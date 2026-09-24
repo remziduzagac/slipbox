@@ -24,6 +24,7 @@ this handoff arrived with. You are making the first commit.
 | `docs/handoff.md` | this file — orientation and traps | first |
 | `docs/idea.md` | *what and why* — captured scope, the reasoning, and what was ruled out | before designing |
 | `docs/plan.md` | *what to do*. Work items with stable IDs, grouped into phases | before writing anything |
+| `docs/samples/` | markdown fixtures, mostly real documents; see its README | when you touch rendering |
 
 Cite item IDs (`0.11`, `3.3`) rather than restating work. They are stable.
 
@@ -56,6 +57,12 @@ because it is cheap now and expensive later. Two deserve special attention:
 - **`0.8` — every action is a named command from the first commit.** The palette, the keymaps,
   the modal editing layer and any future plugin tier all consume that registry. Retrofitting it
   means touching every action.
+
+`docs/samples/` already holds the fixtures for `0.5` — the wide-table case that started the
+project, a 1,181-line document, 232 dense table rows, and a synthetic file covering wikilinks
+and display width because nothing in the source repo contained either. Its README lists what is
+still missing: name collisions, CRLF and encoding cases, images, and the `.slipbox/` marker that
+would make it an actual vault rather than loose files.
 
 **Three decisions gate phase 0.** Do not start building around them:
 
