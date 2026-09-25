@@ -81,9 +81,8 @@ async function harness(opts: Opts = {}): Promise<Harness> {
 }
 
 const rowText = (h: Harness, row = h.app.view!.cur.row) => h.app.currentLayout(h.app.view!).lines[row]!.spans.map((s) => s.text).join("");
-/** The status line's content row and the top bar's: each bar has a padding row above and below. */
-const statusRow = (frame: string) => frame.split("\n").at(-2)!;
-const topRow = (frame: string) => frame.split("\n")[1]!;
+const statusRow = (frame: string) => frame.split("\n").at(-1)!;
+const topRow = (frame: string) => frame.split("\n")[0]!;
 const rowStarting = (h: Harness, prefix: string) => h.app.currentLayout(h.app.view!).lines.findIndex((l) => l.spans.map((s) => s.text).join("").startsWith(prefix));
 
 describe("drawing (3.1, 3.2)", () => {
@@ -381,8 +380,9 @@ describe("which-key", () => {
     expect(rows[head + 3]).toContain("notes, headings, text, commands"); // +find's explanation
     const arrows = rows[head + 2]!.split("→").length - 1;
     expect(arrows).toBeLessThanOrEqual(3);
-    const status = rows.length - 2; // the status line's content row, inside its padding
-    expect(rows[status - 2]!.trim()).toBe(""); // the popup's blank bottom row, above the bar
+    const status = rows.length - 1;
+    expect(rows[status - 1]!.trim()).toBe(""); // the gap above the status line
+    expect(rows[status - 2]!.trim()).toBe(""); // the popup's blank bottom row
   });
   test("keys with the same action share an entry; short screens drop the explanations", async () => {
     const h = await harness({ width: 160, height: 40 });
@@ -604,7 +604,7 @@ describe("top bar, tab strip, status line", () => {
     expect(top).toContain("not watching"); // watch: false in the harness
     // The chip is plain text on the bar: no background of its own.
     const chipR = h.app.geometry!.hot.find((r) => r.id === "btn:palette")!;
-    expect(h.canvas().styles[chipR.y + 1]![chipR.x + 2]!.bg).toBe(h.app.theme.roles.topbar.bg!);
+    expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(h.app.theme.roles.topbar.bg!);
     const ex = hot(h, "btn:explorer");
     click(h, ex.x, ex.y);
     expect(h.app.sidebarShown).toBe(false);
@@ -623,10 +623,7 @@ describe("top bar, tab strip, status line", () => {
     h.app.handleMouse({ type: "move", x: ex.x, y: ex.y, button: 0 });
     expect(h.app.hover).toBe("btn:explorer");
     const c = h.canvas();
-    // The button fills the whole bar, padding rows included, and is about as wide as it is tall.
-    expect(ex.h).toBe(3);
-    expect(ex.w).toBeGreaterThanOrEqual(5); // 2 + glyph + 2
-    for (let y = ex.y; y < ex.y + ex.h; y++) expect(c.styles[y]![ex.x + 1]!.bg).toBe(h.app.theme.roles.hover.bg!);
+    expect(c.styles[ex.y]![ex.x + 1]!.bg).toBe(h.app.theme.roles.hover.bg!);
     h.app.handleMouse({ type: "move", x: 80, y: 10, button: 0 });
     expect(h.app.hover).toBeNull();
   });
@@ -646,8 +643,8 @@ describe("top bar, tab strip, status line", () => {
     await h.app.run("note.open notes/alpha.md");
     h.frame();
     const strip = h.app.geometry!.tabStrip!;
-    expect(strip.y).toBe(3); // under the 3-row top bar
-    expect(strip.h).toBe(3);
+    expect(strip.y).toBe(1);
+    expect(h.frame().split("\n")[2]!.trim()).toBe(""); // the gap between the strip and the note
     const tab = (i: number) => h.app.geometry!.tabs[i]!;
     click(h, tab(0).x + 2, strip.y);
     expect(h.app.activeTab).toBe(0);

@@ -23,22 +23,23 @@ Code, in `src/tui/`:
 ```text
  ≡  slipbox                                              ● watching  ≣   ← top bar (ui.top_bar)
  1 index ×  2 alpha ×                                                    ← tab strip, only with 2+ tabs
+                                                                         ← gap (ui.bar_gap)
  ▾ notes    ┃ ▌ Heading                          ┃ Heading   ← explorer ┃ content ┃ outline
      alpha  ┃ Text with the █ursor on its row…   ┃   Sub     (both panes optional)
  ␣ l › links  backspace: up · esc: cancel                  ← which-key popup, while a key is pending
  f → Follow link   n → Next link   …
+                                                                         ← gap
  READ  notes/alpha.md ↻ reloaded   Alpha › Sub  → [[beta]]  L12:7 40%  ← status line
  ↻ notes/alpha.md changed on disk — reloaded                         ← message or prompt
 ```
 
-**Bars.** The top bar, the tab strip and the status line each have `ui.bar_padding` rows
-(default 1) above and below their content, in the bar's colour; buttons, tabs and the mode chip fill the
-bar's full height. Screens shorter than 24 rows drop the padding.
+**Gaps.** With `ui.bar_gap` (default on), a blank row separates the note from the bar above it
+(the tab strip when shown, otherwise the top bar) and from the status line below it. Screens
+shorter than 20 rows drop the gaps.
 
 **The top bar** has buttons on both sides. On the left, `≡` toggles the explorer and the `slipbox`
-chip (plain accent text, no background) opens the command palette. The icon buttons are two
-cells of padding on each side of the glyph, which with the padded bar is roughly square; a
-button is filled with the accent while its pane is open. On the right it shows the vault's state (`● watching`,
+chip (plain accent text, no background) opens the command palette. An icon button is filled with
+the accent while its pane is open. On the right it shows the vault's state (`● watching`,
 `⚠ not watching`, `indexing N…` or `single file`), then `≣` to toggle the outline. The middle is
 empty. `ui.top_bar = false` removes the bar, and zen mode hides it.
 

@@ -77,18 +77,19 @@ export function drawApp(app: App, c: Canvas): Geometry {
     return geo;
   }
   const zen = app.ui.zen;
-  // Each bar is its content row plus `bar_padding` rows above and below, dropped on short screens.
-  const pad = H >= 24 ? app.config.ui.bar_padding : 0;
-  const barH = 1 + 2 * pad;
-  const topBar = app.config.ui.top_bar && !zen ? barH : 0;
-  const tabBar = app.tabs.length > 1 && !zen ? barH : 0;
-  const status = zen ? 0 : barH;
+  const topBar = app.config.ui.top_bar && !zen ? 1 : 0;
+  const tabBar = app.tabs.length > 1 && !zen ? 1 : 0;
+  const status = zen ? 0 : 1;
   const bottomLine = app.overlay?.kind === "prompt" || app.transient ? 1 : 0;
-  const mainY = topBar + tabBar;
-  const mainH = H - mainY - status - bottomLine;
+  // A blank row between the note and the bars above and below it, dropped on short screens.
+  const gap = app.config.ui.bar_gap && H >= 20 ? 1 : 0;
+  const gapTop = topBar + tabBar ? gap : 0;
+  const gapBottom = status ? gap : 0;
+  const mainY = topBar + tabBar + gapTop;
+  const mainH = H - mainY - gapBottom - status - bottomLine;
 
-  if (topBar) drawTopBar(app, c, { y: 0, h: barH }, geo);
-  if (tabBar) drawTabs(app, c, { y: topBar, h: barH }, geo);
+  if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
+  if (tabBar) drawTabs(app, c, { y: topBar, h: 1 }, geo);
 
   const sideW = app.sidebarWidth();
   const outW = app.outlineWidth();
@@ -115,7 +116,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     if (app.outlineBeside) geo.separators.push({ kind: "outline", x: W - w - 1, y: mainY, w: 1, h: mainH });
   }
 
-  if (status) drawStatus(app, c, { y: H - status - bottomLine, h: barH }, geo);
+  if (status) drawStatus(app, c, { y: H - status - bottomLine, h: 1 }, geo);
   if (bottomLine) {
     drawBottomLine(app, c, H - 1);
     if (app.transient && app.overlay?.kind !== "prompt") geo.hot.push({ id: "status:message", x: 0, y: H - 1, w: W, h: 1 });
@@ -125,7 +126,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   return geo;
 }
 
-/** A bar's rows: `h` rows from `y`, its content on the middle one. */
+/** A bar's rows: `h` rows from `y`, its text on the middle one. */
 interface Band {
   y: number;
   h: number;
@@ -158,9 +159,7 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const bar = roleStyle(theme, "topbar", pageBg(theme));
   c.fill(0, band.y, c.width, band.h, bar.bg);
   const y = mid(band);
-  // Icon buttons are about as wide as they are tall (a cell is roughly twice as tall as wide).
-  const iconPad = " ".repeat(band.h > 1 ? 2 : 1);
-  const icon = (glyph: string) => `${iconPad}${glyph}${iconPad}`;
+  const icon = (glyph: string) => ` ${glyph} `;
   let x = button(app, c, 0, band, icon(g.explorerButton), app.sidebarShown ? "topbar_button_on" : "topbar_button", "btn:explorer", geo, bar.bg);
   x += 1;
   x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
@@ -198,13 +197,13 @@ function drawTabs(app: App, c: Canvas, band: Band, geo: Geometry): void {
     if (x >= c.width) return;
     const v = t.views[t.active]!;
     const changed = v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS ? " ↻" : "";
-    const label = `  ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!.replace(/\.(md|markdown)$/i, ""), 24)}${changed} `;
+    const label = ` ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!.replace(/\.(md|markdown)$/i, ""), 24)}${changed} `;
     const role: Role = i === app.activeTab ? "tab_active" : "tab";
     const w = button(app, c, x, band, label, role, `tab:${i}`, geo, stripBg, c.width - x);
     geo.tabs.push({ x, y: band.y, w, h: band.h, index: i });
     x += w;
     const tabBg = roleStyle(theme, role, stripBg).bg ?? stripBg;
-    x += button(app, c, x, band, `${app.glyphs.close}  `, role, `tabclose:${i}`, geo, tabBg, c.width - x);
+    x += button(app, c, x, band, `${app.glyphs.close} `, role, `tabclose:${i}`, geo, tabBg, c.width - x);
     x += 1;
   });
 }

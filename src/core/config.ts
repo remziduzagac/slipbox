@@ -49,8 +49,8 @@ export interface Config {
     zen: boolean;
     /** The top bar: explorer and outline buttons, the app chip, vault state. */
     top_bar: boolean;
-    /** Blank rows above and below the content of the top bar, tab strip and status line. */
-    bar_padding: number;
+    /** A blank row between the note and the bars above and below it. */
+    bar_gap: boolean;
     /** Rows of margin kept between the cursor and the top or bottom of the view. */
     scrolloff: number;
   };
@@ -112,7 +112,7 @@ export const DEFAULT_CONFIG: Config = {
     readable_max: 100,
     zen: false,
     top_bar: true,
-    bar_padding: 1,
+    bar_gap: true,
     scrolloff: 3,
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
@@ -141,7 +141,6 @@ const RANGES: Record<string, [number, number]> = {
   "ui.split_ratio": [0.2, 0.8],
   "ui.readable_max": [20, 1000],
   "ui.scrolloff": [0, 50],
-  "ui.bar_padding": [0, 1],
   "input.which_key_delay_ms": [0, 10_000],
   "ui.narrow_width": [0, 1000],
   "watch.debounce_ms": [0, 10_000],
