@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { afterAll, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatEntry, formatRef, parseRef } from "../src/core/capture.ts";
@@ -13,6 +13,14 @@ import { listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
 import type { WikiLink } from "../src/core/wikilink.ts";
+
+// Isolation (testing.md): never read or write the real config, cache or state directories.
+const sandbox = mkdtempSync(join(tmpdir(), "slipbox-core-"));
+process.env.XDG_STATE_HOME = join(sandbox, "state");
+process.env.XDG_CACHE_HOME = join(sandbox, "cache");
+process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+
 
 describe("width (0.7)", () => {
   test("ASCII, CJK, emoji, ZWJ, combining marks", () => {

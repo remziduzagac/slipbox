@@ -86,7 +86,7 @@ export const HELP = `slipbox ${VERSION} — terminal markdown notes, agent-driva
 
 Usage:
   slipbox [path]                    open the TUI (needs a terminal)
-  slipbox render <note>             render a note to stdout        [--width N] [--theme T] [--plain]
+  slipbox render <note>             render a note to stdout        [--width N] [--theme T] [--glyphs G] [--plain]
   slipbox resolve <link>            follow a link to a path        [--from <note>]
   slipbox links <note>              outgoing links with status
   slipbox backlinks <note>          notes that link to <note>

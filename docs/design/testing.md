@@ -11,7 +11,7 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 
 | File | Covers |
 | --- | --- |
-| `tests/core.test.ts` | width, sanitize, wikilink syntax, link resolution, capture format, config, themes |
+| `tests/core.test.ts` | width, sanitize, wikilinks, link resolution, capture, config, themes, keymap, glyph sets |
 | `tests/render.test.ts` | snapshots, the no-overflow property, allocator properties, blocks, ANSI output |
 | `tests/vault.test.ts` | discovery, the walk against the fixture vault, the graph, the CLI and parity |
 | `tests/tui.test.ts` | the TUI model, the real watcher, state, keymap, OpenTUI end to end |
@@ -28,9 +28,9 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 **Watcher tests wait for a condition, not a fixed time.** Events arrive asynchronously and more
 slowly under a loaded test run, so fixed sleeps made them flaky.
 
-**Isolation.** Tests point `XDG_STATE_HOME`, `XDG_CACHE_HOME` and `XDG_CONFIG_HOME` at a temp
-directory. TUI tests work on a temp copy of the fixture vault, so they can write, rename and
-delete notes.
+**Isolation.** Every test file points `XDG_STATE_HOME`, `XDG_CACHE_HOME` and `XDG_CONFIG_HOME` at
+its own temp directory, so a developer's config, themes or session never leak into a run. TUI
+tests work on a temp copy of the fixture vault, so they can write, rename and delete notes.
 
 ## The fixture vault (plan `0.5`)
 

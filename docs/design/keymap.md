@@ -28,8 +28,9 @@ Config uses the same notation and accepts common spellings: `G` means `shift+g`,
   `ctrl+` keys (zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`); nothing takes `space`.
 - **Same letter twice opens that group's list:** `space h h`, `space l l`, `space t t`,
   `space f f`, `space u u`, `space s s`.
-- **Plain `q` only closes** the pane or overlay it is in. **`ctrl+c` only copies**, and only
-  when something is selected. Neither ever quits.
+- **Plain `q` only closes** the explorer, the outline or resize mode (in lists and prompts it is
+  typed). **`ctrl+c` copies** when something is selected, and in a list or prompt it cancels.
+  Neither ever quits.
 
 ## The cursor
 
@@ -75,6 +76,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | extend by character / row | `shift+left` / `shift+right` / `shift+up` / `shift+down` |
 | extend by word | `shift+alt+left` / `shift+alt+right` |
 | extend to row start / end | `shift+ctrl+left` / `shift+ctrl+right`, `shift+home` / `shift+end` |
+| … also | `shift+cmd+left` / `shift+cmd+right` (where the terminal passes `cmd` through) |
 | extend by paragraph | `shift+ctrl+up` / `shift+ctrl+down` |
 | extend to note top / bottom | `shift+ctrl+home` / `shift+ctrl+end` |
 | extend by page | `shift+pageup` / `shift+pagedown` |
@@ -82,7 +84,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | swap selection ends (visual mode) | `o` |
 | copy the selection and leave visual mode | `y` |
 | cancel (also clears find highlights) | `esc` |
-| mouse | click moves the cursor; drag selects and copies on release |
+| mouse | click moves the cursor (on a link, follows it); drag selects and copies on release |
 
 ## Copy
 
@@ -142,8 +144,9 @@ which-key popup lists the keys while the mode is on, and the status chip reads `
 
 **What resizes follows focus:** the explorer's or the outline's width when it is focused,
 otherwise the active window's share of the split. Sizes are remembered in the session, and the
-defaults come from `ui.split_ratio`, `ui.sidebar_width` and `ui.outline_width`. The mode's keys
-are `[keys.resize]` in config.
+defaults come from `ui.split_ratio`, `ui.sidebar_width` and `ui.outline_width`; `=` evens a split
+to half and puts the pane widths back to those defaults. Pane widths stay between 12 columns and
+half the terminal, and a split between 15% and 85%. The mode's keys are `[keys.resize]` in config.
 
 `ctrl+alt+w` arrives when `alt` does. On macOS that means Option set to act as Alt (Ghostty:
 `macos-option-as-alt`); otherwise use `space w r`.
@@ -195,15 +198,16 @@ Inside the explorer (`[keys.explorer]` in config):
 | open → focus → close (a cycle) | `ctrl+o` | `space o` |
 
 Like the explorer: opening it focuses it; while open but unfocused, the key focuses it; while
-focused, the key closes it and focus returns to the note. It lists the note's headings and,
-while unfocused, keeps its selection on the section the cursor is in. Inside the outline
+focused, the key closes it and focus returns to the note. The `▤` button at the right of the
+breadcrumb runs `outline.toggle` instead: show and focus, or hide. It lists the note's headings
+and, while unfocused, keeps its selection on the section the cursor is in. Inside the outline
 (`[keys.outline]` in config):
 
 | Key | Action |
 | --- | --- |
 | `j` / `k`, `down` / `up` | move |
 | `enter` | jump to the heading; focus goes to the note |
-| mouse click | jump to the heading (the note takes focus); on the `▾`/`▸` marker, fold |
+| mouse click | jump to the heading (the note takes focus); on the `▾`/`▸` marker, fold or unfold |
 | `h` / `l`, `left` / `right` | fold / unfold |
 | `g g` / `shift+g` | top / bottom |
 | `q` | close the outline |
@@ -233,7 +237,7 @@ config.
 | `:q`, `:quit` | quit |
 | `:e <note>`, `:open <note>` | open a note |
 | `:theme <name>` | set the theme |
-| `:glyphs <nerd\|unicode\|ascii>` | set the glyph set |
+| `:glyphs <nerd\|unicode\|ascii\|auto>` | set the glyph set |
 | `:zen` | toggle zen mode |
 | `:vs` / `:sp` | split side by side / stacked |
 | `:tabnew` | new tab with the current note |
@@ -251,7 +255,7 @@ config.
 | `space u t` | theme picker, previewed live (`esc` restores) |
 | `space u g` | glyph picker: nerd, unicode, ascii (previewed live) |
 | `space u w` | readable width: the text column capped at `ui.readable_max` (100), centred |
-| `space u z` | zen mode: no top bar, explorer, outline, tab strip or status line; readable width on |
+| `space u z` | zen: no bars, frame, panes, tabs or breadcrumbs; readable width on |
 | `space u l` | cursor-row highlight on / off |
 | `space u n` | source line numbers in a left gutter |
 | `space u r` | link URLs shown after the link text |
@@ -280,8 +284,22 @@ edit the config and the config wins again.
 | `space v i` | vault info: root, notes, skipped paths, cache and state, watcher |
 | `space v c` | reload the configuration (it also reloads by itself when a config file is saved) |
 | `space m` | messages |
-| `?`, `space ?` | help: every key, grouped, searchable (commands, panes, resize mode, mouse) |
+| `?`, `space ?` | help: every key, grouped, searchable (commands, panes, resize mode, mouse); `enter` runs a command |
 | `space q q` | quit (also `ctrl+q`, `:q`) |
+
+## In lists and prompts
+
+Pickers, the palette, help and the `/` and `:` prompts share these keys:
+
+| Key | Action |
+| --- | --- |
+| `down` / `up`, `tab` / `shift+tab`, `ctrl+n` / `ctrl+p`, `ctrl+j` / `ctrl+k` | move (wrapping around) |
+| `pagedown` / `pageup`, `ctrl+d` / `ctrl+u` | move by 10 |
+| `j` / `k` | move, in lists without a filter |
+| `enter` | accept |
+| `esc`, `ctrl+c`, `ctrl+g` | cancel |
+| `backspace`, `ctrl+w` | delete a character / a word of the filter |
+| `ctrl+u` | clear a prompt |
 
 ## Mouse
 
@@ -309,11 +327,13 @@ with the `hover` role. `space u m` turns the mouse off, which gives it back to t
 
 | Where | What the mouse does |
 | --- | --- |
-| note | click moves the cursor; drag selects and copies on release |
+| note | click moves the cursor, or follows the link under it; drag selects and copies on release |
 | note, double / triple click | select and copy the word / the row |
 | note, wheel | scroll the view |
 | explorer, outline | a click anywhere in the pane focuses it; rows as in their sections above |
 | lists, wheel | move the selection |
+| explorer, outline, wheel | scroll the pane (the selection stays) |
+| outside a list, or anywhere during a prompt | close it |
 
 ## Platform notes
 

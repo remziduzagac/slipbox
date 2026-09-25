@@ -11,45 +11,53 @@ Code, in `src/tui/`:
 
 | File | Role |
 | --- | --- |
-| `app.ts` | the model: state, dispatch, panes, reload |
-| `actions.ts` | the command implementations |
+| `app.ts` | the model: state, dispatch, panes, mouse, reload, session |
+| `actions.ts` | the command implementations, the palette, help and pickers |
+| `buffer.ts` | a note's text and cached layouts |
+| `canvas.ts` | the drawing surface; `TextCanvas` for headless tests |
 | `cursor.ts` | the motions |
-| `draw.ts` | painting |
-| `keys.ts` | the default keymap, groups and aliases |
+| `draw.ts` | painting, and the geometry the mouse uses |
+| `fuzzy.ts` | the fuzzy ranking every list filters with |
+| `keys.ts` | the default keymaps, groups, aliases, and the in-pane actions' titles |
 | `run.ts`, `opentui.ts` | the OpenTUI binding |
 
 ## Screen layout (plan `3.1`)
 
 ```text
- ≡  slipbox                                                 indexing 3…    ← top bar (ui.top_bar)
-━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
- Explorer   ┃ 1 index × ┃ 2 alpha × ┃                                  +3  ← tab strip, +N when some don't fit
-            ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← a rule under the strip
+ ≡   slipbox                                                 indexing 3…   ← top bar (ui.top_bar)
+━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━  ← the frame's top rule
+ Explorer   ┃ 1 index × ┃ 2 alpha × ┃                               ┃ +3   ← tab strip; +N when some don't fit
+━━━━━━━━━━━━╋━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━  ← the explorer's title rule, the strip's rule
  ▾ notes    ┃ § Heading › Sub                                          ▤   ← the window's breadcrumb (tinted),
-     beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━  ←   over the outline; ▤ toggles it
-     alpha  ┃ ▌ Sub                              ┃ Outline                 ← explorer ┃ content ┃ outline
-            ┃ Text with the █ursor on its row…   ┃                         ← (both panes optional, titled)
+ ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━  ←   over the outline; ▤ toggles it
+ └─  alpha  ┃ ▌ Sub                              ┃ Outline                 ← explorer ┃ note ┃ outline, titled
+            ┃ Text with the █ursor on its row…   ┃                         ← (both panes optional)
             ┃                                    ┃ ▾ Heading
- ␣ l › links  backspace: up · esc: cancel                                  ← which-key popup, while a key is pending
- f → Follow link   n → Next link   …
+ ␣ l › links  backspace: up · esc: cancel                                  ← which-key popup, while keys are pending
+
+   f → Follow link          n → Next link
+       open the link           the next link
 ━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
- READ  notes/alpha.md ↻ reloaded  ● watching   → [[beta]]  L12:7 40%       ← status line
+ READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line
  ↻ notes/alpha.md changed on disk — reloaded                               ← message or prompt
 ```
 
 **The frame.** Right under the top bar, a `━` rule in the `border` role runs across the top of
-everything: the explorer, the tab strip (or the window, without tabs) and the outline. Another
-runs across their bottom, right above the status line. With tabs, a third runs under the strip,
-over the note and the outline. Windows' header rules and the
-vertical borders complete it. Where rules and borders meet, one pass picks the box glyph from the
-lines that meet there: `┳` where a border starts under a rule, `┻` where it ends on one, and `┣`
-`┫` `╋` where it continues through (ascii: `+`). Zen mode has no frame.
+everything: the explorer and the tab strip, which spans the note and the outline. A second runs
+under the strip, over the note and the outline, level with the rule under the explorer's title. A
+third runs across the bottom of the explorer, the note and the outline, right above the status line.
+Windows' header rules and the vertical borders complete it. Where rules and borders meet, one pass
+picks the box glyph from the lines that meet there: `┳` where a border starts under a rule, `┻`
+where it ends on one, `┣` `┫` `╋` where it continues through, and the corners `┏` `┓` `┗` `┛`
+(ascii: `+`). Borders are always the plain `border` colour; focus shows as brightness (see the side
+panes). Zen mode has no frame.
 
 **The top bar** has buttons and vault-wide state; the middle is empty:
 
-- on the left, `≡` toggles the explorer and the `slipbox` chip (plain accent text on the bar)
-  opens the command palette;
-- on the right, vault-wide state (`indexing N…`, `single-file`).
+- on the left, `≡` shows the explorer (focusing it and revealing the current note) or hides it,
+  and the `slipbox` chip (plain accent text on the bar) opens the command palette;
+- on the right, vault-wide state (`indexing N…`, `single-file`), dropped when fewer than 12
+  columns are left.
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is
 closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, and
@@ -61,37 +69,53 @@ is under, each cut to 40 columns, with the outermost dropped first when space ru
 split it shares the window's title row, after the file name. Clicking a heading focuses that
 window, puts its cursor on the heading, and scrolls the heading to the window's first row (as far
 as the note's end allows). The row stays reserved above the first heading, so the text doesn't
-jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it.
+jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it. Without it
+there is no `▤` button (the outline opens with `ctrl+o`) and no header rules, the outline starts
+at the top of the content, and a split window gets a plain title row (`tab` / `tab_active`).
 
 The breadcrumb row has its own background, `breadcrumb_band` (`surface` blended into the page
 at 35%). The icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators
 `breadcrumb_sep` (faint), and the heading the cursor is in `breadcrumb_current` (bold). In a
-split, the file name comes first on the same row.
+split, the file name comes first on the same row: `strong` in the active window, `dim` in the
+other.
 
-Rules run above and below it. The rule above is the frame's (the top rule, or the one under the
-tab strip); the lower window of a stacked split draws its own.
+Rules run above and below it. The rule above is the frame's rule under the tab strip; the lower
+window of a stacked split draws its own.
 
-**The tab strip** sits under the top bar, even with a single tab. Each tab has a `×` to close it and
-a `┃` after it, joined to the rules above and below the strip (`┳`, `┻`). When the tabs don't all
-fit, the strip shows a run of them that includes the active tab: from the first tab, scrolled just
-enough to bring the active one in. A `+N` button at the far right counts the tabs left out; clicking
-it opens the tab list (`ctrl+t t`) to pick one. A tab holds the note and its outline but not the
-explorer, so with the explorer open beside the content the strip starts after the explorer's border
-and spans the note and the outline. The explorer runs from under the frame's top rule to the status
-line, and stays put when the strip appears or goes.
+**The tab strip** sits under the top bar whenever a note is open, even with a single tab. A tab
+reads ` N name `: its number, the file name without `.md`, cut to 24 columns, and `↻` for 3 s after
+a reload. Each tab has a `×` to close it and a `┃` after it, joined to the rules above and below the
+strip (`┳`, `┻`). The active tab is bright (`tab_active`) while the note has focus and dimmer
+(`tab_active_idle`) otherwise; other tabs are `tab`. When the tabs don't all fit, the strip shows a
+run of them that includes the active tab: from the first tab, scrolled just enough to bring the
+active one in. A `+N` button at the far right, behind its own `┃`, counts the tabs left out;
+clicking it opens the tab list (`ctrl+t t`) to pick one. A tab holds the note and its outline but
+not the explorer, so with the explorer open beside the content the strip starts after the explorer's
+border and spans the note and the outline. The explorer runs from under the frame's top rule to its
+bottom rule, and stays put when the strip appears or goes.
 
 **The status line** is about the file. From left to right:
 
-- a mode chip: `READ`, `VISUAL`, `V-LINE`, `FILES`, `OUTLINE`, or the pending keys;
-- the note's path (click to copy it);
+- a mode chip: `READ`, `VISUAL`, `V-LINE`, `FILES`, `OUTLINE`, `RESIZE`, or the pending keys
+  (in short form: `␣ l`, `C-w`);
+- the note's path (click to copy its absolute path);
 - `↻ reloaded` after an external change, or `✖ deleted on disk`;
 - whether external changes will show up: `● watching` (with a count of polled directories, if
-  any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off.
+  any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
+  dropped when the line is too short.
 
-On the right it shows the link under the cursor and its status (or find progress), then the tab,
-then `L<source line>:<column>` and the percentage.
+On the right it shows the link under the cursor and its status (`→ [[beta]] (resolved)`) or find
+progress (`/query 2/7`), then `tab N/M` when there are two or more tabs, then `L<source
+line>:<column>` and the percentage (`all` when the note fits).
 
 **The bottom line** appears only while there is a message (4 s, 8 s for errors) or a prompt.
+Clicking a message opens the messages list.
+
+**The scrollbar** is the last column of each window: a `▐` track (`scrollbar_track`) with a `▐`
+thumb (`scrollbar` in the active window, `border` in the other); ascii `|` and `#`. It can be
+clicked and dragged.
+
+**Hover.** Every clickable region is drawn in the `hover` role while the mouse is over it.
 
 **Viewport-only (plan `3.2`).** Only rows on screen are drawn, and a layout is computed once
 per width and cached on the buffer.
@@ -129,8 +153,10 @@ you saw.
 - **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a
   ratio (the first window's share). Resize mode (`ctrl+alt+w`, `space w r`) changes the ratio,
   or the explorer or outline width when one is focused, and all of it is kept in the session.
-  Side by side falls back to stacked below 80 content columns. With a split, each window gets
-  a title row, and the active one is highlighted.
+  Side by side falls back to stacked below 80 content columns (a fixed width, not
+  `ui.narrow_width`). With a split, each window names its note on its breadcrumb row, bright in
+  the active window. Pane widths stay between 12 columns and half the terminal; a split's ratio
+  between 15% and 85%.
 
 ## Positions (plans `3.4`, `3.5`, `3.15`)
 
@@ -147,9 +173,10 @@ heading later falls back to a current line, not a stale one.
 **Saved state:**
 
 - **Reading position** per note, cursor included, in `positions.json` in the state dir.
-- **Session:** tabs, splits and their orientation, cursors, explorer visibility, and UI setting
-  overrides, in `session.json`. It's restored when slipbox starts with no path, if
-  `ui.restore_session` is on.
+- **Session:** tabs and the active tab, splits with their orientation and ratio, cursors, the
+  explorer's and the outline's visibility and widths, UI setting overrides, and the palette's
+  recent commands, in `session.json`. It's restored when slipbox starts with no path, if
+  `ui.restore_session` is on (recent commands are kept either way).
 
 ## History (plan `3.6`)
 
@@ -195,14 +222,16 @@ of them stay bold, so nothing shifts.
 
 Both trees show depth by indentation plus dim tree lines (the `tree_guide` role): `├─` into each
 child, `└─` into the last one, and `│` where an ancestor has siblings still to come (ascii: `|`,
-`` ` ``, `-`). The outline marks headings that have sub-headings with `▾` / `▸` (fold markers of
-its own, in every glyph set); the explorer marks folders with its folder glyphs.
+`` ` ``, `-`). The outline marks headings that have sub-headings with fold markers of its own (`▾`
+/ `▸`; ascii `v` / `>`); the explorer marks folders with its folder glyphs. The wheel scrolls a
+pane without moving its selection, and a click anywhere in a pane focuses it.
 
 Both are windows for `ctrl+w h` / `ctrl+w l`, and each has its own keymap: `[keys.explorer]` and
 `[keys.outline]`.
 
-**Narrow terminals (plan `3.14`).** Below `ui.narrow_width` (90) columns, both panes open over
-the content on demand and close after a pick. The wide-terminal preferences (`ui.sidebar`,
+**Narrow terminals (plan `3.14`).** Below `ui.narrow_width` (90) columns, and in zen mode, both
+panes open over the content on demand (6 columns wider than their width, leaving at least 6 of
+the note) and close after a pick. The wide-terminal preferences (`ui.sidebar`,
 `ui.outline`) are kept separately, so widening the terminal brings them back. Tables that cannot
 fit become records ([rendering.md](rendering.md)).
 
@@ -214,8 +243,10 @@ One list component serves every picker:
   pickers (with live preview; `esc` restores), UI settings, messages, info, and keys.
 - **Filtering:** fuzzy, with smart case, preferring word and path starts and file names over
   directories.
-- **Keys:** `up`/`down`, `tab`, `ctrl+n`/`ctrl+p` or `ctrl+j`/`ctrl+k` move; `enter` accepts;
-  `esc` cancels; a click picks.
+- **Keys:** as in [keymap.md](keymap.md), "In lists and prompts": the arrows, `tab` and
+  `ctrl+n`/`ctrl+p` move (wrapping around), `enter` accepts, `esc` cancels. The wheel moves the
+  selection, a click picks, and a click outside closes the list. A counter in the bottom border
+  shows `n/m`, and an empty list says "no matches" or "nothing here".
 - **Groups and footers:** a list may have group headings (dim, bold capitals, never selected;
   moving skips them) and a footer that shows the selected entry's description.
 - **Keycaps:** key bindings are spelled out (`ctrl+d`, `shift+g`, `space l y`, `esc`) and each
@@ -248,7 +279,10 @@ never spreads them apart. Each entry is `key → name` with a short, dimmed expl
 
 Keys with the same action share one entry, letters first (`j down`). When the screen is too
 short for two rows per entry, the explanations go first. It shows at once for the leader, and after
-`input.which_key_delay_ms` for other prefixes. `backspace` goes up a level; `esc` cancels.
+`input.which_key_delay_ms` for other prefixes, never with `input.which_key = false`. `backspace`
+goes up a level; `esc` cancels. Groups read `+name`; clicking an entry presses its key. The popup
+spans the full width, over the explorer, and also shows in resize mode (titled "resize", with
+"keys repeat · any other key leaves").
 
 **The message sink (plan `3.13`).** Config warnings, walk errors, watcher problems and command
 feedback all go to one place: the bottom line briefly, the messages list permanently (the last
@@ -274,8 +308,8 @@ your config.
 ## Configuration reload
 
 The configuration reloads **by itself** when a config file is saved: the user file and the vault
-file are polled every second. `space v c` (or `:config`) reloads on demand. A reload applies what
-changed, live:
+file are polled every second (or every `watch.poll_ms`, if that is shorter). `space v c` (or
+`:config`) reloads on demand. A reload applies what changed, live:
 
 - **keys, leader, aliases, groups:** keymaps rebuilt
 - **theme, glyphs, UI defaults:** applied, replacing session overrides of the changed values
@@ -321,8 +355,10 @@ produces one error message, `⚠ not watching` in the status line, and polling o
 
 ## Modes and dispatch (decision `3.11`)
 
-**Dispatch order:** an overlay first, then the focused pane's keymap (explorer or outline), then
-visual mode's, then the normal keymap. Only keymaps at or above the one holding a binding can
+**Dispatch order:** an overlay first, then resize mode's keys (any other key leaves resize mode
+and runs as usual), then a pending sequence (where `esc` cancels and `backspace` goes up a
+level), then the focused pane's keymap (explorer or outline), then visual mode's, then the normal
+keymap. Only keymaps at or above the one holding a binding can
 make a key a prefix: visual mode's `y` doesn't wait for the normal keymap's `y y`. When a key is
 both a binding and a prefix, slipbox waits `input.which_key_delay_ms` for the next key, then
 runs the binding.

@@ -192,8 +192,8 @@ function button(app: App, c: Canvas, x: number, band: Band, text: string, role: 
 }
 
 /**
- * The top bar: the explorer button and the app chip on the left, vault state and the outline
- * button on the right; the middle is left empty.
+ * The top bar: the explorer button and the app chip on the left, vault state on the right; the
+ * middle is left empty. (The outline's button is on the breadcrumb row.)
  */
 function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;

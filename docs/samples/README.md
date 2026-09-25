@@ -56,14 +56,11 @@ It also contains a malformed heading-then-table with no blank line, on purpose.
 
 ## Still missing
 
-Known gaps, so nobody mistakes this folder for complete coverage:
+Known gaps, so nobody mistakes this folder for complete coverage. The vault cases (name
+collisions, CRLF, a BOM, Latin-1, no trailing newline, a local image, a `.slipbox/` marker,
+nested directories and links that cross them) are covered by the test vault,
+`tests/fixtures/vault/`, rather than here. Still missing anywhere:
 
-- **Name collisions.** Two notes called `index.md` in different directories is the case `1.4`
-  has to resolve, and it needs a directory shape, not a file.
-- **Line endings and encoding.** No CRLF file, no BOM, no non-UTF-8 file, no file without a
-  trailing newline. `7.6` and the round-trip rule need all four.
 - **A pathological file.** No multi-megabyte document, and no `.md` file that is really a log.
-- **Images.** No local image to exercise the protocol ladder, and no broken image path.
+- **A broken image path.** The test vault has a local image, but none that fails to load.
 - **Mermaid and LaTeX.** Deferred features, but fixtures cost nothing to add now.
-- **A vault.** These are loose files. `0.5` wants a `.slipbox/` marker, nested directories, and
-  links that cross them.

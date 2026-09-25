@@ -60,7 +60,7 @@ Read against zk's and nb's surfaces. Small on purpose. Global flags: `--root <di
 
 | Command | What it does | Stability |
 | --- | --- | --- |
-| `slipbox [path]` | open the TUI; refuses when stdout is not a terminal (`9.3`) | — |
+| `slipbox [path]` | open the TUI; refuses when stdin or stdout is not a terminal (`9.3`) | — |
 | `slipbox render <note>` | render to stdout; `--width`, `--theme`, `--plain` | **stable v1** |
 | `slipbox capture [text]` | append to the scratch; `--ref path:L[-M]`, `--stdin`, `--snippet` | **stable v1** |
 | `slipbox scratch show\|path\|clear\|copy` | read, locate, wipe or copy the scratch | **stable v1** |
@@ -110,17 +110,19 @@ paragraph above your reading position therefore does not move you.
 ## `3.11` — mode taxonomy and dispatch order
 
 Revised 2026-09-25 with the reading keymap in [keymap.md](keymap.md). Phase 2 has no editing,
-so there are five layers:
+so there are six layers:
 
 | Mode | Owns keys | Examples |
 | --- | --- | --- |
 | overlay | every key | switcher, palette, pickers, prompts |
+| resize | its own keys; any other key leaves it, then runs | `ctrl+alt+w`, then `h j k l` |
 | pending | the next key of a sequence | `space l …`, `ctrl+w …`, `g g` |
 | pane | keys of the focused side pane | explorer, outline |
 | visual | selection keys, and movement extends | `v`, `shift+v` |
 | normal | everything else | cursor, links, tabs |
 
-**Dispatch order:** overlay → pending → pane → visual → normal. Only keymaps at or above the one
+**Dispatch order:** overlay → resize → pending → pane → visual → normal (with keys pending, `esc`
+and `backspace` act on the sequence first). Only keymaps at or above the one
 holding a binding can make a key a prefix. Every binding names a registry command (plan `0.8`),
 and config remaps all of them.
 
@@ -129,8 +131,10 @@ and config remaps all of them.
 - **Direct keys are for navigation only;** everything else is under the leader, `space`.
 - **No emacs keys**, and no `g` keys except `g g`.
 - **Every `ctrl+` chord has a non-`ctrl+` route,** because terminals, multiplexers and browsers
-  can swallow them.
-- **Plain `q` never quits** (`ctrl+q` does), and **`ctrl+c` only copies**.
+  can swallow them. Cursor movement is exempt (it has its own alternatives: page keys, arrows,
+  `home`/`end`), and so is `ctrl+c`, whose route is `y y`.
+- **Plain `q` never quits** (`ctrl+q` does), and **`ctrl+c` only copies** (in a list or prompt it
+  cancels).
 
 ## Moved deliberately
 

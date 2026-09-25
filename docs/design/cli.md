@@ -11,8 +11,9 @@ A CLI call is a second process. It reads the files and the fresh cache, never a 
 buffer. It writes atomically, with a temp file plus rename. The TUI treats a CLI write like any
 external writer: it reloads and says so.
 
-The TUI records paths with unsaved changes in `dirty/<pid>.json` in the state dir (plan `9.9`).
-Every CLI call reads it, ignoring and pruning files from dead pids. Human output then carries a
+From phase 3 the TUI records paths with unsaved changes in `dirty/<pid>.json` in the state dir
+(plan `9.9`; `core/stale.ts` has the writer, not yet called). Every CLI call reads it, ignoring and
+pruning files from dead pids. Human output then carries a
 warning, and `--json` output a `stale` array. It is advisory only: never a lock, never a refusal.
 Phase 2's TUI never has unsaved changes, so the list stays empty until phase 3.
 
@@ -23,7 +24,8 @@ Phase 2's TUI never has unsaved changes, so the list stays empty until phase 3.
 
 ```json
 {"schema": 1, "ok": true, "command": "links", "data": [], "warnings": [], "stale": []}
-{"schema": 1, "ok": false, "command": "resolve", "error": {"code": 3, "message": "…"}, "data": {}}
+{"schema": 1, "ok": false, "command": "resolve", "error": {"code": 3, "message": "…"},
+ "data": null, "warnings": [], "stale": []}
 ```
 
 - **`schema`** is versioned separately from the app. It only changes when a stable command's
@@ -33,10 +35,12 @@ Phase 2's TUI never has unsaved changes, so the list stays empty until phase 3.
 - **Flags.** Global flags may come before or after the command. An unknown flag is a usage
   error. `--width` takes a whole number from 20 to 1000.
 - **Colour:** `render` colours only when stdout is a TTY and `NO_COLOR` is unset. `--plain`,
-  `--color never` or a pipe give output with no escapes.
+  `--color never` or a pipe give output with no escapes. `--theme` and `--glyphs
+  auto|nerd|unicode|ascii` override the config for one render.
 
-**No TTY (plan `9.3`):** `slipbox [path]` with a non-terminal stdin or stdout refuses to start the
-TUI, prints a hint and exits 2. It never paints escape codes into a pipe.
+**No TTY (plan `9.3`):** `slipbox [path]` (also spelled `slipbox open [path]`) with a non-terminal
+stdin or stdout refuses to start the TUI, prints a hint and exits 2. It never paints escape codes
+into a pipe.
 
 ## Stability
 
@@ -63,7 +67,7 @@ These churn freely before 1.0:
 | `init [dir]` | `{root, created}` |
 | `info` | root, mode, marker version, paths, index stats, skipped entries, stale |
 | `themes` | `[{name, source, path?, current}]` |
-| `commands` | `[{id, title, cli}]` — the registry with CLI equivalents |
+| `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
 
 ## Naming notes
 
@@ -97,7 +101,8 @@ calls it, and the user reads the scratch in the TUI.
   `path:42:10-30`, `path:42:10-50:30`. Paths inside the project are stored relative to it.
   Lines count from 1 and ranges must be in order; `--snippet` past the end of the file exits 3.
 - **`--snippet`** reads the referenced lines from disk and fences them, with the language taken
-  from the file extension. The fence grows when the snippet itself contains fences.
+  from the file extension. `--stdin --lang L` fences stdin as `L` code, with or without `--ref`.
+  The fence grows when the snippet itself contains fences.
 - **`--stdin`.** With `--ref`, stdin is the snippet: a visual selection piped from nvim. Without
   it, stdin is the text.
 - **Appending.** Each entry is appended after a blank line, atomically. Output is markdown,

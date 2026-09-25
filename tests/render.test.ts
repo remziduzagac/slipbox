@@ -1,7 +1,8 @@
 // Rendering: snapshot the pure layout stage (0.4) and property-test the table allocator (2.3).
 
-import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { afterAll, describe, expect, test } from "bun:test";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
@@ -10,6 +11,14 @@ import { renderMarkdown } from "../src/core/layout/render.ts";
 import { allocate } from "../src/core/layout/table.ts";
 import { loadTheme } from "../src/core/theme/index.ts";
 import { stringWidth } from "../src/core/width.ts";
+
+// Isolation (testing.md): never read or write the real config, cache or state directories.
+const sandbox = mkdtempSync(join(tmpdir(), "slipbox-render-"));
+process.env.XDG_STATE_HOME = join(sandbox, "state");
+process.env.XDG_CACHE_HOME = join(sandbox, "cache");
+process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+
 
 const SAMPLES = join(import.meta.dir, "..", "docs", "samples");
 const samples = readdirSync(SAMPLES).filter((f) => f.endsWith(".md")).sort();

@@ -1371,7 +1371,7 @@ export class App {
     | { kind: "scrollbar"; bar: import("./draw.ts").ScrollbarGeom }
     | null = null;
 
-  /** Everything visible is clickable (docs/design/tui.md, "Mouse"). */
+  /** Everything visible is clickable (docs/design/keymap.md, "Mouse"). */
   handleMouse(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
     const g = this.geometry;
     if (!g) return;

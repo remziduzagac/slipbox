@@ -32,7 +32,7 @@ export const ROLES = [
   "syn_variable", "syn_constant", "syn_operator", "syn_punctuation", "syn_tag", "syn_attr",
   "syn_builtin", "syn_meta", "syn_regexp", "syn_section", "syn_addition", "syn_deletion",
   // chrome
-  "border", "border_active", "status", "status_accent", "status_dim",
+  "border", "status", "status_accent", "status_dim",
   "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active",
   "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
   "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
@@ -184,7 +184,6 @@ export function themeFromPalette(
     syn_addition: { fg: p.green },
     syn_deletion: { fg: p.red },
     border: { fg: p.border },
-    border_active: { fg: p.blue, bold: true },
     status: { fg: p.fg_dim, bg: p.bg_dark },
     status_accent: { fg: p.bg, bg: p.blue, bold: true },
     status_dim: { fg: p.comment, bg: p.bg_dark },

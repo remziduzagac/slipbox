@@ -45,9 +45,9 @@ export interface Config {
     /** Cap the text column at `readable_max` columns, centred. */
     readable_width: boolean;
     readable_max: number;
-    /** Hide explorer, outline, top bar, tab strip and status line; readable width on. */
+    /** Hide the top bar, frame, explorer, outline, tab strip, breadcrumbs and status line; readable width on. */
     zen: boolean;
-    /** The top bar: explorer and outline buttons, the app chip, vault state. */
+    /** The top bar: the explorer button, the app chip, vault state. */
     top_bar: boolean;
     /** The outline breadcrumb at the top of each window. */
     breadcrumb: boolean;

@@ -82,7 +82,7 @@ candidates. Pick one, or ask the user.
 
 ## Capturing for the user — the scratch
 
-The scratch is a markdown file per project. The user reads it in the TUI (`space s`) and copies
+The scratch is a markdown file per project. The user reads it in the TUI (`space s s`) and copies
 it into their next prompt. Append to it; never rewrite it.
 
 ```bash

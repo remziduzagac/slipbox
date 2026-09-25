@@ -63,7 +63,8 @@ Two things are pulled early into phase 2 deliberately:
 
 **Link-following is split out of the graph and pulled into phase 2.** Following a `[[link]]`
 *is* navigation, so leaving it to phase 4 would make phase 2's navigation incomplete and
-phase 3 an editor that cannot traverse its own vault. Backlinks, tags, unresolved-link lists,
+phase 3 an editor that cannot traverse its own vault. Backlinks and the persisted index came
+forward too, with the phase 2 CLI (see `docs/design/decisions.md`); tags, unresolved-link lists,
 aliases and heading references stay in phase 4, where the rest of the graph lands.
 
 **LSP is phase 5, not phase 3.** Its entire value is the graph — `[[` completion, definition,
@@ -262,7 +263,7 @@ common, and the only reason they are step 0.
 
 ## Core: vault and graph — `1.x`
 
-*Phase 1 for `1.1`–`1.3`; link-follow from `1.4` in phase 2; the rest phase 4.*
+*Phase 1 for `1.1`–`1.3`; phase 2 for link-follow from `1.4`, `1.5`, `1.8`–`1.10`; the rest phase 4.*
 
 | ID | Item |
 | --- | --- |

@@ -26,6 +26,7 @@ editing — start from `4.x` and `7.6` in the plan.
 | `docs/handoff.md` | this file — orientation and traps | first |
 | `docs/idea.md` | *what and why* — captured scope, the reasoning, and what was ruled out | before designing |
 | `docs/plan.md` | *what to do*. Work items with stable IDs, grouped into phases | before writing anything |
+| `docs/design/` | *how it's built*: the code as it is (start at its README) | before changing code |
 | `docs/samples/` | markdown fixtures, mostly real documents; see its README | when you touch rendering |
 
 Cite item IDs (`0.11`, `3.3`) rather than restating work. They are stable.
@@ -60,13 +61,12 @@ because it is cheap now and expensive later. Two deserve special attention:
   the modal editing layer and any future plugin tier all consume that registry. Retrofitting it
   means touching every action.
 
-`docs/samples/` already holds the fixtures for `0.5` — the wide-table case that started the
-project, a 1,181-line document, 232 dense table rows, and a synthetic file covering wikilinks
-and display width because nothing in the source repo contained either. Its README lists what is
-still missing: name collisions, CRLF and encoding cases, images, and the `.slipbox/` marker that
-would make it an actual vault rather than loose files.
+`docs/samples/` holds the rendering fixtures for `0.5` — the wide-table case that started the
+project, a 1,181-line document, 232 dense table rows, and a synthetic file covering wikilinks and
+display width. The vault cases (name collisions, CRLF and encodings, images, the `.slipbox/`
+marker) live in the test vault, `tests/fixtures/vault/`.
 
-**Three decisions gate phase 0.** Do not start building around them:
+**Three decisions gated phase 0**, and are recorded in `docs/design/decisions.md`:
 
 | ID | Decision |
 | --- | --- |
@@ -162,8 +162,8 @@ Measured by installing and running, not by reading documentation:
 
 ## What not to do
 
-- Don't start writing feature code before `0.10`, `0.11` and `9.1` are decided. All three are
-  cheap now and each invalidates work if deferred.
+- Don't change storage (`0.10`), the walk (`0.11`) or the CLI list (`9.1`) without updating
+  `docs/design/decisions.md`: each is relied on by the index, the watcher and agents.
 - Don't add a dependency without checking it against constraint 1. An external binary can be an
   optional enhancement; it cannot be required.
 - Don't reopen the settled list above without reading the reasoning first. Most of it was

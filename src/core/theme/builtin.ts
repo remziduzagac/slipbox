@@ -33,7 +33,6 @@ const tokyoNightOverrides: RoleOverrides = {
   syn_keyword: { fg: "#ff9ed1", bold: true },
   syn_function: { fg: "#82dfff", bold: true },
   border: { fg: "#3b4261" },
-  border_active: { fg: "#7aa2f7", bold: true },
 };
 
 const tokyoNightDay: Palette = {

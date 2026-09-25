@@ -51,6 +51,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | Module | Plan items | Role |
 | --- | --- | --- |
 | `core/width.ts` | 0.7 | the one width function: graphemes, East Asian width, emoji |
+| `core/fsutil.ts` | 4.6 | atomic writes, `readText`, JSON read/write |
 | `core/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
 | `core/paths.ts` | 0.10 | config, cache and state directories; the vault key |
 | `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
@@ -60,6 +61,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
 | `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
 | `core/graph.ts` | 1.5, 1.8, 1.9 | notes, links, backlinks, lazy parsing, persisted index |
+| `core/note.ts` | 2.x | a note rendered for a pane: parse, resolve links, lay out (CLI and TUI) |
 | `core/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
 | `core/theme/*` | 2.6 | semantic roles, built-in themes, base16 loader |
 | `core/glyphs.ts` | 2.8 | Nerd, Unicode and ASCII glyph sets |
@@ -69,8 +71,10 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
 | `core/clipboard.ts` | 8.5 | OSC 52, then pbcopy / wl-copy / xclip, then a file |
-| `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped |
+| `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped (not written until editing) |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face |
+| `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |
+| `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3, 5.4 | the reader |
 
 ## Data flow for one note

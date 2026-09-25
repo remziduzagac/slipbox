@@ -5,7 +5,8 @@ distinguishing feature. It reads a vault of markdown notes, renders them properl
 fit, highlighted code, themes), follows `[[wikilinks]]`, and reloads the instant an agent rewrites
 a note. Every state change is also reachable from a CLI that agents drive.
 
-Status: **phases 0–2** — rendering (leaf parity) and a read-only TUI with an agent-drivable CLI.
+Status: **phases 0–2** — rendering (leaf parity) and a read-only TUI (it never writes a note;
+the scratch is the one file it writes) with an agent-drivable CLI.
 Editing arrives in phase 3. See [docs/plan.md](docs/plan.md).
 
 ## Try it
@@ -24,16 +25,17 @@ single-file mode.
 
 ## In the TUI
 
-A reading cursor moves with vim keys or the usual editor keys, and `space` opens a which-key
-popup listing everything else, so nothing needs memorising:
+A reading cursor moves with vim keys or the usual editor keys. `space` opens a which-key popup
+listing everything else, and `?` lists every key, so nothing needs memorising:
 
-- **Moving:** `h` `j` `k` `l` or the arrows; `w`/`b` or `alt+arrows` by word; `[ [` / `] ]` by
-  heading.
+- **Moving:** `h` `j` `k` `l` or the arrows; `w`/`b` or `alt+left`/`alt+right` by word; `[ [` /
+  `] ]` or `alt+up`/`alt+down` by heading.
 - **Links:** `enter` follows the link under the cursor; `shift+h` / `shift+l` go back and
   forward.
 - **Finding and copying:** `ctrl+p` switches notes, `ctrl+f` finds, `:` opens the command
   palette, and `v` selects then `y` copies.
-- **Panes:** `ctrl+e` explorer, `ctrl+o` outline, `ctrl+w v` split, `ctrl+t o` new tab.
+- **Panes:** `ctrl+e` explorer and `ctrl+o` outline (each opens, then focuses, then closes;
+  `esc` returns to the note), `ctrl+w v` split, `ctrl+t o` new tab. Everything is clickable too.
 - **Quitting:** `ctrl+q`, and slipbox remembers where you were.
 
 Every key is in [docs/design/keymap.md](docs/design/keymap.md), and all of them are configurable.

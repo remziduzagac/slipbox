@@ -40,10 +40,10 @@ sidebar_width = 30
 outline = false                # outline pane on the right on wide terminals
 outline_width = 32
 split_ratio = 0.5              # first window's share of a split (0.2–0.8)
-top_bar = true                 # explorer/outline buttons, palette chip, vault state
-breadcrumb = true              # outline breadcrumb atop each window, then a rule
+top_bar = true                 # explorer button, palette chip, vault state
+breadcrumb = true              # breadcrumb atop each window (with the outline's ▤ button)
 mouse = true
-narrow_width = 90              # below this, panes overlay and splits stack
+narrow_width = 90              # below this, the explorer and outline open over the content
 restore_session = true         # reopen tabs and splits when started without a path
 cursorline = true              # band on the cursor row
 line_numbers = false           # source line numbers in a gutter
@@ -81,7 +81,7 @@ poll_ms = 2000                 # backstop tick, unwatchable directories, degrade
 "p" = "open"                   #   collapse open_split top bottom close leave
 
 [keys.outline]                 # key = outline action: down up jump fold unfold
-"za" = "fold"                  #   top bottom close leave
+"z a" = "fold"                 #   top bottom close leave (sequences: space-separated keys)
 
 [keys.resize]                  # key = resize action: narrower wider shorter taller
 "<" = "narrower"               #   equalize leave

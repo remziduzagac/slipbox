@@ -151,15 +151,16 @@ Carried over from the nvim configuration, where they were arrived at by trial:
   right border never sits on the edge. It is capped at 5% of narrow panes and is never below 1.
 - **Inline code** has its own background: `#c0caf5` on `#292e42`, italic, in Tokyo Night.
 - **Bold** has an explicit lighter foreground: `#bcc5e6` in Tokyo Night.
-- **Borders** are thick (`┃`), with a themeable colour and weight; the active region's border
-  is highlighted.
+- **Borders** are thick (`┃`, `━`), in the one `border` colour whatever has focus; focus shows
+  as brightness in titles and tabs ([tui.md](tui.md)).
 - **Code fences** are full width, with no right padding.
 
 ## Themes (plan `2.6`)
 
 `core/theme/theme.ts` defines about 100 semantic roles covering the document, syntax and chrome.
-Every theme reduces to a 17-colour `Palette`, and `themeFromPalette` maps it to roles, so there is
-one mapping to get right. Heading bands are the heading colour blended 14% into the background.
+Every theme reduces to an 18-colour `Palette`, and `themeFromPalette` maps it to roles, so there is
+one mapping to get right. Heading bands are the heading colour blended into the background, 14%
+in dark themes and 16% in light ones.
 
 | Kind | Themes |
 | --- | --- |
@@ -184,7 +185,9 @@ override:
 2. Nerd glyphs when the terminal bundles the Nerd Font symbols (Ghostty, kitty, WezTerm).
 3. Plain Unicode otherwise.
 
-`SLIPBOX_GLYPHS` or the config value forces a set, and `space g` cycles them live in the TUI.
+`SLIPBOX_GLYPHS` or the config value forces a set, and in the TUI `space u g` picks one with a live
+preview (`:glyphs <set>` sets it directly). The chrome has ASCII fallbacks too: `≡`→`=`, `▤`→`#`,
+`×`→`x`, `›`→`>`, `§`→`#`, tree lines `|` `` ` `` `-`, box joints `+`.
 The Nerd set uses the same heading icons as the render-markdown configuration it replaces.
 
 ## Escapes (constraint `2.9`)
