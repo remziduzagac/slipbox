@@ -78,8 +78,8 @@ poll_ms = 2000                 # backstop tick, unwatchable directories, degrade
 [keys.visual]                  # visual mode (movement keys extend by themselves)
 "Y" = "visual.yank"
 
-[keys.explorer]                # key = explorer action: down up open_tab open collapse
-"o" = "open"                   #   open_split top bottom close leave
+[keys.explorer]                # key = explorer action: down up open_tab expand open
+"p" = "open"                   #   collapse open_split top bottom close leave
 
 [keys.outline]                 # key = outline action: down up jump fold unfold
 "za" = "fold"                  #   top bottom close leave

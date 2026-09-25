@@ -155,8 +155,9 @@ Each kind of link does something different when followed:
 
 ## Side panes: explorer (plan `3.7`) and outline
 
-- **Explorer (left):** the walked notes as a tree, directories first. `enter` opens a new tab,
-  `l` opens in the current window, and `s` opens in the split.
+- **Explorer (left):** the walked notes as a tree, directories first. Moving the selection only
+  selects. `enter`, `l` and a click open the note as a tab, or switch to the tab already showing
+  it; `o` replaces the current window's note, and `s` opens it in the split.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 

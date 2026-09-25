@@ -177,15 +177,16 @@ Inside the explorer (`[keys.explorer]` in config):
 
 | Key | Action |
 | --- | --- |
-| `j` / `k`, `down` / `up` | move |
-| `enter` | open the note in a new tab / expand a folder |
-| `l`, `right` | open in the current window / expand |
+| `j` / `k`, `down` / `up` | move (selects only; nothing opens) |
+| `enter` | open the note as a tab (or switch to its tab) / fold or unfold a folder |
+| `l`, `right` | open the note as a tab (or switch to its tab) / unfold a folder |
+| `o` | open the note in the current window, replacing what it shows |
 | `h`, `left` | collapse |
 | `s` | open in the split |
 | `g g` / `shift+g` | top / bottom |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open |
-| mouse | click a folder to fold or unfold it; click a note to open it here, double-click for a new tab |
+| mouse | click a folder to fold or unfold it; click a note to open it as a tab (or switch to its tab) |
 
 ## Outline — right pane
 

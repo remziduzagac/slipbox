@@ -187,8 +187,9 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   k: "up",
   up: "up",
   enter: "open_tab",
-  l: "open",
-  right: "open",
+  l: "expand",
+  right: "expand",
+  o: "open",
   h: "collapse",
   left: "collapse",
   s: "open_split",
@@ -198,7 +199,7 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   escape: "leave",
 };
 
-export const EXPLORER_ACTIONS = ["down", "up", "open_tab", "open", "collapse", "open_split", "top", "bottom", "close", "leave"];
+export const EXPLORER_ACTIONS = ["down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "close", "leave"];
 
 /** Keys inside the outline pane: key → outline action. */
 export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {

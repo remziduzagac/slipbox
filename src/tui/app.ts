@@ -514,6 +514,18 @@ export class App {
     this.revealInSidebar();
   }
 
+  /** Switch to a tab already showing this note, or open it in a new one. */
+  openOrSwitchTab(path: string): void {
+    const buf = this.buffer(path);
+    if (!buf) return;
+    const i = this.tabs.findIndex((t) => t.views.some((v) => v.buf === buf));
+    if (i < 0) return this.openInNewTab(path);
+    const t = this.tabs[i]!;
+    this.activeTab = i;
+    t.active = t.views.findIndex((v) => v.buf === buf);
+    this.region = "content";
+  }
+
   /** Open a note in a view, pushing history (3.6) and remembering the old position (3.4). */
   open(path: string, anchor?: Anchor, view = this.view): void {
     if (!view) return this.openInNewTab(path, anchor);
@@ -936,7 +948,7 @@ export class App {
         this.invalidateTree();
         return;
       }
-      if (where === "tab") this.openInNewTab(row.path);
+      if (where === "tab") this.openOrSwitchTab(row.path);
       else if (where === "split") {
         this.splitWith(this.tab?.orientation ?? "side");
         this.open(row.path);
@@ -960,6 +972,11 @@ export class App {
       case "open":
         if (row?.kind === "dir" && this.expanded.has(row.path)) break;
         openNote("here");
+        break;
+      case "expand":
+        // A folder unfolds; a note opens as a tab.
+        if (row?.kind === "dir") openNote("here");
+        else openNote("tab");
         break;
       case "open_tab":
         if (row?.kind === "dir") {
@@ -1428,7 +1445,7 @@ export class App {
         if (this.expanded.has(row.path)) this.expanded.delete(row.path);
         else this.expanded.add(row.path);
         this.invalidateTree();
-      } else this.explorerAction(clicks >= 2 ? "open_tab" : "open");
+      } else this.explorerAction("open_tab"); // a second click finds the tab it opened
       return;
     }
     if (g.outline && inRect(g.outline, ev.x, ev.y)) {

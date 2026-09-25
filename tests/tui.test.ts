@@ -762,7 +762,7 @@ describe("mouse", () => {
     h.app.handleMouse({ type: "up", x: split.x, y: split.y + 3, button: 0 });
     expect(h.app.tab!.ratio).toBeCloseTo(0.3, 1);
   });
-  test("explorer: click a folder to fold it, double-click a note for a new tab", async () => {
+  test("explorer: click a folder to fold it; a click opens a note as a tab, once", async () => {
     const h = await harness({ open: "notes/alpha.md" });
     h.frame();
     const sb = h.app.geometry!.sidebar!;
@@ -773,8 +773,11 @@ describe("mouse", () => {
     expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(true);
     const y = rowOf("notes/beta.md");
     click(h, sb.x + 6, y);
-    click(h, sb.x + 6, y);
     expect(h.app.tabs).toHaveLength(2);
+    expect(h.app.view!.buf.rel).toBe("notes/beta.md");
+    click(h, sb.x + 6, y); // a double-click finds the tab the first click opened
+    expect(h.app.tabs).toHaveLength(2);
+    expect(h.app.tabs[0]!.views[0]!.buf.rel).toBe("notes/alpha.md"); // the first tab is untouched
   });
   test("outline: click the fold marker folds; click the text jumps", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
@@ -832,7 +835,7 @@ describe("tabs (ctrl+t, space t)", () => {
 });
 
 describe("explorer and outline panes", () => {
-  test("ctrl+e cycles open, focus, close; enter opens a new tab; l here; s the split; q closes", async () => {
+  test("ctrl+e cycles open, focus, close; enter and l open tabs (or switch); o here; s the split; q closes", async () => {
     const h = await harness({ config: (c) => (c.ui.sidebar = false) });
     expect(h.app.sidebarShown).toBe(false);
     await h.keys("ctrl+e");
@@ -848,9 +851,15 @@ describe("explorer and outline panes", () => {
     h.app.sidebar.selected = h.app.treeRows().findIndex((r) => r.path === "notes");
     await h.keys("l", "j", "enter");
     expect(h.app.tabs).toHaveLength(2);
-    await h.keys("ctrl+e", "j", "l"); // l opens in the current window: still two tabs
-    expect(h.app.tabs).toHaveLength(2);
+    await h.keys("ctrl+e", "j", "l"); // l opens a tab too
+    expect(h.app.tabs).toHaveLength(3);
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
+    await h.keys("ctrl+e", "k", "enter"); // already open: switches to its tab
+    expect(h.app.tabs).toHaveLength(3);
+    expect(h.app.activeTab).toBe(1);
+    await h.keys("ctrl+e", "j", "o"); // o replaces the current window's note
+    expect(h.app.tabs).toHaveLength(3);
+    expect(h.app.tabs[1]!.views[0]!.buf.rel).toBe("notes/beta.md");
     await h.keys("ctrl+e", "s");
     expect(h.app.tab!.views).toHaveLength(2);
     await h.keys("ctrl+e", "q");
