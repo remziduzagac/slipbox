@@ -82,7 +82,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   }
   const zen = app.ui.zen;
   const topBar = app.config.ui.top_bar && !zen ? 1 : 0;
-  const tabBar = app.tabs.length > 1 && !zen ? 1 : 0;
+  const tabBar = app.tabs.length > 0 && !zen ? 1 : 0;
   const status = zen ? 0 : 1;
   const bottomLine = app.overlay?.kind === "prompt" || app.transient ? 1 : 0;
   const head = topBar;
@@ -249,7 +249,7 @@ function drawBreadcrumb(app: App, c: Canvas, view: View, x0: number, x1: number,
 
 const CRUMB_MAX = 40;
 
-/** The tab strip, under the top bar when there are two or more tabs, right of the explorer. */
+/** The tab strip, under the top bar whenever a note is open, right of the explorer. */
 function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): void {
   const theme = app.theme;
   const stripBg = theme.roles.tab.bg ?? pageBg(theme);

@@ -23,7 +23,7 @@ Code, in `src/tui/`:
 ```text
  ≡  slipbox                                              indexing 3…  ▤   ← top bar (ui.top_bar)
 ━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
- ▾ notes    ┃ 1 index ×  2 alpha ×                                    ← tab strip, only with 2+ tabs
+ ▾ notes    ┃ 1 index ×  2 alpha ×                                    ← tab strip
      beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━  ← a rule under the strip
      alpha  ┃ § Heading › Sub                    ┃ Heading   ← each window's breadcrumb (tinted)
             ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫   Sub       and a rule under it
@@ -69,7 +69,7 @@ split, the file name comes first on the same row.
 Rules run above and below it. The rule above is the frame's (the top rule, or the one under the
 tab strip); the lower window of a stacked split draws its own.
 
-**The tab strip** sits under the top bar and appears only with two or more tabs. Each tab has a
+**The tab strip** sits under the top bar, even with a single tab. Each tab has a
 `×` to close it. A tab holds the note and its outline but not the explorer, so with the explorer
 open beside the content the strip starts after the explorer's border and spans the note and the
 outline. The explorer runs from under the frame's top rule to the status line, and stays put when

@@ -640,9 +640,11 @@ describe("top bar, tab strip, status line", () => {
     zen.frame();
     expect(zen.app.geometry!.hot.some((r) => r.id === "btn:explorer")).toBe(false);
   });
-  test("tab strip under the top bar only with 2+ tabs: click, ×, middle-click, wheel, drag", async () => {
+  test("tab strip under the top bar, even with one tab: click, ×, middle-click, wheel, drag", async () => {
     const h = await harness({ width: 160 });
-    expect(h.app.geometry!.tabStrip).toBeNull();
+    h.frame();
+    expect(h.app.geometry!.tabStrip).not.toBeNull();
+    expect(h.app.geometry!.tabs).toHaveLength(1);
     await h.keys("ctrl+t", "o");
     await h.app.run("note.open notes/beta.md");
     await h.keys("ctrl+t", "o");
@@ -687,6 +689,8 @@ describe("top bar, tab strip, status line", () => {
     h.frame();
     click(h, tab(0).x + 2, strip.y, 1);
     expect(h.app.tabs).toHaveLength(1);
+    h.frame();
+    expect(h.app.geometry!.tabStrip).not.toBeNull(); // the strip stays with the last tab
   });
   test("each window has its breadcrumb and a rule on top; a click scrolls that window", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 160 });
@@ -699,8 +703,8 @@ describe("top bar, tab strip, status line", () => {
     // Right under it a rule, joined to the explorer's border.
     expect(rows[pane.y - 1]!.slice(pane.x, pane.x + 20)).toBe("━".repeat(20));
     expect(rows[pane.y - 1]![pane.x - 1]).toBe("┣");
-    // Above it the frame's top rule, across the explorer too; the explorer's border starts there.
-    expect(rows[pane.y - 3]!.slice(0, pane.x + 20)).toBe(`${"━".repeat(pane.x - 1)}┳${"━".repeat(20)}`);
+    // Above it the rule under the tab strip, meeting the explorer's border.
+    expect(rows[pane.y - 3]!.slice(pane.x - 1, pane.x + 20)).toBe(`┣${"━".repeat(20)}`);
     // Only the breadcrumb row has the band colour.
     const st = h.canvas().styles;
     expect(st[pane.y - 2]![pane.x + 60]!.bg).toBe(h.app.theme.roles.breadcrumb_band.bg!);
