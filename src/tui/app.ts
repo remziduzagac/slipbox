@@ -48,7 +48,9 @@ import {
   DEFAULT_GROUPS,
   DEFAULT_KEYS,
   DEFAULT_OUTLINE_KEYS,
+  DEFAULT_RESIZE_KEYS,
   DEFAULT_VISUAL_KEYS,
+  RESIZE_ACTIONS,
   prettyKey,
 } from "./keys.ts";
 
@@ -113,6 +115,8 @@ export interface Tab {
   views: View[];
   active: number;
   orientation: "side" | "stacked";
+  /** Share of the width (side by side) or height (stacked) given to the first window. */
+  ratio: number;
 }
 
 export interface ListItem {
@@ -225,6 +229,12 @@ export class App {
   visualKeys!: Keymap;
   explorerKeys!: Keymap;
   outlineKeys!: Keymap;
+  resizeKeys!: Keymap;
+  /** Resize mode: h j k l / arrows resize until esc (ctrl+alt+w, space w r). */
+  resizeMode = false;
+  /** Live side pane widths; start from config, changed in resize mode, kept in the session. */
+  sideW: number;
+  outW: number;
   aliases: Record<string, string> = {};
   groups = new Map<string, string>();
   leader = "space";
@@ -271,6 +281,8 @@ export class App {
     if (opts.themeName) this.ui.theme = opts.themeName;
     if (process.env.NO_COLOR) this.ui.theme = "mono";
     this.sidebar = { visible: opts.config.ui.sidebar, overlay: false, selected: 0, scroll: 0 };
+    this.sideW = opts.config.ui.sidebar_width;
+    this.outW = opts.config.ui.outline_width;
     this.outline = { visible: opts.config.ui.outline, overlay: false, selected: 0, scroll: 0, folded: new Set(), forKey: "" };
     this.positions = new PositionStore(this.loc.root);
     registerActions(this);
@@ -301,11 +313,12 @@ export class App {
   applyKeys(): void {
     const c = this.config;
     this.leader = canonKey(c.input.leader || "space");
-    const { visual, explorer, outline, ...normal } = c.keys;
+    const { visual, explorer, outline, resize, ...normal } = c.keys;
     this.keymap = new Keymap(DEFAULT_KEYS, normal as Record<string, string>, this.leader);
     this.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.leader);
     this.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.leader);
     this.outlineKeys = new Keymap(DEFAULT_OUTLINE_KEYS, outline ?? {}, this.leader);
+    this.resizeKeys = new Keymap(DEFAULT_RESIZE_KEYS, resize ?? {}, this.leader);
     this.aliases = { ...DEFAULT_ALIASES };
     for (const [k, v] of Object.entries(c.aliases)) {
       if (v === "") delete this.aliases[k];
@@ -386,6 +399,9 @@ export class App {
     }
     if (before.ui.sidebar !== next.ui.sidebar) this.sidebar.visible = next.ui.sidebar;
     if (before.ui.outline !== next.ui.outline) this.outline.visible = next.ui.outline;
+    if (before.ui.sidebar_width !== next.ui.sidebar_width) this.sideW = next.ui.sidebar_width;
+    if (before.ui.outline_width !== next.ui.outline_width) this.outW = next.ui.outline_width;
+    if (before.ui.split_ratio !== next.ui.split_ratio) for (const t of this.tabs) t.ratio = next.ui.split_ratio;
     if (changed.some((s) => s === "keys" || s === "aliases" || s === "groups" || s === "input")) this.applyKeys();
     if (changed.includes("render")) {
       for (const b of this.buffers.values()) b.invalidateLayouts();
@@ -490,7 +506,7 @@ export class App {
   openInNewTab(path: string, anchor?: Anchor): void {
     const buf = this.buffer(path);
     if (!buf) return;
-    this.tabs.push({ views: [this.makeView(buf, anchor)], active: 0, orientation: "side" });
+    this.tabs.push({ views: [this.makeView(buf, anchor)], active: 0, orientation: "side", ratio: this.config.ui.split_ratio });
     this.activeTab = this.tabs.length - 1;
     this.region = "content";
     this.revealInSidebar();
@@ -778,11 +794,49 @@ export class App {
   }
 
   sidebarWidth(): number {
-    return Math.max(16, Math.min(this.config.ui.sidebar_width, Math.floor(this.width * 0.4)));
+    return Math.max(12, Math.min(this.sideW, Math.floor(this.width * 0.5)));
   }
 
   outlineWidth(): number {
-    return Math.max(16, Math.min(this.config.ui.outline_width, Math.floor(this.width * 0.35)));
+    return Math.max(12, Math.min(this.outW, Math.floor(this.width * 0.5)));
+  }
+
+  /**
+   * One resize step (resize mode). What resizes follows focus: the explorer or outline width
+   * when one is focused, otherwise the active window's share of the split. "Narrower" and
+   * "wider" apply to the focused thing.
+   */
+  resizeAction(action: string): void {
+    const step = 2;
+    if (action === "leave") {
+      this.resizeMode = false;
+      return;
+    }
+    if (action === "equalize") {
+      const t = this.tab;
+      if (t) t.ratio = 0.5;
+      this.sideW = this.config.ui.sidebar_width;
+      this.outW = this.config.ui.outline_width;
+      return;
+    }
+    const grow = action === "wider" || action === "taller" ? 1 : -1;
+    const horizontal = action === "wider" || action === "narrower";
+    if (this.region === "sidebar" && horizontal) {
+      this.sideW = Math.max(12, Math.min(this.sideW + grow * step, Math.floor(this.width * 0.5)));
+      return;
+    }
+    if (this.region === "outline" && horizontal) {
+      this.outW = Math.max(12, Math.min(this.outW + grow * step, Math.floor(this.width * 0.5)));
+      return;
+    }
+    const t = this.tab;
+    if (!t || t.views.length < 2) return this.message("info", "one window — resize mode sizes a split, or the explorer and outline when focused");
+    const side = this.effectiveOrientation(t) === "side";
+    if (side !== horizontal) return this.message("info", side ? "side-by-side split: h / l resize it" : "stacked split: j / k resize it");
+    const total = side ? this.contentWidth() : this.height;
+    // Growing the first window raises the ratio; growing the second lowers it.
+    const delta = (grow * step) / Math.max(10, total) * (t.active === 0 ? 1 : -1);
+    t.ratio = Math.max(0.15, Math.min(0.85, t.ratio + delta));
   }
 
   showSidebar(on: boolean): void {
@@ -1072,6 +1126,9 @@ export class App {
 
   /** which-key entries one level below the pending prefix, across the active keymaps. */
   whichKeyEntries(): { key: string; label: string; group: boolean }[] {
+    if (this.resizeMode && !this.pending.length) {
+      return this.resizeKeys.children("").map((c) => ({ key: c.key, label: RESIZE_ACTIONS[c.spec ?? ""] ?? c.spec ?? "", group: false }));
+    }
     const prefix = this.pending.join(" ");
     const seen = new Map<string, { key: string; label: string; group: boolean }>();
     for (const { map } of this.maps()) {
@@ -1091,6 +1148,7 @@ export class App {
   }
 
   groupName(prefix: string[]): string {
+    if (this.resizeMode && !prefix.length) return "resize";
     const seq = prefix.join(" ");
     if (seq === this.leader) return "leader";
     return this.groups.get(seq) ?? "";
@@ -1123,6 +1181,12 @@ export class App {
 
   private async dispatchKey(key: string): Promise<void> {
     if (this.overlay) return this.overlayKey(this.overlay, key);
+    if (this.resizeMode && !this.pending.length) {
+      const action = this.resizeKeys.lookup(key);
+      if (action) return this.resizeAction(action);
+      // Any other key leaves resize mode and does what it normally does.
+      this.resizeMode = false;
+    }
     if (this.pendingTimer) {
       clearTimeout(this.pendingTimer);
       this.pendingTimer = null;
@@ -1511,12 +1575,14 @@ export class App {
         const buf = this.buffer(p.path);
         if (buf) views.push(this.makeView(buf, p.anchor, p.cursor));
       }
-      if (views.length) this.tabs.push({ views, active: Math.min(t.active, views.length - 1), orientation: t.orientation ?? "side" });
+      if (views.length) this.tabs.push({ views, active: Math.min(t.active, views.length - 1), orientation: t.orientation ?? "side", ratio: t.ratio ?? this.config.ui.split_ratio });
     }
     if (!this.tabs.length) return false;
     this.activeTab = Math.max(0, Math.min(s.activeTab, this.tabs.length - 1));
     for (const t of this.tabs) t.active = Math.max(0, Math.min(t.active, t.views.length - 1));
     this.sidebar.visible = s.sidebar;
+    if (s.sidebar_width) this.sideW = s.sidebar_width;
+    if (s.outline_width) this.outW = s.outline_width;
     this.revealInSidebar();
     return true;
   }
@@ -1530,9 +1596,12 @@ export class App {
         panes: t.views.map((v) => ({ path: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor })),
         active: t.active,
         orientation: t.orientation,
+        ratio: t.ratio,
       })),
       activeTab: this.activeTab,
       sidebar: this.sidebar.visible,
+      sidebar_width: this.sideW,
+      outline_width: this.outW,
       ui: this.uiOverrides,
     };
     saveSession(this.loc.root, s);

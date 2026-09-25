@@ -484,6 +484,10 @@ export function registerActions(app: App): void {
     "window.move_down": (a) => a.moveWindow("down"),
     "window.move_up": (a) => a.moveWindow("up"),
     "window.move_right": (a) => a.moveWindow("right"),
+    "window.resize_mode": (a) => {
+      a.resizeMode = true;
+    },
+    "window.equalize": (a) => a.resizeAction("equalize"),
     "window.swap": (a) => {
       const t = a.tab;
       if (!t || t.views.length < 2) return a.message("info", "only one window");
@@ -502,7 +506,7 @@ export function registerActions(app: App): void {
     // tabs
     "tab.new": (a) =>
       withView(a, (v) => {
-        a.tabs.splice(a.activeTab + 1, 0, { views: [a.makeView(v.buf, { ...v.topAnchor }, { ...v.curAnchor })], active: 0, orientation: "side" });
+        a.tabs.splice(a.activeTab + 1, 0, { views: [a.makeView(v.buf, { ...v.topAnchor }, { ...v.curAnchor })], active: 0, orientation: "side", ratio: a.config.ui.split_ratio });
         a.activeTab += 1;
       }),
     "tab.list": (a) =>

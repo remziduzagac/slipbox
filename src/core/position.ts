@@ -127,9 +127,11 @@ export interface UiOverride {
 
 export interface SessionState {
   version: 1;
-  tabs: { panes: SessionPane[]; active: number; orientation?: "side" | "stacked" }[];
+  tabs: { panes: SessionPane[]; active: number; orientation?: "side" | "stacked"; ratio?: number }[];
   activeTab: number;
   sidebar: boolean;
+  sidebar_width?: number;
+  outline_width?: number;
   theme?: string;
   ui?: Record<string, UiOverride>;
 }
@@ -155,6 +157,7 @@ export function loadSession(root: string): SessionState | null {
         .slice(0, 2),
       active: Number.isInteger(t.active) ? t.active : 0,
       orientation: t.orientation === "stacked" ? ("stacked" as const) : ("side" as const),
+      ratio: typeof t.ratio === "number" && t.ratio >= 0.15 && t.ratio <= 0.85 ? t.ratio : undefined,
     }))
     .filter((t) => t.panes.length);
   return {
@@ -162,9 +165,15 @@ export function loadSession(root: string): SessionState | null {
     tabs,
     activeTab: Number.isInteger(s.activeTab) ? s.activeTab : 0,
     sidebar: typeof s.sidebar === "boolean" ? s.sidebar : true,
+    sidebar_width: validWidth(s.sidebar_width),
+    outline_width: validWidth(s.outline_width),
     theme: typeof s.theme === "string" ? s.theme : undefined,
     ui: s.ui && typeof s.ui === "object" && !Array.isArray(s.ui) ? s.ui : {},
   };
+}
+
+function validWidth(v: unknown): number | undefined {
+  return typeof v === "number" && Number.isInteger(v) && v >= 12 && v <= 200 ? v : undefined;
 }
 
 export function saveSession(root: string, s: SessionState): void {

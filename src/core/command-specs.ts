@@ -73,6 +73,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "window.swap", title: "Swap windows", cli: I },
   { id: "window.close", title: "Close window", cli: I },
   { id: "window.only", title: "Keep only this window", cli: I },
+  { id: "window.resize_mode", title: "Resize mode", cli: I },
+  { id: "window.equalize", title: "Equal window sizes", cli: I },
   { id: "tab.new", title: "New tab with this note", cli: I },
   { id: "tab.list", title: "Tabs", cli: I },
   { id: "tab.next", title: "Next tab", cli: I },

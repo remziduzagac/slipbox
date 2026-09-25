@@ -487,6 +487,68 @@ describe("windows (ctrl+w, space w)", () => {
   });
 });
 
+describe("resize mode (ctrl+alt+w, space w r)", () => {
+  test("enter, resize the split with h l and arrows, equalize, leave", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160 });
+    await h.keys("ctrl+w", "v", "ctrl+w", "h"); // left window active
+    const t = h.app.tab!;
+    const f = await h.keys("ctrl+alt+w");
+    expect(h.app.resizeMode).toBe(true);
+    expect(f.split("\n").at(-1)).toContain("RESIZE");
+    expect(f).toContain("Wider");
+    const w0 = h.app.geometry!.panes[0]!.w;
+    await h.keys("l", "l", "right");
+    expect(h.app.geometry!.panes[0]!.w).toBeGreaterThan(w0 + 4);
+    await h.keys("h", "left");
+    await h.keys("=");
+    expect(t.ratio).toBe(0.5);
+    await h.keys("escape");
+    expect(h.app.resizeMode).toBe(false);
+  });
+  test("any other key leaves the mode and does its normal job", async () => {
+    const h = await harness({ open: "samples/large-document.md" });
+    await h.keys("space", "w", "r");
+    expect(h.app.resizeMode).toBe(true);
+    await h.keys("ctrl+d");
+    expect(h.app.resizeMode).toBe(false);
+    expect(h.app.view!.top).toBeGreaterThan(0);
+  });
+  test("stacked splits resize with j k; the right window grows by lowering the ratio", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, height: 40 });
+    await h.keys("ctrl+w", "s", "ctrl+alt+w", "j", "j", "escape");
+    expect(h.app.tab!.ratio).toBeLessThan(0.5); // the lower (second) window got taller
+    await h.keys("ctrl+w", "v", "ctrl+alt+w", "k");
+    expect(h.app.transient!.text).toContain("h / l");
+  });
+  test("the focused explorer or outline resizes its own width; sizes persist in the session", async () => {
+    const root = makeVault();
+    const h = await harness({ root, width: 160, config: (c) => (c.ui.outline = true) });
+    await h.keys("ctrl+w", "h", "ctrl+alt+w", "l", "l", "escape");
+    expect(h.app.sideW).toBe(34);
+    await h.keys("ctrl+w", "l", "ctrl+w", "l", "space", "w", "r", "h", "escape");
+    expect(h.app.region).toBe("outline");
+    expect(h.app.outW).toBe(30);
+    await h.keys("ctrl+w", "h", "ctrl+w", "v", "ctrl+alt+w", "l", "escape");
+    const ratio = h.app.tab!.ratio;
+    h.app.quit();
+    const again = await harness({ root, open: null, width: 160, config: (c) => (c.ui.restore_session = true) });
+    expect(again.app.sideW).toBe(34);
+    expect(again.app.outW).toBe(30);
+    expect(again.app.tab!.ratio).toBeCloseTo(ratio, 5);
+  });
+  test("resize keys and the default split ratio come from config", async () => {
+    const h = await harness({
+      open: "samples/large-document.md",
+      width: 160,
+      config: (c) => ((c.ui.split_ratio = 0.3), (c.keys = { resize: { a: "wider" } } as unknown as Config["keys"])),
+    });
+    await h.keys("ctrl+w", "v", "ctrl+w", "h");
+    expect(h.app.tab!.ratio).toBe(0.3);
+    await h.keys("ctrl+alt+w", "a");
+    expect(h.app.tab!.ratio).toBeGreaterThan(0.3);
+  });
+});
+
 describe("tabs (ctrl+t, space t)", () => {
   test("new, next, previous, go to, move, list, close", async () => {
     const h = await harness();
@@ -813,6 +875,7 @@ describe("keymap and registry (0.8, 3.12)", () => {
     expect(k("e", "\x1b[101;6u", { ctrl: true, shift: true })).toBe("ctrl+shift+e");
     expect(k("backspace", "\x08")).toBe("ctrl+backspace");
     expect(k("left", "\x1b[1;9D", { super: true })).toBe("cmd+left");
+    expect(k("w", "\x1b\x17", { ctrl: true, meta: true })).toBe("ctrl+alt+w");
     expect(k("space", " ")).toBe("space");
     expect(k("$", "$")).toBe("$");
     expect(canonKey("G")).toBe("shift+g");

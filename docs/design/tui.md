@@ -74,7 +74,9 @@ you saw.
   its buffer.
 - **View** (a window): a buffer plus its own cursor, top row, selection, find and history.
   Two windows may show one buffer.
-- **Tab:** one window, or two in a split, with an orientation: side by side, or stacked.
+- **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a
+  ratio (the first window's share). Resize mode (`ctrl+alt+w`, `space w r`) changes the ratio,
+  or the explorer or outline width when one is focused, and all of it is kept in the session.
   Side by side falls back to stacked below 80 content columns. With a split, each window gets
   a title row, and the active one is highlighted.
 

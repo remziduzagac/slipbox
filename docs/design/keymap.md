@@ -125,6 +125,27 @@ One split per tab, side by side or stacked.
 | close this window | `ctrl+w q` | `space w q` |
 | keep only this window | `ctrl+w o` | `space w o` |
 
+### Resize mode
+
+One chord enters a mode; its keys repeat until you leave, so `l l l` widens step by step. The
+which-key popup lists the keys while the mode is on, and the status chip reads `RESIZE`.
+
+| Action | Keys |
+| --- | --- |
+| enter resize mode | `ctrl+alt+w`, `space w r` |
+| narrower / wider | `h` / `l`, `left` / `right` |
+| shorter / taller (a stacked split) | `k` / `j`, `up` / `down` |
+| equal sizes | `=` (also `ctrl+w =`, `space w =` outside the mode) |
+| leave | `esc`, `enter`, `q`; any other key leaves and does its normal job |
+
+**What resizes follows focus:** the explorer's or the outline's width when it is focused,
+otherwise the active window's share of the split. Sizes are remembered in the session, and the
+defaults come from `ui.split_ratio`, `ui.sidebar_width` and `ui.outline_width`. The mode's keys
+are `[keys.resize]` in config.
+
+`ctrl+alt+w` arrives when `alt` does. On macOS that means Option set to act as Alt (Ghostty:
+`macos-option-as-alt`); otherwise use `space w r`.
+
 - **Focus moves beyond the panes:** out to the explorer on the left and the outline on the
   right, and back.
 - **Moving a window** also chooses the split's orientation: moving right makes it the right pane

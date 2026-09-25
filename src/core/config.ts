@@ -32,6 +32,8 @@ export interface Config {
     /** Outline pane shown on the right on wide terminals. */
     outline: boolean;
     outline_width: number;
+    /** Share of the content width (side by side) or height (stacked) given to the first window. */
+    split_ratio: number;
     mouse: boolean;
     /** Below this many columns the explorer and outline overlay the content (3.14). */
     narrow_width: number;
@@ -73,9 +75,14 @@ export interface Config {
   };
   /**
    * key sequence → command spec, e.g. `"leader l n" = "link.next"`; `""` unbinds a default.
-   * Sub-tables `visual`, `explorer` and `outline` hold the keymaps of those contexts.
+   * Sub-tables `visual`, `explorer`, `outline` and `resize` hold the keymaps of those contexts.
    */
-  keys: Record<string, string> & { visual?: Record<string, string>; explorer?: Record<string, string>; outline?: Record<string, string> };
+  keys: Record<string, string> & {
+    visual?: Record<string, string>;
+    explorer?: Record<string, string>;
+    outline?: Record<string, string>;
+    resize?: Record<string, string>;
+  };
   /** `:` aliases: alias → command spec, e.g. `wq = "app.quit"`; `""` removes a default. */
   aliases: Record<string, string>;
   /** which-key group names by prefix, e.g. `"leader l" = "links"`. */
@@ -91,6 +98,7 @@ export const DEFAULT_CONFIG: Config = {
     sidebar_width: 30,
     outline: false,
     outline_width: 32,
+    split_ratio: 0.5,
     mouse: true,
     narrow_width: 90,
     restore_session: true,
@@ -124,6 +132,7 @@ const RANGES: Record<string, [number, number]> = {
   "walk.max_file_size": [1, 1 << 30],
   "ui.sidebar_width": [8, 200],
   "ui.outline_width": [8, 200],
+  "ui.split_ratio": [0.2, 0.8],
   "ui.readable_max": [20, 1000],
   "ui.scrolloff": [0, 50],
   "input.which_key_delay_ms": [0, 10_000],
@@ -175,9 +184,9 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
   for (const [key, value] of Object.entries(over)) {
     const path = prefix ? `${prefix}.${key}` : key;
     // String maps: key bindings (with context sub-tables), aliases, group names.
-    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|explorer|outline)$/.test(prefix)) {
+    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|explorer|outline|resize)$/.test(prefix)) {
       if (typeof value === "string") out[key] = value;
-      else if (prefix === "keys" && ["visual", "explorer", "outline"].includes(key) && isPlainObject(value)) {
+      else if (prefix === "keys" && ["visual", "explorer", "outline", "resize"].includes(key) && isPlainObject(value)) {
         out[key] = merge((out[key] as Record<string, string> | undefined) ?? {}, value, file, `keys.${key}`, warnings);
       } else warnings.push(`config: ${file}: ${path} must be a string`);
       continue;

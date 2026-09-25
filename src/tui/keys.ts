@@ -151,6 +151,11 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader ?": "help.open",
   "leader q q": "app.quit",
   "ctrl+q": "app.quit",
+  // resizing: a mode, entered with one chord, left with esc
+  "ctrl+alt+w": "window.resize_mode",
+  "leader w r": "window.resize_mode",
+  "ctrl+w =": "window.equalize",
+  "leader w =": "window.equalize",
 };
 
 for (const prefix of ["ctrl+w", "leader w"]) {
@@ -213,6 +218,31 @@ export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {
 };
 
 export const OUTLINE_ACTIONS = ["down", "up", "jump", "fold", "unfold", "top", "bottom", "close", "leave"];
+
+/** Keys in resize mode: key → resize action. Anything else leaves the mode. */
+export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
+  h: "narrower",
+  left: "narrower",
+  l: "wider",
+  right: "wider",
+  k: "shorter",
+  up: "shorter",
+  j: "taller",
+  down: "taller",
+  "=": "equalize",
+  escape: "leave",
+  enter: "leave",
+  q: "leave",
+};
+
+export const RESIZE_ACTIONS: Record<string, string> = {
+  narrower: "Narrower",
+  wider: "Wider",
+  shorter: "Shorter",
+  taller: "Taller",
+  equalize: "Equal sizes",
+  leave: "Leave resize mode",
+};
 
 /** which-key group names, by prefix in config notation. */
 export const DEFAULT_GROUPS: Record<string, string> = {

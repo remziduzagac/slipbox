@@ -89,7 +89,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
 
   if (status) drawStatus(app, c, H - 1 - bottomLine);
   if (bottomLine) drawBottomLine(app, c, H - 1);
-  if (app.whichKey && app.pending.length && !app.overlay) drawWhichKey(app, c, mainY, mainY + mainH);
+  if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay) drawWhichKey(app, c, mainY, mainY + mainH);
   if (app.overlay?.kind === "list") geo.overlay = drawList(app, c, app.overlay, mainY, mainH);
   return geo;
 }
@@ -125,12 +125,12 @@ function drawContent(app: App, c: Canvas, area: Rect, geo: Geometry): void {
   const [a, b] = tab.views as [View, View];
   const border = roleStyle(theme, "border", page);
   if (app.effectiveOrientation(tab) === "side") {
-    const w1 = Math.floor((area.w - 1) / 2);
+    const w1 = Math.max(12, Math.min(area.w - 13, Math.round((area.w - 1) * tab.ratio)));
     drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, geo);
     for (let y = area.y; y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
     drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, geo);
   } else {
-    const h1 = Math.floor(area.h / 2);
+    const h1 = Math.max(3, Math.min(area.h - 3, Math.round(area.h * tab.ratio)));
     drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, geo);
     drawPane(app, c, b, { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 }, focusContent, true, geo);
   }
@@ -329,6 +329,8 @@ function drawStatus(app: App, c: Canvas, y: number): void {
   const view = app.view;
   const chip = app.pending.length
     ? ` ${app.pending.map((k) => prettyKey(k, app.leader)).join(" ")} `
+    : app.resizeMode
+      ? " RESIZE "
     : view?.visual === "char"
       ? " VISUAL "
       : view?.visual === "line"
@@ -394,9 +396,10 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number): void {
   const bg = roleStyle(theme, "which_key", null);
   c.fill(0, y0, c.width, h, bg.bg);
   const name = app.groupName(app.pending);
-  const crumb = ` ${app.pending.map((k) => prettyKey(k, app.leader)).join(" ")} ›${name ? ` ${name}` : ""} `;
+  const crumb = app.pending.length ? ` ${app.pending.map((k) => prettyKey(k, app.leader)).join(" ")} ›${name ? ` ${name}` : ""} ` : ` ${name} `;
   const cw = drawText(c, 0, y0, crumb, roleStyle(theme, "which_key_title", null));
-  drawText(c, cw + 1, y0, "backspace: up · esc: cancel", roleStyle(theme, "overlay_dim", bg.bg), c.width - cw - 1);
+  const hint = app.pending.length ? "backspace: up · esc: cancel" : "keys repeat · any other key leaves";
+  drawText(c, cw + 1, y0, hint, roleStyle(theme, "overlay_dim", bg.bg), c.width - cw - 1);
   const keySt = roleStyle(theme, "which_key_key", null);
   const grpSt = roleStyle(theme, "which_key_group", null);
   const visibleRows = h - 1;

@@ -39,6 +39,7 @@ sidebar = true                 # explorer beside the content on wide terminals
 sidebar_width = 30
 outline = false                # outline pane on the right on wide terminals
 outline_width = 32
+split_ratio = 0.5              # first window's share of a split (0.2–0.8)
 mouse = true
 narrow_width = 90              # below this, panes overlay and splits stack
 restore_session = true         # reopen tabs and splits when started without a path
@@ -79,6 +80,9 @@ poll_ms = 2000                 # backstop tick, unwatchable directories, degrade
 
 [keys.outline]                 # key = outline action: down up jump fold unfold
 "za" = "fold"                  #   top bottom close leave
+
+[keys.resize]                  # key = resize action: narrower wider shorter taller
+"<" = "narrower"               #   equalize leave
 
 [aliases]                      # `:` aliases; "" removes a default
 wq = "app.quit"
