@@ -685,6 +685,11 @@ describe("top bar, tab strip, status line", () => {
     const rows = f.split("\n");
     expect(rows[pane.y - 2]).toMatch(/§ Alpha › Section One/);
     expect(rows[pane.y - 1]!.slice(pane.x).trim()).toBe(""); // the blank row under it
+    // One band: the gap above, the breadcrumb row and the blank row, in the band colour.
+    const band = h.app.theme.roles.breadcrumb_band.bg!;
+    const st = h.canvas().styles;
+    for (const y of [pane.y - 3, pane.y - 2, pane.y - 1]) expect(st[y]![pane.x + 60]!.bg).toBe(band);
+    expect(st[pane.y]![pane.x + 60]?.bg ?? null).not.toBe(band);
     const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:0:"))!;
     click(h, crumb.x, crumb.y);
     expect(rowText(h)).toContain("Alpha");

@@ -56,6 +56,12 @@ window, puts its cursor on the heading, and scrolls the heading to the window's 
 as the note's end allows). The row stays reserved above the first heading, so the text doesn't
 jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it.
 
+The breadcrumb row, the blank row under it and the gap above it (when there is one) form the
+window's header band, in the `breadcrumb_band` role: `surface` blended into the page at 35%, a
+step quieter than the cursor-row highlight so the two don't merge. The icon is `breadcrumb_icon`
+(blue), outer headings `breadcrumb` (dim), separators `breadcrumb_sep` (faint), and the heading
+the cursor is in `breadcrumb_current` (bold). In a split, the file name sits in the band too.
+
 **The tab strip** sits under the top bar and appears only with two or more tabs. Each tab has a
 `×` to close it. A tab holds the note and its outline but not the explorer, so with the explorer
 open beside the content the strip starts after the explorer's border and spans the note and the

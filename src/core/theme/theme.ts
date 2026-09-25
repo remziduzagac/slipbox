@@ -38,7 +38,8 @@ export const ROLES = [
   "selection", "error", "warn", "info", "scrollbar",
   "cursor", "cursor_line", "line_number", "line_number_current",
   "which_key", "which_key_key", "which_key_group", "which_key_title",
-  "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover", "breadcrumb",
+  "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover",
+  "breadcrumb", "breadcrumb_current", "breadcrumb_sep", "breadcrumb_icon", "breadcrumb_band",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -217,7 +218,12 @@ export function themeFromPalette(
     topbar_button_on: { fg: p.bg, bg: p.purple, bold: true },
     topbar_chip: { fg: p.purple, bold: true },
     hover: { fg: p.fg_strong, bg: p.surface2, bold: true },
-    breadcrumb: { fg: p.cyan, bg: p.bg_dark },
+    // A window's header band: the breadcrumb and the blank rows around it.
+    breadcrumb_band: { bg: blend(p.surface, p.bg, 0.35) }, // quieter than cursor_line
+    breadcrumb: { fg: p.fg_dim },
+    breadcrumb_current: { fg: p.fg_strong, bold: true },
+    breadcrumb_sep: { fg: p.comment },
+    breadcrumb_icon: { fg: p.blue },
   };
   for (const [role, style] of Object.entries(overrides)) {
     roles[role as Role] = { ...roles[role as Role], ...style };
@@ -273,7 +279,11 @@ export function terminalTheme(): Theme {
     topbar_button_on: { fg: a(0), bg: a(5), bold: true },
     topbar_chip: { fg: a(5), bold: true },
     hover: { fg: a(0), bg: a(7), bold: true },
-    breadcrumb: { fg: a(6), bg: a(0) },
+    breadcrumb_band: { bg: a(0) },
+    breadcrumb: { fg: a(7) },
+    breadcrumb_current: { fg: a(15), bold: true },
+    breadcrumb_sep: { fg: a(8) },
+    breadcrumb_icon: { fg: a(4) },
   });
   t.kind = "dark";
   return t;

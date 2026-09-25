@@ -97,7 +97,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // Tabs hold the note and its outline, not the explorer: the strip starts after the explorer.
   if (tabBar) drawTabs(app, c, beside ? left : 0, { y: topBar, h: 1 }, geo);
   const right = app.outlineBeside ? outW + 1 : 0;
-  drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, geo);
+  drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, gapTop > 0, geo);
 
   if (app.sidebarShown) {
     const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, W - 6);
@@ -203,7 +203,7 @@ function drawBreadcrumb(app: App, c: Canvas, view: View, x0: number, x1: number,
   const widthOf = (ps: typeof crumbs) => ps.reduce((a, p) => a + Math.min(CRUMB_MAX, stringWidth(p.text)), 0) + (ps.length - 1) * stringWidth(sep);
   // The icon opens the heading finder.
   const iconId = `crumbicon:${index}`;
-  const iconSt = app.hover === iconId ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb", bg), bg };
+  const iconSt = app.hover === iconId ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb_icon", bg), bg };
   const iw = drawText(c, x0, y, app.glyphs.crumbIcon, iconSt);
   geo.hot.push({ id: iconId, x: x0, y, w: iw, h: 1 });
   x0 += iw + 1;
@@ -212,9 +212,10 @@ function drawBreadcrumb(app: App, c: Canvas, view: View, x0: number, x1: number,
   let cx = x0;
   parts.forEach((p, i) => {
     if (cx >= x1) return;
-    if (i) cx += drawText(c, cx, y, sep, { ...roleStyle(theme, "dim", bg), bg }, x1 - cx);
+    if (i) cx += drawText(c, cx, y, sep, { ...roleStyle(theme, "breadcrumb_sep", bg), bg }, x1 - cx);
     const id = `crumb:${index}:${p.line}`;
-    const st = app.hover === id ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb", bg), bg };
+    const role: Role = i === parts.length - 1 ? "breadcrumb_current" : "breadcrumb";
+    const st = app.hover === id ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, role, bg), bg };
     const w = drawText(c, cx, y, truncate(p.text, Math.min(CRUMB_MAX, x1 - cx)), st);
     geo.hot.push({ id, x: cx, y, w, h: 1 });
     cx += w;
@@ -245,7 +246,8 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
   });
 }
 
-function drawContent(app: App, c: Canvas, area: Rect, geo: Geometry): void {
+/** `gapAbove`: the row above `area` is a blank gap the top windows may paint their header into. */
+function drawContent(app: App, c: Canvas, area: Rect, gapAbove: boolean, geo: Geometry): void {
   const tab = app.tab;
   const theme = app.theme;
   const page = pageBg(theme);
@@ -256,23 +258,23 @@ function drawContent(app: App, c: Canvas, area: Rect, geo: Geometry): void {
   }
   const focusContent = app.region === "content";
   if (tab.views.length === 1) {
-    drawPane(app, c, tab.views[0]!, area, focusContent, false, geo);
+    drawPane(app, c, tab.views[0]!, area, focusContent, false, gapAbove, geo);
     return;
   }
   const [a, b] = tab.views as [View, View];
   const border = roleStyle(theme, "border", page);
   if (app.effectiveOrientation(tab) === "side") {
     const w1 = Math.max(12, Math.min(area.w - 13, Math.round((area.w - 1) * tab.ratio)));
-    drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, geo);
-    for (let y = area.y; y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
+    drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, gapAbove, geo);
+    for (let y = area.y - (gapAbove ? 1 : 0); y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
     geo.separators.push({ kind: "split-side", x: area.x + w1, y: area.y, w: 1, h: area.h, area });
-    drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, geo);
+    drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, gapAbove, geo);
   } else {
     const h1 = Math.max(3, Math.min(area.h - 3, Math.round(area.h * tab.ratio)));
-    drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, geo);
+    drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, gapAbove, geo);
     // The lower window's title row is the stacked split's handle.
     geo.separators.push({ kind: "split-stacked", x: area.x, y: area.y + h1, w: area.w, h: 1, area });
-    drawPane(app, c, b, { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 }, focusContent, true, geo);
+    drawPane(app, c, b, { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 }, focusContent, true, false, geo);
   }
 }
 
@@ -281,22 +283,30 @@ function paneIsActive(app: App, view: View): boolean {
   return !!t && t.views[t.active] === view;
 }
 
-function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, geo: Geometry): void {
+function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, gapAbove: boolean, geo: Geometry): void {
   const theme = app.theme;
   const page = pageBg(theme);
   const active = paneIsActive(app, view);
   let body = rect;
   // The header: a split window's title, then the breadcrumb, then a blank row before the text.
   const crumbs = app.config.ui.breadcrumb && !app.ui.zen && rect.h >= 8;
-  if (titled || crumbs) {
-    const st = titled ? roleStyle(theme, active ? "tab_active" : "tab", page) : roleStyle(theme, "text", page);
-    const bg = titled ? st.bg : page;
-    c.fill(rect.x, rect.y, rect.w, 1, bg);
+  if (crumbs) {
+    // One band: the gap above (when there is one), the title and breadcrumb row, the blank row.
+    const bg = roleStyle(theme, "breadcrumb_band", page).bg;
+    const top = gapAbove ? rect.y - 1 : rect.y;
+    c.fill(rect.x, top, rect.w, rect.y + 2 - top, bg);
     let x = rect.x;
-    if (titled) x += drawText(c, x, rect.y, ` ${truncate(app.displayName(view.buf), Math.floor(rect.w / 2))} `, st, rect.w);
-    if (crumbs) drawBreadcrumb(app, c, view, x + 1, rect.x + rect.w - 1, rect.y, bg, geo);
-    const header = crumbs ? 2 : 1;
-    body = { x: rect.x, y: rect.y + header, w: rect.w, h: rect.h - header };
+    if (titled) {
+      const name = ` ${truncate(app.displayName(view.buf), Math.floor(rect.w / 2))} `;
+      x += drawText(c, x, rect.y, name, { ...roleStyle(theme, active ? "strong" : "dim", bg), bg }, rect.w);
+    }
+    drawBreadcrumb(app, c, view, x + 1, rect.x + rect.w - 1, rect.y, bg, geo);
+    body = { x: rect.x, y: rect.y + 2, w: rect.w, h: rect.h - 2 };
+  } else if (titled) {
+    const st = roleStyle(theme, active ? "tab_active" : "tab", page);
+    c.fill(rect.x, rect.y, rect.w, 1, st.bg);
+    drawText(c, rect.x, rect.y, ` ${truncate(app.displayName(view.buf), rect.w - 2)} `, st, rect.w);
+    body = { x: rect.x, y: rect.y + 1, w: rect.w, h: rect.h - 1 };
   }
   if (body.h <= 0 || body.w <= 6) return;
   view.height = body.h;
