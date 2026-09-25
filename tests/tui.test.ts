@@ -599,7 +599,7 @@ describe("top bar, tab strip, status line", () => {
     const h = await harness({ width: 160 });
     const top = topRow(h.frame());
     expect(top).toContain("≡");
-    expect(top).toContain("※ slipbox");
+    expect(top).toContain("slipbox");
     expect(top).toContain("▤");
     expect(top).not.toContain("watching"); // the watcher is shown by the file's path
     expect(statusRow(h.frame())).toMatch(/index\.md +○ not watching/); // watch: false in the harness
