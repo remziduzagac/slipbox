@@ -41,7 +41,6 @@ outline = false                # outline pane on the right on wide terminals
 outline_width = 32
 split_ratio = 0.5              # first window's share of a split (0.2–0.8)
 top_bar = true                 # explorer/outline buttons, palette chip, vault state
-bar_gap = true                 # a blank row between the note and the bars
 breadcrumb = true              # outline breadcrumb atop each window, then a rule
 mouse = true
 narrow_width = 90              # below this, panes overlay and splits stack

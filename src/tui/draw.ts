@@ -85,16 +85,16 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const tabBar = app.tabs.length > 1 && !zen ? 1 : 0;
   const status = zen ? 0 : 1;
   const bottomLine = app.overlay?.kind === "prompt" || app.transient ? 1 : 0;
-  // A blank row under the top bar and above the status line, dropped on short screens.
-  const gap = app.config.ui.bar_gap && H >= 20 ? 1 : 0;
-  const head = topBar + (topBar ? gap : 0);
-  const gapBottom = status ? gap : 0;
+  const head = topBar;
   // The frame: a rule across the top of the explorer, the tab strip (or the window) and the
-  // outline; with tabs, another under the strip, over the note and the outline. Zen has none.
+  // outline, and one across their bottom; with tabs, another under the strip, over the note and
+  // the outline. Zen has none.
   const frame = !zen;
   const mainY = frame ? head + 1 + (tabBar ? 2 : 0) : 0;
-  const mainH = H - mainY - gapBottom - status - bottomLine;
+  const mainH = H - mainY - (frame ? 1 : 0) - status - bottomLine;
   const bottom = mainY + mainH - 1;
+  // Borders run down to the bottom rule, where they join it.
+  const borderEnd = frame ? bottom + 1 : bottom;
 
   const sideW = app.sidebarWidth();
   const outW = app.outlineWidth();
@@ -107,7 +107,10 @@ export function drawApp(app: App, c: Canvas): Geometry {
   };
 
   if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
-  if (frame) rule(head, 0, W);
+  if (frame) {
+    rule(head, 0, W);
+    rule(bottom + 1, 0, W);
+  }
   if (tabBar) {
     // Tabs hold the note and its outline, not the explorer: the strip starts after the explorer.
     const x0 = beside ? left : 0;
@@ -128,7 +131,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     geo.sidebar = rect;
     if (beside) {
       geo.separators.push({ kind: "sidebar", x: w, y: sideY, w: 1, h: bottom + 1 - sideY });
-      geo.verticals.push({ x: w, y0: frame ? head : sideY, y1: bottom, style: border });
+      geo.verticals.push({ x: w, y0: frame ? head : sideY, y1: borderEnd, style: border });
     }
   }
   if (app.outlineShown) {
@@ -140,7 +143,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     geo.outline = rect;
     if (app.outlineBeside) {
       geo.separators.push({ kind: "outline", x: W - w - 1, y: mainY, w: 1, h: mainH });
-      geo.verticals.push({ x: W - w - 1, y0: frame ? mainY - 1 : mainY, y1: bottom, style: border });
+      geo.verticals.push({ x: W - w - 1, y0: frame ? mainY - 1 : mainY, y1: borderEnd, style: border });
     }
   }
   drawJoints(app, c, geo);
@@ -305,7 +308,8 @@ function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, geo: G
     const w1 = Math.max(12, Math.min(area.w - 13, Math.round((area.w - 1) * tab.ratio)));
     drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, ruleAbove, geo);
     for (let y = area.y; y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
-    geo.verticals.push({ x: area.x + w1, y0: area.y - (ruleAbove ? 1 : 0), y1: area.y + area.h - 1, style: border });
+    // With a frame, rules sit right above and below the content area.
+    geo.verticals.push({ x: area.x + w1, y0: area.y - (ruleAbove ? 1 : 0), y1: area.y + area.h - (ruleAbove ? 0 : 1), style: border });
     geo.separators.push({ kind: "split-side", x: area.x + w1, y: area.y, w: 1, h: area.h, area });
     drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, ruleAbove, geo);
   } else {

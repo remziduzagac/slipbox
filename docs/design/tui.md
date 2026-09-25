@@ -22,7 +22,6 @@ Code, in `src/tui/`:
 
 ```text
  ≡  slipbox                                              indexing 3…  ▤   ← top bar (ui.top_bar)
-                                                                         ← empty row (ui.bar_gap)
 ━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
  ▾ notes    ┃ 1 index ×  2 alpha ×                                    ← tab strip, only with 2+ tabs
      beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━  ← a rule under the strip
@@ -32,21 +31,18 @@ Code, in `src/tui/`:
             ┃ Text with the █ursor on its row…   ┃           (both panes optional)
  ␣ l › links  backspace: up · esc: cancel                  ← which-key popup, while a key is pending
  f → Follow link   n → Next link   …
-                                                                         ← gap
+━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
  READ  notes/alpha.md ↻ reloaded  ● watching   → [[beta]]  L12:7 40%  ← status line
  ↻ notes/alpha.md changed on disk — reloaded                         ← message or prompt
 ```
 
-**Gaps.** With `ui.bar_gap` (default on), an empty row in the page's colour runs under the top
-bar across the whole width, and another sits above the status line. Screens shorter than 20 rows
-drop the gaps.
-
-**The frame.** Under the empty row, a `━` rule in the `border` role runs across the top of
-everything: the explorer, the tab strip (or the window, without tabs) and the outline. With tabs,
-a second rule runs under the strip, over the note and the outline. Windows' header rules and the
+**The frame.** Right under the top bar, a `━` rule in the `border` role runs across the top of
+everything: the explorer, the tab strip (or the window, without tabs) and the outline. Another
+runs across their bottom, right above the status line. With tabs, a third runs under the strip,
+over the note and the outline. Windows' header rules and the
 vertical borders complete it. Where rules and borders meet, one pass picks the box glyph from the
-lines that meet there: `┳` where a border starts under a rule, `┣` `┫` `╋` where it continues
-through (ascii: `+`). Zen mode has no frame.
+lines that meet there: `┳` where a border starts under a rule, `┻` where it ends on one, and `┣`
+`┫` `╋` where it continues through (ascii: `+`). Zen mode has no frame.
 
 **The top bar** has buttons and vault-wide state; the middle is empty:
 
