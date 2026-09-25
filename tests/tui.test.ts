@@ -603,9 +603,11 @@ describe("top bar, tab strip, status line", () => {
     expect(top).toContain("▤");
     expect(top).not.toContain("watching"); // the watcher is shown by the file's path
     expect(statusRow(h.frame())).toMatch(/index\.md +○ not watching/); // watch: false in the harness
-    // The chip is plain text on the bar: no background of its own.
+    // The bar and the chip have the page's background.
     const chipR = h.app.geometry!.hot.find((r) => r.id === "btn:palette")!;
-    expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(h.app.theme.roles.topbar.bg!);
+    const page = h.app.theme.roles.text.bg ?? h.app.theme.bg;
+    expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(page);
+    expect(h.canvas().styles[0]![80]!.bg).toBe(page);
     const ex = hot(h, "btn:explorer");
     click(h, ex.x, ex.y);
     expect(h.app.sidebarShown).toBe(false);
