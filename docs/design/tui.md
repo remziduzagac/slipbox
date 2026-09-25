@@ -51,8 +51,9 @@ lines that meet there: `┳` where a border starts under a rule, `┻` where it 
   opens the command palette;
 - on the right, vault-wide state (`indexing N…`, `single-file`).
 
-An icon button is filled with the accent while its pane is open. `ui.top_bar = false` removes the
-bar, and zen mode hides it.
+Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is
+closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, and
+zen mode hides it.
 
 **The breadcrumb** tops each window, between two rules. It starts with an icon (`§`, ascii
 `#`) that opens the heading finder when clicked, then the chain of headings that window's cursor
@@ -185,7 +186,10 @@ Each pane starts with its title, "Explorer" or "Outline", and a blank row (panes
 them). The explorer runs from under the frame's top rule, beside the tab strip. The outline
 belongs to the note, so it opens under the note's breadcrumb: the top-right window's breadcrumb
 row and the rule under it run across the outline's column, and the outline's button (`▤`) sits
-at the far right of that row, filled with the accent while the outline is open.
+at the far right of that row, bright while the outline is open.
+
+Both trees show depth by indentation plus dim guides (`│`, the `tree_guide` role; ascii `|`): one
+under each ancestor's marker, so a row's parents can be followed up the column.
 
 Both are windows for `ctrl+w h` / `ctrl+w l`, and each has its own keymap: `[keys.explorer]` and
 `[keys.outline]`.

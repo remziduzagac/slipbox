@@ -40,6 +40,8 @@ export interface Glyphs {
   joints: Record<string, string>;
   dirOpen: string;
   dirClosed: string;
+  /** Indent guide in the explorer and the outline. */
+  guide: string;
   file: string;
   sep: string;
   scrollThumb: string;
@@ -82,6 +84,7 @@ const unicode: Glyphs = {
   joints: { udlr: "╋", udr: "┣", udl: "┫", dlr: "┳", ulr: "┻", dr: "┏", dl: "┓", ur: "┗", ul: "┛" },
   dirOpen: "▾",
   dirClosed: "▸",
+  guide: "│",
   file: " ",
   sep: "›",
   // The bar is a thin column, unlike the ┃ borders it often sits beside; colour tells the thumb.
@@ -140,6 +143,7 @@ const ascii: Glyphs = {
   joints: { udlr: "+", udr: "+", udl: "+", dlr: "+", ulr: "+", dr: "+", dl: "+", ur: "+", ul: "+" },
   dirOpen: "v",
   dirClosed: ">",
+  guide: "|",
   file: " ",
   sep: ">",
   scrollThumb: "#",

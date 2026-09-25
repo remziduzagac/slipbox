@@ -714,6 +714,31 @@ describe("top bar, tab strip, status line", () => {
     expect(g.outline!.y).toBe(crumbY + 4);
     expect(rows[g.outline!.y]!.slice(g.outline!.x).trim()).not.toBe("");
   });
+  test("toggle buttons: dim while off, bright while on, no fill of their own", async () => {
+    const h = await harness({ width: 160 });
+    const btn = (id: string) => {
+      const c = h.canvas();
+      const r = h.app.geometry!.hot.find((x) => x.id === id)!;
+      return c.styles[r.y]![r.x + 1]!;
+    };
+    const roles = h.app.theme.roles;
+    h.app.handleMouse({ type: "move", x: 80, y: 10, button: 0 }); // no hover
+    expect(btn("btn:explorer").fg).toBe(roles.topbar_button_on.fg!); // the explorer is open
+    expect(btn("btn:explorer").bg).toBe(roles.topbar.bg!); // the bar's own background
+    expect(btn("btn:outline").fg).toBe(roles.topbar_button.fg!); // the outline is closed
+    expect(btn("btn:outline").bg).toBe(roles.breadcrumb_band.bg!);
+  });
+  test("dim indent guides under each ancestor in the explorer and the outline", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+    const c = h.canvas();
+    const sb = h.app.geometry!.sidebar!;
+    const deep = h.app.treeRows().findIndex((r) => r.depth === 1) - h.app.sidebar.scroll;
+    expect(c.rows[sb.y + deep]![sb.x + 1]).toBe("│");
+    expect(c.styles[sb.y + deep]![sb.x + 1]!.fg).toBe(h.app.theme.roles.tree_guide.fg!);
+    const o = h.app.geometry!.outline!;
+    const sub = h.app.outlineRows().findIndex((r) => r.level === 2) - h.app.outline.scroll;
+    expect(c.rows[o.y + sub]![o.x + 1]).toBe("│");
+  });
   test("a ┃ after each tab, joined to the rules above and below the strip", async () => {
     const h = await harness({ width: 160 });
     await h.app.run("note.open notes/alpha.md");

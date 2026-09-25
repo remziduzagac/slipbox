@@ -392,7 +392,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       // The outline's button, at the far right.
       const label = ` ${app.glyphs.outlineButton} `;
       end -= stringWidth(label);
-      button(app, c, end, { y, h: 1 }, label, app.outlineShown ? "topbar_button_on" : "breadcrumb_icon", "btn:outline", geo, bg);
+      button(app, c, end, { y, h: 1 }, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bg);
       geo.headerEnd = y + 2;
     }
     drawBreadcrumb(app, c, view, x + 1, end - 1, y, bg, geo);
@@ -524,6 +524,12 @@ function paneTitle(app: App, c: Canvas, rect: Rect, title: string, bg: Color | n
   return { ...rect, y: rect.y + 2, h: rect.h - 2 };
 }
 
+/** Dim indent guides: a line under each ancestor's marker, `depth` of them. */
+function drawGuides(app: App, c: Canvas, rect: Rect, y: number, depth: number, bg: Color | null): void {
+  const st = { ...roleStyle(app.theme, "tree_guide", bg), bg };
+  for (let d = 0; d < depth && 1 + d * 2 < rect.w - 1; d++) drawText(c, rect.x + 1 + d * 2, y, app.glyphs.guide, st, 1);
+}
+
 /** The explorer; returns the rect its tree occupies (under the title). */
 function drawSidebar(app: App, c: Canvas, pane: Rect): Rect {
   const theme = app.theme;
@@ -551,6 +557,7 @@ function drawSidebar(app: App, c: Canvas, pane: Rect): Rect {
     const icon = row.kind === "dir" ? (app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : g.file;
     const name = row.kind === "note" ? row.name.replace(/\.(md|markdown)$/i, "") : row.name;
     drawText(c, rect.x, y, truncate(`${" ".repeat(1 + row.depth * 2)}${icon} ${name}`, rect.w - 1), st, rect.w);
+    drawGuides(app, c, rect, y, row.depth, st.bg);
   }  return rect;
 }
 
@@ -587,6 +594,7 @@ function drawOutline(app: App, c: Canvas, pane: Rect): Rect {
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
     const marker = row.hasChildren ? (row.folded ? g.dirClosed : g.dirOpen) : " ";
     drawText(c, rect.x, y, truncate(`${" ".repeat(1 + (row.level - 1) * 2)}${marker} ${row.text}`, rect.w - 1), st, rect.w);
+    drawGuides(app, c, rect, y, row.level - 1, st.bg);
   }  return rect;
 }
 
