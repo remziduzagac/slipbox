@@ -52,6 +52,8 @@ export interface Geometry {
   separators: Separator[];
   scrollbars: ScrollbarGeom[];
   tabStrip: Rect | null;
+  /** The rules under window headers: row `y`, columns [x0, x1). */
+  rules: { y: number; x0: number; x1: number }[];
 }
 
 const CHANGE_MARKER_MS = 3000;
@@ -70,7 +72,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const page = pageBg(theme);
   const W = c.width;
   const H = c.height;
-  const geo: Geometry = { panes: [], sidebar: null, outline: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null };
+  const geo: Geometry = { panes: [], sidebar: null, outline: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, rules: [] };
   c.fill(0, 0, W, H, page);
   if (W < 10 || H < 4) {
     drawText(c, 0, 0, "slipbox: too small", roleStyle(theme, "warn", page), W);
@@ -121,6 +123,12 @@ export function drawApp(app: App, c: Canvas): Geometry {
     for (let y = mainY; y < mainY + mainH; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
     geo.outline = rect;
     if (app.outlineBeside) geo.separators.push({ kind: "outline", x: W - w - 1, y: mainY, w: 1, h: mainH });
+  }
+
+  // Where a window's rule meets the explorer's or the outline's border, join them.
+  for (const r of geo.rules) {
+    if (beside && r.x0 === left) drawText(c, left - 1, r.y, app.glyphs.teeRight, roleStyle(theme, app.region === "sidebar" ? "border_active" : "border", page), 1);
+    if (app.outlineShown && app.outlineBeside && r.x1 === W - right) drawText(c, r.x1, r.y, app.glyphs.teeLeft, roleStyle(theme, app.region === "outline" ? "border_active" : "border", page), 1);
   }
 
   if (status) drawStatus(app, c, { y: H - status - bottomLine, h: 1 }, geo);
@@ -269,6 +277,7 @@ function drawContent(app: App, c: Canvas, area: Rect, gapAbove: boolean, geo: Ge
     for (let y = area.y - (gapAbove ? 1 : 0); y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
     geo.separators.push({ kind: "split-side", x: area.x + w1, y: area.y, w: 1, h: area.h, area });
     drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, gapAbove, geo);
+    for (const r of geo.rules) if (r.x1 === area.x + w1) drawText(c, r.x1, r.y, app.glyphs.cross, border, 1);
   } else {
     const h1 = Math.max(3, Math.min(area.h - 3, Math.round(area.h * tab.ratio)));
     drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, gapAbove, geo);
@@ -301,7 +310,11 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       x += drawText(c, x, rect.y, name, { ...roleStyle(theme, active ? "strong" : "dim", bg), bg }, rect.w);
     }
     drawBreadcrumb(app, c, view, x + 1, rect.x + rect.w - 1, rect.y, bg, geo);
-    body = { x: rect.x, y: rect.y + 2, w: rect.w, h: rect.h - 2 };
+    // A rule under the band, like the explorer's border turned on its side.
+    const ruleY = rect.y + 2;
+    drawText(c, rect.x, ruleY, app.glyphs.hbar.repeat(rect.w), roleStyle(theme, "border", page), rect.w);
+    geo.rules.push({ y: ruleY, x0: rect.x, x1: rect.x + rect.w });
+    body = { x: rect.x, y: rect.y + 3, w: rect.w, h: rect.h - 3 };
   } else if (titled) {
     const st = roleStyle(theme, active ? "tab_active" : "tab", page);
     c.fill(rect.x, rect.y, rect.w, 1, st.bg);

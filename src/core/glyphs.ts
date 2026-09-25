@@ -33,6 +33,10 @@ export interface Glyphs {
   // chrome
   vbar: string;
   hbar: string;
+  /** Where a horizontal rule meets a vertical border: ┣ ┫ ╋. */
+  teeRight: string;
+  teeLeft: string;
+  cross: string;
   dirOpen: string;
   dirClosed: string;
   file: string;
@@ -74,6 +78,9 @@ const unicode: Glyphs = {
   ellipsis: "…",
   vbar: "┃",
   hbar: "━",
+  teeRight: "┣",
+  teeLeft: "┫",
+  cross: "╋",
   dirOpen: "▾",
   dirClosed: "▸",
   file: " ",
@@ -130,6 +137,9 @@ const ascii: Glyphs = {
   ellipsis: "~",
   vbar: "|",
   hbar: "-",
+  teeRight: "+",
+  teeLeft: "+",
+  cross: "+",
   dirOpen: "v",
   dirClosed: ">",
   file: " ",
