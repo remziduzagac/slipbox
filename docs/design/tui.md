@@ -34,8 +34,10 @@ Code, in `src/tui/`:
             ┃ Text with the █ursor on its row…   ┃                         ← (both panes optional)
             ┃                                    ┃ ▾ Heading
            ┌─ ␣ l › links ──────────────────────────────────┐              ← which-key popup, while keys are pending
+           │                                                │
            │ f → Follow link          n → Next link         │
            │     Opens the link…          Moves to the…     │
+           │                                                │
            └───────────────────── backspace up · esc cancel ┘
 ━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
  READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line
@@ -282,13 +284,14 @@ Help and the palette list the same commands for different jobs, in the groups of
 (`:q`, `:vs`, `:theme dracula`) always wins, and an alias taking an argument lists completions
 (notes, themes, glyph sets) once a space is typed.
 
-**The which-key popup** lists the next keys of a pending sequence, across the keymaps active in
-the current state. It is framed like the other popups: a bordered box on the overlay background,
-with the pending keys as its title (`␣ l › links`), the hint (`backspace up · esc cancel`) in its
-bottom border, and the same margin; it sits centred just above the bottom of the content area.
-The entries are in at most three columns, as many as fit. Each column is sized to its own entries,
-so a long explanation in one never spreads the others apart. Each entry is `key → name` with a
-short, dimmed explanation underneath:
+**The which-key popup** lists the next keys of a pending sequence, across the keymaps active in the
+current state. It is framed like the other popups: a bordered box on the overlay background, with
+the pending keys as its title (`␣ l › links`), the hint (`backspace up · esc cancel`) in its bottom
+border, a blank row inside above and below the entries (dropped first on a short screen), and the
+same margin; it sits centred just above the bottom of the content area. The entries are in at most
+three columns, as many as fit. Each column is sized to its own entries, so a long explanation in one
+never spreads the others apart. Each entry is `key → name` with a short, dimmed explanation
+underneath:
 
 - **For a command:** its `desc` in `core/command-specs.ts`.
 - **For a group:** from `[groups]`.

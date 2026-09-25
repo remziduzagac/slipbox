@@ -376,15 +376,17 @@ describe("which-key", () => {
     const head = rows.findIndex((r) => r.includes("┌─ ␣ › leader "));
     expect(head).toBeGreaterThan(0);
     const left = rows[head]!.indexOf("┌");
-    expect(rows[head + 1]!.slice(left)).toMatch(/^│ \S+ +→ \+\w+/);
-    expect(rows[head + 2]).toContain("notes, headings, text, commands"); // +find's explanation
-    const arrows = rows[head + 1]!.split("→").length - 1;
+    expect(rows[head + 1]!.slice(left + 1, rows[head + 1]!.lastIndexOf("│")).trim()).toBe(""); // a blank row inside, above
+    expect(rows[head + 2]!.slice(left)).toMatch(/^│ \S+ +→ \+\w+/);
+    expect(rows[head + 3]).toContain("notes, headings, text, commands"); // +find's explanation
+    const arrows = rows[head + 2]!.split("→").length - 1;
     expect(arrows).toBeLessThanOrEqual(3);
     const foot = rows.findIndex((r, i) => i > head && r.includes("└"));
     expect(rows[foot]).toContain("backspace up · esc cancel"); // the hint in the bottom border
+    expect(rows[foot - 1]!.slice(left + 1, rows[foot - 1]!.lastIndexOf("│")).trim()).toBe(""); // and a blank row above it
     // The same margin as the other popups: a row above and below, two columns aside.
     expect(rows[head - 1]!.slice(left - 2, left + 10).trim()).toBe("");
-    expect(rows[head + 1]!.slice(left - 2, left)).toBe("  ");
+    expect(rows[head + 2]!.slice(left - 2, left)).toBe("  ");
     const status = rows.length - 1;
     expect(rows[status - 1]!.startsWith("━━━━")).toBe(true); // the frame's bottom rule
     expect(rows[status - 2]!.trim()).toBe(""); // the popup's margin row

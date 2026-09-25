@@ -754,9 +754,12 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   }
   const rows = plan.perCol;
   const room = bottom - top - 2; // the margin above and below
-  const withDesc = entries.some((e) => e.desc) && rows * 2 + 2 <= room;
+  // Inside the borders, a blank row above and below the entries; on a short screen the blank rows
+  // go first, then the explanations.
+  const withDesc = entries.some((e) => e.desc) && rows * 2 + 4 <= room;
   const entryH = withDesc ? 2 : 1;
-  const h = Math.max(3, Math.min(room, rows * entryH + 2));
+  const pad = rows * entryH + 4 <= room ? 1 : 0;
+  const h = Math.max(3, Math.min(room, rows * entryH + 2 + 2 * pad));
   const w = Math.min(maxW, Math.max(plan.total, 40));
   const x0 = Math.floor((c.width - w) / 2);
   const y0 = bottom - 1 - h;
@@ -787,9 +790,9 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   entries.forEach((e, i) => {
     const col = Math.floor(i / rows);
     const row = i % rows;
-    const y = y0 + 1 + row * entryH;
+    const y = y0 + 1 + pad + row * entryH;
     const cw = plan.widths[col];
-    if (y >= y0 + h - 1 || !cw) return;
+    if (y >= y0 + h - 1 - pad || !cw) return;
     const x = colX[col]!;
     const textX = x + cw.key + 1;
     const textW = Math.max(4, Math.min(cw.text, x0 + w - 2 - textX));
@@ -801,7 +804,7 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
     drawText(c, x, y, truncate(shownKey(e.key), cw.key - 2), { ...keySt, bg: rowBg });
     drawText(c, x + cw.key - 1, y, "→", { ...bg, bg: rowBg });
     drawText(c, textX, y, truncate(e.label, textW), e.group ? { ...grpSt, bg: rowBg } : { ...bg, bg: rowBg, bold: true });
-    if (withDesc && e.desc && y + 1 < y0 + h - 1) drawText(c, textX, y + 1, truncate(e.desc, textW), { ...desc, bg: rowBg });
+    if (withDesc && e.desc && y + 1 < y0 + h - 1 - pad) drawText(c, textX, y + 1, truncate(e.desc, textW), { ...desc, bg: rowBg });
   });
 }
 
