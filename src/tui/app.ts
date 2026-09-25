@@ -127,8 +127,10 @@ export interface ListItem {
   /** Key bindings, drawn as separate keycaps at the right (instead of `hint`). */
   keys?: string[];
   indent?: number;
-  /** A group heading: drawn dim and bold, never selected. */
+  /** A group heading: drawn dim and bold, never selected. With `rule`, the line under a heading;
+   * with an empty label, the blank row before one. */
   header?: boolean;
+  rule?: boolean;
   data: unknown;
 }
 
@@ -1917,18 +1919,25 @@ export function refilter(o: ListOverlay): void {
   if (o.source) {
     o.filtered = o.source(o.input).map((item) => ({ item, positions: [] }));
   } else if (o.keepGroups && o.input.trim()) {
-    // The matches in their original order, each under its group heading.
+    // The matches in their original order, each under its group heading (with its blank row and
+    // rule); a group with no match disappears, and the list never starts with a blank row.
     const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => (i.detail ? `${i.label} ${i.detail}` : i.label));
     const hit = new Map(ranked.map((r) => [r.item, r.match.positions]));
     o.filtered = [];
-    let heading: ListItem | null = null;
+    let heading: ListItem[] = [];
+    let prevHeader = false;
     for (const item of o.items) {
-      if (item.header) heading = item;
-      else if (hit.has(item)) {
-        if (heading) o.filtered.push({ item: heading, positions: [] });
-        heading = null;
-        o.filtered.push({ item, positions: hit.get(item)! });
+      if (item.header) {
+        if (!prevHeader) heading = [];
+        heading.push(item);
+        prevHeader = true;
+        continue;
       }
+      prevHeader = false;
+      if (!hit.has(item)) continue;
+      for (const hd of heading) if (o.filtered.length || hd.label || hd.rule) o.filtered.push({ item: hd, positions: [] });
+      heading = [];
+      o.filtered.push({ item, positions: hit.get(item)! });
     }
   } else if (o.input.trim()) {
     const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => (i.detail ? `${i.label} ${i.detail}` : i.label));

@@ -247,12 +247,15 @@ One list component serves every picker:
   `ctrl+n`/`ctrl+p` move (wrapping around), `enter` accepts, `esc` cancels. The wheel moves the
   selection, a click picks, and a click outside closes the list. A counter in the bottom border
   shows `n/m`, and an empty list says "no matches" or "nothing here".
-- **Groups and footers:** a list may have group headings (dim, bold capitals, never selected;
-  moving skips them) and a footer that shows the selected entry's description.
+- **Groups and footers:** a list may have group headings (dim, bold capitals, with a blank row
+  before each but the first and a full rule under each; never selected, moving skips them) and a
+  footer that shows the selected entry's description.
 - **Keycaps:** key bindings are spelled out (`ctrl+d`, `shift+g`, `space l y`, `esc`) and each
   binding is its own keycap (`keycap` role; `keycap_selected` on the selected row), so the space
-  inside a sequence (`g g`) can't be mistaken for the gap between bindings. Without a keycap
-  background (`NO_COLOR`), bindings are joined by ` · `. Bindings that don't fit end in `…`.
+  inside a sequence (`g g`) can't be mistaken for the gap between bindings. At most three show,
+  in columns sized per section so they line up down it; plain bindings come before variants
+  (such as the selection-extending ones), and the rest are listed in the footer ("also …").
+  Without a keycap background (`NO_COLOR`), the columns are separated by `·`.
 
 Help and the palette list the same commands for different jobs, in the groups of
 [keymap.md](keymap.md) (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order:

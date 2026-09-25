@@ -177,14 +177,29 @@ function runChosen(a: App, spec: string): void {
   void a.run(spec).then(() => a.host.requestRender());
 }
 
+/** A group heading: a blank row before it (unless first), the title, a rule under it. */
+function heading(title: string, first: boolean): ListItem[] {
+  return [...(first ? [] : [{ label: "", header: true, data: null }]), { label: title, header: true, data: null }, { label: "", header: true, rule: true, data: null }];
+}
+
 /** Items under group headings, in the groups' order (docs/design/keymap.md). */
-function grouped(items: ListItem[], groupOf: (item: ListItem) => string, order: string[]): ListItem[] {
+function grouped(items: ListItem[], groupOf: (item: ListItem) => string, order: string[], first = true): ListItem[] {
   const out: ListItem[] = [];
   for (const title of order) {
     const members = items.filter((i) => groupOf(i) === title);
-    if (members.length) out.push({ label: title, header: true, data: null }, ...members);
+    if (members.length) out.push(...heading(title, first && !out.length), ...members);
   }
   return out;
+}
+
+/**
+ * At most three bindings shown, plain ones first (a variant like "extend the selection" after);
+ * the rest go to the description, which help shows in its footer.
+ */
+function topKeys(keys: string[], variants: Set<string>, desc: string): { keys: string[]; detail: string } {
+  const ordered = [...keys.filter((k) => !variants.has(k)), ...keys.filter((k) => variants.has(k))];
+  const rest = ordered.slice(3);
+  return { keys: ordered.slice(0, 3), detail: rest.length ? `${desc} — also ${rest.join(", ")}` : desc };
 }
 
 /**
@@ -209,8 +224,8 @@ function openPalette(a: App): void {
   const byId = new Map(commandItems.map((i) => [i.data as string, i]));
   const recent = a.recentCommands.map((id) => byId.get(id)).filter((i): i is ListItem => !!i);
   const browse: ListItem[] = [
-    ...(recent.length ? [{ label: "Recent", header: true, data: null }, ...recent] : []),
-    ...grouped(commandItems, (i) => commandGroup(i.data as string), COMMAND_GROUPS.map((g) => g.title)),
+    ...(recent.length ? [...heading("Recent", true), ...recent] : []),
+    ...grouped(commandItems, (i) => commandGroup(i.data as string), COMMAND_GROUPS.map((g) => g.title), !recent.length),
   ];
   a.openList({
     title: "Commands — type a name, or an alias like :q",
@@ -265,30 +280,30 @@ function openPalette(a: App): void {
  * from the explorer, the outline or visual mode, it starts at that section.
  */
 function openHelp(a: App): void {
-  const keysOf = (id: string) => {
-    const keys = [...a.keymap.keysFor(id), ...a.visualKeys.keysFor(id)];
-    for (const [k, v] of a.keymap.entries()) if (v.startsWith(`${id} `)) keys.push(k);
-    return [...new Set(keys)].map(spellKey);
-  };
-  const commands: ListItem[] = inSpecOrder(a.registry.list()).map((c) => ({ label: c.title, detail: c.description ?? c.id, keys: keysOf(c.id), data: c.id }));
+  const commands: ListItem[] = inSpecOrder(a.registry.list()).map((c) => {
+    const plain = [...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].map(spellKey);
+    // Bindings with an argument (e.g. "cursor.down extend") are variants: shown after the plain ones.
+    const variants = a.keymap.entries().filter(([, v]) => v.startsWith(`${c.id} `)).map(([k]) => spellKey(k));
+    return { label: c.title, ...topKeys([...new Set([...plain, ...variants])], new Set(variants), c.description ?? c.id), data: c.id };
+  });
   const pane = (keymap: { keysFor(action: string): string[] }, info: Record<string, { title: string; desc: string }>): ListItem[] =>
     Object.entries(info)
-      .map(([action, i]) => ({ label: i.title, detail: i.desc, keys: keymap.keysFor(action).map(spellKey), data: null }))
+      .map(([action, i]) => ({ label: i.title, ...topKeys(keymap.keysFor(action).map(spellKey), new Set(), i.desc), data: null }))
       .filter((i) => i.keys.length);
   const items: ListItem[] = [
     ...grouped(commands, (i) => commandGroup(i.data as string), COMMAND_GROUPS.map((g) => g.title)),
-    { label: "Inside the explorer", header: true, data: null },
+    ...heading("Inside the explorer", false),
     ...pane(a.explorerKeys, EXPLORER_ACTION_INFO),
-    { label: "Inside the outline", header: true, data: null },
+    ...heading("Inside the outline", false),
     ...pane(a.outlineKeys, OUTLINE_ACTION_INFO),
-    { label: "Resize mode", header: true, data: null },
+    ...heading("Resize mode", false),
     ...pane(a.resizeKeys, RESIZE_ACTIONS),
-    { label: "Mouse", header: true, data: null },
-    ...MOUSE_HELP.map(([label, keys, detail]) => ({ label, detail, keys, data: null })),
+    ...heading("Mouse", false),
+    ...MOUSE_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys, new Set(), detail), data: null })),
   ];
   // Start where the keys are about what you're doing: the focused pane's, or visual mode's.
   const section = a.region === "sidebar" ? "Inside the explorer" : a.region === "outline" ? "Inside the outline" : a.view?.visual ? "Selection & copy" : null;
-  const at = section ? items.findIndex((i) => i.header && i.label === section) : -1;
+  const at = section ? items.findIndex((i) => i.header && i.label === section) : -1; // the title row
   a.openList({
     title: "Keys — type to filter, enter runs a command",
     items,

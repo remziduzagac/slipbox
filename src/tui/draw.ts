@@ -827,8 +827,27 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
   const rows = h - (listY - y) - 1 - (o.footer ? 2 : 0);
   if (o.selected < o.scroll) o.scroll = o.selected;
   if (o.selected >= o.scroll + rows) o.scroll = o.selected - rows + 1;
-  // Keep a group's heading in view above its first entry.
-  if (o.scroll > 0 && o.scroll === o.selected && o.filtered[o.scroll - 1]?.item.header) o.scroll--;
+  // When the selected entry is the top row, bring its heading (title and rule, not the blank
+  // row before them) into view above it.
+  if (o.scroll === o.selected) {
+    while (o.scroll > 0 && o.filtered[o.scroll - 1]!.item.header && (o.filtered[o.scroll - 1]!.item.label || o.filtered[o.scroll - 1]!.item.rule)) o.scroll--;
+  }
+  // Key columns: each as wide as its widest binding in the section, so keys line up down it.
+  const colWAt: number[][] = new Array(o.filtered.length);
+  for (let i = 0; i < o.filtered.length; ) {
+    let j = i;
+    while (j < o.filtered.length && o.filtered[j]!.item.header) colWAt[j++] = [0, 0, 0];
+    const colW = [0, 0, 0];
+    let k = j;
+    for (; k < o.filtered.length && !o.filtered[k]!.item.header; k++) (o.filtered[k]!.item.keys ?? []).slice(0, 3).forEach((key, c) => (colW[c] = Math.max(colW[c]!, stringWidth(key))));
+    for (let m = j; m < k; m++) colWAt[m] = colW;
+    i = k;
+  }
+  const lastEntry = (() => {
+    let last = -1;
+    for (let i = 0; i < rows; i++) if (o.filtered[o.scroll + i] && !o.filtered[o.scroll + i]!.item.header) last = i;
+    return last;
+  })();
   const matchSt = roleStyle(theme, "overlay_match", null);
   for (let i = 0; i < rows; i++) {
     const idx = o.scroll + i;
@@ -837,18 +856,20 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     const ry = listY + i;
     const { item, positions } = entry;
     if (item.header) {
-      // Not as the last row: a heading with nothing under it.
-      if (i < rows - 1) drawText(c, x + 2, ry, truncate(item.label.toUpperCase(), w - 4), roleStyle(theme, "overlay_group", null));
+      // Never a heading with nothing under it on screen.
+      if (i > lastEntry) continue;
+      if (item.rule) drawText(c, x + 2, ry, b.h.repeat(w - 4), roleStyle(theme, "overlay_dim", null), w - 4);
+      else if (item.label) drawText(c, x + 2, ry, truncate(item.label.toUpperCase(), w - 4), roleStyle(theme, "overlay_group", null));
       continue;
     }
     const selected = idx === o.selected;
     const st = selected ? roleStyle(theme, "overlay_selected", null) : bg;
     c.fill(x + 1, ry, w - 2, 1, st.bg);
-    const indent = (item.indent ?? 0) * 2 + (o.filtered.some((e) => e.item.header) ? 2 : 0);
+    const indent = (item.indent ?? 0) * 2;
     // Keys at the right: as many as fit beside the label, then an ellipsis.
     const labelW = Math.min(stringWidth(item.label), Math.max(8, Math.floor((w - 6) / 2)));
     const keysRoom = w - 4 - indent - labelW - 2;
-    const keysW = item.keys?.length ? drawKeys(app, c, x + w - 2, ry, item.keys, keysRoom, selected, st.bg) : 0;
+    const keysW = item.keys?.length ? drawKeys(app, c, x + w - 2, ry, item.keys, keysRoom, selected, st.bg, colWAt[idx]!) : 0;
     const hint = item.keys ? "" : (item.hint ?? "");
     const hintW = hint ? stringWidth(hint) + 2 : 0;
     const avail = w - 4 - hintW - (keysW ? keysW + 2 : 0);
@@ -873,27 +894,30 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
 }
 
 /**
- * Key bindings as keycaps ending at `right`, each binding one cap (a sequence stays inside it).
- * Without a keycap background (NO_COLOR) they're joined by " · ". Returns the width used.
+ * Key bindings as keycaps ending at `right`, each binding one cap (a sequence stays inside it),
+ * in columns `colW` wide so they line up from row to row. Without a keycap background (NO_COLOR)
+ * the columns are separated by " · ". Returns the width used; keys that don't fit are dropped.
  */
-function drawKeys(app: App, c: Canvas, right: number, y: number, keys: string[], room: number, selected: boolean, rowBg: Color | null): number {
+function drawKeys(app: App, c: Canvas, right: number, y: number, keys: string[], room: number, selected: boolean, rowBg: Color | null, colW: number[]): number {
   const theme = app.theme;
   const cap = roleStyle(theme, selected ? "keycap_selected" : "keycap", rowBg);
   const plain = cap.bg === rowBg;
-  const parts = keys.map((k) => (plain ? k : ` ${k} `));
-  const sep = plain ? " · " : " ";
-  const widthOf = (n: number) => parts.slice(0, n).reduce((a, p) => a + stringWidth(p), 0) + (n - 1) * stringWidth(sep);
-  let n = parts.length;
-  const more = n > 1 ? stringWidth(`${sep}…`) : 0;
-  while (n > 0 && widthOf(n) + (n < parts.length ? more : 0) > room) n--;
+  const pad = plain ? 0 : 2; // the cap's own spaces
+  const gap = plain ? 3 : 1;
+  const cols = colW.filter((wd) => wd > 0).length;
+  const widthOf = (n: number) => colW.slice(0, n).reduce((a, wd) => a + wd + pad, 0) + (n - 1) * gap;
+  let n = cols;
+  while (n > 0 && widthOf(n) > room) n--;
   if (!n) return 0;
-  const total = widthOf(n) + (n < parts.length ? more : 0);
-  let x = right - total;
-  const sepSt = roleStyle(theme, "overlay_dim", rowBg);
+  let x = right - widthOf(n);
+  const sepSt = { ...roleStyle(theme, "overlay_dim", rowBg), bg: rowBg };
   for (let i = 0; i < n; i++) {
-    if (i) x += drawText(c, x, y, sep, { ...sepSt, bg: rowBg });
-    x += drawText(c, x, y, parts[i]!, cap);
+    const k = keys[i];
+    if (k !== undefined) {
+      if (plain && i > 0) drawText(c, x - 2, y, "·", sepSt);
+      drawText(c, x, y, plain ? k : ` ${k} `, cap);
+    }
+    x += colW[i]! + pad + gap;
   }
-  if (n < parts.length) drawText(c, x, y, `${sep}…`, { ...sepSt, bg: rowBg });
-  return total;
+  return widthOf(n);
 }

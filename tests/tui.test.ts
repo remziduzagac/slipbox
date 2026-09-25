@@ -469,7 +469,24 @@ describe("overlays and the : prompt", () => {
     const f = h.frame();
     expect(f).toContain("│ CURSOR");
     expect(o.filtered[0]!.item.header).toBe(true);
-    expect(o.selected).toBe(1); // headings are never selected
+    expect(o.filtered[1]!.item.rule).toBe(true); // a full rule under each heading
+    expect(o.selected).toBe(2); // headings and rules are never selected
+    // Later sections have a blank row before the heading.
+    const sel = o.filtered.findIndex((e) => e.item.label === "Selection & copy");
+    expect(o.filtered[sel - 1]!.item).toMatchObject({ header: true, label: "" });
+    expect(f).toContain(`│ ${"─".repeat(20)}`);
+    // At most three bindings; the rest in the footer description.
+    const endRow = o.items.find((i) => i.data === "cursor.line_end")!;
+    expect(endRow.keys).toEqual(["$", "end", "ctrl+right"]);
+    expect(endRow.detail).toContain("also cmd+right, shift+end, ctrl+shift+right");
+    // Keys in a section line up in columns.
+    const lines = f.split("\n");
+    const colOf = (label: string, key: string) => {
+      const l = lines.find((x) => x.includes(label))!;
+      return l.indexOf(` ${key} `, l.indexOf(label) + label.length);
+    };
+    expect(colOf("Cursor left", "left")).toBe(colOf("Top of note", "ctrl+home"));
+    expect(colOf("Cursor left", "h")).toBe(colOf("Top of note", "g g"));
     // Spelled-out keys, each binding a separate keycap (a sequence stays in one).
     const row = f.split("\n").find((l) => l.includes("Top of note"))!;
     expect(row).toMatch(/g g +ctrl\+home +ctrl\+shift\+home/);
@@ -525,7 +542,7 @@ describe("overlays and the : prompt", () => {
     await h.keys(":");
     o = h.app.overlay as ListOverlay;
     expect(o.filtered[0]!.item.label).toBe("Recent");
-    expect(o.filtered[1]!.item.data).toBe("ui.zen");
+    expect(o.filtered[2]!.item.data).toBe("ui.zen"); // after the heading's rule
     const top = o.filtered.find((e) => e.item.data === "cursor.top")!.item;
     expect(top.keys).toEqual(["g g"]); // one key in the palette
     expect(h.app.recentCommands[0]).toBe("ui.zen");
