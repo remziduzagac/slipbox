@@ -22,6 +22,7 @@ Code, in `src/tui/`:
 
 ```text
  ≡  slipbox                                              indexing 3…  ▤   ← top bar (ui.top_bar)
+                                                                         ← empty row (ui.bar_gap)
             ┃ 1 index ×  2 alpha ×                                    ← tab strip, only with 2+ tabs
  ▾ notes    ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓           ← each window's header: a rule,
      beta   ┃ § Heading › Sub                    ┃ Heading     its breadcrumb (tinted),
@@ -35,13 +36,14 @@ Code, in `src/tui/`:
  ↻ notes/alpha.md changed on disk — reloaded                         ← message or prompt
 ```
 
-**Gaps.** With `ui.bar_gap` (default on), a blank row separates the note from the bar above it
-(the tab strip when shown, otherwise the top bar) and from the status line below it. Screens
-shorter than 20 rows drop the gaps.
+**Gaps.** With `ui.bar_gap` (default on), an empty row in the page's colour runs under the top
+bar across the whole width, and another sits above the status line. The row between the bars
+and the note holds each window's top rule (see the breadcrumb below). Screens shorter than 20
+rows drop the gaps.
 
 **The top bar** has buttons and vault-wide state; the middle is empty:
 
-- on the left, `≡` toggles the explorer and the `slipbox` chip (plain accent text, no background)
+- on the left, `≡` toggles the explorer and the `slipbox` chip (plain accent text on the bar)
   opens the command palette;
 - on the right, vault-wide state (`indexing N…`, `single-file`), then `▤` to toggle the outline.
 

@@ -86,9 +86,12 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const bottomLine = app.overlay?.kind === "prompt" || app.transient ? 1 : 0;
   // A blank row between the note and the bars above and below it, dropped on short screens.
   const gap = app.config.ui.bar_gap && H >= 20 ? 1 : 0;
+  // An empty row under the top bar, across the whole width.
+  const barGap = topBar ? gap : 0;
+  const head = topBar + barGap;
   const gapTop = topBar + tabBar ? gap : 0;
   const gapBottom = status ? gap : 0;
-  const mainY = topBar + tabBar + gapTop;
+  const mainY = head + tabBar + gapTop;
   const mainH = H - mainY - gapBottom - status - bottomLine;
 
   const sideW = app.sidebarWidth();
@@ -98,7 +101,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
 
   if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
   // Tabs hold the note and its outline, not the explorer: the strip starts after the explorer.
-  if (tabBar) drawTabs(app, c, beside ? left : 0, { y: topBar, h: 1 }, geo);
+  if (tabBar) drawTabs(app, c, beside ? left : 0, { y: head, h: 1 }, geo);
   const right = app.outlineBeside ? outW + 1 : 0;
   drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, gapTop > 0, geo);
 
@@ -106,8 +109,8 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, W - 6);
     // Beside the content, the explorer runs from under the top bar (and its gap) to the status
     // line whether or not the tab strip shows, and its border runs up beside the strip.
-    const sideY = beside ? (topBar ? topBar + gap : 0) : mainY;
-    const borderY = beside ? topBar : mainY;
+    const sideY = beside ? (topBar ? head + gap : 0) : mainY;
+    const borderY = beside ? head : mainY;
     const rect = { x: 0, y: sideY, w, h: mainY + mainH - sideY };
     if (beside) c.fill(0, borderY, w, sideY - borderY, page);
     drawSidebar(app, c, rect);
@@ -131,7 +134,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   for (const r of geo.rules) {
     if (beside && r.x0 === left) {
       const st = roleStyle(theme, app.region === "sidebar" ? "border_active" : "border", page);
-      drawText(c, left - 1, r.y, joint(app.glyphs, r.y > topBar, false, true), st, 1);
+      drawText(c, left - 1, r.y, joint(app.glyphs, r.y > head, false, true), st, 1);
     }
     if (app.outlineShown && app.outlineBeside && r.x1 === W - right) {
       const st = roleStyle(theme, app.region === "outline" ? "border_active" : "border", page);

@@ -603,11 +603,15 @@ describe("top bar, tab strip, status line", () => {
     expect(top).toContain("▤");
     expect(top).not.toContain("watching"); // the watcher is shown by the file's path
     expect(statusRow(h.frame())).toMatch(/index\.md +○ not watching/); // watch: false in the harness
-    // The bar and the chip have the page's background.
+    // The chip is plain text on the bar's own background; under the bar, an empty page-coloured row.
     const chipR = h.app.geometry!.hot.find((r) => r.id === "btn:palette")!;
     const page = h.app.theme.roles.text.bg ?? h.app.theme.bg;
-    expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(page);
-    expect(h.canvas().styles[0]![80]!.bg).toBe(page);
+    const bar = h.app.theme.roles.topbar.bg!;
+    expect(bar).not.toBe(page);
+    expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(bar);
+    expect(h.canvas().styles[0]![80]!.bg).toBe(bar);
+    expect(h.frame().split("\n")[1]!.trim()).toBe("");
+    expect(h.canvas().styles[1]![80]?.bg ?? page).toBe(page);
     const ex = hot(h, "btn:explorer");
     click(h, ex.x, ex.y);
     expect(h.app.sidebarShown).toBe(false);
@@ -646,16 +650,16 @@ describe("top bar, tab strip, status line", () => {
     await h.app.run("note.open notes/alpha.md");
     h.frame();
     const strip = h.app.geometry!.tabStrip!;
-    expect(strip.y).toBe(1);
+    expect(strip.y).toBe(2); // under the top bar and its empty row
     // Tabs hold the note and its outline, not the explorer: the strip starts after it, and the
     // explorer stays where it was before the strip appeared.
     const sb = h.app.geometry!.sidebar!;
     expect(strip.x).toBe(sb.x + sb.w + 1);
     expect(strip.x + strip.w).toBe(160);
-    expect(sb.y).toBe(2);
-    expect(h.frame().split("\n")[1]![sb.w]).toBe("┃");
+    expect(sb.y).toBe(3);
+    expect(h.frame().split("\n")[2]![sb.w]).toBe("┃");
     // Under the strip, the window's top rule; the explorer's border runs on above it (┣).
-    const r2 = h.frame().split("\n")[2]!;
+    const r2 = h.frame().split("\n")[3]!;
     expect(r2.slice(strip.x, strip.x + 10)).toBe("━".repeat(10));
     expect(r2[strip.x - 1]).toBe("┣");
     const tab = (i: number) => h.app.geometry!.tabs[i]!;
