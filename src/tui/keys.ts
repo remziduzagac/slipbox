@@ -113,8 +113,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader e": "explorer.cycle",
   "ctrl+shift+e": "explorer.reveal",
   "leader shift+e": "explorer.reveal",
-  "ctrl+o": "outline.toggle",
-  "leader o": "outline.toggle",
+  "ctrl+o": "outline.cycle",
+  "leader o": "outline.cycle",
   // find
   "ctrl+f": "find.open",
   "/": "find.open",

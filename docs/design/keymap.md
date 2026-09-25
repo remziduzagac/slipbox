@@ -192,16 +192,18 @@ Inside the explorer (`[keys.explorer]` in config):
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| toggle | `ctrl+o` | `space o` |
+| open → focus → close (a cycle) | `ctrl+o` | `space o` |
 
-It lists the note's headings and highlights the section the cursor is in. Inside the outline
+Like the explorer: opening it focuses it; while open but unfocused, the key focuses it; while
+focused, the key closes it and focus returns to the note. It lists the note's headings and,
+while unfocused, keeps its selection on the section the cursor is in. Inside the outline
 (`[keys.outline]` in config):
 
 | Key | Action |
 | --- | --- |
 | `j` / `k`, `down` / `up` | move |
 | `enter` | jump to the heading; focus goes to the note |
-| mouse click | jump to the heading, keeping focus in the outline; on the `▾`/`▸` marker, fold |
+| mouse click | jump to the heading (the note takes focus); on the `▾`/`▸` marker, fold |
 | `h` / `l`, `left` / `right` | fold / unfold |
 | `g g` / `shift+g` | top / bottom |
 | `q` | close the outline |
@@ -290,8 +292,8 @@ with the `hover` role. `space u m` turns the mouse off, which gives it back to t
 
 | Where | What the mouse does |
 | --- | --- |
-| top bar `≡` | toggle the explorer |
-| breadcrumb `▤` (far right) | toggle the outline |
+| top bar `≡` | show the explorer (and focus it) / hide it |
+| breadcrumb `▤` (far right) | show the outline (and focus it) / hide it |
 | top bar `slipbox` chip | open the command palette |
 | window breadcrumb | scroll that window to the heading, and focus it; its icon finds a heading |
 | tab | click to switch; drag to reorder; middle-click or `×` to close |

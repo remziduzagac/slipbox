@@ -783,7 +783,7 @@ describe("top bar, tab strip, status line", () => {
     // Bold throughout, so nothing shifts.
     expect(roles.pane_title.bold && roles.pane_title_active.bold && roles.tab_active_idle.bold && roles.tab_active.bold).toBe(true);
   });
-  test("a click anywhere in a side pane focuses it; a heading click keeps the outline focused", async () => {
+  test("a click anywhere in a side pane focuses it; a heading click is a choice: the note takes focus", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
     const click = (x: number, y: number) => {
       h.app.handleMouse({ type: "down", x, y, button: 0 });
@@ -801,8 +801,15 @@ describe("top bar, tab strip, status line", () => {
     const o = g().outline!;
     const row = h.app.outlineRows()[2]!;
     click(o.x + 12, o.y + 2 - h.app.outline.scroll);
-    expect(h.app.view!.cur.row).toBe(row.line); // the note followed
-    expect(h.app.region).toBe("outline"); // and the focus stayed
+    expect(h.app.view!.cur.row).toBe(row.line); // the note moved there
+    expect(h.app.region).toBe("content"); // and took the focus
+    // The ▤ button: open (and focus) when closed, close when open.
+    await h.app.run("outline.toggle");
+    expect(h.app.outlineShown).toBe(false);
+    const btn = g().hot.find((r) => r.id === "btn:outline")!;
+    click(btn.x + 1, btn.y);
+    expect(h.app.outlineShown).toBe(true);
+    expect(h.app.region).toBe("outline");
   });
   test("a ┃ after each tab, joined to the rules above and below the strip", async () => {
     const h = await harness({ width: 160 });
@@ -1061,11 +1068,21 @@ describe("explorer and outline panes", () => {
     await h.keys("space", "shift+e");
     expect(h.app.treeRows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
   });
-  test("outline: ctrl+o toggles; it follows the cursor's section; enter jumps; h folds", async () => {
+  test("outline: ctrl+o opens and focuses, focuses, closes; it follows the cursor while unfocused; enter jumps; h folds", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 160 });
     await h.keys("ctrl+o");
     expect(h.app.outlineShown).toBe(true);
+    expect(h.app.region).toBe("outline"); // opening focuses it
     expect(h.app.geometry!.outline).not.toBeNull();
+    await h.keys("escape"); // back to the note; the outline stays open
+    expect(h.app.region).toBe("content");
+    expect(h.app.outlineShown).toBe(true);
+    await h.keys("ctrl+o"); // open, focus elsewhere: focus it
+    expect(h.app.region).toBe("outline");
+    await h.keys("ctrl+o"); // focused: close
+    expect(h.app.outlineShown).toBe(false);
+    expect(h.app.region).toBe("content");
+    await h.keys("ctrl+o", "escape");
     await h.keys("]", "]", "]", "]");
     expect(h.app.outline.selected).toBe(h.app.currentSection());
     await h.keys("ctrl+w", "l");

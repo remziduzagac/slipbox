@@ -88,7 +88,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   // panes
   { id: "explorer.cycle", title: "Explorer: open, focus, close", cli: "slipbox ls", desc: "open the file tree, focus it, then close it" },
   { id: "explorer.reveal", title: "Reveal note in explorer", cli: I, desc: "select this note in the file tree" },
-  { id: "outline.toggle", title: "Outline pane", cli: "slipbox outline <note>", desc: "the headings of this note, on the right" },
+  { id: "outline.cycle", title: "Outline: open, focus, close", cli: "slipbox outline <note>", desc: "the headings of this note, on the right" },
+  { id: "outline.toggle", title: "Show or hide the outline", cli: "slipbox outline <note>", desc: "opening it also focuses it" },
   // find
   { id: "find.open", title: "Find in note", cli: I, desc: "search this note; the cursor goes to the match" },
   { id: "find.next", title: "Next match", cli: I, desc: "the next match" },

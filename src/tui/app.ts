@@ -881,6 +881,13 @@ export class App {
     if (!on && this.region === "sidebar") this.region = "content";
   }
 
+  /** Show the outline and focus it, its selection on the cursor's section. */
+  openOutline(): void {
+    this.showOutline(true);
+    this.outline.selected = Math.max(0, this.currentSection());
+    this.region = "outline";
+  }
+
   showOutline(on: boolean): void {
     if (this.narrow || this.ui.zen) this.outline.overlay = on;
     else this.outline.visible = on;
@@ -1460,11 +1467,7 @@ export class App {
       // The fold marker sits right after the indent.
       const markerX = g.outline.x + 1 + (row.level - 1) * 2;
       if (row.hasChildren && ev.x >= markerX - 1 && ev.x <= markerX + 1) this.outlineAction(row.folded ? "unfold" : "fold");
-      else {
-        this.outlineAction("jump");
-        // The note follows, but a click keeps the focus where it landed (enter hands it over).
-        if (this.outlineShown) this.region = "outline";
-      }
+      else this.outlineAction("jump"); // a choice: the note moves there and takes the focus
       return;
     }
     const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));

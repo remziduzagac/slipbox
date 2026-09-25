@@ -556,10 +556,16 @@ export function registerActions(app: App): void {
       a.revealInSidebar();
       a.region = "sidebar";
     },
+    // Like the explorer: closed → open and focus; open elsewhere → focus; focused → close.
+    "outline.cycle": (a) => {
+      if (!a.outlineShown) return a.openOutline();
+      if (a.region !== "outline") a.region = "outline";
+      else a.showOutline(false);
+    },
+    // The ▤ button: show (and focus) or hide.
     "outline.toggle": (a) => {
       if (a.outlineShown) return a.showOutline(false);
-      a.showOutline(true);
-      a.outline.selected = Math.max(0, a.currentSection());
+      a.openOutline();
     },
     // find
     "find.open": (a) =>
