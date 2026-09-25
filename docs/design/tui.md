@@ -21,7 +21,7 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- ≡  slipbox                                              indexing 3…  ≣   ← top bar (ui.top_bar)
+ ≡  slipbox                                              indexing 3…  ▤   ← top bar (ui.top_bar)
  1 index ×  2 alpha ×                                                    ← tab strip, only with 2+ tabs
                                                                          ← gap (ui.bar_gap)
  ▾ notes    ┃ § Heading › Sub                    ┃ Heading   ← each window: its breadcrumb,
@@ -43,7 +43,7 @@ shorter than 20 rows drop the gaps.
 
 - on the left, `≡` toggles the explorer and the `slipbox` chip (plain accent text, no background)
   opens the command palette;
-- on the right, vault-wide state (`indexing N…`, `single-file`), then `≣` to toggle the outline.
+- on the right, vault-wide state (`indexing N…`, `single-file`), then `▤` to toggle the outline.
 
 An icon button is filled with the accent while its pane is open. `ui.top_bar = false` removes the
 bar, and zen mode hides it.
