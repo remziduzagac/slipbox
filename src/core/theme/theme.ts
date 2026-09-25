@@ -35,7 +35,7 @@ export const ROLES = [
   "border", "border_active", "status", "status_accent", "status_dim",
   "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active",
   "tab", "tab_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim",
-  "selection", "error", "warn", "info", "scrollbar",
+  "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
   "cursor", "cursor_line", "line_number", "line_number_current",
   "which_key", "which_key_key", "which_key_group", "which_key_title",
   "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover",
@@ -204,6 +204,7 @@ export function themeFromPalette(
     warn: { fg: p.yellow },
     info: { fg: p.cyan },
     scrollbar: { fg: p.surface2 },
+    scrollbar_track: { fg: blend(p.surface, p.bg, 0.5) },
     // The reading cursor: a block over the character, and a row band behind it.
     cursor: { fg: p.bg, bg: p.fg_strong },
     cursor_line: { bg: blend(p.surface, p.bg, 0.55) },

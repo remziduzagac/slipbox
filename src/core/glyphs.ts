@@ -85,8 +85,9 @@ const unicode: Glyphs = {
   dirClosed: "▸",
   file: " ",
   sep: "›",
-  scrollThumb: "▐", // unlike the ┃ borders it often sits beside
-  scrollTrack: " ",
+  // The bar is a thin column, unlike the ┃ borders it often sits beside; colour tells the thumb.
+  scrollThumb: "▐",
+  scrollTrack: "▐",
   dirty: "●",
   explorerButton: "≡",
   outlineButton: "▤",
@@ -145,7 +146,7 @@ const ascii: Glyphs = {
   file: " ",
   sep: ">",
   scrollThumb: "#",
-  scrollTrack: " ",
+  scrollTrack: "|",
   dirty: "*",
   explorerButton: "=",
   outlineButton: "#",

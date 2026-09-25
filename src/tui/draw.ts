@@ -380,6 +380,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const thumb = Math.max(1, Math.round((body.h * body.h) / total));
     const pos = Math.round((view.top / Math.max(1, total - body.h)) * (body.h - thumb));
     const st = roleStyle(theme, active ? "scrollbar" : "border", page);
+    const track = roleStyle(theme, "scrollbar_track", page);
+    for (let k = 0; k < body.h; k++) drawText(c, body.x + body.w - 1, body.y + k, app.glyphs.scrollTrack, track, 1);
     for (let k = 0; k < thumb; k++) drawText(c, body.x + body.w - 1, body.y + pos + k, app.glyphs.scrollThumb, st, 1);
     geo.scrollbars.push({ view, total, x: body.x + body.w - 1, y: body.y, w: 1, h: body.h });
   }

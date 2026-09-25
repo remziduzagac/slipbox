@@ -753,6 +753,11 @@ describe("mouse", () => {
     const h = await harness({ open: "samples/large-document.md" });
     h.frame();
     const bar = h.app.geometry!.scrollbars[0]!;
+    // The whole bar is a ▐ column: the track faint, the thumb (at the top here) stronger.
+    const c = h.canvas();
+    for (let y = bar.y; y < bar.y + bar.h; y++) expect(c.rows[y]![bar.x]).toBe("▐");
+    expect(c.styles[bar.y]![bar.x]!.fg).toBe(h.app.theme.roles.scrollbar.fg!);
+    expect(c.styles[bar.y + bar.h - 1]![bar.x]!.fg).toBe(h.app.theme.roles.scrollbar_track.fg!);
     click(h, bar.x, bar.y + bar.h - 1);
     expect(h.app.view!.top).toBeGreaterThan(100);
     h.app.handleMouse({ type: "down", x: bar.x, y: bar.y + bar.h - 1, button: 0 });
