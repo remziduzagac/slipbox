@@ -53,8 +53,9 @@ export interface Geometry {
   separators: Separator[];
   scrollbars: ScrollbarGeom[];
   tabStrip: Rect | null;
-  /** The rules under window headers: row `y`, columns [x0, x1). */
+  /** Horizontal rules (row `y`, columns [x0, x1)) and the vertical borders they may meet. */
   rules: { y: number; x0: number; x1: number }[];
+  verticals: { x: number; y0: number; y1: number; style: CellStyle }[];
 }
 
 const CHANGE_MARKER_MS = 3000;
@@ -73,7 +74,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const page = pageBg(theme);
   const W = c.width;
   const H = c.height;
-  const geo: Geometry = { panes: [], sidebar: null, outline: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, rules: [] };
+  const geo: Geometry = { panes: [], sidebar: null, outline: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, rules: [], verticals: [] };
   c.fill(0, 0, W, H, page);
   if (W < 10 || H < 4) {
     drawText(c, 0, 0, "slipbox: too small", roleStyle(theme, "warn", page), W);
@@ -84,63 +85,65 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const tabBar = app.tabs.length > 1 && !zen ? 1 : 0;
   const status = zen ? 0 : 1;
   const bottomLine = app.overlay?.kind === "prompt" || app.transient ? 1 : 0;
-  // A blank row between the note and the bars above and below it, dropped on short screens.
+  // A blank row under the top bar and above the status line, dropped on short screens.
   const gap = app.config.ui.bar_gap && H >= 20 ? 1 : 0;
-  // An empty row under the top bar, across the whole width.
-  const barGap = topBar ? gap : 0;
-  const head = topBar + barGap;
-  const gapTop = topBar + tabBar ? gap : 0;
+  const head = topBar + (topBar ? gap : 0);
   const gapBottom = status ? gap : 0;
-  const mainY = head + tabBar + gapTop;
+  // The frame: a rule across the top of the explorer, the tab strip (or the window) and the
+  // outline; with tabs, another under the strip, over the note and the outline. Zen has none.
+  const frame = !zen;
+  const mainY = frame ? head + 1 + (tabBar ? 2 : 0) : 0;
   const mainH = H - mainY - gapBottom - status - bottomLine;
+  const bottom = mainY + mainH - 1;
 
   const sideW = app.sidebarWidth();
   const outW = app.outlineWidth();
   const beside = app.sidebarShown && app.sidebarBeside;
   const left = app.sidebarBeside ? sideW + 1 : 0;
+  const right = app.outlineBeside ? outW + 1 : 0;
+  const rule = (y: number, x0: number, x1: number) => {
+    drawText(c, x0, y, app.glyphs.hbar.repeat(x1 - x0), roleStyle(theme, "border", page), x1 - x0);
+    geo.rules.push({ y, x0, x1 });
+  };
 
   if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
-  // Tabs hold the note and its outline, not the explorer: the strip starts after the explorer.
-  if (tabBar) drawTabs(app, c, beside ? left : 0, { y: head, h: 1 }, geo);
-  const right = app.outlineBeside ? outW + 1 : 0;
-  drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, gapTop > 0, geo);
+  if (frame) rule(head, 0, W);
+  if (tabBar) {
+    // Tabs hold the note and its outline, not the explorer: the strip starts after the explorer.
+    const x0 = beside ? left : 0;
+    drawTabs(app, c, x0, { y: head + 1, h: 1 }, geo);
+    rule(head + 2, x0, W);
+  }
+  drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, frame, geo);
 
   if (app.sidebarShown) {
     const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, W - 6);
-    // Beside the content, the explorer runs from under the top bar (and its gap) to the status
-    // line whether or not the tab strip shows, and its border runs up beside the strip.
-    const sideY = beside ? (topBar ? head + gap : 0) : mainY;
-    const borderY = beside ? head : mainY;
-    const rect = { x: 0, y: sideY, w, h: mainY + mainH - sideY };
-    if (beside) c.fill(0, borderY, w, sideY - borderY, page);
+    // Beside the content, the explorer runs from under the frame's top rule to the status line,
+    // whether or not the tab strip shows; its border runs up beside the strip.
+    const sideY = beside && frame ? head + 1 : mainY;
+    const rect = { x: 0, y: sideY, w, h: bottom + 1 - sideY };
     drawSidebar(app, c, rect);
     const border = roleStyle(theme, app.region === "sidebar" ? "border_active" : "border", page);
-    for (let y = borderY; y < mainY + mainH; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
+    for (let y = sideY; y <= bottom; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
     geo.sidebar = rect;
-    if (beside) geo.separators.push({ kind: "sidebar", x: w, y: borderY, w: 1, h: mainY + mainH - borderY });
+    if (beside) {
+      geo.separators.push({ kind: "sidebar", x: w, y: sideY, w: 1, h: bottom + 1 - sideY });
+      geo.verticals.push({ x: w, y0: frame ? head : sideY, y1: bottom, style: border });
+    }
   }
   if (app.outlineShown) {
     const w = app.outlineBeside ? outW : Math.min(outW + 6, W - 6);
     const rect = { x: W - w, y: mainY, w, h: mainH };
     drawOutline(app, c, rect);
     const border = roleStyle(theme, app.region === "outline" ? "border_active" : "border", page);
-    for (let y = mainY; y < mainY + mainH; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
+    for (let y = mainY; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
     geo.outline = rect;
-    if (app.outlineBeside) geo.separators.push({ kind: "outline", x: W - w - 1, y: mainY, w: 1, h: mainH });
-  }
-
-  // Where a window's rule meets the explorer's or the outline's border, join them.
-  // The explorer's border starts under the top bar; the outline's at the content's top.
-  for (const r of geo.rules) {
-    if (beside && r.x0 === left) {
-      const st = roleStyle(theme, app.region === "sidebar" ? "border_active" : "border", page);
-      drawText(c, left - 1, r.y, joint(app.glyphs, r.y > head, false, true), st, 1);
-    }
-    if (app.outlineShown && app.outlineBeside && r.x1 === W - right) {
-      const st = roleStyle(theme, app.region === "outline" ? "border_active" : "border", page);
-      drawText(c, r.x1, r.y, joint(app.glyphs, r.y > mainY, true, false), st, 1);
+    if (app.outlineBeside) {
+      geo.separators.push({ kind: "outline", x: W - w - 1, y: mainY, w: 1, h: mainH });
+      geo.verticals.push({ x: W - w - 1, y0: frame ? mainY - 1 : mainY, y1: bottom, style: border });
     }
   }
+  drawJoints(app, c, geo);
 
   if (status) drawStatus(app, c, { y: H - status - bottomLine, h: 1 }, geo);
   if (bottomLine) {
@@ -265,18 +268,24 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
   });
 }
 
-/**
- * Where a rule meets a vertical border (which always continues down): the lines that join there.
- * `up`: the border also continues above.
- */
-function joint(g: Glyphs, up: boolean, left: boolean, right: boolean): string {
-  if (left && right) return up ? g.cross : g.teeDown;
-  if (right) return up ? g.teeRight : g.cornerTopLeft;
-  return up ? g.teeLeft : g.cornerTopRight;
+/** Where rules meet vertical borders, the box glyph for the lines that meet there. */
+function drawJoints(app: App, c: Canvas, geo: Geometry): void {
+  const covers = (y: number, x: number) => geo.rules.some((r) => r.y === y && x >= r.x0 && x < r.x1);
+  for (const v of geo.verticals) {
+    for (const r of geo.rules) {
+      if (r.y < v.y0 || r.y > v.y1) continue;
+      const l = covers(r.y, v.x - 1);
+      const rt = covers(r.y, v.x + 1);
+      if (!l && !rt) continue;
+      const key = `${r.y > v.y0 ? "u" : ""}${r.y < v.y1 ? "d" : ""}${l ? "l" : ""}${rt ? "r" : ""}`;
+      const g = app.glyphs.joints[key];
+      if (g) drawText(c, v.x, r.y, g, v.style, 1);
+    }
+  }
 }
 
-/** `gapAbove`: the row above `area` is free; the top windows draw their top rule there. */
-function drawContent(app: App, c: Canvas, area: Rect, gapAbove: boolean, geo: Geometry): void {
+/** `ruleAbove`: the row above `area` is a rule already, so the top windows don't draw their own. */
+function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, geo: Geometry): void {
   const tab = app.tab;
   const theme = app.theme;
   const page = pageBg(theme);
@@ -287,22 +296,21 @@ function drawContent(app: App, c: Canvas, area: Rect, gapAbove: boolean, geo: Ge
   }
   const focusContent = app.region === "content";
   if (tab.views.length === 1) {
-    drawPane(app, c, tab.views[0]!, area, focusContent, false, gapAbove, geo);
+    drawPane(app, c, tab.views[0]!, area, focusContent, false, ruleAbove, geo);
     return;
   }
   const [a, b] = tab.views as [View, View];
   const border = roleStyle(theme, "border", page);
   if (app.effectiveOrientation(tab) === "side") {
     const w1 = Math.max(12, Math.min(area.w - 13, Math.round((area.w - 1) * tab.ratio)));
-    drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, gapAbove, geo);
-    for (let y = area.y - (gapAbove ? 1 : 0); y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
+    drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, ruleAbove, geo);
+    for (let y = area.y; y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
+    geo.verticals.push({ x: area.x + w1, y0: area.y - (ruleAbove ? 1 : 0), y1: area.y + area.h - 1, style: border });
     geo.separators.push({ kind: "split-side", x: area.x + w1, y: area.y, w: 1, h: area.h, area });
-    drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, gapAbove, geo);
-    const sepTop = area.y - (gapAbove ? 1 : 0);
-    for (const r of geo.rules) if (r.x1 === area.x + w1) drawText(c, r.x1, r.y, joint(app.glyphs, r.y > sepTop, true, true), border, 1);
+    drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, ruleAbove, geo);
   } else {
     const h1 = Math.max(3, Math.min(area.h - 3, Math.round(area.h * tab.ratio)));
-    drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, gapAbove, geo);
+    drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, ruleAbove, geo);
     // The lower window's title row is the stacked split's handle.
     geo.separators.push({ kind: "split-stacked", x: area.x, y: area.y + h1, w: area.w, h: 1, area });
     drawPane(app, c, b, { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 }, focusContent, true, false, geo);
@@ -314,7 +322,7 @@ function paneIsActive(app: App, view: View): boolean {
   return !!t && t.views[t.active] === view;
 }
 
-function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, gapAbove: boolean, geo: Geometry): void {
+function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, ruleAbove: boolean, geo: Geometry): void {
   const theme = app.theme;
   const page = pageBg(theme);
   const active = paneIsActive(app, view);
@@ -323,13 +331,13 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const crumbs = app.config.ui.breadcrumb && !app.ui.zen && rect.h >= 8;
   if (crumbs) {
     // A rule, the title (in a split) and breadcrumb row on its own background, a rule. The top
-    // rule takes the free row above the window when there is one.
+    // rule is the frame's when the window is at the top.
     const rule = (y: number) => {
       drawText(c, rect.x, y, app.glyphs.hbar.repeat(rect.w), roleStyle(theme, "border", page), rect.w);
       geo.rules.push({ y, x0: rect.x, x1: rect.x + rect.w });
     };
-    const y = gapAbove ? rect.y : rect.y + 1;
-    rule(y - 1);
+    const y = ruleAbove ? rect.y : rect.y + 1;
+    if (!ruleAbove) rule(rect.y);
     const bg = roleStyle(theme, "breadcrumb_band", page).bg;
     c.fill(rect.x, y, rect.w, 1, bg);
     let x = rect.x;

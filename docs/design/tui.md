@@ -23,10 +23,11 @@ Code, in `src/tui/`:
 ```text
  ≡  slipbox                                              indexing 3…  ▤   ← top bar (ui.top_bar)
                                                                          ← empty row (ui.bar_gap)
-            ┃ 1 index ×  2 alpha ×                                    ← tab strip, only with 2+ tabs
- ▾ notes    ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓           ← each window's header: a rule,
-     beta   ┃ § Heading › Sub                    ┃ Heading     its breadcrumb (tinted),
-     alpha  ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫   Sub       and a rule
+━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
+ ▾ notes    ┃ 1 index ×  2 alpha ×                                    ← tab strip, only with 2+ tabs
+     beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━  ← a rule under the strip
+     alpha  ┃ § Heading › Sub                    ┃ Heading   ← each window's breadcrumb (tinted)
+            ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫   Sub       and a rule under it
             ┃ ▌ Sub                              ┃           ← explorer ┃ content ┃ outline
             ┃ Text with the █ursor on its row…   ┃           (both panes optional)
  ␣ l › links  backspace: up · esc: cancel                  ← which-key popup, while a key is pending
@@ -37,9 +38,15 @@ Code, in `src/tui/`:
 ```
 
 **Gaps.** With `ui.bar_gap` (default on), an empty row in the page's colour runs under the top
-bar across the whole width, and another sits above the status line. The row between the bars
-and the note holds each window's top rule (see the breadcrumb below). Screens shorter than 20
-rows drop the gaps.
+bar across the whole width, and another sits above the status line. Screens shorter than 20 rows
+drop the gaps.
+
+**The frame.** Under the empty row, a `━` rule in the `border` role runs across the top of
+everything: the explorer, the tab strip (or the window, without tabs) and the outline. With tabs,
+a second rule runs under the strip, over the note and the outline. Windows' header rules and the
+vertical borders complete it. Where rules and borders meet, one pass picks the box glyph from the
+lines that meet there: `┳` where a border starts under a rule, `┣` `┫` `╋` where it continues
+through (ascii: `+`). Zen mode has no frame.
 
 **The top bar** has buttons and vault-wide state; the middle is empty:
 
@@ -63,16 +70,14 @@ at 35%). The icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim)
 `breadcrumb_sep` (faint), and the heading the cursor is in `breadcrumb_current` (bold). In a
 split, the file name comes first on the same row.
 
-A `━` rule in the `border` role runs above and below it. The top rule takes the gap row under the
-bars (`ui.bar_gap`), or a row of the window when there is no gap. Each rule joins the vertical
-borders it meets, with the glyph chosen by which lines meet there: `┣` `┫` `╋` where a border runs
-on above, and `┏` `┓` `┳` where a border starts (the outline's and a split's, at the top rule).
+Rules run above and below it. The rule above is the frame's (the top rule, or the one under the
+tab strip); the lower window of a stacked split draws its own.
 
 **The tab strip** sits under the top bar and appears only with two or more tabs. Each tab has a
 `×` to close it. A tab holds the note and its outline but not the explorer, so with the explorer
 open beside the content the strip starts after the explorer's border and spans the note and the
-outline. The explorer runs from under the top bar to the status line, and stays put when the
-strip appears or goes.
+outline. The explorer runs from under the frame's top rule to the status line, and stays put when
+the strip appears or goes.
 
 **The status line** is about the file. From left to right:
 

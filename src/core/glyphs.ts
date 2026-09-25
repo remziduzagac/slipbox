@@ -33,13 +33,11 @@ export interface Glyphs {
   // chrome
   vbar: string;
   hbar: string;
-  /** Where a horizontal rule meets a vertical border: ┣ ┫ ╋, and ┏ ┓ ┳ where the border starts. */
-  teeRight: string;
-  teeLeft: string;
-  cross: string;
-  cornerTopLeft: string;
-  cornerTopRight: string;
-  teeDown: string;
+  /**
+   * Where rules and borders meet, keyed by the directions with a line: some of u(p), d(own),
+   * l(eft), r(ight), in that order — `udr` is ┣.
+   */
+  joints: Record<string, string>;
   dirOpen: string;
   dirClosed: string;
   file: string;
@@ -81,12 +79,7 @@ const unicode: Glyphs = {
   ellipsis: "…",
   vbar: "┃",
   hbar: "━",
-  teeRight: "┣",
-  teeLeft: "┫",
-  cross: "╋",
-  cornerTopLeft: "┏",
-  cornerTopRight: "┓",
-  teeDown: "┳",
+  joints: { udlr: "╋", udr: "┣", udl: "┫", dlr: "┳", ulr: "┻", dr: "┏", dl: "┓", ur: "┗", ul: "┛" },
   dirOpen: "▾",
   dirClosed: "▸",
   file: " ",
@@ -144,12 +137,7 @@ const ascii: Glyphs = {
   ellipsis: "~",
   vbar: "|",
   hbar: "-",
-  teeRight: "+",
-  teeLeft: "+",
-  cross: "+",
-  cornerTopLeft: "+",
-  cornerTopRight: "+",
-  teeDown: "+",
+  joints: { udlr: "+", udr: "+", udl: "+", dlr: "+", ulr: "+", dr: "+", dl: "+", ur: "+", ul: "+" },
   dirOpen: "v",
   dirClosed: ">",
   file: " ",

@@ -650,18 +650,21 @@ describe("top bar, tab strip, status line", () => {
     await h.app.run("note.open notes/alpha.md");
     h.frame();
     const strip = h.app.geometry!.tabStrip!;
-    expect(strip.y).toBe(2); // under the top bar and its empty row
+    expect(strip.y).toBe(3); // under the top bar, its empty row and the frame's top rule
     // Tabs hold the note and its outline, not the explorer: the strip starts after it, and the
     // explorer stays where it was before the strip appeared.
     const sb = h.app.geometry!.sidebar!;
     expect(strip.x).toBe(sb.x + sb.w + 1);
     expect(strip.x + strip.w).toBe(160);
     expect(sb.y).toBe(3);
-    expect(h.frame().split("\n")[2]![sb.w]).toBe("┃");
-    // Under the strip, the window's top rule; the explorer's border runs on above it (┣).
-    const r2 = h.frame().split("\n")[3]!;
-    expect(r2.slice(strip.x, strip.x + 10)).toBe("━".repeat(10));
-    expect(r2[strip.x - 1]).toBe("┣");
+    const rows = h.frame().split("\n");
+    // A rule over everything, the explorer's border starting under it (┳)…
+    expect(rows[2]!.slice(0, 10)).toBe("━".repeat(10));
+    expect(rows[2]![sb.w]).toBe("┳");
+    expect(rows[3]![sb.w]).toBe("┃");
+    // …and one under the strip, over the note (and the outline), meeting the border in ┣.
+    expect(rows[4]!.slice(strip.x, strip.x + 10)).toBe("━".repeat(10));
+    expect(rows[4]![strip.x - 1]).toBe("┣");
     const tab = (i: number) => h.app.geometry!.tabs[i]!;
     click(h, tab(0).x + 2, strip.y);
     expect(h.app.activeTab).toBe(0);
@@ -694,9 +697,8 @@ describe("top bar, tab strip, status line", () => {
     // Right under it a rule, joined to the explorer's border.
     expect(rows[pane.y - 1]!.slice(pane.x, pane.x + 20)).toBe("━".repeat(20));
     expect(rows[pane.y - 1]![pane.x - 1]).toBe("┣");
-    // Above it a rule too, in the row under the top bar: the frame's top corner is ┏.
-    expect(rows[pane.y - 3]!.slice(pane.x, pane.x + 20)).toBe("━".repeat(20));
-    expect(rows[pane.y - 3]![pane.x - 1]).toBe("┏");
+    // Above it the frame's top rule, across the explorer too; the explorer's border starts there.
+    expect(rows[pane.y - 3]!.slice(0, pane.x + 20)).toBe(`${"━".repeat(pane.x - 1)}┳${"━".repeat(20)}`);
     // Only the breadcrumb row has the band colour.
     const st = h.canvas().styles;
     expect(st[pane.y - 2]![pane.x + 60]!.bg).toBe(h.app.theme.roles.breadcrumb_band.bg!);
