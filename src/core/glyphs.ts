@@ -47,6 +47,8 @@ export interface Glyphs {
   crumb: string;
   /** Before a window's breadcrumb. */
   crumbIcon: string;
+  /** slipbox's emblem, in the top bar's chip. */
+  emblem: string;
 }
 
 const unicode: Glyphs = {
@@ -86,6 +88,7 @@ const unicode: Glyphs = {
   close: "×",
   crumb: "›",
   crumbIcon: "§",
+  emblem: "※", // the reference mark: notes pointing to notes
 };
 
 const nerd: Glyphs = {
@@ -142,6 +145,7 @@ const ascii: Glyphs = {
   close: "x",
   crumb: ">",
   crumbIcon: "#",
+  emblem: "*",
 };
 
 const SETS = { unicode, nerd, ascii };

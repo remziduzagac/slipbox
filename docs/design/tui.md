@@ -21,7 +21,7 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- ≡  slipbox                                              indexing 3…  ▤   ← top bar (ui.top_bar)
+ ≡  ※ slipbox                                            indexing 3…  ▤   ← top bar (ui.top_bar)
  1 index ×  2 alpha ×                                                    ← tab strip, only with 2+ tabs
                                                                          ← gap (ui.bar_gap)
  ▾ notes    ┃ § Heading › Sub                    ┃ Heading   ← each window: its breadcrumb,
@@ -41,7 +41,8 @@ shorter than 20 rows drop the gaps.
 
 **The top bar** has buttons and vault-wide state; the middle is empty:
 
-- on the left, `≡` toggles the explorer and the `slipbox` chip (plain accent text, no background)
+- on the left, `≡` toggles the explorer and the `※ slipbox` chip (plain accent text, no background; `※`
+  is the reference mark, notes pointing to notes)
   opens the command palette;
 - on the right, vault-wide state (`indexing N…`, `single-file`), then `▤` to toggle the outline.
 

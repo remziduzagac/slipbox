@@ -162,7 +162,7 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const icon = (glyph: string) => ` ${glyph} `;
   let x = button(app, c, 0, band, icon(g.explorerButton), app.sidebarShown ? "topbar_button_on" : "topbar_button", "btn:explorer", geo, bar.bg);
   x += 1;
-  x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
+  x += button(app, c, x, band, ` ${g.emblem} slipbox `, "topbar_chip", "btn:palette", geo, bar.bg);
 
   // Right side, laid out from the far right inwards.
   let rx = c.width;
