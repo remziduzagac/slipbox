@@ -88,23 +88,30 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const mainY = topBar + tabBar + gapTop;
   const mainH = H - mainY - gapBottom - status - bottomLine;
 
-  if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
-  if (tabBar) drawTabs(app, c, { y: topBar, h: 1 }, geo);
-
   const sideW = app.sidebarWidth();
   const outW = app.outlineWidth();
+  const beside = app.sidebarShown && app.sidebarBeside;
   const left = app.sidebarBeside ? sideW + 1 : 0;
+
+  if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
+  // Tabs hold the note and its outline, not the explorer: the strip starts after the explorer.
+  if (tabBar) drawTabs(app, c, beside ? left : 0, { y: topBar, h: 1 }, geo);
   const right = app.outlineBeside ? outW + 1 : 0;
   drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, geo);
 
   if (app.sidebarShown) {
     const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, W - 6);
-    const rect = { x: 0, y: mainY, w, h: mainH };
+    // Beside the content, the explorer runs from under the top bar (and its gap) to the status
+    // line whether or not the tab strip shows, and its border runs up beside the strip.
+    const sideY = beside ? (topBar ? topBar + gap : 0) : mainY;
+    const borderY = beside ? topBar : mainY;
+    const rect = { x: 0, y: sideY, w, h: mainY + mainH - sideY };
+    if (beside) c.fill(0, borderY, w, sideY - borderY, page);
     drawSidebar(app, c, rect);
     const border = roleStyle(theme, app.region === "sidebar" ? "border_active" : "border", page);
-    for (let y = mainY; y < mainY + mainH; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
+    for (let y = borderY; y < mainY + mainH; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
     geo.sidebar = rect;
-    if (app.sidebarBeside) geo.separators.push({ kind: "sidebar", x: w, y: mainY, w: 1, h: mainH });
+    if (beside) geo.separators.push({ kind: "sidebar", x: w, y: borderY, w: 1, h: mainY + mainH - borderY });
   }
   if (app.outlineShown) {
     const w = app.outlineBeside ? outW : Math.min(outW + 6, W - 6);
@@ -216,13 +223,13 @@ function drawBreadcrumb(app: App, c: Canvas, view: View, x0: number, x1: number,
 
 const CRUMB_MAX = 40;
 
-/** The tab strip, under the top bar when there are two or more tabs. */
-function drawTabs(app: App, c: Canvas, band: Band, geo: Geometry): void {
+/** The tab strip, under the top bar when there are two or more tabs, right of the explorer. */
+function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): void {
   const theme = app.theme;
   const stripBg = theme.roles.tab.bg ?? pageBg(theme);
-  c.fill(0, band.y, c.width, band.h, stripBg);
-  geo.tabStrip = { x: 0, y: band.y, w: c.width, h: band.h };
-  let x = 0;
+  c.fill(x0, band.y, c.width - x0, band.h, stripBg);
+  geo.tabStrip = { x: x0, y: band.y, w: c.width - x0, h: band.h };
+  let x = x0;
   app.tabs.forEach((t, i) => {
     if (x >= c.width) return;
     const v = t.views[t.active]!;

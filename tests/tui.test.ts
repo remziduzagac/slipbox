@@ -645,11 +645,18 @@ describe("top bar, tab strip, status line", () => {
     h.frame();
     const strip = h.app.geometry!.tabStrip!;
     expect(strip.y).toBe(1);
-    expect(h.frame().split("\n")[2]!.trim()).toBe(""); // the gap between the strip and the note
+    // Tabs hold the note and its outline, not the explorer: the strip starts after it, and the
+    // explorer stays where it was before the strip appeared.
+    const sb = h.app.geometry!.sidebar!;
+    expect(strip.x).toBe(sb.x + sb.w + 1);
+    expect(strip.x + strip.w).toBe(160);
+    expect(sb.y).toBe(2);
+    expect(h.frame().split("\n")[1]![sb.w]).toBe("┃");
+    expect(h.frame().split("\n")[2]!.slice(strip.x).trim()).toBe(""); // the gap between the strip and the note
     const tab = (i: number) => h.app.geometry!.tabs[i]!;
     click(h, tab(0).x + 2, strip.y);
     expect(h.app.activeTab).toBe(0);
-    h.app.handleMouse({ type: "scroll", x: 5, y: strip.y, button: 0, scroll: { direction: "down", delta: 1 } });
+    h.app.handleMouse({ type: "scroll", x: strip.x + 5, y: strip.y, button: 0, scroll: { direction: "down", delta: 1 } });
     expect(h.app.activeTab).toBe(1);
     // drag tab 0 onto tab 2
     const names = () => h.app.tabs.map((t) => t.views[0]!.buf.name);

@@ -22,11 +22,11 @@ Code, in `src/tui/`:
 
 ```text
  ≡  slipbox                                              indexing 3…  ▤   ← top bar (ui.top_bar)
- 1 index ×  2 alpha ×                                                    ← tab strip, only with 2+ tabs
-                                                                         ← gap (ui.bar_gap)
- ▾ notes    ┃ § Heading › Sub                    ┃ Heading   ← each window: its breadcrumb,
-     beta   ┃                                    ┃   Sub       then a blank row
-     alpha  ┃ ▌ Sub                              ┃           ← explorer ┃ content ┃ outline
+            ┃ 1 index ×  2 alpha ×                                    ← tab strip, only with 2+ tabs
+ ▾ notes    ┃                                                         ← gap (ui.bar_gap)
+     beta   ┃ § Heading › Sub                    ┃ Heading   ← each window: its breadcrumb,
+     alpha  ┃                                    ┃   Sub       then a blank row
+            ┃ ▌ Sub                              ┃           ← explorer ┃ content ┃ outline
             ┃ Text with the █ursor on its row…   ┃           (both panes optional)
  ␣ l › links  backspace: up · esc: cancel                  ← which-key popup, while a key is pending
  f → Follow link   n → Next link   …
@@ -57,7 +57,10 @@ as the note's end allows). The row stays reserved above the first heading, so th
 jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it.
 
 **The tab strip** sits under the top bar and appears only with two or more tabs. Each tab has a
-`×` to close it.
+`×` to close it. A tab holds the note and its outline but not the explorer, so with the explorer
+open beside the content the strip starts after the explorer's border and spans the note and the
+outline. The explorer runs from under the top bar to the status line, and stays put when the
+strip appears or goes.
 
 **The status line** is about the file. From left to right:
 
