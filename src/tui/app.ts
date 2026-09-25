@@ -39,7 +39,7 @@ import { stringWidth } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
 import { NoteBuffer } from "./buffer.ts";
 import type { Canvas } from "./canvas.ts";
-import { cells, clampPos, ordered, type Pos, snap } from "./cursor.ts";
+import { cells, clampPos, ordered, type Pos, snap, wordAt } from "./cursor.ts";
 import { drawApp, type Geometry } from "./draw.ts";
 import { rank } from "./fuzzy.ts";
 import {
@@ -258,13 +258,14 @@ export class App {
   width = 80;
   height = 24;
   geometry: Geometry | null = null;
+  /** Id of the clickable region under the mouse, for hover highlighting. */
+  hover: string | null = null;
   positions: PositionStore;
   watcher: VaultWatcher | null = null;
   ui: UiState;
   /** UI settings changed in this session, with the config value each overrode. */
   uiOverrides: Record<string, UiOverride> = {};
   private tree: TreeRow[] | null = null;
-  private dragging: { view: View; start: Pos; moved: boolean } | null = null;
   private readonly configFile: string | undefined;
   private configStamps = new Map<string, number>();
   readonly now: () => number;
@@ -672,6 +673,19 @@ export class App {
       view.curAnchor = this.cursorAnchorFor(layout, view.cur);
     }
     if (moveCursor) this.ensureCursorVisible(view, layout);
+  }
+
+  /** The headings the cursor is in, outermost first: the status line's breadcrumb. */
+  breadcrumb(view = this.view): { text: string; line: number }[] {
+    if (!view) return [];
+    const hs = this.currentLayout(view).headings;
+    const chain: { text: string; line: number; level: number }[] = [];
+    for (const h of hs) {
+      if (h.line > view.cur.row) break;
+      while (chain.length && chain[chain.length - 1]!.level >= h.level) chain.pop();
+      chain.push({ text: h.text, line: h.line, level: h.level });
+    }
+    return chain.map(({ text, line }) => ({ text, line }));
   }
 
   /** The link under the cursor, if any. */
@@ -1299,95 +1313,259 @@ export class App {
     if (item) o.move?.(item.item);
   }
 
+  private lastClick: { x: number; y: number; at: number; count: number } | null = null;
+  private drag:
+    | { kind: "select"; view: View; start: Pos; moved: boolean }
+    | { kind: "tab"; index: number }
+    | { kind: "separator"; sep: import("./draw.ts").Separator }
+    | { kind: "scrollbar"; bar: import("./draw.ts").ScrollbarGeom }
+    | null = null;
+
+  /** Everything visible is clickable (docs/design/tui.md, "Mouse"). */
   handleMouse(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
     const g = this.geometry;
     if (!g) return;
-    if (this.overlay && ev.type === "down") {
-      if (this.overlay.kind === "list" && g.overlay) {
-        const r = g.overlay;
-        const idx = ev.y - r.listY + this.overlay.scroll;
-        if (ev.x >= r.x && ev.x < r.x + r.w && ev.y >= r.listY && idx < this.overlay.filtered.length) {
-          this.overlay.selected = idx;
-          return void this.overlayKey(this.overlay, "enter");
-        }
-      }
-      return this.closeOverlay(true);
+    const hotAt = () => g.hot.find((h) => inRect(h, ev.x, ev.y));
+    if (ev.type === "move" || ev.type === "over" || ev.type === "out") {
+      this.hover = hotAt()?.id ?? null;
+      return;
     }
+    if (this.overlay) return this.overlayMouse(ev, g);
+    if (ev.type === "scroll") return this.wheel(ev, g);
+    if (ev.type === "down") return this.mouseDown(ev, g, hotAt()?.id ?? null);
+    if (ev.type === "drag" && this.drag) return this.mouseDrag(ev, g);
+    if ((ev.type === "up" || ev.type === "drag-end") && this.drag) return this.mouseUp();
+  }
+
+  private overlayMouse(ev: { type: string; x: number; y: number; scroll?: { direction: string } }, g: Geometry): void {
+    const o = this.overlay!;
+    if (o.kind !== "list" || !g.overlay) {
+      if (ev.type === "down") this.closeOverlay(true);
+      return;
+    }
+    const r = g.overlay;
     if (ev.type === "scroll") {
-      const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
-      const n = Math.max(1, ev.scroll?.delta ?? 1) * 3;
-      const dir = ev.scroll?.direction === "up" ? -1 : 1;
-      if (pane) this.scrollBy(pane.view, dir * n, false);
-      else if (g.sidebar && inRect(g.sidebar, ev.x, ev.y)) this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
-      else if (g.outline && inRect(g.outline, ev.x, ev.y)) this.outline.scroll = Math.max(0, this.outline.scroll + dir * n);
+      const d = ev.scroll?.direction === "up" ? -1 : 1;
+      o.selected = Math.max(0, Math.min(o.filtered.length - 1, o.selected + d));
+      const item = o.filtered[o.selected];
+      if (item) o.move?.(item.item);
       return;
     }
-    if (ev.type === "down" && ev.button === 0) {
+    if (ev.type !== "down") return;
+    const idx = ev.y - r.listY + o.scroll;
+    if (ev.x >= r.x && ev.x < r.x + r.w && ev.y >= r.listY && idx < o.filtered.length) {
+      o.selected = idx;
+      return void this.overlayKey(o, "enter");
+    }
+    if (!inRect(r, ev.x, ev.y)) this.closeOverlay(true);
+  }
+
+  private wheel(ev: { x: number; y: number; scroll?: { direction: string; delta: number } }, g: Geometry): void {
+    const n = Math.max(1, ev.scroll?.delta ?? 1) * 3;
+    const dir = ev.scroll?.direction === "up" ? -1 : 1;
+    if (g.tabStrip && inRect(g.tabStrip, ev.x, ev.y) && this.tabs.length) {
+      this.activeTab = (this.activeTab + dir + this.tabs.length) % this.tabs.length;
+      return;
+    }
+    const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
+    if (pane) this.scrollBy(pane.view, dir * n, false);
+    else if (g.sidebar && inRect(g.sidebar, ev.x, ev.y)) this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
+    else if (g.outline && inRect(g.outline, ev.x, ev.y)) this.outline.scroll = Math.max(0, this.outline.scroll + dir * n);
+  }
+
+  /** Click count at this spot: 1, 2 (double) or 3 (triple), within 400 ms. */
+  private clicks(ev: { x: number; y: number }): number {
+    const now = this.now();
+    const l = this.lastClick;
+    const count = l && l.x === ev.x && l.y === ev.y && now - l.at < 400 ? Math.min(3, l.count + 1) : 1;
+    this.lastClick = { x: ev.x, y: ev.y, at: now, count };
+    return count;
+  }
+
+  private mouseDown(ev: { x: number; y: number; button: number }, g: Geometry, hot: string | null): void {
+    // Middle-click closes a tab.
+    if (ev.button === 1) {
       const tab = g.tabs.find((t) => inRect(t, ev.x, ev.y));
-      if (tab) {
-        this.activeTab = tab.index;
-        return;
-      }
-      if (g.sidebar && inRect(g.sidebar, ev.x, ev.y)) {
-        const idx = ev.y - g.sidebar.y + this.sidebar.scroll;
-        if (idx < this.treeRows().length) {
-          this.sidebar.selected = idx;
-          this.region = "sidebar";
-          this.explorerAction("open");
-        }
-        return;
-      }
-      if (g.outline && inRect(g.outline, ev.x, ev.y)) {
-        const idx = ev.y - g.outline.y + this.outline.scroll;
-        if (idx < this.outlineRows().length) {
-          this.outline.selected = idx;
-          this.region = "outline";
-          this.outlineAction("jump");
-        }
-        return;
-      }
-      const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
-      if (!pane) return;
-      const t = this.tab!;
-      t.active = t.views.indexOf(pane.view);
-      this.region = "content";
-      const layout = this.currentLayout(pane.view);
-      const pos = clampPos(layout, { row: pane.view.top + (ev.y - pane.y), col: Math.max(0, ev.x - pane.textX) });
-      pane.view.sel = null;
-      pane.view.visual = null;
-      this.moveCursor(pane.view, pos);
-      this.dragging = { view: pane.view, start: pos, moved: false };
+      if (tab) this.closeTabAt(tab.index);
       return;
     }
-    if (ev.type === "drag" && this.dragging) {
-      const d = this.dragging;
-      const pane = g.panes.find((p) => p.view === d.view);
-      if (!pane) return;
-      if (ev.y < pane.y) this.scrollBy(pane.view, -1, false);
-      if (ev.y >= pane.y + pane.h) this.scrollBy(pane.view, 1, false);
-      const layout = this.currentLayout(d.view);
-      const pos = clampPos(layout, { row: d.view.top + Math.max(0, Math.min(pane.h - 1, ev.y - pane.y)), col: Math.max(0, ev.x - pane.textX) });
-      d.view.sel = { anchor: d.start, line: false };
-      d.view.cur = pos;
-      d.view.goal = pos.col;
-      d.moved = true;
+    if (ev.button !== 0) return;
+    const clicks = this.clicks(ev);
+    if (hot && !hot.startsWith("tab:")) return this.clickHot(hot);
+    const tab = g.tabs.find((t) => inRect(t, ev.x, ev.y));
+    if (tab) {
+      this.activeTab = tab.index;
+      this.drag = { kind: "tab", index: tab.index };
       return;
     }
-    if ((ev.type === "up" || ev.type === "drag-end") && this.dragging) {
-      const d = this.dragging;
-      this.dragging = null;
-      if (d.moved && d.view.sel) {
-        const text = this.selectionText(d.view);
-        if (text) {
-          this.copy(text, false);
-          this.message("info", `copied ${text.length} characters · ${prettyKey(`${this.leader} s a`, this.leader)} adds it to the scratch`);
-        }
-        return;
-      }
-      d.view.sel = null;
-      const link = linkAt(this.currentLayout(d.view), d.start.row, d.start.col);
-      if (link >= 0) void this.run("link.follow").then(() => this.host.requestRender());
+    const sep = g.separators.find((s) => inRect(s, ev.x, ev.y));
+    if (sep) {
+      this.drag = { kind: "separator", sep };
+      return;
     }
+    const bar = g.scrollbars.find((b) => inRect(b, ev.x, ev.y));
+    if (bar) {
+      this.drag = { kind: "scrollbar", bar };
+      this.scrollbarTo(bar, ev.y);
+      return;
+    }
+    if (g.sidebar && inRect(g.sidebar, ev.x, ev.y)) {
+      const idx = ev.y - g.sidebar.y + this.sidebar.scroll;
+      const row = this.treeRows()[idx];
+      if (!row) return;
+      this.sidebar.selected = idx;
+      this.region = "sidebar";
+      if (row.kind === "dir") {
+        if (this.expanded.has(row.path)) this.expanded.delete(row.path);
+        else this.expanded.add(row.path);
+        this.invalidateTree();
+      } else this.explorerAction(clicks >= 2 ? "open_tab" : "open");
+      return;
+    }
+    if (g.outline && inRect(g.outline, ev.x, ev.y)) {
+      const idx = ev.y - g.outline.y + this.outline.scroll;
+      const row = this.outlineRows()[idx];
+      if (!row) return;
+      this.outline.selected = idx;
+      this.region = "outline";
+      // The fold marker sits right after the indent.
+      const markerX = g.outline.x + 1 + (row.level - 1) * 2;
+      if (row.hasChildren && ev.x >= markerX - 1 && ev.x <= markerX + 1) this.outlineAction(row.folded ? "unfold" : "fold");
+      else this.outlineAction("jump");
+      return;
+    }
+    const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
+    if (!pane) return;
+    const t = this.tab!;
+    t.active = t.views.indexOf(pane.view);
+    this.region = "content";
+    const view = pane.view;
+    const layout = this.currentLayout(view);
+    const pos = clampPos(layout, { row: view.top + (ev.y - pane.y), col: Math.max(0, ev.x - pane.textX) });
+    view.visual = null;
+    if (clicks === 2) {
+      // Double-click selects the word, triple-click the row; either is copied, like a terminal.
+      const [a, b] = wordAt(layout, pos);
+      view.sel = { anchor: { row: pos.row, col: a }, line: false };
+      this.moveCursor(view, { row: pos.row, col: b }, { extend: true });
+      this.copySelectionQuietly(view);
+      return;
+    }
+    if (clicks === 3) {
+      view.sel = { anchor: { row: pos.row, col: 0 }, line: true };
+      view.cur = pos;
+      this.copySelectionQuietly(view);
+      return;
+    }
+    view.sel = null;
+    this.moveCursor(view, pos);
+    this.drag = { kind: "select", view, start: pos, moved: false };
+  }
+
+  private copySelectionQuietly(view: View): void {
+    const text = this.selectionText(view);
+    if (!text) return;
+    this.copy(text, false);
+    this.message("info", `copied ${text.length} characters`);
+  }
+
+  private mouseDrag(ev: { x: number; y: number }, g: Geometry): void {
+    const d = this.drag!;
+    if (d.kind === "tab") {
+      const over = g.tabs.find((t) => ev.x >= t.x && ev.x < t.x + t.w);
+      if (over && over.index !== d.index) {
+        const [moved] = this.tabs.splice(d.index, 1);
+        this.tabs.splice(over.index, 0, moved!);
+        this.activeTab = over.index;
+        d.index = over.index;
+      }
+      return;
+    }
+    if (d.kind === "separator") {
+      const s = d.sep;
+      if (s.kind === "sidebar") this.sideW = Math.max(12, Math.min(ev.x, Math.floor(this.width * 0.5)));
+      else if (s.kind === "outline") this.outW = Math.max(12, Math.min(this.width - ev.x - 1, Math.floor(this.width * 0.5)));
+      else if (s.area && this.tab) {
+        const r = s.kind === "split-side" ? (ev.x - s.area.x) / Math.max(1, s.area.w) : (ev.y - s.area.y) / Math.max(1, s.area.h);
+        this.tab.ratio = Math.max(0.15, Math.min(0.85, r));
+      }
+      return;
+    }
+    if (d.kind === "scrollbar") return this.scrollbarTo(d.bar, ev.y);
+    const pane = g.panes.find((p) => p.view === d.view);
+    if (!pane) return;
+    if (ev.y < pane.y) this.scrollBy(pane.view, -1, false);
+    if (ev.y >= pane.y + pane.h) this.scrollBy(pane.view, 1, false);
+    const layout = this.currentLayout(d.view);
+    const pos = clampPos(layout, { row: d.view.top + Math.max(0, Math.min(pane.h - 1, ev.y - pane.y)), col: Math.max(0, ev.x - pane.textX) });
+    d.view.sel = { anchor: d.start, line: false };
+    d.view.cur = pos;
+    d.view.goal = pos.col;
+    d.moved = true;
+  }
+
+  private mouseUp(): void {
+    const d = this.drag!;
+    this.drag = null;
+    if (d.kind !== "select") return;
+    if (d.moved && d.view.sel) {
+      const text = this.selectionText(d.view);
+      if (text) {
+        this.copy(text, false);
+        this.message("info", `copied ${text.length} characters · ${prettyKey(`${this.leader} s a`, this.leader)} adds it to the scratch`);
+      }
+      return;
+    }
+    d.view.sel = null;
+    const link = linkAt(this.currentLayout(d.view), d.start.row, d.start.col);
+    if (link >= 0) void this.run("link.follow").then(() => this.host.requestRender());
+  }
+
+  private scrollbarTo(bar: import("./draw.ts").ScrollbarGeom, y: number): void {
+    const frac = Math.max(0, Math.min(1, (y - bar.y) / Math.max(1, bar.h - 1)));
+    const target = Math.round(frac * Math.max(0, bar.total - bar.view.height));
+    this.scrollBy(bar.view, target - bar.view.top, false);
+  }
+
+  /** What a click on a region of the chrome does. */
+  clickHot(id: string): void {
+    const [kind, arg] = [id.slice(0, id.indexOf(":")), id.slice(id.indexOf(":") + 1)];
+    switch (kind) {
+      case "btn":
+        if (arg === "explorer") {
+          const on = !this.sidebarShown;
+          this.showSidebar(on);
+          if (on) {
+            this.region = "sidebar";
+            this.revealInSidebar();
+          }
+        } else if (arg === "outline") void this.run("outline.toggle");
+        else if (arg === "palette") void this.run("palette.open");
+        break;
+      case "tabclose":
+        this.closeTabAt(Number(arg));
+        break;
+      case "crumb": {
+        const v = this.view;
+        if (!v) break;
+        this.pushHistory(v);
+        this.moveCursor(v, { row: Number(arg), col: 0 });
+        break;
+      }
+      case "status":
+        if (arg === "path" && this.view) this.copy(this.view.buf.abs);
+        else if (arg === "message") void this.run("messages.open");
+        break;
+      case "wk":
+        void this.handleKey(arg);
+        break;
+    }
+  }
+
+  closeTabAt(index: number): void {
+    if (index < 0 || index >= this.tabs.length) return;
+    this.activeTab = index;
+    this.closeTab();
   }
 
   resize(width: number, height: number): void {

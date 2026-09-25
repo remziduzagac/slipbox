@@ -45,8 +45,10 @@ export interface Config {
     /** Cap the text column at `readable_max` columns, centred. */
     readable_width: boolean;
     readable_max: number;
-    /** Hide explorer, outline, tab bar and status line; readable width on. */
+    /** Hide explorer, outline, top bar, tab strip and status line; readable width on. */
     zen: boolean;
+    /** The top bar: explorer and outline buttons, the app chip, vault state. */
+    top_bar: boolean;
     /** Rows of margin kept between the cursor and the top or bottom of the view. */
     scrolloff: number;
   };
@@ -107,6 +109,7 @@ export const DEFAULT_CONFIG: Config = {
     readable_width: false,
     readable_max: 100,
     zen: false,
+    top_bar: true,
     scrolloff: 3,
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },

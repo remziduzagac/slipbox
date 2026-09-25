@@ -185,7 +185,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `g g` / `shift+g` | top / bottom |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open |
-| mouse click | open in the current window |
+| mouse | click a folder to fold or unfold it; click a note to open it here, double-click for a new tab |
 
 ## Outline — right pane
 
@@ -199,7 +199,7 @@ It lists the note's headings and highlights the section the cursor is in. Inside
 | Key | Action |
 | --- | --- |
 | `j` / `k`, `down` / `up` | move |
-| `enter`, mouse click | jump to the heading |
+| `enter`, mouse click | jump to the heading; clicking the `▾`/`▸` marker folds instead |
 | `h` / `l`, `left` / `right` | fold / unfold |
 | `g g` / `shift+g` | top / bottom |
 | `q` | close the outline |
@@ -247,7 +247,7 @@ config.
 | `space u t` | theme picker, previewed live (`esc` restores) |
 | `space u g` | glyph picker: nerd, unicode, ascii (previewed live) |
 | `space u w` | readable width: the text column capped at `ui.readable_max` (100), centred |
-| `space u z` | zen mode: no explorer, outline, tab bar or status line; readable width on |
+| `space u z` | zen mode: no top bar, explorer, outline, tab strip or status line; readable width on |
 | `space u l` | cursor-row highlight on / off |
 | `space u n` | source line numbers in a left gutter |
 | `space u r` | link URLs shown after the link text |
@@ -278,6 +278,35 @@ edit the config and the config wins again.
 | `space m` | messages |
 | `space ?` | every key and command, searchable |
 | `space q q` | quit (also `ctrl+q`, `:q`) |
+
+## Mouse
+
+Everything on screen that looks clickable is clickable. The item under the pointer is highlighted
+with the `hover` role. `space u m` turns the mouse off, which gives it back to the terminal.
+
+### Chrome
+
+| Where | What the mouse does |
+| --- | --- |
+| top bar `☰` / `≣` | toggle the explorer / the outline |
+| top bar `slipbox` chip | open the command palette |
+| tab | click to switch; drag to reorder; middle-click or `×` to close |
+| tab strip, wheel | previous / next tab |
+| pane borders | drag to resize the explorer, the outline, or the split |
+| scrollbar | click to jump; drag to scroll |
+| status line | click a breadcrumb heading to jump to it; click the path to copy it |
+| message line | click to open the messages |
+| which-key popup | click an entry: a group opens it, a command runs it |
+
+### Content, panes, lists
+
+| Where | What the mouse does |
+| --- | --- |
+| note | click moves the cursor; drag selects and copies on release |
+| note, double / triple click | select and copy the word / the row |
+| note, wheel | scroll the view |
+| explorer, outline | see their sections above |
+| lists, wheel | move the selection |
 
 ## Platform notes
 

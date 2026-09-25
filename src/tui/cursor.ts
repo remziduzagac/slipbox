@@ -245,3 +245,18 @@ export function ordered(a: Pos, b: Pos): [Pos, Pos] {
 export function samePos(a: Pos, b: Pos): boolean {
   return a.row === b.row && a.col === b.col;
 }
+
+/** The word (same-kind run) under a position, as [start, end] columns — for double-click. */
+export function wordAt(layout: Layout, p: Pos): [number, number] {
+  const cs = cells(layout.lines[p.row]);
+  const i = index(cs, p.col);
+  const c = cs[i];
+  if (!c) return [p.col, p.col];
+  const k = kind(c);
+  if (k === 0 || k === 3) return [c.x, c.x];
+  let a = i;
+  let b = i;
+  while (a > 0 && kind(cs[a - 1]!) === k) a--;
+  while (b < cs.length - 1 && kind(cs[b + 1]!) === k) b++;
+  return [cs[a]!.x, cs[b]!.x];
+}

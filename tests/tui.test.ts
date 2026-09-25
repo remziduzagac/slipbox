@@ -580,6 +580,196 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
   });
 });
 
+describe("top bar, tab strip, status line", () => {
+  const hot = (h: Harness, id: string) => {
+    h.frame();
+    const r = h.app.geometry!.hot.find((x) => x.id === id);
+    if (!r) throw new Error(`no region ${id}`);
+    return r;
+  };
+  const click = (h: Harness, x: number, y: number, button = 0) => {
+    h.app.handleMouse({ type: "down", x, y, button });
+    h.app.handleMouse({ type: "up", x, y, button });
+    h.frame();
+  };
+  test("top bar: explorer and outline buttons, the chip opens the palette, vault state on the right", async () => {
+    const h = await harness({ width: 160 });
+    const top = h.frame().split("\n")[0]!;
+    expect(top).toContain("☰");
+    expect(top).toContain("slipbox");
+    expect(top).toContain("≣");
+    expect(top).toContain("not watching"); // watch: false in the harness
+    const ex = hot(h, "btn:explorer");
+    click(h, ex.x, ex.y);
+    expect(h.app.sidebarShown).toBe(false);
+    click(h, ex.x, ex.y);
+    expect(h.app.sidebarShown).toBe(true);
+    const ol = hot(h, "btn:outline");
+    click(h, ol.x + 1, ol.y);
+    expect(h.app.outlineShown).toBe(true);
+    const chip = hot(h, "btn:palette");
+    click(h, chip.x + 2, chip.y);
+    expect(h.app.overlay?.kind).toBe("list");
+  });
+  test("hover highlights what is under the mouse", async () => {
+    const h = await harness({ width: 160 });
+    const ex = hot(h, "btn:explorer");
+    h.app.handleMouse({ type: "move", x: ex.x, y: ex.y, button: 0 });
+    expect(h.app.hover).toBe("btn:explorer");
+    const c = h.canvas();
+    expect(c.styles[ex.y]![ex.x + 1]!.bg).toBe(h.app.theme.roles.hover.bg!);
+    h.app.handleMouse({ type: "move", x: 80, y: 10, button: 0 });
+    expect(h.app.hover).toBeNull();
+  });
+  test("top_bar = false removes it; zen hides it", async () => {
+    const off = await harness({ config: (c) => (c.ui.top_bar = false) });
+    expect(off.frame().split("\n")[0]).not.toContain("slipbox");
+    const zen = await harness({ config: (c) => (c.ui.zen = true) });
+    expect(zen.frame()).not.toContain("☰");
+  });
+  test("tab strip under the top bar only with 2+ tabs: click, ×, middle-click, wheel, drag", async () => {
+    const h = await harness({ width: 160 });
+    expect(h.app.geometry!.tabStrip).toBeNull();
+    await h.keys("ctrl+t", "o");
+    await h.app.run("note.open notes/beta.md");
+    await h.keys("ctrl+t", "o");
+    await h.app.run("note.open notes/alpha.md");
+    h.frame();
+    const strip = h.app.geometry!.tabStrip!;
+    expect(strip.y).toBe(1);
+    const tab = (i: number) => h.app.geometry!.tabs[i]!;
+    click(h, tab(0).x + 2, strip.y);
+    expect(h.app.activeTab).toBe(0);
+    h.app.handleMouse({ type: "scroll", x: 5, y: strip.y, button: 0, scroll: { direction: "down", delta: 1 } });
+    expect(h.app.activeTab).toBe(1);
+    // drag tab 0 onto tab 2
+    const names = () => h.app.tabs.map((t) => t.views[0]!.buf.name);
+    const first = names()[0];
+    h.frame();
+    h.app.handleMouse({ type: "down", x: tab(0).x + 2, y: strip.y, button: 0 });
+    h.app.handleMouse({ type: "drag", x: tab(2).x + 2, y: strip.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: tab(2).x + 2, y: strip.y, button: 0 });
+    expect(names()[2]).toBe(first!);
+    h.frame();
+    const x0 = hot(h, "tabclose:0");
+    click(h, x0.x, x0.y);
+    expect(h.app.tabs).toHaveLength(2);
+    h.frame();
+    click(h, tab(0).x + 2, strip.y, 1);
+    expect(h.app.tabs).toHaveLength(1);
+  });
+  test("status line: outline breadcrumb left of the position, clickable; the path copies", async () => {
+    const h = await harness({ open: "notes/alpha.md", width: 160 });
+    h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
+    const status = h.frame().split("\n").at(-1)!;
+    expect(status).toMatch(/Alpha › Section One +L9:1/);
+    const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:"))!;
+    click(h, crumb.x, crumb.y);
+    expect(rowText(h)).toContain("Alpha");
+    const path = hot(h, "status:path");
+    click(h, path.x, path.y);
+    expect(h.copied.at(-1)).toEndWith("/notes/alpha.md");
+    const msg = hot(h, "status:message");
+    click(h, msg.x + 3, msg.y);
+    expect(h.frame()).toContain("Messages");
+  });
+});
+
+describe("mouse", () => {
+  const click = (h: Harness, x: number, y: number) => {
+    h.app.handleMouse({ type: "down", x, y, button: 0 });
+    h.app.handleMouse({ type: "up", x, y, button: 0 });
+    h.frame();
+  };
+  test("double-click selects a word, triple-click the row; both copy", async () => {
+    const h = await harness({ open: "notes/alpha.md" });
+    const pane = h.app.geometry!.panes[0]!;
+    const row = rowStarting(h, "Back to");
+    const y = pane.y + row - h.app.view!.top;
+    click(h, pane.textX + 1, y);
+    click(h, pane.textX + 1, y);
+    expect(h.copied.at(-1)).toBe("Back");
+    click(h, pane.textX + 1, y);
+    expect(h.copied.at(-1)).toBe("Back to index and on to beta.");
+  });
+  test("scrollbar click and drag jump through the note", async () => {
+    const h = await harness({ open: "samples/large-document.md" });
+    h.frame();
+    const bar = h.app.geometry!.scrollbars[0]!;
+    click(h, bar.x, bar.y + bar.h - 1);
+    expect(h.app.view!.top).toBeGreaterThan(100);
+    h.app.handleMouse({ type: "down", x: bar.x, y: bar.y + bar.h - 1, button: 0 });
+    h.app.handleMouse({ type: "drag", x: bar.x, y: bar.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: bar.x, y: bar.y, button: 0 });
+    expect(h.app.view!.top).toBe(0);
+  });
+  test("dragging borders resizes the explorer, the outline and the split", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+    await h.keys("ctrl+w", "v");
+    h.frame();
+    const seps = h.app.geometry!.separators;
+    const side = seps.find((s) => s.kind === "sidebar")!;
+    h.app.handleMouse({ type: "down", x: side.x, y: side.y + 3, button: 0 });
+    h.app.handleMouse({ type: "drag", x: side.x + 8, y: side.y + 3, button: 0 });
+    h.app.handleMouse({ type: "up", x: side.x + 8, y: side.y + 3, button: 0 });
+    expect(h.app.sideW).toBe(side.x + 8);
+    const out = seps.find((s) => s.kind === "outline")!;
+    h.app.handleMouse({ type: "down", x: out.x, y: out.y + 3, button: 0 });
+    h.app.handleMouse({ type: "drag", x: out.x - 6, y: out.y + 3, button: 0 });
+    h.app.handleMouse({ type: "up", x: out.x - 6, y: out.y + 3, button: 0 });
+    expect(h.app.outW).toBe(160 - (out.x - 6) - 1);
+    h.frame();
+    const split = h.app.geometry!.separators.find((s) => s.kind === "split-side")!;
+    h.app.handleMouse({ type: "down", x: split.x, y: split.y + 3, button: 0 });
+    h.app.handleMouse({ type: "drag", x: split.area!.x + Math.round(split.area!.w * 0.3), y: split.y + 3, button: 0 });
+    h.app.handleMouse({ type: "up", x: split.x, y: split.y + 3, button: 0 });
+    expect(h.app.tab!.ratio).toBeCloseTo(0.3, 1);
+  });
+  test("explorer: click a folder to fold it, double-click a note for a new tab", async () => {
+    const h = await harness({ open: "notes/alpha.md" });
+    h.frame();
+    const sb = h.app.geometry!.sidebar!;
+    const rowOf = (path: string) => h.app.treeRows().findIndex((r) => r.path === path) - h.app.sidebar.scroll + sb.y;
+    click(h, sb.x + 3, rowOf("notes"));
+    expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(false);
+    click(h, sb.x + 3, rowOf("notes"));
+    expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(true);
+    const y = rowOf("notes/beta.md");
+    click(h, sb.x + 6, y);
+    click(h, sb.x + 6, y);
+    expect(h.app.tabs).toHaveLength(2);
+  });
+  test("outline: click the fold marker folds; click the text jumps", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+    h.frame();
+    const o = h.app.geometry!.outline!;
+    const before = h.app.outlineRows().length;
+    const first = h.app.outlineRows()[0]!;
+    click(h, o.x + 1 + (first.level - 1) * 2, o.y);
+    expect(h.app.outlineRows().length).toBeLessThan(before);
+    click(h, o.x + 1 + (first.level - 1) * 2, o.y);
+    click(h, o.x + 10, o.y + 2);
+    expect(h.app.view!.cur.row).toBe(h.app.outlineRows()[2]!.line);
+  });
+  test("which-key entries are clickable", async () => {
+    const h = await harness({ width: 160 });
+    await h.keys("space");
+    h.frame();
+    const u = h.app.geometry!.hot.find((r) => r.id === "wk:u")!;
+    click(h, u.x + 2, u.y);
+    expect(h.app.pending).toEqual(["space", "u"]);
+    const z = h.app.geometry!.hot.find((r) => r.id === "wk:z")!;
+    click(h, z.x + 2, z.y);
+    expect(h.app.ui.zen).toBe(true);
+  });
+  test("the wheel over a list moves its selection", async () => {
+    const h = await harness();
+    await h.keys("ctrl+p");
+    h.app.handleMouse({ type: "scroll", x: 50, y: 10, button: 0, scroll: { direction: "down", delta: 1 } });
+    expect((h.app.overlay as { selected: number }).selected).toBe(1);
+  });
+});
+
 describe("tabs (ctrl+t, space t)", () => {
   test("new, next, previous, go to, move, list, close", async () => {
     const h = await harness();

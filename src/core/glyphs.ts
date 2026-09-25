@@ -40,6 +40,11 @@ export interface Glyphs {
   scrollThumb: string;
   scrollTrack: string;
   dirty: string;
+  /** Top bar buttons and the tab close button. */
+  explorerButton: string;
+  outlineButton: string;
+  close: string;
+  crumb: string;
 }
 
 const unicode: Glyphs = {
@@ -74,6 +79,10 @@ const unicode: Glyphs = {
   scrollThumb: "┃",
   scrollTrack: " ",
   dirty: "●",
+  explorerButton: "☰",
+  outlineButton: "≣",
+  close: "×",
+  crumb: "›",
 };
 
 const nerd: Glyphs = {
@@ -125,6 +134,10 @@ const ascii: Glyphs = {
   scrollThumb: "#",
   scrollTrack: " ",
   dirty: "*",
+  explorerButton: "=",
+  outlineButton: "#",
+  close: "x",
+  crumb: ">",
 };
 
 const SETS = { unicode, nerd, ascii };

@@ -38,6 +38,7 @@ export const ROLES = [
   "selection", "error", "warn", "info", "scrollbar",
   "cursor", "cursor_line", "line_number", "line_number_current",
   "which_key", "which_key_key", "which_key_group", "which_key_title",
+  "topbar", "topbar_button", "topbar_chip", "hover", "breadcrumb",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -211,6 +212,11 @@ export function themeFromPalette(
     which_key_key: { fg: p.orange, bg: p.bg_dark, bold: true },
     which_key_group: { fg: p.blue, bg: p.bg_dark },
     which_key_title: { fg: p.bg, bg: p.blue, bold: true },
+    topbar: { fg: p.fg_dim, bg: p.bg_dark },
+    topbar_button: { fg: p.fg_strong, bg: p.bg_dark, bold: true },
+    topbar_chip: { fg: p.bg, bg: p.purple, bold: true },
+    hover: { fg: p.fg_strong, bg: p.surface2, bold: true },
+    breadcrumb: { fg: p.cyan, bg: p.bg_dark },
   };
   for (const [role, style] of Object.entries(overrides)) {
     roles[role as Role] = { ...roles[role as Role], ...style };
@@ -261,6 +267,11 @@ export function terminalTheme(): Theme {
     which_key_key: { fg: a(3), bg: a(0), bold: true },
     which_key_group: { fg: a(4), bg: a(0) },
     which_key_title: { fg: a(0), bg: a(4), bold: true },
+    topbar: { fg: a(7), bg: a(0) },
+    topbar_button: { fg: a(15), bg: a(0), bold: true },
+    topbar_chip: { fg: a(0), bg: a(5), bold: true },
+    hover: { fg: a(0), bg: a(7), bold: true },
+    breadcrumb: { fg: a(6), bg: a(0) },
   });
   t.kind = "dark";
   return t;
@@ -282,5 +293,7 @@ export function monoTheme(): Theme {
   roles.cursor = { inverse: true };
   roles.cursor_line = {};
   roles.which_key_title = { bold: true };
+  roles.hover = { inverse: true };
+  roles.topbar_chip = { inverse: true, bold: true };
   return { ...t, name: "mono", roles };
 }

@@ -21,23 +21,37 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- 1 index  2 alpha                                         ← tab bar, only with 2+ tabs
+ ☰  slipbox                                              ● watching  ≣   ← top bar (ui.top_bar)
+ 1 index ×  2 alpha ×                                                    ← tab strip, only with 2+ tabs
  ▾ notes    ┃ ▌ Heading                          ┃ Heading   ← explorer ┃ content ┃ outline
      alpha  ┃ Text with the █ursor on its row…   ┃   Sub     (both panes optional)
  ␣ l › links  backspace: up · esc: cancel                  ← which-key popup, while a key is pending
  f → Follow link   n → Next link   …
- READ  notes/alpha.md ↻ reloaded   → [[beta]] (resolved)  L12:7 40%  ← status line
+ READ  notes/alpha.md ↻ reloaded   Alpha › Sub  → [[beta]]  L12:7 40%  ← status line
  ↻ notes/alpha.md changed on disk — reloaded                         ← message or prompt
 ```
+
+**The top bar** has buttons on both sides. On the left, `☰` toggles the explorer and the `slipbox`
+chip opens the command palette. On the right it shows the vault's state (`● watching`,
+`⚠ not watching`, `indexing N…` or `single file`), then `≣` to toggle the outline. The middle is
+empty. `ui.top_bar = false` removes the bar, and zen mode hides it.
+
+**The tab strip** sits under the top bar and appears only with two or more tabs. Each tab has a
+`×` to close it.
 
 **The status line** shows, from left to right:
 
 - a mode chip: `READ`, `VISUAL`, `V-LINE`, `FILES`, `OUTLINE`, or the pending keys;
-- the note;
-- markers: `↻ reloaded`, `✖ deleted on disk`, `⚠ not watching`, `indexing N…`, `(single-file)`.
+- the note's path (click to copy it);
+- markers: `↻ reloaded`, `✖ deleted on disk`.
 
-On the right it shows the link under the cursor and its status (or find progress), then the tab,
-then `L<source line>:<column>` and the percentage.
+On the right it shows:
+
+- the outline breadcrumb: the chain of headings the cursor is under, each cut to 28 columns,
+  with the outermost dropped first when space runs short (click a heading to jump to it);
+- the link under the cursor and its status, or find progress;
+- the tab;
+- `L<source line>:<column>` and the percentage.
 
 **The bottom line** appears only while there is a message (4 s, 8 s for errors) or a prompt.
 
@@ -232,7 +246,7 @@ backstops:
 The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes.
 
 **Degrading loudly (plan `5.2`).** Exhausting the watch limit (`ENOSPC`, `EMFILE`, `ENFILE`)
-produces one error message, `⚠ not watching` in the status line, and polling of open notes.
+produces one error message, `⚠ not watching` in the top bar, and polling of open notes.
 
 ## Modes and dispatch (decision `3.11`)
 

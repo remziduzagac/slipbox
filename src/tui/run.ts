@@ -23,6 +23,8 @@ export async function runTui(argv: string[]): Promise<number> {
   const renderer = await createCliRenderer({
     exitOnCtrlC: false,
     useMouse: loaded.config.ui.mouse,
+    // Mouse movement drives hover highlighting on buttons, tabs and entries.
+    enableMouseMovement: true,
     targetFps: 60,
     autoFocus: false,
   });

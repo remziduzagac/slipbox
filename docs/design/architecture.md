@@ -149,7 +149,7 @@ Measured on this machine (aarch64 VM) on 2026-09-25:
 The graph parses lazily. The walk alone supplies every note name, which is all link resolution
 needs, so `render` and `resolve` never parse the whole vault. `backlinks`, `ls --json` and
 `outline` parse what they need and persist it. The TUI paints the first note straight away and
-parses the rest in 12 ms slices between frames, showing `indexing N…` in the status line.
+parses the rest in 12 ms slices between frames, showing `indexing N…` in the top bar.
 
 Parsing costs about 2 ms per 3 KB note, which is remark's own speed. Parsing in worker threads is
 the next lever. It belongs with phase 4's vault-scale work.
