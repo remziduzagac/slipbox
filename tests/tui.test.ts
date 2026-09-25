@@ -654,7 +654,10 @@ describe("top bar, tab strip, status line", () => {
     expect(strip.x + strip.w).toBe(160);
     expect(sb.y).toBe(2);
     expect(h.frame().split("\n")[1]![sb.w]).toBe("┃");
-    expect(h.frame().split("\n")[2]!.slice(strip.x).trim()).toBe(""); // the gap between the strip and the note
+    // Under the strip, the window's top rule; the explorer's border runs on above it (┣).
+    const r2 = h.frame().split("\n")[2]!;
+    expect(r2.slice(strip.x, strip.x + 10)).toBe("━".repeat(10));
+    expect(r2[strip.x - 1]).toBe("┣");
     const tab = (i: number) => h.app.geometry!.tabs[i]!;
     click(h, tab(0).x + 2, strip.y);
     expect(h.app.activeTab).toBe(0);
@@ -687,12 +690,13 @@ describe("top bar, tab strip, status line", () => {
     // Right under it a rule, joined to the explorer's border.
     expect(rows[pane.y - 1]!.slice(pane.x, pane.x + 20)).toBe("━".repeat(20));
     expect(rows[pane.y - 1]![pane.x - 1]).toBe("┣");
-    expect(rows[pane.y - 3]!.slice(pane.x).trim()).toBe(""); // the gap above
-    // Only the breadcrumb row has the band colour; the gap above stays on the page.
-    const page = h.app.theme.roles.text.bg ?? h.app.theme.bg;
+    // Above it a rule too, in the row under the top bar: the frame's top corner is ┏.
+    expect(rows[pane.y - 3]!.slice(pane.x, pane.x + 20)).toBe("━".repeat(20));
+    expect(rows[pane.y - 3]![pane.x - 1]).toBe("┏");
+    // Only the breadcrumb row has the band colour.
     const st = h.canvas().styles;
     expect(st[pane.y - 2]![pane.x + 60]!.bg).toBe(h.app.theme.roles.breadcrumb_band.bg!);
-    expect(st[pane.y - 3]![pane.x + 60]?.bg ?? page).toBe(page);
+    expect(st[pane.y - 1]![pane.x + 60]!.bg).not.toBe(h.app.theme.roles.breadcrumb_band.bg!);
     const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:0:"))!;
     click(h, crumb.x, crumb.y);
     expect(rowText(h)).toContain("Alpha");
@@ -724,6 +728,7 @@ describe("top bar, tab strip, status line", () => {
     // Both windows' rules meet the border between them in a cross.
     const sep = h.app.geometry!.separators.find((x) => x.kind === "split-side")!;
     expect(f.split("\n")[crumb.y + 1]![sep.x]).toBe("╋");
+    expect(f.split("\n")[crumb.y - 1]![sep.x]).toBe("┳"); // the border between them starts here
     const before = a!.top;
     click(h, crumb.x, crumb.y);
     expect(h.app.tab!.active).toBe(1);
