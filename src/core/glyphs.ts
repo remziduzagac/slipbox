@@ -85,7 +85,7 @@ const unicode: Glyphs = {
   dirClosed: "▸",
   file: " ",
   sep: "›",
-  scrollThumb: "┃",
+  scrollThumb: "▐", // unlike the ┃ borders it often sits beside
   scrollTrack: " ",
   dirty: "●",
   explorerButton: "≡",
