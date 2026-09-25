@@ -300,14 +300,15 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   // The header: a split window's title, then the breadcrumb, then a blank row before the text.
   const crumbs = app.config.ui.breadcrumb && !app.ui.zen && rect.h >= 8;
   if (crumbs) {
-    // The title (in a split) and breadcrumb row, on the page, then a rule under it.
-    c.fill(rect.x, rect.y, rect.w, 1, page);
+    // The title (in a split) and breadcrumb row, on its own background, then a rule under it.
+    const bg = roleStyle(theme, "breadcrumb_band", page).bg;
+    c.fill(rect.x, rect.y, rect.w, 1, bg);
     let x = rect.x;
     if (titled) {
       const name = ` ${truncate(app.displayName(view.buf), Math.floor(rect.w / 2))} `;
-      x += drawText(c, x, rect.y, name, roleStyle(theme, active ? "strong" : "dim", page), rect.w);
+      x += drawText(c, x, rect.y, name, { ...roleStyle(theme, active ? "strong" : "dim", bg), bg }, rect.w);
     }
-    drawBreadcrumb(app, c, view, x + 1, rect.x + rect.w - 1, rect.y, page, geo);
+    drawBreadcrumb(app, c, view, x + 1, rect.x + rect.w - 1, rect.y, bg, geo);
     // The rule is the explorer's border turned on its side.
     const ruleY = rect.y + 1;
     drawText(c, rect.x, ruleY, app.glyphs.hbar.repeat(rect.w), roleStyle(theme, "border", page), rect.w);

@@ -684,13 +684,15 @@ describe("top bar, tab strip, status line", () => {
     const pane = h.app.geometry!.panes[0]!;
     const rows = f.split("\n");
     expect(rows[pane.y - 2]).toMatch(/§ Alpha › Section One/);
-    // Right under it a rule, joined to the explorer's border; everything on the page's background.
+    // Right under it a rule, joined to the explorer's border.
     expect(rows[pane.y - 1]!.slice(pane.x, pane.x + 20)).toBe("━".repeat(20));
     expect(rows[pane.y - 1]![pane.x - 1]).toBe("┣");
     expect(rows[pane.y - 3]!.slice(pane.x).trim()).toBe(""); // the gap above
+    // Only the breadcrumb row has the band colour; the gap above stays on the page.
     const page = h.app.theme.roles.text.bg ?? h.app.theme.bg;
     const st = h.canvas().styles;
-    for (const y of [pane.y - 3, pane.y - 2]) expect(st[y]![pane.x + 60]?.bg ?? page).toBe(page);
+    expect(st[pane.y - 2]![pane.x + 60]!.bg).toBe(h.app.theme.roles.breadcrumb_band.bg!);
+    expect(st[pane.y - 3]![pane.x + 60]?.bg ?? page).toBe(page);
     const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:0:"))!;
     click(h, crumb.x, crumb.y);
     expect(rowText(h)).toContain("Alpha");

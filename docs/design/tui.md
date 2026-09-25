@@ -56,7 +56,8 @@ window, puts its cursor on the heading, and scrolls the heading to the window's 
 as the note's end allows). The row stays reserved above the first heading, so the text doesn't
 jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it.
 
-The breadcrumb sits on the page's background. The icon is `breadcrumb_icon` (blue), outer
+The breadcrumb row has its own background, `breadcrumb_band` (`surface` blended into the page
+at 35%); the gap above it stays on the page. The icon is `breadcrumb_icon` (blue), outer
 headings `breadcrumb` (dim), separators `breadcrumb_sep` (faint), and the heading the cursor is
 in `breadcrumb_current` (bold). In a split, the file name comes first on the same row. Under it a
 `━` rule in the `border` role closes the header, joined to the borders it meets: `┣` at the
