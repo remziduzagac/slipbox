@@ -153,7 +153,14 @@ An exact alias from `[aliases]` (`:q`, `:vs`, `:theme dracula`) always wins, and
 an argument lists completions (notes, themes, glyph sets) once a space is typed.
 
 **The which-key popup** lists the next keys of a pending sequence, across the keymaps active in
-the current state, with group names from `[groups]`. It shows at once for the leader, and after
+the current state. The layout, top to bottom: a header bar (`␣ l › links`), a blank row, the
+entries, and a blank row at the bottom. The entries are in at most three columns (two below 120
+columns, one below 70). Each is `key → name` with a short, dimmed explanation underneath:
+- **For a command:** its `desc` in `core/command-specs.ts`.
+- **For a group:** from `[groups]`.
+
+Keys with the same action share one entry, letters first (`j down`). When the screen is too
+short for two rows per entry, the explanations go first. It shows at once for the leader, and after
 `input.which_key_delay_ms` for other prefixes. `backspace` goes up a level; `esc` cancels.
 
 **The message sink (plan `3.13`).** Config warnings, walk errors, watcher problems and command

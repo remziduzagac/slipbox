@@ -382,36 +382,50 @@ function drawBottomLine(app: App, c: Canvas, y: number): void {
   drawText(c, 1, y, truncate(m.text, c.width - 2), roleStyle(theme, role, page));
 }
 
-/** The which-key popup: a panel along the bottom listing the next keys of the pending sequence. */
+/**
+ * The which-key popup: a panel along the bottom listing the next keys of the pending sequence.
+ * Header bar, a blank row, then entries in at most three columns — each "key → name" with a
+ * short explanation dimmed underneath — and a blank row at the bottom. When the screen is too
+ * short for two rows per entry, the explanations are dropped before anything else.
+ */
 function drawWhichKey(app: App, c: Canvas, top: number, bottom: number): void {
   const theme = app.theme;
   const entries = app.whichKeyEntries();
   if (!entries.length) return;
-  const keyW = Math.min(14, Math.max(...entries.map((e) => stringWidth(prettyKey(e.key, app.leader)))));
-  const colW = Math.min(44, Math.max(24, keyW + 4 + Math.max(...entries.map((e) => stringWidth(e.label)))));
-  const cols = Math.max(1, Math.floor((c.width - 2) / colW));
+  const cols = c.width >= 120 ? 3 : c.width >= 70 ? 2 : 1;
+  const colW = Math.floor((c.width - 2) / cols);
   const rows = Math.ceil(entries.length / cols);
-  const h = Math.min(rows + 1, Math.max(2, bottom - top));
+  const room = bottom - top;
+  const withDesc = entries.some((e) => e.desc) && rows * 2 + 3 <= room;
+  const entryH = withDesc ? 2 : 1;
+  const h = Math.min(room, 1 + 1 + rows * entryH + 1);
   const y0 = bottom - h;
   const bg = roleStyle(theme, "which_key", null);
+  const dim = { ...roleStyle(theme, "overlay_dim", bg.bg) };
   c.fill(0, y0, c.width, h, bg.bg);
   const name = app.groupName(app.pending);
   const crumb = app.pending.length ? ` ${app.pending.map((k) => prettyKey(k, app.leader)).join(" ")} ›${name ? ` ${name}` : ""} ` : ` ${name} `;
   const cw = drawText(c, 0, y0, crumb, roleStyle(theme, "which_key_title", null));
   const hint = app.pending.length ? "backspace: up · esc: cancel" : "keys repeat · any other key leaves";
-  drawText(c, cw + 1, y0, hint, roleStyle(theme, "overlay_dim", bg.bg), c.width - cw - 1);
+  drawText(c, cw + 1, y0, hint, dim, c.width - cw - 1);
+  const shown = (key: string) => key.split(" ").map((k) => prettyKey(k, app.leader)).join(" ");
+  const keyW = Math.min(16, Math.max(...entries.map((e) => stringWidth(shown(e.key)))));
   const keySt = roleStyle(theme, "which_key_key", null);
   const grpSt = roleStyle(theme, "which_key_group", null);
-  const visibleRows = h - 1;
+  const firstY = y0 + 2;
+  const lastY = y0 + h - 2; // keep the bottom row blank
   entries.forEach((e, i) => {
     const col = Math.floor(i / rows);
     const row = i % rows;
-    if (row >= visibleRows) return;
-    const x = 1 + col * colW;
-    const y = y0 + 1 + row;
-    drawText(c, x, y, prettyKey(e.key, app.leader), keySt, keyW);
+    const y = firstY + row * entryH;
+    if (y > lastY) return;
+    const x = 2 + col * colW;
+    const textX = x + keyW + 3;
+    const textW = colW - keyW - 5;
+    drawText(c, x, y, shown(e.key), keySt, keyW);
     drawText(c, x + keyW + 1, y, "→", bg);
-    drawText(c, x + keyW + 3, y, truncate(e.label, colW - keyW - 4), e.group ? grpSt : bg);
+    drawText(c, textX, y, truncate(e.label, textW), e.group ? grpSt : { ...bg, bold: true });
+    if (withDesc && e.desc && y + 1 <= lastY) drawText(c, textX, y + 1, truncate(e.desc, textW), dim);
   });
 }
 

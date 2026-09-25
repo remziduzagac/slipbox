@@ -367,6 +367,36 @@ describe("which-key", () => {
     expect(h.app.pending).toEqual([]);
     expect(h.app.whichKey).toBe(false);
   });
+  test("layout: header, a blank row, at most three columns of name + explanation, a blank row", async () => {
+    const h = await harness({ width: 160, height: 40 });
+    await h.keys("space");
+    const rows = h.frame().split("\n");
+    const head = rows.findIndex((r) => r.startsWith(" ␣ › leader"));
+    expect(head).toBeGreaterThan(0);
+    expect(rows[head + 1]!.trim()).toBe("");
+    expect(rows[head + 2]).toMatch(/^ {2}\S+ +→ \+\w+/);
+    expect(rows[head + 3]).toContain("notes, headings, text, commands"); // +find's explanation
+    const arrows = rows[head + 2]!.split("→").length - 1;
+    expect(arrows).toBeLessThanOrEqual(3);
+    const status = rows.length - 1;
+    expect(rows[status - 1]!.trim()).toBe(""); // blank row above the status line
+  });
+  test("keys with the same action share an entry; short screens drop the explanations", async () => {
+    const h = await harness({ width: 160, height: 40 });
+    const f = await h.keys("ctrl+alt+w");
+    expect(f).toContain("h left");
+    expect(f).toContain("q enter escape");
+    const short = await harness({ width: 60, height: 14 });
+    const s2 = await short.keys("space");
+    expect(s2).toContain("+links");
+    expect(s2).not.toContain("follow, list and copy links");
+  });
+  test("group names and explanations come from [groups]", async () => {
+    const h = await harness({ config: (c) => (c.groups = { "leader l": "LINKS: everything about links" }) });
+    const f = await h.keys("space");
+    expect(f).toContain("+LINKS");
+    expect(f).toContain("everything about links");
+  });
   test("other prefixes show it only after the delay", async () => {
     const h = await harness({ config: (c) => (c.input.which_key_delay_ms = 50) });
     await h.keys("y");

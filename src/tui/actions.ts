@@ -175,7 +175,7 @@ function openPalette(a: App): void {
   }
   const commandItems: ListItem[] = commands.map((c) => ({
     label: c.title,
-    detail: c.id,
+    detail: c.description ?? c.id,
     hint: [...a.keymap.keysFor(c.id).slice(0, 2).map((k) => prettyKey(k, a.leader)), ...(aliasOf.get(c.id) ?? []).slice(0, 1)].join("  "),
     data: c.id,
   }));
@@ -739,7 +739,7 @@ export function registerActions(app: App): void {
       for (const c of a.registry.list()) {
         const keys = [...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)];
         for (const [k, v] of a.keymap.entries()) if (v.startsWith(`${c.id} `)) keys.push(k);
-        items.push({ label: c.title, detail: c.id, hint: [...new Set(keys)].slice(0, 3).map((k) => prettyKey(k, a.leader)).join("  ") || "—", data: c.id });
+        items.push({ label: c.title, detail: c.description ?? c.id, hint: [...new Set(keys)].slice(0, 3).map((k) => prettyKey(k, a.leader)).join("  ") || "—", data: c.id });
       }
       a.openList({ title: "Keys and commands — enter runs one", items, accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()) });
     },
@@ -750,7 +750,7 @@ export function registerActions(app: App): void {
   for (const spec of COMMAND_SPECS) {
     const run = impl[spec.id];
     if (!run) throw new Error(`command ${spec.id} is specified but not implemented`);
-    app.registry.register({ id: spec.id, title: spec.title, run, hidden: spec.id === "app.escape" });
+    app.registry.register({ id: spec.id, title: spec.title, description: spec.desc, run, hidden: spec.id === "app.escape" });
   }
   for (const id of Object.keys(impl)) if (!app.registry.get(id)) throw new Error(`command ${id} has no spec in core/command-specs.ts`);
 }

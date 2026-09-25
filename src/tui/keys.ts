@@ -235,34 +235,40 @@ export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
   q: "leave",
 };
 
-export const RESIZE_ACTIONS: Record<string, string> = {
-  narrower: "Narrower",
-  wider: "Wider",
-  shorter: "Shorter",
-  taller: "Taller",
-  equalize: "Equal sizes",
-  leave: "Leave resize mode",
+export const RESIZE_ACTIONS: Record<string, { title: string; desc: string }> = {
+  narrower: { title: "Narrower", desc: "shrink the focused pane" },
+  wider: { title: "Wider", desc: "grow the focused pane" },
+  shorter: { title: "Shorter", desc: "shrink in a stacked split" },
+  taller: { title: "Taller", desc: "grow in a stacked split" },
+  equalize: { title: "Equal sizes", desc: "reset the split and pane widths" },
+  leave: { title: "Leave resize mode", desc: "back to reading" },
 };
 
-/** which-key group names, by prefix in config notation. */
+/** which-key groups by prefix, in config notation: "name: short explanation". */
 export const DEFAULT_GROUPS: Record<string, string> = {
-  "leader l": "links",
-  "leader h": "history",
-  "leader w": "window",
-  "leader t": "tabs",
-  "leader f": "find",
-  "leader u": "ui",
-  "leader s": "scratch",
-  "leader n": "note",
-  "leader v": "vault",
-  "leader q": "session",
-  y: "copy",
-  "ctrl+w": "window",
-  "ctrl+t": "tabs",
-  g: "go",
-  "[": "previous",
-  "]": "next",
+  "leader l": "links: follow, list and copy links",
+  "leader h": "history: back, forward, everywhere visited",
+  "leader w": "window: split, focus, move, resize",
+  "leader t": "tabs: open, switch, reorder, close",
+  "leader f": "find: notes, headings, text, commands",
+  "leader u": "ui: theme, icons, width, zen, toggles",
+  "leader s": "scratch: collect references for agents",
+  "leader n": "note: reload, info",
+  "leader v": "vault: reindex, info, reload config",
+  "leader q": "session: quit",
+  y: "copy: selection, path, reference, link",
+  "ctrl+w": "window: split, focus, move, resize",
+  "ctrl+t": "tabs: open, switch, reorder, close",
+  g: "go: top of the note",
+  "[": "previous: heading",
+  "]": "next: heading",
 };
+
+/** A group's value is "name" or "name: explanation". */
+export function parseGroup(value: string): { name: string; desc: string } {
+  const i = value.indexOf(":");
+  return i < 0 ? { name: value.trim(), desc: "" } : { name: value.slice(0, i).trim(), desc: value.slice(i + 1).trim() };
+}
 
 /** `:` aliases: alias → command spec. The rest of the typed line becomes the argument. */
 export const DEFAULT_ALIASES: Record<string, string> = {

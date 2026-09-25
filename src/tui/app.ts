@@ -51,6 +51,7 @@ import {
   DEFAULT_RESIZE_KEYS,
   DEFAULT_VISUAL_KEYS,
   RESIZE_ACTIONS,
+  parseGroup,
   prettyKey,
 } from "./keys.ts";
 
@@ -236,7 +237,7 @@ export class App {
   sideW: number;
   outW: number;
   aliases: Record<string, string> = {};
-  groups = new Map<string, string>();
+  groups = new Map<string, { name: string; desc: string }>();
   leader = "space";
   readonly buffers = new Map<string, NoteBuffer>();
   tabs: Tab[] = [];
@@ -325,7 +326,7 @@ export class App {
       else this.aliases[k] = v;
     }
     this.groups = new Map();
-    for (const [k, v] of Object.entries({ ...DEFAULT_GROUPS, ...c.groups })) this.groups.set(canonSeq(k, this.leader), v);
+    for (const [k, v] of Object.entries({ ...DEFAULT_GROUPS, ...c.groups })) this.groups.set(canonSeq(k, this.leader), parseGroup(v));
     const ids = new Set(this.registry.list().map((x) => x.id));
     const bad = [...this.keymap.entries(), ...this.visualKeys.entries()].map(([, v]) => v.split(" ")[0]!).filter((id) => !ids.has(id));
     for (const id of new Set(bad)) this.message("warn", `config: [keys] binds unknown command "${id}"`);
@@ -1125,33 +1126,42 @@ export class App {
   }
 
   /** which-key entries one level below the pending prefix, across the active keymaps. */
-  whichKeyEntries(): { key: string; label: string; group: boolean }[] {
+  whichKeyEntries(): { key: string; label: string; desc: string; group: boolean }[] {
     if (this.resizeMode && !this.pending.length) {
-      return this.resizeKeys.children("").map((c) => ({ key: c.key, label: RESIZE_ACTIONS[c.spec ?? ""] ?? c.spec ?? "", group: false }));
+      return mergeSameAction(
+        this.resizeKeys.children("").map((c) => {
+          const a = RESIZE_ACTIONS[c.spec ?? ""];
+          return { key: c.key, label: a?.title ?? c.spec ?? "", desc: a?.desc ?? "", group: false, spec: c.spec };
+        }),
+      );
     }
     const prefix = this.pending.join(" ");
-    const seen = new Map<string, { key: string; label: string; group: boolean }>();
+    const seen = new Map<string, { key: string; label: string; desc: string; group: boolean }>();
+    const specs = new Map<string, string>();
     for (const { map } of this.maps()) {
       for (const c of map.children(prefix)) {
         if (seen.has(c.key)) continue;
+        if (c.spec && !(c.group && !c.spec)) specs.set(c.key, c.spec);
         const full = prefix ? `${prefix} ${c.key}` : c.key;
         const group = c.group && !c.spec;
-        const label = group
-          ? `+${this.groups.get(full) ?? "more"}`
-          : c.spec
-            ? (this.registry.get(c.spec.split(" ")[0]!)?.title ?? c.spec.replace(/_/g, " "))
-            : "";
-        seen.set(c.key, { key: c.key, label, group });
+        if (group) {
+          const g = this.groups.get(full);
+          seen.set(c.key, { key: c.key, label: `+${g?.name ?? "more"}`, desc: g?.desc ?? "", group });
+          continue;
+        }
+        const id = c.spec?.split(" ")[0] ?? "";
+        const cmd = this.registry.get(id);
+        seen.set(c.key, { key: c.key, label: cmd?.title ?? c.spec?.replace(/_/g, " ") ?? "", desc: cmd?.description ?? "", group });
       }
     }
-    return [...seen.values()].sort((a, b) => Number(b.group) - Number(a.group) || a.key.localeCompare(b.key));
+    return mergeSameAction([...seen.values()].map((e) => ({ ...e, spec: specs.get(e.key) ?? null })));
   }
 
   groupName(prefix: string[]): string {
     if (this.resizeMode && !prefix.length) return "resize";
     const seq = prefix.join(" ");
     if (seq === this.leader) return "leader";
-    return this.groups.get(seq) ?? "";
+    return this.groups.get(seq)?.name ?? "";
   }
 
   clearPending(): void {
@@ -1619,6 +1629,21 @@ export class App {
 }
 
 // ---------------------------------------------------------------------------------------------
+
+/** Keys that run the same action share one which-key entry: `h left → Narrower`. */
+function mergeSameAction(entries: { key: string; label: string; desc: string; group: boolean; spec: string | null }[]): { key: string; label: string; desc: string; group: boolean }[] {
+  const out: { key: string; label: string; desc: string; group: boolean; spec: string | null }[] = [];
+  for (const e of entries.sort((a, b) => Number(b.group) - Number(a.group) || a.key.localeCompare(b.key))) {
+    const same = !e.group && e.spec ? out.find((o) => !o.group && o.spec === e.spec) : undefined;
+    if (same) same.key = `${same.key} ${e.key}`;
+    else out.push({ ...e });
+  }
+  // Within an entry, letters before named keys (`j down`, `q enter escape`); entries by first key.
+  const order = (a: string, b: string) => a.length - b.length || a.localeCompare(b);
+  for (const o of out) o.key = o.key.split(" ").sort(order).join(" ");
+  out.sort((a, b) => Number(b.group) - Number(a.group) || order(a.key.split(" ")[0]!, b.key.split(" ")[0]!));
+  return out.map(({ spec: _, ...rest }) => rest);
+}
 
 function fileStamp(path: string): number {
   try {

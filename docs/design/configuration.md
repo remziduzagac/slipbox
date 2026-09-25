@@ -87,8 +87,8 @@ poll_ms = 2000                 # backstop tick, unwatchable directories, degrade
 [aliases]                      # `:` aliases; "" removes a default
 wq = "app.quit"
 
-[groups]                       # which-key group names by prefix
-"leader n" = "notes"
+[groups]                       # which-key groups by prefix: "name" or "name: explanation"
+"leader n" = "notes: reload, info"
 ```
 
 The notation is in [keymap.md](keymap.md): space-separated key names such as `g g`,
