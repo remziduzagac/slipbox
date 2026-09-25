@@ -200,7 +200,8 @@ It lists the note's headings and highlights the section the cursor is in. Inside
 | Key | Action |
 | --- | --- |
 | `j` / `k`, `down` / `up` | move |
-| `enter`, mouse click | jump to the heading; clicking the `▾`/`▸` marker folds instead |
+| `enter` | jump to the heading; focus goes to the note |
+| mouse click | jump to the heading, keeping focus in the outline; on the `▾`/`▸` marker, fold |
 | `h` / `l`, `left` / `right` | fold / unfold |
 | `g g` / `shift+g` | top / bottom |
 | `q` | close the outline |
@@ -309,7 +310,7 @@ with the `hover` role. `space u m` turns the mouse off, which gives it back to t
 | note | click moves the cursor; drag selects and copies on release |
 | note, double / triple click | select and copy the word / the row |
 | note, wheel | scroll the view |
-| explorer, outline | see their sections above |
+| explorer, outline | a click anywhere in the pane focuses it; rows as in their sections above |
 | lists, wheel | move the selection |
 
 ## Platform notes

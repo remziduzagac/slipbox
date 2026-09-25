@@ -783,6 +783,27 @@ describe("top bar, tab strip, status line", () => {
     // Bold throughout, so nothing shifts.
     expect(roles.pane_title.bold && roles.pane_title_active.bold && roles.tab_active_idle.bold && roles.tab_active.bold).toBe(true);
   });
+  test("a click anywhere in a side pane focuses it; a heading click keeps the outline focused", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+    const click = (x: number, y: number) => {
+      h.app.handleMouse({ type: "down", x, y, button: 0 });
+      h.app.handleMouse({ type: "up", x, y, button: 0 });
+      h.frame();
+    };
+    h.frame();
+    const g = () => h.app.geometry!;
+    click(g().sidebarPane!.x + 3, g().sidebarPane!.y); // the "Explorer" title
+    expect(h.app.region).toBe("sidebar");
+    click(g().outlinePane!.x + 3, g().outlinePane!.y); // the "Outline" title
+    expect(h.app.region).toBe("outline");
+    click(g().sidebarPane!.x + 3, g().sidebarPane!.y + g().sidebarPane!.h - 1); // below the tree
+    expect(h.app.region).toBe("sidebar");
+    const o = g().outline!;
+    const row = h.app.outlineRows()[2]!;
+    click(o.x + 12, o.y + 2 - h.app.outline.scroll);
+    expect(h.app.view!.cur.row).toBe(row.line); // the note followed
+    expect(h.app.region).toBe("outline"); // and the focus stayed
+  });
   test("a ┃ after each tab, joined to the rules above and below the strip", async () => {
     const h = await harness({ width: 160 });
     await h.app.run("note.open notes/alpha.md");

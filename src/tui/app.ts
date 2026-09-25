@@ -1435,12 +1435,14 @@ export class App {
       this.scrollbarTo(bar, ev.y);
       return;
     }
-    if (g.sidebar && inRect(g.sidebar, ev.x, ev.y)) {
+    // A click anywhere in a side pane focuses it: its title, the blank rows, below the list.
+    if (g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {
+      this.region = "sidebar";
+      if (!g.sidebar || !inRect(g.sidebar, ev.x, ev.y)) return;
       const idx = ev.y - g.sidebar.y + this.sidebar.scroll;
       const row = this.treeRows()[idx];
       if (!row) return;
       this.sidebar.selected = idx;
-      this.region = "sidebar";
       if (row.kind === "dir") {
         if (this.expanded.has(row.path)) this.expanded.delete(row.path);
         else this.expanded.add(row.path);
@@ -1448,16 +1450,21 @@ export class App {
       } else this.explorerAction("open_tab"); // a second click finds the tab it opened
       return;
     }
-    if (g.outline && inRect(g.outline, ev.x, ev.y)) {
+    if (g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)) {
+      this.region = "outline";
+      if (!g.outline || !inRect(g.outline, ev.x, ev.y)) return;
       const idx = ev.y - g.outline.y + this.outline.scroll;
       const row = this.outlineRows()[idx];
       if (!row) return;
       this.outline.selected = idx;
-      this.region = "outline";
       // The fold marker sits right after the indent.
       const markerX = g.outline.x + 1 + (row.level - 1) * 2;
       if (row.hasChildren && ev.x >= markerX - 1 && ev.x <= markerX + 1) this.outlineAction(row.folded ? "unfold" : "fold");
-      else this.outlineAction("jump");
+      else {
+        this.outlineAction("jump");
+        // The note follows, but a click keeps the focus where it landed (enter hands it over).
+        if (this.outlineShown) this.region = "outline";
+      }
       return;
     }
     const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));

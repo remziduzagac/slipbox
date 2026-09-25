@@ -45,8 +45,11 @@ export interface ScrollbarGeom extends Rect {
 
 export interface Geometry {
   panes: PaneGeom[];
+  /** The explorer's and the outline's lists (under their titles), and the whole panes. */
   sidebar: Rect | null;
   outline: Rect | null;
+  sidebarPane: Rect | null;
+  outlinePane: Rect | null;
   tabs: (Rect & { index: number })[];
   overlay: (Rect & { listY: number }) | null;
   hot: Hot[];
@@ -76,7 +79,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const page = pageBg(theme);
   const W = c.width;
   const H = c.height;
-  const geo: Geometry = { panes: [], sidebar: null, outline: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, rules: [], verticals: [], headerEnd: null };
+  const geo: Geometry = { panes: [], sidebar: null, outline: null, sidebarPane: null, outlinePane: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, rules: [], verticals: [], headerEnd: null };
   c.fill(0, 0, W, H, page);
   if (W < 10 || H < 4) {
     drawText(c, 0, 0, "slipbox: too small", roleStyle(theme, "warn", page), W);
@@ -133,6 +136,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const border = roleStyle(theme, "border", page);
     for (let y = sideY; y <= bottom; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
     geo.sidebar = list;
+    geo.sidebarPane = rect;
     if (beside) {
       geo.separators.push({ kind: "sidebar", x: w, y: sideY, w: 1, h: bottom + 1 - sideY });
       geo.verticals.push({ x: w, y0: frame ? head : sideY, y1: borderEnd, style: border });
@@ -144,6 +148,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const top = app.outlineBeside && geo.headerEnd !== null ? geo.headerEnd : mainY;
     const rect = { x: W - w, y: top, w, h: bottom + 1 - top };
     geo.outline = drawOutline(app, c, rect);
+    geo.outlinePane = rect;
     const border = roleStyle(theme, "border", page);
     for (let y = top; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
     if (app.outlineBeside) {
