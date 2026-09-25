@@ -261,7 +261,8 @@ function openPalette(a: App): void {
 /**
  * Help (`?`, `space ?`): for learning the keys. Every command with all its keys, by group, plus what
  * works inside the explorer, the outline, visual and resize mode, and the mouse. Filtering keeps
- * the groups; enter runs a command (the in-pane and mouse entries are reference only).
+ * the groups; enter runs a command (the in-pane and mouse entries are reference only). Opened
+ * from the explorer, the outline or visual mode, it starts at that section.
  */
 function openHelp(a: App): void {
   const keysOf = (id: string) => {
@@ -285,15 +286,21 @@ function openHelp(a: App): void {
     { label: "Mouse", header: true, data: null },
     ...MOUSE_HELP.map(([label, keys, detail]) => ({ label, detail, keys, data: null })),
   ];
+  // Start where the keys are about what you're doing: the focused pane's, or visual mode's.
+  const section = a.region === "sidebar" ? "Inside the explorer" : a.region === "outline" ? "Inside the outline" : a.view?.visual ? "Selection & copy" : null;
+  const at = section ? items.findIndex((i) => i.header && i.label === section) : -1;
   a.openList({
     title: "Keys — type to filter, enter runs a command",
     items,
     footer: true,
     keepGroups: true,
+    selected: at >= 0 ? at + 1 : undefined,
     accept: (item) => {
       if (typeof item.data === "string") runChosen(a, item.data);
     },
   });
+  // With the section's heading at the top of the list.
+  if (at >= 0 && a.overlay?.kind === "list") a.overlay.scroll = at;
 }
 
 /** The mouse, for help: [what, how, detail]. */

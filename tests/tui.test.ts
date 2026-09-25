@@ -493,6 +493,25 @@ describe("overlays and the : prompt", () => {
     for (const ch of "fold") await h.keys(ch);
     expect(o.filtered.some((e) => e.item.header && e.item.label === "Inside the outline")).toBe(true);
   });
+  test("help opens at the section for where you are: explorer, outline, visual mode", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 140, height: 40 });
+    const start = async (...keys: string[]) => {
+      await h.keys(...keys, "?");
+      const o = h.app.overlay as ListOverlay;
+      h.frame();
+      const heading = o.filtered[o.scroll]!.item;
+      const selected = o.filtered[o.selected]!.item;
+      await h.keys("escape");
+      return { heading: heading.header ? heading.label : null, selectedIsEntry: !selected.header };
+    };
+    expect(await start("ctrl+e")).toEqual({ heading: "Inside the explorer", selectedIsEntry: true });
+    await h.keys("escape"); // back to the note
+    expect(await start("ctrl+o")).toEqual({ heading: "Inside the outline", selectedIsEntry: true });
+    await h.keys("escape");
+    expect(await start("v")).toEqual({ heading: "Selection & copy", selectedIsEntry: true });
+    await h.keys("escape");
+    expect(await start()).toEqual({ heading: "Cursor", selectedIsEntry: true }); // from the note: the top
+  });
   test("palette: Recent first, then groups; typing ranks without groups; the first key only", async () => {
     const h = await harness({ width: 140, height: 40 });
     await h.keys(":");
