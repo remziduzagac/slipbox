@@ -48,13 +48,13 @@ shorter than 20 rows drop the gaps.
 An icon button is filled with the accent while its pane is open. `ui.top_bar = false` removes the
 bar, and zen mode hides it.
 
-**The breadcrumb** tops each window, followed by a blank row. It starts with an icon (`§`, ascii `#`)
-that opens the heading finder when clicked, then the chain of headings that window's cursor is under, each cut to 40 columns, with the outermost dropped first when space
-runs short. In a split it shares the window's title row, after the file name. Clicking a heading
-focuses that window, puts its cursor on the heading, and scrolls the heading to the window's
-first row (as far as the note's end allows). The row stays reserved above the first heading, so
-the text doesn't jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows
-drop it.
+**The breadcrumb** tops each window, followed by a blank row. It starts with an icon (`§`, ascii
+`#`) that opens the heading finder when clicked, then the chain of headings that window's cursor
+is under, each cut to 40 columns, with the outermost dropped first when space runs short. In a
+split it shares the window's title row, after the file name. Clicking a heading focuses that
+window, puts its cursor on the heading, and scrolls the heading to the window's first row (as far
+as the note's end allows). The row stays reserved above the first heading, so the text doesn't
+jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it.
 
 **The tab strip** sits under the top bar and appears only with two or more tabs. Each tab has a
 `×` to close it.
