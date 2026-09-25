@@ -103,7 +103,6 @@ const nerd: Glyphs = {
   dirOpen: "",
   dirClosed: "",
   file: "󰍔",
-  crumbIcon: "󰠶", // nf-md-table_of_contents
 };
 
 const ascii: Glyphs = {
