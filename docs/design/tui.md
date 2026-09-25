@@ -237,8 +237,9 @@ fit become records ([rendering.md](rendering.md)).
 
 ## Overlays
 
-One list component serves every picker. Like every floating window, it has a one-cell margin
-in its own colour around its border (the explorer and outline over the content get a blank column
+One list component serves every picker. Like every floating window, it has a margin in its own
+colour around its border, one row above and below and two columns at the sides, since a cell is
+about twice as tall as it is wide (the explorer and outline over the content get two blank columns
 past theirs), so the content behind never runs up to the edge.
 
 - **Pickers:** quick switcher, heading picker, links, backlinks, history, tabs, theme and glyph
