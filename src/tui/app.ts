@@ -1565,6 +1565,14 @@ export class App {
         this.revealHeading(v, row);
         break;
       }
+      case "crumbicon": {
+        const t = this.tab;
+        if (!t?.views[Number(arg)]) break;
+        t.active = Number(arg);
+        this.region = "content";
+        void this.run("outline.pick");
+        break;
+      }
       case "status":
         if (arg === "path" && this.view) this.copy(this.view.buf.abs);
         else if (arg === "message") void this.run("messages.open");

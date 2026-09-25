@@ -190,13 +190,18 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
 function drawBreadcrumb(app: App, c: Canvas, view: View, x0: number, x1: number, y: number, bg: Color | null, geo: Geometry): void {
   const theme = app.theme;
   const crumbs = app.breadcrumb(view);
-  const room = x1 - x0;
-  if (!crumbs.length || room < 8) return;
+  if (!crumbs.length || x1 - x0 < 10) return;
   const index = app.tab!.views.indexOf(view);
   const sep = ` ${app.glyphs.crumb} `;
   const widthOf = (ps: typeof crumbs) => ps.reduce((a, p) => a + Math.min(CRUMB_MAX, stringWidth(p.text)), 0) + (ps.length - 1) * stringWidth(sep);
+  // The icon opens the heading finder.
+  const iconId = `crumbicon:${index}`;
+  const iconSt = app.hover === iconId ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb", bg), bg };
+  const iw = drawText(c, x0, y, app.glyphs.crumbIcon, iconSt);
+  geo.hot.push({ id: iconId, x: x0, y, w: iw, h: 1 });
+  x0 += iw + 1;
   let parts = crumbs;
-  while (parts.length > 1 && widthOf(parts) > room) parts = parts.slice(1);
+  while (parts.length > 1 && widthOf(parts) > x1 - x0) parts = parts.slice(1);
   let cx = x0;
   parts.forEach((p, i) => {
     if (cx >= x1) return;

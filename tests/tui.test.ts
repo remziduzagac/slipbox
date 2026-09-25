@@ -674,12 +674,18 @@ describe("top bar, tab strip, status line", () => {
     expect(topRow(f)).not.toContain("Section One"); // the top bar's middle stays empty
     const pane = h.app.geometry!.panes[0]!;
     const rows = f.split("\n");
-    expect(rows[pane.y - 2]).toMatch(/Alpha › Section One/);
+    expect(rows[pane.y - 2]).toMatch(/§ Alpha › Section One/);
     expect(rows[pane.y - 1]!.slice(pane.x).trim()).toBe(""); // the blank row under it
     const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:0:"))!;
     click(h, crumb.x, crumb.y);
     expect(rowText(h)).toContain("Alpha");
     expect(h.app.view!.top).toBe(0); // a short note never scrolls past its end; the split test covers scrolling
+    // The icon opens the heading finder.
+    h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
+    const icon = hot(h, "crumbicon:0");
+    click(h, icon.x, icon.y);
+    expect(h.app.overlay?.kind).toBe("list");
+    await h.keys("escape");
     const path = hot(h, "status:path");
     click(h, path.x, path.y);
     expect(h.copied.at(-1)).toEndWith("/notes/alpha.md");

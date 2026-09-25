@@ -24,7 +24,7 @@ Code, in `src/tui/`:
  ≡  slipbox                                              indexing 3…  ≣   ← top bar (ui.top_bar)
  1 index ×  2 alpha ×                                                    ← tab strip, only with 2+ tabs
                                                                          ← gap (ui.bar_gap)
- ▾ notes    ┃ Heading › Sub                      ┃ Heading   ← each window: its breadcrumb,
+ ▾ notes    ┃ § Heading › Sub                    ┃ Heading   ← each window: its breadcrumb,
      beta   ┃                                    ┃   Sub       then a blank row
      alpha  ┃ ▌ Sub                              ┃           ← explorer ┃ content ┃ outline
             ┃ Text with the █ursor on its row…   ┃           (both panes optional)
@@ -48,12 +48,14 @@ shorter than 20 rows drop the gaps.
 An icon button is filled with the accent while its pane is open. `ui.top_bar = false` removes the
 bar, and zen mode hides it.
 
-**The breadcrumb** tops each window, followed by a blank row: the chain of headings that window's
-cursor is under, each cut to 40 columns, with the outermost dropped first when space runs short.
-In a split it shares the window's title row, after the file name. Clicking a heading focuses that
-window, puts its cursor on the heading, and scrolls the heading to the window's first row (as far
-as the note's end allows). The row stays reserved above the first heading, so the text doesn't
-jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it.
+**The breadcrumb** tops each window, followed by a blank row. It starts with an icon (`§`; nerd
+`󰠶`, ascii `#`) that opens the heading finder when clicked, then the chain of headings that
+window's cursor is under, each cut to 40 columns, with the outermost dropped first when space
+runs short. In a split it shares the window's title row, after the file name. Clicking a heading
+focuses that window, puts its cursor on the heading, and scrolls the heading to the window's
+first row (as far as the note's end allows). The row stays reserved above the first heading, so
+the text doesn't jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows
+drop it.
 
 **The tab strip** sits under the top bar and appears only with two or more tabs. Each tab has a
 `×` to close it.

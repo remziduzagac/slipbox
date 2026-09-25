@@ -45,6 +45,8 @@ export interface Glyphs {
   outlineButton: string;
   close: string;
   crumb: string;
+  /** Before a window's breadcrumb. */
+  crumbIcon: string;
 }
 
 const unicode: Glyphs = {
@@ -83,6 +85,7 @@ const unicode: Glyphs = {
   outlineButton: "≣",
   close: "×",
   crumb: "›",
+  crumbIcon: "§",
 };
 
 const nerd: Glyphs = {
@@ -100,6 +103,7 @@ const nerd: Glyphs = {
   dirOpen: "",
   dirClosed: "",
   file: "󰍔",
+  crumbIcon: "󰠶", // nf-md-table_of_contents
 };
 
 const ascii: Glyphs = {
@@ -138,6 +142,7 @@ const ascii: Glyphs = {
   outlineButton: "#",
   close: "x",
   crumb: ">",
+  crumbIcon: "#",
 };
 
 const SETS = { unicode, nerd, ascii };
