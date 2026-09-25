@@ -4,7 +4,7 @@
 
 import { join } from "node:path";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
-import { COMMAND_SPECS } from "../core/command-specs.ts";
+import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
 import type { Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import { slugify } from "../core/parse.ts";
@@ -16,7 +16,7 @@ import type { App, ListItem, Loc, UiState, View } from "./app.ts";
 import { computeFind } from "./app.ts";
 import * as C from "./cursor.ts";
 import { rank } from "./fuzzy.ts";
-import { prettyKey } from "./keys.ts";
+import { EXPLORER_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, RESIZE_ACTIONS, spellKey } from "./keys.ts";
 
 type Run = Command<App>["run"];
 
@@ -165,8 +165,35 @@ function argCandidates(a: App, cmd: string): string[] | null {
   }
 }
 
+/** Commands in the order of core/command-specs.ts, which follows docs/design/keymap.md. */
+const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
+function inSpecOrder<T extends { id: string }>(commands: T[]): T[] {
+  return [...commands].sort((x, y) => (SPEC_ORDER.get(x.id) ?? 1e9) - (SPEC_ORDER.get(y.id) ?? 1e9));
+}
+
+/** Run a command chosen from the palette or help, remembering it for the palette's Recent. */
+function runChosen(a: App, spec: string): void {
+  a.noteRecent(spec.split(" ")[0]!);
+  void a.run(spec).then(() => a.host.requestRender());
+}
+
+/** Items under group headings, in the groups' order (docs/design/keymap.md). */
+function grouped(items: ListItem[], groupOf: (item: ListItem) => string, order: string[]): ListItem[] {
+  const out: ListItem[] = [];
+  for (const title of order) {
+    const members = items.filter((i) => groupOf(i) === title);
+    if (members.length) out.push({ label: title, header: true, data: null }, ...members);
+  }
+  return out;
+}
+
+/**
+ * The palette (`:`): for doing things. An empty query shows Recent, then every command by group;
+ * typing ranks the best match first. Each command shows its first key and alias; the selected
+ * one's description is in the footer.
+ */
 function openPalette(a: App): void {
-  const commands = a.registry.list().filter((c) => !c.hidden);
+  const commands = inSpecOrder(a.registry.list().filter((c) => !c.hidden));
   const aliasOf = new Map<string, string[]>();
   for (const [al, spec] of Object.entries(a.aliases)) {
     const list = aliasOf.get(spec) ?? [];
@@ -176,13 +203,21 @@ function openPalette(a: App): void {
   const commandItems: ListItem[] = commands.map((c) => ({
     label: c.title,
     detail: c.description ?? c.id,
-    hint: [...a.keymap.keysFor(c.id).slice(0, 2).map((k) => prettyKey(k, a.leader)), ...(aliasOf.get(c.id) ?? []).slice(0, 1)].join("  "),
+    keys: [...[...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].slice(0, 1).map(spellKey), ...(aliasOf.get(c.id) ?? []).slice(0, 1)],
     data: c.id,
   }));
+  const byId = new Map(commandItems.map((i) => [i.data as string, i]));
+  const recent = a.recentCommands.map((id) => byId.get(id)).filter((i): i is ListItem => !!i);
+  const browse: ListItem[] = [
+    ...(recent.length ? [{ label: "Recent", header: true, data: null }, ...recent] : []),
+    ...grouped(commandItems, (i) => commandGroup(i.data as string), COMMAND_GROUPS.map((g) => g.title)),
+  ];
   a.openList({
     title: "Commands — type a name, or an alias like :q",
     items: commandItems,
+    footer: true,
     source: (input) => {
+      if (!input.trim()) return browse;
       const m = /^(\S+)\s(.*)$/.exec(input);
       const aliasSpec = m ? a.aliases[m[1]!] : undefined;
       if (aliasSpec) {
@@ -195,7 +230,7 @@ function openPalette(a: App): void {
       const ranked = rank(input.trim(), commandItems, (i) => `${i.label} ${i.detail}`).map((r) => r.item);
       if (exact) {
         const title = a.registry.get(exact.split(" ")[0]!)?.title ?? exact;
-        return [{ label: title, detail: `:${input.trim()}`, hint: "alias", data: exact }, ...ranked.filter((i) => i.data !== exact)];
+        return [{ label: title, detail: `alias for ${exact}`, keys: [`:${input.trim()}`], data: exact }, ...ranked.filter((i) => i.data !== exact)];
       }
       return ranked;
     },
@@ -210,16 +245,70 @@ function openPalette(a: App): void {
         // With an argument that completes, prefer the highlighted candidate.
         const sel = a.overlay.filtered[a.overlay.selected]?.item;
         a.overlay = null;
-        void a.run(sel ? (sel.data as string) : `${spec} ${arg}`).then(() => a.host.requestRender());
+        runChosen(a, sel ? (sel.data as string) : `${spec} ${arg}`);
         return true;
       }
       a.overlay = null;
-      void a.run(arg ? `${spec} ${arg}` : spec).then(() => a.host.requestRender());
+      runChosen(a, arg ? `${spec} ${arg}` : spec);
       return true;
     },
-    accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()),
+    accept: (item) => {
+      if (typeof item.data === "string") runChosen(a, item.data);
+    },
   });
 }
+
+/**
+ * Help (`space ?`): for learning the keys. Every command with all its keys, by group, plus what
+ * works inside the explorer, the outline, visual and resize mode, and the mouse. Filtering keeps
+ * the groups; enter runs a command (the in-pane and mouse entries are reference only).
+ */
+function openHelp(a: App): void {
+  const keysOf = (id: string) => {
+    const keys = [...a.keymap.keysFor(id), ...a.visualKeys.keysFor(id)];
+    for (const [k, v] of a.keymap.entries()) if (v.startsWith(`${id} `)) keys.push(k);
+    return [...new Set(keys)].map(spellKey);
+  };
+  const commands: ListItem[] = inSpecOrder(a.registry.list()).map((c) => ({ label: c.title, detail: c.description ?? c.id, keys: keysOf(c.id), data: c.id }));
+  const pane = (keymap: { keysFor(action: string): string[] }, info: Record<string, { title: string; desc: string }>): ListItem[] =>
+    Object.entries(info)
+      .map(([action, i]) => ({ label: i.title, detail: i.desc, keys: keymap.keysFor(action).map(spellKey), data: null }))
+      .filter((i) => i.keys.length);
+  const items: ListItem[] = [
+    ...grouped(commands, (i) => commandGroup(i.data as string), COMMAND_GROUPS.map((g) => g.title)),
+    { label: "Inside the explorer", header: true, data: null },
+    ...pane(a.explorerKeys, EXPLORER_ACTION_INFO),
+    { label: "Inside the outline", header: true, data: null },
+    ...pane(a.outlineKeys, OUTLINE_ACTION_INFO),
+    { label: "Resize mode", header: true, data: null },
+    ...pane(a.resizeKeys, RESIZE_ACTIONS),
+    { label: "Mouse", header: true, data: null },
+    ...MOUSE_HELP.map(([label, keys, detail]) => ({ label, detail, keys, data: null })),
+  ];
+  a.openList({
+    title: "Keys — type to filter, enter runs a command",
+    items,
+    footer: true,
+    keepGroups: true,
+    accept: (item) => {
+      if (typeof item.data === "string") runChosen(a, item.data);
+    },
+  });
+}
+
+/** The mouse, for help: [what, how, detail]. */
+const MOUSE_HELP: [string, string[], string][] = [
+  ["Move the cursor", ["click"], "in a note"],
+  ["Select and copy", ["drag"], "copied on release"],
+  ["Select a word / a row", ["double-click", "triple-click"], "and copy it"],
+  ["Scroll", ["wheel"], "the note, a list, or the tabs"],
+  ["Open a note as a tab", ["click"], "in the explorer; a folder folds or unfolds"],
+  ["Jump to a heading", ["click"], "in the outline or a breadcrumb; on ▾ / ▸, fold"],
+  ["Switch, reorder, close tabs", ["click", "drag", "middle-click"], "on the tab strip; × closes too"],
+  ["Resize panes and splits", ["drag"], "a border"],
+  ["Scroll to a place", ["click", "drag"], "on the scrollbar"],
+  ["Copy the note's path", ["click"], "on the path in the status line"],
+];
 
 // ---------------------------------------------------------------------------------------------
 // UI settings
@@ -740,15 +829,7 @@ export function registerActions(app: App): void {
         accept: (item) => void a.copy(item.data as string),
       });
     },
-    "help.open": (a) => {
-      const items: ListItem[] = [];
-      for (const c of a.registry.list()) {
-        const keys = [...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)];
-        for (const [k, v] of a.keymap.entries()) if (v.startsWith(`${c.id} `)) keys.push(k);
-        items.push({ label: c.title, detail: c.description ?? c.id, hint: [...new Set(keys)].slice(0, 3).map((k) => prettyKey(k, a.leader)).join("  ") || "—", data: c.id });
-      }
-      a.openList({ title: "Keys and commands — enter runs one", items, accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()) });
-    },
+    "help.open": (a) => openHelp(a),
     "app.quit": (a) => a.quit(),
   };
   for (const t of UI_TOGGLES) impl[t.id] = (a) => toggle(a, t.key, t.title);

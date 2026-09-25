@@ -130,3 +130,25 @@ export const COMMAND_SPECS: CommandSpec[] = [
 export function commandSpec(id: string): CommandSpec | undefined {
   return COMMAND_SPECS.find((c) => c.id === id);
 }
+
+/**
+ * The groups commands are listed under in help and the palette: the sections of
+ * docs/design/keymap.md, in its order. The first group whose pattern matches an id wins.
+ */
+export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
+  { title: "Cursor", ids: /^cursor\./ },
+  { title: "Selection & copy", ids: /^(visual\.|copy\.|app\.escape$)/ },
+  { title: "Links & history", ids: /^(link\.|links\.|backlinks\.|history\.)/ },
+  { title: "Windows", ids: /^window\./ },
+  { title: "Tabs", ids: /^tab\./ },
+  { title: "Explorer", ids: /^explorer\./ },
+  { title: "Outline", ids: /^outline\.(cycle|toggle)$/ },
+  { title: "Find", ids: /^(find\.|switcher\.|outline\.pick$|palette\.|note\.open$)/ },
+  { title: "UI", ids: /^(ui\.|theme\.|glyphs\.)/ },
+  { title: "Scratch", ids: /^scratch\./ },
+  { title: "Note, vault, app", ids: /^(note\.|vault\.|config\.|messages\.|help\.|app\.)/ },
+];
+
+export function commandGroup(id: string): string {
+  return COMMAND_GROUPS.find((g) => g.ids.test(id))?.title ?? "Other";
+}

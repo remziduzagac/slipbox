@@ -787,7 +787,8 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
   const theme = app.theme;
   const W = c.width;
   const w = Math.min(100, W - (W > 60 ? 8 : 0));
-  const inner = o.filterable ? 3 : 2;
+  // Rows besides the list: the borders, the input, and the footer (a rule and a line).
+  const inner = (o.filterable ? 3 : 2) + (o.footer ? 2 : 0);
   const h = Math.max(inner + 1, Math.min(o.filtered.length + inner + 1, mainH - 2, 30));
   const x = Math.floor((W - w) / 2);
   const y = mainY + Math.max(0, Math.min(2, mainH - h));
@@ -803,7 +804,9 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     drawText(c, x, y + k, b.v, border, 1);
     drawText(c, x + w - 1, y + k, b.v, border, 1);
   }
-  const count = ` ${o.filtered.length ? o.selected + 1 : 0}/${o.filtered.length} `;
+  const selectableCount = o.filtered.filter((e) => !e.item.header).length;
+  const position = o.filtered.slice(0, o.selected + 1).filter((e) => !e.item.header).length;
+  const count = ` ${selectableCount ? position : 0}/${selectableCount} `;
   const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 3 - stringWidth(count)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, count + b.br, dim);
@@ -815,24 +818,42 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     drawText(c, x + 2 + px + iw, y + 1, " ", roleStyle(theme, "cursor", null));
     listY = y + 2;
   }
-  const rows = h - (listY - y) - 1;
+  if (o.footer) {
+    // The selected entry's description, under a rule.
+    drawText(c, x, y + h - 3, `${b.ml}${b.h.repeat(w - 2)}${b.mr}`, border);
+    const detail = o.filtered[o.selected]?.item.detail ?? "";
+    drawText(c, x + 2, y + h - 2, truncate(detail, w - 4), dim);
+  }
+  const rows = h - (listY - y) - 1 - (o.footer ? 2 : 0);
   if (o.selected < o.scroll) o.scroll = o.selected;
   if (o.selected >= o.scroll + rows) o.scroll = o.selected - rows + 1;
+  // Keep a group's heading in view above its first entry.
+  if (o.scroll > 0 && o.scroll === o.selected && o.filtered[o.scroll - 1]?.item.header) o.scroll--;
   const matchSt = roleStyle(theme, "overlay_match", null);
   for (let i = 0; i < rows; i++) {
     const idx = o.scroll + i;
     const entry = o.filtered[idx];
     if (!entry) break;
     const ry = listY + i;
+    const { item, positions } = entry;
+    if (item.header) {
+      // Not as the last row: a heading with nothing under it.
+      if (i < rows - 1) drawText(c, x + 2, ry, truncate(item.label.toUpperCase(), w - 4), roleStyle(theme, "overlay_group", null));
+      continue;
+    }
     const selected = idx === o.selected;
     const st = selected ? roleStyle(theme, "overlay_selected", null) : bg;
     c.fill(x + 1, ry, w - 2, 1, st.bg);
-    const { item, positions } = entry;
-    const hint = item.hint ?? "";
+    const indent = (item.indent ?? 0) * 2 + (o.filtered.some((e) => e.item.header) ? 2 : 0);
+    // Keys at the right: as many as fit beside the label, then an ellipsis.
+    const labelW = Math.min(stringWidth(item.label), Math.max(8, Math.floor((w - 6) / 2)));
+    const keysRoom = w - 4 - indent - labelW - 2;
+    const keysW = item.keys?.length ? drawKeys(app, c, x + w - 2, ry, item.keys, keysRoom, selected, st.bg) : 0;
+    const hint = item.keys ? "" : (item.hint ?? "");
     const hintW = hint ? stringWidth(hint) + 2 : 0;
-    const avail = w - 4 - hintW;
-    let cx = x + 2 + (item.indent ?? 0) * 2;
-    const label = truncate(item.label, Math.max(4, avail - (item.indent ?? 0) * 2));
+    const avail = w - 4 - hintW - (keysW ? keysW + 2 : 0);
+    let cx = x + 2 + indent;
+    const label = truncate(item.label, Math.max(4, avail - indent));
     const pos = new Set(positions);
     let ci = 0;
     for (const g of graphemes(label)) {
@@ -841,12 +862,38 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
       cx += gw;
       ci += g.length;
     }
-    if (item.detail) {
+    if (item.detail && !o.footer) {
       const room = x + 2 + avail - cx - 2;
       if (room > 4) cx += drawText(c, cx + 2, ry, truncate(item.detail, room), { ...dim, bg: st.bg }) + 2;
     }
     if (hint) drawText(c, x + w - 2 - stringWidth(hint), ry, hint, { ...dim, bg: st.bg });
   }
-  if (!o.filtered.length) drawText(c, x + 2, listY, o.input ? "no matches" : "nothing here", dim);
+  if (!selectableCount) drawText(c, x + 2, listY, o.input ? "no matches" : "nothing here", dim);
   return { x, y, w, h, listY };
+}
+
+/**
+ * Key bindings as keycaps ending at `right`, each binding one cap (a sequence stays inside it).
+ * Without a keycap background (NO_COLOR) they're joined by " · ". Returns the width used.
+ */
+function drawKeys(app: App, c: Canvas, right: number, y: number, keys: string[], room: number, selected: boolean, rowBg: Color | null): number {
+  const theme = app.theme;
+  const cap = roleStyle(theme, selected ? "keycap_selected" : "keycap", rowBg);
+  const plain = cap.bg === rowBg;
+  const parts = keys.map((k) => (plain ? k : ` ${k} `));
+  const sep = plain ? " · " : " ";
+  const widthOf = (n: number) => parts.slice(0, n).reduce((a, p) => a + stringWidth(p), 0) + (n - 1) * stringWidth(sep);
+  let n = parts.length;
+  const more = n > 1 ? stringWidth(`${sep}…`) : 0;
+  while (n > 0 && widthOf(n) + (n < parts.length ? more : 0) > room) n--;
+  if (!n) return 0;
+  const total = widthOf(n) + (n < parts.length ? more : 0);
+  let x = right - total;
+  const sepSt = roleStyle(theme, "overlay_dim", rowBg);
+  for (let i = 0; i < n; i++) {
+    if (i) x += drawText(c, x, y, sep, { ...sepSt, bg: rowBg });
+    x += drawText(c, x, y, parts[i]!, cap);
+  }
+  if (n < parts.length) drawText(c, x, y, `${sep}…`, { ...sepSt, bg: rowBg });
+  return total;
 }

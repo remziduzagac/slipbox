@@ -124,7 +124,11 @@ export interface ListItem {
   label: string;
   detail?: string;
   hint?: string;
+  /** Key bindings, drawn as separate keycaps at the right (instead of `hint`). */
+  keys?: string[];
   indent?: number;
+  /** A group heading: drawn dim and bold, never selected. */
+  header?: boolean;
   data: unknown;
 }
 
@@ -144,6 +148,10 @@ export interface ListOverlay {
   submit?: (input: string) => boolean;
   move?: (item: ListItem) => void;
   cancel?: () => void;
+  /** Show the selected item's `detail` in a footer line instead of beside its label. */
+  footer?: boolean;
+  /** While filtering, keep the group headings of the items that match (help). */
+  keepGroups?: boolean;
 }
 
 export interface PromptOverlay {
@@ -263,6 +271,9 @@ export class App {
   positions: PositionStore;
   watcher: VaultWatcher | null = null;
   ui: UiState;
+  /** Commands run from the palette or help, most recent first (kept in the session). */
+  recentCommands: string[] = [];
+
   /** UI settings changed in this session, with the config value each overrode. */
   uiOverrides: Record<string, UiOverride> = {};
   private tree: TreeRow[] | null = null;
@@ -292,6 +303,7 @@ export class App {
     for (const w of opts.warnings ?? []) this.message("warn", w);
     for (const e of this.graph.errors) this.message("warn", e);
 
+    this.recentCommands = (loadSession(this.loc.root)?.recent_commands ?? []).filter((id) => typeof id === "string").slice(0, RECENT_MAX);
     const restored = !opts.open && this.config.ui.restore_session && this.restoreSession();
     this.applyTheme();
     this.glyphs = glyphsFor(this.ui.glyphs);
@@ -1118,6 +1130,8 @@ export class App {
     selected?: number;
     source?: (input: string) => ListItem[];
     submit?: (input: string) => boolean;
+    footer?: boolean;
+    keepGroups?: boolean;
   }): void {
     const o: ListOverlay = {
       kind: "list",
@@ -1133,9 +1147,11 @@ export class App {
       submit: opts.submit,
       move: opts.move,
       cancel: opts.cancel,
+      footer: opts.footer,
+      keepGroups: opts.keepGroups,
     };
     refilter(o);
-    if (opts.selected !== undefined) o.selected = Math.max(0, Math.min(opts.selected, o.filtered.length - 1));
+    if (opts.selected !== undefined) o.selected = selectable(o, Math.max(0, Math.min(opts.selected, o.filtered.length - 1)), 1);
     this.overlay = o;
   }
 
@@ -1298,8 +1314,9 @@ export class App {
       return;
     }
     const n = o.filtered.length;
-    const moveTo = (i: number) => {
-      o.selected = Math.max(0, Math.min(n - 1, i));
+    // Group headings are skipped, in the direction of travel.
+    const moveTo = (i: number, dir = i >= o.selected ? 1 : -1) => {
+      o.selected = selectable(o, Math.max(0, Math.min(n - 1, i)), dir);
       const item = o.filtered[o.selected];
       if (item) o.move?.(item.item);
     };
@@ -1319,12 +1336,12 @@ export class App {
       case "ctrl+n":
       case "ctrl+j":
       case "tab":
-        return moveTo(o.selected + 1 >= n ? 0 : o.selected + 1);
+        return moveTo(o.selected + 1 >= n ? 0 : o.selected + 1, 1);
       case "up":
       case "ctrl+p":
       case "ctrl+k":
       case "shift+tab":
-        return moveTo(o.selected - 1 < 0 ? n - 1 : o.selected - 1);
+        return moveTo(o.selected - 1 < 0 ? n - 1 : o.selected - 1, -1);
       case "pagedown":
       case "ctrl+d":
         return moveTo(o.selected + 10);
@@ -1379,7 +1396,7 @@ export class App {
     const r = g.overlay;
     if (ev.type === "scroll") {
       const d = ev.scroll?.direction === "up" ? -1 : 1;
-      o.selected = Math.max(0, Math.min(o.filtered.length - 1, o.selected + d));
+      o.selected = selectable(o, Math.max(0, Math.min(o.filtered.length - 1, o.selected + d)), d);
       const item = o.filtered[o.selected];
       if (item) o.move?.(item.item);
       return;
@@ -1387,6 +1404,7 @@ export class App {
     if (ev.type !== "down") return;
     const idx = ev.y - r.listY + o.scroll;
     if (ev.x >= r.x && ev.x < r.x + r.w && ev.y >= r.listY && idx < o.filtered.length) {
+      if (o.filtered[idx]!.item.header) return;
       o.selected = idx;
       return void this.overlayKey(o, "enter");
     }
@@ -1612,6 +1630,11 @@ export class App {
         void this.handleKey(arg);
         break;
     }
+  }
+
+  /** Remember a command run from the palette or help, for the palette's "Recent" group. */
+  noteRecent(id: string): void {
+    this.recentCommands = [id, ...this.recentCommands.filter((x) => x !== id)].slice(0, RECENT_MAX);
   }
 
   closeTabAt(index: number): void {
@@ -1845,6 +1868,7 @@ export class App {
       sidebar_width: this.sideW,
       outline_width: this.outW,
       ui: this.uiOverrides,
+      recent_commands: this.recentCommands,
     };
     saveSession(this.loc.root, s);
   }
@@ -1887,15 +1911,41 @@ function inRect(r: { x: number; y: number; w: number; h: number }, x: number, y:
   return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 }
 
+const RECENT_MAX = 5;
+
 export function refilter(o: ListOverlay): void {
   if (o.source) {
     o.filtered = o.source(o.input).map((item) => ({ item, positions: [] }));
-  } else {
-    const ranked = rank(o.input, o.items, (i) => (i.detail ? `${i.label} ${i.detail}` : i.label));
+  } else if (o.keepGroups && o.input.trim()) {
+    // The matches in their original order, each under its group heading.
+    const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => (i.detail ? `${i.label} ${i.detail}` : i.label));
+    const hit = new Map(ranked.map((r) => [r.item, r.match.positions]));
+    o.filtered = [];
+    let heading: ListItem | null = null;
+    for (const item of o.items) {
+      if (item.header) heading = item;
+      else if (hit.has(item)) {
+        if (heading) o.filtered.push({ item: heading, positions: [] });
+        heading = null;
+        o.filtered.push({ item, positions: hit.get(item)! });
+      }
+    }
+  } else if (o.input.trim()) {
+    const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => (i.detail ? `${i.label} ${i.detail}` : i.label));
     o.filtered = ranked.map((r) => ({ item: r.item, positions: r.match.positions }));
+  } else {
+    o.filtered = o.items.map((item) => ({ item, positions: [] }));
   }
-  o.selected = 0;
   o.scroll = 0;
+  o.selected = selectable(o, 0, 1);
+}
+
+/** The nearest item at or after `i` (before, for dir -1) that is not a group heading. */
+export function selectable(o: ListOverlay, i: number, dir: number): number {
+  const n = o.filtered.length;
+  for (let k = i; k >= 0 && k < n; k += dir) if (!o.filtered[k]!.item.header) return k;
+  for (let k = i; k >= 0 && k < n; k -= dir) if (!o.filtered[k]!.item.header) return k;
+  return 0;
 }
 
 /** Link index at a layout cell, or -1. */

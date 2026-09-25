@@ -34,7 +34,7 @@ export const ROLES = [
   // chrome
   "border", "border_active", "status", "status_accent", "status_dim",
   "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active",
-  "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim",
+  "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
   "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
   "cursor", "cursor_line", "line_number", "line_number_current",
   "which_key", "which_key_key", "which_key_group", "which_key_title",
@@ -204,6 +204,10 @@ export function themeFromPalette(
     overlay_selected: { fg: p.fg_strong, bg: p.surface, bold: true },
     overlay_match: { fg: p.orange, bold: true },
     overlay_dim: { fg: p.comment, bg: p.bg_dark },
+    // Group headings in help and the palette; key bindings drawn as keycaps.
+    overlay_group: { fg: p.fg_dim, bg: p.bg_dark, bold: true },
+    keycap: { fg: p.fg, bg: p.surface },
+    keycap_selected: { fg: p.fg_strong, bg: p.surface2 },
     selection: { bg: p.surface2 },
     error: { fg: p.red, bold: true },
     warn: { fg: p.yellow },

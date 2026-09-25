@@ -10,7 +10,7 @@ import { canonKey, canonSeq } from "../src/core/commands.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
-import { App, type Host } from "../src/tui/app.ts";
+import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
 
@@ -458,7 +458,56 @@ describe("overlays and the : prompt", () => {
     await h.keys(":", "z", "e", "n", "space", "m", "o", "d", "e", "enter");
     expect(h.app.ui.zen).toBe(true);
     await h.keys("space", "?");
-    expect(h.frame()).toContain("Keys and commands");
+    expect(h.frame()).toContain("Keys — type to filter");
+  });
+  test("help: grouped, every binding its own keycap, the description in the footer, groups kept while filtering", async () => {
+    const h = await harness({ width: 140, height: 40 });
+    await h.keys("space", "?");
+    const o = h.app.overlay as ListOverlay;
+    const f = h.frame();
+    expect(f).toContain("│ CURSOR");
+    expect(o.filtered[0]!.item.header).toBe(true);
+    expect(o.selected).toBe(1); // headings are never selected
+    // Spelled-out keys, each binding a separate keycap (a sequence stays in one).
+    const row = f.split("\n").find((l) => l.includes("Top of note"))!;
+    expect(row).toMatch(/g g +ctrl\+home +ctrl\+shift\+home/);
+    const c = h.canvas();
+    const y = c.rows.findIndex((r) => r.join("").includes("Top of note"));
+    const line = c.rows[y]!.join("");
+    const at = (s: string) => c.styles[y]![line.indexOf(s)]!.bg;
+    expect(at("g g")).toBe(h.app.theme.roles.keycap.bg!);
+    expect(c.styles[y]![line.indexOf("g g") + 1]!.bg).toBe(h.app.theme.roles.keycap.bg!); // the space inside the cap
+    expect(c.styles[y]![line.indexOf("ctrl+home") - 2]!.bg).not.toBe(h.app.theme.roles.keycap.bg!); // between caps
+    // The footer shows the selected entry's description.
+    expect(f).toContain("one character left");
+    // Moving skips headings; filtering keeps them.
+    await h.keys("down");
+    expect(o.filtered[o.selected]!.item.header).toBeFalsy();
+    for (const ch of "copy") await h.keys(ch);
+    expect(o.filtered.some((e) => e.item.header && e.item.label === "Selection & copy")).toBe(true);
+    expect(o.filtered[o.selected]!.item.header).toBeFalsy();
+    // In-pane keys and the mouse are there too.
+    await h.keys("ctrl+w");
+    for (const ch of "fold") await h.keys(ch);
+    expect(o.filtered.some((e) => e.item.header && e.item.label === "Inside the outline")).toBe(true);
+  });
+  test("palette: Recent first, then groups; typing ranks without groups; the first key only", async () => {
+    const h = await harness({ width: 140, height: 40 });
+    await h.keys(":");
+    let o = h.app.overlay as ListOverlay;
+    expect(o.filtered[0]!.item.label).toBe("Cursor"); // no Recent yet
+    for (const ch of "zen") await h.keys(ch);
+    expect(o.filtered.some((e) => e.item.header)).toBe(false);
+    expect(o.filtered[0]!.item.label).toBe("Zen mode");
+    await h.keys("enter");
+    expect(h.app.ui.zen).toBe(true);
+    await h.keys(":");
+    o = h.app.overlay as ListOverlay;
+    expect(o.filtered[0]!.item.label).toBe("Recent");
+    expect(o.filtered[1]!.item.data).toBe("ui.zen");
+    const top = o.filtered.find((e) => e.item.data === "cursor.top")!.item;
+    expect(top.keys).toEqual(["g g"]); // one key in the palette
+    expect(h.app.recentCommands[0]).toBe("ui.zen");
   });
   test("messages, note info, vault info", async () => {
     const h = await harness();

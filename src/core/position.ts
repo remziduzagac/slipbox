@@ -135,6 +135,8 @@ export interface SessionState {
   outline_width?: number;
   theme?: string;
   ui?: Record<string, UiOverride>;
+  /** Commands run from the palette or help, most recent first. */
+  recent_commands?: string[];
 }
 
 export function isAnchor(v: unknown): v is Anchor {
@@ -171,6 +173,7 @@ export function loadSession(root: string): SessionState | null {
     outline_width: validWidth(s.outline_width),
     theme: typeof s.theme === "string" ? s.theme : undefined,
     ui: s.ui && typeof s.ui === "object" && !Array.isArray(s.ui) ? s.ui : {},
+    recent_commands: Array.isArray(s.recent_commands) ? s.recent_commands.filter((x) => typeof x === "string") : [],
   };
 }
 

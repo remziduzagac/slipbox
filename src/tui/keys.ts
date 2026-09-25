@@ -236,6 +236,33 @@ export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
   q: "leave",
 };
 
+/** What the explorer's and the outline's actions do, for help. */
+export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string }> = {
+  down: { title: "Move down", desc: "select the next row; nothing opens" },
+  up: { title: "Move up", desc: "select the previous row; nothing opens" },
+  open_tab: { title: "Open as a tab", desc: "the note in a tab (or its tab, if open); a folder folds or unfolds" },
+  expand: { title: "Open as a tab / unfold", desc: "the note in a tab; a folder unfolds" },
+  open: { title: "Open here", desc: "replace the current window's note" },
+  collapse: { title: "Fold", desc: "fold the folder, or go to its parent" },
+  open_split: { title: "Open in the split", desc: "the note in the other window" },
+  top: { title: "Top", desc: "the first row" },
+  bottom: { title: "Bottom", desc: "the last row" },
+  close: { title: "Close the explorer", desc: "focus returns to the note" },
+  leave: { title: "Back to the note", desc: "the explorer stays open" },
+};
+
+export const OUTLINE_ACTION_INFO: Record<string, { title: string; desc: string }> = {
+  down: { title: "Move down", desc: "the next heading" },
+  up: { title: "Move up", desc: "the previous heading" },
+  jump: { title: "Jump", desc: "the note goes to the heading and takes focus" },
+  fold: { title: "Fold", desc: "hide the sub-headings, or go to the parent" },
+  unfold: { title: "Unfold", desc: "show the sub-headings" },
+  top: { title: "Top", desc: "the first heading" },
+  bottom: { title: "Bottom", desc: "the last heading" },
+  close: { title: "Close the outline", desc: "focus returns to the note" },
+  leave: { title: "Back to the note", desc: "the outline stays open" },
+};
+
 export const RESIZE_ACTIONS: Record<string, { title: string; desc: string }> = {
   narrower: { title: "Narrower", desc: "shrink the focused pane" },
   wider: { title: "Wider", desc: "grow the focused pane" },
@@ -325,6 +352,14 @@ export function keyName(k: KeyLike): string {
 }
 
 /** Short human form for the popup, palette and help: `ctrl+w shift+h` → `C-w S-h`. */
+/** A key sequence spelled out for reading (help, the palette): `ctrl+d`, `space l y`, `esc`. */
+export function spellKey(seq: string): string {
+  return seq
+    .split(" ")
+    .map((k) => k.replace(/(^|\+)escape$/, "$1esc"))
+    .join(" ");
+}
+
 export function prettyKey(seq: string, leader = "space"): string {
   const leaderKey = canonKey(leader);
   return seq

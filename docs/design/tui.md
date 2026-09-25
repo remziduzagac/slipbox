@@ -216,10 +216,26 @@ One list component serves every picker:
   directories.
 - **Keys:** `up`/`down`, `tab`, `ctrl+n`/`ctrl+p` or `ctrl+j`/`ctrl+k` move; `enter` accepts;
   `esc` cancels; a click picks.
+- **Groups and footers:** a list may have group headings (dim, bold capitals, never selected;
+  moving skips them) and a footer that shows the selected entry's description.
+- **Keycaps:** key bindings are spelled out (`ctrl+d`, `shift+g`, `space l y`, `esc`) and each
+  binding is its own keycap (`keycap` role; `keycap_selected` on the selected row), so the space
+  inside a sequence (`g g`) can't be mistaken for the gap between bindings. Without a keycap
+  background (`NO_COLOR`), bindings are joined by ` · `. Bindings that don't fit end in `…`.
 
-**The `:` prompt** is the palette and a command line at once. Typing filters commands by name.
-An exact alias from `[aliases]` (`:q`, `:vs`, `:theme dracula`) always wins, and an alias taking
-an argument lists completions (notes, themes, glyph sets) once a space is typed.
+Help and the palette list the same commands for different jobs, in the groups of
+[keymap.md](keymap.md) (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order:
+
+- **Help (`space ?`)** is for learning the keys: every command with all its bindings, then what
+  works inside the explorer, inside the outline, in resize mode, and with the mouse. Filtering
+  keeps the groups; `enter` runs a command (the other entries are reference only).
+- **The palette (`:`)** is for doing things. Empty, it lists the recently run commands (the last
+  5, kept in the session) and then every command by group; typing ranks the best match first,
+  without groups. Each command shows its first binding and first alias.
+
+**The `:` prompt** is the palette and a command line at once. An exact alias from `[aliases]`
+(`:q`, `:vs`, `:theme dracula`) always wins, and an alias taking an argument lists completions
+(notes, themes, glyph sets) once a space is typed.
 
 **The which-key popup** lists the next keys of a pending sequence, across the keymaps active in
 the current state. The layout, top to bottom: a header bar (`␣ l › links`), a blank row, the
