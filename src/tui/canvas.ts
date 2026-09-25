@@ -50,8 +50,13 @@ export class TextCanvas implements Canvas {
     this.rows = Array.from({ length: height }, () => Array(width).fill(" "));
     this.styles = Array.from({ length: height }, () => Array(width).fill(null));
   }
-  fill(x: number, y: number, w: number, h: number): void {
-    for (let r = y; r < y + h && r < this.height; r++) for (let k = x; k < x + w && k < this.width; k++) if (r >= 0 && k >= 0) this.rows[r]![k] = " ";
+  fill(x: number, y: number, w: number, h: number, bg: Color | null): void {
+    for (let r = Math.max(0, y); r < y + h && r < this.height; r++) {
+      for (let k = Math.max(0, x); k < x + w && k < this.width; k++) {
+        this.rows[r]![k] = " ";
+        this.styles[r]![k] = bg ? { fg: "default", bg, bold: false, italic: false, underline: false, strike: false, dim: false } : null;
+      }
+    }
   }
   cell(x: number, y: number, g: string, w: number, style: CellStyle): void {
     if (y < 0 || y >= this.height || x < 0 || x >= this.width) return;

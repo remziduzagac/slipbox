@@ -77,15 +77,18 @@ export function drawApp(app: App, c: Canvas): Geometry {
     return geo;
   }
   const zen = app.ui.zen;
-  const topBar = app.config.ui.top_bar && !zen ? 1 : 0;
-  const tabBar = app.tabs.length > 1 && !zen ? 1 : 0;
-  const status = zen ? 0 : 1;
+  // Each bar is its content row plus `bar_padding` rows above and below, dropped on short screens.
+  const pad = H >= 24 ? app.config.ui.bar_padding : 0;
+  const barH = 1 + 2 * pad;
+  const topBar = app.config.ui.top_bar && !zen ? barH : 0;
+  const tabBar = app.tabs.length > 1 && !zen ? barH : 0;
+  const status = zen ? 0 : barH;
   const bottomLine = app.overlay?.kind === "prompt" || app.transient ? 1 : 0;
   const mainY = topBar + tabBar;
   const mainH = H - mainY - status - bottomLine;
 
-  if (topBar) drawTopBar(app, c, 0, geo);
-  if (tabBar) drawTabs(app, c, topBar, geo);
+  if (topBar) drawTopBar(app, c, { y: 0, h: barH }, geo);
+  if (tabBar) drawTabs(app, c, { y: topBar, h: barH }, geo);
 
   const sideW = app.sidebarWidth();
   const outW = app.outlineWidth();
@@ -112,7 +115,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     if (app.outlineBeside) geo.separators.push({ kind: "outline", x: W - w - 1, y: mainY, w: 1, h: mainH });
   }
 
-  if (status) drawStatus(app, c, H - 1 - bottomLine, geo);
+  if (status) drawStatus(app, c, { y: H - status - bottomLine, h: barH }, geo);
   if (bottomLine) {
     drawBottomLine(app, c, H - 1);
     if (app.transient && app.overlay?.kind !== "prompt") geo.hot.push({ id: "status:message", x: 0, y: H - 1, w: W, h: 1 });
@@ -122,12 +125,26 @@ export function drawApp(app: App, c: Canvas): Geometry {
   return geo;
 }
 
-/** A clickable label: drawn with the hover role while the mouse is over it. */
-function button(app: App, c: Canvas, x: number, y: number, text: string, role: Role, id: string, geo: Geometry, maxW = Number.POSITIVE_INFINITY): number {
+/** A bar's rows: `h` rows from `y`, its content on the middle one. */
+interface Band {
+  y: number;
+  h: number;
+}
+
+const mid = (b: Band) => b.y + Math.floor(b.h / 2);
+
+/**
+ * A clickable label filling the bar's full height, drawn with the hover role while the mouse is
+ * over it. `role` null draws the text on the bar's own background.
+ */
+function button(app: App, c: Canvas, x: number, band: Band, text: string, role: Role, id: string, geo: Geometry, barBg: Color | null, maxW = Number.POSITIVE_INFINITY): number {
   const theme = app.theme;
-  const st = roleStyle(theme, app.hover === id ? "hover" : role, pageBg(theme));
-  const w = drawText(c, x, y, text, st, maxW);
-  geo.hot.push({ id, x, y, w, h: 1 });
+  const st = roleStyle(theme, app.hover === id ? "hover" : role, barBg);
+  const w = Math.min(stringWidth(text), maxW);
+  if (w <= 0) return 0;
+  c.fill(x, band.y, w, band.h, st.bg ?? null);
+  drawText(c, x, mid(band), text, st, maxW);
+  geo.hot.push({ id, x, y: band.y, w, h: band.h });
   return w;
 }
 
@@ -135,20 +152,25 @@ function button(app: App, c: Canvas, x: number, y: number, text: string, role: R
  * The top bar: the explorer button and the app chip on the left, vault state and the outline
  * button on the right; the middle is left empty.
  */
-function drawTopBar(app: App, c: Canvas, y: number, geo: Geometry): void {
+function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
   const g = app.glyphs;
   const bar = roleStyle(theme, "topbar", pageBg(theme));
-  c.fill(0, y, c.width, 1, bar.bg);
-  let x = button(app, c, 0, y, ` ${g.explorerButton} `, app.sidebarShown ? "topbar_chip" : "topbar_button", "btn:explorer", geo);
+  c.fill(0, band.y, c.width, band.h, bar.bg);
+  const y = mid(band);
+  // Icon buttons are about as wide as they are tall (a cell is roughly twice as tall as wide).
+  const iconPad = " ".repeat(band.h > 1 ? 2 : 1);
+  const icon = (glyph: string) => `${iconPad}${glyph}${iconPad}`;
+  let x = button(app, c, 0, band, icon(g.explorerButton), app.sidebarShown ? "topbar_button_on" : "topbar_button", "btn:explorer", geo, bar.bg);
   x += 1;
-  button(app, c, x, y, " slipbox ", "topbar_chip", "btn:palette", geo);
+  x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
 
   // Right side, laid out from the far right inwards.
   let rx = c.width;
-  const outline = ` ${g.outlineButton} `;
+  const outline = icon(g.outlineButton);
   rx -= stringWidth(outline);
-  button(app, c, rx, y, outline, app.outlineShown ? "topbar_chip" : "topbar_button", "btn:outline", geo);
+  button(app, c, rx, band, outline, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);
+  rx -= 1;
   const items: { text: string; role: Role }[] = [];
   const changed = app.allViews().some((v) => v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS);
   if (changed) items.push({ text: "↻", role: "info" });
@@ -166,25 +188,24 @@ function drawTopBar(app: App, c: Canvas, y: number, geo: Geometry): void {
 }
 
 /** The tab strip, under the top bar when there are two or more tabs. */
-function drawTabs(app: App, c: Canvas, y: number, geo: Geometry): void {
+function drawTabs(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
-  c.fill(0, y, c.width, 1, theme.roles.tab.bg ?? pageBg(theme));
-  geo.tabStrip = { x: 0, y, w: c.width, h: 1 };
+  const stripBg = theme.roles.tab.bg ?? pageBg(theme);
+  c.fill(0, band.y, c.width, band.h, stripBg);
+  geo.tabStrip = { x: 0, y: band.y, w: c.width, h: band.h };
   let x = 0;
   app.tabs.forEach((t, i) => {
     if (x >= c.width) return;
     const v = t.views[t.active]!;
     const changed = v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS ? " ↻" : "";
-    const label = ` ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!.replace(/\.(md|markdown)$/i, ""), 24)}${changed} `;
+    const label = `  ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!.replace(/\.(md|markdown)$/i, ""), 24)}${changed} `;
     const role: Role = i === app.activeTab ? "tab_active" : "tab";
-    const id = `tab:${i}`;
-    const w = drawText(c, x, y, label, roleStyle(theme, app.hover === id ? "hover" : role, pageBg(theme)), c.width - x);
-    geo.tabs.push({ x, y, w, h: 1, index: i });
-    geo.hot.push({ id, x, y, w, h: 1 });
+    const w = button(app, c, x, band, label, role, `tab:${i}`, geo, stripBg, c.width - x);
+    geo.tabs.push({ x, y: band.y, w, h: band.h, index: i });
     x += w;
-    const close = `${app.glyphs.close} `;
-    const cw = button(app, c, x, y, close, role, `tabclose:${i}`, geo, c.width - x);
-    x += cw + 1;
+    const tabBg = roleStyle(theme, role, stripBg).bg ?? stripBg;
+    x += button(app, c, x, band, `${app.glyphs.close}  `, role, `tabclose:${i}`, geo, tabBg, c.width - x);
+    x += 1;
   });
 }
 
@@ -405,11 +426,12 @@ function drawOutline(app: App, c: Canvas, rect: Rect): void {
   }
 }
 
-function drawStatus(app: App, c: Canvas, y: number, geo: Geometry): void {
+function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
   const page = pageBg(theme);
   const st = roleStyle(theme, "status", page);
-  c.fill(0, y, c.width, 1, st.bg);
+  c.fill(0, band.y, c.width, band.h, st.bg);
+  const y = mid(band);
   const view = app.view;
   const chip = app.pending.length
     ? ` ${app.pending.map((k) => prettyKey(k, app.leader)).join(" ")} `
@@ -424,7 +446,9 @@ function drawStatus(app: App, c: Canvas, y: number, geo: Geometry): void {
           : app.region === "outline"
             ? " OUTLINE "
             : " READ ";
-  let x = drawText(c, 0, y, chip, roleStyle(theme, "status_accent", page));
+  const chipSt = roleStyle(theme, "status_accent", page);
+  c.fill(0, band.y, stringWidth(chip), band.h, chipSt.bg ?? null);
+  let x = drawText(c, 0, y, chip, chipSt);
   if (!view) return;
   const buf = view.buf;
   const layout = app.currentLayout(view);
@@ -441,7 +465,7 @@ function drawStatus(app: App, c: Canvas, y: number, geo: Geometry): void {
   x += drawText(c, x, y, " ", st);
   const pathId = "status:path";
   const pw = drawText(c, x, y, truncate(app.displayName(buf), Math.max(4, c.width - x - rightW - 14)), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
-  geo.hot.push({ id: pathId, x, y, w: pw, h: 1 });
+  geo.hot.push({ id: pathId, x, y: band.y, w: pw, h: band.h });
   x += pw;
   if (buf.deleted) x += drawText(c, x, y, " ✖ deleted on disk", roleStyle(theme, "error", st.bg));
   else if (changed) x += drawText(c, x, y, " ↻ reloaded", roleStyle(theme, "info", st.bg));
@@ -461,7 +485,7 @@ function drawStatus(app: App, c: Canvas, y: number, geo: Geometry): void {
       if (i) cx += drawText(c, cx, y, sep, roleStyle(theme, "status_dim", page));
       const id = `crumb:${p.line}`;
       const w = drawText(c, cx, y, truncate(p.text, Math.min(28, rx - 2 - cx)), roleStyle(theme, app.hover === id ? "hover" : "breadcrumb", st.bg));
-      geo.hot.push({ id, x: cx, y, w, h: 1 });
+      geo.hot.push({ id, x: cx, y: band.y, w, h: band.h });
       cx += w;
     });
   }

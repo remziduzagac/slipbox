@@ -288,7 +288,7 @@ with the `hover` role. `space u m` turns the mouse off, which gives it back to t
 
 | Where | What the mouse does |
 | --- | --- |
-| top bar `☰` / `≣` | toggle the explorer / the outline |
+| top bar `≡` / `≣` | toggle the explorer / the outline |
 | top bar `slipbox` chip | open the command palette |
 | tab | click to switch; drag to reorder; middle-click or `×` to close |
 | tab strip, wheel | previous / next tab |

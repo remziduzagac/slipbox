@@ -79,7 +79,7 @@ const unicode: Glyphs = {
   scrollThumb: "┃",
   scrollTrack: " ",
   dirty: "●",
-  explorerButton: "☰",
+  explorerButton: "≡",
   outlineButton: "≣",
   close: "×",
   crumb: "›",

@@ -21,7 +21,7 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- ☰  slipbox                                              ● watching  ≣   ← top bar (ui.top_bar)
+ ≡  slipbox                                              ● watching  ≣   ← top bar (ui.top_bar)
  1 index ×  2 alpha ×                                                    ← tab strip, only with 2+ tabs
  ▾ notes    ┃ ▌ Heading                          ┃ Heading   ← explorer ┃ content ┃ outline
      alpha  ┃ Text with the █ursor on its row…   ┃   Sub     (both panes optional)
@@ -31,8 +31,14 @@ Code, in `src/tui/`:
  ↻ notes/alpha.md changed on disk — reloaded                         ← message or prompt
 ```
 
-**The top bar** has buttons on both sides. On the left, `☰` toggles the explorer and the `slipbox`
-chip opens the command palette. On the right it shows the vault's state (`● watching`,
+**Bars.** The top bar, the tab strip and the status line each have `ui.bar_padding` rows
+(default 1) above and below their content, in the bar's colour; buttons, tabs and the mode chip fill the
+bar's full height. Screens shorter than 24 rows drop the padding.
+
+**The top bar** has buttons on both sides. On the left, `≡` toggles the explorer and the `slipbox`
+chip (plain accent text, no background) opens the command palette. The icon buttons are two
+cells of padding on each side of the glyph, which with the padded bar is roughly square; a
+button is filled with the accent while its pane is open. On the right it shows the vault's state (`● watching`,
 `⚠ not watching`, `indexing N…` or `single file`), then `≣` to toggle the outline. The middle is
 empty. `ui.top_bar = false` removes the bar, and zen mode hides it.
 

@@ -81,6 +81,9 @@ async function harness(opts: Opts = {}): Promise<Harness> {
 }
 
 const rowText = (h: Harness, row = h.app.view!.cur.row) => h.app.currentLayout(h.app.view!).lines[row]!.spans.map((s) => s.text).join("");
+/** The status line's content row and the top bar's: each bar has a padding row above and below. */
+const statusRow = (frame: string) => frame.split("\n").at(-2)!;
+const topRow = (frame: string) => frame.split("\n")[1]!;
 const rowStarting = (h: Harness, prefix: string) => h.app.currentLayout(h.app.view!).lines.findIndex((l) => l.spans.map((s) => s.text).join("").startsWith(prefix));
 
 describe("drawing (3.1, 3.2)", () => {
@@ -89,7 +92,7 @@ describe("drawing (3.1, 3.2)", () => {
     const f = h.frame();
     expect(f).toContain("▸ notes");
     expect(f).toContain("▌ Home");
-    const status = f.split("\n").at(-1)!;
+    const status = statusRow(f);
     expect(status).toContain("READ");
     expect(status).toContain("index.md");
     expect(status).toContain("L1:1");
@@ -245,7 +248,7 @@ describe("selection", () => {
     const h = await harness({ open: "notes/alpha.md" });
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
     await h.keys("v", "e");
-    expect(h.frame().split("\n").at(-1)).toContain("VISUAL");
+    expect(statusRow(h.frame())).toContain("VISUAL");
     await h.keys("o");
     expect(h.app.view!.cur.col).toBe(0);
     await h.keys("y");
@@ -281,7 +284,7 @@ describe("links and history", () => {
   test("ctrl+tab puts the cursor on a link; enter follows; shift+h / shift+l / ctrl+backspace", async () => {
     const h = await harness();
     await h.keys("ctrl+tab");
-    expect(h.frame().split("\n").at(-1)).toContain("[[alpha]]");
+    expect(statusRow(h.frame())).toContain("[[alpha]]");
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     await h.keys("shift+h");
@@ -378,8 +381,8 @@ describe("which-key", () => {
     expect(rows[head + 3]).toContain("notes, headings, text, commands"); // +find's explanation
     const arrows = rows[head + 2]!.split("→").length - 1;
     expect(arrows).toBeLessThanOrEqual(3);
-    const status = rows.length - 1;
-    expect(rows[status - 1]!.trim()).toBe(""); // blank row above the status line
+    const status = rows.length - 2; // the status line's content row, inside its padding
+    expect(rows[status - 2]!.trim()).toBe(""); // the popup's blank bottom row, above the bar
   });
   test("keys with the same action share an entry; short screens drop the explanations", async () => {
     const h = await harness({ width: 160, height: 40 });
@@ -524,7 +527,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     const t = h.app.tab!;
     const f = await h.keys("ctrl+alt+w");
     expect(h.app.resizeMode).toBe(true);
-    expect(f.split("\n").at(-1)).toContain("RESIZE");
+    expect(statusRow(f)).toContain("RESIZE");
     expect(f).toContain("Wider");
     const w0 = h.app.geometry!.panes[0]!.w;
     await h.keys("l", "l", "right");
@@ -594,11 +597,14 @@ describe("top bar, tab strip, status line", () => {
   };
   test("top bar: explorer and outline buttons, the chip opens the palette, vault state on the right", async () => {
     const h = await harness({ width: 160 });
-    const top = h.frame().split("\n")[0]!;
-    expect(top).toContain("☰");
+    const top = topRow(h.frame());
+    expect(top).toContain("≡");
     expect(top).toContain("slipbox");
     expect(top).toContain("≣");
     expect(top).toContain("not watching"); // watch: false in the harness
+    // The chip is plain text on the bar: no background of its own.
+    const chipR = h.app.geometry!.hot.find((r) => r.id === "btn:palette")!;
+    expect(h.canvas().styles[chipR.y + 1]![chipR.x + 2]!.bg).toBe(h.app.theme.roles.topbar.bg!);
     const ex = hot(h, "btn:explorer");
     click(h, ex.x, ex.y);
     expect(h.app.sidebarShown).toBe(false);
@@ -617,15 +623,19 @@ describe("top bar, tab strip, status line", () => {
     h.app.handleMouse({ type: "move", x: ex.x, y: ex.y, button: 0 });
     expect(h.app.hover).toBe("btn:explorer");
     const c = h.canvas();
-    expect(c.styles[ex.y]![ex.x + 1]!.bg).toBe(h.app.theme.roles.hover.bg!);
+    // The button fills the whole bar, padding rows included, and is about as wide as it is tall.
+    expect(ex.h).toBe(3);
+    expect(ex.w).toBeGreaterThanOrEqual(5); // 2 + glyph + 2
+    for (let y = ex.y; y < ex.y + ex.h; y++) expect(c.styles[y]![ex.x + 1]!.bg).toBe(h.app.theme.roles.hover.bg!);
     h.app.handleMouse({ type: "move", x: 80, y: 10, button: 0 });
     expect(h.app.hover).toBeNull();
   });
   test("top_bar = false removes it; zen hides it", async () => {
     const off = await harness({ config: (c) => (c.ui.top_bar = false) });
-    expect(off.frame().split("\n")[0]).not.toContain("slipbox");
+    expect(off.frame().split("\n").slice(0, 3).join("\n")).not.toContain("slipbox");
     const zen = await harness({ config: (c) => (c.ui.zen = true) });
-    expect(zen.frame()).not.toContain("☰");
+    zen.frame();
+    expect(zen.app.geometry!.hot.some((r) => r.id === "btn:explorer")).toBe(false);
   });
   test("tab strip under the top bar only with 2+ tabs: click, ×, middle-click, wheel, drag", async () => {
     const h = await harness({ width: 160 });
@@ -636,7 +646,8 @@ describe("top bar, tab strip, status line", () => {
     await h.app.run("note.open notes/alpha.md");
     h.frame();
     const strip = h.app.geometry!.tabStrip!;
-    expect(strip.y).toBe(1);
+    expect(strip.y).toBe(3); // under the 3-row top bar
+    expect(strip.h).toBe(3);
     const tab = (i: number) => h.app.geometry!.tabs[i]!;
     click(h, tab(0).x + 2, strip.y);
     expect(h.app.activeTab).toBe(0);
@@ -661,7 +672,7 @@ describe("top bar, tab strip, status line", () => {
   test("status line: outline breadcrumb left of the position, clickable; the path copies", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 160 });
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
-    const status = h.frame().split("\n").at(-1)!;
+    const status = statusRow(h.frame());
     expect(status).toMatch(/Alpha › Section One +L9:1/);
     const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:"))!;
     click(h, crumb.x, crumb.y);
