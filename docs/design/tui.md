@@ -156,6 +156,7 @@ an argument lists completions (notes, themes, glyph sets) once a space is typed.
 the current state. The layout, top to bottom: a header bar (`␣ l › links`), a blank row, the
 entries, and a blank row at the bottom. The entries are in at most three columns (two below 120
 columns, one below 70). Each is `key → name` with a short, dimmed explanation underneath:
+
 - **For a command:** its `desc` in `core/command-specs.ts`.
 - **For a group:** from `[groups]`.
 
