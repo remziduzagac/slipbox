@@ -1,0 +1,3 @@
+# fixture vault config
+[walk]
+exclude = ["drafts/"]

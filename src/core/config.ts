@@ -1,0 +1,169 @@
+// Config loader (plan 0.9): TOML, defaults ← user ← vault marker, vault wins.
+// Must run correctly with no config at all, and never crash on a bad one — problems become
+// warnings in the message sink.
+
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { parse as parseToml } from "smol-toml";
+import { userConfigFile } from "./paths.ts";
+
+export type GlyphMode = "auto" | "nerd" | "unicode" | "ascii";
+
+export interface Config {
+  theme: string;
+  render: {
+    /** Columns held back from the render width so the right border stays visible (2.7). */
+    inset: number;
+    /** Cap on the text column in the TUI; 0 means use the full pane. */
+    max_width: number;
+    glyphs: GlyphMode;
+    /** Show link URLs after link text. `auto`: only when colour is off. */
+    show_urls: "auto" | "always" | "never";
+  };
+  walk: {
+    extensions: string[];
+    exclude: string[];
+    max_file_size: number;
+  };
+  ui: {
+    sidebar: boolean;
+    sidebar_width: number;
+    mouse: boolean;
+    /** Below this many columns the sidebar collapses (3.14). */
+    narrow_width: number;
+    restore_session: boolean;
+  };
+  capture: {
+    location: "state" | "vault";
+    /** Scratch file name; relative to the vault root when location = "vault". */
+    file: string;
+  };
+  editor: {
+    /** `{file}` and `{line}` are substituted as separate argv entries — never through a shell (13.2). */
+    command: string;
+  };
+  watch: {
+    enabled: boolean;
+    debounce_ms: number;
+    /** Interval for directories that cannot be watched, and for everything when watching degrades. */
+    poll_ms: number;
+  };
+  /** key sequence → command id, e.g. `"g g" = "scroll.top"`. */
+  keys: Record<string, string>;
+}
+
+export const DEFAULT_CONFIG: Config = {
+  theme: "tokyo-night",
+  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto" },
+  walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024 },
+  ui: { sidebar: true, sidebar_width: 30, mouse: true, narrow_width: 90, restore_session: true },
+  capture: { location: "state", file: "scratch.md" },
+  editor: { command: "" },
+  watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
+  keys: {},
+};
+
+/** Keys whose values come from a fixed set. Anything else is a warning and the default stays. */
+const ENUMS: Record<string, readonly string[]> = {
+  "render.glyphs": ["auto", "nerd", "unicode", "ascii"],
+  "render.show_urls": ["auto", "always", "never"],
+  "capture.location": ["state", "vault"],
+};
+
+/** Numeric keys and their allowed range. */
+const RANGES: Record<string, [number, number]> = {
+  "render.inset": [0, 40],
+  "render.max_width": [0, 1000],
+  "walk.max_file_size": [1, 1 << 30],
+  "ui.sidebar_width": [8, 200],
+  "ui.narrow_width": [0, 1000],
+  "watch.debounce_ms": [0, 10_000],
+  "watch.poll_ms": [50, 600_000],
+};
+
+export interface LoadedConfig {
+  config: Config;
+  sources: string[];
+  warnings: string[];
+}
+
+export interface LoadConfigOptions {
+  vaultRoot?: string | null;
+  /** `--config` flag; overrides `SLIPBOX_CONFIG` and the XDG location. */
+  configFile?: string;
+}
+
+export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
+  const warnings: string[] = [];
+  const sources: string[] = [];
+  let config = structuredClone(DEFAULT_CONFIG);
+
+  const userFile = opts.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile();
+  const files = [userFile];
+  if (opts.vaultRoot) files.push(join(opts.vaultRoot, ".slipbox", "config.toml"));
+
+  for (const file of files) {
+    if (!existsSync(file)) {
+      if (file === opts.configFile) warnings.push(`config: ${file} does not exist`);
+      continue;
+    }
+    try {
+      const data = parseToml(readFileSync(file, "utf8")) as Record<string, unknown>;
+      config = merge(config, data, file, "", warnings);
+      sources.push(file);
+    } catch (err) {
+      warnings.push(`config: ${file}: ${(err as Error).message.split("\n")[0]}`);
+    }
+  }
+  return { config, sources, warnings };
+}
+
+/** Merge `over` into `base`, typed by `base`'s shape. Unknown keys and wrong types are warnings. */
+function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: string, warnings: string[]): T {
+  const out = { ...(base as Record<string, unknown>) };
+  for (const [key, value] of Object.entries(over)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (prefix === "keys") {
+      if (typeof value === "string") out[key] = value;
+      else warnings.push(`config: ${file}: keys.${key} must be a command id string`);
+      continue;
+    }
+    if (!(key in out)) {
+      warnings.push(`config: ${file}: unknown key "${path}"`);
+      continue;
+    }
+    const current = out[key];
+    if (isPlainObject(current)) {
+      if (isPlainObject(value)) out[key] = merge(current, value, file, path, warnings);
+      else warnings.push(`config: ${file}: "${path}" must be a table`);
+    } else if (Array.isArray(current)) {
+      if (Array.isArray(value)) out[key] = value.map(String);
+      else warnings.push(`config: ${file}: "${path}" must be an array`);
+    } else if (typeof current === typeof value) {
+      const allowed = ENUMS[path];
+      const range = RANGES[path];
+      if (allowed && !allowed.includes(value as string)) {
+        warnings.push(`config: ${file}: "${path}" must be one of ${allowed.join(", ")} (got "${value}")`);
+      } else if (range && (!Number.isFinite(value as number) || (value as number) < range[0] || (value as number) > range[1])) {
+        warnings.push(`config: ${file}: "${path}" must be between ${range[0]} and ${range[1]} (got ${value})`);
+      } else out[key] = value;
+    } else {
+      warnings.push(`config: ${file}: "${path}" must be a ${typeof current}`);
+    }
+  }
+  return out as T;
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v) && !(v instanceof Date);
+}
+
+export const VAULT_CONFIG_TEMPLATE = `# slipbox vault config. Settings here override ~/.config/slipbox/config.toml.
+# See docs/design/configuration.md for every key.
+
+# theme = "tokyo-night"
+
+[walk]
+# Extra gitignore-syntax patterns to leave out of the vault, on top of .gitignore.
+# exclude = ["archive/"]
+`;

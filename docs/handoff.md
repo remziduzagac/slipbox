@@ -1,7 +1,7 @@
 # slipbox — handoff
 
-Written 2026-09-25 for whoever picks this up next, human or agent. Nothing is built yet.
-Read this, then `docs/idea.md`, then `docs/plan.md`.
+Written 2026-09-25 for whoever picks this up next, human or agent. Phases 0–2 are built.
+Read this, then `docs/idea.md`, then `docs/plan.md`, then `docs/design/` for how it was built.
 
 ## What you are building
 
@@ -14,8 +14,10 @@ dissatisfaction that started it.
 
 ## Repository state
 
-An empty git repository. Branch `main`, **no commits**, no remote, nothing tracked but the docs
-this handoff arrived with. You are making the first commit.
+Phases 0–2 are implemented: the core, the rendering pipeline, a read-only TUI and the agent CLI,
+with tests (`bun run check`). `docs/design/` describes the code as it is and is kept in step with
+it; `docs/design/decisions.md` answers the decide items that gated phase 0. The next phase is 3,
+editing — start from `4.x` and `7.6` in the plan.
 
 ## The documents
 
@@ -46,7 +48,7 @@ missing. Use `zsh -lic '...'` before concluding a tool is absent.
 brew); if you want to compare rendering here, the project ships a `leaf-linux-arm64` release
 asset.
 
-## Start here
+## Where phase 0 started
 
 **Phase 0 in `docs/plan.md`.** It is not generic scaffolding — every item in it is there
 because it is cheap now and expensive later. Two deserve special attention:

@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - run: bun install --frozen-lockfile
+      - name: typecheck
+        run: bun run typecheck
+      # Plan 0.3: the core never imports the TUI. This is what keeps the CLI and LSP faces alive.
+      - name: boundary
+        run: bun run check:boundary
+      - name: tests
+        run: bun test

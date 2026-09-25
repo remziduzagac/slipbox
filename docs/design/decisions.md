@@ -1,0 +1,135 @@
+# slipbox — decisions taken during phases 0–2
+
+Decided 2026-09-25 while building phases 0–2. Each entry answers a **decide** item in `docs/plan.md`; the item ID
+is the heading. The plan's "Still open" table points here.
+
+## `0.10` — storage layout
+
+Three kinds of data, three places. Nothing derived ever lives in the vault.
+
+| Kind | Location | Holds | Safe to delete |
+| --- | --- | --- | --- |
+| config | `$XDG_CONFIG_HOME/slipbox/config.toml`, then `<vault>/.slipbox/config.toml` | user and vault settings | no |
+| cache | `$XDG_CACHE_HOME/slipbox/<key>/` | the persisted link index | yes, rebuilt on demand |
+| state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness | loses your place |
+
+XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`) on macOS too — the
+terminal stack here is XDG-shaped on both machines.
+
+**The key** is `<basename>-<hash>`, where the hash is the first 12 hex characters of SHA-256 over the vault root's
+**real path**. The basename is only there so a human can find the directory.
+
+Consequences, accepted deliberately:
+
+- State does not travel between the Mac and the VMs. Reading position is machine-local anyway.
+- Every git worktree of one repo keys separately. Right for the graph (a `[[link]]` resolves to different content per
+  branch) and tolerable for reading position.
+- Single-file mode keys on the file's directory.
+
+**The scratch (`8.2`)** lives in the state dir by default, because a scratch inside the repo gets committed by
+accident. It is not invisible to agents: `slipbox scratch path` and `slipbox scratch show` expose it. Setting
+`capture.location = "vault"` puts it at `<vault>/<capture.file>` instead, for anyone who wants agents to see it
+without the CLI.
+
+## `0.11` — the file walk
+
+One predicate, used by both the walk and the watcher (`5.2` is this decision seen again).
+
+- **Extensions:** `.md` and `.markdown`, case-insensitive. Configurable as `walk.extensions`.
+- **Always skipped:** `.git`, `.slipbox`, `node_modules`, and every entry whose name starts with a dot.
+- **`.gitignore` is honoured**, including nested ones, with git's own semantics. The vault is usually a repo, and what
+  git ignores (`target/`, `dist/`, vendored trees) is exactly what must not resolve `[[README]]`. Every
+  `.gitignore` from the root down applies, and the deepest one with an opinion wins, so `!keep.md` re-includes. Case
+  follows git's default `core.ignorecase`: insensitive on macOS, sensitive on Linux.
+- **`walk.exclude`** adds gitignore-syntax patterns from config.
+- **Nested vaults are boundaries.** A subdirectory holding its own `.slipbox/` is a different vault and is not
+  walked. One vault per repo is the norm; this keeps a fixture vault inside a repo from leaking into it.
+- **Symlinks:** a symlinked *file* is included when its real path is inside the vault root, unless that target is
+  already walked, since the same note twice would double every backlink. A symlinked *directory* is never followed:
+  no cycles, no escaping the root. Anything pointing outside the root is skipped and reported (`7.5` constraint).
+- **Single-file mode** applies the same filter and size cap to its one directory.
+- **Size cap:** files over `walk.max_file_size` (default 4 MiB) are listed as skipped, not parsed.
+- **Errors never abort.** Unreadable directories and files are collected and reported as warnings.
+- **Encoding:** read as UTF-8. Invalid sequences decode to U+FFFD and the file is flagged; a BOM is noted and
+  stripped for parsing only.
+
+## `9.1` — the CLI command list
+
+Read against zk's and nb's surfaces. Small on purpose. Global flags: `--root <dir>`, `--config <file>`, `--json`,
+`--color auto|always|never`.
+
+| Command | What it does | Stability |
+| --- | --- | --- |
+| `slipbox [path]` | open the TUI; refuses when stdout is not a terminal (`9.3`) | — |
+| `slipbox render <note>` | render to stdout; `--width`, `--theme`, `--plain` | **stable v1** |
+| `slipbox capture [text]` | append to the scratch; `--ref path:L[-M]`, `--stdin`, `--snippet` | **stable v1** |
+| `slipbox scratch show\|path\|clear\|copy` | read, locate, wipe or copy the scratch | **stable v1** |
+| `slipbox resolve <link>` | follow a link: `[[target]]` text to a path; `--from <note>` | **stable v1** |
+| `slipbox links <note>` | outgoing links with resolution status | **stable v1** |
+| `slipbox backlinks <note>` | notes linking to a note | **stable v1** |
+| `slipbox ls` | list notes | churns |
+| `slipbox outline <note>` | headings with source lines | churns |
+| `slipbox init [dir]` | create the `.slipbox/` marker (`1.10`) | churns |
+| `slipbox info` | vault root, mode, config/cache/state paths, versions, staleness | churns |
+| `slipbox themes` | list built-in and loaded themes | churns |
+| `slipbox commands` | list the command registry (`0.8`) | churns |
+
+**`--json`** always prints one object: `{"schema": 1, "ok": true, "command": "...", "data": ..., "warnings": [...],
+"stale": [...]}`. Human output goes to stdout, diagnostics to stderr.
+
+**Exit codes:** `0` ok, `1` error, `2` usage, `3` not found (note or link target), `4` ambiguous link, `5` refused
+by `--if-unchanged`.
+
+## `1.4` — link resolution
+
+One policy everywhere, never the filesystem's:
+
+- **Case-insensitive**, after Unicode NFC. `[[Readme]]` resolves to `readme.md` on the Mac and on beaver alike.
+- **Forms.** `[[name]]` matches file basenames without extension. `[[dir/name]]` matches a path suffix aligned on
+  segments. `[[name.md]]` is accepted. `#heading`, `^block` and `|alias` are split off first; `\|` is an alias
+  divider too, because that is how a wikilink is written inside a table cell.
+- **Collisions** are a candidate list, never a silent pick. Disambiguation order: an exact-case match; then a candidate
+  in the linking note's own directory; then the deepest shared directory with the linking note; then the shortest
+  path (Obsidian's shortest-when-unambiguous). Still tied → **ambiguous**, all candidates returned, and the TUI shows
+  a picker.
+- **Markdown links** `[t](path.md)` resolve relative to the linking note; a leading `/` means the vault root.
+- **Non-markdown targets** (`![[diagram.png]]`) resolve relative to the note, then the vault root.
+- **Single-file mode** resolves only within the file's own directory.
+
+This opens an existing Obsidian vault unchanged for the default "shortest path when possible" setting.
+
+## `3.5` — reload anchoring
+
+A buffer stores **source lines, never rendered rows**. Rendered rows change with every resize.
+
+The anchor is `{ heading, headingIndex, offset, line }`: the nearest heading above the top of the viewport (its slug
+and occurrence index), the source-line offset from it, and the absolute source line as fallback. On reload the heading
+is found again by slug and occurrence; if it is gone the absolute line is used, clamped. An agent inserting a
+paragraph above your reading position therefore does not move you.
+
+## `3.11` — mode taxonomy and dispatch order
+
+Phase 2 has no editing, so three modes:
+
+| Mode | Owns keys | Examples |
+| --- | --- | --- |
+| overlay | every key | switcher, palette, outline, picker, messages |
+| pending | the next key of a sequence | `g` then `g`; `space` then `f` |
+| normal | everything else | scroll, links, tabs |
+
+**Dispatch order:** overlay → pending sequence → focused region (explorer or content) → global keymap. `Esc` always
+leaves the innermost state. Every binding resolves to a named command from the registry (`0.8`), so config remaps by
+command id.
+
+**Collisions settled:** `Tab` cycles links, not tabs — terminals send `Ctrl-I` as `Tab`, so `Ctrl-O`/`Ctrl-I` history
+is out and back/forward is `H`/`L` (as in qutebrowser and vimium) plus `Ctrl-O`. Tabs are `gt`/`gT`. `/` is reserved
+for in-note find; vault search arrives in phase 4.
+
+## Moved deliberately
+
+- **Phase 2 is read-only.** `4.1`–`4.2` (`$EDITOR` hand-off) stay in phase 3 with the rest of editing, even though
+  the v1 cut in `docs/idea.md` lists the hand-off. Phase 2's TUI browses, renders, copies text, holds several notes
+  and follows external changes; it never writes a note.
+- **`1.5` backlinks and `9.5` graph queries land with the phase 2 CLI**, because the stable CLI subset promises "a
+  couple of graph queries" from phase 1 and the map falls out of the same parse as link-following. The TUI backlinks
+  panel stays in phase 4.

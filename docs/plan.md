@@ -1,6 +1,7 @@
 # slipbox — implementation plan
 
-Status: **items extracted and phased**. Captured 2026-09-25, phased 2026-09-25.
+Status: **phases 0–2 built**. Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25 — how it
+was built is in `docs/design/`, the decisions it needed in `docs/design/decisions.md`.
 
 The design lives in `docs/idea.md` — what slipbox is, why each decision went the
 way it did, and what was ruled out. This file is the other half: the units of work, with
@@ -177,6 +178,13 @@ changed.
 | A server is deferred, not rejected | 2026-09-25 | Principles, above |
 | `8.1` the capture path — `slipbox capture` is it | 2026-09-25 | Principles, above |
 | `9.4` cross-process semantics | 2026-09-25 | below |
+| `0.10` storage layout | 2026-09-25 | `docs/design/decisions.md` |
+| `0.11` the file walk | 2026-09-25 | `docs/design/decisions.md` |
+| `9.1` the CLI command list | 2026-09-25 | `docs/design/decisions.md`, `docs/design/cli.md` |
+| `1.4` link resolution | 2026-09-25 | `docs/design/decisions.md` |
+| `3.5` reload anchoring | 2026-09-25 | `docs/design/decisions.md` |
+| `3.11` mode taxonomy and dispatch | 2026-09-25 | `docs/design/decisions.md` |
+| Phase 2 is read-only; `4.1`–`4.2` stay in phase 3 | 2026-09-25 | `docs/design/decisions.md` |
 
 ### `9.4` decided 2026-09-25 — disk is the contract
 
@@ -226,17 +234,9 @@ optional `--if-unchanged` for careful writers.
 
 | ID | Decision | Gates |
 | --- | --- | --- |
-| `0.10` | Storage layout — config vs cache vs state, and what the root hash hashes | Phase 0; paths bake in |
-| `0.11` | The file walk — extensions, ignores, symlinks, size caps, errors | Phase 0; changes graph, perf, watching |
-| `1.4` | Link resolution — collisions, case across macOS and Linux, Obsidian path conventions | Phase 2 (link-follow) |
-| `3.5` | Reload anchoring — line, heading, node id or content hash | Phase 2; decides what a buffer stores |
-| `3.11` | Mode taxonomy and dispatch order, plus the key collisions | Phase 2 |
 | `6.1` | Search — own, `qmd`, or an optional `zk` tier | Phase 4 |
 | `7.6` | Frontmatter spliced by byte range, never re-serialised | Phase 3 |
-| `9.1` | The CLI command list | Phase 0, since parity makes the shape matter early |
 | `10.5` | PDF base — `pdfkit` or `@react-pdf/renderer` | Phase 6+ |
-
-`0.10`, `0.11` and `9.1` are phase 0 and all three are cheap now.
 
 ## Step 0 — codebase
 

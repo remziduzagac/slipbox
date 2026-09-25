@@ -1,0 +1,37 @@
+{
+  "name": "slipbox",
+  "version": "0.2.0",
+  "description": "Terminal markdown notes: Obsidian's model without the GUI, agent-drivable from the CLI.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "bin": {
+  "slipbox": "src/main.ts"
+},
+"scripts": {
+  "start": "bun src/main.ts",
+  "test": "bun test",
+  "typecheck": "tsc --noEmit -p .",
+  "check:boundary": "bun scripts/check-boundary.ts",
+  "check": "bun run typecheck && bun run check:boundary && bun test",
+  "build": "bun build --compile src/main.ts --outfile dist/slipbox"
+},
+"dependencies": {
+  "@opentui/core": "0.5.12",
+  "get-east-asian-width": "1.7.0",
+  "highlight.js": "^11.12.0",
+  "ignore": "^7.0.10",
+  "mdast-util-to-string": "^4.0.0",
+  "remark-frontmatter": "^5.0.0",
+  "remark-gfm": "^4.0.1",
+  "remark-parse": "^11.0.0",
+  "smol-toml": "^1.9.0",
+  "unified": "^11.0.5",
+  "yaml": "^2.9.1"
+},
+"devDependencies": {
+  "@types/bun": "^1.4.2",
+  "@types/mdast": "^4.0.4",
+  "typescript": "^7.0.2"
+}
+}

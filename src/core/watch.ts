@@ -1,0 +1,330 @@
+// Vault watcher (plan 5.1, 5.2). One non-recursive watch per walked directory, so the watcher
+// subscribes to exactly what the walk includes (0.11 = 5.2): node_modules, target/ and anything
+// gitignored are never watched.
+//
+// Events are debounced — agents write in bursts, and editors save by temp-and-rename, which looks
+// like delete-then-create — and then settled by stat, so the consumer gets one clean list of
+// created / changed / deleted notes. Our own writes are ignored by (path, mtime).
+//
+// If registration fails (inotify limits on the Linux VMs: ENOSPC / EMFILE), the watcher degrades
+// *loudly*: it reports once and falls back to polling the files it was asked to poll.
+
+import { type Dirent, existsSync, type FSWatcher, readdirSync, statSync, watch } from "node:fs";
+import { join } from "node:path";
+import type { WalkFilter } from "./walk.ts";
+
+export interface WatchChange {
+  rel: string;
+  kind: "created" | "changed" | "deleted";
+  isNote: boolean;
+}
+
+export interface WatchBatch {
+  changes: WatchChange[];
+  /** A .gitignore or the vault config changed: the walk itself may differ, so rebuild. */
+  rescan: boolean;
+}
+
+export interface WatcherOptions {
+  root: string;
+  filter: WalkFilter;
+  dirs: string[];
+  debounceMs: number;
+  onBatch: (batch: WatchBatch) => void;
+  /** Called once when watching degrades (registration failure). */
+  onDegraded: (reason: string) => void;
+  /** Called when one directory cannot be watched and is polled instead. */
+  onWarn?: (message: string) => void;
+  /** Known files and their mtimes, so change vs create vs no-op can be told apart. */
+  known: Map<string, number>;
+  /** Files to poll when degraded (open buffers). */
+  pollTargets?: () => string[];
+  pollMs?: number;
+}
+
+export class VaultWatcher {
+  private readonly watchers = new Map<string, FSWatcher>();
+  private pending = new Set<string>();
+  private rescan = false;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly ownWrites = new Map<string, number>();
+  /** Directories whose watch failed (e.g. Bun's fs.watch errors on a broken symlink inside). */
+  private readonly polled = new Set<string>();
+  degraded: string | null = null;
+  private closed = false;
+
+  /** mtime of each watched directory's .gitignore (-1 when absent). Bun's fs.watch reports no
+   *  events for dot-files, so these are polled on the housekeeping tick. */
+  private readonly gitignores = new Map<string, number>();
+
+  constructor(private readonly opts: WatcherOptions) {
+    for (const d of opts.dirs) this.watchDir(d);
+    this.ensurePollTimer();
+  }
+
+  /** After a rescan: watch exactly `dirs`, and adopt the new graph's notes as known. */
+  sync(dirs: string[], known: Map<string, number>): void {
+    const want = new Set(dirs);
+    for (const [d, w] of this.watchers) {
+      if (!want.has(d)) {
+        w.close();
+        this.watchers.delete(d);
+        this.gitignores.delete(d);
+      }
+    }
+    for (const d of this.polled) if (!want.has(d)) this.polled.delete(d);
+    for (const d of dirs) this.watchDir(d);
+    this.opts.known.clear();
+    for (const [k, v] of known) this.opts.known.set(k, v);
+  }
+
+  private gitignoreStamp(dirRel: string): number {
+    try {
+      return statSync(join(this.opts.root, dirRel, ".gitignore")).mtimeMs;
+    } catch {
+      return -1;
+    }
+  }
+
+  private unwatchTree(dirRel: string): void {
+    for (const [d, w] of this.watchers) {
+      if (d === dirRel || d.startsWith(`${dirRel}/`)) {
+        w.close();
+        this.watchers.delete(d);
+        this.gitignores.delete(d);
+      }
+    }
+    for (const d of this.polled) if (d === dirRel || d.startsWith(`${dirRel}/`)) this.polled.delete(d);
+  }
+
+  /** Watch a directory that appeared (created, or moved in with its contents) and everything
+   *  below it; return the notes already inside, which are new to us. */
+  private adoptTree(dirRel: string): string[] {
+    const notes: string[] = [];
+    const visit = (d: string) => {
+      this.watchDir(d);
+      let entries: Dirent[] = [];
+      try {
+        entries = readdirSync(join(this.opts.root, d), { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const e of entries) {
+        const rel = `${d}/${e.name}`;
+        if (e.isDirectory()) {
+          if (this.opts.filter.exclusion(rel, true) === null) visit(rel);
+        } else if (this.opts.filter.isNoteName(e.name) && this.opts.filter.exclusion(rel, false) === null) notes.push(rel);
+      }
+    };
+    visit(dirRel);
+    return notes;
+  }
+
+  get watchedCount(): number {
+    return this.watchers.size;
+  }
+
+  get polledDirs(): string[] {
+    return [...this.polled];
+  }
+
+  /** Tell the watcher about a write slipbox made itself, so it does not react to it. */
+  noteOwnWrite(rel: string): void {
+    try {
+      this.ownWrites.set(rel, statSync(join(this.opts.root, rel)).mtimeMs);
+    } catch {}
+  }
+
+  close(): void {
+    this.closed = true;
+    for (const w of this.watchers.values()) w.close();
+    this.watchers.clear();
+    if (this.timer) clearTimeout(this.timer);
+    if (this.pollTimer) clearInterval(this.pollTimer);
+  }
+
+  private watchDir(dirRel: string): void {
+    if (this.watchers.has(dirRel) || this.degraded) return;
+    try {
+      const w = watch(join(this.opts.root, dirRel), { persistent: false }, (_event, name) => {
+        if (!name) {
+          this.rescan = true;
+          this.schedule();
+          return;
+        }
+        const rel = dirRel ? `${dirRel}/${name.toString()}` : name.toString();
+        this.pending.add(rel);
+        this.schedule();
+      });
+      w.on("error", (err) => {
+        w.close();
+        this.watchers.delete(dirRel);
+        // Gone: a parent event reports the deletion. Still there: never go quiet — poll it.
+        if (existsSync(join(this.opts.root, dirRel))) this.pollDir(dirRel, (err as Error).message);
+      });
+      this.watchers.set(dirRel, w);
+      this.gitignores.set(dirRel, this.gitignoreStamp(dirRel));
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOSPC" || code === "EMFILE" || code === "ENFILE") this.degrade(`${code}: the system watch limit is exhausted (${this.watchers.size} directories watched)`);
+      else if (existsSync(join(this.opts.root, dirRel))) this.pollDir(dirRel, (err as Error).message);
+    }
+  }
+
+  private pollDir(dirRel: string, reason: string): void {
+    if (this.closed || this.polled.has(dirRel)) return;
+    this.polled.add(dirRel);
+    this.opts.onWarn?.(`cannot watch ${dirRel || "the vault root"} (${reason.split("\n")[0]}) — polling it every ${Math.round((this.opts.pollMs ?? 2000) / 1000)} s instead`);
+    this.ensurePollTimer();
+  }
+
+  private ensurePollTimer(): void {
+    if (this.pollTimer) return;
+    this.pollTimer = setInterval(() => this.pollTick(), this.opts.pollMs ?? 2000);
+    (this.pollTimer as { unref?: () => void }).unref?.();
+  }
+
+  /** Stat-scan polled directories (and, when degraded, open files) for changes. Exposed for tests. */
+  private ticks = 0;
+
+  pollTick(): void {
+    const { filter, known, root } = this.opts;
+    // Bun's fs.watch drops some events: a directory renamed out of the vault reports nothing,
+    // and a rename reports only the new name. So check that watched directories still exist,
+    // and every ~15 ticks sweep every known note as a backstop.
+    for (const d of this.watchers.keys()) if (d && !existsSync(join(root, d))) this.pending.add(d);
+    if (++this.ticks % 15 === 0) for (const rel of known.keys()) if (!existsSync(join(root, rel))) this.pending.add(rel);
+    for (const [dirRel, before] of this.gitignores) {
+      const now = this.gitignoreStamp(dirRel);
+      if (now !== before) {
+        this.gitignores.set(dirRel, now);
+        filter.invalidate(dirRel);
+        this.rescan = true;
+      }
+    }
+    for (const dirRel of this.polled) {
+      let entries: Dirent[] = [];
+      try {
+        entries = readdirSync(join(root, dirRel), { withFileTypes: true });
+      } catch {
+        this.polled.delete(dirRel);
+        continue;
+      }
+      const seen = new Set<string>();
+      for (const e of entries) {
+        const rel = dirRel ? `${dirRel}/${e.name}` : e.name;
+        if (e.isDirectory()) {
+          if (!this.watchers.has(rel) && !this.polled.has(rel) && filter.exclusion(rel, true) === null) {
+            this.watchDir(rel);
+            this.rescan = true;
+          }
+          continue;
+        }
+        if (!filter.isNoteName(e.name) || filter.exclusion(rel, false) !== null) continue;
+        seen.add(rel);
+        let mtime: number | undefined;
+        try {
+          mtime = statSync(join(root, rel)).mtimeMs;
+        } catch {}
+        if (mtime !== undefined && mtime !== known.get(rel)) this.pending.add(rel);
+      }
+      for (const rel of known.keys()) {
+        const parent = rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : "";
+        if (parent === dirRel && !seen.has(rel)) this.pending.add(rel);
+      }
+    }
+    if (this.degraded) for (const rel of this.opts.pollTargets?.() ?? []) this.pending.add(rel);
+    if (this.pending.size || this.rescan) this.flush();
+  }
+
+  private degrade(reason: string): void {
+    if (this.degraded) return;
+    this.degraded = reason;
+    for (const w of this.watchers.values()) w.close();
+    this.watchers.clear();
+    this.opts.onDegraded(`${reason} — falling back to polling open notes every ${Math.round((this.opts.pollMs ?? 2000) / 1000)} s`);
+    this.ensurePollTimer();
+  }
+
+  private schedule(): void {
+    if (this.closed) return;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.flush(), this.opts.debounceMs);
+  }
+
+  /** Settle pending paths by stat. Exposed for tests. */
+  flush(): void {
+    this.timer = null;
+    const paths = [...this.pending];
+    this.pending.clear();
+    const seen = new Set<string>();
+    let rescan = this.rescan;
+    this.rescan = false;
+    const changes: WatchChange[] = [];
+    const { filter, known, root } = this.opts;
+    for (let i = 0; i < paths.length; i++) {
+      const rel = paths[i]!;
+      if (seen.has(rel)) continue;
+      seen.add(rel);
+      const name = rel.slice(rel.lastIndexOf("/") + 1);
+      if (name === ".gitignore") {
+        filter.invalidate(rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : "");
+        rescan = true;
+        continue;
+      }
+      let st: ReturnType<typeof statSync> | null = null;
+      try {
+        st = statSync(join(root, rel));
+      } catch {}
+      if (st?.isDirectory()) {
+        if (filter.exclusion(rel, true) === null && !this.watchers.has(rel)) paths.push(...this.adoptTree(rel));
+        continue;
+      }
+      if (!st && !known.has(rel)) {
+        // Possibly a directory that went away (deleted, or moved out of the vault) — its own
+        // watcher may already have errored and gone — so every known note under it went too.
+        const prefix = `${rel}/`;
+        let any = false;
+        for (const k of known.keys()) {
+          if (k.startsWith(prefix)) {
+            paths.push(k);
+            any = true;
+          }
+        }
+        if (any || this.watchers.has(rel)) {
+          this.unwatchTree(rel);
+          continue;
+        }
+      }
+      if (!filter.isNoteName(name) || filter.exclusion(rel, false) !== null) continue;
+      const own = this.ownWrites.get(rel);
+      if (st && own !== undefined && own === st.mtimeMs) continue;
+      const before = known.get(rel);
+      if (!st) {
+        if (before !== undefined) {
+          known.delete(rel);
+          changes.push({ rel, kind: "deleted", isNote: true });
+        }
+        continue;
+      }
+      if (before === undefined) changes.push({ rel, kind: "created", isNote: true });
+      else if (before !== st.mtimeMs) changes.push({ rel, kind: "changed", isNote: true });
+      else continue;
+      known.set(rel, st.mtimeMs);
+    }
+    // A rename reports only the new name; notes that vanished from the directories we heard
+    // from, or moved away under the same name, are found here.
+    const dirs = new Set(paths.map((p) => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "")));
+    const createdNames = new Set(changes.filter((c) => c.kind === "created").map((c) => c.rel.slice(c.rel.lastIndexOf("/") + 1)));
+    for (const rel of [...known.keys()]) {
+      const slash = rel.lastIndexOf("/");
+      const dir = slash >= 0 ? rel.slice(0, slash) : "";
+      if ((dirs.has(dir) || createdNames.has(rel.slice(slash + 1))) && !seen.has(rel) && !existsSync(join(root, rel))) {
+        known.delete(rel);
+        changes.push({ rel, kind: "deleted", isNote: true });
+      }
+    }
+    if (changes.length || rescan) this.opts.onBatch({ changes, rescan });
+  }
+}

@@ -1,0 +1,8 @@
+# slipbox vault config. Settings here override ~/.config/slipbox/config.toml.
+# See docs/design/configuration.md for every key.
+
+# theme = "tokyo-night"
+
+[walk]
+# Extra gitignore-syntax patterns to leave out of the vault, on top of .gitignore.
+# exclude = ["archive/"]
