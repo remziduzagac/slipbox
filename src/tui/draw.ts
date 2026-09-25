@@ -130,7 +130,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const sideY = beside && frame ? head + 1 : mainY;
     const rect = { x: 0, y: sideY, w, h: bottom + 1 - sideY };
     const list = drawSidebar(app, c, rect, geo);
-    const border = roleStyle(theme, app.region === "sidebar" ? "border_active" : "border", page);
+    const border = roleStyle(theme, "border", page);
     for (let y = sideY; y <= bottom; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
     geo.sidebar = list;
     if (beside) {
@@ -144,7 +144,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const top = app.outlineBeside && geo.headerEnd !== null ? geo.headerEnd : mainY;
     const rect = { x: W - w, y: top, w, h: bottom + 1 - top };
     geo.outline = drawOutline(app, c, rect);
-    const border = roleStyle(theme, app.region === "outline" ? "border_active" : "border", page);
+    const border = roleStyle(theme, "border", page);
     for (let y = top; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
     if (app.outlineBeside) {
       geo.separators.push({ kind: "outline", x: W - w - 1, y: top, w: 1, h: bottom + 1 - top });
@@ -285,7 +285,7 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
   }
   let x = x0;
   for (let i = from; i <= to && x < c.width; i++) {
-    const role: Role = i === app.activeTab ? "tab_active" : "tab";
+    const role: Role = i !== app.activeTab ? "tab" : app.region === "content" ? "tab_active" : "tab_active_idle";
     const w = button(app, c, x, band, labels[i]!, role, `tab:${i}`, geo, stripBg, c.width - x);
     geo.tabs.push({ x, y: band.y, w, h: band.h, index: i });
     x += w;
@@ -518,9 +518,10 @@ function markStyle(theme: Theme, role: Role): Partial<CellStyle> {
  * A side pane's title and the blank row (or, given the geometry, a rule) under it; returns the
  * rect left for the pane's list. Short panes skip the title.
  */
-function paneTitle(app: App, c: Canvas, rect: Rect, title: string, bg: Color | null, rule?: Geometry): Rect {
+function paneTitle(app: App, c: Canvas, rect: Rect, title: string, focused: boolean, bg: Color | null, rule?: Geometry): Rect {
   if (rect.h < 8) return rect;
-  drawText(c, rect.x + 1, rect.y, title, { ...roleStyle(app.theme, "strong", bg), bg }, rect.w - 1);
+  // Bright while the pane has focus, dimmer otherwise; bold either way.
+  drawText(c, rect.x + 1, rect.y, title, { ...roleStyle(app.theme, focused ? "pane_title_active" : "pane_title", bg), bg }, rect.w - 1);
   if (rule) {
     // A rule instead of the blank row, joined to the pane's border like the others.
     drawText(c, rect.x, rect.y + 1, app.glyphs.hbar.repeat(rect.w), roleStyle(app.theme, "border", pageBg(app.theme)), rect.w);
@@ -565,7 +566,7 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  const rect = paneTitle(app, c, pane, "Explorer", base.bg, geo);
+  const rect = paneTitle(app, c, pane, "Explorer", app.region === "sidebar", base.bg, geo);
   const rows = app.treeRows();
   const lines = treeLines(rows.map((r) => r.depth));
   const s = app.sidebar;
@@ -597,7 +598,7 @@ function drawOutline(app: App, c: Canvas, pane: Rect): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  const rect = paneTitle(app, c, pane, "Outline", base.bg);
+  const rect = paneTitle(app, c, pane, "Outline", app.region === "outline", base.bg);
   const rows = app.outlineRows();
   const lines = treeLines(rows.map((r) => r.level - 1));
   const o = app.outline;

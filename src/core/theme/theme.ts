@@ -34,7 +34,7 @@ export const ROLES = [
   // chrome
   "border", "border_active", "status", "status_accent", "status_dim",
   "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active",
-  "tab", "tab_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim",
+  "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim",
   "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
   "cursor", "cursor_line", "line_number", "line_number_current",
   "which_key", "which_key_key", "which_key_group", "which_key_title",
@@ -194,6 +194,11 @@ export function themeFromPalette(
     sidebar_active: { fg: p.cyan },
     tab: { fg: p.comment, bg: p.bg_dark },
     tab_active: { fg: p.fg_strong, bg: p.bg, bold: true },
+    // Focus shows as brightness, never as colour: the active tab and the side panes' titles are
+    // bright while their part of the screen has focus, dimmer (still bold) otherwise.
+    tab_active_idle: { fg: p.fg_dim, bg: p.bg, bold: true },
+    pane_title: { fg: p.fg_dim, bold: true },
+    pane_title_active: { fg: p.fg_strong, bold: true },
     overlay: { fg: p.fg, bg: p.bg_dark },
     overlay_border: { fg: p.blue, bg: p.bg_dark },
     overlay_selected: { fg: p.fg_strong, bg: p.surface, bold: true },

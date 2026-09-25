@@ -188,7 +188,10 @@ under the outline's. Panes under 8 rows skip both. The explorer runs from under 
 rule, beside the tab strip. The outline belongs to the note, so it opens under the note's
 breadcrumb: the top-right window's breadcrumb row and the rule under it run across the outline's
 column, and the outline's button (`▤`) sits at the far right of that row, bright while the outline
-is open.
+is open. Focus shows as brightness, never as a coloured border: a pane's title is bright
+(`pane_title_active`) while the pane has focus and dimmer (`pane_title`) otherwise, and the active
+tab is bright (`tab_active`) while the note has focus and dimmer (`tab_active_idle`) otherwise. All
+of them stay bold, so nothing shifts.
 
 Both trees show depth by indentation plus dim tree lines (the `tree_guide` role): `├─` into each
 child, `└─` into the last one, and `│` where an ancestor has siblings still to come (ascii: `|`,

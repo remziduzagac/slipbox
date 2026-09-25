@@ -755,6 +755,34 @@ describe("top bar, tab strip, status line", () => {
     const leaf = c.rows[o.y + orows.findIndex((r) => r.level === 2 && !r.hasChildren) - h.app.outline.scroll]!.join("");
     expect(dl.indexOf(orows[d]!.text.slice(0, 6)) - o.x).toBe(leaf.indexOf(orows.find((r) => r.level === 2 && !r.hasChildren)!.text.slice(0, 6)) - o.x);
   });
+  test("focus shows as brightness: titles and the active tab, never a coloured border", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+    const roles = h.app.theme.roles;
+    const look = () => {
+      const c = h.canvas();
+      const g = h.app.geometry!;
+      const find = (label: string) => {
+        const y = c.rows.findIndex((r) => r.join("").includes(` ${label}`));
+        return c.styles[y]![c.rows[y]!.join("").indexOf(label)]!;
+      };
+      const tab = g.tabs.find((t) => t.index === h.app.activeTab)!;
+      return {
+        explorer: find("Explorer").fg,
+        outline: find("Outline").fg,
+        tab: c.styles[tab.y]![tab.x + 3]!.fg,
+        border: c.styles[g.sidebar!.y]![g.sidebar!.w]!.fg,
+      };
+    };
+    const content = look();
+    expect(content).toEqual({ explorer: roles.pane_title.fg!, outline: roles.pane_title.fg!, tab: roles.tab_active.fg!, border: roles.border.fg! });
+    h.app.region = "sidebar";
+    const files = look();
+    expect(files).toEqual({ explorer: roles.pane_title_active.fg!, outline: roles.pane_title.fg!, tab: roles.tab_active_idle.fg!, border: roles.border.fg! });
+    h.app.region = "outline";
+    expect(look()).toEqual({ explorer: roles.pane_title.fg!, outline: roles.pane_title_active.fg!, tab: roles.tab_active_idle.fg!, border: roles.border.fg! });
+    // Bold throughout, so nothing shifts.
+    expect(roles.pane_title.bold && roles.pane_title_active.bold && roles.tab_active_idle.bold && roles.tab_active.bold).toBe(true);
+  });
   test("a ┃ after each tab, joined to the rules above and below the strip", async () => {
     const h = await harness({ width: 160 });
     await h.app.run("note.open notes/alpha.md");
