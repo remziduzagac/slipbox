@@ -1581,6 +1581,7 @@ export class App {
     this.activeTab = Math.max(0, Math.min(s.activeTab, this.tabs.length - 1));
     for (const t of this.tabs) t.active = Math.max(0, Math.min(t.active, t.views.length - 1));
     this.sidebar.visible = s.sidebar;
+    if (s.outline !== undefined) this.outline.visible = s.outline;
     if (s.sidebar_width) this.sideW = s.sidebar_width;
     if (s.outline_width) this.outW = s.outline_width;
     this.revealInSidebar();
@@ -1600,6 +1601,7 @@ export class App {
       })),
       activeTab: this.activeTab,
       sidebar: this.sidebar.visible,
+      outline: this.outline.visible,
       sidebar_width: this.sideW,
       outline_width: this.outW,
       ui: this.uiOverrides,

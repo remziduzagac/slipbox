@@ -534,6 +534,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     const again = await harness({ root, open: null, width: 160, config: (c) => (c.ui.restore_session = true) });
     expect(again.app.sideW).toBe(34);
     expect(again.app.outW).toBe(30);
+    expect(again.app.outlineShown).toBe(true); // the outline pane itself is restored too
     expect(again.app.tab!.ratio).toBeCloseTo(ratio, 5);
   });
   test("resize keys and the default split ratio come from config", async () => {

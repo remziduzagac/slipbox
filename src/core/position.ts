@@ -130,6 +130,7 @@ export interface SessionState {
   tabs: { panes: SessionPane[]; active: number; orientation?: "side" | "stacked"; ratio?: number }[];
   activeTab: number;
   sidebar: boolean;
+  outline?: boolean;
   sidebar_width?: number;
   outline_width?: number;
   theme?: string;
@@ -165,6 +166,7 @@ export function loadSession(root: string): SessionState | null {
     tabs,
     activeTab: Number.isInteger(s.activeTab) ? s.activeTab : 0,
     sidebar: typeof s.sidebar === "boolean" ? s.sidebar : true,
+    outline: typeof s.outline === "boolean" ? s.outline : undefined,
     sidebar_width: validWidth(s.sidebar_width),
     outline_width: validWidth(s.outline_width),
     theme: typeof s.theme === "string" ? s.theme : undefined,
