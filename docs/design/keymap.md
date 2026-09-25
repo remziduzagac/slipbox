@@ -294,6 +294,7 @@ with the `hover` role. `space u m` turns the mouse off, which gives it back to t
 | window breadcrumb | scroll that window to the heading, and focus it; its icon finds a heading |
 | tab | click to switch; drag to reorder; middle-click or `×` to close |
 | tab strip, wheel | previous / next tab |
+| tab strip `+N` | the tabs that don't fit: open the tab list |
 | pane borders | drag to resize the explorer, the outline, or the split |
 | scrollbar | click to jump; drag to scroll |
 | status line path | copy the note's path |

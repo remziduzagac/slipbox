@@ -22,9 +22,9 @@ Code, in `src/tui/`:
 
 ```text
  ≡  slipbox                                              indexing 3…  ▤   ← top bar (ui.top_bar)
-━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
- ▾ notes    ┃ 1 index ×  2 alpha ×                                    ← tab strip
-     beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━  ← a rule under the strip
+━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
+ ▾ notes    ┃ 1 index × ┃ 2 alpha × ┃                                 +3   ← tab strip, +N when some don't fit
+     beta   ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━  ← a rule under the strip
      alpha  ┃ § Heading › Sub                    ┃ Heading   ← each window's breadcrumb (tinted)
             ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫   Sub       and a rule under it
             ┃ ▌ Sub                              ┃           ← explorer ┃ content ┃ outline
@@ -69,11 +69,14 @@ split, the file name comes first on the same row.
 Rules run above and below it. The rule above is the frame's (the top rule, or the one under the
 tab strip); the lower window of a stacked split draws its own.
 
-**The tab strip** sits under the top bar, even with a single tab. Each tab has a
-`×` to close it. A tab holds the note and its outline but not the explorer, so with the explorer
-open beside the content the strip starts after the explorer's border and spans the note and the
-outline. The explorer runs from under the frame's top rule to the status line, and stays put when
-the strip appears or goes.
+**The tab strip** sits under the top bar, even with a single tab. Each tab has a `×` to close it and
+a `┃` after it, joined to the rules above and below the strip (`┳`, `┻`). When the tabs don't all
+fit, the strip shows a run of them that includes the active tab: from the first tab, scrolled just
+enough to bring the active one in. A `+N` button at the far right counts the tabs left out; clicking
+it opens the tab list (`ctrl+t t`) to pick one. A tab holds the note and its outline but not the
+explorer, so with the explorer open beside the content the strip starts after the explorer's border
+and spans the note and the outline. The explorer runs from under the frame's top rule to the status
+line, and stays put when the strip appears or goes.
 
 **The status line** is about the file. From left to right:
 

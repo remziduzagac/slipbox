@@ -252,23 +252,55 @@ const CRUMB_MAX = 40;
 /** The tab strip, under the top bar whenever a note is open, right of the explorer. */
 function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): void {
   const theme = app.theme;
-  const stripBg = theme.roles.tab.bg ?? pageBg(theme);
+  const page = pageBg(theme);
+  const stripBg = theme.roles.tab.bg ?? page;
   c.fill(x0, band.y, c.width - x0, band.h, stripBg);
   geo.tabStrip = { x: x0, y: band.y, w: c.width - x0, h: band.h };
-  let x = x0;
-  app.tabs.forEach((t, i) => {
-    if (x >= c.width) return;
+  const border = roleStyle(theme, "border", page);
+  // A ┃ after each tab, joined to the rules above and below the strip.
+  const separator = (x: number) => {
+    drawText(c, x, band.y, app.glyphs.vbar, border, 1);
+    geo.verticals.push({ x, y0: band.y - 1, y1: band.y + band.h, style: border });
+  };
+  const labels = app.tabs.map((t, i) => {
     const v = t.views[t.active]!;
     const changed = v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS ? " ↻" : "";
-    const label = ` ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!.replace(/\.(md|markdown)$/i, ""), 24)}${changed} `;
+    return ` ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!.replace(/\.(md|markdown)$/i, ""), 24)}${changed} `;
+  });
+  const close = `${app.glyphs.close} `;
+  const widths = labels.map((l) => stringWidth(l) + stringWidth(close) + 1);
+  // What fits: from the first tab, scrolled just enough to show the active one. When some don't
+  // fit, a "+N" button at the far right opens the tab list.
+  const room = c.width - x0;
+  const fits = (from: number, to: number, reserve: number) => widths.slice(from, to + 1).reduce((a, w) => a + w, 0) <= room - reserve;
+  let from = 0;
+  let to = widths.length - 1;
+  if (!fits(from, to, 0)) {
+    const more = (hidden: number) => stringWidth(` +${hidden} `) + 1;
+    const active = Math.min(app.activeTab, widths.length - 1);
+    to = active;
+    while (from < to && !fits(from, to, more(widths.length - (to - from + 1)))) from++;
+    while (to + 1 < widths.length && fits(from, to + 1, more(widths.length - (to - from + 2)))) to++;
+  }
+  let x = x0;
+  for (let i = from; i <= to && x < c.width; i++) {
     const role: Role = i === app.activeTab ? "tab_active" : "tab";
-    const w = button(app, c, x, band, label, role, `tab:${i}`, geo, stripBg, c.width - x);
+    const w = button(app, c, x, band, labels[i]!, role, `tab:${i}`, geo, stripBg, c.width - x);
     geo.tabs.push({ x, y: band.y, w, h: band.h, index: i });
     x += w;
     const tabBg = roleStyle(theme, role, stripBg).bg ?? stripBg;
-    x += button(app, c, x, band, `${app.glyphs.close} `, role, `tabclose:${i}`, geo, tabBg, c.width - x);
+    x += button(app, c, x, band, close, role, `tabclose:${i}`, geo, tabBg, c.width - x);
+    if (x < c.width) separator(x);
     x += 1;
-  });
+  }
+  const hidden = widths.length - (to - from + 1);
+  if (hidden > 0) {
+    const label = ` +${hidden} `;
+    const bx = c.width - stringWidth(label);
+    // Its own border, unless the last tab's is (nearly) next to it already.
+    if (bx - 1 - x >= 2) separator(bx - 1);
+    button(app, c, bx, band, label, "tab", "tabmore:", geo, stripBg);
+  }
 }
 
 /** Where rules meet vertical borders, the box glyph for the lines that meet there. */

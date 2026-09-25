@@ -692,6 +692,43 @@ describe("top bar, tab strip, status line", () => {
     h.frame();
     expect(h.app.geometry!.tabStrip).not.toBeNull(); // the strip stays with the last tab
   });
+  test("a ┃ after each tab, joined to the rules above and below the strip", async () => {
+    const h = await harness({ width: 160 });
+    await h.app.run("note.open notes/alpha.md");
+    h.app.openInNewTab("notes/beta.md");
+    const rows = h.frame().split("\n");
+    const tabs = h.app.geometry!.tabs;
+    const end = (i: number) => h.app.geometry!.hot.find((r) => r.id === `tabclose:${i}`)!;
+    for (const i of [0, 1]) {
+      const x = end(i).x + end(i).w;
+      expect(rows[tabs[i]!.y]![x]).toBe("┃");
+      expect(rows[tabs[i]!.y - 1]![x]).toBe("┳");
+      expect(rows[tabs[i]!.y + 1]![x]).toBe("┻");
+    }
+  });
+  test("tabs that don't fit: the active one stays visible, and +N opens the tab list", async () => {
+    const h = await harness({ width: 90 });
+    const notes = ["index.md", "notes/alpha.md", "notes/beta.md", "notes/gamma.md", "samples/large-document.md"];
+    for (let i = 0; i < 3; i++) for (const n of notes) h.app.openInNewTab(n);
+    const count = h.app.tabs.length;
+    const f = h.frame();
+    const shown = h.app.geometry!.tabs.map((t) => t.index);
+    expect(shown.length).toBeLessThan(count);
+    expect(shown).toContain(h.app.activeTab); // the last, opened last
+    const more = h.app.geometry!.hot.find((r) => r.id === "tabmore:")!;
+    expect(more.x + more.w).toBe(90); // at the far right
+    expect(f.split("\n")[more.y]).toContain(`+${count - shown.length}`);
+    // The first tab active: the strip starts at it.
+    h.app.activeTab = 0;
+    h.frame();
+    expect(h.app.geometry!.tabs[0]!.index).toBe(0);
+    const m = h.app.geometry!.hot.find((r) => r.id === "tabmore:")!;
+    h.app.handleMouse({ type: "down", x: m.x + 1, y: m.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: m.x + 1, y: m.y, button: 0 });
+    h.frame();
+    expect(h.app.overlay?.kind).toBe("list");
+    expect(h.frame()).toContain("Tabs");
+  });
   test("each window has its breadcrumb and a rule on top; a click scrolls that window", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 160 });
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
@@ -704,7 +741,7 @@ describe("top bar, tab strip, status line", () => {
     expect(rows[pane.y - 1]!.slice(pane.x, pane.x + 20)).toBe("━".repeat(20));
     expect(rows[pane.y - 1]![pane.x - 1]).toBe("┣");
     // Above it the rule under the tab strip, meeting the explorer's border.
-    expect(rows[pane.y - 3]!.slice(pane.x - 1, pane.x + 20)).toBe(`┣${"━".repeat(20)}`);
+    expect(rows[pane.y - 3]!.slice(pane.x - 1, pane.x + 5)).toBe(`┣${"━".repeat(5)}`);
     // Only the breadcrumb row has the band colour.
     const st = h.canvas().styles;
     expect(st[pane.y - 2]![pane.x + 60]!.bg).toBe(h.app.theme.roles.breadcrumb_band.bg!);

@@ -1571,6 +1571,10 @@ export class App {
       case "tabclose":
         this.closeTabAt(Number(arg));
         break;
+      case "tabmore":
+        // The tabs that don't fit in the strip: pick one from the tab list.
+        void this.run("tab.list");
+        break;
       case "crumb": {
         // crumb:<window>:<row> — that window scrolls to the heading, and takes the focus.
         const [w, row] = arg.split(":").map(Number) as [number, number];
