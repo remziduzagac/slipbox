@@ -158,6 +158,8 @@ export interface ListOverlay {
   keepGroups?: boolean;
   /** The wheel scrolled the view last: the selection follows the view, not the other way. */
   wheeled?: boolean;
+  /** Key columns sized over the whole list (fixed-meaning columns), not per section. */
+  alignKeysAcrossList?: boolean;
 }
 
 export interface PromptOverlay {
@@ -1138,6 +1140,7 @@ export class App {
     submit?: (input: string) => boolean;
     footer?: boolean;
     keepGroups?: boolean;
+    alignKeysAcrossList?: boolean;
   }): void {
     const o: ListOverlay = {
       kind: "list",
@@ -1155,6 +1158,7 @@ export class App {
       cancel: opts.cancel,
       footer: opts.footer,
       keepGroups: opts.keepGroups,
+      alignKeysAcrossList: opts.alignKeysAcrossList,
     };
     refilter(o);
     if (opts.selected !== undefined) o.selected = selectable(o, Math.max(0, Math.min(opts.selected, o.filtered.length - 1)), 1);
@@ -1343,12 +1347,12 @@ export class App {
       case "ctrl+n":
       case "ctrl+j":
       case "tab":
-        return moveTo(o.selected + 1 >= n ? 0 : o.selected + 1, 1);
+        return moveTo(step(o, 1), 1);
       case "up":
       case "ctrl+p":
       case "ctrl+k":
       case "shift+tab":
-        return moveTo(o.selected - 1 < 0 ? n - 1 : o.selected - 1, -1);
+        return moveTo(step(o, -1), -1);
       case "pagedown":
       case "ctrl+d":
         return moveTo(o.selected + 10);
@@ -1960,6 +1964,14 @@ export function refilter(o: ListOverlay): void {
   o.scroll = 0;
   o.wheeled = false;
   o.selected = selectable(o, 0, 1);
+}
+
+/** One entry up or down, skipping headings, wrapping around past the first or last entry. */
+function step(o: ListOverlay, dir: number): number {
+  const n = o.filtered.length;
+  for (let k = o.selected + dir; k >= 0 && k < n; k += dir) if (!o.filtered[k]!.item.header) return k;
+  for (let k = dir > 0 ? 0 : n - 1; k >= 0 && k < n; k += dir) if (!o.filtered[k]!.item.header) return k;
+  return o.selected;
 }
 
 /** The nearest item at or after `i` (before, for dir -1) that is not a group heading. */

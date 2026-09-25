@@ -547,7 +547,18 @@ describe("overlays and the : prompt", () => {
     expect(o.filtered[0]!.item.label).toBe("Recent");
     expect(o.filtered[2]!.item.data).toBe("ui.zen"); // after the heading's rule
     const top = o.filtered.find((e) => e.item.data === "cursor.top")!.item;
-    expect(top.keys).toEqual(["g g"]); // one key in the palette
+    expect(top.keys).toEqual(["g g", ""]); // one key and one alias column (empty here)
+    // Both columns line up across the whole palette, sections included.
+    await h.keys("escape", ":", "up"); // wraps to the last entry: the end of the list in view
+    const g = h.frame().split("\n");
+    const po = h.app.overlay as ListOverlay;
+    expect(po.selected).toBe(po.filtered.length - 1); // up from the first entry wraps past the headings
+    const colOf = (lines: string[], label: string, key: string) => {
+      const l = lines.find((x) => x.includes(label))!;
+      return l.indexOf(` ${key} `, l.indexOf(label) + label.length);
+    };
+    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "Clear the scratch", "space s d"));
+    expect(colOf(g, "Reload note from disk", ":reload")).toBe(colOf(g, "Quit", ":q"));
     expect(h.app.recentCommands[0]).toBe("ui.zen");
   });
   test("messages, note info, vault info", async () => {

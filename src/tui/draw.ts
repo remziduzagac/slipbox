@@ -830,7 +830,11 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
   }
   // Key columns: each as wide as its widest binding in the section, so keys line up down it.
   const colWAt: number[][] = new Array(o.filtered.length);
-  for (let i = 0; i < o.filtered.length; ) {
+  if (o.alignKeysAcrossList) {
+    const colW = [0, 0, 0];
+    for (const e of o.filtered) (e.item.keys ?? []).slice(0, 3).forEach((key, c) => (colW[c] = Math.max(colW[c]!, stringWidth(key))));
+    colWAt.fill(colW);
+  } else for (let i = 0; i < o.filtered.length; ) {
     let j = i;
     while (j < o.filtered.length && o.filtered[j]!.item.header) colWAt[j++] = [0, 0, 0];
     const colW = [0, 0, 0];
@@ -952,7 +956,7 @@ function drawKeys(app: App, c: Canvas, right: number, y: number, keys: string[],
   const sepSt = { ...roleStyle(theme, "overlay_dim", rowBg), bg: rowBg };
   for (let i = 0; i < n; i++) {
     const k = keys[i];
-    if (k !== undefined) {
+    if (k) {
       if (plain && i > 0) drawText(c, x - 2, y, "·", sepSt);
       drawText(c, x, y, plain ? k : ` ${k} `, cap);
     }

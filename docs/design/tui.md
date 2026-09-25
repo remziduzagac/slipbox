@@ -256,8 +256,9 @@ One list component serves every picker:
   a plain sentence saying what it does ("Moves the cursor to the end of the row").
 - **Keycaps:** key bindings are spelled out (`ctrl+d`, `shift+g`, `space l y`, `esc`) and each
   binding is its own keycap (`keycap` role; `keycap_selected` on the selected row), so the space
-  inside a sequence (`g g`) can't be mistaken for the gap between bindings. At most three show,
-  in columns sized per section so they line up down it; plain bindings come before variants
+  inside a sequence (`g g`) can't be mistaken for the gap between bindings. In help at most three
+  show, in columns sized per section so they line up down it; the palette has two fixed columns
+  (the first key, the first alias), aligned across the whole list; plain bindings come before variants
   (such as the selection-extending ones), and the rest are shown in the footer. The columns have
   no names: they are simply the first, second and third way to do it.
   Without a keycap background (`NO_COLOR`), the columns are separated by `·`.

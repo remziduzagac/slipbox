@@ -217,8 +217,9 @@ function openPalette(a: App): void {
   const commandItems: ListItem[] = commands.map((c) => {
     const keys = [...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].map(spellKey);
     const aliases = aliasOf.get(c.id) ?? [];
-    // One key and one alias on the row; everything else in the footer.
-    return { label: c.title, detail: c.description ?? c.id, keys: [...keys.slice(0, 1), ...aliases.slice(0, 1)], more: [...keys.slice(1), ...aliases.slice(1)], data: c.id };
+    // Two fixed columns, the first key and the first alias (empty when there is none); the rest
+    // in the footer.
+    return { label: c.title, detail: c.description ?? c.id, keys: [keys[0] ?? "", aliases[0] ?? ""], more: [...keys.slice(1), ...aliases.slice(1)], data: c.id };
   });
   const byId = new Map(commandItems.map((i) => [i.data as string, i]));
   const recent = a.recentCommands.map((id) => byId.get(id)).filter((i): i is ListItem => !!i);
@@ -230,6 +231,7 @@ function openPalette(a: App): void {
     title: "Commands — type a name, or an alias like :q",
     items: commandItems,
     footer: true,
+    alignKeysAcrossList: true,
     source: (input) => {
       if (!input.trim()) return browse;
       const m = /^(\S+)\s(.*)$/.exec(input);
