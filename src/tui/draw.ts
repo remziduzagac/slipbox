@@ -56,6 +56,8 @@ export interface Geometry {
   /** Horizontal rules (row `y`, columns [x0, x1)) and the vertical borders they may meet. */
   rules: { y: number; x0: number; x1: number }[];
   verticals: { x: number; y0: number; y1: number; style: CellStyle }[];
+  /** The row under the rightmost top window's header, which spans the outline's column too. */
+  headerEnd: number | null;
 }
 
 const CHANGE_MARKER_MS = 3000;
@@ -74,7 +76,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const page = pageBg(theme);
   const W = c.width;
   const H = c.height;
-  const geo: Geometry = { panes: [], sidebar: null, outline: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, rules: [], verticals: [] };
+  const geo: Geometry = { panes: [], sidebar: null, outline: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, rules: [], verticals: [], headerEnd: null };
   c.fill(0, 0, W, H, page);
   if (W < 10 || H < 4) {
     drawText(c, 0, 0, "slipbox: too small", roleStyle(theme, "warn", page), W);
@@ -117,7 +119,9 @@ export function drawApp(app: App, c: Canvas): Geometry {
     drawTabs(app, c, x0, { y: head + 1, h: 1 }, geo);
     rule(head + 2, x0, W);
   }
-  drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, frame, geo);
+  // The rightmost top window's header runs over the outline's column, which starts under it.
+  const overOutline = app.outlineShown && app.outlineBeside ? right : 0;
+  drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, frame, overOutline, geo);
 
   if (app.sidebarShown) {
     const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, W - 6);
@@ -125,10 +129,10 @@ export function drawApp(app: App, c: Canvas): Geometry {
     // whether or not the tab strip shows; its border runs up beside the strip.
     const sideY = beside && frame ? head + 1 : mainY;
     const rect = { x: 0, y: sideY, w, h: bottom + 1 - sideY };
-    drawSidebar(app, c, rect);
+    const list = drawSidebar(app, c, rect);
     const border = roleStyle(theme, app.region === "sidebar" ? "border_active" : "border", page);
     for (let y = sideY; y <= bottom; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
-    geo.sidebar = rect;
+    geo.sidebar = list;
     if (beside) {
       geo.separators.push({ kind: "sidebar", x: w, y: sideY, w: 1, h: bottom + 1 - sideY });
       geo.verticals.push({ x: w, y0: frame ? head : sideY, y1: borderEnd, style: border });
@@ -136,14 +140,15 @@ export function drawApp(app: App, c: Canvas): Geometry {
   }
   if (app.outlineShown) {
     const w = app.outlineBeside ? outW : Math.min(outW + 6, W - 6);
-    const rect = { x: W - w, y: mainY, w, h: mainH };
-    drawOutline(app, c, rect);
+    // Beside the content, the outline starts under the header that spans its column.
+    const top = app.outlineBeside && geo.headerEnd !== null ? geo.headerEnd : mainY;
+    const rect = { x: W - w, y: top, w, h: bottom + 1 - top };
+    geo.outline = drawOutline(app, c, rect);
     const border = roleStyle(theme, app.region === "outline" ? "border_active" : "border", page);
-    for (let y = mainY; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
-    geo.outline = rect;
+    for (let y = top; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
     if (app.outlineBeside) {
-      geo.separators.push({ kind: "outline", x: W - w - 1, y: mainY, w: 1, h: mainH });
-      geo.verticals.push({ x: W - w - 1, y0: frame ? mainY - 1 : mainY, y1: borderEnd, style: border });
+      geo.separators.push({ kind: "outline", x: W - w - 1, y: top, w: 1, h: bottom + 1 - top });
+      geo.verticals.push({ x: W - w - 1, y0: frame ? top - 1 : top, y1: borderEnd, style: border });
     }
   }
   drawJoints(app, c, geo);
@@ -196,12 +201,8 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   x += 1;
   x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
 
-  // Right side, laid out from the far right inwards.
-  let rx = c.width;
-  const outline = icon(g.outlineButton);
-  rx -= stringWidth(outline);
-  button(app, c, rx, band, outline, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);
-  rx -= 1;
+  // Right side, laid out from the far right inwards. (The outline's button is on the breadcrumb.)
+  let rx = c.width - 1;
   // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
   // The middle is left empty.
   const items: { text: string; role: Role }[] = [];
@@ -320,7 +321,7 @@ function drawJoints(app: App, c: Canvas, geo: Geometry): void {
 }
 
 /** `ruleAbove`: the row above `area` is a rule already, so the top windows don't draw their own. */
-function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, geo: Geometry): void {
+function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, overOutline: number, geo: Geometry): void {
   const tab = app.tab;
   const theme = app.theme;
   const page = pageBg(theme);
@@ -331,25 +332,25 @@ function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, geo: G
   }
   const focusContent = app.region === "content";
   if (tab.views.length === 1) {
-    drawPane(app, c, tab.views[0]!, area, focusContent, false, ruleAbove, geo);
+    drawPane(app, c, tab.views[0]!, area, focusContent, false, ruleAbove, overOutline, geo);
     return;
   }
   const [a, b] = tab.views as [View, View];
   const border = roleStyle(theme, "border", page);
   if (app.effectiveOrientation(tab) === "side") {
     const w1 = Math.max(12, Math.min(area.w - 13, Math.round((area.w - 1) * tab.ratio)));
-    drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, ruleAbove, geo);
+    drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, ruleAbove, -1, geo);
     for (let y = area.y; y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
     // With a frame, rules sit right above and below the content area.
     geo.verticals.push({ x: area.x + w1, y0: area.y - (ruleAbove ? 1 : 0), y1: area.y + area.h - (ruleAbove ? 0 : 1), style: border });
     geo.separators.push({ kind: "split-side", x: area.x + w1, y: area.y, w: 1, h: area.h, area });
-    drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, ruleAbove, geo);
+    drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, ruleAbove, overOutline, geo);
   } else {
     const h1 = Math.max(3, Math.min(area.h - 3, Math.round(area.h * tab.ratio)));
-    drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, ruleAbove, geo);
+    drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, ruleAbove, overOutline, geo);
     // The lower window's title row is the stacked split's handle.
     geo.separators.push({ kind: "split-stacked", x: area.x, y: area.y + h1, w: area.w, h: 1, area });
-    drawPane(app, c, b, { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 }, focusContent, true, false, geo);
+    drawPane(app, c, b, { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 }, focusContent, true, false, -1, geo);
   }
 }
 
@@ -358,7 +359,11 @@ function paneIsActive(app: App, view: View): boolean {
   return !!t && t.views[t.active] === view;
 }
 
-function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, ruleAbove: boolean, geo: Geometry): void {
+/**
+ * `overOutline`: -1 for a window not at the top right; otherwise it is, and its header also spans
+ * that many columns to its right (the outline and its border), carrying the outline's button.
+ */
+function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, ruleAbove: boolean, overOutline: number, geo: Geometry): void {
   const theme = app.theme;
   const page = pageBg(theme);
   const active = paneIsActive(app, view);
@@ -368,21 +373,30 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   if (crumbs) {
     // A rule, the title (in a split) and breadcrumb row on its own background, a rule. The top
     // rule is the frame's when the window is at the top.
-    const rule = (y: number) => {
-      drawText(c, rect.x, y, app.glyphs.hbar.repeat(rect.w), roleStyle(theme, "border", page), rect.w);
-      geo.rules.push({ y, x0: rect.x, x1: rect.x + rect.w });
+    const hw = rect.w + Math.max(0, overOutline);
+    const rule = (y: number, w: number) => {
+      drawText(c, rect.x, y, app.glyphs.hbar.repeat(w), roleStyle(theme, "border", page), w);
+      geo.rules.push({ y, x0: rect.x, x1: rect.x + w });
     };
     const y = ruleAbove ? rect.y : rect.y + 1;
-    if (!ruleAbove) rule(rect.y);
+    if (!ruleAbove) rule(rect.y, rect.w);
     const bg = roleStyle(theme, "breadcrumb_band", page).bg;
-    c.fill(rect.x, y, rect.w, 1, bg);
+    c.fill(rect.x, y, hw, 1, bg);
     let x = rect.x;
     if (titled) {
       const name = ` ${truncate(app.displayName(view.buf), Math.floor(rect.w / 2))} `;
       x += drawText(c, x, y, name, { ...roleStyle(theme, active ? "strong" : "dim", bg), bg }, rect.w);
     }
-    drawBreadcrumb(app, c, view, x + 1, rect.x + rect.w - 1, y, bg, geo);
-    rule(y + 1);
+    let end = rect.x + hw;
+    if (overOutline >= 0) {
+      // The outline's button, at the far right.
+      const label = ` ${app.glyphs.outlineButton} `;
+      end -= stringWidth(label);
+      button(app, c, end, { y, h: 1 }, label, app.outlineShown ? "topbar_button_on" : "breadcrumb_icon", "btn:outline", geo, bg);
+      geo.headerEnd = y + 2;
+    }
+    drawBreadcrumb(app, c, view, x + 1, end - 1, y, bg, geo);
+    rule(y + 1, hw);
     body = { x: rect.x, y: y + 2, w: rect.w, h: rect.y + rect.h - y - 2 };
   } else if (titled) {
     const st = roleStyle(theme, active ? "tab_active" : "tab", page);
@@ -500,11 +514,23 @@ function markStyle(theme: Theme, role: Role): Partial<CellStyle> {
   return out;
 }
 
-function drawSidebar(app: App, c: Canvas, rect: Rect): void {
+/**
+ * A side pane's title and the blank row under it; returns the rect left for the pane's list.
+ * Short panes skip the title.
+ */
+function paneTitle(app: App, c: Canvas, rect: Rect, title: string, bg: Color | null): Rect {
+  if (rect.h < 8) return rect;
+  drawText(c, rect.x + 1, rect.y, title, { ...roleStyle(app.theme, "strong", bg), bg }, rect.w - 1);
+  return { ...rect, y: rect.y + 2, h: rect.h - 2 };
+}
+
+/** The explorer; returns the rect its tree occupies (under the title). */
+function drawSidebar(app: App, c: Canvas, pane: Rect): Rect {
   const theme = app.theme;
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
-  c.fill(rect.x, rect.y, rect.w, rect.h, base.bg);
+  c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
+  const rect = paneTitle(app, c, pane, "Explorer", base.bg);
   const rows = app.treeRows();
   const s = app.sidebar;
   s.selected = Math.max(0, Math.min(s.selected, rows.length - 1));
@@ -525,14 +551,16 @@ function drawSidebar(app: App, c: Canvas, rect: Rect): void {
     const icon = row.kind === "dir" ? (app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : g.file;
     const name = row.kind === "note" ? row.name.replace(/\.(md|markdown)$/i, "") : row.name;
     drawText(c, rect.x, y, truncate(`${" ".repeat(1 + row.depth * 2)}${icon} ${name}`, rect.w - 1), st, rect.w);
-  }
+  }  return rect;
 }
 
-function drawOutline(app: App, c: Canvas, rect: Rect): void {
+/** The outline; returns the rect its headings occupy (under the title). */
+function drawOutline(app: App, c: Canvas, pane: Rect): Rect {
   const theme = app.theme;
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
-  c.fill(rect.x, rect.y, rect.w, rect.h, base.bg);
+  c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
+  const rect = paneTitle(app, c, pane, "Outline", base.bg);
   const rows = app.outlineRows();
   const o = app.outline;
   const current = app.currentSection();
@@ -544,7 +572,7 @@ function drawOutline(app: App, c: Canvas, rect: Rect): void {
   o.scroll = Math.max(0, Math.min(o.scroll, Math.max(0, rows.length - rect.h)));
   if (!rows.length) {
     drawText(c, rect.x + 1, rect.y, "no headings", roleStyle(theme, "dim", base.bg), rect.w - 1);
-    return;
+    return rect;
   }
   const g = app.glyphs;
   for (let i = 0; i < rect.h; i++) {
@@ -559,7 +587,7 @@ function drawOutline(app: App, c: Canvas, rect: Rect): void {
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
     const marker = row.hasChildren ? (row.folded ? g.dirClosed : g.dirOpen) : " ";
     drawText(c, rect.x, y, truncate(`${" ".repeat(1 + (row.level - 1) * 2)}${marker} ${row.text}`, rect.w - 1), st, rect.w);
-  }
+  }  return rect;
 }
 
 function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {

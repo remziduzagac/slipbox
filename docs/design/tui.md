@@ -21,19 +21,20 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- ≡  slipbox                                              indexing 3…  ▤   ← top bar (ui.top_bar)
-━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
- ▾ notes    ┃ 1 index × ┃ 2 alpha × ┃                                 +3   ← tab strip, +N when some don't fit
-     beta   ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━  ← a rule under the strip
-     alpha  ┃ § Heading › Sub                    ┃ Heading   ← each window's breadcrumb (tinted)
-            ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫   Sub       and a rule under it
-            ┃ ▌ Sub                              ┃           ← explorer ┃ content ┃ outline
-            ┃ Text with the █ursor on its row…   ┃           (both panes optional)
- ␣ l › links  backspace: up · esc: cancel                  ← which-key popup, while a key is pending
+ ≡  slipbox                                                 indexing 3…    ← top bar (ui.top_bar)
+━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
+ Explorer   ┃ 1 index × ┃ 2 alpha × ┃                                  +3  ← tab strip, +N when some don't fit
+            ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← a rule under the strip
+ ▾ notes    ┃ § Heading › Sub                                          ▤   ← the window's breadcrumb (tinted),
+     beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━  ←   over the outline; ▤ toggles it
+     alpha  ┃ ▌ Sub                              ┃ Outline                 ← explorer ┃ content ┃ outline
+            ┃ Text with the █ursor on its row…   ┃                         ← (both panes optional, titled)
+            ┃                                    ┃ ▾ Heading
+ ␣ l › links  backspace: up · esc: cancel                                  ← which-key popup, while a key is pending
  f → Follow link   n → Next link   …
-━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
- READ  notes/alpha.md ↻ reloaded  ● watching   → [[beta]]  L12:7 40%  ← status line
- ↻ notes/alpha.md changed on disk — reloaded                         ← message or prompt
+━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
+ READ  notes/alpha.md ↻ reloaded  ● watching   → [[beta]]  L12:7 40%       ← status line
+ ↻ notes/alpha.md changed on disk — reloaded                               ← message or prompt
 ```
 
 **The frame.** Right under the top bar, a `━` rule in the `border` role runs across the top of
@@ -48,7 +49,7 @@ lines that meet there: `┳` where a border starts under a rule, `┻` where it 
 
 - on the left, `≡` toggles the explorer and the `slipbox` chip (plain accent text on the bar)
   opens the command palette;
-- on the right, vault-wide state (`indexing N…`, `single-file`), then `▤` to toggle the outline.
+- on the right, vault-wide state (`indexing N…`, `single-file`).
 
 An icon button is filled with the accent while its pane is open. `ui.top_bar = false` removes the
 bar, and zen mode hides it.
@@ -179,6 +180,12 @@ Each kind of link does something different when followed:
   it; `o` replaces the current window's note, and `s` opens it in the split.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
+
+Each pane starts with its title, "Explorer" or "Outline", and a blank row (panes under 8 rows skip
+them). The explorer runs from under the frame's top rule, beside the tab strip. The outline
+belongs to the note, so it opens under the note's breadcrumb: the top-right window's breadcrumb
+row and the rule under it run across the outline's column, and the outline's button (`▤`) sits
+at the far right of that row, filled with the accent while the outline is open.
 
 Both are windows for `ctrl+w h` / `ctrl+w l`, and each has its own keymap: `[keys.explorer]` and
 `[keys.outline]`.

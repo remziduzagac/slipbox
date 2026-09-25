@@ -600,7 +600,7 @@ describe("top bar, tab strip, status line", () => {
     const top = topRow(h.frame());
     expect(top).toContain("≡");
     expect(top).toContain("slipbox");
-    expect(top).toContain("▤");
+    expect(top).not.toContain("▤"); // the outline's button is on the breadcrumb
     expect(top).not.toContain("watching"); // the watcher is shown by the file's path
     expect(statusRow(h.frame())).toMatch(/index\.md +○ not watching/); // watch: false in the harness
     // The chip is plain text on the bar's own background; right under the bar, the frame's rule.
@@ -617,6 +617,8 @@ describe("top bar, tab strip, status line", () => {
     click(h, ex.x, ex.y);
     expect(h.app.sidebarShown).toBe(true);
     const ol = hot(h, "btn:outline");
+    expect(ol.x + ol.w).toBe(160); // far right of the breadcrumb row
+    expect(ol.y).toBe(h.app.geometry!.panes[0]!.y - 2);
     click(h, ol.x + 1, ol.y);
     expect(h.app.outlineShown).toBe(true);
     const chip = hot(h, "btn:palette");
@@ -657,7 +659,8 @@ describe("top bar, tab strip, status line", () => {
     const sb = h.app.geometry!.sidebar!;
     expect(strip.x).toBe(sb.x + sb.w + 1);
     expect(strip.x + strip.w).toBe(160);
-    expect(sb.y).toBe(2);
+    expect(sb.y).toBe(4); // the tree, under the "Explorer" title (beside the strip) and a blank row
+    expect(h.frame().split("\n")[2]!.startsWith(" Explorer")).toBe(true);
     const rows = h.frame().split("\n");
     // A rule over everything, the explorer's border starting under it (┳)…
     expect(rows[1]!.slice(0, 10)).toBe("━".repeat(10));
@@ -691,6 +694,25 @@ describe("top bar, tab strip, status line", () => {
     expect(h.app.tabs).toHaveLength(1);
     h.frame();
     expect(h.app.geometry!.tabStrip).not.toBeNull(); // the strip stays with the last tab
+  });
+  test("the outline opens under the breadcrumb, which spans its column; titled, then a blank row", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160 });
+    await h.app.run("cursor.heading_next");
+    await h.app.run("outline.toggle");
+    const rows = h.frame().split("\n");
+    const g = h.app.geometry!;
+    const pane = g.panes[0]!;
+    const crumbY = pane.y - 2;
+    // The breadcrumb row and its rule run across the outline's column; the button ends the row.
+    expect(g.outline!.x).toBeGreaterThan(pane.x + pane.w);
+    expect(rows[crumbY]!.trimEnd().endsWith("▤")).toBe(true);
+    const border = g.outline!.x - 1;
+    expect(rows[crumbY + 1]![border]).toBe("┳");
+    // Then the pane: "Outline", a blank row, the headings.
+    expect(rows[crumbY + 2]!.slice(g.outline!.x)).toMatch(/^ Outline/);
+    expect(rows[crumbY + 3]!.slice(g.outline!.x).trim()).toBe("");
+    expect(g.outline!.y).toBe(crumbY + 4);
+    expect(rows[g.outline!.y]!.slice(g.outline!.x).trim()).not.toBe("");
   });
   test("a ┃ after each tab, joined to the rules above and below the strip", async () => {
     const h = await harness({ width: 160 });
