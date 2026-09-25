@@ -22,7 +22,7 @@ Config uses the same notation and accepts common spellings: `G` means `shift+g`,
 - **Everything else is under the leader, `space`.** The which-key popup lists the next keys:
   immediately after the leader, and after 500 ms for the other prefixes (`y`, `ctrl+w`,
   `ctrl+t`, `[`, `]`, `g`). Each entry shows a name and a short explanation, in at most three
-  columns, and keys with the same action share an entry (`h left`). `backspace` goes up a
+  columns packed from the left, and keys with the same action share an entry (`h left`). `backspace` goes up a
   level, and `esc` cancels.
 - **Every `ctrl+` chord has a leader route.** Terminals, multiplexers and browsers swallow
   `ctrl+` keys (zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`); nothing takes `space`.

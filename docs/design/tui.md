@@ -154,8 +154,9 @@ an argument lists completions (notes, themes, glyph sets) once a space is typed.
 
 **The which-key popup** lists the next keys of a pending sequence, across the keymaps active in
 the current state. The layout, top to bottom: a header bar (`␣ l › links`), a blank row, the
-entries, and a blank row at the bottom. The entries are in at most three columns (two below 120
-columns, one below 70). Each is `key → name` with a short, dimmed explanation underneath:
+entries, and a blank row at the bottom. The entries are in at most three columns, as many as
+fit. Each column is sized to its own entries, and the columns pack from the left, so a wide pane
+never spreads them apart. Each entry is `key → name` with a short, dimmed explanation underneath:
 
 - **For a command:** its `desc` in `core/command-specs.ts`.
 - **For a group:** from `[groups]`.

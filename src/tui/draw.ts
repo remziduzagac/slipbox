@@ -392,9 +392,34 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number): void {
   const theme = app.theme;
   const entries = app.whichKeyEntries();
   if (!entries.length) return;
-  const cols = c.width >= 120 ? 3 : c.width >= 70 ? 2 : 1;
-  const colW = Math.floor((c.width - 2) / cols);
-  const rows = Math.ceil(entries.length / cols);
+  // Each column is sized to its own entries plus a small gap, and columns pack from the left,
+  // so a long explanation in one column never spreads out the others; at most three, as many
+  // as fit.
+  const shownKey = (key: string) => key.split(" ").map((k) => prettyKey(k, app.leader)).join(" ");
+  const GAP = 3;
+  const layoutFor = (n: number) => {
+    const perCol = Math.ceil(entries.length / n);
+    const widths: { key: number; text: number }[] = [];
+    for (let k = 0; k < n; k++) {
+      const col = entries.slice(k * perCol, (k + 1) * perCol);
+      if (!col.length) break;
+      widths.push({
+        key: Math.min(16, Math.max(...col.map((e) => stringWidth(shownKey(e.key))))),
+        text: Math.min(48, Math.max(...col.map((e) => Math.max(stringWidth(e.label), stringWidth(e.desc))))),
+      });
+    }
+    const total = widths.reduce((a, w) => a + w.key + 3 + w.text + GAP, 2);
+    return { perCol, widths, total };
+  };
+  let plan = layoutFor(1);
+  for (const n of [3, 2]) {
+    const p = layoutFor(n);
+    if (p.total <= c.width) {
+      plan = p;
+      break;
+    }
+  }
+  const rows = plan.perCol;
   const room = bottom - top;
   const withDesc = entries.some((e) => e.desc) && rows * 2 + 3 <= room;
   const entryH = withDesc ? 2 : 1;
@@ -408,22 +433,23 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number): void {
   const cw = drawText(c, 0, y0, crumb, roleStyle(theme, "which_key_title", null));
   const hint = app.pending.length ? "backspace: up · esc: cancel" : "keys repeat · any other key leaves";
   drawText(c, cw + 1, y0, hint, dim, c.width - cw - 1);
-  const shown = (key: string) => key.split(" ").map((k) => prettyKey(k, app.leader)).join(" ");
-  const keyW = Math.min(16, Math.max(...entries.map((e) => stringWidth(shown(e.key)))));
   const keySt = roleStyle(theme, "which_key_key", null);
   const grpSt = roleStyle(theme, "which_key_group", null);
   const firstY = y0 + 2;
   const lastY = y0 + h - 2; // keep the bottom row blank
+  const colX: number[] = [];
+  plan.widths.reduce((x, w) => (colX.push(x), x + w.key + 3 + w.text + GAP), 2);
   entries.forEach((e, i) => {
     const col = Math.floor(i / rows);
     const row = i % rows;
     const y = firstY + row * entryH;
-    if (y > lastY) return;
-    const x = 2 + col * colW;
-    const textX = x + keyW + 3;
-    const textW = colW - keyW - 5;
-    drawText(c, x, y, shown(e.key), keySt, keyW);
-    drawText(c, x + keyW + 1, y, "→", bg);
+    const w = plan.widths[col];
+    if (y > lastY || !w) return;
+    const x = colX[col]!;
+    const textX = x + w.key + 3;
+    const textW = Math.max(4, Math.min(w.text, c.width - textX - 1));
+    drawText(c, x, y, shownKey(e.key), keySt, w.key);
+    drawText(c, x + w.key + 1, y, "→", bg);
     drawText(c, textX, y, truncate(e.label, textW), e.group ? grpSt : { ...bg, bold: true });
     if (withDesc && e.desc && y + 1 <= lastY) drawText(c, textX, y + 1, truncate(e.desc, textW), dim);
   });
