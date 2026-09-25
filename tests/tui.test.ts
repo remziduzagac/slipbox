@@ -369,20 +369,28 @@ describe("which-key", () => {
     expect(h.app.pending).toEqual([]);
     expect(h.app.whichKey).toBe(false);
   });
-  test("layout: header, a blank row, at most three columns of name + explanation, a blank row", async () => {
+  test("layout: framed like the other popups; at most three columns of key → name + explanation", async () => {
     const h = await harness({ width: 160, height: 40 });
     await h.keys("space");
     const rows = h.frame().split("\n");
-    const head = rows.findIndex((r) => r.startsWith(" ␣ › leader"));
+    const head = rows.findIndex((r) => r.includes("┌─ ␣ › leader "));
     expect(head).toBeGreaterThan(0);
-    expect(rows[head + 1]!.trim()).toBe("");
-    expect(rows[head + 2]).toMatch(/^ {2}\S+ +→ \+\w+/);
-    expect(rows[head + 3]).toContain("notes, headings, text, commands"); // +find's explanation
-    const arrows = rows[head + 2]!.split("→").length - 1;
+    const left = rows[head]!.indexOf("┌");
+    expect(rows[head + 1]!.slice(left)).toMatch(/^│ \S+ +→ \+\w+/);
+    expect(rows[head + 2]).toContain("notes, headings, text, commands"); // +find's explanation
+    const arrows = rows[head + 1]!.split("→").length - 1;
     expect(arrows).toBeLessThanOrEqual(3);
+    const foot = rows.findIndex((r, i) => i > head && r.includes("└"));
+    expect(rows[foot]).toContain("backspace up · esc cancel"); // the hint in the bottom border
+    // The same margin as the other popups: a row above and below, two columns aside.
+    expect(rows[head - 1]!.slice(left - 2, left + 10).trim()).toBe("");
+    expect(rows[head + 1]!.slice(left - 2, left)).toBe("  ");
     const status = rows.length - 1;
     expect(rows[status - 1]!.startsWith("━━━━")).toBe(true); // the frame's bottom rule
-    expect(rows[status - 2]!.trim()).toBe(""); // the popup's blank bottom row
+    expect(rows[status - 2]!.trim()).toBe(""); // the popup's margin row
+    // Centred.
+    const right = rows[head]!.lastIndexOf("┐");
+    expect(Math.abs(left - (160 - 1 - right))).toBeLessThanOrEqual(1);
   });
   test("keys with the same action share an entry; short screens drop the explanations", async () => {
     const h = await harness({ width: 160, height: 40 });

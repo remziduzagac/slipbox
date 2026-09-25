@@ -11,7 +11,7 @@ import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.t
 import type { App, ListOverlay, Tab, View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, ordered } from "./cursor.ts";
-import { prettyKey } from "./keys.ts";
+import { prettyKey, spellKey } from "./keys.ts";
 
 export interface Rect {
   x: number;
@@ -716,15 +716,19 @@ function drawBottomLine(app: App, c: Canvas, y: number): void {
  * short explanation dimmed underneath — and a blank row at the bottom. When the screen is too
  * short for two rows per entry, the explanations are dropped before anything else.
  */
+/**
+ * The which-key popup, framed like the other popups: a bordered box on the overlay background
+ * with the pending keys as its title, the hint in the bottom border, and the same margin. Inside,
+ * `key → name` entries in up to three columns (each sized to its own entries), explanations
+ * underneath. It sits centred just above the bottom of the content area.
+ */
 function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geometry): void {
   const theme = app.theme;
   const entries = app.whichKeyEntries();
   if (!entries.length) return;
-  // Each column is sized to its own entries plus a small gap, and columns pack from the left,
-  // so a long explanation in one column never spreads out the others; at most three, as many
-  // as fit.
   const shownKey = (key: string) => key.split(" ").map((k) => prettyKey(k, app.leader)).join(" ");
-  const GAP = 3;
+  const GAP = 4;
+  const maxW = Math.min(c.width - 8, 140);
   const layoutFor = (n: number) => {
     const perCol = Math.ceil(entries.length / n);
     const widths: { key: number; text: number }[] = [];
@@ -732,57 +736,72 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
       const col = entries.slice(k * perCol, (k + 1) * perCol);
       if (!col.length) break;
       widths.push({
-        key: Math.min(16, Math.max(...col.map((e) => stringWidth(shownKey(e.key))))),
-        text: Math.min(48, Math.max(...col.map((e) => Math.max(stringWidth(e.label), stringWidth(e.desc))))),
+        key: Math.min(16, Math.max(...col.map((e) => stringWidth(shownKey(e.key))))) + 2, // " → "
+        text: Math.min(44, Math.max(...col.map((e) => Math.max(stringWidth(e.label), stringWidth(e.desc))))),
       });
     }
-    const total = widths.reduce((a, w) => a + w.key + 3 + w.text + GAP, 2);
+    // Inside the borders: a column of padding each side, the columns, gaps between them.
+    const total = widths.reduce((a, w) => a + w.key + 1 + w.text, 0) + (widths.length - 1) * GAP + 4;
     return { perCol, widths, total };
   };
   let plan = layoutFor(1);
   for (const n of [3, 2]) {
     const p = layoutFor(n);
-    if (p.total <= c.width) {
+    if (p.total <= maxW) {
       plan = p;
       break;
     }
   }
   const rows = plan.perCol;
-  const room = bottom - top;
-  const withDesc = entries.some((e) => e.desc) && rows * 2 + 3 <= room;
+  const room = bottom - top - 2; // the margin above and below
+  const withDesc = entries.some((e) => e.desc) && rows * 2 + 2 <= room;
   const entryH = withDesc ? 2 : 1;
-  const h = Math.min(room, 1 + 1 + rows * entryH + 1);
-  const y0 = bottom - h;
-  const bg = roleStyle(theme, "which_key", null);
-  const dim = { ...roleStyle(theme, "overlay_dim", bg.bg) };
-  c.fill(0, y0, c.width, h, bg.bg);
+  const h = Math.max(3, Math.min(room, rows * entryH + 2));
+  const w = Math.min(maxW, Math.max(plan.total, 40));
+  const x0 = Math.floor((c.width - w) / 2);
+  const y0 = bottom - 1 - h;
+  const bg = roleStyle(theme, "overlay", null);
+  const border = roleStyle(theme, "overlay_border", null);
+  const dim = roleStyle(theme, "overlay_dim", null);
+  const desc = { ...dim, bg: bg.bg };
+  c.fill(x0 - 2, y0 - 1, w + 4, h + 2, bg.bg);
+  const b = app.glyphs.box;
   const name = app.groupName(app.pending);
-  const crumb = app.pending.length ? ` ${app.pending.map((k) => prettyKey(k, app.leader)).join(" ")} ›${name ? ` ${name}` : ""} ` : ` ${name} `;
-  const cw = drawText(c, 0, y0, crumb, roleStyle(theme, "which_key_title", null));
-  const hint = app.pending.length ? "backspace: up · esc: cancel" : "keys repeat · any other key leaves";
-  drawText(c, cw + 1, y0, hint, dim, c.width - cw - 1);
-  const keySt = roleStyle(theme, "which_key_key", null);
-  const grpSt = roleStyle(theme, "which_key_group", null);
-  const firstY = y0 + 2;
-  const lastY = y0 + h - 2; // keep the bottom row blank
+  const title = app.pending.length ? ` ${shownKey(app.pending.join(" "))} ›${name ? ` ${name}` : ""} ` : ` ${name} `;
+  drawText(c, x0, y0, `${b.tl}${b.h}`, border);
+  const tw = drawText(c, x0 + 2, y0, truncate(title, w - 6), { ...border, bold: true });
+  drawText(c, x0 + 2 + tw, y0, b.h.repeat(Math.max(0, w - 3 - tw)) + b.tr, border);
+  for (let k = 1; k < h - 1; k++) {
+    drawText(c, x0, y0 + k, b.v, border, 1);
+    drawText(c, x0 + w - 1, y0 + k, b.v, border, 1);
+  }
+  const hint = ` ${app.pending.length ? "backspace up · esc cancel" : "keys repeat · any other key leaves"} `;
+  const bottomRule = `${b.bl}${b.h.repeat(Math.max(0, w - 3 - stringWidth(hint)))}`;
+  drawText(c, x0, y0 + h - 1, bottomRule, border);
+  drawText(c, x0 + stringWidth(bottomRule), y0 + h - 1, hint, dim);
+  drawText(c, x0 + w - 1, y0 + h - 1, b.br, border);
+  const keySt = { ...roleStyle(theme, "which_key_key", bg.bg), bg: bg.bg };
+  const grpSt = { ...roleStyle(theme, "which_key_group", bg.bg), bg: bg.bg, bold: true };
   const colX: number[] = [];
-  plan.widths.reduce((x, w) => (colX.push(x), x + w.key + 3 + w.text + GAP), 2);
+  plan.widths.reduce((x, cw) => (colX.push(x), x + cw.key + 1 + cw.text + GAP), x0 + 2);
   entries.forEach((e, i) => {
     const col = Math.floor(i / rows);
     const row = i % rows;
-    const y = firstY + row * entryH;
-    const w = plan.widths[col];
-    if (y > lastY || !w) return;
+    const y = y0 + 1 + row * entryH;
+    const cw = plan.widths[col];
+    if (y >= y0 + h - 1 || !cw) return;
     const x = colX[col]!;
-    const textX = x + w.key + 3;
-    const textW = Math.max(4, Math.min(w.text, c.width - textX - 1));
+    const textX = x + cw.key + 1;
+    const textW = Math.max(4, Math.min(cw.text, x0 + w - 2 - textX));
     const id = `wk:${e.key.split(" ")[0]}`;
-    geo.hot.push({ id, x, y, w: w.key + 3 + w.text, h: entryH });
-    if (app.hover === id) c.fill(x, y, w.key + 3 + w.text, 1, theme.roles.hover.bg ?? null);
-    drawText(c, x, y, shownKey(e.key), keySt, w.key);
-    drawText(c, x + w.key + 1, y, "→", bg);
-    drawText(c, textX, y, truncate(e.label, textW), e.group ? grpSt : { ...bg, bold: true });
-    if (withDesc && e.desc && y + 1 <= lastY) drawText(c, textX, y + 1, truncate(e.desc, textW), dim);
+    geo.hot.push({ id, x, y, w: cw.key + 1 + cw.text, h: entryH });
+    const hover = app.hover === id;
+    if (hover) c.fill(x, y, cw.key + 1 + cw.text, entryH, theme.roles.hover.bg ?? null);
+    const rowBg = hover ? (theme.roles.hover.bg ?? bg.bg) : bg.bg;
+    drawText(c, x, y, truncate(shownKey(e.key), cw.key - 2), { ...keySt, bg: rowBg });
+    drawText(c, x + cw.key - 1, y, "→", { ...bg, bg: rowBg });
+    drawText(c, textX, y, truncate(e.label, textW), e.group ? { ...grpSt, bg: rowBg } : { ...bg, bg: rowBg, bold: true });
+    if (withDesc && e.desc && y + 1 < y0 + h - 1) drawText(c, textX, y + 1, truncate(e.desc, textW), { ...desc, bg: rowBg });
   });
 }
 
