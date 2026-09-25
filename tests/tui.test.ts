@@ -1101,6 +1101,25 @@ describe("mouse", () => {
     click(h, z.x + 2, z.y);
     expect(h.app.ui.zen).toBe(true);
   });
+  test("floating windows have a one-cell margin in their own colour", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 140, height: 40 });
+    await h.keys(":");
+    h.frame();
+    const r = h.app.geometry!.overlay!;
+    const c = h.canvas();
+    const bg = h.app.theme.roles.overlay.bg!;
+    for (const [x, y] of [[r.x - 1, r.y + 3], [r.x + r.w, r.y + 3], [r.x + 5, r.y - 1], [r.x + 5, r.y + r.h]] as const) {
+      expect(c.rows[y]![x]).toBe(" ");
+      expect(c.styles[y]![x]!.bg).toBe(bg);
+    }
+    // The explorer over the content (narrow): a blank column past its border.
+    const n = await harness({ width: 70, height: 30 });
+    await n.keys("ctrl+e");
+    n.frame();
+    const p = n.app.geometry!.sidebarPane!;
+    const nc = n.canvas();
+    for (let y = p.y; y < p.y + p.h; y++) expect(nc.rows[y]![p.w + 1]).toBe(" ");
+  });
   test("the wheel scrolls a list; the selection moves only to stay in view", async () => {
     const h = await harness({ width: 140, height: 40 });
     await h.keys("?");

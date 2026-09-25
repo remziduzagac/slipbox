@@ -137,6 +137,8 @@ export function drawApp(app: App, c: Canvas): Geometry {
     for (let y = sideY; y <= bottom; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
     geo.sidebar = list;
     geo.sidebarPane = rect;
+    // Over the content (narrow or zen), a one-column margin past its border sets it apart.
+    if (!app.sidebarBeside) c.fill(w + 1, sideY, 1, bottom + 1 - sideY, roleStyle(theme, "sidebar", page).bg);
     if (beside) {
       geo.separators.push({ kind: "sidebar", x: w, y: sideY, w: 1, h: bottom + 1 - sideY });
       geo.verticals.push({ x: w, y0: frame ? head : sideY, y1: borderEnd, style: border });
@@ -149,6 +151,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const rect = { x: W - w, y: top, w, h: bottom + 1 - top };
     geo.outline = drawOutline(app, c, rect);
     geo.outlinePane = rect;
+    if (!app.outlineBeside) c.fill(W - w - 2, top, 1, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
     const border = roleStyle(theme, "border", page);
     for (let y = top; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
     if (app.outlineBeside) {
@@ -796,7 +799,8 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
   const bg = roleStyle(theme, "overlay", null);
   const border = roleStyle(theme, "overlay_border", null);
   const dim = roleStyle(theme, "overlay_dim", null);
-  c.fill(x, y, w, h, bg.bg);
+  // A one-cell margin in the window's own colour sets it apart from the content behind it.
+  c.fill(x - 1, y - 1, w + 2, h + 2, bg.bg);
   const b = app.glyphs.box;
   drawText(c, x, y, `${b.tl}${b.h}`, border);
   const tw = drawText(c, x + 2, y, truncate(` ${o.title} `, w - 6), { ...border, bold: true });
