@@ -290,11 +290,12 @@ with the `hover` role. `space u m` turns the mouse off, which gives it back to t
 | --- | --- |
 | top bar `≡` / `≣` | toggle the explorer / the outline |
 | top bar `slipbox` chip | open the command palette |
+| top bar breadcrumb | jump to that heading |
 | tab | click to switch; drag to reorder; middle-click or `×` to close |
 | tab strip, wheel | previous / next tab |
 | pane borders | drag to resize the explorer, the outline, or the split |
 | scrollbar | click to jump; drag to scroll |
-| status line | click a breadcrumb heading to jump to it; click the path to copy it |
+| status line path | copy the note's path |
 | message line | click to open the messages |
 | which-key popup | click an entry: a group opens it, a command runs it |
 

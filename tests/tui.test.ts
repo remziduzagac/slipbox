@@ -601,7 +601,8 @@ describe("top bar, tab strip, status line", () => {
     expect(top).toContain("≡");
     expect(top).toContain("slipbox");
     expect(top).toContain("≣");
-    expect(top).toContain("not watching"); // watch: false in the harness
+    expect(top).not.toContain("watching"); // the watcher is shown by the file's path
+    expect(statusRow(h.frame())).toMatch(/index\.md +○ not watching/); // watch: false in the harness
     // The chip is plain text on the bar: no background of its own.
     const chipR = h.app.geometry!.hot.find((r) => r.id === "btn:palette")!;
     expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(h.app.theme.roles.topbar.bg!);
@@ -666,12 +667,14 @@ describe("top bar, tab strip, status line", () => {
     click(h, tab(0).x + 2, strip.y, 1);
     expect(h.app.tabs).toHaveLength(1);
   });
-  test("status line: outline breadcrumb left of the position, clickable; the path copies", async () => {
+  test("outline breadcrumb in the top bar after the chip, clickable; the status path copies", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 160 });
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
-    const status = statusRow(h.frame());
-    expect(status).toMatch(/Alpha › Section One +L9:1/);
+    const f = h.frame();
+    expect(topRow(f)).toMatch(/slipbox +Alpha › Section One/);
+    expect(statusRow(f)).not.toContain("Section One");
     const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:"))!;
+    expect(crumb.y).toBe(0);
     click(h, crumb.x, crumb.y);
     expect(rowText(h)).toContain("Alpha");
     const path = hot(h, "status:path");

@@ -170,21 +170,44 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   rx -= stringWidth(outline);
   button(app, c, rx, band, outline, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);
   rx -= 1;
+  // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
   const items: { text: string; role: Role }[] = [];
-  const changed = app.allViews().some((v) => v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS);
-  if (changed) items.push({ text: "↻", role: "info" });
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
-  if (app.watcher?.degraded) items.push({ text: "⚠ not watching", role: "warn" });
-  else if (app.watcher) items.push({ text: `● watching${app.watcher.polledDirs.length ? ` (${app.watcher.polledDirs.length} polled)` : ""}`, role: "check_done" });
-  else items.push({ text: "○ not watching", role: "status_dim" });
   if (app.loc.mode === "single") items.push({ text: "single-file", role: "status_dim" });
   for (const it of items) {
     const w = stringWidth(it.text) + 2;
+    if (rx - w < x + 12) break;
     rx -= w;
-    if (rx < x + 12) break;
     drawText(c, rx + 1, y, it.text, { ...roleStyle(theme, it.role, bar.bg), bg: bar.bg });
   }
+  if (app.view) drawBreadcrumb(app, c, x + 2, rx - 2, y, band, bar.bg, geo);
 }
+
+/**
+ * The outline breadcrumb: the headings the cursor is under, each clickable. When there is not
+ * enough room, the outermost headings go first.
+ */
+function drawBreadcrumb(app: App, c: Canvas, x0: number, x1: number, y: number, band: Band, bg: Color | null, geo: Geometry): void {
+  const theme = app.theme;
+  const crumbs = app.breadcrumb(app.view!);
+  const room = x1 - x0;
+  if (!crumbs.length || room < 8) return;
+  const sep = ` ${app.glyphs.crumb} `;
+  const widthOf = (ps: typeof crumbs) => ps.reduce((a, p) => a + Math.min(CRUMB_MAX, stringWidth(p.text)), 0) + (ps.length - 1) * stringWidth(sep);
+  let parts = crumbs;
+  while (parts.length > 1 && widthOf(parts) > room) parts = parts.slice(1);
+  let cx = x0;
+  parts.forEach((p, i) => {
+    if (cx >= x1) return;
+    if (i) cx += drawText(c, cx, y, sep, { ...roleStyle(theme, "status_dim", bg), bg });
+    const id = `crumb:${p.line}`;
+    const w = drawText(c, cx, y, truncate(p.text, Math.min(CRUMB_MAX, x1 - cx)), roleStyle(theme, app.hover === id ? "hover" : "breadcrumb", bg));
+    geo.hot.push({ id, x: cx, y: band.y, w, h: band.h });
+    cx += w;
+  });
+}
+
+const CRUMB_MAX = 40;
 
 /** The tab strip, under the top bar when there are two or more tabs. */
 function drawTabs(app: App, c: Canvas, band: Band, geo: Geometry): void {
@@ -468,26 +491,16 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   x += pw;
   if (buf.deleted) x += drawText(c, x, y, " ✖ deleted on disk", roleStyle(theme, "error", st.bg));
   else if (changed) x += drawText(c, x, y, " ↻ reloaded", roleStyle(theme, "info", st.bg));
+  // Whether external changes to this file will show up.
+  const w = app.watcher;
+  const watch = w?.degraded
+    ? { text: "⚠ not watching", role: "warn" as Role }
+    : w
+      ? { text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`, role: "check_done" as Role }
+      : { text: "○ not watching", role: "status_dim" as Role };
   const rx = c.width - rightW;
+  if (x + stringWidth(watch.text) + 3 < rx) x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
   if (rx > x) drawText(c, rx, y, right, roleStyle(theme, "status_dim", page));
-  // The outline breadcrumb, just left of the right-hand items; each heading is clickable.
-  const crumbs = app.breadcrumb(view);
-  if (crumbs.length && rx - x > 12) {
-    const sep = ` ${app.glyphs.crumb} `;
-    const room = rx - x - 4;
-    // Drop outer headings first when there is not enough room.
-    let parts = crumbs;
-    const widthOf = (ps: typeof crumbs) => ps.reduce((a, p) => a + Math.min(28, stringWidth(p.text)), 0) + (ps.length - 1) * stringWidth(sep);
-    while (parts.length > 1 && widthOf(parts) > room) parts = parts.slice(1);
-    let cx = rx - 2 - Math.min(room, widthOf(parts));
-    parts.forEach((p, i) => {
-      if (i) cx += drawText(c, cx, y, sep, roleStyle(theme, "status_dim", page));
-      const id = `crumb:${p.line}`;
-      const w = drawText(c, cx, y, truncate(p.text, Math.min(28, rx - 2 - cx)), roleStyle(theme, app.hover === id ? "hover" : "breadcrumb", st.bg));
-      geo.hot.push({ id, x: cx, y: band.y, w, h: band.h });
-      cx += w;
-    });
-  }
 }
 
 function drawBottomLine(app: App, c: Canvas, y: number): void {
