@@ -21,11 +21,13 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- ≡  slipbox  Alpha › Sub                                 indexing 3…  ≣   ← top bar (ui.top_bar)
+ ≡  slipbox                                              indexing 3…  ≣   ← top bar (ui.top_bar)
  1 index ×  2 alpha ×                                                    ← tab strip, only with 2+ tabs
                                                                          ← gap (ui.bar_gap)
- ▾ notes    ┃ ▌ Heading                          ┃ Heading   ← explorer ┃ content ┃ outline
-     alpha  ┃ Text with the █ursor on its row…   ┃   Sub     (both panes optional)
+ ▾ notes    ┃ Heading › Sub                      ┃ Heading   ← each window: its breadcrumb,
+     beta   ┃                                    ┃   Sub       then a blank row
+     alpha  ┃ ▌ Sub                              ┃           ← explorer ┃ content ┃ outline
+            ┃ Text with the █ursor on its row…   ┃           (both panes optional)
  ␣ l › links  backspace: up · esc: cancel                  ← which-key popup, while a key is pending
  f → Follow link   n → Next link   …
                                                                          ← gap
@@ -37,16 +39,21 @@ Code, in `src/tui/`:
 (the tab strip when shown, otherwise the top bar) and from the status line below it. Screens
 shorter than 20 rows drop the gaps.
 
-**The top bar** is navigation and the vault:
+**The top bar** has buttons and vault-wide state; the middle is empty:
 
 - on the left, `≡` toggles the explorer and the `slipbox` chip (plain accent text, no background)
   opens the command palette;
-- after them, the outline breadcrumb: the chain of headings the cursor is under, each cut to 40
-  columns, with the outermost dropped first when space runs short (click a heading to jump to it);
 - on the right, vault-wide state (`indexing N…`, `single-file`), then `≣` to toggle the outline.
 
 An icon button is filled with the accent while its pane is open. `ui.top_bar = false` removes the
-bar (and the breadcrumb with it), and zen mode hides it.
+bar, and zen mode hides it.
+
+**The breadcrumb** tops each window, followed by a blank row: the chain of headings that window's
+cursor is under, each cut to 40 columns, with the outermost dropped first when space runs short.
+In a split it shares the window's title row, after the file name. Clicking a heading focuses that
+window, puts its cursor on the heading, and scrolls the heading to the window's first row (as far
+as the note's end allows). The row stays reserved above the first heading, so the text doesn't
+jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it.
 
 **The tab strip** sits under the top bar and appears only with two or more tabs. Each tab has a
 `×` to close it.

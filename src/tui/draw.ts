@@ -171,6 +171,7 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   button(app, c, rx, band, outline, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);
   rx -= 1;
   // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
+  // The middle is left empty.
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
   if (app.loc.mode === "single") items.push({ text: "single-file", role: "status_dim" });
@@ -180,18 +181,18 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
     rx -= w;
     drawText(c, rx + 1, y, it.text, { ...roleStyle(theme, it.role, bar.bg), bg: bar.bg });
   }
-  if (app.view) drawBreadcrumb(app, c, x + 2, rx - 2, y, band, bar.bg, geo);
 }
 
 /**
- * The outline breadcrumb: the headings the cursor is under, each clickable. When there is not
- * enough room, the outermost headings go first.
+ * A window's outline breadcrumb: the headings its cursor is under, each clickable. When there is
+ * not enough room, the outermost headings go first.
  */
-function drawBreadcrumb(app: App, c: Canvas, x0: number, x1: number, y: number, band: Band, bg: Color | null, geo: Geometry): void {
+function drawBreadcrumb(app: App, c: Canvas, view: View, x0: number, x1: number, y: number, bg: Color | null, geo: Geometry): void {
   const theme = app.theme;
-  const crumbs = app.breadcrumb(app.view!);
+  const crumbs = app.breadcrumb(view);
   const room = x1 - x0;
   if (!crumbs.length || room < 8) return;
+  const index = app.tab!.views.indexOf(view);
   const sep = ` ${app.glyphs.crumb} `;
   const widthOf = (ps: typeof crumbs) => ps.reduce((a, p) => a + Math.min(CRUMB_MAX, stringWidth(p.text)), 0) + (ps.length - 1) * stringWidth(sep);
   let parts = crumbs;
@@ -199,10 +200,11 @@ function drawBreadcrumb(app: App, c: Canvas, x0: number, x1: number, y: number, 
   let cx = x0;
   parts.forEach((p, i) => {
     if (cx >= x1) return;
-    if (i) cx += drawText(c, cx, y, sep, { ...roleStyle(theme, "status_dim", bg), bg });
-    const id = `crumb:${p.line}`;
-    const w = drawText(c, cx, y, truncate(p.text, Math.min(CRUMB_MAX, x1 - cx)), roleStyle(theme, app.hover === id ? "hover" : "breadcrumb", bg));
-    geo.hot.push({ id, x: cx, y: band.y, w, h: band.h });
+    if (i) cx += drawText(c, cx, y, sep, { ...roleStyle(theme, "dim", bg), bg }, x1 - cx);
+    const id = `crumb:${index}:${p.line}`;
+    const st = app.hover === id ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb", bg), bg };
+    const w = drawText(c, cx, y, truncate(p.text, Math.min(CRUMB_MAX, x1 - cx)), st);
+    geo.hot.push({ id, x: cx, y, w, h: 1 });
     cx += w;
   });
 }
@@ -272,11 +274,17 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const page = pageBg(theme);
   const active = paneIsActive(app, view);
   let body = rect;
-  if (titled) {
-    const st = roleStyle(theme, active ? "tab_active" : "tab", page);
-    c.fill(rect.x, rect.y, rect.w, 1, st.bg);
-    drawText(c, rect.x, rect.y, ` ${truncate(app.displayName(view.buf), rect.w - 2)} `, st, rect.w);
-    body = { x: rect.x, y: rect.y + 1, w: rect.w, h: rect.h - 1 };
+  // The header: a split window's title, then the breadcrumb, then a blank row before the text.
+  const crumbs = app.config.ui.breadcrumb && !app.ui.zen && rect.h >= 8;
+  if (titled || crumbs) {
+    const st = titled ? roleStyle(theme, active ? "tab_active" : "tab", page) : roleStyle(theme, "text", page);
+    const bg = titled ? st.bg : page;
+    c.fill(rect.x, rect.y, rect.w, 1, bg);
+    let x = rect.x;
+    if (titled) x += drawText(c, x, rect.y, ` ${truncate(app.displayName(view.buf), Math.floor(rect.w / 2))} `, st, rect.w);
+    if (crumbs) drawBreadcrumb(app, c, view, x + 1, rect.x + rect.w - 1, rect.y, bg, geo);
+    const header = crumbs ? 2 : 1;
+    body = { x: rect.x, y: rect.y + header, w: rect.w, h: rect.h - header };
   }
   if (body.h <= 0 || body.w <= 6) return;
   view.height = body.h;

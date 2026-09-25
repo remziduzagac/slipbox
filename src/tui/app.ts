@@ -675,7 +675,16 @@ export class App {
     if (moveCursor) this.ensureCursorVisible(view, layout);
   }
 
-  /** The headings the cursor is in, outermost first: the status line's breadcrumb. */
+  /** Put the cursor on a heading row and scroll the window so that row is its first. */
+  revealHeading(view: View, row: number): void {
+    this.pushHistory(view);
+    this.moveCursor(view, { row, col: 0 });
+    const layout = this.currentLayout(view);
+    view.top = this.clampTop(view, layout, view.cur.row);
+    view.topAnchor = anchorAt(layout, view.top);
+  }
+
+  /** The headings the cursor is in, outermost first: each window's breadcrumb. */
   breadcrumb(view = this.view): { text: string; line: number }[] {
     if (!view) return [];
     const hs = this.currentLayout(view).headings;
@@ -1546,10 +1555,14 @@ export class App {
         this.closeTabAt(Number(arg));
         break;
       case "crumb": {
-        const v = this.view;
-        if (!v) break;
-        this.pushHistory(v);
-        this.moveCursor(v, { row: Number(arg), col: 0 });
+        // crumb:<window>:<row> — that window scrolls to the heading, and takes the focus.
+        const [w, row] = arg.split(":").map(Number) as [number, number];
+        const t = this.tab;
+        const v = t?.views[w];
+        if (!t || !v) break;
+        t.active = w;
+        this.region = "content";
+        this.revealHeading(v, row);
         break;
       }
       case "status":

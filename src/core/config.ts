@@ -51,6 +51,8 @@ export interface Config {
     top_bar: boolean;
     /** A blank row between the note and the bars above and below it. */
     bar_gap: boolean;
+    /** The outline breadcrumb at the top of each window. */
+    breadcrumb: boolean;
     /** Rows of margin kept between the cursor and the top or bottom of the view. */
     scrolloff: number;
   };
@@ -113,6 +115,7 @@ export const DEFAULT_CONFIG: Config = {
     zen: false,
     top_bar: true,
     bar_gap: true,
+    breadcrumb: true,
     scrolloff: 3,
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },

@@ -667,22 +667,42 @@ describe("top bar, tab strip, status line", () => {
     click(h, tab(0).x + 2, strip.y, 1);
     expect(h.app.tabs).toHaveLength(1);
   });
-  test("outline breadcrumb in the top bar after the chip, clickable; the status path copies", async () => {
+  test("each window has its breadcrumb and a blank row on top; a click scrolls that window", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 160 });
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
     const f = h.frame();
-    expect(topRow(f)).toMatch(/slipbox +Alpha › Section One/);
-    expect(statusRow(f)).not.toContain("Section One");
-    const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:"))!;
-    expect(crumb.y).toBe(0);
+    expect(topRow(f)).not.toContain("Section One"); // the top bar's middle stays empty
+    const pane = h.app.geometry!.panes[0]!;
+    const rows = f.split("\n");
+    expect(rows[pane.y - 2]).toMatch(/Alpha › Section One/);
+    expect(rows[pane.y - 1]!.slice(pane.x).trim()).toBe(""); // the blank row under it
+    const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:0:"))!;
     click(h, crumb.x, crumb.y);
     expect(rowText(h)).toContain("Alpha");
+    expect(h.app.view!.top).toBe(0); // a short note never scrolls past its end; the split test covers scrolling
     const path = hot(h, "status:path");
     click(h, path.x, path.y);
     expect(h.copied.at(-1)).toEndWith("/notes/alpha.md");
     const msg = hot(h, "status:message");
     click(h, msg.x + 3, msg.y);
     expect(h.frame()).toContain("Messages");
+  });
+  test("split windows: title then breadcrumb on one row; a click acts on its own window", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160 });
+    await h.keys("ctrl+w", "v");
+    const [a, b] = h.app.tab!.views;
+    // Move the right window's cursor a few headings down, then focus the left one.
+    h.app.tab!.active = 1;
+    for (let i = 0; i < 4; i++) await h.app.run("cursor.heading_next");
+    h.app.tab!.active = 0;
+    const f = h.frame();
+    const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:1:"))!;
+    expect(f.split("\n")[crumb.y]).toContain("large-document.md");
+    const before = a!.top;
+    click(h, crumb.x, crumb.y);
+    expect(h.app.tab!.active).toBe(1);
+    expect(b!.top).toBe(b!.cur.row);
+    expect(a!.top).toBe(before);
   });
 });
 
