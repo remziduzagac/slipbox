@@ -280,7 +280,7 @@ edit the config and the config wins again.
 | `space v i` | vault info: root, notes, skipped paths, cache and state, watcher |
 | `space v c` | reload the configuration (it also reloads by itself when a config file is saved) |
 | `space m` | messages |
-| `space ?` | help: every key, grouped, searchable (commands, panes, resize mode, mouse) |
+| `?`, `space ?` | help: every key, grouped, searchable (commands, panes, resize mode, mouse) |
 | `space q q` | quit (also `ctrl+q`, `:q`) |
 
 ## Mouse

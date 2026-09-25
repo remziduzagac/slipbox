@@ -148,6 +148,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader v i": "vault.info",
   "leader v c": "config.reload",
   "leader m": "messages.open",
+  "?": "help.open",
   "leader ?": "help.open",
   "leader q q": "app.quit",
   "ctrl+q": "app.quit",

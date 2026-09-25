@@ -1291,7 +1291,7 @@ export class App {
     }
     this.clearPending();
     if (hit) return hit.run(hit.spec!);
-    if (key !== "escape") this.message("info", `${prettyKey(seq, this.leader)} is not bound — ${prettyKey(`${this.leader} ?`, this.leader)} lists keys`);
+    if (key !== "escape") this.message("info", `${prettyKey(seq, this.leader)} is not bound — ? lists keys`);
   }
 
   async run(spec: string): Promise<void> {

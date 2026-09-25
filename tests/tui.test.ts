@@ -453,11 +453,13 @@ describe("overlays and the : prompt", () => {
     await h.keys(":", "q", "enter");
     expect(h.quit.called).toBe(true);
   });
-  test(": also finds commands by name; space ? lists every key", async () => {
+  test(": also finds commands by name; ? and space ? list every key", async () => {
     const h = await harness();
     await h.keys(":", "z", "e", "n", "space", "m", "o", "d", "e", "enter");
     expect(h.app.ui.zen).toBe(true);
     await h.keys("space", "?");
+    expect(h.frame()).toContain("Keys — type to filter");
+    await h.keys("escape", "?"); // ? on its own too
     expect(h.frame()).toContain("Keys — type to filter");
   });
   test("help: grouped, every binding its own keycap, the description in the footer, groups kept while filtering", async () => {

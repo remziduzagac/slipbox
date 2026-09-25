@@ -259,7 +259,7 @@ function openPalette(a: App): void {
 }
 
 /**
- * Help (`space ?`): for learning the keys. Every command with all its keys, by group, plus what
+ * Help (`?`, `space ?`): for learning the keys. Every command with all its keys, by group, plus what
  * works inside the explorer, the outline, visual and resize mode, and the mouse. Filtering keeps
  * the groups; enter runs a command (the in-pane and mouse entries are reference only).
  */
