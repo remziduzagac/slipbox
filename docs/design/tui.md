@@ -244,17 +244,22 @@ One list component serves every picker:
 - **Filtering:** fuzzy, with smart case, preferring word and path starts and file names over
   directories.
 - **Keys:** as in [keymap.md](keymap.md), "In lists and prompts": the arrows, `tab` and
-  `ctrl+n`/`ctrl+p` move (wrapping around), `enter` accepts, `esc` cancels. The wheel moves the
-  selection, a click picks, and a click outside closes the list. A counter in the bottom border
-  shows `n/m`, and an empty list says "no matches" or "nothing here".
+  `ctrl+n`/`ctrl+p` move (wrapping around), `enter` accepts, `esc` cancels. The wheel scrolls the
+  list three rows a notch (the selection moves only to stay in view), a click picks, and a click
+  outside closes the list. A counter in the bottom border shows `n/m`, and an empty list says "no
+  matches" or "nothing here".
 - **Groups and footers:** a list may have group headings (dim, bold capitals, with a blank row
   before each but the first and a full rule under each; never selected, moving skips them) and a
-  footer that shows the selected entry's description.
+  footer. The footer is always four rows, so the list doesn't jump: the selected entry's name
+  (bold), its explanation in normal text (wrapping to a second row), and its other bindings
+  ("also", as keycaps). Explanations are the `desc` of each command in `core/command-specs.ts`:
+  a plain sentence saying what it does ("Moves the cursor to the end of the row").
 - **Keycaps:** key bindings are spelled out (`ctrl+d`, `shift+g`, `space l y`, `esc`) and each
   binding is its own keycap (`keycap` role; `keycap_selected` on the selected row), so the space
   inside a sequence (`g g`) can't be mistaken for the gap between bindings. At most three show,
   in columns sized per section so they line up down it; plain bindings come before variants
-  (such as the selection-extending ones), and the rest are listed in the footer ("also …").
+  (such as the selection-extending ones), and the rest are shown in the footer. The columns have
+  no names: they are simply the first, second and third way to do it.
   Without a keycap background (`NO_COLOR`), the columns are separated by `·`.
 
 Help and the palette list the same commands for different jobs, in the groups of

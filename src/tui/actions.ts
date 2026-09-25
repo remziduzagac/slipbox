@@ -194,12 +194,11 @@ function grouped(items: ListItem[], groupOf: (item: ListItem) => string, order: 
 
 /**
  * At most three bindings shown, plain ones first (a variant like "extend the selection" after);
- * the rest go to the description, which help shows in its footer.
+ * the rest go to the footer.
  */
-function topKeys(keys: string[], variants: Set<string>, desc: string): { keys: string[]; detail: string } {
+function topKeys(keys: string[], variants: Set<string>, desc: string): { keys: string[]; more: string[]; detail: string } {
   const ordered = [...keys.filter((k) => !variants.has(k)), ...keys.filter((k) => variants.has(k))];
-  const rest = ordered.slice(3);
-  return { keys: ordered.slice(0, 3), detail: rest.length ? `${desc} — also ${rest.join(", ")}` : desc };
+  return { keys: ordered.slice(0, 3), more: ordered.slice(3), detail: desc };
 }
 
 /**
@@ -215,12 +214,12 @@ function openPalette(a: App): void {
     list.push(`:${al}`);
     aliasOf.set(spec, list);
   }
-  const commandItems: ListItem[] = commands.map((c) => ({
-    label: c.title,
-    detail: c.description ?? c.id,
-    keys: [...[...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].slice(0, 1).map(spellKey), ...(aliasOf.get(c.id) ?? []).slice(0, 1)],
-    data: c.id,
-  }));
+  const commandItems: ListItem[] = commands.map((c) => {
+    const keys = [...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].map(spellKey);
+    const aliases = aliasOf.get(c.id) ?? [];
+    // One key and one alias on the row; everything else in the footer.
+    return { label: c.title, detail: c.description ?? c.id, keys: [...keys.slice(0, 1), ...aliases.slice(0, 1)], more: [...keys.slice(1), ...aliases.slice(1)], data: c.id };
+  });
   const byId = new Map(commandItems.map((i) => [i.data as string, i]));
   const recent = a.recentCommands.map((id) => byId.get(id)).filter((i): i is ListItem => !!i);
   const browse: ListItem[] = [
@@ -320,16 +319,16 @@ function openHelp(a: App): void {
 
 /** The mouse, for help: [what, how, detail]. */
 const MOUSE_HELP: [string, string[], string][] = [
-  ["Move the cursor", ["click"], "in a note"],
-  ["Select and copy", ["drag"], "copied on release"],
-  ["Select a word / a row", ["double-click", "triple-click"], "and copy it"],
-  ["Scroll", ["wheel"], "the note, a list, or the tabs"],
-  ["Open a note as a tab", ["click"], "in the explorer; a folder folds or unfolds"],
-  ["Jump to a heading", ["click"], "in the outline or a breadcrumb; on ▾ / ▸, fold"],
-  ["Switch, reorder, close tabs", ["click", "drag", "middle-click"], "on the tab strip; × closes too"],
-  ["Resize panes and splits", ["drag"], "a border"],
-  ["Scroll to a place", ["click", "drag"], "on the scrollbar"],
-  ["Copy the note's path", ["click"], "on the path in the status line"],
+  ["Move the cursor", ["click"], "Moves the cursor to where you click in a note; on a link, follows it"],
+  ["Select and copy", ["drag"], "Selects the text you drag over and copies it on release"],
+  ["Select a word / a row", ["double-click", "triple-click"], "Selects the word or the whole row, and copies it"],
+  ["Scroll", ["wheel"], "Scrolls the note or a pane, moves a list's selection, or switches tabs"],
+  ["Open a note as a tab", ["click"], "In the explorer: opens the note as a tab; on a folder, folds or unfolds it"],
+  ["Jump to a heading", ["click"], "In the outline or a breadcrumb: moves the note there; on ▾ / ▸, folds"],
+  ["Switch, reorder, close tabs", ["click", "drag", "middle-click"], "On the tab strip: switches, drags to reorder, closes (so does ×)"],
+  ["Resize panes and splits", ["drag"], "Drags a border to resize what's beside it"],
+  ["Scroll to a place", ["click", "drag"], "On the scrollbar: jumps there, or drags the thumb"],
+  ["Copy the note's path", ["click"], "On the path in the status line: copies the absolute path"],
 ];
 
 // ---------------------------------------------------------------------------------------------

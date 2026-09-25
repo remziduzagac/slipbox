@@ -51,7 +51,7 @@ export interface Geometry {
   sidebarPane: Rect | null;
   outlinePane: Rect | null;
   tabs: (Rect & { index: number })[];
-  overlay: (Rect & { listY: number }) | null;
+  overlay: (Rect & { listY: number; rows: number }) | null;
   hot: Hot[];
   separators: Separator[];
   scrollbars: ScrollbarGeom[];
@@ -783,12 +783,13 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   });
 }
 
-function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: number): Rect & { listY: number } {
+function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: number): Rect & { listY: number; rows: number } {
   const theme = app.theme;
   const W = c.width;
   const w = Math.min(100, W - (W > 60 ? 8 : 0));
-  // Rows besides the list: the borders, the input, and the footer (a rule and a line).
-  const inner = (o.filterable ? 3 : 2) + (o.footer ? 2 : 0);
+  // Rows besides the list: the borders, the input, and the footer (a rule, the entry's name, two
+  // rows of explanation, its other keys).
+  const inner = (o.filterable ? 3 : 2) + (o.footer ? FOOTER_ROWS + 1 : 0);
   const h = Math.max(inner + 1, Math.min(o.filtered.length + inner + 1, mainH - 2, 30));
   const x = Math.floor((W - w) / 2);
   const y = mainY + Math.max(0, Math.min(2, mainH - h));
@@ -818,18 +819,13 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     drawText(c, x + 2 + px + iw, y + 1, " ", roleStyle(theme, "cursor", null));
     listY = y + 2;
   }
-  if (o.footer) {
-    // The selected entry's description, under a rule.
-    drawText(c, x, y + h - 3, `${b.ml}${b.h.repeat(w - 2)}${b.mr}`, border);
-    const detail = o.filtered[o.selected]?.item.detail ?? "";
-    drawText(c, x + 2, y + h - 2, truncate(detail, w - 4), dim);
-  }
-  const rows = h - (listY - y) - 1 - (o.footer ? 2 : 0);
+  if (o.footer) drawFooter(app, c, o, x, y + h - 2 - FOOTER_ROWS, w);
+  const rows = h - (listY - y) - 1 - (o.footer ? FOOTER_ROWS + 1 : 0);
   if (o.selected < o.scroll) o.scroll = o.selected;
   if (o.selected >= o.scroll + rows) o.scroll = o.selected - rows + 1;
   // When the selected entry is the top row, bring its heading (title and rule, not the blank
-  // row before them) into view above it.
-  if (o.scroll === o.selected) {
+  // row before them) into view above it; not while the wheel is scrolling the view.
+  if (o.scroll === o.selected && !o.wheeled) {
     while (o.scroll > 0 && o.filtered[o.scroll - 1]!.item.header && (o.filtered[o.scroll - 1]!.item.label || o.filtered[o.scroll - 1]!.item.rule)) o.scroll--;
   }
   // Key columns: each as wide as its widest binding in the section, so keys line up down it.
@@ -890,7 +886,50 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     if (hint) drawText(c, x + w - 2 - stringWidth(hint), ry, hint, { ...dim, bg: st.bg });
   }
   if (!selectableCount) drawText(c, x + 2, listY, o.input ? "no matches" : "nothing here", dim);
-  return { x, y, w, h, listY };
+  return { x, y, w, h, listY, rows };
+}
+
+const FOOTER_ROWS = 4;
+
+/**
+ * A list's footer, under a rule: the selected entry's name, its explanation (wrapping to a second
+ * row), and its other bindings as keycaps. Always the same height, so the list doesn't jump.
+ */
+function drawFooter(app: App, c: Canvas, o: ListOverlay, x: number, y: number, w: number): void {
+  const theme = app.theme;
+  const b = app.glyphs.box;
+  drawText(c, x, y, `${b.ml}${b.h.repeat(w - 2)}${b.mr}`, roleStyle(theme, "overlay_border", null));
+  const item = o.filtered[o.selected]?.item;
+  if (!item || item.header) return;
+  const text = roleStyle(theme, "overlay", null);
+  const room = w - 4;
+  drawText(c, x + 2, y + 1, truncate(item.label, room), { ...text, bold: true });
+  const lines = wrapWords(item.detail ?? "", room);
+  lines.slice(0, 2).forEach((l, i) => drawText(c, x + 2, y + 2 + i, i === 1 && lines.length > 2 ? truncate(`${l} ${lines.slice(2).join(" ")}`, room) : l, text));
+  if (item.more?.length) {
+    const cap = roleStyle(theme, "keycap", text.bg);
+    const plain = cap.bg === text.bg;
+    let cx = x + 2 + drawText(c, x + 2, y + 4, "also ", roleStyle(theme, "overlay_dim", null));
+    for (const [i, k] of item.more.entries()) {
+      const label = plain ? (i ? ` · ${k}` : k) : ` ${k} `;
+      if (cx + stringWidth(label) > x + w - 2) break;
+      cx += drawText(c, cx, y + 4, label, plain ? text : cap) + (plain ? 0 : 1);
+    }
+  }
+}
+
+/** Words into lines of at most `width` columns. */
+function wrapWords(text: string, width: number): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    if (line && stringWidth(`${line} ${word}`) > width) {
+      lines.push(line);
+      line = word;
+    } else line = line ? `${line} ${word}` : word;
+  }
+  if (line) lines.push(line);
+  return lines.map((l) => truncate(l, width));
 }
 
 /**

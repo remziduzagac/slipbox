@@ -239,38 +239,38 @@ export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
 
 /** What the explorer's and the outline's actions do, for help. */
 export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string }> = {
-  down: { title: "Move down", desc: "select the next row; nothing opens" },
-  up: { title: "Move up", desc: "select the previous row; nothing opens" },
-  open_tab: { title: "Open as a tab", desc: "the note in a tab (or its tab, if open); a folder folds or unfolds" },
-  expand: { title: "Open as a tab / unfold", desc: "the note in a tab; a folder unfolds" },
-  open: { title: "Open here", desc: "replace the current window's note" },
-  collapse: { title: "Fold", desc: "fold the folder, or go to its parent" },
-  open_split: { title: "Open in the split", desc: "the note in the other window" },
-  top: { title: "Top", desc: "the first row" },
-  bottom: { title: "Bottom", desc: "the last row" },
-  close: { title: "Close the explorer", desc: "focus returns to the note" },
-  leave: { title: "Back to the note", desc: "the explorer stays open" },
+  down: { title: "Move down", desc: "Selects the next row; nothing opens" },
+  up: { title: "Move up", desc: "Selects the previous row; nothing opens" },
+  open_tab: { title: "Open as a tab", desc: "Opens the note in a tab (or switches to its tab); folds or unfolds a folder" },
+  expand: { title: "Open as a tab / unfold", desc: "Opens the note in a tab; unfolds a folder" },
+  open: { title: "Open here", desc: "Replaces the current window's note with this one" },
+  collapse: { title: "Fold", desc: "Folds the folder, or goes to its parent" },
+  open_split: { title: "Open in the split", desc: "Opens the note in the other window" },
+  top: { title: "Top", desc: "Selects the first row" },
+  bottom: { title: "Bottom", desc: "Selects the last row" },
+  close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
+  leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
 };
 
 export const OUTLINE_ACTION_INFO: Record<string, { title: string; desc: string }> = {
-  down: { title: "Move down", desc: "the next heading" },
-  up: { title: "Move up", desc: "the previous heading" },
-  jump: { title: "Jump", desc: "the note goes to the heading and takes focus" },
-  fold: { title: "Fold", desc: "hide the sub-headings, or go to the parent" },
-  unfold: { title: "Unfold", desc: "show the sub-headings" },
-  top: { title: "Top", desc: "the first heading" },
-  bottom: { title: "Bottom", desc: "the last heading" },
-  close: { title: "Close the outline", desc: "focus returns to the note" },
-  leave: { title: "Back to the note", desc: "the outline stays open" },
+  down: { title: "Move down", desc: "Selects the next heading" },
+  up: { title: "Move up", desc: "Selects the previous heading" },
+  jump: { title: "Jump", desc: "Moves the note to the heading and focuses it" },
+  fold: { title: "Fold", desc: "Hides the sub-headings, or goes to the parent" },
+  unfold: { title: "Unfold", desc: "Shows the sub-headings" },
+  top: { title: "Top", desc: "Selects the first heading" },
+  bottom: { title: "Bottom", desc: "Selects the last heading" },
+  close: { title: "Close the outline", desc: "Closes it; focus returns to the note" },
+  leave: { title: "Back to the note", desc: "Focuses the note; the outline stays open" },
 };
 
 export const RESIZE_ACTIONS: Record<string, { title: string; desc: string }> = {
-  narrower: { title: "Narrower", desc: "shrink the focused pane" },
-  wider: { title: "Wider", desc: "grow the focused pane" },
-  shorter: { title: "Shorter", desc: "shrink in a stacked split" },
-  taller: { title: "Taller", desc: "grow in a stacked split" },
-  equalize: { title: "Equal sizes", desc: "reset the split and pane widths" },
-  leave: { title: "Leave resize mode", desc: "back to reading" },
+  narrower: { title: "Narrower", desc: "Shrinks the focused pane or window" },
+  wider: { title: "Wider", desc: "Grows the focused pane or window" },
+  shorter: { title: "Shorter", desc: "Shrinks the window in a stacked split" },
+  taller: { title: "Taller", desc: "Grows the window in a stacked split" },
+  equalize: { title: "Equal sizes", desc: "Evens the split and resets pane widths" },
+  leave: { title: "Leave resize mode", desc: "Back to reading" },
 };
 
 /** which-key groups by prefix, in config notation: "name: short explanation". */

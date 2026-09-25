@@ -126,6 +126,8 @@ export interface ListItem {
   hint?: string;
   /** Key bindings, drawn as separate keycaps at the right (instead of `hint`). */
   keys?: string[];
+  /** Further bindings, shown in the footer ("also"). */
+  more?: string[];
   indent?: number;
   /** A group heading: drawn dim and bold, never selected. With `rule`, the line under a heading;
    * with an empty label, the blank row before one. */
@@ -154,6 +156,8 @@ export interface ListOverlay {
   footer?: boolean;
   /** While filtering, keep the group headings of the items that match (help). */
   keepGroups?: boolean;
+  /** The wheel scrolled the view last: the selection follows the view, not the other way. */
+  wheeled?: boolean;
 }
 
 export interface PromptOverlay {
@@ -1318,6 +1322,7 @@ export class App {
     const n = o.filtered.length;
     // Group headings are skipped, in the direction of travel.
     const moveTo = (i: number, dir = i >= o.selected ? 1 : -1) => {
+      o.wheeled = false;
       o.selected = selectable(o, Math.max(0, Math.min(n - 1, i)), dir);
       const item = o.filtered[o.selected];
       if (item) o.move?.(item.item);
@@ -1397,10 +1402,17 @@ export class App {
     }
     const r = g.overlay;
     if (ev.type === "scroll") {
-      const d = ev.scroll?.direction === "up" ? -1 : 1;
-      o.selected = selectable(o, Math.max(0, Math.min(o.filtered.length - 1, o.selected + d)), d);
+      // The wheel scrolls the list, three rows a notch, like the note and the side panes; the
+      // selection moves only to stay in view.
+      const d = (ev.scroll?.direction === "up" ? -1 : 1) * 3;
+      const n = o.filtered.length;
+      o.scroll = Math.max(0, Math.min(Math.max(0, n - r.rows), o.scroll + d));
+      o.wheeled = true;
+      const before = o.selected;
+      if (o.selected < o.scroll) o.selected = selectable(o, o.scroll, 1);
+      else if (o.selected >= o.scroll + r.rows) o.selected = selectable(o, Math.min(n - 1, o.scroll + r.rows - 1), -1);
       const item = o.filtered[o.selected];
-      if (item) o.move?.(item.item);
+      if (item && o.selected !== before) o.move?.(item.item);
       return;
     }
     if (ev.type !== "down") return;
@@ -1946,6 +1958,7 @@ export function refilter(o: ListOverlay): void {
     o.filtered = o.items.map((item) => ({ item, positions: [] }));
   }
   o.scroll = 0;
+  o.wheeled = false;
   o.selected = selectable(o, 0, 1);
 }
 

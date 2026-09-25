@@ -478,7 +478,7 @@ describe("overlays and the : prompt", () => {
     // At most three bindings; the rest in the footer description.
     const endRow = o.items.find((i) => i.data === "cursor.line_end")!;
     expect(endRow.keys).toEqual(["$", "end", "ctrl+right"]);
-    expect(endRow.detail).toContain("also cmd+right, shift+end, ctrl+shift+right");
+    expect(endRow.more).toEqual(["cmd+right", "shift+end", "ctrl+shift+right", "shift+cmd+right"]);
     // Keys in a section line up in columns.
     const lines = f.split("\n");
     const colOf = (label: string, key: string) => {
@@ -497,8 +497,11 @@ describe("overlays and the : prompt", () => {
     expect(at("g g")).toBe(h.app.theme.roles.keycap.bg!);
     expect(c.styles[y]![line.indexOf("g g") + 1]!.bg).toBe(h.app.theme.roles.keycap.bg!); // the space inside the cap
     expect(c.styles[y]![line.indexOf("ctrl+home") - 2]!.bg).not.toBe(h.app.theme.roles.keycap.bg!); // between caps
-    // The footer shows the selected entry's description.
-    expect(f).toContain("one character left");
+    // The footer: the selected entry's name, its explanation, its other keys.
+    const foot = f.split("\n");
+    const rule = foot.findIndex((l, i) => i > 3 && l.includes("├"));
+    expect(foot[rule + 1]).toContain("Cursor left");
+    expect(foot[rule + 2]).toContain("Moves the cursor one character left");
     // Moving skips headings; filtering keeps them.
     await h.keys("down");
     expect(o.filtered[o.selected]!.item.header).toBeFalsy();
@@ -1087,11 +1090,30 @@ describe("mouse", () => {
     click(h, z.x + 2, z.y);
     expect(h.app.ui.zen).toBe(true);
   });
-  test("the wheel over a list moves its selection", async () => {
-    const h = await harness();
-    await h.keys("ctrl+p");
-    h.app.handleMouse({ type: "scroll", x: 50, y: 10, button: 0, scroll: { direction: "down", delta: 1 } });
-    expect((h.app.overlay as { selected: number }).selected).toBe(1);
+  test("the wheel scrolls a list; the selection moves only to stay in view", async () => {
+    const h = await harness({ width: 140, height: 40 });
+    await h.keys("?");
+    h.frame();
+    const o = h.app.overlay as ListOverlay;
+    const r = h.app.geometry!.overlay!;
+    const wheel = (direction: string) => {
+      h.app.handleMouse({ type: "scroll", x: r.x + 5, y: r.listY + 3, button: 0, scroll: { direction, delta: 1 } });
+      h.frame();
+    };
+    expect(o.selected).toBe(2);
+    wheel("down");
+    expect(o.scroll).toBe(3); // the view moved three rows
+    expect(o.selected).toBe(3); // row 2 left the view, so the selection moved to its top
+    for (let i = 0; i < 5; i++) wheel("down");
+    expect(o.scroll).toBe(18);
+    expect(o.selected).toBeGreaterThanOrEqual(18); // kept in view, at its top
+    expect(o.filtered[o.selected]!.item.header).toBeFalsy();
+    const kept = o.selected;
+    wheel("up");
+    expect(o.scroll).toBe(15);
+    expect(o.selected).toBe(kept); // still in view: untouched
+    await h.keys("down"); // keys move the selection again, and the view follows it
+    expect(o.selected).toBeGreaterThan(kept);
   });
 });
 

@@ -331,7 +331,7 @@ with the `hover` role. `space u m` turns the mouse off, which gives it back to t
 | note, double / triple click | select and copy the word / the row |
 | note, wheel | scroll the view |
 | explorer, outline | a click anywhere in the pane focuses it; rows as in their sections above |
-| lists, wheel | move the selection |
+| lists, wheel | scroll the list; the selection moves only to stay in view |
 | explorer, outline, wheel | scroll the pane (the selection stays) |
 | outside a list, or anywhere during a prompt | close it |
 
