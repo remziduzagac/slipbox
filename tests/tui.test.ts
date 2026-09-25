@@ -728,16 +728,30 @@ describe("top bar, tab strip, status line", () => {
     expect(btn("btn:outline").fg).toBe(roles.topbar_button.fg!); // the outline is closed
     expect(btn("btn:outline").bg).toBe(roles.breadcrumb_band.bg!);
   });
-  test("dim indent guides under each ancestor in the explorer and the outline", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+  test("tree lines: ├─ to each child, └─ to the last, │ where an ancestor goes on", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, height: 90, config: (c) => (c.ui.outline = true) });
     const c = h.canvas();
     const sb = h.app.geometry!.sidebar!;
-    const deep = h.app.treeRows().findIndex((r) => r.depth === 1) - h.app.sidebar.scroll;
-    expect(c.rows[sb.y + deep]![sb.x + 1]).toBe("│");
-    expect(c.styles[sb.y + deep]![sb.x + 1]!.fg).toBe(h.app.theme.roles.tree_guide.fg!);
+    const rows = h.app.treeRows();
+    const at = (i: number) => c.rows[sb.y + i - h.app.sidebar.scroll]!;
+    // In each expanded folder, children branch with ├─ and the last one closes with └─.
+    const kids = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.depth === 1);
+    expect(kids.length).toBeGreaterThan(1);
+    const lastKid = kids.filter(({ i }) => !rows.slice(i + 1).some((r, j) => r.depth === 1 && !rows.slice(i + 1, i + 1 + j).some((x) => x.depth < 1)))[0]!;
+    expect(at(kids[0]!.i).slice(sb.x + 1, sb.x + 3).join("")).toBe(kids[0] === lastKid ? "└─" : "├─");
+    expect(at(lastKid.i).slice(sb.x + 1, sb.x + 3).join("")).toBe("└─");
+    expect(c.styles[sb.y + kids[0]!.i - h.app.sidebar.scroll]![sb.x + 1]!.fg).toBe(h.app.theme.roles.tree_guide.fg!);
+    // The outline: a sub-heading under a section with later siblings has │ then ├─ or └─.
     const o = h.app.geometry!.outline!;
-    const sub = h.app.outlineRows().findIndex((r) => r.level === 2) - h.app.outline.scroll;
-    expect(c.rows[o.y + sub]![o.x + 1]).toBe("│");
+    const orows = h.app.outlineRows();
+    const sub = orows.findIndex((r, i) => r.level === 3 && orows.slice(i + 1).some((x) => x.level === 2));
+    const line = c.rows[o.y + sub - h.app.outline.scroll]!.slice(o.x + 1, o.x + 5).join("");
+    expect(line).toMatch(/^│ [├└]─$/);
+    // Every heading with sub-headings shows a fold marker, so sibling titles line up.
+    const d = orows.findIndex((r) => r.level === 2 && r.hasChildren);
+    const dl = c.rows[o.y + d - h.app.outline.scroll]!.join("");
+    const leaf = c.rows[o.y + orows.findIndex((r) => r.level === 2 && !r.hasChildren) - h.app.outline.scroll]!.join("");
+    expect(dl.indexOf(orows[d]!.text.slice(0, 6)) - o.x).toBe(leaf.indexOf(orows.find((r) => r.level === 2 && !r.hasChildren)!.text.slice(0, 6)) - o.x);
   });
   test("a ┃ after each tab, joined to the rules above and below the strip", async () => {
     const h = await harness({ width: 160 });

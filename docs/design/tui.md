@@ -188,8 +188,10 @@ belongs to the note, so it opens under the note's breadcrumb: the top-right wind
 row and the rule under it run across the outline's column, and the outline's button (`▤`) sits
 at the far right of that row, bright while the outline is open.
 
-Both trees show depth by indentation plus dim guides (`│`, the `tree_guide` role; ascii `|`): one
-under each ancestor's marker, so a row's parents can be followed up the column.
+Both trees show depth by indentation plus dim tree lines (the `tree_guide` role): `├─` into each
+child, `└─` into the last one, and `│` where an ancestor has siblings still to come (ascii: `|`,
+`` ` ``, `-`). The outline marks headings that have sub-headings with `▾` / `▸` (fold markers of
+its own, in every glyph set); the explorer marks folders with its folder glyphs.
 
 Both are windows for `ctrl+w h` / `ctrl+w l`, and each has its own keymap: `[keys.explorer]` and
 `[keys.outline]`.

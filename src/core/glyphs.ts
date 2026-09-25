@@ -40,8 +40,14 @@ export interface Glyphs {
   joints: Record<string, string>;
   dirOpen: string;
   dirClosed: string;
-  /** Indent guide in the explorer and the outline. */
+  /** The outline's fold markers (the explorer uses dirOpen / dirClosed). */
+  foldOpen: string;
+  foldClosed: string;
+  /** Tree lines in the explorer and the outline: │ ├ └ ─. */
   guide: string;
+  guideBranch: string;
+  guideLast: string;
+  guideDash: string;
   file: string;
   sep: string;
   scrollThumb: string;
@@ -84,7 +90,12 @@ const unicode: Glyphs = {
   joints: { udlr: "╋", udr: "┣", udl: "┫", dlr: "┳", ulr: "┻", dr: "┏", dl: "┓", ur: "┗", ul: "┛" },
   dirOpen: "▾",
   dirClosed: "▸",
+  foldOpen: "▾",
+  foldClosed: "▸",
   guide: "│",
+  guideBranch: "├",
+  guideLast: "└",
+  guideDash: "─",
   file: " ",
   sep: "›",
   // The bar is a thin column, unlike the ┃ borders it often sits beside; colour tells the thumb.
@@ -110,8 +121,8 @@ const nerd: Glyphs = {
   image: "󰋩",
   callout: { note: "󰋽", tip: "󰌶", important: "󰅾", warning: "󰀪", caution: "󰳦", quote: "󱆨" },
   fmOpen: "󰈮",
-  dirOpen: "",
-  dirClosed: "",
+  dirOpen: "\u{f0770}", // nf-md-folder_open (escaped: private-use characters get lost in editing)
+  dirClosed: "\u{f024b}", // nf-md-folder
   file: "󰍔",
 };
 
@@ -143,7 +154,12 @@ const ascii: Glyphs = {
   joints: { udlr: "+", udr: "+", udl: "+", dlr: "+", ulr: "+", dr: "+", dl: "+", ur: "+", ul: "+" },
   dirOpen: "v",
   dirClosed: ">",
+  foldOpen: "v",
+  foldClosed: ">",
   guide: "|",
+  guideBranch: "|",
+  guideLast: "`",
+  guideDash: "-",
   file: " ",
   sep: ">",
   scrollThumb: "#",

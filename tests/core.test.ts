@@ -10,6 +10,7 @@ import { parseMarkdown, visit } from "../src/core/parse.ts";
 import { sanitize } from "../src/core/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
+import { glyphsFor } from "../src/core/glyphs.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
 import type { WikiLink } from "../src/core/wikilink.ts";
 
@@ -163,4 +164,26 @@ describe("keymap (0.8)", () => {
     expect(k.isPrefix("g")).toBe(true);
     expect(k.lookup("g t")).toBe("tab.next");
   });
+});
+
+describe("glyph sets", () => {
+  // Private-use icons get lost when files are edited; an empty glyph draws nothing and shifts
+  // whatever follows it. Every glyph must take up room, except the ones that are spacing by design.
+  const blankByDesign = new Set(["file", "scrollTrack"]);
+  const flatten = (v: unknown, path: string): [string, string][] =>
+    typeof v === "string"
+      ? [[path, v]]
+      : Array.isArray(v)
+        ? v.flatMap((x, i) => flatten(x, `${path}[${i}]`))
+        : v && typeof v === "object"
+          ? Object.entries(v).flatMap(([k, x]) => flatten(x, path ? `${path}.${k}` : k))
+          : [];
+  for (const mode of ["nerd", "unicode", "ascii"] as const) {
+    test(`${mode}: no empty or zero-width glyphs`, () => {
+      for (const [path, g] of flatten(glyphsFor(mode), "")) {
+        if (path === "mode" || blankByDesign.has(path)) continue;
+        expect({ path, width: stringWidth(g) > 0 }).toEqual({ path, width: true });
+      }
+    });
+  }
 });

@@ -524,10 +524,34 @@ function paneTitle(app: App, c: Canvas, rect: Rect, title: string, bg: Color | n
   return { ...rect, y: rect.y + 2, h: rect.h - 2 };
 }
 
-/** Dim indent guides: a line under each ancestor's marker, `depth` of them. */
-function drawGuides(app: App, c: Canvas, rect: Rect, y: number, depth: number, bg: Color | null): void {
+/**
+ * Tree lines for rows at the given depths: for each row, whether it is the last of its siblings,
+ * and for each indentation column whether the ancestor drawn there has siblings still to come
+ * (so a │ runs on).
+ */
+function treeLines(depths: number[]): { last: boolean; more: boolean[] }[] {
+  const out: { last: boolean; more: boolean[] }[] = new Array(depths.length);
+  const seen: boolean[] = []; // seen[k]: a row at depth k below, before any shallower row
+  for (let i = depths.length - 1; i >= 0; i--) {
+    const d = depths[i]!;
+    // Column k carries the line of the ancestor at depth k + 1 (its ├─ sits in that column).
+    out[i] = { last: !seen[d], more: Array.from({ length: d }, (_, k) => !!seen[k + 1]) };
+    seen[d] = true;
+    seen.length = d + 1;
+  }
+  return out;
+}
+
+/** Dim tree lines in a row's indentation: │ for ancestors that go on, then ├─ or └─ to the row. */
+function drawGuides(app: App, c: Canvas, rect: Rect, y: number, depth: number, line: { last: boolean; more: boolean[] }, bg: Color | null): void {
+  const g = app.glyphs;
   const st = { ...roleStyle(app.theme, "tree_guide", bg), bg };
-  for (let d = 0; d < depth && 1 + d * 2 < rect.w - 1; d++) drawText(c, rect.x + 1 + d * 2, y, app.glyphs.guide, st, 1);
+  for (let k = 0; k < depth; k++) {
+    const x = rect.x + 1 + k * 2;
+    if (x + 1 >= rect.x + rect.w - 1) break;
+    if (k === depth - 1) drawText(c, x, y, `${line.last ? g.guideLast : g.guideBranch}${g.guideDash}`, st, 2);
+    else if (line.more[k]) drawText(c, x, y, g.guide, st, 1);
+  }
 }
 
 /** The explorer; returns the rect its tree occupies (under the title). */
@@ -538,6 +562,7 @@ function drawSidebar(app: App, c: Canvas, pane: Rect): Rect {
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
   const rect = paneTitle(app, c, pane, "Explorer", base.bg);
   const rows = app.treeRows();
+  const lines = treeLines(rows.map((r) => r.depth));
   const s = app.sidebar;
   s.selected = Math.max(0, Math.min(s.selected, rows.length - 1));
   if (s.selected < s.scroll) s.scroll = s.selected;
@@ -557,7 +582,7 @@ function drawSidebar(app: App, c: Canvas, pane: Rect): Rect {
     const icon = row.kind === "dir" ? (app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : g.file;
     const name = row.kind === "note" ? row.name.replace(/\.(md|markdown)$/i, "") : row.name;
     drawText(c, rect.x, y, truncate(`${" ".repeat(1 + row.depth * 2)}${icon} ${name}`, rect.w - 1), st, rect.w);
-    drawGuides(app, c, rect, y, row.depth, st.bg);
+    drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg);
   }  return rect;
 }
 
@@ -569,6 +594,7 @@ function drawOutline(app: App, c: Canvas, pane: Rect): Rect {
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
   const rect = paneTitle(app, c, pane, "Outline", base.bg);
   const rows = app.outlineRows();
+  const lines = treeLines(rows.map((r) => r.level - 1));
   const o = app.outline;
   const current = app.currentSection();
   // While the outline is not focused, it follows the cursor's section.
@@ -592,9 +618,9 @@ function drawOutline(app: App, c: Canvas, pane: Rect): Rect {
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, base.bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
-    const marker = row.hasChildren ? (row.folded ? g.dirClosed : g.dirOpen) : " ";
+    const marker = row.hasChildren ? (row.folded ? g.foldClosed : g.foldOpen) : " ";
     drawText(c, rect.x, y, truncate(`${" ".repeat(1 + (row.level - 1) * 2)}${marker} ${row.text}`, rect.w - 1), st, rect.w);
-    drawGuides(app, c, rect, y, row.level - 1, st.bg);
+    drawGuides(app, c, rect, y, row.level - 1, lines[idx]!, st.bg);
   }  return rect;
 }
 
