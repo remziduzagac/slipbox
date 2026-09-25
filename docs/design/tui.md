@@ -182,11 +182,13 @@ Each kind of link does something different when followed:
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 
-Each pane starts with its title, "Explorer" or "Outline", and a blank row (panes under 8 rows skip
-them). The explorer runs from under the frame's top rule, beside the tab strip. The outline
-belongs to the note, so it opens under the note's breadcrumb: the top-right window's breadcrumb
-row and the rule under it run across the outline's column, and the outline's button (`▤`) sits
-at the far right of that row, bright while the outline is open.
+Each pane starts with its title, "Explorer" or "Outline", then a row before the list: a rule under
+the explorer's title (level with the rule under the tab strip, which it meets in `╋`), a blank row
+under the outline's. Panes under 8 rows skip both. The explorer runs from under the frame's top
+rule, beside the tab strip. The outline belongs to the note, so it opens under the note's
+breadcrumb: the top-right window's breadcrumb row and the rule under it run across the outline's
+column, and the outline's button (`▤`) sits at the far right of that row, bright while the outline
+is open.
 
 Both trees show depth by indentation plus dim tree lines (the `tree_guide` role): `├─` into each
 child, `└─` into the last one, and `│` where an ancestor has siblings still to come (ascii: `|`,

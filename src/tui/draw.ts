@@ -129,7 +129,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     // whether or not the tab strip shows; its border runs up beside the strip.
     const sideY = beside && frame ? head + 1 : mainY;
     const rect = { x: 0, y: sideY, w, h: bottom + 1 - sideY };
-    const list = drawSidebar(app, c, rect);
+    const list = drawSidebar(app, c, rect, geo);
     const border = roleStyle(theme, app.region === "sidebar" ? "border_active" : "border", page);
     for (let y = sideY; y <= bottom; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
     geo.sidebar = list;
@@ -515,12 +515,17 @@ function markStyle(theme: Theme, role: Role): Partial<CellStyle> {
 }
 
 /**
- * A side pane's title and the blank row under it; returns the rect left for the pane's list.
- * Short panes skip the title.
+ * A side pane's title and the blank row (or, given the geometry, a rule) under it; returns the
+ * rect left for the pane's list. Short panes skip the title.
  */
-function paneTitle(app: App, c: Canvas, rect: Rect, title: string, bg: Color | null): Rect {
+function paneTitle(app: App, c: Canvas, rect: Rect, title: string, bg: Color | null, rule?: Geometry): Rect {
   if (rect.h < 8) return rect;
   drawText(c, rect.x + 1, rect.y, title, { ...roleStyle(app.theme, "strong", bg), bg }, rect.w - 1);
+  if (rule) {
+    // A rule instead of the blank row, joined to the pane's border like the others.
+    drawText(c, rect.x, rect.y + 1, app.glyphs.hbar.repeat(rect.w), roleStyle(app.theme, "border", pageBg(app.theme)), rect.w);
+    rule.rules.push({ y: rect.y + 1, x0: rect.x, x1: rect.x + rect.w });
+  }
   return { ...rect, y: rect.y + 2, h: rect.h - 2 };
 }
 
@@ -555,12 +560,12 @@ function drawGuides(app: App, c: Canvas, rect: Rect, y: number, depth: number, l
 }
 
 /** The explorer; returns the rect its tree occupies (under the title). */
-function drawSidebar(app: App, c: Canvas, pane: Rect): Rect {
+function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const theme = app.theme;
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  const rect = paneTitle(app, c, pane, "Explorer", base.bg);
+  const rect = paneTitle(app, c, pane, "Explorer", base.bg, geo);
   const rows = app.treeRows();
   const lines = treeLines(rows.map((r) => r.depth));
   const s = app.sidebar;
