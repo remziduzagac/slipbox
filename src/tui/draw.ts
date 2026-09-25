@@ -254,7 +254,7 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
   });
 }
 
-/** `gapAbove`: the row above `area` is a blank gap the top windows may paint their header into. */
+/** `gapAbove`: the row above `area` is a blank gap; a side-by-side split's border runs up through it. */
 function drawContent(app: App, c: Canvas, area: Rect, gapAbove: boolean, geo: Geometry): void {
   const tab = app.tab;
   const theme = app.theme;
@@ -266,24 +266,24 @@ function drawContent(app: App, c: Canvas, area: Rect, gapAbove: boolean, geo: Ge
   }
   const focusContent = app.region === "content";
   if (tab.views.length === 1) {
-    drawPane(app, c, tab.views[0]!, area, focusContent, false, gapAbove, geo);
+    drawPane(app, c, tab.views[0]!, area, focusContent, false, geo);
     return;
   }
   const [a, b] = tab.views as [View, View];
   const border = roleStyle(theme, "border", page);
   if (app.effectiveOrientation(tab) === "side") {
     const w1 = Math.max(12, Math.min(area.w - 13, Math.round((area.w - 1) * tab.ratio)));
-    drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, gapAbove, geo);
+    drawPane(app, c, a, { ...area, w: w1 }, focusContent, true, geo);
     for (let y = area.y - (gapAbove ? 1 : 0); y < area.y + area.h; y++) drawText(c, area.x + w1, y, app.glyphs.vbar, border, 1);
     geo.separators.push({ kind: "split-side", x: area.x + w1, y: area.y, w: 1, h: area.h, area });
-    drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, gapAbove, geo);
+    drawPane(app, c, b, { x: area.x + w1 + 1, y: area.y, w: area.w - w1 - 1, h: area.h }, focusContent, true, geo);
     for (const r of geo.rules) if (r.x1 === area.x + w1) drawText(c, r.x1, r.y, app.glyphs.cross, border, 1);
   } else {
     const h1 = Math.max(3, Math.min(area.h - 3, Math.round(area.h * tab.ratio)));
-    drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, gapAbove, geo);
+    drawPane(app, c, a, { ...area, h: h1 }, focusContent, true, geo);
     // The lower window's title row is the stacked split's handle.
     geo.separators.push({ kind: "split-stacked", x: area.x, y: area.y + h1, w: area.w, h: 1, area });
-    drawPane(app, c, b, { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 }, focusContent, true, false, geo);
+    drawPane(app, c, b, { x: area.x, y: area.y + h1, w: area.w, h: area.h - h1 }, focusContent, true, geo);
   }
 }
 
@@ -292,7 +292,7 @@ function paneIsActive(app: App, view: View): boolean {
   return !!t && t.views[t.active] === view;
 }
 
-function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, gapAbove: boolean, geo: Geometry): void {
+function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, geo: Geometry): void {
   const theme = app.theme;
   const page = pageBg(theme);
   const active = paneIsActive(app, view);
@@ -300,21 +300,19 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   // The header: a split window's title, then the breadcrumb, then a blank row before the text.
   const crumbs = app.config.ui.breadcrumb && !app.ui.zen && rect.h >= 8;
   if (crumbs) {
-    // One band: the gap above (when there is one), the title and breadcrumb row, the blank row.
-    const bg = roleStyle(theme, "breadcrumb_band", page).bg;
-    const top = gapAbove ? rect.y - 1 : rect.y;
-    c.fill(rect.x, top, rect.w, rect.y + 2 - top, bg);
+    // The title (in a split) and breadcrumb row, on the page, then a rule under it.
+    c.fill(rect.x, rect.y, rect.w, 1, page);
     let x = rect.x;
     if (titled) {
       const name = ` ${truncate(app.displayName(view.buf), Math.floor(rect.w / 2))} `;
-      x += drawText(c, x, rect.y, name, { ...roleStyle(theme, active ? "strong" : "dim", bg), bg }, rect.w);
+      x += drawText(c, x, rect.y, name, roleStyle(theme, active ? "strong" : "dim", page), rect.w);
     }
-    drawBreadcrumb(app, c, view, x + 1, rect.x + rect.w - 1, rect.y, bg, geo);
-    // A rule under the band, like the explorer's border turned on its side.
-    const ruleY = rect.y + 2;
+    drawBreadcrumb(app, c, view, x + 1, rect.x + rect.w - 1, rect.y, page, geo);
+    // The rule is the explorer's border turned on its side.
+    const ruleY = rect.y + 1;
     drawText(c, rect.x, ruleY, app.glyphs.hbar.repeat(rect.w), roleStyle(theme, "border", page), rect.w);
     geo.rules.push({ y: ruleY, x0: rect.x, x1: rect.x + rect.w });
-    body = { x: rect.x, y: rect.y + 3, w: rect.w, h: rect.h - 3 };
+    body = { x: rect.x, y: rect.y + 2, w: rect.w, h: rect.h - 2 };
   } else if (titled) {
     const st = roleStyle(theme, active ? "tab_active" : "tab", page);
     c.fill(rect.x, rect.y, rect.w, 1, st.bg);

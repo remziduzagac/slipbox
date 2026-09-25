@@ -676,23 +676,21 @@ describe("top bar, tab strip, status line", () => {
     click(h, tab(0).x + 2, strip.y, 1);
     expect(h.app.tabs).toHaveLength(1);
   });
-  test("each window has its breadcrumb and a blank row on top; a click scrolls that window", async () => {
+  test("each window has its breadcrumb and a rule on top; a click scrolls that window", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 160 });
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
     const f = h.frame();
     expect(topRow(f)).not.toContain("Section One"); // the top bar's middle stays empty
     const pane = h.app.geometry!.panes[0]!;
     const rows = f.split("\n");
-    expect(rows[pane.y - 3]).toMatch(/§ Alpha › Section One/);
-    expect(rows[pane.y - 2]!.slice(pane.x).trim()).toBe(""); // the blank row under it
-    // One band: the gap above, the breadcrumb row and the blank row, in the band colour.
-    const band = h.app.theme.roles.breadcrumb_band.bg!;
-    const st = h.canvas().styles;
-    for (const y of [pane.y - 4, pane.y - 3, pane.y - 2]) expect(st[y]![pane.x + 60]!.bg).toBe(band);
-    // Then a rule, joined to the explorer's border.
+    expect(rows[pane.y - 2]).toMatch(/§ Alpha › Section One/);
+    // Right under it a rule, joined to the explorer's border; everything on the page's background.
     expect(rows[pane.y - 1]!.slice(pane.x, pane.x + 20)).toBe("━".repeat(20));
     expect(rows[pane.y - 1]![pane.x - 1]).toBe("┣");
-    expect(st[pane.y]![pane.x + 60]?.bg ?? null).not.toBe(band);
+    expect(rows[pane.y - 3]!.slice(pane.x).trim()).toBe(""); // the gap above
+    const page = h.app.theme.roles.text.bg ?? h.app.theme.bg;
+    const st = h.canvas().styles;
+    for (const y of [pane.y - 3, pane.y - 2]) expect(st[y]![pane.x + 60]?.bg ?? page).toBe(page);
     const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:0:"))!;
     click(h, crumb.x, crumb.y);
     expect(rowText(h)).toContain("Alpha");
@@ -723,7 +721,7 @@ describe("top bar, tab strip, status line", () => {
     expect(f.split("\n")[crumb.y]).toContain("large-document.md");
     // Both windows' rules meet the border between them in a cross.
     const sep = h.app.geometry!.separators.find((x) => x.kind === "split-side")!;
-    expect(f.split("\n")[crumb.y + 2]![sep.x]).toBe("╋");
+    expect(f.split("\n")[crumb.y + 1]![sep.x]).toBe("╋");
     const before = a!.top;
     click(h, crumb.x, crumb.y);
     expect(h.app.tab!.active).toBe(1);

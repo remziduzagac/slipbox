@@ -25,8 +25,7 @@ Code, in `src/tui/`:
             ┃ 1 index ×  2 alpha ×                                    ← tab strip, only with 2+ tabs
  ▾ notes    ┃                                                         ← gap (ui.bar_gap)
      beta   ┃ § Heading › Sub                    ┃ Heading   ← each window: its breadcrumb,
-     alpha  ┃                                    ┃   Sub       a blank row, and a rule
-            ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+     alpha  ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫   Sub       then a rule
             ┃ ▌ Sub                              ┃           ← explorer ┃ content ┃ outline
             ┃ Text with the █ursor on its row…   ┃           (both panes optional)
  ␣ l › links  backspace: up · esc: cancel                  ← which-key popup, while a key is pending
@@ -49,7 +48,7 @@ shorter than 20 rows drop the gaps.
 An icon button is filled with the accent while its pane is open. `ui.top_bar = false` removes the
 bar, and zen mode hides it.
 
-**The breadcrumb** tops each window, followed by a blank row and a rule. It starts with an icon (`§`, ascii
+**The breadcrumb** tops each window, with a rule right under it. It starts with an icon (`§`, ascii
 `#`) that opens the heading finder when clicked, then the chain of headings that window's cursor
 is under, each cut to 40 columns, with the outermost dropped first when space runs short. In a
 split it shares the window's title row, after the file name. Clicking a heading focuses that
@@ -57,13 +56,11 @@ window, puts its cursor on the heading, and scrolls the heading to the window's 
 as the note's end allows). The row stays reserved above the first heading, so the text doesn't
 jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it.
 
-The breadcrumb row, the blank row under it and the gap above it (when there is one) form the
-window's header band, in the `breadcrumb_band` role: `surface` blended into the page at 35%, a
-step quieter than the cursor-row highlight so the two don't merge. The icon is `breadcrumb_icon`
-(blue), outer headings `breadcrumb` (dim), separators `breadcrumb_sep` (faint), and the heading
-the cursor is in `breadcrumb_current` (bold). In a split, the file name sits in the band too.
-Under the band a `━` rule in the `border` role closes the header, joined to the borders it meets:
-`┣` at the explorer's, `┫` at the outline's, and `╋` where two side-by-side windows meet.
+The breadcrumb sits on the page's background. The icon is `breadcrumb_icon` (blue), outer
+headings `breadcrumb` (dim), separators `breadcrumb_sep` (faint), and the heading the cursor is
+in `breadcrumb_current` (bold). In a split, the file name comes first on the same row. Under it a
+`━` rule in the `border` role closes the header, joined to the borders it meets: `┣` at the
+explorer's, `┫` at the outline's, and `╋` where two side-by-side windows meet.
 
 **The tab strip** sits under the top bar and appears only with two or more tabs. Each tab has a
 `×` to close it. A tab holds the note and its outline but not the explorer, so with the explorer
