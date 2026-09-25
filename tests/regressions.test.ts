@@ -89,10 +89,10 @@ describe("medium", () => {
     await app.run("note.open a.md");
     rmSync(join(dir, "b.md"));
     app.applyChanges({ changes: [{ rel: "b.md", kind: "deleted", isNote: true }], rescan: false });
-    await app.handleKey("H");
+    await app.handleKey("shift+h");
     expect(app.view!.buf.key).toBe("b.md");
     expect(app.view!.buf.source).toBe("# B\n");
-    await app.handleKey("L");
+    await app.handleKey("shift+l");
     expect(app.view!.buf.key).toBe("a.md");
     expect(app.view!.fwd).toHaveLength(0);
   });
@@ -103,7 +103,7 @@ describe("medium", () => {
     const loc = locateVault({ root: dir });
     const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "a.md", watch: false });
     app.view!.back.push({ key: "gone.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } });
-    await app.handleKey("H");
+    await app.handleKey("shift+h");
     expect(app.view!.buf.key).toBe("a.md");
     expect(app.view!.fwd).toHaveLength(0);
   });
@@ -215,7 +215,8 @@ describe("low", () => {
     config.ui.restore_session = false;
     const loc = locateVault({ root: dir });
     const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "a.md", watch: false });
-    for (const k of ["space", "t", "s", "o", "l", "z", "z", "z", "enter"]) await app.handleKey(k);
+    for (const k of ["space", "u", "t", "s", "o", "l", "z", "z", "z", "enter"]) await app.handleKey(k);
+    expect(app.messages.some((m) => m.text.includes("not bound"))).toBe(false);
     expect(app.theme.name).toBe("tokyo-night");
     expect(app.overlay).toBeNull();
   });
@@ -263,7 +264,7 @@ describe("low", () => {
   });
   test("selection starting on the right half of a wide character includes it", () => {
     const layout = renderMarkdown("日本語\n", { width: 40, glyphs: unicode, showUrls: false });
-    expect(selectedText(layout, { a: { row: 0, col: 1 }, b: { row: 0, col: 3 }, active: false })).toBe("日本");
+    expect(selectedText(layout, { anchor: { row: 0, col: 1 }, line: false }, { row: 0, col: 3 })).toBe("日本");
   });
   test("single-file mode applies the size cap and .gitignore", () => {
     const dir = mkdtempSync(join(sandbox, "single-"));
@@ -303,9 +304,12 @@ describe("found in hands-on review", () => {
     const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "n.md", watch: false });
     const canvas = () => app.draw(new TextCanvas(100, 20));
     canvas();
-    for (let i = 0; i < 20; i++) await app.handleKey("}");
+    for (let i = 0; i < 20; i++) {
+      await app.handleKey("]");
+      await app.handleKey("]");
+    }
     canvas();
-    const topText = () => app.currentLayout(app.view!).lines[app.view!.top]!.spans.map((s) => s.text).join("");
+    const topText = () => app.currentLayout(app.view!).lines[app.view!.cur.row]!.spans.map((s) => s.text).join("");
     expect(topText()).toContain("H19");
     const change = (src: string) => {
       writeFileSync(join(dir, "n.md"), src);

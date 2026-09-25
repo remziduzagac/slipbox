@@ -28,6 +28,7 @@ function attrs(s: CellStyle): number {
   if (s.underline) a |= TextAttributes.UNDERLINE;
   if (s.strike) a |= TextAttributes.STRIKETHROUGH;
   if (s.dim) a |= TextAttributes.DIM;
+  if (s.inverse) a |= TextAttributes.INVERSE;
   return a;
 }
 

@@ -1,5 +1,7 @@
-// The TUI app model (plan 3.x): tabs of one or two views over shared buffers, a file explorer,
-// overlays, history, link-following, find, selection, and live reload from the watcher (5.1–5.4).
+// The TUI app model (plan 3.x; keymap in docs/design/keymap.md): tabs of one or two windows over
+// shared buffers, a reading cursor with selection, the explorer and outline panes, overlays,
+// history, link-following, find, the which-key popup, UI settings, live reload from the watcher
+// (5.1–5.4), and live reload of the configuration itself.
 //
 // Phase 2 is read-only: nothing here writes a note. It writes only its own state (reading
 // positions, session) and the scratch, through core.
@@ -7,29 +9,48 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
-import { statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { appendScratch, clearScratch, formatEntry, readScratch, scratchLocation } from "../core/capture.ts";
+import { appendScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
-import { COMMAND_SPECS } from "../core/command-specs.ts";
-import { type Command, CommandRegistry, Keymap } from "../core/commands.ts";
-import type { Config } from "../core/config.ts";
+import { canonKey, canonSeq, CommandRegistry, Keymap } from "../core/commands.ts";
+import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
-import type { Graph } from "../core/graph.ts";
-import type { Layout, LayoutLink } from "../core/layout/ir.ts";
+import { Graph } from "../core/graph.ts";
+import type { Layout } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
-import { slugify } from "../core/parse.ts";
-import { stateDir } from "../core/paths.ts";
-import { type Anchor, anchorAt, loadSession, PositionStore, rowFor, saveSession, type SessionState, TOP } from "../core/position.ts";
-import { listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
+import { stateDir, userConfigFile } from "../core/paths.ts";
+import {
+  type Anchor,
+  anchorAt,
+  type CursorAnchor,
+  loadSession,
+  PositionStore,
+  rowFor,
+  saveSession,
+  type SessionState,
+  TOP,
+  type UiOverride,
+} from "../core/position.ts";
+import { loadTheme, type Theme } from "../core/theme/index.ts";
 import type { VaultLocation } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
-import { graphemes, graphemeWidth, stringWidth } from "../core/width.ts";
+import { stringWidth } from "../core/width.ts";
+import { registerActions } from "./actions.ts";
 import { NoteBuffer } from "./buffer.ts";
 import type { Canvas } from "./canvas.ts";
+import { cells, clampPos, ordered, type Pos, snap } from "./cursor.ts";
 import { drawApp, type Geometry } from "./draw.ts";
 import { rank } from "./fuzzy.ts";
-import { DEFAULT_KEYS, prettyKey, SIDEBAR_KEYS } from "./keys.ts";
+import {
+  DEFAULT_ALIASES,
+  DEFAULT_EXPLORER_KEYS,
+  DEFAULT_GROUPS,
+  DEFAULT_KEYS,
+  DEFAULT_OUTLINE_KEYS,
+  DEFAULT_VISUAL_KEYS,
+  prettyKey,
+} from "./keys.ts";
 
 export interface Host {
   requestRender(): void;
@@ -37,6 +58,8 @@ export interface Host {
   osc52(text: string): boolean;
   quit(): void;
   setTitle?(title: string): void;
+  /** Turn mouse capture on or off (off hands the mouse to the terminal). */
+  setMouse?(on: boolean): void;
 }
 
 export type Level = "info" | "warn" | "error";
@@ -50,13 +73,14 @@ export interface Message {
 export interface Loc {
   key: string;
   anchor: Anchor;
+  cursor?: CursorAnchor;
 }
 
 export interface Selection {
-  /** Anchor and head in layout coordinates (row, column). */
-  a: { row: number; col: number };
-  b: { row: number; col: number };
-  active: boolean;
+  /** The end that stays put; the cursor is the other end. */
+  anchor: Pos;
+  /** Whole rows (V) rather than characters. */
+  line: boolean;
 }
 
 export interface FindState {
@@ -67,16 +91,20 @@ export interface FindState {
 
 export interface View {
   buf: NoteBuffer;
+  /** First row on screen. */
   top: number;
-  anchor: Anchor;
-  focusLink: number;
+  cur: Pos;
+  /** Column to return to when moving through shorter rows. */
+  goal: number;
+  sel: Selection | null;
+  visual: "char" | "line" | null;
+  /** Source-based positions, which survive re-layout (decision 3.5). */
+  topAnchor: Anchor;
+  curAnchor: CursorAnchor;
   back: Loc[];
   fwd: Loc[];
-  selection: Selection | null;
   find: FindState | null;
-  /** Width/glyph key of the layout `top` refers to; when it changes, re-anchor. */
   layoutKey: string;
-  /** Viewport height from the last draw. */
   height: number;
   width: number;
 }
@@ -84,12 +112,12 @@ export interface View {
 export interface Tab {
   views: View[];
   active: number;
+  orientation: "side" | "stacked";
 }
 
 export interface ListItem {
   label: string;
   detail?: string;
-  /** Right-aligned hint, e.g. a key binding. */
   hint?: string;
   indent?: number;
   data: unknown;
@@ -101,10 +129,14 @@ export interface ListOverlay {
   input: string;
   filterable: boolean;
   items: ListItem[];
+  /** Items computed from the input instead of fuzzy-filtering `items` (the `:` prompt). */
+  source?: (input: string) => ListItem[];
   filtered: { item: ListItem; positions: number[] }[];
   selected: number;
   scroll: number;
   accept: (item: ListItem) => void;
+  /** Enter with the raw input, before `accept`; return true when handled (exact `:` aliases). */
+  submit?: (input: string) => boolean;
   move?: (item: ListItem) => void;
   cancel?: () => void;
 }
@@ -120,12 +152,11 @@ export interface PromptOverlay {
 
 export type Overlay = ListOverlay | PromptOverlay;
 
-export interface SidebarState {
-  /** Preference on wide terminals: the explorer sits beside the content. */
+export interface SidePaneState {
+  /** Preference on wide terminals: shown beside the content. */
   visible: boolean;
-  /** Narrow terminals (3.14): the explorer is shown over the content only on demand. */
+  /** Narrow terminals (3.14): shown over the content, on demand. */
   overlay: boolean;
-  expanded: Set<string>;
   selected: number;
   scroll: number;
 }
@@ -137,6 +168,34 @@ export interface TreeRow {
   depth: number;
 }
 
+export type Region = "content" | "sidebar" | "outline";
+
+/** Live UI settings (docs/design/keymap.md, `space u`). */
+export interface UiState {
+  cursorline: boolean;
+  line_numbers: boolean;
+  readable_width: boolean;
+  zen: boolean;
+  mouse: boolean;
+  urls: boolean;
+  theme: string;
+  glyphs: string;
+}
+
+/** Each UI setting's config default, so a session override is kept only while that is unchanged. */
+export function uiDefaults(c: Config): UiState {
+  return {
+    cursorline: c.ui.cursorline,
+    line_numbers: c.ui.line_numbers,
+    readable_width: c.ui.readable_width,
+    zen: c.ui.zen,
+    mouse: c.ui.mouse,
+    urls: c.render.show_urls === "always",
+    theme: c.theme,
+    glyphs: c.render.glyphs,
+  };
+}
+
 const HISTORY_LIMIT = 200;
 const MESSAGE_LIMIT = 500;
 
@@ -146,10 +205,10 @@ export interface AppOptions {
   graph: Graph;
   host: Host;
   warnings?: string[];
-  /** Initial path to open (vault-relative or absolute). */
   open?: string | null;
   themeName?: string;
-  /** Skip the watcher (tests drive changes by hand). */
+  /** `--config`, remembered for reloads. */
+  configFile?: string;
   watch?: boolean;
   now?: () => number;
 }
@@ -158,20 +217,30 @@ export class App {
   readonly loc: VaultLocation;
   config: Config;
   graph: Graph;
-  theme: Theme;
-  glyphs: Glyphs;
+  theme!: Theme;
+  glyphs!: Glyphs;
   readonly host: Host;
   readonly registry = new CommandRegistry<App>();
-  readonly keymap: Keymap;
-  readonly sidebarKeys: Keymap;
+  keymap!: Keymap;
+  visualKeys!: Keymap;
+  explorerKeys!: Keymap;
+  outlineKeys!: Keymap;
+  aliases: Record<string, string> = {};
+  groups = new Map<string, string>();
+  leader = "space";
   readonly buffers = new Map<string, NoteBuffer>();
   tabs: Tab[] = [];
   activeTab = 0;
-  region: "content" | "sidebar" = "content";
-  sidebar: SidebarState;
+  region: Region = "content";
+  sidebar: SidePaneState;
+  outline: SidePaneState & { folded: Set<number>; forKey: string };
+  expanded = new Set<string>();
   overlay: Overlay | null = null;
   pending: string[] = [];
   private pendingTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The which-key popup is showing for `pending`. */
+  whichKey = false;
+  private whichKeyTimer: ReturnType<typeof setTimeout> | null = null;
   messages: Message[] = [];
   transient: Message | null = null;
   private transientTimer: ReturnType<typeof setTimeout> | null = null;
@@ -180,74 +249,168 @@ export class App {
   geometry: Geometry | null = null;
   positions: PositionStore;
   watcher: VaultWatcher | null = null;
+  ui: UiState;
+  /** UI settings changed in this session, with the config value each overrode. */
+  uiOverrides: Record<string, UiOverride> = {};
   private tree: TreeRow[] | null = null;
-  private dragging: { view: View; row: number; col: number } | null = null;
+  private dragging: { view: View; start: Pos; moved: boolean } | null = null;
+  private readonly configFile: string | undefined;
+  private configStamps = new Map<string, number>();
   readonly now: () => number;
   quitting = false;
+  indexing = 0;
 
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
     this.config = opts.config;
     this.graph = opts.graph;
     this.host = opts.host;
+    this.configFile = opts.configFile;
     this.now = opts.now ?? Date.now;
-    const t = loadTheme(opts.themeName ?? opts.config.theme);
-    this.theme = process.env.NO_COLOR ? loadTheme("mono").theme : t.theme;
-    this.glyphs = glyphsFor(opts.config.render.glyphs);
-    this.keymap = new Keymap(DEFAULT_KEYS, opts.config.keys);
-    this.sidebarKeys = new Keymap(SIDEBAR_KEYS);
-    this.sidebar = { visible: opts.config.ui.sidebar, overlay: false, expanded: new Set(), selected: 0, scroll: 0 };
+    this.ui = uiDefaults(opts.config);
+    if (opts.themeName) this.ui.theme = opts.themeName;
+    if (process.env.NO_COLOR) this.ui.theme = "mono";
+    this.sidebar = { visible: opts.config.ui.sidebar, overlay: false, selected: 0, scroll: 0 };
+    this.outline = { visible: opts.config.ui.outline, overlay: false, selected: 0, scroll: 0, folded: new Set(), forKey: "" };
     this.positions = new PositionStore(this.loc.root);
-    registerCommands(this);
+    registerActions(this);
+    this.applyKeys();
     for (const w of opts.warnings ?? []) this.message("warn", w);
-    if (t.warning) this.message("warn", t.warning);
     for (const e of this.graph.errors) this.message("warn", e);
-    for (const bad of this.unknownBindings()) this.message("warn", `config: [keys] binds unknown command "${bad}"`);
 
     const restored = !opts.open && this.config.ui.restore_session && this.restoreSession();
+    this.applyTheme();
+    this.glyphs = glyphsFor(this.ui.glyphs);
     if (!restored) {
       const first = opts.open ?? this.defaultNote();
       if (first) this.openInNewTab(first);
     }
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
-    if (opts.watch !== false && this.config.watch.enabled) {
-      this.startWatcher();
-      this.watchOutsideFiles();
+    this.recordConfigStamps();
+    if (opts.watch !== false) {
+      if (this.config.watch.enabled) this.startWatcher();
+      this.startPolling();
+      this.indexInBackground();
     }
-    if (opts.watch !== false) this.indexInBackground();
-  }
-
-  /** Parse notes the cache could not supply in small slices, so the first note paints at once. */
-  indexing = 0;
-  indexInBackground(): void {
-    if (this.indexing) return; // a pass is already running; it picks up the new stubs
-    const total = this.graph.pendingCount;
-    if (!total) return;
-    this.indexing = total;
-    const t0 = this.now();
-    const tick = () => {
-      if (this.quitting) return;
-      const left = this.graph.parseSome(12);
-      this.indexing = left;
-      if (left) {
-        setTimeout(tick, 1);
-        if (total > 200) this.host.requestRender();
-        return;
-      }
-      this.invalidateTree();
-      if (total > 200) this.message("info", `indexed ${total} notes in ${((this.now() - t0) / 1000).toFixed(1)} s`);
-      this.host.requestRender();
-    };
-    setTimeout(tick, 1);
-  }
-
-  private unknownBindings(): string[] {
-    const ids = new Set(this.registry.list().map((c) => c.id));
-    return Object.values(this.config.keys).filter((v) => v && !ids.has(v.split(" ")[0]!));
   }
 
   // -------------------------------------------------------------------------------------------
-  // Messages (3.13): one sink for errors, warnings and info.
+  // Configuration: keys, theme, glyphs, and live reload.
+
+  /** (Re)build every keymap, the groups and the aliases from defaults plus config. */
+  applyKeys(): void {
+    const c = this.config;
+    this.leader = canonKey(c.input.leader || "space");
+    const { visual, explorer, outline, ...normal } = c.keys;
+    this.keymap = new Keymap(DEFAULT_KEYS, normal as Record<string, string>, this.leader);
+    this.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.leader);
+    this.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.leader);
+    this.outlineKeys = new Keymap(DEFAULT_OUTLINE_KEYS, outline ?? {}, this.leader);
+    this.aliases = { ...DEFAULT_ALIASES };
+    for (const [k, v] of Object.entries(c.aliases)) {
+      if (v === "") delete this.aliases[k];
+      else this.aliases[k] = v;
+    }
+    this.groups = new Map();
+    for (const [k, v] of Object.entries({ ...DEFAULT_GROUPS, ...c.groups })) this.groups.set(canonSeq(k, this.leader), v);
+    const ids = new Set(this.registry.list().map((x) => x.id));
+    const bad = [...this.keymap.entries(), ...this.visualKeys.entries()].map(([, v]) => v.split(" ")[0]!).filter((id) => !ids.has(id));
+    for (const id of new Set(bad)) this.message("warn", `config: [keys] binds unknown command "${id}"`);
+    for (const [a, v] of Object.entries(this.aliases)) if (!ids.has(v.split(" ")[0]!)) this.message("warn", `config: [aliases] ${a} = unknown command "${v}"`);
+  }
+
+  applyTheme(): void {
+    const t = loadTheme(this.ui.theme);
+    if (t.warning) this.message("warn", t.warning);
+    this.theme = t.theme;
+  }
+
+  /** Change a UI setting from the TUI; remembered in the session against its config default. */
+  setUi<K extends keyof UiState>(key: K, value: UiState[K]): void {
+    this.ui[key] = value;
+    const base = uiDefaults(this.config)[key];
+    if (value === base) delete this.uiOverrides[key];
+    else this.uiOverrides[key] = { value, base };
+    this.applyUi(key);
+  }
+
+  private applyUi(key: keyof UiState): void {
+    if (key === "theme") this.applyTheme();
+    else if (key === "glyphs") this.glyphs = glyphsFor(this.ui.glyphs);
+    else if (key === "mouse") this.host.setMouse?.(this.ui.mouse);
+    this.relayoutAll();
+  }
+
+  relayoutAll(): void {
+    for (const v of this.allViews()) v.layoutKey = "";
+  }
+
+  private configFiles(): string[] {
+    const files = [this.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile()];
+    if (this.loc.mode === "vault") files.push(join(this.loc.root, ".slipbox", "config.toml"));
+    return files;
+  }
+
+  private recordConfigStamps(): void {
+    this.configStamps = new Map(this.configFiles().map((f) => [f, fileStamp(f)]));
+  }
+
+  /** True when a config file was created, changed or removed since the last load. */
+  configChangedOnDisk(): boolean {
+    for (const [f, before] of this.configStamps) if (fileStamp(f) !== before) return true;
+    return false;
+  }
+
+  /**
+   * Reload config and apply what changed, live: keys, aliases, groups, theme and every UI
+   * setting, render settings, the walk (rebuild), the watcher. A UI setting whose config value
+   * changed takes the new value, replacing any session override of it.
+   */
+  reloadConfig(reason: "manual" | "file changed" = "manual"): void {
+    this.recordConfigStamps();
+    const loaded = loadConfig({ vaultRoot: this.loc.mode === "vault" ? this.loc.root : null, configFile: this.configFile });
+    const before = this.config;
+    const next = loaded.config;
+    this.config = next;
+    const differs = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
+    const changed = (Object.keys(next) as (keyof Config)[]).filter((s) => differs(before[s], next[s]));
+
+    const oldUi = uiDefaults(before);
+    const newUi = uiDefaults(next);
+    for (const key of Object.keys(newUi) as (keyof UiState)[]) {
+      if (differs(oldUi[key], newUi[key])) {
+        delete this.uiOverrides[key];
+        (this.ui as unknown as Record<string, unknown>)[key] = newUi[key];
+        this.applyUi(key);
+      }
+    }
+    if (before.ui.sidebar !== next.ui.sidebar) this.sidebar.visible = next.ui.sidebar;
+    if (before.ui.outline !== next.ui.outline) this.outline.visible = next.ui.outline;
+    if (changed.some((s) => s === "keys" || s === "aliases" || s === "groups" || s === "input")) this.applyKeys();
+    if (changed.includes("render")) {
+      for (const b of this.buffers.values()) b.invalidateLayouts();
+      this.relayoutAll();
+    }
+    if (changed.includes("walk")) {
+      this.graph = new Graph(this.loc, this.config).build(true, "lazy");
+      this.indexInBackground();
+      this.invalidateTree();
+      for (const b of this.buffers.values()) b.invalidateLayouts();
+      this.relayoutAll();
+      this.watcher?.close();
+      this.watcher = null;
+      if (next.watch.enabled) this.startWatcher();
+    } else if (changed.includes("watch")) {
+      this.watcher?.close();
+      this.watcher = null;
+      if (next.watch.enabled) this.startWatcher();
+    }
+    for (const w of loaded.warnings) this.message("warn", w);
+    this.message("info", `config reloaded (${reason}) — ${changed.length ? `changed: ${changed.join(", ")}` : "no changes"}`);
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Messages (3.13)
 
   message(level: Level, text: string): void {
     const m = { level, text, at: this.now() };
@@ -283,13 +446,11 @@ export class App {
     return notes[0] ?? null;
   }
 
-  /** Buffer for a vault-relative path or an absolute path. */
+  /** Buffer for a vault-relative or absolute path. Keyed by path, not graph membership. */
   buffer(pathOrRel: string): NoteBuffer | null {
     const abs = pathOrRel.startsWith("/") ? pathOrRel : join(this.loc.root, pathOrRel);
     const relRaw = relative(this.loc.root, abs);
     const inside = !relRaw.startsWith("..") && !relRaw.startsWith("/");
-    // Keyed by path, not by graph membership: a note deleted on disk keeps its buffer (and its
-    // "still showing the last version" promise), and history and the buffer list still find it.
     const key = inside ? relRaw : abs;
     let buf = this.buffers.get(key);
     if (!buf) {
@@ -305,15 +466,20 @@ export class App {
     return buf;
   }
 
-  private makeView(buf: NoteBuffer, anchor?: Anchor): View {
+  makeView(buf: NoteBuffer, anchor?: Anchor, cursor?: CursorAnchor): View {
+    const topAnchor = anchor ?? this.positions.get(buf.key) ?? { ...TOP };
+    const curAnchor = cursor ?? (anchor ? { anchor, sub: 0, col: 0 } : (this.positions.getCursor(buf.key) ?? { anchor: topAnchor, sub: 0, col: 0 }));
     return {
       buf,
       top: 0,
-      anchor: anchor ?? this.positions.get(buf.key) ?? { ...TOP },
-      focusLink: -1,
+      cur: { row: 0, col: 0 },
+      goal: curAnchor.col,
+      sel: null,
+      visual: null,
+      topAnchor,
+      curAnchor,
       back: [],
       fwd: [],
-      selection: null,
       find: null,
       layoutKey: "",
       height: this.height,
@@ -324,43 +490,45 @@ export class App {
   openInNewTab(path: string, anchor?: Anchor): void {
     const buf = this.buffer(path);
     if (!buf) return;
-    this.tabs.push({ views: [this.makeView(buf, anchor)], active: 0 });
+    this.tabs.push({ views: [this.makeView(buf, anchor)], active: 0, orientation: "side" });
     this.activeTab = this.tabs.length - 1;
     this.region = "content";
     this.revealInSidebar();
   }
 
-  /** Open a note in the active view, pushing history (3.6) and remembering the old position (3.4). */
+  /** Open a note in a view, pushing history (3.6) and remembering the old position (3.4). */
   open(path: string, anchor?: Anchor, view = this.view): void {
     if (!view) return this.openInNewTab(path, anchor);
     const buf = this.buffer(path);
     if (!buf) return;
+    this.pushHistory(view);
     if (buf === view.buf && anchor) {
-      this.pushHistory(view);
       this.jumpTo(view, anchor);
       return;
     }
-    this.pushHistory(view);
     this.remember(view);
     Object.assign(view, this.makeView(buf, anchor), { back: view.back, fwd: [] });
     this.region = "content";
     this.revealInSidebar();
   }
 
-  private pushHistory(view: View): void {
-    view.back.push({ key: view.buf.key, anchor: { ...view.anchor } });
+  pushHistory(view: View): void {
+    view.back.push({ key: view.buf.key, anchor: { ...view.topAnchor }, cursor: { ...view.curAnchor } });
     if (view.back.length > HISTORY_LIMIT) view.back.shift();
     view.fwd = [];
   }
 
-  private remember(view: View): void {
-    this.positions.set(view.buf.key, view.anchor);
+  remember(view: View): void {
+    this.positions.set(view.buf.key, view.topAnchor, view.curAnchor);
   }
 
-  private jumpTo(view: View, anchor: Anchor): void {
-    view.anchor = anchor;
+  jumpTo(view: View, anchor: Anchor): void {
+    view.topAnchor = anchor;
+    view.curAnchor = { anchor, sub: 0, col: 0 };
+    view.goal = 0;
     view.layoutKey = "";
-    view.focusLink = -1;
+    view.sel = null;
+    view.visual = null;
   }
 
   history(dir: "back" | "forward"): void {
@@ -373,36 +541,75 @@ export class App {
     // Load first: a location that can no longer be opened is dropped, and nothing else moves.
     const buf = this.buffer(loc.key);
     if (!buf) return;
-    to.push({ key: view.buf.key, anchor: { ...view.anchor } });
+    to.push({ key: view.buf.key, anchor: { ...view.topAnchor }, cursor: { ...view.curAnchor } });
     this.remember(view);
-    Object.assign(view, { buf, anchor: loc.anchor, layoutKey: "", focusLink: -1, selection: null, find: null });
+    this.showLoc(view, buf, loc);
+  }
+
+  showLoc(view: View, buf: NoteBuffer, loc: Loc): void {
+    Object.assign(view, {
+      buf,
+      topAnchor: loc.anchor,
+      curAnchor: loc.cursor ?? { anchor: loc.anchor, sub: 0, col: 0 },
+      layoutKey: "",
+      sel: null,
+      visual: null,
+      find: null,
+    });
+    view.goal = view.curAnchor.col;
     this.revealInSidebar();
   }
 
   // -------------------------------------------------------------------------------------------
-  // Layout access. Views store source anchors; rows are derived per width (3.5).
+  // Layout access. Views store source anchors; rows are derived per width (decision 3.5).
 
-  layoutFor(view: View, paneWidth: number): Layout {
-    const width = layoutWidth(paneWidth, this.config.render.inset, this.config.render.max_width);
-    const showUrls = this.config.render.show_urls === "always";
-    const layout = view.buf.layout(width, this.glyphs, showUrls, view.buf.rel ? this.graph : null);
-    const key = `${width}:${this.glyphs.mode}:${this.theme.name}:${layout.lines.length}`;
+  /** Width of the text column for a pane of `paneWidth`, after line numbers and readable width. */
+  textWidth(paneWidth: number, gutter: number): number {
+    const w = layoutWidth(paneWidth - gutter, this.config.render.inset, this.config.render.max_width);
+    return this.ui.readable_width || this.ui.zen ? Math.min(w, this.config.ui.readable_max) : w;
+  }
+
+  layoutFor(view: View, paneWidth: number, gutter = 0): Layout {
+    const width = this.textWidth(paneWidth, gutter);
+    const layout = view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
+    const key = `${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.stamp?.mtimeMs ?? 0}:${view.height}`;
     if (view.layoutKey !== key) {
       view.layoutKey = key;
-      view.top = this.clampTop(view, layout, rowFor(layout, view.anchor));
-      // Refresh the anchor from where we landed, so its fallback line tracks the current file:
-      // after an insertion above, a later removal of the heading must not fall back to a stale
-      // pre-insertion line. Keep the anchor as-is when the view is clamped at the end.
-      if (view.top === rowFor(layout, view.anchor)) view.anchor = anchorAt(layout, view.top);
-      if (view.focusLink >= layout.links.length) view.focusLink = -1;
+      view.cur = this.cursorFromAnchor(layout, view.curAnchor);
+      // Re-derive the anchor from where the cursor landed, so its fallback line tracks the file:
+      // after an insertion above, a later removal of the heading must not use a stale line.
+      view.curAnchor = { ...this.cursorAnchorFor(layout, view.cur), col: view.curAnchor.col };
+      view.top = this.clampTop(view, layout, rowFor(layout, view.topAnchor));
+      this.ensureCursorVisible(view, layout);
       if (view.find) view.find = computeFind(layout, view.find.query, view.find.current);
+      if (view.sel) view.sel.anchor = clampPos(layout, view.sel.anchor);
     }
     return layout;
   }
 
-  /** Current layout of a view at its last drawn width. */
   currentLayout(view: View): Layout {
-    return this.layoutFor(view, view.width);
+    return this.layoutFor(view, view.width, this.gutterWidth(view));
+  }
+
+  /** Source line-number gutter width for a view (0 when line numbers are off). */
+  gutterWidth(view: View): number {
+    if (!this.ui.line_numbers) return 0;
+    return String(view.buf.source.split("\n").length).length + 1;
+  }
+
+  private cursorFromAnchor(layout: Layout, c: CursorAnchor): Pos {
+    const first = rowFor(layout, c.anchor);
+    const src = layout.lines[first]?.src;
+    let row = first;
+    for (let k = 0; k < c.sub && layout.lines[row + 1]?.src === src; k++) row++;
+    return clampPos(layout, { row, col: c.col });
+  }
+
+  private cursorAnchorFor(layout: Layout, p: Pos): CursorAnchor {
+    const src = layout.lines[p.row]?.src;
+    let sub = 0;
+    while (p.row - sub - 1 >= 0 && layout.lines[p.row - sub - 1]?.src === src) sub++;
+    return { anchor: anchorAt(layout, p.row - sub), sub, col: p.col };
   }
 
   private clampTop(view: View, layout: Layout, top: number): number {
@@ -410,182 +617,185 @@ export class App {
     return Math.max(0, Math.min(top, max));
   }
 
-  scrollTo(view: View, top: number): void {
+  /** Keep the cursor inside the view with `scrolloff` rows of margin. */
+  ensureCursorVisible(view: View, layout: Layout): void {
+    const so = Math.max(0, Math.min(this.config.ui.scrolloff, Math.floor((view.height - 1) / 2)));
+    if (view.cur.row < view.top + so) view.top = view.cur.row - so;
+    else if (view.cur.row > view.top + view.height - 1 - so) view.top = view.cur.row - view.height + 1 + so;
+    view.top = this.clampTop(view, layout, view.top);
+    view.topAnchor = anchorAt(layout, view.top);
+  }
+
+  /** Move the cursor (extending the selection when asked, or in visual mode). */
+  moveCursor(view: View, to: Pos, opts: { extend?: boolean; keepGoal?: boolean } = {}): void {
     const layout = this.currentLayout(view);
-    view.top = this.clampTop(view, layout, top);
-    view.anchor = anchorAt(layout, view.top);
+    const extend = opts.extend || view.visual !== null;
+    if (extend && !view.sel) view.sel = { anchor: { ...view.cur }, line: view.visual === "line" };
+    if (!extend && view.sel && !view.visual) view.sel = null;
+    view.cur = clampPos(layout, to);
+    if (!opts.keepGoal) view.goal = view.cur.col;
+    view.curAnchor = this.cursorAnchorFor(layout, view.cur);
+    this.ensureCursorVisible(view, layout);
   }
 
-  scrollBy(view: View, delta: number): void {
-    this.scrollTo(view, view.top + delta);
+  /** Scroll by rows; the cursor moves with the view (ctrl+d/u, pages) or only as needed (wheel). */
+  scrollBy(view: View, delta: number, moveCursor: boolean): void {
+    const layout = this.currentLayout(view);
+    view.top = this.clampTop(view, layout, view.top + delta);
+    view.topAnchor = anchorAt(layout, view.top);
+    const last = Math.max(0, layout.lines.length - 1);
+    let row = view.cur.row;
+    if (moveCursor) row = Math.max(0, Math.min(view.cur.row + delta, last));
+    else {
+      const so = Math.max(0, Math.min(this.config.ui.scrolloff, Math.floor((view.height - 1) / 2)));
+      row = Math.max(0, Math.min(Math.max(view.top + so, Math.min(view.cur.row, view.top + view.height - 1 - so)), last));
+    }
+    if (row !== view.cur.row) {
+      view.cur = { row, col: snap(layout, row, view.goal) };
+      view.curAnchor = this.cursorAnchorFor(layout, view.cur);
+    }
+    if (moveCursor) this.ensureCursorVisible(view, layout);
   }
 
-  /** Scroll so `row` is visible, with a little context. */
-  ensureVisible(view: View, row: number): void {
-    const margin = Math.min(3, Math.floor(view.height / 4));
-    if (row < view.top + margin) this.scrollTo(view, row - margin);
-    else if (row >= view.top + view.height - margin) this.scrollTo(view, row - view.height + margin + 1);
+  /** The link under the cursor, if any. */
+  linkUnderCursor(view = this.view): number {
+    if (!view) return -1;
+    return linkAt(this.currentLayout(view), view.cur.row, view.cur.col);
+  }
+
+  /** The link under the cursor, else the first link on the cursor row. */
+  linkForFollow(view: View): number {
+    const layout = this.currentLayout(view);
+    const at = linkAt(layout, view.cur.row, view.cur.col);
+    if (at >= 0) return at;
+    for (const s of layout.lines[view.cur.row]?.spans ?? []) if (s.link !== undefined) return s.link;
+    return -1;
+  }
+
+  selectionText(view: View): string {
+    if (!view.sel) return "";
+    return selectedText(this.currentLayout(view), view.sel, view.cur);
   }
 
   // -------------------------------------------------------------------------------------------
-  // Links
+  // Tabs and the split (3.3)
 
-  visibleLinks(view: View): number[] {
-    const layout = this.currentLayout(view);
-    return layout.links.map((_, i) => i).filter((i) => layout.links[i]!.line >= 0);
-  }
-
-  cycleLink(dir: 1 | -1): void {
-    const view = this.view;
-    if (!view) return;
-    const layout = this.currentLayout(view);
-    const links = this.visibleLinks(view);
-    if (!links.length) return this.message("info", "no links in this note");
-    let next: number | undefined;
-    const cur = view.focusLink >= 0 ? layout.links[view.focusLink] : null;
-    const onScreen = (i: number) => layout.links[i]!.line >= view.top && layout.links[i]!.line < view.top + view.height;
-    if (!cur || !onScreen(view.focusLink)) {
-      // Start from the viewport rather than from wherever focus was left.
-      const inView = links.filter(onScreen);
-      next = dir === 1 ? (inView[0] ?? links.find((i) => layout.links[i]!.line >= view.top)) : (inView[inView.length - 1] ?? [...links].reverse().find((i) => layout.links[i]!.line < view.top));
-    } else {
-      const idx = links.indexOf(view.focusLink);
-      next = links[(idx + dir + links.length) % links.length];
-    }
-    if (next === undefined) next = dir === 1 ? links[0] : links[links.length - 1];
-    view.focusLink = next!;
-    this.ensureVisible(view, layout.links[next!]!.line);
-  }
-
-  focusedLink(view = this.view): LayoutLink | null {
-    if (!view || view.focusLink < 0) return null;
-    return this.currentLayout(view).links[view.focusLink] ?? null;
-  }
-
-  /** Follow a link (link-follow, pulled into phase 2). */
-  follow(link: LayoutLink, inSplit = false): void {
-    const view = this.view;
-    if (!view) return;
-    const from = view.buf.rel;
-    const heading = link.heading;
-    const go = (path: string, h: string | null) => {
-      const anchor = h ? this.headingAnchor(path, h) : undefined;
-      if (inSplit) {
-        this.ensureSplit();
-        const t = this.tab!;
-        t.active = t.views.length - 1;
-      }
-      this.open(path, anchor);
-    };
-    switch (link.kind) {
-      case "footnote": {
-        const layout = this.currentLayout(view);
-        const row = layout.lines.findIndex((l) => l.spans[0]?.role === "footnote" && l.spans[0].text.startsWith(`${link.target}.`));
-        if (row < 0) return this.message("warn", `footnote [^${link.target}] has no definition`);
-        this.pushHistory(view);
-        this.scrollTo(view, row - 1);
-        return;
-      }
-      case "wiki":
-      case "embed": {
-        if (!link.target) {
-          if (heading) return this.jumpToHeading(view, heading);
-          return;
-        }
-        if (!from) return this.message("warn", `[[${link.target}]]: links resolve only inside the vault`);
-        const r = this.graph.resolveLink({ kind: link.kind, target: link.target }, from);
-        if (r.resolvedKind === "note") return go(r.path!, heading);
-        if (r.resolvedKind === "file") return this.fileLink(r.path!);
-        if (r.resolvedKind === "ambiguous") {
-          return this.openList({
-            title: `[[${link.target}]] matches ${r.candidates.length} notes`,
-            items: r.candidates.map((c) => ({ label: c, data: c })),
-            accept: (item) => go(item.data as string, heading),
-          });
-        }
-        return this.message("warn", `unresolved link [[${link.target}]] — no note named "${link.target}"`);
-      }
-      case "markdown":
-      case "image": {
-        if (!from && !/^[a-z][a-z0-9+.-]*:/i.test(link.target)) return this.message("warn", `${link.target}: links resolve only inside the vault`);
-        const r = this.graph.resolveLink({ kind: link.kind === "image" ? "image" : "markdown", target: link.target }, from ?? "");
-        if (r.resolvedKind === "external") {
-          const ok = this.copy(link.target, false);
-          return this.message("info", `${ok ? "copied" : "external link"}: ${link.target}`);
-        }
-        if (r.resolvedKind === "anchor") {
-          const frag = link.target.split("#")[1];
-          if (frag) this.jumpToHeading(view, decodeURIComponent(frag));
-          return;
-        }
-        if (r.resolvedKind === "note") return go(r.path!, link.target.includes("#") ? decodeURIComponent(link.target.split("#")[1]!) : null);
-        if (r.resolvedKind === "file") return this.fileLink(r.path!);
-        return this.message("warn", `broken link: ${link.target}`);
-      }
-    }
-  }
-
-  private fileLink(rel: string): void {
-    const abs = join(this.loc.root, rel);
-    this.copy(abs, false);
-    this.message("info", `attachment ${rel} — path copied (images render in a later phase)`);
-  }
-
-  headingAnchor(path: string, heading: string): Anchor | undefined {
-    const rel = path.startsWith("/") ? relative(this.loc.root, path) : path;
-    const note = this.graph.entry(rel);
-    const slug = slugify(heading);
-    const h = note?.headings.find((x) => x.slug === slug || x.text.toLowerCase() === heading.toLowerCase());
-    if (!h) {
-      this.message("warn", `no heading "${heading}" in ${rel}`);
-      return undefined;
-    }
-    const idx = note!.headings.filter((x) => x.slug === h.slug && x.line < h.line).length;
-    return { heading: h.slug, headingIndex: idx, offset: 0, line: h.line };
-  }
-
-  private jumpToHeading(view: View, heading: string): void {
-    const layout = this.currentLayout(view);
-    const slug = slugify(heading);
-    const h = layout.headings.find((x) => x.slug === slug || x.text.toLowerCase() === heading.toLowerCase());
-    if (!h) return this.message("warn", `no heading "${heading}" here`);
-    this.pushHistory(view);
-    this.scrollTo(view, h.line);
-  }
-
-  // -------------------------------------------------------------------------------------------
-  // Split and tabs (3.3)
-
-  ensureSplit(): void {
+  splitWith(orientation: Tab["orientation"]): void {
     const t = this.tab;
     const view = this.view;
-    if (!t || !view || t.views.length > 1) return;
-    const clone = this.makeView(view.buf, { ...view.anchor });
-    t.views.push(clone);
-  }
-
-  toggleSplit(): void {
-    const t = this.tab;
-    if (!t) return;
-    if (t.views.length > 1) {
-      const closed = t.views.splice(t.active === 0 ? 1 : 0, 1)[0]!;
-      this.remember(closed);
-      t.active = 0;
-    } else {
-      this.ensureSplit();
+    if (!t || !view) return;
+    t.orientation = orientation;
+    if (t.views.length === 1) {
+      t.views.push(this.makeView(view.buf, { ...view.topAnchor }, { ...view.curAnchor }));
       t.active = 1;
     }
   }
 
+  closeWindow(): void {
+    const t = this.tab;
+    if (!t) return;
+    if (t.views.length > 1) {
+      const closed = t.views.splice(t.active, 1)[0]!;
+      this.remember(closed);
+      t.active = 0;
+      return;
+    }
+    if (this.tabs.length > 1) return this.closeTab();
+    this.message("info", "last window — ctrl+q quits");
+  }
+
   closeTab(): void {
-    if (this.tabs.length <= 1) return this.message("info", "last tab — q quits");
+    if (this.tabs.length <= 1) return this.message("info", "last tab — ctrl+q quits");
     const t = this.tabs.splice(this.activeTab, 1)[0]!;
     for (const v of t.views) this.remember(v);
     this.activeTab = Math.min(this.activeTab, this.tabs.length - 1);
   }
 
+  /** Move focus in a direction: between the two windows, and out to the side panes. */
+  focusDir(dir: "left" | "right" | "up" | "down"): void {
+    const t = this.tab;
+    if (this.region === "sidebar") {
+      if (dir === "right") this.region = "content";
+      return;
+    }
+    if (this.region === "outline") {
+      if (dir === "left") this.region = "content";
+      return;
+    }
+    if (!t) return;
+    const side = t.views.length > 1 && this.effectiveOrientation(t) === "side";
+    const stacked = t.views.length > 1 && !side;
+    if (dir === "left") {
+      if (side && t.active === 1) t.active = 0;
+      else if (this.sidebarShown) this.region = "sidebar";
+    } else if (dir === "right") {
+      if (side && t.active === 0) t.active = 1;
+      else if (this.outlineShown) this.region = "outline";
+    } else if (stacked) t.active = dir === "up" ? 0 : 1;
+  }
+
+  /** Move the active window to a side, choosing the split's orientation. */
+  moveWindow(dir: "left" | "right" | "up" | "down"): void {
+    const t = this.tab;
+    if (!t || t.views.length < 2) return this.message("info", "only one window — ctrl+w v splits");
+    t.orientation = dir === "left" || dir === "right" ? "side" : "stacked";
+    const want = dir === "left" || dir === "up" ? 0 : 1;
+    if (t.active !== want) {
+      t.views.reverse();
+      t.active = want;
+    }
+  }
+
+  effectiveOrientation(t: Tab): Tab["orientation"] {
+    return t.orientation === "side" && this.contentWidth() < 80 ? "stacked" : t.orientation;
+  }
+
+  contentWidth(): number {
+    return this.width - (this.sidebarBeside ? this.sidebarWidth() + 1 : 0) - (this.outlineBeside ? this.outlineWidth() + 1 : 0);
+  }
+
   // -------------------------------------------------------------------------------------------
-  // Sidebar (3.7)
+  // Side panes: explorer (3.7) and outline
+
+  get narrow(): boolean {
+    return this.width < this.config.ui.narrow_width;
+  }
+
+  get sidebarShown(): boolean {
+    return this.narrow || this.ui.zen ? this.sidebar.overlay : this.sidebar.visible;
+  }
+
+  get sidebarBeside(): boolean {
+    return this.sidebarShown && !this.narrow && !this.ui.zen;
+  }
+
+  get outlineShown(): boolean {
+    return this.narrow || this.ui.zen ? this.outline.overlay : this.outline.visible;
+  }
+
+  get outlineBeside(): boolean {
+    return this.outlineShown && !this.narrow && !this.ui.zen;
+  }
+
+  sidebarWidth(): number {
+    return Math.max(16, Math.min(this.config.ui.sidebar_width, Math.floor(this.width * 0.4)));
+  }
+
+  outlineWidth(): number {
+    return Math.max(16, Math.min(this.config.ui.outline_width, Math.floor(this.width * 0.35)));
+  }
+
+  showSidebar(on: boolean): void {
+    if (this.narrow || this.ui.zen) this.sidebar.overlay = on;
+    else this.sidebar.visible = on;
+    if (!on && this.region === "sidebar") this.region = "content";
+  }
+
+  showOutline(on: boolean): void {
+    if (this.narrow || this.ui.zen) this.outline.overlay = on;
+    else this.outline.visible = on;
+    if (!on && this.region === "outline") this.region = "content";
+  }
 
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
@@ -613,7 +823,7 @@ export class App {
           seen.add(dir);
           rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i });
         }
-        if (!this.sidebar.expanded.has(dir)) {
+        if (!this.expanded.has(dir)) {
           visible = false;
           break;
         }
@@ -632,15 +842,30 @@ export class App {
     const rel = this.view?.buf.rel;
     if (!rel) return;
     const parts = rel.split("/");
-    for (let i = 1; i < parts.length; i++) this.sidebar.expanded.add(parts.slice(0, i).join("/"));
+    for (let i = 1; i < parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
     this.invalidateTree();
     const idx = this.treeRows().findIndex((r) => r.path === rel);
     if (idx >= 0) this.sidebar.selected = idx;
   }
 
-  sidebarAction(action: string): void {
+  explorerAction(action: string): void {
     const rows = this.treeRows();
     const row = rows[this.sidebar.selected];
+    const openNote = (where: "here" | "tab" | "split") => {
+      if (!row) return;
+      if (row.kind === "dir") {
+        this.expanded.add(row.path);
+        this.invalidateTree();
+        return;
+      }
+      if (where === "tab") this.openInNewTab(row.path);
+      else if (where === "split") {
+        this.splitWith(this.tab?.orientation ?? "side");
+        this.open(row.path);
+      } else this.open(row.path);
+      this.region = "content";
+      if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+    };
     switch (action) {
       case "down":
         this.sidebar.selected = Math.min(rows.length - 1, this.sidebar.selected + 1);
@@ -655,61 +880,155 @@ export class App {
         this.sidebar.selected = rows.length - 1;
         break;
       case "open":
-        if (!row) break;
-        if (row.kind === "dir") {
-          if (this.sidebar.expanded.has(row.path)) this.sidebar.expanded.delete(row.path);
-          else this.sidebar.expanded.add(row.path);
+        if (row?.kind === "dir" && this.expanded.has(row.path)) break;
+        openNote("here");
+        break;
+      case "open_tab":
+        if (row?.kind === "dir") {
+          if (this.expanded.has(row.path)) this.expanded.delete(row.path);
+          else this.expanded.add(row.path);
           this.invalidateTree();
-        } else {
-          this.open(row.path);
-          if (this.narrow) this.sidebar.overlay = false;
-        }
+        } else openNote("tab");
+        break;
+      case "open_split":
+        openNote("split");
         break;
       case "collapse": {
         if (!row) break;
-        const dir = row.kind === "dir" && this.sidebar.expanded.has(row.path) ? row.path : row.path.split("/").slice(0, -1).join("/");
+        const dir = row.kind === "dir" && this.expanded.has(row.path) ? row.path : row.path.split("/").slice(0, -1).join("/");
         if (dir) {
-          this.sidebar.expanded.delete(dir);
+          this.expanded.delete(dir);
           this.invalidateTree();
           this.sidebar.selected = Math.max(0, this.treeRows().findIndex((r) => r.path === dir));
         }
         break;
       }
+      case "close":
+        this.showSidebar(false);
+        break;
       case "leave":
         this.region = "content";
-        if (this.narrow) this.sidebar.overlay = false;
+        if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
         break;
+      default:
+        this.message("error", `unknown explorer action: ${action}`);
     }
   }
 
-  /** Narrow terminals (3.14): the sidebar cannot sit beside the content, so it overlays it. */
-  get narrow(): boolean {
-    return this.width < this.config.ui.narrow_width;
+  /** Visible outline rows for the current view: headings, folds applied. */
+  outlineRows(): { index: number; level: number; text: string; line: number; folded: boolean; hasChildren: boolean }[] {
+    const view = this.view;
+    if (!view) return [];
+    if (this.outline.forKey !== view.buf.key) {
+      this.outline.forKey = view.buf.key;
+      this.outline.folded = new Set();
+      this.outline.scroll = 0;
+    }
+    const hs = this.currentLayout(view).headings;
+    const out: ReturnType<App["outlineRows"]> = [];
+    let hideDeeperThan = Number.POSITIVE_INFINITY;
+    hs.forEach((h, i) => {
+      if (h.level <= hideDeeperThan) hideDeeperThan = Number.POSITIVE_INFINITY;
+      else return;
+      const hasChildren = (hs[i + 1]?.level ?? 0) > h.level;
+      const folded = this.outline.folded.has(i);
+      out.push({ index: i, level: h.level, text: h.text, line: h.line, folded, hasChildren });
+      if (folded && hasChildren) hideDeeperThan = h.level;
+    });
+    return out;
   }
 
-  get sidebarShown(): boolean {
-    return this.narrow ? this.sidebar.overlay : this.sidebar.visible;
+  /** Index into outlineRows() of the section the cursor is in. */
+  currentSection(): number {
+    const view = this.view;
+    if (!view) return -1;
+    let best = -1;
+    this.outlineRows().forEach((r, i) => {
+      if (r.line <= view.cur.row) best = i;
+    });
+    return best;
   }
 
-  showSidebar(on: boolean): void {
-    if (this.narrow) this.sidebar.overlay = on;
-    else this.sidebar.visible = on;
+  outlineAction(action: string): void {
+    const rows = this.outlineRows();
+    const row = rows[this.outline.selected];
+    const view = this.view;
+    switch (action) {
+      case "down":
+        this.outline.selected = Math.min(rows.length - 1, this.outline.selected + 1);
+        break;
+      case "up":
+        this.outline.selected = Math.max(0, this.outline.selected - 1);
+        break;
+      case "top":
+        this.outline.selected = 0;
+        break;
+      case "bottom":
+        this.outline.selected = rows.length - 1;
+        break;
+      case "jump":
+        if (row && view) {
+          this.pushHistory(view);
+          this.moveCursor(view, { row: row.line, col: 0 });
+          this.region = "content";
+          if (this.narrow || this.ui.zen) this.outline.overlay = false;
+        }
+        break;
+      case "fold":
+        if (!row) break;
+        if (row.hasChildren && !row.folded) this.outline.folded.add(row.index);
+        else {
+          // Already folded, or a leaf: go to the parent heading.
+          const before = rows.slice(0, this.outline.selected);
+          for (let i = before.length - 1; i >= 0; i--) {
+            if (before[i]!.level < row.level) {
+              this.outline.selected = i;
+              break;
+            }
+          }
+        }
+        break;
+      case "unfold":
+        if (row) this.outline.folded.delete(row.index);
+        break;
+      case "close":
+        this.showOutline(false);
+        break;
+      case "leave":
+        this.region = "content";
+        if (this.narrow || this.ui.zen) this.outline.overlay = false;
+        break;
+      default:
+        this.message("error", `unknown outline action: ${action}`);
+    }
   }
 
   // -------------------------------------------------------------------------------------------
   // Overlays
 
-  openList(opts: { title: string; items: ListItem[]; accept: (item: ListItem) => void; move?: (item: ListItem) => void; cancel?: () => void; filterable?: boolean; selected?: number }): void {
+  openList(opts: {
+    title: string;
+    items: ListItem[];
+    accept: (item: ListItem) => void;
+    move?: (item: ListItem) => void;
+    cancel?: () => void;
+    filterable?: boolean;
+    selected?: number;
+    source?: (input: string) => ListItem[];
+    submit?: (input: string) => boolean;
+  }): void {
     const o: ListOverlay = {
       kind: "list",
       title: opts.title,
       input: "",
       filterable: opts.filterable ?? true,
       items: opts.items,
+      source: opts.source,
       filtered: [],
       selected: 0,
       scroll: 0,
       accept: opts.accept,
+      submit: opts.submit,
       move: opts.move,
       cancel: opts.cancel,
     };
@@ -729,7 +1048,8 @@ export class App {
   }
 
   // -------------------------------------------------------------------------------------------
-  // Input (dispatch order, decision 3.11: overlay → pending → region → global)
+  // Input. Dispatch order (decision 3.11): overlay → pending sequence → focused pane keys →
+  // visual-mode keys → the normal keymap. The which-key popup shows while a sequence is pending.
 
   async handleKey(key: string): Promise<void> {
     try {
@@ -740,41 +1060,101 @@ export class App {
     this.host.requestRender();
   }
 
+  /** The keymaps consulted in the current state, in priority order, with how to run a hit. */
+  private maps(): { map: Keymap; run: (spec: string) => Promise<void> | void }[] {
+    const out: { map: Keymap; run: (spec: string) => Promise<void> | void }[] = [];
+    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a) });
+    if (this.region === "outline" && this.outlineShown) out.push({ map: this.outlineKeys, run: (a) => this.outlineAction(a) });
+    if (this.view?.visual) out.push({ map: this.visualKeys, run: (s) => this.run(s) });
+    out.push({ map: this.keymap, run: (s) => this.run(s) });
+    return out;
+  }
+
+  /** which-key entries one level below the pending prefix, across the active keymaps. */
+  whichKeyEntries(): { key: string; label: string; group: boolean }[] {
+    const prefix = this.pending.join(" ");
+    const seen = new Map<string, { key: string; label: string; group: boolean }>();
+    for (const { map } of this.maps()) {
+      for (const c of map.children(prefix)) {
+        if (seen.has(c.key)) continue;
+        const full = prefix ? `${prefix} ${c.key}` : c.key;
+        const group = c.group && !c.spec;
+        const label = group
+          ? `+${this.groups.get(full) ?? "more"}`
+          : c.spec
+            ? (this.registry.get(c.spec.split(" ")[0]!)?.title ?? c.spec.replace(/_/g, " "))
+            : "";
+        seen.set(c.key, { key: c.key, label, group });
+      }
+    }
+    return [...seen.values()].sort((a, b) => Number(b.group) - Number(a.group) || a.key.localeCompare(b.key));
+  }
+
+  groupName(prefix: string[]): string {
+    const seq = prefix.join(" ");
+    if (seq === this.leader) return "leader";
+    return this.groups.get(seq) ?? "";
+  }
+
+  clearPending(): void {
+    this.pending = [];
+    this.whichKey = false;
+    if (this.pendingTimer) clearTimeout(this.pendingTimer);
+    if (this.whichKeyTimer) clearTimeout(this.whichKeyTimer);
+    this.pendingTimer = null;
+    this.whichKeyTimer = null;
+  }
+
+  private startPending(key: string): void {
+    this.pending.push(key);
+    if (!this.config.input.which_key) return;
+    if (this.pending[0] === this.leader) this.whichKey = true;
+    else if (!this.whichKey && !this.whichKeyTimer) {
+      this.whichKeyTimer = setTimeout(() => {
+        this.whichKeyTimer = null;
+        if (this.pending.length) {
+          this.whichKey = true;
+          this.host.requestRender();
+        }
+      }, this.config.input.which_key_delay_ms);
+      (this.whichKeyTimer as { unref?: () => void }).unref?.();
+    }
+  }
+
   private async dispatchKey(key: string): Promise<void> {
     if (this.overlay) return this.overlayKey(this.overlay, key);
     if (this.pendingTimer) {
       clearTimeout(this.pendingTimer);
       this.pendingTimer = null;
     }
-    const seq = [...this.pending, key].join(" ");
-    const km = this.region === "sidebar" && this.sidebarShown ? this.sidebarKeys : null;
-    if (km) {
-      const action = km.lookup(seq);
-      if (action && !km.isPrefix(seq)) {
-        this.pending = [];
-        return this.sidebarAction(action);
-      }
-      if (km.isPrefix(seq) || (action && km.isPrefix(seq))) {
-        this.pending.push(key);
-        return;
-      }
+    if (this.pending.length && key === "escape") return this.clearPending();
+    if (this.pending.length && key === "backspace") {
+      this.pending.pop();
+      if (!this.pending.length) this.clearPending();
+      return;
     }
-    const cmd = this.keymap.lookup(seq);
-    if (this.keymap.isPrefix(seq)) {
-      this.pending.push(key);
-      if (cmd) {
-        // Both a binding and a prefix (`space`): run it unless another key follows promptly.
+    const seq = [...this.pending, key].join(" ");
+    const maps = this.maps();
+    const at = maps.findIndex((m) => m.map.lookup(seq) !== undefined);
+    const hit = at >= 0 ? { ...maps[at]!, spec: maps[at]!.map.lookup(seq) } : undefined;
+    // Only keymaps at or above the one holding the binding may turn the key into a prefix:
+    // visual mode's `y` must not wait for the normal keymap's `y y`.
+    const prefix = maps.slice(0, at >= 0 ? at + 1 : maps.length).some((m) => m.map.isPrefix(seq));
+    if (prefix) {
+      this.startPending(key);
+      if (hit) {
+        // Both a binding and a prefix: run it unless another key follows promptly.
         this.pendingTimer = setTimeout(() => {
           this.pendingTimer = null;
-          this.pending = [];
-          void this.run(cmd).then(() => this.host.requestRender());
-        }, 400);
+          this.clearPending();
+          void Promise.resolve(hit.run(hit.spec!)).then(() => this.host.requestRender());
+        }, this.config.input.which_key_delay_ms);
       }
       return;
     }
-    this.pending = [];
-    if (cmd) return this.run(cmd);
-    if (key !== "escape") this.message("info", `${prettyKey(seq)} is not bound — ? lists keys`);
+    this.clearPending();
+    if (hit) return hit.run(hit.spec!);
+    if (key !== "escape") this.message("info", `${prettyKey(seq, this.leader)} is not bound — ${prettyKey(`${this.leader} ?`, this.leader)} lists keys`);
   }
 
   async run(spec: string): Promise<void> {
@@ -783,6 +1163,7 @@ export class App {
 
   private overlayKey(o: Overlay, key: string): void {
     if (key === "escape" || key === "ctrl+c" || key === "ctrl+g") return this.closeOverlay(true);
+    const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
     if (o.kind === "prompt") {
       if (key === "enter") {
         this.overlay = null;
@@ -790,8 +1171,7 @@ export class App {
       }
       if (key === "backspace") o.text = [...o.text].slice(0, -1).join("");
       else if (key === "ctrl+u") o.text = "";
-      else if (key === "space") o.text += " ";
-      else if ([...key].length === 1) o.text += key;
+      else if (typed !== null) o.text += typed;
       else return;
       o.change?.(o.text);
       return;
@@ -804,6 +1184,10 @@ export class App {
     };
     switch (key) {
       case "enter": {
+        if (o.submit?.(o.input)) {
+          if (this.overlay === o) this.overlay = null;
+          return;
+        }
         const item = o.filtered[o.selected];
         if (!item) return this.closeOverlay(true); // nothing to accept: undo any live preview
         this.overlay = null;
@@ -834,8 +1218,7 @@ export class App {
     }
     if (key === "backspace") o.input = [...o.input].slice(0, -1).join("");
     else if (key === "ctrl+w") o.input = o.input.replace(/\S*\s*$/, "");
-    else if (key === "space") o.input += " ";
-    else if ([...key].length === 1) o.input += key;
+    else if (typed !== null) o.input += typed;
     else return;
     refilter(o);
     const item = o.filtered[o.selected];
@@ -860,10 +1243,9 @@ export class App {
       const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
       const n = Math.max(1, ev.scroll?.delta ?? 1) * 3;
       const dir = ev.scroll?.direction === "up" ? -1 : 1;
-      if (pane) this.scrollBy(pane.view, dir * n);
-      else if (g.sidebar && inRect(g.sidebar, ev.x, ev.y)) {
-        this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
-      }
+      if (pane) this.scrollBy(pane.view, dir * n, false);
+      else if (g.sidebar && inRect(g.sidebar, ev.x, ev.y)) this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
+      else if (g.outline && inRect(g.outline, ev.x, ev.y)) this.outline.scroll = Math.max(0, this.outline.scroll + dir * n);
       return;
     }
     if (ev.type === "down" && ev.button === 0) {
@@ -877,7 +1259,16 @@ export class App {
         if (idx < this.treeRows().length) {
           this.sidebar.selected = idx;
           this.region = "sidebar";
-          this.sidebarAction("open");
+          this.explorerAction("open");
+        }
+        return;
+      }
+      if (g.outline && inRect(g.outline, ev.x, ev.y)) {
+        const idx = ev.y - g.outline.y + this.outline.scroll;
+        if (idx < this.outlineRows().length) {
+          this.outline.selected = idx;
+          this.region = "outline";
+          this.outlineAction("jump");
         }
         return;
       }
@@ -886,44 +1277,42 @@ export class App {
       const t = this.tab!;
       t.active = t.views.indexOf(pane.view);
       this.region = "content";
-      const row = pane.view.top + (ev.y - pane.y);
-      const col = ev.x - pane.textX;
-      pane.view.selection = null;
-      this.dragging = { view: pane.view, row, col };
+      const layout = this.currentLayout(pane.view);
+      const pos = clampPos(layout, { row: pane.view.top + (ev.y - pane.y), col: Math.max(0, ev.x - pane.textX) });
+      pane.view.sel = null;
+      pane.view.visual = null;
+      this.moveCursor(pane.view, pos);
+      this.dragging = { view: pane.view, start: pos, moved: false };
       return;
     }
     if (ev.type === "drag" && this.dragging) {
-      const pane = g.panes.find((p) => p.view === this.dragging!.view);
+      const d = this.dragging;
+      const pane = g.panes.find((p) => p.view === d.view);
       if (!pane) return;
-      if (ev.y < pane.y) this.scrollBy(pane.view, -1);
-      if (ev.y >= pane.y + pane.h) this.scrollBy(pane.view, 1);
-      const row = pane.view.top + Math.max(0, Math.min(pane.h - 1, ev.y - pane.y));
-      const col = Math.max(0, ev.x - pane.textX);
-      pane.view.selection = { a: { row: this.dragging.row, col: this.dragging.col }, b: { row, col }, active: true };
+      if (ev.y < pane.y) this.scrollBy(pane.view, -1, false);
+      if (ev.y >= pane.y + pane.h) this.scrollBy(pane.view, 1, false);
+      const layout = this.currentLayout(d.view);
+      const pos = clampPos(layout, { row: d.view.top + Math.max(0, Math.min(pane.h - 1, ev.y - pane.y)), col: Math.max(0, ev.x - pane.textX) });
+      d.view.sel = { anchor: d.start, line: false };
+      d.view.cur = pos;
+      d.view.goal = pos.col;
+      d.moved = true;
       return;
     }
     if ((ev.type === "up" || ev.type === "drag-end") && this.dragging) {
       const d = this.dragging;
       this.dragging = null;
-      const sel = d.view.selection;
-      if (sel && (sel.a.row !== sel.b.row || sel.a.col !== sel.b.col)) {
-        sel.active = false;
-        // Mouse selection copies on release, like a terminal would (beat leaf: no selection there).
-        const text = selectedText(this.currentLayout(d.view), sel);
+      if (d.moved && d.view.sel) {
+        const text = this.selectionText(d.view);
         if (text) {
           this.copy(text, false);
-          this.message("info", `copied ${text.length} characters · c s captures it to the scratch`);
+          this.message("info", `copied ${text.length} characters · ${prettyKey(`${this.leader} s a`, this.leader)} adds it to the scratch`);
         }
         return;
       }
-      d.view.selection = null;
-      // A click (no drag) on a link follows it.
-      const layout = this.currentLayout(d.view);
-      const link = linkAt(layout, d.row, d.col);
-      if (link >= 0) {
-        d.view.focusLink = link;
-        this.follow(layout.links[link]!);
-      }
+      d.view.sel = null;
+      const link = linkAt(this.currentLayout(d.view), d.start.row, d.start.col);
+      if (link >= 0) void this.run("link.follow").then(() => this.host.requestRender());
     }
   }
 
@@ -941,7 +1330,6 @@ export class App {
   // -------------------------------------------------------------------------------------------
   // Clipboard, capture
 
-  /** Copy via OSC 52 (through the renderer) plus a local tool when there is one (8.5). */
   copy(text: string, announce = true): boolean {
     const r = copyText(text, { osc52: (t) => this.host.osc52(t), fallbackDir: stateDir(this.loc.root) });
     if (announce) this.message("info", r.file ? `clipboard unavailable — wrote ${r.file}` : `copied ${text.length} characters`);
@@ -952,7 +1340,6 @@ export class App {
     return scratchLocation(this.loc.root, this.config);
   }
 
-  /** Append to the scratch, telling the watcher it was our own write. */
   capture(entry: string): void {
     const loc = this.scratch();
     appendScratch(loc, entry);
@@ -963,29 +1350,54 @@ export class App {
       open.load();
       for (const v of this.allViews()) if (v.buf === open) v.layoutKey = "";
     }
-    this.message("info", `captured to scratch · space s opens it`);
+    this.message("info", `added to the scratch · ${prettyKey(`${this.leader} s s`, this.leader)} opens it`);
   }
 
   allViews(): View[] {
     return this.tabs.flatMap((t) => t.views);
   }
 
+  displayName(buf: NoteBuffer): string {
+    return buf.abs === this.scratch().path ? "scratch" : buf.key;
+  }
+
   // -------------------------------------------------------------------------------------------
-  // Watching (5.1–5.4): reload clean buffers silently, keep the reading position, say so.
+  // Background indexing, watching (5.1–5.4), polling outside files and the config.
+
+  indexInBackground(): void {
+    if (this.indexing) return; // a pass is already running; it picks up the new stubs
+    const total = this.graph.pendingCount;
+    if (!total) return;
+    this.indexing = total;
+    const t0 = this.now();
+    const tick = () => {
+      if (this.quitting) return;
+      const left = this.graph.parseSome(12);
+      this.indexing = left;
+      if (left) {
+        setTimeout(tick, 1);
+        if (total > 200) this.host.requestRender();
+        return;
+      }
+      this.invalidateTree();
+      if (total > 200) this.message("info", `indexed ${total} notes in ${((this.now() - t0) / 1000).toFixed(1)} s`);
+      this.host.requestRender();
+    };
+    setTimeout(tick, 1);
+  }
 
   private knownFromGraph(): Map<string, number> {
     return new Map([...this.graph.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
   }
 
   startWatcher(): void {
-    const known = this.knownFromGraph();
     this.watcher = new VaultWatcher({
       root: this.loc.root,
       filter: this.graph.filter,
       dirs: this.loc.mode === "vault" ? this.graph.dirs : [""],
       debounceMs: this.config.watch.debounce_ms,
       pollMs: this.config.watch.poll_ms,
-      known,
+      known: this.knownFromGraph(),
       onBatch: (b) => {
         this.applyChanges(b);
         this.host.requestRender();
@@ -1002,9 +1414,9 @@ export class App {
     });
   }
 
-  /** Files open from outside the vault (the scratch in the state dir) are not under the vault
-   *  watcher; poll them, so an agent's `slipbox capture` shows up while you look at the scratch. */
-  private watchOutsideFiles(): void {
+  /** Poll what the vault watcher cannot see: files open from outside the vault (the scratch)
+   *  and the config files, which reload automatically when saved. */
+  private startPolling(): void {
     const t = setInterval(() => {
       if (this.quitting) return clearInterval(t);
       let changed = false;
@@ -1015,14 +1427,13 @@ export class App {
           changed = true;
         }
       }
+      if (this.configChangedOnDisk()) {
+        this.reloadConfig("file changed");
+        changed = true;
+      }
       if (changed) this.host.requestRender();
     }, Math.min(this.config.watch.poll_ms, 1000));
     (t as { unref?: () => void }).unref?.();
-  }
-
-  /** How a buffer is named in the status line and titles. */
-  displayName(buf: NoteBuffer): string {
-    return buf.abs === this.scratch().path ? "scratch" : buf.key;
   }
 
   applyChanges(batch: WatchBatch): void {
@@ -1056,10 +1467,8 @@ export class App {
       // New or removed notes change link statuses everywhere and the explorer.
       this.invalidateTree();
       for (const b of this.buffers.values()) b.invalidateLayouts();
-      for (const v of this.allViews()) v.layoutKey = "";
-    }
-    // A changed note may have gained or lost links to open notes: cheap to re-lay-out all.
-    else if (batch.changes.length) for (const b of this.buffers.values()) b.invalidateLayouts();
+      this.relayoutAll();
+    } else if (batch.changes.length) for (const b of this.buffers.values()) b.invalidateLayouts();
   }
 
   reloadBuffer(buf: NoteBuffer, deleted = false): void {
@@ -1072,10 +1481,10 @@ export class App {
     buf.changedAt = this.now();
     for (const v of this.allViews()) {
       if (v.buf !== buf) continue;
-      // Keep the anchor (3.5): the heading above the viewport, not the row number.
+      // Keep the anchors (3.5): the heading above the viewport and the cursor's source line.
       v.layoutKey = "";
-      v.focusLink = -1;
-      v.selection = null;
+      v.sel = null;
+      v.visual = null;
     }
     this.message("info", `↻ ${this.displayName(buf)} changed on disk — reloaded`);
     setTimeout(() => this.host.requestRender(), 3100).unref?.();
@@ -1087,22 +1496,27 @@ export class App {
   private restoreSession(): boolean {
     const s = loadSession(this.loc.root);
     if (!s) return false;
+    // UI settings: a session value is kept only while the config value it overrode is unchanged.
+    const defaults = uiDefaults(this.config);
+    for (const [k, o] of Object.entries(s.ui ?? {})) {
+      if (!(k in defaults) || !o || typeof o !== "object") continue;
+      if (JSON.stringify(defaults[k as keyof UiState]) !== JSON.stringify(o.base)) continue;
+      if (typeof o.value !== typeof defaults[k as keyof UiState]) continue;
+      (this.ui as unknown as Record<string, unknown>)[k] = o.value;
+      this.uiOverrides[k] = o;
+    }
     for (const t of s.tabs) {
       const views: View[] = [];
       for (const p of t.panes) {
         const buf = this.buffer(p.path);
-        if (buf) views.push(this.makeView(buf, p.anchor));
+        if (buf) views.push(this.makeView(buf, p.anchor, p.cursor));
       }
-      if (views.length) this.tabs.push({ views, active: Math.min(t.active, views.length - 1) });
+      if (views.length) this.tabs.push({ views, active: Math.min(t.active, views.length - 1), orientation: t.orientation ?? "side" });
     }
     if (!this.tabs.length) return false;
     this.activeTab = Math.max(0, Math.min(s.activeTab, this.tabs.length - 1));
     for (const t of this.tabs) t.active = Math.max(0, Math.min(t.active, t.views.length - 1));
     this.sidebar.visible = s.sidebar;
-    if (s.theme && s.theme !== this.theme.name) {
-      const t = loadTheme(s.theme);
-      if (!t.warning) this.theme = t.theme;
-    }
     this.revealInSidebar();
     return true;
   }
@@ -1112,10 +1526,14 @@ export class App {
     this.positions.save();
     const s: SessionState = {
       version: 1,
-      tabs: this.tabs.map((t) => ({ panes: t.views.map((v) => ({ path: v.buf.key, anchor: v.anchor })), active: t.active })),
+      tabs: this.tabs.map((t) => ({
+        panes: t.views.map((v) => ({ path: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor })),
+        active: t.active,
+        orientation: t.orientation,
+      })),
       activeTab: this.activeTab,
       sidebar: this.sidebar.visible,
-      theme: this.theme.name,
+      ui: this.uiOverrides,
     };
     saveSession(this.loc.root, s);
   }
@@ -1131,13 +1549,25 @@ export class App {
 
 // ---------------------------------------------------------------------------------------------
 
+function fileStamp(path: string): number {
+  try {
+    return existsSync(path) ? statSync(path).mtimeMs : -1;
+  } catch {
+    return -1;
+  }
+}
+
 function inRect(r: { x: number; y: number; w: number; h: number }, x: number, y: number): boolean {
   return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 }
 
-function refilter(o: ListOverlay): void {
-  const ranked = rank(o.input, o.items, (i) => (i.detail ? `${i.label} ${i.detail}` : i.label));
-  o.filtered = ranked.map((r) => ({ item: r.item, positions: r.match.positions }));
+export function refilter(o: ListOverlay): void {
+  if (o.source) {
+    o.filtered = o.source(o.input).map((item) => ({ item, positions: [] }));
+  } else {
+    const ranked = rank(o.input, o.items, (i) => (i.detail ? `${i.label} ${i.detail}` : i.label));
+    o.filtered = ranked.map((r) => ({ item: r.item, positions: r.match.positions }));
+  }
   o.selected = 0;
   o.scroll = 0;
 }
@@ -1155,26 +1585,25 @@ export function linkAt(layout: Layout, row: number, col: number): number {
   return -1;
 }
 
-/** Text of a selection in reading order, rows joined with newlines, trailing space trimmed. */
-export function selectedText(layout: Layout, sel: Selection): string {
-  let [a, b] = [sel.a, sel.b];
-  if (b.row < a.row || (b.row === a.row && b.col < a.col)) [a, b] = [b, a];
+/**
+ * Text of a selection from `sel.anchor` to the cursor, inclusive, in reading order; rows joined
+ * with newlines and trailing blanks trimmed. Line selections take whole rows.
+ */
+export function selectedText(layout: Layout, sel: Selection, cur: Pos): string {
+  const [a, b] = ordered(sel.anchor, cur);
   const out: string[] = [];
   for (let r = a.row; r <= b.row; r++) {
-    const line = layout.lines[r];
-    if (!line) continue;
-    const from = r === a.row ? a.col : 0;
-    const to = r === b.row ? b.col + 1 : Number.POSITIVE_INFINITY;
-    let x = 0;
-    let text = "";
-    for (const s of line.spans) {
-      for (const g of graphemes(s.text)) {
-        const w = graphemeWidth(g);
-        if (x + Math.max(1, w) > from && x < to) text += g;
-        x += w;
-      }
-    }
-    out.push(text.replace(/\s+$/, ""));
+    const cs = cells(layout.lines[r]);
+    const from = sel.line || r !== a.row ? 0 : a.col;
+    const to = sel.line || r !== b.row ? Number.POSITIVE_INFINITY : b.col;
+    // A grapheme is selected when any of its cells is — so a wide character counts once.
+    out.push(
+      cs
+        .filter((c) => c.x + c.w > from && c.x <= to)
+        .map((c) => c.g)
+        .join("")
+        .replace(/\s+$/, ""),
+    );
   }
   return out.join("\n");
 }
@@ -1194,317 +1623,4 @@ export function computeFind(layout: Layout, query: string, current = 0): FindSta
     });
   }
   return { query, matches, current: Math.min(current, Math.max(0, matches.length - 1)) };
-}
-
-// ---------------------------------------------------------------------------------------------
-// Command implementations. Ids and titles come from core/command-specs.ts so the CLI can list
-// them and the parity test can check them; this is where each one does its work.
-
-function registerCommands(app: App): void {
-  const impl: Record<string, Command<App>["run"]> = {
-    "scroll.down": (a) => withView(a, (v) => a.scrollBy(v, 1)),
-    "scroll.up": (a) => withView(a, (v) => a.scrollBy(v, -1)),
-    "scroll.half_down": (a) => withView(a, (v) => a.scrollBy(v, Math.max(1, Math.floor(v.height / 2)))),
-    "scroll.half_up": (a) => withView(a, (v) => a.scrollBy(v, -Math.max(1, Math.floor(v.height / 2)))),
-    "scroll.page_down": (a) => withView(a, (v) => a.scrollBy(v, Math.max(1, v.height - 2))),
-    "scroll.page_up": (a) => withView(a, (v) => a.scrollBy(v, -Math.max(1, v.height - 2))),
-    "scroll.top": (a) => withView(a, (v) => a.scrollTo(v, 0)),
-    "scroll.bottom": (a) => withView(a, (v) => a.scrollTo(v, Number.MAX_SAFE_INTEGER)),
-    "heading.next": (a) =>
-      withView(a, (v) => {
-        const h = a.currentLayout(v).headings.find((x) => x.line > v.top);
-        if (h) a.scrollTo(v, h.line);
-      }),
-    "heading.prev": (a) =>
-      withView(a, (v) => {
-        const h = [...a.currentLayout(v).headings].reverse().find((x) => x.line < v.top);
-        a.scrollTo(v, h ? h.line : 0);
-      }),
-    "note.open": (a, arg) => {
-      if (arg) return a.open(arg);
-      return a.run("switcher.open");
-    },
-    "note.reload": (a) =>
-      withView(a, (v) => {
-        a.reloadBuffer(v.buf);
-      }),
-    "note.copy_path": (a) => withView(a, (v) => void a.copy(v.buf.abs)),
-    "note.copy_ref": (a) =>
-      withView(a, (v) => {
-        const line = a.currentLayout(v).lines[v.top]?.src ?? 1;
-        a.copy(`${v.buf.rel ?? v.buf.abs}:${line}`);
-      }),
-    "link.next": (a) => a.cycleLink(1),
-    "link.prev": (a) => a.cycleLink(-1),
-    "link.follow": (a) => {
-      const l = a.focusedLink();
-      if (l) a.follow(l);
-      else a.message("info", "no link focused — Tab moves between links");
-    },
-    "link.follow_split": (a) => {
-      const l = a.focusedLink();
-      if (l) a.follow(l, true);
-      else a.message("info", "no link focused — Tab moves between links");
-    },
-    "link.copy": (a) => {
-      const l = a.focusedLink();
-      if (!l) return a.message("info", "no link focused");
-      const view = a.view!;
-      const r = view.buf.rel && l.kind !== "footnote" ? a.graph.resolveLink({ kind: l.kind, target: l.target }, view.buf.rel) : null;
-      a.copy(r?.path && r.resolvedKind !== "external" ? join(a.loc.root, r.path) : l.target);
-    },
-    "history.back": (a) => a.history("back"),
-    "history.forward": (a) => a.history("forward"),
-    "switcher.open": (a) => {
-      const notes = [...a.graph.notes.values()];
-      a.openList({
-        title: `Open note (${notes.length})`,
-        items: notes.map((n) => ({ label: n.rel, detail: n.title !== n.rel.replace(/\.(md|markdown)$/i, "").split("/").pop() ? n.title : undefined, data: n.rel })),
-        accept: (item) => a.open(item.data as string),
-      });
-    },
-    "outline.open": (a) =>
-      withView(a, (v) => {
-        const layout = a.currentLayout(v);
-        if (!layout.headings.length) return a.message("info", "no headings in this note");
-        const current = [...layout.headings].reverse().findIndex((h) => h.line <= v.top);
-        a.openList({
-          title: `Outline — ${v.buf.name}`,
-          items: layout.headings.map((h) => ({ label: h.text, indent: h.level - 1, hint: `${h.src}`, data: h.line })),
-          accept: (item) => {
-            a.scrollTo(v, item.data as number);
-          },
-          selected: current < 0 ? 0 : layout.headings.length - 1 - current,
-        });
-      }),
-    "links.open": (a) =>
-      withView(a, (v) => {
-        const layout = a.currentLayout(v);
-        if (!layout.links.length) return a.message("info", "no links in this note");
-        a.openList({
-          title: `Links from ${v.buf.name}`,
-          items: layout.links.map((l, i) => ({ label: l.text, detail: l.kind === "markdown" || l.kind === "image" ? l.target : `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]`, hint: l.status, data: i })),
-          accept: (item) => {
-            v.focusLink = item.data as number;
-            a.follow(layout.links[item.data as number]!);
-          },
-        });
-      }),
-    "backlinks.open": (a) =>
-      withView(a, (v) => {
-        if (!v.buf.rel) return a.message("info", "backlinks exist only for vault notes");
-        const bl = a.graph.backlinks(v.buf.rel);
-        if (!bl.length) return a.message("info", `no notes link to ${v.buf.rel}`);
-        a.openList({
-          title: `Linking to ${v.buf.name} (${bl.length})`,
-          items: bl.map((b) => ({ label: b.from, detail: b.text, hint: `${b.line}`, data: b })),
-          accept: (item) => {
-            const b = item.data as { from: string; line: number };
-            a.open(b.from, { heading: null, headingIndex: 0, offset: b.line - 1, line: b.line });
-          },
-        });
-      }),
-    "palette.open": (a) => {
-      const cmds = a.registry.list().filter((c) => !c.hidden);
-      a.openList({
-        title: "Commands",
-        items: cmds.map((c) => ({ label: c.title, detail: c.id, hint: a.keymap.keysFor(c.id).slice(0, 2).map(prettyKey).join("  "), data: c.id })),
-        accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()),
-      });
-    },
-    "find.open": (a) =>
-      withView(a, (v) => {
-        const prev = v.find;
-        const top = v.top;
-        a.prompt(
-          "/",
-          (text) => {
-            v.find = computeFind(a.currentLayout(v), text, v.find?.current ?? 0);
-            if (!v.find.matches.length && text) a.message("info", `not found: ${text}`);
-          },
-          (text) => {
-            v.find = computeFind(a.currentLayout(v), text);
-            const first = v.find.matches.findIndex((m) => m.row >= top);
-            if (first >= 0) {
-              v.find.current = first;
-              a.ensureVisible(v, v.find.matches[first]!.row);
-            }
-          },
-          () => {
-            v.find = prev;
-            a.scrollTo(v, top);
-          },
-        );
-      }),
-    "find.next": (a) => findStep(a, 1),
-    "find.prev": (a) => findStep(a, -1),
-    "tab.new": (a) =>
-      withView(a, (v) => {
-        a.tabs.push({ views: [{ ...v, back: [], fwd: [], selection: null, find: null, layoutKey: "" }], active: 0 });
-        a.activeTab = a.tabs.length - 1;
-      }),
-    "tab.close": (a) => a.closeTab(),
-    "tab.next": (a) => {
-      if (a.tabs.length) a.activeTab = (a.activeTab + 1) % a.tabs.length;
-    },
-    "tab.prev": (a) => {
-      if (a.tabs.length) a.activeTab = (a.activeTab - 1 + a.tabs.length) % a.tabs.length;
-    },
-    "split.toggle": (a) => a.toggleSplit(),
-    "split.focus": (a) => {
-      const t = a.tab;
-      if (a.region === "sidebar") {
-        a.region = "content";
-        if (a.narrow) a.sidebar.overlay = false;
-        return;
-      }
-      if (t && t.views.length > 1) t.active = (t.active + 1) % t.views.length;
-    },
-    "buffers.open": (a) => {
-      const bufs = [...a.buffers.values()];
-      a.openList({
-        title: `Buffers (${bufs.length})`,
-        items: bufs.map((b) => ({ label: b.key, hint: b.deleted ? "deleted" : undefined, data: b.abs })),
-        accept: (item) => a.open(item.data as string),
-      });
-    },
-    "sidebar.toggle": (a) => {
-      a.showSidebar(!a.sidebarShown);
-      a.region = a.sidebarShown ? "sidebar" : "content";
-      if (a.sidebarShown) a.revealInSidebar();
-    },
-    "sidebar.focus": (a) => {
-      a.showSidebar(true);
-      a.region = "sidebar";
-      a.revealInSidebar();
-    },
-    "sidebar.reveal": (a) => {
-      a.showSidebar(true);
-      a.revealInSidebar();
-    },
-    "capture.ref": (a) =>
-      withView(a, (v) => {
-        const line = a.currentLayout(v).lines[v.top]?.src ?? 1;
-        a.capture(formatEntry({ ref: { path: v.buf.abs, startLine: line, endLine: line } }, a.loc.root));
-      }),
-    "capture.selection": (a) =>
-      withView(a, (v) => {
-        const sel = v.selection;
-        if (!sel) return a.message("info", "no selection — drag with the mouse to select");
-        const layout = a.currentLayout(v);
-        const text = selectedText(layout, sel);
-        const r1 = layout.lines[Math.min(sel.a.row, sel.b.row)]?.src ?? 1;
-        const r2 = layout.lines[Math.max(sel.a.row, sel.b.row)]?.src ?? r1;
-        a.capture(formatEntry({ ref: { path: v.buf.abs, startLine: r1, endLine: r2 }, snippetText: text, lang: "" }, a.loc.root));
-      }),
-    "scratch.open": (a) => {
-      const loc = a.scratch();
-      if (!readScratch(loc).trim()) return a.message("info", "the scratch is empty — c c captures a reference");
-      a.open(loc.path);
-    },
-    "scratch.copy": (a) => {
-      const text = readScratch(a.scratch());
-      if (!text.trim()) return a.message("info", "the scratch is empty");
-      a.copy(text);
-    },
-    "scratch.clear": (a) => {
-      a.prompt("clear the scratch? type y ", (t) => {
-        if (t.trim().toLowerCase() !== "y") return;
-        clearScratch(a.scratch());
-        a.message("info", "scratch cleared");
-        const buf = a.buffers.get(a.scratch().path);
-        if (buf) a.reloadBuffer(buf);
-      });
-    },
-    "selection.copy": (a) =>
-      withView(a, (v) => {
-        if (!v.selection) return a.message("info", "no selection — drag with the mouse to select");
-        a.copy(selectedText(a.currentLayout(v), v.selection));
-      }),
-    "theme.select": (a) => {
-      const before = a.theme;
-      const themes = listThemes();
-      a.openList({
-        title: "Theme (live preview)",
-        items: themes.map((t) => ({ label: t.name, hint: t.source, data: t.name })),
-        selected: themes.findIndex((t) => t.name === before.name),
-        move: (item) => {
-          a.theme = loadTheme(item.data as string).theme;
-        },
-        accept: (item) => {
-          a.theme = loadTheme(item.data as string).theme;
-          a.message("info", `theme ${a.theme.name} — set theme = "${a.theme.name}" in config to keep it`);
-        },
-        cancel: () => {
-          a.theme = before;
-        },
-      });
-    },
-    "theme.set": (a, arg) => {
-      if (!arg) return a.run("theme.select");
-      const t = loadTheme(arg);
-      if (t.warning) return a.message("warn", t.warning);
-      a.theme = t.theme;
-    },
-    "glyphs.cycle": (a) => {
-      const order = ["nerd", "unicode", "ascii"] as const;
-      a.glyphs = glyphsFor(order[(order.indexOf(a.glyphs.mode) + 1) % order.length]!);
-      for (const v of a.allViews()) v.layoutKey = "";
-      a.message("info", `glyphs: ${a.glyphs.mode}`);
-    },
-    "messages.open": (a) => {
-      if (!a.messages.length) return a.message("info", "no messages");
-      a.openList({
-        title: "Messages",
-        items: [...a.messages].reverse().map((m) => ({ label: m.text, hint: `${m.level} ${new Date(m.at).toTimeString().slice(0, 8)}`, data: m })),
-        accept: (item) => void a.copy((item.data as Message).text),
-      });
-    },
-    "help.open": (a) => {
-      const items: ListItem[] = [];
-      for (const c of a.registry.list()) {
-        const keys = a.keymap.keysFor(c.id);
-        items.push({ label: c.title, detail: c.id, hint: keys.map(prettyKey).join("  ") || "—", data: c.id });
-      }
-      a.openList({ title: "Keys — Enter runs, Esc closes", items, accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()) });
-    },
-    "vault.reindex": (a) => {
-      a.graph.build(true, "lazy");
-      a.indexInBackground();
-      a.invalidateTree();
-      for (const b of a.buffers.values()) b.invalidateLayouts();
-      for (const v of a.allViews()) v.layoutKey = "";
-      a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
-    },
-    "app.quit": (a) => a.quit(),
-    "overlay.close": (a) => {
-      const v = a.view;
-      if (a.overlay) return a.closeOverlay(true);
-      if (v?.selection) v.selection = null;
-      else if (v?.find) v.find = null;
-      else if (v && v.focusLink >= 0) v.focusLink = -1;
-      else if (a.region === "sidebar") a.sidebarAction("leave");
-    },
-  };
-  for (const spec of COMMAND_SPECS) {
-    const run = impl[spec.id];
-    if (!run) continue;
-    app.registry.register({ id: spec.id, title: spec.title, run, hidden: spec.id === "overlay.close" });
-  }
-  for (const id of Object.keys(impl)) if (!app.registry.get(id)) throw new Error(`command ${id} has no spec in core/command-specs.ts`);
-}
-
-function withView(a: App, fn: (v: View) => void): void {
-  const v = a.view;
-  if (!v) return a.message("info", "no note open");
-  fn(v);
-}
-
-function findStep(a: App, dir: 1 | -1): void {
-  const v = a.view;
-  if (!v?.find || !v.find.matches.length) return a.message("info", "no search — / starts one");
-  const n = v.find.matches.length;
-  v.find.current = (v.find.current + dir + n) % n;
-  a.ensureVisible(v, v.find.matches[v.find.current]!.row);
-  a.message("info", `${v.find.current + 1}/${n}  ${v.find.query}`);
 }

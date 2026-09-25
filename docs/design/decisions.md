@@ -109,21 +109,28 @@ paragraph above your reading position therefore does not move you.
 
 ## `3.11` — mode taxonomy and dispatch order
 
-Phase 2 has no editing, so three modes:
+Revised 2026-09-25 with the reading keymap in [keymap.md](keymap.md). Phase 2 has no editing,
+so there are five layers:
 
 | Mode | Owns keys | Examples |
 | --- | --- | --- |
-| overlay | every key | switcher, palette, outline, picker, messages |
-| pending | the next key of a sequence | `g` then `g`; `space` then `f` |
-| normal | everything else | scroll, links, tabs |
+| overlay | every key | switcher, palette, pickers, prompts |
+| pending | the next key of a sequence | `space l …`, `ctrl+w …`, `g g` |
+| pane | keys of the focused side pane | explorer, outline |
+| visual | selection keys, and movement extends | `v`, `shift+v` |
+| normal | everything else | cursor, links, tabs |
 
-**Dispatch order:** overlay → pending sequence → focused region (explorer or content) → global keymap. `Esc` always
-leaves the innermost state. Every binding resolves to a named command from the registry (`0.8`), so config remaps by
-command id.
+**Dispatch order:** overlay → pending → pane → visual → normal. Only keymaps at or above the one
+holding a binding can make a key a prefix. Every binding names a registry command (plan `0.8`),
+and config remaps all of them.
 
-**Collisions settled:** `Tab` cycles links, not tabs — terminals send `Ctrl-I` as `Tab`, so `Ctrl-O`/`Ctrl-I` history
-is out and back/forward is `H`/`L` (as in qutebrowser and vimium) plus `Ctrl-O`. Tabs are `gt`/`gT`. `/` is reserved
-for in-note find; vault search arrives in phase 4.
+**The conventions that settle collisions:**
+
+- **Direct keys are for navigation only;** everything else is under the leader, `space`.
+- **No emacs keys**, and no `g` keys except `g g`.
+- **Every `ctrl+` chord has a non-`ctrl+` route,** because terminals, multiplexers and browsers
+  can swallow them.
+- **Plain `q` never quits** (`ctrl+q` does), and **`ctrl+c` only copies**.
 
 ## Moved deliberately
 

@@ -37,6 +37,7 @@ export async function runTui(argv: string[]): Promise<number> {
     warnings,
     open,
     themeName: flag(args, "theme"),
+    configFile: flag(args, "config"),
     host: {
       requestRender: () => renderer.requestRender(),
       osc52: (text) => renderer.copyToClipboardOSC52(text),
@@ -45,9 +46,13 @@ export async function runTui(argv: string[]): Promise<number> {
         resolveDone(0);
       },
       setTitle: (t) => renderer.setTerminalTitle(t),
+      setMouse: (on) => {
+        renderer.useMouse = on;
+      },
     },
   });
 
+  renderer.useMouse = app.ui.mouse;
   const view = new AppRenderable(renderer, (canvas) => {
     renderer.setBackgroundColor(toRGBA(app.theme.bg === "default" ? null : app.theme.bg, false));
     app.draw(canvas);

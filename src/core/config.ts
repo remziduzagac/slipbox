@@ -26,12 +26,35 @@ export interface Config {
     max_file_size: number;
   };
   ui: {
+    /** Explorer shown beside the content on wide terminals. */
     sidebar: boolean;
     sidebar_width: number;
+    /** Outline pane shown on the right on wide terminals. */
+    outline: boolean;
+    outline_width: number;
     mouse: boolean;
-    /** Below this many columns the sidebar collapses (3.14). */
+    /** Below this many columns the explorer and outline overlay the content (3.14). */
     narrow_width: number;
     restore_session: boolean;
+    /** Highlight the cursor row. */
+    cursorline: boolean;
+    /** Source line numbers in a left gutter. */
+    line_numbers: boolean;
+    /** Cap the text column at `readable_max` columns, centred. */
+    readable_width: boolean;
+    readable_max: number;
+    /** Hide explorer, outline, tab bar and status line; readable width on. */
+    zen: boolean;
+    /** Rows of margin kept between the cursor and the top or bottom of the view. */
+    scrolloff: number;
+  };
+  input: {
+    /** The leader key; `leader` in `[keys]` means this. */
+    leader: string;
+    /** Show the which-key popup for pending key sequences. */
+    which_key: boolean;
+    /** Delay before the popup appears for prefixes other than the leader. */
+    which_key_delay_ms: number;
   };
   capture: {
     location: "state" | "vault";
@@ -48,19 +71,43 @@ export interface Config {
     /** Interval for directories that cannot be watched, and for everything when watching degrades. */
     poll_ms: number;
   };
-  /** key sequence → command id, e.g. `"g g" = "scroll.top"`. */
-  keys: Record<string, string>;
+  /**
+   * key sequence → command spec, e.g. `"leader l n" = "link.next"`; `""` unbinds a default.
+   * Sub-tables `visual`, `explorer` and `outline` hold the keymaps of those contexts.
+   */
+  keys: Record<string, string> & { visual?: Record<string, string>; explorer?: Record<string, string>; outline?: Record<string, string> };
+  /** `:` aliases: alias → command spec, e.g. `wq = "app.quit"`; `""` removes a default. */
+  aliases: Record<string, string>;
+  /** which-key group names by prefix, e.g. `"leader l" = "links"`. */
+  groups: Record<string, string>;
 }
 
 export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
   render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto" },
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024 },
-  ui: { sidebar: true, sidebar_width: 30, mouse: true, narrow_width: 90, restore_session: true },
+  ui: {
+    sidebar: true,
+    sidebar_width: 30,
+    outline: false,
+    outline_width: 32,
+    mouse: true,
+    narrow_width: 90,
+    restore_session: true,
+    cursorline: true,
+    line_numbers: false,
+    readable_width: false,
+    readable_max: 100,
+    zen: false,
+    scrolloff: 3,
+  },
+  input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   capture: { location: "state", file: "scratch.md" },
   editor: { command: "" },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
+  aliases: {},
+  groups: {},
 };
 
 /** Keys whose values come from a fixed set. Anything else is a warning and the default stays. */
@@ -76,6 +123,10 @@ const RANGES: Record<string, [number, number]> = {
   "render.max_width": [0, 1000],
   "walk.max_file_size": [1, 1 << 30],
   "ui.sidebar_width": [8, 200],
+  "ui.outline_width": [8, 200],
+  "ui.readable_max": [20, 1000],
+  "ui.scrolloff": [0, 50],
+  "input.which_key_delay_ms": [0, 10_000],
   "ui.narrow_width": [0, 1000],
   "watch.debounce_ms": [0, 10_000],
   "watch.poll_ms": [50, 600_000],
@@ -123,9 +174,12 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
   const out = { ...(base as Record<string, unknown>) };
   for (const [key, value] of Object.entries(over)) {
     const path = prefix ? `${prefix}.${key}` : key;
-    if (prefix === "keys") {
+    // String maps: key bindings (with context sub-tables), aliases, group names.
+    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|explorer|outline)$/.test(prefix)) {
       if (typeof value === "string") out[key] = value;
-      else warnings.push(`config: ${file}: keys.${key} must be a command id string`);
+      else if (prefix === "keys" && ["visual", "explorer", "outline"].includes(key) && isPlainObject(value)) {
+        out[key] = merge((out[key] as Record<string, string> | undefined) ?? {}, value, file, `keys.${key}`, warnings);
+      } else warnings.push(`config: ${file}: ${path} must be a string`);
       continue;
     }
     if (!(key in out)) {

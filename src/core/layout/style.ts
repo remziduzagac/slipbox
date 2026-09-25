@@ -12,6 +12,7 @@ export interface CellStyle {
   underline: boolean;
   strike: boolean;
   dim: boolean;
+  inverse?: boolean;
 }
 
 export function lineFillBg(theme: Theme, line: Line): Color | null {

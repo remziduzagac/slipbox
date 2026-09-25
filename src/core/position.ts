@@ -53,7 +53,20 @@ export function rowForSource(layout: Layout, src: number): number {
   return Math.max(0, layout.lines.length - 1);
 }
 
-type PositionMap = Record<string, Anchor & { at: string }>;
+/** Where the reading cursor is, in source terms: an anchor for its row, which of that source
+ *  line's wrapped rows it is on, and its display column. */
+export interface CursorAnchor {
+  anchor: Anchor;
+  sub: number;
+  col: number;
+}
+
+export function isCursorAnchor(v: unknown): v is CursorAnchor {
+  const c = v as CursorAnchor;
+  return !!c && typeof c === "object" && isAnchor(c.anchor) && Number.isInteger(c.sub) && Number.isInteger(c.col);
+}
+
+type PositionMap = Record<string, Anchor & { at: string; cursor?: CursorAnchor }>;
 
 const MAX_POSITIONS = 2000;
 
@@ -66,7 +79,12 @@ export class PositionStore {
     const raw = readJson<unknown>(this.file, {});
     this.data = {};
     if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-      for (const [k, v] of Object.entries(raw as Record<string, unknown>)) if (isAnchor(v)) this.data[k] = v as PositionMap[string];
+      for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+        if (!isAnchor(v)) continue;
+        const entry = v as PositionMap[string];
+        if (entry.cursor !== undefined && !isCursorAnchor(entry.cursor)) delete entry.cursor;
+        this.data[k] = entry;
+      }
     }
   }
 
@@ -75,8 +93,12 @@ export class PositionStore {
     return a ? { heading: a.heading, headingIndex: a.headingIndex, offset: a.offset, line: a.line } : null;
   }
 
-  set(rel: string, anchor: Anchor): void {
-    this.data[rel] = { ...anchor, at: new Date().toISOString() };
+  getCursor(rel: string): CursorAnchor | null {
+    return this.data[rel]?.cursor ?? null;
+  }
+
+  set(rel: string, anchor: Anchor, cursor?: CursorAnchor): void {
+    this.data[rel] = { ...anchor, at: new Date().toISOString(), ...(cursor ? { cursor } : {}) };
   }
 
   save(): void {
@@ -94,14 +116,22 @@ export class PositionStore {
 export interface SessionPane {
   path: string;
   anchor: Anchor;
+  cursor?: CursorAnchor;
+}
+
+/** A UI setting changed in the TUI, with the config value it overrode (see keymap.md). */
+export interface UiOverride {
+  value: unknown;
+  base: unknown;
 }
 
 export interface SessionState {
   version: 1;
-  tabs: { panes: SessionPane[]; active: number }[];
+  tabs: { panes: SessionPane[]; active: number; orientation?: "side" | "stacked" }[];
   activeTab: number;
   sidebar: boolean;
   theme?: string;
+  ui?: Record<string, UiOverride>;
 }
 
 export function isAnchor(v: unknown): v is Anchor {
@@ -119,8 +149,12 @@ export function loadSession(root: string): SessionState | null {
   const tabs = s.tabs
     .filter((t) => t && Array.isArray(t.panes))
     .map((t) => ({
-      panes: t.panes.filter((p) => p && typeof p.path === "string" && p.path).map((p) => ({ path: p.path, anchor: isAnchor(p.anchor) ? p.anchor : { ...TOP } })).slice(0, 2),
+      panes: t.panes
+        .filter((p) => p && typeof p.path === "string" && p.path)
+        .map((p) => ({ path: p.path, anchor: isAnchor(p.anchor) ? p.anchor : { ...TOP }, ...(isCursorAnchor(p.cursor) ? { cursor: p.cursor } : {}) }))
+        .slice(0, 2),
       active: Number.isInteger(t.active) ? t.active : 0,
+      orientation: t.orientation === "stacked" ? ("stacked" as const) : ("side" as const),
     }))
     .filter((t) => t.panes.length);
   return {
@@ -129,6 +163,7 @@ export function loadSession(root: string): SessionState | null {
     activeTab: Number.isInteger(s.activeTab) ? s.activeTab : 0,
     sidebar: typeof s.sidebar === "boolean" ? s.sidebar : true,
     theme: typeof s.theme === "string" ? s.theme : undefined,
+    ui: s.ui && typeof s.ui === "object" && !Array.isArray(s.ui) ? s.ui : {},
   };
 }
 

@@ -37,9 +37,22 @@ max_file_size = 4194304        # bytes; larger notes are listed as skipped
 [ui]
 sidebar = true                 # explorer beside the content on wide terminals
 sidebar_width = 30
+outline = false                # outline pane on the right on wide terminals
+outline_width = 32
 mouse = true
-narrow_width = 90              # below this, the explorer overlays and splits stack
+narrow_width = 90              # below this, panes overlay and splits stack
 restore_session = true         # reopen tabs and splits when started without a path
+cursorline = true              # band on the cursor row
+line_numbers = false           # source line numbers in a gutter
+readable_width = false         # cap the text column at readable_max, centred
+readable_max = 100
+zen = false                    # no chrome; readable width on
+scrolloff = 3                  # rows kept between the cursor and the view's edge
+
+[input]
+leader = "space"               # the key `leader` means in [keys] and [groups]
+which_key = true               # the popup for pending key sequences
+which_key_delay_ms = 500       # before it shows for prefixes other than the leader
 
 [capture]
 location = "state"             # state (never committed) | vault
@@ -51,16 +64,41 @@ command = ""                   # phase 3: `$EDITOR` hand-off template with {file
 [watch]
 enabled = true
 debounce_ms = 120
-poll_ms = 2000                 # for unwatchable directories, and when the watch limit is hit
+poll_ms = 2000                 # backstop tick, unwatchable directories, degraded mode
 
-[keys]                         # key sequence = command id; "" unbinds
-# "x" = "scroll.bottom"
-# "space n" = "switcher.open"
+[keys]                         # key sequence = command spec; "" unbinds a default
+"x" = "cursor.bottom"
+"leader n n" = "switcher.open"
+"ctrl+o" = ""
+
+[keys.visual]                  # visual mode (movement keys extend by themselves)
+"Y" = "visual.yank"
+
+[keys.explorer]                # key = explorer action: down up open_tab open collapse
+"o" = "open"                   #   open_split top bottom close leave
+
+[keys.outline]                 # key = outline action: down up jump fold unfold
+"za" = "fold"                  #   top bottom close leave
+
+[aliases]                      # `:` aliases; "" removes a default
+wq = "app.quit"
+
+[groups]                       # which-key group names by prefix
+"leader n" = "notes"
 ```
 
-Key sequences are space-separated key names: `g g`, `ctrl+w v`, `space f`, `shift+tab`,
-`alt+left`. Printable characters name themselves (`G`, `?`, `:`). `slipbox commands` lists every
-command id, and `?` in the TUI shows every binding.
+The notation is in [keymap.md](keymap.md): space-separated key names such as `g g`,
+`ctrl+w shift+h` or `leader l n`. `G` means `shift+g`, and modifiers may be written in any order.
+A command spec is a command id, optionally followed by an argument (`"tab.goto 3"`,
+`"theme.set nord"`). `slipbox commands` lists every id, and `space ?` in the TUI lists every
+binding.
+
+## Reloading
+
+The TUI reloads the configuration **by itself** when the user or vault config file is saved, and
+on demand with `space v c` or `:config`. [tui.md](tui.md) lists what a reload applies live. UI
+settings changed in the TUI are session overrides. Each is kept only while the config value it
+replaced is unchanged, so editing the config always wins.
 
 ## Environment
 

@@ -24,10 +24,20 @@ single-file mode.
 
 ## In the TUI
 
-`?` lists every key. The essentials: `j`/`k` scroll, `Tab` then `Enter` follows a link, `H`/`L`
-back and forward, `Ctrl-P` switches notes, `o` outlines, `/` finds, `Ctrl-W v` splits, `t` opens a
-tab, `space e` toggles the explorer, drag to select and copy, `c c` captures a reference to the
-scratch, `q` quits and remembers where you were.
+A reading cursor moves with vim keys or the usual editor keys, and `space` opens a which-key
+popup listing everything else, so nothing needs memorising:
+
+- **Moving:** `h` `j` `k` `l` or the arrows; `w`/`b` or `alt+arrows` by word; `[ [` / `] ]` by
+  heading.
+- **Links:** `enter` follows the link under the cursor; `shift+h` / `shift+l` go back and
+  forward.
+- **Finding and copying:** `ctrl+p` switches notes, `ctrl+f` finds, `:` opens the command
+  palette, and `v` selects then `y` copies.
+- **Panes:** `ctrl+e` explorer, `ctrl+o` outline, `ctrl+w v` split, `ctrl+t o` new tab.
+- **Quitting:** `ctrl+q`, and slipbox remembers where you were.
+
+Every key is in [docs/design/keymap.md](docs/design/keymap.md), and all of them are configurable.
+The configuration reloads itself when you save it.
 
 ## For agents
 

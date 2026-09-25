@@ -12,6 +12,8 @@ export interface RoleStyle {
   italic?: boolean;
   underline?: boolean;
   dim?: boolean;
+  /** Swap foreground and background — how the cursor shows without colour (NO_COLOR). */
+  inverse?: boolean;
 }
 
 export const ROLES = [
@@ -34,6 +36,8 @@ export const ROLES = [
   "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active",
   "tab", "tab_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim",
   "selection", "error", "warn", "info", "scrollbar",
+  "cursor", "cursor_line", "line_number", "line_number_current",
+  "which_key", "which_key_key", "which_key_group", "which_key_title",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -198,6 +202,15 @@ export function themeFromPalette(
     warn: { fg: p.yellow },
     info: { fg: p.cyan },
     scrollbar: { fg: p.surface2 },
+    // The reading cursor: a block over the character, and a row band behind it.
+    cursor: { fg: p.bg, bg: p.fg_strong },
+    cursor_line: { bg: blend(p.surface, p.bg, 0.55) },
+    line_number: { fg: p.surface2 },
+    line_number_current: { fg: p.orange, bold: true },
+    which_key: { fg: p.fg, bg: p.bg_dark },
+    which_key_key: { fg: p.orange, bg: p.bg_dark, bold: true },
+    which_key_group: { fg: p.blue, bg: p.bg_dark },
+    which_key_title: { fg: p.bg, bg: p.blue, bold: true },
   };
   for (const [role, style] of Object.entries(overrides)) {
     roles[role as Role] = { ...roles[role as Role], ...style };
@@ -242,6 +255,12 @@ export function terminalTheme(): Theme {
     code_inline: { fg: a(15), bg: a(8), italic: false },
     status: { fg: a(7), bg: a(0) },
     link_focus: { fg: a(0), bg: a(6) },
+    cursor: { fg: a(0), bg: a(15) },
+    cursor_line: { bg: a(0) },
+    which_key: { fg: "default", bg: a(0) },
+    which_key_key: { fg: a(3), bg: a(0), bold: true },
+    which_key_group: { fg: a(4), bg: a(0) },
+    which_key_title: { fg: a(0), bg: a(4), bold: true },
   });
   t.kind = "dark";
   return t;
@@ -260,5 +279,8 @@ export function monoTheme(): Theme {
   roles.overlay_selected = { bold: true, underline: true };
   roles.status_accent = { bold: true };
   roles.selection = { underline: true };
+  roles.cursor = { inverse: true };
+  roles.cursor_line = {};
+  roles.which_key_title = { bold: true };
   return { ...t, name: "mono", roles };
 }
