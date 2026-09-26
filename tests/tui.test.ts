@@ -82,7 +82,8 @@ async function harness(opts: Opts = {}): Promise<Harness> {
 
 const rowText = (h: Harness, row = h.app.view!.cur.row) => h.app.currentLayout(h.app.view!).lines[row]!.spans.map((s) => s.text).join("");
 const statusRow = (frame: string) => frame.split("\n").at(-1)!;
-const topRow = (frame: string) => frame.split("\n")[0]!;
+/** The top bar's row: under a blank row that gives it air on top. */
+const topRow = (frame: string) => frame.split("\n")[1]!;
 const rowStarting = (h: Harness, prefix: string) => h.app.currentLayout(h.app.view!).lines.findIndex((l) => l.spans.map((s) => s.text).join("").startsWith(prefix));
 
 describe("drawing (3.1, 3.2)", () => {
@@ -721,7 +722,8 @@ describe("top bar, tab strip, status line", () => {
     expect(h.app.theme.roles.topbar.bg).toBeUndefined();
     expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(page);
     expect(h.canvas().styles[0]![80]?.bg ?? page).toBe(page);
-    expect(h.frame().split("\n")[1]!.startsWith("━━━━")).toBe(true);
+    expect(h.frame().split("\n")[0]!.trim()).toBe(""); // a blank row above the bar
+    expect(h.frame().split("\n")[2]!.startsWith("━━━━")).toBe(true);
     const ex = hot(h, "btn:explorer");
     click(h, ex.x, ex.y);
     expect(h.app.sidebarShown).toBe(false);
@@ -764,24 +766,24 @@ describe("top bar, tab strip, status line", () => {
     await h.app.run("note.open notes/alpha.md");
     h.frame();
     const strip = h.app.geometry!.tabStrip!;
-    expect(strip.y).toBe(2); // under the top bar and the frame's top rule
+    expect(strip.y).toBe(3); // under the blank row, the top bar and the frame's top rule
     // Tabs hold the note and its outline, not the explorer: the strip starts after it, and the
     // explorer stays where it was before the strip appeared.
     const sb = h.app.geometry!.sidebar!;
     expect(strip.x).toBe(sb.x + sb.w + 1);
     expect(strip.x + strip.w).toBe(160);
-    expect(sb.y).toBe(4); // the tree, under the "Explorer" title (beside the strip) and a blank row
-    expect(h.frame().split("\n")[2]!.startsWith(" Explorer")).toBe(true);
+    expect(sb.y).toBe(5); // the tree, under the "Explorer" title (beside the strip) and its rule
+    expect(h.frame().split("\n")[3]!.startsWith(" Explorer")).toBe(true);
     // Under the title a rule, meeting the one under the strip at the explorer's border.
-    expect(h.frame().split("\n")[3]!.slice(0, sb.w + 2)).toBe(`${"━".repeat(sb.w)}╋━`);
+    expect(h.frame().split("\n")[4]!.slice(0, sb.w + 2)).toBe(`${"━".repeat(sb.w)}╋━`);
     const rows = h.frame().split("\n");
     // A rule over everything, the explorer's border starting under it (┳)…
-    expect(rows[1]!.slice(0, 10)).toBe("━".repeat(10));
-    expect(rows[1]![sb.w]).toBe("┳");
-    expect(rows[2]![sb.w]).toBe("┃");
+    expect(rows[2]!.slice(0, 10)).toBe("━".repeat(10));
+    expect(rows[2]![sb.w]).toBe("┳");
+    expect(rows[3]![sb.w]).toBe("┃");
     // …and one under the strip, over the note (and the outline), meeting the border in ┣.
-    expect(rows[3]!.slice(strip.x, strip.x + 10)).toBe("━".repeat(10));
-    expect(rows[3]![strip.x - 1]).toBe("╋"); // the explorer's title rule meets it
+    expect(rows[4]!.slice(strip.x, strip.x + 10)).toBe("━".repeat(10));
+    expect(rows[4]![strip.x - 1]).toBe("╋"); // the explorer's title rule meets it
     // The bottom rule closes the explorer and the note above the status line.
     expect(rows.at(-2)!.slice(0, 10)).toBe("━".repeat(10));
     expect(rows.at(-2)![sb.w]).toBe("┻");

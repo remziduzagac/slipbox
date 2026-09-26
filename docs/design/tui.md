@@ -24,6 +24,7 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
+                                                                           ← a blank row above the bar
  ≡   slipbox                                                 indexing 3…   ← top bar (ui.top_bar)
 ━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━  ← the frame's top rule
  Explorer   ┃ 1 index × ┃ 2 alpha × ┃                               ┃ +3   ← tab strip; +N when some don't fit
@@ -55,8 +56,8 @@ where it ends on one, `┣` `┫` `╋` where it continues through, and the corn
 panes). Zen mode has no frame.
 
 **The top bar** has buttons and vault-wide state; the middle is empty. It sits on the page's
-background like the rest, so the frame's rule under it gives it the same half row of air the tab
-strip and the titles get from theirs:
+background like the rest, under a blank row, so it has air above as well as the half row the
+frame's rule under it gives (the tab strip and the titles get theirs from the rules around them):
 
 - on the left, `≡` shows the explorer (focusing it and revealing the current note) or hides it,
   and the `slipbox` chip (plain accent text) opens the command palette;
