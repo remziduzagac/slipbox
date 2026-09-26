@@ -49,6 +49,8 @@ export class VaultWatcher {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly ownWrites = new Map<string, number>();
+  /** Sizes beside the known mtimes: a same-second rewrite that changes the size still counts. */
+  private readonly sizes = new Map<string, number>();
   /** Directories whose watch failed (e.g. Bun's fs.watch errors on a broken symlink inside). */
   private readonly polled = new Set<string>();
   degraded: string | null = null;
@@ -297,9 +299,17 @@ export class VaultWatcher {
           continue;
         }
       }
-      if (!filter.isNoteName(name) || filter.exclusion(rel, false) !== null) continue;
+      if (filter.exclusion(rel, false) !== null) continue;
+      if (!filter.isNoteName(name)) {
+        // An attachment: the graph keeps a name index of them for ![[embeds]].
+        changes.push({ rel, kind: st ? "created" : "deleted", isNote: false });
+        continue;
+      }
       const own = this.ownWrites.get(rel);
-      if (st && own !== undefined && own === st.mtimeMs) continue;
+      if (st && own !== undefined && own === st.mtimeMs) {
+        this.ownWrites.delete(rel); // our own write, seen once
+        continue;
+      }
       const before = known.get(rel);
       if (!st) {
         if (before !== undefined) {
@@ -309,9 +319,10 @@ export class VaultWatcher {
         continue;
       }
       if (before === undefined) changes.push({ rel, kind: "created", isNote: true });
-      else if (before !== st.mtimeMs) changes.push({ rel, kind: "changed", isNote: true });
+      else if (before !== st.mtimeMs || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size)) changes.push({ rel, kind: "changed", isNote: true });
       else continue;
       known.set(rel, st.mtimeMs);
+      this.sizes.set(rel, st.size);
     }
     // A rename reports only the new name; notes that vanished from the directories we heard
     // from, or moved away under the same name, are found here.

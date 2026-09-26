@@ -2,6 +2,7 @@
 //
 // Notes are written by agents and pulled from repos; a raw escape sequence in a note must never
 // reach the terminal. Every string that enters the layout IR passes through `sanitize`.
+import { graphemes, graphemeWidth } from "./width.ts";
 
 // ESC-introduced sequences: CSI, OSC (BEL or ST terminated), DCS/SOS/PM/APC strings, and
 // two-byte escapes. Then the bare C0/C1 controls that are left.
@@ -19,10 +20,18 @@ export function sanitize(text: string): string {
 /** Expand tabs to spaces against a tab stop, for code blocks. */
 export function expandTabs(line: string, tabWidth = 4): string {
   if (!line.includes("\t")) return line;
+  // Tab stops count display columns (a CJK character is two), not UTF-16 units.
   let out = "";
-  for (const ch of line) {
-    if (ch === "\t") out += " ".repeat(tabWidth - (out.length % tabWidth));
-    else out += ch;
+  let col = 0;
+  for (const g of graphemes(line)) {
+    if (g === "\t") {
+      const n = tabWidth - (col % tabWidth);
+      out += " ".repeat(n);
+      col += n;
+    } else {
+      out += g;
+      col += graphemeWidth(g);
+    }
   }
   return out;
 }

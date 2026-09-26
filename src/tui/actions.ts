@@ -258,7 +258,8 @@ function openPalette(a: App): void {
       const spec = a.aliases[m[1]!];
       if (!spec) return false;
       const arg = m[2]?.trim();
-      if (!arg && a.overlay?.kind === "list" && a.overlay.selected > 0) return false;
+      // …or an alias with a trailing space: its candidates are listed, so enter picks one of them.
+      if (!arg && a.overlay?.kind === "list" && (a.overlay.selected > 0 || /\s$/.test(input))) return false;
       if (arg && argCandidates(a, spec.split(" ")[0]!) && a.overlay?.kind === "list") {
         // With an argument that completes, prefer the highlighted candidate.
         const sel = a.overlay.filtered[a.overlay.selected]?.item;
@@ -454,19 +455,21 @@ export function registerActions(app: App): void {
       withView(a, (v) => {
         if (v.visual === "char") return void Object.assign(v, { visual: null, sel: null });
         v.visual = "char";
-        v.sel = { anchor: v.sel?.anchor ?? { ...v.cur }, line: false };
+        if (v.sel) v.sel.line = false;
+        else a.select(v, { ...v.cur }, false);
       }),
     "visual.line": (a) =>
       withView(a, (v) => {
         if (v.visual === "line") return void Object.assign(v, { visual: null, sel: null });
         v.visual = "line";
-        v.sel = { anchor: v.sel?.anchor ?? { ...v.cur }, line: true };
+        if (v.sel) v.sel.line = true;
+        else a.select(v, { ...v.cur }, true);
       }),
     "visual.swap": (a) =>
       withView(a, (v) => {
         if (!v.sel) return;
         const anchor = v.sel.anchor;
-        v.sel.anchor = { ...v.cur };
+        a.select(v, { ...v.cur }, v.sel.line);
         a.moveCursor(v, anchor);
       }),
     "visual.yank": (a) =>
@@ -663,8 +666,10 @@ export function registerActions(app: App): void {
         a.showSidebar(true);
         a.region = "sidebar";
         a.revealInSidebar();
-      } else if (a.region !== "sidebar") a.region = "sidebar";
-      else a.showSidebar(false);
+      } else if (a.region !== "sidebar") {
+        a.region = "sidebar";
+        a.sidebar.pinned = false; // focused: the selection comes back into view
+      } else a.showSidebar(false);
     },
     "explorer.reveal": (a) => {
       a.showSidebar(true);
@@ -674,8 +679,10 @@ export function registerActions(app: App): void {
     // Like the explorer: closed → open and focus; open elsewhere → focus; focused → close.
     "outline.cycle": (a) => {
       if (!a.outlineShown) return a.openOutline();
-      if (a.region !== "outline") a.region = "outline";
-      else a.showOutline(false);
+      if (a.region !== "outline") {
+        a.region = "outline";
+        a.outline.pinned = false;
+      } else a.showOutline(false);
     },
     // The ▤ button: show (and focus) or hide.
     "outline.toggle": (a) => {
@@ -690,8 +697,10 @@ export function registerActions(app: App): void {
         a.prompt(
           "/",
           (text) => {
+            // An empty search clears the find rather than leaving "/ 0/0" behind.
+            if (!text) return void (v.find = null);
             v.find = computeFind(lay(a, v), text, v.find?.current ?? 0);
-            if (!v.find.matches.length && text) a.message("info", `not found: ${text}`);
+            if (!v.find.matches.length) a.message("info", `not found: ${text}`);
           },
           (text) => {
             v.find = computeFind(lay(a, v), text);

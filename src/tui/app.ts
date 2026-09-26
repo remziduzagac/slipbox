@@ -86,6 +86,8 @@ export interface Selection {
   anchor: Pos;
   /** Whole rows (V) rather than characters. */
   line: boolean;
+  /** The anchor in source terms, so a re-layout (resize, a pane toggled) keeps the same text. */
+  src?: CursorAnchor;
 }
 
 export interface FindState {
@@ -288,6 +290,8 @@ export class App {
   positions: PositionStore;
   watcher: VaultWatcher | null = null;
   ui: UiState;
+  private drawFailed = false;
+
   /** Commands run from the palette or help, most recent first (kept in the session). */
   recentCommands: string[] = [];
 
@@ -680,7 +684,7 @@ export class App {
       view.top = this.clampTop(view, layout, rowFor(layout, view.topAnchor));
       this.ensureCursorVisible(view, layout);
       if (view.find) view.find = computeFind(layout, view.find.query, view.find.current);
-      if (view.sel) view.sel.anchor = clampPos(layout, view.sel.anchor);
+      if (view.sel) view.sel.anchor = view.sel.src ? this.cursorFromAnchor(layout, view.sel.src) : clampPos(layout, view.sel.anchor);
     }
     return layout;
   }
@@ -733,12 +737,17 @@ export class App {
     }
   }
 
+  /** Start a selection anchored at `anchor`, remembering it in source terms too. */
+  select(view: View, anchor: Pos, line: boolean): void {
+    view.sel = { anchor, line, src: this.cursorAnchorFor(this.currentLayout(view), anchor) };
+  }
+
   /** Move the cursor (extending the selection when asked, or in visual mode). */
   moveCursor(view: View, to: Pos, opts: { extend?: boolean; keepGoal?: boolean } = {}): void {
     this.outline.pinned = false; // the outline follows the cursor's section again
     const layout = this.currentLayout(view);
     const extend = opts.extend || view.visual !== null;
-    if (extend && !view.sel) view.sel = { anchor: { ...view.cur }, line: view.visual === "line" };
+    if (extend && !view.sel) this.select(view, { ...view.cur }, view.visual === "line");
     if (!extend && view.sel && !view.visual) view.sel = null;
     view.cur = clampPos(layout, to);
     if (!opts.keepGoal) view.goal = view.cur.col;
@@ -748,6 +757,7 @@ export class App {
 
   /** Scroll by rows; the cursor moves with the view (ctrl+d/u, pages) or only as needed (wheel). */
   scrollBy(view: View, delta: number, moveCursor: boolean): void {
+    this.outline.pinned = false; // the outline follows the cursor's section again
     const layout = this.currentLayout(view);
     view.top = this.clampTop(view, layout, view.top + delta);
     view.topAnchor = anchorAt(layout, view.top);
@@ -907,12 +917,18 @@ export class App {
     return this.outlineShown && !this.narrow && !this.ui.zen;
   }
 
+  /**
+   * Side pane widths: at least 12, at most half the terminal, and never so wide together that the
+   * note gets under MIN_CONTENT columns (whatever the config, resize mode or a drag asked for).
+   */
   sidebarWidth(): number {
-    return Math.max(12, Math.min(this.sideW, Math.floor(this.width * 0.5)));
+    const room = this.width - MIN_CONTENT - 1 - (this.outlineBeside ? 13 : 0);
+    return Math.max(12, Math.min(this.sideW, Math.floor(this.width * 0.5), room));
   }
 
   outlineWidth(): number {
-    return Math.max(12, Math.min(this.outW, Math.floor(this.width * 0.5)));
+    const room = this.width - MIN_CONTENT - 1 - (this.sidebarBeside ? this.sidebarWidth() + 1 : 0);
+    return Math.max(12, Math.min(this.outW, Math.floor(this.width * 0.5), room));
   }
 
   /**
@@ -962,6 +978,7 @@ export class App {
 
   /** Show the outline and focus it, its selection on the cursor's section. */
   openOutline(): void {
+    this.outline.pinned = false;
     this.showOutline(true);
     this.outline.selected = Math.max(0, this.currentSection());
     this.region = "outline";
@@ -1015,6 +1032,7 @@ export class App {
   }
 
   revealInSidebar(): void {
+    this.sidebar.pinned = false;
     const rel = this.view?.buf.rel;
     if (!rel) return;
     const parts = rel.split("/");
@@ -1103,6 +1121,7 @@ export class App {
     if (!view) return [];
     if (this.outline.forKey !== view.buf.key) {
       this.outline.forKey = view.buf.key;
+      this.outline.pinned = false;
       this.outline.folded = new Set();
       this.outline.scroll = 0;
     }
@@ -1517,12 +1536,12 @@ export class App {
       return;
     }
     // Side panes first: on narrow screens they lie over the note.
-    if (g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {
-      this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
-      this.sidebar.pinned = true;
-    } else if (g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)) {
+    if (g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)) {
       this.outline.scroll = Math.max(0, this.outline.scroll + dir * n);
       this.outline.pinned = true;
+    } else if (g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {
+      this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
+      this.sidebar.pinned = true;
     } else if (pane) this.scrollBy(pane.view, dir * n, false);
   }
 
@@ -1545,24 +1564,29 @@ export class App {
     if (ev.button !== 0) return;
     const clicks = this.clicks(ev);
     if (hot && !hot.startsWith("tab:")) return this.clickHot(hot);
+    if (g.popup && inRect(g.popup, ev.x, ev.y)) return; // the which-key popup's background
     const tab = g.tabs.find((t) => inRect(t, ev.x, ev.y));
     if (tab) {
       this.activeTab = tab.index;
       this.drag = { kind: "tab", index: tab.index };
       return;
     }
-    const sep = g.separators.find((s) => inRect(s, ev.x, ev.y));
-    if (sep) {
-      this.drag = { kind: "separator", sep };
+    // Side panes before the note's borders and scrollbars: on narrow screens they lie over the
+    // note, the outline over the explorer. A click anywhere in one (its title, blank rows, below
+    // the list, its border) focuses it.
+    if (g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)) {
+      this.region = "outline";
+      if (!g.outline || !inRect(g.outline, ev.x, ev.y)) return;
+      const idx = ev.y - g.outline.y + this.outline.scroll;
+      const row = this.outlineRows()[idx];
+      if (!row) return;
+      this.outline.selected = idx;
+      // The fold marker sits right after the indent.
+      const markerX = g.outline.x + 1 + (row.level - 1) * 2;
+      if (row.hasChildren && ev.x >= markerX - 1 && ev.x <= markerX + 1) this.outlineAction(row.folded ? "unfold" : "fold");
+      else this.outlineAction("jump"); // a choice: the note moves there and takes the focus
       return;
     }
-    const bar = g.scrollbars.find((b) => inRect(b, ev.x, ev.y));
-    if (bar) {
-      this.drag = { kind: "scrollbar", bar };
-      this.scrollbarTo(bar, ev.y);
-      return;
-    }
-    // A click anywhere in a side pane focuses it: its title, the blank rows, below the list.
     if (g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {
       this.region = "sidebar";
       if (!g.sidebar || !inRect(g.sidebar, ev.x, ev.y)) return;
@@ -1577,17 +1601,15 @@ export class App {
       } else this.explorerAction("open_tab"); // a second click finds the tab it opened
       return;
     }
-    if (g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)) {
-      this.region = "outline";
-      if (!g.outline || !inRect(g.outline, ev.x, ev.y)) return;
-      const idx = ev.y - g.outline.y + this.outline.scroll;
-      const row = this.outlineRows()[idx];
-      if (!row) return;
-      this.outline.selected = idx;
-      // The fold marker sits right after the indent.
-      const markerX = g.outline.x + 1 + (row.level - 1) * 2;
-      if (row.hasChildren && ev.x >= markerX - 1 && ev.x <= markerX + 1) this.outlineAction(row.folded ? "unfold" : "fold");
-      else this.outlineAction("jump"); // a choice: the note moves there and takes the focus
+    const sep = g.separators.find((s) => inRect(s, ev.x, ev.y));
+    if (sep) {
+      this.drag = { kind: "separator", sep };
+      return;
+    }
+    const bar = g.scrollbars.find((b) => inRect(b, ev.x, ev.y));
+    if (bar) {
+      this.drag = { kind: "scrollbar", bar };
+      this.scrollbarTo(bar, ev.y);
       return;
     }
     const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
@@ -1602,13 +1624,13 @@ export class App {
     if (clicks === 2) {
       // Double-click selects the word, triple-click the row; either is copied, like a terminal.
       const [a, b] = wordAt(layout, pos);
-      view.sel = { anchor: { row: pos.row, col: a }, line: false };
+      this.select(view, { row: pos.row, col: a }, false);
       this.moveCursor(view, { row: pos.row, col: b }, { extend: true });
       this.copySelectionQuietly(view);
       return;
     }
     if (clicks === 3) {
-      view.sel = { anchor: { row: pos.row, col: 0 }, line: true };
+      this.select(view, { row: pos.row, col: 0 }, true);
       view.cur = pos;
       view.curAnchor = this.cursorAnchorFor(layout, pos);
       this.copySelectionQuietly(view);
@@ -1655,7 +1677,7 @@ export class App {
     if (ev.y >= pane.y + pane.h) this.scrollBy(pane.view, 1, false);
     const layout = this.currentLayout(d.view);
     const pos = clampPos(layout, { row: d.view.top + Math.max(0, Math.min(pane.h - 1, ev.y - pane.y)), col: Math.max(0, ev.x - pane.textX) + d.view.left });
-    d.view.sel = { anchor: d.start, line: false };
+    if (!d.view.sel || d.view.sel.anchor !== d.start) this.select(d.view, d.start, false);
     d.view.cur = pos;
     d.view.goal = pos.col;
     // The anchor too, so a re-layout (a message line appearing, a resize) keeps the cursor here.
@@ -1761,7 +1783,15 @@ export class App {
     this.width = canvas.width;
     this.height = canvas.height;
     this.fixRegion();
-    this.geometry = drawApp(this, canvas);
+    try {
+      this.geometry = drawApp(this, canvas);
+    } catch (err) {
+      // A drawing bug must never take the app down: report it, keep the last geometry.
+      if (!this.drawFailed) this.message("error", `drawing failed: ${(err as Error).message}`);
+      this.drawFailed = true;
+      return;
+    }
+    this.drawFailed = false;
   }
 
   // -------------------------------------------------------------------------------------------
@@ -1884,6 +1914,13 @@ export class App {
       for (const buf of this.buffers.values()) if (buf.changedOnDisk()) this.reloadBuffer(buf);
     }
     for (const c of batch.changes) {
+      if (!c.isNote) {
+        // An attachment appeared or went: ![[embeds]] of it change status.
+        if (c.kind === "deleted") this.graph.removeAsset(c.rel);
+        else this.graph.addAsset(c.rel);
+        setChanged = true;
+        continue;
+      }
       if (c.kind === "deleted") {
         this.graph.removeFile(c.rel);
         setChanged = true;
@@ -1894,6 +1931,13 @@ export class App {
           st = statSync(abs);
         } catch {}
         if (!st) continue;
+        // The walk's size cap holds for notes that appear later too.
+        if (st.size > this.config.walk.max_file_size) {
+          if (this.graph.notes.has(c.rel)) this.graph.removeFile(c.rel);
+          this.message("warn", `${c.rel} is larger than walk.max_file_size — skipped`);
+          setChanged = true;
+          continue;
+        }
         if (c.kind === "created") setChanged = true;
         this.graph.updateFile(c.rel, { rel: c.rel, abs, size: st.size, mtimeMs: st.mtimeMs });
       }
@@ -2029,6 +2073,8 @@ function inRect(r: { x: number; y: number; w: number; h: number }, x: number, y:
 }
 
 const RECENT_MAX = 5;
+/** The note keeps at least this many columns beside the side panes. */
+const MIN_CONTENT = 24;
 
 /** Wrapping off: how wide a note is laid out first, to find its natural width. */
 const NOWRAP_PROBE = 2000;

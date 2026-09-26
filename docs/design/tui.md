@@ -397,7 +397,10 @@ backstops:
 | anything on dot-files, `.gitignore` included | `.gitignore` mtimes polled each tick |
 | a directory containing a broken symlink (it errors) | that directory is polled instead, with a warning |
 
-The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes.
+The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes. A change counts
+when a note's mtime or size differs, so a rewrite in the same second is still seen. Attachments
+(any non-note file) are reported too, so `![[image.png]]` embeds change status as images come and
+go; a note that appears larger than `walk.max_file_size` is skipped, as the walk would.
 
 **Degrading loudly (plan `5.2`).** Exhausting the watch limit (`ENOSPC`, `EMFILE`, `ENFILE`)
 produces one error message, `⚠ not watching` in the status line, and polling of open notes.

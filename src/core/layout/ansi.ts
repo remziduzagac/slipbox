@@ -43,6 +43,18 @@ function rgbTo16(hex: string): number {
   return idx + (idx === 0 && Math.max(r, g, b) > 60 ? 8 : bright);
 }
 
+/** The xterm 256-colour palette entry `n` (16–255) as #rrggbb: the 6×6×6 cube, then greys. */
+function paletteHex(n: number): string {
+  const hex = (v: number) => v.toString(16).padStart(2, "0");
+  if (n >= 232) {
+    const v = 8 + (n - 232) * 10;
+    return `#${hex(v)}${hex(v)}${hex(v)}`;
+  }
+  const i = n - 16;
+  const step = (k: number) => (k === 0 ? 0 : 55 + k * 40);
+  return `#${hex(step(Math.floor(i / 36)))}${hex(step(Math.floor(i / 6) % 6))}${hex(step(i % 6))}`;
+}
+
 function colorCode(c: Color | null, fg: boolean, depth: ColorDepth): string {
   if (c === null) return fg ? "39" : "49";
   if (c === "default") return fg ? "39" : "49";
@@ -50,6 +62,11 @@ function colorCode(c: Color | null, fg: boolean, depth: ColorDepth): string {
     const n = Number(c.slice(5));
     if (n < 8) return String((fg ? 30 : 40) + n);
     if (n < 16) return String((fg ? 90 : 100) + n - 8);
+    if (depth === "16") {
+      // A 256-colour palette entry, on a 16-colour terminal: the nearest of the 16.
+      const m = rgbTo16(paletteHex(n));
+      return m < 8 ? String((fg ? 30 : 40) + m) : String((fg ? 90 : 100) + m - 8);
+    }
     return `${fg ? 38 : 48};5;${n}`;
   }
   if (depth === "truecolor") {

@@ -56,6 +56,9 @@ export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontm
 function finish(lines: Line[], ctx: Ctx, width: number): Layout {
   const headings: LayoutHeading[] = [];
   lines.forEach((line, i) => {
+    // Constraint 2.9, as a last line of defence: no span leaves the layout carrying a terminal
+    // escape, whichever path built it (footnote labels, frontmatter keys, …).
+    for (const span of line.spans) span.text = sanitize(span.text);
     enforceRow(line, width);
     if (line.heading !== undefined) headings[line.heading] = { ...ctx.headings[line.heading]!, line: i };
     let col = 0;
@@ -521,6 +524,12 @@ function tableRecords(node: Table, cells: Span[][][], ctx: Ctx, width: number): 
       }
     });
   });
+  // A table with a header only: its column names, one per row, so it doesn't vanish.
+  if (!out.length && labels.length) {
+    const src = srcOf(node);
+    out.push(rule(src));
+    for (const l of labels) for (const row of wrapSpans([{ text: l, role: "table_header", attrs: A_BOLD }], width)) out.push({ spans: row, src });
+  }
   if (out.length) out.push(rule(srcOf(node)));
   return out;
 }

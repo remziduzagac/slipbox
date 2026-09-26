@@ -191,6 +191,12 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
       warnings.push(`config: ${file}: ${(err as Error).message.split("\n")[0]}`);
     }
   }
+  // The scratch's file name: a plain relative path inside the project, never empty, absolute or
+  // climbing out (a cloned vault's config must not aim `slipbox capture` at any file).
+  if (!isSafeRelative(config.capture.file)) {
+    warnings.push(`config: capture.file must be a relative path inside the project (got ${JSON.stringify(config.capture.file)}); using "${DEFAULT_CONFIG.capture.file}"`);
+    config.capture.file = DEFAULT_CONFIG.capture.file;
+  }
   return { config, sources, warnings };
 }
 
@@ -231,12 +237,23 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
         warnings.push(`config: ${file}: "${path}" must be one of ${allowed.join(", ")} (got "${value}")`);
       } else if (range && (!Number.isFinite(value as number) || (value as number) < range[0] || (value as number) > range[1])) {
         warnings.push(`config: ${file}: "${path}" must be between ${range[0]} and ${range[1]} (got ${value})`);
+      } else if (range && !FRACTIONAL.has(path) && !Number.isInteger(value)) {
+        warnings.push(`config: ${file}: "${path}" must be a whole number (got ${value})`);
       } else out[key] = value;
     } else {
       warnings.push(`config: ${file}: "${path}" must be a ${typeof current}`);
     }
   }
   return out as T;
+}
+
+/** Ranged settings that may be fractional; every other ranged number must be whole. */
+const FRACTIONAL = new Set(["ui.split_ratio"]);
+
+/** A relative path that stays inside its base: not empty, not absolute, no `..` segment. */
+export function isSafeRelative(p: string): boolean {
+  if (!p.trim() || p.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(p)) return false;
+  return !p.split(/[\\/]/).some((seg) => seg === "..");
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {

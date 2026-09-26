@@ -7,7 +7,9 @@ import { Keymap } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
 import { parseMarkdown, visit } from "../src/core/parse.ts";
-import { sanitize } from "../src/core/sanitize.ts";
+import { layoutToAnsi } from "../src/core/layout/ansi.ts";
+import { renderMarkdown } from "../src/core/layout/render.ts";
+import { expandTabs, sanitize } from "../src/core/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
@@ -232,4 +234,43 @@ describe("glyph sets", () => {
       }
     });
   }
+});
+
+describe("review round 2 (core)", () => {
+  const g = glyphsFor("unicode");
+  const text = (l: { lines: { spans: { text: string }[] }[] }) => l.lines.map((x) => x.spans.map((s) => s.text).join("")).join("\n");
+  test("footnote labels and frontmatter keys can't smuggle escapes into the layout", () => {
+    const fn = renderMarkdown("x[^a\u001bcb]\n\n[^a\u001bcb]: foot\n", { width: 60, glyphs: g, showUrls: false });
+    const fm = renderMarkdown('---\na: {"\u001b[31mRED": 1}\n---\n# T\n', { width: 60, glyphs: g, showUrls: false });
+    expect(text(fn)).not.toContain("\u001b");
+    expect(text(fm)).not.toContain("\u001b");
+  });
+  test("a header-only table survives a narrow width", () => {
+    const l = renderMarkdown("| a | b | c | d |\n|---|---|---|---|\n", { width: 12, glyphs: g, showUrls: false });
+    expect(text(l)).toContain("d");
+  });
+  test("tab stops count display columns", () => {
+    expect(expandTabs("日本\tx")).toBe("日本    x");
+  });
+  test("capture.file must stay inside the project; ranged numbers must be whole", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
+    for (const [value, needle] of [['""', "capture.file"], ['"../../escape.md"', "capture.file"]] as const) {
+      const file = join(dir, "c.toml");
+      writeFileSync(file, `[capture]\nfile = ${value}\n`);
+      const r = loadConfig({ configFile: file });
+      expect(r.config.capture.file).toBe("scratch.md");
+      expect(r.warnings.join("\n")).toContain(needle);
+    }
+    const file = join(dir, "i.toml");
+    writeFileSync(file, "[render]\ninset = 2.5\n");
+    const r = loadConfig({ configFile: file });
+    expect(r.config.render.inset).toBe(4);
+    expect(r.warnings.join("\n")).toContain("whole number");
+  });
+  test("a 256-colour palette entry is mapped to the 16 on a 16-colour terminal", () => {
+    const theme = loadTheme("tokyo-night").theme;
+    const t = { ...theme, roles: { ...theme.roles, text: { fg: "ansi:200" } } };
+    const out = layoutToAnsi(renderMarkdown("hello\n", { width: 20, glyphs: g, showUrls: false }), t, { depth: "16" });
+    expect(out).not.toContain("38;5;");
+  });
 });

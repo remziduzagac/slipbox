@@ -56,6 +56,8 @@ export interface Geometry {
   separators: Separator[];
   scrollbars: ScrollbarGeom[];
   tabStrip: Rect | null;
+  /** The which-key popup, with its margin: clicks there never reach what's under it. */
+  popup: Rect | null;
   /** Horizontal rules (row `y`, columns [x0, x1)) and the vertical borders they may meet. */
   rules: { y: number; x0: number; x1: number }[];
   verticals: { x: number; y0: number; y1: number; style: CellStyle }[];
@@ -79,7 +81,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const page = pageBg(theme);
   const W = c.width;
   const H = c.height;
-  const geo: Geometry = { panes: [], sidebar: null, outline: null, sidebarPane: null, outlinePane: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, rules: [], verticals: [], headerEnd: null };
+  const geo: Geometry = { panes: [], sidebar: null, outline: null, sidebarPane: null, outlinePane: null, tabs: [], overlay: null, hot: [], separators: [], scrollbars: [], tabStrip: null, popup: null, rules: [], verticals: [], headerEnd: null };
   c.fill(0, 0, W, H, page);
   if (W < 10 || H < 4) {
     drawText(c, 0, 0, "slipbox: too small", roleStyle(theme, "warn", page), W);
@@ -123,7 +125,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   }
   // The rightmost top window's header runs over the outline's column, which starts under it.
   const overOutline = app.outlineShown && app.outlineBeside ? right : 0;
-  drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, frame, overOutline, geo);
+  drawContent(app, c, { x: left, y: mainY, w: Math.max(0, W - left - right), h: mainH }, frame, overOutline, geo);
   // After the windows: the top bar carries the outline's button when no breadcrumb row did.
   if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
 
@@ -141,7 +143,9 @@ export function drawApp(app: App, c: Canvas): Geometry {
     // Over the content (narrow or zen), a two-column margin past its border sets it apart.
     if (!app.sidebarBeside) {
       c.fill(w + 1, sideY, 2, bottom + 1 - sideY, roleStyle(theme, "sidebar", page).bg);
-      coverHot(geo, { x: 0, y: sideY, w: w + 3, h: bottom + 1 - sideY });
+      // Over the note, its border and margin are the pane's too: clicks there stay in it.
+      geo.sidebarPane = { x: 0, y: sideY, w: w + 3, h: bottom + 1 - sideY };
+      coverHot(geo, geo.sidebarPane);
     }
     if (beside) {
       geo.separators.push({ kind: "sidebar", x: w, y: sideY, w: 1, h: bottom + 1 - sideY });
@@ -157,7 +161,8 @@ export function drawApp(app: App, c: Canvas): Geometry {
     geo.outlinePane = rect;
     if (!app.outlineBeside) {
       c.fill(W - w - 3, top, 2, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
-      coverHot(geo, { x: W - w - 3, y: top, w: w + 3, h: bottom + 1 - top });
+      geo.outlinePane = { x: W - w - 3, y: top, w: w + 3, h: bottom + 1 - top };
+      coverHot(geo, geo.outlinePane);
     }
     const border = roleStyle(theme, "border", page);
     for (let y = top; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
@@ -400,6 +405,7 @@ function paneIsActive(app: App, view: View): boolean {
  * that many columns to its right (the outline and its border), carrying the outline's button.
  */
 function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: boolean, titled: boolean, ruleAbove: boolean, overOutline: number, geo: Geometry): void {
+  if (rect.w < 8 || rect.h < 1) return; // too small to draw a window (a tiny terminal)
   const theme = app.theme;
   const page = pageBg(theme);
   const active = paneIsActive(app, view);
@@ -723,10 +729,11 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
   x += drawText(c, x, y, " ", st);
   const pathId = "status:path";
-  // The path keeps room for the watch marker only when both fit; otherwise it takes the room.
+  // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
+  // the watch marker after it is dropped when it doesn't fit.
   const full = app.displayName(buf);
-  const pathRoom = Math.max(4, c.width - x - rightW - 2);
-  const pathW = stringWidth(full) + 16 <= pathRoom ? pathRoom : Math.max(4, pathRoom);
+  const marker = buf.deleted ? " ✖ deleted on disk" : changed ? " ↻ reloaded" : "";
+  const pathW = Math.max(4, c.width - x - rightW - 2 - stringWidth(marker));
   const pw = drawText(c, x, y, truncate(full, pathW), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
   geo.hot.push({ id: pathId, x, y: band.y, w: pw, h: band.h });
   x += pw;
@@ -815,6 +822,8 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   const dim = roleStyle(theme, "overlay_dim", null);
   const desc = { ...dim, bg: bg.bg };
   c.fill(x0 - 2, y0 - 1, w + 4, h + 2, bg.bg);
+  geo.popup = { x: x0 - 2, y: y0 - 1, w: w + 4, h: h + 2 };
+  coverHot(geo, geo.popup);
   const b = app.glyphs.box;
   const name = app.groupName(app.pending);
   const title = app.pending.length ? ` ${shownKey(app.pending.join(" "))} ›${name ? ` ${name}` : ""} ` : ` ${name} `;

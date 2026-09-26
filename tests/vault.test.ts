@@ -169,3 +169,42 @@ describe("CLI parity (Principles)", () => {
     }
   });
 });
+
+describe("review round 2 (CLI)", () => {
+  const vault = (files: Record<string, string>) => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-r2-"));
+    mkdirSync(join(dir, ".slipbox"));
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);
+    return dir;
+  };
+  test("--json prints one envelope even for usage errors, help and version", async () => {
+    const bad = await cli(["ls", "--json", "--bogus"]);
+    expect(bad.code).toBe(2);
+    expect(JSON.parse(bad.out)).toMatchObject({ ok: false, error: { code: 2 }, warnings: [], stale: [] });
+    expect(JSON.parse((await cli(["help", "--json"])).out)).toMatchObject({ ok: true, command: "help" });
+    expect(JSON.parse((await cli(["-V", "--json"])).out)).toMatchObject({ ok: true, warnings: [], stale: [] });
+  });
+  test("shared flags are checked for every command", async () => {
+    expect((await cli(["ls", "--color", "bogus"])).code).toBe(2);
+    expect((await cli(["render", "notes/alpha.md", "--width", "0x20"])).code).toBe(2);
+  });
+  test("plain output never carries a note's escapes", async () => {
+    const dir = vault({ "o.md": "# Title \u001b]0;HACKED\u0007 \u001b[31mred\n" });
+    const r = await cli(["outline", join(dir, "o.md"), "--root", dir]);
+    expect(r.out).toContain("Title");
+    expect(r.out).not.toContain("\u001b");
+  });
+  test("a note named with a colon resolves as a note, not a URL", async () => {
+    const dir = vault({ "Meeting: Q3.md": "# Q3\n" });
+    const r = JSON.parse((await cli(["resolve", "Meeting: Q3", "--root", dir, "--json"])).out);
+    expect(r.data).toMatchObject({ status: "resolved", path: "Meeting: Q3.md" });
+    expect(JSON.parse((await cli(["resolve", "https://x.y", "--root", dir, "--json"])).out).data.status).toBe("external");
+  });
+  test("a markdown link in the wrong case resolves to the note's own path, and counts as a backlink", async () => {
+    const dir = vault({ "note.md": "# note\n", "linker.md": "[x](Note.md)\n" });
+    const links = JSON.parse((await cli(["links", join(dir, "linker.md"), "--root", dir, "--json"])).out);
+    expect(links.data[0].path).toBe("note.md");
+    const bl = JSON.parse((await cli(["backlinks", join(dir, "note.md"), "--root", dir, "--json"])).out);
+    expect(bl.data.backlinks.map((b: { from: string }) => b.from)).toContain("linker.md");
+  });
+});

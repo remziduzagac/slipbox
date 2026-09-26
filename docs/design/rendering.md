@@ -115,8 +115,9 @@ prediction is exactly what is drawn.
 | `large-document.md` | 19 ms |
 | `overlong-table-rows.md` | 6 ms |
 
-**Records.** Below a useful width, one record per row: labels in an aligned column (at most a
-third of the width), values wrapped beside them.
+**Records.** Below a useful width, one record per row: labels in an aligned column (at most a third
+of the width), values wrapped beside them. A table with a header row only shows its column names,
+one per row, rather than nothing.
 
 **Verified by properties.** `tests/render.test.ts` runs 5,000 generated allocations checking
 the budget and minimums. It also runs 400 generated tables where the chosen allocation must
@@ -199,8 +200,11 @@ The Nerd set uses the same heading icons as the render-markdown configuration it
 `core/sanitize.ts` removes CSI, OSC, DCS/APC and two-byte escape sequences, bare C0 and C1
 controls, and bidi override and isolate characters, which are used for display spoofing. Every
 string entering the IR passes through it: text, code, HTML, frontmatter, link targets and
-language labels. The fixture `tests/fixtures/vault/escapes.md` holds a hostile note, and the
-tests check that neither face ever emits an escape from it.
+language labels. As a backstop, the layout's final pass sanitizes every span again, whichever
+path built it (footnote labels and nested frontmatter keys were found that way). The fixture
+`tests/fixtures/vault/escapes.md` holds a hostile note, and the tests check that neither face
+ever emits an escape from it. Tabs expand to stops of 4 display columns (a CJK character counts
+two).
 
 ## Code-fence highlighting (plan `2.5`)
 
@@ -212,6 +216,7 @@ auto-detection is slow and often wrong. Scopes map to the `syn_*` roles. It live
 ## The ANSI writer
 
 `layout/ansi.ts` writes the IR as text for `slipbox render`. Colour depth comes from `NO_COLOR`,
-whether stdout is a TTY, `COLORTERM` and `TERM`: truecolor, 256, 16, or none. The 256- and
-16-colour paths approximate the theme's colours. With `--plain`, `--color never`, or when stdout
-is piped, the output contains no escape sequences at all.
+whether stdout is a TTY, `COLORTERM` and `TERM`: truecolor, 256, 16, or none. The 256- and 16-colour
+paths approximate the theme's colours. With `--plain`, `--color never`, or when stdout is piped, the
+output contains no escape sequences at all. A 256-colour palette entry (from `[colors]`, say)
+becomes the nearest of the 16 on a 16-colour terminal.

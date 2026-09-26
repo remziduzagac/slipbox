@@ -230,6 +230,13 @@ export class Graph {
     else if (!list.includes(rel)) list.push(rel);
   }
 
+  removeAsset(rel: string): void {
+    const key = rel.slice(rel.lastIndexOf("/") + 1).normalize("NFC").toLowerCase();
+    const list = this.assets.get(key)?.filter((p) => p !== rel);
+    if (list?.length) this.assets.set(key, list);
+    else this.assets.delete(key);
+  }
+
   removeFile(rel: string): void {
     this.unparsed.delete(rel);
     if (!this.notes.delete(rel)) return;

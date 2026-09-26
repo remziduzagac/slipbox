@@ -67,6 +67,9 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   const canvas = () => {
     const c = new TextCanvas(W, H);
     app.draw(c);
+    // The app survives a drawing bug in use; tests must not.
+    const failed = app.messages.find((m) => m.text.startsWith("drawing failed"));
+    if (failed) throw new Error(failed.text);
     return c;
   };
   const frame = () => canvas().toString();
@@ -1204,6 +1207,82 @@ describe("review round 1", () => {
   });
 });
 
+describe("review round 2", () => {
+  const click = (h: Harness, x: number, y: number) => {
+    h.app.handleMouse({ type: "down", x, y, button: 0 });
+    h.app.handleMouse({ type: "up", x, y, button: 0 });
+    h.frame();
+  };
+  test("side panes can't squeeze the note to nothing: no crash with a split and wide panes", async () => {
+    const h = await harness({ open: "samples/README.md", width: 100, height: 30, config: (c) => ((c.ui.outline = true), (c.ui.sidebar_width = 60), (c.ui.outline_width = 60)) });
+    await h.keys("ctrl+w", "v");
+    h.frame(); // throws on a drawing failure
+    expect(h.app.contentWidth()).toBeGreaterThanOrEqual(24);
+  });
+  test("an overlaid explorer keeps clicks on its border and margin", async () => {
+    const h = await harness({ open: "samples/README.md", width: 70, height: 30 });
+    await h.keys("ctrl+e");
+    h.frame();
+    const p = h.app.geometry!.sidebarPane!;
+    const cur = { ...h.app.view!.cur };
+    click(h, p.x + p.w - 1, p.y + 6); // the margin, over the note
+    expect(h.app.view!.cur).toEqual(cur);
+    expect(h.app.region).toBe("sidebar");
+  });
+  test("focusing a pane brings its selection back after the wheel moved the view", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, height: 16 });
+    h.frame();
+    const p = h.app.geometry!.sidebarPane!;
+    for (let i = 0; i < 3; i++) h.app.handleMouse({ type: "scroll", x: p.x + 3, y: p.y + 3, button: 0, scroll: { direction: "down", delta: 1 } });
+    expect(h.app.sidebar.pinned).toBe(true);
+    await h.keys("ctrl+e");
+    h.frame();
+    expect(h.app.sidebar.pinned).toBe(false);
+    const list = h.app.geometry!.sidebar!;
+    expect(h.app.sidebar.selected).toBeGreaterThanOrEqual(h.app.sidebar.scroll);
+    expect(h.app.sidebar.selected).toBeLessThan(h.app.sidebar.scroll + list.h);
+  });
+  test("a selection stays on the same source lines when the width changes", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
+    for (let i = 0; i < 12; i++) await h.keys("j");
+    await h.keys("shift+v", "j", "j");
+    const lines = () => {
+      const v = h.app.view!;
+      const l = h.app.currentLayout(v);
+      return [l.lines[v.sel!.anchor.row]!.src, l.lines[v.cur.row]!.src];
+    };
+    const before = lines();
+    await h.keys("ctrl+e", "escape"); // the explorer takes width: the note re-wraps
+    h.frame();
+    // The same place (a blank line between paragraphs has no row, so the next one stands in),
+    // never another paragraph as before.
+    const after = lines();
+    expect(Math.abs(after[0]! - before[0]!)).toBeLessThanOrEqual(1);
+    expect(after[1]).toBe(before[1]);
+  });
+  test("a which-key entry takes its click, not what's under the popup", async () => {
+    const h = await harness({ open: "samples/links-and-unicode.md", width: 120, height: 30 });
+    await h.keys("ctrl+w", "s", "ctrl+w", "j");
+    await h.keys("space");
+    h.frame();
+    for (const r of h.app.geometry!.hot.filter((x) => x.id.startsWith("wk:"))) {
+      const at = h.app.geometry!.hot.find((x) => x.x <= r.x + 1 && r.x + 1 < x.x + x.w && x.y <= r.y && r.y < x.y + x.h)!;
+      expect(at.id).toBe(r.id);
+    }
+  });
+  test("an empty search clears the find; ':theme ' + enter applies the highlighted theme", async () => {
+    const h = await harness({ width: 120, height: 30 });
+    await h.keys("/", "enter");
+    expect(h.app.view!.find).toBeNull();
+    await h.keys(":", "t", "h", "e", "m", "e", "space");
+    const o = h.app.overlay as ListOverlay;
+    const pick = o.filtered[o.selected]!.item.data as string;
+    await h.keys("enter");
+    expect(h.app.overlay).toBeNull();
+    expect(`theme.set ${h.app.ui.theme}`).toBe(pick);
+  });
+});
+
 describe("wrap (space u s, ui.wrap)", () => {
   test("off: natural width, one row per paragraph, the view follows the cursor sideways", async () => {
     const h = await harness({ open: "samples/wide-tables.md", width: 110, config: (c) => (c.ui.sidebar = false) });
@@ -1359,9 +1438,9 @@ describe("mouse", () => {
     const n = await harness({ width: 70, height: 30 });
     await n.keys("ctrl+e");
     n.frame();
-    const p = n.app.geometry!.sidebarPane!;
+    const p = n.app.geometry!.sidebarPane!; // over the note, the pane's area includes its border and margin
     const nc = n.canvas();
-    for (let y = p.y; y < p.y + p.h; y++) expect(nc.rows[y]!.slice(p.w + 1, p.w + 3).join("")).toBe("  ");
+    for (let y = p.y; y < p.y + p.h; y++) expect(nc.rows[y]!.slice(p.x + p.w - 2, p.x + p.w).join("")).toBe("  ");
   });
   test("the wheel scrolls a list; the selection moves only to stay in view", async () => {
     const h = await harness({ width: 140, height: 40 });

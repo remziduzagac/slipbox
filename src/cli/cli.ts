@@ -21,6 +21,7 @@ import { parseMarkdown, slugify } from "../core/parse.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
+import { sanitize } from "../core/sanitize.ts";
 import { readText } from "../core/fsutil.ts";
 import { initVault, isInside, locateVault, readVaultVersion, VaultError, type VaultLocation } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
@@ -116,21 +117,26 @@ export const CLI_COMMANDS = new Set([
 
 /** Run a CLI command. Returns the exit code; never calls process.exit itself. */
 export async function runCli(argv: string[], io: Io): Promise<number> {
+  // `--json` promises exactly one object on stdout, whatever happens: usage errors included.
+  const envelope = (o: { ok: boolean; command: string; data?: unknown; error?: { code: number; message: string }; warnings?: string[]; stale?: string[] }) =>
+    `${JSON.stringify({ schema: JSON_SCHEMA, ok: o.ok, command: o.command, ...(o.error ? { error: o.error } : {}), data: o.data ?? null, warnings: o.warnings ?? [], stale: o.stale ?? [] })}\n`;
   let args: Args;
   try {
     args = parseArgs(argv);
   } catch (err) {
-    io.err(`slipbox: ${(err as Error).message}\n`);
+    const message = (err as Error).message;
+    if (argv.includes("--json")) io.out(envelope({ ok: false, command: argv.find((a) => !a.startsWith("-")) ?? "help", error: { code: EXIT.usage, message } }));
+    else io.err(`slipbox: ${message}\n`);
     return EXIT.usage;
   }
   const json = has(args, "json");
   const [command = "help", ...rest] = args.positional;
   if (has(args, "version")) {
-    io.out(json ? `${JSON.stringify({ schema: JSON_SCHEMA, ok: true, command: "version", data: { version: VERSION } })}\n` : `slipbox ${VERSION}\n`);
+    io.out(json ? envelope({ ok: true, command: "version", data: { version: VERSION } }) : `slipbox ${VERSION}\n`);
     return EXIT.ok;
   }
   if (command === "help" || has(args, "help")) {
-    io.out(HELP);
+    io.out(json ? envelope({ ok: true, command: "help", data: { text: HELP } }) : HELP);
     return EXIT.ok;
   }
   let session: Session | null = null;
@@ -140,6 +146,9 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
       command === "init"
         ? { root: io.cwd, mode: "single" as const, file: null }
         : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
+    // Flags every command shares are checked for every command, used or not.
+    const color = flag(args, "color");
+    if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);
@@ -148,7 +157,9 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     if (json) {
       io.out(`${JSON.stringify({ schema: JSON_SCHEMA, ok: true, command, data: result.data, warnings: session.allWarnings(), stale: stale.map((s) => s.path) })}\n`);
     } else {
-      if (result.human) io.out(result.human);
+      // Note text reaches the terminal only sanitized (2.9). `render` is the exception: its output
+      // is a layout, sanitized when built, plus the colours it adds on purpose.
+      if (result.human) io.out(command === "render" ? result.human : sanitize(result.human));
       for (const w of session.allWarnings()) io.err(`slipbox: warning: ${w}\n`);
       if (stale.length) io.err(`slipbox: warning: unsaved changes in a running slipbox: ${stale.map((s) => s.path).join(", ")}\n`);
     }
@@ -157,7 +168,13 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     const code = err instanceof CliError ? err.code : err instanceof UsageError ? EXIT.usage : err instanceof VaultError ? EXIT.notFound : EXIT.error;
     const message = (err as Error).message;
     if (json) {
-      io.out(`${JSON.stringify({ schema: JSON_SCHEMA, ok: false, command, error: { code, message }, data: err instanceof CliError ? (err.data ?? null) : null, warnings: session?.allWarnings() ?? [], stale: [] })}\n`);
+      let stale: string[] = [];
+      try {
+        stale = session && command !== "init" ? session.stale().map((x) => x.path) : [];
+      } catch {
+        // the error came from the session itself; no stale list then
+      }
+      io.out(envelope({ ok: false, command, error: { code, message }, data: err instanceof CliError ? (err.data ?? null) : null, warnings: session?.allWarnings() ?? [], stale }));
     } else {
       io.err(`slipbox: ${message}\n`);
       if (!(err instanceof CliError) && !(err instanceof UsageError) && !(err instanceof VaultError) && io.env.SLIPBOX_DEBUG) io.err(`${(err as Error).stack}\n`);
@@ -225,7 +242,8 @@ const HANDLERS: Record<string, Handler> = {
     const decoded = readText(abs);
     const depth = colorDepth(s);
     const widthArg = flag(s.args, "width");
-    const pane = widthArg ? Number(widthArg) : (s.io.columns ?? 100);
+    if (widthArg !== undefined && !/^\d+$/.test(widthArg)) throw new UsageError("--width must be a whole number from 20 to 1000");
+    const pane = widthArg !== undefined ? Number(widthArg) : (s.io.columns ?? 100);
     if (!Number.isInteger(pane) || pane < 20 || pane > 1000) throw new UsageError("--width must be a whole number from 20 to 1000");
     const width = layoutWidth(pane, s.config.render.inset);
     const themeName = flag(s.args, "theme") ?? s.config.theme;
@@ -259,7 +277,11 @@ const HANDLERS: Record<string, Handler> = {
     let status: string;
     let path: string | null = null;
     let candidates: string[] = [];
-    if (/^[a-z][a-z0-9+.-]*:/i.test(inner)) {
+    // A scheme makes it external only outside [[…]] (as the renderer has it) and when no note by
+    // that name exists: "Meeting: Q3" is a note.
+    const bracketed = /^!?\[\[/.test(raw);
+    const noteNamed = s.graph.findNote(parts.target, s.io.cwd).status !== "unresolved";
+    if (!bracketed && /^[a-z][a-z0-9+.-]*:/i.test(inner) && !noteNamed) {
       status = "external";
       path = inner;
     } else if (!parts.target && from) {

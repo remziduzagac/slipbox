@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
-import type { Config } from "./config.ts";
+import { type Config, isSafeRelative } from "./config.ts";
 import { atomicWrite, ensureDir } from "./fsutil.ts";
 import { stateDir } from "./paths.ts";
 import { sanitize } from "./sanitize.ts";
@@ -20,8 +20,10 @@ export interface ScratchLocation {
 
 /** Where the scratch lives for a project (0.10 / 8.2). */
 export function scratchLocation(project: string, config: Config): ScratchLocation {
-  if (config.capture.location === "vault") return { path: join(project, config.capture.file), project };
-  return { path: join(stateDir(project), config.capture.file), project };
+  // Config validation already refuses an unsafe name; this holds even if one got through.
+  const file = isSafeRelative(config.capture.file) ? config.capture.file : "scratch.md";
+  if (config.capture.location === "vault") return { path: join(project, file), project };
+  return { path: join(stateDir(project), file), project };
 }
 
 export class CaptureError extends Error {}
@@ -105,7 +107,10 @@ export function formatEntry(input: CaptureInput, project: string): string {
       if (body === undefined) {
         if (!existsSync(abs)) throw new CaptureError(`${input.ref.path}: no such file for --snippet`);
         const lines = readFileSync(abs, "utf8").split(/\r?\n/);
-        if (input.ref.startLine > lines.length) throw new CaptureError(`${input.ref.path} has ${lines.length} lines; ${input.ref.startLine} is past the end`);
+        // A final newline ends the last line; it doesn't start another.
+        if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+        const last = input.ref.endLine ?? input.ref.startLine;
+        if (last > lines.length) throw new CaptureError(`${input.ref.path} has ${lines.length} lines; ${last} is past the end`);
         body = lines.slice(input.ref.startLine - 1, input.ref.endLine).join("\n");
       }
       if (body !== undefined) parts.push(fence(sanitize(body), input.lang ?? fenceLanguage(abs)));

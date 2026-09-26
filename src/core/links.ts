@@ -63,6 +63,11 @@ export class LinkIndex {
     return this.byPath.has(normKey(stripExt(rel)));
   }
 
+  /** The note's own path for a path matched case-insensitively (`Note.md` → `note.md`), or null. */
+  canonical(rel: string): string | null {
+    return this.atPath(rel)[0] ?? null;
+  }
+
   /** The note at a path (case-insensitive), preferring an exact match. */
   private atPath(rel: string): string[] {
     const list = this.byPath.get(normKey(stripExt(rel))) ?? [];
@@ -176,7 +181,9 @@ export function resolveMarkdownUrl(url: string, fromRel: string, root: string, i
     : posix.normalize(posix.join(posix.dirname(fromRel), pathPart));
   if (rel.startsWith("..")) return { kind: "missing", target: rel, fragment };
   if (NOTE_EXT.test(rel)) {
-    if (index.has(rel)) return { kind: "note", target: rel, fragment };
+    // The note's own spelling, not the link's: a path that exists, and the key backlinks use.
+    const canon = index.canonical(rel);
+    if (canon) return { kind: "note", target: canon, fragment };
     return { kind: fileExists(root, rel) ? "file" : "missing", target: rel, fragment };
   }
   return { kind: fileExists(root, rel) ? "file" : "missing", target: rel, fragment };

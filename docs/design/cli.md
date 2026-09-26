@@ -20,7 +20,8 @@ Phase 2's TUI never has unsaved changes, so the list stays empty until phase 3.
 ## Output contract (plan `9.2`)
 
 - **Human output** goes to stdout and diagnostics to stderr, prefixed `slipbox: warning:`.
-- **`--json`** prints exactly one object on stdout, whatever happens:
+- **`--json`** prints exactly one object on stdout, whatever happens: a usage error (an unknown
+  flag, say), `help` (its text in `data.text`) and `-V` included:
 
 ```json
 {"schema": 1, "ok": true, "command": "links", "data": [], "warnings": [], "stale": []}
@@ -33,7 +34,10 @@ Phase 2's TUI never has unsaved changes, so the list stays empty until phase 3.
 - **Exit codes:** `0` ok, `1` error, `2` usage, `3` not found, `4` ambiguous, `5` refused
   (`--if-unchanged`).
 - **Flags.** Global flags may come before or after the command. An unknown flag is a usage
-  error. `--width` takes a whole number from 20 to 1000.
+  error, and so is a bad value of a shared flag on any command (`--color` must be `auto`,
+  `always` or `never`). `--width` takes a whole number from 20 to 1000, written in digits.
+- **Human output** of note text (headings, link text, paths, the scratch) is sanitized like the
+  TUI's (constraint `2.9`); only `render`'s own colours are escape codes.
 - **Colour:** `render` colours only when stdout is a TTY and `NO_COLOR` is unset; `--color always`
   forces it (even with `NO_COLOR`). `--plain`, `--color never` or a pipe give output with no
   escapes. `--theme` and `--glyphs auto|nerd|unicode|ascii` override the config for one render.
@@ -69,6 +73,11 @@ These churn freely before 1.0:
 | `info` | root, mode, marker version, paths, index stats, skipped entries, stale |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
+
+`resolve` treats a target with a scheme (`https:`) as external only outside `[[…]]` and when no
+note has that name: `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A markdown link resolves to the
+note's own path whatever case the link uses (`[x](Note.md)` → `note.md`), so it counts as a
+backlink.
 
 ## Naming notes
 

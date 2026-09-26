@@ -13,7 +13,8 @@ slipbox runs correctly with no config at all. None of these crash it:
 - an unknown key
 - a wrong type
 - a value outside its set (`glyphs`, `show_urls`, `location`)
-- a number out of range (`inset` 0–40, `sidebar_width` 8–200, `poll_ms` ≥ 50…)
+- a number out of range (`inset` 0–40, `sidebar_width` 8–200, `poll_ms` ≥ 50…), or a fraction
+  where a whole number is meant (only `ui.split_ratio` is fractional)
 
 Each is a warning in the message sink (the TUI) or on stderr (the CLI). The key keeps its
 default, and the rest of the file still applies.
@@ -60,7 +61,7 @@ which_key_delay_ms = 500       # before it shows for prefixes other than the lea
 
 [capture]
 location = "state"             # state (never committed) | vault
-file = "scratch.md"            # relative to the vault root when location = "vault"
+file = "scratch.md"            # relative; never empty, absolute or with ".." (else the default)
 
 [editor]
 command = ""                   # phase 3: `$EDITOR` hand-off template with {file} and {line}
