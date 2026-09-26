@@ -90,9 +90,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const tabBar = app.tabs.length > 0 && !zen ? 1 : 0;
   const status = zen ? 0 : 1;
   const bottomLine = app.overlay?.kind === "prompt" || app.transient ? 1 : 0;
-  // A blank row above the top bar gives it air on top; the frame's rule under it gives the rest.
-  const barY = topBar;
-  const head = topBar ? barY + 1 : 0;
+  const head = topBar;
   // The frame: a rule across the top of the explorer, the tab strip (or the window) and the
   // outline, and one across their bottom; with tabs, another under the strip, over the note and
   // the outline. Zen has none.
@@ -113,7 +111,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     geo.rules.push({ y, x0, x1 });
   };
 
-  if (topBar) drawTopBar(app, c, { y: barY, h: 1 }, geo);
+  if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
   if (frame) {
     rule(head, 0, W);
     rule(bottom + 1, 0, W);
