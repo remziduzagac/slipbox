@@ -315,6 +315,7 @@ export function monoTheme(): Theme {
   roles.cursor_line = {};
   roles.hover = { inverse: true };
   roles.topbar_button_on = { bold: true };
+  roles.sidebar_active = { bold: true }; // the current note / section, without colour
   roles.topbar_button = { dim: true };
   return { ...t, name: "mono", roles };
 }

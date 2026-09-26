@@ -354,7 +354,7 @@ export function keyName(k: KeyLike): string {
   return canonKey([...mods, name.length === 1 ? name.toLowerCase() : name].join("+"));
 }
 
-/** Short human form for the popup, palette and help: `ctrl+w shift+h` → `C-w S-h`. */
+/** Short human form for which-key and the status line: `ctrl+w shift+h` → `C-w S-h`. */
 /** A key sequence spelled out for reading (help, the palette): `ctrl+d`, `space l y`, `esc`. */
 export function spellKey(seq: string): string {
   return seq

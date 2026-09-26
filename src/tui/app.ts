@@ -182,6 +182,8 @@ export interface SidePaneState {
   overlay: boolean;
   selected: number;
   scroll: number;
+  /** The wheel scrolled it: the view stays put, not pulled back to the selection. */
+  pinned?: boolean;
 }
 
 export interface TreeRow {
@@ -215,7 +217,8 @@ export function uiDefaults(c: Config): UiState {
     readable_width: c.ui.readable_width,
     zen: c.ui.zen,
     mouse: c.ui.mouse,
-    urls: c.render.show_urls === "always",
+    // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
+    urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,
     glyphs: c.render.glyphs,
   };
@@ -316,6 +319,8 @@ export class App {
     for (const e of this.graph.errors) this.message("warn", e);
 
     this.recentCommands = (loadSession(this.loc.root)?.recent_commands ?? []).filter((id) => typeof id === "string").slice(0, RECENT_MAX);
+    this.restoreUiOverrides();
+    if (opts.themeName) this.ui.theme = opts.themeName; // an explicit theme beats a remembered one
     const restored = !opts.open && this.config.ui.restore_session && this.restoreSession();
     this.applyTheme();
     this.glyphs = glyphsFor(this.ui.glyphs);
@@ -364,9 +369,9 @@ export class App {
     this.theme = t.theme;
   }
 
-  /** A theme by name with the config's `[colors]` overrides on top. */
+  /** A theme by name with the config's `[colors]` overrides on top; always mono under NO_COLOR. */
   themeNamed(name: string): { theme: Theme; warnings: string[] } {
-    const t = loadTheme(name);
+    const t = loadTheme(process.env.NO_COLOR ? "mono" : name);
     const o = applyColorOverrides(t.theme, this.config.colors);
     return { theme: o.theme, warnings: [...(t.warning ? [t.warning] : []), ...o.warnings] };
   }
@@ -719,6 +724,7 @@ export class App {
 
   /** Move the cursor (extending the selection when asked, or in visual mode). */
   moveCursor(view: View, to: Pos, opts: { extend?: boolean; keepGoal?: boolean } = {}): void {
+    this.outline.pinned = false; // the outline follows the cursor's section again
     const layout = this.currentLayout(view);
     const extend = opts.extend || view.visual !== null;
     if (extend && !view.sel) view.sel = { anchor: { ...view.cur }, line: view.visual === "line" };
@@ -1007,6 +1013,7 @@ export class App {
   }
 
   explorerAction(action: string): void {
+    this.sidebar.pinned = false;
     const rows = this.treeRows();
     const row = rows[this.sidebar.selected];
     const openNote = (where: "here" | "tab" | "split") => {
@@ -1113,6 +1120,7 @@ export class App {
   }
 
   outlineAction(action: string): void {
+    this.outline.pinned = false;
     const rows = this.outlineRows();
     const row = rows[this.outline.selected];
     const view = this.view;
@@ -1217,10 +1225,16 @@ export class App {
   }
 
   // -------------------------------------------------------------------------------------------
-  // Input. Dispatch order (decision 3.11): overlay → pending sequence → focused pane keys →
-  // visual-mode keys → the normal keymap. The which-key popup shows while a sequence is pending.
+  // Input. Dispatch order (decision 3.11): overlay → resize mode → pending sequence → focused
+  // pane keys → visual-mode keys → the normal keymap. The which-key popup shows while a sequence is pending.
+
+  /** Focus never stays on a hidden pane (after zen, a config reload, a resize): back to the note. */
+  fixRegion(): void {
+    if ((this.region === "sidebar" && !this.sidebarShown) || (this.region === "outline" && !this.outlineShown)) this.region = "content";
+  }
 
   async handleKey(key: string): Promise<void> {
+    this.fixRegion();
     try {
       await this.dispatchKey(key);
     } catch (err) {
@@ -1358,6 +1372,7 @@ export class App {
         return o.accept(o.text);
       }
       if (key === "backspace") o.text = [...o.text].slice(0, -1).join("");
+      else if (key === "ctrl+w") o.text = o.text.replace(/\S*\s*$/, "");
       else if (key === "ctrl+u") o.text = "";
       else if (typed !== null) o.text += typed;
       else return;
@@ -1462,7 +1477,7 @@ export class App {
     }
     if (ev.type !== "down") return;
     const idx = ev.y - r.listY + o.scroll;
-    if (ev.x >= r.x && ev.x < r.x + r.w && ev.y >= r.listY && idx < o.filtered.length) {
+    if (ev.x >= r.x && ev.x < r.x + r.w && ev.y >= r.listY && ev.y < r.listY + r.rows && idx < o.filtered.length) {
       if (o.filtered[idx]!.item.header) return;
       o.selected = idx;
       return void this.overlayKey(o, "enter");
@@ -1487,9 +1502,14 @@ export class App {
       }
       return;
     }
-    if (pane) this.scrollBy(pane.view, dir * n, false);
-    else if (g.sidebar && inRect(g.sidebar, ev.x, ev.y)) this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
-    else if (g.outline && inRect(g.outline, ev.x, ev.y)) this.outline.scroll = Math.max(0, this.outline.scroll + dir * n);
+    // Side panes first: on narrow screens they lie over the note.
+    if (g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {
+      this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
+      this.sidebar.pinned = true;
+    } else if (g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)) {
+      this.outline.scroll = Math.max(0, this.outline.scroll + dir * n);
+      this.outline.pinned = true;
+    } else if (pane) this.scrollBy(pane.view, dir * n, false);
   }
 
   /** Click count at this spot: 1, 2 (double) or 3 (triple), within 400 ms. */
@@ -1576,6 +1596,7 @@ export class App {
     if (clicks === 3) {
       view.sel = { anchor: { row: pos.row, col: 0 }, line: true };
       view.cur = pos;
+      view.curAnchor = this.cursorAnchorFor(layout, pos);
       this.copySelectionQuietly(view);
       return;
     }
@@ -1623,6 +1644,8 @@ export class App {
     d.view.sel = { anchor: d.start, line: false };
     d.view.cur = pos;
     d.view.goal = pos.col;
+    // The anchor too, so a re-layout (a message line appearing, a resize) keeps the cursor here.
+    d.view.curAnchor = this.cursorAnchorFor(layout, pos);
     d.moved = true;
   }
 
@@ -1705,10 +1728,14 @@ export class App {
     this.recentCommands = [id, ...this.recentCommands.filter((x) => x !== id)].slice(0, RECENT_MAX);
   }
 
+  /** Close a tab by index; the tab you're on stays active (shifted if one before it closed). */
   closeTabAt(index: number): void {
     if (index < 0 || index >= this.tabs.length) return;
-    this.activeTab = index;
-    this.closeTab();
+    if (index === this.activeTab) return this.closeTab();
+    if (this.tabs.length <= 1) return;
+    const [t] = this.tabs.splice(index, 1);
+    for (const v of t!.views) this.remember(v);
+    if (index < this.activeTab) this.activeTab--;
   }
 
   resize(width: number, height: number): void {
@@ -1719,6 +1746,7 @@ export class App {
   draw(canvas: Canvas): void {
     this.width = canvas.width;
     this.height = canvas.height;
+    this.fixRegion();
     this.geometry = drawApp(this, canvas);
   }
 
@@ -1888,18 +1916,25 @@ export class App {
   // -------------------------------------------------------------------------------------------
   // Session (3.15)
 
-  private restoreSession(): boolean {
+  /**
+   * UI settings changed in the TUI, on every start (with a path too, and with restore_session
+   * off): a session value is kept only while the config value it overrode is unchanged.
+   */
+  private restoreUiOverrides(): void {
     const s = loadSession(this.loc.root);
-    if (!s) return false;
-    // UI settings: a session value is kept only while the config value it overrode is unchanged.
     const defaults = uiDefaults(this.config);
-    for (const [k, o] of Object.entries(s.ui ?? {})) {
+    for (const [k, o] of Object.entries(s?.ui ?? {})) {
       if (!(k in defaults) || !o || typeof o !== "object") continue;
       if (JSON.stringify(defaults[k as keyof UiState]) !== JSON.stringify(o.base)) continue;
       if (typeof o.value !== typeof defaults[k as keyof UiState]) continue;
       (this.ui as unknown as Record<string, unknown>)[k] = o.value;
       this.uiOverrides[k] = o;
     }
+  }
+
+  private restoreSession(): boolean {
+    const s = loadSession(this.loc.root);
+    if (!s) return false;
     for (const t of s.tabs) {
       const views: View[] = [];
       for (const p of t.panes) {

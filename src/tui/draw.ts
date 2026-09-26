@@ -138,7 +138,10 @@ export function drawApp(app: App, c: Canvas): Geometry {
     geo.sidebar = list;
     geo.sidebarPane = rect;
     // Over the content (narrow or zen), a two-column margin past its border sets it apart.
-    if (!app.sidebarBeside) c.fill(w + 1, sideY, 2, bottom + 1 - sideY, roleStyle(theme, "sidebar", page).bg);
+    if (!app.sidebarBeside) {
+      c.fill(w + 1, sideY, 2, bottom + 1 - sideY, roleStyle(theme, "sidebar", page).bg);
+      coverHot(geo, { x: 0, y: sideY, w: w + 3, h: bottom + 1 - sideY });
+    }
     if (beside) {
       geo.separators.push({ kind: "sidebar", x: w, y: sideY, w: 1, h: bottom + 1 - sideY });
       geo.verticals.push({ x: w, y0: frame ? head : sideY, y1: borderEnd, style: border });
@@ -151,7 +154,10 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const rect = { x: W - w, y: top, w, h: bottom + 1 - top };
     geo.outline = drawOutline(app, c, rect);
     geo.outlinePane = rect;
-    if (!app.outlineBeside) c.fill(W - w - 3, top, 2, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
+    if (!app.outlineBeside) {
+      c.fill(W - w - 3, top, 2, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
+      coverHot(geo, { x: W - w - 3, y: top, w: w + 3, h: bottom + 1 - top });
+    }
     const border = roleStyle(theme, "border", page);
     for (let y = top; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
     if (app.outlineBeside) {
@@ -209,8 +215,15 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   x += 1;
   x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
 
-  // Right side, laid out from the far right inwards. (The outline's button is on the breadcrumb.)
+  // Right side, laid out from the far right inwards. The outline's button is on the breadcrumb,
+  // or here when there is no breadcrumb.
   let rx = c.width - 1;
+  if (!app.config.ui.breadcrumb && app.tab) {
+    const label = icon(g.outlineButton);
+    rx = c.width - stringWidth(label);
+    button(app, c, rx, band, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);
+    rx -= 1;
+  }
   // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
   // The middle is left empty.
   const items: { text: string; role: Role }[] = [];
@@ -291,25 +304,33 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
     while (from < to && !fits(from, to, more(widths.length - (to - from + 1)))) from++;
     while (to + 1 < widths.length && fits(from, to + 1, more(widths.length - (to - from + 2)))) to++;
   }
+  const hidden = widths.length - (to - from + 1);
+  const moreLabel = ` +${hidden} `;
+  // Tabs stop before the +N button (and its border), even when the one tab left is cut short.
+  const limit = hidden > 0 ? c.width - stringWidth(moreLabel) - 1 : c.width;
   let x = x0;
-  for (let i = from; i <= to && x < c.width; i++) {
+  for (let i = from; i <= to && x < limit; i++) {
     const role: Role = i !== app.activeTab ? "tab" : app.region === "content" ? "tab_active" : "tab_active_idle";
-    const w = button(app, c, x, band, labels[i]!, role, `tab:${i}`, geo, stripBg, c.width - x);
+    const w = button(app, c, x, band, labels[i]!, role, `tab:${i}`, geo, stripBg, limit - x);
     geo.tabs.push({ x, y: band.y, w, h: band.h, index: i });
     x += w;
     const tabBg = roleStyle(theme, role, stripBg).bg ?? stripBg;
-    x += button(app, c, x, band, close, role, `tabclose:${i}`, geo, tabBg, c.width - x);
-    if (x < c.width) separator(x);
+    x += button(app, c, x, band, close, role, `tabclose:${i}`, geo, tabBg, limit - x);
+    if (x < limit) separator(x);
     x += 1;
   }
-  const hidden = widths.length - (to - from + 1);
   if (hidden > 0) {
-    const label = ` +${hidden} `;
+    const label = moreLabel;
     const bx = c.width - stringWidth(label);
     // Its own border, unless the last tab's is (nearly) next to it already.
     if (bx - 1 - x >= 2) separator(bx - 1);
     button(app, c, bx, band, label, "tab", "tabmore:", geo, stripBg);
   }
+}
+
+/** A pane drawn over the content hides the click targets under it. */
+function coverHot(geo: Geometry, r: Rect): void {
+  geo.hot = geo.hot.filter((h) => h.x + h.w <= r.x || h.x >= r.x + r.w || h.y + h.h <= r.y || h.y >= r.y + r.h);
 }
 
 /** Where rules meet vertical borders, the box glyph for the lines that meet there. */
@@ -339,6 +360,12 @@ function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, overOu
     return;
   }
   const focusContent = app.region === "content";
+  // Too short for two stacked windows: just the active one.
+  const tooShort = tab.views.length === 2 && app.effectiveOrientation(tab) !== "side" && area.h < 6;
+  if (tooShort) {
+    drawPane(app, c, tab.views[tab.active]!, area, focusContent, false, ruleAbove, overOutline, geo);
+    return;
+  }
   if (tab.views.length === 1) {
     drawPane(app, c, tab.views[0]!, area, focusContent, false, ruleAbove, overOutline, geo);
     return;
@@ -430,6 +457,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const cursorBg = app.ui.cursorline && showCursor ? (theme.roles.cursor_line.bg ?? null) : null;
   const sel = view.sel ? { range: ordered(view.sel.anchor, view.cur), line: view.sel.line } : null;
   const textW = Math.max(1, body.x + body.w - 1 - textX);
+  // Wrapping off: never scrolled past what this width can show (after a resize, say).
+  view.left = app.ui.wrap ? 0 : Math.max(0, Math.min(view.left, Math.max(0, layout.width - textW)));
   const cursorSrc = layout.lines[view.cur.row]?.src;
 
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
@@ -462,7 +491,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       marks.push({ from, to, role: "selection" });
     }
     drawLine(c, textX, y, line, textW, theme, band ?? page, underCursor, marks, view.left);
-    if (isCursorRow && view.cur.col >= view.left && view.cur.col < view.left + textW) drawCursor(c, textX - view.left, y, line, view.cur.col, theme);
+    if (isCursorRow && view.cur.col >= view.left && view.cur.col < view.left + textW) drawCursor(c, textX - view.left, y, line, view.cur.col, theme, view.left + textW);
   }
 
   // Scrollbar in the last column.
@@ -472,17 +501,20 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const pos = Math.round((view.top / Math.max(1, total - body.h)) * (body.h - thumb));
     const st = roleStyle(theme, active ? "scrollbar" : "border", page);
     const track = roleStyle(theme, "scrollbar_track", page);
-    for (let k = 0; k < body.h; k++) drawText(c, body.x + body.w - 1, body.y + k, app.glyphs.scrollTrack, track, 1);
+    // Without colour (NO_COLOR) the track is blank, so the thumb's shape shows where you are.
+    const trackGlyph = theme.roles.scrollbar_track.fg ? app.glyphs.scrollTrack : " ";
+    for (let k = 0; k < body.h; k++) drawText(c, body.x + body.w - 1, body.y + k, trackGlyph, track, 1);
     for (let k = 0; k < thumb; k++) drawText(c, body.x + body.w - 1, body.y + pos + k, app.glyphs.scrollThumb, st, 1);
     geo.scrollbars.push({ view, total, x: body.x + body.w - 1, y: body.y, w: 1, h: body.h });
   }
 }
 
 /** The block cursor: the character under it drawn with the cursor role (inverse without colour). */
-function drawCursor(c: Canvas, x: number, y: number, line: Line, col: number, theme: Theme): void {
+/** The cursor on its character; a wide one at the last column (`end`) shows as one cell. */
+function drawCursor(c: Canvas, x: number, y: number, line: Line, col: number, theme: Theme, end = Number.POSITIVE_INFINITY): void {
   const st = roleStyle(theme, "cursor", null);
   const cell = cells(line).find((k) => k.x === col);
-  if (cell) c.cell(x + cell.x, y, cell.g, cell.w, st);
+  if (cell && cell.x + cell.w <= end) c.cell(x + cell.x, y, cell.g, cell.w, st);
   else c.cell(x + col, y, " ", 1, st);
 }
 
@@ -501,7 +533,9 @@ function drawLine(c: Canvas, x: number, y: number, line: Line, maxW: number, the
     // The cursor-row band replaces the page and block fill, never a span's own background.
     if (!st.bg || (rowBg && st.bg === fillBg)) st.bg = rowBg;
     if (!marks.length && !left) {
-      col += drawText(c, x + col, y, span.text, st, maxW - col);
+      const w = drawText(c, x + col, y, span.text, st, maxW - col);
+      if (w < stringWidth(span.text)) return; // cut at the edge (a wide character that didn't fit)
+      col += w;
       continue;
     }
     for (const g of graphemes(span.text)) {
@@ -589,8 +623,9 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const lines = treeLines(rows.map((r) => r.depth));
   const s = app.sidebar;
   s.selected = Math.max(0, Math.min(s.selected, rows.length - 1));
-  if (s.selected < s.scroll) s.scroll = s.selected;
-  if (s.selected >= s.scroll + rect.h) s.scroll = s.selected - rect.h + 1;
+  // Keep the selection in view, unless the wheel moved the view.
+  if (!s.pinned && s.selected < s.scroll) s.scroll = s.selected;
+  if (!s.pinned && s.selected >= s.scroll + rect.h) s.scroll = s.selected - rect.h + 1;
   s.scroll = Math.max(0, Math.min(s.scroll, Math.max(0, rows.length - rect.h)));
   const current = app.view?.buf.rel;
   const g = app.glyphs;
@@ -624,8 +659,9 @@ function drawOutline(app: App, c: Canvas, pane: Rect): Rect {
   // While the outline is not focused, it follows the cursor's section.
   if (app.region !== "outline" && current >= 0) o.selected = current;
   o.selected = Math.max(0, Math.min(o.selected, rows.length - 1));
-  if (o.selected < o.scroll) o.scroll = o.selected;
-  if (o.selected >= o.scroll + rect.h) o.scroll = o.selected - rect.h + 1;
+  // Keep the selection in view, unless the wheel moved the view.
+  if (!o.pinned && o.selected < o.scroll) o.scroll = o.selected;
+  if (!o.pinned && o.selected >= o.scroll + rect.h) o.scroll = o.selected - rect.h + 1;
   o.scroll = Math.max(0, Math.min(o.scroll, Math.max(0, rows.length - rect.h)));
   if (!rows.length) {
     drawText(c, rect.x + 1, rect.y, "no headings", roleStyle(theme, "dim", base.bg), rect.w - 1);
@@ -686,7 +722,11 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
   x += drawText(c, x, y, " ", st);
   const pathId = "status:path";
-  const pw = drawText(c, x, y, truncate(app.displayName(buf), Math.max(4, c.width - x - rightW - 14)), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
+  // The path keeps room for the watch marker only when both fit; otherwise it takes the room.
+  const full = app.displayName(buf);
+  const pathRoom = Math.max(4, c.width - x - rightW - 2);
+  const pathW = stringWidth(full) + 16 <= pathRoom ? pathRoom : Math.max(4, pathRoom);
+  const pw = drawText(c, x, y, truncate(full, pathW), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
   geo.hot.push({ id: pathId, x, y: band.y, w: pw, h: band.h });
   x += pw;
   if (buf.deleted) x += drawText(c, x, y, " ✖ deleted on disk", roleStyle(theme, "error", st.bg));
@@ -720,12 +760,6 @@ function drawBottomLine(app: App, c: Canvas, y: number): void {
   drawText(c, 1, y, truncate(m.text, c.width - 2), roleStyle(theme, role, page));
 }
 
-/**
- * The which-key popup: a panel along the bottom listing the next keys of the pending sequence.
- * Header bar, a blank row, then entries in at most three columns — each "key → name" with a
- * short explanation dimmed underneath — and a blank row at the bottom. When the screen is too
- * short for two rows per entry, the explanations are dropped before anything else.
- */
 /**
  * The which-key popup, framed like the other popups: a bordered box on the overlay background
  * with the pending keys as its title, the hint in the bottom border, and the same margin. Inside,
@@ -764,11 +798,13 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   }
   const rows = plan.perCol;
   const room = bottom - top - 2; // the margin above and below
-  // Inside the borders, a blank row above and below the entries; on a short screen the blank rows
-  // go first, then the explanations.
-  const withDesc = entries.some((e) => e.desc) && rows * 2 + 4 <= room;
+  if (room < 3) return; // no room for even a box with one row
+  // Inside the borders, a blank row above and below the entries.
+  const withDesc = entries.some((e) => e.desc) && rows * 2 + 2 <= room;
   const entryH = withDesc ? 2 : 1;
-  const pad = rows * entryH + 4 <= room ? 1 : 0;
+  // The blank rows only with the explanations: shrinking drops them first, and they don't come
+  // back once the explanations are gone.
+  const pad = withDesc && rows * 2 + 4 <= room ? 1 : 0;
   const h = Math.max(3, Math.min(room, rows * entryH + 2 + 2 * pad));
   const w = Math.min(maxW, Math.max(plan.total, 40));
   const x0 = Math.floor((c.width - w) / 2);
@@ -788,7 +824,12 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
     drawText(c, x0, y0 + k, b.v, border, 1);
     drawText(c, x0 + w - 1, y0 + k, b.v, border, 1);
   }
-  const hint = ` ${app.pending.length ? "backspace up · esc cancel" : "keys repeat · any other key leaves"} `;
+  // Entries that don't fit (a short screen) are counted in the bottom border; the hint is left
+  // out when the box is too narrow for it.
+  const visibleRows = Math.floor((h - 2 - 2 * pad) / entryH);
+  const hiddenCount = entries.filter((_, i) => i % rows >= visibleRows).length;
+  const hintText = `${hiddenCount ? `+${hiddenCount} more · ` : ""}${app.pending.length ? "backspace up · esc cancel" : "keys repeat · any other key leaves"}`;
+  const hint = stringWidth(hintText) + 2 <= w - 4 ? ` ${hintText} ` : "";
   const bottomRule = `${b.bl}${b.h.repeat(Math.max(0, w - 3 - stringWidth(hint)))}`;
   drawText(c, x0, y0 + h - 1, bottomRule, border);
   drawText(c, x0 + stringWidth(bottomRule), y0 + h - 1, hint, dim);
@@ -805,7 +846,8 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
     if (y >= y0 + h - 1 - pad || !cw) return;
     const x = colX[col]!;
     const textX = x + cw.key + 1;
-    const textW = Math.max(4, Math.min(cw.text, x0 + w - 2 - textX));
+    const textW = Math.min(cw.text, x0 + w - 2 - textX);
+    if (textW <= 0) return; // no room for the name inside the box
     const id = `wk:${e.key.split(" ")[0]}`;
     geo.hot.push({ id, x, y, w: cw.key + 1 + cw.text, h: entryH });
     const hover = app.hover === id;
@@ -824,7 +866,9 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
   const w = Math.min(100, W - (W > 60 ? 8 : 0));
   // Rows besides the list: the borders, the input, and the footer (a rule, the entry's name, two
   // rows of explanation, its other keys).
-  const inner = (o.filterable ? 3 : 2) + (o.footer ? FOOTER_ROWS + 1 : 0);
+  // The footer only when the list keeps at least four rows beside it.
+  const footer = !!o.footer && Math.min(mainH - 2, 30) - ((o.filterable ? 3 : 2) + FOOTER_ROWS + 2) >= 4;
+  const inner = (o.filterable ? 3 : 2) + (footer ? FOOTER_ROWS + 1 : 0);
   const h = Math.max(inner + 1, Math.min(o.filtered.length + inner + 1, mainH - 2, 30));
   const x = Math.floor((W - w) / 2);
   const y = mainY + Math.max(0, Math.min(2, mainH - h));
@@ -856,14 +900,15 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     drawText(c, x + 2 + px + iw, y + 1, " ", roleStyle(theme, "cursor", null));
     listY = y + 2;
   }
-  if (o.footer) drawFooter(app, c, o, x, y + h - 2 - FOOTER_ROWS, w);
-  const rows = h - (listY - y) - 1 - (o.footer ? FOOTER_ROWS + 1 : 0);
+  if (footer) drawFooter(app, c, o, x, y + h - 2 - FOOTER_ROWS, w);
+  const rows = h - (listY - y) - 1 - (footer ? FOOTER_ROWS + 1 : 0);
   if (o.selected < o.scroll) o.scroll = o.selected;
   if (o.selected >= o.scroll + rows) o.scroll = o.selected - rows + 1;
   // When the selected entry is the top row, bring its heading (title and rule, not the blank
   // row before them) into view above it; not while the wheel is scrolling the view.
   if (o.scroll === o.selected && !o.wheeled) {
-    while (o.scroll > 0 && o.filtered[o.scroll - 1]!.item.header && (o.filtered[o.scroll - 1]!.item.label || o.filtered[o.scroll - 1]!.item.rule)) o.scroll--;
+    // …as long as the selected entry stays in view.
+    while (o.scroll > 0 && o.selected - (o.scroll - 1) < rows && o.filtered[o.scroll - 1]!.item.header && (o.filtered[o.scroll - 1]!.item.label || o.filtered[o.scroll - 1]!.item.rule)) o.scroll--;
   }
   // Key columns: each as wide as its widest binding in the section, so keys line up down it.
   const colWAt: number[][] = new Array(o.filtered.length);
@@ -920,7 +965,7 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
       cx += gw;
       ci += g.length;
     }
-    if (item.detail && !o.footer) {
+    if (item.detail && !footer) {
       const room = x + 2 + avail - cx - 2;
       if (room > 4) cx += drawText(c, cx + 2, ry, truncate(item.detail, room), { ...dim, bg: st.bg }) + 2;
     }

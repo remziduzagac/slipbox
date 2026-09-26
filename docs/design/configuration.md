@@ -115,9 +115,11 @@ is active, and `[colors.<theme>]` does so for one theme only.
 
 - **A string** sets the role's foreground; **a table** sets any of `fg`, `bg`, `bold`, `italic`,
   `underline`, `dim`. Only the fields given change.
-- **Colours** are `"#rrggbb"`, `"default"` (the terminal's own), or a terminal palette number
+- **Colours** are `"#rrggbb"`, `"default"` (the terminal's own), or a terminal palette number (as
+  a number, or a string like `"12"` or `"ansi:12"`)
   `0`–`255`.
-- **Under `NO_COLOR`**, colours are ignored; the attributes still apply.
+- **Under `NO_COLOR`**, colours are ignored; the attributes still apply in the TUI
+  (`slipbox render` prints plain text then).
 - **Problems** (an unknown role or field, a malformed colour) are warnings, and the rest applies.
 - **They apply everywhere** a theme does: the TUI, its theme picker's preview, and `slipbox
   render`. Saving the file reloads them live.

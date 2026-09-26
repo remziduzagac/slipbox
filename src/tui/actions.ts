@@ -246,17 +246,19 @@ function openPalette(a: App): void {
       const ranked = rank(input.trim(), commandItems, (i) => `${i.label} ${i.detail}`).map((r) => r.item);
       if (exact) {
         const title = a.registry.get(exact.split(" ")[0]!)?.title ?? exact;
-        return [{ label: title, detail: `alias for ${exact}`, keys: [`:${input.trim()}`], data: exact }, ...ranked.filter((i) => i.data !== exact)];
+        return [{ label: title, detail: `alias for ${exact}`, keys: ["", `:${input.trim()}`], data: exact }, ...ranked.filter((i) => i.data !== exact)];
       }
       return ranked;
     },
     submit: (input) => {
-      // An exact alias (optionally with an argument) always wins over the fuzzy match.
+      // An exact alias (optionally with an argument) wins over the fuzzy match, unless another
+      // entry was picked: moved to with the keys, or clicked (its row is first while unmoved).
       const m = /^(\S+)(?:\s+(.*))?$/.exec(input.trim());
       if (!m) return false;
       const spec = a.aliases[m[1]!];
       if (!spec) return false;
       const arg = m[2]?.trim();
+      if (!arg && a.overlay?.kind === "list" && a.overlay.selected > 0) return false;
       if (arg && argCandidates(a, spec.split(" ")[0]!) && a.overlay?.kind === "list") {
         // With an argument that completes, prefer the highlighted candidate.
         const sel = a.overlay.filtered[a.overlay.selected]?.item;
@@ -324,7 +326,7 @@ const MOUSE_HELP: [string, string[], string][] = [
   ["Move the cursor", ["click"], "Moves the cursor to where you click in a note; on a link, follows it"],
   ["Select and copy", ["drag"], "Selects the text you drag over and copies it on release"],
   ["Select a word / a row", ["double-click", "triple-click"], "Selects the word or the whole row, and copies it"],
-  ["Scroll", ["wheel"], "Scrolls the note or a pane, moves a list's selection, or switches tabs"],
+  ["Scroll", ["wheel"], "Scrolls the note, a pane or a list, or switches tabs"],
   ["Open a note as a tab", ["click"], "In the explorer: opens the note as a tab; on a folder, folds or unfolds it"],
   ["Jump to a heading", ["click"], "In the outline or a breadcrumb: moves the note there; on ▾ / ▸, folds"],
   ["Switch, reorder, close tabs", ["click", "drag", "middle-click"], "On the tab strip: switches, drags to reorder, closes (so does ×)"],

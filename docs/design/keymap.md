@@ -188,7 +188,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `s` | open in the split |
 | `g g` / `shift+g` | top / bottom |
 | `q` | close the explorer |
-| `esc` | back to the note; the explorer stays open |
+| `esc` | back to the note; the explorer stays open (over the content, it closes) |
 | mouse | click a folder to fold or unfold it; click a note to open it as a tab (or switch to its tab) |
 
 ## Outline — right pane
@@ -291,7 +291,8 @@ edit the config and the config wins again.
 
 ## In lists and prompts
 
-Pickers, the palette, help and the `/` and `:` prompts share these keys:
+Pickers, the palette and help share these keys (a prompt, such as `/`, takes `backspace`,
+`ctrl+w`, `ctrl+u`, `enter` and the cancel keys):
 
 | Key | Action |
 | --- | --- |
@@ -305,8 +306,9 @@ Pickers, the palette, help and the `/` and `:` prompts share these keys:
 
 ## Mouse
 
-Everything on screen that looks clickable is clickable. The item under the pointer is highlighted
-with the `hover` role. `space u m` turns the mouse off, which gives it back to the terminal.
+Everything on screen that looks clickable is clickable. Buttons, tabs, breadcrumb headings and the
+other small targets are highlighted with the `hover` role under the pointer. `space u m` turns the
+mouse off, which gives it back to the terminal.
 
 ### Chrome
 

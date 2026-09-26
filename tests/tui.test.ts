@@ -46,6 +46,7 @@ interface Opts {
   config?: (c: Config) => void;
   watch?: boolean;
   configFile?: string;
+  themeName?: string;
 }
 
 async function harness(opts: Opts = {}): Promise<Harness> {
@@ -60,7 +61,7 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   const copied: string[] = [];
   const quit = { called: false };
   const host: Host = { requestRender() {}, osc52: (t) => (copied.push(t), true), quit: () => (quit.called = true) };
-  const app = new App({ loc, config, graph, host, open: opts.open === undefined ? "index.md" : opts.open, watch: opts.watch ?? false, configFile: opts.configFile });
+  const app = new App({ loc, config, graph, host, open: opts.open === undefined ? "index.md" : opts.open, watch: opts.watch ?? false, configFile: opts.configFile, themeName: opts.themeName });
   const W = opts.width ?? 120;
   const H = opts.height ?? 30;
   const canvas = () => {
@@ -1013,6 +1014,193 @@ describe("top bar, tab strip, status line", () => {
     expect(h.app.tab!.active).toBe(1);
     expect(b!.top).toBe(b!.cur.row);
     expect(a!.top).toBe(before);
+  });
+});
+
+describe("review round 1", () => {
+  const click = (h: Harness, x: number, y: number, button = 0) => {
+    h.app.handleMouse({ type: "down", x, y, button });
+    h.app.handleMouse({ type: "up", x, y, button });
+    h.frame();
+  };
+  test("a drag selection survives the re-layout its copy message causes", async () => {
+    const h = await harness({ open: "samples/README.md", width: 120, height: 30 });
+    h.frame();
+    const p = h.app.geometry!.panes[0]!;
+    h.app.handleMouse({ type: "down", x: p.textX + 2, y: p.y + 2, button: 0 });
+    h.app.handleMouse({ type: "drag", x: p.textX + 10, y: p.y + 8, button: 0 });
+    h.app.handleMouse({ type: "up", x: p.textX + 10, y: p.y + 8, button: 0 });
+    const cur = { ...h.app.view!.cur };
+    h.frame(); // the message line changes the pane's height
+    expect(h.app.view!.cur).toEqual(cur);
+    expect(h.copied.at(-1)!.length).toBeGreaterThan(10);
+  });
+  test("clicking a list's bottom border or footer runs nothing", async () => {
+    const h = await harness({ width: 120, height: 30 });
+    await h.keys("?");
+    h.frame();
+    const r = h.app.geometry!.overlay!;
+    const before = h.app.view!.cur;
+    click(h, r.x + 10, r.y + r.h - 1); // the bottom border
+    click(h, r.x + 10, r.listY + r.rows + 2); // the footer
+    expect(h.app.overlay?.kind).toBe("list");
+    expect(h.app.view!.cur).toEqual(before);
+  });
+  test("an exact alias yields to the entry you moved to", async () => {
+    const h = await harness({ width: 120, height: 30 });
+    await h.keys(":", "q");
+    const o = h.app.overlay as ListOverlay;
+    expect(o.filtered[0]!.item.data).toBe("app.quit"); // the alias row first
+    await h.keys("down");
+    const chosen = o.filtered[o.selected]!.item.data;
+    await h.keys("enter");
+    expect(h.quit.called).toBe(false);
+    expect(chosen).not.toBe("app.quit");
+  });
+  test("closing another tab keeps you on yours", async () => {
+    const h = await harness({ width: 120, height: 30 });
+    h.app.openInNewTab("notes/alpha.md");
+    h.app.openInNewTab("notes/beta.md");
+    h.app.activeTab = 0;
+    h.app.closeTabAt(2);
+    expect(h.app.activeTab).toBe(0);
+    h.app.activeTab = 1;
+    h.app.closeTabAt(0);
+    expect(h.app.tabs[h.app.activeTab]!.views[0]!.buf.rel).toBe("notes/alpha.md");
+  });
+  test("the wheel scrolls the explorer and outline, and on narrow screens not the note under them", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 120, height: 20, config: (c) => (c.ui.outline = true) });
+    h.frame();
+    const sb = h.app.geometry!.sidebarPane!;
+    h.app.handleMouse({ type: "scroll", x: sb.x + 3, y: sb.y + 4, button: 0, scroll: { direction: "down", delta: 1 } });
+    h.frame();
+    expect(h.app.sidebar.scroll).toBeGreaterThan(0);
+    const op = h.app.geometry!.outlinePane!;
+    h.app.handleMouse({ type: "scroll", x: op.x + 3, y: op.y + 4, button: 0, scroll: { direction: "down", delta: 1 } });
+    h.frame();
+    expect(h.app.outline.scroll).toBeGreaterThan(0);
+    const n = await harness({ open: "samples/large-document.md", width: 70, height: 20 });
+    await n.keys("ctrl+e");
+    n.frame();
+    const p = n.app.geometry!.sidebarPane!;
+    const top = n.app.view!.top;
+    n.app.handleMouse({ type: "scroll", x: p.x + 3, y: p.y + 4, button: 0, scroll: { direction: "down", delta: 1 } });
+    expect(n.app.view!.top).toBe(top);
+  });
+  test("wrapping off: the sideways offset is clamped when the window widens", async () => {
+    const h = await harness({ open: "samples/wrap-probe.md", width: 80, height: 30, config: (c) => ((c.ui.wrap = false), (c.ui.sidebar = false)) });
+    h.frame();
+    const v = h.app.view!;
+    const layout = h.app.currentLayout(v);
+    const row = layout.lines.reduce((best, l, i, all) => (l.spans.reduce((a, x) => a + x.text.length, 0) > all[best]!.spans.reduce((a, x) => a + x.text.length, 0) ? i : best), 0);
+    h.app.moveCursor(v, { row, col: 10_000 });
+    await h.keys("$");
+    h.frame();
+    expect(v.left).toBeGreaterThan(0);
+    const wide = h.app.draw.bind(h.app);
+    const { TextCanvas } = await import("../src/tui/canvas.ts");
+    wide(new TextCanvas(200, 30));
+    expect(v.left).toBeLessThanOrEqual(Math.max(0, h.app.currentLayout(v).width - h.app.textColumns(v)));
+  });
+  test("focus never stays on a hidden pane", async () => {
+    const h = await harness({ width: 120, height: 30 });
+    await h.keys("ctrl+e");
+    expect(h.app.region).toBe("sidebar");
+    h.app.setUi("zen", true);
+    h.frame();
+    expect(h.app.region).toBe("content");
+  });
+  test("UI settings survive a start with a path; an explicit theme beats a remembered one", async () => {
+    const root = mkdtempSync(join(sandbox, "vault-"));
+    cpSync(join(import.meta.dir, "fixtures", "vault"), root, { recursive: true, verbatimSymlinks: true });
+    const a = await harness({ root, open: "notes/alpha.md" });
+    a.app.setUi("line_numbers", true);
+    a.app.saveState();
+    const b = await harness({ root, open: "notes/beta.md" }); // with a path: tabs not restored
+    expect(b.app.ui.line_numbers).toBe(true);
+    b.app.setUi("theme", "nord");
+    b.app.saveState();
+    const c = await harness({ root, open: "notes/beta.md", themeName: "dracula" });
+    expect(c.app.ui.theme).toBe("dracula");
+  });
+  test("on a narrow strip, +N is clickable: tabs stop before it", async () => {
+    const h = await harness({ open: "samples/README.md", width: 30, height: 12 });
+    for (const n of ["notes/alpha.md", "notes/beta.md", "index.md", "samples/wide-tables.md", "samples/code-heavy.md", "samples/dense-tables.md", "samples/large-document.md"]) h.app.openInNewTab(n);
+    h.app.activeTab = 3;
+    h.frame();
+    const more = h.app.geometry!.hot.find((r) => r.id === "tabmore:")!;
+    for (const r of h.app.geometry!.hot) if (r.id.startsWith("tab")) expect(r.id === "tabmore:" || r.x + r.w <= more.x).toBe(true);
+    const count = h.app.tabs.length;
+    click(h, more.x + 2, more.y);
+    expect(h.app.tabs).toHaveLength(count);
+    expect(h.app.overlay?.kind).toBe("list");
+  });
+  test("a short list keeps its selection in view (the footer goes first)", async () => {
+    for (const [width, height] of [[60, 16], [40, 12], [60, 20]] as const) {
+      const h = await harness({ width, height });
+      await h.keys("?");
+      h.frame();
+      const o = h.app.overlay as ListOverlay;
+      const r = h.app.geometry!.overlay!;
+      expect(o.selected).toBeGreaterThanOrEqual(o.scroll);
+      expect(o.selected).toBeLessThan(o.scroll + r.rows);
+    }
+  });
+  test("a stacked split too short for two windows shows the active one, inside its area", async () => {
+    const h = await harness({ open: "samples/README.md", width: 40, height: 9 });
+    await h.keys("ctrl+w", "s");
+    const rows = h.frame().split("\n");
+    expect(rows.at(-2)!.startsWith("━")).toBe(true); // the bottom frame rule is intact
+    expect(h.app.geometry!.panes.some((p) => p.view === h.app.view)).toBe(true);
+  });
+  test("clicks on an overlaid explorer or outline don't reach what's under it", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 80, height: 24 });
+    await h.keys("]", "]");
+    await h.keys("ctrl+e");
+    h.frame();
+    const p = h.app.geometry!.sidebarPane!;
+    const row = h.app.view!.cur.row;
+    click(h, p.x + 3, p.y);
+    expect(h.app.view!.cur.row).toBe(row);
+    expect(h.app.region).toBe("sidebar");
+  });
+  test("which-key on a tiny screen stays inside its box and says what's hidden", async () => {
+    const h = await harness({ width: 60, height: 14 });
+    const rows = (await h.keys("space")).split("\n");
+    const top = rows.findIndex((r) => r.includes("┌─"));
+    const bottom = rows.findIndex((r, i) => i > top && r.includes("└"));
+    const right = rows[top]!.lastIndexOf("┐");
+    for (let y = top; y <= bottom; y++) expect(rows[y]!.slice(right + 1).replace(/[▐┃━]/g, "").trim()).toBe("");
+    expect(rows[bottom]).toMatch(/\+\d+ more/);
+  });
+  test("NO_COLOR: the scrollbar thumb stands out from its track; the current note is bold", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 100, height: 20, themeName: "mono" });
+    const c = h.canvas();
+    const bar = h.app.geometry!.scrollbars[0]!;
+    const col = Array.from({ length: bar.h }, (_, k) => c.rows[bar.y + k]![bar.x]);
+    expect(new Set(col).size).toBeGreaterThan(1);
+    expect(h.app.theme.roles.sidebar_active.bold).toBe(true);
+  });
+  test("without the breadcrumb, the outline button is in the top bar", async () => {
+    const h = await harness({ width: 100, height: 14, config: (c) => (c.ui.breadcrumb = false) });
+    h.frame();
+    const btn = h.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
+    expect(btn.y).toBe(0);
+    click(h, btn.x + 1, btn.y);
+    expect(h.app.outlineShown).toBe(true);
+  });
+  test("which-key on a short screen drops its blank rows before its explanations", async () => {
+    // At every height: blank rows inside the box only ever appear together with the explanations.
+    for (let height = 12; height <= 40; height++) {
+      const h = await harness({ width: 160, height });
+      const rows = (await h.keys("space")).split("\n");
+      const head = rows.findIndex((r) => r.includes("┌─ ␣ › leader"));
+      if (head < 0) continue;
+      const left = rows[head]!.indexOf("┌");
+      const padded = rows[head + 1]!.slice(left + 1, rows[head + 1]!.lastIndexOf("│")).trim() === "";
+      const described = rows.join("\n").includes("notes, headings, text, commands");
+      if (padded) expect(described).toBe(true);
+    }
   });
 });
 

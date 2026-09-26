@@ -171,7 +171,10 @@ in dark themes and 16% in light ones. Single roles can be overridden from config
 | base16 data | `gruvbox-light`, `nord`, `solarized-dark`, `solarized-light`, `rose-pine` |
 | base16 data | `everforest`, `kanagawa`, `one-dark`, `monokai` |
 | special | `terminal` (ANSI indexed colours: the terminal's own theme flows through) |
-| special | `mono` (no colour at all, attributes only; used when `NO_COLOR` is set) |
+| special | `mono` (no colour, attributes only; always used when `NO_COLOR` is set) |
+
+In the TUI, `NO_COLOR` wins over any theme setting, session or picker choice. Without colour the
+scrollbar's track is blank so the thumb shows, and the current note or section is bold.
 
 **User themes:** any base16 or base24 scheme file (`*.yaml`, either the current `palette:` format
 or the legacy flat one) in `~/.config/slipbox/themes/` is a theme under its file name. An unknown

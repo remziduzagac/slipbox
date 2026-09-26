@@ -67,15 +67,15 @@ Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) w
 closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, and
 zen mode hides it.
 
-**The breadcrumb** tops each window, between two rules. It starts with an icon (`§`, ascii
-`#`) that opens the heading finder when clicked, then the chain of headings that window's cursor
-is under, each cut to 40 columns, with the outermost dropped first when space runs short. In a
-split it shares the window's title row, after the file name. Clicking a heading focuses that
-window, puts its cursor on the heading, and scrolls the heading to the window's first row (as far
-as the note's end allows). The row stays reserved above the first heading, so the text doesn't
-jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it. Without it
-there is no `▤` button (the outline opens with `ctrl+o`) and no header rules, the outline starts
-at the top of the content, and a split window gets a plain title row (`tab` / `tab_active`).
+**The breadcrumb** tops each window, between two rules. It starts with an icon (`§`, ascii `#`) that
+opens the heading finder when clicked, then the chain of headings that window's cursor is under,
+each cut to 40 columns, with the outermost dropped first when space runs short. In a split it shares
+the window's title row, after the file name. Clicking a heading focuses that window, puts its cursor
+on the heading, and scrolls the heading to the window's first row (as far as the note's end allows).
+The row stays reserved above the first heading, so the text doesn't jump. `ui.breadcrumb = false`
+removes it; zen mode and windows under 8 rows drop it. Without it the `▤` button moves to the right
+end of the top bar and no header rules, the outline starts at the top of the content, and a split
+window gets a plain title row (`tab` / `tab_active`).
 
 The breadcrumb row has its own background, `breadcrumb_band` (`surface` blended into the page
 at 35%). The icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators
@@ -92,11 +92,12 @@ a reload. Each tab has a `×` to close it and a `┃` after it, joined to the ru
 strip (`┳`, `┻`). The active tab is bright (`tab_active`) while the note has focus and dimmer
 (`tab_active_idle`) otherwise; other tabs are `tab`. When the tabs don't all fit, the strip shows a
 run of them that includes the active tab: from the first tab, scrolled just enough to bring the
-active one in. A `+N` button at the far right, behind its own `┃`, counts the tabs left out;
-clicking it opens the tab list (`ctrl+t t`) to pick one. A tab holds the note and its outline but
-not the explorer, so with the explorer open beside the content the strip starts after the explorer's
-border and spans the note and the outline. The explorer runs from under the frame's top rule to its
-bottom rule, and stays put when the strip appears or goes.
+active one in. A `+N` button at the far right, behind its own `┃`, counts the tabs left out; tabs
+always stop before it, even when the one left has to be cut short, and clicking it opens the tab
+list (`ctrl+t t`) to pick one. A tab holds the note and its outline but not the explorer, so with
+the explorer open beside the content the strip starts after the explorer's border and spans the note
+and the outline. The explorer runs from under the frame's top rule to its bottom rule, and stays put
+when the strip appears or goes.
 
 **The status line** is about the file. From left to right:
 
@@ -119,7 +120,9 @@ Clicking a message opens the messages list.
 thumb (`scrollbar` in the active window, `border` in the other); ascii `|` and `#`. It can be
 clicked and dragged.
 
-**Hover.** Every clickable region is drawn in the `hover` role while the mouse is over it.
+**Hover.** Buttons, tabs and their `×`, `+N`, breadcrumb headings and icon, the status path and
+which-key entries are drawn in the `hover` role while the mouse is over them. Rows in lists and
+panes show their selection instead.
 
 **Viewport-only (plan `3.2`).** Only rows on screen are drawn, and a layout is computed once
 per width and cached on the buffer.
@@ -158,7 +161,8 @@ you saw.
   ratio (the first window's share). Resize mode (`ctrl+alt+w`, `space w r`) changes the ratio,
   or the explorer or outline width when one is focused, and all of it is kept in the session.
   Side by side falls back to stacked below 80 content columns (a fixed width, not
-  `ui.narrow_width`). With a split, each window names its note on its breadcrumb row, bright in
+  `ui.narrow_width`), and a stacked split too short for two windows (under 6 rows) shows only the
+  active one. With a split, each window names its note on its breadcrumb row, bright in
   the active window. Pane widths stay between 12 columns and half the terminal; a split's ratio
   between 15% and 85%.
 
@@ -179,8 +183,8 @@ heading later falls back to a current line, not a stale one.
 - **Reading position** per note, cursor included, in `positions.json` in the state dir.
 - **Session:** tabs and the active tab, splits with their orientation and ratio, cursors, the
   explorer's and the outline's visibility and widths, UI setting overrides, and the palette's
-  recent commands, in `session.json`. It's restored when slipbox starts with no path, if
-  `ui.restore_session` is on (recent commands are kept either way).
+  recent commands, in `session.json`. The tabs and windows are restored when slipbox starts with
+  no path, if `ui.restore_session` is on; UI setting overrides and recent commands on every start.
 
 ## History (plan `3.6`)
 
@@ -234,10 +238,11 @@ Both are windows for `ctrl+w h` / `ctrl+w l`, and each has its own keymap: `[key
 `[keys.outline]`.
 
 **Narrow terminals (plan `3.14`).** Below `ui.narrow_width` (90) columns, and in zen mode, both
-panes open over the content on demand (6 columns wider than their width, leaving at least 6 of
-the note) and close after a pick. The wide-terminal preferences (`ui.sidebar`,
-`ui.outline`) are kept separately, so widening the terminal brings them back. Tables that cannot
-fit become records ([rendering.md](rendering.md)).
+panes open over the content on demand (6 columns wider than their width, leaving at least 6 of the
+note) and close after a pick. The wide-terminal preferences (`ui.sidebar`, `ui.outline`) are kept
+separately, so widening the terminal brings them back. Tables that cannot fit become records
+([rendering.md](rendering.md)). Click targets under an overlaid pane (a breadcrumb heading, the `▤`
+button) are off while it's open.
 
 ## Overlays
 
@@ -257,7 +262,8 @@ past theirs), so the content behind never runs up to the edge.
   matches" or "nothing here".
 - **Groups and footers:** a list may have group headings (dim, bold capitals, with a blank row
   before each but the first and a full rule under each; never selected, moving skips them) and a
-  footer. The footer is always four rows, so the list doesn't jump: the selected entry's name
+  footer. The footer is always four rows under a rule, so the list doesn't jump (on a short screen
+  it's left out before the list gets under four rows): the selected entry's name
   (bold), its explanation in normal text (wrapping to a second row), and its other bindings
   ("also", as keycaps). Explanations are the `desc` of each command in `core/command-specs.ts`:
   a plain sentence saying what it does ("Moves the cursor to the end of the row").
@@ -266,8 +272,9 @@ past theirs), so the content behind never runs up to the edge.
   inside a sequence (`g g`) can't be mistaken for the gap between bindings. In help at most three
   show, in columns sized per section so they line up down it; the palette has two fixed columns
   (the first key, the first alias), aligned across the whole list; plain bindings come before variants
-  (such as the selection-extending ones), and the rest are shown in the footer. The columns have
-  no names: they are simply the first, second and third way to do it.
+  (such as the selection-extending ones), and the rest are shown in the footer. On a narrow screen
+  the columns that don't fit are dropped from the row (help's footer still lists the extras). The
+  columns have no names: they are simply the first, second and third way to do it.
   Without a keycap background (`NO_COLOR`), the columns are separated by `·`.
 
 Help and the palette list the same commands for different jobs, in the groups of
@@ -278,8 +285,9 @@ Help and the palette list the same commands for different jobs, in the groups of
   the groups; `enter` runs a command (the other entries are reference only). Opened from the
   explorer, the outline or visual mode, it starts at that section ("Inside the explorer", "Inside
   the outline", "Selection & copy"), with its heading at the top.
-- **The palette (`:`)** is for doing things. Empty, it lists the recently run commands (the last
-  5, kept in the session) and then every command by group; typing ranks the best match first,
+- **The palette (`:`)** is for doing things. Empty, it lists the commands last run from the
+  palette or help (the last 5, kept in the session) and then every command by group (except the
+  internal `esc` handler); typing ranks the best match first,
   without groups. Each command shows its first binding and first alias.
 
 **The `:` prompt** is the palette and a command line at once. An exact alias from `[aliases]`
@@ -289,20 +297,23 @@ Help and the palette list the same commands for different jobs, in the groups of
 **The which-key popup** lists the next keys of a pending sequence, across the keymaps active in the
 current state. It is framed like the other popups: a bordered box on the overlay background, with
 the pending keys as its title (`␣ l › links`), the hint (`backspace up · esc cancel`) in its bottom
-border, a blank row inside above and below the entries (dropped first on a short screen), and the
-same margin; it sits centred just above the bottom of the content area. The entries are in at most
-three columns, as many as fit. Each column is sized to its own entries, so a long explanation in one
-never spreads the others apart. Each entry is `key → name` with a short, dimmed explanation
+border, a blank row inside above and below the entries, and the same margin; it sits centred just
+above the bottom of the content area. On a short screen the blank rows go first, then the
+explanations (the blank rows never show without them); entries that still don't fit are counted in
+the bottom border (`+3 more`), and with no room at all the popup isn't drawn. The entries are in at
+most three columns, as many as fit. Each column is sized to its own entries, so a long explanation
+in one never spreads the others apart. Each entry is `key → name` with a short, dimmed explanation
 underneath:
 
 - **For a command:** its `desc` in `core/command-specs.ts`.
 - **For a group:** from `[groups]`.
 
-Keys with the same action share one entry, letters first (`j down`). When the screen is too
-short for two rows per entry, the explanations go first. It shows at once for the leader, and after
-`input.which_key_delay_ms` for other prefixes, never with `input.which_key = false`. `backspace`
-goes up a level; `esc` cancels. Groups read `+name`; clicking an entry presses its key. It also
-shows in resize mode (titled "resize", with "keys repeat · any other key leaves").
+Keys with the same action share one entry, letters first (`j down`); groups come before commands,
+and a group without a name reads `+more`. It shows at once for the leader, and after
+`input.which_key_delay_ms` for other prefixes, never with `input.which_key = false` (resize mode's
+popup shows regardless: it is that mode's only cue). `backspace` goes up a level; `esc` cancels.
+Groups read `+name`; clicking an entry presses its key. It also shows in resize mode (titled
+"resize", with "keys repeat · any other key leaves").
 
 **The message sink (plan `3.13`).** Config warnings, walk errors, watcher problems and command
 feedback all go to one place: the bottom line briefly, the messages list permanently (the last
@@ -325,15 +336,19 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 first very wide, then at its widest real row (trailing spaces, rules and right-aligned
 decorations such as a code block's language label don't count), never narrower than the pane.
 Paragraphs stay on one row and tables keep their natural column widths. Each window then scrolls
-sideways: the view keeps the cursor 4 columns from either edge, a horizontal wheel or trackpad
-scrolls it without moving the cursor, and clicks land on the column under the pointer. Full-width
-elements (code block backgrounds, rules, heading bands) span the natural width, so a code
-block's language label sits at the note's right edge.
+sideways: the view keeps the cursor 4 columns from either edge (a quarter of a narrow window), a
+horizontal wheel or trackpad scrolls it 6 columns a notch without moving the cursor, clicks land on
+the column under the pointer, and the offset is clamped when the window changes size. Full-width
+elements (code block backgrounds, rules, heading bands) span the natural width, so a code block's
+language label sits at the note's right edge. Wrapping off takes precedence over readable width,
+zen's cap and `render.max_width`: the text is never narrower than the pane, so it isn't centred.
+The first layout is 2000 columns wide and only the first 1500 count, so a note wider than that
+still wraps there; a row of one repeated character more than 20 columns wide counts as a rule.
 
-**Persistence.** Changes apply at once and are remembered in the session with the config value
-each one overrode. At the next start, or on a config reload, an override is kept only while that
-config value is unchanged. Editing the config therefore always wins, and the TUI never writes
-your config.
+**Persistence.** Changes apply at once and are remembered in the session with the config value each
+one overrode, on every start (with a path too). At the next start, or on a config reload, an
+override is kept only while that config value is unchanged. Editing the config therefore always
+wins, and the TUI never writes your config.
 
 ## Configuration reload
 
