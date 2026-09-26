@@ -215,7 +215,7 @@ function openPalette(a: App): void {
     aliasOf.set(spec, list);
   }
   const commandItems: ListItem[] = commands.map((c) => {
-    const keys = [...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].map(spellKey);
+    const keys = [...new Set([...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)])].map(spellKey);
     const aliases = aliasOf.get(c.id) ?? [];
     // Two fixed columns, the first key and the first alias (empty when there is none); the rest
     // in the footer.
@@ -760,12 +760,16 @@ export function registerActions(app: App): void {
       ];
       a.openList({ title: "UI settings — enter changes one", items, accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()) });
     },
-    "theme.pick": (a) => pickTheme(a),
+    "theme.pick": (a) => {
+      if (process.env.NO_COLOR) a.message("info", "NO_COLOR is set: the theme you pick applies once it's unset");
+      pickTheme(a);
+    },
     "theme.set": (a, arg) => {
       if (!arg) return pickTheme(a);
       const t = loadTheme(arg);
       if (t.warning) return a.message("warn", t.warning);
       a.setUi("theme", arg);
+      if (process.env.NO_COLOR) a.message("info", `NO_COLOR is set: theme ${arg} applies once it's unset`);
     },
     "glyphs.pick": (a) => pickGlyphs(a),
     "glyphs.set": (a, arg) => {

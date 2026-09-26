@@ -73,9 +73,10 @@ each cut to 40 columns, with the outermost dropped first when space runs short. 
 the window's title row, after the file name. Clicking a heading focuses that window, puts its cursor
 on the heading, and scrolls the heading to the window's first row (as far as the note's end allows).
 The row stays reserved above the first heading, so the text doesn't jump. `ui.breadcrumb = false`
-removes it; zen mode and windows under 8 rows drop it. Without it the `▤` button moves to the right
-end of the top bar and no header rules, the outline starts at the top of the content, and a split
-window gets a plain title row (`tab` / `tab_active`).
+removes it; zen mode and windows under 8 rows drop it. When no window shows one, the `▤` button
+moves to the right end of the top bar (with neither, in zen or with `ui.top_bar = false`, the
+outline opens with `ctrl+o`); there are no header rules, the outline starts at the top of the
+content, and a split window gets a plain title row (`tab` / `tab_active`).
 
 The breadcrumb row has its own background, `breadcrumb_band` (`surface` blended into the page
 at 35%). The icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators
@@ -223,7 +224,7 @@ under the outline's. Panes under 8 rows skip both. The explorer runs from under 
 rule, beside the tab strip. The outline belongs to the note, so it opens under the note's
 breadcrumb: the top-right window's breadcrumb row and the rule under it run across the outline's
 column, and the outline's button (`▤`) sits at the far right of that row, bright while the outline
-is open. Focus shows as brightness, never as a coloured border: a pane's title is bright
+is open. Focus shows as brightness (without colour, as an underline), never as a coloured border: a pane's title is bright
 (`pane_title_active`) while the pane has focus and dimmer (`pane_title`) otherwise, and the active
 tab is bright (`tab_active`) while the note has focus and dimmer (`tab_active_idle`) otherwise. All
 of them stay bold, so nothing shifts.
@@ -356,8 +357,11 @@ The configuration reloads **by itself** when a config file is saved: the user fi
 file are polled every second (or every `watch.poll_ms`, if that is shorter). `space v c` (or
 `:config`) reloads on demand. A reload applies what changed, live:
 
-- **keys, leader, aliases, groups:** keymaps rebuilt
-- **theme, glyphs, UI defaults:** applied, replacing session overrides of the changed values
+- **keys, leader, aliases, groups:** keymaps rebuilt; unknown commands, and unknown actions in
+  `[keys.explorer]`, `[keys.outline]` and `[keys.resize]`, are reported
+- **theme, glyphs, UI defaults:** applied, replacing session overrides of the changed values; a
+  changed `ui.split_ratio`, `ui.sidebar`, `ui.outline` or pane width resets the live value
+- **`[colors]`:** re-applied to the current theme
 - **render settings:** every note re-laid out
 - **walk settings:** the vault re-walked, re-indexed and re-watched
 - **watch settings:** the watcher restarted

@@ -316,6 +316,11 @@ export function monoTheme(): Theme {
   roles.hover = { inverse: true };
   roles.topbar_button_on = { bold: true };
   roles.sidebar_active = { bold: true }; // the current note / section, without colour
+  // Focus without colour: the focused title and the active tab are underlined too.
+  roles.pane_title = { bold: true };
+  roles.pane_title_active = { bold: true, underline: true };
+  roles.tab_active_idle = { bold: true };
+  roles.tab_active = { bold: true, underline: true };
   roles.topbar_button = { dim: true };
   return { ...t, name: "mono", roles };
 }

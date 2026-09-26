@@ -6,7 +6,7 @@ fit, highlighted code, themes), follows `[[wikilinks]]`, and reloads the instant
 a note. Every state change is also reachable from a CLI that agents drive.
 
 Status: **phases 0–2** — rendering (leaf parity) and a read-only TUI (it never writes a note;
-the scratch is the one file it writes) with an agent-drivable CLI.
+besides its own state and cache, the scratch is the one file it writes) with an agent-drivable CLI.
 Editing arrives in phase 3. See [docs/plan.md](docs/plan.md).
 
 ## Try it

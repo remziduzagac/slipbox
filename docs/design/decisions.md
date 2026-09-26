@@ -61,7 +61,7 @@ Read against zk's and nb's surfaces. Small on purpose. Global flags: `--root <di
 | Command | What it does | Stability |
 | --- | --- | --- |
 | `slipbox [path]` | open the TUI; refuses when stdin or stdout is not a terminal (`9.3`) | — |
-| `slipbox render <note>` | render to stdout; `--width`, `--theme`, `--plain` | **stable v1** |
+| `slipbox render <note>` | render to stdout; `--width`, `--theme`, `--glyphs`, `--plain` | **stable v1** |
 | `slipbox capture [text]` | append to the scratch; `--ref path:L[-M]`, `--stdin`, `--snippet` | **stable v1** |
 | `slipbox scratch show\|path\|clear\|copy` | read, locate, wipe or copy the scratch | **stable v1** |
 | `slipbox resolve <link>` | follow a link: `[[target]]` text to a path; `--from <note>` | **stable v1** |

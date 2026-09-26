@@ -50,6 +50,8 @@ import {
   DEFAULT_OUTLINE_KEYS,
   DEFAULT_RESIZE_KEYS,
   DEFAULT_VISUAL_KEYS,
+  EXPLORER_ACTIONS,
+  OUTLINE_ACTIONS,
   RESIZE_ACTIONS,
   parseGroup,
   prettyKey,
@@ -361,6 +363,15 @@ export class App {
     const bad = [...this.keymap.entries(), ...this.visualKeys.entries()].map(([, v]) => v.split(" ")[0]!).filter((id) => !ids.has(id));
     for (const id of new Set(bad)) this.message("warn", `config: [keys] binds unknown command "${id}"`);
     for (const [a, v] of Object.entries(this.aliases)) if (!ids.has(v.split(" ")[0]!)) this.message("warn", `config: [aliases] ${a} = unknown command "${v}"`);
+    // The in-pane keymaps name actions, not commands: check them against their own lists.
+    const panes: [string, Keymap, readonly string[]][] = [
+      ["keys.explorer", this.explorerKeys, EXPLORER_ACTIONS],
+      ["keys.outline", this.outlineKeys, OUTLINE_ACTIONS],
+      ["keys.resize", this.resizeKeys, Object.keys(RESIZE_ACTIONS)],
+    ];
+    for (const [table, map, actions] of panes) {
+      for (const a of new Set(map.entries().map(([, v]) => v))) if (!actions.includes(a)) this.message("warn", `config: [${table}] binds unknown action "${a}" (${actions.join(", ")})`);
+    }
   }
 
   applyTheme(): void {
@@ -911,6 +922,7 @@ export class App {
    */
   resizeAction(action: string): void {
     const step = 2;
+    if (!(action in RESIZE_ACTIONS)) return this.message("error", `unknown resize action: ${action}`);
     if (action === "leave") {
       this.resizeMode = false;
       return;
@@ -1462,6 +1474,7 @@ export class App {
     }
     const r = g.overlay;
     if (ev.type === "scroll") {
+      if (ev.scroll?.direction !== "up" && ev.scroll?.direction !== "down") return; // sideways: nothing
       // The wheel scrolls the list, three rows a notch, like the note and the side panes; the
       // selection moves only to stay in view.
       const d = (ev.scroll?.direction === "up" ? -1 : 1) * 3;
@@ -1488,7 +1501,8 @@ export class App {
   private wheel(ev: { x: number; y: number; scroll?: { direction: string; delta: number } }, g: Geometry): void {
     const n = Math.max(1, ev.scroll?.delta ?? 1) * 3;
     const dir = ev.scroll?.direction === "up" ? -1 : 1;
-    if (g.tabStrip && inRect(g.tabStrip, ev.x, ev.y) && this.tabs.length) {
+    const sideways = ev.scroll?.direction === "left" || ev.scroll?.direction === "right";
+    if (!sideways && g.tabStrip && inRect(g.tabStrip, ev.x, ev.y) && this.tabs.length) {
       this.activeTab = (this.activeTab + dir + this.tabs.length) % this.tabs.length;
       return;
     }

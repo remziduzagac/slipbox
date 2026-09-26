@@ -36,11 +36,11 @@ max_file_size = 4194304        # bytes; larger notes are listed as skipped
 
 [ui]
 sidebar = true                 # explorer beside the content on wide terminals
-sidebar_width = 30
+sidebar_width = 30             # 8–200; drawn at least 12 wide and at most half the terminal
 outline = false                # outline pane on the right on wide terminals
 outline_width = 32
 split_ratio = 0.5              # first window's share of a split (0.2–0.8)
-top_bar = true                 # explorer button, palette chip, vault state
+top_bar = true                 # explorer button, palette chip, vault state (and ▤ when no breadcrumb)
 breadcrumb = true              # breadcrumb atop each window (with the outline's ▤ button)
 mouse = true
 narrow_width = 90              # below this, the explorer and outline open over the content
@@ -119,7 +119,8 @@ is active, and `[colors.<theme>]` does so for one theme only.
   a number, or a string like `"12"` or `"ansi:12"`)
   `0`–`255`.
 - **Under `NO_COLOR`**, colours are ignored; the attributes still apply in the TUI
-  (`slipbox render` prints plain text then).
+  (`slipbox render` prints plain text then). The theme is then `mono`, so of the per-theme
+  tables only `[colors.mono]` applies.
 - **Problems** (an unknown role or field, a malformed colour) are warnings, and the rest applies.
 - **They apply everywhere** a theme does: the TUI, its theme picker's preview, and `slipbox
   render`. Saving the file reloads them live.

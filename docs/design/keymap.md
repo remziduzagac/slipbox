@@ -19,13 +19,17 @@ Config uses the same notation and accepts common spellings: `G` means `shift+g`,
 
 - **Navigation has direct keys**, both vim-style and standard editor keys. **No emacs keys.**
   No `g` keys except `g g`.
-- **Everything else is under the leader, `space`.** The which-key popup lists the next keys:
-  immediately after the leader, and after 500 ms for the other prefixes (`y`, `ctrl+w`,
-  `ctrl+t`, `[`, `]`, `g`). Each entry shows a name and a short explanation, in at most three
-  columns packed from the left, and keys with the same action share an entry (`h left`). `backspace` goes up a
-  level, and `esc` cancels.
-- **Every `ctrl+` chord has a leader route.** Terminals, multiplexers and browsers swallow
-  `ctrl+` keys (zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`); nothing takes `space`.
+- **Everything else is under the leader, `space`**, apart from a few universal direct keys: `?`
+  help, `:` the palette, `/` and `ctrl+f` find (`n` / `shift+n`), `ctrl+p` the switcher, the
+  `y …` copies, `v` visual mode, `ctrl+e` / `ctrl+o` the panes, `ctrl+q` quit. The which-key
+  popup lists the next keys: immediately after the leader, and after 500 ms for the other
+  prefixes (`y`, `ctrl+w`, `ctrl+t`, `[`, `]`, `g`). Each entry shows a name and a short
+  explanation, in at most three columns, and keys with the same action share an entry
+  (`h left`). `backspace` goes up a level, and `esc` cancels.
+- **Every `ctrl+` chord has another route**, usually under the leader: terminals, multiplexers
+  and browsers swallow `ctrl+` keys (zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`);
+  nothing takes `space`. Cursor movement is the exception (its chords have direct alternatives:
+  page keys, arrows, `home` / `end`), and `ctrl+c`'s alternative is `y y`.
 - **Same letter twice opens that group's list:** `space h h`, `space l l`, `space t t`,
   `space f f`, `space u u`, `space s s`.
 - **Plain `q` only closes** the explorer, the outline or resize mode (in lists and prompts it is
@@ -68,6 +72,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | half page down / up (cursor moves with it) | `ctrl+d` / `ctrl+u` |
 | page down / up (cursor moves with it) | `pagedown` / `pageup` |
 | mouse wheel | scrolls the view |
+| horizontal wheel or trackpad | with wrapping off, scrolls the view sideways (6 columns a notch) |
 
 ## Selection
 
@@ -80,10 +85,10 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | extend by paragraph | `shift+ctrl+up` / `shift+ctrl+down` |
 | extend to note top / bottom | `shift+ctrl+home` / `shift+ctrl+end` |
 | extend by page | `shift+pageup` / `shift+pagedown` |
-| visual mode, by character / whole rows | `v` / `shift+v`, then any movement |
+| visual mode, by character / whole rows | `v` / `shift+v`, then any movement (the same key again leaves) |
 | swap selection ends (visual mode) | `o` |
 | copy the selection and leave visual mode | `y` |
-| cancel (also clears find highlights) | `esc` |
+| cancel (also clears find highlights; with neither, focuses the note) | `esc` |
 | mouse | click moves the cursor (on a link, follows it); drag selects and copies on release |
 
 ## Copy
@@ -137,7 +142,7 @@ which-key popup lists the keys while the mode is on, and the status chip reads `
 | Action | Keys |
 | --- | --- |
 | enter resize mode | `ctrl+alt+w`, `space w r` |
-| narrower / wider | `h` / `l`, `left` / `right` |
+| narrower / wider (2 columns a step) | `h` / `l`, `left` / `right` |
 | shorter / taller (a stacked split) | `k` / `j`, `up` / `down` |
 | equal sizes | `=` (also `ctrl+w =`, `space w =` outside the mode) |
 | leave | `esc`, `enter`, `q`; any other key leaves and does its normal job |
@@ -211,7 +216,7 @@ and, while unfocused, keeps its selection on the section the cursor is in. Insid
 | `h` / `l`, `left` / `right` | fold / unfold |
 | `g g` / `shift+g` | top / bottom |
 | `q` | close the outline |
-| `esc` | back to the note |
+| `esc` | back to the note (over the content, the outline closes) |
 
 Below `ui.narrow_width` columns (default 90), the explorer and the outline open over the content.
 
@@ -254,7 +259,7 @@ config.
 | --- | --- |
 | `space u u` | list the UI settings with their current values; pick one to change it |
 | `space u t` | theme picker, previewed live (`esc` restores) |
-| `space u g` | glyph picker: nerd, unicode, ascii (previewed live) |
+| `space u g` | glyph picker: nerd, unicode, ascii or auto (previewed live) |
 | `space u w` | readable width: the text column capped at `ui.readable_max` (100), centred |
 | `space u z` | zen: no bars, frame, panes, tabs or breadcrumbs; readable width on |
 | `space u l` | cursor-row highlight on / off |
@@ -315,7 +320,7 @@ mouse off, which gives it back to the terminal.
 | Where | What the mouse does |
 | --- | --- |
 | top bar `≡` | show the explorer (and focus it) / hide it |
-| breadcrumb `▤` (far right) | show the outline (and focus it) / hide it |
+| `▤` (breadcrumb's far right, or the top bar's) | show the outline (and focus it) / hide it |
 | top bar `slipbox` chip | open the command palette |
 | window breadcrumb | scroll that window to the heading, and focus it; its icon finds a heading |
 | tab | click to switch; drag to reorder; middle-click or `×` to close |

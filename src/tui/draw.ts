@@ -111,7 +111,6 @@ export function drawApp(app: App, c: Canvas): Geometry {
     geo.rules.push({ y, x0, x1 });
   };
 
-  if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
   if (frame) {
     rule(head, 0, W);
     rule(bottom + 1, 0, W);
@@ -125,6 +124,8 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // The rightmost top window's header runs over the outline's column, which starts under it.
   const overOutline = app.outlineShown && app.outlineBeside ? right : 0;
   drawContent(app, c, { x: left, y: mainY, w: W - left - right, h: mainH }, frame, overOutline, geo);
+  // After the windows: the top bar carries the outline's button when no breadcrumb row did.
+  if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
 
   if (app.sidebarShown) {
     const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, W - 6);
@@ -216,9 +217,9 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
 
   // Right side, laid out from the far right inwards. The outline's button is on the breadcrumb,
-  // or here when there is no breadcrumb.
+  // or here when no window drew one (breadcrumb off, a window too short for it).
   let rx = c.width - 1;
-  if (!app.config.ui.breadcrumb && app.tab) {
+  if (app.tab && !geo.hot.some((h) => h.id === "btn:outline")) {
     const label = icon(g.outlineButton);
     rx = c.width - stringWidth(label);
     button(app, c, rx, band, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);

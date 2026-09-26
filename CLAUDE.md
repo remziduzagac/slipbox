@@ -13,7 +13,8 @@ Read `docs/handoff.md` first, then `docs/design/README.md`. The plan's item IDs 
   `docs/design/` in the same change.
 - **Nothing measures text except `src/core/width.ts`**, and every string entering the layout
   passes through `sanitize`.
-- Phase 2 is read-only: the TUI never writes a note. The scratch is the one file it writes.
+- Phase 2 is read-only: the TUI never writes a note. Besides its own state and cache, the scratch
+  is the one file it writes.
 - Markdown is wrapped at 120 columns, tables and code included.
 
 ## Commands

@@ -34,13 +34,14 @@ Phase 2's TUI never has unsaved changes, so the list stays empty until phase 3.
   (`--if-unchanged`).
 - **Flags.** Global flags may come before or after the command. An unknown flag is a usage
   error. `--width` takes a whole number from 20 to 1000.
-- **Colour:** `render` colours only when stdout is a TTY and `NO_COLOR` is unset. `--plain`,
-  `--color never` or a pipe give output with no escapes. `--theme` and `--glyphs
-  auto|nerd|unicode|ascii` override the config for one render.
+- **Colour:** `render` colours only when stdout is a TTY and `NO_COLOR` is unset; `--color always`
+  forces it (even with `NO_COLOR`). `--plain`, `--color never` or a pipe give output with no
+  escapes. `--theme` and `--glyphs auto|nerd|unicode|ascii` override the config for one render.
 
 **No TTY (plan `9.3`):** `slipbox [path]` (also spelled `slipbox open [path]`) with a non-terminal
 stdin or stdout refuses to start the TUI, prints a hint and exits 2. It never paints escape codes
-into a pipe.
+into a pipe. The TUI takes `--root`, `--config` and `--theme` (which beats a theme remembered in the
+session); other flags are ignored there.
 
 ## Stability
 
@@ -50,7 +51,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | --- | --- |
 | `render <note>` | `{path, width, lines[], headings[{level, text, slug, line}]}` |
 | `capture [text]` | `{scratch, project, entry}` |
-| `scratch show` | `{path, content, sha}` |
+| `scratch show` (also plain `scratch`) | `{path, content, sha}` |
 | `scratch path` | `{path, exists}` |
 | `scratch clear` | `{path, cleared, previousSha}` |
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
