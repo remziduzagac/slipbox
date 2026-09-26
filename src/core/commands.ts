@@ -76,9 +76,13 @@ export function canonKey(token: string, leader = "space"): string {
   else if (t === "+") parts = ["+"];
   let key = parts.pop() ?? "";
   const mods = new Set<string>();
+  // An unknown modifier stays in the name, so `hyper+x` never fires rather than binding plain `x`
+  // (the keymap reports it: unknownModifiers).
+  const unknown: string[] = [];
   for (const p of parts) {
     const m = MOD_ALIASES[p.toLowerCase()];
     if (m) mods.add(m);
+    else unknown.push(p.toLowerCase());
   }
   if (key.length === 1 && key >= "A" && key <= "Z") {
     mods.add("shift");
@@ -87,7 +91,18 @@ export function canonKey(token: string, leader = "space"): string {
     key = key.toLowerCase();
     key = KEY_ALIASES[key] ?? key;
   } else key = KEY_ALIASES[key] ?? key;
-  return [...MOD_ORDER.filter((m) => mods.has(m)), key].join("+");
+  return [...MOD_ORDER.filter((m) => mods.has(m)), ...unknown, key].join("+");
+}
+
+/** The modifier names in a key sequence that aren't modifiers slipbox knows (`hyper` in `hyper+x`). */
+export function unknownModifiers(seq: string): string[] {
+  const out: string[] = [];
+  for (const token of seq.trim().split(/\s+/)) {
+    if (token.length < 2 || !token.slice(0, -1).includes("+")) continue;
+    const parts = token.endsWith("++") ? token.slice(0, -2).split("+") : token.split("+").slice(0, -1);
+    for (const p of parts) if (p && !MOD_ALIASES[p.toLowerCase()]) out.push(p);
+  }
+  return out;
 }
 
 /** Canonical form of a key sequence: space-separated tokens, `leader` substituted. */

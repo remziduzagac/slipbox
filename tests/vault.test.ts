@@ -208,3 +208,14 @@ describe("review round 2 (CLI)", () => {
     expect(bl.data.backlinks.map((b: { from: string }) => b.from)).toContain("linker.md");
   });
 });
+
+describe("review round 3 (CLI)", () => {
+  test("a usage error's envelope names the command, never a flag's value", async () => {
+    const r = await cli(["--root", "/tmp", "--bogus", "--json"]);
+    expect(JSON.parse(r.out).command).toBe("help");
+    expect(JSON.parse((await cli(["--root", "/tmp", "ls", "--bogus", "--json"])).out).command).toBe("ls");
+  });
+  test("a bad --color is a usage error before anything else can fail", async () => {
+    expect((await cli(["ls", "--root", "/nonexistent-dir", "--color", "bad"])).code).toBe(2);
+  });
+});

@@ -125,8 +125,10 @@ clicked and dragged.
 which-key entries are drawn in the `hover` role while the mouse is over them. Rows in lists and
 panes show their selection instead.
 
-**Viewport-only (plan `3.2`).** Only rows on screen are drawn, and a layout is computed once
-per width and cached on the buffer.
+**Viewport-only (plan `3.2`).** Only rows on screen are drawn, and a layout is computed once per
+width and cached on the buffer. A drawing failure never takes the app down: it is reported once as
+an error message and the last frame's geometry is kept (tests fail on it instead). A window narrower
+than 8 columns isn't drawn.
 
 ## The cursor
 
@@ -164,8 +166,8 @@ you saw.
   Side by side falls back to stacked below 80 content columns (a fixed width, not
   `ui.narrow_width`), and a stacked split too short for two windows (under 6 rows) shows only the
   active one. With a split, each window names its note on its breadcrumb row, bright in
-  the active window. Pane widths stay between 12 columns and half the terminal; a split's ratio
-  between 15% and 85%.
+  the active window. Pane widths stay between 12 columns and half the terminal, and together
+  leave the note at least 24; a split's ratio stays between 15% and 85%.
 
 ## Positions (plans `3.4`, `3.5`, `3.15`)
 
@@ -174,6 +176,8 @@ you saw.
 - **Top of the view:** the nearest heading above it, plus an offset and a fallback line.
 - **Cursor:** the same kind of anchor for its row, plus which wrapped row of that source line
   it's on, plus its column.
+- **Selection:** its fixed end is kept the same way, so a resize or a pane toggle keeps it on the
+  same text (whole-row selections take whatever the rows hold after re-wrapping).
 
 Rows are re-derived on every re-layout (a resize, a reload), and the anchors are then refreshed
 from where they landed. So text an agent inserts above doesn't move you, and removing your
@@ -230,10 +234,12 @@ tab is bright (`tab_active`) while the note has focus and dimmer (`tab_active_id
 of them stay bold, so nothing shifts.
 
 Both trees show depth by indentation plus dim tree lines (the `tree_guide` role): `├─` into each
-child, `└─` into the last one, and `│` where an ancestor has siblings still to come (ascii: `|`,
-`` ` ``, `-`). The outline marks headings that have sub-headings with fold markers of its own (`▾`
-/ `▸`; ascii `v` / `>`); the explorer marks folders with its folder glyphs. The wheel scrolls a
-pane without moving its selection, and a click anywhere in a pane focuses it.
+child, `└─` into the last one, and `│` where an ancestor has siblings still to come (ascii: `|`, ``
+` ``, `-`). The outline marks headings that have sub-headings with fold markers of its own (`▾` /
+`▸`; ascii `v` / `>`); the explorer marks folders with its folder glyphs. The wheel scrolls a pane
+without moving its selection, and the pane stays where the wheel left it until it is focused,
+revealed or opened, the note scrolls, or the outline's note changes; and a click anywhere in a pane
+focuses it.
 
 Both are windows for `ctrl+w h` / `ctrl+w l`, and each has its own keymap: `[keys.explorer]` and
 `[keys.outline]`.
@@ -243,7 +249,9 @@ panes open over the content on demand (6 columns wider than their width, leaving
 note) and close after a pick. The wide-terminal preferences (`ui.sidebar`, `ui.outline`) are kept
 separately, so widening the terminal brings them back. Tables that cannot fit become records
 ([rendering.md](rendering.md)). Click targets under an overlaid pane (a breadcrumb heading, the `▤`
-button) are off while it's open.
+button) are off while it's open. Over the note, a pane's border and margin belong to it (clicks
+there focus it); the side panes take clicks and the wheel before the note's borders and scrollbars,
+and the outline, drawn over the explorer, before the explorer.
 
 ## Overlays
 
@@ -291,9 +299,10 @@ Help and the palette list the same commands for different jobs, in the groups of
   internal `esc` handler); typing ranks the best match first,
   without groups. Each command shows its first binding and first alias.
 
-**The `:` prompt** is the palette and a command line at once. An exact alias from `[aliases]`
-(`:q`, `:vs`, `:theme dracula`) always wins, and an alias taking an argument lists completions
-(notes, themes, glyph sets) once a space is typed.
+**The `:` prompt** is the palette and a command line at once. An exact alias from `[aliases]` (`:q`,
+`:vs`, `:theme dracula`) always wins, and an alias taking an argument lists completions (notes,
+themes, glyph sets) once a space is typed. With an alias and a trailing space (`:theme` then a
+space), `enter` applies the highlighted candidate.
 
 **The which-key popup** lists the next keys of a pending sequence, across the keymaps active in the
 current state. It is framed like the other popups: a bordered box on the overlay background, with
@@ -313,8 +322,9 @@ Keys with the same action share one entry, letters first (`j down`); groups come
 and a group without a name reads `+more`. It shows at once for the leader, and after
 `input.which_key_delay_ms` for other prefixes, never with `input.which_key = false` (resize mode's
 popup shows regardless: it is that mode's only cue). `backspace` goes up a level; `esc` cancels.
-Groups read `+name`; clicking an entry presses its key. It also shows in resize mode (titled
-"resize", with "keys repeat · any other key leaves").
+Groups read `+name`; clicking an entry presses its key, and the popup covers what's under it (clicks
+on its background do nothing). It also shows in resize mode (titled "resize", with "keys repeat ·
+any other key leaves").
 
 **The message sink (plan `3.13`).** Config warnings, walk errors, watcher problems and command
 feedback all go to one place: the bottom line briefly, the messages list permanently (the last
@@ -400,7 +410,8 @@ backstops:
 The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes. A change counts
 when a note's mtime or size differs, so a rewrite in the same second is still seen. Attachments
 (any non-note file) are reported too, so `![[image.png]]` embeds change status as images come and
-go; a note that appears larger than `walk.max_file_size` is skipped, as the walk would.
+go; a note that appears or grows larger than `walk.max_file_size` is skipped (and dropped from the
+index), as the walk would. The TUI's own writes (the scratch) are ignored once, then forgotten.
 
 **Degrading loudly (plan `5.2`).** Exhausting the watch limit (`ENOSPC`, `EMFILE`, `ENFILE`)
 produces one error message, `⚠ not watching` in the status line, and polling of open notes.

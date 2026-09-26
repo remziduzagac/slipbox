@@ -25,7 +25,7 @@ import { sanitize } from "../core/sanitize.ts";
 import { readText } from "../core/fsutil.ts";
 import { initVault, isInside, locateVault, readVaultVersion, VaultError, type VaultLocation } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
-import { type Args, flag, has, parseArgs, UsageError } from "./args.ts";
+import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 
 export const JSON_SCHEMA = 1;
@@ -115,6 +115,20 @@ export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "capture", "scratch", "init", "info", "themes", "commands", "help",
 ]);
 
+/** The command word in raw arguments that failed to parse: skips flags and their values. */
+function commandIn(argv: string[]): string {
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (a === "--") return argv[i + 1] ?? "help";
+    if (a.startsWith("-")) {
+      if (!a.includes("=") && VALUED.has(a.replace(/^-+/, ""))) i++;
+      continue;
+    }
+    return a;
+  }
+  return "help";
+}
+
 /** Run a CLI command. Returns the exit code; never calls process.exit itself. */
 export async function runCli(argv: string[], io: Io): Promise<number> {
   // `--json` promises exactly one object on stdout, whatever happens: usage errors included.
@@ -125,7 +139,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     args = parseArgs(argv);
   } catch (err) {
     const message = (err as Error).message;
-    if (argv.includes("--json")) io.out(envelope({ ok: false, command: argv.find((a) => !a.startsWith("-")) ?? "help", error: { code: EXIT.usage, message } }));
+    if (argv.includes("--json")) io.out(envelope({ ok: false, command: commandIn(argv), error: { code: EXIT.usage, message } }));
     else io.err(`slipbox: ${message}\n`);
     return EXIT.usage;
   }
@@ -141,14 +155,14 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
   }
   let session: Session | null = null;
   try {
+    // Flags every command shares are checked for every command, used or not.
+    const color = flag(args, "color");
+    if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
     const pathArg = ["render", "links", "backlinks", "outline"].includes(command) ? noteArgPath(rest[0], io.cwd) : undefined;
     const loc =
       command === "init"
         ? { root: io.cwd, mode: "single" as const, file: null }
         : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
-    // Flags every command shares are checked for every command, used or not.
-    const color = flag(args, "color");
-    if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);

@@ -37,6 +37,8 @@ export interface WatcherOptions {
   onWarn?: (message: string) => void;
   /** Known files and their mtimes, so change vs create vs no-op can be told apart. */
   known: Map<string, number>;
+  /** Their sizes, so a same-mtime rewrite that changes the size counts from the start. */
+  sizes?: Map<string, number>;
   /** Files to poll when degraded (open buffers). */
   pollTargets?: () => string[];
   pollMs?: number;
@@ -61,12 +63,13 @@ export class VaultWatcher {
   private readonly gitignores = new Map<string, number>();
 
   constructor(private readonly opts: WatcherOptions) {
+    for (const [k, v] of opts.sizes ?? []) this.sizes.set(k, v);
     for (const d of opts.dirs) this.watchDir(d);
     this.ensurePollTimer();
   }
 
   /** After a rescan: watch exactly `dirs`, and adopt the new graph's notes as known. */
-  sync(dirs: string[], known: Map<string, number>): void {
+  sync(dirs: string[], known: Map<string, number>, sizes?: Map<string, number>): void {
     const want = new Set(dirs);
     for (const [d, w] of this.watchers) {
       if (!want.has(d)) {
@@ -79,6 +82,8 @@ export class VaultWatcher {
     for (const d of dirs) this.watchDir(d);
     this.opts.known.clear();
     for (const [k, v] of known) this.opts.known.set(k, v);
+    this.sizes.clear();
+    for (const [k, v] of sizes ?? []) this.sizes.set(k, v);
   }
 
   private gitignoreStamp(dirRel: string): number {

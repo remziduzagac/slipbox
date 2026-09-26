@@ -14,39 +14,38 @@ originals never fixed.
 
 ▌ What each file is for
 
-┌────────────────────────┬───────────────────────────────────────┬─────────────┐
-│ File                   │ Exercises                             │ Shape       │
-╞════════════════════════╪═══════════════════════════════════════╪═════════════╡
-│ wide-tables.md         │ The allocator's hardest case — the    │ 72 lines,   │
-│                        │ problem that started the project      │ longest 503 │
-├────────────────────────┼───────────────────────────────────────┼─────────────┤
-│ overlong-table-rows.md │ Rows at 371 characters, to be wrapped │ 151 lines,  │
-│                        │ or refused, never overflowed          │ 34 rows     │
-├────────────────────────┼───────────────────────────────────────┼─────────────┤
-│ dense-tables.md        │ 232 table rows in one document, most  │ 324 lines   │
-│                        │ near the 120 limit. Throughput, not   │             │
-│                        │ width                                 │             │
-├────────────────────────┼───────────────────────────────────────┼─────────────┤
-│ wrap-probe.md          │ A small wide-table case, for fast     │ 16 lines    │
-│                        │ iteration                             │             │
-├────────────────────────┼───────────────────────────────────────┼─────────────┤
-│ frontmatter-tables-    │ YAML frontmatter, 38 table rows, 10   │ 233 lines   │
-│ fences.md              │ fenced blocks — the common mixture    │             │
-├────────────────────────┼───────────────────────────────────────┼─────────────┤
-│ code-heavy.md          │ 22 fenced blocks in several           │ 199 lines   │
-│                        │ languages; highlighting and fence     │             │
-│                        │ width                                 │             │
-├────────────────────────┼───────────────────────────────────────┼─────────────┤
-│ large-document.md      │ 1,181 lines, 69 rows, deep nesting.   │ 56 KB       │
-│                        │ Scroll, viewport rendering, reparse   │             │
-├────────────────────────┼───────────────────────────────────────┼─────────────┤
-│ long-form-mixed.md     │ Long prose with embedded code, tables │ 473 lines   │
-│                        │ and quotes — the ordinary case at     │             │
-│                        │ length                                │             │
-├────────────────────────┼───────────────────────────────────────┼─────────────┤
-│ links-and-unicode.md   │ Wikilinks and display width.          │ 91 lines    │
-│                        │ Synthetic — see below                 │             │
-└────────────────────────┴───────────────────────────────────────┴─────────────┘
+┌─────────────────────┬─────────────────────────────────────────┬──────────────┐
+│ File                │ Exercises                               │ Shape        │
+╞═════════════════════╪═════════════════════════════════════════╪══════════════╡
+│ wide-tables.md      │ The allocator's hardest case — the      │ 71 lines,    │
+│                     │ problem that started the project        │ longest 503  │
+├─────────────────────┼─────────────────────────────────────────┼──────────────┤
+│ overlong-table-     │ Rows at 371 characters, to be wrapped   │ 150 lines,   │
+│ rows.md             │ or refused, never overflowed            │ 34 rows      │
+├─────────────────────┼─────────────────────────────────────────┼──────────────┤
+│ dense-tables.md     │ 232 table rows in one document, most    │ 323 lines    │
+│                     │ near the 120 limit. Throughput, not     │              │
+│                     │ width                                   │              │
+├─────────────────────┼─────────────────────────────────────────┼──────────────┤
+│ wrap-probe.md       │ A small wide-table case, for fast       │ 15 lines     │
+│                     │ iteration                               │              │
+├─────────────────────┼─────────────────────────────────────────┼──────────────┤
+│ frontmatter-tables- │ YAML frontmatter, 38 table rows, 6      │ 232 lines    │
+│ fences.md           │ fenced blocks — the common mixture      │              │
+├─────────────────────┼─────────────────────────────────────────┼──────────────┤
+│ code-heavy.md       │ 22 fenced blocks in several languages;  │ 198 lines    │
+│                     │ highlighting and fence width            │              │
+├─────────────────────┼─────────────────────────────────────────┼──────────────┤
+│ large-document.md   │ 1,180 lines, 69 rows, deep nesting.     │ 56 KB        │
+│                     │ Scroll, viewport rendering, reparse     │              │
+├─────────────────────┼─────────────────────────────────────────┼──────────────┤
+│ long-form-mixed.md  │ Long prose with embedded code, tables   │ 472 lines    │
+│                     │ and quotes — the ordinary case at       │              │
+│                     │ length                                  │              │
+├─────────────────────┼─────────────────────────────────────────┼──────────────┤
+│ links-and-unicode.  │ Wikilinks and display width. Synthetic  │ 90 lines     │
+│ md                  │ — see below                             │              │
+└─────────────────────┴─────────────────────────────────────────┴──────────────┘
 
 ▌ Provenance
 

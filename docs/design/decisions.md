@@ -93,7 +93,8 @@ One policy everywhere, never the filesystem's:
   path (Obsidian's shortest-when-unambiguous). Still tied → **ambiguous**, all candidates returned, and the TUI shows
   a picker.
 - **Markdown links** `[t](path.md)` resolve relative to the linking note; a leading `/` means the vault root.
-- **Non-markdown targets** (`![[diagram.png]]`) resolve relative to the note, then the vault root.
+- **Non-markdown targets** (`![[diagram.png]]`) resolve relative to the note, then the vault root,
+  then by file name anywhere in the vault (several matches are ambiguous).
 - **Single-file mode** resolves only within the file's own directory.
 
 This opens an existing Obsidian vault unchanged for the default "shortest path when possible" setting.
@@ -128,7 +129,9 @@ and config remaps all of them.
 
 **The conventions that settle collisions:**
 
-- **Direct keys are for navigation only;** everything else is under the leader, `space`.
+- **Direct keys are for navigation,** plus a few universal ones (`?`, `:`, `/`, `ctrl+f`,
+  `ctrl+p`, the `y …` copies, `v`, `ctrl+e`, `ctrl+o`, `ctrl+q`; see keymap.md); everything
+  else is under the leader, `space`.
 - **No emacs keys**, and no `g` keys except `g g`.
 - **Every `ctrl+` chord has a non-`ctrl+` route,** because terminals, multiplexers and browsers
   can swallow them. Cursor movement is exempt (it has its own alternatives: page keys, arrows,

@@ -132,6 +132,7 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | link index | `$XDG_CACHE_HOME/slipbox/<key>/index.json` |
 | reading positions | `$XDG_STATE_HOME/slipbox/<key>/positions.json` |
 | session | `$XDG_STATE_HOME/slipbox/<key>/session.json` |
+| clipboard fallback (no OSC 52 or clipboard tool) | `$XDG_STATE_HOME/slipbox/<key>/clipboard.txt` |
 | scratch | `$XDG_STATE_HOME/slipbox/<key>/scratch.md`, or in the vault by config |
 | staleness | `$XDG_STATE_HOME/slipbox/<key>/dirty/<pid>.json` |
 

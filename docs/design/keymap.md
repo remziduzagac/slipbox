@@ -147,11 +147,12 @@ which-key popup lists the keys while the mode is on, and the status chip reads `
 | equal sizes | `=` (also `ctrl+w =`, `space w =` outside the mode) |
 | leave | `esc`, `enter`, `q`; any other key leaves and does its normal job |
 
-**What resizes follows focus:** the explorer's or the outline's width when it is focused,
-otherwise the active window's share of the split. Sizes are remembered in the session, and the
-defaults come from `ui.split_ratio`, `ui.sidebar_width` and `ui.outline_width`; `=` evens a split
-to half and puts the pane widths back to those defaults. Pane widths stay between 12 columns and
-half the terminal, and a split between 15% and 85%. The mode's keys are `[keys.resize]` in config.
+**What resizes follows focus:** the explorer's or the outline's width when it is focused, otherwise
+the active window's share of the split. Sizes are remembered in the session, and the defaults come
+from `ui.split_ratio`, `ui.sidebar_width` and `ui.outline_width`; `=` evens a split to half and puts
+the pane widths back to those defaults. Pane widths stay between 12 columns and half the terminal,
+leaving the note at least 24; a split stays between 15% and 85%. The mode's keys are `[keys.resize]`
+in config.
 
 `ctrl+alt+w` arrives when `alt` does. On macOS that means Option set to act as Alt (Ghostty:
 `macos-option-as-alt`); otherwise use `space w r`.
@@ -224,7 +225,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| find in this note (the cursor goes to the match) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
+| find in this note (cursor to the match; empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
 | quick switcher: find a note by name | `ctrl+p` | `space f f` |
 | outline picker: find a heading in this note | — | `space f o` |
 | command palette / command line | `:` | `space f p` |

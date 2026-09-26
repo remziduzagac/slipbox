@@ -37,7 +37,7 @@ max_file_size = 4194304        # bytes; larger notes are listed as skipped
 
 [ui]
 sidebar = true                 # explorer beside the content on wide terminals
-sidebar_width = 30             # 8–200; drawn at least 12 wide and at most half the terminal
+sidebar_width = 30             # 8–200; drawn 12 to half the terminal, the note keeping 24
 outline = false                # outline pane on the right on wide terminals
 outline_width = 32
 split_ratio = 0.5              # first window's share of a split (0.2–0.8)
@@ -104,6 +104,7 @@ breadcrumb_band = { bg = "#1d1e2b" }
 
 The notation is in [keymap.md](keymap.md): space-separated key names such as `g g`,
 `ctrl+w shift+h` or `leader l n`. `G` means `shift+g`, and modifiers may be written in any order.
+An unknown modifier (`hyper+x`) is reported, and the key never fires rather than binding `x`.
 A command spec is a command id, optionally followed by an argument (`"tab.goto 3"`,
 `"theme.set nord"`). `slipbox commands` lists every id, and `?` in the TUI lists every
 binding.

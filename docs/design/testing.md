@@ -15,7 +15,10 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/render.test.ts` | snapshots, the no-overflow property, allocator properties, blocks, ANSI output |
 | `tests/vault.test.ts` | discovery, the walk against the fixture vault, the graph, the CLI and parity |
 | `tests/tui.test.ts` | the TUI model, the real watcher, state, keymap, OpenTUI end to end |
-| `tests/regressions.test.ts` | one test per bug found in review (later rounds: `tui.test.ts`, "review round N") |
+| `tests/regressions.test.ts` | one test per bug found in review (later: "review round N" blocks) |
+
+Later review rounds keep their regression tests in `describe("review round N …")` blocks in the
+file for the area: `tui.test.ts`, `core.test.ts` and `vault.test.ts`.
 
 **Properties, not just examples:**
 

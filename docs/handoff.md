@@ -62,7 +62,7 @@ because it is cheap now and expensive later. Two deserve special attention:
   means touching every action.
 
 `docs/samples/` holds the rendering fixtures for `0.5` — the wide-table case that started the
-project, a 1,181-line document, 232 dense table rows, and a synthetic file covering wikilinks and
+project, a 1,180-line document, 232 dense table rows, and a synthetic file covering wikilinks and
 display width. The vault cases (name collisions, CRLF and encodings, images, the `.slipbox/`
 marker) live in the test vault, `tests/fixtures/vault/`.
 

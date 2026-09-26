@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatEntry, formatRef, parseRef } from "../src/core/capture.ts";
-import { Keymap } from "../src/core/commands.ts";
+import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
 import { parseMarkdown, visit } from "../src/core/parse.ts";
@@ -272,5 +272,14 @@ describe("review round 2 (core)", () => {
     const t = { ...theme, roles: { ...theme.roles, text: { fg: "ansi:200" } } };
     const out = layoutToAnsi(renderMarkdown("hello\n", { width: 20, glyphs: g, showUrls: false }), t, { depth: "16" });
     expect(out).not.toContain("38;5;");
+  });
+});
+
+describe("review round 3 (core)", () => {
+  test("an unknown modifier keeps the key from binding plain x, and is reported", () => {
+    expect(canonKey("hyper+x")).toBe("hyper+x");
+    expect(unknownModifiers("hyper+x g g")).toEqual(["hyper"]);
+    expect(unknownModifiers("ctrl+w shift+h")).toEqual([]);
+    expect(unknownModifiers("ctrl++")).toEqual([]);
   });
 });

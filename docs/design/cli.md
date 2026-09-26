@@ -45,7 +45,8 @@ Phase 2's TUI never has unsaved changes, so the list stays empty until phase 3.
 **No TTY (plan `9.3`):** `slipbox [path]` (also spelled `slipbox open [path]`) with a non-terminal
 stdin or stdout refuses to start the TUI, prints a hint and exits 2. It never paints escape codes
 into a pipe. The TUI takes `--root`, `--config` and `--theme` (which beats a theme remembered in the
-session); other flags are ignored there.
+session); `--json`, `--help` and `--version` run the CLI instead, other known flags are ignored,
+and an unknown one is a usage error.
 
 ## Stability
 
@@ -61,7 +62,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
 | `resolve <link>` | `{link, status, path, abs, heading, line, candidates[]}` |
 | `links <note>` | `[{kind, target, heading, text, line, column, status, path, candidates}]` |
-| `backlinks <note>` | `{path, backlinks[{from, line, column, text}]}` |
+| `backlinks <note>` | `{path, backlinks[{from, line, column, text}]}` (a note's links to itself excluded) |
 
 These churn freely before 1.0:
 

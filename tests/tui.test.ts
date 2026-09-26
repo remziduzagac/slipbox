@@ -1283,6 +1283,15 @@ describe("review round 2", () => {
   });
 });
 
+describe("review round 3", () => {
+  test("a config key with an unknown modifier is reported and binds nothing", async () => {
+    const h = await harness({ config: (c) => (c.keys = { "hyper+x": "ui.zen" } as Config["keys"]) });
+    expect(h.app.messages.some((m) => m.text.includes('unknown modifier "hyper"'))).toBe(true);
+    await h.keys("x");
+    expect(h.app.ui.zen).toBe(false);
+  });
+});
+
 describe("wrap (space u s, ui.wrap)", () => {
   test("off: natural width, one row per paragraph, the view follows the cursor sideways", async () => {
     const h = await harness({ open: "samples/wide-tables.md", width: 110, config: (c) => (c.ui.sidebar = false) });

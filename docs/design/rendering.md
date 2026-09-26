@@ -203,8 +203,8 @@ string entering the IR passes through it: text, code, HTML, frontmatter, link ta
 language labels. As a backstop, the layout's final pass sanitizes every span again, whichever
 path built it (footnote labels and nested frontmatter keys were found that way). The fixture
 `tests/fixtures/vault/escapes.md` holds a hostile note, and the tests check that neither face
-ever emits an escape from it. Tabs expand to stops of 4 display columns (a CJK character counts
-two).
+ever emits an escape from it. Tabs expand to stops of 4 display columns in code blocks, HTML
+and frontmatter, and of 2 in inline code (a CJK character counts two).
 
 ## Code-fence highlighting (plan `2.5`)
 

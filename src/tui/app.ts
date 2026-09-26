@@ -13,7 +13,7 @@ import { existsSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { appendScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
-import { canonKey, canonSeq, CommandRegistry, Keymap } from "../core/commands.ts";
+import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { Graph } from "../core/graph.ts";
@@ -367,6 +367,18 @@ export class App {
     const bad = [...this.keymap.entries(), ...this.visualKeys.entries()].map(([, v]) => v.split(" ")[0]!).filter((id) => !ids.has(id));
     for (const id of new Set(bad)) this.message("warn", `config: [keys] binds unknown command "${id}"`);
     for (const [a, v] of Object.entries(this.aliases)) if (!ids.has(v.split(" ")[0]!)) this.message("warn", `config: [aliases] ${a} = unknown command "${v}"`);
+    // Keys with a modifier slipbox doesn't know can never be pressed: say so.
+    const tables: [string, Record<string, unknown>][] = [["keys", c.keys as Record<string, unknown>]];
+    for (const sub of ["visual", "explorer", "outline", "resize"]) {
+      const t = (c.keys as Record<string, unknown>)[sub];
+      if (t && typeof t === "object") tables.push([`keys.${sub}`, t as Record<string, unknown>]);
+    }
+    for (const [table, map] of tables) {
+      for (const k of Object.keys(map)) {
+        const bad = unknownModifiers(k);
+        if (bad.length) this.message("warn", `config: [${table}] "${k}": unknown modifier ${bad.map((b) => `"${b}"`).join(", ")} (ctrl, alt, shift, cmd)`);
+      }
+    }
     // The in-pane keymaps name actions, not commands: check them against their own lists.
     const panes: [string, Keymap, readonly string[]][] = [
       ["keys.explorer", this.explorerKeys, EXPLORER_ACTIONS],
@@ -1857,6 +1869,10 @@ export class App {
     return new Map([...this.graph.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));
   }
 
+  private sizesFromGraph(): Map<string, number> {
+    return new Map([...this.graph.notes.values()].map((n) => [n.rel, n.size] as [string, number]));
+  }
+
   startWatcher(): void {
     this.watcher = new VaultWatcher({
       root: this.loc.root,
@@ -1865,6 +1881,7 @@ export class App {
       debounceMs: this.config.watch.debounce_ms,
       pollMs: this.config.watch.poll_ms,
       known: this.knownFromGraph(),
+      sizes: this.sizesFromGraph(),
       onBatch: (b) => {
         this.applyChanges(b);
         this.host.requestRender();
@@ -1908,7 +1925,7 @@ export class App {
     if (batch.rescan) {
       this.graph.build(true, "lazy");
       this.indexInBackground();
-      this.watcher?.sync(this.loc.mode === "vault" ? this.graph.dirs : [""], this.knownFromGraph());
+      this.watcher?.sync(this.loc.mode === "vault" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
       setChanged = true;
       // The walk itself changed: any open note may have changed, appeared or gone.
       for (const buf of this.buffers.values()) if (buf.changedOnDisk()) this.reloadBuffer(buf);

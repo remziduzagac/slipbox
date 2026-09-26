@@ -12,15 +12,15 @@ including markdownlint violations the originals never fixed.
 
 | File | Exercises | Shape |
 | --- | --- | --- |
-| `wide-tables.md` | The allocator's hardest case — the problem that started the project | 72 lines, longest 503 |
-| `overlong-table-rows.md` | Rows at 371 characters, to be wrapped or refused, never overflowed | 151 lines, 34 rows |
-| `dense-tables.md` | 232 table rows in one document, most near the 120 limit. Throughput, not width | 324 lines |
-| `wrap-probe.md` | A small wide-table case, for fast iteration | 16 lines |
-| `frontmatter-tables-fences.md` | YAML frontmatter, 38 table rows, 10 fenced blocks — the common mixture | 233 lines |
-| `code-heavy.md` | 22 fenced blocks in several languages; highlighting and fence width | 199 lines |
-| `large-document.md` | 1,181 lines, 69 rows, deep nesting. Scroll, viewport rendering, reparse | 56 KB |
-| `long-form-mixed.md` | Long prose with embedded code, tables and quotes — the ordinary case at length | 473 lines |
-| `links-and-unicode.md` | **Wikilinks and display width.** Synthetic — see below | 91 lines |
+| `wide-tables.md` | The allocator's hardest case — the problem that started the project | 71 lines, longest 503 |
+| `overlong-table-rows.md` | Rows at 371 characters, to be wrapped or refused, never overflowed | 150 lines, 34 rows |
+| `dense-tables.md` | 232 table rows in one document, most near the 120 limit. Throughput, not width | 323 lines |
+| `wrap-probe.md` | A small wide-table case, for fast iteration | 15 lines |
+| `frontmatter-tables-fences.md` | YAML frontmatter, 38 table rows, 6 fenced blocks — the common mixture | 232 lines |
+| `code-heavy.md` | 22 fenced blocks in several languages; highlighting and fence width | 198 lines |
+| `large-document.md` | 1,180 lines, 69 rows, deep nesting. Scroll, viewport rendering, reparse | 56 KB |
+| `long-form-mixed.md` | Long prose with embedded code, tables and quotes — the ordinary case at length | 472 lines |
+| `links-and-unicode.md` | **Wikilinks and display width.** Synthetic — see below | 90 lines |
 
 ## Provenance
 
