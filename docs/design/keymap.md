@@ -329,7 +329,8 @@ mouse off, which gives it back to the terminal.
 | tab strip, wheel | previous / next tab |
 | tab strip `+N` | the tabs that don't fit: open the tab list |
 | pane borders | drag to resize the explorer, the outline, or the split |
-| scrollbar | click to jump; drag to scroll |
+| scrollbar (window, explorer, outline) | click to jump; drag to scroll |
+| horizontal scrollbar (wrapping off) | click to jump sideways; drag to scroll sideways |
 | status line path | copy the note's path |
 | message line | click to open the messages |
 | which-key popup | click an entry: a group opens it, a command runs it |

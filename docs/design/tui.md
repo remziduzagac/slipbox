@@ -117,9 +117,13 @@ line>:<column>` and the percentage (`all` when the note fits).
 **The bottom line** appears only while there is a message (4 s, 8 s for errors) or a prompt.
 Clicking a message opens the messages list.
 
-**The scrollbar** is the last column of each window: a `▐` track (`scrollbar_track`) with a `▐`
-thumb (`scrollbar` in the active window, `border` in the other); ascii `|` and `#`. It can be
-clicked and dragged.
+**Scrollbars.** The last column of each window is its scrollbar: a `▐` track (`scrollbar_track`)
+with a `▐` thumb (`scrollbar` in the active window, `border` in the other); ascii `|` and `#`. The
+explorer and the outline get the same bar in their last column while their rows overflow (the
+thumb bright while the pane is focused). With wrapping off, each window's last row belongs to a
+horizontal bar: a `▄` track and thumb under the text (ascii `-` and `#`), drawn when the note is
+wider than the window; the row stays reserved when it isn't, so the text doesn't jump. Every bar
+can be clicked and dragged; in a side pane that pins the pane's scroll, like the wheel.
 
 **Hover.** Buttons, tabs and their `×`, `+N`, breadcrumb headings and icon, the status path and
 which-key entries are drawn in the `hover` role while the mouse is over them. Rows in lists and
@@ -249,7 +253,8 @@ below 50, the room for both panes and the note's 24), and in zen mode, both pane
 content on demand (6 columns wider than their width, leaving at least 6 of the note) and close after
 a pick. The wide-terminal preferences (`ui.sidebar`, `ui.outline`) are kept separately, so widening
 the terminal brings them back. Tables that cannot fit become records ([rendering.md](rendering.md)).
-Click targets under an overlaid pane (a breadcrumb heading, the `▤` button) are off while it's open.
+Click targets under an overlaid pane (a breadcrumb heading, the `▤` button) are off while it's open,
+and the rules it covers stop at its border, which joins them with `┳`, `┫` and `┻`.
 Over the note, a pane's border and margin belong to it (clicks there focus it); the side panes take
 clicks and the wheel before the note's borders and scrollbars, and the outline, drawn over the
 explorer, before the explorer.
@@ -357,7 +362,8 @@ elements (code block backgrounds, rules, heading bands) span the natural width, 
 language label sits at the note's right edge. Wrapping off takes precedence over readable width,
 zen's cap and `render.max_width`: the text is never narrower than the pane, so it isn't centred.
 The first layout is 2000 columns wide and only the first 1500 count, so a note wider than that
-still wraps there; a row of one repeated character more than 20 columns wide counts as a rule.
+still wraps there; a run of one repeated character more than 20 columns wide ending a row counts as
+a rule (so a titled rule such as the properties header counts only up to its title).
 
 **Persistence.** Changes apply at once and are remembered in the session with the config value each
 one overrode, on every start (with a path too). At the next start, or on a config reload, an
@@ -432,12 +438,13 @@ runs the binding.
 
 ## Known limits
 
-- **Very large notes re-lay out in full.** There is no incremental layout: a change of width
+- **Very large notes re-lay out in full** (future optimization: plan `15.1`). There is no
+  incremental layout: a change of width
   (dragging a border, resize mode, toggling a pane, zen, wrap or line numbers, a terminal resize)
   re-lays out the note, which takes tens of milliseconds for a thousand-line note and hundreds for
   twenty thousand. A buffer keeps its last six widths, so going back and forth is cached.
-- **Pathological nesting parses slowly.** A list nested hundreds of levels deep takes seconds in
-  the markdown parser, on the main thread.
+- **Pathological nesting parses slowly** (future optimization: plan `15.2`). A list nested
+  hundreds of levels deep takes seconds in the markdown parser, on the main thread.
 
 ## Parity with the CLI
 

@@ -1449,6 +1449,58 @@ describe("mouse", () => {
     h.app.handleMouse({ type: "up", x: bar.x, y: bar.y, button: 0 });
     expect(h.app.view!.top).toBe(0);
   });
+  test("side panes get a scrollbar when their rows overflow; clicking it pins the scroll", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, height: 20, config: (c) => (c.ui.outline = true) });
+    h.frame();
+    const outline = h.app.geometry!.scrollbars.find((b) => b.pane === "outline")!;
+    expect(outline).toBeDefined();
+    const c = h.canvas();
+    for (let y = outline.y; y < outline.y + outline.h; y++) expect(c.rows[y]![outline.x]).toBe("▐");
+    click(h, outline.x, outline.y + outline.h - 1);
+    expect(h.app.outline.scroll).toBe(outline.total - outline.h);
+    expect(h.app.outline.pinned).toBe(true);
+    // The note didn't move.
+    expect(h.app.view!.top).toBe(0);
+  });
+  test("wrapping off: a horizontal scrollbar under the text scrolls sideways", async () => {
+    const h = await harness({ open: "samples/wide-tables.md", width: 100, height: 30, config: (c) => ((c.ui.wrap = false), (c.ui.sidebar = false)) });
+    h.frame();
+    const v = h.app.view!;
+    const bar = h.app.geometry!.scrollbars.find((b) => b.horizontal)!;
+    expect(bar).toBeDefined();
+    const pane = h.app.geometry!.panes[0]!;
+    // Its own row, under the text: the text rows end above it.
+    expect(bar.y).toBe(pane.y + pane.h);
+    expect(v.height).toBe(pane.h);
+    const c = h.canvas();
+    expect(c.rows[bar.y]!.slice(bar.x, bar.x + bar.w).join("")).toBe("▄".repeat(bar.w));
+    expect(c.styles[bar.y]![bar.x]!.fg).toBe(h.app.theme.roles.scrollbar.fg!);
+    expect(c.styles[bar.y]![bar.x + bar.w - 1]!.fg).toBe(h.app.theme.roles.scrollbar_track.fg!);
+    click(h, bar.x + bar.w - 1, bar.y);
+    expect(v.left).toBe(bar.total - bar.w);
+    h.app.handleMouse({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.app.handleMouse({ type: "drag", x: bar.x, y: bar.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: bar.x, y: bar.y, button: 0 });
+    expect(v.left).toBe(0);
+    // A note that fits keeps the row (the text doesn't jump) but draws no bar.
+    await h.keys("space", "u", "s", "space", "u", "s");
+    const n = await harness({ open: "notes/alpha.md", width: 100, height: 30, config: (c) => ((c.ui.wrap = false), (c.ui.sidebar = false)) });
+    n.frame();
+    expect(n.app.geometry!.scrollbars.some((b) => b.horizontal)).toBe(false);
+    expect(n.app.view!.height).toBe(n.app.geometry!.panes[0]!.h);
+  });
+  test("an overlaid pane joins the borders it crosses", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 60, height: 24, config: (c) => (c.ui.sidebar = false) });
+    await h.keys("ctrl+e");
+    const f = h.frame();
+    const lines = f.split("\n");
+    // The explorer's border meets the rules above and below it with tee joints, never a crossing.
+    const pane = h.app.geometry!.sidebarPane!;
+    const x = pane.x + pane.w - 3;
+    const col = lines.map((l) => [...l][x] ?? "").join("");
+    expect(col).not.toContain("╋");
+    for (const joint of ["┳", "┫", "┻"]) expect(col).toContain(joint);
+  });
   test("dragging borders resizes the explorer, the outline and the split", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
     await h.keys("ctrl+w", "v");

@@ -39,7 +39,11 @@ export interface Separator extends Rect {
 }
 
 export interface ScrollbarGeom extends Rect {
-  view: View;
+  /** A window's scrollbar, or a side pane's. */
+  view?: View;
+  /** The window's horizontal scrollbar (wrapping off): its position moves the view sideways. */
+  horizontal?: boolean;
+  pane?: "sidebar" | "outline";
   total: number;
 }
 
@@ -134,6 +138,8 @@ export function drawApp(app: App, c: Canvas): Geometry {
     // whether or not the tab strip shows; its border runs up beside the strip.
     const sideY = beside && frame ? head + 1 : mainY;
     const rect = { x: 0, y: sideY, w, h: bottom + 1 - sideY };
+    // Over the note: the note's rules end where the pane (with its border and margin) begins.
+    if (!app.sidebarBeside) clipRules(geo, { x: 0, y: sideY, w: w + 3, h: bottom + 1 - sideY });
     const list = drawSidebar(app, c, rect, geo);
     const border = roleStyle(theme, "border", page);
     for (let y = sideY; y <= bottom; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
@@ -149,14 +155,15 @@ export function drawApp(app: App, c: Canvas): Geometry {
     if (beside) {
       geo.separators.push({ kind: "sidebar", x: w, y: sideY, w: 1, h: bottom + 1 - sideY });
       geo.verticals.push({ x: w, y0: frame ? head : sideY, y1: borderEnd, style: border });
-    }
+    } else geo.verticals.push({ x: w, y0: frame ? sideY - 1 : sideY, y1: borderEnd, style: border });
   }
   if (app.outlineShown) {
     const w = app.outlineBeside ? outW : Math.min(outW + 6, W - 6);
     // Beside the content, the outline starts under the header that spans its column.
     const top = app.outlineBeside && geo.headerEnd !== null ? geo.headerEnd : mainY;
     const rect = { x: W - w, y: top, w, h: bottom + 1 - top };
-    geo.outline = drawOutline(app, c, rect);
+    if (!app.outlineBeside) clipRules(geo, { x: W - w - 3, y: top, w: w + 3, h: bottom + 1 - top });
+    geo.outline = drawOutline(app, c, rect, geo);
     geo.outlinePane = rect;
     if (!app.outlineBeside) {
       c.fill(W - w - 3, top, 2, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
@@ -165,10 +172,8 @@ export function drawApp(app: App, c: Canvas): Geometry {
     }
     const border = roleStyle(theme, "border", page);
     for (let y = top; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
-    if (app.outlineBeside) {
-      geo.separators.push({ kind: "outline", x: W - w - 1, y: top, w: 1, h: bottom + 1 - top });
-      geo.verticals.push({ x: W - w - 1, y0: frame ? top - 1 : top, y1: borderEnd, style: border });
-    }
+    if (app.outlineBeside) geo.separators.push({ kind: "outline", x: W - w - 1, y: top, w: 1, h: bottom + 1 - top });
+    geo.verticals.push({ x: W - w - 1, y0: frame ? top - 1 : top, y1: borderEnd, style: border });
   }
   drawJoints(app, c, geo);
   // After the windows and the panes: the top bar carries the outline's button when no window
@@ -336,6 +341,25 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
   }
 }
 
+/**
+ * A pane drawn over the note: the rules under it are cut out (they're hidden, and must not make
+ * joints at its border), and so are the borders it covers (the explorer's, under the outline).
+ */
+function clipRules(geo: Geometry, r: Rect): void {
+  const out: Geometry["rules"] = [];
+  for (const rule of geo.rules) {
+    if (rule.y < r.y || rule.y >= r.y + r.h || rule.x1 <= r.x || rule.x0 >= r.x + r.w) {
+      out.push(rule);
+      continue;
+    }
+    if (rule.x0 < r.x) out.push({ ...rule, x1: r.x });
+    if (rule.x1 > r.x + r.w) out.push({ ...rule, x0: r.x + r.w });
+  }
+  geo.rules = out;
+  // Only borders the pane actually covers (a tab separator above it stays).
+  geo.verticals = geo.verticals.filter((v) => v.x < r.x || v.x >= r.x + r.w || v.y1 < r.y || v.y0 >= r.y + r.h);
+}
+
 /** A pane drawn over the content hides the click targets under it. */
 function coverHot(geo: Geometry, r: Rect): void {
   geo.hot = geo.hot.filter((h) => h.x + h.w <= r.x || h.x >= r.x + r.w || h.y + h.h <= r.y || h.y >= r.y + r.h);
@@ -448,6 +472,10 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     drawText(c, rect.x, rect.y, ` ${truncate(app.displayName(view.buf), rect.w - 2)} `, st, rect.w);
     body = { x: rect.x, y: rect.y + 1, w: rect.w, h: rect.h - 1 };
   }
+  // Wrapping off: the last row is the horizontal scrollbar's (kept even when the note fits, so
+  // the text doesn't jump).
+  const hbar = !app.ui.wrap && body.h > 3;
+  if (hbar) body = { ...body, h: body.h - 1 };
   if (body.h <= 0 || body.w <= 6) return;
   view.height = body.h;
   view.width = body.w - 1;
@@ -503,19 +531,53 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     if (isCursorRow && view.cur.col >= view.left && view.cur.col < view.left + textW) drawCursor(c, textX - view.left, y, line, view.cur.col, theme, view.left + textW);
   }
 
+  if (hbar) {
+    const r = { x: textX, y: body.y + body.h, w: textW, h: 1 };
+    c.fill(body.x, r.y, body.w, 1, page);
+    if (layout.width > textW) {
+      drawHScrollbar(app, c, r, layout.width, view.left, active, page);
+      geo.scrollbars.push({ ...r, view, total: layout.width, horizontal: true });
+    }
+  }
   // Scrollbar in the last column.
   const total = layout.lines.length;
   if (total > body.h) {
-    const thumb = Math.max(1, Math.round((body.h * body.h) / total));
-    const pos = Math.round((view.top / Math.max(1, total - body.h)) * (body.h - thumb));
-    const st = roleStyle(theme, active ? "scrollbar" : "border", page);
-    const track = roleStyle(theme, "scrollbar_track", page);
-    // Without colour (NO_COLOR) the track is blank, so the thumb's shape shows where you are.
-    const trackGlyph = theme.roles.scrollbar_track.fg ? app.glyphs.scrollTrack : " ";
-    for (let k = 0; k < body.h; k++) drawText(c, body.x + body.w - 1, body.y + k, trackGlyph, track, 1);
-    for (let k = 0; k < thumb; k++) drawText(c, body.x + body.w - 1, body.y + pos + k, app.glyphs.scrollThumb, st, 1);
+    drawScrollbar(app, c, { x: body.x + body.w - 1, y: body.y, w: 1, h: body.h }, total, view.top, active, page);
     geo.scrollbars.push({ view, total, x: body.x + body.w - 1, y: body.y, w: 1, h: body.h });
   }
+}
+
+/** A side pane's scrollbar, in its list's last column, when the list is longer than the pane. */
+function paneScrollbar(app: App, c: Canvas, rect: Rect, total: number, top: number, pane: "sidebar" | "outline", active: boolean, bg: Color | null, geo: Geometry): void {
+  if (total <= rect.h || rect.h < 2) return;
+  const bar = { x: rect.x + rect.w - 1, y: rect.y, w: 1, h: rect.h };
+  drawScrollbar(app, c, bar, total, top, active, bg);
+  geo.scrollbars.push({ ...bar, pane, total });
+}
+
+/** The horizontal scrollbar: a `▄` track with a `▄` thumb for `total` columns from `left`. */
+function drawHScrollbar(app: App, c: Canvas, r: Rect, total: number, left: number, active: boolean, bg: Color | null): void {
+  const theme = app.theme;
+  const thumb = Math.max(2, Math.round((r.w * r.w) / total));
+  const pos = Math.round((left / Math.max(1, total - r.w)) * (r.w - thumb));
+  const st = { ...roleStyle(theme, active ? "scrollbar" : "border", bg), bg };
+  const track = { ...roleStyle(theme, "scrollbar_track", bg), bg };
+  const trackGlyph = theme.roles.scrollbar_track.fg ? app.glyphs.hScrollTrack : " ";
+  drawText(c, r.x, r.y, trackGlyph.repeat(r.w), track, r.w);
+  drawText(c, r.x + pos, r.y, app.glyphs.hScrollThumb.repeat(thumb), st, thumb);
+}
+
+/** A scrollbar: a `▐` track with a `▐` thumb sized and placed for `total` rows from `top`. */
+function drawScrollbar(app: App, c: Canvas, r: Rect, total: number, top: number, active: boolean, bg: Color | null): void {
+  const theme = app.theme;
+  const thumb = Math.max(1, Math.round((r.h * r.h) / total));
+  const pos = Math.round((top / Math.max(1, total - r.h)) * (r.h - thumb));
+  const st = { ...roleStyle(theme, active ? "scrollbar" : "border", bg), bg };
+  const track = { ...roleStyle(theme, "scrollbar_track", bg), bg };
+  // Without colour (NO_COLOR) the track is blank, so the thumb's shape shows where you are.
+  const trackGlyph = theme.roles.scrollbar_track.fg ? app.glyphs.scrollTrack : " ";
+  for (let k = 0; k < r.h; k++) drawText(c, r.x, r.y + k, trackGlyph, track, 1);
+  for (let k = 0; k < thumb; k++) drawText(c, r.x, r.y + pos + k, app.glyphs.scrollThumb, st, 1);
 }
 
 /** The block cursor: the character under it drawn with the cursor role (inverse without colour). */
@@ -651,11 +713,13 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
     const name = row.kind === "note" ? row.name.replace(/\.(md|markdown)$/i, "") : row.name;
     drawText(c, rect.x, y, truncate(`${" ".repeat(1 + row.depth * 2)}${icon} ${name}`, rect.w - 1), st, rect.w);
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg);
-  }  return rect;
+  }
+  paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", base.bg, geo);
+  return rect;
 }
 
 /** The outline; returns the rect its headings occupy (under the title). */
-function drawOutline(app: App, c: Canvas, pane: Rect): Rect {
+function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const theme = app.theme;
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
@@ -690,7 +754,9 @@ function drawOutline(app: App, c: Canvas, pane: Rect): Rect {
     const marker = row.hasChildren ? (row.folded ? g.foldClosed : g.foldOpen) : " ";
     drawText(c, rect.x, y, truncate(`${" ".repeat(1 + (row.level - 1) * 2)}${marker} ${row.text}`, rect.w - 1), st, rect.w);
     drawGuides(app, c, rect, y, row.level - 1, lines[idx]!, st.bg);
-  }  return rect;
+  }
+  paneScrollbar(app, c, rect, rows.length, o.scroll, "outline", app.region === "outline", base.bg, geo);
+  return rect;
 }
 
 function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {

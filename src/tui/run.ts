@@ -55,8 +55,14 @@ export async function runTui(argv: string[]): Promise<number> {
   });
 
   renderer.useMouse = app.ui.mouse;
+  // Only when it changes: setBackgroundColor requests another render, so calling it on every
+  // paint redraws the screen at the frame rate forever.
+  let bg: string | null = null;
   const view = new AppRenderable(renderer, (canvas) => {
-    renderer.setBackgroundColor(toRGBA(app.theme.bg === "default" ? null : app.theme.bg, false));
+    if (app.theme.bg !== bg) {
+      bg = app.theme.bg;
+      renderer.setBackgroundColor(toRGBA(bg === "default" ? null : bg, false));
+    }
     app.draw(canvas);
   });
   renderer.root.add(view);

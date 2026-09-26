@@ -474,6 +474,20 @@ packaging lands whenever it first needs to run on a VM.*
 | 14.3 | Homebrew formula |
 | 14.4 | Update path |
 
+## Performance — `15.x`
+
+*Future optimization; not scheduled. Found in the phase 2 review (timings in
+`docs/design/tui.md`, "Known limits"). Neither matters for ordinary notes.*
+
+| ID | Item |
+| --- | --- |
+| 15.1 | Incremental layout: a width change re-lays out only what it changes |
+| 15.2 | Pathological nesting: parse off the main thread, or cap the depth first |
+
+`15.1`: dragging a border, resize mode, a pane or wrap toggle and a terminal resize each re-lay out
+the whole note today, hundreds of ms per step for a 20,000-line note. `15.2`: a list nested
+hundreds of levels deep takes seconds in the markdown parser, on the main thread.
+
 ## Deferred — in the design, not in this breakdown
 
 Mermaid and LaTeX, git awareness, worktree handling, Tier 2 plugins, data-file editing,

@@ -1605,6 +1605,13 @@ export class App {
       this.drag = { kind: "tab", index: tab.index };
       return;
     }
+    // A side pane's own scrollbar first: it sits inside the pane.
+    const paneBar = g.scrollbars.find((b) => b.pane && inRect(b, ev.x, ev.y));
+    if (paneBar) {
+      this.drag = { kind: "scrollbar", bar: paneBar };
+      this.scrollbarTo(paneBar, ev.y, ev.x);
+      return;
+    }
     // Side panes before the note's borders and scrollbars: on narrow screens they lie over the
     // note, the outline over the explorer. A click anywhere in one (its title, blank rows, below
     // the list, its border) focuses it.
@@ -1643,7 +1650,7 @@ export class App {
     const bar = g.scrollbars.find((b) => inRect(b, ev.x, ev.y));
     if (bar) {
       this.drag = { kind: "scrollbar", bar };
-      this.scrollbarTo(bar, ev.y);
+      this.scrollbarTo(bar, ev.y, ev.x);
       return;
     }
     const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
@@ -1704,7 +1711,7 @@ export class App {
       }
       return;
     }
-    if (d.kind === "scrollbar") return this.scrollbarTo(d.bar, ev.y);
+    if (d.kind === "scrollbar") return this.scrollbarTo(d.bar, ev.y, ev.x);
     const pane = g.panes.find((p) => p.view === d.view);
     if (!pane) return;
     if (ev.y < pane.y) this.scrollBy(pane.view, -1, false);
@@ -1736,8 +1743,21 @@ export class App {
     if (link >= 0) void this.run("link.follow").then(() => this.host.requestRender());
   }
 
-  private scrollbarTo(bar: import("./draw.ts").ScrollbarGeom, y: number): void {
+  private scrollbarTo(bar: import("./draw.ts").ScrollbarGeom, y: number, x = bar.x): void {
     const frac = Math.max(0, Math.min(1, (y - bar.y) / Math.max(1, bar.h - 1)));
+    if (bar.pane) {
+      // A side pane's view moves, pinned like the wheel's; its selection stays.
+      const state = bar.pane === "sidebar" ? this.sidebar : this.outline;
+      state.scroll = Math.round(frac * Math.max(0, bar.total - bar.h));
+      state.pinned = true;
+      return;
+    }
+    if (!bar.view) return;
+    if (bar.horizontal) {
+      const fx = Math.max(0, Math.min(1, (x - bar.x) / Math.max(1, bar.w - 1)));
+      bar.view.left = Math.round(fx * Math.max(0, bar.total - bar.w));
+      return;
+    }
     const target = Math.round(frac * Math.max(0, bar.total - bar.view.height));
     this.scrollBy(bar.view, target - bar.view.top, false);
   }
@@ -2134,26 +2154,34 @@ const NOWRAP_PROBE = 2000;
 const naturalWidths = new WeakMap<Layout, number>();
 
 /**
- * The widest real row of a very wide layout: trailing spaces don't count, nor do rows of one
- * repeated glyph (rules), nor right-aligned decorations far out (a code block's language label).
+ * The widest real row of a very wide layout: trailing spaces don't count, nor does a trailing run
+ * of one repeated glyph (a rule, or the tail of a titled rule like `── ≡ properties ────`), nor
+ * right-aligned decorations far out (a code block's language label).
  */
 export function naturalWidth(layout: Layout): number {
   let max = 0;
   for (const line of layout.lines) {
     let col = 0;
     let end = 0;
-    const glyphs = new Set<string>();
+    // The current run of one glyph: its glyph, where it started, and the end before it.
+    let run = "";
+    let runStart = 0;
+    let before = 0;
     for (const span of line.spans) {
       for (const g of graphemes(span.text)) {
         const w = graphemeWidth(g);
         if (g.trim() && col < layout.width * 0.75) {
+          if (g !== run) {
+            run = g;
+            runStart = col;
+            before = end;
+          }
           end = col + w;
-          glyphs.add(g);
         }
         col += w;
       }
     }
-    if (glyphs.size === 1 && end > 20) continue; // a rule
+    if (run && end - runStart > 20) end = before;
     max = Math.max(max, end);
   }
   return max;

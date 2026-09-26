@@ -52,6 +52,9 @@ export interface Glyphs {
   sep: string;
   scrollThumb: string;
   scrollTrack: string;
+  /** The horizontal scrollbar (wrapping off): a lower half block, like the vertical's half. */
+  hScrollThumb: string;
+  hScrollTrack: string;
   dirty: string;
   /** Top bar buttons and the tab close button. */
   explorerButton: string;
@@ -101,6 +104,8 @@ const unicode: Glyphs = {
   // The bar is a thin column, unlike the ┃ borders it often sits beside; colour tells the thumb.
   scrollThumb: "▐",
   scrollTrack: "▐",
+  hScrollThumb: "▄",
+  hScrollTrack: "▄",
   dirty: "●",
   explorerButton: "≡",
   outlineButton: "▤",
@@ -164,6 +169,8 @@ const ascii: Glyphs = {
   sep: ">",
   scrollThumb: "#",
   scrollTrack: "|",
+  hScrollThumb: "#",
+  hScrollTrack: "-",
   dirty: "*",
   explorerButton: "=",
   outlineButton: "#",
