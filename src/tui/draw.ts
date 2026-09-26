@@ -461,8 +461,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const to = sel.line || row !== sel.range[1].row ? 1e9 : sel.range[1].col + 1;
       marks.push({ from, to, role: "selection" });
     }
-    drawLine(c, textX, y, line, textW, theme, band ?? page, underCursor, marks);
-    if (isCursorRow) drawCursor(c, textX, y, line, view.cur.col, theme);
+    drawLine(c, textX, y, line, textW, theme, band ?? page, underCursor, marks, view.left);
+    if (isCursorRow && view.cur.col >= view.left && view.cur.col < view.left + textW) drawCursor(c, textX - view.left, y, line, view.cur.col, theme);
   }
 
   // Scrollbar in the last column.
@@ -486,26 +486,36 @@ function drawCursor(c: Canvas, x: number, y: number, line: Line, col: number, th
   else c.cell(x + col, y, " ", 1, st);
 }
 
-/** Draw one layout row. `marks` override styles by column range; the link under the cursor too. */
-function drawLine(c: Canvas, x: number, y: number, line: Line, maxW: number, theme: Theme, rowBg: Color | null, focusLink: number, marks: { from: number; to: number; role: Role }[]): void {
+/**
+ * Draw one layout row from column `left` (wrapping off, scrolled sideways), `maxW` columns of it.
+ * `marks` override styles by column range; the link under the cursor too.
+ */
+function drawLine(c: Canvas, x: number, y: number, line: Line, maxW: number, theme: Theme, rowBg: Color | null, focusLink: number, marks: { from: number; to: number; role: Role }[], left = 0): void {
   let col = 0;
+  const end = left + maxW;
   const fillBg = line.fill ? theme.roles[line.fill].bg : undefined;
   for (const span of line.spans) {
-    if (col >= maxW) break;
+    if (col >= end) break;
     const focused = focusLink >= 0 && span.link === focusLink;
     const st = spanStyle(theme, span, line, focused ? "link_focus" : undefined);
     // The cursor-row band replaces the page and block fill, never a span's own background.
     if (!st.bg || (rowBg && st.bg === fillBg)) st.bg = rowBg;
-    if (!marks.length) {
+    if (!marks.length && !left) {
       col += drawText(c, x + col, y, span.text, st, maxW - col);
       continue;
     }
     for (const g of graphemes(span.text)) {
       const w = graphemeWidth(g);
-      if (col + w > maxW) return;
+      if (col + w > end) return;
+      // A wide character cut by the left edge shows as a blank.
+      if (col < left) {
+        if (col + w > left) c.cell(x, y, " ", 1, st);
+        col += w;
+        continue;
+      }
       const mark = marks.find((m) => col >= m.from && col < m.to);
       const cell = mark ? { ...st, ...markStyle(theme, mark.role) } : st;
-      if (w > 0) c.cell(x + col, y, g, w, cell);
+      if (w > 0) c.cell(x + col - left, y, g, w, cell);
       col += w;
     }
   }

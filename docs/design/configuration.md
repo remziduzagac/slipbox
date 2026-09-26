@@ -47,6 +47,7 @@ narrow_width = 90              # below this, the explorer and outline open over 
 restore_session = true         # reopen tabs and splits when started without a path
 cursorline = true              # band on the cursor row
 line_numbers = false           # source line numbers in a gutter
+wrap = true                    # wrap to the pane; false: natural width, scroll sideways
 readable_width = false         # cap the text column at readable_max, centred
 readable_max = 100
 zen = false                    # no chrome; readable width on

@@ -42,6 +42,8 @@ export interface Config {
     cursorline: boolean;
     /** Source line numbers in a left gutter. */
     line_numbers: boolean;
+    /** Wrap long lines to the pane; off, notes keep their natural width and scroll sideways. */
+    wrap: boolean;
     /** Cap the text column at `readable_max` columns, centred. */
     readable_width: boolean;
     readable_max: number;
@@ -114,6 +116,7 @@ export const DEFAULT_CONFIG: Config = {
     restore_session: true,
     cursorline: true,
     line_numbers: false,
+    wrap: true,
     readable_width: false,
     readable_max: 100,
     zen: false,

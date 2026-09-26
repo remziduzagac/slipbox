@@ -341,6 +341,7 @@ const UI_TOGGLES: { key: keyof UiState; id: string; title: string }[] = [
   { key: "zen", id: "ui.zen", title: "Zen mode" },
   { key: "cursorline", id: "ui.cursorline", title: "Cursor-row highlight" },
   { key: "line_numbers", id: "ui.line_numbers", title: "Line numbers" },
+  { key: "wrap", id: "ui.wrap", title: "Wrap long lines" },
   { key: "urls", id: "ui.urls", title: "Show link URLs" },
   { key: "mouse", id: "ui.mouse", title: "Mouse" },
 ];

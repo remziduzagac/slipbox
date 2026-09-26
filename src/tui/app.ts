@@ -35,7 +35,7 @@ import {
 import { applyColorOverrides, loadTheme, type Theme } from "../core/theme/index.ts";
 import type { VaultLocation } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
-import { stringWidth } from "../core/width.ts";
+import { graphemes, graphemeWidth, stringWidth } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
 import { NoteBuffer } from "./buffer.ts";
 import type { Canvas } from "./canvas.ts";
@@ -110,6 +110,8 @@ export interface View {
   layoutKey: string;
   height: number;
   width: number;
+  /** First column on screen when wrapping is off (horizontal scroll). */
+  left: number;
 }
 
 export interface Tab {
@@ -195,6 +197,7 @@ export type Region = "content" | "sidebar" | "outline";
 export interface UiState {
   cursorline: boolean;
   line_numbers: boolean;
+  wrap: boolean;
   readable_width: boolean;
   zen: boolean;
   mouse: boolean;
@@ -208,6 +211,7 @@ export function uiDefaults(c: Config): UiState {
   return {
     cursorline: c.ui.cursorline,
     line_numbers: c.ui.line_numbers,
+    wrap: c.ui.wrap,
     readable_width: c.ui.readable_width,
     zen: c.ui.zen,
     mouse: c.ui.mouse,
@@ -530,6 +534,7 @@ export class App {
       layoutKey: "",
       height: this.height,
       width: this.width,
+      left: 0,
     };
   }
 
@@ -627,8 +632,27 @@ export class App {
     return this.ui.readable_width || this.ui.zen ? Math.min(w, this.config.ui.readable_max) : w;
   }
 
+  /**
+   * Wrapping off: the note at its natural width (laid out very wide once, then at the widest real
+   * row), never narrower than the pane; the view scrolls sideways instead.
+   */
+  private nowrapWidth(view: View, paneWidth: number, gutter: number): number {
+    const probe = view.buf.layout(NOWRAP_PROBE, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
+    let natural = naturalWidths.get(probe);
+    if (natural === undefined) {
+      natural = naturalWidth(probe);
+      naturalWidths.set(probe, natural);
+    }
+    return Math.max(layoutWidth(paneWidth - gutter, this.config.render.inset, NOWRAP_PROBE), natural);
+  }
+
+  /** Columns of text visible in a view (what drawPane gives the text). */
+  textColumns(view: View): number {
+    return Math.max(1, view.width - 1 - this.gutterWidth(view));
+  }
+
   layoutFor(view: View, paneWidth: number, gutter = 0): Layout {
-    const width = this.textWidth(paneWidth, gutter);
+    const width = this.ui.wrap ? this.textWidth(paneWidth, gutter) : this.nowrapWidth(view, paneWidth, gutter);
     const layout = view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
     const key = `${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.stamp?.mtimeMs ?? 0}:${view.height}`;
     if (view.layoutKey !== key) {
@@ -682,6 +706,15 @@ export class App {
     else if (view.cur.row > view.top + view.height - 1 - so) view.top = view.cur.row - view.height + 1 + so;
     view.top = this.clampTop(view, layout, view.top);
     view.topAnchor = anchorAt(layout, view.top);
+    // Sideways, when wrapping is off: keep the cursor a few columns from either edge.
+    if (this.ui.wrap) view.left = 0;
+    else {
+      const w = this.textColumns(view);
+      const margin = Math.min(4, Math.floor(w / 4));
+      if (view.cur.col < view.left + margin) view.left = view.cur.col - margin;
+      else if (view.cur.col > view.left + w - 1 - margin) view.left = view.cur.col - w + 1 + margin;
+      view.left = Math.max(0, Math.min(view.left, Math.max(0, layout.width - w)));
+    }
   }
 
   /** Move the cursor (extending the selection when asked, or in visual mode). */
@@ -1445,6 +1478,15 @@ export class App {
       return;
     }
     const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
+    // Sideways (a horizontal wheel or trackpad), when wrapping is off: the view moves, not the cursor.
+    const side = ev.scroll?.direction === "left" ? -1 : ev.scroll?.direction === "right" ? 1 : 0;
+    if (side) {
+      if (pane && !this.ui.wrap) {
+        const layout = this.currentLayout(pane.view);
+        pane.view.left = Math.max(0, Math.min(Math.max(0, layout.width - this.textColumns(pane.view)), pane.view.left + side * n * 2));
+      }
+      return;
+    }
     if (pane) this.scrollBy(pane.view, dir * n, false);
     else if (g.sidebar && inRect(g.sidebar, ev.x, ev.y)) this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
     else if (g.outline && inRect(g.outline, ev.x, ev.y)) this.outline.scroll = Math.max(0, this.outline.scroll + dir * n);
@@ -1521,7 +1563,7 @@ export class App {
     this.region = "content";
     const view = pane.view;
     const layout = this.currentLayout(view);
-    const pos = clampPos(layout, { row: view.top + (ev.y - pane.y), col: Math.max(0, ev.x - pane.textX) });
+    const pos = clampPos(layout, { row: view.top + (ev.y - pane.y), col: Math.max(0, ev.x - pane.textX) + view.left });
     view.visual = null;
     if (clicks === 2) {
       // Double-click selects the word, triple-click the row; either is copied, like a terminal.
@@ -1577,7 +1619,7 @@ export class App {
     if (ev.y < pane.y) this.scrollBy(pane.view, -1, false);
     if (ev.y >= pane.y + pane.h) this.scrollBy(pane.view, 1, false);
     const layout = this.currentLayout(d.view);
-    const pos = clampPos(layout, { row: d.view.top + Math.max(0, Math.min(pane.h - 1, ev.y - pane.y)), col: Math.max(0, ev.x - pane.textX) });
+    const pos = clampPos(layout, { row: d.view.top + Math.max(0, Math.min(pane.h - 1, ev.y - pane.y)), col: Math.max(0, ev.x - pane.textX) + d.view.left });
     d.view.sel = { anchor: d.start, line: false };
     d.view.cur = pos;
     d.view.goal = pos.col;
@@ -1938,6 +1980,36 @@ function inRect(r: { x: number; y: number; w: number; h: number }, x: number, y:
 }
 
 const RECENT_MAX = 5;
+
+/** Wrapping off: how wide a note is laid out first, to find its natural width. */
+const NOWRAP_PROBE = 2000;
+const naturalWidths = new WeakMap<Layout, number>();
+
+/**
+ * The widest real row of a very wide layout: trailing spaces don't count, nor do rows of one
+ * repeated glyph (rules), nor right-aligned decorations far out (a code block's language label).
+ */
+export function naturalWidth(layout: Layout): number {
+  let max = 0;
+  for (const line of layout.lines) {
+    let col = 0;
+    let end = 0;
+    const glyphs = new Set<string>();
+    for (const span of line.spans) {
+      for (const g of graphemes(span.text)) {
+        const w = graphemeWidth(g);
+        if (g.trim() && col < layout.width * 0.75) {
+          end = col + w;
+          glyphs.add(g);
+        }
+        col += w;
+      }
+    }
+    if (glyphs.size === 1 && end > 20) continue; // a rule
+    max = Math.max(max, end);
+  }
+  return max;
+}
 
 export function refilter(o: ListOverlay): void {
   if (o.source) {

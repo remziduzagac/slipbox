@@ -239,6 +239,7 @@ config.
 | `:theme <name>` | set the theme |
 | `:glyphs <nerd\|unicode\|ascii\|auto>` | set the glyph set |
 | `:zen` | toggle zen mode |
+| `:wrap` | toggle wrapping |
 | `:vs` / `:sp` | split side by side / stacked |
 | `:tabnew` | new tab with the current note |
 | `:noh` | clear find highlights |
@@ -258,6 +259,7 @@ config.
 | `space u z` | zen: no bars, frame, panes, tabs or breadcrumbs; readable width on |
 | `space u l` | cursor-row highlight on / off |
 | `space u n` | source line numbers in a left gutter |
+| `space u s` | wrap long lines (on by default); off, notes keep their natural width and scroll sideways |
 | `space u r` | link URLs shown after the link text |
 | `space u m` | mouse on / off; off gives the mouse back to the terminal for native selection |
 

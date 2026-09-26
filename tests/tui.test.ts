@@ -1016,6 +1016,51 @@ describe("top bar, tab strip, status line", () => {
   });
 });
 
+describe("wrap (space u s, ui.wrap)", () => {
+  test("off: natural width, one row per paragraph, the view follows the cursor sideways", async () => {
+    const h = await harness({ open: "samples/wide-tables.md", width: 110, config: (c) => (c.ui.sidebar = false) });
+    const wrapped = h.app.currentLayout(h.app.view!);
+    await h.keys("space", "u", "s");
+    expect(h.app.ui.wrap).toBe(false);
+    const layout = h.app.currentLayout(h.app.view!);
+    expect(layout.width).toBeGreaterThan(300); // the widest real row, not the pane
+    expect(layout.width).toBeLessThan(2000); // not the probe width
+    expect(layout.lines.length).toBeLessThan(wrapped.lines.length);
+    const row = layout.lines.findIndex((l) => l.spans.map((x) => x.text).join("").includes("This paragraph is one very long"));
+    h.app.moveCursor(h.app.view!, { row, col: 0 });
+    expect(h.app.view!.left).toBe(0);
+    await h.keys("$");
+    const v = h.app.view!;
+    expect(v.left).toBeGreaterThan(0);
+    expect(v.cur.col).toBeGreaterThanOrEqual(v.left);
+    expect(v.cur.col).toBeLessThan(v.left + h.app.textColumns(v));
+    // What's drawn is the row's end, and a click lands on the column under it.
+    const f = h.frame();
+    expect(f).toContain("avoid breaking mid-word.");
+    const pane = h.app.geometry!.panes[0]!;
+    const y = pane.y + row - v.top;
+    h.app.handleMouse({ type: "down", x: pane.textX + 5, y, button: 0 });
+    h.app.handleMouse({ type: "up", x: pane.textX + 5, y, button: 0 });
+    expect(h.app.view!.cur.col).toBe(v.left + 5);
+    // A horizontal wheel scrolls sideways without moving the cursor.
+    const before = v.left;
+    h.app.handleMouse({ type: "scroll", x: pane.textX + 5, y, button: 0, scroll: { direction: "left", delta: 1 } });
+    expect(v.left).toBeLessThan(before);
+    // Back on: wrapped again, no sideways scroll.
+    await h.keys("space", "u", "s");
+    expect(h.app.view!.left).toBe(0);
+    expect(h.app.currentLayout(h.app.view!).width).toBe(wrapped.width);
+  });
+  test(":wrap toggles it, and rules don't count toward the natural width", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 120 });
+    await h.keys(":", "w", "r", "a", "p", "enter");
+    expect(h.app.ui.wrap).toBe(false);
+    const layout = h.app.currentLayout(h.app.view!);
+    // Every row that isn't a rule fits within the natural width.
+    expect(layout.width).toBeLessThan(2000);
+  });
+});
+
 describe("mouse", () => {
   const click = (h: Harness, x: number, y: number) => {
     h.app.handleMouse({ type: "down", x, y, button: 0 });

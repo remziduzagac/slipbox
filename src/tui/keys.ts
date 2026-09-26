@@ -134,6 +134,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader u z": "ui.zen",
   "leader u l": "ui.cursorline",
   "leader u n": "ui.line_numbers",
+  "leader u s": "ui.wrap",
   "leader u r": "ui.urls",
   "leader u m": "ui.mouse",
   // scratch
@@ -308,6 +309,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   theme: "theme.set",
   glyphs: "glyphs.set",
   zen: "ui.zen",
+  wrap: "ui.wrap",
   vs: "window.split_side",
   sp: "window.split_stacked",
   tabnew: "tab.new",

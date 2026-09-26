@@ -317,8 +317,18 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - zen (no chrome; panes only on demand)
 - the cursor-row band
 - source line numbers in a gutter
+- wrapping (below)
 - link URLs
 - mouse capture
+
+**Wrapping off (`space u s`, `ui.wrap = false`).** Each note is laid out at its natural width:
+first very wide, then at its widest real row (trailing spaces, rules and right-aligned
+decorations such as a code block's language label don't count), never narrower than the pane.
+Paragraphs stay on one row and tables keep their natural column widths. Each window then scrolls
+sideways: the view keeps the cursor 4 columns from either edge, a horizontal wheel or trackpad
+scrolls it without moving the cursor, and clicks land on the column under the pointer. Full-width
+elements (code block backgrounds, rules, heading bands) span the natural width, so a code
+block's language label sits at the note's right edge.
 
 **Persistence.** Changes apply at once and are remembered in the session with the config value
 each one overrode. At the next start, or on a config reload, an override is kept only while that
