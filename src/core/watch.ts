@@ -139,7 +139,13 @@ export class VaultWatcher {
   /** Tell the watcher about a write slipbox made itself, so it does not react to it. */
   noteOwnWrite(rel: string): void {
     try {
-      this.ownWrites.set(rel, statSync(join(this.opts.root, rel)).mtimeMs);
+      const st = statSync(join(this.opts.root, rel));
+      this.ownWrites.set(rel, st.mtimeMs);
+      // Known at this stamp too, so a later sighting (a polled directory, a sweep) sees no change.
+      if (this.opts.filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) {
+        this.opts.known.set(rel, st.mtimeMs);
+        this.sizes.set(rel, st.size);
+      }
     } catch {}
   }
 
@@ -306,6 +312,8 @@ export class VaultWatcher {
       }
       if (filter.exclusion(rel, false) !== null) continue;
       if (!filter.isNoteName(name)) {
+        // Editors' temporary files (vim's 4913, backups~, swap files) are never attachments.
+        if (/^\d+$|~$|\.sw[a-p]$|^\.#|^#.*#$/.test(name)) continue;
         // An attachment: the graph keeps a name index of them for ![[embeds]].
         changes.push({ rel, kind: st ? "created" : "deleted", isNote: false });
         continue;

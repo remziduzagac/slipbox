@@ -210,6 +210,11 @@ describe("review round 2 (CLI)", () => {
 });
 
 describe("review round 3 (CLI)", () => {
+  test("a name with a colon and a space is a note (maybe missing), never a URL", async () => {
+    const r = await cli(["resolve", "Meeting: Q4", "--json"]);
+    expect(r.code).toBe(3);
+    expect(JSON.parse(r.out).error.message).toContain("unresolved");
+  });
   test("a usage error's envelope names the command, never a flag's value", async () => {
     const r = await cli(["--root", "/tmp", "--bogus", "--json"]);
     expect(JSON.parse(r.out).command).toBe("help");

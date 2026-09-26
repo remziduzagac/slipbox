@@ -223,18 +223,25 @@ export class Graph {
     return true;
   }
 
-  addAsset(rel: string): void {
+  /** Index an attachment by file name; true if the index changed. */
+  addAsset(rel: string): boolean {
     const key = rel.slice(rel.lastIndexOf("/") + 1).normalize("NFC").toLowerCase();
     const list = this.assets.get(key);
     if (!list) this.assets.set(key, [rel]);
     else if (!list.includes(rel)) list.push(rel);
+    else return false;
+    return true;
   }
 
-  removeAsset(rel: string): void {
+  /** Forget an attachment; true if the index changed. */
+  removeAsset(rel: string): boolean {
     const key = rel.slice(rel.lastIndexOf("/") + 1).normalize("NFC").toLowerCase();
-    const list = this.assets.get(key)?.filter((p) => p !== rel);
-    if (list?.length) this.assets.set(key, list);
+    const before = this.assets.get(key);
+    if (!before?.includes(rel)) return false;
+    const list = before.filter((p) => p !== rel);
+    if (list.length) this.assets.set(key, list);
     else this.assets.delete(key);
+    return true;
   }
 
   removeFile(rel: string): void {

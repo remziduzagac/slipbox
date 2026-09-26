@@ -193,8 +193,8 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
   }
   // The scratch's file name: a plain relative path inside the project, never empty, absolute or
   // climbing out (a cloned vault's config must not aim `slipbox capture` at any file).
-  if (!isSafeRelative(config.capture.file)) {
-    warnings.push(`config: capture.file must be a relative path inside the project (got ${JSON.stringify(config.capture.file)}); using "${DEFAULT_CONFIG.capture.file}"`);
+  if (!isSafeRelative(config.capture.file) || !/\.(md|markdown)$/i.test(config.capture.file)) {
+    warnings.push(`config: capture.file must be a relative .md path inside the project, not hidden (got ${JSON.stringify(config.capture.file)}); using "${DEFAULT_CONFIG.capture.file}"`);
     config.capture.file = DEFAULT_CONFIG.capture.file;
   }
   return { config, sources, warnings };
@@ -253,7 +253,8 @@ const FRACTIONAL = new Set(["ui.split_ratio"]);
 /** A relative path that stays inside its base: not empty, not absolute, no `..` segment. */
 export function isSafeRelative(p: string): boolean {
   if (!p.trim() || p.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(p)) return false;
-  return !p.split(/[\\/]/).some((seg) => seg === "..");
+  // No "..", and no hidden segment: .git/, .slipbox/ and dot-files are never a scratch.
+  return !p.split(/[\\/]/).some((seg) => seg === ".." || seg.startsWith("."));
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {

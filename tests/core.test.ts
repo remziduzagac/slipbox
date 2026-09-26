@@ -276,6 +276,14 @@ describe("review round 2 (core)", () => {
 });
 
 describe("review round 3 (core)", () => {
+  test("capture.file can't be hidden or non-Markdown (.git/config, .slipbox/config.toml)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
+    for (const bad of [".git/config", ".slipbox/config.toml", "notes.txt"]) {
+      const file = join(dir, "c.toml");
+      writeFileSync(file, `[capture]\nlocation = "vault"\nfile = "${bad}"\n`);
+      expect(loadConfig({ configFile: file }).config.capture.file).toBe("scratch.md");
+    }
+  });
   test("an unknown modifier keeps the key from binding plain x, and is reported", () => {
     expect(canonKey("hyper+x")).toBe("hyper+x");
     expect(unknownModifiers("hyper+x g g")).toEqual(["hyper"]);

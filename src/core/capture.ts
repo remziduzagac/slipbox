@@ -21,7 +21,7 @@ export interface ScratchLocation {
 /** Where the scratch lives for a project (0.10 / 8.2). */
 export function scratchLocation(project: string, config: Config): ScratchLocation {
   // Config validation already refuses an unsafe name; this holds even if one got through.
-  const file = isSafeRelative(config.capture.file) ? config.capture.file : "scratch.md";
+  const file = isSafeRelative(config.capture.file) && /\.(md|markdown)$/i.test(config.capture.file) ? config.capture.file : "scratch.md";
   if (config.capture.location === "vault") return { path: join(project, file), project };
   return { path: join(stateDir(project), file), project };
 }

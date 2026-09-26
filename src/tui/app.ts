@@ -35,10 +35,10 @@ import {
 import { applyColorOverrides, loadTheme, type Theme } from "../core/theme/index.ts";
 import type { VaultLocation } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
-import { graphemes, graphemeWidth, stringWidth } from "../core/width.ts";
+import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
 import { NoteBuffer } from "./buffer.ts";
-import type { Canvas } from "./canvas.ts";
+import { type Canvas, drawText } from "./canvas.ts";
 import { cells, clampPos, ordered, type Pos, snap, wordAt } from "./cursor.ts";
 import { drawApp, type Geometry } from "./draw.ts";
 import { rank } from "./fuzzy.ts";
@@ -909,8 +909,9 @@ export class App {
   // -------------------------------------------------------------------------------------------
   // Side panes: explorer (3.7) and outline
 
+  /** Narrow: side panes open over the note. Never wider than two 12-column panes and the note. */
   get narrow(): boolean {
-    return this.width < this.config.ui.narrow_width;
+    return this.width < Math.max(this.config.ui.narrow_width, 2 * 13 + MIN_CONTENT);
   }
 
   get sidebarShown(): boolean {
@@ -1798,9 +1799,13 @@ export class App {
     try {
       this.geometry = drawApp(this, canvas);
     } catch (err) {
-      // A drawing bug must never take the app down: report it, keep the last geometry.
-      if (!this.drawFailed) this.message("error", `drawing failed: ${(err as Error).message}`);
+      // A drawing bug must never take the app down: report it, and say so on screen too (the
+      // message line may be what failed to draw).
+      const text = `drawing failed: ${(err as Error).message}`;
+      if (!this.drawFailed) this.message("error", text);
       this.drawFailed = true;
+      canvas.fill(0, 0, canvas.width, canvas.height, null);
+      drawText(canvas, 0, 0, truncate(`slipbox: ${text} — resize, or esc`, canvas.width), { fg: "default", bg: null, bold: true, italic: false, underline: false, strike: false, dim: false });
       return;
     }
     this.drawFailed = false;
@@ -1933,9 +1938,8 @@ export class App {
     for (const c of batch.changes) {
       if (!c.isNote) {
         // An attachment appeared or went: ![[embeds]] of it change status.
-        if (c.kind === "deleted") this.graph.removeAsset(c.rel);
-        else this.graph.addAsset(c.rel);
-        setChanged = true;
+        // Only a real change to the index re-lays anything out (a rewrite of a known image doesn't).
+        if (c.kind === "deleted" ? this.graph.removeAsset(c.rel) : this.graph.addAsset(c.rel)) setChanged = true;
         continue;
       }
       if (c.kind === "deleted") {
@@ -1948,15 +1952,18 @@ export class App {
           st = statSync(abs);
         } catch {}
         if (!st) continue;
-        // The walk's size cap holds for notes that appear later too.
+        // The walk's size cap holds for notes that appear or grow later too: out of the index (an
+        // open buffer still reloads below); back in when it shrinks under the cap again.
         if (st.size > this.config.walk.max_file_size) {
-          if (this.graph.notes.has(c.rel)) this.graph.removeFile(c.rel);
-          this.message("warn", `${c.rel} is larger than walk.max_file_size — skipped`);
+          if (this.graph.notes.has(c.rel)) {
+            this.graph.removeFile(c.rel);
+            this.message("warn", `${c.rel} is larger than walk.max_file_size — left out of the index`);
+          }
           setChanged = true;
-          continue;
+        } else {
+          if (c.kind === "created" || !this.graph.notes.has(c.rel)) setChanged = true;
+          this.graph.updateFile(c.rel, { rel: c.rel, abs, size: st.size, mtimeMs: st.mtimeMs });
         }
-        if (c.kind === "created") setChanged = true;
-        this.graph.updateFile(c.rel, { rel: c.rel, abs, size: st.size, mtimeMs: st.mtimeMs });
       }
       const buf = this.buffers.get(c.rel);
       if (buf) this.reloadBuffer(buf, c.kind === "deleted");

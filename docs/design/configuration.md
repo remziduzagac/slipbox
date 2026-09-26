@@ -61,7 +61,7 @@ which_key_delay_ms = 500       # before it shows for prefixes other than the lea
 
 [capture]
 location = "state"             # state (never committed) | vault
-file = "scratch.md"            # relative; never empty, absolute or with ".." (else the default)
+file = "scratch.md"            # a relative .md path; no "..", no hidden part (else the default)
 
 [editor]
 command = ""                   # phase 3: `$EDITOR` hand-off template with {file} and {line}

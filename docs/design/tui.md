@@ -126,9 +126,9 @@ which-key entries are drawn in the `hover` role while the mouse is over them. Ro
 panes show their selection instead.
 
 **Viewport-only (plan `3.2`).** Only rows on screen are drawn, and a layout is computed once per
-width and cached on the buffer. A drawing failure never takes the app down: it is reported once as
-an error message and the last frame's geometry is kept (tests fail on it instead). A window narrower
-than 8 columns isn't drawn.
+width and cached on the buffer. A drawing failure never takes the app down: the screen says so on
+its first row, it is reported once as an error message and the last frame's geometry is kept (tests
+fail on it instead). A window narrower than 8 columns isn't drawn.
 
 ## The cursor
 
@@ -244,14 +244,15 @@ focuses it.
 Both are windows for `ctrl+w h` / `ctrl+w l`, and each has its own keymap: `[keys.explorer]` and
 `[keys.outline]`.
 
-**Narrow terminals (plan `3.14`).** Below `ui.narrow_width` (90) columns, and in zen mode, both
-panes open over the content on demand (6 columns wider than their width, leaving at least 6 of the
-note) and close after a pick. The wide-terminal preferences (`ui.sidebar`, `ui.outline`) are kept
-separately, so widening the terminal brings them back. Tables that cannot fit become records
-([rendering.md](rendering.md)). Click targets under an overlaid pane (a breadcrumb heading, the `▤`
-button) are off while it's open. Over the note, a pane's border and margin belong to it (clicks
-there focus it); the side panes take clicks and the wheel before the note's borders and scrollbars,
-and the outline, drawn over the explorer, before the explorer.
+**Narrow terminals (plan `3.14`).** Below `ui.narrow_width` (90) columns (and never beside the note
+below 50, the room for both panes and the note's 24), and in zen mode, both panes open over the
+content on demand (6 columns wider than their width, leaving at least 6 of the note) and close after
+a pick. The wide-terminal preferences (`ui.sidebar`, `ui.outline`) are kept separately, so widening
+the terminal brings them back. Tables that cannot fit become records ([rendering.md](rendering.md)).
+Click targets under an overlaid pane (a breadcrumb heading, the `▤` button) are off while it's open.
+Over the note, a pane's border and margin belong to it (clicks there focus it); the side panes take
+clicks and the wheel before the note's borders and scrollbars, and the outline, drawn over the
+explorer, before the explorer.
 
 ## Overlays
 
@@ -301,8 +302,8 @@ Help and the palette list the same commands for different jobs, in the groups of
 
 **The `:` prompt** is the palette and a command line at once. An exact alias from `[aliases]` (`:q`,
 `:vs`, `:theme dracula`) always wins, and an alias taking an argument lists completions (notes,
-themes, glyph sets) once a space is typed. With an alias and a trailing space (`:theme` then a
-space), `enter` applies the highlighted candidate.
+themes, glyph sets) once a space is typed. Move to a candidate and `enter` applies it; `enter`
+without moving runs the alias bare (`:theme` opens the theme picker, `:e` the note picker).
 
 **The which-key popup** lists the next keys of a pending sequence, across the keymaps active in the
 current state. It is framed like the other popups: a bordered box on the overlay background, with
@@ -408,10 +409,11 @@ backstops:
 | a directory containing a broken symlink (it errors) | that directory is polled instead, with a warning |
 
 The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes. A change counts
-when a note's mtime or size differs, so a rewrite in the same second is still seen. Attachments
-(any non-note file) are reported too, so `![[image.png]]` embeds change status as images come and
-go; a note that appears or grows larger than `walk.max_file_size` is skipped (and dropped from the
-index), as the walk would. The TUI's own writes (the scratch) are ignored once, then forgotten.
+when a note's mtime or size differs, so a rewrite in the same second is still seen. Attachments (any
+non-note file but editors' temporary files) are reported too, re-laying out only when the attachment
+index actually changes, so `![[image.png]]` embeds change status as images come and go; a note that
+appears or grows larger than `walk.max_file_size` is skipped (and dropped from the index), as the
+walk would. The TUI's own writes (the scratch) are ignored once, then forgotten.
 
 **Degrading loudly (plan `5.2`).** Exhausting the watch limit (`ENOSPC`, `EMFILE`, `ENFILE`)
 produces one error message, `⚠ not watching` in the status line, and polling of open notes.

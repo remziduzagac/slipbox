@@ -139,7 +139,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     args = parseArgs(argv);
   } catch (err) {
     const message = (err as Error).message;
-    if (argv.includes("--json")) io.out(envelope({ ok: false, command: commandIn(argv), error: { code: EXIT.usage, message } }));
+    if (argv.some((a) => a === "--json" || a.startsWith("--json="))) io.out(envelope({ ok: false, command: commandIn(argv), error: { code: EXIT.usage, message } }));
     else io.err(`slipbox: ${message}\n`);
     return EXIT.usage;
   }
@@ -291,11 +291,11 @@ const HANDLERS: Record<string, Handler> = {
     let status: string;
     let path: string | null = null;
     let candidates: string[] = [];
-    // A scheme makes it external only outside [[…]] (as the renderer has it) and when no note by
-    // that name exists: "Meeting: Q3" is a note.
+    // A scheme makes it external only outside [[…]] (as the renderer has it), with no spaces (a
+    // URL has none), and when no note by that name exists: "Meeting: Q3" is a note.
     const bracketed = /^!?\[\[/.test(raw);
     const noteNamed = s.graph.findNote(parts.target, s.io.cwd).status !== "unresolved";
-    if (!bracketed && /^[a-z][a-z0-9+.-]*:/i.test(inner) && !noteNamed) {
+    if (!bracketed && /^[a-z][a-z0-9+.-]*:\S*$/i.test(inner) && !noteNamed) {
       status = "external";
       path = inner;
     } else if (!parts.target && from) {

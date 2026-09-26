@@ -109,6 +109,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const left = app.sidebarBeside ? sideW + 1 : 0;
   const right = app.outlineBeside ? outW + 1 : 0;
   const rule = (y: number, x0: number, x1: number) => {
+    if (x1 <= x0) return;
     drawText(c, x0, y, app.glyphs.hbar.repeat(x1 - x0), roleStyle(theme, "border", page), x1 - x0);
     geo.rules.push({ y, x0, x1 });
   };
@@ -126,8 +127,6 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // The rightmost top window's header runs over the outline's column, which starts under it.
   const overOutline = app.outlineShown && app.outlineBeside ? right : 0;
   drawContent(app, c, { x: left, y: mainY, w: Math.max(0, W - left - right), h: mainH }, frame, overOutline, geo);
-  // After the windows: the top bar carries the outline's button when no breadcrumb row did.
-  if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
 
   if (app.sidebarShown) {
     const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, W - 6);
@@ -172,6 +171,9 @@ export function drawApp(app: App, c: Canvas): Geometry {
     }
   }
   drawJoints(app, c, geo);
+  // After the windows and the panes: the top bar carries the outline's button when no window
+  // shows one (none drew it, or an overlaid pane hides it).
+  if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
 
   if (status) drawStatus(app, c, { y: H - status - bottomLine, h: 1 }, geo);
   if (bottomLine) {

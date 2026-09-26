@@ -1270,20 +1270,65 @@ describe("review round 2", () => {
       expect(at.id).toBe(r.id);
     }
   });
-  test("an empty search clears the find; ':theme ' + enter applies the highlighted theme", async () => {
+  test("an empty search clears the find; alias candidates: move to one to apply it, else the picker", async () => {
     const h = await harness({ width: 120, height: 30 });
     await h.keys("/", "enter");
     expect(h.app.view!.find).toBeNull();
-    await h.keys(":", "t", "h", "e", "m", "e", "space");
+    await h.keys(":", "t", "h", "e", "m", "e", "space", "down");
     const o = h.app.overlay as ListOverlay;
     const pick = o.filtered[o.selected]!.item.data as string;
     await h.keys("enter");
-    expect(h.app.overlay).toBeNull();
     expect(`theme.set ${h.app.ui.theme}`).toBe(pick);
+    await h.keys(":", "e", "space", "enter"); // not moved: the note picker, not some note
+    expect(h.app.overlay?.kind).toBe("list");
+    expect(h.app.view!.buf.rel).toBe("index.md");
   });
 });
 
 describe("review round 3", () => {
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  test("the scratch's own writes never read as external changes (polled directories included)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, watch: true, config: (c) => ((c.capture.location = "vault"), (c.watch.debounce_ms = 30), (c.watch.poll_ms = 100)) });
+    try {
+      await h.keys("space", "s", "a");
+      await sleep(400);
+      await h.keys("space", "s", "s"); // the scratch open in a window
+      await h.keys("space", "s", "a");
+      await sleep(1200);
+      expect(h.app.messages.some((m) => m.text.includes("scratch.md changed on disk"))).toBe(false);
+    } finally {
+      h.app.watcher?.close();
+    }
+  });
+  test("a note that shrinks back under the size cap rejoins the explorer", async () => {
+    const root = makeVault();
+    const h = await harness({ root, config: (c) => (c.walk.max_file_size = 100) });
+    const file = join(root, "notes", "beta.md");
+    writeFileSync(file, "x".repeat(200));
+    h.app.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
+    expect(h.app.graph.notes.has("notes/beta.md")).toBe(false);
+    h.app.expanded.add("notes"); // its folder open, so its notes are rows
+    h.app.invalidateTree();
+    expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(false); // the tree, cached
+    writeFileSync(file, "# Beta small\n");
+    h.app.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
+    expect(h.app.graph.notes.has("notes/beta.md")).toBe(true);
+    expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(true); // refreshed by the change
+  });
+  test("tiny terminals: panes go over the note, and nothing fails to draw", async () => {
+    for (const width of [12, 20, 26, 40]) {
+      const h = await harness({ width, height: 12, config: (c) => ((c.ui.narrow_width = 0), (c.ui.outline = true)) });
+      h.frame(); // throws on a drawing failure
+      expect(h.app.sidebarBeside && h.app.outlineBeside && h.app.contentWidth() < 24).toBe(false);
+    }
+  });
+  test("the outline button stays reachable when an overlaid outline hides the breadcrumb", async () => {
+    const h = await harness({ width: 70, height: 30 });
+    await h.keys("space", "o");
+    h.frame();
+    expect(h.app.geometry!.hot.some((r) => r.id === "btn:outline")).toBe(true);
+  });
   test("a config key with an unknown modifier is reported and binds nothing", async () => {
     const h = await harness({ config: (c) => (c.keys = { "hyper+x": "ui.zen" } as Config["keys"]) });
     expect(h.app.messages.some((m) => m.text.includes('unknown modifier "hyper"'))).toBe(true);

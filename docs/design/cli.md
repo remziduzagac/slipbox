@@ -75,10 +75,10 @@ These churn freely before 1.0:
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
 
-`resolve` treats a target with a scheme (`https:`) as external only outside `[[…]]` and when no
-note has that name: `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A markdown link resolves to the
-note's own path whatever case the link uses (`[x](Note.md)` → `note.md`), so it counts as a
-backlink.
+`resolve` treats a target with a scheme (`https:`) as external only outside `[[…]]`, with no spaces,
+and when no note has that name: `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A markdown link
+resolves to the note's own path whatever case the link uses (`[x](Note.md)` → `note.md`), so it
+counts as a backlink.
 
 ## Naming notes
 

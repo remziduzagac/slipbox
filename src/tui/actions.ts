@@ -258,8 +258,7 @@ function openPalette(a: App): void {
       const spec = a.aliases[m[1]!];
       if (!spec) return false;
       const arg = m[2]?.trim();
-      // …or an alias with a trailing space: its candidates are listed, so enter picks one of them.
-      if (!arg && a.overlay?.kind === "list" && (a.overlay.selected > 0 || /\s$/.test(input))) return false;
+      if (!arg && a.overlay?.kind === "list" && a.overlay.selected > 0) return false;
       if (arg && argCandidates(a, spec.split(" ")[0]!) && a.overlay?.kind === "list") {
         // With an argument that completes, prefer the highlighted candidate.
         const sel = a.overlay.filtered[a.overlay.selected]?.item;
