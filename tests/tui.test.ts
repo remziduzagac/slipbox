@@ -714,13 +714,13 @@ describe("top bar, tab strip, status line", () => {
     expect(top).not.toContain("▤"); // the outline's button is on the breadcrumb
     expect(top).not.toContain("watching"); // the watcher is shown by the file's path
     expect(statusRow(h.frame())).toMatch(/index\.md +○ not watching/); // watch: false in the harness
-    // The chip is plain text on the bar's own background; right under the bar, the frame's rule.
+    // The bar and its chip sit on the page, so the frame's rule right under it gives it the same
+    // air as the rows below.
     const chipR = h.app.geometry!.hot.find((r) => r.id === "btn:palette")!;
     const page = h.app.theme.roles.text.bg ?? h.app.theme.bg;
-    const bar = h.app.theme.roles.topbar.bg!;
-    expect(bar).not.toBe(page);
-    expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(bar);
-    expect(h.canvas().styles[0]![80]!.bg).toBe(bar);
+    expect(h.app.theme.roles.topbar.bg).toBeUndefined();
+    expect(h.canvas().styles[chipR.y]![chipR.x + 2]!.bg).toBe(page);
+    expect(h.canvas().styles[0]![80]?.bg ?? page).toBe(page);
     expect(h.frame().split("\n")[1]!.startsWith("━━━━")).toBe(true);
     const ex = hot(h, "btn:explorer");
     click(h, ex.x, ex.y);
@@ -837,7 +837,7 @@ describe("top bar, tab strip, status line", () => {
     const roles = h.app.theme.roles;
     h.app.handleMouse({ type: "move", x: 80, y: 10, button: 0 }); // no hover
     expect(btn("btn:explorer").fg).toBe(roles.topbar_button_on.fg!); // the explorer is open
-    expect(btn("btn:explorer").bg).toBe(roles.topbar.bg!); // the bar's own background
+    expect(btn("btn:explorer").bg).toBe(h.app.theme.roles.text.bg ?? h.app.theme.bg); // the page
     expect(btn("btn:outline").fg).toBe(roles.topbar_button.fg!); // the outline is closed
     expect(btn("btn:outline").bg).toBe(roles.breadcrumb_band.bg!);
   });

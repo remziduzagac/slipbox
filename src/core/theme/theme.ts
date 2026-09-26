@@ -222,11 +222,12 @@ export function themeFromPalette(
     which_key_key: { fg: p.orange, bg: p.bg_dark, bold: true },
     which_key_group: { fg: p.blue, bg: p.bg_dark },
     which_key_title: { fg: p.bg, bg: p.blue, bold: true },
-    topbar: { fg: p.fg_dim, bg: p.bg_dark },
+    // On the page: the frame rule under it gives the bar the same air as the rows below.
+    topbar: { fg: p.fg_dim },
     // Toggle buttons sit on whatever they're drawn on: dim while off, bright while on.
     topbar_button: { fg: p.comment },
     topbar_button_on: { fg: p.fg_strong, bold: true },
-    topbar_chip: { fg: p.purple, bg: p.bg_dark, bold: true },
+    topbar_chip: { fg: p.purple, bold: true },
     hover: { fg: p.fg_strong, bg: p.surface2, bold: true },
     breadcrumb_band: { bg: blend(p.surface, p.bg, 0.35) }, // the breadcrumb row's background
     breadcrumb: { fg: p.fg_dim },
@@ -285,10 +286,10 @@ export function terminalTheme(): Theme {
     which_key_key: { fg: a(3), bg: a(0), bold: true },
     which_key_group: { fg: a(4), bg: a(0) },
     which_key_title: { fg: a(0), bg: a(4), bold: true },
-    topbar: { fg: a(7), bg: a(0) },
+    topbar: { fg: a(7) },
     topbar_button: { fg: a(8) },
     topbar_button_on: { fg: a(15), bold: true },
-    topbar_chip: { fg: a(5), bg: a(0), bold: true },
+    topbar_chip: { fg: a(5), bold: true },
     hover: { fg: a(0), bg: a(7), bold: true },
     breadcrumb_band: { bg: a(0) },
     breadcrumb: { fg: a(7) },

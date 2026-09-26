@@ -54,10 +54,12 @@ where it ends on one, `┣` `┫` `╋` where it continues through, and the corn
 (ascii: `+`). Borders are always the plain `border` colour; focus shows as brightness (see the side
 panes). Zen mode has no frame.
 
-**The top bar** has buttons and vault-wide state; the middle is empty:
+**The top bar** has buttons and vault-wide state; the middle is empty. It sits on the page's
+background like the rest, so the frame's rule under it gives it the same half row of air the tab
+strip and the titles get from theirs:
 
 - on the left, `≡` shows the explorer (focusing it and revealing the current note) or hides it,
-  and the `slipbox` chip (plain accent text on the bar) opens the command palette;
+  and the `slipbox` chip (plain accent text) opens the command palette;
 - on the right, vault-wide state (`indexing N…`, `single-file`), dropped when fewer than 12
   columns are left.
 
