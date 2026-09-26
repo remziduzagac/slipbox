@@ -359,14 +359,14 @@ function pickTheme(a: App): void {
     items: themes.map((t) => ({ label: t.name, hint: t.source, data: t.name })),
     selected: themes.findIndex((t) => t.name === before),
     move: (item) => {
-      a.theme = loadTheme(item.data as string).theme;
+      a.theme = a.themeNamed(item.data as string).theme;
     },
     accept: (item) => {
       a.setUi("theme", item.data as string);
       a.message("info", `theme ${a.theme.name} · theme = "${a.theme.name}" in config makes it the default`);
     },
     cancel: () => {
-      a.theme = loadTheme(before).theme;
+      a.theme = a.themeNamed(before).theme;
     },
   });
 }

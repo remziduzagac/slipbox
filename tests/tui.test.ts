@@ -1345,6 +1345,17 @@ describe("configuration: everything from config, and live reload", () => {
     expect(h.app.ui.zen).toBe(true);
     expect(h.app.messages.some((m) => m.text.includes("config reloaded"))).toBe(true);
   });
+  test("[colors] overrides apply to the theme, the picker's preview and a live reload", async () => {
+    const dir = mkdtempSync(join(sandbox, "cfg-"));
+    const file = join(dir, "config.toml");
+    writeFileSync(file, '[colors]\ntree_guide = "#445566"\n');
+    const h = await harness({ configFile: file, config: (c) => (c.colors = { tree_guide: "#445566" }) });
+    expect(h.app.theme.roles.tree_guide.fg).toBe("#445566");
+    expect(h.app.themeNamed("nord").theme.roles.tree_guide.fg).toBe("#445566"); // what the picker previews
+    writeFileSync(file, '[colors]\ntree_guide = "#778899"\n');
+    await h.keys("space", "v", "c");
+    expect(h.app.theme.roles.tree_guide.fg).toBe("#778899");
+  });
   test("saving a config file reloads it automatically", async () => {
     const dir = mkdtempSync(join(sandbox, "cfg-"));
     const file = join(dir, "config.toml");

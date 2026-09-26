@@ -32,7 +32,7 @@ import {
   TOP,
   type UiOverride,
 } from "../core/position.ts";
-import { loadTheme, type Theme } from "../core/theme/index.ts";
+import { applyColorOverrides, loadTheme, type Theme } from "../core/theme/index.ts";
 import type { VaultLocation } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { stringWidth } from "../core/width.ts";
@@ -355,9 +355,16 @@ export class App {
   }
 
   applyTheme(): void {
-    const t = loadTheme(this.ui.theme);
-    if (t.warning) this.message("warn", t.warning);
+    const t = this.themeNamed(this.ui.theme);
+    for (const w of t.warnings) this.message("warn", w);
     this.theme = t.theme;
+  }
+
+  /** A theme by name with the config's `[colors]` overrides on top. */
+  themeNamed(name: string): { theme: Theme; warnings: string[] } {
+    const t = loadTheme(name);
+    const o = applyColorOverrides(t.theme, this.config.colors);
+    return { theme: o.theme, warnings: [...(t.warning ? [t.warning] : []), ...o.warnings] };
   }
 
   /** Change a UI setting from the TUI; remembered in the session against its config default. */
@@ -397,8 +404,8 @@ export class App {
   }
 
   /**
-   * Reload config and apply what changed, live: keys, aliases, groups, theme and every UI
-   * setting, render settings, the walk (rebuild), the watcher. A UI setting whose config value
+   * Reload config and apply what changed, live: keys, aliases, groups, theme and colour
+   * overrides, every UI setting, render settings, the walk (rebuild), the watcher. A UI setting whose config value
    * changed takes the new value, replacing any session override of it.
    */
   reloadConfig(reason: "manual" | "file changed" = "manual"): void {
@@ -425,6 +432,7 @@ export class App {
     if (before.ui.outline_width !== next.ui.outline_width) this.outW = next.ui.outline_width;
     if (before.ui.split_ratio !== next.ui.split_ratio) for (const t of this.tabs) t.ratio = next.ui.split_ratio;
     if (changed.some((s) => s === "keys" || s === "aliases" || s === "groups" || s === "input")) this.applyKeys();
+    if (changed.includes("colors") && !differs(oldUi.theme, newUi.theme)) this.applyTheme();
     if (changed.includes("render")) {
       for (const b of this.buffers.values()) b.invalidateLayouts();
       this.relayoutAll();

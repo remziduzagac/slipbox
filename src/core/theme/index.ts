@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { userThemesDir } from "../paths.ts";
 import { base16ToPalette, parseBase16 } from "./base16.ts";
 import { builtinThemes } from "./builtin.ts";
-import { monoTheme, type Theme, terminalTheme, themeFromPalette } from "./theme.ts";
+import { type Color, monoTheme, type Role, ROLES, type RoleStyle, type Theme, terminalTheme, themeFromPalette } from "./theme.ts";
 
 export * from "./theme.ts";
 
@@ -63,4 +63,59 @@ export function loadTheme(name: string, dir = userThemesDir()): ThemeResult {
 
 function fallback(warning: string): ThemeResult {
   return { theme: builtinThemes().get(DEFAULT_THEME)!(), warning };
+}
+
+/** A colour in config: `#rrggbb`, `default`, or a terminal palette number 0–255. */
+function parseColor(v: unknown): Color | null {
+  if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 255) return `ansi:${v}`;
+  if (typeof v !== "string") return null;
+  if (/^#[0-9a-fA-F]{6}$/.test(v) || v === "default") return v;
+  if (/^(ansi:)?\d{1,3}$/.test(v) && Number(v.replace("ansi:", "")) <= 255) return `ansi:${v.replace("ansi:", "")}`;
+  return null;
+}
+
+const ATTRS = ["bold", "italic", "underline", "dim"] as const;
+
+/**
+ * Apply `[colors]` from config to a theme: `role = "#rrggbb"` sets the foreground, a table sets
+ * `fg`, `bg` and the attributes; `[colors.<theme>]` applies only to that theme. Only the given
+ * fields change. Under NO_COLOR (the mono theme) colours are ignored and attributes still apply.
+ * Problems are warnings, never failures.
+ */
+export function applyColorOverrides(theme: Theme, colors: Record<string, unknown>): { theme: Theme; warnings: string[] } {
+  const warnings: string[] = [];
+  const roles = { ...theme.roles };
+  const mono = theme.name === "mono";
+  const one = (role: string, v: unknown, where: string, apply: boolean) => {
+    if (!(ROLES as readonly string[]).includes(role)) return void warnings.push(`config: ${where}: unknown role "${role}"`);
+    const spec: RoleStyle = {};
+    if (typeof v === "string" || typeof v === "number") {
+      const c = parseColor(v);
+      if (!c) return void warnings.push(`config: ${where}.${role}: not a colour: ${JSON.stringify(v)} (use "#rrggbb", "default" or 0–255)`);
+      spec.fg = c;
+    } else if (v && typeof v === "object" && !Array.isArray(v)) {
+      for (const [k, x] of Object.entries(v)) {
+        if (k === "fg" || k === "bg") {
+          const c = parseColor(x);
+          if (c) spec[k] = c;
+          else warnings.push(`config: ${where}.${role}.${k}: not a colour: ${JSON.stringify(x)}`);
+        } else if ((ATTRS as readonly string[]).includes(k)) {
+          if (typeof x === "boolean") spec[k as (typeof ATTRS)[number]] = x;
+          else warnings.push(`config: ${where}.${role}.${k} must be true or false`);
+        } else warnings.push(`config: ${where}.${role}: unknown field "${k}" (fg, bg, ${ATTRS.join(", ")})`);
+      }
+    } else return void warnings.push(`config: ${where}.${role}: a colour or a table`);
+    if (mono) {
+      delete spec.fg;
+      delete spec.bg;
+    }
+    if (apply) roles[role as Role] = { ...roles[role as Role], ...spec };
+  };
+  for (const [key, v] of Object.entries(colors)) {
+    // A table whose key isn't a role is a theme's own overrides.
+    if (!(ROLES as readonly string[]).includes(key) && v && typeof v === "object" && !Array.isArray(v)) {
+      for (const [role, x] of Object.entries(v as Record<string, unknown>)) one(role, x, `colors.${key}`, key === theme.name);
+    } else one(key, v, "colors", true);
+  }
+  return { theme: { ...theme, roles }, warnings };
 }

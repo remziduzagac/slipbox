@@ -91,6 +91,13 @@ wq = "app.quit"
 
 [groups]                       # which-key groups by prefix: "name" or "name: explanation"
 "leader n" = "notes: reload, info"
+
+[colors]                       # per-role overrides on top of any theme (see "Colours" below)
+tree_guide = "#3b4261"         # a string sets the foreground
+pane_title = { fg = "#8c95b0", bold = true }
+
+[colors."tokyo-night"]         # only while this theme is active
+breadcrumb_band = { bg = "#1d1e2b" }
 ```
 
 The notation is in [keymap.md](keymap.md): space-separated key names such as `g g`,
@@ -98,6 +105,37 @@ The notation is in [keymap.md](keymap.md): space-separated key names such as `g 
 A command spec is a command id, optionally followed by an argument (`"tab.goto 3"`,
 `"theme.set nord"`). `slipbox commands` lists every id, and `?` in the TUI lists every
 binding.
+
+## Colours
+
+Themes supply a palette, and slipbox derives about 100 **roles** from it (the full list is
+`ROLES` in `src/core/theme/theme.ts`). `[colors]` overrides single roles on top of whichever theme
+is active, and `[colors.<theme>]` does so for one theme only.
+
+- **A string** sets the role's foreground; **a table** sets any of `fg`, `bg`, `bold`, `italic`,
+  `underline`, `dim`. Only the fields given change.
+- **Colours** are `"#rrggbb"`, `"default"` (the terminal's own), or a terminal palette number
+  `0`–`255`.
+- **Under `NO_COLOR`**, colours are ignored; the attributes still apply.
+- **Problems** (an unknown role or field, a malformed colour) are warnings, and the rest applies.
+- **They apply everywhere** a theme does: the TUI, its theme picker's preview, and `slipbox
+  render`. Saving the file reloads them live.
+
+The chrome roles most worth tuning:
+
+| Role | What it colours |
+| --- | --- |
+| `border` | the frame, the pane borders and the rules |
+| `topbar_chip` | the `slipbox` chip |
+| `topbar_button`, `topbar_button_on` | the `≡` and `▤` buttons, closed and open |
+| `tab`, `tab_active`, `tab_active_idle` | tabs; the active one with and without focus |
+| `pane_title`, `pane_title_active` | the Explorer and Outline titles, unfocused and focused |
+| `breadcrumb*` | the breadcrumb row (`_band` its background, `_icon`, `_sep`, `_current`) |
+| `tree_guide` | the explorer's and the outline's tree lines |
+| `scrollbar`, `scrollbar_track` | the scrollbar's thumb and track |
+| `cursor`, `cursor_line` | the cursor and its row |
+| `overlay*`, `keycap*` | popups: background, border, selection, headings, keycaps |
+| `which_key_key`, `which_key_group` | the which-key popup's keys and `+group` names |
 
 ## Reloading
 

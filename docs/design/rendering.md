@@ -160,7 +160,8 @@ Carried over from the nvim configuration, where they were arrived at by trial:
 `core/theme/theme.ts` defines about 100 semantic roles covering the document, syntax and chrome.
 Every theme reduces to an 18-colour `Palette`, and `themeFromPalette` maps it to roles, so there is
 one mapping to get right. Heading bands are the heading colour blended into the background, 14%
-in dark themes and 16% in light ones.
+in dark themes and 16% in light ones. Single roles can be overridden from config, for every theme or one
+(`[colors]`, [configuration.md](configuration.md)).
 
 | Kind | Themes |
 | --- | --- |

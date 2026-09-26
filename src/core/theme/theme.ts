@@ -37,7 +37,7 @@ export const ROLES = [
   "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
   "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
   "cursor", "cursor_line", "line_number", "line_number_current",
-  "which_key", "which_key_key", "which_key_group", "which_key_title",
+  "which_key_key", "which_key_group",
   "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover",
   "breadcrumb", "breadcrumb_current", "breadcrumb_sep", "breadcrumb_icon", "breadcrumb_band", "tree_guide",
 ] as const;
@@ -218,10 +218,8 @@ export function themeFromPalette(
     cursor_line: { bg: blend(p.surface, p.bg, 0.55) },
     line_number: { fg: p.surface2 },
     line_number_current: { fg: p.orange, bold: true },
-    which_key: { fg: p.fg, bg: p.bg_dark },
     which_key_key: { fg: p.orange, bg: p.bg_dark, bold: true },
     which_key_group: { fg: p.blue, bg: p.bg_dark },
-    which_key_title: { fg: p.bg, bg: p.blue, bold: true },
     // On the page: the frame rule under it gives the bar the same air as the rows below.
     topbar: { fg: p.fg_dim },
     // Toggle buttons sit on whatever they're drawn on: dim while off, bright while on.
@@ -282,10 +280,8 @@ export function terminalTheme(): Theme {
     link_focus: { fg: a(0), bg: a(6) },
     cursor: { fg: a(0), bg: a(15) },
     cursor_line: { bg: a(0) },
-    which_key: { fg: "default", bg: a(0) },
     which_key_key: { fg: a(3), bg: a(0), bold: true },
     which_key_group: { fg: a(4), bg: a(0) },
-    which_key_title: { fg: a(0), bg: a(4), bold: true },
     topbar: { fg: a(7) },
     topbar_button: { fg: a(8) },
     topbar_button_on: { fg: a(15), bold: true },
@@ -317,7 +313,6 @@ export function monoTheme(): Theme {
   roles.selection = { underline: true };
   roles.cursor = { inverse: true };
   roles.cursor_line = {};
-  roles.which_key_title = { bold: true };
   roles.hover = { inverse: true };
   roles.topbar_button_on = { bold: true };
   roles.topbar_button = { dim: true };

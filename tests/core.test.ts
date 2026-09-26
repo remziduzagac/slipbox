@@ -9,7 +9,7 @@ import { LinkIndex } from "../src/core/links.ts";
 import { parseMarkdown, visit } from "../src/core/parse.ts";
 import { sanitize } from "../src/core/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
-import { listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
+import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
 import type { WikiLink } from "../src/core/wikilink.ts";
@@ -118,6 +118,44 @@ describe("capture format (8.3, 8.4)", () => {
 });
 
 describe("config (0.9)", () => {
+  test("[colors]: per-role overrides, for every theme or one; problems are warnings", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
+    const file = join(dir, "c.toml");
+    writeFileSync(
+      file,
+      [
+        "[colors]",
+        'tree_guide = "#445566"',
+        'pane_title = { fg = "#ffffff", bold = false }',
+        "h1 = 33",
+        'nope = "#000000"',
+        'breadcrumb = "red"',
+        '[colors."tokyo-night"]',
+        'border = { bg = "#101010", sparkle = true }',
+        "[colors.nord]",
+        'border = "#222222"',
+      ].join("\n"),
+    );
+    const r = loadConfig({ configFile: file });
+    expect(r.warnings.filter((w) => w.includes("colors"))).toEqual([]); // the config itself passes it through
+    const tokyo = loadTheme("tokyo-night").theme;
+    const { theme, warnings } = applyColorOverrides(tokyo, r.config.colors);
+    expect(theme.roles.tree_guide.fg).toBe("#445566");
+    expect(theme.roles.pane_title).toMatchObject({ fg: "#ffffff", bold: false });
+    expect(theme.roles.border.bg).toBe("#101010"); // this theme's table applies…
+    expect(theme.roles.border.fg).toBe(tokyo.roles.border.fg); // …only the fields given
+    expect(theme.roles.h1.fg).toBe("ansi:33"); // a terminal palette number
+    const w = warnings.join("\n");
+    expect(w).toContain('unknown role "nope"');
+    expect(w).toContain("breadcrumb: not a colour");
+    expect(w).toContain('unknown field "sparkle"');
+    // Another theme's table doesn't apply here, but applies there.
+    expect(applyColorOverrides(loadTheme("nord").theme, r.config.colors).theme.roles.border.fg).toBe("#222222");
+    // NO_COLOR (mono): attributes apply, colours never do.
+    const mono = applyColorOverrides(loadTheme("mono").theme, { pane_title: { fg: "#ffffff", bold: false } }).theme;
+    expect(mono.roles.pane_title.fg).toBeUndefined();
+    expect(mono.roles.pane_title.bold).toBe(false);
+  });
   test("no config at all is fine; bad keys are warnings, not crashes", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
     const file = join(dir, "c.toml");

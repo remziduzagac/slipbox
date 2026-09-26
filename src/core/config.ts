@@ -89,6 +89,12 @@ export interface Config {
   };
   /** `:` aliases: alias → command spec, e.g. `wq = "app.quit"`; `""` removes a default. */
   aliases: Record<string, string>;
+  /**
+   * Per-role colour overrides on top of the theme: `role = "#rrggbb"` (the foreground) or
+   * `role = { fg, bg, bold, italic, underline, dim }`; `[colors.<theme>]` applies to one theme.
+   * Validated when applied (core/theme: applyColorOverrides).
+   */
+  colors: Record<string, unknown>;
   /** which-key group names by prefix, e.g. `"leader l" = "links"`. */
   groups: Record<string, string>;
 }
@@ -121,6 +127,7 @@ export const DEFAULT_CONFIG: Config = {
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
   aliases: {},
+  colors: {},
   groups: {},
 };
 
@@ -189,6 +196,12 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
   const out = { ...(base as Record<string, unknown>) };
   for (const [key, value] of Object.entries(over)) {
     const path = prefix ? `${prefix}.${key}` : key;
+    // Colour overrides: kept as given (tables merge by key) and validated against the theme.
+    if (prefix === "colors") {
+      const prev = out[key];
+      out[key] = isPlainObject(prev) && isPlainObject(value) ? { ...prev, ...value } : value;
+      continue;
+    }
     // String maps: key bindings (with context sub-tables), aliases, group names.
     if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|explorer|outline|resize)$/.test(prefix)) {
       if (typeof value === "string") out[key] = value;
