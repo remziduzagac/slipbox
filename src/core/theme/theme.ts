@@ -211,7 +211,8 @@ export function themeFromPalette(
     error: { fg: p.red, bold: true },
     warn: { fg: p.yellow },
     info: { fg: p.cyan },
-    scrollbar: { fg: p.surface2 },
+    // Brighter than the frame lines (surface2), so the thumb reads as a control, not a border.
+    scrollbar: { fg: p.comment },
     scrollbar_track: { fg: blend(p.surface, p.bg, 0.5) },
     // The reading cursor: a block over the character, and a row band behind it.
     cursor: { fg: p.bg, bg: p.fg_strong },
