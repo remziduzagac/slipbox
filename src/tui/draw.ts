@@ -7,8 +7,8 @@ import type { Glyphs } from "../core/glyphs.ts";
 import type { Line } from "../core/layout/ir.ts";
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
-import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
-import type { App, ListOverlay, Tab, View } from "./app.ts";
+import { graphemes, graphemeWidth, splitAtWidth, stringWidth, truncate } from "../core/width.ts";
+import type { App, ListOverlay, SidePaneState, Tab, TreeRow, View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, ordered } from "./cursor.ts";
 import { prettyKey, spellKey } from "./keys.ts";
@@ -672,15 +672,62 @@ function treeLines(depths: number[]): { last: boolean; more: boolean[] }[] {
 }
 
 /** Dim tree lines in a row's indentation: │ for ancestors that go on, then ├─ or └─ to the row. */
-function drawGuides(app: App, c: Canvas, rect: Rect, y: number, depth: number, line: { last: boolean; more: boolean[] }, bg: Color | null): void {
+function drawGuides(app: App, c: Canvas, rect: Rect, y: number, depth: number, line: { last: boolean; more: boolean[] }, bg: Color | null, left = 0): void {
   const g = app.glyphs;
   const st = { ...roleStyle(app.theme, "tree_guide", bg), bg };
   for (let k = 0; k < depth; k++) {
-    const x = rect.x + 1 + k * 2;
+    const x = rect.x + 1 + k * 2 - left;
     if (x + 1 >= rect.x + rect.w - 1) break;
-    if (k === depth - 1) drawText(c, x, y, `${line.last ? g.guideLast : g.guideBranch}${g.guideDash}`, st, 2);
-    else if (line.more[k]) drawText(c, x, y, g.guide, st, 1);
+    if (k === depth - 1) {
+      // Scrolled sideways, the branch may be half off the left edge.
+      const branch = `${line.last ? g.guideLast : g.guideBranch}${g.guideDash}`;
+      if (x >= rect.x) drawText(c, x, y, branch, st, 2);
+      else if (x + 1 >= rect.x) drawText(c, x + 1, y, g.guideDash, st, 1);
+    } else if (line.more[k] && x >= rect.x) drawText(c, x, y, g.guide, st, 1);
   }
+}
+
+/** A side pane's list viewport: its rows' natural width and, when they don't fit, the sideways
+ *  offset and the row under the list that the horizontal scrollbar takes. */
+interface SideView {
+  list: Rect;
+  /** Columns for text: the last one is the vertical scrollbar's. */
+  cols: number;
+  natural: number;
+  left: number;
+  hbar: Rect | null;
+}
+
+const naturalWidths = new WeakMap<object, number>();
+
+function sideView<T extends object>(rect: Rect, rows: T[], text: (row: T) => string, state: SidePaneState): SideView {
+  const cols = Math.max(1, rect.w - 1);
+  let natural = naturalWidths.get(rows);
+  if (natural === undefined) {
+    natural = 0;
+    for (const row of rows) natural = Math.max(natural, stringWidth(text(row)) + 1);
+    naturalWidths.set(rows, natural);
+  }
+  if (natural <= cols || rect.h < 4) {
+    state.left = 0;
+    return { list: rect, cols, natural, left: 0, hbar: null };
+  }
+  const list = { ...rect, h: rect.h - 1 };
+  state.left = Math.max(0, Math.min(state.left ?? 0, natural - cols));
+  return { list, cols, natural, left: state.left, hbar: { x: rect.x, y: rect.y + rect.h - 1, w: cols, h: 1 } };
+}
+
+/** One side-pane row's text from the view's offset: clipped when the pane scrolls sideways,
+ *  cut with an ellipsis otherwise (a pane too short for the bar). */
+function sideRow(text: string, sv: SideView): string {
+  if (!sv.hbar) return truncate(text, sv.cols);
+  return splitAtWidth(splitAtWidth(text, sv.left)[1], sv.cols)[0];
+}
+
+function sideHScrollbar(app: App, c: Canvas, sv: SideView, pane: "sidebar" | "outline", active: boolean, bg: Color | null, geo: Geometry): void {
+  if (!sv.hbar) return;
+  drawHScrollbar(app, c, sv.hbar, sv.natural, sv.left, active, bg);
+  geo.scrollbars.push({ ...sv.hbar, pane, total: sv.natural, horizontal: true });
 }
 
 /** The explorer; returns the rect its tree occupies (under the title). */
@@ -689,17 +736,24 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  const rect = paneTitle(app, c, pane, "Explorer", app.region === "sidebar", base.bg, geo);
+  let rect = paneTitle(app, c, pane, "Explorer", app.region === "sidebar", base.bg, geo);
   const rows = app.treeRows();
   const lines = treeLines(rows.map((r) => r.depth));
   const s = app.sidebar;
+  const g = app.glyphs;
+  const text = (row: TreeRow) => {
+    const icon = row.kind === "dir" ? (app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : g.file;
+    const name = row.kind === "note" ? row.name.replace(/\.(md|markdown)$/i, "") : row.name;
+    return `${" ".repeat(1 + row.depth * 2)}${icon} ${name}`;
+  };
+  const sv = sideView(rect, rows, text, s);
+  rect = sv.list;
   s.selected = Math.max(0, Math.min(s.selected, rows.length - 1));
   // Keep the selection in view, unless the wheel moved the view.
   if (!s.pinned && s.selected < s.scroll) s.scroll = s.selected;
   if (!s.pinned && s.selected >= s.scroll + rect.h) s.scroll = s.selected - rect.h + 1;
   s.scroll = Math.max(0, Math.min(s.scroll, Math.max(0, rows.length - rect.h)));
   const current = app.view?.buf.rel;
-  const g = app.glyphs;
   for (let i = 0; i < rect.h; i++) {
     const row = rows[s.scroll + i];
     if (!row) break;
@@ -709,12 +763,11 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, base.bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
-    const icon = row.kind === "dir" ? (app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : g.file;
-    const name = row.kind === "note" ? row.name.replace(/\.(md|markdown)$/i, "") : row.name;
-    drawText(c, rect.x, y, truncate(`${" ".repeat(1 + row.depth * 2)}${icon} ${name}`, rect.w - 1), st, rect.w);
-    drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg);
+    drawText(c, rect.x, y, sideRow(text(row), sv), st, rect.w);
+    drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
   }
   paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", base.bg, geo);
+  sideHScrollbar(app, c, sv, "sidebar", app.region === "sidebar", base.bg, geo);
   return rect;
 }
 
@@ -724,10 +777,17 @@ function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  const rect = paneTitle(app, c, pane, "Outline", app.region === "outline", base.bg);
+  let rect = paneTitle(app, c, pane, "Outline", app.region === "outline", base.bg);
   const rows = app.outlineRows();
   const lines = treeLines(rows.map((r) => r.level - 1));
   const o = app.outline;
+  const g = app.glyphs;
+  const text = (row: (typeof rows)[number]) => {
+    const marker = row.hasChildren ? (row.folded ? g.foldClosed : g.foldOpen) : " ";
+    return `${" ".repeat(1 + (row.level - 1) * 2)}${marker} ${row.text}`;
+  };
+  const sv = sideView(rect, rows, text, o);
+  rect = sv.list;
   const current = app.currentSection();
   // While the outline is not focused, it follows the cursor's section.
   if (app.region !== "outline" && current >= 0) o.selected = current;
@@ -740,7 +800,6 @@ function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
     drawText(c, rect.x + 1, rect.y, "no headings", roleStyle(theme, "dim", base.bg), rect.w - 1);
     return rect;
   }
-  const g = app.glyphs;
   for (let i = 0; i < rect.h; i++) {
     const idx = o.scroll + i;
     const row = rows[idx];
@@ -751,11 +810,11 @@ function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, base.bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
-    const marker = row.hasChildren ? (row.folded ? g.foldClosed : g.foldOpen) : " ";
-    drawText(c, rect.x, y, truncate(`${" ".repeat(1 + (row.level - 1) * 2)}${marker} ${row.text}`, rect.w - 1), st, rect.w);
-    drawGuides(app, c, rect, y, row.level - 1, lines[idx]!, st.bg);
+    drawText(c, rect.x, y, sideRow(text(row), sv), st, rect.w);
+    drawGuides(app, c, rect, y, row.level - 1, lines[idx]!, st.bg, sv.left);
   }
   paneScrollbar(app, c, rect, rows.length, o.scroll, "outline", app.region === "outline", base.bg, geo);
+  sideHScrollbar(app, c, sv, "outline", app.region === "outline", base.bg, geo);
   return rect;
 }
 

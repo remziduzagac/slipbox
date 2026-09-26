@@ -122,8 +122,11 @@ with a `▐` thumb (`scrollbar` in the active window, `border` in the other); as
 explorer and the outline get the same bar in their last column while their rows overflow (the
 thumb bright while the pane is focused). With wrapping off, each window's last row belongs to a
 horizontal bar: a `▄` track and thumb under the text (ascii `-` and `#`), drawn when the note is
-wider than the window; the row stays reserved when it isn't, so the text doesn't jump. Every bar
-can be clicked and dragged; in a side pane that pins the pane's scroll, like the wheel.
+wider than the window; the row stays reserved when it isn't, so the text doesn't jump. A side pane
+whose rows are wider than it scrolls sideways too: its rows are clipped instead of cut with `…`,
+and its last row holds the same `▄` bar (only while they overflow). Every bar can be clicked and
+dragged; in a side pane that focuses the pane and pins its scroll, like the wheel. A horizontal
+wheel or trackpad scrolls a side pane sideways as it does the note.
 
 **Hover.** Buttons, tabs and their `×`, `+N`, breadcrumb headings and icon, the status path and
 which-key entries are drawn in the `hover` role while the mouse is over them. Rows in lists and

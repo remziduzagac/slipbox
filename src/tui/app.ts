@@ -189,6 +189,8 @@ export interface SidePaneState {
   scroll: number;
   /** The wheel scrolled it: the view stays put, not pulled back to the selection. */
   pinned?: boolean;
+  /** Scrolled sideways (rows wider than the pane): the first column shown. */
+  left?: number;
 }
 
 export interface TreeRow {
@@ -1138,6 +1140,7 @@ export class App {
       this.outline.pinned = false;
       this.outline.folded = new Set();
       this.outline.scroll = 0;
+      this.outline.left = 0;
     }
     const hs = this.currentLayout(view).headings;
     const out: ReturnType<App["outlineRows"]> = [];
@@ -1563,6 +1566,12 @@ export class App {
     // Sideways (a horizontal wheel or trackpad), when wrapping is off: the view moves, not the cursor.
     const side = ev.scroll?.direction === "left" ? -1 : ev.scroll?.direction === "right" ? 1 : 0;
     if (side) {
+      // Side panes first (they lie over the note on narrow screens); drawing clamps the offset.
+      const sidePane = g.outlinePane && inRect(g.outlinePane, ev.x, ev.y) ? this.outline : g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y) ? this.sidebar : null;
+      if (sidePane) {
+        sidePane.left = Math.max(0, (sidePane.left ?? 0) + side * n * 2);
+        return;
+      }
       if (pane && !this.ui.wrap) {
         const layout = this.currentLayout(pane.view);
         pane.view.left = Math.max(0, Math.min(Math.max(0, layout.width - this.textColumns(pane.view)), pane.view.left + side * n * 2));
@@ -1605,9 +1614,10 @@ export class App {
       this.drag = { kind: "tab", index: tab.index };
       return;
     }
-    // A side pane's own scrollbar first: it sits inside the pane.
+    // A side pane's own scrollbars first: they sit inside the pane, and focus it like any click there.
     const paneBar = g.scrollbars.find((b) => b.pane && inRect(b, ev.x, ev.y));
     if (paneBar) {
+      this.region = paneBar.pane!;
       this.drag = { kind: "scrollbar", bar: paneBar };
       this.scrollbarTo(paneBar, ev.y, ev.x);
       return;
@@ -1748,6 +1758,11 @@ export class App {
     if (bar.pane) {
       // A side pane's view moves, pinned like the wheel's; its selection stays.
       const state = bar.pane === "sidebar" ? this.sidebar : this.outline;
+      if (bar.horizontal) {
+        const fx = Math.max(0, Math.min(1, (x - bar.x) / Math.max(1, bar.w - 1)));
+        state.left = Math.round(fx * Math.max(0, bar.total - bar.w));
+        return;
+      }
       state.scroll = Math.round(frac * Math.max(0, bar.total - bar.h));
       state.pinned = true;
       return;

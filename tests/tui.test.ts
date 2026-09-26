@@ -1462,6 +1462,34 @@ describe("mouse", () => {
     // The note didn't move.
     expect(h.app.view!.top).toBe(0);
   });
+  test("side panes scroll sideways when rows are wider than the pane", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, height: 30, config: (c) => (c.ui.outline = true) });
+    h.frame();
+    expect(h.app.region).toBe("content");
+    const bar = h.app.geometry!.scrollbars.find((b) => b.pane === "outline" && b.horizontal)!;
+    expect(bar).toBeDefined();
+    expect(bar.total).toBeGreaterThan(bar.w);
+    const c = h.canvas();
+    expect(c.rows[bar.y]!.slice(bar.x, bar.x + bar.w).join("")).toBe("▄".repeat(bar.w));
+    // Rows are clipped, not cut with an ellipsis, and the list stops above the bar.
+    const list = h.app.geometry!.outline!;
+    expect(list.y + list.h).toBe(bar.y);
+    const rows = c.rows.slice(list.y, list.y + list.h).map((r) => r.slice(list.x, list.x + list.w).join(""));
+    expect(rows.some((r) => r.includes("…"))).toBe(false);
+    // Dragging to the end shows the ends of the longest rows; the wheel comes back.
+    h.app.handleMouse({ type: "down", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: bar.x + bar.w - 1, y: bar.y, button: 0 });
+    h.frame();
+    expect(h.app.outline.left).toBe(bar.total - bar.w);
+    for (let k = 0; k < 100; k++) h.app.handleMouse({ type: "scroll", x: list.x + 2, y: list.y + 1, button: 0, scroll: { direction: "left", delta: 1 } });
+    h.frame();
+    expect(h.app.outline.left).toBe(0);
+    h.app.handleMouse({ type: "scroll", x: list.x + 2, y: list.y + 1, button: 0, scroll: { direction: "right", delta: 1 } });
+    h.frame();
+    expect(h.app.outline.left).toBeGreaterThan(0);
+    // Clicking a pane's bar focuses the pane, like any click in it.
+    expect(h.app.region).toBe("outline");
+  });
   test("wrapping off: a horizontal scrollbar under the text scrolls sideways", async () => {
     const h = await harness({ open: "samples/wide-tables.md", width: 100, height: 30, config: (c) => ((c.ui.wrap = false), (c.ui.sidebar = false)) });
     h.frame();

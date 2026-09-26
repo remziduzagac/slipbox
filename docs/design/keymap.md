@@ -72,7 +72,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | half page down / up (cursor moves with it) | `ctrl+d` / `ctrl+u` |
 | page down / up (cursor moves with it) | `pagedown` / `pageup` |
 | mouse wheel | scrolls the view |
-| horizontal wheel or trackpad | with wrapping off, scrolls the view sideways (6 columns a notch) |
+| horizontal wheel or trackpad | scrolls sideways: the note with wrapping off, a side pane with rows wider than it |
 
 ## Selection
 
@@ -330,7 +330,7 @@ mouse off, which gives it back to the terminal.
 | tab strip `+N` | the tabs that don't fit: open the tab list |
 | pane borders | drag to resize the explorer, the outline, or the split |
 | scrollbar (window, explorer, outline) | click to jump; drag to scroll |
-| horizontal scrollbar (wrapping off) | click to jump sideways; drag to scroll sideways |
+| horizontal scrollbar | click to jump sideways; drag to scroll sideways (a side pane's also focuses it) |
 | status line path | copy the note's path |
 | message line | click to open the messages |
 | which-key popup | click an entry: a group opens it, a command runs it |
