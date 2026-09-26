@@ -42,7 +42,10 @@ OpenTUI:
 | File | What it does with OpenTUI |
 | --- | --- |
 | `src/tui/opentui.ts` | `Canvas` over `OptimizedBuffer`; the full-screen `Renderable` |
-| `src/tui/run.ts` | `createCliRenderer`, key and mouse events, resize, OSC 52, shutdown |
+| `src/tui/run.ts` | `createCliRenderer`, key, paste and mouse events, resize, OSC 52, shutdown |
+
+Shutdown saves positions and the session whatever ends the process: `ctrl+q`, or `SIGTERM`, `SIGHUP`,
+`SIGINT`, `SIGQUIT` or `SIGPIPE`.
 
 Everything else is testable headlessly with `TextCanvas` (see [testing.md](testing.md)).
 
@@ -70,7 +73,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/position.ts` | 3.4, 3.5, 3.15 | anchors, reading positions, session file |
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
-| `core/clipboard.ts` | 8.5 | OSC 52, then pbcopy / wl-copy / xclip, then a file |
+| `core/clipboard.ts` | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / wl-copy / xclip, then a file |
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped (not written until editing) |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face |
 | `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |

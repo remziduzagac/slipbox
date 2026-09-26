@@ -68,6 +68,11 @@ export async function runTui(argv: string[]): Promise<number> {
     if (k.eventType === "release") return;
     void app.handleKey(keyName(k));
   });
+  // Bracketed paste arrives as one event, not keys: into the list filter or prompt.
+  renderer.keyInput.on("paste", (p: { bytes: Uint8Array }) => {
+    app.paste(new TextDecoder().decode(p.bytes));
+    renderer.requestRender();
+  });
   renderer.on("resize", (w: number, h: number) => {
     app.resize(w, h);
     renderer.requestRender();
@@ -76,11 +81,11 @@ export async function runTui(argv: string[]): Promise<number> {
   title();
   renderer.requestRender();
 
+  // Every signal that ends the process saves positions and the session first.
   const onSignal = () => app.quit();
-  process.once("SIGTERM", onSignal);
-  process.once("SIGHUP", onSignal);
+  const signals = ["SIGTERM", "SIGHUP", "SIGINT", "SIGQUIT", "SIGPIPE"] as const;
+  for (const s of signals) process.once(s, onSignal);
   const code = await done;
-  process.off("SIGTERM", onSignal);
-  process.off("SIGHUP", onSignal);
+  for (const s of signals) process.off(s, onSignal);
   return code;
 }

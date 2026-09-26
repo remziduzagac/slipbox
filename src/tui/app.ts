@@ -35,6 +35,7 @@ import {
 import { applyColorOverrides, loadTheme, type Theme } from "../core/theme/index.ts";
 import type { VaultLocation } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
+import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
 import { NoteBuffer } from "./buffer.ts";
@@ -1272,6 +1273,26 @@ export class App {
   // Input. Dispatch order (decision 3.11): overlay → resize mode → pending sequence → focused
   // pane keys → visual-mode keys → the normal keymap. The which-key popup shows while a sequence is pending.
 
+  /**
+   * Pasted text (bracketed paste): into the open list's filter or prompt, first line only and
+   * sanitized; elsewhere nothing (the reader has nowhere to put it).
+   */
+  paste(text: string): void {
+    const o = this.overlay;
+    if (!o) return;
+    const line = sanitize(text.replace(/\r\n?/g, "\n").split("\n")[0] ?? "");
+    if (!line) return;
+    if (o.kind === "prompt") {
+      o.text += line;
+      o.change?.(o.text);
+    } else if (o.filterable) {
+      o.input += line;
+      refilter(o);
+      const item = o.filtered[o.selected];
+      if (item) o.move?.(item.item);
+    }
+  }
+
   /** Focus never stays on a hidden pane (after zen, a config reload, a resize): back to the note. */
   fixRegion(): void {
     if ((this.region === "sidebar" && !this.sidebarShown) || (this.region === "outline" && !this.outlineShown)) this.region = "content";
@@ -1416,7 +1437,7 @@ export class App {
         return o.accept(o.text);
       }
       if (key === "backspace") o.text = [...o.text].slice(0, -1).join("");
-      else if (key === "ctrl+w") o.text = o.text.replace(/\S*\s*$/, "");
+      else if (key === "ctrl+w" || key === "ctrl+backspace") o.text = o.text.replace(/\S*\s*$/, "");
       else if (key === "ctrl+u") o.text = "";
       else if (typed !== null) o.text += typed;
       else return;
@@ -1466,7 +1487,7 @@ export class App {
       return;
     }
     if (key === "backspace") o.input = [...o.input].slice(0, -1).join("");
-    else if (key === "ctrl+w") o.input = o.input.replace(/\S*\s*$/, "");
+    else if (key === "ctrl+w" || key === "ctrl+backspace") o.input = o.input.replace(/\S*\s*$/, "");
     else if (typed !== null) o.input += typed;
     else return;
     refilter(o);
@@ -1973,7 +1994,15 @@ export class App {
       this.invalidateTree();
       for (const b of this.buffers.values()) b.invalidateLayouts();
       this.relayoutAll();
-    } else if (batch.changes.length) for (const b of this.buffers.values()) b.invalidateLayouts();
+    } else if (batch.changes.length) {
+      // Only changed notes: their own buffers reloaded above; others re-lay out only when they
+      // link to one (its headings, and so a [[note#heading]]'s status, may have changed).
+      const changed = new Set(batch.changes.map((c) => c.rel));
+      for (const b of this.buffers.values()) {
+        if (!b.rel || changed.has(b.rel)) continue;
+        if (this.graph.linksOf(b.rel).some((l) => l.path !== null && l.path !== undefined && changed.has(l.path))) b.invalidateLayouts();
+      }
+    }
   }
 
   reloadBuffer(buf: NoteBuffer, deleted = false): void {

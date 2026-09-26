@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatEntry, formatRef, parseRef } from "../src/core/capture.ts";
+import { copyText } from "../src/core/clipboard.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
@@ -276,6 +277,14 @@ describe("review round 2 (core)", () => {
 });
 
 describe("review round 3 (core)", () => {
+  test("OSC 52 is capped whoever writes it; the fallback carries big copies", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
+    let sent = 0;
+    const big = "x".repeat(200_000);
+    const r = copyText(big, { osc52: () => ((sent += 1), true), fallbackDir: dir });
+    expect(sent).toBe(0);
+    expect(r.methods.length).toBeGreaterThan(0);
+  });
   test("capture.file can't be hidden or non-Markdown (.git/config, .slipbox/config.toml)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
     for (const bad of [".git/config", ".slipbox/config.toml", "notes.txt"]) {

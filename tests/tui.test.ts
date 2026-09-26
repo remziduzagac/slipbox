@@ -12,6 +12,7 @@ import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
+import { fuzzy, rank } from "../src/tui/fuzzy.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
@@ -1286,6 +1287,39 @@ describe("review round 2", () => {
 });
 
 describe("review round 3", () => {
+  test("pasted text goes into the list filter or prompt (first line, sanitized)", async () => {
+    const h = await harness();
+    await h.keys("ctrl+p");
+    h.app.paste("alp\u001b[31m\nsecond line");
+    const o = h.app.overlay as ListOverlay;
+    expect(o.input).toBe("alp");
+    expect(o.filtered[0]!.item.label).toContain("alpha");
+    await h.keys("ctrl+backspace"); // deletes a word in inputs
+    expect(o.input).toBe("");
+  });
+  test("keypad keys and legacy ctrl+j arrive under the names the keymaps use", () => {
+    expect(keyName({ name: "kpenter", sequence: "\u001b[57414u" } as never)).toBe("enter");
+    expect(keyName({ name: "kpleft", sequence: "\u001b[57417u" } as never)).toBe("left");
+    expect(keyName({ name: "linefeed", sequence: "\n" } as never)).toBe("ctrl+j");
+  });
+  test("a change to one note re-lays out only the open notes that link to it", async () => {
+    const h = await harness({ open: "notes/alpha.md" });
+    h.app.openInNewTab("samples/wide-tables.md");
+    h.frame();
+    const wide = h.app.view!;
+    const before = h.app.currentLayout(wide);
+    const alpha = h.app.tabs[0]!.views[0]!;
+    const alphaBefore = h.app.currentLayout(alpha);
+    h.app.applyChanges({ changes: [{ rel: "notes/beta.md", kind: "changed", isNote: true }], rescan: false });
+    expect(h.app.currentLayout(wide)).toBe(before); // no link to beta: the same layout object
+    expect(h.app.currentLayout(alpha)).not.toBe(alphaBefore); // links to beta: re-laid out
+  });
+  test("fuzzy: a contiguous match ranks first and highlights where it matched", () => {
+    const r = rank("readme", ["r/e/a/d/m/e.md", "notes/rename-adme.md", "areas/readme.md"], (x) => x);
+    expect(r[0]!.item).toBe("areas/readme.md");
+    expect(fuzzy("read", "areas/readme.md")!.positions).toEqual([6, 7, 8, 9]);
+    expect(fuzzy("stan", "İİstanbul.md")!.positions).toEqual([2, 3, 4, 5]);
+  });
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   test("the scratch's own writes never read as external changes (polled directories included)", async () => {
     const root = makeVault();

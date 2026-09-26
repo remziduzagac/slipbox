@@ -67,7 +67,8 @@ export class NoteBuffer {
     let l = this.layouts.get(key);
     if (!l) {
       l = layoutNote(this.parsed, graph, this.rel, { width, glyphs, showUrls });
-      if (this.layouts.size > 3) this.layouts.clear();
+      // Keep the last few widths (a drag back and forth, a toggle and back): evict the oldest.
+      if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
     }
     return l;

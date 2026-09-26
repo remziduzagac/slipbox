@@ -330,7 +330,23 @@ export interface KeyLike {
   sequence: string;
 }
 
-const RENAME: Record<string, string> = { return: "enter", esc: "escape", " ": "space", del: "delete" };
+const RENAME: Record<string, string> = {
+  return: "enter",
+  esc: "escape",
+  " ": "space",
+  del: "delete",
+  // The keypad under the kitty protocol, which reports its keys apart from the main ones.
+  kpenter: "enter",
+  kpleft: "left",
+  kpright: "right",
+  kpup: "up",
+  kpdown: "down",
+  kphome: "home",
+  kpend: "end",
+  kppageup: "pageup",
+  kppagedown: "pagedown",
+  kpdelete: "delete",
+};
 
 /** Name a key event canonically, so it compares equal to config notation (see canonKey). */
 export function keyName(k: KeyLike): string {
@@ -343,6 +359,8 @@ export function keyName(k: KeyLike): string {
     return canonKey(seq);
   }
   let name = RENAME[k.name] ?? k.name ?? "";
+  // Legacy terminals send ctrl+j as a line feed.
+  if (name === "linefeed" && !k.ctrl) return "ctrl+j";
   // Many terminals send ctrl+backspace as ^H, which parses as plain backspace.
   if (name === "backspace" && seq === "\x08" && !k.ctrl) return "ctrl+backspace";
   if (!name && seq.length === 1) name = seq;

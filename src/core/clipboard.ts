@@ -69,7 +69,10 @@ export interface CopyOptions {
 export function copyText(text: string, opts: CopyOptions): CopyResult {
   const methods: string[] = [];
   let confirmed = false;
-  if ((opts.osc52 ?? osc52ToTty)(text)) methods.push("osc52");
+  // The same size cap whoever writes the sequence: terminals drop or choke on larger payloads,
+  // and the local tools or the fallback file carry it instead.
+  const fits = Buffer.byteLength(Buffer.from(text, "utf8").toString("base64")) <= OSC52_MAX_BASE64;
+  if (fits && (opts.osc52 ?? osc52ToTty)(text)) methods.push("osc52");
   for (const tool of localTools()) {
     if (runTool(tool, text)) {
       methods.push(tool[0]!);

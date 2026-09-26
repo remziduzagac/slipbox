@@ -307,7 +307,8 @@ Pickers, the palette and help share these keys (a prompt, such as `/`, takes `ba
 | `j` / `k` | move, in lists without a filter |
 | `enter` | accept |
 | `esc`, `ctrl+c`, `ctrl+g` | cancel |
-| `backspace`, `ctrl+w` | delete a character / a word of the filter |
+| `backspace`, `ctrl+w` or `ctrl+backspace` | delete a character / a word of the filter |
+| paste | the first line of the pasted text goes into the filter or prompt |
 | `ctrl+u` | clear a prompt |
 
 ## Mouse
@@ -350,6 +351,9 @@ mouse off, which gives it back to the terminal.
 - **macOS:** `ctrl+left` / `ctrl+right` / `ctrl+up` / `ctrl+down` switch desktops and open
   Mission Control by default, so they never arrive. `cmd+left` / `cmd+right` arrive only if the
   terminal passes them through. Their alternatives always work.
+- **Keypad:** under the kitty protocol its keys arrive apart from the main ones; `enter`, the arrows
+  and the paging keys on it act like the main ones. Legacy terminals send `ctrl+j` as a line feed,
+  which slipbox reads as `ctrl+j`.
 - **Older terminals:** `ctrl+shift+e`, `ctrl+tab`, `ctrl+enter` and `ctrl+backspace` can't be
   told apart from their plain forms. Each one has a fallback that works everywhere.
 - **Multiplexers:** zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`, and tmux and herdr

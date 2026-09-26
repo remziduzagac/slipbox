@@ -263,8 +263,10 @@ past theirs), so the content behind never runs up to the edge.
 
 - **Pickers:** quick switcher, heading picker, links, backlinks, history, tabs, theme and glyph
   pickers (with live preview; `esc` restores), UI settings, messages, info, and keys.
-- **Filtering:** fuzzy, with smart case, preferring word and path starts and file names over
-  directories.
+- **Filtering:** fuzzy, with smart case. A contiguous match wins (its best occurrence: in the
+  file name, at a word start); otherwise the tightest subsequence, preferring word and path starts
+  and file names over directories. Highlights follow the original text even where lowercasing
+  changes its length.
 - **Keys:** as in [keymap.md](keymap.md), "In lists and prompts": the arrows, `tab` and
   `ctrl+n`/`ctrl+p` move (wrapping around), `enter` accepts, `esc` cancels. The wheel scrolls the
   list three rows a notch (the selection moves only to stay in view), a click picks, and a click
@@ -387,7 +389,7 @@ directory, sharing the walk's `WalkFilter` (decision `0.11`). Events are debounc
 
 - **Changed:** the note reloads silently; phase 2 buffers are never dirty (plan `5.3`). Its
   anchors keep your place, and the change is surfaced at once with `↻ reloaded` and a message
-  (plan `5.4`).
+  (plan `5.4`). Other open notes re-lay out only if they link to it.
 - **Deleted:** the buffer keeps showing the last version, marked `✖ deleted on disk`.
 - **Created or deleted notes:** these change link statuses, so every layout and the explorer
   refresh. A red `[[link]]` turns resolved when its note appears.
@@ -427,6 +429,15 @@ keymap. Only keymaps at or above the one holding a binding can
 make a key a prefix: visual mode's `y` doesn't wait for the normal keymap's `y y`. When a key is
 both a binding and a prefix, slipbox waits `input.which_key_delay_ms` for the next key, then
 runs the binding.
+
+## Known limits
+
+- **Very large notes re-lay out in full.** There is no incremental layout: a change of width
+  (dragging a border, resize mode, toggling a pane, zen, wrap or line numbers, a terminal resize)
+  re-lays out the note, which takes tens of milliseconds for a thousand-line note and hundreds for
+  twenty thousand. A buffer keeps its last six widths, so going back and forth is cached.
+- **Pathological nesting parses slowly.** A list nested hundreds of levels deep takes seconds in
+  the markdown parser, on the main thread.
 
 ## Parity with the CLI
 
