@@ -521,11 +521,13 @@ small moves don't reshape it. It never splits a block.
 
 **Moving while it's open.** The cursor stays in it. Moving inside changes nothing; moving past an
 edge brings the next block in, dropping the far ones once it's taller than `[editor] lens_max` of
-the window (half); a jump (`g g`, `shift+g`, a search, `n`, the outline) moves it to the block landed
-on. It keeps its height on screen: when it moves or grows, the page scrolls under it, so your eyes
-stay in one place. A click in the rendered text outside it moves it there; the wheel scrolls the
-page freely, the lens riding with its text. In insert mode the arrows stop at its rules. A single
-block taller than the maximum shows whole for now (scrolling inside the lens is to come).
+the window (half); a jump (`g g`, `shift+g`, a search, `n`, the outline) moves it to the block
+landed on. It keeps its height on screen: when it moves or grows, the page scrolls under it, so your
+eyes stay in one place. A click in the rendered text outside it moves it there, the clicked line
+staying under the pointer (the lens's height on screen is the keyboard's rule; a click keeps what
+you clicked); the wheel scrolls the page freely, the lens riding with its text. In insert mode the
+arrows stop at its rules. A single block taller than the maximum shows whole for now (scrolling
+inside the lens is to come).
 
 **How it's drawn.** It is composed, not re-rendered (`core/layout/live.ts`): the render with the
 lens's rows swapped for source rows (which carry `srcMap`, so everything in

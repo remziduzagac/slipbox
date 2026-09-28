@@ -1538,6 +1538,33 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(rows().some((t) => t.includes("New line."))).toBe(true);
     expect(v.buf.source).toContain("Para 2 with **bold**.\nNew *line*.\n");
   });
+  test("clicking around: each clicked line stays under the pointer as the lens moves to it", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "l.md"), note);
+    const h = await harness({ root, open: "l.md", width: 100, height: 40 });
+    const v = h.app.view!;
+    await h.keys("space", "n", "l");
+    const rows = () => h.app.currentLayout(v).lines.map((l) => l.spans.map((x) => x.text).join("").trimEnd());
+    for (const want of [8, 3, 12, 11, 5, 9]) {
+      h.frame();
+      const pane = h.app.geometry!.panes[0]!;
+      const target = rows().findIndex((t, i) => i >= v.top && i < v.top + v.height && (t === `Para ${want} with bold.` || t === `Para ${want} with **bold**.`));
+      expect(target).toBeGreaterThanOrEqual(0); // still on screen: the page didn't jump away
+      const screen = target - v.top;
+      h.app.handleMouse({ type: "down", x: pane.textX + 3, y: pane.y + screen, button: 0 });
+      h.app.handleMouse({ type: "up", x: pane.textX + 3, y: pane.y + screen, button: 0 });
+      h.frame();
+      expect(rows()[v.cur.row]).toBe(`Para ${want} with **bold**.`);
+      // Exactly where it was clicked — except inside the scrolloff margin at an edge, where the
+      // view scrolls just enough to keep the margin, as a click there does in reading too.
+      // (At the note's top or end the page can't scroll further: there it moves only as far as it must.)
+      const so = Math.min(3, Math.floor((v.height - 1) / 2));
+      const want0 = Math.max(so, Math.min(v.height - 1 - so, screen));
+      const maxTop = Math.max(0, h.app.currentLayout(v).lines.length - v.height);
+      const top = Math.max(0, Math.min(maxTop, v.cur.row - want0));
+      expect(v.top).toBe(top);
+    }
+  });
   test("a click in the render outside it moves the lens there", async () => {
     const { h, v, goto, lens, rows } = await setup();
     goto("Para 2 with");

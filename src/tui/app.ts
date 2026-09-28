@@ -142,6 +142,8 @@ export interface View {
   liveBase?: LiveBase;
   /** Where the lens sits on screen (rows from the window's top to its top rule), kept as it moves. */
   lensPin?: { range: string; screen: number };
+  /** A click moved the cursor: the screen row it was on, which the clicked line keeps. */
+  lensClick?: number;
   /** Typing into the text (insert mode); in source mode or live preview. */
   insert?: boolean;
 }
@@ -837,9 +839,12 @@ export class App {
       view.lensPin = { range, screen: top - view.top };
       return;
     }
+    const click = view.lensClick;
+    view.lensClick = undefined;
     if (pin.range !== range) {
       pin.range = range;
-      view.top = this.clampTop(view, layout, top - pin.screen);
+      // A click: the clicked line stays under the pointer. The keyboard: the lens stays put.
+      view.top = this.clampTop(view, layout, click !== undefined ? view.cur.row - click : top - pin.screen);
       view.topAnchor = anchorAt(layout, view.top);
       this.ensureCursorVisible(view, layout);
     }
@@ -2463,7 +2468,13 @@ export class App {
     }
     view.sel = null;
     this.moveCursor(view, pos);
-    this.drag = { kind: "select", view, start: pos, moved: false };
+    // With the lens open, a click that moves it keeps the clicked line under the pointer (set now,
+    // for the layout that moves the lens, not the one moveCursor started from).
+    if (view.live) view.lensClick = ev.y - pane.y;
+    // Where the cursor really is now (the lens may have moved): a drag starts from there.
+    this.currentLayout(view);
+    view.lensClick = undefined;
+    this.drag = { kind: "select", view, start: { ...view.cur }, moved: false };
   }
 
   private copySelectionQuietly(view: View): void {
