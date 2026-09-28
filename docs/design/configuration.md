@@ -103,6 +103,7 @@ pane_title = { fg = "#8c95b0", bold = true }
 
 [colors."tokyo-night"]         # only while this theme is active
 breadcrumb_band = { bg = "#1d1e2b" }
+rail = { bg = "#0f0f17" }
 ```
 
 The notation is in [keymap.md](keymap.md): space-separated key names such as `g g`,
@@ -136,7 +137,8 @@ The chrome roles most worth tuning:
 | --- | --- |
 | `border` | the frame, the pane borders and the rules |
 | `topbar_chip` | the `slipbox` chip |
-| `topbar_button`, `topbar_button_on` | the `≡` and `▤` buttons, closed and open |
+| `topbar_button`, `topbar_button_on` | the rails' and top bar's buttons (`≡` `◷` `▤`), closed and open |
+| `rail` | the rails' tint (its `bg`); none, as under NO_COLOR, draws a bordered rail instead |
 | `tab`, `tab_active`, `tab_active_idle` | tabs; the active one with and without focus |
 | `pane_title`, `pane_title_active` | the Explorer and Outline titles, unfocused and focused |
 | `breadcrumb*` | the breadcrumb row (`_band` its background, `_icon`, `_sep`, `_current`) |

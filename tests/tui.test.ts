@@ -739,14 +739,15 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
     const rows = f.split("\n");
     const W = 140;
     const x = W - h.app.rightRailWidth;
-    expect(h.app.rightRailWidth).toBe(4);
+    expect(h.app.rightRailWidth).toBe(3); // tinted: one button wide, no border
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
-    expect(btn.x).toBe(x + 1);
-    expect([...rows[btn.y]!][x + 2]).toBe("▤");
-    // Its border joins the strip's rule above and the frame's bottom rule.
+    expect(btn.x).toBe(x);
+    expect([...rows[btn.y]!][x + 1]).toBe("▤");
+    // The rail's column is tinted from under the strip's rule to the bottom rule, with no line.
+    const c = h.canvas();
+    expect(c.styles[btn.y + 5]![x]!.bg).toBe(h.app.theme.roles.rail.bg!);
     const col = rows.map((r) => [...r][x] ?? "").join("");
-    expect(col).toContain("┳");
-    expect(col).toContain("┻");
+    expect(col).not.toMatch(/[┃┳┻┫]/u);
     // Only one ▤: not on the breadcrumb as well.
     expect(h.app.geometry!.hot.filter((r) => r.id === "btn:outline").length).toBe(1);
     h.app.handleMouse({ type: "down", x: btn.x + 1, y: btn.y, button: 0 });
@@ -754,7 +755,14 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
     h.frame();
     expect(h.app.outlineShown).toBe(true);
     const o = h.app.geometry!.outline!;
-    expect(o.x + o.w).toBe(x); // the outline ends at the rail's border
+    expect(o.x + o.w).toBe(x); // the outline ends at the rail
+    // Without colour there's no tint: the rail is a bordered column, joined to the rules.
+    const mono = await harness({ open: "samples/large-document.md", width: 140, height: 30, themeName: "mono" });
+    const mrows = mono.frame().split("\n");
+    expect(mono.app.rightRailWidth).toBe(4);
+    const mcol = mrows.map((r) => [...r][W - 4] ?? "").join("");
+    expect(mcol).toContain("┳");
+    expect(mcol).toContain("┻");
     // Zen has no rails; ui.right_rail = false removes it and the breadcrumb gets ▤ back.
     await h.app.run("ui.zen");
     h.frame();
@@ -786,21 +794,20 @@ describe("the left rail", () => {
   test("a column at the left edge under the top bar; its ≡ toggles the explorer, which opens beside it", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
     const rows = h.frame().split("\n");
-    expect(h.app.leftRailWidth).toBe(4);
+    expect(h.app.leftRailWidth).toBe(3);
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:explorer")!;
     expect(btn.x).toBe(0);
     expect(btn.y).toBe(2); // under the top bar's rule, level with the tab strip
     expect([...rows[btn.y]!][1]).toBe("≡");
     expect(h.app.geometry!.hot.filter((r) => r.id === "btn:explorer").length).toBe(1); // not in the top bar too
-    const col = rows.map((r) => [...r][3] ?? "").join("");
-    expect(col).toMatch(/^.┳┃/u); // the border starts under the top bar's rule
-    expect(col).toContain("┻");
-    expect(h.app.geometry!.tabStrip!.x).toBe(4); // the strip starts after the rail
+    expect(h.canvas().styles[btn.y + 5]![1]!.bg).toBe(h.app.theme.roles.rail.bg!); // tinted, no border
+    expect(rows[1]!.slice(0, 5)).toBe("━".repeat(5)); // the top rule runs over it unbroken
+    expect(h.app.geometry!.tabStrip!.x).toBe(3); // the strip starts after the rail
     h.app.handleMouse({ type: "down", x: btn.x + 1, y: btn.y, button: 0 });
     h.app.handleMouse({ type: "up", x: btn.x + 1, y: btn.y, button: 0 });
     h.frame();
     expect(h.app.sidebarShown).toBe(true);
-    expect(h.app.geometry!.sidebarPane!.x).toBe(4);
+    expect(h.app.geometry!.sidebarPane!.x).toBe(3);
     // Without it, ≡ is back in the top bar.
     const n = await harness({ width: 140, height: 30, config: (c) => (c.ui.left_rail = false) });
     n.frame();
@@ -1043,12 +1050,11 @@ describe("top bar, tab strip, status line", () => {
     expect(sb.y).toBe(4); // the tree, under the "Explorer" title (beside the strip) and a blank row
     expect(h.frame().split("\n")[2]!.slice(sb.x).startsWith(" Explorer")).toBe(true);
     // Under the title a blank row; the strip's rule starts at the explorer's border.
-    expect(h.frame().split("\n")[3]!.slice(sb.x - 1, sb.x + sb.w + 2)).toBe(`┃${" ".repeat(sb.w)}┣━`);
+    expect(h.frame().split("\n")[3]!.slice(sb.x - 1, sb.x + sb.w + 2)).toBe(`${" ".repeat(sb.w + 1)}┣━`); // the tinted rail, then the explorer
     const rows = h.frame().split("\n");
-    // A rule over everything, the left rail's border and the explorer's starting under it (┳)…
+    // A rule over everything (the tinted rail too), the explorer's border starting under it (┳)…
     const bx = sb.x + sb.w;
-    expect(rows[1]!.slice(sb.x, sb.x + 10)).toBe("━".repeat(10));
-    expect(rows[1]![sb.x - 1]).toBe("┳");
+    expect(rows[1]!.slice(0, sb.x + 10)).toBe("━".repeat(sb.x + 10));
     expect(rows[1]![bx]).toBe("┳");
     expect(rows[2]![bx]).toBe("┃");
     // …and one under the strip, over the note (and the outline), meeting the border in ┣.
@@ -1109,9 +1115,9 @@ describe("top bar, tab strip, status line", () => {
     const roles = h.app.theme.roles;
     h.app.handleMouse({ type: "move", x: 80, y: 10, button: 0 }); // no hover
     expect(btn("btn:explorer").fg).toBe(roles.topbar_button_on.fg!); // the explorer is open
-    expect(btn("btn:explorer").bg).toBe(h.app.theme.roles.text.bg ?? h.app.theme.bg); // the page
+    expect(btn("btn:explorer").bg).toBe(roles.rail.bg!); // the rail's tint
     expect(btn("btn:outline").fg).toBe(roles.topbar_button.fg!); // the outline is closed
-    expect(btn("btn:outline").bg).toBe(h.app.theme.roles.text.bg ?? h.app.theme.bg); // on the rail, on the page
+    expect(btn("btn:outline").bg).toBe(roles.rail.bg!); // the rail's tint
   });
   test("tree lines: ├─ to each child, └─ to the last, │ where an ancestor goes on", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 160, height: 90, config: (c) => (c.ui.outline = true) });

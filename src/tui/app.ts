@@ -992,12 +992,17 @@ export class App {
 
   /** The left rail's columns (one button wide, then its border), when it shows: never in zen. */
   get leftRailWidth(): number {
-    return this.config.ui.left_rail && !this.ui.zen ? RAIL_WIDTH : 0;
+    return this.config.ui.left_rail && !this.ui.zen ? this.railCols : 0;
+  }
+
+  /** A rail's columns: a tinted column, one button wide; without colour to tint it, a border too. */
+  get railCols(): number {
+    return this.theme.roles.rail.bg ? RAIL_WIDTH - 1 : RAIL_WIDTH;
   }
 
   /** The right rail's columns (its border, then one button wide): with a note, never in zen. */
   get rightRailWidth(): number {
-    return this.config.ui.right_rail && !this.ui.zen && this.tabs.length ? RAIL_WIDTH : 0;
+    return this.config.ui.right_rail && !this.ui.zen && this.tabs.length ? this.railCols : 0;
   }
 
   /** The terminal's width less the rails': what the panes and the note share. */

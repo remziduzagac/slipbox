@@ -201,18 +201,27 @@ export function drawApp(app: App, c: Canvas): Geometry {
 }
 
 /**
- * A rail: a column of buttons at one edge, one per row from the top, and a border on its inner
- * side (at `bx`) joined to the rules it meets. The left rail runs from under the top bar and holds
- * the explorer's button; the right one from under the tab strip, with the outline's.
+ * A rail: a column of buttons at one edge, one per row from the top. Tinted (the `rail` role), it
+ * needs no border; without colour to tint it (NO_COLOR) a border on its inner side, at `bx`,
+ * sets it apart, joined to the rules it meets. The left rail runs from under the top bar and
+ * holds the left panel's views; the right one from under the tab strip, with the right panel's.
  */
 function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: number, top: number, bottom: number, borderEnd: number, geo: Geometry): void {
   const theme = app.theme;
   const page = pageBg(theme);
-  const border = roleStyle(theme, "border", page);
-  const x = side === "left" ? 0 : bx + 1; // the buttons' column
-  c.fill(side === "left" ? 0 : bx, top, side === "left" ? bx + 1 : c.width - bx, bottom + 1 - top, page);
-  for (let y = top; y <= bottom; y++) drawText(c, bx, y, app.glyphs.vbar, border, 1);
-  geo.verticals.push({ x: bx, y0, y1: borderEnd, style: border });
+  const tint = theme.roles.rail.bg ?? null;
+  const w = side === "left" ? app.leftRailWidth : app.rightRailWidth;
+  // The rail's columns: [x0, x0 + w); with a border, the buttons sit beside it.
+  const x0 = side === "left" ? 0 : c.width - w;
+  const bg = tint ?? page;
+  c.fill(x0, top, w, bottom + 1 - top, bg);
+  let x = x0;
+  if (!tint) {
+    const border = roleStyle(theme, "border", page);
+    for (let y = top; y <= bottom; y++) drawText(c, bx, y, app.glyphs.vbar, border, 1);
+    geo.verticals.push({ x: bx, y0, y1: borderEnd, style: border });
+    if (side === "right") x = bx + 1;
+  }
   // A button per view of that side's panel, bright while its view shows.
   const buttons =
     side === "left"
@@ -221,7 +230,7 @@ function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: n
   buttons.forEach((b, k) => {
     const y = top + k;
     if (y > bottom) return;
-    button(app, c, x, { y, h: 1 }, ` ${b.glyph} `, b.on ? "topbar_button_on" : "topbar_button", b.id, geo, page);
+    button(app, c, x, { y, h: 1 }, ` ${b.glyph} `, b.on ? "topbar_button_on" : "topbar_button", b.id, geo, bg);
   });
 }
 

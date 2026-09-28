@@ -266,18 +266,20 @@ breadcrumb: the top-right window's breadcrumb row and the rule under it run acro
 column. The outline's button (`▤`) is on the right rail, bright while the outline is open.
 
 **The rails** (`ui.left_rail`, `ui.right_rail`, both on by default) are columns of buttons at the
-edges, one button per row from the top, with a border on their inner side joined to the rules it
-meets. Each is generic: a place for buttons, whatever they open.
+edges, one button per row from the top. Each is a tinted column (the `rail` role, the tab strip's
+shade), 3 columns wide, with no border: the frame's rules run over it unbroken. Without colour
+(NO_COLOR) there's no tint, so a rail is 4 columns with a border on its inner side, joined to the
+rules it meets. Each is generic: a place for buttons, whatever they open.
 
 - **The left rail** runs from under the top bar's rule to the frame's bottom rule, its first button
   level with the tab strip. It holds the left panel's views, the explorer's `≡` and the history's
   `◷` (ascii `~`), and the panel opens beside it. Without it, `≡` is the top bar's and the history
   opens with `space h h`.
 - **The right rail** runs from under the tab strip's rule, its first button level with the
-  breadcrumb, whose rule meets its border in `┫`. It holds the outline's `▤`, and the outline opens
+  breadcrumb. It holds the outline's `▤`, and the outline opens
   beside it. Without it, `▤` sits at the breadcrumb's right end.
 
-Every width (the panes, the note, the narrow cutoff) is shared out after the rails' 4 columns each.
+Every width (the panes, the note, the narrow cutoff) is shared out after the rails' columns.
 Zen mode hides both.
 
 Focus shows as brightness (without colour, as an underline), never as a coloured border: a pane's
