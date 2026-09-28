@@ -507,6 +507,10 @@ typing). `esc` from typing goes to normal mode with the lens still open — the 
 what's in it — and `esc` in normal mode closes it: everything renders again. Reading, there is no
 lens and the keys are the reading keys.
 
+**Its tint.** The rows of markdown between the rules have a background of their own (`lens_band`, a
+shade lighter than the page — a code block is darker), so the whole area reads as the lens, not
+just its edges.
+
 **Its air.** One blank row sits outside each rule: where the rendered row next to it is already
 blank (the gap after a block), that's it; otherwise a blank frame row is added, so the lens never
 touches a heading band, a table or a code block. Like the rules, these rows are frame rows.

@@ -83,7 +83,7 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
       if (prev && !blank(prev)) out.push({ spans: [], src: Math.max(0, active[0] - 1), decor: true, lens: "pad" });
       out.push({ ...lensRule(opts.rule, opts.width, active[0] - 1, ` source · ${active[0] === active[1] ? `line ${active[0]}` : `lines ${active[0]}–${active[1]}`} `), lens: "top" });
     }
-    for (const l of source.lines) out.push({ ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })), ...(opts.rule ? { lens: "source" as const } : {}) });
+    for (const l of source.lines) out.push({ ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })), ...(opts.rule ? { lens: "source" as const, fill: "lens_band" as const } : {}) });
     if (opts.rule) {
       out.push({ ...lensRule(opts.rule, opts.width, active[1], ""), lens: "bottom" });
       if (next && !blank(next)) out.push({ spans: [], src: active[1], decor: true, lens: "pad" });

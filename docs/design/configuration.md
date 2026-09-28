@@ -148,6 +148,7 @@ The chrome roles most worth tuning:
 | `topbar_button`, `topbar_button_on` | the rails' and top bar's buttons (`≡` `◷` `▤`), closed and open |
 | `rail` | the rails' tint (its `bg`); none, as under NO_COLOR, draws a bordered rail instead |
 | `lens` | the lens's rules and label (the accent, bold) |
+| `lens_band` | the lens's rows of markdown (a light tint; its `bg`) |
 | `tab`, `tab_active`, `tab_active_idle` | tabs; the active one with and without focus |
 | `pane_title`, `pane_title_active` | the Explorer and Outline titles, unfocused and focused |
 | `breadcrumb*` | the breadcrumb row (`_band` its background, `_icon`, `_sep`, `_current`) |

@@ -1476,6 +1476,9 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     const cell = c.styles[pane.y + l.top - v.top]![pane.textX]!;
     expect(cell.fg).toBe(h.app.theme.roles.lens.fg!);
     expect(cell.bold).toBe(true);
+    // Its rows of markdown are tinted (off the cursor's row, which has its own band).
+    const tinted = [...Array(l.bottom - l.top - 1).keys()].map((k) => l.top + 1 + k).find((r) => r !== v.cur.row)!;
+    expect(c.styles[pane.y + tinted - v.top]![pane.textX]!.bg).toBe(h.app.theme.roles.lens_band.bg!);
     expect(l.source).toContain("Para 5 with **bold**."); // the markdown
     expect(l.source.length).toBeGreaterThanOrEqual(6); // neighbours pulled in
     expect(rows().some((t) => t.includes("Para 15 with bold."))).toBe(true); // rendered further off
