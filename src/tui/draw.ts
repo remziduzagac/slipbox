@@ -590,10 +590,13 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const cursorSrc = layout.lines[view.cur.row]?.src;
 
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
+  // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
+  const shown = app.screenRows(view, layout);
+  const hidden = app.lensHidden(view, layout);
   for (let i = 0; i < body.h; i++) {
-    const row = view.top + i;
-    const line = layout.lines[row];
-    if (!line) break;
+    const row = shown[i];
+    if (row === undefined) break;
+    const line = layout.lines[row]!;
     const y = body.y + i;
     const isCursorRow = showCursor && row === view.cur.row;
     const band = isCursorRow ? cursorBg : null;
@@ -619,6 +622,16 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       marks.push({ from, to, role: "selection" });
     }
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
+    // An oversized lens's rules say how much of it is out of sight: ↑ above, ↓ below.
+    if ((line.lens === "top" || line.lens === "bottom") && hidden.length) {
+      const first = layout.lines.findIndex((l) => l.lens === "source");
+      const n = hidden.filter(([a]) => (line.lens === "top" ? a === first : a !== first)).reduce((k, [a, b]) => k + b - a, 0);
+      if (n) {
+        const label = ` ${line.lens === "top" ? "↑" : "↓"} ${n} line${n === 1 ? "" : "s"} `;
+        const x = textX + Math.max(0, Math.min(layout.width, textW) - stringWidth(label) - 2);
+        drawText(c, x, y, label, { ...roleStyle(theme, "lens", page), bg: page });
+      }
+    }
     if (isCursorRow && view.cur.col >= view.left && view.cur.col < view.left + textW) drawCursor(c, textX - view.left, y, line, view.cur.col, theme, view.left + textW);
   }
 

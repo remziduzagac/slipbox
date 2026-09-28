@@ -144,6 +144,8 @@ export interface View {
   lensPin?: { range: string; screen: number };
   /** A click moved the cursor: the screen row it was on, which the clicked line keeps. */
   lensClick?: number;
+  /** An oversized lens's inner scroll: the first of its rows shown (4.15). */
+  lensInner?: number;
   /** Typing into the text (insert mode); in source mode or live preview. */
   insert?: boolean;
 }
@@ -834,9 +836,10 @@ export class App {
     const top = layout.lines.findIndex((l) => l.lens === "top");
     if (top < 0) return;
     const range = `${view.liveBase!.active[0]}-${view.liveBase!.active[1]}`;
+    const hidden = this.lensHidden(view, layout);
     const pin = view.lensPin;
     if (!pin) {
-      view.lensPin = { range, screen: top - view.top };
+      view.lensPin = { range, screen: this.visibleBetween(layout, hidden, view.top, top) };
       return;
     }
     const click = view.lensClick;
@@ -844,11 +847,11 @@ export class App {
     if (pin.range !== range) {
       pin.range = range;
       // A click: the clicked line stays under the pointer. The keyboard: the lens stays put.
-      view.top = this.clampTop(view, layout, click !== undefined ? view.cur.row - click : top - pin.screen);
+      view.top = this.clampTop(view, layout, click !== undefined ? this.stepVisible(layout, hidden, view.cur.row, -click) : this.stepVisible(layout, hidden, top, -pin.screen));
       view.topAnchor = anchorAt(layout, view.top);
       this.ensureCursorVisible(view, layout);
     }
-    pin.screen = top - view.top;
+    pin.screen = this.visibleBetween(layout, hidden, view.top, top);
   }
 
   /**
@@ -879,9 +882,17 @@ export class App {
       const i = blocks.findIndex((b) => at >= b[0] && at <= b[1]);
       let lo = i < 0 ? blocks.length - 1 : i;
       let hi = lo;
-      while (rowsOf(blocks[lo]![0], blocks[hi]![1]) < minRows && (hi + 1 < blocks.length || lo > 0)) {
-        if (hi + 1 < blocks.length) hi++;
-        if (rowsOf(blocks[lo]![0], blocks[hi]![1]) < minRows && lo > 0) lo--;
+      // A neighbour comes in only if the lens still fits its maximum with it: a small block next to
+      // a huge one stays small rather than swallowing it.
+      const fits = (a: number, b: number) => rowsOf(blocks[a]![0], blocks[b]![1]) <= maxRows;
+      let below = true;
+      let above = true;
+      while (rowsOf(blocks[lo]![0], blocks[hi]![1]) < minRows && (below || above)) {
+        below = hi + 1 < blocks.length && fits(lo, hi + 1);
+        if (below) hi++;
+        if (rowsOf(blocks[lo]![0], blocks[hi]![1]) >= minRows) break;
+        above = lo > 0 && fits(lo - 1, hi);
+        if (above) lo--;
       }
       return [blocks[lo]![0], blocks[hi]![1]];
     };
@@ -979,6 +990,7 @@ export class App {
     view.live = mode === "live";
     view.liveBase = undefined;
     view.lensPin = undefined;
+    view.lensInner = 0;
     view.layoutKey = ""; // re-derive the rows from the anchors: the same source line
     view.sel = null;
     view.visual = null;
@@ -997,15 +1009,103 @@ export class App {
   }
 
   private clampTop(view: View, layout: Layout, top: number): number {
-    const max = Math.max(0, layout.lines.length - Math.max(1, view.height));
-    return Math.max(0, Math.min(top, max));
+    const hidden = this.lensHidden(view, layout);
+    if (!hidden.length) {
+      const max = Math.max(0, layout.lines.length - Math.max(1, view.height));
+      return Math.max(0, Math.min(top, max));
+    }
+    // The last screenful starts `height` visible rows before the end; never on a hidden row.
+    const max = this.stepVisible(layout, hidden, layout.lines.length, -Math.max(1, view.height));
+    let t = Math.max(0, Math.min(top, max));
+    while (isHidden(hidden, t) && t < layout.lines.length - 1) t++;
+    return t;
+  }
+
+  // The lens's inner window (4.15): a lens taller than `lens_max` of the window shows that many of
+  // its rows, scrolled to keep the cursor in; the rest of its rows stay in the layout (so motions,
+  // find and editing see them) but aren't drawn. These helpers map screen rows to layout rows
+  // around them — the drawing, clicks, drags and scrolling go through them.
+
+  /** Rows the lens may show at once. */
+  lensRows(view: View): number {
+    return Math.max(this.config.editor.lens_min_rows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
+  }
+
+  /** The lens's rows left out of the drawing: above its inner window and below it ([a, b) each). */
+  lensHidden(view: View, layout: Layout): [number, number][] {
+    if (!view.live) return [];
+    const first = layout.lines.findIndex((l) => l.lens === "source");
+    if (first < 0) return [];
+    let n = 0;
+    while (layout.lines[first + n]?.lens === "source") n++;
+    const max = this.lensRows(view);
+    if (n <= max) {
+      view.lensInner = 0;
+      return [];
+    }
+    const inner = Math.max(0, Math.min(view.lensInner ?? 0, n - max));
+    view.lensInner = inner;
+    const out: [number, number][] = [];
+    if (inner > 0) out.push([first, first + inner]);
+    if (inner + max < n) out.push([first + inner + max, first + n]);
+    return out;
+  }
+
+  /** From `row`, `n` shown rows on (back when negative), skipping hidden ones; within the layout. */
+  stepVisible(layout: Layout, hidden: [number, number][], row: number, n: number): number {
+    let r = row;
+    let k = Math.abs(n);
+    const dir = n < 0 ? -1 : 1;
+    while (k > 0) {
+      const next = r + dir;
+      if (next < 0 || next > layout.lines.length) break;
+      r = next;
+      if (r < layout.lines.length && !isHidden(hidden, r)) k--;
+    }
+    return Math.max(0, Math.min(r, Math.max(0, layout.lines.length - 1)));
+  }
+
+  /** The layout rows a window shows, top to bottom. */
+  screenRows(view: View, layout: Layout): number[] {
+    const hidden = this.lensHidden(view, layout);
+    const out: number[] = [];
+    for (let r = view.top; r < layout.lines.length && out.length < view.height; r++) if (!isHidden(hidden, r)) out.push(r);
+    return out;
+  }
+
+  /** How many shown rows lie between `a` and `b` (negative when `b` is before `a`). */
+  private visibleBetween(layout: Layout, hidden: [number, number][], a: number, b: number): number {
+    let n = 0;
+    for (let r = Math.min(a, b); r < Math.max(a, b); r++) if (!isHidden(hidden, r)) n++;
+    return b >= a ? n : -n;
+  }
+
+  /** The cursor inside an oversized lens: its window scrolls to keep it two rows from the rules. */
+  private followInLens(view: View, layout: Layout): void {
+    if (!view.live || layout.lines[view.cur.row]?.lens !== "source") return;
+    const first = layout.lines.findIndex((l) => l.lens === "source");
+    const max = this.lensRows(view);
+    const idx = view.cur.row - first;
+    const m = Math.min(2, Math.floor((max - 1) / 2));
+    let inner = view.lensInner ?? 0;
+    if (idx < inner + m) inner = idx - m;
+    else if (idx > inner + max - 1 - m) inner = idx - max + 1 + m;
+    view.lensInner = Math.max(0, inner);
   }
 
   /** Keep the cursor inside the view with `scrolloff` rows of margin. */
   ensureCursorVisible(view: View, layout: Layout): void {
     const so = Math.max(0, Math.min(this.config.ui.scrolloff, Math.floor((view.height - 1) / 2)));
-    if (view.cur.row < view.top + so) view.top = view.cur.row - so;
-    else if (view.cur.row > view.top + view.height - 1 - so) view.top = view.cur.row - view.height + 1 + so;
+    this.followInLens(view, layout);
+    const hidden = this.lensHidden(view, layout);
+    if (!hidden.length) {
+      if (view.cur.row < view.top + so) view.top = view.cur.row - so;
+      else if (view.cur.row > view.top + view.height - 1 - so) view.top = view.cur.row - view.height + 1 + so;
+    } else {
+      const d = this.visibleBetween(layout, hidden, view.top, view.cur.row);
+      if (d < so) view.top = this.stepVisible(layout, hidden, view.cur.row, -so);
+      else if (d > view.height - 1 - so) view.top = this.stepVisible(layout, hidden, view.cur.row, -(view.height - 1 - so));
+    }
     view.top = this.clampTop(view, layout, view.top);
     view.topAnchor = anchorAt(layout, view.top);
     // Sideways, when wrapping is off: keep the cursor a few columns from either edge.
@@ -1041,14 +1141,20 @@ export class App {
   scrollBy(view: View, delta: number, moveCursor: boolean): void {
     this.outline.pinned = false; // the outline follows the cursor's section again
     const layout = this.currentLayout(view);
-    view.top = this.clampTop(view, layout, view.top + delta);
+    const hidden = this.lensHidden(view, layout);
+    view.top = this.clampTop(view, layout, this.stepVisible(layout, hidden, view.top, delta));
     view.topAnchor = anchorAt(layout, view.top);
     const last = Math.max(0, layout.lines.length - 1);
     let row = view.cur.row;
-    if (moveCursor) row = Math.max(0, Math.min(view.cur.row + delta, last));
+    if (moveCursor) row = Math.max(0, Math.min(this.stepVisible(layout, hidden, view.cur.row, delta), last));
     else {
+      // The wheel: the cursor moves only to stay on screen, scrolloff rows in.
       const so = Math.max(0, Math.min(this.config.ui.scrolloff, Math.floor((view.height - 1) / 2)));
-      row = Math.max(0, Math.min(Math.max(view.top + so, Math.min(view.cur.row, view.top + view.height - 1 - so)), last));
+      const rows = this.screenRows(view, layout);
+      const lo = rows[Math.min(so, rows.length - 1)] ?? 0;
+      const hi = rows[Math.max(0, rows.length - 1 - so)] ?? last;
+      if (view.cur.row < lo || isHidden(hidden, view.cur.row)) row = lo;
+      else if (view.cur.row > hi) row = hi;
     }
     if (row !== view.cur.row) {
       view.cur = { row, col: snap(layout, row, view.goal) };
@@ -2347,7 +2453,21 @@ export class App {
     } else if (g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {
       this.sidebar.scroll = Math.max(0, this.sidebar.scroll + dir * n);
       this.sidebar.pinned = true;
-    } else if (pane) this.scrollBy(pane.view, dir * n, false);
+    } else if (pane) {
+      // Over an oversized lens: its inside scrolls first; at its end, the page (4.15).
+      const v = pane.view;
+      if (v.live) {
+        const layout = this.currentLayout(v);
+        const row = this.screenRows(v, layout)[ev.y - pane.y];
+        if (row !== undefined && layout.lines[row]?.lens === "source" && this.lensHidden(v, layout).length) {
+          const before = v.lensInner ?? 0;
+          v.lensInner = Math.max(0, before + dir * n);
+          this.lensHidden(v, layout); // clamps it to the lens
+          if (v.lensInner !== before) return;
+        }
+      }
+      this.scrollBy(v, dir * n, false);
+    }
   }
 
   /** Click count at this spot: 1, 2 (double) or 3 (triple), within 400 ms. */
@@ -2449,7 +2569,8 @@ export class App {
     this.region = "content";
     const view = pane.view;
     const layout = this.currentLayout(view);
-    const pos = clampPos(layout, { row: view.top + (ev.y - pane.y), col: Math.max(0, ev.x - pane.textX) + view.left });
+    const shown = this.screenRows(view, layout);
+    const pos = clampPos(layout, { row: shown[ev.y - pane.y] ?? shown[shown.length - 1] ?? 0, col: Math.max(0, ev.x - pane.textX) + view.left });
     view.visual = null;
     if (clicks === 2) {
       // Double-click selects the word, triple-click the row; either is copied, like a terminal.
@@ -2512,7 +2633,8 @@ export class App {
     if (ev.y < pane.y) this.scrollBy(pane.view, -1, false);
     if (ev.y >= pane.y + pane.h) this.scrollBy(pane.view, 1, false);
     const layout = this.currentLayout(d.view);
-    const pos = clampPos(layout, { row: d.view.top + Math.max(0, Math.min(pane.h - 1, ev.y - pane.y)), col: Math.max(0, ev.x - pane.textX) + d.view.left });
+    const shown = this.screenRows(d.view, layout);
+    const pos = clampPos(layout, { row: shown[Math.max(0, Math.min(shown.length - 1, ev.y - pane.y))] ?? 0, col: Math.max(0, ev.x - pane.textX) + d.view.left });
     if (!d.view.sel || d.view.sel.anchor !== d.start) this.select(d.view, d.start, false);
     d.view.cur = pos;
     d.view.goal = pos.col;
@@ -3238,6 +3360,12 @@ export function taskMarkAt(layout: Layout, row: number, col: number): { line: nu
     x += w;
   }
   return null;
+}
+
+/** Whether layout row `r` is left out of the drawing (an oversized lens's hidden rows). */
+export function isHidden(hidden: [number, number][], r: number): boolean {
+  for (const [a, b] of hidden) if (r >= a && r < b) return true;
+  return false;
 }
 
 export function linkAt(layout: Layout, row: number, col: number): number {

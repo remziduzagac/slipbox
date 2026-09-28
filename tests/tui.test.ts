@@ -1538,6 +1538,56 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(rows().some((t) => t.includes("New line."))).toBe(true);
     expect(v.buf.source).toContain("Para 2 with **bold**.\nNew *line*.\n");
   });
+  test("a block taller than half the window scrolls inside the lens; the prose around stays in sight", async () => {
+    const code = Array.from({ length: 60 }, (_, i) => `line ${i + 1} of code`).join("\n");
+    const root = makeVault();
+    writeFileSync(join(root, "big.md"), `# Big\n\nIntro paragraph before.\n\n\`\`\`\n${code}\n\`\`\`\n\nOutro paragraph after.\n`);
+    const h = await harness({ root, open: "big.md", width: 100, height: 40 });
+    const v = h.app.view!;
+    const text = (r: number) => h.app.currentLayout(v).lines[r]!.spans.map((x) => x.text).join("");
+    h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.spans.map((x) => x.text).join("").includes("line 1 of code")), col: 0 });
+    await h.keys("space", "n", "l");
+    const f = () => h.frame().split("\n");
+    let frame = f();
+    const max = h.app.lensRows(v);
+    const L = h.app.currentLayout(v);
+    const shown = h.app.screenRows(v, L).filter((r) => L.lines[r]!.lens === "source");
+    expect(shown.length).toBe(max); // the lens is capped
+    expect(frame.join("\n")).toContain("Intro paragraph before."); // the prose above is still there
+    expect(frame.join("\n")).toMatch(/↓ \d+ lines/); // what's below the window, counted on the rule
+    // Moving down inside: the lens scrolls; the cursor stays in sight; the rule counts both ways.
+    for (let k = 0; k < 30; k++) await h.keys("j");
+    frame = f();
+    expect(text(v.cur.row)).toContain("of code");
+    expect(h.app.screenRows(v, h.app.currentLayout(v))).toContain(v.cur.row);
+    expect(frame.join("\n")).toMatch(/↑ \d+ lines/);
+    expect(frame.join("\n")).toMatch(/↓ \d+ lines/);
+    expect(frame.join("\n")).toContain("Intro paragraph before.");
+    // A click on a row inside lands on that row.
+    const pane = h.app.geometry!.panes[0]!;
+    const rows = h.app.screenRows(v, h.app.currentLayout(v));
+    const i = rows.findIndex((r) => h.app.currentLayout(v).lines[r]!.lens === "source") + 3;
+    h.app.handleMouse({ type: "down", x: pane.textX + 2, y: pane.y + i, button: 0 });
+    h.app.handleMouse({ type: "up", x: pane.textX + 2, y: pane.y + i, button: 0 });
+    expect(v.cur.row).toBe(rows[i]!);
+    // The wheel over it scrolls inside first.
+    const before = v.lensInner;
+    h.app.handleMouse({ type: "scroll", x: pane.textX + 2, y: pane.y + i, button: 0, scroll: { direction: "down", delta: 1 } });
+    expect(v.lensInner ?? 0).toBeGreaterThan(before ?? 0);
+  });
+  test("growing to its minimum never swallows a neighbour too big for it", async () => {
+    const code = Array.from({ length: 80 }, (_, i) => `const line${i + 1} = ${i + 1};`).join("\n");
+    const root = makeVault();
+    writeFileSync(join(root, "big.md"), `# Long snippet\n\nSome prose before.\n\n\`\`\`ts\n${code}\n\`\`\`\n\nProse after.\n`);
+    const h = await harness({ root, open: "big.md", width: 150, height: 60 });
+    const v = h.app.view!;
+    await h.keys("g", "g", "space", "n", "l");
+    expect(v.liveBase!.active).toEqual([1, 4]); // the heading and the prose, not the 83-line block
+    for (let k = 0; k < 30; k++) await h.keys("j");
+    h.frame();
+    expect(v.liveBase!.active).toEqual([5, 87]); // into the block: the lens is that block, scrolled
+    expect(h.app.lensHidden(v, h.app.currentLayout(v)).length).toBeGreaterThan(0);
+  });
   test("clicking around: each clicked line stays under the pointer as the lens moves to it", async () => {
     const root = makeVault();
     writeFileSync(join(root, "l.md"), note);

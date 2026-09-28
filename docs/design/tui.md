@@ -526,8 +526,16 @@ landed on. It keeps its height on screen: when it moves or grows, the page scrol
 eyes stay in one place. A click in the rendered text outside it moves it there, the clicked line
 staying under the pointer (the lens's height on screen is the keyboard's rule; a click keeps what
 you clicked); the wheel scrolls the page freely, the lens riding with its text. In insert mode the
-arrows stop at its rules. A single block taller than the maximum shows whole for now (scrolling
-inside the lens is to come).
+arrows stop at its rules.
+
+**A block taller than the lens** (plan `4.15`) scrolls inside it: the lens shows `lens_max` of the
+window, the rest of the block out of sight above and below, counted on its rules (`↑ 21 lines`,
+`↓ 24 lines`), and the rendered text around it stays on screen. Moving through the block scrolls
+the lens to keep the cursor two rows from its rules; the wheel over the lens scrolls inside it, and
+at its end goes on to the page. Growing to its minimum never pulls in a neighbour too big for it:
+a heading next to a long code block stays a small lens until the cursor moves into the block. The
+hidden rows are still in the layout — motions, find and editing see all of the block — and only
+the drawing, clicks, drags and scrolling map screen rows around them (`App.screenRows`).
 
 **How it's drawn.** It is composed, not re-rendered (`core/layout/live.ts`): the render with the
 lens's rows swapped for source rows (which carry `srcMap`, so everything in
