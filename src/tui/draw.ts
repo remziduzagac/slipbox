@@ -130,13 +130,17 @@ export function drawApp(app: App, c: Canvas): Geometry {
     // Tabs hold the note and its outline, not the explorer: the strip starts after the explorer.
     const x0 = beside ? left : LW;
     drawTabs(app, c, x0, { y: head + 1, h: 1 }, geo);
-    rule(head + 2, x0, W);
+    // A tinted right rail starts right under the strip: the strip's rule stops at it.
+    rule(head + 2, x0, theme.roles.rail.bg && RW < W ? RW : W);
   }
   // The rightmost top window's header runs over the outline's column, which starts under it.
   const overOutline = app.outlineShown && app.outlineBeside ? right : 0;
   drawContent(app, c, { x: left, y: mainY, w: Math.max(0, RW - left - right), h: mainH }, frame, overOutline, geo);
-  if (LW) drawRail(app, c, "left", LW - 1, frame ? head : 0, frame ? head + 1 : 0, bottom, borderEnd, geo);
-  if (RW < W) drawRail(app, c, "right", RW, frame ? head + (tabBar ? 2 : 0) : mainY, mainY, bottom, borderEnd, geo);
+  if (LW) drawRail(app, c, "left", LW - 1, frame ? head : 0, frame ? head + 1 : 0, frame ? head + 1 : 0, bottom, borderEnd, geo);
+  // The right rail's buttons start level with the breadcrumb; tinted, the rail itself starts right
+  // under the tab strip (on its rule's row).
+  const railTop = theme.roles.rail.bg && frame && tabBar ? head + 2 : mainY;
+  if (RW < W) drawRail(app, c, "right", RW, frame ? head + (tabBar ? 2 : 0) : mainY, railTop, mainY, bottom, borderEnd, geo);
 
   if (app.sidebarShown) {
     const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, RW - LW - 6);
@@ -206,7 +210,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
  * sets it apart, joined to the rules it meets. The left rail runs from under the top bar and
  * holds the left panel's views; the right one from under the tab strip, with the right panel's.
  */
-function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: number, top: number, bottom: number, borderEnd: number, geo: Geometry): void {
+function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: number, top: number, buttonsTop: number, bottom: number, borderEnd: number, geo: Geometry): void {
   const theme = app.theme;
   const page = pageBg(theme);
   const tint = theme.roles.rail.bg ?? null;
@@ -228,7 +232,7 @@ function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: n
       ? LEFT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.sidebarShown && app.leftView === v.id, id: `btn:${v.id}` }))
       : RIGHT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.outlineShown, id: `btn:${v.id}` }));
   buttons.forEach((b, k) => {
-    const y = top + k;
+    const y = buttonsTop + k;
     if (y > bottom) return;
     button(app, c, x, { y, h: 1 }, ` ${b.glyph} `, b.on ? "topbar_button_on" : "topbar_button", b.id, geo, bg);
   });
