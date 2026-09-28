@@ -167,6 +167,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n e": "note.edit",
   "leader n v": "view.source",
   "leader n w": "note.save",
+  "leader n c": "note.resolve",
   "leader n s": "note.send",
   "leader n p": "note.send_pick",
   "leader n i": "note.info",

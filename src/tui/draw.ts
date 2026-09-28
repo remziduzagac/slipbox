@@ -1009,12 +1009,13 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.
   const full = app.displayName(buf);
-  const marker = buf.deleted ? " ✖ deleted on disk" : buf.dirty ? " • unsaved" : changed ? " ↻ reloaded" : "";
+  const marker = buf.deleted ? " ✖ deleted on disk" : buf.conflictKept ? " • unsaved ⚠ differs from disk" : buf.dirty ? " • unsaved" : changed ? " ↻ reloaded" : "";
   const pathW = Math.max(4, c.width - x - rightW - 2 - stringWidth(marker));
   const pw = drawText(c, x, y, truncate(full, pathW), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
   geo.hot.push({ id: pathId, x, y: band.y, w: pw, h: band.h });
   x += pw;
   if (buf.deleted) x += drawText(c, x, y, " ✖ deleted on disk", roleStyle(theme, "error", st.bg));
+  else if (buf.conflictKept) x += drawText(c, x, y, " • unsaved ⚠ differs from disk", roleStyle(theme, "warn", st.bg));
   else if (buf.dirty) x += drawText(c, x, y, " • unsaved", roleStyle(theme, "warn", st.bg));
   else if (changed) x += drawText(c, x, y, " ↻ reloaded", roleStyle(theme, "info", st.bg));
   // Whether external changes to this file will show up.

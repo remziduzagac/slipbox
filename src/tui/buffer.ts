@@ -45,6 +45,8 @@ export class NoteBuffer {
   private redoStack: UndoStep[] = [];
   private openStep: UndoStep | null = null;
   stamp: Stamp | null = null;
+  /** Read at least once: later loads are reloads, kept in the undo history. */
+  private loaded = false;
   invalidUtf8 = false;
   deleted = false;
   /** When the file last changed under us (ms since epoch), for the change marker. */
@@ -68,19 +70,30 @@ export class NoteBuffer {
     try {
       const d = readText(this.abs);
       this.bom = d.bom;
-      this.source = d.text;
       this.eol = d.crlf ? "\r\n" : "\n";
       this.invalidUtf8 = d.invalidUtf8;
-      this.version++;
+      if (this.loaded && d.text !== this.source) {
+        // A reload is one more undo step (4.5): the new text replaces the old where they differ,
+        // so `u` brings back what was here — an agent's rewrite, or :e! dropping your changes.
+        this.endStep(0);
+        let head = 0;
+        const a = this.source;
+        const b = d.text;
+        while (head < a.length && head < b.length && a[head] === b[head]) head++;
+        let tail = 0;
+        while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail]) tail++;
+        this.edit(head, a.length - head - tail, b.slice(head, b.length - tail), head);
+      } else if (!this.loaded) {
+        this.source = d.text;
+        this.version++;
+      }
+      this.loaded = true;
+      this.conflictKept = false;
       this.savedVersion = this.version;
       this.savedText = this.source;
       this.stamp = stamp(this.abs);
       this.deleted = false;
       this.layouts.clear();
-      // A reload is a new text: the old history's offsets no longer apply (4.5 will carry it over).
-      this.undoStack = [];
-      this.redoStack = [];
-      this.openStep = null;
       return true;
     } catch {
       this.deleted = true;
@@ -120,11 +133,29 @@ export class NoteBuffer {
     return (this.bom ? "\uFEFF" : "") + this.source;
   }
 
+  /** After (K)eep yours in the conflict prompt: autosave is off for it until a confirmed save. */
+  conflictKept = false;
+
+  /** The text as last loaded or saved: the merge base. */
+  get baseText(): string {
+    return this.savedText;
+  }
+
+  /** The file on disk is now `diskText` (after a merge): unsaved is measured against it. */
+  rebase(diskText: string): void {
+    this.savedText = diskText;
+    this.savedVersion = -1;
+    this.dirtyMemo = { version: -1, dirty: false };
+    this.stamp = stamp(this.abs);
+    this.conflictKept = false;
+  }
+
   /** The text on disk is now this version (after a save). */
   markSaved(): void {
     this.savedVersion = this.version;
     this.savedText = this.source;
     this.stamp = stamp(this.abs);
+    this.conflictKept = false;
   }
 
   /** Replace `length` characters at `at` with `text`; part of the open undo step, else a step of

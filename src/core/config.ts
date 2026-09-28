@@ -91,6 +91,11 @@ export interface Config {
      * picks up its saves. Empty: off.
      */
     remote: string[];
+    /**
+     * Save a changed note after this long without a key (ms); 0: never. Not mid-insert, not over a
+     * file changed on disk, not after (K)eep yours until a confirmed save, not during a git commit.
+     */
+    autosave_ms: number;
   };
   watch: {
     enabled: boolean;
@@ -150,7 +155,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   capture: { location: "state", file: "scratch.md" },
-  editor: { command: "", remote: ["nvim"] },
+  editor: { command: "", remote: ["nvim"], autosave_ms: 30000 },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
   aliases: {},
@@ -168,6 +173,7 @@ const ENUMS: Record<string, readonly string[]> = {
 
 /** Numeric keys and their allowed range. */
 const RANGES: Record<string, [number, number]> = {
+  "editor.autosave_ms": [0, 3_600_000],
   "render.inset": [0, 40],
   "render.max_width": [0, 1000],
   "walk.max_file_size": [1, 1 << 30],

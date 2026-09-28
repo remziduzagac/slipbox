@@ -1130,27 +1130,120 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     expect(readFileSync(b.file, "utf8")).toBe("z\n");
     void v;
   });
-  test("a change on disk under unsaved edits: kept, not reloaded; :w refuses, :w! and :e! choose", async () => {
-    const { h, v, file } = await setup("mine\n");
-    await h.keys("shift+a", "!", "escape");
-    writeFileSync(file, "theirs\n");
-    const future = Date.now() / 1000 + 5;
-    (await import("node:fs")).utimesSync(file, future, future);
-    h.app.reloadBuffer(v.buf);
-    expect(v.buf.source).toBe("mine!\n");
-    await h.keys(":", "w", "enter");
-    expect(readFileSync(file, "utf8")).toBe("theirs\n");
-    expect(h.app.transient!.text).toContain("changed on disk");
-    await h.keys(":", "e", "!", "enter");
-    expect(v.buf.source).toBe("theirs\n");
-    expect(v.buf.dirty).toBe(false);
-  });
   test("a BOM and CRLF endings survive; new lines are CRLF too", async () => {
     const { h, type, file } = await setup("\uFEFFone\r\ntwo\r\n");
     await h.keys("shift+a", "enter");
     await type("mid");
     await h.keys("escape", "ctrl+s");
     expect(readFileSync(file)).toEqual(Buffer.from("\uFEFFone\r\nmid\r\ntwo\r\n", "utf8"));
+  });
+});
+
+describe("saving and conflicts (step 4)", () => {
+  const touch = async (file: string, text: string) => {
+    writeFileSync(file, text);
+    const future = Date.now() / 1000 + 5;
+    (await import("node:fs")).utimesSync(file, future, future);
+  };
+  const setup = async (text: string, config?: (c: Config) => void) => {
+    const root = makeVault();
+    const file = join(root, "c.md");
+    writeFileSync(file, text);
+    const h = await harness({ root, open: "c.md", width: 100, height: 30, config });
+    return { h, file, v: h.app.view!, root };
+  };
+  test("an outside change to a clean note reloads it as an undo step: u brings back what you had", async () => {
+    const { h, file, v } = await setup("mine\n");
+    await touch(file, "the agent's version\n");
+    h.app.reloadBuffer(v.buf);
+    expect(v.buf.source).toBe("the agent's version\n");
+    expect(v.buf.dirty).toBe(false);
+    await h.keys("u");
+    expect(v.buf.source).toBe("mine\n");
+    expect(v.buf.dirty).toBe(true); // it differs from the file now
+  });
+  test("the conflict prompt: (l) loads theirs, yours one u away; (k) keeps yours, saving then asks", async () => {
+    const { h, file, v } = await setup("line\n");
+    await h.keys("shift+a", "!", "escape");
+    await touch(file, "theirs\n");
+    h.app.reloadBuffer(v.buf);
+    const o = h.app.overlay as ListOverlay;
+    expect(o.title).toContain("changed on disk");
+    await h.keys("l");
+    expect(v.buf.source).toBe("theirs\n");
+    await h.keys("u");
+    expect(v.buf.source).toBe("line!\n");
+    // Changed again: keep yours this time.
+    await touch(file, "theirs again\n");
+    h.app.reloadBuffer(v.buf);
+    await h.keys("k");
+    expect(v.buf.conflictKept).toBe(true);
+    expect(statusRow(h.frame())).toContain("differs from disk");
+    await h.keys("ctrl+s"); // asks
+    expect((h.app.overlay as ListOverlay).title).toContain("write yours over it?");
+    await h.keys("n");
+    expect(readFileSync(file, "utf8")).toBe("theirs again\n");
+    await h.keys("ctrl+s", "y");
+    expect(readFileSync(file, "utf8")).toBe("line!\n");
+    expect(v.buf.conflictKept).toBe(false);
+  });
+  test("(d) shows yours → theirs; (m) merges against the version you started from", async () => {
+    const { h, file, v } = await setup("one\ntwo\nthree\n");
+    await h.keys("space", "n", "v", "g", "g", "shift+a", "!", "escape"); // yours: one!
+    await touch(file, "one\ntwo\nTHREE\n"); // theirs: THREE
+    h.app.reloadBuffer(v.buf);
+    await h.keys("d");
+    const d = h.app.overlay as ListOverlay;
+    expect(d.title).toContain("Diff");
+    expect(d.items.map((i) => i.label)).toContain("- THREE".replace("- ", "+ "));
+    await h.keys("escape"); // back to the prompt
+    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+    await h.keys("m");
+    expect(v.buf.source).toBe("one!\ntwo\nTHREE\n"); // both changes, no conflict
+    expect(v.buf.dirty).toBe(true);
+    await h.keys(":", "w", "enter"); // the file is theirs now: a plain save
+    expect(readFileSync(file, "utf8")).toBe("one!\ntwo\nTHREE\n");
+    // Both changing the same line: marked.
+    await h.keys("g", "g", "shift+a", "?", "escape");
+    await touch(file, "one?!\ntwo\nTHREE\n".replace("?!", "#"));
+    h.app.reloadBuffer(v.buf);
+    await h.keys("m");
+    expect(v.buf.source).toBe("<<<<<<< yours\none!?\n=======\none#\n>>>>>>> theirs\ntwo\nTHREE\n");
+    expect(h.app.transient!.text).toContain("1 conflict");
+  });
+  test("autosave: after the idle delay; not mid-insert, not after keep, not during a git commit", async () => {
+    const { h, file, v, root } = await setup("a\n", (c) => (c.editor.autosave_ms = 20));
+    await h.keys("shift+a", "b");
+    await Bun.sleep(60);
+    expect(readFileSync(file, "utf8")).toBe("a\n"); // still typing
+    await h.keys("escape");
+    await Bun.sleep(60);
+    expect(readFileSync(file, "utf8")).toBe("ab\n");
+    expect(v.buf.dirty).toBe(false);
+    // git holding its lock: later.
+    mkdirSync(join(root, ".git"), { recursive: true });
+    writeFileSync(join(root, ".git", "index.lock"), "");
+    await h.keys("shift+a", "c", "escape");
+    await Bun.sleep(60);
+    expect(readFileSync(file, "utf8")).toBe("ab\n");
+    rmSync(join(root, ".git", "index.lock"));
+    await Bun.sleep(60);
+    expect(readFileSync(file, "utf8")).toBe("abc\n");
+    // After keep: never on its own.
+    await h.keys("shift+a", "d", "escape");
+    await touch(file, "other\n");
+    h.app.reloadBuffer(v.buf);
+    await h.keys("k");
+    await Bun.sleep(60);
+    expect(readFileSync(file, "utf8")).toBe("other\n");
+  });
+  test("a hand-off saves first: the editor never gets a stale file", async () => {
+    const { h, file } = await setup("x\n", (c) => (c.editor.command = "ed {file}"));
+    const host = (h.app as unknown as { host: Host }).host;
+    let seen = "";
+    host.runForeground = () => ((seen = readFileSync(file, "utf8")), 0);
+    await h.keys("shift+a", "y", "escape", "space", "n", "e");
+    expect(seen).toBe("xy\n");
   });
 });
 

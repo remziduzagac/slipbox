@@ -11,8 +11,9 @@
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { WriteRefused, writeNote } from "../core/fsutil.ts";
+import { readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
+import { merge3, unifiedDiff } from "../core/merge.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, stopInsert } from "./editing.ts";
 import { newVimState, vimKey } from "./vim.ts";
@@ -159,6 +160,8 @@ export interface ListItem {
    * with an empty label, the blank row before one. */
   header?: boolean;
   rule?: boolean;
+  /** A key that picks this item at once (a list that isn't filtered by typing): `l`, `k`… */
+  hotkey?: string;
   data: unknown;
 }
 
@@ -1012,6 +1015,8 @@ export class App {
   editInEditor(view: View): void {
     if (!this.host.runForeground) return this.message("error", "can't hand off to an editor here");
     const buf = view.buf;
+    // The editor reads the file: unsaved changes go there first (4.10).
+    if (buf.dirty && !this.saveBuffer(buf)) return this.message("warn", `${this.displayName(buf)} isn't saved — not handing it off`);
     const argv = editorArgv(this.config.editor.command, buf.abs, this.cursorLine(view));
     const r = this.host.runForeground(argv);
     if (typeof r === "string") return this.message("error", `couldn't start ${argv[0]}: ${r}`);
@@ -1033,6 +1038,7 @@ export class App {
    * answers; else the only one running; else a picker — which `choose` (`space n p`) always opens.
    */
   sendToEditor(view: View, choose = false): void {
+    if (view.buf.dirty && !this.saveBuffer(view.buf)) return this.message("warn", `${this.displayName(view.buf)} isn't saved — not sending it`);
     const raw = this.config.editor.remote.filter((t) => t.trim());
     if (!raw.length) return this.message("info", "set [editor] remote in the config to send notes to a running editor");
     const templates = raw.length === 1 && raw[0]!.trim() === "nvim" ? NVIM_REMOTE : raw;
@@ -1862,6 +1868,7 @@ export class App {
     } catch (err) {
       this.message("error", (err as Error).message);
     }
+    this.scheduleAutosave(); // the idle clock starts again at each key
     this.host.requestRender();
   }
 
@@ -2063,6 +2070,12 @@ export class App {
         return moveTo(o.selected - 10);
     }
     if (!o.filterable) {
+      // An item's own key picks it.
+      const hot = o.filtered.findIndex((e) => e.item.hotkey && e.item.hotkey === (typed ?? "").toLowerCase());
+      if (hot >= 0) {
+        o.selected = hot;
+        return this.overlayKey(o, "enter");
+      }
       if (key === "j") return moveTo(o.selected + 1);
       if (key === "k") return moveTo(o.selected - 1);
       return;
@@ -2487,6 +2500,9 @@ export class App {
 
   capture(entry: string): void {
     const loc = this.scratch();
+    // An open, changed scratch is saved first, so the entry goes after what you typed (4.10).
+    const scratchBuf = this.buffers.get(loc.path) ?? this.buffers.get(relative(this.loc.root, loc.path));
+    if (scratchBuf?.dirty && !this.saveBuffer(scratchBuf)) return;
     appendScratch(loc, entry);
     const rel = relative(this.loc.root, loc.path);
     if (!rel.startsWith("..")) this.watcher?.noteOwnWrite(rel);
@@ -2647,8 +2663,8 @@ export class App {
 
   reloadBuffer(buf: NoteBuffer, deleted = false): void {
     if (buf.dirty && !deleted) {
-      // Unsaved changes here and a new version there: keep ours; the conflict prompt is step 4.
-      this.message("warn", `${this.displayName(buf)} changed on disk while you have unsaved changes — :w! keeps yours, :e! loads theirs`);
+      // Unsaved changes here and a new version there: the conflict prompt decides (5.5).
+      if (!buf.conflictKept) this.conflictPrompt(buf);
       return;
     }
     if (deleted || !buf.load()) {
@@ -2748,17 +2764,162 @@ export class App {
     this.quit();
   }
 
-  /** Save a buffer (`:w`, ctrl+s): its text, with its BOM and line endings, through writeBuffer. */
-  saveBuffer(buf: NoteBuffer): boolean {
+  /**
+   * Save a buffer (`:w`, ctrl+s): its text, with its BOM and line endings, through writeBuffer. If
+   * the file changed on disk since it was loaded, not blindly: after (K)eep yours it asks first;
+   * otherwise the conflict prompt decides.
+   */
+  saveBuffer(buf: NoteBuffer, quiet = false): boolean {
     if (buf.invalidUtf8) {
       this.message("error", `${buf.key} isn't valid UTF-8 — not saving over it`);
       return false;
     }
     if (buf.changedOnDisk() && !buf.deleted) {
-      this.message("warn", `${this.displayName(buf)} changed on disk since it was loaded — not saving (:w! overwrites, :e! reloads)`);
+      if (quiet) return false;
+      if (buf.conflictKept) this.confirmOverwrite(buf);
+      else this.conflictPrompt(buf);
       return false;
     }
     return this.writeBuffer(buf, buf.contentToSave(), true);
+  }
+
+  /** After (K)eep yours: a save asks before writing over the file's other version. */
+  private confirmOverwrite(buf: NoteBuffer): void {
+    this.openList({
+      title: `${this.displayName(buf)} changed on disk — write yours over it?`,
+      filterable: false,
+      items: [
+        { label: "(y) Yes, write mine over it", hotkey: "y", data: "y" },
+        { label: "(n) No, keep both as they are", hotkey: "n", data: "n" },
+        { label: "(d) Show the differences first", hotkey: "d", data: "d" },
+      ],
+      accept: (item) => {
+        if (item.data === "y" && this.writeBuffer(buf, buf.contentToSave(), true)) this.message("info", `saved ${this.displayName(buf)} over the file on disk`);
+        else if (item.data === "d") this.showDiff(buf, () => this.confirmOverwrite(buf));
+      },
+    });
+  }
+
+  /**
+   * The conflict prompt (5.5): a note with unsaved changes changed on disk. (L)oad theirs — yours
+   * stays one `u` away; (K)eep yours — autosave off, and saving asks first; (D)iff; (M)erge the two
+   * against the version you started from, marking what both changed.
+   */
+  conflictPrompt(buf: NoteBuffer): void {
+    if (this.overlay) {
+      this.message("warn", `${this.displayName(buf)} changed on disk while you have unsaved changes — space n c resolves it`);
+      return;
+    }
+    for (const v of this.allViews()) if (v.insert && v.buf === buf) stopInsert(this, v);
+    const name = this.displayName(buf);
+    this.openList({
+      title: `${name} changed on disk, and you have unsaved changes`,
+      filterable: false,
+      items: [
+        { label: "(l) Load theirs", detail: "yours stays one u away", hotkey: "l", data: "l" },
+        { label: "(k) Keep yours", detail: "autosave off; saving asks first", hotkey: "k", data: "k" },
+        { label: "(d) Diff", detail: "yours → theirs", hotkey: "d", data: "d" },
+        { label: "(m) Merge", detail: "both, conflicts marked", hotkey: "m", data: "m" },
+      ],
+      accept: (item) => this.resolveConflict(buf, item.data as string),
+      cancel: () => {
+        buf.conflictKept = true;
+        this.message("warn", `${name}: keeping yours for now — space n c to resolve`);
+      },
+    });
+  }
+
+  resolveConflict(buf: NoteBuffer, choice: string): void {
+    const name = this.displayName(buf);
+    const views = this.allViews().filter((v) => v.buf === buf);
+    if (choice === "l") {
+      if (!buf.load()) return this.message("warn", `${buf.key} is gone from disk`);
+      for (const v of views) v.layoutKey = "";
+      return this.message("info", `loaded theirs — u brings yours back`);
+    }
+    if (choice === "k") {
+      buf.conflictKept = true;
+      return this.message("info", `keeping yours — autosave is off for ${name} until you save (it asks first)`);
+    }
+    let theirs: string;
+    try {
+      theirs = readText(buf.abs).text;
+    } catch {
+      return this.message("warn", `${buf.key} is gone from disk`);
+    }
+    if (choice === "d") return this.showDiff(buf, () => this.conflictPrompt(buf), theirs);
+    // Merge: base (as loaded), yours, theirs. The result is an undo step; the file is theirs now.
+    const r = merge3(buf.baseText, buf.source, theirs);
+    buf.edit(0, buf.source.length, r.text);
+    buf.rebase(theirs);
+    for (const v of views) v.layoutKey = "";
+    this.message(r.conflicts ? "warn" : "info", r.conflicts ? `merged — ${r.conflicts} conflict${r.conflicts === 1 ? "" : "s"} marked <<<<<<< yours … >>>>>>> theirs; unsaved` : "merged cleanly — unsaved; :w writes it");
+  }
+
+  /** Yours → theirs as a read-only list; closing it goes back to where it came from. */
+  showDiff(buf: NoteBuffer, back: () => void, theirs?: string): void {
+    let disk = theirs;
+    if (disk === undefined) {
+      try {
+        disk = readText(buf.abs).text;
+      } catch {
+        return this.message("warn", `${buf.key} is gone from disk`);
+      }
+    }
+    const lines = unifiedDiff(buf.source, disk);
+    this.openList({
+      title: `Diff — yours → theirs (${this.displayName(buf)})`,
+      filterable: false,
+      items: lines.length ? lines.map((l) => ({ label: sanitize(l), data: null })) : [{ label: "no differences", data: null }],
+      accept: () => back(),
+      cancel: () => back(),
+    });
+  }
+
+  // Autosave (4.7): a changed note is saved after `editor.autosave_ms` with no key pressed.
+
+  private autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** (Re)start the idle clock, when something is unsaved. */
+  scheduleAutosave(): void {
+    const ms = this.config.editor.autosave_ms;
+    if (this.autosaveTimer) clearTimeout(this.autosaveTimer);
+    this.autosaveTimer = null;
+    if (!ms || this.quitting || !this.dirtyBuffers().length) return;
+    this.autosaveTimer = setTimeout(() => {
+      this.autosaveTimer = null;
+      this.autosave();
+      this.host.requestRender();
+    }, ms);
+    (this.autosaveTimer as { unref?: () => void }).unref?.();
+  }
+
+  /** Save what can be: not mid-insert, not after (K)eep yours, not over a changed file (the
+   *  conflict prompt comes instead, 5.6), not while git holds its index lock (5.10). */
+  autosave(): void {
+    let later = false;
+    for (const buf of this.dirtyBuffers()) {
+      if (this.allViews().some((v) => v.buf === buf && v.insert) || this.gitIndexLocked()) {
+        later = true;
+        continue;
+      }
+      if (buf.conflictKept || buf.invalidUtf8 || buf.deleted) continue;
+      if (buf.changedOnDisk()) {
+        this.conflictPrompt(buf);
+        continue;
+      }
+      if (this.writeBuffer(buf, buf.contentToSave(), true)) this.message("info", `autosaved ${this.displayName(buf)}`);
+    }
+    if (later) this.scheduleAutosave();
+  }
+
+  /** git is mid-commit (or mid-anything) in the vault's repository. Looked up each time: it runs
+   *  only when an autosave is due, and a repository can appear. */
+  private gitIndexLocked(): boolean {
+    for (let d = this.loc.root; ; d = dirname(d)) {
+      if (existsSync(join(d, ".git"))) return existsSync(join(d, ".git", "index.lock"));
+      if (dirname(d) === d) return false;
+    }
   }
 
   quit(): void {

@@ -955,7 +955,12 @@ export function registerActions(app: App): void {
         for (const w of a.allViews()) if (w.buf === v.buf) w.insert = false;
         if (!v.buf.load()) return a.message("warn", `${v.buf.key} is gone from disk`);
         for (const w of a.allViews()) if (w.buf === v.buf) w.layoutKey = "";
-        a.message("info", `${a.displayName(v.buf)} reloaded from disk; changes dropped`);
+        a.message("info", `${a.displayName(v.buf)} reloaded from disk — u brings your changes back`);
+      }),
+    "note.resolve": (a) =>
+      withView(a, (v) => {
+        if (!v.buf.dirty || !v.buf.changedOnDisk()) return a.message("info", `${a.displayName(v.buf)} has no conflict with the file on disk`);
+        a.conflictPrompt(v.buf);
       }),
     "app.save_quit": (a) => {
       for (const v of a.allViews()) if (v.insert) E.stopInsert(a, v);

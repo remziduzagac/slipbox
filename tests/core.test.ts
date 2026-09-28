@@ -17,6 +17,7 @@ import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/t
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { toggleTask } from "../src/core/tasks.ts";
+import { diffLines, merge3, unifiedDiff } from "../src/core/merge.ts";
 import { editorArgv, splitCommand } from "../src/core/editor.ts";
 import { discoverNvims, nvimSockets } from "../src/core/nvim.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
@@ -454,5 +455,36 @@ describe("source layout (4.13)", () => {
     expect(roleAt(7, 0)).toBe("code_block");
     expect(L.headings).toEqual([{ level: 1, text: "Head", slug: "head", src: 4, line: 3 }]);
     expect(L.lines[3]!.heading).toBe(0);
+  });
+});
+
+describe("diff and three-way merge (5.5)", () => {
+  const base = "one\ntwo\nthree\nfour\nfive\n";
+  test("diffLines: the smallest set of replaced runs", () => {
+    expect(diffLines(["a", "b", "c"], ["a", "x", "c", "d"])).toEqual([
+      { aStart: 1, aLen: 1, bStart: 1, bLen: 1 },
+      { aStart: 3, aLen: 0, bStart: 3, bLen: 1 },
+    ]);
+    const big = Array.from({ length: 20000 }, (_, i) => `line ${i}`);
+    const changed = [...big];
+    changed[100] = "x";
+    changed.splice(19000, 1);
+    const t = performance.now();
+    expect(diffLines(big, changed).length).toBe(2);
+    expect(performance.now() - t).toBeLessThan(200);
+  });
+  test("merge3: one side's changes taken, the same change once, overlapping ones marked", () => {
+    expect(merge3(base, "ONE\ntwo\nthree\nfour\nfive\n", "one\ntwo\nthree\nfour\nFIVE\n")).toEqual({ text: "ONE\ntwo\nthree\nfour\nFIVE\n", conflicts: 0 });
+    expect(merge3(base, "one\ntwo\nadded\nthree\nfour\nfive\n", "one\ntwo\nthree\nfour\nfive\nend\n").text).toBe("one\ntwo\nadded\nthree\nfour\nfive\nend\n");
+    expect(merge3(base, "one\nsame\nthree\nfour\nfive\n", "one\nsame\nthree\nfour\nfive\n").conflicts).toBe(0);
+    expect(merge3(base, "one\nTWO\nthree\nfour\nfive\n", "one\ntwo-t\nthree\nfour\nfive\n")).toEqual({
+      text: "one\n<<<<<<< yours\nTWO\n=======\ntwo-t\n>>>>>>> theirs\nthree\nfour\nfive\n",
+      conflicts: 1,
+    });
+    // Both inserting at the same place differently: a conflict too.
+    expect(merge3(base, "one\ntwo\nA\nthree\nfour\nfive\n", "one\ntwo\nB\nthree\nfour\nfive\n").conflicts).toBe(1);
+  });
+  test("unifiedDiff: - and + lines with context and @@ markers", () => {
+    expect(unifiedDiff(base, "one\nTWO\nthree\nfour\nfive\n")).toEqual(["@@ line 2", "  one", "- two", "+ TWO", "  three", "  four"]);
   });
 });

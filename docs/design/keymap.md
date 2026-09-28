@@ -288,7 +288,8 @@ source first.
 | delete the character under the cursor | `x` (source) |
 | undo / redo (an insert session is one step) | `u` / `ctrl+r`, `shift+u` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
-| save over a file changed on disk / reload it, dropping changes | `:w!` / `:e!` |
+| save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |
+| the conflict prompt again: load theirs, keep yours, diff, merge | `space n c` |
 | save everything and quit / quit without saving | `:wq`, `:x` / `:q!` |
 
 **Normal mode in source** is vim-shaped (`[keys.source]`; these keys do nothing in the render):

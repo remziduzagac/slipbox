@@ -515,9 +515,31 @@ gets CRLF for new lines too; a file that isn't valid UTF-8 can't be edited or sa
 waits until something needs it (the rendered view), so typing never re-parses the note; while it's
 unsaved, source mode's outline comes from a quick scan of the text's headings.
 
-Until the conflict prompt (step 4): a note changed on disk while it has unsaved changes is not
-reloaded — a message says so — and `:w` refuses to write over it; `:w!` keeps yours, `:e!` loads
-theirs. The task toggle on an unsaved note edits the buffer (an undo step), never the file under it.
+**Outside changes and conflicts** (`4.5`, `5.5`–`5.7`). A clean note that changes on disk reloads,
+and the reload is one more undo step: `u` brings back what was there before an agent rewrote it (and
+`:e!`, dropping your changes, is undoable the same way). A note with unsaved changes that changes on
+disk opens the **conflict prompt**, which each choice answers with its key:
+
+- **(l) Load theirs** — the file's version; yours is one `u` away.
+- **(k) Keep yours** — the status line says `⚠ differs from disk`; autosave stays off for it, and
+  saving asks first (**y** write over it, **n** not now, **d** see the diff). `esc` does the same.
+- **(d) Diff** — yours → theirs, `-` and `+` lines with context; closing it returns to the prompt.
+- **(m) Merge** — a three-way merge by lines against the version you started from (`core/merge.ts`):
+  what only one side changed is taken, the same change once, and different changes to the same
+  lines are marked `<<<<<<< yours` / `=======` / `>>>>>>> theirs`. The result is unsaved (one undo
+  step); the file is theirs now, so `:w` writes it without asking.
+
+`space n c` reopens the prompt. When a list or prompt is already open, a message says so instead.
+`:w` on a note whose file changed since it was loaded opens the prompt rather than writing over it;
+`:w!` writes over it.
+
+**Autosave** (`4.7`, `5.6`, `5.10`): a changed note is saved after `[editor] autosave_ms` (30 s;
+`0` turns it off) without a key pressed — not while you're in insert mode, not after (k) Keep yours
+until a saved, confirmed write, not over a file changed on disk (the conflict prompt comes instead),
+and not while git holds `.git/index.lock` (a commit in progress: it tries again later). **Hand-offs
+save first** (`4.10`): `space n e`, `space n s` and a capture into an open scratch write unsaved
+changes before the other side reads the file.
+
 Quitting with unsaved changes is refused (`:q!` quits anyway); a signal still quits.
 
 ## External changes (plans `5.1`–`5.4`)
