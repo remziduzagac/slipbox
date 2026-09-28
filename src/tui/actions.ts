@@ -812,9 +812,14 @@ export function registerActions(app: App): void {
           "/",
           (text) => {
             // An empty search clears the find rather than leaving "/ 0/0" behind.
-            if (!text) return void (v.find = null);
+            if (!text) {
+              v.find = null;
+              return V.finishSearchOp(a, v, false);
+            }
             v.find = computeFind(lay(a, v), text, v.find?.current ?? 0);
             if (!v.find.matches.length) a.message("info", `not found: ${text}`);
+            // After an operator (d/foo): it covers the text up to the match.
+            V.finishSearchOp(a, v, v.find.matches.length > 0);
           },
           (text) => {
             v.find = computeFind(lay(a, v), text);
@@ -829,8 +834,27 @@ export function registerActions(app: App): void {
           () => {
             v.find = prev;
             a.moveCursor(v, start);
+            V.finishSearchOp(a, v, false);
           },
         );
+      }),
+    // f F t T: a character on the line; ; and , again, the same way or back.
+    "cursor.find_char": (a, arg) =>
+      withView(a, (v) => {
+        const kind = (arg === "F" || arg === "t" || arg === "T" ? arg : "f") as V.FindKind;
+        const n = V.takeCount(a);
+        a.vim.awaitChar = (ch) => {
+          a.vim.lastFind = { kind, ch };
+          const to = C.findChar(lay(a, v), v.cur, kind, ch, n);
+          if (to) a.moveCursor(v, to);
+        };
+      }),
+    "cursor.find_repeat": (a, arg) =>
+      withView(a, (v) => {
+        const f = a.vim.lastFind;
+        if (!f) return a.message("info", "no f or t to repeat yet");
+        const to = C.findChar(lay(a, v), v.cur, arg === "back" ? V.reverseFind(f.kind) : f.kind, f.ch, V.takeCount(a), true);
+        if (to) a.moveCursor(v, to);
       }),
     "find.next": (a) => findStep(a, 1),
     "find.prev": (a) => findStep(a, -1),

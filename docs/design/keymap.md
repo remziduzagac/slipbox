@@ -235,6 +235,8 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
 | find in this note (cursor to the match; empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
+| onto the next / previous character typed on the line; just before it | `f` / `shift+f`; `t` / `shift+t` | — |
+| the last `f` `t` again / the other way | `;` / `,` | — |
 | the whole word under the cursor, forward / backward | `*` / `#` | — |
 | quick switcher: find a note by name | `ctrl+p` | `space f f` |
 | outline picker: find a heading in this note | — | `space f o` |
@@ -304,7 +306,9 @@ source first.
 | repeat the last change | `.` |
 | in visual mode: delete, change, indent, outdent the selection | `d` `x`, `c`, `>`, `<` |
 
-Motions are the reading keys (`w` `b` `e` `0` `^` `$` `j` `k` `g g` `shift+g` `{` `}`…); `j`, `k`,
+Motions are the reading keys (`w` `b` `e` `0` `^` `$` `j` `k` `g g` `shift+g` `{` `}`, `f` `t`…), and
+a search: after an operator, `/` covers the text up to the match you accept, and `n` / `shift+n` up
+to the next or previous one (`d/foo`, `dn`). `j`, `k`,
 `g g` and `shift+g` take whole lines, `e` and `$` include the character they land on, `cw` changes to
 the word's end, and `dw` stops at the line's end. Text objects follow `i` (inside) or `a` (around):
 `w` `W` a word, `"` `'` `` ` `` quotes on the line, `(` `b` `[` `{` `B` `<` brackets (nested, across

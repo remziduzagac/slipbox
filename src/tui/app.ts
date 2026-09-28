@@ -1950,6 +1950,14 @@ export class App {
       if (key === "ctrl+s") return void this.run("note.save");
       return insertKey(this, iv, key);
     }
+    // A command waiting for one character (f, t) in the render; in source vim.ts has it.
+    if (this.region === "content" && this.vim.awaitChar && !iv?.source) {
+      const f = this.vim.awaitChar;
+      this.vim.awaitChar = null;
+      const ch = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+      if (ch !== null) f(ch);
+      return;
+    }
     // Source mode's normal mode: counts, operators and `.` around the keymaps (vim.ts).
     if (this.region === "content" && iv?.source && !iv.visual && !this.resizeMode) return vimKey(this, iv, key, () => this.dispatchMapped(key));
     return this.dispatchMapped(key);

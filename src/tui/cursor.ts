@@ -260,3 +260,33 @@ export function wordAt(layout: Layout, p: Pos): [number, number] {
   while (b < cs.length - 1 && kind(cs[b + 1]!) === k) b++;
   return [cs[a]!.x, cs[b]!.x];
 }
+
+/**
+ * `f` / `F` / `t` / `T`: the `count`th `ch` after (f, t) or before (F, T) the cursor on its source
+ * line — every row of a wrapped line — `t` / `T` stopping one short. Null when there's none.
+ */
+export function findChar(layout: Layout, p: Pos, kind: "f" | "F" | "t" | "T", ch: string, count = 1, repeat = false): Pos | null {
+  const src = layout.lines[p.row]?.src;
+  let first = p.row;
+  while (first > 0 && layout.lines[first - 1]?.src === src) first--;
+  const all: Pos[] = [];
+  const gs: string[] = [];
+  for (let r = first; layout.lines[r]?.src === src; r++) {
+    for (const c of cells(layout.lines[r])) {
+      all.push({ row: r, col: c.x });
+      gs.push(c.g);
+    }
+  }
+  const here = all.findIndex((q) => q.row === p.row && q.col === snap(layout, p.row, p.col));
+  if (here < 0) return null;
+  const forward = kind === "f" || kind === "t";
+  let seen = 0;
+  // Repeating t / T (;) skips the character right next to the cursor, or it would never move on.
+  const skip = repeat && (kind === "t" || kind === "T") ? 1 : 0;
+  for (let k = here + (forward ? 1 + skip : -1 - skip); forward ? k < all.length : k >= 0; k += forward ? 1 : -1) {
+    if (gs[k] !== ch || ++seen < count) continue;
+    const at = kind === "t" ? k - 1 : kind === "T" ? k + 1 : k;
+    return all[at] ?? null;
+  }
+  return null;
+}

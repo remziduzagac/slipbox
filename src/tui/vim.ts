@@ -4,17 +4,27 @@
 // operator is read here, the way which-key reads what follows a prefix.
 
 import type { App, View } from "./app.ts";
+import * as C from "./cursor.ts";
 import * as E from "./editing.ts";
 
 type Op = "d" | "c" | "y" | ">" | "<";
+export type FindKind = "f" | "F" | "t" | "T";
+
+export function reverseFind(k: FindKind): FindKind {
+  return ({ f: "F", F: "f", t: "T", T: "t" } as const)[k];
+}
 
 export interface VimState {
   /** Digits typed before a command (`3dw`, `d3w`). */
   count: string;
   /** An operator waiting for its motion: which, its count, the motion keys so far. */
-  op: { op: Op; count: number; keys: string[]; object: "i" | "a" | null } | null;
+  op: { op: Op; count: number; keys: string[]; object: "i" | "a" | null; char: FindKind | null } | null;
   /** A command waiting for one character (`r`). */
   awaitChar: ((ch: string) => void) | null;
+  /** The last f / F / t / T and its character, for ; and ,. */
+  lastFind: { kind: FindKind; ch: string } | null;
+  /** An operator waiting for a search to finish (d/foo): where it started. */
+  searchOp: { op: Op; from: number } | null;
   /** The unnamed register: the last text deleted, changed or yanked. */
   register: { text: string; linewise: boolean } | null;
   /** The keys of the last change, for `.`, and the ones of the change being made. */
@@ -27,7 +37,7 @@ export interface VimState {
 }
 
 export function newVimState(): VimState {
-  return { count: "", op: null, awaitChar: null, register: null, lastChange: null, seq: [], seqVersion: -1, replaying: false, undoing: false };
+  return { count: "", op: null, awaitChar: null, lastFind: null, searchOp: null, register: null, lastChange: null, seq: [], seqVersion: -1, replaying: false, undoing: false };
 }
 
 /** The count typed before a command (1 without one); reading it clears it. */
@@ -81,7 +91,8 @@ async function handle(app: App, view: View, key: string, dispatch: () => Promise
   // for the command to read).
   if (s.count && !app.pending.length) {
     const spec = app.keymap.lookup(key);
-    if (spec?.startsWith("cursor.") && !app.keymap.isPrefix(key) && !app.sourceKeys.lookup(key)) {
+    // (f and t read their count themselves.)
+    if (spec?.startsWith("cursor.") && !spec.startsWith("cursor.find_") && !app.keymap.isPrefix(key) && !app.sourceKeys.lookup(key)) {
       const n = takeCount(app);
       for (let k = 0; k < n; k++) await app.run(spec);
       return;
@@ -93,7 +104,7 @@ async function handle(app: App, view: View, key: string, dispatch: () => Promise
 
 /** Start an operator (the command bound to `d`, `c`…): it waits for a motion or a text object. */
 export function startOperator(app: App, op: Op): void {
-  app.vim.op = { op, count: takeCount(app), keys: [], object: null };
+  app.vim.op = { op, count: takeCount(app), keys: [], object: null, char: null };
 }
 
 async function operatorKey(app: App, view: View, key: string): Promise<void> {
@@ -106,6 +117,14 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
   if (key === "escape" || key === "ctrl+c") return cancel();
   const count = o.count * (Number(s.count) || 1);
   s.count = "";
+  // f / t after the operator: this key is the character.
+  if (o.char) {
+    s.op = null;
+    const ch = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+    if (ch === null) return;
+    s.lastFind = { kind: o.char, ch };
+    return findRange(app, view, o.op, o.char, ch, count, false);
+  }
   // A text object: i or a, then its character.
   if (o.object) {
     const ch = key === "shift+9" ? "(" : key;
@@ -131,8 +150,25 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
   const seq = o.keys.join(" ");
   const spec = app.keymap.lookup(seq);
   if (!spec && app.keymap.isPrefix(seq)) return;
+  // f F t T wait for their character; ; and , use the last one.
+  if (spec?.startsWith("cursor.find_char")) {
+    const arg = spec.split(" ")[1];
+    o.char = (arg === "F" || arg === "t" || arg === "T" ? arg : "f") as FindKind;
+    o.count = count;
+    return;
+  }
   s.op = null;
-  if (!spec?.startsWith("cursor.")) return app.message("info", `${o.op} doesn't take ${seq}`);
+  if (spec?.startsWith("cursor.find_repeat")) {
+    const f = s.lastFind;
+    if (!f) return app.message("info", "no f or t to repeat yet");
+    return findRange(app, view, o.op, spec.endsWith("back") ? reverseFind(f.kind) : f.kind, f.ch, count, true);
+  }
+  // A search: the operator covers the text up to where it lands (finishSearchOp).
+  if (spec === "find.open") {
+    s.searchOp = { op: o.op, from: E.offsetOf(app, view) };
+    return app.run(spec);
+  }
+  if (!spec?.startsWith("cursor.") && spec !== "find.next" && spec !== "find.prev") return app.message("info", `${o.op} doesn't take ${seq}`);
   const r = await motionRange(app, view, spec, count, o.op);
   if (r) return apply(app, view, o.op, r);
 }
@@ -166,6 +202,28 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
   if (motion === "cursor.word_next" && E.lineOf(view, b) > E.lineOf(view, a)) b = Math.max(a, E.lineEnd(view, a));
   if (a === b) return null;
   return { from: a, to: b, linewise: false };
+}
+
+/** An operator with f / t: f and t take the character they land on, F and T don't. */
+function findRange(app: App, view: View, op: Op, kind: FindKind, ch: string, count: number, repeat: boolean): void {
+  const to = C.findChar(app.currentLayout(view), view.cur, kind, ch, count, repeat);
+  if (!to) return app.message("info", `no ${ch} ${kind === "f" || kind === "t" ? "after" : "before"} the cursor on this line`);
+  const a = E.offsetOf(app, view);
+  const b = E.offsetAtPos(app, view, to);
+  const r = kind === "f" || kind === "t" ? { from: a, to: E.nextBoundary(view.buf.source, b), linewise: false } : { from: b, to: a, linewise: false };
+  if (r.from < r.to) apply(app, view, op, r);
+}
+
+/** The search an operator waited for ended: accepted with a match, the range to it; else nothing. */
+export function finishSearchOp(app: App, view: View, found: boolean): void {
+  const s = app.vim.searchOp;
+  if (!s) return;
+  app.vim.searchOp = null;
+  if (!found || !view.source) return;
+  const to = E.offsetOf(app, view);
+  const r = { from: Math.min(s.from, to), to: Math.max(s.from, to), linewise: false };
+  E.placeAt(app, view, s.from);
+  if (r.from < r.to) apply(app, view, s.op, r);
 }
 
 /** Whole source lines `first`..`last` (1-based), with their line break. */

@@ -1232,6 +1232,42 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     await Promise.all([h.app.handleKey("j"), h.app.handleKey(".")]);
     expect(h.app.view!.buf.source).toBe("# Vim\n\nthe fox\njumpthe lazy dog\n");
   });
+  test("f F t T and ; , — as motions, with counts, and after an operator", async () => {
+    const { keys, at, text, v, h } = await setup("call(a, b, c) done\n");
+    at(0, 0);
+    await keys("f", "(");
+    expect(v.cur.col).toBe(4);
+    await keys("2", "f", ",");
+    expect(v.cur.col).toBe(9); // the second comma
+    await keys(",");
+    expect(v.cur.col).toBe(6); // back to the first
+    await keys("t", ")");
+    expect(v.cur.col).toBe(11);
+    await keys(";"); // t again moves on past the one right next to it: nothing more, stays
+    expect(v.cur.col).toBe(11);
+    await keys("shift+f", "a");
+    expect(v.cur.col).toBe(5);
+    at(0, 5);
+    await keys("d", "t", ")");
+    expect(text()).toBe("call() done\n");
+    await keys("u");
+    at(0, 0);
+    await keys("c", "f", "(", "fn(", "escape");
+    expect(text()).toBe("fn(a, b, c) done\n");
+    // In the render too.
+    await keys("space", "n", "v", "0", "f", "d");
+    expect(h.app.view!.source).toBe(false);
+    expect(h.app.currentLayout(v).lines[h.app.view!.cur.row]!.spans.map((x) => x.text).join("")[h.app.view!.cur.col]).toBe("d");
+  });
+  test("an operator with a search: d/foo covers up to the match; dn to the next", async () => {
+    const { keys, at, text } = await setup("keep this part and stop here, then more stop\n");
+    at(0, 5);
+    await keys("d", "/", "stop", "enter");
+    expect(text()).toBe("keep stop here, then more stop\n");
+    at(0, 0);
+    await keys("d", "n"); // to the next match after the cursor: the first stop
+    expect(text()).toBe("stop here, then more stop\n");
+  });
   test(". repeats a counted change with its count", async () => {
     const { keys, at, text, h } = await setup("a b c d\ne f g h\n");
     at(0, 0);

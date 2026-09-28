@@ -34,6 +34,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "cursor.heading_next", title: "Next heading", cli: I, desc: "Moves to the heading after the cursor" },
   { id: "cursor.paragraph_prev", title: "Previous paragraph", cli: I, desc: "Moves to the blank row before this block" },
   { id: "cursor.paragraph_next", title: "Next paragraph", cli: I, desc: "Moves to the blank row after this block" },
+  { id: "cursor.find_char", title: "To a character on the line", cli: I, desc: "f / F: onto the next or previous character typed; t / T: just before it" },
+  { id: "cursor.find_repeat", title: "Repeat f / t", cli: I, desc: "; the last f, F, t or T again; , the other way" },
   { id: "cursor.half_down", title: "Half page down", cli: I, desc: "Scrolls half a page down, cursor along" },
   { id: "cursor.half_up", title: "Half page up", cli: I, desc: "Scrolls half a page up, cursor along" },
   { id: "cursor.page_down", title: "Page down", cli: I, desc: "Scrolls a page down, cursor along" },
