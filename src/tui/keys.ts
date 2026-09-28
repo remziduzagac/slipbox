@@ -123,6 +123,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "ctrl+p": "switcher.open",
   "leader f f": "switcher.open",
   "leader f o": "outline.pick",
+  "leader f b": "breadcrumb.path",
   ":": "palette.open",
   "leader f p": "palette.open",
   // ui

@@ -76,6 +76,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "window.close", title: "Close window", cli: I, desc: "Closes this window" },
   { id: "window.only", title: "Keep only this window", cli: I, desc: "Closes the other window" },
   { id: "window.resize_mode", title: "Resize mode", cli: I, desc: "Resizes with h j k l or arrows until esc" },
+  { id: "breadcrumb.path", title: "Heading path", cli: I, desc: "Lists the headings the cursor is under, as a dropdown; pick one to jump" },
   { id: "window.equalize", title: "Equal window sizes", cli: I, desc: "Gives both windows the same size" },
   { id: "window.wider", title: "Wider", cli: I, desc: "Grows the focused pane or window, then stays in resize mode" },
   { id: "window.narrower", title: "Narrower", cli: I, desc: "Shrinks the focused pane or window, then stays in resize mode" },

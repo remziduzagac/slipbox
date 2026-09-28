@@ -233,6 +233,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | find in this note (cursor to the match; empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
 | quick switcher: find a note by name | `ctrl+p` | `space f f` |
 | outline picker: find a heading in this note | — | `space f o` |
+| heading path: the breadcrumb's headings as a dropdown | — | `space f b` |
 | command palette / command line | `:` | `space f p` |
 | *(reserved for phase 4)* vault text search / tags | — | `space f s` / `space f t` |
 
@@ -330,6 +331,7 @@ mouse off, which gives it back to the terminal.
 | `▤` (breadcrumb's far right, or the top bar's) | show the outline (and focus it) / hide it |
 | top bar `slipbox` chip | open the command palette |
 | window breadcrumb | scroll that window to the heading, and focus it; its icon finds a heading |
+| breadcrumb `…` | the whole heading path as a dropdown; click or `enter` on one to jump there |
 | tab | click to switch; drag to reorder; middle-click or `×` to close |
 | tab strip, wheel | previous / next tab |
 | tab strip `+N` | the tabs that don't fit: open the tab list |

@@ -8,7 +8,7 @@ import type { Line } from "../core/layout/ir.ts";
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemes, graphemeWidth, splitAtWidth, stringWidth, truncate } from "../core/width.ts";
-import type { App, ListOverlay, SidePaneState, Tab, TreeRow, View } from "./app.ts";
+import type { App, ListItem, ListOverlay, SidePaneState, Tab, TreeRow, View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, ordered } from "./cursor.ts";
 import { prettyKey, spellKey } from "./keys.ts";
@@ -187,7 +187,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   if (prompt || (app.transient && !messageInBar)) drawBottomLine(app, c, H - 1, geo);
   else if (status) drawStatus(app, c, { y: H - status, h: 1 }, geo);
   if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay) drawWhichKey(app, c, mainY, mainY + mainH, geo);
-  if (app.overlay?.kind === "list") geo.overlay = drawList(app, c, app.overlay, mainY, mainH);
+  if (app.overlay?.kind === "list") geo.overlay = app.overlay.anchor ? drawDropdown(app, c, app.overlay, app.overlay.anchor, H - 1) : drawList(app, c, app.overlay, mainY, mainH);
   return geo;
 }
 
@@ -253,35 +253,85 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
 }
 
 /**
- * A window's outline breadcrumb: the headings its cursor is under, each clickable. When there is
- * not enough room, the outermost headings go first.
+ * A window's outline breadcrumb: the headings its cursor is under, each clickable. When they don't
+ * all fit, the middle collapses into `…` (click: the whole path as a dropdown); then the texts are
+ * cut; then the first goes too, then the last, leaving only `…`.
  */
 function drawBreadcrumb(app: App, c: Canvas, view: View, x0: number, x1: number, y: number, bg: Color | null, geo: Geometry): void {
   const theme = app.theme;
   const crumbs = app.breadcrumb(view);
-  if (!crumbs.length || x1 - x0 < 10) return;
+  if (!crumbs.length || x1 - x0 < 4) return;
   const index = app.tab!.views.indexOf(view);
   const sep = ` ${app.glyphs.crumb} `;
-  const widthOf = (ps: typeof crumbs) => ps.reduce((a, p) => a + Math.min(CRUMB_MAX, stringWidth(p.text)), 0) + (ps.length - 1) * stringWidth(sep);
   // The icon opens the heading finder.
   const iconId = `crumbicon:${index}`;
   const iconSt = app.hover === iconId ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb_icon", bg), bg };
   const iw = drawText(c, x0, y, app.glyphs.crumbIcon, iconSt);
   geo.hot.push({ id: iconId, x: x0, y, w: iw, h: 1 });
   x0 += iw + 1;
-  let parts = crumbs;
-  while (parts.length > 1 && widthOf(parts) > x1 - x0) parts = parts.slice(1);
+  const plan = crumbLayout(
+    crumbs.map((p) => Math.min(CRUMB_MAX, stringWidth(p.text))),
+    x1 - x0,
+    stringWidth(sep),
+  );
   let cx = x0;
-  parts.forEach((p, i) => {
-    if (cx >= x1) return;
-    if (i) cx += drawText(c, cx, y, sep, { ...roleStyle(theme, "breadcrumb_sep", bg), bg }, x1 - cx);
-    const id = `crumb:${index}:${p.line}`;
-    const role: Role = i === parts.length - 1 ? "breadcrumb_current" : "breadcrumb";
+  plan.forEach((p, k) => {
+    if (k) cx += drawText(c, cx, y, sep, { ...roleStyle(theme, "breadcrumb_sep", bg), bg }, x1 - cx);
+    if (p === "more") {
+      const id = `crumbmore:${index}`;
+      const st = app.hover === id ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, "breadcrumb", bg), bg };
+      const w = drawText(c, cx, y, "…", st);
+      geo.hot.push({ id, x: cx, y, w, h: 1 });
+      cx += w;
+      return;
+    }
+    const crumb = crumbs[p.i]!;
+    const id = `crumb:${index}:${crumb.line}`;
+    const role: Role = p.i === crumbs.length - 1 ? "breadcrumb_current" : "breadcrumb";
     const st = app.hover === id ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, role, bg), bg };
-    const w = drawText(c, cx, y, truncate(p.text, Math.min(CRUMB_MAX, x1 - cx)), st);
+    const w = drawText(c, cx, y, truncate(crumb.text, p.w), st);
     geo.hot.push({ id, x: cx, y, w, h: 1 });
     cx += w;
   });
+}
+
+/** Below this, a heading is cut no further: the breadcrumb drops it instead. */
+const CRUMB_MIN = 8;
+
+/**
+ * Which headings a breadcrumb shows in `room` columns, each with its width, and where `…` stands
+ * for the hidden ones. All of them if they fit; else the first, `…` and as many of the innermost as
+ * fit; else the first and the last, cut (down to 8 columns each); else `…` and the last; else `…`.
+ */
+export function crumbLayout(widths: number[], room: number, sepW: number): ({ i: number; w: number } | "more")[] {
+  const n = widths.length;
+  if (!n || room < 1) return [];
+  type Part = { i: number; w: number } | "more";
+  const width = (parts: Part[]) => parts.reduce((a, p) => a + (p === "more" ? 1 : p.w), 0) + (parts.length - 1) * sepW;
+  const all = widths.map((w, i) => ({ i, w }));
+  if (width(all) <= room) return all;
+  const last = all[n - 1]!;
+  if (n >= 3) {
+    for (let k = 2; k < n; k++) {
+      const parts: Part[] = [all[0]!, "more", ...all.slice(k)];
+      if (width(parts) <= room) return parts;
+    }
+  }
+  const minW = (w: number) => Math.min(w, CRUMB_MIN);
+  if (n >= 2) {
+    // The first and the last, cut to fit; `…` between them when something is hidden.
+    const fixed = sepW + (n >= 3 ? 1 + sepW : 0);
+    const first = all[0]!;
+    if (minW(first.w) + minW(last.w) + fixed <= room) {
+      const lastW = Math.min(last.w, room - fixed - minW(first.w));
+      const firstW = Math.min(first.w, room - fixed - lastW);
+      return n >= 3 ? [{ i: 0, w: firstW }, "more", { i: n - 1, w: lastW }] : [{ i: 0, w: firstW }, { i: n - 1, w: lastW }];
+    }
+    if (1 + sepW + minW(last.w) <= room) return ["more", { i: n - 1, w: Math.min(last.w, room - 1 - sepW) }];
+    return ["more"];
+  }
+  if (minW(last.w) <= room) return [{ i: 0, w: Math.min(last.w, room) }];
+  return ["more"];
 }
 
 const CRUMB_MAX = 40;
@@ -1133,6 +1183,58 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
 }
 
 const FOOTER_ROWS = 4;
+
+/**
+ * A list as a dropdown hanging under `anchor` (the breadcrumb's `…`): framed like the other
+ * popups, as wide as its rows, entries indented as a tree. Keys, clicks and the wheel are the
+ * list's. The margin row above it lies on the rule under the breadcrumb, which stays visible.
+ */
+function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; y: number }, maxY: number): Rect & { listY: number; rows: number } {
+  const theme = app.theme;
+  const g = app.glyphs;
+  const W = c.width;
+  const hintW = (item: ListItem) => (item.hint ? stringWidth(item.hint) + 2 : 0);
+  // Three columns a level: `└─` and a space.
+  const content = Math.max(20, ...o.filtered.map(({ item }) => (item.indent ?? 0) * 3 + stringWidth(item.label) + hintW(item)));
+  const w = Math.max(10, Math.min(content + 4, 64, W - 4));
+  const x = Math.max(2, Math.min(anchor.x - 2, W - w - 2));
+  const y = anchor.y + 2;
+  const h = Math.max(3, Math.min(o.filtered.length + 2, maxY - y));
+  const bg = roleStyle(theme, "overlay", null);
+  const border = roleStyle(theme, "overlay_border", null);
+  const dim = roleStyle(theme, "overlay_dim", null);
+  c.fill(x - 2, y - 1, w + 4, h + 2, bg.bg);
+  const b = g.box;
+  drawText(c, x, y, `${b.tl}${b.h}`, border);
+  const tw = drawText(c, x + 2, y, truncate(` ${o.title} `, w - 6), { ...border, bold: true });
+  drawText(c, x + 2 + tw, y, b.h.repeat(Math.max(0, w - 3 - tw)) + b.tr, border);
+  for (let k = 1; k < h - 1; k++) {
+    drawText(c, x, y + k, b.v, border, 1);
+    drawText(c, x + w - 1, y + k, b.v, border, 1);
+  }
+  drawText(c, x, y + h - 1, `${b.bl}${b.h.repeat(w - 2)}${b.br}`, border);
+  const rows = h - 2;
+  if (o.selected < o.scroll) o.scroll = o.selected;
+  if (o.selected >= o.scroll + rows) o.scroll = o.selected - rows + 1;
+  for (let i = 0; i < rows; i++) {
+    const idx = o.scroll + i;
+    const entry = o.filtered[idx];
+    if (!entry) break;
+    const { item } = entry;
+    const ry = y + 1 + i;
+    const selected = idx === o.selected;
+    const st = selected ? roleStyle(theme, "overlay_selected", null) : bg;
+    c.fill(x + 1, ry, w - 2, 1, st.bg);
+    const depth = item.indent ?? 0;
+    let cx = x + 2 + depth * 3;
+    // One heading under the next: each row hangs off the one above with └─.
+    if (depth) drawText(c, cx - 3, ry, `${g.guideLast}${g.guideDash}`, { ...roleStyle(theme, "tree_guide", st.bg), bg: st.bg }, 2);
+    const hw = hintW(item);
+    cx += drawText(c, cx, ry, truncate(item.label, Math.max(1, x + w - 2 - hw - cx)), st);
+    if (item.hint) drawText(c, x + w - 2 - stringWidth(item.hint), ry, item.hint, { ...dim, bg: st.bg });
+  }
+  return { x, y, w, h, listY: y + 1, rows };
+}
 
 /**
  * A list's footer, under a rule: the selected entry's name, its explanation (wrapping to a second

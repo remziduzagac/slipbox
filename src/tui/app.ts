@@ -167,6 +167,8 @@ export interface ListOverlay {
   wheeled?: boolean;
   /** Key columns sized over the whole list (fixed-meaning columns), not per section. */
   alignKeysAcrossList?: boolean;
+  /** A dropdown hanging under this cell (the breadcrumb's `…`) instead of a centred list. */
+  anchor?: { x: number; y: number };
 }
 
 export interface PromptOverlay {
@@ -812,6 +814,42 @@ export class App {
     return chain.map(({ text, line }) => ({ text, line }));
   }
 
+  /**
+   * The breadcrumb's whole path as a dropdown under its `…` (or its icon when nothing is
+   * collapsed, centred when there is no breadcrumb): picking a heading scrolls the window to it.
+   */
+  openHeadingPath(): void {
+    const t = this.tab;
+    const view = this.view;
+    if (!t || !view) return;
+    const chain = this.breadcrumb(view);
+    if (!chain.length) return this.message("info", "no heading above the cursor");
+    const w = t.active;
+    const hot = this.geometry?.hot ?? [];
+    const at = hot.find((h) => h.id === `crumbmore:${w}`) ?? hot.find((h) => h.id === `crumbicon:${w}`);
+    // The deepest heading the breadcrumb hides is the likeliest pick; else the parent.
+    const shown = new Set(hot.filter((h) => h.id.startsWith(`crumb:${w}:`)).map((h) => Number(h.id.split(":")[2])));
+    let selected = chain.length > 1 ? chain.length - 2 : 0;
+    for (let k = chain.length - 1; k >= 0; k--) {
+      if (at?.id.startsWith("crumbmore") && !shown.has(chain[k]!.line)) {
+        selected = k;
+        break;
+      }
+    }
+    this.openList({
+      title: "Path",
+      filterable: false,
+      items: chain.map((c, k) => ({ label: c.text, indent: k, hint: k === chain.length - 1 ? "here" : undefined, data: c.line })),
+      selected,
+      anchor: at ? { x: at.x, y: at.y } : undefined,
+      accept: (item) => {
+        t.active = w;
+        this.region = "content";
+        this.revealHeading(view, item.data as number);
+      },
+    });
+  }
+
   /** The link under the cursor, if any. */
   linkUnderCursor(view = this.view): number {
     if (!view) return -1;
@@ -1238,6 +1276,7 @@ export class App {
     footer?: boolean;
     keepGroups?: boolean;
     alignKeysAcrossList?: boolean;
+    anchor?: { x: number; y: number };
   }): void {
     const o: ListOverlay = {
       kind: "list",
@@ -1256,6 +1295,7 @@ export class App {
       footer: opts.footer,
       keepGroups: opts.keepGroups,
       alignKeysAcrossList: opts.alignKeysAcrossList,
+      anchor: opts.anchor,
     };
     refilter(o);
     if (opts.selected !== undefined) o.selected = selectable(o, Math.max(0, Math.min(opts.selected, o.filtered.length - 1)), 1);
@@ -1808,6 +1848,14 @@ export class App {
         t.active = w;
         this.region = "content";
         this.revealHeading(v, row);
+        break;
+      }
+      case "crumbmore": {
+        const t = this.tab;
+        if (!t?.views[Number(arg)]) break;
+        t.active = Number(arg);
+        this.region = "content";
+        void this.run("breadcrumb.path");
         break;
       }
       case "crumbicon": {

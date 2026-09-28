@@ -13,6 +13,7 @@ import { locateVault } from "../src/core/vault.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { fuzzy, rank } from "../src/tui/fuzzy.ts";
+import { crumbLayout } from "../src/tui/draw.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
@@ -719,6 +720,59 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     expect(h.app.tab!.ratio).toBe(0.3);
     await h.keys("ctrl+alt+w", "a");
     expect(h.app.tab!.ratio).toBeGreaterThan(0.3);
+  });
+});
+
+describe("breadcrumb collapse (…) and the path dropdown", () => {
+  test("crumbLayout: all, then first … innermost, then cut, then … last, then …", () => {
+    const shape = (ps: ReturnType<typeof crumbLayout>) => ps.map((p) => (p === "more" ? "…" : `${p.i}:${p.w}`)).join(" ");
+    const ws = [20, 15, 15, 20];
+    expect(shape(crumbLayout(ws, 200, 3))).toBe("0:20 1:15 2:15 3:20");
+    expect(shape(crumbLayout(ws, 70, 3))).toBe("0:20 … 2:15 3:20"); // 20+3+1+3+15+3+20 = 65
+    expect(shape(crumbLayout(ws, 50, 3))).toBe("0:20 … 3:20");
+    expect(shape(crumbLayout(ws, 30, 3))).toBe("0:8 … 3:15"); // cut, the last keeps the most
+    expect(shape(crumbLayout(ws, 20, 3))).toBe("… 3:16");
+    expect(shape(crumbLayout(ws, 10, 3))).toBe("…");
+    expect(shape(crumbLayout([30, 30], 40, 3))).toBe("0:8 1:29"); // two: no … until the first goes
+    expect(shape(crumbLayout([30], 12, 3))).toBe("0:12");
+    expect(shape(crumbLayout([30], 5, 3))).toBe("…");
+  });
+  test("… opens the whole path as a dropdown under it; enter jumps; space f b opens it too", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 70, height: 30, config: (c) => ((c.ui.sidebar = false), (c.ui.outline = false)) });
+    const v = h.app.view!;
+    const target = h.app.currentLayout(v).headings.find((x) => x.text.startsWith("Layered capture order"))!;
+    h.app.moveCursor(v, { row: target.line + 1, col: 0 });
+    h.frame();
+    const chain = h.app.breadcrumb(v);
+    expect(chain.length).toBe(3);
+    const more = h.app.geometry!.hot.find((r) => r.id === "crumbmore:0")!;
+    expect(more).toBeDefined();
+    h.app.handleMouse({ type: "down", x: more.x, y: more.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: more.x, y: more.y, button: 0 });
+    const o = h.app.overlay as ListOverlay;
+    expect(o.kind).toBe("list");
+    expect(o.anchor).toEqual({ x: more.x, y: more.y });
+    expect(o.items.map((i) => i.label)).toEqual(chain.map((c) => c.text));
+    expect(o.selected).toBe(1); // the hidden middle heading
+    const f = h.frame();
+    const box = h.app.geometry!.overlay!;
+    expect(box.y).toBe(more.y + 2); // hanging under the breadcrumb, not centred
+    expect(f).toContain("└─");
+    await h.keys("enter");
+    expect(h.app.overlay).toBeNull();
+    expect(v.cur.row).toBe(chain[1]!.line);
+    // From the keyboard: j / k move, and a click on an entry picks it.
+    h.app.moveCursor(v, { row: target.line + 1, col: 0 });
+    h.frame();
+    await h.keys("space", "f", "b");
+    expect(h.app.overlay?.kind).toBe("list");
+    await h.keys("k");
+    expect((h.app.overlay as ListOverlay).selected).toBe(0);
+    h.frame();
+    const g = h.app.geometry!.overlay!;
+    h.app.handleMouse({ type: "down", x: g.x + 4, y: g.listY, button: 0 });
+    expect(h.app.overlay).toBeNull();
+    expect(v.cur.row).toBe(chain[0]!.line);
   });
 });
 
