@@ -1031,6 +1031,129 @@ describe("hand-off to an editor (space n e, space n s)", () => {
   });
 });
 
+describe("editing: insert mode, undo, save (step 3b)", () => {
+  const setup = async (text: string, name = "ed.md") => {
+    const root = makeVault();
+    const file = join(root, name);
+    writeFileSync(file, text);
+    const h = await harness({ root, open: name, width: 100, height: 30 });
+    const type = async (s: string) => {
+      for (const ch of s) await h.keys(ch === " " ? "space" : /[A-Z]/.test(ch) ? `shift+${ch.toLowerCase()}` : ch);
+    };
+    return { h, file, type, v: h.app.view! };
+  };
+  test("i from the render switches to source and types; esc ends; u undoes the session; U redoes", async () => {
+    const { h, type, v, file } = await setup("# T\n\nhello world\n");
+    h.app.moveCursor(v, { row: rowStarting(h, "hello"), col: 6 }); // on "w"
+    await h.keys("i");
+    expect(v.source).toBe(true);
+    expect(v.insert).toBe(true);
+    expect(statusRow(h.frame())).toContain("INSERT");
+    await type("big ");
+    expect(v.buf.source).toBe("# T\n\nhello big world\n");
+    await h.keys("escape");
+    expect(v.insert).toBe(false);
+    expect(v.buf.dirty).toBe(true);
+    const f = h.frame();
+    expect(statusRow(f)).toContain("• unsaved");
+    expect(f).toContain("ed •"); // the tab
+    expect(readFileSync(file, "utf8")).toBe("# T\n\nhello world\n"); // not saved yet
+    await h.keys("u");
+    expect(v.buf.source).toBe("# T\n\nhello world\n"); // the whole session at once
+    expect(v.buf.dirty).toBe(false);
+    await h.keys("shift+u");
+    expect(v.buf.source).toBe("# T\n\nhello big world\n");
+    // :w writes it; the marker goes.
+    await h.keys(":", "w", "enter");
+    expect(readFileSync(file, "utf8")).toBe("# T\n\nhello big world\n");
+    expect(v.buf.dirty).toBe(false);
+  });
+  test("a, A, I, o and O; enter carries indentation and continues a list; an empty item ends it", async () => {
+    const { h, type, v } = await setup("- one\n  - two\n");
+    await h.keys("space", "n", "v");
+    h.app.moveCursor(v, { row: 0, col: 0 });
+    await h.keys("shift+a");
+    await type("!");
+    await h.keys("enter");
+    await type("next");
+    await h.keys("escape");
+    expect(v.buf.source).toBe("- one!\n- next\n  - two\n");
+    await h.keys("j", "o"); // under "  - two": a nested item
+    await type("three");
+    await h.keys("enter", "enter"); // an empty item: the list ends there
+    await h.keys("escape");
+    expect(v.buf.source).toBe("- one!\n- next\n  - two\n  - three\n  \n");
+    h.app.moveCursor(v, { row: 0, col: 0 });
+    await h.keys("shift+o");
+    await type("top");
+    await h.keys("escape", "shift+i");
+    await type("> ");
+    await h.keys("escape");
+    expect(v.buf.source.split("\n")[0]).toBe("> top");
+    await h.keys("a");
+    expect(h.app.cursorLine(v)).toBe(1);
+  });
+  test("backspace joins lines, x deletes a character (in source), numbered lists count on", async () => {
+    const { h, type, v } = await setup("ab\ncd\n1. first\n");
+    await h.keys("space", "n", "v");
+    h.app.moveCursor(v, { row: 1, col: 0 });
+    await h.keys("i", "backspace", "escape");
+    expect(v.buf.source).toBe("abcd\n1. first\n");
+    await h.keys("x");
+    expect(v.buf.source).toBe("acd\n1. first\n"); // the b, the cursor having stepped back onto it
+    await h.keys("j", "shift+a", "enter");
+    await type("second");
+    await h.keys("escape");
+    expect(v.buf.source).toBe("acd\n1. first\n2. second\n");
+  });
+  test("x still ticks a task in the render; with unsaved changes it edits the buffer, not the file", async () => {
+    const { h, v, file } = await setup("- [ ] a task\n");
+    await h.keys("x");
+    expect(readFileSync(file, "utf8")).toBe("- [x] a task\n"); // clean: straight to disk
+    await h.keys("shift+a");
+    await h.keys("!", "escape", "space", "n", "v"); // back to the render, unsaved
+    await h.keys("x");
+    expect(v.buf.source).toBe("- [ ] a task!\n");
+    expect(readFileSync(file, "utf8")).toBe("- [x] a task\n");
+  });
+  test("quitting with unsaved changes is refused; :q! quits; :wq saves and quits", async () => {
+    const { h, v, file } = await setup("x\n");
+    await h.keys("shift+a", "y", "escape", "ctrl+q");
+    expect(h.quit.called).toBe(false);
+    expect(h.app.transient!.text).toContain("unsaved changes");
+    await h.keys(":", "w", "q", "enter");
+    expect(readFileSync(file, "utf8")).toBe("xy\n");
+    expect(h.quit.called).toBe(true);
+    const b = await setup("z\n");
+    await b.h.keys("shift+a", "z", "escape", ":", "q", "!", "enter");
+    expect(b.h.quit.called).toBe(true);
+    expect(readFileSync(b.file, "utf8")).toBe("z\n");
+    void v;
+  });
+  test("a change on disk under unsaved edits: kept, not reloaded; :w refuses, :w! and :e! choose", async () => {
+    const { h, v, file } = await setup("mine\n");
+    await h.keys("shift+a", "!", "escape");
+    writeFileSync(file, "theirs\n");
+    const future = Date.now() / 1000 + 5;
+    (await import("node:fs")).utimesSync(file, future, future);
+    h.app.reloadBuffer(v.buf);
+    expect(v.buf.source).toBe("mine!\n");
+    await h.keys(":", "w", "enter");
+    expect(readFileSync(file, "utf8")).toBe("theirs\n");
+    expect(h.app.transient!.text).toContain("changed on disk");
+    await h.keys(":", "e", "!", "enter");
+    expect(v.buf.source).toBe("theirs\n");
+    expect(v.buf.dirty).toBe(false);
+  });
+  test("a BOM and CRLF endings survive; new lines are CRLF too", async () => {
+    const { h, type, file } = await setup("\uFEFFone\r\ntwo\r\n");
+    await h.keys("shift+a", "enter");
+    await type("mid");
+    await h.keys("escape", "ctrl+s");
+    expect(readFileSync(file)).toEqual(Buffer.from("\uFEFFone\r\nmid\r\ntwo\r\n", "utf8"));
+  });
+});
+
 describe("source mode (space n v)", () => {
   test("the window shows the raw markdown, the cursor on the same source line; back again", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 100, height: 30 });
@@ -1627,6 +1750,8 @@ describe("review round 1", () => {
     const o = h.app.overlay as ListOverlay;
     expect(o.filtered[0]!.item.data).toBe("app.quit"); // the alias row first
     await h.keys("down");
+    // Past the other quit commands (save and quit, quit without saving) to one that doesn't quit.
+    while (String(o.filtered[o.selected]!.item.data).startsWith("app.")) await h.keys("down");
     const chosen = o.filtered[o.selected]!.item.data;
     await h.keys("enter");
     expect(h.quit.called).toBe(false);

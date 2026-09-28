@@ -272,13 +272,31 @@ config.
 
 ## Editing
 
-Phase 3 (plan): the checkbox and the hand-offs (`space n e`, `space n s`, under "Note, vault, app")
-come first; source mode and the modal layer follow.
+Phase 3 (plan). The hand-offs (`space n e`, `space n s`) are under "Note, vault, app". Editing
+happens in source mode; the keys that start it work from the render too, switching the window to
+source first.
 
 | Action | Keys |
 | --- | --- |
-| tick or untick the task item at the cursor (the innermost, on any of its rows) | `x` |
+| tick or untick the task item at the cursor (the innermost, on any of its rows) | `x` (rendered) |
 | show this window's note as its raw markdown, or rendered again (`:source`) | `space n v` |
+| type before the cursor / after it | `i` / `a` |
+| type at the line's first non-blank / its end | `shift+i` / `shift+a` |
+| open a line below (continuing a list) / above, and type | `o` / `shift+o` |
+| delete the character under the cursor | `x` (source) |
+| undo / redo (an insert session is one step) | `u` / `ctrl+r`, `shift+u` |
+| save (`:w`, `:write`) | `ctrl+s`, `space n w` |
+| save over a file changed on disk / reload it, dropping changes | `:w!` / `:e!` |
+| save everything and quit / quit without saving | `:wq`, `:x` / `:q!` |
+
+Quitting (`ctrl+q`, `:q`) with unsaved changes is refused, naming the notes. In **insert mode**
+(the chip reads `INSERT`) keys are text, except: `esc` (or `ctrl+c`) back to normal, the cursor
+stepping back onto a character; `enter` a new line with the same indentation, continuing a list
+(the same bullet, the next number, an empty task box) — or, on an item with nothing after its
+marker, ending the list; `backspace` / `delete` a character (joining lines at an edge); `ctrl+w`
+the word before; `ctrl+u` back to the line's start; `tab` / `shift+tab` indent or outdent the line
+by two spaces; the arrows, `home` and `end` move; `ctrl+s` saves. A paste goes into the text.
+Source mode's own keys are `[keys.source]` in config (`x` is its only one so far).
 
 ## UI — `space u`
 

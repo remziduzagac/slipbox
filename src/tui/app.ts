@@ -14,6 +14,7 @@ import { dirname, join, relative } from "node:path";
 import { WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
+import { insertKey, insertText, stopInsert } from "./editing.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
 import { appendScratch, scratchLocation } from "../core/capture.ts";
@@ -56,6 +57,7 @@ import {
   DEFAULT_OUTLINE_KEYS,
   DEFAULT_RESIZE_KEYS,
   DEFAULT_VISUAL_KEYS,
+  DEFAULT_SOURCE_KEYS,
   EXPLORER_ACTIONS,
   OUTLINE_ACTIONS,
   RESIZE_ACTIONS,
@@ -131,6 +133,8 @@ export interface View {
   left: number;
   /** Showing the note's raw markdown (source mode, 4.13) instead of its render. */
   source?: boolean;
+  /** Typing into the text (insert mode); only in source mode. */
+  insert?: boolean;
 }
 
 export interface Tab {
@@ -312,6 +316,7 @@ export class App {
   readonly registry = new CommandRegistry<App>();
   keymap!: Keymap;
   visualKeys!: Keymap;
+  sourceKeys!: Keymap;
   explorerKeys!: Keymap;
   outlineKeys!: Keymap;
   resizeKeys!: Keymap;
@@ -412,9 +417,10 @@ export class App {
   applyKeys(): void {
     const c = this.config;
     this.leader = canonKey(c.input.leader || "space");
-    const { visual, explorer, outline, resize, ...normal } = c.keys;
+    const { visual, explorer, outline, resize, source, ...normal } = c.keys;
     this.keymap = new Keymap(DEFAULT_KEYS, normal as Record<string, string>, this.leader);
     this.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.leader);
+    this.sourceKeys = new Keymap(DEFAULT_SOURCE_KEYS, source ?? {}, this.leader);
     this.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.leader);
     this.outlineKeys = new Keymap(DEFAULT_OUTLINE_KEYS, outline ?? {}, this.leader);
     this.resizeKeys = new Keymap(DEFAULT_RESIZE_KEYS, resize ?? {}, this.leader);
@@ -426,12 +432,12 @@ export class App {
     this.groups = new Map();
     for (const [k, v] of Object.entries({ ...DEFAULT_GROUPS, ...c.groups })) this.groups.set(canonSeq(k, this.leader), parseGroup(v));
     const ids = new Set(this.registry.list().map((x) => x.id));
-    const bad = [...this.keymap.entries(), ...this.visualKeys.entries()].map(([, v]) => v.split(" ")[0]!).filter((id) => !ids.has(id));
+    const bad = [...this.keymap.entries(), ...this.visualKeys.entries(), ...this.sourceKeys.entries()].map(([, v]) => v.split(" ")[0]!).filter((id) => !ids.has(id));
     for (const id of new Set(bad)) this.message("warn", `config: [keys] binds unknown command "${id}"`);
     for (const [a, v] of Object.entries(this.aliases)) if (!ids.has(v.split(" ")[0]!)) this.message("warn", `config: [aliases] ${a} = unknown command "${v}"`);
     // Keys with a modifier slipbox doesn't know can never be pressed: say so.
     const tables: [string, Record<string, unknown>][] = [["keys", c.keys as Record<string, unknown>]];
-    for (const sub of ["visual", "explorer", "outline", "resize"]) {
+    for (const sub of ["visual", "source", "explorer", "outline", "resize"]) {
       const t = (c.keys as Record<string, unknown>)[sub];
       if (t && typeof t === "object") tables.push([`keys.${sub}`, t as Record<string, unknown>]);
     }
@@ -760,7 +766,7 @@ export class App {
         ? this.textWidth(paneWidth, gutter)
         : this.nowrapWidth(view, paneWidth, gutter);
     const layout = view.source ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs) : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
-    const key = `${view.source ? "s" : "r"}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.stamp?.mtimeMs ?? 0}:${view.height}`;
+    const key = `${view.source ? "s" : "r"}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
     if (view.layoutKey !== key) {
       view.layoutKey = key;
       view.cur = this.cursorFromAnchor(layout, view.curAnchor);
@@ -791,6 +797,23 @@ export class App {
     let row = first;
     for (let k = 0; k < c.sub && layout.lines[row + 1]?.src === src; k++) row++;
     return clampPos(layout, { row, col: c.col });
+  }
+
+  /** After placing `view.cur` directly (editing): its anchor, and the view following it. */
+  setCursorAnchor(view: View, layout: Layout): void {
+    view.curAnchor = this.cursorAnchorFor(layout, view.cur);
+    this.ensureCursorVisible(view, layout);
+  }
+
+  /** Show a window's note as its markdown (`on`) or rendered; the cursor keeps its source line. */
+  setSource(view: View, on: boolean): void {
+    if (!!view.source === on) return;
+    if (!on && view.insert) stopInsert(this, view);
+    this.remember(view);
+    view.source = on;
+    view.layoutKey = ""; // re-derive the rows from the anchors: the same source line
+    view.sel = null;
+    view.visual = null;
   }
 
   private cursorAnchorFor(layout: Layout, p: Pos): CursorAnchor {
@@ -931,6 +954,14 @@ export class App {
     if (!task) return this.message("info", "no task here — x toggles a list item's [ ]");
     const buf = view.buf;
     if (buf.deleted) return this.message("warn", `${buf.key} was deleted on disk — nothing to toggle`);
+    if (buf.dirty) {
+      // Unsaved changes: toggle in the buffer (an undo step), not on disk under them.
+      const r = toggleTask(new TextEncoder().encode(buf.source), task.line);
+      if (!r) return this.message("warn", `line ${task.line} has no task marker`);
+      const at = buf.lineStarts()[task.line - 1]! + /\[([ xX])\]/.exec(buf.source.slice(buf.lineStarts()[task.line - 1]!))!.index + 1;
+      buf.edit(at, 1, r.checked ? "x" : " ");
+      return this.message("info", r.checked ? "done ✓ (unsaved)" : "not done (unsaved)");
+    }
     if (buf.changedOnDisk()) {
       // Line numbers may have moved: show the new version first.
       this.reloadBuffer(buf);
@@ -948,7 +979,7 @@ export class App {
   }
 
   /** Write a buffer's file and take the result back in; false (with a message) if refused. */
-  writeBuffer(buf: NoteBuffer, content: string | Uint8Array): boolean {
+  writeBuffer(buf: NoteBuffer, content: string | Uint8Array, saving = false): boolean {
     // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder.
     const root = buf.rel !== null ? this.loc.root : dirname(buf.abs);
     try {
@@ -958,6 +989,12 @@ export class App {
       return false;
     }
     if (buf.rel !== null) this.watcher?.noteOwnWrite(buf.rel);
+    if (saving) {
+      // The text on disk is what's in the buffer: keep it, its history and every cursor.
+      buf.deleted = false;
+      buf.markSaved();
+      return true;
+    }
     buf.load();
     for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = ""; // keeps the anchors (3.5)
     return true;
@@ -1773,6 +1810,11 @@ export class App {
    */
   paste(text: string): void {
     const o = this.overlay;
+    const iv = this.view;
+    if (!o && this.region === "content" && iv?.insert) {
+      // Into the text, its line breaks the note's own.
+      return insertText(this, iv, text.replace(/\r\n?/g, "\n").replaceAll("\n", iv.buf.eol));
+    }
     if (!o) return;
     const line = sanitize(text.replace(/\r\n?/g, "\n").split("\n")[0] ?? "");
     if (!line) return;
@@ -1808,6 +1850,8 @@ export class App {
     if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a) });
     if (this.region === "outline" && this.outlineShown) out.push({ map: this.outlineKeys, run: (a) => this.outlineAction(a) });
     if (this.view?.visual) out.push({ map: this.visualKeys, run: (s) => this.run(s) });
+    // Source mode's own keys (x deletes a character there) before the reading ones.
+    if (this.region === "content" && this.view?.source && !this.view.visual) out.push({ map: this.sourceKeys, run: (s) => this.run(s) });
     out.push({ map: this.keymap, run: (s) => this.run(s) });
     return out;
   }
@@ -1879,6 +1923,12 @@ export class App {
   private async dispatchKey(key: string): Promise<void> {
     if (this.overlay) return this.overlayKey(this.overlay, key);
     if (this.region === "sidebar" && this.sidebarShown && this.sidebar.filtering && !this.pending.length) return this.filterKey(key);
+    // Insert mode: keys are text, except the few that edit or move (editing.ts); save still works.
+    const iv = this.view;
+    if (this.region === "content" && iv?.insert && !this.pending.length) {
+      if (key === "ctrl+s") return void this.run("note.save");
+      return insertKey(this, iv, key);
+    }
     if (this.resizeMode && !this.pending.length) {
       const action = this.resizeKeys.lookup(key);
       if (action) return this.resizeAction(action);
@@ -2009,7 +2059,11 @@ export class App {
     }
     if (this.overlay) return this.overlayMouse(ev, g);
     if (ev.type === "scroll") return this.wheel(ev, g);
-    if (ev.type === "down") return this.mouseDown(ev, g, hotAt()?.id ?? null);
+    if (ev.type === "down") {
+      // A click ends typing (its undo step closes), then does what it does.
+      for (const v of this.allViews()) if (v.insert) stopInsert(this, v);
+      return this.mouseDown(ev, g, hotAt()?.id ?? null);
+    }
     if (ev.type === "drag" && this.drag) return this.mouseDrag(ev, g);
     if ((ev.type === "up" || ev.type === "drag-end") && this.drag) return this.mouseUp();
   }
@@ -2556,6 +2610,11 @@ export class App {
   }
 
   reloadBuffer(buf: NoteBuffer, deleted = false): void {
+    if (buf.dirty && !deleted) {
+      // Unsaved changes here and a new version there: keep ours; the conflict prompt is step 4.
+      this.message("warn", `${this.displayName(buf)} changed on disk while you have unsaved changes — :w! keeps yours, :e! loads theirs`);
+      return;
+    }
     if (deleted || !buf.load()) {
       buf.deleted = true;
       buf.changedAt = this.now();
@@ -2636,6 +2695,34 @@ export class App {
       ...(this.remoteServer ? { remote_server: this.remoteServer } : {}),
     };
     saveSession(this.loc.root, s);
+  }
+
+  /** Buffers with unsaved changes. */
+  dirtyBuffers(): NoteBuffer[] {
+    return [...this.buffers.values()].filter((b) => b.dirty);
+  }
+
+  /** Quit, unless something is unsaved (`app.quit`; `:q!` quits anyway). */
+  requestQuit(force = false): void {
+    for (const v of this.allViews()) if (v.insert) stopInsert(this, v);
+    const dirty = this.dirtyBuffers();
+    if (dirty.length && !force) {
+      return this.message("warn", `unsaved changes in ${dirty.map((b) => this.displayName(b)).join(", ")} — :w saves, :q! quits without saving`);
+    }
+    this.quit();
+  }
+
+  /** Save a buffer (`:w`, ctrl+s): its text, with its BOM and line endings, through writeBuffer. */
+  saveBuffer(buf: NoteBuffer): boolean {
+    if (buf.invalidUtf8) {
+      this.message("error", `${buf.key} isn't valid UTF-8 — not saving over it`);
+      return false;
+    }
+    if (buf.changedOnDisk() && !buf.deleted) {
+      this.message("warn", `${this.displayName(buf)} changed on disk since it was loaded — not saving (:w! overwrites, :e! reloads)`);
+      return false;
+    }
+    return this.writeBuffer(buf, buf.contentToSave(), true);
   }
 
   quit(): void {

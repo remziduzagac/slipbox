@@ -82,6 +82,7 @@ poll_ms = 2000                 # backstop tick, unwatchable directories, degrade
 "leader n n" = "switcher.open"
 "ctrl+o" = ""
 
+[keys.source]                  # source mode's own keys, before the reading ones (x = edit.delete_char)
 [keys.visual]                  # visual mode (movement keys extend by themselves)
 "Y" = "visual.yank"
 

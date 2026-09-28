@@ -7,6 +7,7 @@
 // spaces, all mapping to the tab; a wide character is one cell of width two). Control characters
 // show as `�` — the terminal never receives one.
 
+import { slugify } from "../parse.ts";
 import { graphemes, graphemeWidth } from "../width.ts";
 import type { Layout, LayoutHeading, Line, Span } from "./ir.ts";
 import type { Role } from "../theme/theme.ts";
@@ -185,6 +186,48 @@ function highlight(texts: string[]): Role[][] {
     const inCode = (k: number) => code.some(([a, b]) => k >= a && k < b);
     for (const m of text.matchAll(/!?\[\[[^\]\n]+\]\]/g)) if (!inCode(m.index)) paint(m.index, m.index + m[0].length, "wikilink");
     for (const m of text.matchAll(/!?\[[^\]\n]*\]\([^)\n]*\)/g)) if (!inCode(m.index)) paint(m.index, m.index + m[0].length, "link");
+  });
+  return out;
+}
+
+/**
+ * The ATX headings of a text without parsing it (source mode while editing, so a keystroke never
+ * re-parses the note): outside frontmatter and fenced code, their text with the common inline
+ * markup taken off, slugged the way the render slugs them.
+ */
+export function scanHeadings(source: string): Omit<LayoutHeading, "line">[] {
+  const out: Omit<LayoutHeading, "line">[] = [];
+  const counts = new Map<string, number>();
+  const lines = source.split("\n");
+  let fence: string | null = null;
+  let frontmatter = lines[0]?.replace(/\r$/, "") === "---";
+  lines.forEach((raw, i) => {
+    const text = raw.replace(/\r$/, "");
+    if (frontmatter) {
+      if (i > 0 && (text === "---" || text === "...")) frontmatter = false;
+      return;
+    }
+    const f = /^\s{0,3}(`{3,}|~{3,})/.exec(text);
+    if (fence) {
+      if (f && f[1]![0] === fence[0] && f[1]!.length >= fence.length) fence = null;
+      return;
+    }
+    if (f) {
+      fence = f[1]!;
+      return;
+    }
+    const h = /^\s{0,3}(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$/.exec(text);
+    if (!h) return;
+    const plain = (h[2] ?? "")
+      .replace(/!?\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
+      .replace(/!?\[\[([^\]]+)\]\]/g, "$1")
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/[*_`~]/g, "")
+      .trim();
+    const base = slugify(plain);
+    const n = counts.get(base) ?? 0;
+    counts.set(base, n + 1);
+    out.push({ level: h[1]!.length, text: plain, slug: n === 0 ? base : `${base}-${n}`, src: i + 1 });
   });
   return out;
 }

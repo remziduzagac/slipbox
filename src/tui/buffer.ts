@@ -1,21 +1,49 @@
-// A buffer: one open note, its parse, and its layouts cached per width (3.3). Views (panes) hold
+// A buffer: one open note, its text, and its layouts cached per width (3.3). Views (panes) hold
 // a buffer plus their own scroll position; two panes may show the same buffer.
 //
-// Phase 2 has no editing, so a buffer is never dirty and an external change always reloads
-// silently (5.3). The fields for "changed on disk" exist so the change is surfaced the moment it
-// lands (5.4), not discovered later.
+// Phase 3: the text can be edited (source mode). `source` is the truth; every change goes through
+// `edit`, which keeps an undo history in steps (an insert session is one step) and marks the
+// buffer dirty until it is saved. The parse is redone only when something needs it (the rendered
+// layout), not on every keystroke.
 
 import type { Glyphs } from "../core/glyphs.ts";
 import type { Graph } from "../core/graph.ts";
 import { readText, type Stamp, stamp } from "../core/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
-import { layoutSource } from "../core/layout/source.ts";
+import { layoutSource, scanHeadings } from "../core/layout/source.ts";
 import { type ParsedNote, parseMarkdown } from "../core/parse.ts";
+
+/** One change to the text: at `at`, `removed` was replaced by `inserted`. */
+export interface TextEdit {
+  at: number;
+  removed: string;
+  inserted: string;
+}
+
+/** An undo step: its edits in order, and the cursor (a source offset) before and after. */
+interface UndoStep {
+  edits: TextEdit[];
+  before: number;
+  after: number;
+}
 
 export class NoteBuffer {
   source = "";
-  parsed: ParsedNote = parseMarkdown("");
+  private parsedNote: ParsedNote = parseMarkdown("");
+  private parsedVersion = 0;
+  /** Bumped by every change to `source`; `savedVersion` is the one on disk. */
+  version = 0;
+  private savedVersion = 0;
+  /** The text as on disk, so undoing back to it is clean again. */
+  private savedText = "";
+  private dirtyMemo = { version: -1, dirty: false };
+  /** The file started with a UTF-8 BOM (kept on save); its lines end in CRLF (kept for new ones). */
+  bom = false;
+  eol: "\n" | "\r\n" = "\n";
+  private undoStack: UndoStep[] = [];
+  private redoStack: UndoStep[] = [];
+  private openStep: UndoStep | null = null;
   stamp: Stamp | null = null;
   invalidUtf8 = false;
   deleted = false;
@@ -39,12 +67,20 @@ export class NoteBuffer {
   load(): boolean {
     try {
       const d = readText(this.abs);
+      this.bom = d.bom;
       this.source = d.text;
+      this.eol = d.crlf ? "\r\n" : "\n";
       this.invalidUtf8 = d.invalidUtf8;
-      this.parsed = parseMarkdown(d.text);
+      this.version++;
+      this.savedVersion = this.version;
+      this.savedText = this.source;
       this.stamp = stamp(this.abs);
       this.deleted = false;
       this.layouts.clear();
+      // A reload is a new text: the old history's offsets no longer apply (4.5 will carry it over).
+      this.undoStack = [];
+      this.redoStack = [];
+      this.openStep = null;
       return true;
     } catch {
       this.deleted = true;
@@ -63,12 +99,111 @@ export class NoteBuffer {
     this.layouts.clear();
   }
 
+  /** The parse of the current text, redone only when the text changed since. */
+  get parsed(): ParsedNote {
+    if (this.parsedVersion !== this.version) {
+      this.parsedNote = parseMarkdown(this.source);
+      this.parsedVersion = this.version;
+    }
+    return this.parsedNote;
+  }
+
+  /** Different from the text on disk (as loaded or saved) — undoing back to it is clean. */
+  get dirty(): boolean {
+    if (this.version === this.savedVersion) return false;
+    if (this.dirtyMemo.version !== this.version) this.dirtyMemo = { version: this.version, dirty: this.source !== this.savedText };
+    return this.dirtyMemo.dirty;
+  }
+
+  /** The file's content for `source`: with its BOM again. */
+  contentToSave(): string {
+    return (this.bom ? "\uFEFF" : "") + this.source;
+  }
+
+  /** The text on disk is now this version (after a save). */
+  markSaved(): void {
+    this.savedVersion = this.version;
+    this.savedText = this.source;
+    this.stamp = stamp(this.abs);
+  }
+
+  /** Replace `length` characters at `at` with `text`; part of the open undo step, else a step of
+   *  its own (the cursor offsets given). */
+  edit(at: number, length: number, text: string, cursor = at): void {
+    const removed = this.source.slice(at, at + length);
+    if (!removed && !text) return;
+    this.source = this.source.slice(0, at) + text + this.source.slice(at + length);
+    this.version++;
+    this.layouts.clear();
+    const e = { at, removed, inserted: text };
+    if (this.openStep) this.openStep.edits.push(e);
+    else {
+      this.undoStack.push({ edits: [e], before: cursor, after: at + text.length });
+      this.redoStack = [];
+    }
+  }
+
+  /** Group the edits until `endStep` into one undo step (an insert session, a compound command). */
+  beginStep(cursor: number): void {
+    if (!this.openStep) this.openStep = { edits: [], before: cursor, after: cursor };
+  }
+
+  endStep(cursor: number): void {
+    const step = this.openStep;
+    this.openStep = null;
+    if (!step?.edits.length) return;
+    step.after = cursor;
+    this.undoStack.push(step);
+    this.redoStack = [];
+  }
+
+  /** Undo the last step: the cursor offset to go back to, or null when there's nothing. */
+  undo(): number | null {
+    this.endStep(0);
+    const step = this.undoStack.pop();
+    if (!step) return null;
+    for (const e of [...step.edits].reverse()) this.replace(e.at, e.inserted.length, e.removed);
+    this.redoStack.push(step);
+    return step.before;
+  }
+
+  redo(): number | null {
+    const step = this.redoStack.pop();
+    if (!step) return null;
+    for (const e of step.edits) this.replace(e.at, e.removed.length, e.inserted);
+    this.undoStack.push(step);
+    return step.after;
+  }
+
+  get canUndo(): boolean {
+    return this.undoStack.length > 0 || !!this.openStep?.edits.length;
+  }
+
+  private replace(at: number, length: number, text: string): void {
+    this.source = this.source.slice(0, at) + text + this.source.slice(at + length);
+    this.version++;
+    this.layouts.clear();
+  }
+
+  /** Where each line starts (UTF-16 offsets), for the current version. */
+  lineStarts(): number[] {
+    if (this.starts?.version === this.version) return this.starts.at;
+    const at = [0];
+    for (let i = this.source.indexOf("\n"); i >= 0; i = this.source.indexOf("\n", i + 1)) at.push(i + 1);
+    this.starts = { version: this.version, at };
+    return at;
+  }
+
+  private starts: { version: number; at: number[] } | null = null;
+
   /** The raw markdown as a layout (source mode, 4.13), its headings borrowed from the render. */
   sourceLayout(width: number, wrap: boolean, glyphs: Glyphs): Layout {
     const key = `src:${width}:${wrap ? 1 : 0}`;
     let l = this.layouts.get(key);
     if (!l) {
-      const headings = this.layout(200, glyphs, false, null).headings.map(({ level, text, slug, src }) => ({ level, text, slug, src }));
+      // Unedited, the render's headings (exact slugs); being edited, a quick scan of the text, so a
+      // keystroke never re-parses the note.
+      const headings = this.dirty ? scanHeadings(this.source) : this.layout(200, glyphs, false, null).headings.map(({ level, text, slug, src }) => ({ level, text, slug, src }));
       l = layoutSource(this.source, { width, wrap, headings });
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);

@@ -104,6 +104,8 @@ export interface Config {
    */
   keys: Record<string, string> & {
     visual?: Record<string, string>;
+    /** Source mode's own keys, before the reading ones (`x` deletes a character there). */
+    source?: Record<string, string>;
     explorer?: Record<string, string>;
     outline?: Record<string, string>;
     resize?: Record<string, string>;
@@ -235,9 +237,9 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       continue;
     }
     // String maps: key bindings (with context sub-tables), aliases, group names.
-    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|explorer|outline|resize)$/.test(prefix)) {
+    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|source|explorer|outline|resize)$/.test(prefix)) {
       if (typeof value === "string") out[key] = value;
-      else if (prefix === "keys" && ["visual", "explorer", "outline", "resize"].includes(key) && isPlainObject(value)) {
+      else if (prefix === "keys" && ["visual", "source", "explorer", "outline", "resize"].includes(key) && isPlainObject(value)) {
         out[key] = merge((out[key] as Record<string, string> | undefined) ?? {}, value, file, `keys.${key}`, warnings);
       } else warnings.push(`config: ${file}: ${path} must be a string`);
       continue;

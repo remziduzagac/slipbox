@@ -14,6 +14,7 @@ import { listThemes, loadTheme } from "../core/theme/index.ts";
 import type { App, ListItem, Loc, UiState, View } from "./app.ts";
 import { computeFind } from "./app.ts";
 import * as C from "./cursor.ts";
+import * as E from "./editing.ts";
 import { rank } from "./fuzzy.ts";
 import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, HISTORY_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, RESIZE_ACTIONS, spellKey } from "./keys.ts";
 
@@ -31,6 +32,16 @@ function motion(target: (a: App, v: View) => C.Pos, opts: { keepGoal?: boolean }
     withView(a, (v) => {
       a.moveCursor(v, target(a, v), { extend: arg === "extend", keepGoal: opts.keepGoal });
     });
+}
+
+/** u / ctrl+r: the cursor goes back to where the change was. */
+function undoRedo(a: App, v: View, which: "undo" | "redo"): void {
+  if (v.insert) E.stopInsert(a, v);
+  const at = which === "undo" ? v.buf.undo() : v.buf.redo();
+  if (at === null) return a.message("info", which === "undo" ? "nothing to undo" : "nothing to redo");
+  for (const w of a.allViews()) if (w.buf === v.buf) w.layoutKey = "";
+  if (v.source) E.placeAt(a, v, at);
+  a.message("info", v.buf.dirty ? which === "undo" ? "undone" : "redone" : `${which === "undo" ? "undone" : "redone"} — as saved`);
 }
 
 function lay(a: App, v: View) {
@@ -750,13 +761,75 @@ export function registerActions(app: App): void {
     "note.edit": (a) => withView(a, (v) => a.editInEditor(v)),
     "view.source": (a) =>
       withView(a, (v) => {
-        a.remember(v);
-        v.source = !v.source;
-        v.layoutKey = ""; // re-derive the rows from the anchors: the same source line
-        v.sel = null;
-        v.visual = null;
+        a.setSource(v, !v.source);
         a.message("info", v.source ? "source — the note's markdown" : "rendered");
       }),
+    // Editing (source mode; step 3). Entering insert from the render switches to source first.
+    "edit.insert": (a) => withView(a, (v) => E.startInsert(a, v, (w) => E.offsetOf(a, w))),
+    "edit.append": (a) =>
+      withView(a, (v) =>
+        E.startInsert(a, v, (w) => {
+          const at = E.offsetOf(a, w);
+          return Math.min(E.nextBoundary(w.buf.source, at), E.lineEnd(w, at));
+        }),
+      ),
+    "edit.insert_line_start": (a) =>
+      withView(a, (v) =>
+        E.startInsert(a, v, (w) => {
+          const src = E.lineOf(w, E.offsetOf(a, w));
+          return (w.buf.lineStarts()[src - 1] ?? 0) + /^\s*/.exec(E.lineText(w, src))![0].length;
+        }),
+      ),
+    "edit.append_line_end": (a) => withView(a, (v) => E.startInsert(a, v, (w) => E.lineEnd(w, E.offsetOf(a, w)))),
+    "edit.open_below": (a) =>
+      withView(a, (v) => {
+        E.startInsert(a, v, (w) => E.lineEnd(w, E.offsetOf(a, w)));
+        if (v.insert) E.newline(a, v);
+      }),
+    "edit.open_above": (a) =>
+      withView(a, (v) => {
+        E.startInsert(a, v, (w) => w.buf.lineStarts()[E.lineOf(w, E.offsetOf(a, w)) - 1] ?? 0);
+        if (!v.insert) return;
+        const at = E.offsetOf(a, v);
+        const indent = /^\s*/.exec(E.lineText(v, E.lineOf(v, at)))![0];
+        v.buf.edit(at, 0, indent + v.buf.eol);
+        E.placeAt(a, v, at + indent.length, true);
+      }),
+    "edit.delete_char": (a) =>
+      withView(a, (v) => {
+        const why = E.cannotEdit(v);
+        if (why) return a.message("warn", `${why} — not editing`);
+        if (!v.source) return;
+        const at = E.offsetOf(a, v);
+        // Only within the line: x on a line's end (or an empty line) does nothing, as in vim.
+        if (at >= E.lineEnd(v, at)) return;
+        v.buf.edit(at, E.nextBoundary(v.buf.source, at) - at, "");
+        E.placeAt(a, v, Math.min(at, Math.max(E.lineStart(v, at), E.lineEnd(v, at) - 1)));
+      }),
+    "edit.undo": (a) => withView(a, (v) => undoRedo(a, v, "undo")),
+    "edit.redo": (a) => withView(a, (v) => undoRedo(a, v, "redo")),
+    "note.save": (a) =>
+      withView(a, (v) => {
+        if (!v.buf.dirty && !v.buf.changedOnDisk()) return a.message("info", `${a.displayName(v.buf)} has no changes to save`);
+        if (a.saveBuffer(v.buf)) a.message("info", `saved ${a.displayName(v.buf)}`);
+      }),
+    "note.save_force": (a) =>
+      withView(a, (v) => {
+        if (a.writeBuffer(v.buf, v.buf.contentToSave(), true)) a.message("info", `saved ${a.displayName(v.buf)} over the file on disk`);
+      }),
+    "note.revert": (a) =>
+      withView(a, (v) => {
+        for (const w of a.allViews()) if (w.buf === v.buf) w.insert = false;
+        if (!v.buf.load()) return a.message("warn", `${v.buf.key} is gone from disk`);
+        for (const w of a.allViews()) if (w.buf === v.buf) w.layoutKey = "";
+        a.message("info", `${a.displayName(v.buf)} reloaded from disk; changes dropped`);
+      }),
+    "app.save_quit": (a) => {
+      for (const v of a.allViews()) if (v.insert) E.stopInsert(a, v);
+      for (const b of a.dirtyBuffers()) if (!a.saveBuffer(b)) return;
+      a.requestQuit();
+    },
+    "app.quit_force": (a) => a.requestQuit(true),
     "note.send": (a) => withView(a, (v) => a.sendToEditor(v)),
     "note.send_pick": (a) => withView(a, (v) => a.sendToEditor(v, true)),
     "find.word_next": (a) => findWord(a, 1),
@@ -910,7 +983,7 @@ export function registerActions(app: App): void {
       });
     },
     "help.open": (a) => openHelp(a),
-    "app.quit": (a) => a.quit(),
+    "app.quit": (a) => a.requestQuit(),
   };
   for (const t of UI_TOGGLES) impl[t.id] = (a) => toggle(a, t.key, t.title);
 

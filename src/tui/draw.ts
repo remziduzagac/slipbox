@@ -390,7 +390,8 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
   };
   const labels = app.tabs.map((t, i) => {
     const v = t.views[t.active]!;
-    const changed = v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS ? " ↻" : "";
+    // Unsaved changes (any tab showing the note), else a recent change on disk.
+    const changed = v.buf.dirty ? " •" : v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS ? " ↻" : "";
     return ` ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!.replace(/\.(md|markdown)$/i, ""), 24)}${changed} `;
   });
   const close = `${app.glyphs.close} `;
@@ -978,9 +979,11 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
           ? " FILES "
           : app.region === "outline"
             ? " OUTLINE "
-            : view?.source
-              ? " SOURCE "
-              : " READ ";
+            : view?.insert
+              ? " INSERT "
+              : view?.source
+                ? " SOURCE "
+                : " READ ";
   const chipSt = roleStyle(theme, "status_accent", page);
   c.fill(0, band.y, stringWidth(chip), band.h, chipSt.bg ?? null);
   let x = drawText(c, 0, y, chip, chipSt);
@@ -1002,12 +1005,13 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.
   const full = app.displayName(buf);
-  const marker = buf.deleted ? " ✖ deleted on disk" : changed ? " ↻ reloaded" : "";
+  const marker = buf.deleted ? " ✖ deleted on disk" : buf.dirty ? " • unsaved" : changed ? " ↻ reloaded" : "";
   const pathW = Math.max(4, c.width - x - rightW - 2 - stringWidth(marker));
   const pw = drawText(c, x, y, truncate(full, pathW), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
   geo.hot.push({ id: pathId, x, y: band.y, w: pw, h: band.h });
   x += pw;
   if (buf.deleted) x += drawText(c, x, y, " ✖ deleted on disk", roleStyle(theme, "error", st.bg));
+  else if (buf.dirty) x += drawText(c, x, y, " • unsaved", roleStyle(theme, "warn", st.bg));
   else if (changed) x += drawText(c, x, y, " ↻ reloaded", roleStyle(theme, "info", st.bg));
   // Whether external changes to this file will show up.
   const w = app.watcher;

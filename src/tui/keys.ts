@@ -120,6 +120,17 @@ export const DEFAULT_KEYS: Record<string, string> = {
   n: "find.next",
   "shift+n": "find.prev",
   x: "task.toggle",
+  // editing (source mode; from the render they switch the window to source first)
+  i: "edit.insert",
+  a: "edit.append",
+  "shift+i": "edit.insert_line_start",
+  "shift+a": "edit.append_line_end",
+  o: "edit.open_below",
+  "shift+o": "edit.open_above",
+  u: "edit.undo",
+  "ctrl+r": "edit.redo",
+  "shift+u": "edit.redo",
+  "ctrl+s": "note.save",
   "*": "find.word_next",
   "#": "find.word_prev",
   "leader f /": "find.open",
@@ -149,6 +160,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n r": "note.reload",
   "leader n e": "note.edit",
   "leader n v": "view.source",
+  "leader n w": "note.save",
   "leader n s": "note.send",
   "leader n p": "note.send_pick",
   "leader n i": "note.info",
@@ -188,6 +200,12 @@ for (let i = 1; i <= 9; i++) {
   DEFAULT_KEYS[`ctrl+t ${i}`] = `tab.goto ${i}`;
   DEFAULT_KEYS[`leader t ${i}`] = `tab.goto ${i}`;
 }
+
+/** Source mode: these win over the reading keys there (`x` deletes a character instead of
+ *  ticking a task, as in vim). */
+export const DEFAULT_SOURCE_KEYS: Record<string, string> = {
+  x: "edit.delete_char",
+};
 
 /** Visual mode: these win over the normal keymap; movements extend the selection by themselves. */
 export const DEFAULT_VISUAL_KEYS: Record<string, string> = {
@@ -327,7 +345,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader f": "find: notes, headings, text, commands",
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
-  "leader n": "note: source view, edit, send to an editor, reload, info",
+  "leader n": "note: source view, save, edit, send to an editor, reload, info",
   "leader v": "vault: reindex, info, reload config",
   "leader q": "session: quit",
   y: "copy: selection, path, reference, link",
@@ -350,6 +368,13 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   quit: "app.quit",
   e: "note.open",
   source: "view.source",
+  w: "note.save",
+  write: "note.save",
+  "w!": "note.save_force",
+  wq: "app.save_quit",
+  x: "app.save_quit",
+  "q!": "app.quit_force",
+  "e!": "note.revert",
   open: "note.open",
   theme: "theme.set",
   glyphs: "glyphs.set",

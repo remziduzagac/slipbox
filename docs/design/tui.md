@@ -491,6 +491,26 @@ spaces up to the next stop, all mapping to the tab; a wide character is one cell
 a control character shows as `�` and never reaches the terminal; a CRLF's CR isn't shown — so a
 cursor column maps to an exact place in the text, which editing (next) builds on.
 
+## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
+
+Editing is in source mode: `i`, `a`, `o` and their capitals (in [keymap.md](keymap.md)) start
+typing, switching a rendered window to source first. The buffer's `source` is the truth; every
+change is `NoteBuffer.edit`, one undo step each, except that an insert session (from `i` to `esc`)
+is one step. The cursor is a place in the text found through the source layout's `srcMap`
+(`editing.ts`), so tabs, wide characters and wrapped rows edit exactly where they show.
+
+A changed note is **unsaved** until `:w` / `ctrl+s`: `• unsaved` by its path in the status line,
+`•` on its tab; undoing back to the saved text makes it clean again. Saving goes through
+`writeBuffer` (atomic, inside the vault) and keeps the file's BOM and line endings — a CRLF file
+gets CRLF for new lines too; a file that isn't valid UTF-8 can't be edited or saved over. Parsing
+waits until something needs it (the rendered view), so typing never re-parses the note; while it's
+unsaved, source mode's outline comes from a quick scan of the text's headings.
+
+Until the conflict prompt (step 4): a note changed on disk while it has unsaved changes is not
+reloaded — a message says so — and `:w` refuses to write over it; `:w!` keeps yours, `:e!` loads
+theirs. The task toggle on an unsaved note edits the buffer (an undo step), never the file under it.
+Quitting with unsaved changes is refused (`:q!` quits anyway); a signal still quits.
+
 ## External changes (plans `5.1`–`5.4`)
 
 The watcher subscribes to exactly the directories the walk includes: one non-recursive watch per
