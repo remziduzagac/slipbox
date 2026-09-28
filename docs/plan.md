@@ -186,6 +186,31 @@ changed.
 | `3.5` reload anchoring | 2026-09-25 | `docs/design/decisions.md` |
 | `3.11` mode taxonomy and dispatch | 2026-09-25 | `docs/design/decisions.md` |
 | Phase 2 is read-only; `4.1`–`4.2` stay in phase 3 | 2026-09-25 | `docs/design/decisions.md` |
+| Phase 3 order and editing design | 2026-09-28 | below |
+
+### Phase 3 decided 2026-09-28 — editing, in five steps
+
+1. **Checkbox toggle** (`4.11`): the first write. One byte-range edit, atomic, through the same
+   write path everything after it uses.
+2. **Hand-off, both kinds** (`4.1`, `4.2`, `4.12`): one `{file}` / `{line}` template, and whether
+   slipbox waits for it. *Suspend* steps aside for `$EDITOR` in this terminal and reloads on
+   return; *remote* tells an editor already running elsewhere (nvim's `--server`, `code -g`) to
+   open the note and keeps going, the watcher picking up its saves.
+3. **Source mode with the modal layer** (`4.3`, `4.4`, `4.13`): **source mode is another layout
+   of the same note** — the raw markdown, a source line per row, lightly highlighted — so
+   everything built on the layout (motions, find, `*`, visual, the mouse, wrap, line numbers,
+   scrollbars) works unchanged, and the keys stay the ones the rendered view has. Editing is a
+   layer over that: vim-shaped (insert, operators and motions, `.`, counts), every operator a
+   named command. A good editor, consistent with the other modes; not all of vim.
+4. **Saving and conflicts** (`4.5`–`4.10`, `5.5`–`5.7`): atomic saves, autosave after a long
+   idle, the dirty marker, and the vim-shaped conflict prompt when an agent writes a note with
+   unsaved changes.
+5. **Live preview** (`4.14`): the rendered layout with the block under the cursor swapped for its
+   source layout, edited in place. It needs per-block re-layout (`15.1`, at least for one block).
+   Its look is tuned once it works.
+
+Tables are edited in source mode only; frontmatter is spliced by byte range (`7.6`); undo is kept
+as source edits so it survives an external reload (`4.5`).
 
 ### `9.4` decided 2026-09-25 — disk is the contract
 
@@ -332,6 +357,10 @@ common, and the only reason they are step 0.
 | 4.8 | Dirty-state indicators |
 | 4.9 | Incremental reparse |
 | 4.10 | Flush dirty buffers at handoff points — capture, context bundle, invoking an agent |
+| 4.11 | Checkbox toggle — a key and a click on `[ ]`; the first write |
+| 4.12 | Remote hand-off — open the note in an editor already running (nvim `--server`), no wait |
+| 4.13 | Source mode — the raw markdown as a layout, so the reading keys work unchanged |
+| 4.14 | Live preview — the block under the cursor as its source, edited in place |
 
 ## Concurrency — `5.x`
 
