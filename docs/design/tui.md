@@ -350,10 +350,11 @@ Help and the palette list the same commands for different jobs, in the groups of
 [keymap.md](keymap.md) (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order:
 
 - **Help (`?`, `space ?`)** is for learning the keys: every command with all its bindings, then what
-  works inside the explorer, inside the outline, in resize mode, and with the mouse. Filtering keeps
-  the groups; `enter` runs a command (the other entries are reference only). Opened from the
-  explorer, the outline or visual mode, it starts at that section ("Inside the explorer", "Inside
-  the outline", "Selection & copy"), with its heading at the top.
+  works inside the explorer, inside the history, while filtering a panel, inside the outline, in
+  resize mode, and with the mouse. Filtering keeps the groups; `enter` runs a command (the other
+  entries are reference only). Opened from the explorer, the history, the outline or visual mode,
+  it starts at that section ("Inside the explorer", "Inside the history", "Inside the outline",
+  "Selection & copy"), with its heading at the top. A new panel view gets its own section.
 - **The palette (`:`)** is for doing things. Empty, it lists the commands last run from the
   palette or help (the last 5, kept in the session) and then every command by group (except the
   internal `esc` handler); typing ranks the best match first,

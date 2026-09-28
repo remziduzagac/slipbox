@@ -268,6 +268,28 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
 };
 
+/** The history view takes the explorer's keymap; what its actions do there, for help. Several
+ *  actions jump (enter, l, o, s), so they share one entry. */
+export const HISTORY_ACTION_INFO: Record<string, { title: string; desc: string; actions?: string[] }> = {
+  down: { title: "Move down", desc: "Selects the older place; nothing jumps" },
+  up: { title: "Move up", desc: "Selects the newer place; nothing jumps" },
+  jump: { title: "Jump there", desc: "Moves the window there; the places before become back, after it forward", actions: ["open_tab", "expand", "open", "open_split"] },
+  top: { title: "Top", desc: "Selects the newest place" },
+  bottom: { title: "Bottom", desc: "Selects the oldest place" },
+  filter: { title: "Filter", desc: "Type to narrow the places by path; enter jumps, esc clears" },
+  close: { title: "Close the history", desc: "Closes it; focus returns to the note" },
+  leave: { title: "Back to the note", desc: "Focuses the note; the history stays open" },
+};
+
+/** Keys while a left panel's filter (`/`) has them, for help. Fixed, not from a keymap. */
+export const FILTER_KEYS_HELP: [string, string[], string][] = [
+  ["Narrow the rows", ["type"], "Filters the explorer (folders kept) or the history by path"],
+  ["Move", ["down", "up", "ctrl+n", "ctrl+p"], "Moves through the matches"],
+  ["Open or jump", ["enter"], "Opens the note as a tab, or jumps to the place; the filter clears"],
+  ["Clear the filter", ["esc"], "Clears it; the whole tree or history comes back"],
+  ["Delete", ["backspace", "ctrl+w", "ctrl+u"], "A character, a word, or everything typed"],
+];
+
 export const OUTLINE_ACTION_INFO: Record<string, { title: string; desc: string }> = {
   down: { title: "Move down", desc: "Selects the next heading" },
   up: { title: "Move up", desc: "Selects the previous heading" },

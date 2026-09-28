@@ -15,7 +15,7 @@ import type { App, ListItem, Loc, UiState, View } from "./app.ts";
 import { computeFind } from "./app.ts";
 import * as C from "./cursor.ts";
 import { rank } from "./fuzzy.ts";
-import { EXPLORER_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, RESIZE_ACTIONS, spellKey } from "./keys.ts";
+import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, HISTORY_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, RESIZE_ACTIONS, spellKey } from "./keys.ts";
 
 type Run = Command<App>["run"];
 
@@ -288,14 +288,19 @@ function openHelp(a: App): void {
     const variants = a.keymap.entries().filter(([, v]) => v.startsWith(`${c.id} `)).map(([k]) => spellKey(k));
     return { label: c.title, ...topKeys([...new Set([...plain, ...variants])], new Set(variants), c.description ?? c.id), data: c.id };
   });
-  const pane = (keymap: { keysFor(action: string): string[] }, info: Record<string, { title: string; desc: string }>): ListItem[] =>
+  // An entry per action with its keys; `actions` gathers several that do the same there.
+  const pane = (keymap: { keysFor(action: string): string[] }, info: Record<string, { title: string; desc: string; actions?: string[] }>): ListItem[] =>
     Object.entries(info)
-      .map(([action, i]) => ({ label: i.title, ...topKeys(keymap.keysFor(action).map(spellKey), new Set(), i.desc), data: null }))
+      .map(([action, i]) => ({ label: i.title, ...topKeys((i.actions ?? [action]).flatMap((x) => keymap.keysFor(x)).map(spellKey), new Set(), i.desc), data: null }))
       .filter((i) => i.keys.length);
   const items: ListItem[] = [
     ...grouped(commands, (i) => commandGroup(i.data as string), COMMAND_GROUPS.map((g) => g.title)),
     ...heading("Inside the explorer", false),
     ...pane(a.explorerKeys, EXPLORER_ACTION_INFO),
+    ...heading("Inside the history", false),
+    ...pane(a.explorerKeys, HISTORY_ACTION_INFO),
+    ...heading("Filtering a panel (/)", false),
+    ...FILTER_KEYS_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys.map((k) => (k === "type" ? k : spellKey(k))), new Set(), detail), data: null })),
     ...heading("Inside the outline", false),
     ...pane(a.outlineKeys, OUTLINE_ACTION_INFO),
     ...heading("Resize mode", false),
@@ -304,7 +309,7 @@ function openHelp(a: App): void {
     ...MOUSE_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys, new Set(), detail), data: null })),
   ];
   // Start where the keys are about what you're doing: the focused pane's, or visual mode's.
-  const section = a.region === "sidebar" ? "Inside the explorer" : a.region === "outline" ? "Inside the outline" : a.view?.visual ? "Selection & copy" : null;
+  const section = a.region === "sidebar" ? (a.leftView === "history" ? "Inside the history" : "Inside the explorer") : a.region === "outline" ? "Inside the outline" : a.view?.visual ? "Selection & copy" : null;
   const at = section ? items.findIndex((i) => i.header && i.label === section) : -1; // the title row
   a.openList({
     title: "Keys — type to filter, enter runs a command",
@@ -326,11 +331,14 @@ const MOUSE_HELP: [string, string[], string][] = [
   ["Select and copy", ["drag"], "Selects the text you drag over and copies it on release"],
   ["Select a word / a row", ["double-click", "triple-click"], "Selects the word or the whole row, and copies it"],
   ["Scroll", ["wheel"], "Scrolls the note, a pane or a list, or switches tabs"],
+  ["Show a panel's view", ["click"], "On a rail: ≡ the explorer, ◷ the history, ▤ the outline; again hides it"],
   ["Open a note as a tab", ["click"], "In the explorer: opens the note as a tab; on a folder, folds or unfolds it"],
+  ["Jump to a place", ["click"], "In the history: moves the window back or forward to that place"],
   ["Jump to a heading", ["click"], "In the outline or a breadcrumb: moves the note there; on ▾ / ▸, folds"],
   ["Switch, reorder, close tabs", ["click", "drag", "middle-click"], "On the tab strip: switches, drags to reorder, closes (so does ×)"],
   ["Resize panes and splits", ["drag"], "Drags a border to resize what's beside it"],
-  ["Scroll to a place", ["click", "drag"], "On the scrollbar: jumps there, or drags the thumb"],
+  ["Scroll to a place", ["click", "drag"], "On a scrollbar (either direction): jumps there, or drags the thumb"],
+  ["Open the heading path", ["click"], "On the breadcrumb's …: the whole path as a dropdown"],
   ["Copy the note's path", ["click"], "On the path in the status line: copies the absolute path"],
 ];
 

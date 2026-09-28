@@ -556,6 +556,15 @@ describe("overlays and the : prompt", () => {
     expect(await start("v")).toEqual({ heading: "Selection & copy", selectedIsEntry: true });
     await h.keys("escape");
     expect(await start()).toEqual({ heading: "Cursor", selectedIsEntry: true }); // from the note: the top
+    await h.app.run("note.open notes/alpha.md"); // some history
+    expect(await start("space", "h", "h")).toEqual({ heading: "Inside the history", selectedIsEntry: true });
+    // It lists the history's keys, the jump keys gathered on one entry, and the filter's.
+    await h.keys("?");
+    const o = h.app.overlay as ListOverlay;
+    const jump = o.items.find((i) => i.label === "Jump there")!;
+    expect(jump.keys).toContain("enter");
+    expect(o.items.some((i) => i.header && i.label === "Filtering a panel (/)")).toBe(true);
+    await h.keys("escape");
   });
   test("palette: Recent first, then groups; typing ranks without groups; the first key only", async () => {
     const h = await harness({ width: 140, height: 40 });
