@@ -39,6 +39,8 @@ export interface Line {
    * wrapped row starts, or the line's length).
    */
   srcMap?: { cells: number[]; end: number };
+  /** A frame row drawn in the layout (the lens's rules): no text of the note, never the cursor's. */
+  decor?: boolean;
 }
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote";

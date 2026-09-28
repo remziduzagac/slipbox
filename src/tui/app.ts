@@ -140,6 +140,8 @@ export interface View {
   live?: boolean;
   /** Live preview's render and blocks, kept while the cursor's block is being typed into. */
   liveBase?: LiveBase;
+  /** Where the lens sits on screen (rows from the window's top to its top rule), kept as it moves. */
+  lensPin?: { range: string; screen: number };
   /** Typing into the text (insert mode); in source mode or live preview. */
   insert?: boolean;
 }
@@ -818,51 +820,117 @@ export class App {
       if (view.find) view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole);
       if (view.sel) view.sel.anchor = view.sel.src ? this.cursorFromAnchor(layout, view.sel.src) : clampPos(layout, view.sel.anchor);
     }
+    if (view.live && view.liveBase) this.pinLens(view, layout);
     return layout;
   }
 
   /**
-   * Live preview's layout: the render, with the block holding the cursor's source line as its
-   * markdown. While that block is typed into, the render around it is reused (no re-parse);
-   * leaving insert mode, or an edit outside the block, lays it out afresh.
+   * The lens keeps its height on screen: when it moves or grows, the page scrolls under it. While it
+   * stays the same, wherever it is now (the wheel, the cursor) is where it's kept.
+   */
+  private pinLens(view: View, layout: Layout): void {
+    const top = layout.lines.findIndex((l) => l.decor);
+    if (top < 0) return;
+    const range = `${view.liveBase!.active[0]}-${view.liveBase!.active[1]}`;
+    const pin = view.lensPin;
+    if (!pin) {
+      view.lensPin = { range, screen: top - view.top };
+      return;
+    }
+    if (pin.range !== range) {
+      pin.range = range;
+      view.top = this.clampTop(view, layout, top - pin.screen);
+      view.topAnchor = anchorAt(layout, view.top);
+      this.ensureCursorVisible(view, layout);
+    }
+    pin.screen = top - view.top;
+  }
+
+  /**
+   * The lens (live preview, 4.14): the render, with whole blocks around the cursor's line as their
+   * markdown between two rules. It opens on the cursor's block, grown by its neighbours to
+   * `lens_min_rows`; the cursor reaching past an edge brings the next block in, dropping the far
+   * ones past `lens_max` of the window; a jump moves it to the block landed on. While it's typed
+   * into, the render around it is reused (no re-parse); leaving insert mode, or an edit reaching
+   * outside it, lays the note out afresh.
    */
   private liveLayout(view: View, width: number): Layout {
     const buf = view.buf;
-    const line = view.curAnchor.anchor.line || 1;
+    const line = Math.max(1, view.curAnchor.anchor.line || 1);
     const wrap = this.ui.wrap;
-    let base = view.liveBase;
-    const lineStarts = buf.lineStarts();
-    const lineCount = lineStarts.length - (buf.source.endsWith("\n") && lineStarts.length > 1 ? 1 : 0);
-    const fresh = (): LiveBase => {
-      const rendered = buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null);
-      const blocks = blockRanges(buf.parsed.tree, Math.max(1, lineCount));
-      const b = blockAt(blocks, Math.min(line, Math.max(1, lineCount)));
-      const from = lineStarts[b[0] - 1] ?? 0;
-      const to = lineStarts[b[1]] ?? buf.source.length;
-      return { rendered, width, wrap, renderedVersion: buf.version, version: buf.version, blocks, old: b, active: b, before: buf.source.slice(0, from), after: buf.source.slice(to), lineCount };
+    const starts = buf.lineStarts();
+    const lineCount = Math.max(1, starts.length - (buf.source.endsWith("\n") && starts.length > 1 ? 1 : 0));
+    const texts = buf.source.split("\n");
+    // Rows a run of lines takes in the lens (wrapped at the width).
+    const rowsOf = (s: number, e: number) => {
+      let n = 0;
+      for (let k = s; k <= e; k++) n += wrap ? Math.max(1, Math.ceil(stringWidth(texts[k - 1] ?? "") / Math.max(1, width))) : 1;
+      return n;
     };
+    const minRows = this.config.editor.lens_min_rows;
+    const maxRows = Math.max(minRows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
+    // The lens on the cursor's block, grown by its neighbours (below, then above) to the minimum.
+    const openOn = (blocks: Block[], at: number): Block => {
+      const i = blocks.findIndex((b) => at >= b[0] && at <= b[1]);
+      let lo = i < 0 ? blocks.length - 1 : i;
+      let hi = lo;
+      while (rowsOf(blocks[lo]![0], blocks[hi]![1]) < minRows && (hi + 1 < blocks.length || lo > 0)) {
+        if (hi + 1 < blocks.length) hi++;
+        if (rowsOf(blocks[lo]![0], blocks[hi]![1]) < minRows && lo > 0) lo--;
+      }
+      return [blocks[lo]![0], blocks[hi]![1]];
+    };
+    // The cursor past an edge: the blocks up to its one come in; far ones go past the maximum.
+    const follow = (blocks: Block[], range: Block, at: number): Block => {
+      if (at >= range[0] && at <= range[1]) return range;
+      let lo = blocks.findIndex((b) => b[0] === range[0]);
+      let hi = blocks.findIndex((b) => b[1] === range[1]);
+      const i = blocks.findIndex((b) => at >= b[0] && at <= b[1]);
+      if (lo < 0 || hi < 0 || i < 0 || i > hi + 1 || i < lo - 1) return openOn(blocks, at); // a jump
+      if (i > hi) hi = i;
+      else lo = i;
+      while (rowsOf(blocks[lo]![0], blocks[hi]![1]) > maxRows && lo < hi) {
+        if (i === hi) lo++;
+        else hi--;
+      }
+      return [blocks[lo]![0], blocks[hi]![1]];
+    };
+    const around = (range: Block) => ({
+      before: buf.source.slice(0, starts[range[0] - 1] ?? 0),
+      after: buf.source.slice(starts[range[1]] ?? buf.source.length),
+    });
+    const fresh = (prev?: Block): LiveBase => {
+      const rendered = buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null);
+      const blocks = blockRanges(buf.parsed.tree, lineCount);
+      // After an edit, the lens keeps covering the lines it did (snapped to whole blocks).
+      let range: Block;
+      if (prev) {
+        const s = blockAt(blocks, Math.min(prev[0], lineCount));
+        const e = blockAt(blocks, Math.min(Math.max(prev[0], prev[1]), lineCount));
+        range = follow(blocks, [s[0], e[1]], Math.min(line, lineCount));
+      } else range = openOn(blocks, Math.min(line, lineCount));
+      return { rendered, width, wrap, renderedVersion: buf.version, version: buf.version, blocks, old: range, active: range, ...around(range), lineCount };
+    };
+    let base = view.liveBase;
     if (!base || base.width !== width || base.wrap !== wrap) base = fresh();
     else if (buf.version !== base.version) {
-      // Typed into the block, the rest untouched: the same render, the block longer or shorter.
+      // Typed into the lens, the rest untouched: the same render, the lens longer or shorter.
       const untouched = buf.source.startsWith(base.before) && buf.source.endsWith(base.after) && buf.source.length >= base.before.length + base.after.length;
-      if (view.insert && untouched) {
-        const grew = lineCount - base.lineCount;
-        base = { ...base, version: buf.version, active: [base.old[0], Math.max(base.old[0], base.old[1] + grew)], composed: undefined };
-      } else base = fresh();
+      const grew = lineCount - base.lineCount;
+      const active: Block = [base.active[0], Math.max(base.active[0], base.active[1] + grew)];
+      if (view.insert && untouched) base = { ...base, version: buf.version, active, lineCount, composed: undefined };
+      else base = fresh(active);
     } else if (line < base.active[0] || line > base.active[1]) {
-      // The cursor moved to another block: from the same render if it's current, else afresh.
-      if (base.renderedVersion === buf.version && !view.insert) {
-        const b = blockAt(base.blocks, line);
-        const from = lineStarts[b[0] - 1] ?? 0;
-        const to = lineStarts[b[1]] ?? buf.source.length;
-        base = { ...base, old: b, active: b, before: buf.source.slice(0, from), after: buf.source.slice(to), composed: undefined };
-      } else if (!view.insert) base = fresh();
+      if (base.renderedVersion === buf.version) {
+        const range = follow(base.blocks, base.active, line);
+        base = { ...base, old: range, active: range, ...around(range), composed: undefined };
+      } else if (!view.insert) base = fresh(base.active);
     }
-    if (!view.insert && base.renderedVersion !== buf.version) base = fresh();
+    if (!view.insert && base.renderedVersion !== buf.version) base = fresh(base.active);
     view.liveBase = base;
     const key = `${base.active[0]}-${base.active[1]}:${buf.version}:${base.renderedVersion}`;
     if (base.composed?.key === key) return base.composed.layout;
-    const layout = composeLive(base.rendered, base.old, base.active, buf.source.split("\n"), { width, wrap });
+    const layout = composeLive(base.rendered, base.old, base.active, texts, { width, wrap, rule: this.glyphs.hbar });
     base.composed = { key, layout };
     return layout;
   }
@@ -905,6 +973,7 @@ export class App {
     view.source = mode === "source";
     view.live = mode === "live";
     view.liveBase = undefined;
+    view.lensPin = undefined;
     view.layoutKey = ""; // re-derive the rows from the anchors: the same source line
     view.sel = null;
     view.visual = null;
@@ -3205,6 +3274,7 @@ export function computeFind(layout: Layout, query: string, current = 0, whole = 
     const source = whole ? `(?<![\\p{L}\\p{N}_])${literal}(?![\\p{L}\\p{N}_])` : literal;
     const re = new RegExp(source, /\p{Lu}/u.test(query) ? "gu" : "giu");
     layout.lines.forEach((line, row) => {
+      if (line.decor) return; // the lens's rules aren't the note's text
       const text = line.spans.map((s) => s.text).join("");
       for (const m of text.matchAll(re)) {
         if (!m[0]) break;

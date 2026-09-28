@@ -17,7 +17,10 @@ export function offsetAtPos(app: App, view: View, pos: { row: number; col: numbe
   const layout = app.currentLayout(view);
   const line = layout.lines[pos.row];
   const starts = view.buf.lineStarts();
-  if (!line?.srcMap) return 0;
+  if (!line) return 0;
+  // A rendered row (live preview, outside the lens): the start of its source line — never a guess
+  // that could land an edit somewhere else.
+  if (!line.srcMap) return starts[Math.max(0, Math.min(starts.length - 1, line.src - 1))] ?? 0;
   const cs = cells(line);
   const i = cs.findIndex((c) => c.x + c.w > pos.col);
   const within = i < 0 ? line.srcMap.end : line.srcMap.cells[i]!;
@@ -42,10 +45,12 @@ export function placeAt(app: App, view: View, at: number, past = false): void {
   }
   const src = lo + 1;
   const within = at - starts[lo]!;
-  let row = layout.lines.findIndex((l) => l.src === src);
+  // A source row for that line (live preview has rendered rows and frame rows too).
+  let row = layout.lines.findIndex((l) => l.src === src && l.srcMap);
+  if (row < 0) row = layout.lines.findIndex((l) => l.src >= src && !l.decor);
   if (row < 0) row = Math.max(0, layout.lines.length - 1);
   // Among its wrapped rows, the one that holds it (a row's end belongs to the next row).
-  while (layout.lines[row + 1]?.src === src && within >= layout.lines[row]!.srcMap!.end) row++;
+  while (layout.lines[row + 1]?.src === src && layout.lines[row + 1]?.srcMap && within >= (layout.lines[row]!.srcMap?.end ?? 0)) row++;
   const line = layout.lines[row]!;
   const cs = cells(line);
   const map = line.srcMap?.cells ?? [];
@@ -109,7 +114,7 @@ export function startInsert(app: App, view: View, at: (v: View) => number, past 
   if (!editable(view)) {
     const mode = app.editMode();
     app.setViewMode(view, mode);
-    app.message("info", mode === "live" ? "live preview — the block you're in is its markdown" : "source — editing the markdown");
+    app.message("info", mode === "live" ? "the lens: editing the markdown around the cursor — esc esc closes it" : "source — editing the markdown");
   }
   view.sel = null;
   view.visual = null;
@@ -282,6 +287,8 @@ export function insertKey(app: App, view: View, key: string): void {
       // A row up or down (wrapped rows count), at the goal column, past the end allowed.
       const layout = app.currentLayout(view);
       const row = Math.max(0, Math.min(layout.lines.length - 1, view.cur.row + (key === "up" ? -1 : 1)));
+      // Only onto rows of text: the lens's rules and the render beyond them stop it (normal mode moves on).
+      if (!layout.lines[row]?.srcMap) return;
       const cs = cells(layout.lines[row]);
       const last = cs[cs.length - 1];
       const endCol = last ? last.x + last.w : 0;

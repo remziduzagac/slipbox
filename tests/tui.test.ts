@@ -1414,67 +1414,110 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
   });
 });
 
-describe("live preview (space n l, step 5)", () => {
-  const note = "# Title\n\nPara with **bold** text.\n\n- item one\n- item two\n\nEnd para.\n";
+describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => {
+  // Twenty short paragraphs: blocks of two lines (the paragraph and the blank after it).
+  const note = `# Title\n\n${Array.from({ length: 20 }, (_, i) => `Para ${i + 1} with **bold**.`).join("\n\n")}\n`;
   const setup = async (config?: (c: Config) => void) => {
     const root = makeVault();
     writeFileSync(join(root, "l.md"), note);
     const h = await harness({ root, open: "l.md", width: 100, height: 30, config });
     const v = h.app.view!;
-    const rows = () => h.app.currentLayout(v).lines.map((l) => l.spans.map((x) => x.text).join("").trimEnd());
+    const L = () => h.app.currentLayout(v);
+    const rows = () => L().lines.map((l) => l.spans.map((x) => x.text).join("").trimEnd());
     const goto = (text: string) => {
-      const r = rows().findIndex((t) => t.includes(text));
-      h.app.moveCursor(v, { row: r, col: 0 });
+      h.app.moveCursor(v, { row: rows().findIndex((t) => t.includes(text)), col: 0 });
       h.frame();
     };
-    return { h, v, rows, goto };
+    const lens = () => {
+      const lines = L().lines;
+      const top = lines.findIndex((l) => l.decor);
+      const bottom = lines.findIndex((l, i) => i > top && l.decor);
+      return { top, bottom, source: lines.slice(top + 1, bottom).map((l) => l.spans.map((x) => x.text).join("")) };
+    };
+    return { h, v, rows, goto, lens, L };
   };
-  test("rendered, except the block the cursor is in, which is its markdown", async () => {
-    const { h, v, rows, goto } = await setup();
-    goto("Para with");
+  test("space n l opens it on the cursor's block, between two rules, grown to at least 6 rows", async () => {
+    const { h, v, rows, goto, lens } = await setup();
+    goto("Para 5 with");
     await h.keys("space", "n", "l");
     expect(v.live).toBe(true);
-    expect(statusRow(h.frame())).toContain("LIVE");
-    let r = rows();
-    expect(r).toContain("Para with **bold** text."); // the markdown
-    expect(r.some((t) => t.startsWith("#"))).toBe(false); // the heading still rendered
-    expect(r.some((t) => t.includes("- item one"))).toBe(false);
-    // Onto the second list item: just that item goes raw; the paragraph renders again.
-    goto("item two");
-    r = rows();
-    expect(r).toContain("- item two");
-    expect(r.some((t) => t.includes("- item one"))).toBe(false);
-    expect(r.some((t) => t.includes("**bold**"))).toBe(false);
-    expect(h.app.cursorLine(v)).toBe(6);
+    expect(statusRow(h.frame())).toContain("LENS");
+    const l = lens();
+    expect(l.top).toBeGreaterThan(0);
+    expect(rows()[l.top]).toContain("source · lines");
+    expect(l.source).toContain("Para 5 with **bold**."); // the markdown
+    expect(l.source.length).toBeGreaterThanOrEqual(6); // neighbours pulled in
+    expect(rows().some((t) => t.includes("Para 15 with bold."))).toBe(true); // rendered further off
+    // The cursor is in it, never on a rule.
+    expect(v.cur.row).toBeGreaterThan(l.top);
+    expect(v.cur.row).toBeLessThan(l.bottom);
   });
-  test("typing in the block: the rest stays rendered and shifts; leaving renders the edit", async () => {
-    const { h, v, rows, goto } = await setup();
+  test("moving past its edge brings the next block in; the lens keeps its place on screen", async () => {
+    const { h, v, goto, lens } = await setup();
+    goto("Para 3 with");
     await h.keys("space", "n", "l");
-    goto("Para with");
-    await h.keys("shift+a", "enter");
-    for (const ch of "More *here*.") await h.keys(ch === " " ? "space" : ch);
-    let r = rows();
-    expect(r).toContain("More *here*.");
-    expect(r.some((t) => t.startsWith("#"))).toBe(false); // still rendered around it
-    // The rows after the block moved down a line, still rendered, their source lines renumbered.
-    const layout = h.app.currentLayout(v);
-    const end = layout.lines.find((l) => l.spans.map((x) => x.text).join("").includes("End para."))!;
-    expect(end.src).toBe(9);
-    await h.keys("escape", "shift+g");
     h.frame();
-    r = rows();
-    expect(r.some((t) => t.includes("*here*"))).toBe(false); // rendered now: emphasis, no stars
-    expect(r.some((t) => t.includes("More here."))).toBe(true);
-    expect(v.buf.source).toContain("Para with **bold** text.\nMore *here*.\n");
+    const screen = lens().top - v.top;
+    const before = lens().source.length;
+    for (let k = 0; k < 12; k++) await h.keys("j");
+    h.frame();
+    const l = lens();
+    expect(v.cur.row).toBeGreaterThan(l.top);
+    expect(v.cur.row).toBeLessThan(l.bottom);
+    expect(l.top - v.top).toBe(screen); // the page moved under it
+    expect(l.source.length).toBeGreaterThanOrEqual(before);
+    expect(l.source.length).toBeLessThanOrEqual(Math.floor(v.height * 0.5) + 2); // the maximum
+    // A jump: the lens goes to where the cursor lands.
+    await h.keys("shift+g");
+    h.frame();
+    expect(lens().source.join("\n")).toContain("Para 20 with **bold**.");
   });
-  test("[editor] edit_in = live: i from the render goes to live preview", async () => {
-    const { h, v, goto } = await setup((c) => (c.editor.edit_in = "live"));
-    goto("End para");
+  test("esc esc from typing closes it; i from the render (edit_in = live) opens it typing", async () => {
+    const { h, v, goto, lens } = await setup((c) => (c.editor.edit_in = "live"));
+    goto("Para 7 with");
     await h.keys("i");
     expect(v.live).toBe(true);
     expect(v.insert).toBe(true);
-    await h.keys("escape", "space", "n", "l");
+    await h.keys("escape");
+    expect(v.live).toBe(true); // normal mode, still open
+    expect(statusRow(h.frame())).toContain("LENS");
+    await h.keys("escape");
     expect(v.live).toBe(false);
+    expect(lens().top).toBe(-1);
+  });
+  test("typing in it doesn't re-parse; what's after shifts; closing renders the edit", async () => {
+    const { h, v, goto, rows } = await setup();
+    goto("Para 2 with");
+    await h.keys("space", "n", "l", "shift+a", "enter");
+    const rendered = v.liveBase!.renderedVersion;
+    for (const ch of "New *line*.") await h.keys(ch === " " ? "space" : ch);
+    expect(v.liveBase!.renderedVersion).toBe(rendered); // the render around it reused
+    expect(rows()).toContain("New *line*.");
+    const last = h.app.currentLayout(v).lines.find((l) => l.spans.map((x) => x.text).join("").includes("Para 20 with"))!;
+    expect(last.src).toBe(42); // renumbered: one line further down
+    await h.keys("escape", "escape");
+    expect(rows().some((t) => t.includes("New line."))).toBe(true);
+    expect(v.buf.source).toContain("Para 2 with **bold**.\nNew *line*.\n");
+  });
+  test("a click in the render outside it moves the lens there", async () => {
+    const { h, v, goto, lens, rows } = await setup();
+    goto("Para 2 with");
+    await h.keys("space", "n", "l");
+    h.frame();
+    const pane = h.app.geometry!.panes[0]!;
+    // The lowest rendered paragraph on screen.
+    let target = -1;
+    rows().forEach((t, i) => {
+      if (i >= v.top && i < v.top + v.height && i > lens().bottom && /Para \d+ with bold\./.test(t)) target = i;
+    });
+    const which = /Para (\d+)/.exec(rows()[target]!)![1];
+    const y = pane.y + target - v.top;
+    h.app.handleMouse({ type: "down", x: pane.textX + 2, y, button: 0 });
+    h.app.handleMouse({ type: "up", x: pane.textX + 2, y, button: 0 });
+    h.frame();
+    expect(v.live).toBe(true);
+    expect(lens().source.join("\n")).toContain(`Para ${which} with **bold**.`);
+    expect(h.app.cursorLine(v)).toBe(1 + 2 * Number(which));
   });
 });
 

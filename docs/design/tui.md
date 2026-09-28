@@ -491,22 +491,39 @@ spaces up to the next stop, all mapping to the tab; a wide character is one cell
 a control character shows as `�` and never reaches the terminal; a CRLF's CR isn't shown — so a
 cursor column maps to an exact place in the text, which editing (next) builds on.
 
-## Live preview (plan `4.14`, phase 3 step 5)
+## The lens: live preview (plan `4.14`, phase 3 step 5)
 
-`space n l` (`:live`) shows a window's note rendered, except the block the cursor is in, which is
-its markdown — to read and edit in place; the chip reads `LIVE`. A block is a top-level node (a
-paragraph, a heading, a table, a code block, a quote), a list's top-level item, each with the blank
-lines after it, so the blocks cover the note. Moving into another block renders the one left and
-opens the new one. Everything in [Editing](#editing-plans-43-44-45-phase-3-step-3) works in it: the
-block's rows are source rows (`srcMap`), the rest rendered rows the cursor passes over.
+Editing a rendered note happens in **the lens**: whole blocks around the cursor shown as their
+markdown between two rules, the rest of the note rendered above and below it. Where you're looking
+is source; nothing is half rendered. The top rule is labelled with its lines (`── source · lines
+12–18 ──`). A block is a top-level node (a paragraph, a heading, a table, a code block, a quote) or a
+list's top-level item, each with the blank lines after it, so the blocks cover the note.
 
-It is composed, not re-rendered (`core/layout/live.ts`): the render with the block's rows swapped
-for source rows. While the block is being typed into, the render around it is reused as it was —
-the rows after it renumbered by the lines added or taken away — so a keystroke never re-parses the
-note (this is plan `15.1`'s per-block re-layout, for the block being edited). Leaving insert mode,
-or an edit reaching outside the block, lays the note out afresh. `[editor] edit_in = "live"` makes
-the editing keys (`i`, `a`, `o`…) switch a rendered window to live preview instead of source mode
-(the default, until live preview's look is settled).
+**The session.** With `[editor] edit_in = "live"`, `i` `a` `o` and the other editing keys open the
+lens typing; `space n l` (`:live`) opens it in normal mode. The chip reads `LENS` (`INSERT` while
+typing). `esc` from typing goes to normal mode with the lens still open — the vim commands work on
+what's in it — and `esc` in normal mode closes it: everything renders again. Reading, there is no
+lens and the keys are the reading keys.
+
+**Its size.** It opens on the cursor's block and takes in the neighbours (below, then above) until
+it has `[editor] lens_min_rows` rows of markdown (6), so a one-line paragraph isn't a sliver and
+small moves don't reshape it. It never splits a block.
+
+**Moving while it's open.** The cursor stays in it. Moving inside changes nothing; moving past an
+edge brings the next block in, dropping the far ones once it's taller than `[editor] lens_max` of
+the window (half); a jump (`g g`, `shift+g`, a search, `n`, the outline) moves it to the block landed
+on. It keeps its height on screen: when it moves or grows, the page scrolls under it, so your eyes
+stay in one place. A click in the rendered text outside it moves it there; the wheel scrolls the
+page freely, the lens riding with its text. In insert mode the arrows stop at its rules. A single
+block taller than the maximum shows whole for now (scrolling inside the lens is to come).
+
+**How it's drawn.** It is composed, not re-rendered (`core/layout/live.ts`): the render with the
+lens's rows swapped for source rows (which carry `srcMap`, so everything in
+[Editing](#editing-plans-43-44-45-phase-3-step-3) works in it) and its rules as frame rows
+(`decor`: the cursor steps over them, find ignores them, they map to no text). While it's being
+typed into, the render around it is reused — the rows after it renumbered by the lines added or
+taken away — so a keystroke never re-parses the note (plan `15.1`'s per-block re-layout, for the
+lens). Leaving insert mode, or an edit reaching outside it, lays the note out afresh.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
 

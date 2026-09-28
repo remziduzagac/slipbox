@@ -31,6 +31,21 @@ export function blockRanges(tree: Root, lineCount: number): Block[] {
   return sorted.map((s, i) => [s, (sorted[i + 1] ?? lineCount + 1) - 1] as Block);
 }
 
+/** A lens rule: the glyph across the width, a label after its first two. */
+function lensRule(glyph: string, width: number, src: number, label: string): Line {
+  const head = label ? glyph.repeat(2) : "";
+  const rest = Math.max(0, width - head.length - label.length);
+  return {
+    spans: [
+      { text: head, role: "border", attrs: 0 },
+      ...(label ? [{ text: label, role: "dim" as const, attrs: 0 }] : []),
+      { text: glyph.repeat(rest), role: "border", attrs: 0 },
+    ],
+    src: Math.max(0, src),
+    decor: true,
+  };
+}
+
 /** The block holding source line `line`. */
 export function blockAt(blocks: Block[], line: number): Block {
   for (const b of blocks) if (line >= b[0] && line <= b[1]) return b;
@@ -40,6 +55,8 @@ export function blockAt(blocks: Block[], line: number): Block {
 export interface LiveOptions {
   width: number;
   wrap: boolean;
+  /** The lens: a rule of this glyph above and below the source rows (frame rows, `decor`). */
+  rule?: string;
 }
 
 /**
@@ -56,7 +73,11 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
   const place = () => {
     if (placed) return;
     placed = true;
+    // The lens's rules carry the line before it and its last line, so an anchor on any line of
+    // the block lands on a source row, never on a rule.
+    if (opts.rule) out.push(lensRule(opts.rule, opts.width, active[0] - 1, ` source · ${active[0] === active[1] ? `line ${active[0]}` : `lines ${active[0]}–${active[1]}`} `));
     for (const l of source.lines) out.push({ ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })) });
+    if (opts.rule) out.push(lensRule(opts.rule, opts.width, active[1], ""));
   };
   rendered.lines.forEach((l, i) => {
     if (l.src < old[0]) {

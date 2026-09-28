@@ -56,7 +56,7 @@ function sourceEdit(a: App, run: (v: View) => void | Promise<void>, edits = true
     if (!editable(v)) {
       const mode = a.editMode();
       a.setViewMode(v, mode);
-      a.message("info", mode === "live" ? "live preview — the block you're in is its markdown" : "source — editing the markdown");
+      a.message("info", mode === "live" ? "the lens: editing the markdown around the cursor — esc esc closes it" : "source — editing the markdown");
     }
     return run(v);
   });
@@ -611,6 +611,7 @@ export function registerActions(app: App): void {
       const v = a.view;
       if (!v) return;
       if (v.sel || v.visual) Object.assign(v, { visual: null, sel: null });
+      else if (v.live) a.setViewMode(v, "rendered"); // esc in normal mode closes the lens
       else if (v.find) v.find = null;
       else if (a.region !== "content") a.region = "content";
     },
@@ -869,7 +870,7 @@ export function registerActions(app: App): void {
     "view.live": (a) =>
       withView(a, (v) => {
         a.setViewMode(v, v.live ? "rendered" : "live");
-        a.message("info", v.live ? "live preview — the block you're in is its markdown" : "rendered");
+        a.message("info", v.live ? "the lens: the markdown around the cursor — esc closes it" : "rendered");
       }),
     // Editing (source mode; step 3). Entering insert from the render switches to source first.
     "edit.insert": (a) => withView(a, (v) => E.startInsert(a, v, (w) => E.offsetOf(a, w))),

@@ -360,7 +360,8 @@ common, and the only reason they are step 0.
 | 4.11 | Checkbox toggle — a key and a click on `[ ]`; the first write |
 | 4.12 | Remote hand-off — open the note in an editor already running (nvim `--server`), no wait |
 | 4.13 | Source mode — the raw markdown as a layout, so the reading keys work unchanged |
-| 4.14 | Live preview — the block under the cursor as its source, edited in place |
+| 4.14 | Live preview — the block under the cursor as its source, edited in place (the lens) |
+| 4.15 | The lens scrolls inside a block taller than its maximum, with "↑ N lines" on its rules |
 
 ## Concurrency — `5.x`
 

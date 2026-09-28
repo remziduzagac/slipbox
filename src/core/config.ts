@@ -98,6 +98,10 @@ export interface Config {
     autosave_ms: number;
     /** What the editing keys (i, a, o…) switch a rendered window to: "source" or "live" preview. */
     edit_in: "source" | "live";
+    /** The lens (live preview): at least this many rows of markdown, its neighbours pulled in. */
+    lens_min_rows: number;
+    /** …and it stops taking in neighbours at this share of the window (a bigger block shows whole). */
+    lens_max: number;
   };
   watch: {
     enabled: boolean;
@@ -157,7 +161,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   capture: { location: "state", file: "scratch.md" },
-  editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source" },
+  editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
   aliases: {},
@@ -176,6 +180,8 @@ const ENUMS: Record<string, readonly string[]> = {
 
 /** Numeric keys and their allowed range. */
 const RANGES: Record<string, [number, number]> = {
+  "editor.lens_min_rows": [1, 200],
+  "editor.lens_max": [0.1, 1],
   "editor.autosave_ms": [0, 3_600_000],
   "render.inset": [0, 40],
   "render.max_width": [0, 1000],
@@ -283,7 +289,7 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
 }
 
 /** Ranged settings that may be fractional; every other ranged number must be whole. */
-const FRACTIONAL = new Set(["ui.split_ratio"]);
+const FRACTIONAL = new Set(["ui.split_ratio", "editor.lens_max"]);
 
 /** A relative path that stays inside its base: not empty, not absolute, no `..` segment. */
 export function isSafeRelative(p: string): boolean {

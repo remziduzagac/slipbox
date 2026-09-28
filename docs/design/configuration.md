@@ -69,7 +69,9 @@ file = "scratch.md"            # a relative .md path; no "..", no hidden part (e
 [editor]                       # {file} and {line} fill in inside arguments; never through a shell
 command = ""                   # space n e: runs here, slipbox waits; "" = $VISUAL, $EDITOR, vi (+line)
 autosave_ms = 30000            # save a changed note after this long without a key; 0 = off
-edit_in = "source"             # where i, a, o… take a rendered window: "source" or "live" preview
+edit_in = "source"             # where i, a, o… take a rendered window: "source" or "live" (the lens)
+lens_min_rows = 6              # the lens takes in neighbouring blocks up to at least this many rows
+lens_max = 0.5                 # …and stops at this share of the window
 remote = ["nvim"]              # space n s: "nvim" finds the running nvims (space n p picks);
                                # else commands run in order, e.g. "code -g {file}:{line}", or
                                # ['nvim --server {server} --remote {file}', …], {server} picked

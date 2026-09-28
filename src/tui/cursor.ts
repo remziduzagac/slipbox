@@ -51,7 +51,14 @@ export function snap(layout: Layout, row: number, x: number): number {
 }
 
 export function clampPos(layout: Layout, p: Pos): Pos {
-  const row = Math.max(0, Math.min(p.row, lastRow(layout)));
+  let row = Math.max(0, Math.min(p.row, lastRow(layout)));
+  // Never on a frame row: the next row of text, else the one before.
+  if (layout.lines[row]?.decor) {
+    let r = row;
+    while (layout.lines[r]?.decor && r < lastRow(layout)) r++;
+    if (layout.lines[r]?.decor) for (r = row; layout.lines[r]?.decor && r > 0; ) r--;
+    row = r;
+  }
   return { row, col: snap(layout, row, p.col) };
 }
 
@@ -73,7 +80,11 @@ export function right(layout: Layout, p: Pos): Pos {
 }
 
 export function vertical(layout: Layout, p: Pos, delta: number, goal: number): Pos {
-  const row = Math.max(0, Math.min(p.row + delta, lastRow(layout)));
+  let row = Math.max(0, Math.min(p.row + delta, lastRow(layout)));
+  // Frame rows (the lens's rules) are stepped over, in the direction of travel.
+  const dir = delta < 0 ? -1 : 1;
+  while (layout.lines[row]?.decor && row + dir >= 0 && row + dir <= lastRow(layout)) row += dir;
+  if (layout.lines[row]?.decor) row = p.row;
   return { row, col: snap(layout, row, goal) };
 }
 
