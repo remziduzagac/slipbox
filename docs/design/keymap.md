@@ -332,7 +332,7 @@ mouse off, which gives it back to the terminal.
 | scrollbar (window, explorer, outline) | click to jump; drag to scroll |
 | horizontal scrollbar | click to jump sideways; drag to scroll sideways (a side pane's also focuses it) |
 | status line path | copy the note's path |
-| message line | click to open the messages |
+| message (top bar) | click to open the messages |
 | which-key popup | click an entry: a group opens it, a command runs it |
 
 ### Content, panes, lists

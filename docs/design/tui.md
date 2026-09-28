@@ -24,7 +24,7 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- ≡   slipbox                                                 indexing 3…   ← top bar (ui.top_bar)
+ ≡   slipbox                     ↻ alpha.md reloaded  indexing 3…   ← top bar (ui.top_bar), latest message
 ━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━  ← the frame's top rule
  Explorer   ┃ 1 index × ┃ 2 alpha × ┃                               ┃ +3   ← tab strip; +N when some don't fit
 ━━━━━━━━━━━━╋━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━  ← the explorer's title rule, the strip's rule
@@ -40,8 +40,7 @@ Code, in `src/tui/`:
            │                                                │
            └───────────────────── backspace up · esc cancel ┘
 ━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
- READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line
- ↻ notes/alpha.md changed on disk — reloaded                               ← message or prompt
+ READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line, or a prompt
 ```
 
 **The frame.** Right under the top bar, a `━` rule in the `border` role runs across the top of
@@ -54,13 +53,14 @@ where it ends on one, `┣` `┫` `╋` where it continues through, and the corn
 (ascii: `+`). Borders are always the plain `border` colour; focus shows as brightness (see the side
 panes). Zen mode has no frame.
 
-**The top bar** has buttons and vault-wide state; the middle is empty. It sits on the page's
+**The top bar** has buttons, the latest message and vault-wide state. It sits on the page's
 background like the rest, so the frame's rule under it gives it the same half row of air the tab
 strip and the titles get from theirs:
 
 - on the left, `≡` shows the explorer (focusing it and revealing the current note) or hides it,
   and the `slipbox` chip (plain accent text) opens the command palette;
-- on the right, vault-wide state (`indexing N…`, `single-file`), dropped when fewer than 12
+- at the right end, the latest message while it shows (below);
+- left of it, vault-wide state (`indexing N…`, `single-file`), dropped when fewer than 12
   columns are left.
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is
@@ -114,8 +114,13 @@ On the right it shows the link under the cursor and its status (`→ [[beta]] (r
 progress (`/query 2/7`), then `tab N/M` when there are two or more tabs, then `L<source
 line>:<column>` and the percentage (`all` when the note fits).
 
-**The bottom line** appears only while there is a message (4 s, 8 s for errors) or a prompt.
-Clicking a message opens the messages list.
+**Messages and prompts never take a row of their own,** so the note never changes height for them.
+The latest message (4 s, 8 s for errors) sits at the right end of the top bar, right-aligned, cut
+with `…` to the room left; its level shows as colour and a glyph: `✗` error, `!` warning, `·` info
+(ascii `x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just
+that). Clicking it opens the messages list. Without a top bar (`ui.top_bar = false`) it takes over
+the status line while it shows. A prompt (`/` find) takes over the status line while it's open. In
+zen, with neither bar, both are drawn over the screen's last row.
 
 **Scrollbars.** The last column of each window is its scrollbar: a `▐` track (`scrollbar_track`)
 with a `▐` thumb (`scrollbar` in the active window, `border` in the other); ascii `|` and `#`. The
@@ -338,7 +343,7 @@ on its background do nothing). It also shows in resize mode (titled "resize", wi
 any other key leaves").
 
 **The message sink (plan `3.13`).** Config warnings, walk errors, watcher problems and command
-feedback all go to one place: the bottom line briefly, the messages list permanently (the last
+feedback all go to one place: the top bar briefly, the messages list permanently (the last
 500).
 
 ## UI settings

@@ -95,14 +95,13 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const topBar = app.config.ui.top_bar && !zen ? 1 : 0;
   const tabBar = app.tabs.length > 0 && !zen ? 1 : 0;
   const status = zen ? 0 : 1;
-  const bottomLine = app.overlay?.kind === "prompt" || app.transient ? 1 : 0;
   const head = topBar;
   // The frame: a rule across the top of the explorer, the tab strip (or the window) and the
   // outline, and one across their bottom; with tabs, another under the strip, over the note and
   // the outline. Zen has none.
   const frame = !zen;
   const mainY = frame ? head + 1 + (tabBar ? 2 : 0) : 0;
-  const mainH = H - mainY - (frame ? 1 : 0) - status - bottomLine;
+  const mainH = H - mainY - (frame ? 1 : 0) - status;
   const bottom = mainY + mainH - 1;
   // Borders run down to the bottom rule, where they join it.
   const borderEnd = frame ? bottom + 1 : bottom;
@@ -180,11 +179,13 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // shows one (none drew it, or an overlaid pane hides it).
   if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
 
-  if (status) drawStatus(app, c, { y: H - status - bottomLine, h: 1 }, geo);
-  if (bottomLine) {
-    drawBottomLine(app, c, H - 1);
-    if (app.transient && app.overlay?.kind !== "prompt") geo.hot.push({ id: "status:message", x: 0, y: H - 1, w: W, h: 1 });
-  }
+  // Messages and prompts never take a row of their own, so the note never changes height for
+  // them. A prompt takes over the status line while it's open (in zen, the screen's last row);
+  // a message sits in the top bar, or without one takes over the status line the same way.
+  const prompt = app.overlay?.kind === "prompt";
+  const messageInBar = topBar && app.transient && !prompt;
+  if (prompt || (app.transient && !messageInBar)) drawBottomLine(app, c, H - 1, geo);
+  else if (status) drawStatus(app, c, { y: H - status, h: 1 }, geo);
   if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay) drawWhichKey(app, c, mainY, mainY + mainH, geo);
   if (app.overlay?.kind === "list") geo.overlay = drawList(app, c, app.overlay, mainY, mainH);
   return geo;
@@ -237,8 +238,9 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
     button(app, c, rx, band, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);
     rx -= 1;
   }
+  // The latest message, at the right end: it never moves the note, as a row of its own would.
+  if (app.transient && app.overlay?.kind !== "prompt") rx = drawMessage(app, c, x + 2, rx, y, bar.bg, geo) - 1;
   // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
-  // The middle is left empty.
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
   if (app.loc.mode === "single") items.push({ text: "single-file", role: "status_dim" });
@@ -878,21 +880,39 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   if (rx > x) drawText(c, rx, y, right, roleStyle(theme, "status_dim", page));
 }
 
-function drawBottomLine(app: App, c: Canvas, y: number): void {
+/** A prompt, or a message with no top bar to sit in, over the status line (zen: the last row). */
+function drawBottomLine(app: App, c: Canvas, y: number, geo: Geometry): void {
   const theme = app.theme;
-  const page = pageBg(theme);
-  c.fill(0, y, c.width, 1, page);
+  const bg = app.ui.zen ? pageBg(theme) : roleStyle(theme, "status", pageBg(theme)).bg;
+  c.fill(0, y, c.width, 1, bg);
   const o = app.overlay;
   if (o?.kind === "prompt") {
-    const x = drawText(c, 0, y, o.label, roleStyle(theme, "info", page));
-    const w = drawText(c, x, y, truncate(o.text, c.width - x - 2), roleStyle(theme, "text", page));
-    drawText(c, x + w, y, " ", roleStyle(theme, "cursor", page));
+    const x = drawText(c, 1, y, o.label, { ...roleStyle(theme, "info", bg), bg }) + 1;
+    const w = drawText(c, x, y, truncate(o.text, c.width - x - 2), { ...roleStyle(theme, "text", bg), bg });
+    drawText(c, x + w, y, " ", roleStyle(theme, "cursor", bg));
     return;
   }
+  if (!app.transient) return;
+  drawMessage(app, c, 1, c.width - 1, y, bg, geo);
+}
+
+/** The latest message between `x0` and `x1`, right-aligned, its level as colour and a glyph;
+ *  a click opens the messages. */
+function drawMessage(app: App, c: Canvas, x0: number, x1: number, y: number, bg: Color | null, geo: Geometry): number {
   const m = app.transient;
-  if (!m) return;
+  if (!m || x1 - x0 < 6) return x1;
+  const theme = app.theme;
+  const g = app.glyphs;
   const role: Role = m.level === "error" ? "error" : m.level === "warn" ? "warn" : "info";
-  drawText(c, 1, y, truncate(m.text, c.width - 2), roleStyle(theme, role, page));
+  // An info message that starts with its own symbol (`↻ … reloaded`) needs no second one.
+  const mark = m.level === "error" ? g.msgError : m.level === "warn" ? g.msgWarn : /^[\p{L}\p{N}"'`(]/u.test(m.text) ? g.msgInfo : "";
+  const text = truncate(mark ? `${mark} ${m.text}` : m.text, x1 - x0);
+  const w = stringWidth(text);
+  const id = "status:message";
+  const st = app.hover === id ? roleStyle(theme, "hover", bg) : { ...roleStyle(theme, role, bg), bg };
+  drawText(c, x1 - w, y, text, st);
+  geo.hot.push({ id, x: x1 - w, y, w, h: 1 });
+  return x1 - w;
 }
 
 /**

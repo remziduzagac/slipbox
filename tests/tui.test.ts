@@ -998,6 +998,34 @@ describe("top bar, tab strip, status line", () => {
     click(h, msg.x + 3, msg.y);
     expect(h.frame()).toContain("Messages");
   });
+  test("messages sit in the top bar and prompts on the status line: the note never changes height", async () => {
+    const h = await harness({ open: "notes/alpha.md", width: 100, height: 24 });
+    h.frame();
+    const height = h.app.view!.height;
+    const lines = () => h.frame().split("\n");
+    h.app.message("error", "something broke");
+    let f = lines();
+    expect(h.app.view!.height).toBe(height);
+    expect(f[0]).toContain("✗ something broke");
+    expect(f.at(-1)).toContain("READ"); // the status line stays
+    const msg = h.app.geometry!.hot.find((r) => r.id === "status:message")!;
+    expect(msg.y).toBe(0);
+    await h.keys("/", "B");
+    expect(h.app.overlay?.kind).toBe("prompt");
+    f = lines();
+    expect(h.app.view!.height).toBe(height);
+    expect(f.at(-1)).toMatch(/^ \/B/);
+    expect(f.at(-1)).not.toContain("READ");
+    await h.keys("escape");
+    // Without a top bar, a message takes over the status line for its while.
+    const n = await harness({ open: "notes/alpha.md", width: 100, height: 24, config: (c) => (c.ui.top_bar = false) });
+    n.frame();
+    const nh = n.app.view!.height;
+    n.app.message("warn", "careful");
+    f = n.frame().split("\n");
+    expect(n.app.view!.height).toBe(nh);
+    expect(f.at(-1)).toContain("! careful");
+  });
   test("split windows: title then breadcrumb on one row; a click acts on its own window", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 160 });
     await h.keys("ctrl+w", "v");

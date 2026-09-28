@@ -63,6 +63,10 @@ export interface Glyphs {
   crumb: string;
   /** Before a window's breadcrumb. */
   crumbIcon: string;
+  /** Before a message, by level, so the level shows without colour too. */
+  msgError: string;
+  msgWarn: string;
+  msgInfo: string;
 }
 
 const unicode: Glyphs = {
@@ -112,6 +116,9 @@ const unicode: Glyphs = {
   close: "×",
   crumb: "›",
   crumbIcon: "§",
+  msgError: "✗",
+  msgWarn: "!",
+  msgInfo: "·",
 };
 
 const nerd: Glyphs = {
@@ -177,6 +184,9 @@ const ascii: Glyphs = {
   close: "x",
   crumb: ">",
   crumbIcon: "#",
+  msgError: "x",
+  msgWarn: "!",
+  msgInfo: "-",
 };
 
 const SETS = { unicode, nerd, ascii };
