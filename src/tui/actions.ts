@@ -748,6 +748,15 @@ export function registerActions(app: App): void {
     "find.prev": (a) => findStep(a, -1),
     "task.toggle": (a) => withView(a, (v) => a.toggleTaskAt(v)),
     "note.edit": (a) => withView(a, (v) => a.editInEditor(v)),
+    "view.source": (a) =>
+      withView(a, (v) => {
+        a.remember(v);
+        v.source = !v.source;
+        v.layoutKey = ""; // re-derive the rows from the anchors: the same source line
+        v.sel = null;
+        v.visual = null;
+        a.message("info", v.source ? "source — the note's markdown" : "rendered");
+      }),
     "note.send": (a) => withView(a, (v) => a.sendToEditor(v)),
     "note.send_pick": (a) => withView(a, (v) => a.sendToEditor(v, true)),
     "find.word_next": (a) => findWord(a, 1),

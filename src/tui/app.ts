@@ -129,6 +129,8 @@ export interface View {
   width: number;
   /** First column on screen when wrapping is off (horizontal scroll). */
   left: number;
+  /** Showing the note's raw markdown (source mode, 4.13) instead of its render. */
+  source?: boolean;
 }
 
 export interface Tab {
@@ -750,9 +752,15 @@ export class App {
   }
 
   layoutFor(view: View, paneWidth: number, gutter = 0): Layout {
-    const width = this.ui.wrap ? this.textWidth(paneWidth, gutter) : this.nowrapWidth(view, paneWidth, gutter);
-    const layout = view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
-    const key = `${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.stamp?.mtimeMs ?? 0}:${view.height}`;
+    // Source mode: the whole text column (no readable width), less one for a cursor after a full
+    // row's end; unwrapped, as long as the longest line.
+    const width = view.source
+      ? Math.max(10, paneWidth - gutter - 2)
+      : this.ui.wrap
+        ? this.textWidth(paneWidth, gutter)
+        : this.nowrapWidth(view, paneWidth, gutter);
+    const layout = view.source ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs) : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
+    const key = `${view.source ? "s" : "r"}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.stamp?.mtimeMs ?? 0}:${view.height}`;
     if (view.layoutKey !== key) {
       view.layoutKey = key;
       view.cur = this.cursorFromAnchor(layout, view.curAnchor);

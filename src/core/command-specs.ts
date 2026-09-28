@@ -128,6 +128,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   // note, vault, app
   { id: "note.reload", title: "Reload note from disk", cli: "slipbox render <note>", desc: "Reads the note from disk again" },
   { id: "note.edit", title: "Edit in your editor", cli: I, desc: "Hands the note to your editor at the cursor's line, in this terminal; back here when it closes" },
+  { id: "view.source", title: "Source / rendered", cli: I, desc: "Shows this window's note as its raw markdown, or rendered again; the cursor stays on its line" },
   { id: "note.send", title: "Send to your running editor", cli: I, desc: "Opens the note at the cursor's line in an editor already running elsewhere: by default, a running nvim" },
   { id: "note.send_pick", title: "Choose the editor to send to", cli: I, desc: "Lists the running nvims to pick the one space n s sends to, then sends the note there" },
   { id: "note.info", title: "Note info", cli: "slipbox links <note> --json", desc: "Shows path, size, links, backlinks, encoding" },
@@ -156,7 +157,7 @@ export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Explorer", ids: /^explorer\./ },
   { title: "Outline", ids: /^outline\.(cycle|toggle)$/ },
   { title: "Find", ids: /^(find\.|switcher\.|outline\.pick$|breadcrumb\.path$|palette\.|note\.open$)/ },
-  { title: "Editing", ids: /^(task\.|edit\.)/ },
+  { title: "Editing", ids: /^(task\.|edit\.|view\.source$)/ },
   { title: "UI", ids: /^(ui\.|theme\.|glyphs\.)/ },
   { title: "Scratch", ids: /^scratch\./ },
   { title: "Note, vault, app", ids: /^(note\.|vault\.|config\.|messages\.|help\.|app\.)/ },

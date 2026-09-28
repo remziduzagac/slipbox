@@ -278,6 +278,7 @@ come first; source mode and the modal layer follow.
 | Action | Keys |
 | --- | --- |
 | tick or untick the task item at the cursor (the innermost, on any of its rows) | `x` |
+| show this window's note as its raw markdown, or rendered again (`:source`) | `space n v` |
 
 ## UI — `space u`
 

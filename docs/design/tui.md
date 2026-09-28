@@ -475,6 +475,22 @@ the picked nvim's socket. Every template is split into arguments and `{file}` / 
 inside them, never through a shell, so a file name can't become a command; a template without
 `{file}` gets the file appended, except a remote one.
 
+## Source mode (plan `4.13`)
+
+`space n v` (`:source`) shows a window's note as its raw markdown, and again rendered; the status
+chip reads `SOURCE`. It is another layout of the same note (`core/layout/source.ts`), so everything
+built on the layout works the same in both: the cursor keys, find and `*`, visual selection and
+copy, the mouse, wrapping, line numbers, the scrollbars. The cursor stays on its source line across
+the switch, and the outline and breadcrumb keep working, their headings borrowed from the render.
+
+A source line is a row, wrapped at the last space that fits (wrapping on) or kept whole (off); the
+text column is the window's full width, readable width aside. Highlighting is light and per line:
+frontmatter, headings, rules, quote bars, list markers and task boxes, fenced code, inline code and
+links. Every row records, for each cell drawn, the offset in its source line it shows — a tab is
+spaces up to the next stop, all mapping to the tab; a wide character is one cell two columns wide;
+a control character shows as `�` and never reaches the terminal; a CRLF's CR isn't shown — so a
+cursor column maps to an exact place in the text, which editing (next) builds on.
+
 ## External changes (plans `5.1`–`5.4`)
 
 The watcher subscribes to exactly the directories the walk includes: one non-recursive watch per

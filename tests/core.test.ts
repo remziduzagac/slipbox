@@ -10,6 +10,7 @@ import { LinkIndex } from "../src/core/links.ts";
 import { parseMarkdown, visit } from "../src/core/parse.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
+import { layoutSource } from "../src/core/layout/source.ts";
 import { expandTabs, sanitize } from "../src/core/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
@@ -409,5 +410,49 @@ describe("finding running nvims (4.12)", () => {
       for (const srv of [a, b, c]) srv.close();
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("source layout (4.13)", () => {
+  const text = (l: { spans: { text: string }[] }) => l.spans.map((s) => s.text).join("");
+  test("a row per source line; tabs, wide characters and controls map back to exact offsets", () => {
+    const L = layoutSource("a\tb\n漢x\n\x1b[31mred\r\nend\n", { width: 80, wrap: true, headings: [] });
+    expect(L.lines.map((l) => l.src)).toEqual([1, 2, 3, 4]);
+    expect(text(L.lines[0]!)).toBe("a   b"); // the tab to the next stop
+    expect(L.lines[0]!.srcMap!.cells).toEqual([0, 1, 1, 1, 2]); // every tab cell maps to the tab
+    expect(L.lines[1]!.srcMap).toEqual({ cells: [0, 1], end: 2 }); // one cell, two columns wide
+    expect(text(L.lines[2]!)).toBe("�[31mred"); // never a raw escape; no CR shown
+    expect(L.lines[2]!.srcMap!.end).toBe(8);
+  });
+  test("wrapping at the last space; each row knows where the next begins", () => {
+    const L = layoutSource("one two three four\n", { width: 9, wrap: true, headings: [] });
+    expect(L.lines.map(text)).toEqual(["one two ", "three ", "four"]);
+    expect(L.lines.map((l) => l.srcMap!.end)).toEqual([8, 14, 18]);
+    expect(L.lines.every((l) => l.src === 1)).toBe(true);
+    const nowrap = layoutSource("one two three four\n", { width: 9, wrap: false, headings: [] });
+    expect(nowrap.lines.length).toBe(1);
+    expect(nowrap.width).toBe(19);
+  });
+  test("light highlighting, and headings placed on their rows", () => {
+    const src = "---\ntitle: x\n---\n# Head\n\n- [ ] task `code` [[link]]\n```ts\nconst a = 1;\n```\n";
+    const L = layoutSource(src, { width: 80, wrap: true, headings: [{ level: 1, text: "Head", slug: "head", src: 4 }] });
+    const roleAt = (row: number, col: number) => {
+      let x = 0;
+      for (const s of L.lines[row]!.spans) {
+        if (col < x + s.text.length) return s.role;
+        x += s.text.length;
+      }
+      return null;
+    };
+    expect(roleAt(1, 0)).toBe("fm_key");
+    expect(roleAt(3, 0)).toBe("h1");
+    expect(roleAt(5, 0)).toBe("list_marker");
+    expect(roleAt(5, 2)).toBe("check_todo");
+    expect(roleAt(5, 13)).toBe("code_inline");
+    expect(roleAt(5, 20)).toBe("wikilink");
+    expect(roleAt(6, 0)).toBe("code_label");
+    expect(roleAt(7, 0)).toBe("code_block");
+    expect(L.headings).toEqual([{ level: 1, text: "Head", slug: "head", src: 4, line: 3 }]);
+    expect(L.lines[3]!.heading).toBe(0);
   });
 });

@@ -10,6 +10,7 @@ import type { Graph } from "../core/graph.ts";
 import { readText, type Stamp, stamp } from "../core/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
+import { layoutSource } from "../core/layout/source.ts";
 import { type ParsedNote, parseMarkdown } from "../core/parse.ts";
 
 export class NoteBuffer {
@@ -60,6 +61,19 @@ export class NoteBuffer {
 
   invalidateLayouts(): void {
     this.layouts.clear();
+  }
+
+  /** The raw markdown as a layout (source mode, 4.13), its headings borrowed from the render. */
+  sourceLayout(width: number, wrap: boolean, glyphs: Glyphs): Layout {
+    const key = `src:${width}:${wrap ? 1 : 0}`;
+    let l = this.layouts.get(key);
+    if (!l) {
+      const headings = this.layout(200, glyphs, false, null).headings.map(({ level, text, slug, src }) => ({ level, text, slug, src }));
+      l = layoutSource(this.source, { width, wrap, headings });
+      if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
+      this.layouts.set(key, l);
+    }
+    return l;
   }
 
   layout(width: number, glyphs: Glyphs, showUrls: boolean, graph: Graph | null): Layout {

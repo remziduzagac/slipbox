@@ -33,6 +33,12 @@ export interface Line {
   fill?: Role;
   /** Set on the first row of a heading: index into Layout.headings. */
   heading?: number;
+  /**
+   * Source-mode rows only (4.13): for each cell of the row, in order, the UTF-16 offset in source
+   * line `src` of the grapheme drawn there; `end` is the offset just past the row (where the next
+   * wrapped row starts, or the line's length).
+   */
+  srcMap?: { cells: number[]; end: number };
 }
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote";
