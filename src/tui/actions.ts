@@ -437,6 +437,7 @@ const UI_TOGGLES: { key: keyof UiState; id: string; title: string }[] = [
   { key: "wrap", id: "ui.wrap", title: "Wrap long lines" },
   { key: "urls", id: "ui.urls", title: "Show link URLs" },
   { key: "mouse", id: "ui.mouse", title: "Mouse" },
+  { key: "breadcrumb", id: "ui.breadcrumb", title: "Breadcrumb" },
 ];
 
 function toggle(a: App, key: keyof UiState, title: string): void {
@@ -838,6 +839,7 @@ export function registerActions(app: App): void {
             a.moveCursor(v, start);
             V.finishSearchOp(a, v, false);
           },
+          v, // typed in this window's find row
         );
       }),
     // f F t T: a character on the line; ; and , again, the same way or back.

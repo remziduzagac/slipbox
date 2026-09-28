@@ -154,6 +154,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "ui.cursorline", title: "Cursor-row highlight", cli: I, desc: "Highlights the cursor row" },
   { id: "ui.line_numbers", title: "Line numbers", cli: I, desc: "Shows source line numbers on the left" },
   { id: "ui.wrap", title: "Wrap long lines", cli: "slipbox render --width <n>", desc: "Wraps to the pane, or scrolls sideways when off" },
+  { id: "ui.breadcrumb", title: "Breadcrumb", cli: I, desc: "Shows or hides the heading path at the top of each window" },
   { id: "ui.urls", title: "Show link URLs", cli: "slipbox render --plain", desc: "Prints link addresses after their text" },
   { id: "ui.mouse", title: "Mouse", cli: I, desc: "Turns the mouse off so the terminal selects" },
   // scratch

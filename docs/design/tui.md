@@ -122,17 +122,23 @@ when the strip appears or goes.
   any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
   dropped when the line is too short.
 
-On the right it shows the link under the cursor and its status (`→ [[beta]] (resolved)`) or find
-progress (`/query 2/7`), then `tab N/M` when there are two or more tabs, then `L<source
-line>:<column>` and the percentage (`all` when the note fits).
+On the right it shows the link under the cursor and its status (`→ [[beta]] (resolved)`), then
+`tab N/M` when there are two or more tabs, then `L<source line>:<column>` and the percentage (`all`
+when the note fits). Find's progress is in its window's find row, not here.
+
+**Find** (`/`, `ctrl+f`) belongs to a window, so it's typed there: a row of its own under the
+breadcrumb (or at the window's top when there's none), `› query` with the match count at its right
+(`2/7`, `no matches`), and a rule under it — the look of a pane's filter. The row stays while the
+search is on (`n`, `shift+n`, `*` move through the matches) and goes with it (`esc`, `:noh`); the text
+moves down two rows while it's there. A window too short for it has its prompt on the status line.
 
 **Messages and prompts never take a row of their own,** so the note never changes height for them.
 The latest message (4 s, 8 s for errors) sits at the right end of the top bar, right-aligned, cut
 with `…` to the room left; its level shows as colour and a glyph: `✗` error, `!` warning, `·` info
 (ascii `x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just
 that). Clicking it opens the messages list. Without a top bar (`ui.top_bar = false`) it takes over
-the status line while it shows. A prompt (`/` find) takes over the status line while it's open. In
-zen, with neither bar, both are drawn over the screen's last row.
+the status line while it shows. A prompt takes over the status line while it's open (find's is in
+its window, above). In zen, with neither bar, both are drawn over the screen's last row.
 
 **Scrollbars.** The last column of each window is its scrollbar: a `▐` track (`scrollbar_track`)
 with a `▐` thumb (`scrollbar` in the active window, `border` in the other); ascii `|` and `#`. The
@@ -407,6 +413,7 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - zen (no chrome; panes only on demand)
 - the cursor-row band
 - source line numbers in a gutter
+- the breadcrumb (no key of its own: the `space u u` list, or the palette)
 - wrapping (below)
 - link URLs
 - mouse capture

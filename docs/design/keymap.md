@@ -235,7 +235,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| find in this note (cursor to the match; empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
+| find in this note, in the window's find row (empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
 | onto the next / previous character typed on the line; just before it | `f` / `shift+f`; `t` / `shift+t` | — |
 | the last `f` `t` again / the other way | `;` / `,` | — |
 | the whole word under the cursor, forward / backward | `*` / `#` | — |

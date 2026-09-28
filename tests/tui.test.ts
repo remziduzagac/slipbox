@@ -2188,6 +2188,28 @@ describe("top bar, tab strip, status line", () => {
     click(h, msg.x + 3, msg.y);
     expect(h.frame()).toContain("Messages");
   });
+  test("the breadcrumb can be hidden (a UI setting); find's row then sits at the window's top", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 120, height: 30 });
+    const v = h.app.view!;
+    await h.keys("]", "]"); // onto a heading, so the breadcrumb has something
+    expect(h.frame()).toContain("§");
+    await h.app.run("ui.breadcrumb");
+    expect(h.app.ui.breadcrumb).toBe(false);
+    let f = h.frame();
+    expect(f).not.toContain("§");
+    const pane = h.app.geometry!.panes[0]!;
+    await h.keys("/", "D", "2");
+    f = h.frame();
+    const lines = f.split("\n");
+    // The find row is the window's first row, its rule under it, then the text.
+    expect(lines[h.app.geometry!.panes[0]!.y - 2]).toMatch(/› D2/);
+    expect(pane.y).toBeLessThan(h.app.geometry!.panes[0]!.y);
+    await h.keys("escape", "escape");
+    // It's in the UI settings list, and it's remembered like the others.
+    await h.app.run("ui.breadcrumb");
+    expect(h.app.ui.breadcrumb).toBe(true);
+    void v;
+  });
   test("messages sit in the top bar and prompts on the status line: the note never changes height", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 100, height: 24 });
     h.frame();
@@ -2200,13 +2222,22 @@ describe("top bar, tab strip, status line", () => {
     expect(f.at(-1)).toContain("READ"); // the status line stays
     const msg = h.app.geometry!.hot.find((r) => r.id === "status:message")!;
     expect(msg.y).toBe(0);
-    await h.keys("/", "B");
+    // A prompt (here the scratch's clear) takes over the status line; the note keeps its height.
+    await h.keys("space", "s", "d");
     expect(h.app.overlay?.kind).toBe("prompt");
     f = lines();
     expect(h.app.view!.height).toBe(height);
-    expect(f.at(-1)).toMatch(/^ \/B/);
+    expect(f.at(-1)).toContain("clear the scratch?");
     expect(f.at(-1)).not.toContain("READ");
     await h.keys("escape");
+    // Find is the window's own: its row under the header, with the count; the status line stays.
+    await h.keys("/", "B");
+    f = lines();
+    expect(f.some((l) => /› B.*1\/1/.test(l))).toBe(true);
+    expect(f.at(-1)).toContain("READ");
+    await h.keys("escape", "escape");
+    expect(h.app.view!.find).toBeNull();
+    expect(h.app.view!.height).toBe(height); // the row gone with the search
     // Without a top bar, a message takes over the status line for its while.
     const n = await harness({ open: "notes/alpha.md", width: 100, height: 24, config: (c) => (c.ui.top_bar = false) });
     n.frame();

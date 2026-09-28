@@ -236,6 +236,8 @@ export interface PromptOverlay {
   change?: (text: string) => void;
   accept: (text: string) => void;
   cancel?: () => void;
+  /** Find's prompt: typed in that window's own find row, not on the bottom line. */
+  view?: View;
 }
 
 export type Overlay = ListOverlay | PromptOverlay;
@@ -309,6 +311,7 @@ export interface UiState {
   zen: boolean;
   mouse: boolean;
   urls: boolean;
+  breadcrumb: boolean;
   theme: string;
   glyphs: string;
 }
@@ -322,6 +325,7 @@ export function uiDefaults(c: Config): UiState {
     readable_width: c.ui.readable_width,
     zen: c.ui.zen,
     mouse: c.ui.mouse,
+    breadcrumb: c.ui.breadcrumb,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
     urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,
@@ -2167,8 +2171,8 @@ export class App {
     this.overlay = o;
   }
 
-  prompt(label: string, accept: (text: string) => void, change?: (text: string) => void, cancel?: () => void): void {
-    this.overlay = { kind: "prompt", label, text: "", accept, change, cancel };
+  prompt(label: string, accept: (text: string) => void, change?: (text: string) => void, cancel?: () => void, view?: View): void {
+    this.overlay = { kind: "prompt", label, text: "", accept, change, cancel, view };
   }
 
   closeOverlay(cancelled: boolean): void {

@@ -66,6 +66,8 @@ export interface Geometry {
   /** Horizontal rules (row `y`, columns [x0, x1)) and the vertical borders they may meet. */
   rules: { y: number; x0: number; x1: number }[];
   verticals: { x: number; y0: number; y1: number; style: CellStyle }[];
+  /** Find's prompt is drawn in its window (its find row), not on the bottom line. */
+  findInWindow?: boolean;
 }
 
 const CHANGE_MARKER_MS = 3000;
@@ -187,7 +189,8 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // Messages and prompts never take a row of their own, so the note never changes height for
   // them. A prompt takes over the status line while it's open (in zen, the screen's last row);
   // a message sits in the top bar, or without one takes over the status line the same way.
-  const prompt = app.overlay?.kind === "prompt";
+  // Find's prompt is in its window when that window had room for its find row.
+  const prompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow);
   const messageInBar = topBar && app.transient && !prompt;
   if (prompt || (app.transient && !messageInBar)) drawBottomLine(app, c, H - 1, geo);
   else if (status) drawStatus(app, c, { y: H - status, h: 1 }, geo);
@@ -529,7 +532,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const active = paneIsActive(app, view);
   let body = rect;
   // The header: a split window's title, then the breadcrumb, then a blank row before the text.
-  const crumbs = app.config.ui.breadcrumb && !app.ui.zen && rect.h >= 8;
+  const crumbs = app.ui.breadcrumb && !app.ui.zen && rect.h >= 8;
   if (crumbs) {
     // A rule, the title (in a split) and breadcrumb row on its own background, a rule. The top
     // rule is the frame's when the window is at the top.
@@ -562,6 +565,24 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     c.fill(rect.x, rect.y, rect.w, 1, st.bg);
     drawText(c, rect.x, rect.y, ` ${truncate(app.displayName(view.buf), rect.w - 2)} `, st, rect.w);
     body = { x: rect.x, y: rect.y + 1, w: rect.w, h: rect.h - 1 };
+  }
+  // Find (`/`): a row of its own under the header (or at the window's top) and a rule, while it's
+  // typed and while the search is on — the window's search, like a pane's filter.
+  const typing = app.overlay?.kind === "prompt" && app.overlay.view === view ? app.overlay : null;
+  if ((typing || view.find) && body.h > 6) {
+    const y = body.y;
+    const bg = page;
+    const text = typing ? typing.text : view.find!.query;
+    const px = drawText(c, body.x + 1, y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
+    const fw = drawText(c, body.x + 1 + px, y, truncate(text, Math.max(1, body.w - 16 - px)), { ...roleStyle(theme, "text", bg), bg });
+    if (typing) drawText(c, body.x + 1 + px + fw, y, " ", roleStyle(theme, "cursor", bg));
+    const f = view.find;
+    const count = !text ? "" : f && f.matches.length ? `${f.current + 1}/${f.matches.length}` : "no matches";
+    if (count) drawText(c, body.x + body.w - 2 - stringWidth(count), y, count, { ...roleStyle(theme, "dim", bg), bg });
+    drawText(c, body.x, y + 1, app.glyphs.hbar.repeat(body.w), roleStyle(theme, "border", page), body.w);
+    geo.rules.push({ y: y + 1, x0: body.x, x1: body.x + body.w });
+    if (typing) geo.findInWindow = true;
+    body = { ...body, y: y + 2, h: body.h - 2 };
   }
   // Wrapping off: the last row is the horizontal scrollbar's (kept even when the note fits, so
   // the text doesn't jump).
@@ -1030,7 +1051,7 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const li = app.linkUnderCursor(view);
   const link = li >= 0 ? layout.links[li] : null;
   if (link) right = `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status})  ${right}`;
-  else if (view.find) right = `/${view.find.query} ${view.find.matches.length ? view.find.current + 1 : 0}/${view.find.matches.length}  ${right}`;
+
   const rightW = stringWidth(right) + 1;
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
   x += drawText(c, x, y, " ", st);
@@ -1065,7 +1086,7 @@ function drawBottomLine(app: App, c: Canvas, y: number, geo: Geometry): void {
   const bg = app.ui.zen ? pageBg(theme) : roleStyle(theme, "status", pageBg(theme)).bg;
   c.fill(0, y, c.width, 1, bg);
   const o = app.overlay;
-  if (o?.kind === "prompt") {
+  if (o?.kind === "prompt" && !(o.view && geo.findInWindow)) {
     const x = drawText(c, 1, y, o.label, { ...roleStyle(theme, "info", bg), bg }) + 1;
     const w = drawText(c, x, y, truncate(o.text, c.width - x - 2), { ...roleStyle(theme, "text", bg), bg });
     drawText(c, x + w, y, " ", roleStyle(theme, "cursor", bg));
