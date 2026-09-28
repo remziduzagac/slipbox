@@ -209,7 +209,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | open → focus → close (a cycle) | `ctrl+o` | `space o` |
 
 Like the explorer: opening it focuses it; while open but unfocused, the key focuses it; while
-focused, the key closes it and focus returns to the note. The `▤` button on the rail (or, without
+focused, the key closes it and focus returns to the note. The `▤` button on the right rail (or, without
 it, at the right of the breadcrumb) runs `outline.toggle` instead: show and focus, or hide. It lists the note's headings
 and, while unfocused, keeps its selection on the section the cursor is in. Inside the outline
 (`[keys.outline]` in config):
@@ -327,8 +327,8 @@ mouse off, which gives it back to the terminal.
 
 | Where | What the mouse does |
 | --- | --- |
-| top bar `≡` | show the explorer (and focus it) / hide it |
-| `▤` (on the rail; without it the breadcrumb's or the top bar's) | show the outline (and focus it) / hide it |
+| `≡` (on the left rail; without it the top bar's) | show the explorer (and focus it) / hide it |
+| `▤` (on the right rail; without it the breadcrumb's or the top bar's) | show the outline (and focus it) / hide it |
 | top bar `slipbox` chip | open the command palette |
 | window breadcrumb | scroll that window to the heading, and focus it; its icon finds a heading |
 | breadcrumb `…` | the whole heading path as a dropdown; click or `enter` on one to jump there |

@@ -942,14 +942,19 @@ export class App {
     return t.orientation === "side" && this.contentWidth() < 80 ? "stacked" : t.orientation;
   }
 
-  /** The rail's columns (its border and one button wide), when it shows: never in zen. */
-  get railWidth(): number {
-    return this.config.ui.rail && !this.ui.zen && this.tabs.length ? RAIL_WIDTH : 0;
+  /** The left rail's columns (one button wide, then its border), when it shows: never in zen. */
+  get leftRailWidth(): number {
+    return this.config.ui.left_rail && !this.ui.zen ? RAIL_WIDTH : 0;
   }
 
-  /** The terminal's width less the rail's: what the panes and the note share. */
+  /** The right rail's columns (its border, then one button wide): with a note, never in zen. */
+  get rightRailWidth(): number {
+    return this.config.ui.right_rail && !this.ui.zen && this.tabs.length ? RAIL_WIDTH : 0;
+  }
+
+  /** The terminal's width less the rails': what the panes and the note share. */
   get usableWidth(): number {
-    return this.width - this.railWidth;
+    return this.width - this.leftRailWidth - this.rightRailWidth;
   }
 
   contentWidth(): number {
@@ -1762,8 +1767,8 @@ export class App {
     }
     if (d.kind === "separator") {
       const s = d.sep;
-      if (s.kind === "sidebar") this.sideW = Math.max(12, Math.min(ev.x, Math.floor(this.width * 0.5)));
-      else if (s.kind === "outline") this.outW = Math.max(12, Math.min(this.usableWidth - ev.x - 1, Math.floor(this.usableWidth * 0.5)));
+      if (s.kind === "sidebar") this.sideW = Math.max(12, Math.min(ev.x - this.leftRailWidth, Math.floor(this.usableWidth * 0.5)));
+      else if (s.kind === "outline") this.outW = Math.max(12, Math.min(this.width - this.rightRailWidth - ev.x - 1, Math.floor(this.usableWidth * 0.5)));
       else if (s.area && this.tab) {
         const r = s.kind === "split-side" ? (ev.x - s.area.x) / Math.max(1, s.area.w) : (ev.y - s.area.y) / Math.max(1, s.area.h);
         this.tab.ratio = Math.max(0.15, Math.min(0.85, r));

@@ -24,22 +24,20 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- ≡   slipbox                         ↻ alpha.md reloaded  indexing 3…  ← top bar (ui.top_bar), latest message
-━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
- Explorer   ┃ 1 index × ┃ 2 alpha × ┃                               ┃ +3     ← tab strip; +N when some don't fit
-━━━━━━━━━━━━╋━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━┳━━━  ← the explorer's title rule, the strip's rule
- ▾ notes    ┃ § Heading › Sub                                         ┃ ▤    ← the window's breadcrumb (tinted), over
- ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┫        the outline; the rail at the right,
- └─  alpha  ┃ ▌ Sub                            ┃ Outline             ┃        its ▤ toggles the outline
-            ┃ Text with the █ursor on its row… ┃                     ┃      ← explorer ┃ note ┃ outline ┃ rail
-            ┃                                  ┃ ▾ Heading           ┃        (both panes optional)
-           ┌─ ␣ l › links ──────────────────────────────────┐        ┃      ← which-key popup, while keys are pending
-           │                                                │        ┃
-           │ f → Follow link          n → Next link         │        ┃
-           │     Opens the link…          Moves to the…     │        ┃
-           │                                                │        ┃
-           └───────────────────── backspace up · esc cancel ┘        ┃
-━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━┻━━━━  ← the frame's bottom rule
+ slipbox                             ↻ alpha.md reloaded  indexing 3…      ← top bar (ui.top_bar), latest message
+━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
+ ≡ ┃ Explorer   ┃ 1 index × ┃ 2 alpha × ┃                           ┃ +3    ← left rail ┃ explorer ┃ tab strip
+   ┣━━━━━━━━━━━━╋━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━┳━━━  ← the explorer's title rule, the strip's
+   ┃ ▾ notes    ┃ § Heading › Sub                                     ┃ ▤    ← the window's breadcrumb (tinted), over
+   ┃ ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┫        the outline; the right rail,
+   ┃ └─  alpha  ┃ ▌ Sub                        ┃ Outline             ┃        its ▤ toggles the outline
+   ┃            ┃ Text with the █ursor on it…  ┃                     ┃      ← explorer ┃ note ┃ outline ┃ right rail
+   ┃            ┃                              ┃ ▾ Heading           ┃        (both panes optional)
+   ┃       ┌─ ␣ l › links ─────────────────────────────┐             ┃      ← which-key popup, while keys are pending
+   ┃       │ f → Follow link          n → Next link    │             ┃
+   ┃       │     Opens the link…          Moves to the…│             ┃
+   ┃       └──────────────── backspace up · esc cancel ┘             ┃
+━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━┻━━━━  ← the frame's bottom rule
  READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line, or a prompt
 ```
 
@@ -57,8 +55,8 @@ panes). Zen mode has no frame.
 background like the rest, so the frame's rule under it gives it the same half row of air the tab
 strip and the titles get from theirs:
 
-- on the left, `≡` shows the explorer (focusing it and revealing the current note) or hides it,
-  and the `slipbox` chip (plain accent text) opens the command palette;
+- on the left, the `slipbox` chip (plain accent text), which opens the command palette; before
+  it, without the left rail, the explorer's `≡`;
 - at the right end, the latest message while it shows (below);
 - left of it, vault-wide state (`indexing N…`, `single-file`), dropped when fewer than 12
   columns are left.
@@ -80,7 +78,7 @@ closes it. With nothing collapsed it hangs under the icon. In a split it shares
 the window's title row, after the file name. Clicking a heading focuses that window, puts its cursor
 on the heading, and scrolls the heading to the window's first row (as far as the note's end allows).
 The row stays reserved above the first heading, so the text doesn't jump. `ui.breadcrumb = false`
-removes it; zen mode and windows under 8 rows drop it. Without the rail (below), the `▤` button sits
+removes it; zen mode and windows under 8 rows drop it. Without the right rail (below), the `▤` button sits
 at the breadcrumb's right end; when no window shows a breadcrumb either, it moves to the right end
 of the top bar (with neither, in zen or with `ui.top_bar = false`, the outline opens with `ctrl+o`).
 Without a breadcrumb there are no header rules, the outline starts at the top of the
@@ -247,14 +245,21 @@ the explorer's title (level with the rule under the tab strip, which it meets in
 under the outline's. Panes under 8 rows skip both. The explorer runs from under the frame's top
 rule, beside the tab strip. The outline belongs to the note, so it opens under the note's
 breadcrumb: the top-right window's breadcrumb row and the rule under it run across the outline's
-column. The outline's button (`▤`) is on the rail, bright while the outline is open.
+column. The outline's button (`▤`) is on the right rail, bright while the outline is open.
 
-**The rail** (`ui.rail`, on by default) is a column at the right edge for the note's tools: a
-border, then one button per row from the top, level with the breadcrumb. It runs from under the
-tab strip's rule to the frame's bottom rule, and its border joins both (`┳`, `┻`) and the rule under
-the breadcrumb (`┫`). Today it holds the outline's `▤`; the note's other tools (footnotes, comments)
-will go there too. The outline opens beside it, and every width (the panes, the note, the narrow
-cutoff) is shared out after the rail's 4 columns. Zen mode hides it.
+**The rails** (`ui.left_rail`, `ui.right_rail`, both on by default) are columns of buttons at the
+edges, one button per row from the top, with a border on their inner side joined to the rules it
+meets. Each is generic: a place for buttons, whatever they open.
+
+- **The left rail** runs from under the top bar's rule to the frame's bottom rule, its first button
+  level with the tab strip. It holds the explorer's `≡` (show and focus, or hide), and the explorer
+  opens beside it. Without it, `≡` is the top bar's.
+- **The right rail** runs from under the tab strip's rule, its first button level with the
+  breadcrumb, whose rule meets its border in `┫`. It holds the outline's `▤`, and the outline opens
+  beside it. Without it, `▤` sits at the breadcrumb's right end.
+
+Every width (the panes, the note, the narrow cutoff) is shared out after the rails' 4 columns each.
+Zen mode hides both.
 
 Focus shows as brightness (without colour, as an underline), never as a coloured border: a pane's
 title is bright (`pane_title_active`) while the pane has focus and dimmer (`pane_title`) otherwise,

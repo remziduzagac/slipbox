@@ -394,8 +394,8 @@ describe("which-key", () => {
     expect(rows[head - 1]!.slice(left - 2, left + 10).trim()).toBe("");
     expect(rows[head + 2]!.slice(left - 2, left)).toBe("  ");
     const status = rows.length - 1;
-    expect(rows[status - 1]!.startsWith("━━━━")).toBe(true); // the frame's bottom rule
-    expect(rows[status - 2]!.slice(0, rows[status - 2]!.length - h.app.railWidth).trim()).toBe(""); // the popup's margin row (the rail beside it)
+    expect(rows[status - 1]!.startsWith("━━━")).toBe(true); // the frame's bottom rule
+    expect(rows[status - 2]!.slice(h.app.leftRailWidth, rows[status - 2]!.length - h.app.rightRailWidth).trim()).toBe(""); // the popup's margin row (between the rails)
     // Centred.
     const right = rows[head]!.lastIndexOf("┐");
     expect(Math.abs(left - (160 - 1 - right))).toBeLessThanOrEqual(1);
@@ -723,14 +723,14 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
   });
 });
 
-describe("the rail (ui.rail)", () => {
+describe("the rails (ui.left_rail, ui.right_rail)", () => {
   test("a column at the right edge under the tab strip; its ▤ toggles the outline, which opens beside it", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 140, height: 30 });
     const f = h.frame();
     const rows = f.split("\n");
     const W = 140;
-    const x = W - h.app.railWidth;
-    expect(h.app.railWidth).toBe(4);
+    const x = W - h.app.rightRailWidth;
+    expect(h.app.rightRailWidth).toBe(4);
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
     expect(btn.x).toBe(x + 1);
     expect([...rows[btn.y]!][x + 2]).toBe("▤");
@@ -746,16 +746,42 @@ describe("the rail (ui.rail)", () => {
     expect(h.app.outlineShown).toBe(true);
     const o = h.app.geometry!.outline!;
     expect(o.x + o.w).toBe(x); // the outline ends at the rail's border
-    // Zen has no rail; ui.rail = false removes it and the breadcrumb gets ▤ back.
+    // Zen has no rails; ui.right_rail = false removes it and the breadcrumb gets ▤ back.
     await h.app.run("ui.zen");
     h.frame();
-    expect(h.app.railWidth).toBe(0);
+    expect(h.app.rightRailWidth).toBe(0);
     await h.app.run("ui.zen");
-    const n = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.rail = false) });
+    const n = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.right_rail = false) });
     n.frame();
-    expect(n.app.railWidth).toBe(0);
+    expect(n.app.rightRailWidth).toBe(0);
     const b2 = n.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
     expect(b2.x + b2.w).toBe(W);
+  });
+});
+
+describe("the left rail", () => {
+  test("a column at the left edge under the top bar; its ≡ toggles the explorer, which opens beside it", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
+    const rows = h.frame().split("\n");
+    expect(h.app.leftRailWidth).toBe(4);
+    const btn = h.app.geometry!.hot.find((r) => r.id === "btn:explorer")!;
+    expect(btn.x).toBe(0);
+    expect(btn.y).toBe(2); // under the top bar's rule, level with the tab strip
+    expect([...rows[btn.y]!][1]).toBe("≡");
+    expect(h.app.geometry!.hot.filter((r) => r.id === "btn:explorer").length).toBe(1); // not in the top bar too
+    const col = rows.map((r) => [...r][3] ?? "").join("");
+    expect(col).toMatch(/^.┳┃/u); // the border starts under the top bar's rule
+    expect(col).toContain("┻");
+    expect(h.app.geometry!.tabStrip!.x).toBe(4); // the strip starts after the rail
+    h.app.handleMouse({ type: "down", x: btn.x + 1, y: btn.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: btn.x + 1, y: btn.y, button: 0 });
+    h.frame();
+    expect(h.app.sidebarShown).toBe(true);
+    expect(h.app.geometry!.sidebarPane!.x).toBe(4);
+    // Without it, ≡ is back in the top bar.
+    const n = await harness({ width: 140, height: 30, config: (c) => (c.ui.left_rail = false) });
+    n.frame();
+    expect(n.app.geometry!.hot.find((r) => r.id === "btn:explorer")!.y).toBe(0);
   });
 });
 
@@ -831,7 +857,8 @@ describe("top bar, tab strip, status line", () => {
     h.frame();
   };
   test("top bar: explorer and outline buttons, the chip opens the palette, vault state on the right", async () => {
-    const h = await harness({ width: 160 });
+    // Without the left rail, the explorer's button is the top bar's.
+    const h = await harness({ width: 160, config: (c) => (c.ui.left_rail = false) });
     const top = topRow(h.frame());
     expect(top).toContain("≡");
     expect(top).toContain("slipbox");
@@ -895,20 +922,22 @@ describe("top bar, tab strip, status line", () => {
     expect(strip.x).toBe(sb.x + sb.w + 1);
     expect(strip.x + strip.w).toBe(160);
     expect(sb.y).toBe(4); // the tree, under the "Explorer" title (beside the strip) and a blank row
-    expect(h.frame().split("\n")[2]!.startsWith(" Explorer")).toBe(true);
+    expect(h.frame().split("\n")[2]!.slice(sb.x).startsWith(" Explorer")).toBe(true);
     // Under the title a rule, meeting the one under the strip at the explorer's border.
-    expect(h.frame().split("\n")[3]!.slice(0, sb.w + 2)).toBe(`${"━".repeat(sb.w)}╋━`);
+    expect(h.frame().split("\n")[3]!.slice(sb.x - 1, sb.x + sb.w + 2)).toBe(`┣${"━".repeat(sb.w)}╋━`); // from the left rail's border
     const rows = h.frame().split("\n");
-    // A rule over everything, the explorer's border starting under it (┳)…
-    expect(rows[1]!.slice(0, 10)).toBe("━".repeat(10));
-    expect(rows[1]![sb.w]).toBe("┳");
-    expect(rows[2]![sb.w]).toBe("┃");
+    // A rule over everything, the left rail's border and the explorer's starting under it (┳)…
+    const bx = sb.x + sb.w;
+    expect(rows[1]!.slice(sb.x, sb.x + 10)).toBe("━".repeat(10));
+    expect(rows[1]![sb.x - 1]).toBe("┳");
+    expect(rows[1]![bx]).toBe("┳");
+    expect(rows[2]![bx]).toBe("┃");
     // …and one under the strip, over the note (and the outline), meeting the border in ┣.
     expect(rows[3]!.slice(strip.x, strip.x + 10)).toBe("━".repeat(10));
     expect(rows[3]![strip.x - 1]).toBe("╋"); // the explorer's title rule meets it
     // The bottom rule closes the explorer and the note above the status line.
-    expect(rows.at(-2)!.slice(0, 10)).toBe("━".repeat(10));
-    expect(rows.at(-2)![sb.w]).toBe("┻");
+    expect(rows.at(-2)!.slice(sb.x, sb.x + 10)).toBe("━".repeat(10));
+    expect(rows.at(-2)![bx]).toBe("┻");
     const tab = (i: number) => h.app.geometry!.tabs[i]!;
     click(h, tab(0).x + 2, strip.y);
     expect(h.app.activeTab).toBe(0);
@@ -1005,7 +1034,7 @@ describe("top bar, tab strip, status line", () => {
         explorer: find("Explorer").fg,
         outline: find("Outline").fg,
         tab: c.styles[tab.y]![tab.x + 3]!.fg,
-        border: c.styles[g.sidebar!.y]![g.sidebar!.w]!.fg,
+        border: c.styles[g.sidebar!.y]![g.sidebar!.x + g.sidebar!.w]!.fg,
       };
     };
     const content = look();
@@ -1333,7 +1362,7 @@ describe("review round 1", () => {
     expect(h.app.theme.roles.sidebar_active.bold).toBe(true);
   });
   test("without the breadcrumb, the outline button is in the top bar", async () => {
-    const h = await harness({ width: 100, height: 14, config: (c) => ((c.ui.breadcrumb = false), (c.ui.rail = false)) });
+    const h = await harness({ width: 100, height: 14, config: (c) => ((c.ui.breadcrumb = false), (c.ui.right_rail = false)) });
     h.frame();
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
     expect(btn.y).toBe(0);
@@ -1685,12 +1714,12 @@ describe("mouse", () => {
     h.app.handleMouse({ type: "down", x: side.x, y: side.y + 3, button: 0 });
     h.app.handleMouse({ type: "drag", x: side.x + 8, y: side.y + 3, button: 0 });
     h.app.handleMouse({ type: "up", x: side.x + 8, y: side.y + 3, button: 0 });
-    expect(h.app.sideW).toBe(side.x + 8);
+    expect(h.app.sideW).toBe(side.x + 8 - h.app.leftRailWidth);
     const out = seps.find((s) => s.kind === "outline")!;
     h.app.handleMouse({ type: "down", x: out.x, y: out.y + 3, button: 0 });
     h.app.handleMouse({ type: "drag", x: out.x - 6, y: out.y + 3, button: 0 });
     h.app.handleMouse({ type: "up", x: out.x - 6, y: out.y + 3, button: 0 });
-    expect(h.app.outW).toBe(170 - h.app.railWidth - (out.x - 6) - 1);
+    expect(h.app.outW).toBe(170 - h.app.rightRailWidth - (out.x - 6) - 1);
     h.frame();
     const split = h.app.geometry!.separators.find((s) => s.kind === "split-side")!;
     h.app.handleMouse({ type: "down", x: split.x, y: split.y + 3, button: 0 });

@@ -108,11 +108,12 @@ export function drawApp(app: App, c: Canvas): Geometry {
 
   const sideW = app.sidebarWidth();
   const outW = app.outlineWidth();
-  // The rail takes the right edge under the tab strip; everything else shares what's left (RW).
-  const railW = app.railWidth;
-  const RW = W - railW;
+  // The rails take the edges: the left one under the top bar, the right one under the tab strip.
+  // Everything else shares what's between them (LW to RW).
+  const LW = app.leftRailWidth;
+  const RW = W - app.rightRailWidth;
   const beside = app.sidebarShown && app.sidebarBeside;
-  const left = app.sidebarBeside ? sideW + 1 : 0;
+  const left = LW + (app.sidebarBeside ? sideW + 1 : 0);
   const right = app.outlineBeside ? outW + 1 : 0;
   const rule = (y: number, x0: number, x1: number) => {
     if (x1 <= x0) return;
@@ -126,39 +127,42 @@ export function drawApp(app: App, c: Canvas): Geometry {
   }
   if (tabBar) {
     // Tabs hold the note and its outline, not the explorer: the strip starts after the explorer.
-    const x0 = beside ? left : 0;
+    const x0 = beside ? left : LW;
     drawTabs(app, c, x0, { y: head + 1, h: 1 }, geo);
     rule(head + 2, x0, W);
   }
   // The rightmost top window's header runs over the outline's column, which starts under it.
   const overOutline = app.outlineShown && app.outlineBeside ? right : 0;
   drawContent(app, c, { x: left, y: mainY, w: Math.max(0, RW - left - right), h: mainH }, frame, overOutline, geo);
-  if (railW) drawRail(app, c, RW, frame ? head + (tabBar ? 2 : 0) : mainY, mainY, bottom, borderEnd, geo);
+  if (LW) drawRail(app, c, "left", LW - 1, frame ? head : 0, frame ? head + 1 : 0, bottom, borderEnd, geo);
+  if (RW < W) drawRail(app, c, "right", RW, frame ? head + (tabBar ? 2 : 0) : mainY, mainY, bottom, borderEnd, geo);
 
   if (app.sidebarShown) {
-    const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, RW - 6);
+    const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, RW - LW - 6);
     // Beside the content, the explorer runs from under the frame's top rule to the status line,
-    // whether or not the tab strip shows; its border runs up beside the strip.
+    // whether or not the tab strip shows; its border runs up beside the strip. It starts after
+    // the left rail (LW), and its border is at bx.
     const sideY = beside && frame ? head + 1 : mainY;
-    const rect = { x: 0, y: sideY, w, h: bottom + 1 - sideY };
+    const bx = LW + w;
+    const rect = { x: LW, y: sideY, w, h: bottom + 1 - sideY };
     // Over the note: the note's rules end where the pane (with its border and margin) begins.
-    if (!app.sidebarBeside) clipRules(geo, { x: 0, y: sideY, w: w + 3, h: bottom + 1 - sideY });
+    if (!app.sidebarBeside) clipRules(geo, { x: LW, y: sideY, w: w + 3, h: bottom + 1 - sideY });
     const list = drawSidebar(app, c, rect, geo);
     const border = roleStyle(theme, "border", page);
-    for (let y = sideY; y <= bottom; y++) drawText(c, w, y, app.glyphs.vbar, border, 1);
+    for (let y = sideY; y <= bottom; y++) drawText(c, bx, y, app.glyphs.vbar, border, 1);
     geo.sidebar = list;
     geo.sidebarPane = rect;
     // Over the content (narrow or zen), a two-column margin past its border sets it apart.
     if (!app.sidebarBeside) {
-      c.fill(w + 1, sideY, 2, bottom + 1 - sideY, roleStyle(theme, "sidebar", page).bg);
+      c.fill(bx + 1, sideY, 2, bottom + 1 - sideY, roleStyle(theme, "sidebar", page).bg);
       // Over the note, its border and margin are the pane's too: clicks there stay in it.
-      geo.sidebarPane = { x: 0, y: sideY, w: w + 3, h: bottom + 1 - sideY };
+      geo.sidebarPane = { x: LW, y: sideY, w: w + 3, h: bottom + 1 - sideY };
       coverHot(geo, geo.sidebarPane);
     }
     if (beside) {
-      geo.separators.push({ kind: "sidebar", x: w, y: sideY, w: 1, h: bottom + 1 - sideY });
-      geo.verticals.push({ x: w, y0: frame ? head : sideY, y1: borderEnd, style: border });
-    } else geo.verticals.push({ x: w, y0: frame ? sideY - 1 : sideY, y1: borderEnd, style: border });
+      geo.separators.push({ kind: "sidebar", x: bx, y: sideY, w: 1, h: bottom + 1 - sideY });
+      geo.verticals.push({ x: bx, y0: frame ? head : sideY, y1: borderEnd, style: border });
+    } else geo.verticals.push({ x: bx, y0: frame ? sideY - 1 : sideY, y1: borderEnd, style: border });
   }
   if (app.outlineShown) {
     const w = app.outlineBeside ? outW : Math.min(outW + 6, RW - 6);
@@ -196,21 +200,26 @@ export function drawApp(app: App, c: Canvas): Geometry {
 }
 
 /**
- * The rail: a column at the right edge, under the tab strip, holding buttons for the note's tools
- * (the outline's for now), one per row from the top. Its border joins the rules above and below.
+ * A rail: a column of buttons at one edge, one per row from the top, and a border on its inner
+ * side (at `bx`) joined to the rules it meets. The left rail runs from under the top bar and holds
+ * the explorer's button; the right one from under the tab strip, with the outline's.
  */
-function drawRail(app: App, c: Canvas, x: number, y0: number, top: number, bottom: number, borderEnd: number, geo: Geometry): void {
+function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: number, top: number, bottom: number, borderEnd: number, geo: Geometry): void {
   const theme = app.theme;
   const page = pageBg(theme);
   const border = roleStyle(theme, "border", page);
-  c.fill(x, top, c.width - x, bottom + 1 - top, page);
-  for (let y = top; y <= bottom; y++) drawText(c, x, y, app.glyphs.vbar, border, 1);
-  geo.verticals.push({ x, y0, y1: borderEnd, style: border });
-  const buttons: { glyph: string; on: boolean; id: string }[] = [{ glyph: app.glyphs.outlineButton, on: app.outlineShown, id: "btn:outline" }];
+  const x = side === "left" ? 0 : bx + 1; // the buttons' column
+  c.fill(side === "left" ? 0 : bx, top, side === "left" ? bx + 1 : c.width - bx, bottom + 1 - top, page);
+  for (let y = top; y <= bottom; y++) drawText(c, bx, y, app.glyphs.vbar, border, 1);
+  geo.verticals.push({ x: bx, y0, y1: borderEnd, style: border });
+  const buttons: { glyph: string; on: boolean; id: string }[] =
+    side === "left"
+      ? [{ glyph: app.glyphs.explorerButton, on: app.sidebarShown, id: "btn:explorer" }]
+      : [{ glyph: app.glyphs.outlineButton, on: app.outlineShown, id: "btn:outline" }];
   buttons.forEach((b, k) => {
     const y = top + k;
     if (y > bottom) return;
-    button(app, c, x + 1, { y, h: 1 }, ` ${b.glyph} `, b.on ? "topbar_button_on" : "topbar_button", b.id, geo, page);
+    button(app, c, x, { y, h: 1 }, ` ${b.glyph} `, b.on ? "topbar_button_on" : "topbar_button", b.id, geo, page);
   });
 }
 
@@ -248,8 +257,8 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   c.fill(0, band.y, c.width, band.h, bar.bg);
   const y = mid(band);
   const icon = (glyph: string) => ` ${glyph} `;
-  let x = button(app, c, 0, band, icon(g.explorerButton), app.sidebarShown ? "topbar_button_on" : "topbar_button", "btn:explorer", geo, bar.bg);
-  x += 1;
+  // The explorer's button, unless the left rail has it.
+  let x = app.leftRailWidth ? 0 : button(app, c, 0, band, icon(g.explorerButton), app.sidebarShown ? "topbar_button_on" : "topbar_button", "btn:explorer", geo, bar.bg) + 1;
   x += button(app, c, x, band, " slipbox ", "topbar_chip", "btn:palette", geo, bar.bg);
 
   // Right side, laid out from the far right inwards. The outline's button is on the breadcrumb,
@@ -533,7 +542,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     let end = rect.x + hw;
     if (overOutline >= 0) {
       // The outline's button, at the far right (on the rail instead, when it shows).
-      if (!app.railWidth) {
+      if (!app.rightRailWidth) {
         const label = ` ${app.glyphs.outlineButton} `;
         end -= stringWidth(label);
         button(app, c, end, { y, h: 1 }, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bg);
