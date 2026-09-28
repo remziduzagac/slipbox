@@ -354,7 +354,8 @@ function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: num
       lines.push(...rendered);
     });
     if (i > 0 && node.spread) out.push(gapAfter(out, srcOf(item)));
-    out.push(...prefixed(lines, [{ text, role: m.role, attrs: 0 }], srcOf(item)));
+    const task = typeof item.checked === "boolean" ? { line: srcOf(item), end: item.position?.end.line ?? srcOf(item), checked: item.checked } : undefined;
+    out.push(...prefixed(lines, [{ text, role: m.role, attrs: 0, ...(task ? { task } : {}) }], srcOf(item)));
   });
   return out;
 }

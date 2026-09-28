@@ -21,6 +21,8 @@ export interface Span {
   link?: number;
   /** 1-based source line this text came from. */
   src?: number;
+  /** A task item's checkbox: the item's first and last source lines (plan 4.11). */
+  task?: { line: number; end: number; checked: boolean };
 }
 
 export interface Line {

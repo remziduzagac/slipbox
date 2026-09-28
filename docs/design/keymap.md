@@ -270,6 +270,14 @@ config.
 | `:reindex` | reindex the vault |
 | `:config` | reload the configuration |
 
+## Editing
+
+Phase 3 (plan): the first write is the checkbox; hand-off, source mode and the modal layer follow.
+
+| Action | Keys |
+| --- | --- |
+| tick or untick the task item at the cursor (the innermost, on any of its rows) | `x` |
+
 ## UI — `space u`
 
 | Keys | Action |
@@ -349,6 +357,7 @@ mouse off, which gives it back to the terminal.
 | pane borders | drag to resize the explorer, the outline, or the split |
 | scrollbar (window, explorer, outline) | click to jump; drag to scroll |
 | horizontal scrollbar | click to jump sideways; drag to scroll sideways (a side pane's also focuses it) |
+| a task's checkbox (`☐` / `☑`) | tick or untick it |
 | status line path | copy the note's path |
 | message (top bar) | click to open the messages |
 | which-key popup | click an entry: a group opens it, a command runs it |

@@ -441,6 +441,18 @@ file are polled every second (or every `watch.poll_ms`, if that is shorter). `sp
 
 A broken file is reported in the message sink; the valid parts still apply.
 
+## Writing notes (phase 3)
+
+Every write goes one way (`writeBuffer`): the file is replaced atomically (a temp file in the same
+folder, then a rename) keeping its permissions; a symlinked note is written through to its target,
+and a target outside the vault is refused (`7.5`); the watcher is told the write is its own; the
+buffer reloads, its windows keeping their anchors, so the cursor stays put.
+
+**Task checkboxes** (`4.11`) are the first write. `x`, or a click on the checkbox, flips the task
+item holding the cursor — the innermost, from any of its rows — as a one-byte edit to the file's
+bytes, so a BOM, CRLF endings and even invalid UTF-8 survive untouched. If the file changed on disk
+since it was shown, it is reloaded instead and nothing is written (its lines may have moved).
+
 ## External changes (plans `5.1`–`5.4`)
 
 The watcher subscribes to exactly the directories the walk includes: one non-recursive watch per

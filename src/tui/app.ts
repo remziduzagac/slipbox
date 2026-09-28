@@ -9,8 +9,10 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
-import { existsSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { WriteRefused, writeNote } from "../core/fsutil.ts";
+import { toggleTask } from "../core/tasks.ts";
 import { appendScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
@@ -890,6 +892,58 @@ export class App {
         this.revealHeading(view, item.data as number);
       },
     });
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Writing notes (phase 3). Every write goes through writeBuffer: atomic, inside the vault, the
+  // watcher told it's ours, the buffer reloaded with its views' anchors kept.
+
+  /** The task item at the cursor: the innermost one whose source lines hold the cursor's row. */
+  taskAt(view: View): { line: number; end: number; checked: boolean } | null {
+    const layout = this.currentLayout(view);
+    const src = layout.lines[view.cur.row]?.src;
+    if (src === undefined) return null;
+    for (let r = view.cur.row; r >= 0; r--) {
+      for (const s of layout.lines[r]!.spans) if (s.task && src >= s.task.line && src <= s.task.end) return s.task;
+    }
+    return null;
+  }
+
+  /** Toggle a task's checkbox (plan 4.11): `x`, or a click on it. */
+  toggleTaskAt(view: View, task = this.taskAt(view)): void {
+    if (!task) return this.message("info", "no task here — x toggles a list item's [ ]");
+    const buf = view.buf;
+    if (buf.deleted) return this.message("warn", `${buf.key} was deleted on disk — nothing to toggle`);
+    if (buf.changedOnDisk()) {
+      // Line numbers may have moved: show the new version first.
+      this.reloadBuffer(buf);
+      return this.message("warn", `${this.displayName(buf)} changed on disk — reloaded; toggle again`);
+    }
+    let bytes: Uint8Array;
+    try {
+      bytes = readFileSync(buf.abs);
+    } catch (err) {
+      return this.message("error", `can't read ${buf.key}: ${(err as Error).message}`);
+    }
+    const r = toggleTask(bytes, task.line);
+    if (!r) return this.message("warn", `line ${task.line} of ${buf.key} has no task marker`);
+    if (this.writeBuffer(buf, r.bytes)) this.message("info", r.checked ? "done ✓" : "not done");
+  }
+
+  /** Write a buffer's file and take the result back in; false (with a message) if refused. */
+  writeBuffer(buf: NoteBuffer, content: string | Uint8Array): boolean {
+    // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder.
+    const root = buf.rel !== null ? this.loc.root : dirname(buf.abs);
+    try {
+      writeNote(root, buf.abs, content);
+    } catch (err) {
+      this.message("error", err instanceof WriteRefused ? err.message : `can't write ${buf.key}: ${(err as Error).message}`);
+      return false;
+    }
+    if (buf.rel !== null) this.watcher?.noteOwnWrite(buf.rel);
+    buf.load();
+    for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = ""; // keeps the anchors (3.5)
+    return true;
   }
 
   /** The link under the cursor, if any. */
@@ -2108,8 +2162,11 @@ export class App {
       return;
     }
     d.view.sel = null;
-    const link = linkAt(this.currentLayout(d.view), d.start.row, d.start.col);
-    if (link >= 0) void this.run("link.follow").then(() => this.host.requestRender());
+    const layout = this.currentLayout(d.view);
+    const link = linkAt(layout, d.start.row, d.start.col);
+    if (link >= 0) return void this.run("link.follow").then(() => this.host.requestRender());
+    const task = taskMarkAt(layout, d.start.row, d.start.col);
+    if (task) this.toggleTaskAt(d.view, task);
   }
 
   private scrollbarTo(bar: import("./draw.ts").ScrollbarGeom, y: number, x = bar.x): void {
@@ -2618,6 +2675,17 @@ export function selectable(o: ListOverlay, i: number, dir: number): number {
 }
 
 /** Link index at a layout cell, or -1. */
+/** The task whose checkbox glyph is at this cell, if any (its trailing space doesn't count). */
+export function taskMarkAt(layout: Layout, row: number, col: number): { line: number; end: number; checked: boolean } | null {
+  let x = 0;
+  for (const s of layout.lines[row]?.spans ?? []) {
+    const w = stringWidth(s.text);
+    if (s.task && col >= x && col < x + stringWidth(s.text.trimEnd())) return s.task;
+    x += w;
+  }
+  return null;
+}
+
 export function linkAt(layout: Layout, row: number, col: number): number {
   const line = layout.lines[row];
   if (!line) return -1;

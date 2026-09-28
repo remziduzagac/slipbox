@@ -1,8 +1,8 @@
 // Filesystem helpers shared by every face. Writes are atomic (plan 4.6): temp file plus rename
 // in the same directory, so a crash or a full disk never truncates a note.
 
-import { closeSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeSync } from "node:fs";
-import { dirname, join, basename } from "node:path";
+import { chmodSync, closeSync, fsyncSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative } from "node:path";
 
 export function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
@@ -12,13 +12,21 @@ export function atomicWrite(path: string, content: string | Uint8Array): void {
   const dir = dirname(path);
   ensureDir(dir);
   const tmp = join(dir, `.${basename(path)}.slipbox-${process.pid}-${Date.now()}.tmp`);
-  const fd = openSync(tmp, "w", 0o644);
+  // A file being replaced keeps its permissions.
+  let mode = 0o644;
+  try {
+    mode = statSync(path).mode & 0o7777;
+  } catch {}
+  const fd = openSync(tmp, "w", mode);
   try {
     writeSync(fd, typeof content === "string" ? Buffer.from(content, "utf8") : content);
     fsyncSync(fd);
   } finally {
     closeSync(fd);
   }
+  try {
+    chmodSync(tmp, mode); // the umask may have narrowed it
+  } catch {}
   try {
     renameSync(tmp, path);
   } catch (err) {
@@ -27,6 +35,26 @@ export function atomicWrite(path: string, content: string | Uint8Array): void {
     } catch {}
     throw err;
   }
+}
+
+export class WriteRefused extends Error {}
+
+/**
+ * Write a note in place (plan 4.6, 7.5): atomically, through a symlink to the file it points at
+ * (the link stays a link), and never outside `root` — a symlink out of the vault is refused.
+ */
+export function writeNote(root: string, path: string, content: string | Uint8Array): void {
+  let target = path;
+  try {
+    target = realpathSync(path);
+  } catch {}
+  let realRoot = root;
+  try {
+    realRoot = realpathSync(root);
+  } catch {}
+  const rel = relative(realRoot, target);
+  if (rel.startsWith("..") || isAbsolute(rel)) throw new WriteRefused(`${path} resolves outside the vault (${target}) — not writing there`);
+  atomicWrite(target, content);
 }
 
 export interface Stamp {
