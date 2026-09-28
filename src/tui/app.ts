@@ -249,7 +249,7 @@ export interface PromptOverlay {
   cancel?: () => void;
   /** Find's prompt: typed in that window's own find row, not on the bottom line. */
   view?: View;
-  /** Find's replace field, when open (ctrl+r, space f r; tab from the find field). */
+  /** Find's replace field, when open (ctrl+h, space f r; tab from the find field). */
   replace?: ReplaceState;
 }
 
@@ -2481,8 +2481,8 @@ export class App {
         else o.change?.(o.text);
         return;
       }
-      // Find's replace field: tab or ctrl+r into it, shift+tab back to the find field.
-      if (o.view && (key === "tab" || key === "ctrl+r")) return R.openReplace(this, o, o.view);
+      // Find's replace field: tab or ctrl+h into it, shift+tab back to the find field.
+      if (o.view && (key === "tab" || key === "ctrl+h")) return R.openReplace(this, o, o.view);
       if (o.view && o.replace && key === "shift+tab") {
         o.replace.focus = false;
         return;

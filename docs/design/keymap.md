@@ -237,7 +237,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | --- | --- | --- |
 | find in this note, in the window's find row (empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
 | while typing it: regex / whole words (also its `.*` / `ab` buttons) | `alt+r` / `alt+w` | — |
-| find and replace (on the markdown); from find, into replace / back | `ctrl+r`; `tab` / `shift+tab` | `space f r` |
+| find and replace (on the markdown); from find, into replace / back | `ctrl+h`; `tab` / `shift+tab` | `space f r` |
 | in replace: one / all, one undo step (or buttons) / move | `enter` / `alt+a` / `ctrl+n`, `ctrl+p` | — |
 | onto the next / previous character typed on the line; just before it | `f` / `shift+f`; `t` / `shift+t` | — |
 | the last `f` `t` again / the other way | `;` / `,` | — |
@@ -300,7 +300,7 @@ source first.
 | type at the line's first non-blank / its end | `shift+i` / `shift+a` |
 | open a line below (continuing a list) / above, and type | `o` / `shift+o` |
 | delete the character under the cursor | `x` (source) |
-| undo / redo (an insert session is one step; `ctrl+r` is replace) | `u` / `shift+u` |
+| undo / redo (an insert session is one step) | `u` / `ctrl+r`, `shift+u` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |
 | the conflict prompt again: load theirs, keep yours, diff, merge | `space n c` |

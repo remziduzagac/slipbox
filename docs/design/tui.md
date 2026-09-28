@@ -135,10 +135,10 @@ note's text as a layout shows it — the look of a pane's filter. The row stays 
 (`n`, `shift+n`, `*` move through the matches) and goes with it (`esc`, `:noh`); the text moves down
 two rows while it's there. A window too short for it has its prompt on the status line.
 
-**Replace** (`ctrl+r`, `space f r`, or `tab` from the find field) is the same find row with a second
+**Replace** (`ctrl+h`, `space f r`, or `tab` from the find field) is the same find row with a second
 row under it: `⇄ replacement` with `replace` and `all` buttons at its right, the rule under both. It works on the
 markdown, so a rendered window switches to editing first (`editor.edit_in`: source mode or the lens)
-and every match is a real place in the file. `tab` / `ctrl+r` and `shift+tab` move between the two
+and every match is a real place in the file. `tab` / `ctrl+h` and `shift+tab` move between the two
 fields. In the replace field `enter` replaces the match at the cursor (or the next one) and moves on,
 `alt+enter` or `alt+a` replaces them all as one undo step, `ctrl+n` / `ctrl+p` move between matches
 without replacing, and `esc` closes both rows, keeping the edits and the search. While it's open the

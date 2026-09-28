@@ -37,7 +37,7 @@ function motion(target: (a: App, v: View) => C.Pos, opts: { keepGoal?: boolean }
     });
 }
 
-/** u / U: the cursor goes back to where the change was. */
+/** u / ctrl+r: the cursor goes back to where the change was. */
 function undoRedo(a: App, v: View, which: "undo" | "redo"): void {
   if (v.insert) E.stopInsert(a, v);
   a.vim.undoing = true; // not a change for `.` to repeat

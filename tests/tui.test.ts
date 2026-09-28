@@ -1411,11 +1411,11 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     expect(v.find?.query).toBe("cat");
     await h.keys("escape", "u");
     expect(v.buf.source).toBe("# R\n\ncow dog cat\n\n**cat** here\n"); // all of them in one step
-    // ctrl+r opens the same rows; the buttons do what the keys do; regex replacements take groups.
-    await h.keys("ctrl+r");
+    // ctrl+h opens the same rows; the buttons do what the keys do; regex replacements take groups.
+    await h.keys("ctrl+h");
     await h.keys("alt+r");
     await type("(c)at");
-    await h.keys("ctrl+r");
+    await h.keys("ctrl+h");
     await type("$1ub");
     h.frame();
     const all = h.app.geometry!.hot.find((r) => r.id === "findrep:all:0")!;
