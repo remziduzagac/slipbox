@@ -59,7 +59,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "backlinks.open", title: "Backlinks: notes linking here", cli: "slipbox backlinks <note>", desc: "Lists the notes that link to this one" },
   { id: "history.back", title: "Back", cli: I, desc: "Goes back to where you were before" },
   { id: "history.forward", title: "Forward", cli: I, desc: "Goes forward again, undoing a back" },
-  { id: "history.list", title: "History", cli: I, desc: "Lists every place visited; pick one to jump" },
+  { id: "history.list", title: "History", cli: I, desc: "Shows every place visited in the left panel; pick one to jump" },
   // windows and tabs
   { id: "window.split_side", title: "Split side by side", cli: I, desc: "Splits the window into two, side by side" },
   { id: "window.split_stacked", title: "Split stacked", cli: I, desc: "Splits the window into two, one above the other" },

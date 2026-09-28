@@ -8,9 +8,10 @@ import type { Line } from "../core/layout/ir.ts";
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemes, graphemeWidth, splitAtWidth, stringWidth, truncate } from "../core/width.ts";
-import type { App, ListItem, ListOverlay, SidePaneState, Tab, TreeRow, View } from "./app.ts";
+import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, ordered } from "./cursor.ts";
+import { fuzzy } from "./fuzzy.ts";
 import { prettyKey, spellKey } from "./keys.ts";
 
 export interface Rect {
@@ -212,10 +213,11 @@ function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: n
   c.fill(side === "left" ? 0 : bx, top, side === "left" ? bx + 1 : c.width - bx, bottom + 1 - top, page);
   for (let y = top; y <= bottom; y++) drawText(c, bx, y, app.glyphs.vbar, border, 1);
   geo.verticals.push({ x: bx, y0, y1: borderEnd, style: border });
-  const buttons: { glyph: string; on: boolean; id: string }[] =
+  // A button per view of that side's panel, bright while its view shows.
+  const buttons =
     side === "left"
-      ? [{ glyph: app.glyphs.explorerButton, on: app.sidebarShown, id: "btn:explorer" }]
-      : [{ glyph: app.glyphs.outlineButton, on: app.outlineShown, id: "btn:outline" }];
+      ? LEFT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.sidebarShown && app.leftView === v.id, id: `btn:${v.id}` }))
+      : RIGHT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.outlineShown, id: `btn:${v.id}` }));
   buttons.forEach((b, k) => {
     const y = top + k;
     if (y > bottom) return;
@@ -816,30 +818,51 @@ function sideHScrollbar(app: App, c: Canvas, sv: SideView, pane: "sidebar" | "ou
   geo.scrollbars.push({ ...sv.hbar, pane, total: sv.natural, horizontal: true });
 }
 
-/** The explorer; returns the rect its tree occupies (under the title). */
+/** The left panel: the explorer's tree or the history; returns the rect its list occupies. */
 function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const theme = app.theme;
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  let rect = paneTitle(app, c, pane, "Explorer", app.region === "sidebar", base.bg, geo);
-  const rows = app.treeRows();
+  const history = app.leftView === "history";
+  const title = LEFT_VIEWS.find((v) => v.id === app.leftView)!.title;
+  let rect = paneTitle(app, c, pane, title, app.region === "sidebar", base.bg, geo);
+  const s = app.sidebar;
+  // The filter (`/`): a row at the top of the list while it's open or holds text.
+  if ((s.filtering || s.filter) && rect.h > 2) {
+    const px = drawText(c, rect.x + 1, rect.y, "› ", { ...roleStyle(theme, "sidebar_dir", base.bg), bg: base.bg });
+    const fw = drawText(c, rect.x + 1 + px, rect.y, truncate(s.filter ?? "", rect.w - 4 - px), { ...roleStyle(theme, "text", base.bg), bg: base.bg });
+    if (s.filtering && app.region === "sidebar") drawText(c, rect.x + 1 + px + fw, rect.y, " ", roleStyle(theme, "cursor", base.bg));
+    rect = { ...rect, y: rect.y + 1, h: rect.h - 1 };
+  }
+  return history ? drawHistoryList(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
+}
+
+/** Keep a side list's selection in view (unless the wheel moved it) and clamp its scroll. */
+function followSelection(s: SidePaneState, count: number, h: number): void {
+  s.selected = Math.max(0, Math.min(s.selected, count - 1));
+  if (!s.pinned && s.selected < s.scroll) s.scroll = s.selected;
+  if (!s.pinned && s.selected >= s.scroll + h) s.scroll = s.selected - h + 1;
+  s.scroll = Math.max(0, Math.min(s.scroll, Math.max(0, count - h)));
+}
+
+/** The explorer's tree (filtered while the filter holds text, its matches highlighted). */
+function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geometry): Rect {
+  const theme = app.theme;
+  const rows = app.explorerRows();
   const lines = treeLines(rows.map((r) => r.depth));
   const s = app.sidebar;
   const g = app.glyphs;
-  const text = (row: TreeRow) => {
-    const icon = row.kind === "dir" ? (app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : g.file;
-    const name = row.kind === "note" ? row.name.replace(/\.(md|markdown)$/i, "") : row.name;
-    return `${" ".repeat(1 + row.depth * 2)}${icon} ${name}`;
-  };
-  const sv = sideView(rect, rows, text, s);
-  rect = sv.list;
-  s.selected = Math.max(0, Math.min(s.selected, rows.length - 1));
-  // Keep the selection in view, unless the wheel moved the view.
-  if (!s.pinned && s.selected < s.scroll) s.scroll = s.selected;
-  if (!s.pinned && s.selected >= s.scroll + rect.h) s.scroll = s.selected - rect.h + 1;
-  s.scroll = Math.max(0, Math.min(s.scroll, Math.max(0, rows.length - rect.h)));
+  const q = s.filter ?? "";
+  const nameOf = (row: TreeRow) => (row.kind === "note" ? row.name.replace(/\.(md|markdown)$/i, "") : row.name);
+  const prefix = (row: TreeRow) => `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : g.file} `;
+  const text = (row: TreeRow) => prefix(row) + nameOf(row);
+  const sv = sideView(list, rows, text, s);
+  const rect = sv.list;
+  followSelection(s, rows.length, rect.h);
+  if (!rows.length && q) drawText(c, rect.x + 1, rect.y, "no matches", roleStyle(theme, "dim", bg), rect.w - 1);
   const current = app.view?.buf.rel;
+  const matchSt = roleStyle(theme, "overlay_match", null);
   for (let i = 0; i < rect.h; i++) {
     const row = rows[s.scroll + i];
     if (!row) break;
@@ -847,13 +870,50 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
     let role: Role = row.kind === "dir" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
     if (selected) role = "sidebar_selected";
-    const st = roleStyle(theme, role, base.bg);
+    const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
     drawText(c, rect.x, y, sideRow(text(row), sv), st, rect.w);
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
+    // The letters the filter matched in a note's name.
+    const m = q && row.kind === "note" ? fuzzy(q, nameOf(row)) : null;
+    if (m) {
+      const name = nameOf(row);
+      const off = stringWidth(prefix(row));
+      for (const p of m.positions) {
+        const x = rect.x + off + stringWidth(name.slice(0, p)) - sv.left;
+        if (x >= rect.x && x < rect.x + sv.cols) c.cell(x, y, name[p]!, 1, { ...st, fg: matchSt.fg, bold: true });
+      }
+    }
   }
-  paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", base.bg, geo);
-  sideHScrollbar(app, c, sv, "sidebar", app.region === "sidebar", base.bg, geo);
+  paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
+  sideHScrollbar(app, c, sv, "sidebar", app.region === "sidebar", bg, geo);
+  return rect;
+}
+
+/** The history: the window's timeline, newest first, the current place marked `here`. */
+function drawHistoryList(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geometry): Rect {
+  const theme = app.theme;
+  const rows = app.historyRows();
+  const s = app.sidebar;
+  const text = (row: HistoryRow) => ` ${row.label}`;
+  const sv = sideView(list, rows, text, s);
+  const rect = sv.list;
+  followSelection(s, rows.length, rect.h);
+  if (!rows.length) drawText(c, rect.x + 1, rect.y, s.filter ? "no matches" : "no history yet", roleStyle(theme, "dim", bg), rect.w - 1);
+  for (let i = 0; i < rect.h; i++) {
+    const row = rows[s.scroll + i];
+    if (!row) break;
+    const y = rect.y + i;
+    const selected = s.scroll + i === s.selected && app.region === "sidebar";
+    const st = roleStyle(theme, selected ? "sidebar_selected" : row.here ? "sidebar_active" : "sidebar", bg);
+    if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
+    const w = drawText(c, rect.x, y, sideRow(text(row), sv), st, rect.w);
+    // Its line (or `here`) at the right, when the row has room for it.
+    const hintW = stringWidth(row.hint);
+    if (!sv.hbar && w + 2 + hintW <= sv.cols - 1) drawText(c, rect.x + sv.cols - 1 - hintW, y, row.hint, { ...roleStyle(theme, "dim", st.bg), bg: st.bg });
+  }
+  paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
+  sideHScrollbar(app, c, sv, "sidebar", app.region === "sidebar", bg, geo);
   return rect;
 }
 
@@ -863,7 +923,7 @@ function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  let rect = paneTitle(app, c, pane, "Outline", app.region === "outline", base.bg);
+  let rect = paneTitle(app, c, pane, RIGHT_VIEWS[0]!.title, app.region === "outline", base.bg);
   const rows = app.outlineRows();
   const lines = treeLines(rows.map((r) => r.level - 1));
   const o = app.outline;

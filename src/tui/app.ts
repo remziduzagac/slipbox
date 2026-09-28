@@ -42,7 +42,7 @@ import { NoteBuffer } from "./buffer.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, clampPos, ordered, type Pos, snap, wordAt } from "./cursor.ts";
 import { drawApp, type Geometry } from "./draw.ts";
-import { rank } from "./fuzzy.ts";
+import { fuzzy, rank } from "./fuzzy.ts";
 import {
   DEFAULT_ALIASES,
   DEFAULT_EXPLORER_KEYS,
@@ -193,6 +193,44 @@ export interface SidePaneState {
   pinned?: boolean;
   /** Scrolled sideways (rows wider than the pane): the first column shown. */
   left?: number;
+  /** The left panel's filter (`/`): its text, and whether keys go to it. */
+  filter?: string;
+  filtering?: boolean;
+}
+
+/** What the left panel shows: the file tree or the window's history (more views to come). */
+export type LeftView = "explorer" | "history";
+/** What the right panel shows: the outline (more views to come: footnotes, comments). */
+export type RightView = "outline";
+
+/**
+ * The panels' views, in rail order. Each side's panel shows one view at a time; its rail has a
+ * button per view (bright while that view shows), and the view's own drawing and keys decide what
+ * it does. A new view is an entry here, then its rows, drawing and keys.
+ */
+export interface PanelView<Id extends string> {
+  id: Id;
+  title: string;
+  /** The rail button's glyph. */
+  glyph: (g: Glyphs) => string;
+}
+
+export const LEFT_VIEWS: PanelView<LeftView>[] = [
+  { id: "explorer", title: "Explorer", glyph: (g) => g.explorerButton },
+  { id: "history", title: "History", glyph: (g) => g.historyButton },
+];
+
+export const RIGHT_VIEWS: PanelView<RightView>[] = [{ id: "outline", title: "Outline", glyph: (g) => g.outlineButton }];
+
+/** One row of the history view: a place in the window's timeline, newest first. */
+export interface HistoryRow {
+  /** The note's name (the pane is narrow); `path` is what the filter matches. */
+  label: string;
+  path: string;
+  hint: string;
+  /** Its index in the timeline (oldest first). */
+  index: number;
+  here: boolean;
 }
 
 export interface TreeRow {
@@ -276,6 +314,8 @@ export class App {
   activeTab = 0;
   region: Region = "content";
   sidebar: SidePaneState;
+  /** The left panel's view; the rail's buttons pick it. */
+  leftView: LeftView = "explorer";
   outline: SidePaneState & { folded: Set<number>; forKey: string };
   expanded = new Set<string>();
   overlay: Overlay | null = null;
@@ -1099,6 +1139,227 @@ export class App {
     this.tree = null;
   }
 
+  /** The explorer's rows: the tree, or while filtering the matching notes under their folders
+   *  (all unfolded), in tree order. */
+  explorerRows(): TreeRow[] {
+    const q = this.sidebar.filter ?? "";
+    if (!q) return this.treeRows();
+    if (this.filtered?.query === q && this.filtered.tree === this.treeRows()) return this.filtered.rows;
+    const rows: TreeRow[] = [];
+    const seen = new Set<string>();
+    for (const row of this.allNotesInTreeOrder()) {
+      if (!fuzzy(q, row)) continue;
+      const parts = row.split("/");
+      for (let i = 0; i < parts.length - 1; i++) {
+        const dir = parts.slice(0, i + 1).join("/");
+        if (seen.has(dir)) continue;
+        seen.add(dir);
+        rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i });
+      }
+      rows.push({ kind: "note", path: row, name: parts[parts.length - 1]!, depth: parts.length - 1 });
+    }
+    this.filtered = { query: q, tree: this.treeRows(), rows };
+    return rows;
+  }
+
+  private filtered: { query: string; tree: TreeRow[]; rows: TreeRow[] } | null = null;
+
+  /** Every note's path, directories first at each level, as the tree orders them. */
+  private allNotesInTreeOrder(): string[] {
+    return [...this.graph.notes.keys()].sort((a, b) => {
+      const da = a.split("/");
+      const db = b.split("/");
+      for (let i = 0; i < Math.min(da.length, db.length); i++) {
+        const lastA = i === da.length - 1;
+        const lastB = i === db.length - 1;
+        if (da[i] !== db[i]) {
+          if (lastA !== lastB) return lastA ? 1 : -1;
+          return da[i]!.localeCompare(db[i]!, undefined, { sensitivity: "base" });
+        }
+      }
+      return da.length - db.length;
+    });
+  }
+
+  /** The history view's rows: the active window's timeline, newest first, filtered. */
+  historyRows(): HistoryRow[] {
+    const v = this.view;
+    if (!v) return [];
+    const here: Loc = { key: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor };
+    const timeline = [...v.back, here, ...[...v.fwd].reverse()];
+    const cur = v.back.length;
+    const rows = timeline
+      .map((l, i) => {
+        const path = this.buffers.get(l.key) ? this.displayName(this.buffers.get(l.key)!) : l.key;
+        return {
+          label: path.split("/").pop()!.replace(/\.(md|markdown)$/i, ""),
+          path,
+          hint: i === cur ? "here" : `line ${l.cursor?.anchor.line ?? l.anchor.line}`,
+          index: i,
+          here: i === cur,
+        };
+      })
+      .reverse();
+    const q = this.sidebar.filter ?? "";
+    return q ? rows.filter((r) => fuzzy(q, r.path)) : rows;
+  }
+
+  /** Jump the window to entry `i` of its timeline: what's before it becomes back, after it forward. */
+  jumpHistory(i: number): void {
+    const v = this.view;
+    if (!v) return;
+    const here: Loc = { key: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor };
+    const timeline = [...v.back, here, ...[...v.fwd].reverse()];
+    const cur = v.back.length;
+    if (i === cur) return;
+    const loc = timeline[i];
+    const buf = loc && this.buffer(loc.key);
+    if (!loc || !buf) return;
+    this.remember(v);
+    v.back = timeline.slice(0, i);
+    v.fwd = timeline.slice(i + 1).reverse();
+    this.showLoc(v, buf, loc);
+  }
+
+  /**
+   * A rail button, or its command: show the left panel on `view` and focus it; if it's already
+   * showing that view, hide it (`cycle`: focus it first when it's open but not focused).
+   */
+  openLeftView(view: LeftView, mode: "toggle" | "cycle" = "toggle"): void {
+    const showing = this.sidebarShown && this.leftView === view;
+    if (showing && mode === "cycle" && this.region !== "sidebar") {
+      this.region = "sidebar";
+      this.sidebar.pinned = false;
+      return;
+    }
+    if (showing) return this.showSidebar(false);
+    if (this.leftView !== view) {
+      this.leftView = view;
+      this.sidebar.scroll = 0;
+      this.sidebar.left = 0;
+    }
+    this.sidebar.filter = "";
+    this.sidebar.filtering = false;
+    this.showSidebar(true);
+    this.region = "sidebar";
+    this.sidebar.pinned = false;
+    if (view === "explorer") this.revealInSidebar();
+    else this.sidebar.selected = Math.max(0, this.historyRows().findIndex((r) => r.here));
+  }
+
+  /** Keys while the left panel's filter has them: type, move, open, clear. */
+  private filterKey(key: string): void {
+    const s = this.sidebar;
+    const rows = this.leftView === "explorer" ? this.explorerRows() : this.historyRows();
+    const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+    const done = () => {
+      s.filter = "";
+      s.filtering = false;
+    };
+    switch (key) {
+      case "escape":
+      case "ctrl+c":
+      case "ctrl+g":
+        done();
+        if (this.leftView === "explorer") this.revealInSidebar();
+        return;
+      case "enter": {
+        const row = rows[s.selected];
+        if (!row) return;
+        if (this.leftView === "history") {
+          const i = (row as HistoryRow).index;
+          done();
+          this.jumpHistory(i);
+          this.region = "content";
+          return;
+        }
+        const tree = row as TreeRow;
+        if (tree.kind === "dir") return;
+        done();
+        this.openOrSwitchTab(tree.path);
+        this.region = "content";
+        if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+        return;
+      }
+      case "down":
+      case "ctrl+n":
+      case "ctrl+j":
+      case "tab":
+        s.selected = Math.min(rows.length - 1, s.selected + 1);
+        return;
+      case "up":
+      case "ctrl+p":
+      case "ctrl+k":
+      case "shift+tab":
+        s.selected = Math.max(0, s.selected - 1);
+        return;
+      case "backspace":
+        s.filter = [...(s.filter ?? "")].slice(0, -1).join("");
+        break;
+      case "ctrl+w":
+      case "ctrl+backspace":
+        s.filter = (s.filter ?? "").replace(/\S*\s*$/, "");
+        break;
+      case "ctrl+u":
+        s.filter = "";
+        break;
+      default:
+        if (typed === null) return;
+        s.filter = (s.filter ?? "") + typed;
+    }
+    // The selection goes to the first match: the first note, in the explorer.
+    s.scroll = 0;
+    s.pinned = false;
+    const next = this.leftView === "explorer" ? this.explorerRows() : this.historyRows();
+    s.selected = Math.max(0, this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : 0);
+  }
+
+  /** The history view's keys (the explorer's keymap): move, jump, filter, close, leave. */
+  historyAction(action: string): void {
+    const s = this.sidebar;
+    const rows = this.historyRows();
+    switch (action) {
+      case "down":
+        s.selected = Math.min(rows.length - 1, s.selected + 1);
+        break;
+      case "up":
+        s.selected = Math.max(0, s.selected - 1);
+        break;
+      case "top":
+        s.selected = 0;
+        break;
+      case "bottom":
+        s.selected = rows.length - 1;
+        break;
+      case "open":
+      case "open_tab":
+      case "expand":
+      case "open_split": {
+        const row = rows[s.selected];
+        if (!row) break;
+        this.jumpHistory(row.index);
+        this.region = "content";
+        if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+        break;
+      }
+      case "filter":
+        s.filtering = true;
+        s.filter = "";
+        break;
+      case "collapse":
+        break;
+      case "close":
+        this.showSidebar(false);
+        break;
+      case "leave":
+        this.region = "content";
+        if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+        break;
+      default:
+        this.message("error", `unknown explorer action: ${action}`);
+    }
+  }
+
   revealInSidebar(): void {
     this.sidebar.pinned = false;
     const rel = this.view?.buf.rel;
@@ -1112,7 +1373,13 @@ export class App {
 
   explorerAction(action: string): void {
     this.sidebar.pinned = false;
-    const rows = this.treeRows();
+    if (this.leftView === "history") return this.historyAction(action);
+    if (action === "filter") {
+      this.sidebar.filtering = true;
+      this.sidebar.filter = "";
+      return;
+    }
+    const rows = this.explorerRows();
     const row = rows[this.sidebar.selected];
     const openNote = (where: "here" | "tab" | "split") => {
       if (!row) return;
@@ -1441,6 +1708,7 @@ export class App {
 
   private async dispatchKey(key: string): Promise<void> {
     if (this.overlay) return this.overlayKey(this.overlay, key);
+    if (this.region === "sidebar" && this.sidebarShown && this.sidebar.filtering && !this.pending.length) return this.filterKey(key);
     if (this.resizeMode && !this.pending.length) {
       const action = this.resizeKeys.lookup(key);
       if (action) return this.resizeAction(action);
@@ -1696,9 +1964,26 @@ export class App {
       this.region = "sidebar";
       if (!g.sidebar || !inRect(g.sidebar, ev.x, ev.y)) return;
       const idx = ev.y - g.sidebar.y + this.sidebar.scroll;
-      const row = this.treeRows()[idx];
+      if (this.leftView === "history") {
+        const h = this.historyRows()[idx];
+        if (!h) return;
+        this.sidebar.selected = idx;
+        this.sidebar.filter = "";
+        this.sidebar.filtering = false;
+        this.historyAction("open");
+        return;
+      }
+      const row = this.explorerRows()[idx];
       if (!row) return;
       this.sidebar.selected = idx;
+      if (row.kind === "note" && this.sidebar.filter) {
+        // Picked from the filter: open it, and the tree comes back.
+        this.sidebar.filter = "";
+        this.sidebar.filtering = false;
+        this.openOrSwitchTab(row.path);
+        this.region = "content";
+        return;
+      }
       if (row.kind === "dir") {
         if (this.expanded.has(row.path)) this.expanded.delete(row.path);
         else this.expanded.add(row.path);
@@ -1836,14 +2121,9 @@ export class App {
     const [kind, arg] = [id.slice(0, id.indexOf(":")), id.slice(id.indexOf(":") + 1)];
     switch (kind) {
       case "btn":
-        if (arg === "explorer") {
-          const on = !this.sidebarShown;
-          this.showSidebar(on);
-          if (on) {
-            this.region = "sidebar";
-            this.revealInSidebar();
-          }
-        } else if (arg === "outline") void this.run("outline.toggle");
+        if (arg === "explorer") this.openLeftView("explorer");
+        else if (arg === "history") this.openLeftView("history");
+        else if (arg === "outline") void this.run("outline.toggle");
         else if (arg === "palette") void this.run("palette.open");
         break;
       case "tabclose":

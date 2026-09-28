@@ -232,15 +232,29 @@ Each kind of link does something different when followed:
 
 `enter` follows the link under the cursor, or else the row's first link.
 
-## Side panes: explorer (plan `3.7`) and outline
+## Side panes: explorer (plan `3.7`), history and outline
 
-- **Explorer (left):** the walked notes as a tree, directories first. Moving the selection only
+Each side has one panel, which shows one of its views at a time; its rail has a button per view,
+bright while that view shows. Clicking a view's button shows the panel on it (and focuses it), or
+hides the panel when that view already shows. The views are a registry (`LEFT_VIEWS`,
+`RIGHT_VIEWS` in `app.ts`) and more will come on both sides, each with its own rows, drawing and
+keys.
+
+- **Explorer (left, `≡`):** the walked notes as a tree, directories first. Moving the selection only
   selects. `enter`, `l` and a click open the note as a tab, or switch to the tab already showing
   it; `o` replaces the current window's note, and `s` opens it in the split.
+- **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
+  note name and line, the current one marked `here` and selected when the view opens. `enter` or a
+  click jumps there, the places before it becoming back and those after it forward.
+- **Filter (`/`, both left views):** a `› text` row at the top of the list; typing narrows the
+  rows. The explorer keeps the tree: the notes whose path matches, under their folders (all
+  unfolded), the matched letters highlighted, the selection on the first note. The history keeps
+  the entries whose path matches. The arrows and `ctrl+n` / `ctrl+p` move, `enter` or a click opens
+  (the filter clears), `esc` clears it. `ctrl+p` stays the flat quick-open across the vault.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 
-Each pane starts with its title, "Explorer" or "Outline", then a row before the list: a rule under
+Each pane starts with its view's title ("Explorer", "History", "Outline"), then a row before the list: a rule under
 the explorer's title (level with the rule under the tab strip, which it meets in `╋`), a blank row
 under the outline's. Panes under 8 rows skip both. The explorer runs from under the frame's top
 rule, beside the tab strip. The outline belongs to the note, so it opens under the note's
@@ -252,8 +266,9 @@ edges, one button per row from the top, with a border on their inner side joined
 meets. Each is generic: a place for buttons, whatever they open.
 
 - **The left rail** runs from under the top bar's rule to the frame's bottom rule, its first button
-  level with the tab strip. It holds the explorer's `≡` (show and focus, or hide), and the explorer
-  opens beside it. Without it, `≡` is the top bar's.
+  level with the tab strip. It holds the left panel's views, the explorer's `≡` and the history's
+  `◷` (ascii `~`), and the panel opens beside it. Without it, `≡` is the top bar's and the history
+  opens with `space h h`.
 - **The right rail** runs from under the tab strip's rule, its first button level with the
   breadcrumb, whose rule meets its border in `┫`. It holds the outline's `▤`, and the outline opens
   beside it. Without it, `▤` sits at the breadcrumb's right end.

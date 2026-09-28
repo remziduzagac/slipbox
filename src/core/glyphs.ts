@@ -59,6 +59,8 @@ export interface Glyphs {
   /** Top bar buttons and the tab close button. */
   explorerButton: string;
   outlineButton: string;
+  /** The left rail's history button. */
+  historyButton: string;
   close: string;
   crumb: string;
   /** Before a window's breadcrumb. */
@@ -113,6 +115,7 @@ const unicode: Glyphs = {
   dirty: "●",
   explorerButton: "≡",
   outlineButton: "▤",
+  historyButton: "◷",
   close: "×",
   crumb: "›",
   crumbIcon: "§",
@@ -181,6 +184,7 @@ const ascii: Glyphs = {
   dirty: "*",
   explorerButton: "=",
   outlineButton: "#",
+  historyButton: "~",
   close: "x",
   crumb: ">",
   crumbIcon: "#",

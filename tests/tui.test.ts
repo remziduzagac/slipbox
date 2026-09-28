@@ -325,6 +325,13 @@ describe("links and history", () => {
     await h.app.run("note.open notes/beta.md");
     await h.keys("space", "h", "h");
     expect(h.frame()).toContain("History");
+    // In the left panel, not a popup: focused, the current place selected and marked.
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.leftView).toBe("history");
+    expect(h.app.region).toBe("sidebar");
+    const rows = h.app.historyRows();
+    expect(rows[h.app.sidebar.selected]!.here).toBe(true);
+    expect(h.frame()).toContain("here");
     await h.keys("down", "down", "enter");
     expect(h.app.view!.buf.rel).toBe("index.md");
     await h.keys("shift+l");
@@ -782,6 +789,67 @@ describe("the left rail", () => {
     const n = await harness({ width: 140, height: 30, config: (c) => (c.ui.left_rail = false) });
     n.frame();
     expect(n.app.geometry!.hot.find((r) => r.id === "btn:explorer")!.y).toBe(0);
+  });
+});
+
+describe("the left panel's views and filter", () => {
+  test("the rail's buttons pick the view; clicking the showing one hides the panel", async () => {
+    const h = await harness({ open: "notes/alpha.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
+    await h.app.run("note.open notes/beta.md");
+    h.frame();
+    const hot = (id: string) => h.app.geometry!.hot.find((r) => r.id === id)!;
+    const click = (id: string) => {
+      const b = hot(id);
+      h.app.handleMouse({ type: "down", x: b.x + 1, y: b.y, button: 0 });
+      h.app.handleMouse({ type: "up", x: b.x + 1, y: b.y, button: 0 });
+      return h.frame();
+    };
+    expect(hot("btn:history").y).toBe(hot("btn:explorer").y + 1); // one button per row
+    let f = click("btn:history");
+    expect(h.app.sidebarShown).toBe(true);
+    expect(h.app.leftView).toBe("history");
+    expect(f).toContain("History");
+    f = click("btn:explorer"); // the other view: the same panel switches
+    expect(h.app.sidebarShown).toBe(true);
+    expect(h.app.leftView).toBe("explorer");
+    expect(f).toContain("Explorer");
+    click("btn:explorer"); // the showing view: hide
+    expect(h.app.sidebarShown).toBe(false);
+    // ctrl+e always comes back to the tree.
+    click("btn:history");
+    await h.keys("ctrl+e");
+    expect(h.app.leftView).toBe("explorer");
+  });
+  test("/ filters the explorer: matching notes under their folders; enter opens, esc clears", async () => {
+    const h = await harness({ open: "index.md", width: 140, height: 30 });
+    await h.keys("ctrl+e", "/", "b", "e", "t");
+    expect(h.app.sidebar.filtering).toBe(true);
+    const rows = h.app.explorerRows();
+    expect(rows.filter((r) => r.kind === "note").map((r) => r.path)).toContain("notes/beta.md");
+    expect(rows.some((r) => r.kind === "dir" && r.path === "notes")).toBe(true); // its folder, unfolded
+    expect(rows.some((r) => r.path === "notes/alpha.md")).toBe(false);
+    const f = h.frame();
+    expect(f).toContain("› bet");
+    expect(h.app.sidebar.selected).toBe(rows.findIndex((r) => r.kind === "note"));
+    await h.keys("escape");
+    expect(h.app.sidebar.filter).toBe("");
+    expect(h.app.explorerRows()).toBe(h.app.treeRows());
+    await h.keys("/", "b", "e", "t", "a");
+    const pick = h.app.explorerRows()[h.app.sidebar.selected]!;
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe(pick.path);
+    expect(h.app.region).toBe("content");
+    expect(h.app.sidebar.filter).toBe("");
+  });
+  test("the history filters too", async () => {
+    const h = await harness();
+    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("note.open notes/beta.md");
+    await h.keys("space", "h", "h", "/", "a", "l", "p");
+    const rows = h.app.historyRows();
+    expect(rows.map((r) => r.label)).toEqual([expect.stringContaining("alpha")]);
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
   });
 });
 

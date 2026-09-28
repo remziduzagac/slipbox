@@ -560,30 +560,11 @@ export function registerActions(app: App): void {
     // history
     "history.back": (a) => a.history("back"),
     "history.forward": (a) => a.history("forward"),
+    // The left panel on the history, like the explorer: open and focus, focus, close.
     "history.list": (a) =>
       withView(a, (v) => {
-        const here: Loc = { key: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor };
-        const timeline = [...v.back, here, ...[...v.fwd].reverse()];
-        if (timeline.length === 1) return a.message("info", "no history yet");
-        const cur = v.back.length;
-        a.openList({
-          title: "History — newest first",
-          items: timeline
-            .map((l, i) => ({ label: a.buffers.get(l.key) ? a.displayName(a.buffers.get(l.key)!) : l.key, hint: i === cur ? "here" : `line ${l.cursor?.anchor.line ?? l.anchor.line}`, data: i }))
-            .reverse(),
-          selected: timeline.length - 1 - cur,
-          accept: (item) => {
-            const i = item.data as number;
-            if (i === cur) return;
-            const loc = timeline[i]!;
-            const buf = a.buffer(loc.key);
-            if (!buf) return;
-            a.remember(v);
-            v.back = timeline.slice(0, i);
-            v.fwd = timeline.slice(i + 1).reverse();
-            a.showLoc(v, buf, loc);
-          },
-        });
+        if (!v.back.length && !v.fwd.length && !(a.sidebarShown && a.leftView === "history")) return a.message("info", "no history yet");
+        a.openLeftView("history", "cycle");
       }),
     // windows
     "window.split_side": (a) => a.splitWith("side"),
@@ -671,17 +652,12 @@ export function registerActions(app: App): void {
     },
     "tab.close": (a) => a.closeTab(),
     // panes
-    "explorer.cycle": (a) => {
-      if (!a.sidebarShown) {
-        a.showSidebar(true);
-        a.region = "sidebar";
-        a.revealInSidebar();
-      } else if (a.region !== "sidebar") {
-        a.region = "sidebar";
-        a.sidebar.pinned = false; // focused: the selection comes back into view
-      } else a.showSidebar(false);
-    },
+    // Closed (or showing the history) → open on the tree and focus; open elsewhere → focus; focused → close.
+    "explorer.cycle": (a) => a.openLeftView("explorer", "cycle"),
     "explorer.reveal": (a) => {
+      a.leftView = "explorer";
+      a.sidebar.filter = "";
+      a.sidebar.filtering = false;
       a.showSidebar(true);
       a.revealInSidebar();
       a.region = "sidebar";

@@ -117,7 +117,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | Action | Direct keys | Leader |
 | --- | --- | --- |
 | back / forward | `shift+h` / `shift+l`, `ctrl+backspace` (back) | `space h p` / `space h n` |
-| history list (pick an entry) | — | `space h h` |
+| history, in the left panel (open → focus → close) | — | `space h h` |
 
 ## Windows — `space w`
 
@@ -198,9 +198,13 @@ Inside the explorer (`[keys.explorer]` in config):
 | `h`, `left` | collapse |
 | `s` | open in the split |
 | `g g` / `shift+g` | top / bottom |
+| `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
 | mouse | click a folder to fold or unfold it; click a note to open it as a tab (or switch to its tab) |
+
+The history view (`space h h`, the left rail's `◷`) takes the same keys: `j` / `k` move, `enter`,
+`l` or a click jumps to the place, `/` filters, `q` closes, `esc` goes back to the note.
 
 ## Outline — right pane
 
@@ -328,6 +332,7 @@ mouse off, which gives it back to the terminal.
 | Where | What the mouse does |
 | --- | --- |
 | `≡` (on the left rail; without it the top bar's) | show the explorer (and focus it) / hide it |
+| `◷` (on the left rail) | show the history (and focus it) / hide it |
 | `▤` (on the right rail; without it the breadcrumb's or the top bar's) | show the outline (and focus it) / hide it |
 | top bar `slipbox` chip | open the command palette |
 | window breadcrumb | scroll that window to the heading, and focus it; its icon finds a heading |
