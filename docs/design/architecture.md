@@ -71,6 +71,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/tasks.ts` | 4.11 | a task's checkbox toggled as a one-byte edit |
 | `core/editor.ts` | 4.1, 4.2, 4.12 | hand-off templates to argv, never through a shell |
 | `core/nvim.ts` | 4.12 | finding and asking the running nvims |
+| `core/replace.ts` | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
 | `core/merge.ts` | 5.5 | line diff (Myers), three-way merge, the diff the conflict prompt shows |
 | `core/theme/*` | 2.6 | semantic roles, built-in themes, base16 loader |
 | `core/glyphs.ts` | 2.8 | Nerd, Unicode and ASCII glyph sets |
@@ -88,6 +89,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `tui/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
 | `tui/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
 | `tui/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
+| `tui/replacing.ts` | 4.16 | the replace row, `:s` and its confirm, `gn`'s matches |
 
 ## Data flow for one note
 

@@ -32,8 +32,8 @@ listing everything else, and `?` lists every key, so nothing needs memorising:
   `] ]` or `alt+up`/`alt+down` by heading.
 - **Links:** `enter` follows the link under the cursor; `shift+h` / `shift+l` go back and
   forward.
-- **Finding and copying:** `ctrl+p` switches notes, `ctrl+f` finds, `:` opens the command
-  palette, and `v` selects then `y` copies.
+- **Finding and copying:** `ctrl+p` switches notes, `ctrl+f` finds, `ctrl+h` finds and replaces
+  (or vim's `:%s/old/new/g`), `:` opens the command palette, and `v` selects then `y` copies.
 - **Panes:** `ctrl+e` explorer and `ctrl+o` outline (each opens, then focuses, then closes;
   `esc` returns to the note), `ctrl+w v` split, `ctrl+t o` new tab. Everything is clickable too.
 - **Editing:** `i`, `a` or `o` start typing — in the lens (rendered, with the markdown around the

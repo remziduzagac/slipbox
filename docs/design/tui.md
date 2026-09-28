@@ -20,6 +20,7 @@ Code, in `src/tui/`:
 | `draw.ts` | painting, and the geometry the mouse uses |
 | `editing.ts` | the cursor as a text offset; insert mode |
 | `vim.ts` | normal mode in source and the lens: counts, operators, the register, `.` |
+| `replacing.ts` | find and replace: the replace row, `:s` and its confirm |
 | `fuzzy.ts` | the fuzzy ranking every list filters with |
 | `keys.ts` | the default keymaps, groups, aliases, and the in-pane actions' titles |
 | `run.ts`, `opentui.ts` | the OpenTUI binding |
