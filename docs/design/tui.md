@@ -24,20 +24,20 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- slipbox                             ↻ alpha.md reloaded  indexing 3…      ← top bar (ui.top_bar), latest message
-━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
- ≡ ┃ Explorer   ┃ 1 index × ┃ 2 alpha × ┃                           ┃ +3    ← left rail ┃ explorer ┃ tab strip
-   ┃            ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━┳━━━  ← the strip's rule; a blank row in the explorer
-   ┃ ▾ notes    ┃ § Heading › Sub                                     ┃ ▤    ← the window's breadcrumb (tinted), over
-   ┃ ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┫        the outline; the right rail,
-   ┃ └─  alpha  ┃ ▌ Sub                        ┃ Outline             ┃        its ▤ toggles the outline
-   ┃            ┃ Text with the █ursor on it…  ┃                     ┃      ← explorer ┃ note ┃ outline ┃ right rail
-   ┃            ┃                              ┃ ▾ Heading           ┃        (both panes optional)
-   ┃       ┌─ ␣ l › links ─────────────────────────────┐             ┃      ← which-key popup, while keys are pending
-   ┃       │ f → Follow link          n → Next link    │             ┃
-   ┃       │     Opens the link…          Moves to the…│             ┃
-   ┃       └──────────────── backspace up · esc cancel ┘             ┃
-━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━┻━━━━  ← the frame's bottom rule
+ slipbox                              ↻ alpha.md reloaded  indexing 3…     ← top bar (ui.top_bar), latest message
+━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━  ← the frame's top rule
+ ≡  Explorer   ┃ 1 index × ┃ 2 alpha × ┃                             ┃ +3  ← left rail (tinted) · explorer ┃ tab strip
+ ◷             ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┻━━━  ← the strip's rule, the outline under it
+    ▾ notes    ┃ § Heading › Sub                  ┃ Outline            ▤   ← breadcrumb (tinted) ┃ outline · right rail
+    ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+    └─  alpha  ┃ ▌ Sub                            ┃ ▾ Heading              ← explorer ┃ note ┃ outline
+               ┃ Text with the █ursor on it…      ┃ └─  Sub                ← (both panes optional)
+               ┃                                  ┃
+        ┌─ ␣ l › links ─────────────────────────┐ ┃                        ← which-key popup, while keys are pending
+        │ f → Follow link      n → Next link    │ ┃
+        │     Opens the link…      Moves to the…│ ┃
+        └──────────── backspace up · esc cancel ┘ ┃
+━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
  READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line, or a prompt
 ```
 
@@ -261,9 +261,10 @@ keys.
 
 Each pane starts with its view's title ("Explorer", "History", "Outline") and a blank row before the
 list; panes under 8 rows skip both. The explorer runs from under the frame's top
-rule, beside the tab strip. The outline belongs to the note, so it opens under the note's
-breadcrumb: the top-right window's breadcrumb row and the rule under it run across the outline's
-column. The outline's button (`▤`) is on the right rail, bright while the outline is open.
+rule, beside the tab strip. The outline starts right under the tab strip too,
+beside the note's windows: their breadcrumbs and rules stop at its border (which meets the
+breadcrumb's rule in `┫`), and its title sits level with the breadcrumb. The outline's button
+(`▤`) is on the right rail, bright while the outline is open.
 
 **The rails** (`ui.left_rail`, `ui.right_rail`, both on by default) are columns of buttons at the
 edges, one button per row from the top. Each is a tinted column (the `rail` role, the tab strip's

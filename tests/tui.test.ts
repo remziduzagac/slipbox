@@ -1086,7 +1086,7 @@ describe("top bar, tab strip, status line", () => {
     h.frame();
     expect(h.app.geometry!.tabStrip).not.toBeNull(); // the strip stays with the last tab
   });
-  test("the outline opens under the breadcrumb, which spans its column; titled, then a blank row", async () => {
+  test("the outline starts right under the tab strip, beside the note's header; titled, then a blank row", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 160 });
     await h.app.run("cursor.heading_next");
     await h.app.run("outline.toggle");
@@ -1094,15 +1094,17 @@ describe("top bar, tab strip, status line", () => {
     const g = h.app.geometry!;
     const pane = g.panes[0]!;
     const crumbY = pane.y - 2;
-    // The breadcrumb row and its rule run across the outline's column; the button ends the row.
-    expect(g.outline!.x).toBeGreaterThan(pane.x + pane.w);
-    expect(rows[crumbY]!.trimEnd().endsWith("▤")).toBe(true);
+    const strip = g.tabStrip!;
     const border = g.outline!.x - 1;
-    expect(rows[crumbY + 1]![border]).toBe("┳");
-    // Then the pane: "Outline", a blank row, the headings.
-    expect(rows[crumbY + 2]!.slice(g.outline!.x)).toMatch(/^ Outline/);
-    expect(rows[crumbY + 3]!.slice(g.outline!.x, g.outline!.x + g.outline!.w).trim()).toBe("");
-    expect(g.outline!.y).toBe(crumbY + 4);
+    // The breadcrumb and its rule stop at the outline's border; the pane's border starts under the
+    // strip's rule (┳) and meets the breadcrumb's rule (┫).
+    expect(g.outline!.x).toBeGreaterThan(pane.x + pane.w);
+    expect(rows[strip.y + 1]![border]).toBe("┳");
+    expect(rows[crumbY + 1]![border]).toBe("┫");
+    // The pane itself: "Outline" on the breadcrumb's row, a blank row, the headings.
+    expect(rows[crumbY]!.slice(g.outline!.x)).toMatch(/^ Outline/);
+    expect(rows[crumbY + 1]!.slice(g.outline!.x, g.outline!.x + g.outline!.w).trim()).toBe("");
+    expect(g.outline!.y).toBe(crumbY + 2);
     expect(rows[g.outline!.y]!.slice(g.outline!.x).trim()).not.toBe("");
   });
   test("toggle buttons: dim while off, bright while on, no fill of their own", async () => {
