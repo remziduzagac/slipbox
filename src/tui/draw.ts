@@ -573,12 +573,26 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const y = body.y;
     const bg = page;
     const text = typing ? typing.text : view.find!.query;
-    const px = drawText(c, body.x + 1, y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
-    const fw = drawText(c, body.x + 1 + px, y, truncate(text, Math.max(1, body.w - 16 - px)), { ...roleStyle(theme, "text", bg), bg });
-    if (typing) drawText(c, body.x + 1 + px + fw, y, " ", roleStyle(theme, "cursor", bg));
     const f = view.find;
-    const count = !text ? "" : f && f.matches.length ? `${f.current + 1}/${f.matches.length}` : "no matches";
-    if (count) drawText(c, body.x + body.w - 2 - stringWidth(count), y, count, { ...roleStyle(theme, "dim", bg), bg });
+    const count = !text ? "" : f?.error ? "not a regex" : f && f.matches.length ? `${f.current + 1}/${f.matches.length}` : "no matches";
+    let rx = body.x + body.w - 2;
+    if (count) {
+      rx -= stringWidth(count);
+      drawText(c, rx, y, count, { ...roleStyle(theme, f?.error ? "warn" : "dim", bg), bg });
+      rx -= 2;
+    }
+    // Its toggles, clickable, bright while on: whole words, regex.
+    const opts = view.findOpts ?? { regex: false, whole: false };
+    const index = app.tab?.views.indexOf(view) ?? 0;
+    for (const [id, label, on] of [["regex", " .* ", opts.regex], ["whole", " ab ", opts.whole]] as const) {
+      rx -= stringWidth(label);
+      button(app, c, rx, { y, h: 1 }, label, on ? "topbar_button_on" : "topbar_button", `findopt:${id}:${index}`, geo, bg);
+      rx -= 1;
+    }
+    // The query in the room left of them.
+    const px = drawText(c, body.x + 1, y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
+    const fw = drawText(c, body.x + 1 + px, y, truncate(text, Math.max(1, rx - (body.x + 1 + px) - 2)), { ...roleStyle(theme, "text", bg), bg });
+    if (typing) drawText(c, body.x + 1 + px + fw, y, " ", roleStyle(theme, "cursor", bg));
     drawText(c, body.x, y + 1, app.glyphs.hbar.repeat(body.w), roleStyle(theme, "border", page), body.w);
     geo.rules.push({ y: y + 1, x0: body.x, x1: body.x + body.w });
     if (typing) geo.findInWindow = true;

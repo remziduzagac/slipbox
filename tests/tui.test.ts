@@ -1357,6 +1357,32 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     await keys("x", "p");
     expect(text().split("\n")[0]).toBe("lapha beta");
   });
+  test("find's toggles: plain text by default, alt+r regex, alt+w whole words; clickable, shown", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "f.md"), "a.b axb a.b foo_a.b\n");
+    const h = await harness({ root, open: "f.md", width: 100, height: 30 });
+    const v = h.app.view!;
+    await h.keys("/", "a", ".", "b");
+    expect(v.find!.matches.length).toBe(3); // a literal dot: not axb
+    await h.keys("alt+r");
+    expect(v.findOpts!.regex).toBe(true);
+    expect(v.find!.matches.length).toBe(4); // the dot is any character now
+    await h.keys("alt+w");
+    expect(v.find!.matches.length).toBe(3); // not inside foo_a.b
+    h.frame();
+    const hot = (id: string) => h.app.geometry!.hot.find((r) => r.id === id)!;
+    const regexBtn = hot("findopt:regex:0");
+    expect(h.canvas().styles[regexBtn.y]![regexBtn.x + 1]!.fg).toBe(h.app.theme.roles.topbar_button_on.fg!);
+    h.app.handleMouse({ type: "down", x: regexBtn.x + 1, y: regexBtn.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: regexBtn.x + 1, y: regexBtn.y, button: 0 });
+    expect(v.findOpts!.regex).toBe(false);
+    expect(v.find!.matches.length).toBe(2); // plain, whole words: the two standalone a.b
+    await h.keys("enter");
+    // A broken regex says so, in the row.
+    await h.keys("/", "alt+r", "(");
+    expect(h.frame()).toContain("not a regex");
+    await h.keys("escape");
+  });
   test("keys are handled in order, one at a time: a fast j then . doesn't interleave", async () => {
     const root = makeVault();
     writeFileSync(join(root, "v.md"), "# Vim\n\nthe quick brown fox\njumps over the lazy dog\n");

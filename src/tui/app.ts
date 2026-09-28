@@ -14,6 +14,7 @@ import { dirname, join, relative } from "node:path";
 import { readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
+import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, stopInsert } from "./editing.ts";
@@ -111,8 +112,12 @@ export interface FindState {
   query: string;
   matches: { row: number; col: number; len: number }[];
   current: number;
-  /** Whole words only (`*` / `#`): not inside a longer word. */
+  /** Whole words only (`*` / `#`, `alt+w`): not inside a longer word. */
   whole?: boolean;
+  /** A regular expression (`alt+r`), not plain text. */
+  regex?: boolean;
+  /** Why the regex isn't one, when it isn't. */
+  error?: string;
 }
 
 export interface View {
@@ -147,6 +152,8 @@ export interface View {
   lensClick?: number;
   /** An oversized lens's inner scroll: the first of its rows shown (4.15). */
   lensInner?: number;
+  /** The find row's toggles, kept for the window's next search: regex, whole words. */
+  findOpts?: { regex: boolean; whole: boolean };
   /** Typing into the text (insert mode); in source mode or live preview. */
   insert?: boolean;
 }
@@ -826,7 +833,7 @@ export class App {
       view.curAnchor = { ...this.cursorAnchorFor(layout, view.cur), col: view.curAnchor.col };
       view.top = this.clampTop(view, layout, rowFor(layout, view.topAnchor));
       this.ensureCursorVisible(view, layout);
-      if (view.find) view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole);
+      if (view.find) view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole, view.find.regex);
       if (view.sel) view.sel.anchor = view.sel.src ? this.cursorFromAnchor(layout, view.sel.src) : clampPos(layout, view.sel.anchor);
     }
     if (view.live && view.liveBase) this.pinLens(view, layout);
@@ -2171,6 +2178,19 @@ export class App {
     this.overlay = o;
   }
 
+  /** Flip a window's find toggle (regex, whole words); the search it has redoes itself with it. */
+  toggleFindOpt(view: View, key: "regex" | "whole"): void {
+    const o = { ...(view.findOpts ?? { regex: false, whole: false }) };
+    o[key] = !o[key];
+    view.findOpts = o;
+    const typing = this.overlay?.kind === "prompt" && this.overlay.view === view;
+    if (view.find && !typing) {
+      const f = computeFind(this.currentLayout(view), view.find.query, view.find.current, o.whole, o.regex);
+      view.find = f;
+    }
+    this.message("info", `${key === "regex" ? "regex" : "whole words"}: ${o[key] ? "on" : "off"}`);
+  }
+
   prompt(label: string, accept: (text: string) => void, change?: (text: string) => void, cancel?: () => void, view?: View): void {
     this.overlay = { kind: "prompt", label, text: "", accept, change, cancel, view };
   }
@@ -2410,6 +2430,12 @@ export class App {
     if (key === "escape" || key === "ctrl+c" || key === "ctrl+g") return this.closeOverlay(true);
     const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
     if (o.kind === "prompt") {
+      // The find row's toggles, while typing in it.
+      if (o.view && (key === "alt+r" || key === "alt+w")) {
+        this.toggleFindOpt(o.view, key === "alt+r" ? "regex" : "whole");
+        o.change?.(o.text);
+        return;
+      }
       if (key === "enter") {
         this.overlay = null;
         return o.accept(o.text);
@@ -2509,6 +2535,11 @@ export class App {
 
   private overlayMouse(ev: { type: string; x: number; y: number; scroll?: { direction: string } }, g: Geometry): void {
     const o = this.overlay!;
+    // The find row's own buttons work while typing in it.
+    if (o.kind === "prompt" && o.view && ev.type === "down") {
+      const hot = g.hot.find((h) => inRect(h, ev.x, ev.y));
+      if (hot?.id.startsWith("findopt:")) return this.clickHot(hot.id);
+    }
     if (o.kind !== "list" || !g.overlay) {
       if (ev.type === "down") this.closeOverlay(true);
       return;
@@ -2834,6 +2865,16 @@ export class App {
         t.active = w;
         this.region = "content";
         this.revealHeading(v, row);
+        break;
+      }
+      case "findopt": {
+        // findopt:<regex|whole>:<window>
+        const [which, w] = arg.split(":");
+        const v = this.tab?.views[Number(w)];
+        if (!v) break;
+        this.toggleFindOpt(v, which === "regex" ? "regex" : "whole");
+        const o = this.overlay;
+        if (o?.kind === "prompt" && o.view === v) o.change?.(o.text);
         break;
       }
       case "crumbmore": {
@@ -3528,23 +3569,21 @@ export function selectedText(layout: Layout, sel: Selection, cur: Pos): string {
   return out.join("\n");
 }
 
-export function computeFind(layout: Layout, query: string, current = 0, whole = false): FindState {
+export function computeFind(layout: Layout, query: string, current = 0, whole = false, regex = false): FindState {
   const matches: FindState["matches"] = [];
+  let error: string | undefined;
   if (query) {
     // Match on the original text (never a lowercased copy, whose length can differ: "İ"), with
-    // smart case: case-insensitive unless the query has an uppercase letter. Whole words: not
-    // next to another letter, digit or underscore (in any script).
-    const literal = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const source = whole ? `(?<![\\p{L}\\p{N}_])${literal}(?![\\p{L}\\p{N}_])` : literal;
-    const re = new RegExp(source, /\p{Lu}/u.test(query) ? "gu" : "giu");
-    layout.lines.forEach((line, row) => {
-      if (line.decor) return; // the lens's rules aren't the note's text
-      const text = line.spans.map((s) => s.text).join("");
-      for (const m of text.matchAll(re)) {
-        if (!m[0]) break;
-        matches.push({ row, col: stringWidth(text.slice(0, m.index)), len: stringWidth(m[0]) });
-      }
-    });
+    // smart case, plain text unless regex is on, whole words when asked (core/replace.ts).
+    const re = compilePattern(query, { regex, whole });
+    if (typeof re === "string") error = re;
+    else {
+      layout.lines.forEach((line, row) => {
+        if (line.decor) return; // the lens's rules aren't the note's text
+        const text = line.spans.map((s) => s.text).join("");
+        for (const m of findAll(text, re)) matches.push({ row, col: stringWidth(text.slice(0, m.from)), len: stringWidth(text.slice(m.from, m.to)) });
+      });
+    }
   }
-  return { query, matches, current: Math.min(current, Math.max(0, matches.length - 1)), whole };
+  return { query, matches, current: Math.min(current, Math.max(0, matches.length - 1)), whole, regex, error };
 }

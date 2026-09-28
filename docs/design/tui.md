@@ -128,9 +128,12 @@ when the note fits). Find's progress is in its window's find row, not here.
 
 **Find** (`/`, `ctrl+f`) belongs to a window, so it's typed there: a row of its own under the
 breadcrumb (or at the window's top when there's none), `› query` with the match count at its right
-(`2/7`, `no matches`), and a rule under it — the look of a pane's filter. The row stays while the
-search is on (`n`, `shift+n`, `*` move through the matches) and goes with it (`esc`, `:noh`); the text
-moves down two rows while it's there. A window too short for it has its prompt on the status line.
+(`2/7`, `no matches`, `not a regex`) and two toggles before it, clickable and bright while on — `.*`
+regex (`alt+r`) and `ab` whole words (`alt+w`), kept for the window's next search; a rule under it.
+The query is plain text by default, smart case (a capital makes it case-sensitive); it matches the
+note's text as a layout shows it — the look of a pane's filter. The row stays while the search is on
+(`n`, `shift+n`, `*` move through the matches) and goes with it (`esc`, `:noh`); the text moves down
+two rows while it's there. A window too short for it has its prompt on the status line.
 
 **Messages and prompts never take a row of their own,** so the note never changes height for them.
 The latest message (4 s, 8 s for errors) sits at the right end of the top bar, right-aligned, cut

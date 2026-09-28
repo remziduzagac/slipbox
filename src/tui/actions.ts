@@ -819,13 +819,16 @@ export function registerActions(app: App): void {
               v.find = null;
               return V.finishSearchOp(a, v, false);
             }
-            v.find = computeFind(lay(a, v), text, v.find?.current ?? 0);
-            if (!v.find.matches.length) a.message("info", `not found: ${text}`);
+            const o = v.findOpts ?? { regex: false, whole: false };
+            v.find = computeFind(lay(a, v), text, v.find?.current ?? 0, o.whole, o.regex);
+            if (v.find.error) a.message("warn", `not a regex: ${v.find.error}`);
+            else if (!v.find.matches.length) a.message("info", `not found: ${text}`);
             // After an operator (d/foo): it covers the text up to the match.
             V.finishSearchOp(a, v, v.find.matches.length > 0);
           },
           (text) => {
-            v.find = computeFind(lay(a, v), text);
+            const o = v.findOpts ?? { regex: false, whole: false };
+            v.find = computeFind(lay(a, v), text, 0, o.whole, o.regex);
             const first = v.find.matches.findIndex((m) => m.row > start.row || (m.row === start.row && m.col >= start.col));
             const i = first >= 0 ? first : 0;
             const m = v.find.matches[i];
