@@ -73,9 +73,10 @@ each cut to 40 columns. When they don't all fit, the middle collapses into `…`
 `…`, and as many of the innermost as fit; then only the first and the last, cut (down to 8 columns
 each); then `…` and the last; then `…` alone. Clicking `…` (or `space f b`) opens the whole path as
 a dropdown hanging under it, framed like the other popups: one heading per row, each hanging off
-the one above with `└─`, the current one marked `here`, the deepest hidden one selected. The
-arrows, `j` / `k` and `ctrl+n` / `ctrl+p` move, `enter` or a click jumps there as a breadcrumb
-click does, `esc` or a click outside closes it. With nothing collapsed it hangs under the icon. In a split it shares
+the one above with `└─`, the current one marked `here`, the deepest hidden one selected. Typing
+filters it, as in every list (the filter's row sits under the title); the arrows and `ctrl+n` /
+`ctrl+p` move, `enter` or a click jumps there as a breadcrumb click does, `esc` or a click outside
+closes it. With nothing collapsed it hangs under the icon. In a split it shares
 the window's title row, after the file name. Clicking a heading focuses that window, puts its cursor
 on the heading, and scrolls the heading to the window's first row (as far as the note's end allows).
 The row stays reserved above the first heading, so the text doesn't jump. `ui.breadcrumb = false`

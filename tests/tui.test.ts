@@ -761,13 +761,19 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     await h.keys("enter");
     expect(h.app.overlay).toBeNull();
     expect(v.cur.row).toBe(chain[1]!.line);
-    // From the keyboard: j / k move, and a click on an entry picks it.
+    // From the keyboard: the arrows move, and a click on an entry picks it.
     h.app.moveCursor(v, { row: target.line + 1, col: 0 });
     h.frame();
     await h.keys("space", "f", "b");
     expect(h.app.overlay?.kind).toBe("list");
-    await h.keys("k");
+    await h.keys("up");
     expect((h.app.overlay as ListOverlay).selected).toBe(0);
+    // Typing filters, as in every list; the filter's row sits above the entries.
+    await h.keys("L", "a", "y");
+    expect((h.app.overlay as ListOverlay).filtered.map((e) => e.item.label)).toEqual(["Layered capture order"]);
+    expect(h.frame()).toContain("› Lay");
+    await h.keys("backspace", "backspace", "backspace");
+    await h.keys("up", "up");
     h.frame();
     const g = h.app.geometry!.overlay!;
     h.app.handleMouse({ type: "down", x: g.x + 4, y: g.listY, button: 0 });

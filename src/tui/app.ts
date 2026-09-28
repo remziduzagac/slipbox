@@ -838,7 +838,6 @@ export class App {
     }
     this.openList({
       title: "Path",
-      filterable: false,
       items: chain.map((c, k) => ({ label: c.text, indent: k, hint: k === chain.length - 1 ? "here" : undefined, data: c.line })),
       selected,
       anchor: at ? { x: at.x, y: at.y } : undefined,

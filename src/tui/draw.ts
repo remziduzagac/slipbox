@@ -1195,11 +1195,14 @@ function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; 
   const W = c.width;
   const hintW = (item: ListItem) => (item.hint ? stringWidth(item.hint) + 2 : 0);
   // Three columns a level: `└─` and a space.
-  const content = Math.max(20, ...o.filtered.map(({ item }) => (item.indent ?? 0) * 3 + stringWidth(item.label) + hintW(item)));
+  // Sized over every entry, not the matches, so it keeps its width while you type.
+  const content = Math.max(20, ...o.items.map((item) => (item.indent ?? 0) * 3 + stringWidth(item.label) + hintW(item)));
   const w = Math.max(10, Math.min(content + 4, 64, W - 4));
   const x = Math.max(2, Math.min(anchor.x - 2, W - w - 2));
   const y = anchor.y + 2;
-  const h = Math.max(3, Math.min(o.filtered.length + 2, maxY - y));
+  // The filter's row, then at least one row for the entries (or "no matches").
+  const inputRows = o.filterable ? 1 : 0;
+  const h = Math.max(3 + inputRows, Math.min(Math.max(1, o.filtered.length) + 2 + inputRows, maxY - y));
   const bg = roleStyle(theme, "overlay", null);
   const border = roleStyle(theme, "overlay_border", null);
   const dim = roleStyle(theme, "overlay_dim", null);
@@ -1213,15 +1216,22 @@ function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; 
     drawText(c, x + w - 1, y + k, b.v, border, 1);
   }
   drawText(c, x, y + h - 1, `${b.bl}${b.h.repeat(w - 2)}${b.br}`, border);
-  const rows = h - 2;
+  const listY = y + 1 + inputRows;
+  if (o.filterable) {
+    const px = drawText(c, x + 2, y + 1, "› ", border);
+    const iw = drawText(c, x + 2 + px, y + 1, truncate(o.input, w - 6 - px), bg);
+    drawText(c, x + 2 + px + iw, y + 1, " ", roleStyle(theme, "cursor", null));
+  }
+  const rows = h - 2 - inputRows;
+  const matchSt = roleStyle(theme, "overlay_match", null);
   if (o.selected < o.scroll) o.scroll = o.selected;
   if (o.selected >= o.scroll + rows) o.scroll = o.selected - rows + 1;
   for (let i = 0; i < rows; i++) {
     const idx = o.scroll + i;
     const entry = o.filtered[idx];
     if (!entry) break;
-    const { item } = entry;
-    const ry = y + 1 + i;
+    const { item, positions } = entry;
+    const ry = listY + i;
     const selected = idx === o.selected;
     const st = selected ? roleStyle(theme, "overlay_selected", null) : bg;
     c.fill(x + 1, ry, w - 2, 1, st.bg);
@@ -1230,10 +1240,19 @@ function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; 
     // One heading under the next: each row hangs off the one above with └─.
     if (depth) drawText(c, cx - 3, ry, `${g.guideLast}${g.guideDash}`, { ...roleStyle(theme, "tree_guide", st.bg), bg: st.bg }, 2);
     const hw = hintW(item);
-    cx += drawText(c, cx, ry, truncate(item.label, Math.max(1, x + w - 2 - hw - cx)), st);
+    const label = truncate(item.label, Math.max(1, x + w - 2 - hw - cx));
+    const pos = new Set(positions);
+    let ci = 0;
+    for (const gr of graphemes(label)) {
+      const gw = graphemeWidth(gr);
+      if (gw > 0) c.cell(cx, ry, gr, gw, pos.has(ci) ? { ...st, fg: matchSt.fg, bold: true } : st);
+      cx += gw;
+      ci += gr.length;
+    }
     if (item.hint) drawText(c, x + w - 2 - stringWidth(item.hint), ry, item.hint, { ...dim, bg: st.bg });
   }
-  return { x, y, w, h, listY: y + 1, rows };
+  if (!o.filtered.length) drawText(c, x + 2, listY, "no matches", dim);
+  return { x, y, w, h, listY, rows };
 }
 
 /**
