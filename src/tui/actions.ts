@@ -655,7 +655,7 @@ export function registerActions(app: App): void {
     // Closed (or showing the history) → open on the tree and focus; open elsewhere → focus; focused → close.
     "explorer.cycle": (a) => a.openLeftView("explorer", "cycle"),
     "explorer.reveal": (a) => {
-      a.leftView = "explorer";
+      a.switchLeftView("explorer");
       a.sidebar.filter = "";
       a.sidebar.filtering = false;
       a.showSidebar(true);

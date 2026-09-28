@@ -316,6 +316,8 @@ export class App {
   sidebar: SidePaneState;
   /** The left panel's view; the rail's buttons pick it. */
   leftView: LeftView = "explorer";
+  /** Where each left view was when another took the panel: restored when it comes back. */
+  private leftPositions = new Map<LeftView, Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">>();
   outline: SidePaneState & { folded: Set<number>; forKey: string };
   expanded = new Set<string>();
   overlay: Overlay | null = null;
@@ -1233,18 +1235,32 @@ export class App {
       return;
     }
     if (showing) return this.showSidebar(false);
-    if (this.leftView !== view) {
-      this.leftView = view;
-      this.sidebar.scroll = 0;
-      this.sidebar.left = 0;
-    }
-    this.sidebar.filter = "";
+    const restored = this.switchLeftView(view);
     this.sidebar.filtering = false;
     this.showSidebar(true);
     this.region = "sidebar";
+    if (restored) return;
+    // Its first showing (or reopened on the same view): the current note, or the current place.
+    this.sidebar.filter = "";
     this.sidebar.pinned = false;
     if (view === "explorer") this.revealInSidebar();
     else this.sidebar.selected = Math.max(0, this.historyRows().findIndex((r) => r.here));
+  }
+
+  /**
+   * Put `view` in the left panel: the view leaving keeps its position (selection, scroll, sideways
+   * offset, filter text), and `view` gets back the one it had. False when it has none to restore
+   * (its first showing, or already the panel's view).
+   */
+  switchLeftView(view: LeftView): boolean {
+    if (this.leftView === view) return false;
+    const s = this.sidebar;
+    this.leftPositions.set(this.leftView, { selected: s.selected, scroll: s.scroll, left: s.left, pinned: s.pinned, filter: s.filter });
+    this.leftView = view;
+    s.filtering = false;
+    const saved = this.leftPositions.get(view);
+    Object.assign(s, saved ?? { selected: 0, scroll: 0, left: 0, pinned: false, filter: "" });
+    return !!saved;
   }
 
   /** Keys while the left panel's filter has them: type, move, open, clear. */
@@ -1344,7 +1360,6 @@ export class App {
       }
       case "filter":
         s.filtering = true;
-        s.filter = "";
         break;
       case "collapse":
         break;
@@ -1375,8 +1390,7 @@ export class App {
     this.sidebar.pinned = false;
     if (this.leftView === "history") return this.historyAction(action);
     if (action === "filter") {
-      this.sidebar.filtering = true;
-      this.sidebar.filter = "";
+      this.sidebar.filtering = true; // resumes a filter already there (a view's restored one)
       return;
     }
     const rows = this.explorerRows();

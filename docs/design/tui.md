@@ -236,7 +236,10 @@ Each kind of link does something different when followed:
 
 Each side has one panel, which shows one of its views at a time; its rail has a button per view,
 bright while that view shows. Clicking a view's button shows the panel on it (and focuses it), or
-hides the panel when that view already shows. The views are a registry (`LEFT_VIEWS`,
+hides the panel when that view already shows. Each view keeps its own position while another shows
+(selection, scroll, sideways offset and filter text) and gets it back when it returns; on its first
+showing the explorer reveals the current note and the history selects `here`. The views are a
+registry (`LEFT_VIEWS`,
 `RIGHT_VIEWS` in `app.ts`) and more will come on both sides, each with its own rows, drawing and
 keys.
 
@@ -247,7 +250,7 @@ keys.
   note name and line, the current one marked `here` and selected when the view opens. `enter` or a
   click jumps there, the places before it becoming back and those after it forward.
 - **Filter (`/`, both left views):** a `› text` row at the top of the list; typing narrows the
-  rows. The explorer keeps the tree: the notes whose path matches, under their folders (all
+  rows (`/` on a view that kept its filter resumes it). The explorer keeps the tree: the notes whose path matches, under their folders (all
   unfolded), the matched letters highlighted, the selection on the first note. The history keeps
   the entries whose path matches. The arrows and `ctrl+n` / `ctrl+p` move, `enter` or a click opens
   (the filter clears), `esc` clears it. `ctrl+p` stays the flat quick-open across the vault.

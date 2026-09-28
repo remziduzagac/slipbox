@@ -820,6 +820,41 @@ describe("the left panel's views and filter", () => {
     await h.keys("ctrl+e");
     expect(h.app.leftView).toBe("explorer");
   });
+  test("each view keeps its position (selection, scroll, filter) while the other shows", async () => {
+    const h = await harness({ open: "index.md", width: 140, height: 30 });
+    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("note.open notes/beta.md");
+    const click = (id: string) => {
+      h.frame();
+      const b = h.app.geometry!.hot.find((r) => r.id === id)!;
+      h.app.handleMouse({ type: "down", x: b.x + 1, y: b.y, button: 0 });
+      h.app.handleMouse({ type: "up", x: b.x + 1, y: b.y, button: 0 });
+    };
+    await h.keys("ctrl+e", "g", "g", "j", "j");
+    const explorerSel = h.app.sidebar.selected;
+    click("btn:history"); // its first showing: on `here`, the newest
+    expect(h.app.leftView).toBe("history");
+    expect(h.app.sidebar.selected).toBe(0);
+    await h.keys("j");
+    click("btn:explorer");
+    expect(h.app.leftView).toBe("explorer");
+    expect(h.app.sidebar.selected).toBe(explorerSel); // not moved to the current note
+    await h.keys("/", "b", "e", "t");
+    const filtered = h.app.sidebar.selected;
+    click("btn:history"); // mid-filter: the explorer keeps its filter
+    expect(h.app.sidebar.selected).toBe(1);
+    expect(h.app.sidebar.filter ?? "").toBe("");
+    click("btn:explorer");
+    expect(h.app.sidebar.filter).toBe("bet");
+    expect(h.app.sidebar.filtering).toBe(false);
+    expect(h.app.sidebar.selected).toBe(filtered);
+    await h.keys("/"); // resumes the filter; esc clears it
+    expect(h.app.sidebar.filtering).toBe(true);
+    await h.keys("t");
+    expect(h.app.sidebar.filter).toBe("bett");
+    await h.keys("escape");
+    expect(h.app.sidebar.filter).toBe("");
+  });
   test("/ filters the explorer: matching notes under their folders; enter opens, esc clears", async () => {
     const h = await harness({ open: "index.md", width: 140, height: 30 });
     await h.keys("ctrl+e", "/", "b", "e", "t");
