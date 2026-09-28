@@ -30,7 +30,7 @@ undo) wait for renames (`7.1`, phase 4).
 | `docs/idea.md` | *what and why* — captured scope, the reasoning, and what was ruled out | before designing |
 | `docs/plan.md` | *what to do*. Work items with stable IDs, grouped into phases | before writing anything |
 | `docs/design/` | *how it's built*: the code as it is (start at its README) | before changing code |
-| `docs/samples/` | markdown fixtures, mostly real documents; see its README | when you touch rendering |
+| `examples/vault/` | the demo vault, and the rendering fixtures; see `about-this-vault.md` | when you touch rendering |
 
 Cite item IDs (`0.11`, `3.3`) rather than restating work. They are stable.
 
@@ -64,9 +64,10 @@ because it is cheap now and expensive later. Two deserve special attention:
   the modal editing layer and any future plugin tier all consume that registry. Retrofitting it
   means touching every action.
 
-`docs/samples/` holds the rendering fixtures for `0.5` — the wide-table case that started the
-project, a 1,180-line document, 232 dense table rows, and a synthetic file covering wikilinks and
-display width. The vault cases (name collisions, CRLF and encodings, images, the `.slipbox/`
+The demo vault, `examples/vault/`, holds the rendering fixtures for `0.5` — the wide-table case that
+started the project, a 1,180-line document, 216 dense table rows, and a note covering every link
+form and display width. Its notes are invented (a fictional observatory's), written to keep the
+awkward things real notes contain. The vault cases (name collisions, CRLF and encodings, images, the `.slipbox/`
 marker) live in the test vault, `tests/fixtures/vault/`.
 
 **Three decisions gated phase 0**, and are recorded in `docs/design/decisions.md`:

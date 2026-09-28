@@ -131,6 +131,8 @@ export interface View {
   goal: number;
   sel: Selection | null;
   visual: "char" | "line" | null;
+  /** The text version the cursor's anchor was last re-derived at (layoutFor). */
+  anchorVersion?: number;
   /** The last selection's source lines, 1-based: `:'<,'>s` works on them. */
   visualLines?: [number, number];
   /** Source-based positions, which survive re-layout (decision 3.5). */
@@ -835,8 +837,13 @@ export class App {
       view.layoutKey = key;
       view.cur = this.cursorFromAnchor(layout, view.curAnchor);
       // Re-derive the anchor from where the cursor landed, so its fallback line tracks the file:
-      // after an insertion above, a later removal of the heading must not use a stale line.
-      view.curAnchor = { ...this.cursorAnchorFor(layout, view.cur), col: view.curAnchor.col };
+      // after an insertion above, a later removal of the heading must not use a stale line. Only
+      // when the text changed: a re-wrap alone can leave no row starting on the anchor's line (the
+      // paragraph reflowed), and the next row's line would then replace the true one for good.
+      if (view.anchorVersion !== view.buf.version) {
+        view.curAnchor = { ...this.cursorAnchorFor(layout, view.cur), col: view.curAnchor.col };
+        view.anchorVersion = view.buf.version;
+      }
       view.top = this.clampTop(view, layout, rowFor(layout, view.topAnchor));
       this.ensureCursorVisible(view, layout);
       if (view.find) view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole, view.find.regex);

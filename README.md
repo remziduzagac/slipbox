@@ -15,8 +15,8 @@ Requires [Bun](https://bun.sh) 1.3+.
 
 ```bash
 bun install
-bun src/main.ts docs/samples/links-and-unicode.md   # the TUI
-bun src/main.ts render docs/samples/wide-tables.md  # render to stdout
+bun src/main.ts examples/vault                      # the TUI, on the demo vault
+bun src/main.ts render examples/vault/equipment/telescope-comparison.md  # render to stdout
 scripts/install-local.sh                            # a `slipbox` launcher in ~/.local/bin
 ```
 

@@ -24,10 +24,14 @@ process.env.XDG_CONFIG_HOME = join(sandbox, "config");
 delete process.env.NO_COLOR;
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
+const DEMO = join(import.meta.dir, "..", "examples", "vault");
+
 function makeVault(): string {
   const dir = mkdtempSync(join(sandbox, "vault-"));
   cpSync(join(import.meta.dir, "fixtures", "vault"), dir, { recursive: true, verbatimSymlinks: true });
-  cpSync(join(import.meta.dir, "..", "docs", "samples"), join(dir, "samples"), { recursive: true });
+  // The demo vault's notes, as a folder of this one (without its marker, which would make it a
+  // nested vault: a boundary, not walked).
+  cpSync(DEMO, join(dir, "samples"), { recursive: true, filter: (src) => !src.endsWith(".slipbox") });
   return dir;
 }
 
@@ -129,7 +133,7 @@ describe("drawing (3.1, 3.2)", () => {
 
 describe("cursor movement", () => {
   test("h j k l and arrows; up and down keep the goal column", async () => {
-    const h = await harness({ open: "samples/wrap-probe.md" });
+    const h = await harness({ open: "samples/scratch/wrap-probe.md" });
     await h.keys("j", "j", "$");
     const long = h.app.view!.cur.col;
     expect(long).toBeGreaterThan(20);
@@ -143,7 +147,7 @@ describe("cursor movement", () => {
     expect(h.app.view!.cur.col).toBe(long);
   });
   test("row start and end: 0 $ home end ctrl+left ctrl+right", async () => {
-    const h = await harness({ open: "samples/wrap-probe.md" });
+    const h = await harness({ open: "samples/scratch/wrap-probe.md" });
     await h.keys("j", "j", "$");
     const end = h.app.view!.cur.col;
     for (const k of ["0", "home", "ctrl+left"]) {
@@ -171,7 +175,7 @@ describe("cursor movement", () => {
     expect(h.app.view!.cur.row).toBeLessThan(row);
   });
   test("g g, shift+g, ctrl+home, ctrl+end", async () => {
-    const h = await harness({ open: "samples/large-document.md" });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md" });
     await h.keys("shift+g");
     const last = h.app.currentLayout(h.app.view!).lines.length - 1;
     expect(h.app.view!.cur.row).toBe(last);
@@ -184,7 +188,7 @@ describe("cursor movement", () => {
     expect(h.app.view!.cur.row).toBe(0);
   });
   test("headings with [ [ ] ] alt+up alt+down; paragraphs with { } ctrl+up ctrl+down", async () => {
-    const h = await harness({ open: "samples/large-document.md" });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md" });
     const heads = () => h.app.currentLayout(h.app.view!).headings.map((x) => x.line);
     await h.keys("]", "]");
     expect(heads()).toContain(h.app.view!.cur.row);
@@ -204,7 +208,7 @@ describe("cursor movement", () => {
     expect(heads().includes(h.app.view!.cur.row) || h.app.view!.cur.row === 0).toBe(true);
   });
   test("ctrl+d ctrl+u pagedown pageup move cursor and view together; scrolloff holds", async () => {
-    const h = await harness({ open: "samples/large-document.md", height: 30 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", height: 30 });
     await h.keys("ctrl+d");
     const v = h.app.view!;
     expect(v.top).toBeGreaterThan(0);
@@ -223,7 +227,7 @@ describe("cursor movement", () => {
     expect(h.app.view!.cur.col).toBe(col + 2);
   });
   test("mouse click moves the cursor; the wheel scrolls the view", async () => {
-    const h = await harness({ open: "samples/large-document.md" });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md" });
     const pane = h.app.geometry!.panes[0]!;
     h.app.handleMouse({ type: "down", x: pane.textX + 3, y: pane.y + 5, button: 0 });
     h.app.handleMouse({ type: "up", x: pane.textX + 3, y: pane.y + 5, button: 0 });
@@ -448,7 +452,7 @@ describe("overlays and the : prompt", () => {
     expect(h.frame()).toContain("Open note");
   });
   test("find: ctrl+f, cursor on the match, n / shift+n, esc clears", async () => {
-    const h = await harness({ open: "samples/dense-tables.md" });
+    const h = await harness({ open: "samples/logs/observing-log-2026.md" });
     await h.keys("ctrl+f", "m", "o", "d", "e", "enter");
     const v = h.app.view!;
     expect(v.find!.matches.length).toBeGreaterThan(3);
@@ -463,7 +467,7 @@ describe("overlays and the : prompt", () => {
     expect(v.find).toBeNull();
   });
   test("space f o outline picker", async () => {
-    const h = await harness({ open: "samples/large-document.md" });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md" });
     await h.keys("space", "f", "o");
     expect(h.frame()).toContain("Headings");
     await h.keys("down", "down", "enter");
@@ -543,7 +547,7 @@ describe("overlays and the : prompt", () => {
     expect(o.filtered.some((e) => e.item.header && e.item.label === "Inside the outline")).toBe(true);
   });
   test("help opens at the section for where you are: explorer, outline, visual mode", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 140, height: 40 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 40 });
     const start = async (...keys: string[]) => {
       await h.keys(...keys, "?");
       const o = h.app.overlay as ListOverlay;
@@ -613,7 +617,7 @@ describe("overlays and the : prompt", () => {
 
 describe("windows (ctrl+w, space w)", () => {
   test("split, focus, move, swap, close, only", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160 });
     await h.keys("ctrl+w", "v");
     const t = h.app.tab!;
     expect(t.views).toHaveLength(2);
@@ -661,7 +665,7 @@ describe("windows (ctrl+w, space w)", () => {
 
 describe("resize mode (ctrl+alt+w, space w r)", () => {
   test("enter, resize the split with h l and arrows, equalize, leave", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160 });
     await h.keys("ctrl+w", "v", "ctrl+w", "h"); // left window active
     const t = h.app.tab!;
     const f = await h.keys("ctrl+alt+w");
@@ -678,7 +682,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     expect(h.app.resizeMode).toBe(false);
   });
   test("ctrl+w > < + - resize one step, then stay in the mode so the key repeats", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, height: 40 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 40 });
     await h.keys("ctrl+w", "v", "ctrl+w", "h");
     const t = h.app.tab!;
     await h.keys("ctrl+w", ">");
@@ -701,7 +705,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     expect(t.views.length).toBe(2);
   });
   test("any other key leaves the mode and does its normal job", async () => {
-    const h = await harness({ open: "samples/large-document.md" });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md" });
     await h.keys("space", "w", "r");
     expect(h.app.resizeMode).toBe(true);
     await h.keys("ctrl+d");
@@ -709,7 +713,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     expect(h.app.view!.top).toBeGreaterThan(0);
   });
   test("stacked splits resize with j k; the right window grows by lowering the ratio", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, height: 40 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 40 });
     await h.keys("ctrl+w", "s", "ctrl+alt+w", "j", "j", "escape");
     expect(h.app.tab!.ratio).toBeLessThan(0.5); // the lower (second) window got taller
     await h.keys("ctrl+w", "v", "ctrl+alt+w", "k");
@@ -734,7 +738,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
   });
   test("resize keys and the default split ratio come from config", async () => {
     const h = await harness({
-      open: "samples/large-document.md",
+      open: "samples/handbook/operations-handbook.md",
       width: 160,
       config: (c) => ((c.ui.split_ratio = 0.3), (c.keys = { resize: { a: "wider" } } as unknown as Config["keys"])),
     });
@@ -747,7 +751,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
 
 describe("the rails (ui.left_rail, ui.right_rail)", () => {
   test("a column at the right edge under the tab strip; its ▤ toggles the outline, which opens beside it", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 140, height: 30 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 30 });
     const f = h.frame();
     const rows = f.split("\n");
     const W = 140;
@@ -770,7 +774,7 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
     const o = h.app.geometry!.outline!;
     expect(o.x + o.w).toBe(x); // the outline ends at the rail
     // Without colour there's no tint: the rail is a bordered column, joined to the rules.
-    const mono = await harness({ open: "samples/large-document.md", width: 140, height: 30, themeName: "mono" });
+    const mono = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 30, themeName: "mono" });
     const mrows = mono.frame().split("\n");
     expect(mono.app.rightRailWidth).toBe(4);
     const mcol = mrows.map((r) => [...r][W - 4] ?? "").join("");
@@ -781,7 +785,7 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
     h.frame();
     expect(h.app.rightRailWidth).toBe(0);
     await h.app.run("ui.zen");
-    const n = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.right_rail = false) });
+    const n = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 30, config: (c) => (c.ui.right_rail = false) });
     n.frame();
     expect(n.app.rightRailWidth).toBe(0);
     const b2 = n.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
@@ -791,21 +795,21 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
 
 describe("ui.lines", () => {
   test("light (the default): the frame in ─ │ and light joints; heavy: ━ ┃", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.lines = "light") });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 30, config: (c) => (c.ui.lines = "light") });
     const f = h.frame();
     expect(DEFAULT_CONFIG.ui.lines).toBe("light");
     expect(f).not.toMatch(/[━┃╋┳┻┣┫]/u);
     expect(f).toContain("┬");
     expect(f).toContain("┴");
     expect(f.split("\n")[1]!).toMatch(/^─+┬/u);
-    const heavy = await harness({ open: "samples/large-document.md", width: 140, height: 30 });
+    const heavy = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 30 });
     expect(heavy.frame().split("\n")[1]!).toMatch(/^━+┳/u);
   });
 });
 
 describe("the left rail", () => {
   test("a column at the left edge under the top bar; its ≡ toggles the explorer, which opens beside it", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
     const rows = h.frame().split("\n");
     expect(h.app.leftRailWidth).toBe(3);
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:explorer")!;
@@ -920,17 +924,17 @@ describe("the left panel's views and filter", () => {
     expect(h.app.sidebar.filter).toBe("");
   });
   test("/ filters the outline: matching headings under their parents; enter jumps, esc clears", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, height: 40, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 40, config: (c) => (c.ui.outline = true) });
     await h.keys("ctrl+o"); // focus it
     expect(h.app.region).toBe("outline");
-    await h.keys("/", "L", "a", "y", "e", "r", "e", "d");
+    await h.keys("/", ..."Swapping");
     expect(h.app.outline.filtering).toBe(true);
     const rows = h.app.outlineRows();
-    expect(rows.some((r) => r.text.startsWith("Layered capture order"))).toBe(true);
-    expect(rows.some((r) => r.text.startsWith("D20:"))).toBe(true); // its parent, kept
-    expect(rows.some((r) => r.text.startsWith("D1:"))).toBe(false);
-    expect(h.frame()).toContain("› Layered");
-    expect(rows[h.app.outline.selected]!.text).toStartWith("Layered capture order"); // on the match itself
+    expect(rows.some((r) => r.text.startsWith("Swapping a filter"))).toBe(true);
+    expect(rows.some((r) => r.text.startsWith("O16:"))).toBe(true); // its parent, kept
+    expect(rows.some((r) => r.text.startsWith("O1:"))).toBe(false);
+    expect(h.frame()).toContain("› Swapping");
+    expect(rows[h.app.outline.selected]!.text).toStartWith("Swapping a filter"); // on the match itself
     const line = rows[h.app.outline.selected]!.line;
     await h.keys("enter");
     expect(h.app.region).toBe("content");
@@ -2022,9 +2026,9 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     expect(shape(crumbLayout([30], 5, 3))).toBe("…");
   });
   test("… opens the whole path as a dropdown under it; enter jumps; space f b opens it too", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 70, height: 30, config: (c) => ((c.ui.sidebar = false), (c.ui.outline = false)) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 70, height: 30, config: (c) => ((c.ui.sidebar = false), (c.ui.outline = false)) });
     const v = h.app.view!;
-    const target = h.app.currentLayout(v).headings.find((x) => x.text.startsWith("Layered capture order"))!;
+    const target = h.app.currentLayout(v).headings.find((x) => x.text.startsWith("Swapping a filter"))!;
     h.app.moveCursor(v, { row: target.line + 1, col: 0 });
     h.frame();
     const chain = h.app.breadcrumb(v);
@@ -2058,9 +2062,9 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     await h.keys("up", "up");
     expect((h.app.overlay as ListOverlay).selected).toBe(0);
     // Typing filters, as in every list; the filter's row sits above the entries.
-    await h.keys("L", "a", "y");
-    expect((h.app.overlay as ListOverlay).filtered.map((e) => e.item.label)).toEqual(["Layered capture order"]);
-    expect(h.frame()).toContain("› Lay");
+    await h.keys("S", "w", "a");
+    expect((h.app.overlay as ListOverlay).filtered.map((e) => e.item.label)).toEqual(["Swapping a filter"]);
+    expect(h.frame()).toContain("› Swa");
     await h.keys("backspace", "backspace", "backspace");
     await h.keys("up", "up");
     h.frame();
@@ -2188,7 +2192,7 @@ describe("top bar, tab strip, status line", () => {
     expect(h.app.geometry!.tabStrip).not.toBeNull(); // the strip stays with the last tab
   });
   test("the outline starts right under the tab strip, beside the note's header; titled, then a blank row", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160 });
     await h.app.run("cursor.heading_next");
     await h.app.run("outline.toggle");
     const rows = h.frame().split("\n");
@@ -2223,7 +2227,7 @@ describe("top bar, tab strip, status line", () => {
     expect(btn("btn:outline").bg).toBe(roles.rail.bg!); // the rail's tint
   });
   test("tree lines: ├─ to each child, └─ to the last, │ where an ancestor goes on", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, height: 90, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 90, config: (c) => (c.ui.outline = true) });
     const c = h.canvas();
     const sb = h.app.geometry!.sidebar!;
     const rows = h.app.treeRows();
@@ -2248,7 +2252,7 @@ describe("top bar, tab strip, status line", () => {
     expect(dl.indexOf(orows[d]!.text.slice(0, 6)) - o.x).toBe(leaf.indexOf(orows.find((r) => r.level === 2 && !r.hasChildren)!.text.slice(0, 6)) - o.x);
   });
   test("focus shows as brightness: titles and the active tab, never a coloured border", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, config: (c) => (c.ui.outline = true) });
     const roles = h.app.theme.roles;
     const look = () => {
       const c = h.canvas();
@@ -2276,7 +2280,7 @@ describe("top bar, tab strip, status line", () => {
     expect(roles.pane_title.bold && roles.pane_title_active.bold && roles.tab_active_idle.bold && roles.tab_active.bold).toBe(true);
   });
   test("a click anywhere in a side pane focuses it; a heading click is a choice: the note takes focus", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, config: (c) => (c.ui.outline = true) });
     const click = (x: number, y: number) => {
       h.app.handleMouse({ type: "down", x, y, button: 0 });
       h.app.handleMouse({ type: "up", x, y, button: 0 });
@@ -2319,7 +2323,7 @@ describe("top bar, tab strip, status line", () => {
   });
   test("tabs that don't fit: the active one stays visible, and +N opens the tab list", async () => {
     const h = await harness({ width: 90 });
-    const notes = ["index.md", "notes/alpha.md", "notes/beta.md", "notes/gamma.md", "samples/large-document.md"];
+    const notes = ["index.md", "notes/alpha.md", "notes/beta.md", "notes/gamma.md", "samples/handbook/operations-handbook.md"];
     for (let i = 0; i < 3; i++) for (const n of notes) h.app.openInNewTab(n);
     const count = h.app.tabs.length;
     const f = h.frame();
@@ -2375,7 +2379,7 @@ describe("top bar, tab strip, status line", () => {
     expect(h.frame()).toContain("Messages");
   });
   test("the breadcrumb can be hidden (a UI setting); find's row then sits at the window's top", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 120, height: 30 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 120, height: 30 });
     const v = h.app.view!;
     await h.keys("]", "]"); // onto a heading, so the breadcrumb has something
     expect(h.frame()).toContain("§");
@@ -2434,7 +2438,7 @@ describe("top bar, tab strip, status line", () => {
     expect(f.at(-1)).toContain("! careful");
   });
   test("split windows: title then breadcrumb on one row; a click acts on its own window", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160 });
     await h.keys("ctrl+w", "v");
     const [a, b] = h.app.tab!.views;
     // Move the right window's cursor a few headings down, then focus the left one.
@@ -2443,7 +2447,7 @@ describe("top bar, tab strip, status line", () => {
     h.app.tab!.active = 0;
     const f = h.frame();
     const crumb = h.app.geometry!.hot.find((r) => r.id.startsWith("crumb:1:"))!;
-    expect(f.split("\n")[crumb.y]).toContain("large-document.md");
+    expect(f.split("\n")[crumb.y]).toContain("samples/handbook/operations-h");
     // Both windows' rules meet the border between them in a cross.
     const sep = h.app.geometry!.separators.find((x) => x.kind === "split-side")!;
     expect(f.split("\n")[crumb.y + 1]![sep.x]).toBe("╋");
@@ -2463,7 +2467,7 @@ describe("review round 1", () => {
     h.frame();
   };
   test("a drag selection survives the re-layout its copy message causes", async () => {
-    const h = await harness({ open: "samples/README.md", width: 120, height: 30 });
+    const h = await harness({ open: "samples/about-this-vault.md", width: 120, height: 30 });
     h.frame();
     const p = h.app.geometry!.panes[0]!;
     h.app.handleMouse({ type: "down", x: p.textX + 2, y: p.y + 2, button: 0 });
@@ -2510,7 +2514,7 @@ describe("review round 1", () => {
     expect(h.app.tabs[h.app.activeTab]!.views[0]!.buf.rel).toBe("notes/alpha.md");
   });
   test("the wheel scrolls the explorer and outline, and on narrow screens not the note under them", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 120, height: 20, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 120, height: 20, config: (c) => (c.ui.outline = true) });
     h.frame();
     const sb = h.app.geometry!.sidebarPane!;
     h.app.handleMouse({ type: "scroll", x: sb.x + 3, y: sb.y + 4, button: 0, scroll: { direction: "down", delta: 1 } });
@@ -2520,7 +2524,7 @@ describe("review round 1", () => {
     h.app.handleMouse({ type: "scroll", x: op.x + 3, y: op.y + 4, button: 0, scroll: { direction: "down", delta: 1 } });
     h.frame();
     expect(h.app.outline.scroll).toBeGreaterThan(0);
-    const n = await harness({ open: "samples/large-document.md", width: 70, height: 20 });
+    const n = await harness({ open: "samples/handbook/operations-handbook.md", width: 70, height: 20 });
     await n.keys("ctrl+e");
     n.frame();
     const p = n.app.geometry!.sidebarPane!;
@@ -2529,7 +2533,7 @@ describe("review round 1", () => {
     expect(n.app.view!.top).toBe(top);
   });
   test("wrapping off: the sideways offset is clamped when the window widens", async () => {
-    const h = await harness({ open: "samples/wrap-probe.md", width: 80, height: 30, config: (c) => ((c.ui.wrap = false), (c.ui.sidebar = false)) });
+    const h = await harness({ open: "samples/scratch/wrap-probe.md", width: 80, height: 30, config: (c) => ((c.ui.wrap = false), (c.ui.sidebar = false)) });
     h.frame();
     const v = h.app.view!;
     const layout = h.app.currentLayout(v);
@@ -2565,8 +2569,8 @@ describe("review round 1", () => {
     expect(c.app.ui.theme).toBe("dracula");
   });
   test("on a narrow strip, +N is clickable: tabs stop before it", async () => {
-    const h = await harness({ open: "samples/README.md", width: 30, height: 12 });
-    for (const n of ["notes/alpha.md", "notes/beta.md", "index.md", "samples/wide-tables.md", "samples/code-heavy.md", "samples/dense-tables.md", "samples/large-document.md"]) h.app.openInNewTab(n);
+    const h = await harness({ open: "samples/about-this-vault.md", width: 30, height: 12 });
+    for (const n of ["notes/alpha.md", "notes/beta.md", "index.md", "samples/equipment/telescope-comparison.md", "samples/software/pipeline-cookbook.md", "samples/logs/observing-log-2026.md", "samples/handbook/operations-handbook.md"]) h.app.openInNewTab(n);
     h.app.activeTab = 3;
     h.frame();
     const more = h.app.geometry!.hot.find((r) => r.id === "tabmore:")!;
@@ -2588,14 +2592,14 @@ describe("review round 1", () => {
     }
   });
   test("a stacked split too short for two windows shows the active one, inside its area", async () => {
-    const h = await harness({ open: "samples/README.md", width: 40, height: 9 });
+    const h = await harness({ open: "samples/about-this-vault.md", width: 40, height: 9 });
     await h.keys("ctrl+w", "s");
     const rows = h.frame().split("\n");
     expect(rows.at(-2)!.startsWith("━")).toBe(true); // the bottom frame rule is intact
     expect(h.app.geometry!.panes.some((p) => p.view === h.app.view)).toBe(true);
   });
   test("clicks on an overlaid explorer or outline don't reach what's under it", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 80, height: 24 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 80, height: 24 });
     await h.keys("]", "]");
     await h.keys("ctrl+e");
     h.frame();
@@ -2615,7 +2619,7 @@ describe("review round 1", () => {
     expect(rows[bottom]).toMatch(/\+\d+ more/);
   });
   test("NO_COLOR: the scrollbar thumb stands out from its track; the current note is bold", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 100, height: 20, themeName: "mono" });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 100, height: 20, themeName: "mono" });
     const c = h.canvas();
     const bar = h.app.geometry!.scrollbars[0]!;
     const col = Array.from({ length: bar.h }, (_, k) => c.rows[bar.y + k]![bar.x]);
@@ -2652,13 +2656,13 @@ describe("review round 2", () => {
     h.frame();
   };
   test("side panes can't squeeze the note to nothing: no crash with a split and wide panes", async () => {
-    const h = await harness({ open: "samples/README.md", width: 100, height: 30, config: (c) => ((c.ui.outline = true), (c.ui.sidebar_width = 60), (c.ui.outline_width = 60)) });
+    const h = await harness({ open: "samples/about-this-vault.md", width: 100, height: 30, config: (c) => ((c.ui.outline = true), (c.ui.sidebar_width = 60), (c.ui.outline_width = 60)) });
     await h.keys("ctrl+w", "v");
     h.frame(); // throws on a drawing failure
     expect(h.app.contentWidth()).toBeGreaterThanOrEqual(24);
   });
   test("an overlaid explorer keeps clicks on its border and margin", async () => {
-    const h = await harness({ open: "samples/README.md", width: 70, height: 30 });
+    const h = await harness({ open: "samples/about-this-vault.md", width: 70, height: 30 });
     await h.keys("ctrl+e");
     h.frame();
     const p = h.app.geometry!.sidebarPane!;
@@ -2668,7 +2672,7 @@ describe("review round 2", () => {
     expect(h.app.region).toBe("sidebar");
   });
   test("focusing a pane brings its selection back after the wheel moved the view", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, height: 16 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 16 });
     h.frame();
     const p = h.app.geometry!.sidebarPane!;
     for (let i = 0; i < 3; i++) h.app.handleMouse({ type: "scroll", x: p.x + 3, y: p.y + 3, button: 0, scroll: { direction: "down", delta: 1 } });
@@ -2681,7 +2685,7 @@ describe("review round 2", () => {
     expect(h.app.sidebar.selected).toBeLessThan(h.app.sidebar.scroll + list.h);
   });
   test("a selection stays on the same source lines when the width changes", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
     for (let i = 0; i < 12; i++) await h.keys("j");
     await h.keys("shift+v", "j", "j");
     const lines = () => {
@@ -2699,7 +2703,7 @@ describe("review round 2", () => {
     expect(after[1]).toBe(before[1]);
   });
   test("a which-key entry takes its click, not what's under the popup", async () => {
-    const h = await harness({ open: "samples/links-and-unicode.md", width: 120, height: 30 });
+    const h = await harness({ open: "samples/people/partners-and-names.md", width: 120, height: 30 });
     await h.keys("ctrl+w", "s", "ctrl+w", "j");
     await h.keys("space");
     h.frame();
@@ -2741,7 +2745,7 @@ describe("review round 3", () => {
   });
   test("a change to one note re-lays out only the open notes that link to it", async () => {
     const h = await harness({ open: "notes/alpha.md" });
-    h.app.openInNewTab("samples/wide-tables.md");
+    h.app.openInNewTab("samples/equipment/telescope-comparison.md");
     h.frame();
     const wide = h.app.view!;
     const before = h.app.currentLayout(wide);
@@ -2810,7 +2814,7 @@ describe("review round 3", () => {
 
 describe("wrap (space u s, ui.wrap)", () => {
   test("off: natural width, one row per paragraph, the view follows the cursor sideways", async () => {
-    const h = await harness({ open: "samples/wide-tables.md", width: 110, config: (c) => (c.ui.sidebar = false) });
+    const h = await harness({ open: "samples/equipment/telescope-comparison.md", width: 110, config: (c) => (c.ui.sidebar = false) });
     const wrapped = h.app.currentLayout(h.app.view!);
     await h.keys("space", "u", "s");
     expect(h.app.ui.wrap).toBe(false);
@@ -2818,7 +2822,7 @@ describe("wrap (space u s, ui.wrap)", () => {
     expect(layout.width).toBeGreaterThan(300); // the widest real row, not the pane
     expect(layout.width).toBeLessThan(2000); // not the probe width
     expect(layout.lines.length).toBeLessThan(wrapped.lines.length);
-    const row = layout.lines.findIndex((l) => l.spans.map((x) => x.text).join("").includes("This paragraph is one very long"));
+    const row = layout.lines.findIndex((l) => l.spans.map((x) => x.text).join("").includes("The short version is that Aster"));
     h.app.moveCursor(h.app.view!, { row, col: 0 });
     expect(h.app.view!.left).toBe(0);
     await h.keys("$");
@@ -2828,7 +2832,7 @@ describe("wrap (space u s, ui.wrap)", () => {
     expect(v.cur.col).toBeLessThan(v.left + h.app.textColumns(v));
     // What's drawn is the row's end, and a click lands on the column under it.
     const f = h.frame();
-    expect(f).toContain("avoid breaking mid-word.");
+    expect(f).toContain("before anyone signs a purchase order.");
     const pane = h.app.geometry!.panes[0]!;
     const y = pane.y + row - v.top;
     h.app.handleMouse({ type: "down", x: pane.textX + 5, y, button: 0 });
@@ -2844,7 +2848,7 @@ describe("wrap (space u s, ui.wrap)", () => {
     expect(h.app.currentLayout(h.app.view!).width).toBe(wrapped.width);
   });
   test(":wrap toggles it, and rules don't count toward the natural width", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 120 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 120 });
     await h.keys(":", "w", "r", "a", "p", "enter");
     expect(h.app.ui.wrap).toBe(false);
     const layout = h.app.currentLayout(h.app.view!);
@@ -2871,7 +2875,7 @@ describe("mouse", () => {
     expect(h.copied.at(-1)).toBe("Back to index and on to beta.");
   });
   test("scrollbar click and drag jump through the note", async () => {
-    const h = await harness({ open: "samples/large-document.md" });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md" });
     h.frame();
     const bar = h.app.geometry!.scrollbars[0]!;
     // The whole bar is a ▐ column: the track faint, the thumb (at the top here) stronger.
@@ -2887,7 +2891,7 @@ describe("mouse", () => {
     expect(h.app.view!.top).toBe(0);
   });
   test("side panes get a scrollbar when their rows overflow; clicking it pins the scroll", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, height: 20, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 20, config: (c) => (c.ui.outline = true) });
     h.frame();
     const outline = h.app.geometry!.scrollbars.find((b) => b.pane === "outline")!;
     expect(outline).toBeDefined();
@@ -2900,7 +2904,7 @@ describe("mouse", () => {
     expect(h.app.view!.top).toBe(0);
   });
   test("side panes scroll sideways when rows are wider than the pane", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, height: 30, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 30, config: (c) => (c.ui.outline = true) });
     h.frame();
     expect(h.app.region).toBe("content");
     const bar = h.app.geometry!.scrollbars.find((b) => b.pane === "outline" && b.horizontal)!;
@@ -2928,7 +2932,7 @@ describe("mouse", () => {
     expect(h.app.region).toBe("outline");
   });
   test("wrapping off: a horizontal scrollbar under the text scrolls sideways", async () => {
-    const h = await harness({ open: "samples/wide-tables.md", width: 100, height: 30, config: (c) => ((c.ui.wrap = false), (c.ui.sidebar = false)) });
+    const h = await harness({ open: "samples/equipment/telescope-comparison.md", width: 100, height: 30, config: (c) => ((c.ui.wrap = false), (c.ui.sidebar = false)) });
     h.frame();
     const v = h.app.view!;
     const bar = h.app.geometry!.scrollbars.find((b) => b.horizontal)!;
@@ -2955,7 +2959,7 @@ describe("mouse", () => {
     expect(n.app.view!.height).toBe(n.app.geometry!.panes[0]!.h);
   });
   test("an overlaid pane joins the borders it crosses", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 60, height: 24, config: (c) => (c.ui.sidebar = false) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 60, height: 24, config: (c) => (c.ui.sidebar = false) });
     await h.keys("ctrl+e");
     const f = h.frame();
     const lines = f.split("\n");
@@ -2967,7 +2971,7 @@ describe("mouse", () => {
     for (const joint of ["┳", "┻"]) expect(col).toContain(joint);
   });
   test("dragging borders resizes the explorer, the outline and the split", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 170, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 170, config: (c) => (c.ui.outline = true) });
     await h.keys("ctrl+w", "v");
     h.frame();
     const seps = h.app.geometry!.separators;
@@ -3006,7 +3010,7 @@ describe("mouse", () => {
     expect(h.app.tabs[0]!.views[0]!.buf.rel).toBe("notes/alpha.md"); // the first tab is untouched
   });
   test("outline: click the fold marker folds; click the text jumps", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, config: (c) => (c.ui.outline = true) });
     h.frame();
     const o = h.app.geometry!.outline!;
     const before = h.app.outlineRows().length;
@@ -3031,7 +3035,7 @@ describe("mouse", () => {
     expect(h.app.ui.zen).toBe(true);
   });
   test("floating windows have a margin in their own colour: a row above and below, two columns aside", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 140, height: 40 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 40 });
     await h.keys(":");
     h.frame();
     const r = h.app.geometry!.overlay!;
@@ -3137,7 +3141,7 @@ describe("explorer and outline panes", () => {
     expect(h.app.treeRows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
   });
   test("outline: ctrl+o opens and focuses, focuses, closes; it follows the cursor while unfocused; enter jumps; h folds", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160 });
     await h.keys("ctrl+o");
     expect(h.app.outlineShown).toBe(true);
     expect(h.app.region).toBe("outline"); // opening focuses it
@@ -3227,7 +3231,7 @@ describe("UI settings (space u)", () => {
 describe("configuration: everything from config, and live reload", () => {
   test("keys, leader, pane keys, aliases and groups come from config", async () => {
     const h = await harness({
-      open: "samples/large-document.md",
+      open: "samples/handbook/operations-handbook.md",
       config: (c) => {
         c.input.leader = ",";
         c.keys = { x: "cursor.bottom", j: "", "leader z": "ui.zen", explorer: { o: "open" } } as unknown as Config["keys"];
@@ -3318,12 +3322,12 @@ describe("scratch (space s)", () => {
 
 describe("external changes (5.3, 5.4) and anchoring (3.5)", () => {
   test("a clean buffer reloads silently and the cursor keeps its place", async () => {
-    const h = await harness({ open: "samples/large-document.md", height: 20 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", height: 20 });
     await h.keys("]", "]", "]", "]");
     const before = rowText(h);
-    const file = join(h.root, "samples", "large-document.md");
+    const file = join(h.root, "samples", "handbook", "operations-handbook.md");
     writeFileSync(file, `# Inserted by an agent\n\n${"A new paragraph.\n\n".repeat(20)}${readFileSync(file, "utf8")}`);
-    h.app.applyChanges({ changes: [{ rel: "samples/large-document.md", kind: "changed", isNote: true }], rescan: false });
+    h.app.applyChanges({ changes: [{ rel: "samples/handbook/operations-handbook.md", kind: "changed", isNote: true }], rescan: false });
     h.frame();
     expect(rowText(h)).toBe(before);
     expect(h.frame()).toContain("↻");
@@ -3370,13 +3374,24 @@ describe("external changes (5.3, 5.4) and anchoring (3.5)", () => {
 
 describe("state (3.4, 3.15)", () => {
   test("the cursor position per note survives leaving and returning", async () => {
-    const h = await harness({ open: "samples/large-document.md", height: 20 });
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", height: 20 });
     await h.keys("ctrl+d", "ctrl+d", "w");
     const cur = { ...h.app.view!.cur };
     await h.app.run("note.open index.md");
-    await h.app.run("note.open samples/large-document.md");
+    await h.app.run("note.open samples/handbook/operations-handbook.md");
     h.frame();
     expect(h.app.view!.cur).toEqual(cur);
+  });
+  test("a re-wrap keeps the cursor's source line, even when no row starts on it", async () => {
+    // A paragraph of short source lines renders as one row: lines 4–8 start no row of their own.
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), `# P\n\n${Array.from({ length: 8 }, (_, i) => `line ${i + 1}`).join("\n")}\n\nafter\n`);
+    const h = await harness({ root, open: "p.md", width: 120 });
+    const v = h.app.view!;
+    v.curAnchor = { anchor: { heading: null, headingIndex: 0, offset: 5, line: 6 }, sub: 0, col: 0 };
+    v.layoutKey = ""; // as when the width changes
+    h.frame();
+    expect(v.curAnchor.anchor.line).toBe(6); // not the next row's line, which would stick
   });
   test("session restore: tabs, splits with orientation, cursors", async () => {
     const root = makeVault();

@@ -22,8 +22,8 @@ file for the area: `tui.test.ts`, `core.test.ts` and `vault.test.ts`.
 
 **Properties, not just examples:**
 
-- Every sample in `docs/samples/` is rendered at widths 24, 37, 60, 80, 101 and 140, in the
-  Unicode and ASCII glyph sets. No row may exceed the layout width.
+- Every note in the demo vault (`examples/vault/`) is rendered at widths 24, 37, 60, 80, 101 and
+  140, in the Unicode and ASCII glyph sets. No row may exceed the layout width.
 - The table allocator gets 5,000 generated inputs. The allocation must never exceed the budget,
   never drop a column below its minimum when the minimums fit, and use the desired widths when
   they fit. This is the render-markdown bug and its siblings (`docs/idea.md`, Testing).
@@ -57,8 +57,15 @@ tests work on a temp copy of the fixture vault, so they can write, rename and de
 `node_modules/` and `ignored/` in the fixture are committed deliberately: the walk has to see
 them in order to skip them.
 
-The samples in `docs/samples/` are real documents copied from the dotfiles repo (see their
-README), plus the synthetic `links-and-unicode.md`.
+## The demo vault
+
+`examples/vault/` is slipbox's demo and the material the render tests snapshot: the invented
+notes of a fictional observatory, written to keep what real notes contain (tables too wide for any
+screen, unbreakable tokens, lines over the limit, every link form, CJK, emoji and RTL). Its
+`about-this-vault.md` says what each note exercises; `scripts/sample-metrics.ts` measures it, so a
+change to a note can be checked against what it has to keep covering. The TUI tests copy its notes
+into a temporary fixture vault as `samples/` (without its marker, which would make it a nested
+vault).
 
 ## Manual checks that stay manual
 

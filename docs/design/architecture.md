@@ -162,7 +162,7 @@ Measured on this machine (aarch64 VM) on 2026-09-25:
 | rebuild of the 5,000-note index from cache | 55 ms |
 | backlinks map over 5,000 cached notes | 23 ms |
 | first full parse of 5,000 notes (≈15 MB) | 11 s, once; the TUI does it in the background |
-| parse + layout of the 56 KB `large-document.md`, warm | 45 ms + 12 ms |
+| parse + layout of the 61 KB `operations-handbook.md`, warm | 41 ms + at most 23 ms |
 | the same, cold process | ≈170 ms |
 
 The graph parses lazily. The walk alone supplies every note name, which is all link resolution

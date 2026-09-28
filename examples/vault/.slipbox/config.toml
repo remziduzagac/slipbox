@@ -1,0 +1,6 @@
+# Halden Ridge Observatory demo vault. Settings here override ~/.config/slipbox/config.toml.
+# See docs/design/configuration.md for every key.
+
+[walk]
+# Extra gitignore-syntax patterns to leave out of the vault, on top of .gitignore.
+exclude = ["scratch/trash/"]

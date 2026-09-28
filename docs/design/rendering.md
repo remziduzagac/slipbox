@@ -107,13 +107,13 @@ widths. `countLines` and `fit` in `layout/wrap.ts` answer "how many rows at widt
 building spans, using the same packing rule `wrapSpans` draws with. So the allocator's
 prediction is exactly what is drawn.
 
-**Cost.** A re-layout on resize, tables included, measured on 2026-09-25:
+**Cost.** A re-layout on resize, tables included, measured on 2026-09-29 (widths 40 to 200):
 
-| Sample | Worst re-layout |
+| Demo note | Worst re-layout |
 | --- | --- |
-| `dense-tables.md` (232 table rows) | 20 ms |
-| `large-document.md` | 19 ms |
-| `overlong-table-rows.md` | 6 ms |
+| `logs/observing-log-2026.md` (216 table rows) | 14 ms |
+| `handbook/operations-handbook.md` (1,180 lines) | 23 ms |
+| `equipment/instrument-inventory.md` (rows of 500+ characters) | 7 ms |
 
 **Records.** Below a useful width, one record per row: labels in an aligned column (at most a third
 of the width), values wrapped beside them. A table with a header row only shows its column names,

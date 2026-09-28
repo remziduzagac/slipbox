@@ -20,8 +20,9 @@ process.env.XDG_CONFIG_HOME = join(sandbox, "config");
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
 
-const SAMPLES = join(import.meta.dir, "..", "docs", "samples");
-const samples = readdirSync(SAMPLES).filter((f) => f.endsWith(".md")).sort();
+// The demo vault's notes, by path inside it.
+const SAMPLES = join(import.meta.dir, "..", "examples", "vault");
+const samples = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => f.endsWith(".md")).sort();
 const unicode = glyphsFor("unicode");
 const text = (l: Layout) => l.lines.map((line) => line.spans.map((s) => s.text).join("").replace(/\s+$/, "")).join("\n");
 
@@ -50,7 +51,7 @@ describe("snapshots of the layout IR as text", () => {
     });
   }
   test("wrap-probe @ 44 (narrow)", () => {
-    const src = readFileSync(join(SAMPLES, "wrap-probe.md"), "utf8");
+    const src = readFileSync(join(SAMPLES, "scratch", "wrap-probe.md"), "utf8");
     expect(text(renderMarkdown(src, { width: 44, glyphs: unicode, showUrls: false }))).toMatchSnapshot();
   });
 });
