@@ -901,14 +901,13 @@ describe("the left panel's views and filter", () => {
     expect(rows.some((r) => r.path === "notes/alpha.md")).toBe(false);
     const f = h.frame();
     expect(f).toContain("› bet");
-    // Under it a rule across the pane, joined to its border, then a blank row, then the list.
+    // Under it a rule across the pane, joined to its border, then the list.
     const lines = f.split("\n");
     const at = lines.findIndex((l) => l.includes("› bet"));
     const list = h.app.geometry!.sidebar!;
     const cols = (r: number) => [...lines[r]!].slice(list.x, list.x + list.w + 1).join("");
     expect(cols(at + 1)).toMatch(/^━+[┫╋]$/u); // ╋ where it meets the note's breadcrumb rule
-    expect(cols(at + 2).slice(0, list.w).trim()).toBe("");
-    expect(list.y).toBe(at + 3);
+    expect(list.y).toBe(at + 2);
     expect(h.app.sidebar.selected).toBe(rows.findIndex((r) => r.kind === "note"));
     await h.keys("escape");
     expect(h.app.sidebar.filter).toBe("");

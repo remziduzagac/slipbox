@@ -844,8 +844,8 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
 }
 
 /**
- * A pane's filter (`/`), at the top of its list while it's open or holds text: the `› text` row,
- * a rule across the pane (joined to its border) and a blank row, then the list. Returns the rect
+ * A pane's filter (`/`), at the top of its list while it's open or holds text: the `› text` row
+ * and a rule across the pane (joined to its border), then the list. Returns the rect
  * left for the list; a short pane gets only the text row.
  */
 function filterRow(app: App, c: Canvas, rect: Rect, s: SidePaneState, focused: boolean, bg: Color | null, geo: Geometry): Rect {
@@ -857,7 +857,7 @@ function filterRow(app: App, c: Canvas, rect: Rect, s: SidePaneState, focused: b
   if (rect.h <= 6) return { ...rect, y: rect.y + 1, h: rect.h - 1 };
   drawText(c, rect.x, rect.y + 1, app.glyphs.hbar.repeat(rect.w), { ...roleStyle(theme, "border", bg), bg }, rect.w);
   geo.rules.push({ y: rect.y + 1, x0: rect.x, x1: rect.x + rect.w });
-  return { ...rect, y: rect.y + 3, h: rect.h - 3 };
+  return { ...rect, y: rect.y + 2, h: rect.h - 2 };
 }
 
 /** Keep a side list's selection in view (unless the wheel moved it) and clamp its scroll. */

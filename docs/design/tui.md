@@ -256,7 +256,7 @@ keys.
   note name and line, the current one marked `here` and selected when the view opens. `enter` or a
   click jumps there, the places before it becoming back and those after it forward.
 - **Filter (`/`, the explorer, the history and the outline):** a `› text` row at the top of the
-  list, a rule under it (joined to the pane's border) and a blank row, then the list —
+  list, a rule under it (joined to the pane's border), then the list —
   while the pane has focus (otherwise `/` is find in the note); typing narrows the rows (`/`
   on a view that kept its filter resumes it). The explorer keeps the tree: the notes whose path
   matches, under their folders (all unfolded), the matched letters highlighted, the selection on the
