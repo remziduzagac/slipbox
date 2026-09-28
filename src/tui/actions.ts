@@ -15,6 +15,7 @@ import type { App, ListItem, Loc, UiState, View } from "./app.ts";
 import { editable, computeFind } from "./app.ts";
 import * as C from "./cursor.ts";
 import * as E from "./editing.ts";
+import * as R from "./replacing.ts";
 import * as V from "./vim.ts";
 import { rank } from "./fuzzy.ts";
 import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, HISTORY_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, RESIZE_ACTIONS, spellKey } from "./keys.ts";
@@ -844,6 +845,35 @@ export function registerActions(app: App): void {
           },
           v, // typed in this window's find row
         );
+      }),
+    // Find and replace: the find row with a replace row under it, on the markdown (replacing.ts).
+    // A selection on one line is the query; across lines, it's where to replace.
+    "find.replace": (a) =>
+      withView(a, async (v) => {
+        let seed = v.find?.query ?? "";
+        let range: [number, number] | undefined;
+        if (v.sel) {
+          const [p, q] = v.sel.anchor.row < v.cur.row || (v.sel.anchor.row === v.cur.row && v.sel.anchor.col <= v.cur.col) ? [v.sel.anchor, v.cur] : [v.cur, v.sel.anchor];
+          const text = a.selectionText(v);
+          if (text && !text.includes("\n") && !v.sel.line) seed = text;
+          else {
+            const starts = v.buf.lineStarts();
+            const lineOf = (at: number) => starts.findLastIndex((s) => s <= at);
+            const from = starts[lineOf(E.offsetAtPos(a, v, p))]!;
+            const next = starts[lineOf(E.offsetAtPos(a, v, q)) + 1];
+            range = [from, next ?? v.buf.source.length];
+          }
+          v.sel = null;
+        }
+        await a.run("find.open");
+        const o = a.overlay;
+        if (o?.kind !== "prompt" || o.view !== v) return;
+        R.openReplace(a, o, v, range);
+        if (seed) {
+          o.text = seed;
+          o.change?.(seed);
+          R.refresh(a, o, v);
+        } else o.replace!.focus = false; // nothing to find yet: type it first
       }),
     // f F t T: a character on the line; ; and , again, the same way or back.
     "cursor.find_char": (a, arg) =>

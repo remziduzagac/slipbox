@@ -281,7 +281,9 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
     rx -= 1;
   }
   // The latest message, at the right end: it never moves the note, as a row of its own would.
-  if (app.transient && app.overlay?.kind !== "prompt") rx = drawMessage(app, c, x + 2, rx, y, bar.bg, geo) - 1;
+  // (A prompt on the bottom line shows its own; find's in its window leaves the bar to them.)
+  const bottomPrompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow);
+  if (app.transient && !bottomPrompt) rx = drawMessage(app, c, x + 2, rx, y, bar.bg, geo) - 1;
   // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
@@ -574,7 +576,19 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const bg = page;
     const text = typing ? typing.text : view.find!.query;
     const f = view.find;
-    const count = !text ? "" : f?.error ? "not a regex" : f && f.matches.length ? `${f.current + 1}/${f.matches.length}` : "no matches";
+    // While replacing, the count is of the note's text: what enter and all would replace.
+    const rep = typing?.replace;
+    const count = !text
+      ? ""
+      : f?.error
+        ? "not a regex"
+        : rep
+          ? rep.total
+            ? `${rep.current + 1}/${rep.total}`
+            : "no matches"
+          : f && f.matches.length
+            ? `${f.current + 1}/${f.matches.length}`
+            : "no matches";
     let rx = body.x + body.w - 2;
     if (count) {
       rx -= stringWidth(count);
@@ -592,11 +606,27 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     // The query in the room left of them.
     const px = drawText(c, body.x + 1, y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
     const fw = drawText(c, body.x + 1 + px, y, truncate(text, Math.max(1, rx - (body.x + 1 + px) - 2)), { ...roleStyle(theme, "text", bg), bg });
-    if (typing) drawText(c, body.x + 1 + px + fw, y, " ", roleStyle(theme, "cursor", bg));
-    drawText(c, body.x, y + 1, app.glyphs.hbar.repeat(body.w), roleStyle(theme, "border", page), body.w);
-    geo.rules.push({ y: y + 1, x0: body.x, x1: body.x + body.w });
+    if (typing && !rep?.focus) drawText(c, body.x + 1 + px + fw, y, " ", roleStyle(theme, "cursor", bg));
+    let rows = 1;
+    // The replace row under it, with its buttons: replace this one, replace all.
+    if (rep) {
+      const ry = y + 1;
+      const index = app.tab?.views.indexOf(view) ?? 0;
+      let bx = body.x + body.w - 2;
+      for (const [id, label] of [["all", " all "], ["one", " replace "]] as const) {
+        bx -= stringWidth(label);
+        button(app, c, bx, { y: ry, h: 1 }, label, "topbar_button", `findrep:${id}:${index}`, geo, bg);
+        bx -= 1;
+      }
+      const qx = drawText(c, body.x + 1, ry, "⇄ ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
+      const rw = drawText(c, body.x + 1 + qx, ry, truncate(rep.text, Math.max(1, bx - (body.x + 1 + qx) - 2)), { ...roleStyle(theme, "text", bg), bg });
+      if (rep.focus) drawText(c, body.x + 1 + qx + rw, ry, " ", roleStyle(theme, "cursor", bg));
+      rows = 2;
+    }
+    drawText(c, body.x, y + rows, app.glyphs.hbar.repeat(body.w), roleStyle(theme, "border", page), body.w);
+    geo.rules.push({ y: y + rows, x0: body.x, x1: body.x + body.w });
     if (typing) geo.findInWindow = true;
-    body = { ...body, y: y + 2, h: body.h - 2 };
+    body = { ...body, y: y + rows + 1, h: body.h - rows - 1 };
   }
   // Wrapping off: the last row is the horizontal scrollbar's (kept even when the note fits, so
   // the text doesn't jump).

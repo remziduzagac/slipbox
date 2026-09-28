@@ -135,6 +135,18 @@ note's text as a layout shows it — the look of a pane's filter. The row stays 
 (`n`, `shift+n`, `*` move through the matches) and goes with it (`esc`, `:noh`); the text moves down
 two rows while it's there. A window too short for it has its prompt on the status line.
 
+**Replace** (`space f r`, or `tab` / `ctrl+r` from the find field) adds a second row under find's:
+`⇄ replacement` with `replace` and `all` buttons at its right, the rule under both. It works on the
+markdown, so a rendered window switches to editing first (`editor.edit_in`: source mode or the lens)
+and every match is a real place in the file. `tab` / `ctrl+r` and `shift+tab` move between the two
+fields. In the replace field `enter` replaces the match at the cursor (or the next one) and moves on,
+`alt+enter` or `alt+a` replaces them all as one undo step, `ctrl+n` / `ctrl+p` move between matches
+without replacing, and `esc` closes both rows, keeping the edits and the search. While it's open the
+count is of the note's text, so it's exactly what would be replaced; with regex on, the replacement
+takes `$&`, `$1`–`$9` and `$$`. Opened on a selection within a line, the selection is the query;
+across lines, the replacing stays within the selection's lines. Messages (`replaced 3 matches`) show
+in the top bar while the rows are open. The text moves down three rows.
+
 **Messages and prompts never take a row of their own,** so the note never changes height for them.
 The latest message (4 s, 8 s for errors) sits at the right end of the top bar, right-aligned, cut
 with `…` to the room left; its level shows as colour and a glyph: `✗` error, `!` warning, `·` info

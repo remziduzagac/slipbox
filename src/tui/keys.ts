@@ -140,6 +140,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   ",": "cursor.find_repeat back",
   "#": "find.word_prev",
   "leader f /": "find.open",
+  "leader f r": "find.replace",
   "ctrl+p": "switcher.open",
   "leader f f": "switcher.open",
   "leader f o": "outline.pick",

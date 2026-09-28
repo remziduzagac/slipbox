@@ -19,6 +19,8 @@ import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, stopInsert } from "./editing.ts";
 import { newVimState, vimKey } from "./vim.ts";
+import * as R from "./replacing.ts";
+import type { ReplaceState } from "./replacing.ts";
 import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
@@ -245,6 +247,8 @@ export interface PromptOverlay {
   cancel?: () => void;
   /** Find's prompt: typed in that window's own find row, not on the bottom line. */
   view?: View;
+  /** Find's replace field, when open (space f r, tab, ctrl+r). */
+  replace?: ReplaceState;
 }
 
 export type Overlay = ListOverlay | PromptOverlay;
@@ -2191,6 +2195,40 @@ export class App {
     this.message("info", `${key === "regex" ? "regex" : "whole words"}: ${o[key] ? "on" : "off"}`);
   }
 
+  /** Keys in the replace field: its text, enter replaces one, alt+enter (alt+a) all, ctrl+n/p move. */
+  private replaceFieldKey(o: PromptOverlay, view: View, key: string, typed: string | null): void {
+    const r = o.replace!;
+    switch (key) {
+      case "escape":
+      case "ctrl+c":
+      case "ctrl+g":
+        this.overlay = null;
+        return o.accept(o.text);
+      case "enter":
+        return R.replaceOne(this, o, view);
+      case "alt+enter":
+      case "alt+a":
+        return R.replaceAll(this, o, view);
+      case "ctrl+n":
+      case "down":
+        return R.stepMatch(this, o, view, 1);
+      case "ctrl+p":
+      case "up":
+        return R.stepMatch(this, o, view, -1);
+      case "backspace":
+        r.text = [...r.text].slice(0, -1).join("");
+        return;
+      case "ctrl+w":
+      case "ctrl+backspace":
+        r.text = r.text.replace(/\S*\s*$/, "");
+        return;
+      case "ctrl+u":
+        r.text = "";
+        return;
+    }
+    if (typed !== null) r.text += typed;
+  }
+
   prompt(label: string, accept: (text: string) => void, change?: (text: string) => void, cancel?: () => void, view?: View): void {
     this.overlay = { kind: "prompt", label, text: "", accept, change, cancel, view };
   }
@@ -2433,8 +2471,21 @@ export class App {
       // The find row's toggles, while typing in it.
       if (o.view && (key === "alt+r" || key === "alt+w")) {
         this.toggleFindOpt(o.view, key === "alt+r" ? "regex" : "whole");
-        o.change?.(o.text);
+        if (o.replace) R.refresh(this, o, o.view);
+        else o.change?.(o.text);
         return;
+      }
+      // Find's replace field: tab or ctrl+r into it, shift+tab back to the find field.
+      if (o.view && (key === "tab" || key === "ctrl+r")) return R.openReplace(this, o, o.view);
+      if (o.view && o.replace && key === "shift+tab") {
+        o.replace.focus = false;
+        return;
+      }
+      if (o.view && o.replace?.focus) return this.replaceFieldKey(o, o.view, key, typed);
+      if (o.view && o.replace && (key === "escape" || key === "enter")) {
+        // Closing the pair keeps the search (and what was replaced); it doesn't undo anything.
+        this.overlay = null;
+        return o.accept(o.text);
       }
       if (key === "enter") {
         this.overlay = null;
@@ -2538,7 +2589,7 @@ export class App {
     // The find row's own buttons work while typing in it.
     if (o.kind === "prompt" && o.view && ev.type === "down") {
       const hot = g.hot.find((h) => inRect(h, ev.x, ev.y));
-      if (hot?.id.startsWith("findopt:")) return this.clickHot(hot.id);
+      if (hot?.id.startsWith("findopt:") || hot?.id.startsWith("findrep:")) return this.clickHot(hot.id);
     }
     if (o.kind !== "list" || !g.overlay) {
       if (ev.type === "down") this.closeOverlay(true);
@@ -2865,6 +2916,15 @@ export class App {
         t.active = w;
         this.region = "content";
         this.revealHeading(v, row);
+        break;
+      }
+      case "findrep": {
+        // findrep:<one|all>:<window>
+        const [which] = arg.split(":");
+        const o = this.overlay;
+        if (o?.kind !== "prompt" || !o.view || !o.replace) break;
+        if (which === "all") R.replaceAll(this, o, o.view);
+        else R.replaceOne(this, o, o.view);
         break;
       }
       case "findopt": {

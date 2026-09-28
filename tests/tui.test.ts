@@ -1383,6 +1383,46 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     expect(h.frame()).toContain("not a regex");
     await h.keys("escape");
   });
+  test("replace: space f r, tab into the replace row; enter one, alt+a all as one undo step", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "r.md"), "# R\n\ncat dog cat\n\n**cat** here\n");
+    const h = await harness({ root, open: "r.md", width: 100, height: 30 });
+    const v = h.app.view!;
+    const type = (t: string) => h.keys(...[...t]);
+    await h.keys("space", "f", "r");
+    const o = h.app.overlay as { replace?: { focus: boolean; total: number } };
+    expect(o.replace!.focus).toBe(false); // nothing to find yet: the find field first
+    expect(v.source).toBe(true); // replacing works on the markdown
+    await type("cat");
+    await h.keys("tab");
+    await type("cow");
+    expect(o.replace!.total).toBe(3);
+    const frame = h.frame();
+    expect(frame).toContain("⇄ cow");
+    expect(frame).toContain("1/3");
+    await h.keys("enter");
+    expect(v.buf.source).toBe("# R\n\ncow dog cat\n\n**cat** here\n");
+    expect(o.replace!.total).toBe(2);
+    await h.keys("alt+a");
+    expect(v.buf.source).toBe("# R\n\ncow dog cow\n\n**cow** here\n");
+    expect(h.frame().split("\n")[0]).toContain("replaced 2 matches"); // in the top bar, the rows still open
+    await h.keys("escape"); // closes the rows, keeps the edits
+    expect(h.app.overlay).toBeNull();
+    await h.keys("escape", "u");
+    expect(v.buf.source).toBe("# R\n\ncow dog cat\n\n**cat** here\n"); // all of them in one step
+    // The buttons do the same, and regex replacements take groups.
+    await h.keys("space", "f", "r");
+    await h.keys("alt+r");
+    await type("(c)at");
+    await h.keys("ctrl+r");
+    await type("$1ub");
+    h.frame();
+    const all = h.app.geometry!.hot.find((r) => r.id === "findrep:all:0")!;
+    h.app.handleMouse({ type: "down", x: all.x + 1, y: all.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: all.x + 1, y: all.y, button: 0 });
+    expect(v.buf.source).toBe("# R\n\ncow dog cub\n\n**cub** here\n");
+    await h.keys("escape");
+  });
   test("keys are handled in order, one at a time: a fast j then . doesn't interleave", async () => {
     const root = makeVault();
     writeFileSync(join(root, "v.md"), "# Vim\n\nthe quick brown fox\njumps over the lazy dog\n");
@@ -1518,6 +1558,28 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     };
     return { h, v, rows, goto, lens, L };
   };
+  test("replace in the lens: enter replaces the match at the cursor and moves one on", async () => {
+    const { h, v } = await setup((c) => (c.editor.edit_in = "live"));
+    await h.keys("space", "f", "r", ...[..."para"], "tab", ...[..."P"]);
+    const o = h.app.overlay as { replace?: { current: number; total: number } };
+    expect(v.live).toBe(true);
+    expect(o.replace!.total).toBe(20);
+    for (let i = 1; i <= 3; i++) {
+      await h.keys("enter");
+      h.frame();
+      expect(v.buf.source.split("P ").length - 1).toBe(i);
+      expect(o.replace).toMatchObject({ current: 0, total: 20 - i }); // the next one is the first left
+    }
+    // A replacement that still matches: the count stays, the cursor moves on past it.
+    await h.keys("ctrl+u", ...[..."PARA"]);
+    for (let i = 1; i <= 3; i++) {
+      await h.keys("enter");
+      h.frame();
+      expect(v.buf.source.split("PARA ").length - 1).toBe(i);
+      expect(o.replace).toMatchObject({ current: i, total: 17 });
+    }
+    await h.keys("escape");
+  });
   test("space n l opens it on the cursor's block, between two rules, grown to at least 6 rows", async () => {
     const { h, v, rows, goto, lens } = await setup((c) => (c.ui.lines = "light"));
     goto("Para 5 with");
