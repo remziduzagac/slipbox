@@ -1,6 +1,10 @@
 // Task checkboxes (plan 4.11): toggling `[ ]` ⇄ `[x]` as a one-byte edit to the file's bytes, so
 // nothing else changes — not a BOM, not CRLF line endings, not bytes that aren't valid UTF-8.
 
+import type { Root } from "mdast";
+import { toString } from "mdast-util-to-string";
+import { visit } from "./parse.ts";
+
 /** A list item's task marker at the start of a line: optional `>` quote prefixes, the bullet or
  *  number, then `[ ]`, `[x]` or `[X]`. Matched on the line's bytes read one per character. */
 const TASK_RE = /^((?:[ \t]*>)*[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+)\[([ xX])\]/;
@@ -35,4 +39,27 @@ export function toggleTask(bytes: Uint8Array, line: number): TaskToggle | null {
   const out = new Uint8Array(bytes);
   out[at] = checked ? 0x78 /* x */ : 0x20;
   return { bytes: out, checked };
+}
+
+export interface TaskItem {
+  /** The 1-based line of the item's marker. */
+  line: number;
+  checked: boolean;
+  /** The item's first line of text, without its marker. */
+  text: string;
+}
+
+/**
+ * The note's task items, from the parsed tree (so a `- [ ]` inside a code block isn't one), in
+ * order. The CLI's `task` lists them; `toggleTask` changes one by its line.
+ */
+export function listTasks(tree: Root): TaskItem[] {
+  const out: TaskItem[] = [];
+  visit(tree, (node) => {
+    if (node.type !== "listItem" || typeof node.checked !== "boolean" || !node.position) return;
+    const first = node.children[0];
+    const text = first ? toString(first).split("\n")[0]!.trim() : "";
+    out.push({ line: node.position.start.line, checked: node.checked, text });
+  });
+  return out;
 }

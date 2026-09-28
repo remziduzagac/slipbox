@@ -70,6 +70,13 @@ Read against zk's and nb's surfaces. Small on purpose. Global flags: `--root <di
 | `slipbox backlinks <note>` | notes linking to a note | **stable v1** |
 | `slipbox ls` | list notes | churns |
 | `slipbox outline <note>` | headings with source lines | churns |
+| `slipbox find <query> [note]` | text in a note or the vault: `--regex`, `--whole`, `--ignore-case` | churns |
+| `slipbox replace <note> <old> <new>` | replace in a note; `--first`, `--lines A-B`, `--dry-run` | churns |
+| `slipbox task <note> [line]` | list a note's tasks, or toggle one; `--check`, `--uncheck` | churns |
+| `slipbox read <note>` | the raw text and its sha, for `--if-unchanged` | churns |
+| `slipbox write <note> [text]` | write a note atomically, in the vault; `--stdin`, `--append`, `--create` | churns |
+| `slipbox send <note>` | open it in a running editor (`editor.remote`); `--line`, `--server` | churns |
+| `slipbox history` | notes the TUI read lately, newest first, and its open tabs | churns |
 | `slipbox init [dir]` | create the `.slipbox/` marker (`1.10`) | churns |
 | `slipbox info` | vault root, mode, config/cache/state paths, versions, staleness | churns |
 | `slipbox themes` | list built-in and loaded themes | churns |
@@ -78,8 +85,12 @@ Read against zk's and nb's surfaces. Small on purpose. Global flags: `--root <di
 **`--json`** always prints one object: `{"schema": 1, "ok": true, "command": "...", "data": ..., "warnings": [...],
 "stale": [...]}`. Human output goes to stdout, diagnostics to stderr.
 
-**Exit codes:** `0` ok, `1` error, `2` usage, `3` not found (note or link target), `4` ambiguous link, `5` refused
-by `--if-unchanged`.
+**Exit codes:** `0` ok, `1` error, `2` usage, `3` not found (note or link target), `4` ambiguous (a link, or
+several nvims for `send`), `5` refused: by `--if-unchanged`, a write outside the vault, a note that isn't valid UTF-8.
+
+**What reaches the state, from the CLI.** Every command in `core/command-specs.ts` names its CLI equivalent or is an
+interaction (cursor, scroll, windows, modes, the UI's own toggles, the conflict prompt). Editing keys are
+interactions; the state they change, a note's text, is reached by `write`, `replace` and `task`.
 
 ## `1.4` — link resolution
 

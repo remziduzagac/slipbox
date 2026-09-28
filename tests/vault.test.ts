@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runCli } from "../src/cli/cli.ts";
+import { CLI_COMMANDS, runCli } from "../src/cli/cli.ts";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
@@ -166,6 +166,8 @@ describe("CLI parity (Principles)", () => {
       expect(ids.has(c.id)).toBe(false);
       ids.add(c.id);
       expect(c.cli === null || c.cli.startsWith("slipbox") || c.cli.startsWith("$EDITOR")).toBe(true);
+      // …and a command the CLI has.
+      if (c.cli?.startsWith("slipbox ")) expect(CLI_COMMANDS.has(c.cli.split(" ")[1]!)).toBe(true);
     }
   });
 });

@@ -475,6 +475,30 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: "agent: the CLI ticks a task, replaces text and appends while you read",
+    options: { open: MEETING },
+    run: async (s) => {
+      await s.see("Tomasz: book the courier");
+      const row = () => s.screen()[s.rowOf("Tomasz: book the courier")] ?? "";
+      const unticked = row();
+      const tasks = JSON.parse(s.cli("task", "2026-09-14-weekly", "--json").out).data.tasks;
+      const courier = tasks.find((t: { text: string }) => t.text.includes("courier"));
+      s.expect(s.cli("task", "2026-09-14-weekly", String(courier.line), "--check").code === 0, "slipbox task ran");
+      await s.until(() => row() !== unticked && row().includes("Tomasz"), 5000, "the task's box ticked on screen"); // the glyph set decides the box
+      s.expect(s.read(MEETING).includes("- [x] Tomasz: book the courier"), "ticked on disk");
+      s.cli("replace", "2026-09-14-weekly", "Dunmore", "DUNMORE");
+      await s.see("DUNMORE's new primary mirror", 5000);
+      s.cli("write", "2026-09-14-weekly", "Appended by an agent.", "--append");
+      await s.see("Appended by an agent.", 5000);
+      // The stale list: with unsaved changes here, the CLI says so.
+      await leader(s, "n", "v");
+      await s.keys("G", "o");
+      await s.type("mine");
+      await s.keys("escape");
+      await s.until(() => JSON.parse(s.cli("info", "--json").out).stale.length === 1, 3000, "the CLI to see the unsaved note");
+    },
+  },
+  {
     name: "save and quit: :wq writes and exits",
     options: { open: MEETING },
     run: async (s) => {

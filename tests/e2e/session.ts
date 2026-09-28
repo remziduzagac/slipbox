@@ -3,6 +3,7 @@
 // (up to a timeout) rather than sleeping a fixed time.
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Pane, sleep } from "./herdr.ts";
@@ -144,6 +145,16 @@ export class Session {
 
   exists(rel: string): boolean {
     return existsSync(join(this.vault, rel));
+  }
+
+  /** The slipbox CLI, as an agent runs it beside the TUI: the same vault, config and state. */
+  cli(...args: string[]): { code: number; out: string } {
+    const r = spawnSync("bun", [join(REPO, "src", "main.ts"), ...args], {
+      cwd: this.vault,
+      encoding: "utf8",
+      env: { ...process.env, XDG_CONFIG_HOME: `${this.dir}/config`, XDG_STATE_HOME: `${this.dir}/state`, XDG_CACHE_HOME: `${this.dir}/cache`, NO_COLOR: "1" },
+    });
+    return { code: r.status ?? -1, out: r.stdout };
   }
 
   /** Write a file in the vault from outside the app (an agent's edit). */

@@ -63,7 +63,26 @@ slipbox outline <note> --json            # headings with source line numbers
 slipbox ls --json                        # every note: path, title, tags, link count
 ```
 
-`render` is for reading. When you edit, edit the raw markdown file itself.
+`render` is for reading. `slipbox read <note> --json` gives the raw text and its `sha`.
+
+## Finding and changing notes
+
+```bash
+slipbox find <text> [<note>] --json      # data.matches[{path,line,column,match,text}]; --regex --whole
+slipbox replace <note> <old> <new> --dry-run --json   # see data.changes first, then run it without
+slipbox task <note> --json               # data.tasks[{line,checked,text}]
+slipbox task <note> <line> --check       # tick one (--uncheck, or neither to toggle)
+slipbox write <note> --stdin --if-unchanged <sha>     # replace the text, only if unchanged since read
+slipbox write <note> '<text>' --append   # add a line at the end
+slipbox write <path> '<text>' --create   # a new note
+slipbox send <note> --line <n>           # show it to the user in their running nvim
+slipbox history --json                   # what the user has been reading, newest first
+```
+
+These write atomically and never outside the vault, keeping the note's BOM and line endings. Use
+`--if-unchanged` with the sha from `read` whenever you rewrite a note the user may be editing; it
+refuses (exit 5) instead of clobbering. Check `stale` first: a note listed there has unsaved
+changes in the user's TUI.
 
 ## Following links
 
@@ -105,3 +124,4 @@ Paths inside the project are stored relative to it.
 - Don't write into `.slipbox/` or the cache and state directories; `info` shows where they
   are.
 - Don't start the TUI from a script. It refuses without a terminal and exits 2.
+- Don't `send` a note to the user's editor unless they asked to see it.

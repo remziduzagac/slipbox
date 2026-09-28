@@ -92,6 +92,44 @@ counts as a backlink.
 3. A note name, resolved like a `[[wikilink]]` with no linking note. Collisions then go to the
    shortest path, and a real tie exits 4.
 
+## Finding and changing notes
+
+These reach, from the CLI, the state the TUI's find, replace, task and save change. They write the way
+the TUI saves: atomically, through a symlink but never outside the vault (`7.5`), keeping a BOM and
+CRLF line endings. A note that isn't valid UTF-8 is read but never rewritten (exit 5).
+
+```bash
+slipbox find Aster                       # every note: path:line:column: the line
+slipbox find 'O2[0-9]:' handbook --regex --json   # one note; data.matches[{path,line,column,match,text}]
+slipbox replace kenji-mori Aster ASTER --dry-run  # what would change, line by line
+slipbox replace note '(\w+): book' '$1 will book' --regex --lines 10-20
+slipbox task 2026-09-14-weekly           # line, [x] or [ ], text
+slipbox task 2026-09-14-weekly 13 --check
+slipbox read note --json                 # data.content, data.sha
+slipbox write note --stdin --if-unchanged <sha> < new.md
+slipbox write logs/2026-10-01 '# 1 October' --create
+slipbox send handbook --line 42          # to the running nvim, as space n s does
+slipbox history --json                   # data.read[{path,at,line}], data.open (tabs)
+```
+
+- **Patterns** are find's: plain text unless `--regex` (JavaScript syntax), `--whole` keeps to
+  whole words, smart case unless `--ignore-case`. With `--regex` the replacement takes `$&`,
+  `$1`–`$9` and `$$`. `replace` changes every match unless `--first`; `--lines A-B` keeps it to
+  those lines, as `:'<,'>s` does.
+- **`--if-unchanged <sha>`** on `replace`, `task` and `write` refuses (exit 5) when the note's bytes
+  no longer have that sha, the one `read` reports: nobody changed it since you read it.
+- **`write`** replaces the note's text; `--append` adds to its end on a new line; `--create`
+  makes a note that doesn't exist, as a path in the vault (`.md` added). Text given as arguments
+  ends with a newline; `--stdin` is written as it comes.
+- **`task`** lists task items from the parsed note, so a `- [ ]` inside a code block isn't one.
+  With a line it toggles that task; `--check` and `--uncheck` set it and change nothing when it is
+  already so.
+- **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
+  nvims (the one picked last in the TUI while it answers, else the only one, else the one working
+  where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4
+  with the candidates.
+- **`history`** reads the TUI's state: the notes it read, newest first, with the line it was on.
+
 ## `resolve`
 
 It uses the same resolver as `links` and the TUI, so it is the CLI equivalent of following a link,

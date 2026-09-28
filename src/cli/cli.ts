@@ -6,9 +6,9 @@
 // and the CLI keeps to the same rule so it runs without a terminal renderer.
 
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { relative } from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
@@ -22,7 +22,12 @@ import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
 import { sanitize } from "../core/sanitize.ts";
-import { readText } from "../core/fsutil.ts";
+import { type DecodedFile, decodeText, readJson, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { compilePattern, expandReplacement, findAll, replaceMatches } from "../core/replace.ts";
+import { listTasks, toggleTask } from "../core/tasks.ts";
+import { editorArgv } from "../core/editor.ts";
+import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
+import { loadSession } from "../core/position.ts";
 import { initVault, isInside, locateVault, readVaultVersion, VaultError, type VaultLocation } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
@@ -93,6 +98,13 @@ Usage:
   slipbox backlinks <note>          notes that link to <note>
   slipbox ls                        list the vault's notes
   slipbox outline <note>            headings with source lines
+  slipbox find <query> [note]       find text in a note, or the vault  [--regex] [--whole] [--ignore-case]
+  slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
+  slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
+  slipbox read <note>               a note's text, and its sha
+  slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append] [--create] [--if-unchanged <sha>]
+  slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
+  slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M]] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
   slipbox init [dir]                make <dir> a vault (creates .slipbox/)
@@ -112,7 +124,8 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous link, 5 refused (--
 `;
 
 export const CLI_COMMANDS = new Set([
-  "render", "resolve", "links", "backlinks", "ls", "outline", "capture", "scratch", "init", "info", "themes", "commands", "help",
+  "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "write", "send", "history",
+  "capture", "scratch", "init", "info", "themes", "commands", "help",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -158,7 +171,9 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // Flags every command shares are checked for every command, used or not.
     const color = flag(args, "color");
     if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
-    const pathArg = ["render", "links", "backlinks", "outline"].includes(command) ? noteArgPath(rest[0], io.cwd) : undefined;
+    // The note argument, when it names a file, also says which vault this is.
+    const noteAt = ["render", "links", "backlinks", "outline", "replace", "task", "read", "write", "send"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
+    const pathArg = noteArgPath(noteAt, io.cwd);
     const loc =
       command === "init"
         ? { root: io.cwd, mode: "single" as const, file: null }
@@ -469,6 +484,162 @@ const HANDLERS: Record<string, Handler> = {
     };
   },
 
+  find(s, rest) {
+    const query = requireArg(rest, "query");
+    const re = pattern(s, query);
+    const notes = rest[1] ? [resolveNote(s, rest[1])] : [...s.graph.notes.keys()].sort();
+    const matches: { path: string; line: number; column: number; match: string; text: string }[] = [];
+    for (const rel of notes) {
+      const { text } = readText(s.graph.abs(rel));
+      const starts = lineStarts(text);
+      for (const m of findAll(text, re)) {
+        const line = lineAt(starts, m.from);
+        const lineText = text.slice(starts[line - 1], (starts[line] ?? text.length + 1) - 1).replace(/\r$/, "");
+        matches.push({ path: rel, line, column: [...text.slice(starts[line - 1], m.from)].length + 1, match: m.groups[0]!, text: lineText });
+      }
+    }
+    return {
+      data: { query, regex: has(s.args, "regex"), whole: has(s.args, "whole"), count: matches.length, matches },
+      human: matches.map((m) => `${m.path}:${m.line}:${m.column}: ${m.text}\n`).join(""),
+    };
+  },
+
+  replace(s, rest) {
+    if (rest.length < 3) throw new UsageError("replace needs <note> <old> <new> (the new text may be \"\")");
+    const [noteArg, query, replacement] = rest as [string, string, string];
+    const rel = resolveNote(s, noteArg);
+    const abs = s.graph.abs(rel);
+    const file = readNoteFile(s, abs);
+    const re = pattern(s, query);
+    const starts = lineStarts(file.text);
+    const lines = flag(s.args, "lines");
+    let range: [number, number] = [0, file.text.length];
+    if (lines !== undefined) {
+      const m = /^(\d+)(?:-(\d+))?$/.exec(lines);
+      const a = m ? Number(m[1]) : 0;
+      const b = m ? Number(m[2] ?? m[1]) : 0;
+      if (!m || a < 1 || b < a) throw new UsageError("--lines must look like 12 or 12-40, from 1 and in order");
+      range = [starts[a - 1] ?? file.text.length, starts[b] ?? file.text.length];
+    }
+    let ms = findAll(file.text, re, range[0], range[1]);
+    if (has(s.args, "first")) ms = ms.slice(0, 1);
+    const regex = has(s.args, "regex");
+    const out = replaceMatches(file.text, ms, replacement, regex);
+    const dry = has(s.args, "dry-run");
+    if (!dry && out.count) writeNoteText(s, abs, out.text, file);
+    const changes = ms.map((m) => ({ line: lineAt(starts, m.from), before: m.groups[0]!, after: expandReplacement(replacement, m, regex) }));
+    const verb = dry ? "would replace" : "replaced";
+    return {
+      data: { path: rel, count: out.count, dryRun: dry, sha: file.sha, newSha: dry || !out.count ? file.sha : shaOf(abs), changes },
+      human: `${verb} ${out.count} in ${rel}\n${dry ? changes.map((c) => `${c.line}: ${c.before} → ${c.after}\n`).join("") : ""}`,
+    };
+  },
+
+  task(s, rest) {
+    const rel = resolveNote(s, requireArg(rest, "note"));
+    const abs = s.graph.abs(rel);
+    const file = readNoteFile(s, abs);
+    const tasks = listTasks(parseMarkdown(file.text).tree);
+    if (rest[1] === undefined) {
+      return { data: { path: rel, tasks }, human: tasks.map((t) => `${String(t.line).padStart(5)}  [${t.checked ? "x" : " "}] ${t.text}\n`).join("") };
+    }
+    const line = Number(rest[1]);
+    if (!Number.isInteger(line) || line < 1) throw new UsageError("the task's line must be a whole number from 1");
+    const task = tasks.find((t) => t.line === line);
+    if (!task) throw new CliError(`no task on line ${line} of ${rel}`, EXIT.notFound, { tasks });
+    const want = has(s.args, "check") ? true : has(s.args, "uncheck") ? false : !task.checked;
+    if (has(s.args, "check") && has(s.args, "uncheck")) throw new UsageError("--check or --uncheck, not both");
+    if (want !== task.checked) {
+      const r = toggleTask(file.bytes, line);
+      if (!r) throw new CliError(`no task marker on line ${line} of ${rel}`, EXIT.notFound);
+      writeNote(s.loc.root, abs, r.bytes);
+    }
+    return {
+      data: { path: rel, line, text: task.text, checked: want, changed: want !== task.checked, sha: shaOf(abs) },
+      human: `${String(line).padStart(5)}  [${want ? "x" : " "}] ${task.text}\n`,
+    };
+  },
+
+  read(s, rest) {
+    const rel = resolveNote(s, requireArg(rest, "note"));
+    const abs = s.graph.abs(rel);
+    const file = readNoteFile(s, abs, false);
+    return { data: { path: rel, abs, sha: file.sha, bom: file.bom, crlf: file.crlf, invalidUtf8: file.invalidUtf8, content: file.text }, human: file.text };
+  },
+
+  async write(s, rest) {
+    const noteArg = requireArg(rest, "note");
+    // Text from the arguments is a line (or lines), so it ends with a newline; stdin is taken as is.
+    let text = rest.length > 1 ? `${rest.slice(1).join(" ")}\n` : "";
+    if (has(s.args, "stdin")) {
+      const input = await s.io.stdin();
+      text = `${text}${input}`;
+    }
+    if (!has(s.args, "stdin") && rest.length < 2) throw new UsageError("write needs the text, or --stdin");
+    let rel: string;
+    let created = false;
+    try {
+      rel = resolveNote(s, noteArg);
+    } catch (err) {
+      if (!(err instanceof CliError) || err.code !== EXIT.notFound || !has(s.args, "create")) throw err;
+      // A new note: a path in the vault, relative to it (or to cwd, when inside it).
+      const base = noteArg.startsWith("/") ? noteArg : isInside(s.loc.root, join(s.io.cwd, noteArg)) ? join(s.io.cwd, noteArg) : join(s.loc.root, noteArg);
+      const abs = base.endsWith(".md") ? base : `${base}.md`;
+      if (!isInside(s.loc.root, abs)) throw new CliError(`${noteArg} is outside the vault (${s.loc.root})`, EXIT.refused);
+      rel = relative(s.loc.root, abs);
+      created = true;
+    }
+    const abs = join(s.loc.root, rel);
+    let previous: NoteFile | null = null;
+    if (!created) previous = readNoteFile(s, abs);
+    else if (flag(s.args, "if-unchanged")) throw new CliError(`${rel} doesn't exist; --if-unchanged has nothing to compare`, EXIT.refused);
+    let content = text;
+    if (previous && has(s.args, "append")) {
+      const sep = previous.text && !previous.text.endsWith("\n") ? "\n" : "";
+      content = `${previous.text}${sep}${text}`;
+    }
+    if (created) mkdirSync(dirname(abs), { recursive: true });
+    writeNoteText(s, abs, content, previous);
+    return {
+      data: { path: rel, created, appended: !!previous && has(s.args, "append"), previousSha: previous?.sha ?? null, sha: shaOf(abs) },
+      human: `${created ? "created" : "wrote"} ${rel}\n`,
+    };
+  },
+
+  send(s, rest) {
+    const rel = resolveNote(s, requireArg(rest, "note"));
+    const abs = s.graph.abs(rel);
+    const lineArg = flag(s.args, "line") ?? "1";
+    if (!/^\d+$/.test(lineArg) || Number(lineArg) < 1) throw new UsageError("--line must be a whole number from 1");
+    const line = Number(lineArg);
+    const raw = s.config.editor.remote.filter((t) => t.trim());
+    if (!raw.length) throw new CliError("set [editor] remote in the config to send notes to a running editor", EXIT.error);
+    const templates = raw.length === 1 && raw[0]!.trim() === "nvim" ? NVIM_REMOTE : raw;
+    let server = "";
+    if (templates.some((t) => t.includes("{server}"))) server = pickNvim(s, abs);
+    const commands = templates.map((t) => editorArgv(t, abs, line, s.io.env, false, server));
+    for (const argv of commands) {
+      const r = spawnSync(argv[0]!, argv.slice(1), { stdio: "ignore", timeout: 10000 });
+      if (r.error) throw new CliError(`couldn't start ${argv[0]}: ${r.error.message}`);
+      if (r.status !== 0) throw new CliError(`${argv.slice(0, 2).join(" ")} exited with ${r.status}`);
+    }
+    return { data: { path: rel, line, server: server || null, commands }, human: `sent ${rel}:${line}${server ? ` to ${server}` : ""}\n` };
+  },
+
+  history(s) {
+    const positions = readJson<Record<string, { line?: number; at?: string; cursor?: { anchor?: { line?: number } } }>>(join(stateDir(s.loc.root), "positions.json"), {});
+    const read = Object.entries(positions)
+      .filter(([, p]) => p && typeof p.at === "string")
+      .sort((a, b) => (a[1].at! < b[1].at! ? 1 : -1))
+      .map(([path, p]) => ({ path, at: p.at!, line: p.cursor?.anchor?.line ?? p.line ?? 1 }));
+    const session = loadSession(s.loc.root);
+    const open = (session?.tabs ?? []).map((t) => t.panes.map((p) => p.path));
+    return {
+      data: { read, open },
+      human: read.map((r) => `${r.at.slice(0, 16).replace("T", " ")}  ${r.path}:${r.line}\n`).join(""),
+    };
+  },
+
   commands() {
     return {
       data: COMMAND_SPECS,
@@ -476,6 +647,90 @@ const HANDLERS: Record<string, Handler> = {
     };
   },
 };
+
+/** The query as a pattern, with the shared flags; a bad regex is a usage error. */
+function pattern(s: Session, query: string): RegExp {
+  const re = compilePattern(query, { regex: has(s.args, "regex"), whole: has(s.args, "whole"), ignoreCase: has(s.args, "ignore-case") });
+  if (typeof re === "string") throw new UsageError(`not a regex: ${re}`);
+  return re;
+}
+
+function lineStarts(text: string): number[] {
+  const out = [0];
+  for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) out.push(i + 1);
+  return out;
+}
+
+/** The 1-based line holding offset `at`. */
+function lineAt(starts: number[], at: number): number {
+  let lo = 0;
+  let hi = starts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (starts[mid]! <= at) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo + 1;
+}
+
+interface NoteFile extends DecodedFile {
+  bytes: Uint8Array;
+  sha: string;
+}
+
+function shaOf(abs: string): string {
+  return createHash("sha256").update(readFileSync(abs)).digest("hex").slice(0, 16);
+}
+
+/**
+ * A note's bytes, text and sha (of the bytes), checked against `--if-unchanged`. A note that isn't
+ * valid UTF-8 is read, never rewritten: its invalid bytes would be lost.
+ */
+function readNoteFile(s: Session, abs: string, forWriting = true): NoteFile {
+  const bytes = readFileSync(abs);
+  const decoded = decodeText(bytes);
+  const sha = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+  if (forWriting) {
+    const expect = flag(s.args, "if-unchanged");
+    if (expect && expect !== sha) throw new CliError(`${relative(s.loc.root, abs)} changed since ${expect} (now ${sha}); not written`, EXIT.refused, { sha });
+    if (decoded.invalidUtf8) throw new CliError(`${relative(s.loc.root, abs)} isn't valid UTF-8; not rewriting it`, EXIT.refused);
+  }
+  return { ...decoded, bytes, sha };
+}
+
+/** Write a note's text back as it was stored: its BOM and its line endings kept. */
+function writeNoteText(s: Session, abs: string, text: string, was: DecodedFile | null): void {
+  let out = text;
+  if (was?.crlf) out = out.replace(/\r?\n/g, "\r\n");
+  if (was?.bom) out = `\uFEFF${out}`;
+  try {
+    writeNote(s.loc.root, abs, out);
+  } catch (err) {
+    if (err instanceof WriteRefused) throw new CliError(err.message, EXIT.refused);
+    throw err;
+  }
+}
+
+/**
+ * The nvim to send to: --server, else the one picked last in the TUI while it answers, else the
+ * only one running, else the one working where the note lives (the closest folder).
+ */
+function pickNvim(s: Session, abs: string): string {
+  const given = flag(s.args, "server");
+  if (given) {
+    if (!probeNvim(given)) throw new CliError(`no nvim answers at ${given}`, EXIT.notFound);
+    return given;
+  }
+  const last = loadSession(s.loc.root)?.remote_server;
+  if (last && probeNvim(last)) return last;
+  const found = discoverNvims();
+  if (!found.length) throw new CliError("no nvim is running with a server — start nvim (0.9 or later) and try again", EXIT.notFound);
+  if (found.length === 1) return found[0]!.socket;
+  const holding = found.filter((n) => n.cwd && (abs === n.cwd || abs.startsWith(`${n.cwd}/`))).sort((a, b) => b.cwd.length - a.cwd.length);
+  if (holding.length && (holding.length === 1 || holding[0]!.cwd.length > holding[1]!.cwd.length)) return holding[0]!.socket;
+  const candidates = found.map((n) => ({ socket: n.socket, cwd: n.cwd, file: n.file }));
+  throw new CliError(`${found.length} nvims are running; pick one with --server (${found.map((n) => n.socket).join(", ")})`, EXIT.ambiguous, { candidates });
+}
 
 /** The scratch's project: the vault root, else the git top-level of cwd, else cwd (0.10 / 8.2). */
 function captureProject(s: Session): string {

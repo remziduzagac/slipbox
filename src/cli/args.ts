@@ -7,8 +7,8 @@ export interface Args {
 }
 
 /** Flags that take a value, and boolean flags. Anything else is a usage error. */
-export const VALUED = new Set(["root", "config", "color", "width", "theme", "from", "ref", "lang", "if-unchanged", "glyphs"]);
-const BOOLEAN = new Set(["json", "plain", "snippet", "stdin", "help", "version"]);
+export const VALUED = new Set(["root", "config", "color", "width", "theme", "from", "ref", "lang", "if-unchanged", "glyphs", "lines", "line", "server"]);
+const BOOLEAN = new Set(["json", "plain", "snippet", "stdin", "help", "version", "regex", "whole", "ignore-case", "first", "dry-run", "create", "append", "check", "uncheck"]);
 
 export class UsageError extends Error {}
 
