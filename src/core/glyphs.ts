@@ -35,8 +35,6 @@ export interface Glyphs {
   hbar: string;
   /** The lens's rules: heavy whatever `ui.lines` says, so they stand out from the frame. */
   lensRule: string;
-  /** The lens's left bar, joining its rules: top corner, the rows, bottom corner. */
-  lensBar: [string, string, string];
   /**
    * Where rules and borders meet, keyed by the directions with a line: some of u(p), d(own),
    * l(eft), r(ight), in that order — `udr` is ┣.
@@ -101,7 +99,6 @@ const unicode: Glyphs = {
   vbar: "┃",
   hbar: "━",
   lensRule: "━",
-  lensBar: ["┏", "┃", "┗"],
   joints: { udlr: "╋", udr: "┣", udl: "┫", dlr: "┳", ulr: "┻", dr: "┏", dl: "┓", ur: "┗", ul: "┛" },
   dirOpen: "▾",
   dirClosed: "▸",
@@ -173,7 +170,6 @@ const ascii: Glyphs = {
   vbar: "|",
   hbar: "-",
   lensRule: "=",
-  lensBar: ["+", "|", "+"],
   joints: { udlr: "+", udr: "+", udl: "+", dlr: "+", ulr: "+", dr: "+", dl: "+", ur: "+", ul: "+" },
   dirOpen: "v",
   dirClosed: ">",
