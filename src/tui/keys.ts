@@ -147,6 +147,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader s d": "scratch.clear",
   // note, vault, app
   "leader n r": "note.reload",
+  "leader n e": "note.edit",
+  "leader n s": "note.send",
   "leader n i": "note.info",
   "leader v r": "vault.reindex",
   "leader v i": "vault.info",
@@ -323,7 +325,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader f": "find: notes, headings, text, commands",
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
-  "leader n": "note: reload, info",
+  "leader n": "note: edit, send to an editor, reload, info",
   "leader v": "vault: reindex, info, reload config",
   "leader q": "session: quit",
   y: "copy: selection, path, reference, link",

@@ -51,6 +51,28 @@ export async function runTui(argv: string[]): Promise<number> {
       setMouse: (on) => {
         renderer.useMouse = on;
       },
+      // The editor gets the terminal: the renderer stops drawing and reading keys until it exits.
+      runForeground: (argv) => {
+        renderer.suspend();
+        try {
+          const r = Bun.spawnSync({ cmd: argv, stdio: ["inherit", "inherit", "inherit"] });
+          return r.exitCode ?? 1;
+        } catch (err) {
+          return (err as Error).message;
+        } finally {
+          renderer.resume();
+          renderer.requestRender();
+        }
+      },
+      // An editor elsewhere: no terminal of ours, not waited for.
+      runDetached: async (argv) => {
+        try {
+          const p = Bun.spawn({ cmd: argv, stdio: ["ignore", "ignore", "ignore"] });
+          return await p.exited;
+        } catch (err) {
+          return (err as Error).message;
+        }
+      },
     },
   });
 

@@ -75,8 +75,18 @@ export interface Config {
     file: string;
   };
   editor: {
-    /** `{file}` and `{line}` are substituted as separate argv entries — never through a shell (13.2). */
+    /**
+     * The editor slipbox steps aside for (4.1): it runs in this terminal and slipbox waits. `{file}`
+     * and `{line}` are filled in inside each argument — never through a shell (13.2). Empty:
+     * `$VISUAL`, else `$EDITOR`, else `vi`, given the line when it's a known editor.
+     */
     command: string;
+    /**
+     * The editor already running elsewhere to send a note to (4.12), e.g.
+     * `nvim --server /tmp/nvim.sock --remote +{line} {file}`. slipbox doesn't wait; the watcher
+     * picks up its saves. Empty: off.
+     */
+    remote: string;
   };
   watch: {
     enabled: boolean;
@@ -134,7 +144,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   capture: { location: "state", file: "scratch.md" },
-  editor: { command: "" },
+  editor: { command: "", remote: "" },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
   aliases: {},

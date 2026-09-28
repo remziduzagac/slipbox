@@ -13,6 +13,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
+import { editorArgv } from "../core/editor.ts";
 import { appendScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
@@ -68,6 +69,11 @@ export interface Host {
   setTitle?(title: string): void;
   /** Turn mouse capture on or off (off hands the mouse to the terminal). */
   setMouse?(on: boolean): void;
+  /** Step aside for `argv` in this terminal and wait for it (the renderer suspended): its exit
+   *  code, or an error message when it couldn't start. */
+  runForeground?(argv: string[]): number | string;
+  /** Start `argv` detached and don't wait; the promise settles with its exit code or an error. */
+  runDetached?(argv: string[]): Promise<number | string>;
 }
 
 export type Level = "info" | "warn" | "error";
@@ -944,6 +950,37 @@ export class App {
     buf.load();
     for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = ""; // keeps the anchors (3.5)
     return true;
+  }
+
+  /** The source line under the cursor: where a hand-off opens the note. */
+  cursorLine(view: View): number {
+    return this.currentLayout(view).lines[view.cur.row]?.src ?? 1;
+  }
+
+  /** Step aside for the editor (4.1): it runs in this terminal; the note reloads after it. */
+  editInEditor(view: View): void {
+    if (!this.host.runForeground) return this.message("error", "can't hand off to an editor here");
+    const buf = view.buf;
+    const argv = editorArgv(this.config.editor.command, buf.abs, this.cursorLine(view));
+    const r = this.host.runForeground(argv);
+    if (typeof r === "string") return this.message("error", `couldn't start ${argv[0]}: ${r}`);
+    if (buf.changedOnDisk()) this.reloadBuffer(buf);
+    if (r !== 0) this.message("warn", `${argv[0]} exited with ${r}`);
+  }
+
+  /** Send the note to an editor already running elsewhere (4.12); its saves arrive through the
+   *  watcher. */
+  sendToEditor(view: View): void {
+    const template = this.config.editor.remote;
+    if (!template.trim()) return this.message("info", "set [editor] remote in the config to send notes to a running editor");
+    if (!this.host.runDetached) return this.message("error", "can't start an editor from here");
+    const argv = editorArgv(template, view.buf.abs, this.cursorLine(view));
+    this.message("info", `sent to ${argv[0]} at line ${this.cursorLine(view)}`);
+    void this.host.runDetached(argv).then((r) => {
+      if (r === 0) return;
+      this.message("error", typeof r === "string" ? `couldn't start ${argv[0]}: ${r}` : `${argv[0]} exited with ${r}`);
+      this.host.requestRender();
+    });
   }
 
   /** The link under the cursor, if any. */

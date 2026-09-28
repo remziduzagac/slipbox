@@ -66,8 +66,9 @@ which_key_delay_ms = 500       # before it shows for prefixes other than the lea
 location = "state"             # state (never committed) | vault
 file = "scratch.md"            # a relative .md path; no "..", no hidden part (else the default)
 
-[editor]
-command = ""                   # phase 3: `$EDITOR` hand-off template with {file} and {line}
+[editor]                       # {file} and {line} fill in inside arguments; never through a shell
+command = ""                   # space n e: runs here, slipbox waits; "" = $VISUAL, $EDITOR, vi (+line)
+remote = ""                    # space n s: e.g. "nvim --server /tmp/nvim.sock --remote +{line} {file}"
 
 [watch]
 enabled = true

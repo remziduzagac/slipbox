@@ -272,7 +272,8 @@ config.
 
 ## Editing
 
-Phase 3 (plan): the first write is the checkbox; hand-off, source mode and the modal layer follow.
+Phase 3 (plan): the checkbox and the hand-offs (`space n e`, `space n s`, under "Note, vault, app")
+come first; source mode and the modal layer follow.
 
 | Action | Keys |
 | --- | --- |
@@ -310,6 +311,8 @@ edit the config and the config wins again.
 
 | Keys | Action |
 | --- | --- |
+| `space n e` | edit in your editor at the cursor's line, in this terminal; back here when it closes |
+| `space n s` | send the note to your editor already running elsewhere (`[editor] remote`) |
 | `space n r` | reload this note from disk |
 | `space n i` | note info: path, size, modified time, links, backlinks, encoding |
 | `space v r` | reindex the vault |

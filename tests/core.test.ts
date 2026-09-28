@@ -16,6 +16,7 @@ import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/t
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { toggleTask } from "../src/core/tasks.ts";
+import { editorArgv, splitCommand } from "../src/core/editor.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
 import type { WikiLink } from "../src/core/wikilink.ts";
 
@@ -352,5 +353,22 @@ describe("task toggle (4.11) and note writes (4.6, 7.5)", () => {
       rmSync(root, { recursive: true, force: true });
       rmSync(outside, { recursive: true, force: true });
     }
+  });
+});
+
+describe("editor hand-off argv (4.1, 4.2, 4.12)", () => {
+  test("a template is split without a shell; {file} and {line} fill in inside arguments", () => {
+    expect(splitCommand(`nvim --server '/tmp/my sock' --remote "+{line}" {file}`)).toEqual(["nvim", "--server", "/tmp/my sock", "--remote", "+{line}", "{file}"]);
+    expect(editorArgv("nvim --server /tmp/s --remote +{line} {file}", "/v/a b.md", 12)).toEqual(["nvim", "--server", "/tmp/s", "--remote", "+12", "/v/a b.md"]);
+    expect(editorArgv("code -g {file}:{line}", "/v/a.md", 3)).toEqual(["code", "-g", "/v/a.md:3"]);
+    // A file name is data, never a command: no shell sees it.
+    expect(editorArgv("vi {file}", "/v/$(rm -rf ~).md", 1)).toEqual(["vi", "/v/$(rm -rf ~).md"]);
+    expect(editorArgv("myeditor --wait", "/v/a.md", 1)).toEqual(["myeditor", "--wait", "/v/a.md"]); // no {file}: last
+  });
+  test("no template: $VISUAL, $EDITOR, vi — the line passed the way the editor takes it", () => {
+    expect(editorArgv("", "/v/a.md", 7, { VISUAL: "nvim", EDITOR: "nano" })).toEqual(["nvim", "+7", "/v/a.md"]);
+    expect(editorArgv("", "/v/a.md", 7, { EDITOR: "/usr/bin/hx" })).toEqual(["/usr/bin/hx", "/v/a.md:7"]);
+    expect(editorArgv("", "/v/a.md", 7, { EDITOR: "code --wait" })).toEqual(["code", "--wait", "/v/a.md"]);
+    expect(editorArgv("", "/v/a.md", 7, {})).toEqual(["vi", "+7", "/v/a.md"]);
   });
 });

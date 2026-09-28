@@ -967,6 +967,44 @@ describe("find: n / N from the cursor, * / # the word under it", () => {
   });
 });
 
+describe("hand-off to an editor (space n e, space n s)", () => {
+  test("space n e steps aside for the editor at the cursor's line, then reloads what it saved", async () => {
+    const root = makeVault();
+    const file = join(root, "notes", "alpha.md");
+    const h = await harness({ root, open: "notes/alpha.md", config: (c) => (c.editor.command = "myed +{line} {file}") });
+    const v = h.app.view!;
+    h.app.moveCursor(v, { row: rowStarting(h, "Back to"), col: 0 });
+    const line = h.app.cursorLine(v);
+    const calls: string[][] = [];
+    const host = (h.app as unknown as { host: Host }).host;
+    host.runForeground = (argv) => {
+      calls.push(argv);
+      writeFileSync(file, readFileSync(file, "utf8").replace("Back to", "Edited, back to"));
+      const future = Date.now() / 1000 + 5;
+      require("node:fs").utimesSync(file, future, future);
+      return 0;
+    };
+    await h.keys("space", "n", "e");
+    expect(calls).toEqual([["myed", `+${line}`, file]]);
+    expect(h.frame()).toContain("Edited, back to");
+    host.runForeground = () => "no such file";
+    await h.keys("space", "n", "e");
+    expect(h.app.transient!.text).toContain("couldn't start myed");
+  });
+  test("space n s sends the note to the remote editor without waiting; unset, it says how", async () => {
+    const h = await harness({ open: "notes/alpha.md" });
+    await h.keys("space", "n", "s");
+    expect(h.app.transient!.text).toContain("[editor] remote");
+    const n = await harness({ open: "notes/alpha.md", config: (c) => (c.editor.remote = "nvim --server /tmp/s --remote +{line} {file}") });
+    const sent: string[][] = [];
+    (n.app as unknown as { host: Host }).host.runDetached = async (argv) => (sent.push(argv), 0);
+    await n.keys("space", "n", "s");
+    expect(sent[0]!.slice(0, 4)).toEqual(["nvim", "--server", "/tmp/s", "--remote"]);
+    expect(sent[0]!.at(-1)).toEndWith("notes/alpha.md");
+    expect(n.app.transient!.text).toContain("sent to nvim");
+  });
+});
+
 describe("task toggle (x, a click on [ ])", () => {
   const note = "# Tasks\n\n- [ ] parent task\n  - [x] child task\n    with a second line\n- plain item\n";
   const setup = async () => {

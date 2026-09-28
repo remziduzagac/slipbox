@@ -453,6 +453,15 @@ item holding the cursor — the innermost, from any of its rows — as a one-byt
 bytes, so a BOM, CRLF endings and even invalid UTF-8 survive untouched. If the file changed on disk
 since it was shown, it is reloaded instead and nothing is written (its lines may have moved).
 
+**Handing off to another editor** (`4.1`, `4.2`, `4.12`) comes in two kinds, both opening the note at
+the cursor's source line. `space n e` steps aside: the renderer suspends, the editor
+(`[editor] command`, else `$VISUAL`, `$EDITOR`, `vi`, given `+line` or `file:line` when it's a
+known editor) runs in this terminal, and when it exits slipbox resumes and reloads the note if it
+changed. `space n s` sends the note to an editor already running elsewhere (`[editor] remote`, e.g.
+nvim's `--server … --remote`) and doesn't wait; the watcher shows its saves as they land. Either
+template is split into arguments and `{file}` / `{line}` filled in inside them, never through a
+shell, so a file name can't become a command.
+
 ## External changes (plans `5.1`–`5.4`)
 
 The watcher subscribes to exactly the directories the walk includes: one non-recursive watch per
