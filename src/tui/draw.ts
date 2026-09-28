@@ -725,19 +725,12 @@ function markStyle(theme: Theme, role: Role): Partial<CellStyle> {
   return out;
 }
 
-/**
- * A side pane's title and the blank row (or, given the geometry, a rule) under it; returns the
- * rect left for the pane's list. Short panes skip the title.
- */
-function paneTitle(app: App, c: Canvas, rect: Rect, title: string, focused: boolean, bg: Color | null, rule?: Geometry): Rect {
+/** A side pane's title and the blank row under it; returns the rect left for the pane's list.
+ *  Short panes skip the title. */
+function paneTitle(app: App, c: Canvas, rect: Rect, title: string, focused: boolean, bg: Color | null): Rect {
   if (rect.h < 8) return rect;
   // Bright while the pane has focus, dimmer otherwise; bold either way.
   drawText(c, rect.x + 1, rect.y, title, { ...roleStyle(app.theme, focused ? "pane_title_active" : "pane_title", bg), bg }, rect.w - 1);
-  if (rule) {
-    // A rule instead of the blank row, joined to the pane's border like the others.
-    drawText(c, rect.x, rect.y + 1, app.glyphs.hbar.repeat(rect.w), roleStyle(app.theme, "border", pageBg(app.theme)), rect.w);
-    rule.rules.push({ y: rect.y + 1, x0: rect.x, x1: rect.x + rect.w });
-  }
   return { ...rect, y: rect.y + 2, h: rect.h - 2 };
 }
 
@@ -826,7 +819,7 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
   const history = app.leftView === "history";
   const title = LEFT_VIEWS.find((v) => v.id === app.leftView)!.title;
-  let rect = paneTitle(app, c, pane, title, app.region === "sidebar", base.bg, geo);
+  let rect = paneTitle(app, c, pane, title, app.region === "sidebar", base.bg);
   const s = app.sidebar;
   // The filter (`/`): a row at the top of the list while it's open or holds text.
   if ((s.filtering || s.filter) && rect.h > 2) {

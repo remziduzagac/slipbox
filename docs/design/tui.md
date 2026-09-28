@@ -27,7 +27,7 @@ Code, in `src/tui/`:
  slipbox                             ↻ alpha.md reloaded  indexing 3…      ← top bar (ui.top_bar), latest message
 ━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
  ≡ ┃ Explorer   ┃ 1 index × ┃ 2 alpha × ┃                           ┃ +3    ← left rail ┃ explorer ┃ tab strip
-   ┣━━━━━━━━━━━━╋━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━┳━━━  ← the explorer's title rule, the strip's
+   ┃            ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━┳━━━  ← the strip's rule; a blank row in the explorer
    ┃ ▾ notes    ┃ § Heading › Sub                                     ┃ ▤    ← the window's breadcrumb (tinted), over
    ┃ ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┫        the outline; the right rail,
    ┃ └─  alpha  ┃ ▌ Sub                        ┃ Outline             ┃        its ▤ toggles the outline
@@ -43,7 +43,7 @@ Code, in `src/tui/`:
 
 **The frame.** Right under the top bar, a `━` rule in the `border` role runs across the top of
 everything: the explorer and the tab strip, which spans the note and the outline. A second runs
-under the strip, over the note and the outline, level with the rule under the explorer's title. A
+under the strip, over the note and the outline, starting at the explorer's border. A
 third runs across the bottom of the explorer, the note and the outline, right above the status line.
 Windows' header rules and the vertical borders complete it. Where rules and borders meet, one pass
 picks the box glyph from the lines that meet there: `┳` where a border starts under a rule, `┻`
@@ -259,9 +259,8 @@ keys.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 
-Each pane starts with its view's title ("Explorer", "History", "Outline"), then a row before the list: a rule under
-the explorer's title (level with the rule under the tab strip, which it meets in `╋`), a blank row
-under the outline's. Panes under 8 rows skip both. The explorer runs from under the frame's top
+Each pane starts with its view's title ("Explorer", "History", "Outline") and a blank row before the
+list; panes under 8 rows skip both. The explorer runs from under the frame's top
 rule, beside the tab strip. The outline belongs to the note, so it opens under the note's
 breadcrumb: the top-right window's breadcrumb row and the rule under it run across the outline's
 column. The outline's button (`▤`) is on the right rail, bright while the outline is open.

@@ -1042,8 +1042,8 @@ describe("top bar, tab strip, status line", () => {
     expect(strip.x + strip.w).toBe(160);
     expect(sb.y).toBe(4); // the tree, under the "Explorer" title (beside the strip) and a blank row
     expect(h.frame().split("\n")[2]!.slice(sb.x).startsWith(" Explorer")).toBe(true);
-    // Under the title a rule, meeting the one under the strip at the explorer's border.
-    expect(h.frame().split("\n")[3]!.slice(sb.x - 1, sb.x + sb.w + 2)).toBe(`┣${"━".repeat(sb.w)}╋━`); // from the left rail's border
+    // Under the title a blank row; the strip's rule starts at the explorer's border.
+    expect(h.frame().split("\n")[3]!.slice(sb.x - 1, sb.x + sb.w + 2)).toBe(`┃${" ".repeat(sb.w)}┣━`);
     const rows = h.frame().split("\n");
     // A rule over everything, the left rail's border and the explorer's starting under it (┳)…
     const bx = sb.x + sb.w;
@@ -1053,7 +1053,7 @@ describe("top bar, tab strip, status line", () => {
     expect(rows[2]![bx]).toBe("┃");
     // …and one under the strip, over the note (and the outline), meeting the border in ┣.
     expect(rows[3]!.slice(strip.x, strip.x + 10)).toBe("━".repeat(10));
-    expect(rows[3]![strip.x - 1]).toBe("╋"); // the explorer's title rule meets it
+    expect(rows[3]![strip.x - 1]).toBe("┣"); // it starts at the explorer's border
     // The bottom rule closes the explorer and the note above the status line.
     expect(rows.at(-2)!.slice(sb.x, sb.x + 10)).toBe("━".repeat(10));
     expect(rows.at(-2)![bx]).toBe("┻");
@@ -1243,7 +1243,7 @@ describe("top bar, tab strip, status line", () => {
     expect(rows[pane.y - 1]!.slice(pane.x, pane.x + 20)).toBe("━".repeat(20));
     expect(rows[pane.y - 1]![pane.x - 1]).toBe("┣");
     // Above it the rule under the tab strip, meeting the explorer's border.
-    expect(rows[pane.y - 3]!.slice(pane.x - 1, pane.x + 5)).toBe(`╋${"━".repeat(5)}`); // and the explorer's title rule
+    expect(rows[pane.y - 3]!.slice(pane.x - 1, pane.x + 5)).toBe(`┣${"━".repeat(5)}`);
     // Only the breadcrumb row has the band colour.
     const st = h.canvas().styles;
     expect(st[pane.y - 2]![pane.x + 60]!.bg).toBe(h.app.theme.roles.breadcrumb_band.bg!);
@@ -1822,7 +1822,7 @@ describe("mouse", () => {
     const x = pane.x + pane.w - 3;
     const col = lines.map((l) => [...l][x] ?? "").join("");
     expect(col).not.toContain("╋");
-    for (const joint of ["┳", "┫", "┻"]) expect(col).toContain(joint);
+    for (const joint of ["┳", "┻"]) expect(col).toContain(joint);
   });
   test("dragging borders resizes the explorer, the outline and the split", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 170, config: (c) => (c.ui.outline = true) });
