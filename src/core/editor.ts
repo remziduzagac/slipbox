@@ -34,8 +34,8 @@ const FILE_COLON_LINE = new Set(["hx", "helix", "micro"]);
  * `$VISUAL`, else `$EDITOR`, else `vi`, with the line passed the way that editor understands (a
  * known editor), or just the file (an unknown one).
  */
-export function editorArgv(template: string, file: string, line: number, env: Record<string, string | undefined> = process.env, appendFile = true): string[] {
-  const fill = (arg: string) => arg.replaceAll("{file}", file).replaceAll("{line}", String(line));
+export function editorArgv(template: string, file: string, line: number, env: Record<string, string | undefined> = process.env, appendFile = true, server = ""): string[] {
+  const fill = (arg: string) => arg.replaceAll("{file}", file).replaceAll("{line}", String(line)).replaceAll("{server}", server);
   if (template.trim()) {
     const argv = splitCommand(template).map(fill);
     // A template without {file} still gets the file, last (not for a remote command that only

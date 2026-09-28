@@ -14,6 +14,8 @@ import { dirname, join, relative } from "node:path";
 import { WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
+import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
+import { homedir } from "node:os";
 import { appendScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
@@ -382,6 +384,7 @@ export class App {
     for (const e of this.graph.errors) this.message("warn", e);
 
     this.recentCommands = (loadSession(this.loc.root)?.recent_commands ?? []).filter((id) => typeof id === "string").slice(0, RECENT_MAX);
+    this.remoteServer = loadSession(this.loc.root)?.remote_server;
     this.restoreUiOverrides();
     if (opts.themeName) this.ui.theme = opts.themeName; // an explicit theme beats a remembered one
     const restored = !opts.open && this.config.ui.restore_session && this.restoreSession();
@@ -970,15 +973,56 @@ export class App {
 
   /** Send the note to an editor already running elsewhere (4.12); its saves arrive through the
    *  watcher. */
-  sendToEditor(view: View): void {
-    const templates = this.config.editor.remote.filter((t) => t.trim());
-    if (!templates.length) return this.message("info", "set [editor] remote in the config to send notes to a running editor");
+  /** How the running nvims are found and asked; tests replace these. */
+  nvimDiscovery: () => NvimServer[] = () => discoverNvims();
+  nvimProbe: (socket: string) => NvimServer | null = (s) => probeNvim(s);
+  /** The nvim `space n s` sends to, picked once per vault and kept while it answers. */
+  remoteServer: string | undefined;
+
+  /**
+   * `space n s`: the note, at the cursor's line, to an editor running elsewhere. With the nvim
+   * preset (the default) or a `{server}` template, the nvim is the one picked before while it
+   * answers; else the only one running; else a picker — which `choose` (`space n p`) always opens.
+   */
+  sendToEditor(view: View, choose = false): void {
+    const raw = this.config.editor.remote.filter((t) => t.trim());
+    if (!raw.length) return this.message("info", "set [editor] remote in the config to send notes to a running editor");
+    const templates = raw.length === 1 && raw[0]!.trim() === "nvim" ? NVIM_REMOTE : raw;
+    if (!templates.some((t) => t.includes("{server}"))) return this.sendWith(view, templates, "");
+    if (!choose && this.remoteServer) {
+      const known = this.nvimProbe(this.remoteServer);
+      if (known) return this.sendWith(view, templates, known);
+    }
+    const found = this.nvimDiscovery();
+    if (!found.length) return this.message("info", "no nvim is running with a server — start nvim (0.9 or later) and try again");
+    const pick = (s: NvimServer) => {
+      this.remoteServer = s.socket;
+      this.sendWith(view, templates, s);
+    };
+    if (found.length === 1 && !choose) return pick(found[0]!);
+    // The nvim working where the note lives first (the closest folder), then the rest.
+    const abs = view.buf.abs;
+    const holds = (s: NvimServer) => !!s.cwd && (abs === s.cwd || abs.startsWith(`${s.cwd}/`));
+    const ordered = [...found].sort((a, b) => Number(holds(b)) - Number(holds(a)) || b.cwd.length - a.cwd.length);
+    const home = homedir();
+    const tilde = (p: string) => (p === home || p.startsWith(`${home}/`) ? `~${p.slice(home.length)}` : p);
+    const shown = (s: NvimServer) => (s.file ? (s.cwd && s.file.startsWith(`${s.cwd}/`) ? s.file.slice(s.cwd.length + 1) : tilde(s.file)) : "no file");
+    this.openList({
+      title: "Send to which nvim?",
+      items: ordered.map((s) => ({ label: tilde(s.cwd || s.socket), detail: shown(s), hint: s.socket === this.remoteServer ? "last used" : holds(s) ? "holds this note" : undefined, data: s })),
+      accept: (item) => pick(item.data as NvimServer),
+    });
+  }
+
+  private sendWith(view: View, templates: string[], server: NvimServer | ""): void {
     const run = this.host.runDetached;
     if (!run) return this.message("error", "can't start an editor from here");
     const line = this.cursorLine(view);
     // Each command a template of its own; no {file} means none is appended (nvim's --remote-send).
-    const cmds = templates.map((t) => editorArgv(t, view.buf.abs, line, process.env, false));
-    this.message("info", `sent to ${cmds[0]![0]} at line ${line}`);
+    const socket = server ? server.socket : "";
+    const cmds = templates.map((t) => editorArgv(t, view.buf.abs, line, process.env, false, socket));
+    const where = server && server.cwd ? ` (${server.cwd.split("/").pop()})` : "";
+    this.message("info", `sent to ${cmds[0]![0]}${where} at line ${line}`);
     void (async () => {
       for (const argv of cmds) {
         const r = await run(argv);
@@ -2581,6 +2625,7 @@ export class App {
       outline_width: this.outW,
       ui: this.uiOverrides,
       recent_commands: this.recentCommands,
+      ...(this.remoteServer ? { remote_server: this.remoteServer } : {}),
     };
     saveSession(this.loc.root, s);
   }

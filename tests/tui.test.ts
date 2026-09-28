@@ -11,6 +11,7 @@ import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
+import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { fuzzy, rank } from "../src/tui/fuzzy.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
@@ -66,6 +67,9 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   const quit = { called: false };
   const host: Host = { requestRender() {}, osc52: (t) => (copied.push(t), true), quit: () => (quit.called = true) };
   const app = new App({ loc, config, graph, host, open: opts.open === undefined ? "index.md" : opts.open, watch: opts.watch ?? false, configFile: opts.configFile, themeName: opts.themeName });
+  // Never the machine's own nvims.
+  app.nvimDiscovery = () => [];
+  app.nvimProbe = () => null;
   const W = opts.width ?? 120;
   const H = opts.height ?? 30;
   const canvas = () => {
@@ -992,7 +996,7 @@ describe("hand-off to an editor (space n e, space n s)", () => {
     expect(h.app.transient!.text).toContain("couldn't start myed");
   });
   test("space n s sends the note to the remote editor without waiting; unset, it says how", async () => {
-    const h = await harness({ open: "notes/alpha.md" });
+    const h = await harness({ open: "notes/alpha.md", config: (c) => (c.editor.remote = []) });
     await h.keys("space", "n", "s");
     expect(h.app.transient!.text).toContain("[editor] remote");
     // nvim: open the file, then go to the line (its --remote has no +{line}); in order, each awaited.
@@ -1024,6 +1028,68 @@ describe("hand-off to an editor (space n e, space n s)", () => {
     await one.keys("space", "n", "s");
     await Bun.sleep(5);
     expect(got[0]![2]).toMatch(/notes\/alpha\.md:\d+$/);
+  });
+});
+
+describe("the nvim preset ([editor] remote = \"nvim\", the default)", () => {
+  const server = (cwd: string, file = ""): NvimServer => ({ socket: `/run/nvim.${cwd.split("/").pop()}.sock`, cwd, file });
+  const setup = async (found: NvimServer[]) => {
+    const h = await harness({ open: "notes/alpha.md" });
+    const sent: string[][] = [];
+    (h.app as unknown as { host: Host }).host.runDetached = async (argv) => (sent.push(argv), 0);
+    h.app.nvimDiscovery = () => found;
+    h.app.nvimProbe = (s) => found.find((f) => f.socket === s) ?? null;
+    return { h, sent, root: h.root };
+  };
+  test("none running: says so; one: sends there straight away, opening the file then the line", async () => {
+    const none = await setup([]);
+    await none.h.keys("space", "n", "s");
+    expect(none.h.app.transient!.text).toContain("no nvim is running");
+    const { h, sent, root } = await setup([server("/elsewhere")]);
+    await h.keys("space", "n", "s");
+    await Bun.sleep(5);
+    const line = h.app.cursorLine(h.app.view!);
+    expect(sent).toEqual([
+      ["nvim", "--server", "/run/nvim.elsewhere.sock", "--remote", join(root, "notes", "alpha.md")],
+      ["nvim", "--server", "/run/nvim.elsewhere.sock", "--remote-send", `<C-\\><C-N>:${line}<CR>`],
+    ]);
+    expect(h.app.remoteServer).toBe("/run/nvim.elsewhere.sock");
+  });
+  test("several: a picker, the nvim working where the note lives first; the pick is remembered", async () => {
+    const root = makeVault();
+    const found = [server("/tmp/other", "/tmp/other/x.md"), server(root, join(root, "index.md")), server("/")];
+    const h = await harness({ root, open: "notes/alpha.md" });
+    const sent: string[][] = [];
+    (h.app as unknown as { host: Host }).host.runDetached = async (argv) => (sent.push(argv), 0);
+    h.app.nvimDiscovery = () => found;
+    h.app.nvimProbe = (s) => found.find((f) => f.socket === s) ?? null;
+    await h.keys("space", "n", "s");
+    const o = h.app.overlay as ListOverlay;
+    expect(o.title).toContain("which nvim");
+    expect((o.filtered[0]!.item.data as NvimServer).cwd).toBe(root); // holds the note, the closest folder
+    expect(o.filtered[0]!.item.detail).toBe("index.md");
+    expect(o.filtered[0]!.item.hint).toBe("holds this note");
+    await h.keys("down", "enter"); // pick another one: the deeper folder comes before "/"
+    await Bun.sleep(5);
+    expect(sent[0]![2]).toBe(found[0]!.socket);
+    // Next time: straight to the remembered one, no picker, while it answers…
+    sent.length = 0;
+    await h.keys("space", "n", "s");
+    await Bun.sleep(5);
+    expect(h.app.overlay).toBeNull();
+    expect(sent[0]![2]).toBe(found[0]!.socket);
+    // …and kept in the session.
+    h.app.quit();
+    const again = await harness({ root, open: "notes/alpha.md" });
+    expect(again.app.remoteServer).toBe(found[0]!.socket);
+    // space n p always asks.
+    await h.keys("space", "n", "p");
+    expect(h.app.overlay?.kind).toBe("list");
+    await h.keys("escape");
+    // Gone: the picker comes back.
+    h.app.nvimProbe = () => null;
+    await h.keys("space", "n", "s");
+    expect(h.app.overlay?.kind).toBe("list");
   });
 });
 

@@ -17,6 +17,7 @@ import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { toggleTask } from "../src/core/tasks.ts";
 import { editorArgv, splitCommand } from "../src/core/editor.ts";
+import { discoverNvims, nvimSockets } from "../src/core/nvim.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
 import type { WikiLink } from "../src/core/wikilink.ts";
 
@@ -385,5 +386,28 @@ describe("editor hand-off argv (4.1, 4.2, 4.12)", () => {
     expect(editorArgv("", "/v/a.md", 7, { EDITOR: "/usr/bin/hx" })).toEqual(["/usr/bin/hx", "/v/a.md:7"]);
     expect(editorArgv("", "/v/a.md", 7, { EDITOR: "code --wait" })).toEqual(["code", "--wait", "/v/a.md"]);
     expect(editorArgv("", "/v/a.md", 7, {})).toEqual(["vi", "+7", "/v/a.md"]);
+  });
+});
+
+describe("finding running nvims (4.12)", () => {
+  test("sockets named nvim.* only, then only the ones that answer", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-nv-"));
+    const net = await import("node:net");
+    const listen = (p: string) => new Promise<import("node:net").Server>((res) => {
+      const srv = net.createServer();
+      srv.listen(p, () => res(srv));
+    });
+    const a = await listen(join(dir, "nvim.123.0"));
+    const b = await listen(join(dir, "nvim.wt-abc.sock"));
+    const c = await listen(join(dir, "other.sock"));
+    writeFileSync(join(dir, "nvim.notasocket"), "");
+    try {
+      expect(nvimSockets([dir, join(dir, "missing")])).toEqual([join(dir, "nvim.123.0"), join(dir, "nvim.wt-abc.sock")]);
+      const found = discoverNvims({ dirs: [dir], probe: (s) => (s.endsWith(".sock") ? { socket: s, cwd: "/w", file: "" } : null) });
+      expect(found.map((f) => f.socket)).toEqual([join(dir, "nvim.wt-abc.sock")]);
+    } finally {
+      for (const srv of [a, b, c]) srv.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

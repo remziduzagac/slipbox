@@ -86,7 +86,9 @@ export interface Config {
      * waited for before the next (slipbox itself doesn't wait). One string is one command, e.g.
      * `code -g {file}:{line}`; nvim takes two, since its `--remote` has no `+{line}`:
      * `nvim --server S --remote {file}`, then `nvim --server S --remote-send <C-\><C-N>:{line}<CR>`.
-     * The watcher picks up its saves. Empty: off.
+     * `{server}` is a socket picked from the running nvims. `["nvim"]` (the default) is the preset:
+     * find the running nvims, pick one (remembered per vault), then those two commands. The watcher
+     * picks up its saves. Empty: off.
      */
     remote: string[];
   };
@@ -146,7 +148,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   capture: { location: "state", file: "scratch.md" },
-  editor: { command: "", remote: [] },
+  editor: { command: "", remote: ["nvim"] },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
   aliases: {},

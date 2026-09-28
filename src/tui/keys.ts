@@ -149,6 +149,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n r": "note.reload",
   "leader n e": "note.edit",
   "leader n s": "note.send",
+  "leader n p": "note.send_pick",
   "leader n i": "note.info",
   "leader v r": "vault.reindex",
   "leader v i": "vault.info",

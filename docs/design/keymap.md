@@ -312,7 +312,8 @@ edit the config and the config wins again.
 | Keys | Action |
 | --- | --- |
 | `space n e` | edit in your editor at the cursor's line, in this terminal; back here when it closes |
-| `space n s` | send the note to your editor already running elsewhere (`[editor] remote`) |
+| `space n s` | send the note to your editor already running elsewhere: a running nvim by default |
+| `space n p` | choose which running nvim `space n s` sends to (it asks by itself when unsure) |
 | `space n r` | reload this note from disk |
 | `space n i` | note info: path, size, modified time, links, backlinks, encoding |
 | `space v r` | reindex the vault |

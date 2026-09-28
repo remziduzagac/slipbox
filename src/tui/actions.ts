@@ -749,6 +749,7 @@ export function registerActions(app: App): void {
     "task.toggle": (a) => withView(a, (v) => a.toggleTaskAt(v)),
     "note.edit": (a) => withView(a, (v) => a.editInEditor(v)),
     "note.send": (a) => withView(a, (v) => a.sendToEditor(v)),
+    "note.send_pick": (a) => withView(a, (v) => a.sendToEditor(v, true)),
     "find.word_next": (a) => findWord(a, 1),
     "find.word_prev": (a) => findWord(a, -1),
     "find.clear": (a) =>

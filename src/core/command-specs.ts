@@ -128,7 +128,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   // note, vault, app
   { id: "note.reload", title: "Reload note from disk", cli: "slipbox render <note>", desc: "Reads the note from disk again" },
   { id: "note.edit", title: "Edit in your editor", cli: I, desc: "Hands the note to your editor at the cursor's line, in this terminal; back here when it closes" },
-  { id: "note.send", title: "Send to your running editor", cli: I, desc: "Opens the note at the cursor's line in an editor already running elsewhere ([editor] remote)" },
+  { id: "note.send", title: "Send to your running editor", cli: I, desc: "Opens the note at the cursor's line in an editor already running elsewhere: by default, a running nvim" },
+  { id: "note.send_pick", title: "Choose the editor to send to", cli: I, desc: "Lists the running nvims to pick the one space n s sends to, then sends the note there" },
   { id: "note.info", title: "Note info", cli: "slipbox links <note> --json", desc: "Shows path, size, links, backlinks, encoding" },
   { id: "vault.reindex", title: "Reindex the vault", cli: "slipbox ls", desc: "Re-walks and re-reads every note" },
   { id: "vault.info", title: "Vault info", cli: "slipbox info", desc: "Shows root, notes, watcher, cache and state" },
