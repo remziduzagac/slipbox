@@ -42,6 +42,7 @@ outline = false                # outline pane on the right on wide terminals
 outline_width = 32
 split_ratio = 0.5              # first window's share of a split (0.2–0.8)
 top_bar = true                 # palette chip, messages, vault state (≡ and ▤ when their rails are off)
+lines = "light"                # the frame's lines: "light" (─ │) or "heavy" (━ ┃)
 breadcrumb = true              # breadcrumb atop each window (with ▤ when there's no rail)
 left_rail = true               # a column of buttons down the left edge: the explorer's ≡
 right_rail = true              # a column of buttons down the right edge: the outline's ▤

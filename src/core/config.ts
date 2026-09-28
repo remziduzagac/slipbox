@@ -53,6 +53,8 @@ export interface Config {
     top_bar: boolean;
     /** The outline breadcrumb at the top of each window. */
     breadcrumb: boolean;
+    /** The frame's lines: light `─ │` or heavy `━ ┃`. */
+    lines: "light" | "heavy";
     /** The rails: columns of buttons down the left edge (the explorer's) and the right (the outline's). */
     left_rail: boolean;
     right_rail: boolean;
@@ -125,6 +127,7 @@ export const DEFAULT_CONFIG: Config = {
     zen: false,
     top_bar: true,
     breadcrumb: true,
+    lines: "light",
     left_rail: true,
     right_rail: true,
     scrolloff: 3,
@@ -144,6 +147,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.glyphs": ["auto", "nerd", "unicode", "ascii"],
   "render.show_urls": ["auto", "always", "never"],
   "capture.location": ["state", "vault"],
+  "ui.lines": ["light", "heavy"],
 };
 
 /** Numeric keys and their allowed range. */

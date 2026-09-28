@@ -376,7 +376,7 @@ export class App {
     if (opts.themeName) this.ui.theme = opts.themeName; // an explicit theme beats a remembered one
     const restored = !opts.open && this.config.ui.restore_session && this.restoreSession();
     this.applyTheme();
-    this.glyphs = glyphsFor(this.ui.glyphs);
+    this.glyphs = this.glyphSet(this.ui.glyphs);
     if (!restored) {
       const first = opts.open ?? this.defaultNote();
       if (first) this.openInNewTab(first);
@@ -461,9 +461,14 @@ export class App {
 
   private applyUi(key: keyof UiState): void {
     if (key === "theme") this.applyTheme();
-    else if (key === "glyphs") this.glyphs = glyphsFor(this.ui.glyphs);
+    else if (key === "glyphs") this.glyphs = this.glyphSet(this.ui.glyphs);
     else if (key === "mouse") this.host.setMouse?.(this.ui.mouse);
     this.relayoutAll();
+  }
+
+  /** The glyph set for `mode`, with the frame's lines as `ui.lines` asks. */
+  glyphSet(mode: string): Glyphs {
+    return glyphsFor(mode, process.env, this.config.ui.lines);
   }
 
   relayoutAll(): void {
@@ -509,6 +514,7 @@ export class App {
         this.applyUi(key);
       }
     }
+    if (before.ui.lines !== next.ui.lines) this.glyphs = this.glyphSet(this.ui.glyphs);
     if (before.ui.sidebar !== next.ui.sidebar) this.sidebar.visible = next.ui.sidebar;
     if (before.ui.outline !== next.ui.outline) this.outline.visible = next.ui.outline;
     if (before.ui.sidebar_width !== next.ui.sidebar_width) this.sideW = next.ui.sidebar_width;

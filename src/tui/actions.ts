@@ -9,7 +9,6 @@ import type { Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import { slugify } from "../core/parse.ts";
 import type { Anchor } from "../core/position.ts";
-import { glyphsFor } from "../core/glyphs.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
 import type { App, ListItem, Loc, UiState, View } from "./app.ts";
@@ -378,7 +377,7 @@ function pickGlyphs(a: App): void {
   const before = a.ui.glyphs;
   const sets = ["nerd", "unicode", "ascii", "auto"];
   const preview = (mode: string) => {
-    a.glyphs = glyphsFor(mode);
+    a.glyphs = a.glyphSet(mode);
     a.relayoutAll();
   };
   a.openList({

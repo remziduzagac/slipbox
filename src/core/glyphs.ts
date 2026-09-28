@@ -210,6 +210,11 @@ export function isGlyphMode(v: string): v is GlyphMode {
 }
 
 /** Unknown modes fall back to detection rather than failing: config validation reports them. */
-export function glyphsFor(mode: GlyphMode | string, env: NodeJS.ProcessEnv = process.env): Glyphs {
-  return SETS[(Object.hasOwn(SETS, mode) ? mode : detectGlyphMode(env)) as keyof typeof SETS];
+export function glyphsFor(mode: GlyphMode | string, env: NodeJS.ProcessEnv = process.env, lines: "light" | "heavy" = "heavy"): Glyphs {
+  const set = SETS[(Object.hasOwn(SETS, mode) ? mode : detectGlyphMode(env)) as keyof typeof SETS];
+  // The frame's lines (`ui.lines`): heavy `━ ┃`, or light `─ │`; ascii has only the one kind.
+  if (lines === "heavy" || set.mode === "ascii") return set;
+  return { ...set, vbar: "│", hbar: "─", joints: LIGHT_JOINTS };
 }
+
+const LIGHT_JOINTS: Record<string, string> = { udlr: "┼", udr: "├", udl: "┤", dlr: "┬", ulr: "┴", dr: "┌", dl: "┐", ur: "└", ul: "┘" };

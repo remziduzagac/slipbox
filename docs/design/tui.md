@@ -49,7 +49,8 @@ Windows' header rules and the vertical borders complete it. Where rules and bord
 picks the box glyph from the lines that meet there: `┳` where a border starts under a rule, `┻`
 where it ends on one, `┣` `┫` `╋` where it continues through, and the corners `┏` `┓` `┗` `┛`
 (ascii: `+`). Borders are always the plain `border` colour; focus shows as brightness (see the side
-panes). Zen mode has no frame.
+panes). Zen mode has no frame. The lines are light by default (`ui.lines = "light"`: `─ │ ┬ ┴ ├ ┤ ┼`);
+`ui.lines = "heavy"` draws them as shown here, `━ ┃ ┳ ┻ ┣ ┫ ╋`. Tables in the note are always light.
 
 **The top bar** has buttons, the latest message and vault-wide state. It sits on the page's
 background like the rest, so the frame's rule under it gives it the same half row of air the tab

@@ -56,6 +56,8 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   const config: Config = structuredClone(DEFAULT_CONFIG);
   config.ui.restore_session = false;
   config.render.glyphs = "unicode";
+  // The frame tests read heavy lines; the light set has its own test.
+  config.ui.lines = "heavy";
   config.walk.exclude = ["drafts/"];
   opts.config?.(config);
   const loc = locateVault({ root });
@@ -763,6 +765,20 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
     expect(n.app.rightRailWidth).toBe(0);
     const b2 = n.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
     expect(b2.x + b2.w).toBe(W);
+  });
+});
+
+describe("ui.lines", () => {
+  test("light (the default): the frame in ─ │ and light joints; heavy: ━ ┃", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.lines = "light") });
+    const f = h.frame();
+    expect(DEFAULT_CONFIG.ui.lines).toBe("light");
+    expect(f).not.toMatch(/[━┃╋┳┻┣┫]/u);
+    expect(f).toContain("┬");
+    expect(f).toContain("┴");
+    expect(f.split("\n")[1]!).toMatch(/^─+┬/u);
+    const heavy = await harness({ open: "samples/large-document.md", width: 140, height: 30 });
+    expect(heavy.frame().split("\n")[1]!).toMatch(/^━+┳/u);
   });
 });
 
