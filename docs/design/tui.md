@@ -24,22 +24,22 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- ≡   slipbox                     ↻ alpha.md reloaded  indexing 3…   ← top bar (ui.top_bar), latest message
-━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━  ← the frame's top rule
- Explorer   ┃ 1 index × ┃ 2 alpha × ┃                               ┃ +3   ← tab strip; +N when some don't fit
-━━━━━━━━━━━━╋━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━  ← the explorer's title rule, the strip's rule
- ▾ notes    ┃ § Heading › Sub                                          ▤   ← the window's breadcrumb (tinted),
- ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━  ←   over the outline; ▤ toggles it
- └─  alpha  ┃ ▌ Sub                              ┃ Outline                 ← explorer ┃ note ┃ outline, titled
-            ┃ Text with the █ursor on its row…   ┃                         ← (both panes optional)
-            ┃                                    ┃ ▾ Heading
-           ┌─ ␣ l › links ──────────────────────────────────┐              ← which-key popup, while keys are pending
-           │                                                │
-           │ f → Follow link          n → Next link         │
-           │     Opens the link…          Moves to the…     │
-           │                                                │
-           └───────────────────── backspace up · esc cancel ┘
-━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
+ ≡   slipbox                         ↻ alpha.md reloaded  indexing 3…  ← top bar (ui.top_bar), latest message
+━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← the frame's top rule
+ Explorer   ┃ 1 index × ┃ 2 alpha × ┃                               ┃ +3     ← tab strip; +N when some don't fit
+━━━━━━━━━━━━╋━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━┳━━━  ← the explorer's title rule, the strip's rule
+ ▾ notes    ┃ § Heading › Sub                                         ┃ ▤    ← the window's breadcrumb (tinted), over
+ ├─  beta   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┫        the outline; the rail at the right,
+ └─  alpha  ┃ ▌ Sub                            ┃ Outline             ┃        its ▤ toggles the outline
+            ┃ Text with the █ursor on its row… ┃                     ┃      ← explorer ┃ note ┃ outline ┃ rail
+            ┃                                  ┃ ▾ Heading           ┃        (both panes optional)
+           ┌─ ␣ l › links ──────────────────────────────────┐        ┃      ← which-key popup, while keys are pending
+           │                                                │        ┃
+           │ f → Follow link          n → Next link         │        ┃
+           │     Opens the link…          Moves to the…     │        ┃
+           │                                                │        ┃
+           └───────────────────── backspace up · esc cancel ┘        ┃
+━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━┻━━━━  ← the frame's bottom rule
  READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line, or a prompt
 ```
 
@@ -80,9 +80,10 @@ closes it. With nothing collapsed it hangs under the icon. In a split it shares
 the window's title row, after the file name. Clicking a heading focuses that window, puts its cursor
 on the heading, and scrolls the heading to the window's first row (as far as the note's end allows).
 The row stays reserved above the first heading, so the text doesn't jump. `ui.breadcrumb = false`
-removes it; zen mode and windows under 8 rows drop it. When no window shows one, the `▤` button
-moves to the right end of the top bar (with neither, in zen or with `ui.top_bar = false`, the
-outline opens with `ctrl+o`); there are no header rules, the outline starts at the top of the
+removes it; zen mode and windows under 8 rows drop it. Without the rail (below), the `▤` button sits
+at the breadcrumb's right end; when no window shows a breadcrumb either, it moves to the right end
+of the top bar (with neither, in zen or with `ui.top_bar = false`, the outline opens with `ctrl+o`).
+Without a breadcrumb there are no header rules, the outline starts at the top of the
 content, and a split window gets a plain title row (`tab` / `tab_active`).
 
 The breadcrumb row has its own background, `breadcrumb_band` (`surface` blended into the page
@@ -246,11 +247,19 @@ the explorer's title (level with the rule under the tab strip, which it meets in
 under the outline's. Panes under 8 rows skip both. The explorer runs from under the frame's top
 rule, beside the tab strip. The outline belongs to the note, so it opens under the note's
 breadcrumb: the top-right window's breadcrumb row and the rule under it run across the outline's
-column, and the outline's button (`▤`) sits at the far right of that row, bright while the outline
-is open. Focus shows as brightness (without colour, as an underline), never as a coloured border: a pane's title is bright
-(`pane_title_active`) while the pane has focus and dimmer (`pane_title`) otherwise, and the active
-tab is bright (`tab_active`) while the note has focus and dimmer (`tab_active_idle`) otherwise. All
-of them stay bold, so nothing shifts.
+column. The outline's button (`▤`) is on the rail, bright while the outline is open.
+
+**The rail** (`ui.rail`, on by default) is a column at the right edge for the note's tools: a
+border, then one button per row from the top, level with the breadcrumb. It runs from under the
+tab strip's rule to the frame's bottom rule, and its border joins both (`┳`, `┻`) and the rule under
+the breadcrumb (`┫`). Today it holds the outline's `▤`; the note's other tools (footnotes, comments)
+will go there too. The outline opens beside it, and every width (the panes, the note, the narrow
+cutoff) is shared out after the rail's 4 columns. Zen mode hides it.
+
+Focus shows as brightness (without colour, as an underline), never as a coloured border: a pane's
+title is bright (`pane_title_active`) while the pane has focus and dimmer (`pane_title`) otherwise,
+and the active tab is bright (`tab_active`) while the note has focus and dimmer (`tab_active_idle`)
+otherwise. All of them stay bold, so nothing shifts.
 
 Both trees show depth by indentation plus dim tree lines (the `tree_guide` role): `├─` into each
 child, `└─` into the last one, and `│` where an ancestor has siblings still to come (ascii: `|`, ``

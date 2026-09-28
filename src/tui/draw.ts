@@ -108,6 +108,9 @@ export function drawApp(app: App, c: Canvas): Geometry {
 
   const sideW = app.sidebarWidth();
   const outW = app.outlineWidth();
+  // The rail takes the right edge under the tab strip; everything else shares what's left (RW).
+  const railW = app.railWidth;
+  const RW = W - railW;
   const beside = app.sidebarShown && app.sidebarBeside;
   const left = app.sidebarBeside ? sideW + 1 : 0;
   const right = app.outlineBeside ? outW + 1 : 0;
@@ -129,10 +132,11 @@ export function drawApp(app: App, c: Canvas): Geometry {
   }
   // The rightmost top window's header runs over the outline's column, which starts under it.
   const overOutline = app.outlineShown && app.outlineBeside ? right : 0;
-  drawContent(app, c, { x: left, y: mainY, w: Math.max(0, W - left - right), h: mainH }, frame, overOutline, geo);
+  drawContent(app, c, { x: left, y: mainY, w: Math.max(0, RW - left - right), h: mainH }, frame, overOutline, geo);
+  if (railW) drawRail(app, c, RW, frame ? head + (tabBar ? 2 : 0) : mainY, mainY, bottom, borderEnd, geo);
 
   if (app.sidebarShown) {
-    const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, W - 6);
+    const w = app.sidebarBeside ? sideW : Math.min(sideW + 6, RW - 6);
     // Beside the content, the explorer runs from under the frame's top rule to the status line,
     // whether or not the tab strip shows; its border runs up beside the strip.
     const sideY = beside && frame ? head + 1 : mainY;
@@ -157,22 +161,22 @@ export function drawApp(app: App, c: Canvas): Geometry {
     } else geo.verticals.push({ x: w, y0: frame ? sideY - 1 : sideY, y1: borderEnd, style: border });
   }
   if (app.outlineShown) {
-    const w = app.outlineBeside ? outW : Math.min(outW + 6, W - 6);
+    const w = app.outlineBeside ? outW : Math.min(outW + 6, RW - 6);
     // Beside the content, the outline starts under the header that spans its column.
     const top = app.outlineBeside && geo.headerEnd !== null ? geo.headerEnd : mainY;
-    const rect = { x: W - w, y: top, w, h: bottom + 1 - top };
-    if (!app.outlineBeside) clipRules(geo, { x: W - w - 3, y: top, w: w + 3, h: bottom + 1 - top });
+    const rect = { x: RW - w, y: top, w, h: bottom + 1 - top };
+    if (!app.outlineBeside) clipRules(geo, { x: RW - w - 3, y: top, w: w + 3, h: bottom + 1 - top });
     geo.outline = drawOutline(app, c, rect, geo);
     geo.outlinePane = rect;
     if (!app.outlineBeside) {
-      c.fill(W - w - 3, top, 2, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
-      geo.outlinePane = { x: W - w - 3, y: top, w: w + 3, h: bottom + 1 - top };
+      c.fill(RW - w - 3, top, 2, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
+      geo.outlinePane = { x: RW - w - 3, y: top, w: w + 3, h: bottom + 1 - top };
       coverHot(geo, geo.outlinePane);
     }
     const border = roleStyle(theme, "border", page);
-    for (let y = top; y <= bottom; y++) drawText(c, W - w - 1, y, app.glyphs.vbar, border, 1);
-    if (app.outlineBeside) geo.separators.push({ kind: "outline", x: W - w - 1, y: top, w: 1, h: bottom + 1 - top });
-    geo.verticals.push({ x: W - w - 1, y0: frame ? top - 1 : top, y1: borderEnd, style: border });
+    for (let y = top; y <= bottom; y++) drawText(c, RW - w - 1, y, app.glyphs.vbar, border, 1);
+    if (app.outlineBeside) geo.separators.push({ kind: "outline", x: RW - w - 1, y: top, w: 1, h: bottom + 1 - top });
+    geo.verticals.push({ x: RW - w - 1, y0: frame ? top - 1 : top, y1: borderEnd, style: border });
   }
   drawJoints(app, c, geo);
   // After the windows and the panes: the top bar carries the outline's button when no window
@@ -189,6 +193,25 @@ export function drawApp(app: App, c: Canvas): Geometry {
   if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay) drawWhichKey(app, c, mainY, mainY + mainH, geo);
   if (app.overlay?.kind === "list") geo.overlay = app.overlay.anchor ? drawDropdown(app, c, app.overlay, app.overlay.anchor, H - 1) : drawList(app, c, app.overlay, mainY, mainH);
   return geo;
+}
+
+/**
+ * The rail: a column at the right edge, under the tab strip, holding buttons for the note's tools
+ * (the outline's for now), one per row from the top. Its border joins the rules above and below.
+ */
+function drawRail(app: App, c: Canvas, x: number, y0: number, top: number, bottom: number, borderEnd: number, geo: Geometry): void {
+  const theme = app.theme;
+  const page = pageBg(theme);
+  const border = roleStyle(theme, "border", page);
+  c.fill(x, top, c.width - x, bottom + 1 - top, page);
+  for (let y = top; y <= bottom; y++) drawText(c, x, y, app.glyphs.vbar, border, 1);
+  geo.verticals.push({ x, y0, y1: borderEnd, style: border });
+  const buttons: { glyph: string; on: boolean; id: string }[] = [{ glyph: app.glyphs.outlineButton, on: app.outlineShown, id: "btn:outline" }];
+  buttons.forEach((b, k) => {
+    const y = top + k;
+    if (y > bottom) return;
+    button(app, c, x + 1, { y, h: 1 }, ` ${b.glyph} `, b.on ? "topbar_button_on" : "topbar_button", b.id, geo, page);
+  });
 }
 
 /** A bar's rows: `h` rows from `y`, its text on the middle one. */
@@ -509,10 +532,12 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     }
     let end = rect.x + hw;
     if (overOutline >= 0) {
-      // The outline's button, at the far right.
-      const label = ` ${app.glyphs.outlineButton} `;
-      end -= stringWidth(label);
-      button(app, c, end, { y, h: 1 }, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bg);
+      // The outline's button, at the far right (on the rail instead, when it shows).
+      if (!app.railWidth) {
+        const label = ` ${app.glyphs.outlineButton} `;
+        end -= stringWidth(label);
+        button(app, c, end, { y, h: 1 }, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bg);
+      }
       geo.headerEnd = y + 2;
     }
     drawBreadcrumb(app, c, view, x + 1, end - 1, y, bg, geo);

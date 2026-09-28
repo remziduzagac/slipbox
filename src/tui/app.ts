@@ -942,8 +942,18 @@ export class App {
     return t.orientation === "side" && this.contentWidth() < 80 ? "stacked" : t.orientation;
   }
 
+  /** The rail's columns (its border and one button wide), when it shows: never in zen. */
+  get railWidth(): number {
+    return this.config.ui.rail && !this.ui.zen && this.tabs.length ? RAIL_WIDTH : 0;
+  }
+
+  /** The terminal's width less the rail's: what the panes and the note share. */
+  get usableWidth(): number {
+    return this.width - this.railWidth;
+  }
+
   contentWidth(): number {
-    return this.width - (this.sidebarBeside ? this.sidebarWidth() + 1 : 0) - (this.outlineBeside ? this.outlineWidth() + 1 : 0);
+    return this.usableWidth - (this.sidebarBeside ? this.sidebarWidth() + 1 : 0) - (this.outlineBeside ? this.outlineWidth() + 1 : 0);
   }
 
   // -------------------------------------------------------------------------------------------
@@ -951,7 +961,7 @@ export class App {
 
   /** Narrow: side panes open over the note. Never wider than two 12-column panes and the note. */
   get narrow(): boolean {
-    return this.width < Math.max(this.config.ui.narrow_width, 2 * 13 + MIN_CONTENT);
+    return this.usableWidth < Math.max(this.config.ui.narrow_width, 2 * 13 + MIN_CONTENT);
   }
 
   get sidebarShown(): boolean {
@@ -975,13 +985,13 @@ export class App {
    * note gets under MIN_CONTENT columns (whatever the config, resize mode or a drag asked for).
    */
   sidebarWidth(): number {
-    const room = this.width - MIN_CONTENT - 1 - (this.outlineBeside ? 13 : 0);
-    return Math.max(12, Math.min(this.sideW, Math.floor(this.width * 0.5), room));
+    const room = this.usableWidth - MIN_CONTENT - 1 - (this.outlineBeside ? 13 : 0);
+    return Math.max(12, Math.min(this.sideW, Math.floor(this.usableWidth * 0.5), room));
   }
 
   outlineWidth(): number {
-    const room = this.width - MIN_CONTENT - 1 - (this.sidebarBeside ? this.sidebarWidth() + 1 : 0);
-    return Math.max(12, Math.min(this.outW, Math.floor(this.width * 0.5), room));
+    const room = this.usableWidth - MIN_CONTENT - 1 - (this.sidebarBeside ? this.sidebarWidth() + 1 : 0);
+    return Math.max(12, Math.min(this.outW, Math.floor(this.usableWidth * 0.5), room));
   }
 
   /**
@@ -1753,7 +1763,7 @@ export class App {
     if (d.kind === "separator") {
       const s = d.sep;
       if (s.kind === "sidebar") this.sideW = Math.max(12, Math.min(ev.x, Math.floor(this.width * 0.5)));
-      else if (s.kind === "outline") this.outW = Math.max(12, Math.min(this.width - ev.x - 1, Math.floor(this.width * 0.5)));
+      else if (s.kind === "outline") this.outW = Math.max(12, Math.min(this.usableWidth - ev.x - 1, Math.floor(this.usableWidth * 0.5)));
       else if (s.area && this.tab) {
         const r = s.kind === "split-side" ? (ev.x - s.area.x) / Math.max(1, s.area.w) : (ev.y - s.area.y) / Math.max(1, s.area.h);
         this.tab.ratio = Math.max(0.15, Math.min(0.85, r));
@@ -2210,6 +2220,8 @@ function inRect(r: { x: number; y: number; w: number; h: number }, x: number, y:
 const RECENT_MAX = 5;
 /** The note keeps at least this many columns beside the side panes. */
 const MIN_CONTENT = 24;
+/** The rail: its border, then a button (a glyph with a space either side). */
+export const RAIL_WIDTH = 4;
 
 /** Wrapping off: how wide a note is laid out first, to find its natural width. */
 const NOWRAP_PROBE = 2000;

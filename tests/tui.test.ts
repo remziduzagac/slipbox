@@ -395,7 +395,7 @@ describe("which-key", () => {
     expect(rows[head + 2]!.slice(left - 2, left)).toBe("  ");
     const status = rows.length - 1;
     expect(rows[status - 1]!.startsWith("━━━━")).toBe(true); // the frame's bottom rule
-    expect(rows[status - 2]!.trim()).toBe(""); // the popup's margin row
+    expect(rows[status - 2]!.slice(0, rows[status - 2]!.length - h.app.railWidth).trim()).toBe(""); // the popup's margin row (the rail beside it)
     // Centred.
     const right = rows[head]!.lastIndexOf("┐");
     expect(Math.abs(left - (160 - 1 - right))).toBeLessThanOrEqual(1);
@@ -723,6 +723,42 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
   });
 });
 
+describe("the rail (ui.rail)", () => {
+  test("a column at the right edge under the tab strip; its ▤ toggles the outline, which opens beside it", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 140, height: 30 });
+    const f = h.frame();
+    const rows = f.split("\n");
+    const W = 140;
+    const x = W - h.app.railWidth;
+    expect(h.app.railWidth).toBe(4);
+    const btn = h.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
+    expect(btn.x).toBe(x + 1);
+    expect([...rows[btn.y]!][x + 2]).toBe("▤");
+    // Its border joins the strip's rule above and the frame's bottom rule.
+    const col = rows.map((r) => [...r][x] ?? "").join("");
+    expect(col).toContain("┳");
+    expect(col).toContain("┻");
+    // Only one ▤: not on the breadcrumb as well.
+    expect(h.app.geometry!.hot.filter((r) => r.id === "btn:outline").length).toBe(1);
+    h.app.handleMouse({ type: "down", x: btn.x + 1, y: btn.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: btn.x + 1, y: btn.y, button: 0 });
+    h.frame();
+    expect(h.app.outlineShown).toBe(true);
+    const o = h.app.geometry!.outline!;
+    expect(o.x + o.w).toBe(x); // the outline ends at the rail's border
+    // Zen has no rail; ui.rail = false removes it and the breadcrumb gets ▤ back.
+    await h.app.run("ui.zen");
+    h.frame();
+    expect(h.app.railWidth).toBe(0);
+    await h.app.run("ui.zen");
+    const n = await harness({ open: "samples/large-document.md", width: 140, height: 30, config: (c) => (c.ui.rail = false) });
+    n.frame();
+    expect(n.app.railWidth).toBe(0);
+    const b2 = n.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
+    expect(b2.x + b2.w).toBe(W);
+  });
+});
+
 describe("breadcrumb collapse (…) and the path dropdown", () => {
   test("crumbLayout: all, then first … innermost, then cut, then … last, then …", () => {
     const shape = (ps: ReturnType<typeof crumbLayout>) => ps.map((p) => (p === "more" ? "…" : `${p.i}:${p.w}`)).join(" ");
@@ -911,7 +947,7 @@ describe("top bar, tab strip, status line", () => {
     expect(rows[crumbY + 1]![border]).toBe("┳");
     // Then the pane: "Outline", a blank row, the headings.
     expect(rows[crumbY + 2]!.slice(g.outline!.x)).toMatch(/^ Outline/);
-    expect(rows[crumbY + 3]!.slice(g.outline!.x).trim()).toBe("");
+    expect(rows[crumbY + 3]!.slice(g.outline!.x, g.outline!.x + g.outline!.w).trim()).toBe("");
     expect(g.outline!.y).toBe(crumbY + 4);
     expect(rows[g.outline!.y]!.slice(g.outline!.x).trim()).not.toBe("");
   });
@@ -927,7 +963,7 @@ describe("top bar, tab strip, status line", () => {
     expect(btn("btn:explorer").fg).toBe(roles.topbar_button_on.fg!); // the explorer is open
     expect(btn("btn:explorer").bg).toBe(h.app.theme.roles.text.bg ?? h.app.theme.bg); // the page
     expect(btn("btn:outline").fg).toBe(roles.topbar_button.fg!); // the outline is closed
-    expect(btn("btn:outline").bg).toBe(roles.breadcrumb_band.bg!);
+    expect(btn("btn:outline").bg).toBe(h.app.theme.roles.text.bg ?? h.app.theme.bg); // on the rail, on the page
   });
   test("tree lines: ├─ to each child, └─ to the last, │ where an ancestor goes on", async () => {
     const h = await harness({ open: "samples/large-document.md", width: 160, height: 90, config: (c) => (c.ui.outline = true) });
@@ -1297,7 +1333,7 @@ describe("review round 1", () => {
     expect(h.app.theme.roles.sidebar_active.bold).toBe(true);
   });
   test("without the breadcrumb, the outline button is in the top bar", async () => {
-    const h = await harness({ width: 100, height: 14, config: (c) => (c.ui.breadcrumb = false) });
+    const h = await harness({ width: 100, height: 14, config: (c) => ((c.ui.breadcrumb = false), (c.ui.rail = false)) });
     h.frame();
     const btn = h.app.geometry!.hot.find((r) => r.id === "btn:outline")!;
     expect(btn.y).toBe(0);
@@ -1641,7 +1677,7 @@ describe("mouse", () => {
     for (const joint of ["┳", "┫", "┻"]) expect(col).toContain(joint);
   });
   test("dragging borders resizes the explorer, the outline and the split", async () => {
-    const h = await harness({ open: "samples/large-document.md", width: 160, config: (c) => (c.ui.outline = true) });
+    const h = await harness({ open: "samples/large-document.md", width: 170, config: (c) => (c.ui.outline = true) });
     await h.keys("ctrl+w", "v");
     h.frame();
     const seps = h.app.geometry!.separators;
@@ -1654,7 +1690,7 @@ describe("mouse", () => {
     h.app.handleMouse({ type: "down", x: out.x, y: out.y + 3, button: 0 });
     h.app.handleMouse({ type: "drag", x: out.x - 6, y: out.y + 3, button: 0 });
     h.app.handleMouse({ type: "up", x: out.x - 6, y: out.y + 3, button: 0 });
-    expect(h.app.outW).toBe(160 - (out.x - 6) - 1);
+    expect(h.app.outW).toBe(170 - h.app.railWidth - (out.x - 6) - 1);
     h.frame();
     const split = h.app.geometry!.separators.find((s) => s.kind === "split-side")!;
     h.app.handleMouse({ type: "down", x: split.x, y: split.y + 3, button: 0 });
