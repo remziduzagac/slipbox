@@ -6,6 +6,7 @@
 import type { App, View } from "./app.ts";
 import * as C from "./cursor.ts";
 import * as E from "./editing.ts";
+import { textMatches } from "./replacing.ts";
 
 type Op = "d" | "c" | "y" | ">" | "<";
 export type FindKind = "f" | "F" | "t" | "T";
@@ -29,6 +30,8 @@ export interface VimState {
   register: { text: string; linewise: boolean } | null;
   /** The keys of the last change, for `.`, and the ones of the change being made. */
   lastChange: string[] | null;
+  /** A change went on into insert mode (c, i, o…): its typed keys are part of it, up to esc. */
+  inInsert?: boolean;
   seq: string[];
   seqVersion: number;
   replaying: boolean;
@@ -63,11 +66,13 @@ export async function vimKey(app: App, view: View, key: string, dispatch: () => 
   const start = idle(app, view) && !app.pending.length;
   if (start) {
     s.seq = [];
+    s.inInsert = false;
     s.seqVersion = view.buf.version;
     s.undoing = false;
   }
   s.seq.push(key);
   await handle(app, view, key, dispatch);
+  if (view.insert) s.inInsert = true;
   // Back to rest: if the text changed (and it wasn't undo), this was a change to repeat.
   if (idle(app, view) && !app.pending.length && !s.undoing && view.buf.version !== s.seqVersion) s.lastChange = [...s.seq];
 }
@@ -148,6 +153,17 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
   // A motion, possibly of several keys (g g).
   o.keys.push(key);
   const seq = o.keys.join(" ");
+  // gn / gN: the search's next (previous) match, the one under the cursor included — so cgn, then
+  // . . . changes the matches one after another.
+  if (seq === "g n" || seq === "g shift+n") {
+    s.op = null;
+    const q = view.find?.query;
+    const ms = q ? textMatches(view, q) : [];
+    if (typeof ms === "string" || !ms.length) return app.message("info", q ? `not found: ${q}` : "no search yet for gn");
+    const at = E.offsetOf(app, view);
+    const m = seq === "g n" ? (ms.find((x) => x.to > at) ?? ms[0]!) : (ms.findLast((x) => x.from <= at) ?? ms[ms.length - 1]!);
+    return apply(app, view, o.op, { from: m.from, to: m.to, linewise: false });
+  }
   const spec = app.keymap.lookup(seq);
   if (!spec && app.keymap.isPrefix(seq)) return;
   // f F t T wait for their character; ; and , use the last one.
@@ -402,6 +418,16 @@ export function put(app: App, view: View, after: boolean): void {
   const where = after && at < E.lineEnd(view, at) ? E.nextBoundary(buf.source, at) : at;
   buf.edit(where, 0, text, at);
   E.placeAt(app, view, Math.max(where, where + text.length - 1));
+}
+
+/** A key typed in insert mode: recorded with the change that started it; esc ends that change. */
+export function insertRecord(app: App, view: View, key: string): void {
+  const s = app.vim;
+  if (s.replaying || !s.inInsert) return;
+  s.seq.push(key);
+  if (view.insert) return;
+  s.inInsert = false;
+  if (!s.undoing && view.buf.version !== s.seqVersion) s.lastChange = [...s.seq];
 }
 
 /** `.`: the last change's keys again. */

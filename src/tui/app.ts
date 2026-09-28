@@ -18,7 +18,7 @@ import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, stopInsert } from "./editing.ts";
-import { newVimState, vimKey } from "./vim.ts";
+import { insertRecord, newVimState, vimKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
 import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
@@ -2402,7 +2402,8 @@ export class App {
     const iv = this.view;
     if (this.region === "content" && iv?.insert && !this.pending.length) {
       if (key === "ctrl+s") return void this.run("note.save");
-      return insertKey(this, iv, key);
+      insertKey(this, iv, key);
+      return insertRecord(this, iv, key);
     }
     // A command waiting for one character (f, t) in the render; in source vim.ts has it.
     if (this.region === "content" && this.vim.awaitChar && !editable(iv)) {

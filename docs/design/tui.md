@@ -588,8 +588,10 @@ is one step. The cursor is a place in the text found through the source layout's
 wait for a motion or a text object, a register, and `.`. Each operator and edit is a named command
 in `[keys.source]`; what follows an operator is read the way which-key reads a prefix: a motion is
 any cursor command the keymap resolves (run with the cursor put back after, its range taken as
-text offsets), a text object is found in the text itself. `.` replays the keys of the last change
-(an insert session included), so anything that changed the text repeats exactly. Keys are handled
+text offsets), a text object is found in the text itself; `gn` is the search's next match in the
+text (`replacing.ts` finds it with the window's find toggles). `.` replays the keys of the last
+change, the keys typed in the insert session it started included (`insertRecord`), so anything that
+changed the text repeats exactly — `cgn` then `.` walks the matches. Keys are handled
 one at a time, in order (`App.handleKey` queues them), so a burst of typed keys or a paste never
 interleaves with a command still running; `.`'s own replay runs inside its turn.
 

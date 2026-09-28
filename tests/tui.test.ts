@@ -1466,6 +1466,21 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     await ex("s/nothing/x/");
     expect(h.frame().split("\n")[0]).toContain("not found: nothing");
   });
+  test("cgn changes the search's next match, and . the one after; dgn deletes one", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "g.md"), "foo bar foo baz foo end foo\n");
+    const h = await harness({ root, open: "g.md", width: 100, height: 30 });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", "/", "f", "o", "o", "enter");
+    await h.keys("c", "g", "n", "shift+x", "escape");
+    expect(v.buf.source).toBe("X bar foo baz foo end foo\n");
+    await h.keys(".");
+    expect(v.buf.source).toBe("X bar X baz foo end foo\n");
+    await h.keys("d", "g", "n");
+    expect(v.buf.source).toBe("X bar X baz  end foo\n");
+    await h.keys("u", "u", "u", "/", "z", "z", "z", "enter", "c", "g", "n");
+    expect(h.frame().split("\n")[0]).toContain("not found: zzz");
+  });
   test("keys are handled in order, one at a time: a fast j then . doesn't interleave", async () => {
     const root = makeVault();
     writeFileSync(join(root, "v.md"), "# Vim\n\nthe quick brown fox\njumps over the lazy dog\n");
@@ -1510,6 +1525,16 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     at(0, 0);
     await keys("d", "n"); // to the next match after the cursor: the first stop
     expect(text()).toBe("stop here, then more stop\n");
+  });
+  test(". repeats a change that typed: cw, i and o with their text", async () => {
+    const { keys, at, text } = await setup("one two three\n");
+    at(0, 0);
+    await keys("c", "w", "1", "escape", "w", ".");
+    expect(text()).toBe("1 1 three\n");
+    await keys("i", "<", "escape", "w", ".");
+    expect(text()).toBe("1 <<1 three\n"); // w went from < onto the 1
+    await keys("o", "x", "escape", ".");
+    expect(text()).toBe("1 <<1 three\nx\nx\n");
   });
   test(". repeats a counted change with its count", async () => {
     const { keys, at, text, h } = await setup("a b c d\ne f g h\n");

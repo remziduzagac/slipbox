@@ -327,7 +327,9 @@ to the next or previous one (`d/foo`, `dn`). `j`, `k`,
 `g g` and `shift+g` take whole lines, `e` and `$` include the character they land on, `cw` changes to
 the word's end, and `dw` stops at the line's end. Text objects follow `i` (inside) or `a` (around):
 `w` `W` a word, `"` `'` `` ` `` quotes on the line, `(` `b` `[` `{` `B` `<` brackets (nested, across
-lines), `p` a paragraph. A count goes before the command or the motion (`3dd`, `d2w`, `5j`). The
+lines), `p` a paragraph. `g n` / `g shift+n` after an operator is the search's next / previous match
+(the one under the cursor included): `cgn`, type, `esc`, then `.` changes the next one, and the next.
+A count goes before the command or the motion (`3dd`, `d2w`, `5j`). The
 status chip shows what's pending (`2d`, `di`). The register holds the last text deleted, changed or
 yanked; a yank also goes to the clipboard.
 
