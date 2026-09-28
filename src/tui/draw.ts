@@ -839,14 +839,25 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const title = LEFT_VIEWS.find((v) => v.id === app.leftView)!.title;
   let rect = paneTitle(app, c, pane, title, app.region === "sidebar", base.bg);
   const s = app.sidebar;
-  // The filter (`/`): a row at the top of the list while it's open or holds text.
-  if ((s.filtering || s.filter) && rect.h > 2) {
-    const px = drawText(c, rect.x + 1, rect.y, "› ", { ...roleStyle(theme, "sidebar_dir", base.bg), bg: base.bg });
-    const fw = drawText(c, rect.x + 1 + px, rect.y, truncate(s.filter ?? "", rect.w - 4 - px), { ...roleStyle(theme, "text", base.bg), bg: base.bg });
-    if (s.filtering && app.region === "sidebar") drawText(c, rect.x + 1 + px + fw, rect.y, " ", roleStyle(theme, "cursor", base.bg));
-    rect = { ...rect, y: rect.y + 1, h: rect.h - 1 };
-  }
+  rect = filterRow(app, c, rect, s, app.region === "sidebar", base.bg, geo);
   return history ? drawHistoryList(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
+}
+
+/**
+ * A pane's filter (`/`), at the top of its list while it's open or holds text: the `› text` row,
+ * a rule across the pane (joined to its border) and a blank row, then the list. Returns the rect
+ * left for the list; a short pane gets only the text row.
+ */
+function filterRow(app: App, c: Canvas, rect: Rect, s: SidePaneState, focused: boolean, bg: Color | null, geo: Geometry): Rect {
+  if (!(s.filtering || s.filter) || rect.h <= 2) return rect;
+  const theme = app.theme;
+  const px = drawText(c, rect.x + 1, rect.y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
+  const fw = drawText(c, rect.x + 1 + px, rect.y, truncate(s.filter ?? "", rect.w - 4 - px), { ...roleStyle(theme, "text", bg), bg });
+  if (s.filtering && focused) drawText(c, rect.x + 1 + px + fw, rect.y, " ", roleStyle(theme, "cursor", bg));
+  if (rect.h <= 6) return { ...rect, y: rect.y + 1, h: rect.h - 1 };
+  drawText(c, rect.x, rect.y + 1, app.glyphs.hbar.repeat(rect.w), { ...roleStyle(theme, "border", bg), bg }, rect.w);
+  geo.rules.push({ y: rect.y + 1, x0: rect.x, x1: rect.x + rect.w });
+  return { ...rect, y: rect.y + 3, h: rect.h - 3 };
 }
 
 /** Keep a side list's selection in view (unless the wheel moved it) and clamp its scroll. */
@@ -935,14 +946,7 @@ function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
   let rect = paneTitle(app, c, pane, RIGHT_VIEWS[0]!.title, app.region === "outline", base.bg);
-  const of = app.outline;
-  // The filter (`/`): a row at the top of the list while it's open or holds text.
-  if ((of.filtering || of.filter) && rect.h > 2) {
-    const px = drawText(c, rect.x + 1, rect.y, "› ", { ...roleStyle(theme, "sidebar_dir", base.bg), bg: base.bg });
-    const fw = drawText(c, rect.x + 1 + px, rect.y, truncate(of.filter ?? "", rect.w - 4 - px), { ...roleStyle(theme, "text", base.bg), bg: base.bg });
-    if (of.filtering && app.region === "outline") drawText(c, rect.x + 1 + px + fw, rect.y, " ", roleStyle(theme, "cursor", base.bg));
-    rect = { ...rect, y: rect.y + 1, h: rect.h - 1 };
-  }
+  rect = filterRow(app, c, rect, app.outline, app.region === "outline", base.bg, geo);
   const rows = app.outlineRows();
   const lines = treeLines(rows.map((r) => r.level - 1));
   const o = app.outline;
