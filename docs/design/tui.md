@@ -497,8 +497,9 @@ Editing a rendered note happens in **the lens**: whole blocks around the cursor 
 markdown between two rules, the rest of the note rendered above and below it. Where you're looking
 is source; nothing is half rendered. Its rules are heavy (`━`, ascii `=`) whatever `ui.lines` says,
 so they stand out from the frame and from a note's own rules; the top one is labelled with its lines
-(`━━ source · lines 12–18 ━━`). A block is a top-level node (a paragraph, a heading, a table, a code block, a quote) or a
-list's top-level item, each with the blank lines after it, so the blocks cover the note.
+(`━━ source · lines 12–18 ━━`). A block is a top-level node (a paragraph, a heading, a table, a
+code block, a quote) or a list's top-level item, each with the blank lines after it, so the blocks
+cover the note.
 
 **The session.** With `[editor] edit_in = "live"`, `i` `a` `o` and the other editing keys open the
 lens typing; `space n l` (`:live`) opens it in normal mode. The chip reads `LENS` (`INSERT` while
