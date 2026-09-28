@@ -11,11 +11,11 @@ A CLI call is a second process. It reads the files and the fresh cache, never a 
 buffer. It writes atomically, with a temp file plus rename. The TUI treats a CLI write like any
 external writer: it reloads and says so.
 
-From phase 3 the TUI records paths with unsaved changes in `dirty/<pid>.json` in the state dir
-(plan `9.9`; `core/stale.ts` has the writer, not yet called). Every CLI call reads it, ignoring and
-pruning files from dead pids. Human output then carries a
-warning, and `--json` output a `stale` array. It is advisory only: never a lock, never a refusal.
-Phase 2's TUI never has unsaved changes, so the list stays empty until phase 3.
+The TUI records the notes it holds with unsaved changes in `dirty/<pid>.json` in the state dir
+(plan `9.9`, `core/stale.ts`): written after each key or autosave when the list changes, removed
+when it empties and on quit. Every CLI call reads it, ignoring and pruning files from dead pids.
+Human output then carries a warning, and `--json` output a `stale` array. It is advisory only:
+never a lock, never a refusal.
 
 ## Output contract (plan `9.2`)
 

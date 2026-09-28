@@ -14,6 +14,7 @@ import { dirname, join, relative } from "node:path";
 import { readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
+import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, stopInsert } from "./editing.ts";
 import { newVimState, vimKey } from "./vim.ts";
@@ -2142,8 +2143,25 @@ export class App {
       this.message("error", (err as Error).message);
     }
     this.scheduleAutosave(); // the idle clock starts again at each key
+    this.publishDirty();
     this.host.requestRender();
   }
+
+  /**
+   * The advisory staleness file (9.9, decision 9.4): the notes with unsaved changes here, for the
+   * CLI to warn agents about. Written when the list changes; removed when it's empty, and on quit.
+   */
+  publishDirty(): void {
+    const paths = this.dirtyBuffers().map((b) => b.key).sort();
+    const key = paths.join("\n");
+    if (key === this.lastDirty) return;
+    this.lastDirty = key;
+    try {
+      writeDirty(this.loc.root, paths);
+    } catch {}
+  }
+
+  private lastDirty = "";
 
   /** The keymaps consulted in the current state, in priority order, with how to run a hit. */
   private maps(): { map: Keymap; run: (spec: string) => Promise<void> | void }[] {
@@ -3206,6 +3224,7 @@ export class App {
       if (this.writeBuffer(buf, buf.contentToSave(), true)) this.message("info", `autosaved ${this.displayName(buf)}`);
     }
     if (later) this.scheduleAutosave();
+    this.publishDirty();
   }
 
   /** git is mid-commit (or mid-anything) in the vault's repository. Looked up each time: it runs
@@ -3220,6 +3239,9 @@ export class App {
   quit(): void {
     if (this.quitting) return;
     this.quitting = true;
+    try {
+      writeDirty(this.loc.root, []);
+    } catch {}
     this.watcher?.close();
     this.saveState();
     this.host.quit();

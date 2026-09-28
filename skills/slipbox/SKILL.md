@@ -47,9 +47,9 @@ On failure `ok` is false and `error` is `{code, message}`. Exit codes are stable
 | 4 | ambiguous — several notes match; `data.candidates` lists them |
 | 5 | refused — `--if-unchanged` did not match |
 
-**`stale`** lists notes that a running slipbox TUI holds with unsaved changes. Phase 2 has no
-editing, so it is empty for now. When it is not, what you read on disk may be older than what
-the user sees. Tell them, or ask.
+**`stale`** lists notes that a running slipbox TUI holds with unsaved changes. When it is not
+empty, what you read on disk may be older than what the user sees — and if you write such a note,
+the user gets a conflict prompt. Tell them, or ask, before writing it.
 
 ## Reading notes
 

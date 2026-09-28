@@ -1,6 +1,6 @@
 # Architecture
 
-How the code is laid out and why, as built in phases 0–2. The *why* of the product is in `docs/idea.md`; the
+How the code is laid out and why, as built in phases 0–3. The *why* of the product is in `docs/idea.md`; the
 decisions that gated this code are in [decisions.md](decisions.md).
 
 ## One core, three faces
@@ -54,7 +54,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | Module | Plan items | Role |
 | --- | --- | --- |
 | `core/width.ts` | 0.7 | the one width function: graphemes, East Asian width, emoji |
-| `core/fsutil.ts` | 4.6 | atomic writes, `readText`, JSON read/write |
+| `core/fsutil.ts` | 4.6, 7.5 | atomic writes keeping the mode; `writeNote` (never out of the vault); reads |
 | `core/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
 | `core/paths.ts` | 0.10 | config, cache and state directories; the vault key |
 | `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
@@ -66,6 +66,12 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/graph.ts` | 1.5, 1.8, 1.9 | notes, links, backlinks, lazy parsing, persisted index |
 | `core/note.ts` | 2.x | a note rendered for a pane: parse, resolve links, lay out (CLI and TUI) |
 | `core/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
+| `core/layout/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
+| `core/layout/live.ts` | 4.14 | a note's blocks; the lens composed into the render |
+| `core/tasks.ts` | 4.11 | a task's checkbox toggled as a one-byte edit |
+| `core/editor.ts` | 4.1, 4.2, 4.12 | hand-off templates to argv, never through a shell |
+| `core/nvim.ts` | 4.12 | finding and asking the running nvims |
+| `core/merge.ts` | 5.5 | line diff (Myers), three-way merge, the diff the conflict prompt shows |
 | `core/theme/*` | 2.6 | semantic roles, built-in themes, base16 loader |
 | `core/glyphs.ts` | 2.8 | Nerd, Unicode and ASCII glyph sets |
 | `core/commands.ts` | 0.8 | `CommandRegistry` and `Keymap` |
@@ -74,11 +80,14 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
 | `core/clipboard.ts` | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / wl-copy / xclip, then a file |
-| `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped (not written until editing) |
+| `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face |
 | `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |
 | `version.ts` | — | the version, one source |
-| `tui/*` | 3.x, 5.3, 5.4 | the reader |
+| `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
+| `tui/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
+| `tui/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
+| `tui/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
 
 ## Data flow for one note
 

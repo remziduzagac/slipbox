@@ -1,9 +1,10 @@
 # The TUI
 
-Phase 2: the reader, the "beat leaf" target. **Read-only by decision**: it browses, renders,
-selects and copies text, holds several notes and follows external changes, and never writes a
-note. The only files it writes are its own state and the scratch. Editing, including `$EDITOR`
-hand-off, is phase 3.
+The reader of phase 2 — the "beat leaf" target: it browses, renders, selects and copies text,
+holds several notes and follows external changes — and the editor of phase 3: task checkboxes,
+hand-off to `$EDITOR` or a running nvim, source mode with a vim-shaped normal mode, the lens (live
+preview), saving, autosave and the conflict prompt. Every write to a note goes through one path
+("Writing notes"); besides notes it writes its own state and the scratch.
 
 **Every key is in [keymap.md](keymap.md).** This document covers how the parts behave.
 
@@ -13,10 +14,12 @@ Code, in `src/tui/`:
 | --- | --- |
 | `app.ts` | the model: state, dispatch, panes, mouse, reload, session |
 | `actions.ts` | the command implementations, the palette, help and pickers |
-| `buffer.ts` | a note's text and cached layouts |
+| `buffer.ts` | a note's text, its undo steps, unsaved state, and cached layouts |
 | `canvas.ts` | the drawing surface; `TextCanvas` for headless tests |
 | `cursor.ts` | the motions |
 | `draw.ts` | painting, and the geometry the mouse uses |
+| `editing.ts` | the cursor as a text offset; insert mode |
+| `vim.ts` | normal mode in source and the lens: counts, operators, the register, `.` |
 | `fuzzy.ts` | the fuzzy ranking every list filters with |
 | `keys.ts` | the default keymaps, groups, aliases, and the in-pane actions' titles |
 | `run.ts`, `opentui.ts` | the OpenTUI binding |
@@ -602,9 +605,10 @@ The watcher subscribes to exactly the directories the walk includes: one non-rec
 directory, sharing the walk's `WalkFilter` (decision `0.11`). Events are debounced
 (`watch.debounce_ms`) and settled by `stat`.
 
-- **Changed:** the note reloads silently; phase 2 buffers are never dirty (plan `5.3`). Its
-  anchors keep your place, and the change is surfaced at once with `↻ reloaded` and a message
-  (plan `5.4`). Other open notes re-lay out only if they link to it.
+- **Changed:** a note without unsaved changes reloads silently (plan `5.3`), as one more undo
+  step. Its anchors keep your place, and the change is surfaced at once with `↻ reloaded` and a
+  message (plan `5.4`). Other open notes re-lay out only if they link to it. A note with unsaved
+  changes opens the conflict prompt instead ("Writing notes").
 - **Deleted:** the buffer keeps showing the last version, marked `✖ deleted on disk`.
 - **Created or deleted notes:** these change link statuses, so every layout and the explorer
   refresh. A red `[[link]]` turns resolved when its note appears.

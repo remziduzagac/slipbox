@@ -689,13 +689,15 @@ This is deliberately the same shape as
 exactly this reason: an in-app edit mode reachable from the rendered view, with `Ctrl+E` kept for
 anything bigger. slipbox asked leaf for it; slipbox should have it.
 
-**Live preview is not chosen.** The Obsidian model — where the rendered view *is* the
-editor and the cursor line reveals its source — is ruled out for now. It would need
-cursor-to-source mapping for every node type and editing inside table cells. (Cursor movement
-across wrapped rows is *not* a cost here — OpenTUI's `visual-line-*` actions handle it.)
-It also cuts against a decision already made and tested:
-keeping the row under the cursor rendered is what made the nvim setup pleasant to read,
-and un-rendering it was tried and rejected.
+**Live preview is chosen, as a lens** (decided 2026-09-28). Not the Obsidian model, where the
+cursor line quietly reveals its source inside the rendered view: that needs cursor-to-source
+mapping for every node type and editing inside table cells, and un-rendering the cursor row was
+tried in nvim and rejected — keeping it rendered is what made reading pleasant. The lens is an
+explicit editing session instead. Reading, everything is rendered. Editing, whole blocks around the
+cursor are shown as their markdown between two clear rules, the rest rendered above and below;
+nothing is half rendered, so no per-node mapping is needed (a whole block is source or it isn't),
+and a table is edited as its markdown. It opens with the editing keys and closes on `esc`. How it
+behaves is in `docs/design/tui.md`, "The lens".
 
 ### Division of labour
 
@@ -1589,14 +1591,14 @@ These are the *design* questions still open. Build-order decisions and their sta
 **A standing risk rather than a question:** OpenTUI is pre-1.0 at v0.5.12 and moving fast.
 Pinning works; upgrades will not be free. Mitigated by keeping mdast-to-layout pure.
 
-Settled: build rather than fork; OpenTUI over Ink; remark over marked; `.slipbox/` marker root
-with no git fallback; one vault per repo for a plain checkout; PKM in-process rather than over
-LSP; themes first-class and built in, defaulting to Tokyo Night; native export writers with
-pandoc optional; standalone with no multiplexer dependency; **both an in-app editor and
-`$EDITOR` hand-off, no live preview**; **autosave on with a long idle delay, vim-shaped conflict
-prompt, and autosave never wins a conflict**; **one core with three faces — TUI, CLI and an
-embedded LSP — with the core importing nothing from the TUI**; **disk is the contract between
-the CLI and the TUI**.
+Settled: build rather than fork; OpenTUI over Ink; remark over marked; `.slipbox/` marker root with
+no git fallback; one vault per repo for a plain checkout; PKM in-process rather than over LSP;
+themes first-class and built in, defaulting to Tokyo Night; native export writers with pandoc
+optional; standalone with no multiplexer dependency; **both an in-app editor and `$EDITOR` hand-off,
+with live preview as a lens — an explicit, framed editing session**; **autosave on with a long idle
+delay, vim-shaped conflict prompt, and autosave never wins a conflict**; **one core with three faces
+— TUI, CLI and an embedded LSP — with the core importing nothing from the TUI**; **disk is the
+contract between the CLI and the TUI**.
 
 **Resolved before code:** the editing model and agent-write concurrency (2026-09-24), and
 phasing (2026-09-25 — see `docs/plan.md`, which also carries the CLI-parity

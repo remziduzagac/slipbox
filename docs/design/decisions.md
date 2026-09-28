@@ -1,7 +1,8 @@
-# slipbox — decisions taken during phases 0–2
+# slipbox — decisions taken during phases 0–3
 
-Decided 2026-09-25 while building phases 0–2. Each entry answers a **decide** item in `docs/plan.md`; the item ID
-is the heading. The plan's "Still open" table points here.
+Decided 2026-09-25 while building phases 0–2, and 2026-09-28 for phase 3. Each entry answers a
+**decide** item in `docs/plan.md`; the item ID is the heading. The plan's "Still open" table points
+here.
 
 ## `0.10` — storage layout
 
@@ -110,20 +111,26 @@ paragraph above your reading position therefore does not move you.
 
 ## `3.11` — mode taxonomy and dispatch order
 
-Revised 2026-09-25 with the reading keymap in [keymap.md](keymap.md). Phase 2 has no editing,
-so there are six layers:
+Revised 2026-09-28 with editing (phase 3); the keys are in [keymap.md](keymap.md). The layers:
 
 | Mode | Owns keys | Examples |
 | --- | --- | --- |
-| overlay | every key | switcher, palette, pickers, prompts |
+| overlay | every key | switcher, palette, pickers, prompts, the conflict prompt |
+| filter | typed text, and moving through the matches | `/` in the explorer or the history |
+| insert | typed text, and the few keys that edit or move | `i`, `a`, `o` in source or the lens |
+| a character | the next key, as a character | after `f`, `t`, `r` |
+| operator | a count, a motion or a text object | after `d`, `c`, `y`, `>`, `<` |
 | resize | its own keys; any other key leaves it, then runs | `ctrl+alt+w`, then `h j k l` |
 | pending | the next key of a sequence | `space l …`, `ctrl+w …`, `g g` |
-| pane | keys of the focused side pane | explorer, outline |
+| pane | keys of the focused side pane | explorer, history, outline |
 | visual | selection keys, and movement extends | `v`, `shift+v` |
+| source | source mode's and the lens's own keys, before the reading ones | `x`, `d`, `p`, `.` |
 | normal | everything else | cursor, links, tabs |
 
-**Dispatch order:** overlay → resize → pending → pane → visual → normal (with keys pending, `esc`
-and `backspace` act on the sequence first). Only keymaps at or above the one
+**Dispatch order:** overlay → filter → insert → a character → (in source or the lens: counts and
+an operator's motion, around the rest) → resize → pending → pane → visual → source → normal (with
+keys pending, `esc` and `backspace` act on the sequence first). Keys are handled one at a time, in
+order. Only keymaps at or above the one
 holding a binding can make a key a prefix. Every binding names a registry command (plan `0.8`),
 and config remaps all of them.
 
@@ -138,6 +145,21 @@ and config remaps all of them.
   `home`/`end`), and so is `ctrl+c`, whose route is `y y`.
 - **Plain `q` never quits** (`ctrl+q` does), and **`ctrl+c` only copies** (in a list or prompt it
   cancels).
+- **Editing keys are vim's, and only where the text is editable**: `i a o d c y p u x .` and the
+  rest live in the source layer (source mode and the lens), so reading keeps its own `x` (tick a
+  task) and nothing else changes for it.
+
+## Phase 3 — editing
+
+Its order and design are in `docs/plan.md` ("Phase 3 decided 2026-09-28"); how it works is in
+[tui.md](tui.md). Two decisions that shape the code:
+
+- **Source mode is another layout of the note**, not another editor: every row records the source
+  offset of each cell, so everything built on the layout — motions, find, selection, the mouse —
+  works on the markdown unchanged, and editing is a thin layer that maps the cursor to an offset.
+- **Live preview is the lens** (reversing `docs/idea.md`'s "not chosen"): whole blocks as their
+  markdown between two rules, composed into the render rather than re-rendered, so a block is
+  either source or rendered and a keystroke never re-parses the note.
 
 ## Moved deliberately
 

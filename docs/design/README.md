@@ -6,10 +6,10 @@ behaviour, the matching document changes in the same commit.
 
 | Document | Covers |
 | --- | --- |
-| [decisions.md](decisions.md) | answers to the plan's **decide** items: `0.10` `0.11` `9.1` `1.4` `3.5` `3.11` |
+| [decisions.md](decisions.md) | answers to the plan's **decide** items: `0.10` `0.11` `9.1` `1.4` `3.5` `3.11`; phase 3 |
 | [architecture.md](architecture.md) | one core and three faces, the boundary, modules, storage, performance |
 | [rendering.md](rendering.md) | phase 1: layout IR, blocks, tables, wrapping, themes, glyphs, escapes |
-| [tui.md](tui.md) | phase 2: the read-only TUI, navigation, watching, keymap |
+| [tui.md](tui.md) | phases 2–3: the TUI — reading, navigation, watching, editing, the lens, saving |
 | [cli.md](cli.md) | the agent surface: commands, JSON contract, exit codes, capture |
 | [configuration.md](configuration.md) | every config key and environment variable |
 | [testing.md](testing.md) | test strategy and the fixture vault |

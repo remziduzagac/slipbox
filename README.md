@@ -5,9 +5,9 @@ distinguishing feature. It reads a vault of markdown notes, renders them properl
 fit, highlighted code, themes), follows `[[wikilinks]]`, and reloads the instant an agent rewrites
 a note. Every state change is also reachable from a CLI that agents drive.
 
-Status: **phases 0–2** — rendering (leaf parity) and a read-only TUI (it never writes a note;
-besides its own state and cache, the scratch is the one file it writes) with an agent-drivable CLI.
-Editing arrives in phase 3. See [docs/plan.md](docs/plan.md).
+Status: **phases 0–3** — rendering (leaf parity), a TUI that reads and edits (source mode, vim-shaped
+editing, the lens, autosave and a conflict prompt), and an agent-drivable CLI. See
+[docs/plan.md](docs/plan.md).
 
 ## Try it
 
@@ -36,6 +36,10 @@ listing everything else, and `?` lists every key, so nothing needs memorising:
   palette, and `v` selects then `y` copies.
 - **Panes:** `ctrl+e` explorer and `ctrl+o` outline (each opens, then focuses, then closes;
   `esc` returns to the note), `ctrl+w v` split, `ctrl+t o` new tab. Everything is clickable too.
+- **Editing:** `i`, `a` or `o` start typing — in the lens (rendered, with the markdown around the
+  cursor between two rules) or in source mode (`space n v`); `esc` twice closes the lens. The vim
+  commands work (`dw`, `ciw`, `p`, `u`, `.`); `ctrl+s` saves, and autosave does after a pause. `x`
+  ticks a task; `space n e` hands the note to your editor, `space n s` to a running nvim.
 - **Quitting:** `ctrl+q`, and slipbox remembers where you were.
 
 Every key is in [docs/design/keymap.md](docs/design/keymap.md), and all of them are configurable.

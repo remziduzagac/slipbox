@@ -1,6 +1,7 @@
 # slipbox — handoff
 
-Written 2026-09-25 for whoever picks this up next, human or agent. Phases 0–2 are built.
+Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-09-28. Phases 0–3
+are built.
 Read this, then `docs/idea.md`, then `docs/plan.md`, then `docs/design/` for how it was built.
 
 ## What you are building
@@ -14,10 +15,12 @@ dissatisfaction that started it.
 
 ## Repository state
 
-Phases 0–2 are implemented: the core, the rendering pipeline, a read-only TUI and the agent CLI,
-with tests (`bun run check`). `docs/design/` describes the code as it is and is kept in step with
-it; `docs/design/decisions.md` answers the decide items that gated phase 0. The next phase is 3,
-editing — start from `4.x` and `7.6` in the plan.
+Phases 0–3 are implemented: the core, the rendering pipeline, the TUI with editing (source mode, a
+vim-shaped normal mode, the lens, autosave and the conflict prompt, hand-off to `$EDITOR` or a
+running nvim) and the agent CLI, with tests (`bun run check`). `docs/design/` describes the code as
+it is and is kept in step with it; `docs/design/decisions.md` answers the decide items. The next
+phase is 4, vault and structure. Still open from phase 3: `7.2`–`7.4` (multi-file preview, rename
+undo) wait for renames (`7.1`, phase 4).
 
 ## The documents
 
@@ -119,7 +122,9 @@ spend a day on:
   silently turn every repo you open into a vault.
 - **PKM layer in-process**, not by depending on a language server. slipbox *offering* an LSP is a
   separate and approved thing (phase 5).
-- **Editing:** an in-app editor *and* `$EDITOR` hand-off. Live preview is ruled out.
+- **Editing:** an in-app editor *and* `$EDITOR` hand-off (or a running nvim). Live preview is a
+  lens: an explicit, framed editing session, not the rendered view quietly un-rendering the cursor
+  line.
 - **Concurrency:** autosave on with a long idle delay, a vim-shaped conflict prompt
   (`(L)oad` `(K)eep` `(D)iff` `(M)erge`), and **autosave never wins a conflict**.
 - **Export:** slipbox writes its own formats; pandoc is an optional tier, never required.

@@ -1237,6 +1237,19 @@ describe("saving and conflicts (step 4)", () => {
     await Bun.sleep(60);
     expect(readFileSync(file, "utf8")).toBe("other\n");
   });
+  test("unsaved notes are listed for the CLI (the staleness file, 9.9) until saved or quit", async () => {
+    const { readStale } = await import("../src/core/stale.ts");
+    const { h, root } = await setup("x\n");
+    expect(readStale(root)).toEqual([]);
+    await h.keys("shift+a", "y", "escape");
+    expect(readStale(root).map((e) => e.path)).toEqual(["c.md"]);
+    await h.keys("ctrl+s");
+    expect(readStale(root)).toEqual([]);
+    await h.keys("shift+a", "z", "escape");
+    expect(readStale(root).map((e) => e.path)).toEqual(["c.md"]);
+    await h.keys(":", "q", "!", "enter");
+    expect(readStale(root)).toEqual([]);
+  });
   test("a hand-off saves first: the editor never gets a stale file", async () => {
     const { h, file } = await setup("x\n", (c) => (c.editor.command = "ed {file}"));
     const host = (h.app as unknown as { host: Host }).host;
