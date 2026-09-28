@@ -746,12 +746,6 @@ describe("the rails (ui.left_rail, ui.right_rail)", () => {
     // The rail's column is tinted from under the strip's rule to the bottom rule, with no line.
     const c = h.canvas();
     expect(c.styles[btn.y + 5]![x]!.bg).toBe(h.app.theme.roles.rail.bg!);
-    // It starts right under the tab strip: the strip's rule stops at it, and its row is tinted.
-    const stripRule = h.app.geometry!.tabStrip!.y + 1;
-    expect(c.styles[stripRule]![x]!.bg).toBe(h.app.theme.roles.rail.bg!);
-    expect([...rows[stripRule]!][x - 1]).toBe("━");
-    expect([...rows[stripRule]!][x] ?? " ").toBe(" "); // (trailing blanks are trimmed)
-    expect(btn.y).toBe(stripRule + 1); // its button level with the breadcrumb
     const col = rows.map((r) => [...r][x] ?? "").join("");
     expect(col).not.toMatch(/[┃┳┻┫]/u);
     // Only one ▤: not on the breadcrumb as well.

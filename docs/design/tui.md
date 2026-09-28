@@ -275,8 +275,8 @@ rules it meets. Each is generic: a place for buttons, whatever they open.
   level with the tab strip. It holds the left panel's views, the explorer's `≡` and the history's
   `◷` (ascii `~`), and the panel opens beside it. Without it, `≡` is the top bar's and the history
   opens with `space h h`.
-- **The right rail** runs from right under the tab strip (the strip's rule stops at it; bordered,
-  from under that rule), its first button level with the breadcrumb. It holds the outline's `▤`, and the outline opens
+- **The right rail** runs from under the tab strip's rule, its first button level with the
+  breadcrumb. It holds the outline's `▤`, and the outline opens
   beside it. Without it, `▤` sits at the breadcrumb's right end.
 
 Every width (the panes, the note, the narrow cutoff) is shared out after the rails' columns.
