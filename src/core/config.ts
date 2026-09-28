@@ -96,6 +96,8 @@ export interface Config {
      * file changed on disk, not after (K)eep yours until a confirmed save, not during a git commit.
      */
     autosave_ms: number;
+    /** What the editing keys (i, a, o…) switch a rendered window to: "source" or "live" preview. */
+    edit_in: "source" | "live";
   };
   watch: {
     enabled: boolean;
@@ -155,7 +157,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   capture: { location: "state", file: "scratch.md" },
-  editor: { command: "", remote: ["nvim"], autosave_ms: 30000 },
+  editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source" },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
   aliases: {},
@@ -169,6 +171,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.show_urls": ["auto", "always", "never"],
   "capture.location": ["state", "vault"],
   "ui.lines": ["light", "heavy"],
+  "editor.edit_in": ["source", "live"],
 };
 
 /** Numeric keys and their allowed range. */

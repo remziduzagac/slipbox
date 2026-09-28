@@ -282,6 +282,7 @@ source first.
 | --- | --- |
 | tick or untick the task item at the cursor (the innermost, on any of its rows) | `x` (rendered) |
 | show this window's note as its raw markdown, or rendered again (`:source`) | `space n v` |
+| live preview: rendered, the block you're in as markdown (`:live`) | `space n l` |
 | type before the cursor / after it | `i` / `a` |
 | type at the line's first non-blank / its end | `shift+i` / `shift+a` |
 | open a line below (continuing a list) / above, and type | `o` / `shift+o` |

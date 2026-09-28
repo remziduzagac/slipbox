@@ -4,7 +4,7 @@
 // named commands in actions.ts that call in here.
 
 import { graphemes } from "../core/width.ts";
-import type { App, View } from "./app.ts";
+import { type App, editable, type View } from "./app.ts";
 import { cells } from "./cursor.ts";
 
 /** The cursor's place in the text (a UTF-16 offset into `source`). Source mode only. */
@@ -106,9 +106,10 @@ export function cannotEdit(view: View): string | null {
 export function startInsert(app: App, view: View, at: (v: View) => number, past = true): void {
   const why = cannotEdit(view);
   if (why) return app.message("warn", `${why} — not editing`);
-  if (!view.source) {
-    app.setSource(view, true);
-    app.message("info", "source — editing the markdown");
+  if (!editable(view)) {
+    const mode = app.editMode();
+    app.setViewMode(view, mode);
+    app.message("info", mode === "live" ? "live preview — the block you're in is its markdown" : "source — editing the markdown");
   }
   view.sel = null;
   view.visual = null;

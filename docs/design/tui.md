@@ -491,6 +491,23 @@ spaces up to the next stop, all mapping to the tab; a wide character is one cell
 a control character shows as `�` and never reaches the terminal; a CRLF's CR isn't shown — so a
 cursor column maps to an exact place in the text, which editing (next) builds on.
 
+## Live preview (plan `4.14`, phase 3 step 5)
+
+`space n l` (`:live`) shows a window's note rendered, except the block the cursor is in, which is
+its markdown — to read and edit in place; the chip reads `LIVE`. A block is a top-level node (a
+paragraph, a heading, a table, a code block, a quote), a list's top-level item, each with the blank
+lines after it, so the blocks cover the note. Moving into another block renders the one left and
+opens the new one. Everything in [Editing](#editing-plans-43-44-45-phase-3-step-3) works in it: the
+block's rows are source rows (`srcMap`), the rest rendered rows the cursor passes over.
+
+It is composed, not re-rendered (`core/layout/live.ts`): the render with the block's rows swapped
+for source rows. While the block is being typed into, the render around it is reused as it was —
+the rows after it renumbered by the lines added or taken away — so a keystroke never re-parses the
+note (this is plan `15.1`'s per-block re-layout, for the block being edited). Leaving insert mode,
+or an edit reaching outside the block, lays the note out afresh. `[editor] edit_in = "live"` makes
+the editing keys (`i`, `a`, `o`…) switch a rendered window to live preview instead of source mode
+(the default, until live preview's look is settled).
+
 ## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
 
 Editing is in source mode: `i`, `a`, `o` and their capitals (in [keymap.md](keymap.md)) start

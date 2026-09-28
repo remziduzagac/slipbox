@@ -17,6 +17,7 @@ import { merge3, unifiedDiff } from "../core/merge.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, stopInsert } from "./editing.ts";
 import { newVimState, vimKey } from "./vim.ts";
+import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
 import { appendScratch, scratchLocation } from "../core/capture.ts";
@@ -135,8 +136,36 @@ export interface View {
   left: number;
   /** Showing the note's raw markdown (source mode, 4.13) instead of its render. */
   source?: boolean;
-  /** Typing into the text (insert mode); only in source mode. */
+  /** Live preview (4.14): rendered, with the cursor's block as its markdown, editable in place. */
+  live?: boolean;
+  /** Live preview's render and blocks, kept while the cursor's block is being typed into. */
+  liveBase?: LiveBase;
+  /** Typing into the text (insert mode); in source mode or live preview. */
   insert?: boolean;
+}
+
+/** What live preview composes from: a render, the blocks of its parse, and which one is active. */
+export interface LiveBase {
+  rendered: Layout;
+  width: number;
+  wrap: boolean;
+  /** The buffer version the render was made from, and the one the block was last matched to. */
+  renderedVersion: number;
+  version: number;
+  blocks: Block[];
+  /** The active block in the render's numbering, and now (grown or shrunk by typing). */
+  old: Block;
+  active: Block;
+  /** The text around the block when the render was made: typing must leave it alone. */
+  before: string;
+  after: string;
+  lineCount: number;
+  composed?: { key: string; layout: Layout };
+}
+
+/** A window whose text can be edited: source mode or live preview. */
+export function editable(view: View | null | undefined): boolean {
+  return !!view && (!!view.source || !!view.live);
 }
 
 export interface Tab {
@@ -771,8 +800,13 @@ export class App {
       : this.ui.wrap
         ? this.textWidth(paneWidth, gutter)
         : this.nowrapWidth(view, paneWidth, gutter);
-    const layout = view.source ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs) : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
-    const key = `${view.source ? "s" : "r"}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
+    const layout = view.source
+      ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs)
+      : view.live
+        ? this.liveLayout(view, width)
+        : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
+    const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
+    const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
     if (view.layoutKey !== key) {
       view.layoutKey = key;
       view.cur = this.cursorFromAnchor(layout, view.curAnchor);
@@ -784,6 +818,52 @@ export class App {
       if (view.find) view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole);
       if (view.sel) view.sel.anchor = view.sel.src ? this.cursorFromAnchor(layout, view.sel.src) : clampPos(layout, view.sel.anchor);
     }
+    return layout;
+  }
+
+  /**
+   * Live preview's layout: the render, with the block holding the cursor's source line as its
+   * markdown. While that block is typed into, the render around it is reused (no re-parse);
+   * leaving insert mode, or an edit outside the block, lays it out afresh.
+   */
+  private liveLayout(view: View, width: number): Layout {
+    const buf = view.buf;
+    const line = view.curAnchor.anchor.line || 1;
+    const wrap = this.ui.wrap;
+    let base = view.liveBase;
+    const lineStarts = buf.lineStarts();
+    const lineCount = lineStarts.length - (buf.source.endsWith("\n") && lineStarts.length > 1 ? 1 : 0);
+    const fresh = (): LiveBase => {
+      const rendered = buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null);
+      const blocks = blockRanges(buf.parsed.tree, Math.max(1, lineCount));
+      const b = blockAt(blocks, Math.min(line, Math.max(1, lineCount)));
+      const from = lineStarts[b[0] - 1] ?? 0;
+      const to = lineStarts[b[1]] ?? buf.source.length;
+      return { rendered, width, wrap, renderedVersion: buf.version, version: buf.version, blocks, old: b, active: b, before: buf.source.slice(0, from), after: buf.source.slice(to), lineCount };
+    };
+    if (!base || base.width !== width || base.wrap !== wrap) base = fresh();
+    else if (buf.version !== base.version) {
+      // Typed into the block, the rest untouched: the same render, the block longer or shorter.
+      const untouched = buf.source.startsWith(base.before) && buf.source.endsWith(base.after) && buf.source.length >= base.before.length + base.after.length;
+      if (view.insert && untouched) {
+        const grew = lineCount - base.lineCount;
+        base = { ...base, version: buf.version, active: [base.old[0], Math.max(base.old[0], base.old[1] + grew)], composed: undefined };
+      } else base = fresh();
+    } else if (line < base.active[0] || line > base.active[1]) {
+      // The cursor moved to another block: from the same render if it's current, else afresh.
+      if (base.renderedVersion === buf.version && !view.insert) {
+        const b = blockAt(base.blocks, line);
+        const from = lineStarts[b[0] - 1] ?? 0;
+        const to = lineStarts[b[1]] ?? buf.source.length;
+        base = { ...base, old: b, active: b, before: buf.source.slice(0, from), after: buf.source.slice(to), composed: undefined };
+      } else if (!view.insert) base = fresh();
+    }
+    if (!view.insert && base.renderedVersion !== buf.version) base = fresh();
+    view.liveBase = base;
+    const key = `${base.active[0]}-${base.active[1]}:${buf.version}:${base.renderedVersion}`;
+    if (base.composed?.key === key) return base.composed.layout;
+    const layout = composeLive(base.rendered, base.old, base.active, buf.source.split("\n"), { width, wrap });
+    base.composed = { key, layout };
     return layout;
   }
 
@@ -813,13 +893,26 @@ export class App {
 
   /** Show a window's note as its markdown (`on`) or rendered; the cursor keeps its source line. */
   setSource(view: View, on: boolean): void {
-    if (!!view.source === on) return;
-    if (!on && view.insert) stopInsert(this, view);
+    this.setViewMode(view, on ? "source" : "rendered");
+  }
+
+  /** A window's mode: rendered, source (the markdown), or live preview. The cursor keeps its line. */
+  setViewMode(view: View, mode: "rendered" | "source" | "live"): void {
+    const now = view.source ? "source" : view.live ? "live" : "rendered";
+    if (now === mode) return;
+    if (view.insert) stopInsert(this, view);
     this.remember(view);
-    view.source = on;
+    view.source = mode === "source";
+    view.live = mode === "live";
+    view.liveBase = undefined;
     view.layoutKey = ""; // re-derive the rows from the anchors: the same source line
     view.sel = null;
     view.visual = null;
+  }
+
+  /** The mode the editing keys switch a rendered window to (`[editor] edit_in`). */
+  editMode(): "source" | "live" {
+    return this.config.editor.edit_in === "live" ? "live" : "source";
   }
 
   private cursorAnchorFor(layout: Layout, p: Pos): CursorAnchor {
@@ -1879,7 +1972,7 @@ export class App {
     if (this.region === "outline" && this.outlineShown) out.push({ map: this.outlineKeys, run: (a) => this.outlineAction(a) });
     if (this.view?.visual) out.push({ map: this.visualKeys, run: (s) => this.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
-    if (this.region === "content" && this.view?.source && !this.view.visual) out.push({ map: this.sourceKeys, run: (s) => this.run(s) });
+    if (this.region === "content" && editable(this.view) && !this.view!.visual) out.push({ map: this.sourceKeys, run: (s) => this.run(s) });
     out.push({ map: this.keymap, run: (s) => this.run(s) });
     return out;
   }
@@ -1958,7 +2051,7 @@ export class App {
       return insertKey(this, iv, key);
     }
     // A command waiting for one character (f, t) in the render; in source vim.ts has it.
-    if (this.region === "content" && this.vim.awaitChar && !iv?.source) {
+    if (this.region === "content" && this.vim.awaitChar && !editable(iv)) {
       const f = this.vim.awaitChar;
       this.vim.awaitChar = null;
       const ch = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
@@ -1966,7 +2059,7 @@ export class App {
       return;
     }
     // Source mode's normal mode: counts, operators and `.` around the keymaps (vim.ts).
-    if (this.region === "content" && iv?.source && !iv.visual && !this.resizeMode) return vimKey(this, iv, key, () => this.dispatchMapped(key));
+    if (this.region === "content" && iv && editable(iv) && !iv.visual && !this.resizeMode) return vimKey(this, iv, key, () => this.dispatchMapped(key));
     return this.dispatchMapped(key);
   }
 

@@ -12,7 +12,7 @@ import type { Anchor } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
 import type { App, ListItem, Loc, UiState, View } from "./app.ts";
-import { computeFind } from "./app.ts";
+import { editable, computeFind } from "./app.ts";
 import * as C from "./cursor.ts";
 import * as E from "./editing.ts";
 import * as V from "./vim.ts";
@@ -42,7 +42,7 @@ function undoRedo(a: App, v: View, which: "undo" | "redo"): void {
   const at = which === "undo" ? v.buf.undo() : v.buf.redo();
   if (at === null) return a.message("info", which === "undo" ? "nothing to undo" : "nothing to redo");
   for (const w of a.allViews()) if (w.buf === v.buf) w.layoutKey = "";
-  if (v.source) E.placeAt(a, v, at);
+  if (editable(v)) E.placeAt(a, v, at);
   a.message("info", v.buf.dirty ? which === "undo" ? "undone" : "redone" : `${which === "undo" ? "undone" : "redone"} — as saved`);
 }
 
@@ -53,9 +53,10 @@ function sourceEdit(a: App, run: (v: View) => void | Promise<void>, edits = true
   return withView(a, (v) => {
     const why = E.cannotEdit(v);
     if (edits && why) return a.message("warn", `${why} — not editing`);
-    if (!v.source) {
-      a.setSource(v, true);
-      a.message("info", "source — editing the markdown");
+    if (!editable(v)) {
+      const mode = a.editMode();
+      a.setViewMode(v, mode);
+      a.message("info", mode === "live" ? "live preview — the block you're in is its markdown" : "source — editing the markdown");
     }
     return run(v);
   });
@@ -103,7 +104,7 @@ function joinLines(a: App, v: View, n: number): void {
 /** d / c / > / < on a visual selection (char or line), in source mode. */
 function visualOp(a: App, op: "d" | "c" | ">" | "<"): void {
   withView(a, (v) => {
-    if (!v.source) return a.message("info", "editing is in source mode — space n v");
+    if (!editable(v)) return a.message("info", "editing is in source mode (space n v) or live preview (space n l)");
     const why = E.cannotEdit(v);
     if (why) return a.message("warn", `${why} — not editing`);
     const [s, e] = C.ordered(v.sel?.anchor ?? v.cur, v.cur);
@@ -599,7 +600,7 @@ export function registerActions(app: App): void {
         const text = a.selectionText(v);
         if (text) a.copy(text);
         // In source mode the text is the markdown itself: it's what p puts back, too.
-        if (text && v.source) a.vim.register = { text: v.visual === "line" ? `${text}\n` : text, linewise: v.visual === "line" };
+        if (text && editable(v)) a.vim.register = { text: v.visual === "line" ? `${text}\n` : text, linewise: v.visual === "line" };
         Object.assign(v, { visual: null, sel: null });
       }),
     "visual.exit": (a) =>
@@ -862,8 +863,13 @@ export function registerActions(app: App): void {
     "note.edit": (a) => withView(a, (v) => a.editInEditor(v)),
     "view.source": (a) =>
       withView(a, (v) => {
-        a.setSource(v, !v.source);
+        a.setViewMode(v, v.source ? "rendered" : "source");
         a.message("info", v.source ? "source — the note's markdown" : "rendered");
+      }),
+    "view.live": (a) =>
+      withView(a, (v) => {
+        a.setViewMode(v, v.live ? "rendered" : "live");
+        a.message("info", v.live ? "live preview — the block you're in is its markdown" : "rendered");
       }),
     // Editing (source mode; step 3). Entering insert from the render switches to source first.
     "edit.insert": (a) => withView(a, (v) => E.startInsert(a, v, (w) => E.offsetOf(a, w))),

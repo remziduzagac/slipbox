@@ -19,6 +19,8 @@ export interface SourceLayoutOptions {
   /** Headings (from the rendered layout): their `src` lines, placed on the rows here. */
   headings: Omit<LayoutHeading, "line">[];
   tabWidth?: number;
+  /** A slice of lines (live preview's block): every line is a row, a last empty one too. */
+  slice?: boolean;
 }
 
 /** A displayed grapheme and the source offset (UTF-16, within its line) it came from. */
@@ -36,7 +38,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions): Layout 
   const tab = opts.tabWidth ?? 4;
   const lines: Line[] = [];
   const texts = source.split("\n");
-  if (texts.length > 1 && texts[texts.length - 1] === "") texts.pop(); // a final newline ends the last line
+  if (!opts.slice && texts.length > 1 && texts[texts.length - 1] === "") texts.pop(); // a final newline ends the last line
   const roles = highlight(texts);
   let natural = 0;
   texts.forEach((raw, i) => {

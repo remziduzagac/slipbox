@@ -219,7 +219,7 @@ export function finishSearchOp(app: App, view: View, found: boolean): void {
   const s = app.vim.searchOp;
   if (!s) return;
   app.vim.searchOp = null;
-  if (!found || !view.source) return;
+  if (!found || (!view.source && !view.live)) return;
   const to = E.offsetOf(app, view);
   const r = { from: Math.min(s.from, to), to: Math.max(s.from, to), linewise: false };
   E.placeAt(app, view, s.from);

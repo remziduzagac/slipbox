@@ -987,7 +987,9 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
               ? " INSERT "
               : view?.source
                 ? " SOURCE "
-                : " READ ";
+                : view?.live
+                  ? " LIVE "
+                  : " READ ";
   const chipSt = roleStyle(theme, "status_accent", page);
   c.fill(0, band.y, stringWidth(chip), band.h, chipSt.bg ?? null);
   let x = drawText(c, 0, y, chip, chipSt);

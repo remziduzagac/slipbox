@@ -1414,6 +1414,70 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
   });
 });
 
+describe("live preview (space n l, step 5)", () => {
+  const note = "# Title\n\nPara with **bold** text.\n\n- item one\n- item two\n\nEnd para.\n";
+  const setup = async (config?: (c: Config) => void) => {
+    const root = makeVault();
+    writeFileSync(join(root, "l.md"), note);
+    const h = await harness({ root, open: "l.md", width: 100, height: 30, config });
+    const v = h.app.view!;
+    const rows = () => h.app.currentLayout(v).lines.map((l) => l.spans.map((x) => x.text).join("").trimEnd());
+    const goto = (text: string) => {
+      const r = rows().findIndex((t) => t.includes(text));
+      h.app.moveCursor(v, { row: r, col: 0 });
+      h.frame();
+    };
+    return { h, v, rows, goto };
+  };
+  test("rendered, except the block the cursor is in, which is its markdown", async () => {
+    const { h, v, rows, goto } = await setup();
+    goto("Para with");
+    await h.keys("space", "n", "l");
+    expect(v.live).toBe(true);
+    expect(statusRow(h.frame())).toContain("LIVE");
+    let r = rows();
+    expect(r).toContain("Para with **bold** text."); // the markdown
+    expect(r.some((t) => t.startsWith("#"))).toBe(false); // the heading still rendered
+    expect(r.some((t) => t.includes("- item one"))).toBe(false);
+    // Onto the second list item: just that item goes raw; the paragraph renders again.
+    goto("item two");
+    r = rows();
+    expect(r).toContain("- item two");
+    expect(r.some((t) => t.includes("- item one"))).toBe(false);
+    expect(r.some((t) => t.includes("**bold**"))).toBe(false);
+    expect(h.app.cursorLine(v)).toBe(6);
+  });
+  test("typing in the block: the rest stays rendered and shifts; leaving renders the edit", async () => {
+    const { h, v, rows, goto } = await setup();
+    await h.keys("space", "n", "l");
+    goto("Para with");
+    await h.keys("shift+a", "enter");
+    for (const ch of "More *here*.") await h.keys(ch === " " ? "space" : ch);
+    let r = rows();
+    expect(r).toContain("More *here*.");
+    expect(r.some((t) => t.startsWith("#"))).toBe(false); // still rendered around it
+    // The rows after the block moved down a line, still rendered, their source lines renumbered.
+    const layout = h.app.currentLayout(v);
+    const end = layout.lines.find((l) => l.spans.map((x) => x.text).join("").includes("End para."))!;
+    expect(end.src).toBe(9);
+    await h.keys("escape", "shift+g");
+    h.frame();
+    r = rows();
+    expect(r.some((t) => t.includes("*here*"))).toBe(false); // rendered now: emphasis, no stars
+    expect(r.some((t) => t.includes("More here."))).toBe(true);
+    expect(v.buf.source).toContain("Para with **bold** text.\nMore *here*.\n");
+  });
+  test("[editor] edit_in = live: i from the render goes to live preview", async () => {
+    const { h, v, goto } = await setup((c) => (c.editor.edit_in = "live"));
+    goto("End para");
+    await h.keys("i");
+    expect(v.live).toBe(true);
+    expect(v.insert).toBe(true);
+    await h.keys("escape", "space", "n", "l");
+    expect(v.live).toBe(false);
+  });
+});
+
 describe("source mode (space n v)", () => {
   test("the window shows the raw markdown, the cursor on the same source line; back again", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 100, height: 30 });
