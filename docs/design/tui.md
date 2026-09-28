@@ -507,6 +507,10 @@ typing). `esc` from typing goes to normal mode with the lens still open — the 
 what's in it — and `esc` in normal mode closes it: everything renders again. Reading, there is no
 lens and the keys are the reading keys.
 
+**Its air.** One blank row sits outside each rule: where the rendered row next to it is already
+blank (the gap after a block), that's it; otherwise a blank frame row is added, so the lens never
+touches a heading band, a table or a code block. Like the rules, these rows are frame rows.
+
 **Its size.** It opens on the cursor's block and takes in the neighbours (below, then above) until
 it has `[editor] lens_min_rows` rows of markdown (6), so a one-line paragraph isn't a sliver and
 small moves don't reshape it. It never splits a block.

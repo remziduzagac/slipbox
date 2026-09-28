@@ -829,7 +829,7 @@ export class App {
    * stays the same, wherever it is now (the wheel, the cursor) is where it's kept.
    */
   private pinLens(view: View, layout: Layout): void {
-    const top = layout.lines.findIndex((l) => l.decor);
+    const top = layout.lines.findIndex((l) => l.lens === "top");
     if (top < 0) return;
     const range = `${view.liveBase!.active[0]}-${view.liveBase!.active[1]}`;
     const pin = view.lensPin;

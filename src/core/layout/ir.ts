@@ -41,6 +41,8 @@ export interface Line {
   srcMap?: { cells: number[]; end: number };
   /** A frame row drawn in the layout (the lens's rules): no text of the note, never the cursor's. */
   decor?: boolean;
+  /** The lens's rows: its rules, the air outside them, and its rows of markdown. */
+  lens?: "top" | "bottom" | "pad" | "source";
 }
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote";

@@ -70,21 +70,31 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
   const newRow = new Map<number, number>();
   const source = layoutSource(lines.slice(active[0] - 1, active[1]).join("\n"), { width: opts.width, wrap: opts.wrap, headings: [], slice: true });
   let placed = false;
-  const place = () => {
+  const blank = (l: Line | undefined) => !!l && !l.fill && l.spans.every((s) => !s.text.trim());
+  // `next`: the rendered row that will follow the lens (none at the note's end).
+  const place = (next?: Line) => {
     if (placed) return;
     placed = true;
     // The lens's rules carry the line before it and its last line, so an anchor on any line of
-    // the block lands on a source row, never on a rule.
-    if (opts.rule) out.push(lensRule(opts.rule, opts.width, active[0] - 1, ` source · ${active[0] === active[1] ? `line ${active[0]}` : `lines ${active[0]}–${active[1]}`} `));
-    for (const l of source.lines) out.push({ ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })) });
-    if (opts.rule) out.push(lensRule(opts.rule, opts.width, active[1], ""));
+    // the block lands on a source row, never on a rule. One blank row of air outside each rule,
+    // added only where the rendered row beside it isn't blank already.
+    if (opts.rule) {
+      const prev = out[out.length - 1];
+      if (prev && !blank(prev)) out.push({ spans: [], src: Math.max(0, active[0] - 1), decor: true, lens: "pad" });
+      out.push({ ...lensRule(opts.rule, opts.width, active[0] - 1, ` source · ${active[0] === active[1] ? `line ${active[0]}` : `lines ${active[0]}–${active[1]}`} `), lens: "top" });
+    }
+    for (const l of source.lines) out.push({ ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })), ...(opts.rule ? { lens: "source" as const } : {}) });
+    if (opts.rule) {
+      out.push({ ...lensRule(opts.rule, opts.width, active[1], ""), lens: "bottom" });
+      if (next && !blank(next)) out.push({ spans: [], src: active[1], decor: true, lens: "pad" });
+    }
   };
   rendered.lines.forEach((l, i) => {
     if (l.src < old[0]) {
       newRow.set(i, out.length);
       out.push(l);
     } else if (l.src > old[1]) {
-      place();
+      place(l);
       newRow.set(i, out.length);
       out.push(delta ? { ...l, src: l.src + delta } : l);
     }

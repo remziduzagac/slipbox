@@ -1430,8 +1430,8 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     };
     const lens = () => {
       const lines = L().lines;
-      const top = lines.findIndex((l) => l.decor);
-      const bottom = lines.findIndex((l, i) => i > top && l.decor);
+      const top = lines.findIndex((l) => l.lens === "top");
+      const bottom = lines.findIndex((l) => l.lens === "bottom");
       return { top, bottom, source: lines.slice(top + 1, bottom).map((l) => l.spans.map((x) => x.text).join("")) };
     };
     return { h, v, rows, goto, lens, L };
@@ -1447,6 +1447,14 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(rows()[l.top]).toContain("source · lines");
     expect(rows()[l.top]).toMatch(/^━━ source/); // heavy, even with light frame lines
     expect(rows()[l.bottom]).toMatch(/^━+$/);
+    // One blank row of air outside each rule, never two: above, the render's own gap; below, one
+    // added (a frame row the cursor never takes).
+    const lines = h.app.currentLayout(v).lines;
+    expect(rows()[l.top - 1]).toBe("");
+    expect(rows()[l.top - 2]).not.toBe("");
+    expect(rows()[l.bottom + 1]).toBe("");
+    expect(lines[l.bottom + 1]!.lens).toBe("pad");
+    expect(rows()[l.bottom + 2]).not.toBe("");
     // Drawn in the lens role: the accent, bold.
     const c = h.canvas();
     const pane = h.app.geometry!.panes[0]!;
@@ -1459,6 +1467,11 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     // The cursor is in it, never on a rule.
     expect(v.cur.row).toBeGreaterThan(l.top);
     expect(v.cur.row).toBeLessThan(l.bottom);
+    // Walking through, the cursor never lands on a rule or the air around it.
+    for (let k = 0; k < 20; k++) {
+      await h.keys("j");
+      expect(h.app.currentLayout(v).lines[v.cur.row]!.decor).toBeFalsy();
+    }
   });
   test("moving past its edge brings the next block in; the lens keeps its place on screen", async () => {
     const { h, v, goto, lens } = await setup();
