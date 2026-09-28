@@ -357,6 +357,21 @@ describe("task toggle (4.11) and note writes (4.6, 7.5)", () => {
 });
 
 describe("editor hand-off argv (4.1, 4.2, 4.12)", () => {
+  test("[editor] remote: a list of commands, or one string as one command", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
+    try {
+      const one = join(dir, "one.toml");
+      writeFileSync(one, '[editor]\nremote = "code -g {file}:{line}"\n');
+      expect(loadConfig({ vaultRoot: null, configFile: one }).config.editor.remote).toEqual(["code -g {file}:{line}"]);
+      const two = join(dir, "two.toml");
+      writeFileSync(two, '[editor]\nremote = ["nvim --server S --remote {file}", "nvim --server S --remote-send <C-\\\\><C-N>:{line}<CR>"]\n');
+      const r = loadConfig({ vaultRoot: null, configFile: two });
+      expect(r.warnings).toEqual([]);
+      expect(r.config.editor.remote).toEqual(["nvim --server S --remote {file}", "nvim --server S --remote-send <C-\\><C-N>:{line}<CR>"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   test("a template is split without a shell; {file} and {line} fill in inside arguments", () => {
     expect(splitCommand(`nvim --server '/tmp/my sock' --remote "+{line}" {file}`)).toEqual(["nvim", "--server", "/tmp/my sock", "--remote", "+{line}", "{file}"]);
     expect(editorArgv("nvim --server /tmp/s --remote +{line} {file}", "/v/a b.md", 12)).toEqual(["nvim", "--server", "/tmp/s", "--remote", "+12", "/v/a b.md"]);

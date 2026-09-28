@@ -82,11 +82,13 @@ export interface Config {
      */
     command: string;
     /**
-     * The editor already running elsewhere to send a note to (4.12), e.g.
-     * `nvim --server /tmp/nvim.sock --remote +{line} {file}`. slipbox doesn't wait; the watcher
-     * picks up its saves. Empty: off.
+     * The editor already running elsewhere to send a note to (4.12): commands run in order, each
+     * waited for before the next (slipbox itself doesn't wait). One string is one command, e.g.
+     * `code -g {file}:{line}`; nvim takes two, since its `--remote` has no `+{line}`:
+     * `nvim --server S --remote {file}`, then `nvim --server S --remote-send <C-\><C-N>:{line}<CR>`.
+     * The watcher picks up its saves. Empty: off.
      */
-    remote: string;
+    remote: string[];
   };
   watch: {
     enabled: boolean;
@@ -144,7 +146,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   capture: { location: "state", file: "scratch.md" },
-  editor: { command: "", remote: "" },
+  editor: { command: "", remote: [] },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
   aliases: {},
@@ -248,6 +250,7 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       else warnings.push(`config: ${file}: "${path}" must be a table`);
     } else if (Array.isArray(current)) {
       if (Array.isArray(value)) out[key] = value.map(String);
+      else if (path === "editor.remote" && typeof value === "string") out[key] = value.trim() ? [value] : []; // one command
       else warnings.push(`config: ${file}: "${path}" must be an array`);
     } else if (typeof current === typeof value) {
       const allowed = ENUMS[path];

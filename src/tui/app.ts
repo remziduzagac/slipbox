@@ -971,16 +971,23 @@ export class App {
   /** Send the note to an editor already running elsewhere (4.12); its saves arrive through the
    *  watcher. */
   sendToEditor(view: View): void {
-    const template = this.config.editor.remote;
-    if (!template.trim()) return this.message("info", "set [editor] remote in the config to send notes to a running editor");
-    if (!this.host.runDetached) return this.message("error", "can't start an editor from here");
-    const argv = editorArgv(template, view.buf.abs, this.cursorLine(view));
-    this.message("info", `sent to ${argv[0]} at line ${this.cursorLine(view)}`);
-    void this.host.runDetached(argv).then((r) => {
-      if (r === 0) return;
-      this.message("error", typeof r === "string" ? `couldn't start ${argv[0]}: ${r}` : `${argv[0]} exited with ${r}`);
-      this.host.requestRender();
-    });
+    const templates = this.config.editor.remote.filter((t) => t.trim());
+    if (!templates.length) return this.message("info", "set [editor] remote in the config to send notes to a running editor");
+    const run = this.host.runDetached;
+    if (!run) return this.message("error", "can't start an editor from here");
+    const line = this.cursorLine(view);
+    // Each command a template of its own; no {file} means none is appended (nvim's --remote-send).
+    const cmds = templates.map((t) => editorArgv(t, view.buf.abs, line, process.env, false));
+    this.message("info", `sent to ${cmds[0]![0]} at line ${line}`);
+    void (async () => {
+      for (const argv of cmds) {
+        const r = await run(argv);
+        if (r === 0) continue;
+        this.message("error", typeof r === "string" ? `couldn't start ${argv[0]}: ${r}` : `${argv.slice(0, 2).join(" ")} exited with ${r}`);
+        this.host.requestRender();
+        return;
+      }
+    })();
   }
 
   /** The link under the cursor, if any. */

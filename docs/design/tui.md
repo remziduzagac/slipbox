@@ -457,10 +457,13 @@ since it was shown, it is reloaded instead and nothing is written (its lines may
 the cursor's source line. `space n e` steps aside: the renderer suspends, the editor
 (`[editor] command`, else `$VISUAL`, `$EDITOR`, `vi`, given `+line` or `file:line` when it's a
 known editor) runs in this terminal, and when it exits slipbox resumes and reloads the note if it
-changed. `space n s` sends the note to an editor already running elsewhere (`[editor] remote`, e.g.
-nvim's `--server … --remote`) and doesn't wait; the watcher shows its saves as they land. Either
-template is split into arguments and `{file}` / `{line}` filled in inside them, never through a
-shell, so a file name can't become a command.
+changed. `space n s` sends the note to an editor already running elsewhere (`[editor] remote`) and
+doesn't wait; the watcher shows its saves as they land. `remote` is a list of commands run in
+order, each waited for before the next, stopping at the first that fails: nvim needs two, since its
+`--remote` takes no `+line` — `--remote {file}`, then `--remote-send <C-\><C-N>:{line}<CR>` (the
+line alone, so a file name never becomes keys). Every template is split into arguments and
+`{file}` / `{line}` filled in inside them, never through a shell, so a file name can't become a
+command; a template without `{file}` gets the file appended, except a remote one.
 
 ## External changes (plans `5.1`–`5.4`)
 

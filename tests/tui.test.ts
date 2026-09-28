@@ -995,13 +995,35 @@ describe("hand-off to an editor (space n e, space n s)", () => {
     const h = await harness({ open: "notes/alpha.md" });
     await h.keys("space", "n", "s");
     expect(h.app.transient!.text).toContain("[editor] remote");
-    const n = await harness({ open: "notes/alpha.md", config: (c) => (c.editor.remote = "nvim --server /tmp/s --remote +{line} {file}") });
+    // nvim: open the file, then go to the line (its --remote has no +{line}); in order, each awaited.
+    const n = await harness({
+      open: "notes/alpha.md",
+      config: (c) => (c.editor.remote = ["nvim --server /tmp/s --remote {file}", "nvim --server /tmp/s --remote-send <C-\\><C-N>:{line}<CR>"]),
+    });
     const sent: string[][] = [];
     (n.app as unknown as { host: Host }).host.runDetached = async (argv) => (sent.push(argv), 0);
     await n.keys("space", "n", "s");
+    await Bun.sleep(5);
+    const line = n.app.cursorLine(n.app.view!);
+    expect(sent.length).toBe(2);
     expect(sent[0]!.slice(0, 4)).toEqual(["nvim", "--server", "/tmp/s", "--remote"]);
     expect(sent[0]!.at(-1)).toEndWith("notes/alpha.md");
+    expect(sent[1]).toEqual(["nvim", "--server", "/tmp/s", "--remote-send", `<C-\\><C-N>:${line}<CR>`]); // no file appended
     expect(n.app.transient!.text).toContain("sent to nvim");
+    // A failing first command stops the rest.
+    sent.length = 0;
+    (n.app as unknown as { host: Host }).host.runDetached = async (argv) => (sent.push(argv), 1);
+    await n.keys("space", "n", "s");
+    await Bun.sleep(5);
+    expect(sent.length).toBe(1);
+    expect(n.app.transient!.text).toContain("exited with 1");
+    // One string is one command.
+    const one = await harness({ open: "notes/alpha.md", configFile: undefined, config: (c) => (c.editor.remote = ["code -g {file}:{line}"]) });
+    const got: string[][] = [];
+    (one.app as unknown as { host: Host }).host.runDetached = async (argv) => (got.push(argv), 0);
+    await one.keys("space", "n", "s");
+    await Bun.sleep(5);
+    expect(got[0]![2]).toMatch(/notes\/alpha\.md:\d+$/);
   });
 });
 

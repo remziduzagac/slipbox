@@ -68,7 +68,10 @@ file = "scratch.md"            # a relative .md path; no "..", no hidden part (e
 
 [editor]                       # {file} and {line} fill in inside arguments; never through a shell
 command = ""                   # space n e: runs here, slipbox waits; "" = $VISUAL, $EDITOR, vi (+line)
-remote = ""                    # space n s: e.g. "nvim --server /tmp/nvim.sock --remote +{line} {file}"
+remote = []                    # space n s: commands run in order; one string is one command
+                               # e.g. "code -g {file}:{line}", or nvim (no +{line} on --remote):
+                               # ['nvim --server S --remote {file}',
+                               #  'nvim --server S --remote-send <C-\><C-N>:{line}<CR>']
 
 [watch]
 enabled = true
