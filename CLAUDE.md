@@ -21,6 +21,7 @@ Read `docs/handoff.md` first, then `docs/design/README.md`. The plan's item IDs 
 ## Commands
 
 - `bun run check` — typecheck, boundary, tests. Run before declaring done.
+- `bun run e2e --tab` — the terminal tests: slipbox driven in a herdr pane (`docs/design/testing.md`).
 - `bun test -u` updates snapshots; read the diff before accepting it.
 - `bun src/main.ts <path>` runs the TUI; `bun src/main.ts help` lists CLI commands.
 - Tooling lives on a login-shell PATH (mise): use `zsh -lc '…'` in non-interactive shells.

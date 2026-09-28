@@ -1,7 +1,8 @@
 # Testing
 
-`bun test` runs everything, and `bun run check` adds the typecheck and the boundary check. CI runs
-all three (`.github/workflows/ci.yml`).
+`bun test` runs the headless tests, and `bun run check` adds the typecheck and the boundary check.
+CI runs all three (`.github/workflows/ci.yml`). `bun run e2e` runs the terminal tests, slipbox itself
+in a herdr pane (below).
 
 ## Strategy (plan `0.4`)
 
@@ -67,8 +68,44 @@ change to a note can be checked against what it has to keep covering. The TUI te
 into a temporary fixture vault as `samples/` (without its marker, which would make it a nested
 vault).
 
+## The terminal tests (`bun run e2e`)
+
+The headless tests drive the model; these drive slipbox itself in a real terminal, a herdr pane,
+by the keys a keyboard would send, and check what the screen shows. They catch what the model
+can't: how keys are encoded (`ctrl+h` versus backspace, an escape read as alt), timing, and what
+is really drawn. They need herdr, so they are a developer's tool, not part of `bun run check` or
+CI; slipbox itself never needs herdr.
+
+```sh
+bun run e2e                  # a pane split off this one; closed at the end
+bun run e2e --tab            # a tab of its own, as big as the window
+bun run e2e --pane w1:p2     # that pane (also SLIPBOX_E2E_PANE); it must be at a shell prompt
+bun run e2e find replace     # only the scenarios whose names contain these
+```
+
+- **Isolated.** Each scenario gets a fresh copy of the demo vault and its own config, state and
+  cache directories. Nothing in the repo or in your own setup is touched, and a given pane that is
+  running slipbox is refused rather than typed into.
+- **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
+  contains something, the status line's mode, a message in the top bar, a file on disk.
+- **Coverage is measured.** slipbox appends each command it runs to `SLIPBOX_TRACE`; the runner
+  lists the commands no scenario ran. Every command is run today.
+- **Size.** herdr owns the pane's size, which the runner asks the shell for and never sets.
+  Scenarios that need room (docked panes, splits) say so and are skipped, named, in a smaller pane.
+- **Keys.** Single characters are typed as themselves; keys herdr has no name for (the page keys,
+  `ctrl+end`) are sent as the escape sequences a terminal sends.
+- **Not the mouse.** herdr passes no mouse events through, so clicks, the wheel and drags stay
+  covered by the headless tests only.
+
+| File | Covers |
+| --- | --- |
+| `tests/e2e/run.ts` | the runner: the pane, the loop, the report |
+| `tests/e2e/herdr.ts` | a herdr pane, driven: keys and text in, the screen out |
+| `tests/e2e/session.ts` | one scenario's slipbox, and the checks |
+| `tests/e2e/scenarios.ts` | the scenarios, by area |
+
 ## Manual checks that stay manual
 
-Some things are only real in a terminal: glyph rendering in the actual font, OSC 52 reaching the
-Mac clipboard over SSH, mouse selection feel. These are checked by running the TUI in a herdr pane
-or a bare terminal. The model behind each is covered by the headless tests.
+Some things are only real in a terminal and a pair of eyes: glyph rendering in the actual font,
+OSC 52 reaching the Mac clipboard over SSH, mouse selection feel. The model behind each is covered
+by the headless tests.

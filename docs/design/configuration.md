@@ -174,3 +174,4 @@ replaced is unchanged, so editing the config always wins.
 | `NO_COLOR` | CLI: no colour; TUI: the `mono` theme |
 | `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME` | storage roots (decision `0.10`) |
 | `SLIPBOX_DEBUG` | print stack traces for unexpected CLI errors |
+| `SLIPBOX_TRACE` | TUI: append each command it runs to this file, one id a line (the terminal tests' coverage) |

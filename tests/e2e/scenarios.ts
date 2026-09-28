@@ -1,0 +1,580 @@
+// The terminal tests' scenarios. Each runs on a fresh copy of the demo vault (examples/vault), in a
+// real terminal. Keys go through herdr exactly as a keyboard's would, so these catch what the
+// headless tests can't: key encodings, timing, the idle loop, what the screen really shows. Mouse
+// clicks can't be sent through herdr; the headless tests cover them.
+
+import type { Session, SessionOptions } from "./session.ts";
+
+export interface Scenario {
+  name: string;
+  options?: SessionOptions;
+  /** The pane size it needs (docked panes need 90 columns); skipped in a smaller pane. */
+  needs?: { cols?: number; rows?: number };
+  run: (s: Session) => Promise<void>;
+}
+
+const HANDBOOK = "handbook/operations-handbook.md";
+const MEETING = "meetings/2026-09-14-weekly.md";
+
+/** The cursor's line and column, from the status line (`L12:3`). */
+function pos(s: Session): { line: number; col: number } {
+  const m = /L(\d+):(\d+)/.exec(s.statusLine());
+  return m ? { line: Number(m[1]), col: Number(m[2]) } : { line: -1, col: -1 };
+}
+
+/** Keys, then wait until the cursor's line satisfies `ok`. */
+async function moveTo(s: Session, keys: string[], ok: (line: number, col: number) => boolean, what: string): Promise<void> {
+  await s.keys(...keys);
+  await s.until(() => {
+    const p = pos(s);
+    return ok(p.line, p.col);
+  }, 3000, what);
+}
+
+/** Open a note with the quick switcher. */
+async function open(s: Session, name: string): Promise<void> {
+  await s.keys("ctrl+p");
+  await s.see("Open note");
+  await s.type(name);
+  await s.keys("enter");
+  await s.status(name);
+}
+
+/** Leader sequences: space, then the keys. */
+const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys);
+
+export const SCENARIOS: Scenario[] = [
+  // --- start and quit -------------------------------------------------------------------------
+  {
+    name: "start: home renders; ctrl+q quits cleanly",
+    run: async (s) => {
+      await s.see("Halden Ridge Observatory");
+      await s.status("home.md");
+      await s.status(/READ/);
+      await s.keys("ctrl+q");
+      await s.until(() => s.exited(), 5000, "slipbox to quit");
+    },
+  },
+
+  // --- rendering, as the terminal draws it -------------------------------------------------------
+  {
+    name: "render: wide tables fit, code blocks, names in their own scripts",
+    run: async (s) => {
+      await open(s, "telescope-comparison");
+      await s.see("┌");
+      await s.see("╞");
+      // No row runs past the pane: the table allocator's whole job.
+      s.expect(s.screen().every((r) => r.length <= s.pane.cols), "a row wider than the pane");
+      await open(s, "pipeline-cookbook");
+      await s.see("properties"); // the frontmatter, rendered
+      await s.see(/bash|python/);
+      await open(s, "partners-and-names");
+      await s.see("木曽原天文同好会");
+      await s.see("يوسف حداد");
+      await s.see("🔭");
+      await s.see("unresolved"); // [[visiting-rota]] exists nowhere; the text says so, drawn as such
+    },
+  },
+
+  // --- reading: every motion ------------------------------------------------------------------
+  {
+    name: "motions: j k h l, words, row ends, top and bottom, headings, paragraphs, pages",
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      await moveTo(s, ["j", "j", "j", "j", "j", "j"], (l) => l > 3, "j to move down");
+      const down = pos(s).line;
+      await moveTo(s, ["k", "k", "k"], (l) => l < down, "k to move up");
+      await s.keys("g", "g", "]", "]", "j", "j"); // a body row, with words on it
+      await moveTo(s, ["l", "l", "l"], (_, c) => c > 1, "l to move right");
+      await moveTo(s, ["h"], (_, c) => c >= 1, "h to move left");
+      await moveTo(s, ["0"], (_, c) => c === 1, "0 to go to the row start");
+      await moveTo(s, ["w"], (_, c) => c > 1, "w to the next word");
+      await moveTo(s, ["e"], (_, c) => c > 1, "e to a word end");
+      await moveTo(s, ["b"], (_, c) => c >= 1, "b back a word");
+      await moveTo(s, ["$"], (_, c) => c > 5, "$ to the row end");
+      await s.keys("^");
+      await moveTo(s, ["G"], (l) => l > 1100, "G to the bottom");
+      await moveTo(s, ["g", "g"], (l) => l === 1, "gg to the top");
+      await moveTo(s, ["]", "]"], (l) => l >= 6, "]] to the next heading");
+      const h = pos(s).line;
+      await moveTo(s, ["]", "]"], (l) => l > h, "]] again");
+      await moveTo(s, ["[", "["], (l) => l === h, "[[ back a heading");
+      await moveTo(s, ["}", "}"], (l) => l > h, "} to the next paragraph");
+      const p = pos(s).line;
+      await moveTo(s, ["{"], (l) => l < p, "{ back a paragraph");
+      await moveTo(s, ["ctrl+d"], (l) => l > p, "ctrl+d half a page down");
+      const d = pos(s).line;
+      await moveTo(s, ["ctrl+u"], (l) => l < d, "ctrl+u half a page up");
+      await moveTo(s, ["pagedown"], (l) => l > d - 5, "pagedown");
+      const pd = pos(s).line;
+      await moveTo(s, ["pageup"], (l) => l < pd, "pageup");
+      await moveTo(s, ["ctrl+end"], (l) => l > 1100, "ctrl+end");
+      await moveTo(s, ["ctrl+home"], (l) => l === 1, "ctrl+home");
+      await moveTo(s, ["alt+down"], (l) => l > 1, "alt+down: next heading");
+    },
+  },
+  {
+    name: "motions: f t ; , on the line",
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      await s.keys("]", "]", "j", "j", "0"); // onto the O1 decision line
+      await s.until(() => pos(s).line > 6, 3000, "a body line");
+      await moveTo(s, ["f", "e"], (_, c) => c > 1, "fe to an e");
+      const c1 = pos(s).col;
+      await moveTo(s, [";"], (_, c) => c > c1, "; to the next e");
+      const c2 = pos(s).col;
+      await moveTo(s, [","], (_, c) => c < c2, ", back to the previous e");
+      await moveTo(s, ["t", "s"], (_, c) => c > 0, "ts before an s");
+    },
+  },
+
+  // --- visual and copy ------------------------------------------------------------------------
+  {
+    name: "visual: v and V select, o swaps ends, y copies, esc leaves",
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      await s.keys("]", "]", "j", "j");
+      await s.keys("v");
+      await s.status("VISUAL");
+      await s.keys("l", "l", "l", "o");
+      await s.keys("y");
+      await s.top(/copied \d+ characters/);
+      await s.keys("V");
+      await s.status("V-LINE");
+      await s.keys("j", "ctrl+c");
+      await s.top(/copied \d+ characters/);
+      await s.keys("v", "l");
+      await s.status("VISUAL");
+      await s.keys("escape");
+      await s.status("READ");
+    },
+  },
+  {
+    name: "copy: yy the row, yp the path, yr a reference, yl a link",
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      const copied = async (keys: string[], command: string) => {
+        await s.keys(...keys);
+        await s.until(() => s.commands().includes(command) && /copied/.test(s.topBar()), 3000, `${command} to copy`);
+      };
+      await s.keys("]", "]", "j", "j");
+      await copied(["y", "p"], "copy.path");
+      await copied(["y", "r"], "copy.ref");
+      await copied(["y", "y"], "copy.smart");
+      await s.keys("g", "g");
+      await leader(s, "l", "n"); // onto a link (the handbook has one)
+      await copied(["y", "l"], "copy.link");
+    },
+  },
+
+  // --- links and history ----------------------------------------------------------------------
+  {
+    name: "links: next / previous, follow, back and forward, the lists, a split",
+    run: async (s) => {
+      await s.keys("ctrl+tab");
+      await s.keys("ctrl+tab");
+      await s.keys("ctrl+shift+tab");
+      await s.keys("enter");
+      await s.status("about-this-vault.md");
+      await s.keys("H"); // back
+      await s.status("home.md");
+      await s.keys("L"); // forward
+      await s.status("about-this-vault.md");
+      await leader(s, "h", "p");
+      await s.status("home.md");
+      await leader(s, "h", "n");
+      await s.status("about-this-vault.md");
+      await leader(s, "h", "h");
+      await s.see("History");
+      await s.keys("escape");
+      await s.keys("H");
+      await s.status("home.md");
+      await leader(s, "l", "l");
+      await s.see("Links from");
+      await s.keys("escape");
+      await leader(s, "l", "b");
+      await s.see("Linking to");
+      await s.keys("escape");
+      await leader(s, "l", "n");
+      await leader(s, "l", "p");
+      await leader(s, "l", "f");
+      await s.status("about-this-vault.md");
+      await s.keys("H");
+      await s.keys("ctrl+tab");
+      await leader(s, "l", "s"); // follow in a split
+      await s.until(() => s.text().split("§ ").length - 1 === 2, 3000, "the link open in a split");
+    },
+  },
+
+  // --- windows --------------------------------------------------------------------------------
+  {
+    name: "windows: split, turn, focus, move, swap, resize, resize mode, close, only",
+    needs: { cols: 90, rows: 24 },
+    run: async (s) => {
+      const crumbs = () => s.text().split("§ ").length - 1; // one breadcrumb a window
+      // A tab holds one window, or two in a split: side by side, or stacked (ctrl+w s turns it).
+      const sameRow = () => s.screen().some((r) => r.split("§ ").length - 1 === 2);
+      await s.keys("ctrl+w", "v");
+      await s.until(() => crumbs() === 2 && sameRow(), 3000, "two windows side by side");
+      await s.keys("ctrl+w", "s");
+      await s.until(() => crumbs() === 2 && !sameRow(), 3000, "the split turned stacked");
+      for (const k of ["h", "l", "k", "j", "w"]) await s.keys("ctrl+w", k);
+      await s.keys("ctrl+w");
+      await s.type("H");
+      await s.keys("ctrl+w");
+      await s.type("L");
+      await s.keys("ctrl+w");
+      await s.type("K");
+      await s.keys("ctrl+w");
+      await s.type("J");
+      await s.keys("ctrl+w", "x");
+      for (const k of ["=", ">", "<", "+", "-"]) {
+        await s.keys("ctrl+w");
+        await s.type(k);
+        await s.keys("escape"); // one step, then the mode it leaves on
+      }
+      await s.keys("ctrl+alt+w");
+      await s.status("RESIZE");
+      await s.keys("l", "escape");
+      await s.status("READ");
+      await s.keys("ctrl+w", "q");
+      await s.until(() => crumbs() === 1, 3000, "a window closed");
+      await s.keys("ctrl+w", "v", "ctrl+w", "o");
+      await s.until(() => crumbs() === 1, 3000, "only one window");
+    },
+  },
+
+  // --- tabs -----------------------------------------------------------------------------------
+  {
+    name: "tabs: new, list, next and previous, go to, move, close",
+    needs: { cols: 60 },
+    run: async (s) => {
+      await s.keys("ctrl+t", "o");
+      await s.see(/2 home/);
+      await open(s, "operations-handbook");
+      await s.keys("ctrl+t", "t");
+      await s.see("Tabs (2)");
+      await s.keys("escape");
+      await s.keys("ctrl+t", "p");
+      await s.status("home.md");
+      await s.keys("ctrl+t", "n");
+      await s.status("operations-handbook.md");
+      await s.keys("ctrl+t", "1");
+      await s.status("home.md");
+      await s.keys("ctrl+t");
+      await s.type("L");
+      await s.keys("ctrl+t");
+      await s.type("H");
+      await s.keys("ctrl+t", "q");
+      await s.notSee(/2 home|2 operations/);
+    },
+  },
+
+  // --- panes ----------------------------------------------------------------------------------
+  {
+    name: "panes: the explorer, reveal, the outline, the heading picker, the path dropdown",
+    needs: { cols: 100 },
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      // ctrl+e cycles: open, focus, close. It may start open (a wide pane), so press to focus.
+      const focus = async (key: string, chip: string) => {
+        for (let i = 0; i < 3 && !s.statusLine().includes(chip); i++) await s.keys(key);
+        await s.status(chip);
+      };
+      await focus("ctrl+e", "FILES");
+      await s.see("Explorer");
+      await s.keys("escape");
+      await s.keys("ctrl+shift+e");
+      await s.status("FILES");
+      await s.keys("escape");
+      await focus("ctrl+o", "OUTLINE");
+      await s.see("Outline");
+      await s.keys("escape");
+      await leader(s, "f", "o");
+      await s.see("Headings —");
+      await s.type("O25");
+      await s.keys("enter");
+      await s.see("Documentation categories");
+      await s.keys("j", "j", "j");
+      await leader(s, "f", "b");
+      await s.see("Path");
+      await s.keys("escape");
+      await s.keys(":");
+      await s.type("Show or hide the outline");
+      await s.keys("enter");
+    },
+  },
+
+  // --- find and replace -----------------------------------------------------------------------
+  {
+    name: "find: / n N * #, :noh; the find row",
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      await s.keys("/");
+      await s.type("Aster");
+      await s.see(/› Aster/);
+      await s.see(/\d+\/\d+/);
+      await s.keys("enter");
+      const l1 = pos(s).line;
+      await moveTo(s, ["n"], (l) => l !== l1, "n to the next match");
+      await moveTo(s, ["N"], (l) => l === l1, "N back");
+      await s.keys("w", "*");
+      await s.keys("#");
+      await s.ex("noh");
+      await s.notSee(/[│┃] › /); // the find row (the breadcrumb has › too, never after a border)
+    },
+  },
+  {
+    name: "replace: ctrl+h, tab, enter one, alt+a all, alt+h, :%s with c",
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      await s.keys("ctrl+h");
+      await s.see("⇄");
+      await s.type("Brill");
+      await s.keys("tab");
+      await s.type("BRILL");
+      await s.keys("enter");
+      await s.keys("alt+a");
+      await s.top(/replaced \d+ match/);
+      await s.keys("alt+h");
+      await s.notSee("⇄ BRILL"); // the replace row gone (⇄ stays, as the find row's button)
+      await s.keys("escape", "escape");
+      await s.keys("ctrl+s");
+      await s.file(HANDBOOK, (t) => t.includes("BRILL") && !t.includes("Brill"), "every Brill replaced and saved");
+      await s.ex("%s/Corvid/CORVID/gc");
+      await s.see("replace? y n a q");
+      await s.keys("y", "n", "q");
+      await s.top("1 substitution");
+      await leader(s, "f", "r");
+      await s.see("⇄");
+      await s.keys("escape");
+    },
+  },
+
+  // --- editing --------------------------------------------------------------------------------
+  {
+    name: "source mode: i a I A o O type; esc; u, ctrl+r, U; ctrl+s writes",
+    options: { open: MEETING },
+    run: async (s) => {
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.keys("i");
+      await s.status("INSERT");
+      await s.type("[i]");
+      await s.keys("escape");
+      await s.keys("a");
+      await s.type("[a]");
+      await s.keys("escape", "I");
+      await s.type("[I]");
+      await s.keys("escape", "A");
+      await s.type("[A]");
+      await s.keys("escape", "o");
+      await s.type("[o]");
+      await s.keys("escape", "O");
+      await s.type("[O]");
+      await s.keys("escape");
+      await s.status("• unsaved");
+      await s.keys("ctrl+s");
+      await s.file(MEETING, (t) => ["[i]", "[a]", "[I]", "[A]", "[o]", "[O]"].every((x) => t.includes(x)), "all six inserts saved");
+      await s.keys("u");
+      await s.keys("ctrl+r");
+      await s.keys("u", "U");
+      await s.ex("w");
+      await s.file(MEETING, (t) => t.includes("[O]"), "the redone insert saved");
+    },
+  },
+  {
+    name: "normal mode: x d c y > < D C s S r J p P ~ . and visual d c > <",
+    options: { open: MEETING },
+    run: async (s) => {
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.keys("G", "o");
+      await s.type("alpha beta gamma delta");
+      await s.keys("escape", "0", "x"); // lpha
+      await s.keys("d", "w"); // beta…
+      await s.keys("c", "w");
+      await s.type("BETA");
+      await s.keys("escape", "y", "y", "p", "P");
+      await s.keys(">", ">", "<", "<");
+      await s.keys("w", "D");
+      await s.keys("0", "w", "C");
+      await s.type("end");
+      await s.keys("escape", "0", "s");
+      await s.type("S");
+      await s.keys("escape", "S");
+      await s.type("whole line");
+      await s.keys("escape", "0", "r", "W", "~", "J", ".");
+      await s.keys("V", "j", ">", "V", "<", "V", "d");
+      await s.keys("v", "l", "c");
+      await s.type("X");
+      await s.keys("escape");
+      await s.keys("ctrl+s");
+      await s.file(MEETING, (t) => t !== "", "the note saved");
+    },
+  },
+  {
+    name: "task: x ticks a checkbox in the render and writes it",
+    options: { open: MEETING },
+    run: async (s) => {
+      await s.see("Tomasz: book the courier");
+      const before = s.read(MEETING);
+      await s.keys("/");
+      await s.type("book the courier");
+      await s.keys("enter", "x");
+      await s.file(MEETING, (t) => t !== before && t.includes("- [x] Tomasz: book the courier"), "the task ticked on disk");
+    },
+  },
+  {
+    name: "lens: space n l edits in place; esc esc closes it",
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      await s.keys("]", "]", "j", "j");
+      await leader(s, "n", "l");
+      await s.status("LENS");
+      await s.see("source · lines");
+      await s.keys("A");
+      await s.type(" (lens)");
+      await s.keys("escape", "escape");
+      await s.keys("ctrl+s");
+      await s.file(HANDBOOK, (t) => t.includes(" (lens)"), "the lens edit saved");
+    },
+  },
+
+  // --- saving and conflicts -------------------------------------------------------------------
+  {
+    name: "conflict: an agent writes while you have changes; the prompt; :w! and :e!",
+    options: { open: MEETING },
+    run: async (s) => {
+      await leader(s, "n", "v");
+      await s.keys("G", "o");
+      await s.type("mine");
+      await s.keys("escape");
+      s.write(MEETING, `${s.read(MEETING)}\ntheirs\n`);
+      await s.see("changed on disk", 5000);
+      await s.keys("escape");
+      await leader(s, "n", "c");
+      await s.see("changed on disk");
+      await s.keys("escape");
+      await s.ex("w!");
+      await s.file(MEETING, (t) => t.includes("mine") && !t.includes("theirs"), "yours written over theirs");
+      await s.keys("o");
+      await s.type("unsaved");
+      await s.keys("escape");
+      await s.ex("e!");
+      await s.until(() => !s.statusLine().includes("unsaved"), 3000, "the changes dropped");
+    },
+  },
+  {
+    name: "watching: an agent's edit to a clean note shows at once",
+    options: { open: MEETING },
+    run: async (s) => {
+      s.write(MEETING, `${s.read(MEETING)}\nAdded by an agent while you read.\n`);
+      await s.see("Added by an agent while you read.", 5000);
+      await leader(s, "n", "r");
+    },
+  },
+  {
+    name: "save and quit: :wq writes and exits",
+    options: { open: MEETING },
+    run: async (s) => {
+      await leader(s, "n", "v");
+      await s.keys("G", "o");
+      await s.type("last words");
+      await s.keys("escape");
+      await s.ex("wq");
+      await s.until(() => s.exited(), 5000, "slipbox to exit");
+      s.expect(s.read(MEETING).includes("last words"), ":wq wrote the note");
+    },
+  },
+
+  // --- the palette, settings, themes ----------------------------------------------------------
+  {
+    name: "palette: : runs commands and aliases; :e opens a note",
+    run: async (s) => {
+      await s.keys(":");
+      await s.see("Commands");
+      await s.keys("escape");
+      await leader(s, "f", "p");
+      await s.see("Commands");
+      await s.keys("escape");
+      await s.ex("e partners-and-names");
+      await s.status("partners-and-names.md");
+    },
+  },
+  {
+    name: "settings: space u u, every toggle, themes and glyph sets",
+    run: async (s) => {
+      await leader(s, "u", "u");
+      await s.see("UI settings");
+      await s.keys("escape");
+      for (const k of ["w", "z", "l", "n", "s", "r", "m"]) {
+        await leader(s, "u", k);
+        await s.see(/: (on|off)/); // on the top bar, or the last row in zen
+        await leader(s, "u", k); // back
+      }
+      await s.keys(":");
+      await s.type("Breadcrumb");
+      await s.keys("enter");
+      await leader(s, "u", "t");
+      await s.see("Theme (live preview)");
+      await s.keys("j", "escape");
+      await s.ex("theme tokyo-night");
+      await leader(s, "u", "g");
+      await s.see("Glyphs (live preview)");
+      await s.keys("escape");
+      await s.ex("glyphs ascii");
+      await s.until(() => s.commands().includes("glyphs.set") && !s.text().includes("≡"), 3000, "the ASCII glyphs");
+    },
+  },
+
+  // --- scratch, info, messages, help ----------------------------------------------------------
+  {
+    name: "scratch: add, open, copy, clear",
+    run: async (s) => {
+      await s.keys("j", "j");
+      await leader(s, "s", "a");
+      await leader(s, "s", "s");
+      await s.status(/scratch/);
+      await leader(s, "s", "y");
+      await s.top("copied");
+      await leader(s, "s", "d");
+      await s.status("clear the scratch?");
+      await s.type("y");
+      await s.keys("enter");
+      await leader(s, "s", "y");
+      await s.top("the scratch is empty");
+    },
+  },
+  {
+    name: "info: note and vault info, reindex, config reload, messages, help",
+    run: async (s) => {
+      await leader(s, "n", "i");
+      await s.keys("escape");
+      await leader(s, "v", "i");
+      await s.keys("escape");
+      await leader(s, "v", "r");
+      await s.top(/reindexed \d+ notes/);
+      await leader(s, "v", "c");
+      await leader(s, "m");
+      await s.see("Messages");
+      await s.keys("escape");
+      await s.keys("?");
+      await s.see("Keys — type to filter");
+      await s.keys("escape");
+    },
+  },
+
+  // --- hand-offs ------------------------------------------------------------------------------
+  {
+    name: "hand-off: space n e runs the editor and comes back; send to a remote editor",
+    options: { config: '[editor]\ncommand = "true {file}"\nremote = ["true {file}"]\n' },
+    run: async (s) => {
+      await leader(s, "n", "e");
+      await s.status("home.md", 5000);
+      await leader(s, "n", "s");
+      await leader(s, "n", "p");
+      await s.keys("escape");
+    },
+  },
+];

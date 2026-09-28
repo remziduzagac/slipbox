@@ -9,7 +9,7 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
@@ -184,6 +184,9 @@ export interface LiveBase {
 }
 
 /** A window whose text can be edited: source mode or live preview. */
+/** Where to log each command run, for the terminal tests' coverage: `SLIPBOX_TRACE`. */
+const TRACE = process.env.SLIPBOX_TRACE;
+
 export function editable(view: View | null | undefined): boolean {
   return !!view && (!!view.source || !!view.live);
 }
@@ -2480,6 +2483,8 @@ export class App {
   }
 
   async run(spec: string): Promise<void> {
+    // The terminal tests' coverage (tests/e2e): every command run, one id per line.
+    if (TRACE) appendFileSync(TRACE, `${spec.split(" ")[0]}\n`);
     if (!(await this.registry.run(this, spec))) this.message("error", `unknown command: ${spec}`);
   }
 

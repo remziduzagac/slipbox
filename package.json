@@ -14,6 +14,7 @@
   "typecheck": "tsc --noEmit -p .",
   "check:boundary": "bun scripts/check-boundary.ts",
   "check": "bun run typecheck && bun run check:boundary && bun test",
+  "e2e": "bun tests/e2e/run.ts",
   "build": "bun build --compile src/main.ts --outfile dist/slipbox"
 },
 "dependencies": {
