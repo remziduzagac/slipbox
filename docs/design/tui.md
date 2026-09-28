@@ -147,6 +147,9 @@ takes `$&`, `$1`–`$9` and `$$`. Opened on a selection within a line, the selec
 across lines, the replacing stays within the selection's lines. Messages (`replaced 3 matches`) show
 in the top bar while the rows are open. The text moves down three rows.
 
+Vim's `:s` (`docs/design/keymap.md`) uses the same engine, `core/replace.ts`; with its `c` flag the
+same two rows ask at each match, `replace? y n a q` where the buttons were.
+
 **Messages and prompts never take a row of their own,** so the note never changes height for them.
 The latest message (4 s, 8 s for errors) sits at the right end of the top bar, right-aligned, cut
 with `…` to the room left; its level shows as colour and a glyph: `✗` error, `!` warning, `·` info

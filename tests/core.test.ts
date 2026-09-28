@@ -18,6 +18,7 @@ import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { toggleTask } from "../src/core/tasks.ts";
 import { diffLines, merge3, unifiedDiff } from "../src/core/merge.ts";
+import { compilePattern, expandReplacement, findAll, parseSubstitute, replaceMatches } from "../src/core/replace.ts";
 import { editorArgv, splitCommand } from "../src/core/editor.ts";
 import { discoverNvims, nvimSockets } from "../src/core/nvim.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
@@ -486,5 +487,45 @@ describe("diff and three-way merge (5.5)", () => {
   });
   test("unifiedDiff: - and + lines with context and @@ markers", () => {
     expect(unifiedDiff(base, "one\nTWO\nthree\nfour\nfive\n")).toEqual(["@@ line 2", "  one", "- two", "+ TWO", "  three", "  four"]);
+  });
+});
+
+describe("find and replace (core/replace.ts)", () => {
+  const re = (q: string, o: Partial<{ regex: boolean; whole: boolean; ignoreCase: boolean }> = {}) => {
+    const r = compilePattern(q, { regex: false, whole: false, ...o });
+    if (typeof r === "string") throw new Error(r);
+    return r;
+  };
+  test("plain by default, smart case, whole words, regex, and a bad regex says why", () => {
+    const text = "a.b axb A.B foo_a.b";
+    expect(findAll(text, re("a.b")).map((m) => m.from)).toEqual([0, 8, 16]);
+    expect(findAll(text, re("A.B")).map((m) => m.from)).toEqual([8]);
+    expect(findAll(text, re("A.B", { ignoreCase: true })).length).toBe(3);
+    expect(findAll(text, re("a.b", { regex: true })).length).toBe(4);
+    expect(findAll(text, re("a.b", { whole: true })).map((m) => m.from)).toEqual([0, 8]);
+    expect(typeof compilePattern("(", { regex: true, whole: false })).toBe("string");
+  });
+  test("findAll keeps within its range and skips empty matches", () => {
+    expect(findAll("aaa", re("x*", { regex: true }))).toEqual([]);
+    expect(findAll("cat cat cat", re("cat"), 1, 11).map((m) => m.from)).toEqual([4, 8]);
+    expect(findAll("cat cat cat", re("cat"), 0, 6).map((m) => m.from)).toEqual([0]);
+  });
+  test("replacements: literal unless regex; $& $1 $$ with it", () => {
+    const [m] = findAll("key=value", re("(\\w+)=(\\w+)", { regex: true }));
+    expect(expandReplacement("$2=$1 ($&) $$", m!, true)).toBe("value=key (key=value) $");
+    expect(expandReplacement("$2", m!, false)).toBe("$2");
+    const ms = findAll("a b a", re("a"));
+    expect(replaceMatches("a b a", ms, "xy", false)).toEqual({ text: "xy b xy", count: 2 });
+  });
+  test("vim's substitute: ranges, delimiters, flags, \\1 and & in the replacement", () => {
+    expect(parseSubstitute("s/old/new/")).toEqual({ range: "line", pattern: "old", replacement: "new", global: false, ignoreCase: false, confirm: false });
+    expect(parseSubstitute("%s/a/b/gic")).toMatchObject({ range: "all", global: true, ignoreCase: true, confirm: true });
+    expect(parseSubstitute("'<,'>s/a/b")).toMatchObject({ range: "selection", replacement: "b" });
+    expect(parseSubstitute("s#a/b#c#")).toMatchObject({ pattern: "a/b", replacement: "c" });
+    expect(parseSubstitute("s/a\\/b/c/")).toMatchObject({ pattern: "a/b" });
+    expect(parseSubstitute("s/(\\w+) (\\w+)/\\2 \\1 & \\& $5/")!.replacement).toBe("$2 $1 $& & $$5");
+    expect(parseSubstitute("s/a/b/x")).toBeNull(); // not a flag
+    expect(parseSubstitute("sort")).toBeNull();
+    expect(parseSubstitute("s//b/")).toBeNull();
   });
 });

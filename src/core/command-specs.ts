@@ -100,6 +100,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   // find
   { id: "find.open", title: "Find in note", cli: I, desc: "Searches this note; the cursor goes to matches" },
   { id: "find.replace", title: "Find and replace", cli: I, desc: "Find with a replace row under it: enter replaces one, alt+enter all, as one undo step" },
+  { id: "find.substitute", title: "Substitute: s/old/new/", cli: I, desc: "Vim's :s — on this line, % the note, '<,'> the selection; g all on a line, i ignore case, c confirm" },
   { id: "find.next", title: "Next match", cli: I, desc: "Moves to the next match after the cursor, wrapping at the end" },
   { id: "find.prev", title: "Previous match", cli: I, desc: "Moves to the previous match before the cursor, wrapping at the top" },
   { id: "find.word_next", title: "Find the word under the cursor", cli: I, desc: "Searches for the whole word under the cursor, forward (vim's *)" },

@@ -131,6 +131,8 @@ export interface View {
   goal: number;
   sel: Selection | null;
   visual: "char" | "line" | null;
+  /** The last selection's source lines, 1-based: `:'<,'>s` works on them. */
+  visualLines?: [number, number];
   /** Source-based positions, which survive re-layout (decision 3.5). */
   topAnchor: Anchor;
   curAnchor: CursorAnchor;
@@ -2157,11 +2159,13 @@ export class App {
     keepGroups?: boolean;
     alignKeysAcrossList?: boolean;
     anchor?: { x: number; y: number };
+    /** Already typed in its filter. */
+    input?: string;
   }): void {
     const o: ListOverlay = {
       kind: "list",
       title: opts.title,
-      input: "",
+      input: opts.input ?? "",
       filterable: opts.filterable ?? true,
       items: opts.items,
       source: opts.source,
@@ -2199,11 +2203,6 @@ export class App {
   private replaceFieldKey(o: PromptOverlay, view: View, key: string, typed: string | null): void {
     const r = o.replace!;
     switch (key) {
-      case "escape":
-      case "ctrl+c":
-      case "ctrl+g":
-        this.overlay = null;
-        return o.accept(o.text);
       case "enter":
         return R.replaceOne(this, o, view);
       case "alt+enter":
@@ -2465,6 +2464,12 @@ export class App {
   }
 
   private overlayKey(o: Overlay, key: string): void {
+    // Replacing: closing the rows keeps the search, the cursor and the edits (nothing to cancel).
+    if (o.kind === "prompt" && o.replace?.confirm && o.view) return R.confirmKey(this, o, o.view, key);
+    if (o.kind === "prompt" && o.replace && (key === "escape" || key === "ctrl+c" || key === "ctrl+g")) {
+      this.overlay = null;
+      return o.accept(o.text);
+    }
     if (key === "escape" || key === "ctrl+c" || key === "ctrl+g") return this.closeOverlay(true);
     const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
     if (o.kind === "prompt") {
@@ -2482,7 +2487,7 @@ export class App {
         return;
       }
       if (o.view && o.replace?.focus) return this.replaceFieldKey(o, o.view, key, typed);
-      if (o.view && o.replace && (key === "escape" || key === "enter")) {
+      if (o.view && o.replace && key === "enter") {
         // Closing the pair keeps the search (and what was replaced); it doesn't undo anything.
         this.overlay = null;
         return o.accept(o.text);
@@ -2922,7 +2927,7 @@ export class App {
         // findrep:<one|all>:<window>
         const [which] = arg.split(":");
         const o = this.overlay;
-        if (o?.kind !== "prompt" || !o.view || !o.replace) break;
+        if (o?.kind !== "prompt" || !o.view || !o.replace || o.replace.confirm) break;
         if (which === "all") R.replaceAll(this, o, o.view);
         else R.replaceOne(this, o, o.view);
         break;

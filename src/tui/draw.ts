@@ -598,7 +598,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     // Its toggles, clickable, bright while on: whole words, regex.
     const opts = view.findOpts ?? { regex: false, whole: false };
     const index = app.tab?.views.indexOf(view) ?? 0;
-    for (const [id, label, on] of [["regex", " .* ", opts.regex], ["whole", " ab ", opts.whole]] as const) {
+    // (Not for :s…/c, whose pattern is always a regex.)
+    for (const [id, label, on] of rep?.confirm ? [] : ([["regex", " .* ", opts.regex], ["whole", " ab ", opts.whole]] as const)) {
       rx -= stringWidth(label);
       button(app, c, rx, { y, h: 1 }, label, on ? "topbar_button_on" : "topbar_button", `findopt:${id}:${index}`, geo, bg);
       rx -= 1;
@@ -613,14 +614,21 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const ry = y + 1;
       const index = app.tab?.views.indexOf(view) ?? 0;
       let bx = body.x + body.w - 2;
-      for (const [id, label] of [["all", " all "], ["one", " replace "]] as const) {
-        bx -= stringWidth(label);
-        button(app, c, bx, { y: ry, h: 1 }, label, "topbar_button", `findrep:${id}:${index}`, geo, bg);
+      if (rep.confirm) {
+        // :s…/c asks at each match instead.
+        const ask = "replace? y n a q";
+        bx -= stringWidth(ask);
+        drawText(c, bx, ry, ask, { ...roleStyle(theme, "warn", bg), bg });
         bx -= 1;
-      }
+      } else
+        for (const [id, label] of [["all", " all "], ["one", " replace "]] as const) {
+          bx -= stringWidth(label);
+          button(app, c, bx, { y: ry, h: 1 }, label, "topbar_button", `findrep:${id}:${index}`, geo, bg);
+          bx -= 1;
+        }
       const qx = drawText(c, body.x + 1, ry, "⇄ ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
       const rw = drawText(c, body.x + 1 + qx, ry, truncate(rep.text, Math.max(1, bx - (body.x + 1 + qx) - 2)), { ...roleStyle(theme, "text", bg), bg });
-      if (rep.focus) drawText(c, body.x + 1 + qx + rw, ry, " ", roleStyle(theme, "cursor", bg));
+      if (rep.focus && !rep.confirm) drawText(c, body.x + 1 + qx + rw, ry, " ", roleStyle(theme, "cursor", bg));
       rows = 2;
     }
     drawText(c, body.x, y + rows, app.glyphs.hbar.repeat(body.w), roleStyle(theme, "border", page), body.w);

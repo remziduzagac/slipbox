@@ -276,6 +276,15 @@ config.
 | `:reindex` | reindex the vault |
 | `:config` | reload the configuration |
 
+**Substitute** is vim's, typed at the `:` prompt (`find.substitute`): `:s/old/new/` on the cursor's
+line, `:%s/old/new/` on the note, `:'<,'>s/old/new/` on the last selection's lines — pressing `:` on a
+selection types `'<,'>` for you. Without `g` only the first match on each line is replaced; `i`
+ignores case (otherwise smart case, as `/`); `c` asks at each match in the window's find and replace
+rows, `replace? y n a q` (`l` replaces this one and stops, `esc` stops too). The pattern is a
+JavaScript regex; any punctuation can delimit (`:s#a/b#c#`) and `\` escapes it. In the replacement
+`\1`–`\9` are groups, `&` the match, `\&` a literal `&`. A substitute is one undo step, confirmed or
+not, and works on the markdown: a rendered window switches to editing first.
+
 ## Editing
 
 Phase 3 (plan). The hand-offs (`space n e`, `space n s`) are under "Note, vault, app". Editing

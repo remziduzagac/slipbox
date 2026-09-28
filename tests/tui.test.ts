@@ -1406,8 +1406,9 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     await h.keys("alt+a");
     expect(v.buf.source).toBe("# R\n\ncow dog cow\n\n**cow** here\n");
     expect(h.frame().split("\n")[0]).toContain("replaced 2 matches"); // in the top bar, the rows still open
-    await h.keys("escape"); // closes the rows, keeps the edits
+    await h.keys("escape"); // closes the rows, keeps the edits and the search
     expect(h.app.overlay).toBeNull();
+    expect(v.find?.query).toBe("cat");
     await h.keys("escape", "u");
     expect(v.buf.source).toBe("# R\n\ncow dog cat\n\n**cat** here\n"); // all of them in one step
     // The buttons do the same, and regex replacements take groups.
@@ -1422,6 +1423,48 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     h.app.handleMouse({ type: "up", x: all.x + 1, y: all.y, button: 0 });
     expect(v.buf.source).toBe("# R\n\ncow dog cub\n\n**cub** here\n");
     await h.keys("escape");
+  });
+  test(":s, :%s and :'<,'>s from the command line; g, and c asking y n a q; one undo step each", async () => {
+    const root = makeVault();
+    const note = "one cat cat\n\ntwo cat\n\nthree cat cat\n";
+    writeFileSync(join(root, "s.md"), note);
+    const h = await harness({ root, open: "s.md", width: 100, height: 30 });
+    const v = h.app.view!;
+    const ex = (cmd: string) => h.keys(":", ...[...cmd], "enter");
+    await ex("s/cat/dog/"); // the cursor's line, its first match
+    expect(v.buf.source).toBe("one dog cat\n\ntwo cat\n\nthree cat cat\n");
+    expect(v.source).toBe(true); // on the markdown
+    await h.keys("u");
+    await ex("%s/(c)at/\\1ow/"); // the first on each line; \1 a group
+    expect(v.buf.source).toBe("one cow cat\n\ntwo cow\n\nthree cow cat\n");
+    expect(h.frame().split("\n")[0]).toContain("3 substitutions on 3 lines");
+    await h.keys("u");
+    expect(v.buf.source).toBe(note);
+    await ex("%s/CAT/x/gi");
+    expect(v.buf.source).toBe("one x x\n\ntwo x\n\nthree x x\n");
+    await h.keys("u");
+    // c: the find and replace rows ask at each match.
+    await ex("%s/cat/X/gc");
+    expect(h.frame()).toContain("replace? y n a q");
+    await h.keys("y", "n", "y");
+    expect(v.buf.source).toBe("one X cat\n\ntwo X\n\nthree cat cat\n");
+    await h.keys("a");
+    expect(h.app.overlay).toBeNull();
+    expect(v.buf.source).toBe("one X cat\n\ntwo X\n\nthree X X\n");
+    await h.keys("u");
+    expect(v.buf.source).toBe(note); // the whole confirm, one step
+    await ex("%s/cat/X/c");
+    await h.keys("y", "q");
+    expect(v.buf.source).toBe("one X cat\n\ntwo cat\n\nthree cat cat\n");
+    await h.keys("u");
+    // '<,'>: typed for you when : is pressed on a selection; only those lines.
+    h.app.moveCursor(v, { row: rowStarting(h, "two"), col: 0 });
+    await h.keys("shift+v", "j", "j", ":");
+    expect(h.app.overlay?.kind === "list" && h.app.overlay.input).toBe("'<,'>");
+    await h.keys(...[..."s/cat/Z/g"], "enter");
+    expect(v.buf.source).toBe("one cat cat\n\ntwo Z\n\nthree Z Z\n");
+    await ex("s/nothing/x/");
+    expect(h.frame().split("\n")[0]).toContain("not found: nothing");
   });
   test("keys are handled in order, one at a time: a fast j then . doesn't interleave", async () => {
     const root = makeVault();

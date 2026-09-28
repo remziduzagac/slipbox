@@ -8,6 +8,7 @@ import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-spe
 import type { Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import { slugify } from "../core/parse.ts";
+import { parseSubstitute } from "../core/replace.ts";
 import type { Anchor } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
@@ -291,6 +292,16 @@ function topKeys(keys: string[], variants: Set<string>, desc: string): { keys: s
  * one's description is in the footer.
  */
 function openPalette(a: App): void {
+  // From a selection: its lines are '<,'> (vim's marks), already typed, for :'<,'>s.
+  const v = a.view;
+  let input = "";
+  if (v?.sel) {
+    const lines = a.currentLayout(v).lines;
+    const x = lines[v.sel.anchor.row]?.src ?? 1;
+    const y = lines[v.cur.row]?.src ?? 1;
+    v.visualLines = [Math.min(x, y), Math.max(x, y)];
+    input = "'<,'>";
+  }
   const commands = inSpecOrder(a.registry.list().filter((c) => !c.hidden));
   const aliasOf = new Map<string, string[]>();
   for (const [al, spec] of Object.entries(a.aliases)) {
@@ -316,8 +327,11 @@ function openPalette(a: App): void {
     items: commandItems,
     footer: true,
     alignKeysAcrossList: true,
+    input,
     source: (input) => {
       if (!input.trim()) return browse;
+      // A substitute (vim's :s): one entry, run by enter.
+      if (parseSubstitute(input)) return [{ label: "Substitute", detail: input.trim(), keys: ["", ":s"], data: `find.substitute ${input.trim()}` }];
       const m = /^(\S+)\s(.*)$/.exec(input);
       const aliasSpec = m ? a.aliases[m[1]!] : undefined;
       if (aliasSpec) {
@@ -335,6 +349,11 @@ function openPalette(a: App): void {
       return ranked;
     },
     submit: (input) => {
+      if (parseSubstitute(input)) {
+        a.overlay = null;
+        void a.run(`find.substitute ${input.trim()}`).then(() => a.host.requestRender());
+        return true;
+      }
       // An exact alias (optionally with an argument) wins over the fuzzy match, unless another
       // entry was picked: moved to with the keys, or clicked (its row is first while unmoved).
       const m = /^(\S+)(?:\s+(.*))?$/.exec(input.trim());
@@ -981,6 +1000,11 @@ export function registerActions(app: App): void {
     "visual.change": (a) => visualOp(a, "c"),
     "visual.indent": (a) => visualOp(a, ">"),
     "visual.outdent": (a) => visualOp(a, "<"),
+    "find.substitute": (a, arg) =>
+      withView(a, (v) => {
+        if (!arg) return a.message("info", "type it on the command line: :s/old/new/ or :%s/old/new/g");
+        R.substitute(a, v, arg);
+      }),
     "edit.undo": (a) => withView(a, (v) => undoRedo(a, v, "undo")),
     "edit.redo": (a) => withView(a, (v) => undoRedo(a, v, "redo")),
     "note.save": (a) =>

@@ -6,6 +6,8 @@
 export interface PatternOptions {
   regex: boolean;
   whole: boolean;
+  /** Case-insensitive whatever the query (`:s`'s `i` flag); otherwise smart case. */
+  ignoreCase?: boolean;
 }
 
 /** The query as a global regex, or why it isn't one (an invalid regex). */
@@ -13,7 +15,7 @@ export function compilePattern(query: string, opts: PatternOptions): RegExp | st
   let source = opts.regex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (opts.whole) source = `(?<![\\p{L}\\p{N}_])(?:${source})(?![\\p{L}\\p{N}_])`;
   try {
-    return new RegExp(source, /\p{Lu}/u.test(query) ? "gu" : "giu");
+    return new RegExp(source, !opts.ignoreCase && /\p{Lu}/u.test(query) ? "gu" : "giu");
   } catch (err) {
     return (err as Error).message.replace(/^Invalid regular expression: /, "");
   }
