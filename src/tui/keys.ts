@@ -74,7 +74,6 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "ctrl+w v": "window.split_side",
   "ctrl+w |": "window.split_side",
   "ctrl+w s": "window.split_stacked",
-  "ctrl+w -": "window.split_stacked",
   "ctrl+w w": "window.other",
   "ctrl+w x": "window.swap",
   "ctrl+w q": "window.close",
@@ -158,6 +157,15 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader w r": "window.resize_mode",
   "ctrl+w =": "window.equalize",
   "leader w =": "window.equalize",
+  // One step each, as in vim, then resize mode so the key repeats on its own.
+  "ctrl+w >": "window.wider",
+  "ctrl+w <": "window.narrower",
+  "ctrl+w +": "window.taller",
+  "ctrl+w -": "window.shorter",
+  "leader w >": "window.wider",
+  "leader w <": "window.narrower",
+  "leader w +": "window.taller",
+  "leader w -": "window.shorter",
 };
 
 for (const prefix of ["ctrl+w", "leader w"]) {
@@ -232,6 +240,10 @@ export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
   up: "shorter",
   j: "taller",
   down: "taller",
+  ">": "wider",
+  "<": "narrower",
+  "+": "taller",
+  "-": "shorter",
   "=": "equalize",
   escape: "leave",
   enter: "leave",

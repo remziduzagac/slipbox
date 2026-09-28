@@ -605,6 +605,16 @@ export function registerActions(app: App): void {
       a.resizeMode = true;
     },
     "window.equalize": (a) => a.resizeAction("equalize"),
+    // One step, then resize mode: the same key (or h j k l) goes on resizing without the chord.
+    ...Object.fromEntries(
+      (["wider", "narrower", "taller", "shorter"] as const).map((step) => [
+        `window.${step}`,
+        (a: App) => {
+          a.resizeAction(step);
+          a.resizeMode = true;
+        },
+      ]),
+    ),
     "window.swap": (a) => {
       const t = a.tab;
       if (!t || t.views.length < 2) return a.message("info", "only one window");

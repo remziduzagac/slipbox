@@ -654,6 +654,29 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     await h.keys("escape");
     expect(h.app.resizeMode).toBe(false);
   });
+  test("ctrl+w > < + - resize one step, then stay in the mode so the key repeats", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, height: 40 });
+    await h.keys("ctrl+w", "v", "ctrl+w", "h");
+    const t = h.app.tab!;
+    await h.keys("ctrl+w", ">");
+    expect(h.app.resizeMode).toBe(true);
+    const once = t.ratio;
+    expect(once).toBeGreaterThan(0.5);
+    await h.keys(">", ">");
+    expect(t.ratio).toBeGreaterThan(once);
+    await h.keys("<", "<", "<");
+    expect(t.ratio).toBeCloseTo(0.5, 5);
+    await h.keys("escape", "ctrl+w", "o", "ctrl+w", "s");
+    expect(t.views.length).toBe(2); // ctrl+w - no longer splits; ctrl+w s does
+    await h.keys("ctrl+w", "k", "ctrl+w", "+", "+");
+    const taller = t.ratio;
+    expect(taller).toBeGreaterThan(0.5);
+    await h.keys("-", "escape", "space", "w", "-");
+    expect(t.ratio).toBeLessThan(taller);
+    await h.keys("escape", "ctrl+w", "=");
+    expect(t.ratio).toBe(0.5);
+    expect(t.views.length).toBe(2);
+  });
   test("any other key leaves the mode and does its normal job", async () => {
     const h = await harness({ open: "samples/large-document.md" });
     await h.keys("space", "w", "r");

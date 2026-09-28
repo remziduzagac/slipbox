@@ -126,24 +126,29 @@ One split per tab, side by side or stacked.
 | Action | Direct keys | Leader |
 | --- | --- | --- |
 | split side by side | `ctrl+w v`, `ctrl+w \|` | `space w v` |
-| split stacked | `ctrl+w s`, `ctrl+w -` | `space w s` |
+| split stacked | `ctrl+w s` | `space w s` |
 | focus left / down / up / right | `ctrl+w h` `j` `k` `l`, `ctrl+w` + arrows | `space w` + same |
 | other window | `ctrl+w w` | `space w w` |
 | move window left / down / up / right | `ctrl+w shift+h` `j` `k` `l`, `ctrl+w shift+`arrows | `space w` + same |
 | swap the two windows | `ctrl+w x` | `space w x` |
 | close this window | `ctrl+w q` | `space w q` |
 | keep only this window | `ctrl+w o` | `space w o` |
+| wider / narrower, one step (then resize mode) | `ctrl+w >` / `ctrl+w <` | `space w >` / `<` |
+| taller / shorter, one step (then resize mode) | `ctrl+w +` / `ctrl+w -` | `space w +` / `-` |
+| equal sizes | `ctrl+w =` | `space w =` |
 
 ### Resize mode
 
 One chord enters a mode; its keys repeat until you leave, so `l l l` widens step by step. The
-which-key popup lists the keys while the mode is on, and the status chip reads `RESIZE`.
+which-key popup lists the keys while the mode is on, and the status chip reads `RESIZE`. The vim
+keys `ctrl+w >` `<` `+` `-` resize one step and then enter the mode, so `ctrl+w > > >` keeps
+widening without the chord.
 
 | Action | Keys |
 | --- | --- |
-| enter resize mode | `ctrl+alt+w`, `space w r` |
-| narrower / wider (2 columns a step) | `h` / `l`, `left` / `right` |
-| shorter / taller (a stacked split) | `k` / `j`, `up` / `down` |
+| enter resize mode | `ctrl+alt+w`, `space w r`; or resize one step with `ctrl+w >` `<` `+` `-` |
+| narrower / wider (2 columns a step) | `h` / `l`, `left` / `right`, `<` / `>` |
+| shorter / taller (a stacked split) | `k` / `j`, `up` / `down`, `-` / `+` |
 | equal sizes | `=` (also `ctrl+w =`, `space w =` outside the mode) |
 | leave | `esc`, `enter`, `q`; any other key leaves and does its normal job |
 
