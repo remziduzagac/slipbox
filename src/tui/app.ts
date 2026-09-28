@@ -249,7 +249,7 @@ export interface PromptOverlay {
   cancel?: () => void;
   /** Find's prompt: typed in that window's own find row, not on the bottom line. */
   view?: View;
-  /** Find's replace field, when open (space f r, tab, ctrl+r). */
+  /** Find's replace field, when open (ctrl+r, space f r; tab from the find field). */
   replace?: ReplaceState;
 }
 

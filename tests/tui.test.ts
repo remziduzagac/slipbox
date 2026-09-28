@@ -1411,8 +1411,8 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     expect(v.find?.query).toBe("cat");
     await h.keys("escape", "u");
     expect(v.buf.source).toBe("# R\n\ncow dog cat\n\n**cat** here\n"); // all of them in one step
-    // The buttons do the same, and regex replacements take groups.
-    await h.keys("space", "f", "r");
+    // ctrl+r opens the same rows; the buttons do what the keys do; regex replacements take groups.
+    await h.keys("ctrl+r");
     await h.keys("alt+r");
     await type("(c)at");
     await h.keys("ctrl+r");
