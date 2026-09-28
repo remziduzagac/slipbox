@@ -250,10 +250,11 @@ keys.
   note name and line, the current one marked `here` and selected when the view opens. `enter` or a
   click jumps there, the places before it becoming back and those after it forward.
 - **Filter (`/`, both left views):** a `› text` row at the top of the list; typing narrows the
-  rows (`/` on a view that kept its filter resumes it). The explorer keeps the tree: the notes whose path matches, under their folders (all
-  unfolded), the matched letters highlighted, the selection on the first note. The history keeps
-  the entries whose path matches. The arrows and `ctrl+n` / `ctrl+p` move, `enter` or a click opens
-  (the filter clears), `esc` clears it. `ctrl+p` stays the flat quick-open across the vault.
+  rows (`/` on a view that kept its filter resumes it). The explorer keeps the tree: the notes whose
+  path matches, under their folders (all unfolded), the matched letters highlighted, the selection
+  on the first note. The history keeps the entries whose path matches. The arrows and `ctrl+n` /
+  `ctrl+p` move, `enter` or a click opens (the filter clears), `esc` clears it. `ctrl+p` stays the
+  flat quick-open across the vault.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 
