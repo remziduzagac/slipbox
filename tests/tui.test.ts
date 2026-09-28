@@ -1414,6 +1414,21 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
   });
 });
 
+describe("block backgrounds", () => {
+  test("a code block's text sits on the block's background, not the page's; the cursor band covers both", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), "text\n\n```\ncode here\n```\n\nmore\n");
+    const h = await harness({ root, open: "p.md", width: 80, height: 20 });
+    const pane = h.app.geometry!.panes[0]!;
+    const v = h.app.view!;
+    const row = h.app.currentLayout(v).lines.findIndex((l) => l.spans.map((x) => x.text).join("").includes("code here"));
+    const y = pane.y + row - v.top;
+    expect(h.canvas().styles[y]![pane.textX + 3]!.bg).toBe(h.app.theme.roles.code_block.bg!);
+    h.app.moveCursor(v, { row, col: 0 });
+    expect(h.canvas().styles[y]![pane.textX + 3]!.bg).toBe(h.app.theme.roles.cursor_line.bg!);
+  });
+});
+
 describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => {
   // Twenty short paragraphs: blocks of two lines (the paragraph and the blank after it).
   const note = `# Title\n\n${Array.from({ length: 20 }, (_, i) => `Para ${i + 1} with **bold**.`).join("\n\n")}\n`;

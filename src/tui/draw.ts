@@ -618,7 +618,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const to = sel.line || row !== sel.range[1].row ? 1e9 : sel.range[1].col + 1;
       marks.push({ from, to, role: "selection" });
     }
-    drawLine(c, textX, y, line, textW, theme, band ?? page, underCursor, marks, view.left);
+    drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
     if (isCursorRow && view.cur.col >= view.left && view.cur.col < view.left + textW) drawCursor(c, textX - view.left, y, line, view.cur.col, theme, view.left + textW);
   }
 
@@ -684,7 +684,7 @@ function drawCursor(c: Canvas, x: number, y: number, line: Line, col: number, th
  * Draw one layout row from column `left` (wrapping off, scrolled sideways), `maxW` columns of it.
  * `marks` override styles by column range; the link under the cursor too.
  */
-function drawLine(c: Canvas, x: number, y: number, line: Line, maxW: number, theme: Theme, rowBg: Color | null, focusLink: number, marks: { from: number; to: number; role: Role }[], left = 0): void {
+function drawLine(c: Canvas, x: number, y: number, line: Line, maxW: number, theme: Theme, band: Color | null, page: Color | null, focusLink: number, marks: { from: number; to: number; role: Role }[], left = 0): void {
   let col = 0;
   const end = left + maxW;
   const fillBg = line.fill ? theme.roles[line.fill].bg : undefined;
@@ -692,8 +692,10 @@ function drawLine(c: Canvas, x: number, y: number, line: Line, maxW: number, the
     if (col >= end) break;
     const focused = focusLink >= 0 && span.link === focusLink;
     const st = spanStyle(theme, span, line, focused ? "link_focus" : undefined);
-    // The cursor-row band replaces the page and block fill, never a span's own background.
-    if (!st.bg || (rowBg && st.bg === fillBg)) st.bg = rowBg;
+    // The cursor-row band replaces the page and the block's fill, never a span's own background;
+    // off the cursor row, text keeps its block's fill (a code block's text on its background).
+    if (band && (!st.bg || st.bg === fillBg)) st.bg = band;
+    else if (!st.bg) st.bg = page;
     if (!marks.length && !left) {
       const w = drawText(c, x + col, y, span.text, st, maxW - col);
       if (w < stringWidth(span.text)) return; // cut at the edge (a wide character that didn't fit)
