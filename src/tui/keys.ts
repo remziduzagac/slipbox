@@ -205,12 +205,33 @@ for (let i = 1; i <= 9; i++) {
  *  ticking a task, as in vim). */
 export const DEFAULT_SOURCE_KEYS: Record<string, string> = {
   x: "edit.delete_char",
+  d: "edit.op_delete",
+  c: "edit.op_change",
+  y: "edit.op_yank",
+  ">": "edit.op_indent",
+  "<": "edit.op_outdent",
+  "shift+d": "edit.delete_to_end",
+  "shift+c": "edit.change_to_end",
+  s: "edit.substitute",
+  "shift+s": "edit.substitute_line",
+  r: "edit.replace_char",
+  "shift+j": "edit.join",
+  p: "edit.paste_after",
+  "shift+p": "edit.paste_before",
+  "~": "edit.toggle_case",
+  ".": "edit.repeat",
 };
 
 /** Visual mode: these win over the normal keymap; movements extend the selection by themselves. */
 export const DEFAULT_VISUAL_KEYS: Record<string, string> = {
   o: "visual.swap",
   y: "visual.yank",
+  // Source mode: edit the selection.
+  d: "visual.delete",
+  x: "visual.delete",
+  c: "visual.change",
+  ">": "visual.indent",
+  "<": "visual.outdent",
   escape: "visual.exit",
   v: "visual.char",
   "shift+v": "visual.line",

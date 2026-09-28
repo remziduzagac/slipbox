@@ -15,15 +15,16 @@ import type { App, ListItem, Loc, UiState, View } from "./app.ts";
 import { computeFind } from "./app.ts";
 import * as C from "./cursor.ts";
 import * as E from "./editing.ts";
+import * as V from "./vim.ts";
 import { rank } from "./fuzzy.ts";
 import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, HISTORY_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, RESIZE_ACTIONS, spellKey } from "./keys.ts";
 
 type Run = Command<App>["run"];
 
-function withView(a: App, fn: (v: View) => void): void {
+function withView<T>(a: App, fn: (v: View) => T): T | void {
   const v = a.view;
   if (!v) return a.message("info", "no note open");
-  fn(v);
+  return fn(v); // an async command's promise goes back to the dispatcher, which awaits it
 }
 
 /** A cursor command: compute the target from the layout, then move (extending when asked). */
@@ -37,11 +38,82 @@ function motion(target: (a: App, v: View) => C.Pos, opts: { keepGoal?: boolean }
 /** u / ctrl+r: the cursor goes back to where the change was. */
 function undoRedo(a: App, v: View, which: "undo" | "redo"): void {
   if (v.insert) E.stopInsert(a, v);
+  a.vim.undoing = true; // not a change for `.` to repeat
   const at = which === "undo" ? v.buf.undo() : v.buf.redo();
   if (at === null) return a.message("info", which === "undo" ? "nothing to undo" : "nothing to redo");
   for (const w of a.allViews()) if (w.buf === v.buf) w.layoutKey = "";
   if (v.source) E.placeAt(a, v, at);
   a.message("info", v.buf.dirty ? which === "undo" ? "undone" : "redone" : `${which === "undo" ? "undone" : "redone"} — as saved`);
+}
+
+const noRange: V.Range = { from: 0, to: 0, linewise: false };
+
+/** An editing command: in a source window (switching a rendered one first), on an editable note. */
+function sourceEdit(a: App, run: (v: View) => void | Promise<void>, edits = true): Promise<void> | void {
+  return withView(a, (v) => {
+    const why = E.cannotEdit(v);
+    if (edits && why) return a.message("warn", `${why} — not editing`);
+    if (!v.source) {
+      a.setSource(v, true);
+      a.message("info", "source — editing the markdown");
+    }
+    return run(v);
+  });
+}
+
+/** `n` characters from the cursor, on its line; null on an empty line or at its end. */
+function charsRange(a: App, v: View, n: number): V.Range | null {
+  const at = E.offsetOf(a, v);
+  const end = E.lineEnd(v, at);
+  if (at >= end) return null;
+  let to = at;
+  for (let k = 0; k < n && to < end; k++) to = E.nextBoundary(v.buf.source, to);
+  return { from: at, to: Math.min(to, end), linewise: false };
+}
+
+/** D / C: to the end of the line (with a count, of the line count-1 below). */
+function toLineEnd(a: App, v: View, n: number): V.Range {
+  const at = E.offsetOf(a, v);
+  const last = Math.min(E.lineOf(v, at) + n - 1, v.buf.lineStarts().length);
+  const end = (v.buf.lineStarts()[last - 1] ?? 0) + E.lineText(v, last).length;
+  return { from: at, to: Math.max(at, end), linewise: false };
+}
+
+/** J: `n` lines into one, each break and the next line's indentation becoming a space. */
+function joinLines(a: App, v: View, n: number): void {
+  const buf = v.buf;
+  const first = E.lineOf(v, E.offsetOf(a, v));
+  const lines = buf.lineStarts().length - (buf.source.endsWith("\n") ? 1 : 0);
+  if (first >= lines) return;
+  buf.beginStep(E.offsetOf(a, v));
+  let at = 0;
+  for (let k = 1; k < n && first < lines - (k - 1); k++) {
+    const end = (buf.lineStarts()[first - 1] ?? 0) + E.lineText(v, first).length;
+    const next = buf.lineStarts()[first];
+    if (next === undefined) break;
+    const lead = /^\s*/.exec(E.lineText(v, first + 1))![0].length;
+    const sep = E.lineText(v, first).endsWith(" ") || !E.lineText(v, first + 1).trim() ? "" : " ";
+    buf.edit(end, next + lead - end, sep);
+    at = end;
+  }
+  buf.endStep(at);
+  E.placeAt(a, v, at);
+}
+
+/** d / c / > / < on a visual selection (char or line), in source mode. */
+function visualOp(a: App, op: "d" | "c" | ">" | "<"): void {
+  withView(a, (v) => {
+    if (!v.source) return a.message("info", "editing is in source mode — space n v");
+    const why = E.cannotEdit(v);
+    if (why) return a.message("warn", `${why} — not editing`);
+    const [s, e] = C.ordered(v.sel?.anchor ?? v.cur, v.cur);
+    const line = v.visual === "line";
+    Object.assign(v, { visual: null, sel: null });
+    const from = E.offsetAtPos(a, v, s);
+    const to = E.offsetAtPos(a, v, e);
+    const r = line ? V.linesRange(v, E.lineOf(v, from), E.lineOf(v, to)) : { from, to: Math.min(E.nextBoundary(v.buf.source, to), Math.max(to, E.lineEnd(v, to))), linewise: false };
+    V.apply(a, v, op, r);
+  });
 }
 
 function lay(a: App, v: View) {
@@ -526,9 +598,14 @@ export function registerActions(app: App): void {
       withView(a, (v) => {
         const text = a.selectionText(v);
         if (text) a.copy(text);
+        // In source mode the text is the markdown itself: it's what p puts back, too.
+        if (text && v.source) a.vim.register = { text: v.visual === "line" ? `${text}\n` : text, linewise: v.visual === "line" };
         Object.assign(v, { visual: null, sel: null });
       }),
-    "visual.exit": (a) => withView(a, (v) => Object.assign(v, { visual: null, sel: null })),
+    "visual.exit": (a) =>
+      withView(a, (v) => {
+        Object.assign(v, { visual: null, sel: null });
+      }),
     "app.escape": (a) => {
       const v = a.view;
       if (!v) return;
@@ -795,17 +872,49 @@ export function registerActions(app: App): void {
         v.buf.edit(at, 0, indent + v.buf.eol);
         E.placeAt(a, v, at + indent.length, true);
       }),
-    "edit.delete_char": (a) =>
-      withView(a, (v) => {
-        const why = E.cannotEdit(v);
-        if (why) return a.message("warn", `${why} — not editing`);
-        if (!v.source) return;
-        const at = E.offsetOf(a, v);
-        // Only within the line: x on a line's end (or an empty line) does nothing, as in vim.
-        if (at >= E.lineEnd(v, at)) return;
-        v.buf.edit(at, E.nextBoundary(v.buf.source, at) - at, "");
-        E.placeAt(a, v, Math.min(at, Math.max(E.lineStart(v, at), E.lineEnd(v, at) - 1)));
+    "edit.delete_char": (a) => sourceEdit(a, (v) => V.apply(a, v, "d", charsRange(a, v, V.takeCount(a)) ?? noRange)),
+    // Operators wait for a motion or a text object (vim.ts reads what follows).
+    "edit.op_delete": (a) => sourceEdit(a, () => V.startOperator(a, "d")),
+    "edit.op_change": (a) => sourceEdit(a, () => V.startOperator(a, "c")),
+    "edit.op_yank": (a) => sourceEdit(a, () => V.startOperator(a, "y"), false),
+    "edit.op_indent": (a) => sourceEdit(a, () => V.startOperator(a, ">")),
+    "edit.op_outdent": (a) => sourceEdit(a, () => V.startOperator(a, "<")),
+    "edit.delete_to_end": (a) => sourceEdit(a, (v) => V.apply(a, v, "d", toLineEnd(a, v, V.takeCount(a)))),
+    "edit.change_to_end": (a) => sourceEdit(a, (v) => V.apply(a, v, "c", toLineEnd(a, v, V.takeCount(a)))),
+    "edit.substitute": (a) => sourceEdit(a, (v) => V.apply(a, v, "c", charsRange(a, v, V.takeCount(a)) ?? { ...noRange, from: E.offsetOf(a, v), to: E.offsetOf(a, v) })),
+    "edit.substitute_line": (a) =>
+      sourceEdit(a, (v) => {
+        const first = E.lineOf(v, E.offsetOf(a, v));
+        V.apply(a, v, "c", V.linesRange(v, first, first + V.takeCount(a) - 1));
       }),
+    "edit.replace_char": (a) =>
+      sourceEdit(a, (v) => {
+        const n = V.takeCount(a);
+        a.vim.awaitChar = (ch) => {
+          const r = charsRange(a, v, n);
+          if (!r || [...v.buf.source.slice(r.from, r.to)].length < n) return;
+          v.buf.edit(r.from, r.to - r.from, ch.repeat(n), r.from);
+          E.placeAt(a, v, r.from + ch.length * (n - 1));
+        };
+      }),
+    "edit.join": (a) => sourceEdit(a, (v) => joinLines(a, v, Math.max(2, V.takeCount(a)))),
+    "edit.paste_after": (a) => sourceEdit(a, (v) => V.put(a, v, true)),
+    "edit.paste_before": (a) => sourceEdit(a, (v) => V.put(a, v, false)),
+    "edit.toggle_case": (a) =>
+      sourceEdit(a, (v) => {
+        const r = charsRange(a, v, V.takeCount(a));
+        if (!r) return;
+        const t = v.buf.source.slice(r.from, r.to);
+        const flipped = [...t].map((c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase())).join("");
+        if (flipped.length === t.length) v.buf.edit(r.from, t.length, flipped, r.from);
+        E.placeAt(a, v, Math.min(r.to, Math.max(r.from, E.lineEnd(v, r.from) - 1)));
+      }),
+    "edit.repeat": (a) => sourceEdit(a, () => V.repeat(a)),
+    // Visual mode's operators, on the selection (source mode).
+    "visual.delete": (a) => visualOp(a, "d"),
+    "visual.change": (a) => visualOp(a, "c"),
+    "visual.indent": (a) => visualOp(a, ">"),
+    "visual.outdent": (a) => visualOp(a, "<"),
     "edit.undo": (a) => withView(a, (v) => undoRedo(a, v, "undo")),
     "edit.redo": (a) => withView(a, (v) => undoRedo(a, v, "redo")),
     "note.save": (a) =>

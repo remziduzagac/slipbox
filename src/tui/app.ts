@@ -15,6 +15,7 @@ import { WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, stopInsert } from "./editing.ts";
+import { newVimState, vimKey } from "./vim.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
 import { appendScratch, scratchLocation } from "../core/capture.ts";
@@ -333,6 +334,8 @@ export class App {
   activeTab = 0;
   region: Region = "content";
   sidebar: SidePaneState;
+  /** Source mode's vim state: counts, a pending operator, the register, the last change. */
+  vim = newVimState();
   /** The left panel's view; the rail's buttons pick it. */
   leftView: LeftView = "explorer";
   /** Where each left view was when another took the panel: restored when it comes back. */
@@ -1834,7 +1837,25 @@ export class App {
     if ((this.region === "sidebar" && !this.sidebarShown) || (this.region === "outline" && !this.outlineShown)) this.region = "content";
   }
 
-  async handleKey(key: string): Promise<void> {
+  /**
+   * A key from the terminal. Keys are handled one at a time, in order: a key arriving while
+   * another is still being handled (a fast typist, a paste, a command that awaits) waits its turn.
+   */
+  handleKey(key: string): Promise<void> {
+    const start = () => {
+      this.keysInFlight++;
+      return this.processKey(key).finally(() => this.keysInFlight--);
+    };
+    // Nothing in flight: start now (a click's key acts at once); else after the ones before it.
+    this.keyQueue = this.keysInFlight === 0 ? start() : this.keyQueue.then(start);
+    return this.keyQueue;
+  }
+
+  private keyQueue: Promise<void> = Promise.resolve();
+  private keysInFlight = 0;
+
+  /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. */
+  async processKey(key: string): Promise<void> {
     this.fixRegion();
     try {
       await this.dispatchKey(key);
@@ -1929,6 +1950,13 @@ export class App {
       if (key === "ctrl+s") return void this.run("note.save");
       return insertKey(this, iv, key);
     }
+    // Source mode's normal mode: counts, operators and `.` around the keymaps (vim.ts).
+    if (this.region === "content" && iv?.source && !iv.visual && !this.resizeMode) return vimKey(this, iv, key, () => this.dispatchMapped(key));
+    return this.dispatchMapped(key);
+  }
+
+  /** A key through the keymaps: resize mode's, then pending sequences, then the bindings. */
+  private async dispatchMapped(key: string): Promise<void> {
     if (this.resizeMode && !this.pending.length) {
       const action = this.resizeKeys.lookup(key);
       if (action) return this.resizeAction(action);

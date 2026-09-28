@@ -499,6 +499,15 @@ change is `NoteBuffer.edit`, one undo step each, except that an insert session (
 is one step. The cursor is a place in the text found through the source layout's `srcMap`
 (`editing.ts`), so tabs, wide characters and wrapped rows edit exactly where they show.
 
+**Normal mode** in source is vim-shaped (`vim.ts`): counts, operators (`d` `c` `y` `>` `<`) that
+wait for a motion or a text object, a register, and `.`. Each operator and edit is a named command
+in `[keys.source]`; what follows an operator is read the way which-key reads a prefix: a motion is
+any cursor command the keymap resolves (run with the cursor put back after, its range taken as
+text offsets), a text object is found in the text itself. `.` replays the keys of the last change
+(an insert session included), so anything that changed the text repeats exactly. Keys are handled
+one at a time, in order (`App.handleKey` queues them), so a burst of typed keys or a paste never
+interleaves with a command still running; `.`'s own replay runs inside its turn.
+
 A changed note is **unsaved** until `:w` / `ctrl+s`: `• unsaved` by its path in the status line,
 `•` on its tab; undoing back to the saved text makes it clean again. Saving goes through
 `writeBuffer` (atomic, inside the vault) and keeps the file's BOM and line endings — a CRLF file

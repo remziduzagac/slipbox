@@ -9,12 +9,17 @@ import { cells } from "./cursor.ts";
 
 /** The cursor's place in the text (a UTF-16 offset into `source`). Source mode only. */
 export function offsetOf(app: App, view: View): number {
+  return offsetAtPos(app, view, view.cur);
+}
+
+/** The text offset of a layout position in a source-mode view. */
+export function offsetAtPos(app: App, view: View, pos: { row: number; col: number }): number {
   const layout = app.currentLayout(view);
-  const line = layout.lines[view.cur.row];
+  const line = layout.lines[pos.row];
   const starts = view.buf.lineStarts();
   if (!line?.srcMap) return 0;
   const cs = cells(line);
-  const i = cs.findIndex((c) => c.x + c.w > view.cur.col);
+  const i = cs.findIndex((c) => c.x + c.w > pos.col);
   const within = i < 0 ? line.srcMap.end : line.srcMap.cells[i]!;
   return Math.min(view.buf.source.length, (starts[line.src - 1] ?? 0) + within);
 }

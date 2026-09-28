@@ -967,8 +967,12 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   c.fill(0, band.y, c.width, band.h, st.bg);
   const y = mid(band);
   const view = app.view;
+  const vim = app.vim;
   const chip = app.pending.length
     ? ` ${app.pending.map((k) => prettyKey(k, app.leader)).join(" ")} `
+    : vim.op || vim.count || vim.awaitChar
+      ? // An operator (or a count, or r) waiting: what's been typed so far, as in vim's showcmd.
+        ` ${vim.op ? `${vim.op.count > 1 ? vim.op.count : ""}${vim.op.op}${vim.count}${vim.op.object ?? ""}${vim.op.keys.join("")}` : vim.awaitChar ? "r" : vim.count} `
     : app.resizeMode
       ? " RESIZE "
     : view?.visual === "char"

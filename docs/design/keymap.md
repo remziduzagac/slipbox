@@ -289,6 +289,29 @@ source first.
 | save over a file changed on disk / reload it, dropping changes | `:w!` / `:e!` |
 | save everything and quit / quit without saving | `:wq`, `:x` / `:q!` |
 
+**Normal mode in source** is vim-shaped (`[keys.source]`; these keys do nothing in the render):
+
+| Action | Keys |
+| --- | --- |
+| delete / change / yank what a motion or text object covers | `d` / `c` / `y` + motion |
+| indent / outdent the lines it covers (two spaces) | `>` / `<` + motion |
+| … whole lines | `dd` `cc` `yy` `>>` `<<` |
+| to the line's end: delete / change | `shift+d` / `shift+c` |
+| substitute the character / the line | `s` / `shift+s` |
+| replace the character with the next one typed | `r` |
+| join the line below / toggle case | `shift+j` / `~` |
+| put after / before (a line register: under / over the line) | `p` / `shift+p` |
+| repeat the last change | `.` |
+| in visual mode: delete, change, indent, outdent the selection | `d` `x`, `c`, `>`, `<` |
+
+Motions are the reading keys (`w` `b` `e` `0` `^` `$` `j` `k` `g g` `shift+g` `{` `}`…); `j`, `k`,
+`g g` and `shift+g` take whole lines, `e` and `$` include the character they land on, `cw` changes to
+the word's end, and `dw` stops at the line's end. Text objects follow `i` (inside) or `a` (around):
+`w` `W` a word, `"` `'` `` ` `` quotes on the line, `(` `b` `[` `{` `B` `<` brackets (nested, across
+lines), `p` a paragraph. A count goes before the command or the motion (`3dd`, `d2w`, `5j`). The
+status chip shows what's pending (`2d`, `di`). The register holds the last text deleted, changed or
+yanked; a yank also goes to the clipboard.
+
 Quitting (`ctrl+q`, `:q`) with unsaved changes is refused, naming the notes. In **insert mode**
 (the chip reads `INSERT`) keys are text, except: `esc` (or `ctrl+c`) back to normal, the cursor
 stepping back onto a character; `enter` a new line with the same indentation, continuing a list

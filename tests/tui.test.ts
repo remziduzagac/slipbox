@@ -1154,6 +1154,137 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
   });
 });
 
+describe("vim-shaped normal mode in source (step 3c)", () => {
+  const setup = async (text: string) => {
+    const root = makeVault();
+    writeFileSync(join(root, "v.md"), text);
+    const h = await harness({ root, open: "v.md", width: 100, height: 30 });
+    await h.keys("space", "n", "v");
+    const v = h.app.view!;
+    const keys = async (...ks: string[]) => {
+      for (const k of ks) {
+        if (k.length > 1 && !k.includes("+") && !["escape", "enter", "backspace", "space"].includes(k)) {
+          for (const ch of k) await h.keys(ch === " " ? "space" : /[A-Z]/.test(ch) ? `shift+${ch.toLowerCase()}` : ch);
+        } else await h.keys(k);
+      }
+    };
+    const at = (row: number, col: number) => h.app.moveCursor(v, { row, col });
+    return { h, v, keys, at, text: () => v.buf.source };
+  };
+  test("d with motions, doubled, counts; u undoes each", async () => {
+    const { keys, at, text } = await setup("one two three four\nline two\nline three\n");
+    at(0, 0);
+    await keys("dw");
+    expect(text()).toBe("two three four\nline two\nline three\n");
+    await keys("d2w");
+    expect(text()).toBe("four\nline two\nline three\n");
+    await keys("d$");
+    expect(text()).toBe("\nline two\nline three\n");
+    await keys("u", "u", "u");
+    expect(text()).toBe("one two three four\nline two\nline three\n");
+    await keys("dd");
+    expect(text()).toBe("line two\nline three\n");
+    await keys("u", "2dd");
+    expect(text()).toBe("line three\n");
+    await keys("u", "dj");
+    expect(text()).toBe("line three\n");
+    await keys("u", "j", "dG");
+    expect(text()).toBe("one two three four\n");
+  });
+  test("text objects: ciw, di\", da(, dap; c types in place, one undo step with its typing", async () => {
+    const { keys, at, text } = await setup('say "hello there" (a (b) c) now\n\npara one\npara two\n\nend\n');
+    at(0, 7); // inside "hello"
+    await keys("ciw", "HI", "escape");
+    expect(text().split("\n")[0]).toBe('say "HI there" (a (b) c) now');
+    await keys("u");
+    expect(text().split("\n")[0]).toBe('say "hello there" (a (b) c) now');
+    await keys('di"');
+    expect(text().split("\n")[0]).toBe('say "" (a (b) c) now');
+    await keys("u");
+    at(0, 22); // on the b: the inner parentheses
+    await keys("da(");
+    expect(text().split("\n")[0]).toBe('say "hello there" (a  c) now');
+    at(0, 19); // on the a: the outer ones
+    await keys("da(");
+    expect(text().split("\n")[0]).toBe('say "hello there"  now');
+    at(2, 0);
+    await keys("dap");
+    expect(text()).toBe('say "hello there"  now\n\nend\n');
+  });
+  test("yank and put: yy p puts a line under; yw P puts before; x and p swap characters", async () => {
+    const { keys, at, text } = await setup("alpha beta\ngamma\n");
+    at(0, 0);
+    await keys("yy", "j", "p");
+    expect(text()).toBe("alpha beta\ngamma\nalpha beta\n");
+    at(1, 0);
+    await keys("yw", "P");
+    expect(text()).toBe("alpha beta\ngammagamma\nalpha beta\n");
+    at(0, 0);
+    await keys("x", "p");
+    expect(text().split("\n")[0]).toBe("lapha beta");
+  });
+  test("keys are handled in order, one at a time: a fast j then . doesn't interleave", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "v.md"), "# Vim\n\nthe quick brown fox\njumps over the lazy dog\n");
+    const h = await harness({ root, open: "v.md", width: 100, height: 30 });
+    await h.keys("space", "n", "v", "j", "j", "w", "2", "d", "w");
+    // Both at once, not awaiting the first: as a terminal delivers "j." typed fast.
+    await Promise.all([h.app.handleKey("j"), h.app.handleKey(".")]);
+    expect(h.app.view!.buf.source).toBe("# Vim\n\nthe fox\njumpthe lazy dog\n");
+  });
+  test(". repeats a counted change with its count", async () => {
+    const { keys, at, text, h } = await setup("a b c d\ne f g h\n");
+    at(0, 0);
+    await keys("2", "d", "w");
+    expect(text().split("\n")[0]).toBe("c d");
+    expect(h.app.vim.lastChange).toEqual(["2", "d", "w"]);
+    at(1, 0);
+    await keys(".");
+    expect(text().split("\n")[1]).toBe("g h");
+  });
+  test("., D, C, s, S, r, J, ~, >>, <<", async () => {
+    const { keys, at, text } = await setup("a1 a2 a3\nb\n  c\nd\n");
+    at(0, 0);
+    await keys("dw", ".");
+    expect(text().split("\n")[0]).toBe("a3");
+    await keys("u", "u");
+    at(0, 3);
+    await keys("D");
+    expect(text().split("\n")[0]).toBe("a1 ");
+    await keys("u");
+    at(0, 0);
+    await keys("C", "new", "escape");
+    expect(text().split("\n")[0]).toBe("new");
+    await keys("s", "N", "escape", "r", "W"); // on the w: N, then W
+    expect(text().split("\n")[0]).toBe("neW");
+    at(1, 0);
+    await keys("J"); // the cursor lands on the joining space, as in vim
+    expect(text().split("\n")[1]).toBe("b c");
+    at(1, 0);
+    await keys("~");
+    expect(text().split("\n")[1]).toBe("B c");
+    await keys(">>");
+    expect(text().split("\n")[1]).toBe("  B c");
+    await keys("<<", "<<");
+    expect(text().split("\n")[1]).toBe("B c");
+    at(2, 0);
+    await keys("S", "dd", "escape");
+    expect(text().split("\n")[2]).toBe("dd");
+  });
+  test("visual d and >, and cw changing only to the word's end", async () => {
+    const { keys, at, text } = await setup("one two three\nfour\nfive\n");
+    at(0, 4);
+    await keys("v", "e", "d");
+    expect(text().split("\n")[0]).toBe("one  three");
+    at(1, 0);
+    await keys("shift+v", "j", ">");
+    expect(text()).toBe("one  three\n  four\n  five\n");
+    at(0, 0);
+    await keys("cw", "ONE", "escape");
+    expect(text().split("\n")[0]).toBe("ONE  three");
+  });
+});
+
 describe("source mode (space n v)", () => {
   test("the window shows the raw markdown, the cursor on the same source line; back again", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 100, height: 30 });
@@ -2283,8 +2414,10 @@ describe("mouse", () => {
     const u = h.app.geometry!.hot.find((r) => r.id === "wk:u")!;
     click(h, u.x + 2, u.y);
     expect(h.app.pending).toEqual(["space", "u"]);
+    await Bun.sleep(1); // keys are handled one at a time: let the first one's turn end
     const z = h.app.geometry!.hot.find((r) => r.id === "wk:z")!;
     click(h, z.x + 2, z.y);
+    await Bun.sleep(1);
     expect(h.app.ui.zen).toBe(true);
   });
   test("floating windows have a margin in their own colour: a row above and below, two columns aside", async () => {
