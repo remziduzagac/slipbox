@@ -511,6 +511,10 @@ lens and the keys are the reading keys.
 shade lighter than the page — a code block is darker), so the whole area reads as the lens, not
 just its edges.
 
+**Its bar.** A bar in the lens's colour runs down its left, in the column just left of the text (the
+margin, or the line numbers' last column), joining the rules into one bracket: `┏` on the top rule,
+`┃` down the rows, `┗` on the bottom one (ascii `+ | +`). It takes no column from the text.
+
 **Its air.** One blank row sits outside each rule: where the rendered row next to it is already
 blank (the gap after a block), that's it; otherwise a blank frame row is added, so the lens never
 touches a heading band, a table or a code block. Like the rules, these rows are frame rows.

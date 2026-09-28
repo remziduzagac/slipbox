@@ -1479,6 +1479,12 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     // Its rows of markdown are tinted (off the cursor's row, which has its own band).
     const tinted = [...Array(l.bottom - l.top - 1).keys()].map((k) => l.top + 1 + k).find((r) => r !== v.cur.row)!;
     expect(c.styles[pane.y + tinted - v.top]![pane.textX]!.bg).toBe(h.app.theme.roles.lens_band.bg!);
+    // A bar down its left, joining the rules: ┏ ┃ … ┗, in the column left of the text.
+    const barAt = (r: number) => c.rows[pane.y + r - v.top]![pane.textX - 1];
+    expect(barAt(l.top)).toBe("┏");
+    for (let r = l.top + 1; r < l.bottom; r++) expect(barAt(r)).toBe("┃");
+    expect(barAt(l.bottom)).toBe("┗");
+    expect(c.rows[pane.y + l.top - v.top]!.slice(pane.textX - 1, pane.textX + 3).join("")).toBe("┏━━ ");
     expect(l.source).toContain("Para 5 with **bold**."); // the markdown
     expect(l.source.length).toBeGreaterThanOrEqual(6); // neighbours pulled in
     expect(rows().some((t) => t.includes("Para 15 with bold."))).toBe(true); // rendered further off

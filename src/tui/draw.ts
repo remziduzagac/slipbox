@@ -619,6 +619,13 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       marks.push({ from, to, role: "selection" });
     }
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
+    // The lens's bar, in the column left of the text (the margin, or the gutter's last), joining
+    // its two rules into one bracket.
+    if (line.lens && line.lens !== "pad" && textX - 1 >= body.x) {
+      const [t, m, b] = app.glyphs.lensBar;
+      const bar = line.lens === "top" ? t : line.lens === "bottom" ? b : m;
+      drawText(c, textX - 1, y, bar, { ...roleStyle(theme, "lens", band ?? page), bg: band ?? page }, 1);
+    }
     if (isCursorRow && view.cur.col >= view.left && view.cur.col < view.left + textW) drawCursor(c, textX - view.left, y, line, view.cur.col, theme, view.left + textW);
   }
 
