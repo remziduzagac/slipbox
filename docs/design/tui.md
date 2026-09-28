@@ -95,7 +95,8 @@ other.
 Rules run above and below it. The rule above is the frame's rule under the tab strip; the lower
 window of a stacked split draws its own.
 
-**The tab strip** sits under the top bar whenever a note is open, even with a single tab. A tab
+**The tab strip** sits under the top bar whenever a note is open, even with a single tab, on the
+page's background like the top bar and the status line. A tab
 reads ` N name `: its number, the file name without `.md`, cut to 24 columns, and `↻` for 3 s after
 a reload. Each tab has a `×` to close it and a `┃` after it, joined to the rules above and below the
 strip (`┳`, `┻`). The active tab is bright (`tab_active`) while the note has focus and dimmer
@@ -268,8 +269,8 @@ breadcrumb's rule in `┫`), and its title sits level with the breadcrumb. The o
 (`▤`) is on the right rail, bright while the outline is open.
 
 **The rails** (`ui.left_rail`, `ui.right_rail`, both on by default) are columns of buttons at the
-edges, one button per row from the top. Each is a tinted column (the `rail` role, the tab strip's
-shade), 3 columns wide, with no border: the frame's rules run over it unbroken. Without colour
+edges, one button per row from the top. Each is a tinted column (the `rail` role, a shade darker than
+the page), 3 columns wide, with no border: the frame's rules run over it unbroken. Without colour
 (NO_COLOR) there's no tint, so a rail is 4 columns with a border on its inner side, joined to the
 rules it meets. Each is generic: a place for buttons, whatever they open.
 

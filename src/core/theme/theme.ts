@@ -184,14 +184,15 @@ export function themeFromPalette(
     syn_addition: { fg: p.green },
     syn_deletion: { fg: p.red },
     border: { fg: p.border },
-    status: { fg: p.fg_dim, bg: p.bg_dark },
+    // The tab strip and the status line sit on the page, like the top bar.
+    status: { fg: p.fg_dim },
     status_accent: { fg: p.bg, bg: p.blue, bold: true },
-    status_dim: { fg: p.comment, bg: p.bg_dark },
+    status_dim: { fg: p.comment },
     sidebar: { fg: p.fg_dim, bg: p.bg },
     sidebar_dir: { fg: p.blue },
     sidebar_selected: { fg: p.fg_strong, bg: p.surface, bold: true },
     sidebar_active: { fg: p.cyan },
-    tab: { fg: p.comment, bg: p.bg_dark },
+    tab: { fg: p.comment },
     tab_active: { fg: p.fg_strong, bg: p.bg, bold: true },
     // Focus shows as brightness, never as colour: the active tab and the side panes' titles are
     // bright while their part of the screen has focus, dimmer (still bold) otherwise.
@@ -278,7 +279,7 @@ export function terminalTheme(): Theme {
     code_label: { fg: a(8), bg: undefined },
     code_gutter: { fg: a(8), bg: undefined },
     code_inline: { fg: a(15), bg: a(8), italic: false },
-    status: { fg: a(7), bg: a(0) },
+    status: { fg: a(7) },
     link_focus: { fg: a(0), bg: a(6) },
     cursor: { fg: a(0), bg: a(15) },
     cursor_line: { bg: a(0) },
