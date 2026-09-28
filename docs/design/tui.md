@@ -73,18 +73,18 @@ each cut to 40 columns. When they don't all fit, the middle collapses into `…`
 each); then `…` and the last; then `…` alone. Clicking `…` (or `space f b`) opens the whole path as
 a dropdown hanging under the breadcrumb, centred across the screen, at least half its width (60 to
 100 columns) and room for 8 entries between blank rows, framed like the other popups: one heading
-per row, each hanging off the one above with `└─`, the current one marked `here`, the deepest hidden
-one selected. Typing filters it, as in every list (the filter's row sits under the title); the
-arrows and `ctrl+n` / `ctrl+p` move, `enter` or a click jumps there as a breadcrumb click does,
-`esc` or a click outside closes it. In a split it shares the window's title row, after the file
-name. Clicking a heading focuses that window, puts its cursor on the heading, and scrolls the
-heading to the window's first row (as far as the note's end allows). The row stays reserved above
-the first heading, so the text doesn't jump. `ui.breadcrumb = false` removes it; zen mode and
-windows under 8 rows drop it. Without the right rail (below), the `▤` button sits at the
-breadcrumb's right end; when no window shows a breadcrumb either, it moves to the right end of the
-top bar (with neither, in zen or with `ui.top_bar = false`, the outline opens with `ctrl+o`).
-Without a breadcrumb there are no header rules, the outline starts at the top of the content, and a
-split window gets a plain title row (`tab` / `tab_active`).
+per row, each hanging off the one above with `└─`, the current one marked `here` and selected.
+Typing filters it, as in every list (the filter's row sits under the title); the arrows and `ctrl+n`
+/ `ctrl+p` move, `enter` or a click jumps there as a breadcrumb click does, `esc` or a click outside
+closes it. In a split it shares the window's title row, after the file name. Clicking a heading
+focuses that window, puts its cursor on the heading, and scrolls the heading to the window's first
+row (as far as the note's end allows). The row stays reserved above the first heading, so the text
+doesn't jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it. Without
+the right rail (below), the `▤` button sits at the breadcrumb's right end; when no window shows a
+breadcrumb either, it moves to the right end of the top bar (with neither, in zen or with
+`ui.top_bar = false`, the outline opens with `ctrl+o`). Without a breadcrumb there are no header
+rules, the outline starts at the top of the content, and a split window gets a plain title row
+(`tab` / `tab_active`).
 
 The breadcrumb row has its own background, `breadcrumb_band` (`surface` blended into the page
 at 35%). The icon is `breadcrumb_icon` (blue), outer headings `breadcrumb` (dim), separators

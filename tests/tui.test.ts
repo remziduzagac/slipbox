@@ -941,7 +941,7 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     expect(o.kind).toBe("list");
     expect(o.anchor).toEqual({ x: more.x, y: more.y });
     expect(o.items.map((i) => i.label)).toEqual(chain.map((c) => c.text));
-    expect(o.selected).toBe(1); // the hidden middle heading
+    expect(o.selected).toBe(2); // the current heading
     const f = h.frame();
     const box = h.app.geometry!.overlay!;
     expect(box.y).toBe(more.y + 2); // hanging under the breadcrumb…
@@ -950,7 +950,7 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     expect(box.listY).toBe(box.y + 3); // the filter's row, then a blank row
     expect(box.h).toBeGreaterThanOrEqual(8 + 5);
     expect(f).toContain("└─");
-    await h.keys("enter");
+    await h.keys("up", "enter"); // up to the hidden middle one
     expect(h.app.overlay).toBeNull();
     expect(v.cur.row).toBe(chain[1]!.line);
     // From the keyboard: the arrows move, and a click on an entry picks it.
@@ -958,7 +958,8 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     h.frame();
     await h.keys("space", "f", "b");
     expect(h.app.overlay?.kind).toBe("list");
-    await h.keys("up");
+    expect((h.app.overlay as ListOverlay).selected).toBe(2); // on the current heading
+    await h.keys("up", "up");
     expect((h.app.overlay as ListOverlay).selected).toBe(0);
     // Typing filters, as in every list; the filter's row sits above the entries.
     await h.keys("L", "a", "y");

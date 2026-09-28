@@ -875,15 +875,8 @@ export class App {
     const w = t.active;
     const hot = this.geometry?.hot ?? [];
     const at = hot.find((h) => h.id === `crumbmore:${w}`) ?? hot.find((h) => h.id === `crumbicon:${w}`);
-    // The deepest heading the breadcrumb hides is the likeliest pick; else the parent.
-    const shown = new Set(hot.filter((h) => h.id.startsWith(`crumb:${w}:`)).map((h) => Number(h.id.split(":")[2])));
-    let selected = chain.length > 1 ? chain.length - 2 : 0;
-    for (let k = chain.length - 1; k >= 0; k--) {
-      if (at?.id.startsWith("crumbmore") && !shown.has(chain[k]!.line)) {
-        selected = k;
-        break;
-      }
-    }
+    // The selection starts on the current heading (the last), marked `here`.
+    const selected = chain.length - 1;
     this.openList({
       title: "Path",
       items: chain.map((c, k) => ({ label: c.text, indent: k, hint: k === chain.length - 1 ? "here" : undefined, data: c.line })),
