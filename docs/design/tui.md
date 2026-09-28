@@ -277,7 +277,7 @@ keys.
 
 - **Explorer (left, `≡`):** the walked notes as a tree, directories first. Moving the selection only
   selects. `enter`, `l` and a click open the note as a tab, or switch to the tab already showing
-  it; `o` replaces the current window's note, and `s` opens it in the split.
+  it; `o` replaces the current window's note, and `s` opens it in the split's other window.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. `enter` or a
   click jumps there, the places before it becoming back and those after it forward.
@@ -382,7 +382,8 @@ past theirs), so the content behind never runs up to the edge.
 Help and the palette list the same commands for different jobs, in the groups of
 [keymap.md](keymap.md) (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order:
 
-- **Help (`?`, `space ?`)** is for learning the keys: every command with all its bindings, then what
+- **Help (`?`, `space ?`)** is for learning the keys: every command with all its bindings (source
+  mode's own, `[keys.source]`, and visual mode's included), then what
   works inside the explorer, inside the history, while filtering a panel, inside the outline, in
   resize mode, and with the mouse. Filtering keeps the groups; `enter` runs a command (the other
   entries are reference only). Opened from the explorer, the history, the outline or visual mode,
@@ -592,9 +593,12 @@ in `[keys.source]`; what follows an operator is read the way which-key reads a p
 any cursor command the keymap resolves (run with the cursor put back after, its range taken as
 text offsets), a text object is found in the text itself; `gn` is the search's next match in the
 text (`replacing.ts` finds it with the window's find toggles). `.` replays the keys of the last
-change, the keys typed in the insert session it started included (`insertRecord`), so anything that
-changed the text repeats exactly — `cgn` then `.` walks the matches. Keys are handled
-one at a time, in order (`App.handleKey` queues them), so a burst of typed keys or a paste never
+change, the keys typed in the insert session it started included (`insertRecord`), a paste as a key
+of its own, so anything that changed the text repeats exactly — `cgn` then `.` walks the matches. A
+visual-mode change repeats on as much text from the cursor, as in vim (`V`, `j`s and the operator;
+`v`, `l`s and the operator on one line); one across lines of characters can't be said in keys, and
+`.` then has nothing to repeat rather than an older change. Keys are handled one at a time, in
+order (`App.handleKey` queues them, a paste too), so a burst of typed keys or a paste never
 interleaves with a command still running; `.`'s own replay runs inside its turn.
 
 A changed note is **unsaved** until `:w` / `ctrl+s`: `• unsaved` by its path in the status line,
@@ -607,7 +611,9 @@ unsaved, source mode's outline comes from a quick scan of the text's headings.
 **Outside changes and conflicts** (`4.5`, `5.5`–`5.7`). A clean note that changes on disk reloads,
 and the reload is one more undo step: `u` brings back what was there before an agent rewrote it (and
 `:e!`, dropping your changes, is undoable the same way). A note with unsaved changes that changes on
-disk opens the **conflict prompt**, which each choice answers with its key:
+disk opens the **conflict prompt**, which each choice answers with its key. While you're typing into
+the note it waits: a message says the file changed, and the prompt opens when insert mode ends, so
+letters meant for the note never pick a choice.
 
 - **(l) Load theirs** — the file's version; yours is one `u` away.
 - **(k) Keep yours** — the status line says `⚠ differs from disk`; autosave stays off for it, and
@@ -615,8 +621,9 @@ disk opens the **conflict prompt**, which each choice answers with its key:
 - **(d) Diff** — yours → theirs, `-` and `+` lines with context; closing it returns to the prompt.
 - **(m) Merge** — a three-way merge by lines against the version you started from (`core/merge.ts`):
   what only one side changed is taken, the same change once, and different changes to the same
-  lines are marked `<<<<<<< yours` / `=======` / `>>>>>>> theirs`. The result is unsaved (one undo
-  step); the file is theirs now, so `:w` writes it without asking.
+  lines are marked `<<<<<<< yours` / `=======` / `>>>>>>> theirs` (with the note's own line endings).
+  The result is unsaved (one undo step); the file is theirs now, so `:w` writes it without asking.
+  Autosave never writes the markers: with conflicts marked, it stays off until you save.
 
 `space n c` reopens the prompt. When a list or prompt is already open, a message says so instead.
 `:w` on a note whose file changed since it was loaded opens the prompt rather than writing over it;
@@ -625,7 +632,9 @@ disk opens the **conflict prompt**, which each choice answers with its key:
 **Autosave** (`4.7`, `5.6`, `5.10`): a changed note is saved after `[editor] autosave_ms` (30 s;
 `0` turns it off) without a key pressed — not while you're in insert mode, not after (k) Keep yours
 until a saved, confirmed write, not over a file changed on disk (the conflict prompt comes instead),
-and not while git holds `.git/index.lock` (a commit in progress: it tries again later). **Hand-offs
+not with a merge's conflict markers in it, and not while git holds its `index.lock` (a commit in
+progress: it tries again later; in a worktree or submodule, the lock in the git directory its
+`.git` file names). **Hand-offs
 save first** (`4.10`): `space n e`, `space n s` and a capture into an open scratch write unsaved
 changes before the other side reads the file.
 

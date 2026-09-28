@@ -2,7 +2,7 @@
 // the note's text — its markdown — found by core/replace.ts with the window's find toggles. The
 // window edits (source mode or the lens), so every match is a real place in the file.
 
-import { compilePattern, expandReplacement, findAll, parseSubstitute, type TextMatch } from "../core/replace.ts";
+import { compilePattern, expandReplacement, findAll, firstPerLine, nextLine, parseSubstitute, type TextMatch } from "../core/replace.ts";
 import { type App, computeFind, editable, type PromptOverlay, type View } from "./app.ts";
 import * as E from "./editing.ts";
 
@@ -124,8 +124,11 @@ function applyMatches(app: App, view: View, ms: TextMatch[], replacement: string
 export function replaceAll(app: App, o: PromptOverlay, view: View): void {
   const r = o.replace;
   if (!r) return;
+  const before = view.buf.source.length;
   const n = replaceEvery(app, view, o.text, r.text, r.range);
   if (typeof n === "string") return app.message("warn", `not a regex: ${n}`);
+  // The selection's end moves with what was replaced inside it, as replaceOne keeps it.
+  if (r.range) r.range = [r.range[0], r.range[1] + view.buf.source.length - before];
   refresh(app, o, view);
   app.message("info", n ? `replaced ${n} match${n === 1 ? "" : "es"}` : "no matches");
 }
@@ -136,24 +139,6 @@ export function replaceEvery(app: App, view: View, query: string, replacement: s
   if (typeof ms === "string") return ms;
   applyMatches(app, view, ms, replacement, view.findOpts?.regex ?? false);
   return ms.length;
-}
-
-/** The offset just past the line holding `at` (the end of the text on the last line). */
-function nextLine(text: string, at: number): number {
-  const nl = text.indexOf("\n", at);
-  return nl < 0 ? text.length : nl + 1;
-}
-
-/** Only the first match on each line (`:s` without `g`). */
-function firstPerLine(text: string, ms: TextMatch[]): TextMatch[] {
-  const out: TextMatch[] = [];
-  let past = -1;
-  for (const m of ms) {
-    if (m.from < past) continue;
-    out.push(m);
-    past = nextLine(text, m.to > m.from ? m.to - 1 : m.from);
-  }
-  return out;
 }
 
 /**
@@ -174,7 +159,7 @@ export function substitute(app: App, view: View, input: string): void {
   const range: [number, number] = [starts[a - 1] ?? 0, starts[b] ?? text.length];
   const re = compilePattern(sub.pattern, { regex: true, whole: false, ignoreCase: sub.ignoreCase });
   if (typeof re === "string") return app.message("warn", `not a regex: ${re}`);
-  const all = findAll(text, re, range[0], range[1]);
+  const all = findAll(text, re, range[0], range[1], true); // :s/^/> / inserts at an empty match
   const ms = sub.global ? all : firstPerLine(text, all);
   if (!ms.length) return app.message("warn", `not found: ${sub.pattern}`);
   if (sub.confirm) return startConfirm(app, view, sub.pattern, { re, replacement: sub.replacement, global: sub.global, range, pos: range[0], asked: 0, replaced: 0 });
@@ -205,7 +190,7 @@ function startConfirm(app: App, view: View, pattern: string, c: Confirm): void {
 /** The remaining matches from `c.pos` on (the first per line without `g`). */
 function remaining(view: View, c: Confirm): TextMatch[] {
   const text = view.buf.source;
-  const all = findAll(text, c.re, c.pos, c.range[1]);
+  const all = findAll(text, c.re, c.pos, c.range[1], true);
   return c.global ? all : firstPerLine(text, all);
 }
 
@@ -233,7 +218,8 @@ function confirmReplace(view: View, c: Confirm): void {
   view.buf.edit(m.from, m.to - m.from, text);
   c.range[1] += text.length - (m.to - m.from);
   c.replaced++;
-  c.pos = c.global ? m.from + text.length : nextLine(view.buf.source, Math.max(m.from, m.from + text.length - 1));
+  // On past it (an empty match one further, or it would match again right there).
+  c.pos = c.global ? m.from + text.length + (m.from === m.to ? 1 : 0) : nextLine(view.buf.source, Math.max(m.from, m.from + text.length - 1));
 }
 
 /** y replace, n skip, a this and the rest, l this and stop, q (esc) stop. */
@@ -249,7 +235,7 @@ export function confirmKey(app: App, o: PromptOverlay, view: View, key: string):
       confirmReplace(view, c);
       break;
     case "n":
-      c.pos = c.global ? c.match.to : nextLine(view.buf.source, c.match.from);
+      c.pos = c.global ? c.match.to + (c.match.from === c.match.to ? 1 : 0) : nextLine(view.buf.source, c.match.from);
       break;
     case "l":
       confirmReplace(view, c);

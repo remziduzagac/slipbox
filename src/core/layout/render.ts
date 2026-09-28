@@ -55,11 +55,12 @@ export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontm
 
 function finish(lines: Line[], ctx: Ctx, width: number): Layout {
   const headings: LayoutHeading[] = [];
+  let clipped = 0;
   lines.forEach((line, i) => {
     // Constraint 2.9, as a last line of defence: no span leaves the layout carrying a terminal
     // escape, whichever path built it (footnote labels, frontmatter keys, …).
     for (const span of line.spans) span.text = sanitize(span.text);
-    enforceRow(line, width);
+    if (enforceRow(line, width)) clipped++;
     if (line.heading !== undefined) headings[line.heading] = { ...ctx.headings[line.heading]!, line: i };
     let col = 0;
     for (const span of line.spans) {
@@ -73,15 +74,16 @@ function finish(lines: Line[], ctx: Ctx, width: number): Layout {
       col += stringWidth(span.text);
     }
   });
-  return { lines, links: ctx.links, headings: headings.filter(Boolean), width };
+  return { lines, links: ctx.links, headings: headings.filter(Boolean), width, clipped };
 }
 
 /**
  * The IR's invariants, enforced once at the end so no block can break them: no tab reaches a span
  * (the width function gives it no columns), and no row is wider than the layout. Blocks already
  * fit; this catches pathological nesting at very narrow widths, clipping rather than overflowing.
+ * True when it had to clip (counted in `Layout.clipped`, which the tests hold at 0).
  */
-function enforceRow(line: Line, width: number): void {
+function enforceRow(line: Line, width: number): boolean {
   let used = 0;
   const kept: Span[] = [];
   for (const span of line.spans) {
@@ -100,9 +102,11 @@ function enforceRow(line: Line, width: number): void {
       used += gw;
     }
     if (cut) kept.push({ ...span, text: cut });
-    break;
+    line.spans = kept;
+    return true;
   }
   line.spans = kept;
+  return false;
 }
 
 function collectDefinitions(tree: Root, ctx: Ctx) {
@@ -393,7 +397,8 @@ function frontmatterBlock(fm: Frontmatter | null, raw: string, src: number, ctx:
       const keyLine = findKeyLine(raw, key);
       const ksrc = keyLine >= 0 ? src + 1 + keyLine : line;
       valueRows.forEach((row, i) => {
-        const k = i === 0 ? padEnd(sanitize(key), keyW) : " ".repeat(keyW);
+        // A key longer than the column is cut with an ellipsis, never silently.
+        const k = i === 0 ? padEnd(truncate(sanitize(key), keyW), keyW) : " ".repeat(keyW);
         out.push({ spans: [{ text: ` ${k}`, role: "fm_key", attrs: 0 }, { text: "  ", role: "text", attrs: 0 }, ...row], src: ksrc });
       });
       line++;
@@ -402,7 +407,7 @@ function frontmatterBlock(fm: Frontmatter | null, raw: string, src: number, ctx:
     raw.split("\n").forEach((text, i) => {
       for (const row of breakHard([{ text: ` ${expandTabs(sanitize(text))}`, role: "fm_value", attrs: 0 }], width)) out.push({ spans: row, src: src + 1 + i });
     });
-    if (fm?.error) out.push({ spans: [{ text: ` ${sanitize(fm.error)}`, role: "fm_error", attrs: 0 }], src });
+    if (fm?.error) for (const row of wrapSpans([{ text: sanitize(fm.error), role: "fm_error", attrs: 0 }], Math.max(1, width - 1))) out.push({ spans: [{ text: " ", role: "fm_error", attrs: 0 }, ...row], src });
   }
   out.push({ spans: [{ text: g.rule.repeat(width), role: "fm_border", attrs: 0 }], src: src + raw.split("\n").length + 1 });
   return out;
@@ -554,7 +559,10 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
     parts.forEach((p, i) => {
       if (i > 0) {
         line++;
-        push(" ", st, extra);
+        // Between two CJK characters a soft break is no space at all, as those scripts write.
+        const before = [...parts[i - 1]!].at(-1) ?? "";
+        const after = [...p][0] ?? "";
+        if (!(before && after && graphemeWidth(before) === 2 && graphemeWidth(after) === 2)) push(" ", st, extra);
       }
       push(p, st, extra);
     });

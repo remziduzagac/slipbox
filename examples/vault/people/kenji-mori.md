@@ -2,6 +2,13 @@
 title: Kenji Mori
 aliases: [Kenji, 森健二]
 tags: [people, visiting]
+office:
+  building: Workshop
+  desk: 2
+bio: |
+  Variable-star observer and secretary of the Kiso-Hara Astronomical Society.
+  At Halden Ridge for the autumn 2026 semester, mostly on Aster.
+observing_programme_coordinator_contact: priya.raman@example.org
 ---
 
 # Kenji Mori

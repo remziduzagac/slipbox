@@ -1660,6 +1660,20 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(rep()?.focus).toBe(true);
     await h.keys("escape");
   });
+  test("an operator with a jump in the lens acts from the cursor: dG, yG, >G", async () => {
+    const { h, v, goto } = await setup((c) => (c.editor.edit_in = "live"));
+    goto("Para 5 with");
+    await h.keys("space", "n", "l");
+    await h.keys("d", "G");
+    expect(v.buf.source).toContain("Para 4 with"); // above the cursor: kept
+    expect(v.buf.source).not.toContain("Para 5 with"); // from the cursor down: gone
+    expect(v.buf.source).not.toContain("Para 20 with");
+    await h.keys("u");
+    goto("Para 5 with");
+    await h.keys(">", "G");
+    expect(v.buf.source).toContain("\nPara 4 with"); // not indented
+    expect(v.buf.source).toContain("  Para 5 with");
+  });
   test("replace in the lens: enter replaces the match at the cursor and moves one on", async () => {
     const { h, v } = await setup((c) => (c.editor.edit_in = "live"));
     await h.keys("space", "f", "r", ...[..."para"], "tab", ...[..."P"]);
@@ -3483,5 +3497,163 @@ describe("OpenTUI end to end", () => {
     await renderOnce();
     expect(captureCharFrame()).toContain("+links");
     renderer.destroy();
+  });
+});
+
+describe("review cycle 1 (TUI)", () => {
+  const touch = async (file: string, text: string) => {
+    writeFileSync(file, text);
+    const future = Date.now() / 1000 + 5;
+    (await import("node:fs")).utimesSync(file, future, future);
+  };
+  const source = async (text: string, config?: (c: Config) => void, width = 100, height = 30) => {
+    const root = makeVault();
+    const file = join(root, "r.md");
+    writeFileSync(file, text);
+    const h = await harness({ root, open: "r.md", width, height, config });
+    await h.keys("space", "n", "v");
+    const v = h.app.view!;
+    const at = (row: number, col: number) => h.app.moveCursor(v, { row, col });
+    const ex = (cmd: string) => h.keys(":", ...[...cmd].map((ch) => (ch === " " ? "space" : ch)), "enter");
+    return { h, v, at, ex, file, root };
+  };
+  test(":s with line anchors and empty matches: ^ and $ on every line, the cursor's line only", async () => {
+    const { v, at, ex } = await source("# a\n# b\nc\n");
+    await ex("%s/^/> /");
+    expect(v.buf.source).toBe("> # a\n> # b\n> c\n");
+    await ex("%s/$/!/");
+    expect(v.buf.source).toBe("> # a!\n> # b!\n> c!\n");
+    at(1, 0);
+    await ex("s/^> #/##/");
+    expect(v.buf.source).toBe("> # a!\n## b!\n> c!\n");
+  });
+  test("autosave never writes a merge's conflict markers; :w does", async () => {
+    const { h, v, file } = await source("one\n", (c) => (c.editor.autosave_ms = 20));
+    await h.keys("shift+a", "!", "escape");
+    await touch(file, "one?\n");
+    h.app.reloadBuffer(v.buf);
+    await h.keys("m");
+    expect(v.buf.source).toContain("<<<<<<< yours");
+    await Bun.sleep(80);
+    expect(readFileSync(file, "utf8")).toBe("one?\n");
+    await h.keys(":", "w", "enter");
+    expect(readFileSync(file, "utf8")).toContain("<<<<<<< yours");
+  });
+  test("a change on disk while typing waits for esc: typed letters never pick l, k, d or m", async () => {
+    const { h, v, file } = await source("mine\n");
+    await h.keys("shift+a", "space", "h", "e");
+    await touch(file, "theirs\n");
+    h.app.reloadBuffer(v.buf);
+    expect(h.app.overlay).toBeNull();
+    await h.keys("l", "l", "o");
+    expect(v.buf.source).toBe("mine hello\n");
+    await h.keys("escape");
+    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+  });
+  test("replace all keeps to the selection as it shrinks or grows", async () => {
+    const { h, v } = await source("cat cat\ncat cat\ncat\n");
+    await h.keys("shift+v", "j", "space", "f", "r", ...[..."cat"], "tab", "c", "alt+a");
+    expect(v.buf.source).toBe("c c\nc c\ncat\n");
+    await h.keys("enter"); // nothing left inside: the cat on line 3 stays
+    expect(v.buf.source).toBe("c c\nc c\ncat\n");
+  });
+  test("cw on a word's last letter, or a one-letter word, changes only that", async () => {
+    const { h, v, at } = await source("a b\nab cd\n");
+    at(0, 0);
+    await h.keys("c", "w", "X", "escape");
+    expect(v.buf.source.split("\n")[0]).toBe("X b");
+    at(1, 1);
+    await h.keys("c", "w", "Y", "escape");
+    expect(v.buf.source.split("\n")[1]).toBe("aY cd");
+  });
+  test(". repeats a visual change and a paste", async () => {
+    const { h, v, at } = await source("abcdef\nabcdef\nx\ny\n");
+    at(0, 0);
+    await h.keys("v", "l", "d");
+    expect(v.buf.source.split("\n")[0]).toBe("cdef");
+    at(1, 0);
+    await h.keys(".");
+    expect(v.buf.source.split("\n")[1]).toBe("cdef"); // two characters again, not an older change
+    at(2, 0);
+    await h.keys("shift+a");
+    await h.app.paste("XY");
+    await h.keys("escape", "j", ".");
+    expect(v.buf.source.split("\n").slice(2, 4)).toEqual(["xXY", "yXY"]);
+  });
+  test("a count between the operator and the text object: d2i( and d2aw", async () => {
+    const { h, v, at } = await source("x (a (b) c) y\none two three four\n");
+    at(0, 6); // on b
+    await h.keys("d", "2", "i", "(");
+    expect(v.buf.source.split("\n")[0]).toBe("x () y");
+    at(1, 0);
+    await h.keys("d", "2", "a", "w");
+    expect(v.buf.source.split("\n")[1]).toBe("three four");
+  });
+  test("a charwise put of lines into a CRLF note keeps it CRLF", async () => {
+    const { h, v, at } = await source("ab\r\ncd\r\nxy\r\n");
+    at(0, 1);
+    await h.keys("v", "j", "y");
+    at(2, 0);
+    await h.keys("p");
+    expect(v.buf.source.replace(/\r\n/g, "")).not.toContain("\n");
+  });
+  test("'<,'> is the last selection's lines after it ends", async () => {
+    const { h, v, at, ex } = await source("a\nb\nc\nd\n");
+    at(1, 0);
+    await h.keys("shift+v", "j", "escape");
+    await ex("'<,'>s/$/!/");
+    expect(v.buf.source).toBe("a\nb!\nc!\nd\n");
+  });
+  test("session restore keeps the scroll position, with the breadcrumb on", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "samples/handbook/operations-handbook.md", width: 160, height: 40 });
+    for (let i = 0; i < 60; i++) await h.keys("j");
+    h.frame();
+    const top = h.app.view!.top;
+    expect(top).toBeGreaterThan(0);
+    h.app.quit();
+    const again = await harness({ root, open: null, width: 160, height: 40, config: (c) => (c.ui.restore_session = true) });
+    again.frame();
+    expect(again.app.view!.top).toBe(top);
+  });
+  test("explorer s opens in the other window when a split is there already", async () => {
+    const h = await harness({ open: "index.md", width: 160, height: 40 });
+    await h.keys("ctrl+w", "v", "ctrl+w", "h");
+    const reading = h.app.tab!.views[0]!.buf.rel;
+    h.app.showSidebar(true);
+    h.app.region = "sidebar";
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "crlf.md");
+    await h.keys("s");
+    expect(h.app.tab!.views[0]!.buf.rel).toBe(reading);
+    expect(h.app.tab!.views[1]!.buf.rel).toBe("crlf.md");
+  });
+  test("help and the palette list source mode's keys", async () => {
+    const h = await harness();
+    await h.keys("?");
+    const del = (h.app.overlay as ListOverlay).items.find((i) => i.data === "edit.op_delete")!;
+    expect(del.keys).toContain("d");
+  });
+  test("resize mode: every step changes the drawn width", async () => {
+    const h = await harness({ width: 100, height: 30, config: (c) => (c.ui.outline = true) });
+    await h.app.run("explorer.cycle");
+    await h.app.run("explorer.cycle"); // focus it
+    for (let i = 0; i < 15; i++) await h.app.run("window.wider");
+    await h.keys("escape");
+    await h.app.run("outline.cycle");
+    let last = h.app.outlineWidth();
+    for (let i = 0; i < 3; i++) {
+      await h.app.run("window.narrower");
+      h.frame();
+      expect(h.app.outlineWidth()).toBeLessThan(last);
+      last = h.app.outlineWidth();
+    }
+  });
+  test("popups: the bottom-right corner is under the top-right one", async () => {
+    const h = await harness({ width: 60, height: 20 });
+    await h.keys("?");
+    const rows = h.frame().split("\n");
+    const top = rows.findIndex((r) => r.includes("┐"));
+    const bottom = rows.findIndex((r, i) => i > top && r.includes("┘"));
+    expect(rows[bottom]!.lastIndexOf("┘")).toBe(rows[top]!.lastIndexOf("┐"));
   });
 });

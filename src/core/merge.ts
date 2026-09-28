@@ -134,6 +134,8 @@ export function merge3(base: string, ours: string, theirs: string): MergeResult 
   const out: string[] = [];
   let conflicts = 0;
   let bi = 0; // next base line not yet written
+  // Lines keep their \r in a CRLF note; the markers get one too, so the note stays all CRLF.
+  const cr = ours.includes("\r\n") ? "\r" : "";
   // A side's lines for base lines [start, end): shifted by the hunks before the group, and grown or
   // shrunk by the group's own.
   const sideLines = (hs: Hunk[], group: Hunk[], lines: string[], start: number, end: number) => {
@@ -165,7 +167,7 @@ export function merge3(base: string, ours: string, theirs: string): MergeResult 
     else if (o.join("\n") === t.join("\n")) out.push(...o);
     else {
       conflicts++;
-      out.push("<<<<<<< yours", ...o, "=======", ...t, ">>>>>>> theirs");
+      out.push(`<<<<<<< yours${cr}`, ...o, `=======${cr}`, ...t, `>>>>>>> theirs${cr}`);
     }
     bi = end;
     i = j;

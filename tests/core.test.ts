@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { formatEntry, formatRef, parseRef } from "../src/core/capture.ts";
+import { formatEntry, formatRef, parseRef, scratchLocation } from "../src/core/capture.ts";
 import { copyText } from "../src/core/clipboard.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
@@ -16,9 +16,9 @@ import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
-import { toggleTask } from "../src/core/tasks.ts";
+import { listTasks, toggleTask } from "../src/core/tasks.ts";
 import { diffLines, merge3, unifiedDiff } from "../src/core/merge.ts";
-import { compilePattern, expandReplacement, findAll, parseSubstitute, replaceMatches } from "../src/core/replace.ts";
+import { compilePattern, expandReplacement, findAll, firstPerLine, parseSubstitute, replaceMatches } from "../src/core/replace.ts";
 import { editorArgv, splitCommand } from "../src/core/editor.ts";
 import { discoverNvims, nvimSockets } from "../src/core/nvim.ts";
 import { graphemes, stringWidth, truncate } from "../src/core/width.ts";
@@ -527,5 +527,84 @@ describe("find and replace (core/replace.ts)", () => {
     expect(parseSubstitute("s/a/b/x")).toBeNull(); // not a flag
     expect(parseSubstitute("sort")).toBeNull();
     expect(parseSubstitute("s//b/")).toBeNull();
+  });
+});
+
+describe("review cycle 1 (core)", () => {
+  const tmp = (name: string) => mkdtempSync(join(tmpdir(), `slipbox-${name}-`));
+  test("a vault's committed config never chooses a program to run: editor.command, editor.remote", () => {
+    const dir = tmp("trust");
+    const user = join(dir, "user.toml");
+    writeFileSync(user, '[editor]\ncommand = "nvim {file}"\n');
+    mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
+    writeFileSync(join(dir, "v", ".slipbox", "config.toml"), '[editor]\ncommand = "evil {file}"\nremote = ["evil {file}"]\nautosave_ms = 5000\n');
+    const r = loadConfig({ configFile: user, vaultRoot: join(dir, "v") });
+    expect(r.config.editor.command).toBe("nvim {file}");
+    expect(r.config.editor.remote).toEqual(["nvim"]);
+    expect(r.config.editor.autosave_ms).toBe(5000); // the rest of [editor] still applies
+    expect(r.warnings.filter((w) => w.includes("only your own config")).length).toBe(2);
+  });
+  test("writeNote: a new file through a symlinked folder is refused; a vault reached by a symlink is fine", () => {
+    const root = tmp("wroot");
+    const outside = tmp("wout");
+    symlinkSync(outside, join(root, "out"));
+    expect(() => writeNote(root, join(root, "out", "new.md"), "x")).toThrow(WriteRefused);
+    expect(existsSync(join(outside, "new.md"))).toBe(false);
+    const via = join(tmp("wvia"), "link");
+    symlinkSync(root, via);
+    writeNote(via, join(via, "brand-new.md"), "ok");
+    expect(readFileSync(join(root, "brand-new.md"), "utf8")).toBe("ok");
+    writeNote(root, join(root, "..notes.md"), "dots"); // a name starting with dots is inside
+    expect(existsSync(join(root, "..notes.md"))).toBe(true);
+  });
+  test("the scratch in the vault refuses a symlink: it lives in the state dir then", () => {
+    const root = tmp("scr");
+    writeFileSync(join(root, "secret.txt"), "SECRET");
+    symlinkSync(join(root, "secret.txt"), join(root, "scratch.md"));
+    const cfg = structuredClone(loadConfig({ vaultRoot: null }).config);
+    cfg.capture.location = "vault";
+    expect(scratchLocation(root, cfg).path).not.toBe(join(root, "scratch.md"));
+    rmSync(join(root, "scratch.md"));
+    expect(scratchLocation(root, cfg).path).toBe(join(root, "scratch.md"));
+  });
+  test("regex ^ and $ are a line's; $ in CRLF ends before the \\r; empty matches only when asked", () => {
+    const re = (q: string) => compilePattern(q, { regex: true, whole: false }) as RegExp;
+    expect(findAll("# a\n# b\n", re("^# ")).length).toBe(2);
+    expect(findAll("ab\r\ncb\r\n", re("b$")).map((m) => m.from)).toEqual([1, 5]);
+    expect(findAll("a\nb\n", re("^"))).toEqual([]); // a search skips empty matches
+    expect(findAll("a\nb\n", re("^"), 0, 4, true).map((m) => m.from)).toEqual([0, 2]); // not the line after the last
+    expect(findAll("a\nb", re("$"), 0, 3, true).map((m) => m.from)).toEqual([1, 3]); // an unterminated last line
+    expect(findAll("a\nb\n", re("^"), 0, 2, true).map((m) => m.from)).toEqual([0]); // the next line's start isn't in range
+    const ms = findAll("a a\nb a a\n", re("a"));
+    expect(firstPerLine("a a\nb a a\n", ms).map((m) => m.from)).toEqual([0, 6]);
+  });
+  test("merge conflict markers in a CRLF note are CRLF", () => {
+    const r = merge3("a\r\nb\r\n", "A\r\nb\r\n", "Z\r\nb\r\n");
+    expect(r.conflicts).toBe(1);
+    expect(r.text.replace(/\r\n/g, "")).not.toContain("\n");
+  });
+  test("listTasks: from the parsed note, so a code block's - [ ] isn't a task", () => {
+    const tasks = listTasks(parseMarkdown("- [ ] one\n- [x] two\n\n```\n- [ ] not a task\n```\n").tree);
+    expect(tasks).toEqual([
+      { line: 1, checked: false, text: "one" },
+      { line: 2, checked: true, text: "two" },
+    ]);
+  });
+  test("CJK wrapping: no row starts with closing punctuation; no space from a soft break between CJK", () => {
+    const text = (md: string, width: number) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false }).lines.map((l) => l.spans.map((x) => x.text).join(""));
+    for (let w = 8; w <= 30; w++) {
+      for (const row of text("今夜は晴れ、シーイングは良好でした。（観測）は続く。", w)) expect(row.trimStart()).not.toMatch(/^[、。）]/);
+    }
+    expect(text("今夜は\n晴れ", 40)[0]).toBe("今夜は晴れ");
+    expect(text("tonight\nclear", 40)[0]).toBe("tonight clear");
+  });
+  test("frontmatter: a parse error wraps whole; a long key is cut with an ellipsis; no row is clipped", () => {
+    const render = (md: string, width: number) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false });
+    const broken = render("---\ntitle: [unclosed\ntags: [a, b\n---\n\nbody\n", 30);
+    const all = broken.lines.map((l) => l.spans.map((x) => x.text).join("").trim()).join(" ");
+    expect(all.replace(/\s+/g, " ")).toMatch(/sufficiently indented/);
+    expect(broken.clipped).toBe(0);
+    const keyed = render("---\nobserving_programme_coordinator_contact: Ada\n---\n", 40);
+    expect(keyed.lines.some((l) => l.spans.map((x) => x.text).join("").includes("…"))).toBe(true);
   });
 });

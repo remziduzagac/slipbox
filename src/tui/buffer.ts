@@ -89,6 +89,8 @@ export class NoteBuffer {
       }
       this.loaded = true;
       this.conflictKept = false;
+      this.markers = false;
+      this.conflictWaiting = false;
       this.savedVersion = this.version;
       this.savedText = this.source;
       this.stamp = stamp(this.abs);
@@ -135,6 +137,10 @@ export class NoteBuffer {
 
   /** After (K)eep yours in the conflict prompt: autosave is off for it until a confirmed save. */
   conflictKept = false;
+  /** A merge left conflict markers in it: autosave is off until you save it yourself. */
+  markers = false;
+  /** Changed on disk while you were typing into it: the conflict prompt waits for esc. */
+  conflictWaiting = false;
 
   /** The text as last loaded or saved: the merge base. */
   get baseText(): string {
@@ -156,6 +162,7 @@ export class NoteBuffer {
     this.savedText = this.source;
     this.stamp = stamp(this.abs);
     this.conflictKept = false;
+    this.markers = false;
   }
 
   /** Replace `length` characters at `at` with `text`; part of the open undo step, else a step of

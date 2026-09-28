@@ -14,13 +14,16 @@ export const DEMO = join(REPO, "examples", "vault");
 export interface SessionOptions {
   /** The note opened, relative to the vault (default: home.md). */
   open?: string;
-  /** Extra user config, as TOML. */
+  /** Extra user config, as TOML; `{vault}` is the scenario's copy of the vault. */
   config?: string;
   /** More files in the vault before it starts: path → content. */
   files?: Record<string, string>;
 }
 
 export class CheckFailed extends Error {}
+
+/** The pane isn't back at a shell: nothing after this can run in it. */
+export class Stuck extends Error {}
 
 export class Session {
   readonly dir: string;
@@ -37,7 +40,8 @@ export class Session {
     cpSync(DEMO, this.vault, { recursive: true });
     for (const [rel, text] of Object.entries(opts.files ?? {})) this.write(rel, text);
     for (const d of ["config/slipbox", "state", "cache"]) mkdirSync(join(this.dir, d), { recursive: true });
-    writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), opts.config ?? "");
+    // {vault} in a scenario's config is this scenario's own copy of the vault.
+    writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), (opts.config ?? "").replaceAll("{vault}", this.vault));
     this.trace = join(this.dir, "trace");
     writeFileSync(this.trace, "");
     this.marker = `__slipbox_e2e_exit_${Math.random().toString(36).slice(2, 8)}__`;
@@ -50,19 +54,31 @@ export class Session {
       `XDG_STATE_HOME=${this.dir}/state`,
       `XDG_CACHE_HOME=${this.dir}/cache`,
       `SLIPBOX_TRACE=${this.trace}`,
+      "SLIPBOX_CLIPBOARD=file", // copies land in the state dir, not on your clipboard
     ].join(" ");
     const file = join(this.vault, this.opts.open ?? "home.md");
     this.pane.run(`clear; cd ${REPO} && ${env} bun src/main.ts '${file}'; echo ${this.marker} $?`);
     await this.until(() => this.statusLine().includes("READ") || this.statusLine().includes("SOURCE"), 10000, "slipbox to start");
   }
 
-  /** Quit (discarding changes) and wait for the shell; true if it exited cleanly. */
+  /**
+   * Quit (discarding changes) and wait for the shell; true if it exited cleanly. A slipbox that
+   * won't quit is killed — it must never be left to swallow the next scenario's keys — and if even
+   * that fails, the run stops (Stuck).
+   */
   async quit(): Promise<boolean> {
     if (!this.exited()) {
       await this.pane.keys("escape", "escape");
       this.pane.text(":q!");
       await this.pane.keys("enter");
       await this.until(() => this.exited(), 5000, "slipbox to quit").catch(() => undefined);
+    }
+    if (!this.exited()) {
+      // Its command line names this scenario's own vault, so this kills nothing else.
+      spawnSync("pkill", ["-f", this.vault]);
+      await this.until(() => this.exited(), 5000, "slipbox to be killed").catch(() => undefined);
+      if (!this.exited()) throw new Stuck(`slipbox in pane ${this.pane.id} would not quit or die; stopping`);
+      return false;
     }
     return this.exitCode() === 0;
   }

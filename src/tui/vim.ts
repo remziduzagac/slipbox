@@ -140,6 +140,7 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
   }
   if (!o.keys.length && (key === "i" || key === "a")) {
     o.object = key;
+    o.count = count; // d2i( and 2di( both: a count before the object counts too
     return;
   }
   // The operator doubled (dd, cc, yy, >>, <<): whole lines, count of them.
@@ -205,8 +206,18 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
   const saved = { cur: view.cur, goal: view.goal, top: view.top, left: view.left, topAnchor: view.topAnchor, curAnchor: view.curAnchor };
   const from = E.offsetOf(app, view);
   let motion = spec;
-  // cw on a word changes to its end (as vim does), not to the next word's start.
-  if (op === "c" && spec === "cursor.word_next" && !/\s/.test(view.buf.source[from] ?? " ")) motion = "cursor.word_end";
+  // cw on a word changes to its end (as vim does), not to the next word's start — and on a word's
+  // last character (or a one-letter word) just that character, never through the next word.
+  if (op === "c" && spec === "cursor.word_next" && !/\s/.test(view.buf.source[from] ?? " ")) {
+    if (count === 1) {
+      const text = view.buf.source;
+      const kind = (ch: string) => (/[\p{L}\p{N}_]/u.test(ch) ? 1 : /\s/.test(ch) ? 0 : 2);
+      let end = from + 1;
+      while (end < text.length && kind(text[end]!) === kind(text[from]!) && kind(text[end]!) !== 0) end++;
+      return { from, to: end, linewise: false };
+    }
+    motion = "cursor.word_end";
+  }
   for (let k = 0; k < count; k++) await app.run(motion);
   const to = E.offsetOf(app, view);
   Object.assign(view, saved);
@@ -323,6 +334,16 @@ export function textObject(view: View, at: number, kind: "i" | "a", ch: string, 
   const ls = view.buf.lineStarts()[line - 1] ?? 0;
   const text = E.lineText(view, line);
   const i = at - ls;
+  if ((ch === "w" || ch === "W") && count > 1) {
+    // 2aw: this word, then the next, each taken from where the last ended (on the line).
+    let r = textObject(view, at, kind, ch, 1);
+    for (let k = 1; r && k < count && r.to < ls + text.length; k++) {
+      const next = textObject(view, r.to, kind, ch, 1);
+      if (!next || next.to <= r.to) break;
+      r = { ...r, to: next.to };
+    }
+    return r;
+  }
   if (ch === "w" || ch === "W") {
     const cls = (c: string | undefined) => (c === undefined ? -1 : /\s/.test(c) ? 0 : ch === "W" || /[\p{L}\p{N}_]/u.test(c) ? 1 : 2);
     const k = cls(text[i]);
@@ -414,11 +435,34 @@ export function put(app: App, view: View, after: boolean): void {
     } else buf.edit(where, 0, text, at);
     return E.placeAt(app, view, firstNonBlank(view, E.lineOf(view, where)));
   }
-  const text = reg.text.repeat(n);
+  // The note's own line breaks, as the linewise put has them.
+  const text = reg.text.replaceAll("\r\n", "\n").replaceAll("\n", buf.eol).repeat(n);
   const where = after && at < E.lineEnd(view, at) ? E.nextBoundary(buf.source, at) : at;
   buf.edit(where, 0, text, at);
   E.placeAt(app, view, Math.max(where, where + text.length - 1));
 }
+
+/**
+ * A visual-mode change, for `.`: the keys that make the same change on as much text from the
+ * cursor (vim's rule) — `V` and `j`s for lines, `v` and `l`s on one line — or none when it can't
+ * be said in keys (characters across lines), so `.` never repeats an older change instead.
+ */
+export function recordVisual(app: App, keys: string[] | null, insert: boolean, versionBefore: number): void {
+  const s = app.vim;
+  if (s.replaying) return;
+  if (!keys) {
+    s.lastChange = null;
+    return;
+  }
+  s.seq = [...keys];
+  s.seqVersion = versionBefore;
+  s.undoing = false;
+  if (insert) s.inInsert = true; // c: the text typed next is part of it (insertRecord)
+  else s.lastChange = [...keys];
+}
+
+/** Pasted text, as a key of its own in a recorded change (`.` pastes it again). */
+export const PASTE = "\u0000paste:";
 
 /** A key typed in insert mode: recorded with the change that started it; esc ends that change. */
 export function insertRecord(app: App, view: View, key: string): void {

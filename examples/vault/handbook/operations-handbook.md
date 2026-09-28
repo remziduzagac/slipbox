@@ -52,6 +52,15 @@ The checklist, in order:
 
 > Rule of thumb from Rosa: if you had to read Sable twice to convince yourself, the answer is no.
 
+> [!warning] Dome safety
+> The slit and the dome ring move with enough force to break a wrist, and neither has a sensor
+> that notices a hand. Nobody touches the slit edge or the ring rail while the controller shows
+> READY, and nobody stands on the catwalk while the dome rotates (O8).
+
+> [!tip]- Night assistant shortcut
+> `night-start.sh` (O11) runs the first four checks for you and prints them in one block. Read the
+> block aloud instead of the first four lines of the list; the rest are still done by hand.
+
 ## O5: The closing checklist (2025-03)
 
 **Decision:** Closing mirrors opening, in reverse, with two additions: park the telescope before
@@ -571,6 +580,19 @@ replaced every two years or at the first sign of fraying, whichever comes first.
 - Wipe the rain sensor with a dry cloth.
 - Log the inspection with initials and any findings.
 
+The same inspection as the tick sheet in the binder, which nests because the shutter does:
+
+- [ ] Shutter
+  - [ ] Belt
+    - [x] Upper run, slit at 50 %
+    - [ ] Lower run, slit closed
+      - [ ] Splice plate bolts, all six
+      - [ ] Tension gauge reads 40–45 N
+  - [ ] Limit switches
+    - [ ] Open limit
+    - [ ] Closed limit
+- [ ] Rain sensor wiped
+
 ### Belt replacement
 
 The belt replacement runbook lives at `runbooks/replace-shutter-belt.md`. It takes two people and
@@ -584,6 +606,21 @@ crank back.
 
 > Every night assistant winds the slit closed by hand once during training, on a dry afternoon,
 > so the first time they do it is not at 03:00 in sleet.
+
+#### Winding by hand, in detail
+
+Isolate the shutter motor at the red switch first; the crank will fight a live motor and win.
+Engage the crank on the hex boss below the drive pulley and turn clockwise, looking up.
+
+##### If the crank slips
+
+The crank's pin shears before the gearbox does, by design. Spare pins are in the tin taped inside
+the control room door.
+
+###### Replacing the shear pin
+
+Knock the stub out with the 4 mm drift, fit a new pin, and log the replacement: a slipping crank
+usually means the belt is binding, and that is a fault for Tomasz, not a pin for the tin.
 
 ## O37: Power cuts and the UPS (2026-01)
 
@@ -1126,6 +1163,18 @@ Before adding an entry, check:
 
 > Last word, from the first page of the original binder, in Tomasz's handwriting: "Write it down.
 > The ridge forgets nothing, but people do."
+
+Appendix: shutter firmware
+--------------------------
+
+The dome controller runs vendor firmware that we patch ourselves, because the vendor stopped
+shipping updates in 2024. Build names are long and are copied exactly, never abbreviated.
+
+### HRO-DOME-SHUTTER-FIRMWARE-3.2.1-rc4-patched-2026-03-14-build-00000000000042 and why we still run it
+
+It is the last build that honours the rain sensor while the slit is mid-travel. Later builds
+finish the move first, which on a squally night means another eleven seconds of open slit. Keep
+the image on the offsite disk next to the `ridge-ctl` image (O45).
 
 ## Appendix: glossary
 

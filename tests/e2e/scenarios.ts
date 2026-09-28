@@ -3,6 +3,8 @@
 // headless tests can't: key encodings, timing, the idle loop, what the screen really shows. Mouse
 // clicks can't be sent through herdr; the headless tests cover them.
 
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Session, SessionOptions } from "./session.ts";
 
 export interface Scenario {
@@ -63,8 +65,9 @@ export const SCENARIOS: Scenario[] = [
       await open(s, "telescope-comparison");
       await s.see("┌");
       await s.see("╞");
-      // No row runs past the pane: the table allocator's whole job.
-      s.expect(s.screen().every((r) => r.length <= s.pane.cols), "a row wider than the pane");
+      // Every table row closes with its right border: nothing ran past the window and got cut.
+      const table = s.screen().filter((r) => r.includes("│ ") && (r.match(/│/g) ?? []).length >= 3);
+      s.expect(table.length > 0 && table.every((r) => /│\s*(▐|$)/.test(r.trimEnd())), "a table row without its right border");
       await open(s, "pipeline-cookbook");
       await s.see("properties"); // the frontmatter, rendered
       await s.see(/bash|python/);
@@ -574,8 +577,10 @@ export const SCENARIOS: Scenario[] = [
     name: "info: note and vault info, reindex, config reload, messages, help",
     run: async (s) => {
       await leader(s, "n", "i");
+      await s.see("Note — home");
       await s.keys("escape");
       await leader(s, "v", "i");
+      await s.see(s.vault);
       await s.keys("escape");
       await leader(s, "v", "r");
       await s.top(/reindexed \d+ notes/);
@@ -592,11 +597,15 @@ export const SCENARIOS: Scenario[] = [
   // --- hand-offs ------------------------------------------------------------------------------
   {
     name: "hand-off: space n e runs the editor and comes back; send to a remote editor",
-    options: { config: '[editor]\ncommand = "true {file}"\nremote = ["true {file}"]\n' },
+    // Each editor leaves a file behind, so the check is that it really ran, with the note's path.
+    options: { config: `[editor]\ncommand = "sh -c 'echo $0 > $1' {file} {vault}/ran-edit"\nremote = ["sh -c 'echo $0 > $1' {file} {vault}/ran-send"]\n` },
     run: async (s) => {
       await leader(s, "n", "e");
       await s.status("home.md", 5000);
+      await s.until(() => existsSync(join(s.vault, "ran-edit")), 5000, "the editor to run");
       await leader(s, "n", "s");
+      await s.until(() => existsSync(join(s.vault, "ran-send")), 5000, "the remote editor to run");
+      s.expect(readFileSync(join(s.vault, "ran-send"), "utf8").trim().endsWith("home.md"), "the remote editor got the note");
       await leader(s, "n", "p");
       await s.keys("escape");
     },

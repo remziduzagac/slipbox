@@ -77,6 +77,8 @@ export interface Layout {
   links: LayoutLink[];
   headings: LayoutHeading[];
   width: number;
+  /** Rows the last line of defence had to cut to the width: a block's bug, lost text. Always 0. */
+  clipped?: number;
 }
 
 export function spanWidthText(spans: Span[]): string {

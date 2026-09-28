@@ -419,6 +419,7 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
   // Tabs stop before the +N button (and its border), even when the one tab left is cut short.
   const limit = hidden > 0 ? c.width - stringWidth(moreLabel) - 1 : c.width;
   let x = x0;
+  let lastSep = -1;
   for (let i = from; i <= to && x < limit; i++) {
     const role: Role = i !== app.activeTab ? "tab" : app.region === "content" ? "tab_active" : "tab_active_idle";
     const w = button(app, c, x, band, labels[i]!, role, `tab:${i}`, geo, stripBg, limit - x);
@@ -426,14 +427,17 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
     x += w;
     const tabBg = roleStyle(theme, role, stripBg).bg ?? stripBg;
     x += button(app, c, x, band, close, role, `tabclose:${i}`, geo, tabBg, limit - x);
-    if (x < limit) separator(x);
+    if (x < limit) {
+      separator(x);
+      lastSep = x;
+    }
     x += 1;
   }
   if (hidden > 0) {
     const label = moreLabel;
     const bx = c.width - stringWidth(label);
-    // Its own border, unless the last tab's is (nearly) next to it already.
-    if (bx - 1 - x >= 2) separator(bx - 1);
+    // Its own border — also after a tab cut short — unless the last tab's is (nearly) next to it.
+    if (lastSep < bx - 2) separator(bx - 1);
     button(app, c, bx, band, label, "tab", "tabmore:", geo, stripBg);
   }
 }
@@ -535,6 +539,19 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   let body = rect;
   // The header: a split window's title, then the breadcrumb, then a blank row before the text.
   const crumbs = app.ui.breadcrumb && !app.ui.zen && rect.h >= 8;
+  const typing = app.overlay?.kind === "prompt" && app.overlay.view === view ? app.overlay : null;
+  {
+    // The window's text size, set before anything lays it out: the breadcrumb asks for the layout
+    // first, and a layout at a stale size scrolls the view to fit it (a restored session lost its
+    // place). The same arithmetic as the rows drawn below.
+    let h = rect.h - (crumbs ? (ruleAbove ? 2 : 3) : titled ? 1 : 0);
+    if ((typing || view.find) && h > 6) h -= typing?.replace ? 3 : 2;
+    if (!app.ui.wrap && h > 3) h -= 1;
+    if (h > 0 && rect.w > 6) {
+      view.height = h;
+      view.width = rect.w - 1;
+    }
+  }
   if (crumbs) {
     // A rule, the title (in a split) and breadcrumb row on its own background, a rule. The top
     // rule is the frame's when the window is at the top.
@@ -570,7 +587,6 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   }
   // Find (`/`): a row of its own under the header (or at the window's top) and a rule, while it's
   // typed and while the search is on — the window's search, like a pane's filter.
-  const typing = app.overlay?.kind === "prompt" && app.overlay.view === view ? app.overlay : null;
   if ((typing || view.find) && body.h > 6) {
     const y = body.y;
     const bg = page;
@@ -1239,8 +1255,10 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   const visibleRows = Math.floor((h - 2 - 2 * pad) / entryH);
   const hiddenCount = entries.filter((_, i) => i % rows >= visibleRows).length;
   const hintText = `${hiddenCount ? `+${hiddenCount} more · ` : ""}${app.pending.length ? "backspace up · esc cancel" : "keys repeat · any other key leaves"}`;
-  const hint = stringWidth(hintText) + 2 <= w - 4 ? ` ${hintText} ` : "";
-  const bottomRule = `${b.bl}${b.h.repeat(Math.max(0, w - 3 - stringWidth(hint)))}`;
+  // Too narrow for the hint: the count alone, which must not be lost with it.
+  const countOnly = hiddenCount ? `+${hiddenCount} more` : "";
+  const hint = stringWidth(hintText) + 2 <= w - 4 ? ` ${hintText} ` : countOnly && stringWidth(countOnly) + 2 <= w - 4 ? ` ${countOnly} ` : "";
+  const bottomRule = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
   drawText(c, x0, y0 + h - 1, bottomRule, border);
   drawText(c, x0 + stringWidth(bottomRule), y0 + h - 1, hint, dim);
   drawText(c, x0 + w - 1, y0 + h - 1, b.br, border);
@@ -1299,7 +1317,7 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
   const selectableCount = o.filtered.filter((e) => !e.item.header).length;
   const position = o.filtered.slice(0, o.selected + 1).filter((e) => !e.item.header).length;
   const count = ` ${selectableCount ? position : 0}/${selectableCount} `;
-  const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 3 - stringWidth(count)))}`;
+  const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(count)))}`;
   drawText(c, x, y + h - 1, bottom, border);
   drawText(c, x + stringWidth(bottom), y + h - 1, count + b.br, dim);
 

@@ -225,6 +225,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     }
     try {
       const data = parseToml(readFileSync(file, "utf8")) as Record<string, unknown>;
+      if (file !== userFile) dropUserOnly(data, file, warnings);
       config = merge(config, data, file, "", warnings);
       sources.push(file);
     } catch (err) {
@@ -232,12 +233,29 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     }
   }
   // The scratch's file name: a plain relative path inside the project, never empty, absolute or
-  // climbing out (a cloned vault's config must not aim `slipbox capture` at any file).
+  // climbing out (a cloned vault's config must not aim `slipbox capture` at any file; symlinks on
+  // the way are refused where the path is used, in core/capture.ts).
   if (!isSafeRelative(config.capture.file) || !/\.(md|markdown)$/i.test(config.capture.file)) {
     warnings.push(`config: capture.file must be a relative .md path inside the project, not hidden (got ${JSON.stringify(config.capture.file)}); using "${DEFAULT_CONFIG.capture.file}"`);
     config.capture.file = DEFAULT_CONFIG.capture.file;
   }
   return { config, sources, warnings };
+}
+
+/**
+ * Settings only your own config may set: each names a program slipbox runs. A vault's committed
+ * config comes with whatever you clone, so it never chooses what runs on your machine.
+ */
+export const USER_ONLY = ["editor.command", "editor.remote"];
+
+function dropUserOnly(data: Record<string, unknown>, file: string, warnings: string[]): void {
+  for (const key of USER_ONLY) {
+    const [table, name] = key.split(".") as [string, string];
+    const t = data[table];
+    if (!isPlainObject(t) || !(name in t)) continue;
+    delete (t as Record<string, unknown>)[name];
+    warnings.push(`config: ${file} sets ${key}, which only your own config may set (it runs a program); ignored`);
+  }
 }
 
 /** Merge `over` into `base`, typed by `base`'s shape. Unknown keys and wrong types are warnings. */

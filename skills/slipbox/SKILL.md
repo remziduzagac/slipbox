@@ -45,7 +45,7 @@ On failure `ok` is false and `error` is `{code, message}`. Exit codes are stable
 | 2 | usage — a bad flag or a missing argument |
 | 3 | not found — no such note, or the link does not resolve |
 | 4 | ambiguous — several notes match; `data.candidates` lists them |
-| 5 | refused — `--if-unchanged` did not match |
+| 5 | refused — a stale `--if-unchanged`, a write outside the vault or over a note (`--create`), bad UTF-8 |
 
 **`stale`** lists notes that a running slipbox TUI holds with unsaved changes. When it is not
 empty, what you read on disk may be older than what the user sees — and if you write such a note,

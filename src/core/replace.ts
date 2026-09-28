@@ -12,13 +12,46 @@ export interface PatternOptions {
 
 /** The query as a global regex, or why it isn't one (an invalid regex). */
 export function compilePattern(query: string, opts: PatternOptions): RegExp | string {
-  let source = opts.regex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let source = opts.regex ? crlfEnds(query) : query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (opts.whole) source = `(?<![\\p{L}\\p{N}_])(?:${source})(?![\\p{L}\\p{N}_])`;
   try {
-    return new RegExp(source, !opts.ignoreCase && /\p{Lu}/u.test(query) ? "gu" : "giu");
+    // m: ^ and $ are a line's start and end, as in vim and grep, not the whole note's.
+    return new RegExp(source, !opts.ignoreCase && /\p{Lu}/u.test(query) ? "gmu" : "gimu");
   } catch (err) {
     return (err as Error).message.replace(/^Invalid regular expression: /, "");
   }
+}
+
+/**
+ * A pattern's line anchors, made to mean lines of the note: `^` after a `\n` (or at the start) and
+ * `$` before a `\n` — or a `\r\n`, so a CRLF line ends before its `\r` — or at the end. (A
+ * multiline RegExp alone also breaks lines at a lone `\r`.) Escaped characters and character
+ * classes are left alone.
+ */
+function crlfEnds(source: string): string {
+  let out = "";
+  let inClass = false;
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i]!;
+    if (c === "\\") {
+      out += c + (source[i + 1] ?? "");
+      i++;
+      continue;
+    }
+    if (inClass) {
+      if (c === "]") inClass = false;
+      out += c;
+      continue;
+    }
+    if (c === "[") {
+      inClass = true;
+      out += c;
+      if (source[i + 1] === "^") out += source[++i]; // a negated class, not an anchor
+      continue;
+    }
+    out += c === "^" ? "(?<![^\\n])" : c === "$" ? "(?=\\r?\\n|(?![\\s\\S]))" : c;
+  }
+  return out;
 }
 
 export interface TextMatch {
@@ -28,19 +61,27 @@ export interface TextMatch {
   groups: string[];
 }
 
-/** Every non-empty match in `text` (within [from, to) when given). */
-export function findAll(text: string, re: RegExp, from = 0, to = text.length): TextMatch[] {
+/**
+ * Every match in `text` (within [from, to) when given). Empty matches (`^`, `$`, a lookahead) are
+ * kept only when `empty` is set — a replacement inserts there (`:s/^/> /`); a search skips them.
+ * The empty "line" after a final newline is never one.
+ */
+export function findAll(text: string, re: RegExp, from = 0, to = text.length, empty = false): TextMatch[] {
   const out: TextMatch[] = [];
   const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
   g.lastIndex = from;
   for (let m = g.exec(text); m; m = g.exec(text)) {
-    if (m.index >= to) break;
+    const at = m.index;
     if (!m[0]) {
-      g.lastIndex++; // an empty match never replaces anything
+      g.lastIndex++;
+      // An empty match at `to` is the next line's start, unless the note ends there unterminated.
+      const inside = at < to || (at === text.length && to === text.length && !text.endsWith("\n"));
+      if (empty && inside) out.push({ from: at, to: at, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });
+      if (at >= to) break;
       continue;
     }
-    if (m.index + m[0].length > to) break;
-    out.push({ from: m.index, to: m.index + m[0].length, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });
+    if (at >= to || at + m[0].length > to) break;
+    out.push({ from: at, to: at + m[0].length, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });
   }
   return out;
 }
@@ -52,6 +93,24 @@ export function findAll(text: string, re: RegExp, from = 0, to = text.length): T
 export function expandReplacement(replacement: string, m: TextMatch, regex: boolean): string {
   if (!regex) return replacement;
   return replacement.replace(/\$(\$|&|[1-9])/g, (_, k: string) => (k === "$" ? "$" : k === "&" ? m.groups[0]! : (m.groups[Number(k)] ?? "")));
+}
+
+/** The offset just past the line holding `at` (the end of the text on the last line). */
+export function nextLine(text: string, at: number): number {
+  const nl = text.indexOf("\n", at);
+  return nl < 0 ? text.length : nl + 1;
+}
+
+/** Only the first match on each line (vim's `:s` without `g`). */
+export function firstPerLine(text: string, ms: TextMatch[]): TextMatch[] {
+  const out: TextMatch[] = [];
+  let past = -1;
+  for (const m of ms) {
+    if (m.from < past) continue;
+    out.push(m);
+    past = nextLine(text, m.to > m.from ? m.to - 1 : m.from);
+  }
+  return out;
 }
 
 /** Replace `matches` in `text` (in order, not overlapping): the new text and how many were replaced. */

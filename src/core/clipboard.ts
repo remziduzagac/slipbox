@@ -72,8 +72,12 @@ export function copyText(text: string, opts: CopyOptions): CopyResult {
   // The same size cap whoever writes the sequence: terminals drop or choke on larger payloads,
   // and the local tools or the fallback file carry it instead.
   const fits = Buffer.byteLength(Buffer.from(text, "utf8").toString("base64")) <= OSC52_MAX_BASE64;
-  if (fits && (opts.osc52 ?? osc52ToTty)(text)) methods.push("osc52");
-  for (const tool of localTools()) {
+  // SLIPBOX_CLIPBOARD=file: never the real clipboard (the terminal's or the system's), only the
+  // file — for tests, and anyone who wants that. A writer passed in is the caller's to honour it.
+  const fileOnly = process.env.SLIPBOX_CLIPBOARD === "file";
+  const osc52 = opts.osc52 ?? (fileOnly ? () => false : osc52ToTty);
+  if (fits && osc52(text)) methods.push("osc52");
+  for (const tool of fileOnly ? [] : localTools()) {
     if (runTool(tool, text)) {
       methods.push(tool[0]!);
       confirmed = true;

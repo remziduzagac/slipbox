@@ -196,7 +196,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `l`, `right` | open the note as a tab (or switch to its tab) / unfold a folder |
 | `o` | open the note in the current window, replacing what it shows |
 | `h`, `left` | collapse |
-| `s` | open in the split |
+| `s` | open in the split's other window (splitting first) |
 | `g g` / `shift+g` | top / bottom |
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
 | `q` | close the explorer |
@@ -283,8 +283,10 @@ selection types `'<,'>` for you. Without `g` only the first match on each line i
 ignores case (otherwise smart case, as `/`); `c` asks at each match in the window's find and replace
 rows, `replace? y n a q` (`l` replaces this one and stops, `esc` stops too). The pattern is a
 JavaScript regex; any punctuation can delimit (`:s#a/b#c#`) and `\` escapes it. In the replacement
-`\1`–`\9` are groups, `&` the match, `\&` a literal `&`. A substitute is one undo step, confirmed or
-not, and works on the markdown: a rendered window switches to editing first.
+`\1`–`\9` are groups, `&` the match, `\&` a literal `&`. `^` and `$` are a line's start and end, and
+a match of nothing inserts there: `:%s/^/> /` quotes every line, `:%s/$/!/` ends each with `!`. A
+substitute is one undo step, confirmed or not, and works on the markdown: a rendered window switches
+to editing first. `'<,'>` is the last selection's lines, also after it ended.
 
 ## Editing
 
@@ -330,7 +332,8 @@ the word's end, and `dw` stops at the line's end. Text objects follow `i` (insid
 `w` `W` a word, `"` `'` `` ` `` quotes on the line, `(` `b` `[` `{` `B` `<` brackets (nested, across
 lines), `p` a paragraph. `g n` / `g shift+n` after an operator is the search's next / previous match
 (the one under the cursor included): `cgn`, type, `esc`, then `.` changes the next one, and the next.
-A count goes before the command or the motion (`3dd`, `d2w`, `5j`). The
+A count goes before the command, the motion or the text object (`3dd`, `d2w`, `5j`, `d2i(`, `d2aw`).
+`cw` on a word's last letter, or a one-letter word, changes just that letter, as in vim. The
 status chip shows what's pending (`2d`, `di`). The register holds the last text deleted, changed or
 yanked; a yank also goes to the clipboard.
 

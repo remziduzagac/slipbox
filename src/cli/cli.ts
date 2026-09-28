@@ -22,8 +22,8 @@ import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
 import { sanitize } from "../core/sanitize.ts";
-import { type DecodedFile, decodeText, readJson, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
-import { compilePattern, expandReplacement, findAll, replaceMatches } from "../core/replace.ts";
+import { type DecodedFile, decodeText, landsInside, readJson, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
@@ -99,7 +99,7 @@ Usage:
   slipbox ls                        list the vault's notes
   slipbox outline <note>            headings with source lines
   slipbox find <query> [note]       find text in a note, or the vault  [--regex] [--whole] [--ignore-case]
-  slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
+  slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first | --first-per-line] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
   slipbox read <note>               a note's text, and its sha
   slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append] [--create] [--if-unchanged <sha>]
@@ -120,7 +120,8 @@ Global options:
   -h, --help        this help        -V, --version   print the version
 
 <note> is a path, or a note name resolved like a [[wikilink]].
-Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous link, 5 refused (--if-unchanged).
+Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
+5 refused (--if-unchanged, a write outside the vault or over an existing note, invalid UTF-8).
 `;
 
 export const CLI_COMMANDS = new Set([
@@ -153,7 +154,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
   } catch (err) {
     const message = (err as Error).message;
     if (argv.some((a) => a === "--json" || a.startsWith("--json="))) io.out(envelope({ ok: false, command: commandIn(argv), error: { code: EXIT.usage, message } }));
-    else io.err(`slipbox: ${message}\n`);
+    else io.err(sanitize(`slipbox: ${message}\n`));
     return EXIT.usage;
   }
   const json = has(args, "json");
@@ -189,8 +190,9 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
       // Note text reaches the terminal only sanitized (2.9). `render` is the exception: its output
       // is a layout, sanitized when built, plus the colours it adds on purpose.
       if (result.human) io.out(command === "render" ? result.human : sanitize(result.human));
-      for (const w of session.allWarnings()) io.err(`slipbox: warning: ${w}\n`);
-      if (stale.length) io.err(`slipbox: warning: unsaved changes in a running slipbox: ${stale.map((s) => s.path).join(", ")}\n`);
+      // Diagnostics quote config values and paths from the vault: sanitized like the output (2.9).
+      for (const w of session.allWarnings()) io.err(sanitize(`slipbox: warning: ${w}\n`));
+      if (stale.length) io.err(sanitize(`slipbox: warning: unsaved changes in a running slipbox: ${stale.map((s) => s.path).join(", ")}\n`));
     }
     return result.code ?? EXIT.ok;
   } catch (err) {
@@ -205,7 +207,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
       }
       io.out(envelope({ ok: false, command, error: { code, message }, data: err instanceof CliError ? (err.data ?? null) : null, warnings: session?.allWarnings() ?? [], stale }));
     } else {
-      io.err(`slipbox: ${message}\n`);
+      io.err(sanitize(`slipbox: ${message}\n`));
       if (!(err instanceof CliError) && !(err instanceof UsageError) && !(err instanceof VaultError) && io.env.SLIPBOX_DEBUG) io.err(`${(err as Error).stack}\n`);
     }
     return code;
@@ -233,15 +235,18 @@ function requireArg(rest: string[], what: string): string {
   return v;
 }
 
-/** Resolve a note argument to a vault-relative path, or fail with exit 3/4. */
-function resolveNote(s: Session, arg: string): string {
+/**
+ * Resolve a note argument to a vault-relative path, or fail with exit 3/4. `parse` is false for
+ * commands that need only the file's bytes: a big note the walk leaves out is then never parsed.
+ */
+function resolveNote(s: Session, arg: string, parse = true): string {
   if (s.loc.file && isInside(s.loc.root, s.loc.file)) {
     const rel = relative(s.loc.root, s.loc.file);
     if (s.graph.notes.has(rel)) return rel;
     // An existing file the walk leaves out (gitignored, hidden, under node_modules): the user
     // named it explicitly, so read it — as the TUI does — without adding it to the vault.
     if (arg && existsSync(arg.startsWith("/") ? arg : `${s.io.cwd}/${arg}`)) {
-      s.graph.adopt(rel);
+      if (parse) s.graph.adopt(rel);
       return rel;
     }
   }
@@ -423,6 +428,7 @@ const HANDLERS: Record<string, Handler> = {
         return { data: { path: loc.path, content, sha }, human: content };
       case "clear": {
         const expect = flag(s.args, "if-unchanged");
+        if (expect === "") throw new UsageError("--if-unchanged needs a sha (an empty one would check nothing)");
         if (expect && expect !== sha) throw new CliError(`scratch changed since ${expect} (now ${sha}); not cleared`, EXIT.refused, { sha });
         clearScratch(loc);
         return { data: { path: loc.path, cleared: true, previousSha: sha }, human: "" };
@@ -487,7 +493,7 @@ const HANDLERS: Record<string, Handler> = {
   find(s, rest) {
     const query = requireArg(rest, "query");
     const re = pattern(s, query);
-    const notes = rest[1] ? [resolveNote(s, rest[1])] : [...s.graph.notes.keys()].sort();
+    const notes = rest[1] ? [resolveNote(s, rest[1], false)] : [...s.graph.notes.keys()].sort();
     const matches: { path: string; line: number; column: number; match: string; text: string }[] = [];
     for (const rel of notes) {
       const { text } = readText(s.graph.abs(rel));
@@ -507,7 +513,7 @@ const HANDLERS: Record<string, Handler> = {
   replace(s, rest) {
     if (rest.length < 3) throw new UsageError("replace needs <note> <old> <new> (the new text may be \"\")");
     const [noteArg, query, replacement] = rest as [string, string, string];
-    const rel = resolveNote(s, noteArg);
+    const rel = resolveNote(s, noteArg, false);
     const abs = s.graph.abs(rel);
     const file = readNoteFile(s, abs);
     const re = pattern(s, query);
@@ -521,8 +527,10 @@ const HANDLERS: Record<string, Handler> = {
       if (!m || a < 1 || b < a) throw new UsageError("--lines must look like 12 or 12-40, from 1 and in order");
       range = [starts[a - 1] ?? file.text.length, starts[b] ?? file.text.length];
     }
-    let ms = findAll(file.text, re, range[0], range[1]);
+    let ms = findAll(file.text, re, range[0], range[1], has(s.args, "regex")); // ^ and $ insert
+    if (has(s.args, "first") && has(s.args, "first-per-line")) throw new UsageError("--first or --first-per-line, not both");
     if (has(s.args, "first")) ms = ms.slice(0, 1);
+    if (has(s.args, "first-per-line")) ms = firstPerLine(file.text, ms); // vim's :s without g
     const regex = has(s.args, "regex");
     const out = replaceMatches(file.text, ms, replacement, regex);
     const dry = has(s.args, "dry-run");
@@ -538,7 +546,8 @@ const HANDLERS: Record<string, Handler> = {
   task(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
     const abs = s.graph.abs(rel);
-    const file = readNoteFile(s, abs);
+    // A task is a one-byte edit, so a note that isn't valid UTF-8 can be ticked, as in the TUI.
+    const file = readNoteFile(s, abs, false);
     const tasks = listTasks(parseMarkdown(file.text).tree);
     if (rest[1] === undefined) {
       return { data: { path: rel, tasks }, human: tasks.map((t) => `${String(t.line).padStart(5)}  [${t.checked ? "x" : " "}] ${t.text}\n`).join("") };
@@ -549,10 +558,16 @@ const HANDLERS: Record<string, Handler> = {
     if (!task) throw new CliError(`no task on line ${line} of ${rel}`, EXIT.notFound, { tasks });
     const want = has(s.args, "check") ? true : has(s.args, "uncheck") ? false : !task.checked;
     if (has(s.args, "check") && has(s.args, "uncheck")) throw new UsageError("--check or --uncheck, not both");
+    checkUnchanged(s, abs, file.sha);
     if (want !== task.checked) {
       const r = toggleTask(file.bytes, line);
       if (!r) throw new CliError(`no task marker on line ${line} of ${rel}`, EXIT.notFound);
-      writeNote(s.loc.root, abs, r.bytes);
+      try {
+        writeNote(s.loc.root, abs, r.bytes);
+      } catch (err) {
+        if (err instanceof WriteRefused) throw new CliError(err.message, EXIT.refused);
+        throw err;
+      }
     }
     return {
       data: { path: rel, line, text: task.text, checked: want, changed: want !== task.checked, sha: shaOf(abs) },
@@ -561,7 +576,7 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   read(s, rest) {
-    const rel = resolveNote(s, requireArg(rest, "note"));
+    const rel = resolveNote(s, requireArg(rest, "note"), false);
     const abs = s.graph.abs(rel);
     const file = readNoteFile(s, abs, false);
     return { data: { path: rel, abs, sha: file.sha, bom: file.bom, crlf: file.crlf, invalidUtf8: file.invalidUtf8, content: file.text }, human: file.text };
@@ -578,17 +593,17 @@ const HANDLERS: Record<string, Handler> = {
     if (!has(s.args, "stdin") && rest.length < 2) throw new UsageError("write needs the text, or --stdin");
     let rel: string;
     let created = false;
-    try {
-      rel = resolveNote(s, noteArg);
-    } catch (err) {
-      if (!(err instanceof CliError) || err.code !== EXIT.notFound || !has(s.args, "create")) throw err;
-      // A new note: a path in the vault, relative to it (or to cwd, when inside it).
+    if (has(s.args, "create")) {
+      // A new note: the argument is a path in the vault (relative to it, or to cwd when inside
+      // it), never a name to resolve — and a file already there is never overwritten.
       const base = noteArg.startsWith("/") ? noteArg : isInside(s.loc.root, join(s.io.cwd, noteArg)) ? join(s.io.cwd, noteArg) : join(s.loc.root, noteArg);
-      const abs = base.endsWith(".md") ? base : `${base}.md`;
-      if (!isInside(s.loc.root, abs)) throw new CliError(`${noteArg} is outside the vault (${s.loc.root})`, EXIT.refused);
+      const abs = /\.(md|markdown)$/i.test(base) ? base : `${base}.md`;
+      // Outside by its path, or by a symlinked folder on the way: checked before any folder is made.
+      if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${noteArg} is outside the vault (${s.loc.root})`, EXIT.refused);
       rel = relative(s.loc.root, abs);
+      if (existsSync(abs)) throw new CliError(`${rel} already exists; not overwriting it (drop --create to write it)`, EXIT.refused, { path: rel });
       created = true;
-    }
+    } else rel = resolveNote(s, noteArg, false);
     const abs = join(s.loc.root, rel);
     let previous: NoteFile | null = null;
     if (!created) previous = readNoteFile(s, abs);
@@ -607,7 +622,7 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   send(s, rest) {
-    const rel = resolveNote(s, requireArg(rest, "note"));
+    const rel = resolveNote(s, requireArg(rest, "note"), false);
     const abs = s.graph.abs(rel);
     const lineArg = flag(s.args, "line") ?? "1";
     if (!/^\d+$/.test(lineArg) || Number(lineArg) < 1) throw new UsageError("--line must be a whole number from 1");
@@ -691,11 +706,18 @@ function readNoteFile(s: Session, abs: string, forWriting = true): NoteFile {
   const decoded = decodeText(bytes);
   const sha = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
   if (forWriting) {
-    const expect = flag(s.args, "if-unchanged");
-    if (expect && expect !== sha) throw new CliError(`${relative(s.loc.root, abs)} changed since ${expect} (now ${sha}); not written`, EXIT.refused, { sha });
+    checkUnchanged(s, abs, sha);
     if (decoded.invalidUtf8) throw new CliError(`${relative(s.loc.root, abs)} isn't valid UTF-8; not rewriting it`, EXIT.refused);
   }
   return { ...decoded, bytes, sha };
+}
+
+/** `--if-unchanged <sha>`: refuse (exit 5) unless the note's bytes still have that sha. */
+function checkUnchanged(s: Session, abs: string, sha: string): void {
+  const expect = flag(s.args, "if-unchanged");
+  if (expect === undefined) return;
+  if (!expect) throw new UsageError("--if-unchanged needs a sha (an empty one would check nothing)");
+  if (expect !== sha) throw new CliError(`${relative(s.loc.root, abs)} changed since ${expect} (now ${sha}); not written`, EXIT.refused, { sha });
 }
 
 /** Write a note's text back as it was stored: its BOM and its line endings kept. */

@@ -259,7 +259,8 @@ export class Graph {
   /** Find a note by user input: a vault-relative path, a path relative to cwd, or a link name. */
   findNote(input: string, cwd = process.cwd()): Resolution {
     const cleaned = input.replace(/^\[\[|\]\]$/g, "");
-    const asAbs = join(cwd, cleaned).startsWith(this.root) ? join(cwd, cleaned).slice(this.root.length + 1) : null;
+    const full = join(cwd, cleaned);
+    const asAbs = full.startsWith(`${this.root}/`) ? full.slice(this.root.length + 1) : null;
     for (const cand of [cleaned, asAbs]) {
       if (cand && this.notes.has(cand)) return { status: "resolved", path: cand, candidates: [cand] };
     }

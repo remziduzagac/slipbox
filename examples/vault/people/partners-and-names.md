@@ -38,17 +38,39 @@ A standard markdown link to [the vault's overview](../about-this-vault.md), a ba
 
 [ref]: https://partners.example.invalid/charter
 
+Kenji's own note can be reached several ways, and all of them should land on the same page:
+[[kenji-mori.md]] with its extension, [[people/kenji-mori]] by folder path, and through either of
+the aliases it declares, [[Kenji]] or [[森健二]] — once slipbox reads aliases; until then those
+two show as unresolved. The table of scripts further down is
+[[#Names in their own scripts]], a link to a heading in this very note. His heading, embedded:
+
+![[kenji-mori#Kenji Mori]]
+
+Standard links can carry a heading too:
+[the survey's calibration](../projects/variable-star-survey.md#thread-2--calibration) jumps straight to the second
+thread.
+
+Some links here are **deliberately broken**, so the renderer and the link index have something to
+refuse politely:
+
+- ![[dome-diagram.png]] — an image embed; nobody has drawn the dome diagram yet
+- [a path with spaces](<../scratch/wrap probe copy.md>) — the copy was never made, so it stays
+  unresolved
+- [[home#No such heading]] — the note exists, the heading does not (slipbox doesn't check a
+  reference's heading yet, so for now this one lands on the note)
+- [[variable-star-survey^nope]] — the note exists, the block id does not (the same)
+
 ## Names in their own scripts
 
 These rows all contain the same number of *characters* and different display widths, which is
 the difference that breaks column alignment:
 
 | Kind | Sample | Notes |
-| --- | --- | --- |
+| --- | :---: | --- |
 | ASCII | `Marrowby` | 8 columns |
 | CJK | `木曽原天文同好会` | 8 characters, 16 columns |
 | Korean | `서민준의 관측일지` | mixed with a space |
-| Emoji | `🔭🌌🌙⭐🪐☄️📷🛰` | 8 characters, 16 columns |
+| Emoji | `🔭🌌🌙⭐🪐☄️📷🛰️` | 8 characters, 16 columns |
 | ZWJ | `👩‍🔬👨‍👩‍👧‍👦` | two graphemes, many code points |
 | Combining | `Chrétien vs Chrétien` | precomposed vs `e` + U+0301 |
 | RTL | `يوسف حداد` | right-to-left run inside an LTR line |
@@ -75,6 +97,14 @@ Our visitor numbers, a footnote reference[^1], and a horizontal rule.
 
 [^1]: Counted at the Visitor Pavilion door, not from ticket sales.
 
+Every partnership rests on the same short agreement[^charter], signed once and renewed by email.
+
+[^charter]: The partner charter is two pages: what we share (data, dome time, volunteers) and
+    what we do not (anything with a visitor's name on it).
+
+    It was last revised in 2026-02, when the Kiso-Hara society joined; the next review is due
+    with the handbook's (O54).
+
 ---
 
 ## Edge cases worth keeping
@@ -87,5 +117,10 @@ An empty table cell, a pipe escaped inside a cell, and a very long unbreakable t
 | escaped pipe | `U \| B \| V` |
 | unbreakable | `HRO-VSS-2026-000000000000000000000000000000000000000000000000000000000000000000000001` |
 
-A heading immediately followed by a table with no blank line between them is malformed on
-purpose — the parser should not crash on it.
+The next heading is immediately followed by a table with no blank line between them. It is
+malformed on purpose — the parser should not crash on it.
+
+### Malformed
+| a | b |
+| --- | --- |
+| 1 | 2 |

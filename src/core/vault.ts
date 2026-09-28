@@ -5,7 +5,7 @@
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { VAULT_CONFIG_TEMPLATE } from "./config.ts";
 
 export const MARKER = ".slipbox";
@@ -97,7 +97,8 @@ export function locateVault(opts: LocateOptions): VaultLocation {
 
 export function isInside(root: string, path: string): boolean {
   const rel = relative(root, path);
-  return rel === "" || (!rel.startsWith("..") && !rel.startsWith(sep) && !/^[A-Za-z]:/.test(rel));
+  // Climbing out is a ".." segment; a name that merely starts with dots ("..notes") is inside.
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel) && !/^[A-Za-z]:/.test(rel));
 }
 
 export function readVaultVersion(root: string): number | null {

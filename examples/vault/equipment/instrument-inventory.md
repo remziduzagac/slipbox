@@ -130,6 +130,22 @@ long enough to finish a reduction run.
 - Take one, write one line in the night log.
 - Take the last one, tell Tomasz the same day.
 
+## Photos
+
+Each instrument is meant to have a photo beside its row, so a new volunteer can find it in the
+dark. None of these have been taken yet; the links below are placeholders, and they will show as
+missing until Min-jun's photo walk-round in October.
+
+![Lyra slit assembly](images/lyra-slit.png)
+
+The Tern housing, from below, with the heater cable visible (no caption yet):
+
+![](images/tern-frame.jpg)
+
+The flat field that should be pinned here, for comparing against a suspect night:
+
+![[missing-flat-field.png]]
+
 ## History
 
 This inventory started as a sheet of paper taped inside the

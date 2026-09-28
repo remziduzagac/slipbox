@@ -2,7 +2,7 @@
 // in the same directory, so a crash or a full disk never truncates a note.
 
 import { chmodSync, closeSync, fsyncSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
@@ -44,17 +44,46 @@ export class WriteRefused extends Error {}
  * (the link stays a link), and never outside `root` — a symlink out of the vault is refused.
  */
 export function writeNote(root: string, path: string, content: string | Uint8Array): void {
-  let target = path;
-  try {
-    target = realpathSync(path);
-  } catch {}
+  const target = realTarget(path);
   let realRoot = root;
   try {
     realRoot = realpathSync(root);
   } catch {}
   const rel = relative(realRoot, target);
-  if (rel.startsWith("..") || isAbsolute(rel)) throw new WriteRefused(`${path} resolves outside the vault (${target}) — not writing there`);
+  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) throw new WriteRefused(`${path} resolves outside the vault (${target}) — not writing there`);
   atomicWrite(target, content);
+}
+
+/**
+ * Where a write to `path` really lands: the file's real path, or, for a file not there yet, the
+ * real path of its nearest existing folder with the rest appended — a symlinked folder on the way
+ * counts, so a new file can't be slipped out of the vault through one.
+ */
+export function realTarget(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {}
+  const rest: string[] = [];
+  let dir = resolve(path);
+  for (;;) {
+    rest.unshift(basename(dir));
+    const up = dirname(dir);
+    if (up === dir) return resolve(path);
+    dir = up;
+    try {
+      return join(realpathSync(dir), ...rest);
+    } catch {}
+  }
+}
+
+/** Whether a write to `path` would land inside `root` (both by their real paths). */
+export function landsInside(root: string, path: string): boolean {
+  let realRoot = root;
+  try {
+    realRoot = realpathSync(root);
+  } catch {}
+  const rel = relative(realRoot, realTarget(path));
+  return !(rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel));
 }
 
 export interface Stamp {

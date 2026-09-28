@@ -4,7 +4,7 @@
 // process for the finer cases.)
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CLI_COMMANDS } from "../src/cli/cli.ts";
@@ -19,6 +19,7 @@ const env = {
   XDG_CACHE_HOME: join(sandbox, "cache"),
   XDG_CONFIG_HOME: join(sandbox, "config"),
   NO_COLOR: "1",
+  SLIPBOX_CLIPBOARD: "file", // never the developer's clipboard
 };
 const ran = new Set<string>();
 
@@ -119,12 +120,12 @@ describe("find and replace", () => {
   test("replace: dry run, all, first, a line range, groups; --if-unchanged refuses a stale sha", () => {
     const before = note("people/kenji-mori.md");
     const dry = slipbox(["replace", "kenji-mori", "Aster", "ASTER", "--dry-run", "--json"]).json.data;
-    expect(dry.count).toBe(1);
+    expect(dry.count).toBe(2); // the frontmatter's bio, and the body
     expect(note("people/kenji-mori.md")).toBe(before);
     const stale = slipbox(["replace", "kenji-mori", "Aster", "ASTER", "--if-unchanged", "0000000000000000"]);
     expect(stale.code).toBe(5);
     const done = slipbox(["replace", "kenji-mori", "Aster", "ASTER", "--if-unchanged", dry.sha, "--json"]).json.data;
-    expect(done.count).toBe(1);
+    expect(done.count).toBe(2);
     expect(note("people/kenji-mori.md")).toContain("Observes on ASTER");
     const first = slipbox(["replace", "home", "—", "-", "--first", "--json"]).json.data;
     expect(first.count).toBe(1);
@@ -235,6 +236,52 @@ describe("the vault and the tool", () => {
     const missing = slipbox(["render", "nothing-here", "--json"]);
     expect(missing.code).toBe(3);
     expect(missing.json.ok).toBe(false);
+  });
+  test("review cycle 1: writes never escape or clobber; empty --if-unchanged; refusals are 5", () => {
+    const outside = mkdtempSync(join(tmpdir(), "slipbox-cli-out-"));
+    symlinkSync(outside, join(vault, "out"));
+    expect(slipbox(["write", "out/escaped", "x", "--create"]).code).toBe(5);
+    expect(existsSync(join(outside, "escaped.md"))).toBe(false);
+    // --create is a path, and never overwrites: not kenji-mori found by name, nor a file already there.
+    const kenji = note("people/kenji-mori.md");
+    expect(slipbox(["write", "people/kenji-mori", "NEW", "--create"]).code).toBe(5);
+    expect(note("people/kenji-mori.md")).toBe(kenji);
+    expect(slipbox(["write", "kenji-mori.md", "NEW", "--create", "--json"]).json.data.path).toBe("kenji-mori.md"); // a new note at the root
+    expect(note("people/kenji-mori.md")).toBe(kenji);
+    expect(slipbox(["write", "home", "x", "--if-unchanged", ""]).code).toBe(2);
+    expect(slipbox(["scratch", "clear", "--if-unchanged="]).code).toBe(2);
+    writeFileSync(join(outside, "ext.md"), "- [ ] outside\n");
+    symlinkSync(join(outside, "ext.md"), join(vault, "ext.md"));
+    expect(slipbox(["task", "ext.md", "1", "--json"]).json.error?.code).toBe(5);
+    expect(readFileSync(join(outside, "ext.md"), "utf8")).toBe("- [ ] outside\n");
+  });
+  test("review cycle 1: line anchors, :s without g, CRLF ends; a vault's config can't pick the editor", () => {
+    writeFileSync(join(vault, "anchors.md"), "one a a\r\ntwo a\r\n");
+    expect(slipbox(["find", "^two", "anchors", "--regex", "--json"]).json.data.count).toBe(1);
+    slipbox(["replace", "anchors", "^", "> ", "--regex"]);
+    slipbox(["replace", "anchors", "a$", "A", "--regex"]);
+    slipbox(["replace", "anchors", "a", "X", "--first-per-line"]);
+    expect(readFileSync(join(vault, "anchors.md"), "utf8")).toBe("> one X A\r\n> two X\r\n"); // smart case: a is A too
+    mkdirSync(join(vault, ".slipbox"), { recursive: true });
+    writeFileSync(join(vault, ".slipbox", "config.toml"), '[editor]\nremote = ["touch /tmp/slipbox-evil-{line}"]\n');
+    const r = slipbox(["send", "home", "--json"]);
+    expect(r.json.data.commands[0][0]).toBe("true"); // the user's config, not the vault's
+    expect(r.json.warnings.some((w: string) => w.includes("only your own config"))).toBe(true);
+    rmSync(join(vault, ".slipbox", "config.toml"));
+  });
+  test("review cycle 1: diagnostics carry no escapes; history lists open tabs; a note outside the walk reads", () => {
+    mkdirSync(join(vault, ".slipbox"), { recursive: true });
+    writeFileSync(join(vault, ".slipbox", "config.toml"), '[render]\nglyphs = "\\u001b]0;PWNED\\u0007"\n');
+    const r = slipbox(["ls"]);
+    expect(r.err).not.toContain("\u001b");
+    rmSync(join(vault, ".slipbox", "config.toml"));
+    const state = slipbox(["info", "--json"]).json.data.state;
+    writeFileSync(join(state, "session.json"), JSON.stringify({ version: 1, tabs: [{ panes: [{ path: "home.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }], active: 0 }], activeTab: 0, sidebar: true }));
+    expect(slipbox(["history", "--json"]).json.data.open).toEqual([["home.md"]]);
+    mkdirSync(join(vault, ".hidden"), { recursive: true });
+    writeFileSync(join(vault, ".hidden", "note.md"), "hidden text\n");
+    expect(slipbox(["read", ".hidden/note.md"]).out).toBe("hidden text\n");
+    expect(slipbox(["find", "hidden", ".hidden/note.md", "--json"]).json.data.count).toBe(1);
   });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));

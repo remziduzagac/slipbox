@@ -42,7 +42,8 @@ export async function runTui(argv: string[]): Promise<number> {
     configFile: flag(args, "config"),
     host: {
       requestRender: () => renderer.requestRender(),
-      osc52: (text) => renderer.copyToClipboardOSC52(text),
+      // SLIPBOX_CLIPBOARD=file keeps copies off the real clipboard (core/clipboard.ts).
+      osc52: (text) => process.env.SLIPBOX_CLIPBOARD !== "file" && renderer.copyToClipboardOSC52(text),
       quit: () => {
         renderer.destroy();
         resolveDone(0);

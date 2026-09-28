@@ -19,6 +19,34 @@ If a recipe here disagrees with the code, the code wins and this note is wrong; 
 - Changing the nightjar queue without restarting everything.
 - Checking why the public site shows yesterday's all-sky image.
 
+## The night pipeline at a glance
+
+One clear night, from the plan to the public site:
+
+```mermaid
+flowchart LR
+    plan[nightjar plan] --> ctl[ridge-ctl: expose]
+    ctl --> raw[(raw frames)]
+    raw --> halley[halley reduce]
+    halley --> phot[photometry]
+    phot --> stacks[(stacks on ridge-arch)]
+    stacks --> web[ridge-web light curves]
+```
+
+halley reports every star as an instrumental magnitude, so the numbers in `vss_photometry` are
+$m_V$ relative to the comparison stars, not fluxes. The conversion is the usual one:
+
+$$
+m = -2.5 \log_{10}\left(\frac{F}{F_0}\right)
+$$
+
+where $F_0$ is the zero-point flux for the filter, fitted each night from the comparisons.
+
+To see the night's zero points without opening Python, ask stacks directly; the query is short
+enough to keep in your head:
+
+    psql stacks -c "select filter, zp, zp_err from zero_points where night = '2026-03-13'"
+
 ## Start and stop a night
 
 Always start from `ridge-ctl`, logged in as `observer`. The start script checks Sable and Quill before it opens anything, and refuses politely if either is stale.
@@ -145,6 +173,16 @@ limits:
   seeing_max_arcsec: 4.0
 ```
 
+Per-host overrides go in a small TOML file next to the main one. It is fenced with tildes here
+because the comment inside quotes a triple backtick from the chat where it was agreed:
+
+~~~toml
+# halley.local.toml — ridge-arch only. Agreed in chat as ```reduce_workers = 6```, then halved.
+[runtime]
+reduce_workers = 3
+scratch = "/scratch/halley"
+~~~
+
 ## Talk to nightjar over HTTP
 
 nightjar has a tiny HTTP API on `ridge-ctl:8420`. Adding a target to tonight's queue:
@@ -174,6 +212,17 @@ TAG   := $(shell git describe --tags --always)
 
 image:
 	docker build -t $(IMAGE):$(TAG) -f docker/Dockerfile .
+```
+
+The calibration library has its own tiny Makefile on `ridge-arch`. Recipe lines must start with a
+real tab, which is why this block is copied from the file rather than retyped:
+
+```make
+calib: masters/bias.fits masters/dark.fits
+
+masters/%.fits: raw/%/*.fits
+	halley calib build --kind $* --out $@ $^
+	@echo "built $@ from $(words $^) frames"
 ```
 
 ```dockerfile

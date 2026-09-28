@@ -36,7 +36,7 @@ their children out at reduced width and prefix every row, so nesting composes.
 | Node | Rendering |
 | --- | --- |
 | heading | level icon plus text in `h1`–`h6`; a background band across the width |
-| paragraph | wrapped; soft breaks become spaces, hard breaks and `<br>` split rows |
+| paragraph | wrapped; soft breaks become spaces (none between two CJK characters), hard breaks and `<br>` split rows |
 | list | bullets per depth, numbers right-aligned, hanging indent |
 | task item | checkbox glyph; a checked item's text is dimmed |
 | blockquote | `▎` bar per row, italic dim text |
@@ -44,7 +44,7 @@ their children out at reduced width and prefix every row, so nesting composes.
 | code | full width, background fill, language label at top right, highlighted, hard-wrapped |
 | table | the allocator below |
 | thematic break | a rule across the width |
-| frontmatter | a "properties" block: aligned key and value rows; raw text plus error if broken |
+| frontmatter | a "properties" block: aligned rows, a long key cut with `…`; raw text and the wrapped error if broken |
 | html block | shown dim, verbatim; comments hidden; a lone `<br>` is a blank row |
 | footnote | `[1]` reference; the definition as `1.` with a hanging indent |
 | definition | hidden; reference links resolve through it |
@@ -137,12 +137,16 @@ some row wraps. The header separator is doubled (`╞═╪═╡`).
 - A ZWJ family is one grapheme of width 2.
 - Combining marks and zero-width characters are 0.
 
-`layout/wrap.ts` breaks at spaces, and between CJK characters. A token longer than the row starts
+`layout/wrap.ts` breaks at spaces, and between CJK characters — except that closing punctuation
+(`、` `。` `）` `」`, and an ASCII `,` or `.` right after a CJK character) never starts a row, and
+opening punctuation (`（` `「`) never ends one (kinsoku). A token longer than the row starts
 a fresh row and packs its soft segments (split after `/ - _ . ? & = , : ; |`), so paths, URLs and
 identifiers break at a readable point. Only a segment wider than the whole row breaks at the
 grapheme that overflows.
-Nothing ever overflows the layout width: `tests/render.test.ts` renders every sample at six
-widths in two glyph sets and asserts that.
+Nothing ever overflows the layout width. As a last defence the renderer cuts any row still too wide
+(`enforceRow`) and counts it in `Layout.clipped`, since a cut row is a block's bug and lost text:
+`tests/render.test.ts` renders every demo note at six widths in two glyph sets and asserts that no
+row was cut (a width check alone could never fail, with the cut in place).
 
 ## Readability defaults (plan `2.7`)
 

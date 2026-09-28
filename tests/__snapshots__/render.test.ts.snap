@@ -15,39 +15,53 @@ house style that writing-guide describes.
 
 ▌ What each note is for
 
-┌───────────────────────────────────┬──────────────────────────────────────────┐
-│ Note                              │ Exercises                                │
-╞═══════════════════════════════════╪══════════════════════════════════════════╡
-│ equipment/telescope-comparison.md │ the table allocator's hardest case:      │
-│                                   │ seven columns, cells of 500 characters   │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ equipment/instrument-inventory.md │ table rows of 500+ characters to wrap,   │
-│                                   │ never overflow; emoji in cells           │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ logs/observing-log-2026.md        │ throughput: 30 tables and 216 rows in    │
-│                                   │ one note                                 │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ scratch/wrap-probe.md             │ a small wide-table case with unbreakable │
-│                                   │ tokens, for fast iteration               │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ handbook/writing-guide.md         │ YAML frontmatter, tables and fences: the │
-│                                   │ common mixture                           │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/pipeline-cookbook.md     │ 24 fenced blocks in ten languages;       │
-│                                   │ highlighting and fence width             │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ handbook/operations-handbook.md   │ 1,180 lines and 93 headings: scrolling,  │
-│                                   │ the outline, reparsing                   │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ projects/variable-star-survey.md  │ long prose with code, tables, quotes and │
-│                                   │ a block id: the ordinary case            │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ people/partners-and-names.md      │ every link form, and display width: CJK, │
-│                                   │ emoji, ZWJ, combining marks, RTL         │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ home.md, people/, meetings/       │ a small linked graph: backlinks, tasks,  │
-│                                   │ aliases, heading references              │
-└───────────────────────────────────┴──────────────────────────────────────────┘
+┌────────────────────────────────────┬─────────────────────────────────────────┐
+│ Note                               │ Exercises                               │
+╞════════════════════════════════════╪═════════════════════════════════════════╡
+│ equipment/telescope-comparison.md  │ the table allocator's hardest case:     │
+│                                    │ seven columns, cells of 500 characters  │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/instrument-inventory.md  │ table rows of 500+ characters to wrap,  │
+│                                    │ never overflow; emoji in cells          │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ logs/observing-log-2026.md         │ throughput: 30 tables and 216 rows in   │
+│                                    │ one note                                │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ scratch/wrap-probe.md              │ a small wide-table case with            │
+│                                    │ unbreakable tokens, for fast iteration  │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ handbook/writing-guide.md          │ YAML frontmatter, tables and fences:    │
+│                                    │ the common mixture                      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/pipeline-cookbook.md      │ fences in a dozen languages, mermaid,   │
+│                                    │ $$ math, ~~~, indented code, tabs       │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ handbook/operations-handbook.md    │ 1,200+ lines, h1–h6, setext, callouts,  │
+│                                    │ a 4-deep checklist, a long heading      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ handbook/writing-guide.md (HTML)   │ inline HTML, a comment, <details>;      │
+│                                    │ lists from 0), 7., 998.                 │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/instrument-inventory.md  │ broken images: missing file, empty alt  │
+│ (photos)                           │ text, a missing ![[embed]]              │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ meetings/2026-09-14-weekly.md      │ hard breaks (two spaces, backslash) and │
+│                                    │ a struck-out decision                   │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ people/kenji-mori.md               │ frontmatter with a nested map, a block  │
+│                                    │ string and a long key                   │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ scratch/broken-frontmatter.md      │ frontmatter that is not valid YAML      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ projects/variable-star-survey.md   │ long prose with code, tables, quotes    │
+│                                    │ and a block id: the ordinary case       │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ people/partners-and-names.md       │ every link form, broken links,          │
+│                                    │ footnotes; CJK, emoji, ZWJ, RTL widths  │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ home.md, people/, meetings/        │ a small linked graph: backlinks, tasks, │
+│                                    │ aliases, heading references             │
+└────────────────────────────────────┴─────────────────────────────────────────┘
 
 scripts/sample-metrics.ts measures what each note exercises (lines, longest
 line, tables and rows, fences and their languages, headings, links, wide and
@@ -63,9 +77,27 @@ in a demo. Still missing anywhere:
 
 • A pathological file. No multi-megabyte note, and no .md file that is really a
   log.
-• A broken image. The fixture vault has a local image, but none that fails to
-  load.
-• Mermaid and LaTeX. Deferred features, but fixtures cost nothing to add now."
+• Mermaid and LaTeX, rendered. software/pipeline-cookbook.md now has a mermaid
+  fence and a $$ block, but slipbox shows both as code; drawing them is a
+  deferred feature.
+• Aliases, and checked heading and block references. [[Kenji]] and [[森健二]] in
+  people/partners-and-names.md name the aliases people/kenji-mori.md declares,
+  but slipbox doesn't read aliases: yet, so both are unresolved; and [[home#No
+  such heading]] resolves to its note, since a reference's heading or block
+  isn't checked yet. Both are phase 4 link work (plan 1.x); these links are the
+  test material for it.
+
+Some links are unresolved on purpose, so the link index always has failures to
+report:
+
+• people/partners-and-names.md: [[visiting-rota]], ![[dome-diagram.png]],
+  <../scratch/wrap probe copy.md>, [[home#No such heading]] and
+  [[variable-star-survey^nope]].
+• handbook/writing-guide.md: ../projects/dunmore-refurbishment.md,
+  ../incidents/2026-03-14-fw8-stuck.md, ../reports/template.md and glossary.md
+  (twice).
+• equipment/instrument-inventory.md: images/lyra-slit.png, images/tern-frame.jpg
+  and ![[missing-flat-field.png]], placeholders for photos not yet taken."
 `;
 
 exports[`snapshots of the layout IR as text equipment/instrument-inventory.md @ 80 1`] = `
@@ -298,6 +330,24 @@ run.
 • Take one, write one line in the night log.
 • Take the last one, tell Tomasz the same day.
 
+▌ Photos
+
+Each instrument is meant to have a photo beside its row, so a new volunteer can
+find it in the dark. None of these have been taken yet; the links below are
+placeholders, and they will show as missing until Min-jun's photo walk-round in
+October.
+
+▣ Lyra slit assembly <images/lyra-slit.png>
+
+The Tern housing, from below, with the heater cable visible (no caption yet):
+
+▣ tern-frame.jpg <images/tern-frame.jpg>
+
+The flat field that should be pinned here, for comparing against a suspect
+night:
+
+⧉ missing-flat-field.png
+
 ▌ History
 
 This inventory started as a sheet of paper taped inside the Workshop door,
@@ -513,6 +563,17 @@ The checklist, in order:
 
 ▎ Rule of thumb from Rosa: if you had to read Sable twice to convince yourself,
 ▎ the answer is no.
+
+▎ ⚠ Dome safety
+▎ The slit and the dome ring move with enough force to break a wrist, and
+▎ neither has a sensor that notices a hand. Nobody touches the slit edge or the
+▎ ring rail while the controller shows READY, and nobody stands on the catwalk
+▎ while the dome rotates (O8).
+
+▎ ✦ Night assistant shortcut
+▎ night-start.sh (O11) runs the first four checks for you and prints them in one
+▎ block. Read the block aloud instead of the first four lines of the list; the
+▎ rest are still done by hand.
 
 ▌ O5: The closing checklist (2025-03)
 
@@ -1123,6 +1184,20 @@ dome open in the rain.
 • Wipe the rain sensor with a dry cloth.
 • Log the inspection with initials and any findings.
 
+The same inspection as the tick sheet in the binder, which nests because the
+shutter does:
+
+☐ Shutter
+  ☐ Belt
+    ☑ Upper run, slit at 50 %
+    ☐ Lower run, slit closed
+      ☐ Splice plate bolts, all six
+      ☐ Tension gauge reads 40–45 N
+  ☐ Limit switches
+    ☐ Open limit
+    ☐ Closed limit
+☐ Rain sensor wiped
+
 ▌ Belt replacement
 
 The belt replacement runbook lives at runbooks/replace-shutter-belt.md. It takes
@@ -1137,6 +1212,23 @@ turns. Two people take turns. Bring the crank back.
 
 ▎ Every night assistant winds the slit closed by hand once during training, on a
 ▎ dry afternoon, so the first time they do it is not at 03:00 in sleet.
+
+▌ Winding by hand, in detail
+
+Isolate the shutter motor at the red switch first; the crank will fight a live
+motor and win. Engage the crank on the hex boss below the drive pulley and turn
+clockwise, looking up.
+
+▌ If the crank slips
+
+The crank's pin shears before the gearbox does, by design. Spare pins are in the
+tin taped inside the control room door.
+
+▌ Replacing the shear pin
+
+Knock the stub out with the 4 mm drift, fit a new pin, and log the replacement:
+a slipping crank usually means the belt is binding, and that is a fault for
+Tomasz, not a pin for the tin.
 
 ▌ O37: Power cuts and the UPS (2026-01)
 
@@ -1843,6 +1935,20 @@ Before adding an entry, check:
 ▎ Last word, from the first page of the original binder, in Tomasz's
 ▎ handwriting: "Write it down. The ridge forgets nothing, but people do."
 
+▌ Appendix: shutter firmware
+
+The dome controller runs vendor firmware that we patch ourselves, because the
+vendor stopped shipping updates in 2024. Build names are long and are copied
+exactly, never abbreviated.
+
+▌ HRO-DOME-SHUTTER-FIRMWARE-3.2.1-rc4-patched-2026-03-14-build-00000000000042
+  and why we still run it
+
+It is the last build that honours the rain sensor while the slit is mid-travel.
+Later builds finish the move first, which on a squally night means another
+eleven seconds of open slit. Keep the image on the offsite disk next to the
+ridge-ctl image (O45).
+
 ▌ Appendix: glossary
 
 Terms that appear throughout the handbook, for new staff and visitors reading
@@ -2152,6 +2258,28 @@ so anyone can pull it back out.
 4. What it cost: lost hours, lost frames, damaged hardware.
 5. What changes, with an owner for each change.
 
+Items 1–5 are the shared template; incidents that touched hardware carry two
+more, numbered on from where the template stops (the gap is the template's
+sixth, "sign-off", which lives in the header):
+
+7. The part, by name and serial number, and where it is now.
+8. Whether the vendor has been told, and the reference they gave.
+
+Before item 1 comes a step nobody skips, numbered zero so that it cannot be
+mistaken for part of the template:
+
+0. Make the hardware safe: dome closed, telescope parked, power isolated if
+   anything smells.
+1. Then, and only then, open the note.
+
+When a log refers to frames by number, a numbered list can use the frame numbers
+directly. The night of 2026-03-14 crossed a thousand frames during block B:
+
+ 998. V, 60 s, variable target VSS-0117, fine.
+ 999. V, 60 s, the same target, a satellite trail across the check star.
+1000. R, 60 s, the wheel stopped mid-slot here (the FW-8 incident).
+1001. R, 60 s, after fw8 home, fine again.
+
 ▌ Example
 
                                                                              md
@@ -2207,6 +2335,26 @@ Run it like this before pushing:
  cd ~/vault && ./tools/check-notes.sh . && git add logs/ && git commit -m "Nigh
 ↪t log $(date -u +%F)"
 
+
+▌ HTML in notes
+
+Markdown covers almost everything. Where it does not, a few HTML tags are
+allowed, and nothing else: keep them for things the reader would otherwise miss.
+
+• A forced line break inside a table cell or list item: Aster<br>Main Dome,
+  which renders as Aster
+  Main Dome.
+• Keys, when a procedure says what to press: save the plan with Ctrl+S.
+• Powers and chemistry: the flat field falls off as r2 near the edge, and the
+  dome dehumidifier removes about 3 litres of H2O on a damp night.
+
+For a long justification that most readers can skip, fold it:
+
+<details><summary>Why</summary>
+Night logs are read on the control room screen at 03:00 by someone tired. A fold
+ed paragraph keeps
+the log short for them and complete for the person who opens it in two years.
+</details>
 
 ▌ Monthly reports
 
@@ -2797,8 +2945,12 @@ Delgado.
 
 1. Dunmore's new primary mirror goes back to the coater; the reflectivity was 4%
    under spec.
+   The coater pays for the return courier; we pay for the insurance.
 2. Open nights move to Fridays from October (operations-handbook).
 3. kenji-mori gets Aster on Tuesday and Thursday nights.
+   Brill stays free for volunteers on those nights.
+4. Lyra stays on Aster through the winter. Withdrawn: Tomasz needs it off for
+   re-greasing in November.
 
 ▌ Actions
 
@@ -2815,9 +2967,14 @@ observing-log-2026 for the nights we did get."
 
 exports[`snapshots of the layout IR as text people/kenji-mori.md @ 80 1`] = `
 "── ≡ properties ────────────────────────────────────────────────────────────────
- title    Kenji Mori
- aliases  Kenji, 森健二
- tags     people, visiting
+ title                 Kenji Mori
+ aliases               Kenji, 森健二
+ tags                  people, visiting
+ office                building: Workshop; desk: 2
+ bio                   Variable-star observer and secretary of the Kiso-Hara
+                       Astronomical Society. At Halden Ridge for the autumn 2026
+                       semester, mostly on Aster.
+ observing_programme…  priya.raman@example.org
 ────────────────────────────────────────────────────────────────────────────────
 
 ▌ Kenji Mori
@@ -2873,25 +3030,47 @@ A standard markdown link to the vault's overview, a bare autolink
 https://partners.example.invalid/directory, and a reference-style link
 <https://partners.example.invalid/charter>.
 
+Kenji's own note can be reached several ways, and all of them should land on the
+same page: kenji-mori.md with its extension, people/kenji-mori by folder path,
+and through either of the aliases it declares, Kenji or 森健二 — once slipbox
+reads aliases; until then those two show as unresolved. The table of scripts
+further down is #Names in their own scripts, a link to a heading in this very
+note. His heading, embedded:
+
+⧉ kenji-mori › Kenji Mori
+
+Standard links can carry a heading too: the survey's calibration jumps straight
+to the second thread.
+
+Some links here are deliberately broken, so the renderer and the link index have
+something to refuse politely:
+
+• ⧉ dome-diagram.png — an image embed; nobody has drawn the dome diagram yet
+• a path with spaces — the copy was never made, so it stays unresolved
+• home › No such heading — the note exists, the heading does not (slipbox
+  doesn't check a reference's heading yet, so for now this one lands on the
+  note)
+• variable-star-survey ^nope — the note exists, the block id does not (the same)
+
 ▌ Names in their own scripts
 
 These rows all contain the same number of characters and different display
 widths, which is the difference that breaks column alignment:
 
 ┌───────────┬──────────────────────┬──────────────────────────────────────┐
-│ Kind      │ Sample               │ Notes                                │
+│ Kind      │        Sample        │ Notes                                │
 ╞═══════════╪══════════════════════╪══════════════════════════════════════╡
-│ ASCII     │ Marrowby             │ 8 columns                            │
-│ CJK       │ 木曽原天文同好会     │ 8 characters, 16 columns             │
-│ Korean    │ 서민준의 관측일지    │ mixed with a space                   │
-│ Emoji     │ 🔭🌌🌙⭐🪐☄️📷🛰      │ 8 characters, 16 columns             │
-│ ZWJ       │ 👩‍🔬👨‍👩‍👧‍👦                 │ two graphemes, many code points      │
+│ ASCII     │       Marrowby       │ 8 columns                            │
+│ CJK       │   木曽原天文同好会   │ 8 characters, 16 columns             │
+│ Korean    │  서민준의 관측일지   │ mixed with a space                   │
+│ Emoji     │   🔭🌌🌙⭐🪐☄️📷🛰️   │ 8 characters, 16 columns             │
+│ ZWJ       │         👩‍🔬👨‍👩‍👧‍👦         │ two graphemes, many code points      │
 │ Combining │ Chrétien vs Chrétien │ precomposed vs e + U+0301            │
-│ RTL       │ يوسف حداد            │ right-to-left run inside an LTR line │
+│ RTL       │      يوسف حداد       │ right-to-left run inside an LTR line │
 └───────────┴──────────────────────┴──────────────────────────────────────┘
 
 Kenji Mori writes his society's name 木曽原天文同好会 and keeps his logs in
-Japanese: 今夜は晴れ、 シーイングは良好でした。Min-jun Seo signs his notes 서민
+Japanese: 今夜は晴れ、シーイングは良好でした。Min-jun Seo signs his notes 서민
 준, and Yusuf Haddad heads his pages مرصد هالدن ريدج. Plus a telescope 🔭 and a
 family 👨‍👩‍👧‍👦 at an open night, which must stay whole when a line breaks near them.
 
@@ -2913,6 +3092,14 @@ Our visitor numbers, a footnote reference[1], and a horizontal rule.
 
 1. Counted at the Visitor Pavilion door, not from ticket sales.
 
+Every partnership rests on the same short agreement[charter], signed once and
+renewed by email.
+
+charter. The partner charter is two pages: what we share (data, dome time,
+         volunteers) and what we do not (anything with a visitor's name on it).
+         It was last revised in 2026-02, when the Kiso-Hara society joined; the
+         next review is due with the handbook's (O54).
+
 ────────────────────────────────────────────────────────────────────────────────
 
 ▌ Edge cases worth keeping
@@ -2932,8 +3119,16 @@ token:
 │              │ 00000000001                                                   │
 └──────────────┴───────────────────────────────────────────────────────────────┘
 
-A heading immediately followed by a table with no blank line between them is
-malformed on purpose — the parser should not crash on it."
+The next heading is immediately followed by a table with no blank line between
+them. It is malformed on purpose — the parser should not crash on it.
+
+▌ Malformed
+
+┌───┬───┐
+│ a │ b │
+╞═══╪═══╡
+│ 1 │ 2 │
+└───┴───┘"
 `;
 
 exports[`snapshots of the layout IR as text projects/variable-star-survey.md @ 80 1`] = `
@@ -3570,6 +3765,22 @@ Actions:
 Anything not on this list waits until after the first month of the real survey."
 `;
 
+exports[`snapshots of the layout IR as text scratch/broken-frontmatter.md @ 80 1`] = `
+"── ≡ properties ────────────────────────────────────────────────────────────────
+ title: [unclosed
+ tags: [a, b
+ created: 2026-09-29
+ Flow sequence in block collection must be sufficiently indented and end with a
+ ] at line 2, column 1:
+────────────────────────────────────────────────────────────────────────────────
+
+▌ Broken frontmatter
+
+The frontmatter above is invalid YAML on purpose: an unclosed flow sequence in
+the title and another in the tags. Whatever reads this note should show the body
+anyway and not crash."
+`;
+
 exports[`snapshots of the layout IR as text scratch/wrap-probe.md @ 80 1`] = `
 "▌ Wrap probe
 
@@ -3633,6 +3844,37 @@ conditions.
 • Pulling frames or photometry out of the stacks archive.
 • Changing the nightjar queue without restarting everything.
 • Checking why the public site shows yesterday's all-sky image.
+
+▌ The night pipeline at a glance
+
+One clear night, from the plan to the public site:
+
+                                                                        mermaid
+ flowchart LR
+     plan[nightjar plan] --> ctl[ridge-ctl: expose]
+     ctl --> raw[(raw frames)]
+     raw --> halley[halley reduce]
+     halley --> phot[photometry]
+     phot --> stacks[(stacks on ridge-arch)]
+     stacks --> web[ridge-web light curves]
+
+
+halley reports every star as an instrumental magnitude, so the numbers in
+vss_photometry are $m_V$ relative to the comparison stars, not fluxes. The
+conversion is the usual one:
+
+$$ m = -2.5 \\log_{10}\\left(\\frac{F}{F_0}\\right) $$
+
+where $F_0$ is the zero-point flux for the filter, fitted each night from the
+comparisons.
+
+To see the night's zero points without opening Python, ask stacks directly; the
+query is short enough to keep in your head:
+
+
+ psql stacks -c "select filter, zp, zp_err from zero_points where night = '2026
+↪-03-13'"
+
 
 ▌ Start and stop a night
 
@@ -3776,6 +4018,18 @@ Weather limits live next to the queue. Quill's seeing is in arcseconds:
    seeing_max_arcsec: 4.0
 
 
+Per-host overrides go in a small TOML file next to the main one. It is fenced
+with tildes here because the comment inside quotes a triple backtick from the
+chat where it was agreed:
+
+                                                                           toml
+ # halley.local.toml — ridge-arch only. Agreed in chat as \`\`\`reduce_workers = 6
+↪\`\`\`, then halved.
+ [runtime]
+ reduce_workers = 3
+ scratch = "/scratch/halley"
+
+
 ▌ Talk to nightjar over HTTP
 
 nightjar has a tiny HTTP API on ridge-ctl:8420. Adding a target to tonight's
@@ -3807,6 +4061,18 @@ The archive tools ship as a container. The Makefile target builds and tags it:
 
  image:
      docker build -t $(IMAGE):$(TAG) -f docker/Dockerfile .
+
+
+The calibration library has its own tiny Makefile on ridge-arch. Recipe lines
+must start with a real tab, which is why this block is copied from the file
+rather than retyped:
+
+                                                                           make
+ calib: masters/bias.fits masters/dark.fits
+
+ masters/%.fits: raw/%/*.fits
+     halley calib build --kind $* --out $@ $^
+     @echo "built $@ from $(words $^) frames"
 
 
                                                                      dockerfile

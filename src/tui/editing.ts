@@ -9,6 +9,9 @@ import { cells } from "./cursor.ts";
 
 /** The cursor's place in the text (a UTF-16 offset into `source`). Source mode only. */
 export function offsetOf(app: App, view: View): number {
+  // Lay out first: a motion that moved the lens (G, a search) left view.cur a row of the layout
+  // before, and reading it against the new one lands somewhere else in the note.
+  app.currentLayout(view);
   return offsetAtPos(app, view, view.cur);
 }
 

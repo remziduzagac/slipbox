@@ -74,6 +74,13 @@ These churn freely before 1.0:
 | `info` | root, mode, marker version, paths, index stats, skipped entries, stale |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
+| `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |
+| `replace <note> <old> <new>` | `{path, count, dryRun, sha, newSha, changes[{line, before, after}]}` |
+| `task <note>` | `{path, tasks[{line, checked, text}]}`; with a line `{path, line, text, checked, changed, sha}` |
+| `read <note>` | `{path, abs, sha, bom, crlf, invalidUtf8, content}` |
+| `write <note>` | `{path, created, appended, previousSha, sha}` |
+| `send <note>` | `{path, line, server, commands[]}` |
+| `history` | `{read[{path, at, line}], open[[path…]…]}` (open: the TUI's tabs, each its windows) |
 
 `resolve` treats a target with a scheme (`https:`) as external only outside `[[…]]`, with no spaces,
 and when no note has that name: `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A markdown link
@@ -113,17 +120,24 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
 ```
 
 - **Patterns** are find's: plain text unless `--regex` (JavaScript syntax), `--whole` keeps to
-  whole words, smart case unless `--ignore-case`. With `--regex` the replacement takes `$&`,
-  `$1`–`$9` and `$$`. `replace` changes every match unless `--first`; `--lines A-B` keeps it to
-  those lines, as `:'<,'>s` does.
+  whole words, smart case unless `--ignore-case`. With `--regex`, `^` and `$` are a line's start
+  and end (a CRLF line ends before its `\r`), an empty match inserts (`replace note '^' '> '
+  --regex`), and the replacement takes `$&`, `$1`–`$9` and `$$`. `replace` changes every match
+  unless `--first` (the first in the range) or `--first-per-line` (vim's `:s` without `g`);
+  `--lines A-B` keeps it to those lines, as `:'<,'>s` does.
 - **`--if-unchanged <sha>`** on `replace`, `task` and `write` refuses (exit 5) when the note's bytes
-  no longer have that sha, the one `read` reports: nobody changed it since you read it.
+  no longer have that sha, the one `read` reports: nobody changed it since you read it. An empty
+  sha is a usage error (exit 2), never a check that passes.
 - **`write`** replaces the note's text; `--append` adds to its end on a new line; `--create`
-  makes a note that doesn't exist, as a path in the vault (`.md` added). Text given as arguments
-  ends with a newline; `--stdin` is written as it comes.
+  makes a new note: the argument is then a path in the vault (`.md` added), never a name to
+  resolve, and a file already there is refused (exit 5), never overwritten. Text given as
+  arguments ends with a newline; `--stdin` is written as it comes. No write reaches outside the
+  vault, a symlinked folder on the way included.
 - **`task`** lists task items from the parsed note, so a `- [ ]` inside a code block isn't one.
   With a line it toggles that task; `--check` and `--uncheck` set it and change nothing when it is
-  already so.
+  already so. A toggle is a one-byte edit, so it works on a note that isn't valid UTF-8 too.
+- **Big notes.** `read`, `find`, `replace`, `write` and `send` read a note's bytes and never parse
+  it, so a note the walk leaves out for its size is still quick to reach.
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4

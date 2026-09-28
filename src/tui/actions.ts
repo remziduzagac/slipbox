@@ -115,7 +115,13 @@ function visualOp(a: App, op: "d" | "c" | ">" | "<"): void {
     const from = E.offsetAtPos(a, v, s);
     const to = E.offsetAtPos(a, v, e);
     const r = line ? V.linesRange(v, E.lineOf(v, from), E.lineOf(v, to)) : { from, to: Math.min(E.nextBoundary(v.buf.source, to), Math.max(to, E.lineEnd(v, to))), linewise: false };
+    // For `.`: the same change on as much text, said in keys.
+    const lines = E.lineOf(v, to) - E.lineOf(v, from) + 1;
+    const chars = [...v.buf.source.slice(r.from, r.to)].length;
+    const keys = line ? ["shift+v", ...Array(lines - 1).fill("j"), op] : lines === 1 ? ["v", ...Array(Math.max(0, chars - 1)).fill("l"), op] : null;
+    const before = v.buf.version;
     V.apply(a, v, op, r);
+    V.recordVisual(a, keys, op === "c", before);
   });
 }
 
@@ -132,11 +138,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
   const from = view.buf.rel;
   const go = (path: string, heading: string | null) => {
     const anchor = heading ? headingAnchor(a, path, heading) : undefined;
-    if (inSplit) {
-      a.splitWith(a.tab?.orientation ?? "side");
-      const t = a.tab!;
-      t.active = t.views.length - 1;
-    }
+    if (inSplit) a.otherWindow();
     a.open(path, anchor);
   };
   switch (link.kind) {
@@ -310,7 +312,7 @@ function openPalette(a: App): void {
     aliasOf.set(spec, list);
   }
   const commandItems: ListItem[] = commands.map((c) => {
-    const keys = [...new Set([...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)])].map(spellKey);
+    const keys = [...new Set([...a.keymap.keysFor(c.id), ...a.sourceKeys.keysFor(c.id), ...a.visualKeys.keysFor(c.id)])].map(spellKey);
     const aliases = aliasOf.get(c.id) ?? [];
     // Two fixed columns, the first key and the first alias (empty when there is none); the rest
     // in the footer.
@@ -387,7 +389,8 @@ function openPalette(a: App): void {
  */
 function openHelp(a: App): void {
   const commands: ListItem[] = inSpecOrder(a.registry.list()).map((c) => {
-    const plain = [...a.keymap.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].map(spellKey);
+    // Every keymap's keys: the reading ones, source mode's own ([keys.source]) and visual mode's.
+    const plain = [...a.keymap.keysFor(c.id), ...a.sourceKeys.keysFor(c.id), ...a.visualKeys.keysFor(c.id)].map(spellKey);
     // Bindings with an argument (e.g. "cursor.down extend") are variants: shown after the plain ones.
     const variants = a.keymap.entries().filter(([, v]) => v.startsWith(`${c.id} `)).map(([k]) => spellKey(k));
     return { label: c.title, ...topKeys([...new Set([...plain, ...variants])], new Set(variants), c.description ?? c.id), data: c.id };

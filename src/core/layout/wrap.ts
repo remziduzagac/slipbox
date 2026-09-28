@@ -14,6 +14,9 @@ interface G {
 type Chunk = { kind: "word" | "space"; gs: G[]; width: number } | { kind: "newline" };
 
 const SPACE = /^\s$/;
+// Kinsoku: CJK closing punctuation never starts a row, opening punctuation never ends one.
+const NO_BREAK_BEFORE = /^[、。，．：；？！）」』】〕〉》｝］〙〗ー々ゝゞヽヾ…‥・％]$/;
+const NO_BREAK_AFTER = /^[（「『【〔〈《｛［〘〖]$/;
 const BREAK_AFTER = /^[/\\\-_.?&=,:;|]$/;
 
 function chunkify(spans: Span[]): Chunk[] {
@@ -32,15 +35,27 @@ function chunkify(spans: Span[]): Chunk[] {
       }
       const w = graphemeWidth(g);
       const kind = SPACE.test(g) ? "space" : "word";
-      // Wide (CJK) graphemes are each their own break opportunity.
+      // Wide (CJK) graphemes are each their own break opportunity — except that closing
+      // punctuation stays with what precedes it and opening punctuation with what follows (kinsoku).
       if (kind === "word" && w === 2) {
         flush();
+        const prev = chunks.at(-1);
+        if (prev?.kind === "word" && (NO_BREAK_BEFORE.test(g) || NO_BREAK_AFTER.test(prev.gs.at(-1)!.g))) {
+          prev.gs.push({ g, w, s });
+          prev.width += w;
+          continue;
+        }
         chunks.push({ kind: "word", gs: [{ g, w, s }], width: w });
         continue;
       }
       if (!cur || cur.kind !== kind) {
         flush();
-        cur = { kind, gs: [], width: 0 };
+        const prev = chunks.at(-1);
+        // Text right after opening punctuation continues its chunk (no break after （ or 「), and so
+        // does ASCII closing punctuation right after a CJK character (no row starts with its comma).
+        if (kind === "word" && prev?.kind === "word" && (NO_BREAK_AFTER.test(prev.gs.at(-1)!.g) || /^[,.;:!?)\]}]$/.test(g)))
+          cur = chunks.pop() as { kind: "word" | "space"; gs: G[]; width: number };
+        else cur = { kind, gs: [], width: 0 };
       }
       cur.gs.push({ g, w, s });
       cur.width += w;

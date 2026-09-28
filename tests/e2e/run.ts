@@ -40,43 +40,68 @@ if (given && /\b(READ|SOURCE|INSERT|LENS|VISUAL)\b/.test(pane.screen().at(-1) ??
   console.error(`pane ${given} is running slipbox; quit it first`);
   process.exit(2);
 }
-await pane.measure();
-console.log(`pane ${pane.id}: ${pane.cols}×${pane.rows}`);
-
 const chosen = SCENARIOS.filter((s) => !filters.length || filters.some((f) => s.name.includes(f)));
 const ran = new Set<string>();
 const failures: { name: string; error: string }[] = [];
 const started = Date.now();
-
 let skipped = 0;
-for (const s of chosen) {
-  const need = s.needs ?? {};
-  if ((need.cols && pane.cols < need.cols) || (need.rows && pane.rows < need.rows)) {
-    skipped++;
-    console.log(`- ${s.name} (skipped: needs ${need.cols ?? "any"}×${need.rows ?? "any"})`);
-    continue;
-  }
-  const session = new Session(pane, s.options);
-  const t0 = Date.now();
-  let error: string | null = null;
+let current: Session | null = null;
+
+// Whatever happens (a failure, herdr going away, ctrl+c), a pane or tab of our own is closed and
+// the scenario's temporary files go.
+const cleanUp = () => {
+  if (keep) return;
   try {
-    await session.start();
-    await s.run(session);
-  } catch (err) {
-    error = err instanceof Error ? err.message : String(err);
+    current?.cleanup();
+    pane.close();
+  } catch {}
+};
+process.on("SIGINT", () => {
+  cleanUp();
+  process.exit(130);
+});
+
+async function runAll(): Promise<void> {
+  await pane.measure();
+  console.log(`pane ${pane.id}: ${pane.cols}×${pane.rows}`);
+  for (const s of chosen) {
+    const need = s.needs ?? {};
+    if ((need.cols && pane.cols < need.cols) || (need.rows && pane.rows < need.rows)) {
+      skipped++;
+      console.log(`- ${s.name} (skipped: needs ${need.cols ?? "any"}×${need.rows ?? "any"})`);
+      continue;
+    }
+    const session = new Session(pane, s.options);
+    current = session;
+    const t0 = Date.now();
+    let error: string | null = null;
+    try {
+      await session.start();
+      await s.run(session);
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
+    }
+    // A slipbox that won't quit or die (Stuck) ends the run: the pane can't take another.
+    const clean = await session.quit();
+    if (!error && !clean) error = `slipbox did not exit cleanly\n${pane.recent(30)}`;
+    for (const c of session.commands()) ran.add(c);
+    if (!keep) session.cleanup();
+    current = null;
+    const ms = Date.now() - t0;
+    if (error) {
+      failures.push({ name: s.name, error });
+      console.log(`✗ ${s.name} (${ms} ms)`);
+    } else console.log(`✓ ${s.name} (${ms} ms)`);
   }
-  const clean = await session.quit();
-  if (!error && !clean) error = `slipbox did not exit cleanly\n${pane.recent(30)}`;
-  for (const c of session.commands()) ran.add(c);
-  if (!keep) session.cleanup();
-  const ms = Date.now() - t0;
-  if (error) {
-    failures.push({ name: s.name, error });
-    console.log(`✗ ${s.name} (${ms} ms)`);
-  } else console.log(`✓ ${s.name} (${ms} ms)`);
 }
 
-if (!keep) pane.close();
+try {
+  await runAll();
+} catch (err) {
+  failures.push({ name: "(the run)", error: err instanceof Error ? err.message : String(err) });
+} finally {
+  cleanUp();
+}
 
 for (const f of failures) console.log(`\n── ${f.name}\n${f.error}`);
 const all = COMMAND_SPECS.map((c) => c.id);

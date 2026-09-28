@@ -173,6 +173,26 @@ When you write about a measurement, name the instrument that made it and, if it 
 4. What it cost: lost hours, lost frames, damaged hardware.
 5. What changes, with an owner for each change.
 
+Items 1–5 are the shared template; incidents that touched hardware carry two more, numbered on from
+where the template stops (the gap is the template's sixth, "sign-off", which lives in the header):
+
+7. The part, by name and serial number, and where it is now.
+8. Whether the vendor has been told, and the reference they gave.
+
+Before item 1 comes a step nobody skips, numbered zero so that it cannot be mistaken for part of
+the template:
+
+0) Make the hardware safe: dome closed, telescope parked, power isolated if anything smells.
+1) Then, and only then, open the note.
+
+When a log refers to frames by number, a numbered list can use the frame numbers directly. The
+night of 2026-03-14 crossed a thousand frames during block B:
+
+998. V, 60 s, variable target VSS-0117, fine.
+999. V, 60 s, the same target, a satellite trail across the check star.
+1000. R, 60 s, the wheel stopped mid-slot here (the FW-8 incident).
+1001. R, 60 s, after `fw8 home`, fine again.
+
 ### Example
 
 ```md
@@ -221,6 +241,26 @@ Run it like this before pushing:
 ```bash
 cd ~/vault && ./tools/check-notes.sh . && git add logs/ && git commit -m "Night log $(date -u +%F)"
 ```
+
+## HTML in notes
+
+Markdown covers almost everything. Where it does not, a few HTML tags are allowed, and nothing
+else: keep them for things the reader would otherwise miss.
+
+- A forced line break inside a table cell or list item: `Aster<br>Main Dome`, which renders as
+  Aster<br>Main Dome.
+- Keys, when a procedure says what to press: save the plan with <kbd>Ctrl</kbd>+<kbd>S</kbd>.
+- Powers and chemistry: the flat field falls off as r<sup>2</sup> near the edge, and the dome
+  dehumidifier removes about 3 litres of H<sub>2</sub>O on a damp night.
+
+<!-- an HTML comment: invisible when rendered, so never put anything in one that a reader needs -->
+
+For a long justification that most readers can skip, fold it:
+
+<details><summary>Why</summary>
+Night logs are read on the control room screen at 03:00 by someone tired. A folded paragraph keeps
+the log short for them and complete for the person who opens it in two years.
+</details>
 
 ## Monthly reports
 

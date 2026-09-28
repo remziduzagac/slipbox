@@ -5,10 +5,10 @@
 // Reference format, GitHub-style, as prompt-buffer.lua emits it:
 //   `path:42`  `path:42-50`  `path:42:10-30`  `path:42:10-50:30`
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import { type Config, isSafeRelative } from "./config.ts";
-import { atomicWrite, ensureDir } from "./fsutil.ts";
+import { atomicWrite, ensureDir, landsInside } from "./fsutil.ts";
 import { stateDir } from "./paths.ts";
 import { sanitize } from "./sanitize.ts";
 
@@ -22,7 +22,16 @@ export interface ScratchLocation {
 export function scratchLocation(project: string, config: Config): ScratchLocation {
   // Config validation already refuses an unsafe name; this holds even if one got through.
   const file = isSafeRelative(config.capture.file) && /\.(md|markdown)$/i.test(config.capture.file) ? config.capture.file : "scratch.md";
-  if (config.capture.location === "vault") return { path: join(project, file), project };
+  if (config.capture.location === "vault") {
+    // In the vault, a committed symlink could make the scratch read a file from anywhere (and copy
+    // it into the vault) or write out of it: then it lives in the state dir, as by default.
+    const path = join(project, file);
+    let linked = false;
+    try {
+      linked = lstatSync(path).isSymbolicLink();
+    } catch {}
+    if (!linked && landsInside(project, path)) return { path, project };
+  }
   return { path: join(stateDir(project), file), project };
 }
 

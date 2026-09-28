@@ -41,7 +41,7 @@ export function parseMarkdown(source: string): ParsedNote {
     let error: string | null = null;
     if (format === "yaml") {
       try {
-        const v = parseYaml(raw);
+        const v = parseYaml(raw, { logLevel: "error" }); // warnings stay off stderr; an error still fails
         data = v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
       } catch (err) {
         error = (err as Error).message.split("\n")[0] ?? "invalid YAML";

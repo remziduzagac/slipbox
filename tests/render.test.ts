@@ -33,6 +33,9 @@ describe("no rendered row ever exceeds the layout width", () => {
       for (const width of [24, 37, 60, 80, 101, 140]) {
         for (const glyphs of [unicode, glyphsFor("ascii")]) {
           const layout = renderMarkdown(src, { width, glyphs, showUrls: false });
+          // The renderer cuts any row to the width as a last defence; a cut is a block's bug and
+          // lost text, so none may happen (the width check alone could never fail).
+          if (layout.clipped) throw new Error(`${file} @${width}: ${layout.clipped} row(s) had to be clipped`);
           for (const [i, line] of layout.lines.entries()) {
             const w = line.spans.reduce((a, s) => a + stringWidth(s.text), 0);
             if (w > width) throw new Error(`${file} @${width}: row ${i} is ${w} wide: ${line.spans.map((s) => s.text).join("")}`);

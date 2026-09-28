@@ -7,6 +7,10 @@ TOML, in two levels, with the vault winning (plan `0.9`):
    `$XDG_CONFIG_HOME/slipbox/config.toml`
 3. the vault file: `<vault>/.slipbox/config.toml`
 
+**What only you can set.** The vault file comes with whatever you clone, so it never chooses a
+program slipbox runs: `editor.command` and `editor.remote` there are ignored, with a warning, and
+only your user file sets them (`USER_ONLY` in `core/config.ts`). The rest of `[editor]` applies.
+
 slipbox runs correctly with no config at all. None of these crash it:
 
 - a broken file
@@ -14,7 +18,7 @@ slipbox runs correctly with no config at all. None of these crash it:
 - a wrong type
 - a value outside its set (`glyphs`, `show_urls`, `location`)
 - a number out of range (`inset` 0–40, `sidebar_width` 8–200, `poll_ms` ≥ 50…), or a fraction
-  where a whole number is meant (only `ui.split_ratio` is fractional)
+  where a whole number is meant (only `ui.split_ratio` and `editor.lens_max` are fractional)
 
 Each is a warning in the message sink (the TUI) or on stderr (the CLI). The key keeps its
 default, and the rest of the file still applies.
@@ -64,7 +68,8 @@ which_key_delay_ms = 500       # before it shows for prefixes other than the lea
 
 [capture]
 location = "state"             # state (never committed) | vault
-file = "scratch.md"            # a relative .md path; no "..", no hidden part (else the default)
+file = "scratch.md"            # a relative .md path; no "..", no hidden part (else the default);
+                               # in the vault, a symlinked scratch or folder puts it in the state dir
 
 [editor]                       # {file} and {line} fill in inside arguments; never through a shell
 command = ""                   # space n e: runs here, slipbox waits; "" = $VISUAL, $EDITOR, vi (+line)
@@ -174,4 +179,5 @@ replaced is unchanged, so editing the config always wins.
 | `NO_COLOR` | CLI: no colour; TUI: the `mono` theme |
 | `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME` | storage roots (decision `0.10`) |
 | `SLIPBOX_DEBUG` | print stack traces for unexpected CLI errors |
+| `SLIPBOX_CLIPBOARD` | `file`: copies go only to `clipboard.txt` in the state dir, never the clipboard (tests) |
 | `SLIPBOX_TRACE` | TUI: append each command it runs to this file, one id a line (the terminal tests' coverage) |

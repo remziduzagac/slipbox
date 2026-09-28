@@ -10,7 +10,7 @@
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
 import { appendFileSync, existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
@@ -18,7 +18,7 @@ import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, stopInsert } from "./editing.ts";
-import { insertRecord, newVimState, vimKey } from "./vim.ts";
+import { insertRecord, newVimState, PASTE, vimKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
 import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
@@ -1162,6 +1162,12 @@ export class App {
     view.cur = clampPos(layout, to);
     if (!opts.keepGoal) view.goal = view.cur.col;
     view.curAnchor = this.cursorAnchorFor(layout, view.cur);
+    // The selection's lines, kept after it ends: `:'<,'>s` works on the last one, as vim's marks.
+    if (view.sel) {
+      const x = layout.lines[view.sel.anchor.row]?.src ?? 1;
+      const y = layout.lines[view.cur.row]?.src ?? 1;
+      view.visualLines = [Math.min(x, y), Math.max(x, y)];
+    }
     this.ensureCursorVisible(view, layout);
   }
 
@@ -1423,6 +1429,14 @@ export class App {
     }
   }
 
+  /** Focus the split's other window, splitting first when there's one: where "in the split" opens. */
+  otherWindow(): void {
+    const t = this.tab;
+    if (!t) return;
+    if (t.views.length === 1) this.splitWith(t.orientation ?? "side");
+    else t.active = 1 - t.active;
+  }
+
   closeWindow(): void {
     const t = this.tab;
     if (!t) return;
@@ -1566,11 +1580,12 @@ export class App {
     const grow = action === "wider" || action === "taller" ? 1 : -1;
     const horizontal = action === "wider" || action === "narrower";
     if (this.region === "sidebar" && horizontal) {
-      this.sideW = Math.max(12, Math.min(this.sideW + grow * step, Math.floor(this.width * 0.5)));
+      // From the drawn width, which the room left can hold below the stored one: every step shows.
+      this.sideW = Math.max(12, Math.min(this.sidebarWidth() + grow * step, Math.floor(this.width * 0.5)));
       return;
     }
     if (this.region === "outline" && horizontal) {
-      this.outW = Math.max(12, Math.min(this.outW + grow * step, Math.floor(this.width * 0.5)));
+      this.outW = Math.max(12, Math.min(this.outlineWidth() + grow * step, Math.floor(this.width * 0.5)));
       return;
     }
     const t = this.tab;
@@ -1977,7 +1992,7 @@ export class App {
       }
       if (where === "tab") this.openOrSwitchTab(row.path);
       else if (where === "split") {
-        this.splitWith(this.tab?.orientation ?? "side");
+        this.otherWindow();
         this.open(row.path);
       } else this.open(row.path);
       this.region = "content";
@@ -2016,7 +2031,8 @@ export class App {
         openNote("split");
         break;
       case "collapse": {
-        if (!row) break;
+        // A filtered list shows every match whatever is folded: folding would act on rows not shown.
+        if (!row || this.sidebar.filter) break;
         const dir = row.kind === "dir" && this.expanded.has(row.path) ? row.path : row.path.split("/").slice(0, -1).join("/");
         if (dir) {
           this.expanded.delete(dir);
@@ -2268,12 +2284,18 @@ export class App {
    * Pasted text (bracketed paste): into the open list's filter or prompt, first line only and
    * sanitized; elsewhere nothing (the reader has nowhere to put it).
    */
-  paste(text: string): void {
+  paste(text: string): Promise<void> {
+    // In turn with the keys (never between two of them), and recorded as a key of its own.
+    return this.handleKey(`${PASTE}${text}`);
+  }
+
+  private pasteNow(text: string): void {
     const o = this.overlay;
     const iv = this.view;
     if (!o && this.region === "content" && iv?.insert) {
-      // Into the text, its line breaks the note's own.
-      return insertText(this, iv, text.replace(/\r\n?/g, "\n").replaceAll("\n", iv.buf.eol));
+      // Into the text, its line breaks the note's own; part of the change for `.`.
+      insertText(this, iv, text.replace(/\r\n?/g, "\n").replaceAll("\n", iv.buf.eol));
+      return insertRecord(this, iv, `${PASTE}${text}`);
     }
     if (!o) return;
     const line = sanitize(text.replace(/\r\n?/g, "\n").split("\n")[0] ?? "");
@@ -2321,6 +2343,14 @@ export class App {
     }
     this.scheduleAutosave(); // the idle clock starts again at each key
     this.publishDirty();
+    // A conflict that arrived while typing: its prompt now that typing stopped.
+    if (!this.overlay) {
+      const waiting = this.allViews().find((v) => v.buf.conflictWaiting && !v.insert)?.buf;
+      if (waiting && !this.allViews().some((v) => v.insert && v.buf === waiting)) {
+        if (waiting.dirty && waiting.changedOnDisk()) this.conflictPrompt(waiting);
+        else waiting.conflictWaiting = false;
+      }
+    }
     this.host.requestRender();
   }
 
@@ -2417,6 +2447,7 @@ export class App {
   }
 
   private async dispatchKey(key: string): Promise<void> {
+    if (key.startsWith(PASTE)) return this.pasteNow(key.slice(PASTE.length));
     if (this.overlay) return this.overlayKey(this.overlay, key);
     if (this.region === "sidebar" && this.sidebarShown && this.sidebar.filtering && !this.pending.length) return this.filterKey(key);
     if (this.region === "outline" && this.outlineShown && this.outline.filtering && !this.pending.length) return this.outlineFilterKey(key);
@@ -2776,6 +2807,7 @@ export class App {
         this.sidebar.filtering = false;
         this.openOrSwitchTab(row.path);
         this.region = "content";
+        if (this.narrow || this.ui.zen) this.sidebar.overlay = false; // an overlaid pane closes after a pick
         return;
       }
       if (row.kind === "dir") {
@@ -3046,7 +3078,9 @@ export class App {
 
   copy(text: string, announce = true): boolean {
     const r = copyText(text, { osc52: (t) => this.host.osc52(t), fallbackDir: stateDir(this.loc.root) });
-    if (announce) this.message("info", r.file ? `clipboard unavailable — wrote ${r.file}` : `copied ${text.length} characters`);
+    // SLIPBOX_CLIPBOARD=file sends copies to the file on purpose; otherwise the file means no clipboard answered.
+    const onPurpose = process.env.SLIPBOX_CLIPBOARD === "file";
+    if (announce) this.message("info", r.file ? (onPurpose ? `copied ${text.length} characters to ${r.file}` : `clipboard unavailable — wrote ${r.file}`) : `copied ${text.length} characters`);
     return !r.file;
   }
 
@@ -3362,6 +3396,14 @@ export class App {
    * against the version you started from, marking what both changed.
    */
   conflictPrompt(buf: NoteBuffer): void {
+    // Not while you type into it: letters meant for the note would pick l, k, d or m. It opens
+    // when insert mode ends (processKey).
+    if (this.allViews().some((v) => v.insert && v.buf === buf)) {
+      if (!buf.conflictWaiting) this.message("warn", `${this.displayName(buf)} changed on disk — esc, then choose what to keep`);
+      buf.conflictWaiting = true;
+      return;
+    }
+    buf.conflictWaiting = false;
     if (this.overlay) {
       this.message("warn", `${this.displayName(buf)} changed on disk while you have unsaved changes — space n c resolves it`);
       return;
@@ -3408,6 +3450,7 @@ export class App {
     const r = merge3(buf.baseText, buf.source, theirs);
     buf.edit(0, buf.source.length, r.text);
     buf.rebase(theirs);
+    buf.markers = r.conflicts > 0; // autosave must not put <<<<<<< on disk; :w does, on purpose
     for (const v of views) v.layoutKey = "";
     this.message(r.conflicts ? "warn" : "info", r.conflicts ? `merged — ${r.conflicts} conflict${r.conflicts === 1 ? "" : "s"} marked <<<<<<< yours … >>>>>>> theirs; unsaved` : "merged cleanly — unsaved; :w writes it");
   }
@@ -3459,7 +3502,7 @@ export class App {
         later = true;
         continue;
       }
-      if (buf.conflictKept || buf.invalidUtf8 || buf.deleted) continue;
+      if (buf.conflictKept || buf.markers || buf.invalidUtf8 || buf.deleted) continue;
       if (buf.changedOnDisk()) {
         this.conflictPrompt(buf);
         continue;
@@ -3474,7 +3517,18 @@ export class App {
    *  only when an autosave is due, and a repository can appear. */
   private gitIndexLocked(): boolean {
     for (let d = this.loc.root; ; d = dirname(d)) {
-      if (existsSync(join(d, ".git"))) return existsSync(join(d, ".git", "index.lock"));
+      const dotGit = join(d, ".git");
+      if (existsSync(dotGit)) {
+        // A worktree or submodule has a .git file pointing at its git directory.
+        let gitDir = dotGit;
+        try {
+          if (statSync(dotGit).isFile()) {
+            const m = /^gitdir:\s*(.+)$/m.exec(readFileSync(dotGit, "utf8"));
+            if (m) gitDir = resolve(d, m[1]!.trim());
+          }
+        } catch {}
+        return existsSync(join(gitDir, "index.lock"));
+      }
       if (dirname(d) === d) return false;
     }
   }
