@@ -598,8 +598,9 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     // Its toggles, clickable, bright while on: whole words, regex.
     const opts = view.findOpts ?? { regex: false, whole: false };
     const index = app.tab?.views.indexOf(view) ?? 0;
-    // (Not for :s…/c, whose pattern is always a regex.)
-    for (const [id, label, on] of rep?.confirm ? [] : ([["regex", " .* ", opts.regex], ["whole", " ab ", opts.whole]] as const)) {
+    // And ⇄, the replace row open or not. (None for :s…/c, whose pattern is always a regex.)
+    const toggles = [["regex", " .* ", opts.regex], ["whole", " ab ", opts.whole], ["replace", " ⇄ ", !!rep]] as const;
+    for (const [id, label, on] of rep?.confirm ? [] : toggles) {
       rx -= stringWidth(label);
       button(app, c, rx, { y, h: 1 }, label, on ? "topbar_button_on" : "topbar_button", `findopt:${id}:${index}`, geo, bg);
       rx -= 1;

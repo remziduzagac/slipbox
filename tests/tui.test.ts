@@ -1626,6 +1626,31 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     };
     return { h, v, rows, goto, lens, L };
   };
+  test("the ⇄ button opens and closes the replace row, while typing or after the search", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "b.md"), "cat dog cat\n");
+    const h = await harness({ root, open: "b.md", width: 100, height: 30 });
+    const click = () => {
+      h.frame();
+      const b = h.app.geometry!.hot.find((r) => r.id === "findopt:replace:0")!;
+      h.app.handleMouse({ type: "down", x: b.x + 1, y: b.y, button: 0 });
+      h.app.handleMouse({ type: "up", x: b.x + 1, y: b.y, button: 0 });
+    };
+    const rep = () => (h.app.overlay as { replace?: { focus: boolean } } | null)?.replace;
+    await h.keys("/", "c", "a", "t");
+    click();
+    expect(rep()?.focus).toBe(true);
+    expect(h.frame()).toContain("⇄ ");
+    click();
+    expect(rep()).toBeUndefined();
+    expect(h.app.overlay?.kind).toBe("prompt"); // still finding
+    await h.keys("enter");
+    click(); // the search done, its row still there
+    await Bun.sleep(5); // the click runs find.replace, asynchronously
+    expect(rep()?.focus).toBe(true);
+    expect((h.app.overlay as { text: string }).text).toBe("cat");
+    await h.keys("escape");
+  });
   test("replace in the lens: enter replaces the match at the cursor and moves one on", async () => {
     const { h, v } = await setup((c) => (c.editor.edit_in = "live"));
     await h.keys("space", "f", "r", ...[..."para"], "tab", ...[..."P"]);

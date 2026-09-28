@@ -2934,13 +2934,29 @@ export class App {
         break;
       }
       case "findopt": {
-        // findopt:<regex|whole>:<window>
+        // findopt:<regex|whole|replace>:<window>
         const [which, w] = arg.split(":");
         const v = this.tab?.views[Number(w)];
         if (!v) break;
-        this.toggleFindOpt(v, which === "regex" ? "regex" : "whole");
         const o = this.overlay;
-        if (o?.kind === "prompt" && o.view === v) o.change?.(o.text);
+        const typing = o?.kind === "prompt" && o.view === v ? o : null;
+        if (which === "replace") {
+          // ⇄: the replace row, opened or closed (ctrl+h opens it too).
+          if (typing?.replace?.confirm) break;
+          if (typing?.replace) {
+            typing.replace = undefined;
+            typing.change?.(typing.text);
+          } else if (typing) R.openReplace(this, typing, v);
+          else {
+            this.tab!.active = Number(w);
+            this.region = "content";
+            void this.run("find.replace").then(() => this.host.requestRender());
+          }
+          break;
+        }
+        this.toggleFindOpt(v, which === "regex" ? "regex" : "whole");
+        if (typing?.replace) R.refresh(this, typing, v);
+        else typing?.change?.(typing.text);
         break;
       }
       case "crumbmore": {

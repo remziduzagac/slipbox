@@ -237,7 +237,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | --- | --- | --- |
 | find in this note, in the window's find row (empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
 | while typing it: regex / whole words (also its `.*` / `ab` buttons) | `alt+r` / `alt+w` | — |
-| find and replace (on the markdown); from find, into replace / back | `ctrl+h`; `tab` / `shift+tab` | `space f r` |
+| find and replace (the markdown; `⇄` button); into replace / back | `ctrl+h`; `tab` / `shift+tab` | `space f r` |
 | in replace: one / all, one undo step (or buttons) / move | `enter` / `alt+a` / `ctrl+n`, `ctrl+p` | — |
 | onto the next / previous character typed on the line; just before it | `f` / `shift+f`; `t` / `shift+t` | — |
 | the last `f` `t` again / the other way | `;` / `,` | — |
