@@ -37,9 +37,9 @@ function lensRule(glyph: string, width: number, src: number, label: string): Lin
   const rest = Math.max(0, width - head.length - label.length);
   return {
     spans: [
-      { text: head, role: "border", attrs: 0 },
-      ...(label ? [{ text: label, role: "dim" as const, attrs: 0 }] : []),
-      { text: glyph.repeat(rest), role: "border", attrs: 0 },
+      { text: head, role: "lens", attrs: 0 },
+      ...(label ? [{ text: label, role: "lens" as const, attrs: 0 }] : []),
+      { text: glyph.repeat(rest), role: "lens", attrs: 0 },
     ],
     src: Math.max(0, src),
     decor: true,

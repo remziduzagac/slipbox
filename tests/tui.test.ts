@@ -1447,6 +1447,12 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(rows()[l.top]).toContain("source · lines");
     expect(rows()[l.top]).toMatch(/^━━ source/); // heavy, even with light frame lines
     expect(rows()[l.bottom]).toMatch(/^━+$/);
+    // Drawn in the lens role: the accent, bold.
+    const c = h.canvas();
+    const pane = h.app.geometry!.panes[0]!;
+    const cell = c.styles[pane.y + l.top - v.top]![pane.textX]!;
+    expect(cell.fg).toBe(h.app.theme.roles.lens.fg!);
+    expect(cell.bold).toBe(true);
     expect(l.source).toContain("Para 5 with **bold**."); // the markdown
     expect(l.source.length).toBeGreaterThanOrEqual(6); // neighbours pulled in
     expect(rows().some((t) => t.includes("Para 15 with bold."))).toBe(true); // rendered further off

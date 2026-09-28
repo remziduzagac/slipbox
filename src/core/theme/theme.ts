@@ -39,7 +39,7 @@ export const ROLES = [
   "cursor", "cursor_line", "line_number", "line_number_current",
   "which_key_key", "which_key_group",
   "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover",
-  "breadcrumb", "breadcrumb_current", "breadcrumb_sep", "breadcrumb_icon", "breadcrumb_band", "tree_guide", "rail",
+  "breadcrumb", "breadcrumb_current", "breadcrumb_sep", "breadcrumb_icon", "breadcrumb_band", "tree_guide", "rail", "lens",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -231,6 +231,8 @@ export function themeFromPalette(
     breadcrumb_band: { bg: blend(p.surface, p.bg, 0.35) }, // the breadcrumb row's background
     // The rails: a tinted column instead of a bordered one (the tab strip's shade).
     rail: { bg: p.bg_dark },
+    // The lens's rules and label: the accent, bold — clearer than any frame line.
+    lens: { fg: p.blue, bold: true },
     breadcrumb: { fg: p.fg_dim },
     breadcrumb_current: { fg: p.fg_strong, bold: true },
     breadcrumb_sep: { fg: p.comment },
@@ -292,6 +294,7 @@ export function terminalTheme(): Theme {
     hover: { fg: a(0), bg: a(7), bold: true },
     breadcrumb_band: { bg: a(0) },
     rail: { bg: a(0) },
+    lens: { fg: a(4), bold: true },
     breadcrumb: { fg: a(7) },
     breadcrumb_current: { fg: a(15), bold: true },
     breadcrumb_sep: { fg: a(8) },
