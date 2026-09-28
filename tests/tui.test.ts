@@ -1649,6 +1649,11 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     await Bun.sleep(5); // the click runs find.replace, asynchronously
     expect(rep()?.focus).toBe(true);
     expect((h.app.overlay as { text: string }).text).toBe("cat");
+    // alt+h does what ⇄ does: closes the row, opens it again.
+    await h.keys("alt+h");
+    expect(rep()).toBeUndefined();
+    await h.keys("alt+h");
+    expect(rep()?.focus).toBe(true);
     await h.keys("escape");
   });
   test("replace in the lens: enter replaces the match at the cursor and moves one on", async () => {

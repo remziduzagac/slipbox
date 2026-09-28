@@ -141,6 +141,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "#": "find.word_prev",
   "leader f /": "find.open",
   "ctrl+h": "find.replace",
+  "alt+h": "find.replace",
   "leader f r": "find.replace",
   "ctrl+p": "switcher.open",
   "leader f f": "switcher.open",

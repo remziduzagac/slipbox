@@ -2186,6 +2186,18 @@ export class App {
     this.overlay = o;
   }
 
+  /** ⇄ / alt+h: the replace row under a window's find row, opened (with find, if need be) or closed. */
+  async toggleReplaceRow(view: View): Promise<void> {
+    const o = this.overlay;
+    const typing = o?.kind === "prompt" && o.view === view ? o : null;
+    if (typing?.replace?.confirm) return;
+    if (typing?.replace) {
+      typing.replace = undefined;
+      typing.change?.(typing.text);
+    } else if (typing) R.openReplace(this, typing, view);
+    else await this.run("find.replace");
+  }
+
   /** Flip a window's find toggle (regex, whole words); the search it has redoes itself with it. */
   toggleFindOpt(view: View, key: "regex" | "whole"): void {
     const o = { ...(view.findOpts ?? { regex: false, whole: false }) };
@@ -2481,6 +2493,7 @@ export class App {
         else o.change?.(o.text);
         return;
       }
+      if (o.view && key === "alt+h") return void this.toggleReplaceRow(o.view);
       // Find's replace field: tab or ctrl+h into it, shift+tab back to the find field.
       if (o.view && (key === "tab" || key === "ctrl+h")) return R.openReplace(this, o, o.view);
       if (o.view && o.replace && key === "shift+tab") {
@@ -2941,17 +2954,9 @@ export class App {
         const o = this.overlay;
         const typing = o?.kind === "prompt" && o.view === v ? o : null;
         if (which === "replace") {
-          // ⇄: the replace row, opened or closed (ctrl+h opens it too).
-          if (typing?.replace?.confirm) break;
-          if (typing?.replace) {
-            typing.replace = undefined;
-            typing.change?.(typing.text);
-          } else if (typing) R.openReplace(this, typing, v);
-          else {
-            this.tab!.active = Number(w);
-            this.region = "content";
-            void this.run("find.replace").then(() => this.host.requestRender());
-          }
+          this.tab!.active = Number(w);
+          this.region = "content";
+          void this.toggleReplaceRow(v).then(() => this.host.requestRender());
           break;
         }
         this.toggleFindOpt(v, which === "regex" ? "regex" : "whole");
