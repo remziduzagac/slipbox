@@ -944,7 +944,11 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     expect(o.selected).toBe(1); // the hidden middle heading
     const f = h.frame();
     const box = h.app.geometry!.overlay!;
-    expect(box.y).toBe(more.y + 2); // hanging under the breadcrumb, not centred
+    expect(box.y).toBe(more.y + 2); // hanging under the breadcrumb…
+    expect(box.x).toBe(Math.floor((70 - box.w) / 2)); // …centred across the screen
+    expect(box.w).toBeGreaterThanOrEqual(Math.min(60, 70 - 8));
+    expect(box.listY).toBe(box.y + 3); // the filter's row, then a blank row
+    expect(box.h).toBeGreaterThanOrEqual(8 + 5);
     expect(f).toContain("└─");
     await h.keys("enter");
     expect(h.app.overlay).toBeNull();

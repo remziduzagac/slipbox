@@ -1286,12 +1286,14 @@ function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; 
   // Three columns a level: `└─` and a space.
   // Sized over every entry, not the matches, so it keeps its width while you type.
   const content = Math.max(20, ...o.items.map((item) => (item.indent ?? 0) * 3 + stringWidth(item.label) + hintW(item)));
-  const w = Math.max(10, Math.min(content + 4, 64, W - 4));
-  const x = Math.max(2, Math.min(anchor.x - 2, W - w - 2));
+  // At least half the screen (60 to 100 columns), centred; it hangs under the anchor's row.
+  const w = Math.max(10, Math.min(Math.max(content + 4, 60, Math.floor(W / 2)), 100, W - 8));
+  const x = Math.max(2, Math.floor((W - w) / 2));
   const y = anchor.y + 2;
-  // The filter's row, then at least one row for the entries (or "no matches").
+  // The filter's row, a blank row, room for at least 8 entries, a blank row.
   const inputRows = o.filterable ? 1 : 0;
-  const h = Math.max(3 + inputRows, Math.min(Math.max(1, o.filtered.length) + 2 + inputRows, maxY - y));
+  const pad = 1;
+  const h = Math.max(3 + inputRows, Math.min(Math.max(8, o.filtered.length) + 2 + inputRows + 2 * pad, maxY - y));
   const bg = roleStyle(theme, "overlay", null);
   const border = roleStyle(theme, "overlay_border", null);
   const dim = roleStyle(theme, "overlay_dim", null);
@@ -1305,13 +1307,14 @@ function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; 
     drawText(c, x + w - 1, y + k, b.v, border, 1);
   }
   drawText(c, x, y + h - 1, `${b.bl}${b.h.repeat(w - 2)}${b.br}`, border);
-  const listY = y + 1 + inputRows;
+  const tight = h < Math.max(1, o.filtered.length) + 2 + inputRows + 2 * pad; // no room for the blank rows
+  const listY = y + 1 + inputRows + (tight ? 0 : pad);
   if (o.filterable) {
     const px = drawText(c, x + 2, y + 1, "› ", border);
     const iw = drawText(c, x + 2 + px, y + 1, truncate(o.input, w - 6 - px), bg);
     drawText(c, x + 2 + px + iw, y + 1, " ", roleStyle(theme, "cursor", null));
   }
-  const rows = h - 2 - inputRows;
+  const rows = h - 2 - inputRows - (tight ? 0 : 2 * pad);
   const matchSt = roleStyle(theme, "overlay_match", null);
   if (o.selected < o.scroll) o.scroll = o.selected;
   if (o.selected >= o.scroll + rows) o.scroll = o.selected - rows + 1;
