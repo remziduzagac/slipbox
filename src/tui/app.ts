@@ -930,7 +930,7 @@ export class App {
     view.liveBase = base;
     const key = `${base.active[0]}-${base.active[1]}:${buf.version}:${base.renderedVersion}`;
     if (base.composed?.key === key) return base.composed.layout;
-    const layout = composeLive(base.rendered, base.old, base.active, texts, { width, wrap, rule: this.glyphs.hbar });
+    const layout = composeLive(base.rendered, base.old, base.active, texts, { width, wrap, rule: this.glyphs.lensRule });
     base.composed = { key, layout };
     return layout;
   }

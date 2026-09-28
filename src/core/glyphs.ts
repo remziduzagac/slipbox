@@ -33,6 +33,8 @@ export interface Glyphs {
   // chrome
   vbar: string;
   hbar: string;
+  /** The lens's rules: heavy whatever `ui.lines` says, so they stand out from the frame. */
+  lensRule: string;
   /**
    * Where rules and borders meet, keyed by the directions with a line: some of u(p), d(own),
    * l(eft), r(ight), in that order — `udr` is ┣.
@@ -96,6 +98,7 @@ const unicode: Glyphs = {
   ellipsis: "…",
   vbar: "┃",
   hbar: "━",
+  lensRule: "━",
   joints: { udlr: "╋", udr: "┣", udl: "┫", dlr: "┳", ulr: "┻", dr: "┏", dl: "┓", ur: "┗", ul: "┛" },
   dirOpen: "▾",
   dirClosed: "▸",
@@ -166,6 +169,7 @@ const ascii: Glyphs = {
   ellipsis: "~",
   vbar: "|",
   hbar: "-",
+  lensRule: "=",
   joints: { udlr: "+", udr: "+", udl: "+", dlr: "+", ulr: "+", dr: "+", dl: "+", ur: "+", ul: "+" },
   dirOpen: "v",
   dirClosed: ">",

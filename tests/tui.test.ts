@@ -1437,7 +1437,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     return { h, v, rows, goto, lens, L };
   };
   test("space n l opens it on the cursor's block, between two rules, grown to at least 6 rows", async () => {
-    const { h, v, rows, goto, lens } = await setup();
+    const { h, v, rows, goto, lens } = await setup((c) => (c.ui.lines = "light"));
     goto("Para 5 with");
     await h.keys("space", "n", "l");
     expect(v.live).toBe(true);
@@ -1445,6 +1445,8 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     const l = lens();
     expect(l.top).toBeGreaterThan(0);
     expect(rows()[l.top]).toContain("source · lines");
+    expect(rows()[l.top]).toMatch(/^━━ source/); // heavy, even with light frame lines
+    expect(rows()[l.bottom]).toMatch(/^━+$/);
     expect(l.source).toContain("Para 5 with **bold**."); // the markdown
     expect(l.source.length).toBeGreaterThanOrEqual(6); // neighbours pulled in
     expect(rows().some((t) => t.includes("Para 15 with bold."))).toBe(true); // rendered further off
