@@ -225,6 +225,7 @@ and, while unfocused, keeps its selection on the section the cursor is in. Insid
 | mouse click | jump to the heading (the note takes focus); on the `▾`/`▸` marker, fold or unfold |
 | `h` / `l`, `left` / `right` | fold / unfold |
 | `g g` / `shift+g` | top / bottom |
+| `/` | filter: type to narrow the headings (their parents kept); `enter` jumps, `esc` clears |
 | `q` | close the outline |
 | `esc` | back to the note (over the content, the outline closes) |
 

@@ -912,6 +912,27 @@ describe("the left panel's views and filter", () => {
     expect(h.app.region).toBe("content");
     expect(h.app.sidebar.filter).toBe("");
   });
+  test("/ filters the outline: matching headings under their parents; enter jumps, esc clears", async () => {
+    const h = await harness({ open: "samples/large-document.md", width: 160, height: 40, config: (c) => (c.ui.outline = true) });
+    await h.keys("ctrl+o"); // focus it
+    expect(h.app.region).toBe("outline");
+    await h.keys("/", "L", "a", "y", "e", "r", "e", "d");
+    expect(h.app.outline.filtering).toBe(true);
+    const rows = h.app.outlineRows();
+    expect(rows.some((r) => r.text.startsWith("Layered capture order"))).toBe(true);
+    expect(rows.some((r) => r.text.startsWith("D20:"))).toBe(true); // its parent, kept
+    expect(rows.some((r) => r.text.startsWith("D1:"))).toBe(false);
+    expect(h.frame()).toContain("› Layered");
+    expect(rows[h.app.outline.selected]!.text).toStartWith("Layered capture order"); // on the match itself
+    const line = rows[h.app.outline.selected]!.line;
+    await h.keys("enter");
+    expect(h.app.region).toBe("content");
+    expect(h.app.view!.cur.row).toBe(line);
+    expect(h.app.outline.filter).toBe("");
+    await h.keys("ctrl+o", "/", "x", "escape");
+    expect(h.app.outline.filter).toBe("");
+    expect(h.app.outlineRows().length).toBeGreaterThan(10);
+  });
   test("the history filters too", async () => {
     const h = await harness();
     await h.app.run("note.open notes/alpha.md");

@@ -1739,6 +1739,76 @@ export class App {
     return !!saved;
   }
 
+  /** Keys while the outline's filter has them: type, move, jump, clear. */
+  private outlineFilterKey(key: string): void {
+    const o = this.outline;
+    const rows = this.outlineRows();
+    const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+    const done = () => {
+      o.filter = "";
+      o.filtering = false;
+    };
+    switch (key) {
+      case "escape":
+      case "ctrl+c":
+      case "ctrl+g":
+        return done();
+      case "enter": {
+        const row = rows[o.selected];
+        const view = this.view;
+        done();
+        if (!row || !view) return;
+        this.pushHistory(view);
+        this.moveCursor(view, { row: row.line, col: 0 });
+        this.region = "content";
+        if (this.narrow || this.ui.zen) o.overlay = false;
+        return;
+      }
+      case "down":
+      case "ctrl+n":
+      case "ctrl+j":
+      case "tab":
+        o.selected = Math.min(rows.length - 1, o.selected + 1);
+        return;
+      case "up":
+      case "ctrl+p":
+      case "ctrl+k":
+      case "shift+tab":
+        o.selected = Math.max(0, o.selected - 1);
+        return;
+      case "backspace":
+        o.filter = [...(o.filter ?? "")].slice(0, -1).join("");
+        break;
+      case "ctrl+w":
+      case "ctrl+backspace":
+        o.filter = (o.filter ?? "").replace(/\S*\s*$/, "");
+        break;
+      case "ctrl+u":
+        o.filter = "";
+        break;
+      default:
+        if (typed === null) return;
+        o.filter = (o.filter ?? "") + typed;
+    }
+    // The selection goes to the heading that matches best (never a parent only kept for context).
+    o.scroll = 0;
+    o.pinned = false;
+    const q = o.filter ?? "";
+    const next = this.outlineRows();
+    let best = 0;
+    let bestScore = Number.NEGATIVE_INFINITY;
+    if (q) {
+      next.forEach((r, i) => {
+        const m = fuzzy(q, r.text);
+        if (m && m.score > bestScore) {
+          bestScore = m.score;
+          best = i;
+        }
+      });
+    }
+    o.selected = best;
+  }
+
   /** Keys while the left panel's filter has them: type, move, open, clear. */
   private filterKey(key: string): void {
     const s = this.sidebar;
@@ -1953,6 +2023,26 @@ export class App {
     }
     const hs = this.currentLayout(view).headings;
     const out: ReturnType<App["outlineRows"]> = [];
+    // Filtering (`/`): the headings that match and the ones they sit under, folds ignored.
+    const q = this.outline.filter ?? "";
+    if (q) {
+      const keep = new Set<number>();
+      hs.forEach((h, i) => {
+        if (!fuzzy(q, h.text)) return;
+        keep.add(i);
+        let level = h.level;
+        for (let k = i - 1; k >= 0 && level > 1; k--) {
+          if (hs[k]!.level < level) {
+            keep.add(k);
+            level = hs[k]!.level;
+          }
+        }
+      });
+      hs.forEach((h, i) => {
+        if (keep.has(i)) out.push({ index: i, level: h.level, text: h.text, line: h.line, folded: false, hasChildren: (hs[i + 1]?.level ?? 0) > h.level });
+      });
+      return out;
+    }
     let hideDeeperThan = Number.POSITIVE_INFINITY;
     hs.forEach((h, i) => {
       if (h.level <= hideDeeperThan) hideDeeperThan = Number.POSITIVE_INFINITY;
@@ -1978,6 +2068,10 @@ export class App {
 
   outlineAction(action: string): void {
     this.outline.pinned = false;
+    if (action === "filter") {
+      this.outline.filtering = true; // resumes a filter already there
+      return;
+    }
     const rows = this.outlineRows();
     const row = rows[this.outline.selected];
     const view = this.view;
@@ -2242,6 +2336,7 @@ export class App {
   private async dispatchKey(key: string): Promise<void> {
     if (this.overlay) return this.overlayKey(this.overlay, key);
     if (this.region === "sidebar" && this.sidebarShown && this.sidebar.filtering && !this.pending.length) return this.filterKey(key);
+    if (this.region === "outline" && this.outlineShown && this.outline.filtering && !this.pending.length) return this.outlineFilterKey(key);
     // Insert mode: keys are text, except the few that edit or move (editing.ts); save still works.
     const iv = this.view;
     if (this.region === "content" && iv?.insert && !this.pending.length) {
@@ -2534,8 +2629,12 @@ export class App {
       this.outline.selected = idx;
       // The fold marker sits right after the indent.
       const markerX = g.outline.x + 1 + (row.level - 1) * 2;
-      if (row.hasChildren && ev.x >= markerX - 1 && ev.x <= markerX + 1) this.outlineAction(row.folded ? "unfold" : "fold");
-      else this.outlineAction("jump"); // a choice: the note moves there and takes the focus
+      if (row.hasChildren && ev.x >= markerX - 1 && ev.x <= markerX + 1 && !this.outline.filter) this.outlineAction(row.folded ? "unfold" : "fold");
+      else {
+        this.outlineAction("jump"); // a choice: the note moves there and takes the focus
+        this.outline.filter = "";
+        this.outline.filtering = false;
+      }
       return;
     }
     if (g.sidebarPane && inRect(g.sidebarPane, ev.x, ev.y)) {

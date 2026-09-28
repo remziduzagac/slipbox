@@ -280,11 +280,12 @@ export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {
   right: "unfold",
   "g g": "top",
   "shift+g": "bottom",
+  "/": "filter",
   q: "close",
   escape: "leave",
 };
 
-export const OUTLINE_ACTIONS = ["down", "up", "jump", "fold", "unfold", "top", "bottom", "close", "leave"];
+export const OUTLINE_ACTIONS = ["down", "up", "jump", "fold", "unfold", "top", "bottom", "filter", "close", "leave"];
 
 /** Keys in resize mode: key → resize action. Anything else leaves the mode. */
 export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
@@ -337,9 +338,9 @@ export const HISTORY_ACTION_INFO: Record<string, { title: string; desc: string; 
 
 /** Keys while a left panel's filter (`/`) has them, for help. Fixed, not from a keymap. */
 export const FILTER_KEYS_HELP: [string, string[], string][] = [
-  ["Narrow the rows", ["type"], "Filters the explorer (folders kept) or the history by path"],
+  ["Narrow the rows", ["type"], "Filters the explorer (folders kept), the history by path, or the outline (parents kept)"],
   ["Move", ["down", "up", "ctrl+n", "ctrl+p"], "Moves through the matches"],
-  ["Open or jump", ["enter"], "Opens the note as a tab, or jumps to the place; the filter clears"],
+  ["Open or jump", ["enter"], "Opens the note as a tab, or jumps to the place or heading; the filter clears"],
   ["Clear the filter", ["esc"], "Clears it; the whole tree or history comes back"],
   ["Delete", ["backspace", "ctrl+w", "ctrl+u"], "A character, a word, or everything typed"],
 ];
@@ -352,6 +353,7 @@ export const OUTLINE_ACTION_INFO: Record<string, { title: string; desc: string }
   unfold: { title: "Unfold", desc: "Shows the sub-headings" },
   top: { title: "Top", desc: "Selects the first heading" },
   bottom: { title: "Bottom", desc: "Selects the last heading" },
+  filter: { title: "Filter", desc: "Type to narrow the headings (their parents kept); enter jumps, esc clears" },
   close: { title: "Close the outline", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the outline stays open" },
 };

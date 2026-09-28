@@ -935,6 +935,14 @@ function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
   let rect = paneTitle(app, c, pane, RIGHT_VIEWS[0]!.title, app.region === "outline", base.bg);
+  const of = app.outline;
+  // The filter (`/`): a row at the top of the list while it's open or holds text.
+  if ((of.filtering || of.filter) && rect.h > 2) {
+    const px = drawText(c, rect.x + 1, rect.y, "› ", { ...roleStyle(theme, "sidebar_dir", base.bg), bg: base.bg });
+    const fw = drawText(c, rect.x + 1 + px, rect.y, truncate(of.filter ?? "", rect.w - 4 - px), { ...roleStyle(theme, "text", base.bg), bg: base.bg });
+    if (of.filtering && app.region === "outline") drawText(c, rect.x + 1 + px + fw, rect.y, " ", roleStyle(theme, "cursor", base.bg));
+    rect = { ...rect, y: rect.y + 1, h: rect.h - 1 };
+  }
   const rows = app.outlineRows();
   const lines = treeLines(rows.map((r) => r.level - 1));
   const o = app.outline;
