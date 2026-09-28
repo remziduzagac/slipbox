@@ -235,11 +235,17 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
 | find in this note (cursor to the match; empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
+| the whole word under the cursor, forward / backward | `*` / `#` | — |
 | quick switcher: find a note by name | `ctrl+p` | `space f f` |
 | outline picker: find a heading in this note | — | `space f o` |
 | heading path: the breadcrumb's headings as a dropdown | — | `space f b` |
 | command palette / command line | `:` | `space f p` |
 | *(reserved for phase 4)* vault text search / tags | — | `space f s` / `space f t` |
+
+As in vim, `n` and `shift+n` go to the match after or before the cursor, wherever it has moved
+since the last one, and wrap around the note (the message says so: "from the top"). `*` and `#`
+search for the whole word under the cursor (or, off a word, the next one on its row): not inside
+longer words, smart case like `/`.
 
 ### The `:` prompt
 

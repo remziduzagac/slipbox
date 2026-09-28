@@ -95,6 +95,8 @@ export interface FindState {
   query: string;
   matches: { row: number; col: number; len: number }[];
   current: number;
+  /** Whole words only (`*` / `#`): not inside a longer word. */
+  whole?: boolean;
 }
 
 export interface View {
@@ -748,7 +750,7 @@ export class App {
       view.curAnchor = { ...this.cursorAnchorFor(layout, view.cur), col: view.curAnchor.col };
       view.top = this.clampTop(view, layout, rowFor(layout, view.topAnchor));
       this.ensureCursorVisible(view, layout);
-      if (view.find) view.find = computeFind(layout, view.find.query, view.find.current);
+      if (view.find) view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole);
       if (view.sel) view.sel.anchor = view.sel.src ? this.cursorFromAnchor(layout, view.sel.src) : clampPos(layout, view.sel.anchor);
     }
     return layout;
@@ -2651,12 +2653,15 @@ export function selectedText(layout: Layout, sel: Selection, cur: Pos): string {
   return out.join("\n");
 }
 
-export function computeFind(layout: Layout, query: string, current = 0): FindState {
+export function computeFind(layout: Layout, query: string, current = 0, whole = false): FindState {
   const matches: FindState["matches"] = [];
   if (query) {
     // Match on the original text (never a lowercased copy, whose length can differ: "İ"), with
-    // smart case: case-insensitive unless the query has an uppercase letter.
-    const re = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), /\p{Lu}/u.test(query) ? "gu" : "giu");
+    // smart case: case-insensitive unless the query has an uppercase letter. Whole words: not
+    // next to another letter, digit or underscore (in any script).
+    const literal = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const source = whole ? `(?<![\\p{L}\\p{N}_])${literal}(?![\\p{L}\\p{N}_])` : literal;
+    const re = new RegExp(source, /\p{Lu}/u.test(query) ? "gu" : "giu");
     layout.lines.forEach((line, row) => {
       const text = line.spans.map((s) => s.text).join("");
       for (const m of text.matchAll(re)) {
@@ -2665,5 +2670,5 @@ export function computeFind(layout: Layout, query: string, current = 0): FindSta
       }
     });
   }
-  return { query, matches, current: Math.min(current, Math.max(0, matches.length - 1)) };
+  return { query, matches, current: Math.min(current, Math.max(0, matches.length - 1)), whole };
 }

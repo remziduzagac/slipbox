@@ -413,14 +413,47 @@ function infoList(a: App, title: string, rows: [string, string][]): void {
   });
 }
 
-function findStep(a: App, dir: 1 | -1): void {
+/**
+ * `n` / `shift+n`, as in vim: the next match after the cursor (or before it), wrapping around the
+ * note, wherever the cursor has moved since the last one.
+ */
+function findStep(a: App, dir: 1 | -1, from?: { row: number; col: number }): void {
   const v = a.view;
   if (!v?.find || !v.find.matches.length) return a.message("info", "no search — ctrl+f or / starts one");
-  const n = v.find.matches.length;
-  v.find.current = (v.find.current + dir + n) % n;
-  const m = v.find.matches[v.find.current]!;
+  const ms = v.find.matches;
+  const n = ms.length;
+  const at = from ?? v.cur;
+  const cmp = (m: { row: number; col: number }) => (m.row - at.row) * 1e9 + (m.col - at.col);
+  let i = dir === 1 ? ms.findIndex((m) => cmp(m) > 0) : ms.findLastIndex((m) => cmp(m) < 0);
+  const wrapped = i < 0;
+  if (wrapped) i = dir === 1 ? 0 : n - 1;
+  v.find.current = i;
+  const m = ms[i]!;
   a.moveCursor(v, { row: m.row, col: m.col });
-  a.message("info", `${v.find.current + 1}/${n}  ${v.find.query}`);
+  a.message("info", `${i + 1}/${n}  ${v.find.query}${wrapped ? (dir === 1 ? "  (from the top)" : "  (from the bottom)") : ""}`);
+}
+
+/**
+ * `*` / `#`, as in vim: search for the whole word under the cursor (or, off a word, the next one on
+ * its row), forward or backward from it.
+ */
+function findWord(a: App, dir: 1 | -1): void {
+  const v = a.view;
+  if (!v) return;
+  const layout = lay(a, v);
+  const cs = C.cells(layout.lines[v.cur.row]);
+  const isWord = (g: string) => /^[\p{L}\p{N}_]/u.test(g);
+  let k = cs.findIndex((c) => c.x + c.w > v.cur.col);
+  if (k >= 0) while (k < cs.length && !isWord(cs[k]!.g)) k++;
+  if (k < 0 || k >= cs.length) return a.message("info", "no word under the cursor");
+  let s = k;
+  while (s > 0 && isWord(cs[s - 1]!.g)) s--;
+  let e = k;
+  while (e < cs.length - 1 && isWord(cs[e + 1]!.g)) e++;
+  const word = cs.slice(s, e + 1).map((c) => c.g).join("");
+  v.find = computeFind(layout, word, 0, true);
+  // From the word's start: forward skips this one, backward finds the one before it.
+  findStep(a, dir, { row: v.cur.row, col: cs[s]!.x });
 }
 
 export function registerActions(app: App): void {
@@ -713,6 +746,8 @@ export function registerActions(app: App): void {
       }),
     "find.next": (a) => findStep(a, 1),
     "find.prev": (a) => findStep(a, -1),
+    "find.word_next": (a) => findWord(a, 1),
+    "find.word_prev": (a) => findWord(a, -1),
     "find.clear": (a) =>
       withView(a, (v) => {
         v.find = null;

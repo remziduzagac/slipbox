@@ -97,8 +97,10 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "outline.toggle", title: "Show or hide the outline", cli: "slipbox outline <note>", desc: "Shows the outline (focusing it) or hides it" },
   // find
   { id: "find.open", title: "Find in note", cli: I, desc: "Searches this note; the cursor goes to matches" },
-  { id: "find.next", title: "Next match", cli: I, desc: "Moves to the next match" },
-  { id: "find.prev", title: "Previous match", cli: I, desc: "Moves to the previous match" },
+  { id: "find.next", title: "Next match", cli: I, desc: "Moves to the next match after the cursor, wrapping at the end" },
+  { id: "find.prev", title: "Previous match", cli: I, desc: "Moves to the previous match before the cursor, wrapping at the top" },
+  { id: "find.word_next", title: "Find the word under the cursor", cli: I, desc: "Searches for the whole word under the cursor, forward (vim's *)" },
+  { id: "find.word_prev", title: "Find the word under the cursor, backward", cli: I, desc: "Searches for the whole word under the cursor, backward (vim's #)" },
   { id: "find.clear", title: "Clear find highlights", cli: I, desc: "Removes the find highlights" },
   { id: "switcher.open", title: "Quick switcher: find a note", cli: "slipbox ls", desc: "Opens a note by typing part of its name" },
   { id: "outline.pick", title: "Find a heading in this note", cli: "slipbox outline <note>", desc: "Jumps to a heading by typing part of it" },

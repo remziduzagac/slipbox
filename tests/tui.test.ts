@@ -920,6 +920,53 @@ describe("the left panel's views and filter", () => {
   });
 });
 
+describe("find: n / N from the cursor, * / # the word under it", () => {
+  const note = "# T\n\nalpha beta\n\nalphabet gamma\n\nbeta alpha\n\nend alpha\n";
+  const setup = async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "find.md"), note);
+    const h = await harness({ root, open: "find.md", width: 80, height: 24 });
+    const rowOf = (text: string) => rowStarting(h, text);
+    return { h, rowOf };
+  };
+  test("n and N go to the match after / before the cursor, wherever it has moved; they wrap", async () => {
+    const { h, rowOf } = await setup();
+    const v = h.app.view!;
+    await h.keys("/", "a", "l", "p", "h", "a", "enter"); // alpha, alphabet, alpha, alpha
+    expect(v.find!.matches.length).toBe(4);
+    // Move the cursor down past two matches: n goes to the next one after it, not after the first.
+    h.app.moveCursor(v, { row: rowOf("beta alpha"), col: 0 });
+    await h.keys("n");
+    expect(v.cur).toEqual({ row: rowOf("beta alpha"), col: 5 });
+    await h.keys("n");
+    expect(v.cur.row).toBe(rowOf("end alpha"));
+    await h.keys("n"); // wraps to the top
+    expect(v.cur).toEqual({ row: rowOf("alpha beta"), col: 0 });
+    expect(h.app.transient!.text).toContain("from the top");
+    await h.keys("shift+n"); // and back round to the bottom
+    expect(v.cur.row).toBe(rowOf("end alpha"));
+    expect(h.app.transient!.text).toContain("from the bottom");
+  });
+  test("* and # search for the whole word under the cursor, forward and backward", async () => {
+    const { h, rowOf } = await setup();
+    const v = h.app.view!;
+    h.app.moveCursor(v, { row: rowOf("alpha beta"), col: 2 }); // inside "alpha"
+    await h.keys("*");
+    expect(v.find!.query).toBe("alpha");
+    expect(v.find!.whole).toBe(true);
+    expect(v.find!.matches.length).toBe(3); // not "alphabet"
+    expect(v.cur).toEqual({ row: rowOf("beta alpha"), col: 5 });
+    await h.keys("n");
+    expect(v.cur.row).toBe(rowOf("end alpha"));
+    await h.keys("#");
+    expect(v.cur).toEqual({ row: rowOf("beta alpha"), col: 5 });
+    // Off a word: the next word on the row.
+    h.app.moveCursor(v, { row: rowOf("beta alpha"), col: 4 }); // the space
+    await h.keys("*");
+    expect(v.find!.query).toBe("alpha");
+  });
+});
+
 describe("breadcrumb collapse (…) and the path dropdown", () => {
   test("crumbLayout: all, then first … innermost, then cut, then … last, then …", () => {
     const shape = (ps: ReturnType<typeof crumbLayout>) => ps.map((p) => (p === "more" ? "…" : `${p.i}:${p.w}`)).join(" ");
