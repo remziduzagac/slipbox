@@ -4804,6 +4804,28 @@ describe("AsciiDoc notes in the TUI (16.17)", () => {
   });
 });
 
+describe("a data file that doesn't parse, opened (16.14)", () => {
+  test("opens in source mode with its error said, once each time: at the start, by :e, from a link", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "bad.json"), '{"a": }\n');
+    writeFileSync(join(root, "to-bad.md"), "# T\n\n[bad](bad.json)\n");
+    const said = (h: Harness) => h.app.messages.filter((m) => m.text.includes("bad.json doesn't parse")).length;
+    const h = await harness({ root, open: "bad.json" });
+    const v = h.app.view!;
+    expect(v.source).toBe(true);
+    expect(said(h)).toBe(1);
+    await h.app.run("note.open to-bad.md");
+    expect(v.source).toBe(false); // a note renders again
+    await h.app.run("note.open bad.json"); // :e takes a file's path too
+    expect([v.buf.rel, v.source, said(h)]).toEqual(["bad.json", true, 2]);
+    await h.app.run("history.back");
+    const l = h.app.currentLayout(v).links[0]!;
+    h.app.moveCursor(v, { row: l.line, col: l.col });
+    await h.keys("enter");
+    expect([v.buf.rel, v.source, said(h)]).toEqual(["bad.json", true, 3]);
+  });
+});
+
 describe("links out of data files in the TUI (16.15)", () => {
   test("a value that is a path is a link: coloured, followed with enter", async () => {
     const root = makeVault();

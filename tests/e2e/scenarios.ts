@@ -644,7 +644,8 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("H");
       await s.status("reduce.py");
       // A file with a syntax error: counted in the status line, gone while typing, back after.
-      await open(s, "half-written.py");
+      await s.ex("e scratch/half-written.py"); // code isn't in ctrl+p by default (files.show)
+      await s.status("half-written.py");
       await s.status(/✖/, 5000);
       await s.keys("G", "o");
       await s.status("INSERT");

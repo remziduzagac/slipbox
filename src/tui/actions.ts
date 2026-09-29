@@ -316,7 +316,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
     case "window.split_side":
     case "window.split_stacked":
     case "tab.new":
-      return [...a.graph.notes.keys()];
+      return cmd === "note.open" ? [...a.graph.notes.keys(), ...a.graph.filePaths().filter((p) => classify(p, a.config.walk.extensions).group !== "binary")] : [...a.graph.notes.keys()];
     case "theme.set":
       return listThemes().map((t) => t.name);
     case "glyphs.set":
@@ -1198,7 +1198,10 @@ export function registerActions(app: App): void {
       const r = a.graph.findNote(arg, a.loc.root);
       if (r.status === "resolved") return a.open(r.path);
       if (r.status === "ambiguous") return a.message("warn", `"${arg}" matches ${r.candidates.join(", ")}`);
-      a.message("warn", `no note "${arg}"`);
+      // Any other file of the vault, by its path with its extension (16.4), as :e opens it in vim.
+      const rel = arg.replace(/^\.?\//, "");
+      if (a.graph.filePaths().includes(rel)) return fileLink(a, rel);
+      a.message("warn", `no note or file "${arg}"`);
     },
     // ui
     "ui.list": (a) => {

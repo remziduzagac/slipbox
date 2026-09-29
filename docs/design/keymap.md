@@ -266,7 +266,7 @@ config.
 | Alias | Runs |
 | --- | --- |
 | `:q`, `:quit` | quit |
-| `:e <note>`, `:open <note>` | open a note |
+| `:e <note>`, `:open <note>` | open a note, or any text file of the vault by its path (`:e tool.py`) |
 | `:theme <name>` | set the theme |
 | `:glyphs <nerd\|unicode\|ascii\|auto>` | set the glyph set |
 | `:zen` | toggle zen mode |

@@ -785,7 +785,7 @@ export class App {
       width: this.width,
       left: 0,
       // A data or text file opens in source mode (16.4); data files render once they can (16.11).
-      ...(this.canRender(buf) ? {} : { source: true }),
+      ...(this.canRender(buf) ? {} : (this.saySourceWhy(buf), { source: true })),
     };
   }
 
@@ -923,10 +923,19 @@ export class App {
    * After a window changes file: one with no render goes to source mode; a window that was only in
    * source mode for such a file (from `before`) renders again for one that can.
    */
+  /** A data file that opens in source mode because it doesn't parse (16.14): the error said. */
+  private saySourceWhy(buf: NoteBuffer): void {
+    const error = buf.kind.group === "data" ? buf.parsed.error : null;
+    if (error) this.message("warn", `${buf.name} doesn't parse — ${error}: source mode`);
+  }
+
   fitMode(view: View, before: NoteBuffer): void {
     const forced = !this.canRender(before);
-    if (!this.canRender(view.buf)) Object.assign(view, { source: true, live: false, liveBase: undefined });
-    else if (forced) Object.assign(view, { source: false, live: false, liveBase: undefined });
+    if (!this.canRender(view.buf)) {
+      const was = view.source; // already so from makeView, which said why
+      Object.assign(view, { source: true, live: false, liveBase: undefined });
+      if (!was) this.saySourceWhy(view.buf);
+    } else if (forced) Object.assign(view, { source: false, live: false, liveBase: undefined });
   }
 
   // -------------------------------------------------------------------------------------------
