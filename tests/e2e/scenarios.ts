@@ -5,6 +5,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { UNSAFE } from "../../src/core/sanitize.ts";
 import type { Session, SessionOptions } from "./session.ts";
 
 export interface Scenario {
@@ -76,6 +77,36 @@ export const SCENARIOS: Scenario[] = [
       await s.see("يوسف حداد");
       await s.see("🔭");
       await s.see("unresolved"); // [[visiting-rota]] exists nowhere; the text says so, drawn as such
+    },
+  },
+
+  {
+    name: "hostile names: a bidi override, C1 and an OSC in a file name never reach the terminal",
+    needs: { cols: 100 },
+    options: {
+      files: { "n-\u202etxt.cod\u202c-\u009b31m-\x1b]0;PWNED\x07.md": "# Hostile\u202e heading\n\n[[home]]\n" },
+    },
+    run: async (s) => {
+      const clean = () => {
+        const t = s.text();
+        s.expect(!UNSAFE.test(t.replace(/\n/g, "")) && !t.includes("PWNED"), "a control character or an OSC's text on screen");
+      };
+      for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await s.keys("ctrl+e");
+      await s.see("n-");
+      clean();
+      await s.keys("escape");
+      await s.keys("ctrl+p"); // the switcher lists it by name
+      await s.see("Open note");
+      await s.type("n-");
+      await s.see(/n-.*cod/);
+      clean();
+      await s.keys("enter");
+      await s.see("heading");
+      clean();
+      await open(s, "home");
+      await s.ex("backlinks.open"); // it links to home, so it is in home's list, by name
+      await s.see(/n-.*cod/);
+      clean();
     },
   },
 
