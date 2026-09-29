@@ -26,7 +26,7 @@ export function offsetAtPos(app: App, view: View, pos: { row: number; col: numbe
   if (!line.srcMap) return starts[Math.max(0, Math.min(starts.length - 1, line.src - 1))] ?? 0;
   const cs = cells(line);
   const i = cs.findIndex((c) => c.x + c.w > pos.col);
-  const within = i < 0 ? line.srcMap.end : line.srcMap.cells[i]!;
+  const within = i < 0 ? line.srcMap.end : cs[i]!.at!;
   return Math.min(view.buf.source.length, (starts[line.src - 1] ?? 0) + within);
 }
 
@@ -67,18 +67,13 @@ export function placeAt(app: App, view: View, at: number, past = false, again = 
   while (layout.lines[row + 1]?.src === src && layout.lines[row + 1]?.srcMap && within >= (layout.lines[row]!.srcMap?.end ?? 0)) row++;
   const line = layout.lines[row]!;
   const cs = cells(line);
-  const map = line.srcMap?.cells ?? [];
-  let k = map.findIndex((o) => o >= within);
+  const k = line.srcMap ? cs.findIndex((c) => c.at! >= within) : -1;
   let col: number;
   if (k < 0) {
     // After the row's last character: past it (insert), or on it (normal).
     const lastCell = cs[cs.length - 1];
     col = past || !lastCell ? (lastCell ? lastCell.x + lastCell.w : 0) : lastCell.x;
-  } else {
-    // A tab is several cells with one offset: the first of them.
-    while (k > 0 && map[k - 1] === map[k]) k--;
-    col = cs[k]?.x ?? 0;
-  }
+  } else col = cs[k]!.x;
   view.cur = { row, col };
   view.goal = col;
   app.setCursorAnchor(view, layout);
@@ -136,6 +131,18 @@ export function startInsert(app: App, view: View, at: (v: View) => number, past 
   view.buf.beginStep(offsetOf(app, view));
   view.insert = true;
   placeAt(app, view, off, past);
+  view.insertFrom = offsetOf(app, view);
+}
+
+/**
+ * Where ctrl+u and ctrl+w stop first (vim's rule): the insert's start, when it is on this line
+ * before the cursor. Once reached, it's spent — the next one goes on to the line's start.
+ */
+function insertStop(view: View, lineStart: number, at: number): number {
+  const s = view.insertFrom;
+  // After only indentation (cc, o keep it), the insert's start is the line's: the indent goes too.
+  if (s !== undefined && s > lineStart && s < at && view.buf.source.slice(lineStart, s).trim()) return s;
+  return lineStart;
 }
 
 /** Leave insert mode: the session is one undo step; the cursor steps back onto a character. */
@@ -198,6 +205,12 @@ export function newline(app: App, view: View): void {
     const marker = m[2] ?? `${Number(m[3]) + 1}${m[4]}`;
     lead = `${m[1]}${marker}${m[5]}${m[6] ? "[ ] " : ""}`;
   }
+  // The last line of a note with no final newline (or an empty note): the new line gets a line
+  // ending too, or it would be no line at all and typing would land on the line before.
+  if (at === view.buf.source.length && !view.buf.source.endsWith("\n")) {
+    view.buf.edit(at, 0, view.buf.eol + lead + view.buf.eol);
+    return placeAt(app, view, at + view.buf.eol.length + lead.length, true);
+  }
   insertText(app, view, view.buf.eol + lead);
 }
 
@@ -239,18 +252,22 @@ export function deleteWordBack(app: App, view: View): void {
   if (!before) return backspace(app, view);
   // The word before the cursor and the spaces after it — not the space before it (vim, readline).
   const m = /([\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]+)?\s*$/u.exec(before)!;
-  const from = at - m[0].length;
+  const stop = insertStop(view, start, at);
+  const from = Math.max(at - m[0].length, stop);
+  if (from === stop) view.insertFrom = undefined;
   view.buf.edit(from, at - from, "");
   placeAt(app, view, from, true);
 }
 
-/** ctrl+u: back to the start of the line. */
+/** ctrl+u: what was typed on this line; again, the rest before the cursor; at its start, a join. */
 export function deleteToLineStart(app: App, view: View): void {
   const at = offsetOf(app, view);
   const start = view.buf.lineStarts()[lineOf(view, at) - 1] ?? 0;
-  if (at === start) return;
-  view.buf.edit(start, at - start, "");
-  placeAt(app, view, start, true);
+  if (at === start) return backspace(app, view);
+  const from = insertStop(view, start, at);
+  view.insertFrom = undefined;
+  view.buf.edit(from, at - from, "");
+  placeAt(app, view, from, true);
 }
 
 /** Tab / shift+tab: indent or outdent the cursor's line by two spaces (markdown list nesting). */
@@ -270,6 +287,12 @@ export function indentLine(app: App, view: View, dir: 1 | -1): void {
 
 /** Keys in insert mode: text goes in; the arrows and friends move; esc leaves. */
 export function insertKey(app: App, view: View, key: string): void {
+  insertKeyNow(app, view, key);
+  // Moving the cursor starts the insert again there, as vim's does: ctrl+u and ctrl+w stop at it.
+  if (view.insert && ["left", "right", "up", "down", "home", "end"].includes(key)) view.insertFrom = offsetOf(app, view);
+}
+
+function insertKeyNow(app: App, view: View, key: string): void {
   const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
   switch (key) {
     case "escape":

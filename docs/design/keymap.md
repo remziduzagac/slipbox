@@ -324,14 +324,21 @@ source first.
 | put after / before (a line register: under / over the line) | `p` / `shift+p` |
 | repeat the last change | `.` |
 | in visual mode: delete, change, indent, outdent the selection | `d` `x`, `c`, `>`, `<` |
+| in visual mode: select a text object (`viw`, `vi(`); counts work (`v2j`, `V3>`) | `i` / `a` + object |
 
 Motions are the reading keys (`w` `b` `e` `0` `^` `$` `j` `k` `g g` `shift+g` `{` `}`, `f` `t`…), and
 a search: after an operator, `/` covers the text up to the match you accept, and `n` / `shift+n` up
 to the next or previous one (`d/foo`, `dn`). `j`, `k`,
-`g g` and `shift+g` take whole lines, `e` and `$` include the character they land on, `cw` changes to
-the word's end, and `dw` stops at the line's end. Text objects follow `i` (inside) or `a` (around):
-`w` `W` a word, `"` `'` `` ` `` quotes on the line, `(` `b` `[` `{` `B` `<` brackets (nested, across
-lines), `p` a paragraph. `g n` / `g shift+n` after an operator is the search's next / previous match
+`g g` and `shift+g` take whole lines (with a count, to that line: `d3G`), `e` and `$` include the
+character they land on, `cw` changes to the word's end, and `dw` stops at the line's end. An
+exclusive motion that ends at a line's start ends at the end of the line before instead, and from
+the first non-blank takes whole lines (vim's rule): `d}` keeps the blank line, `c}` changes the
+paragraph's lines, `db` at a line's start stays on the line above. `}` in the last paragraph goes
+to its last character. Text objects follow `i` (inside) or `a` (around):
+`w` `W` a word, `"` `'` `` ` `` quotes on the line (`a"` takes the space after, else before), `(` `b`
+`[` `{` `B` `<` brackets (nested, across lines; `i(` with the brackets on lines of their own takes the
+lines between, whole), `p` a paragraph (`ap` on the last one takes the blank lines before it).
+`g n` / `g shift+n` after an operator is the search's next / previous match
 (the one under the cursor included): `cgn`, type, `esc`, then `.` changes the next one, and the next.
 A count goes before the command, the motion or the text object (`3dd`, `d2w`, `5j`, `d2i(`, `d2aw`).
 `cw` on a word's last letter, or a one-letter word, changes just that letter, as in vim. The
@@ -343,8 +350,10 @@ Quitting (`ctrl+q`, `:q`) with unsaved changes is refused, naming the notes. In 
 stepping back onto a character; `enter` a new line with the same indentation, continuing a list
 (the same bullet, the next number, an empty task box) — or, on an item with nothing after its
 marker, ending the list; `backspace` / `delete` a character (joining lines at an edge); `ctrl+w`
-the word before; `ctrl+u` back to the line's start; `tab` / `shift+tab` indent or outdent the line
-by two spaces; the arrows, `home` and `end` move; `ctrl+s` saves. A paste goes into the text.
+the word before; `ctrl+u` what was typed on the line, then the rest before the cursor, and at the
+line's start joins it to the one above (`ctrl+w` too stops once where the insert began); `tab` /
+`shift+tab` indent or outdent the line by two spaces; the arrows, `home` and `end` move; `ctrl+s`
+saves. A paste goes into the text.
 Source mode's own keys are `[keys.source]` in config: the operators and edits above (`d c y > < D C s
 S r J p P ~ . x`), which win over the reading keys there.
 
@@ -354,6 +363,13 @@ wrapped across rows, `0`, `$`, `j` and `k` (and `d$`, `dj`) work on the row, whi
 wraps. Each CJK character is a word for `w`, `b` and `e`, while `iw`, `*` and `#` take the whole run
 of them. `/` typed with the cursor on a match stays on it (vim moves to the next). `r` and `f` take
 a character typed, not `enter` or `tab`. A count before `gg` or `G` is a line number (`3gg`, `5G`).
+The cursor stops on trailing spaces and on a tab (one stop, as wide as it's drawn), as in vim. Also
+not vim: `$` in visual mode stops on the last character, so `v$d` keeps the line break; `<` on a
+tab-indented line takes the tab (never turns it into spaces); a count before `i`, `a`, `o` is
+ignored (`3ix` types one x); `n` and `shift+n` go forward and back through the note whichever of
+`/`, `*` or `#` started the search; `.` doesn't repeat a characterwise visual change that spans
+lines; `:s` takes only `%` and `'<,'>` for ranges (`:2,5s` says so). A note with no final newline
+gets one when a line is added after its last.
 
 ## UI — `space u`
 

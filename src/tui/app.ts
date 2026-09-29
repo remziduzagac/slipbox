@@ -18,7 +18,7 @@ import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, offsetOf, stopInsert } from "./editing.ts";
-import { insertRecord, newVimState, PASTE, vimKey } from "./vim.ts";
+import { insertRecord, newVimState, PASTE, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
 import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
@@ -162,6 +162,8 @@ export interface View {
   findOpts?: { regex: boolean; whole: boolean };
   /** Typing into the text (insert mode); in source mode or live preview. */
   insert?: boolean;
+  /** Where the current insert began (moved by arrow keys): ctrl+u and ctrl+w stop there first. */
+  insertFrom?: number;
 }
 
 /** What live preview composes from: a render, the blocks of its parse, and which one is active. */
@@ -2517,6 +2519,7 @@ export class App {
     }
     // Source mode's normal mode: counts, operators and `.` around the keymaps (vim.ts).
     if (this.region === "content" && iv && editable(iv) && !iv.visual && !this.resizeMode) return vimKey(this, iv, key, () => this.dispatchMapped(key));
+    if (this.region === "content" && iv?.visual && !this.resizeMode) return visualKey(this, iv, key, () => this.dispatchMapped(key));
     return this.dispatchMapped(key);
   }
 

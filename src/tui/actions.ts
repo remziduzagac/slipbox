@@ -84,6 +84,17 @@ function countedLine(a: App, v: View): C.Pos | null {
   return { ...v.cur };
 }
 
+/**
+ * G where the text is editable: the last source line's first non-blank, as vim has it. (The last
+ * rendered row belongs to its block's first line: in the lens, `Gdd` would take the wrong line.)
+ */
+function lastLine(a: App, v: View): C.Pos {
+  const starts = v.buf.lineStarts();
+  const n = Math.max(1, starts.length - (v.buf.source.endsWith("\n") ? 1 : 0));
+  E.placeAt(a, v, (starts[n - 1] ?? 0) + /^\s*/.exec(E.lineText(v, n))![0].length);
+  return { ...v.cur };
+}
+
 /** D / C: to the end of the line (with a count, of the line count-1 below). */
 function toLineEnd(a: App, v: View, n: number): V.Range {
   const at = E.offsetOf(a, v);
@@ -133,8 +144,9 @@ function visualOp(a: App, op: "d" | "c" | ">" | "<"): void {
     const chars = [...v.buf.source.slice(r.from, r.to)].length;
     const keys = line ? ["shift+v", ...Array(lines - 1).fill("j"), op] : lines === 1 ? ["v", ...Array(Math.max(0, chars - 1)).fill("l"), op] : null;
     const before = v.buf.version;
-    V.apply(a, v, op, r);
-    V.recordVisual(a, keys, op === "c", before);
+    const times = op === ">" || op === "<" ? V.takeCount(a) : 1;
+    V.apply(a, v, op, { ...r, times });
+    V.recordVisual(a, times > 1 ? null : keys, op === "c", before);
   });
 }
 
@@ -393,6 +405,12 @@ function openPalette(a: App): void {
       return ranked;
     },
     submit: (input) => {
+      // :2,5s/…, :.,$s/…: ranges :s doesn't take — said, never a silent nothing.
+      if (/^\s*[\d.$,+-]+s[^\w\s\\]/.test(input)) {
+        a.overlay = null;
+        a.message("warn", "`:s` takes the line, `%` or `'<,'>` — select the lines (V) and type :, or use :%s");
+        return true;
+      }
       if (parseSubstitute(input)) {
         a.overlay = null;
         void a.run(`find.substitute ${input.trim()}`).then(() => a.host.requestRender());
@@ -630,7 +648,7 @@ export function registerActions(app: App): void {
     "cursor.first_nonblank": motion((a, v) => C.firstNonBlank(lay(a, v), v.cur)),
     // gg and G; with a count in source mode (3gg, 5G), that line of the note, as vim.
     "cursor.top": motion((a, v) => countedLine(a, v) ?? C.top(lay(a, v))),
-    "cursor.bottom": motion((a, v) => countedLine(a, v) ?? C.bottom(lay(a, v))),
+    "cursor.bottom": motion((a, v) => countedLine(a, v) ?? (editable(v) ? lastLine(a, v) : C.bottom(lay(a, v)))),
     "cursor.heading_prev": motion((a, v) => C.headingPrev(lay(a, v), v.cur)),
     "cursor.heading_next": motion((a, v) => C.headingNext(lay(a, v), v.cur)),
     "cursor.paragraph_prev": motion((a, v) => C.paragraphPrev(lay(a, v), v.cur)),
@@ -677,7 +695,10 @@ export function registerActions(app: App): void {
         if (text) a.copy(text);
         // In source mode the text is the markdown itself: it's what p puts back, too.
         if (text && editable(v)) a.vim.register = { text: v.visual === "line" ? `${text}\n` : text, linewise: v.visual === "line" };
+        // The cursor goes to the selection's start, as vim's does: p and P then put where expected.
+        const [start] = C.ordered(v.sel?.anchor ?? v.cur, v.cur);
         Object.assign(v, { visual: null, sel: null });
+        if (editable(v)) a.moveCursor(v, start);
       }),
     "visual.exit": (a) =>
       withView(a, (v) => {

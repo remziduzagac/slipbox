@@ -799,7 +799,9 @@ function drawScrollbar(app: App, c: Canvas, r: Rect, total: number, top: number,
 function drawCursor(c: Canvas, x: number, y: number, line: Line, col: number, theme: Theme, end = Number.POSITIVE_INFINITY): void {
   const st = roleStyle(theme, "cursor", null);
   const cell = cells(line).find((k) => k.x === col);
-  if (cell && cell.x + cell.w <= end) c.cell(x + cell.x, y, cell.g, cell.w, st);
+  // A tab is one stop several columns wide: the cursor sits on its first column.
+  if (cell && cell.g === "\t") c.cell(x + cell.x, y, " ", 1, st);
+  else if (cell && cell.x + cell.w <= end) c.cell(x + cell.x, y, cell.g, cell.w, st);
   else c.cell(x + col, y, " ", 1, st);
 }
 

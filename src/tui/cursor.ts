@@ -14,6 +14,8 @@ export interface Cell {
   g: string;
   x: number;
   w: number;
+  /** Source rows: the grapheme's UTF-16 offset in its source line. */
+  at?: number;
 }
 
 const cellCache = new WeakMap<Line, Cell[]>();
@@ -25,15 +27,26 @@ export function cells(line: Line | undefined): Cell[] {
   if (c) return c;
   c = [];
   let x = 0;
+  const map = line.srcMap?.cells;
+  let i = 0;
   for (const span of line.spans) {
     for (const g of graphemes(span.text)) {
       const w = graphemeWidth(g);
-      if (w > 0) c.push({ g, x, w });
+      const at = map?.[i++]; // srcMap has every grapheme, zero-width ones too
+      if (w > 0) {
+        const prev = c[c.length - 1];
+        // A tab is drawn as several cells with one offset: one stop, as wide as all of them.
+        if (map && prev && at === prev.at) {
+          prev.g = "\t";
+          prev.w += w;
+        } else c.push(map ? { g, x, w, at } : { g, x, w });
+      }
       x += w;
     }
   }
-  // Trailing spaces are padding, not text: the cursor stops at the last visible character.
-  while (c.length && /^\s$/.test(c[c.length - 1]!.g)) c.pop();
+  // A rendered row's trailing spaces are padding, not text: the cursor stops at the last visible
+  // character. A source row's are text (a hard break's two spaces): the cursor reaches them.
+  if (!map) while (c.length && /^\s$/.test(c[c.length - 1]!.g)) c.pop();
   cellCache.set(line, c);
   return c;
 }

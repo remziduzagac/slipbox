@@ -19,7 +19,7 @@ export interface VimState {
   /** Digits typed before a command (`3dw`, `d3w`). */
   count: string;
   /** An operator waiting for its motion: which, its count, the motion keys so far. */
-  op: { op: Op; count: number; keys: string[]; object: "i" | "a" | null; char: FindKind | null } | null;
+  op: { op: Op; count: number; given: boolean; keys: string[]; object: "i" | "a" | null; char: FindKind | null } | null;
   /** A command waiting for one character (`r`). */
   awaitChar: ((ch: string) => void) | null;
   /** The last f / F / t / T and its character, for ; and ,. */
@@ -37,6 +37,8 @@ export interface VimState {
   replaying: boolean;
   /** Set by undo/redo, which change the text but aren't changes to repeat. */
   undoing: boolean;
+  /** Visual mode's i or a, waiting for its object (viw, va"). */
+  visualObject?: "i" | "a" | null;
 }
 
 export function newVimState(): VimState {
@@ -48,6 +50,16 @@ export function takeCount(app: App): number {
   const n = Number(app.vim.count) || 1;
   app.vim.count = "";
   return Math.min(n, 10000);
+}
+
+/** The character a key types (`shift+w` is W, `shift+9` is `(`), or null for a named key. */
+export function keyChar(key: string): string | null {
+  if (key === "space") return " ";
+  if ([...key].length === 1) return key;
+  const m = /^shift\+(.)$/.exec(key);
+  if (!m) return null;
+  const SHIFTED: Record<string, string> = { "9": "(", "0": ")", "[": "{", "]": "}", ",": "<", ".": ">", "'": '"', "`": "~" };
+  return SHIFTED[m[1]!] ?? m[1]!.toUpperCase();
 }
 
 function idle(app: App, view: View): boolean {
@@ -108,9 +120,49 @@ async function handle(app: App, view: View, key: string, dispatch: () => Promise
   if (!s.op && !s.awaitChar && !app.pending.length) s.count = "";
 }
 
+/**
+ * Before the keymaps, in visual mode: a count (v2j, V3>) and, where the text is editable, `i` or
+ * `a` and a text object, which becomes the selection (viw, vi(, vap).
+ */
+export async function visualKey(app: App, view: View, key: string, dispatch: () => Promise<void>): Promise<void> {
+  const s = app.vim;
+  if (s.visualObject) {
+    const kind = s.visualObject;
+    s.visualObject = null;
+    const ch = key === "escape" ? null : keyChar(key);
+    if (ch === null) return;
+    const r = textObject(view, E.offsetOf(app, view), kind, ch, takeCount(app));
+    if (!r) return app.message("info", `no ${kind}${ch} here`);
+    E.placeAt(app, view, r.from);
+    app.select(view, { ...view.cur }, view.visual === "line");
+    E.placeAt(app, view, Math.max(r.from, E.prevBoundary(view.buf.source, r.to)));
+    app.moveCursor(view, view.cur);
+    return;
+  }
+  if (!app.pending.length && (/^[1-9]$/.test(key) || (key === "0" && s.count))) {
+    s.count += key;
+    return;
+  }
+  if (!app.pending.length && (key === "i" || key === "a") && (view.source || view.live)) {
+    s.visualObject = key;
+    return;
+  }
+  if (s.count && !app.pending.length && !app.visualKeys.lookup(key)) {
+    const spec = app.keymap.lookup(key);
+    if (spec?.startsWith("cursor.") && spec !== "cursor.bottom" && !spec.startsWith("cursor.find_") && !app.keymap.isPrefix(key)) {
+      const n = takeCount(app);
+      for (let k = 0; k < n; k++) await app.run(spec);
+      return;
+    }
+  }
+  await dispatch();
+  if (!app.pending.length) s.count = "";
+}
+
 /** Start an operator (the command bound to `d`, `c`…): it waits for a motion or a text object. */
 export function startOperator(app: App, op: Op): void {
-  app.vim.op = { op, count: takeCount(app), keys: [], object: null, char: null };
+  const given = !!app.vim.count;
+  app.vim.op = { op, count: takeCount(app), given, keys: [], object: null, char: null };
 }
 
 async function operatorKey(app: App, view: View, key: string): Promise<void> {
@@ -122,6 +174,10 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
   };
   if (key === "escape" || key === "ctrl+c") return cancel();
   const count = o.count * (Number(s.count) || 1);
+  const given = o.given || !!s.count;
+  // Kept on the operator: a motion of several keys (d2gg) reads it at its last key.
+  o.count = count;
+  o.given = given;
   s.count = "";
   // f / t after the operator: this key is the character.
   if (o.char) {
@@ -133,7 +189,7 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
   }
   // A text object: i or a, then its character.
   if (o.object) {
-    const ch = key === "shift+9" ? "(" : key;
+    const ch = keyChar(key) ?? key;
     const r = textObject(view, E.offsetOf(app, view), o.object, ch, count);
     s.op = null;
     if (!r) return app.message("info", `no ${o.object}${ch} here`);
@@ -187,6 +243,14 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
     return app.run(spec);
   }
   if (!spec?.startsWith("cursor.") && spec !== "find.next" && spec !== "find.prev") return app.message("info", `${o.op} doesn't take ${seq}`);
+  // G and gg with a count go to that line (d3G), not that many times to the end.
+  if ((spec === "cursor.bottom" || spec === "cursor.top") && given) {
+    const at = E.offsetOf(app, view);
+    const n = view.buf.lineStarts().length - (view.buf.source.endsWith("\n") ? 1 : 0);
+    const here = E.lineOf(view, at);
+    const there = Math.max(1, Math.min(count, n));
+    return apply(app, view, o.op, linesRange(view, Math.min(here, there), Math.max(here, there)));
+  }
   const r = await motionRange(app, view, spec, count, o.op);
   if (r) return apply(app, view, o.op, r);
 }
@@ -195,6 +259,8 @@ export interface Range {
   from: number;
   to: number;
   linewise: boolean;
+  /** > and < in visual mode with a count (V3>): that many levels. */
+  times?: number;
 }
 
 /** Motions that take whole lines under an operator, and those that include the character they
@@ -234,16 +300,23 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
     const to = E.lineEnd(view, from);
     return to > from ? { from, to, linewise: false } : null;
   }
+  // l under an operator counts characters, the last one included (d3l on "abc" takes all three).
+  if (motion === "cursor.right") {
+    const end = E.lineEnd(view, from);
+    let b = from;
+    for (let k = 0; k < count && b < end; k++) b = E.nextBoundary(text, b);
+    return b > from ? { from, to: Math.min(b, end), linewise: false } : null;
+  }
+  // } in the note's last paragraph: to the end of its last line (vim's rule), nothing after.
+  if (motion === "cursor.paragraph_next" && !/\n[ \t]*\n/.test(text.slice(from))) {
+    const to = text.replace(/\s+$/, "").length;
+    return to > from ? { from, to, linewise: false } : null;
+  }
   for (let k = 0; k < count; k++) await app.run(motion);
   const to = E.offsetOf(app, view);
   Object.assign(view, saved);
   // dj on the last line, dk on the first: nowhere to go, so nothing (vim fails, it deletes nothing).
   if ((motion === "cursor.down" || motion === "cursor.up") && E.lineOf(view, to) === E.lineOf(view, from)) return null;
-  // dl on a line's last character: l can't move, yet it takes that character (as x does).
-  if (motion === "cursor.right" && to <= from) {
-    const end = E.lineEnd(view, from);
-    return from < end ? { from, to: Math.min(end, E.nextBoundary(text, from)), linewise: false } : null;
-  }
   if (LINEWISE.has(motion)) return linesRange(view, E.lineOf(view, Math.min(from, to)), E.lineOf(view, Math.max(from, to)));
   let a = Math.min(from, to);
   let b = Math.max(from, to);
@@ -251,10 +324,19 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
   // dw at a line's last word stops at the line's end, not the next line's first word: when the
   // motion ends at the very start of a later line (vim's rule; d3w reaching into a line's words
   // takes them).
-  // } in the note's last paragraph stops on its last line's start: an operator takes that line too.
-  if (motion === "cursor.paragraph_next" && b > a && !/\n[ \t]*\n/.test(text.slice(b)) && text.slice(b).trim()) b = E.lineEnd(view, b);
+  // } that ran into the note's last paragraph (c2} from the one before) ends at its last
+  // character, taken (vim's rule), not at its last line's start.
+  // (} otherwise lands on a blank line: landing on text means there was no blank line left.)
+  if (motion === "cursor.paragraph_next" && b > a && E.lineText(view, E.lineOf(view, b)).trim()) b = text.replace(/\s+$/, "").length;
   const bLine = E.lineOf(view, b);
-  if (motion === "cursor.word_next" && bLine > E.lineOf(view, a) && b === (view.buf.lineStarts()[bLine - 1] ?? -1)) b = Math.max(a, E.lineEnd(view, b - 1));
+  const aLine = E.lineOf(view, a);
+  if (!INCLUSIVE.has(motion) && bLine > aLine && b === (view.buf.lineStarts()[bLine - 1] ?? -1)) {
+    // vim's rule for an exclusive motion ending at a line's start (d}, db, dw): it ends at the end
+    // of the line before instead — and, from at or before the first non-blank, takes whole lines
+    // (so d} keeps the blank line, c} changes the paragraph's lines). Not for w, which only stops.
+    b = Math.max(a, E.lineEnd(view, b - 1));
+    if (motion !== "cursor.word_next" && a <= firstNonBlank(view, aLine)) return linesRange(view, aLine, bLine - 1);
+  }
   if (a === b) return null;
   return { from: a, to: b, linewise: false };
 }
@@ -305,7 +387,7 @@ export function apply(app: App, view: View, op: Op, r: Range): void {
     app.message("info", r.linewise ? `yanked ${lines} line${lines === 1 ? "" : "s"}` : `yanked ${[...text].length} characters`);
     return E.placeAt(app, view, r.from);
   }
-  if (op === ">" || op === "<") return indentLines(app, view, E.lineOf(view, r.from), E.lineOf(view, Math.max(r.from, r.to - 1)), op === ">" ? 1 : -1);
+  if (op === ">" || op === "<") return indentLines(app, view, E.lineOf(view, r.from), E.lineOf(view, Math.max(r.from, r.to - 1)), op === ">" ? 1 : -1, r.times ?? 1);
   app.vim.register = { text, linewise: r.linewise };
   const cursor = E.offsetOf(app, view);
   if (op === "d") {
@@ -335,15 +417,17 @@ export function firstNonBlank(view: View, src: number): number {
 }
 
 /** > and <: two spaces in or out on each line (not on blank ones, going in). */
-export function indentLines(app: App, view: View, first: number, last: number, dir: 1 | -1): void {
+export function indentLines(app: App, view: View, first: number, last: number, dir: 1 | -1, times = 1): void {
   const buf = view.buf;
   buf.beginStep(E.offsetOf(app, view));
   for (let n = last; n >= first; n--) {
     const start = buf.lineStarts()[n - 1] ?? 0;
     const text = E.lineText(view, n);
-    if (dir === 1 && text.trim()) buf.edit(start, 0, "  ");
+    if (dir === 1 && text.trim()) buf.edit(start, 0, "  ".repeat(times));
     else if (dir === -1) {
-      const k = /^ {0,2}/.exec(text)![0].length;
+      // A tab is one level (as > never adds one, it only takes it away); else two spaces.
+      let k = 0;
+      for (let t = 0; t < times; t++) k += text.startsWith("\t", k) ? 1 : /^ {0,2}/.exec(text.slice(k))![0].length;
       if (k) buf.edit(start, k, "");
     }
   }
@@ -392,7 +476,14 @@ export function textObject(view: View, at: number, kind: "i" | "a", ch: string, 
     for (let k = 0; k < text.length; k++) if (text[k] === ch && text[k - 1] !== "\\") qs.push(k);
     for (let k = 0; k + 1 < qs.length; k += 2) {
       const [a, b] = [qs[k]!, qs[k + 1]!];
-      if (i <= b && (i >= a || k === 0 || i > qs[k - 1]!)) return kind === "i" ? { from: ls + a + 1, to: ls + b, linewise: false } : { from: ls + a, to: ls + b + 1, linewise: false };
+      if (i <= b && (i >= a || k === 0 || i > qs[k - 1]!)) {
+        if (kind === "i") return { from: ls + a + 1, to: ls + b, linewise: false };
+        // a": the quotes, and the white space after them (else before them), as vim takes it.
+        let [x, y] = [a, b + 1];
+        if (/[ \t]/.test(text[y] ?? "")) while (/[ \t]/.test(text[y] ?? "")) y++;
+        else while (x > 0 && /[ \t]/.test(text[x - 1]!)) x--;
+        return { from: ls + x, to: ls + y, linewise: false };
+      }
     }
     return null;
   }
@@ -419,21 +510,36 @@ export function textObject(view: View, at: number, kind: "i" | "a", ch: string, 
     for (let k = a + 1; k < src.length; k++) {
       if (src[k] === open) depth++;
       else if (src[k] === close) {
-        if (depth === 0) return kind === "i" ? { from: a + 1, to: k, linewise: false } : { from: a, to: k + 1, linewise: false };
+        if (depth === 0) {
+          if (kind === "a") return { from: a, to: k + 1, linewise: false };
+          // The brackets on lines of their own around the inside (f(⏎ … ⏎)): the lines between,
+          // whole (vim's rule), so ci( keeps the brackets' lines.
+          const openLine = E.lineOf(view, a);
+          const closeLine = E.lineOf(view, k);
+          const afterOpen = src.slice(a + 1, E.lineEnd(view, a));
+          const beforeClose = src.slice(view.buf.lineStarts()[closeLine - 1] ?? 0, k);
+          if (closeLine - openLine >= 2 && !afterOpen.trim() && !beforeClose.trim()) return linesRange(view, openLine + 1, closeLine - 1);
+          return { from: a + 1, to: k, linewise: false };
+        }
         depth--;
       }
     }
     return null;
   }
   if (ch === "p") {
-    const n = view.buf.lineStarts().length;
+    const n = view.buf.lineStarts().length - (src.endsWith("\n") ? 1 : 0);
     const blank = (l: number) => !E.lineText(view, l).trim();
     const b0 = blank(line);
     let first = line;
     let last = line;
     while (first > 1 && blank(first - 1) === b0) first--;
     while (last < n && blank(last + 1) === b0) last++;
-    if (kind === "a") while (last < n && blank(last + 1) !== b0) last++;
+    if (kind === "a") {
+      const before = last;
+      while (last < n && blank(last + 1) !== b0) last++;
+      // Nothing blank after the paragraph (the note's last): the blank lines before it instead.
+      if (last === before && !b0) while (first > 1 && blank(first - 1)) first--;
+    }
     return linesRange(view, first, last);
   }
   return null;
