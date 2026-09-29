@@ -536,11 +536,11 @@ text/source files (source mode only). In order: the groundwork first, then each 
 
 | ID | Item |
 | --- | --- |
-| 16.1 | File groups: which extensions are notes, data, text; their config (other note formats off) |
+| 16.1 | **Done.** File groups: which extensions are notes, data, text; their config (other note formats off) |
 | 16.2 | A reader per format (blocks with lines, headings, links, tasks, a tree); markdown the first |
-| 16.3 | The walk and index see data and text files: link targets by path; the graph stays notes |
-| 16.4 | Any text file opens (source mode only for code); the CLI's writers take all groups; `ls --files` |
-| 16.5 | Explorer: notes and renderables, a key for all text files, patterns; `ctrl+p` and find follow |
+| 16.3 | **Done.** The walk and index see data and text files: link targets by path; the graph stays notes |
+| 16.4 | **Done.** Any text file opens (source mode only for code); the CLI's writers take all groups; `ls --files` |
+| 16.5 | **Done.** Explorer: notes and renderables, a key for all text files, patterns; `ctrl+p` and find follow |
 | 16.6 | Lazy loading: parsers and grammars loaded on first use |
 | 16.7 | Tree-sitter per language (TS, Python, shell, Lua, Go, Rust): highlighting; highlight.js fallback |
 | 16.8 | Code outline and breadcrumb: functions, classes, methods, from a query per language |

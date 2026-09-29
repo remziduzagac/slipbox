@@ -26,6 +26,16 @@ export interface Config {
     exclude: string[];
     max_file_size: number;
   };
+  /** Files beyond notes (16.x): which the explorer, the switcher and find show. */
+  files: {
+    /** "notes": notes only; "renderable": notes and data files (JSON, YAML, TOML, INI, CSV);
+     *  "all": every text file the walk sees. The explorer's key toggles to "all" and back. */
+    show: "notes" | "renderable" | "all";
+    /** gitignore-syntax patterns shown whatever `show` says (`*.ts`, `scripts/`). */
+    include: string[];
+    /** gitignore-syntax patterns never shown (the walk's own excludes apply too). */
+    exclude: string[];
+  };
   ui: {
     /** Explorer shown beside the content on wide terminals. */
     sidebar: boolean;
@@ -138,6 +148,7 @@ export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
   render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto" },
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024 },
+  files: { show: "renderable", include: [], exclude: [] },
   ui: {
     sidebar: true,
     sidebar_width: 30,
@@ -176,6 +187,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.show_urls": ["auto", "always", "never"],
   "capture.location": ["state", "vault"],
   "ui.lines": ["light", "heavy"],
+  "files.show": ["notes", "renderable", "all"],
   "editor.edit_in": ["source", "live"],
 };
 

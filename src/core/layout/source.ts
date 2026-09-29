@@ -8,6 +8,7 @@
 // show as `�` — the terminal never receives one.
 
 import { slugify } from "../parse.ts";
+import { highlight } from "./highlight.ts";
 import { graphemes, graphemeWidth } from "../width.ts";
 import type { Layout, LayoutHeading, Line, Span } from "./ir.ts";
 import type { Role } from "../theme/theme.ts";
@@ -22,6 +23,9 @@ export interface SourceLayoutOptions {
   tabWidth?: number;
   /** A slice of lines (live preview's block): every line is a row, a last empty one too. */
   slice?: boolean;
+  /** Not markdown (16.4): the file's language, highlighted a line at a time (tree-sitter's
+   *  structure comes later, 16.7); "text", or a language highlight.js lacks, is plain. */
+  language?: string | null;
 }
 
 /** A displayed grapheme and the source offset (UTF-16, within its line) it came from. */
@@ -63,7 +67,8 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   const texts = source.split("\n");
   if (!opts.slice && texts.length > 1 && texts[texts.length - 1] === "") texts.pop(); // a final newline ends the last line
   const width = opts.wrap ? Math.max(1, opts.width) : Number.POSITIVE_INFINITY;
-  const cacheKey = `${width}:${tab}`;
+  const lang = opts.language ?? null;
+  const cacheKey = `${width}:${tab}:${lang ?? "md"}`;
   const old = cache.key === cacheKey ? cache : newSourceCache();
   const O = old.texts;
   const n = texts.length;
@@ -79,7 +84,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   // The state at the first changed line: after the unchanged ones, as the old layout had it.
   let state = pre > 0 ? nextState(old, pre - 1, texts[pre - 1]!) : texts[0]?.replace(/\r$/, "") === "---" ? "fm0" : "";
   const lay = (i: number) => {
-    const built = layoutLine(texts[i]!, state, i, width, tab);
+    const built = layoutLine(texts[i]!, state, i, width, tab, lang);
     states.push(state);
     rows.push(built.rows);
     naturals.push(built.natural);
@@ -137,9 +142,9 @@ function nextState(old: SourceCache, i: number, raw: string): string {
 }
 
 /** One source line's rows. */
-function layoutLine(raw: string, state: string, i: number, width: number, tab: number): { rows: Line[]; natural: number; out: string } {
+function layoutLine(raw: string, state: string, i: number, width: number, tab: number, lang: string | null = null): { rows: Line[]; natural: number; out: string } {
   const src = i + 1;
-  const hl = highlightLine(raw, state, i);
+  const hl = lang ? codeLine(raw, lang) : highlightLine(raw, state, i);
   const text = raw.endsWith("\r") ? raw.slice(0, -1) : raw; // CRLF: the CR isn't shown
   const cells: Cell[] = [];
   let col = 0;
@@ -199,6 +204,18 @@ function toSpans(cells: Cell[], src: number): Span[] {
     else spans.push({ text: c.g, role: c.role, attrs: 0, src });
   }
   return spans;
+}
+
+/** A line of code, coloured by highlight.js alone (no state across lines yet). */
+function codeLine(raw: string, lang: string): { roles: Role[]; out: string } {
+  const roles: Role[] = new Array(raw.length).fill("text");
+  const tokens = raw.trim() ? highlight(raw.replace(/\r$/, ""), lang)?.[0] : undefined;
+  let at = 0;
+  for (const t of tokens ?? []) {
+    if (t.role) for (let k = at; k < at + t.text.length && k < roles.length; k++) roles[k] = t.role;
+    at += t.text.length;
+  }
+  return { roles, out: "" };
 }
 
 /**

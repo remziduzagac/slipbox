@@ -509,6 +509,29 @@ describe("the vault and the tool", () => {
     expect(sent.code).toBe(0);
     expect(sent.json.warnings.join(" ")).toContain("--server has no effect");
   });
+  test("files beyond notes (16.4): read, replace, write and find them; ls --files; binary refused", () => {
+    mkdirSync(join(vault, "cfg"), { recursive: true });
+    writeFileSync(join(vault, "cfg", "site.toml"), '[site]\nname = "Halden" # the observatory\n');
+    writeFileSync(join(vault, "tool.py"), 'print("needle-py")\n');
+    writeFileSync(join(vault, "pic.png"), "\u0000png");
+    expect(slipbox(["read", "cfg/site.toml", "--json"]).json.data.content).toContain("the observatory");
+    expect(slipbox(["replace", "cfg/site.toml", '"Halden"', '"Halden Ridge"']).code).toBe(0);
+    expect(readFileSync(join(vault, "cfg", "site.toml"), "utf8")).toContain('name = "Halden Ridge"');
+    expect(slipbox(["write", "tool.py", "--append", "--", "# done"]).code).toBe(0);
+    expect(readFileSync(join(vault, "tool.py"), "utf8")).toBe('print("needle-py")\n# done\n');
+    expect(slipbox(["write", "cfg/new.json", "{}", "--create"]).code).toBe(0);
+    expect(existsSync(join(vault, "cfg", "new.json"))).toBe(true); // the extension kept, no .md added
+    expect(slipbox(["find", "needle-py", "--json"]).json.data.count).toBe(0); // notes only…
+    expect(slipbox(["find", "needle-py", "--files", "--json"]).json.data.matches[0].path).toBe("tool.py"); // …files with --files
+    const ls = slipbox(["ls", "--files", "--json"]).json.data;
+    expect(ls.find((f: { path: string }) => f.path === "cfg/site.toml")).toMatchObject({ group: "data", format: "toml" });
+    expect(ls.find((f: { path: string }) => f.path === "tool.py")).toMatchObject({ group: "text", format: "python" });
+    expect(ls.some((f: { path: string }) => f.path === "pic.png")).toBe(false);
+    expect(slipbox(["ls", "--json"]).json.data.some((f: { path: string }) => f.path === "tool.py")).toBe(false);
+    expect(slipbox(["write", "pic.png", "x"]).code).toBe(5);
+    expect(slipbox(["read", "cfg/site"]).code).toBe(3); // a file needs its extension
+    for (const f of ["cfg/site.toml", "cfg/new.json", "tool.py", "pic.png"]) rmSync(join(vault, f));
+  });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));
     expect(missing).toEqual([]);

@@ -3,6 +3,7 @@
 // keys are in keys.ts and docs/design/keymap.md.
 
 import { join } from "node:path";
+import { classify } from "../core/filetypes.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
 import type { Command } from "../core/commands.ts";
@@ -165,6 +166,8 @@ function lay(a: App, v: View) {
 function sourceLinkAt(a: App, v: View): LayoutLink | null {
   const row = lay(a, v).lines[v.cur.row];
   if (!row?.srcMap) return null;
+  // Markdown's link syntax, in markdown only (links in code comments come with 16.10).
+  if (v.buf.kind.format !== "markdown") return null;
   const at = E.offsetOf(a, v);
   const line = E.lineOf(v, at);
   const text = E.lineText(v, line);
@@ -242,6 +245,8 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
 }
 
 function fileLink(a: App, rel: string): void {
+  // A data or text file opens (16.4); a binary one's path is copied (images render later).
+  if (classify(rel, a.config.walk.extensions).group !== "binary") return void a.open(rel);
   a.copy(join(a.loc.root, rel), false);
   a.message("info", `attachment ${rel} — path copied (images render in a later phase)`);
 }
@@ -1007,12 +1012,16 @@ export function registerActions(app: App): void {
     "note.edit": (a) => withView(a, (v) => a.editInEditor(v)),
     "view.source": (a) =>
       withView(a, (v) => {
+        const was = v.source;
         a.setViewMode(v, v.source ? "rendered" : "source");
+        if (v.source === was) return; // refused (a file with no render): its own message says why
         a.message("info", v.source ? "source — the note's markdown" : "rendered");
       }),
     "view.live": (a) =>
       withView(a, (v) => {
+        const was = v.live;
         a.setViewMode(v, v.live ? "rendered" : "live");
+        if (v.live === was) return;
         a.message("info", v.live ? "the lens: the markdown around the cursor — esc closes it" : "rendered");
       }),
     // Editing (source mode; step 3). Entering insert from the render switches to source first.
@@ -1138,13 +1147,18 @@ export function registerActions(app: App): void {
       }),
     "switcher.open": (a) => {
       const notes = [...a.graph.notes.values()];
+      // The files the explorer shows (files.show, its toggle, the patterns) come too (16.5).
+      const files = a.shownFiles();
       a.openList({
-        title: `Open note (${notes.length})`,
-        items: notes.map((n) => ({
-          label: n.rel,
-          detail: n.title !== n.rel.replace(/\.(md|markdown)$/i, "").split("/").pop() ? n.title : undefined,
-          data: n.rel,
-        })),
+        title: files.length ? `Open (${notes.length} notes, ${files.length} files)` : `Open note (${notes.length})`,
+        items: [
+          ...notes.map((n) => ({
+            label: n.rel,
+            detail: n.title !== n.rel.replace(/\.(md|markdown)$/i, "").split("/").pop() ? n.title : undefined,
+            data: n.rel,
+          })),
+          ...files.map((f) => ({ label: f.path, hint: f.group === "data" ? "data" : "file", data: f.path })),
+        ],
         accept: (item) => a.open(item.data as string),
       });
     },

@@ -23,7 +23,8 @@ slipbox runs correctly with no config at all. None of these crash it:
 - a broken file
 - an unknown key
 - a wrong type
-- a value outside its set (`glyphs`, `show_urls`, `location`, `ui.lines`, `editor.edit_in`)
+- a value outside its set (`glyphs`, `show_urls`, `location`, `ui.lines`, `editor.edit_in`,
+  `files.show`)
 - a list with something other than strings in it, a mode's key table (`[keys.source]`…) given as a
   string, or an empty `walk.extensions`
 - a number out of range (`inset` 0–40, `sidebar_width` 8–200, `poll_ms` ≥ 50…), or a fraction
@@ -47,6 +48,11 @@ show_urls = "auto"             # auto (only without colour) | always | never
 extensions = ["md", "markdown"]
 exclude = []                   # gitignore syntax, on top of .gitignore
 max_file_size = 4194304        # bytes; larger notes are listed as skipped
+
+[files]                        # files beyond notes (16.x): what the explorer and ctrl+p list
+show = "renderable"            # notes | renderable (notes and data files) | all (every text file)
+include = []                   # gitignore syntax: always listed ("*.ts", "scripts/")
+exclude = []                   # gitignore syntax: never listed
 
 [ui]
 sidebar = true                 # explorer beside the content on wide terminals

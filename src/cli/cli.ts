@@ -18,6 +18,7 @@ import { type Graph, openGraph } from "../core/graph.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { parseAround, parseMarkdown, slugify } from "../core/parse.ts";
+import { classify, extensionOf, isKnownExtension } from "../core/filetypes.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
@@ -108,9 +109,9 @@ Usage:
   slipbox resolve <link>            follow a link to a path        [--from <note>]
   slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
-  slipbox ls                        list the vault's notes
+  slipbox ls                        list the vault's notes         [--files: data and text files too]
   slipbox outline <note>            headings with source lines
-  slipbox find <query> [note]       find text in a note, or the vault  [--regex] [--whole] [--ignore-case]
+  slipbox find <query> [note]       find text in a note, or the vault  [--regex] [--whole] [--ignore-case] [--files]
   slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first | --first-per-line] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
   slipbox read <note>               a note's text, and its sha
@@ -132,7 +133,8 @@ Global options:
   --color <when>    auto | always | never
   -h, --help        this help        -V, --version   print the version
 
-<note> is a path, or a note name resolved like a [[wikilink]]; a name several notes share is exit 4,
+<note> is a path (a data or text file too, with its extension), or a note name resolved like a
+[[wikilink]]; a name several notes share is exit 4,
 unless --from <note> picks the one a link from there reaches. After --, nothing is an option:
 slipbox read -- -dash.md names a note that starts with a dash.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
@@ -244,12 +246,22 @@ const MAX_ARGS: Record<string, number> = {
   scratch: 1, init: 1, info: 0, themes: 0, commands: 0,
 };
 
+/** The vault's data and text files (not notes, not binary), with their group and format. */
+function textFiles(s: Session): { path: string; group: string; format: string }[] {
+  return s.graph
+    .filePaths()
+    .map((path) => ({ path, ...classify(path, s.config.walk.extensions) }))
+    .filter((f) => f.group !== "binary")
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
 /** Flags every command takes, and each command's own. */
 const GLOBAL_FLAGS = new Set(["root", "config", "json", "color", "plain", "help", "version", "from"]);
 const FLAGS: Record<string, string[]> = {
   render: ["width", "theme", "glyphs"],
   links: ["all"],
-  find: ["regex", "whole", "ignore-case"],
+  find: ["regex", "whole", "ignore-case", "files"],
+  ls: ["files"],
   replace: ["regex", "whole", "ignore-case", "first", "first-per-line", "lines", "dry-run", "if-unchanged"],
   task: ["check", "uncheck", "if-unchanged"],
   write: ["stdin", "append", "paragraph", "create", "if-unchanged", "allow-empty"],
@@ -298,7 +310,8 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
     // An existing file the walk leaves out (gitignored, hidden, under node_modules): the user
     // named it explicitly, so read it — as the TUI does — without adding it to the vault.
     if (arg && existsSync(arg.startsWith("/") ? arg : `${s.io.cwd}/${arg}`)) {
-      if (parse) s.graph.adopt(rel);
+      // A data or text file is itself (16.4): never parsed as a note.
+      if (parse && classify(rel, s.config.walk.extensions).group === "note") s.graph.adopt(rel);
       return rel;
     }
   }
@@ -316,7 +329,14 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
   if (r.status === "ambiguous") {
     throw new CliError(`ambiguous note "${arg}": ${r.candidates.join(", ")}`, EXIT.ambiguous, { candidates: r.candidates });
   }
-  throw new CliError(`no note "${arg}" in ${s.loc.root}`, EXIT.notFound);
+  // A data or text file of the vault, named by its path with its extension (16.4): from the
+  // current folder, or from the vault's root.
+  for (const abs of new Set([arg.startsWith("/") ? arg : join(s.io.cwd, arg), join(s.loc.root, arg)])) {
+    if (!isInside(s.loc.root, abs)) continue;
+    const rel = relative(s.loc.root, abs);
+    if (s.graph.filePaths().includes(rel) && classify(rel, s.config.walk.extensions).group !== "binary") return rel;
+  }
+  throw new CliError(`no note or file "${arg}" in ${s.loc.root}`, EXIT.notFound);
 }
 
 function colorDepth(s: Session): ColorDepth {
@@ -449,10 +469,20 @@ const HANDLERS: Record<string, Handler> = {
   ls(s) {
     if (has(s.args, "json")) s.graph.ensureAll();
     const notes = [...s.graph.notes.values()];
-    return {
-      data: notes.map((n) => ({ path: n.rel, title: n.title, size: n.size, mtime: new Date(n.mtimeMs).toISOString(), tags: n.tags, links: n.links.length })),
-      human: notes.map((n) => `${n.rel}\n`).join(""),
-    };
+    const data: Record<string, unknown>[] = notes.map((n) => ({ path: n.rel, title: n.title, size: n.size, mtime: new Date(n.mtimeMs).toISOString(), tags: n.tags, links: n.links.length }));
+    const lines = notes.map((n) => n.rel);
+    // --files: the vault's data and text files too (16.4), each with its group and format.
+    if (has(s.args, "files")) {
+      for (const f of textFiles(s)) {
+        let st: { size: number; mtimeMs: number } | null = null;
+        try {
+          st = statSync(s.graph.abs(f.path));
+        } catch {}
+        data.push({ path: f.path, group: f.group, format: f.format, size: st?.size ?? 0, mtime: st ? new Date(st.mtimeMs).toISOString() : null });
+        lines.push(f.path);
+      }
+    }
+    return { data, human: lines.map((l) => `${l}\n`).join("") };
   },
 
   outline(s, rest) {
@@ -584,7 +614,8 @@ const HANDLERS: Record<string, Handler> = {
   find(s, rest) {
     const query = requireArg(rest, "query");
     const re = pattern(s, query);
-    const notes = rest[1] ? [resolveNote(s, rest[1], false)] : [...s.graph.notes.keys()].sort();
+    // --files: the vault's data and text files are searched too (16.4).
+    const notes = rest[1] ? [resolveNote(s, rest[1], false)] : [...s.graph.notes.keys(), ...(has(s.args, "files") ? textFiles(s).map((f) => f.path) : [])].sort();
     const matches: { path: string; line: number; column: number; match: string; text: string }[] = [];
     for (const rel of notes) {
       let text: string;
@@ -787,7 +818,8 @@ const HANDLERS: Record<string, Handler> = {
       // it), never a name to resolve — and a file already there is never overwritten.
       // A path in the vault, from its root — or from the current folder when it says so (./, ../).
       const base = noteArg.startsWith("/") ? noteArg : /^\.\.?\//.test(noteArg) ? join(s.io.cwd, noteArg) : join(s.loc.root, noteArg);
-      const abs = /\.(md|markdown)$/i.test(base) ? base : `${base}.md`;
+      // A note unless the name says otherwise: `config.toml`, `run.py` keep their extension (16.4).
+      const abs = isKnownExtension(extensionOf(base)) ? base : `${base}.md`;
       // Outside by its path, or by a symlinked folder on the way: checked before any folder is made.
       if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${noteArg} is outside the vault (${s.loc.root})`, EXIT.refused);
       rel = relative(s.loc.root, abs);
@@ -962,11 +994,8 @@ function checkWritable(s: Session, abs: string): void {
   if (s.loc.mode !== "vault") refuse("not in a vault (no .slipbox/ above it)");
   if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the vault (${s.loc.root})`);
   const rel = relative(s.loc.root, abs);
-  // A note is a file the vault lists by its extension (walk.extensions: md, markdown, or more).
-  const exts = s.config.walk.extensions.map((e) => e.replace(/^\./, "").toLowerCase());
-  const base = rel.split("/").pop()!;
-  const dot = base.lastIndexOf(".");
-  if (dot <= 0 || !exts.includes(base.slice(dot + 1).toLowerCase())) refuse(`not a note (the vault's notes end in ${exts.map((e) => `.${e}`).join(", ")})`);
+  // Notes, data and text files are written (16.4); binary files never are.
+  if (classify(rel, s.config.walk.extensions).group === "binary") refuse("a binary file");
   if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules")) refuse("in a folder the vault doesn't list");
   if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
 }

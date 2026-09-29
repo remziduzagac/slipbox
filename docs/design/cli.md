@@ -80,7 +80,7 @@ These churn freely before 1.0:
 
 | Command | `data` in `--json` |
 | --- | --- |
-| `ls` | `[{path, title, size, mtime, tags, links}]` |
+| `ls` | `[{path, title, size, mtime, tags, links}]`; `--files` adds `[{path, group, format, size, mtime}]` |
 | `outline <note>` | `{path, headings[{depth, text, slug, line}]}` |
 | `init [dir]` | `{root, created}` |
 | `info` | root, mode, marker version, paths, index stats, skipped entries, stale |
@@ -115,6 +115,14 @@ rewrite them.
 2. A vault-relative path.
 3. A note name, resolved like a `[[wikilink]]` with no linking note. Collisions then go to the
    shortest path, and a real tie exits 4.
+4. A data or text file of the vault (`16.4`), by its path with its extension (`cfg/app.toml`,
+   `tool.py`), from the current folder or the vault's root. It's read and written as it is, never
+   parsed as a note; `links`, `outline` and `task` find nothing in it, and `backlinks` lists the
+   notes linking to it. A binary file is never written (exit 5).
+
+`ls --files` lists the data and text files too (each with `group` and `format`); `find --files`
+searches them as well. `write --create` keeps a name's known extension (`cfg/new.json`,
+`tool.py`); any other name is a note and gets `.md`.
 
 ## Finding and changing notes
 

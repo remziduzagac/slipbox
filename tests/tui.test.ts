@@ -4532,3 +4532,75 @@ describe("review cycle 5 (TUI journeys: a resize round trip)", () => {
     expect(v.cur.row).toBe(bottom);
   });
 });
+
+describe("files beyond notes (16.3–16.5)", () => {
+  const setup = async () => {
+    const root = makeVault();
+    mkdirSync(join(root, "cfg"), { recursive: true });
+    writeFileSync(join(root, "cfg", "app.toml"), '[editor]\nfont = "x" # a comment\n');
+    writeFileSync(join(root, "run.py"), 'def main():\n    print("hi")  # [[alpha]] in a comment\n');
+    writeFileSync(join(root, "blob.dat"), "\u0000\u0001binary");
+    writeFileSync(join(root, "links-out.md"), "# L\n\nSee [the config](cfg/app.toml) and [[run.py]].\n");
+    return root;
+  };
+  test("the explorer lists data files by default; `a` shows every text file; binary never", async () => {
+    const h = await harness({ root: await setup(), width: 120 });
+    await h.keys("ctrl+e"); // focus the explorer
+    const paths = () => h.app.explorerRows().map((r) => r.path);
+    h.app.expanded.add("cfg");
+    h.app.invalidateTree();
+    expect(paths()).toContain("cfg/app.toml");
+    expect(paths()).not.toContain("run.py");
+    const row = h.app.explorerRows().find((r) => r.path === "cfg/app.toml")!;
+    expect(row.group).toBe("data");
+    expect(h.frame()).toContain("app.toml"); // shown with its extension
+    await h.keys("a");
+    expect(paths()).toContain("run.py");
+    expect(paths()).not.toContain("blob.dat");
+    await h.keys("a");
+    expect(paths()).not.toContain("run.py");
+  });
+  test("a code file opens in source mode, highlighted, and has no render; a note after it renders", async () => {
+    const h = await harness({ root: await setup() });
+    await h.app.run("note.open links-out.md");
+    const v = h.app.view!;
+    const links = h.app.currentLayout(v).links;
+    const py = links.find((l) => l.target === "run.py")!;
+    h.app.moveCursor(v, { row: py.line, col: py.col });
+    await h.keys("enter");
+    expect(v.buf.rel).toBe("run.py");
+    expect(v.source).toBe(true);
+    const layout = h.app.currentLayout(v);
+    expect(layout.lines[0]!.spans.some((s) => s.role === "syn_keyword")).toBe(true); // `def`
+    expect(layout.headings).toEqual([]); // `# …` in Python is no heading
+    await h.keys("space", "n", "v"); // toggling off source: refused
+    expect(v.source).toBe(true);
+    expect(h.app.messages.at(-1)!.text).toContain("no rendered view");
+    await h.app.run("history.back");
+    expect(v.buf.rel).toBe("links-out.md");
+    expect(v.source).toBe(false); // the note renders again
+  });
+  test("a data file opens in source mode for now; edits save; a binary file doesn't open", async () => {
+    const root = await setup();
+    const h = await harness({ root });
+    await h.app.run("note.open links-out.md");
+    const v = h.app.view!;
+    const cfg = h.app.currentLayout(v).links.find((l) => l.target === "cfg/app.toml")!;
+    h.app.moveCursor(v, { row: cfg.line, col: cfg.col });
+    await h.keys("enter");
+    expect(v.buf.rel).toBe("cfg/app.toml");
+    expect(v.source).toBe(true);
+    await h.keys("G", "o", "w", "r", "a", "p", "space", "=", "space", "t", "r", "u", "e", "escape", "ctrl+s");
+    expect(readFileSync(join(root, "cfg", "app.toml"), "utf8")).toBe('[editor]\nfont = "x" # a comment\nwrap = true\n');
+    expect(h.app.buffer("blob.dat")).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toContain("binary");
+  });
+  test("the switcher lists the files the explorer shows", async () => {
+    const h = await harness({ root: await setup() });
+    await h.keys("ctrl+p");
+    const o = h.app.overlay as { items: { data: unknown }[] };
+    const data = o.items.map((i) => i.data);
+    expect(data).toContain("cfg/app.toml");
+    expect(data).not.toContain("run.py");
+  });
+});

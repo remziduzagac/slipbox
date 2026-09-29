@@ -265,11 +265,12 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   "g g": "top",
   "shift+g": "bottom",
   "/": "filter",
+  a: "all_files",
   q: "close",
   escape: "leave",
 };
 
-export const EXPLORER_ACTIONS = ["down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "close", "leave"];
+export const EXPLORER_ACTIONS = ["down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files", "close", "leave"];
 
 /** Keys inside the outline pane: key → outline action. */
 export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {
@@ -323,6 +324,7 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   top: { title: "Top", desc: "Selects the first row" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   filter: { title: "Filter", desc: "Type to narrow the rows (the tree keeps its folders); enter opens, esc clears" },
+  all_files: { title: "All files", desc: "Shows every text file, or back to files.show (notes and data files)" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
 };

@@ -9,6 +9,8 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
+import ignore from "ignore";
+import { classify, type FileGroup } from "../core/filetypes.ts";
 import { appendFileSync, existsSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { readRegular, readText, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
@@ -278,6 +280,8 @@ export interface SidePaneState {
   /** The left panel's filter (`/`): its text, and whether keys go to it. */
   filter?: string;
   filtering?: boolean;
+  /** The explorer's toggle (`a`): every text file, whatever `files.show` says. */
+  allFiles?: boolean;
 }
 
 /** What the left panel shows: the file tree or the window's history (more views to come). */
@@ -316,10 +320,13 @@ export interface HistoryRow {
 }
 
 export interface TreeRow {
+  /** "note": a row the explorer opens — a note, or a data or text file (`group` says which). */
   kind: "dir" | "note";
   path: string;
   name: string;
   depth: number;
+  /** A file beyond notes: its group (16.x). */
+  group?: FileGroup;
 }
 
 export type Region = "content" | "sidebar" | "outline";
@@ -725,10 +732,23 @@ export class App {
     const key = inside ? relRaw : abs;
     let buf = this.buffers.get(key);
     if (!buf) {
-      const rel = inside && this.graph.notes.has(relRaw) ? relRaw : null;
+      // Inside the vault, a note or any file the walk saw has its vault path (the watcher, saves).
+      const known = inside && (this.graph.notes.has(relRaw) || this.graph.filePaths().includes(relRaw));
+      const rel = known ? relRaw : null;
+      const kind = classify(abs, this.config.walk.extensions);
+      if (kind.group === "binary") {
+        this.message("warn", `${relRaw || abs} is a binary file; slipbox opens text`);
+        return null;
+      }
       buf = new NoteBuffer(rel, abs, key);
+      buf.kind = kind;
       if (!buf.load()) {
         this.message("error", `cannot read ${pathOrRel}`);
+        return null;
+      }
+      // Named like text, holding binary bytes (a NUL early on, as git decides): not opened.
+      if (kind.group !== "note" && buf.source.slice(0, 8192).includes("\u0000")) {
+        this.message("warn", `${buf.key} holds binary bytes; slipbox opens text`);
         return null;
       }
       if (buf.invalidUtf8) this.message("warn", `${buf.key}: not valid UTF-8; invalid bytes shown as �`);
@@ -756,7 +776,14 @@ export class App {
       height: this.height,
       width: this.width,
       left: 0,
+      // A data or text file opens in source mode (16.4); data files render once they can (16.11).
+      ...(this.canRender(buf) ? {} : { source: true }),
     };
+  }
+
+  /** Whether a file has a rendered view: notes do, data files will (16.11–16.13), text never. */
+  canRender(buf: NoteBuffer): boolean {
+    return buf.kind.group === "note" && buf.kind.format === "markdown";
   }
 
   openInNewTab(path: string, anchor?: Anchor): void {
@@ -791,7 +818,9 @@ export class App {
       return;
     }
     this.remember(view);
+    const before = view.buf;
     Object.assign(view, this.makeView(buf, anchor), { back: view.back, fwd: [] });
+    this.fitMode(view, before);
     this.region = "content";
     this.revealInSidebar();
   }
@@ -832,6 +861,7 @@ export class App {
   }
 
   showLoc(view: View, buf: NoteBuffer, loc: Loc): void {
+    const before = view.buf;
     Object.assign(view, {
       buf,
       topAnchor: loc.anchor,
@@ -842,7 +872,18 @@ export class App {
       find: null,
     });
     view.goal = view.curAnchor.col;
+    this.fitMode(view, before);
     this.revealInSidebar();
+  }
+
+  /**
+   * After a window changes file: one with no render goes to source mode; a window that was only in
+   * source mode for such a file (from `before`) renders again for one that can.
+   */
+  fitMode(view: View, before: NoteBuffer): void {
+    const forced = !this.canRender(before);
+    if (!this.canRender(view.buf)) Object.assign(view, { source: true, live: false, liveBase: undefined });
+    else if (forced) Object.assign(view, { source: false, live: false, liveBase: undefined });
   }
 
   // -------------------------------------------------------------------------------------------
@@ -1088,6 +1129,9 @@ export class App {
   setViewMode(view: View, mode: "rendered" | "source" | "live"): void {
     const now = view.source ? "source" : view.live ? "live" : "rendered";
     if (now === mode) return;
+    if (mode !== "source" && !this.canRender(view.buf)) {
+      return this.message("info", `${view.buf.name} has no rendered view${view.buf.kind.group === "text" ? "" : " yet"}: source mode`);
+    }
     if (view.insert) stopInsert(this, view);
     this.remember(view);
     view.source = mode === "source";
@@ -1696,10 +1740,30 @@ export class App {
     if (!on && this.region === "outline") this.region = "content";
   }
 
+  /**
+   * The files beyond notes the explorer and the switcher list (16.5): by `files.show` — or all
+   * text files while the explorer's toggle is on — then `files.include` patterns always, and
+   * `files.exclude` never. Binary files are never listed.
+   */
+  shownFiles(): { path: string; group: FileGroup }[] {
+    const f = this.config.files;
+    const mode = this.sidebar.allFiles ? "all" : f.show;
+    const incl = f.include.length ? ignore().add(f.include) : null;
+    const excl = f.exclude.length ? ignore().add(f.exclude) : null;
+    const out: { path: string; group: FileGroup }[] = [];
+    for (const path of this.graph.filePaths()) {
+      const { group } = classify(path, this.config.walk.extensions);
+      if (group === "binary" || excl?.ignores(path)) continue;
+      if (incl?.ignores(path) || mode === "all" || (mode === "renderable" && group === "data")) out.push({ path, group });
+    }
+    return out;
+  }
+
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
     const rows: TreeRow[] = [];
-    const paths = [...this.graph.notes.keys()].sort((a, b) => {
+    const groups = new Map(this.shownFiles().map((f) => [f.path, f.group]));
+    const paths = [...this.graph.notes.keys(), ...groups.keys()].sort((a, b) => {
       const da = a.split("/");
       const db = b.split("/");
       for (let i = 0; i < Math.min(da.length, db.length); i++) {
@@ -1727,7 +1791,7 @@ export class App {
           break;
         }
       }
-      if (visible) rows.push({ kind: "note", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1 });
+      if (visible) rows.push({ kind: "note", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(groups.has(p) ? { group: groups.get(p) } : {}) });
     }
     this.tree = rows;
     return rows;
@@ -1754,7 +1818,8 @@ export class App {
         seen.add(dir);
         rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i });
       }
-      rows.push({ kind: "note", path: row, name: parts[parts.length - 1]!, depth: parts.length - 1 });
+      const group = this.graph.notes.has(row) ? undefined : classify(row, this.config.walk.extensions).group;
+      rows.push({ kind: "note", path: row, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(group ? { group } : {}) });
     }
     this.filtered = { query: q, tree: this.treeRows(), rows };
     return rows;
@@ -1764,7 +1829,7 @@ export class App {
 
   /** Every note's path, directories first at each level, as the tree orders them. */
   private allNotesInTreeOrder(): string[] {
-    return [...this.graph.notes.keys()].sort((a, b) => {
+    return [...this.graph.notes.keys(), ...this.shownFiles().map((f) => f.path)].sort((a, b) => {
       const da = a.split("/");
       const db = b.split("/");
       for (let i = 0; i < Math.min(da.length, db.length); i++) {
@@ -2086,6 +2151,16 @@ export class App {
       case "top":
         this.sidebar.selected = 0;
         break;
+      case "all_files": {
+        // Every text file, or back to what files.show lists; the selection stays on its row.
+        const at = row?.path;
+        this.sidebar.allFiles = !this.sidebar.allFiles;
+        this.invalidateTree();
+        const again = this.explorerRows().findIndex((r) => r.path === at);
+        if (again >= 0) this.sidebar.selected = again;
+        this.message("info", this.sidebar.allFiles ? "explorer: every text file" : `explorer: ${this.config.files.show === "notes" ? "notes" : this.config.files.show === "all" ? "every text file" : "notes and data files"} (files.show)`);
+        break;
+      }
       case "bottom":
         this.sidebar.selected = rows.length - 1;
         break;
@@ -3400,6 +3475,9 @@ export class App {
         // An attachment appeared or went: ![[embeds]] of it change status.
         // Only a real change to the index re-lays anything out (a rewrite of a known image doesn't).
         if (c.kind === "deleted" ? this.graph.removeAsset(c.rel) : this.graph.addAsset(c.rel)) setChanged = true;
+        // An open data or text file reloads like a note (16.4).
+        const open = this.buffers.get(c.rel);
+        if (open) this.reloadBuffer(open, c.kind === "deleted");
         continue;
       }
       if (c.kind === "deleted") {

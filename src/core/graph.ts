@@ -229,6 +229,11 @@ export class Graph {
     return true;
   }
 
+  /** Every non-note file the walk saw (data, text and binary alike), vault-relative. */
+  filePaths(): string[] {
+    return [...this.assets.values()].flat();
+  }
+
   /** Index an attachment by file name; true if the index changed. */
   addAsset(rel: string): boolean {
     const key = rel.slice(rel.lastIndexOf("/") + 1).normalize("NFC").toLowerCase();

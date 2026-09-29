@@ -200,6 +200,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `s` | open in the split's other window (splitting first) |
 | `g g` / `shift+g` | top / bottom |
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
+| `a` | show every text file, or back to what `files.show` lists (notes and data files) |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
 | mouse | click a folder to fold or unfold it; click a note to select it, double-click to open it as a tab |

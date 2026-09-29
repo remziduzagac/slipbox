@@ -299,10 +299,13 @@ registry (`LEFT_VIEWS`,
 `RIGHT_VIEWS` in `app.ts`) and more will come on both sides, each with its own rows, drawing and
 keys.
 
-- **Explorer (left, `≡`):** the walked notes as a tree, directories first. Moving the selection, or
-  a click on a note, only selects. `enter`, `l` and a double-click open the note as a tab, or
-  switch to the tab already showing it; `o` replaces the current window's note, and `s` opens it in
-  the split's other window. A click on a folder folds or unfolds it.
+- **Explorer (left, `≡`):** the walked notes as a tree, directories first, with the files
+  `files.show` lists beside them — by default the data files (JSON, YAML, TOML, INI, CSV), shown with
+  their extension and their own icon; `a` toggles to every text file and back (`16.5`, "Files beyond
+  notes" below). Moving the selection, or a click on a note, only selects. `enter`, `l` and a
+  double-click open the note as a tab, or switch to the tab already showing it; `o` replaces the
+  current window's note, and `s` opens it in the split's other window. A click on a folder folds or
+  unfolds it.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
@@ -613,6 +616,27 @@ typed into, the render around it is reused — the rows after it renumbered by t
 taken away — so a keystroke never re-parses the note (plan `15.1`'s per-block re-layout, for the
 lens). Leaving insert mode, or an edit reaching outside it, lays the note out afresh — re-parsing
 only the chunks the edits touched and re-rendering only their blocks.
+
+## Files beyond notes (plan `16.x`)
+
+slipbox opens any text file in the vault, not only notes (`docs/idea.md`, "Files beyond
+markdown"). `core/filetypes.ts` puts each file in a group by its name: **notes** (the vault's
+`walk.extensions`), **data** (JSON, YAML, TOML, INI, CSV/TSV), **text** (everything else: code,
+logs, `.txt`), or **binary** (images, archives…, by extension — and a text-named file holding a NUL
+in its first 8 KB), which never opens.
+
+- **Opening.** A data or text file opens from the explorer, `ctrl+p`, or a link to it
+  (`[config](cfg/app.toml)`, `[[run.py]]`; binary links still copy their path). It opens in source
+  mode, highlighted by its language (highlight.js, a line at a time for now; tree-sitter comes with
+  `16.7`); no markdown headings are looked for in it. Text files have no rendered view:
+  `space n v` and the lens say so and stay in source mode. Data files render once `16.11`–`16.13`
+  land. A window that was in source mode only for such a file renders again when it opens a note
+  (a link, `history.back`).
+- **Editing and saving** work as for notes: the same undo, saves, autosave and conflict prompt; an
+  agent's change to an open file reloads it.
+- **What lists them.** The explorer and the switcher show what `files.show` says (`notes`,
+  `renderable` — notes and data files, the default — or `all` text files), plus `files.include`
+  patterns, minus `files.exclude`; the explorer's `a` toggles to all and back.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
 

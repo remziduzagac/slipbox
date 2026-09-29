@@ -51,6 +51,9 @@ export interface Glyphs {
   guideLast: string;
   guideDash: string;
   file: string;
+  /** Files beyond notes in the explorer: data (JSON, TOML…) and text or code. */
+  dataFile: string;
+  textFile: string;
   sep: string;
   scrollThumb: string;
   scrollTrack: string;
@@ -109,6 +112,8 @@ const unicode: Glyphs = {
   guideLast: "└",
   guideDash: "─",
   file: " ",
+  dataFile: " ",
+  textFile: " ",
   sep: "›",
   // The bar is a thin column, unlike the ┃ borders it often sits beside; colour tells the thumb.
   scrollThumb: "▐",
@@ -142,6 +147,8 @@ const nerd: Glyphs = {
   dirOpen: "\u{f0770}", // nf-md-folder_open (escaped: private-use characters get lost in editing)
   dirClosed: "\u{f024b}", // nf-md-folder
   file: "󰍔",
+  dataFile: "\u{f0626}", // nf-md-code_json
+  textFile: "\u{f022e}", // nf-md-file_code
 };
 
 const ascii: Glyphs = {
@@ -180,6 +187,8 @@ const ascii: Glyphs = {
   guideLast: "`",
   guideDash: "-",
   file: " ",
+  dataFile: " ",
+  textFile: " ",
   sep: ">",
   scrollThumb: "#",
   scrollTrack: "|",

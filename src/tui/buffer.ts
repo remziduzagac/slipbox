@@ -7,6 +7,7 @@
 // layout), not on every keystroke.
 
 import type { Glyphs } from "../core/glyphs.ts";
+import type { FileKind } from "../core/filetypes.ts";
 import { newRenderCache } from "../core/layout/render.ts";
 import type { Graph } from "../core/graph.ts";
 import { readText, type Stamp, stamp } from "../core/fsutil.ts";
@@ -59,6 +60,9 @@ export class NoteBuffer {
   private readonly parseCache = newParseCache();
   /** The render's blocks, reused across edits and reloads (only a changed block renders again). */
   private renderCache = newRenderCache();
+
+  /** What the file is (16.1): a note, a data file or a text file — which modes and layouts it has. */
+  kind: FileKind = { group: "note", format: "markdown" };
 
   constructor(
     /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */
@@ -260,8 +264,11 @@ export class NoteBuffer {
       // otherwise the ATX lines the layout finds as it goes — so a keystroke, or an undo back to
       // the saved text, never re-parses the note (a 1 MB note would take a second).
       const parsed = this.parsedVersion === this.version && !this.dirty;
-      const headings = parsed ? headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line })) : "scan";
-      l = layoutSource(this.source, { width, wrap, headings }, this.sourceCache);
+      const markdown = this.kind.format === "markdown";
+      // Files beyond notes: highlighted by their language, no markdown headings (a `# comment`
+      // in a shell script is no heading).
+      const headings = !markdown ? [] : parsed ? headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line })) : "scan";
+      l = layoutSource(this.source, { width, wrap, headings, language: markdown ? null : this.kind.format }, this.sourceCache);
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
     }
