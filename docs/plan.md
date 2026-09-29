@@ -40,7 +40,7 @@ cited, not to imply an order.
 | **2** | The app — beat leaf | `3.x`, `5.1`–`5.4`, `8.x`, link-follow, `9.3`–`9.4` | **An agent can drive it** |
 | **3** | Editing | all of `4.x`, `5.5`–`5.10`, `7.2`–`7.5`, lint surface | Small edits stop provoking `$EDITOR` |
 | **3b** | Files beyond markdown | all of `16.x` | Any text file opens; data files render; code has an outline |
-| **4** | Vault and structure | rest of `1.x`, all `6.x`, `7.1`, embeds/aliases | Backlinks and search on a real vault |
+| **4** | Vault and structure | `17.x`, rest of `1.x`, `6.x`, `7.1`, embeds | Backlinks and search on a real vault |
 | **5** | LSP | all of `11.x` | nvim gets slipbox's graph |
 | **6+** | Export, images, extensibility | `10.x`, `12.x`, `13.x` | — |
 
@@ -556,6 +556,35 @@ the link graph), data files (JSON, YAML, TOML, INI, CSV: rendered, not notes), a
 
 Later, on the same render: slipbox's own settings as a TOML screen with the config's schema
 (defaults, allowed values, unknown keys). Diffs are a separate discussion.
+
+## Vaults — `17.x` (phase 4)
+
+*The design, and why, is `docs/idea.md`, "Vaults — decided 2026-09-30": a file's root is decided by
+the file; derived data in the cache, personal data in the state, `.slipbox/` only for what is
+shared; names that mean the same on every machine. In order: roots and storage, then names, then
+links across vaults, then the TUI, then renames.*
+
+| ID | Item |
+| --- | --- |
+| 17.1 | Roots: the nearest `.slipbox/`, else the git repository, else the home vault; never `~` or `/` |
+| 17.2 | The home vault: `~/.local/share/slipbox/home/`, made on first use; a loose file's links look beside it |
+| 17.3 | Storage keyed by the vault's id (a repository without `.slipbox/`: by path); old state moved over |
+| 17.4 | Vault identity in `.slipbox/config.toml`, `[vault]`: `id`, `name`, `aliases`, `previous_names` |
+| 17.5 | Distinct names suggested: a vault's (`x-plan` inside `x`; a known name refused), a new note's |
+| 17.6 | The machine's vaults, `vaults.json`: recorded on each open; `slipbox vaults` lists them |
+| 17.7 | Note `aliases` resolve like names; `previous_names` (vault and note) as a checked fallback, said so |
+| 17.8 | Interwiki links `[[vault:name]]`, `#heading`, `\|text`; "unknown vault", with where it was last seen |
+| 17.9 | Path links across roots: `[t](../other/x.md)` reaches the file in whichever root holds it |
+| 17.10 | Following a link into another vault switches the TUI to it; back returns; its index refreshed |
+| 17.11 | Backlinks across vaults, from each vault's index as of its last indexing |
+| 17.12 | Moves detected by content hash; redirects kept in the state; a link to the old path follows them |
+| 17.13 | Explorer: vault and repository folders with their own icons, the vault's name dimmed beside |
+| 17.14 | The launcher: `~`, or a loose folder opened without a file, shows the known vaults and the folder |
+| 17.15 | Renames across vaults (with `7.1`–`7.3`): links fixed in every reachable vault after a preview |
+
+`17.15` is where `7.1`–`7.3` land: a note's rename rewrites links as byte-range edits, previews every
+file it touches (7.2), and warns when a vault's git tree already has changes (7.3); the old name goes
+to `previous_names`. `7.4` (undo) stays open.
 
 ## Deferred — in the design, not in this breakdown
 
