@@ -180,8 +180,9 @@ in config.
 | go to tab N | `ctrl+t 1` … `ctrl+t 9` | `space t 1` … `space t 9` |
 | move tab left / right | `ctrl+t shift+h` / `shift+l`, `ctrl+t shift+left` / `shift+right` | `space t` + the same |
 | close tab | `ctrl+t q` | `space t q` |
-| close the other tabs (`:tabonly`) | `ctrl+t shift+o` | `space t shift+o` |
-| close all tabs (the explorer then opens a note) | `ctrl+t shift+q` | `space t shift+q` |
+| close the other tabs but the pinned (`:tabonly`) | `ctrl+t shift+o` | `space t shift+o` |
+| close all tabs but the pinned (the explorer then opens a note) | `ctrl+t shift+q` | `space t shift+q` |
+| pin / unpin tab (`:tabpin`): kept left, its note kept, never bulk-closed | `ctrl+t shift+p` | `space t shift+p` |
 
 ## Explorer — left pane
 
@@ -310,6 +311,7 @@ source first.
 | delete the character under the cursor | `x` (source) |
 | undo / redo (an insert session is one step) | `u` / `ctrl+r`, `shift+u` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
+| save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |
 | the conflict prompt again: load theirs, keep yours, diff, merge | `space n c` |
 | save everything and quit / quit without saving | `:wq`, `:x` / `:q!` |
@@ -325,6 +327,8 @@ source first.
 | substitute the character / the line | `s` / `shift+s` |
 | replace the character with the next one typed | `r` |
 | join the line below / toggle case | `shift+j` / `~` |
+| move the line (or V's lines) up / down | `alt+shift+up` / `alt+shift+down` |
+| older / newer change (vim's change list) / insert where the last insert ended | `g ;` / `g ,` / `g i` |
 | put after / before (a line register: under / over the line) | `p` / `shift+p` |
 | repeat the last change | `.` |
 | in visual mode: delete, change, indent, outdent the selection | `d` `x`, `c`, `>`, `<` |

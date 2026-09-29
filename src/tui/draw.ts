@@ -11,6 +11,7 @@ import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncate
 import { sanitize } from "../core/sanitize.ts";
 import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
+import { countWords } from "../core/words.ts";
 import type { CommentLink, SyntaxError } from "../core/syntax.ts";
 import { cells, ordered } from "./cursor.ts";
 import { fuzzy } from "./fuzzy.ts";
@@ -396,7 +397,7 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
     const v = t.views[t.active]!;
     // Unsaved changes (any tab showing the note), else a recent change on disk.
     const changed = v.buf.dirty ? " •" : v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS ? " ↻" : "";
-    return ` ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!, 24)}${changed} `;
+    return ` ${i + 1} ${t.pinned ? `${app.glyphs.pin} ` : ""}${truncate(app.displayName(v.buf).split("/").pop()!, 24)}${changed} `;
   });
   const close = `${app.glyphs.close} `;
   const widths = labels.map((l) => stringWidth(l) + stringWidth(close) + 1);
@@ -1187,13 +1188,17 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   // The right side: the position always; the tab count and the link under the cursor only while
   // the path keeps a readable width (the link goes first, then the tab count).
   const pos = `L${src}:${view.cur.col + 1} ${pct}`;
+  // Words: the note's, or the selection's in visual mode; dropped first when room is short.
+  const n = view.visual ? countWords(app.selectionText(view)) : buf.words();
+  const words = `${n.toLocaleString("en")} word${n === 1 ? "" : "s"}${view.visual ? " selected" : ""}  `;
   const tabs = app.tabs.length > 1 ? `tab ${app.activeTab + 1}/${app.tabs.length}  ` : "";
   const li = app.linkUnderCursor(view);
   const link = li >= 0 ? layout.links[li] : null;
   const linkText = link ? `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status})  ` : "";
   const markerW = stringWidth(pathMarker(app, view));
   const room = c.width - stringWidth(chip) - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
-  let right = `${linkText}${tabs}${pos}`;
+  let right = `${linkText}${words}${tabs}${pos}`;
+  if (stringWidth(right) + 1 > room) right = `${linkText}${tabs}${pos}`;
   if (stringWidth(right) + 1 > room) right = `${tabs}${pos}`;
   if (stringWidth(right) + 1 > room) right = pos;
 

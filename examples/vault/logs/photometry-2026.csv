@@ -36,7 +36,7 @@ date,utc,target,telescope,filter,mag,err,airmass,observer,notes
 2026-01-08,11:47,T CrB,Brill,V,5.767,0.033,1.38,Rosa Lind,"wind gusts, trailing"
 2026-01-08,12:00,R Leo,Lyra,V,11.258,0.064,1.37,Ingrid Halvorsen,
 2026-01-08,15:00,chi Cyg,Aster,R,3.528,0.052,1.14,Yusuf Haddad,
-2026-01-08,15:23,RS Oph,Aster,B,2.679,0.068,2.0,Rosa Lind,
+2026-01-08,15:23,RS Oph,Aster,B,2.679,0.068v,2.0,Rosa Lind,
 2026-01-08,15:36,T CrB,Brill,V,11.895,0.022,2.33,Tomasz Nowak,moon 60% up
 2026-01-08,16:17,Mira,Lyra,V,7.753,0.04,2.26,Rosa Lind,"fast rise, see log, 2026-03-01"
 2026-01-08,19:17,SS Cyg,Aster,B,11.306,0.076,2.3,Kenji Mori,"dew on corrector, re-shot"

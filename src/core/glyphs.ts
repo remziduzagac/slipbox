@@ -67,6 +67,8 @@ export interface Glyphs {
   /** The left rail's history button. */
   historyButton: string;
   close: string;
+  /** A pinned tab's mark, before its name. */
+  pin: string;
   crumb: string;
   /** Before a window's breadcrumb. */
   crumbIcon: string;
@@ -125,6 +127,7 @@ const unicode: Glyphs = {
   outlineButton: "▤",
   historyButton: "◷",
   close: "×",
+  pin: "⚑",
   crumb: "›",
   crumbIcon: "§",
   msgError: "✗",
@@ -134,6 +137,7 @@ const unicode: Glyphs = {
 
 const nerd: Glyphs = {
   ...unicode,
+  pin: "\u{f0403}", // nf-md-pin
   mode: "nerd",
   // Same icons as render-markdown in the nvim config this replaces.
   heading: ["󰲡 ", "󰲣 ", "󰲥 ", "󰲧 ", "󰲩 ", "󰲫 "],
@@ -199,6 +203,7 @@ const ascii: Glyphs = {
   outlineButton: "#",
   historyButton: "~",
   close: "x",
+  pin: "^",
   crumb: ">",
   crumbIcon: "#",
   msgError: "x",

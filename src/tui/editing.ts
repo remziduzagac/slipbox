@@ -150,6 +150,7 @@ export function stopInsert(app: App, view: View): void {
   if (!view.insert) return;
   view.insert = false;
   const at = offsetOf(app, view);
+  view.buf.lastInsert = at; // gi comes back here
   view.buf.endStep(at);
   const start = view.buf.lineStarts()[lineOf(view, at) - 1] ?? 0;
   placeAt(app, view, at > start ? prevBoundary(view.buf.source, at) : at);
@@ -355,3 +356,48 @@ function insertKeyNow(app: App, view: View, key: string): void {
   }
   if (typed !== null) insertText(app, view, typed);
 }
+
+/**
+ * Move the cursor's line — or, in V, the selected lines — up or down past its neighbour, one undo
+ * step; the cursor (and the selection) go with them. From the render, the window switches to
+ * editing first, as the other editing keys do.
+ */
+export function moveLines(app: App, view: View, dir: -1 | 1): void {
+  const why = cannotEdit(view);
+  if (why) return app.message("warn", `${why} — not editing`);
+  if (!editable(view)) app.setViewMode(view, app.editMode());
+  const buf = view.buf;
+  const src = buf.source;
+  const lines = src.split("\n");
+  const real = src.endsWith("\n") ? lines.length - 1 : lines.length; // the empty string after a final newline is no line
+  const cur = offsetOf(app, view);
+  const anchor = view.sel && view.visual === "line" ? offsetAt(app, view, view.sel.anchor) : cur;
+  const a = Math.min(lineOf(view, cur), lineOf(view, anchor));
+  const b = Math.max(lineOf(view, cur), lineOf(view, anchor));
+  if (dir < 0 ? a <= 1 : b >= real) return;
+  const starts = buf.lineStarts();
+  const block = lines.slice(a - 1, b).join("\n");
+  const other = lines[dir < 0 ? a - 2 : b]!;
+  const from = starts[dir < 0 ? a - 2 : a - 1]!;
+  const to = (starts[dir < 0 ? b - 1 : b] ?? src.length) + lines[dir < 0 ? b - 1 : b]!.length;
+  const text = dir < 0 ? `${block}\n${other}` : `${other}\n${block}`;
+  const moveBy = dir < 0 ? -(other.length + 1) : other.length + 1;
+  buf.beginStep(cur);
+  buf.edit(from, to - from, text, cur);
+  buf.endStep(cur + moveBy);
+  if (view.sel && view.visual === "line") {
+    placeAt(app, view, anchor + moveBy);
+    view.sel = { ...view.sel, anchor: { ...view.cur } };
+  }
+  placeAt(app, view, cur + moveBy);
+}
+
+/** The text offset of a position on the view's layout (a selection's anchor). */
+function offsetAt(app: App, view: View, pos: { row: number; col: number }): number {
+  const saved = view.cur;
+  view.cur = pos;
+  const at = offsetOf(app, view);
+  view.cur = saved;
+  return at;
+}
+

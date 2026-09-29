@@ -4976,3 +4976,112 @@ describe("the lens's modes and size", () => {
     expect(lensLabel(h)).toBe("source 9–15");
   });
 });
+
+describe("pinned tabs", () => {
+  test("pinned tabs keep left, in the order pinned; moves stay in their group; the session keeps them", async () => {
+    const root = makeVault();
+    const h = await harness({ root });
+    for (const n of ["notes/alpha.md", "notes/beta.md", "crlf.md"]) {
+      await h.app.run("tab.new");
+      await h.app.run(`note.open ${n}`);
+    }
+    const names = () => h.app.tabs.map((t) => `${t.pinned ? "^" : ""}${t.views[t.active]!.buf.rel}`).join(" ");
+    expect(names()).toBe("index.md notes/alpha.md notes/beta.md crlf.md");
+    await h.keys("ctrl+t", "shift+p"); // crlf pinned: to the left
+    h.app.activeTab = 3;
+    await h.keys("ctrl+t", "shift+p"); // beta pinned: after crlf
+    expect(names()).toBe("^crlf.md ^notes/beta.md index.md notes/alpha.md");
+    expect(h.frame()).toMatch(/1 ⚑ crlf\.md/);
+    await h.keys("ctrl+t", "shift+l"); // beta can't leave the pinned group
+    expect(names()).toBe("^crlf.md ^notes/beta.md index.md notes/alpha.md");
+    await h.keys("ctrl+t", "shift+h");
+    expect(names()).toBe("^notes/beta.md ^crlf.md index.md notes/alpha.md");
+    h.app.quit();
+    const again = await harness({ root, open: null, config: (c) => (c.ui.restore_session = true) });
+    expect(again.app.tabs.filter((t) => t.pinned).map((t) => t.views[0]!.buf.rel)).toEqual(["notes/beta.md", "crlf.md"]);
+  });
+  test("a link from a pinned tab opens in a new tab; close others and close all keep pinned tabs", async () => {
+    const h = await harness();
+    await h.keys("ctrl+t", "shift+p");
+    const v = h.app.view!;
+    const l = h.app.currentLayout(v).links.find((x) => x.target === "alpha")!;
+    h.app.moveCursor(v, { row: l.line, col: l.col });
+    await h.keys("enter");
+    expect(h.app.tabs.length).toBe(2);
+    expect(h.app.tabs[0]!.views[0]!.buf.rel).toBe("index.md"); // the pinned tab kept its note
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    await h.app.run("tab.new");
+    await h.keys("ctrl+t", "shift+o");
+    expect(h.app.tabs.map((t) => t.views[0]!.buf.rel)).toEqual(["index.md", "notes/alpha.md"]);
+    await h.keys("ctrl+t", "shift+q");
+    expect(h.app.tabs.map((t) => t.views[0]!.buf.rel)).toEqual(["index.md"]);
+    expect(h.app.messages.at(-1)!.text).toContain("aren't pinned");
+    await h.keys("ctrl+t", "q"); // closing it directly works (the last tab stays, as ever)
+    expect(h.app.tabs.length).toBe(1);
+  });
+});
+
+describe("word count, save all, the change list, moving lines", () => {
+  test("words in the status line, the selection's in visual mode; note info; frontmatter not counted", async () => {
+    const { countWords } = await import("../src/core/words.ts");
+    expect(countWords("# Title\n\n- one two, three's\n| a | b |\n")).toBe(6);
+    expect(countWords("---\ntitle: x y\n---\nhello world\n", true)).toBe(2);
+    expect(countWords("日本語のノート")).toBe(7);
+    expect(countWords("日本語、ノート。")).toBe(6); // punctuation is no word
+    const root = makeVault();
+    writeFileSync(join(root, "w.md"), "one two three\nfour five\n");
+    const h = await harness({ root, open: "w.md", width: 120 });
+    expect(statusRow(h.frame())).toContain("5 words");
+    await h.keys("space", "n", "v", "v", "e", "e");
+    expect(statusRow(h.frame())).toContain("2 words selected");
+    await h.keys("escape");
+    await h.app.run("note.info");
+    expect(h.frame()).toMatch(/words\s+5/);
+  });
+  test(":wa saves every changed note; g; g, walk the changes; gi types where the last insert ended", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "c.md"), "line one\nline two\nline three\nline four\n");
+    const h = await harness({ root, open: "c.md" });
+    await h.keys("space", "n", "v", "g", "g", "A", "!", "escape", "G", "A", "?", "escape");
+    await h.app.run("note.open notes/alpha.md");
+    await h.keys("space", "n", "v", "A", "#", "escape");
+    await h.app.run("note.save_all");
+    expect(readFileSync(join(root, "c.md"), "utf8")).toBe("line one!\nline two\nline three\nline four?\n");
+    expect(readFileSync(join(root, "notes", "alpha.md"), "utf8")).toContain("#");
+    await h.app.run("history.back");
+    const v = h.app.view!;
+    const line = () => h.app.currentLayout(v).lines[v.cur.row]!.src;
+    await h.keys("g", "g");
+    await h.keys("g", ";");
+    expect(line()).toBe(4); // the newest change
+    await h.keys("g", ";");
+    expect(line()).toBe(1);
+    await h.keys("g", ",");
+    expect(line()).toBe(4);
+    await h.keys("g", "g", "g", "i", "x", "escape");
+    expect(v.buf.source).toContain("line four?x");
+  });
+  test("alt+shift+up/down move the line, or V's lines, as one undo step; from the render too", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "m.md"), "a\nb\nc\nd\n");
+    const h = await harness({ root, open: "m.md" });
+    const v = h.app.view!;
+    await h.keys("j"); // rendered: a one-paragraph note, its first row
+    await h.app.run("view.source");
+    await h.keys("j", "alt+shift+down");
+    expect(v.buf.source).toBe("a\nc\nb\nd\n");
+    await h.keys("alt+shift+up", "alt+shift+up");
+    expect(v.buf.source).toBe("b\na\nc\nd\n");
+    await h.keys("alt+shift+up"); // at the top: nothing
+    expect(v.buf.source).toBe("b\na\nc\nd\n");
+    await h.keys("shift+v", "j", "alt+shift+down", "alt+shift+down");
+    expect(v.buf.source).toBe("c\nd\nb\na\n");
+    expect(v.visual).toBe("line"); // still selected, lines b and a
+    await h.keys("escape", "u");
+    expect(v.buf.source).toBe("c\nb\na\nd\n"); // one step undone
+    await h.app.run("view.source"); // back to the render: the key switches to editing first
+    expect(v.source).toBe(false);
+    await h.keys("alt+shift+down");
+    expect(v.source || v.live).toBe(true);
+  });
+});

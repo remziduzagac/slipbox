@@ -168,7 +168,7 @@ export interface UiOverride {
 
 export interface SessionState {
   version: 1;
-  tabs: { panes: SessionPane[]; active: number; orientation?: "side" | "stacked"; ratio?: number }[];
+  tabs: { panes: SessionPane[]; active: number; orientation?: "side" | "stacked"; ratio?: number; pinned?: boolean }[];
   activeTab: number;
   sidebar: boolean;
   outline?: boolean;
@@ -204,6 +204,7 @@ export function loadSession(root: string): SessionState | null {
       active: Number.isInteger(t.active) ? t.active : 0,
       orientation: t.orientation === "stacked" ? ("stacked" as const) : ("side" as const),
       ratio: typeof t.ratio === "number" && t.ratio >= 0.15 && t.ratio <= 0.85 ? t.ratio : undefined,
+      pinned: t.pinned === true ? true : undefined,
     }))
     .filter((t) => t.panes.length);
   return {

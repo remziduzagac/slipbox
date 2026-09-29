@@ -16,6 +16,7 @@ import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
 import { layoutSource, newSourceCache } from "../core/layout/source.ts";
 import { headingsOf, newParseCache, type ParsedNote, parseMarkdown, slugify } from "../core/parse.ts";
+import { countWords } from "../core/words.ts";
 import { readerFor } from "../core/readers.ts";
 import type { CommentLink, OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
 
@@ -195,10 +196,29 @@ export class NoteBuffer {
 
   /** Replace `length` characters at `at` with `text`; part of the open undo step, else a step of
    *  its own (the cursor offsets given). */
+  /** Vim's change list (`g;` `g,`): where the text was changed, oldest first, as offsets kept in
+   *  step with later edits; a change on the line of the one before replaces it. */
+  changes: number[] = [];
+  /** Where `g;` / `g,` are in `changes` (its length: past the newest). */
+  changeAt = 0;
+  /** Where the last insert session ended (`gi`). */
+  lastInsert: number | null = null;
+
   edit(at: number, length: number, text: string, cursor = at): void {
     const removed = this.source.slice(at, at + length);
     if (!removed && !text) return;
+    const d = text.length - removed.length;
+    const shift = (o: number) => (o > at ? Math.max(at, o + d) : o);
+    this.changes = this.changes.map(shift);
+    if (this.lastInsert !== null) this.lastInsert = shift(this.lastInsert);
     this.source = this.source.slice(0, at) + text + this.source.slice(at + length);
+    const last = this.changes[this.changes.length - 1];
+    if (last !== undefined && !this.source.slice(Math.min(last, at), Math.max(last, at)).includes("\n")) this.changes[this.changes.length - 1] = at;
+    else {
+      this.changes.push(at);
+      if (this.changes.length > 100) this.changes.shift();
+    }
+    this.changeAt = this.changes.length;
     this.version++;
     this.layouts.clear();
     const e = { at, removed, inserted: text };
@@ -252,6 +272,14 @@ export class NoteBuffer {
   }
 
   /** Where each line starts (UTF-16 offsets), for the current version. */
+  private wordMemo = { version: -1, words: 0 };
+
+  /** Words in the text (a note's frontmatter not counted), counted once per edit. */
+  words(): number {
+    if (this.wordMemo.version !== this.version) this.wordMemo = { version: this.version, words: countWords(this.source, this.kind.group === "note") };
+    return this.wordMemo.words;
+  }
+
   lineStarts(): number[] {
     if (this.starts?.version === this.version) return this.starts.at;
     const at = [0];

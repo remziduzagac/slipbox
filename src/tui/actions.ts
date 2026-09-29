@@ -246,6 +246,20 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
   }
 }
 
+/** `g;` / `g,`: the change before or after in the note's change list. */
+function changeStep(a: App, dir: -1 | 1): void {
+  withView(a, (v) => {
+    const b = v.buf;
+    if (!b.changes.length) return a.message("info", "no changes in this note yet");
+    const i = b.changeAt + dir;
+    if (i < 0) return a.message("info", "at the oldest change");
+    if (i >= b.changes.length) return a.message("info", "at the newest change");
+    b.changeAt = i;
+    E.placeAt(a, v, Math.min(b.changes[i]!, b.source.length));
+    a.message("info", `change ${i + 1} of ${b.changes.length}`);
+  });
+}
+
 function lensStep(a: App, step: 1 | -1): void {
   withView(a, (v) => {
     if (!v.live) return a.message("info", "the lens isn't open — space n l opens it");
@@ -843,6 +857,17 @@ export function registerActions(app: App): void {
         });
       }),
     // history
+    "edit.move_line_up": (a) => withView(a, (v) => E.moveLines(a, v, -1)),
+    "edit.move_line_down": (a) => withView(a, (v) => E.moveLines(a, v, 1)),
+    "change.prev": (a) => changeStep(a, -1),
+    "change.next": (a) => changeStep(a, 1),
+    "edit.insert_last": (a) =>
+      withView(a, (v) => {
+        const at = v.buf.lastInsert;
+        if (at === null) return a.message("info", "no insert yet in this note");
+        a.pushHistory(v);
+        E.startInsert(a, v, () => Math.min(at, v.buf.source.length));
+      }),
     "history.back": (a) => a.history("back"),
     "history.forward": (a) => a.history("forward"),
     // The left panel on the history, like the explorer: open and focus, focus, close.
@@ -932,18 +957,9 @@ export function registerActions(app: App): void {
       if (Number.isInteger(n) && n >= 0 && n < a.tabs.length) a.activeTab = n;
       else a.message("info", `no tab ${arg}`);
     },
-    "tab.move_left": (a) => {
-      const i = a.activeTab;
-      if (i <= 0) return;
-      [a.tabs[i - 1], a.tabs[i]] = [a.tabs[i]!, a.tabs[i - 1]!];
-      a.activeTab = i - 1;
-    },
-    "tab.move_right": (a) => {
-      const i = a.activeTab;
-      if (i >= a.tabs.length - 1) return;
-      [a.tabs[i + 1], a.tabs[i]] = [a.tabs[i]!, a.tabs[i + 1]!];
-      a.activeTab = i + 1;
-    },
+    "tab.move_left": (a) => a.moveTab(-1),
+    "tab.move_right": (a) => a.moveTab(1),
+    "tab.pin": (a) => a.togglePin(),
     "tab.close": (a) => a.closeTab(),
     // panes
     // Closed (or showing the history) → open on the tree and focus; open elsewhere → focus; focused → close.
@@ -1191,6 +1207,14 @@ export function registerActions(app: App): void {
         if (!v.buf.dirty || !v.buf.changedOnDisk()) return a.message("info", `${a.displayName(v.buf)} has no conflict with the file on disk`);
         a.conflictPrompt(v.buf);
       }),
+    "note.save_all": (a) => {
+      for (const v of a.allViews()) if (v.insert) E.stopInsert(a, v);
+      const dirty = a.dirtyBuffers();
+      if (!dirty.length) return a.message("info", "nothing to save");
+      const saved = dirty.filter((b) => a.saveBuffer(b, true)).length;
+      if (saved === dirty.length) a.message("info", `saved ${saved} note${saved === 1 ? "" : "s"}`);
+      else a.message("warn", `saved ${saved} of ${dirty.length} — the others say why above`);
+    },
     "app.save_quit": (a) => {
       for (const v of a.allViews()) if (v.insert) E.stopInsert(a, v);
       for (const b of a.dirtyBuffers()) if (!a.saveBuffer(b)) return;
@@ -1319,6 +1343,8 @@ export function registerActions(app: App): void {
           ["size", `${b.stamp?.size ?? 0} bytes`],
           ["modified", b.stamp ? new Date(b.stamp.mtimeMs).toLocaleString() : "?"],
           ["title", entry?.title ?? "—"],
+          ["words", b.words().toLocaleString("en")],
+          ["characters", [...b.source].length.toLocaleString("en")],
           ["headings", String(entry?.headings.length ?? lay(a, v).headings.length)],
           ["links", String(lay(a, v).links.length)],
           ["backlinks", b.rel ? String(a.graph.backlinks(b.rel).length) : "—"],

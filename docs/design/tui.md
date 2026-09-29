@@ -100,18 +100,24 @@ Rules run above and below it. The rule above is the frame's rule under the tab s
 window of a stacked split draws its own.
 
 **The tab strip** sits under the top bar whenever a note is open, even with a single tab, on the
-page's background like the top bar and the status line. A tab
-reads ` N name `: its number, the file name without `.md`, cut to 24 columns, and `↻` for 3 s after
-a reload. Each tab has a `×` to close it and a `┃` after it, joined to the rules above and below the
-strip (`┳`, `┻`). The active tab is bright (`tab_active`) while the note has focus and dimmer
-(`tab_active_idle`) otherwise; other tabs are `tab`. When the tabs don't all fit, the strip shows a
-run of them that includes the active tab: from the first tab, scrolled just enough to bring the
-active one in. A `+N` button at the far right, behind its own `┃`, counts the tabs left out; tabs
-always stop before it, even when the one left has to be cut short, and clicking it opens the tab
-list (`ctrl+t t`) to pick one. A tab holds the note and its outline but not the explorer, so with
-the explorer open beside the content the strip starts after the explorer's border and spans the note
-and the outline. The explorer runs from under the frame's top rule to its bottom rule, and stays put
-when the strip appears or goes.
+page's background like the top bar and the status line. A tab reads ` N name `: its number, the file
+name with its extension, cut to 24 columns, and `↻` for 3 s after a reload; a pinned tab has a pin
+(`⚑`) before its name. Each tab has a `×` to close it and a `┃` after it, joined to the rules above
+and below the strip (`┳`, `┻`). The active tab is bright (`tab_active`) while the note has focus and
+dimmer (`tab_active_idle`) otherwise; other tabs are `tab`. When the tabs don't all fit, the strip
+shows a run of them that includes the active tab: from the first tab, scrolled just enough to bring
+the active one in. A `+N` button at the far right, behind its own `┃`, counts the tabs left out;
+tabs always stop before it, even when the one left has to be cut short, and clicking it opens the
+tab list (`ctrl+t t`) to pick one. A tab holds the note and its outline but not the explorer, so
+with the explorer open beside the content the strip starts after the explorer's border and spans the
+note and the outline. The explorer runs from under the frame's top rule to its bottom rule, and
+stays put when the strip appears or goes.
+
+**Pinned tabs** (`ctrl+t shift+p`, `:tabpin`) keep together at the left of the strip, in the order
+they were pinned; moving a tab (keys or a drag) stays inside its group. A pinned tab keeps its note:
+whatever would open over it — a link, `ctrl+p`, `:e`, the explorer — opens in a new tab instead.
+Close others and close all skip pinned tabs (`ctrl+t q` closes one, being about that tab), and the
+session keeps them.
 
 **The status line** is about the file. From left to right:
 
@@ -128,6 +134,8 @@ when the strip appears or goes.
   dropped when the line is too short.
 
 On the right it shows the link under the cursor and its status (`→ [[beta]] (resolved)`), then
+the note's words (`1,234 words`; the selection's in visual mode, `12 words selected`; frontmatter
+not counted, each Han or kana character a word; dropped first when short of room), then
 `tab N/M` when there are two or more tabs, then `L<source line>:<column>` and the percentage (`all`
 when the note fits), which always shows. Find's progress is in its window's find row, not here.
 

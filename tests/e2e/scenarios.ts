@@ -376,6 +376,46 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "pinned tabs, save all, the change list, moving lines, the word count",
+    options: { files: { "m.md": "alpha\nbravo\ncharlie\n" }, open: "m.md" },
+    run: async (s) => {
+      await s.status(/3 words/);
+      // Pinned: a link from it opens a new tab; close all keeps it.
+      await s.keys("ctrl+t");
+      await s.type("P");
+      await s.see(/1 \S+ m\.md/);
+      await leader(s, "t", "o");
+      await s.see(/2 m\.md/);
+      await s.keys("ctrl+t");
+      await s.type("Q");
+      await s.notSee(/2 m\.md/);
+      await s.see(/1 \S+ m\.md/);
+      // Move a line down, change it, walk back to it with g;, save all.
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.keys("g", "g", "alt+shift+down");
+      await s.until(() => s.rowOf(/│ bravo/) >= 0 && s.rowOf(/│ bravo/) < s.rowOf(/│ alpha/), 3000, "alpha moved below bravo");
+      await s.keys("G", "A");
+      await s.type("!");
+      await s.keys("escape", "g", "g");
+      await s.keys("g");
+      await s.type(";");
+      await moveTo(s, [], (l) => l === 3, "g; to the newest change");
+      await s.keys("g");
+      await s.type(",");
+      await s.message(/newest change/);
+      // Up and back down again (the file ends as it was); gi, left without typing.
+      await moveTo(s, ["alt+shift+up"], (l) => l === 2, "alt+shift+up");
+      await moveTo(s, ["alt+shift+down"], (l) => l === 3, "alt+shift+down");
+      await s.keys("g", "g", "g", "i");
+      await s.status("INSERT");
+      await s.keys("escape");
+      await s.ex("wa");
+      await s.file("m.md", (t) => t === "bravo\nalpha\ncharlie!\n", "the moved line and the change saved");
+    },
+  },
+
   // --- panes ----------------------------------------------------------------------------------
   {
     name: "panes: the explorer, reveal, the outline, the heading picker, the path dropdown",

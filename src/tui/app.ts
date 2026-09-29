@@ -209,6 +209,9 @@ export interface Tab {
   orientation: "side" | "stacked";
   /** Share of the width (side by side) or height (stacked) given to the first window. */
   ratio: number;
+  /** Pinned: kept at the left with the other pinned tabs, skipped by close others / close all, and
+   *  its note stays — what would open over it opens in a new tab. */
+  pinned?: boolean;
 }
 
 export interface ListItem {
@@ -859,6 +862,8 @@ export class App {
     if (!view) return this.openInNewTab(path, anchor);
     const buf = this.buffer(path);
     if (!buf) return;
+    // A pinned tab keeps its note: another one opens in a new tab.
+    if (buf !== view.buf && this.tabs.find((t) => t.views.includes(view))?.pinned) return this.openInNewTab(path, anchor);
     this.pushHistory(view);
     if (buf === view.buf && anchor) {
       this.jumpTo(view, anchor);
@@ -1678,26 +1683,58 @@ export class App {
     this.activeTab = Math.min(this.activeTab, this.tabs.length - 1);
   }
 
-  /** Keep only this tab (`:tabonly`). Its notes' buffers stay, unsaved changes and all. */
+  /** Keep only this tab (`:tabonly`) and the pinned ones. The notes' buffers stay, unsaved
+   *  changes and all. */
   closeOtherTabs(): void {
     const t = this.tab;
     if (!t) return;
-    if (this.tabs.length === 1) return this.message("info", "only one tab");
-    const n = this.tabs.length - 1;
-    for (const other of this.tabs) if (other !== t) for (const v of other.views) this.remember(v);
-    this.tabs = [t];
-    this.activeTab = 0;
-    this.message("info", `closed ${n} other tab${n === 1 ? "" : "s"}`);
+    const gone = this.tabs.filter((x) => x !== t && !x.pinned);
+    if (!gone.length) return this.message("info", this.tabs.length > 1 ? "the other tabs are pinned" : "only one tab");
+    for (const other of gone) for (const v of other.views) this.remember(v);
+    this.tabs = this.tabs.filter((x) => x === t || x.pinned);
+    this.activeTab = this.tabs.indexOf(t);
+    this.message("info", `closed ${gone.length} other tab${gone.length === 1 ? "" : "s"}`);
   }
 
-  /** Close every tab: the "no note open" page, the explorer focused to open one. */
+  /** Close every tab but the pinned ones; with none left, the "no note open" page, the explorer
+   *  focused to open one. */
   closeAllTabs(): void {
     if (!this.tabs.length) return;
-    for (const t of this.tabs) for (const v of t.views) this.remember(v);
-    this.tabs = [];
+    const t = this.tab;
+    for (const x of this.tabs) if (!x.pinned) for (const v of x.views) this.remember(v);
+    this.tabs = this.tabs.filter((x) => x.pinned);
+    if (this.tabs.length) {
+      this.activeTab = t?.pinned ? this.tabs.indexOf(t) : this.tabs.length - 1;
+      return this.message("info", "closed the tabs that aren't pinned");
+    }
     this.activeTab = 0;
     this.showSidebar(true);
     this.region = "sidebar";
+  }
+
+  /** Pin or unpin this tab: pinned tabs keep together at the left, in the order pinned. */
+  togglePin(): void {
+    const t = this.tab;
+    if (!t) return;
+    const rest = this.tabs.filter((x) => x !== t);
+    t.pinned = !t.pinned;
+    const firstUnpinned = rest.findIndex((x) => !x.pinned);
+    const at = firstUnpinned < 0 ? rest.length : firstUnpinned; // the pinned group's end
+    rest.splice(at, 0, t);
+    this.tabs = rest;
+    this.activeTab = at;
+    this.message("info", t.pinned ? "pinned: links open in new tabs, close others / all keep it" : "unpinned");
+  }
+
+  /** Move this tab one place, within its group (pinned tabs stay left of the others). */
+  moveTab(dir: -1 | 1): void {
+    const i = this.activeTab;
+    const j = i + dir;
+    const t = this.tabs[i];
+    const other = this.tabs[j];
+    if (!t || !other || !!other.pinned !== !!t.pinned) return;
+    [this.tabs[i], this.tabs[j]] = [other, t];
+    this.activeTab = j;
   }
 
   /** Move focus in a direction: between the two windows, and out to the side panes. */
@@ -3220,7 +3257,8 @@ export class App {
     const d = this.drag!;
     if (d.kind === "tab") {
       const over = g.tabs.find((t) => ev.x >= t.x && ev.x < t.x + t.w);
-      if (over && over.index !== d.index) {
+      // A drag stays within its group: pinned tabs keep left of the others.
+      if (over && over.index !== d.index && !!this.tabs[over.index]?.pinned === !!this.tabs[d.index]?.pinned) {
         const [moved] = this.tabs.splice(d.index, 1);
         this.tabs.splice(over.index, 0, moved!);
         this.activeTab = over.index;
@@ -3713,7 +3751,7 @@ export class App {
         const buf = this.buffer(p.path);
         if (buf) views.push(this.makeView(buf, p.anchor, p.cursor));
       }
-      if (views.length) this.tabs.push({ views, active: Math.min(t.active, views.length - 1), orientation: t.orientation ?? "side", ratio: t.ratio ?? this.config.ui.split_ratio });
+      if (views.length) this.tabs.push({ views, active: Math.min(t.active, views.length - 1), orientation: t.orientation ?? "side", ratio: t.ratio ?? this.config.ui.split_ratio, ...(t.pinned ? { pinned: true } : {}) });
     }
     if (!this.tabs.length) return false;
     this.activeTab = Math.max(0, Math.min(s.activeTab, this.tabs.length - 1));
@@ -3736,6 +3774,7 @@ export class App {
         active: t.active,
         orientation: t.orientation,
         ratio: t.ratio,
+        ...(t.pinned ? { pinned: true } : {}),
       })),
       activeTab: this.activeTab,
       sidebar: this.sidebar.visible,
