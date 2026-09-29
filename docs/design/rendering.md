@@ -9,9 +9,9 @@ reading `docs/`". Code: `src/core/layout/`, `src/core/theme/`, `src/core/glyphs.
 Pure data, framework-agnostic, defined in `layout/ir.ts`:
 
 ```ts
-Layout { lines: Line[]; links: LayoutLink[]; headings: LayoutHeading[]; width }
-Line   { spans: Span[]; src; fill?; heading? }
-Span   { text; role; attrs; bg?; link?; src? }
+Layout { lines: Line[]; links: LayoutLink[]; headings: LayoutHeading[]; width; clipped? }
+Line   { spans: Span[]; src; fill?; heading?; srcMap?; decor?; lens?; footnoteDef? }
+Span   { text; role; attrs; bg?; link?; src?; task? }
 ```
 
 - **`role`** is a semantic theme role (`h2`, `code_inline`, `wikilink`, `syn_keyword`…). The IR
@@ -210,7 +210,7 @@ or broken theme falls back to `tokyo-night` with a warning.
 Fonts cannot be probed through the terminal, so `render.glyphs = "auto"` is a heuristic with an
 override:
 
-1. ASCII when the locale is not UTF-8 or `TERM=linux`.
+1. ASCII when a locale is set (`LC_ALL`, `LC_CTYPE` or `LANG`) and isn't UTF-8, or `TERM=linux`.
 2. Nerd glyphs when the terminal bundles the Nerd Font symbols (Ghostty, kitty, WezTerm).
 3. Plain Unicode otherwise.
 

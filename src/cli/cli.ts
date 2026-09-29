@@ -103,7 +103,7 @@ class Session {
 export const HELP = `slipbox ${VERSION} — terminal markdown notes, agent-drivable
 
 Usage:
-  slipbox [path]                    open the TUI (needs a terminal)
+  slipbox [path]                    open the TUI (needs a terminal); also: slipbox open [path]
   slipbox render <note>             render a note to stdout        [--width N] [--theme T] [--glyphs G] [--plain]
   slipbox resolve <link>            follow a link to a path        [--from <note>]
   slipbox links <note>              outgoing links with status
@@ -117,7 +117,7 @@ Usage:
   slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
-  slipbox capture [text]            append to the scratch          [--ref path:L[-M]] [--snippet] [--stdin] [--lang L]
+  slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
   slipbox init [dir]                make <dir> a vault (creates .slipbox/)
   slipbox info                      vault, paths, versions, staleness
@@ -131,10 +131,12 @@ Global options:
   --color <when>    auto | always | never
   -h, --help        this help        -V, --version   print the version
 
-<note> is a path, or a note name resolved like a [[wikilink]]. After --, nothing is an option:
+<note> is a path, or a note name resolved like a [[wikilink]]; a name several notes share is exit 4,
+unless --from <note> picks the one a link from there reaches. After --, nothing is an option:
 slipbox read -- -dash.md names a note that starts with a dash.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
-5 refused (--if-unchanged, a write outside the vault or over an existing note, invalid UTF-8).
+5 refused (--if-unchanged, a write outside the vault or over an existing note, invalid UTF-8,
+  a read of a symlink leading out of the vault).
 `;
 
 export const CLI_COMMANDS = new Set([
@@ -282,6 +284,15 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
   }
   const r = s.graph.findNote(arg, s.io.cwd);
   if (r.status === "resolved") return r.path;
+  // --from: a name several notes share means the one a link from that note reaches (the nearest).
+  const fromArg = flag(s.args, "from");
+  if (r.status === "ambiguous" && fromArg !== undefined && fromArg !== arg) {
+    const from = s.graph.findNote(fromArg, s.io.cwd);
+    if (from.status === "resolved") {
+      const l = s.graph.resolveLink({ kind: "wiki", target: arg }, from.path);
+      if (l.resolvedKind === "note" && l.path) return l.path;
+    }
+  }
   if (r.status === "ambiguous") {
     throw new CliError(`ambiguous note "${arg}": ${r.candidates.join(", ")}`, EXIT.ambiguous, { candidates: r.candidates });
   }
@@ -682,7 +693,8 @@ const HANDLERS: Record<string, Handler> = {
     else if (flag(s.args, "if-unchanged") !== undefined) throw new CliError(`${rel} doesn't exist; --if-unchanged has nothing to compare`, EXIT.refused);
     // Nothing to write is almost always a failed producer (gen | slipbox write note --stdin): it
     // would empty the note, and --if-unchanged can't catch it. Said on purpose with --allow-empty.
-    if (!text && !has(s.args, "append") && !has(s.args, "allow-empty")) throw new UsageError("nothing to write (empty text); --allow-empty empties the note on purpose");
+    // Blank counts as empty: `write note "$(gen)"` gives "\n" when gen fails.
+    if (!text.trim() && !has(s.args, "allow-empty")) throw new UsageError("nothing to write (empty text); --allow-empty empties the note on purpose");
     let content = text;
     if (previous && has(s.args, "append")) {
       // On a new line; with --paragraph after a blank one too, so the text is a block of its own

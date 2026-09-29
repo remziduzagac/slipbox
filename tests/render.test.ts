@@ -20,6 +20,7 @@ process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
 delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
+process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
 

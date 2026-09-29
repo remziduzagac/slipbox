@@ -133,7 +133,7 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
 - **Paths for `--create`** are from the vault's root, wherever you are in it, unless they start
   with `./` or `../` (then from the current folder). A bare note name never depends on the current
   folder: a name several notes share is exit 4 with the candidates (`--from` picks the nearest).
-- **`write`** refuses empty text (exit 2: a producer that failed would otherwise empty the note,
+- **`write`** refuses empty or blank text, `write note ""` included (exit 2: a producer that failed would otherwise empty the note,
   and `--if-unchanged` can't tell); `--allow-empty` empties it on purpose. `--append --paragraph`
   puts a blank line first, so the text is a block of its own and doesn't become the next row of a
   table or the end of a paragraph.

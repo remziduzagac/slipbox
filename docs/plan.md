@@ -1,6 +1,7 @@
 # slipbox — implementation plan
 
-Status: **phases 0–3 built**. Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
+Status: **phases 0–3 built**, except `4.9` (moved to `15.1`), `5.9`, the lint surface, and `7.2`–`7.4`
+(which wait for renames, `7.1`). Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
 2026-09-28 — how it was built is in `docs/design/`, the decisions it needed in `docs/design/decisions.md`.
 
 The design lives in `docs/idea.md` — what slipbox is, why each decision went the

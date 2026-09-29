@@ -404,6 +404,16 @@ describe("the vault and the tool", () => {
     expect(slipbox(["--root", h, "write", "sub\u202e/x", "hi", "--create"]).code).toBe(5);
     expect(existsSync(join(h, "sub\u202e"))).toBe(false);
   });
+  test("review cycle 5: blank text never empties a note; --from picks among notes sharing a name", () => {
+    const before = note("people/kenji-mori.md");
+    expect(slipbox(["write", "kenji-mori", ""]).code).toBe(2);
+    expect(slipbox(["write", "kenji-mori", "--stdin"], { stdin: " \n\n" }).code).toBe(2);
+    expect(slipbox(["write", "kenji-mori", "", "--append"]).code).toBe(2);
+    expect(note("people/kenji-mori.md")).toBe(before);
+    expect(slipbox(["read", "contacts", "--json"]).code).toBe(4);
+    expect(slipbox(["read", "contacts", "--from", "people/kenji-mori.md", "--json"]).json.data.path).toBe("people/contacts.md");
+    expect(slipbox(["read", "contacts", "--from", "equipment/instrument-inventory.md", "--json"]).json.data.path).toBe("equipment/contacts.md");
+  });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));
     expect(missing).toEqual([]);

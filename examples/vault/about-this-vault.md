@@ -13,7 +13,7 @@ some deliberately break the house style that [[writing-guide]] describes.
 
 | Note | Exercises |
 | --- | --- |
-| `equipment/telescope-comparison.md` | the table allocator's hardest case: seven columns, cells of 500 characters |
+| `equipment/telescope-comparison.md` | the table allocator's hardest case: seven columns, cells of 250 characters |
 | `equipment/instrument-inventory.md` | table rows of 500+ characters to wrap, never overflow; emoji in cells |
 | `logs/observing-log-2026.md` | throughput: 30 tables and 216 rows in one note |
 | `scratch/wrap-probe.md` | a small wide-table case with unbreakable tokens, for fast iteration |
@@ -52,7 +52,9 @@ terminal escapes, symlinks, ignored folders, a nested vault — live in the test
 Some links are unresolved on purpose, so the link index always has failures to report:
 
 - `people/partners-and-names.md`: `[[visiting-rota]]`, `![[dome-diagram.png]]`,
-  `<../scratch/wrap probe copy.md>`, `[[home#No such heading]]` and `[[variable-star-survey^nope]]`.
+  `<../scratch/wrap probe copy.md>`, and the aliases `[[Kenji]]` and `[[森健二]]` (until aliases are
+  read). `[[home#No such heading]]` and `[[variable-star-survey^nope]]` will join them once a
+  reference's heading and block are checked; for now they reach their notes.
 - `handbook/writing-guide.md`: `../projects/dunmore-refurbishment.md`,
   `../incidents/2026-03-14-fw8-stuck.md`, `../reports/template.md` and `glossary.md` (twice).
 - `equipment/instrument-inventory.md`: `images/lyra-slit.png`, `images/tern-frame.jpg` and

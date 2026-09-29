@@ -25,7 +25,8 @@ Config uses the same notation and accepts common spellings: `G` means `shift+g`,
   popup lists the next keys: immediately after the leader, and after 500 ms for the other
   prefixes (`y`, `ctrl+w`, `ctrl+t`, `[`, `]`, `g`). Each entry shows a name and a short
   explanation, in at most three columns, and keys with the same action share an entry
-  (`h left`). `backspace` goes up a level, and `esc` cancels.
+  (`h left`). `backspace` goes up a level, and `esc` cancels. A key that is both a binding and a
+  prefix waits the same delay (`input.which_key_delay_ms`) for the next key before it runs.
 - **Every `ctrl+` chord has another route**, usually under the leader: terminals, multiplexers
   and browsers swallow `ctrl+` keys (zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`);
   nothing takes `space`. Cursor movement is the exception (its chords have direct alternatives:
@@ -239,7 +240,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | while typing it: regex / whole words (also its `.*` / `ab` buttons) | `alt+r` / `alt+w` | — |
 | find and replace (the markdown); into replace / back | `ctrl+h`; `tab` / `shift+tab` | `space f r` |
 | the replace row open / closed (its `⇄` button) | `alt+h` | — |
-| in replace: one / all, one undo step (or buttons) / move | `enter` / `alt+a` / `ctrl+n`, `ctrl+p` | — |
+| in replace: one / all, one undo step (or buttons) / move | `enter` / `alt+a` (`alt+enter`) / `ctrl+n`, `ctrl+p` | — |
 | onto the next / previous character typed on the line; just before it | `f` / `shift+f`; `t` / `shift+t` | — |
 | the last `f` `t` again / the other way | `;` / `,` | — |
 | the whole word under the cursor, forward / backward | `*` / `#` | — |

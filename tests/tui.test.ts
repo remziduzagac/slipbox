@@ -23,6 +23,7 @@ process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
 delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
+process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 delete process.env.NO_COLOR;
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
@@ -2662,7 +2663,7 @@ describe("review round 1", () => {
       const described = rows.join("\n").includes("notes, headings, text, commands");
       if (padded) expect(described).toBe(true);
     }
-  });
+  }, 30_000); // 29 harnesses
 });
 
 describe("review round 2", () => {

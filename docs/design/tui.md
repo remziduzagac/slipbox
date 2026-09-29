@@ -115,9 +115,9 @@ when the strip appears or goes.
 
 **The status line** is about the file. From left to right:
 
-- a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES`, `OUTLINE`, `RESIZE`,
-  or what's pending: keys of a sequence in short form (`␣ l`, `C-w`), or an operator, count or `r`
-  (`2d`, `di`);
+- a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES` (the explorer or
+  the history), `OUTLINE`, `RESIZE`, or what's pending: keys of a sequence in short form (`␣ l`,
+  `C-w`), or an operator, count or `r` (`2d`, `di`);
 - the note's path (click to copy its absolute path);
 - `↻ reloaded` after an external change, or `✖ deleted on disk`;
 - whether external changes will show up: `● watching` (with a count of polled directories, if

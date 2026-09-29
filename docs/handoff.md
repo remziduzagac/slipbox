@@ -23,7 +23,8 @@ tests (`bun run e2e`, slipbox driven in a herdr pane; see `docs/design/testing.m
 vault in `examples/vault`. `docs/design/` describes the code as
 it is and is kept in step with it; `docs/design/decisions.md` answers the decide items. The next
 phase is 4, vault and structure. Still open from phase 3: `7.2`–`7.4` (multi-file preview, rename
-undo) wait for renames (`7.1`, phase 4).
+undo) wait for renames (`7.1`, phase 4); `4.9` (incremental reparse) moved to `15.1`; `5.9` (a
+`HEAD` change as a branch switch) and the lint surface (markdownlint-cli2) are not built.
 
 ## The documents
 

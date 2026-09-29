@@ -91,7 +91,8 @@ Read against zk's and nb's surfaces. Small on purpose. Global flags: `--root <di
 "stale": [...]}`. Human output goes to stdout, diagnostics to stderr.
 
 **Exit codes:** `0` ok, `1` error, `2` usage, `3` not found (note or link target), `4` ambiguous (a link, or
-several nvims for `send`), `5` refused: by `--if-unchanged`, a write outside the vault, a note that isn't valid UTF-8.
+several nvims for `send`), `5` refused: by `--if-unchanged`, a write outside the vault or to what isn't a note of it,
+`--create` over an existing file, a note that isn't valid UTF-8, a read of a symlink leading out of the vault.
 
 **What reaches the state, from the CLI.** Every command in `core/command-specs.ts` names its CLI equivalent or is an
 interaction (cursor, scroll, windows, modes, the UI's own toggles, the conflict prompt). Editing keys are
@@ -161,9 +162,10 @@ and config remaps all of them.
   `home`/`end`), and so is `ctrl+c`, whose route is `y y`.
 - **Plain `q` never quits** (`ctrl+q` does), and **`ctrl+c` only copies** (in a list or prompt it
   cancels).
-- **Editing keys are vim's, and only where the text is editable**: `i a o d c y p u x .` and the
-  rest live in the source layer (source mode and the lens), so reading keeps its own `x` (tick a
-  task) and nothing else changes for it.
+- **Editing keys are vim's, and only where the text is editable**: `d c y p x .` and the rest live
+  in the source layer (source mode and the lens), so reading keeps its own `x` (tick a task). The
+  keys that start an edit (`i a I A o O`) and undo (`u ctrl+r U`) are in the reading layer too:
+  they switch the window to source first.
 
 ## Phase 3 — editing
 

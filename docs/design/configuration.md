@@ -73,7 +73,8 @@ scrolloff = 3                  # rows kept between the cursor and the view's edg
 [input]
 leader = "space"               # the key `leader` means in [keys] and [groups]
 which_key = true               # the popup for pending key sequences
-which_key_delay_ms = 500       # before it shows for prefixes other than the leader
+which_key_delay_ms = 500       # before it shows for prefixes other than the leader; also how long a
+                               # key that is both a binding and a prefix waits before it runs
 
 [capture]
 location = "state"             # state (never committed) | vault
