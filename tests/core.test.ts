@@ -731,3 +731,18 @@ describe("review cycle 5 (core, from mutation testing)", () => {
     expect(graphemeWidth("❤️")).toBe(2);
   });
 });
+
+describe("review cycle 5 (core, colour depth)", () => {
+  test("NO_COLOR and a pipe mean none; COLORTERM and known terminals truecolor; TERM for the rest", async () => {
+    const { detectColorDepth } = await import("../src/core/layout/ansi.ts");
+    expect(detectColorDepth({ NO_COLOR: "1", COLORTERM: "truecolor" }, true)).toBe("none");
+    expect(detectColorDepth({ NO_COLOR: "", COLORTERM: "truecolor" }, true)).toBe("truecolor"); // empty NO_COLOR is unset
+    expect(detectColorDepth({ COLORTERM: "truecolor" }, false)).toBe("none");
+    expect(detectColorDepth({ COLORTERM: "24bit" }, true)).toBe("truecolor");
+    expect(detectColorDepth({ TERM: "xterm-kitty" }, true)).toBe("truecolor");
+    expect(detectColorDepth({ TERM: "xterm", TERM_PROGRAM: "WezTerm" }, true)).toBe("truecolor");
+    expect(detectColorDepth({ TERM: "screen-256color" }, true)).toBe("256");
+    expect(detectColorDepth({ TERM: "dumb" }, true)).toBe("none");
+    expect(detectColorDepth({ TERM: "xterm" }, true)).toBe("16");
+  });
+});

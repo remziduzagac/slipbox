@@ -178,11 +178,12 @@ export const SCENARIOS: Scenario[] = [
       await s.status("VISUAL");
       await s.keys("l", "l", "l", "o");
       await s.keys("y");
-      await s.top(/copied \d+ characters/);
+      await s.top(/copied 4 characters/);
+      await s.until(() => [...s.clipboard()].length === 4, 3000, "v l l l y to copy four characters");
       await s.keys("V");
       await s.status("V-LINE");
       await s.keys("j", "ctrl+c");
-      await s.top(/copied \d+ characters/);
+      await s.until(() => s.clipboard().split("\n").length === 2, 3000, "V j ctrl+c to copy two whole rows");
       await s.keys("v", "l");
       await s.status("VISUAL");
       await s.keys("escape");
@@ -236,8 +237,14 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "l", "b");
       await s.see("Linking to");
       await s.keys("escape");
+      // The link under the cursor, as the status line names it.
+      const link = () => /→ (\S+)/.exec(s.statusLine())?.[1] ?? "";
+      await s.until(() => link() !== "", 3000, "the cursor on a link");
+      const first = link();
       await leader(s, "l", "n");
+      await s.until(() => link() !== "" && link() !== first, 3000, "space l n onto the next link");
       await leader(s, "l", "p");
+      await s.until(() => link() === first, 3000, "space l p back onto the first");
       await leader(s, "l", "f");
       await s.status("about-this-vault.md");
       await s.keys("H");
@@ -260,15 +267,20 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("ctrl+w", "s");
       await s.until(() => crumbs() === 2 && !sameRow(), 3000, "the split turned stacked");
       for (const k of ["h", "l", "k", "j", "w"]) await s.keys("ctrl+w", k);
-      await s.keys("ctrl+w");
-      await s.type("H");
-      await s.keys("ctrl+w");
-      await s.type("L");
-      await s.keys("ctrl+w");
-      await s.type("K");
-      await s.keys("ctrl+w");
-      await s.type("J");
+      // Moving a window to an edge turns the split: H and L side by side, K and J stacked.
+      for (const [k, side] of [["H", true], ["K", false], ["L", true], ["J", false]] as const) {
+        await s.keys("ctrl+w");
+        await s.type(k);
+        await s.until(() => sameRow() === side, 3000, `ctrl+w ${k}: ${side ? "side by side" : "stacked"}`);
+      }
+      // Swap: the two windows trade notes (one shows another note first).
+      await open(s, "writing-guide");
+      // The windows' notes in screen order, from their breadcrumbs (not the status line's path).
+      const order = () => (s.screen().slice(0, -1).join("\n").match(/\b(home|writing-guide)\.md\b/g) ?? []).join(" ");
+      await s.until(() => order().split(" ").length === 2, 3000, "two windows, two notes");
+      const before = order();
       await s.keys("ctrl+w", "x");
+      await s.until(() => order() === before.split(" ").reverse().join(" "), 3000, "ctrl+w x to swap the windows");
       for (const k of ["=", ">", "<", "+", "-"]) {
         await s.keys("ctrl+w");
         await s.type(k);
@@ -304,8 +316,10 @@ export const SCENARIOS: Scenario[] = [
       await s.status("home.md");
       await s.keys("ctrl+t");
       await s.type("L");
+      await s.see(/1 operations/); // home moved right, past the handbook
       await s.keys("ctrl+t");
       await s.type("H");
+      await s.see(/1 home/);
       await s.keys("ctrl+t", "q");
       await s.notSee(/2 home|2 operations/);
     },
@@ -468,6 +482,33 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: "vim grammar: counts, F, text objects (iW, vi(), *, cgn and ., insert's ctrl+w and ctrl+u",
+    options: { open: "edit-probe.md", files: { "edit-probe.md": "alpha beta gamma\na.b c\nf(ab) x\none two one two\n" } },
+    run: async (s) => {
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.keys("g", "g", "2", "w", "F", "b", "x"); // alpha eta gamma
+      await s.keys("j", "0", "d", "i", "W"); // " c"
+      await s.keys("j", "f", "a", "v", "i");
+      await s.type("(");
+      await s.keys("d"); // f() x
+      await s.keys("j", "0");
+      await s.type("*");
+      await s.keys("c", "g", "n");
+      await s.type("1");
+      await s.keys("escape", "."); // 1 two 1 two
+      await s.keys("o");
+      await s.type("typo word");
+      await s.keys("ctrl+w"); // typo
+      await s.type("fixed");
+      await s.keys("ctrl+u"); // what was typed on the line
+      await s.type("final");
+      await s.keys("escape", "0", "3", "x", "ctrl+s"); // al
+      // What the same keys give headlessly, and what vim gives.
+      await s.file("edit-probe.md", (t) => t === "alpha eta gamma\n c\nf() x\n1 two 1 two\nal\n", "the exact result of those keys");
+    },
+  },
+  {
     name: "task: x ticks a checkbox in the render and writes it",
     options: { open: MEETING },
     run: async (s) => {
@@ -517,6 +558,8 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("escape");
       await s.ex("e!");
       await s.until(() => !s.statusLine().includes("unsaved"), 3000, "the changes dropped");
+      await s.notSee(/^.*│ *unsaved\s*$/m); // the typed line is gone from the screen, not just the marker
+      s.expect(!s.read(MEETING).includes("unsaved"), "e! wrote nothing");
     },
   },
   {
@@ -621,6 +664,8 @@ export const SCENARIOS: Scenario[] = [
       await s.status(/scratch/);
       await leader(s, "s", "y");
       await s.top("copied");
+      // What space s a added: home's third row, with its path and line.
+      await s.until(() => /home\.md:\d+/.test(s.clipboard()), 3000, "the scratch holding home.md:line");
       await leader(s, "s", "d");
       await s.status("clear the scratch?");
       await s.type("y");
