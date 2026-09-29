@@ -79,6 +79,13 @@ the breadcrumb, `[[file.toml#section]]`, find and the lens work unchanged:
 - **Records become tables** through the allocator: a YAML or JSON list of two or more objects with
   plain values, TOML `[[name]]` entries likewise; a row per record, on its own source line.
 - **Comment lines** on their own are dimmed rows.
+- **Values that are links** (`16.15`) draw as links, followed with `enter`: a URL; a reference
+  key's value (`$ref`, `$schema`, `schema`, `include(s)`, `extends`, `import(s)`, `file`, `path`),
+  shown broken when it doesn't resolve; and any path-like value (`schemas/user.json`,
+  `../base.toml`) that resolves to a vault file — relative to the file's folder, as a markdown
+  link is. The graph reads the same links (files over 256 KB aside), so a data file shows among the
+  backlinks of what it points at, and `slipbox links` lists them. No wikilinks: data files have no
+  such convention.
 - **CSV and TSV** are one table: quoted fields (with `""` and newlines inside), the first row the
   header, rows padded to the widest; past 2,000 rows the rest are counted, and source mode shows
   them.

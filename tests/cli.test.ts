@@ -537,6 +537,11 @@ describe("the vault and the tool", () => {
     expect(slipbox(["outline", "cfg/site.toml", "--json"]).json.data.headings.map((h: { text: string }) => h.text)).toEqual(["site"]);
     expect(slipbox(["render", "tool.py"]).code).toBe(2);
     expect(slipbox(["task", "tool.py"]).code).toBe(2);
+    // Its links (16.15): a path that resolves, and it shows among the target's backlinks.
+    writeFileSync(join(vault, "cfg", "links.yaml"), "docs: ../home.md\nnope: home.md\nname: not-a-link\n"); // relative to the file
+    expect(slipbox(["links", "cfg/links.yaml", "--json"]).json.data.map((l: { target: string; status: string }) => [l.target, l.status])).toEqual([["../home.md", "note"]]);
+    expect(slipbox(["backlinks", "home", "--json"]).json.data.backlinks.some((b: { from: string }) => b.from === "cfg/links.yaml")).toBe(true);
+    rmSync(join(vault, "cfg", "links.yaml"));
     writeFileSync(join(vault, "cfg", "bad.json"), '{"a": }');
     expect(slipbox(["render", "cfg/bad.json"]).err).toContain("doesn't parse");
     for (const f of ["cfg/site.toml", "cfg/new.json", "cfg/bad.json", "tool.py", "pic.png"]) rmSync(join(vault, f));

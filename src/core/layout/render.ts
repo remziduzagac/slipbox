@@ -5,7 +5,7 @@
 
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
-import type { DataComment, DataField } from "../data.ts";
+import { type DataComment, type DataField, fieldLink } from "../data.ts";
 import { headingText, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
@@ -276,7 +276,7 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
     }
     default:
       if ((node.type as string) === "toml") return frontmatterBlock(fm ?? null, (node as { value: string }).value, srcOf(node), ctx, width);
-      if ((node.type as string) === "dataField") return dataField(node as unknown as DataField, width);
+      if ((node.type as string) === "dataField") return dataField(node as unknown as DataField, ctx, width);
       if ((node.type as string) === "dataComment") return dataComment(node as unknown as DataComment, width);
       // Unknown block: show its text rather than lose it.
       return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
@@ -548,12 +548,22 @@ function frontmatterBlock(fm: Frontmatter | null, raw: string, src: number, ctx:
 
 /** A data file's key and value (16.11): drawn like frontmatter's properties, the value coloured
  *  by its kind, a comment dimmed after it; the key column shared by the section's keys. */
-function dataField(f: DataField, width: number): Line[] {
+function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
   const src = srcOf(f as unknown as Nodes);
   const kw = Math.max(1, Math.min(f.keyWidth || stringWidth(sanitize(f.key)), Math.floor(width / 3)));
-  const role: Role = f.kind === "number" || f.kind === "date" ? "syn_number" : f.kind === "boolean" || f.kind === "null" ? "syn_constant" : "fm_value";
+  let role: Role = f.kind === "number" || f.kind === "date" ? "syn_number" : f.kind === "boolean" || f.kind === "null" ? "syn_constant" : "fm_value";
   const value = expandTabs(sanitize(f.value)) || (f.kind === "string" ? '""' : "");
-  const spans: Span[] = [{ text: value, role, attrs: 0 }];
+  // A value that is a link (16.15): a URL, a reference key's value, or a path that resolves.
+  const l = fieldLink(f);
+  let link: number | undefined;
+  if (l) {
+    const s = status(ctx, "markdown", l.target);
+    if (l.explicit || s === "resolved") {
+      link = addLink(ctx, { kind: "markdown", target: l.target, heading: null, text: f.value, status: s, src: f.keyLine });
+      role = s === "unresolved" ? "link_unresolved" : "link";
+    }
+  }
+  const spans: Span[] = [{ text: value, role, attrs: 0, ...(link !== undefined ? { link } : {}) }];
   if (f.comment) spans.push({ text: `${value ? "  " : ""}# ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`, role: "syn_comment", attrs: 0 });
   const rows = wrapSpans(spans, Math.max(4, width - kw - 3));
   return rows.map((row, i) => ({

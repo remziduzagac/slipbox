@@ -12,6 +12,8 @@ import { ensureDir, readJson, readText, writeJson } from "./fsutil.ts";
 import { isNotePath, LinkIndex, type MdLinkTarget, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, parseMarkdown, visit } from "./parse.ts";
 import { cacheDir } from "./paths.ts";
+import { dataLinks, parseData } from "./data.ts";
+import { classify } from "./filetypes.ts";
 import type { VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, WalkFilter, walkVault } from "./walk.ts";
 import type { WikiLink } from "./wikilink.ts";
@@ -76,6 +78,9 @@ export interface GraphStats {
   ms: number;
 }
 
+/** Data files larger than this aren't read for links (a lock file, a dump). */
+const DATA_LINK_MAX = 256 * 1024;
+
 export class Graph {
   readonly filter: WalkFilter;
   notes = new Map<string, NoteEntry>();
@@ -87,6 +92,7 @@ export class Graph {
   errors: string[] = [];
   stats: GraphStats = { notes: 0, parsed: 0, cached: 0, ms: 0 };
   private backlinkCache: Map<string, Backlink[]> | null = null;
+  private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
 
   constructor(
     readonly loc: VaultLocation,
@@ -241,6 +247,7 @@ export class Graph {
     if (!list) this.assets.set(key, [rel]);
     else if (!list.includes(rel)) list.push(rel);
     else return false;
+    this.backlinkCache = null;
     return true;
   }
 
@@ -252,6 +259,8 @@ export class Graph {
     const list = before.filter((p) => p !== rel);
     if (list.length) this.assets.set(key, list);
     else this.assets.delete(key);
+    this.dataLinkCache.delete(rel);
+    this.backlinkCache = null;
     return true;
   }
 
@@ -317,19 +326,21 @@ export class Graph {
 
   linksOf(rel: string): ResolvedLink[] {
     const note = this.entry(rel);
-    if (!note) return [];
-    return note.links.map((l) => ({ ...l, ...this.resolveLink(l, rel) }));
+    const links = note ? note.links : this.dataLinksOf(rel);
+    return links.map((l) => ({ ...l, ...this.resolveLink(l, rel) }));
   }
 
   backlinks(rel: string): Backlink[] {
     this.ensureAll();
     if (!this.backlinkCache) {
       const map = new Map<string, Backlink[]>();
-      for (const [from, note] of this.notes) {
-        for (const l of note.links) {
+      // Notes' links, and data files' (16.15); to a note or to a file (a config, a script, 16.3).
+      const sources: [string, LinkRef[]][] = [...[...this.notes].map(([from, note]) => [from, note.links] as [string, LinkRef[]]), ...this.dataFiles().map((f) => [f, this.dataLinksOf(f)] as [string, LinkRef[]])];
+      for (const [from, links] of sources) {
+        for (const l of links) {
           if (l.kind === "image") continue;
           const r = this.resolveLink(l, from);
-          if (r.resolvedKind !== "note" || !r.path || r.path === from) continue;
+          if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || r.path === from) continue;
           const list = map.get(r.path) ?? [];
           list.push({ from, line: l.line, column: l.column, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
           map.set(r.path, list);
@@ -338,6 +349,46 @@ export class Graph {
       this.backlinkCache = map;
     }
     return this.backlinkCache.get(rel) ?? [];
+  }
+
+  /** The vault's data files (JSON, YAML, TOML, INI, CSV). */
+  dataFiles(): string[] {
+    return this.filePaths().filter((p) => classify(p, this.config.walk.extensions).group === "data");
+  }
+
+  /**
+   * A data file's links (16.15): URLs, reference keys' values ($ref, include…) whether or not they
+   * resolve, and path-like values that do — read when asked and cached by the file's stamp. Files
+   * over 256 KB (lock files, dumps) aren't read for links.
+   */
+  dataLinksOf(rel: string): LinkRef[] {
+    const kind = classify(rel, this.config.walk.extensions);
+    if (kind.group !== "data") return [];
+    let st: { size: number; mtimeMs: number };
+    try {
+      st = statSync(join(this.root, rel));
+    } catch {
+      return [];
+    }
+    if (st.size > DATA_LINK_MAX) return [];
+    const stamp = `${st.mtimeMs}:${st.size}`;
+    const hit = this.dataLinkCache.get(rel);
+    if (hit?.stamp === stamp) return hit.links;
+    let links: LinkRef[] = [];
+    try {
+      const d = parseData(kind.format, readText(join(this.root, rel)).text);
+      links = dataLinks(d.tree)
+        .filter((l) => l.explicit || ["note", "file"].includes(this.resolveLink({ kind: "markdown", target: l.target }, rel).resolvedKind))
+        .map((l) => ({ kind: "markdown", target: l.target, heading: null, block: null, alias: null, text: l.key, line: l.line, column: 1 }));
+    } catch {}
+    this.dataLinkCache.set(rel, { stamp, links });
+    return links;
+  }
+
+  /** A data file changed or went: its links are read again, and backlinks recomputed. */
+  fileChanged(rel: string): void {
+    this.dataLinkCache.delete(rel);
+    this.backlinkCache = null;
   }
 }
 

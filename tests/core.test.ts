@@ -928,3 +928,18 @@ describe("data files read as documents (16.11–16.13)", () => {
     expect(parseData("csv", 'a\n"open\n').error).toBeTruthy();
   });
 });
+
+describe("links out of data files (16.15)", () => {
+  test("URLs and reference keys always; path-like values only when they resolve (the graph's call)", async () => {
+    const { fieldLink } = await import("../src/core/data.ts");
+    expect(fieldLink({ key: "home", value: "https://example.invalid/x" })).toEqual({ target: "https://example.invalid/x", explicit: true });
+    expect(fieldLink({ key: "$ref", value: "./user.json#/defs/id" })).toEqual({ target: "./user.json#/defs/id", explicit: true });
+    expect(fieldLink({ key: "include", value: "base.toml" })!.explicit).toBe(true);
+    expect(fieldLink({ key: "schema_file", value: "schemas/user.json" })).toEqual({ target: "schemas/user.json", explicit: false });
+    expect(fieldLink({ key: "docs", value: "docs/design/sync" })).toEqual({ target: "docs/design/sync", explicit: false });
+    expect(fieldLink({ key: "out", value: "dist/" })).toBeNull(); // a folder: never a link target
+    expect(fieldLink({ key: "name", value: "slipbox" })).toBeNull();
+    expect(fieldLink({ key: "version", value: "1.2.3" })).toBeNull();
+    expect(fieldLink({ key: "title", value: "a sentence with spaces.md" })).toBeNull();
+  });
+});

@@ -341,3 +341,24 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
     }
   });
 });
+
+describe("links out of data files and to files (16.15)", () => {
+  test("a data file's links resolve and count as backlinks; a note's link to a file is a backlink", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-datalinks-"));
+    mkdirSync(join(dir, ".slipbox"));
+    mkdirSync(join(dir, "schemas"));
+    writeFileSync(join(dir, "schemas", "user.json"), '{"type": "object"}\n');
+    writeFileSync(join(dir, "design.md"), "# Design\n\nSee [the config](app.toml).\n");
+    writeFileSync(join(dir, "app.toml"), '[api]\nschema = "schemas/user.json"\ndocs = "design.md"\nout = "no/such/dir/"\nhome = "https://example.invalid"\n');
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    const links = g.linksOf("app.toml");
+    expect(links.map((l) => [l.target, l.resolvedKind])).toEqual([
+      ["schemas/user.json", "file"],
+      ["design.md", "note"],
+      ["https://example.invalid", "external"],
+    ]); // "no/such/dir/" isn't a link: a path-like value counts only when it resolves
+    expect(g.backlinks("schemas/user.json").map((b) => [b.from, b.line])).toEqual([["app.toml", 2]]);
+    expect(g.backlinks("design.md").map((b) => b.from)).toEqual(["app.toml"]);
+    expect(g.backlinks("app.toml").map((b) => b.from)).toEqual(["design.md"]);
+  });
+});

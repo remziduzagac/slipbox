@@ -3485,6 +3485,7 @@ export class App {
         // An attachment appeared or went: ![[embeds]] of it change status.
         // Only a real change to the index re-lays anything out (a rewrite of a known image doesn't).
         if (c.kind === "deleted" ? this.graph.removeAsset(c.rel) : this.graph.addAsset(c.rel)) setChanged = true;
+        this.graph.fileChanged(c.rel); // a data file's links may have changed (16.15)
         // An open data or text file reloads like a note (16.4).
         const open = this.buffers.get(c.rel);
         if (open) this.reloadBuffer(open, c.kind === "deleted");

@@ -25,6 +25,8 @@ export interface DataField {
   comment: string | null;
   /** The key column's width, shared by the keys of one section so they line up. */
   keyWidth: number;
+  /** The key's own line (its position starts at a comment above it, when there is one). */
+  keyLine: number;
   position: { start: { line: number; column: number }; end: { line: number; column: number } };
 }
 
@@ -205,7 +207,7 @@ function readToml(source: string): ParsedData {
     const first = pending ? pending.line : i + 1;
     const comment = v.comment ?? (pending ? pending.text.join(" ") : null);
     pending = null;
-    out.push({ type: "dataField", key, value: shown.value, kind: shown.kind, comment, keyWidth: 0, position: pos(first, v.end + 1) } as unknown as RootContent);
+    out.push({ type: "dataField", key, value: shown.value, kind: shown.kind, comment, keyWidth: 0, keyLine: i + 1, position: pos(first, v.end + 1) } as unknown as RootContent);
     i = v.end;
   }
   flushComment();
@@ -315,7 +317,7 @@ function readIni(source: string): ParsedData {
     const first = pending ? pending.line : i + 1;
     comment ??= pending ? pending.text.join(" ") : null;
     pending = null;
-    out.push({ type: "dataField", key, value: quoted ? (quoted[1] ?? quoted[2])! : value, kind: quoted ? "string" : kindOf(value), comment, keyWidth: 0, position: pos(first, i + 1) } as unknown as RootContent);
+    out.push({ type: "dataField", key, value: quoted ? (quoted[1] ?? quoted[2])! : value, kind: quoted ? "string" : kindOf(value), comment, keyWidth: 0, keyLine: i + 1, position: pos(first, i + 1) } as unknown as RootContent);
   });
   flushComment();
   const tree: Root = { type: "root", children: out };
@@ -422,7 +424,7 @@ function walkYaml(node: YamlNode, depth: number, out: RootContent[], lineOf: (o:
       } else {
         const end = value?.range ? lineOf(Math.max(value.range[0], value.range[1] - 1)) : keyLine;
         const first = (key as { commentBefore?: string } | null)?.commentBefore ? Math.max(1, keyLine - (key as { commentBefore: string }).commentBefore.split("\n").length) : keyLine;
-        out.push({ type: "dataField", key: name, value: inline(value), kind: scalarKind(value), comment, keyWidth: 0, position: pos(first, Math.max(keyLine, end)) } as unknown as RootContent);
+        out.push({ type: "dataField", key: name, value: inline(value), kind: scalarKind(value), comment, keyWidth: 0, keyLine, position: pos(first, Math.max(keyLine, end)) } as unknown as RootContent);
       }
     }
   } else if (isSeq(node)) {
@@ -433,10 +435,10 @@ function walkYaml(node: YamlNode, depth: number, out: RootContent[], lineOf: (o:
         if (isMap(n) && depth <= HEADING_DEPTH) {
           out.push(heading(depth, `${i + 1}`, lineAt(n)));
           walkYaml(n, depth + 1, out, lineOf, source);
-        } else out.push({ type: "dataField", key: `${i + 1}`, value: inline(n), kind: scalarKind(n), comment: null, keyWidth: 0, position: pos(lineAt(n)) } as unknown as RootContent);
+        } else out.push({ type: "dataField", key: `${i + 1}`, value: inline(n), kind: scalarKind(n), comment: null, keyWidth: 0, keyLine: lineAt(n), position: pos(lineAt(n)) } as unknown as RootContent);
       });
   } else {
-    out.push({ type: "dataField", key: "value", value: inline(node), kind: scalarKind(node), comment: null, keyWidth: 0, position: pos(lineAt(node)) } as unknown as RootContent);
+    out.push({ type: "dataField", key: "value", value: inline(node), kind: scalarKind(node), comment: null, keyWidth: 0, keyLine: lineAt(node), position: pos(lineAt(node)) } as unknown as RootContent);
   }
 }
 
@@ -509,4 +511,45 @@ function readDelimited(source: string, sep: string): ParsedData {
     if (body.length > CSV_ROWS) out.push({ type: "dataComment", text: `… ${body.length - CSV_ROWS} more rows — source mode (space n v) shows them all`, position: pos(shown[shown.length - 1]!.line + 1) } as unknown as RootContent);
   }
   return { tree: { type: "root", children: out }, error };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Links out of data files (16.15)
+
+/** Keys whose value is a reference by intent: counted whether or not it resolves. */
+const REFERENCE_KEYS = /^(\$ref|\$schema|schema|include|includes|extends|import|imports|file|path)$/i;
+const URL = /^[a-z][a-z0-9+.-]*:\/\/\S+$/i;
+/** A path-like value: no spaces, a separator or a file extension (`schemas/user.json`, `../base.toml`). */
+const PATHLIKE = /^(?:\.{0,2}\/)?[\w.@~-]+(?:\/[\w.@~-]+)*(?:\.[A-Za-z0-9]{1,10})(?:#\S*)?$|^(?:\.{0,2}\/)?[\w.@~-]+(?:\/[\w.@~-]+)+\/?$/;
+
+export interface DataLink {
+  /** The value as a link target (a path relative to the file, maybe with #fragment, or a URL). */
+  target: string;
+  key: string;
+  line: number;
+  /** A URL, or a reference key's value: a link even when it doesn't resolve (then reported broken). */
+  explicit: boolean;
+}
+
+/** The link a key's value is, if any: a URL, a reference key's value, or a path-like string (which
+ *  counts only if it resolves — the caller checks). */
+export function fieldLink(f: Pick<DataField, "key" | "value">): { target: string; explicit: boolean } | null {
+  const v = f.value.trim();
+  if (!v || v.length > 500) return null;
+  if (URL.test(v)) return { target: v, explicit: true };
+  if (REFERENCE_KEYS.test(f.key) && !/\s/.test(v)) return { target: v, explicit: true };
+  if (PATHLIKE.test(v) && !/^\d+(\.\d+)+$/.test(v)) return { target: v, explicit: false };
+  return null;
+}
+
+/** Every key's link candidate in a data file's tree (resolution is the graph's). */
+export function dataLinks(tree: Root): DataLink[] {
+  const out: DataLink[] = [];
+  for (const n of tree.children) {
+    const f = n as unknown as DataField;
+    if (f.type !== "dataField") continue;
+    const l = fieldLink(f);
+    if (l) out.push({ ...l, key: f.key, line: f.keyLine });
+  }
+  return out;
 }
