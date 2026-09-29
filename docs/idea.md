@@ -548,6 +548,153 @@ git-root fallback** — convenient, but it would silently turn every repo you op
 **One vault per repo is enough.** Links do not cross vaults; connecting vaults is a separate
 problem for later.
 
+*Superseded 2026-09-30 by "Vaults — decided 2026-09-30" below: no init and no single-file mode, a
+git repository is a root, and links cross vaults (`[[vault:name]]`, path links).*
+
+## Vaults — decided 2026-09-30
+
+The worry that started this: Obsidian locks you into its vaults — you create one before you can
+work, and a markdown file outside it is out of reach. slipbox should open any folder or file, and
+leave the files readable by anything else. At the same time, links, backlinks, history, comments
+and agent conversations all need a place. The way out is to see that "a vault" was two separate
+things: **a namespace**, the set of notes in which a `[[name]]` is looked up, and **a place for
+data**. Only the first needs a folder to be marked; the second belongs outside it.
+
+### A root is decided by the file
+
+- **Every file belongs to exactly one root:** the nearest `.slipbox/` above it; else the git
+  repository it's in; else its own folder — never `$HOME` or `/`, which would index everything.
+  Where slipbox was opened doesn't matter: `~/notes/idea.md` is in `~/notes` however you reach it.
+- **No init, no degraded mode.** Opening a folder or a file just works, links and backlinks
+  included. `slipbox init` only creates `.slipbox/`, for the things below that need it.
+- **Opening `~`, or a big folder that isn't a root,** shows a launcher — the vaults this machine
+  knows, and a plain file tree — rather than indexing everything under it.
+- **A nested `.slipbox/` is a boundary:** its files are its own vault's, not the outer one's.
+
+The earlier "deliberately no git-root fallback" is reversed: its reason was that every repo you
+opened would turn into a vault, and a vault now costs nothing in the folder — nothing is written
+there, and the index is a cache elsewhere.
+
+### Where everything is stored
+
+Every piece of data answers two questions: can it be rebuilt from the files, and who is it for?
+
+| Place | Holds | Rebuilt if deleted? |
+| --- | --- | --- |
+| the notes themselves | links, tags, tasks, footnotes; frontmatter `aliases`, `previous_names` | — (the truth) |
+| `~/.config/slipbox/` | your settings, everywhere; themes | no: yours |
+| `~/.cache/slipbox/<vault>/` | the index: derived from the files | yes, on the next open |
+| `~/.local/state/slipbox/<vault>/` | personal data, per vault | no: yours, not shared |
+| `~/.local/state/slipbox/vaults.json` | the vaults this machine knows | partly: vaults re-add when opened |
+| `<vault>/.slipbox/` | what travels with the folder | no: commit it to share |
+
+**`~/.config/slipbox/`** (today): `config.toml` — the global settings — and `themes/`.
+
+**`~/.cache/slipbox/<vault>/`** — derived; delete it any time, nothing is lost:
+
+- today: `index.json` — each note's title, headings, links, tags, tasks, and its stamp (so a
+  reopen re-reads only what changed);
+- new: a content hash per file (move detection), and the links other vaults make into this one
+  (their backlinks here), as of each vault's last indexing.
+
+**`~/.local/state/slipbox/<vault>/`** — personal, per vault; history in one project never shows in
+another:
+
+- today: `positions.json` (reading positions: `slipbox history`), `session.json` (tabs, splits,
+  recent notes, UI settings changed in the TUI), the scratch (unless `capture.location = "vault"`
+  puts it in the project), `dirty/` (unsaved notes, for the CLI's staleness warning), the
+  clipboard's fallback file;
+- new: **redirects** learned from moves (`old.md → ideas/new.md`) — not derived, since only seeing
+  the move teaches them, so not in the cache; **conversations with agents** (a `claude -p`
+  question about a term in a PRD, and its answer); **private comments**.
+
+**`~/.local/state/slipbox/vaults.json`** (new, one for the machine): each known vault's id, name,
+aliases, previous names, the path it was last seen at, and when — what `[[vault:name]]` resolves
+through, and what the launcher lists.
+
+**`<vault>/.slipbox/`** — shared: it travels with the folder, and is committed when the vault is a
+repo (or not; that's the user's call):
+
+- today: `config.toml` (settings over the global ones) and `version`;
+- new, in `config.toml`: the vault's `id` (random, made once, never changed), `name`, `aliases`
+  and `previous_names`;
+- later: **shared comments** and **agent answers worth keeping**, for collaborators.
+
+**Keys:** `<vault>` is the vault's `id` when its root has a `.slipbox/` — so its personal data and
+cache survive moving the folder — else, as today, the folder's name and a hash of its path.
+
+**Config precedence:** the built-in defaults, then `~/.config/slipbox/config.toml`, then
+`<vault>/.slipbox/config.toml`.
+
+**No `.slipbox.local/`.** Personal data already lives in the global state, keyed per vault: a
+second home for it in the folder would be the complication this design avoids. Revisit only if
+personal data ever has to travel with a folder, or be visible beside it.
+
+### Names
+
+- **A vault** has, in `.slipbox/config.toml`: `id`, `name` (the folder's name at creation, stored,
+  so renaming the folder doesn't rename the vault), `aliases`, `previous_names`. Names are unique
+  on a machine.
+- **A note** is named by its file name and by frontmatter `aliases` (Obsidian's field, so other
+  tools read it), and remembers `previous_names` in its frontmatter.
+- **Aliases are addresses, previous names are history.** An alias resolves like the name itself.
+  A previous name is only a fallback, tried when normal resolution fails, and verified: for a
+  vault, the old name must lead to the same `id` (so a new vault reusing a name can't take old
+  links); for a note, its last-seen path and its content (move detection) must agree. Several
+  files agreeing on the same old name is a further signal. A link resolved this way says so, and
+  offers to be updated.
+- **Creating suggests distinct names.** A note named like another in the vault gets a suggestion
+  from its folder (`ideas-plan`); a vault inside vault `x` is suggested `x-plan`, and a name this
+  machine already knows is refused, with a suggestion. Suggestions, not rules.
+
+### Links
+
+| Link | Means | Crosses vaults |
+| --- | --- | --- |
+| `[[name]]`, `[[name\|text]]`, `[[name#Heading]]` | the note with that name or alias in this vault | no |
+| `[[vault:name]]`, `[[vault:name\|text]]`, `[[vault:name#Heading]]` | the same, in the named vault | yes |
+| `[text](../x.md)`, `[text](/x.md)` | that file: relative to the linking file, or to its root | yes |
+
+- **A name means the same on every machine.** The namespace is decided by the files (`.slipbox/`
+  or the repository) and the rules are fixed — exact case, same folder, deepest shared folder,
+  shortest path, else a picker — so no index ever travels: each machine builds its own from the
+  same files, and gets the same answers. The index only makes lookups fast; it never decides what
+  a link means. A central index merged across vaults was rejected for exactly that reason: `[[plan]]`
+  would change meaning with whatever else the machine had opened.
+- **`[[vault:name]]`** is MediaWiki's interwiki link. The vault is found by name or alias through
+  `vaults.json`, then the note inside it by the usual rules. Only a root with a `.slipbox/` (a
+  declared name) can be named; a repository without one is reached by path links.
+- **A vault this machine doesn't have** makes a broken link that says so ("unknown vault `app`"),
+  and where the vault was last seen, if it ever was — with an offer to point slipbox at it.
+- **Path links** name a place, need no namespace, and cross vaults freely. The target vault's index
+  keeps them working after a move (below).
+
+### Moves, renames and backlinks
+
+- **Moves are detected, not journalled.** Each vault's index hashes file contents; on a refresh, a
+  file that vanished and reappeared elsewhere with the same hash was moved — whoever moved it
+  (slipbox, `mv`, git, a file manager). The vault then keeps a redirect, and a link to the old path
+  follows it: it works, shows as moved, and offers to be rewritten — never rewritten silently.
+- **Backlinks cross vaults** in the same `vault:name` form, taken from each vault's index: as fresh
+  as each vault's last indexing.
+- **Renaming a note or a vault** fixes the links in every vault this machine can reach, found
+  through backlinks, after a preview that lists every file in every vault (and warns when a vault's
+  git tree already has changes: this is the one time slipbox writes into another project, and only
+  because you asked). The old name goes to `previous_names`, which keeps links working in places
+  this machine can't reach — a colleague's clone, a vault not opened here. For notes, writing
+  `previous_names` into the frontmatter is a setting, on by default.
+- **Indexing is per vault, on demand, and incremental.** Opening a vault refreshes its index and
+  those of the vaults it links into — only those. Measured on 2,000 notes (5 MB, 10,000 links):
+  3.4 s the first time ever (in the background; the note shows at once), 17 ms on each later open,
+  56 ms after one file changed, 12 ms for a note's backlinks.
+
+### Rejected on the way
+
+- **A central index across all vaults** — it would make a link's meaning depend on the machine.
+- **A rename journal** — move detection covers it, and also catches moves made outside slipbox.
+- **Rewriting other vaults' files at rename time without asking** — only with the preview.
+- **`.slipbox.local/`** — see above.
+
 ## Effort
 
 **The 1,500–3,000 line estimate is for the core only** — app state, file browsing, root
