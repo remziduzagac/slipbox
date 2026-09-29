@@ -388,7 +388,15 @@ function readYaml(source: string, json: boolean): ParsedData {
   const list = Array.isArray(docs) ? docs : [docs];
   const lineOf = (offset: number) => lc.linePos(offset).line;
   const out: RootContent[] = [];
+  const srcLines = text.split("\n");
+  let docStart = 1;
   list.forEach((doc, d) => {
+    // Where this document's text starts: the line after its `---` (the first has none).
+    if (d > 0) {
+      let k = docStart;
+      while (k <= srcLines.length && !/^---(\s|$)/.test(srcLines[k - 1]!)) k++;
+      docStart = k + 1;
+    }
     if (doc.errors.length && !error) {
       const e = doc.errors[0]!;
       error = `line ${lineOf(e.pos[0])}: ${firstLine(e.message)}`;
@@ -396,10 +404,14 @@ function readYaml(source: string, json: boolean): ParsedData {
     const contents = doc.contents as YamlNode | null;
     // A comment block before a document's content (a blank line after it keeps it off the first
     // key): the file's, or the document's, opening prose.
-    const opening = (doc as { commentBefore?: string | null }).commentBefore?.trim();
+    // (The parser keeps it on the document, or — after a `---` — on its content.)
+    const opening = ((doc as { commentBefore?: string | null }).commentBefore ?? (contents as { commentBefore?: string | null } | null)?.commentBefore)?.trim();
     if (opening) {
-      const start = doc.range ? lineOf(doc.range[0]) : 1;
+      // Its lines are the first comment lines of the document (the parser keeps no position for
+      // them): after the previous document's `---`, blank lines skipped.
       const n = opening.split("\n").length;
+      let start = d === 0 ? 1 : docStart;
+      while (start <= srcLines.length && !srcLines[start - 1]!.trimStart().startsWith("#")) start++;
       out.push({ type: "dataComment", text: opening.split("\n").map((l) => l.trim()).join("\n"), position: pos(start, start + n - 1) } as unknown as RootContent);
     }
     // Several documents (`---`): each a branch of its own, its keys under it.

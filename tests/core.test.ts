@@ -925,6 +925,9 @@ describe("data files read as documents (16.11–16.13)", () => {
       ["n", "2", "LL", "", 13],
     ]);
     expect(dataOutline(y.tree).map((h) => [h.depth, h.text])).toEqual([[1, "b"], [2, "e"], [3, "g"], [1, "rows"], [1, "v"], [2, "1"], [2, "2"]]);
+    // A document's opening comment block, on its own lines (the lens edits it, not the first key).
+    const c = parseData("yaml", "# one\n# two\n\nk: 1\n---\n\n# three\n\nm: 2\n");
+    expect(c.tree.children.filter((n) => n.type === ("dataComment" as never)).map((n) => [n.position!.start.line, n.position!.end.line])).toEqual([[1, 2], [7, 7]]);
     const j = parseData("json", '{\n  "name": "s",\n  // a comment\n  "deps": {"a": "1"}\n}\n');
     expect(j.error).toBeNull(); // jsonc comments are allowed
     expect((j.tree.children[1] as unknown as { key: string; value: string }).value).toBe("{a: 1}"); // small and plain: inline
