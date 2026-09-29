@@ -12,7 +12,7 @@ import { readText, type Stamp, stamp } from "../core/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
 import { layoutSource, newSourceCache, scanHeadings } from "../core/layout/source.ts";
-import { type ParsedNote, parseMarkdown } from "../core/parse.ts";
+import { newParseCache, type ParsedNote, parseMarkdown } from "../core/parse.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
 export interface TextEdit {
@@ -54,6 +54,8 @@ export class NoteBuffer {
   private layouts = new Map<string, Layout>();
   /** Source mode's rows line by line, reused across keystrokes (only a changed line is laid out). */
   private readonly sourceCache = newSourceCache();
+  /** The note's parse in chunks, reused across edits and reloads (only a changed chunk re-parses). */
+  private readonly parseCache = newParseCache();
 
   constructor(
     /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */
@@ -119,7 +121,7 @@ export class NoteBuffer {
   /** The parse of the current text, redone only when the text changed since. */
   get parsed(): ParsedNote {
     if (this.parsedVersion !== this.version) {
-      this.parsedNote = parseMarkdown(this.source);
+      this.parsedNote = parseMarkdown(this.source, this.parseCache);
       this.parsedVersion = this.version;
     }
     return this.parsedNote;
