@@ -2462,7 +2462,7 @@ describe("top bar, tab strip, status line", () => {
     const box = h.app.geometry!.hot.find((r) => r.id === "toast:0")!;
     expect(f[box.y + 1]).toContain("✗ something broke"); // in its box, under its top border
     expect(box.x + box.w).toBeGreaterThan(90); // at the right
-    expect(box.y).toBeGreaterThanOrEqual(h.app.geometry!.panes[0]!.y); // below the window's chrome
+    expect(box.y).toBe(h.app.geometry!.panes[0]!.y - 1); // on the rule under the window's chrome
     expect(f.at(-1)).toContain("READ"); // the status line stays
     // Several stack, newest on top; the same one again doesn't stack twice.
     h.app.message("warn", "and a warning");

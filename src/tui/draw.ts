@@ -1222,10 +1222,10 @@ function drawToasts(app: App, c: Canvas, top: number, bottom: number, geo: Geome
   const bg = roleStyle(theme, "overlay", null);
   const maxW = Math.max(16, Math.min(56, Math.floor(c.width * 0.45)));
   const right = c.width - 2; // clear of the scrollbar and the rail
-  // Below the chrome at the top of the window under them (breadcrumb, find and replace rows, whose
-  // counts and toggles sit at the right): from its first row of text.
+  // Hanging from the rule under the chrome at the top of the window under them (breadcrumb, find
+  // and replace rows, whose counts and toggles sit at the right): the rule just above its text.
   const under = geo.panes.filter((p) => p.x + p.w > right - maxW && p.x < right);
-  let y = Math.max(top + 1, under.length ? Math.min(...under.map((p) => p.y)) : top + 1);
+  let y = Math.max(top, (under.length ? Math.min(...under.map((p) => p.y)) : top + 1) - 1);
   app.toasts.forEach((m, i) => {
     const role: Role = m.level === "error" ? "error" : m.level === "warn" ? "warn" : "info";
     // An info message that starts with its own symbol (`↻ … reloaded`) needs no second one.

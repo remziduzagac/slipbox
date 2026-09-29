@@ -157,8 +157,9 @@ Vim's `:s` (`docs/design/keymap.md`) uses the same engine, `core/replace.ts`; wi
 same two rows ask at each match, `replace? y n a q` where the buttons were.
 
 **Messages and prompts never take a row of their own,** so the note never changes height for them.
-Messages float as boxes at the top right of the content, below the chrome at the top of the window
-under them (its breadcrumb, find and replace rows), newest on top and stacked down, four at most:
+Messages float as boxes at the top right of the content, hanging from the rule under the chrome at
+the top of the window under them (its breadcrumb, find and replace rows, which stay in sight),
+newest on top and stacked down, four at most:
 each framed in its level's colour with its glyph first — `✗` error, `!` warning, `·` info (ascii
 `x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just that) —
 and wrapped to three rows. Each shows 4 s (8 s an error); the same message again refreshes its box
