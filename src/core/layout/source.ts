@@ -34,55 +34,126 @@ interface Cell {
 // biome-ignore lint: control characters are the point of this pattern
 const CONTROL = /^[\x00-\x08\x0b-\x1f\x7f-\x9f‪-‮⁦-⁩]/;
 
-export function layoutSource(source: string, opts: SourceLayoutOptions): Layout {
+/**
+ * The last layout's lines, kept by the caller between layouts of the same text as it is edited (a
+ * buffer keeps one): the lines before and after an edit are reused — shifted when lines were added
+ * or taken away — and only those between are laid out, so a keystroke costs a line, not the note.
+ */
+export interface SourceCache {
+  /** The options the rows were made for: a change drops everything. */
+  key: string;
+  texts: string[];
+  /** The highlighter's state at each line's start ("" none, "fm0"/"fm" frontmatter, "c…" code). */
+  states: string[];
+  /** Each line's rows, and its natural width. */
+  rows: Line[][];
+  naturals: number[];
+}
+
+export function newSourceCache(): SourceCache {
+  return { key: "", texts: [], states: [], rows: [], naturals: [] };
+}
+
+export function layoutSource(source: string, opts: SourceLayoutOptions, cache: SourceCache = newSourceCache()): Layout {
   const tab = opts.tabWidth ?? 4;
-  const lines: Line[] = [];
   const texts = source.split("\n");
   if (!opts.slice && texts.length > 1 && texts[texts.length - 1] === "") texts.pop(); // a final newline ends the last line
-  const roles = highlight(texts);
+  const width = opts.wrap ? Math.max(1, opts.width) : Number.POSITIVE_INFINITY;
+  const cacheKey = `${width}:${tab}`;
+  const old = cache.key === cacheKey ? cache : newSourceCache();
+  const O = old.texts;
+  const n = texts.length;
+  // The unchanged lines at each end.
+  let pre = 0;
+  while (pre < n && pre < O.length && texts[pre] === O[pre]) pre++;
+  let suf = 0;
+  while (suf < n - pre && suf < O.length - pre && texts[n - 1 - suf] === O[O.length - 1 - suf]) suf++;
+  const states: string[] = old.states.slice(0, pre);
+  const rows: Line[][] = old.rows.slice(0, pre);
+  const naturals: number[] = old.naturals.slice(0, pre);
+  // The state at the first changed line: after the unchanged ones, as the old layout had it.
+  let state = pre > 0 ? nextState(old, pre - 1, texts[pre - 1]!) : texts[0]?.replace(/\r$/, "") === "---" ? "fm0" : "";
+  const lay = (i: number) => {
+    const built = layoutLine(texts[i]!, state, i, width, tab);
+    states.push(state);
+    rows.push(built.rows);
+    naturals.push(built.natural);
+    state = built.out;
+  };
+  let i = pre;
+  for (; i < n - suf; i++) lay(i);
+  // The unchanged end: reused from where the highlighter's state agrees with the old one there
+  // (a new fence above changes how every line after it is coloured, until it closes).
+  const shift = n - O.length;
+  for (; i < n; i++) {
+    const o = i - shift;
+    if (old.states[o] !== state) {
+      lay(i);
+      continue;
+    }
+    for (; i < n; i++) {
+      const o2 = i - shift;
+      states.push(old.states[o2]!);
+      naturals.push(old.naturals[o2]!);
+      const r = old.rows[o2]!;
+      const src = i + 1;
+      rows.push(shift === 0 ? r : r.map((row) => ({ ...row, src, spans: row.spans.map((sp) => ({ ...sp, src })) })));
+    }
+  }
+  Object.assign(cache, { key: cacheKey, texts, states, rows, naturals });
+  const lines: Line[] = [];
+  const firstRow: number[] = [];
   let natural = 0;
-  texts.forEach((raw, i) => {
-    const text = raw.endsWith("\r") ? raw.slice(0, -1) : raw; // CRLF: the CR isn't shown
-    const lineRoles = roles[i]!;
-    const cells: Cell[] = [];
-    let col = 0;
-    let at = 0;
-    for (const g of graphemes(text)) {
-      const role = lineRoles[at] ?? "text";
-      if (g === "\t") {
-        const n = tab - (col % tab);
-        for (let k = 0; k < n; k++) cells.push({ g: " ", w: 1, at, role });
-        col += n;
-      } else if (CONTROL.test(g)) {
-        cells.push({ g: "�", w: 1, at, role: "dim" });
-        col += 1;
-      } else {
-        const w = graphemeWidth(g);
-        cells.push({ g, w, at, role });
-        col += w;
-      }
-      at += g.length;
-    }
-    natural = Math.max(natural, col);
-    for (const row of wrapCells(cells, opts.wrap ? Math.max(1, opts.width) : Number.POSITIVE_INFINITY)) {
-      lines.push({ spans: toSpans(row.cells, i + 1), src: i + 1, srcMap: { cells: row.cells.map((c) => c.at), end: row.end ?? text.length } });
-    }
-  });
+  for (let k = 0; k < rows.length; k++) {
+    firstRow.push(lines.length);
+    for (const r of rows[k]!) lines.push(r);
+    if (naturals[k]! > natural) natural = naturals[k]!;
+  }
   if (!lines.length) lines.push({ spans: [], src: 1, srcMap: { cells: [], end: 0 } });
   const headings: LayoutHeading[] = [];
-  // Each source line's first row, in one pass (rows are in source order): a lookup per heading
-  // would be headings × rows on every keystroke.
-  const firstRow = new Map<number, number>();
-  lines.forEach((l, i) => {
-    if (!firstRow.has(l.src)) firstRow.set(l.src, i);
-  });
   for (const h of opts.headings) {
-    const row = firstRow.get(h.src) ?? -1;
-    if (row < 0) continue;
-    lines[row]!.heading ??= headings.length;
+    const row = firstRow[h.src - 1] ?? -1;
+    if (row < 0 || !lines[row]) continue;
+    // A copy with its heading: the rows themselves are kept and shared between layouts.
+    if (lines[row]!.heading === undefined) lines[row] = { ...lines[row]!, heading: headings.length };
     headings.push({ ...h, line: row });
   }
   return { lines, links: [], headings, width: opts.wrap ? opts.width : Math.max(opts.width, natural + 1) };
+}
+
+/** The highlighter's state after line `i` of the old layout (its text unchanged). */
+function nextState(old: SourceCache, i: number, raw: string): string {
+  const after = old.states[i + 1];
+  if (after !== undefined) return after;
+  return highlightLine(raw, old.states[i]!, i).out;
+}
+
+/** One source line's rows. */
+function layoutLine(raw: string, state: string, i: number, width: number, tab: number): { rows: Line[]; natural: number; out: string } {
+  const src = i + 1;
+  const hl = highlightLine(raw, state, i);
+  const text = raw.endsWith("\r") ? raw.slice(0, -1) : raw; // CRLF: the CR isn't shown
+  const cells: Cell[] = [];
+  let col = 0;
+  let at = 0;
+  for (const g of graphemes(text)) {
+    const role = hl.roles[at] ?? "text";
+    if (g === "\t") {
+      const k = tab - (col % tab);
+      for (let j = 0; j < k; j++) cells.push({ g: " ", w: 1, at, role });
+      col += k;
+    } else if (CONTROL.test(g)) {
+      cells.push({ g: "�", w: 1, at, role: "dim" });
+      col += 1;
+    } else {
+      const w = graphemeWidth(g);
+      cells.push({ g, w, at, role });
+      col += w;
+    }
+    at += g.length;
+  }
+  const rows: Line[] = wrapCells(cells, width).map((row) => ({ spans: toSpans(row.cells, src), src, srcMap: { cells: row.cells.map((c) => c.at), end: row.end ?? text.length } }));
+  return { rows, natural: col, out: hl.out };
 }
 
 /** Rows of cells no wider than `width`: at the last space that fits, else wherever it must.
@@ -123,69 +194,68 @@ function toSpans(cells: Cell[], src: number): Span[] {
 }
 
 /**
- * A role for each UTF-16 offset of each line: light markdown highlighting, line by line with a
- * little state (frontmatter, fenced code). Anything it doesn't know is text.
+ * A role for each UTF-16 offset of a line: light markdown highlighting with a little state carried
+ * from line to line — "fm0" (a first line of "---"), "fm" (inside frontmatter), "c<fence>" (inside
+ * fenced code), "" (neither). Anything it doesn't know is text.
  */
-function highlight(texts: string[]): Role[][] {
-  const out: Role[][] = [];
-  let fence: string | null = null;
-  let frontmatter = texts[0]?.replace(/\r$/, "") === "---";
-  texts.forEach((raw, i) => {
-    const text = raw.replace(/\r$/, "");
-    const roles: Role[] = new Array(raw.length).fill("text");
-    const paint = (from: number, to: number, role: Role) => {
-      for (let k = from; k < Math.min(to, roles.length); k++) roles[k] = role;
-    };
-    out.push(roles);
-    if (frontmatter) {
-      if (i > 0 && (text === "---" || text === "...")) {
-        frontmatter = false;
-        paint(0, text.length, "fm_border");
-      } else if (i === 0) paint(0, text.length, "fm_border");
-      else {
-        const m = /^(\s*[\w-]+)(:)/.exec(text);
-        paint(0, text.length, "fm_value");
-        if (m) paint(0, m[1]!.length, "fm_key");
-      }
-      return;
+function highlightLine(raw: string, state: string, i: number): { roles: Role[]; out: string } {
+  const text = raw.replace(/\r$/, "");
+  const roles: Role[] = new Array(raw.length).fill("text");
+  const paint = (from: number, to: number, role: Role) => {
+    for (let k = from; k < Math.min(to, roles.length); k++) roles[k] = role;
+  };
+  if (state === "fm0") {
+    paint(0, text.length, "fm_border");
+    return { roles, out: "fm" };
+  }
+  if (state === "fm") {
+    if (i > 0 && (text === "---" || text === "...")) {
+      paint(0, text.length, "fm_border");
+      return { roles, out: "" };
     }
-    const f = /^\s{0,3}(`{3,}|~{3,})/.exec(text);
-    if (fence) {
-      paint(0, text.length, "code_block");
-      if (f && f[1]![0] === fence[0] && f[1]!.length >= fence.length && !text.slice(f[0].length).trim()) fence = null;
-      return;
+    const m = /^(\s*[\w-]+)(:)/.exec(text);
+    paint(0, text.length, "fm_value");
+    if (m) paint(0, m[1]!.length, "fm_key");
+    return { roles, out: "fm" };
+  }
+  const f = /^\s{0,3}(`{3,}|~{3,})/.exec(text);
+  if (state.startsWith("c")) {
+    const fence = state.slice(1);
+    paint(0, text.length, "code_block");
+    const closes = f && f[1]![0] === fence[0] && f[1]!.length >= fence.length && !text.slice(f[0].length).trim();
+    return { roles, out: closes ? "" : state };
+  }
+  if (f) {
+    paint(0, text.length, "code_label");
+    return { roles, out: `c${f[1]!}` };
+  }
+  const h = /^\s{0,3}(#{1,6})(\s|$)/.exec(text);
+  if (h) {
+    paint(0, text.length, `h${h[1]!.length}` as Role);
+    return { roles, out: "" };
+  }
+  if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(text)) {
+    paint(0, text.length, "rule");
+    return { roles, out: "" };
+  }
+  // Quote bars, then a list marker (and a task box) after them.
+  let at = 0;
+  const q = /^(\s*>)+/.exec(text);
+  if (q) {
+    paint(0, q[0].length, "quote_bar");
+    at = q[0].length;
+  }
+  const li = /^(\s*)([-*+]|\d{1,9}[.)])(\s+)(\[[ xX]\])?/.exec(text.slice(at));
+  if (li) {
+    const m0 = at + li[1]!.length;
+    paint(m0, m0 + li[2]!.length, "list_marker");
+    if (li[4]) {
+      const b = m0 + li[2]!.length + li[3]!.length;
+      paint(b, b + 3, li[4] === "[ ]" ? "check_todo" : "check_done");
     }
-    if (f) {
-      fence = f[1]!;
-      paint(0, text.length, "code_label");
-      return;
-    }
-    const h = /^\s{0,3}(#{1,6})(\s|$)/.exec(text);
-    if (h) {
-      paint(0, text.length, `h${h[1]!.length}` as Role);
-      return;
-    }
-    if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(text)) {
-      paint(0, text.length, "rule");
-      return;
-    }
-    // Quote bars, then a list marker (and a task box) after them.
-    let at = 0;
-    const q = /^(\s*>)+/.exec(text);
-    if (q) {
-      paint(0, q[0].length, "quote_bar");
-      at = q[0].length;
-    }
-    const li = /^(\s*)([-*+]|\d{1,9}[.)])(\s+)(\[[ xX]\])?/.exec(text.slice(at));
-    if (li) {
-      const m0 = at + li[1]!.length;
-      paint(m0, m0 + li[2]!.length, "list_marker");
-      if (li[4]) {
-        const b = m0 + li[2]!.length + li[3]!.length;
-        paint(b, b + 3, li[4] === "[ ]" ? "check_todo" : "check_done");
-      }
-    }
-    // Inline: code spans, then links (wikilinks and [text](url)) outside them.
+  }
+  // Inline: code spans, then links (wikilinks and [text](url)) outside them.
+  if (text.includes("`") || text.includes("[")) {
     const code: [number, number][] = [];
     for (const m of text.matchAll(/(`+)[^`]*?\1/g)) {
       paint(m.index, m.index + m[0].length, "code_inline");
@@ -194,8 +264,8 @@ function highlight(texts: string[]): Role[][] {
     const inCode = (k: number) => code.some(([a, b]) => k >= a && k < b);
     for (const m of text.matchAll(/!?\[\[[^\]\n]+\]\]/g)) if (!inCode(m.index)) paint(m.index, m.index + m[0].length, "wikilink");
     for (const m of text.matchAll(/!?\[[^\]\n]*\]\([^)\n]*\)/g)) if (!inCode(m.index)) paint(m.index, m.index + m[0].length, "link");
-  });
-  return out;
+  }
+  return { roles, out: "" };
 }
 
 /**
@@ -205,7 +275,6 @@ function highlight(texts: string[]): Role[][] {
  */
 export function scanHeadings(source: string): Omit<LayoutHeading, "line">[] {
   const out: Omit<LayoutHeading, "line">[] = [];
-  const counts = new Map<string, number>();
   const lines = source.split("\n");
   let fence: string | null = null;
   let frontmatter = lines[0]?.replace(/\r$/, "") === "---";
@@ -232,10 +301,8 @@ export function scanHeadings(source: string): Omit<LayoutHeading, "line">[] {
       .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
       .replace(/[*_`~]/g, "")
       .trim();
-    const base = slugify(plain);
-    const n = counts.get(base) ?? 0;
-    counts.set(base, n + 1);
-    out.push({ level: h[1]!.length, text: plain, slug: n === 0 ? base : `${base}-${n}`, src: i + 1 });
+    // Slugged as the render slugs them: a repeated heading keeps its plain slug (no -1 suffix).
+    out.push({ level: h[1]!.length, text: plain, slug: slugify(plain), src: i + 1 });
   });
   return out;
 }

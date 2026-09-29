@@ -746,3 +746,34 @@ describe("review cycle 5 (core, colour depth)", () => {
     expect(detectColorDepth({ TERM: "xterm" }, true)).toBe("16");
   });
 });
+
+describe("the incremental source layout (15.1)", () => {
+  test("after any edit, reusing the last layout's lines gives exactly a fresh layout", async () => {
+    const { layoutSource, newSourceCache, scanHeadings } = await import("../src/core/layout/source.ts");
+    let seed = 5;
+    const rand = (n: number) => {
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+      return (seed >>> 8) % n;
+    };
+    const pieces = ["", "text", "# Heading", "- [ ] task", "```", "~~~", "---", "> quote `code`", "[[link]] and [md](x.md)", "\t tab\there", "漢字の行", "a long line that will wrap at the narrow width we use for this test"];
+    for (const width of [12, 40]) {
+      for (const wrap of [true, false]) {
+        const cache = newSourceCache();
+        let lines = Array.from({ length: 30 }, () => pieces[rand(pieces.length)]!);
+        for (let step = 0; step < 300; step++) {
+          const at = rand(lines.length + 1);
+          const r = rand(4);
+          if (r === 0) lines.splice(at, 0, pieces[rand(pieces.length)]!); // a line added
+          else if (r === 1 && lines.length > 1) lines.splice(Math.min(at, lines.length - 1), 1); // taken away
+          else if (at < lines.length) lines[at] = `${lines[at]}${pieces[rand(pieces.length)]!.slice(0, 3)}`; // typed into
+          else lines = [pieces[rand(pieces.length)]!, ...lines];
+          const text = `${lines.join("\n")}\n`;
+          const opts = { width, wrap, headings: scanHeadings(text) };
+          const inc = layoutSource(text, opts, cache);
+          const fresh = layoutSource(text, opts);
+          expect(JSON.stringify(inc)).toBe(JSON.stringify(fresh));
+        }
+      }
+    }
+  });
+});

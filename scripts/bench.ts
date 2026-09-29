@@ -1,0 +1,175 @@
+// Timings for the paths that grow with a note's size (plan 15.1): bun scripts/bench.ts [filter…]
+//
+// Generates big notes in a temporary vault, drives the TUI model headlessly (as tests/tui.test.ts
+// does) and the CLI as a process, and prints the median of a few runs of each. Nothing outside the
+// temporary directory is touched; the config, state and cache go there too.
+
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const dir = mkdtempSync(join(tmpdir(), "slipbox-bench-"));
+process.env.XDG_STATE_HOME = join(dir, "state");
+process.env.XDG_CACHE_HOME = join(dir, "cache");
+process.env.XDG_CONFIG_HOME = join(dir, "config");
+process.env.SLIPBOX_CLIPBOARD = "file";
+delete process.env.SLIPBOX_CONFIG;
+
+const { canonKey } = await import("../src/core/commands.ts");
+const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+const { openGraph } = await import("../src/core/graph.ts");
+const { locateVault } = await import("../src/core/vault.ts");
+const { App } = await import("../src/tui/app.ts");
+const { TextCanvas } = await import("../src/tui/canvas.ts");
+
+const vault = join(dir, "vault");
+const MAIN = join(import.meta.dir, "..", "src", "main.ts");
+
+/** A note of `n` lines of the usual mixture: headings, prose, lists, tasks, code, tables. */
+function mixed(n: number): string {
+  const out: string[] = [];
+  for (let i = 0; out.length < n; i++) {
+    out.push(`## Section ${i}`, "");
+    out.push(`Some prose for section ${i}, with **bold**, a [[link-${i % 50}]] and \`code\`; long enough to wrap at eighty columns once.`, "");
+    out.push(`- item ${i} one`, `- item ${i} two`, `  - nested ${i}`, `- [ ] task ${i}`, "");
+    if (i % 5 === 0) out.push("```ts", `const x${i} = ${i};`, `function f${i}() { return x${i}; }`, "```", "");
+    if (i % 7 === 0) out.push("| a | b | c |", "| --- | --- | --- |", `| ${i} | cell ${i} | more text ${i} |`, "");
+  }
+  return `${out.slice(0, n).join("\n")}\n`;
+}
+
+const notes: Record<string, string> = {
+  "small.md": mixed(200),
+  "k1.md": mixed(1000),
+  "k20.md": mixed(20000),
+  "tasks20k.md": Array.from({ length: 20000 }, (_, i) => `- [ ] task number ${i} with a little text`).join("\n") + "\n",
+};
+const { mkdirSync } = await import("node:fs");
+mkdirSync(join(vault, ".slipbox"), { recursive: true });
+for (const [name, text] of Object.entries(notes)) writeFileSync(join(vault, name), text);
+
+const filters = process.argv.slice(2);
+const want = (name: string) => !filters.length || filters.some((f) => name.includes(f));
+
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)]!;
+}
+
+async function makeApp(open: string, width = 120, height = 40) {
+  const config = structuredClone(DEFAULT_CONFIG);
+  config.ui.restore_session = false;
+  config.editor.autosave_ms = 0;
+  const loc = locateVault({ root: vault });
+  const graph = openGraph(loc, config, false, "lazy");
+  const app = new App({ loc, config, graph, host: { requestRender() {}, osc52: () => true, quit() {} }, open, watch: false });
+  let w = width;
+  let h = height;
+  const frame = () => app.draw(new TextCanvas(w, h));
+  const key = async (k: string) => {
+    await app.handleKey(canonKey(k));
+    frame();
+  };
+  frame();
+  return { app, key, frame, resize: (nw: number, nh: number) => ((w = nw), (h = nh), frame()) };
+}
+
+async function time(fn: () => Promise<void> | void): Promise<number> {
+  const t = performance.now();
+  await fn();
+  return performance.now() - t;
+}
+
+const rows: [string, string][] = [];
+async function bench(name: string, run: () => Promise<number[]>): Promise<void> {
+  if (!want(name)) return;
+  const xs = await run();
+  const line = `${median(xs).toFixed(1).padStart(8)} ms   (min ${Math.min(...xs).toFixed(1)}, max ${Math.max(...xs).toFixed(1)}, n=${xs.length})`;
+  rows.push([name, line]);
+  console.log(`${name.padEnd(44)} ${line}`);
+}
+
+for (const note of ["k1.md", "k20.md"]) {
+  await bench(`open ${note} (parse + layout + draw)`, async () => {
+    const xs: number[] = [];
+    for (let k = 0; k < 3; k++) xs.push(await time(() => makeApp(note).then(() => {})));
+    return xs;
+  });
+  await bench(`j in ${note} (read mode)`, async () => {
+    const { key } = await makeApp(note);
+    const xs: number[] = [];
+    for (let k = 0; k < 20; k++) xs.push(await time(() => key("j")));
+    return xs;
+  });
+  await bench(`type a key, source mode, ${note}`, async () => {
+    const { key } = await makeApp(note);
+    for (const k of ["space", "n", "v", "shift+g", "o"]) await key(k);
+    await key("x");
+    const xs: number[] = [];
+    for (let k = 0; k < 20; k++) xs.push(await time(() => key("x")));
+    return xs;
+  });
+  await bench(`type a key, source mode mid-note, ${note}`, async () => {
+    const { key, app } = await makeApp(note);
+    for (const k of ["space", "n", "v"]) await key(k);
+    const half = Math.floor(app.view!.buf.lineStarts().length / 2);
+    for (const k of [...String(half)]) await key(k);
+    for (const k of ["shift+g", "o"]) await key(k);
+    await key("x");
+    const xs: number[] = [];
+    for (let k = 0; k < 20; k++) xs.push(await time(() => key("x")));
+    return xs;
+  });
+  await bench(`type a key, the lens, ${note}`, async () => {
+    const { key } = await makeApp(note);
+    for (const k of ["space", "n", "l", "shift+g", "o"]) await key(k);
+    await key("x");
+    const xs: number[] = [];
+    for (let k = 0; k < 20; k++) xs.push(await time(() => key("x")));
+    return xs;
+  });
+  await bench(`leave insert in the lens, ${note}`, async () => {
+    const { key } = await makeApp(note);
+    await key("space");
+    await key("n");
+    await key("l");
+    const xs: number[] = [];
+    for (let k = 0; k < 3; k++) {
+      await key("o");
+      await key("x");
+      xs.push(await time(() => key("escape")));
+    }
+    return xs;
+  });
+  await bench(`resize (width change), ${note}`, async () => {
+    const { resize } = await makeApp(note);
+    const xs: number[] = [];
+    for (let k = 0; k < 4; k++) xs.push(await time(() => resize(100 + k * 7 + 1, 40)));
+    return xs;
+  });
+  await bench(`reload after an agent's write, ${note}`, async () => {
+    const { app, frame } = await makeApp(note);
+    const xs: number[] = [];
+    for (let k = 0; k < 3; k++) {
+      writeFileSync(join(vault, note), `${notes[note]}\nappended ${k}\n`);
+      xs.push(await time(() => (app.reloadBuffer(app.view!.buf), frame())));
+    }
+    writeFileSync(join(vault, note), notes[note]!);
+    return xs;
+  });
+}
+
+const env = { ...process.env, NO_COLOR: "1" };
+const cli = (args: string[]) => time(() => void Bun.spawnSync(["bun", MAIN, "--root", vault, ...args], { env, stdout: "ignore", stderr: "ignore" }));
+await bench("cli: task tasks20k 10000 (a toggle)", async () => {
+  const xs: number[] = [];
+  for (let k = 0; k < 3; k++) xs.push(await cli(["task", "tasks20k", "10000"]));
+  return xs;
+});
+await bench("cli: task tasks20k (the list)", async () => [await cli(["task", "tasks20k", "--json"]), await cli(["task", "tasks20k", "--json"])]);
+await bench("cli: read k20", async () => [await cli(["read", "k20"]), await cli(["read", "k20"])]);
+await bench("cli: render k20 --plain", async () => [await cli(["render", "k20", "--plain"]), await cli(["render", "k20", "--plain"])]);
+await bench("cli: find link-7 (the vault)", async () => [await cli(["find", "link-7"]), await cli(["find", "link-7"])]);
+await bench("cli: backlinks link-7", async () => [await cli(["backlinks", "k1"]), await cli(["backlinks", "k1"])]);
+
+rmSync(dir, { recursive: true, force: true });

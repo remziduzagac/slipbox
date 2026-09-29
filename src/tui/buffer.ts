@@ -11,7 +11,7 @@ import type { Graph } from "../core/graph.ts";
 import { readText, type Stamp, stamp } from "../core/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
-import { layoutSource, scanHeadings } from "../core/layout/source.ts";
+import { layoutSource, newSourceCache, scanHeadings } from "../core/layout/source.ts";
 import { type ParsedNote, parseMarkdown } from "../core/parse.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
@@ -52,6 +52,8 @@ export class NoteBuffer {
   /** When the file last changed under us (ms since epoch), for the change marker. */
   changedAt = 0;
   private layouts = new Map<string, Layout>();
+  /** Source mode's rows line by line, reused across keystrokes (only a changed line is laid out). */
+  private readonly sourceCache = newSourceCache();
 
   constructor(
     /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */
@@ -244,7 +246,7 @@ export class NoteBuffer {
       // re-parses the note (a 1 MB note would take a second).
       const parsed = this.parsedVersion === this.version && !this.dirty;
       const headings = parsed ? this.layout(200, glyphs, false, null).headings.map(({ level, text, slug, src }) => ({ level, text, slug, src })) : scanHeadings(this.source);
-      l = layoutSource(this.source, { width, wrap, headings });
+      l = layoutSource(this.source, { width, wrap, headings }, this.sourceCache);
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
     }
