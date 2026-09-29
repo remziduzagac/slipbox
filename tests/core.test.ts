@@ -970,3 +970,61 @@ describe("a reader per note format (16.2)", () => {
     expect(adoc.tree.children.map((c) => [c.type, c.position!.start.line])).toEqual([["paragraph", 1], ["paragraph", 4]]);
   });
 });
+
+describe("Org notes (16.16)", () => {
+  const ORG = "#+TITLE: The Plan\n#+FILETAGS: :work:\n\n* TODO [#A] Ship it :urgent:\nSee [[file:notes.md::*Intro][the notes]], [[Later]] and [[https://x.invalid][web]].\n- [ ] write docs\n- [X] build\n** Details\n#+begin_src python\nprint(1)\n#+end_src\n* DONE Later\n";
+  test("headlines are headings (keyword and tags aside), sections flattened, keywords rows, links and tasks", async () => {
+    const { parseOrg } = await import("../src/core/org.ts");
+    const { headingsOf, noteTitle } = await import("../src/core/parse.ts");
+    const { listTasks } = await import("../src/core/tasks.ts");
+    const p = parseOrg(ORG);
+    expect(p.tree.children.map((c) => [c.type as string, c.position!.start.line])).toEqual([
+      ["dataField", 1],
+      ["dataField", 2],
+      ["heading", 4],
+      ["paragraph", 5],
+      ["list", 6],
+      ["heading", 8],
+      ["code", 9],
+      ["heading", 12],
+    ]);
+    expect(headingsOf(p.tree).map((h) => [h.depth, h.text])).toEqual([[1, "Ship it"], [2, "Details"], [1, "Later"]]);
+    expect((p.tree.children[2]!.data as { org: unknown }).org).toEqual({ todo: "TODO", done: false, priority: "A", tags: ["urgent"] });
+    expect(noteTitle(p, "plan.org")).toBe("The Plan");
+    expect(p.frontmatter!.data!.tags).toEqual(["work", "urgent"]);
+    const links: string[] = [];
+    const walk = (n: { type: string; url?: string; children?: unknown[] }) => {
+      if (n.type === "link") links.push(n.url!);
+      for (const c of (n.children ?? []) as never[]) walk(c);
+    };
+    walk(p.tree as never);
+    expect(links).toEqual(["notes.md#Intro", "#Later", "https://x.invalid"]);
+    expect(listTasks(p.tree).map((t) => [t.line, t.checked, t.text])).toEqual([[6, false, "write docs"], [7, true, "build"]]);
+  });
+  test("parsed by chunk: the same tree as a whole parse, unchanged chunks reused", async () => {
+    const { parseOrg } = await import("../src/core/org.ts");
+    const { newParseCache } = await import("../src/core/parse.ts");
+    const big = Array.from({ length: 60 }, (_, i) => `* H${i}\n${"text line\n".repeat(i % 7)}- [ ] t${i}\n#+begin_example\n* not a headline\n#+end_example\n`).join("");
+    const cache = newParseCache();
+    parseOrg(big, cache);
+    const edited = big.replace("* H30", "* H30 edited");
+    const json = (x: unknown) => JSON.stringify(x);
+    expect(json(parseOrg(edited, cache).tree)).toBe(json(parseOrg(edited).tree));
+    expect(cache.chunks.size).toBeGreaterThan(3);
+  });
+  test("a task toggles to Org's X in an .org file, markdown's x elsewhere", async () => {
+    const { doneMark, toggleTask } = await import("../src/core/tasks.ts");
+    const bytes = new TextEncoder().encode("- [ ] a\n");
+    expect(new TextDecoder().decode(toggleTask(bytes, 1, doneMark("p.org"))!.bytes)).toBe("- [X] a\n");
+    expect(new TextDecoder().decode(toggleTask(bytes, 1, doneMark("p.md"))!.bytes)).toBe("- [x] a\n");
+  });
+  test("the reader's heading scan and link under a column", async () => {
+    const { readerFor } = await import("../src/core/readers.ts");
+    const org = readerFor("org");
+    expect(org.scanHeadings(ORG).map((h) => [h.level, h.text, h.src])).toEqual([[1, "Ship it", 4], [2, "Details", 8], [1, "Later", 12]]);
+    const line = "See [[file:notes.md::*Intro][the notes]] and https://x.invalid/y";
+    expect(org.linkAt(line, 8)).toEqual({ kind: "markdown", target: "notes.md#Intro", heading: null, text: "the notes" });
+    expect(org.linkAt(line, 50)).toMatchObject({ target: "https://x.invalid/y" });
+    expect(org.linkAt(line, 1)).toBeNull();
+  });
+});

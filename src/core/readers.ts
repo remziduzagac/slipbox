@@ -12,6 +12,7 @@ import { noteFormat } from "./filetypes.ts";
 import type { LayoutHeading, LinkKind } from "./layout/ir.ts";
 import { scanHeadings } from "./layout/source.ts";
 import { type ParseCache, type ParsedNote, parseMarkdown } from "./parse.ts";
+import { orgReader } from "./org.ts";
 import { parseWikiTarget } from "./wikilink.ts";
 
 /** A link read from a line of source text. */
@@ -84,16 +85,11 @@ const plain: NoteReader = {
   language: "text",
 };
 
-const READERS: Record<string, NoteReader> = { markdown };
+const READERS: Record<string, NoteReader> = { markdown, org: orgReader };
 
 /** The reader for a note format ("markdown", "org"…); a format without one reads as plain text. */
 export function readerFor(format: string): NoteReader {
   return READERS[format] ?? plain;
-}
-
-/** Register a format's reader (the formats beyond markdown register themselves). */
-export function registerReader(r: NoteReader): void {
-  READERS[r.format] = r;
 }
 
 /** Parse a note's text by its name's format. */

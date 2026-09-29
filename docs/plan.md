@@ -551,7 +551,7 @@ text/source files (source mode only). In order: the groundwork first, then each 
 | 16.13 | **Done.** Render CSV/TSV as a table: header detection, lazy layout past a size |
 | 16.14 | **Done.** Data files' lens (blocks: sections, keys, rows); a parse error on leaving insert → source mode |
 | 16.15 | **Done.** Links out of data files: paths that resolve, URLs, `$ref`, includes; into the graph |
-| 16.16 | Org as a note format (`uniorg`): render, headings, links, `TODO`/`DONE` tasks, tags |
+| 16.16 | **Done.** Org as a note format (`uniorg`): render, headings, links, `TODO`/`DONE` tasks, tags |
 | 16.17 | AsciiDoc as a note format: a line scanner to index; asciidoctor.js loaded lazily to render |
 
 Later, on the same render: slipbox's own settings as a TOML screen with the config's schema

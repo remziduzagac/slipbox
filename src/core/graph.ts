@@ -470,7 +470,7 @@ function isUnreadable(e: NoteEntry): boolean {
 }
 
 function stub(f: NoteFile): NoteEntry {
-  return { rel: f.rel, title: basename(f.rel).replace(/\.(md|markdown)$/i, ""), headings: [], links: [], tags: [], mtimeMs: f.mtimeMs, size: f.size, flags: ["unparsed"] };
+  return { rel: f.rel, title: basename(f.rel).replace(/\.(md|markdown|org|adoc|asciidoc)$/i, ""), headings: [], links: [], tags: [], mtimeMs: f.mtimeMs, size: f.size, flags: ["unparsed"] };
 }
 
 /** Parse one note and extract what the graph needs. */

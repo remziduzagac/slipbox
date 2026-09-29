@@ -45,7 +45,7 @@ glyphs = "auto"                # auto | nerd | unicode | ascii   (env SLIPBOX_GL
 show_urls = "auto"             # auto (only without colour) | always | never
 
 [walk]
-extensions = ["md", "markdown"]
+extensions = ["md", "markdown"] # note formats: add "org" for Org notes (16.16)
 exclude = []                   # gitignore syntax, on top of .gitignore
 max_file_size = 4194304        # bytes; larger notes are listed as skipped
 

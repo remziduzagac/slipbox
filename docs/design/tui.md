@@ -630,7 +630,8 @@ in its first 8 KB), which never opens.
 A note is read by its format's reader (`core/readers.ts`, `16.2`): each parses into the same mdast
 tree — so the index, the render, the lens and the outline work alike for every format — and says
 what source mode reads off the raw lines: its headings and the link around the cursor. Markdown's
-is the first; a note format with no reader yet (AsciiDoc, until `16.17`) opens as plain paragraphs.
+is the first, Org the second (`16.16`, [rendering.md](rendering.md), "Org notes"); a note format with
+no reader yet (AsciiDoc, until `16.17`) opens as plain paragraphs.
 
 - **Opening.** A data or text file opens from the explorer, `ctrl+p`, or a link to it
   (`[config](cfg/app.toml)`, `[[run.py]]`, `[[cfg/app.toml#editor]]` at that section; binary links

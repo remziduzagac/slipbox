@@ -4742,6 +4742,42 @@ describe("links in code comments in the TUI (16.10)", () => {
   });
 });
 
+describe("Org notes in the TUI (16.16)", () => {
+  const setup = () => {
+    const root = makeVault();
+    writeFileSync(join(root, "plan.org"), "#+TITLE: The Plan\n\n* TODO Ship it :urgent:\nSee [[file:notes/alpha.md][alpha]].\n- [ ] write docs\n** Details\nMore.\n");
+    return root;
+  };
+  test("renders with its keyword and tags; x ticks a task with Org's X; a link follows", async () => {
+    const root = setup();
+    const h = await harness({ root, open: "plan.org", width: 100, config: (c) => (c.walk.extensions = ["md", "org"]) });
+    const v = h.app.view!;
+    expect(v.source).toBeFalsy();
+    const f = h.frame();
+    expect(f).toMatch(/TODO Ship it\s+:urgent:/);
+    expect(f).toMatch(/title\s+The Plan/);
+    expect(h.app.currentLayout(v).headings.map((x) => x.text)).toEqual(["Ship it", "Details"]);
+    const task = h.app.currentLayout(v).lines.findIndex((l) => l.spans.some((s) => s.text.includes("write docs")));
+    h.app.moveCursor(v, { row: task, col: 0 });
+    await h.keys("x");
+    expect(readFileSync(join(root, "plan.org"), "utf8")).toContain("- [X] write docs");
+    const l = h.app.currentLayout(v).links[0]!;
+    h.app.moveCursor(v, { row: l.line, col: l.col });
+    await h.keys("enter");
+    expect(v.buf.rel).toBe("notes/alpha.md");
+  });
+  test("source mode: headlines for the breadcrumb, an Org link under the cursor", async () => {
+    const h = await harness({ root: setup(), open: "plan.org", width: 100, config: (c) => (c.walk.extensions = ["md", "org"]) });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v");
+    expect(v.source).toBe(true);
+    expect(h.app.currentLayout(v).headings.map((x) => [x.level, x.text])).toEqual([[1, "Ship it"], [2, "Details"]]);
+    h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.src === 4), col: 8 });
+    await h.keys("enter");
+    expect(v.buf.rel).toBe("notes/alpha.md");
+  });
+});
+
 describe("links out of data files in the TUI (16.15)", () => {
   test("a value that is a path is a link: coloured, followed with enter", async () => {
     const root = makeVault();

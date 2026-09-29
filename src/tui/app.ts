@@ -16,7 +16,7 @@ import { classify, extensionOf, type FileGroup } from "../core/filetypes.ts";
 import { appendFileSync, existsSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { readRegular, readText, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
-import { toggleTask } from "../core/tasks.ts";
+import { doneMark, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
@@ -1441,10 +1441,11 @@ export class App {
     if (buf.deleted) return this.message("warn", `${buf.key} was deleted on disk — nothing to toggle`);
     if (buf.dirty) {
       // Unsaved changes: toggle in the buffer (an undo step), not on disk under them.
-      const r = toggleTask(new TextEncoder().encode(buf.source), task.line);
+      const mark = doneMark(buf.name);
+      const r = toggleTask(new TextEncoder().encode(buf.source), task.line, mark);
       if (!r) return this.message("warn", `line ${task.line} has no task marker`);
       const at = buf.lineStarts()[task.line - 1]! + /\[([ xX])\]/.exec(buf.source.slice(buf.lineStarts()[task.line - 1]!))!.index + 1;
-      buf.edit(at, 1, r.checked ? "x" : " ");
+      buf.edit(at, 1, r.checked ? mark : " ");
       return this.message("info", r.checked ? "done ✓ (unsaved)" : "not done (unsaved)");
     }
     if (buf.changedOnDisk()) {
@@ -1458,7 +1459,7 @@ export class App {
     } catch (err) {
       return this.message("error", `can't read ${buf.key}: ${(err as Error).message}`);
     }
-    const r = toggleTask(bytes, task.line);
+    const r = toggleTask(bytes, task.line, doneMark(buf.name));
     if (!r) return this.message("warn", `line ${task.line} of ${buf.key} has no task marker`);
     if (this.writeBuffer(buf, r.bytes)) this.message("info", r.checked ? "done ✓" : "not done");
   }

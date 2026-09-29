@@ -29,7 +29,7 @@ import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.
 import { sanitize, UNSAFE } from "../core/sanitize.ts";
 import { type DecodedFile, decodeText, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
-import { listTasks, toggleTask } from "../core/tasks.ts";
+import { listTasks, doneMark, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
@@ -776,7 +776,7 @@ const HANDLERS: Record<string, Handler> = {
     checkUnchanged(s, abs, file.sha);
     let sha = file.sha;
     if (want !== task.checked) {
-      const r = toggleTask(file.bytes, line);
+      const r = toggleTask(file.bytes, line, doneMark(rel));
       if (!r) throw new CliError(`no task marker on line ${line} of ${rel}`, EXIT.notFound);
       try {
         writeNote(s.loc.root, abs, r.bytes);

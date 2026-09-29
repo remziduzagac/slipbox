@@ -386,3 +386,23 @@ describe("links in code comments (16.10)", () => {
     expect(g.backlinks("src/util.ts").map((b) => b.from)).toEqual(["src/main.ts"]);
   });
 });
+
+describe("Org notes in the graph (16.16)", () => {
+  test("with org among the extensions: notes by name and path, links both ways, title and tags", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-org-"));
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, "plan.org"), "#+TITLE: The Plan\n* Later :soon:\nSee [[file:notes.md][notes]].\n");
+    writeFileSync(join(dir, "notes.md"), "# Notes\n\n[[plan]] and [the plan](plan.org#Later).\n");
+    const config = structuredClone(DEFAULT_CONFIG);
+    config.walk.extensions = ["md", "org"];
+    const g = openGraph(locateVault({ root: dir }), config, false);
+    expect(g.entry("plan.org")).toMatchObject({ title: "The Plan", tags: ["soon"] });
+    expect(g.linksOf("plan.org").map((l) => [l.target, l.resolvedKind, l.path])).toEqual([["notes.md", "note", "notes.md"]]);
+    expect(g.backlinks("plan.org").map((b) => b.text)).toEqual(["plan", "the plan"]);
+    expect(g.backlinks("notes.md").map((b) => b.from)).toEqual(["plan.org"]);
+    // Without org among them, an .org file is a text file: linked as a file, not a note.
+    const g2 = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    expect(g2.entry("plan.org")).toBeUndefined();
+    expect(g2.linksOf("notes.md").map((l) => l.resolvedKind)).toEqual(["unresolved", "file"]);
+  });
+});
