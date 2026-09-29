@@ -28,7 +28,7 @@ Code, in `src/tui/`:
 ## Screen layout (plan `3.1`)
 
 ```text
- slipbox                              ↻ alpha.md reloaded  indexing 3…     ← top bar (ui.top_bar), latest message
+ slipbox                                                indexing 3…     ← top bar (ui.top_bar; can be hidden)
 ━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━  ← the frame's top rule
  ≡  Explorer   ┃ 1 index × ┃ 2 alpha × ┃                             ┃ +3  ← left rail (tinted) · explorer ┃ tab strip
  ◷             ┣━━━━━━━━━━━┻━━━━━━━━━━━┻━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┻━━━  ← the strip's rule, the outline under it
@@ -56,19 +56,19 @@ where it ends on one, `┣` `┫` `╋` where it continues through, and the corn
 panes). Zen mode has no frame. The lines are light by default (`ui.lines = "light"`: `─ │ ┬ ┴ ├ ┤ ┼`);
 `ui.lines = "heavy"` draws them as shown here, `━ ┃ ┳ ┻ ┣ ┫ ╋`. Tables in the note are always light.
 
-**The top bar** has buttons, the latest message and vault-wide state. It sits on the page's
+**The top bar** has buttons and vault-wide state. It sits on the page's
 background like the rest, so the frame's rule under it gives it the same half row of air the tab
 strip and the titles get from theirs:
 
 - on the left, the `slipbox` chip (plain accent text), which opens the command palette; before
   it, without the left rail, the explorer's `≡`;
-- at the right end, the latest message while it shows (below);
-- left of it, vault-wide state (`indexing N…`, `single-file`), dropped when fewer than 12
+- at the right end, vault-wide state (`indexing N…`, `single-file`), dropped when fewer than 12
   columns are left.
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is
-closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, and
-zen mode hides it.
+closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, as
+does "Top bar" in the UI settings (`space u u`, remembered like the other settings; the note gains
+its row, `:` still opens the palette, and the vault state isn't shown); zen mode hides it too.
 
 **The breadcrumb** tops each window, between two rules. It starts with an icon (`§`, ascii `#`) that
 opens the heading finder when clicked, then the chain of headings that window's cursor is under,
@@ -151,18 +151,21 @@ without replacing, and `esc` closes both rows, keeping the edits and the search.
 count is of the note's text, so it's exactly what would be replaced; with regex on, the replacement
 takes `$&`, `$1`–`$9` and `$$`. Opened on a selection within a line, the selection is the query;
 across lines, the replacing stays within the selection's lines. Messages (`replaced 3 matches`) show
-in the top bar while the rows are open. The text moves down three rows.
+while the rows are open. The text moves down three rows.
 
 Vim's `:s` (`docs/design/keymap.md`) uses the same engine, `core/replace.ts`; with its `c` flag the
 same two rows ask at each match, `replace? y n a q` where the buttons were.
 
 **Messages and prompts never take a row of their own,** so the note never changes height for them.
-The latest message (4 s, 8 s for errors) sits at the right end of the top bar, right-aligned, cut
-with `…` to the room left; its level shows as colour and a glyph: `✗` error, `!` warning, `·` info
-(ascii `x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just
-that). Clicking it opens the messages list. Without a top bar (`ui.top_bar = false`) it takes over
-the status line while it shows. A prompt takes over the status line while it's open (find's is in
-its window, above). In zen, with neither bar, both are drawn over the screen's last row.
+Messages float as boxes at the top right of the content, below the chrome at the top of the window
+under them (its breadcrumb, find and replace rows), newest on top and stacked down, four at most:
+each framed in its level's colour with its glyph first — `✗` error, `!` warning, `·` info (ascii
+`x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just that) —
+and wrapped to three rows. Each shows 4 s (8 s an error); the same message again refreshes its box
+rather than stacking a second. Clicking one opens the messages list and clears the boxes. Popups
+and prompts draw over them. On a screen too small for a box (under 30 columns), a message takes
+over the status line while it shows. A prompt takes over the status line while it's open (find's
+is in its window, above). In zen, with neither bar, a prompt is drawn over the screen's last row.
 
 **Scrollbars.** The last column of each window is its scrollbar: a `▐` track (`scrollbar_track`)
 with a `▐` thumb (`scrollbar` in the active window, `border` in the other); ascii `|` and `#`. The
@@ -445,7 +448,7 @@ on its background do nothing). It also shows in resize mode (titled "resize", wi
 any other key leaves").
 
 **The message sink (plan `3.13`).** Config warnings, walk errors, watcher problems and command
-feedback all go to one place: the top bar briefly, the messages list permanently (the last
+feedback all go to one place: a floating box briefly, the messages list permanently (the last
 500).
 
 ## UI settings

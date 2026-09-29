@@ -178,7 +178,7 @@ export const SCENARIOS: Scenario[] = [
       await s.status("VISUAL");
       await s.keys("l", "l", "l", "o");
       await s.keys("y");
-      await s.top(/copied 4 characters/);
+      await s.message(/copied 4 characters/);
       await s.until(() => [...s.clipboard()].length === 4, 3000, "v l l l y to copy four characters");
       await s.keys("V");
       await s.status("V-LINE");
@@ -436,7 +436,7 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("enter");
       await s.until(() => total() === was - 1, 3000, "enter to replace exactly one");
       await s.keys("alt+a");
-      await s.top(/replaced \d+ match/);
+      await s.message(/replaced \d+ match/);
       await s.keys("alt+h");
       await s.notSee("⇄ BRILL"); // the replace row gone (⇄ stays, as the find row's button)
       await s.keys("escape", "escape");
@@ -445,7 +445,7 @@ export const SCENARIOS: Scenario[] = [
       await s.ex("%s/Corvid/CORVID/gc");
       await s.see("replace? y n a q");
       await s.keys("y", "n", "q");
-      await s.top("1 substitution");
+      await s.message("1 substitution");
       await leader(s, "f", "r");
       await s.see("⇄");
       await s.keys("escape");
@@ -683,6 +683,17 @@ export const SCENARIOS: Scenario[] = [
       await s.keys(":");
       await s.type("Breadcrumb");
       await s.keys("enter");
+      // The top bar hides and comes back (a setting, from the palette or the settings list).
+      s.expect(s.topBar().includes("slipbox"), "the top bar showing to begin with");
+      await s.keys(":");
+      await s.type("Top bar");
+      await s.keys("enter");
+      await s.message("Top bar: off");
+      await s.until(() => !s.topBar().includes("slipbox"), 3000, "the top bar gone");
+      await s.keys(":");
+      await s.type("Top bar");
+      await s.keys("enter");
+      await s.until(() => s.topBar().includes("slipbox"), 3000, "the top bar back");
       await leader(s, "u", "t");
       await s.see("Theme (live preview)");
       await s.keys("j", "escape");
@@ -704,7 +715,7 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "s", "s");
       await s.status(/scratch/);
       await leader(s, "s", "y");
-      await s.top("copied");
+      await s.message("copied");
       // What space s a added: home's third row, with its path and line.
       await s.until(() => /home\.md:\d+/.test(s.clipboard()), 3000, "the scratch holding home.md:line");
       await leader(s, "s", "d");
@@ -712,7 +723,7 @@ export const SCENARIOS: Scenario[] = [
       await s.type("y");
       await s.keys("enter");
       await leader(s, "s", "y");
-      await s.top("the scratch is empty");
+      await s.message("the scratch is empty");
     },
   },
   {
@@ -725,7 +736,7 @@ export const SCENARIOS: Scenario[] = [
       await s.see(s.vault);
       await s.keys("escape");
       await leader(s, "v", "r");
-      await s.top(/reindexed \d+ notes/);
+      await s.message(/reindexed \d+ notes/);
       await leader(s, "v", "c");
       await leader(s, "m");
       await s.see("Messages");

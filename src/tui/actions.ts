@@ -529,6 +529,7 @@ const UI_TOGGLES: { key: keyof UiState; id: string; title: string }[] = [
   { key: "urls", id: "ui.urls", title: "Show link URLs" },
   { key: "mouse", id: "ui.mouse", title: "Mouse" },
   { key: "breadcrumb", id: "ui.breadcrumb", title: "Breadcrumb" },
+  { key: "top_bar", id: "ui.top_bar", title: "Top bar" },
 ];
 
 function toggle(a: App, key: keyof UiState, title: string): void {

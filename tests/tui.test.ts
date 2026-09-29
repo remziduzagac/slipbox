@@ -1437,7 +1437,7 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     expect(o.replace!.total).toBe(2);
     await h.keys("alt+a");
     expect(v.buf.source).toBe("# R\n\ncow dog cow\n\n**cow** here\n");
-    expect(h.frame().split("\n")[0]).toContain("replaced 2 matches"); // in the top bar, the rows still open
+    expect(h.frame()).toContain("replaced 2 matches"); // a floating message; the rows still open
     await h.keys("escape"); // closes the rows, keeps the edits and the search
     expect(h.app.overlay).toBeNull();
     expect(v.find?.query).toBe("cat");
@@ -1469,7 +1469,7 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     await h.keys("u");
     await ex("%s/(c)at/\\1ow/"); // the first on each line; \1 a group
     expect(v.buf.source).toBe("one cow cat\n\ntwo cow\n\nthree cow cat\n");
-    expect(h.frame().split("\n")[0]).toContain("3 substitutions on 3 lines");
+    expect(h.frame()).toContain("3 substitutions on 3 lines");
     await h.keys("u");
     expect(v.buf.source).toBe(note);
     await ex("%s/CAT/x/gi");
@@ -1496,7 +1496,7 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     await h.keys(...[..."s/cat/Z/g"], "enter");
     expect(v.buf.source).toBe("one cat cat\n\ntwo Z\n\nthree Z Z\n");
     await ex("s/nothing/x/");
-    expect(h.frame().split("\n")[0]).toContain("not found: nothing");
+    expect(h.frame()).toContain("not found: nothing");
   });
   test("cgn changes the search's next match, and . the one after; dgn deletes one", async () => {
     const root = makeVault();
@@ -1511,7 +1511,7 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     await h.keys("d", "g", "n");
     expect(v.buf.source).toBe("X bar X baz  end foo\n");
     await h.keys("u", "u", "u", "/", "z", "z", "z", "enter", "c", "g", "n");
-    expect(h.frame().split("\n")[0]).toContain("not found: zzz");
+    expect(h.frame()).toContain("not found: zzz");
   });
   test("keys are handled in order, one at a time: a fast j then . doesn't interleave", async () => {
     const root = makeVault();
@@ -2422,9 +2422,11 @@ describe("top bar, tab strip, status line", () => {
     const path = hot(h, "status:path");
     click(h, path.x, path.y);
     expect(h.copied.at(-1)).toEndWith("/notes/alpha.md");
-    const msg = hot(h, "status:message");
+    h.app.message("info", "a message to click");
+    const msg = hot(h, "toast:0");
     click(h, msg.x + 3, msg.y);
     expect(h.frame()).toContain("Messages");
+    expect(h.app.toasts).toEqual([]); // the boxes go: every message is in the list
   });
   test("the breadcrumb can be hidden (a UI setting); find's row then sits at the window's top", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 120, height: 30 });
@@ -2448,7 +2450,7 @@ describe("top bar, tab strip, status line", () => {
     expect(h.app.ui.breadcrumb).toBe(true);
     void v;
   });
-  test("messages sit in the top bar and prompts on the status line: the note never changes height", async () => {
+  test("messages float at the top right and prompts take the status line: the note never changes height", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 100, height: 24 });
     h.frame();
     const height = h.app.view!.height;
@@ -2456,10 +2458,20 @@ describe("top bar, tab strip, status line", () => {
     h.app.message("error", "something broke");
     let f = lines();
     expect(h.app.view!.height).toBe(height);
-    expect(f[0]).toContain("✗ something broke");
+    expect(f[0]).not.toContain("something broke"); // not in the top bar
+    const box = h.app.geometry!.hot.find((r) => r.id === "toast:0")!;
+    expect(f[box.y + 1]).toContain("✗ something broke"); // in its box, under its top border
+    expect(box.x + box.w).toBeGreaterThan(90); // at the right
+    expect(box.y).toBeGreaterThanOrEqual(h.app.geometry!.panes[0]!.y); // below the window's chrome
     expect(f.at(-1)).toContain("READ"); // the status line stays
-    const msg = h.app.geometry!.hot.find((r) => r.id === "status:message")!;
-    expect(msg.y).toBe(0);
+    // Several stack, newest on top; the same one again doesn't stack twice.
+    h.app.message("warn", "and a warning");
+    h.app.message("warn", "and a warning");
+    h.frame();
+    const boxes = h.app.geometry!.hot.filter((r) => r.id.startsWith("toast:"));
+    expect(boxes).toHaveLength(2);
+    expect(boxes[0]!.y).toBeLessThan(boxes[1]!.y);
+    expect(lines()[boxes[0]!.y + 1]).toContain("and a warning");
     // A prompt (here the scratch's clear) takes over the status line; the note keeps its height.
     await h.keys("space", "s", "d");
     expect(h.app.overlay?.kind).toBe("prompt");
@@ -2476,8 +2488,20 @@ describe("top bar, tab strip, status line", () => {
     await h.keys("escape", "escape");
     expect(h.app.view!.find).toBeNull();
     expect(h.app.view!.height).toBe(height); // the row gone with the search
-    // Without a top bar, a message takes over the status line for its while.
-    const n = await harness({ open: "notes/alpha.md", width: 100, height: 24, config: (c) => (c.ui.top_bar = false) });
+    // The top bar can go (a UI setting): the note gains its row, messages still float.
+    await h.app.run("ui.top_bar");
+    expect(h.app.ui.top_bar).toBe(false);
+    f = lines();
+    expect(h.app.view!.height).toBe(height + 1);
+    expect(f[0]).not.toContain("slipbox");
+    h.app.message("warn", "careful");
+    f = lines();
+    expect(f.join("\n")).toContain("! careful");
+    expect(f.at(-1)).toContain("READ");
+    await h.app.run("ui.top_bar");
+    expect(lines()[0]).toContain("slipbox");
+    // Too narrow for a box: a message takes over the status line for its while.
+    const n = await harness({ open: "notes/alpha.md", width: 28, height: 24 });
     n.frame();
     const nh = n.app.view!.height;
     n.app.message("warn", "careful");

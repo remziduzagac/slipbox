@@ -334,6 +334,7 @@ export interface UiState {
   mouse: boolean;
   urls: boolean;
   breadcrumb: boolean;
+  top_bar: boolean;
   theme: string;
   glyphs: string;
 }
@@ -348,6 +349,7 @@ export function uiDefaults(c: Config): UiState {
     zen: c.ui.zen,
     mouse: c.ui.mouse,
     breadcrumb: c.ui.breadcrumb,
+    top_bar: c.ui.top_bar,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
     urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,
@@ -357,6 +359,8 @@ export function uiDefaults(c: Config): UiState {
 
 const HISTORY_LIMIT = 200;
 const MESSAGE_LIMIT = 500;
+/** Floating messages at once; older ones stay in the messages list. */
+const TOAST_LIMIT = 4;
 
 export interface AppOptions {
   loc: VaultLocation;
@@ -414,8 +418,14 @@ export class App {
   whichKey = false;
   private whichKeyTimer: ReturnType<typeof setTimeout> | null = null;
   messages: Message[] = [];
-  transient: Message | null = null;
-  private transientTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error). */
+  toasts: Message[] = [];
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** The newest message still showing. */
+  get transient(): Message | null {
+    return this.toasts[0] ?? null;
+  }
   width = 80;
   height = 24;
   geometry: Geometry | null = null;
@@ -654,16 +664,39 @@ export class App {
     const m = { level, text, at: this.now() };
     this.messages.push(m);
     if (this.messages.length > MESSAGE_LIMIT) this.messages.shift();
-    this.transient = m;
-    if (this.transientTimer) clearTimeout(this.transientTimer);
-    this.transientTimer = setTimeout(
+    // The same message again (a key held down) refreshes its box rather than stacking another.
+    this.toasts = [m, ...this.toasts.filter((t) => t.text !== text || t.level !== level)].slice(0, TOAST_LIMIT);
+    this.scheduleToasts();
+  }
+
+  /** How long a message shows. */
+  private toastMs(m: Message): number {
+    return m.level === "error" ? 8000 : 4000;
+  }
+
+  /** Drop the messages whose time is up, and wake again when the next one's is. */
+  private scheduleToasts(): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
+    const now = this.now();
+    this.toasts = this.toasts.filter((t) => t.at + this.toastMs(t) > now);
+    if (!this.toasts.length) return;
+    const next = Math.min(...this.toasts.map((t) => t.at + this.toastMs(t))) - now;
+    this.toastTimer = setTimeout(
       () => {
-        if (this.transient === m) this.transient = null;
+        this.scheduleToasts();
         this.host.requestRender();
       },
-      level === "error" ? 8000 : 4000,
+      Math.max(10, next),
     );
-    (this.transientTimer as { unref?: () => void }).unref?.();
+    (this.toastTimer as { unref?: () => void }).unref?.();
+  }
+
+  /** Clear the floating messages (a click on one opens the messages list; they're all there). */
+  dismissToasts(): void {
+    this.toasts = [];
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = null;
   }
 
   // -------------------------------------------------------------------------------------------
@@ -3155,6 +3188,10 @@ export class App {
         break;
       case "wk":
         void this.handleKey(arg);
+        break;
+      case "toast":
+        this.dismissToasts();
+        void this.run("messages.open");
         break;
     }
   }

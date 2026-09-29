@@ -234,9 +234,10 @@ export class Session {
     await this.until(has, timeout, `the status line to show ${needle}`);
   }
 
-  async top(needle: string | RegExp, timeout = 3000): Promise<void> {
-    const has = () => (typeof needle === "string" ? this.topBar().includes(needle) : needle.test(this.topBar()));
-    await this.until(has, timeout, `the top bar to show ${needle}`);
+  /** A message showing: in its floating box (a long one wraps, so the needle is kept short). */
+  async message(needle: string | RegExp, timeout = 3000): Promise<void> {
+    const has = () => this.screen().some((r) => (typeof needle === "string" ? r.includes(needle) : needle.test(r)));
+    await this.until(has, timeout, `a message showing ${needle}`);
   }
 
   async file(rel: string, check: (text: string) => boolean, what = `${rel} to change`, timeout = 3000): Promise<void> {

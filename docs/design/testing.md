@@ -98,7 +98,7 @@ bun run e2e find replace     # only the scenarios whose names contain these
   cache directories. Nothing in the repo or in your own setup is touched, and a given pane that is
   running slipbox is refused rather than typed into.
 - **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
-  contains something, the status line's mode, a message in the top bar, a file on disk.
+  contains something, the status line's mode, a message's floating box, a file on disk.
 - **Coverage is measured.** slipbox appends each command it runs to `SLIPBOX_TRACE`; the runner
   lists the commands no scenario ran, and every command is run today. That says a command was
   reached, not that its effect was checked: each scenario checks its effects itself (the exact text

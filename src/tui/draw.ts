@@ -94,7 +94,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     return geo;
   }
   const zen = app.ui.zen;
-  const topBar = app.config.ui.top_bar && !zen ? 1 : 0;
+  const topBar = app.ui.top_bar && !zen ? 1 : 0;
   const tabBar = app.tabs.length > 0 && !zen ? 1 : 0;
   const status = zen ? 0 : 1;
   const head = topBar;
@@ -188,13 +188,14 @@ export function drawApp(app: App, c: Canvas): Geometry {
   if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
 
   // Messages and prompts never take a row of their own, so the note never changes height for
-  // them. A prompt takes over the status line while it's open (in zen, the screen's last row);
-  // a message sits in the top bar, or without one takes over the status line the same way.
-  // Find's prompt is in its window when that window had room for its find row.
+  // them. Messages float as boxes at the top right of the content (a screen too small for them:
+  // over the status line). A prompt takes over the status line while it's open (in zen, the
+  // screen's last row); find's is in its window when that window had room for its find row.
   const prompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow);
-  const messageInBar = topBar && app.transient && !prompt;
-  if (prompt || (app.transient && !messageInBar)) drawBottomLine(app, c, H - 1, geo);
+  const float = W >= TOAST_MIN_W && mainH >= 5;
+  if (prompt || (app.transient && !float)) drawBottomLine(app, c, H - 1, geo);
   else if (status) drawStatus(app, c, { y: H - status, h: 1 }, geo);
+  if (float && app.toasts.length) drawToasts(app, c, mainY, mainY + mainH, geo);
   if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay) drawWhichKey(app, c, mainY, mainY + mainH, geo);
   if (app.overlay?.kind === "list") geo.overlay = app.overlay.anchor ? drawDropdown(app, c, app.overlay, app.overlay.anchor, mainY + mainH) /* above the frame's bottom rule, never on the status line */ : drawList(app, c, app.overlay, mainY, mainH);
   return geo;
@@ -281,10 +282,6 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
     button(app, c, rx, band, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);
     rx -= 1;
   }
-  // The latest message, at the right end: it never moves the note, as a row of its own would.
-  // (A prompt on the bottom line shows its own; find's in its window leaves the bar to them.)
-  const bottomPrompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow);
-  if (app.transient && !bottomPrompt) rx = drawMessage(app, c, x + 2, rx, y, bar.bg, geo) - 1;
   // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
@@ -1210,8 +1207,64 @@ function drawBottomLine(app: App, c: Canvas, y: number, geo: Geometry): void {
   drawMessage(app, c, 1, c.width - 1, y, bg, geo);
 }
 
+/** Narrower than this, messages go over the status line instead of floating. */
+const TOAST_MIN_W = 30;
+
+/**
+ * The messages still showing, as boxes at the top right of the content, newest first, stacked
+ * down: each framed in its level's colour (error, warning, info), its glyph first, wrapped to three
+ * rows at most. A click on one opens the messages list (every message is there, whole).
+ */
+function drawToasts(app: App, c: Canvas, top: number, bottom: number, geo: Geometry): void {
+  const theme = app.theme;
+  const g = app.glyphs;
+  const b = g.box;
+  const bg = roleStyle(theme, "overlay", null);
+  const maxW = Math.max(16, Math.min(56, Math.floor(c.width * 0.45)));
+  const right = c.width - 2; // clear of the scrollbar and the rail
+  // Below the chrome at the top of the window under them (breadcrumb, find and replace rows, whose
+  // counts and toggles sit at the right): from its first row of text.
+  const under = geo.panes.filter((p) => p.x + p.w > right - maxW && p.x < right);
+  let y = Math.max(top + 1, under.length ? Math.min(...under.map((p) => p.y)) : top + 1);
+  app.toasts.forEach((m, i) => {
+    const role: Role = m.level === "error" ? "error" : m.level === "warn" ? "warn" : "info";
+    // An info message that starts with its own symbol (`↻ … reloaded`) needs no second one.
+    const mark = m.level === "error" ? g.msgError : m.level === "warn" ? g.msgWarn : /^[\p{L}\p{N}"'`(]/u.test(m.text) ? g.msgInfo : "";
+    const inner = maxW - 4;
+    // Wrapped at spaces where it can be, to three rows; what's past them ends in …
+    const rows: string[] = [];
+    let rest = (mark ? `${mark} ${m.text}` : m.text).replace(/\s+/g, " ").trim();
+    while (rest && rows.length < 3) {
+      let [head, tail] = splitAtWidth(rest, inner);
+      const cut = tail && !tail.startsWith(" ") ? head.lastIndexOf(" ") : -1;
+      if (cut > inner / 2) [head, tail] = [head.slice(0, cut), head.slice(cut) + tail];
+      rows.push(head.trimEnd());
+      rest = tail.trimStart();
+    }
+    if (rest) rows[rows.length - 1] = truncate(`${rows[rows.length - 1]} ${rest}`, inner);
+    const w = Math.max(...rows.map((r) => stringWidth(r))) + 4;
+    const h = rows.length + 2;
+    if (y + h > bottom) return;
+    const x = right - w;
+    const frame = { ...roleStyle(theme, role, bg.bg), bg: bg.bg };
+    const id = `toast:${i}`;
+    const text = app.hover === id ? roleStyle(theme, "hover", bg.bg) : { ...roleStyle(theme, "overlay", null), bg: bg.bg };
+    c.fill(x, y, w, h, bg.bg);
+    drawText(c, x, y, `${b.tl}${b.h.repeat(w - 2)}${b.tr}`, frame);
+    rows.forEach((r, k) => {
+      drawText(c, x, y + 1 + k, b.v, frame, 1);
+      const markW = k === 0 && mark ? drawText(c, x + 2, y + 1, mark, { ...frame, bold: true }) : 0;
+      drawText(c, x + 2 + markW, y + 1 + k, markW ? r.slice(mark.length) : r, text, inner);
+      drawText(c, x + w - 1, y + 1 + k, b.v, frame, 1);
+    });
+    drawText(c, x, y + h - 1, `${b.bl}${b.h.repeat(w - 2)}${b.br}`, frame);
+    geo.hot.push({ id, x, y, w, h });
+    y += h;
+  });
+}
+
 /** The latest message between `x0` and `x1`, right-aligned, its level as colour and a glyph;
- *  a click opens the messages. */
+ *  a click opens the messages. (A screen too small for the floating boxes: the status line.) */
 function drawMessage(app: App, c: Canvas, x0: number, x1: number, y: number, bg: Color | null, geo: Geometry): number {
   const m = app.transient;
   if (!m || x1 - x0 < 6) return x1;

@@ -455,7 +455,7 @@ mouse off, which gives it back to the terminal.
 | horizontal scrollbar | click to jump sideways; drag to scroll sideways (a side pane's also focuses it) |
 | a task's checkbox (`☐` / `☑`) | tick or untick it |
 | status line path | copy the note's path |
-| message (top bar) | click to open the messages |
+| a message's floating box | click to open the messages list (the boxes go) |
 | which-key popup | click an entry: a group opens it, a command runs it |
 
 ### Content, panes, lists
