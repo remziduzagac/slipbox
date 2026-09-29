@@ -252,3 +252,12 @@ describe("review cycle 4 (vault, hostile files)", () => {
     expect(readVaultVersion(dir)).toBeNull();
   });
 });
+
+describe("review cycle 5 (the repo carries the demo vault)", () => {
+  test("every file of the demo vault is tracked by git: none is ignored", () => {
+    const dir = join(import.meta.dir, "..", "examples", "vault");
+    const r = Bun.spawnSync(["git", "ls-files", "--others", "--ignored", "--exclude-standard", "--directory", dir]);
+    if (r.exitCode !== 0) return; // not a git checkout (an archive): nothing to compare
+    expect(r.stdout.toString().trim()).toBe("");
+  });
+});

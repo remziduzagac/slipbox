@@ -2,17 +2,17 @@
 /node_modules
 
 # output
-out
-dist
+/out
+/dist
 *.tgz
 
 # code coverage
-coverage
+/coverage
 *.lcov
 
-# logs
-logs
-_.log
+# logs (anchored: the demo vault has a logs/ folder of notes)
+/logs
+*.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # dotenv environment variable files
