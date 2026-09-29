@@ -850,6 +850,91 @@ Notes are not regenerable, so this deserves stating rather than assuming.
 
 ---
 
+## Files beyond markdown — decided 2026-09-29
+
+slipbox started as a markdown notes app, but the work it serves has moved. With coding agents, the
+human mostly **designs** documents, **reviews** what an agent produced — notes, configs, source
+files — and makes **minor edits** in place. Reviewing means opening whatever the agent touched, so
+slipbox opens any text file, and renders the ones worth rendering. Diffs are part of review too;
+they are a separate discussion (possibly a separate tool), not part of this.
+
+### Three groups of files
+
+| | 1. Notes | 2. Data / config | 3. Text / source |
+| --- | --- | --- | --- |
+| Formats | markdown, Org, AsciiDoc | JSON, YAML, TOML, INI, CSV/TSV | everything else textual: code, logs, `.txt` |
+| Opens in | rendered; source mode a key away | rendered; source mode a key away | source mode only (no render) |
+| Editing | the lens, source mode | the lens, source mode | source mode |
+| Outline, breadcrumb | headings | sections and keys | functions, classes, methods (tree-sitter) |
+| Links out | each format's own syntax | resolving paths, URLs, `$ref`, includes | comments: paths, `path:line`, URLs |
+| Linked to | by name (`[[design]]`) or path | by path with extension (`[[config.toml]]`) | by path with extension |
+| Tasks, tags, title | yes | — | — |
+| A parse error | source mode, the error shown | source mode, the error shown | marked in place: syntax errors only |
+
+**Notes are the link graph; rendering is a separate property.** A note (markdown, Org, AsciiDoc)
+has links in its own syntax, backlinks, tasks, tags and a title, and is found by name. A data file
+has structure — an outline, sections to link to — and links of its own kind, but no tasks and no
+name lookup: `[[config]]` quietly meaning `config.toml` would surprise. Source files are link
+targets by path, and link out only from comments. Wikilinks are markdown's convention (Org and
+AsciiDoc use their own link syntax), so data files and code comments don't get them.
+
+Other note formats are off by default and enabled by configuration. Binary files (images, PDFs)
+stay link targets, as attachments are today; they don't open.
+
+### Rendering data files as documents
+
+A config renders like a note, which gives outline, breadcrumb, find and `[[config.toml#section]]`
+for free: TOML `[table]`s and INI `[section]`s become headings, as do nested YAML/JSON objects down to a
+depth (then indented key–value rows); scalars are aligned key–value rows, like frontmatter's
+properties block; arrays of plain values sit inline, arrays of records (TOML `[[array]]`, JSON arrays
+of objects) become tables through the table allocator; comments show dimmed beside or above their
+key. CSV/TSV is one table, its header row detected, laid out lazily when large.
+
+**Edits are always on the text.** No value is ever re-serialized, so comments, key order and
+formatting survive; the lens edits a block's source lines (a table or section, a top-level key, a
+CSV row) exactly as it edits a markdown paragraph. Validity is checked when insert mode ends, never
+per keystroke (typing through an open quote is normal): a file that no longer parses switches to
+source mode with the error shown.
+
+The same render, with the schema from `core/config.ts` (defaults dimmed, allowed values, unknown
+keys flagged), can later become slipbox's own settings screen.
+
+### Source files: tree-sitter, loaded lazily
+
+highlight.js only colours tokens; the outline, links in comments and syntax errors need structure.
+`web-tree-sitter` is already installed (OpenTUI's peer dependency). One grammar per language, a few
+hundred KB of WebAssembly each, **loaded the first time a file of that language opens**; the first
+set is TypeScript, Python, shell, Lua, Go and Rust. It gives:
+
+- highlighting in source mode (highlight.js remains the fallback for other languages);
+- an outline and breadcrumb of functions, classes and methods, from a small query per language;
+- links in real comment nodes only — never in strings or code;
+- syntax errors (`ERROR` / `MISSING` nodes), shown as a gutter mark, an underline and a count in
+  the status line when insert mode ends. Syntax only: type errors and unresolved imports need a
+  language server, which is not slipbox's job.
+
+**Lazy loading is a mechanism, not a special case.** asciidoctor.js (large: Ruby compiled to
+JavaScript), more grammars, and later Mermaid and images all load on first use.
+
+### Note formats: a reader per format
+
+Markdown becomes one reader among several. A reader produces what the rest of slipbox needs:
+blocks with source line ranges (for the lens and incremental work), headings, links, tasks, tags,
+a title, and a tree the renderer lays out. The graph, outline, backlinks and CLI stay
+format-agnostic.
+
+- **Org** — a full note format: headings, `TODO`/`DONE` and checkboxes as tasks, tags, links
+  (`[[file:x.org][text]]`, `[[id]]`). `uniorg` is unified-based, like remark, and fits the same way.
+- **AsciiDoc** — a full note format: headings with ids, `xref:` and `<<id>>`, `include::`,
+  checklists, admonitions, tables. Indexing uses a small line scanner (the structure is line-based);
+  rendering loads asciidoctor.js lazily and maps its document onto the layout.
+
+### Finding files
+
+The explorer shows notes and renderable files by default; a key toggles it to every text file the
+walk sees; include/exclude patterns refine either. `ctrl+p` and find follow the same setting. The CLI's
+`read`, `write`, `replace` and `find` work on all three groups; `ls` lists notes, a flag adds the rest.
+
 ## Configuration
 
 Undesigned, and load-bearing: theming and user scripts are both in scope and both need it.
@@ -1288,8 +1373,7 @@ viewer.
 Treating those as navigable — jump from a note into that line in the editor — makes notes link
 into *code*, not just other notes. The counterpart to wikilinks for a dev-focused tool.
 
-**Data files.** YAML, JSON and CSV viewing and editing. Cheaper than it looks: frontmatter is
-already YAML, so a YAML editor is most of a properties editor; CSV to `TextTable` is nearly free.
+**Data files.** Decided and scheduled: see [Files beyond markdown](#files-beyond-markdown--decided-2026-09-29).
 
 **Frontmatter validation.** `SKILL.md` requires `name` and `description`; memory files require
 `name`, `description` and `metadata.type`. A per-directory schema flagging missing or malformed

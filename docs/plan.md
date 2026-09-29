@@ -1,8 +1,10 @@
 # slipbox — implementation plan
 
-Status: **phases 0–3 built**, except `4.9` (moved to `15.1`), `5.9`, the lint surface, and `7.2`–`7.4`
-(which wait for renames, `7.1`). Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
-2026-09-28 — how it was built is in `docs/design/`, the decisions it needed in `docs/design/decisions.md`.
+Status: **phases 0–3 built**; **phase 3b (`16.x`, files beyond markdown) is next**, then 4. Phase 3
+left open `4.9` (moved to `15.1`), `5.9`, the lint surface, and `7.2`–`7.4` (which wait for renames,
+`7.1`). Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
+2026-09-28 — how it was built is in `docs/design/`, the decisions it needed in
+`docs/design/decisions.md`.
 
 The design lives in `docs/idea.md` — what slipbox is, why each decision went the
 way it did, and what was ruled out. This file is the other half: the units of work, with
@@ -37,6 +39,7 @@ cited, not to imply an order.
 | **1** | Rendering — leaf parity | `1.1`–`1.3`, all `2.x`, `slipbox render` | Replaces leaf for reading `docs/` |
 | **2** | The app — beat leaf | `3.x`, `5.1`–`5.4`, `8.x`, link-follow, `9.3`–`9.4` | **An agent can drive it** |
 | **3** | Editing | all of `4.x`, `5.5`–`5.10`, `7.2`–`7.5`, lint surface | Small edits stop provoking `$EDITOR` |
+| **3b** | Files beyond markdown | all of `16.x` | Any text file opens; data files render; code has an outline |
 | **4** | Vault and structure | rest of `1.x`, all `6.x`, `7.1`, embeds/aliases | Backlinks and search on a real vault |
 | **5** | LSP | all of `11.x` | nvim gets slipbox's graph |
 | **6+** | Export, images, extensibility | `10.x`, `12.x`, `13.x` | — |
@@ -45,6 +48,10 @@ cited, not to imply an order.
 probably during phase 2.
 
 ### Why this order
+
+**Phase 3b comes before the vault (decided 2026-09-29).** Viewing and editing come first: the
+review work slipbox serves — reading what agents produced, configs and code as much as notes — needs
+every text file to open well before the vault grows broader concepts.
 
 **Phase 1 is rendering because it de-risks the premise.** If the rendering is not better than
 leaf's, nothing after it matters. It is also self-contained — parse, layout, theme — and needs
@@ -188,6 +195,7 @@ changed.
 | `3.11` mode taxonomy and dispatch | 2026-09-25 | `docs/design/decisions.md` |
 | Phase 2 is read-only; `4.1`–`4.2` stay in phase 3 | 2026-09-25 | `docs/design/decisions.md` |
 | Phase 3 order and editing design | 2026-09-28 | below |
+| Files beyond markdown: three groups, phase 3b before the vault | 2026-09-29 | `docs/idea.md`, `16.x` below |
 
 ### Phase 3 decided 2026-09-28 — editing, in five steps
 
@@ -517,12 +525,41 @@ packaging lands whenever it first needs to run on a VM.*
 
 `15.1`: edits, reloads and leaving the lens now cost what they change (`docs/design/architecture.md`,
 "Big notes", with timings from `scripts/bench.ts`). Left: a width change still re-wraps the whole
-note (180 ms at 20,000 lines), and the first open parses and renders all of it (810 ms). `15.2` is done as a cap (`docs/design/rendering.md`,
-"Hostile notes").
+note (180 ms at 20,000 lines), and the first open parses and renders all of it (810 ms). `15.2` is
+done as a cap (`docs/design/rendering.md`, "Hostile notes").
+
+## Files beyond markdown — `16.x` (phase 3b)
+
+*The design, and why, is `docs/idea.md`, "Files beyond markdown". Three groups: notes (markdown,
+Org, AsciiDoc: the link graph), data files (JSON, YAML, TOML, INI, CSV: rendered, not notes), and
+text/source files (source mode only). In order: the groundwork first, then each group.*
+
+| ID | Item |
+| --- | --- |
+| 16.1 | File groups: which extensions are notes, data, text; their config (other note formats off) |
+| 16.2 | A reader per format (blocks with lines, headings, links, tasks, a tree); markdown the first |
+| 16.3 | The walk and index see data and text files: link targets by path; the graph stays notes |
+| 16.4 | Any text file opens (source mode only for code); the CLI's writers take all groups; `ls --files` |
+| 16.5 | Explorer: notes and renderables, a key for all text files, patterns; `ctrl+p` and find follow |
+| 16.6 | Lazy loading: parsers and grammars loaded on first use |
+| 16.7 | Tree-sitter per language (TS, Python, shell, Lua, Go, Rust): highlighting; highlight.js fallback |
+| 16.8 | Code outline and breadcrumb: functions, classes, methods, from a query per language |
+| 16.9 | Syntax errors in code: gutter mark, underline, status count, when insert ends; syntax only |
+| 16.10 | Links in code comments: paths that resolve, `path:line`, URLs; into the graph as backlinks |
+| 16.11 | Render TOML and INI: sections as headings, key–value rows, comments dimmed, records as tables |
+| 16.12 | Render YAML and JSON the same way: nested objects as headings to a depth, then rows |
+| 16.13 | Render CSV/TSV as a table: header detection, lazy layout past a size |
+| 16.14 | Data files' lens (blocks: sections, keys, rows); a parse error on leaving insert → source mode |
+| 16.15 | Links out of data files: paths that resolve, URLs, `$ref`, includes; into the graph |
+| 16.16 | Org as a note format (`uniorg`): render, headings, links, `TODO`/`DONE` tasks, tags |
+| 16.17 | AsciiDoc as a note format: a line scanner to index; asciidoctor.js loaded lazily to render |
+
+Later, on the same render: slipbox's own settings as a TOML screen with the config's schema
+(defaults, allowed values, unknown keys). Diffs are a separate discussion.
 
 ## Deferred — in the design, not in this breakdown
 
-Mermaid and LaTeX, git awareness, worktree handling, Tier 2 plugins, data-file editing,
+Mermaid and LaTeX, git awareness, worktree handling, Tier 2 plugins, diffs,
 document-type awareness, frontmatter validation, running the repo's linter, composing notes
 into one document, and everything under the design's community-plugin tier. They get IDs
 when they get scheduled.
