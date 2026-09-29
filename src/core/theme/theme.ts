@@ -41,7 +41,7 @@ export const ROLES = [
   "cursor", "cursor_line", "line_number", "line_number_current",
   "which_key_key", "which_key_group",
   "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover",
-  "breadcrumb", "breadcrumb_current", "breadcrumb_sep", "breadcrumb_icon", "breadcrumb_band", "tree_guide", "rail", "lens", "lens_band",
+  "breadcrumb", "breadcrumb_current", "breadcrumb_sep", "breadcrumb_icon", "breadcrumb_band", "tree_guide", "rail", "lens", "lens_band", "lens_edit", "lens_band_edit",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -238,6 +238,9 @@ export function themeFromPalette(
     lens: { fg: p.blue, bold: true },
     // The lens's rows of markdown: a shade lighter than the page (a code block is darker).
     lens_band: { bg: blend(p.surface, p.bg, 0.3) },
+    // While it's typed into: warm, so editing never looks like reading.
+    lens_edit: { fg: p.orange, bold: true },
+    lens_band_edit: { bg: blend(p.orange, p.bg, 0.07) },
     breadcrumb: { fg: p.fg_dim },
     breadcrumb_current: { fg: p.fg_strong, bold: true },
     breadcrumb_sep: { fg: p.comment },
@@ -301,6 +304,8 @@ export function terminalTheme(): Theme {
     rail: { bg: a(0) },
     lens: { fg: a(4), bold: true },
     lens_band: { bg: a(0) },
+    lens_edit: { fg: a(3), bold: true },
+    lens_band_edit: { bg: a(0) },
     breadcrumb: { fg: a(7) },
     breadcrumb_current: { fg: a(15), bold: true },
     breadcrumb_sep: { fg: a(8) },
@@ -348,5 +353,6 @@ export function monoTheme(): Theme {
   roles.dim = { dim: true };
   roles.fm_error = { bold: true };
   roles.syntax_error = { bold: true, underline: true };
+  roles.lens_edit = { bold: true, underline: true }; // editing: the label says so too
   return { ...t, name: "mono", roles };
 }

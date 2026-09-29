@@ -361,6 +361,18 @@ export const SCENARIOS: Scenario[] = [
       await s.see(/1 home/);
       await s.keys("ctrl+t", "q");
       await s.notSee(/2 home|2 operations/);
+      // Close the others, then all: the empty page, the explorer ready.
+      await leader(s, "t", "o");
+      await leader(s, "t", "o");
+      await s.see(/3 \S/);
+      await s.keys("ctrl+t");
+      await s.type("O");
+      await s.message(/closed 2 other tabs/);
+      await s.notSee(/2 \S+\.md/);
+      await s.keys("ctrl+t");
+      await s.type("Q");
+      await s.see("No note open");
+      await s.status("FILES");
     },
   },
 
@@ -572,9 +584,23 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "n", "l");
       await s.status("LENS");
       await s.see("source · lines");
+      // Its size by hand: + a block more, - one less, = its own size.
+      const lines = () => /source · lines? (\d+)(?:–(\d+))?/.exec(s.text())?.slice(1).map(Number) ?? [];
+      const size = () => { const [a, b] = lines(); return (b ?? a!) - a! + 1; };
+      const before = size();
+      await s.type("+");
+      await s.until(() => size() > before, 3000, "+ to grow the lens");
+      const grown = size();
+      await s.type("-");
+      await s.until(() => size() < grown, 3000, "- to shrink it");
+      await s.type("=");
+      // Its mode: typing says "editing".
       await s.keys("A");
+      await s.see("editing · line");
       await s.type(" (lens)");
-      await s.keys("escape", "escape");
+      await s.keys("escape");
+      await s.see("source · line");
+      await s.keys("escape");
       await s.keys("ctrl+s");
       await s.file(HANDBOOK, (t) => t.includes(" (lens)"), "the lens edit saved");
     },

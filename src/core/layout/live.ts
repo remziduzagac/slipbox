@@ -8,6 +8,7 @@
 // the rows after it renumbered by the lines added or taken away: no re-parse on a keystroke.
 
 import type { Root, RootContent } from "mdast";
+import type { Role } from "../theme/theme.ts";
 import type { Layout, LayoutHeading, LayoutLink, Line } from "./ir.ts";
 import { layoutSource } from "./source.ts";
 
@@ -54,14 +55,14 @@ function continuesCard(prev: TreeRow | null, n: RootContent): boolean {
 }
 
 /** A lens rule: the glyph across the width, a label after its first two. */
-function lensRule(glyph: string, width: number, src: number, label: string): Line {
+function lensRule(glyph: string, width: number, src: number, label: string, role: Role = "lens"): Line {
   const head = label ? glyph.repeat(2) : "";
   const rest = Math.max(0, width - head.length - label.length);
   return {
     spans: [
-      { text: head, role: "lens", attrs: 0 },
-      ...(label ? [{ text: label, role: "lens" as const, attrs: 0 }] : []),
-      { text: glyph.repeat(rest), role: "lens", attrs: 0 },
+      { text: head, role, attrs: 0 },
+      ...(label ? [{ text: label, role, attrs: 0 }] : []),
+      { text: glyph.repeat(rest), role, attrs: 0 },
     ],
     src: Math.max(0, src),
     decor: true,
@@ -79,6 +80,8 @@ export interface LiveOptions {
   wrap: boolean;
   /** The lens: a rule of this glyph above and below the source rows (frame rows, `decor`). */
   rule?: string;
+  /** Typed into (insert mode): the rules, label and band say "editing" in their own colour. */
+  editing?: boolean;
 }
 
 /**
@@ -92,6 +95,7 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
   const newRow = new Map<number, number>();
   const source = layoutSource(lines.slice(active[0] - 1, active[1]).join("\n"), { width: opts.width, wrap: opts.wrap, headings: [], slice: true });
   let placed = false;
+  const rule: Role = opts.editing ? "lens_edit" : "lens";
   const blank = (l: Line | undefined) => !!l && !l.fill && l.spans.every((s) => !s.text.trim());
   // `next`: the rendered row that will follow the lens (none at the note's end).
   const place = (next?: Line) => {
@@ -103,11 +107,14 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
     if (opts.rule) {
       const prev = out[out.length - 1];
       if (prev && !blank(prev)) out.push({ spans: [], src: Math.max(0, active[0] - 1), decor: true, lens: "pad" });
-      out.push({ ...lensRule(opts.rule, opts.width, active[0] - 1, ` source · ${active[0] === active[1] ? `line ${active[0]}` : `lines ${active[0]}–${active[1]}`} `), lens: "top" });
+      // Its label says the mode — viewing the source, or editing it — in the mode's colour.
+      const lines = active[0] === active[1] ? `line ${active[0]}` : `lines ${active[0]}–${active[1]}`;
+      out.push({ ...lensRule(opts.rule, opts.width, active[0] - 1, ` ${opts.editing ? "editing" : "source"} · ${lines} `, rule), lens: "top" });
     }
-    for (const l of source.lines) out.push({ ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })), ...(opts.rule ? { lens: "source" as const, fill: "lens_band" as const } : {}) });
+    const band = opts.editing ? ("lens_band_edit" as const) : ("lens_band" as const);
+    for (const l of source.lines) out.push({ ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })), ...(opts.rule ? { lens: "source" as const, fill: band } : {}) });
     if (opts.rule) {
-      out.push({ ...lensRule(opts.rule, opts.width, active[1], ""), lens: "bottom" });
+      out.push({ ...lensRule(opts.rule, opts.width, active[1], "", rule), lens: "bottom" });
       if (next && !blank(next)) out.push({ spans: [], src: active[1], decor: true, lens: "pad" });
     }
   };

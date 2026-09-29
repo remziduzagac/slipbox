@@ -98,6 +98,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "ctrl+t shift+l": "tab.move_right",
   "ctrl+t shift+right": "tab.move_right",
   "ctrl+t q": "tab.close",
+  "ctrl+t shift+o": "tab.close_others",
+  "ctrl+t shift+q": "tab.close_all",
   "leader t o": "tab.new",
   "leader t t": "tab.list",
   "leader t n": "tab.next",
@@ -107,6 +109,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader t shift+l": "tab.move_right",
   "leader t shift+right": "tab.move_right",
   "leader t q": "tab.close",
+  "leader t shift+o": "tab.close_others",
+  "leader t shift+q": "tab.close_all",
   // explorer and outline
   "ctrl+e": "explorer.cycle",
   "leader e": "explorer.cycle",
@@ -120,6 +124,10 @@ export const DEFAULT_KEYS: Record<string, string> = {
   n: "find.next",
   "shift+n": "find.prev",
   x: "task.toggle",
+  // the lens's size, by hand
+  "+": "lens.grow",
+  "-": "lens.shrink",
+  "=": "lens.reset",
   // editing (source mode; from the render they switch the window to source first)
   i: "edit.insert",
   a: "edit.append",
@@ -421,6 +429,8 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   vs: "window.split_side",
   sp: "window.split_stacked",
   tabnew: "tab.new",
+  tabonly: "tab.close_others",
+  tabo: "tab.close_others",
   noh: "find.clear",
   messages: "messages.open",
   reload: "note.reload",

@@ -180,6 +180,8 @@ in config.
 | go to tab N | `ctrl+t 1` … `ctrl+t 9` | `space t 1` … `space t 9` |
 | move tab left / right | `ctrl+t shift+h` / `shift+l`, `ctrl+t shift+left` / `shift+right` | `space t` + the same |
 | close tab | `ctrl+t q` | `space t q` |
+| close the other tabs (`:tabonly`) | `ctrl+t shift+o` | `space t shift+o` |
+| close all tabs (the explorer then opens a note) | `ctrl+t shift+q` | `space t shift+q` |
 
 ## Explorer — left pane
 
@@ -301,6 +303,7 @@ source first.
 | tick or untick the task item at the cursor (the innermost, on any of its rows) | `x` (rendered) |
 | show this window's note as its raw markdown, or rendered again (`:source`) | `space n v` |
 | open the lens: the markdown around the cursor, the rest rendered (`:live`); `esc` closes it | `space n l` |
+| the lens a block bigger / smaller (the size kept as it moves) / its own size again | `+` / `-` / `=` |
 | type before the cursor / after it | `i` / `a` |
 | type at the line's first non-blank / its end | `shift+i` / `shift+a` |
 | open a line below (continuing a list) / above, and type | `o` / `shift+o` |

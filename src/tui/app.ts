@@ -158,6 +158,10 @@ export interface View {
   live?: boolean;
   /** Live preview's render and blocks, kept while the cursor's block is being typed into. */
   liveBase?: LiveBase;
+  /** The lens's size set by hand (`+` `-`, in rows), kept as it moves; `=` lets it size itself. */
+  lensSize?: number;
+  /** A `+` or `-` waiting for the next layout (which has the lens's blocks). */
+  lensStep?: 1 | -1;
   /** Where the lens sits on screen (rows from the window's top to its top rule), kept as it moves. */
   lensPin?: { range: string; screen: number };
   /** A click moved the cursor: the screen row it was on, which the clicked line keeps. */
@@ -1062,8 +1066,9 @@ export class App {
     // A CSV or TSV is rows: the lens is a few of them around the cursor, sliding a row at a time.
     const rows = buf.kind.format === "csv" || buf.kind.format === "tsv";
     const cards = buf.kind.group === "data" && !rows;
-    const minRows = cards ? 1 : this.config.editor.lens_min_rows;
-    const maxRows = rows ? minRows : Math.max(minRows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
+    // A size set by hand (`+` `-`) is the lens's size wherever it goes, until `=`.
+    const minRows = view.lensSize ?? (cards ? 1 : this.config.editor.lens_min_rows);
+    const maxRows = view.lensSize !== undefined || rows ? minRows : Math.max(minRows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
     // The lens on the cursor's block, grown by its neighbours (below, then above) to the minimum.
     const openOn = (blocks: Block[], at: number): Block => {
       const i = blocks.findIndex((b) => at >= b[0] && at <= b[1]);
@@ -1138,10 +1143,34 @@ export class App {
       } else base = fresh(view.insert ? [Math.min(base.active[0], line), Math.max(base.active[1], line)] : base.active); // typing never sits outside it
     }
     if (!view.insert && base.renderedVersion !== buf.version) base = fresh(base.active);
+    // `+` / `-`: a block more (below, or above at the note's end), or the one farthest from the
+    // cursor less; the size it comes to is kept.
+    const step = view.lensStep;
+    view.lensStep = undefined;
+    if (step && base.renderedVersion === buf.version) {
+      const bl = base.blocks;
+      let lo = bl.findIndex((b) => b[0] === base!.active[0]);
+      let hi = bl.findIndex((b) => b[1] === base!.active[1]);
+      if (lo >= 0 && hi >= 0) {
+        const at = bl.findIndex((b) => line >= b[0] && line <= b[1]);
+        if (step > 0) {
+          if (hi + 1 < bl.length) hi++;
+          else if (lo > 0) lo--;
+          else this.message("info", "the lens holds the whole note");
+        } else if (lo < hi) {
+          if (at - lo >= hi - at) lo++;
+          else hi--;
+        } else this.message("info", "the lens is one block — esc closes it");
+        const range: Block = [bl[lo]![0], bl[hi]![1]];
+        view.lensSize = rowsOf(range[0], range[1]);
+        base = { ...base, old: range, active: range, ...around(range), composed: undefined };
+      }
+    }
     view.liveBase = base;
-    const key = `${base.active[0]}-${base.active[1]}:${buf.version}:${base.renderedVersion}`;
+    const editing = !!view.insert;
+    const key = `${base.active[0]}-${base.active[1]}:${buf.version}:${base.renderedVersion}:${editing ? "e" : "v"}`;
     if (base.composed?.key === key) return base.composed.layout;
-    const layout = composeLive(base.rendered, base.old, base.active, texts, { width, wrap, rule: this.glyphs.lensRule });
+    const layout = composeLive(base.rendered, base.old, base.active, texts, { width, wrap, rule: this.glyphs.lensRule, editing });
     base.composed = { key, layout };
     return layout;
   }
@@ -1205,6 +1234,7 @@ export class App {
     view.source = mode === "source";
     view.live = mode === "live";
     view.liveBase = undefined;
+    view.lensSize = undefined; // a lens opened again sizes itself
     view.lensPin = undefined;
     view.lensInner = 0;
     view.layoutKey = ""; // re-derive the rows from the anchors: the same source line
@@ -1646,6 +1676,28 @@ export class App {
     const t = this.tabs.splice(this.activeTab, 1)[0]!;
     for (const v of t.views) this.remember(v);
     this.activeTab = Math.min(this.activeTab, this.tabs.length - 1);
+  }
+
+  /** Keep only this tab (`:tabonly`). Its notes' buffers stay, unsaved changes and all. */
+  closeOtherTabs(): void {
+    const t = this.tab;
+    if (!t) return;
+    if (this.tabs.length === 1) return this.message("info", "only one tab");
+    const n = this.tabs.length - 1;
+    for (const other of this.tabs) if (other !== t) for (const v of other.views) this.remember(v);
+    this.tabs = [t];
+    this.activeTab = 0;
+    this.message("info", `closed ${n} other tab${n === 1 ? "" : "s"}`);
+  }
+
+  /** Close every tab: the "no note open" page, the explorer focused to open one. */
+  closeAllTabs(): void {
+    if (!this.tabs.length) return;
+    for (const t of this.tabs) for (const v of t.views) this.remember(v);
+    this.tabs = [];
+    this.activeTab = 0;
+    this.showSidebar(true);
+    this.region = "sidebar";
   }
 
   /** Move focus in a direction: between the two windows, and out to the side panes. */

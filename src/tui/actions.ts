@@ -246,6 +246,13 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
   }
 }
 
+function lensStep(a: App, step: 1 | -1): void {
+  withView(a, (v) => {
+    if (!v.live) return a.message("info", "the lens isn't open — space n l opens it");
+    Object.assign(v, { lensStep: step, layoutKey: "" });
+  });
+}
+
 function fileLink(a: App, rel: string, heading: string | null = null, inSplit = false): void {
   // A data or text file opens (16.4) — at a data file's section when the link names one
   // (`[[config.toml#editor]]`); a binary one's path is copied (images render later).
@@ -1067,6 +1074,16 @@ export function registerActions(app: App): void {
         if (v.live === was) return;
         a.message("info", v.live ? "the lens: the markdown around the cursor — esc closes it" : "rendered");
       }),
+    // The lens's size by hand: a block more or less, kept as it moves; `=` lets it size itself.
+    "lens.grow": (a) => lensStep(a, 1),
+    "lens.shrink": (a) => lensStep(a, -1),
+    "lens.reset": (a) =>
+      withView(a, (v) => {
+        if (!v.live) return a.message("info", "the lens isn't open — space n l opens it");
+        Object.assign(v, { lensSize: undefined, liveBase: undefined, layoutKey: "" });
+      }),
+    "tab.close_others": (a) => a.closeOtherTabs(),
+    "tab.close_all": (a) => a.closeAllTabs(),
     // Editing (source mode; step 3). Entering insert from the render switches to source first.
     "edit.insert": (a) => withView(a, (v) => E.startInsert(a, v, (w) => E.offsetOf(a, w))),
     "edit.append": (a) =>

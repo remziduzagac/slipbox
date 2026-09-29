@@ -741,7 +741,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       if (n) {
         const label = ` ${line.lens === "top" ? "↑" : "↓"} ${n} line${n === 1 ? "" : "s"} `;
         const x = textX + Math.max(0, Math.min(layout.width, textW) - stringWidth(label) - 2);
-        drawText(c, x, y, label, { ...roleStyle(theme, "lens", page), bg: page });
+        drawText(c, x, y, label, { ...roleStyle(theme, view.insert ? "lens_edit" : "lens", page), bg: page });
       }
     }
     if (isCursorRow && view.cur.col >= view.left && view.cur.col < view.left + textW) drawCursor(c, textX - view.left, y, line, view.cur.col, theme, view.left + textW);

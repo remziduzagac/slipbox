@@ -579,9 +579,17 @@ lens and the keys are the reading keys.
 shade lighter than the page — a code block is darker), so the whole area reads as the lens, not
 just its edges.
 
+**Its mode.** The top rule's label says which: `source · lines 8–13` while viewing (normal mode),
+`editing · lines 8–13` while typing. Editing draws the rules and label in `lens_edit` (warm: orange
+where viewing is the accent) and tints the rows `lens_band_edit`, so the two never look alike.
+
 **Its air.** One blank row sits outside each rule: where the rendered row next to it is already
 blank (the gap after a block), that's it; otherwise a blank frame row is added, so the lens never
 touches a heading band, a table or a code block. Like the rules, these rows are frame rows.
+
+**Its size by hand.** `+` takes the next block in (the one above, at the note's end), `-` drops the
+block farthest from the cursor; the size it comes to is kept as the lens moves — it slides at that
+size rather than growing — until `=` lets it size itself again, or it closes.
 
 **Its size.** It opens on the cursor's block and takes in the neighbours (below, then above) until
 it has `[editor] lens_min_rows` rows of markdown (6), so a one-line paragraph isn't a sliver and
