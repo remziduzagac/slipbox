@@ -87,6 +87,18 @@ house style that writing-guide describes.
 │ software/nightjar/environments.    │ several YAML documents (---); a flat    │
 │ yaml, package.json                 │ manifest                                │
 ├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/logging.ini,       │ INI: ;, # comments, a comment after a   │
+│ archive.properties                 │ value; dotted keys                      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/mount-aster.cfg,         │ .cfg with dotted sections; .env with    │
+│ nightjar/nightjar.env              │ export, quotes                          │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/eyepieces.tsv            │ TSV: tabs, a quoted field, cells that   │
+│                                    │ wrap                                    │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ logs/photometry-2026.csv           │ 2,600 rows: past the 2,000-row render   │
+│                                    │ cap, quoted fields, empty cells         │
+├────────────────────────────────────┼─────────────────────────────────────────┤
 │ equipment/filters.csv              │ CSV: quoted fields with commas and "",  │
 │                                    │ empty cells                             │
 ├────────────────────────────────────┼─────────────────────────────────────────┤
@@ -4311,6 +4323,26 @@ One command at the end of setup, from ridge-ctl:
 "
 `;
 
+exports[`snapshots of the layout IR as text equipment/eyepieces.tsv @ 80 1`] = `
+"┌───────────┬──────────┬───────────┬───────────┬─────────┬─────────────────────┐
+│ name      │ focal_mm │ field_deg │ barrel_in │ for     │ notes               │
+╞═══════════╪══════════╪═══════════╪═══════════╪═════════╪═════════════════════╡
+│ Panoptic  │ 41       │ 1.68      │ 2         │ Aster,  │ widest field we own │
+│ 41        │          │           │           │ Brill   │                     │
+├───────────┼──────────┼───────────┼───────────┼─────────┼─────────────────────┤
+│ Nagler 13 │ 13       │ 0.68      │ 1.25      │ Aster   │ public nights: the  │
+│           │          │           │           │         │ crowd favourite     │
+├───────────┼──────────┼───────────┼───────────┼─────────┼─────────────────────┤
+│ Delos 6   │ 6        │ 0.36      │ 1.25      │ Lyra    │ planets             │
+├───────────┼──────────┼───────────┼───────────┼─────────┼─────────────────────┤
+│ Ortho 9   │ 9        │ 0.24      │ 1.25      │ Lyra    │ double stars; no    │
+│           │          │           │           │         │ eye relief          │
+├───────────┼──────────┼───────────┼───────────┼─────────┼─────────────────────┤
+│ ES 82 18  │ 18       │ 0.94      │ 1.25      │ Brill   │ cracked eye lens,   │
+│           │          │           │           │         │ see contacts.md     │
+└───────────┴──────────┴───────────┴───────────┴─────────┴─────────────────────┘"
+`;
+
 exports[`snapshots of the layout IR as text equipment/filters.csv @ 80 1`] = `
 "┌────────┬───────────┬───────────┬──────────┬────────────┬─────────────────────┐
 │ filter │ telescope │ centre_nm │ width_nm │ installed  │ notes               │
@@ -4333,6 +4365,40 @@ exports[`snapshots of the layout IR as text equipment/filters.csv @ 80 1`] = `
 │ V      │ Lyra      │ 551       │ 88       │ 2026-01-20 │ photometric: VSS    │
 │        │           │           │          │            │ only                │
 └────────┴───────────┴───────────┴──────────┴────────────┴─────────────────────┘"
+`;
+
+exports[`snapshots of the layout IR as text equipment/mount-aster.cfg @ 80 1`] = `
+" Aster's mount controller (a .cfg in INI form). Values from the March 2026
+ pointing run:
+ see ../logs/observing-log-2026.md, "Aster pointing model".
+
+▌ mount
+
+ model        EQ8-R Pro
+ latitude     61.442
+ longitude    10.917
+ elevation_m  812
+ park_alt     0
+ park_az      180
+
+▌ limits
+
+ horizon_deg        12
+ meridian_flip_min  15
+ slew_rate          4.0
+
+▌ pointing.model
+
+ terms       IH, ID, CH, NP, MA, ME, TF
+ rms_arcsec  18.4
+ fitted      2026-03-01
+
+▌ guiding
+
+ camera              ASI174MM-mini
+ exposure_s          2
+ aggressiveness_ra   70
+ aggressiveness_dec  100"
 `;
 
 exports[`snapshots of the layout IR as text handbook/safety-card.adoc @ 80 1`] = `
@@ -4435,6 +4501,20 @@ readings.
  An Org comment: dimmed in the render."
 `;
 
+exports[`snapshots of the layout IR as text software/halley/archive.properties @ 80 1`] = `
+" The stacks archive's Java indexer (archive.jar) reads this at start-up.
+ key=value and key: value both work in a .properties file.
+ archive.root                /srv/stacks
+ archive.index.path          /srv/stacks/.index
+ archive.index.rebuild.cron  0 5 * * SUN
+ archive.thumbnails.enabled  true
+ archive.thumbnails.sizes    256, 1024
+ archive.retention.days      400
+ archive.docs                ../pipeline-cookbook.md
+ http.port                   8421
+ http.cors.origins           https://halden-ridge.invalid"
+`;
+
 exports[`snapshots of the layout IR as text software/halley/halley.schema.json @ 80 1`] = `
 " $schema  https://json-schema.org/draft/2020-12/schema
  title    halley settings
@@ -4488,6 +4568,58 @@ exports[`snapshots of the layout IR as text software/halley/halley.toml @ 80 1`]
 │ Brill │ 254         │ ASI2600MM │
 │ Lyra  │ 152         │ ASI533MC  │
 └───────┴─────────────┴───────────┘"
+`;
+
+exports[`snapshots of the layout IR as text software/halley/logging.ini @ 80 1`] = `
+" halley's logging, read at start-up (Python's logging.config.fileConfig format).
+ Change the level here, not in the code: see ../pipeline-cookbook.md.
+
+▌ loggers
+
+ keys  root, reduce, archive
+
+▌ handlers
+
+ keys  console, nightly
+
+▌ formatters
+
+ keys  plain
+
+▌ logger_root
+
+ level     WARNING
+ handlers  console
+
+▌ logger_reduce
+
+ level      INFO  # DEBUG floods the disk on a full night
+ handlers   console, nightly
+ qualname   halley.reduce
+ propagate  0
+
+▌ logger_archive
+
+ level     INFO
+ handlers  nightly
+ qualname  halley.archive
+
+▌ handler_console
+
+ class      StreamHandler
+ formatter  plain
+ args       (sys.stderr,)
+
+▌ handler_nightly
+
+ class      handlers.TimedRotatingFileHandler
+ formatter  plain
+ args       ('/var/log/halley/halley.log', 'midnight', 1, 120)  # one file a
+            night, kept for a season
+
+▌ formatter_plain
+
+ format  %(asctime)s %(levelname)-7s %(name)s: %(message)s"
 `;
 
 exports[`snapshots of the layout IR as text software/halley/targets.yaml @ 80 1`] = `
@@ -4577,6 +4709,20 @@ exports[`snapshots of the layout IR as text software/nightjar/environments.yaml 
  ├─ host      localhost
  ├─ replicas  1
  └─ features  [thumbnails, public-api]"
+`;
+
+exports[`snapshots of the layout IR as text software/nightjar/nightjar.env @ 80 1`] = `
+" nightjar's environment on ridge-arch. Secrets are NOT here: they come from the
+ vault agent.
+ Read by deploy.yaml's containers; see ../pipeline-cookbook.md for what each one
+ does.
+ NIGHTJAR_PORT           8080
+ NIGHTJAR_ARCHIVE_ROOT   /srv/stacks
+ NIGHTJAR_LOG_LEVEL      info
+ NIGHTJAR_PUBLIC_URL     https://nightjar.halden-ridge.invalid/v2
+ NIGHTJAR_THUMB_SIZES    256,1024
+ NIGHTJAR_MAX_UPLOAD_MB  512  # a full-frame Aster stack is ~180 MB
+ NIGHTJAR_READONLY       false"
 `;
 
 exports[`snapshots of the layout IR as text software/nightjar/openapi.json @ 80 1`] = `

@@ -277,7 +277,9 @@ export const SCENARIOS: Scenario[] = [
       // Swap: the two windows trade notes (one shows another note first).
       await open(s, "writing-guide");
       // The windows' notes in screen order, from their breadcrumbs (not the status line's path).
-      const order = () => (s.screen().slice(0, -1).join("\n").match(/\b(home|writing-guide)\.md\b/g) ?? []).join(" ");
+      // (Right of the explorer's border: its rows name files too.)
+      const border = () => Math.max(0, s.screen()[2]?.search(/[│┃]/) ?? 0);
+      const order = () => (s.screen().slice(0, -1).map((r) => r.slice(border() + 1)).join("\n").match(/\b(home|writing-guide)\.md\b/g) ?? []).join(" ");
       await s.until(() => order().split(" ").length === 2, 3000, "two windows, two notes");
       const before = order();
       await s.keys("ctrl+w", "x");
@@ -379,7 +381,7 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("ctrl+shift+e");
       await s.status("FILES");
       // Revealed: the note's own row in the explorer, left of the border.
-      await s.until(() => s.screen().some((r) => /operations-handbook\s*[│┃]/.test(r)), 3000, "the note revealed in the explorer");
+      await s.until(() => s.screen().some((r) => /operations-handbook\.md\s*[│┃]/.test(r)), 3000, "the note revealed in the explorer");
       await s.keys("escape");
       await focus("ctrl+o", "OUTLINE");
       await s.see("Outline");
@@ -631,6 +633,17 @@ export const SCENARIOS: Scenario[] = [
       await s.type("#/components/schemas/Frame");
       await s.keys("enter", "escape", "enter");
       await s.until(() => /L5\d:/.test(s.statusLine()), 3000, "the cursor on the Frame schema's row (line 5x)");
+      // INI, and a big CSV: the first 2,000 rows drawn, the rest counted, all of them in source mode.
+      await open(s, "logging.ini");
+      await s.see(/level\s+INFO\s+# DEBUG floods the disk/);
+      await open(s, "photometry-2026.csv");
+      await s.see(/│ date\s+│ utc/);
+      await s.keys("G");
+      await s.see("… 600 more rows");
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await moveTo(s, ["G"], (l) => l === 2601, "G to the CSV's last line in source mode");
+      await leader(s, "n", "v");
       await open(s, "broken-config.json");
       await s.status("SOURCE");
       await s.message(/doesn't parse/);

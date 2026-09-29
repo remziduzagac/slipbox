@@ -36,6 +36,10 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `software/nightjar/openapi.json` | deep JSON as a tree: `$ref` pointers followed, records in the tree |
 | `software/nightjar/deploy.yaml` | a YAML tree: uneven lists of objects, anchors and aliases, a block string |
 | `software/nightjar/environments.yaml`, `package.json` | several YAML documents (`---`); a flat manifest |
+| `software/halley/logging.ini`, `archive.properties` | INI: `;`, `#` comments, a comment after a value; dotted keys |
+| `equipment/mount-aster.cfg`, `nightjar/nightjar.env` | `.cfg` with dotted sections; `.env` with `export`, quotes |
+| `equipment/eyepieces.tsv` | TSV: tabs, a quoted field, cells that wrap |
+| `logs/photometry-2026.csv` | 2,600 rows: past the 2,000-row render cap, quoted fields, empty cells |
 | `equipment/filters.csv` | CSV: quoted fields with commas and `""`, empty cells |
 | `software/halley/reduce.py`, `night.sh` | tree-sitter: docstrings, heredocs, an outline, links in comments |
 | `scratch/half-written.py`, `broken-config.json` | a syntax error in code; a data file that doesn't parse |

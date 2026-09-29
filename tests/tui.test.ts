@@ -4715,6 +4715,19 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
   });
 });
 
+describe("the explorer shows extensions", () => {
+  test("notes' names keep .md, as other files keep theirs", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "app.toml"), "a = 1\n");
+    const h = await harness({ root });
+    for (let i = 0; i < 3 && h.app.region !== "sidebar"; i++) await h.keys("ctrl+e");
+    const f = h.frame();
+    expect(f).toContain(" index.md");
+    expect(f).toContain(" app.toml");
+    expect(f).not.toMatch(/ index\s*┃/); // never the bare name
+  });
+});
+
 describe("YAML and JSON as a tree (16.12)", () => {
   test("guides at every depth; branches in the outline and breadcrumb; a $ref's JSON pointer followed", async () => {
     const root = makeVault();

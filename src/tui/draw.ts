@@ -1027,8 +1027,9 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   const s = app.sidebar;
   const g = app.glyphs;
   const q = s.filter ?? "";
-  // Notes without their extension (the tree is of notes); other files with it (it says what they are).
-  const nameOf = (row: TreeRow) => (row.kind === "note" && !row.group ? row.name.replace(/\.(md|markdown)$/i, "") : row.name);
+  // Every file with its extension, notes too: a vault holds markdown, Org, AsciiDoc and data files
+  // side by side, and the extension says which.
+  const nameOf = (row: TreeRow) => row.name;
   const icon = (row: TreeRow) => (row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file);
   const prefix = (row: TreeRow) => `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
   const text = (row: TreeRow) => prefix(row) + nameOf(row);

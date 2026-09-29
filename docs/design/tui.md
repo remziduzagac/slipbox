@@ -674,7 +674,9 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
   agent's change to an open file reloads it.
 - **What lists them.** The explorer and the switcher show what `files.show` says (`notes`,
   `renderable` — notes and data files, the default — or `all` text files), plus `files.include`
-  patterns, minus `files.exclude`; the explorer's `a` toggles to all and back.
+  patterns, minus `files.exclude`; the explorer's `a` toggles to all and back. The explorer shows
+  every name with its extension, notes' too (`home.md`, `dome-log.org`): the formats sit side by
+  side, and the extension says which is which.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
 

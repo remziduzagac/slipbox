@@ -1,0 +1,2601 @@
+date,utc,target,telescope,filter,mag,err,airmass,observer,notes
+2026-01-04,19:00,Algol,Brill,R,7.276,0.043,2.38,Yusuf Haddad,
+2026-01-04,22:00,Mira,Lyra,V,4.571,0.051,1.18,Ingrid Halvorsen,
+2026-01-04,22:41,delta Cep,Lyra,V,4.691,0.078,2.49,Yusuf Haddad,"wind gusts, trailing"
+2026-01-04,22:52,RS Oph,Aster,V,7.842,0.026,1.73,Yusuf Haddad,twilight
+2026-01-04,23:15,R Leo,Lyra,V,5.844,0.036,1.64,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-01-05,02:15,Mira,Lyra,V,11.543,0.024,1.67,Kenji Mori,"""comparison star C3, not C2"""
+2026-01-05,02:34,SS Cyg,Aster,V,12.016,0.044,2.07,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-01-05,18:34,delta Cep,Lyra,V,8.555,0.039,1.75,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-01-05,18:57,Mira,Lyra,V,6.561,0.026,1.43,Yusuf Haddad,
+2026-01-06,10:57,Mira,Lyra,V,11.592,0.024,1.78,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-01-06,13:57,R Leo,Lyra,V,5.362,0.074,1.16,Rosa Lind,"dew on corrector, re-shot"
+2026-01-06,16:57,Mira,Lyra,V,8.78,0.073,1.59,Ingrid Halvorsen,
+2026-01-06,17:10,Mira,Lyra,V,3.049,0.038,1.87,Rosa Lind,
+2026-01-06,17:29,Algol,Brill,V,9.844,0.077,2.07,Kenji Mori,twilight
+2026-01-06,18:10,Mira,Lyra,V,7.722,0.04,1.21,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-01-06,18:33,Algol,Brill,R,8.986,0.075,2.25,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-01-06,21:33,SS Cyg,Aster,R,10.411,0.033,2.53,Kenji Mori,"wind gusts, trailing"
+2026-01-06,22:14,RS Oph,Aster,V,2.363,0.04,2.09,Kenji Mori,"""comparison star C3, not C2"""
+2026-01-07,14:14,Mira,Lyra,V,3.685,0.043,1.69,Rosa Lind,moon 60% up
+2026-01-07,14:25,T CrB,Brill,V,4.114,0.074,1.07,Kenji Mori,"dew on corrector, re-shot"
+2026-01-08,06:25,delta Cep,Lyra,V,9.423,0.071,1.21,Yusuf Haddad,"dew on corrector, re-shot"
+2026-01-08,06:38,SS Cyg,Aster,R,10.797,0.034,1.68,Ingrid Halvorsen,"wind gusts, trailing"
+2026-01-08,07:01,SS Cyg,Aster,B,3.899,0.039,2.6,Rosa Lind,"wind gusts, trailing"
+2026-01-08,07:42,Mira,Lyra,V,3.337,0.065,2.27,Rosa Lind,
+2026-01-08,07:49,Algol,Brill,R,8.75,0.035,2.25,Kenji Mori,twilight
+2026-01-08,08:30,SS Cyg,Aster,B,7.889,0.047,1.86,Tomasz Nowak,
+2026-01-08,08:49,chi Cyg,Aster,R,9.004,0.014,2.25,Rosa Lind,
+2026-01-08,09:00,R Leo,Lyra,V,9.54,0.018,2.01,Yusuf Haddad,"dew on corrector, re-shot"
+2026-01-08,09:11,chi Cyg,Aster,R,3.762,0.023,1.02,Kenji Mori,thin cirrus
+2026-01-08,09:18,Algol,Brill,V,2.337,0.013,2.1,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-01-08,09:59,Mira,Lyra,V,11.625,0.028,1.35,Kenji Mori,"""comparison star C3, not C2"""
+2026-01-08,10:40,chi Cyg,Aster,R,5.106,0.066,1.09,Tomasz Nowak,"wind gusts, trailing"
+2026-01-08,11:21,chi Cyg,Aster,V,5.159,0.036,1.94,Tomasz Nowak,
+2026-01-08,11:40,R Leo,Lyra,V,3.77,0.013,1.06,Tomasz Nowak,"dew on corrector, re-shot"
+2026-01-08,11:47,T CrB,Brill,V,5.767,0.033,1.38,Rosa Lind,"wind gusts, trailing"
+2026-01-08,12:00,R Leo,Lyra,V,11.258,0.064,1.37,Ingrid Halvorsen,
+2026-01-08,15:00,chi Cyg,Aster,R,3.528,0.052,1.14,Yusuf Haddad,
+2026-01-08,15:23,RS Oph,Aster,B,2.679,0.068,2.0,Rosa Lind,
+2026-01-08,15:36,T CrB,Brill,V,11.895,0.022,2.33,Tomasz Nowak,moon 60% up
+2026-01-08,16:17,Mira,Lyra,V,7.753,0.04,2.26,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-01-08,19:17,SS Cyg,Aster,B,11.306,0.076,2.3,Kenji Mori,"dew on corrector, re-shot"
+2026-01-08,19:30,Algol,Brill,R,5.94,0.06,1.22,Kenji Mori,
+2026-01-08,19:49,chi Cyg,Aster,V,11.942,0.033,2.54,Rosa Lind,"dew on corrector, re-shot"
+2026-01-08,20:00,Algol,Brill,V,9.646,0.029,1.42,Rosa Lind,
+2026-01-08,20:13,chi Cyg,Aster,R,7.674,0.031,2.56,Kenji Mori,
+2026-01-09,12:13,T CrB,Brill,V,10.465,0.073,2.57,Yusuf Haddad,"dew on corrector, re-shot"
+2026-01-09,12:20,SS Cyg,Aster,B,7.653,0.016,2.42,Kenji Mori,"dew on corrector, re-shot"
+2026-01-09,13:01,Algol,Brill,R,5.217,0.044,1.96,Tomasz Nowak,
+2026-01-10,05:01,Algol,Brill,V,6.026,0.051,2.04,Ingrid Halvorsen,moon 60% up
+2026-01-10,05:12,delta Cep,Lyra,V,9.14,0.039,1.94,Kenji Mori,
+2026-01-10,21:12,chi Cyg,Aster,R,9.859,0.021,1.52,Tomasz Nowak,"dew on corrector, re-shot"
+2026-01-11,13:12,T CrB,Brill,V,3.92,0.065,1.35,Tomasz Nowak,moon 60% up
+2026-01-11,16:12,T CrB,Brill,V,3.69,0.06,2.05,Tomasz Nowak,
+2026-01-11,16:23,RS Oph,Aster,B,10.764,0.038,1.23,Tomasz Nowak,twilight
+2026-01-11,16:36,Algol,Brill,R,5.123,0.039,1.64,Tomasz Nowak,
+2026-01-11,19:36,RS Oph,Aster,V,9.096,0.074,2.45,Yusuf Haddad,twilight
+2026-01-11,19:55,T CrB,Brill,V,,,1.64,Yusuf Haddad,
+2026-01-11,20:18,SS Cyg,Aster,B,8.063,0.05,2.33,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-01-11,20:59,R Leo,Lyra,V,9.9,0.052,2.06,Rosa Lind,thin cirrus
+2026-01-12,12:59,chi Cyg,Aster,R,2.914,0.057,1.86,Rosa Lind,
+2026-01-12,13:40,delta Cep,Lyra,V,4.226,0.055,2.13,Yusuf Haddad,
+2026-01-12,13:53,Algol,Brill,V,4.89,0.036,1.3,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-01-12,14:34,RS Oph,Aster,B,5.374,0.04,1.78,Kenji Mori,moon 60% up
+2026-01-13,06:34,SS Cyg,Aster,V,7.051,0.032,2.34,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-01-13,09:34,chi Cyg,Aster,V,8.092,0.066,2.38,Yusuf Haddad,twilight
+2026-01-13,09:57,Mira,Lyra,V,10.886,0.078,1.95,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-01-13,10:38,SS Cyg,Aster,V,12.285,0.07,1.28,Yusuf Haddad,thin cirrus
+2026-01-13,13:38,Algol,Brill,V,2.397,0.022,1.69,Rosa Lind,"dew on corrector, re-shot"
+2026-01-13,14:01,Mira,Lyra,V,7.857,0.068,1.52,Yusuf Haddad,twilight
+2026-01-13,14:20,SS Cyg,Aster,R,7.778,0.078,2.17,Yusuf Haddad,
+2026-01-13,14:27,R Leo,Lyra,V,10.232,0.076,1.29,Tomasz Nowak,thin cirrus
+2026-01-13,14:40,Mira,Lyra,V,4.022,0.008,1.3,Yusuf Haddad,
+2026-01-14,06:40,R Leo,Lyra,V,4.376,0.032,1.87,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-01-14,06:53,RS Oph,Aster,V,9.463,0.007,1.01,Tomasz Nowak,
+2026-01-14,07:34,R Leo,Lyra,V,7.284,0.07,1.14,Rosa Lind,twilight
+2026-01-14,07:53,delta Cep,Lyra,V,4.291,0.016,2.59,Ingrid Halvorsen,"wind gusts, trailing"
+2026-01-14,08:34,delta Cep,Lyra,V,8.582,0.037,2.52,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-01-14,08:53,Algol,Brill,V,5.746,0.056,2.1,Ingrid Halvorsen,
+2026-01-14,09:12,T CrB,Brill,V,7.733,0.015,2.43,Tomasz Nowak,twilight
+2026-01-14,09:53,T CrB,Brill,V,7.009,0.039,1.44,Rosa Lind,moon 60% up
+2026-01-14,10:04,SS Cyg,Aster,R,4.393,0.031,1.6,Yusuf Haddad,twilight
+2026-01-14,10:45,chi Cyg,Aster,V,6.848,0.03,2.32,Kenji Mori,"dew on corrector, re-shot"
+2026-01-14,11:08,chi Cyg,Aster,V,2.93,0.007,1.84,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-01-15,03:08,Mira,Lyra,V,3.677,0.028,1.04,Yusuf Haddad,"wind gusts, trailing"
+2026-01-15,03:31,R Leo,Lyra,V,9.814,0.009,1.96,Tomasz Nowak,
+2026-01-15,03:44,chi Cyg,Aster,R,4.593,0.058,1.75,Yusuf Haddad,
+2026-01-15,04:25,T CrB,Brill,V,7.136,0.049,1.7,Yusuf Haddad,
+2026-01-15,07:25,Mira,Lyra,V,7.239,0.021,2.17,Rosa Lind,"dew on corrector, re-shot"
+2026-01-15,07:48,delta Cep,Lyra,V,4.853,0.037,2.18,Yusuf Haddad,
+2026-01-15,08:01,Algol,Brill,R,10.4,0.049,1.89,Kenji Mori,"""comparison star C3, not C2"""
+2026-01-15,08:12,T CrB,Brill,V,12.157,0.023,1.08,Tomasz Nowak,
+2026-01-15,08:23,chi Cyg,Aster,V,11.748,0.007,2.13,Yusuf Haddad,twilight
+2026-01-15,08:34,Mira,Lyra,V,5.763,0.071,2.54,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-01-15,08:41,delta Cep,Lyra,V,2.584,0.011,2.04,Tomasz Nowak,thin cirrus
+2026-01-15,08:48,Mira,Lyra,V,2.835,0.057,1.87,Yusuf Haddad,"dew on corrector, re-shot"
+2026-01-15,09:07,Mira,Lyra,V,7.679,0.021,1.63,Kenji Mori,
+2026-01-15,12:07,T CrB,Brill,V,6.644,0.051,1.27,Yusuf Haddad,
+2026-01-15,12:48,T CrB,Brill,V,12.231,0.054,1.75,Rosa Lind,
+2026-01-15,13:07,Mira,Lyra,V,9.173,0.029,1.79,Ingrid Halvorsen,
+2026-01-15,13:18,Mira,Lyra,V,9.01,0.03,2.51,Yusuf Haddad,
+2026-01-15,13:25,chi Cyg,Aster,V,3.29,0.071,2.51,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-01-15,13:38,chi Cyg,Aster,V,12.116,0.03,2.18,Rosa Lind,"""comparison star C3, not C2"""
+2026-01-16,05:38,SS Cyg,Aster,R,11.931,0.075,1.76,Yusuf Haddad,
+2026-01-16,06:01,SS Cyg,Aster,B,11.785,0.006,1.97,Kenji Mori,
+2026-01-16,22:01,Algol,Brill,V,4.442,0.029,2.3,Ingrid Halvorsen,"wind gusts, trailing"
+2026-01-17,14:01,chi Cyg,Aster,R,6.693,0.051,1.75,Kenji Mori,moon 60% up
+2026-01-17,14:08,delta Cep,Lyra,V,12.286,0.026,2.57,Tomasz Nowak,"wind gusts, trailing"
+2026-01-17,14:21,Algol,Brill,V,6.067,0.05,2.03,Yusuf Haddad,"wind gusts, trailing"
+2026-01-17,14:44,T CrB,Brill,V,5.681,0.074,1.39,Yusuf Haddad,"dew on corrector, re-shot"
+2026-01-17,15:03,chi Cyg,Aster,V,10.832,0.055,1.2,Kenji Mori,"wind gusts, trailing"
+2026-01-17,15:26,R Leo,Lyra,V,7.886,0.068,1.36,Yusuf Haddad,twilight
+2026-01-17,15:49,RS Oph,Aster,B,9.838,0.044,1.02,Yusuf Haddad,"dew on corrector, re-shot"
+2026-01-17,16:30,delta Cep,Lyra,V,5.769,0.06,2.39,Rosa Lind,
+2026-01-18,08:30,T CrB,Brill,V,12.374,0.016,1.82,Kenji Mori,moon 60% up
+2026-01-18,08:41,Algol,Brill,V,6.195,0.039,1.56,Kenji Mori,"dew on corrector, re-shot"
+2026-01-18,11:41,delta Cep,Lyra,V,5.299,0.004,2.42,Ingrid Halvorsen,moon 60% up
+2026-01-18,14:41,Algol,Brill,V,10.615,0.018,2.28,Rosa Lind,"""comparison star C3, not C2"""
+2026-01-18,14:52,Algol,Brill,R,4.538,0.038,2.52,Yusuf Haddad,
+2026-01-18,17:52,SS Cyg,Aster,V,2.312,0.039,2.4,Kenji Mori,
+2026-01-19,09:52,Mira,Lyra,V,9.796,0.08,1.65,Tomasz Nowak,"wind gusts, trailing"
+2026-01-19,10:11,T CrB,Brill,V,5.706,0.017,2.37,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-01-19,10:34,T CrB,Brill,V,9.257,0.032,2.2,Kenji Mori,"wind gusts, trailing"
+2026-01-19,10:57,RS Oph,Aster,B,10.936,0.07,1.5,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-01-19,13:57,chi Cyg,Aster,V,7.822,0.023,1.74,Tomasz Nowak,"wind gusts, trailing"
+2026-01-19,14:16,Mira,Lyra,V,5.786,0.043,2.52,Yusuf Haddad,thin cirrus
+2026-01-19,14:35,R Leo,Lyra,V,8.289,0.03,1.51,Tomasz Nowak,twilight
+2026-01-19,17:35,T CrB,Brill,V,8.37,0.055,2.56,Ingrid Halvorsen,"wind gusts, trailing"
+2026-01-19,18:16,T CrB,Brill,V,2.249,0.031,2.18,Kenji Mori,thin cirrus
+2026-01-19,18:57,T CrB,Brill,V,2.553,0.006,2.13,Kenji Mori,"dew on corrector, re-shot"
+2026-01-19,19:08,RS Oph,Aster,B,,,2.38,Rosa Lind,thin cirrus
+2026-01-19,19:15,Algol,Brill,V,3.918,0.058,2.5,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-01-19,19:22,chi Cyg,Aster,V,3.213,0.036,1.19,Kenji Mori,
+2026-01-19,22:22,R Leo,Lyra,V,6.64,0.067,2.18,Tomasz Nowak,thin cirrus
+2026-01-20,14:22,delta Cep,Lyra,V,6.371,0.015,2.02,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-01-20,14:29,Algol,Brill,R,12.046,0.035,1.76,Kenji Mori,twilight
+2026-01-20,14:52,Algol,Brill,V,6.526,0.025,2.18,Rosa Lind,"dew on corrector, re-shot"
+2026-01-20,15:33,SS Cyg,Aster,R,5.14,0.071,1.31,Ingrid Halvorsen,"wind gusts, trailing"
+2026-01-20,15:44,R Leo,Lyra,V,8.043,0.011,1.88,Kenji Mori,
+2026-01-20,16:07,Algol,Brill,V,9.204,0.039,1.56,Rosa Lind,
+2026-01-20,16:30,Algol,Brill,R,4.689,0.053,1.58,Tomasz Nowak,
+2026-01-21,08:30,Algol,Brill,V,8.519,0.026,2.57,Yusuf Haddad,"dew on corrector, re-shot"
+2026-01-21,09:11,delta Cep,Lyra,V,6.98,0.074,2.47,Ingrid Halvorsen,
+2026-01-21,09:22,delta Cep,Lyra,V,3.373,0.078,2.32,Tomasz Nowak,
+2026-01-21,09:45,SS Cyg,Aster,R,11.477,0.008,1.11,Rosa Lind,"wind gusts, trailing"
+2026-01-21,10:04,R Leo,Lyra,V,12.24,0.019,2.0,Ingrid Halvorsen,moon 60% up
+2026-01-21,13:04,RS Oph,Aster,V,2.54,0.068,1.92,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-01-21,16:04,R Leo,Lyra,V,11.1,0.019,2.5,Tomasz Nowak,"dew on corrector, re-shot"
+2026-01-21,19:04,Algol,Brill,V,6.564,0.075,1.08,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-01-22,11:04,T CrB,Brill,V,9.452,0.053,1.57,Rosa Lind,
+2026-01-22,14:04,delta Cep,Lyra,V,4.966,0.02,2.53,Yusuf Haddad,
+2026-01-23,06:04,RS Oph,Aster,V,6.156,0.065,2.03,Tomasz Nowak,
+2026-01-23,06:17,chi Cyg,Aster,R,5.047,0.066,1.89,Ingrid Halvorsen,
+2026-01-23,06:58,delta Cep,Lyra,V,4.796,0.028,2.14,Rosa Lind,moon 60% up
+2026-01-23,07:21,SS Cyg,Aster,V,6.838,0.021,2.24,Ingrid Halvorsen,thin cirrus
+2026-01-23,23:21,R Leo,Lyra,V,10.901,0.059,2.32,Tomasz Nowak,
+2026-01-24,15:21,RS Oph,Aster,V,9.936,0.072,1.82,Kenji Mori,moon 60% up
+2026-01-24,15:44,Algol,Brill,V,7.472,0.014,2.52,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-01-24,16:07,chi Cyg,Aster,V,9.099,0.073,1.91,Tomasz Nowak,thin cirrus
+2026-01-25,08:07,Algol,Brill,V,4.839,0.024,1.01,Yusuf Haddad,"wind gusts, trailing"
+2026-01-25,08:48,T CrB,Brill,V,9.708,0.004,1.09,Kenji Mori,
+2026-01-25,09:29,SS Cyg,Aster,V,2.317,0.008,1.03,Kenji Mori,
+2026-01-25,09:48,SS Cyg,Aster,B,4.168,0.021,1.6,Tomasz Nowak,
+2026-01-26,01:48,Mira,Lyra,V,11.333,0.077,1.64,Tomasz Nowak,
+2026-01-26,04:48,delta Cep,Lyra,V,2.961,0.004,1.05,Kenji Mori,"dew on corrector, re-shot"
+2026-01-26,04:55,chi Cyg,Aster,V,8.588,0.004,1.01,Ingrid Halvorsen,
+2026-01-26,05:06,T CrB,Brill,V,3.115,0.073,1.29,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-01-26,05:17,SS Cyg,Aster,B,6.636,0.043,1.15,Ingrid Halvorsen,
+2026-01-26,21:17,R Leo,Lyra,V,10.203,0.05,1.28,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-01-26,21:28,delta Cep,Lyra,V,7.16,0.068,2.58,Yusuf Haddad,twilight
+2026-01-27,00:28,Algol,Brill,R,7.848,0.013,2.3,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-01-27,16:28,R Leo,Lyra,V,6.949,0.03,1.42,Ingrid Halvorsen,moon 60% up
+2026-01-27,16:47,RS Oph,Aster,V,6.165,0.036,2.34,Tomasz Nowak,
+2026-01-28,08:47,delta Cep,Lyra,V,7.753,0.011,1.43,Rosa Lind,"""comparison star C3, not C2"""
+2026-01-28,11:47,chi Cyg,Aster,V,10.488,0.061,1.65,Rosa Lind,
+2026-01-28,11:54,SS Cyg,Aster,V,7.533,0.072,2.5,Rosa Lind,thin cirrus
+2026-01-28,12:01,chi Cyg,Aster,V,6.256,0.044,2.51,Yusuf Haddad,
+2026-01-28,12:42,R Leo,Lyra,V,2.72,0.08,1.19,Yusuf Haddad,"dew on corrector, re-shot"
+2026-01-29,04:42,R Leo,Lyra,V,3.358,0.013,2.46,Rosa Lind,
+2026-01-29,05:01,SS Cyg,Aster,B,11.02,0.033,1.58,Rosa Lind,"wind gusts, trailing"
+2026-01-29,21:01,SS Cyg,Aster,B,6.178,0.006,1.82,Yusuf Haddad,
+2026-01-30,00:01,Algol,Brill,V,3.066,0.044,1.55,Kenji Mori,
+2026-01-30,00:14,SS Cyg,Aster,V,7.7,0.08,2.1,Tomasz Nowak,"wind gusts, trailing"
+2026-01-30,00:33,chi Cyg,Aster,V,3.403,0.026,1.63,Kenji Mori,moon 60% up
+2026-01-30,00:44,delta Cep,Lyra,V,3.328,0.06,2.57,Ingrid Halvorsen,
+2026-01-30,00:55,Mira,Lyra,V,11.979,0.013,2.22,Tomasz Nowak,thin cirrus
+2026-01-30,01:06,T CrB,Brill,V,7.805,0.007,2.38,Yusuf Haddad,twilight
+2026-01-30,01:13,Algol,Brill,R,4.713,0.012,1.12,Kenji Mori,
+2026-01-30,01:26,SS Cyg,Aster,B,2.118,0.012,2.35,Kenji Mori,
+2026-01-30,01:37,chi Cyg,Aster,V,8.292,0.023,1.19,Tomasz Nowak,"dew on corrector, re-shot"
+2026-01-30,01:48,R Leo,Lyra,V,10.456,0.079,1.64,Rosa Lind,twilight
+2026-01-30,02:29,SS Cyg,Aster,R,3.273,0.059,1.3,Yusuf Haddad,
+2026-01-30,05:29,delta Cep,Lyra,V,10.269,0.075,1.85,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-01-30,05:36,RS Oph,Aster,B,11.465,0.026,1.62,Rosa Lind,moon 60% up
+2026-01-30,05:59,SS Cyg,Aster,B,6.534,0.067,1.11,Ingrid Halvorsen,
+2026-01-30,06:22,chi Cyg,Aster,R,6.26,0.007,2.33,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-01-30,06:41,T CrB,Brill,V,8.916,0.03,1.46,Ingrid Halvorsen,"wind gusts, trailing"
+2026-01-30,06:48,T CrB,Brill,V,5.579,0.024,1.35,Yusuf Haddad,
+2026-01-30,07:01,T CrB,Brill,V,6.886,0.005,2.21,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-01-30,07:24,T CrB,Brill,V,10.409,0.007,1.39,Ingrid Halvorsen,
+2026-01-30,07:43,SS Cyg,Aster,B,6.107,0.056,1.01,Yusuf Haddad,moon 60% up
+2026-01-30,10:43,RS Oph,Aster,V,6.313,0.027,1.09,Kenji Mori,"dew on corrector, re-shot"
+2026-01-30,11:02,T CrB,Brill,V,10.401,0.007,2.0,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-01-30,11:21,Mira,Lyra,V,3.258,0.006,1.91,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-01-30,11:28,R Leo,Lyra,V,9.898,0.066,1.27,Kenji Mori,
+2026-01-30,11:39,T CrB,Brill,V,12.283,0.044,1.5,Kenji Mori,"""comparison star C3, not C2"""
+2026-01-30,14:39,SS Cyg,Aster,B,10.904,0.021,2.36,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-01-30,15:02,delta Cep,Lyra,V,8.569,0.013,2.12,Rosa Lind,"""comparison star C3, not C2"""
+2026-01-30,15:13,chi Cyg,Aster,V,9.297,0.067,1.35,Yusuf Haddad,thin cirrus
+2026-01-30,18:13,Mira,Lyra,V,8.708,0.07,1.1,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-01-30,18:32,SS Cyg,Aster,V,3.411,0.037,1.63,Rosa Lind,"wind gusts, trailing"
+2026-01-30,18:45,Mira,Lyra,V,4.366,0.018,2.23,Tomasz Nowak,
+2026-01-31,10:45,Algol,Brill,R,8.947,0.072,2.07,Yusuf Haddad,twilight
+2026-01-31,11:26,SS Cyg,Aster,R,3.965,0.041,1.27,Ingrid Halvorsen,"wind gusts, trailing"
+2026-01-31,11:45,Mira,Lyra,V,7.122,0.035,1.47,Kenji Mori,
+2026-01-31,14:45,chi Cyg,Aster,R,2.139,0.069,1.12,Tomasz Nowak,moon 60% up
+2026-01-31,17:45,R Leo,Lyra,V,11.977,0.068,1.85,Kenji Mori,moon 60% up
+2026-01-31,17:52,Mira,Lyra,V,9.436,0.029,2.45,Kenji Mori,"dew on corrector, re-shot"
+2026-01-31,18:03,delta Cep,Lyra,V,2.759,0.063,1.69,Kenji Mori,thin cirrus
+2026-01-31,18:22,Mira,Lyra,V,8.374,0.067,2.25,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-01-31,18:33,R Leo,Lyra,V,8.028,0.077,2.33,Tomasz Nowak,thin cirrus
+2026-01-31,21:33,Algol,Brill,R,3.15,0.031,1.78,Rosa Lind,twilight
+2026-01-31,21:44,R Leo,Lyra,V,5.716,0.047,2.19,Rosa Lind,twilight
+2026-01-31,21:55,R Leo,Lyra,V,8.134,0.029,2.41,Ingrid Halvorsen,thin cirrus
+2026-01-31,22:14,delta Cep,Lyra,V,8.751,0.062,1.91,Tomasz Nowak,
+2026-01-31,22:37,SS Cyg,Aster,B,6.853,0.024,2.15,Tomasz Nowak,
+2026-01-31,22:44,T CrB,Brill,V,5.863,0.069,2.46,Rosa Lind,
+2026-01-31,23:07,RS Oph,Aster,B,2.881,0.044,2.56,Tomasz Nowak,
+2026-02-01,02:07,Algol,Brill,V,5.924,0.064,1.04,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-02-01,05:07,T CrB,Brill,V,8.759,0.054,1.39,Kenji Mori,"""comparison star C3, not C2"""
+2026-02-01,05:30,delta Cep,Lyra,V,7.166,0.039,1.71,Yusuf Haddad,
+2026-02-01,08:30,Algol,Brill,V,5.276,0.064,2.11,Kenji Mori,
+2026-02-01,08:49,chi Cyg,Aster,V,12.19,0.067,1.98,Rosa Lind,moon 60% up
+2026-02-01,09:00,chi Cyg,Aster,V,10.55,0.056,2.31,Kenji Mori,thin cirrus
+2026-02-01,09:07,Mira,Lyra,V,6.038,0.044,2.47,Tomasz Nowak,
+2026-02-01,12:07,T CrB,Brill,V,2.9,0.07,2.59,Tomasz Nowak,
+2026-02-01,12:48,SS Cyg,Aster,R,12.238,0.066,1.04,Ingrid Halvorsen,
+2026-02-02,04:48,Algol,Brill,R,6.001,0.043,1.82,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-02-02,04:59,Mira,Lyra,V,7.672,0.073,1.55,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-02-02,05:06,RS Oph,Aster,B,12.037,0.026,1.85,Ingrid Halvorsen,twilight
+2026-02-02,21:06,R Leo,Lyra,V,7.273,0.018,1.63,Tomasz Nowak,
+2026-02-03,13:06,Algol,Brill,R,6.763,0.044,2.49,Kenji Mori,"wind gusts, trailing"
+2026-02-03,13:25,SS Cyg,Aster,V,2.837,0.011,1.27,Rosa Lind,
+2026-02-03,14:06,Mira,Lyra,V,2.423,0.044,1.76,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-02-03,14:29,RS Oph,Aster,B,8.144,0.006,2.56,Yusuf Haddad,"wind gusts, trailing"
+2026-02-03,14:42,delta Cep,Lyra,V,3.548,0.011,1.77,Kenji Mori,thin cirrus
+2026-02-03,15:05,delta Cep,Lyra,V,10.955,0.013,1.92,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-02-03,15:24,T CrB,Brill,V,7.05,0.065,2.11,Tomasz Nowak,thin cirrus
+2026-02-04,07:24,delta Cep,Lyra,V,4.407,0.017,2.21,Yusuf Haddad,moon 60% up
+2026-02-04,23:24,Mira,Lyra,V,4.432,0.059,1.43,Kenji Mori,
+2026-02-05,02:24,chi Cyg,Aster,V,7.455,0.027,2.49,Tomasz Nowak,
+2026-02-05,02:43,delta Cep,Lyra,V,8.037,0.071,1.82,Kenji Mori,
+2026-02-05,03:06,RS Oph,Aster,B,5.009,0.061,1.47,Ingrid Halvorsen,moon 60% up
+2026-02-05,06:06,SS Cyg,Aster,R,6.955,0.078,1.58,Tomasz Nowak,
+2026-02-05,06:19,T CrB,Brill,V,11.262,0.01,2.09,Yusuf Haddad,"wind gusts, trailing"
+2026-02-05,07:00,delta Cep,Lyra,V,11.357,0.061,2.47,Kenji Mori,
+2026-02-05,07:07,RS Oph,Aster,V,7.653,0.063,1.57,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-02-05,07:48,RS Oph,Aster,V,12.113,0.052,1.36,Kenji Mori,
+2026-02-05,23:48,Algol,Brill,R,10.584,0.029,1.58,Rosa Lind,moon 60% up
+2026-02-06,00:01,delta Cep,Lyra,V,7.472,0.044,1.37,Tomasz Nowak,
+2026-02-06,00:24,R Leo,Lyra,V,4.365,0.042,1.43,Tomasz Nowak,
+2026-02-06,00:31,T CrB,Brill,V,11.472,0.014,2.3,Tomasz Nowak,moon 60% up
+2026-02-06,00:54,delta Cep,Lyra,V,5.019,0.024,2.06,Yusuf Haddad,
+2026-02-06,01:35,RS Oph,Aster,V,9.679,0.069,1.95,Kenji Mori,"dew on corrector, re-shot"
+2026-02-06,01:54,T CrB,Brill,V,8.612,0.056,1.71,Ingrid Halvorsen,
+2026-02-06,02:35,SS Cyg,Aster,B,7.358,0.028,1.83,Kenji Mori,"wind gusts, trailing"
+2026-02-06,02:54,Mira,Lyra,V,3.275,0.03,1.93,Rosa Lind,"dew on corrector, re-shot"
+2026-02-06,03:35,Mira,Lyra,V,9.218,0.039,2.16,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-02-06,03:42,R Leo,Lyra,V,12.003,0.038,1.36,Tomasz Nowak,"wind gusts, trailing"
+2026-02-06,04:23,SS Cyg,Aster,B,5.137,0.021,2.02,Kenji Mori,
+2026-02-06,04:30,chi Cyg,Aster,V,7.145,0.035,1.44,Tomasz Nowak,twilight
+2026-02-06,04:41,RS Oph,Aster,V,11.316,0.034,2.03,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-02-06,04:54,T CrB,Brill,V,5.845,0.055,2.14,Tomasz Nowak,"dew on corrector, re-shot"
+2026-02-06,05:13,delta Cep,Lyra,V,8.154,0.06,2.55,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-02-06,05:24,delta Cep,Lyra,V,6.717,0.042,2.5,Ingrid Halvorsen,"wind gusts, trailing"
+2026-02-06,08:24,Mira,Lyra,V,5.235,0.024,1.72,Rosa Lind,"""comparison star C3, not C2"""
+2026-02-07,00:24,T CrB,Brill,V,6.902,0.039,1.69,Tomasz Nowak,
+2026-02-07,00:37,delta Cep,Lyra,V,5.333,0.058,1.67,Ingrid Halvorsen,"wind gusts, trailing"
+2026-02-07,00:56,Mira,Lyra,V,4.847,0.039,1.16,Rosa Lind,thin cirrus
+2026-02-07,01:15,delta Cep,Lyra,V,5.017,0.055,1.37,Rosa Lind,twilight
+2026-02-07,01:22,chi Cyg,Aster,R,6.163,0.046,1.15,Rosa Lind,"dew on corrector, re-shot"
+2026-02-07,01:41,Algol,Brill,R,7.617,0.073,1.51,Tomasz Nowak,
+2026-02-07,01:52,RS Oph,Aster,V,3.959,0.036,1.81,Tomasz Nowak,
+2026-02-07,02:15,delta Cep,Lyra,V,6.779,0.036,1.77,Ingrid Halvorsen,
+2026-02-07,02:28,RS Oph,Aster,B,8.578,0.059,2.09,Tomasz Nowak,moon 60% up
+2026-02-07,18:28,SS Cyg,Aster,R,6.378,0.007,2.51,Rosa Lind,
+2026-02-07,21:28,T CrB,Brill,V,6.66,0.039,1.67,Ingrid Halvorsen,twilight
+2026-02-08,13:28,Algol,Brill,R,8.213,0.041,1.31,Yusuf Haddad,"wind gusts, trailing"
+2026-02-08,13:39,chi Cyg,Aster,V,8.468,0.049,2.3,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-02-08,14:02,T CrB,Brill,V,3.502,0.031,2.03,Ingrid Halvorsen,
+2026-02-08,14:13,chi Cyg,Aster,V,7.219,0.046,1.66,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-02-08,14:20,chi Cyg,Aster,V,8.254,0.072,2.58,Rosa Lind,thin cirrus
+2026-02-08,15:01,SS Cyg,Aster,V,7.962,0.008,1.7,Ingrid Halvorsen,
+2026-02-08,15:42,delta Cep,Lyra,V,3.241,0.049,1.07,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-02-08,18:42,Algol,Brill,V,7.052,0.007,2.53,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-02-08,18:53,T CrB,Brill,V,11.94,0.014,1.62,Rosa Lind,
+2026-02-08,19:04,Mira,Lyra,V,6.755,0.072,2.17,Tomasz Nowak,thin cirrus
+2026-02-08,19:17,chi Cyg,Aster,R,3.415,0.017,2.03,Rosa Lind,
+2026-02-08,19:58,Algol,Brill,R,6.454,0.007,1.31,Ingrid Halvorsen,
+2026-02-08,20:11,Algol,Brill,R,11.35,0.019,2.0,Kenji Mori,moon 60% up
+2026-02-08,23:11,SS Cyg,Aster,V,11.499,0.024,1.18,Rosa Lind,
+2026-02-08,23:34,Mira,Lyra,V,5.873,0.007,1.56,Yusuf Haddad,
+2026-02-09,15:34,Mira,Lyra,V,6.75,0.043,1.77,Kenji Mori,
+2026-02-09,15:41,Algol,Brill,V,3.485,0.019,1.05,Tomasz Nowak,
+2026-02-09,16:04,Mira,Lyra,V,2.94,0.072,1.79,Yusuf Haddad,"wind gusts, trailing"
+2026-02-10,08:04,SS Cyg,Aster,V,9.197,0.031,2.32,Kenji Mori,
+2026-02-10,11:04,Algol,Brill,V,4.807,0.062,2.4,Kenji Mori,
+2026-02-10,11:11,Algol,Brill,V,2.951,0.076,1.08,Ingrid Halvorsen,"wind gusts, trailing"
+2026-02-10,11:22,SS Cyg,Aster,V,8.769,0.079,2.47,Rosa Lind,twilight
+2026-02-10,11:35,SS Cyg,Aster,B,12.243,0.006,2.08,Ingrid Halvorsen,
+2026-02-10,12:16,Mira,Lyra,V,2.759,0.077,1.68,Kenji Mori,
+2026-02-10,12:35,Algol,Brill,V,4.892,0.079,1.61,Rosa Lind,
+2026-02-10,13:16,delta Cep,Lyra,V,6.992,0.033,2.27,Yusuf Haddad,
+2026-02-10,13:29,RS Oph,Aster,V,2.484,0.008,1.91,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-02-10,13:52,SS Cyg,Aster,V,11.128,0.023,2.27,Ingrid Halvorsen,moon 60% up
+2026-02-10,14:05,Algol,Brill,V,11.813,0.046,2.31,Yusuf Haddad,moon 60% up
+2026-02-10,17:05,Algol,Brill,R,4.095,0.049,1.54,Kenji Mori,
+2026-02-10,17:16,Algol,Brill,R,7.35,0.057,1.88,Kenji Mori,moon 60% up
+2026-02-10,17:57,T CrB,Brill,V,3.989,0.07,2.37,Rosa Lind,
+2026-02-10,18:08,Algol,Brill,R,7.769,0.026,1.56,Tomasz Nowak,twilight
+2026-02-10,18:19,RS Oph,Aster,B,2.654,0.063,1.44,Rosa Lind,
+2026-02-10,18:42,delta Cep,Lyra,V,11.73,0.009,2.01,Ingrid Halvorsen,
+2026-02-10,18:49,Algol,Brill,R,7.032,0.024,2.28,Tomasz Nowak,twilight
+2026-02-10,18:56,chi Cyg,Aster,V,12.157,0.006,2.08,Kenji Mori,
+2026-02-10,19:07,Algol,Brill,R,5.349,0.008,1.4,Tomasz Nowak,thin cirrus
+2026-02-10,19:20,R Leo,Lyra,V,5.305,0.061,1.61,Tomasz Nowak,
+2026-02-11,11:20,Mira,Lyra,V,5.554,0.022,1.53,Kenji Mori,
+2026-02-11,11:27,Algol,Brill,V,2.302,0.069,1.52,Kenji Mori,
+2026-02-11,11:34,Algol,Brill,R,,,2.38,Ingrid Halvorsen,
+2026-02-11,11:47,Mira,Lyra,V,9.838,0.017,1.48,Yusuf Haddad,moon 60% up
+2026-02-11,12:10,R Leo,Lyra,V,5.953,0.047,1.39,Kenji Mori,
+2026-02-11,12:29,R Leo,Lyra,V,9.209,0.059,1.68,Yusuf Haddad,thin cirrus
+2026-02-11,12:40,T CrB,Brill,V,8.615,0.034,2.46,Kenji Mori,"wind gusts, trailing"
+2026-02-11,12:59,SS Cyg,Aster,B,8.31,0.076,1.61,Ingrid Halvorsen,moon 60% up
+2026-02-12,04:59,RS Oph,Aster,V,6.829,0.025,1.47,Kenji Mori,
+2026-02-12,20:59,Mira,Lyra,V,9.334,0.028,1.78,Kenji Mori,moon 60% up
+2026-02-12,21:06,R Leo,Lyra,V,2.483,0.02,1.59,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-02-13,13:06,RS Oph,Aster,V,7.156,0.038,2.52,Kenji Mori,thin cirrus
+2026-02-13,13:47,Algol,Brill,R,9.68,0.043,1.54,Kenji Mori,"wind gusts, trailing"
+2026-02-13,13:54,delta Cep,Lyra,V,12.168,0.007,1.54,Yusuf Haddad,
+2026-02-13,14:01,RS Oph,Aster,B,8.577,0.051,1.1,Tomasz Nowak,"wind gusts, trailing"
+2026-02-13,14:42,chi Cyg,Aster,R,10.624,0.055,1.8,Ingrid Halvorsen,moon 60% up
+2026-02-13,14:55,Algol,Brill,V,2.64,0.012,2.27,Ingrid Halvorsen,twilight
+2026-02-14,06:55,T CrB,Brill,V,2.168,0.058,1.65,Kenji Mori,
+2026-02-14,07:14,delta Cep,Lyra,V,8.015,0.05,1.63,Tomasz Nowak,
+2026-02-14,07:27,delta Cep,Lyra,V,11.859,0.044,2.31,Rosa Lind,
+2026-02-14,23:27,RS Oph,Aster,B,6.125,0.063,1.33,Kenji Mori,thin cirrus
+2026-02-14,23:40,delta Cep,Lyra,V,11.163,0.059,2.12,Kenji Mori,"wind gusts, trailing"
+2026-02-14,23:59,Algol,Brill,R,7.629,0.052,1.12,Rosa Lind,
+2026-02-15,00:22,Algol,Brill,R,7.136,0.032,2.03,Yusuf Haddad,twilight
+2026-02-15,01:03,delta Cep,Lyra,V,8.111,0.043,1.99,Ingrid Halvorsen,
+2026-02-15,01:22,Algol,Brill,V,8.432,0.012,1.11,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-02-15,01:35,Mira,Lyra,V,10.926,0.074,1.23,Kenji Mori,"wind gusts, trailing"
+2026-02-15,01:58,chi Cyg,Aster,R,3.106,0.025,2.45,Yusuf Haddad,twilight
+2026-02-15,02:39,T CrB,Brill,V,12.163,0.063,1.67,Tomasz Nowak,
+2026-02-15,03:20,T CrB,Brill,V,8.674,0.014,2.01,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-02-15,03:33,RS Oph,Aster,B,9.562,0.074,2.17,Ingrid Halvorsen,moon 60% up
+2026-02-15,03:44,delta Cep,Lyra,V,4.581,0.079,1.9,Yusuf Haddad,
+2026-02-15,06:44,delta Cep,Lyra,V,9.767,0.039,2.44,Tomasz Nowak,
+2026-02-15,06:55,Mira,Lyra,V,8.726,0.031,1.69,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-02-15,07:06,Algol,Brill,V,2.415,0.037,1.43,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-02-15,07:13,R Leo,Lyra,V,9.227,0.073,1.43,Tomasz Nowak,
+2026-02-15,07:24,chi Cyg,Aster,V,8.287,0.006,1.91,Yusuf Haddad,thin cirrus
+2026-02-15,07:31,chi Cyg,Aster,V,5.446,0.061,1.47,Ingrid Halvorsen,twilight
+2026-02-15,07:38,Mira,Lyra,V,12.148,0.033,1.64,Kenji Mori,"dew on corrector, re-shot"
+2026-02-15,08:01,RS Oph,Aster,V,9.669,0.059,1.15,Kenji Mori,moon 60% up
+2026-02-15,08:14,RS Oph,Aster,B,5.185,0.052,1.14,Tomasz Nowak,
+2026-02-15,08:21,RS Oph,Aster,B,4.92,0.044,1.25,Kenji Mori,
+2026-02-15,08:44,T CrB,Brill,V,12.031,0.052,1.12,Kenji Mori,
+2026-02-15,09:25,Mira,Lyra,V,8.695,0.069,2.08,Tomasz Nowak,"dew on corrector, re-shot"
+2026-02-15,09:32,SS Cyg,Aster,B,6.986,0.046,2.14,Tomasz Nowak,"wind gusts, trailing"
+2026-02-15,09:43,T CrB,Brill,V,8.344,0.048,2.14,Ingrid Halvorsen,
+2026-02-15,10:06,Algol,Brill,R,8.134,0.011,1.03,Tomasz Nowak,moon 60% up
+2026-02-15,13:06,RS Oph,Aster,B,11.628,0.057,1.13,Tomasz Nowak,moon 60% up
+2026-02-15,13:17,delta Cep,Lyra,V,6.856,0.079,1.32,Yusuf Haddad,
+2026-02-15,16:17,delta Cep,Lyra,V,6.798,0.053,1.86,Kenji Mori,
+2026-02-15,16:40,T CrB,Brill,V,12.219,0.018,2.22,Ingrid Halvorsen,
+2026-02-15,17:03,delta Cep,Lyra,V,4.29,0.067,1.79,Rosa Lind,"wind gusts, trailing"
+2026-02-15,17:26,Algol,Brill,V,4.528,0.071,1.28,Ingrid Halvorsen,
+2026-02-15,17:39,chi Cyg,Aster,V,10.833,0.017,2.58,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-02-15,20:39,T CrB,Brill,V,2.465,0.054,1.62,Kenji Mori,
+2026-02-15,21:20,Mira,Lyra,V,5.44,0.006,1.14,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-02-15,21:27,Mira,Lyra,V,8.48,0.017,2.3,Kenji Mori,
+2026-02-15,21:38,delta Cep,Lyra,V,7.249,0.007,2.47,Tomasz Nowak,
+2026-02-16,13:38,chi Cyg,Aster,R,10.977,0.048,2.06,Tomasz Nowak,"dew on corrector, re-shot"
+2026-02-16,14:19,R Leo,Lyra,V,,,1.35,Tomasz Nowak,thin cirrus
+2026-02-16,14:42,Algol,Brill,R,9.033,0.021,2.0,Tomasz Nowak,"dew on corrector, re-shot"
+2026-02-16,17:42,delta Cep,Lyra,V,3.843,0.064,1.72,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-02-16,17:55,Mira,Lyra,V,3.055,0.041,2.11,Tomasz Nowak,thin cirrus
+2026-02-16,18:06,SS Cyg,Aster,R,3.995,0.016,2.15,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-02-17,10:06,delta Cep,Lyra,V,3.909,0.042,2.34,Tomasz Nowak,moon 60% up
+2026-02-17,10:29,T CrB,Brill,V,9.663,0.006,2.54,Rosa Lind,twilight
+2026-02-17,10:42,delta Cep,Lyra,V,11.624,0.025,2.41,Tomasz Nowak,moon 60% up
+2026-02-17,11:05,delta Cep,Lyra,V,,,1.15,Tomasz Nowak,
+2026-02-17,11:16,SS Cyg,Aster,R,4.913,0.016,1.15,Ingrid Halvorsen,thin cirrus
+2026-02-17,11:57,delta Cep,Lyra,V,11.994,0.044,1.23,Rosa Lind,twilight
+2026-02-17,12:16,Mira,Lyra,V,5.192,0.077,1.6,Yusuf Haddad,
+2026-02-17,12:29,SS Cyg,Aster,V,11.001,0.026,1.89,Rosa Lind,"""comparison star C3, not C2"""
+2026-02-17,12:36,chi Cyg,Aster,R,9.965,0.029,1.36,Tomasz Nowak,
+2026-02-17,12:43,RS Oph,Aster,B,9.113,0.038,1.07,Tomasz Nowak,"dew on corrector, re-shot"
+2026-02-17,13:02,delta Cep,Lyra,V,8.292,0.064,1.81,Ingrid Halvorsen,thin cirrus
+2026-02-17,13:25,chi Cyg,Aster,V,9.459,0.075,1.02,Rosa Lind,"wind gusts, trailing"
+2026-02-17,16:25,chi Cyg,Aster,R,2.605,0.044,1.91,Kenji Mori,"wind gusts, trailing"
+2026-02-18,08:25,chi Cyg,Aster,V,10.271,0.024,1.13,Ingrid Halvorsen,thin cirrus
+2026-02-18,09:06,chi Cyg,Aster,V,6.394,0.01,1.79,Ingrid Halvorsen,moon 60% up
+2026-02-18,09:17,Mira,Lyra,V,8.037,0.013,2.21,Ingrid Halvorsen,moon 60% up
+2026-02-18,09:24,SS Cyg,Aster,V,11.218,0.02,1.1,Yusuf Haddad,thin cirrus
+2026-02-18,09:47,RS Oph,Aster,B,3.123,0.009,1.47,Yusuf Haddad,
+2026-02-18,12:47,chi Cyg,Aster,V,3.802,0.057,1.47,Rosa Lind,thin cirrus
+2026-02-19,04:47,R Leo,Lyra,V,2.211,0.067,1.61,Rosa Lind,
+2026-02-19,04:58,chi Cyg,Aster,V,3.455,0.022,2.02,Ingrid Halvorsen,
+2026-02-19,05:17,SS Cyg,Aster,B,8.736,0.023,1.31,Ingrid Halvorsen,"wind gusts, trailing"
+2026-02-19,08:17,chi Cyg,Aster,V,6.951,0.034,2.44,Tomasz Nowak,
+2026-02-19,08:30,R Leo,Lyra,V,10.888,0.074,2.6,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-02-19,09:11,RS Oph,Aster,B,3.437,0.03,1.44,Ingrid Halvorsen,"wind gusts, trailing"
+2026-02-20,01:11,Mira,Lyra,V,10.012,0.025,2.46,Kenji Mori,"dew on corrector, re-shot"
+2026-02-20,01:24,delta Cep,Lyra,V,5.695,0.055,1.12,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-02-20,01:43,RS Oph,Aster,B,5.036,0.023,2.36,Rosa Lind,
+2026-02-20,02:06,delta Cep,Lyra,V,4.626,0.024,2.46,Ingrid Halvorsen,thin cirrus
+2026-02-20,02:25,RS Oph,Aster,B,10.619,0.054,1.02,Kenji Mori,"""comparison star C3, not C2"""
+2026-02-20,02:44,T CrB,Brill,V,7.133,0.069,2.24,Kenji Mori,thin cirrus
+2026-02-20,05:44,T CrB,Brill,V,2.96,0.031,2.33,Ingrid Halvorsen,
+2026-02-20,06:03,RS Oph,Aster,B,8.171,0.037,1.06,Rosa Lind,"dew on corrector, re-shot"
+2026-02-20,06:14,RS Oph,Aster,B,6.95,0.04,1.16,Tomasz Nowak,
+2026-02-20,09:14,SS Cyg,Aster,V,11.855,0.007,2.43,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-02-20,09:55,Algol,Brill,V,7.441,0.014,1.39,Tomasz Nowak,moon 60% up
+2026-02-20,10:14,RS Oph,Aster,B,8.03,0.027,2.06,Yusuf Haddad,
+2026-02-20,10:33,SS Cyg,Aster,B,10.141,0.067,1.36,Tomasz Nowak,"dew on corrector, re-shot"
+2026-02-21,02:33,T CrB,Brill,V,3.8,0.049,1.53,Yusuf Haddad,"dew on corrector, re-shot"
+2026-02-21,02:44,Algol,Brill,V,12.082,0.034,2.09,Kenji Mori,twilight
+2026-02-21,18:44,SS Cyg,Aster,R,9.39,0.066,1.23,Yusuf Haddad,"wind gusts, trailing"
+2026-02-21,19:03,delta Cep,Lyra,V,12.291,0.03,2.03,Ingrid Halvorsen,"wind gusts, trailing"
+2026-02-21,19:22,delta Cep,Lyra,V,4.732,0.066,1.22,Yusuf Haddad,"wind gusts, trailing"
+2026-02-21,19:41,SS Cyg,Aster,B,7.798,0.045,1.53,Yusuf Haddad,moon 60% up
+2026-02-21,19:54,T CrB,Brill,V,9.166,0.027,2.49,Tomasz Nowak,"dew on corrector, re-shot"
+2026-02-21,20:07,Mira,Lyra,V,11.087,0.046,1.69,Kenji Mori,
+2026-02-21,20:20,SS Cyg,Aster,R,3.838,0.059,1.06,Ingrid Halvorsen,
+2026-02-21,20:31,RS Oph,Aster,B,7.043,0.032,2.11,Kenji Mori,
+2026-02-21,20:50,Mira,Lyra,V,7.253,0.049,1.76,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-02-21,21:01,R Leo,Lyra,V,8.905,0.054,1.2,Tomasz Nowak,moon 60% up
+2026-02-22,00:01,delta Cep,Lyra,V,8.907,0.07,1.5,Yusuf Haddad,twilight
+2026-02-22,16:01,SS Cyg,Aster,B,3.436,0.006,2.13,Kenji Mori,"wind gusts, trailing"
+2026-02-22,16:20,Mira,Lyra,V,,,1.34,Yusuf Haddad,
+2026-02-22,16:31,delta Cep,Lyra,V,2.9,0.007,2.4,Rosa Lind,
+2026-02-22,16:54,delta Cep,Lyra,V,7.113,0.033,1.04,Tomasz Nowak,
+2026-02-23,08:54,T CrB,Brill,V,4.1,0.04,2.57,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-02-24,00:54,R Leo,Lyra,V,7.701,0.054,1.24,Tomasz Nowak,
+2026-02-24,01:13,chi Cyg,Aster,V,8.607,0.043,1.3,Tomasz Nowak,
+2026-02-24,01:36,T CrB,Brill,V,6.647,0.056,1.59,Rosa Lind,thin cirrus
+2026-02-24,17:36,delta Cep,Lyra,V,,,1.42,Tomasz Nowak,twilight
+2026-02-24,17:43,chi Cyg,Aster,R,11.262,0.057,2.02,Rosa Lind,thin cirrus
+2026-02-25,09:43,chi Cyg,Aster,V,5.399,0.006,2.02,Kenji Mori,
+2026-02-25,10:06,Algol,Brill,R,6.308,0.078,2.07,Tomasz Nowak,
+2026-02-25,10:29,chi Cyg,Aster,V,5.633,0.015,2.43,Tomasz Nowak,"wind gusts, trailing"
+2026-02-25,10:40,T CrB,Brill,V,9.804,0.008,2.19,Ingrid Halvorsen,
+2026-02-25,11:03,SS Cyg,Aster,R,5.417,0.057,2.01,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-02-25,11:44,chi Cyg,Aster,R,9.097,0.063,2.51,Rosa Lind,"wind gusts, trailing"
+2026-02-25,11:57,chi Cyg,Aster,R,8.782,0.032,1.78,Yusuf Haddad,"wind gusts, trailing"
+2026-02-25,14:57,chi Cyg,Aster,V,9.941,0.075,2.58,Kenji Mori,moon 60% up
+2026-02-26,06:57,chi Cyg,Aster,R,12.315,0.04,1.84,Yusuf Haddad,twilight
+2026-02-26,07:16,SS Cyg,Aster,V,10.766,0.036,2.41,Yusuf Haddad,
+2026-02-26,07:35,RS Oph,Aster,V,7.502,0.04,2.3,Rosa Lind,
+2026-02-26,07:54,RS Oph,Aster,B,11.215,0.028,1.2,Yusuf Haddad,moon 60% up
+2026-02-26,08:01,SS Cyg,Aster,V,3.43,0.079,1.8,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-02-26,08:42,T CrB,Brill,V,9.449,0.026,2.12,Tomasz Nowak,
+2026-02-26,11:42,Mira,Lyra,V,2.979,0.038,2.03,Kenji Mori,"""comparison star C3, not C2"""
+2026-02-26,11:55,RS Oph,Aster,V,11.828,0.068,1.94,Tomasz Nowak,
+2026-02-26,12:06,Mira,Lyra,V,6.004,0.038,1.58,Kenji Mori,"wind gusts, trailing"
+2026-02-26,12:13,Algol,Brill,R,4.102,0.04,1.97,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-02-26,12:24,Algol,Brill,V,6.898,0.049,1.15,Kenji Mori,moon 60% up
+2026-02-26,12:43,R Leo,Lyra,V,10.763,0.012,1.85,Ingrid Halvorsen,moon 60% up
+2026-02-26,12:54,R Leo,Lyra,V,12.085,0.037,2.46,Tomasz Nowak,
+2026-02-26,13:35,RS Oph,Aster,V,10.562,0.056,2.24,Rosa Lind,
+2026-02-26,13:54,SS Cyg,Aster,B,10.103,0.008,2.37,Kenji Mori,"""comparison star C3, not C2"""
+2026-02-27,05:54,chi Cyg,Aster,V,6.68,0.058,1.76,Yusuf Haddad,"dew on corrector, re-shot"
+2026-02-27,06:35,Mira,Lyra,V,4.216,0.041,1.38,Ingrid Halvorsen,
+2026-02-27,06:42,Algol,Brill,V,4.893,0.025,2.53,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-02-27,07:23,chi Cyg,Aster,R,2.706,0.033,1.7,Ingrid Halvorsen,
+2026-02-27,07:46,Algol,Brill,V,12.373,0.019,1.96,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-02-27,07:59,RS Oph,Aster,B,8.721,0.076,2.46,Tomasz Nowak,
+2026-02-27,08:06,Mira,Lyra,V,6.661,0.013,2.3,Ingrid Halvorsen,thin cirrus
+2026-02-27,11:06,Mira,Lyra,V,5.499,0.04,2.07,Yusuf Haddad,"wind gusts, trailing"
+2026-02-27,11:19,R Leo,Lyra,V,7.097,0.043,1.71,Rosa Lind,"wind gusts, trailing"
+2026-02-28,03:19,SS Cyg,Aster,B,8.656,0.033,1.73,Rosa Lind,"wind gusts, trailing"
+2026-02-28,19:19,RS Oph,Aster,V,2.31,0.076,1.76,Rosa Lind,
+2026-02-28,19:32,T CrB,Brill,V,3.111,0.005,2.08,Kenji Mori,
+2026-02-28,19:55,delta Cep,Lyra,V,,,1.82,Kenji Mori,
+2026-02-28,20:06,Algol,Brill,V,5.906,0.071,2.37,Rosa Lind,"wind gusts, trailing"
+2026-02-28,20:13,SS Cyg,Aster,R,2.178,0.042,1.47,Tomasz Nowak,
+2026-02-28,20:26,T CrB,Brill,V,10.409,0.059,1.5,Rosa Lind,
+2026-02-28,20:37,R Leo,Lyra,V,8.127,0.045,2.51,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-02-28,20:50,R Leo,Lyra,V,3.076,0.036,1.75,Tomasz Nowak,moon 60% up
+2026-02-28,20:57,T CrB,Brill,V,7.214,0.034,2.18,Ingrid Halvorsen,
+2026-03-01,12:57,T CrB,Brill,V,9.218,0.011,1.18,Kenji Mori,moon 60% up
+2026-03-01,13:10,T CrB,Brill,V,11.494,0.05,1.65,Ingrid Halvorsen,
+2026-03-01,13:51,SS Cyg,Aster,V,7.995,0.005,2.51,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-03-01,14:04,chi Cyg,Aster,V,2.693,0.017,1.54,Tomasz Nowak,thin cirrus
+2026-03-02,06:04,Algol,Brill,V,3.365,0.01,1.57,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-03-02,06:11,Mira,Lyra,V,10.766,0.031,1.48,Kenji Mori,
+2026-03-02,06:18,delta Cep,Lyra,V,9.833,0.077,1.37,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-03-02,06:25,Mira,Lyra,V,12.337,0.024,1.07,Yusuf Haddad,
+2026-03-02,07:06,Mira,Lyra,V,11.123,0.067,1.96,Yusuf Haddad,thin cirrus
+2026-03-02,07:29,SS Cyg,Aster,R,11.507,0.06,2.16,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-03-02,10:29,Mira,Lyra,V,4.465,0.009,1.04,Yusuf Haddad,
+2026-03-03,02:29,SS Cyg,Aster,R,11.284,0.051,1.08,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-03-03,05:29,RS Oph,Aster,B,2.262,0.032,1.94,Kenji Mori,thin cirrus
+2026-03-03,06:10,delta Cep,Lyra,V,4.799,0.071,2.51,Kenji Mori,
+2026-03-03,06:23,delta Cep,Lyra,V,3.988,0.073,1.2,Ingrid Halvorsen,
+2026-03-03,09:23,chi Cyg,Aster,R,6.851,0.037,1.05,Kenji Mori,
+2026-03-03,12:23,R Leo,Lyra,V,4.69,0.053,2.43,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-03-03,13:04,SS Cyg,Aster,B,11.187,0.061,1.14,Yusuf Haddad,thin cirrus
+2026-03-03,13:23,chi Cyg,Aster,V,10.077,0.068,1.61,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-03-03,13:42,RS Oph,Aster,V,9.621,0.02,2.13,Kenji Mori,"wind gusts, trailing"
+2026-03-03,13:49,RS Oph,Aster,B,7.569,0.013,1.53,Kenji Mori,moon 60% up
+2026-03-03,14:30,SS Cyg,Aster,V,5.808,0.039,1.07,Tomasz Nowak,
+2026-03-03,14:53,RS Oph,Aster,B,,,2.12,Tomasz Nowak,moon 60% up
+2026-03-03,15:16,delta Cep,Lyra,V,4.655,0.006,2.25,Rosa Lind,
+2026-03-03,15:35,SS Cyg,Aster,B,9.529,0.034,1.98,Ingrid Halvorsen,moon 60% up
+2026-03-03,15:54,Mira,Lyra,V,3.304,0.02,1.57,Ingrid Halvorsen,
+2026-03-03,16:35,T CrB,Brill,V,5.242,0.048,1.91,Ingrid Halvorsen,moon 60% up
+2026-03-03,16:46,RS Oph,Aster,V,7.104,0.03,1.73,Rosa Lind,
+2026-03-03,17:09,Mira,Lyra,V,2.416,0.012,1.07,Kenji Mori,
+2026-03-03,17:28,Algol,Brill,V,5.022,0.053,1.49,Ingrid Halvorsen,
+2026-03-03,17:39,T CrB,Brill,V,5.228,0.065,2.37,Tomasz Nowak,twilight
+2026-03-03,17:58,SS Cyg,Aster,V,8.744,0.039,1.45,Ingrid Halvorsen,thin cirrus
+2026-03-03,20:58,R Leo,Lyra,V,6.229,0.063,1.96,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-03-03,21:21,delta Cep,Lyra,V,2.828,0.007,1.81,Kenji Mori,
+2026-03-03,21:44,T CrB,Brill,V,5.041,0.063,1.74,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-03-03,21:57,RS Oph,Aster,V,8.788,0.065,1.99,Kenji Mori,
+2026-03-03,22:10,RS Oph,Aster,V,,,1.1,Tomasz Nowak,twilight
+2026-03-04,01:10,SS Cyg,Aster,R,8.527,0.054,2.26,Rosa Lind,
+2026-03-04,01:21,Algol,Brill,R,8.756,0.06,2.0,Rosa Lind,"wind gusts, trailing"
+2026-03-04,02:02,RS Oph,Aster,B,6.052,0.047,2.3,Rosa Lind,thin cirrus
+2026-03-04,02:43,RS Oph,Aster,B,10.342,0.043,1.91,Tomasz Nowak,moon 60% up
+2026-03-04,18:43,delta Cep,Lyra,V,3.232,0.069,2.44,Rosa Lind,moon 60% up
+2026-03-04,18:50,T CrB,Brill,V,3.696,0.01,1.33,Ingrid Halvorsen,twilight
+2026-03-04,19:01,RS Oph,Aster,B,8.703,0.047,2.52,Ingrid Halvorsen,
+2026-03-04,19:24,Algol,Brill,V,11.244,0.007,1.15,Kenji Mori,twilight
+2026-03-04,20:05,R Leo,Lyra,V,11.7,0.009,2.01,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-03-04,20:46,chi Cyg,Aster,V,10.52,0.057,1.01,Rosa Lind,moon 60% up
+2026-03-04,21:27,T CrB,Brill,V,4.883,0.007,1.52,Ingrid Halvorsen,thin cirrus
+2026-03-04,21:46,delta Cep,Lyra,V,5.74,0.046,2.28,Kenji Mori,
+2026-03-04,21:53,RS Oph,Aster,B,5.452,0.024,2.26,Rosa Lind,
+2026-03-04,22:34,T CrB,Brill,V,3.08,0.008,2.09,Tomasz Nowak,
+2026-03-04,22:47,Mira,Lyra,V,6.88,0.074,2.5,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-03-04,22:58,chi Cyg,Aster,R,7.079,0.078,2.38,Rosa Lind,
+2026-03-04,23:05,SS Cyg,Aster,R,8.563,0.037,1.21,Tomasz Nowak,"dew on corrector, re-shot"
+2026-03-04,23:18,R Leo,Lyra,V,3.571,0.055,1.77,Tomasz Nowak,thin cirrus
+2026-03-04,23:29,delta Cep,Lyra,V,9.571,0.025,1.75,Rosa Lind,thin cirrus
+2026-03-04,23:48,chi Cyg,Aster,V,7.198,0.046,2.51,Rosa Lind,
+2026-03-05,00:01,Algol,Brill,V,4.792,0.069,2.0,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-03-05,00:08,RS Oph,Aster,B,4.649,0.073,1.57,Rosa Lind,
+2026-03-05,00:31,Mira,Lyra,V,10.708,0.007,1.21,Kenji Mori,
+2026-03-05,00:42,R Leo,Lyra,V,4.54,0.051,1.36,Yusuf Haddad,
+2026-03-05,01:05,chi Cyg,Aster,V,8.662,0.04,1.54,Kenji Mori,
+2026-03-05,17:05,Algol,Brill,R,8.776,0.011,2.39,Kenji Mori,"""comparison star C3, not C2"""
+2026-03-05,17:28,Mira,Lyra,V,11.959,0.048,2.34,Kenji Mori,
+2026-03-05,17:35,Algol,Brill,V,7.59,0.041,2.26,Tomasz Nowak,
+2026-03-05,17:54,chi Cyg,Aster,V,9.555,0.056,1.91,Tomasz Nowak,
+2026-03-05,18:35,T CrB,Brill,V,11.569,0.033,1.85,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-03-05,18:54,chi Cyg,Aster,R,11.893,0.056,2.5,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-03-05,19:13,T CrB,Brill,V,7.013,0.077,1.02,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-03-05,22:13,Algol,Brill,R,12.348,0.046,1.71,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-03-06,01:13,R Leo,Lyra,V,2.236,0.026,1.17,Yusuf Haddad,thin cirrus
+2026-03-06,01:20,delta Cep,Lyra,V,3.924,0.074,1.58,Ingrid Halvorsen,twilight
+2026-03-06,02:01,delta Cep,Lyra,V,8.523,0.057,1.08,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-03-06,02:42,SS Cyg,Aster,R,5.45,0.069,2.52,Tomasz Nowak,thin cirrus
+2026-03-06,02:53,R Leo,Lyra,V,7.962,0.049,2.53,Yusuf Haddad,thin cirrus
+2026-03-06,18:53,Mira,Lyra,V,9.366,0.018,1.82,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-03-06,19:06,SS Cyg,Aster,V,8.72,0.034,2.26,Kenji Mori,thin cirrus
+2026-03-07,11:06,delta Cep,Lyra,V,11.394,0.059,2.43,Rosa Lind,thin cirrus
+2026-03-07,11:29,R Leo,Lyra,V,7.448,0.073,1.79,Kenji Mori,
+2026-03-07,11:40,T CrB,Brill,V,10.206,0.059,2.15,Tomasz Nowak,
+2026-03-07,11:53,SS Cyg,Aster,V,4.442,0.042,2.51,Yusuf Haddad,moon 60% up
+2026-03-07,12:34,R Leo,Lyra,V,,,1.87,Kenji Mori,moon 60% up
+2026-03-07,12:57,chi Cyg,Aster,R,,,1.9,Kenji Mori,
+2026-03-07,15:57,SS Cyg,Aster,V,3.524,0.079,1.45,Rosa Lind,
+2026-03-07,18:57,delta Cep,Lyra,V,11.335,0.01,1.3,Yusuf Haddad,moon 60% up
+2026-03-07,19:38,SS Cyg,Aster,R,11.794,0.074,1.77,Rosa Lind,"""comparison star C3, not C2"""
+2026-03-07,19:49,Algol,Brill,V,12.017,0.02,1.94,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-03-07,19:56,Algol,Brill,V,10.446,0.007,1.05,Ingrid Halvorsen,twilight
+2026-03-07,20:03,Algol,Brill,V,9.178,0.056,2.44,Yusuf Haddad,
+2026-03-07,20:44,Mira,Lyra,V,4.342,0.055,1.89,Yusuf Haddad,"wind gusts, trailing"
+2026-03-08,12:44,T CrB,Brill,V,9.647,0.071,2.07,Tomasz Nowak,thin cirrus
+2026-03-08,12:57,Algol,Brill,V,10.955,0.028,2.44,Yusuf Haddad,
+2026-03-08,13:38,chi Cyg,Aster,V,7.172,0.064,2.55,Tomasz Nowak,thin cirrus
+2026-03-08,13:51,Algol,Brill,V,10.05,0.035,1.21,Rosa Lind,"wind gusts, trailing"
+2026-03-08,14:32,Algol,Brill,R,2.297,0.023,2.02,Rosa Lind,
+2026-03-08,14:45,SS Cyg,Aster,B,2.711,0.069,1.8,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-03-08,15:04,T CrB,Brill,V,12.388,0.067,1.93,Yusuf Haddad,
+2026-03-08,15:15,Mira,Lyra,V,4.676,0.036,1.57,Kenji Mori,
+2026-03-08,15:34,Mira,Lyra,V,2.759,0.069,1.06,Kenji Mori,
+2026-03-08,15:53,SS Cyg,Aster,B,8.301,0.038,1.58,Yusuf Haddad,"wind gusts, trailing"
+2026-03-09,07:53,chi Cyg,Aster,V,7.224,0.009,1.5,Yusuf Haddad,
+2026-03-09,23:53,delta Cep,Lyra,V,6.208,0.038,1.19,Yusuf Haddad,"wind gusts, trailing"
+2026-03-10,15:53,chi Cyg,Aster,V,3.842,0.005,2.47,Rosa Lind,
+2026-03-10,16:06,RS Oph,Aster,V,8.462,0.072,2.2,Kenji Mori,
+2026-03-10,16:13,delta Cep,Lyra,V,7.086,0.015,1.89,Kenji Mori,
+2026-03-11,08:13,chi Cyg,Aster,R,9.266,0.014,1.93,Yusuf Haddad,"dew on corrector, re-shot"
+2026-03-11,11:13,chi Cyg,Aster,V,4.78,0.022,2.1,Rosa Lind,moon 60% up
+2026-03-11,14:13,R Leo,Lyra,V,3.342,0.035,1.4,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-03-11,14:54,Mira,Lyra,V,6.694,0.051,1.05,Kenji Mori,"wind gusts, trailing"
+2026-03-12,06:54,RS Oph,Aster,B,4.641,0.008,2.38,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-03-12,07:01,chi Cyg,Aster,R,6.718,0.03,1.03,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-03-12,07:12,SS Cyg,Aster,V,11.796,0.015,2.51,Tomasz Nowak,
+2026-03-12,07:35,Algol,Brill,R,6.172,0.06,2.08,Yusuf Haddad,twilight
+2026-03-12,07:46,SS Cyg,Aster,B,3.282,0.041,2.09,Ingrid Halvorsen,
+2026-03-12,23:46,Mira,Lyra,V,9.616,0.022,1.7,Ingrid Halvorsen,
+2026-03-12,23:57,delta Cep,Lyra,V,2.679,0.037,1.17,Rosa Lind,
+2026-03-13,00:08,RS Oph,Aster,B,10.157,0.079,2.19,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-03-13,16:08,T CrB,Brill,V,2.854,0.049,1.29,Kenji Mori,
+2026-03-13,16:49,SS Cyg,Aster,R,10.038,0.063,2.51,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-03-13,17:08,T CrB,Brill,V,10.067,0.065,1.94,Tomasz Nowak,
+2026-03-14,09:08,chi Cyg,Aster,V,10.678,0.021,1.04,Ingrid Halvorsen,
+2026-03-14,09:15,SS Cyg,Aster,B,3.646,0.071,2.11,Ingrid Halvorsen,
+2026-03-14,09:38,RS Oph,Aster,V,11.877,0.08,2.03,Tomasz Nowak,twilight
+2026-03-14,10:19,R Leo,Lyra,V,12.179,0.031,1.99,Yusuf Haddad,
+2026-03-14,11:00,SS Cyg,Aster,B,7.506,0.064,1.53,Tomasz Nowak,
+2026-03-14,11:13,SS Cyg,Aster,B,12.083,0.077,2.1,Kenji Mori,
+2026-03-15,03:13,RS Oph,Aster,B,3.984,0.018,2.38,Tomasz Nowak,
+2026-03-15,03:54,delta Cep,Lyra,V,3.478,0.045,1.05,Rosa Lind,thin cirrus
+2026-03-15,19:54,Mira,Lyra,V,2.26,0.038,2.27,Kenji Mori,"""comparison star C3, not C2"""
+2026-03-15,20:35,T CrB,Brill,V,3.814,0.054,2.44,Kenji Mori,
+2026-03-15,20:48,SS Cyg,Aster,V,7.255,0.054,2.38,Ingrid Halvorsen,
+2026-03-15,21:07,Algol,Brill,R,2.415,0.051,1.2,Tomasz Nowak,moon 60% up
+2026-03-15,21:14,T CrB,Brill,V,2.829,0.08,1.17,Yusuf Haddad,moon 60% up
+2026-03-15,21:27,T CrB,Brill,V,11.881,0.059,1.98,Rosa Lind,twilight
+2026-03-16,13:27,delta Cep,Lyra,V,11.899,0.079,2.56,Rosa Lind,
+2026-03-16,14:08,delta Cep,Lyra,V,5.916,0.011,1.79,Rosa Lind,moon 60% up
+2026-03-16,14:19,RS Oph,Aster,B,3.642,0.031,1.42,Yusuf Haddad,twilight
+2026-03-16,15:00,RS Oph,Aster,B,7.666,0.026,1.28,Kenji Mori,
+2026-03-17,07:00,chi Cyg,Aster,V,4.843,0.029,2.58,Rosa Lind,"dew on corrector, re-shot"
+2026-03-17,23:00,chi Cyg,Aster,V,6.7,0.044,1.05,Kenji Mori,
+2026-03-17,23:41,RS Oph,Aster,V,4.751,0.045,1.39,Ingrid Halvorsen,twilight
+2026-03-18,00:00,chi Cyg,Aster,V,7.307,0.064,1.26,Rosa Lind,moon 60% up
+2026-03-18,00:41,Algol,Brill,V,8.981,0.058,2.12,Ingrid Halvorsen,twilight
+2026-03-18,01:00,delta Cep,Lyra,V,4.994,0.048,2.6,Ingrid Halvorsen,
+2026-03-18,01:19,Algol,Brill,R,9.861,0.029,2.44,Ingrid Halvorsen,
+2026-03-18,01:42,Mira,Lyra,V,8.468,0.074,1.91,Tomasz Nowak,
+2026-03-18,02:23,T CrB,Brill,V,5.989,0.058,1.35,Ingrid Halvorsen,twilight
+2026-03-18,02:46,Algol,Brill,V,11.964,0.053,2.17,Rosa Lind,
+2026-03-18,03:09,delta Cep,Lyra,V,7.099,0.053,2.49,Kenji Mori,twilight
+2026-03-18,03:32,SS Cyg,Aster,B,7.758,0.036,1.38,Rosa Lind,moon 60% up
+2026-03-18,04:13,RS Oph,Aster,V,7.021,0.038,2.1,Rosa Lind,
+2026-03-18,04:26,SS Cyg,Aster,V,9.714,0.057,1.36,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-03-18,04:39,SS Cyg,Aster,R,3.787,0.049,1.21,Kenji Mori,
+2026-03-18,20:39,delta Cep,Lyra,V,3.889,0.022,1.75,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-03-18,20:50,delta Cep,Lyra,V,3.649,0.07,2.56,Kenji Mori,"dew on corrector, re-shot"
+2026-03-18,21:31,Algol,Brill,R,10.629,0.076,1.1,Rosa Lind,thin cirrus
+2026-03-18,21:50,Mira,Lyra,V,6.334,0.033,2.24,Tomasz Nowak,
+2026-03-19,00:50,T CrB,Brill,V,7.426,0.071,2.17,Kenji Mori,twilight
+2026-03-19,03:50,SS Cyg,Aster,R,2.9,0.064,2.4,Yusuf Haddad,
+2026-03-19,19:50,Algol,Brill,R,3.092,0.048,1.83,Yusuf Haddad,thin cirrus
+2026-03-19,20:13,R Leo,Lyra,V,7.844,0.025,2.41,Rosa Lind,twilight
+2026-03-20,12:13,RS Oph,Aster,B,8.946,0.008,2.37,Yusuf Haddad,
+2026-03-20,12:54,Algol,Brill,R,8.883,0.019,1.68,Yusuf Haddad,moon 60% up
+2026-03-20,13:35,RS Oph,Aster,B,5.697,0.027,1.76,Rosa Lind,
+2026-03-20,14:16,Mira,Lyra,V,5.216,0.041,2.21,Tomasz Nowak,twilight
+2026-03-20,14:27,Algol,Brill,R,7.942,0.033,1.46,Ingrid Halvorsen,
+2026-03-20,14:40,Mira,Lyra,V,10.317,0.055,2.19,Rosa Lind,
+2026-03-20,15:21,SS Cyg,Aster,V,10.085,0.058,1.75,Ingrid Halvorsen,moon 60% up
+2026-03-20,16:02,R Leo,Lyra,V,6.01,0.055,1.97,Tomasz Nowak,moon 60% up
+2026-03-20,16:25,T CrB,Brill,V,7.12,0.036,2.28,Yusuf Haddad,
+2026-03-20,16:32,RS Oph,Aster,B,7.703,0.009,2.03,Ingrid Halvorsen,
+2026-03-20,16:55,delta Cep,Lyra,V,9.741,0.038,1.7,Kenji Mori,twilight
+2026-03-20,17:08,Algol,Brill,V,3.22,0.047,1.98,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-03-21,09:08,Algol,Brill,V,8.129,0.03,1.7,Tomasz Nowak,"dew on corrector, re-shot"
+2026-03-21,09:27,T CrB,Brill,V,7.334,0.066,1.82,Yusuf Haddad,thin cirrus
+2026-03-21,09:40,Algol,Brill,R,7.933,0.039,2.51,Rosa Lind,
+2026-03-21,09:59,R Leo,Lyra,V,5.087,0.016,2.12,Tomasz Nowak,"wind gusts, trailing"
+2026-03-21,10:12,RS Oph,Aster,B,3.725,0.03,2.42,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-03-21,10:31,T CrB,Brill,V,11.039,0.02,1.41,Tomasz Nowak,"wind gusts, trailing"
+2026-03-22,02:31,Algol,Brill,V,3.097,0.079,2.45,Rosa Lind,
+2026-03-22,18:31,SS Cyg,Aster,R,7.463,0.041,1.11,Yusuf Haddad,twilight
+2026-03-22,18:42,Algol,Brill,R,8.287,0.017,1.54,Kenji Mori,"wind gusts, trailing"
+2026-03-22,19:23,RS Oph,Aster,V,9.311,0.068,2.17,Yusuf Haddad,
+2026-03-22,19:42,T CrB,Brill,V,8.631,0.079,2.52,Rosa Lind,
+2026-03-22,20:05,RS Oph,Aster,V,12.189,0.062,1.43,Tomasz Nowak,twilight
+2026-03-23,12:05,T CrB,Brill,V,9.126,0.052,1.62,Rosa Lind,
+2026-03-23,12:12,delta Cep,Lyra,V,8.377,0.052,1.43,Kenji Mori,thin cirrus
+2026-03-23,12:35,RS Oph,Aster,V,11.203,0.072,1.2,Yusuf Haddad,moon 60% up
+2026-03-24,04:35,T CrB,Brill,V,2.164,0.012,1.67,Yusuf Haddad,
+2026-03-24,04:42,T CrB,Brill,V,4.509,0.073,1.86,Yusuf Haddad,"wind gusts, trailing"
+2026-03-24,07:42,T CrB,Brill,V,6.081,0.071,1.19,Tomasz Nowak,
+2026-03-24,08:01,R Leo,Lyra,V,9.992,0.029,2.54,Kenji Mori,
+2026-03-24,08:42,Mira,Lyra,V,11.876,0.038,1.36,Tomasz Nowak,
+2026-03-24,08:55,SS Cyg,Aster,R,5.742,0.063,2.09,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-03-24,09:08,Mira,Lyra,V,3.319,0.004,1.35,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-03-24,09:21,delta Cep,Lyra,V,8.335,0.03,2.5,Tomasz Nowak,
+2026-03-24,10:02,RS Oph,Aster,V,11.309,0.046,1.34,Rosa Lind,moon 60% up
+2026-03-24,10:09,T CrB,Brill,V,2.293,0.019,2.43,Yusuf Haddad,"dew on corrector, re-shot"
+2026-03-24,13:09,Algol,Brill,R,2.478,0.032,1.9,Tomasz Nowak,
+2026-03-24,13:20,Mira,Lyra,V,10.313,0.075,1.79,Ingrid Halvorsen,
+2026-03-24,14:01,T CrB,Brill,V,4.816,0.009,2.23,Yusuf Haddad,
+2026-03-24,14:24,R Leo,Lyra,V,7.414,0.018,1.29,Rosa Lind,thin cirrus
+2026-03-24,14:31,R Leo,Lyra,V,10.629,0.078,2.16,Kenji Mori,"wind gusts, trailing"
+2026-03-24,14:42,chi Cyg,Aster,R,10.55,0.053,1.71,Tomasz Nowak,
+2026-03-24,15:05,T CrB,Brill,V,11.143,0.042,1.61,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-03-24,15:16,RS Oph,Aster,B,11.079,0.027,2.59,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-03-24,15:35,chi Cyg,Aster,R,7.144,0.056,1.29,Tomasz Nowak,
+2026-03-24,15:48,R Leo,Lyra,V,10.592,0.071,2.35,Tomasz Nowak,twilight
+2026-03-24,15:55,R Leo,Lyra,V,3.177,0.032,1.49,Kenji Mori,thin cirrus
+2026-03-24,16:18,SS Cyg,Aster,B,3.634,0.053,1.58,Ingrid Halvorsen,
+2026-03-24,16:41,RS Oph,Aster,V,5.64,0.069,2.41,Rosa Lind,twilight
+2026-03-24,19:41,RS Oph,Aster,B,11.772,0.025,1.1,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-03-24,20:00,R Leo,Lyra,V,10.757,0.034,1.24,Rosa Lind,
+2026-03-24,20:23,RS Oph,Aster,B,10.351,0.016,2.37,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-03-24,21:04,RS Oph,Aster,B,8.761,0.064,1.21,Tomasz Nowak,"wind gusts, trailing"
+2026-03-24,21:27,delta Cep,Lyra,V,12.216,0.006,1.5,Rosa Lind,
+2026-03-25,00:27,T CrB,Brill,V,3.757,0.056,2.36,Kenji Mori,"""comparison star C3, not C2"""
+2026-03-25,03:27,SS Cyg,Aster,R,7.941,0.022,2.04,Rosa Lind,
+2026-03-25,19:27,delta Cep,Lyra,V,10.891,0.053,1.01,Yusuf Haddad,
+2026-03-25,22:27,Mira,Lyra,V,12.237,0.061,2.13,Kenji Mori,
+2026-03-26,01:27,T CrB,Brill,V,11.066,0.031,1.97,Yusuf Haddad,moon 60% up
+2026-03-26,01:34,Algol,Brill,R,2.147,0.039,2.55,Rosa Lind,
+2026-03-26,01:41,Mira,Lyra,V,6.971,0.023,1.91,Yusuf Haddad,
+2026-03-26,01:48,R Leo,Lyra,V,11.615,0.017,1.65,Yusuf Haddad,
+2026-03-26,02:01,delta Cep,Lyra,V,12.21,0.034,1.47,Rosa Lind,twilight
+2026-03-26,02:12,SS Cyg,Aster,V,10.1,0.077,1.21,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-03-26,02:53,R Leo,Lyra,V,10.517,0.033,1.94,Tomasz Nowak,thin cirrus
+2026-03-26,05:53,SS Cyg,Aster,V,2.485,0.018,1.85,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-03-26,06:34,delta Cep,Lyra,V,8.684,0.009,1.88,Tomasz Nowak,thin cirrus
+2026-03-26,07:15,chi Cyg,Aster,V,8.745,0.03,1.64,Ingrid Halvorsen,moon 60% up
+2026-03-26,07:28,SS Cyg,Aster,B,10.125,0.036,1.52,Yusuf Haddad,
+2026-03-26,10:28,Mira,Lyra,V,9.856,0.011,1.47,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-03-26,13:28,Mira,Lyra,V,,,1.69,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-03-27,05:28,chi Cyg,Aster,V,10.028,0.044,1.93,Tomasz Nowak,
+2026-03-27,21:28,SS Cyg,Aster,R,9.289,0.02,2.23,Ingrid Halvorsen,"wind gusts, trailing"
+2026-03-27,21:51,chi Cyg,Aster,R,5.758,0.01,1.11,Tomasz Nowak,twilight
+2026-03-28,00:51,delta Cep,Lyra,V,6.35,0.079,1.42,Kenji Mori,thin cirrus
+2026-03-28,01:10,SS Cyg,Aster,B,7.679,0.064,1.95,Ingrid Halvorsen,moon 60% up
+2026-03-28,17:10,SS Cyg,Aster,R,2.234,0.051,2.12,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-03-29,09:10,Mira,Lyra,V,8.169,0.047,2.35,Rosa Lind,"dew on corrector, re-shot"
+2026-03-29,09:33,R Leo,Lyra,V,12.279,0.012,2.44,Ingrid Halvorsen,
+2026-03-29,09:56,Mira,Lyra,V,4.597,0.032,2.31,Ingrid Halvorsen,
+2026-03-29,12:56,delta Cep,Lyra,V,5.338,0.011,1.36,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-03-30,04:56,Algol,Brill,V,5.042,0.02,1.26,Kenji Mori,"""comparison star C3, not C2"""
+2026-03-30,05:19,delta Cep,Lyra,V,4.569,0.018,1.19,Rosa Lind,
+2026-03-30,05:26,Algol,Brill,R,5.026,0.056,1.07,Kenji Mori,moon 60% up
+2026-03-30,05:39,chi Cyg,Aster,R,10.62,0.043,1.25,Ingrid Halvorsen,"wind gusts, trailing"
+2026-03-30,05:52,RS Oph,Aster,B,8.184,0.068,1.58,Yusuf Haddad,twilight
+2026-03-30,05:59,delta Cep,Lyra,V,11.843,0.009,1.15,Tomasz Nowak,
+2026-03-30,06:22,RS Oph,Aster,V,3.035,0.077,1.95,Kenji Mori,
+2026-03-30,06:45,T CrB,Brill,V,5.54,0.008,1.34,Kenji Mori,"wind gusts, trailing"
+2026-03-30,06:56,Algol,Brill,R,8.145,0.026,1.73,Kenji Mori,moon 60% up
+2026-03-30,07:37,chi Cyg,Aster,V,3.28,0.014,1.34,Kenji Mori,
+2026-03-30,07:56,SS Cyg,Aster,B,5.321,0.054,2.35,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-03-30,23:56,T CrB,Brill,V,6.284,0.04,2.03,Kenji Mori,
+2026-03-31,00:15,delta Cep,Lyra,V,11.012,0.032,2.08,Tomasz Nowak,
+2026-03-31,00:38,Mira,Lyra,V,9.161,0.072,2.31,Ingrid Halvorsen,
+2026-03-31,00:51,R Leo,Lyra,V,11.886,0.004,1.03,Tomasz Nowak,"wind gusts, trailing"
+2026-03-31,01:10,chi Cyg,Aster,V,6.021,0.068,1.01,Rosa Lind,"wind gusts, trailing"
+2026-03-31,01:29,Algol,Brill,V,7.096,0.025,2.26,Yusuf Haddad,thin cirrus
+2026-03-31,04:29,T CrB,Brill,V,7.89,0.046,2.34,Rosa Lind,thin cirrus
+2026-03-31,04:42,R Leo,Lyra,V,,,1.89,Ingrid Halvorsen,twilight
+2026-03-31,05:01,SS Cyg,Aster,B,5.174,0.006,1.27,Ingrid Halvorsen,
+2026-03-31,05:08,T CrB,Brill,V,9.948,0.031,2.5,Ingrid Halvorsen,twilight
+2026-03-31,05:31,chi Cyg,Aster,R,8.311,0.048,1.57,Kenji Mori,"wind gusts, trailing"
+2026-03-31,05:38,delta Cep,Lyra,V,7.325,0.026,2.25,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-03-31,08:38,chi Cyg,Aster,R,10.91,0.014,1.42,Kenji Mori,"dew on corrector, re-shot"
+2026-03-31,11:38,Algol,Brill,V,5.107,0.036,1.2,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-03-31,11:51,Mira,Lyra,V,9.677,0.017,1.17,Tomasz Nowak,"dew on corrector, re-shot"
+2026-03-31,11:58,Mira,Lyra,V,5.989,0.049,2.34,Rosa Lind,
+2026-03-31,14:58,delta Cep,Lyra,V,6.695,0.054,1.82,Kenji Mori,"dew on corrector, re-shot"
+2026-03-31,15:21,chi Cyg,Aster,V,7.256,0.054,1.96,Yusuf Haddad,"dew on corrector, re-shot"
+2026-03-31,18:21,delta Cep,Lyra,V,7.024,0.054,2.52,Ingrid Halvorsen,
+2026-03-31,18:32,SS Cyg,Aster,R,4.604,0.008,1.99,Yusuf Haddad,
+2026-04-01,10:32,RS Oph,Aster,V,12.038,0.067,1.89,Yusuf Haddad,
+2026-04-02,02:32,R Leo,Lyra,V,10.512,0.043,2.48,Yusuf Haddad,"dew on corrector, re-shot"
+2026-04-02,02:45,Algol,Brill,R,12.077,0.048,1.07,Kenji Mori,thin cirrus
+2026-04-02,02:52,Mira,Lyra,V,9.495,0.006,1.92,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-04-02,05:52,R Leo,Lyra,V,10.363,0.046,1.21,Yusuf Haddad,
+2026-04-02,06:05,R Leo,Lyra,V,,,1.14,Ingrid Halvorsen,
+2026-04-02,22:05,delta Cep,Lyra,V,4.691,0.031,2.01,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-04-02,22:18,Mira,Lyra,V,6.553,0.055,1.8,Tomasz Nowak,"wind gusts, trailing"
+2026-04-03,01:18,Mira,Lyra,V,4.491,0.013,1.76,Rosa Lind,
+2026-04-03,01:59,SS Cyg,Aster,R,10.826,0.056,1.79,Kenji Mori,
+2026-04-03,02:22,R Leo,Lyra,V,7.352,0.007,2.08,Ingrid Halvorsen,
+2026-04-03,02:35,R Leo,Lyra,V,2.849,0.008,2.44,Rosa Lind,
+2026-04-03,02:54,T CrB,Brill,V,5.677,0.054,2.39,Tomasz Nowak,
+2026-04-03,03:05,T CrB,Brill,V,8.624,0.057,2.46,Kenji Mori,
+2026-04-03,03:46,Algol,Brill,R,10.738,0.006,1.93,Kenji Mori,twilight
+2026-04-03,06:46,SS Cyg,Aster,V,10.201,0.042,2.01,Yusuf Haddad,
+2026-04-03,06:57,RS Oph,Aster,V,10.932,0.067,1.03,Ingrid Halvorsen,"wind gusts, trailing"
+2026-04-03,07:20,delta Cep,Lyra,V,2.811,0.076,2.56,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-04-03,07:27,R Leo,Lyra,V,5.041,0.08,2.57,Rosa Lind,
+2026-04-03,23:27,Mira,Lyra,V,12.257,0.037,1.34,Rosa Lind,"wind gusts, trailing"
+2026-04-04,15:27,Algol,Brill,V,10.658,0.076,1.8,Yusuf Haddad,
+2026-04-04,15:38,Algol,Brill,R,10.663,0.046,1.11,Rosa Lind,
+2026-04-04,16:19,RS Oph,Aster,B,11.542,0.024,1.12,Ingrid Halvorsen,
+2026-04-04,16:42,SS Cyg,Aster,B,2.216,0.064,2.35,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-04-04,17:23,delta Cep,Lyra,V,4.503,0.079,2.15,Tomasz Nowak,"dew on corrector, re-shot"
+2026-04-04,17:46,Algol,Brill,R,7.714,0.066,1.53,Yusuf Haddad,"dew on corrector, re-shot"
+2026-04-04,17:59,T CrB,Brill,V,5.998,0.006,1.19,Ingrid Halvorsen,
+2026-04-04,18:22,RS Oph,Aster,B,7.558,0.035,1.53,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-04-04,18:33,SS Cyg,Aster,B,6.908,0.061,2.38,Rosa Lind,twilight
+2026-04-04,21:33,Algol,Brill,R,8.416,0.078,2.08,Kenji Mori,"""comparison star C3, not C2"""
+2026-04-04,21:56,Mira,Lyra,V,8.631,0.055,1.48,Kenji Mori,
+2026-04-04,22:09,Mira,Lyra,V,11.929,0.028,1.75,Yusuf Haddad,
+2026-04-04,22:20,Mira,Lyra,V,3.808,0.062,1.07,Tomasz Nowak,
+2026-04-04,22:33,Algol,Brill,V,4.227,0.05,1.97,Tomasz Nowak,"dew on corrector, re-shot"
+2026-04-04,22:40,R Leo,Lyra,V,8.407,0.047,2.05,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-04-04,23:03,T CrB,Brill,V,6.641,0.067,2.15,Tomasz Nowak,
+2026-04-04,23:16,Mira,Lyra,V,2.9,0.076,1.62,Tomasz Nowak,twilight
+2026-04-04,23:57,T CrB,Brill,V,9.977,0.012,2.41,Yusuf Haddad,
+2026-04-05,00:10,chi Cyg,Aster,V,4.994,0.016,1.68,Ingrid Halvorsen,thin cirrus
+2026-04-05,00:29,delta Cep,Lyra,V,12.085,0.04,1.33,Kenji Mori,thin cirrus
+2026-04-05,01:10,Algol,Brill,R,2.713,0.05,2.13,Tomasz Nowak,twilight
+2026-04-05,01:21,T CrB,Brill,V,5.543,0.072,1.23,Tomasz Nowak,
+2026-04-05,01:40,R Leo,Lyra,V,7.808,0.026,1.11,Ingrid Halvorsen,moon 60% up
+2026-04-05,01:51,delta Cep,Lyra,V,10.445,0.011,2.12,Tomasz Nowak,
+2026-04-05,02:10,R Leo,Lyra,V,8.663,0.012,2.43,Yusuf Haddad,
+2026-04-05,18:10,Mira,Lyra,V,7.257,0.037,1.2,Ingrid Halvorsen,"wind gusts, trailing"
+2026-04-05,18:23,delta Cep,Lyra,V,9.648,0.028,1.27,Kenji Mori,twilight
+2026-04-06,10:23,chi Cyg,Aster,V,6.246,0.024,1.75,Rosa Lind,"""comparison star C3, not C2"""
+2026-04-07,02:23,SS Cyg,Aster,V,11.903,0.036,1.0,Ingrid Halvorsen,
+2026-04-07,02:46,Algol,Brill,R,10.087,0.02,1.93,Tomasz Nowak,"wind gusts, trailing"
+2026-04-07,18:46,chi Cyg,Aster,V,9.278,0.075,2.54,Tomasz Nowak,
+2026-04-07,18:59,R Leo,Lyra,V,9.733,0.062,1.21,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-04-07,21:59,T CrB,Brill,V,3.343,0.065,1.7,Tomasz Nowak,"dew on corrector, re-shot"
+2026-04-07,22:22,RS Oph,Aster,B,8.808,0.052,1.26,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-04-07,22:33,delta Cep,Lyra,V,9.624,0.041,1.08,Yusuf Haddad,thin cirrus
+2026-04-07,22:40,RS Oph,Aster,B,3.207,0.06,1.61,Ingrid Halvorsen,moon 60% up
+2026-04-07,22:59,Algol,Brill,V,11.368,0.062,1.62,Ingrid Halvorsen,"wind gusts, trailing"
+2026-04-07,23:12,R Leo,Lyra,V,2.499,0.04,1.07,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-04-08,15:12,Mira,Lyra,V,7.048,0.041,1.58,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-04-08,15:35,Mira,Lyra,V,7.143,0.068,1.48,Ingrid Halvorsen,
+2026-04-08,18:35,Mira,Lyra,V,2.215,0.011,1.58,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-04-08,19:16,SS Cyg,Aster,V,4.73,0.056,1.57,Tomasz Nowak,"wind gusts, trailing"
+2026-04-08,19:35,delta Cep,Lyra,V,3.385,0.066,1.13,Yusuf Haddad,thin cirrus
+2026-04-08,19:48,T CrB,Brill,V,4.691,0.073,1.08,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-04-08,19:59,Algol,Brill,V,9.313,0.076,1.15,Ingrid Halvorsen,
+2026-04-08,22:59,Mira,Lyra,V,10.831,0.063,1.32,Rosa Lind,"wind gusts, trailing"
+2026-04-08,23:12,SS Cyg,Aster,B,10.958,0.007,1.08,Rosa Lind,"""comparison star C3, not C2"""
+2026-04-08,23:25,RS Oph,Aster,B,11.971,0.024,2.12,Ingrid Halvorsen,
+2026-04-09,02:25,R Leo,Lyra,V,3.995,0.067,1.32,Yusuf Haddad,twilight
+2026-04-09,02:44,Algol,Brill,V,9.168,0.066,2.14,Rosa Lind,twilight
+2026-04-09,05:44,Mira,Lyra,V,8.996,0.047,1.7,Yusuf Haddad,thin cirrus
+2026-04-09,06:25,delta Cep,Lyra,V,4.569,0.06,2.01,Kenji Mori,thin cirrus
+2026-04-09,22:25,R Leo,Lyra,V,6.17,0.03,2.35,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-04-09,22:44,delta Cep,Lyra,V,6.653,0.056,1.68,Ingrid Halvorsen,twilight
+2026-04-09,22:55,T CrB,Brill,V,4.109,0.045,1.27,Tomasz Nowak,"wind gusts, trailing"
+2026-04-09,23:18,T CrB,Brill,V,5.801,0.02,1.25,Tomasz Nowak,
+2026-04-09,23:41,Algol,Brill,V,8.847,0.056,2.34,Ingrid Halvorsen,"wind gusts, trailing"
+2026-04-09,23:48,delta Cep,Lyra,V,8.404,0.026,1.41,Yusuf Haddad,
+2026-04-10,15:48,T CrB,Brill,V,6.254,0.073,1.41,Kenji Mori,
+2026-04-10,16:07,R Leo,Lyra,V,4.952,0.035,2.17,Tomasz Nowak,"dew on corrector, re-shot"
+2026-04-10,16:26,RS Oph,Aster,V,7.255,0.055,1.74,Tomasz Nowak,
+2026-04-11,08:26,delta Cep,Lyra,V,2.596,0.025,1.38,Ingrid Halvorsen,
+2026-04-11,09:07,Mira,Lyra,V,9.103,0.038,1.17,Kenji Mori,
+2026-04-12,01:07,delta Cep,Lyra,V,8.47,0.053,1.59,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-04-12,17:07,chi Cyg,Aster,V,5.829,0.077,2.1,Kenji Mori,moon 60% up
+2026-04-12,17:48,RS Oph,Aster,V,2.284,0.055,2.47,Kenji Mori,twilight
+2026-04-12,18:29,R Leo,Lyra,V,10.943,0.028,1.05,Ingrid Halvorsen,
+2026-04-12,18:36,SS Cyg,Aster,R,10.884,0.009,1.43,Ingrid Halvorsen,
+2026-04-12,18:55,delta Cep,Lyra,V,6.116,0.046,1.83,Tomasz Nowak,"wind gusts, trailing"
+2026-04-12,19:36,chi Cyg,Aster,R,5.026,0.047,1.42,Yusuf Haddad,moon 60% up
+2026-04-12,20:17,delta Cep,Lyra,V,3.149,0.033,1.07,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-04-12,20:24,T CrB,Brill,V,,,1.71,Yusuf Haddad,"dew on corrector, re-shot"
+2026-04-12,20:43,delta Cep,Lyra,V,10.503,0.024,2.08,Ingrid Halvorsen,
+2026-04-12,23:43,RS Oph,Aster,V,10.822,0.036,1.09,Kenji Mori,
+2026-04-13,00:06,Algol,Brill,V,2.607,0.017,1.76,Tomasz Nowak,
+2026-04-13,00:25,Mira,Lyra,V,8.436,0.071,1.41,Kenji Mori,"""comparison star C3, not C2"""
+2026-04-13,00:32,Algol,Brill,R,9.515,0.018,1.36,Kenji Mori,
+2026-04-13,03:32,T CrB,Brill,V,6.13,0.056,2.53,Tomasz Nowak,"dew on corrector, re-shot"
+2026-04-13,03:51,Mira,Lyra,V,5.654,0.053,1.49,Rosa Lind,"""comparison star C3, not C2"""
+2026-04-13,04:04,Mira,Lyra,V,6.345,0.065,1.52,Rosa Lind,moon 60% up
+2026-04-13,04:15,RS Oph,Aster,V,5.801,0.022,1.99,Kenji Mori,twilight
+2026-04-13,04:26,chi Cyg,Aster,V,9.972,0.046,1.74,Yusuf Haddad,
+2026-04-13,04:33,delta Cep,Lyra,V,7.494,0.056,1.87,Yusuf Haddad,
+2026-04-13,20:33,Algol,Brill,R,12.235,0.064,1.54,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-04-13,20:46,Mira,Lyra,V,3.667,0.022,1.49,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-04-13,21:05,chi Cyg,Aster,V,8.965,0.024,1.96,Rosa Lind,"""comparison star C3, not C2"""
+2026-04-13,21:16,R Leo,Lyra,V,10.496,0.075,2.59,Kenji Mori,twilight
+2026-04-13,21:23,Mira,Lyra,V,9.26,0.052,1.47,Ingrid Halvorsen,"wind gusts, trailing"
+2026-04-14,00:23,chi Cyg,Aster,V,2.781,0.035,1.06,Yusuf Haddad,"dew on corrector, re-shot"
+2026-04-14,01:04,chi Cyg,Aster,R,3.151,0.059,1.97,Rosa Lind,
+2026-04-14,17:04,SS Cyg,Aster,R,2.708,0.027,2.08,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-04-14,20:04,delta Cep,Lyra,V,6.295,0.049,1.28,Yusuf Haddad,twilight
+2026-04-14,20:27,chi Cyg,Aster,R,8.833,0.057,1.99,Tomasz Nowak,
+2026-04-14,20:40,Mira,Lyra,V,5.028,0.029,2.39,Yusuf Haddad,
+2026-04-14,23:40,T CrB,Brill,V,7.398,0.028,2.16,Kenji Mori,"dew on corrector, re-shot"
+2026-04-14,23:59,Algol,Brill,V,2.232,0.079,1.96,Yusuf Haddad,
+2026-04-15,00:12,SS Cyg,Aster,V,3.181,0.019,2.58,Yusuf Haddad,moon 60% up
+2026-04-15,00:25,RS Oph,Aster,V,12.061,0.041,1.25,Kenji Mori,"""comparison star C3, not C2"""
+2026-04-15,03:25,RS Oph,Aster,B,9.78,0.063,2.13,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-04-15,06:25,SS Cyg,Aster,B,7.855,0.053,2.29,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-04-15,07:06,Mira,Lyra,V,4.375,0.038,2.45,Ingrid Halvorsen,
+2026-04-15,07:17,chi Cyg,Aster,R,6.698,0.069,1.35,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-04-15,07:40,chi Cyg,Aster,V,10.703,0.017,1.24,Rosa Lind,moon 60% up
+2026-04-15,07:51,Mira,Lyra,V,7.665,0.08,2.19,Rosa Lind,
+2026-04-15,08:14,Mira,Lyra,V,5.665,0.009,2.1,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-04-15,11:14,RS Oph,Aster,V,11.336,0.073,2.11,Kenji Mori,
+2026-04-15,11:25,Mira,Lyra,V,4.109,0.063,2.5,Yusuf Haddad,
+2026-04-15,12:06,chi Cyg,Aster,V,2.346,0.04,1.28,Kenji Mori,
+2026-04-15,12:47,delta Cep,Lyra,V,5.351,0.025,2.05,Rosa Lind,
+2026-04-16,04:47,chi Cyg,Aster,V,12.34,0.051,1.43,Ingrid Halvorsen,thin cirrus
+2026-04-16,20:47,R Leo,Lyra,V,2.723,0.024,2.43,Rosa Lind,"dew on corrector, re-shot"
+2026-04-16,21:06,Algol,Brill,R,7.63,0.03,2.49,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-04-16,21:47,Algol,Brill,V,8.66,0.066,1.36,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-04-17,13:47,Algol,Brill,R,7.81,0.014,1.66,Tomasz Nowak,thin cirrus
+2026-04-17,16:47,RS Oph,Aster,B,9.082,0.07,1.21,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-04-17,19:47,T CrB,Brill,V,2.541,0.044,2.56,Kenji Mori,"wind gusts, trailing"
+2026-04-17,22:47,T CrB,Brill,V,11.793,0.007,2.34,Tomasz Nowak,
+2026-04-17,23:10,chi Cyg,Aster,R,6.487,0.041,1.26,Yusuf Haddad,"wind gusts, trailing"
+2026-04-17,23:21,Mira,Lyra,V,4.537,0.036,1.14,Rosa Lind,
+2026-04-17,23:32,R Leo,Lyra,V,4.685,0.011,2.23,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-04-17,23:39,chi Cyg,Aster,V,8.396,0.042,1.93,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-04-18,00:02,Algol,Brill,R,8.475,0.01,2.56,Rosa Lind,"wind gusts, trailing"
+2026-04-18,00:43,R Leo,Lyra,V,3.419,0.078,2.53,Kenji Mori,"dew on corrector, re-shot"
+2026-04-18,01:02,Algol,Brill,V,11.717,0.023,2.24,Ingrid Halvorsen,"wind gusts, trailing"
+2026-04-18,01:13,R Leo,Lyra,V,5.111,0.034,1.86,Kenji Mori,
+2026-04-18,01:20,Algol,Brill,V,4.498,0.009,1.7,Rosa Lind,
+2026-04-18,02:01,R Leo,Lyra,V,2.761,0.068,1.82,Tomasz Nowak,
+2026-04-18,02:08,chi Cyg,Aster,R,4.653,0.052,2.12,Kenji Mori,"dew on corrector, re-shot"
+2026-04-18,02:31,R Leo,Lyra,V,6.48,0.018,1.92,Yusuf Haddad,
+2026-04-18,05:31,chi Cyg,Aster,V,4.618,0.074,1.64,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-04-18,05:42,SS Cyg,Aster,R,7.114,0.048,2.16,Kenji Mori,twilight
+2026-04-18,05:55,T CrB,Brill,V,6.987,0.009,2.41,Rosa Lind,
+2026-04-18,06:36,R Leo,Lyra,V,2.16,0.027,1.3,Yusuf Haddad,
+2026-04-18,06:43,chi Cyg,Aster,R,9.658,0.07,1.44,Kenji Mori,
+2026-04-18,09:43,chi Cyg,Aster,V,4.726,0.073,1.18,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-04-18,10:06,R Leo,Lyra,V,6.364,0.023,1.82,Rosa Lind,
+2026-04-18,10:29,Algol,Brill,R,5.179,0.027,1.31,Yusuf Haddad,
+2026-04-18,10:36,RS Oph,Aster,B,7.912,0.034,2.39,Rosa Lind,
+2026-04-18,10:55,Mira,Lyra,V,5.488,0.057,1.19,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-04-18,11:02,T CrB,Brill,V,8.244,0.015,1.77,Kenji Mori,"dew on corrector, re-shot"
+2026-04-18,11:13,chi Cyg,Aster,R,12.33,0.046,2.1,Rosa Lind,
+2026-04-18,14:13,R Leo,Lyra,V,9.325,0.052,2.54,Rosa Lind,
+2026-04-18,14:26,R Leo,Lyra,V,5.224,0.061,1.23,Tomasz Nowak,
+2026-04-18,14:33,SS Cyg,Aster,V,7.614,0.053,1.29,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-04-18,17:33,Algol,Brill,R,8.158,0.023,1.17,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-04-18,17:52,Mira,Lyra,V,4.269,0.009,1.46,Rosa Lind,
+2026-04-18,18:11,RS Oph,Aster,B,2.818,0.01,2.51,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-04-18,18:30,Algol,Brill,R,7.322,0.06,1.2,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-04-19,10:30,SS Cyg,Aster,V,10.447,0.029,2.43,Yusuf Haddad,
+2026-04-19,13:30,T CrB,Brill,V,9.573,0.033,1.37,Kenji Mori,"""comparison star C3, not C2"""
+2026-04-19,13:43,chi Cyg,Aster,R,3.715,0.072,1.8,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-04-19,14:02,delta Cep,Lyra,V,4.136,0.039,1.05,Ingrid Halvorsen,moon 60% up
+2026-04-19,14:21,chi Cyg,Aster,V,8.626,0.021,1.54,Ingrid Halvorsen,
+2026-04-19,15:02,R Leo,Lyra,V,10.38,0.058,1.75,Ingrid Halvorsen,
+2026-04-19,15:13,Mira,Lyra,V,5.197,0.044,1.06,Tomasz Nowak,moon 60% up
+2026-04-19,15:36,chi Cyg,Aster,R,12.11,0.017,1.13,Kenji Mori,"wind gusts, trailing"
+2026-04-19,15:47,RS Oph,Aster,V,5.594,0.057,2.13,Tomasz Nowak,twilight
+2026-04-19,16:00,SS Cyg,Aster,R,7.01,0.076,2.38,Rosa Lind,"dew on corrector, re-shot"
+2026-04-19,16:19,T CrB,Brill,V,2.95,0.077,2.34,Yusuf Haddad,
+2026-04-20,08:19,R Leo,Lyra,V,9.497,0.037,2.59,Ingrid Halvorsen,
+2026-04-20,08:42,SS Cyg,Aster,B,4.007,0.066,1.81,Kenji Mori,
+2026-04-20,09:01,T CrB,Brill,V,10.394,0.039,2.29,Rosa Lind,
+2026-04-20,09:24,R Leo,Lyra,V,11.841,0.068,1.08,Yusuf Haddad,"wind gusts, trailing"
+2026-04-20,10:05,Algol,Brill,V,5.505,0.06,1.64,Yusuf Haddad,"wind gusts, trailing"
+2026-04-20,10:24,chi Cyg,Aster,V,4.179,0.008,2.12,Rosa Lind,twilight
+2026-04-20,13:24,SS Cyg,Aster,B,2.216,0.07,1.17,Tomasz Nowak,
+2026-04-21,05:24,T CrB,Brill,V,7.323,0.048,2.52,Yusuf Haddad,twilight
+2026-04-21,05:43,Algol,Brill,R,10.853,0.021,1.24,Ingrid Halvorsen,
+2026-04-21,08:43,RS Oph,Aster,V,10.768,0.036,1.24,Kenji Mori,
+2026-04-21,08:54,RS Oph,Aster,V,10.825,0.017,2.57,Ingrid Halvorsen,
+2026-04-21,11:54,Algol,Brill,V,2.714,0.033,1.88,Ingrid Halvorsen,
+2026-04-21,12:01,R Leo,Lyra,V,5.674,0.008,2.14,Tomasz Nowak,
+2026-04-21,12:12,chi Cyg,Aster,V,,,1.67,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-04-22,04:12,delta Cep,Lyra,V,3.008,0.022,1.83,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-04-22,04:23,RS Oph,Aster,B,11.421,0.012,1.01,Tomasz Nowak,
+2026-04-22,04:46,SS Cyg,Aster,R,10.383,0.01,1.47,Tomasz Nowak,
+2026-04-22,04:57,chi Cyg,Aster,V,9.647,0.079,2.43,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-04-22,05:38,delta Cep,Lyra,V,2.661,0.028,2.25,Ingrid Halvorsen,twilight
+2026-04-22,05:45,SS Cyg,Aster,B,10.147,0.075,2.09,Yusuf Haddad,twilight
+2026-04-22,08:45,R Leo,Lyra,V,5.285,0.011,2.12,Kenji Mori,
+2026-04-22,09:26,Algol,Brill,R,8.403,0.044,2.2,Rosa Lind,
+2026-04-22,09:37,T CrB,Brill,V,8.465,0.05,1.4,Ingrid Halvorsen,thin cirrus
+2026-04-22,09:48,Algol,Brill,V,11.125,0.005,2.47,Rosa Lind,"dew on corrector, re-shot"
+2026-04-22,09:59,chi Cyg,Aster,R,3.783,0.036,1.04,Rosa Lind,
+2026-04-22,10:10,Algol,Brill,R,10.828,0.036,1.41,Rosa Lind,
+2026-04-22,10:17,delta Cep,Lyra,V,3.695,0.022,1.89,Yusuf Haddad,moon 60% up
+2026-04-23,02:17,Mira,Lyra,V,6.549,0.048,1.04,Kenji Mori,thin cirrus
+2026-04-23,02:28,T CrB,Brill,V,5.173,0.045,1.14,Yusuf Haddad,
+2026-04-23,18:28,RS Oph,Aster,B,10.242,0.067,1.72,Kenji Mori,"wind gusts, trailing"
+2026-04-23,18:47,Mira,Lyra,V,11.864,0.068,1.68,Tomasz Nowak,thin cirrus
+2026-04-23,18:58,RS Oph,Aster,B,3.733,0.072,1.31,Yusuf Haddad,"wind gusts, trailing"
+2026-04-23,19:09,Algol,Brill,R,5.707,0.046,1.13,Ingrid Halvorsen,
+2026-04-23,19:50,delta Cep,Lyra,V,10.399,0.024,2.12,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-04-23,20:31,RS Oph,Aster,B,10.397,0.017,1.06,Kenji Mori,"dew on corrector, re-shot"
+2026-04-23,21:12,Algol,Brill,R,8.974,0.046,1.28,Tomasz Nowak,"wind gusts, trailing"
+2026-04-24,13:12,RS Oph,Aster,V,8.676,0.018,1.54,Ingrid Halvorsen,
+2026-04-24,13:23,T CrB,Brill,V,2.529,0.023,1.7,Kenji Mori,
+2026-04-24,13:30,R Leo,Lyra,V,10.246,0.01,2.02,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-04-24,13:49,Algol,Brill,V,5.491,0.018,2.5,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-04-24,16:49,T CrB,Brill,V,9.958,0.039,2.41,Tomasz Nowak,
+2026-04-24,19:49,SS Cyg,Aster,B,10.119,0.014,2.26,Tomasz Nowak,moon 60% up
+2026-04-24,19:56,delta Cep,Lyra,V,4.25,0.069,2.14,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-04-25,11:56,Algol,Brill,R,4.266,0.063,1.54,Rosa Lind,thin cirrus
+2026-04-26,03:56,Mira,Lyra,V,10.317,0.034,1.65,Ingrid Halvorsen,moon 60% up
+2026-04-26,06:56,delta Cep,Lyra,V,11.313,0.044,1.06,Yusuf Haddad,
+2026-04-26,07:03,SS Cyg,Aster,R,6.175,0.057,1.43,Kenji Mori,"dew on corrector, re-shot"
+2026-04-26,23:03,RS Oph,Aster,V,12.251,0.031,1.65,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-04-27,15:03,SS Cyg,Aster,R,11.017,0.073,1.29,Tomasz Nowak,
+2026-04-27,15:22,SS Cyg,Aster,B,,,1.09,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-04-27,15:29,T CrB,Brill,V,10.795,0.054,2.57,Ingrid Halvorsen,moon 60% up
+2026-04-27,16:10,RS Oph,Aster,V,4.697,0.031,1.52,Rosa Lind,
+2026-04-27,16:51,delta Cep,Lyra,V,2.584,0.046,1.4,Yusuf Haddad,twilight
+2026-04-27,17:32,Algol,Brill,R,10.574,0.074,1.03,Kenji Mori,"""comparison star C3, not C2"""
+2026-04-27,17:55,R Leo,Lyra,V,2.149,0.013,1.16,Tomasz Nowak,moon 60% up
+2026-04-27,18:02,Algol,Brill,R,4.202,0.076,2.33,Rosa Lind,twilight
+2026-04-27,18:09,T CrB,Brill,V,6.155,0.049,1.98,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-04-27,18:16,Mira,Lyra,V,6.843,0.056,1.96,Rosa Lind,"dew on corrector, re-shot"
+2026-04-27,21:16,Mira,Lyra,V,10.71,0.076,1.33,Yusuf Haddad,"dew on corrector, re-shot"
+2026-04-27,21:27,chi Cyg,Aster,V,3.455,0.061,1.23,Tomasz Nowak,
+2026-04-28,00:27,RS Oph,Aster,V,5.393,0.069,2.46,Yusuf Haddad,
+2026-04-28,00:50,chi Cyg,Aster,V,,,2.19,Yusuf Haddad,thin cirrus
+2026-04-28,01:31,chi Cyg,Aster,R,7.335,0.062,1.36,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-04-28,01:50,chi Cyg,Aster,V,,,1.92,Rosa Lind,"""comparison star C3, not C2"""
+2026-04-28,02:03,Algol,Brill,R,8.053,0.072,2.37,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-04-28,02:14,Mira,Lyra,V,6.019,0.018,1.62,Ingrid Halvorsen,thin cirrus
+2026-04-28,02:33,chi Cyg,Aster,V,10.728,0.046,2.16,Rosa Lind,
+2026-04-28,02:52,Mira,Lyra,V,7.321,0.013,1.41,Ingrid Halvorsen,
+2026-04-28,05:52,T CrB,Brill,V,6.288,0.038,2.39,Rosa Lind,thin cirrus
+2026-04-28,06:11,R Leo,Lyra,V,,,1.9,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-04-28,06:34,RS Oph,Aster,V,2.275,0.04,1.4,Kenji Mori,thin cirrus
+2026-04-28,06:45,chi Cyg,Aster,V,3.598,0.02,1.06,Kenji Mori,twilight
+2026-04-28,06:56,Mira,Lyra,V,2.332,0.065,2.46,Ingrid Halvorsen,
+2026-04-28,07:09,Mira,Lyra,V,11.104,0.07,1.71,Rosa Lind,
+2026-04-28,07:16,RS Oph,Aster,V,11.586,0.037,2.29,Kenji Mori,
+2026-04-28,07:39,SS Cyg,Aster,R,7.765,0.033,2.02,Tomasz Nowak,"dew on corrector, re-shot"
+2026-04-28,07:50,delta Cep,Lyra,V,6.12,0.013,2.3,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-04-28,08:09,Mira,Lyra,V,5.748,0.041,1.57,Yusuf Haddad,moon 60% up
+2026-04-28,08:16,RS Oph,Aster,B,10.54,0.061,2.58,Yusuf Haddad,thin cirrus
+2026-04-28,08:57,Algol,Brill,R,12.238,0.078,1.34,Tomasz Nowak,"dew on corrector, re-shot"
+2026-04-28,09:08,chi Cyg,Aster,R,5.757,0.038,1.09,Tomasz Nowak,moon 60% up
+2026-04-29,01:08,Mira,Lyra,V,5.211,0.045,1.12,Rosa Lind,
+2026-04-29,01:21,SS Cyg,Aster,V,8.079,0.024,1.17,Tomasz Nowak,
+2026-04-29,01:34,delta Cep,Lyra,V,4.917,0.007,2.43,Rosa Lind,
+2026-04-29,01:41,Algol,Brill,V,12.209,0.022,1.48,Rosa Lind,"wind gusts, trailing"
+2026-04-29,01:48,RS Oph,Aster,B,2.121,0.074,1.28,Kenji Mori,twilight
+2026-04-29,02:01,Mira,Lyra,V,5.717,0.033,1.49,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-04-29,02:20,R Leo,Lyra,V,8.07,0.07,2.22,Kenji Mori,"""comparison star C3, not C2"""
+2026-04-29,03:01,R Leo,Lyra,V,5.352,0.02,1.98,Tomasz Nowak,
+2026-04-29,03:12,delta Cep,Lyra,V,2.124,0.063,1.54,Kenji Mori,"""comparison star C3, not C2"""
+2026-04-29,03:53,RS Oph,Aster,B,9.977,0.043,1.37,Kenji Mori,moon 60% up
+2026-04-29,04:16,Algol,Brill,R,6.097,0.02,1.64,Tomasz Nowak,
+2026-04-29,07:16,delta Cep,Lyra,V,10.469,0.024,1.85,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-04-29,07:23,R Leo,Lyra,V,3.716,0.06,1.31,Rosa Lind,
+2026-04-29,23:23,delta Cep,Lyra,V,2.778,0.047,1.76,Tomasz Nowak,twilight
+2026-04-30,15:23,T CrB,Brill,V,11.339,0.048,1.18,Tomasz Nowak,thin cirrus
+2026-04-30,15:42,RS Oph,Aster,B,12.337,0.076,1.11,Kenji Mori,
+2026-04-30,15:49,Mira,Lyra,V,6.441,0.074,1.9,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-05-01,07:49,RS Oph,Aster,V,10.478,0.022,1.74,Tomasz Nowak,
+2026-05-01,07:56,Algol,Brill,R,2.689,0.08,1.28,Tomasz Nowak,
+2026-05-01,08:15,delta Cep,Lyra,V,2.313,0.02,1.4,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-05-01,08:26,delta Cep,Lyra,V,7.369,0.007,2.47,Ingrid Halvorsen,moon 60% up
+2026-05-01,08:45,chi Cyg,Aster,R,4.751,0.008,1.95,Rosa Lind,"""comparison star C3, not C2"""
+2026-05-01,08:56,Mira,Lyra,V,5.586,0.023,2.1,Rosa Lind,
+2026-05-01,09:09,SS Cyg,Aster,B,4.968,0.049,1.39,Rosa Lind,"wind gusts, trailing"
+2026-05-01,09:16,Mira,Lyra,V,10.126,0.069,1.84,Kenji Mori,twilight
+2026-05-01,12:16,R Leo,Lyra,V,12.291,0.017,2.39,Ingrid Halvorsen,
+2026-05-01,12:35,SS Cyg,Aster,V,11.992,0.052,2.08,Kenji Mori,
+2026-05-01,12:42,R Leo,Lyra,V,9.754,0.063,1.19,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-01,15:42,SS Cyg,Aster,B,,,1.5,Rosa Lind,"""comparison star C3, not C2"""
+2026-05-01,15:53,Algol,Brill,R,7.121,0.059,2.34,Rosa Lind,
+2026-05-01,18:53,T CrB,Brill,V,3.188,0.031,2.31,Kenji Mori,
+2026-05-01,19:00,delta Cep,Lyra,V,3.128,0.02,2.58,Ingrid Halvorsen,
+2026-05-01,19:07,R Leo,Lyra,V,10.51,0.038,2.36,Tomasz Nowak,moon 60% up
+2026-05-01,22:07,Algol,Brill,R,2.363,0.054,2.51,Rosa Lind,
+2026-05-01,22:26,chi Cyg,Aster,V,5.629,0.053,1.09,Yusuf Haddad,
+2026-05-01,22:39,Algol,Brill,R,9.612,0.042,1.25,Kenji Mori,
+2026-05-02,01:39,Mira,Lyra,V,5.427,0.073,1.27,Ingrid Halvorsen,twilight
+2026-05-02,01:58,RS Oph,Aster,B,7.31,0.03,1.69,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-05-02,02:17,T CrB,Brill,V,5.781,0.024,1.21,Rosa Lind,"dew on corrector, re-shot"
+2026-05-02,02:24,R Leo,Lyra,V,7.214,0.061,1.91,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-05-02,18:24,RS Oph,Aster,B,2.536,0.045,2.59,Yusuf Haddad,"dew on corrector, re-shot"
+2026-05-02,18:31,T CrB,Brill,V,4.17,0.013,1.63,Kenji Mori,moon 60% up
+2026-05-02,18:42,delta Cep,Lyra,V,6.893,0.056,2.38,Kenji Mori,moon 60% up
+2026-05-02,19:23,chi Cyg,Aster,R,10.005,0.08,2.56,Rosa Lind,"wind gusts, trailing"
+2026-05-02,19:42,Algol,Brill,R,3.103,0.019,1.87,Ingrid Halvorsen,moon 60% up
+2026-05-02,20:01,delta Cep,Lyra,V,5.618,0.07,2.38,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-05-02,20:20,Mira,Lyra,V,9.731,0.045,2.5,Yusuf Haddad,
+2026-05-02,20:43,chi Cyg,Aster,R,3.5,0.04,1.48,Ingrid Halvorsen,moon 60% up
+2026-05-03,12:43,RS Oph,Aster,V,3.962,0.064,1.49,Yusuf Haddad,"dew on corrector, re-shot"
+2026-05-03,13:06,Algol,Brill,V,2.776,0.054,2.32,Ingrid Halvorsen,"wind gusts, trailing"
+2026-05-03,13:25,T CrB,Brill,V,2.164,0.023,1.94,Ingrid Halvorsen,"wind gusts, trailing"
+2026-05-03,16:25,R Leo,Lyra,V,4.387,0.076,1.66,Kenji Mori,
+2026-05-03,16:38,RS Oph,Aster,B,3.665,0.023,1.92,Kenji Mori,"wind gusts, trailing"
+2026-05-03,16:57,R Leo,Lyra,V,9.216,0.009,2.16,Yusuf Haddad,
+2026-05-03,17:16,Algol,Brill,V,8.296,0.063,2.0,Rosa Lind,
+2026-05-03,20:16,T CrB,Brill,V,6.723,0.07,1.38,Yusuf Haddad,moon 60% up
+2026-05-03,20:35,RS Oph,Aster,V,9.072,0.051,1.73,Rosa Lind,thin cirrus
+2026-05-03,20:42,delta Cep,Lyra,V,3.699,0.068,1.21,Rosa Lind,
+2026-05-03,21:01,Algol,Brill,V,10.275,0.041,1.16,Rosa Lind,
+2026-05-04,00:01,Algol,Brill,R,5.389,0.031,2.16,Kenji Mori,twilight
+2026-05-04,00:08,SS Cyg,Aster,B,2.788,0.018,1.93,Tomasz Nowak,twilight
+2026-05-04,00:31,delta Cep,Lyra,V,10.025,0.018,2.14,Yusuf Haddad,
+2026-05-04,00:38,RS Oph,Aster,B,3.479,0.075,1.69,Ingrid Halvorsen,thin cirrus
+2026-05-04,01:19,T CrB,Brill,V,6.475,0.049,2.32,Yusuf Haddad,"dew on corrector, re-shot"
+2026-05-04,02:00,T CrB,Brill,V,5.222,0.057,1.91,Yusuf Haddad,"dew on corrector, re-shot"
+2026-05-04,02:13,RS Oph,Aster,B,6.124,0.065,2.16,Kenji Mori,"wind gusts, trailing"
+2026-05-04,02:36,chi Cyg,Aster,R,10.431,0.061,2.51,Kenji Mori,"""comparison star C3, not C2"""
+2026-05-04,02:49,chi Cyg,Aster,V,12.383,0.049,1.67,Kenji Mori,moon 60% up
+2026-05-04,18:49,Mira,Lyra,V,11.662,0.041,2.37,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-05-05,10:49,R Leo,Lyra,V,9.606,0.038,2.12,Rosa Lind,thin cirrus
+2026-05-05,13:49,R Leo,Lyra,V,8.462,0.008,1.22,Yusuf Haddad,"dew on corrector, re-shot"
+2026-05-05,14:00,SS Cyg,Aster,V,2.21,0.03,2.26,Tomasz Nowak,
+2026-05-05,17:00,Mira,Lyra,V,4.4,0.068,2.05,Yusuf Haddad,thin cirrus
+2026-05-05,17:23,SS Cyg,Aster,R,6.417,0.039,2.3,Ingrid Halvorsen,thin cirrus
+2026-05-05,17:42,T CrB,Brill,V,12.003,0.029,1.14,Ingrid Halvorsen,thin cirrus
+2026-05-06,09:42,R Leo,Lyra,V,9.477,0.031,1.95,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-05-06,09:49,T CrB,Brill,V,3.165,0.022,2.01,Kenji Mori,moon 60% up
+2026-05-06,10:00,delta Cep,Lyra,V,3.467,0.069,2.49,Yusuf Haddad,
+2026-05-06,13:00,R Leo,Lyra,V,5.505,0.071,2.44,Yusuf Haddad,"wind gusts, trailing"
+2026-05-06,13:23,Mira,Lyra,V,9.417,0.018,1.95,Ingrid Halvorsen,moon 60% up
+2026-05-06,13:34,R Leo,Lyra,V,5.883,0.018,2.21,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-05-06,13:57,Mira,Lyra,V,9.792,0.021,2.19,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-05-06,14:08,chi Cyg,Aster,V,10.514,0.062,2.47,Yusuf Haddad,
+2026-05-06,14:31,chi Cyg,Aster,V,8.733,0.01,1.73,Tomasz Nowak,
+2026-05-06,15:12,RS Oph,Aster,B,10.103,0.019,2.19,Ingrid Halvorsen,thin cirrus
+2026-05-06,15:31,SS Cyg,Aster,R,9.812,0.066,2.33,Rosa Lind,
+2026-05-06,18:31,Mira,Lyra,V,3.42,0.072,1.88,Tomasz Nowak,"wind gusts, trailing"
+2026-05-06,18:50,delta Cep,Lyra,V,9.27,0.036,1.71,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-06,19:01,chi Cyg,Aster,R,4.203,0.05,2.56,Yusuf Haddad,
+2026-05-06,19:20,RS Oph,Aster,V,6.754,0.031,1.44,Tomasz Nowak,"wind gusts, trailing"
+2026-05-06,19:39,Mira,Lyra,V,10.513,0.055,2.06,Ingrid Halvorsen,
+2026-05-06,22:39,Mira,Lyra,V,9.531,0.058,2.42,Ingrid Halvorsen,"wind gusts, trailing"
+2026-05-06,22:50,R Leo,Lyra,V,7.639,0.061,2.36,Kenji Mori,twilight
+2026-05-06,23:09,SS Cyg,Aster,V,6.343,0.07,2.44,Kenji Mori,twilight
+2026-05-06,23:20,T CrB,Brill,V,10.245,0.025,2.12,Tomasz Nowak,moon 60% up
+2026-05-07,00:01,Algol,Brill,V,11.967,0.062,2.32,Rosa Lind,
+2026-05-07,00:24,R Leo,Lyra,V,3.017,0.021,2.54,Yusuf Haddad,thin cirrus
+2026-05-07,00:35,delta Cep,Lyra,V,8.354,0.041,1.08,Tomasz Nowak,
+2026-05-07,16:35,RS Oph,Aster,V,9.397,0.013,2.23,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-05-08,08:35,Mira,Lyra,V,3.402,0.017,1.26,Ingrid Halvorsen,thin cirrus
+2026-05-08,11:35,delta Cep,Lyra,V,11.091,0.018,1.32,Yusuf Haddad,moon 60% up
+2026-05-08,12:16,Mira,Lyra,V,8.857,0.06,1.46,Rosa Lind,"wind gusts, trailing"
+2026-05-08,12:27,RS Oph,Aster,B,8.754,0.005,1.43,Tomasz Nowak,moon 60% up
+2026-05-08,12:40,R Leo,Lyra,V,11.918,0.051,1.48,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-08,12:47,Mira,Lyra,V,9.851,0.064,2.52,Tomasz Nowak,twilight
+2026-05-08,13:28,SS Cyg,Aster,B,8.281,0.026,1.6,Yusuf Haddad,"dew on corrector, re-shot"
+2026-05-08,13:39,T CrB,Brill,V,5.262,0.013,1.73,Ingrid Halvorsen,
+2026-05-08,13:58,RS Oph,Aster,V,11.467,0.01,2.42,Kenji Mori,
+2026-05-08,14:11,T CrB,Brill,V,10.504,0.04,1.42,Tomasz Nowak,twilight
+2026-05-08,14:18,SS Cyg,Aster,R,3.507,0.071,1.11,Rosa Lind,twilight
+2026-05-08,14:31,chi Cyg,Aster,V,9.374,0.055,1.21,Yusuf Haddad,moon 60% up
+2026-05-08,14:50,RS Oph,Aster,V,,,1.2,Rosa Lind,thin cirrus
+2026-05-08,15:13,chi Cyg,Aster,V,6.967,0.067,1.23,Kenji Mori,"dew on corrector, re-shot"
+2026-05-08,18:13,delta Cep,Lyra,V,9.076,0.071,2.09,Kenji Mori,twilight
+2026-05-08,21:13,SS Cyg,Aster,V,3.605,0.057,2.49,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-08,21:32,SS Cyg,Aster,R,11.13,0.024,1.82,Rosa Lind,"""comparison star C3, not C2"""
+2026-05-08,22:13,Algol,Brill,V,8.469,0.025,1.76,Kenji Mori,"dew on corrector, re-shot"
+2026-05-08,22:24,Mira,Lyra,V,3.566,0.045,1.3,Ingrid Halvorsen,moon 60% up
+2026-05-08,23:05,SS Cyg,Aster,B,3.202,0.048,1.41,Yusuf Haddad,
+2026-05-08,23:28,SS Cyg,Aster,B,4.489,0.053,1.35,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-09,02:28,RS Oph,Aster,V,11.896,0.013,1.91,Rosa Lind,"""comparison star C3, not C2"""
+2026-05-09,18:28,Algol,Brill,R,9.036,0.036,2.17,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-05-09,18:47,chi Cyg,Aster,R,2.551,0.064,1.49,Ingrid Halvorsen,twilight
+2026-05-10,10:47,Algol,Brill,R,8.773,0.031,1.42,Ingrid Halvorsen,"wind gusts, trailing"
+2026-05-10,11:06,delta Cep,Lyra,V,8.069,0.034,2.26,Tomasz Nowak,"dew on corrector, re-shot"
+2026-05-10,11:19,SS Cyg,Aster,R,5.165,0.072,1.51,Tomasz Nowak,"wind gusts, trailing"
+2026-05-10,11:30,RS Oph,Aster,B,3.871,0.035,1.54,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-10,11:49,RS Oph,Aster,B,11.093,0.044,2.54,Tomasz Nowak,
+2026-05-11,03:49,Mira,Lyra,V,4.718,0.007,2.46,Ingrid Halvorsen,
+2026-05-11,03:56,SS Cyg,Aster,B,8.876,0.036,1.79,Tomasz Nowak,thin cirrus
+2026-05-11,04:37,delta Cep,Lyra,V,10.613,0.068,1.26,Ingrid Halvorsen,moon 60% up
+2026-05-11,05:00,T CrB,Brill,V,7.248,0.068,1.72,Yusuf Haddad,
+2026-05-11,05:07,SS Cyg,Aster,R,7.844,0.009,1.59,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-05-11,05:14,chi Cyg,Aster,R,5.927,0.067,1.26,Tomasz Nowak,
+2026-05-11,05:33,R Leo,Lyra,V,4.402,0.034,1.14,Kenji Mori,
+2026-05-11,05:44,T CrB,Brill,V,3.346,0.037,1.96,Tomasz Nowak,
+2026-05-11,06:07,Mira,Lyra,V,10.924,0.03,2.03,Yusuf Haddad,
+2026-05-11,06:30,SS Cyg,Aster,B,11.864,0.031,2.54,Tomasz Nowak,twilight
+2026-05-11,06:49,Algol,Brill,R,9.879,0.065,1.36,Tomasz Nowak,twilight
+2026-05-11,06:56,T CrB,Brill,V,4.059,0.019,1.77,Yusuf Haddad,
+2026-05-11,07:15,chi Cyg,Aster,V,3.63,0.006,1.01,Yusuf Haddad,"wind gusts, trailing"
+2026-05-11,07:26,SS Cyg,Aster,R,3.216,0.071,1.15,Ingrid Halvorsen,
+2026-05-11,08:07,chi Cyg,Aster,R,2.594,0.049,1.06,Ingrid Halvorsen,thin cirrus
+2026-05-11,11:07,T CrB,Brill,V,12.108,0.041,2.08,Rosa Lind,moon 60% up
+2026-05-11,14:07,delta Cep,Lyra,V,10.862,0.042,2.08,Kenji Mori,
+2026-05-11,14:18,delta Cep,Lyra,V,7.449,0.065,2.34,Tomasz Nowak,
+2026-05-11,17:18,chi Cyg,Aster,R,8.69,0.005,2.48,Ingrid Halvorsen,
+2026-05-11,17:25,chi Cyg,Aster,V,4.571,0.053,1.47,Ingrid Halvorsen,thin cirrus
+2026-05-11,17:48,T CrB,Brill,V,5.795,0.045,1.42,Ingrid Halvorsen,thin cirrus
+2026-05-11,17:55,T CrB,Brill,V,4.931,0.06,1.66,Ingrid Halvorsen,thin cirrus
+2026-05-11,18:06,delta Cep,Lyra,V,2.675,0.048,1.91,Rosa Lind,"""comparison star C3, not C2"""
+2026-05-11,18:13,Mira,Lyra,V,4.802,0.019,1.44,Rosa Lind,"wind gusts, trailing"
+2026-05-11,18:26,R Leo,Lyra,V,6.955,0.074,2.39,Yusuf Haddad,
+2026-05-11,19:07,T CrB,Brill,V,10.856,0.028,2.4,Tomasz Nowak,thin cirrus
+2026-05-11,19:48,Mira,Lyra,V,5.524,0.027,1.78,Yusuf Haddad,
+2026-05-11,20:11,SS Cyg,Aster,V,9.966,0.064,2.16,Rosa Lind,
+2026-05-11,20:22,Mira,Lyra,V,5.726,0.03,2.01,Yusuf Haddad,thin cirrus
+2026-05-11,20:33,RS Oph,Aster,B,8.898,0.017,2.34,Tomasz Nowak,twilight
+2026-05-11,20:56,RS Oph,Aster,V,8.685,0.018,1.92,Yusuf Haddad,
+2026-05-11,21:09,chi Cyg,Aster,R,4.591,0.058,1.38,Rosa Lind,
+2026-05-11,21:32,delta Cep,Lyra,V,4.409,0.023,1.51,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-05-11,22:13,SS Cyg,Aster,V,10.191,0.013,1.89,Rosa Lind,"""comparison star C3, not C2"""
+2026-05-11,22:24,delta Cep,Lyra,V,11.723,0.042,2.09,Tomasz Nowak,twilight
+2026-05-11,22:35,Algol,Brill,V,6.243,0.052,2.1,Rosa Lind,twilight
+2026-05-11,22:46,chi Cyg,Aster,R,7.424,0.011,1.09,Rosa Lind,"dew on corrector, re-shot"
+2026-05-11,22:57,R Leo,Lyra,V,5.144,0.014,2.44,Rosa Lind,thin cirrus
+2026-05-12,14:57,chi Cyg,Aster,R,2.201,0.01,2.1,Kenji Mori,twilight
+2026-05-12,15:38,RS Oph,Aster,B,8.618,0.057,1.5,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-05-12,16:19,SS Cyg,Aster,B,8.971,0.027,1.43,Kenji Mori,thin cirrus
+2026-05-13,08:19,T CrB,Brill,V,7.051,0.038,1.67,Rosa Lind,"wind gusts, trailing"
+2026-05-13,08:30,Algol,Brill,R,5.472,0.034,1.26,Yusuf Haddad,
+2026-05-13,08:43,SS Cyg,Aster,B,7.81,0.043,1.94,Rosa Lind,
+2026-05-13,08:54,Algol,Brill,R,8.975,0.08,1.25,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-05-14,00:54,chi Cyg,Aster,V,5.602,0.052,1.12,Ingrid Halvorsen,twilight
+2026-05-14,03:54,SS Cyg,Aster,B,8.213,0.024,2.02,Tomasz Nowak,
+2026-05-14,04:17,delta Cep,Lyra,V,10.138,0.064,2.51,Kenji Mori,
+2026-05-14,04:24,Algol,Brill,R,12.229,0.033,1.03,Rosa Lind,"wind gusts, trailing"
+2026-05-14,04:47,Mira,Lyra,V,7.205,0.059,2.58,Kenji Mori,"""comparison star C3, not C2"""
+2026-05-14,05:00,T CrB,Brill,V,,,1.93,Ingrid Halvorsen,moon 60% up
+2026-05-14,05:13,Algol,Brill,R,9.909,0.058,2.54,Yusuf Haddad,
+2026-05-14,05:36,chi Cyg,Aster,V,8.512,0.033,1.65,Rosa Lind,
+2026-05-14,05:43,Mira,Lyra,V,11.803,0.031,2.03,Rosa Lind,"dew on corrector, re-shot"
+2026-05-14,21:43,delta Cep,Lyra,V,5.395,0.048,1.78,Kenji Mori,
+2026-05-15,13:43,Mira,Lyra,V,4.268,0.061,1.43,Ingrid Halvorsen,moon 60% up
+2026-05-15,13:50,SS Cyg,Aster,B,3.9,0.021,2.12,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-05-16,05:50,Algol,Brill,R,5.691,0.066,1.46,Rosa Lind,moon 60% up
+2026-05-16,06:31,Algol,Brill,R,8.128,0.073,1.83,Ingrid Halvorsen,
+2026-05-16,22:31,R Leo,Lyra,V,8.977,0.047,2.11,Tomasz Nowak,"dew on corrector, re-shot"
+2026-05-16,22:44,Algol,Brill,V,2.826,0.013,2.22,Ingrid Halvorsen,moon 60% up
+2026-05-16,22:55,Mira,Lyra,V,8.118,0.036,2.4,Kenji Mori,"""comparison star C3, not C2"""
+2026-05-17,14:55,Mira,Lyra,V,8.999,0.045,1.79,Kenji Mori,
+2026-05-17,17:55,T CrB,Brill,V,2.739,0.016,1.79,Rosa Lind,moon 60% up
+2026-05-17,18:18,RS Oph,Aster,V,3.416,0.048,2.5,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-05-17,18:41,delta Cep,Lyra,V,5.541,0.037,1.22,Kenji Mori,thin cirrus
+2026-05-17,19:04,delta Cep,Lyra,V,5.055,0.014,1.66,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-05-17,19:45,Mira,Lyra,V,6.748,0.026,1.19,Tomasz Nowak,twilight
+2026-05-17,19:52,T CrB,Brill,V,8.392,0.077,1.98,Yusuf Haddad,twilight
+2026-05-17,19:59,delta Cep,Lyra,V,5.892,0.018,2.4,Tomasz Nowak,moon 60% up
+2026-05-17,20:40,SS Cyg,Aster,V,5.416,0.059,1.37,Kenji Mori,
+2026-05-17,21:03,delta Cep,Lyra,V,2.569,0.019,1.36,Rosa Lind,
+2026-05-17,21:16,RS Oph,Aster,B,2.285,0.014,2.26,Yusuf Haddad,twilight
+2026-05-17,21:57,SS Cyg,Aster,V,6.995,0.06,1.66,Ingrid Halvorsen,"wind gusts, trailing"
+2026-05-18,13:57,chi Cyg,Aster,V,11.936,0.039,1.7,Tomasz Nowak,
+2026-05-18,14:10,delta Cep,Lyra,V,11.734,0.05,1.53,Ingrid Halvorsen,
+2026-05-18,14:21,SS Cyg,Aster,B,3.517,0.022,1.86,Ingrid Halvorsen,
+2026-05-18,14:32,Mira,Lyra,V,8.243,0.026,1.1,Rosa Lind,
+2026-05-18,14:43,chi Cyg,Aster,V,5.574,0.02,1.79,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-05-18,15:06,chi Cyg,Aster,R,11.797,0.029,1.57,Ingrid Halvorsen,
+2026-05-18,15:47,RS Oph,Aster,B,,,2.0,Yusuf Haddad,
+2026-05-18,16:00,Mira,Lyra,V,8.203,0.01,2.49,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-05-18,16:13,T CrB,Brill,V,9.29,0.035,2.28,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-19,08:13,RS Oph,Aster,V,11.233,0.076,2.06,Tomasz Nowak,"wind gusts, trailing"
+2026-05-19,08:26,SS Cyg,Aster,V,2.541,0.065,2.28,Ingrid Halvorsen,
+2026-05-19,08:37,Mira,Lyra,V,6.408,0.049,2.45,Kenji Mori,moon 60% up
+2026-05-19,08:48,T CrB,Brill,V,4.296,0.033,1.96,Yusuf Haddad,
+2026-05-20,00:48,Mira,Lyra,V,6.243,0.028,2.19,Kenji Mori,
+2026-05-20,01:29,delta Cep,Lyra,V,4.599,0.038,1.94,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-20,02:10,T CrB,Brill,V,9.459,0.02,2.1,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-05-20,02:29,Algol,Brill,R,10.532,0.035,1.47,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-05-20,02:48,delta Cep,Lyra,V,8.128,0.005,1.81,Rosa Lind,
+2026-05-20,02:59,RS Oph,Aster,V,3.239,0.023,1.41,Rosa Lind,
+2026-05-20,03:18,T CrB,Brill,V,4.169,0.04,1.88,Rosa Lind,
+2026-05-20,19:18,Mira,Lyra,V,6.8,0.062,1.39,Kenji Mori,
+2026-05-20,19:37,delta Cep,Lyra,V,8.39,0.008,1.15,Rosa Lind,
+2026-05-20,20:18,R Leo,Lyra,V,,,1.83,Kenji Mori,thin cirrus
+2026-05-20,23:18,chi Cyg,Aster,R,7.266,0.007,1.7,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-21,15:18,delta Cep,Lyra,V,5.776,0.027,2.23,Rosa Lind,"""comparison star C3, not C2"""
+2026-05-21,15:37,Algol,Brill,R,9.012,0.07,1.68,Ingrid Halvorsen,
+2026-05-21,16:00,delta Cep,Lyra,V,3.539,0.034,1.23,Kenji Mori,"""comparison star C3, not C2"""
+2026-05-21,19:00,RS Oph,Aster,B,11.981,0.025,2.13,Rosa Lind,moon 60% up
+2026-05-21,19:19,delta Cep,Lyra,V,8.985,0.06,2.16,Ingrid Halvorsen,
+2026-05-22,11:19,delta Cep,Lyra,V,7.365,0.061,1.95,Kenji Mori,thin cirrus
+2026-05-22,11:42,RS Oph,Aster,B,11.672,0.079,1.88,Yusuf Haddad,"dew on corrector, re-shot"
+2026-05-22,12:05,chi Cyg,Aster,V,9.28,0.073,1.92,Ingrid Halvorsen,
+2026-05-22,12:16,delta Cep,Lyra,V,5.449,0.004,2.29,Yusuf Haddad,"dew on corrector, re-shot"
+2026-05-22,12:29,Mira,Lyra,V,4.96,0.026,1.67,Kenji Mori,
+2026-05-22,12:42,R Leo,Lyra,V,3.987,0.048,1.32,Kenji Mori,"""comparison star C3, not C2"""
+2026-05-22,15:42,T CrB,Brill,V,7.451,0.077,1.29,Yusuf Haddad,
+2026-05-22,16:01,RS Oph,Aster,V,6.298,0.059,2.03,Yusuf Haddad,"wind gusts, trailing"
+2026-05-22,16:42,SS Cyg,Aster,B,3.567,0.049,1.09,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-05-22,16:49,Mira,Lyra,V,6.3,0.025,2.18,Tomasz Nowak,
+2026-05-22,17:00,SS Cyg,Aster,B,2.356,0.05,1.87,Kenji Mori,twilight
+2026-05-22,17:11,delta Cep,Lyra,V,7.363,0.024,1.78,Kenji Mori,
+2026-05-22,17:34,T CrB,Brill,V,6.669,0.036,1.69,Rosa Lind,twilight
+2026-05-22,20:34,SS Cyg,Aster,B,,,1.16,Ingrid Halvorsen,
+2026-05-22,23:34,Mira,Lyra,V,6.376,0.047,1.08,Ingrid Halvorsen,
+2026-05-23,00:15,R Leo,Lyra,V,11.411,0.025,1.17,Tomasz Nowak,moon 60% up
+2026-05-23,00:28,R Leo,Lyra,V,3.374,0.056,1.38,Rosa Lind,thin cirrus
+2026-05-23,16:28,Algol,Brill,R,3.122,0.06,1.85,Tomasz Nowak,
+2026-05-23,16:47,chi Cyg,Aster,R,5.465,0.054,2.43,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-05-23,17:00,T CrB,Brill,V,2.915,0.064,1.46,Ingrid Halvorsen,"wind gusts, trailing"
+2026-05-23,17:07,RS Oph,Aster,B,3.338,0.023,1.57,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-05-23,20:07,SS Cyg,Aster,B,4.77,0.013,2.41,Tomasz Nowak,
+2026-05-23,20:18,Mira,Lyra,V,6.57,0.023,2.37,Rosa Lind,
+2026-05-23,20:59,delta Cep,Lyra,V,11.794,0.074,2.46,Yusuf Haddad,
+2026-05-23,21:06,Algol,Brill,R,2.494,0.074,2.32,Kenji Mori,moon 60% up
+2026-05-23,21:25,chi Cyg,Aster,V,,,1.65,Kenji Mori,
+2026-05-23,21:36,Algol,Brill,R,7.369,0.076,2.29,Tomasz Nowak,
+2026-05-23,21:49,RS Oph,Aster,B,7.074,0.016,1.36,Tomasz Nowak,"dew on corrector, re-shot"
+2026-05-23,22:30,Algol,Brill,R,8.253,0.035,1.07,Rosa Lind,twilight
+2026-05-23,23:11,R Leo,Lyra,V,4.536,0.023,1.79,Yusuf Haddad,"dew on corrector, re-shot"
+2026-05-24,02:11,RS Oph,Aster,B,3.988,0.043,2.5,Kenji Mori,"wind gusts, trailing"
+2026-05-24,02:18,SS Cyg,Aster,B,4.682,0.079,2.16,Tomasz Nowak,
+2026-05-24,02:37,delta Cep,Lyra,V,7.991,0.038,1.34,Kenji Mori,thin cirrus
+2026-05-24,02:48,Mira,Lyra,V,5.372,0.006,1.6,Yusuf Haddad,thin cirrus
+2026-05-24,02:59,Mira,Lyra,V,6.078,0.065,1.79,Rosa Lind,moon 60% up
+2026-05-24,05:59,SS Cyg,Aster,R,11.762,0.05,1.62,Rosa Lind,"wind gusts, trailing"
+2026-05-24,06:22,SS Cyg,Aster,V,9.151,0.041,1.03,Tomasz Nowak,
+2026-05-24,22:22,T CrB,Brill,V,10.199,0.079,1.16,Yusuf Haddad,moon 60% up
+2026-05-24,22:35,Algol,Brill,V,7.393,0.017,2.33,Tomasz Nowak,
+2026-05-24,22:58,delta Cep,Lyra,V,6.818,0.054,1.63,Yusuf Haddad,"wind gusts, trailing"
+2026-05-24,23:21,Mira,Lyra,V,3.78,0.057,1.9,Kenji Mori,moon 60% up
+2026-05-25,15:21,T CrB,Brill,V,6.456,0.026,1.65,Tomasz Nowak,"wind gusts, trailing"
+2026-05-25,15:28,Mira,Lyra,V,11.925,0.023,1.77,Yusuf Haddad,twilight
+2026-05-25,15:39,RS Oph,Aster,B,6.361,0.033,1.73,Tomasz Nowak,
+2026-05-26,07:39,Algol,Brill,V,6.769,0.066,1.09,Rosa Lind,
+2026-05-26,08:02,T CrB,Brill,V,12.041,0.049,1.25,Kenji Mori,thin cirrus
+2026-05-26,08:15,Mira,Lyra,V,4.081,0.038,1.39,Ingrid Halvorsen,"wind gusts, trailing"
+2026-05-27,00:15,chi Cyg,Aster,V,9.423,0.078,1.39,Yusuf Haddad,twilight
+2026-05-27,00:26,RS Oph,Aster,B,5.337,0.032,1.1,Kenji Mori,
+2026-05-27,01:07,Mira,Lyra,V,3.266,0.007,2.47,Rosa Lind,
+2026-05-27,04:07,chi Cyg,Aster,V,8.72,0.015,2.13,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-05-27,04:18,RS Oph,Aster,V,9.541,0.048,1.36,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-05-27,07:18,Algol,Brill,R,7.224,0.076,1.33,Kenji Mori,"dew on corrector, re-shot"
+2026-05-27,07:29,delta Cep,Lyra,V,,,2.09,Kenji Mori,twilight
+2026-05-27,08:10,SS Cyg,Aster,B,2.967,0.03,2.0,Tomasz Nowak,
+2026-05-27,08:29,T CrB,Brill,V,3.78,0.066,1.46,Ingrid Halvorsen,
+2026-05-27,11:29,Mira,Lyra,V,5.759,0.008,1.36,Tomasz Nowak,
+2026-05-27,11:36,SS Cyg,Aster,R,11.93,0.069,1.1,Yusuf Haddad,twilight
+2026-05-27,11:47,SS Cyg,Aster,R,4.109,0.007,2.0,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-05-27,12:00,Algol,Brill,V,5.269,0.065,1.18,Kenji Mori,
+2026-05-27,15:00,delta Cep,Lyra,V,,,2.02,Yusuf Haddad,
+2026-05-27,15:19,R Leo,Lyra,V,4.295,0.067,2.23,Yusuf Haddad,
+2026-05-27,15:38,Algol,Brill,R,8.111,0.067,1.86,Rosa Lind,"dew on corrector, re-shot"
+2026-05-28,07:38,RS Oph,Aster,V,3.982,0.016,2.04,Kenji Mori,"wind gusts, trailing"
+2026-05-28,07:49,R Leo,Lyra,V,9.356,0.025,1.47,Ingrid Halvorsen,
+2026-05-28,07:56,RS Oph,Aster,B,6.776,0.038,2.55,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-05-28,23:56,SS Cyg,Aster,B,9.448,0.009,2.56,Yusuf Haddad,
+2026-05-29,00:15,delta Cep,Lyra,V,7.504,0.027,2.07,Tomasz Nowak,
+2026-05-29,03:15,RS Oph,Aster,V,6.397,0.04,1.7,Kenji Mori,
+2026-05-29,06:15,SS Cyg,Aster,B,4.581,0.077,2.3,Rosa Lind,moon 60% up
+2026-05-29,06:38,SS Cyg,Aster,R,2.103,0.037,1.75,Tomasz Nowak,
+2026-05-29,22:38,T CrB,Brill,V,7.464,0.073,2.55,Kenji Mori,"""comparison star C3, not C2"""
+2026-05-29,22:57,chi Cyg,Aster,R,10.73,0.033,1.15,Kenji Mori,twilight
+2026-05-30,14:57,Mira,Lyra,V,8.867,0.075,1.18,Kenji Mori,"wind gusts, trailing"
+2026-05-30,15:08,SS Cyg,Aster,V,3.356,0.013,2.55,Ingrid Halvorsen,twilight
+2026-05-30,15:31,R Leo,Lyra,V,8.955,0.005,2.48,Yusuf Haddad,twilight
+2026-05-30,15:38,Algol,Brill,R,3.853,0.06,1.75,Ingrid Halvorsen,
+2026-05-30,18:38,R Leo,Lyra,V,6.583,0.049,2.47,Kenji Mori,"wind gusts, trailing"
+2026-05-30,19:01,chi Cyg,Aster,R,2.105,0.079,1.32,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-05-30,19:24,SS Cyg,Aster,V,11.677,0.014,2.41,Ingrid Halvorsen,moon 60% up
+2026-05-30,19:31,SS Cyg,Aster,V,8.076,0.028,1.19,Kenji Mori,moon 60% up
+2026-05-30,19:38,Algol,Brill,R,5.724,0.008,2.41,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-05-31,11:38,R Leo,Lyra,V,5.453,0.071,1.98,Rosa Lind,"dew on corrector, re-shot"
+2026-05-31,12:01,Mira,Lyra,V,11.436,0.051,2.19,Kenji Mori,
+2026-05-31,12:42,Algol,Brill,R,10.264,0.01,1.85,Kenji Mori,
+2026-05-31,13:05,RS Oph,Aster,B,2.472,0.019,1.06,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-01,05:05,R Leo,Lyra,V,4.573,0.067,2.03,Yusuf Haddad,
+2026-06-01,05:46,R Leo,Lyra,V,12.187,0.017,2.21,Rosa Lind,twilight
+2026-06-01,06:09,T CrB,Brill,V,7.149,0.076,2.32,Ingrid Halvorsen,"wind gusts, trailing"
+2026-06-01,06:22,SS Cyg,Aster,V,12.348,0.08,2.6,Rosa Lind,
+2026-06-01,22:22,delta Cep,Lyra,V,11.354,0.026,1.91,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-06-01,22:29,R Leo,Lyra,V,7.868,0.048,1.78,Ingrid Halvorsen,thin cirrus
+2026-06-01,22:42,chi Cyg,Aster,V,3.63,0.024,2.1,Tomasz Nowak,
+2026-06-01,23:23,Mira,Lyra,V,6.231,0.053,2.33,Yusuf Haddad,thin cirrus
+2026-06-01,23:36,delta Cep,Lyra,V,2.886,0.014,1.79,Ingrid Halvorsen,moon 60% up
+2026-06-02,02:36,RS Oph,Aster,B,11.042,0.057,2.23,Rosa Lind,
+2026-06-02,02:59,T CrB,Brill,V,2.956,0.004,1.05,Tomasz Nowak,"wind gusts, trailing"
+2026-06-02,03:22,chi Cyg,Aster,R,10.22,0.043,1.27,Tomasz Nowak,
+2026-06-02,04:03,T CrB,Brill,V,9.254,0.014,2.52,Tomasz Nowak,thin cirrus
+2026-06-02,07:03,SS Cyg,Aster,V,9.12,0.052,1.26,Ingrid Halvorsen,thin cirrus
+2026-06-02,07:44,RS Oph,Aster,V,8.216,0.021,1.41,Yusuf Haddad,
+2026-06-02,07:55,Mira,Lyra,V,12.109,0.075,1.92,Kenji Mori,"dew on corrector, re-shot"
+2026-06-02,08:36,SS Cyg,Aster,V,5.608,0.007,2.05,Yusuf Haddad,
+2026-06-02,11:36,chi Cyg,Aster,R,4.528,0.034,1.42,Rosa Lind,"wind gusts, trailing"
+2026-06-02,11:43,T CrB,Brill,V,7.632,0.038,1.31,Rosa Lind,"dew on corrector, re-shot"
+2026-06-03,03:43,SS Cyg,Aster,R,5.959,0.045,1.13,Ingrid Halvorsen,thin cirrus
+2026-06-03,04:02,chi Cyg,Aster,R,11.804,0.074,2.48,Yusuf Haddad,moon 60% up
+2026-06-03,04:43,SS Cyg,Aster,B,9.789,0.029,1.11,Kenji Mori,
+2026-06-03,05:24,Mira,Lyra,V,9.301,0.011,1.25,Kenji Mori,twilight
+2026-06-03,05:37,R Leo,Lyra,V,10.081,0.079,1.64,Ingrid Halvorsen,moon 60% up
+2026-06-03,05:48,chi Cyg,Aster,R,10.836,0.037,1.58,Yusuf Haddad,
+2026-06-03,08:48,Algol,Brill,R,9.656,0.074,2.0,Ingrid Halvorsen,"wind gusts, trailing"
+2026-06-03,08:59,Mira,Lyra,V,5.109,0.064,1.85,Kenji Mori,"dew on corrector, re-shot"
+2026-06-03,09:40,SS Cyg,Aster,V,6.922,0.053,1.81,Kenji Mori,moon 60% up
+2026-06-04,01:40,delta Cep,Lyra,V,12.368,0.045,1.95,Yusuf Haddad,thin cirrus
+2026-06-04,17:40,Algol,Brill,R,2.704,0.052,1.04,Tomasz Nowak,
+2026-06-04,17:51,Algol,Brill,R,6.011,0.03,2.06,Yusuf Haddad,moon 60% up
+2026-06-04,18:10,R Leo,Lyra,V,9.736,0.042,1.6,Tomasz Nowak,moon 60% up
+2026-06-04,18:17,delta Cep,Lyra,V,,,1.9,Tomasz Nowak,
+2026-06-04,18:30,RS Oph,Aster,V,3.022,0.053,1.77,Kenji Mori,
+2026-06-04,18:37,chi Cyg,Aster,R,7.392,0.044,1.4,Ingrid Halvorsen,thin cirrus
+2026-06-04,21:37,T CrB,Brill,V,4.406,0.067,2.52,Kenji Mori,
+2026-06-04,21:50,Algol,Brill,R,12.102,0.043,1.81,Kenji Mori,
+2026-06-04,22:09,Mira,Lyra,V,3.684,0.06,1.97,Yusuf Haddad,
+2026-06-04,22:32,SS Cyg,Aster,V,5.858,0.017,1.44,Tomasz Nowak,
+2026-06-05,01:32,RS Oph,Aster,V,2.852,0.045,2.34,Rosa Lind,
+2026-06-05,17:32,Mira,Lyra,V,8.799,0.018,2.06,Kenji Mori,
+2026-06-05,17:51,RS Oph,Aster,V,5.156,0.065,1.21,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-05,20:51,Mira,Lyra,V,5.492,0.073,1.21,Yusuf Haddad,
+2026-06-05,21:14,SS Cyg,Aster,V,11.395,0.018,1.4,Yusuf Haddad,
+2026-06-05,21:27,chi Cyg,Aster,R,10.314,0.029,1.77,Rosa Lind,"wind gusts, trailing"
+2026-06-05,22:08,RS Oph,Aster,B,5.383,0.031,1.17,Tomasz Nowak,"dew on corrector, re-shot"
+2026-06-05,22:27,RS Oph,Aster,V,6.822,0.056,1.34,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-06-05,22:38,Algol,Brill,R,3.874,0.02,1.07,Yusuf Haddad,
+2026-06-05,23:19,Mira,Lyra,V,2.638,0.025,1.5,Kenji Mori,"dew on corrector, re-shot"
+2026-06-05,23:32,R Leo,Lyra,V,5.042,0.038,1.14,Kenji Mori,"wind gusts, trailing"
+2026-06-05,23:55,Mira,Lyra,V,5.675,0.039,2.58,Yusuf Haddad,moon 60% up
+2026-06-06,00:06,SS Cyg,Aster,V,8.197,0.038,1.46,Rosa Lind,moon 60% up
+2026-06-06,00:29,T CrB,Brill,V,3.668,0.069,2.31,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-06-06,00:48,R Leo,Lyra,V,9.63,0.055,1.19,Ingrid Halvorsen,moon 60% up
+2026-06-06,01:11,RS Oph,Aster,B,9.667,0.019,2.0,Rosa Lind,moon 60% up
+2026-06-06,17:11,SS Cyg,Aster,V,6.877,0.032,1.22,Tomasz Nowak,thin cirrus
+2026-06-06,17:52,Algol,Brill,R,9.922,0.033,2.34,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-06-06,20:52,Mira,Lyra,V,4.545,0.018,1.79,Kenji Mori,twilight
+2026-06-06,21:33,R Leo,Lyra,V,5.896,0.024,1.65,Yusuf Haddad,moon 60% up
+2026-06-06,21:56,Algol,Brill,R,3.082,0.011,1.33,Yusuf Haddad,
+2026-06-06,22:19,chi Cyg,Aster,V,4.759,0.024,1.4,Kenji Mori,twilight
+2026-06-06,22:38,R Leo,Lyra,V,7.816,0.024,1.24,Kenji Mori,"""comparison star C3, not C2"""
+2026-06-06,22:49,SS Cyg,Aster,V,3.067,0.016,2.02,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-07,01:49,R Leo,Lyra,V,2.121,0.047,2.54,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-06-07,01:56,chi Cyg,Aster,V,5.967,0.006,1.04,Yusuf Haddad,"dew on corrector, re-shot"
+2026-06-07,04:56,Mira,Lyra,V,3.323,0.033,1.02,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-06-07,05:15,T CrB,Brill,V,9.412,0.011,2.58,Yusuf Haddad,"dew on corrector, re-shot"
+2026-06-07,05:56,SS Cyg,Aster,R,11.259,0.014,1.38,Ingrid Halvorsen,
+2026-06-07,21:56,chi Cyg,Aster,R,7.499,0.015,1.25,Kenji Mori,
+2026-06-07,22:07,R Leo,Lyra,V,2.155,0.012,1.25,Rosa Lind,
+2026-06-07,22:18,R Leo,Lyra,V,7.738,0.037,1.91,Ingrid Halvorsen,
+2026-06-07,22:31,delta Cep,Lyra,V,9.308,0.038,1.53,Rosa Lind,
+2026-06-07,22:50,T CrB,Brill,V,9.408,0.013,2.5,Kenji Mori,"""comparison star C3, not C2"""
+2026-06-07,23:09,R Leo,Lyra,V,12.327,0.073,1.7,Ingrid Halvorsen,
+2026-06-07,23:28,T CrB,Brill,V,9.482,0.046,1.62,Kenji Mori,
+2026-06-08,15:28,SS Cyg,Aster,B,5.32,0.015,2.18,Ingrid Halvorsen,
+2026-06-08,18:28,Mira,Lyra,V,2.396,0.07,1.23,Ingrid Halvorsen,
+2026-06-08,18:39,R Leo,Lyra,V,,,1.46,Rosa Lind,
+2026-06-08,18:58,delta Cep,Lyra,V,4.415,0.042,1.6,Tomasz Nowak,"dew on corrector, re-shot"
+2026-06-08,21:58,Algol,Brill,R,8.968,0.029,1.33,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-06-08,22:05,delta Cep,Lyra,V,10.015,0.011,1.03,Kenji Mori,moon 60% up
+2026-06-08,22:46,T CrB,Brill,V,10.188,0.01,1.29,Rosa Lind,
+2026-06-08,23:27,delta Cep,Lyra,V,11.197,0.028,1.36,Ingrid Halvorsen,twilight
+2026-06-09,15:27,RS Oph,Aster,V,3.485,0.048,1.76,Kenji Mori,"wind gusts, trailing"
+2026-06-09,16:08,Mira,Lyra,V,9.845,0.03,1.82,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-06-09,16:31,SS Cyg,Aster,B,5.04,0.028,1.28,Yusuf Haddad,
+2026-06-09,16:42,SS Cyg,Aster,V,2.472,0.07,2.1,Kenji Mori,
+2026-06-09,17:05,RS Oph,Aster,B,12.283,0.013,1.76,Rosa Lind,"dew on corrector, re-shot"
+2026-06-09,17:16,delta Cep,Lyra,V,4.152,0.05,2.39,Rosa Lind,twilight
+2026-06-09,17:35,Algol,Brill,R,8.906,0.033,1.03,Kenji Mori,
+2026-06-09,20:35,T CrB,Brill,V,3.38,0.05,1.22,Ingrid Halvorsen,twilight
+2026-06-09,20:48,SS Cyg,Aster,V,4.427,0.068,1.77,Ingrid Halvorsen,
+2026-06-09,20:55,chi Cyg,Aster,V,8.127,0.057,2.31,Ingrid Halvorsen,twilight
+2026-06-09,21:36,Algol,Brill,V,9.899,0.039,1.68,Yusuf Haddad,"dew on corrector, re-shot"
+2026-06-09,21:47,T CrB,Brill,V,2.19,0.014,2.22,Ingrid Halvorsen,twilight
+2026-06-09,22:06,R Leo,Lyra,V,6.86,0.025,2.48,Kenji Mori,thin cirrus
+2026-06-09,22:47,chi Cyg,Aster,R,10.834,0.049,1.53,Kenji Mori,moon 60% up
+2026-06-09,23:06,delta Cep,Lyra,V,3.716,0.08,1.07,Ingrid Halvorsen,twilight
+2026-06-09,23:17,Algol,Brill,R,3.724,0.042,2.57,Yusuf Haddad,"wind gusts, trailing"
+2026-06-09,23:28,Mira,Lyra,V,10.775,0.072,1.82,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-06-09,23:47,Algol,Brill,R,5.989,0.028,1.46,Tomasz Nowak,"wind gusts, trailing"
+2026-06-10,00:28,RS Oph,Aster,B,5.765,0.015,1.51,Kenji Mori,"wind gusts, trailing"
+2026-06-10,00:41,SS Cyg,Aster,R,6.313,0.005,2.24,Tomasz Nowak,"dew on corrector, re-shot"
+2026-06-10,01:04,RS Oph,Aster,V,3.503,0.02,1.78,Ingrid Halvorsen,twilight
+2026-06-10,01:23,Mira,Lyra,V,11.609,0.068,1.62,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-06-10,01:42,RS Oph,Aster,V,7.712,0.023,2.49,Rosa Lind,thin cirrus
+2026-06-10,01:53,Mira,Lyra,V,8.918,0.026,2.44,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-06-10,02:12,Algol,Brill,R,5.403,0.079,1.63,Rosa Lind,twilight
+2026-06-10,02:31,RS Oph,Aster,V,7.175,0.041,1.44,Ingrid Halvorsen,
+2026-06-10,05:31,T CrB,Brill,V,9.188,0.013,2.1,Ingrid Halvorsen,
+2026-06-10,05:38,delta Cep,Lyra,V,,,2.6,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-06-10,05:49,Algol,Brill,R,3.37,0.074,2.38,Ingrid Halvorsen,
+2026-06-10,06:08,SS Cyg,Aster,R,4.031,0.013,1.88,Yusuf Haddad,
+2026-06-10,06:31,delta Cep,Lyra,V,10.707,0.072,1.4,Yusuf Haddad,twilight
+2026-06-10,06:54,R Leo,Lyra,V,10.907,0.014,1.31,Yusuf Haddad,
+2026-06-10,07:07,delta Cep,Lyra,V,5.27,0.007,2.11,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-06-10,07:48,T CrB,Brill,V,5.671,0.046,1.13,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-06-10,08:29,Algol,Brill,V,2.963,0.011,2.42,Rosa Lind,
+2026-06-10,08:48,chi Cyg,Aster,R,6.666,0.049,2.48,Ingrid Halvorsen,thin cirrus
+2026-06-10,09:07,RS Oph,Aster,B,8.514,0.073,1.68,Rosa Lind,
+2026-06-10,09:18,RS Oph,Aster,V,4.227,0.032,1.59,Ingrid Halvorsen,"wind gusts, trailing"
+2026-06-10,09:29,R Leo,Lyra,V,9.061,0.012,1.04,Rosa Lind,twilight
+2026-06-10,09:40,RS Oph,Aster,B,8.5,0.069,1.0,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-06-10,10:21,delta Cep,Lyra,V,5.29,0.037,1.78,Kenji Mori,
+2026-06-11,02:21,Algol,Brill,R,8.867,0.051,2.29,Rosa Lind,moon 60% up
+2026-06-11,02:34,RS Oph,Aster,V,,,1.31,Ingrid Halvorsen,
+2026-06-11,05:34,T CrB,Brill,V,3.104,0.062,1.05,Rosa Lind,
+2026-06-11,05:41,SS Cyg,Aster,V,11.885,0.044,2.2,Rosa Lind,"dew on corrector, re-shot"
+2026-06-11,05:48,R Leo,Lyra,V,11.941,0.06,2.55,Tomasz Nowak,
+2026-06-11,06:07,Mira,Lyra,V,,,1.3,Ingrid Halvorsen,"wind gusts, trailing"
+2026-06-11,06:26,R Leo,Lyra,V,5.621,0.011,1.28,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-06-11,06:39,chi Cyg,Aster,V,4.604,0.048,2.36,Yusuf Haddad,
+2026-06-11,07:02,chi Cyg,Aster,V,3.079,0.078,2.5,Kenji Mori,"""comparison star C3, not C2"""
+2026-06-11,10:02,RS Oph,Aster,V,2.243,0.022,1.19,Rosa Lind,moon 60% up
+2026-06-11,10:43,Mira,Lyra,V,4.129,0.031,1.08,Ingrid Halvorsen,"wind gusts, trailing"
+2026-06-11,10:50,SS Cyg,Aster,V,2.181,0.059,2.11,Ingrid Halvorsen,moon 60% up
+2026-06-11,11:09,RS Oph,Aster,V,4.169,0.057,1.81,Ingrid Halvorsen,
+2026-06-11,11:20,chi Cyg,Aster,R,7.723,0.019,2.56,Tomasz Nowak,thin cirrus
+2026-06-11,11:33,RS Oph,Aster,B,4.882,0.063,1.86,Kenji Mori,
+2026-06-11,11:56,RS Oph,Aster,B,3.204,0.05,1.14,Tomasz Nowak,"wind gusts, trailing"
+2026-06-12,03:56,chi Cyg,Aster,R,11.895,0.024,1.54,Yusuf Haddad,
+2026-06-12,19:56,SS Cyg,Aster,R,11.929,0.043,2.25,Ingrid Halvorsen,
+2026-06-12,20:15,chi Cyg,Aster,R,6.569,0.038,2.35,Kenji Mori,
+2026-06-12,20:26,Mira,Lyra,V,9.667,0.067,2.58,Ingrid Halvorsen,
+2026-06-12,20:39,T CrB,Brill,V,3.352,0.044,1.28,Kenji Mori,
+2026-06-12,21:02,delta Cep,Lyra,V,10.724,0.053,2.22,Yusuf Haddad,
+2026-06-12,21:25,T CrB,Brill,V,5.617,0.03,1.32,Ingrid Halvorsen,twilight
+2026-06-13,00:25,Mira,Lyra,V,7.16,0.04,1.26,Kenji Mori,"wind gusts, trailing"
+2026-06-13,00:38,RS Oph,Aster,B,10.528,0.076,2.02,Rosa Lind,
+2026-06-13,01:19,T CrB,Brill,V,10.769,0.021,1.92,Rosa Lind,"wind gusts, trailing"
+2026-06-13,01:32,T CrB,Brill,V,11.057,0.013,1.0,Tomasz Nowak,moon 60% up
+2026-06-13,01:43,chi Cyg,Aster,V,6.148,0.074,1.45,Tomasz Nowak,"dew on corrector, re-shot"
+2026-06-13,01:54,Algol,Brill,V,11.105,0.06,1.8,Kenji Mori,
+2026-06-13,02:17,delta Cep,Lyra,V,5.604,0.018,2.4,Yusuf Haddad,thin cirrus
+2026-06-13,02:58,R Leo,Lyra,V,10.123,0.027,2.26,Ingrid Halvorsen,
+2026-06-13,03:09,R Leo,Lyra,V,12.095,0.048,1.27,Ingrid Halvorsen,thin cirrus
+2026-06-13,03:20,RS Oph,Aster,B,6.259,0.054,1.43,Ingrid Halvorsen,
+2026-06-13,03:39,delta Cep,Lyra,V,11.911,0.075,1.06,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-06-13,03:50,chi Cyg,Aster,R,4.034,0.015,2.58,Kenji Mori,"wind gusts, trailing"
+2026-06-13,04:01,delta Cep,Lyra,V,5.921,0.052,1.63,Yusuf Haddad,
+2026-06-13,04:20,RS Oph,Aster,B,12.024,0.054,1.1,Tomasz Nowak,
+2026-06-13,05:01,R Leo,Lyra,V,4.292,0.011,2.27,Rosa Lind,twilight
+2026-06-13,21:01,chi Cyg,Aster,R,4.437,0.064,1.96,Kenji Mori,
+2026-06-13,21:20,RS Oph,Aster,B,8.094,0.053,2.42,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-06-13,21:43,RS Oph,Aster,B,4.195,0.079,1.91,Rosa Lind,twilight
+2026-06-13,21:54,R Leo,Lyra,V,4.237,0.05,2.51,Yusuf Haddad,moon 60% up
+2026-06-13,22:17,RS Oph,Aster,B,9.536,0.032,1.73,Rosa Lind,thin cirrus
+2026-06-13,22:58,R Leo,Lyra,V,3.78,0.004,1.0,Yusuf Haddad,
+2026-06-13,23:05,SS Cyg,Aster,V,9.964,0.052,1.17,Rosa Lind,moon 60% up
+2026-06-13,23:28,chi Cyg,Aster,V,8.152,0.066,2.4,Rosa Lind,twilight
+2026-06-13,23:47,RS Oph,Aster,B,9.713,0.015,1.03,Rosa Lind,"dew on corrector, re-shot"
+2026-06-13,23:54,R Leo,Lyra,V,6.949,0.012,2.47,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-14,15:54,SS Cyg,Aster,B,11.65,0.042,2.31,Rosa Lind,"dew on corrector, re-shot"
+2026-06-14,16:07,Mira,Lyra,V,10.942,0.022,1.21,Kenji Mori,
+2026-06-14,16:20,T CrB,Brill,V,9.598,0.065,1.44,Tomasz Nowak,
+2026-06-14,16:27,delta Cep,Lyra,V,3.114,0.013,2.2,Yusuf Haddad,moon 60% up
+2026-06-14,16:46,R Leo,Lyra,V,9.63,0.031,1.22,Rosa Lind,"""comparison star C3, not C2"""
+2026-06-14,16:53,Algol,Brill,R,9.288,0.034,1.72,Rosa Lind,
+2026-06-14,17:00,SS Cyg,Aster,B,4.8,0.027,1.15,Rosa Lind,
+2026-06-14,17:41,SS Cyg,Aster,V,8.167,0.071,1.56,Ingrid Halvorsen,thin cirrus
+2026-06-14,18:00,delta Cep,Lyra,V,4.942,0.009,1.56,Yusuf Haddad,
+2026-06-14,21:00,R Leo,Lyra,V,3.085,0.016,2.48,Rosa Lind,
+2026-06-14,21:07,Mira,Lyra,V,9.47,0.005,2.06,Rosa Lind,twilight
+2026-06-14,21:18,delta Cep,Lyra,V,2.882,0.066,2.18,Tomasz Nowak,"wind gusts, trailing"
+2026-06-15,13:18,RS Oph,Aster,V,3.768,0.078,2.52,Ingrid Halvorsen,
+2026-06-15,13:59,RS Oph,Aster,B,3.565,0.059,1.35,Rosa Lind,thin cirrus
+2026-06-15,14:18,R Leo,Lyra,V,8.172,0.045,1.07,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-06-15,14:25,Algol,Brill,R,9.165,0.04,1.16,Yusuf Haddad,
+2026-06-15,14:32,T CrB,Brill,V,6.575,0.065,1.13,Yusuf Haddad,
+2026-06-15,14:51,SS Cyg,Aster,V,10.101,0.016,1.15,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-06-15,14:58,Mira,Lyra,V,3.696,0.03,2.31,Ingrid Halvorsen,
+2026-06-15,15:05,Mira,Lyra,V,9.811,0.042,1.02,Ingrid Halvorsen,
+2026-06-15,15:46,Mira,Lyra,V,10.881,0.028,1.9,Tomasz Nowak,"wind gusts, trailing"
+2026-06-16,07:46,RS Oph,Aster,V,5.211,0.062,2.13,Tomasz Nowak,
+2026-06-16,07:57,R Leo,Lyra,V,2.743,0.068,2.22,Rosa Lind,twilight
+2026-06-16,08:20,RS Oph,Aster,V,5.518,0.025,2.5,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-06-16,11:20,Mira,Lyra,V,5.372,0.077,1.86,Kenji Mori,twilight
+2026-06-16,12:01,R Leo,Lyra,V,8.94,0.017,1.56,Tomasz Nowak,twilight
+2026-06-16,15:01,RS Oph,Aster,B,6.442,0.051,1.67,Yusuf Haddad,
+2026-06-17,07:01,R Leo,Lyra,V,5.337,0.072,1.37,Rosa Lind,
+2026-06-17,07:24,delta Cep,Lyra,V,10.053,0.066,1.45,Yusuf Haddad,
+2026-06-17,07:37,chi Cyg,Aster,V,3.445,0.074,1.95,Yusuf Haddad,
+2026-06-17,10:37,R Leo,Lyra,V,4.373,0.024,2.04,Kenji Mori,"wind gusts, trailing"
+2026-06-17,10:44,chi Cyg,Aster,R,10.993,0.057,1.81,Ingrid Halvorsen,
+2026-06-17,11:07,SS Cyg,Aster,V,7.095,0.058,1.86,Kenji Mori,"dew on corrector, re-shot"
+2026-06-17,11:18,Algol,Brill,V,9.226,0.062,1.5,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-06-18,03:18,SS Cyg,Aster,B,2.807,0.075,1.91,Rosa Lind,
+2026-06-18,03:59,SS Cyg,Aster,B,2.56,0.059,1.24,Yusuf Haddad,thin cirrus
+2026-06-18,04:22,chi Cyg,Aster,R,10.801,0.071,1.4,Rosa Lind,
+2026-06-18,04:29,RS Oph,Aster,B,4.114,0.06,1.98,Yusuf Haddad,"dew on corrector, re-shot"
+2026-06-18,07:29,Algol,Brill,R,12.387,0.051,1.04,Kenji Mori,
+2026-06-18,08:10,R Leo,Lyra,V,8.27,0.067,2.0,Tomasz Nowak,
+2026-06-19,00:10,T CrB,Brill,V,,,2.45,Kenji Mori,moon 60% up
+2026-06-19,00:17,Algol,Brill,V,10.531,0.046,2.06,Kenji Mori,twilight
+2026-06-19,03:17,Mira,Lyra,V,2.38,0.033,1.84,Yusuf Haddad,"dew on corrector, re-shot"
+2026-06-19,19:17,SS Cyg,Aster,V,3.226,0.057,2.52,Kenji Mori,twilight
+2026-06-19,19:30,chi Cyg,Aster,V,11.966,0.079,1.11,Tomasz Nowak,
+2026-06-19,19:49,T CrB,Brill,V,10.415,0.062,2.08,Kenji Mori,"wind gusts, trailing"
+2026-06-19,20:12,delta Cep,Lyra,V,11.288,0.024,1.34,Rosa Lind,
+2026-06-19,20:19,delta Cep,Lyra,V,7.739,0.066,2.16,Kenji Mori,"wind gusts, trailing"
+2026-06-19,20:32,R Leo,Lyra,V,7.968,0.031,2.22,Tomasz Nowak,moon 60% up
+2026-06-19,20:51,RS Oph,Aster,B,5.236,0.064,2.49,Rosa Lind,
+2026-06-19,21:02,chi Cyg,Aster,R,2.528,0.074,1.05,Ingrid Halvorsen,
+2026-06-19,21:13,chi Cyg,Aster,R,2.199,0.037,1.9,Kenji Mori,
+2026-06-19,21:54,chi Cyg,Aster,V,9.748,0.046,2.48,Tomasz Nowak,
+2026-06-19,22:17,delta Cep,Lyra,V,11.981,0.018,1.88,Ingrid Halvorsen,
+2026-06-19,22:24,chi Cyg,Aster,V,7.425,0.01,1.71,Rosa Lind,
+2026-06-19,22:43,Mira,Lyra,V,12.282,0.013,1.71,Rosa Lind,
+2026-06-19,23:02,chi Cyg,Aster,R,8.613,0.026,1.69,Yusuf Haddad,moon 60% up
+2026-06-19,23:21,SS Cyg,Aster,V,12.024,0.058,2.48,Kenji Mori,"dew on corrector, re-shot"
+2026-06-19,23:40,Algol,Brill,V,8.921,0.076,1.52,Yusuf Haddad,twilight
+2026-06-20,00:03,T CrB,Brill,V,9.065,0.02,2.59,Ingrid Halvorsen,moon 60% up
+2026-06-20,16:03,delta Cep,Lyra,V,7.39,0.01,2.59,Kenji Mori,"""comparison star C3, not C2"""
+2026-06-20,16:16,RS Oph,Aster,V,7.636,0.024,2.54,Tomasz Nowak,
+2026-06-20,16:29,RS Oph,Aster,B,8.178,0.014,1.81,Tomasz Nowak,thin cirrus
+2026-06-20,16:42,chi Cyg,Aster,R,10.648,0.026,1.05,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-06-20,16:49,chi Cyg,Aster,V,5.701,0.046,1.39,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-06-20,17:30,RS Oph,Aster,V,5.726,0.048,2.41,Kenji Mori,"dew on corrector, re-shot"
+2026-06-20,18:11,R Leo,Lyra,V,6.561,0.04,2.42,Rosa Lind,thin cirrus
+2026-06-20,18:30,R Leo,Lyra,V,4.858,0.043,1.42,Kenji Mori,
+2026-06-20,19:11,SS Cyg,Aster,B,2.675,0.046,1.99,Rosa Lind,"""comparison star C3, not C2"""
+2026-06-20,19:34,SS Cyg,Aster,B,4.096,0.073,2.55,Tomasz Nowak,
+2026-06-20,19:45,R Leo,Lyra,V,8.649,0.042,1.29,Tomasz Nowak,
+2026-06-21,11:45,Mira,Lyra,V,3.346,0.039,2.16,Rosa Lind,
+2026-06-21,12:08,chi Cyg,Aster,V,8.92,0.012,1.91,Yusuf Haddad,moon 60% up
+2026-06-21,12:19,delta Cep,Lyra,V,8.275,0.074,1.37,Tomasz Nowak,moon 60% up
+2026-06-21,12:26,SS Cyg,Aster,V,7.707,0.009,1.29,Yusuf Haddad,
+2026-06-21,15:26,Mira,Lyra,V,8.307,0.079,1.41,Kenji Mori,
+2026-06-22,07:26,R Leo,Lyra,V,4.157,0.014,2.09,Ingrid Halvorsen,thin cirrus
+2026-06-22,07:45,Mira,Lyra,V,,,2.5,Rosa Lind,thin cirrus
+2026-06-22,07:52,SS Cyg,Aster,V,5.533,0.035,2.44,Ingrid Halvorsen,
+2026-06-22,23:52,T CrB,Brill,V,9.6,0.061,1.92,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-23,00:15,chi Cyg,Aster,R,5.198,0.024,2.45,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-06-23,03:15,RS Oph,Aster,V,9.988,0.013,1.14,Rosa Lind,thin cirrus
+2026-06-23,03:28,SS Cyg,Aster,R,2.484,0.039,1.96,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-23,03:35,Algol,Brill,V,5.677,0.01,2.59,Rosa Lind,
+2026-06-23,03:48,RS Oph,Aster,V,9.708,0.012,1.35,Rosa Lind,
+2026-06-23,04:01,RS Oph,Aster,V,5.644,0.016,1.78,Kenji Mori,"""comparison star C3, not C2"""
+2026-06-23,07:01,R Leo,Lyra,V,8.943,0.051,2.51,Rosa Lind,twilight
+2026-06-23,07:12,RS Oph,Aster,V,11.347,0.012,2.14,Yusuf Haddad,
+2026-06-23,07:53,RS Oph,Aster,B,4.396,0.05,1.31,Tomasz Nowak,
+2026-06-23,08:12,Algol,Brill,R,4.256,0.043,1.61,Rosa Lind,moon 60% up
+2026-06-23,08:53,chi Cyg,Aster,V,4.086,0.034,1.08,Ingrid Halvorsen,"wind gusts, trailing"
+2026-06-23,09:00,Mira,Lyra,V,11.624,0.073,1.4,Rosa Lind,"dew on corrector, re-shot"
+2026-06-23,09:11,delta Cep,Lyra,V,10.109,0.052,1.82,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-06-23,09:22,R Leo,Lyra,V,9.13,0.018,2.34,Ingrid Halvorsen,thin cirrus
+2026-06-23,10:03,delta Cep,Lyra,V,7.88,0.064,1.11,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-06-23,10:44,RS Oph,Aster,B,10.607,0.01,1.09,Ingrid Halvorsen,
+2026-06-23,11:25,Algol,Brill,R,,,1.06,Ingrid Halvorsen,
+2026-06-23,11:32,delta Cep,Lyra,V,11.305,0.005,1.15,Rosa Lind,
+2026-06-23,12:13,R Leo,Lyra,V,7.642,0.037,1.04,Rosa Lind,"wind gusts, trailing"
+2026-06-23,12:26,SS Cyg,Aster,V,9.477,0.05,2.59,Kenji Mori,
+2026-06-23,13:07,delta Cep,Lyra,V,5.913,0.06,1.38,Kenji Mori,
+2026-06-23,16:07,Algol,Brill,R,12.126,0.021,2.46,Tomasz Nowak,
+2026-06-23,16:20,SS Cyg,Aster,R,,,2.52,Rosa Lind,"dew on corrector, re-shot"
+2026-06-23,16:33,SS Cyg,Aster,V,10.93,0.031,2.22,Yusuf Haddad,
+2026-06-23,16:46,delta Cep,Lyra,V,4.794,0.039,2.4,Yusuf Haddad,moon 60% up
+2026-06-24,08:46,T CrB,Brill,V,7.301,0.071,1.66,Kenji Mori,
+2026-06-24,09:05,R Leo,Lyra,V,10.458,0.017,2.02,Rosa Lind,
+2026-06-24,09:46,Mira,Lyra,V,11.337,0.034,1.93,Yusuf Haddad,twilight
+2026-06-24,10:09,T CrB,Brill,V,5.158,0.069,2.22,Yusuf Haddad,
+2026-06-24,10:32,Algol,Brill,R,8.745,0.051,2.36,Yusuf Haddad,
+2026-06-24,10:55,Algol,Brill,R,11.085,0.06,1.81,Kenji Mori,
+2026-06-24,11:14,RS Oph,Aster,B,4.918,0.067,1.84,Rosa Lind,"""comparison star C3, not C2"""
+2026-06-24,11:33,SS Cyg,Aster,R,,,1.36,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-06-24,12:14,T CrB,Brill,V,,,1.31,Ingrid Halvorsen,
+2026-06-24,12:25,Algol,Brill,V,2.779,0.051,2.22,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-06-24,12:48,RS Oph,Aster,B,11.896,0.056,1.07,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-06-24,15:48,Mira,Lyra,V,10.353,0.049,1.27,Tomasz Nowak,thin cirrus
+2026-06-24,15:55,R Leo,Lyra,V,4.523,0.039,2.01,Kenji Mori,
+2026-06-24,16:08,Algol,Brill,V,6.243,0.049,1.85,Kenji Mori,
+2026-06-24,16:49,RS Oph,Aster,B,11.535,0.018,1.19,Tomasz Nowak,thin cirrus
+2026-06-24,17:12,chi Cyg,Aster,V,10.393,0.062,2.34,Tomasz Nowak,
+2026-06-24,17:35,chi Cyg,Aster,V,6.73,0.027,2.53,Rosa Lind,
+2026-06-24,20:35,delta Cep,Lyra,V,9.541,0.075,1.6,Ingrid Halvorsen,
+2026-06-24,20:42,Mira,Lyra,V,2.573,0.06,1.21,Rosa Lind,
+2026-06-24,21:01,chi Cyg,Aster,V,4.313,0.075,2.27,Kenji Mori,moon 60% up
+2026-06-24,21:42,T CrB,Brill,V,4.996,0.076,2.43,Ingrid Halvorsen,
+2026-06-24,22:23,delta Cep,Lyra,V,6.411,0.041,1.13,Ingrid Halvorsen,moon 60% up
+2026-06-24,22:42,T CrB,Brill,V,9.856,0.031,2.11,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-25,01:42,R Leo,Lyra,V,4.974,0.013,2.46,Tomasz Nowak,
+2026-06-25,04:42,Algol,Brill,R,4.288,0.005,1.05,Rosa Lind,"wind gusts, trailing"
+2026-06-25,04:49,chi Cyg,Aster,R,10.862,0.032,2.15,Kenji Mori,twilight
+2026-06-25,04:56,R Leo,Lyra,V,11.42,0.063,2.1,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-06-25,05:15,Mira,Lyra,V,9.791,0.007,2.16,Rosa Lind,twilight
+2026-06-25,05:56,delta Cep,Lyra,V,,,1.14,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-06-25,06:09,SS Cyg,Aster,B,8.684,0.061,2.2,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-06-25,06:16,chi Cyg,Aster,R,11.713,0.047,2.46,Kenji Mori,"dew on corrector, re-shot"
+2026-06-25,06:23,chi Cyg,Aster,R,,,2.54,Kenji Mori,"""comparison star C3, not C2"""
+2026-06-25,06:34,SS Cyg,Aster,V,10.096,0.005,1.91,Kenji Mori,"wind gusts, trailing"
+2026-06-25,07:15,SS Cyg,Aster,B,11.486,0.068,1.58,Rosa Lind,"dew on corrector, re-shot"
+2026-06-25,07:28,Algol,Brill,V,4.211,0.012,2.5,Tomasz Nowak,moon 60% up
+2026-06-25,07:47,T CrB,Brill,V,10.953,0.057,2.06,Tomasz Nowak,"dew on corrector, re-shot"
+2026-06-25,23:47,SS Cyg,Aster,V,11.52,0.069,1.95,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-06-25,23:54,SS Cyg,Aster,B,8.422,0.079,2.41,Rosa Lind,"wind gusts, trailing"
+2026-06-26,00:35,Algol,Brill,V,7.431,0.03,2.49,Tomasz Nowak,
+2026-06-26,01:16,R Leo,Lyra,V,7.728,0.031,2.31,Rosa Lind,
+2026-06-26,01:39,SS Cyg,Aster,V,,,2.3,Rosa Lind,
+2026-06-26,02:20,RS Oph,Aster,B,6.401,0.055,1.28,Yusuf Haddad,moon 60% up
+2026-06-26,02:31,R Leo,Lyra,V,8.362,0.027,2.49,Kenji Mori,"wind gusts, trailing"
+2026-06-26,02:38,SS Cyg,Aster,B,10.31,0.034,1.34,Rosa Lind,moon 60% up
+2026-06-26,02:57,Mira,Lyra,V,2.473,0.064,1.66,Tomasz Nowak,thin cirrus
+2026-06-26,03:04,RS Oph,Aster,B,6.884,0.024,1.05,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-06-26,03:15,SS Cyg,Aster,B,7.334,0.063,1.87,Tomasz Nowak,
+2026-06-26,19:15,SS Cyg,Aster,B,10.187,0.04,1.48,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-06-27,11:15,Algol,Brill,V,5.063,0.016,1.84,Yusuf Haddad,"dew on corrector, re-shot"
+2026-06-27,11:22,SS Cyg,Aster,B,4.902,0.071,1.79,Tomasz Nowak,twilight
+2026-06-27,11:33,RS Oph,Aster,V,5.251,0.068,2.35,Rosa Lind,moon 60% up
+2026-06-27,11:52,Algol,Brill,R,2.259,0.026,1.66,Ingrid Halvorsen,
+2026-06-27,12:05,R Leo,Lyra,V,8.302,0.065,1.44,Ingrid Halvorsen,
+2026-06-27,12:12,SS Cyg,Aster,V,9.286,0.014,1.42,Yusuf Haddad,twilight
+2026-06-27,12:23,Algol,Brill,V,7.696,0.049,1.9,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-27,12:46,RS Oph,Aster,B,9.42,0.053,1.41,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-06-27,15:46,RS Oph,Aster,V,5.646,0.029,1.16,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-06-27,15:57,delta Cep,Lyra,V,,,2.41,Rosa Lind,thin cirrus
+2026-06-28,07:57,delta Cep,Lyra,V,3.837,0.004,1.06,Ingrid Halvorsen,
+2026-06-28,10:57,RS Oph,Aster,B,7.612,0.02,1.26,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-06-28,11:08,Algol,Brill,R,,,1.71,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-28,11:21,delta Cep,Lyra,V,3.667,0.049,1.55,Yusuf Haddad,"dew on corrector, re-shot"
+2026-06-28,12:02,T CrB,Brill,V,4.584,0.031,1.98,Yusuf Haddad,"dew on corrector, re-shot"
+2026-06-28,12:25,Mira,Lyra,V,5.654,0.045,2.03,Tomasz Nowak,"wind gusts, trailing"
+2026-06-28,12:32,RS Oph,Aster,B,10.552,0.039,1.11,Kenji Mori,thin cirrus
+2026-06-28,12:45,delta Cep,Lyra,V,7.871,0.044,1.05,Ingrid Halvorsen,moon 60% up
+2026-06-29,04:45,RS Oph,Aster,V,9.624,0.042,1.78,Ingrid Halvorsen,
+2026-06-29,05:26,SS Cyg,Aster,V,7.449,0.006,2.1,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-06-29,21:26,T CrB,Brill,V,8.496,0.015,1.14,Tomasz Nowak,thin cirrus
+2026-06-29,21:49,Mira,Lyra,V,6.399,0.039,1.5,Kenji Mori,
+2026-06-29,21:56,SS Cyg,Aster,B,4.686,0.007,1.7,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-06-29,22:19,SS Cyg,Aster,B,4.056,0.037,1.35,Kenji Mori,thin cirrus
+2026-06-29,22:26,RS Oph,Aster,B,7.979,0.037,1.82,Kenji Mori,moon 60% up
+2026-06-29,22:37,T CrB,Brill,V,2.981,0.021,1.21,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-06-30,01:37,RS Oph,Aster,B,6.38,0.072,1.04,Rosa Lind,thin cirrus
+2026-06-30,01:56,delta Cep,Lyra,V,11.201,0.041,1.02,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-06-30,02:03,R Leo,Lyra,V,6.578,0.031,2.48,Tomasz Nowak,"dew on corrector, re-shot"
+2026-06-30,02:14,R Leo,Lyra,V,2.576,0.052,1.44,Ingrid Halvorsen,
+2026-06-30,02:55,chi Cyg,Aster,V,7.097,0.046,1.1,Rosa Lind,
+2026-06-30,03:36,RS Oph,Aster,B,3.539,0.05,2.17,Kenji Mori,"wind gusts, trailing"
+2026-06-30,19:36,T CrB,Brill,V,10.482,0.008,2.56,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-06-30,19:59,T CrB,Brill,V,3.182,0.008,1.88,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-06-30,20:10,Algol,Brill,V,7.147,0.018,2.15,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-06-30,23:10,T CrB,Brill,V,5.71,0.029,1.01,Kenji Mori,
+2026-06-30,23:29,T CrB,Brill,V,2.871,0.065,1.29,Kenji Mori,"dew on corrector, re-shot"
+2026-06-30,23:36,chi Cyg,Aster,R,9.725,0.054,1.61,Tomasz Nowak,
+2026-06-30,23:59,R Leo,Lyra,V,5.194,0.004,1.92,Yusuf Haddad,
+2026-07-01,00:22,Algol,Brill,V,5.454,0.044,2.35,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-07-01,00:35,delta Cep,Lyra,V,4.625,0.052,2.08,Yusuf Haddad,"wind gusts, trailing"
+2026-07-01,00:54,RS Oph,Aster,B,3.388,0.068,1.46,Kenji Mori,twilight
+2026-07-01,01:05,Algol,Brill,R,5.155,0.016,1.65,Tomasz Nowak,twilight
+2026-07-01,17:05,chi Cyg,Aster,R,12.258,0.011,1.51,Tomasz Nowak,thin cirrus
+2026-07-01,17:12,T CrB,Brill,V,10.287,0.007,2.2,Yusuf Haddad,"dew on corrector, re-shot"
+2026-07-01,17:23,delta Cep,Lyra,V,5.731,0.058,1.21,Tomasz Nowak,moon 60% up
+2026-07-01,17:30,Algol,Brill,V,11.261,0.074,2.41,Kenji Mori,thin cirrus
+2026-07-01,18:11,RS Oph,Aster,B,9.373,0.072,1.64,Yusuf Haddad,moon 60% up
+2026-07-01,18:34,T CrB,Brill,V,9.535,0.039,1.37,Rosa Lind,"""comparison star C3, not C2"""
+2026-07-01,18:45,Algol,Brill,R,3.135,0.051,1.98,Tomasz Nowak,moon 60% up
+2026-07-01,21:45,chi Cyg,Aster,R,12.03,0.034,1.83,Ingrid Halvorsen,moon 60% up
+2026-07-01,22:04,T CrB,Brill,V,7.787,0.025,1.28,Yusuf Haddad,
+2026-07-01,22:23,RS Oph,Aster,B,9.717,0.018,2.36,Yusuf Haddad,twilight
+2026-07-01,22:46,R Leo,Lyra,V,10.543,0.048,2.05,Yusuf Haddad,
+2026-07-02,01:46,RS Oph,Aster,V,2.817,0.077,2.08,Yusuf Haddad,"wind gusts, trailing"
+2026-07-02,02:05,chi Cyg,Aster,R,6.372,0.005,1.31,Yusuf Haddad,"dew on corrector, re-shot"
+2026-07-02,02:46,Algol,Brill,R,9.456,0.043,1.99,Kenji Mori,"dew on corrector, re-shot"
+2026-07-02,05:46,T CrB,Brill,V,9.225,0.03,2.16,Tomasz Nowak,thin cirrus
+2026-07-02,06:09,RS Oph,Aster,V,11.223,0.038,1.43,Kenji Mori,moon 60% up
+2026-07-02,09:09,RS Oph,Aster,B,8.706,0.061,2.57,Yusuf Haddad,
+2026-07-03,01:09,Mira,Lyra,V,7.818,0.023,1.84,Rosa Lind,"""comparison star C3, not C2"""
+2026-07-03,01:20,chi Cyg,Aster,R,4.737,0.056,1.22,Kenji Mori,moon 60% up
+2026-07-03,01:43,chi Cyg,Aster,R,3.7,0.043,1.66,Rosa Lind,
+2026-07-03,02:24,SS Cyg,Aster,V,9.598,0.079,2.25,Tomasz Nowak,thin cirrus
+2026-07-03,05:24,delta Cep,Lyra,V,11.178,0.065,2.41,Ingrid Halvorsen,
+2026-07-03,08:24,Mira,Lyra,V,6.017,0.022,2.28,Yusuf Haddad,
+2026-07-03,09:05,delta Cep,Lyra,V,4.661,0.058,1.81,Ingrid Halvorsen,
+2026-07-03,09:18,Algol,Brill,R,4.214,0.016,2.18,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-07-04,01:18,T CrB,Brill,V,7.489,0.058,2.05,Kenji Mori,"""comparison star C3, not C2"""
+2026-07-04,01:37,Mira,Lyra,V,5.109,0.077,1.96,Tomasz Nowak,
+2026-07-04,01:50,chi Cyg,Aster,V,11.689,0.037,1.42,Yusuf Haddad,thin cirrus
+2026-07-04,02:13,T CrB,Brill,V,2.993,0.064,1.93,Kenji Mori,twilight
+2026-07-04,02:54,Algol,Brill,V,7.366,0.015,2.41,Rosa Lind,
+2026-07-04,03:01,T CrB,Brill,V,12.273,0.004,1.8,Ingrid Halvorsen,moon 60% up
+2026-07-04,03:14,chi Cyg,Aster,R,9.86,0.052,2.41,Kenji Mori,
+2026-07-04,03:55,chi Cyg,Aster,R,10.938,0.015,1.27,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-07-04,04:36,RS Oph,Aster,V,6.574,0.061,2.4,Ingrid Halvorsen,
+2026-07-04,04:55,R Leo,Lyra,V,5.451,0.026,1.03,Yusuf Haddad,"wind gusts, trailing"
+2026-07-04,07:55,delta Cep,Lyra,V,4.491,0.072,1.66,Rosa Lind,"""comparison star C3, not C2"""
+2026-07-04,08:18,chi Cyg,Aster,R,9.462,0.015,2.59,Ingrid Halvorsen,"wind gusts, trailing"
+2026-07-04,08:29,SS Cyg,Aster,B,3.054,0.023,1.15,Kenji Mori,
+2026-07-05,00:29,Mira,Lyra,V,2.686,0.068,2.08,Rosa Lind,
+2026-07-05,00:36,R Leo,Lyra,V,7.401,0.042,1.59,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-07-05,00:47,R Leo,Lyra,V,6.425,0.013,1.37,Tomasz Nowak,
+2026-07-05,01:28,SS Cyg,Aster,V,11.459,0.028,2.42,Ingrid Halvorsen,
+2026-07-05,04:28,RS Oph,Aster,B,9.171,0.058,1.13,Kenji Mori,"wind gusts, trailing"
+2026-07-05,05:09,Algol,Brill,V,7.705,0.066,1.15,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-07-05,05:16,Mira,Lyra,V,11.788,0.019,1.51,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-07-05,05:57,chi Cyg,Aster,V,4.333,0.061,1.32,Tomasz Nowak,twilight
+2026-07-05,06:38,RS Oph,Aster,B,8.884,0.075,2.0,Ingrid Halvorsen,moon 60% up
+2026-07-05,07:19,delta Cep,Lyra,V,8.026,0.025,1.77,Ingrid Halvorsen,
+2026-07-05,07:32,Mira,Lyra,V,10.348,0.015,2.54,Tomasz Nowak,
+2026-07-05,07:51,chi Cyg,Aster,R,9.188,0.041,1.22,Rosa Lind,
+2026-07-05,08:32,R Leo,Lyra,V,5.527,0.013,1.09,Yusuf Haddad,twilight
+2026-07-05,08:55,chi Cyg,Aster,R,11.027,0.056,2.05,Rosa Lind,
+2026-07-05,09:18,T CrB,Brill,V,6.376,0.017,2.39,Rosa Lind,"""comparison star C3, not C2"""
+2026-07-05,12:18,RS Oph,Aster,B,9.686,0.043,2.42,Rosa Lind,thin cirrus
+2026-07-05,12:41,Mira,Lyra,V,8.168,0.076,2.04,Yusuf Haddad,
+2026-07-05,12:54,T CrB,Brill,V,3.757,0.037,1.97,Rosa Lind,
+2026-07-06,04:54,Mira,Lyra,V,11.865,0.059,1.57,Kenji Mori,
+2026-07-06,07:54,SS Cyg,Aster,V,9.818,0.063,2.04,Rosa Lind,"wind gusts, trailing"
+2026-07-06,08:35,delta Cep,Lyra,V,7.721,0.015,1.16,Yusuf Haddad,
+2026-07-06,08:46,chi Cyg,Aster,V,11.865,0.063,1.36,Tomasz Nowak,thin cirrus
+2026-07-07,00:46,SS Cyg,Aster,B,8.368,0.046,1.12,Kenji Mori,
+2026-07-07,00:53,delta Cep,Lyra,V,6.366,0.023,2.07,Tomasz Nowak,
+2026-07-07,03:53,T CrB,Brill,V,12.363,0.075,1.8,Rosa Lind,
+2026-07-07,04:06,SS Cyg,Aster,R,3.566,0.059,2.08,Yusuf Haddad,twilight
+2026-07-07,04:13,RS Oph,Aster,V,11.29,0.044,2.58,Kenji Mori,thin cirrus
+2026-07-07,04:20,R Leo,Lyra,V,11.693,0.009,1.32,Yusuf Haddad,"dew on corrector, re-shot"
+2026-07-07,04:33,delta Cep,Lyra,V,9.198,0.015,2.5,Kenji Mori,thin cirrus
+2026-07-07,04:52,SS Cyg,Aster,V,2.39,0.027,2.24,Yusuf Haddad,"dew on corrector, re-shot"
+2026-07-07,20:52,T CrB,Brill,V,2.616,0.008,2.52,Tomasz Nowak,"wind gusts, trailing"
+2026-07-07,21:15,T CrB,Brill,V,4.243,0.075,1.45,Tomasz Nowak,thin cirrus
+2026-07-07,21:22,R Leo,Lyra,V,11.579,0.01,1.06,Tomasz Nowak,thin cirrus
+2026-07-07,21:33,Mira,Lyra,V,9.804,0.061,1.57,Rosa Lind,
+2026-07-07,21:52,Algol,Brill,V,9.228,0.077,2.51,Tomasz Nowak,twilight
+2026-07-08,00:52,Algol,Brill,V,3.432,0.055,1.16,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-07-08,01:11,R Leo,Lyra,V,9.962,0.051,1.74,Ingrid Halvorsen,
+2026-07-08,01:34,RS Oph,Aster,B,10.64,0.072,1.39,Kenji Mori,
+2026-07-08,01:57,chi Cyg,Aster,R,9.947,0.056,1.93,Ingrid Halvorsen,twilight
+2026-07-08,02:38,T CrB,Brill,V,11.89,0.023,2.41,Tomasz Nowak,twilight
+2026-07-08,02:45,Algol,Brill,V,8.557,0.024,2.55,Yusuf Haddad,
+2026-07-08,03:04,SS Cyg,Aster,R,10.912,0.026,1.38,Tomasz Nowak,
+2026-07-08,06:04,RS Oph,Aster,V,6.292,0.067,1.62,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-07-08,06:45,R Leo,Lyra,V,8.704,0.04,2.24,Rosa Lind,
+2026-07-08,06:56,T CrB,Brill,V,5.703,0.059,1.09,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-07-08,07:03,Algol,Brill,R,5.454,0.035,2.27,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-07-08,07:44,SS Cyg,Aster,B,3.911,0.074,1.87,Rosa Lind,
+2026-07-08,23:44,T CrB,Brill,V,2.455,0.009,2.53,Tomasz Nowak,
+2026-07-09,00:03,T CrB,Brill,V,8.34,0.049,2.58,Yusuf Haddad,"wind gusts, trailing"
+2026-07-09,00:44,Mira,Lyra,V,10.72,0.04,2.45,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-07-09,03:44,Mira,Lyra,V,2.512,0.05,2.25,Yusuf Haddad,
+2026-07-09,04:25,SS Cyg,Aster,R,10.481,0.011,1.95,Yusuf Haddad,thin cirrus
+2026-07-09,07:25,Algol,Brill,R,7.351,0.008,1.74,Kenji Mori,"""comparison star C3, not C2"""
+2026-07-09,07:48,Algol,Brill,V,7.267,0.018,1.9,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-07-09,08:29,chi Cyg,Aster,V,3.239,0.009,1.24,Rosa Lind,moon 60% up
+2026-07-09,08:48,RS Oph,Aster,B,11.589,0.013,2.2,Rosa Lind,
+2026-07-09,08:55,RS Oph,Aster,V,10.804,0.022,2.54,Tomasz Nowak,thin cirrus
+2026-07-09,09:06,SS Cyg,Aster,R,3.593,0.016,1.86,Kenji Mori,"dew on corrector, re-shot"
+2026-07-10,01:06,RS Oph,Aster,V,8.76,0.033,1.18,Rosa Lind,
+2026-07-10,01:19,Algol,Brill,R,12.317,0.039,1.2,Tomasz Nowak,"dew on corrector, re-shot"
+2026-07-10,01:32,delta Cep,Lyra,V,6.895,0.041,1.3,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-07-10,01:51,T CrB,Brill,V,6.07,0.027,2.37,Kenji Mori,
+2026-07-10,17:51,Mira,Lyra,V,10.431,0.055,1.19,Ingrid Halvorsen,moon 60% up
+2026-07-10,18:32,T CrB,Brill,V,8.315,0.032,1.01,Yusuf Haddad,
+2026-07-10,18:45,R Leo,Lyra,V,10.46,0.054,2.02,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-07-10,19:26,T CrB,Brill,V,6.52,0.033,1.87,Kenji Mori,
+2026-07-10,19:39,Mira,Lyra,V,7.623,0.054,1.21,Tomasz Nowak,thin cirrus
+2026-07-10,20:20,R Leo,Lyra,V,5.008,0.006,1.65,Yusuf Haddad,"wind gusts, trailing"
+2026-07-10,20:33,RS Oph,Aster,V,11.204,0.07,1.93,Yusuf Haddad,twilight
+2026-07-10,23:33,SS Cyg,Aster,V,11.235,0.05,2.0,Tomasz Nowak,"wind gusts, trailing"
+2026-07-11,02:33,RS Oph,Aster,B,6.722,0.016,2.55,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-07-11,05:33,Mira,Lyra,V,3.419,0.055,2.47,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-07-11,08:33,Algol,Brill,R,11.076,0.075,1.17,Yusuf Haddad,
+2026-07-11,08:56,SS Cyg,Aster,V,5.388,0.04,2.28,Tomasz Nowak,thin cirrus
+2026-07-11,09:03,Algol,Brill,R,4.194,0.022,2.28,Kenji Mori,"dew on corrector, re-shot"
+2026-07-11,09:44,chi Cyg,Aster,V,4.154,0.075,1.75,Tomasz Nowak,moon 60% up
+2026-07-12,01:44,Algol,Brill,V,4.381,0.02,1.45,Rosa Lind,
+2026-07-12,02:03,chi Cyg,Aster,R,2.45,0.049,1.91,Rosa Lind,
+2026-07-12,02:16,chi Cyg,Aster,V,3.053,0.078,1.39,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-07-12,02:27,T CrB,Brill,V,10.591,0.037,2.11,Ingrid Halvorsen,moon 60% up
+2026-07-12,05:27,T CrB,Brill,V,6.556,0.005,2.15,Yusuf Haddad,thin cirrus
+2026-07-12,05:34,delta Cep,Lyra,V,9.171,0.073,1.35,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-07-12,08:34,T CrB,Brill,V,10.566,0.032,2.02,Kenji Mori,
+2026-07-12,08:53,chi Cyg,Aster,V,11.978,0.017,1.36,Rosa Lind,twilight
+2026-07-12,09:34,delta Cep,Lyra,V,12.045,0.023,2.35,Kenji Mori,twilight
+2026-07-12,09:47,Mira,Lyra,V,8.141,0.034,2.31,Yusuf Haddad,moon 60% up
+2026-07-12,10:10,T CrB,Brill,V,8.827,0.075,1.31,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-07-12,10:29,Algol,Brill,R,2.924,0.074,2.47,Rosa Lind,"dew on corrector, re-shot"
+2026-07-12,13:29,SS Cyg,Aster,B,3.834,0.01,2.31,Ingrid Halvorsen,moon 60% up
+2026-07-12,13:52,RS Oph,Aster,V,,,1.44,Rosa Lind,
+2026-07-12,14:33,chi Cyg,Aster,V,9.404,0.018,1.63,Ingrid Halvorsen,twilight
+2026-07-12,15:14,SS Cyg,Aster,V,3.863,0.068,2.56,Kenji Mori,"dew on corrector, re-shot"
+2026-07-12,15:21,Mira,Lyra,V,2.787,0.017,1.27,Kenji Mori,"""comparison star C3, not C2"""
+2026-07-12,15:44,SS Cyg,Aster,V,7.785,0.014,2.24,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-07-13,07:44,T CrB,Brill,V,4.441,0.013,2.02,Kenji Mori,moon 60% up
+2026-07-13,08:07,R Leo,Lyra,V,4.232,0.02,1.3,Tomasz Nowak,
+2026-07-13,08:20,Algol,Brill,V,9.063,0.041,1.04,Yusuf Haddad,
+2026-07-13,08:27,Mira,Lyra,V,10.737,0.071,1.13,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-07-13,08:34,SS Cyg,Aster,B,2.318,0.061,1.45,Rosa Lind,"wind gusts, trailing"
+2026-07-13,08:47,chi Cyg,Aster,R,5.142,0.023,1.92,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-07-13,09:00,SS Cyg,Aster,V,2.506,0.032,2.25,Yusuf Haddad,
+2026-07-13,09:41,Mira,Lyra,V,4.998,0.046,1.19,Yusuf Haddad,
+2026-07-13,10:00,delta Cep,Lyra,V,7.623,0.079,2.31,Tomasz Nowak,
+2026-07-14,02:00,Algol,Brill,V,6.835,0.025,1.8,Tomasz Nowak,moon 60% up
+2026-07-14,05:00,Algol,Brill,V,11.217,0.041,1.45,Rosa Lind,"wind gusts, trailing"
+2026-07-14,05:13,R Leo,Lyra,V,7.251,0.016,2.07,Ingrid Halvorsen,
+2026-07-14,05:32,R Leo,Lyra,V,9.99,0.012,1.87,Ingrid Halvorsen,thin cirrus
+2026-07-14,06:13,chi Cyg,Aster,R,11.612,0.013,2.02,Ingrid Halvorsen,
+2026-07-14,22:13,RS Oph,Aster,V,3.024,0.043,1.99,Rosa Lind,
+2026-07-14,22:32,T CrB,Brill,V,11.037,0.052,2.53,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-07-15,14:32,delta Cep,Lyra,V,9.463,0.01,1.99,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-07-15,14:39,delta Cep,Lyra,V,2.38,0.023,1.92,Rosa Lind,"wind gusts, trailing"
+2026-07-16,06:39,R Leo,Lyra,V,10.838,0.052,1.44,Kenji Mori,
+2026-07-16,06:58,Algol,Brill,V,6.078,0.063,1.45,Ingrid Halvorsen,moon 60% up
+2026-07-16,09:58,delta Cep,Lyra,V,12.243,0.029,1.47,Yusuf Haddad,twilight
+2026-07-16,10:05,SS Cyg,Aster,V,5.886,0.032,1.82,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-07-16,10:24,Mira,Lyra,V,12.037,0.022,1.71,Yusuf Haddad,"dew on corrector, re-shot"
+2026-07-16,13:24,delta Cep,Lyra,V,11.55,0.023,2.18,Ingrid Halvorsen,
+2026-07-16,13:35,Algol,Brill,V,8.138,0.033,1.18,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-07-16,13:42,chi Cyg,Aster,R,7.888,0.077,1.98,Kenji Mori,
+2026-07-16,13:49,delta Cep,Lyra,V,3.628,0.076,1.46,Ingrid Halvorsen,
+2026-07-16,14:30,Algol,Brill,R,3.044,0.019,2.03,Ingrid Halvorsen,
+2026-07-16,14:41,T CrB,Brill,V,5.562,0.048,1.47,Yusuf Haddad,twilight
+2026-07-16,14:54,R Leo,Lyra,V,3.298,0.012,1.04,Tomasz Nowak,
+2026-07-16,15:05,Algol,Brill,R,11.265,0.08,1.2,Kenji Mori,"wind gusts, trailing"
+2026-07-16,15:24,Mira,Lyra,V,11.321,0.052,1.21,Ingrid Halvorsen,thin cirrus
+2026-07-16,15:37,chi Cyg,Aster,V,,,1.06,Kenji Mori,
+2026-07-16,16:18,chi Cyg,Aster,V,11.126,0.078,1.78,Yusuf Haddad,thin cirrus
+2026-07-16,16:29,delta Cep,Lyra,V,7.101,0.044,1.66,Rosa Lind,
+2026-07-16,17:10,SS Cyg,Aster,B,,,1.47,Rosa Lind,
+2026-07-16,17:23,T CrB,Brill,V,6.042,0.013,1.92,Yusuf Haddad,
+2026-07-16,20:23,RS Oph,Aster,B,2.187,0.076,1.68,Kenji Mori,
+2026-07-17,12:23,R Leo,Lyra,V,12.258,0.062,1.01,Yusuf Haddad,
+2026-07-17,13:04,delta Cep,Lyra,V,10.276,0.018,1.2,Kenji Mori,
+2026-07-17,13:15,R Leo,Lyra,V,11.0,0.076,2.37,Kenji Mori,"""comparison star C3, not C2"""
+2026-07-17,13:38,Algol,Brill,V,2.591,0.069,1.91,Yusuf Haddad,twilight
+2026-07-17,16:38,R Leo,Lyra,V,8.968,0.019,2.52,Rosa Lind,"dew on corrector, re-shot"
+2026-07-17,16:45,T CrB,Brill,V,,,2.46,Tomasz Nowak,
+2026-07-18,08:45,T CrB,Brill,V,10.817,0.027,2.55,Rosa Lind,
+2026-07-18,09:04,R Leo,Lyra,V,11.425,0.025,2.53,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-07-19,01:04,chi Cyg,Aster,R,8.092,0.072,2.49,Ingrid Halvorsen,
+2026-07-19,01:17,delta Cep,Lyra,V,10.763,0.034,1.86,Kenji Mori,twilight
+2026-07-19,01:30,delta Cep,Lyra,V,10.098,0.009,1.69,Rosa Lind,
+2026-07-19,17:30,delta Cep,Lyra,V,2.134,0.044,1.79,Kenji Mori,
+2026-07-19,18:11,chi Cyg,Aster,V,4.342,0.022,1.98,Rosa Lind,moon 60% up
+2026-07-19,18:18,T CrB,Brill,V,11.086,0.006,2.04,Yusuf Haddad,
+2026-07-19,18:31,chi Cyg,Aster,R,9.554,0.029,2.57,Rosa Lind,
+2026-07-19,18:54,R Leo,Lyra,V,2.377,0.016,1.78,Rosa Lind,
+2026-07-19,19:05,R Leo,Lyra,V,9.254,0.036,1.39,Rosa Lind,
+2026-07-20,11:05,delta Cep,Lyra,V,6.696,0.071,1.88,Tomasz Nowak,"dew on corrector, re-shot"
+2026-07-20,11:46,RS Oph,Aster,V,12.189,0.045,1.01,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-07-21,03:46,Mira,Lyra,V,3.44,0.063,2.48,Yusuf Haddad,
+2026-07-21,06:46,delta Cep,Lyra,V,8.99,0.029,2.56,Rosa Lind,thin cirrus
+2026-07-21,22:46,SS Cyg,Aster,V,11.482,0.048,2.22,Tomasz Nowak,
+2026-07-22,01:46,chi Cyg,Aster,V,8.179,0.008,2.35,Yusuf Haddad,thin cirrus
+2026-07-22,02:09,RS Oph,Aster,V,10.31,0.043,1.24,Kenji Mori,"wind gusts, trailing"
+2026-07-22,02:22,Algol,Brill,V,2.449,0.009,2.32,Yusuf Haddad,thin cirrus
+2026-07-22,02:29,R Leo,Lyra,V,8.959,0.071,2.2,Ingrid Halvorsen,twilight
+2026-07-22,03:10,chi Cyg,Aster,V,6.027,0.039,2.44,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-07-22,03:17,delta Cep,Lyra,V,10.996,0.018,1.84,Ingrid Halvorsen,
+2026-07-22,03:40,Algol,Brill,V,6.922,0.03,1.95,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-07-22,03:59,T CrB,Brill,V,9.025,0.034,1.14,Kenji Mori,
+2026-07-22,04:10,R Leo,Lyra,V,11.247,0.052,2.14,Ingrid Halvorsen,"wind gusts, trailing"
+2026-07-22,04:23,chi Cyg,Aster,R,2.836,0.058,1.26,Yusuf Haddad,
+2026-07-22,04:30,SS Cyg,Aster,V,4.447,0.043,1.76,Yusuf Haddad,"wind gusts, trailing"
+2026-07-22,04:49,Algol,Brill,V,6.529,0.08,2.24,Rosa Lind,
+2026-07-22,05:30,delta Cep,Lyra,V,9.762,0.046,2.14,Kenji Mori,thin cirrus
+2026-07-22,05:41,RS Oph,Aster,V,5.21,0.074,1.09,Rosa Lind,"dew on corrector, re-shot"
+2026-07-22,05:54,T CrB,Brill,V,,,2.18,Rosa Lind,moon 60% up
+2026-07-22,08:54,RS Oph,Aster,B,5.872,0.015,2.18,Kenji Mori,moon 60% up
+2026-07-22,09:17,Mira,Lyra,V,3.639,0.03,1.6,Rosa Lind,
+2026-07-22,09:24,RS Oph,Aster,B,7.237,0.026,1.82,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-07-22,09:37,R Leo,Lyra,V,7.637,0.041,2.5,Kenji Mori,"dew on corrector, re-shot"
+2026-07-22,10:18,delta Cep,Lyra,V,10.25,0.071,1.54,Kenji Mori,"dew on corrector, re-shot"
+2026-07-23,02:18,T CrB,Brill,V,5.219,0.031,2.31,Kenji Mori,"dew on corrector, re-shot"
+2026-07-23,18:18,delta Cep,Lyra,V,3.107,0.046,1.61,Tomasz Nowak,"dew on corrector, re-shot"
+2026-07-23,18:29,R Leo,Lyra,V,6.968,0.047,2.38,Tomasz Nowak,
+2026-07-24,10:29,R Leo,Lyra,V,5.28,0.052,2.48,Yusuf Haddad,
+2026-07-24,11:10,chi Cyg,Aster,R,6.612,0.054,2.47,Rosa Lind,"""comparison star C3, not C2"""
+2026-07-24,11:29,R Leo,Lyra,V,7.088,0.021,1.21,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-07-24,11:40,RS Oph,Aster,B,2.622,0.035,1.36,Tomasz Nowak,"wind gusts, trailing"
+2026-07-24,11:51,RS Oph,Aster,B,4.131,0.03,1.23,Tomasz Nowak,twilight
+2026-07-24,12:10,delta Cep,Lyra,V,4.278,0.071,1.6,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-07-24,12:23,Algol,Brill,V,2.165,0.033,1.16,Tomasz Nowak,
+2026-07-24,13:04,RS Oph,Aster,V,4.339,0.042,2.12,Rosa Lind,
+2026-07-24,13:23,chi Cyg,Aster,R,12.249,0.036,2.23,Rosa Lind,"dew on corrector, re-shot"
+2026-07-25,05:23,R Leo,Lyra,V,,,1.16,Yusuf Haddad,
+2026-07-25,21:23,Algol,Brill,R,10.141,0.025,2.52,Yusuf Haddad,
+2026-07-26,00:23,Algol,Brill,R,12.158,0.065,1.68,Yusuf Haddad,
+2026-07-26,00:42,chi Cyg,Aster,R,2.902,0.065,1.54,Kenji Mori,
+2026-07-26,00:49,R Leo,Lyra,V,8.637,0.063,1.78,Tomasz Nowak,"dew on corrector, re-shot"
+2026-07-26,01:00,Mira,Lyra,V,2.514,0.08,2.42,Kenji Mori,
+2026-07-26,17:00,chi Cyg,Aster,R,12.03,0.013,1.8,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-07-26,17:41,Algol,Brill,R,9.778,0.076,1.81,Tomasz Nowak,
+2026-07-26,17:52,T CrB,Brill,V,7.108,0.073,2.05,Kenji Mori,twilight
+2026-07-26,20:52,SS Cyg,Aster,V,8.948,0.043,2.16,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-07-26,21:03,delta Cep,Lyra,V,10.385,0.008,1.07,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-07-27,13:03,SS Cyg,Aster,R,6.34,0.031,2.42,Ingrid Halvorsen,
+2026-07-27,16:03,R Leo,Lyra,V,12.159,0.059,2.38,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-07-28,08:03,SS Cyg,Aster,B,3.753,0.041,2.58,Yusuf Haddad,
+2026-07-28,08:26,T CrB,Brill,V,9.265,0.059,1.33,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-07-28,09:07,SS Cyg,Aster,B,9.879,0.033,1.18,Kenji Mori,
+2026-07-28,09:48,RS Oph,Aster,B,3.961,0.007,1.26,Rosa Lind,
+2026-07-28,12:48,delta Cep,Lyra,V,2.239,0.05,1.1,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-07-28,13:07,T CrB,Brill,V,5.252,0.042,1.32,Rosa Lind,
+2026-07-28,16:07,T CrB,Brill,V,3.606,0.028,1.75,Tomasz Nowak,thin cirrus
+2026-07-28,16:26,R Leo,Lyra,V,2.585,0.042,2.21,Ingrid Halvorsen,"wind gusts, trailing"
+2026-07-28,19:26,Mira,Lyra,V,11.151,0.047,2.39,Rosa Lind,
+2026-07-28,19:37,T CrB,Brill,V,11.413,0.046,2.55,Kenji Mori,
+2026-07-28,19:56,delta Cep,Lyra,V,2.271,0.004,2.24,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-07-28,20:07,delta Cep,Lyra,V,8.303,0.03,1.89,Kenji Mori,twilight
+2026-07-28,20:14,SS Cyg,Aster,R,,,1.67,Tomasz Nowak,"dew on corrector, re-shot"
+2026-07-28,23:14,Mira,Lyra,V,12.377,0.019,1.78,Kenji Mori,"""comparison star C3, not C2"""
+2026-07-28,23:27,Mira,Lyra,V,4.282,0.014,2.48,Kenji Mori,"""comparison star C3, not C2"""
+2026-07-29,15:27,RS Oph,Aster,B,3.835,0.064,1.92,Kenji Mori,twilight
+2026-07-29,16:08,T CrB,Brill,V,10.139,0.045,1.07,Rosa Lind,moon 60% up
+2026-07-29,16:19,RS Oph,Aster,B,8.845,0.012,2.45,Tomasz Nowak,
+2026-07-29,16:30,T CrB,Brill,V,4.185,0.009,1.83,Yusuf Haddad,
+2026-07-29,16:49,R Leo,Lyra,V,4.234,0.032,2.05,Yusuf Haddad,
+2026-07-29,17:02,T CrB,Brill,V,3.775,0.079,1.24,Ingrid Halvorsen,moon 60% up
+2026-07-29,17:21,Algol,Brill,R,12.068,0.033,1.79,Tomasz Nowak,twilight
+2026-07-29,17:34,chi Cyg,Aster,V,11.89,0.044,1.49,Tomasz Nowak,moon 60% up
+2026-07-29,20:34,T CrB,Brill,V,9.775,0.058,1.47,Ingrid Halvorsen,
+2026-07-29,21:15,Algol,Brill,R,9.696,0.031,1.5,Rosa Lind,thin cirrus
+2026-07-30,13:15,T CrB,Brill,V,10.584,0.018,1.48,Tomasz Nowak,
+2026-07-30,13:56,chi Cyg,Aster,V,4.32,0.04,2.45,Rosa Lind,twilight
+2026-07-30,16:56,chi Cyg,Aster,V,10.685,0.021,1.85,Kenji Mori,"wind gusts, trailing"
+2026-07-30,17:19,chi Cyg,Aster,V,8.039,0.006,1.68,Rosa Lind,moon 60% up
+2026-07-30,20:19,R Leo,Lyra,V,3.416,0.043,1.19,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-07-30,20:30,SS Cyg,Aster,V,11.45,0.034,2.12,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-07-30,23:30,T CrB,Brill,V,3.898,0.008,2.34,Tomasz Nowak,twilight
+2026-07-30,23:43,SS Cyg,Aster,V,9.189,0.076,1.74,Kenji Mori,"wind gusts, trailing"
+2026-07-30,23:56,Mira,Lyra,V,11.233,0.018,2.56,Rosa Lind,
+2026-07-31,02:56,chi Cyg,Aster,R,7.123,0.062,1.42,Tomasz Nowak,moon 60% up
+2026-07-31,03:07,R Leo,Lyra,V,9.406,0.058,1.91,Kenji Mori,twilight
+2026-07-31,03:18,R Leo,Lyra,V,10.747,0.048,1.09,Ingrid Halvorsen,
+2026-07-31,03:59,R Leo,Lyra,V,9.617,0.058,1.22,Kenji Mori,"wind gusts, trailing"
+2026-07-31,19:59,chi Cyg,Aster,V,7.091,0.028,1.93,Tomasz Nowak,"dew on corrector, re-shot"
+2026-07-31,20:22,Algol,Brill,R,11.912,0.037,1.74,Rosa Lind,moon 60% up
+2026-07-31,20:29,chi Cyg,Aster,R,12.027,0.006,1.41,Ingrid Halvorsen,
+2026-08-01,12:29,Mira,Lyra,V,3.973,0.069,2.07,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-01,12:42,Algol,Brill,V,3.288,0.075,1.7,Kenji Mori,
+2026-08-02,04:42,Mira,Lyra,V,7.367,0.03,2.34,Tomasz Nowak,
+2026-08-02,04:49,T CrB,Brill,V,10.443,0.068,2.37,Ingrid Halvorsen,"wind gusts, trailing"
+2026-08-02,04:56,Algol,Brill,V,8.561,0.028,2.45,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-08-02,05:09,Mira,Lyra,V,9.445,0.067,2.14,Rosa Lind,moon 60% up
+2026-08-02,05:50,Mira,Lyra,V,3.188,0.057,2.51,Tomasz Nowak,
+2026-08-02,06:09,delta Cep,Lyra,V,4.759,0.068,2.29,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-02,06:32,T CrB,Brill,V,4.119,0.075,1.95,Rosa Lind,"dew on corrector, re-shot"
+2026-08-02,07:13,Mira,Lyra,V,11.97,0.048,2.31,Yusuf Haddad,moon 60% up
+2026-08-02,10:13,Mira,Lyra,V,7.231,0.01,2.5,Ingrid Halvorsen,"wind gusts, trailing"
+2026-08-02,10:32,R Leo,Lyra,V,2.232,0.042,1.9,Tomasz Nowak,
+2026-08-02,10:51,delta Cep,Lyra,V,6.283,0.062,1.24,Yusuf Haddad,"dew on corrector, re-shot"
+2026-08-02,13:51,delta Cep,Lyra,V,5.34,0.023,2.53,Rosa Lind,
+2026-08-02,14:32,SS Cyg,Aster,R,8.449,0.056,2.27,Yusuf Haddad,
+2026-08-03,06:32,SS Cyg,Aster,R,,,1.1,Ingrid Halvorsen,
+2026-08-03,06:45,chi Cyg,Aster,R,12.01,0.009,1.16,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-08-03,07:26,R Leo,Lyra,V,4.829,0.006,2.13,Yusuf Haddad,
+2026-08-03,23:26,Algol,Brill,V,2.495,0.022,1.77,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-08-03,23:33,chi Cyg,Aster,V,12.237,0.058,1.31,Rosa Lind,
+2026-08-03,23:56,Mira,Lyra,V,4.226,0.062,1.71,Kenji Mori,"dew on corrector, re-shot"
+2026-08-04,00:07,chi Cyg,Aster,V,4.88,0.019,1.02,Yusuf Haddad,twilight
+2026-08-04,00:26,T CrB,Brill,V,10.808,0.05,2.34,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-08-04,00:45,R Leo,Lyra,V,3.079,0.058,2.15,Kenji Mori,"""comparison star C3, not C2"""
+2026-08-04,03:45,SS Cyg,Aster,R,10.975,0.035,1.78,Ingrid Halvorsen,
+2026-08-04,03:58,R Leo,Lyra,V,10.967,0.059,1.52,Kenji Mori,thin cirrus
+2026-08-04,06:58,T CrB,Brill,V,9.561,0.026,1.24,Tomasz Nowak,
+2026-08-04,07:05,T CrB,Brill,V,7.219,0.017,1.43,Kenji Mori,
+2026-08-04,07:18,chi Cyg,Aster,V,11.688,0.02,1.05,Yusuf Haddad,thin cirrus
+2026-08-04,07:29,R Leo,Lyra,V,9.961,0.011,1.48,Ingrid Halvorsen,
+2026-08-04,23:29,R Leo,Lyra,V,3.211,0.065,2.29,Yusuf Haddad,
+2026-08-05,00:10,RS Oph,Aster,B,10.659,0.04,1.65,Kenji Mori,"""comparison star C3, not C2"""
+2026-08-05,00:23,Algol,Brill,R,6.532,0.028,1.27,Ingrid Halvorsen,
+2026-08-05,00:34,Algol,Brill,V,8.053,0.044,1.14,Kenji Mori,
+2026-08-05,00:53,SS Cyg,Aster,B,8.641,0.071,1.82,Ingrid Halvorsen,moon 60% up
+2026-08-05,03:53,Mira,Lyra,V,6.536,0.075,1.41,Ingrid Halvorsen,thin cirrus
+2026-08-05,04:34,R Leo,Lyra,V,8.72,0.056,2.29,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-08-05,04:53,T CrB,Brill,V,8.062,0.076,1.62,Kenji Mori,thin cirrus
+2026-08-05,05:16,RS Oph,Aster,V,11.342,0.059,1.73,Rosa Lind,thin cirrus
+2026-08-05,05:27,RS Oph,Aster,V,12.161,0.073,2.56,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-08-05,05:34,Algol,Brill,R,4.421,0.029,1.06,Tomasz Nowak,
+2026-08-05,06:15,Algol,Brill,R,11.313,0.04,2.1,Tomasz Nowak,
+2026-08-05,22:15,delta Cep,Lyra,V,10.992,0.072,1.72,Kenji Mori,
+2026-08-05,22:28,T CrB,Brill,V,9.747,0.042,2.27,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-05,22:51,Mira,Lyra,V,7.388,0.073,1.09,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-08-06,01:51,Algol,Brill,R,6.947,0.055,2.01,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-08-06,17:51,delta Cep,Lyra,V,11.984,0.05,1.79,Ingrid Halvorsen,"wind gusts, trailing"
+2026-08-06,20:51,Algol,Brill,R,5.709,0.07,2.36,Tomasz Nowak,
+2026-08-06,20:58,T CrB,Brill,V,8.336,0.032,2.24,Ingrid Halvorsen,
+2026-08-06,21:11,chi Cyg,Aster,V,9.789,0.024,2.24,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-08-06,21:18,Algol,Brill,V,4.762,0.053,1.75,Kenji Mori,twilight
+2026-08-06,21:59,Algol,Brill,V,9.509,0.016,2.06,Yusuf Haddad,thin cirrus
+2026-08-07,00:59,Algol,Brill,R,9.74,0.078,1.64,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-08-07,01:06,delta Cep,Lyra,V,4.581,0.078,1.56,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-08-07,01:13,Algol,Brill,R,3.794,0.02,2.4,Tomasz Nowak,thin cirrus
+2026-08-07,01:36,R Leo,Lyra,V,11.011,0.017,1.51,Tomasz Nowak,"wind gusts, trailing"
+2026-08-07,04:36,R Leo,Lyra,V,4.789,0.05,1.57,Kenji Mori,
+2026-08-07,04:43,RS Oph,Aster,B,8.042,0.046,1.46,Rosa Lind,"wind gusts, trailing"
+2026-08-07,05:24,delta Cep,Lyra,V,11.57,0.056,1.11,Rosa Lind,twilight
+2026-08-07,06:05,delta Cep,Lyra,V,7.097,0.015,1.05,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-08-07,06:12,T CrB,Brill,V,12.273,0.004,2.09,Yusuf Haddad,
+2026-08-07,06:25,Mira,Lyra,V,12.322,0.006,2.59,Ingrid Halvorsen,
+2026-08-07,06:44,chi Cyg,Aster,R,7.961,0.03,2.32,Ingrid Halvorsen,twilight
+2026-08-07,09:44,Mira,Lyra,V,12.164,0.01,2.21,Rosa Lind,"dew on corrector, re-shot"
+2026-08-07,09:51,T CrB,Brill,V,5.623,0.068,1.23,Tomasz Nowak,"wind gusts, trailing"
+2026-08-07,09:58,Mira,Lyra,V,10.776,0.065,2.35,Kenji Mori,"wind gusts, trailing"
+2026-08-07,10:39,T CrB,Brill,V,7.185,0.054,1.52,Yusuf Haddad,"wind gusts, trailing"
+2026-08-07,10:46,T CrB,Brill,V,3.624,0.006,1.01,Kenji Mori,moon 60% up
+2026-08-08,02:46,RS Oph,Aster,V,5.856,0.076,1.75,Kenji Mori,thin cirrus
+2026-08-08,02:57,Mira,Lyra,V,4.966,0.067,1.2,Kenji Mori,thin cirrus
+2026-08-08,03:04,SS Cyg,Aster,R,5.683,0.045,2.4,Rosa Lind,
+2026-08-08,06:04,RS Oph,Aster,V,5.228,0.063,2.23,Tomasz Nowak,
+2026-08-08,06:15,T CrB,Brill,V,11.584,0.063,1.63,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-08-08,06:38,delta Cep,Lyra,V,10.862,0.067,1.31,Rosa Lind,
+2026-08-08,06:49,T CrB,Brill,V,10.713,0.043,2.24,Ingrid Halvorsen,moon 60% up
+2026-08-08,07:08,R Leo,Lyra,V,3.862,0.032,2.02,Ingrid Halvorsen,thin cirrus
+2026-08-08,07:19,Algol,Brill,R,12.326,0.072,2.08,Yusuf Haddad,
+2026-08-08,23:19,RS Oph,Aster,V,2.382,0.064,1.85,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-08-09,00:00,T CrB,Brill,V,9.955,0.07,2.32,Rosa Lind,twilight
+2026-08-09,00:23,delta Cep,Lyra,V,11.788,0.068,1.81,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-09,03:23,delta Cep,Lyra,V,9.208,0.065,1.85,Kenji Mori,
+2026-08-09,03:34,T CrB,Brill,V,10.0,0.041,1.93,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-08-09,03:53,SS Cyg,Aster,B,8.791,0.075,2.08,Rosa Lind,twilight
+2026-08-09,04:06,R Leo,Lyra,V,5.542,0.007,1.49,Rosa Lind,
+2026-08-09,04:19,Algol,Brill,V,4.624,0.053,2.14,Rosa Lind,
+2026-08-09,04:30,Mira,Lyra,V,4.585,0.026,2.39,Yusuf Haddad,
+2026-08-09,05:11,T CrB,Brill,V,9.258,0.049,1.58,Tomasz Nowak,
+2026-08-09,05:24,Mira,Lyra,V,9.757,0.04,1.8,Kenji Mori,"wind gusts, trailing"
+2026-08-09,05:43,T CrB,Brill,V,9.177,0.019,2.45,Yusuf Haddad,"wind gusts, trailing"
+2026-08-09,06:06,Algol,Brill,V,9.89,0.077,1.74,Tomasz Nowak,moon 60% up
+2026-08-09,06:25,Mira,Lyra,V,9.365,0.036,1.65,Rosa Lind,moon 60% up
+2026-08-09,09:25,T CrB,Brill,V,7.075,0.066,1.09,Ingrid Halvorsen,
+2026-08-09,09:44,R Leo,Lyra,V,6.244,0.066,1.29,Tomasz Nowak,
+2026-08-09,09:51,R Leo,Lyra,V,7.282,0.014,2.17,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-08-10,01:51,SS Cyg,Aster,B,2.516,0.056,1.15,Rosa Lind,
+2026-08-10,04:51,T CrB,Brill,V,12.348,0.029,1.97,Ingrid Halvorsen,twilight
+2026-08-10,20:51,Mira,Lyra,V,10.169,0.027,2.21,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-08-10,21:32,delta Cep,Lyra,V,10.887,0.055,2.55,Yusuf Haddad,twilight
+2026-08-10,22:13,SS Cyg,Aster,R,6.787,0.029,1.86,Kenji Mori,"wind gusts, trailing"
+2026-08-10,22:26,R Leo,Lyra,V,9.832,0.018,2.14,Kenji Mori,thin cirrus
+2026-08-10,22:39,RS Oph,Aster,B,11.375,0.076,1.16,Yusuf Haddad,"dew on corrector, re-shot"
+2026-08-10,22:52,SS Cyg,Aster,R,4.285,0.027,2.08,Yusuf Haddad,
+2026-08-10,23:03,Algol,Brill,V,5.682,0.014,1.77,Yusuf Haddad,thin cirrus
+2026-08-10,23:22,delta Cep,Lyra,V,6.261,0.068,1.87,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-08-11,15:22,delta Cep,Lyra,V,5.172,0.028,2.45,Ingrid Halvorsen,moon 60% up
+2026-08-11,15:41,RS Oph,Aster,B,9.23,0.061,2.21,Kenji Mori,"wind gusts, trailing"
+2026-08-11,16:04,delta Cep,Lyra,V,12.361,0.042,1.02,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-08-11,16:15,T CrB,Brill,V,4.831,0.036,2.45,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-08-11,19:15,Mira,Lyra,V,6.071,0.004,2.22,Kenji Mori,
+2026-08-11,19:26,SS Cyg,Aster,R,4.372,0.03,2.36,Yusuf Haddad,twilight
+2026-08-11,19:45,chi Cyg,Aster,V,,,1.97,Rosa Lind,
+2026-08-11,19:52,chi Cyg,Aster,R,2.85,0.021,2.3,Ingrid Halvorsen,thin cirrus
+2026-08-11,20:11,RS Oph,Aster,B,12.032,0.031,2.1,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-08-12,12:11,SS Cyg,Aster,R,12.091,0.026,2.15,Yusuf Haddad,
+2026-08-12,15:11,T CrB,Brill,V,5.198,0.074,1.97,Yusuf Haddad,
+2026-08-12,15:24,R Leo,Lyra,V,3.807,0.008,1.74,Tomasz Nowak,
+2026-08-12,15:47,delta Cep,Lyra,V,7.407,0.011,1.01,Tomasz Nowak,thin cirrus
+2026-08-12,16:10,Algol,Brill,V,8.61,0.078,2.43,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-08-12,16:17,Mira,Lyra,V,7.331,0.05,2.18,Rosa Lind,
+2026-08-12,19:17,SS Cyg,Aster,V,10.801,0.01,1.22,Rosa Lind,thin cirrus
+2026-08-12,19:24,T CrB,Brill,V,6.075,0.074,1.1,Tomasz Nowak,"wind gusts, trailing"
+2026-08-12,19:43,T CrB,Brill,V,9.01,0.032,2.34,Tomasz Nowak,
+2026-08-12,22:43,RS Oph,Aster,B,12.189,0.014,1.54,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-08-13,01:43,T CrB,Brill,V,4.947,0.072,1.43,Kenji Mori,twilight
+2026-08-13,01:56,Algol,Brill,V,4.102,0.048,1.23,Yusuf Haddad,thin cirrus
+2026-08-13,04:56,delta Cep,Lyra,V,3.662,0.034,2.3,Kenji Mori,moon 60% up
+2026-08-13,05:19,Mira,Lyra,V,2.466,0.021,1.58,Rosa Lind,
+2026-08-13,08:19,Mira,Lyra,V,5.226,0.054,2.42,Tomasz Nowak,moon 60% up
+2026-08-13,11:19,SS Cyg,Aster,B,3.04,0.078,1.82,Yusuf Haddad,"dew on corrector, re-shot"
+2026-08-14,03:19,RS Oph,Aster,V,10.052,0.02,2.37,Kenji Mori,"wind gusts, trailing"
+2026-08-14,03:42,T CrB,Brill,V,10.729,0.078,1.12,Rosa Lind,"dew on corrector, re-shot"
+2026-08-14,06:42,delta Cep,Lyra,V,2.266,0.029,1.09,Rosa Lind,twilight
+2026-08-14,06:49,Mira,Lyra,V,2.126,0.023,2.06,Yusuf Haddad,
+2026-08-14,09:49,Mira,Lyra,V,6.954,0.013,2.45,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-08-14,10:12,T CrB,Brill,V,5.216,0.069,2.47,Rosa Lind,"dew on corrector, re-shot"
+2026-08-14,13:12,delta Cep,Lyra,V,5.037,0.053,1.36,Kenji Mori,thin cirrus
+2026-08-14,13:35,SS Cyg,Aster,R,4.673,0.062,1.71,Kenji Mori,thin cirrus
+2026-08-14,13:42,SS Cyg,Aster,B,6.015,0.057,2.48,Tomasz Nowak,moon 60% up
+2026-08-15,05:42,SS Cyg,Aster,V,4.343,0.018,1.17,Tomasz Nowak,
+2026-08-15,05:55,R Leo,Lyra,V,6.906,0.062,2.15,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-08-15,06:14,RS Oph,Aster,V,6.458,0.058,1.52,Rosa Lind,twilight
+2026-08-15,06:27,R Leo,Lyra,V,11.093,0.015,2.4,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-15,06:34,chi Cyg,Aster,R,8.287,0.067,1.44,Yusuf Haddad,"wind gusts, trailing"
+2026-08-15,06:47,SS Cyg,Aster,R,8.204,0.03,1.52,Ingrid Halvorsen,
+2026-08-15,07:06,delta Cep,Lyra,V,7.612,0.037,2.13,Tomasz Nowak,moon 60% up
+2026-08-15,07:47,R Leo,Lyra,V,4.378,0.006,2.29,Kenji Mori,"dew on corrector, re-shot"
+2026-08-15,23:47,Algol,Brill,V,5.385,0.052,1.74,Tomasz Nowak,
+2026-08-16,00:10,Algol,Brill,V,10.146,0.012,1.22,Kenji Mori,"dew on corrector, re-shot"
+2026-08-16,03:10,delta Cep,Lyra,V,9.853,0.049,1.15,Rosa Lind,
+2026-08-16,03:51,Mira,Lyra,V,3.953,0.043,2.5,Kenji Mori,
+2026-08-16,06:51,delta Cep,Lyra,V,9.945,0.048,1.39,Rosa Lind,
+2026-08-16,09:51,chi Cyg,Aster,R,6.459,0.042,2.39,Ingrid Halvorsen,
+2026-08-16,10:14,delta Cep,Lyra,V,11.972,0.037,2.07,Ingrid Halvorsen,moon 60% up
+2026-08-16,10:25,R Leo,Lyra,V,8.251,0.062,2.59,Ingrid Halvorsen,
+2026-08-16,10:32,Algol,Brill,R,3.952,0.057,1.61,Tomasz Nowak,
+2026-08-16,10:39,chi Cyg,Aster,V,2.426,0.017,2.35,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-16,10:52,chi Cyg,Aster,R,7.439,0.035,1.6,Rosa Lind,twilight
+2026-08-16,11:33,delta Cep,Lyra,V,7.096,0.004,1.44,Ingrid Halvorsen,
+2026-08-16,11:40,T CrB,Brill,V,5.654,0.036,1.35,Rosa Lind,thin cirrus
+2026-08-17,03:40,RS Oph,Aster,B,9.176,0.036,2.57,Yusuf Haddad,
+2026-08-17,04:03,Mira,Lyra,V,5.946,0.042,2.16,Kenji Mori,
+2026-08-17,04:16,chi Cyg,Aster,V,10.716,0.008,2.56,Tomasz Nowak,
+2026-08-17,04:27,R Leo,Lyra,V,3.771,0.024,1.6,Kenji Mori,
+2026-08-17,04:38,T CrB,Brill,V,4.716,0.071,1.93,Rosa Lind,"wind gusts, trailing"
+2026-08-17,04:49,RS Oph,Aster,B,8.968,0.074,2.52,Yusuf Haddad,moon 60% up
+2026-08-17,07:49,chi Cyg,Aster,V,9.09,0.032,1.23,Rosa Lind,
+2026-08-17,08:02,chi Cyg,Aster,R,6.548,0.065,2.59,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-08-17,08:15,SS Cyg,Aster,R,7.487,0.015,1.95,Rosa Lind,
+2026-08-17,08:22,Algol,Brill,V,4.806,0.065,2.53,Rosa Lind,thin cirrus
+2026-08-18,00:22,Algol,Brill,V,5.499,0.025,1.5,Kenji Mori,"""comparison star C3, not C2"""
+2026-08-18,00:33,Mira,Lyra,V,6.816,0.026,1.59,Kenji Mori,"""comparison star C3, not C2"""
+2026-08-18,00:56,RS Oph,Aster,B,8.714,0.041,2.5,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-08-18,03:56,SS Cyg,Aster,V,8.535,0.025,2.14,Yusuf Haddad,twilight
+2026-08-18,04:03,R Leo,Lyra,V,12.275,0.029,2.14,Tomasz Nowak,
+2026-08-18,04:14,T CrB,Brill,V,4.6,0.06,2.48,Kenji Mori,
+2026-08-18,07:14,RS Oph,Aster,V,11.368,0.054,2.17,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-08-18,07:25,R Leo,Lyra,V,12.362,0.052,1.3,Yusuf Haddad,
+2026-08-18,08:06,Mira,Lyra,V,4.98,0.067,1.66,Kenji Mori,moon 60% up
+2026-08-18,08:17,chi Cyg,Aster,R,7.181,0.05,2.49,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-08-18,08:24,RS Oph,Aster,B,11.242,0.006,2.5,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-08-18,09:05,RS Oph,Aster,V,3.578,0.073,1.41,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-18,09:18,delta Cep,Lyra,V,2.951,0.036,1.72,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-08-18,09:37,SS Cyg,Aster,R,7.596,0.013,1.07,Kenji Mori,twilight
+2026-08-18,12:37,T CrB,Brill,V,7.846,0.066,1.03,Yusuf Haddad,
+2026-08-18,12:48,R Leo,Lyra,V,5.592,0.072,1.39,Kenji Mori,twilight
+2026-08-18,13:29,RS Oph,Aster,B,6.862,0.069,2.23,Rosa Lind,
+2026-08-18,13:40,R Leo,Lyra,V,2.121,0.071,1.59,Yusuf Haddad,"wind gusts, trailing"
+2026-08-18,13:53,Mira,Lyra,V,2.167,0.055,2.03,Kenji Mori,"dew on corrector, re-shot"
+2026-08-18,14:00,RS Oph,Aster,B,2.664,0.011,2.59,Kenji Mori,"""comparison star C3, not C2"""
+2026-08-18,17:00,delta Cep,Lyra,V,4.124,0.019,2.12,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-08-18,17:41,Mira,Lyra,V,10.437,0.078,2.5,Kenji Mori,"dew on corrector, re-shot"
+2026-08-19,09:41,R Leo,Lyra,V,5.446,0.076,2.38,Tomasz Nowak,
+2026-08-20,01:41,delta Cep,Lyra,V,8.67,0.013,1.06,Rosa Lind,"wind gusts, trailing"
+2026-08-20,02:04,SS Cyg,Aster,B,,,1.96,Kenji Mori,moon 60% up
+2026-08-20,18:04,chi Cyg,Aster,V,5.38,0.009,1.69,Kenji Mori,thin cirrus
+2026-08-20,18:11,R Leo,Lyra,V,3.455,0.046,1.62,Tomasz Nowak,thin cirrus
+2026-08-20,21:11,chi Cyg,Aster,V,5.189,0.069,1.88,Ingrid Halvorsen,
+2026-08-20,21:18,delta Cep,Lyra,V,9.6,0.042,1.31,Rosa Lind,
+2026-08-20,21:37,SS Cyg,Aster,B,3.154,0.035,1.72,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-08-21,13:37,SS Cyg,Aster,R,6.88,0.075,1.85,Ingrid Halvorsen,thin cirrus
+2026-08-21,13:50,RS Oph,Aster,B,8.764,0.044,2.58,Rosa Lind,"wind gusts, trailing"
+2026-08-21,13:57,delta Cep,Lyra,V,8.566,0.071,2.35,Ingrid Halvorsen,
+2026-08-21,14:16,chi Cyg,Aster,V,8.866,0.033,1.99,Rosa Lind,"dew on corrector, re-shot"
+2026-08-21,14:23,chi Cyg,Aster,V,4.797,0.053,1.38,Yusuf Haddad,
+2026-08-22,06:23,T CrB,Brill,V,7.713,0.054,1.96,Rosa Lind,twilight
+2026-08-22,06:36,R Leo,Lyra,V,11.85,0.06,1.01,Tomasz Nowak,moon 60% up
+2026-08-22,06:55,SS Cyg,Aster,B,3.17,0.042,2.5,Kenji Mori,"wind gusts, trailing"
+2026-08-22,07:36,SS Cyg,Aster,B,4.37,0.01,2.54,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-08-22,07:55,SS Cyg,Aster,B,9.521,0.05,2.27,Rosa Lind,twilight
+2026-08-22,10:55,Algol,Brill,R,8.649,0.008,1.51,Ingrid Halvorsen,
+2026-08-22,11:02,R Leo,Lyra,V,5.623,0.006,1.73,Ingrid Halvorsen,twilight
+2026-08-22,11:25,chi Cyg,Aster,R,10.67,0.045,1.09,Tomasz Nowak,
+2026-08-22,11:36,T CrB,Brill,V,2.17,0.019,1.16,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-08-22,12:17,SS Cyg,Aster,B,5.773,0.074,1.98,Kenji Mori,"wind gusts, trailing"
+2026-08-22,15:17,delta Cep,Lyra,V,9.932,0.079,1.54,Tomasz Nowak,moon 60% up
+2026-08-23,07:17,RS Oph,Aster,V,2.321,0.024,2.28,Yusuf Haddad,"dew on corrector, re-shot"
+2026-08-23,07:58,R Leo,Lyra,V,4.603,0.025,2.57,Yusuf Haddad,twilight
+2026-08-23,08:39,Mira,Lyra,V,3.387,0.018,2.48,Rosa Lind,twilight
+2026-08-23,08:46,Mira,Lyra,V,9.524,0.058,1.12,Yusuf Haddad,thin cirrus
+2026-08-23,08:53,Algol,Brill,V,4.457,0.064,2.26,Kenji Mori,
+2026-08-23,09:00,delta Cep,Lyra,V,8.957,0.02,2.18,Yusuf Haddad,
+2026-08-23,09:11,chi Cyg,Aster,R,8.841,0.02,1.94,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-08-23,12:11,Mira,Lyra,V,7.631,0.05,1.21,Ingrid Halvorsen,"wind gusts, trailing"
+2026-08-24,04:11,Algol,Brill,V,4.588,0.025,2.28,Ingrid Halvorsen,thin cirrus
+2026-08-24,07:11,SS Cyg,Aster,R,10.82,0.046,1.36,Kenji Mori,
+2026-08-24,07:18,RS Oph,Aster,V,6.384,0.014,1.61,Ingrid Halvorsen,
+2026-08-24,07:59,Mira,Lyra,V,5.189,0.034,1.39,Kenji Mori,
+2026-08-24,10:59,R Leo,Lyra,V,6.98,0.028,1.18,Rosa Lind,"wind gusts, trailing"
+2026-08-24,11:10,SS Cyg,Aster,V,5.011,0.028,1.9,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-08-24,11:51,Mira,Lyra,V,3.783,0.01,2.16,Rosa Lind,
+2026-08-24,12:10,SS Cyg,Aster,B,5.743,0.067,1.97,Ingrid Halvorsen,
+2026-08-24,12:29,T CrB,Brill,V,7.73,0.046,2.03,Ingrid Halvorsen,
+2026-08-24,13:10,SS Cyg,Aster,B,7.199,0.009,1.6,Rosa Lind,"""comparison star C3, not C2"""
+2026-08-24,16:10,Algol,Brill,V,7.303,0.017,1.78,Kenji Mori,
+2026-08-24,16:29,RS Oph,Aster,B,2.675,0.015,2.22,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-24,16:48,SS Cyg,Aster,B,11.02,0.01,2.48,Kenji Mori,
+2026-08-24,17:11,R Leo,Lyra,V,12.204,0.027,2.05,Tomasz Nowak,
+2026-08-24,17:18,Mira,Lyra,V,10.653,0.069,2.49,Kenji Mori,
+2026-08-24,17:29,Algol,Brill,R,5.715,0.058,2.0,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-08-24,20:29,SS Cyg,Aster,R,6.48,0.052,1.56,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-08-24,20:36,R Leo,Lyra,V,5.003,0.069,1.16,Yusuf Haddad,
+2026-08-24,20:55,delta Cep,Lyra,V,7.009,0.071,1.02,Kenji Mori,"""comparison star C3, not C2"""
+2026-08-24,21:14,Algol,Brill,V,7.522,0.054,2.27,Yusuf Haddad,
+2026-08-25,13:14,RS Oph,Aster,V,12.339,0.06,1.4,Rosa Lind,"""comparison star C3, not C2"""
+2026-08-25,13:21,Mira,Lyra,V,3.865,0.054,2.34,Rosa Lind,thin cirrus
+2026-08-25,13:40,RS Oph,Aster,V,5.779,0.058,2.17,Rosa Lind,"dew on corrector, re-shot"
+2026-08-25,16:40,Mira,Lyra,V,2.171,0.057,2.01,Kenji Mori,"wind gusts, trailing"
+2026-08-25,16:47,R Leo,Lyra,V,6.816,0.009,2.55,Yusuf Haddad,twilight
+2026-08-25,16:58,chi Cyg,Aster,V,9.946,0.044,1.25,Ingrid Halvorsen,
+2026-08-25,17:11,T CrB,Brill,V,4.644,0.063,1.37,Rosa Lind,twilight
+2026-08-25,17:18,chi Cyg,Aster,V,4.669,0.036,1.32,Kenji Mori,twilight
+2026-08-26,09:18,R Leo,Lyra,V,11.876,0.013,2.13,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-08-26,09:31,SS Cyg,Aster,B,6.702,0.058,1.65,Kenji Mori,
+2026-08-26,09:42,delta Cep,Lyra,V,7.606,0.036,2.37,Rosa Lind,
+2026-08-26,12:42,delta Cep,Lyra,V,11.217,0.041,1.72,Tomasz Nowak,thin cirrus
+2026-08-26,13:23,chi Cyg,Aster,V,11.588,0.038,2.29,Rosa Lind,
+2026-08-26,16:23,Algol,Brill,R,7.413,0.052,1.48,Ingrid Halvorsen,twilight
+2026-08-26,19:23,R Leo,Lyra,V,8.571,0.025,1.91,Yusuf Haddad,
+2026-08-26,22:23,Mira,Lyra,V,7.824,0.048,1.16,Tomasz Nowak,twilight
+2026-08-26,22:42,Algol,Brill,R,8.577,0.021,2.4,Tomasz Nowak,
+2026-08-26,22:49,delta Cep,Lyra,V,10.855,0.017,1.56,Rosa Lind,
+2026-08-27,01:49,RS Oph,Aster,V,6.531,0.023,2.12,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-08-27,02:30,SS Cyg,Aster,V,4.704,0.061,1.95,Kenji Mori,
+2026-08-27,02:53,delta Cep,Lyra,V,7.84,0.065,1.06,Kenji Mori,thin cirrus
+2026-08-27,03:04,RS Oph,Aster,V,7.158,0.038,1.8,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-08-27,19:04,R Leo,Lyra,V,10.502,0.071,1.33,Yusuf Haddad,
+2026-08-27,19:15,RS Oph,Aster,B,6.15,0.042,2.34,Rosa Lind,"dew on corrector, re-shot"
+2026-08-27,19:26,delta Cep,Lyra,V,9.14,0.009,2.26,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-08-27,20:07,R Leo,Lyra,V,3.837,0.061,1.34,Kenji Mori,twilight
+2026-08-27,20:26,T CrB,Brill,V,10.4,0.019,2.05,Yusuf Haddad,
+2026-08-27,20:45,R Leo,Lyra,V,5.043,0.077,1.71,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-08-27,21:26,delta Cep,Lyra,V,5.254,0.062,1.9,Ingrid Halvorsen,thin cirrus
+2026-08-27,21:33,Mira,Lyra,V,11.079,0.03,2.52,Yusuf Haddad,
+2026-08-27,22:14,RS Oph,Aster,V,2.524,0.03,2.26,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-28,01:14,SS Cyg,Aster,B,7.15,0.067,1.08,Ingrid Halvorsen,
+2026-08-28,01:21,delta Cep,Lyra,V,5.801,0.054,2.17,Kenji Mori,
+2026-08-28,04:21,T CrB,Brill,V,11.988,0.008,2.14,Rosa Lind,moon 60% up
+2026-08-28,04:28,RS Oph,Aster,V,3.293,0.032,1.35,Yusuf Haddad,thin cirrus
+2026-08-28,20:28,Mira,Lyra,V,11.336,0.013,1.91,Kenji Mori,
+2026-08-28,20:47,Algol,Brill,R,9.3,0.041,1.65,Kenji Mori,
+2026-08-28,21:06,chi Cyg,Aster,R,7.761,0.011,2.18,Yusuf Haddad,
+2026-08-28,21:19,Mira,Lyra,V,11.724,0.052,1.31,Yusuf Haddad,
+2026-08-28,21:42,Algol,Brill,R,8.095,0.036,1.81,Rosa Lind,
+2026-08-28,22:05,chi Cyg,Aster,R,6.812,0.077,2.42,Ingrid Halvorsen,
+2026-08-29,14:05,Algol,Brill,V,10.562,0.053,1.89,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-08-29,14:24,R Leo,Lyra,V,2.115,0.047,2.05,Kenji Mori,moon 60% up
+2026-08-29,14:37,T CrB,Brill,V,8.427,0.029,2.12,Ingrid Halvorsen,twilight
+2026-08-29,14:50,T CrB,Brill,V,10.536,0.052,2.37,Rosa Lind,"""comparison star C3, not C2"""
+2026-08-29,15:01,chi Cyg,Aster,V,2.88,0.015,1.1,Rosa Lind,"dew on corrector, re-shot"
+2026-08-30,07:01,R Leo,Lyra,V,11.934,0.042,2.22,Kenji Mori,thin cirrus
+2026-08-30,07:20,Mira,Lyra,V,12.333,0.015,2.15,Yusuf Haddad,twilight
+2026-08-30,08:01,R Leo,Lyra,V,4.085,0.009,1.5,Rosa Lind,
+2026-08-31,00:01,RS Oph,Aster,B,2.151,0.022,2.28,Rosa Lind,
+2026-08-31,00:20,delta Cep,Lyra,V,3.955,0.052,2.18,Tomasz Nowak,moon 60% up
+2026-08-31,00:43,SS Cyg,Aster,V,12.188,0.066,1.31,Tomasz Nowak,"dew on corrector, re-shot"
+2026-08-31,00:54,Algol,Brill,V,9.841,0.004,1.14,Rosa Lind,"dew on corrector, re-shot"
+2026-08-31,01:13,chi Cyg,Aster,V,7.925,0.052,1.16,Tomasz Nowak,
+2026-08-31,01:32,T CrB,Brill,V,10.987,0.023,1.74,Yusuf Haddad,
+2026-08-31,01:45,delta Cep,Lyra,V,,,1.17,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-08-31,01:58,RS Oph,Aster,V,4.041,0.054,2.01,Rosa Lind,thin cirrus
+2026-08-31,17:58,Mira,Lyra,V,10.263,0.039,1.22,Yusuf Haddad,
+2026-08-31,18:05,R Leo,Lyra,V,11.167,0.058,1.5,Tomasz Nowak,moon 60% up
+2026-08-31,18:46,R Leo,Lyra,V,5.31,0.06,2.19,Tomasz Nowak,thin cirrus
+2026-08-31,21:46,delta Cep,Lyra,V,8.286,0.066,1.87,Yusuf Haddad,thin cirrus
+2026-08-31,22:09,chi Cyg,Aster,R,6.14,0.039,1.43,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-09-01,01:09,RS Oph,Aster,B,9.377,0.078,2.4,Tomasz Nowak,thin cirrus
+2026-09-01,01:20,chi Cyg,Aster,V,12.063,0.056,2.21,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-09-01,01:33,R Leo,Lyra,V,5.6,0.022,1.78,Kenji Mori,thin cirrus
+2026-09-01,01:40,Algol,Brill,V,8.102,0.063,1.96,Rosa Lind,thin cirrus
+2026-09-01,01:51,RS Oph,Aster,B,4.335,0.005,1.73,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-09-01,17:51,R Leo,Lyra,V,4.776,0.072,1.58,Tomasz Nowak,thin cirrus
+2026-09-01,17:58,Mira,Lyra,V,3.335,0.015,1.44,Yusuf Haddad,
+2026-09-01,18:11,Mira,Lyra,V,11.5,0.068,2.4,Ingrid Halvorsen,
+2026-09-01,18:22,delta Cep,Lyra,V,6.115,0.035,2.3,Rosa Lind,
+2026-09-01,18:45,Algol,Brill,R,2.273,0.057,2.0,Tomasz Nowak,"wind gusts, trailing"
+2026-09-01,18:56,T CrB,Brill,V,6.916,0.058,1.41,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-09-01,19:15,RS Oph,Aster,B,5.192,0.033,1.22,Kenji Mori,"""comparison star C3, not C2"""
+2026-09-01,19:56,T CrB,Brill,V,5.504,0.048,1.88,Rosa Lind,
+2026-09-02,11:56,Algol,Brill,R,10.834,0.013,1.31,Rosa Lind,
+2026-09-02,12:07,T CrB,Brill,V,7.515,0.005,2.1,Rosa Lind,
+2026-09-02,12:26,SS Cyg,Aster,R,7.683,0.078,2.13,Ingrid Halvorsen,twilight
+2026-09-02,15:26,RS Oph,Aster,V,11.154,0.067,1.37,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-09-02,15:37,delta Cep,Lyra,V,5.455,0.076,2.22,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-09-02,16:18,SS Cyg,Aster,V,11.555,0.055,1.55,Tomasz Nowak,
+2026-09-02,16:41,delta Cep,Lyra,V,10.285,0.049,2.1,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-09-02,17:22,T CrB,Brill,V,8.297,0.04,1.34,Tomasz Nowak,"wind gusts, trailing"
+2026-09-02,17:35,chi Cyg,Aster,R,9.622,0.059,1.73,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-09-02,18:16,chi Cyg,Aster,R,3.996,0.036,1.98,Ingrid Halvorsen,
+2026-09-02,18:39,Mira,Lyra,V,8.122,0.074,2.53,Ingrid Halvorsen,moon 60% up
+2026-09-02,18:50,delta Cep,Lyra,V,9.569,0.067,1.19,Rosa Lind,moon 60% up
+2026-09-02,18:57,delta Cep,Lyra,V,2.414,0.044,1.81,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-09-02,19:04,T CrB,Brill,V,3.088,0.046,2.48,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-09-02,22:04,Algol,Brill,R,10.364,0.014,1.11,Yusuf Haddad,
+2026-09-03,01:04,RS Oph,Aster,B,2.909,0.041,1.38,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-09-03,01:27,R Leo,Lyra,V,9.176,0.039,1.16,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-09-03,01:50,R Leo,Lyra,V,3.632,0.035,1.89,Ingrid Halvorsen,
+2026-09-03,02:13,delta Cep,Lyra,V,5.485,0.024,1.77,Kenji Mori,thin cirrus
+2026-09-03,02:26,delta Cep,Lyra,V,11.819,0.06,2.45,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-09-03,03:07,SS Cyg,Aster,B,3.601,0.047,2.42,Tomasz Nowak,
+2026-09-03,03:18,SS Cyg,Aster,R,7.817,0.032,1.82,Rosa Lind,
+2026-09-03,03:29,chi Cyg,Aster,R,11.614,0.066,1.78,Yusuf Haddad,
+2026-09-03,03:36,R Leo,Lyra,V,10.371,0.029,1.71,Yusuf Haddad,"dew on corrector, re-shot"
+2026-09-03,03:47,SS Cyg,Aster,R,4.36,0.005,2.45,Tomasz Nowak,"wind gusts, trailing"
+2026-09-03,19:47,Mira,Lyra,V,3.25,0.05,2.12,Ingrid Halvorsen,
+2026-09-03,20:00,Algol,Brill,R,6.905,0.006,1.84,Tomasz Nowak,
+2026-09-03,20:13,Mira,Lyra,V,3.272,0.021,1.57,Tomasz Nowak,
+2026-09-03,20:36,SS Cyg,Aster,R,6.982,0.064,1.9,Rosa Lind,moon 60% up
+2026-09-03,20:43,RS Oph,Aster,V,8.903,0.024,2.13,Tomasz Nowak,twilight
+2026-09-03,20:56,Mira,Lyra,V,5.678,0.021,2.35,Yusuf Haddad,
+2026-09-03,21:07,chi Cyg,Aster,R,2.313,0.048,1.1,Kenji Mori,
+2026-09-03,21:20,T CrB,Brill,V,10.36,0.014,2.19,Tomasz Nowak,
+2026-09-04,13:20,R Leo,Lyra,V,4.334,0.064,1.22,Ingrid Halvorsen,twilight
+2026-09-04,13:33,chi Cyg,Aster,V,11.157,0.072,1.94,Tomasz Nowak,
+2026-09-04,13:46,RS Oph,Aster,V,3.508,0.07,1.63,Ingrid Halvorsen,"wind gusts, trailing"
+2026-09-04,14:27,RS Oph,Aster,B,2.107,0.077,2.43,Ingrid Halvorsen,"wind gusts, trailing"
+2026-09-04,15:08,chi Cyg,Aster,R,5.267,0.042,1.81,Yusuf Haddad,moon 60% up
+2026-09-04,15:15,Algol,Brill,V,6.318,0.045,2.12,Ingrid Halvorsen,thin cirrus
+2026-09-04,15:56,RS Oph,Aster,V,8.87,0.078,2.44,Kenji Mori,"""comparison star C3, not C2"""
+2026-09-04,16:09,R Leo,Lyra,V,3.199,0.069,1.55,Tomasz Nowak,
+2026-09-04,16:50,Mira,Lyra,V,7.333,0.046,1.63,Kenji Mori,
+2026-09-04,17:13,R Leo,Lyra,V,8.687,0.067,1.84,Yusuf Haddad,"dew on corrector, re-shot"
+2026-09-04,17:32,T CrB,Brill,V,10.936,0.031,2.09,Ingrid Halvorsen,twilight
+2026-09-04,17:43,Mira,Lyra,V,12.03,0.031,1.61,Kenji Mori,
+2026-09-04,18:24,T CrB,Brill,V,5.777,0.019,1.98,Ingrid Halvorsen,twilight
+2026-09-05,10:24,T CrB,Brill,V,4.75,0.033,1.46,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-09-06,02:24,T CrB,Brill,V,11.54,0.04,1.03,Rosa Lind,
+2026-09-06,05:24,T CrB,Brill,V,6.862,0.016,1.19,Rosa Lind,
+2026-09-06,05:47,Algol,Brill,V,7.074,0.032,1.69,Rosa Lind,
+2026-09-06,06:06,SS Cyg,Aster,R,3.618,0.015,1.94,Tomasz Nowak,"dew on corrector, re-shot"
+2026-09-06,06:29,Algol,Brill,V,10.69,0.021,1.96,Rosa Lind,
+2026-09-06,06:42,delta Cep,Lyra,V,2.752,0.025,1.44,Ingrid Halvorsen,
+2026-09-06,22:42,RS Oph,Aster,V,4.373,0.048,2.1,Tomasz Nowak,moon 60% up
+2026-09-06,22:53,T CrB,Brill,V,5.58,0.011,2.57,Kenji Mori,moon 60% up
+2026-09-06,23:00,delta Cep,Lyra,V,10.194,0.035,1.56,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-09-06,23:19,Algol,Brill,V,5.019,0.07,1.48,Tomasz Nowak,
+2026-09-06,23:42,RS Oph,Aster,V,11.525,0.017,1.67,Ingrid Halvorsen,thin cirrus
+2026-09-07,02:42,chi Cyg,Aster,R,7.806,0.013,1.66,Tomasz Nowak,
+2026-09-07,03:05,T CrB,Brill,V,11.197,0.005,1.04,Tomasz Nowak,
+2026-09-07,03:12,R Leo,Lyra,V,5.314,0.013,2.32,Rosa Lind,
+2026-09-07,03:19,R Leo,Lyra,V,4.47,0.064,1.43,Ingrid Halvorsen,
+2026-09-07,03:30,R Leo,Lyra,V,5.98,0.059,1.06,Ingrid Halvorsen,twilight
+2026-09-07,03:37,Mira,Lyra,V,4.346,0.022,1.64,Kenji Mori,twilight
+2026-09-07,19:37,delta Cep,Lyra,V,11.95,0.04,1.3,Yusuf Haddad,
+2026-09-08,11:37,Mira,Lyra,V,3.074,0.056,1.24,Tomasz Nowak,
+2026-09-08,12:18,RS Oph,Aster,B,2.171,0.006,1.77,Rosa Lind,
+2026-09-08,12:31,SS Cyg,Aster,R,7.796,0.028,2.02,Tomasz Nowak,thin cirrus
+2026-09-08,12:44,delta Cep,Lyra,V,12.209,0.068,2.43,Yusuf Haddad,thin cirrus
+2026-09-08,13:25,SS Cyg,Aster,B,5.969,0.014,1.19,Yusuf Haddad,
+2026-09-08,16:25,delta Cep,Lyra,V,3.348,0.021,1.67,Rosa Lind,
+2026-09-08,16:38,Mira,Lyra,V,4.157,0.007,1.53,Kenji Mori,
+2026-09-08,17:19,R Leo,Lyra,V,6.874,0.009,2.01,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-09-08,20:19,R Leo,Lyra,V,6.31,0.045,1.43,Tomasz Nowak,thin cirrus
+2026-09-08,20:38,T CrB,Brill,V,9.722,0.075,1.71,Tomasz Nowak,thin cirrus
+2026-09-09,12:38,R Leo,Lyra,V,5.222,0.05,2.39,Kenji Mori,moon 60% up
+2026-09-09,12:51,R Leo,Lyra,V,7.927,0.064,1.18,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-09-09,12:58,Mira,Lyra,V,,,1.09,Ingrid Halvorsen,"wind gusts, trailing"
+2026-09-09,13:21,Mira,Lyra,V,4.861,0.055,2.52,Rosa Lind,
+2026-09-09,16:21,T CrB,Brill,V,9.056,0.039,1.34,Tomasz Nowak,
+2026-09-10,08:21,T CrB,Brill,V,11.417,0.067,1.48,Kenji Mori,thin cirrus
+2026-09-11,00:21,Mira,Lyra,V,10.689,0.019,1.07,Ingrid Halvorsen,
+2026-09-11,00:34,chi Cyg,Aster,V,12.387,0.056,1.03,Tomasz Nowak,"dew on corrector, re-shot"
+2026-09-11,00:41,RS Oph,Aster,V,2.965,0.037,2.11,Tomasz Nowak,twilight
+2026-09-11,03:41,Algol,Brill,R,4.945,0.071,1.51,Kenji Mori,"""comparison star C3, not C2"""
+2026-09-11,03:52,SS Cyg,Aster,V,10.172,0.013,2.51,Kenji Mori,"wind gusts, trailing"
+2026-09-11,06:52,R Leo,Lyra,V,4.137,0.018,1.58,Kenji Mori,moon 60% up
+2026-09-11,07:11,R Leo,Lyra,V,7.69,0.047,1.29,Rosa Lind,moon 60% up
+2026-09-11,07:34,R Leo,Lyra,V,8.036,0.039,2.4,Yusuf Haddad,moon 60% up
+2026-09-11,07:41,R Leo,Lyra,V,6.475,0.028,2.52,Rosa Lind,"dew on corrector, re-shot"
+2026-09-11,07:52,chi Cyg,Aster,R,2.846,0.005,2.33,Kenji Mori,moon 60% up
+2026-09-11,23:52,chi Cyg,Aster,V,4.056,0.078,1.22,Tomasz Nowak,moon 60% up
+2026-09-11,23:59,RS Oph,Aster,V,9.352,0.013,1.15,Kenji Mori,thin cirrus
+2026-09-12,00:18,RS Oph,Aster,V,12.374,0.009,1.28,Yusuf Haddad,
+2026-09-12,00:37,RS Oph,Aster,V,4.447,0.035,1.54,Yusuf Haddad,twilight
+2026-09-12,00:50,T CrB,Brill,V,9.234,0.035,2.21,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-09-12,16:50,SS Cyg,Aster,B,8.746,0.005,2.03,Rosa Lind,
+2026-09-13,08:50,chi Cyg,Aster,R,6.715,0.005,1.08,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-09-13,09:01,T CrB,Brill,V,,,1.54,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-09-13,09:24,Mira,Lyra,V,10.054,0.015,1.05,Tomasz Nowak,
+2026-09-13,09:47,SS Cyg,Aster,B,4.096,0.036,1.2,Tomasz Nowak,
+2026-09-14,01:47,Algol,Brill,R,8.476,0.033,1.64,Kenji Mori,thin cirrus
+2026-09-14,02:28,chi Cyg,Aster,V,9.518,0.054,1.4,Kenji Mori,"""comparison star C3, not C2"""
+2026-09-14,18:28,Mira,Lyra,V,5.306,0.068,2.07,Rosa Lind,moon 60% up
+2026-09-14,18:47,R Leo,Lyra,V,7.9,0.032,2.57,Yusuf Haddad,"dew on corrector, re-shot"
+2026-09-14,19:10,T CrB,Brill,V,3.734,0.016,1.39,Tomasz Nowak,
+2026-09-14,19:29,T CrB,Brill,V,6.772,0.079,1.15,Ingrid Halvorsen,
+2026-09-14,20:10,R Leo,Lyra,V,6.263,0.065,1.82,Tomasz Nowak,
+2026-09-14,20:29,Algol,Brill,V,12.033,0.071,2.26,Ingrid Halvorsen,
+2026-09-15,12:29,delta Cep,Lyra,V,2.219,0.063,2.56,Rosa Lind,twilight
+2026-09-15,15:29,delta Cep,Lyra,V,8.438,0.032,1.36,Kenji Mori,thin cirrus
+2026-09-15,15:48,T CrB,Brill,V,2.852,0.057,1.75,Ingrid Halvorsen,
+2026-09-15,15:55,Mira,Lyra,V,2.369,0.022,2.22,Kenji Mori,"dew on corrector, re-shot"
+2026-09-15,16:36,R Leo,Lyra,V,4.406,0.042,2.14,Kenji Mori,
+2026-09-15,16:55,Mira,Lyra,V,9.241,0.016,1.92,Rosa Lind,
+2026-09-15,17:06,R Leo,Lyra,V,8.968,0.064,2.46,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-09-15,20:06,Algol,Brill,V,7.422,0.008,2.44,Ingrid Halvorsen,moon 60% up
+2026-09-16,12:06,R Leo,Lyra,V,4.364,0.067,2.52,Ingrid Halvorsen,
+2026-09-16,12:25,chi Cyg,Aster,R,3.119,0.031,1.94,Kenji Mori,
+2026-09-16,12:32,delta Cep,Lyra,V,4.381,0.04,1.58,Ingrid Halvorsen,
+2026-09-16,12:43,T CrB,Brill,V,6.433,0.079,2.28,Kenji Mori,thin cirrus
+2026-09-16,15:43,chi Cyg,Aster,V,6.677,0.035,1.65,Rosa Lind,twilight
+2026-09-16,16:02,T CrB,Brill,V,9.702,0.077,1.77,Rosa Lind,twilight
+2026-09-16,16:13,Algol,Brill,R,7.131,0.076,1.43,Yusuf Haddad,
+2026-09-16,16:24,R Leo,Lyra,V,2.662,0.062,2.14,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-09-16,19:24,Mira,Lyra,V,9.194,0.045,1.35,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-09-17,11:24,T CrB,Brill,V,7.948,0.049,1.1,Ingrid Halvorsen,
+2026-09-17,11:47,Mira,Lyra,V,11.406,0.015,1.83,Kenji Mori,
+2026-09-17,12:28,R Leo,Lyra,V,10.565,0.022,1.63,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-09-17,12:51,T CrB,Brill,V,8.801,0.063,2.31,Yusuf Haddad,twilight
+2026-09-18,04:51,chi Cyg,Aster,R,10.758,0.074,1.49,Tomasz Nowak,moon 60% up
+2026-09-18,05:04,delta Cep,Lyra,V,8.159,0.031,2.56,Yusuf Haddad,twilight
+2026-09-18,05:27,R Leo,Lyra,V,8.13,0.08,1.25,Tomasz Nowak,moon 60% up
+2026-09-18,06:08,chi Cyg,Aster,R,4.309,0.038,1.38,Yusuf Haddad,twilight
+2026-09-18,06:31,Algol,Brill,V,9.405,0.052,1.28,Yusuf Haddad,"wind gusts, trailing"
+2026-09-18,22:31,delta Cep,Lyra,V,11.245,0.034,2.25,Rosa Lind,"""comparison star C3, not C2"""
+2026-09-18,22:38,Algol,Brill,R,11.867,0.077,1.31,Kenji Mori,
+2026-09-18,23:19,chi Cyg,Aster,R,11.794,0.071,2.33,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-09-18,23:26,delta Cep,Lyra,V,5.251,0.051,1.48,Tomasz Nowak,"wind gusts, trailing"
+2026-09-19,00:07,chi Cyg,Aster,R,5.731,0.06,1.27,Rosa Lind,"""comparison star C3, not C2"""
+2026-09-19,00:14,chi Cyg,Aster,R,8.485,0.068,2.45,Tomasz Nowak,thin cirrus
+2026-09-19,00:33,T CrB,Brill,V,2.624,0.04,1.62,Rosa Lind,thin cirrus
+2026-09-19,00:52,Mira,Lyra,V,4.654,0.033,2.18,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-09-19,03:52,R Leo,Lyra,V,7.25,0.013,2.1,Rosa Lind,
+2026-09-19,04:05,SS Cyg,Aster,R,9.29,0.064,1.46,Kenji Mori,"""comparison star C3, not C2"""
+2026-09-19,04:28,SS Cyg,Aster,B,8.616,0.018,1.83,Rosa Lind,
+2026-09-19,04:41,RS Oph,Aster,B,11.772,0.007,2.32,Tomasz Nowak,
+2026-09-19,04:52,Mira,Lyra,V,9.34,0.023,1.06,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-09-19,05:15,SS Cyg,Aster,B,11.986,0.069,1.16,Rosa Lind,twilight
+2026-09-19,05:22,chi Cyg,Aster,R,4.527,0.041,2.13,Kenji Mori,thin cirrus
+2026-09-19,05:35,SS Cyg,Aster,V,3.355,0.028,1.05,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-09-19,06:16,Algol,Brill,R,8.682,0.051,2.22,Rosa Lind,
+2026-09-19,06:35,RS Oph,Aster,V,11.244,0.066,1.35,Rosa Lind,
+2026-09-19,09:35,chi Cyg,Aster,R,9.479,0.015,2.05,Ingrid Halvorsen,"wind gusts, trailing"
+2026-09-19,12:35,R Leo,Lyra,V,6.751,0.038,1.04,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-09-19,12:42,Algol,Brill,V,8.351,0.076,1.85,Ingrid Halvorsen,thin cirrus
+2026-09-19,12:53,T CrB,Brill,V,5.577,0.024,1.69,Rosa Lind,"wind gusts, trailing"
+2026-09-19,13:00,Mira,Lyra,V,4.958,0.031,2.28,Tomasz Nowak,
+2026-09-19,13:11,SS Cyg,Aster,V,10.678,0.036,2.17,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-09-19,13:34,R Leo,Lyra,V,7.639,0.058,1.71,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-09-19,13:53,RS Oph,Aster,B,5.22,0.079,2.13,Ingrid Halvorsen,
+2026-09-20,05:53,Mira,Lyra,V,7.899,0.012,1.45,Yusuf Haddad,
+2026-09-20,06:16,Algol,Brill,V,6.037,0.043,1.62,Yusuf Haddad,moon 60% up
+2026-09-20,06:39,chi Cyg,Aster,R,9.247,0.028,2.32,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-09-20,09:39,Algol,Brill,V,4.962,0.029,1.67,Tomasz Nowak,moon 60% up
+2026-09-20,10:02,R Leo,Lyra,V,5.76,0.068,2.45,Kenji Mori,moon 60% up
+2026-09-20,10:43,Mira,Lyra,V,8.834,0.052,1.94,Yusuf Haddad,"wind gusts, trailing"
+2026-09-20,10:56,delta Cep,Lyra,V,9.276,0.006,1.35,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-09-20,11:09,Algol,Brill,R,11.517,0.079,1.23,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-09-20,11:22,chi Cyg,Aster,R,3.65,0.06,2.35,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-09-20,14:22,T CrB,Brill,V,10.44,0.061,1.03,Tomasz Nowak,
+2026-09-20,14:41,T CrB,Brill,V,6.074,0.03,1.77,Kenji Mori,
+2026-09-20,15:22,RS Oph,Aster,B,11.177,0.023,1.54,Ingrid Halvorsen,"wind gusts, trailing"
+2026-09-20,15:29,delta Cep,Lyra,V,12.074,0.052,1.23,Ingrid Halvorsen,
+2026-09-20,18:29,T CrB,Brill,V,7.689,0.024,1.6,Yusuf Haddad,
+2026-09-21,10:29,R Leo,Lyra,V,4.352,0.063,1.81,Ingrid Halvorsen,
+2026-09-21,10:42,SS Cyg,Aster,B,6.728,0.012,1.76,Kenji Mori,"wind gusts, trailing"
+2026-09-21,10:49,R Leo,Lyra,V,5.466,0.037,2.08,Rosa Lind,"wind gusts, trailing"
+2026-09-22,02:49,R Leo,Lyra,V,9.546,0.074,1.9,Rosa Lind,"""comparison star C3, not C2"""
+2026-09-22,18:49,R Leo,Lyra,V,8.972,0.036,2.11,Ingrid Halvorsen,
+2026-09-22,18:56,Mira,Lyra,V,10.769,0.022,1.01,Ingrid Halvorsen,moon 60% up
+2026-09-22,19:37,delta Cep,Lyra,V,4.784,0.027,2.15,Ingrid Halvorsen,"wind gusts, trailing"
+2026-09-22,20:18,R Leo,Lyra,V,6.604,0.009,1.32,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-09-22,20:41,SS Cyg,Aster,B,3.306,0.054,2.19,Kenji Mori,"""comparison star C3, not C2"""
+2026-09-22,20:54,SS Cyg,Aster,B,2.95,0.067,1.35,Ingrid Halvorsen,
+2026-09-22,21:35,Mira,Lyra,V,8.953,0.03,2.18,Kenji Mori,
+2026-09-22,21:58,chi Cyg,Aster,V,10.813,0.034,2.05,Kenji Mori,moon 60% up
+2026-09-22,22:11,Algol,Brill,V,10.661,0.017,2.31,Tomasz Nowak,"wind gusts, trailing"
+2026-09-22,22:22,RS Oph,Aster,V,4.824,0.032,1.3,Tomasz Nowak,"wind gusts, trailing"
+2026-09-23,01:22,RS Oph,Aster,B,7.929,0.065,1.82,Ingrid Halvorsen,
+2026-09-23,01:33,RS Oph,Aster,B,6.323,0.055,2.52,Kenji Mori,
+2026-09-23,02:14,R Leo,Lyra,V,3.853,0.051,2.37,Rosa Lind,
+2026-09-23,02:21,Mira,Lyra,V,8.913,0.045,2.2,Tomasz Nowak,"dew on corrector, re-shot"
+2026-09-23,02:32,SS Cyg,Aster,V,3.013,0.041,2.59,Rosa Lind,"wind gusts, trailing"
+2026-09-23,18:32,SS Cyg,Aster,R,10.486,0.069,2.15,Tomasz Nowak,twilight
+2026-09-23,18:39,chi Cyg,Aster,V,10.616,0.024,1.73,Kenji Mori,
+2026-09-23,21:39,delta Cep,Lyra,V,6.27,0.074,1.24,Kenji Mori,
+2026-09-23,21:50,T CrB,Brill,V,2.828,0.052,2.02,Rosa Lind,
+2026-09-23,21:57,Mira,Lyra,V,7.369,0.05,1.31,Tomasz Nowak,
+2026-09-24,13:57,T CrB,Brill,V,2.237,0.067,1.21,Yusuf Haddad,moon 60% up
+2026-09-24,16:57,RS Oph,Aster,B,2.892,0.074,1.26,Tomasz Nowak,thin cirrus
+2026-09-24,17:20,chi Cyg,Aster,R,8.581,0.031,1.7,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-09-25,09:20,RS Oph,Aster,B,9.492,0.05,1.36,Ingrid Halvorsen,"dew on corrector, re-shot"
+2026-09-25,09:31,SS Cyg,Aster,R,3.372,0.01,1.52,Tomasz Nowak,
+2026-09-25,09:42,T CrB,Brill,V,3.169,0.006,1.63,Rosa Lind,
+2026-09-25,10:05,delta Cep,Lyra,V,11.962,0.022,1.39,Ingrid Halvorsen,
+2026-09-25,10:12,SS Cyg,Aster,V,2.678,0.03,2.45,Yusuf Haddad,
+2026-09-25,10:19,R Leo,Lyra,V,9.567,0.005,1.57,Ingrid Halvorsen,moon 60% up
+2026-09-25,10:26,Algol,Brill,R,11.728,0.041,1.21,Kenji Mori,
+2026-09-25,10:37,RS Oph,Aster,V,4.93,0.076,1.64,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-09-26,02:37,SS Cyg,Aster,B,11.665,0.016,2.16,Tomasz Nowak,
+2026-09-26,02:48,SS Cyg,Aster,R,3.318,0.032,1.97,Kenji Mori,
+2026-09-26,18:48,SS Cyg,Aster,R,4.819,0.026,1.39,Ingrid Halvorsen,"wind gusts, trailing"
+2026-09-26,19:29,chi Cyg,Aster,R,5.248,0.027,1.7,Rosa Lind,"wind gusts, trailing"
+2026-09-26,19:40,SS Cyg,Aster,B,4.503,0.058,2.44,Yusuf Haddad,"fast rise, see log, 2026-03-01"
+2026-09-26,20:21,T CrB,Brill,V,6.525,0.01,2.04,Yusuf Haddad,
+2026-09-27,12:21,Algol,Brill,R,7.263,0.042,1.95,Rosa Lind,"""comparison star C3, not C2"""
+2026-09-27,12:44,T CrB,Brill,V,11.892,0.037,2.43,Tomasz Nowak,"wind gusts, trailing"
+2026-09-27,12:55,delta Cep,Lyra,V,10.25,0.007,2.09,Tomasz Nowak,thin cirrus
+2026-09-27,13:08,T CrB,Brill,V,11.604,0.026,1.38,Rosa Lind,
+2026-09-28,05:08,chi Cyg,Aster,R,9.693,0.024,2.51,Yusuf Haddad,
+2026-09-28,05:31,delta Cep,Lyra,V,11.262,0.02,1.24,Yusuf Haddad,
+2026-09-28,21:31,SS Cyg,Aster,B,8.424,0.039,1.26,Rosa Lind,"dew on corrector, re-shot"
+2026-09-28,21:50,chi Cyg,Aster,V,10.861,0.071,1.85,Ingrid Halvorsen,"fast rise, see log, 2026-03-01"
+2026-09-29,13:50,Mira,Lyra,V,9.337,0.041,1.53,Kenji Mori,
+2026-09-30,05:50,Algol,Brill,R,5.316,0.047,2.37,Rosa Lind,
+2026-09-30,06:01,chi Cyg,Aster,R,8.497,0.013,1.88,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-09-30,09:01,RS Oph,Aster,V,5.885,0.06,1.81,Tomasz Nowak,moon 60% up
+2026-10-01,01:01,delta Cep,Lyra,V,9.965,0.009,1.66,Ingrid Halvorsen,moon 60% up
+2026-10-01,01:42,Algol,Brill,R,9.239,0.073,2.24,Yusuf Haddad,
+2026-10-01,01:55,Mira,Lyra,V,5.988,0.057,1.88,Rosa Lind,moon 60% up
+2026-10-01,02:18,chi Cyg,Aster,R,3.407,0.027,2.35,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-10-01,18:18,Mira,Lyra,V,7.566,0.029,1.2,Yusuf Haddad,"""comparison star C3, not C2"""
+2026-10-01,18:25,T CrB,Brill,V,5.576,0.055,1.83,Rosa Lind,"dew on corrector, re-shot"
+2026-10-01,19:06,Algol,Brill,V,2.819,0.078,1.74,Ingrid Halvorsen,twilight
+2026-10-01,19:25,Mira,Lyra,V,8.153,0.073,1.01,Yusuf Haddad,"wind gusts, trailing"
+2026-10-01,19:32,RS Oph,Aster,B,6.338,0.046,1.33,Kenji Mori,moon 60% up
+2026-10-02,11:32,chi Cyg,Aster,R,5.62,0.073,2.25,Kenji Mori,thin cirrus
+2026-10-02,11:55,T CrB,Brill,V,7.233,0.044,1.57,Ingrid Halvorsen,"wind gusts, trailing"
+2026-10-02,12:14,T CrB,Brill,V,3.441,0.005,1.46,Rosa Lind,
+2026-10-02,12:33,SS Cyg,Aster,B,11.747,0.064,1.14,Rosa Lind,twilight
+2026-10-03,04:33,Algol,Brill,R,3.56,0.018,1.13,Yusuf Haddad,twilight
+2026-10-03,04:40,SS Cyg,Aster,B,8.711,0.033,2.04,Tomasz Nowak,"dew on corrector, re-shot"
+2026-10-03,04:47,delta Cep,Lyra,V,3.575,0.032,2.1,Tomasz Nowak,
+2026-10-03,05:06,Mira,Lyra,V,10.389,0.033,1.45,Tomasz Nowak,
+2026-10-03,21:06,RS Oph,Aster,B,3.407,0.04,2.3,Ingrid Halvorsen,twilight
+2026-10-03,21:19,RS Oph,Aster,B,11.63,0.077,1.97,Tomasz Nowak,"fast rise, see log, 2026-03-01"
+2026-10-03,21:26,delta Cep,Lyra,V,2.847,0.067,1.78,Ingrid Halvorsen,moon 60% up
+2026-10-04,00:26,R Leo,Lyra,V,2.413,0.017,2.04,Yusuf Haddad,thin cirrus
+2026-10-04,00:37,Mira,Lyra,V,11.35,0.016,2.0,Kenji Mori,thin cirrus
+2026-10-04,00:56,Mira,Lyra,V,2.682,0.065,1.45,Tomasz Nowak,thin cirrus
+2026-10-04,01:37,SS Cyg,Aster,R,2.555,0.029,1.37,Ingrid Halvorsen,twilight
+2026-10-04,04:37,R Leo,Lyra,V,2.184,0.06,1.06,Ingrid Halvorsen,
+2026-10-04,04:44,R Leo,Lyra,V,6.332,0.043,2.22,Yusuf Haddad,thin cirrus
+2026-10-04,04:51,chi Cyg,Aster,V,12.298,0.011,1.02,Ingrid Halvorsen,twilight
+2026-10-04,05:10,RS Oph,Aster,B,3.813,0.005,1.96,Ingrid Halvorsen,"""comparison star C3, not C2"""
+2026-10-04,08:10,SS Cyg,Aster,R,2.596,0.035,2.19,Kenji Mori,"fast rise, see log, 2026-03-01"
+2026-10-04,08:23,SS Cyg,Aster,R,2.804,0.034,1.69,Rosa Lind,"""comparison star C3, not C2"""
+2026-10-05,00:23,Mira,Lyra,V,7.099,0.021,2.36,Kenji Mori,
+2026-10-05,16:23,R Leo,Lyra,V,4.388,0.035,1.03,Kenji Mori,
+2026-10-05,16:30,T CrB,Brill,V,12.278,0.029,1.05,Rosa Lind,
+2026-10-06,08:30,Algol,Brill,V,2.781,0.073,2.22,Kenji Mori,"""comparison star C3, not C2"""
+2026-10-07,00:30,Mira,Lyra,V,10.784,0.024,1.75,Rosa Lind,
+2026-10-07,00:53,Algol,Brill,V,7.099,0.036,1.34,Rosa Lind,
+2026-10-07,01:12,SS Cyg,Aster,V,6.689,0.074,2.28,Kenji Mori,"dew on corrector, re-shot"
+2026-10-07,01:19,T CrB,Brill,V,6.616,0.037,1.3,Rosa Lind,
+2026-10-07,01:26,R Leo,Lyra,V,5.177,0.027,2.06,Kenji Mori,moon 60% up
+2026-10-07,01:33,SS Cyg,Aster,V,6.956,0.037,2.46,Rosa Lind,"dew on corrector, re-shot"
+2026-10-07,02:14,Algol,Brill,V,3.033,0.024,1.82,Rosa Lind,"fast rise, see log, 2026-03-01"
+2026-10-07,18:14,R Leo,Lyra,V,7.698,0.079,2.53,Tomasz Nowak,thin cirrus
+2026-10-07,18:25,delta Cep,Lyra,V,5.743,0.007,2.39,Ingrid Halvorsen,moon 60% up
+2026-10-07,18:38,SS Cyg,Aster,R,8.814,0.075,2.2,Rosa Lind,
+2026-10-07,19:19,delta Cep,Lyra,V,9.308,0.032,1.11,Tomasz Nowak,"""comparison star C3, not C2"""
+2026-10-08,11:19,Algol,Brill,R,11.964,0.032,1.19,Kenji Mori,thin cirrus
+2026-10-08,11:30,T CrB,Brill,V,11.52,0.034,1.79,Ingrid Halvorsen,twilight
+2026-10-08,11:53,T CrB,Brill,V,6.906,0.017,2.31,Ingrid Halvorsen,
+2026-10-08,12:04,Mira,Lyra,V,7.739,0.061,1.27,Tomasz Nowak,"wind gusts, trailing"
+2026-10-09,04:04,delta Cep,Lyra,V,6.179,0.06,2.42,Rosa Lind,"""comparison star C3, not C2"""
+2026-10-09,04:17,delta Cep,Lyra,V,11.036,0.061,1.43,Kenji Mori,"wind gusts, trailing"
+2026-10-09,04:36,SS Cyg,Aster,V,5.596,0.038,1.52,Yusuf Haddad,
+2026-10-09,04:47,Algol,Brill,R,11.08,0.078,1.45,Kenji Mori,moon 60% up
+2026-10-09,05:10,Mira,Lyra,V,3.778,0.04,2.14,Rosa Lind,moon 60% up
+2026-10-09,05:21,delta Cep,Lyra,V,2.871,0.035,2.58,Tomasz Nowak,"dew on corrector, re-shot"
+2026-10-09,06:02,delta Cep,Lyra,V,6.901,0.011,2.02,Yusuf Haddad,
+2026-10-09,09:02,SS Cyg,Aster,V,11.039,0.072,1.44,Rosa Lind,thin cirrus
+2026-10-09,09:09,chi Cyg,Aster,V,12.057,0.039,2.36,Tomasz Nowak,
+2026-10-09,09:20,Algol,Brill,R,4.127,0.012,2.1,Kenji Mori,
+2026-10-09,09:27,SS Cyg,Aster,R,3.305,0.068,1.36,Tomasz Nowak,"wind gusts, trailing"
+2026-10-09,10:08,RS Oph,Aster,V,8.568,0.019,1.49,Kenji Mori,
+2026-10-09,10:49,SS Cyg,Aster,V,6.569,0.046,1.1,Kenji Mori,twilight
+2026-10-09,10:56,Mira,Lyra,V,5.456,0.033,1.25,Kenji Mori,
+2026-10-09,11:09,SS Cyg,Aster,R,2.684,0.065,1.85,Tomasz Nowak,"wind gusts, trailing"
+2026-10-09,11:16,R Leo,Lyra,V,3.057,0.012,1.64,Tomasz Nowak,

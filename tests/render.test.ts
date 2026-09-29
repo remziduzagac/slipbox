@@ -61,7 +61,7 @@ describe("snapshots of the layout IR as text", () => {
     });
   }
   // The samples beyond markdown, each read by its own reader (16.11–16.13, 16.16, 16.17).
-  const others = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => /\.(org|adoc|toml|ya?ml|json|csv)$/.test(f) && !f.includes("broken") && !f.startsWith(".slipbox")).sort();
+  const others = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => /\.(org|adoc|toml|ya?ml|json|csv|tsv|ini|cfg|properties|env)$/.test(f) && !/broken|photometry/.test(f) && !f.startsWith(".slipbox")).sort();
   test("the samples beyond markdown are there", () => {
     expect(others.length).toBeGreaterThanOrEqual(6);
   });
@@ -74,6 +74,19 @@ describe("snapshots of the layout IR as text", () => {
       expect(text(renderTree(parsed.tree, { width: 80, glyphs: unicode, showUrls: true }))).toMatchSnapshot();
     });
   }
+  test("a big CSV: its first 2,000 rows as a table, the rest counted (logs/photometry-2026.csv)", () => {
+    const src = readFileSync(join(SAMPLES, "logs", "photometry-2026.csv"), "utf8");
+    const parsed = parseData("csv", src);
+    expect(parsed.error).toBeNull();
+    const t = parsed.tree.children[0] as unknown as { type: string; children: { position: { start: { line: number } } }[] };
+    expect(t.type).toBe("table");
+    expect(t.children.length).toBe(2001); // the header and 2,000 rows
+    expect(t.children[2000]!.position.start.line).toBe(2001);
+    const out = text(renderTree(parsed.tree, { width: 120, glyphs: unicode, showUrls: false }));
+    expect(out).toContain("… 600 more rows");
+    const cells = (t.children as unknown as { children: { children: { value?: string }[] }[] }[]).flatMap((r) => r.children.map((c) => c.children[0]?.value ?? ""));
+    expect(cells).toContain('"comparison star C3, not C2"'); // doubled quotes read as one
+  });
   test("wrap-probe @ 44 (narrow)", () => {
     const src = readFileSync(join(SAMPLES, "scratch", "wrap-probe.md"), "utf8");
     expect(text(renderMarkdown(src, { width: 44, glyphs: unicode, showUrls: false }))).toMatchSnapshot();
