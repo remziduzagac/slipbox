@@ -10,6 +10,8 @@ behaviour, the matching document changes in the same commit.
 | [architecture.md](architecture.md) | one core and three faces, the boundary, modules, storage, performance |
 | [rendering.md](rendering.md) | phase 1: layout IR, blocks, tables, wrapping, themes, glyphs, escapes |
 | [tui.md](tui.md) | phases 2–3: the TUI — reading, navigation, watching, editing, the lens, saving |
+| [keymap.md](keymap.md) | every key: the conventions, the direct keys, the leader groups, the `:` aliases |
+| [keymap-comparison.md](keymap-comparison.md) | the keys beside vim's, VS Code's and Obsidian's, and where they differ |
 | [cli.md](cli.md) | the agent surface: commands, JSON contract, exit codes, capture |
 | [configuration.md](configuration.md) | every config key and environment variable |
 | [testing.md](testing.md) | test strategy and the fixture vault |

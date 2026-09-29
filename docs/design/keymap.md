@@ -3,7 +3,8 @@
 The reading keymap, decided 2026-09-25 as a replacement for the phase 2 keymap in the first
 version of [tui.md](tui.md). Every binding here is a default: all of it, plus the leader key,
 the which-key group names and the `:` aliases, comes from config and reloads live
-([configuration.md](configuration.md)).
+([configuration.md](configuration.md)). [keymap-comparison.md](keymap-comparison.md) sets the keys
+beside vim's, VS Code's and Obsidian's.
 
 ## Notation
 
