@@ -633,10 +633,26 @@ in its first 8 KB), which never opens.
   opens in source mode, the error said; one that stops parsing while edited goes there when insert
   mode ends (never mid-typing: an open quote is normal while a value is typed), and `space n v`
   renders it again once it parses (`16.14`).
-- **Text files open in source mode**, highlighted by their language (highlight.js, a line at a time
-  for now; tree-sitter comes with `16.7`); no markdown headings are looked for in them. They have
-  no rendered view: `space n v` and the lens say so and stay in source mode. A window that was in
-  source mode only for such a file renders again when it opens a note (a link, `history.back`).
+- **Text files open in source mode**, highlighted by their language; no markdown headings are
+  looked for in them. They have no rendered view: `space n v` and the lens say so and stay in
+  source mode. A window that was in source mode only for such a file renders again when it opens a
+  note (a link, `history.back`).
+- **Source code through tree-sitter** (`16.6`–`16.9`: TypeScript, TSX, JavaScript, Python, shell,
+  Lua, Go, Rust). Each language's grammar (a wasm file, bundled) loads the first time a file of it
+  opens, never at start-up; until it lands, the file shows as any text file, and it draws again
+  when it does. A parse runs at once on open and then 150 ms after typing pauses — never per key
+  (tens of milliseconds for a 4,000-line file) — and the layout uses its last answer:
+  - **Highlighting.** highlight.js still colours each line; tree-sitter adds what a line can't
+    know alone, that it starts inside a string or comment opened above (a template string's middle
+    lines, a docstring, a block comment).
+  - **Outline and breadcrumb.** The file's definitions — functions, classes, methods, types,
+    interfaces, enums, Rust's structs, traits, impls and modules — as headings nested by where they
+    sit, from a query per language. `ctrl+o`, `]]` and the breadcrumb use them as a note's.
+  - **Syntax errors** (syntax only: no types, no lint). Where the parser found an error or had to
+    invent a missing token, the text is underlined (`syntax_error`), and its line number is red
+    when numbers show; the status line says `✖ n syntax errors`, or the error itself on the
+    cursor's line. Never during insert mode — a half-typed line is always broken — and only for
+    the text as it is now: after an edit the marks come back when the new parse lands.
 - **Editing and saving** work as for notes: the same undo, saves, autosave and conflict prompt; an
   agent's change to an open file reloads it.
 - **What lists them.** The explorer and the switcher show what `files.show` says (`notes`,

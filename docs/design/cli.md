@@ -118,10 +118,12 @@ rewrite them.
 4. A data or text file of the vault (`16.4`), by its path with its extension (`cfg/app.toml`,
    `tool.py`), from the current folder or the vault's root. It's read and written as it is, never
    parsed as a note. A data file renders (`render`, as in the TUI) and has an outline (its
-   sections); one that doesn't parse is exit 1 with its error. A text file has neither: `render`
-   is exit 2 (`read` gives its text). `task` is for notes (exit 2 otherwise). `links` on a data file
-   lists its links (`16.15`: URLs, reference keys' values, paths that resolve); `backlinks` of any
-   file lists the notes and data files linking to it. A binary file is never written (exit 5).
+   sections); one that doesn't parse is exit 1 with its error. A text file has no rendered form:
+   `render` is exit 2 (`read` gives its text). Source code in a language with a grammar (`16.8`) has
+   an outline: its definitions, each heading with a `kind` (`function`, `class`, `method`…). `task`
+   is for notes (exit 2 otherwise). `links` on a data file lists its links (`16.15`: URLs, reference
+   keys' values, paths that resolve); `backlinks` of any file lists the notes and data files linking
+   to it. A binary file is never written (exit 5).
 
 `ls --files` lists the data and text files too (each with `group` and `format`); `find --files`
 searches them as well. `write --create` keeps a name's known extension (`cfg/new.json`,

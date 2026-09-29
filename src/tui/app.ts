@@ -9,8 +9,10 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
+import { grammarFor, grammarNow, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
+import { onLoaded } from "../core/lazy.ts";
 import ignore from "ignore";
-import { classify, type FileGroup } from "../core/filetypes.ts";
+import { classify, extensionOf, type FileGroup } from "../core/filetypes.ts";
 import { appendFileSync, existsSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { readRegular, readText, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
@@ -490,6 +492,11 @@ export class App {
       if (first) this.openInNewTab(first);
     }
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
+    // A grammar (or anything lazy) that finished loading: lay out again and draw.
+    this.stopLazy = onLoaded(() => {
+      this.relayoutAll();
+      this.host.requestRender();
+    });
     this.publishState();
     this.recordConfigStamps();
     if (opts.watch !== false) {
@@ -781,6 +788,36 @@ export class App {
     };
   }
 
+  /**
+   * A source file's tree-sitter pass (16.7–16.9), kept current: at once the first time, then
+   * 150 ms after edits stop (a big file's parse takes tens of milliseconds, never paid per key).
+   * The grammar loads lazily; until it lands, highlight.js colours alone.
+   */
+  ensureSyntax(buf: NoteBuffer): void {
+    if (buf.kind.group !== "text" || buf.syntax?.version === buf.version || this.syntaxTimers.has(buf)) return;
+    const g = grammarFor(buf.kind.format, extensionOf(buf.name));
+    const loaded = g ? grammarNow(g) : null;
+    if (!loaded) return; // loading: onLoaded draws again, and this runs then
+    const run = () => {
+      this.syntaxTimers.delete(buf);
+      const tree = parseSyntax(loaded, buf.source);
+      if (!tree) return;
+      const spans = new Map<number, SyntaxSpan[]>();
+      for (const s of tree.spans()) spans.set(s.line, [...(spans.get(s.line) ?? []), s]);
+      buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors() };
+      tree.tree.delete();
+      buf.invalidateLayouts();
+      for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+      this.host.requestRender();
+    };
+    const t = setTimeout(run, buf.syntax ? 150 : 0);
+    (t as { unref?: () => void }).unref?.();
+    this.syntaxTimers.set(buf, t);
+  }
+
+  private readonly syntaxTimers = new Map<NoteBuffer, ReturnType<typeof setTimeout>>();
+  private stopLazy: (() => void) | null = null;
+
   /** Whether a file has a rendered view: markdown notes do, data files while they parse
    *  (16.11–16.14), text files never. */
   canRender(buf: NoteBuffer): boolean {
@@ -931,6 +968,7 @@ export class App {
       : this.ui.wrap
         ? this.textWidth(paneWidth, gutter)
         : this.nowrapWidth(view, paneWidth, gutter);
+    if (view.source) this.ensureSyntax(view.buf);
     const layout = view.source
       ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs)
       : view.live
@@ -3845,6 +3883,7 @@ export class App {
       writeDirty(this.loc.root, []);
     } catch {}
     this.watcher?.close();
+    this.stopLazy?.();
     if (this.stateTimer) clearTimeout(this.stateTimer);
     this.saveState();
     this.host.quit();

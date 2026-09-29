@@ -31,6 +31,8 @@ export const ROLES = [
   "syn_keyword", "syn_function", "syn_string", "syn_number", "syn_comment", "syn_type",
   "syn_variable", "syn_constant", "syn_operator", "syn_punctuation", "syn_tag", "syn_attr",
   "syn_builtin", "syn_meta", "syn_regexp", "syn_section", "syn_addition", "syn_deletion",
+  // a source file's syntax error (16.9), drawn over the text in source mode
+  "syntax_error",
   // chrome
   "border", "status", "status_accent", "status_dim",
   "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active",
@@ -157,6 +159,7 @@ export function themeFromPalette(
     fm_value: { fg: p.fg },
     fm_border: { fg: p.surface2 },
     fm_error: { fg: p.red },
+    syntax_error: { fg: p.red, underline: true },
     callout_note: { fg: p.blue, bold: true },
     callout_tip: { fg: p.green, bold: true },
     callout_important: { fg: p.purple, bold: true },
@@ -344,5 +347,6 @@ export function monoTheme(): Theme {
   roles.html = { dim: true };
   roles.dim = { dim: true };
   roles.fm_error = { bold: true };
+  roles.syntax_error = { bold: true, underline: true };
   return { ...t, name: "mono", roles };
 }

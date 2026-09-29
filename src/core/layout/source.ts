@@ -8,6 +8,7 @@
 // show as `�` — the terminal never receives one.
 
 import { slugify } from "../parse.ts";
+import type { Span as SyntaxSpan } from "../syntax.ts";
 import { highlight } from "./highlight.ts";
 import { graphemes, graphemeWidth } from "../width.ts";
 import type { Layout, LayoutHeading, Line, Span } from "./ir.ts";
@@ -23,9 +24,12 @@ export interface SourceLayoutOptions {
   tabWidth?: number;
   /** A slice of lines (live preview's block): every line is a row, a last empty one too. */
   slice?: boolean;
-  /** Not markdown (16.4): the file's language, highlighted a line at a time (tree-sitter's
-   *  structure comes later, 16.7); "text", or a language highlight.js lacks, is plain. */
+  /** Not markdown (16.4): the file's language, highlighted a line at a time; "text", or a
+   *  language highlight.js lacks, is plain. */
   language?: string | null;
+  /** Tree-sitter's word (16.7) on what highlight.js can't see from one line: the parts of line
+   *  `line` (1-based) inside a string or comment that spans lines. */
+  spans?: (line: number) => SyntaxSpan[] | undefined;
 }
 
 /** A displayed grapheme and the source offset (UTF-16, within its line) it came from. */
@@ -73,8 +77,14 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   const O = old.texts;
   const n = texts.length;
   // The unchanged lines at each end.
+  // Code: a line is unchanged only if its tree-sitter state is too (closing a string lower down
+  // recolours the lines it now covers, above the edit).
+  const sig = (line: number) => {
+    const s = opts.spans?.(line);
+    return s?.length ? s.map((x) => `${x.kind}${x.from}-${x.to}`).join(",") : "";
+  };
   let pre = 0;
-  while (pre < n && pre < O.length && texts[pre] === O[pre]) pre++;
+  while (pre < n && pre < O.length && texts[pre] === O[pre] && (!lang || old.states[pre] === sig(pre + 1))) pre++;
   let suf = 0;
   while (suf < n - pre && suf < O.length - pre && texts[n - 1 - suf] === O[O.length - 1 - suf]) suf++;
   const states: string[] = old.states.slice(0, pre);
@@ -84,7 +94,12 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   // The state at the first changed line: after the unchanged ones, as the old layout had it.
   let state = pre > 0 ? nextState(old, pre - 1, texts[pre - 1]!) : texts[0]?.replace(/\r$/, "") === "---" ? "fm0" : "";
   const lay = (i: number) => {
-    const built = layoutLine(texts[i]!, state, i, width, tab, lang);
+    const lineSpans = opts.spans?.(i + 1);
+    // For code, a line's state is what tree-sitter says of it: which parts are inside a string or
+    // comment opened above — so a line whose text is the same but whose context changed is laid
+    // out again.
+    if (lang) state = sig(i + 1);
+    const built = layoutLine(texts[i]!, state, i, width, tab, lang, lineSpans);
     states.push(state);
     rows.push(built.rows);
     naturals.push(built.natural);
@@ -98,6 +113,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   const shift = n - O.length;
   for (; i < n; i++) {
     const o = i - shift;
+    if (lang) state = sig(i + 1); // code: each line's own state, from tree-sitter's spans
     if (old.states[o] !== state) {
       lay(i);
       continue;
@@ -142,9 +158,9 @@ function nextState(old: SourceCache, i: number, raw: string): string {
 }
 
 /** One source line's rows. */
-function layoutLine(raw: string, state: string, i: number, width: number, tab: number, lang: string | null = null): { rows: Line[]; natural: number; out: string } {
+function layoutLine(raw: string, state: string, i: number, width: number, tab: number, lang: string | null = null, spans?: SyntaxSpan[]): { rows: Line[]; natural: number; out: string } {
   const src = i + 1;
-  const hl = lang ? codeLine(raw, lang) : highlightLine(raw, state, i);
+  const hl = lang ? codeLine(raw, lang, spans) : highlightLine(raw, state, i);
   const text = raw.endsWith("\r") ? raw.slice(0, -1) : raw; // CRLF: the CR isn't shown
   const cells: Cell[] = [];
   let col = 0;
@@ -206,8 +222,9 @@ function toSpans(cells: Cell[], src: number): Span[] {
   return spans;
 }
 
-/** A line of code, coloured by highlight.js alone (no state across lines yet). */
-function codeLine(raw: string, lang: string): { roles: Role[]; out: string } {
+/** A line of code: highlight.js's colours, then tree-sitter's multi-line strings and comments
+ *  over them (a line inside a docstring has no quote of its own to tell highlight.js). */
+function codeLine(raw: string, lang: string, spans?: SyntaxSpan[]): { roles: Role[]; out: string } {
   const roles: Role[] = new Array(raw.length).fill("text");
   const tokens = raw.trim() ? highlight(raw.replace(/\r$/, ""), lang)?.[0] : undefined;
   let at = 0;
@@ -215,6 +232,7 @@ function codeLine(raw: string, lang: string): { roles: Role[]; out: string } {
     if (t.role) for (let k = at; k < at + t.text.length && k < roles.length; k++) roles[k] = t.role;
     at += t.text.length;
   }
+  for (const s of spans ?? []) for (let k = s.from; k < Math.min(s.to, roles.length); k++) roles[k] = s.kind === "string" ? "syn_string" : "syn_comment";
   return { roles, out: "" };
 }
 

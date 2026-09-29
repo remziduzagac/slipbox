@@ -11,6 +11,7 @@ import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncate
 import { sanitize } from "../core/sanitize.ts";
 import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
+import type { SyntaxError } from "../core/syntax.ts";
 import { cells, ordered } from "./cursor.ts";
 import { fuzzy } from "./fuzzy.ts";
 import { prettyKey, spellKey } from "./keys.ts";
@@ -696,6 +697,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   view.left = app.ui.wrap ? 0 : Math.max(0, Math.min(view.left, Math.max(0, layout.width - textW)));
   const cursorSrc = layout.lines[view.cur.row]?.src;
 
+  const errors = syntaxErrorsShown(view);
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
   // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
   const shown = app.screenRows(view, layout);
@@ -710,7 +712,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     if (band) c.fill(body.x, y, body.w - 1, 1, band);
     if (gutter) {
       const num = line.src !== prevSrc ? String(line.src).padStart(gutter - 1) : "";
-      const role: Role = line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
+      const role: Role = errors?.has(line.src) ? "error" : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
       if (num) drawText(c, gutterX, y, num, { ...roleStyle(theme, role, page), bg: band ?? page });
     }
     prevSrc = line.src;
@@ -728,6 +730,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const to = sel.line || row !== sel.range[1].row ? 1e9 : sel.range[1].col + 1;
       marks.push({ from, to, role: "selection" });
     }
+    if (errors) marks.push(...errorMarks(line, errors.get(line.src), layout.lines[row + 1]?.src !== line.src));
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
     // An oversized lens's rules say how much of it is out of sight: ↑ above, ↓ below.
     if ((line.lens === "top" || line.lens === "bottom") && hidden.length) {
@@ -776,6 +779,31 @@ function drawHScrollbar(app: App, c: Canvas, r: Rect, total: number, left: numbe
   const trackGlyph = theme.roles.scrollbar_track.fg ? app.glyphs.hScrollTrack : " ";
   drawText(c, r.x, r.y, trackGlyph.repeat(r.w), track, r.w);
   drawText(c, r.x + pos, r.y, app.glyphs.hScrollThumb.repeat(thumb), st, thumb);
+}
+
+/**
+ * A source file's syntax errors by line (16.9), while they're worth showing: in source mode, out
+ * of insert (a half-typed line is always broken), and only for the text as it is now.
+ */
+function syntaxErrorsShown(view: View): Map<number, SyntaxError[]> | null {
+  const syn = view.buf.syntax;
+  if (!view.source || view.insert || !syn?.errors.length || syn.version !== view.buf.version) return null;
+  const out = new Map<number, SyntaxError[]>();
+  for (const e of syn.errors) out.set(e.line, [...(out.get(e.line) ?? []), e]);
+  return out;
+}
+
+/** The columns of one row an error covers; one past the line's end (a missing `)`) marks its last cell. */
+function errorMarks(line: Line, errs: SyntaxError[] | undefined, lastRow: boolean): { from: number; to: number; role: Role }[] {
+  if (!errs || !line.srcMap) return [];
+  const cs = cells(line);
+  const out: { from: number; to: number; role: Role }[] = [];
+  for (const e of errs) {
+    const hit = cs.filter((k) => k.at! >= e.from && k.at! < e.to);
+    if (hit.length) out.push({ from: hit[0]!.x, to: hit[hit.length - 1]!.x + hit[hit.length - 1]!.w, role: "syntax_error" });
+    else if (lastRow && e.from >= line.srcMap.end && cs.length) out.push({ from: cs[cs.length - 1]!.x, to: cs[cs.length - 1]!.x + cs[cs.length - 1]!.w, role: "syntax_error" });
+  }
+  return out;
 }
 
 /** A scrollbar: a `▐` track with a `▐` thumb sized and placed for `total` rows from `top`. */
@@ -1180,6 +1208,14 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
       ? { text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`, role: "check_done" as Role }
       : { text: "○ not watching", role: "status_dim" as Role };
   const rx = c.width - rightW;
+  // A source file's syntax errors (16.9): the one on the cursor's line, else how many there are.
+  const errs = syntaxErrorsShown(view);
+  if (errs) {
+    const here = errs.get(src)?.[0];
+    const n = [...errs.values()].reduce((k, l) => k + l.length, 0);
+    const text = here ? `  ✖ ${here.message}` : `  ✖ ${n} syntax error${n === 1 ? "" : "s"}`;
+    if (x + stringWidth(text) + 1 < rx) x += drawText(c, x, y, text, { ...roleStyle(theme, "error", st.bg), bg: st.bg });
+  }
   if (x + stringWidth(watch.text) + 3 < rx) x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
   if (rx > x) drawText(c, rx, y, right, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
 }

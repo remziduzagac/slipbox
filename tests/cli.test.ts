@@ -536,6 +536,13 @@ describe("the vault and the tool", () => {
     expect(r.out).toMatch(/name\s+Halden Ridge\s+# the observatory/);
     expect(slipbox(["outline", "cfg/site.toml", "--json"]).json.data.headings.map((h: { text: string }) => h.text)).toEqual(["site"]);
     expect(slipbox(["render", "tool.py"]).code).toBe(2);
+    // Source code's outline is its definitions, from its grammar (16.8).
+    writeFileSync(join(vault, "shape.py"), "class Shape:\n    def area(self):\n        return 0\n");
+    expect(slipbox(["outline", "shape.py", "--json"]).json.data.headings).toEqual([
+      { depth: 1, text: "Shape", kind: "class", line: 1 },
+      { depth: 2, text: "area", kind: "method", line: 2 },
+    ]);
+    rmSync(join(vault, "shape.py"));
     expect(slipbox(["task", "tool.py"]).code).toBe(2);
     // Its links (16.15): a path that resolves, and it shows among the target's backlinks.
     writeFileSync(join(vault, "cfg", "links.yaml"), "docs: ../home.md\nnope: home.md\nname: not-a-link\n"); // relative to the file

@@ -15,7 +15,8 @@ import { readText, type Stamp, stamp } from "../core/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
 import { layoutSource, newSourceCache } from "../core/layout/source.ts";
-import { headingsOf, newParseCache, type ParsedNote, parseMarkdown } from "../core/parse.ts";
+import { headingsOf, newParseCache, type ParsedNote, parseMarkdown, slugify } from "../core/parse.ts";
+import type { OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
 export interface TextEdit {
@@ -64,6 +65,13 @@ export class NoteBuffer {
 
   /** What the file is (16.1): a note, a data file or a text file — which modes and layouts it has. */
   kind: FileKind = { group: "note", format: "markdown" };
+
+  /**
+   * What tree-sitter last found in a source file (16.7–16.9), and for which version: spans of lines
+   * inside multi-line strings and comments, the outline, syntax errors. The app refreshes it
+   * shortly after edits stop; until then the layout uses it as it is.
+   */
+  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[] } | null = null;
 
   constructor(
     /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */
@@ -273,8 +281,11 @@ export class NoteBuffer {
       const markdown = this.kind.format === "markdown";
       // Files beyond notes: highlighted by their language, no markdown headings (a `# comment`
       // in a shell script is no heading).
-      const headings = !markdown ? [] : parsed ? headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line })) : "scan";
-      l = layoutSource(this.source, { width, wrap, headings, language: markdown ? null : this.kind.format }, this.sourceCache);
+      // A source file's outline (16.8) stands in for headings: the outline pane, the breadcrumb.
+      const code = this.syntax ? this.syntax.outline.map((o) => ({ level: Math.min(6, o.depth + 1), text: o.name, slug: slugify(o.name), src: o.line })) : [];
+      const headings = !markdown ? code : parsed ? headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line })) : "scan";
+      const spans = this.syntax?.spans;
+      l = layoutSource(this.source, { width, wrap, headings, language: markdown ? null : this.kind.format, ...(spans ? { spans: (line: number) => spans.get(line) } : {}) }, this.sourceCache);
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
     }

@@ -274,6 +274,10 @@ highlight.js with about 25 common languages (`bash`, `typescript`, `lua`, `pytho
 auto-detection is slow and often wrong. Scopes map to the `syn_*` roles. It lives in the core, so
 `slipbox render` and the TUI highlight identically.
 
+Source files in source mode use it too, a line at a time, with tree-sitter (`core/syntax.ts`,
+`16.7`) painting over it the parts of lines inside a string or comment that spans lines — which a
+line alone can't know. See [tui.md](tui.md), "Files beyond notes".
+
 ## The ANSI writer
 
 `layout/ansi.ts` writes the IR as text for `slipbox render`. Colour depth comes from `NO_COLOR`,

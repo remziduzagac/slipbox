@@ -5,6 +5,8 @@
 // This module must never import from src/tui/ — scripts/check-boundary.ts enforces it for core,
 // and the CLI keeps to the same rule so it runs without a terminal renderer.
 
+import { grammar, grammarFor, parseSyntax } from "../core/syntax.ts";
+import { loadError } from "../core/lazy.ts";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, statSync } from "node:fs";
@@ -501,9 +503,23 @@ const HANDLERS: Record<string, Handler> = {
     return { data, human: lines.map((l) => `${l}\n`).join("") };
   },
 
-  outline(s, rest) {
+  async outline(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
-    // A data file's sections are its outline (16.11); a text file has none (yet: 16.8).
+    // Source code's outline is its definitions, from its grammar (16.8), each with its kind.
+    const kind = classify(rel, s.config.walk.extensions);
+    const g = kind.group === "text" ? grammarFor(kind.format, extensionOf(rel)) : null;
+    if (g) {
+      const loaded = await grammar(g);
+      const tree = loaded ? parseSyntax(loaded, readText(s.graph.abs(rel)).text) : null;
+      if (!tree) throw new CliError(`couldn't load the ${g} grammar${loadError(`grammar:${g}`) ? ` — ${loadError(`grammar:${g}`)}` : ""}`, EXIT.error);
+      const defs = tree.outline().map((d) => ({ depth: d.depth + 1, text: d.name, kind: d.kind, line: d.line }));
+      tree.tree.delete();
+      return {
+        data: { path: rel, headings: defs },
+        human: defs.map((d) => `${String(d.line).padStart(5)}  ${"  ".repeat(d.depth - 1)}${d.kind} ${d.text}\n`).join(""),
+      };
+    }
+    // A data file's sections are its outline (16.11); other text files have none.
     const hs = s.graph.entry(rel)?.headings ?? headingsOf(parseFile(s, rel, readText(s.graph.abs(rel)).text).tree);
     return {
       data: { path: rel, headings: hs },
