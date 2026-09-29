@@ -877,3 +877,54 @@ describe("file groups (16.1)", () => {
     expect(isKnownExtension("toml") && isKnownExtension("py") && !isKnownExtension("2")).toBe(true);
   });
 });
+
+describe("data files read as documents (16.11–16.13)", () => {
+  const fields = (tree: { children: unknown[] }) => tree.children.filter((n) => (n as { type: string }).type === "dataField") as { key: string; value: string; kind: string; comment: string | null; position: { start: { line: number }; end: { line: number } } }[];
+  const headings = (tree: { children: unknown[] }) => tree.children.filter((n) => (n as { type: string }).type === "heading").map((n) => (n as { children: { value: string }[] }).children[0]!.value);
+  test("TOML: sections, keys with their lines and comments, multi-line values, record arrays", async () => {
+    const { parseData } = await import("../src/core/data.ts");
+    const d = parseData("toml", '# top\ntitle = "x"\n\n[a.b]\n# above\nlist = [\n  1,\n  2,\n]\ns = """\nlong\n"""\nn = 3 # three\n\n[[s]]\nname = "p"\n[[s]]\nname = "q"\n');
+    expect(d.error).toBeNull();
+    expect(headings(d.tree)).toEqual(["a.b", "s"]);
+    const f = fields(d.tree);
+    expect(f.map((x) => x.key)).toEqual(["title", "list", "s", "n"]);
+    expect(f[0]).toMatchObject({ value: "x", kind: "string", comment: "top", position: { start: { line: 1 }, end: { line: 2 } } });
+    expect(f[1]).toMatchObject({ kind: "list", comment: "above", position: { start: { line: 5 }, end: { line: 9 } } });
+    expect(f[2]!.value).toBe("long");
+    expect(f[3]).toMatchObject({ value: "3", kind: "number", comment: "three" });
+    expect(d.tree.children.some((n) => n.type === "table")).toBe(true); // [[s]] ×2 → a table
+    expect(parseData("toml", "[bad\n").error).toBeTruthy();
+  });
+  test("YAML and JSON: nested maps as headings, lists of records as tables, positions from the text", async () => {
+    const { parseData } = await import("../src/core/data.ts");
+    const y = parseData("yaml", "a: 1\nb:\n  c: true\n  d: [x, y]\nrows:\n  - k: 1\n  - k: 2\n");
+    expect(y.error).toBeNull();
+    expect(headings(y.tree)).toEqual(["b", "rows"]);
+    expect(fields(y.tree).map((x) => [x.key, x.value, x.kind, x.position.start.line])).toEqual([
+      ["a", "1", "number", 1],
+      ["c", "true", "boolean", 3],
+      ["d", "[x, y]", "list", 4],
+    ]);
+    const j = parseData("json", '{\n  "name": "s",\n  // a comment\n  "deps": {"a": "1"}\n}\n');
+    expect(j.error).toBeNull(); // jsonc comments are allowed
+    expect(headings(j.tree)).toEqual(["deps"]);
+    expect(parseData("json", '{"a": }').error).toBeTruthy();
+    expect(parseData("yaml", "a: [1, 2\n").error).toBeTruthy();
+  });
+  test("INI and .env; CSV with quotes, doubled quotes and a newline in a field", async () => {
+    const { parseData } = await import("../src/core/data.ts");
+    const ini = parseData("ini", "; c\n[core]\nk = v ; tail\nexport X=1\n");
+    expect(headings(ini.tree)).toEqual(["core"]);
+    expect(fields(ini.tree).map((x) => [x.key, x.value, x.comment])).toEqual([
+      ["k", "v", "tail"],
+      ["X", "1", null],
+    ]);
+    const csv = parseData("csv", 'a,b\n"1, one","say ""hi"""\n"multi\nline",2\n');
+    expect(csv.error).toBeNull();
+    const t = csv.tree.children[0] as { children: { position: { start: { line: number } }; children: { children: { value: string }[] }[] }[] };
+    const cells = t.children.map((r) => r.children.map((c) => c.children[0]?.value ?? ""));
+    expect(cells).toEqual([["a", "b"], ["1, one", 'say "hi"'], ["multi line", "2"]]);
+    expect(t.children.map((r) => r.position.start.line)).toEqual([1, 2, 3]);
+    expect(parseData("csv", 'a\n"open\n').error).toBeTruthy();
+  });
+});

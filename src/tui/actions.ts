@@ -213,7 +213,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       if (!from) return a.message("warn", `[[${link.target}]]: links resolve only inside the vault`);
       const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, from);
       if (r.resolvedKind === "note") return go(r.path!, link.heading);
-      if (r.resolvedKind === "file") return fileLink(a, r.path!);
+      if (r.resolvedKind === "file") return fileLink(a, r.path!, link.heading, inSplit);
       if (r.resolvedKind === "ambiguous") {
         return a.openList({
           title: `[[${link.target}]] matches ${r.candidates.length} notes`,
@@ -238,15 +238,21 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
         return;
       }
       if (r.resolvedKind === "note") return go(r.path!, frag);
-      if (r.resolvedKind === "file") return fileLink(a, r.path!);
+      if (r.resolvedKind === "file") return fileLink(a, r.path!, frag, inSplit);
       return a.message("warn", `broken link: ${link.target}`);
     }
   }
 }
 
-function fileLink(a: App, rel: string): void {
-  // A data or text file opens (16.4); a binary one's path is copied (images render later).
-  if (classify(rel, a.config.walk.extensions).group !== "binary") return void a.open(rel);
+function fileLink(a: App, rel: string, heading: string | null = null, inSplit = false): void {
+  // A data or text file opens (16.4) — at a data file's section when the link names one
+  // (`[[config.toml#editor]]`); a binary one's path is copied (images render later).
+  if (classify(rel, a.config.walk.extensions).group !== "binary") {
+    if (inSplit) a.otherWindow();
+    a.open(rel);
+    if (heading && a.view) jumpToHeading(a, a.view, heading);
+    return;
+  }
   a.copy(join(a.loc.root, rel), false);
   a.message("info", `attachment ${rel} — path copied (images render in a later phase)`);
 }

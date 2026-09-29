@@ -546,10 +546,10 @@ text/source files (source mode only). In order: the groundwork first, then each 
 | 16.8 | Code outline and breadcrumb: functions, classes, methods, from a query per language |
 | 16.9 | Syntax errors in code: gutter mark, underline, status count, when insert ends; syntax only |
 | 16.10 | Links in code comments: paths that resolve, `path:line`, URLs; into the graph as backlinks |
-| 16.11 | Render TOML and INI: sections as headings, key–value rows, comments dimmed, records as tables |
-| 16.12 | Render YAML and JSON the same way: nested objects as headings to a depth, then rows |
-| 16.13 | Render CSV/TSV as a table: header detection, lazy layout past a size |
-| 16.14 | Data files' lens (blocks: sections, keys, rows); a parse error on leaving insert → source mode |
+| 16.11 | **Done.** Render TOML and INI: sections as headings, key–value rows, comments dimmed, records as tables |
+| 16.12 | **Done.** Render YAML and JSON the same way: nested objects as headings to a depth, then rows |
+| 16.13 | **Done.** Render CSV/TSV as a table: header detection, lazy layout past a size |
+| 16.14 | **Done.** Data files' lens (blocks: sections, keys, rows); a parse error on leaving insert → source mode |
 | 16.15 | Links out of data files: paths that resolve, URLs, `$ref`, includes; into the graph |
 | 16.16 | Org as a note format (`uniorg`): render, headings, links, `TODO`/`DONE` tasks, tags |
 | 16.17 | AsciiDoc as a note format: a line scanner to index; asciidoctor.js loaded lazily to render |

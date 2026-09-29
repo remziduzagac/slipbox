@@ -17,7 +17,8 @@ import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { type Graph, openGraph } from "../core/graph.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
-import { parseAround, parseMarkdown, slugify } from "../core/parse.ts";
+import { headingsOf, parseAround, parseMarkdown, type ParsedNote, slugify } from "../core/parse.ts";
+import { parseData } from "../core/data.ts";
 import { classify, extensionOf, isKnownExtension } from "../core/filetypes.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
@@ -247,6 +248,21 @@ const MAX_ARGS: Record<string, number> = {
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
+/**
+ * A note's or data file's tree: markdown parsed, a data file read by its format (16.11), its
+ * parse error a CliError. A text file has no rendered form (exit 2: `read` gives its text).
+ */
+function parseFile(s: Session, rel: string, text: string): ParsedNote {
+  const kind = classify(rel, s.config.walk.extensions);
+  if (kind.group === "data") {
+    const d = parseData(kind.format, text);
+    if (d.error) throw new CliError(`${rel} doesn't parse — ${d.error}`, EXIT.error);
+    return { tree: d.tree, frontmatter: null, source: text };
+  }
+  if (kind.group === "text") throw new UsageError(`${rel} is a ${kind.format === "text" ? "text" : kind.format} file, with no rendered form (slipbox read shows its text)`);
+  return parseMarkdown(text);
+}
+
 function textFiles(s: Session): { path: string; group: string; format: string }[] {
   return s.graph
     .filePaths()
@@ -370,7 +386,7 @@ const HANDLERS: Record<string, Handler> = {
     if (glyphArg !== undefined && !isGlyphMode(glyphArg)) throw new UsageError("--glyphs must be auto, nerd, unicode or ascii");
     const glyphMode = (glyphArg as Config["render"]["glyphs"] | undefined) ?? s.config.render.glyphs;
     const showUrls = s.config.render.show_urls === "always" || (s.config.render.show_urls === "auto" && depth === "none");
-    const layout = layoutNote(parseMarkdown(decoded.text), s.graph, rel, { width, glyphs: glyphsFor(glyphMode, s.io.env), showUrls });
+    const layout = layoutNote(parseFile(s, rel, decoded.text), s.graph, rel, { width, glyphs: glyphsFor(glyphMode, s.io.env), showUrls });
     if (decoded.invalidUtf8) s.warnings.push(`${rel}: not valid UTF-8; invalid bytes shown as U+FFFD`);
     return {
       data: {
@@ -487,7 +503,8 @@ const HANDLERS: Record<string, Handler> = {
 
   outline(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
-    const hs = s.graph.entry(rel)!.headings;
+    // A data file's sections are its outline (16.11); a text file has none (yet: 16.8).
+    const hs = s.graph.entry(rel)?.headings ?? headingsOf(parseFile(s, rel, readText(s.graph.abs(rel)).text).tree);
     return {
       data: { path: rel, headings: hs },
       human: hs.map((h) => `${String(h.line).padStart(5)}  ${"  ".repeat(h.depth - 1)}${"#".repeat(h.depth)} ${h.text}\n`).join(""),
@@ -714,6 +731,7 @@ const HANDLERS: Record<string, Handler> = {
     const rel = resolveNote(s, requireArg(rest, "note"));
     const abs = s.graph.abs(rel);
     // A task is a one-byte edit, so a note that isn't valid UTF-8 can be ticked, as in the TUI.
+    if (classify(rel, s.config.walk.extensions).group !== "note") throw new UsageError(`${rel} isn't a note: tasks are in notes`);
     const file = readNoteFile(s, abs, false);
     // Toggling one line needs only the chunk that holds it (a 20,000-task note parses in a blink);
     // the list, the whole note.

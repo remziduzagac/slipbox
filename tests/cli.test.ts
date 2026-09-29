@@ -530,7 +530,16 @@ describe("the vault and the tool", () => {
     expect(slipbox(["ls", "--json"]).json.data.some((f: { path: string }) => f.path === "tool.py")).toBe(false);
     expect(slipbox(["write", "pic.png", "x"]).code).toBe(5);
     expect(slipbox(["read", "cfg/site"]).code).toBe(3); // a file needs its extension
-    for (const f of ["cfg/site.toml", "cfg/new.json", "tool.py", "pic.png"]) rmSync(join(vault, f));
+    // A data file renders and has an outline (16.11); a text file has neither, nor tasks.
+    const r = slipbox(["render", "cfg/site.toml", "--plain"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/name\s+Halden Ridge\s+# the observatory/);
+    expect(slipbox(["outline", "cfg/site.toml", "--json"]).json.data.headings.map((h: { text: string }) => h.text)).toEqual(["site"]);
+    expect(slipbox(["render", "tool.py"]).code).toBe(2);
+    expect(slipbox(["task", "tool.py"]).code).toBe(2);
+    writeFileSync(join(vault, "cfg", "bad.json"), '{"a": }');
+    expect(slipbox(["render", "cfg/bad.json"]).err).toContain("doesn't parse");
+    for (const f of ["cfg/site.toml", "cfg/new.json", "cfg/bad.json", "tool.py", "pic.png"]) rmSync(join(vault, f));
   });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));

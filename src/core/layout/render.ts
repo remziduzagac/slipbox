@@ -5,6 +5,7 @@
 
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
+import type { DataComment, DataField } from "../data.ts";
 import { headingText, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
@@ -85,6 +86,7 @@ export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontm
     cache.blocks = new WeakMap();
   }
   const out: Line[] = [];
+  let prev: RootContent | undefined;
   for (const node of tree.children) {
     const origin = (node as unknown as Record<symbol, object | undefined>)[ORIGIN];
     let hit = origin ? cache.blocks.get(origin) : undefined;
@@ -101,7 +103,8 @@ export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontm
     const headBase = ctx.headings.length;
     for (const l of hit.links) ctx.links.push({ ...l, src: l.src + delta });
     for (const h of hit.headings) ctx.headings.push({ ...h, src: h.src + delta });
-    if (out.length) out.push(gapAfter(out, srcOf(node)));
+    if (out.length && !joined(prev, node)) out.push(gapAfter(out, srcOf(node)));
+    prev = node;
     // Copies: `finish` edits spans in place, and the cached rows serve the next render too.
     for (const line of hit.lines) out.push(placed(line, delta, linkBase, headBase));
   }
@@ -207,13 +210,24 @@ function blank(src: number): Line {
 
 function blocks(nodes: RootContent[], ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null, tight = false): Line[] {
   const out: Line[] = [];
+  let prev: RootContent | undefined;
   for (const node of nodes) {
     const rendered = block(node, ctx, width, base, fm);
     if (rendered === null) continue;
-    if (out.length && !tight) out.push(gapAfter(out, srcOf(node)));
+    if (out.length && !tight && !joined(prev, node)) out.push(gapAfter(out, srcOf(node)));
     out.push(...rendered);
+    prev = node;
   }
   return out;
+}
+
+/** A data file's keys and comment lines follow each other with no blank row between (16.11). */
+function joined(prev: RootContent | undefined, node: RootContent): boolean {
+  const row = (n: RootContent | undefined) => {
+    const t = (n as { type?: string } | undefined)?.type;
+    return t === "dataField" || t === "dataComment";
+  };
+  return row(prev) && row(node);
 }
 
 function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null): Line[] | null {
@@ -262,6 +276,8 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
     }
     default:
       if ((node.type as string) === "toml") return frontmatterBlock(fm ?? null, (node as { value: string }).value, srcOf(node), ctx, width);
+      if ((node.type as string) === "dataField") return dataField(node as unknown as DataField, width);
+      if ((node.type as string) === "dataComment") return dataComment(node as unknown as DataComment, width);
       // Unknown block: show its text rather than lose it.
       return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
   }
@@ -528,6 +544,28 @@ function frontmatterBlock(fm: Frontmatter | null, raw: string, src: number, ctx:
   }
   out.push({ spans: [{ text: g.rule.repeat(width), role: "fm_border", attrs: 0 }], src: src + raw.split("\n").length + 1 });
   return out;
+}
+
+/** A data file's key and value (16.11): drawn like frontmatter's properties, the value coloured
+ *  by its kind, a comment dimmed after it; the key column shared by the section's keys. */
+function dataField(f: DataField, width: number): Line[] {
+  const src = srcOf(f as unknown as Nodes);
+  const kw = Math.max(1, Math.min(f.keyWidth || stringWidth(sanitize(f.key)), Math.floor(width / 3)));
+  const role: Role = f.kind === "number" || f.kind === "date" ? "syn_number" : f.kind === "boolean" || f.kind === "null" ? "syn_constant" : "fm_value";
+  const value = expandTabs(sanitize(f.value)) || (f.kind === "string" ? '""' : "");
+  const spans: Span[] = [{ text: value, role, attrs: 0 }];
+  if (f.comment) spans.push({ text: `${value ? "  " : ""}# ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`, role: "syn_comment", attrs: 0 });
+  const rows = wrapSpans(spans, Math.max(4, width - kw - 3));
+  return rows.map((row, i) => ({
+    spans: [{ text: ` ${i === 0 ? padEnd(truncate(sanitize(f.key), kw), kw) : " ".repeat(kw)}`, role: "fm_key", attrs: 0 }, { text: "  ", role: "text", attrs: 0 }, ...row],
+    src,
+  }));
+}
+
+/** Comment lines of a data file on their own: dimmed, wrapped. */
+function dataComment(c: DataComment, width: number): Line[] {
+  const src = srcOf(c as unknown as Nodes);
+  return c.text.split("\n").flatMap((text, i) => wrapSpans([{ text: ` ${expandTabs(sanitize(text))}`, role: "syn_comment", attrs: 0 }], width).map((row) => ({ spans: row, src: src + i })));
 }
 
 function findKeyLine(raw: string, key: string): number {

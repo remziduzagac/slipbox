@@ -4580,7 +4580,7 @@ describe("files beyond notes (16.3–16.5)", () => {
     expect(v.buf.rel).toBe("links-out.md");
     expect(v.source).toBe(false); // the note renders again
   });
-  test("a data file opens in source mode for now; edits save; a binary file doesn't open", async () => {
+  test("a data file opens from a link, rendered; edits save; a binary file doesn't open", async () => {
     const root = await setup();
     const h = await harness({ root });
     await h.app.run("note.open links-out.md");
@@ -4589,8 +4589,8 @@ describe("files beyond notes (16.3–16.5)", () => {
     h.app.moveCursor(v, { row: cfg.line, col: cfg.col });
     await h.keys("enter");
     expect(v.buf.rel).toBe("cfg/app.toml");
-    expect(v.source).toBe(true);
-    await h.keys("G", "o", "w", "r", "a", "p", "space", "=", "space", "t", "r", "u", "e", "escape", "ctrl+s");
+    expect(v.source).toBeFalsy(); // rendered (16.11)
+    await h.keys("space", "n", "v", "G", "o", "w", "r", "a", "p", "space", "=", "space", "t", "r", "u", "e", "escape", "ctrl+s");
     expect(readFileSync(join(root, "cfg", "app.toml"), "utf8")).toBe('[editor]\nfont = "x" # a comment\nwrap = true\n');
     expect(h.app.buffer("blob.dat")).toBeNull();
     expect(h.app.messages.at(-1)!.text).toContain("binary");
@@ -4602,5 +4602,69 @@ describe("files beyond notes (16.3–16.5)", () => {
     const data = o.items.map((i) => i.data);
     expect(data).toContain("cfg/app.toml");
     expect(data).not.toContain("run.py");
+  });
+});
+
+describe("data files render as documents (16.11–16.14)", () => {
+  const TOML = '# app settings\ntheme = "nord"   # the default\n\n[editor]\ncommand = "nvim"\nautosave_ms = 30000\n\n[ui]\nwrap = true\n';
+  const setup = async () => {
+    const root = makeVault();
+    mkdirSync(join(root, "cfg"), { recursive: true });
+    writeFileSync(join(root, "cfg", "app.toml"), TOML);
+    writeFileSync(join(root, "people.yaml"), "team:\n  - name: Ada\n    role: lead\n  - name: Rosa\n    role: ops\n");
+    writeFileSync(join(root, "to-config.md"), "# T\n\nThe [[cfg/app.toml#ui]] section.\n");
+    return root;
+  };
+  test("TOML opens rendered: sections as headings (outline, breadcrumb), keys lined up, comments dimmed", async () => {
+    const root = await setup();
+    const h = await harness({ root, open: "cfg/app.toml", width: 100 });
+    const v = h.app.view!;
+    expect(v.source).toBeFalsy();
+    const layout = h.app.currentLayout(v);
+    expect(layout.headings.map((x) => x.text)).toEqual(["editor", "ui"]);
+    const f = h.frame();
+    expect(f).toMatch(/theme\s+nord\s+# the default/);
+    expect(f).toMatch(/command\s+nvim/);
+    expect(f).toMatch(/autosave_ms\s+30000/);
+    const row = layout.lines.find((l) => l.spans.some((s) => s.text.includes("the default")))!;
+    expect(row.spans.find((s) => s.text.includes("the default"))!.role).toBe("syn_comment");
+    await h.keys("space", "n", "v");
+    expect(v.source).toBe(true); // source mode is a key away
+    expect(h.frame()).toContain('theme = "nord"');
+  });
+  test("YAML: a list of records is a table; a link to a section of a data file lands there", async () => {
+    const root = await setup();
+    const h = await harness({ root, open: "people.yaml", width: 100 });
+    const f = h.frame();
+    expect(f).toMatch(/│ name\s+│ role\s+│/);
+    expect(f).toMatch(/│ Rosa\s+│ ops\s+│/);
+    await h.app.run("note.open to-config.md");
+    const v = h.app.view!;
+    const l = h.app.currentLayout(v).links[0]!;
+    h.app.moveCursor(v, { row: l.line, col: l.col });
+    await h.keys("enter");
+    expect(v.buf.rel).toBe("cfg/app.toml");
+    expect(rowText(h)).toContain("ui");
+  });
+  test("the lens edits one key; a parse error when insert ends goes to source mode, and back when fixed", async () => {
+    const root = await setup();
+    const h = await harness({ root, open: "cfg/app.toml", width: 100, config: (c) => (c.editor.edit_in = "live") });
+    const v = h.app.view!;
+    const row = h.app.currentLayout(v).lines.findIndex((x) => x.spans.some((s) => s.text.includes("autosave_ms")));
+    h.app.moveCursor(v, { row, col: 2 });
+    await h.keys("shift+a", "0", "escape");
+    expect(v.live).toBe(true);
+    expect(v.buf.source).toContain("autosave_ms = 300000\n");
+    // Break it: an unclosed string. Mid-typing the lens stays; leaving insert, source mode.
+    await h.keys("shift+a", "space", "x", "=", "space", "\"");
+    expect(v.source).toBeFalsy();
+    await h.keys("escape");
+    h.frame();
+    expect(v.source).toBe(true);
+    expect(h.app.messages.some((m) => m.text.includes("doesn't parse"))).toBe(true);
+    await h.keys("space", "n", "v"); // still broken: refused, with the error
+    expect(v.source).toBe(true);
+    await h.keys("u", "space", "n", "v"); // undone: it renders again
+    expect(v.source).toBeFalsy();
   });
 });

@@ -781,8 +781,10 @@ export class App {
     };
   }
 
-  /** Whether a file has a rendered view: notes do, data files will (16.11–16.13), text never. */
+  /** Whether a file has a rendered view: markdown notes do, data files while they parse
+   *  (16.11–16.14), text files never. */
   canRender(buf: NoteBuffer): boolean {
+    if (buf.kind.group === "data") return !buf.parsed.error;
     return buf.kind.group === "note" && buf.kind.format === "markdown";
   }
 
@@ -915,6 +917,13 @@ export class App {
   }
 
   layoutFor(view: View, paneWidth: number, gutter = 0): Layout {
+    // A data file that stopped parsing (16.14) goes to source mode, the error said — when insert
+    // mode ends, never mid-typing (an open quote is normal while a value is typed).
+    if (!view.source && !view.insert && !this.canRender(view.buf)) {
+      const error = view.buf.kind.group === "data" ? view.buf.parsed.error : null;
+      Object.assign(view, { source: true, live: false, liveBase: undefined, layoutKey: "" });
+      if (error) this.message("warn", `${view.buf.name} doesn't parse — ${error}: source mode`);
+    }
     // Source mode: the whole text column (no readable width), less one for a cursor after a full
     // row's end; unwrapped, as long as the longest line.
     const width = view.source
@@ -1130,7 +1139,8 @@ export class App {
     const now = view.source ? "source" : view.live ? "live" : "rendered";
     if (now === mode) return;
     if (mode !== "source" && !this.canRender(view.buf)) {
-      return this.message("info", `${view.buf.name} has no rendered view${view.buf.kind.group === "text" ? "" : " yet"}: source mode`);
+      const why = view.buf.kind.group === "data" ? `doesn't parse — ${view.buf.parsed.error}` : view.buf.kind.group === "text" ? "has no rendered view" : "has no rendered view yet";
+      return this.message(view.buf.kind.group === "data" ? "warn" : "info", `${view.buf.name} ${why}: source mode`);
     }
     if (view.insert) stopInsert(this, view);
     this.remember(view);

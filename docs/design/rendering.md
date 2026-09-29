@@ -64,6 +64,31 @@ tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 resolved, `link_unresolved` red, `link_ambiguous` orange. Embeds (`![[x]]`) render as a
 reference, `⧉ x`. Transclusion is phase 4.
 
+## Data files (plans `16.11`–`16.14`)
+
+A data file is read into the same tree a note is (`core/data.ts`), so the renderer, the outline,
+the breadcrumb, `[[file.toml#section]]`, find and the lens work unchanged:
+
+- **Sections become headings**: a TOML `[table]` or INI `[section]` (deeper by its dots), a YAML or
+  JSON key whose value is an object, down to three levels (deeper ones read inline, `{k: v, …}`).
+- **Each key is a `dataField`** on its own source lines (a comment above it included), drawn like
+  frontmatter's properties: the key column shared by a section's keys (28 columns at most, cut with
+  `…`), the value coloured by its kind (numbers and dates, booleans and null, strings), a comment
+  dimmed after it. Keys follow each other with no blank row between. A string shows unquoted; a list
+  or an inline table as written, its whitespace folded.
+- **Records become tables** through the allocator: a YAML or JSON list of two or more objects with
+  plain values, TOML `[[name]]` entries likewise; a row per record, on its own source line.
+- **Comment lines** on their own are dimmed rows.
+- **CSV and TSV** are one table: quoted fields (with `""` and newlines inside), the first row the
+  header, rows padded to the widest; past 2,000 rows the rest are counted, and source mode shows
+  them.
+
+TOML, INI and `.env` are read line by line (their structure is lines), TOML validated by
+`smol-toml`; YAML and JSON come from `yaml`'s document tree, which keeps positions and comments;
+JSON (and `.jsonc`, comments allowed) is validated by `JSON.parse`. **Nothing is ever
+re-serialized**: edits are always on the text, so comments, order and formatting survive. A file
+that doesn't parse has no render (`16.14`): its error is shown and source mode opens.
+
 ## The wikilink tokenizer
 
 `core/wikilink.ts` is a micromark extension, not a regex. That is why `[[links]]` inside code

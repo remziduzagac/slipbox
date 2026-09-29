@@ -34,6 +34,8 @@ export interface ParsedNote {
   tree: Root;
   frontmatter: Frontmatter | null;
   source: string;
+  /** A data file that doesn't parse (16.14): why. It then has no render; source mode shows it. */
+  error?: string | null;
 }
 
 /**

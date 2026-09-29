@@ -7,6 +7,7 @@
 // layout), not on every keystroke.
 
 import type { Glyphs } from "../core/glyphs.ts";
+import { parseData } from "../core/data.ts";
 import type { FileKind } from "../core/filetypes.ts";
 import { newRenderCache } from "../core/layout/render.ts";
 import type { Graph } from "../core/graph.ts";
@@ -130,7 +131,12 @@ export class NoteBuffer {
   /** The parse of the current text, redone only when the text changed since. */
   get parsed(): ParsedNote {
     if (this.parsedVersion !== this.version) {
-      this.parsedNote = parseMarkdown(this.source, this.parseCache);
+      // A data file is read by its format's reader (16.11–16.13): the same tree, sections as
+      // headings, keys as fields.
+      if (this.kind.group === "data") {
+        const d = parseData(this.kind.format, this.source);
+        this.parsedNote = { tree: d.tree, frontmatter: null, source: this.source, error: d.error };
+      } else this.parsedNote = parseMarkdown(this.source, this.parseCache);
       this.parsedVersion = this.version;
     }
     return this.parsedNote;

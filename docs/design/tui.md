@@ -626,12 +626,17 @@ logs, `.txt`), or **binary** (images, archives…, by extension — and a text-n
 in its first 8 KB), which never opens.
 
 - **Opening.** A data or text file opens from the explorer, `ctrl+p`, or a link to it
-  (`[config](cfg/app.toml)`, `[[run.py]]`; binary links still copy their path). It opens in source
-  mode, highlighted by its language (highlight.js, a line at a time for now; tree-sitter comes with
-  `16.7`); no markdown headings are looked for in it. Text files have no rendered view:
-  `space n v` and the lens say so and stay in source mode. Data files render once `16.11`–`16.13`
-  land. A window that was in source mode only for such a file renders again when it opens a note
-  (a link, `history.back`).
+  (`[config](cfg/app.toml)`, `[[run.py]]`, `[[cfg/app.toml#editor]]` at that section; binary links
+  still copy their path).
+- **Data files open rendered** (`16.11`–`16.13`, [rendering.md](rendering.md), "Data files"), with
+  source mode a key away and the lens editing one key at a time. A data file that doesn't parse
+  opens in source mode, the error said; one that stops parsing while edited goes there when insert
+  mode ends (never mid-typing: an open quote is normal while a value is typed), and `space n v`
+  renders it again once it parses (`16.14`).
+- **Text files open in source mode**, highlighted by their language (highlight.js, a line at a time
+  for now; tree-sitter comes with `16.7`); no markdown headings are looked for in them. They have
+  no rendered view: `space n v` and the lens say so and stay in source mode. A window that was in
+  source mode only for such a file renders again when it opens a note (a link, `history.back`).
 - **Editing and saving** work as for notes: the same undo, saves, autosave and conflict prompt; an
   agent's change to an open file reloads it.
 - **What lists them.** The explorer and the switcher show what `files.show` says (`notes`,
