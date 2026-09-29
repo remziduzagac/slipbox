@@ -17,6 +17,7 @@ import { listThemes, loadTheme } from "../core/theme/index.ts";
 import type { App, ListItem, Loc, UiState, View } from "./app.ts";
 import { editable, computeFind } from "./app.ts";
 import * as C from "./cursor.ts";
+import { linkTokens } from "../core/syntax.ts";
 import * as E from "./editing.ts";
 import * as R from "./replacing.ts";
 import * as V from "./vim.ts";
@@ -166,13 +167,22 @@ function lay(a: App, v: View) {
 function sourceLinkAt(a: App, v: View): LayoutLink | null {
   const row = lay(a, v).lines[v.cur.row];
   if (!row?.srcMap) return null;
-  // Markdown's link syntax, in markdown only (links in code comments come with 16.10).
-  if (v.buf.kind.format !== "markdown") return null;
   const at = E.offsetOf(a, v);
   const line = E.lineOf(v, at);
   const text = E.lineText(v, line);
   const col = at - (v.buf.lineStarts()[line - 1] ?? 0);
   const base = { status: "unknown" as const, line: -1, col: -1, src: line };
+  // A text file's: a URL, or a path naming a file of the vault, `path:42` at its line (16.10) — in
+  // a comment or not (an import's path is worth following too).
+  if (v.buf.kind.group === "text") {
+    const t = linkTokens(text).find((k) => col >= k.index && col < k.index + k.length);
+    if (!t) return null;
+    if (t.url) return { ...base, kind: "markdown", target: t.target, heading: null, text: t.target };
+    const path = v.buf.rel ? a.graph.commentPath(t.target, v.buf.rel) : null;
+    return path ? { ...base, kind: "markdown", target: `/${path}${t.at ? `#L${t.at}` : ""}`, heading: null, text: t.target } : null;
+  }
+  // Markdown's link syntax, in markdown only.
+  if (v.buf.kind.format !== "markdown") return null;
   for (const m of text.matchAll(/(!?)\[\[([^\]\n]+)\]\]/g)) {
     if (col < m.index || col >= m.index + m[0].length) continue;
     const w = parseWikiTarget(m[2]!);
@@ -190,7 +200,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
   if (!view) return;
   const from = view.buf.rel;
   const go = (path: string, heading: string | null) => {
-    const anchor = heading ? headingAnchor(a, path, heading) : undefined;
+    const anchor = heading ? (lineAnchor(heading) ?? headingAnchor(a, path, heading)) : undefined;
     if (inSplit) a.otherWindow();
     a.open(path, anchor);
   };
@@ -249,12 +259,19 @@ function fileLink(a: App, rel: string, heading: string | null = null, inSplit = 
   // (`[[config.toml#editor]]`); a binary one's path is copied (images render later).
   if (classify(rel, a.config.walk.extensions).group !== "binary") {
     if (inSplit) a.otherWindow();
-    a.open(rel);
-    if (heading && a.view) jumpToHeading(a, a.view, heading);
+    const line = heading ? lineAnchor(heading) : undefined;
+    a.open(rel, line);
+    if (heading && !line && a.view) jumpToHeading(a, a.view, heading);
     return;
   }
   a.copy(join(a.loc.root, rel), false);
   a.message("info", `attachment ${rel} — path copied (images render in a later phase)`);
+}
+
+/** A `#L42` fragment (GitHub's, and a code comment's `path:42`, 16.10): that line. */
+function lineAnchor(fragment: string): Anchor | undefined {
+  const m = /^L(\d+)$/.exec(fragment);
+  return m ? { heading: null, headingIndex: 0, offset: 0, line: Math.max(1, Number(m[1])) } : undefined;
 }
 
 function headingAnchor(a: App, path: string, heading: string): Anchor | undefined {

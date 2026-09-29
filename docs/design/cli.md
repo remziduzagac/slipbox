@@ -122,8 +122,9 @@ rewrite them.
    `render` is exit 2 (`read` gives its text). Source code in a language with a grammar (`16.8`) has
    an outline: its definitions, each heading with a `kind` (`function`, `class`, `method`…). `task`
    is for notes (exit 2 otherwise). `links` on a data file lists its links (`16.15`: URLs, reference
-   keys' values, paths that resolve); `backlinks` of any file lists the notes and data files linking
-   to it. A binary file is never written (exit 5).
+   keys' values, paths that resolve), on a code file those in its comments (`16.10`: URLs, paths
+   naming vault files as `/path`, `path:42` as `/path#L42`); `backlinks` of any file lists the
+   notes, data files and code files linking to it. A binary file is never written (exit 5).
 
 `ls --files` lists the data and text files too (each with `group` and `format`); `find --files`
 searches them as well. `write --create` keeps a name's known extension (`cfg/new.json`,

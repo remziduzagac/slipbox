@@ -458,11 +458,12 @@ const HANDLERS: Record<string, Handler> = {
     return { data, human: `${data.abs ?? path}${line ? `:${line}` : ""}\n` };
   },
 
-  links(s, rest) {
+  async links(s, rest) {
     // --all: every note's links in one call (a vault-wide check for broken ones), each with `from`.
     const all = has(s.args, "all");
     if (all && rest.length) throw new UsageError("links takes a note or --all, not both");
     const notes = all ? (s.graph.ensureAll(), [...s.graph.notes.keys()].sort()) : [resolveNote(s, requireArg(rest, "note"))];
+    if (!all) await s.graph.loadGrammars(); // a code file's links are in its comments (16.10)
     const links = notes.flatMap((from) => s.graph.linksOf(from).map((l) => ({ ...l, from })));
     const human = links
       .map((l) => {
@@ -478,8 +479,9 @@ const HANDLERS: Record<string, Handler> = {
     };
   },
 
-  backlinks(s, rest) {
+  async backlinks(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
+    await s.graph.loadGrammars(); // code files link from their comments (16.10)
     const bl = s.graph.backlinks(rel);
     return { data: { path: rel, backlinks: bl }, human: bl.map((b) => `${b.from}:${b.line}  ${b.text}\n`).join("") };
   },
@@ -797,8 +799,9 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   // The TUI's note info (space n i), in one call.
-  stat(s, rest) {
+  async stat(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
+    await s.graph.loadGrammars();
     const abs = s.graph.abs(rel);
     const file = readNoteFile(s, abs, false);
     const e = s.graph.entry(rel);

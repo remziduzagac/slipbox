@@ -943,3 +943,16 @@ describe("links out of data files (16.15)", () => {
     expect(fieldLink({ key: "title", value: "a sentence with spaces.md" })).toBeNull();
   });
 });
+
+describe("link-like tokens in code (16.10)", () => {
+  test("URLs without the sentence's punctuation; paths with an extension, `:line` apart", async () => {
+    const { linkTokens } = await import("../src/core/syntax.ts");
+    const t = (s: string) => linkTokens(s).map((k) => [k.target, k.at, s.slice(k.index, k.index + k.length)]);
+    expect(t("see docs/a.md and src/x.ts:42.")).toEqual([["docs/a.md", null, "docs/a.md"], ["src/x.ts", 42, "src/x.ts:42"]]);
+    expect(t("(https://example.invalid/a_(b)), https://x.invalid/y.")).toEqual([
+      ["https://example.invalid/a_(b)", null, "https://example.invalid/a_(b)"],
+      ["https://x.invalid/y", null, "https://x.invalid/y"],
+    ]);
+    expect(t("version 1.5, ../up.py:3:7 and ./r.toml")).toEqual([["../up.py", 3, "../up.py:3:7"], ["./r.toml", null, "./r.toml"]]);
+  });
+});

@@ -272,15 +272,17 @@ Each kind of link does something different when followed:
 | ambiguous `[[name]]` | a picker of the candidates |
 | unresolved `[[name]]` | a message; creating the note is phase 4 |
 | `[t](other.md#frag)` | opens relative to the note |
+| `[t](run.py#L42)` | opens the file at line 42 (as in a code comment's `run.py:42`) |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
 | attachment `![[x.png]]` | copies the path; images are phase 6 |
 | footnote `[1]` | jumps to the definition |
 
 `enter` follows the link under the cursor, or else the row's first link. In source mode and inside
 the lens, where rows are the markdown itself, `enter` and `space l f` / `s` read the link around the
-cursor from the text (`[[…]]`, `![[…]]`, `[text](url)`); a click there places the cursor for
-editing. A click follows a link only when it lands on the link: blank space past a row's end or
-below the note, which the cursor is clamped from, follows nothing.
+cursor from the text (`[[…]]`, `![[…]]`, `[text](url)`); in a text file, a URL or a path naming a
+file of the vault (`16.10`); a click there places the cursor for editing. A click follows a link
+only when it lands on the link: blank space past a row's end or below the note, which the cursor is
+clamped from, follows nothing.
 
 The explorer's and the outline's selections stay on the note or heading they select when an agent
 adds or removes notes or headings (a selection is kept by what it is, not its row). A reading
@@ -653,6 +655,11 @@ in its first 8 KB), which never opens.
     when numbers show; the status line says `✖ n syntax errors`, or the error itself on the
     cursor's line. Never during insert mode — a half-typed line is always broken — and only for
     the text as it is now: after an edit the marks come back when the new parse lands.
+  - **Links in comments** (`16.10`): URLs, and paths with an extension that name a file of the
+    vault — relative to the file, then to the vault's root, where a repo's paths start —
+    `path:42` at that line. No wikilinks: code has none. They're drawn as links, `enter` follows
+    them (a path in a string too: an import's is worth following), and they count as backlinks
+    of what they name.
 - **Editing and saving** work as for notes: the same undo, saves, autosave and conflict prompt; an
   agent's change to an open file reloads it.
 - **What lists them.** The explorer and the switcher show what `files.show` says (`notes`,

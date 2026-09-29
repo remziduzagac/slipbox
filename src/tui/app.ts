@@ -9,7 +9,7 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
-import { grammarFor, grammarNow, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
+import { commentLinks, grammarFor, grammarNow, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
 import { onLoaded } from "../core/lazy.ts";
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup } from "../core/filetypes.ts";
@@ -494,6 +494,7 @@ export class App {
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
     this.stopLazy = onLoaded(() => {
+      this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
       this.relayoutAll();
       this.host.requestRender();
     });
@@ -804,7 +805,10 @@ export class App {
       if (!tree) return;
       const spans = new Map<number, SyntaxSpan[]>();
       for (const s of tree.spans()) spans.set(s.line, [...(spans.get(s.line) ?? []), s]);
-      buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors() };
+      // Links in its comments (16.10): URLs, and paths that name a file of the vault.
+      const rel = buf.rel;
+      const links = commentLinks(tree.comments()).filter((l) => l.url || (rel && this.graph.commentPath(l.target, rel)));
+      buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors(), links };
       tree.tree.delete();
       buf.invalidateLayouts();
       for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
@@ -3523,7 +3527,7 @@ export class App {
         // An attachment appeared or went: ![[embeds]] of it change status.
         // Only a real change to the index re-lays anything out (a rewrite of a known image doesn't).
         if (c.kind === "deleted" ? this.graph.removeAsset(c.rel) : this.graph.addAsset(c.rel)) setChanged = true;
-        this.graph.fileChanged(c.rel); // a data file's links may have changed (16.15)
+        this.graph.fileChanged(c.rel); // a data or code file's links may have changed (16.15, 16.10)
         // An open data or text file reloads like a note (16.4).
         const open = this.buffers.get(c.rel);
         if (open) this.reloadBuffer(open, c.kind === "deleted");

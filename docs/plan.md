@@ -545,7 +545,7 @@ text/source files (source mode only). In order: the groundwork first, then each 
 | 16.7 | **Done.** Tree-sitter (TS, Python, shell, Lua, Go, Rust): multi-line strings and comments over highlight.js |
 | 16.8 | **Done.** Code outline and breadcrumb: functions, classes, methods, from a query per language |
 | 16.9 | **Done.** Syntax errors in code: gutter mark, underline, status count, out of insert; syntax only |
-| 16.10 | Links in code comments: paths that resolve, `path:line`, URLs; into the graph as backlinks |
+| 16.10 | **Done.** Links in code comments: paths that resolve, `path:line`, URLs; into the graph as backlinks |
 | 16.11 | **Done.** Render TOML and INI: sections as headings, key–value rows, comments dimmed, records as tables |
 | 16.12 | **Done.** Render YAML and JSON the same way: nested objects as headings to a depth, then rows |
 | 16.13 | **Done.** Render CSV/TSV as a table: header detection, lazy layout past a size |

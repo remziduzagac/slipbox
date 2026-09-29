@@ -542,6 +542,9 @@ describe("the vault and the tool", () => {
       { depth: 1, text: "Shape", kind: "class", line: 1 },
       { depth: 2, text: "area", kind: "method", line: 2 },
     ]);
+    // Its comments' links count as backlinks (16.10).
+    writeFileSync(join(vault, "shape.py"), "# the home note: home.md\nx = 1\n");
+    expect(slipbox(["backlinks", "home", "--json"]).json.data.backlinks.some((b: { from: string }) => b.from === "shape.py")).toBe(true);
     rmSync(join(vault, "shape.py"));
     expect(slipbox(["task", "tool.py"]).code).toBe(2);
     // Its links (16.15): a path that resolves, and it shows among the target's backlinks.

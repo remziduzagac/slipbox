@@ -362,3 +362,27 @@ describe("links out of data files and to files (16.15)", () => {
     expect(g.backlinks("app.toml").map((b) => b.from)).toEqual(["design.md"]);
   });
 });
+
+describe("links in code comments (16.10)", () => {
+  test("a comment's paths that name vault files, `path:line` and URLs are links and backlinks; a string's aren't", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-codelinks-"));
+    mkdirSync(join(dir, ".slipbox"));
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "design.md"), "# Design\n");
+    writeFileSync(join(dir, "src", "util.ts"), "export const x = 1;\n");
+    writeFileSync(
+      join(dir, "src", "main.ts"),
+      '// The design: design.md, and util.ts:1 (next to this file).\n/* See https://example.invalid/x. */\nconst s = "design.md";\n// console.log and no-such.md aren\'t links\n',
+    );
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    // Until its grammar has loaded, a code file has no links yet (the TUI hears when it lands).
+    await g.loadGrammars();
+    expect(g.linksOf("src/main.ts").map((l) => [l.target, l.resolvedKind, l.line, l.column, l.text])).toEqual([
+      ["/design.md", "note", 1, 16, "design.md"], // from the vault's root
+      ["/src/util.ts#L1", "file", 1, 31, "util.ts:1"], // relative to the file first
+      ["https://example.invalid/x", "external", 2, 8, "https://example.invalid/x"],
+    ]);
+    expect(g.backlinks("design.md").map((b) => [b.from, b.line])).toEqual([["src/main.ts", 1]]);
+    expect(g.backlinks("src/util.ts").map((b) => b.from)).toEqual(["src/main.ts"]);
+  });
+});

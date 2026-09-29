@@ -5,7 +5,8 @@
 // The CLI reads a fresh cache instead of reparsing every note on every agent call (9.4).
 
 import { statSync } from "node:fs";
-import { basename, join } from "node:path";
+import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
+import { basename, join, posix } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, readJson, readText, writeJson } from "./fsutil.ts";
@@ -13,7 +14,7 @@ import { isNotePath, LinkIndex, type MdLinkTarget, type Resolution, resolveAttac
 import { type HeadingInfo, headingsOf, noteTitle, parseMarkdown, visit } from "./parse.ts";
 import { cacheDir } from "./paths.ts";
 import { dataLinks, parseData } from "./data.ts";
-import { classify } from "./filetypes.ts";
+import { classify, extensionOf } from "./filetypes.ts";
 import type { VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, WalkFilter, walkVault } from "./walk.ts";
 import type { WikiLink } from "./wikilink.ts";
@@ -248,6 +249,7 @@ export class Graph {
     else if (!list.includes(rel)) list.push(rel);
     else return false;
     this.backlinkCache = null;
+    this.dataLinkCache.clear(); // a path in a data file or a comment may resolve now
     return true;
   }
 
@@ -259,7 +261,7 @@ export class Graph {
     const list = before.filter((p) => p !== rel);
     if (list.length) this.assets.set(key, list);
     else this.assets.delete(key);
-    this.dataLinkCache.delete(rel);
+    this.dataLinkCache.clear(); // and paths to it no longer resolve
     this.backlinkCache = null;
     return true;
   }
@@ -326,7 +328,7 @@ export class Graph {
 
   linksOf(rel: string): ResolvedLink[] {
     const note = this.entry(rel);
-    const links = note ? note.links : this.dataLinksOf(rel);
+    const links = note ? note.links : this.fileLinksOf(rel);
     return links.map((l) => ({ ...l, ...this.resolveLink(l, rel) }));
   }
 
@@ -334,8 +336,9 @@ export class Graph {
     this.ensureAll();
     if (!this.backlinkCache) {
       const map = new Map<string, Backlink[]>();
-      // Notes' links, and data files' (16.15); to a note or to a file (a config, a script, 16.3).
-      const sources: [string, LinkRef[]][] = [...[...this.notes].map(([from, note]) => [from, note.links] as [string, LinkRef[]]), ...this.dataFiles().map((f) => [f, this.dataLinksOf(f)] as [string, LinkRef[]])];
+      // Notes' links, data files' (16.15) and code comments' (16.10); to a note or to a file (a
+      // config, a script, 16.3).
+      const sources: [string, LinkRef[]][] = [...[...this.notes].map(([from, note]) => [from, note.links] as [string, LinkRef[]]), ...this.linkingFiles().map((f) => [f, this.fileLinksOf(f)] as [string, LinkRef[]])];
       for (const [from, links] of sources) {
         for (const l of links) {
           if (l.kind === "image") continue;
@@ -351,19 +354,58 @@ export class Graph {
     return this.backlinkCache.get(rel) ?? [];
   }
 
-  /** The vault's data files (JSON, YAML, TOML, INI, CSV). */
-  dataFiles(): string[] {
-    return this.filePaths().filter((p) => classify(p, this.config.walk.extensions).group === "data");
+  /** The vault's files with links besides notes: data files (JSON, YAML, TOML, INI, CSV), and
+   *  source code in a language with a grammar (links in its comments). */
+  linkingFiles(): string[] {
+    return this.filePaths().filter((p) => {
+      const k = classify(p, this.config.walk.extensions);
+      return k.group === "data" || (k.group === "text" && grammarFor(k.format, extensionOf(p)) !== null);
+    });
+  }
+
+  /** The grammars the vault's code needs, loaded (the CLI, before it lists links or backlinks). */
+  async loadGrammars(): Promise<void> {
+    const gs = new Set<Grammar>();
+    for (const p of this.filePaths()) {
+      const k = classify(p, this.config.walk.extensions);
+      const g = k.group === "text" ? grammarFor(k.format, extensionOf(p)) : null;
+      if (g) gs.add(g);
+    }
+    await Promise.all([...gs].map((g) => grammar(g)));
+    this.backlinkCache = null;
+  }
+
+  /** A grammar finished loading: code files' links can be read now (the TUI hears of it). */
+  grammarsChanged(): void {
+    this.backlinkCache = null;
+  }
+
+  /** Whether a vault-relative path is a note or a file of the vault (by the index: no disk). */
+  private known(rel: string): boolean {
+    if (this.notes.has(rel)) return true;
+    return this.assets.get(rel.slice(rel.lastIndexOf("/") + 1).normalize("NFC").toLowerCase())?.includes(rel) ?? false;
+  }
+
+  /**
+   * A path in a code comment (16.10) as a vault-relative path: relative to the file, then to the
+   * vault's root (where a repo's paths start); null if it names no file of the vault.
+   */
+  commentPath(target: string, fromRel: string): string | null {
+    const cands = target.startsWith("/") ? [posix.normalize(target.slice(1))] : [posix.normalize(posix.join(posix.dirname(fromRel), target)), posix.normalize(target)];
+    return cands.find((c) => !c.startsWith("..") && c !== fromRel && this.known(c)) ?? null;
   }
 
   /**
    * A data file's links (16.15): URLs, reference keys' values ($ref, include…) whether or not they
-   * resolve, and path-like values that do — read when asked and cached by the file's stamp. Files
-   * over 256 KB (lock files, dumps) aren't read for links.
+   * resolve, and path-like values that do. A code file's (16.10): URLs and paths that resolve, in
+   * its comments; `path:42` links to that line (`#L42`). Read when asked and cached by the file's
+   * stamp; files over 256 KB (lock files, dumps, generated code) aren't read for links. Code whose
+   * grammar is still loading has none yet (and isn't cached).
    */
-  dataLinksOf(rel: string): LinkRef[] {
+  fileLinksOf(rel: string): LinkRef[] {
     const kind = classify(rel, this.config.walk.extensions);
-    if (kind.group !== "data") return [];
+    const g = kind.group === "text" ? grammarFor(kind.format, extensionOf(rel)) : null;
+    if (kind.group !== "data" && !g) return [];
     let st: { size: number; mtimeMs: number };
     try {
       st = statSync(join(this.root, rel));
@@ -375,6 +417,12 @@ export class Graph {
     const hit = this.dataLinkCache.get(rel);
     if (hit?.stamp === stamp) return hit.links;
     let links: LinkRef[] = [];
+    if (g) {
+      const code = this.codeLinks(rel, g, readText(join(this.root, rel)).text);
+      if (!code) return [];
+      this.dataLinkCache.set(rel, { stamp, links: code });
+      return code;
+    }
     try {
       const d = parseData(kind.format, readText(join(this.root, rel)).text);
       links = dataLinks(d.tree)
@@ -383,6 +431,26 @@ export class Graph {
     } catch {}
     this.dataLinkCache.set(rel, { stamp, links });
     return links;
+  }
+
+  /** A code file's comment links; null while its grammar loads. Parsed only when the text has a
+   *  URL or a path of the vault somewhere (most files have neither, and cost a scan). */
+  private codeLinks(rel: string, g: Grammar, text: string): LinkRef[] | null {
+    if (!linkTokens(text).some((t) => t.url || this.commentPath(t.target, rel))) return [];
+    const loaded = grammarNow(g);
+    if (!loaded) return null;
+    const tree = parseSyntax(loaded, text);
+    if (!tree) return [];
+    const out: LinkRef[] = [];
+    const lines = text.split("\n");
+    for (const l of commentLinks(tree.comments())) {
+      const path = l.url ? null : this.commentPath(l.target, rel);
+      if (!l.url && !path) continue;
+      const target = l.url ? l.target : `/${path}${l.at ? `#L${l.at}` : ""}`;
+      out.push({ kind: "markdown", target, heading: null, block: null, alias: null, text: lines[l.line - 1]!.slice(l.from, l.to), line: l.line, column: l.from + 1 });
+    }
+    tree.tree.delete();
+    return out;
   }
 
   /** A data file changed or went: its links are read again, and backlinks recomputed. */

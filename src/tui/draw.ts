@@ -11,7 +11,7 @@ import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncate
 import { sanitize } from "../core/sanitize.ts";
 import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
-import type { SyntaxError } from "../core/syntax.ts";
+import type { CommentLink, SyntaxError } from "../core/syntax.ts";
 import { cells, ordered } from "./cursor.ts";
 import { fuzzy } from "./fuzzy.ts";
 import { prettyKey, spellKey } from "./keys.ts";
@@ -698,6 +698,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const cursorSrc = layout.lines[view.cur.row]?.src;
 
   const errors = syntaxErrorsShown(view);
+  const links = commentLinksShown(view);
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
   // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
   const shown = app.screenRows(view, layout);
@@ -730,7 +731,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const to = sel.line || row !== sel.range[1].row ? 1e9 : sel.range[1].col + 1;
       marks.push({ from, to, role: "selection" });
     }
-    if (errors) marks.push(...errorMarks(line, errors.get(line.src), layout.lines[row + 1]?.src !== line.src));
+    if (errors) marks.push(...offsetMarks(line, errors.get(line.src), layout.lines[row + 1]?.src !== line.src, "syntax_error"));
+    if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
     // An oversized lens's rules say how much of it is out of sight: ↑ above, ↓ below.
     if ((line.lens === "top" || line.lens === "bottom") && hidden.length) {
@@ -793,15 +795,27 @@ function syntaxErrorsShown(view: View): Map<number, SyntaxError[]> | null {
   return out;
 }
 
-/** The columns of one row an error covers; one past the line's end (a missing `)`) marks its last cell. */
-function errorMarks(line: Line, errs: SyntaxError[] | undefined, lastRow: boolean): { from: number; to: number; role: Role }[] {
-  if (!errs || !line.srcMap) return [];
+/** A source file's links in comments by line (16.10), for the text as it is now. */
+function commentLinksShown(view: View): Map<number, CommentLink[]> | null {
+  const syn = view.buf.syntax;
+  if (!view.source || !syn?.links.length || syn.version !== view.buf.version) return null;
+  const out = new Map<number, CommentLink[]>();
+  for (const l of syn.links) out.set(l.line, [...(out.get(l.line) ?? []), l]);
+  return out;
+}
+
+/**
+ * The columns of one row that source ranges (UTF-16 offsets in its line) cover. One past the
+ * line's end (an error's missing `)`) marks the last cell, on the line's last row.
+ */
+function offsetMarks(line: Line, ranges: { from: number; to: number }[] | undefined, lastRow: boolean, role: Role): { from: number; to: number; role: Role }[] {
+  if (!ranges || !line.srcMap) return [];
   const cs = cells(line);
   const out: { from: number; to: number; role: Role }[] = [];
-  for (const e of errs) {
+  for (const e of ranges) {
     const hit = cs.filter((k) => k.at! >= e.from && k.at! < e.to);
-    if (hit.length) out.push({ from: hit[0]!.x, to: hit[hit.length - 1]!.x + hit[hit.length - 1]!.w, role: "syntax_error" });
-    else if (lastRow && e.from >= line.srcMap.end && cs.length) out.push({ from: cs[cs.length - 1]!.x, to: cs[cs.length - 1]!.x + cs[cs.length - 1]!.w, role: "syntax_error" });
+    if (hit.length) out.push({ from: hit[0]!.x, to: hit[hit.length - 1]!.x + hit[hit.length - 1]!.w, role });
+    else if (lastRow && e.from >= line.srcMap.end && cs.length) out.push({ from: cs[cs.length - 1]!.x, to: cs[cs.length - 1]!.x + cs[cs.length - 1]!.w, role });
   }
   return out;
 }

@@ -16,7 +16,7 @@ import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
 import { layoutSource, newSourceCache } from "../core/layout/source.ts";
 import { headingsOf, newParseCache, type ParsedNote, parseMarkdown, slugify } from "../core/parse.ts";
-import type { OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
+import type { CommentLink, OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
 export interface TextEdit {
@@ -71,7 +71,7 @@ export class NoteBuffer {
    * inside multi-line strings and comments, the outline, syntax errors. The app refreshes it
    * shortly after edits stop; until then the layout uses it as it is.
    */
-  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[] } | null = null;
+  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[]; links: CommentLink[] } | null = null;
 
   constructor(
     /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */

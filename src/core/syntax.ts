@@ -19,7 +19,7 @@ import tsx from "tree-sitter-wasms/out/tree-sitter-tsx.wasm" with { type: "file"
 import typescript from "tree-sitter-wasms/out/tree-sitter-typescript.wasm" with { type: "file" };
 import { lazy, load } from "./lazy.ts";
 
-type Grammar = "typescript" | "tsx" | "javascript" | "python" | "bash" | "lua" | "go" | "rust";
+export type Grammar = "typescript" | "tsx" | "javascript" | "python" | "bash" | "lua" | "go" | "rust";
 
 const WASM: Record<Grammar, string> = { typescript, tsx, javascript, python, bash, lua, go, rust };
 
@@ -222,6 +222,56 @@ export class SyntaxTree {
   comments(): Comment[] {
     return this.g.comments.captures(this.tree.rootNode).map((c) => ({ line: c.node.startPosition.row + 1, column: c.node.startPosition.column, text: c.node.text }));
   }
+}
+
+export interface CommentLink {
+  /** 1-based line; 0-based UTF-16 columns of the token in it. */
+  line: number;
+  from: number;
+  to: number;
+  /** A URL, or a path as written (no `:line`). */
+  target: string;
+  url: boolean;
+  /** `path:42`: the line it points at. */
+  at: number | null;
+}
+
+const URL_RE = /\bhttps?:\/\/[^\s<>"'`]+/g;
+/** A path with an extension (a letter first: `1.5` isn't one), maybe `:line` or `:line:col` after. */
+const PATH_RE = /(?<![\w./@~-])(?:\.{1,2}\/|\/)?[\w@~-][\w.@~-]*(?:\/[\w.@~-]+)*\.[A-Za-z][A-Za-z0-9]{0,9}(?::(\d+)(?::\d+)?)?(?![\w/])/g;
+
+/**
+ * Link-like tokens in a text (16.10): URLs, and paths with an extension, `path:42` included. Which
+ * paths are links is the caller's to say — the ones that name a file of the vault.
+ */
+export function linkTokens(text: string): { index: number; length: number; target: string; url: boolean; at: number | null }[] {
+  const out: { index: number; length: number; target: string; url: boolean; at: number | null }[] = [];
+  let masked = text;
+  for (const m of text.matchAll(URL_RE)) {
+    // Trailing punctuation is the sentence's; a `)` is the URL's only when it opened one.
+    let u = m[0].replace(/[.,;:!?'"]+$/, "");
+    while (u.endsWith(")") && (u.match(/\(/g)?.length ?? 0) < (u.match(/\)/g)?.length ?? 0)) u = u.slice(0, -1).replace(/[.,;:!?]+$/, "");
+    out.push({ index: m.index, length: u.length, target: u, url: true, at: null });
+    masked = masked.slice(0, m.index) + " ".repeat(m[0].length) + masked.slice(m.index + m[0].length);
+  }
+  for (const m of masked.matchAll(PATH_RE)) {
+    const tok = m[0].replace(/\.+$/, "");
+    const target = m[1] ? tok.slice(0, tok.indexOf(":")) : tok;
+    out.push({ index: m.index, length: tok.length, target, url: false, at: m[1] ? Number(m[1]) : null });
+  }
+  return out.sort((x, y) => x.index - y.index);
+}
+
+/** The link-like tokens in a file's comments, placed by line and column. */
+export function commentLinks(comments: Comment[]): CommentLink[] {
+  const out: CommentLink[] = [];
+  for (const c of comments) {
+    c.text.split("\n").forEach((text, i) => {
+      const base = i === 0 ? c.column : 0;
+      for (const t of linkTokens(text)) out.push({ line: c.line + i, from: base + t.index, to: base + t.index + t.length, target: t.target, url: t.url, at: t.at });
+    });
+  }
+  return out;
 }
 
 /** Parse `source` with a loaded grammar. */
