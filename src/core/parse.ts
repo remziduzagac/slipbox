@@ -30,8 +30,26 @@ export interface ParsedNote {
   source: string;
 }
 
+/**
+ * Inputs the markdown parser takes quadratic time over, made harmless without moving a single
+ * offset (positions are what editing uses): a run of 64 or more `*` `_` `[` `]` becomes the same
+ * number of look-alikes, and a line's container prefix (quote marks, list markers, indentation)
+ * past 80 characters becomes no-break spaces — the rest of that line is then plain text. Only the
+ * rendered view sees the difference; source mode shows the file's own text.
+ */
+function tame(source: string): string {
+  if (!/([*_[\]])\1{63}/.test(source) && !/^[ \t>*+\-\d.)]{81}/m.test(source)) return source;
+  const like: Record<string, string> = { "*": "∗", _: "‗", "[": "［", "]": "］" };
+  return source
+    .replace(/([*_[\]])\1{63,}/g, (run) => like[run[0]!]!.repeat(run.length))
+    .replace(/^([ \t>*+\-\d.)]{80})([ \t>*+\-\d.)]+)/gm, (_, keep: string, rest: string) => keep + "\u00a0".repeat(rest.length));
+}
+
+/** Frontmatter bigger than this isn't parsed as YAML: it shows as raw text (a size bomb otherwise). */
+const MAX_YAML = 64 * 1024;
+
 export function parseMarkdown(source: string): ParsedNote {
-  const tree = processor.parse(source) as Root;
+  const tree = processor.parse(tame(source)) as Root;
   let frontmatter: Frontmatter | null = null;
   const first = tree.children[0];
   if (first && (first.type === "yaml" || (first.type as string) === "toml")) {
@@ -39,9 +57,12 @@ export function parseMarkdown(source: string): ParsedNote {
     const format = first.type === "yaml" ? "yaml" : "toml";
     let data: Record<string, unknown> | null = null;
     let error: string | null = null;
-    if (format === "yaml") {
+    if (format === "yaml" && raw.length > MAX_YAML) error = `frontmatter over ${MAX_YAML / 1024} KB: shown as text, not parsed`;
+    else if (format === "yaml") {
       try {
-        const v = parseYaml(raw, { logLevel: "error" }); // warnings stay off stderr; an error still fails
+        // Warnings stay off stderr (an error still fails); no duplicate-key check, which is
+        // quadratic in the number of keys.
+        const v = parseYaml(raw, { logLevel: "error", uniqueKeys: false });
         data = v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
       } catch (err) {
         error = (err as Error).message.split("\n")[0] ?? "invalid YAML";

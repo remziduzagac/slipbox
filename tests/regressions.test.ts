@@ -23,6 +23,7 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-reg-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
 function vault(files: Record<string, string>): string {

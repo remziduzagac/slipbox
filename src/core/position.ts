@@ -16,6 +16,15 @@ export interface Anchor {
   headingIndex: number;
   offset: number;
   line: number;
+  /**
+   * For headings that repeat (a log's `## Weather` entries): the heading's text, its occurrence
+   * among those counted from the top and from the bottom, and the anchored row's text. An entry an
+   * agent prepends shifts the one count but not the other; the row's text says which still holds.
+   */
+  headingText?: string;
+  nth?: number;
+  nthFromEnd?: number;
+  rowText?: string;
 }
 
 export const TOP: Anchor = { heading: null, headingIndex: 0, offset: 0, line: 1 };
@@ -32,13 +41,30 @@ export function anchorAt(layout: Layout, top: number): Anchor {
   }
   if (!heading) return { heading: null, headingIndex: 0, offset: src - 1, line: src };
   const headingIndex = layout.headings.filter((h) => h.slug === heading!.slug && h.line < heading!.line).length;
-  return { heading: heading.slug, headingIndex, offset: src - heading.src, line: src };
+  const same = layout.headings.filter((h) => h.text === heading!.text);
+  if (same.length < 2) return { heading: heading.slug, headingIndex, offset: src - heading.src, line: src };
+  const nth = same.indexOf(heading);
+  return { heading: heading.slug, headingIndex, offset: src - heading.src, line: src, headingText: heading.text, nth, nthFromEnd: same.length - 1 - nth, rowText: rowTextOf(layout, top) };
+}
+
+function rowTextOf(layout: Layout, row: number): string {
+  return (layout.lines[row]?.spans.map((s) => s.text).join("") ?? "").trim().slice(0, 60);
 }
 
 /** The top row for an anchor in a (possibly re-laid-out, possibly edited) layout. */
 export function rowFor(layout: Layout, anchor: Anchor): number {
   if (!layout.lines.length) return 0;
   let targetSrc = anchor.line;
+  if (anchor.headingText !== undefined && anchor.nth !== undefined && anchor.nthFromEnd !== undefined) {
+    // A repeated heading: counted from the top, or from the bottom — whichever still has the row.
+    const same = layout.headings.filter((h) => h.text === anchor.headingText);
+    const tries = [same[anchor.nth], same[same.length - 1 - anchor.nthFromEnd]].filter((h): h is NonNullable<typeof h> => !!h);
+    for (const h of tries) {
+      const row = rowForSource(layout, h.src + anchor.offset);
+      if (anchor.rowText && rowTextOf(layout, row).startsWith(anchor.rowText)) return row;
+    }
+    if (tries[0]) return rowForSource(layout, tries[0].src + anchor.offset);
+  }
   if (anchor.heading) {
     const matches = layout.headings.filter((h) => h.slug === anchor.heading);
     const h = matches[anchor.headingIndex] ?? matches[0];

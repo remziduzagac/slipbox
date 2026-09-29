@@ -27,6 +27,9 @@ export function parseArgs(argv: string[]): Args {
       if (VALUED.has(name)) {
         const v = eq >= 0 ? a.slice(eq + 1) : argv[++i];
         if (v === undefined) throw new UsageError(`--${name} needs a value`);
+        // An empty value is never meant: an empty --if-unchanged would check nothing, an empty
+        // --root would quietly mean the current directory.
+        if (v === "") throw new UsageError(`--${name} needs a value (it was empty)`);
         flags.set(name, v);
       } else {
         if (!BOOLEAN.has(name)) throw new UsageError(`unknown option: --${name}`);

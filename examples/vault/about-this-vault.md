@@ -27,7 +27,8 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `scratch/broken-frontmatter.md` | frontmatter that is not valid YAML |
 | `projects/variable-star-survey.md` | long prose with code, tables, quotes and a block id: the ordinary case |
 | `people/partners-and-names.md` | every link form, broken links, footnotes; CJK, emoji, ZWJ, RTL widths |
-| `home.md`, `people/`, `meetings/` | a small linked graph: backlinks, tasks, aliases, heading references |
+| `home.md`, `people/`, `meetings/` | a linked graph: backlinks, tasks, heading references, an ambiguous link |
+| `logs/observing-log-2026.md` (again) | repeated `### Weather` headings, an in-note `#anchor` link |
 
 `scripts/sample-metrics.ts` measures what each note exercises (lines, longest line, tables and
 rows, fences and their languages, headings, links, wide and right-to-left characters), so a change

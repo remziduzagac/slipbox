@@ -59,8 +59,11 @@ house style that writing-guide describes.
 │ people/partners-and-names.md       │ every link form, broken links,          │
 │                                    │ footnotes; CJK, emoji, ZWJ, RTL widths  │
 ├────────────────────────────────────┼─────────────────────────────────────────┤
-│ home.md, people/, meetings/        │ a small linked graph: backlinks, tasks, │
-│                                    │ aliases, heading references             │
+│ home.md, people/, meetings/        │ a linked graph: backlinks, tasks,       │
+│                                    │ heading references, an ambiguous link   │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ logs/observing-log-2026.md (again) │ repeated ### Weather headings, an       │
+│                                    │ in-note #anchor link                    │
 └────────────────────────────────────┴─────────────────────────────────────────┘
 
 scripts/sample-metrics.ts measures what each note exercises (lines, longest
@@ -98,6 +101,20 @@ report:
   (twice).
 • equipment/instrument-inventory.md: images/lyra-slit.png, images/tern-frame.jpg
   and ![[missing-flat-field.png]], placeholders for photos not yet taken."
+`;
+
+exports[`snapshots of the layout IR as text equipment/contacts.md @ 80 1`] = `
+"▌ Contacts
+
+Suppliers and service contacts for the instruments, by what they look after.
+
+┌────────────┬──────────────────────────────────┬─────────────────────────┐
+│ Instrument │ Who                              │ How                     │
+╞════════════╪══════════════════════════════════╪═════════════════════════╡
+│ HCAM-2     │ the camera's maker, support desk │ support@ccd.example.com │
+│ FW-8       │ the workshop's own spares shelf  │ ask Tomasz              │
+│ Sable      │ the weather-station vendor       │ help@sable.example.com  │
+└────────────┴──────────────────────────────────┴─────────────────────────┘"
 `;
 
 exports[`snapshots of the layout IR as text equipment/instrument-inventory.md @ 80 1`] = `
@@ -2419,7 +2436,9 @@ about-this-vault says what each note is there to exercise.
 
 • partners-and-names — partners, and names in their own scripts
 • 2026-09-14-weekly — the last weekly meeting
-• kenji-mori — our visiting astronomer"
+• kenji-mori — our visiting astronomer
+• contacts — deliberately ambiguous: there are two, people/contacts.md and
+  equipment/contacts.md, so following it asks which"
 `;
 
 exports[`snapshots of the layout IR as text logs/observing-log-2026.md @ 80 1`] = `
@@ -2427,7 +2446,8 @@ exports[`snapshots of the layout IR as text logs/observing-log-2026.md @ 80 1`] 
 
 Night-by-night record for Halden Ridge Observatory. Times are UTC. Weather
 readings come from Sable, seeing from Quill (arcsec, FWHM), sky brightness in
-mag/arcsec². Faults get a ticket number in the Workshop tracker.
+mag/arcsec². Faults get a ticket number in the Workshop tracker. The year opened
+on the first night; every night's weather is under its own ### Weather.
 
 The rule for this page is simple: one heading per night, one table per heading,
 and if a night is lost to cloud it still gets a row.
@@ -2453,6 +2473,10 @@ and if a night is lost to cloud it still gets a row.
 │       │                 │ frames kept, none of them flats                    │
 └───────┴─────────────────┴────────────────────────────────────────────────────┘
 
+▌ Weather
+
+Clear after sunset, cloud from the west by 23:00. Sable: 2.1 °C, RH 64 %.
+
 ▌ 2026-01-11 — Brill test night
 
 ┌───────┬─────────────────┬─────────────────────────────────────────────────┐
@@ -2465,6 +2489,10 @@ and if a night is lost to cloud it still gets a row.
 │ 20:45 │ Sable           │ 0.4 °C, RH 71 %                                 │
 │ 22:10 │ Roll-off closed │ dew on the corrector, heater was off            │
 └───────┴─────────────────┴─────────────────────────────────────────────────┘
+
+▌ Weather
+
+Cold and still. Sable: −3.4 °C, RH 51 %, wind under 2 m/s all night.
 
 ▌ 2026-01-17 — lost to cloud
 
@@ -2482,6 +2510,10 @@ and if a night is lost to cloud it still gets a row.
 │ 21:20 │ Server Room     │ used the time to rotate stacks backups and test a  │
 │       │                 │ restore to a scratch database                      │
 └───────┴─────────────────┴────────────────────────────────────────────────────┘
+
+▌ Weather
+
+Overcast from dusk. Tern never showed a star; the dome stayed shut.
 
 ▌ 2026-01-24 — VSS catch-up
 
@@ -2505,6 +2537,10 @@ and if a night is lost to cloud it still gets a row.
 ├───────┼────────────────┼─────────────────────────────────────────────────────┤
 │ 03:05 │ Dome closed    │ 2 612 frames ingested, 0 rejected                   │
 └───────┴────────────────┴─────────────────────────────────────────────────────┘
+
+▌ Weather
+
+Clear, a little haze low in the south. Quill averaged 2.0″.
 
 ▌ 2026-02-02 — Lyra commissioning, night 1
 
@@ -2963,6 +2999,17 @@ Delgado.
 
 Weather station Sable logged 38 cloudy nights out of 61 this summer; see
 observing-log-2026 for the nights we did get."
+`;
+
+exports[`snapshots of the layout IR as text people/contacts.md @ 80 1`] = `
+"▌ Contacts
+
+The people outside the observatory we call on: the Marrowby council's lighting
+officer, the Kiso-Hara Astronomical Society's secretary, and the courier who
+takes mirrors to the coater.
+
+• Lighting officer, Marrowby council — lighting@marrowby.example.org
+• Secretary, Kiso-Hara Astronomical Society — see partners-and-names"
 `;
 
 exports[`snapshots of the layout IR as text people/kenji-mori.md @ 80 1`] = `

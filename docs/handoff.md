@@ -17,7 +17,10 @@ dissatisfaction that started it.
 
 Phases 0–3 are implemented: the core, the rendering pipeline, the TUI with editing (source mode, a
 vim-shaped normal mode, the lens, autosave and the conflict prompt, hand-off to `$EDITOR` or a
-running nvim) and the agent CLI, with tests (`bun run check`). `docs/design/` describes the code as
+running nvim) and the agent CLI — which reaches every state change the TUI makes: find, replace,
+tasks, safe writes — with tests (`bun run check`: headless, and the CLI as a process) and terminal
+tests (`bun run e2e`, slipbox driven in a herdr pane; see `docs/design/testing.md`), all on the demo
+vault in `examples/vault`. `docs/design/` describes the code as
 it is and is kept in step with it; `docs/design/decisions.md` answers the decide items. The next
 phase is 4, vault and structure. Still open from phase 3: `7.2`–`7.4` (multi-file preview, rename
 undo) wait for renames (`7.1`, phase 4).
@@ -65,7 +68,7 @@ because it is cheap now and expensive later. Two deserve special attention:
   means touching every action.
 
 The demo vault, `examples/vault/`, holds the rendering fixtures for `0.5` — the wide-table case that
-started the project, a 1,180-line document, 216 dense table rows, and a note covering every link
+started the project, a 1,231-line document, 216 dense table rows, and a note covering every link
 form and display width. Its notes are invented (a fictional observatory's), written to keep the
 awkward things real notes contain. The vault cases (name collisions, CRLF and encodings, images, the `.slipbox/`
 marker) live in the test vault, `tests/fixtures/vault/`.

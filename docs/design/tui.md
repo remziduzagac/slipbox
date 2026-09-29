@@ -262,7 +262,17 @@ Each kind of link does something different when followed:
 | attachment `![[x.png]]` | copies the path; images are phase 6 |
 | footnote `[1]` | jumps to the definition |
 
-`enter` follows the link under the cursor, or else the row's first link.
+`enter` follows the link under the cursor, or else the row's first link. In source mode and inside
+the lens, where rows are the markdown itself, `enter` and `space l f` / `s` read the link around the
+cursor from the text (`[[…]]`, `![[…]]`, `[text](url)`); a click there places the cursor for
+editing. A click follows a link only when it lands on the link: blank space past a row's end or
+below the note, which the cursor is clamped from, follows nothing.
+
+The explorer's and the outline's selections stay on the note or heading they select when an agent
+adds or removes notes or headings (a selection is kept by what it is, not its row). A reading
+position under a repeated heading (a log's `## Weather` entries) keeps its entry when one is
+prepended: the anchor also records the heading's occurrence counted from the bottom and the row's
+text, and keeps whichever count still finds that text.
 
 ## Side panes: explorer (plan `3.7`), history and outline
 
@@ -551,7 +561,12 @@ touches a heading band, a table or a code block. Like the rules, these rows are 
 
 **Its size.** It opens on the cursor's block and takes in the neighbours (below, then above) until
 it has `[editor] lens_min_rows` rows of markdown (6), so a one-line paragraph isn't a sliver and
-small moves don't reshape it. It never splits a block.
+small moves don't reshape it. It never splits a block. An edit inside it (typing, `dd`, a replace)
+keeps its lines, grown or shrunk by the edit; typing that reaches past an edge (a join at its last
+line, a backspace at its first) extends it to the cursor, so the cursor always sits on a source row
+and an edit goes where you see it. A change from elsewhere while you aren't typing (an agent's
+write, a `:%s`) reopens it on the cursor's block at its opening size, never stretched by the lines
+the change added. The cursor placed on a line outside it (`cgn`, `n`, undo) moves it there first.
 
 **Moving while it's open.** The cursor stays in it. Moving inside changes nothing; moving past an
 edge brings the next block in, dropping the far ones once it's taller than `[editor] lens_max` of
@@ -611,9 +626,10 @@ unsaved, source mode's outline comes from a quick scan of the text's headings.
 **Outside changes and conflicts** (`4.5`, `5.5`–`5.7`). A clean note that changes on disk reloads,
 and the reload is one more undo step: `u` brings back what was there before an agent rewrote it (and
 `:e!`, dropping your changes, is undoable the same way). A note with unsaved changes that changes on
-disk opens the **conflict prompt**, which each choice answers with its key. While you're typing into
-the note it waits: a message says the file changed, and the prompt opens when insert mode ends, so
-letters meant for the note never pick a choice.
+disk opens the **conflict prompt**, which each choice answers with its key. While you're typing (into
+it or any note) it waits: a message says the file changed, and the prompt opens with the first key
+after typing ends — not the `esc` itself, which a second `esc` closing the lens would answer — so
+letters meant for the text never pick a choice.
 
 - **(l) Load theirs** — the file's version; yours is one `u` away.
 - **(k) Keep yours** — the status line says `⚠ differs from disk`; autosave stays off for it, and

@@ -9,6 +9,8 @@ import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import type { Layout } from "../src/core/layout/ir.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { allocate } from "../src/core/layout/table.ts";
+import { countLines, measure, wrapSpans } from "../src/core/layout/wrap.ts";
+import type { Span } from "../src/core/layout/ir.ts";
 import { loadTheme } from "../src/core/theme/index.ts";
 import { stringWidth } from "../src/core/width.ts";
 
@@ -17,6 +19,7 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-render-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
 
@@ -214,5 +217,93 @@ describe("ANSI writer", () => {
     expect(colour).toContain("\x1b[0;38;2;");
     for (const line of colour.trimEnd().split("\n")) expect(line.endsWith("\x1b[0m")).toBe(true);
     expect(layoutToAnsi(layout, theme, { depth: "256" })).toContain("38;5;");
+  });
+});
+
+describe("the allocator predicts exactly what is drawn (review cycle 2)", () => {
+  test("countLines(measure(x), w) === wrapSpans(x, w).length for random mixed text", () => {
+    let seed = 7;
+    const rand = (n: number) => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed % n;
+    };
+    const pieces = ["a", "word", "漢", "字", "、", "。", "（", "）", "「", "」", "ｱ", "ー", "🎉", "👨‍👩‍👧", "é", " ", "  ", "/", "-", ".", ",", "\n", "longidentifier_with.parts/and-more"];
+    for (let k = 0; k < 3000; k++) {
+      const parts = Array.from({ length: 1 + rand(14) }, () => pieces[rand(pieces.length)]!);
+      const cut = rand(parts.length);
+      const spans: Span[] = [parts.slice(0, cut).join(""), parts.slice(cut).join("")].filter(Boolean).map((text) => ({ text, role: "text", attrs: 0 }));
+      if (!spans.length) continue;
+      for (let w = 2; w <= 14; w++) {
+        const predicted = countLines(measure(spans), w);
+        const drawn = wrapSpans(spans, w).length;
+        if (predicted !== drawn) throw new Error(`${JSON.stringify(spans.map((x) => x.text))} @${w}: predicted ${predicted}, drawn ${drawn}`);
+      }
+    }
+  });
+});
+
+describe("deep nesting at the narrowest widths loses nothing (review cycle 2)", () => {
+  const fixtures = [
+    "> - a\n>   - b\n>\n>     | name | value |\n>     |---|---|\n>     | alpha | 1 |\n",
+    "1. one\n   1. two\n      1. three\n\n         ```\n         code here\n         ```\n",
+    "- - - - - 漢字\n",
+    "> > > > quoted deeply with words\n",
+    "text[^n]\n\n[^n]: - - a footnote in a list\n",
+  ];
+  for (const md of fixtures) {
+    test(JSON.stringify(md.slice(0, 24)), () => {
+      for (let width = 10; width <= 16; width++) {
+        for (const glyphs of [glyphsFor("unicode"), glyphsFor("ascii")]) {
+          const l = renderMarkdown(md, { width, glyphs, showUrls: false });
+          expect(l.clipped).toBe(0);
+          const shown = l.lines.map((x) => x.spans.map((sp) => sp.text).join("")).join("").replace(/[\s↪…]/g, "");
+          // A word may wrap across rows (a record's value, a code line), with borders between the
+          // pieces: every one of its letters must still be there, in order.
+          const inOrder = (word: string) => {
+            let at = 0;
+            for (const ch of word) {
+              at = shown.indexOf(ch, at);
+              if (at < 0) return false;
+              at++;
+            }
+            return true;
+          };
+          for (const word of ["alpha", "code", "here", "漢字", "deeply", "footnote"].filter((w) => md.includes(w))) {
+            expect(inOrder(word)).toBe(true);
+          }
+        }
+      }
+    });
+  }
+});
+
+describe("review cycle 2 (rendering)", () => {
+  const lay = (md: string, width = 60, showUrls = false) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls });
+  const rows = (l: Layout) => l.lines.map((x) => x.spans.map((s) => s.text).join("").trimEnd());
+  test("every link drawn is placed: in a record's header, and a badge's outer link", () => {
+    const records = lay("| [[Alpha]] | [b](http://b) | c |\n|---|---|---|\n| 1 | 2 | 3 |\n", 12);
+    expect(records.links.every((l) => l.line >= 0)).toBe(true);
+    const badge = lay("[![build](b.svg)](https://ci.example.org)\n");
+    const ci = badge.links.find((l) => l.target === "https://ci.example.org")!;
+    expect(ci.line).toBe(0);
+    expect(badge.links.some((l) => l.target === "b.svg")).toBe(false); // the image is the link's text
+  });
+  test("soft breaks join Han and kana, never Hangul words or emoji", () => {
+    expect(rows(lay("漢字\nかな"))[0]).toBe("漢字かな");
+    expect(rows(lay("한국어\n문장"))[0]).toBe("한국어 문장");
+    expect(rows(lay("Shipped 🎉\n🚀 next"))[0]).toBe("Shipped 🎉 🚀 next");
+  });
+  test("with URLs shown, a URL the text already is isn't repeated", () => {
+    expect(rows(lay("visit www.example.com\n", 60, true))[0]).toBe("visit www.example.com");
+    expect(rows(lay("[](https://empty.example.org)\n", 60, true))[0]).toBe("https://empty.example.org");
+    expect(rows(lay("[docs](https://docs.example.org)\n", 60, true))[0]).toContain("<https://docs.example.org>");
+  });
+  test("the mono theme (NO_COLOR) marks links and code, and link statuses differ", () => {
+    const mono = loadTheme("mono").theme;
+    for (const r of ["link", "wikilink", "link_unresolved", "code_inline", "footnote", "image"] as const) {
+      const st = mono.roles[r];
+      expect(!!(st.bold || st.italic || st.underline || st.dim)).toBe(true);
+    }
+    expect(JSON.stringify(mono.roles.link_unresolved)).not.toBe(JSON.stringify(mono.roles.wikilink));
   });
 });

@@ -332,5 +332,17 @@ export function monoTheme(): Theme {
   roles.tab_active_idle = { bold: true };
   roles.tab_active = { bold: true, underline: true };
   roles.topbar_button = { dim: true };
+  // Links and code must still read as such without colour, and a link's status must show.
+  roles.link = { underline: true };
+  roles.wikilink = { underline: true };
+  roles.link_unresolved = { underline: true, dim: true };
+  roles.link_ambiguous = { underline: true, italic: true };
+  roles.code_inline = { bold: true };
+  roles.footnote = { underline: true };
+  roles.image = { underline: true, italic: true };
+  roles.url = { dim: true };
+  roles.html = { dim: true };
+  roles.dim = { dim: true };
+  roles.fm_error = { bold: true };
   return { ...t, name: "mono", roles };
 }

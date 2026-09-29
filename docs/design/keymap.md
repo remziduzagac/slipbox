@@ -106,7 +106,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | Action | Direct keys | Leader |
 | --- | --- | --- |
 | next / previous link (the cursor jumps to it) | `ctrl+tab` / `ctrl+shift+tab` | `space l n` / `space l p` |
-| follow the link under the cursor, else the first on the row | `enter`, `ctrl+enter`, click | `space l f` |
+| follow the link under the cursor, else the first on the row | `enter`, `ctrl+enter`, click on it | `space l f` |
 | follow it into the split | — | `space l s` |
 | copy its target | `y l` | `space l y` |
 | links from this note (list) | — | `space l l` |

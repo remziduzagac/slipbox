@@ -21,6 +21,7 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
 delete process.env.NO_COLOR;
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
@@ -3548,6 +3549,8 @@ describe("review cycle 1 (TUI)", () => {
     await h.keys("l", "l", "o");
     expect(v.buf.source).toBe("mine hello\n");
     await h.keys("escape");
+    expect(h.app.overlay).toBeNull(); // not on the esc: a second one (closing the lens) would dismiss it
+    await h.keys("0");
     expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
   });
   test("replace all keeps to the selection as it shrinks or grows", async () => {
@@ -3657,3 +3660,191 @@ describe("review cycle 1 (TUI)", () => {
     expect(rows[bottom]!.lastIndexOf("┘")).toBe(rows[top]!.lastIndexOf("┐"));
   });
 });
+
+describe("review cycle 2 (TUI)", () => {
+  const note = `# Title\n\n${Array.from({ length: 12 }, (_, i) => `Para ${i + 1} text here.`).join("\n\n")}\n\nA paragraph of\nfour lines with\nthe zebra here\nand an end.\n\n\`\`\`\ncode 1\ncode 2\n\`\`\`\n`;
+  const open = async (mode: "source" | "live", config?: (c: Config) => void) => {
+    const root = makeVault();
+    writeFileSync(join(root, "l.md"), note);
+    const h = await harness({ root, open: "l.md", width: 100, height: 30, config });
+    const v = h.app.view!;
+    await h.keys("space", "n", mode === "live" ? "l" : "v");
+    const goto = (text: string) => {
+      const rows = h.app.currentLayout(v).lines.map((l) => l.spans.map((x) => x.text).join(""));
+      h.app.moveCursor(v, { row: rows.findIndex((t) => t.includes(text)), col: 0 });
+      h.frame();
+    };
+    return { h, v, goto, root };
+  };
+  test("the lens: the same typing keys give the same text as source mode (a differential)", async () => {
+    let seed = 11;
+    const rand = (n: number) => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed % n;
+    };
+    const pool = ["x", "y", "space", "enter", "backspace", "delete", "left", "right", "home", "end", "ctrl+w", "ctrl+u"];
+    for (let run = 0; run < 25; run++) {
+      const keys = Array.from({ length: 25 }, () => pool[rand(pool.length)]!);
+      // Block starts: a row the rendered view and the source both begin with (a paragraph's later
+      // lines are inside one rendered row, which would start the two modes in different places).
+      const start = ["Para 8", "A paragraph", "Para 12"][run % 3]!;
+      const texts: string[] = [];
+      for (const mode of ["source", "live"] as const) {
+        const { h, v, goto } = await open(mode);
+        goto(start);
+        await h.keys("i", ...keys, "escape");
+        texts.push(v.buf.source);
+      }
+      if (texts[0] !== texts[1]) throw new Error(`from ${start}, keys ${keys.join(" ")}:\nsource ${JSON.stringify(texts[0])}\nlens   ${JSON.stringify(texts[1])}`);
+    }
+  }, 60000);
+  test("the lens: delete across its bottom edge, then typing lands at the cursor", async () => {
+    const { h, v, goto } = await open("live");
+    goto("Para 8");
+    await h.keys("shift+a", "delete", "delete", "delete", "Q", "escape");
+    expect(v.buf.source).toContain("Para 8 text here.Qara 9 text here.");
+  });
+  test("the lens: cgn to a match inside a multi-line block outside it types there", async () => {
+    const { h, v, goto } = await open("live");
+    goto("Para 2");
+    await h.keys("/", ...[..."zebra"], "enter", "g", "g", "c", "g", "n", "Z", "escape");
+    expect(v.buf.source).toContain("the Z here");
+  });
+  test("the lens: an agent's edit elsewhere doesn't stretch it", async () => {
+    const { h, v, goto, root } = await open("live");
+    goto("Para 5");
+    h.frame();
+    const span = () => {
+      const lines = h.app.currentLayout(v).lines;
+      return lines.findIndex((l) => l.lens === "bottom") - lines.findIndex((l) => l.lens === "top");
+    };
+    const before = span();
+    writeFileSync(join(root, "l.md"), `${note}${"more\n\n".repeat(200)}`);
+    h.app.reloadBuffer(v.buf);
+    h.frame();
+    expect(span()).toBeLessThanOrEqual(before + 2);
+  });
+});
+
+describe("review cycle 2 (TUI editing)", () => {
+  const src = async (text: string, config?: (c: Config) => void) => {
+    const root = makeVault();
+    writeFileSync(join(root, "e.md"), text);
+    const h = await harness({ root, open: "e.md", width: 100, height: 30, config });
+    await h.keys("space", "n", "v");
+    const v = h.app.view!;
+    return { h, v, root, at: (row: number, col: number) => h.app.moveCursor(v, { row, col }) };
+  };
+  test("a count before . replaces the recorded one: 2dd then 3. deletes three", async () => {
+    const { h, v, at } = await src(Array.from({ length: 10 }, (_, i) => `l${i}`).join("\n") + "\n");
+    at(0, 0);
+    await h.keys("2", "d", "d", "3", ".");
+    expect(v.buf.source.split("\n")[0]).toBe("l5");
+  });
+  test("insert ctrl+w keeps the space before the word; enter doesn't continue lists in code or on rules", async () => {
+    const { h, v, at } = await src("a foo\n```\n- code\n```\n* * *\n");
+    at(0, 5);
+    await h.keys("a", "ctrl+w", "escape");
+    expect(v.buf.source.split("\n")[0]).toBe("a ");
+    at(2, 5);
+    await h.keys("shift+a", "enter", "x", "escape");
+    expect(v.buf.source.split("\n")[3]).toBe("x");
+    const rule = v.buf.source.split("\n").indexOf("* * *");
+    at(rule, 0);
+    await h.keys("shift+a", "enter", "y", "escape");
+    expect(v.buf.source.split("\n")[rule + 1]).toBe("y");
+  });
+  test("d2ap deletes two paragraphs", async () => {
+    const { h, v, at } = await src("one\n\ntwo\n\nthree\n");
+    at(0, 0);
+    await h.keys("d", "2", "a", "p");
+    expect(v.buf.source).toBe("three\n");
+  });
+  test("a reload during typing keeps the rest of the session one undo step", async () => {
+    const { h, v, root } = await src("start\n");
+    await h.keys("shift+a"); // typing, nothing typed yet: the note is still clean
+    writeFileSync(join(root, "e.md"), "agent\n");
+    const future = Date.now() / 1000 + 5;
+    (await import("node:fs")).utimesSync(join(root, "e.md"), future, future);
+    h.app.reloadBuffer(v.buf);
+    expect(v.buf.source).toBe("agent\n");
+    await h.keys("x", "y", "z", "escape");
+    expect(v.buf.source).toContain("xyz");
+    await h.keys("u");
+    expect(v.buf.source).toBe("agent\n"); // one u: the whole session, not just the z
+  });
+});
+
+describe("review cycle 2 (TUI navigation)", () => {
+  const click = (h: Harness, x: number, y: number) => {
+    h.app.handleMouse({ type: "down", x, y, button: 0 });
+    h.app.handleMouse({ type: "up", x, y, button: 0 });
+  };
+  test("enter follows a link in source mode and in the lens", async () => {
+    for (const mode of ["v", "l"]) {
+      const root = makeVault();
+      writeFileSync(join(root, "s.md"), "# S\n\nSee [[notes/alpha]] and [beta](notes/beta.md).\n");
+      const h = await harness({ root, open: "s.md", width: 100, height: 30 });
+      const v = h.app.view!;
+      await h.keys("space", "n", mode);
+      h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.srcMap && l.spans.map((x) => x.text).join("").includes("See [[")), col: 0 });
+      await h.keys("f", "[", "enter");
+      expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    }
+  });
+  test("a click on blank space never follows a link: past a row's end, below the note", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "c.md"), "See also [[notes/alpha]]\n");
+    const h = await harness({ root, open: "c.md", width: 100, height: 30, config: (c) => ((c.ui.sidebar = false), (c.ui.outline = false)) });
+    h.frame();
+    const pane = h.app.geometry!.panes[0]!;
+    click(h, pane.x + pane.w - 5, pane.y + 20); // below the text
+    expect(h.app.view!.buf.rel).toBe("c.md");
+    const row = h.frame().split("\n").findIndex((r) => r.includes("See also"));
+    click(h, pane.x + pane.w - 5, row); // past the row's end
+    expect(h.app.view!.buf.rel).toBe("c.md");
+  });
+  test("the explorer and outline keep their selection when an agent adds a note or a heading", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md", width: 160, height: 40 });
+    h.app.showSidebar(true);
+    h.app.region = "sidebar";
+    h.app.expanded.add("notes");
+    h.app.invalidateTree();
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "notes/beta.md");
+    writeFileSync(join(root, "notes", "aaa.md"), "# new\n");
+    h.app.applyChanges({ changes: [{ rel: "notes/aaa.md", kind: "created", isNote: true }], rescan: false });
+    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
+  });
+  test("repeated headings: an entry prepended above doesn't move the reader to another entry", async () => {
+    const root = makeVault();
+    const entry = (n: string) => `## Weather\n\n${Array.from({ length: 30 }, (_, i) => `${n} line ${i}`).join("\n\n")}\n`;
+    writeFileSync(join(root, "log.md"), `# Log\n\n${entry("newer")}\n${entry("older")}`);
+    const h = await harness({ root, open: "log.md", width: 100, height: 20 });
+    const v = h.app.view!;
+    h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.spans.map((x) => x.text).join("").includes("newer line 20")), col: 0 });
+    h.frame();
+    writeFileSync(join(root, "log.md"), `# Log\n\n${entry("newest")}\n${entry("newer")}\n${entry("older")}`);
+    const future = Date.now() / 1000 + 5;
+    (await import("node:fs")).utimesSync(join(root, "log.md"), future, future);
+    h.app.reloadBuffer(v.buf);
+    h.frame();
+    expect(rowText(h)).toContain("newer line 20");
+  });
+  test("a click clears a half-typed sequence; a tab click focuses the note", async () => {
+    const h = await harness({ open: "index.md", width: 120, height: 30 });
+    await h.keys("space");
+    expect(h.app.pending.length).toBe(1);
+    const pane = (h.frame(), h.app.geometry!.panes[0]!);
+    click(h, pane.textX + 1, pane.y + 1);
+    expect(h.app.pending.length).toBe(0);
+    await h.keys("ctrl+t", "o");
+    h.app.showSidebar(true);
+    h.app.region = "sidebar";
+    h.frame();
+    const tab = h.app.geometry!.tabs[0]!;
+    click(h, tab.x + 1, tab.y);
+    expect(h.app.region as string).toBe("content");
+  });
+});
+

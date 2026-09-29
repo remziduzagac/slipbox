@@ -29,6 +29,7 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-core-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
 
@@ -606,5 +607,29 @@ describe("review cycle 1 (core)", () => {
     expect(broken.clipped).toBe(0);
     const keyed = render("---\nobserving_programme_coordinator_contact: Ada\n---\n", 40);
     expect(keyed.lines.some((l) => l.spans.map((x) => x.text).join("").includes("…"))).toBe(true);
+  });
+});
+
+describe("review cycle 2 (core)", () => {
+  test("hostile notes stay fast and never throw: deep nesting, long runs, huge frontmatter", () => {
+    const g = glyphsFor("unicode");
+    const cases = [
+      "> - ".repeat(5000) + "x\n",
+      "*".repeat(8000) + "x" + "*".repeat(8000),
+      "[".repeat(20000) + "x",
+      `---\n${Array.from({ length: 20000 }, (_, i) => `k${i}: v`).join("\n")}\n---\nbody\n`,
+    ];
+    for (const md of cases) {
+      const t = performance.now();
+      const l = renderMarkdown(md, { width: 80, glyphs: g, showUrls: false });
+      expect(l.lines.length).toBeGreaterThan(0);
+      expect(performance.now() - t).toBeLessThan(2000);
+    }
+    // Taming moves no offset: a heading after a long run keeps its source line.
+    const tamed = parseMarkdown(`${"*".repeat(100)}\n\n# After\n`);
+    expect(tamed.tree.children.find((n) => n.type === "heading")?.position?.start.line).toBe(3);
+  });
+  test("editor templates fill {file} {line} {server} in one pass: a path with braces stays itself", () => {
+    expect(editorArgv("nvim --server {server} --remote {file}", "/v/{line}-{server}.md", 7, {}, false, "/run/n.sock")).toEqual(["nvim", "--server", "/run/n.sock", "--remote", "/v/{line}-{server}.md"]);
   });
 });

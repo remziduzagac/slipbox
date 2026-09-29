@@ -188,7 +188,7 @@ export class VaultWatcher {
   private pollDir(dirRel: string, reason: string): void {
     if (this.closed || this.polled.has(dirRel)) return;
     this.polled.add(dirRel);
-    this.opts.onWarn?.(`cannot watch ${dirRel || "the vault root"} (${reason.split("\n")[0]}) — polling it every ${Math.round((this.opts.pollMs ?? 2000) / 1000)} s instead`);
+    this.opts.onWarn?.(`cannot watch ${dirRel || "the vault root"} (${reason.split("\n")[0]}) — polling it every ${every(this.opts.pollMs ?? 2000)} instead`);
     this.ensurePollTimer();
   }
 
@@ -256,7 +256,7 @@ export class VaultWatcher {
     this.degraded = reason;
     for (const w of this.watchers.values()) w.close();
     this.watchers.clear();
-    this.opts.onDegraded(`${reason} — falling back to polling open notes every ${Math.round((this.opts.pollMs ?? 2000) / 1000)} s`);
+    this.opts.onDegraded(`${reason} — falling back to polling open notes every ${every(this.opts.pollMs ?? 2000)}`);
     this.ensurePollTimer();
   }
 
@@ -351,4 +351,9 @@ export class VaultWatcher {
     }
     if (changes.length || rescan) this.opts.onBatch({ changes, rescan });
   }
+}
+
+/** A polling interval for a message: "2 s", or "500 ms" under a second (never "0 s"). */
+function every(ms: number): string {
+  return ms < 1000 ? `${ms} ms` : `${Math.round(ms / 1000)} s`;
 }

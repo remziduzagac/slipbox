@@ -3,8 +3,8 @@
 // history, link-following, find, the which-key popup, UI settings, live reload from the watcher
 // (5.1–5.4), and live reload of the configuration itself.
 //
-// Phase 2 is read-only: nothing here writes a note. It writes only its own state (reading
-// positions, session) and the scratch, through core.
+// Notes are written only through writeBuffer (atomic, inside the vault, the watcher told); besides
+// them, its own state (reading positions, session) and the scratch, through core.
 //
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
@@ -17,7 +17,7 @@ import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
-import { insertKey, insertText, stopInsert } from "./editing.ts";
+import { insertKey, insertText, offsetOf, stopInsert } from "./editing.ts";
 import { insertRecord, newVimState, PASTE, vimKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
@@ -959,16 +959,23 @@ export class App {
     if (!base || base.width !== width || base.wrap !== wrap) base = fresh();
     else if (buf.version !== base.version) {
       // Typed into the lens, the rest untouched: the same render, the lens longer or shorter.
-      const untouched = buf.source.startsWith(base.before) && buf.source.endsWith(base.after) && buf.source.length >= base.before.length + base.after.length;
+      // …and the line break that ends the lens survived (a delete at its last line's end joins the
+      // line below into it: that's an edit across the edge, not inside).
+      const edgeKept = !base.after || buf.source[buf.source.length - base.after.length - 1] === "\n";
+      const untouched = buf.source.startsWith(base.before) && buf.source.endsWith(base.after) && buf.source.length >= base.before.length + base.after.length && edgeKept;
       const grew = lineCount - base.lineCount;
       const active: Block = [base.active[0], Math.max(base.active[0], base.active[1] + grew)];
       if (view.insert && untouched) base = { ...base, version: buf.version, active, lineCount, composed: undefined };
-      else base = fresh(active);
+      // Your own edit (typing across an edge, dd, a replace inside it): the lens keeps its lines,
+      // grown or shrunk by it, and typing extends it to wherever the cursor goes (below). A change
+      // from elsewhere while you're not typing (an agent's, a :%s) says nothing about where the
+      // lens should be: it opens on the cursor's block again, the size it would open at.
+      else base = view.insert || untouched ? fresh(active) : fresh();
     } else if (line < base.active[0] || line > base.active[1]) {
       if (base.renderedVersion === buf.version) {
         const range = follow(base.blocks, base.active, line);
         base = { ...base, old: range, active: range, ...around(range), composed: undefined };
-      } else if (!view.insert) base = fresh(base.active);
+      } else base = fresh(view.insert ? [Math.min(base.active[0], line), Math.max(base.active[1], line)] : base.active); // typing never sits outside it
     }
     if (!view.insert && base.renderedVersion !== buf.version) base = fresh(base.active);
     view.liveBase = base;
@@ -2343,10 +2350,11 @@ export class App {
     }
     this.scheduleAutosave(); // the idle clock starts again at each key
     this.publishDirty();
-    // A conflict that arrived while typing: its prompt now that typing stopped.
-    if (!this.overlay) {
-      const waiting = this.allViews().find((v) => v.buf.conflictWaiting && !v.insert)?.buf;
-      if (waiting && !this.allViews().some((v) => v.insert && v.buf === waiting)) {
+    // A conflict that arrived while typing: its prompt now that typing stopped — not on the esc that
+    // stopped it, since a second esc (closing the lens) would dismiss it unread.
+    if (!this.overlay && key !== "escape" && !this.allViews().some((v) => v.insert)) {
+      const waiting = this.allViews().find((v) => v.buf.conflictWaiting)?.buf;
+      if (waiting) {
         if (waiting.dirty && waiting.changedOnDisk()) this.conflictPrompt(waiting);
         else waiting.conflictWaiting = false;
       }
@@ -2620,7 +2628,7 @@ export class App {
 
   private lastClick: { x: number; y: number; at: number; count: number } | null = null;
   private drag:
-    | { kind: "select"; view: View; start: Pos; moved: boolean }
+    | { kind: "select"; view: View; start: Pos; moved: boolean; onText: boolean }
     | { kind: "tab"; index: number }
     | { kind: "separator"; sep: import("./draw.ts").Separator }
     | { kind: "scrollbar"; bar: import("./draw.ts").ScrollbarGeom }
@@ -2638,9 +2646,12 @@ export class App {
     if (this.overlay) return this.overlayMouse(ev, g);
     if (ev.type === "scroll") return this.wheel(ev, g);
     if (ev.type === "down") {
-      // A click ends typing (its undo step closes), then does what it does.
+      // A click ends typing (its undo step closes), and a half-typed sequence (space, then the
+      // click) unless it's on the which-key popup's own entries; then does what it does.
       for (const v of this.allViews()) if (v.insert) stopInsert(this, v);
-      return this.mouseDown(ev, g, hotAt()?.id ?? null);
+      const hot = hotAt()?.id ?? null;
+      if (this.pending.length && !hot?.startsWith("wk:")) this.clearPending();
+      return this.mouseDown(ev, g, hot);
     }
     if (ev.type === "drag" && this.drag) return this.mouseDrag(ev, g);
     if ((ev.type === "up" || ev.type === "drag-end") && this.drag) return this.mouseUp();
@@ -2754,6 +2765,7 @@ export class App {
     const tab = g.tabs.find((t) => inRect(t, ev.x, ev.y));
     if (tab) {
       this.activeTab = tab.index;
+      this.region = "content"; // the tab's note has the keys now, not a pane focused before
       this.drag = { kind: "tab", index: tab.index };
       return;
     }
@@ -2811,6 +2823,7 @@ export class App {
         return;
       }
       if (row.kind === "dir") {
+        if (this.sidebar.filter) return; // a filtered list ignores folds: a click there only selects
         if (this.expanded.has(row.path)) this.expanded.delete(row.path);
         else this.expanded.add(row.path);
         this.invalidateTree();
@@ -2837,6 +2850,11 @@ export class App {
     const layout = this.currentLayout(view);
     const shown = this.screenRows(view, layout);
     const pos = clampPos(layout, { row: shown[ev.y - pane.y] ?? shown[shown.length - 1] ?? 0, col: Math.max(0, ev.x - pane.textX) + view.left });
+    // Really on the text, not on blank space the cursor was clamped from (past a row's end, below
+    // the note): only there does a click follow a link or tick a task.
+    const clickedRow = shown[ev.y - pane.y];
+    const clickedCol = ev.x - pane.textX + view.left;
+    const onText = clickedRow !== undefined && clickedCol >= 0 && clickedCol < (layout.lines[clickedRow]?.spans.reduce((a, sp) => a + stringWidth(sp.text), 0) ?? 0);
     view.visual = null;
     if (clicks === 2) {
       // Double-click selects the word, triple-click the row; either is copied, like a terminal.
@@ -2861,7 +2879,7 @@ export class App {
     // Where the cursor really is now (the lens may have moved): a drag starts from there.
     this.currentLayout(view);
     view.lensClick = undefined;
-    this.drag = { kind: "select", view, start: { ...view.cur }, moved: false };
+    this.drag = { kind: "select", view, start: { ...view.cur }, moved: false, onText };
   }
 
   private copySelectionQuietly(view: View): void {
@@ -2922,6 +2940,7 @@ export class App {
       return;
     }
     d.view.sel = null;
+    if (!d.onText) return;
     const layout = this.currentLayout(d.view);
     const link = linkAt(layout, d.start.row, d.start.col);
     if (link >= 0) return void this.run("link.follow").then(() => this.host.requestRender());
@@ -3193,6 +3212,37 @@ export class App {
   }
 
   applyChanges(batch: WatchBatch): void {
+    // The panes' selections are row indexes: an agent's new or deleted note, or a heading added
+    // above, would move them to another item. Kept by what they select, not where.
+    const keep = this.rememberSelections();
+    try {
+      this.applyChangesNow(batch);
+    } finally {
+      keep();
+    }
+  }
+
+  /** What the explorer and the outline have selected; the function puts them back on it. */
+  private rememberSelections(): () => void {
+    const explorer = this.leftView === "explorer" ? this.explorerRows()[this.sidebar.selected]?.path : undefined;
+    const rows = this.outlineShown ? this.outlineRows() : [];
+    const heading = rows[this.outline.selected];
+    const nth = heading ? rows.slice(0, this.outline.selected).filter((r) => r.text === heading.text).length : 0;
+    return () => {
+      if (explorer !== undefined) {
+        const i = this.explorerRows().findIndex((r) => r.path === explorer);
+        if (i >= 0) this.sidebar.selected = i;
+      }
+      if (heading) {
+        const now = this.outlineRows();
+        const same = now.map((r, i) => ({ r, i })).filter((x) => x.r.text === heading.text);
+        const hit = same[Math.min(nth, same.length - 1)];
+        if (hit) this.outline.selected = hit.i;
+      }
+    };
+  }
+
+  private applyChangesNow(batch: WatchBatch): void {
     let setChanged = false;
     if (batch.rescan) {
       this.graph.build(true, "lazy");
@@ -3271,6 +3321,9 @@ export class App {
       v.sel = null;
       v.visual = null;
     }
+    // The reload was an undo step of its own: typing going on in it continues as one step again.
+    const typing = this.allViews().find((v) => v.buf === buf && v.insert);
+    if (typing) buf.beginStep(offsetOf(this, typing));
     this.message("info", `↻ ${this.displayName(buf)} changed on disk — reloaded`);
     setTimeout(() => this.host.requestRender(), 3100).unref?.();
   }
@@ -3396,9 +3449,9 @@ export class App {
    * against the version you started from, marking what both changed.
    */
   conflictPrompt(buf: NoteBuffer): void {
-    // Not while you type into it: letters meant for the note would pick l, k, d or m. It opens
-    // when insert mode ends (processKey).
-    if (this.allViews().some((v) => v.insert && v.buf === buf)) {
+    // Not while you type, into it or any note: letters meant for the text would pick l, k, d or m.
+    // It opens once typing has stopped (processKey).
+    if (this.allViews().some((v) => v.insert)) {
       if (!buf.conflictWaiting) this.message("warn", `${this.displayName(buf)} changed on disk — esc, then choose what to keep`);
       buf.conflictWaiting = true;
       return;

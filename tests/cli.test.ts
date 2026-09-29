@@ -4,7 +4,7 @@
 // process for the finer cases.)
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CLI_COMMANDS } from "../src/cli/cli.ts";
@@ -20,6 +20,9 @@ const env = {
   XDG_CONFIG_HOME: join(sandbox, "config"),
   NO_COLOR: "1",
   SLIPBOX_CLIPBOARD: "file", // never the developer's clipboard
+  // The sandbox's own config: an exported SLIPBOX_CONFIG would win over XDG_CONFIG_HOME and could
+  // name the developer's real editor (send runs it).
+  SLIPBOX_CONFIG: join(sandbox, "config", "slipbox", "config.toml"),
 };
 const ran = new Set<string>();
 
@@ -282,6 +285,63 @@ describe("the vault and the tool", () => {
     writeFileSync(join(vault, ".hidden", "note.md"), "hidden text\n");
     expect(slipbox(["read", ".hidden/note.md"]).out).toBe("hidden text\n");
     expect(slipbox(["find", "hidden", ".hidden/note.md", "--json"]).json.data.count).toBe(1);
+  });
+  test("review cycle 2: writers change only notes in the vault; find survives a bad note; argument checks", () => {
+    const outsideDir = mkdtempSync(join(tmpdir(), "slipbox-cli-out2-"));
+    writeFileSync(join(outsideDir, "outside.md"), "keep\n");
+    // An existing path outside the vault is single-file mode there: never written.
+    expect(slipbox(["write", join(outsideDir, "outside.md"), "clobbered"]).code).toBe(5);
+    expect(slipbox(["replace", join(outsideDir, "outside.md"), "keep", "X"]).code).toBe(5);
+    expect(readFileSync(join(outsideDir, "outside.md"), "utf8")).toBe("keep\n");
+    // Files that aren't notes, or where the vault lists none.
+    mkdirSync(join(vault, ".slipbox"), { recursive: true });
+    writeFileSync(join(vault, ".slipbox", "config.toml"), "# vault config\n");
+    expect(slipbox(["write", ".slipbox/config.toml", "x"]).code).toBe(5);
+    expect(readFileSync(join(vault, ".slipbox", "config.toml"), "utf8")).toBe("# vault config\n");
+    for (const bad of [".slipbox/evil", ".git/hooks/x", "node_modules/x", "odd/"]) expect(slipbox(["write", bad, "x", "--create"]).code).toBe(5);
+    // A dry run previews a note that couldn't be written; a bad --lines is a usage error.
+    expect(slipbox(["replace", "home", "Halden", "H", "--lines", "999"]).code).toBe(2);
+    expect(slipbox(["replace", "home", "", "H"]).code).toBe(2);
+    // find: an unreadable note is a warning, the others are still searched; a long line is clipped.
+    writeFileSync(join(vault, "locked.md"), "Aster\n");
+    chmodSync(join(vault, "locked.md"), 0o000);
+    const found = slipbox(["find", "Aster", "--json"]).json;
+    chmodSync(join(vault, "locked.md"), 0o644);
+    expect(found.ok).toBe(true);
+    expect(found.data.count).toBeGreaterThan(5);
+    writeFileSync(join(vault, "long-line.md"), `${"QUFB".repeat(5000)}\n`);
+    const long = slipbox(["find", "QUFB", "long-line", "--json"]).json.data;
+    expect(long.count).toBe(5000);
+    expect(long.matches.every((m: { text: string }) => m.text.length <= 170)).toBe(true);
+    // Arguments: too many is a usage error; an empty flag value too; -- names a dash note.
+    expect(slipbox(["read", "home", "extra"]).code).toBe(2);
+    expect(slipbox(["ls", "--root", ""]).code).toBe(2);
+    writeFileSync(join(vault, "-dash.md"), "dash\n");
+    expect(slipbox(["read", "--", "-dash.md"]).out).toBe("dash\n");
+  });
+  test("review cycle 2: a symlink out of the vault is never read by path", () => {
+    const outside = mkdtempSync(join(tmpdir(), "slipbox-cli-read-"));
+    writeFileSync(join(outside, "secret.md"), "SECRET\n");
+    symlinkSync(join(outside, "secret.md"), join(vault, "evil.md"));
+    const r = slipbox(["read", "evil.md"]);
+    expect(r.code).toBe(5);
+    expect(r.out).not.toContain("SECRET");
+    expect(slipbox(["find", "SECRET", "evil.md"]).out).not.toContain("SECRET");
+    rmSync(join(vault, "evil.md"));
+  });
+  test("review cycle 2: a malformed stale file is ignored; a live one is reported, a dead one pruned", () => {
+    const state = slipbox(["info", "--json"]).json.data.state;
+    mkdirSync(join(state, "dirty"), { recursive: true });
+    writeFileSync(join(state, "dirty", "bad.json"), JSON.stringify({ pid: process.pid }));
+    expect(slipbox(["ls"]).code).toBe(0);
+    writeFileSync(join(state, "dirty", `${process.pid}.json`), JSON.stringify({ pid: process.pid, paths: ["home.md"] }));
+    const r = slipbox(["ls", "--json"]);
+    expect(r.json.stale).toEqual(["home.md"]);
+    expect(slipbox(["ls"]).err).toContain("unsaved changes in a running slipbox: home.md");
+    writeFileSync(join(state, "dirty", "999999.json"), JSON.stringify({ pid: 999999, paths: ["dead.md"] }));
+    expect(slipbox(["ls", "--json"]).json.stale).toEqual(["home.md"]);
+    expect(existsSync(join(state, "dirty", "999999.json"))).toBe(false);
+    rmSync(join(state, "dirty"), { recursive: true, force: true });
   });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));

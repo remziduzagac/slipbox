@@ -8,6 +8,7 @@ import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-spe
 import type { Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import { slugify } from "../core/parse.ts";
+import { parseWikiTarget } from "../core/wikilink.ts";
 import { parseSubstitute } from "../core/replace.ts";
 import type { Anchor } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
@@ -131,6 +132,31 @@ function lay(a: App, v: View) {
 
 // ---------------------------------------------------------------------------------------------
 // Links
+
+/**
+ * The link under the cursor on a source row (source mode, the lens), read from the markdown: a
+ * `[[wikilink]]`, an `![[embed]]` or a `[text](url)` around the cursor. Rendered rows carry their
+ * links; source rows are the text itself.
+ */
+function sourceLinkAt(a: App, v: View): LayoutLink | null {
+  const row = lay(a, v).lines[v.cur.row];
+  if (!row?.srcMap) return null;
+  const at = E.offsetOf(a, v);
+  const line = E.lineOf(v, at);
+  const text = E.lineText(v, line);
+  const col = at - (v.buf.lineStarts()[line - 1] ?? 0);
+  const base = { status: "unknown" as const, line: -1, col: -1, src: line };
+  for (const m of text.matchAll(/(!?)\[\[([^\]\n]+)\]\]/g)) {
+    if (col < m.index || col >= m.index + m[0].length) continue;
+    const w = parseWikiTarget(m[2]!);
+    return { ...base, kind: m[1] ? "embed" : "wiki", target: w.target, heading: w.heading, text: w.alias ?? m[2]! };
+  }
+  for (const m of text.matchAll(/!?\[([^\]\n]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
+    if (col < m.index || col >= m.index + m[0].length) continue;
+    return { ...base, kind: m[0].startsWith("!") ? "image" : "markdown", target: m[2]!, heading: null, text: m[1]! };
+  }
+  return null;
+}
 
 function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
   const view = a.view;
@@ -669,14 +695,16 @@ export function registerActions(app: App): void {
     "link.follow": (a) =>
       withView(a, (v) => {
         const i = a.linkForFollow(v);
-        if (i < 0) return a.message("info", `no link here · ${prettyKey("ctrl+tab")} or ${prettyKey(`${a.leader} l n`, a.leader)} goes to the next one`);
-        followLink(a, lay(a, v).links[i]!, false);
+        const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
+        if (!link) return a.message("info", `no link here · ${prettyKey("ctrl+tab")} or ${prettyKey(`${a.leader} l n`, a.leader)} goes to the next one`);
+        followLink(a, link, false);
       }),
     "link.follow_split": (a) =>
       withView(a, (v) => {
         const i = a.linkForFollow(v);
-        if (i < 0) return a.message("info", "no link here");
-        followLink(a, lay(a, v).links[i]!, true);
+        const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
+        if (!link) return a.message("info", "no link here");
+        followLink(a, link, true);
       }),
     "links.open": (a) =>
       withView(a, (v) => {

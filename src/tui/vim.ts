@@ -334,10 +334,11 @@ export function textObject(view: View, at: number, kind: "i" | "a", ch: string, 
   const ls = view.buf.lineStarts()[line - 1] ?? 0;
   const text = E.lineText(view, line);
   const i = at - ls;
-  if ((ch === "w" || ch === "W") && count > 1) {
-    // 2aw: this word, then the next, each taken from where the last ended (on the line).
+  if ((ch === "w" || ch === "W" || ch === "p") && count > 1) {
+    // 2aw, 2ap: this one, then the next, each taken from where the last ended.
     let r = textObject(view, at, kind, ch, 1);
-    for (let k = 1; r && k < count && r.to < ls + text.length; k++) {
+    const end = ch === "p" ? src.length : ls + text.length; // words stay on the line; paragraphs don't
+    for (let k = 1; r && k < count && r.to < end; k++) {
       const next = textObject(view, r.to, kind, ch, 1);
       if (!next || next.to <= r.to) break;
       r = { ...r, to: next.to };
@@ -477,8 +478,14 @@ export function insertRecord(app: App, view: View, key: string): void {
 /** `.`: the last change's keys again. */
 export async function repeat(app: App): Promise<void> {
   const s = app.vim;
-  const keys = s.lastChange;
+  let keys = s.lastChange;
   if (!keys) return app.message("info", "no change to repeat yet");
+  // 3. after 2dd: the new count replaces the recorded one (vim's rule), never prefixes it (32dd).
+  if (s.count) {
+    let i = 0;
+    while (i < keys.length && /^[0-9]$/.test(keys[i]!) && !(i === 0 && keys[i] === "0")) i++;
+    keys = keys.slice(i);
+  }
   s.replaying = true;
   try {
     for (const k of keys) await app.processKey(k);

@@ -88,12 +88,17 @@ export const SCENARIOS: Scenario[] = [
       const down = pos(s).line;
       await moveTo(s, ["k", "k", "k"], (l) => l < down, "k to move up");
       await s.keys("g", "g", "]", "]", "j", "j"); // a body row, with words on it
-      await moveTo(s, ["l", "l", "l"], (_, c) => c > 1, "l to move right");
-      await moveTo(s, ["h"], (_, c) => c >= 1, "h to move left");
+      // Each key must move the right way from where the cursor was (strictly: not a check that
+      // passes when nothing happened).
+      const col = () => pos(s).col;
+      await moveTo(s, ["l", "l", "l"], (_, c) => c === 4, "l to move right three");
+      await moveTo(s, ["h"], (_, c) => c === 3, "h to move left one");
       await moveTo(s, ["0"], (_, c) => c === 1, "0 to go to the row start");
       await moveTo(s, ["w"], (_, c) => c > 1, "w to the next word");
-      await moveTo(s, ["e"], (_, c) => c > 1, "e to a word end");
-      await moveTo(s, ["b"], (_, c) => c >= 1, "b back a word");
+      const w1 = col();
+      await moveTo(s, ["e"], (_, c) => c > w1, "e to that word's end");
+      const e1 = col();
+      await moveTo(s, ["b"], (_, c) => c < e1, "b back a word");
       await moveTo(s, ["$"], (_, c) => c > 5, "$ to the row end");
       await s.keys("^");
       await moveTo(s, ["G"], (l) => l > 1100, "G to the bottom");
@@ -108,7 +113,7 @@ export const SCENARIOS: Scenario[] = [
       await moveTo(s, ["ctrl+d"], (l) => l > p, "ctrl+d half a page down");
       const d = pos(s).line;
       await moveTo(s, ["ctrl+u"], (l) => l < d, "ctrl+u half a page up");
-      await moveTo(s, ["pagedown"], (l) => l > d - 5, "pagedown");
+      await moveTo(s, ["pagedown"], (l) => l > d, "pagedown");
       const pd = pos(s).line;
       await moveTo(s, ["pageup"], (l) => l < pd, "pageup");
       await moveTo(s, ["ctrl+end"], (l) => l > 1100, "ctrl+end");
@@ -127,7 +132,8 @@ export const SCENARIOS: Scenario[] = [
       await moveTo(s, [";"], (_, c) => c > c1, "; to the next e");
       const c2 = pos(s).col;
       await moveTo(s, [","], (_, c) => c < c2, ", back to the previous e");
-      await moveTo(s, ["t", "s"], (_, c) => c > 0, "ts before an s");
+      const before = pos(s).col;
+      await moveTo(s, ["t", "s"], (_, c) => c > before, "ts to just before the next s");
     },
   },
 
@@ -156,17 +162,18 @@ export const SCENARIOS: Scenario[] = [
     name: "copy: yy the row, yp the path, yr a reference, yl a link",
     options: { open: HANDBOOK },
     run: async (s) => {
-      const copied = async (keys: string[], command: string) => {
+      // What each copied, read back from the clipboard file (SLIPBOX_CLIPBOARD=file).
+      const copied = async (keys: string[], ok: (text: string) => boolean, what: string) => {
         await s.keys(...keys);
-        await s.until(() => s.commands().includes(command) && /copied/.test(s.topBar()), 3000, `${command} to copy`);
+        await s.until(() => ok(s.clipboard()), 3000, what);
       };
       await s.keys("]", "]", "j", "j");
-      await copied(["y", "p"], "copy.path");
-      await copied(["y", "r"], "copy.ref");
-      await copied(["y", "y"], "copy.smart");
+      await copied(["y", "p"], (t) => t.endsWith("handbook/operations-handbook.md"), "yp to copy the note's path");
+      await copied(["y", "r"], (t) => /^handbook\/operations-handbook\.md:\d+$/.test(t), "yr to copy path:line");
+      await copied(["y", "y"], (t) => t.includes("Decision"), "yy to copy the row");
       await s.keys("g", "g");
       await leader(s, "l", "n"); // onto a link (the handbook has one)
-      await copied(["y", "l"], "copy.link");
+      await copied(["y", "l"], (t) => t.includes("example.org"), "yl to copy the link's target");
     },
   },
 
@@ -336,7 +343,12 @@ export const SCENARIOS: Scenario[] = [
       await s.type("Brill");
       await s.keys("tab");
       await s.type("BRILL");
+      // The find row counts what's left to replace: enter replaces one, so the total drops by one.
+      const total = () => Number(/\d+\/(\d+)/.exec(s.screen().find((r) => r.includes("› Brill")) ?? "")?.[1] ?? -1);
+      await s.until(() => total() > 1, 3000, "the matches counted");
+      const was = total();
       await s.keys("enter");
+      await s.until(() => total() === was - 1, 3000, "enter to replace exactly one");
       await s.keys("alt+a");
       await s.top(/replaced \d+ match/);
       await s.keys("alt+h");
@@ -379,9 +391,15 @@ export const SCENARIOS: Scenario[] = [
       await s.status("• unsaved");
       await s.keys("ctrl+s");
       await s.file(MEETING, (t) => ["[i]", "[a]", "[I]", "[A]", "[o]", "[O]"].every((x) => t.includes(x)), "all six inserts saved");
+      // u takes the last insert away, ctrl+r and U bring it back: each seen on the screen.
       await s.keys("u");
+      await s.notSee("[O]");
       await s.keys("ctrl+r");
-      await s.keys("u", "U");
+      await s.see("[O]");
+      await s.keys("u");
+      await s.notSee("[O]");
+      await s.keys("U");
+      await s.see("[O]");
       await s.ex("w");
       await s.file(MEETING, (t) => t.includes("[O]"), "the redone insert saved");
     },
@@ -413,7 +431,9 @@ export const SCENARIOS: Scenario[] = [
       await s.type("X");
       await s.keys("escape");
       await s.keys("ctrl+s");
-      await s.file(MEETING, (t) => t !== "", "the note saved");
+      // The exact text the same keys give headlessly (tests/tui.test.ts's harness): the terminal's
+      // key encoding changed nothing on the way.
+      await s.file(MEETING, (t) => t.endsWith("for the nights we did get.\nBETA gamma delta\nXTA \n"), "the exact result of those keys");
     },
   },
   {
@@ -535,10 +555,15 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "u", "u");
       await s.see("UI settings");
       await s.keys("escape");
-      for (const k of ["w", "z", "l", "n", "s", "r", "m"]) {
+      // Each toggle says its own name and the new state, then flips back (the message names it,
+      // so a stale message from the one before can't pass).
+      const names: Record<string, string> = { w: "Readable width", z: "Zen mode", l: "Cursor-row highlight", n: "Line numbers", s: "Wrap long lines", r: "Show link URLs", m: "Mouse" };
+      for (const [k, name] of Object.entries(names)) {
         await leader(s, "u", k);
-        await s.see(/: (on|off)/); // on the top bar, or the last row in zen
+        await s.see(new RegExp(`${name}: (on|off)`)); // on the top bar, or the last row in zen
+        const first = s.text().includes(`${name}: on`) ? "on" : "off";
         await leader(s, "u", k); // back
+        await s.see(`${name}: ${first === "on" ? "off" : "on"}`);
       }
       await s.keys(":");
       await s.type("Breadcrumb");
@@ -603,6 +628,7 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "n", "e");
       await s.status("home.md", 5000);
       await s.until(() => existsSync(join(s.vault, "ran-edit")), 5000, "the editor to run");
+      s.expect(readFileSync(join(s.vault, "ran-edit"), "utf8").trim().endsWith("home.md"), "the editor got the note");
       await leader(s, "n", "s");
       await s.until(() => existsSync(join(s.vault, "ran-send")), 5000, "the remote editor to run");
       s.expect(readFileSync(join(s.vault, "ran-send"), "utf8").trim().endsWith("home.md"), "the remote editor got the note");

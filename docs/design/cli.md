@@ -31,8 +31,13 @@ never a lock, never a refusal.
 
 - **`schema`** is versioned separately from the app. It only changes when a stable command's
   shape changes.
-- **Exit codes:** `0` ok, `1` error, `2` usage, `3` not found, `4` ambiguous, `5` refused
-  (`--if-unchanged`).
+- **Exit codes:** `0` ok, `1` error, `2` usage, `3` not found, `4` ambiguous (a link, or several
+  nvims for `send`), `5` refused (a stale `--if-unchanged`, a write outside the vault or to what
+  isn't a note of it, `--create` over an existing file, a note that isn't valid UTF-8, a read of a
+  symlink leading out of the vault).
+- **Arguments.** More than a command takes is a usage error (exit 2), not silently dropped; an
+  empty value for a flag (`--root ''`, `--if-unchanged=`) too. After `--` nothing is an option:
+  `slipbox read -- -dash.md` names a note that starts with a dash.
 - **Flags.** Global flags may come before or after the command. An unknown flag is a usage
   error, and so is a bad value of a shared flag on any command (`--color` must be `auto`,
   `always` or `never`). `--width` takes a whole number from 20 to 1000, written in digits.
@@ -137,7 +142,14 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   With a line it toggles that task; `--check` and `--uncheck` set it and change nothing when it is
   already so. A toggle is a one-byte edit, so it works on a note that isn't valid UTF-8 too.
 - **Big notes.** `read`, `find`, `replace`, `write` and `send` read a note's bytes and never parse
-  it, so a note the walk leaves out for its size is still quick to reach.
+  it, so a note the walk leaves out for its size is still quick to reach. `find` shows a long line
+  as a window around the match (`…` where cut), so its output grows with the matches, not with the
+  line; a note it can't read is a warning, and the rest are still searched.
+- **What a writer may change.** `write`, `replace` and `task` change only a markdown note of a real
+  vault: inside it by its real path, and where the walk lists notes — never `.slipbox/`, `.git/`,
+  a hidden folder or `node_modules`, and never a path outside the vault (which would otherwise be
+  single-file mode there). `replace --dry-run` only reads, so it previews any note; its `newSha` is
+  `null`.
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4

@@ -36,7 +36,7 @@ their children out at reduced width and prefix every row, so nesting composes.
 | Node | Rendering |
 | --- | --- |
 | heading | level icon plus text in `h1`–`h6`; a background band across the width |
-| paragraph | wrapped; soft breaks become spaces (none between two CJK characters), hard breaks and `<br>` split rows |
+| paragraph | wrapped; soft breaks become spaces (none between Han or kana), hard breaks and `<br>` split rows |
 | list | bullets per depth, numbers right-aligned, hanging indent |
 | task item | checkbox glyph; a checked item's text is dimmed |
 | blockquote | `▎` bar per row, italic dim text |
@@ -104,15 +104,18 @@ unmet width.
 
 **Measured once, counted many times.** Each cell is measured once into word, space and segment
 widths. `countLines` and `fit` in `layout/wrap.ts` answer "how many rows at width w" without
-building spans, using the same packing rule `wrapSpans` draws with. So the allocator's
-prediction is exactly what is drawn.
+building spans, using the same packing rule `wrapSpans` draws with — grapheme by grapheme when a
+segment is longer than a row, since a wide character is never split and can leave a row a column
+short, and with no row counted after a final hard break. So the allocator's prediction is exactly
+what is drawn; `tests/render.test.ts` checks it on 39,000 random mixes of ASCII, CJK, kinsoku
+punctuation, emoji, ZWJ sequences and breaks.
 
 **Cost.** A re-layout on resize, tables included, measured on 2026-09-29 (widths 40 to 200):
 
 | Demo note | Worst re-layout |
 | --- | --- |
 | `logs/observing-log-2026.md` (216 table rows) | 14 ms |
-| `handbook/operations-handbook.md` (1,180 lines) | 23 ms |
+| `handbook/operations-handbook.md` (1,231 lines) | 23 ms |
 | `equipment/instrument-inventory.md` (rows of 500+ characters) | 7 ms |
 
 **Records.** Below a useful width, one record per row: labels in an aligned column (at most a third
@@ -143,6 +146,14 @@ opening punctuation (`（` `「`) never ends one (kinsoku). A token longer than 
 a fresh row and packs its soft segments (split after `/ - _ . ? & = , : ; |`), so paths, URLs and
 identifiers break at a readable point. Only a segment wider than the whole row breaks at the
 grapheme that overflows.
+**Hostile notes.** Containers deeper than 60 (quotes, lists) render as their plain text, so a note
+5,000 levels deep neither overflows the stack nor hides everything. Below 8 columns for its child, a
+container stops indenting (a quote drops its bar, a list item's marker takes a row of its own), so
+nothing is cut in a narrow split. Inputs the markdown parser takes quadratic time over are tamed
+before parsing without moving an offset (`tame` in `core/parse.ts`): a run of 64 or more `*` `_` `[`
+`]` becomes look-alikes, and a line's container prefix past 80 characters becomes no-break spaces.
+Frontmatter over 64 KB shows as text; YAML is parsed without the (quadratic) duplicate-key check.
+
 Nothing ever overflows the layout width. As a last defence the renderer cuts any row still too wide
 (`enforceRow`) and counts it in `Layout.clipped`, since a cut row is a block's bug and lost text:
 `tests/render.test.ts` renders every demo note at six widths in two glyph sets and asserts that no
@@ -176,7 +187,7 @@ in dark themes and 16% in light ones. Single roles can be overridden from config
 | base16 data | `gruvbox-light`, `nord`, `solarized-dark`, `solarized-light`, `rose-pine` |
 | base16 data | `everforest`, `kanagawa`, `one-dark`, `monokai` |
 | special | `terminal` (ANSI indexed colours: the terminal's own theme flows through) |
-| special | `mono` (no colour, attributes only; always used when `NO_COLOR` is set) |
+| special | `mono` (attributes only: links underlined, unresolved dim too, code bold; used under `NO_COLOR`) |
 
 In the TUI, `NO_COLOR` wins over any theme setting, session or picker choice. Without colour the
 scrollbar's track is blank so the thumb shows, and the current note or section is bold.

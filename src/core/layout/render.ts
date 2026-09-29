@@ -31,7 +31,13 @@ interface Ctx {
   headings: Omit<LayoutHeading, "line">[];
   definitions: Map<string, string>;
   slugCounts: Map<string, number>;
+  /** How many containers (quotes, lists, footnotes) deep the block being rendered is. */
+  nesting: number;
 }
+
+/** Containers deeper than this render as their plain text: nobody reads 60 levels of quote, and a
+ *  hostile note 5,000 deep must not overflow the stack (the note would then show nothing at all). */
+const MAX_NESTING = 60;
 
 interface Style {
   role: Role;
@@ -46,7 +52,7 @@ export function renderMarkdown(source: string, opts: RenderOptions): Layout {
 }
 
 export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontmatter | null): Layout {
-  const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), slugCounts: new Map() };
+  const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), slugCounts: new Map(), nesting: 0 };
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
   const lines = blocks(tree.children, ctx, width, TEXT, frontmatter);
@@ -157,9 +163,15 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
     case "code":
       return codeBlock(node.value, node.lang ?? null, srcOf(node), ctx, width);
     case "blockquote":
-      return blockquote(node.children, srcOf(node), ctx, width);
-    case "list":
-      return list(node, ctx, width, base);
+    case "list": {
+      if (ctx.nesting >= MAX_NESTING) return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
+      ctx.nesting++;
+      try {
+        return node.type === "list" ? list(node, ctx, width, base) : blockquote(node.children, srcOf(node), ctx, width);
+      } finally {
+        ctx.nesting--;
+      }
+    }
     case "table":
       return table(node, ctx, width);
     case "html":
@@ -171,6 +183,7 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
     case "footnoteDefinition": {
       const label = `${node.label ?? node.identifier}.`;
       const marker: Span = { text: `${label} `, role: "footnote", attrs: 0 };
+      if (width - stringWidth(marker.text) < MIN_NESTED) return [{ spans: [marker], src: srcOf(node) }, ...blocks(node.children, ctx, width, base, null, true)];
       return prefixed(blocks(node.children, ctx, width - stringWidth(marker.text), base, null, true), [marker], srcOf(node));
     }
     default:
@@ -223,7 +236,7 @@ function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, wi
     top.push({ text: " ".repeat(Math.max(0, width - lw)), role: "code_block", attrs: 0 }, { text: `${label} `, role: "code_label", attrs: 0 });
   }
   out.push({ spans: top, src, fill: "code_block" });
-  const inner = Math.max(4, width - 2);
+  const inner = Math.max(1, width - 2);
   sourceLines.forEach((text, i) => {
     const lineSrc = src + 1 + i;
     const spans: Span[] = tokens?.[i]?.length
@@ -292,9 +305,19 @@ function blockquote(children: RootContent[], src: number, ctx: Ctx, width: numbe
     lines.push(...blocks(body, ctx, inner, TEXT));
     return prefixed(lines, [{ text: `${g.quoteBar} `, role, attrs: 0 }], src, true);
   }
+  // Too narrow to indent (deep nesting in a narrow window): no bar, the text keeps the room.
+  if (width - 2 < MIN_NESTED) return blocks(children, ctx, width, { role: "quote", attrs: 0 });
   const lines = blocks(children, ctx, width - 2, { role: "quote", attrs: 0 });
   return prefixed(lines, [{ text: `${g.quoteBar} `, role: "quote_bar", attrs: 0 }], src, true);
 }
+
+/** A wide character of a script written without spaces between words (Han, kana; not Hangul or emoji). */
+function joinsWithoutSpace(g: string): boolean {
+  return !!g && graphemeWidth(g) === 2 && !/[\p{Script=Hangul}\p{Extended_Pictographic}]/u.test(g);
+}
+
+/** Below this many columns for a child, a container stops indenting (a quote's bar, a list's hang). */
+const MIN_NESTED = 8;
 
 function calloutRole(kind: string): Role {
   switch (kind) {
@@ -335,6 +358,17 @@ function prefixed(lines: Line[], first: Span[], src: number, everyRow = false): 
   return lines.map((line, i) => ({ ...line, spans: [...(i === 0 || everyRow ? first : hang), ...line.spans] }));
 }
 
+/** A list inside a list item, counted against the nesting cap like any container. */
+function nestedList(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: number, base: Style, depth: number): Line[] {
+  if (ctx.nesting >= MAX_NESTING) return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
+  ctx.nesting++;
+  try {
+    return list(node, ctx, width, base, depth);
+  } finally {
+    ctx.nesting--;
+  }
+}
+
 function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: number, base: Style, depth = 0): Line[] {
   const g = ctx.opts.glyphs;
   const start = node.start ?? 1;
@@ -349,17 +383,22 @@ function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: num
   node.children.forEach((item, i) => {
     const m = markers[i]!;
     const text = node.ordered ? m.text.padStart(markerW - stringWidth(m.text) + m.text.length) : padEnd(m.text, markerW);
-    const inner = width - markerW;
+    // Too narrow to hang the item beside its marker: the marker on a row of its own, the item
+    // below it at the full width (text is never cut to make room for an indent).
+    const hang = width - markerW >= MIN_NESTED;
+    const inner = hang ? width - markerW : width;
     const lines: Line[] = [];
     item.children.forEach((child, ci) => {
       const rendered =
-        child.type === "list" ? list(child, ctx, inner, base, depth + 1) : (block(child, ctx, inner, item.checked === true ? { role: "dim", attrs: 0 } : base) ?? []);
+        child.type === "list" ? nestedList(child, ctx, inner, base, depth + 1) : (block(child, ctx, inner, item.checked === true ? { role: "dim", attrs: 0 } : base) ?? []);
       if (ci > 0 && (node.spread || child.type !== "list")) lines.push(gapAfter(lines, srcOf(child)));
       lines.push(...rendered);
     });
     if (i > 0 && node.spread) out.push(gapAfter(out, srcOf(item)));
     const task = typeof item.checked === "boolean" ? { line: srcOf(item), end: item.position?.end.line ?? srcOf(item), checked: item.checked } : undefined;
-    out.push(...prefixed(lines, [{ text, role: m.role, attrs: 0, ...(task ? { task } : {}) }], srcOf(item)));
+    const marker: Span = { text, role: m.role, attrs: 0, ...(task ? { task } : {}) };
+    if (hang) out.push(...prefixed(lines, [marker], srcOf(item)));
+    else out.push({ spans: [{ ...marker, text: text.trimEnd() }], src: srcOf(item) }, ...lines);
   });
   return out;
 }
@@ -513,14 +552,16 @@ function tableRecords(node: Table, cells: Span[][][], ctx: Ctx, width: number): 
   const labels = header.map((h, c) => h.map((s) => s.text).join("").trim() || `#${c + 1}`);
   // Labels in an aligned column (at most a third of the width), values hanging beside them.
   const labelW = Math.max(1, Math.min(Math.max(...labels.map((l) => stringWidth(l))), Math.floor(width / 3)));
-  const valueW = Math.max(4, width - labelW - 2);
+  const valueW = Math.max(1, width - labelW - 2);
   const out: Line[] = [];
   const rule = (src: number): Line => ({ spans: [{ text: g.rule.repeat(width), role: "table_border", attrs: 0 }], src });
   cells.slice(1).forEach((row, ri) => {
     const src = srcOf(node.children[ri + 1]!);
     out.push(rule(src));
     row.forEach((spans, c) => {
-      const labelRows = wrapSpans([{ text: labels[c] ?? `#${c + 1}`, role: "table_header", attrs: A_BOLD }], labelW);
+      // The header's own spans, so a link in it stays a link (placed at its first record).
+      const head = header[c]?.some((sp) => sp.text.trim()) ? header[c]!.map((sp) => ({ ...sp, role: sp.link !== undefined ? sp.role : ("table_header" as Role), attrs: sp.attrs | A_BOLD })) : [{ text: labels[c] ?? `#${c + 1}`, role: "table_header" as Role, attrs: A_BOLD }];
+      const labelRows = wrapSpans(head, labelW);
       const valueRows = wrapSpans(spans, valueW);
       const n = Math.max(labelRows.length, valueRows.length);
       for (let k = 0; k < n; k++) {
@@ -559,10 +600,11 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
     parts.forEach((p, i) => {
       if (i > 0) {
         line++;
-        // Between two CJK characters a soft break is no space at all, as those scripts write.
-        const before = [...parts[i - 1]!].at(-1) ?? "";
-        const after = [...p][0] ?? "";
-        if (!(before && after && graphemeWidth(before) === 2 && graphemeWidth(after) === 2)) push(" ", st, extra);
+        // Between two Chinese or Japanese characters a soft break is no space at all, as those
+        // scripts write; Korean spaces its words, and emoji are words of their own.
+        const before = graphemes(parts[i - 1]!).at(-1) ?? "";
+        const after = graphemes(p)[0] ?? "";
+        if (!(joinsWithoutSpace(before) && joinsWithoutSpace(after))) push(" ", st, extra);
       }
       push(p, st, extra);
     });
@@ -602,7 +644,9 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
         case "imageReference": {
           const url = n.type === "image" ? n.url : (ctx.definitions.get(n.identifier.toLowerCase()) ?? "");
           const alt = n.alt || url.split("/").pop() || "image";
-          const id = addLink(ctx, { kind: "image", target: url, heading: null, text: alt, status: status(ctx, "image", url), src: line });
+          // Inside a link (a badge: [![alt](img)](url)) the image is that link's text: it follows
+          // the link, not the image.
+          const id = extra.link ?? addLink(ctx, { kind: "image", target: url, heading: null, text: alt, status: status(ctx, "image", url), src: line });
           push(`${ctx.opts.glyphs.image} ${sanitize(alt)}`, { role: "image", attrs: 0 }, { link: id });
           if (ctx.opts.showUrls && url) push(` <${sanitize(url)}>`, { role: "url", attrs: 0 });
           break;
@@ -634,7 +678,9 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
     if (children.length) walk(children, { role, attrs: st.attrs }, { link: id });
     else push(sanitize(url), { role, attrs: st.attrs }, { link: id });
     const external = /^[a-z][a-z0-9+.-]*:/i.test(url);
-    if (ctx.opts.showUrls && external && visible !== url && url !== `mailto:${visible}`) {
+    // The URL after the text, unless the text already is it (www. autolinks, empty link text).
+    const same = url === visible || ["mailto:", "http://", "https://"].some((scheme) => url === `${scheme}${visible}`);
+    if (ctx.opts.showUrls && external && children.length && !same) {
       push(` <${sanitize(url)}>`, { role: "url", attrs: 0 });
     }
   };

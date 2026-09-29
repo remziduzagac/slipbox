@@ -25,3 +25,5 @@ there to exercise.
 - [[partners-and-names]] — partners, and names in their own scripts
 - [[2026-09-14-weekly]] — the last weekly meeting
 - [[kenji-mori]] — our visiting astronomer
+- [[contacts]] — deliberately ambiguous: there are two, `people/contacts.md` and
+  `equipment/contacts.md`, so following it asks which

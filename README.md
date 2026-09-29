@@ -50,6 +50,11 @@ The configuration reloads itself when you save it.
 ```bash
 slipbox resolve '[[note#heading]]' --from index.md --json
 slipbox backlinks note --json
+slipbox find 'Aster' --json                  # a note's text, or the whole vault's
+slipbox read note --json                     # the raw text and its sha
+slipbox write note --stdin --if-unchanged <sha> < new.md
+slipbox replace note old new --dry-run --json
+slipbox task note 12 --check
 slipbox capture --ref src/file.ts:42-50 --snippet
 slipbox render note --plain
 ```
@@ -70,4 +75,8 @@ One JSON object per call with `--json`; stable exit codes. The skill in
 
 ```bash
 bun run check        # typecheck + the core-never-imports-tui boundary + tests
+bun run e2e --tab    # the terminal tests: slipbox itself in a herdr pane (needs herdr)
 ```
+
+The test strategy, the demo vault (`examples/vault`) and the terminal tests are in
+[docs/design/testing.md](docs/design/testing.md).

@@ -34,7 +34,9 @@ file for the area: `tui.test.ts`, `core.test.ts` and `vault.test.ts`.
 slowly under a loaded test run, so fixed sleeps made them flaky.
 
 **Isolation.** Every test file points `XDG_STATE_HOME`, `XDG_CACHE_HOME` and `XDG_CONFIG_HOME` at
-its own temp directory, so a developer's config, themes or session never leak into a run. TUI
+its own temp directory and drops `SLIPBOX_CONFIG` (which would win over them), so a developer's
+config, editor, themes or session never leak into a run; copies go to a file, never the clipboard
+(`SLIPBOX_CLIPBOARD=file`). TUI
 tests work on a temp copy of the fixture vault, so they can write, rename and delete notes.
 
 ## The fixture vault (plan `0.5`)
@@ -90,7 +92,10 @@ bun run e2e find replace     # only the scenarios whose names contain these
 - **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
   contains something, the status line's mode, a message in the top bar, a file on disk.
 - **Coverage is measured.** slipbox appends each command it runs to `SLIPBOX_TRACE`; the runner
-  lists the commands no scenario ran. Every command is run today.
+  lists the commands no scenario ran, and every command is run today. That says a command was
+  reached, not that its effect was checked: each scenario checks its effects itself (the exact text
+  a sequence of edits leaves, what a copy put on the clipboard file, a count on the find row), and a
+  check that would pass with the feature broken is a bug in the scenario.
 - **Size.** herdr owns the pane's size, which the runner asks the shell for and never sets.
   Scenarios that need room (docked panes, splits) say so and are skipped, named, in a smaller pane.
 - **Keys.** Single characters are typed as themselves; keys herdr has no name for (the page keys,

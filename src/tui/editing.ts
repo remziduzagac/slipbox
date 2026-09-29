@@ -34,7 +34,7 @@ export function offsetAtPos(app: App, view: View, pos: { row: number; col: numbe
  * Put the cursor on offset `at`. `past` lets it sit just after a row's last character (insert
  * mode, `a`); otherwise it lands on a character, as in normal mode.
  */
-export function placeAt(app: App, view: View, at: number, past = false): void {
+export function placeAt(app: App, view: View, at: number, past = false, again = false): void {
   const layout = app.currentLayout(view);
   const starts = view.buf.lineStarts();
   at = Math.max(0, Math.min(at, view.buf.source.length));
@@ -50,7 +50,18 @@ export function placeAt(app: App, view: View, at: number, past = false): void {
   const within = at - starts[lo]!;
   // A source row for that line (live preview has rendered rows and frame rows too).
   let row = layout.lines.findIndex((l) => l.src === src && l.srcMap);
-  if (row < 0) row = layout.lines.findIndex((l) => l.src >= src && !l.decor);
+  if (row < 0 && view.live && !again) {
+    // Outside the lens: the rendered row of the block holding the line becomes the cursor's, so
+    // the lens opens there — then the line has a source row to land on (never a rendered one,
+    // where an edit would go to a line's start or into the next block).
+    const holder = layout.lines.findLastIndex((l) => l.src <= src && !l.decor);
+    if (holder >= 0) {
+      view.cur = { row: holder, col: 0 };
+      app.setCursorAnchor(view, layout);
+      return placeAt(app, view, at, past, true);
+    }
+  }
+  if (row < 0) row = layout.lines.findLastIndex((l) => l.src <= src && !l.decor);
   if (row < 0) row = Math.max(0, layout.lines.length - 1);
   // Among its wrapped rows, the one that holds it (a row's end belongs to the next row).
   while (layout.lines[row + 1]?.src === src && layout.lines[row + 1]?.srcMap && within >= (layout.lines[row]!.srcMap?.end ?? 0)) row++;
@@ -173,7 +184,10 @@ export function newline(app: App, view: View): void {
   const start = view.buf.lineStarts()[src - 1] ?? 0;
   const line = lineText(view, src);
   const before = line.slice(0, at - start);
-  const m = /^(\s*)(?:([-*+])|(\d{1,9})([.)]))(\s+)(\[[ xX]\]\s+)?/.exec(line);
+  // A list item continues — but not inside a code block (a diff's + lines, a - in YAML), and not
+  // on a thematic break (* * *), which only looks like a bullet.
+  const listy = !inFence(view, src) && !/^\s*([-*_])(\s*\1){2,}\s*$/.test(line);
+  const m = listy ? /^(\s*)(?:([-*+])|(\d{1,9})([.)]))(\s+)(\[[ xX]\]\s+)?/.exec(line) : null;
   if (m && at - start >= m[0].length && !line.slice(m[0].length).trim()) {
     // An empty item: end the list.
     view.buf.edit(start, line.length, m[1]!);
@@ -185,6 +199,18 @@ export function newline(app: App, view: View): void {
     lead = `${m[1]}${marker}${m[5]}${m[6] ? "[ ] " : ""}`;
   }
   insertText(app, view, view.buf.eol + lead);
+}
+
+/** Whether source line `src` (1-based) is inside a fenced code block: the fences above it, counted. */
+function inFence(view: View, src: number): boolean {
+  let fence: string | null = null;
+  for (let n = 1; n < src; n++) {
+    const f = /^\s{0,3}(`{3,}|~{3,})/.exec(lineText(view, n));
+    if (!f) continue;
+    if (!fence) fence = f[1]!;
+    else if (f[1]![0] === fence[0] && f[1]!.length >= fence.length) fence = null;
+  }
+  return fence !== null;
 }
 
 /** Backspace: the grapheme before the cursor (a line break joins the lines). */
@@ -211,7 +237,8 @@ export function deleteWordBack(app: App, view: View): void {
   const start = view.buf.lineStarts()[lineOf(view, at) - 1] ?? 0;
   const before = view.buf.source.slice(start, at);
   if (!before) return backspace(app, view);
-  const m = /(\s*)([\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]+)?\s*$/u.exec(before)!;
+  // The word before the cursor and the spaces after it — not the space before it (vim, readline).
+  const m = /([\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]+)?\s*$/u.exec(before)!;
   const from = at - m[0].length;
   view.buf.edit(from, at - from, "");
   placeAt(app, view, from, true);

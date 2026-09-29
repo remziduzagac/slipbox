@@ -35,7 +35,9 @@ const FILE_COLON_LINE = new Set(["hx", "helix", "micro"]);
  * known editor), or just the file (an unknown one).
  */
 export function editorArgv(template: string, file: string, line: number, env: Record<string, string | undefined> = process.env, appendFile = true, server = ""): string[] {
-  const fill = (arg: string) => arg.replaceAll("{file}", file).replaceAll("{line}", String(line)).replaceAll("{server}", server);
+  // One pass: a path that itself contains "{line}" or "{server}" stays the path.
+  const values: Record<string, string> = { file, line: String(line), server };
+  const fill = (arg: string) => arg.replace(/\{(file|line|server)\}/g, (_, k: string) => values[k]!);
   if (template.trim()) {
     const argv = splitCommand(template).map(fill);
     // A template without {file} still gets the file, last (not for a remote command that only

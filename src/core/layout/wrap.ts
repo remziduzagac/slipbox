@@ -212,26 +212,33 @@ export interface Measure {
   /** 0 word, 1 space, 2 hard break, 3 soft segment continuing the previous word */
   kinds: number[];
   widths: number[];
+  /** Each segment's grapheme widths, for breaking one longer than a row exactly as wrapSpans does
+   *  (a wide character is never split, so a row can end a column short). */
+  graphemes: number[][];
 }
 
 export function measure(spans: Span[]): Measure {
   const kinds: number[] = [];
   const widths: number[] = [];
+  const graphemes: number[][] = [];
   for (const c of chunkify(spans)) {
     if (c.kind === "newline") {
       kinds.push(2);
       widths.push(0);
+      graphemes.push([]);
     } else if (c.kind === "space") {
       kinds.push(1);
       widths.push(c.width);
+      graphemes.push([]);
     } else {
-      segmentWidths(c.gs).forEach((w, i) => {
+      segments(c.gs).forEach((seg, i) => {
         kinds.push(i === 0 ? 0 : 3);
-        widths.push(w);
+        widths.push(seg.reduce((a, x) => a + x.w, 0));
+        graphemes.push(seg.map((x) => x.w));
       });
     }
   }
-  return { kinds, widths };
+  return { kinds, widths, graphemes };
 }
 
 /** Rows `wrapSpans` would produce at `width` — the same greedy rule, without building spans. */
@@ -287,10 +294,20 @@ export function fit(m: Measure, width: number): { lines: number; splits: number 
           lines++;
           rowW = sw;
         } else {
-          if (rowW > 0) lines++;
-          const extra = Math.ceil(sw / w) - 1;
-          lines += extra;
-          rowW = sw - extra * w;
+          // Broken by grapheme, as wrapSpans does: a row ends where the next one wouldn't fit.
+          if (rowW > 0) {
+            lines++;
+            rowW = 0;
+          }
+          let started = false;
+          for (const gw of m.graphemes[s]!) {
+            if (rowW + gw > w && started) {
+              lines++;
+              rowW = 0;
+            }
+            rowW += gw;
+            started = true;
+          }
         }
       }
       if (lines > before) splits++;
@@ -299,5 +316,7 @@ export function fit(m: Measure, width: number): { lines: number; splits: number 
     empty = false;
     i = j;
   }
+  // Nothing placed after the last hard break (only spaces, or nothing): wrapSpans draws no row for it.
+  if (empty && lines > 1) lines--;
   return { lines, splits };
 }

@@ -119,7 +119,8 @@ Global options:
   --color <when>    auto | always | never
   -h, --help        this help        -V, --version   print the version
 
-<note> is a path, or a note name resolved like a [[wikilink]].
+<note> is a path, or a note name resolved like a [[wikilink]]. After --, nothing is an option:
+slipbox read -- -dash.md names a note that starts with a dash.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
 5 refused (--if-unchanged, a write outside the vault or over an existing note, invalid UTF-8).
 `;
@@ -182,6 +183,9 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);
+    // Too many arguments is a mistake to report, not to drop (a dropped one can be a flag after --).
+    const most = MAX_ARGS[command];
+    if (most !== undefined && rest.length > most) throw new UsageError(`${command} takes at most ${most} argument${most === 1 ? "" : "s"}; got ${rest.length} (${rest.slice(most).join(" ")} too many)`);
     const result = await handler(session, rest);
     const stale = command === "init" ? [] : session.stale();
     if (json) {
@@ -214,6 +218,12 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
   }
 }
 
+/** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
+const MAX_ARGS: Record<string, number> = {
+  render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, send: 1, history: 0,
+  scratch: 1, init: 1, info: 0, themes: 0, commands: 0,
+};
+
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
 function noteArgPath(arg: string | undefined, cwd: string): string | undefined {
   if (!arg) return undefined;
@@ -240,6 +250,14 @@ function requireArg(rest: string[], what: string): string {
  * commands that need only the file's bytes: a big note the walk leaves out is then never parsed.
  */
 function resolveNote(s: Session, arg: string, parse = true): string {
+  const rel = findNoteArg(s, arg, parse);
+  // Reading follows the vault's rule too: a symlink pointing out of it is not a note of it (the
+  // walk leaves it out), so naming it by path reads nothing from outside.
+  if (s.loc.mode === "vault" && !landsInside(s.loc.root, join(s.loc.root, rel))) throw new CliError(`${rel} points outside the vault; not reading it`, EXIT.refused);
+  return rel;
+}
+
+function findNoteArg(s: Session, arg: string, parse: boolean): string {
   if (s.loc.file && isInside(s.loc.root, s.loc.file)) {
     const rel = relative(s.loc.root, s.loc.file);
     if (s.graph.notes.has(rel)) return rel;
@@ -496,12 +514,21 @@ const HANDLERS: Record<string, Handler> = {
     const notes = rest[1] ? [resolveNote(s, rest[1], false)] : [...s.graph.notes.keys()].sort();
     const matches: { path: string; line: number; column: number; match: string; text: string }[] = [];
     for (const rel of notes) {
-      const { text } = readText(s.graph.abs(rel));
+      let text: string;
+      try {
+        text = readText(s.graph.abs(rel)).text;
+      } catch (err) {
+        // One unreadable or vanished note doesn't fail the search: it's a warning, the rest go on.
+        if (rest[1]) throw new CliError(`${rel}: ${(err as Error).message}`, EXIT.notFound);
+        s.warnings.push(`${rel}: not searched (${(err as NodeJS.ErrnoException).code ?? (err as Error).message})`);
+        continue;
+      }
       const starts = lineStarts(text);
       for (const m of findAll(text, re)) {
         const line = lineAt(starts, m.from);
-        const lineText = text.slice(starts[line - 1], (starts[line] ?? text.length + 1) - 1).replace(/\r$/, "");
-        matches.push({ path: rel, line, column: [...text.slice(starts[line - 1], m.from)].length + 1, match: m.groups[0]!, text: lineText });
+        const lineStart = starts[line - 1]!;
+        const lineEnd = (starts[line] ?? text.length + 1) - 1;
+        matches.push({ path: rel, line, column: [...text.slice(lineStart, m.from)].length + 1, match: m.groups[0]!, text: around(text, lineStart, lineEnd, m.from, m.to) });
       }
     }
     return {
@@ -513,9 +540,13 @@ const HANDLERS: Record<string, Handler> = {
   replace(s, rest) {
     if (rest.length < 3) throw new UsageError("replace needs <note> <old> <new> (the new text may be \"\")");
     const [noteArg, query, replacement] = rest as [string, string, string];
+    if (!query) throw new UsageError("replace needs something to find (an empty pattern matches nothing)");
     const rel = resolveNote(s, noteArg, false);
     const abs = s.graph.abs(rel);
-    const file = readNoteFile(s, abs);
+    const dry = has(s.args, "dry-run");
+    if (!dry) checkWritable(s, abs);
+    // A dry run only reads, so it previews a note that couldn't be rewritten too.
+    const file = readNoteFile(s, abs, !dry);
     const re = pattern(s, query);
     const starts = lineStarts(file.text);
     const lines = flag(s.args, "lines");
@@ -525,6 +556,8 @@ const HANDLERS: Record<string, Handler> = {
       const a = m ? Number(m[1]) : 0;
       const b = m ? Number(m[2] ?? m[1]) : 0;
       if (!m || a < 1 || b < a) throw new UsageError("--lines must look like 12 or 12-40, from 1 and in order");
+      const count = file.text.endsWith("\n") ? starts.length - 1 : starts.length;
+      if (a > Math.max(1, count)) throw new UsageError(`--lines starts past the end (${rel} has ${count} line${count === 1 ? "" : "s"})`);
       range = [starts[a - 1] ?? file.text.length, starts[b] ?? file.text.length];
     }
     let ms = findAll(file.text, re, range[0], range[1], has(s.args, "regex")); // ^ and $ insert
@@ -533,12 +566,12 @@ const HANDLERS: Record<string, Handler> = {
     if (has(s.args, "first-per-line")) ms = firstPerLine(file.text, ms); // vim's :s without g
     const regex = has(s.args, "regex");
     const out = replaceMatches(file.text, ms, replacement, regex);
-    const dry = has(s.args, "dry-run");
     if (!dry && out.count) writeNoteText(s, abs, out.text, file);
     const changes = ms.map((m) => ({ line: lineAt(starts, m.from), before: m.groups[0]!, after: expandReplacement(replacement, m, regex) }));
     const verb = dry ? "would replace" : "replaced";
     return {
-      data: { path: rel, count: out.count, dryRun: dry, sha: file.sha, newSha: dry || !out.count ? file.sha : shaOf(abs), changes },
+      // newSha: the note's sha after the call; null on a dry run, which wrote nothing to hash.
+      data: { path: rel, count: out.count, dryRun: dry, sha: file.sha, newSha: dry ? null : out.count ? shaOf(abs) : file.sha, changes },
       human: `${verb} ${out.count} in ${rel}\n${dry ? changes.map((c) => `${c.line}: ${c.before} → ${c.after}\n`).join("") : ""}`,
     };
   },
@@ -558,6 +591,7 @@ const HANDLERS: Record<string, Handler> = {
     if (!task) throw new CliError(`no task on line ${line} of ${rel}`, EXIT.notFound, { tasks });
     const want = has(s.args, "check") ? true : has(s.args, "uncheck") ? false : !task.checked;
     if (has(s.args, "check") && has(s.args, "uncheck")) throw new UsageError("--check or --uncheck, not both");
+    checkWritable(s, abs);
     checkUnchanged(s, abs, file.sha);
     if (want !== task.checked) {
       const r = toggleTask(file.bytes, line);
@@ -601,13 +635,17 @@ const HANDLERS: Record<string, Handler> = {
       // Outside by its path, or by a symlinked folder on the way: checked before any folder is made.
       if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${noteArg} is outside the vault (${s.loc.root})`, EXIT.refused);
       rel = relative(s.loc.root, abs);
+      checkWritable(s, abs);
       if (existsSync(abs)) throw new CliError(`${rel} already exists; not overwriting it (drop --create to write it)`, EXIT.refused, { path: rel });
       created = true;
-    } else rel = resolveNote(s, noteArg, false);
+    } else {
+      rel = resolveNote(s, noteArg, false);
+      checkWritable(s, join(s.loc.root, rel));
+    }
     const abs = join(s.loc.root, rel);
     let previous: NoteFile | null = null;
     if (!created) previous = readNoteFile(s, abs);
-    else if (flag(s.args, "if-unchanged")) throw new CliError(`${rel} doesn't exist; --if-unchanged has nothing to compare`, EXIT.refused);
+    else if (flag(s.args, "if-unchanged") !== undefined) throw new CliError(`${rel} doesn't exist; --if-unchanged has nothing to compare`, EXIT.refused);
     let content = text;
     if (previous && has(s.args, "append")) {
       const sep = previous.text && !previous.text.endsWith("\n") ? "\n" : "";
@@ -663,6 +701,20 @@ const HANDLERS: Record<string, Handler> = {
   },
 };
 
+/**
+ * A match's line for display: the whole line when short, else a window of it around the match with
+ * `…` where it was cut — a long line (a data URI) repeated per match would grow as its square.
+ */
+function around(text: string, lineStart: number, lineEnd: number, from: number, to: number): string {
+  const MAX = 160;
+  const line = text.slice(lineStart, lineEnd).replace(/\r$/, "");
+  if (line.length <= MAX) return line;
+  const room = Math.max(0, MAX - (to - from));
+  const a = Math.max(lineStart, from - Math.floor(room / 2));
+  const b = Math.min(lineEnd, Math.max(to, a + MAX));
+  return `${a > lineStart ? "…" : ""}${text.slice(a, b).replace(/\r$/, "")}${b < lineEnd ? "…" : ""}`;
+}
+
 /** The query as a pattern, with the shared flags; a bad regex is a usage error. */
 function pattern(s: Session, query: string): RegExp {
   const re = compilePattern(query, { regex: has(s.args, "regex"), whole: has(s.args, "whole"), ignoreCase: has(s.args, "ignore-case") });
@@ -702,7 +754,12 @@ function shaOf(abs: string): string {
  * valid UTF-8 is read, never rewritten: its invalid bytes would be lost.
  */
 function readNoteFile(s: Session, abs: string, forWriting = true): NoteFile {
-  const bytes = readFileSync(abs);
+  let bytes: Buffer;
+  try {
+    bytes = readFileSync(abs);
+  } catch (err) {
+    throw new CliError(`${relative(s.loc.root, abs)}: ${(err as NodeJS.ErrnoException).code === "ENOENT" ? "gone (deleted since it was found)" : (err as Error).message}`, EXIT.notFound);
+  }
   const decoded = decodeText(bytes);
   const sha = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
   if (forWriting) {
@@ -710,6 +767,23 @@ function readNoteFile(s: Session, abs: string, forWriting = true): NoteFile {
     if (decoded.invalidUtf8) throw new CliError(`${relative(s.loc.root, abs)} isn't valid UTF-8; not rewriting it`, EXIT.refused);
   }
   return { ...decoded, bytes, sha };
+}
+
+/**
+ * What a writer (`write`, `replace`, `task`) may change: a markdown note in a real vault, inside
+ * it by its real path, and where the walk lists notes — never `.slipbox/`, `.git/`, a hidden
+ * folder or `node_modules`, and never a file that isn't `.md`. Refused, exit 5.
+ */
+function checkWritable(s: Session, abs: string): void {
+  const refuse = (why: string) => {
+    throw new CliError(`${relative(s.io.cwd, abs) || abs}: ${why}; not writing it`, EXIT.refused);
+  };
+  if (s.loc.mode !== "vault") refuse("not in a vault (no .slipbox/ above it)");
+  if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the vault (${s.loc.root})`);
+  const rel = relative(s.loc.root, abs);
+  if (!/\.(md|markdown)$/i.test(rel) || /^\.(md|markdown)$/i.test(rel.split("/").pop()!)) refuse("not a markdown note");
+  if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules")) refuse("in a folder the vault doesn't list");
+  if (/[\x00-\x1f]/.test(rel)) refuse("a control character in its name");
 }
 
 /** `--if-unchanged <sha>`: refuse (exit 5) unless the note's bytes still have that sha. */

@@ -63,7 +63,7 @@ Read against zk's and nb's surfaces. Small on purpose. Global flags: `--root <di
 | --- | --- | --- |
 | `slipbox [path]` | open the TUI; refuses when stdin or stdout is not a terminal (`9.3`) | — |
 | `slipbox render <note>` | render to stdout; `--width`, `--theme`, `--glyphs`, `--plain` | **stable v1** |
-| `slipbox capture [text]` | append to the scratch; `--ref path:L[-M]`, `--stdin`, `--snippet` | **stable v1** |
+| `slipbox capture [text]` | append to the scratch: `--ref`, `--stdin`, `--snippet`, `--lang` | **stable v1** |
 | `slipbox scratch show\|path\|clear\|copy` | read, locate, wipe or copy the scratch | **stable v1** |
 | `slipbox resolve <link>` | follow a link: `[[target]]` text to a path; `--from <note>` | **stable v1** |
 | `slipbox links <note>` | outgoing links with resolution status | **stable v1** |
@@ -71,7 +71,7 @@ Read against zk's and nb's surfaces. Small on purpose. Global flags: `--root <di
 | `slipbox ls` | list notes | churns |
 | `slipbox outline <note>` | headings with source lines | churns |
 | `slipbox find <query> [note]` | text in a note or the vault: `--regex`, `--whole`, `--ignore-case` | churns |
-| `slipbox replace <note> <old> <new>` | replace in a note; `--first`, `--lines A-B`, `--dry-run` | churns |
+| `slipbox replace <note> <old> <new>` | replace; `--regex`, `--first(-per-line)`, `--lines`, `--dry-run` | churns |
 | `slipbox task <note> [line]` | list a note's tasks, or toggle one; `--check`, `--uncheck` | churns |
 | `slipbox read <note>` | the raw text and its sha, for `--if-unchanged` | churns |
 | `slipbox write <note> [text]` | write a note atomically, in the vault; `--stdin`, `--append`, `--create` | churns |

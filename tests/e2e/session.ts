@@ -2,7 +2,7 @@
 // started in the pane, and ways to drive and check it. Every check waits for the screen to agree
 // (up to a timeout) rather than sleeping a fixed time.
 
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,6 +54,8 @@ export class Session {
       `XDG_STATE_HOME=${this.dir}/state`,
       `XDG_CACHE_HOME=${this.dir}/cache`,
       `SLIPBOX_TRACE=${this.trace}`,
+      // Its own config, whatever the shell exports (SLIPBOX_CONFIG would win over XDG_CONFIG_HOME).
+      `SLIPBOX_CONFIG=${this.dir}/config/slipbox/config.toml`,
       "SLIPBOX_CLIPBOARD=file", // copies land in the state dir, not on your clipboard
     ].join(" ");
     const file = join(this.vault, this.opts.open ?? "home.md");
@@ -168,9 +170,25 @@ export class Session {
     const r = spawnSync("bun", [join(REPO, "src", "main.ts"), ...args], {
       cwd: this.vault,
       encoding: "utf8",
-      env: { ...process.env, XDG_CONFIG_HOME: `${this.dir}/config`, XDG_STATE_HOME: `${this.dir}/state`, XDG_CACHE_HOME: `${this.dir}/cache`, NO_COLOR: "1" },
+      env: {
+        ...process.env,
+        XDG_CONFIG_HOME: `${this.dir}/config`,
+        XDG_STATE_HOME: `${this.dir}/state`,
+        XDG_CACHE_HOME: `${this.dir}/cache`,
+        SLIPBOX_CONFIG: `${this.dir}/config/slipbox/config.toml`,
+        SLIPBOX_CLIPBOARD: "file",
+        NO_COLOR: "1",
+      },
     });
     return { code: r.status ?? -1, out: r.stdout };
+  }
+
+  /** What was copied last (SLIPBOX_CLIPBOARD=file puts copies in clipboard.txt in the state dir). */
+  clipboard(): string {
+    for (const f of readdirSync(join(this.dir, "state"), { recursive: true }) as string[]) {
+      if (f.endsWith("clipboard.txt")) return readFileSync(join(this.dir, "state", f), "utf8");
+    }
+    return "";
   }
 
   /** Write a file in the vault from outside the app (an agent's edit). */
