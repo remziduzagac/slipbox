@@ -520,7 +520,8 @@ const HANDLERS: Record<string, Handler> = {
       tree.tree.delete();
       return {
         data: { path: rel, headings: defs },
-        human: defs.map((d) => `${String(d.line).padStart(5)}  ${"  ".repeat(d.depth - 1)}${d.kind} ${d.text}\n`).join(""),
+        // The kind before the name, unless the name says it already (Rust's `impl Trait for T`).
+        human: defs.map((d) => `${String(d.line).padStart(5)}  ${"  ".repeat(d.depth - 1)}${d.text.startsWith(`${d.kind} `) ? "" : `${d.kind} `}${d.text}\n`).join(""),
       };
     }
     // A data file's sections are its outline (16.11); other text files have none.

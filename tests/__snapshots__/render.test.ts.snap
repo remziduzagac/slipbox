@@ -105,6 +105,15 @@ house style that writing-guide describes.
 │ software/halley/reduce.py,         │ tree-sitter: docstrings, heredocs, an   │
 │ night.sh                           │ outline, links in comments              │
 ├────────────────────────────────────┼─────────────────────────────────────────┤
+│ nightjar/src/server.ts,            │ TypeScript, JavaScript: enums,          │
+│ public/app.js                      │ interfaces, classes, template strings   │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ uploader/main.go,                  │ Go and Rust: types, methods, traits,    │
+│ stacker/src/main.rs                │ impl, raw strings, doc comments         │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/dome.lua           │ Lua: local function, function t.m, long │
+│                                    │ strings and comments                    │
+├────────────────────────────────────┼─────────────────────────────────────────┤
 │ scratch/half-written.py,           │ a syntax error in code; a data file     │
 │ broken-config.json                 │ that doesn't parse                      │
 ├────────────────────────────────────┼─────────────────────────────────────────┤

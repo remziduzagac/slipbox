@@ -820,6 +820,15 @@ export const SCENARIOS: Scenario[] = [
       await s.status("halley.toml");
       await s.keys("ctrl+o");
       await s.status("reduce.py");
+      // TypeScript too: its outline in the breadcrumb, a comment's relative path followed.
+      await s.ex("e software/nightjar/src/server.ts");
+      await s.status("server.ts");
+      await s.ex("40");
+      await s.see(/FrameArchive\s*›\s*byNight/);
+      await s.keys("/");
+      await s.type("../openapi.json");
+      await s.keys("enter", "escape", "enter");
+      await s.status("openapi.json");
       // A file with a syntax error: counted in the status line, gone while typing, back after.
       await s.ex("e scratch/half-written.py"); // code isn't in ctrl+p by default (files.show)
       await s.status("half-written.py");

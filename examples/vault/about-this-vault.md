@@ -42,6 +42,9 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `logs/photometry-2026.csv` | 2,600 rows: past the 2,000-row render cap, quoted fields, empty cells |
 | `equipment/filters.csv` | CSV: quoted fields with commas and `""`, empty cells |
 | `software/halley/reduce.py`, `night.sh` | tree-sitter: docstrings, heredocs, an outline, links in comments |
+| `nightjar/src/server.ts`, `public/app.js` | TypeScript, JavaScript: enums, interfaces, classes, template strings |
+| `uploader/main.go`, `stacker/src/main.rs` | Go and Rust: types, methods, traits, `impl`, raw strings, doc comments |
+| `software/halley/dome.lua` | Lua: `local function`, `function t.m`, long strings and comments |
 | `scratch/half-written.py`, `broken-config.json` | a syntax error in code; a data file that doesn't parse |
 | `logs/dome-log.org`, `handbook/safety-card.adoc` | formats slipbox doesn't read as notes: text files, source mode |
 

@@ -542,6 +542,12 @@ describe("the vault and the tool", () => {
       { depth: 1, text: "Shape", kind: "class", line: 1 },
       { depth: 2, text: "area", kind: "method", line: 2 },
     ]);
+    // A name that says its kind already isn't printed twice (Rust's impl: "impl Show for Point").
+    writeFileSync(join(vault, "shape.rs"), "struct Point;\ntrait Show {}\nimpl Show for Point {}\n");
+    const rs = slipbox(["outline", "shape.rs"]).out;
+    expect(rs).toContain("impl Show for Point");
+    expect(rs).not.toContain("impl impl");
+    rmSync(join(vault, "shape.rs"));
     // Its comments' links count as backlinks (16.10).
     writeFileSync(join(vault, "shape.py"), "# the home note: home.md\nx = 1\n");
     expect(slipbox(["backlinks", "home", "--json"]).json.data.backlinks.some((b: { from: string }) => b.from === "shape.py")).toBe(true);
