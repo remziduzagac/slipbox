@@ -131,7 +131,7 @@ export const SCENARIOS: Scenario[] = [
       const e1 = col();
       await moveTo(s, ["b"], (_, c) => c < e1, "b back a word");
       await moveTo(s, ["$"], (_, c) => c > 5, "$ to the row end");
-      await s.keys("^");
+      await moveTo(s, ["^"], (_, c) => c === 1, "^ back to the first non-blank");
       await moveTo(s, ["G"], (l) => l > 1100, "G to the bottom");
       await moveTo(s, ["g", "g"], (l) => l === 1, "gg to the top");
       await moveTo(s, ["]", "]"], (l) => l >= 6, "]] to the next heading");
@@ -281,14 +281,50 @@ export const SCENARIOS: Scenario[] = [
       const before = order();
       await s.keys("ctrl+w", "x");
       await s.until(() => order() === before.split(" ").reverse().join(" "), 3000, "ctrl+w x to swap the windows");
-      for (const k of ["=", ">", "<", "+", "-"]) {
+      // Focus: the status line names the focused window's note. Stacked now: k is the top one.
+      const focused = () => /\b(home|writing-guide)\.md\b/.exec(s.statusLine())?.[1] ?? "";
+      const [topNote, bottomNote] = order().split(" ").map((n) => n.replace(/\.md$/, ""));
+      await s.keys("ctrl+w", "k");
+      await s.until(() => focused() === topNote, 3000, "ctrl+w k to the top window");
+      await s.keys("ctrl+w", "j");
+      await s.until(() => focused() === bottomNote, 3000, "ctrl+w j to the bottom window");
+      await s.keys("ctrl+w", "w");
+      await s.until(() => focused() === topNote, 3000, "ctrl+w w to the other window");
+      // Resize, one step at a time: where the lower window's breadcrumb sits moves, = evens it.
+      const split = () => s.screen().slice(0, -1).findLastIndex((r) => /\b(home|writing-guide)\.md\b/.test(r));
+      const even = split();
+      const step = async (k: string) => {
         await s.keys("ctrl+w");
         await s.type(k);
         await s.keys("escape"); // one step, then the mode it leaves on
-      }
+      };
+      await step("+");
+      await s.until(() => split() !== even, 3000, "ctrl+w + to change the heights");
+      await step("=");
+      await s.until(() => split() === even, 3000, "ctrl+w = to even them");
+      await step("-");
+      await s.until(() => split() !== even, 3000, "ctrl+w - to change the heights");
+      await step("=");
+      await s.until(() => split() === even, 3000, "ctrl+w = to even them again");
+      // Side by side: where the second breadcrumb starts on the shared row moves with > and <.
+      const bothRow = () => s.screen().find((r) => (r.match(/\b(home|writing-guide)\.md\b/g) ?? []).length === 2);
+      await s.keys("ctrl+w");
+      await s.type("H");
+      await s.until(() => bothRow() !== undefined, 3000, "side by side again");
+      const col = () => (bothRow() ?? "").lastIndexOf(".md");
+      const mid = col();
+      await step(">");
+      await s.until(() => col() !== mid, 3000, "ctrl+w > to change the widths");
+      await step("=");
+      await s.until(() => col() === mid, 3000, "ctrl+w = to even the widths");
+      await step("<");
+      await s.until(() => col() !== mid, 3000, "ctrl+w < to change the widths");
+      await step("=");
       await s.keys("ctrl+alt+w");
       await s.status("RESIZE");
-      await s.keys("l", "escape");
+      await s.keys("l");
+      await s.until(() => col() !== mid, 3000, "l in resize mode to change the widths");
+      await s.keys("escape");
       await s.status("READ");
       await s.keys("ctrl+w", "q");
       await s.until(() => crumbs() === 1, 3000, "a window closed");
@@ -341,6 +377,8 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("escape");
       await s.keys("ctrl+shift+e");
       await s.status("FILES");
+      // Revealed: the note's own row in the explorer, left of the border.
+      await s.until(() => s.screen().some((r) => /operations-handbook\s*[│┃]/.test(r)), 3000, "the note revealed in the explorer");
       await s.keys("escape");
       await focus("ctrl+o", "OUTLINE");
       await s.see("Outline");
@@ -373,8 +411,11 @@ export const SCENARIOS: Scenario[] = [
       const l1 = pos(s).line;
       await moveTo(s, ["n"], (l) => l !== l1, "n to the next match");
       await moveTo(s, ["N"], (l) => l === l1, "N back");
-      await s.keys("w", "*");
-      await s.keys("#");
+      // On an "Aster" (the match): * to the next whole-word Aster, # back to this one.
+      const start = pos(s);
+      await moveTo(s, ["*"], (l, c) => l !== start.line || c !== start.col, "* to the word's next occurrence");
+      await s.see(/[│┃] › \S/); // the word is the query now
+      await moveTo(s, ["#"], (l, c) => l === start.line && c === start.col, "# back to it");
       await s.ex("noh");
       await s.notSee(/[│┃] › /); // the find row (the breadcrumb has › too, never after a border)
     },

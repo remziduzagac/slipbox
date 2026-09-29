@@ -275,3 +275,69 @@ describe("review cycle 5 (vault, single-file mode)", () => {
     expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md"]);
   });
 });
+
+describe("review cycle 5 (the watcher's polling fallbacks)", () => {
+  const until = async (ok: () => boolean, ms = 4000) => {
+    const end = Date.now() + ms;
+    while (!ok() && Date.now() < end) await Bun.sleep(20);
+  };
+  test("degraded (the watch limit hit): open notes are polled, their changes still reported", async () => {
+    const { VaultWatcher } = await import("../src/core/watch.ts");
+    const { WalkFilter } = await import("../src/core/walk.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-poll-"));
+    writeFileSync(join(dir, "a.md"), "one\n");
+    const changed: string[] = [];
+    const degraded: string[] = [];
+    const w = new VaultWatcher({
+      root: dir,
+      filter: new WalkFilter(dir, DEFAULT_CONFIG.walk),
+      dirs: [""],
+      debounceMs: 20,
+      pollMs: 200, // the sweep of every known note comes each 15th tick: 3 s
+      known: new Map([["a.md", 0]]),
+      pollTargets: () => ["a.md"],
+      onBatch: (b) => changed.push(...b.changes.map((c) => c.rel)),
+      onDegraded: (r) => degraded.push(r),
+    });
+    try {
+      (w as unknown as { degrade(r: string): void }).degrade("ENOSPC: test");
+      expect(degraded.join()).toContain("polling open notes");
+      expect(w.degraded).toContain("ENOSPC");
+      writeFileSync(join(dir, "a.md"), "two, longer\n");
+      // Polled as an open note within a few ticks, long before the sweep would find it.
+      await until(() => changed.includes("a.md"), 1500);
+      expect(changed).toContain("a.md");
+    } finally {
+      w.close();
+    }
+  });
+  test("a folder that can't be watched is polled: its new and changed notes still come", async () => {
+    const { VaultWatcher } = await import("../src/core/watch.ts");
+    const { WalkFilter } = await import("../src/core/walk.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-polldir-"));
+    mkdirSync(join(dir, "sub"));
+    const changed: string[] = [];
+    const warned: string[] = [];
+    const w = new VaultWatcher({
+      root: dir,
+      filter: new WalkFilter(dir, DEFAULT_CONFIG.walk),
+      dirs: [],
+      debounceMs: 20,
+      pollMs: 50,
+      known: new Map(),
+      onBatch: (b) => changed.push(...b.changes.map((c) => c.rel)),
+      onDegraded: () => {},
+      onWarn: (m) => warned.push(m),
+    });
+    try {
+      (w as unknown as { pollDir(d: string, r: string): void }).pollDir("sub", "EACCES: test");
+      expect(warned.join()).toContain("polling it");
+      expect(w.polledDirs).toContain("sub");
+      writeFileSync(join(dir, "sub", "new.md"), "# New\n");
+      await until(() => changed.includes("sub/new.md"));
+      expect(changed).toContain("sub/new.md");
+    } finally {
+      w.close();
+    }
+  });
+});
