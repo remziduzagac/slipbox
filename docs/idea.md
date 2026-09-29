@@ -563,10 +563,12 @@ data**. Only the first needs a folder to be marked; the second belongs outside i
 ### A root is decided by the file
 
 - **Every file belongs to exactly one root:** the nearest `.slipbox/` above it; else the git
-  repository it's in; else its own folder — never `$HOME` or `/`, which would index everything.
-  Where slipbox was opened doesn't matter: `~/notes/idea.md` is in `~/notes` however you reach it.
-- **No init, no degraded mode.** Opening a folder or a file just works, links and backlinks
-  included. `slipbox init` only creates `.slipbox/`, for the things below that need it.
+  repository it's in; else the **home vault** (below). `$HOME` and `/` are never a root, which
+  would index everything. Where slipbox was opened doesn't matter: `~/notes/idea.md` is in
+  `~/notes` however you reach it.
+- **No init, no degraded mode.** Opening a folder or a file just works: in a vault or a repository,
+  links and backlinks across all of it; for a loose file, among the files beside it. `slipbox init`
+  only creates `.slipbox/`, for the things below that need it.
 - **Opening `~`, or a big folder that isn't a root,** shows a launcher — the vaults this machine
   knows, and a plain file tree — rather than indexing everything under it.
 - **A nested `.slipbox/` is a boundary:** its files are its own vault's, not the outer one's.
@@ -574,6 +576,41 @@ data**. Only the first needs a folder to be marked; the second belongs outside i
 The earlier "deliberately no git-root fallback" is reversed: its reason was that every repo you
 opened would turn into a vault, and a vault now costs nothing in the folder — nothing is written
 there, and the index is a cache elsewhere.
+
+### The home vault
+
+Files outside every vault and repository — `~/todo.md`, `~/Downloads/spec.md`, `/tmp/x.md` —
+belong to one vault, `home`, rather than each to its own folder. Without it, a file directly in `~`
+had no root at all (`~` never is one), and every folder a stray file was opened in got a state
+directory of its own.
+
+- **The notes stay wherever they are.** The home vault has no folder: it's a place for details, not
+  for notes. A note made outside any vault is made where you are.
+- **Its `.slipbox/` is `~/.local/share/slipbox/home/`** — XDG's data directory, for what is kept
+  but is neither settings nor derived (`paths.ts` has no data directory yet). It holds
+  `config.toml`, with the vault's `id` and `name` and any settings for loose files, and later the
+  comments and kept agent answers about them. Its personal data and its index are keyed by its id
+  like any vault's: `~/.local/state/slipbox/<id>/`, `~/.cache/slipbox/<id>/`.
+- **Not a `~/.slipbox/`.** A marker in `~` would be the nearest `.slipbox/` for every repository
+  under home, and pull them all into one vault.
+- **A loose file's links look beside it.** `[[name]]` resolves among the files in the note's own
+  folder, not below it. The home vault can't be one namespace: that would mean indexing `~`, or
+  counting the files this machine happened to open, and then a link would mean different things on
+  different machines. Path links reach anything, as everywhere.
+- **Loose notes that link across folders are a vault waiting to be marked.** When a `[[name]]` fails
+  but a match exists in a folder nearby, slipbox says where, and offers `slipbox init` on the
+  folder that holds both.
+- **`home` is a reserved name, and not a link target:** `[[home:x]]` would need the one namespace
+  ruled out above.
+
+### Vaults in the explorer
+
+- **A folder that is a root shows its own icon** in the explorer and the launcher: one for a vault
+  (a `.slipbox/`), another for a repository without one. The tree then shows where `[[name]]`
+  changes meaning — above all a vault nested in the open one, where the open vault's links stop.
+- **The vault's name follows the folder's, dimmed, when the two differ:** `docs  app-docs`.
+- The icons come in each glyph set — Nerd Font, Unicode, ASCII (`glyphs.ts`) — beside the folder
+  ones (`dirOpen`, `dirClosed`).
 
 ### Where everything is stored
 
@@ -587,6 +624,7 @@ Every piece of data answers two questions: can it be rebuilt from the files, and
 | `~/.local/state/slipbox/<vault>/` | personal data, per vault | no: yours, not shared |
 | `~/.local/state/slipbox/vaults.json` | the vaults this machine knows | partly: vaults re-add when opened |
 | `<vault>/.slipbox/` | what travels with the folder | no: commit it to share |
+| `~/.local/share/slipbox/home/` | the home vault's `.slipbox/`, for loose files | no: yours |
 
 **`~/.config/slipbox/`** (today): `config.toml` — the global settings — and `themes/`.
 
@@ -620,11 +658,12 @@ repo (or not; that's the user's call):
   and `previous_names`;
 - later: **shared comments** and **agent answers worth keeping**, for collaborators.
 
-**Keys:** `<vault>` is the vault's `id` when its root has a `.slipbox/` — so its personal data and
-cache survive moving the folder — else, as today, the folder's name and a hash of its path.
+**Keys:** `<vault>` is the vault's `id` — so its personal data and cache survive moving the folder
+— for a vault with a `.slipbox/` and for the home vault; for a repository without one, as today,
+the folder's name and a hash of its path.
 
-**Config precedence:** the built-in defaults, then `~/.config/slipbox/config.toml`, then
-`<vault>/.slipbox/config.toml`.
+**Config precedence:** the built-in defaults, then `~/.config/slipbox/config.toml`, then the
+vault's: `<vault>/.slipbox/config.toml`, or the home vault's for a loose file.
 
 **No `.slipbox.local/`.** Personal data already lives in the global state, keyed per vault: a
 second home for it in the folder would be the complication this design avoids. Revisit only if
@@ -634,7 +673,7 @@ personal data ever has to travel with a folder, or be visible beside it.
 
 - **A vault** has, in `.slipbox/config.toml`: `id`, `name` (the folder's name at creation, stored,
   so renaming the folder doesn't rename the vault), `aliases`, `previous_names`. Names are unique
-  on a machine.
+  on a machine, and `home` is taken (the home vault).
 - **A note** is named by its file name and by frontmatter `aliases` (Obsidian's field, so other
   tools read it), and remembers `previous_names` in its frontmatter.
 - **Aliases are addresses, previous names are history.** An alias resolves like the name itself.
