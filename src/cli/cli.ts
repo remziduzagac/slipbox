@@ -121,6 +121,7 @@ Usage:
   slipbox read <note>               a note's text, and its sha
   slipbox stat <note>               a note's size, dates, title, counts, encoding (the TUI's note info)
   slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
+  slipbox mkdir <path>              make a folder in the vault (and its parents)
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
@@ -147,7 +148,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 `;
 
 export const CLI_COMMANDS = new Set([
-  "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "send", "history",
+  "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "capture", "scratch", "init", "info", "themes", "commands", "help",
 ]);
 
@@ -247,7 +248,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, themes: 0, commands: 0,
+  scratch: 1, init: 1, info: 0, themes: 0, commands: 0, mkdir: 1,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -837,6 +838,18 @@ const HANDLERS: Record<string, Handler> = {
       ["sha", data.sha],
     ];
     return { data, human: rows.map(([k, v]) => `${k.padEnd(10)}${v}\n`).join("") };
+  },
+
+  // A folder (and its parents), in the vault only: from its root, or from the current folder
+  // when the path says so (./, ../), as write --create takes a new note's path.
+  mkdir(s, rest) {
+    const arg = requireArg(rest, "path");
+    const abs = arg.startsWith("/") ? arg : /^\.\.?\//.test(arg) ? join(s.io.cwd, arg) : join(s.loc.root, arg);
+    if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${arg} is outside the vault (${s.loc.root})`, EXIT.refused);
+    const rel = relative(s.loc.root, abs);
+    if (existsSync(abs)) throw new CliError(`${rel} already exists`, EXIT.refused, { path: rel });
+    mkdirSync(abs, { recursive: true });
+    return { data: { path: rel, created: true }, human: `${rel}/\n` };
   },
 
   async write(s, rest) {

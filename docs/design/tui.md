@@ -278,7 +278,7 @@ Each kind of link does something different when followed:
 | `[[note]]`, `[[note#heading]]` | opens the note, at the heading |
 | `[[#heading]]`, `[t](#frag)` | jumps within the note |
 | ambiguous `[[name]]` | a picker of the candidates |
-| unresolved `[[name]]` | a message; creating the note is phase 4 |
+| unresolved `[[name]]` | the new-note prompt, the name typed: `enter` makes it beside this note |
 | `[t](other.md#frag)` | opens relative to the note |
 | `[t](run.py#L42)` | opens the file at line 42 (as in a code comment's `run.py:42`) |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
@@ -698,6 +698,14 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
   patterns, minus `files.exclude`; the explorer's `a` toggles to all and back. The explorer, the
   tabs and the history show every name with its extension (the switcher lists paths), notes' too
   (`home.md`, `dome-log.org`): the formats sit side by side, and the extension says which is which.
+  Folders show whether or not anything in them is listed, so a new or empty one is there to open and
+  create in.
+- **New notes and folders** (`ctrl+n`, `space n n`, `:new`; `space v d`, `:mkdir`; `%` and `d` in
+  the explorer): a name, from the current note's folder — or the explorer's selected folder when it
+  has focus, or the vault's root with a leading `/` — and folders on the way are made. `.md` is added
+  unless the name has a known extension (`.org`, `.toml`…). A note starts with its title (`# Name`,
+  Org's `#+TITLE:`, AsciiDoc's `=`), opens, and is typed into on the line after the blank one; an
+  existing file just opens. Nothing is made outside the vault, through a symlink or otherwise.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
 

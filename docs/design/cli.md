@@ -93,6 +93,7 @@ These churn freely before 1.0:
 | `read <note>` | `{path, abs, sha, bom, crlf, invalidUtf8, content}` |
 | `stat <note>` | `{path, abs, size, mtime, title, tags, headings, links, unresolved, backlinks}` + `read`'s flags |
 | `write <note>` | `{path, created, shadows (with --create), appended, previousSha, sha}` |
+| `mkdir <path>` | `{path, created}`; an existing path or one outside the vault is exit 5 |
 | `send <note>` | `{path, line, server, commands[]}` |
 | `history` | `{read[{path, at, line}], open[[path…]…]}` (open: the TUI's tabs, each its windows) |
 

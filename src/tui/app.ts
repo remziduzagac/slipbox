@@ -12,16 +12,16 @@
 import { commentLinks, grammarFor, grammarNow, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
 import { onLoaded } from "../core/lazy.ts";
 import ignore from "ignore";
-import { classify, extensionOf, type FileGroup } from "../core/filetypes.ts";
-import { appendFileSync, existsSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
-import { readRegular, readText, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
+import { appendFileSync, existsSync, mkdirSync, realpathSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
+import { readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { doneMark, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
-import { insertKey, insertText, offsetOf, stopInsert } from "./editing.ts";
+import { insertKey, insertText, offsetOf, startInsert, stopInsert } from "./editing.ts";
 import { insertRecord, newVimState, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
@@ -1569,6 +1569,11 @@ export class App {
     }
     // Stamped as written: an agent's write landing right after is a change, not ours.
     if (buf.rel !== null) this.watcher?.noteOwnWrite(buf.rel, written);
+    // The index learns what we wrote (the watcher skips our own writes): the note's links, for
+    // backlinks, and its stamp — a later watcher resync from the index must not take our own
+    // save for someone else's change.
+    if (buf.rel !== null && this.graph.notes.has(buf.rel)) this.graph.updateFile(buf.rel, { rel: buf.rel, abs: buf.abs, size: written.size, mtimeMs: written.mtimeMs });
+    else if (buf.rel !== null) this.graph.fileChanged(buf.rel);
     if (saving) {
       // The text on disk is what's in the buffer: keep it, its history and every cursor.
       buf.deleted = false;
@@ -1722,6 +1727,156 @@ export class App {
     const t = this.tabs.splice(this.activeTab, 1)[0]!;
     for (const v of t.views) this.remember(v);
     this.activeTab = Math.min(this.activeTab, this.tabs.length - 1);
+  }
+
+  /**
+   * Where a new note or folder goes: the explorer's selected folder (or the folder of its selected
+   * file) when the explorer has focus, else the current note's folder; the vault's root without
+   * one. Vault-relative, "" for the root.
+   */
+  newItemBase(): string {
+    if (this.region === "sidebar" && this.leftView === "explorer") {
+      const row = this.explorerRows()[this.sidebar.selected];
+      if (row) return row.kind === "dir" ? row.path : posix.dirname(row.path) === "." ? "" : posix.dirname(row.path);
+    }
+    const rel = this.view?.buf.rel;
+    return rel && posix.dirname(rel) !== "." ? posix.dirname(rel) : "";
+  }
+
+  /** A path typed for a new note or folder, from `base` (or the root, with a leading `/`); null
+   *  (and said) when it leaves the vault or names nothing. */
+  private newPath(input: string, base: string): string | null {
+    const typed = input.trim();
+    if (!typed) return null;
+    const rel = posix.normalize(typed.startsWith("/") ? typed.slice(1) : posix.join(base, typed)).replace(/\/+$/, "");
+    if (!rel || rel === "." || rel.startsWith("../") || rel === ".." || posix.isAbsolute(rel)) {
+      this.message("warn", `${typed}: not inside the vault`);
+      return null;
+    }
+    // Through a symlinked folder or not, never outside the vault.
+    const target = realTarget(join(this.loc.root, rel));
+    let root = this.loc.root;
+    try {
+      root = realpathSync(root);
+    } catch {}
+    const r = relative(root, target);
+    if (r.startsWith("..") || isAbsolute(r)) {
+      this.message("warn", `${typed} resolves outside the vault — not creating it`);
+      return null;
+    }
+    return rel;
+  }
+
+  /** The folders a new path makes, known to the walk and the watcher (and the explorer shows). */
+  private addFolders(rel: string): void {
+    const parts = rel.split("/");
+    let added = false;
+    for (let i = 1; i <= parts.length; i++) {
+      const dir = parts.slice(0, i).join("/");
+      if (!this.graph.dirs.includes(dir)) {
+        this.graph.dirs.push(dir);
+        added = true;
+      }
+    }
+    if (added) this.watcher?.sync(this.loc.mode === "vault" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
+  }
+
+  /**
+   * Create a note (ctrl+n, `:new`): `input` from `base`, `.md` added unless it names a known
+   * extension (`.org`, `.toml`…); missing folders made. A note starts with its title as a heading
+   * (`# Name`, Org's `#+TITLE:`, AsciiDoc's `=`). An existing file is just opened. Its vault path
+   * and whether it was made, or null.
+   */
+  createNote(input: string, base: string): { rel: string; created: boolean } | null {
+    let rel = this.newPath(input, base);
+    if (!rel) return null;
+    const ext = extensionOf(rel);
+    if (!ext || !isKnownExtension(ext)) rel = `${rel}.md`;
+    const abs = join(this.loc.root, rel);
+    if (existsSync(abs)) {
+      if (statSync(abs).isDirectory()) {
+        this.message("warn", `${rel} is a folder`);
+        return null;
+      }
+      this.message("info", `${rel} exists — opened`);
+      return { rel, created: false };
+    }
+    const kind = classify(rel, this.config.walk.extensions);
+    const name = posix.basename(rel).replace(/\.[^.]+$/, "");
+    const content = kind.group !== "note" ? "" : kind.format === "org" ? `#+TITLE: ${name}\n\n` : kind.format === "asciidoc" ? `= ${name}\n\n` : `# ${name}\n\n`;
+    let stamp: { mtimeMs: number; size: number };
+    try {
+      mkdirSync(dirname(abs), { recursive: true });
+      stamp = writeNote(this.loc.root, abs, content);
+    } catch (err) {
+      this.message("error", `can't create ${rel}: ${(err as Error).message}`);
+      return null;
+    }
+    const dir = posix.dirname(rel);
+    if (dir !== ".") this.addFolders(dir);
+    this.watcher?.noteOwnWrite(rel, stamp);
+    if (kind.group === "note") this.graph.updateFile(rel, { rel, abs, size: stamp.size, mtimeMs: stamp.mtimeMs });
+    else this.graph.addAsset(rel);
+    this.invalidateTree();
+    this.relayoutAll(); // links to it resolve now
+    this.message("info", `created ${rel}`);
+    return { rel, created: true };
+  }
+
+  /**
+   * Ask for a new note's name and make it: opened, and typed into below its title. `prefill`: the
+   * name already typed (a link to a note that doesn't exist yet).
+   */
+  promptNewNote(base = this.newItemBase(), prefill = ""): void {
+    const make = (text: string) => {
+      const r = this.createNote(text, base);
+      if (!r) return;
+      this.region = "content";
+      this.open(r.rel);
+      const v = this.view;
+      // Typing on the line after the title's blank one (as `o` there would): a source view has no
+      // row past the file's last line break, so the insert begins with one.
+      if (r.created && v?.buf.rel === r.rel) {
+        startInsert(this, v, (w) => w.buf.source.length);
+        insertText(this, v, v.buf.eol);
+      }
+    };
+    this.prompt(`new note in ${base ? `${base}/` : "the vault"}`, make);
+    if (prefill && this.overlay?.kind === "prompt") this.overlay.text = prefill;
+  }
+
+  /** Ask for a new folder's name and make it. */
+  promptNewFolder(base = this.newItemBase()): void {
+    this.prompt(`new folder in ${base ? `${base}/` : "the vault"}`, (text) => void this.createFolder(text, base));
+  }
+
+  /** Create a folder (`d` in the explorer, `space v d`, `:mkdir`): selected in the explorer. */
+  createFolder(input: string, base: string): string | null {
+    const rel = this.newPath(input, base);
+    if (!rel) return null;
+    const abs = join(this.loc.root, rel);
+    if (existsSync(abs)) {
+      this.message("warn", `${rel} exists`);
+      return null;
+    }
+    try {
+      mkdirSync(abs, { recursive: true });
+    } catch (err) {
+      this.message("error", `can't create ${rel}: ${(err as Error).message}`);
+      return null;
+    }
+    this.addFolders(rel);
+    // Unfolded to it, and selected, in a shown explorer.
+    const parts = rel.split("/");
+    for (let i = 1; i < parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
+    this.invalidateTree();
+    this.switchLeftView("explorer");
+    this.showSidebar(true);
+    const at = this.explorerRows().findIndex((r) => r.kind === "dir" && r.path === rel);
+    if (at >= 0) this.sidebar.selected = at;
+    this.region = "sidebar";
+    this.message("info", `created ${rel}/`);
+    return rel;
   }
 
   /** Keep only this tab (`:tabonly`) and the pinned ones. The notes' buffers stay, unsaved
@@ -1962,12 +2117,15 @@ export class App {
     if (this.tree) return this.tree;
     const rows: TreeRow[] = [];
     const groups = new Map(this.shownFiles().map((f) => [f.path, f.group]));
-    const paths = [...this.graph.notes.keys(), ...groups.keys()].sort((a, b) => {
+    // The walk's folders too, so one with nothing listed in it (just made, or holding only files
+    // the explorer leaves out) is still there to open and to create in.
+    const folders = new Set(this.graph.dirs.filter((d) => d));
+    const paths = [...this.graph.notes.keys(), ...groups.keys(), ...folders].sort((a, b) => {
       const da = a.split("/");
       const db = b.split("/");
       for (let i = 0; i < Math.min(da.length, db.length); i++) {
-        const lastA = i === da.length - 1;
-        const lastB = i === db.length - 1;
+        const lastA = i === da.length - 1 && !folders.has(a);
+        const lastB = i === db.length - 1 && !folders.has(b);
         if (da[i] !== db[i]) {
           if (lastA !== lastB) return lastA ? 1 : -1; // directories first
           return da[i]!.localeCompare(db[i]!, undefined, { sensitivity: "base" });
@@ -1979,7 +2137,9 @@ export class App {
     for (const p of paths) {
       const parts = p.split("/");
       let visible = true;
-      for (let i = 0; i < parts.length - 1; i++) {
+      // A folder: its own row (its parents first), when they're unfolded.
+      const own = folders.has(p) ? parts.length : parts.length - 1;
+      for (let i = 0; i < own; i++) {
         const dir = parts.slice(0, i + 1).join("/");
         if (!seen.has(dir) && visible) {
           seen.add(dir);
@@ -1990,7 +2150,7 @@ export class App {
           break;
         }
       }
-      if (visible) rows.push({ kind: "note", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(groups.has(p) ? { group: groups.get(p) } : {}) });
+      if (visible && !folders.has(p)) rows.push({ kind: "note", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(groups.has(p) ? { group: groups.get(p) } : {}) });
     }
     this.tree = rows;
     return rows;
@@ -2350,6 +2510,10 @@ export class App {
       case "top":
         this.sidebar.selected = 0;
         break;
+      case "new_note":
+        return this.promptNewNote(this.newItemBase());
+      case "new_folder":
+        return this.promptNewFolder(this.newItemBase());
       case "all_files": {
         // Every text file, or back to what files.show lists; the selection stays on its row.
         const at = row?.path;

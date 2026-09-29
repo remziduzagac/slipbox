@@ -184,6 +184,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "scratch.copy", title: "Copy the scratch", cli: "slipbox scratch copy", desc: "Copies the whole scratch" },
   { id: "scratch.clear", title: "Clear the scratch", cli: "slipbox scratch clear", desc: "Empties the scratch (asks first)" },
   // note, vault, app
+  { id: "note.create", title: "New note", cli: "slipbox write <path> --create", desc: "Asks for a name (folders too: projects/idea) and makes the note beside this one; it opens, typed into below its title" },
+  { id: "folder.create", title: "New folder", cli: "slipbox mkdir <path>", desc: "Asks for a name and makes the folder beside this note (in the explorer: in the selected folder)" },
   { id: "note.reload", title: "Reload note from disk", cli: "slipbox render <note>", desc: "Reads the note from disk again" },
   { id: "note.edit", title: "Edit in your editor", cli: I, desc: "Hands the note to your editor at the cursor's line, in this terminal; back here when it closes" },
   { id: "view.source", title: "Source / rendered", cli: I, desc: "Shows this window's note as its raw markdown, or rendered again; the cursor stays on its line" },
@@ -222,7 +224,7 @@ export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Editing", ids: /^(task\.|edit\.|visual\.(delete|change|indent|outdent)$|view\.(source|live)$|lens\.|note\.(save|save_all|save_force|revert|resolve)$|app\.(save_quit|quit_force)$)/ },
   { title: "UI", ids: /^(ui\.|theme\.|glyphs\.)/ },
   { title: "Scratch", ids: /^scratch\./ },
-  { title: "Note, vault, app", ids: /^(note\.|vault\.|config\.|messages\.|help\.|app\.)/ },
+  { title: "Note, vault, app", ids: /^(note\.|folder\.|vault\.|config\.|messages\.|help\.|app\.)/ },
 ];
 
 export function commandGroup(id: string): string {

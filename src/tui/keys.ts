@@ -223,6 +223,9 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n s": "note.send",
   "leader n p": "note.send_pick",
   "leader n i": "note.info",
+  "leader n n": "note.create",
+  "ctrl+n": "note.create",
+  "leader v d": "folder.create",
   "leader v r": "vault.reindex",
   "leader v i": "vault.info",
   "leader v c": "config.reload",
@@ -313,11 +316,14 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   "shift+g": "bottom",
   "/": "filter",
   a: "all_files",
+  // netrw's (vim's own explorer): % a new file, d a new folder — in the selected folder
+  "%": "new_note",
+  d: "new_folder",
   q: "close",
   escape: "leave",
 };
 
-export const EXPLORER_ACTIONS = ["down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files", "close", "leave"];
+export const EXPLORER_ACTIONS = ["down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files", "new_note", "new_folder", "close", "leave"];
 
 /** Keys inside the outline pane: key → outline action. */
 export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {
@@ -372,6 +378,8 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   bottom: { title: "Bottom", desc: "Selects the last row" },
   filter: { title: "Filter", desc: "Type to narrow the rows (the tree keeps its folders); enter opens, esc clears" },
   all_files: { title: "All files", desc: "Shows every text file, or back to files.show (notes and data files)" },
+  new_note: { title: "New note here", desc: "Asks for a name and makes the note in the selected folder (or beside the selected file)" },
+  new_folder: { title: "New folder here", desc: "Asks for a name and makes the folder in the selected folder (or beside the selected file)" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
 };
@@ -429,8 +437,8 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader f": "find: notes, headings, text, commands",
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
-  "leader n": "note: source, the lens, save, edit elsewhere, reload, info",
-  "leader v": "vault: reindex, info, reload config",
+  "leader n": "note: new, source, the lens, save, edit elsewhere, reload, info",
+  "leader v": "vault: new folder, reindex, info, reload config",
   "leader q": "session: quit",
   y: "copy: selection, path, reference, link",
   "ctrl+w": "window: split, focus, move, resize",
@@ -477,6 +485,8 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   vs: "window.split_side",
   sp: "window.split_stacked",
   tabnew: "tab.new",
+  new: "note.create",
+  mkdir: "folder.create",
   tabonly: "tab.close_others",
   tabpin: "tab.pin",
   tabo: "tab.close_others",

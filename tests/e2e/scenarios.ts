@@ -469,6 +469,36 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "create: ctrl+n a note, typed and saved; the explorer's d a folder and % a note in it",
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      await s.keys("ctrl+n");
+      await s.see("new note in handbook/");
+      await s.type("checklist");
+      await s.keys("enter");
+      await s.status("INSERT");
+      await s.type("First item");
+      await s.keys("escape", "ctrl+s");
+      await s.file("handbook/checklist.md", (t) => t === "# checklist\n\nFirst item\n", "the new note saved");
+      // In the explorer: a folder, then a note in it.
+      for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
+      await s.keys("d");
+      await s.see("new folder in");
+      await s.type("ideas");
+      await s.keys("enter");
+      await s.see("ideas");
+      await s.keys("%");
+      await s.type("spark");
+      await s.keys("enter");
+      await s.status("ideas/spark.md");
+      s.expect(s.exists("handbook/ideas/spark.md") || s.exists("ideas/spark.md"), "the note made in the new folder");
+      await s.keys("escape"); // the new note opened typing
+      await s.ex("mkdir /archive/2026");
+      await s.until(() => s.exists("archive/2026"), 3000, ":mkdir from the vault's root");
+    },
+  },
+
   // --- panes ----------------------------------------------------------------------------------
   {
     name: "panes: the explorer, reveal, the outline, the heading picker, the path dropdown",

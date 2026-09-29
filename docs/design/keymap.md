@@ -223,6 +223,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `g g` / `shift+g` | top / bottom |
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
 | `a` | show every text file, or back to what `files.show` lists (notes and data files) |
+| `%` / `d` | a new note / folder in the selected folder (beside a selected file): netrw's keys |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
 | mouse | click a folder to fold or unfold it; click a note to select it, double-click to open it as a tab |
@@ -303,6 +304,7 @@ config.
 | `:wrap` | toggle wrapping |
 | `:vs` / `:sp` | split side by side / stacked |
 | `:tabnew` | new tab with the current note |
+| `:new <name>` / `:mkdir <name>` | a new note / folder beside this note (a leading `/`: from the vault's root) |
 | `:noh` | clear find highlights |
 | `:messages` | open the messages list |
 | `:reload` | reload the note from disk |
@@ -337,6 +339,8 @@ source first.
 | open a line below (continuing a list) / above, and type | `o` / `shift+o` |
 | cut the character under the cursor (it goes to the clipboard, as vim's `x`) | `x` (source) |
 | undo / redo (an insert session is one step) | `u`, `ctrl+z` / `ctrl+r`, `ctrl+y`, `shift+u` |
+| a new note beside this one (`:new name`; `projects/idea` makes the folder too) | `ctrl+n`, `space n n` |
+| a new folder beside this note (`:mkdir name`) | `space v d` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |

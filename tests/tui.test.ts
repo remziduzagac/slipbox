@@ -2,7 +2,7 @@
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
 
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -390,7 +390,9 @@ describe("links and history", () => {
     await h.keys("enter"); // the cursor starts on [[dup]]
     expect(h.app.overlay?.kind).toBe("list");
     await h.keys("escape", "tab", "enter");
-    expect(h.app.transient!.text).toContain("unresolved link [[nothing-here]]");
+    // No such note: the new-note prompt, its name typed already.
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", text: "nothing-here" });
+    await h.keys("escape");
     await h.keys("tab", "enter");
     expect(h.copied.at(-1)).toBe("https://example.invalid");
     await h.keys("tab", "enter");
@@ -3564,6 +3566,9 @@ describe("keymap and registry (0.8, 3.12)", () => {
     expect(canonKey("shift+alt+left")).toBe("alt+shift+left");
     expect(k("e", "\x1b[101;6u", { ctrl: true, shift: true })).toBe("ctrl+shift+e");
     expect(k("backspace", "\x08")).toBe("ctrl+backspace");
+    // …the byte many terminals send for ctrl+h: it must still open replace there.
+    expect(DEFAULT_KEYS["ctrl+backspace"]).toBe("find.replace");
+    expect(DEFAULT_KEYS["ctrl+h"]).toBe("find.replace");
     expect(k("left", "\x1b[1;9D", { super: true })).toBe("cmd+left");
     expect(k("w", "\x1b\x17", { ctrl: true, meta: true })).toBe("ctrl+alt+w");
     expect(k("space", " ")).toBe("space");
@@ -5241,3 +5246,106 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
   });
 });
 
+describe("creating notes and folders", () => {
+  test("ctrl+n: a name, the note beside this one with its title, opened and typed into", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    await h.keys("ctrl+n");
+    expect(h.frame()).toContain("new note in notes/");
+    for (const c of "idea") await h.keys(c);
+    await h.keys("enter");
+    expect(readFileSync(join(root, "notes", "idea.md"), "utf8")).toBe("# idea\n\n");
+    const v = h.app.view!;
+    expect(v.buf.rel).toBe("notes/idea.md");
+    expect(v.insert).toBe(true);
+    await h.keys("h", "i", "escape", "ctrl+s");
+    expect(readFileSync(join(root, "notes", "idea.md"), "utf8")).toBe("# idea\n\nhi\n");
+    expect(h.app.graph.notes.has("notes/idea.md")).toBe(true);
+  });
+  test(":new takes folders (made) and other note formats; an existing file opens; outside the vault is refused", async () => {
+    const root = makeVault();
+    const h = await harness({ root });
+    await h.app.run("note.create projects/deep/plan");
+    expect(readFileSync(join(root, "projects", "deep", "plan.md"), "utf8")).toBe("# plan\n\n");
+    await h.app.run("note.create /cfg.toml");
+    expect(existsSync(join(root, "cfg.toml"))).toBe(true);
+    expect(h.app.view!.buf.rel).toBe("cfg.toml");
+    await h.app.run("note.create notes/alpha");
+    expect(h.app.messages.at(-1)!.text).toContain("exists");
+    await h.app.run("note.create ../../escape"); // from notes/: past the root
+    expect(h.app.messages.at(-1)!.text).toContain("not inside the vault");
+    expect(existsSync(join(root, "..", "escape.md"))).toBe(false);
+  });
+  test("the explorer: % a note in the selected folder, d a folder — shown though empty, and selected", async () => {
+    const root = makeVault();
+    const h = await harness({ root });
+    await h.keys("space", "e");
+    const at = h.app.explorerRows().findIndex((r) => r.kind === "dir" && r.path === "notes");
+    h.app.sidebar.selected = at;
+    h.app.region = "sidebar";
+    await h.keys("d");
+    for (const c of "drafts") await h.keys(c);
+    await h.keys("enter");
+    expect(existsSync(join(root, "notes", "drafts"))).toBe(true);
+    const sel = h.app.explorerRows()[h.app.sidebar.selected]!;
+    expect([sel.kind, sel.path]).toEqual(["dir", "notes/drafts"]);
+    expect(h.frame()).toContain("drafts"); // empty, still listed
+    await h.keys("%");
+    for (const c of "first") await h.keys(c);
+    await h.keys("enter");
+    expect(existsSync(join(root, "notes", "drafts", "first.md"))).toBe(true);
+    expect(h.app.view!.buf.rel).toBe("notes/drafts/first.md");
+  });
+  test("following a link to a note that doesn't exist asks to create it, the name filled in", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "notes", "hub.md"), "# Hub\n\nSee [[future note]].\n");
+    const h = await harness({ root, open: "notes/hub.md" });
+    const v = h.app.view!;
+    const l = h.app.currentLayout(v).links[0]!;
+    h.app.moveCursor(v, { row: l.line, col: l.col });
+    await h.keys("enter");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", text: "future note" });
+    await h.keys("enter");
+    expect(existsSync(join(root, "notes", "future note.md"))).toBe(true);
+    await h.keys("escape", "ctrl+o");
+    expect(h.app.view!.buf.rel).toBe("notes/hub.md");
+    expect(h.app.graph.linksOf("notes/hub.md")[0]!.resolvedKind).toBe("note"); // the link resolves now
+  });
+});
+
+describe("saving keeps the index true (found by the creation scenario)", () => {
+  test("a note saved in slipbox is re-indexed: the link added shows in the target's backlinks", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    expect(h.app.graph.backlinks("crlf.md").some((b) => b.from === "notes/alpha.md")).toBe(false);
+    await h.keys("space", "n", "v", "shift+g", "o");
+    for (const c of "[[crlf]]") await h.keys(c);
+    await h.keys("escape", "ctrl+s");
+    expect(h.app.graph.backlinks("crlf.md").some((b) => b.from === "notes/alpha.md")).toBe(true);
+    expect(h.app.graph.entry("notes/alpha.md")!.mtimeMs).toBe(statSync(join(root, "notes", "alpha.md")).mtimeMs);
+  });
+  test("a watcher resync after our own save (a new folder) doesn't take the save for a change on disk", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md", watch: true });
+    await h.keys("space", "n", "v", "shift+a", "!", "escape", "ctrl+s");
+    await Bun.sleep(300); // the save's own events, seen and passed over
+    // A folder made beside it: the watcher resyncs from the index, then hears of the folder and
+    // checks the notes around it — the saved one among them.
+    await h.app.run("folder.create /notes/fresh");
+    await Bun.sleep(600);
+    h.frame();
+    expect(h.app.messages.some((m) => m.text.includes("changed on disk"))).toBe(false);
+  });
+  test(":new and :mkdir take a name (free text, nothing to complete)", async () => {
+    const root = makeVault();
+    const h = await harness({ root });
+    await h.keys(":");
+    for (const c of "mkdir box") await h.keys(c === " " ? "space" : c);
+    await h.keys("enter");
+    expect(existsSync(join(root, "box"))).toBe(true);
+    await h.keys("escape", ":");
+    for (const c of "new box/one") await h.keys(c === " " ? "space" : c);
+    await h.keys("enter");
+    expect(existsSync(join(root, "box", "one.md"))).toBe(true);
+  });
+});

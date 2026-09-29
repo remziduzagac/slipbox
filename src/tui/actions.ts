@@ -2,7 +2,7 @@
 // can list them and the parity test can check them; this is where each one does its work. The
 // keys are in keys.ts and docs/design/keymap.md.
 
-import { join } from "node:path";
+import { join, posix } from "node:path";
 import { classify } from "../core/filetypes.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
@@ -225,7 +225,8 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
           accept: (item) => go(item.data as string, link.heading),
         });
       }
-      return a.message("warn", `unresolved link [[${link.target}]] — no note named "${link.target}"`);
+      // No note by that name yet: make it (beside the note linking to it), the name typed already.
+      return a.promptNewNote(posix.dirname(from) === "." ? "" : posix.dirname(from), link.target);
     }
     case "markdown":
     case "image": {
@@ -377,6 +378,9 @@ function argCandidates(a: App, cmd: string): string[] | null {
   }
 }
 
+/** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
+const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault"]);
+
 /** Commands in the order of core/command-specs.ts, which follows docs/design/keymap.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
 function inSpecOrder<T extends { id: string }>(commands: T[]): T[] {
@@ -511,7 +515,7 @@ function openPalette(a: App): void {
       }
       // An argument the command doesn't take: the typing is probably a title ("zen mode"), which the
       // list picks; when nothing there matches either (:w other.md), it's said, never dropped.
-      if (arg && !argCandidates(a, spec.split(" ")[0]!) && !spec.includes(" ")) {
+      if (arg && !argCandidates(a, spec.split(" ")[0]!) && !FREE_ARG.has(spec) && !spec.includes(" ")) {
         if (a.overlay?.kind === "list" && a.overlay.filtered.some((e) => !e.item.header)) return false;
         a.overlay = null;
         a.message("warn", `:${m[1]} takes no argument (${arg} ignored)`);
@@ -1179,6 +1183,13 @@ export function registerActions(app: App): void {
         if (!v.live) return a.message("info", "the lens isn't open — space n l opens it");
         Object.assign(v, { lensSize: undefined, liveBase: undefined, layoutKey: "" });
       }),
+    // New notes and folders: beside the current note, or in the explorer's selected folder.
+    "note.create": (a, arg) => {
+      if (!arg) return a.promptNewNote();
+      const r = a.createNote(arg, a.newItemBase());
+      if (r) a.open(r.rel);
+    },
+    "folder.create": (a, arg) => (arg ? void a.createFolder(arg, a.newItemBase()) : a.promptNewFolder()),
     "tab.close_others": (a) => a.closeOtherTabs(),
     "tab.close_all": (a) => a.closeAllTabs(),
     // Editing (source mode; step 3). Entering insert from the render switches to source first.

@@ -556,6 +556,15 @@ describe("the vault and the tool", () => {
     expect(slipbox(["render", "cfg/bad.json"]).err).toContain("doesn't parse");
     for (const f of ["cfg/site.toml", "cfg/new.json", "cfg/bad.json", "tool.py", "pic.png"]) rmSync(join(vault, f));
   });
+  test("mkdir: a folder in the vault, parents too; never over one, never outside", () => {
+    const r = slipbox(["mkdir", "made/deeper", "--json"]);
+    expect(r.code).toBe(0);
+    expect(r.json.data).toEqual({ path: "made/deeper", created: true });
+    expect(existsSync(join(vault, "made", "deeper"))).toBe(true);
+    expect(slipbox(["mkdir", "made"]).code).toBe(5);
+    expect(slipbox(["mkdir", "../outside"]).code).toBe(5);
+    rmSync(join(vault, "made"), { recursive: true });
+  });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));
     expect(missing).toEqual([]);
