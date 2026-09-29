@@ -2488,8 +2488,8 @@ describe("top bar, tab strip, status line", () => {
     await h.keys("escape", "escape");
     expect(h.app.view!.find).toBeNull();
     expect(h.app.view!.height).toBe(height); // the row gone with the search
-    // The top bar can go (a UI setting): the note gains its row, messages still float.
-    await h.app.run("ui.top_bar");
+    // The top bar can go (space u b, a UI setting): the note gains its row, messages still float.
+    await h.keys("space", "u", "b");
     expect(h.app.ui.top_bar).toBe(false);
     f = lines();
     expect(h.app.view!.height).toBe(height + 1);

@@ -67,7 +67,7 @@ strip and the titles get from theirs:
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is
 closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, as
-does "Top bar" in the UI settings (`space u u`, remembered like the other settings; the note gains
+do `space u b` and "Top bar" in the UI settings (`space u u`, remembered like the other settings; the note gains
 its row, `:` still opens the palette, and the vault state isn't shown); zen mode hides it too.
 
 **The breadcrumb** tops each window, between two rules. It starts with an icon (`§`, ascii `#`) that

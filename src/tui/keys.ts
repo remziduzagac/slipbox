@@ -160,6 +160,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader u s": "ui.wrap",
   "leader u r": "ui.urls",
   "leader u m": "ui.mouse",
+  "leader u b": "ui.top_bar",
   // scratch
   "leader s s": "scratch.open",
   "leader s a": "scratch.add",

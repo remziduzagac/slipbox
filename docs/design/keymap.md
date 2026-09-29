@@ -385,6 +385,7 @@ gets one when a line is added after its last.
 | `space u s` | wrap long lines (on by default); off, notes keep their natural width and scroll sideways |
 | `space u r` | link URLs shown after the link text |
 | `space u m` | mouse on / off; off gives the mouse back to the terminal for native selection |
+| `space u b` | top bar on / off (the palette chip and vault state); the note takes its row |
 
 **Persistence.** UI settings apply at once and are remembered in the session. Config sets the
 defaults, and a session setting is kept only while the config value it overrode is unchanged:
