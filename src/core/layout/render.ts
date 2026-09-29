@@ -5,7 +5,7 @@
 
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
-import { headingText, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
+import { headingText, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../width.ts";
@@ -51,12 +51,75 @@ export function renderMarkdown(source: string, opts: RenderOptions): Layout {
   return renderTree(parsed.tree, opts, parsed.frontmatter);
 }
 
-export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontmatter | null): Layout {
+/**
+ * Top-level blocks' rows, kept between renders of the same note (a buffer keeps one, and drops it
+ * when anything a render reads besides the text changes: the graph, the theme): a block the parse
+ * reused — the same `ORIGIN` — is copied to where it now is, not rendered again (plan 15.1).
+ */
+export interface RenderCache {
+  /** Width, glyphs, URLs and the note's definitions: a change drops every block. */
+  key: string;
+  blocks: WeakMap<object, CachedBlock>;
+}
+
+interface CachedBlock {
+  lines: Line[];
+  links: LayoutLink[];
+  headings: Omit<LayoutHeading, "line">[];
+  /** The block's first source line when it was rendered. */
+  src: number;
+}
+
+export function newRenderCache(): RenderCache {
+  return { key: "", blocks: new WeakMap() };
+}
+
+export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontmatter | null, cache?: RenderCache): Layout {
   const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), slugCounts: new Map(), nesting: 0 };
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
-  const lines = blocks(tree.children, ctx, width, TEXT, frontmatter);
-  return finish(lines, ctx, width);
+  if (!cache) return finish(blocks(tree.children, ctx, width, TEXT, frontmatter), ctx, width);
+  const key = `${width}|${opts.glyphs.mode}|${opts.showUrls ? 1 : 0}|${[...ctx.definitions].join("\u0001")}`;
+  if (cache.key !== key) {
+    cache.key = key;
+    cache.blocks = new WeakMap();
+  }
+  const out: Line[] = [];
+  for (const node of tree.children) {
+    const origin = (node as unknown as Record<symbol, object | undefined>)[ORIGIN];
+    let hit = origin ? cache.blocks.get(origin) : undefined;
+    if (!hit) {
+      // Rendered on its own: its links and headings numbered from 0, renumbered when placed.
+      const own: Ctx = { ...ctx, links: [], headings: [] };
+      const rows = block(node, own, width, TEXT, frontmatter);
+      if (rows === null) continue;
+      hit = { lines: rows, links: own.links, headings: own.headings, src: srcOf(node) };
+      if (origin) cache.blocks.set(origin, hit);
+    }
+    const delta = srcOf(node) - hit.src;
+    const linkBase = ctx.links.length;
+    const headBase = ctx.headings.length;
+    for (const l of hit.links) ctx.links.push({ ...l, src: l.src + delta });
+    for (const h of hit.headings) ctx.headings.push({ ...h, src: h.src + delta });
+    if (out.length) out.push(gapAfter(out, srcOf(node)));
+    // Copies: `finish` edits spans in place, and the cached rows serve the next render too.
+    for (const line of hit.lines) out.push(placed(line, delta, linkBase, headBase));
+  }
+  return finish(out, ctx, width);
+}
+
+/** A cached row, moved `delta` source lines and renumbered into the layout's links and headings. */
+function placed(line: Line, delta: number, linkBase: number, headBase: number): Line {
+  const spans = line.spans.map((s) => {
+    const c: Span = { ...s };
+    if (s.src !== undefined) c.src = s.src + delta;
+    if (s.link !== undefined) c.link = s.link + linkBase;
+    if (s.task) c.task = { ...s.task, line: s.task.line + delta, end: s.task.end + delta };
+    return c;
+  });
+  const c: Line = { ...line, spans, src: line.src + delta };
+  if (line.heading !== undefined) c.heading = line.heading + headBase;
+  return c;
 }
 
 function finish(lines: Line[], ctx: Ctx, width: number): Layout {

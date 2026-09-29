@@ -17,7 +17,7 @@ import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { type Graph, openGraph } from "../core/graph.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
-import { parseMarkdown, slugify } from "../core/parse.ts";
+import { parseAround, parseMarkdown, slugify } from "../core/parse.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
@@ -684,7 +684,10 @@ const HANDLERS: Record<string, Handler> = {
     const abs = s.graph.abs(rel);
     // A task is a one-byte edit, so a note that isn't valid UTF-8 can be ticked, as in the TUI.
     const file = readNoteFile(s, abs, false);
-    const tasks = listTasks(parseMarkdown(file.text).tree);
+    // Toggling one line needs only the chunk that holds it (a 20,000-task note parses in a blink);
+    // the list, the whole note.
+    const lineArg = rest[1] === undefined ? undefined : Number(rest[1]);
+    const tasks = listTasks(lineArg !== undefined && Number.isInteger(lineArg) && lineArg >= 1 ? parseAround(file.text, lineArg) : parseMarkdown(file.text).tree);
     // Each task's source line too (its text keeps [[links]]), and the note's sha for a safe tick.
     const lines = file.text.split("\n");
     const withRaw = tasks.map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
@@ -694,7 +697,11 @@ const HANDLERS: Record<string, Handler> = {
     const line = Number(rest[1]);
     if (!Number.isInteger(line) || line < 1) throw new UsageError("the task's line must be a whole number from 1");
     const task = tasks.find((t) => t.line === line);
-    if (!task) throw new CliError(`no task on line ${line} of ${rel}`, EXIT.notFound, { path: rel, sha: file.sha, tasks: withRaw });
+    if (!task) {
+      // The whole note's tasks, to choose from (the chunk's alone would mislead).
+      const all = listTasks(parseMarkdown(file.text).tree).map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
+      throw new CliError(`no task on line ${line} of ${rel}`, EXIT.notFound, { path: rel, sha: file.sha, tasks: all });
+    }
     const want = has(s.args, "check") ? true : has(s.args, "uncheck") ? false : !task.checked;
     if (has(s.args, "check") && has(s.args, "uncheck")) throw new UsageError("--check or --uncheck, not both");
     checkWritable(s, abs);

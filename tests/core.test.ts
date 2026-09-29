@@ -769,8 +769,9 @@ describe("the incremental source layout (15.1)", () => {
           else lines = [pieces[rand(pieces.length)]!, ...lines];
           const text = `${lines.join("\n")}\n`;
           const opts = { width, wrap, headings: scanHeadings(text) };
-          const inc = layoutSource(text, opts, cache);
+          const inc = layoutSource(text, { ...opts, headings: "scan" as const }, cache);
           const fresh = layoutSource(text, opts);
+          // Headings found line by line as the layout goes are the scan's of the whole text.
           expect(JSON.stringify(inc)).toBe(JSON.stringify(fresh));
         }
       }
@@ -831,6 +832,30 @@ describe("the chunked parse (15.1)", () => {
       const at = (step * 7919) % text.length;
       text = step % 3 === 0 ? `${text.slice(0, at)}\n\nnew para ${step}\n\n${text.slice(at)}` : step % 3 === 1 ? `${text.slice(0, at)}x${text.slice(at)}` : text.slice(0, at) + text.slice(at + 5);
       expect(strip(parseMarkdown(text, cache).tree.children)).toBe(strip(parseMarkdown(text, undefined, { whole: true }).tree.children));
+    }
+  });
+});
+
+describe("parseAround (15.1)", () => {
+  test("the tasks of one line's chunk are the whole parse's there", async () => {
+    const { parseAround } = await import("../src/core/parse.ts");
+    const text = [
+      "# Tasks",
+      "",
+      ...Array.from({ length: 300 }, (_, i) => (i % 50 === 7 ? "```\n- [ ] not a task, in code\n```" : `- [${i % 3 ? " " : "x"}] task ${i}`)),
+      "",
+      "<!--",
+      "- [ ] in a comment",
+      "-->",
+      "",
+      ...Array.from({ length: 100 }, (_, i) => `${i + 1}. [ ] numbered ${i}`),
+    ].join("\n");
+    const whole = listTasks(parseMarkdown(text, undefined, { whole: true }).tree);
+    const byLine = new Map(whole.map((t) => [t.line, t]));
+    const lines = text.split("\n").length;
+    for (let line = 1; line <= lines; line++) {
+      const near = listTasks(parseAround(text, line)).find((t) => t.line === line);
+      expect(near).toEqual(byLine.get(line));
     }
   });
 });

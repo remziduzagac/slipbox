@@ -366,3 +366,33 @@ describe("review cycle 5 (render: what the snapshots can't see)", () => {
     expect(rows.some((r) => r.includes("+++"))).toBe(false);
   });
 });
+
+describe("the render cache (15.1)", () => {
+  test("rendering with the last render's blocks gives exactly a fresh render, edit after edit", async () => {
+    const { newParseCache, parseMarkdown } = await import("../src/core/parse.ts");
+    const { newRenderCache, renderTree } = await import("../src/core/layout/render.ts");
+    let seed = 3;
+    const rand = (n: number) => {
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+      return (seed >>> 8) % n;
+    };
+    const blocksPool = ["# Heading", "## Sub [[link]]", "Some text with [ref] and [^fn] and **bold**.", "- [ ] task\n- [x] done\n  - nested", "```ts\nconst x = 1;\n```", "| a | b |\n| - | - |\n| 1 | 2 |", "> quote with [[other]]", "[ref]: https://example.invalid", "[^fn]: A footnote.", "1. one\n2. two", "<!-- comment -->", "---"];
+    const pcache = newParseCache();
+    const rcache = newRenderCache();
+    let blocks = Array.from({ length: 60 }, () => blocksPool[rand(blocksPool.length)]!);
+    for (let step = 0; step < 120; step++) {
+      const at = rand(blocks.length);
+      const r = rand(3);
+      if (r === 0) blocks.splice(at, 0, blocksPool[rand(blocksPool.length)]!);
+      else if (r === 1 && blocks.length > 2) blocks.splice(at, 1);
+      else blocks[at] = `${blocks[at]} more`;
+      const text = `${blocks.join("\n\n")}\n`;
+      // Options change now and then (each change drops the cache), not at every step (then nothing is reused).
+      const opts = { width: [40, 80][Math.floor(step / 20) % 2]!, glyphs: glyphsFor("unicode"), showUrls: Math.floor(step / 30) % 2 === 1 };
+      const p = parseMarkdown(text, pcache);
+      const cached = renderTree(p.tree, opts, p.frontmatter, rcache);
+      const fresh = renderTree(parseMarkdown(text, undefined, { whole: true }).tree, opts, p.frontmatter);
+      expect(JSON.stringify(cached)).toBe(JSON.stringify(fresh));
+    }
+  });
+});

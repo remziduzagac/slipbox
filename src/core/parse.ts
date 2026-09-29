@@ -95,6 +95,12 @@ export function newParseCache(): ParseCache {
   return { chunks: new Map() };
 }
 
+/**
+ * On each top-level node: a token for the block as parsed, kept when a reused chunk's nodes are
+ * copied to a new position — the renderer caches a block's rows by it (moved, not re-rendered).
+ */
+export const ORIGIN = Symbol("origin");
+
 /** A chunk ends before an ATX heading only after at least this many lines: fewer, larger parses. */
 const CHUNK_LINES = 40;
 
@@ -252,6 +258,7 @@ function mergeLists(children: Root["children"], seams: number[], lines: string[]
     const gap = lines.slice(endA, startB - 1).some((l) => !l.trim());
     const merged = {
       ...a,
+      [ORIGIN]: undefined, // a new block: nothing cached is it
       spread: !!(a.spread || b.spread || gap),
       children: [...a.children, ...b.children],
       position: a.position && b.position ? { start: a.position.start, end: b.position.end } : a.position,
@@ -289,6 +296,23 @@ function dropOffsets(nodes: unknown[]): void {
   }
 }
 
+/**
+ * The blocks of the chunk holding source line `line` (1-based), and nothing else: what a question
+ * about one line needs (is this line a task?) without parsing the whole note. The chunk's blocks
+ * are what a whole parse gives there, but references to definitions elsewhere don't resolve.
+ */
+export function parseAround(source: string, line: number): Root {
+  const lines = tame(source).split("\n");
+  const starts = chunkStarts(lines);
+  let k = starts.length - 1;
+  while (k > 0 && starts[k]! > line - 1) k--;
+  const from = starts[k]!;
+  const to = starts[k + 1] ?? lines.length;
+  const root = (from === 0 ? processor : bodyProcessor).parse(lines.slice(from, to).join("\n")) as Root;
+  dropOffsets(root.children);
+  return { type: "root", children: from ? shifted(root.children, from) : root.children };
+}
+
 export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?: boolean; chunkLines?: number } = {}): ParsedNote {
   const tamed = tame(source);
   const lines = tamed.split("\n");
@@ -320,6 +344,7 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
       const kids = stubs.length ? root.children.filter((n) => !isStub(n)) : root.children;
       const stubbed = !stubs.length || root.children.length - kids.length === stubs.length;
       dropOffsets(kids);
+      for (const k of kids) (k as unknown as Record<symbol, object>)[ORIGIN] = {};
       entry = { children: from - pre ? shifted(kids, from - pre) : kids, shift: from, stubbed };
     }
     used.set(text, entry);

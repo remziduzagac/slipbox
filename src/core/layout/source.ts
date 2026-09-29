@@ -16,8 +16,9 @@ export interface SourceLayoutOptions {
   /** Columns to wrap at; with `wrap` off, rows keep their full length. */
   width: number;
   wrap: boolean;
-  /** Headings (from the rendered layout): their `src` lines, placed on the rows here. */
-  headings: Omit<LayoutHeading, "line">[];
+  /** Headings (from the rendered layout or the parse): their `src` lines, placed on the rows here.
+   *  "scan": found in the text as it's laid out (each line once, when it changes). */
+  headings: Omit<LayoutHeading, "line">[] | "scan";
   tabWidth?: number;
   /** A slice of lines (live preview's block): every line is a row, a last empty one too. */
   slice?: boolean;
@@ -45,13 +46,16 @@ export interface SourceCache {
   texts: string[];
   /** The highlighter's state at each line's start ("" none, "fm0"/"fm" frontmatter, "c…" code). */
   states: string[];
-  /** Each line's rows, and its natural width. */
+  /** Each line's rows, its natural width, and the ATX heading it is (outside code). */
   rows: Line[][];
   naturals: number[];
+  heads: (LineHeading | null)[];
 }
 
+type LineHeading = Omit<LayoutHeading, "line" | "src">;
+
 export function newSourceCache(): SourceCache {
-  return { key: "", texts: [], states: [], rows: [], naturals: [] };
+  return { key: "", texts: [], states: [], rows: [], naturals: [], heads: [] };
 }
 
 export function layoutSource(source: string, opts: SourceLayoutOptions, cache: SourceCache = newSourceCache()): Layout {
@@ -71,6 +75,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   const states: string[] = old.states.slice(0, pre);
   const rows: Line[][] = old.rows.slice(0, pre);
   const naturals: number[] = old.naturals.slice(0, pre);
+  const heads: (LineHeading | null)[] = old.heads.slice(0, pre);
   // The state at the first changed line: after the unchanged ones, as the old layout had it.
   let state = pre > 0 ? nextState(old, pre - 1, texts[pre - 1]!) : texts[0]?.replace(/\r$/, "") === "---" ? "fm0" : "";
   const lay = (i: number) => {
@@ -78,6 +83,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
     states.push(state);
     rows.push(built.rows);
     naturals.push(built.natural);
+    heads.push(state === "" ? headingOfLine(texts[i]!) : null);
     state = built.out;
   };
   let i = pre;
@@ -95,12 +101,13 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
       const o2 = i - shift;
       states.push(old.states[o2]!);
       naturals.push(old.naturals[o2]!);
+      heads.push(old.heads[o2] ?? null);
       const r = old.rows[o2]!;
       const src = i + 1;
       rows.push(shift === 0 ? r : r.map((row) => ({ ...row, src, spans: row.spans.map((sp) => ({ ...sp, src })) })));
     }
   }
-  Object.assign(cache, { key: cacheKey, texts, states, rows, naturals });
+  Object.assign(cache, { key: cacheKey, texts, states, rows, naturals, heads });
   const lines: Line[] = [];
   const firstRow: number[] = [];
   let natural = 0;
@@ -111,7 +118,8 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   }
   if (!lines.length) lines.push({ spans: [], src: 1, srcMap: { cells: [], end: 0 } });
   const headings: LayoutHeading[] = [];
-  for (const h of opts.headings) {
+  const wanted = opts.headings === "scan" ? heads.flatMap((h, k) => (h ? [{ ...h, src: k + 1 }] : [])) : opts.headings;
+  for (const h of wanted) {
     const row = firstRow[h.src - 1] ?? -1;
     if (row < 0 || !lines[row]) continue;
     // A copy with its heading: the rows themselves are kept and shared between layouts.
@@ -276,33 +284,29 @@ function highlightLine(raw: string, state: string, i: number): { roles: Role[]; 
 export function scanHeadings(source: string): Omit<LayoutHeading, "line">[] {
   const out: Omit<LayoutHeading, "line">[] = [];
   const lines = source.split("\n");
-  let fence: string | null = null;
-  let frontmatter = lines[0]?.replace(/\r$/, "") === "---";
+  // The highlighter's own states (frontmatter, fences): the same rule as source mode's colours.
+  let state = lines[0]?.replace(/\r$/, "") === "---" ? "fm0" : "";
   lines.forEach((raw, i) => {
-    const text = raw.replace(/\r$/, "");
-    if (frontmatter) {
-      if (i > 0 && (text === "---" || text === "...")) frontmatter = false;
-      return;
+    if (state === "") {
+      const h = headingOfLine(raw);
+      if (h) out.push({ ...h, src: i + 1 });
     }
-    const f = /^\s{0,3}(`{3,}|~{3,})/.exec(text);
-    if (fence) {
-      if (f && f[1]![0] === fence[0] && f[1]!.length >= fence.length) fence = null;
-      return;
-    }
-    if (f) {
-      fence = f[1]!;
-      return;
-    }
-    const h = /^\s{0,3}(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$/.exec(text);
-    if (!h) return;
-    const plain = (h[2] ?? "")
-      .replace(/!?\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
-      .replace(/!?\[\[([^\]]+)\]\]/g, "$1")
-      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
-      .replace(/[*_`~]/g, "")
-      .trim();
-    // Slugged as the render slugs them: a repeated heading keeps its plain slug (no -1 suffix).
-    out.push({ level: h[1]!.length, text: plain, slug: slugify(plain), src: i + 1 });
+    state = highlightLine(raw, state, i).out;
   });
   return out;
+}
+
+/** An ATX heading line's level, its text with the common inline markup taken off, and its slug —
+ *  as the render slugs it (a repeated heading keeps its plain slug, no -1 suffix). */
+function headingOfLine(raw: string): LineHeading | null {
+  if (!raw.includes("#")) return null;
+  const h = /^\s{0,3}(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$/.exec(raw.replace(/\r$/, ""));
+  if (!h) return null;
+  const plain = (h[2] ?? "")
+    .replace(/!?\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
+    .replace(/!?\[\[([^\]]+)\]\]/g, "$1")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`~]/g, "")
+    .trim();
+  return { level: h[1]!.length, text: plain, slug: slugify(plain) };
 }

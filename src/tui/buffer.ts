@@ -7,12 +7,13 @@
 // layout), not on every keystroke.
 
 import type { Glyphs } from "../core/glyphs.ts";
+import { newRenderCache } from "../core/layout/render.ts";
 import type { Graph } from "../core/graph.ts";
 import { readText, type Stamp, stamp } from "../core/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
-import { layoutSource, newSourceCache, scanHeadings } from "../core/layout/source.ts";
-import { newParseCache, type ParsedNote, parseMarkdown } from "../core/parse.ts";
+import { layoutSource, newSourceCache } from "../core/layout/source.ts";
+import { headingsOf, newParseCache, type ParsedNote, parseMarkdown } from "../core/parse.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
 export interface TextEdit {
@@ -56,6 +57,8 @@ export class NoteBuffer {
   private readonly sourceCache = newSourceCache();
   /** The note's parse in chunks, reused across edits and reloads (only a changed chunk re-parses). */
   private readonly parseCache = newParseCache();
+  /** The render's blocks, reused across edits and reloads (only a changed block renders again). */
+  private renderCache = newRenderCache();
 
   constructor(
     /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */
@@ -116,6 +119,8 @@ export class NoteBuffer {
 
   invalidateLayouts(): void {
     this.layouts.clear();
+    // What a render reads besides the text changed (the graph, the theme): no block is reusable.
+    this.renderCache = newRenderCache();
   }
 
   /** The parse of the current text, redone only when the text changed since. */
@@ -243,11 +248,11 @@ export class NoteBuffer {
     const key = `src:${width}:${wrap ? 1 : 0}`;
     let l = this.layouts.get(key);
     if (!l) {
-      // With a parse of this very text at hand, the render's headings (exact slugs); otherwise a
-      // quick scan of the text — so a keystroke, or an undo back to the saved text, never
-      // re-parses the note (a 1 MB note would take a second).
+      // With a parse of this very text at hand, its headings (the render's text and slugs);
+      // otherwise the ATX lines the layout finds as it goes — so a keystroke, or an undo back to
+      // the saved text, never re-parses the note (a 1 MB note would take a second).
       const parsed = this.parsedVersion === this.version && !this.dirty;
-      const headings = parsed ? this.layout(200, glyphs, false, null).headings.map(({ level, text, slug, src }) => ({ level, text, slug, src })) : scanHeadings(this.source);
+      const headings = parsed ? headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line })) : "scan";
       l = layoutSource(this.source, { width, wrap, headings }, this.sourceCache);
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
@@ -259,7 +264,7 @@ export class NoteBuffer {
     const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}`;
     let l = this.layouts.get(key);
     if (!l) {
-      l = layoutNote(this.parsed, graph, this.rel, { width, glyphs, showUrls });
+      l = layoutNote(this.parsed, graph, this.rel, { width, glyphs, showUrls }, this.renderCache);
       // Keep the last few widths (a drag back and forth, a toggle and back): evict the oldest.
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
