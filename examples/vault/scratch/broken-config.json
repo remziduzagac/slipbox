@@ -1,0 +1,5 @@
+{
+  "workers": 3,
+  "archive": { "root": "/srv/stacks", },
+  "telescopes": ["Aster", "Brill"
+}

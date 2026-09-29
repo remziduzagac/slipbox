@@ -78,7 +78,9 @@ the breadcrumb, `[[file.toml#section]]`, find and the lens work unchanged:
   or an inline table as written, its whitespace folded.
 - **Records become tables** through the allocator: a YAML or JSON list of two or more objects with
   plain values, TOML `[[name]]` entries likewise; a row per record, on its own source line.
-- **Comment lines** on their own are dimmed rows.
+- **Comment lines** on their own are dimmed rows. One comment line right above a key is that key's
+  comment, drawn after its value; several lines, or the file's opening ones, are a block of their
+  own (prose about more than one key).
 - **Values that are links** (`16.15`) draw as links, followed with `enter`: a URL; a reference
   key's value (`$ref`, `$schema`, `schema`, `include(s)`, `extends`, `import(s)`, `file`, `path`),
   shown broken when it doesn't resolve; and any path-like value (`schemas/user.json`,

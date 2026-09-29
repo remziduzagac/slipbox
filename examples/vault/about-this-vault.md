@@ -31,6 +31,13 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `people/partners-and-names.md` | every link form, broken links, footnotes; CJK, emoji, ZWJ, RTL widths |
 | `home.md`, `people/`, `meetings/` | a linked graph: backlinks, tasks, heading references, an ambiguous link |
 | `logs/observing-log-2026.md` (again) | repeated `### Weather` headings, an in-note `#anchor` link |
+| `software/halley/halley.toml` | a data file: sections, comments, `[[telescope]]` records, path links |
+| `software/halley/targets.yaml`, `.schema.json` | YAML records as a table, nested maps; JSON with `$schema`, `$ref` |
+| `equipment/filters.csv` | CSV: quoted fields with commas and `""`, empty cells |
+| `software/halley/reduce.py`, `night.sh` | tree-sitter: docstrings, heredocs, an outline, links in comments |
+| `scratch/half-written.py`, `broken-config.json` | a syntax error in code; a data file that doesn't parse |
+| `logs/dome-log.org` | Org: TODO headlines, tags, properties, checkboxes, a table, blocks, links |
+| `handbook/safety-card.adoc` | AsciiDoc: attributes, admonitions, a checklist, a table, xrefs, `<<ids>>` |
 
 `scripts/sample-metrics.ts` measures what each note exercises (lines, longest line, tables and
 rows, fences and their languages, headings, links, wide and right-to-left characters), so a change

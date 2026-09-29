@@ -201,9 +201,10 @@ function readToml(source: string): ParsedData {
     const start = lines[i]!.indexOf("=", lines[i]!.indexOf(t.slice(0, eq).trim()) + eq - 1);
     const v = scanValue(lines, i, start + 1);
     const shown = tomlDisplay(v.value);
-    // A comment above a key is its comment — unless it has its own after the value: then the one
-    // above stays a line of its own.
-    if (v.comment) flushComment();
+    // A comment line above a key is its comment — unless it has its own after the value, or the
+    // one above is several lines or opens the file (prose about more than this key): then that
+    // stays a block of its own.
+    if (v.comment || standsAlone(pending, out)) flushComment();
     const first = pending ? pending.line : i + 1;
     const comment = v.comment ?? (pending ? pending.text.join(" ") : null);
     pending = null;
@@ -275,6 +276,11 @@ function table(header: string[], rows: { line: number; cells: string[] }[], line
 // ---------------------------------------------------------------------------------------------
 // INI and .env
 
+/** Comment lines above a key that are not its comment: more than one line, or the file's opening. */
+function standsAlone(pending: { text: string[]; line: number } | null, out: RootContent[]): boolean {
+  return !!pending && (pending.text.length > 1 || !out.length);
+}
+
 function readIni(source: string): ParsedData {
   const lines = source.split("\n");
   const out: RootContent[] = [];
@@ -313,7 +319,7 @@ function readIni(source: string): ParsedData {
       value = value.slice(0, c.index).trim();
     }
     const quoted = /^"(.*)"$|^'(.*)'$/.exec(value);
-    if (comment) flushComment();
+    if (comment || standsAlone(pending, out)) flushComment();
     const first = pending ? pending.line : i + 1;
     comment ??= pending ? pending.text.join(" ") : null;
     pending = null;
@@ -414,7 +420,16 @@ function walkYaml(node: YamlNode, depth: number, out: RootContent[], lineOf: (o:
       const value = pair.value as YamlNode | null;
       const name = inline(key);
       const keyLine = lineAt(key);
-      const comment = [(key as { commentBefore?: string } | null)?.commentBefore, (value as { comment?: string } | null)?.comment].filter(Boolean).join(" ").trim() || null;
+      // The comment lines above a key are its comment when they're one line; several, or the
+      // file's opening ones, or those above a section, are a block of their own (as in TOML).
+      let before = (key as { commentBefore?: string } | null)?.commentBefore?.trim() || null;
+      const section = (isMap(value) && value.items.length && depth <= HEADING_DEPTH) || (isSeq(value) && records(value));
+      if (before && (before.includes("\n") || !out.length || section)) {
+        const n = before.split("\n").length;
+        out.push({ type: "dataComment", text: before.split("\n").map((l) => l.trim()).join("\n"), position: pos(Math.max(1, keyLine - n), keyLine - 1) } as unknown as RootContent);
+        before = null;
+      }
+      const comment = [before, (value as { comment?: string } | null)?.comment].filter(Boolean).join(" ").trim() || null;
       if (isMap(value) && value.items.length && depth <= HEADING_DEPTH) {
         out.push(heading(depth, name, keyLine));
         walkYaml(value, depth + 1, out, lineOf, source);
@@ -423,7 +438,7 @@ function walkYaml(node: YamlNode, depth: number, out: RootContent[], lineOf: (o:
         out.push(recordTable(value, lineOf));
       } else {
         const end = value?.range ? lineOf(Math.max(value.range[0], value.range[1] - 1)) : keyLine;
-        const first = (key as { commentBefore?: string } | null)?.commentBefore ? Math.max(1, keyLine - (key as { commentBefore: string }).commentBefore.split("\n").length) : keyLine;
+        const first = before ? Math.max(1, keyLine - before.split("\n").length) : keyLine;
         out.push({ type: "dataField", key: name, value: inline(value), kind: scalarKind(value), comment, keyWidth: 0, keyLine, position: pos(first, Math.max(keyLine, end)) } as unknown as RootContent);
       }
     }

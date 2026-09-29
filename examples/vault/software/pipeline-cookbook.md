@@ -139,6 +139,10 @@ ORDER BY p.mjd;
 
 halley reads `halley.toml` from the working directory. Paths are relative to the data root unless they start with a slash.
 
+The deployed copy is [halley.toml](halley/halley.toml), checked against [its schema](halley/halley.schema.json); the
+season's targets are [[halley/targets.yaml]], and the reduction itself is [[halley/reduce.py]], run by
+[night.sh](halley/night.sh).
+
 ```toml
 [paths]
 data_root = "/data/halley"

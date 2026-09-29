@@ -1,0 +1,27 @@
+# Variable Star Survey targets for the autumn season (see ../../projects/variable-star-survey.md).
+season: 2026-autumn
+coordinator: Kenji Mori
+notes: ../../projects/variable-star-survey.md
+
+cadence:
+  default_minutes: 20
+  eclipsing_minutes: 5   # eclipses are short: sample them hard
+  mira_days: 3
+
+targets:
+  - name: R Leo
+    type: mira
+    mag_range: 4.4–11.3
+    telescope: Lyra
+  - name: Algol
+    type: eclipsing
+    mag_range: 2.1–3.4
+    telescope: Brill
+  - name: SS Cyg
+    type: dwarf nova
+    mag_range: 7.7–12.4
+    telescope: Aster
+  - name: delta Cep
+    type: cepheid
+    mag_range: 3.5–4.4
+    telescope: Lyra

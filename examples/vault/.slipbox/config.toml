@@ -2,5 +2,7 @@
 # See docs/design/configuration.md for every key.
 
 [walk]
+# Org and AsciiDoc notes too (16.16, 16.17): logs/dome-log.org, handbook/safety-card.adoc.
+extensions = ["md", "org", "adoc"]
 # Extra gitignore-syntax patterns to leave out of the vault, on top of .gitignore.
 exclude = ["scratch/trash/"]

@@ -474,7 +474,7 @@ describe("overlays and the : prompt", () => {
     await h.keys("ctrl+p", "b", "e", "t", "enter");
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
     await h.keys("space", "f", "f");
-    expect(h.frame()).toContain("Open note");
+    expect(h.frame()).toMatch(/Open (note|\()/); // "Open (n notes, m files)" once there are files
   });
   test("find: ctrl+f, cursor on the match, n / shift+n, esc clears", async () => {
     const h = await harness({ open: "samples/logs/observing-log-2026.md" });

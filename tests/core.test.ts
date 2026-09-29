@@ -888,7 +888,10 @@ describe("data files read as documents (16.11–16.13)", () => {
     expect(headings(d.tree)).toEqual(["a.b", "s"]);
     const f = fields(d.tree);
     expect(f.map((x) => x.key)).toEqual(["title", "list", "s", "n"]);
-    expect(f[0]).toMatchObject({ value: "x", kind: "string", comment: "top", position: { start: { line: 1 }, end: { line: 2 } } });
+    // The file's opening comment is a block of its own, not the first key's (a key's is one line
+    // right above it, as `# above` is list's).
+    expect(f[0]).toMatchObject({ value: "x", kind: "string", comment: null, position: { start: { line: 2 }, end: { line: 2 } } });
+    expect(d.tree.children[0]).toMatchObject({ type: "dataComment", text: "top" });
     expect(f[1]).toMatchObject({ kind: "list", comment: "above", position: { start: { line: 5 }, end: { line: 9 } } });
     expect(f[2]!.value).toBe("long");
     expect(f[3]).toMatchObject({ value: "3", kind: "number", comment: "three" });
@@ -1105,4 +1108,29 @@ describe("AsciiDoc notes (16.17)", () => {
     expect(a.linkAt(line, 40)).toMatchObject({ target: "https://x.invalid", text: "site" });
     expect(a.linkAt(line, 1)).toBeNull();
   });
+});
+
+describe("every grammar runs with this runtime (16.7)", () => {
+  // What a grammar's external scanner handles — heredocs, docstrings, template and raw strings — is
+  // where a grammar built for another ABI fails (bash's heredoc tripped an assertion once).
+  const SAMPLES = {
+    bash: ["f() {\n  cat <<NOTE > x\nhello $(date)\n# not a comment\nNOTE\n}\n", "f"],
+    python: ['class A:\n    """doc\n    string"""\n    def m(self):\n        return f"{1}"\n', "A"],
+    typescript: ["export class B {\n  m(): string { return `a\n${1}`; }\n}\n", "B"],
+    tsx: ["function C() {\n  return <div>{`x`}</div>;\n}\n", "C"],
+    javascript: ["function f() {\n  return /re/g;\n}\n", "f"],
+    go: ["package m\n\nfunc F() string {\n\treturn `a\nb`\n}\n", "F"],
+    rust: ['fn f() -> &\'static str {\n    r#"a\n"b"#\n}\n', "f"],
+    lua: ["local function g()\n  return [[a\nb]]\nend\n", "g"],
+  } as const;
+  for (const [g, [src, first]] of Object.entries(SAMPLES)) {
+    test(g, async () => {
+      const { grammar, parseSyntax } = await import("../src/core/syntax.ts");
+      const loaded = await grammar(g as Parameters<typeof grammar>[0]);
+      expect(loaded).not.toBeNull();
+      const tree = parseSyntax(loaded!, src)!;
+      expect(tree.errors()).toEqual([]);
+      expect(tree.outline()[0]?.name).toBe(first);
+    });
+  }
 });

@@ -71,6 +71,27 @@ house style that writing-guide describes.
 ├────────────────────────────────────┼─────────────────────────────────────────┤
 │ logs/observing-log-2026.md (again) │ repeated ### Weather headings, an       │
 │                                    │ in-note #anchor link                    │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/halley.toml        │ a data file: sections, comments,        │
+│                                    │ [[telescope]] records, path links       │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/targets.yaml,      │ YAML records as a table, nested maps;   │
+│ .schema.json                       │ JSON with $schema, $ref                 │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/filters.csv              │ CSV: quoted fields with commas and "",  │
+│                                    │ empty cells                             │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/reduce.py,         │ tree-sitter: docstrings, heredocs, an   │
+│ night.sh                           │ outline, links in comments              │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ scratch/half-written.py,           │ a syntax error in code; a data file     │
+│ broken-config.json                 │ that doesn't parse                      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ logs/dome-log.org                  │ Org: TODO headlines, tags, properties,  │
+│                                    │ checkboxes, a table, blocks, links      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ handbook/safety-card.adoc          │ AsciiDoc: attributes, admonitions, a    │
+│                                    │ checklist, a table, xrefs, <<ids>>      │
 └────────────────────────────────────┴─────────────────────────────────────────┘
 
 scripts/sample-metrics.ts measures what each note exercises (lines, longest
@@ -4091,6 +4112,10 @@ The light curve for one VSS star, with the bad-seeing nights removed:
 halley reads halley.toml from the working directory. Paths are relative to the
 data root unless they start with a slash.
 
+The deployed copy is halley.toml, checked against its schema; the season's
+targets are halley/targets.yaml, and the reduction itself is halley/reduce.py,
+run by night.sh.
+
                                                                            toml
  [paths]
  data_root = "/data/halley"
@@ -4273,6 +4298,220 @@ One command at the end of setup, from ridge-ctl:
                                                                            bash
  halley doctor && nightjar check --queue queue.yaml && ridgectl dome status
 "
+`;
+
+exports[`snapshots of the layout IR as text equipment/filters.csv @ 80 1`] = `
+"┌────────┬───────────┬───────────┬──────────┬────────────┬─────────────────────┐
+│ filter │ telescope │ centre_nm │ width_nm │ installed  │ notes               │
+╞════════╪═══════════╪═══════════╪══════════╪════════════╪═════════════════════╡
+│ L      │ Aster     │ 550       │ 300      │ 2024-03-02 │ luminance, the      │
+│        │           │           │          │            │ default             │
+├────────┼───────────┼───────────┼──────────┼────────────┼─────────────────────┤
+│ R      │ Aster     │ 640       │ 100      │ 2024-03-02 │                     │
+├────────┼───────────┼───────────┼──────────┼────────────┼─────────────────────┤
+│ G      │ Aster     │ 530       │ 100      │ 2024-03-02 │                     │
+├────────┼───────────┼───────────┼──────────┼────────────┼─────────────────────┤
+│ B      │ Aster     │ 450       │ 100      │ 2024-03-02 │ slightly vignetted, │
+│        │           │           │          │            │ see "Aster pointing │
+│        │           │           │          │            │ model"              │
+├────────┼───────────┼───────────┼──────────┼────────────┼─────────────────────┤
+│ Ha     │ Brill     │ 656.3     │ 7        │ 2025-06-11 │ narrowband          │
+├────────┼───────────┼───────────┼──────────┼────────────┼─────────────────────┤
+│ OIII   │ Brill     │ 500.7     │ 7        │ 2025-06-11 │ narrowband          │
+├────────┼───────────┼───────────┼──────────┼────────────┼─────────────────────┤
+│ V      │ Lyra      │ 551       │ 88       │ 2026-01-20 │ photometric: VSS    │
+│        │           │           │          │            │ only                │
+└────────┴───────────┴───────────┴──────────┴────────────┴─────────────────────┘"
+`;
+
+exports[`snapshots of the layout IR as text handbook/safety-card.adoc @ 80 1`] = `
+"▌ Dome safety card
+
+ author   Rosa Lind
+ revdate  2026-09-01
+ tags     safety, dome
+Printed and taped inside the dome door. Keep it to one page.
+
+The rules for anyone working in the dome, in the order they matter. The long
+version is the operations handbook; the dome's repair history is the dome log.
+
+▌ Before you go up
+
+▎ ⚠ Warning
+▎ Never work alone in the dome after dark.
+
+☐ tell someone in the control room
+☐ check the wind: the limits table
+☑ wear the head torch, red mode
+  ◦ spare batteries are in the blue box
+
+▌ Wind and weather limits
+
+When to close
+
+┌───────────┬─────────┬───────────────────────┐
+│ Condition │ Limit   │ Action                │
+╞═══════════╪═════════╪═══════════════════════╡
+│ Wind      │ 40 km/h │ close the shutter     │
+│ Humidity  │ 85 %    │ close, cap the optics │
+│ Rain      │ any     │ close at once         │
+└───────────┴─────────┴───────────────────────┘
+
+▎ ✦ Tip
+▎ The weather station's page is at the weather page
+▎ <https://halden-ridge.invalid/weather>; it updates every minute.
+
+▌ After
+
+1. Park the telescope.
+2. Close the shutter and check it latched.
+3. Log the session: see Before you go up for what to check next time.
+
+                                                                           bash
+ halley dome close --verify
+"
+`;
+
+exports[`snapshots of the layout IR as text logs/dome-log.org @ 80 1`] = `
+" title     Dome log
+ filetags  :dome:maintenance:
+
+Org notes live next to the markdown ones: this one is the dome crew's log. The
+refit plan is the dome refit, and the safety card is the safety card.
+
+▌ DONE [#A] Replace the shutter belt  :shutter:
+
+CLOSED: [2026-09-02 Wed 16:40]
+ part  GT3-2160
+ cost  184 EUR
+
+The old belt had stretched 11 mm. Tension now 42 N at the midpoint.
+
+☑ order the belt
+☑ fit and tension
+☑ run the shutter 20 times
+
+▌ TODO Grease the azimuth ring  :rotation:
+
+SCHEDULED: <2026-10-05 Mon>
+
+Needs two people and the long ladder. See Shutter log for the last torque
+readings.
+
+☐ buy lithium grease
+☐ book Rosa for a Saturday
+☐ check the drive motor current before and after
+
+▌ Shutter log
+
+┌────────────┬───────┬────────┬───────────────┐
+│ Date       │ Opens │ Faults │ Note          │
+╞════════════╪═══════╪════════╪═══════════════╡
+│ 2026-08-30 │ 14    │ 2      │ belt slipping │
+│ 2026-09-03 │ 21    │ 0      │ new belt      │
+│ 2026-09-10 │ 18    │ 0      │               │
+└────────────┴───────┴────────┴───────────────┘
+
+▌ Torque check
+
+                                                                           bash
+ halley dome torque --samples 50 --out /srv/logs/torque.csv
+
+
+▎ Never open the dome above 40 km/h wind, whatever the forecast said an hour
+▎ ago.
+
+An Org comment: dimmed in the render."
+`;
+
+exports[`snapshots of the layout IR as text software/halley/halley.schema.json @ 80 1`] = `
+" $schema  https://json-schema.org/draft/2020-12/schema
+ title    halley settings
+ type     object
+
+▌ properties
+
+▌ docs
+
+ type         string
+ description  the note that explains the settings
+
+▌ reduce
+
+ $ref  #/$defs/reduce
+
+▌ $defs
+
+▌ reduce
+
+ type  object
+
+▌ properties
+
+ workers      {type: integer, minimum: 1, maximum: 8}
+ bias_frames  {type: integer}"
+`;
+
+exports[`snapshots of the layout IR as text software/halley/halley.toml @ 80 1`] = `
+"halley — the night pipeline's settings, as deployed on ridge-arch.
+The why of each value is in the cookbook: docs below.
+ docs    ../pipeline-cookbook.md
+ schema  halley.schema.json
+ site    https://halden-ridge.invalid/pipeline
+
+▌ reduce
+
+ workers      3  # halved from 6 after the October swap storms
+ bias_frames  21
+ flat_frames  15
+ dark_scale   true
+ calibration  ../../equipment/instrument-inventory.md
+
+▌ reduce.cosmic_rays
+
+ sigma   4.5
+ passes  2
+
+▌ archive
+
+ root       /srv/stacks
+ keep_days  400
+ compress   zstd  # gzip was 3× slower on the Pi
+
+▌ telescope
+
+┌───────┬─────────────┬───────────┐
+│ name  │ aperture_mm │ camera    │
+╞═══════╪═════════════╪═══════════╡
+│ Aster │ 406         │ QHY600M   │
+│ Brill │ 254         │ ASI2600MM │
+│ Lyra  │ 152         │ ASI533MC  │
+└───────┴─────────────┴───────────┘"
+`;
+
+exports[`snapshots of the layout IR as text software/halley/targets.yaml @ 80 1`] = `
+"Variable Star Survey targets for the autumn season (see
+../../projects/variable-star-survey.md).
+ season       2026-autumn
+ coordinator  Kenji Mori
+ notes        ../../projects/variable-star-survey.md
+
+▌ cadence
+
+ default_minutes    20
+ eclipsing_minutes  5  # eclipses are short: sample them hard
+ mira_days          3
+
+▌ targets
+
+┌───────────┬────────────┬───────────┬───────────┐
+│ name      │ type       │ mag_range │ telescope │
+╞═══════════╪════════════╪═══════════╪═══════════╡
+│ R Leo     │ mira       │ 4.4–11.3  │ Lyra      │
+│ Algol     │ eclipsing  │ 2.1–3.4   │ Brill     │
+│ SS Cyg    │ dwarf nova │ 7.7–12.4  │ Aster     │
+│ delta Cep │ cepheid    │ 3.5–4.4   │ Lyra      │
+└───────────┴────────────┴───────────┴───────────┘"
 `;
 
 exports[`snapshots of the layout IR as text wrap-probe @ 44 (narrow) 1`] = `

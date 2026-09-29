@@ -7,7 +7,10 @@ import { join } from "node:path";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import type { Layout } from "../src/core/layout/ir.ts";
-import { renderMarkdown } from "../src/core/layout/render.ts";
+import { renderMarkdown, renderTree } from "../src/core/layout/render.ts";
+import { parseData } from "../src/core/data.ts";
+import { classify } from "../src/core/filetypes.ts";
+import { parseNoteFile } from "../src/core/readers.ts";
 import { allocate } from "../src/core/layout/table.ts";
 import { countLines, measure, wrapSpans } from "../src/core/layout/wrap.ts";
 import type { Span } from "../src/core/layout/ir.ts";
@@ -55,6 +58,20 @@ describe("snapshots of the layout IR as text", () => {
     test(`${file} @ 80`, () => {
       const src = readFileSync(join(SAMPLES, file), "utf8");
       expect(text(renderMarkdown(src, { width: 80, glyphs: unicode, showUrls: true }))).toMatchSnapshot();
+    });
+  }
+  // The samples beyond markdown, each read by its own reader (16.11–16.13, 16.16, 16.17).
+  const others = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => /\.(org|adoc|toml|ya?ml|json|csv)$/.test(f) && !f.includes("broken") && !f.startsWith(".slipbox")).sort();
+  test("the samples beyond markdown are there", () => {
+    expect(others.length).toBeGreaterThanOrEqual(6);
+  });
+  for (const file of others) {
+    test(`${file} @ 80`, () => {
+      const src = readFileSync(join(SAMPLES, file), "utf8");
+      const kind = classify(file, ["md", "org", "adoc"]);
+      const parsed = kind.group === "data" ? parseData(kind.format, src) : { ...parseNoteFile(file, src), error: null };
+      expect(parsed.error).toBeNull();
+      expect(text(renderTree(parsed.tree, { width: 80, glyphs: unicode, showUrls: true }))).toMatchSnapshot();
     });
   }
   test("wrap-probe @ 44 (narrow)", () => {

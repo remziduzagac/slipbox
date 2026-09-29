@@ -18,6 +18,7 @@ export interface Scenario {
 
 const HANDBOOK = "handbook/operations-handbook.md";
 const MEETING = "meetings/2026-09-14-weekly.md";
+const TOML = "software/halley/halley.toml";
 
 /** The cursor's line and column, from the status line (`L12:3`). */
 function pos(s: Session): { line: number; col: number } {
@@ -37,7 +38,7 @@ async function moveTo(s: Session, keys: string[], ok: (line: number, col: number
 /** Open a note with the quick switcher. */
 async function open(s: Session, name: string): Promise<void> {
   await s.keys("ctrl+p");
-  await s.see("Open note");
+  await s.see(/Open (note|\()/); // "Open (n notes, m files)" when the vault has files
   await s.type(name);
   await s.keys("enter");
   await s.status(name);
@@ -96,7 +97,7 @@ export const SCENARIOS: Scenario[] = [
       clean();
       await s.keys("escape");
       await s.keys("ctrl+p"); // the switcher lists it by name
-      await s.see("Open note");
+      await s.see(/Open (note|\()/); // "Open (n notes, m files)" when the vault has files
       await s.type("n-");
       await s.see(/n-.*cod/);
       clean();
@@ -574,6 +575,109 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("escape", "escape");
       await s.keys("ctrl+s");
       await s.file(HANDBOOK, (t) => t.includes(" (lens)"), "the lens edit saved");
+    },
+  },
+
+  // --- files beyond notes (16.x) --------------------------------------------------------------
+  {
+    name: "data files: TOML renders, a value's link followed, the lens edits a key, source mode",
+    options: { open: TOML },
+    run: async (s) => {
+      await s.see(/workers\s+3\s+# halved from 6/); // keys lined up, the comment after the value
+      await s.see("QHY600M"); // [[telescope]] records as a table
+      await s.status(/READ/);
+      // A value that is a path is a link: find it, follow it, come back.
+      await s.keys("/");
+      await s.type("pipeline-cookbook");
+      await s.keys("enter", "escape", "enter");
+      await s.status("pipeline-cookbook.md");
+      await s.keys("H");
+      await s.status("halley.toml");
+      // The lens edits one key, on its own source line.
+      await s.keys("/");
+      await s.type("bias_frames");
+      await s.keys("enter", "escape");
+      await leader(s, "n", "l");
+      await s.status("LENS");
+      await s.keys("A");
+      await s.type("0");
+      await s.keys("escape", "escape", "ctrl+s");
+      await s.file(TOML, (t) => t.includes("bias_frames = 210"), "the lens edit saved");
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.see("bias_frames = 210");
+    },
+  },
+  {
+    name: "data files: CSV and YAML as tables; a JSON file that doesn't parse opens in source mode",
+    run: async (s) => {
+      await open(s, "filters.csv");
+      await s.see(/│ filter\s+│ telescope/);
+      await s.see('"Aster pointing model"'); // a quoted field with "" in it
+      await open(s, "targets.yaml");
+      await s.see(/│ SS Cyg\s+│ dwarf nova/);
+      await open(s, "broken-config.json");
+      await s.status("SOURCE");
+      await s.message(/doesn't parse/);
+      await s.see('"telescopes": ["Aster", "Brill"');
+    },
+  },
+  {
+    name: "code: tree-sitter's outline and breadcrumb, a comment's path:line followed, syntax errors",
+    needs: { cols: 80 },
+    options: { open: "software/halley/reduce.py" },
+    run: async (s) => {
+      await s.status("SOURCE");
+      await s.see("class Night:");
+      // The outline is the file's definitions, nested (the grammar loads lazily, then redraws).
+      await s.ex("outline.pick");
+      await s.see("is_calibration");
+      await s.see("science");
+      await s.keys("escape");
+      await moveTo(s, ["4", "1", "G"], (l) => l === 41, "41G into Night.reduce");
+      await s.see(/Night\s*›\s*reduce/); // the breadcrumb
+      // A comment's `halley.toml:10`: enter opens the file at that line.
+      await s.keys("/");
+      await s.type("halley.toml:10");
+      await s.keys("enter", "escape", "enter");
+      await s.status("halley.toml");
+      await s.keys("H");
+      await s.status("reduce.py");
+      // A file with a syntax error: counted in the status line, gone while typing, back after.
+      await open(s, "half-written.py");
+      await s.status(/✖/, 5000);
+      await s.keys("G", "o");
+      await s.status("INSERT");
+      await s.until(() => !s.statusLine().includes("✖"), 3000, "no error marks while typing");
+      await s.keys("escape");
+      await s.status(/✖/, 5000);
+    },
+  },
+  {
+    name: "Org and AsciiDoc notes: render, tick a task, follow a link",
+    run: async (s) => {
+      await open(s, "dome-log.org");
+      await s.see(/TODO Grease the azimuth ring\s+:rotation:/);
+      await s.see(/title\s+Dome log/);
+      await s.keys("/");
+      await s.type("buy lithium");
+      await s.keys("enter", "escape", "x");
+      await s.file("logs/dome-log.org", (t) => t.includes("- [X] buy lithium grease"), "Org's task ticked with X");
+      await s.keys("/");
+      await s.type("the dome refit");
+      await s.keys("enter", "escape", "enter");
+      await s.status("dome-refit.md");
+      await open(s, "safety-card.adoc");
+      await s.see("Wind and weather limits");
+      await s.see(/│ Humidity\s+│ 85 %/);
+      await s.keys("/");
+      await s.type("tell someone");
+      await s.keys("enter", "escape", "x");
+      await s.file("handbook/safety-card.adoc", (t) => t.includes("* [x] tell someone in the control room"), "the checklist item ticked");
+      await s.keys("/");
+      await s.type("the operations handbook");
+      await s.keys("enter", "escape", "enter");
+      await s.status("operations-handbook.md");
     },
   },
 

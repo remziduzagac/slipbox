@@ -1,0 +1,36 @@
+# halley — the night pipeline's settings, as deployed on ridge-arch.
+# The why of each value is in the cookbook: docs below.
+docs = "../pipeline-cookbook.md"
+schema = "halley.schema.json"
+site = "https://halden-ridge.invalid/pipeline"
+
+[reduce]
+workers = 3            # halved from 6 after the October swap storms
+bias_frames = 21
+flat_frames = 15
+dark_scale = true
+calibration = "../../equipment/instrument-inventory.md"
+
+[reduce.cosmic_rays]
+sigma = 4.5
+passes = 2
+
+[archive]
+root = "/srv/stacks"
+keep_days = 400
+compress = "zstd"      # gzip was 3× slower on the Pi
+
+[[telescope]]
+name = "Aster"
+aperture_mm = 406
+camera = "QHY600M"
+
+[[telescope]]
+name = "Brill"
+aperture_mm = 254
+camera = "ASI2600MM"
+
+[[telescope]]
+name = "Lyra"
+aperture_mm = 152
+camera = "ASI533MC"
