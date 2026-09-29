@@ -243,6 +243,14 @@ export class NoteBuffer {
 
   private starts: { version: number; at: number[] } | null = null;
 
+  /** The text's lines (split at \n; a CRLF line keeps its \r), computed once per version. */
+  lines(): string[] {
+    if (this.split?.version !== this.version) this.split = { version: this.version, lines: this.source.split("\n") };
+    return this.split.lines;
+  }
+
+  private split: { version: number; lines: string[] } | null = null;
+
   /** The raw markdown as a layout (source mode, 4.13), its headings borrowed from the render. */
   sourceLayout(width: number, wrap: boolean, glyphs: Glyphs): Layout {
     const key = `src:${width}:${wrap ? 1 : 0}`;

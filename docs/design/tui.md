@@ -604,7 +604,8 @@ lens's rows swapped for source rows (which carry `srcMap`, so everything in
 (`decor`: the cursor steps over them, find ignores them, they map to no text). While it's being
 typed into, the render around it is reused — the rows after it renumbered by the lines added or
 taken away — so a keystroke never re-parses the note (plan `15.1`'s per-block re-layout, for the
-lens). Leaving insert mode, or an edit reaching outside it, lays the note out afresh.
+lens). Leaving insert mode, or an edit reaching outside it, lays the note out afresh — re-parsing
+only the chunks the edits touched and re-rendering only their blocks.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
 
@@ -723,11 +724,11 @@ runs the binding.
 
 ## Known limits
 
-- **Very large notes re-lay out in full** (future optimization: plan `15.1`). There is no
-  incremental layout: a change of width
-  (dragging a border, resize mode, toggling a pane, zen, wrap or line numbers, a terminal resize)
-  re-lays out the note, which takes tens of milliseconds for a thousand-line note and hundreds for
-  twenty thousand. A buffer keeps its last six widths, so going back and forth is cached.
+- **A change of width re-wraps a whole note** (plan `15.1`): dragging a border, resize mode,
+  toggling a pane, zen, wrap or line numbers, a terminal resize — about 12 ms for a thousand-line
+  note and 180 ms for twenty thousand. A buffer keeps its last six widths, so going back and forth
+  is cached. Edits, reloads and leaving the lens reuse what didn't change (the parse by chunk, the
+  render by block, source mode by line: [architecture.md](architecture.md), "Big notes").
 - **Pathological nesting parses slowly** (future optimization: plan `15.2`). A list nested
   hundreds of levels deep takes seconds in the markdown parser, on the main thread.
 

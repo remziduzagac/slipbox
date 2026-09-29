@@ -169,11 +169,36 @@ The graph parses lazily. The walk alone supplies every note name, which is all l
 needs, so `render` and `resolve` never parse the whole vault. `backlinks`, `ls --json` and
 `outline` parse what they need and persist it. The TUI paints the first note straight away and
 parses the rest in slices of about 12 ms between frames, showing `indexing N…` in the top bar. A
-slice always parses at least one whole note, so a 1 MB note holds the screen for about a second
-while it is indexed (and a note that size takes 1–3 s to open, and to leave insert mode in the lens:
-`15.1`). Moving around even a 1 MB note stays in single-digit milliseconds. Typing in the lens takes
-7–13 ms a key there; in source mode about 100 ms on a 20,000-line note, since every key rebuilds the
-whole source layout (making it incremental is `15.1`).
+slice always parses at least one whole note, so a big note holds the screen while it is indexed.
 
-Parsing costs about 2 ms per 3 KB note, which is remark's own speed. Parsing in worker threads is
-the next lever. It belongs with phase 4's vault-scale work.
+**Big notes (plan `15.1`).** Three things keep a big note's cost in proportion to what changed:
+
+- **The parse is in chunks** (`parseMarkdown` in `core/parse.ts`): the note is cut where the result
+  is certain to be the same as a whole parse — after a blank line, a heading, a closed fence or
+  HTML block, and inside a list only where the block certainly began as one — each chunk parsed on
+  its own, lists the cut split joined again, and reference and footnote definitions from other
+  chunks stood in for. A buffer caches the chunks by their text, so an edit or a reload parses
+  only the chunks it touched. Smaller parses are also faster (remark is superlinear on long lists).
+- **The render caches blocks** (`renderTree`): each top-level block's rows are kept by a token
+  the parse gives the block, which survives the chunk being moved by an edit above it; a moved
+  block is copied to its new place and renumbered, not rendered again.
+- **Source mode lays out changed lines** (`layoutSource`): the lines before and after an edit are
+  reused, shifted when lines were added or taken away; the highlighter's per-line state says where
+  reuse may resume. Headings are found line by line as it goes.
+
+Measured with `bun scripts/bench.ts` (median, this machine, 2026-09-29):
+
+| Case | 1,000 lines | 20,000 lines (400 KB) |
+| --- | --- | --- |
+| open: parse, layout, first frame | 58 ms | 810 ms (was 1,500) |
+| move the cursor (`j`) | 0.8 ms | 0.7 ms |
+| type a key in source mode | 0.9 ms | 7 ms (was 60) |
+| type a key in the lens | 1.2 ms | 10–13 ms (was 14) |
+| leave insert mode in the lens | 7 ms | 80 ms (was 1,453) |
+| a reload after an agent's write | 6 ms | 60–70 ms (was 1,418) |
+| a width change (resize, a pane) | 12 ms | 180 ms (was 200) |
+| CLI `task <note> <line>` on 20,000 tasks | — | 120 ms (was 2.3 s; it parses the line's chunk) |
+
+What is left grows with the note: the first open parses and renders it all, and a width change
+re-wraps every block. Parsing in worker threads, and laying out only what's in view first, are
+the next levers; they belong with phase 4's vault-scale work.

@@ -118,6 +118,16 @@ bun run e2e find replace     # only the scenarios whose names contain these
 | `tests/e2e/session.ts` | one scenario's slipbox, and the checks |
 | `tests/e2e/scenarios.ts` | the scenarios, by area |
 
+## Timings (`bun scripts/bench.ts`)
+
+`scripts/bench.ts` generates notes of 1,000 and 20,000 lines (and one of 20,000 tasks) in a temporary
+vault and times what grows with a note: opening it, moving, typing in source mode and the lens,
+leaving the lens, a reload, a width change, and the CLI's `task`, `read`, `render`, `find` and
+`backlinks`. `bun scripts/bench.ts lens k20` runs only the cases whose names contain those words.
+It isn't part of `bun run check`: timings depend on the machine. The incremental paths it measures
+are held to their from-scratch results by the tests ("the incremental source layout", "the chunked
+parse", "the render cache", "parseAround").
+
 ## Manual checks that stay manual
 
 Some things are only real in a terminal and a pair of eyes: glyph rendering in the actual font,

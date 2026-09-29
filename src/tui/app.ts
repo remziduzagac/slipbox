@@ -915,7 +915,7 @@ export class App {
     const wrap = this.ui.wrap;
     const starts = buf.lineStarts();
     const lineCount = Math.max(1, starts.length - (buf.source.endsWith("\n") && starts.length > 1 ? 1 : 0));
-    const texts = buf.source.split("\n");
+    const texts = buf.lines();
     // Rows a run of lines takes in the lens (wrapped at the width).
     const rowsOf = (s: number, e: number) => {
       let n = 0;
@@ -1012,7 +1012,7 @@ export class App {
   /** Source line-number gutter width for a view (0 when line numbers are off). */
   gutterWidth(view: View): number {
     if (!this.ui.line_numbers) return 0;
-    return String(view.buf.source.split("\n").length).length + 1;
+    return String(view.buf.lineStarts().length).length + 1;
   }
 
   /** The view's top, remembered as its source line and the row within it: a re-layout (a resize, a

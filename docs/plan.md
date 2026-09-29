@@ -512,12 +512,12 @@ packaging lands whenever it first needs to run on a VM.*
 
 | ID | Item |
 | --- | --- |
-| 15.1 | Incremental layout: a width change re-lays out only what it changes |
+| 15.1 | Incremental layout — **mostly done**: parse by chunk, render by block, source mode by line |
 | 15.2 | Pathological nesting — **done** as a cap: nesting past 60 renders as text, quadratic parser inputs tamed |
 
-`15.1`: dragging a border, resize mode, a pane or wrap toggle and a terminal resize each re-lay out
-the whole note today, hundreds of ms per step for a 20,000-line note — and leaving insert mode in the
-lens re-parses the note (about a second at 1 MB). `15.2` is done as a cap (`docs/design/rendering.md`,
+`15.1`: edits, reloads and leaving the lens now cost what they change (`docs/design/architecture.md`,
+"Big notes", with timings from `scripts/bench.ts`). Left: a width change still re-wraps the whole
+note (180 ms at 20,000 lines), and the first open parses and renders all of it (810 ms). `15.2` is done as a cap (`docs/design/rendering.md`,
 "Hostile notes").
 
 ## Deferred — in the design, not in this breakdown
