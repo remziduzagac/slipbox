@@ -537,7 +537,7 @@ text/source files (source mode only). In order: the groundwork first, then each 
 | ID | Item |
 | --- | --- |
 | 16.1 | **Done.** File groups: which extensions are notes, data, text; their config (other note formats off) |
-| 16.2 | A reader per format (blocks with lines, headings, links, tasks, a tree); markdown the first |
+| 16.2 | **Done.** A reader per format (blocks with lines, headings, links, tasks, a tree); markdown the first |
 | 16.3 | **Done.** The walk and index see data and text files: link targets by path; the graph stays notes |
 | 16.4 | **Done.** Any text file opens (source mode only for code); the CLI's writers take all groups; `ls --files` |
 | 16.5 | **Done.** Explorer: notes and renderables, a key for all text files, patterns; `ctrl+p` and find follow |

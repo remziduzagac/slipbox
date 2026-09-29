@@ -9,7 +9,6 @@ import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-spe
 import type { Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import { slugify } from "../core/parse.ts";
-import { parseWikiTarget } from "../core/wikilink.ts";
 import { parseSubstitute } from "../core/replace.ts";
 import type { Anchor } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
@@ -18,6 +17,7 @@ import type { App, ListItem, Loc, UiState, View } from "./app.ts";
 import { editable, computeFind } from "./app.ts";
 import * as C from "./cursor.ts";
 import { linkTokens } from "../core/syntax.ts";
+import { readerFor } from "../core/readers.ts";
 import * as E from "./editing.ts";
 import * as R from "./replacing.ts";
 import * as V from "./vim.ts";
@@ -181,18 +181,10 @@ function sourceLinkAt(a: App, v: View): LayoutLink | null {
     const path = v.buf.rel ? a.graph.commentPath(t.target, v.buf.rel) : null;
     return path ? { ...base, kind: "markdown", target: `/${path}${t.at ? `#L${t.at}` : ""}`, heading: null, text: t.target } : null;
   }
-  // Markdown's link syntax, in markdown only.
-  if (v.buf.kind.format !== "markdown") return null;
-  for (const m of text.matchAll(/(!?)\[\[([^\]\n]+)\]\]/g)) {
-    if (col < m.index || col >= m.index + m[0].length) continue;
-    const w = parseWikiTarget(m[2]!);
-    return { ...base, kind: m[1] ? "embed" : "wiki", target: w.target, heading: w.heading, text: w.alias ?? m[2]! };
-  }
-  for (const m of text.matchAll(/!?\[([^\]\n]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
-    if (col < m.index || col >= m.index + m[0].length) continue;
-    return { ...base, kind: m[0].startsWith("!") ? "image" : "markdown", target: m[2]!, heading: null, text: m[1]! };
-  }
-  return null;
+  // A note's: its format's link syntax (16.2).
+  if (v.buf.kind.group !== "note") return null;
+  const l = readerFor(v.buf.kind.format).linkAt(text, col);
+  return l ? { ...base, ...l } : null;
 }
 
 function followLink(a: App, link: LayoutLink, inSplit: boolean): void {

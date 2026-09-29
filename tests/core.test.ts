@@ -956,3 +956,17 @@ describe("link-like tokens in code (16.10)", () => {
     expect(t("version 1.5, ../up.py:3:7 and ./r.toml")).toEqual([["../up.py", 3, "../up.py:3:7"], ["./r.toml", null, "./r.toml"]]);
   });
 });
+
+describe("a reader per note format (16.2)", () => {
+  test("markdown's reader parses, scans headings and finds links in a line; a format without one reads as plain text", async () => {
+    const { readerFor, parseNoteFile } = await import("../src/core/readers.ts");
+    const { noteFormat } = await import("../src/core/filetypes.ts");
+    expect([noteFormat("a.md"), noteFormat("b.org"), noteFormat("c.adoc"), noteFormat("d.txt")]).toEqual(["markdown", "org", "asciidoc", "markdown"]);
+    const md = readerFor("markdown");
+    expect(md.scanHeadings("# One\n\n```\n# not\n```\n## Two\n").map((h) => h.text)).toEqual(["One", "Two"]);
+    expect(md.linkAt("see [[alpha#Intro|the intro]] and [x](b.md)", 6)).toEqual({ kind: "wiki", target: "alpha", heading: "Intro", text: "the intro" });
+    expect(md.linkAt("see [[alpha]] and [x](b.md)", 20)).toMatchObject({ kind: "markdown", target: "b.md" });
+    const adoc = parseNoteFile("x.adoc", "= Title\nfirst para\n\nsecond\n");
+    expect(adoc.tree.children.map((c) => [c.type, c.position!.start.line])).toEqual([["paragraph", 1], ["paragraph", 4]]);
+  });
+});

@@ -19,9 +19,10 @@ import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { type Graph, openGraph } from "../core/graph.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
-import { headingsOf, parseAround, parseMarkdown, type ParsedNote, slugify } from "../core/parse.ts";
+import { headingsOf, parseAround, type ParsedNote, slugify } from "../core/parse.ts";
+import { parseNoteFile } from "../core/readers.ts";
 import { parseData } from "../core/data.ts";
-import { classify, extensionOf, isKnownExtension } from "../core/filetypes.ts";
+import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
@@ -262,7 +263,7 @@ function parseFile(s: Session, rel: string, text: string): ParsedNote {
     return { tree: d.tree, frontmatter: null, source: text };
   }
   if (kind.group === "text") throw new UsageError(`${rel} is a ${kind.format === "text" ? "text" : kind.format} file, with no rendered form (slipbox read shows its text)`);
-  return parseMarkdown(text);
+  return parseNoteFile(rel, text);
 }
 
 function textFiles(s: Session): { path: string; group: string; format: string }[] {
@@ -754,7 +755,7 @@ const HANDLERS: Record<string, Handler> = {
     // Toggling one line needs only the chunk that holds it (a 20,000-task note parses in a blink);
     // the list, the whole note.
     const lineArg = rest[1] === undefined ? undefined : Number(rest[1]);
-    const tasks = listTasks(lineArg !== undefined && Number.isInteger(lineArg) && lineArg >= 1 ? parseAround(file.text, lineArg) : parseMarkdown(file.text).tree);
+    const tasks = listTasks(lineArg !== undefined && Number.isInteger(lineArg) && lineArg >= 1 && noteFormat(rel) === "markdown" ? parseAround(file.text, lineArg) : parseNoteFile(rel, file.text).tree);
     // Each task's source line too (its text keeps [[links]]), and the note's sha for a safe tick.
     const lines = file.text.split("\n");
     const withRaw = tasks.map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
@@ -766,7 +767,7 @@ const HANDLERS: Record<string, Handler> = {
     const task = tasks.find((t) => t.line === line);
     if (!task) {
       // The whole note's tasks, to choose from (the chunk's alone would mislead).
-      const all = listTasks(parseMarkdown(file.text).tree).map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
+      const all = listTasks(parseNoteFile(rel, file.text).tree).map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
       throw new CliError(`no task on line ${line} of ${rel}`, EXIT.notFound, { path: rel, sha: file.sha, tasks: all });
     }
     const want = has(s.args, "check") ? true : has(s.args, "uncheck") ? false : !task.checked;

@@ -96,6 +96,11 @@ export function isKnownExtension(ext: string): boolean {
   return e in NOTE_FORMATS || e in DATA_FORMATS || e in LANGUAGES;
 }
 
+/** A note's format from its name: a note is a note by `walk.extensions`; its format, by this. */
+export function noteFormat(rel: string): string {
+  return NOTE_FORMATS[extensionOf(rel)] ?? "markdown";
+}
+
 /** A file's extension, lowercased, without its dot ("" when there is none). */
 export function extensionOf(name: string): string {
   const base = name.slice(name.lastIndexOf("/") + 1);

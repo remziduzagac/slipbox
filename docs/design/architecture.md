@@ -64,6 +64,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
 | `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
 | `core/graph.ts` | 1.5, 1.8, 1.9 | notes, links, backlinks, lazy parsing, persisted index |
+| `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
 | `core/lazy.ts` | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |

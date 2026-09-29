@@ -5,7 +5,7 @@ import type { Glyphs } from "./glyphs.ts";
 import type { Graph } from "./graph.ts";
 import type { Layout, LinkStatus } from "./layout/ir.ts";
 import { type RenderCache, renderTree } from "./layout/render.ts";
-import { type ParsedNote, parseMarkdown } from "./parse.ts";
+import type { ParsedNote } from "./parse.ts";
 
 /** Effective inset: the configured value, but never more than ~5% of a narrow pane, and ≥ 1 (2.7). */
 export function effectiveInset(paneWidth: number, inset: number): number {
@@ -45,8 +45,4 @@ export function linkResolver(graph: Graph | null, rel: string | null) {
 /** `cache`: the note's blocks from its last render (the TUI's buffers keep one; see renderTree). */
 export function layoutNote(parsed: ParsedNote, graph: Graph | null, rel: string | null, opts: NoteRenderOptions, cache?: RenderCache): Layout {
   return renderTree(parsed.tree, { ...opts, resolveLink: linkResolver(graph, rel) }, parsed.frontmatter, cache);
-}
-
-export function parseNote(source: string): ParsedNote {
-  return parseMarkdown(source);
 }

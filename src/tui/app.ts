@@ -826,7 +826,7 @@ export class App {
    *  (16.11–16.14), text files never. */
   canRender(buf: NoteBuffer): boolean {
     if (buf.kind.group === "data") return !buf.parsed.error;
-    return buf.kind.group === "note" && buf.kind.format === "markdown";
+    return buf.kind.group === "note"; // every note format has a reader (16.2)
   }
 
   openInNewTab(path: string, anchor?: Anchor): void {

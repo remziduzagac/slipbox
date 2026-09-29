@@ -10,8 +10,9 @@ import { basename, join, posix } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, readJson, readText, writeJson } from "./fsutil.ts";
-import { isNotePath, LinkIndex, type MdLinkTarget, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
-import { type HeadingInfo, headingsOf, noteTitle, parseMarkdown, visit } from "./parse.ts";
+import { LinkIndex, type MdLinkTarget, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
+import { type HeadingInfo, headingsOf, noteTitle, visit } from "./parse.ts";
+import { parseNoteFile } from "./readers.ts";
 import { cacheDir } from "./paths.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
@@ -299,7 +300,7 @@ export class Graph {
       const r = this.index.resolveWiki(link.target, fromRel);
       if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates };
       if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
-      if (!isNotePath(link.target) && /\.[A-Za-z0-9]+$/.test(link.target)) {
+      if (classify(link.target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(link.target)) {
         const att = resolveAttachment(link.target, fromRel, this.root);
         if (att) return { resolvedKind: "file", path: att, candidates: [] };
         // Obsidian finds attachments anywhere in the vault by name.
@@ -489,7 +490,7 @@ export function extractNote(file: NoteFile): NoteEntry {
 }
 
 export function extractFromSource(file: NoteFile, text: string, flags: string[] = []): NoteEntry {
-  const parsed = parseMarkdown(text);
+  const parsed = parseNoteFile(file.rel, text);
   const links: LinkRef[] = [];
   const definitions = new Map<string, string>();
   visit(parsed.tree, (n) => {

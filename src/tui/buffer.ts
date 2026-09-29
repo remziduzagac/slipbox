@@ -16,6 +16,7 @@ import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
 import { layoutSource, newSourceCache } from "../core/layout/source.ts";
 import { headingsOf, newParseCache, type ParsedNote, parseMarkdown, slugify } from "../core/parse.ts";
+import { readerFor } from "../core/readers.ts";
 import type { CommentLink, OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
@@ -144,7 +145,7 @@ export class NoteBuffer {
       if (this.kind.group === "data") {
         const d = parseData(this.kind.format, this.source);
         this.parsedNote = { tree: d.tree, frontmatter: null, source: this.source, error: d.error };
-      } else this.parsedNote = parseMarkdown(this.source, this.parseCache);
+      } else this.parsedNote = readerFor(this.kind.format).parse(this.source, this.parseCache);
       this.parsedVersion = this.version;
     }
     return this.parsedNote;
@@ -278,14 +279,15 @@ export class NoteBuffer {
       // otherwise the ATX lines the layout finds as it goes — so a keystroke, or an undo back to
       // the saved text, never re-parses the note (a 1 MB note would take a second).
       const parsed = this.parsedVersion === this.version && !this.dirty;
-      const markdown = this.kind.format === "markdown";
-      // Files beyond notes: highlighted by their language, no markdown headings (a `# comment`
-      // in a shell script is no heading).
-      // A source file's outline (16.8) stands in for headings: the outline pane, the breadcrumb.
+      // A note is coloured and its headings scanned by its format's reader (16.2); other files
+      // are highlighted by their language, with no headings from the text (a `# comment` in a
+      // shell script is no heading) — a source file's outline (16.8) stands in for them.
+      const note = this.kind.group === "note" ? readerFor(this.kind.format) : null;
       const code = this.syntax ? this.syntax.outline.map((o) => ({ level: Math.min(6, o.depth + 1), text: o.name, slug: slugify(o.name), src: o.line })) : [];
-      const headings = !markdown ? code : parsed ? headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line })) : "scan";
+      const fromParse = () => headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line }));
+      const headings = !note ? code : parsed ? fromParse() : note.language === null ? "scan" : note.scanHeadings(this.source);
       const spans = this.syntax?.spans;
-      l = layoutSource(this.source, { width, wrap, headings, language: markdown ? null : this.kind.format, ...(spans ? { spans: (line: number) => spans.get(line) } : {}) }, this.sourceCache);
+      l = layoutSource(this.source, { width, wrap, headings, language: note ? note.language : this.kind.format, ...(spans ? { spans: (line: number) => spans.get(line) } : {}) }, this.sourceCache);
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
     }
