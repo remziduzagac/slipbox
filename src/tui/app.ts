@@ -50,7 +50,7 @@ import {
   type UiOverride,
 } from "../core/position.ts";
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
-import type { VaultLocation } from "../core/vault.ts";
+import { type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
@@ -472,7 +472,7 @@ export class App {
     this.host = opts.host;
     this.configFile = opts.configFile;
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
-    loadConfig({ vaultRoot: opts.loc.mode === "vault" ? opts.loc.root : null, configFile: opts.configFile, lastGood: this.configLastGood });
+    loadConfig({ vaultFile: vaultConfigPath(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood });
     this.now = opts.now ?? Date.now;
     this.ui = uiDefaults(opts.config);
     if (opts.themeName) this.ui.theme = opts.themeName;
@@ -481,15 +481,15 @@ export class App {
     this.sideW = opts.config.ui.sidebar_width;
     this.outW = opts.config.ui.outline_width;
     this.outline = { visible: opts.config.ui.outline, overlay: false, selected: 0, scroll: 0, folded: new Set(), forKey: "" };
-    this.positions = new PositionStore(this.loc.root);
+    this.positions = new PositionStore(this.loc);
     registerActions(this);
     this.applyKeys();
     for (const w of opts.warnings ?? []) this.message("warn", w);
     for (const e of this.graph.errors) this.message("warn", e);
 
-    this.recentCommands = (loadSession(this.loc.root)?.recent_commands ?? []).filter((id) => typeof id === "string").slice(0, RECENT_MAX);
-    this.remoteServer = loadSession(this.loc.root)?.remote_server;
-    this.recentNotes = (loadSession(this.loc.root)?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
+    this.recentCommands = (loadSession(this.loc)?.recent_commands ?? []).filter((id) => typeof id === "string").slice(0, RECENT_MAX);
+    this.remoteServer = loadSession(this.loc)?.remote_server;
+    this.recentNotes = (loadSession(this.loc)?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
     this.restoreUiOverrides();
     if (opts.themeName) this.ui.theme = opts.themeName; // an explicit theme beats a remembered one
     const restored = !opts.open && this.config.ui.restore_session && this.restoreSession();
@@ -612,7 +612,8 @@ export class App {
 
   private configFiles(): string[] {
     const files = [this.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile()];
-    if (this.loc.mode === "vault") files.push(join(this.loc.root, ".slipbox", "config.toml"));
+    const vaultFile = vaultConfigPath(this.loc);
+    if (vaultFile) files.push(vaultFile);
     return files;
   }
 
@@ -633,7 +634,7 @@ export class App {
    */
   reloadConfig(reason: "manual" | "file changed" = "manual"): void {
     this.recordConfigStamps();
-    const loaded = loadConfig({ vaultRoot: this.loc.mode === "vault" ? this.loc.root : null, configFile: this.configFile, lastGood: this.configLastGood });
+    const loaded = loadConfig({ vaultFile: vaultConfigPath(this.loc), configFile: this.configFile, lastGood: this.configLastGood });
     this.clearPending(); // a sequence begun under the old keys means nothing under the new ones
     const before = this.config;
     const next = loaded.config;
@@ -1777,7 +1778,7 @@ export class App {
         added = true;
       }
     }
-    if (added) this.watcher?.sync(this.loc.mode === "vault" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
+    if (added) this.watcher?.sync(this.loc.mode !== "home" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
   }
 
   /**
@@ -2878,12 +2879,13 @@ export class App {
    * CLI to warn agents about. Written when the list changes; removed when it's empty, and on quit.
    */
   publishDirty(): void {
-    const paths = this.dirtyBuffers().map((b) => b.key).sort();
+    // The home vault's list covers every loose folder: its paths are absolute (17.2).
+    const paths = this.dirtyBuffers().map((b) => (this.loc.mode === "home" ? b.abs : b.key)).sort();
     const key = paths.join("\n");
     if (key === this.lastDirty) return;
     this.lastDirty = key;
     try {
-      writeDirty(this.loc.root, paths);
+      writeDirty(this.loc, paths);
     } catch {}
   }
 
@@ -3685,13 +3687,13 @@ export class App {
    */
   pasteText(): { text: string; linewise: boolean } | null {
     const reg = this.vim.register;
-    const clip = readClipboard(stateDir(this.loc.root));
+    const clip = readClipboard(stateDir(this.loc));
     if (clip === null || clip === "" || (reg && clip === reg.text)) return reg;
     return { text: clip, linewise: false };
   }
 
   copy(text: string, announce = true): boolean {
-    const r = copyText(text, { osc52: (t) => this.host.osc52(t), fallbackDir: stateDir(this.loc.root) });
+    const r = copyText(text, { osc52: (t) => this.host.osc52(t), fallbackDir: stateDir(this.loc) });
     // SLIPBOX_CLIPBOARD=file sends copies to the file on purpose; otherwise the file means no clipboard answered.
     const onPurpose = process.env.SLIPBOX_CLIPBOARD === "file";
     if (announce) this.message("info", r.file ? (onPurpose ? `copied ${text.length} characters to ${r.file}` : `clipboard unavailable — wrote ${r.file}`) : `copied ${text.length} characters`);
@@ -3699,7 +3701,7 @@ export class App {
   }
 
   scratch() {
-    return scratchLocation(this.loc.root, this.config);
+    return scratchLocation(this.loc, this.config);
   }
 
   capture(entry: string): void {
@@ -3763,7 +3765,7 @@ export class App {
     this.watcher = new VaultWatcher({
       root: this.loc.root,
       filter: this.graph.filter,
-      dirs: this.loc.mode === "vault" ? this.graph.dirs : [""],
+      dirs: this.loc.mode !== "home" ? this.graph.dirs : [""],
       debounceMs: this.config.watch.debounce_ms,
       pollMs: this.config.watch.poll_ms,
       known: this.knownFromGraph(),
@@ -3842,7 +3844,7 @@ export class App {
     if (batch.rescan) {
       this.graph.build(true, "lazy");
       this.indexInBackground();
-      this.watcher?.sync(this.loc.mode === "vault" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
+      this.watcher?.sync(this.loc.mode !== "home" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
       setChanged = true;
       // The walk itself changed: any open note may have changed, appeared or gone.
       for (const buf of this.buffers.values()) if (buf.changedOnDisk()) this.reloadBuffer(buf);
@@ -3945,7 +3947,7 @@ export class App {
    * off): a session value is kept only while the config value it overrode is unchanged.
    */
   private restoreUiOverrides(): void {
-    const s = loadSession(this.loc.root);
+    const s = loadSession(this.loc);
     const defaults = uiDefaults(this.config);
     for (const [k, o] of Object.entries(s?.ui ?? {})) {
       if (!(k in defaults) || !o || typeof o !== "object") continue;
@@ -3961,7 +3963,7 @@ export class App {
   }
 
   private restoreSession(): boolean {
-    const s = loadSession(this.loc.root);
+    const s = loadSession(this.loc);
     if (!s) return false;
     for (const t of s.tabs) {
       const views: View[] = [];
@@ -4004,7 +4006,7 @@ export class App {
       recent_notes: this.recentNotes,
       ...(this.remoteServer ? { remote_server: this.remoteServer } : {}),
     };
-    saveSession(this.loc.root, s);
+    saveSession(this.loc, s);
   }
 
   /** Buffers with unsaved changes. */
@@ -4211,7 +4213,7 @@ export class App {
     if (this.quitting) return;
     this.quitting = true;
     try {
-      writeDirty(this.loc.root, []);
+      writeDirty(this.loc, []);
     } catch {}
     this.watcher?.close();
     this.stopLazy?.();

@@ -5,7 +5,19 @@ TOML, in two levels, with the vault winning (plan `0.9`):
 1. built-in defaults
 2. the user file: `--config <file>`, else `$SLIPBOX_CONFIG`, else
    `$XDG_CONFIG_HOME/slipbox/config.toml`
-3. the vault file: `<vault>/.slipbox/config.toml`
+3. the vault file: `<vault>/.slipbox/config.toml`; for a loose file, the home vault's,
+   `$XDG_DATA_HOME/slipbox/home/config.toml` (a repository without `.slipbox/` has none)
+
+**The vault's identity** is the vault file's `[vault]` table (plan `17.4`), read on its own and never merged into
+the settings; in the user file it's ignored with a warning:
+
+```toml
+[vault]
+id = "3f9c2a7be1d04c55"        # random, made by `slipbox init`, never changed: keys the cache and state
+name = "notes"                 # what [[notes:page]] reaches it by; the folder's name until declared
+aliases = ["n"]                # other names it answers to
+previous_names = ["old-notes"] # names it had: a fallback only (17.7)
+```
 
 **What only you can set.** The vault file comes with whatever you clone, so it never chooses a
 program slipbox runs: `editor.command` and `editor.remote` there are ignored, with a warning, and
@@ -194,7 +206,7 @@ replaced is unchanged, so editing the config always wins.
 | `SLIPBOX_CONFIG` | user config file |
 | `SLIPBOX_GLYPHS` | force `nerd`, `unicode` or `ascii` when `glyphs = "auto"` |
 | `NO_COLOR` | CLI: no colour; TUI: the `mono` theme |
-| `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME` | storage roots (decision `0.10`) |
+| `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME` | storage roots (decision `0.10`) |
 | `SLIPBOX_DEBUG` | print stack traces for unexpected CLI errors |
 | `SLIPBOX_CLIPBOARD` | `file`: copies go only to `clipboard.txt` in the state dir, never the clipboard (tests) |
 | `SLIPBOX_TRACE` | TUI: append each command it runs to this file, one id a line (the terminal tests' coverage) |

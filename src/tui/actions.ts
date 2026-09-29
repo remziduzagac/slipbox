@@ -1463,11 +1463,12 @@ export function registerActions(app: App): void {
       infoList(a, "Vault", [
         ["root", a.loc.root],
         ["mode", a.loc.mode],
+        ...(a.loc.name ? [["vault", `${a.loc.name}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}${a.loc.id ? "" : " — no id yet"}`] as [string, string]] : []),
         ["notes", String(g.notes.size)],
         ["indexing", a.indexing ? `${a.indexing} left` : "done"],
         ["watcher", a.watcher ? (a.watcher.degraded ? `degraded: ${a.watcher.degraded}` : `${a.watcher.watchedCount} directories${a.watcher.polledDirs.length ? `, ${a.watcher.polledDirs.length} polled` : ""}`) : "off"],
-        ["cache", cacheDir(a.loc.root)],
-        ["state", stateDir(a.loc.root)],
+        ["cache", cacheDir(a.loc)],
+        ["state", stateDir(a.loc)],
         ["scratch", a.scratch().path],
         ...g.skipped.map((s) => ["skipped", `${s.rel} — ${s.reason}`] as [string, string]),
       ]);

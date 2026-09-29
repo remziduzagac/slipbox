@@ -33,7 +33,7 @@ import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
-import { initVault, isInside, locateVault, readVaultVersion, VaultError, type VaultLocation } from "../core/vault.ts";
+import { initVault, isInside, locateVault, readVaultVersion, recordLocation, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -83,11 +83,12 @@ class Session {
     readonly loc: VaultLocation,
     readonly io: Io,
   ) {
-    const loaded = loadConfig({ vaultRoot: loc.mode === "vault" ? loc.root : null, configFile: flag(args, "config") });
+    const loaded = loadConfig({ vaultFile: vaultConfigPath(loc), configFile: flag(args, "config") });
     this.config = loaded.config;
     this.configSources = loaded.sources;
     this.warnings.push(...loaded.warnings);
-    if (loc.note && loc.mode === "single") this.warnings.push(loc.note);
+    if (loc.note) this.warnings.push(loc.note);
+    recordLocation(loc);
   }
 
   get graph(): Graph {
@@ -101,7 +102,7 @@ class Session {
   }
 
   stale(): StaleEntry[] {
-    return readStale(this.loc.root);
+    return readStale(this.loc);
   }
 }
 
@@ -126,13 +127,13 @@ Usage:
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
-  slipbox init [dir]                make <dir> a vault (creates .slipbox/)
+  slipbox init [dir]                make <dir> a vault (creates .slipbox/ with its id and name)  [--name N]
   slipbox info                      vault, paths, versions, staleness
   slipbox themes                    list themes
   slipbox commands                  list named commands and their CLI equivalents
 
 Global options:
-  --root <dir>      vault root (default: nearest .slipbox/ above the path or cwd)
+  --root <dir>      the root (default: nearest .slipbox/ above the path or cwd, else its git repository)
   --config <file>   user config file (default: $SLIPBOX_CONFIG or ~/.config/slipbox/config.toml)
   --json            one JSON object on stdout: {schema, ok, command, data, warnings, stale}
   --color <when>    auto | always | never
@@ -198,10 +199,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // The note argument, when it names a file, also says which vault this is.
     const noteAt = ["render", "links", "backlinks", "outline", "replace", "task", "read", "stat", "write", "send"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
     const pathArg = noteArgPath(noteAt, io.cwd);
-    const loc =
-      command === "init"
-        ? { root: io.cwd, mode: "single" as const, file: null }
-        : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
+    const loc = locateVault({ root: command === "init" ? undefined : flag(args, "root"), path: pathArg, cwd: io.cwd });
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);
@@ -288,6 +286,7 @@ const FLAGS: Record<string, string[]> = {
   send: ["line", "server"],
   capture: ["ref", "snippet", "stdin", "lang"],
   scratch: ["if-unchanged"],
+  init: ["name"],
 };
 
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
@@ -319,7 +318,7 @@ function resolveNote(s: Session, arg: string, parse = true): string {
   const rel = findNoteArg(s, arg, parse);
   // Reading follows the vault's rule too: a symlink pointing out of it is not a note of it (the
   // walk leaves it out), so naming it by path reads nothing from outside.
-  if (s.loc.mode === "vault" && !landsInside(s.loc.root, join(s.loc.root, rel))) throw new CliError(`${rel} points outside the vault; not reading it`, EXIT.refused);
+  if (!landsInside(s.loc.root, join(s.loc.root, rel))) throw new CliError(`${rel} points outside the vault; not reading it`, EXIT.refused);
   return rel;
 }
 
@@ -533,8 +532,8 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   async capture(s, rest) {
-    const project = captureProject(s);
-    const loc = scratchLocation(project, s.config);
+    const project = s.loc.root;
+    const loc = scratchLocation(s.loc, s.config);
     const refArg = flag(s.args, "ref");
     const ref = refArg ? parseRef(refArg) : undefined;
     if (refArg && !ref) throw new UsageError(`--ref must look like path:42, path:42-50, path:42:10-30 or path:42:10-50:30, with lines from 1 and ranges in order`);
@@ -577,7 +576,7 @@ const HANDLERS: Record<string, Handler> = {
 
   scratch(s, rest) {
     const sub = rest[0] ?? "show";
-    const loc = scratchLocation(captureProject(s), s.config);
+    const loc = scratchLocation(s.loc, s.config);
     const content = readScratch(loc);
     const sha = createHash("sha256").update(content).digest("hex").slice(0, 16);
     switch (sub) {
@@ -594,7 +593,7 @@ const HANDLERS: Record<string, Handler> = {
       }
       case "copy": {
         if (!content.trim()) throw new CliError("scratch is empty", EXIT.notFound);
-        const r = copyText(content, { fallbackDir: stateDir(loc.project) });
+        const r = copyText(content, { fallbackDir: stateDir(s.loc) });
         const how = r.file ? `wrote ${r.file}` : `copied via ${r.methods.join(" + ")}${r.confirmed ? "" : " (OSC 52 is unconfirmed)"}`;
         return { data: { path: loc.path, chars: content.length, ...r }, human: `${how} (${content.length} chars)\n` };
       }
@@ -605,21 +604,35 @@ const HANDLERS: Record<string, Handler> = {
 
   init(s, rest) {
     const dir = rest[0] ?? flag(s.args, "root") ?? s.io.cwd;
-    const r = initVault(dir.startsWith("/") ? dir : `${s.io.cwd}/${dir}`);
-    return { data: r, human: r.created ? `created ${r.root}/.slipbox/\n` : `${r.root} is already a vault\n` };
+    const name = flag(s.args, "name");
+    if (name === "") throw new UsageError("--name needs a name");
+    let r;
+    try {
+      r = initVault(dir.startsWith("/") ? dir : `${s.io.cwd}/${dir}`, name);
+    } catch (err) {
+      if (err instanceof VaultError) throw new CliError(err.message, EXIT.refused);
+      throw err;
+    }
+    const human = r.created
+      ? `created ${r.root}/.slipbox/ — vault "${r.name}"\n`
+      : r.identified
+        ? `${r.root} is a vault; gave it an id — vault "${r.name}"\n`
+        : `${r.root} is already a vault — "${r.name}"\n`;
+    return { data: r, human };
   },
 
   info(s) {
     const g = s.graph;
-    const scratch = scratchLocation(captureProject(s), s.config);
+    const scratch = scratchLocation(s.loc, s.config);
     const data = {
       version: VERSION,
       root: s.loc.root,
       mode: s.loc.mode,
+      vault: { id: s.loc.id, name: s.loc.name, aliases: s.loc.aliases, previous_names: s.loc.previous_names, key: s.loc.key },
       markerVersion: s.loc.mode === "vault" ? readVaultVersion(s.loc.root) : null,
       config: { user: flag(s.args, "config") ?? s.io.env.SLIPBOX_CONFIG ?? userConfigFile(), sources: s.configSources, theme: s.config.theme },
-      cache: cacheDir(s.loc.root),
-      state: stateDir(s.loc.root),
+      cache: cacheDir(s.loc),
+      state: stateDir(s.loc),
       scratch: scratch.path,
       notes: g.notes.size,
       index: g.stats,
@@ -629,6 +642,7 @@ const HANDLERS: Record<string, Handler> = {
     const human = [
       `slipbox   ${VERSION}`,
       `root      ${data.root} (${data.mode}${data.markerVersion ? `, marker v${data.markerVersion}` : ""})`,
+      ...(s.loc.name ? [`vault     ${s.loc.name}${s.loc.aliases.length ? ` (also ${s.loc.aliases.join(", ")})` : ""}${s.loc.id ? "" : " — no id yet: slipbox init gives it one"}`] : []),
       `notes     ${data.notes} (parsed ${g.stats.parsed}, cached ${g.stats.cached}, ${g.stats.ms.toFixed(0)} ms)`,
       `theme     ${data.config.theme}`,
       `config    ${data.config.sources.length ? data.config.sources.join(", then ") : `none (${data.config.user} doesn't exist)`}`,
@@ -938,12 +952,13 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   history(s) {
-    const positions = readJson<Record<string, { line?: number; at?: string; cursor?: { anchor?: { line?: number } } }>>(join(stateDir(s.loc.root), "positions.json"), {});
+    const positions = readJson<Record<string, { line?: number; at?: string; cursor?: { anchor?: { line?: number } } }>>(join(stateDir(s.loc), "positions.json"), {});
+    // The home vault keeps every loose folder's positions, by absolute path (17.2).
     const read = Object.entries(positions)
       .filter(([, p]) => p && typeof p.at === "string")
       .sort((a, b) => (a[1].at! < b[1].at! ? 1 : -1))
-      .map(([path, p]) => ({ path, at: p.at!, line: p.cursor?.anchor?.line ?? p.line ?? 1, exists: existsSync(join(s.loc.root, path)) }));
-    const session = loadSession(s.loc.root);
+      .map(([path, p]) => ({ path, at: p.at!, line: p.cursor?.anchor?.line ?? p.line ?? 1, exists: existsSync(isAbsolute(path) ? path : join(s.loc.root, path)) }));
+    const session = loadSession(s.loc);
     const open = (session?.tabs ?? []).map((t) => t.panes.map((p) => p.path));
     // What the user is looking at: the active tab's active window's note.
     const tab = session?.tabs[session.activeTab];
@@ -1043,7 +1058,6 @@ function checkWritable(s: Session, abs: string): void {
   const refuse = (why: string) => {
     throw new CliError(`${relative(s.io.cwd, abs) || abs}: ${why}; not writing it`, EXIT.refused);
   };
-  if (s.loc.mode !== "vault") refuse("not in a vault (no .slipbox/ above it)");
   if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the vault (${s.loc.root})`);
   const rel = relative(s.loc.root, abs);
   // Notes, data and text files are written (16.4); binary files never are.
@@ -1088,7 +1102,7 @@ function pickNvim(s: Session, abs: string): string {
     if (!probeNvim(given)) throw new CliError(`no nvim answers at ${given}`, EXIT.notFound);
     return given;
   }
-  const last = loadSession(s.loc.root)?.remote_server;
+  const last = loadSession(s.loc)?.remote_server;
   if (last && probeNvim(last)) return last;
   const found = discoverNvims();
   if (!found.length) throw new CliError("no nvim is running with a server — start nvim (0.9 or later) and try again", EXIT.notFound);
@@ -1097,16 +1111,6 @@ function pickNvim(s: Session, abs: string): string {
   if (holding.length && (holding.length === 1 || holding[0]!.cwd.length > holding[1]!.cwd.length)) return holding[0]!.socket;
   const candidates = found.map((n) => ({ socket: n.socket, cwd: n.cwd, file: n.file }));
   throw new CliError(`${found.length} nvims are running; pick one with --server (${found.map((n) => n.socket).join(", ")})`, EXIT.ambiguous, { candidates });
-}
-
-/** The scratch's project: the vault root, else the git top-level of cwd, else cwd (0.10 / 8.2). */
-function captureProject(s: Session): string {
-  if (s.loc.mode === "vault") return s.loc.root;
-  try {
-    const top = execFileSync("git", ["-C", s.io.cwd, "rev-parse", "--show-toplevel"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-    if (top) return top;
-  } catch {}
-  return s.io.cwd;
 }
 
 export function defaultIo(): Io {

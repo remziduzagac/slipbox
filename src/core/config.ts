@@ -218,6 +218,8 @@ export interface LoadedConfig {
 
 export interface LoadConfigOptions {
   vaultRoot?: string | null;
+  /** The vault's config file, in place of `vaultRoot` (the home vault's is elsewhere: 17.2). */
+  vaultFile?: string | null;
   /** `--config` flag; overrides `SLIPBOX_CONFIG` and the XDG location. */
   configFile?: string;
   /**
@@ -234,7 +236,8 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
 
   const userFile = opts.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile();
   const files = [userFile];
-  if (opts.vaultRoot) files.push(join(opts.vaultRoot, ".slipbox", "config.toml"));
+  if (opts.vaultFile) files.push(opts.vaultFile);
+  else if (opts.vaultRoot) files.push(join(opts.vaultRoot, ".slipbox", "config.toml"));
 
   for (const file of files) {
     if (!existsSync(file)) {
@@ -250,6 +253,11 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
       warnings.push(`config: ${file}: ${(err as Error).message.split("\n")[0]}${kept ? " — keeping what it said before" : ""}`);
       if (!kept) continue;
       data = structuredClone(kept);
+    }
+    // The vault's identity (17.4) isn't a setting: read by core/registry.ts, never merged.
+    if ("vault" in data) {
+      if (file === userFile) warnings.push(`config: ${file}: [vault] belongs in a vault's .slipbox/config.toml; ignored`);
+      delete data.vault;
     }
     if (file !== userFile) dropUserOnly(data, file, warnings);
     config = merge(config, data, file, "", warnings);

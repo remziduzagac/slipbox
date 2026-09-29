@@ -62,7 +62,7 @@ strip and the titles get from theirs:
 
 - on the left, the `slipbox` chip (plain accent text), which opens the command palette; before
   it, without the left rail, the explorer's `≡`;
-- at the right end, vault-wide state (`indexing N…`, `single-file`), dropped when fewer than 12
+- at the right end, vault-wide state (`indexing N…`, `home vault` for a loose folder), dropped when fewer than 12
   columns are left.
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is

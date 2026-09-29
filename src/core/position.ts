@@ -5,10 +5,17 @@
 // source-line offset from it, and the absolute source line as a fallback. An agent inserting a
 // paragraph above your reading position therefore does not move you.
 
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { readJson, writeJson } from "./fsutil.ts";
 import type { Layout } from "./layout/ir.ts";
-import { stateDir } from "./paths.ts";
+import { type Keyed, stateDir, vaultKey } from "./paths.ts";
+
+/** Where a vault's positions and session live: its state directory. The home vault holds every
+ *  loose folder's, so its keys are absolute and each folder has its own session (17.2). */
+export interface StatePlace extends Keyed {
+  mode: string;
+  root: string;
+}
 
 export interface Anchor {
   heading: string | null;
@@ -105,9 +112,12 @@ const MAX_POSITIONS = 2000;
 export class PositionStore {
   private readonly file: string;
   private data: PositionMap;
+  /** The home vault's loose folder: keys are made absolute against it. */
+  private readonly base: string | null;
 
-  constructor(root: string) {
-    this.file = join(stateDir(root), "positions.json");
+  constructor(place: StatePlace) {
+    this.file = join(stateDir(place), "positions.json");
+    this.base = place.mode === "home" ? place.root : null;
     const raw = readJson<unknown>(this.file, {});
     this.data = {};
     if (raw && typeof raw === "object" && !Array.isArray(raw)) {
@@ -120,17 +130,22 @@ export class PositionStore {
     }
   }
 
+  /** The stored key for a buffer's key (a vault path, or absolute). */
+  private k(rel: string): string {
+    return this.base && !isAbsolute(rel) ? join(this.base, rel) : rel;
+  }
+
   get(rel: string): Anchor | null {
-    const a = this.data[rel];
+    const a = this.data[this.k(rel)];
     return a ? { heading: a.heading, headingIndex: a.headingIndex, offset: a.offset, line: a.line } : null;
   }
 
   getCursor(rel: string): CursorAnchor | null {
-    return this.data[rel]?.cursor ?? null;
+    return this.data[this.k(rel)]?.cursor ?? null;
   }
 
   set(rel: string, anchor: Anchor, cursor?: CursorAnchor): void {
-    this.data[rel] = { ...anchor, at: new Date().toISOString(), ...(cursor ? { cursor } : {}) };
+    this.data[this.k(rel)] = { ...anchor, at: new Date().toISOString(), ...(cursor ? { cursor } : {}) };
   }
 
   save(): void {
@@ -192,9 +207,14 @@ export function isAnchor(v: unknown): v is Anchor {
   );
 }
 
+/** The session file: one per vault; in the home vault, one per loose folder. */
+export function sessionFile(place: StatePlace): string {
+  return place.mode === "home" ? join(stateDir(place), "sessions", `${vaultKey(place.root)}.json`) : join(stateDir(place), "session.json");
+}
+
 /** Load the session, dropping anything malformed rather than failing to start. */
-export function loadSession(root: string): SessionState | null {
-  const s = readJson<SessionState | null>(join(stateDir(root), "session.json"), null);
+export function loadSession(place: StatePlace): SessionState | null {
+  const s = readJson<SessionState | null>(sessionFile(place), null);
   if (!s || typeof s !== "object" || s.version !== 1 || !Array.isArray(s.tabs)) return null;
   const tabs = s.tabs
     .filter((t) => t && Array.isArray(t.panes))
@@ -229,8 +249,8 @@ function validWidth(v: unknown): number | undefined {
   return typeof v === "number" && Number.isInteger(v) && v >= 12 && v <= 200 ? v : undefined;
 }
 
-export function saveSession(root: string, s: SessionState): void {
+export function saveSession(place: StatePlace, s: SessionState): void {
   try {
-    writeJson(join(stateDir(root), "session.json"), s);
+    writeJson(sessionFile(place), s);
   } catch {}
 }

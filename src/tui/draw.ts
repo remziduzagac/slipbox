@@ -287,7 +287,7 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
-  if (app.loc.mode === "single") items.push({ text: "single-file", role: "status_dim" });
+  if (app.loc.mode === "home") items.push({ text: "home vault", role: "status_dim" });
   for (const it of items) {
     const w = stringWidth(it.text) + 2;
     if (rx - w < x + 12) break;

@@ -13,7 +13,7 @@ import { renderMarkdown } from "../src/core/layout/render.ts";
 import { LinkIndex } from "../src/core/links.ts";
 import { loadSession, saveSession } from "../src/core/position.ts";
 import { listThemes } from "../src/core/theme/index.ts";
-import { locateVault } from "../src/core/vault.ts";
+import { homeAt, locateVault } from "../src/core/vault.ts";
 import { WalkFilter, walkVault } from "../src/core/walk.ts";
 import { stringWidth } from "../src/core/width.ts";
 import { App, computeFind, selectedText } from "../src/tui/app.ts";
@@ -23,6 +23,7 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-reg-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+process.env.XDG_DATA_HOME = join(sandbox, "data"); // the home vault (17.2)
 delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
 process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
@@ -247,8 +248,9 @@ describe("low", () => {
   });
   test("a corrupt session or positions file never stops the TUI", () => {
     const dir = vault({ "a.md": "# a\n" });
-    saveSession(dir, { version: 1, tabs: [{ panes: [{ path: null as never, anchor: null as never }, { path: "a.md", anchor: "x" as never }], active: 9 }], activeTab: 5, sidebar: true });
-    const s = loadSession(dir)!;
+    const place = locateVault({ root: dir });
+    saveSession(place, { version: 1, tabs: [{ panes: [{ path: null as never, anchor: null as never }, { path: "a.md", anchor: "x" as never }], active: 9 }], activeTab: 5, sidebar: true });
+    const s = loadSession(place)!;
     expect(s.tabs[0]!.panes).toHaveLength(1);
     const config = structuredClone(DEFAULT_CONFIG);
     const loc = locateVault({ root: dir });
@@ -268,7 +270,7 @@ describe("low", () => {
     const layout = renderMarkdown("日本語\n", { width: 40, glyphs: unicode, showUrls: false });
     expect(selectedText(layout, { anchor: { row: 0, col: 1 }, line: false }, { row: 0, col: 3 })).toBe("日本");
   });
-  test("single-file mode applies the size cap and .gitignore", () => {
+  test("a loose folder (the home vault) applies the size cap and .gitignore", () => {
     const dir = mkdtempSync(join(sandbox, "single-"));
     writeFileSync(join(dir, ".gitignore"), "hidden.md\n");
     writeFileSync(join(dir, "hidden.md"), "#\n");
@@ -276,7 +278,7 @@ describe("low", () => {
     writeFileSync(join(dir, "ok.md"), "#\n");
     const cfg = structuredClone(DEFAULT_CONFIG);
     cfg.walk.max_file_size = 1000;
-    const g = openGraph({ root: dir, mode: "single", file: join(dir, "ok.md") }, cfg, false);
+    const g = openGraph(homeAt(dir, join(dir, "ok.md")), cfg, false);
     expect([...g.notes.keys()]).toEqual(["ok.md"]);
   });
   test("[[#heading]] renders without a leading separator", () => {

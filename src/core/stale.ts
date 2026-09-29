@@ -5,7 +5,7 @@
 import { readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { ensureDir, readJson, writeJson } from "./fsutil.ts";
-import { stateDir } from "./paths.ts";
+import { type Keyed, stateDir } from "./paths.ts";
 
 interface StaleFile {
   pid: number;
@@ -13,20 +13,20 @@ interface StaleFile {
   paths: string[];
 }
 
-function fileFor(root: string, pid: number): string {
-  return join(stateDir(root), "dirty", `${pid}.json`);
+function fileFor(v: Keyed, pid: number): string {
+  return join(stateDir(v), "dirty", `${pid}.json`);
 }
 
 /** Record this process's dirty paths; an empty list removes the file. */
-export function writeDirty(root: string, paths: string[], pid = process.pid): void {
-  const file = fileFor(root, pid);
+export function writeDirty(v: Keyed, paths: string[], pid = process.pid): void {
+  const file = fileFor(v, pid);
   if (!paths.length) {
     try {
       unlinkSync(file);
     } catch {}
     return;
   }
-  ensureDir(join(stateDir(root), "dirty"));
+  ensureDir(join(stateDir(v), "dirty"));
   writeJson(file, { pid, updated: new Date().toISOString(), paths } satisfies StaleFile);
 }
 
@@ -45,8 +45,8 @@ export interface StaleEntry {
 }
 
 /** Paths some live slipbox TUI holds unsaved. Files from dead pids are ignored (and pruned). */
-export function readStale(root: string): StaleEntry[] {
-  const dir = join(stateDir(root), "dirty");
+export function readStale(v: Keyed): StaleEntry[] {
+  const dir = join(stateDir(v), "dirty");
   let names: string[] = [];
   try {
     names = readdirSync(dir);

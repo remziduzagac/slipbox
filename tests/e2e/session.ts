@@ -53,6 +53,7 @@ export class Session {
       `XDG_CONFIG_HOME=${this.dir}/config`,
       `XDG_STATE_HOME=${this.dir}/state`,
       `XDG_CACHE_HOME=${this.dir}/cache`,
+      `XDG_DATA_HOME=${this.dir}/data`,
       `SLIPBOX_TRACE=${this.trace}`,
       // Its own config, whatever the shell exports (SLIPBOX_CONFIG would win over XDG_CONFIG_HOME).
       `SLIPBOX_CONFIG=${this.dir}/config/slipbox/config.toml`,
@@ -175,6 +176,7 @@ export class Session {
         XDG_CONFIG_HOME: `${this.dir}/config`,
         XDG_STATE_HOME: `${this.dir}/state`,
         XDG_CACHE_HOME: `${this.dir}/cache`,
+        XDG_DATA_HOME: `${this.dir}/data`,
         SLIPBOX_CONFIG: `${this.dir}/config/slipbox/config.toml`,
         SLIPBOX_CLIPBOARD: "file",
         NO_COLOR: "1",

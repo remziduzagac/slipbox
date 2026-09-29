@@ -82,8 +82,8 @@ These churn freely before 1.0:
 | --- | --- |
 | `ls` | `[{path, title, size, mtime, tags, links}]`; `--files` adds `[{path, group, format, size, mtime}]` |
 | `outline <note>` | `{path, headings[{depth, text, slug, line}]}` |
-| `init [dir]` | `{root, created}` |
-| `info` | root, mode, marker version, paths, index stats, skipped entries, stale |
+| `init [dir]` | `{root, created, identified, id, name}` — `--name N`; a name in use is exit 5 |
+| `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |
@@ -206,11 +206,15 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   it, so a note the walk leaves out for its size is still quick to reach. `find` shows a long line
   as a window around the match (`…` where cut), so its output grows with the matches, not with the
   line; a note it can't read is a warning, and the rest are still searched.
-- **What a writer may change.** `write`, `replace` and `task` change only a markdown note of a real
-  vault: inside it by its real path, and where the walk lists notes — never `.slipbox/`, `.git/`,
-  a hidden folder or `node_modules`, and never a path outside the vault (which would otherwise be
-  single-file mode there). `replace --dry-run` only reads, so it previews any note; its `newSha` is
-  `null`.
+- **What a writer may change.** `write`, `replace` and `task` change a file of the note's root — a
+  vault, a repository, or a loose file's own folder (`17.1`) — inside it by its real path, and
+  where the walk lists notes: never `.slipbox/`, `.git/`, a hidden folder or `node_modules`, and
+  never a path outside `--root` when that names the root. `replace --dry-run` only reads, so it
+  previews any note; its `newSha` is `null`.
+- **Where a command works.** The root is decided by the file: the nearest `.slipbox/` above the
+  note argument (or cwd), else its git repository, else the home vault (the file's own folder,
+  listed alone). `$HOME` and `/` are never a root. Each command records the vault in
+  `vaults.json`.
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4

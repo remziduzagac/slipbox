@@ -101,7 +101,7 @@ export class Graph {
     readonly loc: VaultLocation,
     readonly config: Config,
   ) {
-    this.filter = new WalkFilter(loc.root, config.walk);
+    this.filter = new WalkFilter(loc.root, config.walk, loc.mode === "repo");
   }
 
   get root(): string {
@@ -117,13 +117,14 @@ export class Graph {
    */
   build(useCache = true, parse: "all" | "lazy" = "all"): this {
     const t0 = performance.now();
-    const walk = this.loc.mode === "vault" ? walkVault(this.root, this.filter) : listDirectory(this.root, this.filter);
+    const walk = this.loc.mode === "home" ? listDirectory(this.root, this.filter) : walkVault(this.root, this.filter);
     this.dirs = walk.dirs;
     this.assets.clear();
     for (const a of walk.assets) this.addAsset(a);
     this.skipped = walk.skipped;
     this.errors = walk.errors;
-    this.useCache = useCache && this.loc.mode === "vault";
+    // A loose folder is listed, never indexed: nothing to keep.
+    this.useCache = useCache && this.loc.mode !== "home";
     const cached = this.useCache ? readJson<IndexFile | null>(this.cachePath, null) : null;
     const old = cached?.version === INDEX_VERSION ? cached.entries : {};
     let reused = 0;
@@ -154,7 +155,7 @@ export class Graph {
   private cacheDirty = false;
 
   private get cachePath(): string {
-    return join(cacheDir(this.root), "index.json");
+    return join(cacheDir(this.loc), "index.json");
   }
 
   /** Notes still waiting to be parsed. */
@@ -220,7 +221,7 @@ export class Graph {
     // A read failure is not a fact about the note: never cache it (chmod does not touch mtime).
     for (const [rel, e] of this.notes) if (!this.unparsed.has(rel) && !isUnreadable(e)) entries[rel] = e;
     try {
-      ensureDir(cacheDir(this.root));
+      ensureDir(cacheDir(this.loc));
       writeJson(this.cachePath, { version: INDEX_VERSION, entries } satisfies IndexFile);
     } catch (err) {
       this.errors.push(`cache: ${(err as Error).message}`);

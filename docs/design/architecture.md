@@ -58,7 +58,8 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
 | `core/paths.ts` | 0.10 | config, cache and state directories; the vault key |
 | `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
-| `core/vault.ts` | 1.1, 1.10, 0.12 | marker discovery, single-file mode, `init`, version stamp |
+| `core/vault.ts` | 1.1, 1.10, 0.12, 17.1 | a file's root: a vault, a repository, or the home vault; `init` |
+| `core/registry.ts` | 17.2–17.6 | a vault's identity, the home vault, the machine's vaults, storage keys, names |
 | `core/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
 | `core/wikilink.ts` | 1.3 | micromark tokenizer for `[[link]]` and `![[embed]]` |
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
@@ -146,7 +147,9 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | What | Where |
 | --- | --- |
 | user config | `$XDG_CONFIG_HOME/slipbox/config.toml` (or `--config`, `$SLIPBOX_CONFIG`) |
-| vault config | `<vault>/.slipbox/config.toml`, plus `.slipbox/version` |
+| vault config and identity | `<vault>/.slipbox/config.toml` (`[vault]`: `id`, `name`…), plus `.slipbox/version` |
+| the home vault's | `$XDG_DATA_HOME/slipbox/home/config.toml` |
+| the machine's vaults | `$XDG_STATE_HOME/slipbox/vaults.json` |
 | user themes | `$XDG_CONFIG_HOME/slipbox/themes/*.yaml` (base16 / base24) |
 | link index | `$XDG_CACHE_HOME/slipbox/<key>/index.json` |
 | reading positions | `$XDG_STATE_HOME/slipbox/<key>/positions.json` |
@@ -155,7 +158,8 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | scratch | `$XDG_STATE_HOME/slipbox/<key>/scratch.md`, or in the vault by config |
 | staleness | `$XDG_STATE_HOME/slipbox/<key>/dirty/<pid>.json` |
 
-`<key>` is `<basename>-<sha256(realpath)[:12]>`.
+`<key>` is the vault's id, else `<basename>-<sha256(realpath)[:12]>` (`docs/design/decisions.md`, `0.10`). The home
+vault's session is per loose folder: `sessions/<basename>-<hash>.json`.
 
 ## Performance, measured
 

@@ -126,8 +126,9 @@ spend a day on:
 - **Stack:** Bun + OpenTUI + remark. remark over marked because mdast carries source positions
   and slipbox edits. OpenTUI over Ink because Ink renders to a string and has no scroll
   container.
-- **Vault root** is a `.slipbox/` marker directory, with no git-root fallback — a fallback would
-  silently turn every repo you open into a vault.
+- **A file's root** is the nearest `.slipbox/` above it, else its git repository, else the home vault
+  (loose files, a folder at a time); `$HOME` and `/` never. Revised 2026-09-30 from "no git-root
+  fallback": a root now costs nothing in the folder. See `docs/idea.md`, "Vaults — decided".
 - **PKM layer in-process**, not by depending on a language server. slipbox *offering* an LSP is a
   separate and approved thing (phase 5).
 - **Editing:** an in-app editor *and* `$EDITOR` hand-off (or a running nvim). Live preview is a

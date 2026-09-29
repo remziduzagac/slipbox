@@ -1,4 +1,7 @@
-// Storage layout (decision 0.10, docs/design/decisions.md): config vs cache vs state.
+// Storage layout (decision 0.10, docs/design/decisions.md; 17.3): config vs cache vs state vs data.
+//
+// A vault's cache and state are found by its storage key (`VaultLocation.key`): its id when it has
+// one (so they survive moving the folder), else `<basename>-<hash12>` of its path.
 
 import { createHash } from "node:crypto";
 import { realpathSync } from "node:fs";
@@ -33,10 +36,31 @@ export function vaultKey(root: string): string {
   return `${name}-${hash}`;
 }
 
-export function cacheDir(root: string): string {
-  return join(xdg("XDG_CACHE_HOME", ".cache"), "slipbox", vaultKey(root));
+/** Anything that names a vault's storage: a `VaultLocation`, or just its key. */
+export interface Keyed {
+  key: string;
 }
 
-export function stateDir(root: string): string {
-  return join(xdg("XDG_STATE_HOME", ".local/state"), "slipbox", vaultKey(root));
+/** The vault's derived data: the index. Rebuilt if deleted. */
+export function cacheDir(v: Keyed): string {
+  return join(cacheHome(), v.key);
+}
+
+/** The vault's personal data: positions, the session, the scratch, redirects. */
+export function stateDir(v: Keyed): string {
+  return join(stateHome(), v.key);
+}
+
+export function cacheHome(): string {
+  return join(xdg("XDG_CACHE_HOME", ".cache"), "slipbox");
+}
+
+/** Personal state for the machine: `vaults.json`, and a directory per vault. */
+export function stateHome(): string {
+  return join(xdg("XDG_STATE_HOME", ".local/state"), "slipbox");
+}
+
+/** Kept data that is neither settings nor derived: the home vault's `.slipbox/` (17.2). */
+export function dataHome(): string {
+  return join(xdg("XDG_DATA_HOME", ".local/share"), "slipbox");
 }

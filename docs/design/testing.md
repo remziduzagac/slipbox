@@ -41,11 +41,11 @@ indexes a vault, a CLI test starts processes, and a loaded machine makes either 
 **Watcher tests wait for a condition, not a fixed time.** Events arrive asynchronously and more
 slowly under a loaded test run, so fixed sleeps made them flaky.
 
-**Isolation.** Every test file points `XDG_STATE_HOME`, `XDG_CACHE_HOME` and `XDG_CONFIG_HOME` at
-its own temp directory and drops `SLIPBOX_CONFIG` (which would win over them), so a developer's
-config, editor, themes or session never leak into a run; copies go to a file, never the clipboard
-(`SLIPBOX_CLIPBOARD=file`). TUI
-tests work on a temp copy of the fixture vault, so they can write, rename and delete notes.
+**Isolation.** Every test file points `XDG_STATE_HOME`, `XDG_CACHE_HOME`, `XDG_CONFIG_HOME` and
+`XDG_DATA_HOME` (the home vault) at its own temp directory and drops `SLIPBOX_CONFIG` (which would
+win over them), so a developer's config, editor, themes, session or list of vaults never leak into
+a run; copies go to a file, never the clipboard (`SLIPBOX_CLIPBOARD=file`). TUI tests work on a
+temp copy of the fixture vault, so they can write, rename and delete notes.
 
 ## The fixture vault (plan `0.5`)
 

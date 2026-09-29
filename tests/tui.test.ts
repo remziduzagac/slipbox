@@ -22,6 +22,7 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+process.env.XDG_DATA_HOME = join(sandbox, "data"); // the home vault (17.2)
 // Harnesses copy and index a vault, CLI tests start processes: slow on a loaded machine, not stuck.
 setDefaultTimeout(30_000);
 delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
@@ -1331,15 +1332,15 @@ describe("saving and conflicts (step 4)", () => {
   test("unsaved notes are listed for the CLI (the staleness file, 9.9) until saved or quit", async () => {
     const { readStale } = await import("../src/core/stale.ts");
     const { h, root } = await setup("x\n");
-    expect(readStale(root)).toEqual([]);
+    expect(readStale(h.app.loc)).toEqual([]);
     await h.keys("shift+a", "y", "escape");
-    expect(readStale(root).map((e) => e.path)).toEqual(["c.md"]);
+    expect(readStale(h.app.loc).map((e) => e.path)).toEqual(["c.md"]);
     await h.keys("ctrl+s");
-    expect(readStale(root)).toEqual([]);
+    expect(readStale(h.app.loc)).toEqual([]);
     await h.keys("shift+a", "z", "escape");
-    expect(readStale(root).map((e) => e.path)).toEqual(["c.md"]);
+    expect(readStale(h.app.loc).map((e) => e.path)).toEqual(["c.md"]);
     await h.keys(":", "q", "!", "enter");
-    expect(readStale(root)).toEqual([]);
+    expect(readStale(h.app.loc)).toEqual([]);
   });
   test("a hand-off saves first: the editor never gets a stale file", async () => {
     const { h, file } = await setup("x\n", (c) => (c.editor.command = "ed {file}"));
@@ -4182,7 +4183,7 @@ describe("review cycle 4 (TUI)", () => {
     h.app.handleMouse({ type: "up", x: load.x + 3, y: load.listY, button: 0 });
     expect(v.buf.dirty).toBe(false);
     const { readStale } = await import("../src/core/stale.ts");
-    expect(readStale(root).map((x) => x.path)).not.toContain("c.md");
+    expect(readStale(h.app.loc).map((x) => x.path)).not.toContain("c.md");
   });
   test(":s with \\r in a CRLF note keeps it CRLF; /gc and /g agree on a*", async () => {
     const root = makeVault();
@@ -4231,7 +4232,7 @@ describe("review cycle 5 (TUI, the session while running)", () => {
     await h.keys("j");
     const end = Date.now() + 4000;
     const current = () => {
-      const s = loadSession(root);
+      const s = loadSession(h.app.loc);
       return s ? s.tabs[s.activeTab]?.panes[s.tabs[s.activeTab]!.active]?.path : undefined;
     };
     while (current() !== "notes/beta.md" && Date.now() < end) await new Promise((r) => setTimeout(r, 50));
@@ -5174,7 +5175,7 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     expect(v.buf.source).toBe("lapha beta\n"); // nothing readable on the clipboard: the register
     // Something copied elsewhere (the clipboard file stands for the system clipboard here).
     const { stateDir } = await import("../src/core/paths.ts");
-    copyText("ZED", { osc52: () => false, fallbackDir: stateDir(root) });
+    copyText("ZED", { osc52: () => false, fallbackDir: stateDir(h.app.loc) });
     await h.keys("0", "shift+p");
     expect(v.buf.source).toBe("ZEDlapha beta\n");
     // A terminal paste in normal mode puts, as p does.

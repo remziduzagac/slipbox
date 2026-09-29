@@ -5,7 +5,7 @@ import { createCliRenderer, type KeyEvent } from "@opentui/core";
 import { flag, parseArgs } from "../cli/args.ts";
 import { loadConfig } from "../core/config.ts";
 import { openGraph } from "../core/graph.ts";
-import { locateVault } from "../core/vault.ts";
+import { locateVault, recordLocation, vaultConfigPath } from "../core/vault.ts";
 import { App } from "./app.ts";
 import { keyName } from "./keys.ts";
 import { AppRenderable, toRGBA } from "./opentui.ts";
@@ -14,7 +14,8 @@ export async function runTui(argv: string[]): Promise<number> {
   const args = parseArgs(argv);
   const path = args.positional[0];
   const loc = locateVault({ root: flag(args, "root"), path });
-  const loaded = loadConfig({ vaultRoot: loc.mode === "vault" ? loc.root : null, configFile: flag(args, "config") });
+  const loaded = loadConfig({ vaultFile: vaultConfigPath(loc), configFile: flag(args, "config") });
+  recordLocation(loc);
   const warnings = [...loaded.warnings];
   if (loc.note) warnings.push(loc.note);
   const graph = openGraph(loc, loaded.config, true, "lazy");

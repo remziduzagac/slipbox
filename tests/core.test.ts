@@ -29,6 +29,7 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-core-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+process.env.XDG_DATA_HOME = join(sandbox, "data"); // the home vault (17.2)
 delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
 process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
@@ -565,9 +566,10 @@ describe("review cycle 1 (core)", () => {
     symlinkSync(join(root, "secret.txt"), join(root, "scratch.md"));
     const cfg = structuredClone(loadConfig({ vaultRoot: null }).config);
     cfg.capture.location = "vault";
-    expect(scratchLocation(root, cfg).path).not.toBe(join(root, "scratch.md"));
+    const owner = { root, key: "scr", mode: "vault" };
+    expect(scratchLocation(owner, cfg).path).not.toBe(join(root, "scratch.md"));
     rmSync(join(root, "scratch.md"));
-    expect(scratchLocation(root, cfg).path).toBe(join(root, "scratch.md"));
+    expect(scratchLocation(owner, cfg).path).toBe(join(root, "scratch.md"));
   });
   test("regex ^ and $ are a line's; $ in CRLF ends before the \\r; empty matches only when asked", () => {
     const re = (q: string) => compilePattern(q, { regex: true, whole: false }) as RegExp;

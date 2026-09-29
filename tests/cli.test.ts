@@ -20,6 +20,7 @@ const env = {
   XDG_STATE_HOME: join(sandbox, "state"),
   XDG_CACHE_HOME: join(sandbox, "cache"),
   XDG_CONFIG_HOME: join(sandbox, "config"),
+  XDG_DATA_HOME: join(sandbox, "data"), // the home vault (17.2)
   NO_COLOR: "1",
   SLIPBOX_CLIPBOARD: "file", // never the developer's clipboard
   // The sandbox's own config: an exported SLIPBOX_CONFIG would win over XDG_CONFIG_HOME and could
@@ -295,13 +296,16 @@ describe("the vault and the tool", () => {
     expect(slipbox(["read", ".hidden/note.md"]).out).toBe("hidden text\n");
     expect(slipbox(["find", "hidden", ".hidden/note.md", "--json"]).json.data.count).toBe(1);
   });
-  test("review cycle 2: writers change only notes in the vault; find survives a bad note; argument checks", () => {
+  test("review cycle 2: writers change only notes in the note's root; find survives a bad note; argument checks", () => {
     const outsideDir = mkdtempSync(join(tmpdir(), "slipbox-cli-out2-"));
     writeFileSync(join(outsideDir, "outside.md"), "keep\n");
-    // An existing path outside the vault is single-file mode there: never written.
-    expect(slipbox(["write", join(outsideDir, "outside.md"), "clobbered"]).code).toBe(5);
-    expect(slipbox(["replace", join(outsideDir, "outside.md"), "keep", "X"]).code).toBe(5);
+    // With --root naming the vault, a path outside it is refused: never written.
+    expect(slipbox(["write", "--root", vault, join(outsideDir, "outside.md"), "clobbered"]).code).not.toBe(0);
+    expect(slipbox(["replace", "--root", vault, join(outsideDir, "outside.md"), "keep", "X"]).code).not.toBe(0);
     expect(readFileSync(join(outsideDir, "outside.md"), "utf8")).toBe("keep\n");
+    // Named by its path alone, a loose file is the home vault's, its folder the root (17.2).
+    expect(slipbox(["replace", join(outsideDir, "outside.md"), "keep", "kept"]).code).toBe(0);
+    expect(readFileSync(join(outsideDir, "outside.md"), "utf8")).toBe("kept\n");
     // Files that aren't notes, or where the vault lists none.
     mkdirSync(join(vault, ".slipbox"), { recursive: true });
     writeFileSync(join(vault, ".slipbox", "config.toml"), "# vault config\n");

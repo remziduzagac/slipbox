@@ -9,7 +9,7 @@ import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import { type Config, isSafeRelative } from "./config.ts";
 import { atomicWrite, ensureDir, landsInside, readRegular } from "./fsutil.ts";
-import { stateDir } from "./paths.ts";
+import { type Keyed, stateDir } from "./paths.ts";
 import { sanitize } from "./sanitize.ts";
 
 export interface ScratchLocation {
@@ -18,11 +18,19 @@ export interface ScratchLocation {
   project: string;
 }
 
-/** Where the scratch lives for a project (0.10 / 8.2). */
-export function scratchLocation(project: string, config: Config): ScratchLocation {
+/** The vault a scratch belongs to: its root, its storage key, and what kind of root it is. */
+export interface ScratchOwner extends Keyed {
+  root: string;
+  mode: string;
+}
+
+/** Where the scratch lives for a vault (0.10 / 8.2): in its state, or in the vault itself when
+ *  `capture.location` says so (never in a loose folder: those are the home vault's). */
+export function scratchLocation(owner: ScratchOwner, config: Config): ScratchLocation {
+  const project = owner.root;
   // Config validation already refuses an unsafe name; this holds even if one got through.
   const file = isSafeRelative(config.capture.file) && /\.(md|markdown)$/i.test(config.capture.file) ? config.capture.file : "scratch.md";
-  if (config.capture.location === "vault") {
+  if (config.capture.location === "vault" && owner.mode !== "home") {
     // In the vault, a committed symlink could make the scratch read a file from anywhere (and copy
     // it into the vault) or write out of it: then it lives in the state dir, as by default.
     const path = join(project, file);
@@ -32,7 +40,7 @@ export function scratchLocation(project: string, config: Config): ScratchLocatio
     } catch {}
     if (!linked && landsInside(project, path)) return { path, project };
   }
-  return { path: join(stateDir(project), file), project };
+  return { path: join(stateDir(owner), file), project };
 }
 
 export class CaptureError extends Error {}

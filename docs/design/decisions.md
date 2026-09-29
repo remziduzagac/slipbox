@@ -6,26 +6,35 @@ here.
 
 ## `0.10` — storage layout
 
-Three kinds of data, three places. Nothing derived ever lives in the vault.
+Four kinds of data, four places. Nothing derived ever lives in the vault. Revised 2026-09-30 by the vault design
+(`docs/idea.md`, "Vaults — decided 2026-09-30"; plan `17.3`).
 
 | Kind | Location | Holds | Safe to delete |
 | --- | --- | --- | --- |
-| config | `$XDG_CONFIG_HOME/slipbox/config.toml`, then `<vault>/.slipbox/config.toml` | user and vault settings | no |
+| config | `$XDG_CONFIG_HOME/slipbox/config.toml`, then the vault's | user and vault settings | no |
 | cache | `$XDG_CACHE_HOME/slipbox/<key>/` | the persisted link index | yes, rebuilt on demand |
 | state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness | loses your place |
+| state, the machine's | `$XDG_STATE_HOME/slipbox/vaults.json` | the vaults this machine has seen | re-added on open |
+| data | `$XDG_DATA_HOME/slipbox/home/` | the home vault's `.slipbox/`: its config | a new id: loses state |
 
-XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`) on macOS too — the
-terminal stack here is XDG-shaped on both machines.
+XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) on
+macOS too — the terminal stack here is XDG-shaped on both machines.
 
-**The key** is `<basename>-<hash>`, where the hash is the first 12 hex characters of SHA-256 over the vault root's
-**real path**. The basename is only there so a human can find the directory.
+**The key** is the vault's `id` when it has one — `[vault] id` in `.slipbox/config.toml`, random, made by
+`slipbox init` and never changed — so its cache and state survive moving the folder. A repository without
+`.slipbox/`, or a vault whose config declares no id yet, keys by path: `<basename>-<hash>`, the hash the first 12 hex
+characters of SHA-256 over the root's **real path**, the basename only there so a human can find the directory. When
+a vault gets its id, the state under its path's key moves over once. Loose files (the home vault) key by the home
+vault's id.
 
 Consequences, accepted deliberately:
 
 - State does not travel between the Mac and the VMs. Reading position is machine-local anyway.
-- Every git worktree of one repo keys separately. Right for the graph (a `[[link]]` resolves to different content per
-  branch) and tolerable for reading position.
-- Single-file mode keys on the file's directory.
+- **A copy of a vault carries its id** (`cp -r`, a second clone, a worktree). The copy that isn't where
+  `vaults.json` last saw the vault keys by `<id>-<hash>` of its path, so two live copies never share a session; when
+  the original is gone (the folder was moved), the copy is the vault and takes the id's key.
+- The home vault holds every loose folder: its positions are keyed by absolute path, and each folder has its own
+  session (`sessions/<basename>-<hash>.json`).
 
 **The scratch (`8.2`)** lives in the state dir by default, because a scratch inside the repo gets committed by
 accident. It is not invisible to agents: `slipbox scratch path` and `slipbox scratch show` expose it. Setting
@@ -44,7 +53,10 @@ One predicate, used by both the walk and the watcher (`5.2` is this decision see
   follows git's default `core.ignorecase`: insensitive on macOS, sensitive on Linux.
 - **`walk.exclude`** adds gitignore-syntax patterns from config.
 - **Nested vaults are boundaries.** A subdirectory holding its own `.slipbox/` is a different vault and is not
-  walked. One vault per repo is the norm; this keeps a fixture vault inside a repo from leaking into it.
+  walked. One vault per repo is the norm; this keeps a fixture vault inside a repo from leaking into it. **A
+  repository root** (no `.slipbox/`, plan `17.1`) also stops at a nested repository (a `.git` in a subdirectory: a
+  submodule, a clone): the nearest root holds each file. A vault walks into a repository inside it — the nearest
+  `.slipbox/` wins.
 - **Symlinks:** a symlinked *file* is included when its real path is inside the vault root, unless that target is
   already walked, since the same note twice would double every backlink. A symlinked *directory* is never followed:
   no cycles, no escaping the root. Anything pointing outside the root is skipped and reported (`7.5` constraint),
@@ -53,7 +65,8 @@ One predicate, used by both the walk and the watcher (`5.2` is this decision see
   FIFO where a note, `.gitignore`, `.slipbox/config.toml` or `.slipbox/version` should be. Every such read
   (`readRegular` in `core/fsutil.ts`) opens without blocking and refuses anything but a regular file, and the small
   files have a size cap (1 MB), so a hostile vault gets a warning, never a hang.
-- **Single-file mode** applies the same filter and size cap to its one directory.
+- **A loose folder** (the home vault, `17.2`) applies the same filter and size cap to its one directory, not below
+  it.
 - **Size cap:** files over `walk.max_file_size` (default 4 MiB) are listed as skipped, not parsed.
 - **Errors never abort.** Unreadable directories and files are collected and reported as warnings.
 - **Encoding:** read as UTF-8. Invalid sequences decode to U+FFFD and the file is flagged; a BOM is noted and
@@ -113,7 +126,7 @@ One policy everywhere, never the filesystem's:
 - **Markdown links** `[t](path.md)` resolve relative to the linking note; a leading `/` means the vault root.
 - **Non-markdown targets** (`![[diagram.png]]`) resolve relative to the note, then the vault root,
   then by file name anywhere in the vault (several matches are ambiguous).
-- **Single-file mode** resolves only within the file's own directory.
+- **A loose file** (the home vault) resolves only within its own directory, not below it.
 
 This opens an existing Obsidian vault unchanged for the default "shortest path when possible" setting.
 

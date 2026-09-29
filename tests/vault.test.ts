@@ -1,14 +1,14 @@
 // The fixture vault (0.5) against the walk (0.11), discovery (1.1), the graph and the CLI (9.x).
 
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { CLI_COMMANDS, runCli } from "../src/cli/cli.ts";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
-import { DEFAULT_CONFIG } from "../src/core/config.ts";
+import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
-import { findVaultRoot, locateVault } from "../src/core/vault.ts";
+import { findVaultRoot, initVault, locateVault } from "../src/core/vault.ts";
 
 const VAULT = join(import.meta.dir, "fixtures", "vault");
 
@@ -17,6 +17,7 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-test-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+process.env.XDG_DATA_HOME = join(sandbox, "data"); // the home vault (17.2)
 delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
 process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 
@@ -25,14 +26,69 @@ describe("vault discovery (1.1)", () => {
     expect(findVaultRoot(join(VAULT, "notes", "alpha.md"))).toBe(VAULT);
     expect(findVaultRoot(join(VAULT, "nested-vault", "inner.md"))).toBe(join(VAULT, "nested-vault"));
   });
-  test("no marker means single-file mode, never a git-root fallback", () => {
-    const dir = mkdtempSync(join(tmpdir(), "slipbox-single-"));
+  test("no marker: the git repository is the root (17.1)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-repo-"));
     mkdirSync(join(dir, ".git"));
+    mkdirSync(join(dir, "docs"));
+    writeFileSync(join(dir, "docs", "n.md"), "# n\n");
+    const loc = locateVault({ path: join(dir, "docs", "n.md") });
+    expect(loc.mode).toBe("repo");
+    expect(loc.root).toBe(dir);
+    expect(loc.id).toBeNull();
+    expect(loc.name).toBeNull();
+    // A worktree's or submodule's .git is a file: a root too.
+    const wt = mkdtempSync(join(tmpdir(), "slipbox-worktree-"));
+    writeFileSync(join(wt, ".git"), "gitdir: /elsewhere\n");
+    writeFileSync(join(wt, "n.md"), "# n\n");
+    expect(locateVault({ path: join(wt, "n.md") }).root).toBe(wt);
+  });
+  test("neither: the home vault — the loose file's folder, keyed by the home vault's id (17.2)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
     writeFileSync(join(dir, "n.md"), "# n\n");
     const loc = locateVault({ path: join(dir, "n.md") });
-    expect(loc.mode).toBe("single");
+    expect(loc.mode).toBe("home");
     expect(loc.root).toBe(dir);
-    expect(loc.note).toContain("slipbox init");
+    expect(loc.name).toBe("home");
+    // Made on first use, in the data directory: its .slipbox/, with an id that never changes.
+    const cfg = readFileSync(join(process.env.XDG_DATA_HOME!, "slipbox", "home", "config.toml"), "utf8");
+    expect(cfg).toContain(`id = "${loc.id}"`);
+    expect(cfg).toContain('name = "home"');
+    expect(loc.key).toBe(loc.id!);
+    const other = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
+    expect(locateVault({ path: other }).key).toBe(loc.key);
+  });
+  test("a repository's walk stops at a nested repository; a vault's walks into one (17.1)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-nest-"));
+    mkdirSync(join(dir, ".git"));
+    mkdirSync(join(dir, "sub", ".git"), { recursive: true });
+    writeFileSync(join(dir, "top.md"), "# top\n");
+    writeFileSync(join(dir, "sub", "inner.md"), "# inner\n");
+    const repo = openGraph(locateVault({ path: dir }), DEFAULT_CONFIG, false);
+    expect([...repo.notes.keys()]).toEqual(["top.md"]);
+    expect(repo.skipped).toContainEqual({ rel: "sub", reason: "nested repository" });
+    expect(locateVault({ path: join(dir, "sub", "inner.md") }).root).toBe(join(dir, "sub"));
+    mkdirSync(join(dir, ".slipbox"));
+    const vault = openGraph(locateVault({ path: dir }), DEFAULT_CONFIG, false);
+    expect([...vault.notes.keys()].sort()).toEqual(["sub/inner.md", "top.md"]);
+    expect(locateVault({ path: join(dir, "sub", "inner.md") }).root).toBe(dir);
+  });
+  test("$HOME and / are never a root, whatever they hold (17.1)", () => {
+    const home = mkdtempSync(join(tmpdir(), "slipbox-home-"));
+    mkdirSync(join(home, ".git"));
+    mkdirSync(join(home, ".slipbox"));
+    mkdirSync(join(home, "notes"));
+    writeFileSync(join(home, "notes", "n.md"), "# n\n");
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      expect(findVaultRoot(join(home, "notes", "n.md"))).toBeNull();
+      const loc = locateVault({ path: join(home, "notes", "n.md") });
+      expect(loc.mode).toBe("home");
+      expect(loc.root).toBe(join(home, "notes"));
+      expect(() => initVault(home)).toThrow(/never indexes/);
+    } finally {
+      process.env.HOME = before;
+    }
   });
   test("--root takes precedence", () => {
     expect(locateVault({ root: join(VAULT, "notes"), path: join(VAULT, "notes", "alpha.md") }).root).toBe(join(VAULT, "notes"));
@@ -262,15 +318,15 @@ describe("review cycle 5 (the repo carries the demo vault)", () => {
   });
 });
 
-describe("review cycle 5 (vault, single-file mode)", () => {
-  test("a folder with no .slipbox above it is single-file mode: its notes, no vault walk", () => {
-    const dir = mkdtempSync(join(tmpdir(), "slipbox-single-"));
+describe("review cycle 5 (vault, a loose folder)", () => {
+  test("a folder with no .slipbox or repository above it is listed alone: its notes, no walk", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
     mkdirSync(join(dir, "sub"));
     writeFileSync(join(dir, "a.md"), "# A\n\n[[b]]\n");
     writeFileSync(join(dir, "b.md"), "# B\n");
     writeFileSync(join(dir, "sub", "c.md"), "# C\n");
     const loc = locateVault({ path: dir, cwd: dir });
-    expect(loc.mode).toBe("single");
+    expect(loc.mode).toBe("home");
     const g = openGraph(loc, DEFAULT_CONFIG, false);
     expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md"]);
   });
@@ -406,5 +462,134 @@ describe("the demo vault's code samples", () => {
       expect([rel, tree.outline().length > 0]).toEqual([rel, true]);
       for (const l of g.linksOf(rel)) expect([rel, l.target, l.resolvedKind]).not.toContainEqual("unresolved");
     }
+  });
+});
+
+describe("vault identity, storage and the machine's vaults (17.3–17.6)", () => {
+  const io = (cwd: string) => {
+    const out: string[] = [];
+    const err: string[] = [];
+    return { io: { out: (s: string) => out.push(s), err: (s: string) => err.push(s), stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env }, out, err };
+  };
+  const cli = async (args: string[], cwd: string) => {
+    const r = io(cwd);
+    const code = await runCli(args, r.io);
+    return { code, out: r.out.join(""), err: r.err.join(""), json: args.includes("--json") ? JSON.parse(r.out.join("")) : null };
+  };
+  const fresh = (prefix: string) => mkdtempSync(join(tmpdir(), `slipbox-${prefix}-`));
+
+  test("init gives a vault an id and a name (the folder's), in [vault]; the config loader skips it", async () => {
+    const dir = join(fresh("init"), "Field Notes");
+    mkdirSync(dir);
+    const r = await cli(["init", dir, "--json"], dir);
+    expect(r.code).toBe(0);
+    expect(r.json.data).toMatchObject({ created: true, name: "Field-Notes" });
+    const cfg = readFileSync(join(dir, ".slipbox", "config.toml"), "utf8");
+    expect(cfg).toContain(`[vault]\nid = "${r.json.data.id}"\nname = "Field-Notes"`);
+    const loc = locateVault({ path: dir });
+    expect(loc).toMatchObject({ mode: "vault", id: r.json.data.id, name: "Field-Notes", key: r.json.data.id });
+    // [vault] is identity, not a setting: no "unknown key" warning.
+    const info = await cli(["info", "--json"], dir);
+    expect(info.json.warnings).toEqual([]);
+    expect(info.json.data.vault).toMatchObject({ id: r.json.data.id, name: "Field-Notes" });
+    // …and in the user's config it's a mistake worth a word.
+    const user = join(fresh("user"), "config.toml");
+    writeFileSync(user, '[vault]\nname = "x"\n');
+    expect(loadConfig({ configFile: user }).warnings.join()).toContain("[vault] belongs in a vault's");
+  });
+
+  test("init on a vault without an id adds one, keeping its comments; its old state moves over", async () => {
+    const dir = fresh("old");
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, ".slipbox", "config.toml"), "# mine\n[walk]\nexclude = [\"x/\"]\n");
+    const before = locateVault({ path: dir });
+    expect(before.id).toBeNull();
+    expect(before.name).toBe(basename(dir)); // the folder's, until one is declared
+    // Positions saved under the path's key before the vault had an id.
+    const { PositionStore } = await import("../src/core/position.ts");
+    const ps = new PositionStore(before);
+    ps.set("a.md", { heading: null, headingIndex: 0, offset: 0, line: 7 });
+    ps.save();
+    const r = await cli(["init", "--json"], dir);
+    expect(r.json.data).toMatchObject({ created: false, identified: true });
+    const cfg = readFileSync(join(dir, ".slipbox", "config.toml"), "utf8");
+    expect(cfg.startsWith("# mine\n[walk]\nexclude = [\"x/\"]\n")).toBe(true);
+    const after = locateVault({ path: dir });
+    expect(after.key).toBe(r.json.data.id);
+    expect(new PositionStore(after).get("a.md")?.line).toBe(7);
+    // Again: nothing to do.
+    expect((await cli(["init", "--json"], dir)).json.data).toMatchObject({ created: false, identified: false });
+  });
+
+  test("names: a vault inside vault x is suggested x-<folder>; a known name is refused with a suggestion (17.5)", async () => {
+    const top = join(fresh("names"), "x");
+    mkdirSync(join(top, "plan"), { recursive: true });
+    expect((await cli(["init", top, "--name", "xnames", "--json"], top)).json.data.name).toBe("xnames");
+    const inner = await cli(["init", join(top, "plan"), "--json"], top);
+    expect(inner.json.data.name).toBe("xnames-plan");
+    const other = join(fresh("names"), "y");
+    mkdirSync(other);
+    const refused = await cli(["init", other, "--name", "xnames", "--json"], other);
+    expect(refused.code).toBe(5);
+    expect(refused.json.error.message).toContain('a vault named "xnames" is already at');
+    expect(refused.json.error.message).toContain('try "y"');
+    expect((await cli(["init", other, "--name", "home"], other)).code).toBe(5);
+    expect((await cli(["init", other, "--name", "a:b"], other)).code).toBe(5);
+    // The folder's name when free; a taken one gets -2.
+    const again = join(fresh("names"), "xnames");
+    mkdirSync(again);
+    expect((await cli(["init", again, "--json"], again)).json.data.name).toBe("xnames-2");
+  });
+
+  test("a copy of a vault (same id) keys its state apart while the original is there; a move keeps it (17.3)", async () => {
+    const a = fresh("orig");
+    const r = await cli(["init", a, "--name", "orig", "--json"], a);
+    const id = r.json.data.id;
+    expect(locateVault({ path: a }).key).toBe(id);
+    const b = fresh("copy");
+    cpSync(join(a, ".slipbox"), join(b, ".slipbox"), { recursive: true });
+    const copy = locateVault({ path: b });
+    expect(copy.id).toBe(id);
+    expect(copy.key).not.toBe(id);
+    expect(copy.key.startsWith(`${id}-`)).toBe(true);
+    // The original moved away (gone from where the list saw it): the copy is the vault now.
+    rmSync(a, { recursive: true });
+    expect(locateVault({ path: b }).key).toBe(id);
+  });
+
+  test("the machine's vaults: each open is recorded once, with its name, kind and path (17.6)", async () => {
+    const { readRegistry, registryFile } = await import("../src/core/registry.ts");
+    const dir = fresh("reg");
+    const r = await cli(["init", dir, "--name", "regvault", "--json"], dir);
+    await cli(["ls"], dir);
+    const entry = readRegistry().find((v) => v.id === r.json.data.id)!;
+    expect(entry).toMatchObject({ kind: "vault", name: "regvault", path: dir });
+    // Opened again at once: nothing changed, nothing written.
+    const stamp = statSync(registryFile()).mtimeMs;
+    await Bun.sleep(20);
+    await cli(["ls"], dir);
+    expect(statSync(registryFile()).mtimeMs).toBe(stamp);
+    const repo = fresh("regrepo");
+    mkdirSync(join(repo, ".git"));
+    await cli(["ls"], repo);
+    expect(readRegistry().find((v) => v.path === repo)).toMatchObject({ kind: "repo", id: null, name: null });
+  });
+
+  test("the home vault keeps every loose folder's positions by absolute path, and a session per folder", async () => {
+    const { PositionStore, loadSession, saveSession } = await import("../src/core/position.ts");
+    const one = fresh("l1");
+    const two = fresh("l2");
+    const a = locateVault({ path: one });
+    const b = locateVault({ path: two });
+    expect(a.key).toBe(b.key);
+    const pa = new PositionStore(a);
+    pa.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 3 });
+    pa.save();
+    const pb = new PositionStore(b);
+    expect(pb.get("n.md")).toBeNull(); // another folder's n.md
+    expect(pb.get(join(one, "n.md"))?.line).toBe(3);
+    saveSession(a, { version: 1, tabs: [{ panes: [{ path: "n.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }], active: 0 }], activeTab: 0, sidebar: true });
+    expect(loadSession(a)?.tabs).toHaveLength(1);
+    expect(loadSession(b)).toBeNull();
   });
 });
