@@ -4715,6 +4715,28 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
   });
 });
 
+describe("YAML and JSON as a tree (16.12)", () => {
+  test("guides at every depth; branches in the outline and breadcrumb; a $ref's JSON pointer followed", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "deploy.yaml"), "service: nightjar\ncontainers:\n  - name: api\n    health:\n      path: /v2/health\n      probe: {interval_s: 10}\n  - name: backup\nports: [8080]\n");
+    writeFileSync(join(root, "api.json"), '{\n  "paths": {\n    "/f": { "$ref": "#/components/schemas/Frame" }\n  },\n  "components": {\n    "schemas": {\n      "Other": { "type": "string" },\n      "Frame": { "type": "object" }\n    }\n  }\n}\n');
+    const h = await harness({ root, open: "deploy.yaml", width: 100 });
+    const v = h.app.view!;
+    const f = h.frame();
+    expect(f).toMatch(/ containers\n.*├─ 1\n.*│  ├─ name  api/);
+    expect(f).toMatch(/│  └─ health\n.*│     ├─ path   \/v2\/health/);
+    expect(f).toMatch(/ ports\s+\[8080\]/); // a top-level key after the nested ones: at the top again
+    expect(h.app.currentLayout(v).headings.map((x) => [x.level, x.text])).toEqual([[1, "containers"], [2, "1"], [3, "health"], [2, "2"]]);
+    h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.src === 5), col: 0 });
+    expect(h.frame()).toMatch(/containers\s*›\s*1\s*›\s*health/);
+    await h.app.run("note.open api.json");
+    const l = h.app.currentLayout(v).links.find((x) => x.target.startsWith("#/"))!;
+    h.app.moveCursor(v, { row: l.line, col: l.col });
+    await h.keys("enter");
+    expect(rowText(h)).toContain("Frame"); // the pointer's row, not "Other"
+  });
+});
+
 describe("links in code comments in the TUI (16.10)", () => {
   test("a comment's path is drawn as a link; enter opens it, `path:line` at that line", async () => {
     const root = makeVault();

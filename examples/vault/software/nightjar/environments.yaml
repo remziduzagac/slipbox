@@ -1,0 +1,22 @@
+# One document per environment (`---` between them), as the deploy tool reads them.
+name: production
+host: nightjar.halden-ridge.invalid
+replicas: 2
+database:
+  path: /srv/nightjar/frames.db
+  backup:
+    every_hours: 6
+    keep: 28
+---
+name: staging
+host: ridge-arch.local
+replicas: 1
+database:
+  path: /tmp/nightjar/frames.db
+---
+name: laptop
+host: localhost
+replicas: 1
+features:
+  - thumbnails
+  - public-api

@@ -898,19 +898,36 @@ describe("data files read as documents (16.11–16.13)", () => {
     expect(d.tree.children.some((n) => n.type === "table")).toBe(true); // [[s]] ×2 → a table
     expect(parseData("toml", "[bad\n").error).toBeTruthy();
   });
-  test("YAML and JSON: nested maps as headings, lists of records as tables, positions from the text", async () => {
-    const { parseData } = await import("../src/core/data.ts");
-    const y = parseData("yaml", "a: 1\nb:\n  c: true\n  d: [x, y]\nrows:\n  - k: 1\n  - k: 2\n");
+  test("YAML and JSON as a tree: a row per key with its place, branches, records as tables, positions", async () => {
+    const { parseData, dataOutline } = await import("../src/core/data.ts");
+    const y = parseData("yaml", "a: 1\nb:\n  c: true\n  d: [x, y]\n  e:\n    f: 1\n    g: {h: 1, $ref: x.json}\nrows:\n  - k: 1\n  - k: 2\nv:\n  - {n: 1, deep: {z: 1}}\n  - {n: 2}\n");
     expect(y.error).toBeNull();
-    expect(headings(y.tree)).toEqual(["b", "rows"]);
-    expect(fields(y.tree).map((x) => [x.key, x.value, x.kind, x.position.start.line])).toEqual([
-      ["a", "1", "number", 1],
-      ["c", "true", "boolean", 3],
-      ["d", "[x, y]", "list", 4],
+    const rows = (y.tree.children as unknown as { type: string; key?: string; value?: string; keyLine?: number; tree?: { lasts: boolean[]; branch?: boolean } }[]).map((n) =>
+      n.type === "dataField" ? [n.key, n.value, n.tree!.lasts.map((l) => (l ? "L" : "|")).join(""), n.tree!.branch ? "branch" : "", n.keyLine] : [n.type],
+    );
+    expect(rows).toEqual([
+      ["a", "1", "", "", 1],
+      ["b", "", "", "branch", 2],
+      ["c", "true", "|", "", 3],
+      ["d", "[x, y]", "|", "", 4], // a list of scalars reads inline
+      ["e", "", "L", "branch", 5],
+      ["f", "1", "L|", "", 6],
+      ["g", "", "LL", "branch", 7], // small, but it holds a $ref: its rows show the link
+      ["h", "1", "LL|", "", 7],
+      ["$ref", "x.json", "LLL", "", 7],
+      ["rows", "", "", "branch", 8],
+      ["table"], // records: a table in the tree
+      ["v", "", "", "branch", 11],
+      ["1", "", "|", "branch", 12], // one item has depth, so every object item opens
+      ["n", "1", "||", "", 12],
+      ["deep", "{z: 1}", "|L", "", 12],
+      ["2", "", "L", "branch", 13],
+      ["n", "2", "LL", "", 13],
     ]);
+    expect(dataOutline(y.tree).map((h) => [h.depth, h.text])).toEqual([[1, "b"], [2, "e"], [3, "g"], [1, "rows"], [1, "v"], [2, "1"], [2, "2"]]);
     const j = parseData("json", '{\n  "name": "s",\n  // a comment\n  "deps": {"a": "1"}\n}\n');
     expect(j.error).toBeNull(); // jsonc comments are allowed
-    expect(headings(j.tree)).toEqual(["deps"]);
+    expect((j.tree.children[1] as unknown as { key: string; value: string }).value).toBe("{a: 1}"); // small and plain: inline
     expect(parseData("json", '{"a": }').error).toBeTruthy();
     expect(parseData("yaml", "a: [1, 2\n").error).toBeTruthy();
   });

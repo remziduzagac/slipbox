@@ -6,7 +6,7 @@
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
 import type { OrgHeadline } from "../org.ts";
 import type { Glyphs } from "../glyphs.ts";
-import { type DataComment, type DataField, fieldLink } from "../data.ts";
+import { type DataComment, type DataField, fieldLink, type TreePlace } from "../data.ts";
 import { headingText, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
@@ -226,7 +226,8 @@ function blocks(nodes: RootContent[], ctx: Ctx, width: number, base: Style, fm?:
 function joined(prev: RootContent | undefined, node: RootContent): boolean {
   const row = (n: RootContent | undefined) => {
     const t = (n as { type?: string } | undefined)?.type;
-    return t === "dataField" || t === "dataComment";
+    // A data file's rows follow each other, a table in its tree too (no gap breaks the guides).
+    return t === "dataField" || t === "dataComment" || (t === "table" && !!placeOf(n as RootContent));
   };
   return row(prev) && row(node);
 }
@@ -255,8 +256,14 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
         ctx.nesting--;
       }
     }
-    case "table":
-      return table(node, ctx, width);
+    case "table": {
+      // A table of records in a data file's tree (16.12): under its key, inside the guides.
+      const place = placeOf(node);
+      if (!place?.lasts.length) return table(node, ctx, width);
+      const guide = guides(place.lasts, "down", ctx);
+      const w = guide.reduce((a, s) => a + stringWidth(s.text), 0);
+      return prefixed(table(node, ctx, Math.max(8, width - w)), guide, srcOf(node), true);
+    }
     case "html":
       return htmlBlock(node.value, srcOf(node), width);
     case "yaml":
@@ -278,7 +285,7 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
     default:
       if ((node.type as string) === "toml") return frontmatterBlock(fm ?? null, (node as { value: string }).value, srcOf(node), ctx, width);
       if ((node.type as string) === "dataField") return dataField(node as unknown as DataField, ctx, width);
-      if ((node.type as string) === "dataComment") return dataComment(node as unknown as DataComment, width);
+      if ((node.type as string) === "dataComment") return dataComment(node as unknown as DataComment, width, ctx);
       // Unknown block: show its text rather than lose it.
       return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
   }
@@ -556,10 +563,49 @@ function frontmatterBlock(fm: Frontmatter | null, raw: string, src: number, ctx:
   return out;
 }
 
+/** A table's place in a data file's tree, if it has one. */
+function placeOf(n: RootContent): TreePlace | undefined {
+  return (n.data as { tree?: TreePlace } | undefined)?.tree;
+}
+
+/**
+ * The guides before a row of a data file's tree (16.12), from its place: `row`, its own first row
+ * (├─ or └─ at its level); `down`, a row below it that is still its (a wrapped value, a table);
+ * `above`, comment lines above it (its parent's line running down to it). The top level has none.
+ */
+function guides(lasts: boolean[], at: "row" | "down" | "above", ctx: Ctx): Span[] {
+  const g = ctx.opts.glyphs;
+  const n = lasts.length;
+  if (!n) return [];
+  let text = "";
+  for (let i = 0; i < n - 1; i++) text += lasts[i] ? "   " : `${g.guide}  `;
+  if (at === "row") text += `${lasts[n - 1] ? g.guideLast : g.guideBranch}${g.guideDash} `;
+  else if (at === "above") text += `${g.guide}  `;
+  else text += lasts[n - 1] ? "   " : `${g.guide}  `;
+  return [{ text, role: "table_border", attrs: 0 }];
+}
+
 /** A data file's key and value (16.11): drawn like frontmatter's properties, the value coloured
- *  by its kind, a comment dimmed after it; the key column shared by the section's keys. */
+ *  by its kind, a comment dimmed after it; the key column shared by the section's keys. In a tree
+ *  (YAML, JSON), inside its guides; a branch (an object's key) is a row of the outline. */
 function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
   const src = srcOf(f as unknown as Nodes);
+  const place = f.tree;
+  const lead = place ? guides(place.lasts, "row", ctx) : [];
+  const leadW = lead.reduce((a, s) => a + stringWidth(s.text), 0);
+  if (place?.branch) {
+    // The key alone, its comment after it; a heading of the outline (and the breadcrumb, and a
+    // `#key` link's target), drawn as a row like any other.
+    const level = Math.min(6, place.lasts.length + 1);
+    const text = sanitize(f.key);
+    const idx = ctx.headings.push({ level, text, slug: slugify(text), src }) - 1;
+    const spans: Span[] = [{ text: f.key ? text : "·", role: "fm_key", attrs: A_BOLD }];
+    if (f.comment) spans.push({ text: `  # ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`, role: "syn_comment", attrs: 0 });
+    const down = guides(place.lasts, "down", ctx);
+    const rows = wrapSpans(spans, Math.max(4, width - 1 - leadW));
+    return rows.map((row, i) => ({ spans: [{ text: " ", role: "text", attrs: 0 }, ...(i === 0 ? lead : down), ...row], src, heading: i === 0 ? idx : undefined }));
+  }
+  width -= leadW;
   const kw = Math.max(1, Math.min(f.keyWidth || stringWidth(sanitize(f.key)), Math.floor(width / 3)));
   let role: Role = f.kind === "number" || f.kind === "date" ? "syn_number" : f.kind === "boolean" || f.kind === "null" ? "syn_constant" : "fm_value";
   const value = expandTabs(sanitize(f.value)) || (f.kind === "string" ? '""' : "");
@@ -576,16 +622,28 @@ function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
   const spans: Span[] = [{ text: value, role, attrs: 0, ...(link !== undefined ? { link } : {}) }];
   if (f.comment) spans.push({ text: `${value ? "  " : ""}# ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`, role: "syn_comment", attrs: 0 });
   const rows = wrapSpans(spans, Math.max(4, width - kw - 3));
+  const down = place ? guides(place.lasts, "down", ctx) : [];
   return rows.map((row, i) => ({
-    spans: [{ text: ` ${i === 0 ? padEnd(truncate(sanitize(f.key), kw), kw) : " ".repeat(kw)}`, role: "fm_key", attrs: 0 }, { text: "  ", role: "text", attrs: 0 }, ...row],
+    spans: [
+      { text: " ", role: "text", attrs: 0 },
+      ...(i === 0 ? lead : down),
+      { text: i === 0 ? padEnd(truncate(sanitize(f.key), kw), kw) : " ".repeat(kw), role: "fm_key", attrs: 0 },
+      { text: "  ", role: "text", attrs: 0 },
+      ...row,
+    ],
     src,
   }));
 }
 
 /** Comment lines of a data file on their own: dimmed, wrapped. */
-function dataComment(c: DataComment, width: number): Line[] {
+function dataComment(c: DataComment, width: number, ctx: Ctx): Line[] {
   const src = srcOf(c as unknown as Nodes);
-  return c.text.split("\n").flatMap((text, i) => wrapSpans([{ text: ` ${expandTabs(sanitize(text))}`, role: "syn_comment", attrs: 0 }], width).map((row) => ({ spans: row, src: src + i })));
+  // In a tree, inside the guides of the key it's above.
+  const lead = c.tree ? guides(c.tree.lasts, c.tree.above ? "above" : "down", ctx) : [];
+  const w = lead.reduce((a, s) => a + stringWidth(s.text), 0);
+  return c.text.split("\n").flatMap((text, i) =>
+    wrapSpans([{ text: expandTabs(sanitize(text)), role: "syn_comment", attrs: 0 }], Math.max(4, width - 1 - w)).map((row) => ({ spans: [{ text: " ", role: "text", attrs: 0 }, ...lead, ...row], src: src + i })),
+  );
 }
 
 function findKeyLine(raw: string, key: string): number {

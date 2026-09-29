@@ -616,6 +616,21 @@ export const SCENARIOS: Scenario[] = [
       await s.see('"Aster pointing model"'); // a quoted field with "" in it
       await open(s, "targets.yaml");
       await s.see(/│ SS Cyg\s+│ dwarf nova/);
+      // Nested YAML as a tree, guides at every depth, the breadcrumb following it.
+      await open(s, "deploy.yaml");
+      await s.see(/├─ 1\s*$/m);
+      await s.see(/│  ├─ env/);
+      await s.see(/│  │  ├─ ARCHIVE_ROOT\s+\/srv\/stacks/);
+      await s.keys("/");
+      await s.type("*probe"); // the api's health probe, line 22 (22G would count rows, not lines)
+      await moveTo(s, ["enter", "escape"], (l) => l === 22, "find onto the api's health probe");
+      await s.see(/containers\s*›\s*1\s*›\s*health/);
+      // A $ref's JSON pointer, followed to its row.
+      await open(s, "openapi.json");
+      await s.keys("/");
+      await s.type("#/components/schemas/Frame");
+      await s.keys("enter", "escape", "enter");
+      await s.until(() => /L5\d:/.test(s.statusLine()), 3000, "the cursor on the Frame schema's row (line 5x)");
       await open(s, "broken-config.json");
       await s.status("SOURCE");
       await s.message(/doesn't parse/);

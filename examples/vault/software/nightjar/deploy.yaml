@@ -1,0 +1,51 @@
+# nightjar's deployment on ridge-arch: what `night.sh` and the cookbook assume is running.
+# Anchors (&) and aliases (*) share the probe settings between the two containers.
+
+service: nightjar
+version: 2.4.0
+docs: ../pipeline-cookbook.md
+
+defaults: &probe
+  interval_s: 10
+  timeout_s: 3
+  failures: 3
+
+containers:
+  - name: api
+    image: registry.halden-ridge.invalid/nightjar:2.4.0
+    ports: [8080]
+    env:
+      ARCHIVE_ROOT: /srv/stacks
+      LOG_LEVEL: info
+    health:
+      path: /v2/health
+      probe: *probe
+    resources:
+      limits: { cpu: "2", memory: 1Gi }
+  - name: thumbnailer
+    image: registry.halden-ridge.invalid/thumbs:0.9.1
+    command:
+      - thumbs
+      - --watch
+      - /srv/stacks
+    health:
+      probe: *probe
+  - name: backup  # nightly, to the Dunmore NAS
+    image: registry.halden-ridge.invalid/restic:0.17
+
+volumes:
+  stacks:
+    host: /srv/stacks
+    readonly: false
+  logs:
+    host: /var/log/nightjar
+    rotate:
+      keep: 14
+      compress: true
+      schedule:
+        cron: "0 4 * * *"
+        timezone: Europe/Oslo
+
+motd: |
+  nightjar — Halden Ridge frame archive.
+  Questions to #pipeline, never to the telescope operators at night.

@@ -278,10 +278,38 @@ function headingAnchor(a: App, path: string, heading: string): Anchor | undefine
   return { heading: h.slug, headingIndex: idx, offset: 0, line: h.line };
 }
 
+/**
+ * A JSON pointer (`#/components/schemas/Frame`, a `$ref`'s) as a heading: each segment the next
+ * level's key under the one before, in a data file's tree (16.12). A list index counts from 0,
+ * the tree's item rows from 1.
+ */
+function pointerHeading(headings: { level: number; text: string }[], pointer: string): number {
+  const segs = pointer.slice(1).split("/").map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
+  let at = -1;
+  let level = 0;
+  for (const seg of segs) {
+    const want = [seg, ...(/^\d+$/.test(seg) ? [String(Number(seg) + 1)] : [])];
+    let found = -1;
+    for (let i = at + 1; i < headings.length; i++) {
+      const h = headings[i]!;
+      if (h.level <= level) break; // out of the parent's rows
+      if (h.level === level + 1 && want.includes(h.text)) {
+        found = i;
+        break;
+      }
+    }
+    if (found < 0) return -1;
+    at = found;
+    level++;
+  }
+  return at;
+}
+
 function jumpToHeading(a: App, view: View, heading: string): void {
   const layout = lay(a, view);
   const slug = slugify(heading);
-  const h = layout.headings.find((x) => x.slug === slug || x.text.toLowerCase() === heading.toLowerCase());
+  const p = heading.startsWith("/") ? pointerHeading(layout.headings, heading) : -1;
+  const h = p >= 0 ? layout.headings[p] : layout.headings.find((x) => x.slug === slug || x.text.toLowerCase() === heading.toLowerCase());
   if (!h) return a.message("warn", `no heading "${heading}" here`);
   a.pushHistory(view);
   a.moveCursor(view, { row: h.line, col: 0 });

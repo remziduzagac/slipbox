@@ -12,6 +12,7 @@
 import type { Heading, Root, RootContent, Table, TableRow } from "mdast";
 import { parse as parseToml } from "smol-toml";
 import { isMap, isPair, isScalar, isSeq, LineCounter, type Node as YamlNode, parseAllDocuments, type Scalar } from "yaml";
+import { type HeadingInfo, slugify } from "./parse.ts";
 import { stringWidth } from "./width.ts";
 
 /** One key and its value, on source lines `position` (its comment lines above included). */
@@ -28,11 +29,25 @@ export interface DataField {
   /** The key's own line (its position starts at a comment above it, when there is one). */
   keyLine: number;
   position: { start: { line: number; column: number }; end: { line: number; column: number } };
+  /** YAML's and JSON's rows: its place in the tree (the guides), and whether children follow. */
+  tree?: TreePlace;
+}
+
+/**
+ * A row's place in a data file's tree (16.12): for each level below the top, whether the row — or
+ * its ancestor at that level — is the last of its siblings. `branch`: an object or list whose rows
+ * follow; `above`: comment lines above a key (drawn inside its parent's guides).
+ */
+export interface TreePlace {
+  lasts: boolean[];
+  branch?: boolean;
+  above?: boolean;
 }
 
 /** Comment lines on their own, between keys or sections. */
 export interface DataComment {
   type: "dataComment";
+  tree?: TreePlace;
   text: string;
   position: { start: { line: number; column: number }; end: { line: number; column: number } };
 }
@@ -45,8 +60,6 @@ export interface ParsedData {
 
 /** Keys wider than this share the column no further: they're cut with … instead. */
 const KEY_MAX = 28;
-/** Nested objects become headings this many levels deep; deeper, a key's value reads inline. */
-const HEADING_DEPTH = 3;
 /** A CSV longer than this renders its first rows; source mode has them all. */
 const CSV_ROWS = 2000;
 
@@ -381,12 +394,22 @@ function readYaml(source: string, json: boolean): ParsedData {
       error = `line ${lineOf(e.pos[0])}: ${firstLine(e.message)}`;
     }
     const contents = doc.contents as YamlNode | null;
-    if (list.length > 1) out.push(heading(1, `document ${d + 1}`, contents?.range ? lineOf(contents.range[0]) : 1));
-    if (contents) walkYaml(contents, list.length > 1 ? 2 : 1, out, lineOf, source);
+    // A comment block before a document's content (a blank line after it keeps it off the first
+    // key): the file's, or the document's, opening prose.
+    const opening = (doc as { commentBefore?: string | null }).commentBefore?.trim();
+    if (opening) {
+      const start = doc.range ? lineOf(doc.range[0]) : 1;
+      const n = opening.split("\n").length;
+      out.push({ type: "dataComment", text: opening.split("\n").map((l) => l.trim()).join("\n"), position: pos(start, start + n - 1) } as unknown as RootContent);
+    }
+    // Several documents (`---`): each a branch of its own, its keys under it.
+    if (list.length > 1) {
+      const line = contents?.range ? lineOf(contents.range[0]) : 1;
+      out.push({ type: "dataField", key: `document ${d + 1}`, value: "", kind: "table", comment: null, keyWidth: 0, keyLine: line, position: pos(line), tree: { lasts: [], branch: true } } as unknown as RootContent);
+    }
+    if (contents) walkYaml(contents, list.length > 1 ? [] : null, out, lineOf);
   });
-  const tree: Root = { type: "root", children: out };
-  alignKeys(tree.children);
-  return { tree, error };
+  return { tree: { type: "root", children: out }, error };
 }
 
 /** A node's value as one line: scalars as they read, lists and maps inline. */
@@ -411,50 +434,93 @@ function scalarKind(node: YamlNode | null | undefined): DataField["kind"] {
   return "string";
 }
 
-function walkYaml(node: YamlNode, depth: number, out: RootContent[], lineOf: (o: number) => number, source: string): void {
+/** A small map of plain values reads on one line (`{connect: 5, idle: 300}`) up to this width. */
+const INLINE_MAP = 40;
+
+/** Whether a value is a leaf row: a scalar, a list of scalars, an empty or a small plain map. */
+function leaf(node: YamlNode | null | undefined): boolean {
+  if (!node || (!isMap(node) && !isSeq(node))) return true;
+  const items = (node as unknown as { items: unknown[] }).items;
+  if (!items.length) return true;
+  if (isSeq(node)) return items.every((x) => !isMap(x as YamlNode) && !isSeq(x as YamlNode));
+  const pairs = (node as unknown as { items: { key: YamlNode; value: YamlNode }[] }).items;
+  const plain = pairs.every((p) => !isMap(p.value) && !isSeq(p.value));
+  // A reference (`$ref`, `include`…) keeps a row of its own: its value is a link.
+  return plain && !pairs.some((p) => REFERENCE_KEYS.test(inline(p.key))) && inline(node).length <= INLINE_MAP;
+}
+
+/**
+ * YAML's and JSON's structure as a tree (16.12): every key a row of its own, with its place — for
+ * each level below the top, whether the row (or its ancestor there) is the last of its siblings
+ * (`lasts`), which the renderer draws as guides. An object, or a list that isn't plain, is a
+ * branch row with its children after it; a list of records is a table in the tree. Each row keeps
+ * its own source lines, so the lens edits it. `lasts`: the parent's place; null at the top.
+ */
+function walkYaml(node: YamlNode, lasts: boolean[] | null, out: RootContent[], lineOf: (o: number) => number): void {
   const lineAt = (n: YamlNode | null | undefined, fallback = 1) => (n?.range ? lineOf(n.range[0]) : fallback);
+  type Child = { name: string; key: YamlNode | null; value: YamlNode | null; line: number };
+  let children: Child[];
   if (isMap(node)) {
-    for (const pair of node.items) {
-      if (!isPair(pair)) continue;
-      const key = pair.key as YamlNode | null;
-      const value = pair.value as YamlNode | null;
-      const name = inline(key);
-      const keyLine = lineAt(key);
-      // The comment lines above a key are its comment when they're one line; several, or the
-      // file's opening ones, or those above a section, are a block of their own (as in TOML).
-      let before = (key as { commentBefore?: string } | null)?.commentBefore?.trim() || null;
-      const section = (isMap(value) && value.items.length && depth <= HEADING_DEPTH) || (isSeq(value) && records(value));
-      if (before && (before.includes("\n") || !out.length || section)) {
-        const n = before.split("\n").length;
-        out.push({ type: "dataComment", text: before.split("\n").map((l) => l.trim()).join("\n"), position: pos(Math.max(1, keyLine - n), keyLine - 1) } as unknown as RootContent);
-        before = null;
-      }
-      const comment = [before, (value as { comment?: string } | null)?.comment].filter(Boolean).join(" ").trim() || null;
-      if (isMap(value) && value.items.length && depth <= HEADING_DEPTH) {
-        out.push(heading(depth, name, keyLine));
-        walkYaml(value, depth + 1, out, lineOf, source);
-      } else if (isSeq(value) && records(value)) {
-        out.push(heading(depth, name, keyLine));
-        out.push(recordTable(value, lineOf));
-      } else {
-        const end = value?.range ? lineOf(Math.max(value.range[0], value.range[1] - 1)) : keyLine;
-        const first = before ? Math.max(1, keyLine - before.split("\n").length) : keyLine;
-        out.push({ type: "dataField", key: name, value: inline(value), kind: scalarKind(value), comment, keyWidth: 0, keyLine, position: pos(first, Math.max(keyLine, end)) } as unknown as RootContent);
-      }
+    children = node.items.filter((p) => isPair(p)).map((p) => ({ name: inline(p.key as YamlNode), key: p.key as YamlNode | null, value: p.value as YamlNode | null, line: lineAt(p.key as YamlNode, lineAt(p.value as YamlNode)) }));
+  } else if (isSeq(node) && node.items.length) {
+    if (records(node)) {
+      out.push(treeTable(recordTable(node, lineOf), lasts ? [...lasts, true] : []));
+      return;
     }
-  } else if (isSeq(node)) {
-    if (records(node)) out.push(recordTable(node, lineOf));
-    else
-      node.items.forEach((item, i) => {
-        const n = item as YamlNode;
-        if (isMap(n) && depth <= HEADING_DEPTH) {
-          out.push(heading(depth, `${i + 1}`, lineAt(n)));
-          walkYaml(n, depth + 1, out, lineOf, source);
-        } else out.push({ type: "dataField", key: `${i + 1}`, value: inline(n), kind: scalarKind(n), comment: null, keyWidth: 0, keyLine: lineAt(n), position: pos(lineAt(n)) } as unknown as RootContent);
-      });
+    children = node.items.map((it, i) => ({ name: `${i + 1}`, key: null, value: it as YamlNode, line: lineAt(it as YamlNode) }));
   } else {
-    out.push({ type: "dataField", key: "value", value: inline(node), kind: scalarKind(node), comment: null, keyWidth: 0, keyLine: lineAt(node), position: pos(lineAt(node)) } as unknown as RootContent);
+    out.push({ type: "dataField", key: "value", value: inline(node), kind: scalarKind(node), comment: null, keyWidth: 0, keyLine: lineAt(node), position: pos(lineAt(node)), tree: { lasts: lasts ?? [] } } as unknown as RootContent);
+    return;
   }
+  // Sibling leaves share one key column. In a list, if one object is a branch, all are (item 1
+  // drawn open and item 2 inline would read as two kinds of thing).
+  const leaves: DataField[] = [];
+  const openMaps = isSeq(node) && children.some((c) => isMap(c.value) && !leaf(c.value));
+  children.forEach((c, k) => {
+    const place = lasts ? [...lasts, k === children.length - 1] : [];
+    // The comment lines above a key are its comment when they're one line; several, or the file's
+    // opening ones, or those above a branch, are a block of their own (as in TOML).
+    let before = (c.key as { commentBefore?: string } | null)?.commentBefore?.trim() || (c.value as { commentBefore?: string } | null)?.commentBefore?.trim() || null;
+    const branch = !leaf(c.value) || (openMaps && isMap(c.value) && (c.value as unknown as { items: unknown[] }).items.length > 0);
+    const opening = k === 0 && (lasts === null || lasts.length === 0); // a document's first key
+    if (before && (before.includes("\n") || opening || branch)) {
+      const n = before.split("\n").length;
+      out.push({ type: "dataComment", text: before.split("\n").map((l) => l.trim()).join("\n"), position: pos(Math.max(1, c.line - n), c.line - 1), tree: { lasts: place, above: true } } as unknown as RootContent);
+      before = null;
+    }
+    const comment = [before, (c.value as { comment?: string } | null)?.comment].filter(Boolean).join(" ").trim() || null;
+    if (branch) {
+      out.push({ type: "dataField", key: c.name, value: "", kind: isSeq(c.value) ? "list" : "table", comment, keyWidth: 0, keyLine: c.line, position: pos(c.line), tree: { lasts: place, branch: true } } as unknown as RootContent);
+      walkYaml(c.value!, place, out, lineOf);
+    } else {
+      const end = c.value?.range ? lineOf(Math.max(c.value.range[0], c.value.range[1] - 1)) : c.line;
+      const first = before ? Math.max(1, c.line - before.split("\n").length) : c.line;
+      const f = { type: "dataField", key: c.name, value: inline(c.value), kind: scalarKind(c.value), comment, keyWidth: 0, keyLine: c.line, position: pos(first, Math.max(c.line, end)), tree: { lasts: place } } as unknown as DataField;
+      leaves.push(f);
+      out.push(f as unknown as RootContent);
+    }
+  });
+  const w = Math.min(KEY_MAX, Math.max(0, ...leaves.map((f) => stringWidth(f.key))));
+  for (const f of leaves) f.keyWidth = w;
+}
+
+/** A data file's outline: its sections (TOML, INI) and its tree's branches (YAML, JSON), in order. */
+export function dataOutline(tree: Root): HeadingInfo[] {
+  const out: HeadingInfo[] = [];
+  for (const n of tree.children) {
+    if (n.type === "heading") {
+      const text = n.children.map((c) => ("value" in c ? c.value : "")).join("");
+      out.push({ depth: n.depth, text, slug: slugify(text), line: n.position?.start.line ?? 1 });
+    }
+    const f = n as unknown as DataField;
+    if (f.type === "dataField" && f.tree?.branch) out.push({ depth: Math.min(6, f.tree.lasts.length + 1), text: f.key, slug: slugify(f.key), line: f.keyLine });
+  }
+  return out;
+}
+
+/** A table of records as a row of the tree: drawn under its key, inside the guides. */
+function treeTable(t: Table, lasts: boolean[]): RootContent {
+  return { ...t, data: { tree: { lasts } } } as RootContent;
 }
 
 /** A list of two or more maps whose values are all plain: a table's rows. */

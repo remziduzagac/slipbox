@@ -189,7 +189,9 @@ scratch = "/scratch/halley"
 
 ## Talk to nightjar over HTTP
 
-nightjar has a tiny HTTP API on `ridge-ctl:8420`. Adding a target to tonight's queue:
+nightjar has a tiny HTTP API on `ridge-ctl:8420`. Its full description is [the OpenAPI spec](nightjar/openapi.json);
+how it runs is [[nightjar/deploy.yaml]] (per environment: [[nightjar/environments.yaml]]), and its
+manifest is [package.json](nightjar/package.json). Adding a target to tonight's queue:
 
 ```json
 {

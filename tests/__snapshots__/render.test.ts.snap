@@ -78,6 +78,15 @@ house style that writing-guide describes.
 │ software/halley/targets.yaml,      │ YAML records as a table, nested maps;   │
 │ .schema.json                       │ JSON with $schema, $ref                 │
 ├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/nightjar/openapi.json     │ deep JSON as a tree: $ref pointers      │
+│                                    │ followed, records in the tree           │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/nightjar/deploy.yaml      │ a YAML tree: uneven lists of objects,   │
+│                                    │ anchors and aliases, a block string     │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/nightjar/environments.    │ several YAML documents (---); a flat    │
+│ yaml, package.json                 │ manifest                                │
+├────────────────────────────────────┼─────────────────────────────────────────┤
 │ equipment/filters.csv              │ CSV: quoted fields with commas and "",  │
 │                                    │ empty cells                             │
 ├────────────────────────────────────┼─────────────────────────────────────────┤
@@ -4165,8 +4174,10 @@ chat where it was agreed:
 
 ▌ Talk to nightjar over HTTP
 
-nightjar has a tiny HTTP API on ridge-ctl:8420. Adding a target to tonight's
-queue:
+nightjar has a tiny HTTP API on ridge-ctl:8420. Its full description is the
+OpenAPI spec; how it runs is nightjar/deploy.yaml (per environment:
+nightjar/environments.yaml), and its manifest is package.json. Adding a target
+to tonight's queue:
 
                                                                            json
  {
@@ -4330,7 +4341,7 @@ exports[`snapshots of the layout IR as text handbook/safety-card.adoc @ 80 1`] =
  author   Rosa Lind
  revdate  2026-09-01
  tags     safety, dome
-Printed and taped inside the dome door. Keep it to one page.
+ Printed and taped inside the dome door. Keep it to one page.
 
 The rules for anyone working in the dome, in the order they matter. The long
 version is the operations handbook; the dome's repair history is the dome log.
@@ -4381,7 +4392,7 @@ refit plan is the dome refit, and the safety card is the safety card.
 
 ▌ DONE [#A] Replace the shutter belt  :shutter:
 
-CLOSED: [2026-09-02 Wed 16:40]
+ CLOSED: [2026-09-02 Wed 16:40]
  part  GT3-2160
  cost  184 EUR
 
@@ -4393,7 +4404,7 @@ The old belt had stretched 11 mm. Tension now 42 N at the midpoint.
 
 ▌ TODO Grease the azimuth ring  :rotation:
 
-SCHEDULED: <2026-10-05 Mon>
+ SCHEDULED: <2026-10-05 Mon>
 
 Needs two people and the long ladder. See Shutter log for the last torque
 readings.
@@ -4421,40 +4432,30 @@ readings.
 ▎ Never open the dome above 40 km/h wind, whatever the forecast said an hour
 ▎ ago.
 
-An Org comment: dimmed in the render."
+ An Org comment: dimmed in the render."
 `;
 
 exports[`snapshots of the layout IR as text software/halley/halley.schema.json @ 80 1`] = `
 " $schema  https://json-schema.org/draft/2020-12/schema
  title    halley settings
  type     object
-
-▌ properties
-
-▌ docs
-
- type         string
- description  the note that explains the settings
-
-▌ reduce
-
- $ref  #/$defs/reduce
-
-▌ $defs
-
-▌ reduce
-
- type  object
-
-▌ properties
-
- workers      {type: integer, minimum: 1, maximum: 8}
- bias_frames  {type: integer}"
+ properties
+ ├─ docs
+ │  ├─ type         string
+ │  └─ description  the note that explains the settings
+ └─ reduce
+    └─ $ref  #/$defs/reduce
+ $defs
+ └─ reduce
+    ├─ type  object
+    └─ properties
+       ├─ workers      {type: integer, minimum: 1, maximum: 8}
+       └─ bias_frames  {type: integer}"
 `;
 
 exports[`snapshots of the layout IR as text software/halley/halley.toml @ 80 1`] = `
-"halley — the night pipeline's settings, as deployed on ridge-arch.
-The why of each value is in the cookbook: docs below.
+" halley — the night pipeline's settings, as deployed on ridge-arch.
+ The why of each value is in the cookbook: docs below.
  docs    ../pipeline-cookbook.md
  schema  halley.schema.json
  site    https://halden-ridge.invalid/pipeline
@@ -4490,28 +4491,206 @@ The why of each value is in the cookbook: docs below.
 `;
 
 exports[`snapshots of the layout IR as text software/halley/targets.yaml @ 80 1`] = `
-"Variable Star Survey targets for the autumn season (see
-../../projects/variable-star-survey.md).
+" Variable Star Survey targets for the autumn season (see
+ ../../projects/variable-star-survey.md).
  season       2026-autumn
  coordinator  Kenji Mori
  notes        ../../projects/variable-star-survey.md
+ cadence
+ ├─ default_minutes    20
+ ├─ eclipsing_minutes  5  # eclipses are short: sample them hard
+ └─ mira_days          3
+ targets
+   ┌───────────┬────────────┬───────────┬───────────┐
+   │ name      │ type       │ mag_range │ telescope │
+   ╞═══════════╪════════════╪═══════════╪═══════════╡
+   │ R Leo     │ mira       │ 4.4–11.3  │ Lyra      │
+   │ Algol     │ eclipsing  │ 2.1–3.4   │ Brill     │
+   │ SS Cyg    │ dwarf nova │ 7.7–12.4  │ Aster     │
+   │ delta Cep │ cepheid    │ 3.5–4.4   │ Lyra      │
+   └───────────┴────────────┴───────────┴───────────┘"
+`;
 
-▌ cadence
+exports[`snapshots of the layout IR as text software/nightjar/deploy.yaml @ 80 1`] = `
+" nightjar's deployment on ridge-arch: what \`night.sh\` and the cookbook assume is
+ running.
+ Anchors (&) and aliases (*) share the probe settings between the two
+ containers.
+ service  nightjar
+ version  2.4.0
+ docs     ../pipeline-cookbook.md
+ defaults
+ ├─ interval_s  10
+ ├─ timeout_s   3
+ └─ failures    3
+ containers
+ ├─ 1
+ │  ├─ name   api
+ │  ├─ image  registry.halden-ridge.invalid/nightjar:2.4.0
+ │  ├─ ports  [8080]
+ │  ├─ env
+ │  │  ├─ ARCHIVE_ROOT  /srv/stacks
+ │  │  └─ LOG_LEVEL     info
+ │  ├─ health
+ │  │  ├─ path   /v2/health
+ │  │  └─ probe  *probe
+ │  └─ resources
+ │     └─ limits  {cpu: 2, memory: 1Gi}
+ ├─ 2
+ │  ├─ name     thumbnailer
+ │  ├─ image    registry.halden-ridge.invalid/thumbs:0.9.1
+ │  ├─ command  [thumbs, --watch, /srv/stacks]
+ │  └─ health   {probe: *probe}
+ └─ 3
+    ├─ name   backup  # nightly, to the Dunmore NAS
+    └─ image  registry.halden-ridge.invalid/restic:0.17
+ volumes
+ ├─ stacks  {host: /srv/stacks, readonly: false}
+ └─ logs
+    ├─ host  /var/log/nightjar
+    └─ rotate
+       ├─ keep      14
+       ├─ compress  true
+       └─ schedule  {cron: 0 4 * * *, timezone: Europe/Oslo}
+ motd     nightjar — Halden Ridge frame archive.
+          Questions to #pipeline, never to the telescope operators at night."
+`;
 
- default_minutes    20
- eclipsing_minutes  5  # eclipses are short: sample them hard
- mira_days          3
+exports[`snapshots of the layout IR as text software/nightjar/environments.yaml @ 80 1`] = `
+" document 1
+ │  One document per environment (\`---\` between them), as the deploy tool reads
+ │  them.
+ ├─ name      production
+ ├─ host      nightjar.halden-ridge.invalid
+ ├─ replicas  2
+ └─ database
+    ├─ path    /srv/nightjar/frames.db
+    └─ backup  {every_hours: 6, keep: 28}
+ document 2
+ ├─ name      staging
+ ├─ host      ridge-arch.local
+ ├─ replicas  1
+ └─ database
+    └─ path  /tmp/nightjar/frames.db
+ document 3
+ ├─ name      laptop
+ ├─ host      localhost
+ ├─ replicas  1
+ └─ features  [thumbnails, public-api]"
+`;
 
-▌ targets
+exports[`snapshots of the layout IR as text software/nightjar/openapi.json @ 80 1`] = `
+" openapi  3.1.0
+ info
+ ├─ title        nightjar
+ ├─ version      2.4.0
+ ├─ description  The observatory's frame archive over HTTP. How to call it:
+ │               ../pipeline-cookbook.md
+ └─ contact
+    ├─ name  Kenji Mori
+    └─ url   https://halden-ridge.invalid/people/kenji
+ servers
+   ┌──────────────────────────────────────────┬──────────────────┐
+   │ url                                      │ description      │
+   ╞══════════════════════════════════════════╪══════════════════╡
+   │ https://nightjar.halden-ridge.invalid/v2 │ production       │
+   │ http://ridge-arch.local:8080/v2          │ on the ridge LAN │
+   └──────────────────────────────────────────┴──────────────────┘
+ paths
+ ├─ /nights/{night}/frames
+ │  └─ get
+ │     ├─ summary  List a night's frames
+ │     ├─ parameters
+ │     │  ├─ 1
+ │     │  │  └─ $ref  #/components/parameters/Night
+ │     │  └─ 2
+ │     │     ├─ name      telescope
+ │     │     ├─ in        query
+ │     │     ├─ required  false
+ │     │     └─ schema
+ │     │        ├─ type  string
+ │     │        └─ enum  [Aster, Brill, Lyra]
+ │     └─ responses
+ │        ├─ 200
+ │        │  ├─ description  the frames, oldest first
+ │        │  └─ content
+ │        │     └─ application/json
+ │        │        └─ schema
+ │        │           ├─ type  array
+ │        │           └─ items
+ │        │              └─ $ref  #/components/schemas/Frame
+ │        └─ 404
+ │           └─ $ref  #/components/responses/NotFound
+ └─ /frames/{id}
+    └─ get
+       ├─ summary  One frame's metadata
+       ├─ parameters
+       │  └─ 1
+       │     ├─ name      id
+       │     ├─ in        path
+       │     ├─ required  true
+       │     └─ schema    {type: string}
+       └─ responses
+          ├─ 200
+          │  ├─ description  the frame
+          │  └─ content
+          │     └─ application/json
+          │        └─ schema
+          │           └─ $ref  #/components/schemas/Frame
+          └─ 404
+             └─ $ref  #/components/responses/NotFound
+ components
+ ├─ parameters
+ │  └─ Night
+ │     ├─ name      night
+ │     ├─ in        path
+ │     ├─ required  true
+ │     └─ schema    {type: string, format: date}
+ ├─ schemas
+ │  └─ Frame
+ │     ├─ type      object
+ │     ├─ required  [id, telescope, exposure_s]
+ │     └─ properties
+ │        ├─ id          {type: string}
+ │        ├─ telescope   {type: string}
+ │        ├─ exposure_s  {type: number, minimum: 0}
+ │        ├─ filter
+ │        │  ├─ type         string
+ │        │  └─ description  see ../../equipment/filters.csv
+ │        ├─ calibrated  {type: boolean, default: false}
+ │        └─ wcs
+ │           ├─ type  object
+ │           └─ properties
+ │              ├─ ra_deg    {type: number}
+ │              ├─ dec_deg   {type: number}
+ │              └─ rotation  {type: number}
+ └─ responses
+    └─ NotFound  {description: no such night or frame}"
+`;
 
-┌───────────┬────────────┬───────────┬───────────┐
-│ name      │ type       │ mag_range │ telescope │
-╞═══════════╪════════════╪═══════════╪═══════════╡
-│ R Leo     │ mira       │ 4.4–11.3  │ Lyra      │
-│ Algol     │ eclipsing  │ 2.1–3.4   │ Brill     │
-│ SS Cyg    │ dwarf nova │ 7.7–12.4  │ Aster     │
-│ delta Cep │ cepheid    │ 3.5–4.4   │ Lyra      │
-└───────────┴────────────┴───────────┴───────────┘"
+exports[`snapshots of the layout IR as text software/nightjar/package.json @ 80 1`] = `
+" name         @halden-ridge/nightjar
+ version      2.4.0
+ private      true
+ description  The frame archive's HTTP service
+ homepage     https://halden-ridge.invalid/pipeline/nightjar
+ type         module
+ main         dist/server.js
+ scripts
+ ├─ build          tsc -p .
+ ├─ start          node dist/server.js
+ ├─ test           node --test
+ └─ openapi:check  redocly lint openapi.json
+ dependencies
+ ├─ fastify          ^5.2.0
+ ├─ @fastify/static  ^8.0.0
+ ├─ better-sqlite3   ^11.7.0
+ └─ sharp            ^0.33.5
+ devDependencies
+ ├─ typescript   ^5.7.0
+ └─ @types/node  ^22.10.0
+ engines      {node: >=22}
+ files        [dist, openapi.json]"
 `;
 
 exports[`snapshots of the layout IR as text wrap-probe @ 44 (narrow) 1`] = `

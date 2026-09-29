@@ -21,7 +21,7 @@ import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { headingsOf, parseAround, type ParsedNote, slugify } from "../core/parse.ts";
 import { parseNoteFile } from "../core/readers.ts";
-import { parseData } from "../core/data.ts";
+import { dataOutline, parseData } from "../core/data.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
@@ -523,7 +523,7 @@ const HANDLERS: Record<string, Handler> = {
       };
     }
     // A data file's sections are its outline (16.11); other text files have none.
-    const hs = s.graph.entry(rel)?.headings ?? headingsOf(parseFile(s, rel, readText(s.graph.abs(rel)).text).tree);
+    const hs = s.graph.entry(rel)?.headings ?? (kind.group === "data" ? dataOutline : headingsOf)(parseFile(s, rel, readText(s.graph.abs(rel)).text).tree);
     return {
       data: { path: rel, headings: hs },
       human: hs.map((h) => `${String(h.line).padStart(5)}  ${"  ".repeat(h.depth - 1)}${"#".repeat(h.depth)} ${h.text}\n`).join(""),

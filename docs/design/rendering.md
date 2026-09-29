@@ -69,15 +69,25 @@ reference, `⧉ x`. Transclusion is phase 4.
 A data file is read into the same tree a note is (`core/data.ts`), so the renderer, the outline,
 the breadcrumb, `[[file.toml#section]]`, find and the lens work unchanged:
 
-- **Sections become headings**: a TOML `[table]` or INI `[section]` (deeper by its dots), a YAML or
-  JSON key whose value is an object, down to three levels (deeper ones read inline, `{k: v, …}`).
+- **TOML and INI sections become headings**: a `[table]` or `[section]`, deeper by its dots — the
+  file itself is flat sections, so headings say what it says.
+- **YAML and JSON are a tree** (`16.12`): every key a row, nested ones inside guides (`├─ └─ │`, the
+  explorer's, ASCII too) at every depth, drawn alike. An object — or a list that isn't plain — is a
+  branch row with its rows under it; list items are rows `1`, `2`…, and when one object item has
+  depth, all object items open, so siblings read alike. What stays on one line: scalars, lists of
+  scalars, and a small plain map (`{connect: 5, idle: 300}`, up to 40 columns) — unless it holds a
+  reference key, whose value is a link. Branch rows are the outline and the breadcrumb
+  (`containers › 1 › health`), and a `#/a/b` JSON pointer (a `$ref`'s) goes to the row it names.
+  Several documents (`---`) are rows `document 1`, `document 2`…; a comment block before a
+  document's content is its opening row.
 - **Each key is a `dataField`** on its own source lines (a comment above it included), drawn like
   frontmatter's properties: the key column shared by a section's keys (28 columns at most, cut with
   `…`), the value coloured by its kind (numbers and dates, booleans and null, strings), a comment
   dimmed after it. Keys follow each other with no blank row between. A string shows unquoted; a list
   or an inline table as written, its whitespace folded.
 - **Records become tables** through the allocator: a YAML or JSON list of two or more objects with
-  plain values, TOML `[[name]]` entries likewise; a row per record, on its own source line.
+  plain values (in the tree, under its key), TOML `[[name]]` entries likewise; a row per record,
+  on its own source line.
 - **Comment lines** on their own are dimmed rows. One comment line right above a key is that key's
   comment, drawn after its value; several lines, or the file's opening ones, are a block of their
   own (prose about more than one key).
