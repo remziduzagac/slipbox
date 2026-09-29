@@ -7,7 +7,7 @@
 
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
@@ -21,8 +21,8 @@ import { parseMarkdown, slugify } from "../core/parse.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
-import { sanitize } from "../core/sanitize.ts";
-import { type DecodedFile, decodeText, landsInside, readJson, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { sanitize, UNSAFE } from "../core/sanitize.ts";
+import { type DecodedFile, decodeText, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
@@ -32,6 +32,15 @@ import { initVault, isInside, locateVault, readVaultVersion, VaultError, type Va
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
+
+/**
+ * JSON with every character `sanitize` would change escaped as \uXXXX. JSON.stringify leaves C1
+ * controls, DEL and bidi overrides raw, and a terminal acts on them. Lossless: it is still the same
+ * JSON value.
+ */
+function safeJson(value: unknown): string {
+  return JSON.stringify(value).replace(new RegExp(UNSAFE.source, "g"), (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
+}
 
 export const JSON_SCHEMA = 1;
 
@@ -151,7 +160,7 @@ function commandIn(argv: string[]): string {
 export async function runCli(argv: string[], io: Io): Promise<number> {
   // `--json` promises exactly one object on stdout, whatever happens: usage errors included.
   const envelope = (o: { ok: boolean; command: string; data?: unknown; error?: { code: number; message: string }; warnings?: string[]; stale?: string[] }) =>
-    `${JSON.stringify({ schema: JSON_SCHEMA, ok: o.ok, command: o.command, ...(o.error ? { error: o.error } : {}), data: o.data ?? null, warnings: o.warnings ?? [], stale: o.stale ?? [] })}\n`;
+    `${safeJson({ schema: JSON_SCHEMA, ok: o.ok, command: o.command, ...(o.error ? { error: o.error } : {}), data: o.data ?? null, warnings: o.warnings ?? [], stale: o.stale ?? [] })}\n`;
   let args: Args;
   try {
     args = parseArgs(argv);
@@ -192,7 +201,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     const result = await handler(session, rest);
     const stale = command === "init" ? [] : session.stale();
     if (json) {
-      io.out(`${JSON.stringify({ schema: JSON_SCHEMA, ok: true, command, data: result.data, warnings: session.allWarnings(), stale: stale.map((s) => s.path) })}\n`);
+      io.out(`${safeJson({ schema: JSON_SCHEMA, ok: true, command, data: result.data, warnings: session.allWarnings(), stale: stale.map((s) => s.path) })}\n`);
     } else {
       // Note text reaches the terminal only sanitized (2.9). `render` is the exception: its output
       // is a layout, sanitized when built, plus the colours it adds on purpose.
@@ -569,7 +578,7 @@ const HANDLERS: Record<string, Handler> = {
     if (has(s.args, "first-per-line")) ms = firstPerLine(file.text, ms); // vim's :s without g
     const regex = has(s.args, "regex");
     const out = replaceMatches(file.text, ms, replacement, regex);
-    if (!dry && out.count) writeNoteText(s, abs, out.text, file);
+    const written = !dry && out.count ? writeNoteText(s, abs, out.text, file) : null;
     // Each change with its column and its line before and after (a window of a long one), so a
     // preview shows a match inside a longer word, and two on one line apart.
     const changes = ms.map((m) => {
@@ -585,7 +594,7 @@ const HANDLERS: Record<string, Handler> = {
     const verb = dry ? "would replace" : "replaced";
     return {
       // newSha: the note's sha after the call; null on a dry run, which wrote nothing to hash.
-      data: { path: rel, count: out.count, dryRun: dry, sha: file.sha, newSha: dry ? null : out.count ? shaOf(abs) : file.sha, changes },
+      data: { path: rel, count: out.count, dryRun: dry, sha: file.sha, newSha: dry ? null : (written ?? file.sha), changes },
       human: `${verb} ${out.count} in ${rel}\n${dry ? changes.map((c) => `${c.line}:${c.column}: ${c.text}\n${" ".repeat(String(c.line).length + String(c.column).length + 2)}→ ${c.textAfter}\n`).join("") : ""}`,
     };
   },
@@ -610,6 +619,7 @@ const HANDLERS: Record<string, Handler> = {
     if (has(s.args, "check") && has(s.args, "uncheck")) throw new UsageError("--check or --uncheck, not both");
     checkWritable(s, abs);
     checkUnchanged(s, abs, file.sha);
+    let sha = file.sha;
     if (want !== task.checked) {
       const r = toggleTask(file.bytes, line);
       if (!r) throw new CliError(`no task marker on line ${line} of ${rel}`, EXIT.notFound);
@@ -619,9 +629,10 @@ const HANDLERS: Record<string, Handler> = {
         if (err instanceof WriteRefused) throw new CliError(err.message, EXIT.refused);
         throw err;
       }
+      sha = createHash("sha256").update(r.bytes).digest("hex").slice(0, 16);
     }
     return {
-      data: { path: rel, line, text: task.text, checked: want, changed: want !== task.checked, sha: shaOf(abs) },
+      data: { path: rel, line, text: task.text, checked: want, changed: want !== task.checked, sha },
       human: `${String(line).padStart(5)}  [${want ? "x" : " "}] ${task.text}\n`,
     };
   },
@@ -676,14 +687,14 @@ const HANDLERS: Record<string, Handler> = {
     if (previous && has(s.args, "append")) {
       // On a new line; with --paragraph after a blank one too, so the text is a block of its own
       // (a line appended right after a table would be its next row, after a paragraph part of it).
-      const body = previous.text.replace(/\n*$/, "");
+      const body = previous.text.replace(/(\r?\n)*$/, "");
       const sep = !body ? "" : has(s.args, "paragraph") ? "\n\n" : "\n";
       content = has(s.args, "paragraph") ? `${body}${sep}${text}` : `${previous.text}${previous.text && !previous.text.endsWith("\n") ? "\n" : ""}${text}`;
     }
     if (created) mkdirSync(dirname(abs), { recursive: true });
-    writeNoteText(s, abs, content, previous);
+    const written = writeNoteText(s, abs, content, previous);
     return {
-      data: { path: rel, created, appended: !!previous && has(s.args, "append"), previousSha: previous?.sha ?? null, sha: shaOf(abs) },
+      data: { path: rel, created, appended: !!previous && has(s.args, "append"), previousSha: previous?.sha ?? null, sha: written },
       human: `${created ? "created" : "wrote"} ${rel}\n`,
     };
   },
@@ -777,10 +788,6 @@ interface NoteFile extends DecodedFile {
   sha: string;
 }
 
-function shaOf(abs: string): string {
-  return createHash("sha256").update(readFileSync(abs)).digest("hex").slice(0, 16);
-}
-
 /**
  * A note's bytes, text and sha (of the bytes), checked against `--if-unchanged`. A note that isn't
  * valid UTF-8 is read, never rewritten: its invalid bytes would be lost.
@@ -788,7 +795,7 @@ function shaOf(abs: string): string {
 function readNoteFile(s: Session, abs: string, forWriting = true): NoteFile {
   let bytes: Buffer;
   try {
-    bytes = readFileSync(abs);
+    bytes = readRegular(abs);
   } catch (err) {
     throw new CliError(`${relative(s.loc.root, abs)}: ${(err as NodeJS.ErrnoException).code === "ENOENT" ? "gone (deleted since it was found)" : (err as Error).message}`, EXIT.notFound);
   }
@@ -813,9 +820,13 @@ function checkWritable(s: Session, abs: string): void {
   if (s.loc.mode !== "vault") refuse("not in a vault (no .slipbox/ above it)");
   if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the vault (${s.loc.root})`);
   const rel = relative(s.loc.root, abs);
-  if (!/\.(md|markdown)$/i.test(rel) || /^\.(md|markdown)$/i.test(rel.split("/").pop()!)) refuse("not a markdown note");
+  // A note is a file the vault lists by its extension (walk.extensions: md, markdown, or more).
+  const exts = s.config.walk.extensions.map((e) => e.replace(/^\./, "").toLowerCase());
+  const base = rel.split("/").pop()!;
+  const dot = base.lastIndexOf(".");
+  if (dot <= 0 || !exts.includes(base.slice(dot + 1).toLowerCase())) refuse(`not a note (the vault's notes end in ${exts.map((e) => `.${e}`).join(", ")})`);
   if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules")) refuse("in a folder the vault doesn't list");
-  if (/[\x00-\x1f]/.test(rel)) refuse("a control character in its name");
+  if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
 }
 
 /** `--if-unchanged <sha>`: refuse (exit 5) unless the note's bytes still have that sha. */
@@ -826,8 +837,12 @@ function checkUnchanged(s: Session, abs: string, sha: string): void {
   if (expect !== sha) throw new CliError(`${relative(s.loc.root, abs)} changed since ${expect} (now ${sha}); not written`, EXIT.refused, { sha });
 }
 
-/** Write a note's text back as it was stored: its BOM and its line endings kept. */
-function writeNoteText(s: Session, abs: string, text: string, was: DecodedFile | null): void {
+/**
+ * Write a note's text back as it was stored: its BOM and its line endings kept. Returns the sha of
+ * the bytes written — not of the file re-read after, which another writer (a TUI's autosave) may
+ * already have changed.
+ */
+function writeNoteText(s: Session, abs: string, text: string, was: DecodedFile | null): string {
   let out = text;
   if (was?.crlf) out = out.replace(/\r?\n/g, "\r\n");
   if (was?.bom) out = `\uFEFF${out}`;
@@ -837,6 +852,7 @@ function writeNoteText(s: Session, abs: string, text: string, was: DecodedFile |
     if (err instanceof WriteRefused) throw new CliError(err.message, EXIT.refused);
     throw err;
   }
+  return createHash("sha256").update(Buffer.from(out, "utf8")).digest("hex").slice(0, 16);
 }
 
 /**

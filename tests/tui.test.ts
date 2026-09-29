@@ -3,6 +3,7 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
@@ -3972,5 +3973,140 @@ describe("review cycle 3 (config in the TUI)", () => {
     h.app.reloadConfig();
     await h.keys("escape");
     expect(h.app.theme.name).toBe("nord");
+  });
+});
+
+describe("review cycle 4 (TUI)", () => {
+  const until = async (pred: () => boolean, ms = 4000) => {
+    const end = Date.now() + ms;
+    while (!pred() && Date.now() < end) await new Promise((r) => setTimeout(r, 20));
+  };
+  const touch = async (file: string, text: string) => {
+    writeFileSync(file, text);
+    const future = Date.now() / 1000 + 5;
+    (await import("node:fs")).utimesSync(file, future, future);
+  };
+  test("a footnote with capitals is followed; [[#Title]] finds a heading with a footnote mark", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "f.md"), "# Title[^1]\n\nSee[^Note] here and [[#Title]].\n\n[^Note]: The note text.\n[^1]: one\n");
+    const h = await harness({ root, open: "f.md", width: 100, height: 30 });
+    const v = h.app.view!;
+    const layout = () => h.app.currentLayout(v);
+    const note = layout().links.findIndex((l) => l.kind === "footnote" && l.target.toLowerCase() === "note");
+    h.app.moveCursor(v, { row: layout().links[note]!.line, col: layout().links[note]!.col });
+    await h.keys("enter");
+    expect(rowText(h)).toContain("The note text.");
+    const title = layout().links.findIndex((l) => l.kind === "wiki" && l.heading === "Title");
+    h.app.moveCursor(v, { row: layout().links[title]!.line, col: layout().links[title]!.col });
+    await h.keys("enter");
+    expect(h.app.messages.some((m) => m.text.includes("no heading"))).toBe(false);
+    expect(v.cur.row).toBe(0);
+  });
+  test("deleted, then recreated by an agent: :w asks instead of writing over it", async () => {
+    const root = makeVault();
+    const file = join(root, "d.md");
+    writeFileSync(file, "mine\n");
+    const h = await harness({ root, open: "d.md" });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", "shift+a", "!", "escape");
+    rmSync(file);
+    h.app.reloadBuffer(v.buf, true);
+    expect(v.buf.deleted).toBe(true);
+    await touch(file, "# agent's\n");
+    h.app.reloadBuffer(v.buf);
+    await h.keys("k"); // keep mine
+    await h.keys(":", "w", "enter");
+    expect(readFileSync(file, "utf8")).toBe("# agent's\n");
+  });
+  test("a burst of writes in one folder reloads every open note (the watcher re-reads the folder)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md", watch: true, config: (c) => ((c.watch.debounce_ms = 30), (c.watch.poll_ms = 100)) });
+    try {
+      await h.keys("ctrl+w", "v");
+      await h.app.run("note.open notes/beta.md");
+      for (let i = 0; i < 30; i++) {
+        writeFileSync(join(root, "notes", "alpha.md"), `# Alpha ${i}\n`);
+        writeFileSync(join(root, "notes", "beta.md"), `# Beta ${i}\n`);
+      }
+      const texts = () => h.app.tab!.views.map((x) => x.buf.source).sort();
+      await until(() => JSON.stringify(texts()) === JSON.stringify(["# Alpha 29\n", "# Beta 29\n"]));
+      expect(texts()).toEqual(["# Alpha 29\n", "# Beta 29\n"]);
+    } finally {
+      h.app.quit();
+    }
+  });
+  test("an agent's write landing right after a save is a change, not ours", async () => {
+    const root = makeVault();
+    const file = join(root, "r.md");
+    writeFileSync(file, "start\n");
+    const h = await harness({ root, open: "r.md", watch: true, config: (c) => ((c.watch.debounce_ms = 30), (c.watch.poll_ms = 100)) });
+    try {
+      const v = h.app.view!;
+      const w = h.app.watcher!;
+      const orig = w.noteOwnWrite.bind(w);
+      w.noteOwnWrite = (rel, st) => {
+        writeFileSync(file, "# AGENT\n"); // lands between the rename and the stamp
+        orig(rel, st);
+      };
+      await h.keys("space", "n", "v", "shift+a", "x", "escape", "ctrl+s");
+      w.noteOwnWrite = orig;
+      expect(v.buf.changedOnDisk()).toBe(true);
+    } finally {
+      h.app.quit();
+    }
+  });
+  test("a click resolving a conflict updates the stale list; two instances keep each other's positions", async () => {
+    const root = makeVault();
+    const file = join(root, "c.md");
+    writeFileSync(file, "one\n");
+    const h = await harness({ root, open: "c.md", width: 100, height: 30 });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", "shift+a", "!", "escape");
+    await touch(file, "theirs\n");
+    h.app.reloadBuffer(v.buf);
+    h.frame();
+    const load = h.app.geometry!.overlay!;
+    // The first entry of the prompt, (l) load theirs.
+    h.app.handleMouse({ type: "down", x: load.x + 3, y: load.listY, button: 0 });
+    h.app.handleMouse({ type: "up", x: load.x + 3, y: load.listY, button: 0 });
+    expect(v.buf.dirty).toBe(false);
+    const { readStale } = await import("../src/core/stale.ts");
+    expect(readStale(root).map((x) => x.path)).not.toContain("c.md");
+  });
+  test(":s with \\r in a CRLF note keeps it CRLF; /gc and /g agree on a*", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "s.md"), "a, b\r\naaa\r\n");
+    const h = await harness({ root, open: "s.md" });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", ":", ...[..."s/, /\\r/"].map((c) => (c === " " ? "space" : c)), "enter");
+    expect(v.buf.source.replace(/\r\n/g, "")).not.toContain("\n");
+    await h.keys("G", ":", ...[..."s/a*/X/gc"], "enter", "y");
+    expect(h.app.overlay).toBeNull(); // one match asked about, as /g replaces one
+    expect(v.buf.source).toBe("a\r\nb\r\nX\r\n");
+  });
+});
+
+describe("review cycle 4 (TUI, a hostile vault's names)", () => {
+  test("names with bidi overrides, C1 and escapes never put a control on screen", async () => {
+    const root = makeVault();
+    const bad = "n-bidi\u202edcba\u202c\u200f\u2028-\u009b31m-\x1b]0;PWNED\x07.md";
+    writeFileSync(join(root, bad), "# Bad\u202e name\n\n[[alpha]]\n");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    writeFileSync(join(root, ".slipbox", "config.toml"), '[groups]\n"leader z" = "\u202eevil"\n');
+    const h = await harness({ root, open: bad, width: 140, height: 40 });
+    const shots = [h.frame()];
+    await h.keys("space"); // which-key, with the vault's group label
+    shots.push(h.frame());
+    await h.keys("escape", "space", "space"); // the switcher lists it by name
+    shots.push(h.frame());
+    await h.keys("escape");
+    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("backlinks.open");
+    shots.push(h.frame());
+    for (const s of shots) {
+      expect(UNSAFE.test(s.replace(/\n/g, ""))).toBe(false);
+      expect(s).not.toContain("PWNED");
+    }
+    expect(shots.join("")).toContain("n-bidi");
   });
 });

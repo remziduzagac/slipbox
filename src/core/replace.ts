@@ -49,7 +49,8 @@ function crlfEnds(source: string): string {
       if (source[i + 1] === "^") out += source[++i]; // a negated class, not an anchor
       continue;
     }
-    out += c === "^" ? "(?<![^\\n])" : c === "$" ? "(?=\\r?\\n|(?![\\s\\S]))" : c;
+    // $ before a CRLF's \r (never between the \r and the \n), before an LF, or at the end.
+    out += c === "^" ? "(?<![^\\n])" : c === "$" ? "(?<!\\r)(?=\\r?\\n|(?![\\s\\S]))" : c;
   }
   return out;
 }
@@ -74,8 +75,11 @@ export function findAll(text: string, re: RegExp, from = 0, to = text.length, em
   for (let m = g.exec(text); m; m = g.exec(text)) {
     const at = m.index;
     if (!m[0]) {
-      g.lastIndex++;
+      // Past this position by a whole character: one UTF-16 unit could land inside an emoji's
+      // surrogate pair, and a replacement there would split it.
+      g.lastIndex = at + ((text.codePointAt(at) ?? 0) > 0xffff ? 2 : 1);
       if (at === lastEnd) continue; // right after a real match (a* on aaa): not a second one
+      if (text[at - 1] === "\r" && text[at] === "\n") continue; // inside a CRLF: the line ended before \r
       // An empty match at `to` is the next line's start, unless the note ends there unterminated.
       const inside = at < to || (at === text.length && to === text.length && !text.endsWith("\n"));
       if (empty && inside) out.push({ from: at, to: at, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });

@@ -137,9 +137,10 @@ export class VaultWatcher {
   }
 
   /** Tell the watcher about a write slipbox made itself, so it does not react to it. */
-  noteOwnWrite(rel: string): void {
+  /** Our own write of `rel`, stamped as written (`written`), else as it is on disk now. */
+  noteOwnWrite(rel: string, written?: { mtimeMs: number; size: number }): void {
     try {
-      const st = statSync(join(this.opts.root, rel));
+      const st = written ?? statSync(join(this.opts.root, rel));
       this.ownWrites.set(rel, st.mtimeMs);
       // Known at this stamp too, so a later sighting (a polled directory, a sweep) sees no change.
       if (this.opts.filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) {
@@ -207,7 +208,14 @@ export class VaultWatcher {
     // and a rename reports only the new name. So check that watched directories still exist,
     // and every ~15 ticks sweep every known note as a backstop.
     for (const d of this.watchers.keys()) if (d && !existsSync(join(root, d))) this.pending.add(d);
-    if (++this.ticks % 15 === 0) for (const rel of known.keys()) if (!existsSync(join(root, rel))) this.pending.add(rel);
+    // The sweep compares each known note's mtime and size, not just that it exists: fs.watch merges a
+    // burst of writes (a git checkout) into an event or two, and a missed change would stay missed.
+    if (++this.ticks % 15 === 0) {
+      for (const rel of known.keys()) {
+        const st = statOrNull(join(root, rel));
+        if (!st || st.mtimeMs !== known.get(rel) || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size)) this.pending.add(rel);
+      }
+    }
     for (const [dirRel, before] of this.gitignores) {
       const now = this.gitignoreStamp(dirRel);
       if (now !== before) {
@@ -344,9 +352,16 @@ export class VaultWatcher {
     for (const rel of [...known.keys()]) {
       const slash = rel.lastIndexOf("/");
       const dir = slash >= 0 ? rel.slice(0, slash) : "";
-      if ((dirs.has(dir) || createdNames.has(rel.slice(slash + 1))) && !seen.has(rel) && !existsSync(join(root, rel))) {
+      if (!(dirs.has(dir) || createdNames.has(rel.slice(slash + 1))) || seen.has(rel)) continue;
+      const st = statOrNull(join(root, rel));
+      if (!st) {
         known.delete(rel);
         changes.push({ rel, kind: "deleted", isNote: true });
+      } else if (dirs.has(dir) && (st.mtimeMs !== known.get(rel) || (this.sizes.has(rel) && this.sizes.get(rel) !== st.size)) && this.ownWrites.get(rel) !== st.mtimeMs) {
+        // A burst of writes in this folder reported as one event: the others changed too.
+        known.set(rel, st.mtimeMs);
+        this.sizes.set(rel, st.size);
+        changes.push({ rel, kind: "changed", isNote: true });
       }
     }
     if (changes.length || rescan) this.opts.onBatch({ changes, rescan });
@@ -356,4 +371,13 @@ export class VaultWatcher {
 /** A polling interval for a message: "2 s", or "500 ms" under a second (never "0 s"). */
 function every(ms: number): string {
   return ms < 1000 ? `${ms} ms` : `${Math.round(ms / 1000)} s`;
+}
+
+function statOrNull(path: string): { mtimeMs: number; size: number } | null {
+  try {
+    const st = statSync(path);
+    return st.isFile() ? { mtimeMs: st.mtimeMs, size: st.size } : null;
+  } catch {
+    return null;
+  }
 }

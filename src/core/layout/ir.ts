@@ -43,6 +43,8 @@ export interface Line {
   decor?: boolean;
   /** The lens's rows: its rules, the air outside them, and its rows of markdown. */
   lens?: "top" | "bottom" | "pad" | "source";
+  /** The first row of a footnote's definition: its identifier (what a `[^ref]` link targets). */
+  footnoteDef?: string;
 }
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote";

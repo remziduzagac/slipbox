@@ -307,3 +307,29 @@ describe("review cycle 2 (rendering)", () => {
     expect(JSON.stringify(mono.roles.link_unresolved)).not.toBe(JSON.stringify(mono.roles.wikilink));
   });
 });
+
+describe("review cycle 4 (markdown against the specs)", () => {
+  const lay = (md: string, width = 60) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false });
+  const rows = (l: Layout) => l.lines.map((x) => x.spans.map((s) => s.text).join("").trimEnd());
+  test("a heading's text and slug are the outline's: no footnote marks or image glyphs; repeats share a slug", () => {
+    const l = lay("# Title[^1]\n\n# ![logo](l.png) Project\n\n# A\n\n# A\n\n[^1]: n\n");
+    expect(l.headings.map((h) => [h.text, h.slug])).toEqual([["Title", "title"], ["Project", "project"], ["A", "a"], ["A", "a"]]);
+  });
+  test("footnote definitions are marked by identifier, with their paragraphs apart", () => {
+    const l = lay("See[^Note].\n\n[^Note]: First.\n\n    Second.\n");
+    expect(l.lines.find((x) => x.footnoteDef !== undefined)?.footnoteDef).toBe("note");
+    const r = rows(l);
+    expect(r[r.findIndex((x) => x.includes("First.")) + 1]).toBe("");
+  });
+  test("no-break spaces don't break; text between comments stays; the first definition wins", () => {
+    expect(rows(lay("aaaa bbbb 10\u00a0km cccc\n", 12))).toEqual(["aaaa bbbb", "10\u00a0km cccc"]);
+    expect(rows(lay("<!-- a --> middle <!-- b -->\n")).join("")).toContain("middle");
+    expect(lay("[foo]\n\n[foo]: /first\n[foo]: /second\n").links[0]!.target).toBe("/first");
+  });
+  test("numbered tasks keep their numbers; indented code reports its own lines", () => {
+    expect(rows(lay("1. [ ] a\n2. [x] b\n"))[0]).toMatch(/^1\. /);
+    const code = lay("text\n\n    code1\n    code2\n");
+    const c1 = code.lines.find((x) => x.spans.map((s) => s.text).join("").includes("code1"))!;
+    expect(c1.src).toBe(3);
+  });
+});

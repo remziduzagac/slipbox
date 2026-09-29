@@ -61,7 +61,6 @@ export function stringWidth(text: string): number {
   return w;
 }
 
-/** Cut `text` to at most `width` columns, appending `ellipsis` when it was cut. */
 /** Cut to `width` columns from the start, keeping the end: `…` then the text's last graphemes. */
 export function truncateStart(text: string, width: number, ellipsis = "…"): string {
   if (width <= 0) return "";
@@ -79,6 +78,7 @@ export function truncateStart(text: string, width: number, ellipsis = "…"): st
   return ellipsis + out;
 }
 
+/** Cut `text` to at most `width` columns, appending `ellipsis` when it was cut. */
 export function truncate(text: string, width: number, ellipsis = "…"): string {
   if (width <= 0) return "";
   if (stringWidth(text) <= width) return text;

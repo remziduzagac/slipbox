@@ -9,12 +9,17 @@ import { graphemes, graphemeWidth } from "./width.ts";
 const ESCAPES =
   // biome-ignore lint: control characters are the point of this pattern
   /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x1b[PX^_][^\x1b]*(?:\x1b\\)?|\x1b[@-Z\\-_]|\x9b[0-?]*[ -/]*[@-~]/g;
-// C0 except TAB and LF, DEL, C1, and bidi embedding/override/isolate controls (display spoofing).
-const CONTROLS = /[\x00-\x08\x0b-\x1f\x7f-\x9f‪-‮⁦-⁩]/g;
+// C0 except TAB and LF, DEL, C1, bidi embedding/override/isolate controls and marks (display
+// spoofing; terminals draw the marks as nothing while they measure 1).
+const CONTROLS = /[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+// The Unicode line and paragraph separators: a terminal may break the line there. A space instead.
+const SEPARATORS = /[\u2028\u2029]/g;
+/** Everything `sanitize` changes, for a quick test (and for the CLI's JSON, which escapes it). */
+export const UNSAFE = /[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069\u2028\u2029]/;
 
 export function sanitize(text: string): string {
-  if (!/[\x00-\x08\x0b-\x1f\x7f-\x9f‪-‮⁦-⁩]/.test(text)) return text;
-  return text.replace(ESCAPES, "").replace(CONTROLS, "");
+  if (!UNSAFE.test(text)) return text;
+  return text.replace(ESCAPES, "").replace(CONTROLS, "").replace(SEPARATORS, " ");
 }
 
 /** Expand tabs to spaces against a tab stop, for code blocks. */

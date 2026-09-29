@@ -47,7 +47,12 @@ One predicate, used by both the walk and the watcher (`5.2` is this decision see
   walked. One vault per repo is the norm; this keeps a fixture vault inside a repo from leaking into it.
 - **Symlinks:** a symlinked *file* is included when its real path is inside the vault root, unless that target is
   already walked, since the same note twice would double every backlink. A symlinked *directory* is never followed:
-  no cycles, no escaping the root. Anything pointing outside the root is skipped and reported (`7.5` constraint).
+  no cycles, no escaping the root. Anything pointing outside the root is skipped and reported (`7.5` constraint),
+  and so is one pointing at something that isn't a file (a FIFO or a device, which a read would hang on).
+- **Files a vault controls are read with care.** A cloned or unpacked vault can hold a symlink to `/dev/zero` or a
+  FIFO where a note, `.gitignore`, `.slipbox/config.toml` or `.slipbox/version` should be. Every such read
+  (`readRegular` in `core/fsutil.ts`) opens without blocking and refuses anything but a regular file, and the small
+  files have a size cap (1 MB), so a hostile vault gets a warning, never a hang.
 - **Single-file mode** applies the same filter and size cap to its one directory.
 - **Size cap:** files over `walk.max_file_size` (default 4 MiB) are listed as skipped, not parsed.
 - **Errors never abort.** Unreadable directories and files are collected and reported as warnings.

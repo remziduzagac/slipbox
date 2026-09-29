@@ -5,6 +5,7 @@
 
 import type { CellStyle } from "../core/layout/style.ts";
 import type { Color } from "../core/theme/theme.ts";
+import { sanitize, UNSAFE } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth } from "../core/width.ts";
 
 export interface Canvas {
@@ -19,6 +20,16 @@ export interface Canvas {
 
 const PRINTABLE_ASCII = /^[\x20-\x7e]*$/;
 
+/**
+ * A grapheme as a canvas may put it on screen. Chrome draws names (files, folders, headings,
+ * config labels) straight, some a letter at a time to highlight a match, so every canvas passes
+ * each cell through here: a control or bidi override becomes what `sanitize` makes of it, a space
+ * if nothing (it was measured one column wide).
+ */
+export function safeCell(g: string): string {
+  return UNSAFE.test(g) ? sanitize(g) || " " : g;
+}
+
 /** Draw `text` at (x, y), clipped to `maxW` columns. Returns the columns used. */
 export function drawText(c: Canvas, x: number, y: number, text: string, style: CellStyle, maxW = Number.POSITIVE_INFINITY): number {
   if (y < 0 || y >= c.height || maxW <= 0) return 0;
@@ -30,7 +41,8 @@ export function drawText(c: Canvas, x: number, y: number, text: string, style: C
     return t.length;
   }
   let used = 0;
-  for (const g of graphemes(text)) {
+  // Sanitized whole, so an escape sequence goes as a sequence (not just its ESC).
+  for (const g of graphemes(sanitize(text))) {
     const w = graphemeWidth(g);
     if (used + w > limit) break;
     if (w > 0) c.cell(x + used, y, g, w, style);
@@ -75,7 +87,7 @@ export class TextCanvas implements Canvas {
   cell(x: number, y: number, g: string, w: number, style: CellStyle): void {
     if (y < 0 || y >= this.height || x < 0 || x >= this.width) return;
     this.splitWide(y, x, Math.min(this.width, x + Math.max(1, w)));
-    this.rows[y]![x] = g;
+    this.rows[y]![x] = safeCell(g);
     this.styles[y]![x] = style;
     for (let k = 1; k < w && x + k < this.width; k++) this.rows[y]![x + k] = "";
   }

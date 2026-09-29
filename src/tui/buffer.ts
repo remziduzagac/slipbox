@@ -157,10 +157,10 @@ export class NoteBuffer {
   }
 
   /** The text on disk is now this version (after a save). */
-  markSaved(): void {
+  markSaved(written?: Stamp): void {
     this.savedVersion = this.version;
     this.savedText = this.source;
-    this.stamp = stamp(this.abs);
+    this.stamp = written ?? stamp(this.abs);
     this.conflictKept = false;
     this.markers = false;
   }

@@ -25,6 +25,8 @@ export interface Anchor {
   nth?: number;
   nthFromEnd?: number;
   rowText?: string;
+  /** How many rows below the anchored one `rowText` is (it skips the heading and blank rows). */
+  rowAfter?: number;
 }
 
 export const TOP: Anchor = { heading: null, headingIndex: 0, offset: 0, line: 1 };
@@ -44,7 +46,11 @@ export function anchorAt(layout: Layout, top: number): Anchor {
   const same = layout.headings.filter((h) => h.text === heading!.text);
   if (same.length < 2) return { heading: heading.slug, headingIndex, offset: src - heading.src, line: src };
   const nth = same.indexOf(heading);
-  return { heading: heading.slug, headingIndex, offset: src - heading.src, line: src, headingText: heading.text, nth, nthFromEnd: same.length - 1 - nth, rowText: rowTextOf(layout, top) };
+  // The row whose text tells the entries apart: the anchored row, or when that's a heading (the
+  // same text in every entry) the first row of text after it.
+  let probe = top;
+  while (probe < layout.lines.length - 1 && (probe === heading.line || !rowTextOf(layout, probe))) probe++;
+  return { heading: heading.slug, headingIndex, offset: src - heading.src, line: src, headingText: heading.text, nth, nthFromEnd: same.length - 1 - nth, rowText: rowTextOf(layout, probe), rowAfter: probe - top };
 }
 
 function rowTextOf(layout: Layout, row: number): string {
@@ -61,7 +67,7 @@ export function rowFor(layout: Layout, anchor: Anchor): number {
     const tries = [same[anchor.nth], same[same.length - 1 - anchor.nthFromEnd]].filter((h): h is NonNullable<typeof h> => !!h);
     for (const h of tries) {
       const row = rowForSource(layout, h.src + anchor.offset);
-      if (anchor.rowText && rowTextOf(layout, row).startsWith(anchor.rowText)) return row;
+      if (anchor.rowText && rowTextOf(layout, row + (anchor.rowAfter ?? 0)).startsWith(anchor.rowText)) return row;
     }
     if (tries[0]) return rowForSource(layout, tries[0].src + anchor.offset);
   }
@@ -128,6 +134,15 @@ export class PositionStore {
   }
 
   save(): void {
+    // Another slipbox on this vault may have saved since this one loaded: its entries are kept,
+    // the newer of two for the same note winning (never last-quit-wins).
+    const onDisk = readJson<Record<string, { at?: string }>>(this.file, {});
+    if (onDisk && typeof onDisk === "object" && !Array.isArray(onDisk)) {
+      for (const [k, v] of Object.entries(onDisk)) {
+        const mine = this.data[k];
+        if (v && typeof v.at === "string" && isAnchor(v) && (!mine || mine.at < v.at)) this.data[k] = v as (typeof this.data)[string];
+      }
+    }
     const entries = Object.entries(this.data);
     if (entries.length > MAX_POSITIONS) {
       entries.sort((a, b) => (a[1].at < b[1].at ? 1 : -1));

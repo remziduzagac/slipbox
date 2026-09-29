@@ -29,8 +29,15 @@ export interface Confirm {
   /** Where to look for the next match from. */
   pos: number;
   match?: TextMatch;
+  /** Where the last real (non-empty) match ended: an empty match right there isn't another one. */
+  lastEnd?: number;
   asked: number;
   replaced: number;
+}
+
+/** A replacement's line breaks as the note's own (\r and \n in :s are one, and a CRLF note stays CRLF). */
+function eol(view: View, text: string): string {
+  return view.buf.eol === "\n" ? text : text.replace(/\r?\n/g, view.buf.eol);
 }
 
 /** The query's matches in the note's text, within the replace's range. */
@@ -98,7 +105,7 @@ export function replaceOne(app: App, o: PromptOverlay, view: View): void {
   // The match under the cursor or the next one (wrapping round).
   const m = ms.find((x) => x.to > at) ?? ms[0]!;
   const opts = view.findOpts ?? { regex: false, whole: false };
-  const text = expandReplacement(r.text, m, opts.regex);
+  const text = eol(view, expandReplacement(r.text, m, opts.regex));
   view.buf.edit(m.from, m.to - m.from, text, at);
   if (r.range) r.range = [r.range[0], r.range[1] + text.length - (m.to - m.from)];
   // On to the next match after this one (wrapping), if there is one.
@@ -115,7 +122,7 @@ function applyMatches(app: App, view: View, ms: TextMatch[], replacement: string
   if (!ms.length) return;
   const at = E.offsetOf(app, view);
   view.buf.beginStep(at);
-  for (const m of [...ms].reverse()) view.buf.edit(m.from, m.to - m.from, expandReplacement(replacement, m, regex));
+  for (const m of [...ms].reverse()) view.buf.edit(m.from, m.to - m.from, eol(view, expandReplacement(replacement, m, regex)));
   view.buf.endStep(ms[0]!.from);
   goTo(app, view, Math.min(ms[0]!.from, view.buf.source.length));
 }
@@ -190,7 +197,7 @@ function startConfirm(app: App, view: View, pattern: string, c: Confirm): void {
 /** The remaining matches from `c.pos` on (the first per line without `g`). */
 function remaining(view: View, c: Confirm): TextMatch[] {
   const text = view.buf.source;
-  const all = findAll(text, c.re, c.pos, c.range[1], true);
+  const all = findAll(text, c.re, c.pos, c.range[1], true).filter((m) => !(m.from === m.to && m.from === c.lastEnd));
   return c.global ? all : firstPerLine(text, all);
 }
 
@@ -215,10 +222,11 @@ function nextConfirm(app: App, o: PromptOverlay, view: View): boolean {
 /** Replace the match being asked about; the search goes on after it (or on the next line). */
 function confirmReplace(view: View, c: Confirm): void {
   const m = c.match!;
-  const text = expandReplacement(c.replacement, m, true);
+  const text = eol(view, expandReplacement(c.replacement, m, true));
   view.buf.edit(m.from, m.to - m.from, text);
   c.range[1] += text.length - (m.to - m.from);
   c.replaced++;
+  if (m.to > m.from) c.lastEnd = m.from + text.length;
   // On past it (an empty match one further, or it would match again right there).
   c.pos = c.global ? m.from + text.length + (m.from === m.to ? 1 : 0) : nextLine(view.buf.source, Math.max(m.from, m.from + text.length - 1));
 }
@@ -236,6 +244,7 @@ export function confirmKey(app: App, o: PromptOverlay, view: View, key: string):
       confirmReplace(view, c);
       break;
     case "n":
+      if (c.match.to > c.match.from) c.lastEnd = c.match.to;
       c.pos = c.global ? c.match.to + (c.match.from === c.match.to ? 1 : 0) : nextLine(view.buf.source, c.match.from);
       break;
     case "l":

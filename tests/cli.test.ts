@@ -45,7 +45,8 @@ interface Run {
 function slipbox(args: string[], opts: { stdin?: string; cwd?: string } = {}): Run {
   const word = args.find((a) => !a.startsWith("-"));
   if (word && CLI_COMMANDS.has(word)) ran.add(word);
-  const r = Bun.spawnSync(["bun", MAIN, ...args], { cwd: opts.cwd ?? vault, env, stdin: opts.stdin === undefined ? "ignore" : Buffer.from(opts.stdin) });
+  // A timeout, so a hang (a read that never ends) fails the test instead of the run.
+  const r = Bun.spawnSync(["bun", MAIN, ...args], { cwd: opts.cwd ?? vault, env, stdin: opts.stdin === undefined ? "ignore" : Buffer.from(opts.stdin), timeout: 20_000 });
   const out = r.stdout.toString();
   let json = null;
   if (args.includes("--json")) json = JSON.parse(out);
@@ -364,6 +365,44 @@ describe("the vault and the tool", () => {
     expect(existsSync(join(vault, "meetings", "from-root.md"))).toBe(true);
     slipbox(["write", "./here", "x", "--create"], { cwd: join(vault, "meetings") });
     expect(existsSync(join(vault, "meetings", "here.md"))).toBe(true);
+  });
+  test("review cycle 4: CRLF paragraphs; the vault's extensions; the sha is of the written bytes", () => {
+    writeFileSync(join(vault, "crlf-append.md"), "a\r\nb\r\n");
+    const w = slipbox(["write", "crlf-append", "c", "--append", "--paragraph", "--json"]).json.data;
+    const bytes = readFileSync(join(vault, "crlf-append.md"));
+    expect(bytes.toString()).toBe("a\r\nb\r\n\r\nc\r\n");
+    expect(w.sha).toBe(new Bun.CryptoHasher("sha256").update(bytes).digest("hex").slice(0, 16));
+    const txt = join(sandbox, "txt-vault");
+    mkdirSync(join(txt, ".slipbox"), { recursive: true });
+    writeFileSync(join(txt, ".slipbox", "config.toml"), 'walk.extensions = ["md", "txt"]\n');
+    writeFileSync(join(txt, "plain.txt"), "one\n");
+    expect(slipbox(["--root", txt, "write", "plain.txt", "two", "--append"]).code).toBe(0);
+    expect(readFileSync(join(txt, "plain.txt"), "utf8")).toBe("one\ntwo\n");
+  });
+  test("review cycle 4: a hostile vault — device symlinks and FIFOs never hang; JSON and new names stay clean", () => {
+    const h = join(sandbox, "hostile");
+    mkdirSync(join(h, ".slipbox"), { recursive: true });
+    mkdirSync(join(h, "sub"));
+    writeFileSync(join(h, "index.md"), "# a\n");
+    symlinkSync("/dev/zero", join(h, ".slipbox", "config.toml"));
+    symlinkSync("/dev/zero", join(h, ".slipbox", "version"));
+    symlinkSync("/dev/zero", join(h, "sub", ".gitignore"));
+    Bun.spawnSync(["mkfifo", join(h, "pipe")]);
+    symlinkSync("pipe", join(h, "flink.md"));
+    for (const args of [["ls"], ["info"], ["find", "a"], ["read", "flink.md"], ["backlinks", "index"]]) {
+      const r = slipbox(["--root", h, ...args]);
+      expect(r.code).not.toBe(-1); // -1: killed by the timeout
+      expect(r.code).not.toBeNull();
+    }
+    expect(slipbox(["--root", h, "info"]).err).toContain("not a regular file");
+    // C1 controls and bidi overrides are escaped in --json; the value is unchanged.
+    const odd = "n\u009b31m\u202egnp.md";
+    writeFileSync(join(h, odd), "# odd\n");
+    const ls = slipbox(["--root", h, "ls", "--json"]);
+    expect(ls.out).not.toMatch(/[\u0080-\u009f\u202a-\u202e]/);
+    expect(ls.json.data.map((n: { path: string }) => n.path)).toContain(odd);
+    expect(slipbox(["--root", h, "write", "sub\u202e/x", "hi", "--create"]).code).toBe(5);
+    expect(existsSync(join(h, "sub\u202e"))).toBe(false);
   });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));

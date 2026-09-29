@@ -3,7 +3,8 @@
 // Precedence: `--root`, then the nearest `.slipbox/` walking up from the opened path, then
 // single-file mode. Deliberately no git-root fallback — it would turn every repo into a vault.
 
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { readRegular } from "./fsutil.ts";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { VAULT_CONFIG_TEMPLATE } from "./config.ts";
@@ -103,7 +104,7 @@ export function isInside(root: string, path: string): boolean {
 
 export function readVaultVersion(root: string): number | null {
   try {
-    const n = Number.parseInt(readFileSync(join(root, MARKER, "version"), "utf8").trim(), 10);
+    const n = Number.parseInt(readRegular(join(root, MARKER, "version"), 4096).toString("utf8").trim(), 10);
     return Number.isFinite(n) ? n : null;
   } catch {
     return null;

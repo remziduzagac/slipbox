@@ -8,6 +8,7 @@ import type { Line } from "../core/layout/ir.ts";
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
+import { sanitize } from "../core/sanitize.ts";
 import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, ordered } from "./cursor.ts";
@@ -1146,7 +1147,8 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const li = app.linkUnderCursor(view);
   const link = li >= 0 ? layout.links[li] : null;
   const linkText = link ? `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status})  ` : "";
-  const room = c.width - stringWidth(chip) - 2 - Math.min(16, stringWidth(app.displayName(view.buf)));
+  const markerW = stringWidth(pathMarker(app, view));
+  const room = c.width - stringWidth(chip) - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
   let right = `${linkText}${tabs}${pos}`;
   if (stringWidth(right) + 1 > room) right = `${tabs}${pos}`;
   if (stringWidth(right) + 1 > room) right = pos;
@@ -1158,7 +1160,7 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.
   const full = app.displayName(buf);
-  const marker = buf.deleted ? " ✖ deleted on disk" : buf.conflictKept ? " • unsaved ⚠ differs from disk" : buf.dirty ? " • unsaved" : changed ? " ↻ reloaded" : "";
+  const marker = pathMarker(app, view);
   const pathW = Math.max(4, c.width - x - rightW - 2 - stringWidth(marker));
   const pw = drawText(c, x, y, truncate(full, pathW), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
   geo.hot.push({ id: pathId, x, y: band.y, w: pw, h: band.h });
@@ -1177,6 +1179,13 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const rx = c.width - rightW;
   if (x + stringWidth(watch.text) + 3 < rx) x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
   if (rx > x) drawText(c, rx, y, right, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
+}
+
+/** The marker after the status line's path (its length is what the right side must leave room for). */
+function pathMarker(app: App, view: View): string {
+  const buf = view.buf;
+  const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
+  return buf.deleted ? " ✖ deleted on disk" : buf.conflictKept ? " • unsaved ⚠ differs from disk" : buf.dirty ? " • unsaved" : changed ? " ↻ reloaded" : "";
 }
 
 /** A prompt, or a message with no top bar to sit in, over the status line (zen: the last row). */
@@ -1415,7 +1424,7 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     const hintW = hint ? stringWidth(hint) + 2 : 0;
     const avail = w - 4 - hintW - (keysW ? keysW + 2 : 0);
     let cx = x + 2 + indent;
-    const label = truncate(item.label, Math.max(4, avail - indent));
+    const label = truncate(sanitize(item.label), Math.max(4, avail - indent));
     const pos = new Set(positions);
     let ci = 0;
     for (const g of graphemes(label)) {
@@ -1495,7 +1504,7 @@ function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; 
     // One heading under the next: each row hangs off the one above with └─.
     if (depth) drawText(c, cx - 3, ry, `${g.guideLast}${g.guideDash}`, { ...roleStyle(theme, "tree_guide", st.bg), bg: st.bg }, 2);
     const hw = hintW(item);
-    const label = truncate(item.label, Math.max(1, x + w - 2 - hw - cx));
+    const label = truncate(sanitize(item.label), Math.max(1, x + w - 2 - hw - cx));
     const pos = new Set(positions);
     let ci = 0;
     for (const gr of graphemes(label)) {

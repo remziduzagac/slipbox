@@ -38,16 +38,20 @@ their children out at reduced width and prefix every row, so nesting composes.
 | heading | level icon plus text in `h1`–`h6`; a background band across the width |
 | paragraph | wrapped; soft breaks become spaces (none between Han or kana), hard breaks and `<br>` split rows |
 | list | bullets per depth, numbers right-aligned, hanging indent |
-| task item | checkbox glyph; a checked item's text is dimmed |
+| task item | checkbox glyph (after the number in an ordered list); a checked item's text is dimmed |
 | blockquote | `▎` bar per row, italic dim text |
 | callout | `> [!note] Title` (Obsidian and GitHub): icon, title, bar in the kind's colour |
 | code | full width, background fill, language label at top right, highlighted, hard-wrapped |
 | table | the allocator below |
 | thematic break | a rule across the width |
 | frontmatter | a "properties" block: aligned rows, a long key cut with `…`; raw text and the wrapped error if broken |
-| html block | shown dim, verbatim; comments hidden; a lone `<br>` is a blank row |
-| footnote | `[1]` reference; the definition as `1.` with a hanging indent |
-| definition | hidden; reference links resolve through it |
+| html block | shown dim, verbatim; comments (each `<!-- -->` on its own) hidden; a lone `<br>` is a blank row |
+| footnote | `[1]` reference; the definition as `1.` with a hanging indent, its paragraphs apart |
+| definition | hidden; reference links resolve through it, the first of a label winning (CommonMark) |
+
+**Headings** are linked to by their text as the renderer shows it (a footnote mark or inline code
+included) and slugged GitHub's way; a repeated heading keeps its plain slug (no `-1` suffix), and
+`#anchor` links find the first. A no-break space (U+00A0, U+2007, U+202F) is never a place to wrap.
 
 **Inline:** `**strong**` gets the `strong` role, which has an explicitly lighter foreground,
 because bold alone does not read as bold in a terminal (plan `2.7`). Also: `*emphasis*`,
@@ -150,8 +154,11 @@ grapheme that overflows.
 5,000 levels deep neither overflows the stack nor hides everything. Below 8 columns for its child, a
 container stops indenting (a quote drops its bar, a list item's marker takes a row of its own), so
 nothing is cut in a narrow split. Inputs the markdown parser takes quadratic time over are tamed
-before parsing without moving an offset (`tame` in `core/parse.ts`): a run of 64 or more `*` `_` `[`
-`]` becomes look-alikes, and a line's container prefix past 80 characters becomes no-break spaces.
+before parsing without moving an offset (`tame` in `core/parse.ts`), and only where an ordinary note
+never has them: frontmatter, fenced code and lines made only of rule characters (`***`, a setext
+`===`) are left alone. A run of 64 or more `*` `_` `[` `]` in a line with other text becomes
+look-alikes; 20 or more container markers, or 96 columns of indentation before a list marker, get
+one no-break space at the cap, which ends the nesting there.
 Frontmatter over 64 KB shows as text; YAML is parsed without the (quadratic) duplicate-key check.
 
 Nothing ever overflows the layout width. As a last defence the renderer cuts any row still too wide
@@ -215,7 +222,10 @@ The Nerd set uses the same heading icons as the render-markdown configuration it
 ## Escapes (constraint `2.9`)
 
 `core/sanitize.ts` removes CSI, OSC, DCS/APC and two-byte escape sequences, bare C0 and C1
-controls, and bidi override and isolate characters, which are used for display spoofing. Every
+controls, bidi override and isolate characters and the bidi marks (U+200E, U+200F, U+061C), which
+are used for display spoofing, and turns the line and paragraph separators (U+2028, U+2029) into
+spaces. The TUI's chrome draws names (files, folders, headings, config labels) through the same
+function, and each canvas passes every cell through it again (`safeCell`). Every
 string entering the IR passes through it: text, code, HTML, frontmatter, link targets and
 language labels. As a backstop, the layout's final pass sanitizes every span again, whichever
 path built it (footnote labels and nested frontmatter keys were found that way). The fixture

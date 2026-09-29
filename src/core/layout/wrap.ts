@@ -13,7 +13,9 @@ interface G {
 
 type Chunk = { kind: "word" | "space"; gs: G[]; width: number } | { kind: "newline" };
 
-const SPACE = /^\s$/;
+// Where a line may break: whitespace — but not a no-break space (U+00A0, U+2007, U+202F), which
+// keeps "10 km" together as its author asked.
+const SPACE = /^(?![\u00a0\u2007\u202f])\s$/;
 // Kinsoku: CJK closing punctuation never starts a row, opening punctuation never ends one.
 const NO_BREAK_BEFORE = /^[、。，．：；？！）」』】〕〉》｝］〙〗ー々ゝゞヽヾ…‥・％]$/;
 const NO_BREAK_AFTER = /^[（「『【〔〈《｛［〘〖]$/;

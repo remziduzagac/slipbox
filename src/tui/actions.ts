@@ -182,7 +182,8 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
   switch (link.kind) {
     case "footnote": {
       const layout = lay(a, view);
-      const row = layout.lines.findIndex((l) => l.spans[0]?.role === "footnote" && l.spans[0].text.startsWith(`${link.target}.`));
+      // The definition's first row, by identifier (whatever the label's case, in a quote or a list).
+      const row = layout.lines.findIndex((l) => l.footnoteDef !== undefined && l.footnoteDef.toLowerCase() === link.target.toLowerCase());
       if (row < 0) return a.message("warn", `footnote [^${link.target}] has no definition`);
       a.pushHistory(view);
       a.moveCursor(view, { row, col: 0 });

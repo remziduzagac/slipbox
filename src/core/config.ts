@@ -2,7 +2,8 @@
 // Must run correctly with no config at all, and never crash on a bad one — problems become
 // warnings in the message sink.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { userConfigFile } from "./paths.ts";
@@ -230,7 +231,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     }
     let data: Record<string, unknown>;
     try {
-      data = parseToml(readFileSync(file, "utf8")) as Record<string, unknown>;
+      data = parseToml(readRegular(file, SMALL_FILE).toString("utf8")) as Record<string, unknown>;
       opts.lastGood?.set(file, structuredClone(data));
     } catch (err) {
       const kept = opts.lastGood?.get(file);

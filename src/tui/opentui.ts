@@ -5,7 +5,7 @@
 import { type OptimizedBuffer, Renderable, type RenderContext, RGBA, TextAttributes } from "@opentui/core";
 import type { CellStyle } from "../core/layout/style.ts";
 import type { Color } from "../core/theme/theme.ts";
-import type { Canvas } from "./canvas.ts";
+import { type Canvas, safeCell } from "./canvas.ts";
 
 const colors = new Map<string, RGBA>();
 
@@ -45,7 +45,7 @@ export class BufferCanvas implements Canvas {
     this.buf.fillRect(x, y, w, h, toRGBA(bg, false));
   }
   cell(x: number, y: number, g: string, _w: number, s: CellStyle): void {
-    this.buf.drawText(g, x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
+    this.buf.drawText(safeCell(g), x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
   }
   ascii(x: number, y: number, text: string, s: CellStyle): void {
     this.buf.drawText(text, x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));

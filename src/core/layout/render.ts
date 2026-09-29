@@ -3,9 +3,9 @@
 // Containers (quotes, list items, callouts) lay their children out at a reduced width and then
 // prefix every row, so nesting composes without any block knowing where it sits.
 
-import type { Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
+import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
-import { parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
+import { headingText, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../width.ts";
@@ -117,7 +117,8 @@ function enforceRow(line: Line, width: number): boolean {
 
 function collectDefinitions(tree: Root, ctx: Ctx) {
   const walk = (n: Nodes) => {
-    if (n.type === "definition") ctx.definitions.set(n.identifier.toLowerCase(), n.url);
+    // The first definition of a label wins (CommonMark), not the last.
+    if (n.type === "definition" && !ctx.definitions.has(n.identifier.toLowerCase())) ctx.definitions.set(n.identifier.toLowerCase(), n.url);
     const ch = (n as Parents).children;
     if (ch) for (const c of ch) walk(c);
   };
@@ -160,8 +161,12 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
       return paragraph(node.children, srcOf(node), ctx, width, base);
     case "thematicBreak":
       return [{ spans: [{ text: ctx.opts.glyphs.rule.repeat(width), role: "rule", attrs: 0 }], src: srcOf(node) }];
-    case "code":
-      return codeBlock(node.value, node.lang ?? null, srcOf(node), ctx, width);
+    case "code": {
+      // A fenced block's code starts a line after its fence; an indented one's on its own line.
+      const span = node.position ? node.position.end.line - node.position.start.line + 1 : 0;
+      const fenced = !node.position || span > node.value.split("\n").length;
+      return codeBlock(node.value, node.lang ?? null, srcOf(node), ctx, width, fenced ? 1 : 0);
+    }
     case "blockquote":
     case "list": {
       if (ctx.nesting >= MAX_NESTING) return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
@@ -183,8 +188,14 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
     case "footnoteDefinition": {
       const label = `${node.label ?? node.identifier}.`;
       const marker: Span = { text: `${label} `, role: "footnote", attrs: 0 };
-      if (width - stringWidth(marker.text) < MIN_NESTED) return [{ spans: [marker], src: srcOf(node) }, ...blocks(node.children, ctx, width, base, null, true)];
-      return prefixed(blocks(node.children, ctx, width - stringWidth(marker.text), base, null, true), [marker], srcOf(node));
+      // Its paragraphs keep their gaps; its first row says whose definition it is, so a [^Ref]
+      // finds it whatever the label's case, and inside a quote or a list too.
+      const rows =
+        width - stringWidth(marker.text) < MIN_NESTED
+          ? [{ spans: [marker], src: srcOf(node) }, ...blocks(node.children, ctx, width, base)]
+          : prefixed(blocks(node.children, ctx, width - stringWidth(marker.text), base), [marker], srcOf(node));
+      if (rows[0]) rows[0] = { ...rows[0], footnoteDef: node.identifier };
+      return rows;
     }
     default:
       if ((node.type as string) === "toml") return frontmatterBlock(fm ?? null, (node as { value: string }).value, srcOf(node), ctx, width);
@@ -198,8 +209,11 @@ function heading(depth: number, children: PhrasingContent[], src: number, ctx: C
   const g = ctx.opts.glyphs;
   const icon = g.mode === "nerd" ? g.heading[depth - 1]! : `${g.heading[depth - 1]} `;
   const spans = inline(children, ctx, { role, attrs: A_BOLD }, src);
-  const text = spans.map((s) => s.text).join("");
-  const slug = uniqueSlug(slugify(text), ctx);
+  // The heading's text and slug as the outline (headingsOf) has them — not the drawn spans, which
+  // carry footnote marks and image glyphs. Repeated headings share a slug; their occurrence tells
+  // them apart (anchors count it), so [[#A-1]] is the heading "A-1", never the second "A".
+  const text = headingText({ type: "heading", depth: depth as Heading["depth"], children }).replace(/\s+/g, " ").trim();
+  const slug = slugify(text);
   const idx = ctx.headings.push({ level: depth, text, slug, src }) - 1;
   const iconW = stringWidth(icon);
   const rows = wrapSpans(spans, width - iconW);
@@ -211,18 +225,12 @@ function heading(depth: number, children: PhrasingContent[], src: number, ctx: C
   }));
 }
 
-function uniqueSlug(slug: string, ctx: Ctx): string {
-  const n = ctx.slugCounts.get(slug) ?? 0;
-  ctx.slugCounts.set(slug, n + 1);
-  return n === 0 ? slug : `${slug}-${n}`;
-}
-
 function paragraph(children: PhrasingContent[], src: number, ctx: Ctx, width: number, base: Style): Line[] {
   const spans = inline(children, ctx, base, src);
   return wrapSpans(spans, width).map((row) => ({ spans: row, src: row[0]?.src ?? src }));
 }
 
-function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, width: number): Line[] {
+function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, width: number, firstLine = 1): Line[] {
   const g = ctx.opts.glyphs;
   const code = sanitize(value);
   const sourceLines = code.split("\n").map((l) => expandTabs(l));
@@ -238,7 +246,7 @@ function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, wi
   out.push({ spans: top, src, fill: "code_block" });
   const inner = Math.max(1, width - 2);
   sourceLines.forEach((text, i) => {
-    const lineSrc = src + 1 + i;
+    const lineSrc = src + firstLine + i;
     const spans: Span[] = tokens?.[i]?.length
       ? tokens[i]!.map((t) => ({ text: t.text, role: t.role ?? "code_block", attrs: 0, src: lineSrc }))
       : [{ text, role: "code_block", attrs: 0, src: lineSrc }];
@@ -373,8 +381,10 @@ function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: num
   const g = ctx.opts.glyphs;
   const start = node.start ?? 1;
   const markers = node.children.map((item, i) => {
-    if (item.checked === true) return { text: `${g.checkDone} `, role: "check_done" as Role };
-    if (item.checked === false) return { text: `${g.checkTodo} `, role: "check_todo" as Role };
+    // A numbered task keeps its number before its box (GitHub's way).
+    const num = node.ordered ? `${start + i}. ` : "";
+    if (item.checked === true) return { text: `${num}${g.checkDone} `, role: "check_done" as Role };
+    if (item.checked === false) return { text: `${num}${g.checkTodo} `, role: "check_todo" as Role };
     if (node.ordered) return { text: `${start + i}. `, role: "list_marker" as Role };
     return { text: `${g.bullets[depth % g.bullets.length]} `, role: "list_marker" as Role };
   });
@@ -391,7 +401,9 @@ function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: num
     item.children.forEach((child, ci) => {
       const rendered =
         child.type === "list" ? nestedList(child, ctx, inner, base, depth + 1) : (block(child, ctx, inner, item.checked === true ? { role: "dim", attrs: 0 } : base) ?? []);
-      if (ci > 0 && (node.spread || child.type !== "list")) lines.push(gapAfter(lines, srcOf(child)));
+      // Nothing drawn (a definition, a comment): no gap for it either.
+      if (!rendered.length) return;
+      if (ci > 0 && lines.length && (node.spread || child.type !== "list")) lines.push(gapAfter(lines, srcOf(child)));
       lines.push(...rendered);
     });
     if (i > 0 && node.spread) out.push(gapAfter(out, srcOf(item)));
@@ -404,8 +416,11 @@ function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: num
 }
 
 function htmlBlock(value: string, src: number, width: number): Line[] | null {
+  // Comments are hidden, one by one (not everything from the first to the last: text between two
+  // is kept); a block that was only comments draws nothing.
+  value = value.replace(/<!--[\s\S]*?-->/g, "");
   const v = value.trim();
-  if (/^<!--[\s\S]*-->$/.test(v)) return null;
+  if (!v) return null;
   if (/^<br\s*\/?>$/i.test(v)) return [blank(src)];
   const out: Line[] = [];
   sanitize(value)

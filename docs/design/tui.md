@@ -694,7 +694,10 @@ when a note's mtime or size differs, so a rewrite in the same second is still se
 non-note file but editors' temporary files) are reported too, re-laying out only when the attachment
 index actually changes, so `![[image.png]]` embeds change status as images come and go; a note that
 appears or grows larger than `walk.max_file_size` is skipped (and dropped from the index), as the
-walk would. The TUI's own writes (the scratch) are ignored once, then forgotten.
+walk would. Events come coalesced (a burst of writes in one folder may report one file), so a
+batch also re-stats the known notes in each folder that had events. The TUI's own writes (notes,
+the scratch) are ignored once, then forgotten, and only while the file still has the stamp (mtime
+and size) the write left: an agent's write landing right after a save is a change, not ours.
 
 **Degrading loudly (plan `5.2`).** Exhausting the watch limit (`ENOSPC`, `EMFILE`, `ENFILE`)
 produces one error message, `⚠ not watching` in the status line, and polling of open notes.

@@ -42,7 +42,9 @@ never a lock, never a refusal.
   error, and so is a bad value of a shared flag on any command (`--color` must be `auto`,
   `always` or `never`). `--width` takes a whole number from 20 to 1000, written in digits.
 - **Human output** of note text (headings, link text, paths, the scratch) is sanitized like the
-  TUI's (constraint `2.9`); only `render`'s own colours are escape codes.
+  TUI's (constraint `2.9`); only `render`'s own colours are escape codes. **`--json`** keeps values
+  whole but escapes what sanitize would remove (C1 controls, DEL, bidi controls and separators) as
+  `\uXXXX`, so the raw object is safe to print in a terminal.
 - **Colour:** `render` colours only when stdout is a TTY and `NO_COLOR` is unset; `--color always`
   forces it (even with `NO_COLOR`). `--plain`, `--color never` or a pipe give output with no
   escapes. `--theme` and `--glyphs auto|nerd|unicode|ascii` override the config for one render.
@@ -155,7 +157,10 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   makes a new note: the argument is then a path in the vault (`.md` added), never a name to
   resolve, and a file already there is refused (exit 5), never overwritten. Text given as
   arguments ends with a newline; `--stdin` is written as it comes. No write reaches outside the
-  vault, a symlinked folder on the way included.
+  vault, a symlinked folder on the way included. What counts as a note is the vault's
+  `walk.extensions` (a `.txt` note in a vault that lists `txt`), not the walk's exclusions: a note
+  a pattern leaves out of the index is still written. A new name with a control or bidi character
+  is refused.
 - **`task`** lists task items from the parsed note, so a `- [ ]` inside a code block isn't one.
   With a line it toggles that task; `--check` and `--uncheck` set it and change nothing when it is
   already so. A toggle is a one-byte edit, so it works on a note that isn't valid UTF-8 too.

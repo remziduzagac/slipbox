@@ -9,9 +9,9 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
-import { appendFileSync, existsSync, readFileSync, statSync } from "node:fs";
+import { appendFileSync, existsSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { readRegular, readText, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
@@ -1302,7 +1302,7 @@ export class App {
     }
     let bytes: Uint8Array;
     try {
-      bytes = readFileSync(buf.abs);
+      bytes = readRegular(buf.abs);
     } catch (err) {
       return this.message("error", `can't read ${buf.key}: ${(err as Error).message}`);
     }
@@ -1315,17 +1315,19 @@ export class App {
   writeBuffer(buf: NoteBuffer, content: string | Uint8Array, saving = false): boolean {
     // A vault note stays inside the vault; a file from outside it (the scratch) inside its folder.
     const root = buf.rel !== null ? this.loc.root : dirname(buf.abs);
+    let written: ReturnType<typeof writeNote>;
     try {
-      writeNote(root, buf.abs, content);
+      written = writeNote(root, buf.abs, content);
     } catch (err) {
       this.message("error", err instanceof WriteRefused ? err.message : `can't write ${buf.key}: ${(err as Error).message}`);
       return false;
     }
-    if (buf.rel !== null) this.watcher?.noteOwnWrite(buf.rel);
+    // Stamped as written: an agent's write landing right after is a change, not ours.
+    if (buf.rel !== null) this.watcher?.noteOwnWrite(buf.rel, written);
     if (saving) {
       // The text on disk is what's in the buffer: keep it, its history and every cursor.
       buf.deleted = false;
-      buf.markSaved();
+      buf.markSaved(written);
       return true;
     }
     buf.load();
@@ -2650,6 +2652,16 @@ export class App {
 
   /** Everything visible is clickable (docs/design/keymap.md, "Mouse"). */
   handleMouse(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
+    this.handleMouseNow(ev);
+    // As after a key: a click can save, load theirs, tick a task — the idle clock and the stale list
+    // follow it too.
+    if (ev.type !== "move" && ev.type !== "over" && ev.type !== "out") {
+      this.scheduleAutosave();
+      this.publishDirty();
+    }
+  }
+
+  private handleMouseNow(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
     const g = this.geometry;
     if (!g) return;
     const hotAt = () => g.hot.find((h) => inRect(h, ev.x, ev.y));
@@ -3316,6 +3328,8 @@ export class App {
   }
 
   reloadBuffer(buf: NoteBuffer, deleted = false): void {
+    // Back after being deleted (recreated): not deleted any more, whatever happens next.
+    if (!deleted && buf.deleted && existsSync(buf.abs)) buf.deleted = false;
     if (buf.dirty && !deleted) {
       // Unsaved changes here and a new version there: the conflict prompt decides (5.5).
       if (!buf.conflictKept) this.conflictPrompt(buf);
@@ -3334,6 +3348,14 @@ export class App {
       v.layoutKey = "";
       v.sel = null;
       v.visual = null;
+    }
+    // A selection the replace row keeps to was offsets into the old text: they mean nothing now.
+    const o = this.overlay;
+    if (o?.kind === "prompt" && o.replace?.range && o.view?.buf === buf) {
+      // Closed rather than widened: replace-all must never reach text you didn't select.
+      o.replace = undefined;
+      o.change?.(o.text);
+      this.message("warn", `${this.displayName(buf)} changed on disk — the replace row closed (its selection is gone); select again`);
     }
     // The reload was an undo step of its own: typing going on in it continues as one step again.
     const typing = this.allViews().find((v) => v.buf === buf && v.insert);
@@ -3435,6 +3457,9 @@ export class App {
       this.message("error", `${buf.key} isn't valid UTF-8 — not saving over it`);
       return false;
     }
+    // A note deleted on disk that's there again (an agent recreated it) is a change like any:
+    // never written over without asking.
+    if (buf.deleted && existsSync(buf.abs)) buf.deleted = false;
     if (buf.changedOnDisk() && !buf.deleted) {
       if (quiet) return false;
       if (buf.conflictKept) this.confirmOverwrite(buf);
@@ -3476,7 +3501,10 @@ export class App {
     }
     buf.conflictWaiting = false;
     if (this.overlay) {
-      this.message("warn", `${this.displayName(buf)} changed on disk while you have unsaved changes — space n c resolves it`);
+      // Its own prompt already open: nothing to add. Another list open: said once, not per write.
+      const own = this.overlay.kind === "list" && this.overlay.title.startsWith(`${this.displayName(buf)} changed on disk`);
+      if (!own && !buf.conflictWaiting) this.message("warn", `${this.displayName(buf)} changed on disk while you have unsaved changes — space n c resolves it`);
+      buf.conflictWaiting = !own;
       return;
     }
     for (const v of this.allViews()) if (v.insert && v.buf === buf) stopInsert(this, v);
@@ -3594,7 +3622,7 @@ export class App {
         let gitDir = dotGit;
         try {
           if (statSync(dotGit).isFile()) {
-            const m = /^gitdir:\s*(.+)$/m.exec(readFileSync(dotGit, "utf8"));
+            const m = /^gitdir:\s*(.+)$/m.exec(readRegular(dotGit, SMALL_FILE).toString("utf8"));
             if (m) gitDir = resolve(d, m[1]!.trim());
           }
         } catch {}

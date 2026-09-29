@@ -1,7 +1,8 @@
 // The file walk (plan 1.2), implementing decision 0.11. The watcher uses the same `WalkFilter`,
 // so what the walk excludes is exactly what the watcher does not subscribe to (5.2).
 
-import { type Dirent, existsSync, lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { type Dirent, existsSync, lstatSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
 import type { Config } from "./config.ts";
@@ -92,7 +93,7 @@ export class WalkFilter {
     if (this.gitignores.has(dirRel)) return this.gitignores.get(dirRel)!;
     let ig: Ignore | null = null;
     try {
-      const text = readFileSync(join(this.root, dirRel, ".gitignore"), "utf8");
+      const text = readRegular(join(this.root, dirRel, ".gitignore"), SMALL_FILE).toString("utf8");
       ig = ignore({ ignorecase: GIT_IGNORECASE }).add(text);
     } catch {}
     this.gitignores.set(dirRel, ig);
@@ -166,6 +167,11 @@ function handleSymlink(abs: string, rel: string, realRoot: string, filter: WalkF
   }
   if (st.isDirectory()) {
     out.skipped.push({ rel, reason: "symlinked directory (not followed)" });
+    return;
+  }
+  if (!st.isFile()) {
+    // A FIFO, socket or device: reading one would hang.
+    if (filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) out.skipped.push({ rel, reason: "symlink to something that isn't a file" });
     return;
   }
   if (!filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) return;

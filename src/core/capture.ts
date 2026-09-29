@@ -8,7 +8,7 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import { type Config, isSafeRelative } from "./config.ts";
-import { atomicWrite, ensureDir, landsInside } from "./fsutil.ts";
+import { atomicWrite, ensureDir, landsInside, readRegular } from "./fsutil.ts";
 import { stateDir } from "./paths.ts";
 import { sanitize } from "./sanitize.ts";
 
@@ -142,7 +142,7 @@ function fence(body: string, lang: string): string {
 
 export function readScratch(loc: ScratchLocation): string {
   try {
-    return readFileSync(loc.path, "utf8");
+    return readRegular(loc.path).toString("utf8");
   } catch {
     return "";
   }

@@ -670,3 +670,29 @@ describe("review cycle 3 (config)", () => {
     expect(c.config.walk.extensions.length).toBeGreaterThan(0);
   });
 });
+
+describe("review cycle 4 (core)", () => {
+  const re = (q: string) => compilePattern(q, { regex: true, whole: false }) as RegExp;
+  test("empty matches never split an emoji; $ in CRLF is one per line", () => {
+    for (const m of findAll("x😀y😀", re("x*"), 0, 6, true)) expect([2, 5]).not.toContain(m.from); // inside a pair
+    expect(findAll("a\r\nb\r\n", re("$"), 0, 6, true).map((m) => m.from)).toEqual([1, 4]);
+  });
+  test("taming never changes an ordinary note: rules, setext, long numbers, code, frontmatter", () => {
+    const g = glyphsFor("unicode");
+    const text = (md: string) => renderMarkdown(md, { width: 200, glyphs: g, showUrls: false }).lines.map((l) => l.spans.map((x) => x.text).join("")).join("\n");
+    expect(parseMarkdown(`Section\n${"-".repeat(90)}\n`).tree.children[0]!.type).toBe("heading");
+    const pi = "3".repeat(100);
+    expect(text(`${pi}\n`)).toContain(pi);
+    expect(text(`\`\`\`\n#${"*".repeat(80)}\n\`\`\`\n`)).toContain(`#${"*".repeat(80)}`);
+    expect(parseMarkdown(`---\nsep: "${"*".repeat(80)}"\n---\n`).frontmatter?.data?.sep).toBe("*".repeat(80));
+    expect(text(`${"_".repeat(80)}\n`)).not.toContain("‗");
+  });
+});
+
+describe("review cycle 4 (core, CRLF empty matches)", () => {
+  test("an empty match never falls between \\r and \\n", () => {
+    const { findAll } = require("../src/core/replace.ts");
+    expect(findAll("aaa\r\nb\r\n", /a*/g, 0, 5, true)).toEqual([{ from: 0, to: 3, groups: ["aaa"] }]);
+    expect(findAll("xy\r\n", /a*/g, 0, 4, true).map((m: { from: number }) => m.from)).toEqual([0, 1, 2]);
+  });
+});
