@@ -8,9 +8,12 @@ export interface Args {
 
 /** Flags that take a value, and boolean flags. Anything else is a usage error. */
 export const VALUED = new Set(["root", "config", "color", "width", "theme", "from", "ref", "lang", "if-unchanged", "glyphs", "lines", "line", "server"]);
-const BOOLEAN = new Set(["json", "plain", "snippet", "stdin", "help", "version", "regex", "whole", "ignore-case", "first", "first-per-line", "dry-run", "create", "append", "paragraph", "allow-empty", "check", "uncheck"]);
+const BOOLEAN = new Set(["all", "json", "plain", "snippet", "stdin", "help", "version", "regex", "whole", "ignore-case", "first", "first-per-line", "dry-run", "create", "append", "paragraph", "allow-empty", "check", "uncheck"]);
 
 export class UsageError extends Error {}
+
+// Text that starts with a dash (a list item: "- 22:10 seeing") reads as an option.
+const DASH_HINT = " (text or a pattern starting with - goes after --: slipbox write note --append -- '- item')";
 
 export function parseArgs(argv: string[]): Args {
   const positional: string[] = [];
@@ -32,7 +35,7 @@ export function parseArgs(argv: string[]): Args {
         if (v === "") throw new UsageError(`--${name} needs a value (it was empty)`);
         flags.set(name, v);
       } else {
-        if (!BOOLEAN.has(name)) throw new UsageError(`unknown option: --${name}`);
+        if (!BOOLEAN.has(name)) throw new UsageError(`unknown option: --${name}${DASH_HINT}`);
         if (eq >= 0) throw new UsageError(`--${name} does not take a value`);
         flags.set(name, true);
       }
@@ -46,7 +49,7 @@ export function parseArgs(argv: string[]): Args {
       flags.set("version", true);
       continue;
     }
-    if (a.startsWith("-") && a.length > 1) throw new UsageError(`unknown option: ${a}`);
+    if (a.startsWith("-") && a.length > 1) throw new UsageError(`unknown option: ${a}${DASH_HINT}`);
     positional.push(a);
   }
   return { positional, flags };

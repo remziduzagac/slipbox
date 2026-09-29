@@ -469,6 +469,7 @@ export class App {
       if (first) this.openInNewTab(first);
     }
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
+    this.publishState();
     this.recordConfigStamps();
     if (opts.watch !== false) {
       if (this.config.watch.enabled) this.startWatcher();
@@ -2365,6 +2366,7 @@ export class App {
     }
     this.scheduleAutosave(); // the idle clock starts again at each key
     this.publishDirty();
+    this.publishState();
     // A conflict that arrived while typing: its prompt now that typing stopped — not on the esc that
     // stopped it, since a second esc (closing the lens) would dismiss it unread.
     if (!this.overlay && key !== "escape" && !this.allViews().some((v) => v.insert)) {
@@ -2392,6 +2394,30 @@ export class App {
   }
 
   private lastDirty = "";
+
+  /**
+   * The session and positions, which `slipbox history` reads (what's open, the note on screen, the
+   * nvim picked for send): kept current while slipbox runs, not only at quit, so an agent sees what
+   * the user sees and a crash loses little. Saved a second after they last change.
+   */
+  publishState(): void {
+    const v = this.view;
+    const sig = [this.activeTab, v ? `${v.buf.key}@${v.cur.row}` : "", this.remoteServer ?? "", ...this.tabs.map((t) => `${t.active}:${t.views.map((x) => x.buf.key).join(",")}`)].join("|");
+    if (sig === this.lastState || this.quitting) return;
+    this.lastState = sig;
+    if (this.stateTimer) clearTimeout(this.stateTimer);
+    this.stateTimer = setTimeout(() => {
+      this.stateTimer = null;
+      if (this.quitting) return;
+      try {
+        this.saveState();
+      } catch {}
+    }, 1000);
+    (this.stateTimer as { unref?: () => void }).unref?.();
+  }
+
+  private lastState = "";
+  private stateTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** The keymaps consulted in the current state, in priority order, with how to run a hit. */
   private maps(): { map: Keymap; run: (spec: string) => Promise<void> | void }[] {
@@ -2658,6 +2684,7 @@ export class App {
     if (ev.type !== "move" && ev.type !== "over" && ev.type !== "out") {
       this.scheduleAutosave();
       this.publishDirty();
+      this.publishState();
     }
   }
 
@@ -3639,6 +3666,7 @@ export class App {
       writeDirty(this.loc.root, []);
     } catch {}
     this.watcher?.close();
+    if (this.stateTimer) clearTimeout(this.stateTimer);
     this.saveState();
     this.host.quit();
   }

@@ -65,7 +65,8 @@ slipbox outline <note> --json            # headings with source line numbers
 slipbox ls --json                        # every note: path, title, tags, link count
 ```
 
-`render` is for reading. `slipbox read <note> --json` gives the raw text and its `sha`.
+`render` is for reading. `slipbox read <note> --json` gives the raw text and its `sha`;
+`slipbox stat <note> --json` its size, dates, title, tags and link counts without the text.
 
 ## Finding and changing notes
 
@@ -76,6 +77,7 @@ slipbox task <note> --json               # data.tasks[{line,checked,text}]
 slipbox task <note> <line> --check       # tick one (--uncheck, or neither to toggle)
 slipbox write <note> --stdin --if-unchanged <sha>     # replace the text, only if unchanged since read
 slipbox write <note> '<text>' --append   # add a line at the end
+slipbox write <note> --append -- '- item'   # text starting with a dash goes after --
 slipbox write <path> '<text>' --create   # a new note
 slipbox send <note> --line <n>           # show it to the user in their running nvim
 slipbox history --json                   # what the user has been reading, newest first
@@ -92,17 +94,19 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
   `--whole` for whole words. `replace` changes every match, or `--first`, or `--first-per-line`,
   within `--lines A-B` if given; read `data.changes[].text` / `textAfter` before you run it without
   `--dry-run` — a match inside a longer word shows there.
-- **Writing:** empty text is refused (exit 2) so a failed pipe can't empty a note. `--append` adds a
+- **Flags** a command doesn't take are refused (exit 2): only `replace` has `--dry-run`.
+- **Writing:** empty or blank text is refused (exit 2) so a failed pipe can't empty a note. `--append` adds a
   line; `--append --paragraph` adds a block of its own (after a table or paragraph, plain `--append`
   would join it). `--create` paths are from the vault root unless they start with `./` or `../`;
-  exit 3 on `write` means the note doesn't exist yet: add `--create`.
+  exit 3 on `write` means the note doesn't exist yet: add `--create`. A `--create` warning with
+  `data.shadows` means other notes have that name: `[[name]]` links may now reach the new one.
 - **Names:** a bare name resolves the same from any folder; if several notes share it you get exit 4
-  and `data.candidates` — pick one by path. (For `send`, the candidates are nvims: objects with
-  `socket`, `cwd`, `file`.)
+  and `data.candidates` — pick one by path, or add `--from <note>` for the one nearest it. (For
+  `send`, the candidates are nvims: objects with `socket`, `cwd`, `file`.)
 - **Link status:** `links` says `note`, `file`, `anchor`, `external`, `ambiguous` or `unresolved`;
   `resolve` says `resolved`, `external`, `ambiguous` or `unresolved`.
-- **What the user sees:** `history --json` gives `current` (the note on screen) and `read` (newest
-  first, `exists: false` for deleted ones).
+- **What the user sees:** `history --json` gives `current` (the note on screen, saved by the running
+  TUI within a second of a change) and `read` (newest first, `exists: false` for deleted ones).
 - **The scratch's project** is the vault root, else the git top level, else the current folder.
 
 ## Following links
@@ -111,7 +115,9 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
 slipbox resolve '[[alpha#Section Two]]' --from index.md --json
 # data: {status: "resolved", path, abs, heading, line, candidates}
 slipbox links <note> --json              # outgoing links, each with status and path
-slipbox backlinks <note> --json          # notes linking here, with line numbers
+slipbox backlinks <note> --json          # notes linking here: line, column, and how each is written
+slipbox links --all --json               # every link in the vault, each with `from`: the broken ones
+slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
 ```
 
 Quote wikilinks on the command line: zsh treats unquoted `[[…]]` as a glob and fails with "no

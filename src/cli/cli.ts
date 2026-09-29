@@ -7,8 +7,8 @@
 
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { existsSync, mkdirSync, statSync } from "node:fs";
+import { dirname, isAbsolute, join, relative } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
@@ -106,7 +106,7 @@ Usage:
   slipbox [path]                    open the TUI (needs a terminal); also: slipbox open [path]
   slipbox render <note>             render a note to stdout        [--width N] [--theme T] [--glyphs G] [--plain]
   slipbox resolve <link>            follow a link to a path        [--from <note>]
-  slipbox links <note>              outgoing links with status
+  slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
   slipbox ls                        list the vault's notes
   slipbox outline <note>            headings with source lines
@@ -114,6 +114,7 @@ Usage:
   slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first | --first-per-line] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
   slipbox read <note>               a note's text, and its sha
+  slipbox stat <note>               a note's size, dates, title, counts, encoding (the TUI's note info)
   slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
@@ -140,7 +141,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 `;
 
 export const CLI_COMMANDS = new Set([
-  "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "write", "send", "history",
+  "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "send", "history",
   "capture", "scratch", "init", "info", "themes", "commands", "help",
 ]);
 
@@ -188,7 +189,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     const color = flag(args, "color");
     if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
     // The note argument, when it names a file, also says which vault this is.
-    const noteAt = ["render", "links", "backlinks", "outline", "replace", "task", "read", "write", "send"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
+    const noteAt = ["render", "links", "backlinks", "outline", "replace", "task", "read", "stat", "write", "send"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
     const pathArg = noteArgPath(noteAt, io.cwd);
     const loc =
       command === "init"
@@ -200,6 +201,11 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // Too many arguments is a mistake to report, not to drop (a dropped one can be a flag after --).
     const most = MAX_ARGS[command];
     if (most !== undefined && rest.length > most) throw new UsageError(`${command} takes at most ${most} argument${most === 1 ? "" : "s"}; got ${rest.length} (${rest.slice(most).join(" ")} too many)`);
+    // A flag the command doesn't take is an error, never ignored: `write --dry-run` would write.
+    const own = FLAGS[command] ?? [];
+    for (const name of args.flags.keys()) {
+      if (!GLOBAL_FLAGS.has(name) && !own.includes(name)) throw new UsageError(`--${name} isn't an option of ${command}${own.length ? ` (it takes ${own.map((f) => `--${f}`).join(", ")})` : ""}`);
+    }
     const result = await handler(session, rest);
     const stale = command === "init" ? [] : session.stale();
     if (json) {
@@ -234,8 +240,22 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
-  render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, send: 1, history: 0,
+  render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
   scratch: 1, init: 1, info: 0, themes: 0, commands: 0,
+};
+
+/** Flags every command takes, and each command's own. */
+const GLOBAL_FLAGS = new Set(["root", "config", "json", "color", "plain", "help", "version", "from"]);
+const FLAGS: Record<string, string[]> = {
+  render: ["width", "theme", "glyphs"],
+  links: ["all"],
+  find: ["regex", "whole", "ignore-case"],
+  replace: ["regex", "whole", "ignore-case", "first", "first-per-line", "lines", "dry-run", "if-unchanged"],
+  task: ["check", "uncheck", "if-unchanged"],
+  write: ["stdin", "append", "paragraph", "create", "if-unchanged", "allow-empty"],
+  send: ["line", "server"],
+  capture: ["ref", "snippet", "stdin", "lang"],
+  scratch: ["if-unchanged"],
 };
 
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
@@ -345,8 +365,11 @@ const HANDLERS: Record<string, Handler> = {
 
   resolve(s, rest) {
     const raw = requireArg(rest, "link");
-    const inner = raw.replace(/^!?\[\[/, "").replace(/\]\]$/, "");
-    const parts = parseWikiTarget(inner);
+    // A markdown link, [text](target): resolved as one (a path relative to --from's folder), as
+    // `links` and the TUI resolve it — never by name like a [[wikilink]].
+    const mdLink = /^!?\[[^\]]*\]\(\s*<?([^>)]*?)>?\s*\)$/.exec(raw);
+    const inner = mdLink ? mdLink[1]! : raw.replace(/^!?\[\[/, "").replace(/\]\]$/, "");
+    const parts = mdLink ? { target: decodeURIComponentSafe(inner.split("#")[0]!), heading: inner.includes("#") ? decodeURIComponentSafe(inner.slice(inner.indexOf("#") + 1)) : null } : parseWikiTarget(inner);
     const fromArg = flag(s.args, "from");
     const from = fromArg ? resolveNote(s, fromArg) : null;
     let status: string;
@@ -356,7 +379,15 @@ const HANDLERS: Record<string, Handler> = {
     // URL has none), and when no note by that name exists: "Meeting: Q3" is a note.
     const bracketed = /^!?\[\[/.test(raw);
     const noteNamed = s.graph.findNote(parts.target, s.io.cwd).status !== "unresolved";
-    if (!bracketed && /^[a-z][a-z0-9+.-]*:\S*$/i.test(inner) && !noteNamed) {
+    if (mdLink && /^[a-z][a-z0-9+.-]*:/i.test(inner)) {
+      status = "external";
+      path = inner;
+    } else if (mdLink && parts.target) {
+      const md = s.graph.resolveLink({ kind: "markdown", target: inner }, from ?? "");
+      status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
+      path = status === "resolved" ? md.path : null;
+      candidates = md.candidates;
+    } else if (!bracketed && /^[a-z][a-z0-9+.-]*:\S*$/i.test(inner) && !noteNamed) {
       status = "external";
       path = inner;
     } else if (!parts.target && from) {
@@ -390,18 +421,21 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   links(s, rest) {
-    const rel = resolveNote(s, requireArg(rest, "note"));
-    const links = s.graph.linksOf(rel);
+    // --all: every note's links in one call (a vault-wide check for broken ones), each with `from`.
+    const all = has(s.args, "all");
+    if (all && rest.length) throw new UsageError("links takes a note or --all, not both");
+    const notes = all ? (s.graph.ensureAll(), [...s.graph.notes.keys()].sort()) : [resolveNote(s, requireArg(rest, "note"))];
+    const links = notes.flatMap((from) => s.graph.linksOf(from).map((l) => ({ ...l, from })));
     const human = links
       .map((l) => {
-        const where = `${l.line}:${l.column}`.padEnd(8);
+        const where = `${all ? `${l.from}:` : ""}${l.line}:${l.column}`.padEnd(8);
         const dest = l.resolvedKind === "unresolved" ? "UNRESOLVED" : l.resolvedKind === "ambiguous" ? `AMBIGUOUS (${l.candidates.join(", ")})` : (l.path ?? "");
         const shown = l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]` : l.target;
         return `${where} ${l.kind.padEnd(8)} ${shown} -> ${dest}\n`;
       })
       .join("");
     return {
-      data: links.map((l) => ({ kind: l.kind, target: l.target, heading: l.heading, text: l.text, line: l.line, column: l.column, status: l.resolvedKind, path: l.path, candidates: l.candidates })),
+      data: links.map((l) => ({ ...(all ? { from: l.from } : {}), kind: l.kind, target: l.target, heading: l.heading, text: l.text, line: l.line, column: l.column, status: l.resolvedKind, path: l.path, candidates: l.candidates })),
       human,
     };
   },
@@ -440,6 +474,8 @@ const HANDLERS: Record<string, Handler> = {
     let snippetText: string | undefined;
     if (has(s.args, "stdin")) {
       const input = await s.io.stdin();
+      // --stdin with nothing on it is a producer that failed, as for write: not an empty fence.
+      if (!input.trim()) throw new UsageError("nothing on stdin to capture");
       // With a ref, stdin is the snippet (a visual selection from nvim); without, it is the text.
       // With --lang, stdin is code to fence even without a reference.
       if (ref || flag(s.args, "lang")) snippetText = input;
@@ -452,6 +488,20 @@ const HANDLERS: Record<string, Handler> = {
     } catch (err) {
       if (err instanceof CaptureError) throw new CliError(err.message, EXIT.notFound);
       throw err;
+    }
+    // A reference to a file that isn't there, or past its end, is kept (the file may come later)
+    // but said: it is usually a typo.
+    if (ref && snippetText === undefined && !has(s.args, "snippet")) {
+      const abs = isAbsolute(ref.path) ? ref.path : join(s.io.cwd, ref.path);
+      let lines: number | null = null;
+      try {
+        const t = readRegular(abs, 64 << 20).toString("utf8");
+        lines = t.split("\n").length - (t.endsWith("\n") ? 1 : 0);
+      } catch {
+        s.warnings.push(`--ref ${ref.path}: no such file`);
+      }
+      const last = ref.endLine ?? ref.startLine;
+      if (lines !== null && last > lines) s.warnings.push(`--ref ${ref.path}: line ${last} is past the end (${lines} lines)`);
     }
     appendScratch(loc, entry);
     return { data: { scratch: loc.path, project, entry }, human: `${loc.path}\n` };
@@ -547,12 +597,21 @@ const HANDLERS: Record<string, Handler> = {
         continue;
       }
       const starts = lineStarts(text);
+      let [colLine, colAt, col] = [0, 0, 0];
       for (const m of findAll(text, re)) {
         const line = lineAt(starts, m.from);
         const lineStart = starts[line - 1]!;
         const lineEnd = (starts[line] ?? text.length + 1) - 1;
-        matches.push({ path: rel, line, column: [...text.slice(lineStart, m.from)].length + 1, match: m.groups[0]!, text: around(text, lineStart, lineEnd, m.from, m.to) });
+        // Columns in code points, counted on from the last match of the same line.
+        if (colLine !== line) [colLine, colAt, col] = [line, lineStart, 0];
+        col += [...text.slice(colAt, m.from)].length;
+        colAt = m.from;
+        matches.push({ path: rel, line, column: col + 1, match: m.groups[0]!, text: around(text, lineStart, lineEnd, m.from, m.to) });
       }
+    }
+    // The walk leaves out notes over walk.max_file_size: say so, rather than find nothing in them.
+    if (!rest[1]) {
+      for (const k of s.graph.skipped) if (/^larger than/.test(k.reason)) s.warnings.push(`${k.rel}: not searched (${k.reason}); name it to search it`);
     }
     return {
       data: { query, regex: has(s.args, "regex"), whole: has(s.args, "whole"), count: matches.length, matches },
@@ -589,19 +648,29 @@ const HANDLERS: Record<string, Handler> = {
     if (has(s.args, "first-per-line")) ms = firstPerLine(file.text, ms); // vim's :s without g
     const regex = has(s.args, "regex");
     const out = replaceMatches(file.text, ms, replacement, regex);
-    const written = !dry && out.count ? writeNoteText(s, abs, out.text, file) : null;
     // Each change with its column and its line before and after (a window of a long one), so a
-    // preview shows a match inside a longer word, and two on one line apart.
+    // preview shows a match inside a longer word, and two on one line apart. Built from the line
+    // alone, and before the write: the answer never costs more than the edit, and a note is never
+    // written without one.
+    let colLine = 0;
+    let colAt = 0;
+    let col = 0;
     const changes = ms.map((m) => {
       const line = lineAt(starts, m.from);
       const ls = starts[line - 1]!;
       const le = (starts[line] ?? file.text.length + 1) - 1;
       const after = expandReplacement(replacement, m, regex);
       const lineBefore = around(file.text, ls, le, m.from, m.to);
-      const edited = file.text.slice(0, m.from) + after + file.text.slice(m.to);
-      const lineAfter = around(edited, ls, le + after.length - (m.to - m.from), m.from, m.from + after.length);
-      return { line, column: [...file.text.slice(ls, m.from)].length + 1, before: m.groups[0]!, after, text: lineBefore, textAfter: lineAfter };
+      const text = file.text.slice(ls, le);
+      const edited = text.slice(0, m.from - ls) + after + text.slice(m.to - ls);
+      const lineAfter = around(edited, 0, edited.length, m.from - ls, m.from - ls + after.length);
+      // Columns in code points, counted on from the last match of the same line.
+      if (colLine !== line || colAt > m.from) [colLine, colAt, col] = [line, ls, 0];
+      col += [...file.text.slice(colAt, m.from)].length;
+      colAt = m.from;
+      return { line, column: col + 1, before: m.groups[0]!, after, text: lineBefore, textAfter: lineAfter };
     });
+    const written = !dry && out.count ? writeNoteText(s, abs, out.text, file) : null;
     const verb = dry ? "would replace" : "replaced";
     return {
       // newSha: the note's sha after the call; null on a dry run, which wrote nothing to hash.
@@ -616,16 +685,16 @@ const HANDLERS: Record<string, Handler> = {
     // A task is a one-byte edit, so a note that isn't valid UTF-8 can be ticked, as in the TUI.
     const file = readNoteFile(s, abs, false);
     const tasks = listTasks(parseMarkdown(file.text).tree);
+    // Each task's source line too (its text keeps [[links]]), and the note's sha for a safe tick.
+    const lines = file.text.split("\n");
+    const withRaw = tasks.map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
     if (rest[1] === undefined) {
-      // Each task's source line too (its text keeps [[links]]), and the note's sha for a safe tick.
-      const lines = file.text.split("\n");
-      const withRaw = tasks.map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
       return { data: { path: rel, sha: file.sha, tasks: withRaw }, human: tasks.map((t) => `${String(t.line).padStart(5)}  [${t.checked ? "x" : " "}] ${t.text}\n`).join("") };
     }
     const line = Number(rest[1]);
     if (!Number.isInteger(line) || line < 1) throw new UsageError("the task's line must be a whole number from 1");
     const task = tasks.find((t) => t.line === line);
-    if (!task) throw new CliError(`no task on line ${line} of ${rel}`, EXIT.notFound, { tasks });
+    if (!task) throw new CliError(`no task on line ${line} of ${rel}`, EXIT.notFound, { path: rel, sha: file.sha, tasks: withRaw });
     const want = has(s.args, "check") ? true : has(s.args, "uncheck") ? false : !task.checked;
     if (has(s.args, "check") && has(s.args, "uncheck")) throw new UsageError("--check or --uncheck, not both");
     checkWritable(s, abs);
@@ -655,6 +724,45 @@ const HANDLERS: Record<string, Handler> = {
     return { data: { path: rel, abs, sha: file.sha, bom: file.bom, crlf: file.crlf, invalidUtf8: file.invalidUtf8, content: file.text }, human: file.text };
   },
 
+  // The TUI's note info (space n i), in one call.
+  stat(s, rest) {
+    const rel = resolveNote(s, requireArg(rest, "note"));
+    const abs = s.graph.abs(rel);
+    const file = readNoteFile(s, abs, false);
+    const e = s.graph.entry(rel);
+    const links = s.graph.linksOf(rel);
+    const data = {
+      path: rel,
+      abs,
+      size: file.bytes.length,
+      mtime: new Date(statSync(abs).mtimeMs).toISOString(),
+      title: e?.title ?? null,
+      tags: e?.tags ?? [],
+      headings: e?.headings.length ?? 0,
+      links: links.length,
+      unresolved: links.filter((l) => l.resolvedKind === "unresolved").length,
+      backlinks: s.graph.backlinks(rel).length,
+      sha: file.sha,
+      bom: file.bom,
+      crlf: file.crlf,
+      invalidUtf8: file.invalidUtf8,
+    };
+    const encoding = [file.invalidUtf8 ? "invalid UTF-8" : "UTF-8", ...(file.crlf ? ["crlf"] : []), ...(file.bom ? ["bom"] : [])].join(", ");
+    const rows: [string, string][] = [
+      ["path", abs],
+      ["size", `${data.size} bytes`],
+      ["modified", data.mtime],
+      ["title", data.title ?? "—"],
+      ["tags", data.tags.join(", ") || "—"],
+      ["headings", String(data.headings)],
+      ["links", `${data.links}${data.unresolved ? ` (${data.unresolved} unresolved)` : ""}`],
+      ["backlinks", String(data.backlinks)],
+      ["encoding", encoding],
+      ["sha", data.sha],
+    ];
+    return { data, human: rows.map(([k, v]) => `${k.padEnd(10)}${v}\n`).join("") };
+  },
+
   async write(s, rest) {
     const noteArg = requireArg(rest, "note");
     // Text from the arguments is a line (or lines), so it ends with a newline; stdin is taken as is.
@@ -666,6 +774,7 @@ const HANDLERS: Record<string, Handler> = {
     if (!has(s.args, "stdin") && rest.length < 2) throw new UsageError("write needs the text, or --stdin");
     let rel: string;
     let created = false;
+    let shadows: string[] = [];
     if (has(s.args, "create")) {
       // A new note: the argument is a path in the vault (relative to it, or to cwd when inside
       // it), never a name to resolve — and a file already there is never overwritten.
@@ -678,6 +787,11 @@ const HANDLERS: Record<string, Handler> = {
       checkWritable(s, abs);
       if (existsSync(abs)) throw new CliError(`${rel} already exists; not overwriting it (drop --create to write it)`, EXIT.refused, { path: rel });
       created = true;
+      // A name other notes have: [[name]] links may now reach the new note instead.
+      const name = rel.replace(/\.(md|markdown)$/i, "").split("/").pop()!;
+      const same = s.graph.findNote(name, s.loc.root);
+      shadows = same.status === "resolved" ? [same.path] : same.status === "ambiguous" ? same.candidates : [];
+      if (shadows.length) s.warnings.push(`${rel}: other notes are named "${name}" (${shadows.join(", ")}); [[${name}]] links may now reach this one`);
     } else {
       try {
         rel = resolveNote(s, noteArg, false);
@@ -706,7 +820,7 @@ const HANDLERS: Record<string, Handler> = {
     if (created) mkdirSync(dirname(abs), { recursive: true });
     const written = writeNoteText(s, abs, content, previous);
     return {
-      data: { path: rel, created, appended: !!previous && has(s.args, "append"), previousSha: previous?.sha ?? null, sha: written },
+      data: { path: rel, created, ...(created ? { shadows } : {}), appended: !!previous && has(s.args, "append"), previousSha: previous?.sha ?? null, sha: written },
       human: `${created ? "created" : "wrote"} ${rel}\n`,
     };
   },
@@ -768,6 +882,14 @@ function around(text: string, lineStart: number, lineEnd: number, from: number, 
   const a = Math.max(lineStart, from - Math.floor(room / 2));
   const b = Math.min(lineEnd, Math.max(to, a + MAX));
   return `${a > lineStart ? "…" : ""}${text.slice(a, b).replace(/\r$/, "")}${b < lineEnd ? "…" : ""}`;
+}
+
+function decodeURIComponentSafe(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
 }
 
 /** The query as a pattern, with the shared flags; a bad regex is a usage error. */
@@ -902,7 +1024,15 @@ export function defaultIo(): Io {
   return {
     out: (s) => process.stdout.write(s),
     err: (s) => process.stderr.write(s),
-    stdin: async () => await new Response(Bun.stdin.stream()).text(),
+    // Strict: invalid UTF-8 would be written as U+FFFD, the bytes lost without a word.
+    stdin: async () => {
+      const bytes = new Uint8Array(await new Response(Bun.stdin.stream()).arrayBuffer());
+      try {
+        return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      } catch {
+        throw new CliError("stdin isn't valid UTF-8; nothing written", EXIT.refused);
+      }
+    },
     isTTY: !!process.stdout.isTTY,
     columns: process.stdout.columns,
     cwd: process.cwd(),

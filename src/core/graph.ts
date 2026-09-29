@@ -54,6 +54,12 @@ export interface Backlink {
   line: number;
   column: number;
   text: string;
+  /** How the link is written, so a caller can rewrite it (a rename): its kind and parts. */
+  kind: LinkKind;
+  target: string;
+  heading: string | null;
+  block: string | null;
+  alias: string | null;
 }
 
 const INDEX_VERSION = 2;
@@ -320,7 +326,7 @@ export class Graph {
           const r = this.resolveLink(l, from);
           if (r.resolvedKind !== "note" || !r.path || r.path === from) continue;
           const list = map.get(r.path) ?? [];
-          list.push({ from, line: l.line, column: l.column, text: l.text });
+          list.push({ from, line: l.line, column: l.column, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
           map.set(r.path, list);
         }
       }

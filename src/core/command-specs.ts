@@ -171,11 +171,11 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "view.live", title: "Live preview / rendered", cli: I, desc: "Shows the note rendered, except the block the cursor is in, which is its markdown to edit in place" },
   { id: "note.send", title: "Send to your running editor", cli: "slipbox send <note> --line <n>", desc: "Opens the note at the cursor's line in an editor already running elsewhere: by default, a running nvim" },
   { id: "note.send_pick", title: "Choose the editor to send to", cli: "slipbox send <note> --server <socket>", desc: "Lists the running nvims to pick the one space n s sends to, then sends the note there" },
-  { id: "note.info", title: "Note info", cli: "slipbox links <note> --json", desc: "Shows path, size, links, backlinks, encoding" },
+  { id: "note.info", title: "Note info", cli: "slipbox stat <note>", desc: "Shows path, size, links, backlinks, encoding" },
   { id: "vault.reindex", title: "Reindex the vault", cli: "slipbox ls", desc: "Re-walks and re-reads every note" },
   { id: "vault.info", title: "Vault info", cli: "slipbox info", desc: "Shows root, notes, watcher, cache and state" },
   { id: "config.reload", title: "Reload configuration", cli: "slipbox info", desc: "Applies config changes now (saving does too)" },
-  { id: "messages.open", title: "Messages", cli: "slipbox info", desc: "Lists everything slipbox has said" },
+  { id: "messages.open", title: "Messages", cli: null, desc: "Lists everything slipbox has said" },
   { id: "help.open", title: "All keys and commands", cli: "slipbox commands", desc: "Lists every key and command, searchable" },
   { id: "app.quit", title: "Quit", cli: I, desc: "Saves positions and the session, then quits" },
 ];

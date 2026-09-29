@@ -31,16 +31,21 @@ never a lock, never a refusal.
 
 - **`schema`** is versioned separately from the app. It only changes when a stable command's
   shape changes.
-- **Exit codes:** `0` ok, `1` error, `2` usage, `3` not found, `4` ambiguous (a link, or several
+- **Exit codes:** `0` ok, `1` error, `2` usage, `3` not found (a note, a link's target, a task's
+  line, the `--root` folder), `4` ambiguous (a link, or several
   nvims for `send`), `5` refused (a stale `--if-unchanged`, a write outside the vault or to what
-  isn't a note of it, `--create` over an existing file, a note that isn't valid UTF-8, a read of a
-  symlink leading out of the vault).
+  isn't a note of it, `--create` over an existing file, a note or stdin that isn't valid UTF-8, a
+  read of a symlink leading out of the vault).
 - **Arguments.** More than a command takes is a usage error (exit 2), not silently dropped; an
   empty value for a flag (`--root ''`, `--if-unchanged=`) too. After `--` nothing is an option:
-  `slipbox read -- -dash.md` names a note that starts with a dash.
-- **Flags.** Global flags may come before or after the command. An unknown flag is a usage
-  error, and so is a bad value of a shared flag on any command (`--color` must be `auto`,
-  `always` or `never`). `--width` takes a whole number from 20 to 1000, written in digits.
+  `slipbox read -- -dash.md` names a note that starts with a dash, and text starting with a dash (a
+  list item) goes there too: `slipbox write log --append -- '- 22:10 seeing 2"'` (the error for a
+  dash says so).
+- **Flags.** Global flags (`--root`, `--config`, `--json`, `--color`, `--plain`, `--from`) may come
+  before or after the command. An unknown flag is a usage error, and so is a flag the command
+  doesn't take (`write --dry-run` would otherwise write), and a bad value of a shared flag on any
+  command (`--color` must be `auto`, `always` or `never`). `--width` takes a whole number from 20
+  to 1000, written in digits.
 - **Human output** of note text (headings, link text, paths, the scratch) is sanitized like the
   TUI's (constraint `2.9`); only `render`'s own colours are escape codes. **`--json`** keeps values
   whole but escapes what sanitize would remove (C1 controls, DEL, bidi controls and separators) as
@@ -68,8 +73,8 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `scratch clear` | `{path, cleared, previousSha}` |
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
 | `resolve <link>` | `{link, status, path, abs, heading, line, candidates[]}` |
-| `links <note>` | `[{kind, target, heading, text, line, column, status, path, candidates}]` |
-| `backlinks <note>` | `{path, backlinks[{from, line, column, text}]}` (a note's links to itself excluded) |
+| `links <note>` | `[{kind, target, heading, text, line, column, status, path, candidates}]`; `--all`: each has `from` |
+| `backlinks <note>` | `{path, backlinks[{from, line, column, text, kind, target, heading, block, alias}]}` |
 
 These churn freely before 1.0:
 
@@ -83,16 +88,21 @@ These churn freely before 1.0:
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |
 | `replace <note> <old> <new>` | `{path, count, dryRun, sha, newSha, changes[{line, before, after}]}` |
-| `task <note>` | `{path, tasks[{line, checked, text}]}`; with a line `{path, line, text, checked, changed, sha}` |
+| `task <note>` | `{path, sha, tasks[{line, checked, text, raw}]}` |
+| `task <note> <line>` | `{path, line, text, checked, changed, sha}` |
 | `read <note>` | `{path, abs, sha, bom, crlf, invalidUtf8, content}` |
-| `write <note>` | `{path, created, appended, previousSha, sha}` |
+| `stat <note>` | `{path, abs, size, mtime, title, tags, headings, links, unresolved, backlinks}` + `read`'s flags |
+| `write <note>` | `{path, created, shadows (with --create), appended, previousSha, sha}` |
 | `send <note>` | `{path, line, server, commands[]}` |
 | `history` | `{read[{path, at, line}], open[[path…]…]}` (open: the TUI's tabs, each its windows) |
 
 `resolve` treats a target with a scheme (`https:`) as external only outside `[[…]]`, with no spaces,
 and when no note has that name: `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A markdown link
 resolves to the note's own path whatever case the link uses (`[x](Note.md)` → `note.md`), so it
-counts as a backlink.
+counts as a backlink. A markdown link given whole, `resolve '[a](../home.md)' --from people/x.md`,
+resolves as markdown (a path from `--from`'s folder), as `links` and the TUI do; never by name.
+Backlinks exclude a note's links to itself, and carry how each link is written, so a caller can
+rewrite them.
 
 ## Naming notes
 
@@ -118,8 +128,11 @@ slipbox find 'O2[0-9]:' handbook --regex --json   # one note; data.matches[{path
 slipbox replace kenji-mori Aster ASTER --dry-run  # what would change, line by line
 slipbox replace note '(\w+): book' '$1 will book' --regex --lines 10-20
 slipbox task 2026-09-14-weekly           # line, [x] or [ ], text
-slipbox task 2026-09-14-weekly 13 --check
+slipbox task 2026-09-14-weekly 17 --check
 slipbox read note --json                 # data.content, data.sha
+slipbox stat note                        # size, dates, title, counts, encoding: the TUI's note info
+slipbox links --all --json               # every link in the vault, each with from: find the broken ones
+slipbox write log --append -- '- 22:10 seeing 2"'   # text starting with a dash goes after --
 slipbox write note --stdin --if-unchanged <sha> < new.md
 slipbox write logs/2026-10-01 '# 1 October' --create
 slipbox send handbook --line 42          # to the running nvim, as space n s does
@@ -133,10 +146,20 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
 - **Paths for `--create`** are from the vault's root, wherever you are in it, unless they start
   with `./` or `../` (then from the current folder). A bare note name never depends on the current
   folder: a name several notes share is exit 4 with the candidates (`--from` picks the nearest).
-- **`write`** refuses empty or blank text, `write note ""` included (exit 2: a producer that failed would otherwise empty the note,
-  and `--if-unchanged` can't tell); `--allow-empty` empties it on purpose. `--append --paragraph`
-  puts a blank line first, so the text is a block of its own and doesn't become the next row of a
-  table or the end of a paragraph.
+- **`write`** refuses empty or blank text, `write note ""` included (exit 2: a producer that failed
+  would otherwise empty the note, and `--if-unchanged` can't tell); `--allow-empty` empties it on
+  purpose. Stdin that isn't valid UTF-8 is refused (exit 5), never written as U+FFFD.
+  `--append --paragraph` puts a blank line first, so the text is a block of its own and doesn't
+  become the next row of a table or the end of a paragraph. `--create` with a name other notes
+  have warns, and lists them in `shadows`: `[[name]]` links may now reach the new note.
+- **`replace`** builds its answer before it writes, from each changed line alone, so it takes time
+  in proportion to the note and a note is never changed without an answer.
+- **`find`** across the vault warns about the notes the walk left out for their size (name one to
+  search it); `capture` warns about a `--ref` to a missing file or past its end, and refuses an
+  empty `--stdin`.
+- **`history`** is what the running TUI last saved: it saves the session (open tabs, the note on
+  screen, the nvim `send` uses) a second after it changes, not only on quit. `history.list` in the
+  TUI is a different list, the window's jumps.
 - **`replace`'s changes** carry each match's `line`, `column`, and the line before and after
   (`text`, `textAfter`, a window of a long line), so a preview shows a match inside a longer word.
   The dry run's `sha` is the one `--if-unchanged` wants.
