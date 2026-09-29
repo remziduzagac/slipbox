@@ -1017,14 +1017,12 @@ export function registerActions(app: App): void {
       a.openOutline();
     },
     // find
-    // `/` forward, `?` backward (vim's): the direction n and N then keep.
-    "find.open": (a, arg) =>
+    "find.open": (a) =>
       withView(a, (v) => {
         const prev = v.find;
         const start = { ...v.cur };
-        const back = arg === "back";
         a.prompt(
-          back ? "?" : "/",
+          "/",
           (text) => {
             // An empty search clears the find rather than leaving "/ 0/0" behind.
             if (!text) {
@@ -1033,7 +1031,6 @@ export function registerActions(app: App): void {
             }
             const o = v.findOpts ?? { regex: false, whole: false };
             v.find = computeFind(lay(a, v), text, v.find?.current ?? 0, o.whole, o.regex);
-            if (back) v.find.backward = true;
             if (v.find.error) a.message("warn", `not a regex: ${v.find.error}`);
             else if (!v.find.matches.length) a.message("info", `not found: ${text}`);
             if (v.find.error || !v.find.matches.length) a.moveCursor(v, start);
@@ -1043,11 +1040,8 @@ export function registerActions(app: App): void {
           (text) => {
             const o = v.findOpts ?? { regex: false, whole: false };
             v.find = computeFind(lay(a, v), text, 0, o.whole, o.regex);
-            if (back) v.find.backward = true;
-            // The first match from where the search began: after it, or (backward) before it.
-            const ms = v.find.matches;
-            const first = back ? ms.findLastIndex((m) => m.row < start.row || (m.row === start.row && m.col < start.col)) : ms.findIndex((m) => m.row > start.row || (m.row === start.row && m.col >= start.col));
-            const i = first >= 0 ? first : back ? ms.length - 1 : 0;
+            const first = v.find.matches.findIndex((m) => m.row > start.row || (m.row === start.row && m.col >= start.col));
+            const i = first >= 0 ? first : 0;
             const m = v.find.matches[i];
             if (m) {
               v.find.current = i;
@@ -1158,8 +1152,9 @@ export function registerActions(app: App): void {
         const to = C.findChar(lay(a, v), v.cur, arg === "back" ? V.reverseFind(f.kind) : f.kind, f.ch, V.takeCount(a), true);
         if (to) a.moveCursor(v, to);
       }),
-    "find.next": (a) => findStep(a, a.view?.find?.backward ? -1 : 1),
-    "find.prev": (a) => findStep(a, a.view?.find?.backward ? 1 : -1),
+    // n always forward, N always backward (not vim's "the way the search went").
+    "find.next": (a) => findStep(a, 1),
+    "find.prev": (a) => findStep(a, -1),
     "task.toggle": (a) => withView(a, (v) => a.toggleTaskAt(v)),
     "note.edit": (a) => withView(a, (v) => a.editInEditor(v)),
     "view.source": (a) =>

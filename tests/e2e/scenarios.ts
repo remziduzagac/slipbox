@@ -415,7 +415,7 @@ export const SCENARIOS: Scenario[] = [
   },
 
   {
-    name: "vim's keys and the desktop's: H M L, zz zt zb, ctrl+g and :42, ?, vault search, q and :q, ctrl+z ctrl+y",
+    name: "vim's keys and the desktop's: H M L, zz zt zb, ctrl+g and :42, vault search, q and :q, ctrl+z ctrl+y",
     options: { open: HANDBOOK },
     run: async (s) => {
       await moveTo(s, ["ctrl+g"], () => true, "the line prompt");
@@ -435,11 +435,11 @@ export const SCENARIOS: Scenario[] = [
       await s.until(() => s.screen().slice(2, 8).some((r) => r.includes("│") || r.trim().length > 0), 3000, "zt scrolled");
       await s.keys("z", "b", "z", "z");
       s.expect(pos(s).line === here, "zz, zt, zb move the view, never the cursor");
-      // ? backward: from the bottom, the match before.
-      await s.keys("shift+g", "?");
+      // Find, then N from the bottom: backward, always.
+      await s.keys("/");
       await s.type("Weather");
-      await s.keys("enter");
-      await s.until(() => pos(s).line < 1200 && pos(s).line > 1, 3000, "? found a match above");
+      await s.keys("enter", "shift+g", "shift+n");
+      await s.until(() => pos(s).line < 1200 && pos(s).line > 1, 3000, "N found a match above");
       // Vault search, then open the match.
       await s.keys("space", "f", "g");
       await s.type("Tomasz: book the courier");
@@ -993,7 +993,7 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "m");
       await s.see("Messages");
       await s.keys("escape");
-      await leader(s, "?");
+      await s.keys("?");
       await s.see("Keys — type to filter");
       await s.keys("escape");
     },

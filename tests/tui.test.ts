@@ -523,27 +523,31 @@ describe("overlays and the : prompt", () => {
     await h.keys(":", "q", "enter"); // …then, the last one, quit
     expect(h.quit.called).toBe(true);
   });
-  test(": also finds commands by name; space ? and :help list every key", async () => {
+  test(": also finds commands by name; ?, space ? and :help list every key", async () => {
     const h = await harness();
     await h.keys(":", "z", "e", "n", "space", "m", "o", "d", "e", "enter");
     expect(h.app.ui.zen).toBe(true);
     await h.keys("space", "?");
     expect(h.frame()).toContain("Keys — type to filter");
+    await h.keys("escape", "?");
+    expect(h.frame()).toContain("Keys — type to filter");
     await h.keys("escape", ":", "h", "e", "l", "p", "enter");
     expect(h.frame()).toContain("Keys — type to filter");
   });
-  test("? finds backward (vim's): the match before the cursor, and n goes on backward", async () => {
+  test("n always goes forward and N backward, from wherever the cursor is", async () => {
     const root = makeVault();
     writeFileSync(join(root, "f.md"), "cat one\n\ncat two\n\ncat three\n");
     const h = await harness({ root, open: "f.md" });
     const v = h.app.view!;
     const line = () => h.app.currentLayout(v).lines[v.cur.row]!.src;
-    await h.keys("shift+g", "?", "c", "a", "t", "enter");
-    expect(line()).toBe(3); // from the last line, the one before
+    await h.keys("/", "c", "a", "t", "enter");
+    expect(line()).toBe(1);
     await h.keys("n");
-    expect(line()).toBe(1); // n: on backward
+    expect(line()).toBe(3);
     await h.keys("shift+n");
-    expect(line()).toBe(3); // N: forward
+    expect(line()).toBe(1);
+    await h.keys("shift+g", "shift+n"); // from the bottom: backward is the one above
+    expect(line()).toBe(3);
   });
   test("help: grouped, every binding its own keycap, the description in the footer, groups kept while filtering", async () => {
     const h = await harness({ width: 140, height: 40 });

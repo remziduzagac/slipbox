@@ -48,8 +48,8 @@ keys are its Linux and Windows defaults. `?` marks an Obsidian default not confi
 | Action | vim | VS Code | Obsidian | slipbox |
 | --- | --- | --- | --- | --- |
 | find in the note | `/` | `C-f` | `C-f` | `/`, `C-f`, `␣f/` |
-| find backward | `?` | — | — | `?` |
-| next / previous match | `n` / `N` | `Enter` / `S-Enter` | `Enter` / `S-Enter` | `n` / `N` |
+| find backward | `?` | — | — | `/` then `N` (`?` is help) |
+| next / previous match | `n` / `N` (search's way) | `Enter` / `S-Enter` | `Enter` / `S-Enter` | `n` / `N` (always) |
 | replace | `:s` | `C-h` | `C-h` | `C-h`, `␣fr`, `:s` |
 | search the vault | `:vimgrep` | `C-S-f` | `C-S-f` | `C-S-f`, `␣fg` |
 | open a note | `:e` | `C-p` | `C-o` | `C-p` (recent first), `␣ff`, `:e` |
@@ -100,7 +100,7 @@ keys are its Linux and Windows defaults. `?` marks an Obsidian default not confi
 | the lens | — | — | live preview | `␣nl`, `:lens` |
 | wrap / readable width / zen | `:set wrap` | `A-z` / — / `C-k z` | — | `A-z`, `␣uw` / `␣ud` / `␣uz` |
 | file info | `C-g` | — | — | `␣ni` |
-| help | `:help` | `F1` (palette) | — | `␣?`, `:help` |
+| help | `:help` | `F1` (palette) | — | `?`, `␣?`, `:help` |
 | quit | `:qa` | `C-q` | `C-q` | `C-q`, `␣qq`, `:qa`, `:q` on the last window |
 | new note (phase 4) | — | `C-n` | `C-n` | `C-n`, reserved |
 
@@ -119,6 +119,8 @@ keys are its Linux and Windows defaults. `?` marks an Obsidian default not confi
   with them, which is `A-S-↑/↓` here.
 - **`C-z` undoes, `C-c` copies.** slipbox reads the terminal raw: neither suspends nor interrupts
   it. `C-v` is unbound (`p` pastes, and the terminal's paste works as ever).
+- **`?` is help, not vim's backward search**, and `n` / `N` always go forward / backward rather than
+  the way the search went: `/` then `N` searches backward.
 - **`q` closes the window or the tab but never quits**, vim's macro key being unused here; `:q`
   quits on the last window, as vim's does.
 - **Chords a terminal may not pass** — `C-S-f`, `C-S-p`, `C-Tab`, `C-Enter`, `A-1…9` — each have a

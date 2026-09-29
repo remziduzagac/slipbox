@@ -498,7 +498,7 @@ function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, geo: G
   const theme = app.theme;
   const page = pageBg(theme);
   if (!tab) {
-    const msg = "No note open — ctrl+p opens one, space ? lists keys";
+    const msg = "No note open — ctrl+p opens one, ? lists keys";
     drawText(c, area.x + Math.max(1, Math.floor((area.w - stringWidth(msg)) / 2)), area.y + Math.floor(area.h / 2), msg, roleStyle(theme, "dim", page), area.w);
     return;
   }

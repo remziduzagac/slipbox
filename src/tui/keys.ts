@@ -138,7 +138,6 @@ export const DEFAULT_KEYS: Record<string, string> = {
   // find
   "ctrl+f": "find.open",
   "/": "find.open",
-  "?": "find.open back",
   n: "find.next",
   "shift+n": "find.prev",
   "ctrl+l": "task.toggle",
@@ -228,6 +227,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader v i": "vault.info",
   "leader v c": "config.reload",
   "leader m": "messages.open",
+  "?": "help.open",
   "leader ?": "help.open",
   "leader q q": "app.quit",
   "ctrl+q": "app.quit",

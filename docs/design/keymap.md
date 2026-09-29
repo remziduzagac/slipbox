@@ -18,15 +18,16 @@ Config uses the same notation and accepts common spellings: `G` means `shift+g`,
 
 ## Conventions
 
-- **Vim's keys first, the desktop editors' `ctrl` keys second, the leader for the rest**
-  (decided 2026-09-29). A key keeps its vim meaning where slipbox has the action (`H` `M` `L`,
-  `zz`, `?`, `ctrl+o`, `gt`, `gf`, `:q`); the `ctrl` keys VS Code and Obsidian share come next
-  (`ctrl+f`, `ctrl+p`, `ctrl+s`, `ctrl+z` / `ctrl+y`, `ctrl+←/→` by word, `ctrl+shift+f`,
-  `ctrl+tab`, `alt+←/→` back and forward); `ctrl+w` and `ctrl+t` stay vim's and slipbox's
-  prefixes for windows and tabs; everything else is under `space`. **No emacs keys.**
-- **Direct keys beside navigation** are few: `:` the palette, `/` `?` and `ctrl+f` find (`n` /
-  `shift+n`), `ctrl+p` the switcher, the `y …` copies, `v` visual mode, `ctrl+e` source mode,
-  `ctrl+q` quit; help is `space ?`. The which-key popup lists the next keys: immediately after the
+- **Vim's keys first, the desktop editors' `ctrl` keys second, the leader for the rest** (decided
+  2026-09-29). A key keeps its vim meaning where slipbox has the action (`H` `M` `L`, `zz`,
+  `ctrl+o`, `gt`, `gf`, `:q`) — `?` aside, which is help, the key most apps give it; the `ctrl` keys
+  VS Code and Obsidian share come next (`ctrl+f`, `ctrl+p`, `ctrl+s`, `ctrl+z` / `ctrl+y`,
+  `ctrl+←/→` by word, `ctrl+shift+f`, `ctrl+tab`, `alt+←/→` back and forward); `ctrl+w` and `ctrl+t`
+  stay vim's and slipbox's prefixes for windows and tabs; everything else is under `space`. **No
+  emacs keys.**
+- **Direct keys beside navigation** are few: `?` help, `:` the palette, `/` and `ctrl+f` find
+  (`n` / `shift+n`), `ctrl+p` the switcher, the `y …` copies, `v` visual mode, `ctrl+e` source
+  mode, `ctrl+q` quit. The which-key popup lists the next keys: immediately after the
   leader, and after 500 ms for the other prefixes (`y`, `ctrl+w`, `ctrl+t`, `[`, `]`, `g`, `z`).
   Each entry shows a name and a short explanation, in at most three columns, and keys with the same
   action share an entry (`h left`). `backspace` goes up a level, and `esc` cancels. A key that is
@@ -259,7 +260,6 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
 | find in this note, in the window's find row (empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
-| find backward (vim's): `n` goes on backward, `shift+n` forward | `?` | — |
 | while typing it: regex / whole words (also its `.*` / `ab` buttons) | `alt+r` / `alt+w` | — |
 | find and replace (the markdown); into replace / back | `ctrl+h`; `tab` / `shift+tab` | `space f r` |
 | the replace row open / closed (its `⇄` button) | `alt+h` | — |
@@ -275,8 +275,10 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | command palette / command line | `:`, `ctrl+shift+p` | `space f p` |
 | *(reserved for phase 4)* tags | — | `space f t` |
 
-As in vim, `n` and `shift+n` go to the match after or before the cursor, wherever it has moved
-since the last one, and wrap around the note (the message says so: "from the top"). `*` and `#`
+`n` always goes to the match after the cursor and `shift+n` to the one before, wherever it has
+moved since the last one — never vim's "the way the search went" — and they wrap around the note
+(the message says so: "from the top"). There is no backward search key (`?` is help): search with
+`/`, then `shift+n`. `*` and `#`
 search for the whole word under the cursor (or, off a word, the next one on its row): not inside
 longer words, smart case like `/`.
 

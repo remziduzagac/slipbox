@@ -120,8 +120,6 @@ export interface FindState {
   current: number;
   /** Whole words only (`*` / `#`, `alt+w`): not inside a longer word. */
   whole?: boolean;
-  /** Searched backward (`?`): `n` goes on backward and `N` forward, as in vim. */
-  backward?: boolean;
   /** A regular expression (`alt+r`), not plain text. */
   regex?: boolean;
   /** Why the regex isn't one, when it isn't. */
@@ -2893,7 +2891,7 @@ export class App {
     }
     this.clearPending();
     if (hit) return hit.run(hit.spec!);
-    if (key !== "escape") this.message("info", `${prettyKey(seq, this.leader)} is not bound — space ? lists keys`);
+    if (key !== "escape") this.message("info", `${prettyKey(seq, this.leader)} is not bound — ? lists keys`);
   }
 
   async run(spec: string): Promise<void> {

@@ -425,7 +425,7 @@ past theirs), so the content behind never runs up to the edge.
 Help and the palette list the same commands for different jobs, in the groups of
 [keymap.md](keymap.md) (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order:
 
-- **Help (`space ?`, `:help`)** is for learning the keys: every command with all its bindings (source
+- **Help (`?`, `space ?`, `:help`)** is for learning the keys: every command with all its bindings (source
   mode's own, `[keys.source]`, and visual mode's included), then what
   works inside the explorer, inside the history, while filtering a panel, inside the outline, in
   resize mode, and with the mouse. Filtering keeps the groups; `enter` runs a command (the other
