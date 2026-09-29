@@ -300,8 +300,9 @@ keys.
   switch to the tab already showing it; `o` replaces the current window's note, and `s` opens it in
   the split's other window. A click on a folder folds or unfolds it.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
-  note name and line, the current one marked `here` and selected when the view opens. `enter` or a
-  click jumps there, the places before it becoming back and those after it forward.
+  note name and line, the current one marked `here` and selected when the view opens. A click
+  selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
+  those after it forward.
 - **Filter (`/`, the explorer, the history and the outline):** a `› text` row at the top of the
   list, a rule under it (joined to the pane's border), then the list —
   while the pane has focus (otherwise `/` is find in the note); typing narrows the rows (`/`
@@ -309,8 +310,8 @@ keys.
   matches, under their folders (all unfolded), the matched letters highlighted, the selection on the
   first note. The history keeps the entries whose path matches. The outline keeps the headings that
   match under their parents (folds ignored), the selection on the best match. The arrows and
-  `ctrl+n` / `ctrl+p` move, `enter` or a click opens (the explorer's: a double-click; the filter
-  clears), `esc` clears it. `ctrl+p`
+  `ctrl+n` / `ctrl+p` move, `enter` or a click opens (in the explorer and the history, a
+  double-click; the filter clears), `esc` clears it. `ctrl+p`
   stays the flat quick-open across the vault.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.

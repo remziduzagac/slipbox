@@ -2899,6 +2899,8 @@ export class App {
         const h = this.historyRows()[idx];
         if (!h) return;
         this.sidebar.selected = idx;
+        // As in the explorer: one click selects, a double-click (or enter) jumps there.
+        if (clicks < 2) return;
         this.sidebar.filter = "";
         this.sidebar.filtering = false;
         this.historyAction("open");

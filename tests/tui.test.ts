@@ -352,6 +352,26 @@ describe("links and history", () => {
     await h.keys("shift+l");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
   });
+  test("history: a click selects an entry, a double-click jumps there", async () => {
+    const h = await harness();
+    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("note.open notes/beta.md");
+    await h.keys("space", "h", "h");
+    h.frame();
+    const sb = h.app.geometry!.sidebar!;
+    const rows = h.app.historyRows();
+    const i = rows.findIndex((r) => r.path === "index.md");
+    expect(i).toBeGreaterThanOrEqual(0);
+    const y = sb.y + i - h.app.sidebar.scroll;
+    const at = (type: string) => h.app.handleMouse({ type, x: sb.x + 4, y, button: 0 });
+    at("down");
+    at("up");
+    expect(h.app.sidebar.selected).toBe(i); // selected…
+    expect(h.app.view!.buf.rel).toBe("notes/beta.md"); // …not jumped to
+    at("down");
+    at("up");
+    expect(h.app.view!.buf.rel).toBe("index.md"); // the double-click jumps
+  });
   test("ambiguous, unresolved, external and attachment links", async () => {
     const root = makeVault();
     writeFileSync(join(root, "notes", "dup.md"), "# a\n");
