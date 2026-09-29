@@ -1056,7 +1056,11 @@ export class App {
       for (let k = s; k <= e; k++) n += wrap ? Math.max(1, Math.ceil(stringWidth(texts[k - 1] ?? "") / Math.max(1, width))) : 1;
       return n;
     };
-    const minRows = this.config.editor.lens_min_rows;
+    // A data file's blocks are cards (a key and its values, 16.12): the lens is the cursor's card,
+    // never padded with pieces of its neighbours, and it moves to the next card rather than
+    // gathering them.
+    const cards = buf.kind.group === "data";
+    const minRows = cards ? 1 : this.config.editor.lens_min_rows;
     const maxRows = Math.max(minRows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
     // The lens on the cursor's block, grown by its neighbours (below, then above) to the minimum.
     const openOn = (blocks: Block[], at: number): Block => {
@@ -1080,6 +1084,7 @@ export class App {
     // The cursor past an edge: the blocks up to its one come in; far ones go past the maximum.
     const follow = (blocks: Block[], range: Block, at: number): Block => {
       if (at >= range[0] && at <= range[1]) return range;
+      if (cards) return openOn(blocks, at);
       let lo = blocks.findIndex((b) => b[0] === range[0]);
       let hi = blocks.findIndex((b) => b[1] === range[1]);
       const i = blocks.findIndex((b) => at >= b[0] && at <= b[1]);

@@ -4729,6 +4729,14 @@ describe("YAML and JSON as a tree (16.12)", () => {
     expect(h.app.currentLayout(v).headings.map((x) => [x.level, x.text])).toEqual([[1, "containers"], [2, "1"], [3, "health"], [2, "2"]]);
     h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.src === 5), col: 0 });
     expect(h.frame()).toMatch(/containers\s*›\s*1\s*›\s*health/);
+    // The lens holds a card — a key and the plain values under it — and moves card to card.
+    const lens = () => /source · lines? (\d+(?:–\d+)?)/.exec(h.frame())?.[1] ?? "none";
+    h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((x) => x.src === 4), col: 0 });
+    await h.keys("space", "n", "l");
+    expect(lens()).toBe("4–6"); // health, with path and probe
+    await h.keys("j", "j", "j");
+    expect(lens()).toBe("7"); // the second container
+    await h.keys("escape", "escape");
     await h.app.run("note.open api.json");
     const l = h.app.currentLayout(v).links.find((x) => x.target.startsWith("#/"))!;
     h.app.moveCursor(v, { row: l.line, col: l.col });

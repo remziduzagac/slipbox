@@ -21,14 +21,34 @@ export function blockRanges(tree: Root, lineCount: number): Block[] {
     const at = n.position?.start.line;
     if (at !== undefined) starts.push(at);
   };
+  let prev: TreeRow | null = null;
   for (const node of tree.children) {
     if (node.type === "list") for (const item of node.children) add(item as unknown as RootContent);
-    else add(node);
+    // A data file's tree (16.12): a key and the plain values listed right under it are one block —
+    // a card (`defaults` with its three settings, a run of top-level values) — so the lens holds
+    // what belongs together and moves a card at a time, not a line.
+    else if (!continuesCard(prev, node)) add(node);
+    prev = rowOf(node);
   }
   const sorted = [...new Set(starts)].filter((n) => n >= 1 && n <= lineCount).sort((a, b) => a - b);
   // Blank lines before the first block are a block of their own.
   if (!sorted.length || sorted[0]! > 1) sorted.unshift(1);
   return sorted.map((s, i) => [s, (sorted[i + 1] ?? lineCount + 1) - 1] as Block);
+}
+
+type TreeRow = { depth: number; branch: boolean };
+
+function rowOf(n: RootContent): TreeRow | null {
+  const f = n as unknown as { type: string; tree?: { lasts: boolean[]; branch?: boolean; above?: boolean } };
+  return f.type === "dataField" && f.tree ? { depth: f.tree.lasts.length, branch: !!f.tree.branch } : null;
+}
+
+/** Whether a tree row joins the card before it: a plain value right under that card's key, or
+ *  after a sibling plain value. */
+function continuesCard(prev: TreeRow | null, n: RootContent): boolean {
+  const row = rowOf(n);
+  if (!prev || !row || row.branch) return false;
+  return prev.branch ? row.depth === prev.depth + 1 : row.depth === prev.depth;
 }
 
 /** A lens rule: the glyph across the width, a label after its first two. */
