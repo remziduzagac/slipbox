@@ -396,7 +396,7 @@ function drawTabs(app: App, c: Canvas, x0: number, band: Band, geo: Geometry): v
     const v = t.views[t.active]!;
     // Unsaved changes (any tab showing the note), else a recent change on disk.
     const changed = v.buf.dirty ? " •" : v.buf.changedAt && app.now() - v.buf.changedAt < CHANGE_MARKER_MS ? " ↻" : "";
-    return ` ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!.replace(/\.(md|markdown)$/i, ""), 24)}${changed} `;
+    return ` ${i + 1} ${truncate(app.displayName(v.buf).split("/").pop()!, 24)}${changed} `;
   });
   const close = `${app.glyphs.close} `;
   const widths = labels.map((l) => stringWidth(l) + stringWidth(close) + 1);

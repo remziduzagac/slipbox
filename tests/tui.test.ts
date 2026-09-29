@@ -1113,7 +1113,7 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     expect(v.buf.dirty).toBe(true);
     const f = h.frame();
     expect(statusRow(f)).toContain("• unsaved");
-    expect(f).toContain("ed •"); // the tab
+    expect(f).toContain("ed.md •"); // the tab, its name with its extension
     expect(readFileSync(file, "utf8")).toBe("# T\n\nhello world\n"); // not saved yet
     await h.keys("u");
     expect(v.buf.source).toBe("# T\n\nhello world\n"); // the whole session at once

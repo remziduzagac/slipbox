@@ -277,9 +277,9 @@ export const SCENARIOS: Scenario[] = [
       // Swap: the two windows trade notes (one shows another note first).
       await open(s, "writing-guide");
       // The windows' notes in screen order, from their breadcrumbs (not the status line's path).
-      // (Right of the explorer's border: its rows name files too.)
+      // (Below the tab bar and right of the explorer's border: both name files too.)
       const border = () => Math.max(0, s.screen()[2]?.search(/[│┃]/) ?? 0);
-      const order = () => (s.screen().slice(0, -1).map((r) => r.slice(border() + 1)).join("\n").match(/\b(home|writing-guide)\.md\b/g) ?? []).join(" ");
+      const order = () => (s.screen().slice(3, -1).map((r) => r.slice(border() + 1)).join("\n").match(/\b(home|writing-guide)\.md\b/g) ?? []).join(" ");
       await s.until(() => order().split(" ").length === 2, 3000, "two windows, two notes");
       const before = order();
       await s.keys("ctrl+w", "x");

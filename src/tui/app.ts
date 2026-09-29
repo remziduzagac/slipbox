@@ -1922,7 +1922,7 @@ export class App {
       .map((l, i) => {
         const path = this.buffers.get(l.key) ? this.displayName(this.buffers.get(l.key)!) : l.key;
         return {
-          label: path.split("/").pop()!.replace(/\.(md|markdown)$/i, ""),
+          label: path.split("/").pop()!, // with its extension, as the explorer and tabs show names
           path,
           hint: i === cur ? "here" : `line ${l.cursor?.anchor.line ?? l.anchor.line}`,
           index: i,
