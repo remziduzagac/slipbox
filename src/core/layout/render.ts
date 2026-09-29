@@ -528,9 +528,12 @@ function table(node: Table, ctx: Ctx, width: number): Line[] {
   if (alloc.mode === "records") return tableRecords(node, cells, ctx, width);
 
   const widths = alloc.widths;
-  const border = (l: string, m: string, r: string, h: string): Line => ({
+  // Each rule belongs to a source line: the top to the table's first, the header rule to the
+  // delimiter line, a rule between rows and the bottom to the row above them — so a cursor or a
+  // window top on a rule comes back to that rule after a re-layout, not to the table's top.
+  const border = (l: string, m: string, r: string, h: string, at = src): Line => ({
     spans: [{ text: l + widths.map((w) => h.repeat(w)).join(m) + r, role: "table_border", attrs: 0 }],
-    src,
+    src: at,
   });
   const wrapped = cells.map((row) => row.map((spans, c) => wrapSpans(spans, widths[c]! - 2 * PADDING)));
   const multiLine = wrapped.slice(1).some((row) => row.some((rows) => rows.length > 1));
@@ -553,10 +556,10 @@ function table(node: Table, ctx: Ctx, width: number): Line[] {
       });
       out.push({ spans, src: rowSrc });
     }
-    if (ri === 0) out.push(border(b.hl, b.hx, b.hr, b.hh));
-    else if (multiLine && ri < wrapped.length - 1) out.push(border(b.ml, b.mm, b.mr, b.h));
+    if (ri === 0) out.push(border(b.hl, b.hx, b.hr, b.hh, rowSrc + 1));
+    else if (multiLine && ri < wrapped.length - 1) out.push(border(b.ml, b.mm, b.mr, b.h, rowSrc));
   });
-  out.push(border(b.bl, b.bm, b.br, b.h));
+  out.push(border(b.bl, b.bm, b.br, b.h, srcOf(node.children[node.children.length - 1]!)));
   return out;
 }
 

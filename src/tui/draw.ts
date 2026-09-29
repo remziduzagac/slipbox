@@ -1162,15 +1162,17 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.
   const full = app.displayName(buf);
-  const marker = pathMarker(app, view);
+  // Short of room, the marker says it in symbols (• ⚠), so the path keeps a readable width and the
+  // position on the right is never pushed out.
+  const long = pathMarker(app, view);
+  const marker = c.width - x - rightW - 2 - stringWidth(long) >= 16 ? long : pathMarker(app, view, true);
   const pathW = Math.max(4, c.width - x - rightW - 2 - stringWidth(marker));
-  const pw = drawText(c, x, y, truncate(full, pathW), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
+  // Cut from the front: the note's own name is the part worth keeping.
+  const pw = drawText(c, x, y, truncateStart(full, pathW), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
   geo.hot.push({ id: pathId, x, y: band.y, w: pw, h: band.h });
   x += pw;
-  if (buf.deleted) x += drawText(c, x, y, " ✖ deleted on disk", roleStyle(theme, "error", st.bg));
-  else if (buf.conflictKept) x += drawText(c, x, y, " • unsaved ⚠ differs from disk", roleStyle(theme, "warn", st.bg));
-  else if (buf.dirty) x += drawText(c, x, y, " • unsaved", roleStyle(theme, "warn", st.bg));
-  else if (changed) x += drawText(c, x, y, " ↻ reloaded", roleStyle(theme, "info", st.bg));
+  const markerRole: Role = buf.deleted ? "error" : buf.conflictKept || buf.dirty ? "warn" : "info";
+  if (marker) x += drawText(c, x, y, marker, roleStyle(theme, markerRole, st.bg), Math.max(0, c.width - rightW - x));
   // Whether external changes to this file will show up.
   const w = app.watcher;
   const watch = w?.degraded
@@ -1183,10 +1185,12 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   if (rx > x) drawText(c, rx, y, right, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
 }
 
-/** The marker after the status line's path (its length is what the right side must leave room for). */
-function pathMarker(app: App, view: View): string {
+/** The marker after the status line's path (its length is what the right side must leave room for);
+ *  `short`: in symbols only, for a narrow screen. */
+function pathMarker(app: App, view: View, short = false): string {
   const buf = view.buf;
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
+  if (short) return buf.deleted ? " ✖" : buf.conflictKept ? " • ⚠" : buf.dirty ? " •" : changed ? " ↻" : "";
   return buf.deleted ? " ✖ deleted on disk" : buf.conflictKept ? " • unsaved ⚠ differs from disk" : buf.dirty ? " • unsaved" : changed ? " ↻ reloaded" : "";
 }
 
@@ -1318,9 +1322,10 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
     const textW = Math.min(cw.text, x0 + w - 2 - textX);
     if (textW <= 0) return; // no room for the name inside the box
     const id = `wk:${e.key.split(" ")[0]}`;
-    geo.hot.push({ id, x, y, w: cw.key + 1 + cw.text, h: entryH });
+    // As wide as it's drawn: a column cut by the box's edge never spills past its border.
+    geo.hot.push({ id, x, y, w: cw.key + 1 + textW, h: entryH });
     const hover = app.hover === id;
-    if (hover) c.fill(x, y, cw.key + 1 + cw.text, entryH, theme.roles.hover.bg ?? null);
+    if (hover) c.fill(x, y, cw.key + 1 + textW, entryH, theme.roles.hover.bg ?? null);
     const rowBg = hover ? (theme.roles.hover.bg ?? bg.bg) : bg.bg;
     drawText(c, x, y, truncate(shownKey(e.key), cw.key - 2), { ...keySt, bg: rowBg });
     drawText(c, x + cw.key - 1, y, "→", { ...bg, bg: rowBg });

@@ -118,15 +118,18 @@ when the strip appears or goes.
 - a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES` (the explorer or
   the history), `OUTLINE`, `RESIZE`, or what's pending: keys of a sequence in short form (`␣ l`,
   `C-w`), or an operator, count or `r` (`2d`, `di`);
-- the note's path (click to copy its absolute path);
-- `↻ reloaded` after an external change, or `✖ deleted on disk`;
+- the note's path (click to copy its absolute path), cut from the front when short of room, so the
+  note's own name stays;
+- a marker: `• unsaved`, `• unsaved ⚠ differs from disk` (after keeping yours in a conflict),
+  `↻ reloaded` after an external change, or `✖ deleted on disk` — in symbols only (`• ⚠`) on a
+  narrow screen, so the path and the position keep their room;
 - whether external changes will show up: `● watching` (with a count of polled directories, if
   any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
   dropped when the line is too short.
 
 On the right it shows the link under the cursor and its status (`→ [[beta]] (resolved)`), then
 `tab N/M` when there are two or more tabs, then `L<source line>:<column>` and the percentage (`all`
-when the note fits). Find's progress is in its window's find row, not here.
+when the note fits), which always shows. Find's progress is in its window's find row, not here.
 
 **Find** (`/`, `ctrl+f`) belongs to a window, so it's typed there: a row of its own under the
 breadcrumb (or at the window's top when there's none), `› query` with the match count at its right
@@ -195,14 +198,17 @@ A reading cursor sits on the rendered text, like vim's normal mode.
   video.
 - **Scrolling:** the view keeps `ui.scrolloff` rows (default 3) between the cursor and the
   edges. `ctrl+d` / `ctrl+u` and the page keys move the cursor with the view. The mouse wheel
-  moves the view, and pulls the cursor along only as far as it must.
+  moves the view, and pulls the cursor along only as far as it must — inside a tall lens too,
+  so the cursor is never on a row the lens hides.
 - **What follows from it:** the link under the cursor is the one link commands act on; `y r`
   and `space s a` use the cursor row; find lands on the match; a click sets the cursor.
 
 **Selection.** A selection is an anchor plus the cursor. It's extended by `shift`+movement or by
 visual mode (`v` by character, `shift+v` by whole row); `o` swaps the ends, and `esc` clears it.
-A mouse drag makes one too, copied on release. Copied text is the rendered text, which is what
-you saw.
+A mouse drag makes one too, copied on release; in source mode or the lens it is a visual
+selection (as vim's mouse makes one), so `d`, `c`, `x`, `>`, `<` and `y` act on it and `esc`
+leaves it. Copied text is the rendered text, which is what you saw. A double-click on a link
+follows it once: the second click, landing in the note it opened, is swallowed.
 
 ## Buffers, views, tabs, windows (plan `3.3`)
 
@@ -224,7 +230,10 @@ you saw.
 
 **Views store source anchors, not rows** (decision `3.5`):
 
-- **Top of the view:** the nearest heading above it, plus an offset and a fallback line.
+- **Top of the view:** the nearest heading above it, plus an offset and a fallback line, plus which
+  row of that source line it is (a wrapped paragraph's, a table row's), so a resize and back
+  returns the same top. A table's rules belong to the lines beside them (the header rule to the
+  delimiter line, the bottom rule to the last row), so a cursor on one stays on it.
 - **Cursor:** the same kind of anchor for its row, plus which wrapped row of that source line
   it's on, plus its column.
 - **Selection:** its fixed end is kept the same way, so a resize or a pane toggle keeps it on the

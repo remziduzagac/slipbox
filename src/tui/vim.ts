@@ -270,7 +270,7 @@ const INCLUSIVE = new Set(["cursor.word_end", "cursor.line_end"]);
 
 /** Where a motion goes (run `count` times, then the cursor put back), as a text range. */
 async function motionRange(app: App, view: View, spec: string, count: number, op: Op): Promise<Range | null> {
-  const saved = { cur: view.cur, goal: view.goal, top: view.top, left: view.left, topAnchor: view.topAnchor, curAnchor: view.curAnchor };
+  const saved = { cur: view.cur, goal: view.goal, top: view.top, left: view.left, topAnchor: view.topAnchor, topSub: view.topSub, curAnchor: view.curAnchor };
   const from = E.offsetOf(app, view);
   let motion = spec;
   // cw on a word changes to its end (as vim does), not to the next word's start — and on a word's

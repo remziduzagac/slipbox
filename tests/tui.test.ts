@@ -1827,6 +1827,12 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     const before = v.lensInner;
     h.app.handleMouse({ type: "scroll", x: pane.textX + 2, y: pane.y + i, button: 0, scroll: { direction: "down", delta: 1 } });
     expect(v.lensInner ?? 0).toBeGreaterThan(before ?? 0);
+    // …and the cursor comes along: never on a row the lens now hides, so dd deletes what's seen.
+    for (let k = 0; k < 6; k++) h.app.handleMouse({ type: "scroll", x: pane.textX + 2, y: pane.y + i, button: 0, scroll: { direction: "down", delta: 1 } });
+    expect(h.app.screenRows(v, h.app.currentLayout(v))).toContain(v.cur.row);
+    const seen = text(v.cur.row);
+    await h.keys("d", "d");
+    expect(v.buf.source).not.toContain(`${seen.trim()}\n`);
   });
   test("growing to its minimum never swallows a neighbour too big for it", async () => {
     const code = Array.from({ length: 80 }, (_, i) => `const line${i + 1} = ${i + 1};`).join("\n");
@@ -4331,5 +4337,144 @@ describe("review cycle 5 (TUI, behaviour no test had pinned)", () => {
   test("with no note named and no session, the vault's home note opens", async () => {
     const h = await harness({});
     expect(h.app.view?.buf.rel).toBe("index.md");
+  });
+});
+
+describe("review cycle 5 (TUI journeys: the mouse)", () => {
+  test("a double-click on a link follows it once: nothing in the note it opens is clicked or copied", async () => {
+    const h = await harness({ open: "index.md", width: 130, height: 34 });
+    const v = h.app.view!;
+    const l = h.app.currentLayout(v).links.find((x) => x.kind === "wiki" && x.target === "alpha")!;
+    const pane = h.app.geometry!.panes[0]!;
+    const x = pane.textX + l.col + 1;
+    const y = pane.y + l.line - v.top;
+    for (let k = 0; k < 2; k++) {
+      h.app.handleMouse({ type: "down", x, y, button: 0 });
+      h.app.handleMouse({ type: "up", x, y, button: 0 });
+      await Bun.sleep(5);
+    }
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    expect(h.copied).toEqual([]);
+    expect(h.app.view!.sel).toBeNull();
+  });
+});
+
+describe("review cycle 5 (TUI journeys: narrow screens)", () => {
+  test("which-key on a narrow screen: every entry's click area is inside the box; a hover keeps its border", async () => {
+    const h = await harness({ width: 40, height: 12 });
+    await h.keys("space");
+    const wk = h.app.geometry!.hot.filter((r) => r.id.startsWith("wk:"));
+    expect(wk.length).toBeGreaterThan(0);
+    const right = (y: number) => h.canvas().rows[y]!.lastIndexOf("│"); // the box's right border
+    for (const r of wk) expect(r.x + r.w).toBeLessThanOrEqual(right(r.y));
+    const last = wk.reduce((a, b) => (a.x + a.w > b.x + b.w ? a : b));
+    const border = right(last.y);
+    h.app.handleMouse({ type: "move", x: last.x, y: last.y, button: 0 });
+    h.frame();
+    expect(h.canvas().rows[last.y]![border]).toBe("│");
+  });
+});
+
+describe("review cycle 5 (TUI journeys: a drag in source)", () => {
+  test("a drag in source mode is a visual selection: x deletes it, esc leaves it", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "d.md"), "alpha beta gamma\n");
+    const h = await harness({ root, open: "d.md" });
+    await h.keys("space", "n", "v");
+    const pane = h.app.geometry!.panes[0]!;
+    const y = pane.y + h.app.view!.cur.row - h.app.view!.top;
+    h.app.handleMouse({ type: "down", x: pane.textX + 6, y, button: 0 });
+    h.app.handleMouse({ type: "drag", x: pane.textX + 9, y, button: 0 }); // "beta", its last letter included
+    h.app.handleMouse({ type: "up", x: pane.textX + 9, y, button: 0 });
+    expect(h.app.view!.visual).toBe("char");
+    await h.keys("x");
+    expect(h.app.view!.buf.source).toBe("alpha  gamma\n");
+    expect(h.app.view!.sel).toBeNull();
+  });
+});
+
+describe("review cycle 5 (TUI journeys: the status line when narrow)", () => {
+  test("a kept conflict at 40 columns: the marker shrinks, the position and the note's name stay", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, "deep", "folder"), { recursive: true });
+    const file = join(root, "deep", "folder", "logbook.md");
+    writeFileSync(file, "one\n");
+    const h = await harness({ root, open: "deep/folder/logbook.md", width: 40, height: 12 });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", "shift+a", "!", "escape");
+    writeFileSync(file, "theirs\n");
+    const t = Date.now() / 1000 + 5;
+    (await import("node:fs")).utimesSync(file, t, t);
+    h.app.reloadBuffer(v.buf);
+    await h.keys("k"); // keep mine
+    expect(v.buf.conflictKept).toBe(true);
+    const status = statusRow(h.frame());
+    expect(status).toMatch(/L\d+:\d+/);
+    expect(status).toContain("logbook");
+    expect(status).toContain("⚠");
+  });
+});
+
+describe("review cycle 5 (TUI journeys: the lens after a reload)", () => {
+  test("loading theirs under a tall lens at the note's end: the top stays in range, never past 100%", async () => {
+    const rel = "samples/scratch/broken-frontmatter.md";
+    const bad: string[] = [];
+    for (const paras of [1, 2, 4]) {
+      for (const at of [0, 1, 2]) {
+        for (const keep of ["l", "m"]) {
+          const root = makeVault();
+          const h = await harness({ root, open: rel, width: 40, height: 12, config: (c) => ((c.ui.sidebar = false), (c.ui.outline = false)) });
+          const v = h.app.view!;
+          await h.keys("space", "n", "l", "shift+g", "k", "x");
+          const file = join(root, rel);
+          const text = readFileSync(file, "utf8");
+          // After the at-th blank line: paragraphs long enough to wrap at this width.
+          let i = -2;
+          for (let k = 0; k <= at; k++) i = text.indexOf("\n\n", i + 2);
+          i = i < 0 ? text.length : i + 2;
+          const add = Array.from({ length: paras }, (_, k) => `An agent's paragraph ${k}, long enough to wrap twice at forty columns.\n\n`).join("");
+          writeFileSync(file, text.slice(0, i) + add + text.slice(i));
+          const t = Date.now() / 1000 + 5;
+          (await import("node:fs")).utimesSync(file, t, t);
+          h.app.reloadBuffer(v.buf);
+          await h.keys(keep); // load theirs, or merge
+          const status = statusRow(h.frame());
+          const pct = Number(/(\d+)%/.exec(status)?.[1] ?? 0);
+          const shown = h.app.screenRows(v, h.app.currentLayout(v)).length;
+          if (pct > 100 || shown < v.height) bad.push(`${paras}/${at}/${keep}: ${status.trim()} (${shown} rows of ${v.height})`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  }, 60_000);
+});
+
+describe("review cycle 5 (TUI journeys: a resize round trip)", () => {
+  const drawAt = (h: Harness, w: number, ht: number) => h.app.draw(new TextCanvas(w, ht));
+  test("the window's top comes back to the same row: a wrapped paragraph's, a table's", async () => {
+    const h = await harness({ open: "samples/logs/observing-log-2026.md", width: 130, height: 36 });
+    const v = h.app.view!;
+    for (const start of [0, 7, 19, 33, 51]) {
+      h.app.scrollBy(v, start - v.top, false);
+      drawAt(h, 130, 36);
+      const top = v.top;
+      drawAt(h, 130, 20);
+      drawAt(h, 130, 36);
+      expect(v.top).toBe(top);
+      drawAt(h, 100, 36);
+      drawAt(h, 130, 36);
+      expect(v.top).toBe(top);
+    }
+  });
+  test("a cursor on a table's bottom border stays there through a resize", async () => {
+    const h = await harness({ open: "samples/scratch/wrap-probe.md", width: 130, height: 40 });
+    const v = h.app.view!;
+    const rows = h.app.currentLayout(v).lines.map((l) => l.spans.map((s) => s.text).join(""));
+    const bottom = rows.findLastIndex((r) => r.startsWith("└"));
+    expect(bottom).toBeGreaterThan(0);
+    h.app.moveCursor(v, { row: bottom, col: 0 });
+    drawAt(h, 90, 40);
+    drawAt(h, 130, 40);
+    expect(v.cur.row).toBe(bottom);
   });
 });

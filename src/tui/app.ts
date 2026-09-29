@@ -137,6 +137,8 @@ export interface View {
   visualLines?: [number, number];
   /** Source-based positions, which survive re-layout (decision 3.5). */
   topAnchor: Anchor;
+  /** Which of the top anchor's line's rows is the top (a wrapped line has several): 0, the first. */
+  topSub?: number;
   curAnchor: CursorAnchor;
   back: Loc[];
   fwd: Loc[];
@@ -773,6 +775,7 @@ export class App {
 
   jumpTo(view: View, anchor: Anchor): void {
     view.topAnchor = anchor;
+    view.topSub = 0;
     view.curAnchor = { anchor, sub: 0, col: 0 };
     view.goal = 0;
     view.layoutKey = "";
@@ -863,7 +866,7 @@ export class App {
         view.curAnchor = { ...this.cursorAnchorFor(layout, view.cur), col: view.curAnchor.col };
         view.anchorVersion = view.buf.version;
       }
-      view.top = this.clampTop(view, layout, rowFor(layout, view.topAnchor));
+      view.top = this.clampTop(view, layout, this.rowFromAnchor(layout, view.topAnchor, view.topSub ?? 0));
       this.ensureCursorVisible(view, layout);
       if (view.find) view.find = computeFind(layout, view.find.query, view.find.current, view.find.whole, view.find.regex);
       if (view.sel) view.sel.anchor = view.sel.src ? this.cursorFromAnchor(layout, view.sel.src) : clampPos(layout, view.sel.anchor);
@@ -892,7 +895,7 @@ export class App {
       pin.range = range;
       // A click: the clicked line stays under the pointer. The keyboard: the lens stays put.
       view.top = this.clampTop(view, layout, click !== undefined ? this.stepVisible(layout, hidden, view.cur.row, -click) : this.stepVisible(layout, hidden, top, -pin.screen));
-      view.topAnchor = anchorAt(layout, view.top);
+      this.anchorTop(view, layout);
       this.ensureCursorVisible(view, layout);
     }
     pin.screen = this.visibleBetween(layout, hidden, view.top, top);
@@ -1010,6 +1013,23 @@ export class App {
   gutterWidth(view: View): number {
     if (!this.ui.line_numbers) return 0;
     return String(view.buf.source.split("\n").length).length + 1;
+  }
+
+  /** The view's top, remembered as its source line and the row within it: a re-layout (a resize, a
+   *  reload) brings back the same row of a wrapped paragraph or a table, not the block's first. */
+  private anchorTop(view: View, layout: Layout): void {
+    const c = this.cursorAnchorFor(layout, { row: view.top, col: 0 });
+    view.topAnchor = c.anchor;
+    view.topSub = c.sub;
+  }
+
+  /** The row `sub` rows into the line an anchor names (as far as that line has rows). */
+  private rowFromAnchor(layout: Layout, anchor: Anchor, sub: number): number {
+    const first = rowFor(layout, anchor);
+    const src = layout.lines[first]?.src;
+    let row = first;
+    for (let k = 0; k < sub && layout.lines[row + 1]?.src === src; k++) row++;
+    return row;
   }
 
   private cursorFromAnchor(layout: Layout, c: CursorAnchor): Pos {
@@ -1158,7 +1178,7 @@ export class App {
       else if (d > view.height - 1 - so) view.top = this.stepVisible(layout, hidden, view.cur.row, -(view.height - 1 - so));
     }
     view.top = this.clampTop(view, layout, view.top);
-    view.topAnchor = anchorAt(layout, view.top);
+    this.anchorTop(view, layout);
     // Sideways, when wrapping is off: keep the cursor a few columns from either edge.
     if (this.ui.wrap) view.left = 0;
     else {
@@ -1200,7 +1220,7 @@ export class App {
     const layout = this.currentLayout(view);
     const hidden = this.lensHidden(view, layout);
     view.top = this.clampTop(view, layout, this.stepVisible(layout, hidden, view.top, delta));
-    view.topAnchor = anchorAt(layout, view.top);
+    this.anchorTop(view, layout);
     const last = Math.max(0, layout.lines.length - 1);
     let row = view.cur.row;
     if (moveCursor) row = Math.max(0, Math.min(this.stepVisible(layout, hidden, view.cur.row, delta), last));
@@ -1226,7 +1246,7 @@ export class App {
     this.moveCursor(view, { row, col: 0 });
     const layout = this.currentLayout(view);
     view.top = this.clampTop(view, layout, view.cur.row);
-    view.topAnchor = anchorAt(layout, view.top);
+    this.anchorTop(view, layout);
   }
 
   /** The headings the cursor is in, outermost first: each window's breadcrumb. */
@@ -2791,7 +2811,16 @@ export class App {
           const before = v.lensInner ?? 0;
           v.lensInner = Math.max(0, before + dir * n);
           this.lensHidden(v, layout); // clamps it to the lens
-          if (v.lensInner !== before) return;
+          if (v.lensInner !== before) {
+            // The cursor comes along as far as it must: never left on a row the lens now hides,
+            // where the next edit would change text out of sight.
+            const shown = this.screenRows(v, layout).filter((r) => layout.lines[r]?.lens === "source");
+            if (shown.length && !shown.includes(v.cur.row)) {
+              const to = v.cur.row < shown[0]! ? shown[0]! : shown[shown.length - 1]!;
+              this.moveCursor(v, { row: to, col: v.goal }, { keepGoal: true });
+            }
+            return;
+          }
         }
       }
       this.scrollBy(v, dir * n, false);
@@ -2802,7 +2831,12 @@ export class App {
   private clicks(ev: { x: number; y: number }): number {
     const now = this.now();
     const l = this.lastClick;
-    const count = l && l.x === ev.x && l.y === ev.y && now - l.at < 400 ? Math.min(3, l.count + 1) : 1;
+    const again = l && l.x === ev.x && l.y === ev.y && now - l.at < 400;
+    if (again && l.count === 0) {
+      this.lastClick = null;
+      return 0;
+    }
+    const count = again ? Math.min(3, l.count + 1) : 1;
     this.lastClick = { x: ev.x, y: ev.y, at: now, count };
     return count;
   }
@@ -2816,6 +2850,10 @@ export class App {
     }
     if (ev.button !== 0) return;
     const clicks = this.clicks(ev);
+    if (clicks === 0) {
+      this.drag = null;
+      return;
+    }
     if (hot && !hot.startsWith("tab:")) return this.clickHot(hot);
     if (g.popup && inRect(g.popup, ev.x, ev.y)) return; // the which-key popup's background
     const tab = g.tabs.find((t) => inRect(t, ev.x, ev.y));
@@ -2993,13 +3031,21 @@ export class App {
         this.copy(text, false);
         this.message("info", `copied ${text.length} characters · ${prettyKey(`${this.leader} s a`, this.leader)} adds it to the scratch`);
       }
+      // Where the text is editable, a drag is a visual selection (as vim's mouse makes one): d, c,
+      // x, >, < and y act on it, and esc leaves it — an edit never lands beside a highlight.
+      if (editable(d.view) && !d.view.insert && !d.view.visual) d.view.visual = d.view.sel.line ? "line" : "char";
       return;
     }
     d.view.sel = null;
     if (!d.onText) return;
     const layout = this.currentLayout(d.view);
     const link = linkAt(layout, d.start.row, d.start.col);
-    if (link >= 0) return void this.run("link.follow").then(() => this.host.requestRender());
+    if (link >= 0) {
+      // A double-click's second click lands in the note the first opened: it's swallowed, never a
+      // click (or a double-click, copying a word) on text the user hasn't seen yet.
+      if (this.lastClick) this.lastClick.count = 0;
+      return void this.run("link.follow").then(() => this.host.requestRender());
+    }
     const task = taskMarkAt(layout, d.start.row, d.start.col);
     if (task) this.toggleTaskAt(d.view, task);
   }
