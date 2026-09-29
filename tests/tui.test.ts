@@ -1271,6 +1271,9 @@ describe("saving and conflicts (step 4)", () => {
     await h.keys("k");
     await Bun.sleep(60);
     expect(readFileSync(file, "utf8")).toBe("other\n");
+    // …nor does the prompt come back at each idle delay.
+    await Bun.sleep(60);
+    expect(h.app.overlay).toBeNull();
   });
   test("unsaved notes are listed for the CLI (the staleness file, 9.9) until saved or quit", async () => {
     const { readStale } = await import("../src/core/stale.ts");

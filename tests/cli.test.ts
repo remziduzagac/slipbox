@@ -473,6 +473,20 @@ describe("the vault and the tool", () => {
     expect(miss.code).toBe(3);
     expect(miss.json.data.tasks[0]).toHaveProperty("raw");
   });
+  test("review cycle 5: secondary refusals (from mutation testing)", () => {
+    expect(slipbox(["write", "brand-new-5", "x", "--create", "--if-unchanged", "abc"]).code).toBe(5);
+    expect(existsSync(join(vault, "brand-new-5.md"))).toBe(false);
+    const list = slipbox(["task", "2026-09-14-weekly", "--json"]).json.data;
+    const done = list.tasks.find((t: { checked: boolean }) => t.checked);
+    const before = note("meetings/2026-09-14-weekly.md");
+    // A stale sha is refused even when the toggle would change nothing.
+    expect(slipbox(["task", "2026-09-14-weekly", String(done.line), "--check", "--if-unchanged", "0000000000000000"]).code).toBe(5);
+    expect(slipbox(["task", "2026-09-14-weekly", String(done.line), "--check", "--uncheck"]).code).toBe(2);
+    expect(note("meetings/2026-09-14-weekly.md")).toBe(before);
+    writeFileSync(join(vault, "emoji-col.md"), "🛰️ x needle\n");
+    expect(slipbox(["find", "needle", "emoji-col", "--json"]).json.data.matches[0].column).toBe(6);
+    rmSync(join(vault, "emoji-col.md"));
+  });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));
     expect(missing).toEqual([]);

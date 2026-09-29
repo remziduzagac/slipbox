@@ -334,3 +334,10 @@ describe("review cycle 4 (markdown against the specs)", () => {
     expect(c1.src).toBe(3);
   });
 });
+
+describe("review cycle 5 (render, from mutation testing)", () => {
+  test("an escape before a tab in a code block doesn't move the tab stop", () => {
+    const rows = (code: string) => renderMarkdown(`\`\`\`\n${code}\n\`\`\`\n`, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }).lines.map((l) => l.spans.map((s) => s.text).join(""));
+    expect(rows("ab\x1b[31mcd\x1b[0mef\tgh")).toEqual(rows("abcdef\tgh"));
+  });
+});

@@ -697,3 +697,37 @@ describe("review cycle 4 (core, CRLF empty matches)", () => {
     expect(findAll("xy\r\n", /a*/g, 0, 4, true).map((m: { from: number }) => m.from)).toEqual([0, 1, 2]);
   });
 });
+
+describe("review cycle 5 (core, from mutation testing)", () => {
+  test("tabs reach the next stop, counting display columns", () => {
+    expect(expandTabs("ab\tc")).toBe("ab  c");
+    expect(expandTabs("日\tx")).toBe("日  x");
+    expect(expandTabs("abcd\tx")).toBe("abcd    x");
+  });
+  test("no row ends with opening punctuation (kinsoku)", () => {
+    const text = (md: string, width: number) => renderMarkdown(md, { width, glyphs: glyphsFor("unicode"), showUrls: false }).lines.map((l) => l.spans.map((x) => x.text).join(""));
+    for (let w = 4; w <= 12; w++) for (const row of text("あいう「漢字」です（注）と【記録】", w)) expect(row.trimEnd()).not.toMatch(/[（「『【]$/);
+  });
+  test("smart case knows capitals beyond ASCII", () => {
+    const re = compilePattern("Ärzte", { regex: false, whole: false, ignoreCase: false }) as RegExp;
+    expect(re.flags).not.toContain("i");
+    expect(findAll("ärzte Ärzte", re).map((m) => m.from)).toEqual([6]);
+  });
+  test("the switcher's fuzzy match is smart-case too", async () => {
+    const { fuzzy } = await import("../src/tui/fuzzy.ts");
+    expect(fuzzy("Tel", "telescope.md")).toBeNull();
+    expect(fuzzy("tel", "Telescope.md")).not.toBeNull();
+  });
+  test("truncateStart keeps as much of the end as fits", async () => {
+    const { truncateStart } = await import("../src/core/width.ts");
+    expect(truncateStart("abcdef", 4)).toBe("…def");
+    expect(truncateStart("abcdef", 6)).toBe("abcdef");
+    expect(stringWidth(truncateStart("日本語の文", 6))).toBeLessThanOrEqual(6);
+    expect(truncateStart("日本語の文", 6)).toBe("…の文");
+  });
+  test("VS16 makes a text-default symbol wide", async () => {
+    const { graphemeWidth } = await import("../src/core/width.ts");
+    expect(graphemeWidth("\u{1F02C}️")).toBe(2);
+    expect(graphemeWidth("❤️")).toBe(2);
+  });
+});

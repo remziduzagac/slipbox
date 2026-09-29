@@ -49,7 +49,7 @@ node lts and nvim 0.12.2 are already present, and anything else you need, `mise`
 
 **The trap that will bite you first:** mise puts tools on `PATH` from a *login* shell. A
 non-interactive `ssh beaver 'bun --version'` finds nothing and looks exactly like bun being
-missing. Use `zsh -lic '...'` before concluding a tool is absent.
+missing. Use `zsh -lc '...'` before concluding a tool is absent.
 
 **Not installed:** cargo/rustc (not needed — the stack is TypeScript), `leaf`, `zk`, `chafa`.
 `leaf` is the rendering quality bar and is installed on the Mac (`leaf-markdown-viewer` via

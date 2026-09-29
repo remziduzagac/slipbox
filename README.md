@@ -47,16 +47,21 @@ The configuration reloads itself when you save it.
 
 ## For agents
 
+On the demo vault (`cd examples/vault`; `bun ../../src/main.ts` if `slipbox` isn't installed):
+
 ```bash
-slipbox resolve '[[note#heading]]' --from index.md --json
-slipbox backlinks note --json
+slipbox resolve '[[telescope-comparison#Summary]]' --from home.md --json
+slipbox backlinks telescope-comparison --json
 slipbox find 'Aster' --json                  # a note's text, or the whole vault's
-slipbox read note --json                     # the raw text and its sha
-slipbox write note --stdin --if-unchanged <sha> < new.md
-slipbox replace note old new --dry-run --json
-slipbox task note 12 --check
-slipbox capture --ref src/file.ts:42-50 --snippet
-slipbox render note --plain
+slipbox read home --json                     # the raw text and its sha
+slipbox write home --stdin --if-unchanged <sha> < new.md
+slipbox replace home Aster Astra --dry-run --json
+slipbox task 2026-09-14-weekly 17 --check
+slipbox write observing-log-2026 --append -- '- 22:10 seeing 2"'
+slipbox stat home --json                     # size, dates, title, link counts
+slipbox links --all --json                   # every link in the vault, and whether it resolves
+slipbox capture --ref ../../src/main.ts:1-3 --snippet
+slipbox render home --plain
 ```
 
 One JSON object per call with `--json`; stable exit codes. The skill in
