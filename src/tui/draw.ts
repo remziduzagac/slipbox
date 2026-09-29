@@ -1028,7 +1028,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   const s = app.sidebar;
   const g = app.glyphs;
   const q = s.filter ?? "";
-  // Every file with its extension, notes too: a vault holds markdown, Org, AsciiDoc and data files
+  // Every file with its extension, notes too: a vault holds notes, data files and code
   // side by side, and the extension says which.
   const nameOf = (row: TreeRow) => row.name;
   const icon = (row: TreeRow) => (row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file);

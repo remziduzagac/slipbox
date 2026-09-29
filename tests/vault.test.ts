@@ -387,30 +387,3 @@ describe("links in code comments (16.10)", () => {
   });
 });
 
-describe("Org notes in the graph (16.16)", () => {
-  test("with org among the extensions: notes by name and path, links both ways, title and tags", () => {
-    const dir = mkdtempSync(join(tmpdir(), "slipbox-org-"));
-    mkdirSync(join(dir, ".slipbox"));
-    writeFileSync(join(dir, "plan.org"), "#+TITLE: The Plan\n* Later :soon:\nSee [[file:notes.md][notes]].\n");
-    writeFileSync(join(dir, "notes.md"), "# Notes\n\n[[plan]] and [the plan](plan.org#Later).\n");
-    const config = structuredClone(DEFAULT_CONFIG);
-    config.walk.extensions = ["md", "org"];
-    const g = openGraph(locateVault({ root: dir }), config, false);
-    expect(g.entry("plan.org")).toMatchObject({ title: "The Plan", tags: ["soon"] });
-    expect(g.linksOf("plan.org").map((l) => [l.target, l.resolvedKind, l.path])).toEqual([["notes.md", "note", "notes.md"]]);
-    expect(g.backlinks("plan.org").map((b) => b.text)).toEqual(["plan", "the plan"]);
-    expect(g.backlinks("notes.md").map((b) => b.from)).toEqual(["plan.org"]);
-    // AsciiDoc too (16.17): its xrefs are links, and a markdown note's [[guide]] finds it.
-    writeFileSync(join(dir, "guide.adoc"), "= Guide\n\nSee xref:plan.org[the plan].\n");
-    writeFileSync(join(dir, "notes.md"), "# Notes\n\n[[plan]] and [the plan](plan.org#Later), [[guide]].\n");
-    config.walk.extensions = ["md", "org", "adoc"];
-    const g3 = openGraph(locateVault({ root: dir }), config, false);
-    expect(g3.entry("guide.adoc")!.title).toBe("Guide");
-    expect(g3.backlinks("plan.org").map((b) => b.from).sort()).toEqual(["guide.adoc", "notes.md", "notes.md"]);
-    expect(g3.backlinks("guide.adoc").map((b) => b.from)).toEqual(["notes.md"]);
-    // Without org among them, an .org file is a text file: linked as a file, not a note.
-    const g2 = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
-    expect(g2.entry("plan.org")).toBeUndefined();
-    expect(g2.linksOf("notes.md").map((l) => l.resolvedKind)).toEqual(["unresolved", "file", "unresolved"]);
-  });
-});

@@ -201,8 +201,7 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   is refused.
 - **`task`** lists task items from the parsed note, so a `- [ ]` inside a code block isn't one.
   With a line it toggles that task; `--check` and `--uncheck` set it and change nothing when it is
-  already so. A toggle is a one-byte edit, so it works on a note that isn't valid UTF-8 too; an
-  Org note's done mark is `X` (`16.16`), a markdown note's `x`.
+  already so. A toggle is a one-byte edit, so it works on a note that isn't valid UTF-8 too.
 - **Big notes.** `read`, `find`, `replace`, `write` and `send` read a note's bytes and never parse
   it, so a note the walk leaves out for its size is still quick to reach. `find` shows a long line
   as a window around the match (`…` where cut), so its output grows with the matches, not with the

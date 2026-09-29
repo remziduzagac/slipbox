@@ -108,55 +108,6 @@ JSON (and `.jsonc`, comments allowed) is validated by `JSON.parse`. **Nothing is
 re-serialized**: edits are always on the text, so comments, order and formatting survive. A file
 that doesn't parse has no render (`16.14`): its error is shown and source mode opens.
 
-## Org notes (plan `16.16`)
-
-With `org` among `walk.extensions`, an Org note is a note like any other: `core/org.ts` turns
-uniorg's parse (`uniorg-parse`, with positions) into the same mdast, so the renderer, the lens,
-the index and the CLI need nothing of their own:
-
-- **Headlines are headings**, sections flattened so each block is at the top level (the lens edits
-  one at a time). A headline's TODO keyword (`check_todo`; DONE and CANCELLED as `check_done`) and
-  priority are drawn before its text, its tags (`syn_tag`) after — never in its text or slug, so
-  `[[plan.org#Ship it]]` finds `* TODO Ship it :urgent:`.
-- **`#+KEY: value` lines** and property drawers are key–value rows, as a data file's; `#+TITLE` is
-  the note's title, and `#+FILETAGS` with the headlines' tags are its tags.
-- **Links**: `[[file:x.org::*Heading][text]]` → `x.org#Heading`, a bare `[[Heading]]` → the heading
-  in this note, a URL as it is; `id:` and other kinds show as text. They are the graph's links, so
-  Org and markdown notes are each other's backlinks.
-- **Blocks**: `#+begin_src lang` is a code block, highlighted; example, export and fixed-width
-  blocks are code; quote and verse blocks are quotes; tables are tables (rule rows dropped);
-  checkbox items are tasks, ticked with Org's `[X]`; comments, drawers and planning lines are
-  dimmed rows.
-
-Org is parsed by chunk, split before headlines outside blocks, and a buffer reuses the chunks an
-edit didn't touch: a 16,000-line note parses in about 20 ms, and an edit costs one chunk. Source
-mode shows Org plain, its headlines scanned for the breadcrumb; `enter` follows the `[[…]]` link
-or URL under the cursor.
-
-## AsciiDoc notes (plan `16.17`)
-
-With `adoc` (or `asciidoc`) among `walk.extensions`, `core/asciidoc.ts` reads an AsciiDoc note line
-by line into the same mdast — no dependency, nothing to load. The common syntax of notes and docs:
-
-- **Sections**: `= Title` (the note's title), `==`…`======` (and markdown-style `#`); a section's
-  id — `[[id]]` or `[#id]` above it, else Asciidoctor's automatic `_the_title` — is what
-  `<<id,text>>` and `xref:#id[]` find.
-- **Attribute entries** (`:key: value`) are key–value rows; `:tags:` or `:keywords:` are the
-  note's tags. Comment lines and `////` blocks are dimmed rows.
-- **Delimited blocks**: `----` listing (a code block, highlighted with `[source,lang]`), `....`
-  literal, `++++` passthrough as code; `____` quote, `====` example, `****` sidebar and `--` open
-  blocks hold blocks of their own, a quote around them. `[NOTE]` … `[CAUTION]` on a block, or
-  `NOTE:` at a paragraph's start, makes a callout. A `.Title` line is drawn in bold above its block.
-- **Lists**: `*`/`-` and `.`/`1.` items, nested by marker depth; `* [ ]` and `* [x]` are tasks.
-  **Tables**: `|===`, cells split at `|`, rows by the first row's width or `cols`.
-- **Inline**: `*strong*`, `_emphasis_`, `` `monospace` ``, `url[text]`, bare URLs, `link:path[text]`,
-  `xref:file.adoc#id[text]`, `<<id,text>>`, `image:path[alt]`, a line ending in a space and `+` for a break.
-  `include::file[]` is a link to the file, never expanded.
-
-Not read: conditionals (`ifdef::`), attribute references in text (`{name}`), and custom
-substitutions — a note shows what it says. Source mode shows AsciiDoc plain, section titles
-scanned for the breadcrumb; `enter` follows the link macro or URL under the cursor.
-
 ## The wikilink tokenizer
 
 `core/wikilink.ts` is a micromark extension, not a regex. That is why `[[links]]` inside code

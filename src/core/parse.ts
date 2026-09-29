@@ -486,5 +486,5 @@ export function noteTitle(parsed: ParsedNote, fileName: string): string {
   for (const child of parsed.tree.children) {
     if (child.type === "heading" && child.depth === 1) return headingText(child);
   }
-  return fileName.replace(/\.(md|markdown|org|adoc|asciidoc)$/i, "");
+  return fileName.replace(/\.(md|markdown)$/i, "");
 }

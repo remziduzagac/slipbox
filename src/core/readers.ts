@@ -7,13 +7,10 @@
 // and a few things source mode reads off the raw text without a parse (a keystroke never
 // re-parses a note): its headings, and the link around the cursor.
 
-import type { Paragraph, Root, Text } from "mdast";
 import { noteFormat } from "./filetypes.ts";
 import type { LayoutHeading, LinkKind } from "./layout/ir.ts";
 import { scanHeadings } from "./layout/source.ts";
 import { type ParseCache, type ParsedNote, parseMarkdown } from "./parse.ts";
-import { asciidocReader } from "./asciidoc.ts";
-import { orgReader } from "./org.ts";
 import { parseWikiTarget } from "./wikilink.ts";
 
 /** A link read from a line of source text. */
@@ -55,42 +52,13 @@ const markdown: NoteReader = {
   language: null,
 };
 
-/**
- * A note format without a reader yet (AsciiDoc until 16.17): its paragraphs as plain text, so the
- * note opens, is searched and listed — no headings, no links.
- */
-const plain: NoteReader = {
-  format: "plain",
-  parse(source) {
-    const tree: Root = { type: "root", children: [] };
-    const lines = source.split("\n");
-    let start = -1;
-    const flush = (end: number) => {
-      if (start < 0) return;
-      const value = lines.slice(start, end).join("\n");
-      const pos = { start: { line: start + 1, column: 1 }, end: { line: end, column: (lines[end - 1] ?? "").length + 1 } };
-      const text: Text = { type: "text", value, position: pos };
-      tree.children.push({ type: "paragraph", children: [text], position: pos } as Paragraph);
-      start = -1;
-    };
-    lines.forEach((l, i) => {
-      if (l.trim()) {
-        if (start < 0) start = i;
-      } else flush(i);
-    });
-    flush(lines.length);
-    return { tree, frontmatter: null, source };
-  },
-  scanHeadings: () => [],
-  linkAt: () => null,
-  language: "text",
-};
 
-const READERS: Record<string, NoteReader> = { markdown, org: orgReader, asciidoc: asciidocReader };
+const READERS: Record<string, NoteReader> = { markdown };
 
-/** The reader for a note format ("markdown", "org"…); a format without one reads as plain text. */
+/** The reader for a note format; markdown is the only one (Org and AsciiDoc were tried in 16.16 and
+ *  16.17, and dropped: docs/idea.md). */
 export function readerFor(format: string): NoteReader {
-  return READERS[format] ?? plain;
+  return READERS[format] ?? markdown;
 }
 
 /** Parse a note's text by its name's format. */

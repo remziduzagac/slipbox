@@ -108,11 +108,8 @@ house style that writing-guide describes.
 │ scratch/half-written.py,           │ a syntax error in code; a data file     │
 │ broken-config.json                 │ that doesn't parse                      │
 ├────────────────────────────────────┼─────────────────────────────────────────┤
-│ logs/dome-log.org                  │ Org: TODO headlines, tags, properties,  │
-│                                    │ checkboxes, a table, blocks, links      │
-├────────────────────────────────────┼─────────────────────────────────────────┤
-│ handbook/safety-card.adoc          │ AsciiDoc: attributes, admonitions, a    │
-│                                    │ checklist, a table, xrefs, <<ids>>      │
+│ logs/dome-log.org,                 │ formats slipbox doesn't read as notes:  │
+│ handbook/safety-card.adoc          │ text files, source mode                 │
 └────────────────────────────────────┴─────────────────────────────────────────┘
 
 scripts/sample-metrics.ts measures what each note exercises (lines, longest
@@ -4399,106 +4396,6 @@ exports[`snapshots of the layout IR as text equipment/mount-aster.cfg @ 80 1`] =
  exposure_s          2
  aggressiveness_ra   70
  aggressiveness_dec  100"
-`;
-
-exports[`snapshots of the layout IR as text handbook/safety-card.adoc @ 80 1`] = `
-"▌ Dome safety card
-
- author   Rosa Lind
- revdate  2026-09-01
- tags     safety, dome
- Printed and taped inside the dome door. Keep it to one page.
-
-The rules for anyone working in the dome, in the order they matter. The long
-version is the operations handbook; the dome's repair history is the dome log.
-
-▌ Before you go up
-
-▎ ⚠ Warning
-▎ Never work alone in the dome after dark.
-
-☐ tell someone in the control room
-☐ check the wind: the limits table
-☑ wear the head torch, red mode
-  ◦ spare batteries are in the blue box
-
-▌ Wind and weather limits
-
-When to close
-
-┌───────────┬─────────┬───────────────────────┐
-│ Condition │ Limit   │ Action                │
-╞═══════════╪═════════╪═══════════════════════╡
-│ Wind      │ 40 km/h │ close the shutter     │
-│ Humidity  │ 85 %    │ close, cap the optics │
-│ Rain      │ any     │ close at once         │
-└───────────┴─────────┴───────────────────────┘
-
-▎ ✦ Tip
-▎ The weather station's page is at the weather page
-▎ <https://halden-ridge.invalid/weather>; it updates every minute.
-
-▌ After
-
-1. Park the telescope.
-2. Close the shutter and check it latched.
-3. Log the session: see Before you go up for what to check next time.
-
-                                                                           bash
- halley dome close --verify
-"
-`;
-
-exports[`snapshots of the layout IR as text logs/dome-log.org @ 80 1`] = `
-" title     Dome log
- filetags  :dome:maintenance:
-
-Org notes live next to the markdown ones: this one is the dome crew's log. The
-refit plan is the dome refit, and the safety card is the safety card.
-
-▌ DONE [#A] Replace the shutter belt  :shutter:
-
- CLOSED: [2026-09-02 Wed 16:40]
- part  GT3-2160
- cost  184 EUR
-
-The old belt had stretched 11 mm. Tension now 42 N at the midpoint.
-
-☑ order the belt
-☑ fit and tension
-☑ run the shutter 20 times
-
-▌ TODO Grease the azimuth ring  :rotation:
-
- SCHEDULED: <2026-10-05 Mon>
-
-Needs two people and the long ladder. See Shutter log for the last torque
-readings.
-
-☐ buy lithium grease
-☐ book Rosa for a Saturday
-☐ check the drive motor current before and after
-
-▌ Shutter log
-
-┌────────────┬───────┬────────┬───────────────┐
-│ Date       │ Opens │ Faults │ Note          │
-╞════════════╪═══════╪════════╪═══════════════╡
-│ 2026-08-30 │ 14    │ 2      │ belt slipping │
-│ 2026-09-03 │ 21    │ 0      │ new belt      │
-│ 2026-09-10 │ 18    │ 0      │               │
-└────────────┴───────┴────────┴───────────────┘
-
-▌ Torque check
-
-                                                                           bash
- halley dome torque --samples 50 --out /srv/logs/torque.csv
-
-
-▎ Never open the dome above 40 km/h wind, whatever the forecast said an hour
-▎ ago.
-
- An Org comment: dimmed in the render."
 `;
 
 exports[`snapshots of the layout IR as text software/halley/archive.properties @ 80 1`] = `

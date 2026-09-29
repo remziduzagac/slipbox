@@ -4,7 +4,6 @@
 // prefix every row, so nesting composes without any block knowing where it sits.
 
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
-import type { OrgHeadline } from "../org.ts";
 import type { Glyphs } from "../glyphs.ts";
 import { type DataComment, type DataField, fieldLink, type TreePlace } from "../data.ts";
 import { headingText, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
@@ -235,7 +234,7 @@ function joined(prev: RootContent | undefined, node: RootContent): boolean {
 function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null): Line[] | null {
   switch (node.type) {
     case "heading":
-      return heading(node.depth, node.children, srcOf(node), ctx, width, (node.data as { org?: OrgHeadline } | undefined)?.org);
+      return heading(node.depth, node.children, srcOf(node), ctx, width);
     case "paragraph":
       return paragraph(node.children, srcOf(node), ctx, width, base);
     case "thematicBreak":
@@ -291,20 +290,11 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
   }
 }
 
-function heading(depth: number, children: PhrasingContent[], src: number, ctx: Ctx, width: number, org?: OrgHeadline): Line[] {
+function heading(depth: number, children: PhrasingContent[], src: number, ctx: Ctx, width: number): Line[] {
   const role = `h${Math.min(6, Math.max(1, depth))}` as Role;
   const g = ctx.opts.glyphs;
   const icon = g.mode === "nerd" ? g.heading[depth - 1]! : `${g.heading[depth - 1]} `;
   const spans = inline(children, ctx, { role, attrs: A_BOLD }, src);
-  // An Org headline's keyword and priority before its text, its tags after (16.16): drawn, but
-  // not the heading's text or slug.
-  if (org) {
-    const before: Span[] = [];
-    if (org.todo) before.push({ text: `${sanitize(org.todo)} `, role: org.done ? "check_done" : "check_todo", attrs: A_BOLD });
-    if (org.priority) before.push({ text: `[#${sanitize(org.priority)}] `, role: "dim", attrs: 0 });
-    spans.unshift(...before);
-    if (org.tags.length) spans.push({ text: `  ${org.tags.map((t) => `:${sanitize(t)}`).join("")}:`, role: "syn_tag", attrs: 0 });
-  }
   // The heading's text and slug as the outline (headingsOf) has them — not the drawn spans, which
   // carry footnote marks and image glyphs. Repeated headings share a slug; their occurrence tells
   // them apart (anchors count it), so [[#A-1]] is the heading "A-1", never the second "A".

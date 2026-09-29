@@ -61,14 +61,14 @@ describe("snapshots of the layout IR as text", () => {
     });
   }
   // The samples beyond markdown, each read by its own reader (16.11–16.13, 16.16, 16.17).
-  const others = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => /\.(org|adoc|toml|ya?ml|json|csv|tsv|ini|cfg|properties|env)$/.test(f) && !/broken|photometry/.test(f) && !f.startsWith(".slipbox")).sort();
+  const others = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => /\.(toml|ya?ml|json|csv|tsv|ini|cfg|properties|env)$/.test(f) && !/broken|photometry/.test(f) && !f.startsWith(".slipbox")).sort();
   test("the samples beyond markdown are there", () => {
     expect(others.length).toBeGreaterThanOrEqual(6);
   });
   for (const file of others) {
     test(`${file} @ 80`, () => {
       const src = readFileSync(join(SAMPLES, file), "utf8");
-      const kind = classify(file, ["md", "org", "adoc"]);
+      const kind = classify(file, ["md"]);
       const parsed = kind.group === "data" ? parseData(kind.format, src) : { ...parseNoteFile(file, src), error: null };
       expect(parsed.error).toBeNull();
       expect(text(renderTree(parsed.tree, { width: 80, glyphs: unicode, showUrls: true }))).toMatchSnapshot();

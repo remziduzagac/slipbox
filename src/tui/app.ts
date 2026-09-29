@@ -16,7 +16,7 @@ import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core
 import { appendFileSync, existsSync, mkdirSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
-import { doneMark, toggleTask } from "../core/tasks.ts";
+import { toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
@@ -1533,11 +1533,10 @@ export class App {
     if (buf.deleted) return this.message("warn", `${buf.key} was deleted on disk — nothing to toggle`);
     if (buf.dirty) {
       // Unsaved changes: toggle in the buffer (an undo step), not on disk under them.
-      const mark = doneMark(buf.name);
-      const r = toggleTask(new TextEncoder().encode(buf.source), task.line, mark);
+      const r = toggleTask(new TextEncoder().encode(buf.source), task.line);
       if (!r) return this.message("warn", `line ${task.line} has no task marker`);
       const at = buf.lineStarts()[task.line - 1]! + /\[([ xX])\]/.exec(buf.source.slice(buf.lineStarts()[task.line - 1]!))!.index + 1;
-      buf.edit(at, 1, r.checked ? mark : " ");
+      buf.edit(at, 1, r.checked ? "x" : " ");
       return this.message("info", r.checked ? "done ✓ (unsaved)" : "not done (unsaved)");
     }
     if (buf.changedOnDisk()) {
@@ -1551,7 +1550,7 @@ export class App {
     } catch (err) {
       return this.message("error", `can't read ${buf.key}: ${(err as Error).message}`);
     }
-    const r = toggleTask(bytes, task.line, doneMark(buf.name));
+    const r = toggleTask(bytes, task.line);
     if (!r) return this.message("warn", `line ${task.line} of ${buf.key} has no task marker`);
     if (this.writeBuffer(buf, r.bytes)) this.message("info", r.checked ? "done ✓" : "not done");
   }
@@ -1783,8 +1782,8 @@ export class App {
 
   /**
    * Create a note (ctrl+n, `:new`): `input` from `base`, `.md` added unless it names a known
-   * extension (`.org`, `.toml`…); missing folders made. A note starts with its title as a heading
-   * (`# Name`, Org's `#+TITLE:`, AsciiDoc's `=`). An existing file is just opened. Its vault path
+   * extension (`.toml`, `.py`…); missing folders made. A note starts with its title as a heading
+   * (`# Name`). An existing file is just opened. Its vault path
    * and whether it was made, or null.
    */
   createNote(input: string, base: string): { rel: string; created: boolean } | null {
@@ -1803,7 +1802,7 @@ export class App {
     }
     const kind = classify(rel, this.config.walk.extensions);
     const name = posix.basename(rel).replace(/\.[^.]+$/, "");
-    const content = kind.group !== "note" ? "" : kind.format === "org" ? `#+TITLE: ${name}\n\n` : kind.format === "asciidoc" ? `= ${name}\n\n` : `# ${name}\n\n`;
+    const content = kind.group === "note" ? `# ${name}\n\n` : "";
     let stamp: { mtimeMs: number; size: number };
     try {
       mkdirSync(dirname(abs), { recursive: true });

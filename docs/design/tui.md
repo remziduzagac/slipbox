@@ -649,9 +649,9 @@ in its first 8 KB), which never opens.
 
 A note is read by its format's reader (`core/readers.ts`, `16.2`): each parses into the same mdast
 tree — so the index, the render, the lens and the outline work alike for every format — and says
-what source mode reads off the raw lines: its headings and the link around the cursor. Markdown's
-is the first, then Org (`16.16`) and AsciiDoc (`16.17`; [rendering.md](rendering.md), "Org notes"
-and "AsciiDoc notes"). All three are notes only when `walk.extensions` lists them.
+what source mode reads off the raw lines: its headings and the link around the cursor. Markdown's is
+the only one: Org and AsciiDoc readers were built and dropped (`16.16`, `16.17`; `docs/idea.md`), and
+their files open as text.
 
 - **Opening.** A data or text file opens from the explorer, `ctrl+p`, `:e path`, or a link to it
   (`[config](cfg/app.toml)`, `[[run.py]]`, `[[cfg/app.toml#editor]]` at that section; binary links
@@ -697,14 +697,14 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
   `renderable` — notes and data files, the default — or `all` text files), plus `files.include`
   patterns, minus `files.exclude`; the explorer's `a` toggles to all and back. The explorer, the
   tabs and the history show every name with its extension (the switcher lists paths), notes' too
-  (`home.md`, `dome-log.org`): the formats sit side by side, and the extension says which is which.
+  (`home.md`, `halley.toml`): the formats sit side by side, and the extension says which is which.
   Folders show whether or not anything in them is listed, so a new or empty one is there to open and
   create in.
 - **New notes and folders** (`ctrl+n`, `space n n`, `:new`; `space v d`, `:mkdir`; `%` and `d` in
   the explorer): a name, from the current note's folder — or the explorer's selected folder when it
   has focus, or the vault's root with a leading `/` — and folders on the way are made. `.md` is added
-  unless the name has a known extension (`.org`, `.toml`…). A note starts with its title (`# Name`,
-  Org's `#+TITLE:`, AsciiDoc's `=`), opens, and is typed into on the line after the blank one; an
+  unless the name has a known extension (`.toml`, `.py`…). A note starts with its title (`# Name`),
+  opens, and is typed into on the line after the blank one; an
   existing file just opens. Nothing is made outside the vault, through a symlink or otherwise.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)

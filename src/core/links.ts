@@ -12,8 +12,7 @@ export type Resolution =
   | { status: "ambiguous"; path: null; candidates: string[] }
   | { status: "unresolved"; path: null; candidates: [] };
 
-/** Every note format's extension: which of them are notes is the vault's `walk.extensions`. */
-const NOTE_EXT = /\.(md|markdown|org|adoc|asciidoc)$/i;
+const NOTE_EXT = /\.(md|markdown)$/i;
 
 export function normKey(s: string): string {
   return s.normalize("NFC").toLowerCase();

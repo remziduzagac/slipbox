@@ -43,8 +43,7 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `equipment/filters.csv` | CSV: quoted fields with commas and `""`, empty cells |
 | `software/halley/reduce.py`, `night.sh` | tree-sitter: docstrings, heredocs, an outline, links in comments |
 | `scratch/half-written.py`, `broken-config.json` | a syntax error in code; a data file that doesn't parse |
-| `logs/dome-log.org` | Org: TODO headlines, tags, properties, checkboxes, a table, blocks, links |
-| `handbook/safety-card.adoc` | AsciiDoc: attributes, admonitions, a checklist, a table, xrefs, `<<ids>>` |
+| `logs/dome-log.org`, `handbook/safety-card.adoc` | formats slipbox doesn't read as notes: text files, source mode |
 
 `scripts/sample-metrics.ts` measures what each note exercises (lines, longest line, tables and
 rows, fences and their languages, headings, links, wide and right-to-left characters), so a change

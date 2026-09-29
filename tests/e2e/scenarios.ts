@@ -831,34 +831,6 @@ export const SCENARIOS: Scenario[] = [
       await s.status(/✖/, 5000);
     },
   },
-  {
-    name: "Org and AsciiDoc notes: render, tick a task, follow a link",
-    run: async (s) => {
-      await open(s, "dome-log.org");
-      await s.see(/TODO Grease the azimuth ring\s+:rotation:/);
-      await s.see(/title\s+Dome log/);
-      await s.keys("/");
-      await s.type("buy lithium");
-      await s.keys("enter", "escape", "ctrl+l");
-      await s.file("logs/dome-log.org", (t) => t.includes("- [X] buy lithium grease"), "Org's task ticked with X");
-      await s.keys("/");
-      await s.type("the dome refit");
-      await s.keys("enter", "escape", "enter");
-      await s.status("dome-refit.md");
-      await open(s, "safety-card.adoc");
-      await s.see("Wind and weather limits");
-      await s.see(/│ Humidity\s+│ 85 %/);
-      await s.keys("/");
-      await s.type("tell someone");
-      await s.keys("enter", "escape", "ctrl+l");
-      await s.file("handbook/safety-card.adoc", (t) => t.includes("* [x] tell someone in the control room"), "the checklist item ticked");
-      await s.keys("/");
-      await s.type("the operations handbook");
-      await s.keys("enter", "escape", "enter");
-      await s.status("operations-handbook.md");
-    },
-  },
-
   // --- saving and conflicts -------------------------------------------------------------------
   {
     name: "conflict: an agent writes while you have changes; the prompt; :w! and :e!",

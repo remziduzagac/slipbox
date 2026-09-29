@@ -17,10 +17,9 @@ export interface TaskToggle {
 
 /**
  * Toggle the task marker on 1-based `line`. Null when that line has no task marker (the file
- * changed, or the line isn't a task item's first line). `mark`: what a done task has — Org's is
- * `X` (16.16), markdown's `x`.
+ * changed, or the line isn't a task item's first line).
  */
-export function toggleTask(bytes: Uint8Array, line: number, mark: "x" | "X" = "x"): TaskToggle | null {
+export function toggleTask(bytes: Uint8Array, line: number): TaskToggle | null {
   let start = 0;
   for (let n = 1; n < line; n++) {
     const nl = bytes.indexOf(0x0a, start);
@@ -38,13 +37,8 @@ export function toggleTask(bytes: Uint8Array, line: number, mark: "x" | "X" = "x
   const at = start + m[1]!.length + 1;
   const checked = m[2] === " ";
   const out = new Uint8Array(bytes);
-  out[at] = checked ? mark.charCodeAt(0) : 0x20;
+  out[at] = checked ? 0x78 /* x */ : 0x20;
   return { bytes: out, checked };
-}
-
-/** A note format's done mark, by its name. */
-export function doneMark(rel: string): "x" | "X" {
-  return /\.org$/i.test(rel) ? "X" : "x";
 }
 
 export interface TaskItem {

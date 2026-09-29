@@ -530,9 +530,9 @@ done as a cap (`docs/design/rendering.md`, "Hostile notes").
 
 ## Files beyond markdown — `16.x` (phase 3b)
 
-*The design, and why, is `docs/idea.md`, "Files beyond markdown". Three groups: notes (markdown,
-Org, AsciiDoc: the link graph), data files (JSON, YAML, TOML, INI, CSV: rendered, not notes), and
-text/source files (source mode only). In order: the groundwork first, then each group.*
+*The design, and why, is `docs/idea.md`, "Files beyond markdown". Three groups: notes (markdown:
+the link graph), data files (JSON, YAML, TOML, INI, CSV: rendered, not notes), and text/source files
+(source mode only). In order: the groundwork first, then each group.*
 
 | ID | Item |
 | --- | --- |
@@ -551,8 +551,8 @@ text/source files (source mode only). In order: the groundwork first, then each 
 | 16.13 | **Done.** Render CSV/TSV as a table: header detection, lazy layout past a size |
 | 16.14 | **Done.** Data files' lens (blocks: sections, keys, rows); a parse error on leaving insert → source mode |
 | 16.15 | **Done.** Links out of data files: paths that resolve, URLs, `$ref`, includes; into the graph |
-| 16.16 | **Done.** Org as a note format (`uniorg`): render, headings, links, `TODO`/`DONE` tasks, tags |
-| 16.17 | **Done.** AsciiDoc as a note format: a line reader into the shared tree (no asciidoctor.js) |
+| 16.16 | **Dropped** (built, then removed 2026-09-30). Org as a note format — see `docs/idea.md` |
+| 16.17 | **Dropped** (built, then removed 2026-09-30). AsciiDoc as a note format — see `docs/idea.md` |
 
 Later, on the same render: slipbox's own settings as a TOML screen with the config's schema
 (defaults, allowed values, unknown keys). Diffs are a separate discussion.

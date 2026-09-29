@@ -933,6 +933,14 @@ format-agnostic.
   JavaScript, a few MB) would still need its document mapped onto that tree. What it would add —
   conditionals, attribute substitution, expanded includes — can come later behind the same reader.
 
+**Reversed, 2026-09-30: markdown is the only note format.** Both readers were built and then
+removed. Every note feature ahead — rename with link fixing, tasks, tags, templates for new notes —
+would have to be built three times (Org's `[[file:…]]` links and `[X]` marks, AsciiDoc's `xref:`),
+for formats whose users mostly live elsewhere: Org's in Emacs (org-roam, org-agenda), AsciiDoc's in
+documentation and books rather than a linked vault of notes. The notes world standardised on
+markdown (Obsidian, Zettlr, Foam). `.org` and `.adoc` files still open, as text files in source mode,
+and the reader seam (`16.2`) stays, so a format could come back without touching the rest.
+
 ### Finding files
 
 The explorer shows notes and renderable files by default; a key toggles it to every text file the
