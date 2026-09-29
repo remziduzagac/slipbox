@@ -24,6 +24,8 @@ export function blockRanges(tree: Root, lineCount: number): Block[] {
   let prev: TreeRow | null = null;
   for (const node of tree.children) {
     if (node.type === "list") for (const item of node.children) add(item as unknown as RootContent);
+    // A data file's table: a block per record (a CSV's thousands of rows are never one block).
+    else if (node.type === "table" && (node.data as { rowBlocks?: boolean } | undefined)?.rowBlocks) for (const row of node.children) add(row as unknown as RootContent);
     // A data file's tree (16.12): a key and the plain values listed right under it are one block —
     // a card (`defaults` with its three settings, a run of top-level values) — so the lens holds
     // what belongs together and moves a card at a time, not a line.

@@ -638,12 +638,13 @@ and "AsciiDoc notes"). All three are notes only when `walk.extensions` lists the
   still copy their path).
 - **Data files open rendered** (`16.11`–`16.13`, [rendering.md](rendering.md), "Data files"), with
   source mode a key away and the lens editing a card at a time: in YAML and JSON a key with the
-  plain values listed right under it (`defaults` and its settings), elsewhere one key or row — never
+  plain values listed right under it (`defaults` and its settings), in TOML and INI one key — never
   padded with pieces of the next card, and moving to the next card rather than gathering them. A
-  data file that doesn't parse opens in source mode, the error said each time it opens (a link,
-  `:e`, history); one that stops parsing while edited goes there when insert mode ends (never
-  mid-typing: an open quote is normal while a value is typed), and `space n v` renders it again once
-  it parses (`16.14`).
+  table's records are blocks of their own: in a CSV or TSV the lens is `lens_min_rows` records
+  around the cursor, sliding a record at a time, never the whole table. A data file that doesn't
+  parse opens in source mode, the error said each time it opens (a link, `:e`, history); one that
+  stops parsing while edited goes there when insert mode ends (never mid-typing: an open quote is
+  normal while a value is typed), and `space n v` renders it again once it parses (`16.14`).
 - **Text files open in source mode**, highlighted by their language; no markdown headings are
   looked for in them. They have no rendered view: `space n v` and the lens say so and stay in
   source mode. A window that was in source mode only for such a file renders again when it opens a

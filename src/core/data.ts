@@ -283,7 +283,9 @@ function table(header: string[], rows: { line: number; cells: string[] }[], line
     position: pos(at),
   });
   const last = rows.length ? rows[rows.length - 1]!.line : line;
-  return { type: "table", align: header.map(() => null), children: [row(header, line), ...rows.map((r) => row(r.cells, r.line))], position: pos(line, last) };
+  // A data file's table is records: each row a block of its own for the lens (16.14), not the
+  // whole table at once (a CSV's may be thousands of rows).
+  return { type: "table", align: header.map(() => null), children: [row(header, line), ...rows.map((r) => row(r.cells, r.line))], position: pos(line, last), data: { rowBlocks: true } };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -532,7 +534,7 @@ export function dataOutline(tree: Root): HeadingInfo[] {
 
 /** A table of records as a row of the tree: drawn under its key, inside the guides. */
 function treeTable(t: Table, lasts: boolean[]): RootContent {
-  return { ...t, data: { tree: { lasts } } } as RootContent;
+  return { ...t, data: { ...t.data, tree: { lasts } } } as RootContent;
 }
 
 /** A list of two or more maps whose values are all plain: a table's rows. */

@@ -4883,3 +4883,18 @@ describe("links out of data files in the TUI (16.15)", () => {
     expect(v.buf.rel).toBe("notes/alpha.md");
   });
 });
+describe("the lens on a CSV (16.14)", () => {
+  test("a few rows around the cursor, never the whole table; sliding a row at a time", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "samples/logs/photometry-2026.csv", width: 140, height: 40 });
+    const v = h.app.view!;
+    const lens = () => /source · lines? (\d+(?:–\d+)?)/.exec(h.frame())?.[1] ?? "none";
+    h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.src === 10), col: 2 });
+    await h.keys("space", "n", "l");
+    expect(lens()).toBe("8–13"); // lens_min_rows of records, not 2,601 lines
+    await h.keys("j", "j", "j", "j");
+    expect(lens()).toBe("9–14"); // the cursor past its end: one row in, one out
+    await h.keys("j");
+    expect(lens()).toBe("10–15");
+  });
+});

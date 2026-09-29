@@ -1059,9 +1059,11 @@ export class App {
     // A data file's blocks are cards (a key and its values, 16.12): the lens is the cursor's card,
     // never padded with pieces of its neighbours, and it moves to the next card rather than
     // gathering them.
-    const cards = buf.kind.group === "data";
+    // A CSV or TSV is rows: the lens is a few of them around the cursor, sliding a row at a time.
+    const rows = buf.kind.format === "csv" || buf.kind.format === "tsv";
+    const cards = buf.kind.group === "data" && !rows;
     const minRows = cards ? 1 : this.config.editor.lens_min_rows;
-    const maxRows = Math.max(minRows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
+    const maxRows = rows ? minRows : Math.max(minRows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
     // The lens on the cursor's block, grown by its neighbours (below, then above) to the minimum.
     const openOn = (blocks: Block[], at: number): Block => {
       const i = blocks.findIndex((b) => at >= b[0] && at <= b[1]);
