@@ -92,7 +92,7 @@ export const SCENARIOS: Scenario[] = [
         const t = s.text();
         s.expect(!UNSAFE.test(t.replace(/\n/g, "")) && !t.includes("PWNED"), "a control character or an OSC's text on screen");
       };
-      for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await s.keys("ctrl+e");
+      for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
       await s.see("n-");
       clean();
       await s.keys("escape");
@@ -214,14 +214,14 @@ export const SCENARIOS: Scenario[] = [
   {
     name: "links: next / previous, follow, back and forward, the lists, a split",
     run: async (s) => {
-      await s.keys("ctrl+tab");
-      await s.keys("ctrl+tab");
-      await s.keys("ctrl+shift+tab");
+      await s.keys("tab");
+      await s.keys("tab");
+      await s.keys("shift+tab");
       await s.keys("enter");
       await s.status("about-this-vault.md");
-      await s.keys("H"); // back
+      await s.keys("ctrl+o"); // back
       await s.status("home.md");
-      await s.keys("L"); // forward
+      await s.keys("alt+right"); // forward
       await s.status("about-this-vault.md");
       await leader(s, "h", "p");
       await s.status("home.md");
@@ -230,7 +230,7 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "h", "h");
       await s.see("History");
       await s.keys("escape");
-      await s.keys("H");
+      await s.keys("alt+left"); // back, VS Code's way
       await s.status("home.md");
       await leader(s, "l", "l");
       await s.see("Links from");
@@ -248,8 +248,8 @@ export const SCENARIOS: Scenario[] = [
       await s.until(() => link() === first, 3000, "space l p back onto the first");
       await leader(s, "l", "f");
       await s.status("about-this-vault.md");
-      await s.keys("H");
-      await s.keys("ctrl+tab");
+      await s.keys("ctrl+o");
+      await s.keys("tab");
       await leader(s, "l", "s"); // follow in a split
       await s.until(() => s.text().split("§ ").length - 1 === 2, 3000, "the link open in a split");
     },
@@ -323,7 +323,7 @@ export const SCENARIOS: Scenario[] = [
       await step("<");
       await s.until(() => col() !== mid, 3000, "ctrl+w < to change the widths");
       await step("=");
-      await s.keys("ctrl+alt+w");
+      await leader(s, "w", "r");
       await s.status("RESIZE");
       await s.keys("l");
       await s.until(() => col() !== mid, 3000, "l in resize mode to change the widths");
@@ -341,7 +341,7 @@ export const SCENARIOS: Scenario[] = [
     name: "tabs: new, list, next and previous, go to, move, close",
     needs: { cols: 60 },
     run: async (s) => {
-      await s.keys("ctrl+t", "o");
+      await s.keys("ctrl+t", "c");
       await s.see(/2 home/);
       await open(s, "operations-handbook");
       await s.keys("ctrl+t", "t");
@@ -362,11 +362,10 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("ctrl+t", "q");
       await s.notSee(/2 home|2 operations/);
       // Close the others, then all: the empty page, the explorer ready.
-      await leader(s, "t", "o");
-      await leader(s, "t", "o");
+      await leader(s, "t", "c");
+      await leader(s, "t", "c");
       await s.see(/3 \S/);
-      await s.keys("ctrl+t");
-      await s.type("O");
+      await s.keys("ctrl+t", "o");
       await s.message(/closed 2 other tabs/);
       await s.notSee(/2 \S+\.md/);
       await s.keys("ctrl+t");
@@ -382,10 +381,9 @@ export const SCENARIOS: Scenario[] = [
     run: async (s) => {
       await s.status(/3 words/);
       // Pinned: a link from it opens a new tab; close all keeps it.
-      await s.keys("ctrl+t");
-      await s.type("P");
+      await s.keys("ctrl+t", "m");
       await s.see(/1 \S+ m\.md/);
-      await leader(s, "t", "o");
+      await leader(s, "t", "c");
       await s.see(/2 m\.md/);
       await s.keys("ctrl+t");
       await s.type("Q");
@@ -416,26 +414,81 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "vim's keys and the desktop's: H M L, zz zt zb, ctrl+g and :42, ?, vault search, q and :q, ctrl+z ctrl+y",
+    options: { open: HANDBOOK },
+    run: async (s) => {
+      await moveTo(s, ["ctrl+g"], () => true, "the line prompt");
+      await s.type("300");
+      await moveTo(s, ["enter"], (l) => l === 300, "ctrl+g 300 to line 300");
+      await s.keys(":");
+      await s.type("120");
+      await moveTo(s, ["enter"], (l) => l === 120, ":120 to line 120");
+      await s.keys("shift+h");
+      const top = pos(s).line;
+      await s.keys("shift+l");
+      await s.until(() => pos(s).line > top, 3000, "L below H");
+      await s.keys("shift+m");
+      await s.until(() => pos(s).line > top, 3000, "M between");
+      const here = pos(s).line;
+      await s.keys("z", "t");
+      await s.until(() => s.screen().slice(2, 8).some((r) => r.includes("│") || r.trim().length > 0), 3000, "zt scrolled");
+      await s.keys("z", "b", "z", "z");
+      s.expect(pos(s).line === here, "zz, zt, zb move the view, never the cursor");
+      // ? backward: from the bottom, the match before.
+      await s.keys("shift+g", "?");
+      await s.type("Weather");
+      await s.keys("enter");
+      await s.until(() => pos(s).line < 1200 && pos(s).line > 1, 3000, "? found a match above");
+      // Vault search, then open the match.
+      await s.keys("space", "f", "g");
+      await s.type("Tomasz: book the courier");
+      await s.keys("enter");
+      await s.see(/match(es)? in 1 file/);
+      await s.keys("enter");
+      await s.status("2026-09-14-weekly.md");
+      // ctrl+z / ctrl+y in source mode.
+      await s.keys("ctrl+e");
+      await s.status("SOURCE");
+      await s.keys("A");
+      await s.type(" (undo me)");
+      await s.keys("escape", "ctrl+z");
+      await s.notSee("(undo me)");
+      await s.keys("ctrl+y");
+      await s.see("(undo me)");
+      await s.keys("ctrl+z", "ctrl+e");
+      // q closes the split, :q the last window quits.
+      await s.keys("ctrl+w", "v");
+      await s.until(() => s.text().split("§ ").length - 1 === 2, 3000, "two windows");
+      await s.keys("q");
+      await s.until(() => s.text().split("§ ").length - 1 === 1, 3000, "q closed one");
+      await s.keys("q");
+      await s.message(/ctrl\+q/);
+      await s.ex("q");
+      await s.until(() => s.exited(), 5000, ":q on the last window quits");
+    },
+  },
+
   // --- panes ----------------------------------------------------------------------------------
   {
     name: "panes: the explorer, reveal, the outline, the heading picker, the path dropdown",
     needs: { cols: 100 },
     options: { open: HANDBOOK },
     run: async (s) => {
-      // ctrl+e cycles: open, focus, close. It may start open (a wide pane), so press to focus.
+      // space e cycles: open, focus, close. It may start open (a wide pane), so press to focus.
       const focus = async (key: string, chip: string) => {
-        for (let i = 0; i < 3 && !s.statusLine().includes(chip); i++) await s.keys(key);
+        for (let i = 0; i < 3 && !s.statusLine().includes(chip); i++) await leader(s, key);
         await s.status(chip);
       };
-      await focus("ctrl+e", "FILES");
+      await focus("e", "FILES");
       await s.see("Explorer");
       await s.keys("escape");
-      await s.keys("ctrl+shift+e");
+      await leader(s, "shift+e");
       await s.status("FILES");
       // Revealed: the note's own row in the explorer, left of the border.
       await s.until(() => s.screen().some((r) => /operations-handbook\.md\s*[│┃]/.test(r)), 3000, "the note revealed in the explorer");
       await s.keys("escape");
-      await focus("ctrl+o", "OUTLINE");
+      await focus("o", "OUTLINE");
       await s.see("Outline");
       await s.keys("escape");
       await leader(s, "f", "o");
@@ -605,14 +658,14 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
-    name: "task: x ticks a checkbox in the render and writes it",
+    name: "task: ctrl+l ticks a checkbox in the render and writes it",
     options: { open: MEETING },
     run: async (s) => {
       await s.see("Tomasz: book the courier");
       const before = s.read(MEETING);
       await s.keys("/");
       await s.type("book the courier");
-      await s.keys("enter", "x");
+      await s.keys("enter", "ctrl+l");
       await s.file(MEETING, (t) => t !== before && t.includes("- [x] Tomasz: book the courier"), "the task ticked on disk");
     },
   },
@@ -659,7 +712,7 @@ export const SCENARIOS: Scenario[] = [
       await s.type("pipeline-cookbook");
       await s.keys("enter", "escape", "enter");
       await s.status("pipeline-cookbook.md");
-      await s.keys("H");
+      await s.keys("ctrl+o");
       await s.status("halley.toml");
       // The lens edits one key, on its own source line.
       await s.keys("/");
@@ -735,7 +788,7 @@ export const SCENARIOS: Scenario[] = [
       await s.type("halley.toml:10");
       await s.keys("enter", "escape", "enter");
       await s.status("halley.toml");
-      await s.keys("H");
+      await s.keys("ctrl+o");
       await s.status("reduce.py");
       // A file with a syntax error: counted in the status line, gone while typing, back after.
       await s.ex("e scratch/half-written.py"); // code isn't in ctrl+p by default (files.show)
@@ -756,7 +809,7 @@ export const SCENARIOS: Scenario[] = [
       await s.see(/title\s+Dome log/);
       await s.keys("/");
       await s.type("buy lithium");
-      await s.keys("enter", "escape", "x");
+      await s.keys("enter", "escape", "ctrl+l");
       await s.file("logs/dome-log.org", (t) => t.includes("- [X] buy lithium grease"), "Org's task ticked with X");
       await s.keys("/");
       await s.type("the dome refit");
@@ -767,7 +820,7 @@ export const SCENARIOS: Scenario[] = [
       await s.see(/│ Humidity\s+│ 85 %/);
       await s.keys("/");
       await s.type("tell someone");
-      await s.keys("enter", "escape", "x");
+      await s.keys("enter", "escape", "ctrl+l");
       await s.file("handbook/safety-card.adoc", (t) => t.includes("* [x] tell someone in the control room"), "the checklist item ticked");
       await s.keys("/");
       await s.type("the operations handbook");
@@ -871,7 +924,7 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("escape");
       // Each toggle says its own name and the new state, then flips back (the message names it,
       // so a stale message from the one before can't pass).
-      const names: Record<string, string> = { w: "Readable width", z: "Zen mode", l: "Cursor-row highlight", n: "Line numbers", s: "Wrap long lines", r: "Show link URLs", m: "Mouse" };
+      const names: Record<string, string> = { d: "Readable width", z: "Zen mode", l: "Cursor-row highlight", n: "Line numbers", w: "Wrap long lines", r: "Show link URLs", m: "Mouse" };
       for (const [k, name] of Object.entries(names)) {
         await leader(s, "u", k);
         await s.see(new RegExp(`${name}: (on|off)`)); // on the top bar, or the last row in zen
@@ -940,7 +993,7 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "m");
       await s.see("Messages");
       await s.keys("escape");
-      await s.keys("?");
+      await leader(s, "?");
       await s.see("Keys — type to filter");
       await s.keys("escape");
     },

@@ -86,7 +86,7 @@ row (as far as the note's end allows). The row stays reserved above the first he
 doesn't jump. `ui.breadcrumb = false` removes it; zen mode and windows under 8 rows drop it. Without
 the right rail (below), the `▤` button sits at the breadcrumb's right end; when no window shows a
 breadcrumb either, it moves to the right end of the top bar (with neither, in zen or with
-`ui.top_bar = false`, the outline opens with `ctrl+o`). Without a breadcrumb there are no header
+`ui.top_bar = false`, the outline opens with `space o`). Without a breadcrumb there are no header
 rules, the outline starts at the top of the content, and a split window gets a plain title row
 (`tab` / `tab_active`).
 
@@ -230,7 +230,7 @@ follows it once: the second click, landing in the note it opened, is swallowed.
 - **View** (a window): a buffer plus its own cursor, top row, selection, find and history.
   Two windows may show one buffer.
 - **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a
-  ratio (the first window's share). Resize mode (`ctrl+alt+w`, `space w r`) changes the ratio,
+  ratio (the first window's share). Resize mode (`space w r`, or a `ctrl+w` step) changes the ratio,
   or the explorer or outline width when one is focused, and all of it is kept in the session.
   Side by side falls back to stacked below 80 content columns (a fixed width, not
   `ui.narrow_width`), and a stacked split too short for two windows (under 6 rows) shows only the
@@ -392,7 +392,10 @@ about twice as tall as it is wide (the explorer and outline over the content get
 past theirs), so the content behind never runs up to the edge.
 
 - **Pickers:** quick switcher, heading picker, links, backlinks, history, tabs, theme and glyph
-  pickers (with live preview; `esc` restores), UI settings, messages, info, and keys.
+  pickers (with live preview; `esc` restores), UI settings, messages, info, and keys. The quick
+  switcher lists recent notes and files first (kept in the session), the previous one on top, so
+  `ctrl+p enter` goes back; vault search (`ctrl+shift+f`, `space f g`) lists each matching line as
+  `path:line` with the line, an open note searched as it is now.
 - **Filtering:** fuzzy, with smart case. A contiguous match wins (its best occurrence: in the
   file name, at a word start); otherwise the tightest subsequence, preferring word and path starts
   and file names over directories. Highlights follow the original text even where lowercasing
@@ -422,7 +425,7 @@ past theirs), so the content behind never runs up to the edge.
 Help and the palette list the same commands for different jobs, in the groups of
 [keymap.md](keymap.md) (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order:
 
-- **Help (`?`, `space ?`)** is for learning the keys: every command with all its bindings (source
+- **Help (`space ?`, `:help`)** is for learning the keys: every command with all its bindings (source
   mode's own, `[keys.source]`, and visual mode's included), then what
   works inside the explorer, inside the history, while filtering a panel, inside the outline, in
   resize mode, and with the mouse. Filtering keeps the groups; `enter` runs a command (the other
@@ -479,7 +482,7 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - link URLs
 - mouse capture
 
-**Wrapping off (`space u s`, `ui.wrap = false`).** Each note is laid out at its natural width:
+**Wrapping off (`space u w`, `alt+z`, `ui.wrap = false`).** Each note is laid out at its natural width:
 first very wide, then at its widest real row (trailing spaces, rules and right-aligned
 decorations such as a code block's language label don't count), never narrower than the pane.
 Paragraphs stay on one row and tables keep their natural column widths. Each window then scrolls
@@ -524,10 +527,11 @@ folder, then a rename) keeping its permissions; a symlinked note is written thro
 and a target outside the vault is refused (`7.5`); the watcher is told the write is its own; the
 buffer reloads, its windows keeping their anchors, so the cursor stays put.
 
-**Task checkboxes** (`4.11`) are the first write. `x`, or a click on the checkbox, flips the task
-item holding the cursor — the innermost, from any of its rows — as a one-byte edit to the file's
-bytes, so a BOM, CRLF endings and even invalid UTF-8 survive untouched. If the file changed on disk
-since it was shown, it is reloaded instead and nothing is written (its lines may have moved).
+**Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the
+checkbox, flips the task item holding the cursor — the innermost, from any of its rows — as a
+one-byte edit to the file's bytes, so a BOM, CRLF endings and even invalid UTF-8 survive untouched.
+If the file changed on disk since it was shown, it is reloaded instead and nothing is written (its
+lines may have moved).
 
 **Handing off to another editor** (`4.1`, `4.2`, `4.12`) comes in two kinds, both opening the note at
 the cursor's source line. `space n e` steps aside: the renderer suspends, the editor
@@ -676,7 +680,7 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
     lines, a docstring, a block comment).
   - **Outline and breadcrumb.** The file's definitions — functions, classes, methods, types,
     interfaces, enums, Rust's structs, traits, impls and modules — as headings nested by where they
-    sit, from a query per language. `ctrl+o`, `]]` and the breadcrumb use them as a note's.
+    sit, from a query per language. `space o`, `]]` and the breadcrumb use them as a note's.
   - **Syntax errors** (syntax only: no types, no lint). Where the parser found an error or had to
     invent a missing token, the text is underlined (`syntax_error`), and its line number is red
     when numbers show; the status line says `✖ n syntax errors`, or the error itself on the

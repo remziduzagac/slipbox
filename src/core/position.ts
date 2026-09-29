@@ -178,6 +178,8 @@ export interface SessionState {
   ui?: Record<string, UiOverride>;
   /** Commands run from the palette or help, most recent first. */
   recent_commands?: string[];
+  /** Notes and files shown, most recent first (the switcher lists them first). */
+  recent_notes?: string[];
   /** The nvim socket `space n s` sends to (picked once, then used while it answers). */
   remote_server?: string;
 }
@@ -218,6 +220,7 @@ export function loadSession(root: string): SessionState | null {
     theme: typeof s.theme === "string" ? s.theme : undefined,
     ui: s.ui && typeof s.ui === "object" && !Array.isArray(s.ui) ? s.ui : {},
     recent_commands: Array.isArray(s.recent_commands) ? s.recent_commands.filter((x) => typeof x === "string") : [],
+    recent_notes: Array.isArray(s.recent_notes) ? s.recent_notes.filter((x) => typeof x === "string") : [],
     remote_server: typeof s.remote_server === "string" ? s.remote_server : undefined,
   };
 }

@@ -389,6 +389,8 @@ export function apply(app: App, view: View, op: Op, r: Range): void {
   }
   if (op === ">" || op === "<") return indentLines(app, view, E.lineOf(view, r.from), E.lineOf(view, Math.max(r.from, r.to - 1)), op === ">" ? 1 : -1, r.times ?? 1);
   app.vim.register = { text, linewise: r.linewise };
+  // A cut is a copy too: the system clipboard gets it (vim with clipboard=unnamedplus).
+  if (text) app.copy(text, false);
   const cursor = E.offsetOf(app, view);
   if (op === "d") {
     // A linewise delete of the last line takes the line break before it instead.
@@ -546,9 +548,11 @@ export function textObject(view: View, at: number, kind: "i" | "a", ch: string, 
 }
 
 /** p / P: the register after or before the cursor (a line register: under or over its line). */
-export function put(app: App, view: View, after: boolean): void {
-  const reg = app.vim.register;
-  if (!reg) return app.message("info", "nothing to put — d, c or y fills the register");
+export function put(app: App, view: View, after: boolean, pasted?: string): void {
+  // The system clipboard's text (or the register): see App.pasteText. A terminal paste in normal
+  // mode brings its own text.
+  const reg = pasted !== undefined ? { text: pasted, linewise: false } : app.pasteText();
+  if (!reg) return app.message("info", "nothing to put — copy something (y, d, x or your system's copy)");
   const why = E.cannotEdit(view);
   if (why) return app.message("warn", `${why} — not editing`);
   const n = takeCount(app);

@@ -9,7 +9,9 @@ import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-spe
 import type { Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import { slugify } from "../core/parse.ts";
-import { parseSubstitute } from "../core/replace.ts";
+import { compilePattern, findAll, parseSubstitute } from "../core/replace.ts";
+import { readText } from "../core/fsutil.ts";
+import { sanitize } from "../core/sanitize.ts";
 import type { Anchor } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
@@ -455,6 +457,8 @@ function openPalette(a: App): void {
     input,
     source: (input) => {
       if (!input.trim()) return browse;
+      // :42, vim's: that line.
+      if (/^\s*\d+\s*$/.test(input)) return [{ label: `Go to line ${input.trim()}`, detail: "cursor.goto_line", keys: ["", `:${input.trim()}`], data: `cursor.goto_line ${input.trim()}` }];
       // A substitute (vim's :s): one entry, run by enter.
       if (parseSubstitute(input)) return [{ label: "Substitute", detail: input.trim(), keys: ["", ":s"], data: `find.substitute ${input.trim()}` }];
       const m = /^(\S+)\s(.*)$/.exec(input);
@@ -483,6 +487,11 @@ function openPalette(a: App): void {
       if (parseSubstitute(input)) {
         a.overlay = null;
         void a.run(`find.substitute ${input.trim()}`).then(() => a.host.requestRender());
+        return true;
+      }
+      if (/^\s*\d+\s*$/.test(input)) {
+        a.overlay = null;
+        void a.run(`cursor.goto_line ${input.trim()}`).then(() => a.host.requestRender());
         return true;
       }
       // An exact alias (optionally with an argument) wins over the fuzzy match, unless another
@@ -703,6 +712,9 @@ function findWord(a: App, dir: 1 | -1): void {
   findStep(a, dir, { row: v.cur.row, col: cs[s]!.x });
 }
 
+/** Vault search lists this many matching lines at most (the count says how many there were). */
+const VAULT_SEARCH_MAX = 1000;
+
 export function registerActions(app: App): void {
   const impl: Record<string, Run> = {
     // cursor
@@ -723,6 +735,24 @@ export function registerActions(app: App): void {
     "cursor.heading_next": motion((a, v) => C.headingNext(lay(a, v), v.cur)),
     "cursor.paragraph_prev": motion((a, v) => C.paragraphPrev(lay(a, v), v.cur)),
     "cursor.paragraph_next": motion((a, v) => C.paragraphNext(lay(a, v), v.cur)),
+    "cursor.screen_top": motion((a, v) => C.firstNonBlank(lay(a, v), a.screenRow(v, "top"))),
+    "cursor.screen_middle": motion((a, v) => C.firstNonBlank(lay(a, v), a.screenRow(v, "middle"))),
+    "cursor.screen_bottom": motion((a, v) => C.firstNonBlank(lay(a, v), a.screenRow(v, "bottom"))),
+    "scroll.center": (a) => withView(a, (v) => a.scrollCursorTo(v, "center")),
+    "scroll.top": (a) => withView(a, (v) => a.scrollCursorTo(v, "top")),
+    "scroll.bottom": (a) => withView(a, (v) => a.scrollCursorTo(v, "bottom")),
+    "cursor.goto_line": (a, arg) =>
+      withView(a, (v) => {
+        const go = (text: string) => {
+          const n = Number(text.trim());
+          if (!Number.isInteger(n) || n < 1) return a.message("warn", `not a line number: ${text}`);
+          const starts = v.buf.lineStarts();
+          a.pushHistory(v);
+          E.placeAt(a, v, starts[Math.min(n, starts.length) - 1] ?? 0);
+        };
+        if (arg) return go(arg);
+        a.prompt("line", go, undefined, undefined, v);
+      }),
     "cursor.half_down": (a) => withView(a, (v) => a.scrollBy(v, Math.max(1, Math.floor(v.height / 2)), true)),
     "cursor.half_up": (a) => withView(a, (v) => a.scrollBy(v, -Math.max(1, Math.floor(v.height / 2)), true)),
     "cursor.page_down": (a, arg) =>
@@ -921,6 +951,7 @@ export function registerActions(app: App): void {
       t.active = 1 - t.active;
     },
     "window.close": (a) => a.closeWindow(),
+    "window.close_or_quit": (a) => a.closeOrQuit(),
     "window.only": (a) => {
       const t = a.tab;
       if (!t || t.views.length < 2) return;
@@ -986,12 +1017,14 @@ export function registerActions(app: App): void {
       a.openOutline();
     },
     // find
-    "find.open": (a) =>
+    // `/` forward, `?` backward (vim's): the direction n and N then keep.
+    "find.open": (a, arg) =>
       withView(a, (v) => {
         const prev = v.find;
         const start = { ...v.cur };
+        const back = arg === "back";
         a.prompt(
-          "/",
+          back ? "?" : "/",
           (text) => {
             // An empty search clears the find rather than leaving "/ 0/0" behind.
             if (!text) {
@@ -1000,6 +1033,7 @@ export function registerActions(app: App): void {
             }
             const o = v.findOpts ?? { regex: false, whole: false };
             v.find = computeFind(lay(a, v), text, v.find?.current ?? 0, o.whole, o.regex);
+            if (back) v.find.backward = true;
             if (v.find.error) a.message("warn", `not a regex: ${v.find.error}`);
             else if (!v.find.matches.length) a.message("info", `not found: ${text}`);
             if (v.find.error || !v.find.matches.length) a.moveCursor(v, start);
@@ -1009,8 +1043,11 @@ export function registerActions(app: App): void {
           (text) => {
             const o = v.findOpts ?? { regex: false, whole: false };
             v.find = computeFind(lay(a, v), text, 0, o.whole, o.regex);
-            const first = v.find.matches.findIndex((m) => m.row > start.row || (m.row === start.row && m.col >= start.col));
-            const i = first >= 0 ? first : 0;
+            if (back) v.find.backward = true;
+            // The first match from where the search began: after it, or (backward) before it.
+            const ms = v.find.matches;
+            const first = back ? ms.findLastIndex((m) => m.row < start.row || (m.row === start.row && m.col < start.col)) : ms.findIndex((m) => m.row > start.row || (m.row === start.row && m.col >= start.col));
+            const i = first >= 0 ? first : back ? ms.length - 1 : 0;
             const m = v.find.matches[i];
             if (m) {
               v.find.current = i;
@@ -1025,6 +1062,55 @@ export function registerActions(app: App): void {
           v, // typed in this window's find row
         );
       }),
+    // Search the vault (ctrl+shift+f, space f g): every note and every file the explorer shows, an
+    // open one as it is now (unsaved changes and all); enter opens it at the match.
+    "find.vault": (a, arg) => {
+      const run = (query: string) => {
+        if (!query.trim()) return;
+        const o = a.view?.findOpts ?? { regex: false, whole: false };
+        const re = compilePattern(query, o);
+        if (typeof re === "string") return a.message("warn", `not a regex: ${re}`);
+        const paths = [...a.graph.notes.keys(), ...a.shownFiles().map((f) => f.path)].sort();
+        const items: ListItem[] = [];
+        let total = 0;
+        for (const rel of paths) {
+          let text: string;
+          try {
+            text = a.buffers.get(rel)?.source ?? readText(a.graph.abs(rel)).text;
+          } catch {
+            continue;
+          }
+          let lastLine = -1;
+          // Lines counted on from the last match, never from the top again.
+          let line = 1;
+          let counted = 0;
+          for (const m of findAll(text, re)) {
+            total++;
+            for (let i = text.indexOf("\n", counted); i >= 0 && i < m.from; i = text.indexOf("\n", i + 1)) line++;
+            counted = m.from;
+            if (line === lastLine || items.length >= VAULT_SEARCH_MAX) continue; // a line once, however many matches
+            lastLine = line;
+            const start = text.lastIndexOf("\n", m.from - 1) + 1;
+            const end = text.indexOf("\n", m.from);
+            const row = sanitize(text.slice(start, end < 0 ? text.length : end).replace(/\t/g, " ")).trim();
+            items.push({ label: `${rel}:${line}`, detail: row.length > 160 ? `${row.slice(0, 160)}…` : row, data: { rel, line } });
+          }
+        }
+        if (!items.length) return a.message("info", `not found in the vault: ${query}`);
+        a.openList({
+          title: `"${query}" — ${total} match${total === 1 ? "" : "es"} in ${new Set(items.map((i) => (i.data as { rel: string }).rel)).size} files${items.length >= VAULT_SEARCH_MAX ? ` (the first ${VAULT_SEARCH_MAX} lines)` : ""}`,
+          items,
+          accept: (item) => {
+            const { rel, line } = item.data as { rel: string; line: number };
+            a.open(rel, { heading: null, headingIndex: 0, offset: 0, line });
+            const v = a.view;
+            if (v?.buf.rel === rel) E.placeAt(a, v, v.buf.lineStarts()[line - 1] ?? 0);
+          },
+        });
+      };
+      if (arg) return run(arg);
+      a.prompt("search the vault", run);
+    },
     // Find and replace: the find row with a replace row under it, on the markdown (replacing.ts).
     // A selection on one line is the query; across lines, it's where to replace.
     "find.replace": (a) =>
@@ -1072,8 +1158,8 @@ export function registerActions(app: App): void {
         const to = C.findChar(lay(a, v), v.cur, arg === "back" ? V.reverseFind(f.kind) : f.kind, f.ch, V.takeCount(a), true);
         if (to) a.moveCursor(v, to);
       }),
-    "find.next": (a) => findStep(a, 1),
-    "find.prev": (a) => findStep(a, -1),
+    "find.next": (a) => findStep(a, a.view?.find?.backward ? -1 : 1),
+    "find.prev": (a) => findStep(a, a.view?.find?.backward ? 1 : -1),
     "task.toggle": (a) => withView(a, (v) => a.toggleTaskAt(v)),
     "note.edit": (a) => withView(a, (v) => a.editInEditor(v)),
     "view.source": (a) =>
@@ -1230,19 +1316,25 @@ export function registerActions(app: App): void {
         v.find = null;
       }),
     "switcher.open": (a) => {
+      // Recent first — the previous one at the top, so ctrl+p enter goes back — then the rest.
+      const current = a.view?.buf.key;
+      const rank = new Map(a.recentNotes.filter((k) => k !== current).map((k, i) => [k, i]));
       const notes = [...a.graph.notes.values()];
       // The files the explorer shows (files.show, its toggle, the patterns) come too (16.5).
       const files = a.shownFiles();
+      const items: ListItem[] = [
+        ...notes.map((n) => ({
+          label: n.rel,
+          detail: n.title !== n.rel.replace(/\.(md|markdown)$/i, "").split("/").pop() ? n.title : undefined,
+          data: n.rel,
+        })),
+        ...files.map((f) => ({ label: f.path, hint: f.group === "data" ? "data" : "file", data: f.path })),
+      ];
+      // Notes and files together: a recent file comes before notes not opened lately.
+      const ordered = items.map((x, i) => ({ x, i, r: rank.get(x.data as string) ?? Number.POSITIVE_INFINITY })).sort((p, q) => p.r - q.r || p.i - q.i).map((e) => e.x);
       a.openList({
         title: files.length ? `Open (${notes.length} notes, ${files.length} files)` : `Open note (${notes.length})`,
-        items: [
-          ...notes.map((n) => ({
-            label: n.rel,
-            detail: n.title !== n.rel.replace(/\.(md|markdown)$/i, "").split("/").pop() ? n.title : undefined,
-            data: n.rel,
-          })),
-          ...files.map((f) => ({ label: f.path, hint: f.group === "data" ? "data" : "file", data: f.path })),
-        ],
+        items: ordered,
         accept: (item) => a.open(item.data as string),
       });
     },

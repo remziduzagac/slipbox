@@ -151,20 +151,20 @@ describe("cursor movement", () => {
     await h.keys("l", "right");
     expect(h.app.view!.cur.col).toBe(long);
   });
-  test("row start and end: 0 $ home end ctrl+left ctrl+right", async () => {
+  test("row start and end: 0 $ home end", async () => {
     const h = await harness({ open: "samples/scratch/wrap-probe.md" });
     await h.keys("j", "j", "$");
     const end = h.app.view!.cur.col;
-    for (const k of ["0", "home", "ctrl+left"]) {
+    for (const k of ["0", "home"]) {
       await h.keys("$", k);
       expect(h.app.view!.cur.col).toBe(0);
     }
-    for (const k of ["$", "end", "ctrl+right"]) {
+    for (const k of ["$", "end"]) {
       await h.keys("0", k);
       expect(h.app.view!.cur.col).toBe(end);
     }
   });
-  test("w b e and alt+arrows move by word", async () => {
+  test("w b e and ctrl+arrows move by word (the desktop editors' keys)", async () => {
     const h = await harness({ open: "notes/beta.md" });
     const row = rowStarting(h, "Beta links");
     h.app.moveCursor(h.app.view!, { row, col: 0 });
@@ -172,9 +172,9 @@ describe("cursor movement", () => {
     expect(h.app.view!.cur.col).toBe(5); // "links"
     await h.keys("e");
     expect(h.app.view!.cur.col).toBe(9); // end of "links"
-    await h.keys("alt+right");
+    await h.keys("ctrl+right");
     expect(h.app.view!.cur.col).toBe(11); // "to"
-    await h.keys("b", "alt+left");
+    await h.keys("b", "ctrl+left");
     expect(h.app.view!.cur.col).toBe(0);
     await h.keys("b");
     expect(h.app.view!.cur.row).toBeLessThan(row);
@@ -256,12 +256,12 @@ describe("selection", () => {
     await h.keys("y", "y");
     expect(h.copied.at(-1)).toBe("Back to index and on to beta.");
   });
-  test("shift+alt by word, shift+ctrl to the row end", async () => {
+  test("shift+ctrl by word, shift+end to the row end", async () => {
     const h = await harness({ open: "notes/alpha.md" });
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
-    await h.keys("shift+alt+right", "ctrl+c");
+    await h.keys("shift+ctrl+right", "ctrl+c");
     expect(h.copied.at(-1)).toBe("Back t");
-    await h.keys("escape", "0", "shift+ctrl+right", "ctrl+c");
+    await h.keys("escape", "0", "shift+end", "ctrl+c");
     expect(h.copied.at(-1)).toBe("Back to index and on to beta.");
   });
   test("v, V, o, y and esc", async () => {
@@ -295,29 +295,38 @@ describe("selection", () => {
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Back to"), col: 0 });
     await h.keys("y", "r");
     expect(h.copied.at(-1)).toBe("notes/alpha.md:9");
-    await h.keys("ctrl+tab", "y", "l");
+    await h.keys("tab", "y", "l");
     expect(h.copied.at(-1)).toEndWith("/index.md");
   });
 });
 
 describe("links and history", () => {
-  test("ctrl+tab puts the cursor on a link; enter follows; shift+h / shift+l / ctrl+backspace", async () => {
+  test("tab puts the cursor on a link (] l too); enter, gf follow; ctrl+o / alt+left back, alt+right forward", async () => {
     const h = await harness();
-    await h.keys("ctrl+tab");
+    await h.keys("tab");
+    expect(statusRow(h.frame())).toContain("[[alpha]]");
+    await h.keys("tab", "shift+tab"); // on and back
     expect(statusRow(h.frame())).toContain("[[alpha]]");
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
-    await h.keys("shift+h");
+    await h.keys("ctrl+o");
     expect(h.app.view!.buf.rel).toBe("index.md");
-    await h.keys("shift+l");
+    await h.keys("alt+right");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
-    await h.keys("ctrl+backspace");
+    await h.keys("alt+left");
     expect(h.app.view!.buf.rel).toBe("index.md");
+    await h.keys("g", "g", "]", "l", "g", "f");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
   });
-  test("enter off a link follows the row's first link", async () => {
+  test("enter off a link follows the row's first link; ctrl+enter into the split", async () => {
     const h = await harness();
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Links:"), col: 0 });
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    await h.keys("ctrl+o");
+    h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Links:"), col: 0 });
     await h.keys("ctrl+enter");
+    expect(h.app.tab!.views).toHaveLength(2);
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
   });
   test("space l: n y s b l", async () => {
@@ -349,7 +358,7 @@ describe("links and history", () => {
     expect(h.frame()).toContain("here");
     await h.keys("down", "down", "enter");
     expect(h.app.view!.buf.rel).toBe("index.md");
-    await h.keys("shift+l");
+    await h.keys("alt+right");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
   });
   test("history: a click selects an entry, a double-click jumps there", async () => {
@@ -380,11 +389,11 @@ describe("links and history", () => {
     const h = await harness({ root, open: "amb.md" });
     await h.keys("enter"); // the cursor starts on [[dup]]
     expect(h.app.overlay?.kind).toBe("list");
-    await h.keys("escape", "ctrl+tab", "enter");
+    await h.keys("escape", "tab", "enter");
     expect(h.app.transient!.text).toContain("unresolved link [[nothing-here]]");
-    await h.keys("ctrl+tab", "enter");
+    await h.keys("tab", "enter");
     expect(h.copied.at(-1)).toBe("https://example.invalid");
-    await h.keys("ctrl+tab", "enter");
+    await h.keys("tab", "enter");
     expect(h.copied.at(-1)).toEndWith("attachments/diagram.png");
   });
   test("clicking a link follows it", async () => {
@@ -444,7 +453,7 @@ describe("which-key", () => {
   });
   test("keys with the same action share an entry; short screens drop the explanations", async () => {
     const h = await harness({ width: 160, height: 40 });
-    const f = await h.keys("ctrl+alt+w");
+    const f = await h.keys("space", "w", "r");
     expect(f).toContain("h left");
     expect(f).toContain("q enter escape");
     const short = await harness({ width: 60, height: 14 });
@@ -508,17 +517,33 @@ describe("overlays and the : prompt", () => {
     expect(h.app.ui.theme).toBe("dracula");
     await h.keys(":", "e", "space", "b", "e", "t", "a", "enter");
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
-    await h.keys(":", "q", "enter");
+    await h.keys(":", "q", "enter"); // vim's :q: the split's window first…
+    expect(h.app.tab!.views).toHaveLength(1);
+    expect(h.quit.called).toBe(false);
+    await h.keys(":", "q", "enter"); // …then, the last one, quit
     expect(h.quit.called).toBe(true);
   });
-  test(": also finds commands by name; ? and space ? list every key", async () => {
+  test(": also finds commands by name; space ? and :help list every key", async () => {
     const h = await harness();
     await h.keys(":", "z", "e", "n", "space", "m", "o", "d", "e", "enter");
     expect(h.app.ui.zen).toBe(true);
     await h.keys("space", "?");
     expect(h.frame()).toContain("Keys — type to filter");
-    await h.keys("escape", "?"); // ? on its own too
+    await h.keys("escape", ":", "h", "e", "l", "p", "enter");
     expect(h.frame()).toContain("Keys — type to filter");
+  });
+  test("? finds backward (vim's): the match before the cursor, and n goes on backward", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "f.md"), "cat one\n\ncat two\n\ncat three\n");
+    const h = await harness({ root, open: "f.md" });
+    const v = h.app.view!;
+    const line = () => h.app.currentLayout(v).lines[v.cur.row]!.src;
+    await h.keys("shift+g", "?", "c", "a", "t", "enter");
+    expect(line()).toBe(3); // from the last line, the one before
+    await h.keys("n");
+    expect(line()).toBe(1); // n: on backward
+    await h.keys("shift+n");
+    expect(line()).toBe(3); // N: forward
   });
   test("help: grouped, every binding its own keycap, the description in the footer, groups kept while filtering", async () => {
     const h = await harness({ width: 140, height: 40 });
@@ -535,8 +560,8 @@ describe("overlays and the : prompt", () => {
     expect(f).toContain(`│ ${"─".repeat(20)}`);
     // At most three bindings; the rest in the footer description.
     const endRow = o.items.find((i) => i.data === "cursor.line_end")!;
-    expect(endRow.keys).toEqual(["$", "end", "ctrl+right"]);
-    expect(endRow.more).toEqual(["cmd+right", "shift+end", "ctrl+shift+right", "shift+cmd+right"]);
+    expect(endRow.keys).toEqual(["$", "end", "cmd+right"]);
+    expect(endRow.more).toEqual(["shift+end", "shift+cmd+right"]);
     // Keys in a section line up in columns.
     const lines = f.split("\n");
     const colOf = (label: string, key: string) => {
@@ -574,7 +599,7 @@ describe("overlays and the : prompt", () => {
   test("help opens at the section for where you are: explorer, outline, visual mode", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 140, height: 40 });
     const start = async (...keys: string[]) => {
-      await h.keys(...keys, "?");
+      await h.keys(...keys, "space", "?");
       const o = h.app.overlay as ListOverlay;
       h.frame();
       const heading = o.filtered[o.scroll]!.item;
@@ -582,9 +607,9 @@ describe("overlays and the : prompt", () => {
       await h.keys("escape");
       return { heading: heading.header ? heading.label : null, selectedIsEntry: !selected.header };
     };
-    expect(await start("ctrl+e")).toEqual({ heading: "Inside the explorer", selectedIsEntry: true });
+    expect(await start("space", "e")).toEqual({ heading: "Inside the explorer", selectedIsEntry: true });
     await h.keys("escape"); // back to the note
-    expect(await start("ctrl+o")).toEqual({ heading: "Inside the outline", selectedIsEntry: true });
+    expect(await start("space", "o")).toEqual({ heading: "Inside the outline", selectedIsEntry: true });
     await h.keys("escape");
     expect(await start("v")).toEqual({ heading: "Selection & copy", selectedIsEntry: true });
     await h.keys("escape");
@@ -592,7 +617,7 @@ describe("overlays and the : prompt", () => {
     await h.app.run("note.open notes/alpha.md"); // some history
     expect(await start("space", "h", "h")).toEqual({ heading: "Inside the history", selectedIsEntry: true });
     // It lists the history's keys, the jump keys gathered on one entry, and the filter's.
-    await h.keys("?");
+    await h.keys("space", "?");
     const o = h.app.overlay as ListOverlay;
     const jump = o.items.find((i) => i.label === "Jump there")!;
     expect(jump.keys).toContain("enter");
@@ -625,7 +650,7 @@ describe("overlays and the : prompt", () => {
       return l.indexOf(` ${key} `, l.indexOf(label) + label.length);
     };
     expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "Clear the scratch", "space s d"));
-    expect(colOf(g, "Reload note from disk", ":reload")).toBe(colOf(g, "Quit", ":q"));
+    expect(colOf(g, "Reload note from disk", ":reload")).toBe(colOf(g, "Quit", ":qa"));
     expect(h.app.recentCommands[0]).toBe("ui.zen");
   });
   test("messages, note info, vault info", async () => {
@@ -662,7 +687,7 @@ describe("windows (ctrl+w, space w)", () => {
     const first = t.views[0];
     await h.keys("ctrl+w", "x");
     expect(t.views[1]).toBe(first!);
-    await h.keys("ctrl+w", "|");
+    await h.keys("ctrl+w", "v");
     expect(t.orientation).toBe("side");
     await h.keys("ctrl+w", "o");
     expect(t.views).toHaveLength(1);
@@ -693,7 +718,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160 });
     await h.keys("ctrl+w", "v", "ctrl+w", "h"); // left window active
     const t = h.app.tab!;
-    const f = await h.keys("ctrl+alt+w");
+    const f = await h.keys("space", "w", "r");
     expect(h.app.resizeMode).toBe(true);
     expect(statusRow(f)).toContain("RESIZE");
     expect(f).toContain("Wider");
@@ -739,20 +764,20 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
   });
   test("stacked splits resize with j k; the right window grows by lowering the ratio", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 40 });
-    await h.keys("ctrl+w", "s", "ctrl+alt+w", "j", "j", "escape");
+    await h.keys("ctrl+w", "s", "space", "w", "r", "j", "j", "escape");
     expect(h.app.tab!.ratio).toBeLessThan(0.5); // the lower (second) window got taller
-    await h.keys("ctrl+w", "v", "ctrl+alt+w", "k");
+    await h.keys("ctrl+w", "v", "space", "w", "r", "k");
     expect(h.app.transient!.text).toContain("h / l");
   });
   test("the focused explorer or outline resizes its own width; sizes persist in the session", async () => {
     const root = makeVault();
     const h = await harness({ root, width: 160, config: (c) => (c.ui.outline = true) });
-    await h.keys("ctrl+w", "h", "ctrl+alt+w", "l", "l", "escape");
+    await h.keys("ctrl+w", "h", "space", "w", "r", "l", "l", "escape");
     expect(h.app.sideW).toBe(34);
     await h.keys("ctrl+w", "l", "ctrl+w", "l", "space", "w", "r", "h", "escape");
     expect(h.app.region).toBe("outline");
     expect(h.app.outW).toBe(30);
-    await h.keys("ctrl+w", "h", "ctrl+w", "v", "ctrl+alt+w", "l", "escape");
+    await h.keys("ctrl+w", "h", "ctrl+w", "v", "space", "w", "r", "l", "escape");
     const ratio = h.app.tab!.ratio;
     h.app.quit();
     const again = await harness({ root, open: null, width: 160, config: (c) => (c.ui.restore_session = true) });
@@ -769,7 +794,7 @@ describe("resize mode (ctrl+alt+w, space w r)", () => {
     });
     await h.keys("ctrl+w", "v", "ctrl+w", "h");
     expect(h.app.tab!.ratio).toBe(0.3);
-    await h.keys("ctrl+alt+w", "a");
+    await h.keys("space", "w", "r", "a");
     expect(h.app.tab!.ratio).toBeGreaterThan(0.3);
   });
 });
@@ -882,7 +907,7 @@ describe("the left panel's views and filter", () => {
     expect(h.app.sidebarShown).toBe(false);
     // ctrl+e always comes back to the tree.
     click("btn:history");
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     expect(h.app.leftView).toBe("explorer");
   });
   test("each view keeps its position (selection, scroll, filter) while the other shows", async () => {
@@ -895,7 +920,7 @@ describe("the left panel's views and filter", () => {
       h.app.handleMouse({ type: "down", x: b.x + 1, y: b.y, button: 0 });
       h.app.handleMouse({ type: "up", x: b.x + 1, y: b.y, button: 0 });
     };
-    await h.keys("ctrl+e", "g", "g", "j", "j");
+    await h.keys("space", "e", "g", "g", "j", "j");
     const explorerSel = h.app.sidebar.selected;
     click("btn:history"); // its first showing: on `here`, the newest
     expect(h.app.leftView).toBe("history");
@@ -922,7 +947,7 @@ describe("the left panel's views and filter", () => {
   });
   test("/ filters the explorer: matching notes under their folders; enter opens, esc clears", async () => {
     const h = await harness({ open: "index.md", width: 140, height: 30 });
-    await h.keys("ctrl+e", "/", "b", "e", "t");
+    await h.keys("space", "e", "/", "b", "e", "t");
     expect(h.app.sidebar.filtering).toBe(true);
     const rows = h.app.explorerRows();
     expect(rows.filter((r) => r.kind === "note").map((r) => r.path)).toContain("notes/beta.md");
@@ -950,7 +975,7 @@ describe("the left panel's views and filter", () => {
   });
   test("/ filters the outline: matching headings under their parents; enter jumps, esc clears", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 40, config: (c) => (c.ui.outline = true) });
-    await h.keys("ctrl+o"); // focus it
+    await h.keys("space", "o"); // focus it
     expect(h.app.region).toBe("outline");
     await h.keys("/", ..."Swapping");
     expect(h.app.outline.filtering).toBe(true);
@@ -965,7 +990,7 @@ describe("the left panel's views and filter", () => {
     expect(h.app.region).toBe("content");
     expect(h.app.view!.cur.row).toBe(line);
     expect(h.app.outline.filter).toBe("");
-    await h.keys("ctrl+o", "/", "x", "escape");
+    await h.keys("space", "o", "/", "x", "escape");
     expect(h.app.outline.filter).toBe("");
     expect(h.app.outlineRows().length).toBeGreaterThan(10);
   });
@@ -1163,13 +1188,13 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     await h.keys("escape");
     expect(v.buf.source).toBe("acd\n1. first\n2. second\n");
   });
-  test("x still ticks a task in the render; with unsaved changes it edits the buffer, not the file", async () => {
+  test("ctrl+l ticks a task in the render; with unsaved changes it edits the buffer, not the file", async () => {
     const { h, v, file } = await setup("- [ ] a task\n");
-    await h.keys("x");
+    await h.keys("ctrl+l");
     expect(readFileSync(file, "utf8")).toBe("- [x] a task\n"); // clean: straight to disk
     await h.keys("shift+a");
     await h.keys("!", "escape", "space", "n", "v"); // back to the render, unsaved
-    await h.keys("x");
+    await h.keys("ctrl+l");
     expect(v.buf.source).toBe("- [ ] a task!\n");
     expect(readFileSync(file, "utf8")).toBe("- [x] a task\n");
   });
@@ -2002,7 +2027,7 @@ describe("the nvim preset ([editor] remote = \"nvim\", the default)", () => {
   });
 });
 
-describe("task toggle (x, a click on [ ])", () => {
+describe("task toggle (ctrl+l, a click on [ ])", () => {
   const note = "# Tasks\n\n- [ ] parent task\n  - [x] child task\n    with a second line\n- plain item\n";
   const setup = async () => {
     const root = makeVault();
@@ -2010,25 +2035,25 @@ describe("task toggle (x, a click on [ ])", () => {
     const h = await harness({ root, open: "tasks.md", width: 80, height: 24 });
     return { h, root, file: join(root, "tasks.md") };
   };
-  test("x ticks the innermost task item holding the cursor, on disk; the view keeps its place", async () => {
+  test("ctrl+l ticks the innermost task item holding the cursor, on disk; the view keeps its place", async () => {
     const { h, file } = await setup();
     const v = h.app.view!;
     // The child's continuation row belongs to the child.
     const row = h.app.currentLayout(v).lines.findIndex((l) => l.spans.map((s) => s.text).join("").includes("with a second line"));
     h.app.moveCursor(v, { row, col: 0 });
-    await h.keys("x");
+    await h.keys("ctrl+l");
     expect(readFileSync(file, "utf8")).toBe(note.replace("[x] child", "[ ] child"));
     expect(v.cur.row).toBe(row); // anchored across the reload
     const parent = h.app.currentLayout(v).lines.findIndex((l) => l.spans.map((s) => s.text).join("").includes("parent task"));
     h.app.moveCursor(v, { row: parent, col: 4 });
-    await h.keys("x");
+    await h.keys("ctrl+l");
     expect(readFileSync(file, "utf8")).toContain("- [x] parent task");
     expect(h.app.transient!.text).toBe("done ✓");
     // Not on a task: a message, no write.
     const plain = h.app.currentLayout(v).lines.findIndex((l) => l.spans.map((s) => s.text).join("").includes("plain item"));
     h.app.moveCursor(v, { row: plain, col: 0 });
     const before = readFileSync(file, "utf8");
-    await h.keys("x");
+    await h.keys("ctrl+l");
     expect(readFileSync(file, "utf8")).toBe(before);
     expect(h.app.transient!.text).toContain("no task here");
   });
@@ -2053,7 +2078,7 @@ describe("task toggle (x, a click on [ ])", () => {
     const future = Date.now() / 1000 + 5;
     (await import("node:fs")).utimesSync(file, future, future);
     h.app.moveCursor(v, { row, col: 0 });
-    await h.keys("x");
+    await h.keys("ctrl+l");
     expect(h.app.transient!.text).toContain("changed on disk");
     expect(readFileSync(file, "utf8")).toContain("- [x] parent task");
   });
@@ -2188,9 +2213,9 @@ describe("top bar, tab strip, status line", () => {
     h.frame();
     expect(h.app.geometry!.tabStrip).not.toBeNull();
     expect(h.app.geometry!.tabs).toHaveLength(1);
-    await h.keys("ctrl+t", "o");
+    await h.keys("ctrl+t", "c");
     await h.app.run("note.open notes/beta.md");
-    await h.keys("ctrl+t", "o");
+    await h.keys("ctrl+t", "c");
     await h.app.run("note.open notes/alpha.md");
     h.frame();
     const strip = h.app.geometry!.tabStrip!;
@@ -2552,7 +2577,7 @@ describe("review round 1", () => {
   });
   test("clicking a list's bottom border or footer runs nothing", async () => {
     const h = await harness({ width: 120, height: 30 });
-    await h.keys("?");
+    await h.keys("space", "?");
     h.frame();
     const r = h.app.geometry!.overlay!;
     const before = h.app.view!.cur;
@@ -2565,10 +2590,10 @@ describe("review round 1", () => {
     const h = await harness({ width: 120, height: 30 });
     await h.keys(":", "q");
     const o = h.app.overlay as ListOverlay;
-    expect(o.filtered[0]!.item.data).toBe("app.quit"); // the alias row first
+    expect(o.filtered[0]!.item.data).toBe("window.close_or_quit"); // the alias row first
     await h.keys("down");
     // Past the other quit commands (save and quit, quit without saving) to one that doesn't quit.
-    while (String(o.filtered[o.selected]!.item.data).startsWith("app.")) await h.keys("down");
+    while (/^(app\.|window\.close_or_quit)/.test(String(o.filtered[o.selected]!.item.data))) await h.keys("down");
     const chosen = o.filtered[o.selected]!.item.data;
     await h.keys("enter");
     expect(h.quit.called).toBe(false);
@@ -2597,7 +2622,7 @@ describe("review round 1", () => {
     h.frame();
     expect(h.app.outline.scroll).toBeGreaterThan(0);
     const n = await harness({ open: "samples/handbook/operations-handbook.md", width: 70, height: 20 });
-    await n.keys("ctrl+e");
+    await n.keys("space", "e");
     n.frame();
     const p = n.app.geometry!.sidebarPane!;
     const top = n.app.view!.top;
@@ -2621,7 +2646,7 @@ describe("review round 1", () => {
   });
   test("focus never stays on a hidden pane", async () => {
     const h = await harness({ width: 120, height: 30 });
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     expect(h.app.region).toBe("sidebar");
     h.app.setUi("zen", true);
     h.frame();
@@ -2655,7 +2680,7 @@ describe("review round 1", () => {
   test("a short list keeps its selection in view (the footer goes first)", async () => {
     for (const [width, height] of [[60, 16], [40, 12], [60, 20]] as const) {
       const h = await harness({ width, height });
-      await h.keys("?");
+      await h.keys("space", "?");
       h.frame();
       const o = h.app.overlay as ListOverlay;
       const r = h.app.geometry!.overlay!;
@@ -2673,7 +2698,7 @@ describe("review round 1", () => {
   test("clicks on an overlaid explorer or outline don't reach what's under it", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 80, height: 24 });
     await h.keys("]", "]");
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     h.frame();
     const p = h.app.geometry!.sidebarPane!;
     const row = h.app.view!.cur.row;
@@ -2735,7 +2760,7 @@ describe("review round 2", () => {
   });
   test("an overlaid explorer keeps clicks on its border and margin", async () => {
     const h = await harness({ open: "samples/about-this-vault.md", width: 70, height: 30 });
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     h.frame();
     const p = h.app.geometry!.sidebarPane!;
     const cur = { ...h.app.view!.cur };
@@ -2749,7 +2774,7 @@ describe("review round 2", () => {
     const p = h.app.geometry!.sidebarPane!;
     for (let i = 0; i < 3; i++) h.app.handleMouse({ type: "scroll", x: p.x + 3, y: p.y + 3, button: 0, scroll: { direction: "down", delta: 1 } });
     expect(h.app.sidebar.pinned).toBe(true);
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     h.frame();
     expect(h.app.sidebar.pinned).toBe(false);
     const list = h.app.geometry!.sidebar!;
@@ -2766,7 +2791,7 @@ describe("review round 2", () => {
       return [l.lines[v.sel!.anchor.row]!.src, l.lines[v.cur.row]!.src];
     };
     const before = lines();
-    await h.keys("ctrl+e", "escape"); // the explorer takes width: the note re-wraps
+    await h.keys("space", "e", "escape"); // the explorer takes width: the note re-wraps
     h.frame();
     // The same place (a blank line between paragraphs has no row, so the next one stands in),
     // never another paragraph as before.
@@ -2888,7 +2913,7 @@ describe("wrap (space u s, ui.wrap)", () => {
   test("off: natural width, one row per paragraph, the view follows the cursor sideways", async () => {
     const h = await harness({ open: "samples/equipment/telescope-comparison.md", width: 110, config: (c) => (c.ui.sidebar = false) });
     const wrapped = h.app.currentLayout(h.app.view!);
-    await h.keys("space", "u", "s");
+    await h.keys("space", "u", "w");
     expect(h.app.ui.wrap).toBe(false);
     const layout = h.app.currentLayout(h.app.view!);
     expect(layout.width).toBeGreaterThan(300); // the widest real row, not the pane
@@ -2915,7 +2940,7 @@ describe("wrap (space u s, ui.wrap)", () => {
     h.app.handleMouse({ type: "scroll", x: pane.textX + 5, y, button: 0, scroll: { direction: "left", delta: 1 } });
     expect(v.left).toBeLessThan(before);
     // Back on: wrapped again, no sideways scroll.
-    await h.keys("space", "u", "s");
+    await h.keys("space", "u", "w");
     expect(h.app.view!.left).toBe(0);
     expect(h.app.currentLayout(h.app.view!).width).toBe(wrapped.width);
   });
@@ -3024,7 +3049,7 @@ describe("mouse", () => {
     h.app.handleMouse({ type: "up", x: bar.x, y: bar.y, button: 0 });
     expect(v.left).toBe(0);
     // A note that fits keeps the row (the text doesn't jump) but draws no bar.
-    await h.keys("space", "u", "s", "space", "u", "s");
+    await h.keys("space", "u", "w", "space", "u", "w");
     const n = await harness({ open: "notes/alpha.md", width: 100, height: 30, config: (c) => ((c.ui.wrap = false), (c.ui.sidebar = false)) });
     n.frame();
     expect(n.app.geometry!.scrollbars.some((b) => b.horizontal)).toBe(false);
@@ -3032,7 +3057,7 @@ describe("mouse", () => {
   });
   test("an overlaid pane joins the borders it crosses", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 60, height: 24, config: (c) => (c.ui.sidebar = false) });
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     const f = h.frame();
     const lines = f.split("\n");
     // The explorer's border meets the rules above and below it with tee joints, never a crossing.
@@ -3129,7 +3154,7 @@ describe("mouse", () => {
     }
     // The explorer over the content (narrow): a blank column past its border.
     const n = await harness({ width: 70, height: 30 });
-    await n.keys("ctrl+e");
+    await n.keys("space", "e");
     n.frame();
     const p = n.app.geometry!.sidebarPane!; // over the note, the pane's area includes its border and margin
     const nc = n.canvas();
@@ -3137,7 +3162,7 @@ describe("mouse", () => {
   });
   test("the wheel scrolls a list; the selection moves only to stay in view", async () => {
     const h = await harness({ width: 140, height: 40 });
-    await h.keys("?");
+    await h.keys("space", "?");
     h.frame();
     const o = h.app.overlay as ListOverlay;
     const r = h.app.geometry!.overlay!;
@@ -3165,7 +3190,7 @@ describe("mouse", () => {
 describe("tabs (ctrl+t, space t)", () => {
   test("new, next, previous, go to, move, list, close", async () => {
     const h = await harness();
-    await h.keys("ctrl+t", "o");
+    await h.keys("ctrl+t", "c");
     expect(h.app.tabs).toHaveLength(2);
     await h.app.run("note.open notes/beta.md");
     await h.keys("ctrl+t", "p");
@@ -3190,31 +3215,31 @@ describe("explorer and outline panes", () => {
   test("ctrl+e cycles open, focus, close; enter and l open tabs (or switch); o here; s the split; q closes", async () => {
     const h = await harness({ config: (c) => (c.ui.sidebar = false) });
     expect(h.app.sidebarShown).toBe(false);
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     expect(h.app.sidebarShown).toBe(true);
     expect(h.app.region).toBe("sidebar");
     await h.keys("escape");
     expect(h.app.region).toBe("content");
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     expect(h.app.region).toBe("sidebar");
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     expect(h.app.sidebarShown).toBe(false);
     await h.keys("space", "e");
     h.app.sidebar.selected = h.app.treeRows().findIndex((r) => r.path === "notes");
     await h.keys("l", "j", "enter");
     expect(h.app.tabs).toHaveLength(2);
-    await h.keys("ctrl+e", "j", "l"); // l opens a tab too
+    await h.keys("space", "e", "j", "l"); // l opens a tab too
     expect(h.app.tabs).toHaveLength(3);
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
-    await h.keys("ctrl+e", "k", "enter"); // already open: switches to its tab
+    await h.keys("space", "e", "k", "enter"); // already open: switches to its tab
     expect(h.app.tabs).toHaveLength(3);
     expect(h.app.activeTab).toBe(1);
-    await h.keys("ctrl+e", "j", "o"); // o replaces the current window's note
+    await h.keys("space", "e", "j", "o"); // o replaces the current window's note
     expect(h.app.tabs).toHaveLength(3);
     expect(h.app.tabs[1]!.views[0]!.buf.rel).toBe("notes/beta.md");
-    await h.keys("ctrl+e", "s");
+    await h.keys("space", "e", "s");
     expect(h.app.tab!.views).toHaveLength(2);
-    await h.keys("ctrl+e", "q");
+    await h.keys("space", "e", "q");
     expect(h.app.sidebarShown).toBe(false);
   });
   test("reveal: space shift+e", async () => {
@@ -3224,19 +3249,19 @@ describe("explorer and outline panes", () => {
   });
   test("outline: ctrl+o opens and focuses, focuses, closes; it follows the cursor while unfocused; enter jumps; h folds", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160 });
-    await h.keys("ctrl+o");
+    await h.keys("space", "o");
     expect(h.app.outlineShown).toBe(true);
     expect(h.app.region).toBe("outline"); // opening focuses it
     expect(h.app.geometry!.outline).not.toBeNull();
     await h.keys("escape"); // back to the note; the outline stays open
     expect(h.app.region).toBe("content");
     expect(h.app.outlineShown).toBe(true);
-    await h.keys("ctrl+o"); // open, focus elsewhere: focus it
+    await h.keys("space", "o"); // open, focus elsewhere: focus it
     expect(h.app.region).toBe("outline");
-    await h.keys("ctrl+o"); // focused: close
+    await h.keys("space", "o"); // focused: close
     expect(h.app.outlineShown).toBe(false);
     expect(h.app.region).toBe("content");
-    await h.keys("ctrl+o", "escape");
+    await h.keys("space", "o", "escape");
     await h.keys("]", "]", "]", "]");
     expect(h.app.outline.selected).toBe(h.app.currentSection());
     await h.keys("ctrl+w", "l");
@@ -3255,7 +3280,7 @@ describe("explorer and outline panes", () => {
   test("narrow: panes overlay the content and close after a pick", async () => {
     const h = await harness({ width: 60, height: 20 });
     expect(h.frame()).not.toContain("▸ notes");
-    await h.keys("ctrl+e");
+    await h.keys("space", "e");
     expect(h.frame()).toContain("▸ notes");
     await h.keys("escape");
     expect(h.frame()).not.toContain("▸ notes");
@@ -3281,7 +3306,7 @@ describe("UI settings (space u)", () => {
     expect(h.canvas().line(pane.y).slice(pane.x, pane.textX).trim()).toBe("1");
     const full = h.app.currentLayout(h.app.view!).width;
     expect(full).toBeGreaterThan(100); // 200 columns: the toggle below has something to cap
-    await h.keys("space", "u", "w");
+    await h.keys("space", "u", "d");
     expect(h.app.currentLayout(h.app.view!).width).toBeLessThanOrEqual(100);
     await h.keys("space", "u", "z");
     const f = h.frame();
@@ -3488,7 +3513,7 @@ describe("state (3.4, 3.15)", () => {
   test("session restore: tabs, splits with orientation, cursors", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
-    await h.keys("ctrl+w", "s", "j", "j", "ctrl+t", "o");
+    await h.keys("ctrl+w", "s", "j", "j", "ctrl+t", "c");
     const cur = { ...h.app.view!.cur };
     h.app.quit();
     const again = await harness({ root, open: null, config: (c) => (c.ui.restore_session = true) });
@@ -3709,7 +3734,7 @@ describe("review cycle 1 (TUI)", () => {
   });
   test("help and the palette list source mode's keys", async () => {
     const h = await harness();
-    await h.keys("?");
+    await h.keys("space", "?");
     const del = (h.app.overlay as ListOverlay).items.find((i) => i.data === "edit.op_delete")!;
     expect(del.keys).toContain("d");
   });
@@ -3730,7 +3755,7 @@ describe("review cycle 1 (TUI)", () => {
   });
   test("popups: the bottom-right corner is under the top-right one", async () => {
     const h = await harness({ width: 60, height: 20 });
-    await h.keys("?");
+    await h.keys("space", "?");
     const rows = h.frame().split("\n");
     const top = rows.findIndex((r) => r.includes("┐"));
     const bottom = rows.findIndex((r, i) => i > top && r.includes("┘"));
@@ -3916,7 +3941,7 @@ describe("review cycle 2 (TUI navigation)", () => {
     const pane = (h.frame(), h.app.geometry!.panes[0]!);
     click(h, pane.textX + 1, pane.y + 1);
     expect(h.app.pending.length).toBe(0);
-    await h.keys("ctrl+t", "o");
+    await h.keys("ctrl+t", "c");
     h.app.showSidebar(true);
     h.app.region = "sidebar";
     h.frame();
@@ -4545,7 +4570,7 @@ describe("files beyond notes (16.3–16.5)", () => {
   };
   test("the explorer lists data files by default; `a` shows every text file; binary never", async () => {
     const h = await harness({ root: await setup(), width: 120 });
-    await h.keys("ctrl+e"); // focus the explorer
+    await h.keys("space", "e"); // focus the explorer
     const paths = () => h.app.explorerRows().map((r) => r.path);
     h.app.expanded.add("cfg");
     h.app.invalidateTree();
@@ -4720,7 +4745,7 @@ describe("the explorer shows extensions", () => {
     const root = makeVault();
     writeFileSync(join(root, "app.toml"), "a = 1\n");
     const h = await harness({ root });
-    for (let i = 0; i < 3 && h.app.region !== "sidebar"; i++) await h.keys("ctrl+e");
+    for (let i = 0; i < 3 && h.app.region !== "sidebar"; i++) await h.keys("space", "e");
     const f = h.frame();
     expect(f).toContain(" index.md");
     expect(f).toContain(" app.toml");
@@ -4791,7 +4816,7 @@ describe("Org notes in the TUI (16.16)", () => {
     writeFileSync(join(root, "plan.org"), "#+TITLE: The Plan\n\n* TODO Ship it :urgent:\nSee [[file:notes/alpha.md][alpha]].\n- [ ] write docs\n** Details\nMore.\n");
     return root;
   };
-  test("renders with its keyword and tags; x ticks a task with Org's X; a link follows", async () => {
+  test("renders with its keyword and tags; ctrl+l ticks a task with Org's X; a link follows", async () => {
     const root = setup();
     const h = await harness({ root, open: "plan.org", width: 100, config: (c) => (c.walk.extensions = ["md", "org"]) });
     const v = h.app.view!;
@@ -4802,7 +4827,7 @@ describe("Org notes in the TUI (16.16)", () => {
     expect(h.app.currentLayout(v).headings.map((x) => x.text)).toEqual(["Ship it", "Details"]);
     const task = h.app.currentLayout(v).lines.findIndex((l) => l.spans.some((s) => s.text.includes("write docs")));
     h.app.moveCursor(v, { row: task, col: 0 });
-    await h.keys("x");
+    await h.keys("ctrl+l");
     expect(readFileSync(join(root, "plan.org"), "utf8")).toContain("- [X] write docs");
     const l = h.app.currentLayout(v).links[0]!;
     h.app.moveCursor(v, { row: l.line, col: l.col });
@@ -4822,7 +4847,7 @@ describe("Org notes in the TUI (16.16)", () => {
 });
 
 describe("AsciiDoc notes in the TUI (16.17)", () => {
-  test("renders; x ticks a checklist item; an xref follows; source mode scans titles and follows links", async () => {
+  test("renders; ctrl+l ticks a checklist item; an xref follows; source mode scans titles and follows links", async () => {
     const root = makeVault();
     writeFileSync(join(root, "guide.adoc"), "= Guide\n\n== Start\n\nSee xref:notes/alpha.md[alpha].\n\n* [ ] write docs\n");
     const h = await harness({ root, open: "guide.adoc", width: 100, config: (c) => (c.walk.extensions = ["md", "adoc"]) });
@@ -4831,7 +4856,7 @@ describe("AsciiDoc notes in the TUI (16.17)", () => {
     expect(h.app.currentLayout(v).headings.map((x) => [x.level, x.text])).toEqual([[1, "Guide"], [2, "Start"]]);
     const task = h.app.currentLayout(v).lines.findIndex((l) => l.spans.some((s) => s.text.includes("write docs")));
     h.app.moveCursor(v, { row: task, col: 0 });
-    await h.keys("x");
+    await h.keys("ctrl+l");
     expect(readFileSync(join(root, "guide.adoc"), "utf8")).toContain("* [x] write docs");
     const l = h.app.currentLayout(v).links[0]!;
     h.app.moveCursor(v, { row: l.line, col: l.col });
@@ -4907,7 +4932,7 @@ describe("closing tabs: others, all", () => {
     await h.app.run("tab.new");
     await h.app.run("note.open notes/beta.md");
     expect(h.app.tabs.length).toBe(3);
-    await h.keys("ctrl+t", "shift+o");
+    await h.keys("ctrl+t", "o");
     expect(h.app.tabs.length).toBe(1);
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
     await h.app.run("tab.new");
@@ -4987,9 +5012,9 @@ describe("pinned tabs", () => {
     }
     const names = () => h.app.tabs.map((t) => `${t.pinned ? "^" : ""}${t.views[t.active]!.buf.rel}`).join(" ");
     expect(names()).toBe("index.md notes/alpha.md notes/beta.md crlf.md");
-    await h.keys("ctrl+t", "shift+p"); // crlf pinned: to the left
+    await h.keys("ctrl+t", "m"); // crlf pinned: to the left
     h.app.activeTab = 3;
-    await h.keys("ctrl+t", "shift+p"); // beta pinned: after crlf
+    await h.keys("ctrl+t", "m"); // beta pinned: after crlf
     expect(names()).toBe("^crlf.md ^notes/beta.md index.md notes/alpha.md");
     expect(h.frame()).toMatch(/1 ⚑ crlf\.md/);
     await h.keys("ctrl+t", "shift+l"); // beta can't leave the pinned group
@@ -5002,7 +5027,7 @@ describe("pinned tabs", () => {
   });
   test("a link from a pinned tab opens in a new tab; close others and close all keep pinned tabs", async () => {
     const h = await harness();
-    await h.keys("ctrl+t", "shift+p");
+    await h.keys("ctrl+t", "m");
     const v = h.app.view!;
     const l = h.app.currentLayout(v).links.find((x) => x.target === "alpha")!;
     h.app.moveCursor(v, { row: l.line, col: l.col });
@@ -5011,7 +5036,7 @@ describe("pinned tabs", () => {
     expect(h.app.tabs[0]!.views[0]!.buf.rel).toBe("index.md"); // the pinned tab kept its note
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     await h.app.run("tab.new");
-    await h.keys("ctrl+t", "shift+o");
+    await h.keys("ctrl+t", "o");
     expect(h.app.tabs.map((t) => t.views[0]!.buf.rel)).toEqual(["index.md", "notes/alpha.md"]);
     await h.keys("ctrl+t", "shift+q");
     expect(h.app.tabs.map((t) => t.views[0]!.buf.rel)).toEqual(["index.md"]);
@@ -5085,3 +5110,130 @@ describe("word count, save all, the change list, moving lines", () => {
     expect(v.source || v.live).toBe(true);
   });
 });
+
+describe("the key map as agreed (vim first, desktop editors' ctrl keys, space for the rest)", () => {
+  const long = () => {
+    const root = makeVault();
+    writeFileSync(join(root, "long.md"), Array.from({ length: 80 }, (_, i) => `Line ${i + 1}.`).join("\n\n") + "\n");
+    return root;
+  };
+  test("H M L: the screen's top, middle and bottom rows; zz zt zb scroll the cursor's line there", async () => {
+    const h = await harness({ root: long(), open: "long.md", height: 30 });
+    const v = h.app.view!;
+    await h.keys("ctrl+d", "ctrl+d", "ctrl+d"); // far enough down for zb to have room above
+    const rows = h.app.screenRows(v, h.app.currentLayout(v));
+    await h.keys("shift+h");
+    expect(v.cur.row).toBeGreaterThanOrEqual(rows[0]!);
+    expect(v.cur.row).toBeLessThan(rows[0]! + 5); // scrolloff rows in
+    await h.keys("shift+l");
+    expect(v.cur.row).toBeLessThanOrEqual(rows.at(-1)!);
+    expect(v.cur.row).toBeGreaterThan(rows.at(-1)! - 5);
+    await h.keys("shift+m");
+    expect(Math.abs(v.cur.row - rows[Math.floor((rows.length - 1) / 2)]!)).toBeLessThanOrEqual(1);
+    const row = v.cur.row;
+    await h.keys("z", "t");
+    expect(v.top).toBe(row);
+    await h.keys("z", "b");
+    expect(h.app.screenRows(v, h.app.currentLayout(v)).at(-1)).toBe(row);
+    await h.keys("z", "z");
+    const shown = h.app.screenRows(v, h.app.currentLayout(v));
+    expect(Math.abs(shown.indexOf(row) - Math.floor((shown.length - 1) / 2))).toBeLessThanOrEqual(1);
+  });
+  test("go to line: ctrl+g asks, :42 goes; ctrl+z undoes, ctrl+y redoes; ctrl+e toggles source", async () => {
+    const h = await harness({ root: long(), open: "long.md" });
+    const v = h.app.view!;
+    const line = () => h.app.currentLayout(v).lines[v.cur.row]!.src;
+    await h.keys("ctrl+g", "2", "1", "enter");
+    expect(line()).toBe(21);
+    await h.keys(":", "4", "1", "enter");
+    expect(line()).toBe(41);
+    await h.keys("ctrl+e");
+    expect(v.source).toBe(true);
+    await h.keys("A", "!", "escape", "ctrl+z");
+    expect(v.buf.source).not.toContain("!");
+    await h.keys("ctrl+y");
+    expect(v.buf.source).toContain("Line 21.!");
+    await h.keys("ctrl+e");
+    expect(v.source).toBe(false);
+  });
+  test("q and :q close the window, then the tab; on the last, q only says so and :q quits", async () => {
+    const h = await harness();
+    await h.keys("ctrl+w", "v");
+    await h.app.run("tab.new");
+    expect([h.app.tabs.length, h.app.tab!.views.length]).toEqual([2, 1]);
+    await h.keys("q"); // the tab's only window: the tab
+    expect(h.app.tabs.length).toBe(1);
+    await h.keys("q"); // a split: its window
+    expect(h.app.tab!.views.length).toBe(1);
+    await h.keys("q"); // the last: never quits on one key
+    expect(h.quit.called).toBe(false);
+    expect(h.app.messages.at(-1)!.text).toContain("ctrl+q");
+    await h.keys(":", "q", "enter");
+    expect(h.quit.called).toBe(true);
+  });
+  test("tabs: ctrl+t c new, gt / gT and alt+N move, ctrl+t o closes the others, ctrl+t m pins", async () => {
+    const h = await harness();
+    await h.keys("ctrl+t", "c", "ctrl+t", "c");
+    expect(h.app.tabs.length).toBe(3);
+    await h.keys("g", "t");
+    expect(h.app.activeTab).toBe(0);
+    await h.keys("g", "shift+t");
+    expect(h.app.activeTab).toBe(2);
+    await h.keys("alt+2");
+    expect(h.app.activeTab).toBe(1);
+    await h.keys("ctrl+t", "m");
+    expect(h.app.tabs[0]!.pinned).toBe(true);
+    await h.keys("ctrl+t", "o");
+    expect(h.app.tabs.length).toBe(1);
+  });
+  test("search the vault: every note, the open one as it is now; enter opens it at the match", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "s1.md"), "# One\n\nthe zebra line\n");
+    writeFileSync(join(root, "s2.md"), "# Two\n\nno\n\nzebra again\n");
+    const h = await harness({ root, open: "s2.md" });
+    await h.keys("space", "n", "v", "g", "g", "A");
+    for (const c of " zebra") await h.keys(c === " " ? "space" : c);
+    await h.keys("escape"); // unsaved: the search sees it
+    await h.keys("space", "f", "g");
+    for (const c of "zebra") await h.keys(c);
+    await h.keys("enter");
+    const o = h.app.overlay as ListOverlay;
+    expect(o.items.map((i) => i.label).sort()).toEqual(["s1.md:3", "s2.md:1", "s2.md:5"]);
+    expect(h.frame()).toMatch(/3 matches in 2 files/);
+    const pick = o.filtered.findIndex((e) => e.item.label === "s1.md:3");
+    for (let i = 0; i < pick; i++) await h.keys("down");
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("s1.md");
+  });
+  test("ctrl+p lists recent notes first, the previous one on top", async () => {
+    const h = await harness();
+    await h.app.run("note.open notes/beta.md");
+    await h.app.run("note.open crlf.md");
+    await h.keys("ctrl+p");
+    const o = h.app.overlay as ListOverlay;
+    expect(o.filtered.slice(0, 2).map((e) => e.item.data)).toEqual(["notes/beta.md", "index.md"]);
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/beta.md");
+  });
+  test("the clipboard: cuts reach it, p puts what it holds (the register when it holds nothing)", async () => {
+    const { copyText } = await import("../src/core/clipboard.ts");
+    const root = makeVault();
+    writeFileSync(join(root, "c.md"), "alpha beta\n");
+    const h = await harness({ root, open: "c.md" });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", "x");
+    expect(h.copied.at(-1)).toBe("a"); // x is a cut: on the clipboard too
+    await h.keys("p");
+    expect(v.buf.source).toBe("lapha beta\n"); // nothing readable on the clipboard: the register
+    // Something copied elsewhere (the clipboard file stands for the system clipboard here).
+    const { stateDir } = await import("../src/core/paths.ts");
+    copyText("ZED", { osc52: () => false, fallbackDir: stateDir(root) });
+    await h.keys("0", "shift+p");
+    expect(v.buf.source).toBe("ZEDlapha beta\n");
+    // A terminal paste in normal mode puts, as p does.
+    h.app.paste("++");
+    await h.keys("escape");
+    expect(v.buf.source).toContain("++");
+  });
+});
+

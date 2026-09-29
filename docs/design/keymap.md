@@ -17,25 +17,32 @@ Config uses the same notation and accepts common spellings: `G` means `shift+g`,
 
 ## Conventions
 
-- **Navigation has direct keys**, both vim-style and standard editor keys. **No emacs keys.**
-  No `g` keys except `g g`.
-- **Everything else is under the leader, `space`**, apart from a few universal direct keys: `?`
-  help, `:` the palette, `/` and `ctrl+f` find (`n` / `shift+n`), `ctrl+p` the switcher, the
-  `y …` copies, `v` visual mode, `ctrl+e` / `ctrl+o` the panes, `ctrl+q` quit. The which-key
-  popup lists the next keys: immediately after the leader, and after 500 ms for the other
-  prefixes (`y`, `ctrl+w`, `ctrl+t`, `[`, `]`, `g`). Each entry shows a name and a short
-  explanation, in at most three columns, and keys with the same action share an entry
-  (`h left`). `backspace` goes up a level, and `esc` cancels. A key that is both a binding and a
-  prefix waits the same delay (`input.which_key_delay_ms`) for the next key before it runs.
+- **Vim's keys first, the desktop editors' `ctrl` keys second, the leader for the rest**
+  (decided 2026-09-29). A key keeps its vim meaning where slipbox has the action (`H` `M` `L`,
+  `zz`, `?`, `ctrl+o`, `gt`, `gf`, `:q`); the `ctrl` keys VS Code and Obsidian share come next
+  (`ctrl+f`, `ctrl+p`, `ctrl+s`, `ctrl+z` / `ctrl+y`, `ctrl+←/→` by word, `ctrl+shift+f`,
+  `ctrl+tab`, `alt+←/→` back and forward); `ctrl+w` and `ctrl+t` stay vim's and slipbox's
+  prefixes for windows and tabs; everything else is under `space`. **No emacs keys.**
+- **Direct keys beside navigation** are few: `:` the palette, `/` `?` and `ctrl+f` find (`n` /
+  `shift+n`), `ctrl+p` the switcher, the `y …` copies, `v` visual mode, `ctrl+e` source mode,
+  `ctrl+q` quit; help is `space ?`. The which-key popup lists the next keys: immediately after the
+  leader, and after 500 ms for the other prefixes (`y`, `ctrl+w`, `ctrl+t`, `[`, `]`, `g`, `z`).
+  Each entry shows a name and a short explanation, in at most three columns, and keys with the same
+  action share an entry (`h left`). `backspace` goes up a level, and `esc` cancels. A key that is
+  both a binding and a prefix waits the same delay (`input.which_key_delay_ms`) for the next key
+  before it runs.
 - **Every `ctrl+` chord has another route**, usually under the leader: terminals, multiplexers
   and browsers swallow `ctrl+` keys (zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`);
   nothing takes `space`. Cursor movement is the exception (its chords have direct alternatives:
-  page keys, arrows, `home` / `end`), and `ctrl+c`'s alternative is `y y`.
+  page keys, arrows, `home` / `end`), and `ctrl+c`'s alternative is `y y`. slipbox reads the
+  terminal raw, so `ctrl+c` and `ctrl+z` are keys here (copy, undo) — never an interrupt or a
+  suspend.
 - **Same letter twice opens that group's list:** `space h h`, `space l l`, `space t t`,
   `space f f`, `space u u`, `space s s`.
-- **Plain `q` only closes** the explorer, the outline or resize mode (in lists and prompts it is
-  typed). **`ctrl+c` copies** when something is selected, and in a list or prompt it cancels.
-  Neither ever quits.
+- **Plain `q` closes**: the explorer, the outline or resize mode where they have focus; in the note,
+  the window (vim's `:q` without the quitting), or the tab when it's the last window — never the
+  last one, which only `ctrl+q`, `:q` or `:qa` quit. In lists and prompts it is typed. **`ctrl+c`
+  copies** when something is selected, and in a list or prompt it cancels; it never quits.
 
 ## The cursor
 
@@ -58,13 +65,15 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | --- | --- | --- |
 | left / right one character | `h` / `l` | `left` / `right` |
 | up / down one row | `k` / `j` | `up` / `down` |
-| previous / next word start | `b` / `w` | `alt+left` / `alt+right` |
+| previous / next word start | `b` / `w` | `ctrl+left` / `ctrl+right` |
 | end of word | `e` | — |
-| start / end of row | `0` / `$` | `home` / `end`, `ctrl+left` / `ctrl+right`, `cmd+left` / `cmd+right` |
+| start / end of row | `0` / `$` | `home` / `end`, `cmd+left` / `cmd+right` |
 | first non-blank of row | `^` | — |
 | top / bottom of note | `g g` / `shift+g` | `ctrl+home` / `ctrl+end` |
 | previous / next heading | `[ [` / `] ]` | `alt+up` / `alt+down` |
 | previous / next paragraph | `{` / `}` | `ctrl+up` / `ctrl+down` |
+| top / middle / bottom row on screen | `shift+h` / `shift+m` / `shift+l` | — |
+| a line by number (a prompt; `:42` too) | `42 g g`, `42 shift+g` (source) | `ctrl+g`, `space f l` |
 
 ## Scrolling
 
@@ -72,6 +81,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | --- | --- |
 | half page down / up (cursor moves with it) | `ctrl+d` / `ctrl+u` |
 | page down / up (cursor moves with it) | `pagedown` / `pageup` |
+| the cursor's line to the middle / top / bottom of the window | `z z` / `z t` / `z b` |
 | mouse wheel | scrolls the view |
 | horizontal wheel or trackpad | scrolls sideways: the note with wrapping off, a side pane with rows wider than it |
 
@@ -80,8 +90,8 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | Action | Keys |
 | --- | --- |
 | extend by character / row | `shift+left` / `shift+right` / `shift+up` / `shift+down` |
-| extend by word | `shift+alt+left` / `shift+alt+right` |
-| extend to row start / end | `shift+ctrl+left` / `shift+ctrl+right`, `shift+home` / `shift+end` |
+| extend by word | `shift+ctrl+left` / `shift+ctrl+right`, `v` + `w` `b` `e` |
+| extend to row start / end | `shift+home` / `shift+end`, `v` + `0` `$` |
 | … also | `shift+cmd+left` / `shift+cmd+right` (where the terminal passes `cmd` through) |
 | extend by paragraph | `shift+ctrl+up` / `shift+ctrl+down` |
 | extend to note top / bottom | `shift+ctrl+home` / `shift+ctrl+end` |
@@ -102,13 +112,20 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | copy `path:line` of the cursor row | `y r` |
 | copy the target of the link under the cursor | `y l` |
 
+Every copy goes to the system clipboard (through the terminal, then `wl-copy`, `xclip` or
+`pbcopy`), and so does every cut (`x`, `d…`, `c…`, as vim with `clipboard=unnamedplus`). `p` puts
+what the system clipboard holds — read with `wl-paste`, `xclip`, `xsel` or `pbpaste` — and falls
+back to slipbox's own register when it can't be read (over SSH, say). The terminal's paste
+(`ctrl+shift+v`, `cmd+v`) types the text while typing, and puts it like `p` in normal mode.
+`ctrl+v` is not bound.
+
 ## Links — `space l`
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| next / previous link (the cursor jumps to it) | `ctrl+tab` / `ctrl+shift+tab` | `space l n` / `space l p` |
-| follow the link under the cursor, else the first on the row | `enter`, `ctrl+enter`, click on it | `space l f` |
-| follow it into the split | — | `space l s` |
+| next / previous link (the cursor jumps to it) | `tab` / `shift+tab`, `] l` / `[ l` | `space l n` / `space l p` |
+| follow the link under the cursor, else the first on the row | `enter`, `g f`, `g x`, click on it | `space l f` |
+| follow it into the split | `ctrl+enter`, `ctrl+w f` | `space l s`, `space w f` |
 | copy its target | `y l` | `space l y` |
 | links from this note (list) | — | `space l l` |
 | backlinks: notes linking here (list) | — | `space l b` |
@@ -117,7 +134,10 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| back / forward | `shift+h` / `shift+l`, `ctrl+backspace` (back) | `space h p` / `space h n` |
+| back / forward | `ctrl+o` / `alt+right`, `alt+left` (back) | `space h p` / `space h n` |
+
+Vim's forward is `ctrl+i`, but terminals send `ctrl+i` as `tab`, which is next link here: forward is
+`alt+right` (VS Code's) and `space h n`.
 | history, in the left panel (open → focus → close) | — | `space h h` |
 
 ## Windows — `space w`
@@ -126,13 +146,13 @@ One split per tab, side by side or stacked.
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| split side by side | `ctrl+w v`, `ctrl+w \|` | `space w v` |
+| split side by side | `ctrl+w v`, `ctrl+\` | `space w v` |
 | split stacked | `ctrl+w s` | `space w s` |
 | focus left / down / up / right | `ctrl+w h` `j` `k` `l`, `ctrl+w` + arrows | `space w` + same |
 | other window | `ctrl+w w` | `space w w` |
 | move window left / down / up / right | `ctrl+w shift+h` `j` `k` `l`, `ctrl+w shift+`arrows | `space w` + same |
 | swap the two windows | `ctrl+w x` | `space w x` |
-| close this window | `ctrl+w q` | `space w q` |
+| close this window (the tab, when it's the last window; never quits) | `ctrl+w q`, `q` | `space w q` |
 | keep only this window | `ctrl+w o` | `space w o` |
 | wider / narrower, one step (then resize mode) | `ctrl+w >` / `ctrl+w <` | `space w >` / `<` |
 | taller / shorter, one step (then resize mode) | `ctrl+w +` / `ctrl+w -` | `space w +` / `-` |
@@ -147,7 +167,7 @@ widening without the chord.
 
 | Action | Keys |
 | --- | --- |
-| enter resize mode | `ctrl+alt+w`, `space w r`; or resize one step with `ctrl+w >` `<` `+` `-` |
+| enter resize mode | `space w r`; or resize one step with `ctrl+w >` `<` `+` `-` |
 | narrower / wider (2 columns a step) | `h` / `l`, `left` / `right`, `<` / `>` |
 | shorter / taller (a stacked split) | `k` / `j`, `up` / `down`, `-` / `+` |
 | equal sizes | `=` (also `ctrl+w =`, `space w =` outside the mode) |
@@ -160,9 +180,6 @@ the pane widths back to those defaults. Pane widths stay between 12 columns and 
 leaving the note at least 24; a split stays between 15% and 85%. The mode's keys are `[keys.resize]`
 in config.
 
-`ctrl+alt+w` arrives when `alt` does. On macOS that means Option set to act as Alt (Ghostty:
-`macos-option-as-alt`); otherwise use `space w r`.
-
 - **Focus moves beyond the panes:** out to the explorer on the left and the outline on the
   right, and back.
 - **Moving a window** also chooses the split's orientation: moving right makes it the right pane
@@ -173,23 +190,23 @@ in config.
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| new tab with the current note | `ctrl+t o` | `space t o` |
+| new tab with the current note (`:tabnew`) | `ctrl+t c` | `space t c` |
 | list tabs (pick one) | `ctrl+t t` | `space t t` |
-| next tab | `ctrl+t n`, `ctrl+t right`, `ctrl+pagedown` | `space t n` |
-| previous tab | `ctrl+t p`, `ctrl+t left`, `ctrl+pageup` | `space t p` |
-| go to tab N | `ctrl+t 1` … `ctrl+t 9` | `space t 1` … `space t 9` |
-| move tab left / right | `ctrl+t shift+h` / `shift+l`, `ctrl+t shift+left` / `shift+right` | `space t` + the same |
-| close tab | `ctrl+t q` | `space t q` |
-| close the other tabs but the pinned (`:tabonly`) | `ctrl+t shift+o` | `space t shift+o` |
+| next tab | `g t`, `ctrl+tab`, `ctrl+pagedown`, `ctrl+t n`, `ctrl+t right` | `space t n`, `space t right` |
+| previous tab | `g shift+t`, `ctrl+shift+tab`, `ctrl+pageup`, `ctrl+t p`, `ctrl+t left` | `space t p`, `space t left` |
+| go to tab N | `alt+1` … `alt+9`, `ctrl+t 1` … `ctrl+t 9` | `space t 1` … `space t 9` |
+| move tab left / right | `ctrl+shift+pageup` / `pagedown`, `ctrl+t shift+h` / `l` (or arrows) | `space t` + the same |
+| close tab | `ctrl+t q`, `q` on its last window | `space t q` |
+| close the other tabs but the pinned (`:tabonly`) | `ctrl+t o` | `space t o` |
 | close all tabs but the pinned (the explorer then opens a note) | `ctrl+t shift+q` | `space t shift+q` |
-| pin / unpin tab (`:tabpin`): kept left, its note kept, never bulk-closed | `ctrl+t shift+p` | `space t shift+p` |
+| pin / unpin tab (`:tabpin`): kept left, its note kept, never bulk-closed | `ctrl+t m` | `space t m` |
 
 ## Explorer — left pane
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| open → focus → close (a cycle) | `ctrl+e` | `space e` |
-| reveal the current note | `ctrl+shift+e` (kitty-protocol terminals only) | `space shift+e` |
+| open → focus → close (a cycle) | — | `space e` |
+| reveal the current note | — | `space shift+e` |
 
 Inside the explorer (`[keys.explorer]` in config):
 
@@ -215,7 +232,7 @@ The history view (`space h h`, the left rail's `◷`) takes the same keys: `j` /
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| open → focus → close (a cycle) | `ctrl+o` | `space o` |
+| open → focus → close (a cycle) | — | `space o` |
 
 Like the explorer: opening it focuses it; while open but unfocused, the key focuses it; while
 focused, the key closes it and focus returns to the note. The `▤` button on the right rail (or, without
@@ -241,6 +258,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
 | find in this note, in the window's find row (empty clears) | `ctrl+f`, `/`, then `n` / `shift+n` | `space f /` |
+| find backward (vim's): `n` goes on backward, `shift+n` forward | `?` | — |
 | while typing it: regex / whole words (also its `.*` / `ab` buttons) | `alt+r` / `alt+w` | — |
 | find and replace (the markdown); into replace / back | `ctrl+h`; `tab` / `shift+tab` | `space f r` |
 | the replace row open / closed (its `⇄` button) | `alt+h` | — |
@@ -251,8 +269,10 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | quick switcher: find a note by name | `ctrl+p` | `space f f` |
 | outline picker: find a heading in this note | — | `space f o` |
 | heading path: the breadcrumb's headings as a dropdown | — | `space f b` |
-| command palette / command line | `:` | `space f p` |
-| *(reserved for phase 4)* vault text search / tags | — | `space f s` / `space f t` |
+| search the vault's notes and files (open ones as they are); enter opens at the match | `ctrl+shift+f` | `space f g` |
+| go to a line by number (`:42` too) | `ctrl+g` | `space f l` |
+| command palette / command line | `:`, `ctrl+shift+p` | `space f p` |
+| *(reserved for phase 4)* tags | — | `space f t` |
 
 As in vim, `n` and `shift+n` go to the match after or before the cursor, wherever it has moved
 since the last one, and wrap around the note (the message says so: "from the top"). `*` and `#`
@@ -268,7 +288,11 @@ config.
 
 | Alias | Runs |
 | --- | --- |
-| `:q`, `:quit` | quit |
+| `:q`, `:quit` | close the window, or its tab; on the very last one, quit (vim's) |
+| `:qa`, `:qall` | quit |
+| `:42` | go to line 42 |
+| `:help` | all keys and commands |
+| `:lens`, `:live` | open or close the lens |
 | `:e <note>`, `:open <note>` | open a note, or any text file of the vault by its path (`:e tool.py`) |
 | `:theme <name>` | set the theme |
 | `:glyphs <nerd\|unicode\|ascii\|auto>` | set the glyph set |
@@ -301,20 +325,21 @@ source first.
 
 | Action | Keys |
 | --- | --- |
-| tick or untick the task item at the cursor (the innermost, on any of its rows) | `x` (rendered) |
-| show this window's note as its raw markdown, or rendered again (`:source`) | `space n v` |
-| open the lens: the markdown around the cursor, the rest rendered (`:live`); `esc` closes it | `space n l` |
+| tick or untick the task item at the cursor (the innermost, on any of its rows) | `ctrl+l`, `space n t`, a click |
+| show this window's note as its raw markdown, or rendered again (`:source`) | `ctrl+e`, `space n v` |
+| open the lens: the markdown around the cursor, the rest rendered (`:lens`); `esc` closes it | `space n l` |
 | the lens a block bigger / smaller (the size kept as it moves) / its own size again | `+` / `-` / `=` |
 | type before the cursor / after it | `i` / `a` |
 | type at the line's first non-blank / its end | `shift+i` / `shift+a` |
 | open a line below (continuing a list) / above, and type | `o` / `shift+o` |
-| delete the character under the cursor | `x` (source) |
-| undo / redo (an insert session is one step) | `u` / `ctrl+r`, `shift+u` |
+| cut the character under the cursor (it goes to the clipboard, as vim's `x`) | `x` (source) |
+| undo / redo (an insert session is one step) | `u`, `ctrl+z` / `ctrl+r`, `ctrl+y`, `shift+u` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |
 | the conflict prompt again: load theirs, keep yours, diff, merge | `space n c` |
 | save everything and quit / quit without saving | `:wq`, `:x` / `:q!` |
+| quit (asks nothing when all is saved) | `ctrl+q`, `space q q`, `:qa` |
 
 **Normal mode in source** is vim-shaped (`[keys.source]`; these keys do nothing in the render):
 

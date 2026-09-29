@@ -139,7 +139,7 @@ The notation is in [keymap.md](keymap.md): space-separated key names such as `g 
 `ctrl+w shift+h` or `leader l n`. `G` means `shift+g`, and modifiers may be written in any order.
 An unknown modifier (`hyper+x`) is reported, and the key never fires rather than binding `x`.
 A command spec is a command id, optionally followed by an argument (`"tab.goto 3"`,
-`"theme.set nord"`). `slipbox commands` lists every id, and `?` in the TUI lists every
+`"theme.set nord"`). `slipbox commands` lists every id, and `space ?` in the TUI lists every
 binding.
 
 ## Colours

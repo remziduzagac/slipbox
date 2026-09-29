@@ -22,14 +22,14 @@ import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
 import { insertKey, insertText, offsetOf, stopInsert } from "./editing.ts";
-import { insertRecord, newVimState, PASTE, vimKey, visualKey } from "./vim.ts";
+import { insertRecord, newVimState, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
 import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
 import { appendScratch, scratchLocation } from "../core/capture.ts";
-import { copyText } from "../core/clipboard.ts";
+import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
@@ -120,6 +120,8 @@ export interface FindState {
   current: number;
   /** Whole words only (`*` / `#`, `alt+w`): not inside a longer word. */
   whole?: boolean;
+  /** Searched backward (`?`): `n` goes on backward and `N` forward, as in vim. */
+  backward?: boolean;
   /** A regular expression (`alt+r`), not plain text. */
   regex?: boolean;
   /** Why the regex isn't one, when it isn't. */
@@ -489,6 +491,7 @@ export class App {
 
     this.recentCommands = (loadSession(this.loc.root)?.recent_commands ?? []).filter((id) => typeof id === "string").slice(0, RECENT_MAX);
     this.remoteServer = loadSession(this.loc.root)?.remote_server;
+    this.recentNotes = (loadSession(this.loc.root)?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
     this.restoreUiOverrides();
     if (opts.themeName) this.ui.theme = opts.themeName; // an explicit theme beats a remembered one
     const restored = !opts.open && this.config.ui.restore_session && this.restoreSession();
@@ -836,9 +839,18 @@ export class App {
     return buf.kind.group === "note"; // every note format has a reader (16.2)
   }
 
+  /** Notes and files most recently shown, newest first (the switcher lists them first). */
+  recentNotes: string[] = [];
+
+  /** A note was shown in a window: it's the most recent now. */
+  touchRecent(key: string): void {
+    this.recentNotes = [key, ...this.recentNotes.filter((k) => k !== key)].slice(0, RECENT_NOTES_MAX);
+  }
+
   openInNewTab(path: string, anchor?: Anchor): void {
     const buf = this.buffer(path);
     if (!buf) return;
+    this.touchRecent(buf.key);
     this.tabs.push({ views: [this.makeView(buf, anchor)], active: 0, orientation: "side", ratio: this.config.ui.split_ratio });
     this.activeTab = this.tabs.length - 1;
     this.region = "content";
@@ -864,6 +876,7 @@ export class App {
     if (!buf) return;
     // A pinned tab keeps its note: another one opens in a new tab.
     if (buf !== view.buf && this.tabs.find((t) => t.views.includes(view))?.pinned) return this.openInNewTab(path, anchor);
+    this.touchRecent(buf.key);
     this.pushHistory(view);
     if (buf === view.buf && anchor) {
       this.jumpTo(view, anchor);
@@ -914,6 +927,7 @@ export class App {
 
   showLoc(view: View, buf: NoteBuffer, loc: Loc): void {
     const before = view.buf;
+    this.touchRecent(buf.key);
     Object.assign(view, {
       buf,
       topAnchor: loc.anchor,
@@ -1420,6 +1434,35 @@ export class App {
     if (moveCursor) this.ensureCursorVisible(view, layout);
   }
 
+  /** vim's zz / zt / zb: scroll so the cursor's row is in the middle, at the top or the bottom. */
+  scrollCursorTo(view: View, where: "center" | "top" | "bottom"): void {
+    const layout = this.currentLayout(view);
+    const hidden = this.lensHidden(view, layout);
+    const up = where === "top" ? 0 : where === "center" ? Math.floor((view.height - 1) / 2) : view.height - 1;
+    view.top = this.clampTop(view, layout, this.stepVisible(layout, hidden, view.cur.row, -up));
+    this.anchorTop(view, layout);
+  }
+
+  /** vim's H / M / L: the row on screen at the top, the middle or the bottom (scrolloff rows in,
+   *  unless the note's edge is on screen), its first non-blank. */
+  screenRow(view: View, where: "top" | "middle" | "bottom"): Pos {
+    const layout = this.currentLayout(view);
+    const rows = this.screenRows(view, layout);
+    if (!rows.length) return view.cur;
+    const so = Math.max(0, Math.min(this.config.ui.scrolloff, Math.floor((rows.length - 1) / 2)));
+    const lastShown = rows[rows.length - 1] === layout.lines.length - 1;
+    const i = where === "top" ? (view.top === 0 ? 0 : so) : where === "bottom" ? (lastShown ? rows.length - 1 : rows.length - 1 - so) : Math.floor((rows.length - 1) / 2);
+    const row = rows[Math.max(0, Math.min(i, rows.length - 1))]!;
+    return { row, col: 0 };
+  }
+
+  /** `:q`: this window, or its tab; the very last one quits. */
+  closeOrQuit(): void {
+    const t = this.tab;
+    if (!t || (t.views.length <= 1 && this.tabs.length <= 1)) return this.requestQuit();
+    this.closeWindow();
+  }
+
   /** Put the cursor on a heading row and scroll the window so that row is its first. */
   revealHeading(view: View, row: number): void {
     this.pushHistory(view);
@@ -1487,7 +1530,7 @@ export class App {
 
   /** Toggle a task's checkbox (plan 4.11): `x`, or a click on it. */
   toggleTaskAt(view: View, task = this.taskAt(view)): void {
-    if (!task) return this.message("info", "no task here — x toggles a list item's [ ]");
+    if (!task) return this.message("info", "no task here — ctrl+l toggles a list item's [ ]");
     const buf = view.buf;
     if (buf.deleted) return this.message("warn", `${buf.key} was deleted on disk — nothing to toggle`);
     if (buf.dirty) {
@@ -2592,8 +2635,8 @@ export class App {
   // pane keys → visual-mode keys → the normal keymap. The which-key popup shows while a sequence is pending.
 
   /**
-   * Pasted text (bracketed paste): into the open list's filter or prompt, first line only and
-   * sanitized; elsewhere nothing (the reader has nowhere to put it).
+   * Pasted text (bracketed paste): into the text while typing, after the cursor in normal mode
+   * (as p), into the open list's filter or prompt (first line only, sanitized); reading, nowhere.
    */
   paste(text: string): Promise<void> {
     // In turn with the keys (never between two of them), and recorded as a key of its own.
@@ -2608,6 +2651,8 @@ export class App {
       insertText(this, iv, text.replace(/\r\n?/g, "\n").replaceAll("\n", iv.buf.eol));
       return insertRecord(this, iv, `${PASTE}${text}`);
     }
+    // In normal mode where the text is editable: put after the cursor, as p does.
+    if (!o && this.region === "content" && iv && editable(iv)) return put(this, iv, true, text.replace(/\r\n?/g, "\n"));
     if (!o) return;
     const line = sanitize(text.replace(/\r\n?/g, "\n").split("\n")[0] ?? "");
     if (!line) return;
@@ -2848,7 +2893,7 @@ export class App {
     }
     this.clearPending();
     if (hit) return hit.run(hit.spec!);
-    if (key !== "escape") this.message("info", `${prettyKey(seq, this.leader)} is not bound — ? lists keys`);
+    if (key !== "escape") this.message("info", `${prettyKey(seq, this.leader)} is not bound — space ? lists keys`);
   }
 
   async run(spec: string): Promise<void> {
@@ -3472,6 +3517,18 @@ export class App {
   // -------------------------------------------------------------------------------------------
   // Clipboard, capture
 
+  /**
+   * What `p` puts: the system clipboard when it can be read and holds something else than the
+   * register (text copied in another app); else the register — whose line-wise-ness a clipboard
+   * that holds the same text keeps.
+   */
+  pasteText(): { text: string; linewise: boolean } | null {
+    const reg = this.vim.register;
+    const clip = readClipboard(stateDir(this.loc.root));
+    if (clip === null || clip === "" || (reg && clip === reg.text)) return reg;
+    return { text: clip, linewise: false };
+  }
+
   copy(text: string, announce = true): boolean {
     const r = copyText(text, { osc52: (t) => this.host.osc52(t), fallbackDir: stateDir(this.loc.root) });
     // SLIPBOX_CLIPBOARD=file sends copies to the file on purpose; otherwise the file means no clipboard answered.
@@ -3783,6 +3840,7 @@ export class App {
       outline_width: this.outW,
       ui: this.uiOverrides,
       recent_commands: this.recentCommands,
+      recent_notes: this.recentNotes,
       ...(this.remoteServer ? { remote_server: this.remoteServer } : {}),
     };
     saveSession(this.loc.root, s);
@@ -4032,6 +4090,8 @@ function inRect(r: { x: number; y: number; w: number; h: number }, x: number, y:
 }
 
 const RECENT_MAX = 5;
+/** Notes the switcher lists first, most recent first. */
+const RECENT_NOTES_MAX = 30;
 /** The note keeps at least this many columns beside the side panes. */
 const MIN_CONTENT = 24;
 /** The rail: its border, then a button (a glyph with a space either side). */

@@ -40,6 +40,13 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "cursor.half_up", title: "Half page up", cli: I, desc: "Scrolls half a page up, cursor along" },
   { id: "cursor.page_down", title: "Page down", cli: I, desc: "Scrolls a page down, cursor along" },
   { id: "cursor.page_up", title: "Page up", cli: I, desc: "Scrolls a page up, cursor along" },
+  { id: "cursor.screen_top", title: "Top of the screen", cli: I, desc: "Moves the cursor to the first row on screen (vim's H)" },
+  { id: "cursor.screen_middle", title: "Middle of the screen", cli: I, desc: "Moves the cursor to the middle row on screen (vim's M)" },
+  { id: "cursor.screen_bottom", title: "Bottom of the screen", cli: I, desc: "Moves the cursor to the last row on screen (vim's L)" },
+  { id: "cursor.goto_line", title: "Go to line", cli: "slipbox read <note> --line <n>", desc: "Asks for a line number and goes there (:42 does too)" },
+  { id: "scroll.center", title: "Cursor's line to the middle", cli: I, desc: "Scrolls so the cursor's line is in the middle of the window (vim's zz)" },
+  { id: "scroll.top", title: "Cursor's line to the top", cli: I, desc: "Scrolls so the cursor's line is the first on screen (vim's zt)" },
+  { id: "scroll.bottom", title: "Cursor's line to the bottom", cli: I, desc: "Scrolls so the cursor's line is the last on screen (vim's zb)" },
   // selection and copy
   { id: "visual.char", title: "Visual mode (characters)", cli: I, desc: "Starts selecting by character as you move" },
   { id: "visual.line", title: "Visual mode (rows)", cli: I, desc: "Starts selecting whole rows as you move" },
@@ -80,7 +87,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "window.move_up", title: "Move window up", cli: I, desc: "Moves this window to the top" },
   { id: "window.move_right", title: "Move window right", cli: I, desc: "Moves this window to the right side" },
   { id: "window.swap", title: "Swap windows", cli: I, desc: "Swaps the two windows' places" },
-  { id: "window.close", title: "Close window", cli: I, desc: "Closes this window" },
+  { id: "window.close", title: "Close window", cli: I, desc: "Closes this window, or the tab when it's the last window; never quits (ctrl+q does)" },
+  { id: "window.close_or_quit", title: "Close window, quit on the last", cli: I, desc: "Closes this window, or its tab; on the very last one, quits (vim's :q)" },
   { id: "window.only", title: "Keep only this window", cli: I, desc: "Closes the other window" },
   { id: "window.resize_mode", title: "Resize mode", cli: I, desc: "Resizes with h j k l or arrows until esc" },
   { id: "breadcrumb.path", title: "Heading path", cli: I, desc: "Lists the headings the cursor is under, as a dropdown; pick one to jump" },
@@ -108,6 +116,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   // find
   { id: "find.open", title: "Find in note", cli: "slipbox find <query> [<note>]", desc: "Searches this note; the cursor goes to matches" },
   { id: "find.replace", title: "Find and replace", cli: "slipbox replace <note> <old> <new>", desc: "Find with a replace row under it: enter replaces one, alt+enter all, as one undo step" },
+  { id: "find.vault", title: "Search the vault", cli: "slipbox find <query>", desc: "Searches every note (and open files) for text; enter opens the note at the match" },
   { id: "find.substitute", title: "Substitute: s/old/new/", cli: "slipbox replace <note> <old> <new> --regex --first-per-line [--lines A-B]", desc: "Vim's :s — on this line, % the note, '<,'> the selection; g all on a line, i ignore case, c confirm" },
   { id: "find.next", title: "Next match", cli: "slipbox find <query> <note>", desc: "Moves to the next match after the cursor, wrapping at the end" },
   { id: "find.prev", title: "Previous match", cli: "slipbox find <query> <note>", desc: "Moves to the previous match before the cursor, wrapping at the top" },
@@ -178,7 +187,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "note.reload", title: "Reload note from disk", cli: "slipbox render <note>", desc: "Reads the note from disk again" },
   { id: "note.edit", title: "Edit in your editor", cli: I, desc: "Hands the note to your editor at the cursor's line, in this terminal; back here when it closes" },
   { id: "view.source", title: "Source / rendered", cli: I, desc: "Shows this window's note as its raw markdown, or rendered again; the cursor stays on its line" },
-  { id: "view.live", title: "Live preview / rendered", cli: I, desc: "Shows the note rendered, except the block the cursor is in, which is its markdown to edit in place" },
+  { id: "view.live", title: "Lens / rendered", cli: I, desc: "Shows the note rendered, except the block the cursor is in: the lens, its markdown to edit in place" },
   { id: "lens.grow", title: "Grow the lens", cli: I, desc: "Takes the next block into the lens (the one above, at the note's end); the lens keeps the size" },
   { id: "lens.shrink", title: "Shrink the lens", cli: I, desc: "Drops the lens's block farthest from the cursor; the lens keeps the size" },
   { id: "lens.reset", title: "Lens to its own size", cli: I, desc: "Lets the lens size itself again, after + or -" },
@@ -202,7 +211,7 @@ export function commandSpec(id: string): CommandSpec | undefined {
  * docs/design/keymap.md, in its order. The first group whose pattern matches an id wins.
  */
 export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
-  { title: "Cursor", ids: /^cursor\./ },
+  { title: "Cursor", ids: /^(cursor|scroll)\./ },
   { title: "Selection & copy", ids: /^(visual\.(char|line|swap|yank|exit)$|copy\.|app\.escape$)/ },
   { title: "Links & history", ids: /^(link\.|links\.|backlinks\.|history\.|change\.)/ },
   { title: "Windows", ids: /^window\./ },

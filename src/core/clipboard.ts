@@ -3,7 +3,7 @@
 // OSC 52 is required, not optional: over SSH it is the only way to reach the *local* clipboard.
 // It cannot be confirmed — terminals do not acknowledge it — so the result says so honestly.
 
-import { closeSync, openSync, writeSync } from "node:fs";
+import { closeSync, openSync, readFileSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { atomicWrite } from "./fsutil.ts";
 
@@ -92,3 +92,37 @@ export function copyText(text: string, opts: CopyOptions): CopyResult {
   }
   return { methods, file, confirmed };
 }
+
+/** The tools that read the system clipboard, the counterparts of `localTools`. */
+function readTools(): string[][] {
+  const tools: string[][] = [];
+  if (process.platform === "darwin") tools.push(["pbpaste"]);
+  if (process.env.WAYLAND_DISPLAY) tools.push(["wl-paste", "--no-newline"]);
+  if (process.env.DISPLAY) tools.push(["xclip", "-selection", "clipboard", "-o"], ["xsel", "--clipboard", "--output"]);
+  return tools;
+}
+
+/**
+ * The system clipboard's text (what `p` puts), or null when it can't be read: no tool answers
+ * (over SSH, say) — the caller then uses its own register. With SLIPBOX_CLIPBOARD=file, the file
+ * copies went to (tests never read the developer's clipboard).
+ */
+export function readClipboard(fallbackDir: string): string | null {
+  if (process.env.SLIPBOX_CLIPBOARD === "file") {
+    try {
+      return readFileSync(join(fallbackDir, "clipboard.txt"), "utf8");
+    } catch {
+      return null;
+    }
+  }
+  for (const tool of readTools()) {
+    try {
+      const bin = Bun.which(tool[0]!);
+      if (!bin) continue;
+      const r = Bun.spawnSync([bin, ...tool.slice(1)], { stdout: "pipe", stderr: "ignore", timeout: 1000 });
+      if (r.exitCode === 0) return new TextDecoder().decode(r.stdout);
+    } catch {}
+  }
+  return null;
+}
+

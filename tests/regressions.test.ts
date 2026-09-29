@@ -91,10 +91,10 @@ describe("medium", () => {
     await app.run("note.open a.md");
     rmSync(join(dir, "b.md"));
     app.applyChanges({ changes: [{ rel: "b.md", kind: "deleted", isNote: true }], rescan: false });
-    await app.handleKey("shift+h");
+    await app.handleKey("ctrl+o");
     expect(app.view!.buf.key).toBe("b.md");
     expect(app.view!.buf.source).toBe("# B\n");
-    await app.handleKey("shift+l");
+    await app.handleKey("alt+right");
     expect(app.view!.buf.key).toBe("a.md");
     expect(app.view!.fwd).toHaveLength(0);
   });
@@ -105,7 +105,7 @@ describe("medium", () => {
     const loc = locateVault({ root: dir });
     const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender() {}, osc52: () => true, quit() {} }, open: "a.md", watch: false });
     app.view!.back.push({ key: "gone.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } });
-    await app.handleKey("shift+h");
+    await app.handleKey("ctrl+o");
     expect(app.view!.buf.key).toBe("a.md");
     expect(app.view!.fwd).toHaveLength(0);
   });
