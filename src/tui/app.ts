@@ -2907,6 +2907,8 @@ export class App {
       const row = this.explorerRows()[idx];
       if (!row) return;
       this.sidebar.selected = idx;
+      // A note: one click selects it, a double-click opens it as a tab (enter too, from the keys).
+      if (row.kind === "note" && clicks < 2) return;
       if (row.kind === "note" && this.sidebar.filter) {
         // Picked from the filter: open it, and the tree comes back.
         this.sidebar.filter = "";
@@ -2921,7 +2923,7 @@ export class App {
         if (this.expanded.has(row.path)) this.expanded.delete(row.path);
         else this.expanded.add(row.path);
         this.invalidateTree();
-      } else this.explorerAction("open_tab"); // a second click finds the tab it opened
+      } else this.explorerAction("open_tab");
       return;
     }
     const sep = g.separators.find((s) => inRect(s, ev.x, ev.y));

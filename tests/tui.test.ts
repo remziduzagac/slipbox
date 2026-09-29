@@ -3020,7 +3020,7 @@ describe("mouse", () => {
     h.app.handleMouse({ type: "up", x: split.x, y: split.y + 3, button: 0 });
     expect(h.app.tab!.ratio).toBeCloseTo(0.3, 1);
   });
-  test("explorer: click a folder to fold it; a click opens a note as a tab, once", async () => {
+  test("explorer: click a folder to fold it; a click selects a note, a double-click or enter opens it", async () => {
     const h = await harness({ open: "notes/alpha.md" });
     h.frame();
     const sb = h.app.geometry!.sidebar!;
@@ -3030,12 +3030,22 @@ describe("mouse", () => {
     click(h, sb.x + 3, rowOf("notes"));
     expect(h.app.treeRows().some((r) => r.path === "notes/beta.md")).toBe(true);
     const y = rowOf("notes/beta.md");
-    click(h, sb.x + 6, y);
+    const selected = () => h.app.treeRows()[h.app.sidebar.selected]?.path;
+    click(h, sb.x + 6, y); // one click: selected, not opened
+    expect(h.app.tabs).toHaveLength(1);
+    expect(selected()).toBe("notes/beta.md");
+    click(h, sb.x + 6, y); // the second of a double-click: opened as a tab
     expect(h.app.tabs).toHaveLength(2);
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
-    click(h, sb.x + 6, y); // a double-click finds the tab the first click opened
-    expect(h.app.tabs).toHaveLength(2);
     expect(h.app.tabs[0]!.views[0]!.buf.rel).toBe("notes/alpha.md"); // the first tab is untouched
+    // Enter on a selected note opens it too (a second time: the tab it has).
+    await Bun.sleep(450); // past the double-click window
+    click(h, sb.x + 6, rowOf("notes/alpha.md"));
+    expect(h.app.tabs).toHaveLength(2);
+    expect(selected()).toBe("notes/alpha.md");
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    expect(h.app.tabs).toHaveLength(2);
   });
   test("outline: click the fold marker folds; click the text jumps", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, config: (c) => (c.ui.outline = true) });

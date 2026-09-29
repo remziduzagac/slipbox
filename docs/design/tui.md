@@ -295,9 +295,10 @@ registry (`LEFT_VIEWS`,
 `RIGHT_VIEWS` in `app.ts`) and more will come on both sides, each with its own rows, drawing and
 keys.
 
-- **Explorer (left, `≡`):** the walked notes as a tree, directories first. Moving the selection only
-  selects. `enter`, `l` and a click open the note as a tab, or switch to the tab already showing
-  it; `o` replaces the current window's note, and `s` opens it in the split's other window.
+- **Explorer (left, `≡`):** the walked notes as a tree, directories first. Moving the selection, or
+  a click on a note, only selects. `enter`, `l` and a double-click open the note as a tab, or
+  switch to the tab already showing it; `o` replaces the current window's note, and `s` opens it in
+  the split's other window. A click on a folder folds or unfolds it.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. `enter` or a
   click jumps there, the places before it becoming back and those after it forward.
@@ -308,7 +309,8 @@ keys.
   matches, under their folders (all unfolded), the matched letters highlighted, the selection on the
   first note. The history keeps the entries whose path matches. The outline keeps the headings that
   match under their parents (folds ignored), the selection on the best match. The arrows and
-  `ctrl+n` / `ctrl+p` move, `enter` or a click opens (the filter clears), `esc` clears it. `ctrl+p`
+  `ctrl+n` / `ctrl+p` move, `enter` or a click opens (the explorer's: a double-click; the filter
+  clears), `esc` clears it. `ctrl+p`
   stays the flat quick-open across the vault.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.

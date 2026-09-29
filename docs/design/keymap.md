@@ -202,7 +202,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
-| mouse | click a folder to fold or unfold it; click a note to open it as a tab (or switch to its tab) |
+| mouse | click a folder to fold or unfold it; click a note to select it, double-click to open it as a tab |
 
 The history view (`space h h`, the left rail's `◷`) takes the same keys: `j` / `k` move, `enter`,
 `l` or a click jumps to the place, `/` filters, `q` closes, `esc` goes back to the note.
