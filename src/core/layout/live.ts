@@ -116,16 +116,15 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
     out[h.line] = { ...out[h.line]!, heading: k };
   });
   const links: LayoutLink[] = [];
-  for (const k of rendered.links) {
-    if (k.src >= old[0] && k.src <= old[1]) continue;
-    const row = newRow.get(k.line);
-    if (row !== undefined) links.push({ ...k, line: row, src: k.src > old[1] ? k.src + delta : k.src });
-  }
-  // Link indices on spans point into the old list: renumber the ones kept.
+  // Link indices on spans point into the old list: renumbered as the kept ones are pushed (a
+  // search per link would be quadratic in a note's links, on every keystroke in the lens).
   const index = new Map<number, number>();
   rendered.links.forEach((k, i) => {
-    const j = links.findIndex((x) => x.target === k.target && x.col === k.col && x.line === newRow.get(k.line));
-    if (j >= 0) index.set(i, j);
+    if (k.src >= old[0] && k.src <= old[1]) return;
+    const row = newRow.get(k.line);
+    if (row === undefined) return;
+    index.set(i, links.length);
+    links.push({ ...k, line: row, src: k.src > old[1] ? k.src + delta : k.src });
   });
   for (let r = 0; r < out.length; r++) {
     const l = out[r]!;

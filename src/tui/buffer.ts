@@ -239,9 +239,11 @@ export class NoteBuffer {
     const key = `src:${width}:${wrap ? 1 : 0}`;
     let l = this.layouts.get(key);
     if (!l) {
-      // Unedited, the render's headings (exact slugs); being edited, a quick scan of the text, so a
-      // keystroke never re-parses the note.
-      const headings = this.dirty ? scanHeadings(this.source) : this.layout(200, glyphs, false, null).headings.map(({ level, text, slug, src }) => ({ level, text, slug, src }));
+      // With a parse of this very text at hand, the render's headings (exact slugs); otherwise a
+      // quick scan of the text — so a keystroke, or an undo back to the saved text, never
+      // re-parses the note (a 1 MB note would take a second).
+      const parsed = this.parsedVersion === this.version && !this.dirty;
+      const headings = parsed ? this.layout(200, glyphs, false, null).headings.map(({ level, text, slug, src }) => ({ level, text, slug, src })) : scanHeadings(this.source);
       l = layoutSource(this.source, { width, wrap, headings });
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);

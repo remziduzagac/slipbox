@@ -491,7 +491,7 @@ export function prettyKey(seq: string, leader = "space"): string {
   return seq
     .split(" ")
     .map((k) => {
-      if (k === leaderKey) return "␣";
+      if (k === leaderKey) return leaderKey === "space" ? "␣" : prettyKey(leaderKey); // the leader as it is
       return k
         .replace(/^ctrl\+/, "C-")
         .replace(/alt\+/, "M-")

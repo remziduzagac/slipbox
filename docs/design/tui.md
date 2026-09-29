@@ -115,8 +115,9 @@ when the strip appears or goes.
 
 **The status line** is about the file. From left to right:
 
-- a mode chip: `READ`, `VISUAL`, `V-LINE`, `FILES`, `OUTLINE`, `RESIZE`, or the pending keys
-  (in short form: `␣ l`, `C-w`);
+- a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES`, `OUTLINE`, `RESIZE`,
+  or what's pending: keys of a sequence in short form (`␣ l`, `C-w`), or an operator, count or `r`
+  (`2d`, `di`);
 - the note's path (click to copy its absolute path);
 - `↻ reloaded` after an external change, or `✖ deleted on disk`;
 - whether external changes will show up: `● watching` (with a count of polled directories, if
@@ -483,7 +484,9 @@ file are polled every second (or every `watch.poll_ms`, if that is shorter). `sp
 - **walk settings:** the vault re-walked, re-indexed and re-watched
 - **watch settings:** the watcher restarted
 
-A broken file is reported in the message sink; the valid parts still apply.
+A broken file is reported in the message sink: a wrong value keeps its default and the rest of the
+file applies; a file that doesn't parse at all keeps what it said before (its last good contents),
+so a typo saved mid-edit changes nothing until it's fixed.
 
 ## Writing notes (phase 3)
 

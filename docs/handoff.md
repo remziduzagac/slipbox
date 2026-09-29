@@ -1,6 +1,6 @@
 # slipbox — handoff
 
-Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-09-28. Phases 0–3
+Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-09-29. Phases 0–3
 are built.
 Read this, then `docs/idea.md`, then `docs/plan.md`, then `docs/design/` for how it was built.
 

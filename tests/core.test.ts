@@ -633,3 +633,40 @@ describe("review cycle 2 (core)", () => {
     expect(editorArgv("nvim --server {server} --remote {file}", "/v/{line}-{server}.md", 7, {}, false, "/run/n.sock")).toEqual(["nvim", "--server", "/run/n.sock", "--remote", "/v/{line}-{server}.md"]);
   });
 });
+
+describe("review cycle 3 (config)", () => {
+  const write = (text: string) => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-c3-"));
+    const f = join(dir, "c.toml");
+    writeFileSync(f, text);
+    return { dir, f };
+  };
+  test("a file that fails to parse keeps its last good contents (a typo saved mid-edit)", () => {
+    const { f } = write('theme = "nord"\n');
+    const lastGood = new Map<string, Record<string, unknown>>();
+    expect(loadConfig({ configFile: f, lastGood }).config.theme).toBe("nord");
+    writeFileSync(f, 'theme = "nord"\n[keys\n');
+    const r = loadConfig({ configFile: f, lastGood });
+    expect(r.config.theme).toBe("nord");
+    expect(r.warnings.some((w) => w.includes("keeping what it said before"))).toBe(true);
+  });
+  test("a vault's keys and aliases can't name a command that throws work away", () => {
+    const { dir } = write("");
+    mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
+    writeFileSync(join(dir, "v", ".slipbox", "config.toml"), '[aliases]\nwq = "app.quit_force"\n[keys]\n"ctrl+s" = "note.revert"\n"g z" = "ui.zen"\n');
+    const r = loadConfig({ configFile: join(dir, "none.toml"), vaultRoot: join(dir, "v") });
+    expect(r.config.aliases.wq).toBeUndefined();
+    expect((r.config.keys as Record<string, string>)["ctrl+s"]).toBeUndefined();
+    expect((r.config.keys as Record<string, string>)["g z"]).toBe("ui.zen"); // a harmless one applies
+  });
+  test("wrong shapes are warnings and the rest of the file applies", () => {
+    const a = loadConfig({ configFile: write('theme = "nord"\n[walk]\nexclude = [{ path = "x/" }]\n').f });
+    expect(a.config.theme).toBe("nord");
+    expect(a.warnings.some((w) => w.includes("list of strings"))).toBe(true);
+    const b = loadConfig({ configFile: write('[keys]\nsource = "edit.delete_char"\n').f });
+    expect(b.warnings.some((w) => w.includes("must be a table"))).toBe(true);
+    expect((b.config.keys as Record<string, unknown>).source).toBeUndefined();
+    const c = loadConfig({ configFile: write("[walk]\nextensions = []\n").f });
+    expect(c.config.walk.extensions.length).toBeGreaterThan(0);
+  });
+});

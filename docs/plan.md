@@ -1,7 +1,7 @@
 # slipbox — implementation plan
 
-Status: **phases 0–2 built**. Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25 — how it
-was built is in `docs/design/`, the decisions it needed in `docs/design/decisions.md`.
+Status: **phases 0–3 built**. Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
+2026-09-28 — how it was built is in `docs/design/`, the decisions it needed in `docs/design/decisions.md`.
 
 The design lives in `docs/idea.md` — what slipbox is, why each decision went the
 way it did, and what was ruled out. This file is the other half: the units of work, with
@@ -261,7 +261,6 @@ optional `--if-unchanged` for careful writers.
 | ID | Decision | Gates |
 | --- | --- | --- |
 | `6.1` | Search — own, `qmd`, or an optional `zk` tier | Phase 4 |
-| `7.6` | Frontmatter spliced by byte range, never re-serialised | Phase 3 |
 | `10.5` | PDF base — `pdfkit` or `@react-pdf/renderer` | Phase 6+ |
 
 ## Step 0 — codebase
@@ -349,7 +348,7 @@ common, and the only reason they are step 0.
 | --- | --- |
 | 4.1 | `$EDITOR` hand-off using OpenTUI `suspend()` / `resume()` |
 | 4.2 | `editor.command` template with `{file}` and `{line}` — there is no portable line-number flag |
-| 4.3 | In-app editor on `Textarea` / `EditBuffer` |
+| 4.3 | In-app editor — built as `NoteBuffer` with `editing.ts` and `vim.ts`, not on `Textarea` |
 | 4.4 | Modal layer — state machine over the named actions from 0.8 |
 | 4.5 | Undo/redo wiring, surviving external reload |
 | 4.6 | Atomic save, temp plus rename |
@@ -431,7 +430,7 @@ common, and the only reason they are step 0.
 | 9.4 | Cross-process semantics — **decided**: disk is the contract. See Agent integration |
 | 9.9 | Advisory staleness file — TUI writes dirty paths plus its pid; CLI surfaces them |
 | 9.10 | `--if-unchanged` for writers that must not clobber |
-| 9.5 | Graph queries: links, backlinks, orphans, tags |
+| 9.5 | Graph queries: links and backlinks built; orphans and tags wait for `1.6`/`1.7` (phase 4) |
 | 9.6 | `capture` subcommand |
 | 9.7 | **Context-bundle assembler** — shared with 10.1 |
 | 9.8 | The agent-facing skill that teaches the CLI |
@@ -513,11 +512,12 @@ packaging lands whenever it first needs to run on a VM.*
 | ID | Item |
 | --- | --- |
 | 15.1 | Incremental layout: a width change re-lays out only what it changes |
-| 15.2 | Pathological nesting: parse off the main thread, or cap the depth first |
+| 15.2 | Pathological nesting — **done** as a cap: nesting past 60 renders as text, quadratic parser inputs tamed |
 
 `15.1`: dragging a border, resize mode, a pane or wrap toggle and a terminal resize each re-lay out
-the whole note today, hundreds of ms per step for a 20,000-line note. `15.2`: a list nested
-hundreds of levels deep takes seconds in the markdown parser, on the main thread.
+the whole note today, hundreds of ms per step for a 20,000-line note — and leaving insert mode in the
+lens re-parses the note (about a second at 1 MB). `15.2` is done as a cap (`docs/design/rendering.md`,
+"Hostile notes").
 
 ## Deferred — in the design, not in this breakdown
 

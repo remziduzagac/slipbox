@@ -204,7 +204,8 @@ function nextConfirm(app: App, o: PromptOverlay, view: View): boolean {
   o.replace!.current = c.asked;
   o.replace!.total = c.asked + left.length;
   // The highlights: this pattern, the match being asked about current.
-  const f = computeFind(app.currentLayout(view), o.text, 0, false, true);
+  // Case as the pattern has it (:s…/i ignores it), so the highlights are the matches it asks about.
+  const f = computeFind(app.currentLayout(view), o.text, 0, false, true, c.re.flags.includes("i"));
   const i = f.matches.findIndex((m) => m.row > view.cur.row || (m.row === view.cur.row && m.col >= view.cur.col));
   f.current = i < 0 ? 0 : i;
   view.find = f;

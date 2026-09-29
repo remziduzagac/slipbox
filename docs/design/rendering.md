@@ -167,8 +167,10 @@ Carried over from the nvim configuration, where they were arrived at by trial:
   right border never sits on the edge. It is capped at 5% of narrow panes and is never below 1.
 - **Inline code** has its own background: `#c0caf5` on `#292e42`, italic, in Tokyo Night.
 - **Bold** has an explicit lighter foreground: `#bcc5e6` in Tokyo Night.
-- **Borders** are thick (`┃`, `━`), in the one `border` colour whatever has focus; focus shows
-  as brightness in titles and tabs ([tui.md](tui.md)).
+- **Borders** are light (`│`, `─`) by default, heavy (`┃`, `━`) with `ui.lines = "heavy"`, in the
+  one `border` colour whatever has focus; focus shows as brightness in titles and tabs
+  ([tui.md](tui.md)). Where two lines meet a rule at one column, the joint is one glyph from all
+  their arms (`╋`, not whichever was drawn last).
 - **Code fences** are full width, with no right padding.
 
 ## Themes (plan `2.6`)

@@ -168,7 +168,12 @@ Measured on this machine (aarch64 VM) on 2026-09-25:
 The graph parses lazily. The walk alone supplies every note name, which is all link resolution
 needs, so `render` and `resolve` never parse the whole vault. `backlinks`, `ls --json` and
 `outline` parse what they need and persist it. The TUI paints the first note straight away and
-parses the rest in 12 ms slices between frames, showing `indexing N…` in the top bar.
+parses the rest in slices of about 12 ms between frames, showing `indexing N…` in the top bar. A
+slice always parses at least one whole note, so a 1 MB note holds the screen for about a second
+while it is indexed (and a note that size takes 1–3 s to open, and to leave insert mode in the lens:
+`15.1`). Moving around even a 1 MB note stays in single-digit milliseconds. Typing in the lens takes
+7–13 ms a key there; in source mode about 100 ms on a 20,000-line note, since every key rebuilds the
+whole source layout (making it incremental is `15.1`).
 
 Parsing costs about 2 ms per 3 KB note, which is remark's own speed. Parsing in worker threads is
 the next lever. It belongs with phase 4's vault-scale work.

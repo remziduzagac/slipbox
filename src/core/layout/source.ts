@@ -70,8 +70,14 @@ export function layoutSource(source: string, opts: SourceLayoutOptions): Layout 
   });
   if (!lines.length) lines.push({ spans: [], src: 1, srcMap: { cells: [], end: 0 } });
   const headings: LayoutHeading[] = [];
+  // Each source line's first row, in one pass (rows are in source order): a lookup per heading
+  // would be headings × rows on every keystroke.
+  const firstRow = new Map<number, number>();
+  lines.forEach((l, i) => {
+    if (!firstRow.has(l.src)) firstRow.set(l.src, i);
+  });
   for (const h of opts.headings) {
-    const row = lines.findIndex((l) => l.src === h.src);
+    const row = firstRow.get(h.src) ?? -1;
     if (row < 0) continue;
     lines[row]!.heading ??= headings.length;
     headings.push({ ...h, line: row });

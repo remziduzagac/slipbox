@@ -17,10 +17,11 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/vault.test.ts` | discovery, the walk against the fixture vault, the graph, the CLI and parity |
 | `tests/cli.test.ts` | the CLI as an agent meets it: the real process on a copy of the demo vault; every command |
 | `tests/tui.test.ts` | the TUI model, the real watcher, state, keymap, OpenTUI end to end |
-| `tests/regressions.test.ts` | one test per bug found in review (later: "review round N" blocks) |
+| `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
 
-Later review rounds keep their regression tests in `describe("review round N …")` blocks in the
-file for the area: `tui.test.ts`, `core.test.ts` and `vault.test.ts`.
+Later reviews keep their regression tests in `describe("review round N …")` or `describe("review cycle
+N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.test.ts`,
+`render.test.ts` and `cli.test.ts`.
 
 **Properties, not just examples:**
 

@@ -343,6 +343,28 @@ describe("the vault and the tool", () => {
     expect(existsSync(join(state, "dirty", "999999.json"))).toBe(false);
     rmSync(join(state, "dirty"), { recursive: true, force: true });
   });
+  test("review cycle 3: an empty write never empties a note; append a block; previews show lines", () => {
+    const before = note("people/kenji-mori.md");
+    const empty = slipbox(["write", "kenji-mori", "--stdin"], { stdin: "" });
+    expect(empty.code).toBe(2);
+    expect(note("people/kenji-mori.md")).toBe(before);
+    writeFileSync(join(vault, "table-end.md"), "| a | b |\n| - | - |\n| 1 | 2 |\n");
+    slipbox(["write", "table-end", "A new paragraph.", "--append", "--paragraph"]);
+    expect(readFileSync(join(vault, "table-end.md"), "utf8")).toBe("| a | b |\n| - | - |\n| 1 | 2 |\n\nA new paragraph.\n");
+    writeFileSync(join(vault, "partial.md"), "Asterion and Aster\n");
+    const changes = slipbox(["replace", "partial", "Aster", "Vega", "--dry-run", "--json"]).json.data.changes;
+    expect(changes[0]).toMatchObject({ line: 1, column: 1, text: "Asterion and Aster", textAfter: "Vegaion and Aster" });
+    expect(changes[1]).toMatchObject({ column: 14, textAfter: "Asterion and Vega" });
+    const tasks = slipbox(["task", "2026-09-14-weekly", "--json"]).json.data;
+    expect(tasks.sha).toMatch(/^[0-9a-f]{16}$/);
+    expect(tasks.tasks.some((t: { raw: string }) => t.raw.includes("[["))).toBe(true);
+    expect(slipbox(["write", "brand-new-name", "x"]).err).toContain("--create makes a new note");
+    // --create is vault-relative from anywhere in it, unless it says ./ or ../
+    slipbox(["write", "meetings/from-root", "x", "--create"], { cwd: join(vault, "meetings") });
+    expect(existsSync(join(vault, "meetings", "from-root.md"))).toBe(true);
+    slipbox(["write", "./here", "x", "--create"], { cwd: join(vault, "meetings") });
+    expect(existsSync(join(vault, "meetings", "here.md"))).toBe(true);
+  });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));
     expect(missing).toEqual([]);

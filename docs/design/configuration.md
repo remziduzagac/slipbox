@@ -10,13 +10,22 @@ TOML, in two levels, with the vault winning (plan `0.9`):
 **What only you can set.** The vault file comes with whatever you clone, so it never chooses a
 program slipbox runs: `editor.command` and `editor.remote` there are ignored, with a warning, and
 only your user file sets them (`USER_ONLY` in `core/config.ts`). The rest of `[editor]` applies.
+Nor may its `[keys]` or `[aliases]` name a command that throws work away — `app.quit_force`,
+`note.revert`, `note.save_force`, `scratch.clear` (`VAULT_FORBIDDEN_COMMANDS`) — so a clone can't put
+one on `ctrl+s` or `:wq`; those bindings are dropped with a warning.
+
+**A typo saved mid-edit.** When a file fails to parse on a live reload, it keeps what it said
+before (its last good contents), with a warning — your theme, keys and picked settings stay — until
+it parses again.
 
 slipbox runs correctly with no config at all. None of these crash it:
 
 - a broken file
 - an unknown key
 - a wrong type
-- a value outside its set (`glyphs`, `show_urls`, `location`)
+- a value outside its set (`glyphs`, `show_urls`, `location`, `ui.lines`, `editor.edit_in`)
+- a list with something other than strings in it, a mode's key table (`[keys.source]`…) given as a
+  string, or an empty `walk.extensions`
 - a number out of range (`inset` 0–40, `sidebar_width` 8–200, `poll_ms` ≥ 50…), or a fraction
   where a whole number is meant (only `ui.split_ratio` and `editor.lens_max` are fractional)
 
@@ -96,10 +105,10 @@ poll_ms = 2000                 # backstop tick, unwatchable directories, degrade
 "Y" = "visual.yank"
 
 [keys.explorer]                # key = explorer action: down up open_tab expand open
-"p" = "open"                   #   collapse open_split top bottom close leave
+"p" = "open"                   #   collapse open_split top bottom filter close leave
 
 [keys.outline]                 # key = outline action: down up jump fold unfold
-"z a" = "fold"                 #   top bottom close leave (sequences: space-separated keys)
+"z a" = "fold"                 #   top bottom filter close leave (sequences: space-separated keys)
 
 [keys.resize]                  # key = resize action: narrower wider shorter taller
 "<" = "narrower"               #   equalize leave

@@ -70,10 +70,12 @@ export function findAll(text: string, re: RegExp, from = 0, to = text.length, em
   const out: TextMatch[] = [];
   const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`);
   g.lastIndex = from;
+  let lastEnd = -1;
   for (let m = g.exec(text); m; m = g.exec(text)) {
     const at = m.index;
     if (!m[0]) {
       g.lastIndex++;
+      if (at === lastEnd) continue; // right after a real match (a* on aaa): not a second one
       // An empty match at `to` is the next line's start, unless the note ends there unterminated.
       const inside = at < to || (at === text.length && to === text.length && !text.endsWith("\n"));
       if (empty && inside) out.push({ from: at, to: at, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });
@@ -82,6 +84,7 @@ export function findAll(text: string, re: RegExp, from = 0, to = text.length, em
     }
     if (at >= to || at + m[0].length > to) break;
     out.push({ from: at, to: at + m[0].length, groups: [m[0], ...m.slice(1).map((x) => x ?? "")] });
+    lastEnd = at + m[0].length;
   }
   return out;
 }
@@ -153,6 +156,11 @@ export function parseSubstitute(input: string): Substitute | null {
     if (ch === "\\" && input[i + 1] === delim) {
       parts[parts.length - 1] += delim;
       i += 2;
+    } else if (ch === "\\" && i + 1 < input.length) {
+      // Any other escape is a pair, kept whole: \\ is a backslash, so the delimiter after it ends
+      // the part (:%s/$/\\/ appends a backslash — markdown's hard break).
+      parts[parts.length - 1] += ch + input[i + 1]!;
+      i += 2;
     } else if (ch === delim && parts.length < 3) {
       parts.push("");
       i++;
@@ -163,7 +171,9 @@ export function parseSubstitute(input: string): Substitute | null {
   }
   const [pattern = "", rawReplacement = "", flags = ""] = parts;
   if (!pattern || !/^[gic]*$/.test(flags.trim())) return null;
-  const replacement = rawReplacement.replace(/\$/g, "$$$$").replace(/\\([1-9&\\])|&/g, (all: string, k?: string) => (k === undefined ? "$&" : k === "&" ? "&" : k === "\\" ? "\\" : `$${k}`));
+  // \r (vim's) and \n are a line break, \t a tab.
+  const escapes: Record<string, string> = { "&": "&", "\\": "\\", r: "\n", n: "\n", t: "\t" };
+  const replacement = rawReplacement.replace(/\$/g, "$$$$").replace(/\\([1-9&\\rnt])|&/g, (all: string, k?: string) => (k === undefined ? "$&" : (escapes[k] ?? `$${k}`)));
   return {
     range: m[1] === "%" ? "all" : m[1] ? "selection" : "line",
     pattern,

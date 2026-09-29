@@ -97,7 +97,8 @@ async function handle(app: App, view: View, key: string, dispatch: () => Promise
   if (s.count && !app.pending.length) {
     const spec = app.keymap.lookup(key);
     // (f and t read their count themselves.)
-    if (spec?.startsWith("cursor.") && !spec.startsWith("cursor.find_") && !app.keymap.isPrefix(key) && !app.sourceKeys.lookup(key)) {
+    // (G with a count is a line number, not repeated: cursor.bottom reads the count itself.)
+    if (spec?.startsWith("cursor.") && spec !== "cursor.bottom" && !spec.startsWith("cursor.find_") && !app.keymap.isPrefix(key) && !app.sourceKeys.lookup(key)) {
       const n = takeCount(app);
       for (let k = 0; k < n; k++) await app.run(spec);
       return;
@@ -208,25 +209,52 @@ async function motionRange(app: App, view: View, spec: string, count: number, op
   let motion = spec;
   // cw on a word changes to its end (as vim does), not to the next word's start — and on a word's
   // last character (or a one-letter word) just that character, never through the next word.
-  if (op === "c" && spec === "cursor.word_next" && !/\s/.test(view.buf.source[from] ?? " ")) {
-    if (count === 1) {
-      const text = view.buf.source;
-      const kind = (ch: string) => (/[\p{L}\p{N}_]/u.test(ch) ? 1 : /\s/.test(ch) ? 0 : 2);
-      let end = from + 1;
-      while (end < text.length && kind(text[end]!) === kind(text[from]!) && kind(text[end]!) !== 0) end++;
-      return { from, to: end, linewise: false };
+  const text = view.buf.source;
+  const kind = (ch: string) => (/[\p{L}\p{N}_]/u.test(ch) ? 1 : /\s/.test(ch) ? 0 : 2);
+  /** The end of the word run starting at `at` (letters, or punctuation). */
+  const runEnd = (at: number) => {
+    let end = at;
+    const k = kind(text[at] ?? " ");
+    while (end < text.length && k !== 0 && kind(text[end]!) === k) end++;
+    return end;
+  };
+  if (op === "c" && spec === "cursor.word_next" && !/\s/.test(text[from] ?? " ")) {
+    // cw: this word to its end — from its last letter, just that — then each further word counted,
+    // across lines if need be; never through a word more than asked.
+    let end = runEnd(from);
+    for (let k = 1; k < count; k++) {
+      while (end < text.length && kind(text[end]!) === 0) end++;
+      if (end >= text.length) break;
+      end = runEnd(end);
     }
-    motion = "cursor.word_end";
+    return { from, to: end, linewise: false };
+  }
+  // dw / yw on the note's last word: there's no next word for w to reach, so the rest of the line.
+  if (spec === "cursor.word_next" && count === 1 && !/\S/.test(text.slice(runEnd(from)))) {
+    const to = E.lineEnd(view, from);
+    return to > from ? { from, to, linewise: false } : null;
   }
   for (let k = 0; k < count; k++) await app.run(motion);
   const to = E.offsetOf(app, view);
   Object.assign(view, saved);
+  // dj on the last line, dk on the first: nowhere to go, so nothing (vim fails, it deletes nothing).
+  if ((motion === "cursor.down" || motion === "cursor.up") && E.lineOf(view, to) === E.lineOf(view, from)) return null;
+  // dl on a line's last character: l can't move, yet it takes that character (as x does).
+  if (motion === "cursor.right" && to <= from) {
+    const end = E.lineEnd(view, from);
+    return from < end ? { from, to: Math.min(end, E.nextBoundary(text, from)), linewise: false } : null;
+  }
   if (LINEWISE.has(motion)) return linesRange(view, E.lineOf(view, Math.min(from, to)), E.lineOf(view, Math.max(from, to)));
   let a = Math.min(from, to);
   let b = Math.max(from, to);
   if (INCLUSIVE.has(motion)) b = Math.min(E.nextBoundary(view.buf.source, b), Math.max(b, E.lineEnd(view, b)));
-  // dw at a line's last word stops at the line's end, not the next line's first word.
-  if (motion === "cursor.word_next" && E.lineOf(view, b) > E.lineOf(view, a)) b = Math.max(a, E.lineEnd(view, a));
+  // dw at a line's last word stops at the line's end, not the next line's first word: when the
+  // motion ends at the very start of a later line (vim's rule; d3w reaching into a line's words
+  // takes them).
+  // } in the note's last paragraph stops on its last line's start: an operator takes that line too.
+  if (motion === "cursor.paragraph_next" && b > a && !/\n[ \t]*\n/.test(text.slice(b)) && text.slice(b).trim()) b = E.lineEnd(view, b);
+  const bLine = E.lineOf(view, b);
+  if (motion === "cursor.word_next" && bLine > E.lineOf(view, a) && b === (view.buf.lineStarts()[bLine - 1] ?? -1)) b = Math.max(a, E.lineEnd(view, b - 1));
   if (a === b) return null;
   return { from: a, to: b, linewise: false };
 }

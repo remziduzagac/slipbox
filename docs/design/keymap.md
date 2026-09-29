@@ -344,7 +344,15 @@ stepping back onto a character; `enter` a new line with the same indentation, co
 marker, ending the list; `backspace` / `delete` a character (joining lines at an edge); `ctrl+w`
 the word before; `ctrl+u` back to the line's start; `tab` / `shift+tab` indent or outdent the line
 by two spaces; the arrows, `home` and `end` move; `ctrl+s` saves. A paste goes into the text.
-Source mode's own keys are `[keys.source]` in config (`x` is its only one so far).
+Source mode's own keys are `[keys.source]` in config: the operators and edits above (`d c y > < D C s
+S r J p P ~ . x`), which win over the reading keys there.
+
+**Where source mode isn't vim.** Motions move by the rows you see, as in reading: on a long line
+wrapped across rows, `0`, `$`, `j` and `k` (and `d$`, `dj`) work on the row, while `D`, `C`, `A`,
+`I`, `dd` and `cc` work on the whole source line. A word motion never stops inside a word where it
+wraps. Each CJK character is a word for `w`, `b` and `e`, while `iw`, `*` and `#` take the whole run
+of them. `/` typed with the cursor on a match stays on it (vim moves to the next). `r` and `f` take
+a character typed, not `enter` or `tab`. A count before `gg` or `G` is a line number (`3gg`, `5G`).
 
 ## UI — `space u`
 

@@ -61,6 +61,8 @@ class Session {
   warnings: string[] = [];
   private _graph: Graph | null = null;
   readonly config: Config;
+  /** The config files read, in the order applied (user, then the vault's). */
+  readonly configSources: string[];
 
   constructor(
     readonly args: Args,
@@ -69,6 +71,7 @@ class Session {
   ) {
     const loaded = loadConfig({ vaultRoot: loc.mode === "vault" ? loc.root : null, configFile: flag(args, "config") });
     this.config = loaded.config;
+    this.configSources = loaded.sources;
     this.warnings.push(...loaded.warnings);
     if (loc.note && loc.mode === "single") this.warnings.push(loc.note);
   }
@@ -102,7 +105,7 @@ Usage:
   slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first | --first-per-line] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
   slipbox read <note>               a note's text, and its sha
-  slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append] [--create] [--if-unchanged <sha>]
+  slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M]] [--snippet] [--stdin] [--lang L]
@@ -476,7 +479,7 @@ const HANDLERS: Record<string, Handler> = {
       root: s.loc.root,
       mode: s.loc.mode,
       markerVersion: s.loc.mode === "vault" ? readVaultVersion(s.loc.root) : null,
-      config: { user: flag(s.args, "config") ?? s.io.env.SLIPBOX_CONFIG ?? userConfigFile(), theme: s.config.theme },
+      config: { user: flag(s.args, "config") ?? s.io.env.SLIPBOX_CONFIG ?? userConfigFile(), sources: s.configSources, theme: s.config.theme },
       cache: cacheDir(s.loc.root),
       state: stateDir(s.loc.root),
       scratch: scratch.path,
@@ -490,7 +493,7 @@ const HANDLERS: Record<string, Handler> = {
       `root      ${data.root} (${data.mode}${data.markerVersion ? `, marker v${data.markerVersion}` : ""})`,
       `notes     ${data.notes} (parsed ${g.stats.parsed}, cached ${g.stats.cached}, ${g.stats.ms.toFixed(0)} ms)`,
       `theme     ${data.config.theme}`,
-      `config    ${data.config.user}`,
+      `config    ${data.config.sources.length ? data.config.sources.join(", then ") : `none (${data.config.user} doesn't exist)`}`,
       `cache     ${data.cache}`,
       `state     ${data.state}`,
       `scratch   ${data.scratch}`,
@@ -567,12 +570,23 @@ const HANDLERS: Record<string, Handler> = {
     const regex = has(s.args, "regex");
     const out = replaceMatches(file.text, ms, replacement, regex);
     if (!dry && out.count) writeNoteText(s, abs, out.text, file);
-    const changes = ms.map((m) => ({ line: lineAt(starts, m.from), before: m.groups[0]!, after: expandReplacement(replacement, m, regex) }));
+    // Each change with its column and its line before and after (a window of a long one), so a
+    // preview shows a match inside a longer word, and two on one line apart.
+    const changes = ms.map((m) => {
+      const line = lineAt(starts, m.from);
+      const ls = starts[line - 1]!;
+      const le = (starts[line] ?? file.text.length + 1) - 1;
+      const after = expandReplacement(replacement, m, regex);
+      const lineBefore = around(file.text, ls, le, m.from, m.to);
+      const edited = file.text.slice(0, m.from) + after + file.text.slice(m.to);
+      const lineAfter = around(edited, ls, le + after.length - (m.to - m.from), m.from, m.from + after.length);
+      return { line, column: [...file.text.slice(ls, m.from)].length + 1, before: m.groups[0]!, after, text: lineBefore, textAfter: lineAfter };
+    });
     const verb = dry ? "would replace" : "replaced";
     return {
       // newSha: the note's sha after the call; null on a dry run, which wrote nothing to hash.
       data: { path: rel, count: out.count, dryRun: dry, sha: file.sha, newSha: dry ? null : out.count ? shaOf(abs) : file.sha, changes },
-      human: `${verb} ${out.count} in ${rel}\n${dry ? changes.map((c) => `${c.line}: ${c.before} → ${c.after}\n`).join("") : ""}`,
+      human: `${verb} ${out.count} in ${rel}\n${dry ? changes.map((c) => `${c.line}:${c.column}: ${c.text}\n${" ".repeat(String(c.line).length + String(c.column).length + 2)}→ ${c.textAfter}\n`).join("") : ""}`,
     };
   },
 
@@ -583,7 +597,10 @@ const HANDLERS: Record<string, Handler> = {
     const file = readNoteFile(s, abs, false);
     const tasks = listTasks(parseMarkdown(file.text).tree);
     if (rest[1] === undefined) {
-      return { data: { path: rel, tasks }, human: tasks.map((t) => `${String(t.line).padStart(5)}  [${t.checked ? "x" : " "}] ${t.text}\n`).join("") };
+      // Each task's source line too (its text keeps [[links]]), and the note's sha for a safe tick.
+      const lines = file.text.split("\n");
+      const withRaw = tasks.map((t) => ({ ...t, raw: (lines[t.line - 1] ?? "").replace(/\r$/, "") }));
+      return { data: { path: rel, sha: file.sha, tasks: withRaw }, human: tasks.map((t) => `${String(t.line).padStart(5)}  [${t.checked ? "x" : " "}] ${t.text}\n`).join("") };
     }
     const line = Number(rest[1]);
     if (!Number.isInteger(line) || line < 1) throw new UsageError("the task's line must be a whole number from 1");
@@ -630,7 +647,8 @@ const HANDLERS: Record<string, Handler> = {
     if (has(s.args, "create")) {
       // A new note: the argument is a path in the vault (relative to it, or to cwd when inside
       // it), never a name to resolve — and a file already there is never overwritten.
-      const base = noteArg.startsWith("/") ? noteArg : isInside(s.loc.root, join(s.io.cwd, noteArg)) ? join(s.io.cwd, noteArg) : join(s.loc.root, noteArg);
+      // A path in the vault, from its root — or from the current folder when it says so (./, ../).
+      const base = noteArg.startsWith("/") ? noteArg : /^\.\.?\//.test(noteArg) ? join(s.io.cwd, noteArg) : join(s.loc.root, noteArg);
       const abs = /\.(md|markdown)$/i.test(base) ? base : `${base}.md`;
       // Outside by its path, or by a symlinked folder on the way: checked before any folder is made.
       if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${noteArg} is outside the vault (${s.loc.root})`, EXIT.refused);
@@ -639,17 +657,28 @@ const HANDLERS: Record<string, Handler> = {
       if (existsSync(abs)) throw new CliError(`${rel} already exists; not overwriting it (drop --create to write it)`, EXIT.refused, { path: rel });
       created = true;
     } else {
-      rel = resolveNote(s, noteArg, false);
+      try {
+        rel = resolveNote(s, noteArg, false);
+      } catch (err) {
+        if (err instanceof CliError && err.code === EXIT.notFound) throw new CliError(`${err.message} (--create makes a new note)`, EXIT.notFound);
+        throw err;
+      }
       checkWritable(s, join(s.loc.root, rel));
     }
     const abs = join(s.loc.root, rel);
     let previous: NoteFile | null = null;
     if (!created) previous = readNoteFile(s, abs);
     else if (flag(s.args, "if-unchanged") !== undefined) throw new CliError(`${rel} doesn't exist; --if-unchanged has nothing to compare`, EXIT.refused);
+    // Nothing to write is almost always a failed producer (gen | slipbox write note --stdin): it
+    // would empty the note, and --if-unchanged can't catch it. Said on purpose with --allow-empty.
+    if (!text && !has(s.args, "append") && !has(s.args, "allow-empty")) throw new UsageError("nothing to write (empty text); --allow-empty empties the note on purpose");
     let content = text;
     if (previous && has(s.args, "append")) {
-      const sep = previous.text && !previous.text.endsWith("\n") ? "\n" : "";
-      content = `${previous.text}${sep}${text}`;
+      // On a new line; with --paragraph after a blank one too, so the text is a block of its own
+      // (a line appended right after a table would be its next row, after a paragraph part of it).
+      const body = previous.text.replace(/\n*$/, "");
+      const sep = !body ? "" : has(s.args, "paragraph") ? "\n\n" : "\n";
+      content = has(s.args, "paragraph") ? `${body}${sep}${text}` : `${previous.text}${previous.text && !previous.text.endsWith("\n") ? "\n" : ""}${text}`;
     }
     if (created) mkdirSync(dirname(abs), { recursive: true });
     writeNoteText(s, abs, content, previous);
@@ -684,12 +713,15 @@ const HANDLERS: Record<string, Handler> = {
     const read = Object.entries(positions)
       .filter(([, p]) => p && typeof p.at === "string")
       .sort((a, b) => (a[1].at! < b[1].at! ? 1 : -1))
-      .map(([path, p]) => ({ path, at: p.at!, line: p.cursor?.anchor?.line ?? p.line ?? 1 }));
+      .map(([path, p]) => ({ path, at: p.at!, line: p.cursor?.anchor?.line ?? p.line ?? 1, exists: existsSync(join(s.loc.root, path)) }));
     const session = loadSession(s.loc.root);
     const open = (session?.tabs ?? []).map((t) => t.panes.map((p) => p.path));
+    // What the user is looking at: the active tab's active window's note.
+    const tab = session?.tabs[session.activeTab];
+    const current = tab ? (tab.panes[tab.active] ?? tab.panes[0])?.path ?? null : null;
     return {
-      data: { read, open },
-      human: read.map((r) => `${r.at.slice(0, 16).replace("T", " ")}  ${r.path}:${r.line}\n`).join(""),
+      data: { read, open, activeTab: session?.activeTab ?? null, current },
+      human: read.length ? read.map((r) => `${r.at.slice(0, 16).replace("T", " ")}  ${r.path}:${r.line}${r.exists ? "" : "  (deleted)"}\n`).join("") : "nothing read in the TUI yet\n",
     };
   },
 

@@ -75,6 +75,15 @@ function charsRange(a: App, v: View, n: number): V.Range | null {
   return { from: at, to: Math.min(to, end), linewise: false };
 }
 
+/** A count typed before gg or G, in an editable window: the start of that source line. */
+function countedLine(a: App, v: View): C.Pos | null {
+  if (!editable(v) || !a.vim.count) return null;
+  const n = V.takeCount(a);
+  const starts = v.buf.lineStarts();
+  E.placeAt(a, v, starts[Math.min(n, starts.length) - 1] ?? 0);
+  return { ...v.cur };
+}
+
 /** D / C: to the end of the line (with a count, of the line count-1 below). */
 function toLineEnd(a: App, v: View, n: number): V.Range {
   const at = E.offsetOf(a, v);
@@ -96,7 +105,10 @@ function joinLines(a: App, v: View, n: number): void {
     const next = buf.lineStarts()[first];
     if (next === undefined) break;
     const lead = /^\s*/.exec(E.lineText(v, first + 1))![0].length;
-    const sep = E.lineText(v, first).endsWith(" ") || !E.lineText(v, first + 1).trim() ? "" : " ";
+    // No space after one already, into an empty line, before an empty one, or before a closing ) (vim).
+    const here = E.lineText(v, first);
+    const after = E.lineText(v, first + 1).trimStart();
+    const sep = here.endsWith(" ") || !here.trim() || !after || after.startsWith(")") ? "" : " ";
     buf.edit(end, next + lead - end, sep);
     at = end;
   }
@@ -268,6 +280,9 @@ function linkTarget(a: App, v: View, link: LayoutLink): string {
 function argCandidates(a: App, cmd: string): string[] | null {
   switch (cmd) {
     case "note.open":
+    case "window.split_side":
+    case "window.split_stacked":
+    case "tab.new":
       return [...a.graph.notes.keys()];
     case "theme.set":
       return listThemes().map((t) => t.name);
@@ -397,6 +412,14 @@ function openPalette(a: App): void {
         runChosen(a, sel ? (sel.data as string) : `${spec} ${arg}`);
         return true;
       }
+      // An argument the command doesn't take: the typing is probably a title ("zen mode"), which the
+      // list picks; when nothing there matches either (:w other.md), it's said, never dropped.
+      if (arg && !argCandidates(a, spec.split(" ")[0]!) && !spec.includes(" ")) {
+        if (a.overlay?.kind === "list" && a.overlay.filtered.some((e) => !e.item.header)) return false;
+        a.overlay = null;
+        a.message("warn", `:${m[1]} takes no argument (${arg} ignored)`);
+        return true;
+      }
       a.overlay = null;
       runChosen(a, arg ? `${spec} ${arg}` : spec);
       return true;
@@ -509,8 +532,9 @@ function pickTheme(a: App): void {
       a.setUi("theme", item.data as string);
       a.message("info", `theme ${a.theme.name} · theme = "${a.theme.name}" in config makes it the default`);
     },
+    // Back to the setting as it is now (a config reload may have changed it while the list was open).
     cancel: () => {
-      a.theme = a.themeNamed(before).theme;
+      a.theme = a.themeNamed(a.ui.theme).theme;
     },
   });
 }
@@ -531,7 +555,7 @@ function pickGlyphs(a: App): void {
       a.setUi("glyphs", item.data as string);
       a.message("info", `glyphs: ${item.data}`);
     },
-    cancel: () => preview(before),
+    cancel: () => preview(a.ui.glyphs), // the setting now, not when the list opened
   });
 }
 
@@ -603,8 +627,9 @@ export function registerActions(app: App): void {
     "cursor.line_start": motion((a, v) => C.lineStart(lay(a, v), v.cur)),
     "cursor.line_end": motion((a, v) => C.lineEnd(lay(a, v), v.cur)),
     "cursor.first_nonblank": motion((a, v) => C.firstNonBlank(lay(a, v), v.cur)),
-    "cursor.top": motion((a, v) => C.top(lay(a, v))),
-    "cursor.bottom": motion((a, v) => C.bottom(lay(a, v))),
+    // gg and G; with a count in source mode (3gg, 5G), that line of the note, as vim.
+    "cursor.top": motion((a, v) => countedLine(a, v) ?? C.top(lay(a, v))),
+    "cursor.bottom": motion((a, v) => countedLine(a, v) ?? C.bottom(lay(a, v))),
     "cursor.heading_prev": motion((a, v) => C.headingPrev(lay(a, v), v.cur)),
     "cursor.heading_next": motion((a, v) => C.headingNext(lay(a, v), v.cur)),
     "cursor.paragraph_prev": motion((a, v) => C.paragraphPrev(lay(a, v), v.cur)),
@@ -749,8 +774,15 @@ export function registerActions(app: App): void {
         a.openLeftView("history", "cycle");
       }),
     // windows
-    "window.split_side": (a) => a.splitWith("side"),
-    "window.split_stacked": (a) => a.splitWith("stacked"),
+    // :vs <note> and :sp <note> (vim's): the split, then that note in it.
+    "window.split_side": async (a, arg) => {
+      a.splitWith("side");
+      if (arg) await a.run(`note.open ${arg}`);
+    },
+    "window.split_stacked": async (a, arg) => {
+      a.splitWith("stacked");
+      if (arg) await a.run(`note.open ${arg}`);
+    },
     "window.focus_left": (a) => a.focusDir("left"),
     "window.focus_down": (a) => a.focusDir("down"),
     "window.focus_up": (a) => a.focusDir("up"),
@@ -795,10 +827,12 @@ export function registerActions(app: App): void {
       t.active = 0;
     },
     // tabs
-    "tab.new": (a) =>
-      withView(a, (v) => {
+    // :tabnew <note>: a new tab on that note; without one, on this note.
+    "tab.new": (a, arg) =>
+      withView(a, async (v) => {
         a.tabs.splice(a.activeTab + 1, 0, { views: [a.makeView(v.buf, { ...v.topAnchor }, { ...v.curAnchor })], active: 0, orientation: "side", ratio: a.config.ui.split_ratio });
         a.activeTab += 1;
+        if (arg) await a.run(`note.open ${arg}`);
       }),
     "tab.list": (a) =>
       a.openList({
@@ -874,6 +908,7 @@ export function registerActions(app: App): void {
             v.find = computeFind(lay(a, v), text, v.find?.current ?? 0, o.whole, o.regex);
             if (v.find.error) a.message("warn", `not a regex: ${v.find.error}`);
             else if (!v.find.matches.length) a.message("info", `not found: ${text}`);
+            if (v.find.error || !v.find.matches.length) a.moveCursor(v, start);
             // After an operator (d/foo): it covers the text up to the match.
             V.finishSearchOp(a, v, v.find.matches.length > 0);
           },
@@ -886,7 +921,7 @@ export function registerActions(app: App): void {
             if (m) {
               v.find.current = i;
               a.moveCursor(v, { row: m.row, col: m.col });
-            }
+            } else a.moveCursor(v, start); // nothing matches (yet): back where the search began, as vim
           },
           () => {
             v.find = prev;
@@ -988,7 +1023,12 @@ export function registerActions(app: App): void {
         v.buf.edit(at, 0, indent + v.buf.eol);
         E.placeAt(a, v, at + indent.length, true);
       }),
-    "edit.delete_char": (a) => sourceEdit(a, (v) => V.apply(a, v, "d", charsRange(a, v, V.takeCount(a)) ?? noRange)),
+    // x on an empty line has nothing to take: nothing happens (vim beeps), the register kept.
+    "edit.delete_char": (a) =>
+      sourceEdit(a, (v) => {
+        const r = charsRange(a, v, V.takeCount(a));
+        if (r) V.apply(a, v, "d", r);
+      }),
     // Operators wait for a motion or a text object (vim.ts reads what follows).
     "edit.op_delete": (a) => sourceEdit(a, () => V.startOperator(a, "d")),
     "edit.op_change": (a) => sourceEdit(a, () => V.startOperator(a, "c")),

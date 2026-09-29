@@ -7,7 +7,7 @@ import type { Glyphs } from "../core/glyphs.ts";
 import type { Line } from "../core/layout/ir.ts";
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
-import { graphemes, graphemeWidth, splitAtWidth, stringWidth, truncate } from "../core/width.ts";
+import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, ordered } from "./cursor.ts";
@@ -195,7 +195,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   if (prompt || (app.transient && !messageInBar)) drawBottomLine(app, c, H - 1, geo);
   else if (status) drawStatus(app, c, { y: H - status, h: 1 }, geo);
   if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay) drawWhichKey(app, c, mainY, mainY + mainH, geo);
-  if (app.overlay?.kind === "list") geo.overlay = app.overlay.anchor ? drawDropdown(app, c, app.overlay, app.overlay.anchor, H - 1) : drawList(app, c, app.overlay, mainY, mainH);
+  if (app.overlay?.kind === "list") geo.overlay = app.overlay.anchor ? drawDropdown(app, c, app.overlay, app.overlay.anchor, mainY + mainH) /* above the frame's bottom rule, never on the status line */ : drawList(app, c, app.overlay, mainY, mainH);
   return geo;
 }
 
@@ -469,16 +469,26 @@ function coverHot(geo: Geometry, r: Rect): void {
 /** Where rules meet vertical borders, the box glyph for the lines that meet there. */
 function drawJoints(app: App, c: Canvas, geo: Geometry): void {
   const covers = (y: number, x: number) => geo.rules.some((r) => r.y === y && x >= r.x0 && x < r.x1);
+  // Every vertical's arms at a crossing first, then one glyph from them all: two lines meeting the
+  // same rule at the same column (a tab's separator over a pane's border) make ╋, not whichever
+  // was drawn last.
+  const at = new Map<string, { x: number; y: number; u: boolean; d: boolean; l: boolean; r: boolean; style: (typeof geo.verticals)[number]["style"] }>();
   for (const v of geo.verticals) {
     for (const r of geo.rules) {
       if (r.y < v.y0 || r.y > v.y1) continue;
       const l = covers(r.y, v.x - 1);
       const rt = covers(r.y, v.x + 1);
       if (!l && !rt) continue;
-      const key = `${r.y > v.y0 ? "u" : ""}${r.y < v.y1 ? "d" : ""}${l ? "l" : ""}${rt ? "r" : ""}`;
-      const g = app.glyphs.joints[key];
-      if (g) drawText(c, v.x, r.y, g, v.style, 1);
+      const k = `${v.x},${r.y}`;
+      const j = at.get(k) ?? { x: v.x, y: r.y, u: false, d: false, l, r: rt, style: v.style };
+      j.u ||= r.y > v.y0;
+      j.d ||= r.y < v.y1;
+      at.set(k, j);
     }
+  }
+  for (const j of at.values()) {
+    const g = app.glyphs.joints[`${j.u ? "u" : ""}${j.d ? "d" : ""}${j.l ? "l" : ""}${j.r ? "r" : ""}`];
+    if (g) drawText(c, j.x, j.y, g, j.style, 1);
   }
 }
 
@@ -605,8 +615,14 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
           : f && f.matches.length
             ? `${f.current + 1}/${f.matches.length}`
             : "no matches";
+    // What goes right of the query, while at least QUERY_ROOM columns stay for it: the count, then
+    // the toggles; in a narrow window the ones that don't fit are left out (⇄ first), never drawn
+    // over the next pane.
+    const QUERY_ROOM = 8;
+    const queryStart = body.x + 3; // "› " after a column of margin
+    const fits = (x: number) => x - queryStart >= QUERY_ROOM;
     let rx = body.x + body.w - 2;
-    if (count) {
+    if (count && fits(rx - stringWidth(count) - 2)) {
       rx -= stringWidth(count);
       drawText(c, rx, y, count, { ...roleStyle(theme, f?.error ? "warn" : "dim", bg), bg });
       rx -= 2;
@@ -617,13 +633,15 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     // And ⇄, the replace row open or not. (None for :s…/c, whose pattern is always a regex.)
     const toggles = [["regex", " .* ", opts.regex], ["whole", " ab ", opts.whole], ["replace", " ⇄ ", !!rep]] as const;
     for (const [id, label, on] of rep?.confirm ? [] : toggles) {
+      if (!fits(rx - stringWidth(label) - 1)) break;
       rx -= stringWidth(label);
       button(app, c, rx, { y, h: 1 }, label, on ? "topbar_button_on" : "topbar_button", `findopt:${id}:${index}`, geo, bg);
       rx -= 1;
     }
     // The query in the room left of them.
     const px = drawText(c, body.x + 1, y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
-    const fw = drawText(c, body.x + 1 + px, y, truncate(text, Math.max(1, rx - (body.x + 1 + px) - 2)), { ...roleStyle(theme, "text", bg), bg });
+    // A query longer than its room shows its end, where you type (…cut at the start).
+    const fw = drawText(c, body.x + 1 + px, y, truncateStart(text, Math.max(1, rx - (body.x + 1 + px) - 2)), { ...roleStyle(theme, "text", bg), bg });
     if (typing && !rep?.focus) drawText(c, body.x + 1 + px + fw, y, " ", roleStyle(theme, "cursor", bg));
     let rows = 1;
     // The replace row under it, with its buttons: replace this one, replace all.
@@ -639,12 +657,13 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
         bx -= 1;
       } else
         for (const [id, label] of [["all", " all "], ["one", " replace "]] as const) {
+          if (!fits(bx - stringWidth(label) - 1)) break;
           bx -= stringWidth(label);
           button(app, c, bx, { y: ry, h: 1 }, label, "topbar_button", `findrep:${id}:${index}`, geo, bg);
           bx -= 1;
         }
       const qx = drawText(c, body.x + 1, ry, "⇄ ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
-      const rw = drawText(c, body.x + 1 + qx, ry, truncate(rep.text, Math.max(1, bx - (body.x + 1 + qx) - 2)), { ...roleStyle(theme, "text", bg), bg });
+      const rw = drawText(c, body.x + 1 + qx, ry, truncateStart(rep.text, Math.max(1, bx - (body.x + 1 + qx) - 2)), { ...roleStyle(theme, "text", bg), bg });
       if (rep.focus && !rep.confirm) drawText(c, body.x + 1 + qx + rw, ry, " ", roleStyle(theme, "cursor", bg));
       rows = 2;
     }
@@ -1113,13 +1132,24 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   if (!view) return;
   const buf = view.buf;
   const layout = app.currentLayout(view);
-  const pct = layout.lines.length <= view.height ? "all" : `${Math.round((view.top / Math.max(1, layout.lines.length - view.height)) * 100)}%`;
+  // Where the view is among the rows shown (an oversized lens hides some; they don't count).
+  const hidden = view.live ? app.lensHidden(view, layout) : [];
+  const hiddenIn = (a: number, b: number) => hidden.reduce((n, [h0, h1]) => n + Math.max(0, Math.min(h1, b) - Math.max(h0, a)), 0); // ranges are [start, end)
+  const shownTotal = layout.lines.length - hiddenIn(0, layout.lines.length);
+  const shownTop = view.top - hiddenIn(0, view.top);
+  const pct = shownTotal <= view.height ? "all" : `${Math.round((shownTop / Math.max(1, shownTotal - view.height)) * 100)}%`;
   const src = layout.lines[view.cur.row]?.src ?? 1;
-  let right = `L${src}:${view.cur.col + 1} ${pct}`;
-  if (app.tabs.length > 1) right = `tab ${app.activeTab + 1}/${app.tabs.length}  ${right}`;
+  // The right side: the position always; the tab count and the link under the cursor only while
+  // the path keeps a readable width (the link goes first, then the tab count).
+  const pos = `L${src}:${view.cur.col + 1} ${pct}`;
+  const tabs = app.tabs.length > 1 ? `tab ${app.activeTab + 1}/${app.tabs.length}  ` : "";
   const li = app.linkUnderCursor(view);
   const link = li >= 0 ? layout.links[li] : null;
-  if (link) right = `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status})  ${right}`;
+  const linkText = link ? `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status})  ` : "";
+  const room = c.width - stringWidth(chip) - 2 - Math.min(16, stringWidth(app.displayName(view.buf)));
+  let right = `${linkText}${tabs}${pos}`;
+  if (stringWidth(right) + 1 > room) right = `${tabs}${pos}`;
+  if (stringWidth(right) + 1 > room) right = pos;
 
   const rightW = stringWidth(right) + 1;
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
@@ -1146,7 +1176,7 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
       : { text: "○ not watching", role: "status_dim" as Role };
   const rx = c.width - rightW;
   if (x + stringWidth(watch.text) + 3 < rx) x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
-  if (rx > x) drawText(c, rx, y, right, roleStyle(theme, "status_dim", page));
+  if (rx > x) drawText(c, rx, y, right, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
 }
 
 /** A prompt, or a message with no top bar to sit in, over the status line (zen: the last row). */
@@ -1297,7 +1327,8 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
   // The footer only when the list keeps at least four rows beside it.
   const footer = !!o.footer && Math.min(mainH - 2, 30) - ((o.filterable ? 3 : 2) + FOOTER_ROWS + 2) >= 4;
   const inner = (o.filterable ? 3 : 2) + (footer ? FOOTER_ROWS + 1 : 0);
-  const h = Math.max(inner + 1, Math.min(o.filtered.length + inner + 1, mainH - 2, 30));
+  // Never taller than the content area: on a short screen the status line and the rule stay.
+  const h = Math.min(mainH, Math.max(inner + 1, Math.min(o.filtered.length + inner + 1, mainH - 2, 30)));
   const x = Math.floor((W - w) / 2);
   const y = mainY + Math.max(0, Math.min(2, mainH - h));
   const bg = roleStyle(theme, "overlay", null);

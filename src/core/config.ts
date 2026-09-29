@@ -207,6 +207,11 @@ export interface LoadConfigOptions {
   vaultRoot?: string | null;
   /** `--config` flag; overrides `SLIPBOX_CONFIG` and the XDG location. */
   configFile?: string;
+  /**
+   * Each file's last good contents, kept across reloads: a file that fails to parse (a typo while
+   * it's being edited) then keeps what it said before instead of dropping to the defaults.
+   */
+  lastGood?: Map<string, Record<string, unknown>>;
 }
 
 export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
@@ -223,14 +228,19 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
       if (file === opts.configFile) warnings.push(`config: ${file} does not exist`);
       continue;
     }
+    let data: Record<string, unknown>;
     try {
-      const data = parseToml(readFileSync(file, "utf8")) as Record<string, unknown>;
-      if (file !== userFile) dropUserOnly(data, file, warnings);
-      config = merge(config, data, file, "", warnings);
-      sources.push(file);
+      data = parseToml(readFileSync(file, "utf8")) as Record<string, unknown>;
+      opts.lastGood?.set(file, structuredClone(data));
     } catch (err) {
-      warnings.push(`config: ${file}: ${(err as Error).message.split("\n")[0]}`);
+      const kept = opts.lastGood?.get(file);
+      warnings.push(`config: ${file}: ${(err as Error).message.split("\n")[0]}${kept ? " — keeping what it said before" : ""}`);
+      if (!kept) continue;
+      data = structuredClone(kept);
     }
+    if (file !== userFile) dropUserOnly(data, file, warnings);
+    config = merge(config, data, file, "", warnings);
+    sources.push(file);
   }
   // The scratch's file name: a plain relative path inside the project, never empty, absolute or
   // climbing out (a cloned vault's config must not aim `slipbox capture` at any file; symlinks on
@@ -248,7 +258,26 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
  */
 export const USER_ONLY = ["editor.command", "editor.remote"];
 
+/**
+ * Commands a vault's keys and aliases may not name: each throws work away (quit without saving,
+ * revert, overwrite, clear), and a cloned vault could otherwise put one on ctrl+s or :wq.
+ */
+export const VAULT_FORBIDDEN_COMMANDS = ["app.quit_force", "note.revert", "note.save_force", "scratch.clear"];
+
 function dropUserOnly(data: Record<string, unknown>, file: string, warnings: string[]): void {
+  // Keys and aliases (every mode's table) that name a command throwing work away.
+  const strip = (table: unknown, where: string) => {
+    if (!isPlainObject(table)) return;
+    for (const [k, v] of Object.entries(table)) {
+      if (isPlainObject(v)) strip(v, `${where}.${k}`);
+      else if (typeof v === "string" && VAULT_FORBIDDEN_COMMANDS.includes(v.split(" ")[0]!)) {
+        delete table[k];
+        warnings.push(`config: ${file} binds ${where}.${k} to ${v}, which only your own config may (it throws work away); ignored`);
+      }
+    }
+  };
+  strip(data.keys, "keys");
+  strip(data.aliases, "aliases");
   for (const key of USER_ONLY) {
     const [table, name] = key.split(".") as [string, string];
     const t = data[table];
@@ -271,10 +300,11 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
     }
     // String maps: key bindings (with context sub-tables), aliases, group names.
     if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|source|explorer|outline|resize)$/.test(prefix)) {
-      if (typeof value === "string") out[key] = value;
-      else if (prefix === "keys" && ["visual", "source", "explorer", "outline", "resize"].includes(key) && isPlainObject(value)) {
-        out[key] = merge((out[key] as Record<string, string> | undefined) ?? {}, value, file, `keys.${key}`, warnings);
-      } else warnings.push(`config: ${file}: ${path} must be a string`);
+      const table = prefix === "keys" && ["visual", "source", "explorer", "outline", "resize"].includes(key);
+      if (table && !isPlainObject(value)) warnings.push(`config: ${file}: ${path} must be a table of key = "command" (a mode's own keys)`);
+      else if (typeof value === "string") out[key] = value;
+      else if (table) out[key] = merge((out[key] as Record<string, string> | undefined) ?? {}, value as Record<string, unknown>, file, `keys.${key}`, warnings);
+      else warnings.push(`config: ${file}: ${path} must be a string`);
       continue;
     }
     if (!(key in out)) {
@@ -286,7 +316,11 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       if (isPlainObject(value)) out[key] = merge(current, value, file, path, warnings);
       else warnings.push(`config: ${file}: "${path}" must be a table`);
     } else if (Array.isArray(current)) {
-      if (Array.isArray(value)) out[key] = value.map(String);
+      // Strings only: an inline table in the list is a mistake to report, not to crash the file on.
+      if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+        if (path === "walk.extensions" && !value.length) warnings.push(`config: ${file}: "${path}" can't be empty (no note would be found); keeping ${JSON.stringify(current)}`);
+        else out[key] = value;
+      } else if (Array.isArray(value)) warnings.push(`config: ${file}: "${path}" must be a list of strings`);
       else if (path === "editor.remote" && typeof value === "string") out[key] = value.trim() ? [value] : []; // one command
       else warnings.push(`config: ${file}: "${path}" must be an array`);
     } else if (typeof current === typeof value) {

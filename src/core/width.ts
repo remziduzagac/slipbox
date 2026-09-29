@@ -62,6 +62,23 @@ export function stringWidth(text: string): number {
 }
 
 /** Cut `text` to at most `width` columns, appending `ellipsis` when it was cut. */
+/** Cut to `width` columns from the start, keeping the end: `…` then the text's last graphemes. */
+export function truncateStart(text: string, width: number, ellipsis = "…"): string {
+  if (width <= 0) return "";
+  if (stringWidth(text) <= width) return text;
+  const budget = Math.max(0, width - stringWidth(ellipsis));
+  const gs = graphemes(text);
+  let out = "";
+  let w = 0;
+  for (let i = gs.length - 1; i >= 0; i--) {
+    const gw = graphemeWidth(gs[i]!);
+    if (w + gw > budget) break;
+    out = gs[i]! + out;
+    w += gw;
+  }
+  return ellipsis + out;
+}
+
 export function truncate(text: string, width: number, ellipsis = "…"): string {
   if (width <= 0) return "";
   if (stringWidth(text) <= width) return text;

@@ -50,8 +50,22 @@ export class TextCanvas implements Canvas {
     this.rows = Array.from({ length: height }, () => Array(width).fill(" "));
     this.styles = Array.from({ length: height }, () => Array(width).fill(null));
   }
+  /**
+   * Cells about to be written from `x0` to `x1` (exclusive) on row `y`: a wide character cut by the
+   * edge loses its other half to a blank, as a terminal (and OpenTUI) shows it.
+   */
+  private splitWide(y: number, x0: number, x1: number): void {
+    const row = this.rows[y]!;
+    if (x0 > 0 && row[x0] === "") {
+      let h = x0 - 1;
+      while (h > 0 && row[h] === "") h--;
+      for (let k = h; k < x0; k++) row[k] = " ";
+    }
+    for (let k = x1; k < this.width && row[k] === ""; k++) row[k] = " ";
+  }
   fill(x: number, y: number, w: number, h: number, bg: Color | null): void {
     for (let r = Math.max(0, y); r < y + h && r < this.height; r++) {
+      this.splitWide(r, Math.max(0, x), Math.min(this.width, x + w));
       for (let k = Math.max(0, x); k < x + w && k < this.width; k++) {
         this.rows[r]![k] = " ";
         this.styles[r]![k] = bg ? { fg: "default", bg, bold: false, italic: false, underline: false, strike: false, dim: false } : null;
@@ -60,6 +74,7 @@ export class TextCanvas implements Canvas {
   }
   cell(x: number, y: number, g: string, w: number, style: CellStyle): void {
     if (y < 0 || y >= this.height || x < 0 || x >= this.width) return;
+    this.splitWide(y, x, Math.min(this.width, x + Math.max(1, w)));
     this.rows[y]![x] = g;
     this.styles[y]![x] = style;
     for (let k = 1; k < w && x + k < this.width; k++) this.rows[y]![x + k] = "";

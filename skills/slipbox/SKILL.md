@@ -1,11 +1,13 @@
 ---
 name: slipbox
 description: >-
-  Drive the slipbox markdown vault from the shell: render a note as readable text, follow
-  [[wikilinks]] to files, list links and backlinks, outline a note, and append file:line
-  references or text to the per-project scratch that the user reads in the slipbox TUI. Use when
-  the user mentions slipbox, their notes vault, the scratch, or asks to capture a reference for
-  later; or when a directory contains a `.slipbox/` marker and you need to navigate its notes.
+  Drive the slipbox markdown vault from the shell: find text across notes, read and safely write
+  notes (atomic, never clobbering a note the user changed), replace text, tick tasks, render a
+  note as readable text, follow [[wikilinks]], list links and backlinks, outline a note, see what
+  the user is reading, and append file:line references or text to the per-project scratch the user
+  reads in the slipbox TUI. Use when the user mentions slipbox, their notes vault, the scratch, or
+  asks to capture a reference for later; or when a directory contains a `.slipbox/` marker and you
+  need to find, read or change its notes.
 ---
 
 # slipbox
@@ -80,9 +82,28 @@ slipbox history --json                   # what the user has been reading, newes
 ```
 
 These write atomically and never outside the vault, keeping the note's BOM and line endings. Use
-`--if-unchanged` with the sha from `read` whenever you rewrite a note the user may be editing; it
-refuses (exit 5) instead of clobbering. Check `stale` first: a note listed there has unsaved
-changes in the user's TUI.
+`--if-unchanged` with the sha from `read` (or from `replace --dry-run`, or `task`'s list) whenever
+you rewrite a note the user may be editing; it refuses (exit 5) instead of clobbering. Check `stale`
+first: a note listed there has unsaved changes in the user's TUI — a write still goes through (the
+list is advisory), and the user then gets a conflict prompt, so ask before writing it.
+
+- **Search** is plain text with smart case: a lowercase query ignores case, one with a capital
+  doesn't (`--ignore-case` forces it); `--regex` for patterns (`^` and `$` are a line's ends),
+  `--whole` for whole words. `replace` changes every match, or `--first`, or `--first-per-line`,
+  within `--lines A-B` if given; read `data.changes[].text` / `textAfter` before you run it without
+  `--dry-run` — a match inside a longer word shows there.
+- **Writing:** empty text is refused (exit 2) so a failed pipe can't empty a note. `--append` adds a
+  line; `--append --paragraph` adds a block of its own (after a table or paragraph, plain `--append`
+  would join it). `--create` paths are from the vault root unless they start with `./` or `../`;
+  exit 3 on `write` means the note doesn't exist yet: add `--create`.
+- **Names:** a bare name resolves the same from any folder; if several notes share it you get exit 4
+  and `data.candidates` — pick one by path. (For `send`, the candidates are nvims: objects with
+  `socket`, `cwd`, `file`.)
+- **Link status:** `links` says `note`, `file`, `anchor`, `external`, `ambiguous` or `unresolved`;
+  `resolve` says `resolved`, `external`, `ambiguous` or `unresolved`.
+- **What the user sees:** `history --json` gives `current` (the note on screen) and `read` (newest
+  first, `exists: false` for deleted ones).
+- **The scratch's project** is the vault root, else the git top level, else the current folder.
 
 ## Following links
 

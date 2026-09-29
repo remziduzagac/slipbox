@@ -3848,3 +3848,129 @@ describe("review cycle 2 (TUI navigation)", () => {
   });
 });
 
+
+describe("review cycle 3 (TUI)", () => {
+  const src = async (text: string, config?: (c: Config) => void, width = 100, height = 30) => {
+    const root = makeVault();
+    writeFileSync(join(root, "e.md"), text);
+    const h = await harness({ root, open: "e.md", width, height, config });
+    await h.keys("space", "n", "v");
+    const v = h.app.view!;
+    return { h, v, root, at: (row: number, col: number) => h.app.moveCursor(v, { row, col }), ex: (cmd: string) => h.keys(":", ...[...cmd].map((c) => (c === " " ? "space" : c)), "enter") };
+  };
+  test("operators at the edges: c2w from a word's end, dw on the last word, d3w across lines, x on an empty line", async () => {
+    const a = await src("a quick fox\n");
+    a.at(0, 0);
+    await a.h.keys("c", "2", "w", "X", "escape");
+    expect(a.v.buf.source).toBe("X fox\n");
+    const b = await src("foo bar\n");
+    b.at(0, 4);
+    await b.h.keys("d", "w");
+    expect(b.v.buf.source).toBe("foo \n");
+    const c = await src("a b\nc d\n");
+    c.at(0, 0);
+    await c.h.keys("d", "3", "w");
+    expect(c.v.buf.source).toBe("d\n");
+    const d = await src("one\n\ntwo\n");
+    d.at(0, 0);
+    await d.h.keys("y", "y", "j", "x", "p");
+    expect(d.v.buf.source).toBe("one\n\none\ntwo\n"); // x did nothing; the register still had the line
+  });
+  test("counts: 3gg and 5G go to that line; d} takes a last paragraph whole; J into an empty line", async () => {
+    const { h, v, at } = await src("l1\nl2\nl3\nl4\nl5\nl6\n");
+    at(0, 0);
+    await h.keys("5", "G");
+    expect(rowText(h).trim().endsWith("l5")).toBe(true);
+    await h.keys("3", "g", "g");
+    expect(rowText(h).trim().endsWith("l3")).toBe(true);
+    const p = await src("last para\nline two\n");
+    p.at(0, 0);
+    await p.h.keys("d", "}");
+    expect(p.v.buf.source.trim()).toBe("");
+    const j = await src("\nfoo\n");
+    j.at(0, 0);
+    await j.h.keys("J");
+    expect(j.v.buf.source).toBe("foo\n");
+  });
+  test(":s takes an escaped backslash, \\r as a line break; a* isn't matched twice", async () => {
+    const { v, ex } = await src("a, b\naaa\n");
+    await ex("s/, /\\r/");
+    expect(v.buf.source).toBe("a\nb\naaa\n");
+    await ex("%s/a*/-/g");
+    expect(v.buf.source.split("\n")[2]).toBe("-");
+    await ex("%s/$/\\\\/");
+    expect(v.buf.source.split("\n")[0]).toBe("-\\");
+  });
+  test("incremental search goes back where it began when nothing matches; the replace count follows typing", async () => {
+    const { h, v } = await src("alpha\nbeta\ngamma alpha\n");
+    await h.keys("/", "g", "a", "m");
+    expect(v.cur.row).toBe(2);
+    await h.keys("x");
+    expect(v.cur.row).toBe(0);
+    await h.keys("escape", "ctrl+h", "a", "l", "p");
+    expect((h.app.overlay as { replace?: { total: number } }).replace!.total).toBe(2);
+  });
+  test("the find row keeps room for the query in a narrow window, and shows its end", async () => {
+    const h = await harness({ open: "index.md", width: 40, height: 16, config: (c) => ((c.ui.sidebar = false), (c.ui.outline = false)) });
+    await h.keys("/", ...[..."abcdefghijklmnopqrstuvwxyz"]);
+    const row = h.frame().split("\n").find((r) => r.includes("› "))!;
+    expect(row).toContain("xyz");
+    const pane = h.app.geometry!.panes[0]!;
+    for (const hot of h.app.geometry!.hot.filter((x) => x.id.startsWith("findopt:"))) expect(hot.x).toBeGreaterThanOrEqual(pane.x);
+  });
+  test(":vs <note> and :tabnew <note> open that note; an argument a command doesn't take is said", async () => {
+    const h = await harness({ open: "index.md", width: 160, height: 40 });
+    await h.keys(":", ...[..."vs"], "space", ...[..."notes/alpha"], "enter");
+    expect(h.app.tab!.views.map((x) => x.buf.rel)).toContain("notes/alpha.md");
+    await h.keys(":", ...[..."tabnew"], "space", ...[..."notes/beta"], "enter");
+    expect(h.app.view!.buf.rel).toBe("notes/beta.md");
+    await h.keys(":", "w", "space", ...[..."zzqqxx"], "enter");
+    expect(h.app.messages.at(-1)!.text).toContain("takes no argument");
+  });
+  test("joints: a tab separator over a border is a cross", async () => {
+    // Somewhere across these widths a tab's separator lands on the outline's border column.
+    let checked = 0;
+    for (let width = 100; width <= 160; width++) {
+      const h = await harness({ open: "index.md", width, height: 12, config: (c) => (c.ui.outline = true) });
+      for (const n of ["notes/alpha.md", "notes/beta.md", "crlf.md", "bom.md"]) h.app.openInNewTab(n);
+      const rows = h.frame().split("\n").map((r) => [...r]);
+      rows.forEach((r, y) => {
+        r.forEach((ch, x) => {
+          // A tee pointing down with a line above it should have been a cross.
+          if ((ch === "┬" || ch === "┳") && y > 0 && "│┃┼╋├┤┣┫┬┳".includes(rows[y - 1]![x] ?? " ")) throw new Error(`${width}: ${ch} under a line at ${x},${y}`);
+          if (ch === "┬" || ch === "┳") checked++;
+        });
+      });
+    }
+    expect(checked).toBeGreaterThan(0);
+  }, 60000);
+});
+
+describe("review cycle 3 (config in the TUI)", () => {
+  test("a typo saved mid-edit keeps the theme, keys and picked settings; :toString isn't an alias", async () => {
+    const root = makeVault();
+    const cfg = join(root, "user.toml");
+    writeFileSync(cfg, 'theme = "nord"\n[keys]\n"leader z" = "ui.zen"\n');
+    const h = await harness({ root, configFile: cfg });
+    h.app.reloadConfig();
+    await h.app.run("theme.set dracula");
+    writeFileSync(cfg, 'theme = "nord"\n[keys\n');
+    h.app.reloadConfig();
+    expect(h.app.ui.theme).toBe("dracula");
+    await h.keys("space", "z");
+    expect(h.app.ui.zen).toBe(true);
+    await h.keys(":", ...[..."toString"], "enter");
+    expect(h.app.messages.some((m) => m.text.includes("is not a function"))).toBe(false);
+  });
+  test("cancelling a picker after a reload keeps the reloaded setting", async () => {
+    const root = makeVault();
+    const cfg = join(root, "user.toml");
+    writeFileSync(cfg, "");
+    const h = await harness({ root, configFile: cfg });
+    await h.keys("space", "u", "t", "j");
+    writeFileSync(cfg, 'theme = "nord"\n');
+    h.app.reloadConfig();
+    await h.keys("escape");
+    expect(h.app.theme.name).toBe("nord");
+  });
+});

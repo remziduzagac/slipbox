@@ -124,6 +124,24 @@ slipbox send handbook --line 42          # to the running nvim, as space n s doe
 slipbox history --json                   # data.read[{path,at,line}], data.open (tabs)
 ```
 
+- **Link status words.** `links` reports what a link reaches: `note`, `file`, `anchor` (a heading
+  in the same note), `external`, `ambiguous` or `unresolved`. `resolve` answers whether it
+  resolves: `resolved` (a note or a file), `external`, `ambiguous` or `unresolved`. A `links` entry
+  with `note`, `file` or `anchor` is one `resolve` calls `resolved`.
+- **Paths for `--create`** are from the vault's root, wherever you are in it, unless they start
+  with `./` or `../` (then from the current folder). A bare note name never depends on the current
+  folder: a name several notes share is exit 4 with the candidates (`--from` picks the nearest).
+- **`write`** refuses empty text (exit 2: a producer that failed would otherwise empty the note,
+  and `--if-unchanged` can't tell); `--allow-empty` empties it on purpose. `--append --paragraph`
+  puts a blank line first, so the text is a block of its own and doesn't become the next row of a
+  table or the end of a paragraph.
+- **`replace`'s changes** carry each match's `line`, `column`, and the line before and after
+  (`text`, `textAfter`, a window of a long line), so a preview shows a match inside a longer word.
+  The dry run's `sha` is the one `--if-unchanged` wants.
+- **`task`'s list** has the note's `sha` and each task's `raw` source line (its text keeps
+  `[[links]]`).
+- **`history`** marks read notes that are gone (`exists: false`) and says what is on screen:
+  `activeTab` and `current` (the active window's note).
 - **Patterns** are find's: plain text unless `--regex` (JavaScript syntax), `--whole` keeps to
   whole words, smart case unless `--ignore-case`. With `--regex`, `^` and `$` are a line's start
   and end (a CRLF line ends before its `\r`), an empty match inserts (`replace note '^' '> '

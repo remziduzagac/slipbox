@@ -765,7 +765,7 @@ state, so the conflict case is real.
 
 1. **Watch the vault.** Reload any buffer with no unsaved changes, silently — vim with
    `autoread` on. Silent is right here because agents write constantly and a prompt per
-   write would be unusable. Configurable, for anyone who wants vim's `W11` prompt instead.
+   write would be unusable. (A `W11`-style prompt instead was considered; it isn't built.)
 2. **Autosave, on, with a significant delay** — idle-based, defaulting to about 30 seconds
    of no keystrokes, configurable, and settable to off. The delay is the point: it should
    fire when you have actually stopped, never mid-thought. Explicit save always available.
@@ -779,7 +779,7 @@ state, so the conflict case is real.
    | **(L)oad** | take theirs — reload from disk, lose the buffer's edits |
    | **(K)eep** | keep mine — leave the buffer alone, do not reload |
    | **(D)iff** | show the difference first, then choose |
-   | **(M)erge** | open both in `$EDITOR` and sort it out by hand |
+   | **(M)erge** | a three-way merge in the app, conflicts marked for you to sort out (built so, not in `$EDITOR`) |
 
    OpenTUI ships a `Diff` component, so the expensive-sounding option is nearly free.
 
@@ -826,8 +826,8 @@ the watcher exists, and it turns a surprise into a decision.
 - **Debounce watch events.** Agents write in bursts, and editors write via temp-and-rename,
   which looks like delete-then-create.
 - **Ignore slipbox's own writes**, or the watcher reacts to itself.
-- **On quit with a dirty buffer**, save — autosave semantics have already been accepted —
-  but keep an explicit discard.
+- **On quit with a dirty buffer**: built as a refusal that names the notes — `:wq` saves and quits,
+  `:q!` discards — rather than a silent save.
 - **Watch the whole vault, not just open files**, since the graph depends on files nobody
   has open.
 
@@ -1574,12 +1574,11 @@ These are the *design* questions still open. Build-order decisions and their sta
 
 1. **Vault-wide search** (`6.1`) — undesigned. `tobi/qmd` and `zk` are the candidates, and `zk`
    already ships it. It has to live in the core, since the CLI and LSP faces need it too.
-2. **Link resolution** (`1.4`) — name collisions, case sensitivity across macOS and Linux, and
-   whether to follow Obsidian's path conventions so an existing vault opens unchanged.
-3. **The agent command surface** (`9.1`) — the shape is settled as a CLI and the cross-process
-   semantics are settled as disk-is-the-contract; the command list and output schema are not.
-4. **Where the scratch lives** (`8.2`, folded into `0.10`) — inside the vault where agents can
-   see it, or in the cache directory where git cannot.
+2. **Link resolution** (`1.4`) — **settled**: see `docs/design/decisions.md`.
+3. **The agent command surface** (`9.1`) — **settled**: the command list and the JSON contract are
+   decision `9.1` and `docs/design/cli.md`.
+4. **Where the scratch lives** (`8.2`, folded into `0.10`) — **settled**: the state directory by
+   default, the vault on request (`capture.location`).
 5. **Native PDF typesetting** (`10.5`) — how far to take it, and `pdfkit` or
    `@react-pdf/renderer` as the base. The only genuinely hard part of export.
 6. **Worktree handling** — one vault per repo does not answer several worktrees of one repo.
@@ -1604,8 +1603,8 @@ contract between the CLI and the TUI**.
 phasing (2026-09-25 — see `docs/plan.md`, which also carries the CLI-parity
 principle: the CLI must reach every state change, though not every interaction).
 
-**Still open:** the numbered questions above, of which `6.1` search, `8.1` the scratch capture
-path and `9.1` the CLI command list are the ones that gate whole phases.
+**Still open:** the numbered questions above not marked settled; `6.1` search is the one that gates
+a whole phase (4). `8.1` (the scratch capture path) and `9.1` (the CLI list) are settled.
 
 `mermaid-ascii` on npm **does not fully work** — see Verified, where labelled nodes were
 measured emitting six boxes for a four-node graph. If it is not fixed upstream, port one —

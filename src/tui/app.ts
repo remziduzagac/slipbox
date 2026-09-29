@@ -45,7 +45,7 @@ import {
   TOP,
   type UiOverride,
 } from "../core/position.ts";
-import { applyColorOverrides, loadTheme, type Theme } from "../core/theme/index.ts";
+import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
 import type { VaultLocation } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { sanitize } from "../core/sanitize.ts";
@@ -429,6 +429,7 @@ export class App {
   uiOverrides: Record<string, UiOverride> = {};
   private tree: TreeRow[] | null = null;
   private readonly configFile: string | undefined;
+  private readonly configLastGood = new Map<string, Record<string, unknown>>();
   private configStamps = new Map<string, number>();
   readonly now: () => number;
   quitting = false;
@@ -440,6 +441,8 @@ export class App {
     this.graph = opts.graph;
     this.host = opts.host;
     this.configFile = opts.configFile;
+    // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
+    loadConfig({ vaultRoot: opts.loc.mode === "vault" ? opts.loc.root : null, configFile: opts.configFile, lastGood: this.configLastGood });
     this.now = opts.now ?? Date.now;
     this.ui = uiDefaults(opts.config);
     if (opts.themeName) this.ui.theme = opts.themeName;
@@ -480,7 +483,15 @@ export class App {
   /** (Re)build every keymap, the groups and the aliases from defaults plus config. */
   applyKeys(): void {
     const c = this.config;
-    this.leader = canonKey(c.input.leader || "space");
+    // The leader: a real key, and not one already bound on its own (it would wait before acting).
+    let leader = canonKey(c.input.leader || "space");
+    if (unknownModifiers(leader).length) {
+      this.message("warn", `config: input.leader "${c.input.leader}" isn't a key slipbox knows; using space`);
+      leader = "space";
+    } else if (leader !== "space" && DEFAULT_KEYS[leader] !== undefined) {
+      this.message("warn", `config: input.leader "${c.input.leader}" is also ${DEFAULT_KEYS[leader]}: that key now waits for more`);
+    }
+    this.leader = leader;
     const { visual, explorer, outline, resize, source, ...normal } = c.keys;
     this.keymap = new Keymap(DEFAULT_KEYS, normal as Record<string, string>, this.leader);
     this.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.leader);
@@ -488,7 +499,8 @@ export class App {
     this.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.leader);
     this.outlineKeys = new Keymap(DEFAULT_OUTLINE_KEYS, outline ?? {}, this.leader);
     this.resizeKeys = new Keymap(DEFAULT_RESIZE_KEYS, resize ?? {}, this.leader);
-    this.aliases = { ...DEFAULT_ALIASES };
+    // No prototype: a typed :toString or :constructor is an unknown alias, not Object's.
+    this.aliases = Object.assign(Object.create(null) as Record<string, string>, DEFAULT_ALIASES);
     for (const [k, v] of Object.entries(c.aliases)) {
       if (v === "") delete this.aliases[k];
       else this.aliases[k] = v;
@@ -583,7 +595,8 @@ export class App {
    */
   reloadConfig(reason: "manual" | "file changed" = "manual"): void {
     this.recordConfigStamps();
-    const loaded = loadConfig({ vaultRoot: this.loc.mode === "vault" ? this.loc.root : null, configFile: this.configFile });
+    const loaded = loadConfig({ vaultRoot: this.loc.mode === "vault" ? this.loc.root : null, configFile: this.configFile, lastGood: this.configLastGood });
+    this.clearPending(); // a sequence begun under the old keys means nothing under the new ones
     const before = this.config;
     const next = loaded.config;
     this.config = next;
@@ -2567,6 +2580,7 @@ export class App {
       else if (typed !== null) o.text += typed;
       else return;
       o.change?.(o.text);
+      if (o.replace && o.view) R.refresh(this, o, o.view); // the count of what enter would replace, as you type
       return;
     }
     const n = o.filtered.length;
@@ -3342,6 +3356,10 @@ export class App {
       if (!(k in defaults) || !o || typeof o !== "object") continue;
       if (JSON.stringify(defaults[k as keyof UiState]) !== JSON.stringify(o.base)) continue;
       if (typeof o.value !== typeof defaults[k as keyof UiState]) continue;
+      // A value that isn't one any more (a glyph set that doesn't exist, a theme file since deleted)
+      // is dropped, not kept and saved again forever.
+      if (k === "glyphs" && !["nerd", "unicode", "ascii", "auto"].includes(o.value as string)) continue;
+      if (k === "theme" && !listThemes().some((t) => t.name === o.value)) continue;
       (this.ui as unknown as Record<string, unknown>)[k] = o.value;
       this.uiOverrides[k] = o;
     }
@@ -3775,13 +3793,13 @@ export function selectedText(layout: Layout, sel: Selection, cur: Pos): string {
   return out.join("\n");
 }
 
-export function computeFind(layout: Layout, query: string, current = 0, whole = false, regex = false): FindState {
+export function computeFind(layout: Layout, query: string, current = 0, whole = false, regex = false, ignoreCase = false): FindState {
   const matches: FindState["matches"] = [];
   let error: string | undefined;
   if (query) {
     // Match on the original text (never a lowercased copy, whose length can differ: "İ"), with
     // smart case, plain text unless regex is on, whole words when asked (core/replace.ts).
-    const re = compilePattern(query, { regex, whole });
+    const re = compilePattern(query, { regex, whole, ignoreCase });
     if (typeof re === "string") error = re;
     else {
       layout.lines.forEach((line, row) => {
