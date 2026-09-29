@@ -646,7 +646,8 @@ and "AsciiDoc notes"). All three are notes only when `walk.extensions` lists the
   source mode. A window that was in source mode only for such a file renders again when it opens a
   note (a link, `history.back`).
 - **Source code through tree-sitter** (`16.6`–`16.9`: TypeScript, TSX, JavaScript, Python, shell,
-  Lua, Go, Rust). Each language's grammar (a wasm file, bundled) loads the first time a file of it
+  Lua, Go, Rust). Each language's grammar (the wasm from the language's own npm package, built for
+this runtime; `bunfig.toml` keeps their native install scripts off) loads the first time a file of it
   opens, never at start-up; until it lands, the file shows as any text file, and it draws again
   when it does. A parse runs at once on open and then 150 ms after typing pauses — never per key
   (tens of milliseconds for a 4,000-line file) — and the layout uses its last answer:

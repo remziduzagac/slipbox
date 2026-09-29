@@ -9,14 +9,17 @@
 
 import { Language, Parser, Query, type Tree } from "web-tree-sitter";
 import runtime from "web-tree-sitter/tree-sitter.wasm" with { type: "file" };
-import bash from "tree-sitter-wasms/out/tree-sitter-bash.wasm" with { type: "file" };
-import go from "tree-sitter-wasms/out/tree-sitter-go.wasm" with { type: "file" };
-import javascript from "tree-sitter-wasms/out/tree-sitter-javascript.wasm" with { type: "file" };
-import lua from "tree-sitter-wasms/out/tree-sitter-lua.wasm" with { type: "file" };
-import python from "tree-sitter-wasms/out/tree-sitter-python.wasm" with { type: "file" };
-import rust from "tree-sitter-wasms/out/tree-sitter-rust.wasm" with { type: "file" };
-import tsx from "tree-sitter-wasms/out/tree-sitter-tsx.wasm" with { type: "file" };
-import typescript from "tree-sitter-wasms/out/tree-sitter-typescript.wasm" with { type: "file" };
+// Each language's own package, its wasm built for this runtime's ABI (a mismatched build can trip
+// an assertion in a grammar's scanner: bash's heredocs did). Install scripts stay off
+// (`bunfig.toml`): only the wasm is used, never the native bindings.
+import lua from "@tree-sitter-grammars/tree-sitter-lua/tree-sitter-lua.wasm" with { type: "file" };
+import bash from "tree-sitter-bash/tree-sitter-bash.wasm" with { type: "file" };
+import go from "tree-sitter-go/tree-sitter-go.wasm" with { type: "file" };
+import javascript from "tree-sitter-javascript/tree-sitter-javascript.wasm" with { type: "file" };
+import python from "tree-sitter-python/tree-sitter-python.wasm" with { type: "file" };
+import rust from "tree-sitter-rust/tree-sitter-rust.wasm" with { type: "file" };
+import tsx from "tree-sitter-typescript/tree-sitter-tsx.wasm" with { type: "file" };
+import typescript from "tree-sitter-typescript/tree-sitter-typescript.wasm" with { type: "file" };
 import { lazy, load } from "./lazy.ts";
 
 export type Grammar = "typescript" | "tsx" | "javascript" | "python" | "bash" | "lua" | "go" | "rust";
@@ -48,7 +51,7 @@ const QUERIES: Record<Grammar, { defs: string; comments: string; strings: string
   javascript: { defs: JS_DEFS, comments: "(comment) @c", strings: "[(string) (template_string)] @s" },
   python: { defs: "(function_definition name: (identifier) @name) @def (class_definition name: (identifier) @name) @def", comments: "(comment) @c", strings: "(string) @s" },
   bash: { defs: "(function_definition name: (word) @name) @def", comments: "(comment) @c", strings: "[(string) (raw_string) (heredoc_body)] @s" },
-  lua: { defs: "(function_definition_statement name: (_) @name) @def (local_function_definition_statement name: (_) @name) @def", comments: "(comment) @c", strings: "(string) @s" },
+  lua: { defs: "(function_declaration name: (_) @name) @def", comments: "(comment) @c", strings: "(string) @s" },
   go: {
     defs: "(function_declaration name: (identifier) @name) @def (method_declaration name: (field_identifier) @name) @def (type_spec name: (type_identifier) @name) @def",
     comments: "(comment) @c",
@@ -67,8 +70,6 @@ const KIND: Record<string, string> = {
   generator_function_declaration: "function",
   function_definition: "function",
   function_item: "function",
-  function_definition_statement: "function",
-  local_function_definition_statement: "function",
   variable_declarator: "function",
   class_declaration: "class",
   abstract_class_declaration: "class",

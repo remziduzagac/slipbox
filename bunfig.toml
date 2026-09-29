@@ -1,0 +1,4 @@
+# The tree-sitter grammar packages have native-binding install scripts; slipbox uses only their
+# wasm, so no install script runs (a failed native build would fail the install).
+[install]
+ignoreScripts = true
