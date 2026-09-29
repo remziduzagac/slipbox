@@ -913,8 +913,8 @@ set is TypeScript, Python, shell, Lua, Go and Rust. It gives:
   the status line when insert mode ends. Syntax only: type errors and unresolved imports need a
   language server, which is not slipbox's job.
 
-**Lazy loading is a mechanism, not a special case.** asciidoctor.js (large: Ruby compiled to
-JavaScript), more grammars, and later Mermaid and images all load on first use.
+**Lazy loading is a mechanism, not a special case.** Tree-sitter's grammars, and later Mermaid and
+images, all load on first use.
 
 ### Note formats: a reader per format
 
@@ -925,9 +925,13 @@ format-agnostic.
 
 - **Org** — a full note format: headings, `TODO`/`DONE` and checkboxes as tasks, tags, links
   (`[[file:x.org][text]]`, `[[id]]`). `uniorg` is unified-based, like remark, and fits the same way.
+  As built (`16.16`), checkboxes are the tasks; `TODO`/`DONE` headlines are drawn, not yet ticked.
 - **AsciiDoc** — a full note format: headings with ids, `xref:` and `<<id>>`, `include::`,
-  checklists, admonitions, tables. Indexing uses a small line scanner (the structure is line-based);
-  rendering loads asciidoctor.js lazily and maps its document onto the layout.
+  checklists, admonitions, tables. The plan was a line scanner to index and asciidoctor.js, loaded
+  lazily, to render. As built (`16.17`), one line reader does both: AsciiDoc's structure is its
+  lines, a reader into the shared tree is what Org has too, and asciidoctor.js (Ruby compiled to
+  JavaScript, a few MB) would still need its document mapped onto that tree. What it would add —
+  conditionals, attribute substitution, expanded includes — can come later behind the same reader.
 
 ### Finding files
 

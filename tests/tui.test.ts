@@ -4778,6 +4778,32 @@ describe("Org notes in the TUI (16.16)", () => {
   });
 });
 
+describe("AsciiDoc notes in the TUI (16.17)", () => {
+  test("renders; x ticks a checklist item; an xref follows; source mode scans titles and follows links", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "guide.adoc"), "= Guide\n\n== Start\n\nSee xref:notes/alpha.md[alpha].\n\n* [ ] write docs\n");
+    const h = await harness({ root, open: "guide.adoc", width: 100, config: (c) => (c.walk.extensions = ["md", "adoc"]) });
+    const v = h.app.view!;
+    expect(v.source).toBeFalsy();
+    expect(h.app.currentLayout(v).headings.map((x) => [x.level, x.text])).toEqual([[1, "Guide"], [2, "Start"]]);
+    const task = h.app.currentLayout(v).lines.findIndex((l) => l.spans.some((s) => s.text.includes("write docs")));
+    h.app.moveCursor(v, { row: task, col: 0 });
+    await h.keys("x");
+    expect(readFileSync(join(root, "guide.adoc"), "utf8")).toContain("* [x] write docs");
+    const l = h.app.currentLayout(v).links[0]!;
+    h.app.moveCursor(v, { row: l.line, col: l.col });
+    await h.keys("enter");
+    expect(v.buf.rel).toBe("notes/alpha.md");
+    await h.app.run("history.back");
+    await h.keys("space", "n", "v");
+    expect(v.source).toBe(true);
+    expect(h.app.currentLayout(v).headings.map((x) => x.text)).toEqual(["Guide", "Start"]);
+    h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((x) => x.src === 5), col: 8 });
+    await h.keys("enter");
+    expect(v.buf.rel).toBe("notes/alpha.md");
+  });
+});
+
 describe("links out of data files in the TUI (16.15)", () => {
   test("a value that is a path is a link: coloured, followed with enter", async () => {
     const root = makeVault();

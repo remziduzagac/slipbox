@@ -21,9 +21,10 @@ running nvim) and the agent CLI — which reaches every state change the TUI mak
 tasks, safe writes — with tests (`bun run check`: headless, and the CLI as a process) and terminal
 tests (`bun run e2e`, slipbox driven in a herdr pane; see `docs/design/testing.md`), all on the demo
 vault in `examples/vault`. `docs/design/` describes the code as
-it is and is kept in step with it; `docs/design/decisions.md` answers the decide items. The next
-phase is 3b, files beyond markdown (`16.x`; the design is `docs/idea.md`, "Files beyond markdown"),
-then 4, vault and structure. Still open from phase 3: `7.2`–`7.4` (multi-file preview, rename
+it is and is kept in step with it; `docs/design/decisions.md` answers the decide items. Phase 3b,
+files beyond markdown (`16.x`; the design is `docs/idea.md`, "Files beyond markdown"), is done: data
+files render, source code goes through tree-sitter, Org and AsciiDoc are note formats. Next is 4,
+vault and structure. Still open from phase 3: `7.2`–`7.4` (multi-file preview, rename
 undo) wait for renames (`7.1`, phase 4); `4.9` (incremental reparse) moved to `15.1`, now mostly
 done (a note re-parses by chunk); `5.9` (a `HEAD` change as a branch switch) and the lint surface
 (markdownlint-cli2) are not built.

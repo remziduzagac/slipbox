@@ -66,7 +66,8 @@ export interface Backlink {
   alias: string | null;
 }
 
-const INDEX_VERSION = 2;
+/** Bumped when what a note's entry holds changes: 3, readers per note format (16.2, 16.16, 16.17). */
+const INDEX_VERSION = 3;
 
 interface IndexFile {
   version: number;

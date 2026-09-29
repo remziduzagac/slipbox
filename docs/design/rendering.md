@@ -121,6 +121,30 @@ edit didn't touch: a 16,000-line note parses in about 20 ms, and an edit costs o
 mode shows Org plain, its headlines scanned for the breadcrumb; `enter` follows the `[[…]]` link
 or URL under the cursor.
 
+## AsciiDoc notes (plan `16.17`)
+
+With `adoc` (or `asciidoc`) among `walk.extensions`, `core/asciidoc.ts` reads an AsciiDoc note line
+by line into the same mdast — no dependency, nothing to load. The common syntax of notes and docs:
+
+- **Sections**: `= Title` (the note's title), `==`…`======` (and markdown-style `#`); a section's
+  id — `[[id]]` or `[#id]` above it, else Asciidoctor's automatic `_the_title` — is what
+  `<<id,text>>` and `xref:#id[]` find.
+- **Attribute entries** (`:key: value`) are key–value rows; `:tags:` or `:keywords:` are the
+  note's tags. Comment lines and `////` blocks are dimmed rows.
+- **Delimited blocks**: `----` listing (a code block, highlighted with `[source,lang]`), `....`
+  literal, `++++` passthrough as code; `____` quote, `====` example, `****` sidebar and `--` open
+  blocks hold blocks of their own, a quote around them. `[NOTE]` … `[CAUTION]` on a block, or
+  `NOTE:` at a paragraph's start, makes a callout. A `.Title` line is drawn in bold above its block.
+- **Lists**: `*`/`-` and `.`/`1.` items, nested by marker depth; `* [ ]` and `* [x]` are tasks.
+  **Tables**: `|===`, cells split at `|`, rows by the first row's width or `cols`.
+- **Inline**: `*strong*`, `_emphasis_`, `` `monospace` ``, `url[text]`, bare URLs, `link:path[text]`,
+  `xref:file.adoc#id[text]`, `<<id,text>>`, `image:path[alt]`, a line ending in a space and `+` for a break.
+  `include::file[]` is a link to the file, never expanded.
+
+Not read: conditionals (`ifdef::`), attribute references in text (`{name}`), and custom
+substitutions — a note shows what it says. Source mode shows AsciiDoc plain, section titles
+scanned for the breadcrumb; `enter` follows the link macro or URL under the cursor.
+
 ## The wikilink tokenizer
 
 `core/wikilink.ts` is a micromark extension, not a regex. That is why `[[links]]` inside code

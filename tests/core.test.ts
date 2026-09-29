@@ -966,8 +966,9 @@ describe("a reader per note format (16.2)", () => {
     expect(md.scanHeadings("# One\n\n```\n# not\n```\n## Two\n").map((h) => h.text)).toEqual(["One", "Two"]);
     expect(md.linkAt("see [[alpha#Intro|the intro]] and [x](b.md)", 6)).toEqual({ kind: "wiki", target: "alpha", heading: "Intro", text: "the intro" });
     expect(md.linkAt("see [[alpha]] and [x](b.md)", 20)).toMatchObject({ kind: "markdown", target: "b.md" });
-    const adoc = parseNoteFile("x.adoc", "= Title\nfirst para\n\nsecond\n");
-    expect(adoc.tree.children.map((c) => [c.type, c.position!.start.line])).toEqual([["paragraph", 1], ["paragraph", 4]]);
+    expect(parseNoteFile("x.md", "# T\n").tree.children[0]!.type).toBe("heading");
+    const plain = readerFor("no-such-format").parse("= Title\nfirst para\n\nsecond\n");
+    expect(plain.tree.children.map((c) => [c.type, c.position!.start.line])).toEqual([["paragraph", 1], ["paragraph", 4]]);
   });
 });
 
@@ -1026,5 +1027,82 @@ describe("Org notes (16.16)", () => {
     expect(org.linkAt(line, 8)).toEqual({ kind: "markdown", target: "notes.md#Intro", heading: null, text: "the notes" });
     expect(org.linkAt(line, 50)).toMatchObject({ target: "https://x.invalid/y" });
     expect(org.linkAt(line, 1)).toBeNull();
+  });
+});
+
+describe("AsciiDoc notes (16.17)", () => {
+  const ADOC = [
+    "= The Guide", // 1
+    ":tags: docs, howto",
+    "",
+    "== Getting started",
+    "",
+    "Read *this*, see xref:notes.md[the notes] and <<next,what next>>.", // 6
+    "",
+    "NOTE: Keep it short.",
+    "",
+    "[source,python]", // 10
+    "----",
+    "* not a list",
+    "----",
+    "",
+    ".Tasks", // 15
+    "* [ ] write docs",
+    "* [x] build",
+    "** nested",
+    "",
+    "[[next]]", // 20
+    "== Next steps",
+    "",
+    "|===",
+    "| Name | Role",
+    "", // 25
+    "| Ada | lead",
+    "|===",
+    "",
+    "include::other.adoc[]",
+  ].join("\n");
+  test("sections are headings, attributes rows, blocks by their delimiters, links and tasks", async () => {
+    const { parseAsciidoc } = await import("../src/core/asciidoc.ts");
+    const { headingsOf, noteTitle } = await import("../src/core/parse.ts");
+    const { listTasks } = await import("../src/core/tasks.ts");
+    const p = parseAsciidoc(ADOC);
+    expect(p.tree.children.map((c) => [c.type as string, c.position!.start.line])).toEqual([
+      ["heading", 1],
+      ["dataField", 2],
+      ["heading", 4],
+      ["paragraph", 6],
+      ["blockquote", 8], // the admonition, as a callout
+      ["code", 11],
+      ["paragraph", 15], // the block title
+      ["list", 16],
+      ["heading", 21],
+      ["table", 23],
+      ["paragraph", 29],
+    ]);
+    expect(headingsOf(p.tree).map((h) => [h.depth, h.text])).toEqual([[1, "The Guide"], [2, "Getting started"], [2, "Next steps"]]);
+    expect(noteTitle(p, "guide.adoc")).toBe("The Guide");
+    expect(p.frontmatter!.data!.tags).toEqual(["docs", "howto"]);
+    const links: [string, number, number][] = [];
+    const walk = (n: { type: string; url?: string; position?: { start: { line: number; column: number } }; children?: unknown[] }) => {
+      if (n.type === "link") links.push([n.url!, n.position!.start.line, n.position!.start.column]);
+      for (const c of (n.children ?? []) as never[]) walk(c);
+    };
+    walk(p.tree as never);
+    expect(links).toEqual([["notes.md", 6, 18], ["#Next steps", 6, 47], ["other.adoc", 29, 10]]);
+    expect(listTasks(p.tree).map((t) => [t.line, t.checked, t.text])).toEqual([[16, false, "write docs"], [17, true, "build"]]);
+    const code = p.tree.children[5] as { lang: string; value: string };
+    expect([code.lang, code.value]).toEqual(["python", "* not a list"]);
+    const quote = p.tree.children[4] as { children: { children: { value: string }[] }[] };
+    expect(quote.children[0]!.children[0]!.value).toBe("[!note]\n");
+  });
+  test("the reader's heading scan (outside blocks) and link under a column", async () => {
+    const { readerFor } = await import("../src/core/readers.ts");
+    const a = readerFor("asciidoc");
+    expect(a.scanHeadings("= T\n----\n== not\n----\n== Real\n").map((h) => [h.level, h.text, h.src])).toEqual([[1, "T", 1], [2, "Real", 5]]);
+    const line = "see xref:notes.md[the notes] and https://x.invalid[site]";
+    expect(a.linkAt(line, 6)).toEqual({ kind: "markdown", target: "notes.md", heading: null, text: "the notes" });
+    expect(a.linkAt(line, 40)).toMatchObject({ target: "https://x.invalid", text: "site" });
+    expect(a.linkAt(line, 1)).toBeNull();
   });
 });
