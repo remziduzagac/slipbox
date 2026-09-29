@@ -26,6 +26,8 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `people/kenji-mori.md` | frontmatter with a nested map, a block string and a long key |
 | `scratch/broken-frontmatter.md` | frontmatter that is not valid YAML |
 | `projects/variable-star-survey.md` | long prose with code, tables, quotes and a block id: the ordinary case |
+| `projects/dome-refit.md` | TOML frontmatter, every callout kind (GitHub's capitals, nested), numbered tasks |
+| `projects/dome-refit.md` (again) | `*` and `+` bullets, a `www.` autolink, an image that exists (`attachments/`) |
 | `people/partners-and-names.md` | every link form, broken links, footnotes; CJK, emoji, ZWJ, RTL widths |
 | `home.md`, `people/`, `meetings/` | a linked graph: backlinks, tasks, heading references, an ambiguous link |
 | `logs/observing-log-2026.md` (again) | repeated `### Weather` headings, an in-note `#anchor` link |

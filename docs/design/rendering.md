@@ -89,7 +89,9 @@ otherwise                -> no grid: one record per row
 ```
 
 **The flaw fixed.** render-markdown checks `minimum` only in aggregate, so a column could end up
-narrower than its longest word and overflow. Here no column starts below its own minimum.
+narrower than its longest word and overflow. Here no column starts below its own minimum. The
+room left then first lifts any column below 3 content columns (a column of one-letter cells) to
+that floor, before any column grows past it: whole words come first, the floor second.
 
 **Soft segments.** A column's minimum is its longest *soft segment*, not its longest token.
 Tokens split after `/ - _ . ? & = , : ; |`, so `anti_conceal.enabled` counts as `anti_conceal.`

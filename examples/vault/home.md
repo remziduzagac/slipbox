@@ -9,6 +9,7 @@ there to exercise.
 - [[operations-handbook]] — how the observatory runs, one decision at a time
 - [[writing-guide]] — how we write notes, logs and reports
 - [[variable-star-survey]] — the survey's planning document
+- [[dome-refit]] — the summer shutdown's dome shutter refit
 
 ## Equipment
 

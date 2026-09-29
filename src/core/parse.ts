@@ -7,6 +7,7 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
+import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
 import { remarkWikiLink, type WikiLink } from "./wikilink.ts";
 
@@ -86,8 +87,15 @@ export function parseMarkdown(source: string): ParsedNote {
     const format = first.type === "yaml" ? "yaml" : "toml";
     let data: Record<string, unknown> | null = null;
     let error: string | null = null;
-    if (format === "yaml" && raw.length > MAX_YAML) error = `frontmatter over ${MAX_YAML / 1024} KB: shown as text, not parsed`;
-    else if (format === "yaml") {
+    if (raw.length > MAX_YAML) error = `frontmatter over ${MAX_YAML / 1024} KB: shown as text, not parsed`;
+    else if (format === "toml") {
+      // +++ frontmatter (Hugo, Zola): the same properties block as YAML's.
+      try {
+        data = parseToml(raw) as Record<string, unknown>;
+      } catch (err) {
+        error = (err as Error).message.split("\n")[0] ?? "invalid TOML";
+      }
+    } else {
       try {
         // Warnings stay off stderr (an error still fails); no duplicate-key check, which is
         // quadratic in the number of keys.

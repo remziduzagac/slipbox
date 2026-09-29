@@ -21,7 +21,8 @@
 // spent. What is left once no widening helps is water-filled toward `desired` for even margins.
 
 export const PADDING = 1;
-/** Narrowest content width a column may have, in columns. */
+/** Narrowest content width a column may have, in columns — once every column's longest word
+ *  fits: keeping words whole comes first, then this floor, from what room is left. */
 const MIN_CONTENT = 3;
 /** Below this content width per column, a grid is harder to read than records. */
 const MIN_USEFUL = 6;
@@ -56,6 +57,14 @@ export function allocate(desired: number[], minimum: number[], width: number, li
   let breaksWords = false;
   if (sum(minimum) <= budget) {
     base = [...minimum];
+    // The room left raises columns narrower than the floor first (a one-letter column is still
+    // three wide when it can be), before any column grows past it.
+    let spare = budget - sum(base);
+    for (let i = 0; i < n && spare > 0; i++) {
+      const give = Math.min(spare, Math.max(0, Math.min(desired[i]!, MIN_CONTENT + 2 * PADDING) - base[i]!));
+      base[i]! += give;
+      spare -= give;
+    }
   } else {
     // Words have to break. Floor each column at min(desired, its minimum, a fair share).
     const fair = Math.floor(budget / n);

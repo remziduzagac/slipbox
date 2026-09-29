@@ -1,11 +1,11 @@
 // The TUI model, driven headlessly: keys in (canonical names, as the keymap writes them),
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
 
-import { afterAll, describe, expect, test } from "bun:test";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { canonKey, canonSeq } from "../src/core/commands.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
@@ -22,6 +22,8 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
 process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+// Harnesses copy and index a vault, CLI tests start processes: slow on a loaded machine, not stuck.
+setDefaultTimeout(30_000);
 delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
 process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 delete process.env.NO_COLOR;
@@ -3202,13 +3204,23 @@ describe("explorer and outline panes", () => {
 
 describe("UI settings (space u)", () => {
   test("cursorline, line numbers, readable width, zen, urls", async () => {
-    const h = await harness({ open: "notes/alpha.md" });
+    const h = await harness({ open: "notes/alpha.md", width: 200 });
+    // The band on the cursor row is drawn, and goes: a cell past the text on that row.
+    const band = () => {
+      const p = h.app.geometry!.panes[0]!;
+      const c = h.canvas();
+      return c.styles[p.y + h.app.view!.cur.row - h.app.view!.top]![p.x + p.w - 3]?.bg ?? null;
+    };
+    const withBand = band();
     await h.keys("space", "u", "l");
     expect(h.app.ui.cursorline).toBe(false);
+    expect(band()).not.toEqual(withBand);
     await h.keys("space", "u", "n");
     expect(h.app.ui.line_numbers).toBe(true);
     const pane = h.app.geometry!.panes[0]!;
     expect(h.canvas().line(pane.y).slice(pane.x, pane.textX).trim()).toBe("1");
+    const full = h.app.currentLayout(h.app.view!).width;
+    expect(full).toBeGreaterThan(100); // 200 columns: the toggle below has something to cap
     await h.keys("space", "u", "w");
     expect(h.app.currentLayout(h.app.view!).width).toBeLessThanOrEqual(100);
     await h.keys("space", "u", "z");
@@ -3684,8 +3696,9 @@ describe("review cycle 2 (TUI)", () => {
   test("the lens: the same typing keys give the same text as source mode (a differential)", async () => {
     let seed = 11;
     const rand = (n: number) => {
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      return seed % n;
+      // Math.imul: a plain * exceeds 2^53 and loses the low bits, which then take few values.
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+      return (seed >>> 8) % n; // the high bits: an LCG's low ones repeat quickly
     };
     const pool = ["x", "y", "space", "enter", "backspace", "delete", "left", "right", "home", "end", "ctrl+w", "ctrl+u"];
     for (let run = 0; run < 25; run++) {
@@ -4206,5 +4219,117 @@ describe("review cycle 5 (vim edges)", () => {
     const l = await harness({ root, open: "l.md" });
     await l.keys("space", "n", "l", "shift+g", "d", "d");
     expect(l.app.view!.buf.source).toBe("# T\n\n- a\n- b\n\nx\n");
+  });
+});
+
+describe("review cycle 5 (TUI, behaviour no test had pinned)", () => {
+  const LINKS = "# M\n\n[to alpha](notes/alpha.md) [two](notes/alpha.md#section-two) [far](#far) [broken](nope.md) [[notes/alpha#Section Two]]\n\nfiller\n\n## Far\n\nend\n";
+  const follow = async (h: Harness, k: number) => {
+    const v = h.app.view!;
+    const l = h.app.currentLayout(v).links[k]!;
+    h.app.moveCursor(v, { row: l.line, col: l.col });
+    await h.keys("enter");
+  };
+  const at = (h: Harness) => ({ rel: h.app.view!.buf.rel, row: rowText(h).trim() });
+  test("markdown links, heading anchors and [[note#heading]] are followed to the place", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "m.md"), LINKS);
+    const h = await harness({ root, open: "m.md", width: 160, height: 40 });
+    const back = async () => {
+      await h.app.run("history.back");
+      expect(h.app.view!.buf.rel).toBe("m.md");
+    };
+    await follow(h, 0);
+    expect(at(h).rel).toBe("notes/alpha.md");
+    await back();
+    await follow(h, 1);
+    expect(at(h)).toMatchObject({ rel: "notes/alpha.md", row: expect.stringContaining("Section Two") });
+    await back();
+    await follow(h, 2);
+    expect(at(h)).toMatchObject({ rel: "m.md", row: expect.stringContaining("Far") });
+    await h.app.run("history.back");
+    await follow(h, 3);
+    expect(h.app.view!.buf.rel).toBe("m.md"); // a broken link opens nothing…
+    expect(h.app.messages.some((m) => m.text.includes("nope.md"))).toBe(true); // …and says so
+    await follow(h, 4);
+    expect(at(h)).toMatchObject({ rel: "notes/alpha.md", row: expect.stringContaining("Section Two") });
+  });
+  test("in source mode the markdown link under the cursor is followed too", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "m.md"), LINKS);
+    const h = await harness({ root, open: "m.md", width: 160, height: 40 });
+    await h.keys("space", "n", "v", "j", "j", "l", "l", "enter");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+  });
+  test("counts move by that many (5j, 3w); insert's tab, shift+tab, up and down", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "c.md"), "a b c d e\n1\n2\n3\n4\n5\n6\n");
+    const h = await harness({ root, open: "c.md" });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v", "3", "w");
+    expect(v.cur.col).toBe(6);
+    await h.keys("5", "j");
+    expect(rowText(h)).toBe("5");
+    await h.keys("i", "tab");
+    expect(v.buf.source.split("\n")[5]).toBe("  5");
+    await h.keys("shift+tab", "up", "x", "down", "down", "y", "escape");
+    expect(v.buf.source).toBe("a b c d e\n1\n2\n3\nx4\n5\n6y\n"); // down keeps the goal column
+  });
+  test(":e! reverts, :w! writes over a change on disk, :noh clears the highlights", async () => {
+    const root = makeVault();
+    const file = join(root, "e.md");
+    writeFileSync(file, "one\n");
+    const h = await harness({ root, open: "e.md" });
+    const v = h.app.view!;
+    const ex = (s: string) => h.keys(":", ...[...s].map((c) => (c === " " ? "space" : c === "!" ? "!" : c)), "enter");
+    await h.keys("space", "n", "v", "shift+a", "X", "escape");
+    await ex("e!");
+    expect(v.buf.source).toBe("one\n");
+    expect(v.buf.dirty).toBe(false);
+    await h.keys("shift+a", "Y", "escape");
+    writeFileSync(file, "theirs\n");
+    const t = Date.now() / 1000 + 5;
+    (await import("node:fs")).utimesSync(file, t, t);
+    await ex("w!");
+    expect(readFileSync(file, "utf8")).toBe("oneY\n");
+    await h.keys("/", "o", "n", "e", "enter");
+    expect(v.find?.matches.length).toBeGreaterThan(0);
+    await ex("noh");
+    expect(v.find?.matches.length ?? 0).toBe(0);
+  });
+  test("the replace row steps between matches (ctrl+n, ctrl+p); :glyphs; the scratch asks before it clears; reindex", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "r.md"), "aa\nb\naa\nb\naa\n");
+    const h = await harness({ root, open: "r.md" });
+    await h.keys("ctrl+h", "a", "a", "tab");
+    const o = h.app.overlay as { replace?: { current: number; total: number } };
+    expect(o.replace?.total).toBe(3);
+    const first = o.replace!.current;
+    await h.keys("ctrl+n");
+    expect(o.replace!.current).toBe((first + 1) % 3);
+    await h.keys("ctrl+p");
+    expect(o.replace!.current).toBe(first);
+    await h.keys("escape", "escape");
+    await h.keys(":", ..."glyphs", "space", ..."ascii", "enter");
+    expect(h.app.glyphs.mode).toBe("ascii");
+    const scratch = h.app.scratch().path;
+    mkdirSync(dirname(scratch), { recursive: true });
+    writeFileSync(scratch, "keep me\n");
+    await h.app.run("scratch.clear");
+    await h.keys("n", "enter");
+    expect(readFileSync(scratch, "utf8")).toBe("keep me\n");
+    await h.app.run("scratch.clear");
+    await h.keys("enter"); // nothing typed: not a yes either
+    expect(readFileSync(scratch, "utf8")).toBe("keep me\n");
+    await h.app.run("scratch.clear");
+    await h.keys("y", "enter");
+    expect(existsSync(scratch) ? readFileSync(scratch, "utf8") : "").toBe("");
+    writeFileSync(join(root, "late.md"), "# Late\n");
+    await h.keys("space", "v", "r");
+    expect(h.app.graph.notes.has("late.md")).toBe(true);
+  });
+  test("with no note named and no session, the vault's home note opens", async () => {
+    const h = await harness({});
+    expect(h.app.view?.buf.rel).toBe("index.md");
   });
 });

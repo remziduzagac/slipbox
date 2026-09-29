@@ -31,6 +31,13 @@ N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.
   never drop a column below its minimum when the minimums fit, and use the desired widths when
   they fit. This is the render-markdown bug and its siblings (`docs/idea.md`, Testing).
 
+**Generated inputs use a sound generator.** The seeded generators step with `Math.imul` and draw
+from the high bits: a plain `seed * 1103515245` passes 2^53, loses its low bits, and the "5,000
+inputs" were a few hundred distinct ones (the allocator's floor bug hid behind that).
+
+**Slow is not stuck.** The TUI and CLI test files set a 30 s default timeout: a harness copies and
+indexes a vault, a CLI test starts processes, and a loaded machine makes either take seconds.
+
 **Watcher tests wait for a condition, not a fixed time.** Events arrive asynchronously and more
 slowly under a loaded test run, so fixed sleeps made them flaky.
 

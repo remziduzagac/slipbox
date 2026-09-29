@@ -3,12 +3,14 @@
 // command is run here; the last test fails if one isn't. (tests/vault.test.ts drives runCli in
 // process for the finer cases.)
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CLI_COMMANDS } from "../src/cli/cli.ts";
 
+// Harnesses copy and index a vault, CLI tests start processes: slow on a loaded machine, not stuck.
+setDefaultTimeout(30_000);
 const MAIN = join(import.meta.dir, "..", "src", "main.ts");
 const DEMO = join(import.meta.dir, "..", "examples", "vault");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-cli-"));
@@ -120,6 +122,12 @@ describe("find and replace", () => {
     expect(slipbox(["find", "ASTER", "--ignore-case", "--json"]).json.data.count).toBeGreaterThan(all.count); // "master" too
     expect(slipbox(["find", "Aster"]).out).toMatch(/^[\w/.-]+\.md:\d+:\d+: /m);
     expect(slipbox(["find", "(", "--regex"]).code).toBe(2);
+    // --whole: "aster" in "master" no longer counts.
+    const whole = slipbox(["find", "aster", "--whole", "--ignore-case", "--json"]).json.data;
+    const any = slipbox(["find", "aster", "--ignore-case", "--json"]).json.data;
+    expect(whole.count).toBeGreaterThan(0);
+    expect(whole.count).toBeLessThan(any.count);
+    expect(whole.matches.every((m: { text: string; match: string }) => new RegExp(`(^|[^\\p{L}\\p{N}_])${m.match}([^\\p{L}\\p{N}_]|$)`, "iu").test(m.text))).toBe(true);
   });
   test("replace: dry run, all, first, a line range, groups; --if-unchanged refuses a stale sha", () => {
     const before = note("people/kenji-mori.md");
@@ -486,6 +494,20 @@ describe("the vault and the tool", () => {
     writeFileSync(join(vault, "emoji-col.md"), "🛰️ x needle\n");
     expect(slipbox(["find", "needle", "emoji-col", "--json"]).json.data.matches[0].column).toBe(6);
     rmSync(join(vault, "emoji-col.md"));
+  });
+  test("review cycle 5: --allow-empty empties on purpose; render --theme; send --server", () => {
+    writeFileSync(join(vault, "to-empty.md"), "text\n");
+    expect(slipbox(["write", "to-empty", "", "--allow-empty"]).code).toBe(0);
+    expect(readFileSync(join(vault, "to-empty.md"), "utf8").trim()).toBe("");
+    rmSync(join(vault, "to-empty.md"));
+    const plain = Bun.spawnSync(["bun", MAIN, "render", "home", "--color", "always", "--theme", "nord"], { cwd: vault, env }).stdout.toString();
+    const other = Bun.spawnSync(["bun", MAIN, "render", "home", "--color", "always", "--theme", "gruvbox-dark"], { cwd: vault, env }).stdout.toString();
+    expect(plain).toContain("\x1b[");
+    expect(plain).not.toBe(other); // the theme's colours, not the default's
+    // This config's command names no {server}: --server can't apply, and says so.
+    const sent = slipbox(["send", "home", "--server", join(sandbox, "no-nvim.sock"), "--json"]);
+    expect(sent.code).toBe(0);
+    expect(sent.json.warnings.join(" ")).toContain("--server has no effect");
   });
   test("every CLI command is run by this file", () => {
     const missing = [...CLI_COMMANDS].filter((c) => !ran.has(c));

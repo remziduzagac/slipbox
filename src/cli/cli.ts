@@ -836,6 +836,7 @@ const HANDLERS: Record<string, Handler> = {
     const templates = raw.length === 1 && raw[0]!.trim() === "nvim" ? NVIM_REMOTE : raw;
     let server = "";
     if (templates.some((t) => t.includes("{server}"))) server = pickNvim(s, abs);
+    else if (flag(s.args, "server")) s.warnings.push("--server has no effect: [editor] remote names no {server}");
     const commands = templates.map((t) => editorArgv(t, abs, line, s.io.env, false, server));
     for (const argv of commands) {
       const r = spawnSync(argv[0]!, argv.slice(1), { stdio: "ignore", timeout: 10000 });

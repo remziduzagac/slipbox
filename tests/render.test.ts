@@ -118,8 +118,9 @@ describe("blocks and inlines (2.2)", () => {
 describe("table allocator (2.3) — properties over generated inputs", () => {
   let seed = 42;
   const rand = (n: number) => {
-    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-    return seed % n;
+    // Math.imul: a plain * exceeds 2^53 and loses the low bits, which then take few values.
+    seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+    return (seed >>> 8) % n; // the high bits: an LCG's low ones repeat quickly
   };
   test("never exceeds the budget; never below a column's minimum when minimums fit", () => {
     for (let run = 0; run < 5000; run++) {
@@ -137,11 +138,13 @@ describe("table allocator (2.3) — properties over generated inputs", () => {
       }
       const total = a.widths.reduce((x, y) => x + y, 0) + n + 1;
       expect(total).toBeLessThanOrEqual(width);
+      const minFits = minimum.reduce((x, y) => x + y, 0) <= width - (n + 1);
+      // The floor of 3 content columns holds wherever it fits beside whole words.
+      const floorsFit = minimum.reduce((x, m, i) => x + Math.max(m, Math.min(5, desired[i]!)), 0) <= width - (n + 1);
       a.widths.forEach((w, i) => {
         expect(w).toBeLessThanOrEqual(desired[i]!);
-        expect(w).toBeGreaterThanOrEqual(Math.min(5, desired[i]!));
+        if (!minFits || floorsFit) expect(w).toBeGreaterThanOrEqual(Math.min(5, desired[i]!));
       });
-      const minFits = minimum.reduce((x, y) => x + y, 0) <= width - (n + 1);
       if (minFits) {
         expect(a.breaksWords).toBe(false);
         a.widths.forEach((w, i) => expect(w).toBeGreaterThanOrEqual(minimum[i]!));
@@ -154,8 +157,9 @@ describe("table allocator (2.3) — properties over generated inputs", () => {
 describe("table allocator — height minimisation over generated tables", () => {
   let seed = 7;
   const rand = (n: number) => {
-    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-    return seed % n;
+    // Math.imul: a plain * exceeds 2^53 and loses the low bits, which then take few values.
+    seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+    return (seed >>> 8) % n; // the high bits: an LCG's low ones repeat quickly
   };
   test("same invariants, and never worse than water-filling (height + split words)", async () => {
     const { measure, fit } = await import("../src/core/layout/wrap.ts");
@@ -225,8 +229,9 @@ describe("the allocator predicts exactly what is drawn (review cycle 2)", () => 
   test("countLines(measure(x), w) === wrapSpans(x, w).length for random mixed text", () => {
     let seed = 7;
     const rand = (n: number) => {
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      return seed % n;
+      // Math.imul: a plain * exceeds 2^53 and loses the low bits, which then take few values.
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+      return (seed >>> 8) % n; // the high bits: an LCG's low ones repeat quickly
     };
     const pieces = ["a", "word", "漢", "字", "、", "。", "（", "）", "「", "」", "ｱ", "ー", "🎉", "👨‍👩‍👧", "é", " ", "  ", "/", "-", ".", ",", "\n", "longidentifier_with.parts/and-more"];
     for (let k = 0; k < 3000; k++) {
@@ -339,5 +344,25 @@ describe("review cycle 5 (render, from mutation testing)", () => {
   test("an escape before a tab in a code block doesn't move the tab stop", () => {
     const rows = (code: string) => renderMarkdown(`\`\`\`\n${code}\n\`\`\`\n`, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }).lines.map((l) => l.spans.map((s) => s.text).join(""));
     expect(rows("ab\x1b[31mcd\x1b[0mef\tgh")).toEqual(rows("abcdef\tgh"));
+  });
+});
+
+describe("review cycle 5 (render: what the snapshots can't see)", () => {
+  test("each callout kind takes its own role; GitHub's capitals too; TOML frontmatter is a properties block", () => {
+    const roleOf = (kind: string) => {
+      const l = renderMarkdown(`> [!${kind}] T\n> body\n`, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false });
+      return l.lines[0]!.spans.find((s) => s.role.startsWith("callout_"))?.role;
+    };
+    expect(roleOf("note")).toBe("callout_note");
+    expect(roleOf("tip")).toBe("callout_tip");
+    expect(roleOf("IMPORTANT")).toBe("callout_important");
+    expect(roleOf("warning")).toBe("callout_warning");
+    expect(roleOf("caution")).toBe("callout_caution");
+    expect(roleOf("bug")).toBe("callout_caution");
+    const fm = renderMarkdown('+++\ntitle = "T"\ntags = ["a"]\n+++\n\nx\n', { width: 60, glyphs: glyphsFor("unicode"), showUrls: false });
+    const rows = fm.lines.map((l) => l.spans.map((s) => s.text).join(""));
+    expect(rows[0]).toContain("properties");
+    expect(rows.some((r) => /title\s+T/.test(r))).toBe(true);
+    expect(rows.some((r) => r.includes("+++"))).toBe(false);
   });
 });

@@ -199,7 +199,7 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4
-  with the candidates.
+  with the candidates. Commands that name no `{server}` can't use `--server`: a warning says so.
 - **`history`** reads the TUI's state: the notes it read, newest first, with the line it was on.
 
 ## `resolve`

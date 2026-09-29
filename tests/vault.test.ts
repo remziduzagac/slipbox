@@ -261,3 +261,17 @@ describe("review cycle 5 (the repo carries the demo vault)", () => {
     expect(r.stdout.toString().trim()).toBe("");
   });
 });
+
+describe("review cycle 5 (vault, single-file mode)", () => {
+  test("a folder with no .slipbox above it is single-file mode: its notes, no vault walk", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-single-"));
+    mkdirSync(join(dir, "sub"));
+    writeFileSync(join(dir, "a.md"), "# A\n\n[[b]]\n");
+    writeFileSync(join(dir, "b.md"), "# B\n");
+    writeFileSync(join(dir, "sub", "c.md"), "# C\n");
+    const loc = locateVault({ path: dir, cwd: dir });
+    expect(loc.mode).toBe("single");
+    const g = openGraph(loc, DEFAULT_CONFIG, false);
+    expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md"]);
+  });
+});
