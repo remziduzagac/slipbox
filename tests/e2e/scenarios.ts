@@ -618,8 +618,12 @@ export const SCENARIOS: Scenario[] = [
       await s.see(/Broken links \(\d+\)/);
       await s.see(/Ambiguous links \(1\)/);
       await s.see(/L29 +\[\[contacts\]\]/);
-      // The last row: home's ambiguous [[contacts]]; enter opens it there, the cursor on the link.
-      await s.keys("shift+g", "enter");
+      await s.see(/Orphans \(\d+\)/);
+      await s.see(/scratch\/broken-front/);
+      // Filtered to contacts: home's row first, over its ambiguous [[contacts]]; enter opens it there, on the link.
+      await s.keys("/");
+      await s.type("contacts");
+      await s.keys("enter");
       await s.status("home.md");
       await s.status("→ [[contacts]] (ambiguous)");
     },

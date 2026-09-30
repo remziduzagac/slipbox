@@ -118,7 +118,7 @@ slipbox resolve '[[alpha#Section Two]]' --from index.md --json
 slipbox links <note> --json              # outgoing links, each with status and path
 slipbox backlinks <note> --json          # notes linking here: line, column, and how each is written
 slipbox links --all --json               # every link in the vault, each with `from`: the broken ones
-slipbox problems --json                  # the vault's broken and ambiguous links, each with where and why
+slipbox problems --json                  # broken and ambiguous links (where, why), and orphans: notes nothing links to
 slipbox tags --json                      # every tag with its count (#a/b counts under #a too)
 slipbox tags '#project' --json           # {tag, notes}: the notes carrying it, nested tags included
 slipbox footnotes <note> --json          # each footnote: label, text, definition line, references

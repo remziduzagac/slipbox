@@ -1289,6 +1289,7 @@ describe("the vault's problems (1.7)", () => {
     writeFileSync(join(dir, "b", "twin.md"), "# Twin B\n");
     writeFileSync(join(dir, "index.md"), "# Index\n\n[[missing]] and [x](gone.md) and [[nowhere:x]].\n\n[[twin]] and [[alive]] and [ok](https://example.org)\n");
     writeFileSync(join(dir, "alive.md"), "# Alive\n");
+    writeFileSync(join(dir, "self.md"), "# Self\n\nSee [[self]], [top](#self).\n");
     const p = (await cli(["problems"], dir)).json.data;
     expect(p.broken.map((x: { line: number; column: number; target: string }) => [x.line, x.column, x.target])).toEqual([
       [3, 1, "missing"],
@@ -1297,8 +1298,12 @@ describe("the vault's problems (1.7)", () => {
     ]);
     expect(p.broken[2].reason).toContain('unknown vault "nowhere"');
     expect(p.ambiguous).toMatchObject([{ from: "index.md", line: 5, target: "twin", candidates: ["a/twin.md", "b/twin.md"] }]);
+    // Orphans (9.5): nothing links to them — an ambiguous link reaches neither twin.
+    expect(p.orphans).toEqual(["a/twin.md", "b/twin.md", "index.md", "self.md"]); // its own link isn't one
     // Made: gone from the list.
     writeFileSync(join(dir, "missing.md"), "# Missing\n");
-    expect((await cli(["problems"], dir)).json.data.broken.map((x: { target: string }) => x.target)).toEqual(["gone.md", "nowhere:x"]);
+    const after = (await cli(["problems"], dir)).json.data;
+    expect(after.broken.map((x: { target: string }) => x.target)).toEqual(["gone.md", "nowhere:x"]);
+    expect(after.orphans).toEqual(["a/twin.md", "b/twin.md", "index.md", "self.md"]); // missing.md is linked
   });
 });

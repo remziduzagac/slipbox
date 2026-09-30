@@ -454,12 +454,13 @@ keys.
   stays the flat quick-open across the vault.
 - **Problems (left, `1.7`):** what's wrong in the vault — the left panel's views are the vault's, the right's the
   file's. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link set: each link that
-  reaches nothing, and why when there's a reason, such as an unknown vault), **Ambiguous links**
-  (each that reaches several notes, and how many). Under each, the notes with such links, and under a note its
+  reaches nothing, and why when there's a reason, such as an unknown vault), **Ambiguous links** (each that reaches
+  several notes, and how many), **Orphans** (`9.5`: the notes no other note links to — another vault's links count, a
+  note's own don't — each opened by `enter`). Under the first two, the notes with such links, and under a note its
   problems: the line and the link as written, in the link's colour. `enter` (or a double-click) opens the note there,
-  the cursor on the link as drawn (in source mode, on its text); on a note's row, at its first. It takes the
-  explorer's keys (`l` / `h` unfold and fold a section, `/` filters); a note's change shows at once. `space v p`,
-  `:problems`, the `⚠` button; `slipbox problems` gives the same.
+  the cursor on the link as drawn (in source mode, on its text); on a note's row, at its first. It takes the explorer's
+  keys (`l` / `h` unfold and fold a section, `/` filters); a note's change shows at once. `space v p`, `:problems`, the
+  `⚠` button; `slipbox problems` gives the same.
 - **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
   Sections that fold (`h`/`l`): **File** (its path, the vault it belongs to, its kind, size, modified time, words and
   reading time, lines, encoding and line endings, saved or not), **Properties** (the frontmatter's keys and values,

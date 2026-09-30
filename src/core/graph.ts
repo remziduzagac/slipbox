@@ -149,7 +149,7 @@ export class Graph {
   /** Bumped whenever what the notes say changes (a note read, changed, gone): views that show
    *  what's derived from them (the Info view's counts) know to look again. */
   generation = 0;
-  private problemCache: { generation: number; broken: LinkProblem[]; ambiguous: LinkProblem[] } | null = null;
+  private problemCache: { generation: number; broken: LinkProblem[]; ambiguous: LinkProblem[]; orphans: string[] } | null = null;
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
   /** Aliases and previous names → notes, from the entries parsed so far (null: rebuild). */
   private nameCache: { aliases: Map<string, string[]>; previous: Map<string, string[]> } | null = null;
@@ -659,12 +659,13 @@ export class Graph {
   }
 
   /**
-   * The unresolved-link set (1.7), and the ambiguous links beside it: every note's links that reach
-   * nothing, or more than one note, as each resolves now — in path and line order. Every note is
-   * read first. Made again when a note changes; `forgetProblems` makes it again at once (another
-   * vault's notes changed: `[[vault:note]]` links may reach, or stop reaching).
+   * What's wrong in the vault: the unresolved-link set (1.7) and the ambiguous links beside it —
+   * every note's links that reach nothing, or more than one note, as each resolves now, in path and
+   * line order — and the orphans (9.5), the notes no other note links to (another vault's links
+   * count). Every note is read first. Made again when a note changes; `forgetProblems` makes it
+   * again at once (another vault's notes changed: `[[vault:note]]` links may reach, or stop).
    */
-  linkProblems(): { broken: LinkProblem[]; ambiguous: LinkProblem[] } {
+  problems(): { broken: LinkProblem[]; ambiguous: LinkProblem[]; orphans: string[] } {
     this.ensureAll();
     if (this.problemCache?.generation === this.generation) return this.problemCache;
     const broken: LinkProblem[] = [];
@@ -676,7 +677,8 @@ export class Graph {
         (l.resolvedKind === "unresolved" ? broken : ambiguous).push(p);
       }
     }
-    this.problemCache = { generation: this.generation, broken, ambiguous };
+    const orphans = [...this.notes.keys()].sort().filter((rel) => !this.backlinks(rel).some((b) => b.from !== rel));
+    this.problemCache = { generation: this.generation, broken, ambiguous, orphans };
     return this.problemCache;
   }
 

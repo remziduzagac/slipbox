@@ -129,7 +129,7 @@ Usage:
   slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
   slipbox tags [tag]                the vault's tags and how many notes carry each; a tag's notes
-  slipbox problems                  the vault's broken and ambiguous links
+  slipbox problems                  the vault's broken and ambiguous links, and notes nothing links to
   slipbox ls                        list the vault's notes         [--files: data and text files too]
   slipbox outline <note>            headings with source lines
   slipbox footnotes <note>          footnotes: each label, its text and line, and where it's referred to
@@ -547,17 +547,20 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   problems(s) {
-    // What's wrong in the vault (1.7): links that reach nothing, links that reach more than one note.
-    const p = s.graph.linkProblems();
+    // What's wrong in the vault (1.7, 9.5): links that reach nothing, or more than one note; notes
+    // nothing links to.
+    const p = s.graph.problems();
     const shown = (x: LinkProblem) => `${x.from}:${x.line}:${x.column}  ${x.kind === "wiki" || x.kind === "embed" ? `[[${x.target}]]` : x.target}`;
     const human = [
       `broken links (${p.broken.length})`,
       ...p.broken.map((x) => `  ${shown(x)}${x.reason ? `  — ${x.reason}` : ""}`),
       `ambiguous links (${p.ambiguous.length})`,
       ...p.ambiguous.map((x) => `  ${shown(x)}  — ${x.candidates.join(", ")}`),
+      `orphans (${p.orphans.length})`,
+      ...p.orphans.map((x) => `  ${x}`),
       "",
     ].join("\n");
-    return { data: { broken: p.broken, ambiguous: p.ambiguous }, human };
+    return { data: { broken: p.broken, ambiguous: p.ambiguous, orphans: p.orphans }, human };
   },
 
   tags(s, rest) {

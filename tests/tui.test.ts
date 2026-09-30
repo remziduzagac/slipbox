@@ -6620,6 +6620,12 @@ describe("the Problems view (1.7)", () => {
       "# Ambiguous links (1)",
       "  index.md",
       "    L5  [[twin]]  — 2 notes",
+      // Nothing links to them (an ambiguous link reaches neither twin): orphans (9.5).
+      "# Orphans (4)",
+      "  a/twin.md",
+      "  b/twin.md",
+      "  index.md",
+      "  other.md",
     ]);
     const hot = (id: string) => h.app.geometry!.hot.find((x) => x.id === id)!;
     expect(hot("btn:problems").y).toBe(hot("btn:history").y + 1);
@@ -6649,6 +6655,12 @@ describe("the Problems view (1.7)", () => {
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("other.md");
     await h.keys("space", "v", "p", "/", "t", "w", "i", "n");
-    expect(rows(h)).toEqual(["# Ambiguous links (1)", "  index.md", "    L5  [[twin]]  — 2 notes"]);
+    expect(rows(h)).toEqual(["# Ambiguous links (1)", "  index.md", "    L5  [[twin]]  — 2 notes", "# Orphans (4)", "  a/twin.md", "  b/twin.md"]);
+    // An orphan's row: the note.
+    await h.keys("escape");
+    h.app.sidebar.selected = h.app.problemRows().findIndex((r) => r.section === "Orphans" && r.note === "b/twin.md");
+    h.app.region = "sidebar";
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("b/twin.md");
   });
 });

@@ -2871,7 +2871,7 @@ export class App {
   /** Its rows: each section's heading (with its count), its problems under it unless folded; `/` filters. */
   problemRows(): ProblemRow[] {
     const q = this.leftView === "problems" ? (this.sidebar.filter ?? "") : "";
-    const p = this.graph.linkProblems();
+    const p = this.graph.problems();
     const out: ProblemRow[] = [];
     const written = (l: LinkProblem) => (l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}]]` : l.target);
     const section = (name: string, list: LinkProblem[], why: (l: LinkProblem) => string) => {
@@ -2894,6 +2894,13 @@ export class App {
     };
     section("Broken links", p.broken, (l) => l.reason ?? "");
     section("Ambiguous links", p.ambiguous, (l) => `— ${l.candidates.length} notes`);
+    // Orphans (9.5): each a note's row alone.
+    const orphans = p.orphans.filter((n) => !q || match(q, n));
+    if (!q || orphans.length) {
+      const folded = !q && this.problemsFolded.has("Orphans");
+      out.push({ section: "Orphans", heading: true, label: `Orphans (${p.orphans.length})`, detail: "", text: "Orphans", folded });
+      if (!folded) for (const n of orphans) out.push({ section: "Orphans", heading: false, note: n, label: n, detail: "", text: n, folded: false });
+    }
     return out;
   }
 
@@ -2914,7 +2921,7 @@ export class App {
 
   /** A note's problems, as the graph has them. */
   private problemsAt(rel: string): LinkProblem[] {
-    const p = this.graph.linkProblems();
+    const p = this.graph.problems();
     return [...p.broken, ...p.ambiguous].filter((x) => x.from === rel);
   }
 
@@ -2947,9 +2954,14 @@ export class App {
           else if (action !== "expand") this.problemsFolded.add(row.section);
         } else if (row.link) this.jumpToProblem(row.link);
         else if (row.note) {
-          // A note's row: the note, at its first problem.
+          // A note's row: the note, at its first problem (an orphan: the note).
           const first = rows.find((r) => r.link?.from === row.note && r.section === row.section)?.link;
           if (first) this.jumpToProblem(first);
+          else {
+            this.open(row.note);
+            this.region = "content";
+            if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+          }
         }
         break;
       case "collapse":
@@ -3710,9 +3722,12 @@ export class App {
         if (this.leftView === "problems") {
           const p = row as ProblemRow;
           const link = p.link ?? (rows as ProblemRow[]).find((r) => r.link?.from === p.note)?.link;
-          if (!link) return;
           done();
-          return this.jumpToProblem(link);
+          if (link) return this.jumpToProblem(link);
+          if (!p.note) return;
+          this.open(p.note);
+          this.region = "content";
+          return;
         }
         if (this.leftView === "history") {
           const i = (row as HistoryRow).index;

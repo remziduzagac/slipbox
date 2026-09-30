@@ -444,7 +444,7 @@ common, and the only reason they are step 0.
 | 9.4 | Cross-process semantics — **decided**: disk is the contract. See Agent integration |
 | 9.9 | Advisory staleness file — TUI writes dirty paths plus its pid; CLI surfaces them |
 | 9.10 | `--if-unchanged` for writers that must not clobber |
-| 9.5 | Graph queries: links, backlinks and `tags` built; orphans wait for `1.7` (phase 4) |
+| 9.5 | **Done.** Graph queries: links, backlinks, `tags`; orphans in `slipbox problems` (and the Problems view) |
 | 9.6 | `capture` subcommand |
 | 9.7 | **Context-bundle assembler** — shared with 10.1 |
 | 9.8 | The agent-facing skill that teaches the CLI |
