@@ -409,7 +409,7 @@ position under a repeated heading (a log's `## Weather` entries) keeps its entry
 prepended: the anchor also records the heading's occurrence counted from the bottom and the row's
 text, and keeps whichever count still finds that text.
 
-## Side panes: explorer (plan `3.7`), history and outline
+## Side panes: explorer (plan `3.7`), history, outline and footnotes
 
 Each side has one panel, which shows one of its views at a time; its rail has a button per view,
 bright while that view shows. Clicking a view's button shows the panel on it (and focuses it), or
@@ -454,8 +454,16 @@ keys.
   stays the flat quick-open across the vault.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
+- **Footnotes (right, `3.17`):** the current note's footnotes, in the order the note first refers to them (as GFM
+  numbers them), then the ones nothing refers to: `[label]` and the definition's text (the definition's label), and
+  at the right how many references it has (`2×`), `unused`, or `no definition`. `l` unfolds a footnote into its
+  references, each with its line and that line's text; `enter` (or a click) jumps to the definition or that
+  reference — in a rendered window onto the reference or definition as drawn, in source mode to the text. While not
+  focused it follows the cursor: the footnote the cursor's line refers to or defines. It never scrolls sideways: a
+  long row is cut, so its count stays. `space n f`, the `†` button, `:footnotes`; `slipbox footnotes <note>` gives
+  the same (`docs/design/cli.md`).
 
-Each pane starts with its view's title ("Explorer", "History", "Outline") and a blank row before the
+Each pane starts with its view's title ("Explorer", "History", "Outline", "Footnotes") and a blank row before the
 list; panes under 8 rows skip both. The explorer runs from under the frame's top
 rule, beside the tab strip. The outline starts right under the tab strip too,
 beside the note's windows: their breadcrumbs and rules stop at its border (which meets the
@@ -473,8 +481,9 @@ rules it meets. Each is generic: a place for buttons, whatever they open.
   `◷` (ascii `~`), and the panel opens beside it. Without it, `≡` is the top bar's and the history
   opens with `space h h`.
 - **The right rail** runs from under the tab strip's rule, its first button level with the
-  breadcrumb. It holds the outline's `▤`, and the outline opens
-  beside it. Without it, `▤` sits at the breadcrumb's right end.
+  breadcrumb. It holds the right panel's views, the outline's `▤` and under it the footnotes' `†` (ascii `*`), and
+  the panel opens beside it. Without it, `▤` sits at the breadcrumb's right end and the footnotes open with
+  `space n f`.
 
 Every width (the panes, the note, the narrow cutoff) is shared out after the rails' columns.
 Zen mode hides both.

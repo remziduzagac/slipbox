@@ -580,6 +580,25 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: "footnotes: the right panel's second view — space n f, its † under ▤; unfold, jump to a reference",
+    run: async (s) => {
+      await open(s, "partners-and-names");
+      await leader(s, "n", "f");
+      await s.status("FOOTNOTES");
+      await s.see("Footnotes");
+      await s.see(/\[1\] Counted at the/);
+      await s.see(/\[charter\]/);
+      await s.until(() => s.screen().some((r) => /▤\s*$/.test(r)) && s.screen().some((r) => /†\s*$/.test(r)), 3000, "the rail's ▤ and † under it");
+      await s.keys("l");
+      await s.see("L95");
+      await s.keys("j", "enter");
+      await s.status("→ 1 (resolved)");
+      // Back to the outline with space o: the panel's other view.
+      await leader(s, "o");
+      await s.status("OUTLINE");
+    },
+  },
+  {
     name: "tags: space f t lists them with counts, a tag its notes; a #tag in the text followed",
     run: async (s) => {
       await leader(s, "f", "t");

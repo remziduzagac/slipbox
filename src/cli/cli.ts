@@ -20,6 +20,7 @@ import { type Graph, openGraph, type Target } from "../core/graph.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { headingsOf, parseAround, type ParsedNote, slugify } from "../core/parse.ts";
+import { type Footnote, footnotesOf } from "../core/footnotes.ts";
 import { parseNoteFile } from "../core/readers.ts";
 import { dataOutline, parseData } from "../core/data.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
@@ -130,6 +131,7 @@ Usage:
   slipbox tags [tag]                the vault's tags and how many notes carry each; a tag's notes
   slipbox ls                        list the vault's notes         [--files: data and text files too]
   slipbox outline <note>            headings with source lines
+  slipbox footnotes <note>          footnotes: each label, its text and line, and where it's referred to
   slipbox find <query> [note]       find text in a note, or the vault  [--regex] [--whole] [--ignore-case] [--files]
   slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first | --first-per-line] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
@@ -172,7 +174,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "relink", "cp", "rm", "trash", "deinit", "tags",
+  "mv", "rename-vault", "relink", "cp", "rm", "trash", "deinit", "tags", "footnotes",
   "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
@@ -220,7 +222,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     const color = flag(args, "color");
     if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
     // The note argument, when it names a file, also says which vault this is.
-    const noteAt = ["render", "links", "backlinks", "outline", "replace", "task", "read", "stat", "write", "send", "mv", "relink", "cp", "rm"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
+    const noteAt = ["render", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "relink", "cp", "rm"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
     let pathArg = noteArgPath(noteAt, io.cwd);
     // A nested vault's folder, moved, copied or deleted, is a folder of the vault holding it (18.7).
     if (pathArg && ["mv", "cp", "rm"].includes(command)) {
@@ -275,7 +277,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1,
+  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 1,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -577,6 +579,16 @@ const HANDLERS: Record<string, Handler> = {
       }
     }
     return { data, human: lines.map((l) => `${l}\n`).join("") };
+  },
+
+  footnotes(s, rest) {
+    // A note's footnotes (3.17), as the TUI's footnotes view shows them.
+    const rel = resolveNote(s, requireArg(rest, "note"));
+    if (!s.graph.notes.has(rel)) throw new CliError(`${rel} isn't a note: only notes have footnotes`, EXIT.refused);
+    const list = footnotesOf(parseNoteFile(rel, readText(s.graph.abs(rel)).text));
+    const where = (f: Footnote) => (f.line === null ? "no definition" : `L${f.line}`);
+    const refs = (f: Footnote) => (f.references.length ? f.references.map((r) => `L${r.line}:${r.column}`).join(" ") : "unused");
+    return { data: { path: rel, footnotes: list }, human: list.map((f) => `[${f.label}]  ${where(f)}  ${f.text ?? ""}  ← ${refs(f)}\n`).join("") };
   },
 
   async outline(s, rest) {

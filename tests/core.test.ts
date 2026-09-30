@@ -8,6 +8,7 @@ import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
 import { newParseCache, parseMarkdown, visit } from "../src/core/parse.ts";
+import { footnotesOf } from "../src/core/footnotes.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { layoutSource } from "../src/core/layout/source.ts";
@@ -1045,5 +1046,15 @@ describe("tags (1.6)", () => {
     const span = layout.lines.flatMap((l) => l.spans).find((s) => s.text === "#project/alpha")!;
     expect(span.role).toBe("tag");
     expect(layout.links[span.link!]).toMatchObject({ kind: "tag", target: "project/alpha" });
+  });
+});
+
+describe("footnotes (3.17)", () => {
+  test("numbered as GFM numbers them: by first reference, then the ones nothing refers to; the definition's label", () => {
+    // A definition before the text: the order is still the references'.
+    const list = footnotesOf(parseMarkdown("[^a]: Alpha *one*\n    and [[two|Two]] #tag.\n\nB[^b] then A[^A] and B[^b] again.\n\n[^spare]: Unused.\n[^b]: Beta.\n"));
+    expect(list.map((f) => [f.label, f.line, f.references.length])).toEqual([["b", 7, 2], ["a", 1, 1], ["spare", 6, 0]]);
+    expect(list[1]!.text).toBe("Alpha one and Two #tag.");
+    expect(list[0]!.references).toEqual([{ line: 4, column: 2 }, { line: 4, column: 23 }]);
   });
 });

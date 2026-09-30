@@ -21,7 +21,7 @@ import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
-import { insertKey, insertText, offsetOf, startInsert, stopInsert } from "./editing.ts";
+import { insertKey, insertText, offsetOf, placeAt, startInsert, stopInsert } from "./editing.ts";
 import { insertRecord, newVimState, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
@@ -54,6 +54,7 @@ import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/
 import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
+import { type Footnote, footnotesOf } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
 import { findVaultRoot, gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
@@ -72,6 +73,7 @@ import {
   EXPLORER_ACTION_INFO,
   HISTORY_ACTION_INFO,
   OUTLINE_ACTION_INFO,
+  FOOTNOTE_ACTION_INFO,
   DEFAULT_GROUPS,
   DEFAULT_KEYS,
   DEFAULT_OUTLINE_KEYS,
@@ -313,8 +315,8 @@ export interface SidePaneState {
 
 /** What the left panel shows: the file tree or the window's history (more views to come). */
 export type LeftView = "explorer" | "history";
-/** What the right panel shows: the outline (more views to come: footnotes, comments). */
-export type RightView = "outline";
+/** What the right panel shows: the outline or the note's footnotes (more views to come: comments). */
+export type RightView = "outline" | "footnotes";
 
 /**
  * The panels' views, in rail order. Each side's panel shows one view at a time; its rail has a
@@ -333,7 +335,24 @@ export const LEFT_VIEWS: PanelView<LeftView>[] = [
   { id: "history", title: "History", glyph: (g) => g.historyButton },
 ];
 
-export const RIGHT_VIEWS: PanelView<RightView>[] = [{ id: "outline", title: "Outline", glyph: (g) => g.outlineButton }];
+export const RIGHT_VIEWS: PanelView<RightView>[] = [
+  { id: "outline", title: "Outline", glyph: (g) => g.outlineButton },
+  { id: "footnotes", title: "Footnotes", glyph: (g) => g.footnotesButton },
+];
+
+/**
+ * One row of the footnotes view (3.17): a footnote — its label and text — or, unfolded under it,
+ * one of its references with its line.
+ */
+export interface FootnoteRow {
+  fn: Footnote;
+  /** A reference's row: where it is. */
+  ref: { line: number; column: number } | null;
+  /** What the row shows (and the filter matches). */
+  text: string;
+  hasChildren: boolean;
+  folded: boolean;
+}
 
 /**
  * One row of the history view: a place in the window's timeline, newest first; then the notes
@@ -464,6 +483,12 @@ export class App {
   leftView: LeftView = "explorer";
   /** Where each left view was when another took the panel: restored when it comes back. */
   private leftPositions = new Map<LeftView, Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">>();
+  /** What the right panel shows (3.17); `outline` is its state, whichever view that is. */
+  rightView: RightView = "outline";
+  private rightPositions = new Map<RightView, Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">>();
+  /** The footnotes whose references are unfolded in the footnotes view, by id. */
+  footnotesOpen = new Set<string>();
+  private footnoteCache: { key: string; list: Footnote[] } | null = null;
   outline: SidePaneState & { folded: Set<number>; forKey: string };
   expanded = new Set<string>();
   overlay: Overlay | null = null;
@@ -2592,12 +2617,152 @@ export class App {
     if (!on && this.region === "sidebar") this.region = "content";
   }
 
-  /** Show the outline and focus it, its selection on the cursor's section. */
-  openOutline(): void {
-    this.outline.pinned = false;
+  /**
+   * A right rail button, or its command (3.17): show the right panel on `view` and focus it; if
+   * it's already showing that view, hide it (`cycle`: focus it first when it's open but not focused).
+   * A view shown the first time starts on the cursor's place: its section, its footnote.
+   */
+  openRightView(view: RightView, mode: "toggle" | "cycle" = "toggle"): void {
+    const showing = this.outlineShown && this.rightView === view;
+    if (showing && mode === "cycle" && this.region !== "outline") {
+      this.region = "outline";
+      this.outline.pinned = false;
+      return;
+    }
+    if (showing) return this.showOutline(false);
+    const restored = this.switchRightView(view);
+    this.outline.filtering = false;
     this.showOutline(true);
-    this.outline.selected = Math.max(0, this.currentSection());
     this.region = "outline";
+    if (restored) return;
+    this.outline.filter = "";
+    this.outline.pinned = false;
+    this.outline.selected = Math.max(0, view === "outline" ? this.currentSection() : this.currentFootnote());
+  }
+
+  /** Put `view` in the right panel: each view keeps its own place, as the left panel's do. */
+  switchRightView(view: RightView): boolean {
+    if (this.rightView === view) return false;
+    const o = this.outline;
+    this.rightPositions.set(this.rightView, { selected: o.selected, scroll: o.scroll, left: o.left, pinned: o.pinned, filter: o.filter });
+    this.rightView = view;
+    o.filtering = false;
+    const saved = this.rightPositions.get(view);
+    Object.assign(o, saved ?? { selected: 0, scroll: 0, left: 0, pinned: false, filter: "" });
+    return !!saved;
+  }
+
+  /** The current note's footnotes (3.17), parsed once per version of its text. */
+  footnotes(): Footnote[] {
+    const buf = this.view?.buf;
+    if (!buf || buf.kind.group !== "note") return [];
+    const key = `${buf.key}:${buf.version}`;
+    if (this.footnoteCache?.key !== key) this.footnoteCache = { key, list: footnotesOf(buf.parsed) };
+    return this.footnoteCache.list;
+  }
+
+  /** The footnotes view's rows: each footnote, its references under it when unfolded; filtered by `/`. */
+  footnoteRows(): FootnoteRow[] {
+    const q = this.rightView === "footnotes" ? (this.outline.filter ?? "") : "";
+    const lines = this.view?.buf.source.split("\n") ?? [];
+    const rows: FootnoteRow[] = [];
+    for (const fn of this.footnotes()) {
+      const text = `[${fn.label}] ${fn.text ?? "(no definition)"}`;
+      if (q && !match(q, text)) continue;
+      const folded = !this.footnotesOpen.has(fn.id);
+      rows.push({ fn, ref: null, text, hasChildren: fn.references.length > 0, folded });
+      if (folded) continue;
+      for (const ref of fn.references) {
+        const around = (lines[ref.line - 1] ?? "").trim();
+        rows.push({ fn, ref, text: `L${ref.line}  ${around}`, hasChildren: false, folded: false });
+      }
+    }
+    return rows;
+  }
+
+  /** Index into footnoteRows() of the footnote the cursor's line holds (a reference to it, or its
+   *  definition), else the last one before it; -1 with none. */
+  currentFootnote(): number {
+    const view = this.view;
+    if (!view) return -1;
+    const line = this.cursorLine(view);
+    const rows = this.footnoteRows();
+    const on = rows.findIndex((r) => (r.ref ? r.ref.line === line : r.fn.line === line || (r.folded && r.fn.references.some((x) => x.line === line))));
+    if (on >= 0) return on;
+    let best = -1;
+    rows.forEach((r, i) => {
+      if (!r.ref && Math.min(r.fn.line ?? Infinity, r.fn.references[0]?.line ?? Infinity) <= line) best = i;
+    });
+    return best;
+  }
+
+  /** Move the note to a footnote row's place: the definition, or that reference — the rendered
+   *  reference itself when the window renders the note, the source text's place in source mode. */
+  jumpToFootnote(row: FootnoteRow): void {
+    const view = this.view;
+    if (!view) return;
+    const layout = this.currentLayout(view);
+    this.pushHistory(view);
+    if (row.ref) {
+      const onLine = row.fn.references.filter((r) => r.line === row.ref!.line);
+      const nth = onLine.findIndex((r) => r.column === row.ref!.column);
+      const drawn = layout.links.filter((l) => l.kind === "footnote" && l.target.toLowerCase() === row.fn.id && l.src === row.ref!.line)[nth];
+      if (drawn && drawn.line >= 0) this.moveCursor(view, { row: drawn.line, col: drawn.col });
+      else placeAt(this, view, (view.buf.lineStarts()[row.ref.line - 1] ?? 0) + row.ref.column - 1);
+    } else {
+      if (row.fn.line === null) return this.message("warn", `footnote [^${row.fn.label}] has no definition`);
+      const def = layout.lines.findIndex((l) => l.footnoteDef !== undefined && l.footnoteDef.toLowerCase() === row.fn.id);
+      if (def >= 0) this.moveCursor(view, { row: def, col: 0 });
+      else placeAt(this, view, view.buf.lineStarts()[row.fn.line - 1] ?? 0);
+    }
+    this.region = "content";
+    if (this.narrow || this.ui.zen) this.outline.overlay = false;
+  }
+
+  /** The footnotes view's keys (the outline's keymap): move, jump, fold its references, filter, close, leave. */
+  footnoteAction(action: string): void {
+    this.outline.pinned = false;
+    if (action === "filter") {
+      this.outline.filtering = true;
+      return;
+    }
+    const rows = this.footnoteRows();
+    const row = rows[this.outline.selected];
+    switch (action) {
+      case "down":
+        this.outline.selected = Math.min(rows.length - 1, this.outline.selected + 1);
+        break;
+      case "up":
+        this.outline.selected = Math.max(0, this.outline.selected - 1);
+        break;
+      case "top":
+        this.outline.selected = 0;
+        break;
+      case "bottom":
+        this.outline.selected = rows.length - 1;
+        break;
+      case "jump":
+        if (row) this.jumpToFootnote(row);
+        break;
+      case "fold":
+        if (!row) break;
+        // A reference: to its footnote; a footnote: its references folded.
+        if (row.ref) this.outline.selected = rows.findIndex((r) => r.fn === row.fn && !r.ref);
+        else this.footnotesOpen.delete(row.fn.id);
+        break;
+      case "unfold":
+        if (row?.hasChildren) this.footnotesOpen.add(row.fn.id);
+        break;
+      case "close":
+        this.showOutline(false);
+        break;
+      case "leave":
+        this.region = "content";
+        if (this.narrow || this.ui.zen) this.outline.overlay = false;
+        break;
+      default:
+        this.message("error", `unknown footnotes action: ${action}`);
+    }
   }
 
   showOutline(on: boolean): void {
@@ -2876,7 +3041,9 @@ export class App {
   /** Keys while the outline's filter has them: type, move, jump, clear. */
   private outlineFilterKey(key: string): void {
     const o = this.outline;
-    const rows = this.outlineRows();
+    // The footnotes view filters the same way (3.17).
+    const notes = this.rightView === "footnotes";
+    const rows: { text: string; line?: number }[] = notes ? this.footnoteRows() : this.outlineRows();
     const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
     const done = () => {
       o.filter = "";
@@ -2892,8 +3059,9 @@ export class App {
         const view = this.view;
         done();
         if (!row || !view) return;
+        if (notes) return this.jumpToFootnote(row as FootnoteRow);
         this.pushHistory(view);
-        this.moveCursor(view, { row: row.line, col: 0 });
+        this.moveCursor(view, { row: row.line!, col: 0 });
         this.region = "content";
         if (this.narrow || this.ui.zen) o.overlay = false;
         return;
@@ -2928,7 +3096,7 @@ export class App {
     o.scroll = 0;
     o.pinned = false;
     const q = o.filter ?? "";
-    const next = this.outlineRows();
+    const next: { text: string }[] = notes ? this.footnoteRows() : this.outlineRows();
     let best = 0;
     let bestScore = Number.NEGATIVE_INFINITY;
     if (q) {
@@ -3559,7 +3727,9 @@ export class App {
     const out: { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] = [];
     // A pane's own actions carry their titles (which-key says "New note here", as help does).
     if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : EXPLORER_ACTION_INFO });
-    if (this.region === "outline" && this.outlineShown) out.push({ map: this.outlineKeys, run: (a) => this.outlineAction(a), info: OUTLINE_ACTION_INFO });
+    if (this.region === "outline" && this.outlineShown) {
+      out.push(this.rightView === "footnotes" ? { map: this.outlineKeys, run: (a) => this.footnoteAction(a), info: FOOTNOTE_ACTION_INFO } : { map: this.outlineKeys, run: (a) => this.outlineAction(a), info: OUTLINE_ACTION_INFO });
+    }
     if (this.view?.visual) out.push({ map: this.visualKeys, run: (s) => this.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
     if (this.region === "content" && editable(this.view) && !this.view!.visual) out.push({ map: this.sourceKeys, run: (s) => this.run(s) });
@@ -4020,6 +4190,19 @@ export class App {
       this.region = "outline";
       if (!g.outline || !inRect(g.outline, ev.x, ev.y)) return;
       const idx = ev.y - g.outline.y + this.outline.scroll;
+      if (this.rightView === "footnotes") {
+        // A footnote's fold marker folds; a click elsewhere on a row jumps there.
+        const fr = this.footnoteRows()[idx];
+        if (!fr) return;
+        this.outline.selected = idx;
+        if (fr.hasChildren && ev.x <= g.outline.x + 2) this.footnoteAction(fr.folded ? "unfold" : "fold");
+        else {
+          this.jumpToFootnote(fr);
+          this.outline.filter = "";
+          this.outline.filtering = false;
+        }
+        return;
+      }
       const row = this.outlineRows()[idx];
       if (!row) return;
       this.outline.selected = idx;
@@ -4236,6 +4419,7 @@ export class App {
         if (arg === "explorer") this.openLeftView("explorer");
         else if (arg === "history") this.openLeftView("history");
         else if (arg === "outline") void this.run("outline.toggle");
+        else if (arg === "footnotes") void this.run("footnotes.toggle");
         else if (arg === "palette") void this.run("palette.open");
         break;
       case "tabclose":
@@ -4500,7 +4684,7 @@ export class App {
   /** What the explorer and the outline have selected; the function puts them back on it. */
   private rememberSelections(): () => void {
     const explorer = this.leftView === "explorer" ? this.explorerRows()[this.sidebar.selected]?.path : undefined;
-    const rows = this.outlineShown ? this.outlineRows() : [];
+    const rows = this.outlineShown && this.rightView === "outline" ? this.outlineRows() : [];
     const heading = rows[this.outline.selected];
     const nth = heading ? rows.slice(0, this.outline.selected).filter((r) => r.text === heading.text).length : 0;
     return () => {

@@ -1030,18 +1030,12 @@ export function registerActions(app: App): void {
       a.region = "sidebar";
     },
     // Like the explorer: closed → open and focus; open elsewhere → focus; focused → close.
-    "outline.cycle": (a) => {
-      if (!a.outlineShown) return a.openOutline();
-      if (a.region !== "outline") {
-        a.region = "outline";
-        a.outline.pinned = false;
-      } else a.showOutline(false);
-    },
+    "outline.cycle": (a) => a.openRightView("outline", "cycle"),
     // The ▤ button: show (and focus) or hide.
-    "outline.toggle": (a) => {
-      if (a.outlineShown) return a.showOutline(false);
-      a.openOutline();
-    },
+    "outline.toggle": (a) => a.openRightView("outline"),
+    // The right panel's other view (3.17): the note's footnotes, its button under the outline's.
+    "footnotes.cycle": (a) => a.openRightView("footnotes", "cycle"),
+    "footnotes.toggle": (a) => a.openRightView("footnotes"),
     // find
     "find.open": (a) =>
       withView(a, (v) => {

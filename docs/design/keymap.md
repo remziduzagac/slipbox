@@ -286,6 +286,11 @@ and, while unfocused, keeps its selection on the section the cursor is in. Insid
 | `q` | close the outline |
 | `esc` | back to the note (over the content, the outline closes) |
 
+**Footnotes** (`3.17`) are the right panel's other view, its `†` button (ascii `*`) under the outline's: `space n f`
+cycles it as `space o` does the outline (`:footnotes` toggles it). It takes the outline's keys: `j` / `k` move,
+`enter` (or a click) jumps to the footnote's definition, or to a reference, `l` / `h` unfold and fold a footnote's
+references, `/` filters by label and text, `q` closes, `esc` goes back to the note.
+
 Below `ui.narrow_width` columns (default 90), the explorer and the outline open over the content.
 
 ## Find — `space f`
@@ -532,6 +537,7 @@ mouse off, which gives it back to the terminal.
 | `≡` (on the left rail; without it the top bar's) | show the explorer (and focus it) / hide it |
 | `◷` (on the left rail) | show the history (and focus it) / hide it |
 | `▤` (on the right rail; without it the breadcrumb's or the top bar's) | show the outline (and focus it) / hide it |
+| `†` (on the right rail, under `▤`) | show the footnotes (and focus them) / hide them |
 | top bar `slipbox` chip | open the command palette |
 | window breadcrumb | scroll that window to the heading, and focus it; its icon finds a heading |
 | breadcrumb `…` | the whole heading path as a dropdown; click or `enter` on one to jump there |

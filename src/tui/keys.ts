@@ -228,6 +228,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n n": "note.create",
   "leader n m": "note.rename",
   "leader n d": "note.delete",
+  "leader n f": "footnotes.cycle",
   "leader n shift+m": "note.move",
   "leader n y": "note.yank",
   "leader n x": "note.cut",
@@ -470,6 +471,20 @@ export const OUTLINE_ACTION_INFO: Record<string, { title: string; desc: string }
   leave: { title: "Back to the note", desc: "Focuses the note; the outline stays open" },
 };
 
+/** The footnotes view takes the outline's keymap (3.17); what its actions do there, for help. */
+export const FOOTNOTE_ACTION_INFO: Record<string, { title: string; desc: string }> = {
+  down: { title: "Move down", desc: "Selects the next footnote or reference" },
+  up: { title: "Move up", desc: "Selects the previous footnote or reference" },
+  jump: { title: "Jump", desc: "Moves the note to the footnote's definition, or to that reference, and focuses it" },
+  fold: { title: "Fold", desc: "Hides a footnote's references, or goes from a reference to its footnote" },
+  unfold: { title: "Unfold", desc: "Shows a footnote's references, each with its line" },
+  top: { title: "Top", desc: "Selects the first footnote" },
+  bottom: { title: "Bottom", desc: "Selects the last row" },
+  filter: { title: "Filter", desc: "Type to narrow the footnotes by label and text; enter jumps, esc clears" },
+  close: { title: "Close the footnotes", desc: "Closes the right panel; focus returns to the note" },
+  leave: { title: "Back to the note", desc: "Focuses the note; the footnotes stay open" },
+};
+
 export const RESIZE_ACTIONS: Record<string, { title: string; desc: string }> = {
   narrower: { title: "Narrower", desc: "Shrinks the focused pane or window" },
   wider: { title: "Wider", desc: "Grows the focused pane or window" },
@@ -510,6 +525,7 @@ export function parseGroup(value: string): { name: string; desc: string } {
 /** `:` aliases: alias → command spec. The rest of the typed line becomes the argument. */
 export const DEFAULT_ALIASES: Record<string, string> = {
   tags: "tag.list",
+  footnotes: "footnotes.toggle",
   tag: "tag.list",
   q: "window.close_or_quit",
   quit: "window.close_or_quit",

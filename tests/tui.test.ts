@@ -2792,7 +2792,7 @@ describe("review round 1", () => {
     const top = rows.findIndex((r) => r.includes("┌─"));
     const bottom = rows.findIndex((r, i) => i > top && r.includes("└"));
     const right = rows[top]!.lastIndexOf("┐");
-    for (let y = top; y <= bottom; y++) expect(rows[y]!.slice(right + 1).replace(/[▐┃━]/g, "").trim()).toBe("");
+    for (let y = top; y <= bottom; y++) expect(rows[y]!.slice(right + 1).replace(/[▐┃━▤†]/g, "").trim()).toBe(""); // borders, the right rail
     expect(rows[bottom]).toMatch(/\+\d+ more/);
   });
   test("NO_COLOR: the scrollbar thumb stands out from its track; the current note is bold", async () => {
@@ -6259,5 +6259,84 @@ describe("tags (1.6)", () => {
     for (const c of "tag cupola") await h.keys(c === " " ? "space" : c);
     await h.keys("enter");
     expect((h.app.overlay as ListOverlay).title).toBe("#cupola — 2 notes");
+  });
+});
+
+describe("footnotes in the right panel (3.17)", () => {
+  const NOTE = "# Notes\n\nFirst claim[^one] and a second[^Two].\n\nAgain the first[^one].\n\n[^one]: The first source.\n[^two]: The second, on\n    two lines.\n[^spare]: Nothing refers to this.\n";
+  const setup = async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "fn.md"), NOTE);
+    return await harness({ root, open: "fn.md", width: 140 });
+  };
+  const rows = (h: Harness) => h.app.footnoteRows().map((r) => r.text);
+
+  test("space n f shows them beside the note: each footnote, its references unfolded under it; the rail's button under the outline's", async () => {
+    const h = await setup();
+    await h.keys("space", "n", "f");
+    expect(h.app.rightView).toBe("footnotes");
+    expect(h.app.region).toBe("outline");
+    expect(rows(h)).toEqual(["[one] The first source.", "[two] The second, on two lines.", "[spare] Nothing refers to this."]);
+    const f = h.frame();
+    expect(f).toContain("Footnotes");
+    expect(f).toMatch(/\[one\] The first source\.\s+2×/);
+    expect(f).toMatch(/\[spare\] Nothing refe\S*…\s+unused/); // cut to keep its count in sight
+    expect(h.app.geometry!.scrollbars.some((b) => b.pane === "outline" && b.horizontal)).toBe(false);
+    expect(statusRow(f)).toContain("FOOTNOTES");
+    // The right rail: the outline's button, then this one under it, lit.
+    const hot = (id: string) => h.app.geometry!.hot.find((x) => x.id === id)!;
+    expect(hot("btn:footnotes").y).toBe(hot("btn:outline").y + 1);
+    // l unfolds a footnote's references, each with its line; h folds them back.
+    await h.keys("l");
+    expect(rows(h).slice(0, 3)).toEqual(["[one] The first source.", "L3  First claim[^one] and a second[^Two].", "L5  Again the first[^one]."]);
+    await h.keys("h");
+    expect(rows(h)).toHaveLength(3);
+  });
+
+  test("enter jumps to the definition, or a reference; unfocused, the selection follows the cursor", async () => {
+    const h = await setup();
+    await h.keys("space", "n", "f", "l", "j", "j", "enter"); // [one]'s second reference
+    expect(h.app.region).toBe("content");
+    const v = h.app.view!;
+    const link = h.app.currentLayout(v).links[h.app.linkUnderCursor(v)]!;
+    expect(link).toMatchObject({ kind: "footnote", src: 5 });
+    // Following the cursor, unfocused: onto [two]'s definition, its row.
+    h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.footnoteDef === "two"), col: 0 });
+    h.frame();
+    expect(h.app.footnoteRows()[h.app.outline.selected]!.text).toBe("[two] The second, on two lines.");
+    // A footnote's own row: its definition.
+    await h.keys("space", "n", "f", "g", "g", "h", "j", "enter"); // [one] folded again, then [two] (its definition's label)
+    expect(h.app.currentLayout(v).lines[v.cur.row]!.footnoteDef).toBe("two");
+    // In source mode: the source's place.
+    await h.app.run("view.source");
+    await h.keys("space", "n", "f", "g", "g", "enter");
+    expect(h.app.cursorLine(h.app.view!)).toBe(7);
+  });
+
+  test("the buttons switch the panel's view, each keeping its place; / filters; :footnotes", async () => {
+    const h = await setup();
+    const click = (id: string) => {
+      const r = h.app.geometry!.hot.find((x) => x.id === id)!;
+      h.app.handleMouse({ type: "down", x: r.x + 1, y: r.y, button: 0 });
+      h.app.handleMouse({ type: "up", x: r.x + 1, y: r.y, button: 0 });
+      h.frame();
+    };
+    h.frame();
+    click("btn:footnotes");
+    expect(h.app.rightView).toBe("footnotes");
+    await h.keys("j", "j");
+    click("btn:outline");
+    expect(h.app.rightView).toBe("outline");
+    expect(h.frame()).toContain("Outline");
+    click("btn:footnotes");
+    expect(h.app.outline.selected).toBe(2); // where it was
+    click("btn:footnotes"); // its own button again: hidden
+    expect(h.app.outlineShown).toBe(false);
+    await h.keys(":");
+    for (const ch of "footnotes") await h.keys(ch);
+    await h.keys("enter");
+    expect(h.app.outlineShown).toBe(true);
+    await h.keys("/", "s", "e", "c");
+    expect(rows(h)).toEqual(["[two] The second, on two lines."]);
   });
 });

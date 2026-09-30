@@ -329,6 +329,14 @@ describe("the vault and the tool", () => {
     expect(slipbox(["tags", "#dome/shutter", "--json"], { cwd: DEMO }).json.data).toEqual({ tag: "dome/shutter", notes });
     expect(slipbox(["tags", "dome/shutter"], { cwd: DEMO }).out).toBe(notes.map((n) => `${n}\n`).join(""));
   });
+  test("footnotes: each one's label, text and line, and where it's referred to (3.17)", () => {
+    const r = slipbox(["footnotes", "people/partners-and-names.md", "--json"], { cwd: DEMO }).json.data as { path: string; footnotes: { label: string; line: number; references: { line: number }[] }[] };
+    expect(r.path).toBe("people/partners-and-names.md");
+    expect(r.footnotes.map((f) => f.label)).toEqual(["1", "charter"]);
+    expect(r.footnotes[0]).toMatchObject({ line: 97, text: "Counted at the Visitor Pavilion door, not from ticket sales.", references: [{ line: 95, column: 42 }] });
+    expect(slipbox(["footnotes", "people/partners-and-names.md"], { cwd: DEMO }).out).toContain("[charter]  L101");
+    expect(slipbox(["footnotes", "software/halley/halley.toml"], { cwd: DEMO }).code).toBe(5); // not a note
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);

@@ -76,6 +76,8 @@ export interface Glyphs {
   /** Top bar buttons and the tab close button. */
   explorerButton: string;
   outlineButton: string;
+  /** The right rail's footnotes button (3.17), under the outline's. */
+  footnotesButton: string;
   /** The left rail's history button. */
   historyButton: string;
   close: string;
@@ -145,6 +147,7 @@ const unicode: Glyphs = {
   dirty: "●",
   explorerButton: "≡",
   outlineButton: "▤",
+  footnotesButton: "†",
   historyButton: "◷",
   close: "×",
   pin: "⚑",
@@ -238,6 +241,7 @@ const ascii: Glyphs = {
   dirty: "*",
   explorerButton: "=",
   outlineButton: "#",
+  footnotesButton: "*",
   historyButton: "~",
   close: "x",
   pin: "^",

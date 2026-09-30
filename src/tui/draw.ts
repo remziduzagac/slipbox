@@ -174,7 +174,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const top = mainY;
     const rect = { x: RW - w, y: top, w, h: bottom + 1 - top };
     if (!app.outlineBeside) clipRules(geo, { x: RW - w - 3, y: top, w: w + 3, h: bottom + 1 - top });
-    geo.outline = drawOutline(app, c, rect, geo);
+    geo.outline = app.rightView === "footnotes" ? drawFootnotes(app, c, rect, geo) : drawOutline(app, c, rect, geo);
     geo.outlinePane = rect;
     if (!app.outlineBeside) {
       c.fill(RW - w - 3, top, 2, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
@@ -340,7 +340,7 @@ function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: n
   const buttons =
     side === "left"
       ? LEFT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.sidebarShown && app.leftView === v.id, id: `btn:${v.id}` }))
-      : RIGHT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.outlineShown, id: `btn:${v.id}` }));
+      : RIGHT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.outlineShown && app.rightView === v.id, id: `btn:${v.id}` }));
   buttons.forEach((b, k) => {
     const y = top + k;
     if (y > bottom) return;
@@ -1268,6 +1268,58 @@ function drawHistoryList(app: App, c: Canvas, list: Rect, bg: Color | null, geo:
   return rect;
 }
 
+/**
+ * The note's footnotes (3.17), the right panel's other view: each footnote — `[label]` and its
+ * text, how many references it has at the right — and, unfolded under it, each reference with its
+ * line. A footnote nothing refers to, or a reference with no definition, is marked. While the view
+ * isn't focused, its selection follows the cursor.
+ */
+function drawFootnotes(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
+  const theme = app.theme;
+  const page = pageBg(theme);
+  const base = roleStyle(theme, "sidebar", page);
+  c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
+  let rect = paneTitle(app, c, pane, RIGHT_VIEWS.find((v) => v.id === "footnotes")!.title, app.region === "outline", base.bg);
+  rect = filterRow(app, c, rect, app.outline, app.region === "outline", base.bg, geo);
+  const rows = app.footnoteRows();
+  const o = app.outline;
+  const g = app.glyphs;
+  const hint = (row: (typeof rows)[number]) =>
+    row.ref ? "" : row.fn.line === null ? "no definition" : row.fn.references.length ? `${row.fn.references.length}×` : "unused";
+  const text = (row: (typeof rows)[number]) => (row.ref ? `   ${g.guideLast}${g.guideDash} ${row.text}` : ` ${row.hasChildren ? (row.folded ? g.foldClosed : g.foldOpen) : " "} ${row.text}`);
+  // Never scrolled sideways (as the history): a long row is cut, so its count stays in sight.
+  const sv = sideView(rect, rows, () => "", o);
+  rect = sv.list;
+  const current = app.currentFootnote();
+  if (app.region !== "outline" && current >= 0) o.selected = current;
+  o.selected = Math.max(0, Math.min(o.selected, rows.length - 1));
+  if (!o.pinned && o.selected < o.scroll) o.scroll = o.selected;
+  if (!o.pinned && o.selected >= o.scroll + rect.h) o.scroll = o.selected - rect.h + 1;
+  o.scroll = Math.max(0, Math.min(o.scroll, Math.max(0, rows.length - rect.h)));
+  if (!rows.length) {
+    drawText(c, rect.x + 1, rect.y, o.filter ? "no matches" : "no footnotes", roleStyle(theme, "dim", base.bg), rect.w - 1);
+    return rect;
+  }
+  for (let i = 0; i < rect.h; i++) {
+    const idx = o.scroll + i;
+    const row = rows[idx];
+    if (!row) break;
+    const y = rect.y + i;
+    const selected = idx === o.selected && app.region === "outline";
+    let role: Role = idx === current ? "sidebar_active" : row.ref ? "dim" : "sidebar";
+    if (selected) role = "sidebar_selected";
+    const st = roleStyle(theme, role, base.bg);
+    if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
+    const h = hint(row);
+    const hw = h ? stringWidth(h) + 1 : 0;
+    drawText(c, rect.x, y, truncate(sideRow(text(row), sv), Math.max(1, sv.cols - hw)), st, rect.w);
+    if (h) drawText(c, rect.x + sv.cols - hw + 1, y, h, { ...roleStyle(theme, row.fn.line === null ? "warn" : "dim", st.bg), bg: st.bg }, hw);
+  }
+  paneScrollbar(app, c, rect, rows.length, o.scroll, "outline", app.region === "outline", base.bg, geo);
+  sideHScrollbar(app, c, sv, "outline", app.region === "outline", base.bg, geo);
+  return rect;
+}
+
 /** The outline; returns the rect its headings occupy (under the title). */
 function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const theme = app.theme;
@@ -1338,7 +1390,9 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
         : app.region === "sidebar"
           ? " FILES "
           : app.region === "outline"
-            ? " OUTLINE "
+            ? app.rightView === "footnotes"
+              ? " FOOTNOTES "
+              : " OUTLINE "
             : view?.insert
               ? " INSERT "
               : view?.source

@@ -119,6 +119,7 @@ slipbox backlinks <note> --json          # notes linking here: line, column, and
 slipbox links --all --json               # every link in the vault, each with `from`: the broken ones
 slipbox tags --json                      # every tag with its count (#a/b counts under #a too)
 slipbox tags '#project' --json           # {tag, notes}: the notes carrying it, nested tags included
+slipbox footnotes <note> --json          # each footnote: label, text, definition line, references
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
 ```
 
