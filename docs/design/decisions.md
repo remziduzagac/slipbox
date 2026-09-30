@@ -179,6 +179,15 @@ micromark extension, as wikilinks are). `/` nests: `#dome/shutter` is under `#do
 children's. `#Dome` and `#dome` are one tag, shown as first written (the first note by path, its frontmatter before
 its text).
 
+## `3.18` — footnotes, added and changed
+
+A footnote stays GFM's, in the note: `[^label]` where it's cited, `[^label]: text` wherever it's defined. A new one
+takes the next free number (one past the highest numeric label) and its definition goes at the note's end — in the
+block of definitions that ends it, else after a blank line — never reordered: tidying them into reference order would
+rewrite footnotes nobody touched. Its reference goes after the word the cursor is on; a rendered row knows its source
+only by line, so the word is found in its paragraph's source by how many times it came before, and never lands
+inside a link's or code's syntax. Edits, renames and deletes change the text they name and nothing else.
+
 ## `3.5` — reload anchoring
 
 A buffer stores **source lines, never rendered rows**. Rendered rows change with every resize.

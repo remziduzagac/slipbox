@@ -15,6 +15,7 @@ import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
+import { stringWidth } from "../src/core/width.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
 
@@ -6338,5 +6339,93 @@ describe("footnotes in the right panel (3.17)", () => {
     expect(h.app.outlineShown).toBe(true);
     await h.keys("/", "s", "e", "c");
     expect(rows(h)).toEqual(["[two] The second, on two lines."]);
+  });
+});
+
+describe("adding and changing footnotes (3.18)", () => {
+  const NOTE = "# Notes\n\nThe dome logged nights and more nights, see [[alpha]] here.\n\n[^old]: An old one.\n";
+  const setup = async (source = NOTE) => {
+    const root = makeVault();
+    writeFileSync(join(root, "fn.md"), source);
+    const h = await harness({ root, open: "fn.md", width: 140 });
+    return { root, h, read: () => readFileSync(join(root, "fn.md"), "utf8") };
+  };
+  const prompt = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+  const type = async (h: Harness, text: string) => {
+    for (const c of text) await h.keys(c === " " ? "space" : c);
+  };
+  /** Put the cursor on the `nth` occurrence of `word` as drawn (rendered, or source). */
+  const onWord = (h: Harness, word: string, nth = 0, offset = 0) => {
+    const v = h.app.view!;
+    const lines = h.app.currentLayout(v).lines;
+    let seen = 0;
+    for (let row = 0; row < lines.length; row++) {
+      const t = lines[row]!.spans.map((s) => s.text).join("");
+      for (let i = t.indexOf(word); i >= 0; i = t.indexOf(word, i + 1)) {
+        if (seen++ === nth) return h.app.moveCursor(v, { row, col: stringWidth(t.slice(0, i)) + offset });
+      }
+    }
+    throw new Error(`no ${word}`);
+  };
+
+  test("space n shift+f in the render: its text asked; [^N] after the word the cursor is on, [^N]: text at the end; one undo step", async () => {
+    const { h, read } = await setup();
+    onWord(h, "nights", 1, 2); // the second "nights", inside it
+    await h.keys("space", "n", "shift+f");
+    expect(prompt(h).label).toBe("Add a footnote — its text:");
+    await type(h, "Counted by hand");
+    await h.keys("enter");
+    expect(read()).toBe("# Notes\n\nThe dome logged nights and more nights[^1], see [[alpha]] here.\n\n[^old]: An old one.\n[^1]: Counted by hand\n");
+    expect(h.app.messages.at(-1)!.text).toBe("added footnote [^1]");
+    expect(h.app.view!.buf.dirty).toBe(false); // saved
+    await h.keys("ctrl+z");
+    expect(h.app.view!.buf.source).toBe(NOTE); // both edits, one step
+    // On a wikilink's word: after the link, never inside its brackets.
+    onWord(h, "alpha");
+    await h.keys("space", "n", "shift+f");
+    await type(h, "Linked");
+    await h.keys("enter");
+    expect(read()).toContain("see [[alpha]][^1] here.");
+  });
+
+  test("in source mode: after the word under the cursor; a note without footnotes gets them after a blank line", async () => {
+    const { h, read } = await setup("# Plain\n\nJust a claim here.\n");
+    await h.app.run("view.source");
+    onWord(h, "claim", 0, 1);
+    await h.app.run("footnote.add");
+    await type(h, "Source");
+    await h.keys("enter");
+    expect(read()).toBe("# Plain\n\nJust a claim[^1] here.\n\n[^1]: Source\n");
+  });
+
+  test("the footnotes view: a adds, e edits its text, r renames it everywhere, d deletes it; its + button adds", async () => {
+    const { h, read } = await setup("# N\n\nOne[^a] and two[^a].\n\n[^a]: Alpha,\n    continued.\n");
+    await h.keys("space", "n", "f");
+    await h.keys("e");
+    expect(prompt(h)).toMatchObject({ label: "Footnote [^a] — its text:", text: "Alpha, continued." });
+    await h.keys("ctrl+u");
+    await type(h, "Rewritten");
+    await h.keys("enter");
+    expect(read()).toBe("# N\n\nOne[^a] and two[^a].\n\n[^a]: Rewritten\n");
+    await h.keys("r", "ctrl+u");
+    await type(h, "src");
+    await h.keys("enter");
+    expect(read()).toBe("# N\n\nOne[^src] and two[^src].\n\n[^src]: Rewritten\n");
+    // The + on its title: a new one, at the note's cursor.
+    const plus = h.app.geometry!.hot.find((x) => x.id === "fn:add")!;
+    h.app.handleMouse({ type: "down", x: plus.x + 1, y: plus.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: plus.x + 1, y: plus.y, button: 0 });
+    expect(prompt(h).label).toBe("Add a footnote — its text:");
+    await type(h, "Second");
+    await h.keys("enter");
+    expect(read()).toMatch(/\[\^src\]: Rewritten\n\[\^1\]: Second\n$/);
+    // d: after asking.
+    h.app.region = "outline";
+    h.app.outline.selected = h.app.footnoteRows().findIndex((r) => r.fn.label === "src");
+    await h.keys("d");
+    expect(prompt(h)).toMatchObject({ confirm: true, label: "Delete footnote [^src]: its definition and 2 references?" });
+    await h.keys("y");
+    expect(read()).not.toContain("[^src]");
+    expect(h.app.footnoteRows().map((r) => r.fn.label)).toEqual(["1"]);
   });
 });

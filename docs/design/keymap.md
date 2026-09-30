@@ -286,10 +286,12 @@ and, while unfocused, keeps its selection on the section the cursor is in. Insid
 | `q` | close the outline |
 | `esc` | back to the note (over the content, the outline closes) |
 
-**Footnotes** (`3.17`) are the right panel's other view, its superscript button (unicode `¹`, ascii `^`) under the outline's: `space n f`
-cycles it as `space o` does the outline (`:footnotes` toggles it). It takes the outline's keys: `j` / `k` move,
-`enter` (or a click) jumps to the footnote's definition, or to a reference, `l` / `h` unfold and fold a footnote's
-references, `/` filters by label and text, `q` closes, `esc` goes back to the note.
+**Footnotes** (`3.17`) are the right panel's other view, its superscript button (unicode `¹`, ascii `^`) under the
+outline's: `space n f` cycles it as `space o` does the outline (`:footnotes` toggles it). It takes the outline's keys:
+`j` / `k` move, `enter` (or a click) jumps to the footnote's definition, or to a reference, `l` / `h` unfold and fold a
+footnote's references, `/` filters by label and text, `q` closes, `esc` goes back to the note. Changing them (`3.18`,
+`[keys.footnotes]`): `a` adds one at the note's cursor (as `space n shift+f` does anywhere, and the `+` on the view's
+title), `e` edits the selected one's text, `r` renames its label, `d` deletes it after asking.
 
 Below `ui.narrow_width` columns (default 90), the explorer and the outline open over the content.
 

@@ -120,6 +120,8 @@ slipbox links --all --json               # every link in the vault, each with `f
 slipbox tags --json                      # every tag with its count (#a/b counts under #a too)
 slipbox tags '#project' --json           # {tag, notes}: the notes carrying it, nested tags included
 slipbox footnotes <note> --json          # each footnote: label, text, definition line, references
+slipbox footnotes <note> add 12:30 'Source: the dome log'   # [^N] at line 12, column 30; its definition at the end
+slipbox footnotes <note> edit 3 'New text'   # also: rm <label>, rename <label> <new>; --if-unchanged <sha>
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
 ```
 

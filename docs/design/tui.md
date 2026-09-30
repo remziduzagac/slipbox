@@ -462,6 +462,14 @@ keys.
   focused it follows the cursor: the footnote the cursor's line refers to or defines. It never scrolls sideways: a
   long row is cut, so its count stays. `space n f`, its button, `:footnotes`; `slipbox footnotes <note>` gives
   the same (`docs/design/cli.md`).
+- **Adding and changing footnotes** (`3.18`): they're the note's own markdown, GFM's — `[^N]` where it's cited and
+  `[^N]: text` at the end, as Obsidian writes them. `space n shift+f` (or `a` in the footnotes view, or the `+` on
+  its title) asks the text in a question and adds both: `[^N]`, the next free number, after the word the cursor is
+  on — while typing, at the cursor; in a rendered window, that word found in its paragraph's source (never inside a
+  link's or code's syntax: after it); `[^N]: text` after the note's last definition when the note ends with them,
+  else after a blank line. In the view, `e` edits a footnote's text (its definition becomes one line), `r` renames
+  its label in every reference and its definition, `d` deletes both after asking. Each change is one undo step and
+  is saved at once, as a task's tick is; the cursor stays where it was.
 
 Each pane starts with its view's title ("Explorer", "History", "Outline", "Footnotes") and a blank row before the
 list; panes under 8 rows skip both. The explorer runs from under the frame's top
@@ -480,10 +488,10 @@ rules it meets. Each is generic: a place for buttons, whatever they open.
   level with the tab strip. It holds the left panel's views, the explorer's `≡` and the history's
   `◷` (ascii `~`), and the panel opens beside it. Without it, `≡` is the top bar's and the history
   opens with `space h h`.
-- **The right rail** runs from under the tab strip's rule, its first button level with the
-  breadcrumb. It holds the right panel's views, the outline's `▤` and under it the footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`), and
-  the panel opens beside it. Without it, `▤` sits at the breadcrumb's right end and the footnotes open with
-  `space n f`.
+- **The right rail** runs from under the tab strip's rule, its first button level with the breadcrumb. It holds the
+  right panel's views, the outline's `▤` and under it the footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`),
+  and the panel opens beside it. Without it, `▤` sits at the breadcrumb's right end and the footnotes open with `space n
+  f`.
 
 Every width (the panes, the note, the narrow cutoff) is shared out after the rails' columns.
 Zen mode hides both.

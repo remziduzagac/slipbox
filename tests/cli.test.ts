@@ -337,6 +337,23 @@ describe("the vault and the tool", () => {
     expect(slipbox(["footnotes", "people/partners-and-names.md"], { cwd: DEMO }).out).toContain("[charter]  L101");
     expect(slipbox(["footnotes", "software/halley/halley.toml"], { cwd: DEMO }).code).toBe(5); // not a note
   });
+  test("footnotes add, edit, rename, rm: the note's text changed as the TUI's keys change it (3.18)", () => {
+    const note = join(vault, "fn-cli.md");
+    writeFileSync(note, "# F\r\n\r\nA claim here.\r\n");
+    const add = slipbox(["footnotes", "fn-cli.md", "add", "3:8", "The source", "--json"], { cwd: vault }).json;
+    expect(add.data.footnotes).toMatchObject([{ label: "1", text: "The source" }]);
+    expect(readFileSync(note, "utf8")).toBe("# F\r\n\r\nA claim[^1] here.\r\n\r\n[^1]: The source\r\n"); // CRLF kept
+    slipbox(["footnotes", "fn-cli.md", "add", "3", "Second"], { cwd: vault }); // no column: the line's end
+    expect(readFileSync(note, "utf8")).toContain("A claim[^1] here.[^2]");
+    slipbox(["footnotes", "fn-cli.md", "edit", "1", "Better source"], { cwd: vault });
+    slipbox(["footnotes", "fn-cli.md", "rename", "2", "later"], { cwd: vault });
+    expect(readFileSync(note, "utf8")).toBe("# F\r\n\r\nA claim[^1] here.[^later]\r\n\r\n[^1]: Better source\r\n[^later]: Second\r\n");
+    expect(slipbox(["footnotes", "fn-cli.md", "rename", "later", "1"], { cwd: vault }).code).toBe(5); // taken
+    expect(slipbox(["footnotes", "fn-cli.md", "rm", "nope"], { cwd: vault }).code).toBe(3);
+    expect(slipbox(["footnotes", "fn-cli.md", "rm", "1", "--if-unchanged", "0000000000000000"], { cwd: vault }).code).toBe(5);
+    slipbox(["footnotes", "fn-cli.md", "rm", "1"], { cwd: vault });
+    expect(readFileSync(note, "utf8")).toBe("# F\r\n\r\nA claim here.[^later]\r\n\r\n[^later]: Second\r\n");
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);

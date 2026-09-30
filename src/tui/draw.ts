@@ -1279,7 +1279,12 @@ function drawFootnotes(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  let rect = paneTitle(app, c, pane, RIGHT_VIEWS.find((v) => v.id === "footnotes")!.title, app.region === "outline", base.bg);
+  const title = RIGHT_VIEWS.find((v) => v.id === "footnotes")!.title;
+  let rect = paneTitle(app, c, pane, title, app.region === "outline", base.bg);
+  // Its title: a new footnote, at its right end (3.18).
+  const add = ` ${app.glyphs.newNote} `;
+  const ax = pane.x + pane.w - 1 - stringWidth(add);
+  if (rect !== pane && ax >= pane.x + stringWidth(title) + 3) smallButton(app, c, ax, pane.y, add, "fn:add", geo, base.bg);
   rect = filterRow(app, c, rect, app.outline, app.region === "outline", base.bg, geo);
   const rows = app.footnoteRows();
   const o = app.outline;

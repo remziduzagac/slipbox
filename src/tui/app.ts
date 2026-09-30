@@ -54,7 +54,7 @@ import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/
 import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
-import { type Footnote, footnotesOf } from "../core/footnotes.ts";
+import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
 import { findVaultRoot, gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
@@ -77,6 +77,8 @@ import {
   DEFAULT_GROUPS,
   DEFAULT_KEYS,
   DEFAULT_OUTLINE_KEYS,
+  DEFAULT_FOOTNOTE_KEYS,
+  FOOTNOTE_ACTIONS,
   DEFAULT_RESIZE_KEYS,
   DEFAULT_VISUAL_KEYS,
   DEFAULT_SOURCE_KEYS,
@@ -463,6 +465,7 @@ export class App {
   sourceKeys!: Keymap;
   explorerKeys!: Keymap;
   outlineKeys!: Keymap;
+  footnoteKeys!: Keymap;
   resizeKeys!: Keymap;
   /** Resize mode: h j k l / arrows resize until esc (ctrl+alt+w, space w r). */
   resizeMode = false;
@@ -611,12 +614,13 @@ export class App {
       this.message("warn", `config: input.leader "${c.input.leader}" is also ${DEFAULT_KEYS[leader]}: that key now waits for more`);
     }
     this.leader = leader;
-    const { visual, explorer, outline, resize, source, ...normal } = c.keys;
+    const { visual, explorer, outline, footnotes, resize, source, ...normal } = c.keys;
     this.keymap = new Keymap(DEFAULT_KEYS, normal as Record<string, string>, this.leader);
     this.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.leader);
     this.sourceKeys = new Keymap(DEFAULT_SOURCE_KEYS, source ?? {}, this.leader);
     this.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.leader);
     this.outlineKeys = new Keymap(DEFAULT_OUTLINE_KEYS, outline ?? {}, this.leader);
+    this.footnoteKeys = new Keymap(DEFAULT_FOOTNOTE_KEYS, footnotes ?? {}, this.leader);
     this.resizeKeys = new Keymap(DEFAULT_RESIZE_KEYS, resize ?? {}, this.leader);
     // No prototype: a typed :toString or :constructor is an unknown alias, not Object's.
     this.aliases = Object.assign(Object.create(null) as Record<string, string>, DEFAULT_ALIASES);
@@ -632,7 +636,7 @@ export class App {
     for (const [a, v] of Object.entries(this.aliases)) if (!ids.has(v.split(" ")[0]!)) this.message("warn", `config: [aliases] ${a} = unknown command "${v}"`);
     // Keys with a modifier slipbox doesn't know can never be pressed: say so.
     const tables: [string, Record<string, unknown>][] = [["keys", c.keys as Record<string, unknown>]];
-    for (const sub of ["visual", "source", "explorer", "outline", "resize"]) {
+    for (const sub of ["visual", "source", "explorer", "outline", "footnotes", "resize"]) {
       const t = (c.keys as Record<string, unknown>)[sub];
       if (t && typeof t === "object") tables.push([`keys.${sub}`, t as Record<string, unknown>]);
     }
@@ -646,6 +650,7 @@ export class App {
     const panes: [string, Keymap, readonly string[]][] = [
       ["keys.explorer", this.explorerKeys, EXPLORER_ACTIONS],
       ["keys.outline", this.outlineKeys, OUTLINE_ACTIONS],
+      ["keys.footnotes", this.footnoteKeys, FOOTNOTE_ACTIONS],
       ["keys.resize", this.resizeKeys, Object.keys(RESIZE_ACTIONS)],
     ];
     for (const [table, map, actions] of panes) {
@@ -2719,6 +2724,152 @@ export class App {
     if (this.narrow || this.ui.zen) this.outline.overlay = false;
   }
 
+  // Adding and changing footnotes (3.18): the edits core/footnotes.ts makes, to the buffer as one
+  // undo step, then saved — as a task's tick is.
+
+  /**
+   * Where a new footnote's `[^N]` goes: while typing, at the cursor; else after the word the cursor
+   * is on (on a sign, after the sign). A rendered row maps to its source only by line, so there the
+   * word is found in its paragraph's source by how many times it came before; never inside a link's
+   * or code's syntax (after it instead).
+   */
+  footnoteRefAt(view: View): number {
+    const buf = view.buf;
+    const src = buf.source;
+    const layout = this.currentLayout(view);
+    const line = layout.lines[view.cur.row];
+    const word = (ch: string | undefined) => !!ch && /[\p{L}\p{N}_]/u.test(ch);
+    // Out of `[[…]]`, `[…](…)` and `` `…` ``: to their end.
+    const outOfSyntax = (at: number, from: number, to: number) => {
+      for (const m of src.slice(from, to).matchAll(/!?\[\[[^\]\n]*\]\]|!?\[[^\]\n]*\]\([^)\n]*\)|`[^`\n]*`/g)) {
+        const s = from + m.index;
+        if (at > s && at < s + m[0].length) return s + m[0].length;
+      }
+      return at;
+    };
+    const starts = buf.lineStarts();
+    if (line?.srcMap) {
+      const at = offsetOf(this, view);
+      if (view.insert) return at;
+      let end = at;
+      if (word(src[end])) while (word(src[end])) end++;
+      else if (end < src.length && src[end] !== "\n") end++;
+      const ls = starts[line.src - 1] ?? 0;
+      return outOfSyntax(end, ls, src.indexOf("\n", ls) < 0 ? src.length : src.indexOf("\n", ls));
+    }
+    // A rendered row: the paragraph's rows up to the cursor's, and its source lines.
+    const rowText = (r: number) => layout.lines[r]?.spans.map((s) => s.text).join("") ?? "";
+    let first = view.cur.row;
+    while (first > 0 && rowText(first - 1).trim() && !layout.lines[first - 1]!.srcMap && !layout.lines[first - 1]!.decor) first--;
+    const blockStart = starts[(layout.lines[first]?.src ?? line?.src ?? 1) - 1] ?? 0;
+    const blank = /\n[ \t]*\n/g;
+    blank.lastIndex = blockStart;
+    const blockEnd = blank.exec(src)?.index ?? src.replace(/\s+$/, "").length;
+    const text = rowText(view.cur.row);
+    // The cursor's column as an index into the row's text.
+    let idx = 0;
+    for (let w = 0; idx < text.length && w + stringWidth(text[idx]!) <= view.cur.col; idx++) w += stringWidth(text[idx]!);
+    if (!word(text[idx])) while (idx > 0 && !word(text[idx])) idx--;
+    let ws = idx;
+    let we = idx;
+    while (ws > 0 && word(text[ws - 1])) ws--;
+    while (we < text.length && word(text[we])) we++;
+    const w = text.slice(ws, we);
+    if (!w || !word(w[0])) return blockEnd;
+    const whole = (s: string) => [...s.matchAll(new RegExp(`(?<![\\p{L}\\p{N}_])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}_])`, "gu"))];
+    let k = 0;
+    for (let r = first; r < view.cur.row; r++) k += whole(rowText(r)).length;
+    k += whole(text.slice(0, ws)).length;
+    const hits = whole(src.slice(blockStart, blockEnd));
+    const hit = hits[k] ?? hits[hits.length - 1];
+    return hit ? outOfSyntax(blockStart + hit.index + w.length, blockStart, blockEnd) : blockEnd;
+  }
+
+  /** The edits made to the current note as one undo step, then saved; `done` said when they are. */
+  private applyFootnoteEdits(edits: TextEdit[], done: string, cursorAfter?: number): void {
+    const view = this.view;
+    if (!view) return;
+    const buf = view.buf;
+    const before = view.cur;
+    buf.beginStep(offsetOf(this, view));
+    const order = edits.map((e, i) => ({ e, i })).sort((a, b) => b.e.at - a.e.at || b.i - a.i);
+    for (const { e } of order) buf.edit(e.at, e.length, e.text);
+    buf.endStep(cursorAfter ?? offsetOf(this, view));
+    for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+    // Where the cursor was: in source mode, past what was typed before it; rendered, its row.
+    if (cursorAfter !== undefined && this.currentLayout(view).lines[before.row]?.srcMap) placeAt(this, view, cursorAfter);
+    if (this.saveBuffer(buf, true)) this.message("info", done);
+    else this.message("warn", `${done} — not saved yet (the file changed on disk: space n w decides)`);
+  }
+
+  /** Whether the current window's note can have footnotes changed: a markdown note of this vault. */
+  private footnoteNote(): boolean {
+    const view = this.view;
+    if (!view || view.buf.kind.group !== "note" || view.buf.rel === null) {
+      this.message("info", "footnotes are in this vault's notes");
+      return false;
+    }
+    return true;
+  }
+
+  /** Add a footnote (3.18): its text asked; `[^N]` after the cursor's word, `[^N]: text` at the end. */
+  addFootnote(): void {
+    if (!this.footnoteNote()) return;
+    const view = this.view!;
+    const at = this.footnoteRefAt(view);
+    const version = view.buf.version;
+    this.prompt("Add a footnote — its text:", (text) => {
+      if (!text.trim()) return;
+      if (view.buf.version !== version) return this.message("warn", "the note changed while you typed: add the footnote again");
+      const r = addFootnote(view.buf.source, this.footnotes(), at, text);
+      this.applyFootnoteEdits(r.edits, `added footnote [^${r.label}]`, at + `[^${r.label}]`.length);
+    });
+  }
+
+  private editFootnoteRow(row: FootnoteRow): void {
+    if (!this.footnoteNote()) return;
+    const fn = row.fn;
+    if (!fn.def) return this.message("warn", `footnote [^${fn.label}] has no definition to edit`);
+    this.prompt(`Footnote [^${fn.label}] — its text:`, (text) => {
+      if (!text.trim() || text.trim() === fn.text) return;
+      const now = this.footnotes().find((f) => f.id === fn.id);
+      if (!now) return this.message("warn", `footnote [^${fn.label}] isn't there any more`);
+      this.applyFootnoteEdits(editFootnote(this.view!.buf.source, now, text), `edited footnote [^${fn.label}]`);
+    });
+    if (this.overlay?.kind === "prompt") this.overlay.text = fn.text ?? "";
+  }
+
+  private deleteFootnoteRow(row: FootnoteRow): void {
+    if (!this.footnoteNote()) return;
+    const fn = row.fn;
+    const n = fn.references.length;
+    this.confirm(`Delete footnote [^${fn.label}]: its definition and ${n} reference${n === 1 ? "" : "s"}?`, () => {
+      const now = this.footnotes().find((f) => f.id === fn.id);
+      if (!now) return this.message("warn", `footnote [^${fn.label}] isn't there any more`);
+      this.applyFootnoteEdits(deleteFootnote(this.view!.buf.source, now), `deleted footnote [^${fn.label}]`);
+    });
+  }
+
+  private renameFootnoteRow(row: FootnoteRow): void {
+    if (!this.footnoteNote()) return;
+    const fn = row.fn;
+    this.prompt(`Rename footnote [^${fn.label}] to:`, (text) => {
+      const label = text.trim().replace(/^\[\^|\]$/g, "");
+      if (!label || label === fn.label) return;
+      const list = this.footnotes();
+      const now = list.find((f) => f.id === fn.id);
+      if (!now) return this.message("warn", `footnote [^${fn.label}] isn't there any more`);
+      let edits: TextEdit[];
+      try {
+        edits = renameFootnote(this.view!.buf.source, now, list, label);
+      } catch (err) {
+        return this.message("warn", (err as Error).message);
+      }
+      this.applyFootnoteEdits(edits, `renamed footnote [^${fn.label}] → [^${label}]`);
+    });
+    if (this.overlay?.kind === "prompt") this.overlay.text = fn.label;
+  }
+
   /** The footnotes view's keys (the outline's keymap): move, jump, fold its references, filter, close, leave. */
   footnoteAction(action: string): void {
     this.outline.pinned = false;
@@ -2753,6 +2904,13 @@ export class App {
       case "unfold":
         if (row?.hasChildren) this.footnotesOpen.add(row.fn.id);
         break;
+      case "add":
+        return this.addFootnote();
+      case "edit":
+      case "delete":
+      case "rename":
+        if (!row) return this.message("info", "no footnote selected");
+        return action === "edit" ? this.editFootnoteRow(row) : action === "delete" ? this.deleteFootnoteRow(row) : this.renameFootnoteRow(row);
       case "close":
         this.showOutline(false);
         break;
@@ -3728,7 +3886,7 @@ export class App {
     // A pane's own actions carry their titles (which-key says "New note here", as help does).
     if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : EXPLORER_ACTION_INFO });
     if (this.region === "outline" && this.outlineShown) {
-      out.push(this.rightView === "footnotes" ? { map: this.outlineKeys, run: (a) => this.footnoteAction(a), info: FOOTNOTE_ACTION_INFO } : { map: this.outlineKeys, run: (a) => this.outlineAction(a), info: OUTLINE_ACTION_INFO });
+      out.push(this.rightView === "footnotes" ? { map: this.footnoteKeys, run: (a) => this.footnoteAction(a), info: FOOTNOTE_ACTION_INFO } : { map: this.outlineKeys, run: (a) => this.outlineAction(a), info: OUTLINE_ACTION_INFO });
     }
     if (this.view?.visual) out.push({ map: this.visualKeys, run: (s) => this.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
@@ -4415,6 +4573,8 @@ export class App {
         this.region = "sidebar";
         this.explorerAction(kind === "xnew" ? (arg === "note" ? "new_note" : "new_folder") : arg);
         break;
+      case "fn":
+        return this.addFootnote();
       case "btn":
         if (arg === "explorer") this.openLeftView("explorer");
         else if (arg === "history") this.openLeftView("history");

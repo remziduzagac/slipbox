@@ -133,6 +133,9 @@ poll_ms = 2000                 # backstop tick, unwatchable directories, degrade
 [keys.outline]                 # key = outline action: down up jump fold unfold
 "z a" = "fold"                 #   top bottom filter close leave (sequences: space-separated keys)
 
+[keys.footnotes]               # key = footnotes action: the outline's, and add edit
+"x" = "delete"                 #   delete rename
+
 [keys.resize]                  # key = resize action: narrower wider shorter taller
 "<" = "narrower"               #   equalize leave
 

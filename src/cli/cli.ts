@@ -20,7 +20,7 @@ import { type Graph, openGraph, type Target } from "../core/graph.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { headingsOf, parseAround, type ParsedNote, slugify } from "../core/parse.ts";
-import { type Footnote, footnotesOf } from "../core/footnotes.ts";
+import { addFootnote, applyEdits, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { parseNoteFile } from "../core/readers.ts";
 import { dataOutline, parseData } from "../core/data.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
@@ -132,6 +132,7 @@ Usage:
   slipbox ls                        list the vault's notes         [--files: data and text files too]
   slipbox outline <note>            headings with source lines
   slipbox footnotes <note>          footnotes: each label, its text and line, and where it's referred to
+                                    [add <line[:col]> <text> | edit <label> <text> | rm <label> | rename <label> <new>] [--if-unchanged <sha>]
   slipbox find <query> [note]       find text in a note, or the vault  [--regex] [--whole] [--ignore-case] [--files]
   slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first | --first-per-line] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
@@ -277,7 +278,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 1,
+  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -313,6 +314,7 @@ const FLAGS: Record<string, string[]> = {
   ls: ["files"],
   replace: ["regex", "whole", "ignore-case", "first", "first-per-line", "lines", "dry-run", "if-unchanged"],
   task: ["check", "uncheck", "if-unchanged"],
+  footnotes: ["if-unchanged"],
   write: ["stdin", "append", "paragraph", "create", "if-unchanged", "allow-empty"],
   send: ["line", "server"],
   capture: ["ref", "snippet", "stdin", "lang"],
@@ -582,13 +584,70 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   footnotes(s, rest) {
-    // A note's footnotes (3.17), as the TUI's footnotes view shows them.
+    // A note's footnotes (3.17), as the TUI's footnotes view shows them; and adding and changing
+    // them (3.18), as its keys do — written as `task` writes, `--if-unchanged` honoured.
     const rel = resolveNote(s, requireArg(rest, "note"));
     if (!s.graph.notes.has(rel)) throw new CliError(`${rel} isn't a note: only notes have footnotes`, EXIT.refused);
-    const list = footnotesOf(parseNoteFile(rel, readText(s.graph.abs(rel)).text));
+    const abs = s.graph.abs(rel);
+    const sub = rest[1];
+    const file = readNoteFile(s, abs, sub !== undefined);
+    const text = file.text.replace(/\r\n/g, "\n");
+    const list = footnotesOf(parseNoteFile(rel, text));
     const where = (f: Footnote) => (f.line === null ? "no definition" : `L${f.line}`);
     const refs = (f: Footnote) => (f.references.length ? f.references.map((r) => `L${r.line}:${r.column}`).join(" ") : "unused");
-    return { data: { path: rel, footnotes: list }, human: list.map((f) => `[${f.label}]  ${where(f)}  ${f.text ?? ""}  ← ${refs(f)}\n`).join("") };
+    if (sub === undefined) return { data: { path: rel, sha: file.sha, footnotes: list }, human: list.map((f) => `[${f.label}]  ${where(f)}  ${f.text ?? ""}  ← ${refs(f)}\n`).join("") };
+    const named = (label: string | undefined) => {
+      if (!label) throw new UsageError(`footnotes ${sub} needs the footnote's label`);
+      const f = list.find((x) => x.id === label.replace(/^\[\^|\]$/g, "").toLowerCase());
+      if (!f) throw new CliError(`no footnote [^${label}] in ${rel}`, EXIT.notFound);
+      return f;
+    };
+    let edits: TextEdit[];
+    let done: string;
+    try {
+      if (sub === "add") {
+        const m = /^(\d+)(?::(\d+))?$/.exec(rest[2] ?? "");
+        if (!m || rest[3] === undefined) throw new UsageError("footnotes <note> add <line[:col]> <text>");
+        const starts = [0];
+        for (let i = text.indexOf("\n"); i >= 0; i = text.indexOf("\n", i + 1)) starts.push(i + 1);
+        const line = Number(m[1]);
+        if (line < 1 || line > starts.length) throw new UsageError(`${rel} has no line ${line}`);
+        const lineText = text.slice(starts[line - 1], (starts[line] ?? text.length + 1) - 1);
+        // At the column given (1-based), else the line's end (before trailing spaces).
+        const at = starts[line - 1]! + (m[2] ? Math.min(Number(m[2]) - 1, lineText.length) : lineText.replace(/\s+$/, "").length);
+        const r = addFootnote(text, list, at, rest[3]);
+        edits = r.edits;
+        done = `added footnote [^${r.label}]`;
+      } else if (sub === "edit") {
+        const f = named(rest[2]);
+        if (rest[3] === undefined) throw new UsageError("footnotes <note> edit <label> <text>");
+        edits = editFootnote(text, f, rest[3]);
+        done = `edited footnote [^${f.label}]`;
+      } else if (sub === "rm") {
+        const f = named(rest[2]);
+        edits = deleteFootnote(text, f);
+        done = `deleted footnote [^${f.label}]`;
+      } else if (sub === "rename") {
+        const f = named(rest[2]);
+        if (!rest[3]) throw new UsageError("footnotes <note> rename <label> <new-label>");
+        edits = renameFootnote(text, f, list, rest[3].replace(/^\[\^|\]$/g, ""));
+        done = `renamed footnote [^${f.label}] → [^${rest[3]}]`;
+      } else throw new UsageError(`footnotes: unknown subcommand ${sub} (add, edit, rm, rename)`);
+    } catch (err) {
+      if (err instanceof UsageError || err instanceof CliError) throw err;
+      throw new CliError((err as Error).message, EXIT.refused);
+    }
+    checkWritable(s, abs);
+    const next = applyEdits(text, edits);
+    const out = (file.bom ? "\ufeff" : "") + (file.crlf ? next.replace(/\n/g, "\r\n") : next);
+    try {
+      writeNote(s.loc.root, abs, out);
+    } catch (err) {
+      if (err instanceof WriteRefused) throw new CliError(err.message, EXIT.refused);
+      throw err;
+    }
+    const sha = createHash("sha256").update(Buffer.from(out, "utf8")).digest("hex").slice(0, 16);
+    return { data: { path: rel, sha, footnotes: footnotesOf(parseNoteFile(rel, next)) }, human: `${done}\n` };
   },
 
   async outline(s, rest) {

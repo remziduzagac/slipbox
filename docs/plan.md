@@ -350,6 +350,7 @@ common, and the only reason they are step 0.
 | 3.15 | Session restore |
 | 3.16 | **Done.** Filters match each typed word with its letters together, words in any order — not letter by letter |
 | 3.17 | **Done.** Footnotes: the right panel's second view (`space n f`): each footnote, its references, jumps |
+| 3.18 | **Done.** Footnotes added (`space n shift+f`, `a`, `+`), edited, renamed, deleted; `slipbox footnotes … add` |
 
 ## Editing — `4.x`
 

@@ -1036,6 +1036,7 @@ export function registerActions(app: App): void {
     // The right panel's other view (3.17): the note's footnotes, its button under the outline's.
     "footnotes.cycle": (a) => a.openRightView("footnotes", "cycle"),
     "footnotes.toggle": (a) => a.openRightView("footnotes"),
+    "footnote.add": (a) => a.addFootnote(),
     // find
     "find.open": (a) =>
       withView(a, (v) => {

@@ -114,6 +114,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "outline.cycle", title: "Outline: open, focus, close", cli: "slipbox outline <note>", desc: "Opens the outline, then focuses, then closes it" },
   { id: "outline.toggle", title: "Show or hide the outline", cli: "slipbox outline <note>", desc: "Shows the outline (focusing it) or hides it" },
   { id: "footnotes.cycle", title: "Footnotes: open, focus, close", cli: "slipbox footnotes <note>", desc: "Opens the note's footnotes in the right panel, then focuses, then closes them" },
+  { id: "footnote.add", title: "Add a footnote", cli: "slipbox footnotes <note> add <line[:col]> <text>", desc: "Asks its text: [^N] after the word the cursor is on, [^N]: text at the note's end; saved, one undo step" },
   { id: "footnotes.toggle", title: "Show or hide the footnotes", cli: "slipbox footnotes <note>", desc: "Each footnote, its text and references, in the right panel (focusing it), or hides it" },
   // find
   { id: "find.open", title: "Find in note", cli: "slipbox find <query> [<note>]", desc: "Searches this note; the cursor goes to matches" },

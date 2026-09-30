@@ -229,6 +229,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n m": "note.rename",
   "leader n d": "note.delete",
   "leader n f": "footnotes.cycle",
+  "leader n shift+f": "footnote.add",
   "leader n shift+m": "note.move",
   "leader n y": "note.yank",
   "leader n x": "note.cut",
@@ -386,6 +387,17 @@ export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {
 
 export const OUTLINE_ACTIONS = ["down", "up", "jump", "fold", "unfold", "top", "bottom", "filter", "close", "leave"];
 
+/** Keys inside the footnotes view (3.18): the outline's, and adding and changing footnotes. */
+export const DEFAULT_FOOTNOTE_KEYS: Record<string, string> = {
+  ...DEFAULT_OUTLINE_KEYS,
+  a: "add",
+  e: "edit",
+  d: "delete",
+  r: "rename",
+};
+
+export const FOOTNOTE_ACTIONS = [...OUTLINE_ACTIONS, "add", "edit", "delete", "rename"];
+
 /** Keys in resize mode: key → resize action. Anything else leaves the mode. */
 export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
   h: "narrower",
@@ -481,6 +493,10 @@ export const FOOTNOTE_ACTION_INFO: Record<string, { title: string; desc: string 
   top: { title: "Top", desc: "Selects the first footnote" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   filter: { title: "Filter", desc: "Type to narrow the footnotes by label and text; enter jumps, esc clears" },
+  add: { title: "Add a footnote", desc: "Asks its text: [^N] after the word the cursor is on in the note, [^N]: text at its end" },
+  edit: { title: "Edit its text", desc: "Asks the selected footnote's new text; its definition becomes one line" },
+  delete: { title: "Delete it", desc: "The selected footnote's references and definition, after asking" },
+  rename: { title: "Rename its label", desc: "A new label for the selected footnote, in its references and its definition" },
   close: { title: "Close the footnotes", desc: "Closes the right panel; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the footnotes stay open" },
 };

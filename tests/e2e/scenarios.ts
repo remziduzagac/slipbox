@@ -593,6 +593,14 @@ export const SCENARIOS: Scenario[] = [
       await s.see("L95");
       await s.keys("j", "enter");
       await s.status("→ 1 (resolved)");
+      // Adding one (3.18): its text asked; [^2] after the cursor's word, its definition at the end.
+      await leader(s, "n", "shift+f");
+      await s.see("Add a footnote — its text:");
+      await s.type("Checked against the ledger");
+      await s.keys("enter");
+      await s.message("added footnote [^2]");
+      await s.file("people/partners-and-names.md", (t) => t.includes("[^2]: Checked against the ledger\n"), "the definition at the end");
+      await s.see(/\[2\] C/); // the row, beside the message floating over the panel
       // Back to the outline with space o: the panel's other view.
       await leader(s, "o");
       await s.status("OUTLINE");
