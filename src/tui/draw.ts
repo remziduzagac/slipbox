@@ -951,14 +951,15 @@ interface SideView {
 
 const naturalWidths = new WeakMap<object, number>();
 
-function sideView<T extends object>(rect: Rect, rows: T[], text: (row: T) => string, state: SidePaneState): SideView {
+function sideView<T extends object>(rect: Rect, rows: T[], text: (row: T) => string, state: SidePaneState, least = 0): SideView {
   const cols = Math.max(1, rect.w - 1);
-  let natural = naturalWidths.get(rows);
-  if (natural === undefined) {
-    natural = 0;
-    for (const row of rows) natural = Math.max(natural, stringWidth(text(row)) + 1);
-    naturalWidths.set(rows, natural);
+  let cached = naturalWidths.get(rows);
+  if (cached === undefined) {
+    cached = 0;
+    for (const row of rows) cached = Math.max(cached, stringWidth(text(row)) + 1);
+    naturalWidths.set(rows, cached);
   }
+  const natural = Math.max(cached, least);
   if (natural <= cols || rect.h < 4) {
     state.left = 0;
     return { list: rect, cols, natural, left: 0, hbar: null };
@@ -1050,7 +1051,22 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     row.root ? (row.root.kind === "vault" ? g.vault : g.dirClosed) : row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file;
   const prefix = (row: TreeRow) => `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
   const text = (row: TreeRow) => prefix(row) + nameOf(row);
-  const sv = sideView(list, rows, text, s);
+  // The selected note, file or folder: rename, move and delete at the row's end (18.1), their
+  // right edge under the title's buttons'. A vault nested in this one has a fourth beside rename:
+  // its name (rename is its folder's). The buttons are drawn from the right.
+  const buttonsOf = (row: TreeRow) => {
+    const vaultRow = row.root?.kind === "vault" && app.loc.mode === "vault";
+    if (row.kind === "root" && !vaultRow) return null;
+    const bs: (readonly [string, string])[] = [[g.deleteItem, "xrow:delete"], [g.moveItem, "xrow:move"]];
+    if (vaultRow) bs.push([g.renameVault, "xrow:rename_vault"]);
+    bs.push([g.renameItem, "xrow:rename"]);
+    return { bs, w: bs.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0) };
+  };
+  const sel = app.region === "sidebar" ? rows[Math.max(0, Math.min(s.selected, rows.length - 1))] : undefined;
+  const selButtons = sel ? buttonsOf(sel) : null;
+  const buttonsFit = !!selButtons && list.w - 1 - selButtons.w >= 4;
+  // A name that doesn't fit beside them: the pane scrolls sideways, its end reachable before them.
+  const sv = sideView(list, rows, text, s, sel && buttonsFit ? stringWidth(text(sel)) + selButtons!.w + 1 : 0);
   const rect = sv.list;
   followSelection(s, rows.length, rect.h);
   if (!rows.length && q) drawText(c, rect.x + 1, rect.y, "no matches", roleStyle(theme, "dim", bg), rect.w - 1);
@@ -1066,23 +1082,14 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
-    // The selected note, file or folder: rename, move and delete at the row's end (18.1), their
-    // right edge under the title's buttons', a long name cut (…) to make room for them.
-    // A vault nested in this one has a fourth: its name (rename is its folder's).
-    const vaultRow = row.root?.kind === "vault" && app.loc.mode === "vault";
-    const rowButtons: (readonly [string, string])[] = [
-      ...(vaultRow ? [[g.renameVault, "xrow:rename_vault"] as const] : []),
-      [g.deleteItem, "xrow:delete"],
-      [g.moveItem, "xrow:move"],
-      [g.renameItem, "xrow:rename"],
-    ];
-    const buttonsW = rowButtons.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0);
-    const withButtons = selected && (row.kind !== "root" || vaultRow) && sv.cols - buttonsW >= 10;
+    const withButtons = selected && row === sel && buttonsFit;
+    const buttonsW = withButtons ? selButtons!.w : 0;
     const shown = sideRow(text(row), sv);
-    const w = drawText(c, rect.x, y, withButtons ? truncate(shown, sv.cols - buttonsW) : shown, st, rect.w);
+    const room = sv.cols - buttonsW;
+    const w = drawText(c, rect.x, y, !withButtons ? shown : sv.hbar ? splitAtWidth(shown, room)[0] : truncate(shown, room), st, rect.w);
     if (withButtons) {
       let x = rect.x + rect.w - 1;
-      for (const [glyph, id] of rowButtons) {
+      for (const [glyph, id] of selButtons!.bs) {
         x -= stringWidth(glyph) + 2;
         smallButton(app, c, x, y, ` ${glyph} `, id, geo, st.bg);
       }
@@ -1090,7 +1097,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     // A vault named otherwise than its folder: the name, dimmed, after it (17.13) — up to its
     // buttons, when it has them.
     const vaultName = row.root?.name;
-    const nameEnd = withButtons ? sv.cols - buttonsW : rect.w;
+    const nameEnd = withButtons ? room : rect.w;
     if (vaultName && !sv.left && w + 1 < nameEnd) drawText(c, rect.x + w + 1, y, vaultName, { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, nameEnd - w - 1);
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
     // The letters the filter matched in a note's name.

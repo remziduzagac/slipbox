@@ -320,8 +320,9 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   which-key in a pane names its actions as help does ("New note here"), and a pane's own key sequence waits for its
   second key, whatever the note binds its first to.
 - **Rename (`r`) and move (`m`):** `r` asks for the new name, in its folder (the old one typed); `m` picks a folder
-  from a **tree** of the vault's (`18.8`): the root first, folded as the explorer is, the folder it's in unfolded and
-  selected (marked `here`); `←` / `→` fold and unfold; typing filters to the matching folders under their parents,
+  from a **tree** of the vault's (`18.8`): the root first, each folder folded or unfolded as the explorer has it
+  (whether or not it holds folders), the folder it's in unfolded and selected (marked `here`); `←` / `→` fold and
+  unfold; typing filters to the matching folders under their parents,
   all unfolded, `enter` taking the first match. A folder being moved, and what's in it, isn't offered. Both go through
   the rename's **preview** above: every link to it — and, for a folder, to anything in it — fixed, links between notes
   that move together left as they are, what the walk doesn't list (pictures, hidden files) moving with its folder.
@@ -333,13 +334,14 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   `name-copy`, `-2`… when pasted beside the original, the copy's links as written — or what was cut, moved (the
   preview, links fixed).
 - **Buttons on the selected row** while the explorer has focus: rename, move, delete (Nerd: a pencil, a file with an
-  arrow, a trash can; unicode `✎` `↦` `✕`; ascii `r` `m` `d`), at the row's end, under the title's buttons, a long
-  name cut (`…`) to make room.
+  arrow, a trash can; unicode `✎` `↦` `✕`; ascii `r` `m` `d`), at the row's end, under the title's buttons. A name
+  that doesn't fit beside them widens the tree: the explorer's horizontal scrollbar appears, and scrolled to its end
+  the name ends just before them.
 - **A nested vault's row** (`18.7`) is a folder of this vault: `r` renames its folder and `m` moves it — links into it
   by path fixed here and in the vaults that reach it, its own relative links out fixed, its id and name kept (it's
   recorded at its new place); `d` deletes it whole, saying so ("the vault outreach (outreach/, 12 notes)") with the
-  links into it — by path or by its name — that break. Its name is a fourth button and `shift+r` (Nerd: a tag with a
-  pencil; unicode `✎◈`; ascii `R`): `rename-vault` for it, its folder left where it is.
+  links into it — by path or by its name — that break. Its name is a fourth button, beside rename, and `shift+r`
+  (Nerd: a tag with a pencil; unicode `✎◈`; ascii `R`): `rename-vault` for it, its folder left where it is.
 
 The current note has `space n d` (`:delete`), `space n m` (rename or move by path), and the palette's "Copy the
 note". What they do is the CLI's `rm`, `mv` and `cp` (`docs/design/cli.md`).

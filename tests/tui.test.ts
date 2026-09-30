@@ -5816,10 +5816,19 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("escape");
     h.app.region = "content";
     expect(h.frame().split("\n").find((r) => r.includes("alpha.md"))).not.toMatch(/✎/);
-    // A long name is cut (…) to make room for them.
-    writeFileSync(join(root, "notes", "a-rather-long-note-name-indeed.md"), "# long\n");
-    const long = await at(root, "notes/a-rather-long-note-name-indeed.md");
-    expect(long.frame().split("\n").find((r) => r.includes("a-rather"))).toMatch(/a-rather\S*…\s+✎\s+↦\s+✕/);
+    // A long name beside them: the pane scrolls sideways — a scrollbar, and its end reachable.
+    writeFileSync(join(root, "notes", "a-longish-note-x.md"), "# long\n"); // fits the pane, not beside them
+    const long = await at(root, "notes/a-longish-note-x.md");
+    const longRow = () => long.frame().split("\n").find((r) => r.includes("longish") || r.includes("note-x"))!;
+    expect(longRow()).toMatch(/a-longish\S*[^…\s]\s+✎\s+↦\s+✕/);
+    expect(longRow()).not.toContain("note-x.md");
+    expect(long.app.geometry!.scrollbars.some((b) => b.pane === "sidebar" && b.horizontal)).toBe(true);
+    long.app.sidebar.left = 999;
+    expect(longRow()).toMatch(/note-x\.md\s+✎\s+↦\s+✕/);
+    // Not focused, no buttons: the names fit, no scrollbar.
+    long.app.region = "content";
+    long.frame();
+    expect(long.app.geometry!.scrollbars.some((b) => b.pane === "sidebar" && b.horizontal)).toBe(false);
   });
 
   test("space n d deletes the note; space v t lists the trash", async () => {
@@ -5837,7 +5846,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     writeFileSync(join(root, "vault-links.md"), "[in](nested-vault/inner.md) and [[fixture-nested:inner]]\n");
     const h = await at(root, "nested-vault");
     const row = h.frame().split("\n").find((r) => r.includes("nested-vault"))!;
-    expect(row).toMatch(/✎\s+↦\s+✕\s+✎◈/);
+    expect(row).toMatch(/✎\s+✎◈\s+↦\s+✕/); // the vault's name beside its folder's
     // d: the whole vault, said so.
     await h.keys("d");
     expect(prompt(h).label).toMatch(/^delete the vault fixture-nested \(nested-vault\/, 1 note\)\? 2 links to it will break\./); // by path and by name
@@ -5874,7 +5883,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     const o = () => h.app.overlay as ListOverlay;
     const labels = () => o().filtered.map((e) => e.item.label.trim());
     expect(labels()[0]).toBe("▾ / (the vault's root)");
-    expect(labels()).toContain("▸ notes"); // where it is (no folders in it), marked and selected
+    expect(labels()).toContain("▾ notes"); // where it is: unfolded, as in the explorer (no folders in it), marked, selected
     expect(o().filtered[o().selected]!.item).toMatchObject({ data: "notes", hint: "here" });
     expect(labels()).toContain("▸ projects"); // folded, as in the explorer
     expect(labels()).not.toContain("▸ deep");
@@ -5891,5 +5900,11 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(o().selected).toBe(3);
     await h.keys("enter");
     expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → projects/deep/deeper/alpha.md");
+    // A folder the explorer has unfolded is unfolded here, its folders shown.
+    await h.keys("escape");
+    h.app.expanded.add("projects");
+    await h.keys("m");
+    expect(labels()).toContain("▾ projects");
+    expect(labels()).toContain("▸ deep");
   });
 });

@@ -2012,9 +2012,8 @@ export class App {
       for (let i = 0; i < Math.min(pa.length, pb.length); i++) if (pa[i] !== pb[i]) return pa[i]!.localeCompare(pb[i]!, undefined, { sensitivity: "base" });
       return pa.length - pb.length;
     });
-    const kids = new Set(dirs.map((d) => posix.dirname(d)).filter((d) => d !== "."));
     const row = (d: string, unfolded: boolean, context = false): ListItem => ({
-      label: `${"  ".repeat(d.split("/").length)}${kids.has(d) && unfolded ? g.dirOpen : g.dirClosed} ${posix.basename(d)}`,
+      label: `${"  ".repeat(d.split("/").length)}${unfolded ? g.dirOpen : g.dirClosed} ${posix.basename(d)}`,
       hint: d === opts.current ? "here" : "",
       data: d,
       ...(context ? { context } : {}),
@@ -2049,9 +2048,9 @@ export class App {
       selected: Math.max(0, first.findIndex((it) => it.data === opts.current)),
       accept: (it) => opts.pick(it.data as string),
       fold: (it, unfold) => {
+        // As in the explorer, a folder folds whatever it holds; what unfolds under it here is its folders.
         const d = it.data as string;
-        if (!d || !kids.has(d)) return false;
-        if (unfold === open.has(d)) return false;
+        if (!d || unfold === open.has(d)) return false;
         if (unfold) open.add(d);
         else open.delete(d);
         return true;
