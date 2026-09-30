@@ -138,12 +138,11 @@ in a demo. Still missing anywhere:
 • Mermaid and LaTeX, rendered. software/pipeline-cookbook.md now has a mermaid
   fence and a $$ block, but slipbox shows both as code; drawing them is a
   deferred feature.
-• Aliases, and checked heading and block references. [[Kenji]] and [[森健二]] in
-  people/partners-and-names.md name the aliases people/kenji-mori.md declares,
-  but slipbox doesn't read aliases: yet, so both are unresolved; and [[home#No
-  such heading]] resolves to its note, since a reference's heading or block
-  isn't checked yet. Both are phase 4 link work (plan 1.x); these links are the
-  test material for it.
+• Checked heading and block references. [[home#No such heading]] resolves to its
+  note, since a reference's heading or block isn't checked yet: phase 4 link
+  work (plan 1.x), and this link is the test material for it. ([[Kenji]] and [[
+  森健二]] in people/partners-and-names.md reach people/kenji-mori.md through
+  the aliases it declares.)
 
 Some links are unresolved on purpose, so the link index always has failures to
 report:
@@ -3137,10 +3136,9 @@ https://partners.example.invalid/directory, and a reference-style link
 
 Kenji's own note can be reached several ways, and all of them should land on the
 same page: kenji-mori.md with its extension, people/kenji-mori by folder path,
-and through either of the aliases it declares, Kenji or 森健二 — once slipbox
-reads aliases; until then those two show as unresolved. The table of scripts
-further down is #Names in their own scripts, a link to a heading in this very
-note. His heading, embedded:
+and through either of the aliases it declares, Kenji or 森健二. The table of
+scripts further down is #Names in their own scripts, a link to a heading in this
+very note. His heading, embedded:
 
 ⧉ kenji-mori › Kenji Mori
 

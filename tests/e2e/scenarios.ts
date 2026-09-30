@@ -1075,6 +1075,50 @@ export const SCENARIOS: Scenario[] = [
       // The nested vault in the explorer, with its name.
       await leader(s, "e");
       await s.see("inner-vault inner-name");
+      await s.keys("escape");
+      // Renaming the vault: e2eapp's link to demo:home follows.
+      await leader(s, "v", "n");
+      await s.see("rename vault demo to:");
+      await s.type("demo2");
+      await s.keys("enter");
+      await s.see(/vault demo → demo2: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("renamed the vault demo → demo2");
+      s.expect(readFileSync(join(s.dir, "app", "links.md"), "utf8").includes("[[demo2:home]]"), "the other vault's link follows");
+    },
+  },
+  {
+    name: "rename: space n m previews every change, enter renames; each link follows, the old name kept",
+    run: async (s) => {
+      await open(s, "kenji-mori");
+      await leader(s, "n", "m");
+      await s.see("rename or move people/kenji-mori.md to:");
+      await s.keys("ctrl+u");
+      await s.type("people/kenji");
+      await s.keys("enter");
+      await s.see(/people\/kenji-mori\.md → people\/kenji\.md: \d+ changes in \d+ files/);
+      await s.see("home.md:28");
+      await s.keys("enter");
+      await s.message("renamed people/kenji-mori.md → people/kenji.md");
+      await s.status("kenji.md");
+      s.expect(!s.exists("people/kenji-mori.md"), "the old file is gone");
+      await s.file("people/kenji.md", (t) => t.includes("previous_names: [kenji-mori]"), "the old name kept");
+      s.expect(s.read("home.md").includes("- [[kenji]] — our visiting astronomer"), "home's link follows");
+      s.expect(s.read("people/partners-and-names.md").includes("[[kenji.md]] with its extension, [[people/kenji]] by folder path"), "each form kept");
+      s.expect(s.read("people/partners-and-names.md").includes("![[kenji#Kenji Mori]]"), "the embed follows");
+      // A link written later with the old name: relink rewrites it to the new one.
+      s.write("late-note.md", "# Late\n\nAsk [[kenji-mori]] about Aster.\n");
+      await s.see("late-note.md"); // the watcher has it: the switcher lists it
+      await open(s, "late-note");
+      await leader(s, "l", "r");
+      await s.see("relink: 1 change in 1 file");
+      await s.keys("enter");
+      await s.file("late-note.md", (t) => t.includes("Ask [[kenji]] about Aster."), "the link relinked");
+      // The explorer's R asks for the selected note's new path; esc cancels.
+      await leader(s, "e");
+      await s.keys("shift+r");
+      await s.see(/rename or move .* to:/);
+      await s.keys("escape");
     },
   },
   {

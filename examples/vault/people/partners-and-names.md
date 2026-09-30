@@ -40,8 +40,7 @@ A standard markdown link to [the vault's overview](../about-this-vault.md), a ba
 
 Kenji's own note can be reached several ways, and all of them should land on the same page:
 [[kenji-mori.md]] with its extension, [[people/kenji-mori]] by folder path, and through either of
-the aliases it declares, [[Kenji]] or [[森健二]] — once slipbox reads aliases; until then those
-two show as unresolved. The table of scripts further down is
+the aliases it declares, [[Kenji]] or [[森健二]]. The table of scripts further down is
 [[#Names in their own scripts]], a link to a heading in this very note. His heading, embedded:
 
 ![[kenji-mori#Kenji Mori]]

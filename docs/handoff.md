@@ -23,11 +23,14 @@ tests (`bun run e2e`, slipbox driven in a herdr pane; see `docs/design/testing.m
 vault in `examples/vault`. `docs/design/` describes the code as
 it is and is kept in step with it; `docs/design/decisions.md` answers the decide items. Phase 3b,
 files beyond markdown (`16.x`; the design is `docs/idea.md`, "Files beyond markdown"), is done: data
-files render and source code goes through tree-sitter (Org and AsciiDoc were tried and dropped). Next is 4,
-vault and structure. Still open from phase 3: `7.2`–`7.4` (multi-file preview, rename
-undo) wait for renames (`7.1`, phase 4); `4.9` (incremental reparse) moved to `15.1`, now mostly
-done (a note re-parses by chunk); `5.9` (a `HEAD` change as a branch switch) and the lint surface
-(markdownlint-cli2) are not built.
+files render and source code goes through tree-sitter (Org and AsciiDoc were tried and dropped).
+Phase 4 has begun with the vaults (`17.x`, done 2026-09-30; the design is `docs/idea.md`, "Vaults —
+decided"): a file's root is its `.slipbox/`, its git repository or the home vault; storage keyed by a
+vault's id; aliases and previous names; `[[vault:note]]`, paths and backlinks across vaults; moves
+kept as redirects; switching vaults in the TUI; renames across vaults with a preview (`7.1`–`7.3`).
+Next in phase 4: the rest of `1.x`, search (`6.x`), embeds. Still open: `7.4` (rename undo); `4.9`
+(incremental reparse) moved to `15.1`, now mostly done (a note re-parses by chunk); `5.9` (a `HEAD`
+change as a branch switch) and the lint surface (markdownlint-cli2) are not built.
 
 ## The documents
 

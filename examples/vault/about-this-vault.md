@@ -61,11 +61,10 @@ terminal escapes, symlinks, ignored folders, a nested vault — live in the test
 - **A pathological file.** No multi-megabyte note, and no `.md` file that is really a log.
 - **Mermaid and LaTeX, rendered.** `software/pipeline-cookbook.md` now has a mermaid fence and a
   `$$` block, but slipbox shows both as code; drawing them is a deferred feature.
-- **Aliases, and checked heading and block references.** `[[Kenji]]` and `[[森健二]]` in
-  `people/partners-and-names.md` name the aliases `people/kenji-mori.md` declares, but slipbox
-  doesn't read `aliases:` yet, so both are unresolved; and `[[home#No such heading]]` resolves to
-  its note, since a reference's heading or block isn't checked yet. Both are phase 4 link work
-  (plan `1.x`); these links are the test material for it.
+- **Checked heading and block references.** `[[home#No such heading]]` resolves to its note,
+  since a reference's heading or block isn't checked yet: phase 4 link work (plan `1.x`), and this
+  link is the test material for it. (`[[Kenji]]` and `[[森健二]]` in
+  `people/partners-and-names.md` reach `people/kenji-mori.md` through the aliases it declares.)
 
 Some links are unresolved on purpose, so the link index always has failures to report:
 

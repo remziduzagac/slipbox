@@ -407,9 +407,9 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 7.1 | Rename with link fixing, as byte-range edits from mdast positions |
-| 7.2 | **Multi-file preview** of the transaction |
-| 7.3 | Confirm, and warn when the tree is already dirty |
+| 7.1 | **Done** (`17.15`). Rename with link fixing, as byte-range edits from mdast positions |
+| 7.2 | **Done** (`17.15`). **Multi-file preview** of the transaction |
+| 7.3 | **Done** (`17.15`). Confirm, and warn when the tree is already dirty |
 | 7.4 | Undo a rename |
 | 7.5 | **constraint** never write outside the vault root — decide what a symlink out means |
 | 7.6 | **decide** frontmatter is spliced by byte range, never parsed and re-serialised |
@@ -566,21 +566,21 @@ links across vaults, then the TUI, then renames.*
 
 | ID | Item |
 | --- | --- |
-| 17.1 | Roots: the nearest `.slipbox/`, else the git repository, else the home vault; never `~` or `/` |
-| 17.2 | The home vault: `~/.local/share/slipbox/home/`, made on first use; a loose file's links look beside it |
-| 17.3 | Storage keyed by the vault's id (a repository without `.slipbox/`: by path); old state moved over |
-| 17.4 | Vault identity in `.slipbox/config.toml`, `[vault]`: `id`, `name`, `aliases`, `previous_names` |
-| 17.5 | Distinct names suggested: a vault's (`x-plan` inside `x`; a known name refused), a new note's |
-| 17.6 | The machine's vaults, `vaults.json`: recorded on each open; `slipbox vaults` lists them |
-| 17.7 | Note `aliases` resolve like names; `previous_names` (vault and note) as a checked fallback, said so |
-| 17.8 | Interwiki links `[[vault:name]]`, `#heading`, `\|text`; "unknown vault", with where it was last seen |
-| 17.9 | Path links across roots: `[t](../other/x.md)` reaches the file in whichever root holds it |
-| 17.10 | Following a link into another vault switches the TUI to it; back returns; its index refreshed |
-| 17.11 | Backlinks across vaults, from each vault's index as of its last indexing |
-| 17.12 | Moves detected by content hash; redirects kept in the state; a link to the old path follows them |
-| 17.13 | Explorer: vault and repository folders with their own icons, the vault's name dimmed beside |
-| 17.14 | The launcher: `~`, or a loose folder opened without a file, shows the known vaults and the folder |
-| 17.15 | Renames across vaults (with `7.1`–`7.3`): links fixed in every reachable vault after a preview |
+| 17.1 | **Done.** Roots: the nearest `.slipbox/`, else the git repository, else the home vault; never `~` or `/` |
+| 17.2 | **Done.** The home vault: `~/.local/share/slipbox/home/`, made on first use; loose files' links look beside |
+| 17.3 | **Done.** Storage keyed by the vault's id (a repository without `.slipbox/`: by path); old state moved over |
+| 17.4 | **Done.** Vault identity in `.slipbox/config.toml`, `[vault]`: `id`, `name`, `aliases`, `previous_names` |
+| 17.5 | **Done.** Distinct names suggested: a vault's (`x-plan` inside `x`; a known name refused), a new note's |
+| 17.6 | **Done.** The machine's vaults, `vaults.json`: recorded on each open; `slipbox vaults` lists them |
+| 17.7 | **Done.** Note `aliases` resolve like names; `previous_names` (vault and note) as a checked fallback, said so |
+| 17.8 | **Done.** Interwiki links `[[vault:name]]`, `#heading`, `\|text`; "unknown vault", where it was last seen |
+| 17.9 | **Done.** Path links across roots: `[t](../other/x.md)` reaches the file in whichever root holds it |
+| 17.10 | **Done.** Following a link into another vault switches the TUI to it; back returns; its index refreshed |
+| 17.11 | **Done.** Backlinks across vaults, from each vault's index as of its last indexing |
+| 17.12 | **Done.** Moves detected by content hash; redirects kept in the state; a link to the old path follows them |
+| 17.13 | **Done.** Explorer: vault and repository folders with their own icons, the vault's name dimmed beside |
+| 17.14 | **Done.** The launcher: `~`, or a loose folder opened without a file, shows the known vaults and the folder |
+| 17.15 | **Done.** Renames across vaults (with `7.1`–`7.3`): links fixed in every reachable vault after a preview |
 
 `17.15` is where `7.1`–`7.3` land: a note's rename rewrites links as byte-range edits, previews every
 file it touches (7.2), and warns when a vault's git tree already has changes (7.3); the old name goes
