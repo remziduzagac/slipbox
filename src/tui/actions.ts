@@ -1517,6 +1517,7 @@ export function registerActions(app: App): void {
     // The left panel's Problems view (1.7): open, focus, close — made afresh when it opens.
     "problems.open": (a) => {
       a.graph.forgetProblems();
+      a.lintVault();
       a.openLeftView("problems", "cycle");
     },
     "vault.init": (a) => {

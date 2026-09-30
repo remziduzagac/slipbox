@@ -128,7 +128,8 @@ session keeps them.
   note's own name stays;
 - a marker: `• unsaved`, `• unsaved ⚠ differs from disk` (after keeping yours in a conflict),
   `↻ reloaded` after an external change, or `✖ deleted on disk` — in symbols only (`• ⚠`) on a
-  narrow screen, so the path and the position keep their room;
+  narrow screen, so the path and the position keep their room; then the lint finding on the cursor's line
+  (`⚠ MD013 line-length: …`), or how many the note has (`⚠ 3 lint`; see "The lint surface");
 - whether external changes will show up: `● watching` (with a count of polled directories, if
   any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
   dropped when the line is too short.
@@ -455,12 +456,15 @@ keys.
 - **Problems (left, `1.7`):** what's wrong in the vault — the left panel's views are the vault's, the right's the
   file's. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link set: each link that
   reaches nothing, and why when there's a reason, such as an unknown vault), **Ambiguous links** (each that reaches
-  several notes, and how many), **Orphans** (`9.5`: the notes no other note links to — another vault's links count, a
-  note's own don't — each opened by `enter`). Under the first two, the notes with such links, and under a note its
-  problems: the line and the link as written, in the link's colour. `enter` (or a double-click) opens the note there,
+  several notes, and how many), **Lint** (`3.21`: the linter's findings, when one runs — see "The lint surface"),
+  **Orphans** (`9.5`: the notes no other note links to — another vault's links count, a note's own don't — each opened
+  by `enter`). Under the first three, the notes with such links, and under a note its
+  problems: the line and the link as written, in the link's colour (a finding: its line, rule and what's wrong).
+  `enter` (or a double-click) opens the note there,
   the cursor on the link as drawn (in source mode, on its text); on a note's row, at its first. It takes the explorer's
   keys (`l` / `h` unfold and fold a section, `/` filters); a note's change shows at once. `space v p`, `:problems`, the
-  `⚠` button; `slipbox problems` gives the same.
+  `⚠` button — each opening lints the vault again (`Lint (n) …` while it runs); `slipbox problems` gives the same
+  (`--lint` for the findings).
 - **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
   Sections that fold (`h`/`l`): **File** (its path, the vault it belongs to, its kind, size, modified time, words and
   reading time, lines, encoding and line endings, saved or not), **Properties** (the frontmatter's keys and values,
@@ -983,6 +987,26 @@ and size) the write left: an agent's write landing right after a save is a chang
 
 **Degrading loudly (plan `5.2`).** Exhausting the watch limit (`ENOSPC`, `EMFILE`, `ENFILE`)
 produces one error message, `⚠ not watching` in the status line, and polling of open notes.
+
+## The lint surface (plan `3.21`)
+
+slipbox runs the linter you already use and shows what it finds where it is; it ships no rules of its own
+(`docs/idea.md`, "Run this repo's linter, don't ship one"). By default that's `markdownlint-cli2` through `npx`: with
+the vault's own markdownlint config when it has one (the linter finds it), else with `~/.markdownlint-cli2.jsonc`.
+`[lint] enabled = "auto"` lints only where one of those configs is — markdownlint's defaults are no one's rules for
+notes; `"on"` lints anyway, `"off"` never. `[lint] command` runs another linter, the files appended, as long as it
+prints markdownlint-cli2's lines (`path:line[:column] MD013/line-length what's wrong`) — only your own config can
+name it, never a vault's.
+
+- **A note** is linted once its text is the file's: when it opens, and 300 ms after each save — never while it's
+  unsaved, since the linter reads the file. Its findings show only for the text they were found in: typing hides
+  them until the next save's run. A line with a finding has its number in `warn` (when numbers show); the status
+  line says `⚠ MD013 line-length: …` on such a line, else `⚠ n lint`.
+- **The vault** is linted when the Problems view opens: its **Lint** section lists the findings by note, and a note's
+  own run keeps its rows current. `enter` on one opens the note at that line (in source mode, its column); on a
+  note's row, at its first.
+- **A linter that can't run** (not installed, or failing without a finding) is said once, and not tried again until
+  the config changes.
 
 ## Modes and dispatch (decision `3.11`)
 

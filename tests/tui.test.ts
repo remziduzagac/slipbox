@@ -70,6 +70,7 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   const root = opts.loc?.root ?? opts.root ?? makeVault();
   const config: Config = structuredClone(DEFAULT_CONFIG);
   config.ui.restore_session = false;
+  config.lint.enabled = "off"; // the machine's own linter never runs in a test (the lint tests bring theirs)
   config.render.glyphs = "unicode";
   // The frame tests read heavy lines; the light set has its own test.
   config.ui.lines = "heavy";
@@ -3686,6 +3687,7 @@ describe("OpenTUI end to end", () => {
     const root = makeVault();
     const config: Config = structuredClone(DEFAULT_CONFIG);
     config.ui.restore_session = false;
+    config.lint.enabled = "off";
     config.render.glyphs = "unicode";
     const loc = locateVault({ root });
     const app = new App({ loc, config, graph: openGraph(loc, config, false), host: { requestRender: () => renderer.requestRender(), osc52: () => true, quit() {} }, open: "index.md", watch: false });
@@ -6662,5 +6664,82 @@ describe("the Problems view (1.7)", () => {
     h.app.region = "sidebar";
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("b/twin.md");
+  });
+});
+
+describe("the lint surface: your linter's findings in notes (3.21)", () => {
+  /** A stand-in for markdownlint-cli2: one finding on line 3 of each file it's given. */
+  const FAKE = ["sh", "-c", 'for f; do printf "%s:3:5 error MD013/line-length Line length [Expected: 80]\\n" "$f"; done; exit 1', "lint"];
+  const setup = async (command = FAKE) => {
+    const root = makeVault();
+    writeFileSync(join(root, "l.md"), "# L\n\nA long line here,\nits paragraph going on.\n");
+    const h = await harness({ root, open: "l.md", config: (c) => ((c.lint.enabled = "on"), (c.lint.command = command), (c.ui.line_numbers = true)) });
+    return { root, h };
+  };
+  const until = async (ok: () => boolean) => {
+    for (let i = 0; i < 100 && !ok(); i++) await new Promise((r) => setTimeout(r, 20));
+    expect(ok()).toBe(true);
+  };
+
+  test("once a note is saved it's linted: the finding on the cursor's line on the status line, its line number marked; editing hides them until saved", async () => {
+    const { h } = await setup();
+    h.frame();
+    await until(() => h.app.view!.buf.lint !== null);
+    expect(statusRow(h.frame())).toContain("⚠ 1 lint");
+    await h.keys("j", "j"); // line 3
+    expect(statusRow(h.frame())).toContain("⚠ MD013 line-length: Line length [Expected: 80]");
+    const c = h.canvas();
+    const rows = c.toString().split("\n");
+    const at = (n: string, text: string) => {
+      const y = rows.findIndex((r) => new RegExp(`┃\\s*${n}\\s.*${text}`).test(r));
+      return c.styles[y]![[...rows[y]!].indexOf(n, [...rows[y]!].indexOf("┃"))]!.fg;
+    };
+    expect(at("3", "A long")).toBe(h.app.theme.roles.warn.fg!);
+    expect(at("1", "L")).not.toBe(h.app.theme.roles.warn.fg!);
+    // Typing: its text isn't the file's any more — nothing shown until it's saved (and linted again).
+    h.app.view!.buf.edit(0, 0, "x");
+    h.frame();
+    await new Promise((r) => setTimeout(r, 450)); // past a re-lint's 300 ms: none while it's unsaved
+    h.frame();
+    expect(h.app.lintShown(h.app.view!.buf)).toBeNull();
+    expect(statusRow(h.frame())).not.toContain("⚠");
+    h.app.saveBuffer(h.app.view!.buf);
+    h.frame();
+    await until(() => h.app.lintShown(h.app.view!.buf) !== null);
+  });
+
+  test("the Problems view lints the vault: a Lint section by note; enter opens a finding; a linter that can't run says so once", async () => {
+    const { h } = await setup();
+    await h.keys("space", "v", "p");
+    await until(() => h.app.vaultLint.issues !== null && !h.app.vaultLint.running);
+    const rows = h.app.problemRows();
+    const lint = rows.filter((r) => r.section === "Lint");
+    expect(lint[0]!.label).toMatch(/^Lint \(\d+\)$/);
+    const row = lint.findIndex((r) => r.lint && r.lint.file.endsWith("/l.md"));
+    expect(lint[row - 1]!.note).toBe("l.md");
+    h.app.sidebar.selected = rows.indexOf(lint[row]!);
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("l.md");
+    expect(statusRow(h.frame())).toContain("L3:1"); // rendered: its line's start, not the row's end (a regression)
+    // Filtered, the note's row first: enter takes it to its finding, not its top (a regression).
+    await h.keys("g", "g");
+    await h.keys("space", "v", "p");
+    await until(() => !h.app.vaultLint.running);
+    await h.keys("/");
+    await h.keys(...[..."MD013 l.md"].map((c) => (c === " " ? "space" : c)));
+    expect(h.app.problemRows()[h.app.sidebar.selected]!.note).toBe("l.md");
+    await h.keys("enter");
+    expect(h.app.cursorLine(h.app.view!)).toBe(3);
+    // In source mode, on its column.
+    await h.app.run("view.source");
+    await h.keys("g", "g", "space", "v", "p");
+    h.app.sidebar.selected = h.app.problemRows().findIndex((r) => r.lint?.file.endsWith("/l.md"));
+    await h.keys("enter");
+    expect(statusRow(h.frame())).toContain("L3:5");
+    // Not there: said once, lint off.
+    const bad = await setup(["no-such-linter-slipbox-test"]);
+    bad.h.frame();
+    await until(() => bad.h.app.lintCmd === null);
+    expect(bad.h.app.messages.filter((m) => m.text.includes("couldn't run"))).toHaveLength(1);
   });
 });

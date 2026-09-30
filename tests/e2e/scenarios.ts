@@ -629,6 +629,24 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: "lint: a stand-in linter's finding on the status line and in Problems; enter goes to its line",
+    // markdownlint-cli2's output, from sh: one finding, on home.md's line 3.
+    options: {
+      config: `[lint]\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(`for f; do case "$f" in */home.md) printf '%s:3:6 error MD013/line-length Line length [Expected: 80]\\n' "$f";; esac; done; exit 1`)}, "lint"]\n`,
+    },
+    run: async (s) => {
+      await s.status("⚠ 1 lint");
+      await leader(s, "v", "p");
+      await s.see(/Lint \(1\)/);
+      await s.see(/L3 +MD013 line-len/); // cut to the panel
+      await s.keys("/");
+      await s.type("MD013");
+      await s.keys("enter");
+      await s.status("L3:1"); // rendered: the line's start
+      await s.status("⚠ MD013 line-length: Line length [Expected: 80]");
+    },
+  },
+  {
     name: "tags: space f t lists them with counts, a tag its notes; a #tag in the text followed",
     run: async (s) => {
       await leader(s, "f", "t");

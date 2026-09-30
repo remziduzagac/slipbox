@@ -34,6 +34,7 @@ import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from ".
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { Graph, type LinkProblem } from "../core/graph.ts";
+import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
 import { stateDir, userConfigFile } from "../core/paths.ts";
@@ -357,6 +358,8 @@ export interface ProblemRow {
   text: string;
   folded: boolean;
   link?: LinkProblem;
+  /** A linter's finding (3.21). */
+  lint?: LintIssue;
 }
 
 export const RIGHT_VIEWS: PanelView<RightView>[] = [
@@ -594,6 +597,7 @@ export class App {
     recordLocation(opts.loc);
     this.reach = new Reach(opts.loc);
     this.graph.reach ??= this.reach;
+    this.lintCmd = lintCommand(opts.config.lint, opts.loc.root);
     this.host = opts.host;
     this.configFile = opts.configFile;
     this.live = opts.watch !== false;
@@ -773,6 +777,7 @@ export class App {
     const before = this.config;
     const next = loaded.config;
     this.config = next;
+    this.lintCmd = lintCommand(next.lint, this.loc.root);
     const differs = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
     const changed = (Object.keys(next) as (keyof Config)[]).filter((s) => differs(before[s], next[s]));
 
@@ -966,6 +971,76 @@ export class App {
   }
 
   private readonly syntaxTimers = new Map<NoteBuffer, ReturnType<typeof setTimeout>>();
+
+  // The lint surface (3.21): your markdownlint-cli2 run on a note once it's saved — its findings
+  // beside their lines, on the status line, in the Problems view — and on the vault for that view.
+
+  /** The linter (`[lint]`), or null: lint off, or it couldn't run. */
+  lintCmd: { argv: string[]; literal: boolean } | null = null;
+  private readonly lintRuns = new Map<NoteBuffer, ReturnType<typeof setTimeout> | "running">();
+  /** The whole vault's findings, as last linted (the Problems view's): null until it's run. */
+  vaultLint: { running: boolean; issues: LintIssue[] | null } = { running: false, issues: null };
+
+  /** Lint a note when its text is the file's (saved) and hasn't been linted as it is: at once the
+   *  first time, then 300 ms after it's saved again. */
+  ensureLint(buf: NoteBuffer): void {
+    const cmd = this.lintCmd;
+    if (!cmd || buf.kind.group !== "note" || buf.kind.format !== "markdown" || buf.rel === null || buf.virtual) return;
+    if (buf.dirty || buf.deleted || buf.lint?.version === buf.version || this.lintRuns.has(buf)) return;
+    const version = buf.version;
+    const t = setTimeout(() => {
+      this.lintRuns.set(buf, "running");
+      void runLint(cmd, [buf.abs], this.loc.root).then((issues) => {
+        this.lintRuns.delete(buf);
+        if (issues === null) return this.lintFailed();
+        buf.lint = { version, issues: issues.filter((i) => i.file === buf.abs) };
+        // The vault's list follows this note's.
+        if (this.vaultLint.issues) this.vaultLint.issues = [...this.vaultLint.issues.filter((i) => i.file !== buf.abs), ...buf.lint.issues].sort((a, b) => (a.file === b.file ? a.line - b.line : a.file < b.file ? -1 : 1));
+        for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+        this.host.requestRender();
+      });
+    }, buf.lint ? 300 : 0);
+    (t as { unref?: () => void }).unref?.();
+    this.lintRuns.set(buf, t);
+  }
+
+  /** Lint every note (the Problems view's Lint section), in runs of a few hundred files. */
+  lintVault(): void {
+    const cmd = this.lintCmd;
+    if (!cmd || this.vaultLint.running) return;
+    const files = [...this.graph.notes.keys()].filter((rel) => /\.(md|markdown)$/i.test(rel)).sort().map((rel) => join(this.loc.root, rel));
+    this.vaultLint = { running: true, issues: this.vaultLint.issues };
+    void (async () => {
+      const all: LintIssue[] = [];
+      for (let i = 0; i < files.length; i += 300) {
+        const got = await runLint(cmd, files.slice(i, i + 300), this.loc.root);
+        if (got === null) {
+          this.vaultLint = { running: false, issues: null };
+          this.lintFailed();
+          return this.host.requestRender();
+        }
+        all.push(...got);
+      }
+      this.vaultLint = { running: false, issues: all };
+      this.host.requestRender();
+    })();
+  }
+
+  /** The linter couldn't run: said once, and not tried again until the config says otherwise. */
+  private lintFailed(): void {
+    if (!this.lintCmd) return;
+    this.lintCmd = null;
+    this.message("warn", `lint: ${this.config.lint.command.length ? "[lint] command" : "markdownlint-cli2 (through npx)"} couldn't run — [lint] command sets another; enabled = "off" stops trying`);
+  }
+
+  /** A note's findings for the text as it is now, by line; null when there are none to show. */
+  lintShown(buf: NoteBuffer): Map<number, LintIssue[]> | null {
+    const l = buf.lint;
+    if (!l || l.version !== buf.version || !l.issues.length) return null;
+    const out = new Map<number, LintIssue[]>();
+    for (const i of l.issues) out.set(i.line, [...(out.get(i.line) ?? []), i]);
+    return out;
+  }
   private stopLazy: (() => void) | null = null;
 
   /** Whether a file has a rendered view: markdown notes do, data files while they parse
@@ -1154,6 +1229,7 @@ export class App {
         ? this.textWidth(paneWidth, gutter)
         : this.nowrapWidth(view, paneWidth, gutter);
     if (view.source) this.ensureSyntax(view.buf);
+    this.ensureLint(view.buf);
     const layout = view.source
       ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs)
       : view.live
@@ -2894,6 +2970,27 @@ export class App {
     };
     section("Broken links", p.broken, (l) => l.reason ?? "");
     section("Ambiguous links", p.ambiguous, (l) => `— ${l.candidates.length} notes`);
+    // Lint (3.21): the linter's findings over the vault, by note; while it runs, said so.
+    if (this.lintCmd || this.vaultLint.issues) {
+      const all = this.vaultLint.issues;
+      const rows = (all ?? [])
+        .map((i) => ({ i, rel: relative(this.loc.root, i.file), label: `L${i.line}`, detail: `${i.rule} ${i.name}  ${i.description}` }))
+        .filter((r) => !q || match(q, `${r.rel} ${r.label} ${r.detail}`));
+      if (!q || rows.length) {
+        const folded = !q && this.problemsFolded.has("Lint");
+        out.push({ section: "Lint", heading: true, label: all ? `Lint (${all.length})${this.vaultLint.running ? " …" : ""}` : "Lint — linting…", detail: "", text: "Lint", folded });
+        if (!folded) {
+          let note = "";
+          for (const r of rows) {
+            if (r.rel !== note) {
+              note = r.rel;
+              out.push({ section: "Lint", heading: false, note, label: note, detail: "", text: note, folded: false });
+            }
+            out.push({ section: "Lint", heading: false, label: r.label, detail: r.detail, text: `${r.rel} ${r.label} ${r.detail}`, folded: false, lint: r.i });
+          }
+        }
+      }
+    }
     // Orphans (9.5): each a note's row alone.
     const orphans = p.orphans.filter((n) => !q || match(q, n));
     if (!q || orphans.length) {
@@ -2915,6 +3012,36 @@ export class App {
       if (drawn && drawn.line >= 0 && !this.currentLayout(v).lines[drawn.line]?.srcMap) this.moveCursor(v, { row: drawn.line, col: drawn.col });
       else placeAt(this, v, (v.buf.lineStarts()[l.line - 1] ?? 0) + l.column - 1);
     }
+    this.region = "content";
+    if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+  }
+
+  /** Open a linter's finding: its note at its line (and column, when it says one). */
+  jumpToLint(i: LintIssue): void {
+    const rel = relative(this.loc.root, i.file);
+    this.open(rel, { heading: null, headingIndex: 0, offset: 0, line: i.line });
+    const v = this.view;
+    if (v && v.buf.rel === rel) {
+      // Rendered, the start of its line's row (a rendered row has no source columns); in source mode, the column.
+      const layout = this.currentLayout(v);
+      const row = layout.lines.findIndex((l) => l.src === i.line && !l.decor);
+      if (row >= 0 && !layout.lines[row]!.srcMap) this.moveCursor(v, { row, col: 0 });
+      else placeAt(this, v, (v.buf.lineStarts()[i.line - 1] ?? 0) + Math.max(0, (i.column ?? 1) - 1));
+    }
+    this.region = "content";
+    if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+  }
+
+  /** A Problems row opened: its problem; a note's row, the note at its first in that section, of `rows` (the ones
+   *  shown, so a filter's pick) — an orphan's, the note. A heading's does nothing. */
+  private openProblemRow(row: ProblemRow, rows: ProblemRow[]): void {
+    if (row.link) return this.jumpToProblem(row.link);
+    if (row.lint) return this.jumpToLint(row.lint);
+    if (!row.note || row.heading) return;
+    const first = rows.find((r) => r.section === row.section && (r.link?.from === row.note || (r.lint && relative(this.loc.root, r.lint.file) === row.note)));
+    if (first?.link) return this.jumpToProblem(first.link);
+    if (first?.lint) return this.jumpToLint(first.lint);
+    this.open(row.note);
     this.region = "content";
     if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
   }
@@ -2952,17 +3079,7 @@ export class App {
         if (row.heading) {
           if (row.folded) this.problemsFolded.delete(row.section);
           else if (action !== "expand") this.problemsFolded.add(row.section);
-        } else if (row.link) this.jumpToProblem(row.link);
-        else if (row.note) {
-          // A note's row: the note, at its first problem (an orphan: the note).
-          const first = rows.find((r) => r.link?.from === row.note && r.section === row.section)?.link;
-          if (first) this.jumpToProblem(first);
-          else {
-            this.open(row.note);
-            this.region = "content";
-            if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
-          }
-        }
+        } else this.openProblemRow(row, rows);
         break;
       case "collapse":
         if (!row) break;
@@ -3720,14 +3837,8 @@ export class App {
         const row = rows[s.selected];
         if (!row) return;
         if (this.leftView === "problems") {
-          const p = row as ProblemRow;
-          const link = p.link ?? (rows as ProblemRow[]).find((r) => r.link?.from === p.note)?.link;
           done();
-          if (link) return this.jumpToProblem(link);
-          if (!p.note) return;
-          this.open(p.note);
-          this.region = "content";
-          return;
+          return this.openProblemRow(row as ProblemRow, rows as ProblemRow[]);
         }
         if (this.leftView === "history") {
           const i = (row as HistoryRow).index;
@@ -5048,7 +5159,11 @@ export class App {
       case "btn":
         if (arg === "explorer") this.openLeftView("explorer");
         else if (arg === "history") this.openLeftView("history");
-        else if (arg === "problems") this.openLeftView("problems");
+        else if (arg === "problems") {
+          this.graph.forgetProblems();
+          this.lintVault();
+          this.openLeftView("problems");
+        }
         else if (arg === "outline") void this.run("outline.toggle");
         else if (arg === "footnotes") void this.run("footnotes.toggle");
         else if (arg === "info") void this.run("info.toggle");
@@ -5756,6 +5871,8 @@ export class App {
     this.configLastGood.clear();
     const loaded = loadConfig({ vaultFile: vaultConfigPath(target), configFile: this.configFile, lastGood: this.configLastGood });
     this.config = loaded.config;
+    this.lintCmd = lintCommand(this.config.lint, target.root);
+    this.vaultLint = { running: false, issues: null };
     for (const w of loaded.warnings) this.message("warn", w);
     this.reach = new Reach(target);
     this.graph = new Graph(target, this.config).build(true, "lazy");

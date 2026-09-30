@@ -8,6 +8,7 @@ import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
 import { newParseCache, parseMarkdown, visit } from "../src/core/parse.ts";
+import { lintCommand, parseLint, runLint } from "../src/core/lint.ts";
 import { addFootnote, applyEdits, deleteFootnote, editFootnote, footnotesOf, renameFootnote, type TextEdit } from "../src/core/footnotes.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
@@ -1080,5 +1081,49 @@ describe("footnotes (3.17)", () => {
     const l = footnotesOf(parseMarkdown(two));
     expect(() => renameFootnote(two, l[0]!, l, "Z")).toThrow("taken");
     expect(() => renameFootnote(two, l[0]!, l, "a b")).toThrow("can't be");
+  });
+});
+
+describe("the lint surface (3.21)", () => {
+  test("markdownlint-cli2's lines read: path, line, column, rule and its name, what's wrong; the rest ignored", () => {
+    const out = [
+      "markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)",
+      "Summary: 3 issues in 2 files",
+      'notes/a.md:14 error MD025/single-title/single-h1 Multiple top-level headings [Context: "T"]',
+      "notes/a.md:3:121 error MD013/line-length Line length [Expected: 120; Actual: 138]",
+      "/abs/b.md:7:1 warning MD029/ol-prefix Ordered list item prefix",
+    ].join("\n");
+    expect(parseLint(out, "/v")).toEqual([
+      { file: "/abs/b.md", line: 7, column: 1, rule: "MD029", name: "ol-prefix", description: "Ordered list item prefix" },
+      { file: "/v/notes/a.md", line: 3, column: 121, rule: "MD013", name: "line-length", description: "Line length [Expected: 120; Actual: 138]" },
+      { file: "/v/notes/a.md", line: 14, column: null, rule: "MD025", name: "single-title", description: 'Multiple top-level headings [Context: "T"]' },
+    ]);
+  });
+
+  test("which linter: off; auto only with a markdownlint config (yours, or the vault's); npx markdownlint-cli2 with yours unless the vault has its own; [lint] command as given", () => {
+    const home = mkdtempSync(join(sandbox, "home-"));
+    const vault = mkdtempSync(join(sandbox, "vault-"));
+    const cfg = (enabled: "auto" | "on" | "off", command: string[] = []) => ({ enabled, command });
+    expect(lintCommand(cfg("off"), vault, home)).toBeNull();
+    expect(lintCommand(cfg("auto"), vault, home)).toBeNull(); // no config anywhere: markdownlint's defaults are no one's rules
+    expect(lintCommand(cfg("on"), vault, home)).toEqual({ argv: ["npx", "--yes", "markdownlint-cli2"], literal: true });
+    writeFileSync(join(home, ".markdownlint-cli2.jsonc"), "{}");
+    expect(lintCommand(cfg("auto"), vault, home)).toEqual({ argv: ["npx", "--yes", "markdownlint-cli2", "--config", join(home, ".markdownlint-cli2.jsonc")], literal: true });
+    writeFileSync(join(vault, ".markdownlint.json"), "{}");
+    expect(lintCommand(cfg("auto"), vault, home)).toEqual({ argv: ["npx", "--yes", "markdownlint-cli2"], literal: true }); // the vault's own
+    expect(lintCommand(cfg("auto", ["mdl", "--config", "~/mdl.json"]), vault, home)).toEqual({ argv: ["mdl", "--config", join(home, "mdl.json")], literal: false });
+  });
+
+  test("run: the files given (literal paths for markdownlint-cli2), the findings read; a linter that isn't there, or fails saying nothing, is null", async () => {
+    const v = mkdtempSync(join(sandbox, "lint-"));
+    const echo = { argv: ["sh", "-c", 'for f; do printf "%s:2 error MD001/heading-increment Heading levels\\n" "$f"; done; exit 1', "lint"], literal: false };
+    expect(await runLint(echo, ["/v/a.md", "/v/b [x].md"], v)).toMatchObject([
+      { file: "/v/a.md", line: 2, rule: "MD001" },
+      { file: "/v/b [x].md", line: 2, rule: "MD001" },
+    ]);
+    const said = { argv: ["sh", "-c", 'printf "x.md:1 error MD001/said %s\\n" "$1"', "lint"], literal: true };
+    expect((await runLint(said, ["/v/a[1].md"], v))![0]!.description).toBe(":/v/a[1].md"); // a literal path, never a glob
+    expect(await runLint({ argv: ["no-such-linter-slipbox-test"], literal: false }, ["/v/a.md"], v)).toBeNull();
+    expect(await runLint({ argv: ["sh", "-c", "exit 2"], literal: false }, ["/v/a.md"], v)).toBeNull();
   });
 });

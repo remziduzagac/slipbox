@@ -6,6 +6,7 @@
 // buffer dirty until it is saved. The parse is redone only when something needs it (the rendered
 // layout), not on every keystroke.
 
+import type { LintIssue } from "../core/lint.ts";
 import type { Glyphs } from "../core/glyphs.ts";
 import { parseData } from "../core/data.ts";
 import type { FileKind } from "../core/filetypes.ts";
@@ -64,6 +65,9 @@ export class NoteBuffer {
   private readonly parseCache = newParseCache();
   /** The render's blocks, reused across edits and reloads (only a changed block renders again). */
   private renderCache = newRenderCache();
+
+  /** The linter's findings (3.21), and the version of the text they're for (the file as saved). */
+  lint: { version: number; issues: LintIssue[] } | null = null;
 
   /** A buffer that isn't a file of its own (3.20): its text given, saved by `save` (into a note's
    *  frontmatter), never read from or compared with the disk. */

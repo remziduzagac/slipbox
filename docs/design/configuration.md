@@ -20,8 +20,9 @@ previous_names = ["old-notes"] # names it had: a fallback only (17.7)
 ```
 
 **What only you can set.** The vault file comes with whatever you clone, so it never chooses a
-program slipbox runs: `editor.command` and `editor.remote` there are ignored, with a warning, and
-only your user file sets them (`USER_ONLY` in `core/config.ts`). The rest of `[editor]` applies.
+program slipbox runs: `editor.command`, `editor.remote` and `lint.command` there are ignored, with a
+warning, and only your user file sets them (`USER_ONLY` in `core/config.ts`). The rest of `[editor]`
+and `[lint]` applies.
 Nor may its `[keys]` or `[aliases]` name a command that throws work away — `app.quit_force`,
 `note.revert`, `note.save_force`, `scratch.clear` (`VAULT_FORBIDDEN_COMMANDS`) — so a clone can't put
 one on `ctrl+s` or `:wq`; those bindings are dropped with a warning.
@@ -112,6 +113,12 @@ lens_max = 0.5                 # …and stops at this share of the window
 remote = ["nvim"]              # space n s: "nvim" finds the running nvims (space n p picks);
                                # else commands run in order, e.g. "code -g {file}:{line}", or
                                # ['nvim --server {server} --remote {file}', …], {server} picked
+
+[lint]                         # the lint surface (3.21): your linter's findings in notes and the Problems view
+enabled = "auto"               # auto: only with a markdownlint config (the vault's, or ~/.markdownlint-cli2.jsonc)
+                               # | on | off
+command = []                   # [] = npx markdownlint-cli2 (--config ~/.markdownlint-cli2.jsonc unless the
+                               # vault has its own); else argv, files appended, "~/" expanded; yours only
 
 [watch]
 enabled = true

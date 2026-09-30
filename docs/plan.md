@@ -1,7 +1,7 @@
 # slipbox — implementation plan
 
 Status: **phases 0–3 built**; **phase 3b (`16.x`, files beyond markdown) is next**, then 4. Phase 3
-left open `4.9` (moved to `15.1`), `5.9`, the lint surface, and `7.2`–`7.4` (which wait for renames,
+left open `4.9` (moved to `15.1`), `5.9`, the lint surface (since built, `3.21`), and `7.2`–`7.4` (which wait for renames,
 `7.1`). Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
 2026-09-28 — how it was built is in `docs/design/`, the decisions it needed in
 `docs/design/decisions.md`.
@@ -353,6 +353,7 @@ common, and the only reason they are step 0.
 | 3.18 | **Done.** Footnotes added (`space n shift+f`, `a`, `+`), edited, renamed, deleted; `slipbox footnotes … add` |
 | 3.19 | **Done.** Info: the right panel's first view — the file's place, vault, counts, state, properties, tags |
 | 3.20 | **Done.** Properties edited in a floating editor (`e`, `space n shift+p`): the frontmatter, written back |
+| 3.21 | **Done.** The lint surface: markdownlint-cli2's findings by line, status line, Problems; `problems --lint` |
 
 ## Editing — `4.x`
 

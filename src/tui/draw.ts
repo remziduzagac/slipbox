@@ -848,6 +848,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const cursorSrc = layout.lines[view.cur.row]?.src;
 
   const errors = syntaxErrorsShown(view);
+  const lint = app.lintShown(view.buf);
   const links = commentLinksShown(view);
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
   // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
@@ -863,7 +864,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     if (band) c.fill(body.x, y, body.w - 1, 1, band);
     if (gutter) {
       const num = line.src !== prevSrc ? String(line.src).padStart(gutter - 1) : "";
-      const role: Role = errors?.has(line.src) ? "error" : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
+      const role: Role = errors?.has(line.src) ? "error" : lint?.has(line.src) ? "warn" : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
       if (num) drawText(c, gutterX, y, num, { ...roleStyle(theme, role, page), bg: band ?? page });
     }
     prevSrc = line.src;
@@ -1338,7 +1339,8 @@ function drawProblems(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Ge
     }
     const w = drawText(c, rect.x + 5, y, truncate(row.label, sv.cols - 5), { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, sv.cols - 5);
     const x = rect.x + 5 + w + 2;
-    if (x < rect.x + sv.cols) drawText(c, x, y, truncate(sanitize(row.detail), rect.x + sv.cols - x), { ...roleStyle(theme, row.section === "Broken links" ? "link_unresolved" : "link_ambiguous", st.bg), bg: st.bg }, rect.x + sv.cols - x);
+    const role: Role = row.section === "Broken links" ? "link_unresolved" : row.section === "Lint" ? "warn" : "link_ambiguous";
+    if (x < rect.x + sv.cols) drawText(c, x, y, truncate(sanitize(row.detail), rect.x + sv.cols - x), { ...roleStyle(theme, role, st.bg), bg: st.bg }, rect.x + sv.cols - x);
   }
   paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
   return rect;
@@ -1595,6 +1597,15 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
     const n = [...errs.values()].reduce((k, l) => k + l.length, 0);
     const text = here ? `  ✖ ${here.message}` : `  ✖ ${n} syntax error${n === 1 ? "" : "s"}`;
     if (x + stringWidth(text) + 1 < rx) x += drawText(c, x, y, text, { ...roleStyle(theme, "error", st.bg), bg: st.bg });
+  }
+  // A note's lint findings (3.21): the one on the cursor's line, else how many there are.
+  const lint = errs ? null : app.lintShown(view.buf);
+  if (lint) {
+    const here = lint.get(src)?.[0];
+    const n = [...lint.values()].reduce((k, l) => k + l.length, 0);
+    const text = here ? `  ⚠ ${here.rule} ${here.name}: ${here.description}` : `  ⚠ ${n} lint`;
+    const room = rx - x - 3 - stringWidth(watch.text);
+    if (room > 8) x += drawText(c, x, y, truncate(sanitize(text), room), { ...roleStyle(theme, "warn", st.bg), bg: st.bg });
   }
   if (x + stringWidth(watch.text) + 3 < rx) x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
   if (rx > x) drawText(c, rx, y, right, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });

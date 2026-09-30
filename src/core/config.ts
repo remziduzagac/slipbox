@@ -88,6 +88,17 @@ export interface Config {
      *  machine can't reach still find it. */
     previous_names: boolean;
   };
+  /**
+   * The lint surface (3.21): your markdownlint-cli2's findings in notes — slipbox ships no linter.
+   * `enabled`: "auto" when a markdownlint config is there (~/.markdownlint-cli2.jsonc, or the
+   * vault's own), "on", "off". `command`: the linter, the files appended; empty: markdownlint-cli2
+   * through npx, with ~/.markdownlint-cli2.jsonc unless the vault has a config of its own. Your
+   * own config only (it names a program).
+   */
+  lint: {
+    enabled: "auto" | "on" | "off";
+    command: string[];
+  };
   capture: {
     location: "state" | "vault";
     /** Scratch file name; relative to the vault root when location = "vault". */
@@ -186,6 +197,7 @@ export const DEFAULT_CONFIG: Config = {
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   rename: { previous_names: true },
+  lint: { enabled: "auto", command: [] },
   capture: { location: "state", file: "scratch.md" },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
@@ -200,6 +212,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.glyphs": ["auto", "nerd", "unicode", "ascii"],
   "render.show_urls": ["auto", "always", "never"],
   "capture.location": ["state", "vault"],
+  "lint.enabled": ["auto", "on", "off"],
   "ui.lines": ["light", "heavy"],
   "files.show": ["notes", "renderable", "all"],
   "editor.edit_in": ["source", "live"],
@@ -293,7 +306,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
  * Settings only your own config may set: each names a program slipbox runs. A vault's committed
  * config comes with whatever you clone, so it never chooses what runs on your machine.
  */
-export const USER_ONLY = ["editor.command", "editor.remote"];
+export const USER_ONLY = ["editor.command", "editor.remote", "lint.command"];
 
 /**
  * Commands a vault's keys and aliases may not name: each throws work away (quit without saving,

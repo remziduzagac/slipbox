@@ -17,6 +17,7 @@ import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { type Graph, type LinkProblem, openGraph, type Target } from "../core/graph.ts";
+import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { headingsOf, parseAround, type ParsedNote, slugify } from "../core/parse.ts";
@@ -129,7 +130,7 @@ Usage:
   slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
   slipbox tags [tag]                the vault's tags and how many notes carry each; a tag's notes
-  slipbox problems                  the vault's broken and ambiguous links, and notes nothing links to
+  slipbox problems                  the vault's broken and ambiguous links, and notes nothing links to  [--lint]
   slipbox ls                        list the vault's notes         [--files: data and text files too]
   slipbox outline <note>            headings with source lines
   slipbox footnotes <note>          footnotes: each label, its text and line, and where it's referred to
@@ -316,6 +317,7 @@ const FLAGS: Record<string, string[]> = {
   replace: ["regex", "whole", "ignore-case", "first", "first-per-line", "lines", "dry-run", "if-unchanged"],
   task: ["check", "uncheck", "if-unchanged"],
   footnotes: ["if-unchanged"],
+  problems: ["lint"],
   write: ["stdin", "append", "paragraph", "create", "if-unchanged", "allow-empty"],
   send: ["line", "server"],
   capture: ["ref", "snippet", "stdin", "lang"],
@@ -546,21 +548,39 @@ const HANDLERS: Record<string, Handler> = {
     };
   },
 
-  problems(s) {
+  async problems(s) {
     // What's wrong in the vault (1.7, 9.5): links that reach nothing, or more than one note; notes
     // nothing links to.
     const p = s.graph.problems();
     const shown = (x: LinkProblem) => `${x.from}:${x.line}:${x.column}  ${x.kind === "wiki" || x.kind === "embed" ? `[[${x.target}]]` : x.target}`;
-    const human = [
+    const human: string[] = [
       `broken links (${p.broken.length})`,
       ...p.broken.map((x) => `  ${shown(x)}${x.reason ? `  — ${x.reason}` : ""}`),
       `ambiguous links (${p.ambiguous.length})`,
       ...p.ambiguous.map((x) => `  ${shown(x)}  — ${x.candidates.join(", ")}`),
       `orphans (${p.orphans.length})`,
       ...p.orphans.map((x) => `  ${x}`),
-      "",
-    ].join("\n");
-    return { data: { broken: p.broken, ambiguous: p.ambiguous, orphans: p.orphans }, human };
+    ];
+    // --lint (3.21): your linter's findings too — markdownlint-cli2 with your config, as the TUI runs it.
+    let lint: (Omit<LintIssue, "file"> & { file: string })[] | undefined;
+    if (has(s.args, "lint")) {
+      const cmd = lintCommand(s.config.lint, s.loc.root);
+      const files = [...s.graph.notes.keys()].filter((rel) => /\.(md|markdown)$/i.test(rel)).sort().map((rel) => s.graph.abs(rel));
+      const found: LintIssue[] = [];
+      let ran = !!cmd;
+      for (let i = 0; cmd && ran && i < files.length; i += 300) {
+        const got = await runLint(cmd, files.slice(i, i + 300), s.loc.root);
+        if (got === null) ran = false;
+        else found.push(...got);
+      }
+      if (!cmd) s.warnings.push(s.config.lint.enabled === "off" ? 'lint is off: [lint] enabled = "off"' : 'lint is off: no markdownlint config (~/.markdownlint-cli2.jsonc, or the vault\'s) and [lint] enabled isn\'t "on"');
+      else if (!ran) s.warnings.push(`lint: ${s.config.lint.command.length ? "[lint] command" : "markdownlint-cli2 (through npx)"} couldn't run`);
+      else {
+        lint = found.map((x) => ({ ...x, file: relative(s.loc.root, x.file) }));
+        human.push(`lint (${lint.length})`, ...lint.map((x) => `  ${x.file}:${x.line}${x.column ? `:${x.column}` : ""}  ${x.rule} ${x.name}  ${x.description}`));
+      }
+    }
+    return { data: { broken: p.broken, ambiguous: p.ambiguous, orphans: p.orphans, ...(lint ? { lint } : {}) }, human: `${human.join("\n")}\n` };
   },
 
   tags(s, rest) {

@@ -75,6 +75,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `resolve <link>` | `{link, status, path, abs, heading, line, candidates[], vault, via, reason}` |
 | `links <note>` | `[{kind, target, heading, text, line, column, status, path, candidates, vault, via, reason}]` |
 | `problems` | `{broken[], ambiguous[], orphans[]}`: a link's `{from, line, column, kind, target, reason, …}`; paths |
+| `problems --lint` | adds `lint[{file, line, column, rule, name, description}]`; a warning when lint is off or fails |
 | `tags [tag]` | `[{tag, count}]`, or a tag's `{tag, notes[]}` (its nested tags' too); exit 3: no note has it |
 | `backlinks <note>` | `{path, backlinks[{from, vault, line, column, text, kind, target, heading, block, alias}]}` |
 

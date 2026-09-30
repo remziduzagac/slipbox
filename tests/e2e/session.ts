@@ -51,7 +51,9 @@ export class Session {
     }
     for (const d of ["config/slipbox", "state", "cache"]) mkdirSync(join(this.dir, d), { recursive: true });
     // {vault} in a scenario's config is this scenario's own copy of the vault.
-    writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), (opts.config ?? "").replaceAll("{vault}", this.vault));
+    // The machine's own linter stays out of the scenarios unless one asks for it (3.21).
+    const config = (opts.config ?? "").replaceAll("{vault}", this.vault);
+    writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), /^\[lint\]/m.test(config) ? config : `${config}\n[lint]\nenabled = "off"\n`);
     this.trace = join(this.dir, "trace");
     writeFileSync(this.trace, "");
     this.marker = `__slipbox_e2e_exit_${Math.random().toString(36).slice(2, 8)}__`;

@@ -196,6 +196,15 @@ one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back,
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
 
+## `3.21` — the lint surface
+
+slipbox runs your linter rather than shipping one: rules of its own would fight the ones you've written. The default is
+markdownlint-cli2 through `npx`, with the vault's markdownlint config or else `~/.markdownlint-cli2.jsonc`, and "auto"
+lints only where such a config exists — without one, markdownlint's defaults would flag every note that was never
+meant to follow them. A note is linted from its file, so only once it's saved, and its findings show only while its
+text is the text they were found in: a stale line number is worse than none. The linter is a program, so which one
+runs is the user's config's to say (`lint.command`, as `editor.command`), never a vault's.
+
 ## `3.5` — reload anchoring
 
 A buffer stores **source lines, never rendered rows**. Rendered rows change with every resize.

@@ -366,6 +366,27 @@ describe("the vault and the tool", () => {
     expect(p.ambiguous).toMatchObject([{ from: "home.md", target: "contacts" }]);
     expect(slipbox(["problems"], { cwd: DEMO }).out).toMatch(/^broken links \(\d+\)\n/);
   });
+  test("problems --lint: your linter's findings on every note (3.21); a vault's config never picks the linter", () => {
+    const cfg = join(sandbox, "lint.toml");
+    const fake = `for f; do case "$f" in *home.md) printf '%s:4:2 error MD013/line-length Line length\\n' "$f";; esac; done; exit 1`;
+    writeFileSync(cfg, `[lint]\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(fake)}, "lint"]\n`);
+    const r = slipbox(["problems", "--lint", "--json", "--config", cfg]).json;
+    expect(r.data.lint).toEqual([{ file: "home.md", line: 4, column: 2, rule: "MD013", name: "line-length", description: "Line length" }]);
+    expect(slipbox(["problems", "--lint", "--config", cfg]).out).toContain("lint (1)\n  home.md:4:2  MD013 line-length  Line length\n");
+    expect(slipbox(["problems", "--json", "--config", cfg]).json.data.lint).toBeUndefined(); // only when asked
+    writeFileSync(cfg, `[lint]\nenabled = "on"\ncommand = ["no-such-linter-slipbox-test"]\n`);
+    expect(slipbox(["problems", "--lint", "--json", "--config", cfg]).json.warnings).toContain("lint: [lint] command couldn't run");
+    writeFileSync(cfg, `[lint]\nenabled = "off"\n`);
+    expect(slipbox(["problems", "--lint", "--json", "--config", cfg]).json.warnings).toContain('lint is off: [lint] enabled = "off"');
+    // A vault's committed config can't name the program: its [lint] command is dropped, said so.
+    mkdirSync(join(vault, ".slipbox"), { recursive: true });
+    writeFileSync(join(vault, ".slipbox", "config.toml"), '[lint]\nenabled = "on"\ncommand = ["touch", "/tmp/slipbox-evil-lint"]\n');
+    writeFileSync(cfg, "");
+    const v = slipbox(["problems", "--json", "--config", cfg]).json;
+    expect(v.warnings.some((w: string) => w.includes("lint.command") && w.includes("only your own config"))).toBe(true);
+    rmSync(join(vault, ".slipbox", "config.toml"));
+    rmSync(cfg);
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);
