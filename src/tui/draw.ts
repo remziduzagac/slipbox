@@ -1066,15 +1066,15 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
-    // The selected note, file or folder: rename, move and delete at the row's end (18.1), a long
-    // name cut (…) to make room for them.
+    // The selected note, file or folder: rename, move and delete at the row's end (18.1), their
+    // right edge under the title's buttons', a long name cut (…) to make room for them.
     const rowButtons = [[g.deleteItem, "xrow:delete"], [g.moveItem, "xrow:move"], [g.renameItem, "xrow:rename"]] as const;
     const buttonsW = rowButtons.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0);
     const withButtons = selected && row.kind !== "root" && sv.cols - buttonsW >= 10;
     const shown = sideRow(text(row), sv);
-    const w = drawText(c, rect.x, y, withButtons ? truncate(shown, sv.cols - buttonsW - 1) : shown, st, rect.w);
+    const w = drawText(c, rect.x, y, withButtons ? truncate(shown, sv.cols - buttonsW) : shown, st, rect.w);
     if (withButtons) {
-      let x = rect.x + sv.cols - 1;
+      let x = rect.x + rect.w - 1;
       for (const [glyph, id] of rowButtons) {
         x -= stringWidth(glyph) + 2;
         smallButton(app, c, x, y, ` ${glyph} `, id, geo, st.bg);

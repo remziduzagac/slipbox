@@ -5788,6 +5788,9 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(f.split("\n").find((r) => r.includes("Explorer"))).toMatch(/Explorer\s+\+\s+\+▸/);
     const row = f.split("\n").find((r) => r.includes("alpha.md"))!;
     expect(row).toMatch(/✎\s+↦\s+✕/);
+    // Their right edges line up: the row's last button under the title's (by column).
+    const title = f.split("\n").find((r) => r.includes("Explorer"))!;
+    expect([...row].indexOf("✕")).toBe([...title].lastIndexOf("▸"));
     const hot = (id: string) => h.app.geometry!.hot.find((x) => x.id === id)!;
     const click = (id: string) => {
       const r = hot(id);
