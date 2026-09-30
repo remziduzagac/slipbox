@@ -632,8 +632,9 @@ Every piece of data answers two questions: can it be rebuilt from the files, and
 
 - today: `index.json` — each note's title, headings, links, tags, tasks, and its stamp (so a
   reopen re-reads only what changed);
-- new: a content hash per file (move detection), and the links other vaults make into this one
-  (their backlinks here), as of each vault's last indexing.
+- new: a content hash per note (move detection). The links other vaults make into this one aren't
+  copied here: they're read from those vaults' own indexes, so they're as fresh as each one's last
+  indexing.
 
 **`~/.local/state/slipbox/<vault>/`** — personal, per vault; history in one project never shows in
 another:
@@ -654,13 +655,15 @@ through, and what the launcher lists.
 repo (or not; that's the user's call):
 
 - today: `config.toml` (settings over the global ones) and `version`;
-- new, in `config.toml`: the vault's `id` (random, made once, never changed), `name`, `aliases`
-  and `previous_names`;
+- new, in `config.toml`'s `[vault]` table: the vault's `id` (random, made once, never changed),
+  `name`, `aliases` and `previous_names`;
 - later: **shared comments** and **agent answers worth keeping**, for collaborators.
 
 **Keys:** `<vault>` is the vault's `id` — so its personal data and cache survive moving the folder
 — for a vault with a `.slipbox/` and for the home vault; for a repository without one, as today,
-the folder's name and a hash of its path.
+the folder's name and a hash of its path. A copy of a vault carries its id; while the original is
+still where the machine last saw it, the copy keys by the id and a hash of its own path, so two
+copies never share a session.
 
 **Config precedence:** the built-in defaults, then `~/.config/slipbox/config.toml`, then the
 vault's: `<vault>/.slipbox/config.toml`, or the home vault's for a loose file.

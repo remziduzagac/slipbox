@@ -33,9 +33,14 @@ export class Reach implements VaultReach {
 
   constructor(readonly here: VaultLocation) {}
 
-  /** The machine's vaults, read once per call that needs them (another slipbox may add one). */
+  private knownCache: { at: number; list: KnownVault[] } | null = null;
+
+  /** The machine's vaults: read again after a second (another slipbox may add one), not once per
+   *  link — the renderer resolves every `[[vault:note]]` on the screen. */
   private known(): KnownVault[] {
-    return readRegistry();
+    const now = Date.now();
+    if (!this.knownCache || now - this.knownCache.at > 1000) this.knownCache = { at: now, list: readRegistry() };
+    return this.knownCache.list;
   }
 
   /** The graph of another root, opened on first use with its own config; its index refreshed. */
