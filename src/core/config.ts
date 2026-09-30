@@ -71,6 +71,8 @@ export interface Config {
     right_rail: boolean;
     /** Rows of margin kept between the cursor and the top or bottom of the view. */
     scrolloff: number;
+    /** Notes read elsewhere the history lists under the window's timeline; 0: none. */
+    history_limit: number;
   };
   input: {
     /** The leader key; `leader` in `[keys]` means this. */
@@ -176,6 +178,7 @@ export const DEFAULT_CONFIG: Config = {
     left_rail: true,
     right_rail: true,
     scrolloff: 3,
+    history_limit: 100,
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
   rename: { previous_names: true },
@@ -211,6 +214,8 @@ const RANGES: Record<string, [number, number]> = {
   "ui.split_ratio": [0.2, 0.8],
   "ui.readable_max": [20, 1000],
   "ui.scrolloff": [0, 50],
+  // Up to every reading position kept (positions.json holds the newest 2,000).
+  "ui.history_limit": [0, 2000],
   "input.which_key_delay_ms": [0, 10_000],
   "ui.narrow_width": [0, 1000],
   "watch.debounce_ms": [0, 10_000],

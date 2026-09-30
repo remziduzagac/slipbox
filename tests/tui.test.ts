@@ -1053,6 +1053,21 @@ describe("the left panel's views and filter", () => {
     await narrow.keys("space", "h", "h");
     const row = narrow.frame().split("\n").find((r) => r.includes("a-rather"))!;
     expect(row).toMatch(/a-rather-long-\S*…\s+\d\d:\d\d/);
+    // As many as ui.history_limit says: 3, then none.
+    const three = await harness({ root, config: (c) => (c.ui.history_limit = 3) });
+    await three.keys("space", "h", "h");
+    expect(three.app.historyRows().filter((r) => r.recent)).toHaveLength(3);
+    const none = await harness({ root, config: (c) => (c.ui.history_limit = 0) });
+    await none.app.run("note.open notes/alpha.md");
+    await none.keys("space", "h", "h");
+    expect(none.app.historyRows().some((r) => r.heading || r.recent)).toBe(false);
+    // Out of range: said, and the default kept.
+    const { loadConfig } = await import("../src/core/config.ts");
+    const file = join(root, "limit.toml");
+    writeFileSync(file, "[ui]\nhistory_limit = 5000\n");
+    const loaded = loadConfig({ configFile: file });
+    expect(loaded.warnings.join()).toContain('"ui.history_limit" must be between 0 and 2000');
+    expect(loaded.config.ui.history_limit).toBe(100);
   });
   test("the history filters too", async () => {
     const h = await harness();

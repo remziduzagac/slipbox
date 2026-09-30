@@ -87,6 +87,7 @@ readable_width = false         # cap the text column at readable_max, centred
 readable_max = 100
 zen = false                    # no chrome; readable width on
 scrolloff = 3                  # rows kept between the cursor and the view's edge
+history_limit = 100            # notes read elsewhere the history lists (space h h); 0–2000, 0: none
 
 [input]
 leader = "space"               # the key `leader` means in [keys] and [groups]

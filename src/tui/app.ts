@@ -2337,7 +2337,7 @@ export class App {
     const inTimeline = new Set(timeline.map((l) => l.key));
     const recent: HistoryRow[] = this.readNotes()
       .filter((r) => !inTimeline.has(r.key))
-      .slice(0, HISTORY_READ_MAX)
+      .slice(0, this.config.ui.history_limit)
       .map((r) => ({ label: r.key.split("/").pop()!, path: r.key, hint: r.hint, index: -1, here: false, recent: r.key }));
     const q = this.sidebar.filter ?? "";
     const mine = q ? rows.filter((r) => fuzzy(q, r.path)) : rows;
@@ -4726,8 +4726,6 @@ function inRect(r: { x: number; y: number; w: number; h: number }, x: number, y:
 const RECENT_MAX = 5;
 /** Notes the switcher lists first, most recent first. */
 const RECENT_NOTES_MAX = 30;
-/** Notes read elsewhere the history lists under this window's timeline (it scrolls, and filters). */
-const HISTORY_READ_MAX = 100;
 /** The note keeps at least this many columns beside the side panes. */
 const MIN_CONTENT = 24;
 /** The rail: its border, then a button (a glyph with a space either side). */
