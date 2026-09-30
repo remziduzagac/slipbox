@@ -324,11 +324,10 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   "/": "filter",
   a: "all_files",
   // Making and changing files (18.x), in the selected folder or on the selected row. nvim-tree's
-  // keys where they fit: r renames, d deletes (to the trash), y x p copy, cut and paste; n and N
-  // make a note and a folder (netrw's % too).
-  n: "new_note",
+  // keys where they fit: r renames, d deletes (to the trash), y x p copy, cut and paste; n n makes
+  // a note (as space n n does), N a folder.
+  "n n": "new_note",
   "shift+n": "new_folder",
-  "%": "new_note",
   r: "rename",
   m: "move",
   d: "delete",

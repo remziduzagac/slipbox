@@ -5284,7 +5284,7 @@ describe("creating notes and folders", () => {
     expect(h.app.messages.at(-1)!.text).toContain("not inside the vault");
     expect(existsSync(join(root, "..", "escape.md"))).toBe(false);
   });
-  test("the explorer: n a note in the selected folder, N a folder — shown though empty, and selected (% too)", async () => {
+  test("the explorer: n n a note in the selected folder, N a folder — shown though empty, and selected", async () => {
     const root = makeVault();
     const h = await harness({ root });
     await h.keys("space", "e");
@@ -5298,17 +5298,17 @@ describe("creating notes and folders", () => {
     const sel = h.app.explorerRows()[h.app.sidebar.selected]!;
     expect([sel.kind, sel.path]).toEqual(["dir", "notes/drafts"]);
     expect(h.frame()).toContain("drafts"); // empty, still listed
+    // n waits for its second key: which-key says what it's for.
+    await h.keys("n");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.pending).toEqual(["n"]);
+    h.app.whichKey = true;
+    expect(h.frame()).toContain("New note here");
     await h.keys("n");
     for (const c of "first") await h.keys(c);
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "drafts", "first.md"))).toBe(true);
     expect(h.app.view!.buf.rel).toBe("notes/drafts/first.md");
-    // netrw's % as well.
-    await h.keys("escape", "space", "e");
-    h.app.region = "sidebar";
-    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "notes/drafts");
-    await h.keys("%");
-    expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "new note in notes/drafts/" });
   });
   test("following a link to a note that doesn't exist asks to create it, the name filled in", async () => {
     const root = makeVault();

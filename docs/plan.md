@@ -606,7 +606,7 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | ID | Item |
 | --- | --- |
 | 18.1 | **Done.** Buttons: a new note and folder on the explorer's title; rename, move, delete on the selected row |
-| 18.2 | **Done.** Keys: `n` / `N` new note, folder (`%` too); `r` rename, `m` move, `d` delete, `u` restore |
+| 18.2 | **Done.** Keys: `n n` / `N` new note, folder; `r` rename, `m` move, `d` delete, `u` restore |
 | 18.3 | **Done.** Folders renamed and moved like notes: every link to anything in them fixed, after a preview |
 | 18.4 | **Done.** Delete to the vault's trash (in its state), links that break said; restore; `:trash` |
 | 18.5 | **Done.** Copy, cut and paste (`y`, `x`, `p`): a copy (`name-copy`), or a move with links fixed |

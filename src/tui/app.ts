@@ -69,6 +69,9 @@ import { fuzzy, rank } from "./fuzzy.ts";
 import {
   DEFAULT_ALIASES,
   DEFAULT_EXPLORER_KEYS,
+  EXPLORER_ACTION_INFO,
+  HISTORY_ACTION_INFO,
+  OUTLINE_ACTION_INFO,
   DEFAULT_GROUPS,
   DEFAULT_KEYS,
   DEFAULT_OUTLINE_KEYS,
@@ -3254,10 +3257,11 @@ export class App {
   private stateTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** The keymaps consulted in the current state, in priority order, with how to run a hit. */
-  private maps(): { map: Keymap; run: (spec: string) => Promise<void> | void }[] {
-    const out: { map: Keymap; run: (spec: string) => Promise<void> | void }[] = [];
-    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a) });
-    if (this.region === "outline" && this.outlineShown) out.push({ map: this.outlineKeys, run: (a) => this.outlineAction(a) });
+  private maps(): { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] {
+    const out: { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] = [];
+    // A pane's own actions carry their titles (which-key says "New note here", as help does).
+    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : EXPLORER_ACTION_INFO });
+    if (this.region === "outline" && this.outlineShown) out.push({ map: this.outlineKeys, run: (a) => this.outlineAction(a), info: OUTLINE_ACTION_INFO });
     if (this.view?.visual) out.push({ map: this.visualKeys, run: (s) => this.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
     if (this.region === "content" && editable(this.view) && !this.view!.visual) out.push({ map: this.sourceKeys, run: (s) => this.run(s) });
@@ -3278,7 +3282,7 @@ export class App {
     const prefix = this.pending.join(" ");
     const seen = new Map<string, { key: string; label: string; desc: string; group: boolean }>();
     const specs = new Map<string, string>();
-    for (const { map } of this.maps()) {
+    for (const { map, info } of this.maps()) {
       for (const c of map.children(prefix)) {
         if (seen.has(c.key)) continue;
         if (c.spec && !(c.group && !c.spec)) specs.set(c.key, c.spec);
@@ -3291,7 +3295,8 @@ export class App {
         }
         const id = c.spec?.split(" ")[0] ?? "";
         const cmd = this.registry.get(id);
-        seen.set(c.key, { key: c.key, label: cmd?.title ?? c.spec?.replace(/_/g, " ") ?? "", desc: cmd?.description ?? "", group });
+        const action = info?.[c.spec ?? ""];
+        seen.set(c.key, { key: c.key, label: action?.title ?? cmd?.title ?? c.spec?.replace(/_/g, " ") ?? "", desc: action?.desc ?? cmd?.description ?? "", group });
       }
     }
     return mergeSameAction([...seen.values()].map((e) => ({ ...e, spec: specs.get(e.key) ?? null })));
