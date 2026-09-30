@@ -198,6 +198,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "note.info", title: "Note info", cli: "slipbox stat <note>", desc: "Shows path, size, links, backlinks, encoding" },
   { id: "vault.reindex", title: "Reindex the vault", cli: "slipbox ls", desc: "Re-walks and re-reads every note" },
   { id: "vault.info", title: "Vault info", cli: "slipbox info", desc: "Shows root, notes, watcher, cache and state" },
+  { id: "vault.switch", title: "Switch vault", cli: "slipbox vaults", desc: "The vaults this machine knows: pick one to go to (back returns)" },
   { id: "config.reload", title: "Reload configuration", cli: "slipbox info", desc: "Applies config changes now (saving does too)" },
   { id: "messages.open", title: "Messages", cli: null, desc: "Lists everything slipbox has said" },
   { id: "help.open", title: "All keys and commands", cli: "slipbox commands", desc: "Lists every key and command, searchable" },

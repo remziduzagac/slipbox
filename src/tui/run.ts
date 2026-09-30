@@ -41,6 +41,8 @@ export async function runTui(argv: string[]): Promise<number> {
     open,
     themeName: flag(args, "theme"),
     configFile: flag(args, "config"),
+    // A loose folder opened without a file (`slipbox ~`): the known vaults first (17.14).
+    launcher: loc.mode === "home" && !loc.file,
     host: {
       requestRender: () => renderer.requestRender(),
       // SLIPBOX_CLIPBOARD=file keeps copies off the real clipboard (core/clipboard.ts).
@@ -107,7 +109,7 @@ export async function runTui(argv: string[]): Promise<number> {
     app.resize(w, h);
     renderer.requestRender();
   });
-  const title = () => renderer.setTerminalTitle(`slipbox — ${app.view?.buf.key ?? loc.root}`);
+  const title = () => renderer.setTerminalTitle(`slipbox — ${app.view?.buf.key ?? app.loc.root}`);
   title();
   renderer.requestRender();
 

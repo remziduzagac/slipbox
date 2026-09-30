@@ -269,6 +269,26 @@ Each window has back and forward stacks of `{note, top, cursor}`, 200 deep. Foll
 jumping to a heading and opening a note all push onto them. The history list (`space h h`) shows
 the whole timeline and jumps anywhere in it.
 
+## Switching vaults (plans `17.10`, `17.14`)
+
+The TUI is always in one root: a vault, a repository, or a loose folder of the home vault (the top
+bar says `home vault` then). **Opening a note of another vault or repository switches to it** —
+following `[[vault:note]]` or a path out of the root, a backlink from another vault, a vault picked
+from the list or the explorer: the TUI becomes that root's, as if started there — its config, its
+index (refreshed), its watcher, its reading positions and its session, whose tabs come back, with
+the note open (at its heading). Leaving saves the one before as quitting does. **Refused while a
+note is unsaved** (`unsaved: … — save (:wa) or revert before leaving`): it would be left behind. A
+loose file opens as it is, beside the current vault's notes: it has no vault to switch into.
+
+**Back returns.** `back` (`ctrl+o`) from the first place in a vault goes to the vault before, at
+the note and place you left; each switch is remembered, so a chain of them unwinds one by one.
+
+**The known vaults** (`space v v`, `:vaults`, `vault.switch`): the machine's list (`vaults.json`,
+`slipbox vaults`), most recently seen first — each by its name, its path, and whether it's a vault
+or a repository; `enter` switches. **The launcher:** slipbox opened on a loose folder without a
+file (`slipbox ~`) shows this list at once, over the folder's explorer, when there are vaults to
+show.
+
 ## Following links
 
 Each kind of link does something different when followed:
@@ -320,7 +340,12 @@ keys.
   notes" below). Moving the selection, or a click on a note, only selects. `enter`, `l` and a
   double-click open the note as a tab, or switch to the tab already showing it; `o` replaces the
   current window's note, and `s` opens it in the split's other window. A click on a folder folds or
-  unfolds it.
+  unfolds it. **A folder that is another root** (`17.13`) — a vault nested in this one (`◈`, Nerd:
+  a book) or a repository nested in a repository (`⎇`, Nerd: a repo) — is a row of its own, the
+  vault's name dimmed after the folder's when they differ; `enter` or a double-click goes into it
+  (a switch, below). **In a loose folder** (the home vault) the explorer lists the folder alone:
+  `..` to go up, then each folder in it — a vault, a repository, or a loose folder — and its files;
+  going into a loose folder lists that one (`17.14`).
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and

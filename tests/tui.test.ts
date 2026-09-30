@@ -60,10 +60,13 @@ interface Opts {
   watch?: boolean;
   configFile?: string;
   themeName?: string;
+  /** Start here instead of at `root` as a vault (a loose folder: the home vault). */
+  loc?: import("../src/core/vault.ts").VaultLocation;
+  launcher?: boolean;
 }
 
 async function harness(opts: Opts = {}): Promise<Harness> {
-  const root = opts.root ?? makeVault();
+  const root = opts.loc?.root ?? opts.root ?? makeVault();
   const config: Config = structuredClone(DEFAULT_CONFIG);
   config.ui.restore_session = false;
   config.render.glyphs = "unicode";
@@ -71,12 +74,12 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   config.ui.lines = "heavy";
   config.walk.exclude = ["drafts/"];
   opts.config?.(config);
-  const loc = locateVault({ root });
+  const loc = opts.loc ?? locateVault({ root });
   const graph = openGraph(loc, config, false);
   const copied: string[] = [];
   const quit = { called: false };
   const host: Host = { requestRender() {}, osc52: (t) => (copied.push(t), true), quit: () => (quit.called = true) };
-  const app = new App({ loc, config, graph, host, open: opts.open === undefined ? "index.md" : opts.open, watch: opts.watch ?? false, configFile: opts.configFile, themeName: opts.themeName });
+  const app = new App({ loc, config, graph, host, open: opts.open === undefined ? "index.md" : opts.open, watch: opts.watch ?? false, configFile: opts.configFile, themeName: opts.themeName, launcher: opts.launcher });
   // Never the machine's own nvims.
   app.nvimDiscovery = () => [];
   app.nvimProbe = () => null;
@@ -5328,5 +5331,102 @@ describe("vaults in the TUI (17.x)", () => {
     const h = await harness({ root: notes, open: "todo.md" });
     await h.app.run("backlinks.open");
     expect(h.frame()).toContain(`tapp${n}: links.md`);
+  });
+
+  test("following [[vault:note#heading]] switches the TUI into that vault; back returns (17.10)", async () => {
+    const { notes, app, n } = await twoVaults();
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.keys("tab", "tab", "enter");
+    expect(h.app.loc.root).toBe(app);
+    expect(h.app.loc.name).toBe(`tapp${n}`);
+    expect(h.app.view!.buf.rel).toBe("design.md");
+    expect(h.app.view!.curAnchor.anchor.line).toBe(5); // at ## Goals
+    expect(h.app.messages.some((m) => m.text === `vault tapp${n} — ${app}`)).toBe(true);
+    expect(h.app.graph.root).toBe(app);
+    expect(h.frame()).toContain("Design");
+    // The first place in this vault: back goes to the vault before, at the link.
+    await h.app.run("history.back");
+    expect(h.app.loc.root).toBe(notes);
+    expect(h.app.view!.buf.rel).toBe("index.md");
+    // A path out of the root goes there too.
+    await h.keys("tab", "tab", "tab", "enter");
+    expect(h.app.loc.root).toBe(app);
+    expect(h.app.view!.buf.rel).toBe("design.md");
+  });
+
+  test("a switch is refused while a note is unsaved; each vault keeps its own tabs (17.10)", async () => {
+    const { notes, app } = await twoVaults();
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.keys("space", "n", "v", "shift+a", "!", "escape");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    await h.app.run("history.back"); // nothing: no earlier place, no vault before
+    h.app.switchVault(locateVault({ root: app }), join(app, "design.md"));
+    expect(h.app.loc.root).toBe(notes);
+    expect(h.app.messages.at(-1)!.text).toContain("unsaved: index.md");
+    await h.keys("ctrl+s");
+    expect(h.app.switchVault(locateVault({ root: app }), join(app, "design.md"))).toBe(true);
+    await h.app.run("tab.new");
+    await h.app.run("note.open links.md");
+    h.app.switchVault(locateVault({ root: notes }), null);
+    expect(h.app.loc.root).toBe(notes);
+    // Into app again: its session comes back, its two tabs.
+    h.app.switchVault(locateVault({ root: app }), null);
+    expect(h.app.tabs.map((t) => t.views[0]!.buf.rel).sort()).toEqual(["design.md", "links.md"]);
+  });
+
+  test("the explorer shows a nested vault with its own icon; enter goes into it (17.13)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "nested-vault", ".slipbox", "config.toml"), '[vault]\nid = "nestedid1"\nname = "inner-notes"\n');
+    const h = await harness({ root, open: "index.md" });
+    h.app.region = "sidebar";
+    const rows = h.app.explorerRows();
+    const i = rows.findIndex((r) => r.path === "nested-vault");
+    expect(rows[i]).toMatchObject({ kind: "root", root: { kind: "vault", name: "inner-notes" } });
+    const f = h.frame();
+    expect(f).toContain("◈ nested-vault inner-notes");
+    h.app.sidebar.selected = i;
+    await h.keys("enter");
+    expect(h.app.loc.root).toBe(join(root, "nested-vault"));
+    expect(h.app.view!.buf.rel).toBe("inner.md");
+  });
+
+  test("a loose folder lists its folders — vaults, repositories, folders — and .. to go up (17.13, 17.14)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const dir = mkdtempSync(join(sandbox, "loose-"));
+    writeFileSync(join(dir, "note.md"), "# loose\n");
+    mkdirSync(join(dir, "plain"));
+    writeFileSync(join(dir, "plain", "p.md"), "# p\n");
+    mkdirSync(join(dir, "code", ".git"), { recursive: true });
+    const h = await harness({ loc: homeAt(dir), open: "note.md" });
+    expect(h.app.explorerRows().map((r) => [r.name, r.kind, r.root?.kind])).toEqual([
+      ["..", "root", "folder"],
+      ["code", "root", "repo"],
+      ["plain", "root", "folder"],
+      ["note.md", "note", undefined],
+    ]);
+    expect(h.frame()).toContain("⎇ code");
+    expect(topRow(h.frame())).toContain("home vault");
+    h.app.enterRoot(h.app.explorerRows()[2]!);
+    expect(h.app.loc).toMatchObject({ mode: "home", root: join(dir, "plain") });
+    expect(h.app.view!.buf.rel).toBe("p.md");
+  });
+
+  test("opened on a loose folder, the known vaults come first; space v v lists them anywhere (17.14)", async () => {
+    const { notes, app, n } = await twoVaults();
+    const { homeAt } = await import("../src/core/vault.ts");
+    const dir = mkdtempSync(join(sandbox, "launch-"));
+    const h = await harness({ loc: homeAt(dir), open: null, launcher: true });
+    expect(h.app.overlay?.kind).toBe("list");
+    const f = h.frame();
+    expect(f).toContain(`tnotes${n}`);
+    expect(f).toContain(`tapp${n}`);
+    // Pick tnotes.
+    const items = (h.app.overlay as ListOverlay).items.map((it) => it.label);
+    for (let i = 0; i < items.indexOf(`tnotes${n}`); i++) await h.keys("down");
+    await h.keys("enter");
+    expect(h.app.loc.root).toBe(notes);
+    await h.keys("space", "v", "v");
+    expect(h.frame()).toContain(`tapp${n}`);
+    expect((h.app.overlay as ListOverlay).items.some((it) => it.detail === app)).toBe(true);
   });
 });

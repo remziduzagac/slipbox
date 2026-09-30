@@ -42,6 +42,9 @@ export interface Glyphs {
   joints: Record<string, string>;
   dirOpen: string;
   dirClosed: string;
+  /** A folder that is its own root (17.13): a vault (a `.slipbox/`), or a repository. */
+  vault: string;
+  repo: string;
   /** The outline's fold markers (the explorer uses dirOpen / dirClosed). */
   foldOpen: string;
   foldClosed: string;
@@ -107,6 +110,8 @@ const unicode: Glyphs = {
   joints: { udlr: "╋", udr: "┣", udl: "┫", dlr: "┳", ulr: "┻", dr: "┏", dl: "┓", ur: "┗", ul: "┛" },
   dirOpen: "▾",
   dirClosed: "▸",
+  vault: "◈",
+  repo: "⎇",
   foldOpen: "▾",
   foldClosed: "▸",
   guide: "│",
@@ -150,6 +155,8 @@ const nerd: Glyphs = {
   fmOpen: "󰈮",
   dirOpen: "\u{f0770}", // nf-md-folder_open (escaped: private-use characters get lost in editing)
   dirClosed: "\u{f024b}", // nf-md-folder
+  vault: "\u{f02d}", // nf-fa-book
+  repo: "\u{f401}", // nf-oct-repo
   file: "󰍔",
   dataFile: "\u{f0626}", // nf-md-code_json
   textFile: "\u{f022e}", // nf-md-file_code
@@ -184,6 +191,8 @@ const ascii: Glyphs = {
   joints: { udlr: "+", udr: "+", udl: "+", dlr: "+", ulr: "+", dr: "+", dl: "+", ur: "+", ul: "+" },
   dirOpen: "v",
   dirClosed: ">",
+  vault: "#",
+  repo: "+",
   foldOpen: "v",
   foldClosed: ">",
   guide: "|",

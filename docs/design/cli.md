@@ -84,6 +84,7 @@ These churn freely before 1.0:
 | `outline <note>` | `{path, headings[{depth, text, slug, line}]}` |
 | `init [dir]` | `{root, created, identified, id, name}` — `--name N`; a name in use is exit 5 |
 | `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
+| `vaults` | `[{key, id, kind, name, aliases, previous_names, path, seen, exists}]`, newest first |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |

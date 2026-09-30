@@ -1031,7 +1031,8 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   // Every file with its extension, notes too: a vault holds notes, data files and code
   // side by side, and the extension says which.
   const nameOf = (row: TreeRow) => row.name;
-  const icon = (row: TreeRow) => (row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file);
+  const icon = (row: TreeRow) =>
+    row.root ? (row.root.kind === "vault" ? g.vault : row.root.kind === "repo" ? g.repo : g.dirClosed) : row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file;
   const prefix = (row: TreeRow) => `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
   const text = (row: TreeRow) => prefix(row) + nameOf(row);
   const sv = sideView(list, rows, text, s);
@@ -1045,11 +1046,14 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (!row) break;
     const y = rect.y + i;
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
-    let role: Role = row.kind === "dir" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
+    let role: Role = row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
-    drawText(c, rect.x, y, sideRow(text(row), sv), st, rect.w);
+    const w = drawText(c, rect.x, y, sideRow(text(row), sv), st, rect.w);
+    // A vault named otherwise than its folder: the name, dimmed, after it (17.13).
+    const vaultName = row.root?.name;
+    if (vaultName && !sv.left && w + 1 < rect.w) drawText(c, rect.x + w + 1, y, vaultName, { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, rect.w - w - 1);
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
     // The letters the filter matched in a note's name.
     const m = q && row.kind === "note" ? fuzzy(q, nameOf(row)) : null;

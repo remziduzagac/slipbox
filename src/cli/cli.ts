@@ -10,7 +10,7 @@ import { loadError } from "../core/lazy.ts";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, statSync } from "node:fs";
-import { dirname, isAbsolute, join, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
@@ -34,7 +34,7 @@ import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
 import { Reach } from "../core/reach.ts";
-import { vaultNamed } from "../core/registry.ts";
+import { readRegistry, vaultNamed } from "../core/registry.ts";
 import { initVault, isInside, locateVault, readVaultVersion, recordLocation, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
@@ -137,6 +137,7 @@ Usage:
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
   slipbox init [dir]                make <dir> a vault (creates .slipbox/ with its id and name)  [--name N]
   slipbox info                      vault, paths, versions, staleness
+  slipbox vaults                    the vaults this machine knows: name, kind, path, last seen
   slipbox themes                    list themes
   slipbox commands                  list named commands and their CLI equivalents
 
@@ -158,7 +159,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "capture", "scratch", "init", "info", "themes", "commands", "help",
+  "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -254,7 +255,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, themes: 0, commands: 0, mkdir: 1,
+  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -651,6 +652,17 @@ const HANDLERS: Record<string, Handler> = {
         ? `${r.root} is a vault; gave it an id — vault "${r.name}"\n`
         : `${r.root} is already a vault — "${r.name}"\n`;
     return { data: r, human };
+  },
+
+  vaults() {
+    // Newest first; a vault whose folder is gone is still listed (a link to it says where it was).
+    const list = readRegistry()
+      .sort((a, b) => (a.seen < b.seen ? 1 : -1))
+      .map((v) => ({ ...v, exists: existsSync(v.kind === "home" ? v.path : join(v.path, v.kind === "vault" ? ".slipbox" : "")) }));
+    const human = list
+      .map((v) => `${(v.name ?? basename(v.path)).padEnd(16)} ${v.kind.padEnd(6)} ${v.path}  ${v.seen.slice(0, 16).replace("T", " ")}${v.exists ? "" : "  (gone)"}\n`)
+      .join("");
+    return { data: list, human: human || "no vaults yet\n" };
   },
 
   info(s) {

@@ -13,8 +13,8 @@ import { commentLinks, grammarFor, grammarNow, parseSyntax, type Span as SyntaxS
 import { onLoaded } from "../core/lazy.ts";
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
-import { appendFileSync, existsSync, mkdirSync, realpathSync, statSync } from "node:fs";
-import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
+import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
@@ -51,7 +51,8 @@ import {
 } from "../core/position.ts";
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
 import { Reach } from "../core/reach.ts";
-import { type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { type KnownVault, readIdentity, readRegistry, vaultConfigFile } from "../core/registry.ts";
+import { homeAt, isRepoRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
@@ -330,13 +331,17 @@ export interface HistoryRow {
 }
 
 export interface TreeRow {
-  /** "note": a row the explorer opens — a note, or a data or text file (`group` says which). */
-  kind: "dir" | "note";
+  /** "note": a row the explorer opens — a note, or a data or text file (`group` says which).
+   *  "root": a folder that is another root — a vault, a repository — or, in a loose folder, a
+   *  folder beside it: opening one switches the TUI there (17.13, 17.14). */
+  kind: "dir" | "note" | "root";
   path: string;
   name: string;
   depth: number;
   /** A file beyond notes: its group (16.x). */
   group?: FileGroup;
+  /** A root row: what it is, where it is, and the vault's name when it isn't the folder's. */
+  root?: { kind: "vault" | "repo" | "folder"; abs: string; name?: string };
 }
 
 export type Region = "content" | "sidebar" | "outline";
@@ -391,10 +396,13 @@ export interface AppOptions {
   configFile?: string;
   watch?: boolean;
   now?: () => number;
+  /** Show the known vaults at once (17.14): slipbox was opened on a loose folder, not a file. */
+  launcher?: boolean;
 }
 
 export class App {
-  readonly loc: VaultLocation;
+  /** The root the TUI is in; it changes when a link or the explorer leads into another (17.10). */
+  loc: VaultLocation;
   config: Config;
   graph: Graph;
   theme!: Theme;
@@ -467,6 +475,12 @@ export class App {
   readonly now: () => number;
   quitting = false;
   indexing = 0;
+  /** Watching, polling and indexing in the background (off in tests that drive time themselves). */
+  private readonly live: boolean;
+  /** `--theme`: kept over a vault's own theme when switching vaults. */
+  private readonly explicitTheme: string | undefined;
+  /** Where the TUI was before each switch into another vault: `back` returns there (17.10). */
+  vaultTrail: { root: string; path: string; anchor: Anchor; cursor: CursorAnchor }[] = [];
 
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
@@ -476,6 +490,8 @@ export class App {
     this.graph.reach ??= this.reach;
     this.host = opts.host;
     this.configFile = opts.configFile;
+    this.live = opts.watch !== false;
+    this.explicitTheme = opts.themeName;
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
     loadConfig({ vaultFile: vaultConfigPath(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood });
     this.now = opts.now ?? Date.now;
@@ -505,6 +521,7 @@ export class App {
       if (first) this.openInNewTab(first);
     }
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
+    if (opts.launcher && readRegistry().some((v) => v.kind !== "home" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
     this.stopLazy = onLoaded(() => {
       this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
@@ -853,6 +870,7 @@ export class App {
   }
 
   openInNewTab(path: string, anchor?: Anchor): void {
+    if (this.intoOtherVault(path, anchor)) return;
     const buf = this.buffer(path);
     if (!buf) return;
     this.touchRecent(buf.key);
@@ -864,6 +882,7 @@ export class App {
 
   /** Switch to a tab already showing this note, or open it in a new one. */
   openOrSwitchTab(path: string): void {
+    if (this.intoOtherVault(path)) return;
     const buf = this.buffer(path);
     if (!buf) return;
     const i = this.tabs.findIndex((t) => t.views.some((v) => v.buf === buf));
@@ -877,6 +896,7 @@ export class App {
   /** Open a note in a view, pushing history (3.6) and remembering the old position (3.4). */
   open(path: string, anchor?: Anchor, view = this.view): void {
     if (!view) return this.openInNewTab(path, anchor);
+    if (this.intoOtherVault(path, anchor)) return;
     const buf = this.buffer(path);
     if (!buf) return;
     // A pinned tab keeps its note: another one opens in a new tab.
@@ -921,6 +941,7 @@ export class App {
     const from = dir === "back" ? view.back : view.fwd;
     const to = dir === "back" ? view.fwd : view.back;
     const loc = from.pop();
+    if (!loc && dir === "back" && this.vaultBack()) return;
     if (!loc) return this.message("info", dir === "back" ? "no earlier location" : "no later location");
     // Load first: a location that can no longer be opened is dropped, and nothing else moves.
     const buf = this.buffer(loc.key);
@@ -2119,19 +2140,54 @@ export class App {
     return out;
   }
 
+  /**
+   * The tree's folders that are roots of their own (17.13): vaults and repositories nested in this
+   * one; in a loose folder, every folder in it — each a root, or a loose folder to go into.
+   */
+  private rootRows(): Map<string, NonNullable<TreeRow["root"]>> {
+    const out = new Map<string, NonNullable<TreeRow["root"]>>();
+    const named = (abs: string) => {
+      const n = readIdentity(vaultConfigFile(abs)).name;
+      return n && n !== basename(abs) ? n : undefined;
+    };
+    if (this.loc.mode !== "home") {
+      for (const s of this.graph.skipped) {
+        if (s.reason !== "nested vault" && s.reason !== "nested repository") continue;
+        const abs = join(this.loc.root, s.rel);
+        out.set(s.rel, s.reason === "nested vault" ? { kind: "vault", abs, name: named(abs) } : { kind: "repo", abs });
+      }
+      return out;
+    }
+    let entries: Dirent[] = [];
+    try {
+      entries = readdirSync(this.loc.root, { withFileTypes: true });
+    } catch {}
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name.startsWith(".") || e.name === "node_modules") continue;
+      const abs = join(this.loc.root, e.name);
+      out.set(e.name, isVaultRoot(abs) ? { kind: "vault", abs, name: named(abs) } : isRepoRoot(abs) ? { kind: "repo", abs } : { kind: "folder", abs });
+    }
+    return out;
+  }
+
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
     const rows: TreeRow[] = [];
+    // A loose folder's parent, to go up: the file tree of the launcher (17.14).
+    if (this.loc.mode === "home" && dirname(this.loc.root) !== this.loc.root) {
+      rows.push({ kind: "root", path: "..", name: "..", depth: 0, root: { kind: "folder", abs: dirname(this.loc.root) } });
+    }
     const groups = new Map(this.shownFiles().map((f) => [f.path, f.group]));
     // The walk's folders too, so one with nothing listed in it (just made, or holding only files
     // the explorer leaves out) is still there to open and to create in.
     const folders = new Set(this.graph.dirs.filter((d) => d));
-    const paths = [...this.graph.notes.keys(), ...groups.keys(), ...folders].sort((a, b) => {
+    const roots = this.rootRows();
+    const paths = [...this.graph.notes.keys(), ...groups.keys(), ...folders, ...roots.keys()].sort((a, b) => {
       const da = a.split("/");
       const db = b.split("/");
       for (let i = 0; i < Math.min(da.length, db.length); i++) {
-        const lastA = i === da.length - 1 && !folders.has(a);
-        const lastB = i === db.length - 1 && !folders.has(b);
+        const lastA = i === da.length - 1 && !folders.has(a) && !roots.has(a);
+        const lastB = i === db.length - 1 && !folders.has(b) && !roots.has(b);
         if (da[i] !== db[i]) {
           if (lastA !== lastB) return lastA ? 1 : -1; // directories first
           return da[i]!.localeCompare(db[i]!, undefined, { sensitivity: "base" });
@@ -2156,7 +2212,8 @@ export class App {
           break;
         }
       }
-      if (visible && !folders.has(p)) rows.push({ kind: "note", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(groups.has(p) ? { group: groups.get(p) } : {}) });
+      if (visible && roots.has(p)) rows.push({ kind: "root", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, root: roots.get(p)! });
+      else if (visible && !folders.has(p)) rows.push({ kind: "note", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(groups.has(p) ? { group: groups.get(p) } : {}) });
     }
     this.tree = rows;
     return rows;
@@ -2387,6 +2444,10 @@ export class App {
         }
         const tree = row as TreeRow;
         if (tree.kind === "dir") return;
+        if (tree.kind === "root") {
+          done();
+          return this.enterRoot(tree);
+        }
         done();
         this.openOrSwitchTab(tree.path);
         this.region = "content";
@@ -2493,6 +2554,7 @@ export class App {
     const row = rows[this.sidebar.selected];
     const openNote = (where: "here" | "tab" | "split") => {
       if (!row) return;
+      if (row.kind === "root") return this.enterRoot(row);
       if (row.kind === "dir") {
         this.expanded.add(row.path);
         this.invalidateTree();
@@ -3390,7 +3452,8 @@ export class App {
       if (!row) return;
       this.sidebar.selected = idx;
       // A note: one click selects it, a double-click opens it as a tab (enter too, from the keys).
-      if (row.kind === "note" && clicks < 2) return;
+      // A root (another vault) likewise: a double-click goes there.
+      if ((row.kind === "note" || row.kind === "root") && clicks < 2) return;
       if (row.kind === "note" && this.sidebar.filter) {
         // Picked from the filter: open it, and the tree comes back.
         this.sidebar.filter = "";
@@ -4229,6 +4292,155 @@ export class App {
     if (this.stateTimer) clearTimeout(this.stateTimer);
     this.saveState();
     this.host.quit();
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Vaults (17.10, 17.13, 17.14)
+
+  /**
+   * Become another root's TUI, as if started there (17.10): its config, index, watcher, reading
+   * positions and session — with `open` open (an absolute path), or the session's tabs. Leaving
+   * saves this one's as quitting does. Refused while a note is unsaved: it would be left behind.
+   */
+  switchVault(target: VaultLocation, open: string | null, anchor?: Anchor, how: { back?: boolean } = {}): boolean {
+    const dirty = this.dirtyBuffers();
+    if (dirty.length) {
+      this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save (:wa) or revert before leaving ${this.vaultLabel(this.loc)}`);
+      return false;
+    }
+    const v = this.view;
+    const from = v ? { root: this.loc.root, path: v.buf.abs, anchor: { ...v.topAnchor }, cursor: { ...v.curAnchor } } : null;
+    // Leave, as quitting would.
+    this.saveState();
+    try {
+      writeDirty(this.loc, []);
+    } catch {}
+    this.watcher?.close();
+    this.watcher = null;
+    // Enter.
+    this.loc = target;
+    recordLocation(target);
+    this.configLastGood.clear();
+    const loaded = loadConfig({ vaultFile: vaultConfigPath(target), configFile: this.configFile, lastGood: this.configLastGood });
+    this.config = loaded.config;
+    for (const w of loaded.warnings) this.message("warn", w);
+    this.reach = new Reach(target);
+    this.graph = new Graph(target, this.config).build(true, "lazy");
+    this.graph.reach = this.reach;
+    for (const e of this.graph.errors) this.message("warn", e);
+    this.positions = new PositionStore(target);
+    this.buffers.clear();
+    this.tabs = [];
+    this.activeTab = 0;
+    this.overlay = null;
+    this.expanded.clear();
+    this.leftPositions.clear();
+    this.sidebar = { visible: this.config.ui.sidebar, overlay: false, selected: 0, scroll: 0 };
+    this.sideW = this.config.ui.sidebar_width;
+    this.outW = this.config.ui.outline_width;
+    this.outline = { visible: this.config.ui.outline, overlay: false, selected: 0, scroll: 0, folded: new Set(), forKey: "" };
+    this.invalidateTree();
+    this.ui = uiDefaults(this.config);
+    if (process.env.NO_COLOR) this.ui.theme = "mono";
+    this.uiOverrides = {};
+    const session = loadSession(target);
+    this.recentCommands = (session?.recent_commands ?? []).filter((id) => typeof id === "string").slice(0, RECENT_MAX);
+    this.remoteServer = session?.remote_server;
+    this.recentNotes = (session?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
+    this.restoreUiOverrides();
+    if (this.explicitTheme) this.ui.theme = this.explicitTheme;
+    this.applyKeys();
+    this.applyTheme();
+    this.glyphs = this.glyphSet(this.ui.glyphs);
+    this.host.setMouse?.(this.ui.mouse);
+    const restored = this.config.ui.restore_session && this.restoreSession();
+    if (open) {
+      const i = this.tabs.findIndex((t) => t.views.some((x) => x.buf.abs === open));
+      if (i >= 0) {
+        this.activeTab = i;
+        const t = this.tabs[i]!;
+        t.active = t.views.findIndex((x) => x.buf.abs === open);
+        if (anchor) this.jumpTo(t.views[t.active]!, anchor);
+      } else this.openInNewTab(open, anchor);
+    } else if (!restored) {
+      const first = this.defaultNote();
+      if (first) this.openInNewTab(first);
+    }
+    if (from && !how.back) this.vaultTrail.push(from);
+    this.region = "content";
+    this.relayoutAll();
+    this.publishState();
+    this.recordConfigStamps();
+    if (this.live) {
+      if (this.config.watch.enabled) this.startWatcher();
+      this.indexInBackground();
+    }
+    this.message("info", `${this.vaultLabel(target)} — ${target.root}`);
+    this.host.requestRender();
+    return true;
+  }
+
+  /** How a root is named to the user: its vault's name, "home" for a loose folder, a repo's folder. */
+  vaultLabel(loc: Pick<VaultLocation, "mode" | "name" | "root">): string {
+    if (loc.mode === "home") return `home vault (${loc.root})`;
+    return loc.mode === "vault" ? `vault ${loc.name ?? basename(loc.root)}` : `repository ${basename(loc.root)}`;
+  }
+
+  /** A root row of the explorer: go into it (17.13). */
+  enterRoot(row: TreeRow): void {
+    const r = row.root;
+    if (!r) return;
+    this.switchVault(r.kind === "folder" ? homeAt(r.abs) : rootAt(r.abs, r.kind), null);
+  }
+
+  /**
+   * An absolute path that belongs to another vault or repository (a link into it, a backlink from
+   * it): switch there and open it (17.10); true when it was (or the switch was refused). A loose
+   * file opens as it is, beside this vault's notes: it has no vault to switch into.
+   */
+  private intoOtherVault(path: string, anchor?: Anchor): boolean {
+    if (!isAbsolute(path) || !existsSync(path)) return false;
+    let target: VaultLocation;
+    try {
+      target = locateVault({ path });
+    } catch {
+      return false;
+    }
+    if (target.mode === "home" || target.root === this.loc.root) return false;
+    this.switchVault(target, path, anchor);
+    return true;
+  }
+
+  /** Back from the first place in this vault: to the vault before (17.10). */
+  private vaultBack(): boolean {
+    const t = this.vaultTrail.pop();
+    if (!t) return false;
+    let target: VaultLocation;
+    try {
+      target = existsSync(t.path) ? locateVault({ path: t.path }) : locateVault({ path: t.root });
+    } catch {
+      this.message("warn", `${t.root} is gone`);
+      return true;
+    }
+    if (!this.switchVault(target, existsSync(t.path) ? t.path : null, t.anchor, { back: true })) this.vaultTrail.push(t);
+    return true;
+  }
+
+  /** The vaults this machine knows (17.14): pick one to switch to. */
+  openVaultList(): void {
+    const here = this.loc.root;
+    const known = readRegistry()
+      .filter((v) => v.kind !== "home" && v.path !== here && existsSync(v.path))
+      .sort((a, b) => (a.seen < b.seen ? 1 : -1));
+    if (!known.length) return this.message("info", "no other vaults yet: open one with slipbox <folder>, or make one with slipbox init");
+    this.openList({
+      title: `Vaults (${known.length})`,
+      items: known.map((v) => ({ label: v.name ?? basename(v.path), detail: v.path, hint: v.kind === "repo" ? "repository" : "vault", data: v })),
+      accept: (item) => {
+        const v = item.data as KnownVault;
+        this.switchVault(rootAt(v.path, existsSync(join(v.path, ".slipbox")) ? "vault" : "repo"), null);
+      },
+    });
   }
 }
 

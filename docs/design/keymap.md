@@ -309,6 +309,7 @@ config.
 | `:messages` | open the messages list |
 | `:reload` | reload the note from disk |
 | `:reindex` | reindex the vault |
+| `:vaults` | the vaults this machine knows: pick one to switch to |
 | `:config` | reload the configuration |
 
 **Substitute** is vim's, typed at the `:` prompt (`find.substitute`): `:s/old/new/` on the cursor's
@@ -449,6 +450,7 @@ edit the config and the config wins again.
 | `space n p` | choose which running nvim `space n s` sends to (it asks by itself when unsure) |
 | `space n r` | reload this note from disk |
 | `space n i` | note info: path, size, modified time, links, backlinks, encoding |
+| `space v v` | switch vault: the vaults this machine knows (`:vaults`); `back` returns |
 | `space v r` | reindex the vault |
 | `space v i` | vault info: root, notes, skipped paths, cache and state, watcher |
 | `space v c` | reload the configuration (it also reloads by itself when a config file is saved) |

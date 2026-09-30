@@ -301,7 +301,8 @@ function lineAnchor(fragment: string): Anchor | undefined {
 }
 
 function headingAnchor(a: App, path: string, heading: string): Anchor | undefined {
-  const note = a.graph.entry(path);
+  // A note of another vault too (17.10): its heading is found in that vault's index.
+  const note = a.graph.entryAnywhere(path);
   const slug = slugify(heading);
   const h = note?.headings.find((x) => x.slug === slug || x.text.toLowerCase() === heading.toLowerCase());
   if (!h) {
@@ -1469,6 +1470,7 @@ export function registerActions(app: App): void {
       a.relayoutAll();
       a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
     },
+    "vault.switch": (a) => a.openVaultList(),
     "vault.info": (a) => {
       const g = a.graph;
       infoList(a, "Vault", [

@@ -229,6 +229,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader v r": "vault.reindex",
   "leader v i": "vault.info",
   "leader v c": "config.reload",
+  "leader v v": "vault.switch",
   "leader m": "messages.open",
   "?": "help.open",
   "leader ?": "help.open",
@@ -438,7 +439,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
   "leader n": "note: new, source, the lens, save, edit elsewhere, reload, info",
-  "leader v": "vault: new folder, reindex, info, reload config",
+  "leader v": "vault: switch, new folder, reindex, info, reload config",
   "leader q": "session: quit",
   y: "copy: selection, path, reference, link",
   "ctrl+w": "window: split, focus, move, resize",
@@ -494,6 +495,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   messages: "messages.open",
   reload: "note.reload",
   reindex: "vault.reindex",
+  vaults: "vault.switch",
   config: "config.reload",
 };
 

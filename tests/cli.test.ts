@@ -236,8 +236,14 @@ describe("the vault and the tool", () => {
     expect(c.find((x: { id: string }) => x.id === "task.toggle").cli).toStartWith("slipbox task");
     const fresh = join(sandbox, "fresh");
     mkdirSync(fresh);
-    expect(slipbox(["init", fresh, "--json"]).json.data.created).toBe(true);
+    const made = slipbox(["init", fresh, "--json"]).json.data;
+    expect(made).toMatchObject({ created: true, name: "fresh" });
     expect(existsSync(join(fresh, ".slipbox"))).toBe(true);
+    // The machine's vaults: this one and the one just made, newest first (17.6).
+    const vaults = slipbox(["vaults", "--json"]).json.data;
+    expect(vaults[0]).toMatchObject({ id: made.id, name: "fresh", kind: "vault", path: fresh, exists: true });
+    expect(vaults.some((v: { path: string }) => v.path === vault)).toBe(true);
+    expect(slipbox(["vaults"]).out).toContain(`fresh            vault  ${fresh}`);
     expect(slipbox(["help"]).out).toContain("slipbox find <query>");
     expect(slipbox(["--version"]).out).toMatch(/^slipbox \d+\.\d+\.\d+/);
   });
