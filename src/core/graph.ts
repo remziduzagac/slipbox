@@ -88,6 +88,18 @@ export interface VaultReach {
   entryAt(abs: string): NoteEntry | undefined;
 }
 
+/** A link that reaches nothing, or more than one note (1.7): where it is, how it's written, why. */
+export interface LinkProblem {
+  from: string;
+  line: number;
+  column: number;
+  kind: LinkKind;
+  target: string;
+  text: string;
+  reason: string | null;
+  candidates: string[];
+}
+
 export interface Backlink {
   /** Vault-relative; absolute for a link from another vault (17.11). */
   from: string;
@@ -137,6 +149,7 @@ export class Graph {
   /** Bumped whenever what the notes say changes (a note read, changed, gone): views that show
    *  what's derived from them (the Info view's counts) know to look again. */
   generation = 0;
+  private problemCache: { generation: number; broken: LinkProblem[]; ambiguous: LinkProblem[] } | null = null;
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
   /** Aliases and previous names → notes, from the entries parsed so far (null: rebuild). */
   private nameCache: { aliases: Map<string, string[]>; previous: Map<string, string[]> } | null = null;
@@ -643,6 +656,32 @@ export class Graph {
     }
     this.tagCache = new Map([...index].sort(([a], [b]) => a.localeCompare(b)));
     return this.tagCache;
+  }
+
+  /**
+   * The unresolved-link set (1.7), and the ambiguous links beside it: every note's links that reach
+   * nothing, or more than one note, as each resolves now — in path and line order. Every note is
+   * read first. Made again when a note changes; `forgetProblems` makes it again at once (another
+   * vault's notes changed: `[[vault:note]]` links may reach, or stop reaching).
+   */
+  linkProblems(): { broken: LinkProblem[]; ambiguous: LinkProblem[] } {
+    this.ensureAll();
+    if (this.problemCache?.generation === this.generation) return this.problemCache;
+    const broken: LinkProblem[] = [];
+    const ambiguous: LinkProblem[] = [];
+    for (const rel of [...this.notes.keys()].sort()) {
+      for (const l of this.linksOf(rel)) {
+        if (l.resolvedKind !== "unresolved" && l.resolvedKind !== "ambiguous") continue;
+        const p: LinkProblem = { from: rel, line: l.line, column: l.column, kind: l.kind, target: l.target, text: l.text, reason: l.reason ?? null, candidates: l.candidates };
+        (l.resolvedKind === "unresolved" ? broken : ambiguous).push(p);
+      }
+    }
+    this.problemCache = { generation: this.generation, broken, ambiguous };
+    return this.problemCache;
+  }
+
+  forgetProblems(): void {
+    this.problemCache = null;
   }
 
   /** The vault's tags, with how many notes carry each (a parent's count includes its children's). */

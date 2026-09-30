@@ -6591,3 +6591,64 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
     expect(h.app.floating).toBeNull();
   });
 });
+
+describe("the Problems view (1.7)", () => {
+  const setup = async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-problems-tui-"));
+    mkdirSync(join(root, ".slipbox"));
+    mkdirSync(join(root, "a"));
+    mkdirSync(join(root, "b"));
+    writeFileSync(join(root, "a", "twin.md"), "# Twin A\n");
+    writeFileSync(join(root, "b", "twin.md"), "# Twin B\n");
+    writeFileSync(join(root, "index.md"), "# Index\n\nSee [[missing]] here.\n\nAnd [[twin]].\n");
+    writeFileSync(join(root, "other.md"), "# Other\n\n![pic](nope.png)\n");
+    return await harness({ root, open: "other.md", width: 140 });
+  };
+  const rows = (h: Harness) => h.app.problemRows().map((r) => (r.heading ? `# ${r.label}` : r.note ? `  ${r.label}` : `    ${r.label}  ${r.detail}`));
+
+  test("space v p: the vault's broken and ambiguous links, by note; enter goes there, onto the link; its button under the history's", async () => {
+    const h = await setup();
+    await h.keys("space", "v", "p");
+    expect(h.app.leftView).toBe("problems");
+    expect(h.app.region).toBe("sidebar");
+    expect(rows(h)).toEqual([
+      "# Broken links (2)",
+      "  index.md",
+      "    L3  [[missing]]",
+      "  other.md",
+      "    L3  nope.png",
+      "# Ambiguous links (1)",
+      "  index.md",
+      "    L5  [[twin]]  — 2 notes",
+    ]);
+    const hot = (id: string) => h.app.geometry!.hot.find((x) => x.id === id)!;
+    expect(hot("btn:problems").y).toBe(hot("btn:history").y + 1);
+    // Enter on a problem: its note, the cursor on the link.
+    h.app.sidebar.selected = 2;
+    await h.keys("enter");
+    const v = h.app.view!;
+    expect(v.buf.rel).toBe("index.md");
+    expect(h.app.region).toBe("content");
+    expect(h.app.currentLayout(v).links[h.app.linkUnderCursor(v)]).toMatchObject({ target: "missing" });
+    // Fixed: gone at once.
+    writeFileSync(join(h.root, "missing.md"), "# Missing\n");
+    const st = statSync(join(h.root, "missing.md"));
+    h.app.graph.updateFile("missing.md", { rel: "missing.md", abs: join(h.root, "missing.md"), size: st.size, mtimeMs: st.mtimeMs });
+    expect(rows(h)[0]).toBe("# Broken links (1)");
+  });
+
+  test("a section's heading folds; a note's row goes to its first problem; / filters", async () => {
+    const h = await setup();
+    await h.keys("space", "v", "p");
+    h.app.sidebar.selected = 0;
+    await h.keys("h");
+    expect(rows(h)[0]).toBe("# Broken links (2)");
+    expect(rows(h)[1]).toBe("# Ambiguous links (1)");
+    await h.keys("l");
+    h.app.sidebar.selected = 3; // other.md's row
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("other.md");
+    await h.keys("space", "v", "p", "/", "t", "w", "i", "n");
+    expect(rows(h)).toEqual(["# Ambiguous links (1)", "  index.md", "    L5  [[twin]]  — 2 notes"]);
+  });
+});

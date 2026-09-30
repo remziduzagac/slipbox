@@ -33,7 +33,7 @@ import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
-import { Graph } from "../core/graph.ts";
+import { Graph, type LinkProblem } from "../core/graph.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
 import { stateDir, userConfigFile } from "../core/paths.ts";
@@ -73,6 +73,7 @@ import {
   DEFAULT_EXPLORER_KEYS,
   EXPLORER_ACTION_INFO,
   HISTORY_ACTION_INFO,
+  PROBLEMS_ACTION_INFO,
   OUTLINE_ACTION_INFO,
   FOOTNOTE_ACTION_INFO,
   DEFAULT_GROUPS,
@@ -320,7 +321,7 @@ export interface SidePaneState {
 }
 
 /** What the left panel shows: the file tree or the window's history (more views to come). */
-export type LeftView = "explorer" | "history";
+export type LeftView = "explorer" | "history" | "problems";
 /** What the right panel shows, always of the file on screen: its Info, its outline, its footnotes
  *  (more to come: comments). */
 export type RightView = "info" | "outline" | "footnotes";
@@ -340,7 +341,23 @@ export interface PanelView<Id extends string> {
 export const LEFT_VIEWS: PanelView<LeftView>[] = [
   { id: "explorer", title: "Explorer", glyph: (g) => g.explorerButton },
   { id: "history", title: "History", glyph: (g) => g.historyButton },
+  { id: "problems", title: "Problems", glyph: (g) => g.problemsButton },
 ];
+
+/** One row of the Problems view (1.7): a section's heading, a note with problems under it, or a problem. */
+export interface ProblemRow {
+  section: string;
+  heading: boolean;
+  /** A note's row (its problems under it): its path. */
+  note?: string;
+  /** What's shown first: a heading's name and count, a note's path, a problem's line (`L12`). */
+  label: string;
+  /** How it's written, and why it's a problem. */
+  detail: string;
+  text: string;
+  folded: boolean;
+  link?: LinkProblem;
+}
 
 export const RIGHT_VIEWS: PanelView<RightView>[] = [
   { id: "info", title: "Info", glyph: (g) => g.infoButton },
@@ -513,6 +530,8 @@ export class App {
   /** What the right panel shows (3.17); `outline` is its state, whichever view that is. */
   rightView: RightView = "outline";
   private rightPositions = new Map<RightView, Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">>();
+  /** The Problems view's folded sections, by name (1.7). */
+  problemsFolded = new Set<string>();
   /** The Info view's folded sections, by name (3.19). */
   infoFolded = new Set<string>();
   private infoCache: { key: string; rows: Omit<InfoRow, "folded">[] } | null = null;
@@ -2846,6 +2865,112 @@ export class App {
     return true;
   }
 
+  // The Problems view (1.7), the left panel's third: what's wrong in the vault — links that reach
+  // nothing, links that reach several notes — each opened where it is.
+
+  /** Its rows: each section's heading (with its count), its problems under it unless folded; `/` filters. */
+  problemRows(): ProblemRow[] {
+    const q = this.leftView === "problems" ? (this.sidebar.filter ?? "") : "";
+    const p = this.graph.linkProblems();
+    const out: ProblemRow[] = [];
+    const written = (l: LinkProblem) => (l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}]]` : l.target);
+    const section = (name: string, list: LinkProblem[], why: (l: LinkProblem) => string) => {
+      const rows = list
+        .map((l) => ({ l, label: `L${l.line}`, detail: `${written(l)}${why(l) ? `  ${why(l)}` : ""}` }))
+        .filter((r) => !q || match(q, `${r.l.from} ${r.label} ${r.detail}`));
+      if (q && !rows.length) return;
+      const folded = !q && this.problemsFolded.has(name);
+      out.push({ section: name, heading: true, label: `${name} (${list.length})`, detail: "", text: name, folded });
+      if (folded) return;
+      // Under the note each is in: the path once, then its problems by line.
+      let note = "";
+      for (const r of rows) {
+        if (r.l.from !== note) {
+          note = r.l.from;
+          out.push({ section: name, heading: false, note, label: note, detail: "", text: note, folded: false });
+        }
+        out.push({ section: name, heading: false, label: r.label, detail: r.detail, text: `${r.l.from} ${r.label} ${r.detail}`, folded: false, link: r.l });
+      }
+    };
+    section("Broken links", p.broken, (l) => l.reason ?? "");
+    section("Ambiguous links", p.ambiguous, (l) => `— ${l.candidates.length} notes`);
+    return out;
+  }
+
+  /** Open a problem's note at it: the line, the cursor on the link. */
+  jumpToProblem(l: LinkProblem): void {
+    this.open(l.from, { heading: null, headingIndex: 0, offset: 0, line: l.line });
+    const v = this.view;
+    if (v && v.buf.rel === l.from) {
+      // Rendered, onto the link as drawn (the ones with its target on its line, in order); in source mode, its text.
+      const same = this.problemsAt(l.from).filter((x) => x.line === l.line && x.target === l.target);
+      const drawn = this.currentLayout(v).links.filter((x) => x.src === l.line && x.target === l.target)[Math.max(0, same.indexOf(l))];
+      if (drawn && drawn.line >= 0 && !this.currentLayout(v).lines[drawn.line]?.srcMap) this.moveCursor(v, { row: drawn.line, col: drawn.col });
+      else placeAt(this, v, (v.buf.lineStarts()[l.line - 1] ?? 0) + l.column - 1);
+    }
+    this.region = "content";
+    if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+  }
+
+  /** A note's problems, as the graph has them. */
+  private problemsAt(rel: string): LinkProblem[] {
+    const p = this.graph.linkProblems();
+    return [...p.broken, ...p.ambiguous].filter((x) => x.from === rel);
+  }
+
+  /** The Problems view's keys (the explorer's keymap): move, go there, fold its sections, filter, close, leave. */
+  problemsAction(action: string): void {
+    const s = this.sidebar;
+    s.pinned = false;
+    const rows = this.problemRows();
+    const row = rows[s.selected];
+    switch (action) {
+      case "down":
+        s.selected = Math.min(rows.length - 1, s.selected + 1);
+        break;
+      case "up":
+        s.selected = Math.max(0, s.selected - 1);
+        break;
+      case "top":
+        s.selected = 0;
+        break;
+      case "bottom":
+        s.selected = rows.length - 1;
+        break;
+      case "open":
+      case "open_tab":
+      case "expand":
+      case "open_split":
+        if (!row) break;
+        if (row.heading) {
+          if (row.folded) this.problemsFolded.delete(row.section);
+          else if (action !== "expand") this.problemsFolded.add(row.section);
+        } else if (row.link) this.jumpToProblem(row.link);
+        else if (row.note) {
+          // A note's row: the note, at its first problem.
+          const first = rows.find((r) => r.link?.from === row.note && r.section === row.section)?.link;
+          if (first) this.jumpToProblem(first);
+        }
+        break;
+      case "collapse":
+        if (!row) break;
+        if (!row.heading) s.selected = rows.findIndex((r) => r.heading && r.section === row.section);
+        else this.problemsFolded.add(row.section);
+        break;
+      case "filter":
+        s.filtering = true;
+        break;
+      case "close":
+        this.showSidebar(false);
+        break;
+      case "leave":
+        this.region = "content";
+        if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+        break;
+      // The explorer's other actions (new, rename…) mean nothing here.
+    }
+  }
+
   // The Info view (3.19): what the file on screen is — where, which vault, its size and dates, its
   // text's counts and state — its properties (the frontmatter), its tags, its links and backlinks.
 
@@ -3468,6 +3593,7 @@ export class App {
     this.sidebar.filter = "";
     this.sidebar.pinned = false;
     if (view === "explorer") this.revealInSidebar();
+    else if (view === "problems") this.sidebar.selected = 0;
     else this.sidebar.selected = Math.max(0, this.historyRows().findIndex((r) => r.here));
   }
 
@@ -3565,7 +3691,7 @@ export class App {
   /** Keys while the left panel's filter has them: type, move, open, clear. */
   private filterKey(key: string): void {
     const s = this.sidebar;
-    const rows = this.leftView === "explorer" ? this.explorerRows() : this.historyRows();
+    const rows: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "problems" ? this.problemRows() : this.historyRows();
     const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
     const done = () => {
       s.filter = "";
@@ -3581,6 +3707,13 @@ export class App {
       case "enter": {
         const row = rows[s.selected];
         if (!row) return;
+        if (this.leftView === "problems") {
+          const p = row as ProblemRow;
+          const link = p.link ?? (rows as ProblemRow[]).find((r) => r.link?.from === p.note)?.link;
+          if (!link) return;
+          done();
+          return this.jumpToProblem(link);
+        }
         if (this.leftView === "history") {
           const i = (row as HistoryRow).index;
           done();
@@ -3629,8 +3762,8 @@ export class App {
     // The selection goes to the first match: the first note, in the explorer.
     s.scroll = 0;
     s.pinned = false;
-    const next = this.leftView === "explorer" ? this.explorerRows() : this.historyRows();
-    s.selected = Math.max(0, this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : 0);
+    const next: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "problems" ? this.problemRows() : this.historyRows();
+    s.selected = Math.max(0, this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : this.leftView === "problems" ? next.findIndex((r) => !(r as ProblemRow).heading) : 0);
   }
 
   /** The history view's keys (the explorer's keymap): move, jump, filter, close, leave. */
@@ -3699,6 +3832,7 @@ export class App {
   explorerAction(action: string): void {
     this.sidebar.pinned = false;
     if (this.leftView === "history") return this.historyAction(action);
+    if (this.leftView === "problems") return this.problemsAction(action);
     if (action === "filter") {
       this.sidebar.filtering = true; // resumes a filter already there (a view's restored one)
       return;
@@ -4177,7 +4311,7 @@ export class App {
   private maps(): { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] {
     const out: { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] = [];
     // A pane's own actions carry their titles (which-key says "New note here", as help does).
-    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : EXPLORER_ACTION_INFO });
+    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : this.leftView === "problems" ? PROBLEMS_ACTION_INFO : EXPLORER_ACTION_INFO });
     if (this.region === "outline" && this.outlineShown) {
       out.push(
         this.rightView === "footnotes"
@@ -4686,6 +4820,17 @@ export class App {
       this.region = "sidebar";
       if (!g.sidebar || !inRect(g.sidebar, ev.x, ev.y)) return;
       const idx = ev.y - g.sidebar.y + this.sidebar.scroll;
+      if (this.leftView === "problems") {
+        // A section's heading folds; a problem: one click selects it, a double-click goes there.
+        const p = this.problemRows()[idx];
+        if (!p) return;
+        this.sidebar.selected = idx;
+        if (p.heading) return this.problemsAction(p.folded ? "expand" : "collapse");
+        if (clicks < 2 && !p.note) return;
+        this.sidebar.filter = "";
+        this.sidebar.filtering = false;
+        return this.problemsAction("open");
+      }
       if (this.leftView === "history") {
         const h = this.historyRows()[idx];
         if (!h || h.heading) return;
@@ -4888,6 +5033,7 @@ export class App {
       case "btn":
         if (arg === "explorer") this.openLeftView("explorer");
         else if (arg === "history") this.openLeftView("history");
+        else if (arg === "problems") this.openLeftView("problems");
         else if (arg === "outline") void this.run("outline.toggle");
         else if (arg === "footnotes") void this.run("footnotes.toggle");
         else if (arg === "info") void this.run("info.toggle");

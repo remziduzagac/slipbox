@@ -306,7 +306,7 @@ common, and the only reason they are step 0.
 | 1.4 | **decide** link resolution, then build it: `nameToPath` as lists, collisions, case policy |
 | 1.5 | Backlinks map |
 | 1.6 | **Done.** Tags map: frontmatter `tags` and `#tags` in the text, nested, one tag whatever its case |
-| 1.7 | Unresolved-link set |
+| 1.7 | **Done.** Unresolved-link set (and ambiguous links): the Problems view (`space v p`), `slipbox problems` |
 | 1.8 | Incremental single-file graph update |
 | 1.9 | Index persistence: when, and to the cache location from 0.10 |
 | 1.10 | `slipbox init` and the no-marker path — announce the degradation, offer to create |

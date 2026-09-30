@@ -611,6 +611,20 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: "problems: space v p lists the vault's broken and ambiguous links by note; enter goes onto one",
+    run: async (s) => {
+      await leader(s, "v", "p");
+      await s.status("FILES");
+      await s.see(/Broken links \(\d+\)/);
+      await s.see(/Ambiguous links \(1\)/);
+      await s.see(/L29 +\[\[contacts\]\]/);
+      // The last row: home's ambiguous [[contacts]]; enter opens it there, the cursor on the link.
+      await s.keys("shift+g", "enter");
+      await s.status("home.md");
+      await s.status("→ [[contacts]] (ambiguous)");
+    },
+  },
+  {
     name: "tags: space f t lists them with counts, a tag its notes; a #tag in the text followed",
     run: async (s) => {
       await leader(s, "f", "t");

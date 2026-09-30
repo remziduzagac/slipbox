@@ -1514,6 +1514,11 @@ export function registerActions(app: App): void {
       }),
     "trash.open": (a) => a.openTrash(),
     "tag.list": (a, arg) => (arg ? a.openTagNotes(arg) : a.openTagList()),
+    // The left panel's Problems view (1.7): open, focus, close — made afresh when it opens.
+    "problems.open": (a) => {
+      a.graph.forgetProblems();
+      a.openLeftView("problems", "cycle");
+    },
     "vault.init": (a) => {
       // In a vault: the explorer's selected folder (or this note's) a vault of its own (18.11).
       if (a.loc.mode === "vault") return a.makeVaultHere();

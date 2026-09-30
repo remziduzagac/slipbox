@@ -360,6 +360,12 @@ describe("the vault and the tool", () => {
     expect(r.properties).toMatchObject({ title: "Kenji Mori", office: { building: "Workshop", desk: 2 } });
     expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/vault\s+halden/);
   });
+  test("problems: the demo's broken and ambiguous links (1.7)", () => {
+    const p = slipbox(["problems", "--json"], { cwd: DEMO }).json.data;
+    expect(p.broken.length).toBeGreaterThan(5);
+    expect(p.ambiguous).toMatchObject([{ from: "home.md", target: "contacts" }]);
+    expect(slipbox(["problems"], { cwd: DEMO }).out).toMatch(/^broken links \(\d+\)\n/);
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);

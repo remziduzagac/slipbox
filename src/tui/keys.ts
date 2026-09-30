@@ -244,6 +244,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader v n": "vault.rename",
   "leader v m": "vault.init",
   "leader v t": "trash.open",
+  "leader v p": "problems.open",
   // Folders (18.13): the explorer's selected one when it has focus, else this note's.
   "leader d n": "folder.create",
   "leader d r": "folder.rename",
@@ -483,6 +484,19 @@ export const HISTORY_ACTION_INFO: Record<string, { title: string; desc: string; 
   leave: { title: "Back to the note", desc: "Focuses the note; the history stays open" },
 };
 
+/** The Problems view takes the explorer's keymap too (1.7): what its actions do there, for help. */
+export const PROBLEMS_ACTION_INFO: Record<string, { title: string; desc: string; actions?: string[] }> = {
+  down: { title: "Move down", desc: "Selects the next problem" },
+  up: { title: "Move up", desc: "Selects the previous problem" },
+  jump: { title: "Go there", desc: "Opens the note at the problem (a section's heading: folds or unfolds it)", actions: ["open_tab", "expand", "open", "open_split"] },
+  collapse: { title: "Fold", desc: "Folds the section, or goes from a problem to its section" },
+  top: { title: "Top", desc: "Selects the first row" },
+  bottom: { title: "Bottom", desc: "Selects the last row" },
+  filter: { title: "Filter", desc: "Type to narrow the problems by note and link; enter goes there, esc clears" },
+  close: { title: "Close the problems", desc: "Closes the left panel; focus returns to the note" },
+  leave: { title: "Back to the note", desc: "Focuses the note; the problems stay open" },
+};
+
 /** Keys while a left panel's filter (`/`) has them, for help. Fixed, not from a keymap. */
 export const FILTER_KEYS_HELP: [string, string[], string][] = [
   ["Narrow the rows", ["type"], "Filters the explorer (folders kept), the history by path, or the outline (parents kept)"],
@@ -563,6 +577,7 @@ export function parseGroup(value: string): { name: string; desc: string } {
 /** `:` aliases: alias → command spec. The rest of the typed line becomes the argument. */
 export const DEFAULT_ALIASES: Record<string, string> = {
   tags: "tag.list",
+  problems: "problems.open",
   footnotes: "footnotes.toggle",
   tag: "tag.list",
   q: "window.close_or_quit",

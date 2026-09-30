@@ -1273,3 +1273,32 @@ describe("tags (1.6)", () => {
     expect((await cli(["tags", "idea"], dir)).json.data.notes).toEqual(["a.md", "b.md", "c.md"]);
   });
 });
+
+describe("the vault's problems (1.7)", () => {
+  const cli = async (args: string[], cwd: string) => {
+    const out: string[] = [];
+    const code = await runCli([...args, "--json"], { out: (s: string) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return { code, json: JSON.parse(out.join("")) };
+  };
+  test("every link that reaches nothing, and every one that reaches several notes — with where, how written, and why", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-problems-"));
+    mkdirSync(join(dir, ".slipbox"));
+    mkdirSync(join(dir, "a"));
+    mkdirSync(join(dir, "b"));
+    writeFileSync(join(dir, "a", "twin.md"), "# Twin A\n");
+    writeFileSync(join(dir, "b", "twin.md"), "# Twin B\n");
+    writeFileSync(join(dir, "index.md"), "# Index\n\n[[missing]] and [x](gone.md) and [[nowhere:x]].\n\n[[twin]] and [[alive]] and [ok](https://example.org)\n");
+    writeFileSync(join(dir, "alive.md"), "# Alive\n");
+    const p = (await cli(["problems"], dir)).json.data;
+    expect(p.broken.map((x: { line: number; column: number; target: string }) => [x.line, x.column, x.target])).toEqual([
+      [3, 1, "missing"],
+      [3, 17, "gone.md"],
+      [3, 34, "nowhere:x"],
+    ]);
+    expect(p.broken[2].reason).toContain('unknown vault "nowhere"');
+    expect(p.ambiguous).toMatchObject([{ from: "index.md", line: 5, target: "twin", candidates: ["a/twin.md", "b/twin.md"] }]);
+    // Made: gone from the list.
+    writeFileSync(join(dir, "missing.md"), "# Missing\n");
+    expect((await cli(["problems"], dir)).json.data.broken.map((x: { target: string }) => x.target)).toEqual(["gone.md", "nowhere:x"]);
+  });
+});

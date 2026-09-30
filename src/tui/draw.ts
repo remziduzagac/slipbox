@@ -1138,10 +1138,11 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
   const history = app.leftView === "history";
+  const problems = app.leftView === "problems";
   const title = LEFT_VIEWS.find((v) => v.id === app.leftView)!.title;
   let rect = paneTitle(app, c, pane, title, app.region === "sidebar", base.bg);
   // The explorer's title: a new note and a new folder, at its right end (18.1).
-  if (!history && rect !== pane) {
+  if (!history && !problems && rect !== pane) {
     const g = app.glyphs;
     const buttons: [string, string][] = [
       [g.newNote, "xnew:note"],
@@ -1157,7 +1158,7 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   }
   const s = app.sidebar;
   rect = filterRow(app, c, rect, s, app.region === "sidebar", base.bg, geo);
-  return history ? drawHistoryList(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
+  return history ? drawHistoryList(app, c, rect, base.bg, geo) : problems ? drawProblems(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
 }
 
 /**
@@ -1303,6 +1304,43 @@ function drawHistoryList(app: App, c: Canvas, list: Rect, bg: Color | null, geo:
   }
   paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
   sideHScrollbar(app, c, sv, "sidebar", app.region === "sidebar", bg, geo);
+  return rect;
+}
+
+/**
+ * The Problems view (1.7): a heading per kind of problem, with its count, that folds; under it each
+ * note with problems, then its problems — the line, dim, and how the link is written and why, in
+ * the link's colour — cut to the pane (never scrolled sideways).
+ */
+function drawProblems(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geometry): Rect {
+  const theme = app.theme;
+  const rows = app.problemRows();
+  const s = app.sidebar;
+  const g = app.glyphs;
+  const sv = sideView(list, rows, () => "", s);
+  const rect = sv.list;
+  followSelection(s, rows.length, rect.h);
+  if (!rows.length) drawText(c, rect.x + 1, rect.y, s.filter ? "no matches" : "no problems", roleStyle(theme, "dim", bg), rect.w - 1);
+  for (let i = 0; i < rect.h; i++) {
+    const row = rows[s.scroll + i];
+    if (!row) break;
+    const y = rect.y + i;
+    const selected = s.scroll + i === s.selected && app.region === "sidebar";
+    const st = roleStyle(theme, selected ? "sidebar_selected" : "sidebar", bg);
+    if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
+    if (row.heading) {
+      drawText(c, rect.x, y, truncate(` ${row.folded ? g.foldClosed : g.foldOpen} ${row.label}`, sv.cols), { ...st, bold: true }, rect.w);
+      continue;
+    }
+    if (row.note) {
+      drawText(c, rect.x + 3, y, truncate(row.label, sv.cols - 3), st, sv.cols - 3);
+      continue;
+    }
+    const w = drawText(c, rect.x + 5, y, truncate(row.label, sv.cols - 5), { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, sv.cols - 5);
+    const x = rect.x + 5 + w + 2;
+    if (x < rect.x + sv.cols) drawText(c, x, y, truncate(sanitize(row.detail), rect.x + sv.cols - x), { ...roleStyle(theme, row.section === "Broken links" ? "link_unresolved" : "link_ambiguous", st.bg), bg: st.bg }, rect.x + sv.cols - x);
+  }
+  paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
   return rect;
 }
 

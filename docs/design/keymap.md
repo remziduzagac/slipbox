@@ -259,6 +259,7 @@ file's folder); elsewhere on the current note, its folder, or this vault.
 | `space d p` | paste into the folder: what was copied, or cut |
 | `space n shift+y` | a copy of the note beside it (`name-copy`), opened |
 | `space v t` / `space v u` | the trash (`:trash`) / restore what was deleted last |
+| `space v p` | the problems (`:problems`, `1.7`): broken and ambiguous links, in the left panel |
 | `space v m` | make a vault (`:init`): this loose folder; in a vault, the selected folder (or this note's) |
 | `space v shift+m` | make the vault a plain folder of the one holding it (this one: then into its parent) |
 | `space v n` | rename the vault (the selected one, or this one) |

@@ -409,7 +409,7 @@ position under a repeated heading (a log's `## Weather` entries) keeps its entry
 prepended: the anchor also records the heading's occurrence counted from the bottom and the row's
 text, and keeps whichever count still finds that text.
 
-## Side panes: explorer (plan `3.7`), history, Info, outline and footnotes
+## Side panes: explorer (plan `3.7`), history, problems, Info, outline and footnotes
 
 Each side has one panel, which shows one of its views at a time; its rail has a button per view,
 bright while that view shows. Clicking a view's button shows the panel on it (and focuses it), or
@@ -452,6 +452,14 @@ keys.
   `ctrl+n` / `ctrl+p` move, `enter` or a click opens (in the explorer and the history, a
   double-click; the filter clears), `esc` clears it. `ctrl+p`
   stays the flat quick-open across the vault.
+- **Problems (left, `1.7`):** what's wrong in the vault — the left panel's views are the vault's, the right's the
+  file's. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link set: each link that
+  reaches nothing, and why when there's a reason, such as an unknown vault), **Ambiguous links**
+  (each that reaches several notes, and how many). Under each, the notes with such links, and under a note its
+  problems: the line and the link as written, in the link's colour. `enter` (or a double-click) opens the note there,
+  the cursor on the link as drawn (in source mode, on its text); on a note's row, at its first. It takes the
+  explorer's keys (`l` / `h` unfold and fold a section, `/` filters); a note's change shows at once. `space v p`,
+  `:problems`, the `⚠` button; `slipbox problems` gives the same.
 - **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
   Sections that fold (`h`/`l`): **File** (its path, the vault it belongs to, its kind, size, modified time, words and
   reading time, lines, encoding and line endings, saved or not), **Properties** (the frontmatter's keys and values,
@@ -503,9 +511,10 @@ the page), 3 columns wide, with no border: the frame's rules run over it unbroke
 rules it meets. Each is generic: a place for buttons, whatever they open.
 
 - **The left rail** runs from under the top bar's rule to the frame's bottom rule, its first button
-  level with the tab strip. It holds the left panel's views, the explorer's `≡` and the history's
-  `◷` (ascii `~`), and the panel opens beside it. Without it, `≡` is the top bar's and the history
-  opens with `space h h`.
+  level with the tab strip. It holds the left panel's views, the explorer's `≡`, the history's
+  `◷` (ascii `~`) and the problems' `⚠` (Nerd: an alert in a circle; ascii `!`), and the panel opens
+  beside it. Without it, `≡` is the top bar's, the history opens with `space h h` and the problems
+  with `space v p`.
 - **The right rail** runs from under the tab strip's rule, its first button level with the breadcrumb. It holds the
   right panel's views: the Info's `ℹ` (Nerd: an i in a circle; ascii `i`), under it the outline's `▤`, then the
   footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`); the panel opens beside it. Without it, `▤` sits at the
