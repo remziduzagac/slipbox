@@ -2792,7 +2792,7 @@ describe("review round 1", () => {
     const top = rows.findIndex((r) => r.includes("┌─"));
     const bottom = rows.findIndex((r, i) => i > top && r.includes("└"));
     const right = rows[top]!.lastIndexOf("┐");
-    for (let y = top; y <= bottom; y++) expect(rows[y]!.slice(right + 1).replace(/[▐┃━▤†]/g, "").trim()).toBe(""); // borders, the right rail
+    for (let y = top; y <= bottom; y++) expect(rows[y]!.slice(right + 1).replace(/[▐┃━▤¹]/g, "").trim()).toBe(""); // borders, the right rail
     expect(rows[bottom]).toMatch(/\+\d+ more/);
   });
   test("NO_COLOR: the scrollbar thumb stands out from its track; the current note is bold", async () => {

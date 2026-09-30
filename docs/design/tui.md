@@ -460,7 +460,7 @@ keys.
   references, each with its line and that line's text; `enter` (or a click) jumps to the definition or that
   reference — in a rendered window onto the reference or definition as drawn, in source mode to the text. While not
   focused it follows the cursor: the footnote the cursor's line refers to or defines. It never scrolls sideways: a
-  long row is cut, so its count stays. `space n f`, the `†` button, `:footnotes`; `slipbox footnotes <note>` gives
+  long row is cut, so its count stays. `space n f`, its button, `:footnotes`; `slipbox footnotes <note>` gives
   the same (`docs/design/cli.md`).
 
 Each pane starts with its view's title ("Explorer", "History", "Outline", "Footnotes") and a blank row before the
@@ -481,7 +481,7 @@ rules it meets. Each is generic: a place for buttons, whatever they open.
   `◷` (ascii `~`), and the panel opens beside it. Without it, `≡` is the top bar's and the history
   opens with `space h h`.
 - **The right rail** runs from under the tab strip's rule, its first button level with the
-  breadcrumb. It holds the right panel's views, the outline's `▤` and under it the footnotes' `†` (ascii `*`), and
+  breadcrumb. It holds the right panel's views, the outline's `▤` and under it the footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`), and
   the panel opens beside it. Without it, `▤` sits at the breadcrumb's right end and the footnotes open with
   `space n f`.
 

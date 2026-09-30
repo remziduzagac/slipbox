@@ -580,7 +580,7 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
-    name: "footnotes: the right panel's second view — space n f, its † under ▤; unfold, jump to a reference",
+    name: "footnotes: the right panel's second view — space n f, its superscript button under ▤; unfold, jump to a reference",
     run: async (s) => {
       await open(s, "partners-and-names");
       await leader(s, "n", "f");
@@ -588,7 +588,7 @@ export const SCENARIOS: Scenario[] = [
       await s.see("Footnotes");
       await s.see(/\[1\] Counted at the/);
       await s.see(/\[charter\]/);
-      await s.until(() => s.screen().some((r) => /▤\s*$/.test(r)) && s.screen().some((r) => /†\s*$/.test(r)), 3000, "the rail's ▤ and † under it");
+      await s.until(() => s.screen().some((r) => /▤\s*$/.test(r)) && s.screen().some((r) => /(\u{f0283}|¹|\^)\s*$/u.test(r)), 3000, "the rail's ▤ and † under it");
       await s.keys("l");
       await s.see("L95");
       await s.keys("j", "enter");

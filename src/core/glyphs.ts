@@ -147,7 +147,7 @@ const unicode: Glyphs = {
   dirty: "●",
   explorerButton: "≡",
   outlineButton: "▤",
-  footnotesButton: "†",
+  footnotesButton: "¹",
   historyButton: "◷",
   close: "×",
   pin: "⚑",
@@ -176,6 +176,7 @@ const nerd: Glyphs = {
   // Material, like the folders (so the same size), and nothing like one: shelves of notes.
   vault: "\u{f125f}", // nf-md-bookshelf
   newNote: "\u{f0752}", // nf-md-file_plus
+  footnotesButton: "\u{f0283}", // nf-md-format_superscript
   newFolder: "\u{f0257}", // nf-md-folder_plus
   itemMenu: "\u{f01d8}", // nf-md-dots_horizontal
   renameItem: "\u{f03eb}", // nf-md-pencil
@@ -241,7 +242,7 @@ const ascii: Glyphs = {
   dirty: "*",
   explorerButton: "=",
   outlineButton: "#",
-  footnotesButton: "*",
+  footnotesButton: "^",
   historyButton: "~",
   close: "x",
   pin: "^",
