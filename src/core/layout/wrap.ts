@@ -7,8 +7,9 @@ import type { Span } from "./ir.ts";
 interface G {
   g: string;
   w: number;
-  /** Index of the source span. */
+  /** Index of the source span, and where in its text the grapheme starts. */
   s: number;
+  o: number;
 }
 
 type Chunk = { kind: "word" | "space"; gs: G[]; width: number } | { kind: "newline" };
@@ -20,6 +21,8 @@ const SPACE = /^(?![\u00a0\u2007\u202f])\s$/;
 const NO_BREAK_BEFORE = /^[、。，．：；？！）」』】〕〉》｝］〙〗ー々ゝゞヽヾ…‥・％]$/;
 const NO_BREAK_AFTER = /^[（「『【〔〈《｛［〘〖]$/;
 const BREAK_AFTER = /^[/\\\-_.?&=,:;|]$/;
+/** ASCII closing punctuation: kept with the CJK character before it. */
+const CLOSING = ",.;:!?)]}";
 
 function chunkify(spans: Span[]): Chunk[] {
   const chunks: Chunk[] = [];
@@ -29,25 +32,30 @@ function chunkify(spans: Span[]): Chunk[] {
     cur = null;
   };
   spans.forEach((span, s) => {
+    let o = 0;
     for (const g of graphemes(span.text)) {
+      const at = o;
+      o += g.length;
       if (g === "\n") {
         flush();
         chunks.push({ kind: "newline" });
         continue;
       }
       const w = graphemeWidth(g);
-      const kind = SPACE.test(g) ? "space" : "word";
+      // ASCII without a regex: whitespace is a space, a tab or a line break's kin (\v \f \r).
+      const c = g.length === 1 ? g.charCodeAt(0) : -1;
+      const kind = c >= 0 && c < 0x80 ? (c === 32 || (c >= 9 && c <= 13) ? "space" : "word") : SPACE.test(g) ? "space" : "word";
       // Wide (CJK) graphemes are each their own break opportunity — except that closing
       // punctuation stays with what precedes it and opening punctuation with what follows (kinsoku).
       if (kind === "word" && w === 2) {
         flush();
         const prev = chunks.at(-1);
         if (prev?.kind === "word" && (NO_BREAK_BEFORE.test(g) || NO_BREAK_AFTER.test(prev.gs.at(-1)!.g))) {
-          prev.gs.push({ g, w, s });
+          prev.gs.push({ g, w, s, o: at });
           prev.width += w;
           continue;
         }
-        chunks.push({ kind: "word", gs: [{ g, w, s }], width: w });
+        chunks.push({ kind: "word", gs: [{ g, w, s, o: at }], width: w });
         continue;
       }
       if (!cur || cur.kind !== kind) {
@@ -55,11 +63,11 @@ function chunkify(spans: Span[]): Chunk[] {
         const prev = chunks.at(-1);
         // Text right after opening punctuation continues its chunk (no break after （ or 「), and so
         // does ASCII closing punctuation right after a CJK character (no row starts with its comma).
-        if (kind === "word" && prev?.kind === "word" && (NO_BREAK_AFTER.test(prev.gs.at(-1)!.g) || /^[,.;:!?)\]}]$/.test(g)))
+        if (kind === "word" && prev?.kind === "word" && (NO_BREAK_AFTER.test(prev.gs.at(-1)!.g) || (c >= 0 && CLOSING.includes(g))))
           cur = chunks.pop() as { kind: "word" | "space"; gs: G[]; width: number };
         else cur = { kind, gs: [], width: 0 };
       }
-      cur.gs.push({ g, w, s });
+      cur.gs.push({ g, w, s, o: at });
       cur.width += w;
     }
   });
@@ -67,16 +75,23 @@ function chunkify(spans: Span[]): Chunk[] {
   return chunks;
 }
 
+/** A row's graphemes as spans: each run from one source span sliced from its text, not rebuilt. */
 function toSpans(gs: G[], spans: Span[]): Span[] {
   const out: Span[] = [];
-  for (const { g, s } of gs) {
+  let i = 0;
+  while (i < gs.length) {
+    const first = gs[i]!;
+    let end = first.o + first.g.length;
+    let j = i + 1;
+    // A run: the same span, each grapheme right after the one before (a dropped space ends it).
+    while (j < gs.length && gs[j]!.s === first.s && gs[j]!.o === end) end += gs[j++]!.g.length;
+    const src = spans[first.s]!;
+    const text = src.text.slice(first.o, end);
     const last = out[out.length - 1];
-    if (last && (last as Span & { _s?: number })._s === s) last.text += g;
-    else {
-      const src = spans[s]!;
-      const sp: Span & { _s?: number } = { ...src, text: g, _s: s };
-      out.push(sp);
-    }
+    // A space dropped between two runs of one span: the text joins, as before.
+    if (last && (last as Span & { _s?: number })._s === first.s) last.text += text;
+    else out.push({ ...src, text, _s: first.s } as Span);
+    i = j;
   }
   for (const sp of out) delete (sp as Span & { _s?: number })._s;
   return out;
@@ -87,6 +102,111 @@ function toSpans(gs: G[], spans: Span[]): Span[] {
  * are dropped; trailing spaces are trimmed.
  */
 export function wrapSpans(spans: Span[], width: number): Span[][] {
+  return wrapAscii(spans, Math.max(1, width)) ?? wrapGraphemes(spans, width);
+}
+
+/** The characters `segments` breaks a long word after. */
+const BREAK_CHARS = "/\\-_.?&=,:;|";
+
+/**
+ * `wrapGraphemes` for spans of printable ASCII only — most paragraphs: every character one
+ * grapheme one column wide, only a space a break, no CJK rules — by ranges of the spans' joined
+ * text rather than an object per character (plan 15.1). The same rows, exactly; null for any
+ * other text.
+ */
+function wrapAscii(spans: Span[], w: number): Span[][] | null {
+  let all = "";
+  const starts: number[] = [];
+  for (const sp of spans) {
+    const t = sp.text;
+    for (let k = 0; k < t.length; k++) {
+      const c = t.charCodeAt(k);
+      if (c < 0x20 || c > 0x7e) return null;
+    }
+    starts.push(all.length);
+    all += t;
+  }
+  const rows: [number, number][] = [];
+  // The row being filled (a < 0: empty), and the space before the next word, if the row has one.
+  let a = -1;
+  let b = -1;
+  let rowW = 0;
+  let pa = -1;
+  let pb = -1;
+  const endRow = () => {
+    rows.push([a, b]);
+    a = b = pa = pb = -1;
+    rowW = 0;
+  };
+  const add = (x: number, y: number) => {
+    if (a < 0) a = x;
+    b = y;
+    rowW += y - x;
+  };
+  const n = all.length;
+  let i = 0;
+  while (i < n) {
+    let j = i;
+    if (all.charCodeAt(i) === 32) {
+      while (j < n && all.charCodeAt(j) === 32) j++;
+      if (a >= 0) {
+        pa = i;
+        pb = j;
+      }
+      i = j;
+      continue;
+    }
+    while (j < n && all.charCodeAt(j) !== 32) j++;
+    const cw = j - i;
+    const pendingW = pa >= 0 ? pb - pa : 0;
+    if (rowW + pendingW + cw <= w) {
+      if (pa >= 0) add(pa, pb);
+      add(i, j);
+      pa = pb = -1;
+    } else if (a >= 0 && cw <= w) {
+      endRow();
+      add(i, j);
+    } else {
+      // Longer than a row: its soft segments, and by character one wider than a row (as below).
+      if (a >= 0) endRow();
+      pa = pb = -1;
+      let from = i;
+      for (let k = i; k < j; k++) {
+        if (!(k === j - 1 || (k > i && BREAK_CHARS.includes(all[k]!)))) continue;
+        const to = k + 1;
+        const sw = to - from;
+        if (rowW + sw <= w) add(from, to);
+        else if (sw <= w) {
+          endRow();
+          add(from, to);
+        } else {
+          if (a >= 0) endRow();
+          for (let q = from; q < to; q++) {
+            if (rowW + 1 > w && a >= 0) endRow();
+            add(q, q + 1);
+          }
+        }
+        from = to;
+      }
+    }
+    i = j;
+  }
+  if (a >= 0 || rows.length === 0) rows.push([a, b]);
+  return rows.map(([x, y]) => {
+    const out: Span[] = [];
+    if (x < 0) return out;
+    spans.forEach((sp, k) => {
+      const st = starts[k]!;
+      const from = Math.max(x, st);
+      const to = Math.min(y, st + sp.text.length);
+      if (from < to) out.push({ ...sp, text: sp.text.slice(from - st, to - st) });
+    });
+    return out;
+  });
+}
+
+/** Wrap by grapheme: any text (the rule `wrapAscii` follows for ASCII). */
+export function wrapGraphemes(spans: Span[], width: number): Span[][] {
   const w = Math.max(1, width);
   const rows: G[][] = [];
   let row: G[] = [];

@@ -71,6 +71,9 @@ async function makeApp(open: string, width = 120, height = 40) {
     frame();
   };
   frame();
+  // A big note parses on other threads (15.1): its first frame says so; then it's drawn.
+  await app.whenParsed();
+  frame();
   return { app, key, frame, resize: (nw: number, nh: number) => ((w = nw), (h = nh), frame()) };
 }
 
@@ -90,6 +93,24 @@ async function bench(name: string, run: () => Promise<number[]>): Promise<void> 
 }
 
 for (const note of ["k1.md", "k20.md"]) {
+  await bench(`open ${note}: first frame`, async () => {
+    const xs: number[] = [];
+    for (let k = 0; k < 3; k++) {
+      const config = structuredClone(DEFAULT_CONFIG);
+      config.ui.restore_session = false;
+      const loc = locateVault({ root: vault });
+      const graph = openGraph(loc, config, false, "lazy");
+      let app: InstanceType<typeof App> | null = null;
+      xs.push(
+        await time(() => {
+          app = new App({ loc, config, graph, host: { requestRender() {}, osc52: () => true, quit() {} }, open: note, watch: false });
+          app.draw(new TextCanvas(120, 40));
+        }),
+      );
+      await app!.whenParsed(); // not timed: the next run starts clean
+    }
+    return xs;
+  });
   await bench(`open ${note} (parse + layout + draw)`, async () => {
     const xs: number[] = [];
     for (let k = 0; k < 3; k++) xs.push(await time(() => makeApp(note).then(() => {})));

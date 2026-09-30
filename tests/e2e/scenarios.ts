@@ -124,6 +124,27 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "render: a big note parses on other threads, then is drawn; its end, its width changed (15.1)",
+    options: {
+      open: "big.md",
+      files: {
+        // 16,000 lines, 700 KB: past the 128 KB that sends a parse to the workers.
+        "big.md": Array.from({ length: 8000 }, (_, i) => (i % 40 === 0 ? `## Part ${i}\n` : `Line ${i} of the big note, with [[home]] and enough words to fill a row or so.\n`)).join("\n"),
+      },
+    },
+    run: async (s) => {
+      await s.see("Part 0", 10_000);
+      await s.see("Line 1 of the big note");
+      await s.keys("shift+g");
+      await s.see("Line 7999 of the big note");
+      await s.status("L15999"); // the last line with text
+      // The explorer toggled: the whole note re-wrapped at another width, still at its end.
+      await leader(s, "e");
+      await s.see("Line 7999 of the big note");
+    },
+  },
+
   // --- reading: every motion ------------------------------------------------------------------
   {
     name: "motions: j k h l, words, row ends, top and bottom, headings, paragraphs, pages",

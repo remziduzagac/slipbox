@@ -62,12 +62,14 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/registry.ts` | 17.2–17.6 | a vault's identity, the home vault, the machine's vaults, storage keys, names |
 | `core/reach.ts` | 17.8–17.11 | other vaults: `[[vault:note]]`, paths out of the root, their backlinks here |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
+| `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
 | `core/files.ts` | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
 | `core/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
 | `core/wikilink.ts` | 1.3 | micromark tokenizer for `[[link]]` and `![[embed]]` |
 | `core/footnotes.ts` | 3.17 | a note's footnotes: labels, definitions, references, in GFM's order |
 | `core/tags.ts` | 1.6 | micromark tokenizer for `#tag`; tag names and keys (the graph's tag index) |
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
+| `core/parse-pool.ts` | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
 | `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
 | `core/graph.ts` | 1.5, 1.8, 1.9 | notes, links, backlinks, lazy parsing, persisted index |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
@@ -91,6 +93,8 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/position.ts` | 3.4, 3.5, 3.15 | anchors, reading positions, session file |
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
+| `core/context.ts` | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
+| `core/lint.ts` | 3.21 | the lint surface: your markdownlint-cli2 run, its findings read |
 | `core/clipboard.ts` | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / wl-copy / xclip, then a file |
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face |
@@ -188,7 +192,8 @@ needs, so `render` and `resolve` never parse the whole vault. `backlinks`, `ls -
 parses the rest in slices of about 12 ms between frames, showing `indexing N…` in the top bar. A
 slice always parses at least one whole note, so a big note holds the screen while it is indexed.
 
-**Big notes (plan `15.1`).** Three things keep a big note's cost in proportion to what changed:
+**Big notes (plan `15.1`).** Three things keep a big note's cost in proportion to what changed, and two more keep
+the whole-note work — the first open, a change of width — short:
 
 - **The parse is in chunks** (`parseMarkdown` in `core/parse.ts`): the note is cut where the result
   is certain to be the same as a whole parse — after a blank line, a heading, a closed fence or
@@ -202,20 +207,33 @@ slice always parses at least one whole note, so a big note holds the screen whil
 - **Source mode lays out changed lines** (`layoutSource`): the lines before and after an edit are
   reused, shifted when lines were added or taken away; the highlighter's per-line state says where
   reuse may resume. Headings are found line by line as it goes.
+- **A big note parses on other threads** (`core/parse-pool.ts`): when what's left to parse of a note is 128 KB or
+  more (a first open, a reload that changed most of it), its chunks are split among up to four workers, which send
+  their nodes back as JSON into the buffer's parse cache — so the parse that follows here finds every chunk done.
+  Meanwhile the view draws one line, `reading big.md — 20,000 lines…`, without moving (its reading position waits
+  for the real layout); a key waits for the parse and then acts on the note, and a click is dropped. The Info and
+  footnotes views wait too, rather than parse here. Where threads can't start, or one fails, the note is parsed
+  here as any other. The workers stop after a minute idle.
+- **Wrapping is mostly ASCII work** (`core/layout/wrap.ts`, `core/width.ts`): a paragraph of printable ASCII is
+  wrapped by ranges of its text, not a grapheme object per character (the same rows, exactly: a randomised test
+  holds the two paths together); other text goes through the grapheme segmenter only around what isn't ASCII
+  (between two printable ASCII characters is always a boundary); short strings' widths (a bullet, a border) are
+  remembered; and a code block is highlighted once, not again at each width.
 
-Measured with `bun scripts/bench.ts` (median, this machine, 2026-09-29):
+Measured with `bun scripts/bench.ts` (median, this machine, 2026-10-01):
 
 | Case | 1,000 lines | 20,000 lines (400 KB) |
 | --- | --- | --- |
-| open: parse, layout, first frame | 58 ms | 810 ms (was 1,500) |
-| move the cursor (`j`) | 0.8 ms | 0.7 ms |
-| type a key in source mode | 0.9 ms | 7 ms (was 60) |
-| type a key in the lens | 1.2 ms | 10–13 ms (was 14) |
-| leave insert mode in the lens | 7 ms | 80 ms (was 1,453) |
-| a reload after an agent's write | 6 ms | 60–70 ms (was 1,418) |
-| a width change (resize, a pane) | 12 ms | 180 ms (was 200) |
-| CLI `task <note> <line>` on 20,000 tasks | — | 120 ms (was 2.3 s; it parses the line's chunk) |
+| open: the first frame | 50 ms | 30 ms (`reading…`; was 790, the whole parse) |
+| open: the note drawn | 50 ms | 380 ms (was 790) |
+| move the cursor (`j`) | 1 ms | 1 ms |
+| type a key in source mode | 1.3 ms | 13–18 ms |
+| type a key in the lens | 2 ms | 18 ms |
+| leave insert mode in the lens | 5–10 ms | 40 ms (was 80; 1,453 before the chunks) |
+| a reload after an agent's write | 5 ms | 45–50 ms (was 70; 1,418 before the chunks) |
+| a width change (resize, a pane) | 4 ms | 70 ms (was 200) |
+| CLI `task <note> <line>` on 20,000 tasks | — | 135 ms (it parses the line's chunk) |
 
-What is left grows with the note: the first open parses and renders it all, and a width change
-re-wraps every block. Parsing in worker threads, and laying out only what's in view first, are
-the next levers; they belong with phase 4's vault-scale work.
+What still grows with the note: a width change re-wraps every block (70 ms at 20,000 lines), and a first open
+parses all of it (on other threads, 380 ms). Laying out only what's in view first is the lever left; nothing an
+ordinary note needs.

@@ -100,11 +100,36 @@ export function hasLanguage(lang: string): boolean {
 
 const ENTITIES: Record<string, string> = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#x27;": "'", "&#39;": "'" };
 
-/** Highlight a code block. Returns one token list per source line, or null for plain text. */
+/** Blocks highlighted, by language and text: highlighting doesn't depend on the width, so a re-wrap
+ *  (a resize, a pane toggled) reuses it (plan 15.1). The oldest go first past either bound. */
+const done = new Map<string, Token[][] | null>();
+let doneChars = 0;
+const DONE_MAX = 8000;
+const DONE_CHARS = 8 * 1024 * 1024;
+
+/**
+ * Highlight a code block. Returns one token list per source line, or null for plain text. The
+ * lists are shared between calls with the same text: read them, never change them.
+ */
 export function highlight(code: string, lang: string | null | undefined): Token[][] | null {
   if (!lang) return null;
   const name = lang.toLowerCase();
   if (!hljs.getLanguage(name)) return null;
+  const key = `${name}\u0000${code}`;
+  const hit = done.get(key);
+  if (hit !== undefined) return hit;
+  const lines = highlightNow(code, name);
+  done.set(key, lines);
+  doneChars += key.length;
+  for (const [k] of done) {
+    if (done.size <= DONE_MAX && doneChars <= DONE_CHARS) break;
+    done.delete(k);
+    doneChars -= k.length;
+  }
+  return lines;
+}
+
+function highlightNow(code: string, name: string): Token[][] | null {
   let html: string;
   try {
     html = hljs.highlight(code, { language: name, ignoreIllegals: true }).value;

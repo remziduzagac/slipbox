@@ -1215,6 +1215,9 @@ export class App {
   }
 
   layoutFor(view: View, paneWidth: number, gutter = 0): Layout {
+    // A big note parsing on other threads (15.1): a line saying so, and nothing of the view moved
+    // (its reading position stays for the real layout, a moment later).
+    if (!view.source && !view.live && view.buf.parseAhead()) return this.readingLayout(view.buf, this.textWidth(paneWidth, gutter));
     // A data file that stopped parsing (16.14) goes to source mode, the error said — when insert
     // mode ends, never mid-typing (an open quote is normal while a value is typed).
     if (!view.source && !view.insert && !this.canRender(view.buf)) {
@@ -1256,6 +1259,29 @@ export class App {
     }
     if (view.live && view.liveBase) this.pinLens(view, layout);
     return layout;
+  }
+
+  /** What a big note shows while its parse runs on other threads (15.1); keys wait for it. */
+  private readingLayout(buf: NoteBuffer, width: number): Layout {
+    const parse = buf.parsing!;
+    if (!this.parses.has(parse)) {
+      this.parses.add(parse);
+      void parse.finally(() => {
+        this.parses.delete(parse);
+        for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+        this.host.requestRender();
+      });
+    }
+    const text = truncate(`reading ${this.displayName(buf)} — ${buf.lineStarts().length.toLocaleString("en")} lines…`, width);
+    return { lines: [{ spans: [{ text, role: "dim", attrs: 0 }], src: 1 }], links: [], headings: [], width, clipped: 0 };
+  }
+
+  /** Big notes' parses running on other threads: a key waits for them, a click is dropped. */
+  private readonly parses = new Set<Promise<void>>();
+
+  /** Once every big note's parse has landed (tests, the benchmark). */
+  async whenParsed(): Promise<void> {
+    while (this.parses.size) await Promise.all(this.parses);
   }
 
   /**
@@ -2796,6 +2822,8 @@ export class App {
   footnotes(): Footnote[] {
     const buf = this.view?.buf;
     if (!buf || buf.kind.group !== "note") return [];
+    // Parsing on other threads (15.1): none yet, rather than the whole parse here.
+    if (buf.parsing) return [];
     const key = `${buf.key}:${buf.version}`;
     if (this.footnoteCache?.key !== key) this.footnoteCache = { key, list: footnotesOf(buf.parsed) };
     return this.footnoteCache.list;
@@ -3129,7 +3157,7 @@ export class App {
     const view = this.view;
     if (!view) return [];
     const b = view.buf;
-    const key = `${b.key}:${b.version}:${this.graph.generation}:${b.dirty}:${b.deleted}`;
+    const key = `${b.key}:${b.version}:${this.graph.generation}:${b.dirty}:${b.deleted}:${!!b.parsing}`;
     if (this.infoCache?.key === key) return this.infoCache.rows;
     const rows: Omit<InfoRow, "folded">[] = [];
     const head = (section: string) => rows.push({ section, heading: true, key: section, value: "", depth: 0, text: section });
@@ -3152,7 +3180,9 @@ export class App {
     row("File", "encoding", [b.invalidUtf8 ? "invalid UTF-8" : "UTF-8", b.eol === "\r\n" ? "CRLF" : "LF", ...(b.bom ? ["BOM"] : [])].join(", "));
     row("File", "state", b.deleted ? "deleted on disk" : b.conflictKept ? "unsaved — differs from disk" : b.dirty ? "unsaved changes" : "saved");
     // Its properties: the frontmatter, nested maps under their keys.
-    const fm = note ? b.parsed.frontmatter : null;
+    // Parsing on other threads (15.1): the properties and tasks when it's done.
+    const parsed = note && !b.parsing ? b.parsed : null;
+    const fm = parsed ? parsed.frontmatter : null;
     if (fm) {
       head("Properties");
       const lines = fm.raw.split("\n");
@@ -3192,7 +3222,7 @@ export class App {
     row("Links", "headings", String(this.currentLayout(view).headings.length), { run: "outline.toggle" });
     if (note) {
       row("Links", "footnotes", String(this.footnotes().length), { run: "footnotes.toggle" });
-      const tasks = listTasks(b.parsed.tree);
+      const tasks = parsed ? listTasks(parsed.tree) : [];
       if (tasks.length) row("Links", "tasks", `${tasks.filter((t) => t.checked).length} of ${tasks.length} done`);
     }
     this.infoCache = { key, rows };
@@ -4374,6 +4404,8 @@ export class App {
 
   /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. */
   async processKey(key: string): Promise<void> {
+    // A big note still parsing (15.1): the key acts on it once it's there, not on its placeholder.
+    while (this.parses.size) await Promise.all(this.parses);
     this.fixRegion();
     try {
       await this.dispatchKey(key);
@@ -4725,6 +4757,8 @@ export class App {
 
   /** Everything visible is clickable (docs/design/keymap.md, "Mouse"). */
   handleMouse(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
+    // A big note still parsing (15.1): a click or a scroll would land on its placeholder.
+    if (this.parses.size) return;
     this.handleMouseNow(ev);
     // As after a key: a click can save, load theirs, tick a task — the idle clock and the stale list
     // follow it too.

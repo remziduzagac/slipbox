@@ -318,6 +318,31 @@ export function parseAround(source: string, line: number): Root {
   return { type: "root", children: from ? shifted(root.children, from) : root.children };
 }
 
+/** The chunks `parseMarkdown` cuts a note into, each a text parsed on its own (`first`: the note's
+ *  start, where frontmatter is) — for parsing them elsewhere, on other threads (plan 15.1). */
+export function noteChunks(source: string): { text: string; first: boolean }[] {
+  const lines = tame(source).split("\n");
+  const starts = chunkStarts(lines);
+  return starts.map((from, c) => ({ text: lines.slice(from, starts[c + 1] ?? lines.length).join("\n"), first: from === 0 }));
+}
+
+/** A chunk's top-level nodes, as `parseMarkdown` parses it: positions from line 1, no offsets. */
+export function parseChunk(text: string, first: boolean): Root["children"] {
+  const root = (first ? processor : bodyProcessor).parse(text) as Root;
+  dropOffsets(root.children);
+  return root.children;
+}
+
+/** Chunks parsed elsewhere, taken into a buffer's cache: the next `parseMarkdown` of the note
+ *  parses none of them again. A chunk the cache has already is left as it is. */
+export function adoptChunks(cache: ParseCache, parsed: { text: string; children: Root["children"] }[]): void {
+  for (const p of parsed) {
+    if (cache.chunks.has(p.text)) continue;
+    for (const k of p.children) (k as unknown as Record<symbol, object>)[ORIGIN] = {};
+    cache.chunks.set(p.text, { children: p.children, shift: 0, stubbed: true });
+  }
+}
+
 export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?: boolean; chunkLines?: number } = {}): ParsedNote {
   const tamed = tame(source);
   const lines = tamed.split("\n");

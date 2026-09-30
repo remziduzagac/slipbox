@@ -1029,12 +1029,13 @@ runs the binding.
 ## Known limits
 
 - **A change of width re-wraps a whole note** (plan `15.1`): dragging a border, resize mode,
-  toggling a pane, zen, wrap or line numbers, a terminal resize — about 12 ms for a thousand-line
-  note and 180 ms for twenty thousand. A buffer keeps its last six widths, so going back and forth
+  toggling a pane, zen, wrap or line numbers, a terminal resize — about 4 ms for a thousand-line
+  note and 70 ms for twenty thousand. A buffer keeps its last six widths, so going back and forth
   is cached. Edits, reloads and leaving the lens reuse what didn't change (the parse by chunk, the
   render by block, source mode by line: [architecture.md](architecture.md), "Big notes").
-- **Pathological nesting parses slowly** (future optimization: plan `15.2`). A list nested
-  hundreds of levels deep takes seconds in the markdown parser, on the main thread.
+- **A big note's first open reads for a moment** (plan `15.1`): with 128 KB or more to parse, it parses on other
+  threads — the window says `reading big.md — 20,000 lines…` for about a third of a second at twenty thousand
+  lines, keys wait for it, a click is dropped — then the note is drawn where it was left.
 
 ## Parity with the CLI
 

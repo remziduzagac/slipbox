@@ -2,7 +2,7 @@
 
 Status: **phases 0–3 built**; **phase 3b (`16.x`, files beyond markdown) is next**, then 4. Phase 3
 left open `4.9` (moved to `15.1`), `5.9`, the lint surface, and `7.2`–`7.4`, which waited for renames (`7.1`) — all
-but `5.9` and `15.1` built since. Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
+but `5.9` built since. Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
 2026-09-28 — how it was built is in `docs/design/`, the decisions it needed in
 `docs/design/decisions.md`.
 
@@ -526,13 +526,14 @@ packaging lands whenever it first needs to run on a VM.*
 
 | ID | Item |
 | --- | --- |
-| 15.1 | Incremental layout — **mostly done**: parse by chunk, render by block, source mode by line |
+| 15.1 | **Done.** Incremental layout: parse by chunk, render by block, source mode by line; big notes on threads |
 | 15.2 | Pathological nesting — **done** as a cap: nesting past 60 renders as text, quadratic parser inputs tamed |
 
-`15.1`: edits, reloads and leaving the lens now cost what they change (`docs/design/architecture.md`,
-"Big notes", with timings from `scripts/bench.ts`). Left: a width change still re-wraps the whole
-note (180 ms at 20,000 lines), and the first open parses and renders all of it (810 ms). `15.2` is
-done as a cap (`docs/design/rendering.md`, "Hostile notes").
+`15.1`: edits, reloads and leaving the lens cost what they change (`docs/design/architecture.md`, "Big notes", with
+timings from `scripts/bench.ts`); a big note's first open parses on other threads behind a one-line `reading…`
+(380 ms at 20,000 lines, its first frame at once), and a width change re-wraps it in 70 ms, its ASCII by ranges. Laying
+out only what's in view would take the rest; no ordinary note needs it. `15.2` is done as a cap
+(`docs/design/rendering.md`, "Hostile notes").
 
 ## Files beyond markdown — `16.x` (phase 3b)
 

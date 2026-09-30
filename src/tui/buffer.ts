@@ -16,7 +16,8 @@ import { readText, type Stamp, stamp } from "../core/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
 import { layoutNote } from "../core/note.ts";
 import { layoutSource, newSourceCache } from "../core/layout/source.ts";
-import { headingsOf, newParseCache, type ParsedNote, parseMarkdown, slugify } from "../core/parse.ts";
+import { headingsOf, newParseCache, noteChunks, type ParsedNote, parseMarkdown, slugify } from "../core/parse.ts";
+import { parseInBackground } from "../core/parse-pool.ts";
 import { countWords } from "../core/words.ts";
 import { readerFor } from "../core/readers.ts";
 import type { CommentLink, OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
@@ -34,6 +35,9 @@ interface UndoStep {
   before: number;
   after: number;
 }
+
+/** A note with at least this much to parse is parsed on other threads (15.1): about 6,000 lines. */
+export const BACKGROUND_PARSE = 128 * 1024;
 
 export class NoteBuffer {
   source = "";
@@ -68,6 +72,11 @@ export class NoteBuffer {
 
   /** The linter's findings (3.21), and the version of the text they're for (the file as saved). */
   lint: { version: number; issues: LintIssue[] } | null = null;
+
+  /** The text's parse, running on other threads (15.1): until it lands, a view shows it's reading. */
+  parsing: Promise<void> | null = null;
+  /** The threads couldn't parse this note: the main thread does, as for any note. */
+  private parseFailed = false;
 
   /** A buffer that isn't a file of its own (3.20): its text given, saved by `save` (into a note's
    *  frontmatter), never read from or compared with the disk. */
@@ -156,6 +165,31 @@ export class NoteBuffer {
     this.layouts.clear();
     // What a render reads besides the text changed (the graph, the theme): no block is reusable.
     this.renderCache = newRenderCache();
+  }
+
+  /**
+   * A big note's parse, begun on other threads (15.1): when what's left to parse of the current
+   * text — the chunks its cache hasn't got — is at least `BACKGROUND_PARSE` characters (a first
+   * open, a reload that changed most of it). True while one runs; then `parsed` finds it done.
+   */
+  parseAhead(): boolean {
+    if (this.parsing) return true;
+    if (this.parseFailed || this.parsedVersion === this.version || this.source.length < BACKGROUND_PARSE) return false;
+    if (this.kind.group !== "note" || this.kind.format !== "markdown" || this.virtual) return false;
+    let missing = 0;
+    for (const c of noteChunks(this.source)) if (!this.parseCache.chunks.has(c.text)) missing += c.text.length;
+    if (missing < BACKGROUND_PARSE) return false;
+    this.parsing = parseInBackground(this.source, this.parseCache)
+      .then((ok) => {
+        if (!ok) this.parseFailed = true;
+      })
+      .catch(() => {
+        this.parseFailed = true;
+      })
+      .finally(() => {
+        this.parsing = null;
+      });
+    return true;
   }
 
   /** The parse of the current text, redone only when the text changed since. */

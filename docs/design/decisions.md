@@ -196,6 +196,17 @@ one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back,
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
 
+## `15.1` — a big note on other threads
+
+A big note's parse runs on workers because its chunks already parse the same apart as whole: each worker takes a run
+of them and sends its nodes back as JSON (a string crosses faster than a structured clone of the trees), and they go
+into the buffer's parse cache — so the main thread's parse, the one everything reads, stays the only parse there is,
+and finds nothing left to do. Four workers: more gain little, since the nodes still cross back one at a time. While
+it runs the view shows a line saying so rather than half a note: a partial layout would put the cursor, the reading
+position and a click somewhere the real one doesn't have, so keys wait for the parse (a third of a second at 20,000
+lines) and a click is dropped. Only a note with 128 KB left to parse goes to the threads; below that, starting them
+costs more than it saves.
+
 ## `9.7` — the context bundle
 
 The bundle is the scratch's other half: the scratch is hand-picked, the bundle is gathered from the link graph, and

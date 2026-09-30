@@ -840,6 +840,89 @@ describe("the chunked parse (15.1)", () => {
   });
 });
 
+describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
+  const strip = (t: unknown) => JSON.stringify(t, (k, v) => (k === "offset" ? undefined : v));
+  /** Every demo note, one after another (the first's frontmatter kept): references, footnotes,
+   *  tables, fences, lists across the chunks. */
+  const demo = async () => {
+    const { readdirSync, statSync } = await import("node:fs");
+    const walk = (d: string): string[] => readdirSync(d).flatMap((f) => (statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : f.endsWith(".md") ? [join(d, f)] : []));
+    return walk(join(import.meta.dir, "..", "examples", "vault"))
+      .sort()
+      .map((f, i) => {
+        const t = readFileSync(f, "utf8");
+        return i ? t.replace(/^---\n[\s\S]*?\n---\n/, "") : t;
+      })
+      .join("\n\n");
+  };
+
+  test("chunks parsed apart (through JSON, as from a thread) and taken in: the tree a parse here gives", async () => {
+    const { adoptChunks, noteChunks, parseChunk } = await import("../src/core/parse.ts");
+    const text = await demo();
+    const chunks = noteChunks(text);
+    expect(chunks.length).toBeGreaterThan(50);
+    expect(chunks[0]!.first).toBe(true);
+    const cache = newParseCache();
+    adoptChunks(
+      cache,
+      chunks.map((c) => ({ text: c.text, children: JSON.parse(JSON.stringify(parseChunk(c.text, c.first))) })),
+    );
+    const adopted = parseMarkdown(text, cache);
+    expect(strip(adopted.tree.children)).toBe(strip(parseMarkdown(text).tree.children));
+    expect(strip(adopted.frontmatter)).toBe(strip(parseMarkdown(text).frontmatter));
+    // Each block carries its token for the render's cache, as a block parsed here does (a list
+    // joined across a seam is a new node: none, either way).
+    const { ORIGIN } = await import("../src/core/parse.ts");
+    const tokens = (t: typeof adopted) => t.tree.children.map((n) => (n as unknown as Record<symbol, unknown>)[ORIGIN] !== undefined);
+    expect(tokens(adopted)).toEqual(tokens(parseMarkdown(text, newParseCache())));
+    expect(tokens(adopted).filter(Boolean).length).toBeGreaterThan(100);
+    // A chunk the cache has already stays as it is (its blocks' rows stay cached).
+    const before = new Map(cache.chunks);
+    adoptChunks(
+      cache,
+      chunks.map((c) => ({ text: c.text, children: parseChunk(c.text, c.first) })),
+    );
+    for (const [k, v] of before) expect(cache.chunks.get(k)).toBe(v);
+  });
+
+  test("on the workers: every chunk in the cache, the same tree; nothing left the second time", async () => {
+    const { noteChunks } = await import("../src/core/parse.ts");
+    const { parseInBackground, stopParsePool } = await import("../src/core/parse-pool.ts");
+    const text = await demo();
+    const cache = newParseCache();
+    expect(await parseInBackground(text, cache)).toBe(true);
+    for (const c of noteChunks(text)) expect(cache.chunks.has(c.text)).toBe(true);
+    expect(strip(parseMarkdown(text, cache).tree.children)).toBe(strip(parseMarkdown(text).tree.children));
+    const had = new Map(cache.chunks);
+    expect(await parseInBackground(text, cache)).toBe(true);
+    for (const [k, v] of had) expect(cache.chunks.get(k)).toBe(v); // none parsed again
+    stopParsePool();
+  });
+
+  test("graphemes by islands: what the segmenter gives, for text mostly ASCII", () => {
+    const seg = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+    let seed = 5;
+    const rand = (n: number) => {
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+      return (seed >>> 8) % n;
+    };
+    const pieces = ["a", "b", " ", "e\u0301", "\u0301", "\u0600", "1", "•", "│", "漢", "👨‍👩‍👧", "🇯🇵", "\r\n", "\n", "\t", "x", "é", "\u200d", "️", "-"];
+    for (let k = 0; k < 5000; k++) {
+      const text = Array.from({ length: rand(12) }, () => pieces[rand(pieces.length)]!).join("");
+      expect(graphemes(text)).toEqual([...seg.segment(text)].map((x) => x.segment));
+    }
+  });
+
+  test("a code block is highlighted once: a re-wrap reuses its colours", async () => {
+    const { highlight } = await import("../src/core/layout/highlight.ts");
+    const a = highlight("const x = 1;\nfunction f() { return x; }", "ts");
+    expect(a).not.toBeNull();
+    expect(highlight("const x = 1;\nfunction f() { return x; }", "TS")).toBe(a); // the same lists
+    expect(highlight("const x = 2;", "ts")).not.toBe(a);
+    expect(highlight("text", "no-such-language")).toBeNull();
+  });
+});
+
 describe("parseAround (15.1)", () => {
   test("the tasks of one line's chunk are the whole parse's there", async () => {
     const { parseAround } = await import("../src/core/parse.ts");

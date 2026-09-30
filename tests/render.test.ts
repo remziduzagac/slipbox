@@ -12,7 +12,7 @@ import { parseData } from "../src/core/data.ts";
 import { classify } from "../src/core/filetypes.ts";
 import { parseNoteFile } from "../src/core/readers.ts";
 import { allocate } from "../src/core/layout/table.ts";
-import { countLines, measure, wrapSpans } from "../src/core/layout/wrap.ts";
+import { countLines, measure, wrapGraphemes, wrapSpans } from "../src/core/layout/wrap.ts";
 import type { Span } from "../src/core/layout/ir.ts";
 import { loadTheme } from "../src/core/theme/index.ts";
 import { stringWidth } from "../src/core/width.ts";
@@ -276,6 +276,36 @@ describe("the allocator predicts exactly what is drawn (review cycle 2)", () => 
         if (predicted !== drawn) throw new Error(`${JSON.stringify(spans.map((x) => x.text))} @${w}: predicted ${predicted}, drawn ${drawn}`);
       }
     }
+  });
+});
+
+describe("wrapping ASCII by ranges gives the grapheme wrap's rows, exactly (15.1)", () => {
+  test("random spans of words, runs of spaces, separators, long words, empty spans, at every width", () => {
+    let seed = 11;
+    const rand = (n: number) => {
+      seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+      return (seed >>> 8) % n;
+    };
+    const pieces = ["a", "word", " ", "  ", "   ", "/", "-", ".", ",", "?", "=", "|", "_", "x/y", "a-b-c", "longidentifier_with.parts/and-more", "https://example.org/a?b=c&d", "!", "(", "~", ""];
+    const roles = ["text", "strong", "link"] as const;
+    let fast = 0;
+    for (let k = 0; k < 4000; k++) {
+      const spans: Span[] = Array.from({ length: 1 + rand(4) }, () => ({
+        text: Array.from({ length: rand(7) }, () => pieces[rand(pieces.length)]!).join(""),
+        role: roles[rand(roles.length)]!,
+        attrs: rand(3),
+      }));
+      for (let w = 1; w <= 24; w++) {
+        const a = wrapSpans(spans, w);
+        const b = wrapGraphemes(spans, w);
+        if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${JSON.stringify(spans.map((x) => x.text))} @${w}:\n${JSON.stringify(a)}\n${JSON.stringify(b)}`);
+        fast++;
+      }
+    }
+    expect(fast).toBe(4000 * 24);
+    // Anything else takes the grapheme path: the same function, so the same rows.
+    const mixed: Span[] = [{ text: "naïve 漢字 text", role: "text", attrs: 0 }];
+    expect(wrapSpans(mixed, 6)).toEqual(wrapGraphemes(mixed, 6));
   });
 });
 

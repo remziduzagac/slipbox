@@ -17,9 +17,30 @@ const ZERO_WIDTH = /^[​-‍⁠﻿]+$/;
 export function graphemes(text: string): string[] {
   // ASCII fast path: one grapheme per char unless CR LF appears.
   if (isPrintableAscii(text)) return text.split("");
+  // Mostly ASCII (a bullet, a border, an accent in a sentence): only the islands around the rest go
+  // through the segmenter. Between two printable ASCII characters is always a boundary (no rule
+  // of UAX #29 joins them), so a character with printable ASCII on both sides is a grapheme alone,
+  // and each island starts and ends at a certain boundary.
   const out: string[] = [];
-  for (const { segment } of segmenter.segment(text)) out.push(segment);
+  let island = -1;
+  for (let i = 0; i < text.length; i++) {
+    const alone = printable(text.charCodeAt(i)) && (i === 0 || printable(text.charCodeAt(i - 1))) && (i + 1 === text.length || printable(text.charCodeAt(i + 1)));
+    if (!alone) {
+      if (island < 0) island = i;
+      continue;
+    }
+    if (island >= 0) {
+      for (const { segment } of segmenter.segment(text.slice(island, i))) out.push(segment);
+      island = -1;
+    }
+    out.push(text[i]!);
+  }
+  if (island >= 0) for (const { segment } of segmenter.segment(text.slice(island))) out.push(segment);
   return out;
+}
+
+function printable(c: number): boolean {
+  return c >= 0x20 && c <= 0x7e;
 }
 
 function isPrintableAscii(text: string): boolean {
@@ -54,10 +75,20 @@ function computeWidth(g: string): number {
   return eastAsianWidth(cp, { ambiguousAsWide: false });
 }
 
+/** Short strings with something besides ASCII, measured: a list's bullet, a table's border, a
+ *  heading's mark come back row after row. */
+const shortCache = new Map<string, number>();
+
 export function stringWidth(text: string): number {
   if (isPrintableAscii(text)) return text.length;
+  const short = text.length <= 32;
+  if (short) {
+    const hit = shortCache.get(text);
+    if (hit !== undefined) return hit;
+  }
   let w = 0;
   for (const g of graphemes(text)) w += graphemeWidth(g);
+  if (short && shortCache.size < 10_000) shortCache.set(text, w);
   return w;
 }
 
