@@ -258,16 +258,19 @@ heading later falls back to a current line, not a stale one.
 **Saved state:**
 
 - **Reading position** per note, cursor included, in `positions.json` in the state dir.
-- **Session:** tabs and the active tab, splits with their orientation and ratio, cursors, the
-  explorer's and the outline's visibility and widths, UI setting overrides, and the palette's
-  recent commands, in `session.json`. The tabs and windows are restored when slipbox starts with
+- **Session:** tabs and the active tab, splits with their orientation and ratio, cursors, each
+  window's history (its last 50 places each way), the explorer's and the outline's visibility and
+  widths, UI setting overrides, the palette's recent commands and the recent notes, in
+  `session.json`. The tabs and windows are restored when slipbox starts with
   no path, if `ui.restore_session` is on; UI setting overrides and recent commands on every start.
 
 ## History (plan `3.6`)
 
-Each window has back and forward stacks of `{note, top, cursor}`, 200 deep. Following a link,
-jumping to a heading and opening a note all push onto them. The history list (`space h h`) shows
-the whole timeline and jumps anywhere in it.
+Each window has back and forward stacks of `{note, top, cursor}`, 200 deep, kept in the session (50
+each way) so they go on after a restart. Following a link, jumping to a heading and opening a note
+all push onto them. The history list (`space h h`) shows the whole timeline and jumps anywhere in
+it, and under it the notes read lately in other tabs and sessions: a note opened in a tab of its own
+starts a timeline of its own, and is still found there.
 
 ## Switching vaults (plans `17.10`, `17.14`)
 
@@ -369,7 +372,9 @@ keys.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
-  those after it forward.
+  those after it forward. Under it, **recent in this vault**: the notes read lately in other windows
+  and tabs and in earlier sessions (not already in the timeline), newest first, each with when —
+  the time today, else the day; `enter` opens one in this window. The heading is stepped over.
 - **Filter (`/`, the explorer, the history and the outline):** a `› text` row at the top of the
   list, a rule under it (joined to the pane's border), then the list —
   while the pane has focus (otherwise `/` is find in the note); typing narrows the rows (`/`

@@ -353,6 +353,11 @@ export const SCENARIOS: Scenario[] = [
       await s.status("operations-handbook.md");
       await s.keys("ctrl+t", "1");
       await s.status("home.md");
+      // The history: this window's timeline, and the handbook read in the other tab, under recent.
+      await leader(s, "h", "h");
+      await s.see("recent in this vault");
+      await s.see("operations-handbook.md");
+      await s.keys("escape");
       await s.keys("ctrl+t");
       await s.type("L");
       await s.see(/1 operations/); // home moved right, past the handbook

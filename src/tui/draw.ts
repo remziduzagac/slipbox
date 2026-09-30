@@ -1086,6 +1086,11 @@ function drawHistoryList(app: App, c: Canvas, list: Rect, bg: Color | null, geo:
     const row = rows[s.scroll + i];
     if (!row) break;
     const y = rect.y + i;
+    if (row.heading) {
+      // Over the notes read lately elsewhere: a dim heading, like a list's group.
+      drawText(c, rect.x, y, sideRow(text(row), sv), { ...roleStyle(theme, "dim", bg), bold: true }, rect.w);
+      continue;
+    }
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
     const st = roleStyle(theme, selected ? "sidebar_selected" : row.here ? "sidebar_active" : "sidebar", bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);

@@ -44,6 +44,7 @@ import {
   loadSession,
   PositionStore,
   rowFor,
+  SESSION_HISTORY,
   saveSession,
   type SessionState,
   TOP,
@@ -321,15 +322,22 @@ export const LEFT_VIEWS: PanelView<LeftView>[] = [
 
 export const RIGHT_VIEWS: PanelView<RightView>[] = [{ id: "outline", title: "Outline", glyph: (g) => g.outlineButton }];
 
-/** One row of the history view: a place in the window's timeline, newest first. */
+/**
+ * One row of the history view: a place in the window's timeline, newest first; then the notes
+ * read lately in this vault in other windows and sessions, under a heading.
+ */
 export interface HistoryRow {
   /** The note's name (the pane is narrow); `path` is what the filter matches. */
   label: string;
   path: string;
   hint: string;
-  /** Its index in the timeline (oldest first). */
+  /** Its index in the timeline (oldest first); -1 for a recent note or the heading. */
   index: number;
   here: boolean;
+  /** A note read lately, not in this window's timeline: its buffer key, opened here. */
+  recent?: string;
+  /** The heading over the recent notes: drawn dim, never selected. */
+  heading?: boolean;
 }
 
 export interface TreeRow {
@@ -869,9 +877,12 @@ export class App {
 
   /** Notes and files most recently shown, newest first (the switcher lists them first). */
   recentNotes: string[] = [];
+  /** When each note was opened this session (the history's recent notes show it). */
+  private readonly openedAt = new Map<string, number>();
 
   /** A note was shown in a window: it's the most recent now. */
   touchRecent(key: string): void {
+    this.openedAt.set(key, this.now());
     this.recentNotes = [key, ...this.recentNotes.filter((k) => k !== key)].slice(0, RECENT_NOTES_MAX);
   }
 
@@ -2321,8 +2332,27 @@ export class App {
         };
       })
       .reverse();
+    // Notes read lately in this vault, in other windows and tabs and in earlier sessions: the
+    // history of more than this window, newest first.
+    const inTimeline = new Set(timeline.map((l) => l.key));
+    const recent: HistoryRow[] = this.recentNotes
+      .filter((k) => !inTimeline.has(k) && existsSync(isAbsolute(k) ? k : join(this.loc.root, k)))
+      .map((k) => ({ label: k.split("/").pop()!, path: k, hint: this.whenRead(k), index: -1, here: false, recent: k }));
     const q = this.sidebar.filter ?? "";
-    return q ? rows.filter((r) => fuzzy(q, r.path)) : rows;
+    const mine = q ? rows.filter((r) => fuzzy(q, r.path)) : rows;
+    const others = q ? recent.filter((r) => fuzzy(q, r.path)) : recent;
+    return others.length ? [...mine, { label: "recent in this vault", path: "", hint: "", index: -1, here: false, heading: true }, ...others] : mine;
+  }
+
+  /** When a note was last read, briefly: the time today, else the day. */
+  private whenRead(key: string): string {
+    const opened = this.openedAt.get(key);
+    const at = opened !== undefined ? new Date(opened).toISOString() : this.positions.readAt(key);
+    if (!at) return "";
+    const d = new Date(at);
+    const now = new Date(this.now());
+    if (d.toDateString() === now.toDateString()) return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   }
 
   /** Jump the window to entry `i` of its timeline: what's before it becomes back, after it forward. */
@@ -2527,12 +2557,18 @@ export class App {
   historyAction(action: string): void {
     const s = this.sidebar;
     const rows = this.historyRows();
+    // The heading over the recent notes is stepped over.
+    const step = (from: number, by: number) => {
+      let i = Math.max(0, Math.min(rows.length - 1, from + by));
+      if (rows[i]?.heading) i = Math.max(0, Math.min(rows.length - 1, i + by));
+      return rows[i]?.heading ? from : i;
+    };
     switch (action) {
       case "down":
-        s.selected = Math.min(rows.length - 1, s.selected + 1);
+        s.selected = step(s.selected, 1);
         break;
       case "up":
-        s.selected = Math.max(0, s.selected - 1);
+        s.selected = step(s.selected, -1);
         break;
       case "top":
         s.selected = 0;
@@ -2545,8 +2581,9 @@ export class App {
       case "expand":
       case "open_split": {
         const row = rows[s.selected];
-        if (!row) break;
-        this.jumpHistory(row.index);
+        if (!row || row.heading) break;
+        if (row.recent) this.open(row.recent);
+        else this.jumpHistory(row.index);
         this.region = "content";
         if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
         break;
@@ -3478,7 +3515,7 @@ export class App {
       const idx = ev.y - g.sidebar.y + this.sidebar.scroll;
       if (this.leftView === "history") {
         const h = this.historyRows()[idx];
-        if (!h) return;
+        if (!h || h.heading) return;
         this.sidebar.selected = idx;
         // As in the explorer: one click selects, a double-click (or enter) jumps there.
         if (clicks < 2) return;
@@ -4080,7 +4117,12 @@ export class App {
       const views: View[] = [];
       for (const p of t.panes) {
         const buf = this.buffer(p.path);
-        if (buf) views.push(this.makeView(buf, p.anchor, p.cursor));
+        if (!buf) continue;
+        const view = this.makeView(buf, p.anchor, p.cursor);
+        // Its history too, so back, forward and the history list go on where they were.
+        view.back = [...(p.back ?? [])];
+        view.fwd = [...(p.fwd ?? [])];
+        views.push(view);
       }
       if (views.length) this.tabs.push({ views, active: Math.min(t.active, views.length - 1), orientation: t.orientation ?? "side", ratio: t.ratio ?? this.config.ui.split_ratio, ...(t.pinned ? { pinned: true } : {}) });
     }
@@ -4101,7 +4143,7 @@ export class App {
     const s: SessionState = {
       version: 1,
       tabs: this.tabs.map((t) => ({
-        panes: t.views.map((v) => ({ path: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor })),
+        panes: t.views.map((v) => ({ path: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor, back: v.back.slice(-SESSION_HISTORY), fwd: v.fwd.slice(-SESSION_HISTORY) })),
         active: t.active,
         orientation: t.orientation,
         ratio: t.ratio,

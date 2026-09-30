@@ -1004,6 +1004,32 @@ describe("the left panel's views and filter", () => {
     expect(h.app.outline.filter).toBe("");
     expect(h.app.outlineRows().length).toBeGreaterThan(10);
   });
+  test("history: notes read in other tabs and earlier sessions are there too, under recent (found in use)", async () => {
+    const root = makeVault();
+    const h = await harness({ root });
+    // Each opened in a tab of its own, as the explorer and ctrl+p do: this window's timeline is short.
+    h.app.openInNewTab("notes/alpha.md");
+    h.app.openInNewTab("notes/beta.md");
+    await h.keys("space", "h", "h");
+    const rows = h.app.historyRows();
+    expect(rows.map((r) => (r.heading ? "--" : r.label))).toEqual(["beta.md", "--", "alpha.md", "index.md"]);
+    expect(rows[2]!.hint).toMatch(/^\d\d:\d\d$/); // read today: the time
+    expect(h.frame()).toContain("recent in this vault");
+    // Moving steps over the heading; enter opens the note here, in this window's history.
+    await h.keys("down");
+    expect(h.app.sidebar.selected).toBe(2);
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    expect(h.app.view!.back.map((l) => l.key)).toEqual(["notes/beta.md"]);
+    // A restart: the window's timeline comes back with the session.
+    h.app.saveState();
+    const again = await harness({ root, open: null, config: (c) => (c.ui.restore_session = true) });
+    const v = again.app.view!;
+    expect(v.buf.rel).toBe("notes/alpha.md");
+    expect(v.back.map((l) => l.key)).toEqual(["notes/beta.md"]);
+    await again.app.run("history.back");
+    expect(again.app.view!.buf.rel).toBe("notes/beta.md");
+  });
   test("the history filters too", async () => {
     const h = await harness();
     await h.app.run("note.open notes/alpha.md");

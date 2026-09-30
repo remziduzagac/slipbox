@@ -920,7 +920,9 @@ export function registerActions(app: App): void {
     // The left panel on the history, like the explorer: open and focus, focus, close.
     "history.list": (a) =>
       withView(a, (v) => {
-        if (!v.back.length && !v.fwd.length && !(a.sidebarShown && a.leftView === "history")) return a.message("info", "no history yet");
+        // Nothing but this note — no timeline in this window, no note read lately in another.
+        const others = a.historyRows().filter((r) => !r.here && !r.heading).length;
+        if (!others && !v.back.length && !v.fwd.length && !(a.sidebarShown && a.leftView === "history")) return a.message("info", "no history yet");
         a.openLeftView("history", "cycle");
       }),
     // windows

@@ -135,6 +135,11 @@ export class PositionStore {
     return this.base && !isAbsolute(rel) ? join(this.base, rel) : rel;
   }
 
+  /** When a note was last read here (ISO 8601), if it ever was. */
+  readAt(rel: string): string | null {
+    return this.data[this.k(rel)]?.at ?? null;
+  }
+
   get(rel: string): Anchor | null {
     const a = this.data[this.k(rel)];
     return a ? { heading: a.heading, headingIndex: a.headingIndex, offset: a.offset, line: a.line } : null;
@@ -169,11 +174,33 @@ export class PositionStore {
   }
 }
 
+/** A place in a window's timeline (its back and forward stacks). */
+export interface SessionPlace {
+  key: string;
+  anchor: Anchor;
+  cursor?: CursorAnchor;
+}
+
 export interface SessionPane {
   path: string;
   anchor: Anchor;
   cursor?: CursorAnchor;
+  /** The window's history (3.6), oldest first, and its forward stack: kept across restarts. */
+  back?: SessionPlace[];
+  fwd?: SessionPlace[];
 }
+
+/** A timeline read back: malformed places dropped, the newest kept. */
+function places(v: unknown): SessionPlace[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((p) => p && typeof p.key === "string" && p.key && isAnchor(p.anchor))
+    .map((p) => ({ key: p.key, anchor: p.anchor, ...(isCursorAnchor(p.cursor) ? { cursor: p.cursor } : {}) }))
+    .slice(-SESSION_HISTORY);
+}
+
+/** Places of each window's history kept in the session, each way. */
+export const SESSION_HISTORY = 50;
 
 /** A UI setting changed in the TUI, with the config value it overrode (see keymap.md). */
 export interface UiOverride {
@@ -221,7 +248,7 @@ export function loadSession(place: StatePlace): SessionState | null {
     .map((t) => ({
       panes: t.panes
         .filter((p) => p && typeof p.path === "string" && p.path)
-        .map((p) => ({ path: p.path, anchor: isAnchor(p.anchor) ? p.anchor : { ...TOP }, ...(isCursorAnchor(p.cursor) ? { cursor: p.cursor } : {}) }))
+        .map((p) => ({ path: p.path, anchor: isAnchor(p.anchor) ? p.anchor : { ...TOP }, ...(isCursorAnchor(p.cursor) ? { cursor: p.cursor } : {}), back: places(p.back), fwd: places(p.fwd) }))
         .slice(0, 2),
       active: Number.isInteger(t.active) ? t.active : 0,
       orientation: t.orientation === "stacked" ? ("stacked" as const) : ("side" as const),
