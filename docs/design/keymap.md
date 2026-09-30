@@ -241,6 +241,23 @@ Inside the explorer (`[keys.explorer]` in config):
 The history view (`space h h`, the left rail's `◷`) takes the same keys: `j` / `k` move, `enter`,
 `l` or a click jumps to the place, `/` filters, `q` closes, `esc` goes back to the note.
 
+### Files — `space x`
+
+The explorer's file keys after `space x`, from anywhere, so which-key lists them (`18.13`). With the explorer
+focused they act on its selected row, as the key alone does; from a note, on the note — its folder for `n`,
+`shift+n` and `v`, this vault for `shift+r` and `shift+v`:
+
+| Keys | Action |
+| --- | --- |
+| `space x r` / `space x m` | rename in place / move to a folder picked from a tree: links fixed after a preview |
+| `space x d` / `space x u` | delete to the trash, after asking / restore what was deleted last |
+| `space x y` / `space x x` / `space x p` | copy / cut, to paste; paste in the selected folder (or this note's) |
+| `space x n` / `space x shift+n` | a new note / folder there |
+| `space x v` | make the folder a vault of its own (its name asked): links fixed after a preview |
+| `space x shift+v` | make the vault a plain folder of the one holding it (from a note: this vault, then its parent) |
+| `space x shift+r` | rename the vault (the selected one, or this one) |
+| `space x t` / `space x .` | the trash / the row's menu (from a note, the note's) |
+
 ## Outline — right pane
 
 | Action | Direct keys | Leader |
@@ -358,6 +375,7 @@ source first.
 | rename or move the note (`:rename path`, `:mv path`): a preview, then `enter` | `space n m` |
 | rename the vault: a preview, then `enter` | `space v n` |
 | delete the note to the vault's trash, after asking (`:delete`) | `space n d` |
+| a copy of the note beside it (`name-copy`), opened | `space n y` |
 | the trash: what was deleted, `enter` restores (`:trash`) | `space v t` |
 | make this loose folder (or its git repository) a vault (`:init`): committed, or private | `space v m` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |

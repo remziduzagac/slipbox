@@ -617,6 +617,7 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | 18.10 | **Done.** Questions float in a window: the answer typed, OK / Cancel; a yes-or-no's Yes / No (`y`, `n`) |
 | 18.11 | **Done.** `v` makes a folder a vault, `shift+v` a nested vault a plain folder; `init <folder>`, `deinit` |
 | 18.12 | **Done.** A plan's writes into another vault's files reach its index at once (a second rename finds them) |
+| 18.13 | **Done.** `space x` + the explorer's key, from anywhere (which-key lists them); `space n y` copies the note |
 
 ## Deferred — in the design, not in this breakdown
 

@@ -361,8 +361,12 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   its `[[name:…]]` links become names here — and enter puts its `.slipbox/` in the trash. The row turns into a vault's
   or a folder's, selected. In a loose folder, `v` offers to make the folder a vault of its own and goes into it.
 
-The current note has `space n d` (`:delete`), `space n m` (rename or move by path), and the palette's "Copy the
-note". What they do is the CLI's `rm`, `mv` and `cp` (`docs/design/cli.md`).
+Every one of these is also `space x` and the explorer's key (`18.13`: `space x r`, `space x shift+v`…), from
+anywhere, so which-key lists them: on the explorer's selected row when it has focus, else on the current note — its
+folder for a new note or folder and for making a vault, this vault for renaming it or making it a plain folder of the
+vault holding it (then into that vault, the note still open). The current note also has `space n d` (`:delete`),
+`space n m` (rename or move by path) and `space n y` (a copy beside it, opened). What they do is the CLI's `rm`, `mv`,
+`cp`, `init` and `deinit` (`docs/design/cli.md`).
 
 ## Following links
 

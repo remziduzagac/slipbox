@@ -56,7 +56,7 @@ import { openVault, Reach } from "../core/reach.ts";
 import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
-import { gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { findVaultRoot, gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
@@ -1975,10 +1975,9 @@ export class App {
    * The selected row's menu (its `…` button, `.`): what can be done to it, each with its key in the
    * explorer, which picks it here too. It hangs from the button (by key without one: the row).
    */
-  openItemMenu(): void {
-    const item = this.explorerItem();
-    const row = this.explorerRows()[this.sidebar.selected];
-    if (!item || !row) return this.message("info", "menu: select a note, file or folder first");
+  openItemMenu(item = this.explorerItem(), onRow = true): void {
+    const row = onRow ? this.explorerRows()[this.sidebar.selected] : null;
+    if (!item || (onRow && !row)) return this.message("info", "menu: select a note, file or folder first");
     const actions: [string, string][] = [];
     if (item.dir && !item.vault) actions.push(["new_note", "New note here"], ["new_folder", "New folder here"]);
     actions.push(["rename", item.vault ? "Rename the folder" : "Rename"]);
@@ -1994,19 +1993,96 @@ export class App {
       return { label, hint: hotkey ?? (key ? prettyKey(key, this.leader) : undefined), ...(hotkey ? { hotkey } : {}), data: action };
     });
     const g = this.geometry;
-    const button = g?.hot.find((h) => h.id === "xrow:menu");
-    const anchor = button ? { x: button.x, y: button.y } : g?.sidebar ? { x: g.sidebar.x + 2, y: g.sidebar.y + this.sidebar.selected - this.sidebar.scroll } : undefined;
+    const button = onRow ? g?.hot.find((h) => h.id === "xrow:menu") : undefined;
+    const anchor = button ? { x: button.x, y: button.y } : onRow && g?.sidebar ? { x: g.sidebar.x + 2, y: g.sidebar.y + this.sidebar.selected - this.sidebar.scroll } : undefined;
+    const region = this.region;
     this.openList({
-      title: `${row.name}${item.dir ? "/" : ""}`,
+      title: `${posix.basename(item.rel)}${item.dir ? "/" : ""}`,
       items,
       filterable: false,
       anchor,
       menu: true,
       accept: (it) => {
-        this.region = "sidebar";
-        this.explorerAction(it.data as string);
+        this.region = region;
+        this.itemAction(it.data as string, item);
       },
     });
+  }
+
+  /** An explorer action on a note, file, folder or nested vault: its menu's, its keys', `space x`'s. */
+  itemAction(action: string, item: ExplorerItem): void {
+    const folder = item.dir ? item.rel : posix.dirname(item.rel) === "." ? "" : posix.dirname(item.rel);
+    switch (action) {
+      case "rename":
+        return this.renameItem(item);
+      case "rename_vault":
+        return this.renameVaultItem(item);
+      case "move":
+        return this.moveItem(item);
+      case "delete":
+        return this.deleteItem(item);
+      case "copy":
+      case "cut":
+        return this.clipItem(action, item);
+      case "paste":
+        return this.pasteItem();
+      case "new_note":
+        return this.promptNewNote(folder);
+      case "new_folder":
+        return this.promptNewFolder(folder);
+      case "make_vault":
+        return item.dir && !item.vault ? this.makeVaultItem(item) : this.message("info", item.vault ? `${item.rel} is a vault already — shift+v makes it a plain folder` : "make a vault: select a folder first");
+      case "unmake_vault":
+        return item.vault ? this.unmakeVaultItem(item) : this.message("info", "make a plain folder: select a vault (its folder has its own icon)");
+    }
+  }
+
+  /**
+   * `space x …` (18.13): the explorer's key, after the leader, anywhere. With the explorer focused,
+   * on its selected row, as the key there; from a note, on the note — its folder for what makes
+   * something of a folder, this vault for what a vault's row does.
+   */
+  fileAction(action: string): void {
+    if (this.region === "sidebar" && this.sidebarShown && this.leftView === "explorer") return this.explorerAction(action);
+    if (action === "restore") return this.restoreLast();
+    if (action === "paste") return this.pasteItem();
+    if (action === "rename_vault") return void this.run("vault.rename");
+    if (action === "unmake_vault") return this.unmakeThisVault();
+    const rel = this.view?.buf.rel ?? null;
+    if (rel === null) return this.message("info", "open a note of this vault, or select a row in the explorer (space e)");
+    if (action === "make_vault") {
+      const folder = posix.dirname(rel);
+      if (folder === ".") return this.message("info", `${rel} is at the vault's root: select a folder in the explorer to make it a vault`);
+      return this.makeVaultItem({ rel: folder, dir: true });
+    }
+    if (action === "menu") return this.openItemMenu({ rel, dir: false }, false);
+    this.itemAction(action, { rel, dir: false });
+  }
+
+  /**
+   * This vault, nested in another, made a plain folder of it (18.11, `space x V` from a note): the
+   * preview from the vault holding it; then into that vault, the note still open.
+   */
+  unmakeThisVault(): void {
+    const holder = this.loc.mode === "vault" ? findVaultRoot(dirname(this.loc.root)) : null;
+    if (!holder) return this.message("info", `${this.loc.name ?? this.loc.root} isn't inside another vault: only a nested vault becomes a plain folder (of the vault holding it)`);
+    const parent = openVault(holder);
+    const rel = relative(holder, this.loc.root);
+    const open = this.view?.buf.abs ?? null;
+    this.previewRename(
+      () => planUnmakeVault(parent, rel),
+      (plan) => {
+        let applied: Applied;
+        try {
+          applied = applyPlan(parent, plan);
+        } catch (err) {
+          return this.message("error", (err as Error).message);
+        }
+        const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
+        this.switchVault(rootAt(holder), open && existsSync(open) ? open : null);
+        this.message("info", `made ${rel}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash): ${n} change${n === 1 ? "" : "s"} in ${applied.written.length} file${applied.written.length === 1 ? "" : "s"}`);
+      },
+    );
   }
 
   /**
@@ -2997,24 +3073,16 @@ export class App {
       case "move":
       case "delete":
       case "copy":
-      case "cut": {
+      case "cut":
+      case "make_vault":
+      case "unmake_vault": {
         // On the selected note, file, folder or vault (18.x).
         const item = this.explorerItem();
         if (!item) return this.message("info", `${action.replace("_", " ")}: select a note, file or folder first`);
-        if (action === "rename_vault") return this.renameVaultItem(item);
-        if (action === "rename") return this.renameItem(item);
-        if (action === "move") return this.moveItem(item);
-        if (action === "delete") return this.deleteItem(item);
-        return this.clipItem(action, item);
+        return this.itemAction(action, item);
       }
       case "paste":
         return this.pasteItem();
-      case "make_vault":
-      case "unmake_vault": {
-        const item = this.explorerItem();
-        if (action === "make_vault") return item?.dir && !item.vault ? this.makeVaultItem(item) : this.message("info", item?.vault ? `${item.rel} is a vault already — shift+v makes it a plain folder` : "make a vault: select a folder first");
-        return item?.vault ? this.unmakeVaultItem(item) : this.message("info", "make a plain folder: select a vault (its folder has its own icon)");
-      }
       case "menu":
         return this.openItemMenu();
       case "restore":
@@ -4929,7 +4997,7 @@ export class App {
    * A rename's preview (7.2): every line it changes, in every vault, and the warnings (7.3); enter
    * carries it out, esc leaves everything as it was. Refused while a file it touches is unsaved.
    */
-  previewRename(make: () => RenamePlan): void {
+  previewRename(make: () => RenamePlan, apply: (plan: RenamePlan) => void = (plan) => this.applyRename(plan)): void {
     let plan: RenamePlan;
     try {
       plan = make();
@@ -4963,7 +5031,7 @@ export class App {
       items,
       filterable: false,
       footer: true,
-      accept: () => this.applyRename(plan),
+      accept: () => apply(plan),
     });
   }
 

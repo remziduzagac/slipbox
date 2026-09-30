@@ -1491,6 +1491,17 @@ export function registerActions(app: App): void {
         }
       }),
     "trash.open": (a) => a.openTrash(),
+    "file.rename": (a) => a.fileAction("rename"),
+    "file.move": (a) => a.fileAction("move"),
+    "file.delete": (a) => a.fileAction("delete"),
+    "file.restore": (a) => a.fileAction("restore"),
+    "file.copy": (a) => a.fileAction("copy"),
+    "file.cut": (a) => a.fileAction("cut"),
+    "file.paste": (a) => a.fileAction("paste"),
+    "file.make_vault": (a) => a.fileAction("make_vault"),
+    "file.unmake_vault": (a) => a.fileAction("unmake_vault"),
+    "file.rename_vault": (a) => a.fileAction("rename_vault"),
+    "file.menu": (a) => a.fileAction("menu"),
     "vault.init": (a) => {
       if (a.loc.mode === "vault") return a.message("info", `already a vault: ${a.loc.name} (${a.loc.root})`);
       const dir = gitRootOf(a.loc.root) ?? a.loc.root;
