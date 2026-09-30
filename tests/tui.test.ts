@@ -5284,7 +5284,7 @@ describe("creating notes and folders", () => {
     expect(h.app.messages.at(-1)!.text).toContain("not inside the vault");
     expect(existsSync(join(root, "..", "escape.md"))).toBe(false);
   });
-  test("the explorer: n n a note in the selected folder, N a folder — shown though empty, and selected", async () => {
+  test("the explorer: n a note in the selected folder (space n n too), N a folder — shown though empty, and selected", async () => {
     const root = makeVault();
     const h = await harness({ root });
     await h.keys("space", "e");
@@ -5298,17 +5298,32 @@ describe("creating notes and folders", () => {
     const sel = h.app.explorerRows()[h.app.sidebar.selected]!;
     expect([sel.kind, sel.path]).toEqual(["dir", "notes/drafts"]);
     expect(h.frame()).toContain("drafts"); // empty, still listed
-    // n waits for its second key: which-key says what it's for.
-    await h.keys("n");
-    expect(h.app.overlay).toBeNull();
-    expect(h.app.pending).toEqual(["n"]);
-    h.app.whichKey = true;
-    expect(h.frame()).toContain("New note here");
     await h.keys("n");
     for (const c of "first") await h.keys(c);
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "drafts", "first.md"))).toBe(true);
     expect(h.app.view!.buf.rel).toBe("notes/drafts/first.md");
+    // space n n, from the explorer: the same, in its selected folder.
+    await h.keys("escape", "space", "e");
+    h.app.region = "sidebar";
+    h.app.selectInExplorer("notes/drafts");
+    await h.keys("space", "n", "n");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "new note in notes/drafts/" });
+  });
+  test("a pane's own key sequence waits for its second key: a global key it starts with isn't run after a pause", async () => {
+    // w is the note's word motion; in the explorer, w w is bound here: w waits, however long.
+    const h = await harness({ config: (c) => (c.keys.explorer = { "w w": "bottom" }) });
+    await h.keys("space", "e");
+    h.app.region = "sidebar";
+    h.app.sidebar.selected = 0;
+    await h.keys("w");
+    await Bun.sleep(DEFAULT_CONFIG.input.which_key_delay_ms + 150);
+    expect(h.app.pending).toEqual(["w"]);
+    expect(h.app.region).toBe("sidebar");
+    h.app.whichKey = true;
+    expect(h.frame()).toContain("Bottom"); // which-key names the pane's action as help does
+    await h.keys("w");
+    expect(h.app.sidebar.selected).toBe(h.app.explorerRows().length - 1);
   });
   test("following a link to a note that doesn't exist asks to create it, the name filled in", async () => {
     const root = makeVault();

@@ -3381,11 +3381,13 @@ export class App {
     const seq = [...this.pending, key].join(" ");
     const maps = this.maps();
     const at = maps.findIndex((m) => m.map.lookup(seq) !== undefined);
-    const hit = at >= 0 ? { ...maps[at]!, spec: maps[at]!.map.lookup(seq) } : undefined;
     // Only keymaps at or above the one holding the binding may turn the key into a prefix:
     // visual mode's `y` must not wait for the normal keymap's `y y`.
-    const prefix = maps.slice(0, at >= 0 ? at + 1 : maps.length).some((m) => m.map.isPrefix(seq));
-    if (prefix) {
+    const prefixAt = maps.slice(0, at >= 0 ? at + 1 : maps.length).findIndex((m) => m.map.isPrefix(seq));
+    // …and a prefix in a keymap above the binding's is that keymap's own: the explorer's `n n`
+    // isn't the note's `n` (find next) after a pause.
+    const hit = at >= 0 && !(prefixAt >= 0 && prefixAt < at) ? { ...maps[at]!, spec: maps[at]!.map.lookup(seq) } : undefined;
+    if (prefixAt >= 0) {
       this.startPending(key);
       if (hit) {
         // Both a binding and a prefix: run it unless another key follows promptly.

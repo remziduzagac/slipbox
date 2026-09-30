@@ -477,7 +477,7 @@ export const SCENARIOS: Scenario[] = [
   },
 
   {
-    name: "create: ctrl+n a note, typed and saved; the explorer's N a folder and n n a note in it",
+    name: "create: ctrl+n a note, typed and saved; the explorer's N a folder and n a note in it",
     options: { open: HANDBOOK },
     run: async (s) => {
       await s.keys("ctrl+n");
@@ -495,7 +495,7 @@ export const SCENARIOS: Scenario[] = [
       await s.type("ideas");
       await s.keys("enter");
       await s.see("ideas");
-      await s.keys("n", "n");
+      await s.keys("n");
       await s.type("spark");
       await s.keys("enter");
       await s.status("ideas/spark.md");

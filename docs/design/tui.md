@@ -315,9 +315,10 @@ path, its history following — every note of a moved folder alike.
 
 The explorer makes and changes files by keys and by buttons, on the selected row — a note, a file, or a folder:
 
-- **New:** `n n` a note (as `space n n` elsewhere; after `n`, which-key says so), `shift+n` a folder, in the
-  selected folder or beside the selected file; the title's two buttons do the same (Nerd: a file and a folder with a
-  plus; unicode `+`, `+▸`). which-key in a pane names its actions as help does ("New note here").
+- **New:** `n` a note (`space n n` too, as everywhere), `shift+n` a folder, in the selected folder or beside the
+  selected file; the title's two buttons do the same (Nerd: a file and a folder with a plus; unicode `+`, `+▸`).
+  which-key in a pane names its actions as help does ("New note here"), and a pane's own key sequence waits for its
+  second key, whatever the note binds its first to.
 - **Rename (`r`) and move (`m`):** `r` asks for the new name, in its folder (the old one typed); `m` lists the vault's
   folders (the root first; its own folder and, for a folder, itself and what's in it left out) to pick one. Both go
   through the rename's **preview** above: every link to it — and, for a folder, to anything in it — fixed, links

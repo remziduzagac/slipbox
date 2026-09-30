@@ -224,7 +224,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `g g` / `shift+g` | top / bottom |
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
 | `a` | show every text file, or back to what `files.show` lists (notes and data files) |
-| `n n` / `shift+n` | a new note / folder in the selected folder (beside a selected file); `n` shows which-key |
+| `n` / `shift+n` | a new note / folder in the selected folder (beside a selected file); `space n n` too |
 | `r` | rename the selected note, file or folder, in its folder: links fixed after a preview |
 | `m` | move it to a folder, picked from a list: links fixed after a preview |
 | `d` | delete it to the vault's trash, after asking (it says how many links break) |
