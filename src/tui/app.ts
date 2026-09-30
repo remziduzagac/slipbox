@@ -15,7 +15,7 @@ import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
-import { readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { readJson, readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
@@ -54,7 +54,7 @@ import { normKey } from "../core/links.ts";
 import { Reach } from "../core/reach.ts";
 import { type Applied, applyPlan, planNoteRename, type RenamePlan } from "../core/rename.ts";
 import { type KnownVault, readIdentity, readRegistry, vaultConfigFile } from "../core/registry.ts";
-import { homeAt, isRepoRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
@@ -343,7 +343,7 @@ export interface TreeRow {
   /** A file beyond notes: its group (16.x). */
   group?: FileGroup;
   /** A root row: what it is, where it is, and the vault's name when it isn't the folder's. */
-  root?: { kind: "vault" | "repo" | "folder"; abs: string; name?: string };
+  root?: { kind: "vault" | "folder"; abs: string; name?: string };
 }
 
 export type Region = "content" | "sidebar" | "outline";
@@ -488,6 +488,8 @@ export class App {
     this.loc = opts.loc;
     this.config = opts.config;
     this.graph = opts.graph;
+    // This machine sees the vault (17.6): a copy of it opened later keys its state apart (17.3).
+    recordLocation(opts.loc);
     this.reach = new Reach(opts.loc);
     this.graph.reach ??= this.reach;
     this.host = opts.host;
@@ -523,7 +525,9 @@ export class App {
       if (first) this.openInNewTab(first);
     }
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
-    if (opts.launcher && readRegistry().some((v) => v.kind !== "home" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
+    // A loose file in a git repository: the offer to make it a vault (17.18); else, opened on a
+    // loose folder, the known vaults (17.14).
+    if (!this.offerVault() && opts.launcher && readRegistry().some((v) => v.kind !== "home" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
     this.stopLazy = onLoaded(() => {
       this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
@@ -2184,9 +2188,9 @@ export class App {
     };
     if (this.loc.mode !== "home") {
       for (const s of this.graph.skipped) {
-        if (s.reason !== "nested vault" && s.reason !== "nested repository") continue;
+        if (s.reason !== "nested vault") continue;
         const abs = join(this.loc.root, s.rel);
-        out.set(s.rel, s.reason === "nested vault" ? { kind: "vault", abs, name: named(abs) } : { kind: "repo", abs });
+        out.set(s.rel, { kind: "vault", abs, name: named(abs) });
       }
       return out;
     }
@@ -2197,7 +2201,7 @@ export class App {
     for (const e of entries) {
       if (!e.isDirectory() || e.name.startsWith(".") || e.name === "node_modules") continue;
       const abs = join(this.loc.root, e.name);
-      out.set(e.name, isVaultRoot(abs) ? { kind: "vault", abs, name: named(abs) } : isRepoRoot(abs) ? { kind: "repo", abs } : { kind: "folder", abs });
+      out.set(e.name, isVaultRoot(abs) ? { kind: "vault", abs, name: named(abs) } : { kind: "folder", abs });
     }
     return out;
   }
@@ -4403,6 +4407,7 @@ export class App {
     }
     if (from && !how.back) this.vaultTrail.push(from);
     this.region = "content";
+    this.offerVault();
     this.relayoutAll();
     this.publishState();
     this.recordConfigStamps();
@@ -4425,7 +4430,7 @@ export class App {
   enterRoot(row: TreeRow): void {
     const r = row.root;
     if (!r) return;
-    this.switchVault(r.kind === "folder" ? homeAt(r.abs) : rootAt(r.abs, r.kind), null);
+    this.switchVault(r.kind === "folder" ? homeAt(r.abs) : rootAt(r.abs), null);
   }
 
   /**
@@ -4524,7 +4529,7 @@ export class App {
       if (b && b.abs !== plan.move?.to) this.reloadBuffer(b);
     }
     if (plan.kind === "vault") {
-      this.loc = rootAt(this.loc.root, "vault");
+      this.loc = rootAt(this.loc.root);
       recordLocation(this.loc);
       this.reach = new Reach(this.loc);
       this.graph = new Graph(this.loc, this.config).build(true, "lazy");
@@ -4547,6 +4552,65 @@ export class App {
     (this.overlay as PromptOverlay).text = rel.replace(/\.(md|markdown)$/i, "");
   }
 
+  /** The file where repositories declined as vaults are remembered (the home vault's state). */
+  private declinedFile(): string {
+    return join(stateDir(homeAt(this.loc.root)), "declined-vaults.json");
+  }
+
+  /**
+   * In a loose folder of a git repository without `.slipbox/` (17.18): offer to make the repository
+   * a vault — committed with it, or private (kept out of git) — once; declining is remembered. True
+   * when the offer is showing.
+   */
+  offerVault(): boolean {
+    if (this.loc.mode !== "home" || this.overlay) return false;
+    const repo = gitRootOf(this.loc.root);
+    if (!repo) return false;
+    const declined = readJson<string[]>(this.declinedFile(), []);
+    if (Array.isArray(declined) && declined.includes(repo)) return false;
+    this.vaultChoices(repo, true);
+    return true;
+  }
+
+  /** Make `dir` a vault (`vault.init`, the offer): the choices, as a list. */
+  vaultChoices(dir: string, offered: boolean): void {
+    const repo = gitRootOf(dir) === dir;
+    const decline = () => {
+      if (!offered) return;
+      const declined = readJson<string[]>(this.declinedFile(), []);
+      try {
+        writeJson(this.declinedFile(), [...(Array.isArray(declined) ? declined : []), dir]);
+      } catch {}
+      this.message("info", `not a vault: ${dir} — space v m (:init) makes it one`);
+    };
+    const items: ListItem[] = [
+      { label: "Make it a vault", detail: ".slipbox/ with its id and name — committed with the folder like any file", data: "vault" },
+      ...(repo ? [{ label: "Make it a private vault", detail: ".slipbox/ listed in .git/info/exclude: never in git status or a commit", data: "private" }] : []),
+      { label: offered ? "Not now" : "Cancel", detail: offered ? "links reach only this folder's notes; not asked again for this repository" : "", data: "no" },
+    ];
+    this.openList({
+      title: `${dir} ${repo ? "is a git repository" : "is a folder"} without .slipbox/ — make it a vault?`,
+      items,
+      filterable: false,
+      footer: true,
+      accept: (item) => (item.data === "no" ? decline() : this.makeVault(dir, item.data === "private")),
+      cancel: decline,
+    });
+  }
+
+  /** Make `dir` a vault and go into it, the note open (17.18). */
+  makeVault(dir: string, privately: boolean): void {
+    const open = this.view?.buf.abs ?? null;
+    let r: ReturnType<typeof initVault>;
+    try {
+      r = initVault(dir, undefined, { private: privately });
+    } catch (err) {
+      return this.message("warn", (err as Error).message);
+    }
+    this.switchVault(rootAt(r.root), open && existsSync(open) && open.startsWith(`${r.root}/`) ? open : null);
+    this.message("info", `made ${r.root} a vault: "${r.name}"${r.excluded ? ` (private: in ${r.excluded})` : ""}`);
+  }
+
   /** The vaults this machine knows (17.14): pick one to switch to. */
   openVaultList(): void {
     const here = this.loc.root;
@@ -4556,10 +4620,10 @@ export class App {
     if (!known.length) return this.message("info", "no other vaults yet: open one with slipbox <folder>, or make one with slipbox init");
     this.openList({
       title: `Vaults (${known.length})`,
-      items: known.map((v) => ({ label: v.name ?? basename(v.path), detail: v.path, hint: v.kind === "repo" ? "repository" : "vault", data: v })),
+      items: known.map((v) => ({ label: v.name ?? basename(v.path), detail: v.path, data: v })),
       accept: (item) => {
         const v = item.data as KnownVault;
-        this.switchVault(rootAt(v.path, existsSync(join(v.path, ".slipbox")) ? "vault" : "repo"), null);
+        this.switchVault(rootAt(v.path), null);
       },
     });
   }

@@ -16,7 +16,7 @@ import { dataHome, stateHome, vaultKey } from "./paths.ts";
 
 export const MARKER = ".slipbox";
 
-export type RootKind = "vault" | "repo" | "home";
+export type RootKind = "vault" | "home";
 
 export interface VaultIdentity {
   id: string | null;
@@ -153,7 +153,8 @@ export function registryFile(): string {
 export function readRegistry(): KnownVault[] {
   const f = readJson<RegistryFile | null>(registryFile(), null);
   if (!f || f.version !== 1 || !Array.isArray(f.vaults)) return [];
-  return f.vaults.filter((v) => v && typeof v.key === "string" && typeof v.path === "string");
+  // A kind no longer made ("repo", before 17.18) is dropped.
+  return f.vaults.filter((v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "home"));
 }
 
 /** A seen vault is written again only when something about it changed, or after this long. */

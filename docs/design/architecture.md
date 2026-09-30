@@ -58,7 +58,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
 | `core/paths.ts` | 0.10 | config, cache and state directories; the vault key |
 | `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
-| `core/vault.ts` | 1.1, 1.10, 0.12, 17.1 | a file's root: a vault, a repository, or the home vault; `init` |
+| `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 17.18 | a file's root: a vault or the home vault; identity on open; `init` |
 | `core/registry.ts` | 17.2–17.6 | a vault's identity, the home vault, the machine's vaults, storage keys, names |
 | `core/reach.ts` | 17.8–17.11 | other vaults: `[[vault:note]]`, paths out of the root, their backlinks here |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |

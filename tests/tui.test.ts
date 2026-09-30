@@ -5396,29 +5396,66 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view!.buf.rel).toBe("inner.md");
   });
 
-  test("a loose folder lists its folders — vaults, repositories, folders — and .. to go up (17.13, 17.14)", async () => {
+  test("a loose folder lists its folders — vaults and folders — and .. to go up (17.13, 17.14)", async () => {
     const { homeAt } = await import("../src/core/vault.ts");
     const dir = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(dir, "note.md"), "# loose\n");
     mkdirSync(join(dir, "plain"));
     writeFileSync(join(dir, "plain", "p.md"), "# p\n");
-    mkdirSync(join(dir, "code", ".git"), { recursive: true });
+    mkdirSync(join(dir, "code", ".git"), { recursive: true }); // a repository: a folder, until it's a vault
+    mkdirSync(join(dir, "box", ".slipbox"), { recursive: true });
     const h = await harness({ loc: homeAt(dir), open: "note.md" });
     expect(h.app.explorerRows().map((r) => [r.name, r.kind, r.root?.kind])).toEqual([
       ["..", "root", "folder"],
-      ["code", "root", "repo"],
+      ["box", "root", "vault"],
+      ["code", "root", "folder"],
       ["plain", "root", "folder"],
       ["note.md", "note", undefined],
     ]);
-    expect(h.frame()).toContain("⎇ code");
-    const c = h.canvas();
-    const y = c.toString().split("\n").findIndex((r) => r.includes("⎇ code"));
-    expect(c.styles[y]![c.toString().split("\n")[y]!.indexOf("⎇")]).toMatchObject({ fg: h.app.theme.roles.sidebar_repo.fg });
-    expect(h.app.theme.roles.sidebar_repo.fg).toEqual(h.app.theme.roles.sidebar_dir.fg); // a folder's blue
+    expect(h.frame()).toContain("◈ box");
     expect(topRow(h.frame())).toContain("home vault");
-    h.app.enterRoot(h.app.explorerRows()[2]!);
+    h.app.enterRoot(h.app.explorerRows()[3]!);
     expect(h.app.loc).toMatchObject({ mode: "home", root: join(dir, "plain") });
     expect(h.app.view!.buf.rel).toBe("p.md");
+  });
+
+  test("a loose file in a git repository: the offer to make it a vault — committed, private, not now (17.18)", async () => {
+    const { homeAt } = await import("../src/core/vault.ts");
+    const repo = (name: string) => {
+      const dir = join(mkdtempSync(join(sandbox, "offer-")), name);
+      mkdirSync(join(dir, "docs"), { recursive: true });
+      Bun.spawnSync(["git", "init", "-q", dir]);
+      mkdirSync(join(dir, ".git"), { recursive: true }); // without git installed, a repository all the same
+      writeFileSync(join(dir, "docs", "readme.md"), "# Readme\n");
+      return dir;
+    };
+    const offered = (h: Harness) => (h.app.overlay as ListOverlay | null)?.title ?? "";
+    // Not now: remembered, never offered again for that repository.
+    const a = repo("alpha");
+    let h = await harness({ loc: homeAt(join(a, "docs")), open: "readme.md" });
+    expect(offered(h)).toBe(`${a} is a git repository without .slipbox/ — make it a vault?`);
+    expect((h.app.overlay as ListOverlay).items.map((it) => it.label)).toEqual(["Make it a vault", "Make it a private vault", "Not now"]);
+    await h.keys("escape");
+    expect(existsSync(join(a, ".slipbox"))).toBe(false);
+    h = await harness({ loc: homeAt(join(a, "docs")), open: "readme.md" });
+    expect(h.app.overlay).toBeNull();
+    // …though :init asks again, when asked.
+    await h.app.run("vault.init");
+    expect(offered(h)).toContain(`${a} is a git repository without .slipbox/`);
+    await h.keys("escape");
+    // Made a vault: the TUI goes into it, the note open, its links across the repository now.
+    const b = repo("beta");
+    h = await harness({ loc: homeAt(join(b, "docs")), open: "readme.md" });
+    await h.keys("enter");
+    expect(h.app.loc).toMatchObject({ mode: "vault", root: b, name: "beta" });
+    expect(h.app.view!.buf.rel).toBe("docs/readme.md");
+    expect(h.app.messages.some((m) => m.text === `made ${b} a vault: "beta"`)).toBe(true);
+    // Private: kept out of git.
+    const c = repo("gamma");
+    h = await harness({ loc: homeAt(join(c, "docs")), open: "readme.md" });
+    await h.keys("down", "enter");
+    expect(h.app.loc).toMatchObject({ mode: "vault", root: c });
+    expect(readFileSync(join(c, ".git", "info", "exclude"), "utf8").split("\n")).toContain("/.slipbox/");
   });
 
   test("opened on a loose folder, the known vaults come first; space v v lists them anywhere (17.14)", async () => {

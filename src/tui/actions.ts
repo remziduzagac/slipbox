@@ -3,7 +3,7 @@
 // keys are in keys.ts and docs/design/keymap.md.
 
 import { join, posix, relative } from "node:path";
-import { findRoot } from "../core/vault.ts";
+import { findVaultRoot, gitRootOf, isNeverRoot } from "../core/vault.ts";
 import { planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { classify } from "../core/filetypes.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
@@ -256,8 +256,8 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
 
 /** A path in another vault, shown from that vault's root. */
 function relativeToVault(abs: string): string {
-  const found = findRoot(abs);
-  return found ? relative(found.root, abs) : abs;
+  const found = findVaultRoot(abs);
+  return found ? relative(found, abs) : abs;
 }
 
 /** `g;` / `g,`: the change before or after in the note's change list. */
@@ -1472,6 +1472,12 @@ export function registerActions(app: App): void {
       a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
     },
     "vault.switch": (a) => a.openVaultList(),
+    "vault.init": (a) => {
+      if (a.loc.mode === "vault") return a.message("info", `already a vault: ${a.loc.name} (${a.loc.root})`);
+      const dir = gitRootOf(a.loc.root) ?? a.loc.root;
+      if (isNeverRoot(dir)) return a.message("warn", `${dir} can't be a vault: slipbox never indexes all of it`);
+      a.vaultChoices(dir, false);
+    },
     "note.rename": (a, arg) =>
       withView(a, (v) => {
         if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be renamed here");

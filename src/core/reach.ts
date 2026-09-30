@@ -12,7 +12,7 @@ import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, typ
 import { pathLink } from "./links.ts";
 import { cacheDir } from "./paths.ts";
 import { type KnownVault, namesOf, readIdentity, readRegistry, vaultConfigFile } from "./registry.ts";
-import { findRoot, findVaultRoot, isInside, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "./vault.ts";
+import { findVaultRoot, isInside, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "./vault.ts";
 
 function real(p: string): string {
   try {
@@ -50,7 +50,7 @@ export class Reach implements VaultReach {
     if (this.graphs.has(key)) return this.graphs.get(key)!;
     let g: Graph | null = null;
     try {
-      const loc = rootAt(root, existsSync(join(root, ".slipbox")) ? "vault" : "repo");
+      const loc = rootAt(root);
       const config = loadConfig({ vaultFile: vaultConfigPath(loc) }).config;
       g = openGraph(loc, config, true, "lazy");
       g.thorough = true;
@@ -77,7 +77,7 @@ export class Reach implements VaultReach {
     for (const { root, nested } of roots) {
       let loc: VaultLocation;
       try {
-        loc = rootAt(root, "vault");
+        loc = rootAt(root);
       } catch {
         continue;
       }
@@ -119,24 +119,24 @@ export class Reach implements VaultReach {
   }
 
   vaultOf(abs: string): string | null {
-    const found = findRoot(abs);
+    const found = findVaultRoot(abs);
     if (!found) return null;
-    const known = this.known().find((v) => real(v.path) === real(found.root));
+    const known = this.known().find((v) => real(v.path) === real(found));
     if (known) return shown(known);
-    return found.mode === "vault" ? (readIdentity(vaultConfigFile(found.root)).name ?? basename(found.root)) : basename(found.root);
+    return readIdentity(vaultConfigFile(found)).name ?? basename(found);
   }
 
   entryAt(abs: string): NoteEntry | undefined {
-    const found = findRoot(abs);
+    const found = findVaultRoot(abs);
     if (!found) return undefined;
-    const g = this.graphAt(found.root);
+    const g = this.graphAt(found);
     return g?.entry(relative(g.root, abs));
   }
 
   inbound(g: Graph): Map<string, Backlink[]> {
     this.discover(g);
     const here = real(g.root);
-    const sources = this.known().filter((v) => (v.kind === "vault" || v.kind === "repo") && real(v.path) !== here && existsSync(v.path));
+    const sources = this.known().filter((v) => v.kind === "vault" && real(v.path) !== here && existsSync(v.path));
     const indexes = sources.map((v) => ({ v, file: join(cacheDir(v), "index.json") }));
     const stamp = indexes.map((x) => `${x.file}:${mtime(x.file)}`).join("|");
     if (this.inboundCache?.stamp === stamp) return this.inboundCache.map;

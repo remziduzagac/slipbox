@@ -271,8 +271,8 @@ the whole timeline and jumps anywhere in it.
 
 ## Switching vaults (plans `17.10`, `17.14`)
 
-The TUI is always in one root: a vault, a repository, or a loose folder of the home vault (the top
-bar says `home vault` then). **Opening a note of another vault or repository switches to it** —
+The TUI is always in one root: a vault, or a loose folder of the home vault (the top bar says
+`home vault` then). **Opening a note of another vault switches to it** —
 following `[[vault:note]]` or a path out of the root, a backlink from another vault, a vault picked
 from the list or the explorer: the TUI becomes that root's, as if started there — its config, its
 index (refreshed), its watcher, its reading positions and its session, whose tabs come back, with
@@ -284,10 +284,17 @@ loose file opens as it is, beside the current vault's notes: it has no vault to 
 the note and place you left; each switch is remembered, so a chain of them unwinds one by one.
 
 **The known vaults** (`space v v`, `:vaults`, `vault.switch`): the machine's list (`vaults.json`,
-`slipbox vaults`), most recently seen first — each by its name, its path, and whether it's a vault
-or a repository; `enter` switches. **The launcher:** slipbox opened on a loose folder without a
-file (`slipbox ~`) shows this list at once, over the folder's explorer, when there are vaults to
-show.
+`slipbox vaults`), most recently seen first — each by its name and its path; `enter` switches.
+**The launcher:** slipbox opened on a loose folder without a file (`slipbox ~`) shows this list at
+once, over the folder's explorer, when there are vaults to show.
+
+**A git repository without `.slipbox/`** (`17.18`): opening a file in one offers to make it a vault
+— "`<root>` is a git repository without .slipbox/ — make it a vault?" — with three answers: make it
+a vault (`.slipbox/` committed with it like any file), make it a **private** vault (listed in its
+`.git/info/exclude`: never in `git status`), or not now (`esc` too): the file stays loose, and that
+repository isn't asked about again. Made a vault, the TUI goes into it with the note open.
+`space v m` (`:init`, `vault.init`) asks again, for the loose folder's repository or the folder
+itself.
 
 ## Renames (plans `17.15`, `7.1`–`7.3`)
 
@@ -353,13 +360,12 @@ keys.
   notes" below). Moving the selection, or a click on a note, only selects. `enter`, `l` and a
   double-click open the note as a tab, or switch to the tab already showing it; `o` replaces the
   current window's note, and `s` opens it in the split's other window. A click on a folder folds or
-  unfolds it. **A folder that is another root** (`17.13`) — a vault nested in this one (`◈`, Nerd:
-  a bookshelf) or a repository nested in a repository (`⎇`, Nerd: git's mark), in a folder's blue
-  (roles `sidebar_vault`, `sidebar_repo`, for `[colors]` to set) — is a row of its own, its icon
-  telling it from a folder, the vault's name dimmed after the folder's when they differ; `enter` or
-  a double-click goes into it (a switch, below). **In a loose folder** (the home vault) the explorer lists the folder alone:
-  `..` to go up, then each folder in it — a vault, a repository, or a loose folder — and its files;
-  going into a loose folder lists that one (`17.14`).
+  unfolds it. **A folder that is another vault** (`17.13`), nested in this one (`◈`, Nerd: a
+  bookshelf), in a folder's blue (role `sidebar_vault`, for `[colors]` to set), is a row of its
+  own, its icon telling it from a folder, the vault's name dimmed after the folder's when they
+  differ; `enter` or a double-click goes into it (a switch, below). **In a loose folder** (the home
+  vault) the explorer lists the folder alone: `..` to go up, then each folder in it — a vault or a
+  loose folder — and its files; going into a loose folder lists that one (`17.14`).
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and

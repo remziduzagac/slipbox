@@ -6,3 +6,7 @@
 [walk]
 # Extra gitignore-syntax patterns to leave out of the vault, on top of .gitignore.
 # exclude = ["archive/"]
+
+[vault]
+id = "5b0e2d8c41a7f936"
+name = "slipbox"

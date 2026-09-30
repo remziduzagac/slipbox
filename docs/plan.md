@@ -566,9 +566,9 @@ links across vaults, then the TUI, then renames.*
 
 | ID | Item |
 | --- | --- |
-| 17.1 | **Done.** Roots: the nearest `.slipbox/`, else the git repository, else the home vault; never `~` or `/` |
+| 17.1 | **Done.** Roots: the nearest `.slipbox/`, else the home vault; never `~` or `/` (revised by `17.18`) |
 | 17.2 | **Done.** The home vault: `~/.local/share/slipbox/home/`, made on first use; loose files' links look beside |
-| 17.3 | **Done.** Storage keyed by the vault's id (a repository without `.slipbox/`: by path); old state moved over |
+| 17.3 | **Done.** Storage keyed by the vault's id; state kept by path before ids moved over once |
 | 17.4 | **Done.** Vault identity in `.slipbox/config.toml`, `[vault]`: `id`, `name`, `aliases`, `previous_names` |
 | 17.5 | **Done.** Distinct names suggested: a vault's (`x-plan` inside `x`; a known name refused), a new note's |
 | 17.6 | **Done.** The machine's vaults, `vaults.json`: recorded on each open; `slipbox vaults` lists them |
@@ -578,11 +578,17 @@ links across vaults, then the TUI, then renames.*
 | 17.10 | **Done.** Following a link into another vault switches the TUI to it; back returns; its index refreshed |
 | 17.11 | **Done.** Backlinks across vaults, from each vault's index as of its last indexing |
 | 17.12 | **Done.** Moves detected by content hash; redirects kept in the state; a link to the old path follows them |
-| 17.13 | **Done.** Explorer: vault and repository folders with their own icons, the vault's name dimmed beside |
+| 17.13 | **Done.** Explorer: vault folders with their own icon, the vault's name dimmed beside |
 | 17.14 | **Done.** The launcher: `~`, or a loose folder opened without a file, shows the known vaults and the folder |
 | 17.15 | **Done.** Renames across vaults (with `7.1`–`7.3`): links fixed in every reachable vault after a preview |
 | 17.16 | **Done.** Path links as other tools write them: `../` out of the root, `~/`, absolute, `file://`; wiki too |
 | 17.17 | **Done.** Nested vaults known to each other unopened; paths into them; the demo vault holds two, to test |
+| 17.18 | **Done.** Every vault has `.slipbox/` with id and name; a git repository is offered, not assumed |
+
+`17.18` revised `17.1` (2026-09-30): a git repository without `.slipbox/` was a root of its own;
+now every vault has a `.slipbox/` — one model, no fallbacks — and a repository is offered: made a
+vault (committed, or private through `.git/info/exclude`) or not now, remembered. A `.slipbox/`
+without an identity gets one when first opened.
 
 `17.16` is for compatibility: links written by other editors and agents name files by their paths,
 not by vault names, and every form of it reaches the file, counts as a backlink, and survives a

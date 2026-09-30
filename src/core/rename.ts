@@ -14,7 +14,7 @@ import { VAULT_LINK } from "./graph.ts";
 import { formatPathLink, normKey, pathForm, pathLink } from "./links.ts";
 import { contentHash } from "./redirects.ts";
 import { HOME_NAME, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
-import { findRoot, isInside, type VaultLocation } from "./vault.ts";
+import { findVaultRoot, isInside, type VaultLocation } from "./vault.ts";
 
 export class RenameError extends Error {}
 
@@ -248,7 +248,7 @@ export function addPreviousName(text: string, name: string): string {
 /** Where a link's file is, as shown: vault-relative, another vault's with its name. */
 function shownFor(g: Graph, abs: string, vault: string | null | undefined): string {
   if (isInside(g.root, abs)) return relative(g.root, abs);
-  const root = findRoot(abs)?.root;
+  const root = findVaultRoot(abs);
   return `${vault ?? (root ? basename(root) : "")}: ${root ? relative(root, abs) : abs}`;
 }
 
@@ -299,8 +299,8 @@ class Collector {
 function dirtyTrees(paths: string[]): string[] {
   const roots = new Set<string>();
   for (const p of paths) {
-    const r = findRoot(p);
-    if (r) roots.add(r.root);
+    // git answers for any folder in the tree; the vault's root, else the file's folder, is asked.
+    roots.add(findVaultRoot(p) ?? dirname(p));
   }
   const out: string[] = [];
   for (const root of roots) {
@@ -483,7 +483,7 @@ export function planRelink(g: Graph, rels?: string[]): RenamePlan {
       if (l.kind === "wiki" || l.kind === "embed") {
         const inter = VAULT_LINK.exec(l.target);
         if (inter && isAbsolute(l.path)) {
-          const root = findRoot(l.path)?.root ?? dirname(l.path);
+          const root = findVaultRoot(l.path) ?? dirname(l.path);
           next = `${l.vault ?? inter[1]}:${relative(root, l.path).replace(NOTE_EXT, "")}`;
           const name = posix.basename(next.slice(next.indexOf(":") + 1));
           if (!inter[2]!.includes("/")) next = `${l.vault ?? inter[1]}:${name}`;

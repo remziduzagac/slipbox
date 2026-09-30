@@ -43,9 +43,6 @@ export class WalkFilter {
   constructor(
     readonly root: string,
     private readonly walk: Config["walk"],
-    /** A repository root (17.1): a nested repository is its own root, not walked into. A vault's
-     *  nearest `.slipbox/` wins, so a repository inside a vault is the vault's. */
-    private readonly nestedRepos = false,
   ) {
     this.extensions = new Set(walk.extensions.map((e) => e.replace(/^\./, "").toLowerCase()));
     this.configIgnore = ignore({ ignorecase: GIT_IGNORECASE }).add(walk.exclude);
@@ -84,7 +81,6 @@ export class WalkFilter {
     }
     if (ignored) return ".gitignore";
     if (isDir && existsSync(join(this.root, rel, MARKER))) return "nested vault";
-    if (isDir && this.nestedRepos && existsSync(join(this.root, rel, ".git"))) return "nested repository";
     return null;
   }
 
@@ -141,7 +137,7 @@ function walkDir(root: string, realRoot: string, dirRel: string, filter: WalkFil
     if (entry.isDirectory()) {
       const why = filter.exclusion(rel, true);
       if (why === null) walkDir(root, realRoot, rel, filter, out);
-      else if (why === "nested vault" || why === "nested repository") out.skipped.push({ rel, reason: why });
+      else if (why === "nested vault") out.skipped.push({ rel, reason: why });
       continue;
     }
     if (entry.isSymbolicLink()) {

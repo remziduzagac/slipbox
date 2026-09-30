@@ -25,9 +25,10 @@ it is and is kept in step with it; `docs/design/decisions.md` answers the decide
 files beyond markdown (`16.x`; the design is `docs/idea.md`, "Files beyond markdown"), is done: data
 files render and source code goes through tree-sitter (Org and AsciiDoc were tried and dropped).
 Phase 4 has begun with the vaults (`17.x`, done 2026-09-30; the design is `docs/idea.md`, "Vaults —
-decided"): a file's root is its `.slipbox/`, its git repository or the home vault; storage keyed by a
-vault's id; aliases and previous names; `[[vault:note]]`, paths and backlinks across vaults; moves
-kept as redirects; switching vaults in the TUI; renames across vaults with a preview (`7.1`–`7.3`).
+decided"): a file's root is its `.slipbox/` or the home vault (a git repository is offered, not
+assumed); storage keyed by a vault's id; aliases and previous names; `[[vault:note]]`, paths and
+backlinks across vaults; moves kept as redirects; switching vaults in the TUI; renames across vaults
+with a preview (`7.1`–`7.3`).
 Next in phase 4: the rest of `1.x`, search (`6.x`), embeds. Still open: `7.4` (rename undo); `4.9`
 (incremental reparse) moved to `15.1`, now mostly done (a note re-parses by chunk); `5.9` (a `HEAD`
 change as a branch switch) and the lint surface (markdownlint-cli2) are not built.
@@ -129,9 +130,10 @@ spend a day on:
 - **Stack:** Bun + OpenTUI + remark. remark over marked because mdast carries source positions
   and slipbox edits. OpenTUI over Ink because Ink renders to a string and has no scroll
   container.
-- **A file's root** is the nearest `.slipbox/` above it, else its git repository, else the home vault
-  (loose files, a folder at a time); `$HOME` and `/` never. Revised 2026-09-30 from "no git-root
-  fallback": a root now costs nothing in the folder. See `docs/idea.md`, "Vaults — decided".
+- **A file's root** is the nearest `.slipbox/` above it, else the home vault (loose files, a folder
+  at a time); `$HOME` and `/` never. Every vault has a `.slipbox/` with its id and name; a git
+  repository without one is offered (committed or private), never assumed and never written to
+  unasked. See `docs/idea.md`, "Vaults — decided".
 - **PKM layer in-process**, not by depending on a language server. slipbox *offering* an LSP is a
   separate and approved thing (phase 5).
 - **Editing:** an in-app editor *and* `$EDITOR` hand-off (or a running nvim). Live preview is a

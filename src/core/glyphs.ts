@@ -42,9 +42,8 @@ export interface Glyphs {
   joints: Record<string, string>;
   dirOpen: string;
   dirClosed: string;
-  /** A folder that is its own root (17.13): a vault (a `.slipbox/`), or a repository. */
+  /** A folder that is its own root (17.13): a vault (a `.slipbox/`). */
   vault: string;
-  repo: string;
   /** The outline's fold markers (the explorer uses dirOpen / dirClosed). */
   foldOpen: string;
   foldClosed: string;
@@ -111,7 +110,6 @@ const unicode: Glyphs = {
   dirOpen: "▾",
   dirClosed: "▸",
   vault: "◈",
-  repo: "⎇",
   foldOpen: "▾",
   foldClosed: "▸",
   guide: "│",
@@ -155,9 +153,8 @@ const nerd: Glyphs = {
   fmOpen: "󰈮",
   dirOpen: "\u{f0770}", // nf-md-folder_open (escaped: private-use characters get lost in editing)
   dirClosed: "\u{f024b}", // nf-md-folder
-  // Material, like the folders (so the same size), and nothing like one: shelves of notes, git's mark.
+  // Material, like the folders (so the same size), and nothing like one: shelves of notes.
   vault: "\u{f125f}", // nf-md-bookshelf
-  repo: "\u{f02a2}", // nf-md-git
   file: "󰍔",
   dataFile: "\u{f0626}", // nf-md-code_json
   textFile: "\u{f022e}", // nf-md-file_code
@@ -193,7 +190,6 @@ const ascii: Glyphs = {
   dirOpen: "v",
   dirClosed: ">",
   vault: "#",
-  repo: "+",
   foldOpen: "v",
   foldClosed: ">",
   guide: "|",

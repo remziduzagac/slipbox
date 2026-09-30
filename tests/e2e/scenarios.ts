@@ -1158,6 +1158,34 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: "vaults: a git repository without .slipbox/ is offered; made a vault, its links reach across it",
+    options: {
+      startAt: "project/docs/readme.md",
+      beside: {
+        "project/.git/HEAD": "ref: refs/heads/main\n",
+        "project/docs/readme.md": "# Readme\n\nThe [[guide]] is in another folder.\n",
+        "project/docs/guide/guide.md": "# The guide\n\nFound across the repository.\n",
+      },
+    },
+    run: async (s) => {
+      await s.see("is a git repository without .slipbox/ — make it a vault?");
+      await s.see("Make it a private vault");
+      // Not now: the file stays loose, and space v m (:init) asks again.
+      await s.keys("escape");
+      await s.message("not a vault:");
+      s.expect(!existsSync(join(s.dir, "project", ".slipbox")), "nothing made");
+      await leader(s, "v", "m");
+      await s.see("is a git repository without .slipbox/ — make it a vault?");
+      await s.keys("enter");
+      await s.message("a vault:");
+      await s.status("docs/readme.md");
+      s.expect(existsSync(join(s.dir, "project", ".slipbox", "config.toml")), "the .slipbox/ made");
+      await s.keys("tab", "enter");
+      await s.status("guide.md");
+      await s.see("Found across the repository");
+    },
+  },
+  {
     name: "vaults: opened on a loose folder, the known vaults first; .. and folders in the explorer",
     options: {
       startAt: "loose",

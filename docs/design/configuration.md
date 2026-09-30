@@ -6,7 +6,7 @@ TOML, in two levels, with the vault winning (plan `0.9`):
 2. the user file: `--config <file>`, else `$SLIPBOX_CONFIG`, else
    `$XDG_CONFIG_HOME/slipbox/config.toml`
 3. the vault file: `<vault>/.slipbox/config.toml`; for a loose file, the home vault's,
-   `$XDG_DATA_HOME/slipbox/home/config.toml` (a repository without `.slipbox/` has none)
+   `$XDG_DATA_HOME/slipbox/home/config.toml`
 
 **The vault's identity** is the vault file's `[vault]` table (plan `17.4`), read on its own and never merged into
 the settings; in the user file it's ignored with a warning:
@@ -190,7 +190,7 @@ The chrome roles most worth tuning:
 | `pane_title`, `pane_title_active` | the Explorer and Outline titles, unfocused and focused |
 | `breadcrumb*` | the breadcrumb row (`_band` its background, `_icon`, `_sep`, `_current`) |
 | `tree_guide` | the explorer's and the outline's tree lines |
-| `sidebar_vault`, `sidebar_repo` | in the explorer, a folder that is another vault or repository (a folder's blue) |
+| `sidebar_vault` | in the explorer, a folder that is another vault (a folder's blue: its icon tells it apart) |
 | `scrollbar`, `scrollbar_track` | the scrollbar's thumb and track |
 | `cursor`, `cursor_line` | the cursor and its row |
 | `overlay*`, `keycap*` | popups: background, border, selection, headings, keycaps |

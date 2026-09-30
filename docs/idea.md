@@ -548,8 +548,9 @@ git-root fallback** — convenient, but it would silently turn every repo you op
 **One vault per repo is enough.** Links do not cross vaults; connecting vaults is a separate
 problem for later.
 
-*Superseded 2026-09-30 by "Vaults — decided 2026-09-30" below: no init and no single-file mode, a
-git repository is a root, and links cross vaults (`[[vault:name]]`, path links).*
+*Superseded 2026-09-30 by "Vaults — decided 2026-09-30" below: no single-file mode (a loose file
+belongs to the home vault), slipbox offers to make a git repository a vault, and links cross vaults
+(`[[vault:name]]`, path links).*
 
 ## Vaults — decided 2026-09-30
 
@@ -562,24 +563,30 @@ data**. Only the first needs a folder to be marked; the second belongs outside i
 
 ### A root is decided by the file
 
-- **Every file belongs to exactly one root:** the nearest `.slipbox/` above it; else the git
-  repository it's in; else the **home vault** (below). `$HOME` and `/` are never a root, which
-  would index everything. Where slipbox was opened doesn't matter: `~/notes/idea.md` is in
-  `~/notes` however you reach it.
-- **No init, no degraded mode.** Opening a folder or a file just works: in a vault or a repository,
-  links and backlinks across all of it; for a loose file, among the files beside it. `slipbox init`
-  only creates `.slipbox/`, for the things below that need it.
+- **Every file belongs to exactly one root:** the nearest `.slipbox/` above it, else the **home
+  vault** (below). `$HOME` and `/` are never a root, which would index everything. Where slipbox
+  was opened doesn't matter: `~/notes/idea.md` is in `~/notes` however you reach it.
+- **Every vault has a `.slipbox/`, with its `id` and `name` in its config.** One model, no
+  fallbacks: no folder-name stand-in, no state keyed by path, no second kind of root. Shared
+  features — comments, kept agent answers — need `.slipbox/` anyway.
+- **A git repository without one is offered, not assumed** (decided 2026-09-30, revising the first
+  cut, where a repository was a root of its own). Opening a file in one without a `.slipbox/` asks:
+  make the repository a vault — committed with it, or **private** (listed in `.git/info/exclude`,
+  never in `git status`: for repositories you don't own) — or not now, remembered. Until then its
+  files are loose. The CLI never writes on its own: it says `slipbox init <root>` would.
+- **A `.slipbox/` made before vaults had ids** (or by hand) gets its `id` and `name` written into
+  its config the first time it's opened: a one-time migration of slipbox's own folder, like the
+  version stamp.
 - **Opening `~`, or a big folder that isn't a root,** shows a launcher — the vaults this machine
   knows, and a plain file tree — rather than indexing everything under it.
 - **A nested `.slipbox/` is a boundary:** its files are its own vault's, not the outer one's.
 
-The earlier "deliberately no git-root fallback" is reversed: its reason was that every repo you
-opened would turn into a vault, and a vault now costs nothing in the folder — nothing is written
-there, and the index is a cache elsewhere.
+The earlier "deliberately no git-root fallback" stands, in a new form: a repository isn't silently a
+vault, and it isn't silently written to either — it's offered.
 
 ### The home vault
 
-Files outside every vault and repository — `~/todo.md`, `~/Downloads/spec.md`, `/tmp/x.md` —
+Files outside every vault — `~/todo.md`, `~/Downloads/spec.md`, `/tmp/x.md` —
 belong to one vault, `home`, rather than each to its own folder. Without it, a file directly in `~`
 had no root at all (`~` never is one), and every folder a stray file was opened in got a state
 directory of its own.
@@ -605,9 +612,9 @@ directory of its own.
 
 ### Vaults in the explorer
 
-- **A folder that is a root shows its own icon** in the explorer and the launcher: one for a vault
-  (a `.slipbox/`), another for a repository without one. The tree then shows where `[[name]]`
-  changes meaning — above all a vault nested in the open one, where the open vault's links stop.
+- **A folder that is a vault shows its own icon** in the explorer and the launcher (a bookshelf, in
+  a folder's colour). The tree then shows where `[[name]]` changes meaning — above all a vault
+  nested in the open one, where the open vault's links stop.
 - **The vault's name follows the folder's, dimmed, when the two differ:** `docs  app-docs`.
 - The icons come in each glyph set — Nerd Font, Unicode, ASCII (`glyphs.ts`) — beside the folder
   ones (`dirOpen`, `dirClosed`).
@@ -660,8 +667,8 @@ repo (or not; that's the user's call):
 - later: **shared comments** and **agent answers worth keeping**, for collaborators.
 
 **Keys:** `<vault>` is the vault's `id` — so its personal data and cache survive moving the folder
-— for a vault with a `.slipbox/` and for the home vault; for a repository without one, as today,
-the folder's name and a hash of its path. A copy of a vault carries its id; while the original is
+— for every vault and the home vault. State kept under a path's key before vaults had ids moves
+over once. A copy of a vault carries its id; while the original is
 still where the machine last saw it, the copy keys by the id and a hash of its own path, so two
 copies never share a session.
 
@@ -697,15 +704,15 @@ personal data ever has to travel with a folder, or be visible beside it.
 | `[[vault:name]]`, `[[vault:name\|text]]`, `[[vault:name#Heading]]` | the same, in the named vault | yes |
 | `[text](../x.md)`, `[text](/x.md)` | that file: relative to the linking file, or to its root | yes |
 
-- **A name means the same on every machine.** The namespace is decided by the files (`.slipbox/`
-  or the repository) and the rules are fixed — exact case, same folder, deepest shared folder,
+- **A name means the same on every machine.** The namespace is decided by the files (the
+  `.slipbox/`) and the rules are fixed — exact case, same folder, deepest shared folder,
   shortest path, else a picker — so no index ever travels: each machine builds its own from the
   same files, and gets the same answers. The index only makes lookups fast; it never decides what
   a link means. A central index merged across vaults was rejected for exactly that reason: `[[plan]]`
   would change meaning with whatever else the machine had opened.
 - **`[[vault:name]]`** is MediaWiki's interwiki link. The vault is found by name or alias through
-  `vaults.json`, then the note inside it by the usual rules. Only a root with a `.slipbox/` (a
-  declared name) can be named; a repository without one is reached by path links.
+  `vaults.json`, then the note inside it by the usual rules. Every vault has a declared name; a
+  loose file (a repository not made a vault) is reached by a path link.
 - **A vault this machine doesn't have** makes a broken link that says so ("unknown vault `app`"),
   and where the vault was last seen, if it ever was — with an offer to point slipbox at it.
 - **Path links** name a place, need no namespace, and cross vaults freely. The target vault's index

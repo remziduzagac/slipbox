@@ -1,11 +1,14 @@
-// Root discovery (plan 1.1, 17.1), the marker version stamp (0.12) and `init` (1.10, 17.4).
+// Root discovery (plan 1.1, 17.1, 17.18), the marker version stamp (0.12) and `init` (1.10, 17.4).
 //
 // A file's root is decided by the file (docs/idea.md, "Vaults — decided 2026-09-30"): the nearest
-// `.slipbox/` above it; else the git repository it's in; else the home vault, which holds every
-// loose file and lists a folder at a time. `$HOME` and `/` are never a root: that would index
-// everything. `--root` names a root outright.
+// `.slipbox/` above it, else the home vault, which holds every loose file and lists a folder at a
+// time. Every vault has a `.slipbox/` with its `id` and `name`: a git repository without one is
+// loose until it's made a vault (the TUI offers; `slipbox init`). `$HOME` and `/` are never a root:
+// that would index everything. `--root` names a vault outright.
 
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { parse as parseToml } from "smol-toml";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { VAULT_CONFIG_TEMPLATE } from "./config.ts";
@@ -36,8 +39,8 @@ export { MARKER };
 /** Format version of the marker directory. Bump with a migration, never silently. */
 export const VAULT_FORMAT_VERSION = 1;
 
-/** `vault`: a `.slipbox/` root. `repo`: a git repository without one (or `--root`), walked the
- *  same way. `home`: a loose file's folder, listed alone; its data is the home vault's. */
+/** `vault`: a `.slipbox/` root. `home`: a loose file's folder, listed alone; its data is the home
+ *  vault's (17.18: a git repository without `.slipbox/` is loose too, until it's made a vault). */
 export type VaultMode = RootKind;
 
 export interface VaultLocation {
@@ -48,9 +51,9 @@ export interface VaultLocation {
   file: string | null;
   /** The storage key: what the cache and state directories are named by (17.3). */
   key: string;
-  /** The vault's id; null for a repository, or a vault whose config declares none yet. */
+  /** The vault's id; null only for a vault whose config can't be written (read-only). */
   id: string | null;
-  /** The name `[[name:note]]` reaches it by: declared, else the folder's; null for a repository. */
+  /** The name `[[name:note]]` reaches it by. */
   name: string | null;
   aliases: string[];
   previous_names: string[];
@@ -98,11 +101,12 @@ export function findVaultRoot(start: string): string | null {
   return null;
 }
 
-/** The root a path belongs to: the nearest `.slipbox/`, else the nearest git repository. */
-export function findRoot(start: string): { root: string; mode: "vault" | "repo" } | null {
-  const vault = findVaultRoot(start);
-  if (vault) return { root: vault, mode: "vault" };
-  for (let dir = startDir(start); !isNeverRoot(dir); dir = dirname(dir)) if (isRepoRoot(dir)) return { root: dir, mode: "repo" };
+/**
+ * The git repository a path is in (its top folder), never `$HOME` or `/`: not a root, only where
+ * slipbox offers to make one (17.18).
+ */
+export function gitRootOf(start: string): string | null {
+  for (let dir = startDir(start); !isNeverRoot(dir); dir = dirname(dir)) if (isRepoRoot(dir)) return dir;
   return null;
 }
 
@@ -125,22 +129,43 @@ export function locateVault(opts: LocateOptions): VaultLocation {
   if (opts.root) {
     const root = resolve(cwd, opts.root);
     if (!existsSync(root) || !statSync(root).isDirectory()) throw new VaultError(`--root is not a directory: ${opts.root}`);
+    if (!isVaultRoot(root)) throw new VaultError(`--root ${opts.root} isn't a vault (no .slipbox/): slipbox init ${opts.root} makes it one`);
     if (file && !isInside(root, file)) throw new VaultError(`${opts.path} is outside --root ${opts.root}`);
-    return rootAt(root, isVaultRoot(root) ? "vault" : "repo", file);
+    return rootAt(root, file);
   }
 
-  const found = findRoot(target ?? cwd);
-  if (found) return rootAt(found.root, found.mode, file);
+  const found = findVaultRoot(target ?? cwd);
+  if (found) return rootAt(found, file);
   return homeAt(file ? dirname(file) : (target ?? cwd), file);
 }
 
-/** The location of a known root. */
-export function rootAt(root: string, mode: "vault" | "repo", file: string | null = null): VaultLocation {
-  const ident: VaultIdentity = mode === "vault" ? readIdentity(vaultConfigFile(root)) : { id: null, name: null, aliases: [], previous_names: [] };
+/** The location of a vault root (a folder with `.slipbox/`). */
+export function rootAt(root: string, file: string | null = null): VaultLocation {
+  const ident = ensureIdentity(root);
   const key = storageKey(root, ident.id);
   if (ident.id && key === ident.id) adoptPathState(root, key);
-  const name = mode === "vault" ? (ident.name ?? implicitName(root)) : null;
-  return { root, mode, file, key, id: ident.id, name, aliases: ident.aliases, previous_names: ident.previous_names };
+  return { root, mode: "vault", file, key, id: ident.id, name: ident.name ?? implicitName(root), aliases: ident.aliases, previous_names: ident.previous_names };
+}
+
+/**
+ * A vault's identity, written into its config the first time a vault without one is opened (17.18):
+ * made before vaults had ids, or a `.slipbox/` made by hand. Every vault then has an `id` and a
+ * `name`. A config that doesn't parse is left alone (a typo mid-edit), as is a read-only one: that
+ * vault is keyed by its path this time.
+ */
+function ensureIdentity(root: string): VaultIdentity {
+  const file = vaultConfigFile(root);
+  const have = readIdentity(file);
+  if (have.id && have.name) return have;
+  if (existsSync(file) && !parsesAsToml(file)) return have;
+  const fields = { id: have.id ?? newVaultId(), name: have.name ?? suggestVaultName(root, parentVaultName(root)) };
+  try {
+    if (!existsSync(file)) writeFileSync(file, VAULT_CONFIG_TEMPLATE);
+    addIdentity(file, fields);
+  } catch {
+    return have;
+  }
+  return readIdentity(file);
 }
 
 /** A loose folder, in the home vault. */
@@ -161,11 +186,9 @@ function adoptPathState(root: string, key: string): void {
   } catch {}
 }
 
-/** The vault's config file: `.slipbox/config.toml`, the home vault's, or none (a repository). */
-export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): string | null {
-  if (loc.mode === "vault") return vaultConfigFile(loc.root);
-  if (loc.mode === "home") return join(homeVaultDir(), "config.toml");
-  return null;
+/** The vault's config file: `.slipbox/config.toml`, or the home vault's. */
+export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): string {
+  return loc.mode === "vault" ? vaultConfigFile(loc.root) : join(homeVaultDir(), "config.toml");
 }
 
 /** Record the vault in the machine's list (17.6). The home vault is listed by its own folder. */
@@ -204,14 +227,18 @@ export interface InitResult {
   identified: boolean;
   id: string;
   name: string;
+  /** Where `.slipbox/` was kept out of git (`private`), if it was. */
+  excluded: string | null;
 }
 
 /**
  * Make `dir` a vault (1.10, 17.4): `.slipbox/` with its version and a config holding the vault's
  * `id` and `name`. The name is `name`, else a distinct suggestion (17.5); a name another vault on
- * this machine answers to is refused. An existing vault without an id gets one.
+ * this machine answers to is refused. An existing vault without an id gets one. `private`: a
+ * vault in a repository you don't own — `.slipbox/` listed in its `.git/info/exclude`, never in
+ * `git status` (17.18).
  */
-export function initVault(dir: string, name?: string): InitResult {
+export function initVault(dir: string, name?: string, opts: { private?: boolean } = {}): InitResult {
   const root = resolve(dir);
   if (isNeverRoot(root)) throw new VaultError(`${root} can't be a vault: slipbox never indexes all of ${root === homeFolder() ? "your home folder" : "/"}`);
   const marker = join(root, MARKER);
@@ -224,17 +251,56 @@ export function initVault(dir: string, name?: string): InitResult {
     const other = vaultNamed(name, known, root);
     if (other.length) throw new VaultError(`a vault named "${name}" is already at ${other[0]!.path}; try "${suggestVaultName(root, parentVaultName(root), known)}"`);
   }
-  if (exists && have?.id) return { root, created: false, identified: false, id: have.id, name: have.name ?? implicitName(root) };
+  const excluded = opts.private ? excludeFromGit(root) : null;
+  if (exists && have?.id && have.name) {
+    if (name !== undefined && name !== have.name) throw new VaultError(`${root} is already the vault "${have.name}": slipbox rename-vault ${name} renames it`);
+    return { root, created: false, identified: false, id: have.id, name: have.name, excluded };
+  }
   const chosen = have?.name ?? name ?? suggestVaultName(root, parentVaultName(root), known);
-  const id = newVaultId();
+  const id = have?.id ?? newVaultId();
   if (!exists) {
     mkdirSync(marker, { recursive: true });
     writeFileSync(join(marker, "version"), `${VAULT_FORMAT_VERSION}\n`);
     writeFileSync(join(marker, "config.toml"), VAULT_CONFIG_TEMPLATE);
   }
   addIdentity(vaultConfigFile(root), { id, name: chosen });
-  recordLocation(rootAt(root, "vault"));
-  return { root, created: !exists, identified: exists, id, name: chosen };
+  recordLocation(rootAt(root));
+  return { root, created: !exists, identified: exists, id, name: chosen, excluded };
+}
+
+/**
+ * List a vault's `.slipbox/` in its repository's `.git/info/exclude` (a worktree's too: git says
+ * where): kept out of `git status` on this machine, and out of commits. The exclude file, or null
+ * when `root` isn't in a git repository.
+ */
+function excludeFromGit(root: string): string | null {
+  const repo = gitRootOf(root);
+  if (!repo) return null;
+  let file: string;
+  try {
+    file = resolve(repo, execFileSync("git", ["-C", repo, "rev-parse", "--git-path", "info/exclude"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim());
+  } catch {
+    file = join(repo, ".git", "info", "exclude");
+  }
+  const line = `/${relative(repo, join(root, MARKER)).split(sep).join("/")}/`;
+  let text = "";
+  try {
+    text = readRegular(file, 1 << 20).toString("utf8");
+  } catch {}
+  if (!text.split(/\r?\n/).includes(line)) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, `${text}${text && !text.endsWith("\n") ? "\n" : ""}${line}\n`);
+  }
+  return file;
+}
+
+function parsesAsToml(file: string): boolean {
+  try {
+    parseToml(readRegular(file, 1 << 20).toString("utf8"));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** The name of the vault enclosing `dir`, if any. */

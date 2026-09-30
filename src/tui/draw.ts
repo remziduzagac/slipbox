@@ -1032,7 +1032,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   // side by side, and the extension says which.
   const nameOf = (row: TreeRow) => row.name;
   const icon = (row: TreeRow) =>
-    row.root ? (row.root.kind === "vault" ? g.vault : row.root.kind === "repo" ? g.repo : g.dirClosed) : row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file;
+    row.root ? (row.root.kind === "vault" ? g.vault : g.dirClosed) : row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file;
   const prefix = (row: TreeRow) => `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
   const text = (row: TreeRow) => prefix(row) + nameOf(row);
   const sv = sideView(list, rows, text, s);
@@ -1047,7 +1047,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     const y = rect.y + i;
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
     let role: Role =
-      row.root?.kind === "vault" ? "sidebar_vault" : row.root?.kind === "repo" ? "sidebar_repo" : row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
+      row.root?.kind === "vault" ? "sidebar_vault" : row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);

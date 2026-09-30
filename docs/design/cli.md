@@ -82,7 +82,7 @@ These churn freely before 1.0:
 | --- | --- |
 | `ls` | `[{path, title, size, mtime, tags, links}]`; `--files` adds `[{path, group, format, size, mtime}]` |
 | `outline <note>` | `{path, headings[{depth, text, slug, line}]}` |
-| `init [dir]` | `{root, created, identified, id, name}` — `--name N`; a name in use is exit 5 |
+| `init [dir]` | `{root, created, identified, id, name, excluded}` — `--name N`, `--private`; exit 5: name in use |
 | `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
 | `vaults` | `[{key, id, kind, name, aliases, previous_names, path, seen, exists}]`, newest first |
 | `mv`, `rename-vault`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, written}` (see Renames) |
@@ -209,14 +209,17 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   as a window around the match (`…` where cut), so its output grows with the matches, not with the
   line; a note it can't read is a warning, and the rest are still searched.
 - **What a writer may change.** `write`, `replace` and `task` change a file of the note's root — a
-  vault, a repository, or a loose file's own folder (`17.1`) — inside it by its real path, and
+  vault, or a loose file's own folder (`17.1`) — inside it by its real path, and
   where the walk lists notes: never `.slipbox/`, `.git/`, a hidden folder or `node_modules`, and
   never a path outside `--root` when that names the root. `replace --dry-run` only reads, so it
   previews any note; its `newSha` is `null`.
 - **Where a command works.** The root is decided by the file: the nearest `.slipbox/` above the
-  note argument (or cwd), else its git repository, else the home vault (the file's own folder,
-  listed alone). `$HOME` and `/` are never a root. Each command records the vault in
-  `vaults.json`.
+  note argument (or cwd), else the home vault (the file's own folder, listed alone). `$HOME` and
+  `/` are never a root. `--root` must name a vault (a folder with `.slipbox/`). Each command records
+  the vault in `vaults.json`. A loose file in a git repository gets a warning — `slipbox init
+  <root>` would make the repository a vault (`--private` keeps `.slipbox/` out of git) — and the
+  CLI never makes one on its own (`17.18`). A `.slipbox/` without an id and a name gets them
+  written into its config on first open.
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4
@@ -272,8 +275,7 @@ or path now. Both take `--dry-run`.
 calls it, and the user reads the scratch in the TUI.
 
 - **Where.** In the state dir per vault by default; with `capture.location = "vault"`, in the
-  vault. The project is the root: the vault, else the git repository (`17.1`); a loose folder's
-  scratch is the home vault's, always in its state.
+  vault. A loose folder's scratch is the home vault's, always in its state.
 - **Reference forms**, as `prompt-buffer.lua` emits them: `path:42`, `path:42-50`,
   `path:42:10-30`, `path:42:10-50:30`. Paths inside the project are stored relative to it.
   Lines count from 1 and ranges must be in order; `--snippet` past the end of the file exits 3.

@@ -20,12 +20,11 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) on
 macOS too — the terminal stack here is XDG-shaped on both machines.
 
-**The key** is the vault's `id` when it has one — `[vault] id` in `.slipbox/config.toml`, random, made by
-`slipbox init` and never changed — so its cache and state survive moving the folder. A repository without
-`.slipbox/`, or a vault whose config declares no id yet, keys by path: `<basename>-<hash>`, the hash the first 12 hex
-characters of SHA-256 over the root's **real path**, the basename only there so a human can find the directory. When
-a vault gets its id, the state under its path's key moves over once. Loose files (the home vault) key by the home
-vault's id.
+**The key** is the vault's `id` — `[vault] id` in `.slipbox/config.toml`, random, made by `slipbox init` (or
+written into a `.slipbox/` that has none the first time it's opened, `17.18`) and never changed — so its cache and
+state survive moving the folder. Loose files (the home vault) key by the home vault's id. Only a vault whose config
+can't be written (read-only, or not parsing) keys by path: `<basename>-<hash>`, the hash the first 12 hex characters
+of SHA-256 over the root's **real path**; state kept under a path's key before vaults had ids moves over once.
 
 Consequences, accepted deliberately:
 
@@ -53,10 +52,8 @@ One predicate, used by both the walk and the watcher (`5.2` is this decision see
   follows git's default `core.ignorecase`: insensitive on macOS, sensitive on Linux.
 - **`walk.exclude`** adds gitignore-syntax patterns from config.
 - **Nested vaults are boundaries.** A subdirectory holding its own `.slipbox/` is a different vault and is not
-  walked. One vault per repo is the norm; this keeps a fixture vault inside a repo from leaking into it. **A
-  repository root** (no `.slipbox/`, plan `17.1`) also stops at a nested repository (a `.git` in a subdirectory: a
-  submodule, a clone): the nearest root holds each file. A vault walks into a repository inside it — the nearest
-  `.slipbox/` wins.
+  walked. One vault per repo is the norm; this keeps a fixture vault inside a repo from leaking into it. Only a
+  `.slipbox/` is a boundary: a vault walks into a repository inside it (`17.18`).
 - **Symlinks:** a symlinked *file* is included when its real path is inside the vault root, unless that target is
   already walked, since the same note twice would double every backlink. A symlinked *directory* is never followed:
   no cycles, no escaping the root. Anything pointing outside the root is skipped and reported (`7.5` constraint),

@@ -312,6 +312,7 @@ config.
 | `:reload` | reload the note from disk |
 | `:reindex` | reindex the vault |
 | `:vaults` | the vaults this machine knows: pick one to switch to |
+| `:init` | make this loose folder (or its git repository) a vault |
 | `:config` | reload the configuration |
 
 **Substitute** is vim's, typed at the `:` prompt (`find.substitute`): `:s/old/new/` on the cursor's
@@ -346,6 +347,7 @@ source first.
 | a new folder beside this note (`:mkdir name`) | `space v d` |
 | rename or move the note (`:rename path`, `:mv path`): a preview, then `enter` | `space n m` |
 | rename the vault: a preview, then `enter` | `space v n` |
+| make this loose folder (or its git repository) a vault (`:init`): committed, or private | `space v m` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |

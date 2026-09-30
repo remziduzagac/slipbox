@@ -35,7 +35,7 @@ export const ROLES = [
   "syntax_error",
   // chrome
   "border", "status", "status_accent", "status_dim",
-  "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active", "sidebar_vault", "sidebar_repo",
+  "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active", "sidebar_vault",
   "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
   "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
   "cursor", "cursor_line", "line_number", "line_number_current",
@@ -195,10 +195,9 @@ export function themeFromPalette(
     sidebar_dir: { fg: p.blue },
     sidebar_selected: { fg: p.fg_strong, bg: p.surface, bold: true },
     sidebar_active: { fg: p.cyan },
-    // A folder that is a root of its own (17.13): a folder's colour — its icon tells it apart — and
-    // a role of its own, for [colors] to set.
+    // A folder that is a vault of its own (17.13): a folder's colour — its icon tells it apart —
+    // and a role of its own, for [colors] to set.
     sidebar_vault: { fg: p.blue },
-    sidebar_repo: { fg: p.blue },
     tab: { fg: p.comment },
     tab_active: { fg: p.fg_strong, bg: p.bg, bold: true },
     // Focus shows as brightness, never as colour: the active tab and the side panes' titles are

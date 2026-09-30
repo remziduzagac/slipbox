@@ -36,7 +36,7 @@ import { loadSession } from "../core/position.ts";
 import { Reach } from "../core/reach.ts";
 import { type Applied, applyPlan, planNoteRename, planRelink, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { readRegistry, vaultNamed } from "../core/registry.ts";
-import { initVault, isInside, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { gitRootOf, homeAt, initVault, isInside, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -91,6 +91,9 @@ class Session {
     this.configSources = loaded.sources;
     this.warnings.push(...loaded.warnings);
     if (loc.note) this.warnings.push(loc.note);
+    // A loose file in a git repository without .slipbox/ (17.18): links reach only its folder.
+    const repo = loc.mode === "home" && args.positional[0] !== "init" ? gitRootOf(loc.root) : null;
+    if (repo) this.warnings.push(`not in a vault: ${repo} is a git repository without .slipbox/ — slipbox init ${repo} makes it one (--private keeps .slipbox/ out of git)`);
     recordLocation(loc);
   }
 
@@ -139,14 +142,14 @@ Usage:
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
-  slipbox init [dir]                make <dir> a vault (creates .slipbox/ with its id and name)  [--name N]
+  slipbox init [dir]                make <dir> a vault (creates .slipbox/ with its id and name)  [--name N] [--private]
   slipbox info                      vault, paths, versions, staleness
   slipbox vaults                    the vaults this machine knows: name, kind, path, last seen
   slipbox themes                    list themes
   slipbox commands                  list named commands and their CLI equivalents
 
 Global options:
-  --root <dir>      the root (default: nearest .slipbox/ above the path or cwd, else its git repository)
+  --root <dir>      the vault (default: the nearest .slipbox/ above the path or cwd; none: a loose folder)
   --config <file>   user config file (default: $SLIPBOX_CONFIG or ~/.config/slipbox/config.toml)
   --json            one JSON object on stdout: {schema, ok, command, data, warnings, stale}
   --color <when>    auto | always | never
@@ -213,7 +216,8 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // The note argument, when it names a file, also says which vault this is.
     const noteAt = ["render", "links", "backlinks", "outline", "replace", "task", "read", "stat", "write", "send", "mv", "relink"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
     const pathArg = noteArgPath(noteAt, io.cwd);
-    const loc = locateVault({ root: command === "init" ? undefined : flag(args, "root"), path: pathArg, cwd: io.cwd });
+    // init makes the vault: opening the folder as one first would name it before --name could.
+    const loc = command === "init" ? homeAt(io.cwd) : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);
@@ -300,7 +304,7 @@ const FLAGS: Record<string, string[]> = {
   send: ["line", "server"],
   capture: ["ref", "snippet", "stdin", "lang"],
   scratch: ["if-unchanged"],
-  init: ["name"],
+  init: ["name", "private"],
   mv: ["dry-run"],
   "rename-vault": ["dry-run"],
   relink: ["dry-run"],
@@ -652,7 +656,7 @@ const HANDLERS: Record<string, Handler> = {
     if (name === "") throw new UsageError("--name needs a name");
     let r;
     try {
-      r = initVault(dir.startsWith("/") ? dir : `${s.io.cwd}/${dir}`, name);
+      r = initVault(dir.startsWith("/") ? dir : `${s.io.cwd}/${dir}`, name, { private: has(s.args, "private") });
     } catch (err) {
       if (err instanceof VaultError) throw new CliError(err.message, EXIT.refused);
       throw err;
@@ -662,7 +666,7 @@ const HANDLERS: Record<string, Handler> = {
       : r.identified
         ? `${r.root} is a vault; gave it an id — vault "${r.name}"\n`
         : `${r.root} is already a vault — "${r.name}"\n`;
-    return { data: r, human };
+    return { data: r, human: r.excluded ? `${human}kept out of git: listed in ${r.excluded}\n` : human };
   },
 
   mv(s, rest) {
@@ -675,7 +679,7 @@ const HANDLERS: Record<string, Handler> = {
   "rename-vault"(s, rest) {
     const name = requireArg(rest, "the vault's new name");
     const r = renameResult(s, () => planVaultRename(s.graph, s.loc, name));
-    if (!has(s.args, "dry-run")) recordLocation(rootAt(s.loc.root, "vault"));
+    if (!has(s.args, "dry-run")) recordLocation(rootAt(s.loc.root));
     return r;
   },
 

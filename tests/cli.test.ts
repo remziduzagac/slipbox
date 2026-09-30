@@ -337,9 +337,11 @@ describe("the vault and the tool", () => {
     expect(readFileSync(join(outsideDir, "outside.md"), "utf8")).toBe("kept\n");
     // Files that aren't notes, or where the vault lists none.
     mkdirSync(join(vault, ".slipbox"), { recursive: true });
-    writeFileSync(join(vault, ".slipbox", "config.toml"), "# vault config\n");
+    // (With its identity: a vault without one gets it written on the next open, 17.18.)
+    const cfg = '# vault config\n[vault]\nid = "4a1d3e5c7b9f0261"\nname = "halden"\n';
+    writeFileSync(join(vault, ".slipbox", "config.toml"), cfg);
     expect(slipbox(["write", ".slipbox/config.toml", "x"]).code).toBe(5);
-    expect(readFileSync(join(vault, ".slipbox", "config.toml"), "utf8")).toBe("# vault config\n");
+    expect(readFileSync(join(vault, ".slipbox", "config.toml"), "utf8")).toBe(cfg);
     for (const bad of [".slipbox/evil", ".git/hooks/x", "node_modules/x", "odd/"]) expect(slipbox(["write", bad, "x", "--create"]).code).toBe(5);
     // A dry run previews a note that couldn't be written; a bad --lines is a usage error.
     expect(slipbox(["replace", "home", "Halden", "H", "--lines", "999"]).code).toBe(2);

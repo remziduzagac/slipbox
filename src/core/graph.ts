@@ -147,7 +147,7 @@ export class Graph {
     readonly loc: VaultLocation,
     readonly config: Config,
   ) {
-    this.filter = new WalkFilter(loc.root, config.walk, loc.mode === "repo");
+    this.filter = new WalkFilter(loc.root, config.walk);
   }
 
   get root(): string {
@@ -501,9 +501,9 @@ export class Graph {
     return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], vault: this.reach?.vaultOf(hit.abs) ?? null };
   }
 
-  /** The vaults and repositories nested in this one: folders the walk leaves to them. */
+  /** The vaults nested in this one: folders the walk leaves to them. */
   nestedRoots(): string[] {
-    return this.skipped.filter((s) => s.reason === "nested vault" || s.reason === "nested repository").map((s) => s.rel);
+    return this.skipped.filter((s) => s.reason === "nested vault").map((s) => s.rel);
   }
 
   /**
