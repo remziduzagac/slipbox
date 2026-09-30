@@ -5709,12 +5709,12 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(existsSync(join(root, "notes", "first.md"))).toBe(true);
     expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[[first]]");
     expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("notes/first.md"); // still selected
-    // m: the folders, this one left out; the root first.
+    // m: the folders as a tree, the root first, this one marked (18.8).
     await h.keys("m");
     const list = h.app.overlay as ListOverlay;
-    expect(list.title).toBe("Move notes/first.md to…");
-    expect(list.items[0]!.label).toBe("/ (the vault's root)");
-    expect(list.items.some((it) => it.data === "notes")).toBe(false);
+    expect(list.title).toBe("Move notes/first.md to… — type to filter, ← → fold");
+    expect(list.filtered[0]!.item.label.trim()).toBe("▾ / (the vault's root)");
+    expect(list.filtered.find((e) => e.item.data === "notes")!.item.hint).toBe("here");
     await type(h, "projects");
     await h.keys("enter", "enter");
     expect(existsSync(join(root, "projects", "first.md"))).toBe(true);
@@ -5804,7 +5804,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(prompt(h).text).toBe("alpha");
     await h.keys("escape");
     click("xrow:move");
-    expect((h.app.overlay as ListOverlay).title).toBe("Move notes/alpha.md to…");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("Move notes/alpha.md to…");
     await h.keys("escape");
     click("xnew:folder");
     expect(prompt(h).label).toBe("new folder in notes/");
@@ -5830,5 +5830,66 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(h.app.view!.buf.deleted).toBe(true);
     await h.keys("space", "v", "t");
     expect((h.app.overlay as ListOverlay).title).toBe("Trash (1) — enter restores");
+  });
+
+  test("a vault's row: rename (its folder), move, delete, and rename the vault — four buttons (18.7)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "vault-links.md"), "[in](nested-vault/inner.md) and [[fixture-nested:inner]]\n");
+    const h = await at(root, "nested-vault");
+    const row = h.frame().split("\n").find((r) => r.includes("nested-vault"))!;
+    expect(row).toMatch(/✎\s+↦\s+✕\s+✎◈/);
+    // d: the whole vault, said so.
+    await h.keys("d");
+    expect(prompt(h).label).toMatch(/^delete the vault fixture-nested \(nested-vault\/, 1 note\)\? 2 links to it will break\./); // by path and by name
+    await h.keys("escape");
+    // R: the vault's name; its folder stays.
+    await h.keys("shift+r");
+    expect(prompt(h)).toMatchObject({ label: "rename the vault fixture-nested to: ", text: "fixture-nested" });
+    await h.keys("ctrl+u");
+    await type(h, "inner-box");
+    await h.keys("enter", "enter");
+    expect(readFileSync(join(root, "nested-vault", ".slipbox", "config.toml"), "utf8")).toContain('name = "inner-box"');
+    expect(readFileSync(join(root, "vault-links.md"), "utf8")).toContain("[[inner-box:inner]]");
+    expect(existsSync(join(root, "nested-vault"))).toBe(true);
+    // r: its folder; links into it by path fixed, by name left.
+    h.app.selectInExplorer("nested-vault");
+    await h.keys("r", "ctrl+u");
+    await type(h, "box");
+    await h.keys("enter");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("nested-vault/ → box/");
+    await h.keys("enter");
+    expect(existsSync(join(root, "box", "inner.md"))).toBe(true);
+    expect(readFileSync(join(root, "vault-links.md"), "utf8")).toBe("[in](box/inner.md) and [[inner-box:inner]]\n");
+    expect(h.app.explorerRows().some((r) => r.path === "box" && r.root?.kind === "vault")).toBe(true);
+  });
+
+  test("the move picker is a tree: the explorer's folds, ← → fold, typing filters under the parents (18.8)", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, "projects", "deep", "deeper"), { recursive: true });
+    writeFileSync(join(root, "projects", "deep", "deeper", "d.md"), "# d\n");
+    const h = await at(root, "notes/alpha.md");
+    h.app.graph.build(false);
+    h.app.expanded.delete("projects");
+    await h.keys("m");
+    const o = () => h.app.overlay as ListOverlay;
+    const labels = () => o().filtered.map((e) => e.item.label.trim());
+    expect(labels()[0]).toBe("▾ / (the vault's root)");
+    expect(labels()).toContain("▸ notes"); // where it is (no folders in it), marked and selected
+    expect(o().filtered[o().selected]!.item).toMatchObject({ data: "notes", hint: "here" });
+    expect(labels()).toContain("▸ projects"); // folded, as in the explorer
+    expect(labels()).not.toContain("▸ deep");
+    // → unfolds projects.
+    const at_ = o().filtered.findIndex((e) => e.item.data === "projects");
+    o().selected = at_;
+    await h.keys("right");
+    expect(labels()).toContain("▸ deep");
+    await h.keys("left");
+    expect(labels()).not.toContain("▸ deep");
+    // Typing: the matches, under their parents, unfolded; the first match selected, not a parent.
+    await type(h, "deeper");
+    expect(o().filtered.map((e) => e.item.data)).toEqual(["", "projects", "projects/deep", "projects/deep/deeper"]);
+    expect(o().selected).toBe(3);
+    await h.keys("enter");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → projects/deep/deeper/alpha.md");
   });
 });

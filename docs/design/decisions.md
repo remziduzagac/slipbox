@@ -160,6 +160,9 @@ note's own name and path:
   reaches them, and their links count, without their having been opened on this machine first; a nested one with no
   index yet is indexed then. A vault path into a nested vault — `[t](outreach/index.md)`, `[[outreach/index]]` —
   reaches the note there, as a path out of the root does.
+- **Same-named vaults:** several vaults a name reaches are ambiguous — unless exactly one of them is nested in the
+  linking vault or holds it: that one is meant. Two clones of a repo holding a vault each reach their own, and a link
+  from one isn't a backlink in the other.
 
 This opens an existing Obsidian vault unchanged for the default "shortest path when possible" setting.
 

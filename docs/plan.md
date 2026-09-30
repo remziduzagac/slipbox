@@ -611,6 +611,8 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | 18.4 | **Done.** Delete to the vault's trash (in its state), links that break said; restore; `:trash` |
 | 18.5 | **Done.** Copy, cut and paste (`y`, `x`, `p`): a copy (`name-copy`), or a move with links fixed |
 | 18.6 | **Done.** CLI: `slipbox cp`, `rm`, `trash [restore]`; `mv` takes a folder |
+| 18.7 | **Done.** A nested vault's row: its folder renamed, moved, deleted; a fourth button renames the vault |
+| 18.8 | **Done.** The move picker is a tree: the explorer's folds, `←` / `→` fold, typing filters under the parents |
 
 ## Deferred — in the design, not in this breakdown
 

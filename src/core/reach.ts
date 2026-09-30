@@ -27,6 +27,25 @@ function shown(v: Pick<KnownVault, "name" | "path">): string {
   return v.name ?? basename(v.path);
 }
 
+/**
+ * A vault opened on its own (a rename or move of it, 18.x): its config, its index refreshed, other
+ * vaults reached from it — so its backlinks include theirs.
+ */
+export function openVault(root: string): Graph {
+  const loc = rootAt(root);
+  recordLocation(loc); // seen, like every open (17.6)
+  const g = openGraph(loc, loadConfig({ vaultFile: vaultConfigPath(loc) }).config, true, "lazy");
+  g.thorough = true;
+  g.reach = new Reach(loc);
+  return g;
+}
+
+/** Whether a known vault is nested in the vault at `at` (real), or holds it. */
+function kin(at: string, v: KnownVault): boolean {
+  const p = real(v.path);
+  return isInside(at, p) || isInside(p, at);
+}
+
 export class Reach implements VaultReach {
   /** Other roots' graphs, by real path; null where one couldn't be opened. */
   private readonly graphs = new Map<string, Graph | null>();
@@ -90,10 +109,11 @@ export class Reach implements VaultReach {
   wiki(vault: string, target: string, g: Graph): Target | null {
     const n = vault.toLowerCase();
     const here = real(this.here.root);
-    const named = () => this.known().filter((v) => (v.kind === "vault" || v.kind === "home") && real(v.path) !== here && namesOf(v).includes(n));
-    if (!named().length) this.discover(g);
+    // Unknown, or known only elsewhere (a second clone's own nested vault isn't recorded yet): look
+    // at the vaults nested in this one and holding it.
+    if (!this.meant(n, here).some((v) => kin(here, v))) this.discover(g);
     const others = this.known().filter((v) => (v.kind === "vault" || v.kind === "home") && real(v.path) !== here);
-    let hits = others.filter((v) => namesOf(v).includes(n));
+    let hits = this.meant(n, here);
     let via: Target["via"];
     if (!hits.length) {
       // A name the vault had (17.7): only when the vault itself still says so, under the same id,
@@ -116,6 +136,19 @@ export class Reach implements VaultReach {
     if (r.resolvedKind === "note" || r.resolvedKind === "file") return { ...r, path: abs(r.path!), candidates: r.candidates.map(abs), vault: name, via: via ?? r.via };
     if (r.resolvedKind === "ambiguous") return { ...r, candidates: r.candidates.map(abs), vault: name };
     return { resolvedKind: "unresolved", path: null, candidates: [], vault: name, reason: `no note "${target}" in vault "${name}"` };
+  }
+
+  /**
+   * The vaults `[[name:…]]` in the vault at `from` means, by their names and aliases. Copies of a
+   * vault (a second clone) share its nested vaults' names: of several, the one nested in `from`, or
+   * holding it, is meant.
+   */
+  private meant(n: string, from: string): KnownVault[] {
+    const at = real(from);
+    const hits = this.known().filter((v) => (v.kind === "vault" || v.kind === "home") && real(v.path) !== at && namesOf(v).includes(n));
+    if (hits.length < 2) return hits;
+    const near = hits.filter((v) => kin(at, v));
+    return near.length === 1 ? near : hits;
   }
 
   vaultOf(abs: string): string | null {
@@ -170,12 +203,24 @@ export class Reach implements VaultReach {
     if (l.kind === "wiki" || l.kind === "embed") {
       const m = VAULT_LINK.exec(l.target);
       if (m && g.answersTo(m[1]!)) {
+        // Only when the name means this vault there: not a same-named one, not several.
+        const meant = this.meant(m[1]!.toLowerCase(), v.path);
+        if (meant.length > 1 || (meant.length === 1 && real(meant[0]!.path) !== real(g.root))) return null;
         const r = g.resolveLink({ kind: "wiki", target: m[2]! }, "");
         return r.resolvedKind === "note" && r.path && !isAbsolute(r.path) ? r.path : null;
       }
       // By its path (17.16): `[[../notes/x]]`, `[[~/notes/x]]`, an absolute one.
       const hit = pathLink(l.target, linking, true);
-      return hit ? inG(hit.abs) : null;
+      if (hit) return inG(hit.abs);
+      // A vault path into a vault nested in the linking one (17.17): `[[outreach/index]]`.
+      if (l.target.includes("/") && isInside(real(v.path), real(g.root))) {
+        const base = join(v.path, l.target.replace(/^\/+/, ""));
+        for (const abs of /\.[A-Za-z0-9]+$/.test(base) ? [base] : [`${base}.md`, `${base}.markdown`]) {
+          const rel = inG(abs);
+          if (rel) return rel;
+        }
+      }
+      return null;
     }
     if (l.kind !== "markdown") return null;
     const fileUrl = /^file:\/\//i.test(l.target);

@@ -1184,6 +1184,31 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("escape");
       await leader(s, "e");
       await s.see("outreach");
+      // Its row in the explorer (18.7): shift+r renames the vault; m moves its folder, picked from
+      // the tree by typing — its links out (two deep too) follow, its name stays.
+      await s.status("FILES");
+      await s.keys("g", "g");
+      // The explorer's rows: left of its border (in code points: the Nerd glyphs are two units),
+      // past the left rail.
+      const title = s.rowOf(/Explorer/);
+      const border = [...s.screen()[title]!].findIndex((c) => c === "│" || c === "┃");
+      const left = (r: string) => [...r].slice(3, border).join("");
+      const first = s.screen().findIndex((r, i) => i > title && /\S/.test(left(r)));
+      const at = s.screen().findIndex((r, i) => i >= first && /\boutreach\b/.test(left(r)));
+      for (let i = first; i < at; i++) await s.keys("j");
+      await s.keys("shift+r");
+      await s.see("rename the vault outreach to:");
+      await s.keys("escape");
+      await s.keys("m");
+      await s.see("Move outreach/ to…");
+      await s.see("(the vault's root)");
+      await s.type("handbo");
+      await s.keys("enter");
+      await s.see(/outreach\/ → handbook\/outreach\//);
+      await s.keys("enter");
+      await s.file("handbook/outreach/index.md", (t) => t.includes("[the operations handbook](../operations-handbook.md)"), "outreach's link out fixed");
+      s.expect(s.read("handbook/outreach/school-visits/index.md").includes("(../../safety-card.adoc)"), "two deep: fixed too");
+      s.expect(s.read("home.md").includes("[[outreach:index]]"), "the link by its name as it was");
     },
   },
   {

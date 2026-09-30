@@ -1068,9 +1068,16 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
     // The selected note, file or folder: rename, move and delete at the row's end (18.1), their
     // right edge under the title's buttons', a long name cut (…) to make room for them.
-    const rowButtons = [[g.deleteItem, "xrow:delete"], [g.moveItem, "xrow:move"], [g.renameItem, "xrow:rename"]] as const;
+    // A vault nested in this one has a fourth: its name (rename is its folder's).
+    const vaultRow = row.root?.kind === "vault" && app.loc.mode === "vault";
+    const rowButtons: (readonly [string, string])[] = [
+      ...(vaultRow ? [[g.renameVault, "xrow:rename_vault"] as const] : []),
+      [g.deleteItem, "xrow:delete"],
+      [g.moveItem, "xrow:move"],
+      [g.renameItem, "xrow:rename"],
+    ];
     const buttonsW = rowButtons.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0);
-    const withButtons = selected && row.kind !== "root" && sv.cols - buttonsW >= 10;
+    const withButtons = selected && (row.kind !== "root" || vaultRow) && sv.cols - buttonsW >= 10;
     const shown = sideRow(text(row), sv);
     const w = drawText(c, rect.x, y, withButtons ? truncate(shown, sv.cols - buttonsW) : shown, st, rect.w);
     if (withButtons) {
@@ -1080,9 +1087,11 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
         smallButton(app, c, x, y, ` ${glyph} `, id, geo, st.bg);
       }
     }
-    // A vault named otherwise than its folder: the name, dimmed, after it (17.13).
+    // A vault named otherwise than its folder: the name, dimmed, after it (17.13) — up to its
+    // buttons, when it has them.
     const vaultName = row.root?.name;
-    if (vaultName && !sv.left && w + 1 < rect.w) drawText(c, rect.x + w + 1, y, vaultName, { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, rect.w - w - 1);
+    const nameEnd = withButtons ? sv.cols - buttonsW : rect.w;
+    if (vaultName && !sv.left && w + 1 < nameEnd) drawText(c, rect.x + w + 1, y, vaultName, { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, nameEnd - w - 1);
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
     // The letters the filter matched in a note's name.
     const m = q && row.kind === "note" ? fuzzy(q, nameOf(row)) : null;

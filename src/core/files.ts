@@ -5,11 +5,13 @@
 
 import { randomBytes } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
-import { basename, dirname, join, posix, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative } from "node:path";
 import { classify } from "./filetypes.ts";
 import { landsInside, readJson, writeJson } from "./fsutil.ts";
-import type { Graph } from "./graph.ts";
+import type { Backlink, Graph } from "./graph.ts";
 import { type Keyed, stateDir } from "./paths.ts";
+import { openVault } from "./reach.ts";
+import { linksIntoFolder } from "./rename.ts";
 import { isInside } from "./vault.ts";
 
 export class FileOpError extends Error {}
@@ -80,8 +82,17 @@ export function within(g: Graph, rel: string): string[] {
   return [...g.notes.keys(), ...g.filePaths()].filter((p) => p === rel || p.startsWith(`${rel}/`));
 }
 
-/** How many links from notes that stay would break: to `rel`, or to anything in it. */
+/**
+ * How many links from notes that stay would break: to `rel`, or to anything in it. A vault nested
+ * in `g` (18.7): this vault's links into it, and other vaults' (from their indexes).
+ */
 export function linksInto(g: Graph, rel: string): number {
+  if (g.nestedRoots().includes(rel)) {
+    const abs = join(g.root, rel);
+    const v = openVault(abs);
+    const outside = (b: Backlink) => isAbsolute(b.from) && !isInside(g.root, b.from);
+    return linksIntoFolder(g, abs).length + [...v.notes.keys(), ...v.filePaths()].reduce((n, p) => n + v.backlinks(p).filter(outside).length, 0);
+  }
   const inside = new Set(within(g, rel));
   let n = 0;
   for (const p of inside) for (const b of g.backlinks(p)) if (!inside.has(b.from)) n++;

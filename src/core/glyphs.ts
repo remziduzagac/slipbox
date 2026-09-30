@@ -51,6 +51,8 @@ export interface Glyphs {
   renameItem: string;
   moveItem: string;
   deleteItem: string;
+  /** On a vault's row: rename the vault (its name; rename is its folder's). */
+  renameVault: string;
   /** The outline's fold markers (the explorer uses dirOpen / dirClosed). */
   foldOpen: string;
   foldClosed: string;
@@ -122,6 +124,7 @@ const unicode: Glyphs = {
   renameItem: "✎",
   moveItem: "↦",
   deleteItem: "✕",
+  renameVault: "✎◈",
   foldOpen: "▾",
   foldClosed: "▸",
   guide: "│",
@@ -172,6 +175,7 @@ const nerd: Glyphs = {
   renameItem: "\u{f03eb}", // nf-md-pencil
   moveItem: "\u{f0ab9}", // nf-md-file_move
   deleteItem: "\u{f0a7a}", // nf-md-trash_can_outline
+  renameVault: "\u{f0455}", // nf-md-rename_box
   file: "󰍔",
   dataFile: "\u{f0626}", // nf-md-code_json
   textFile: "\u{f022e}", // nf-md-file_code
@@ -212,6 +216,7 @@ const ascii: Glyphs = {
   renameItem: "r",
   moveItem: "m",
   deleteItem: "d",
+  renameVault: "R",
   foldOpen: "v",
   foldClosed: ">",
   guide: "|",

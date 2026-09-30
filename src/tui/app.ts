@@ -14,7 +14,7 @@ import { onLoaded } from "../core/lazy.ts";
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, realpathSync, statSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { readJson, readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
 import { toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
@@ -52,8 +52,8 @@ import {
 } from "../core/position.ts";
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
 import { normKey } from "../core/links.ts";
-import { Reach } from "../core/reach.ts";
-import { type Applied, applyPlan, planFolderMove, planNoteRename, type RenamePlan } from "../core/rename.ts";
+import { openVault, Reach } from "../core/reach.ts";
+import { type Applied, applyPlan, planFolderMove, planNoteRename, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, vaultConfigFile } from "../core/registry.ts";
 import { gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
@@ -238,6 +238,8 @@ export interface ListItem {
   rule?: boolean;
   /** A key that picks this item at once (a list that isn't filtered by typing): `l`, `k`… */
   hotkey?: string;
+  /** Shown for where the matches are (a tree's parents): the selection starts past it. */
+  context?: boolean;
   data: unknown;
 }
 
@@ -267,6 +269,9 @@ export interface ListOverlay {
   alignKeysAcrossList?: boolean;
   /** A dropdown hanging under this cell (the breadcrumb's `…`) instead of a centred list. */
   anchor?: { x: number; y: number };
+  /** A tree's ← / →: fold or unfold the selected item (true when something changed; `source`
+   *  then gives the rows again). */
+  fold?: (item: ListItem, open: boolean) => boolean;
 }
 
 export interface PromptOverlay {
@@ -342,6 +347,13 @@ export interface HistoryRow {
   recent?: string;
   /** The heading over the recent notes: drawn dim, never selected. */
   heading?: boolean;
+}
+
+/** What an explorer operation acts on (18.x): a note or file, a folder, or a nested vault's folder. */
+export interface ExplorerItem {
+  rel: string;
+  dir: boolean;
+  vault?: boolean;
 }
 
 export interface TreeRow {
@@ -1927,16 +1939,23 @@ export class App {
   // File operations in the explorer (18.x)
 
   /** Copied or cut in the explorer, for `p`. */
-  fileClip: { mode: "copy" | "cut"; rel: string; dir: boolean } | null = null;
+  fileClip: ({ mode: "copy" | "cut" } & ExplorerItem) | null = null;
   /** What was deleted last this session: `u` in the explorer puts it back. */
   private lastTrashed: string | null = null;
 
-  /** What the explorer's selected row names: a note or file, or a folder (a vault or `..`: none). */
-  explorerItem(): { rel: string; dir: boolean } | null {
+  /** What the explorer's selected row names: a note or file, a folder, or a vault nested in this
+   *  one (its folder); `..` and a loose folder's rows name nothing to change. */
+  explorerItem(): ExplorerItem | null {
     if (this.leftView !== "explorer") return null;
     const row = this.explorerRows()[this.sidebar.selected];
-    if (!row || row.kind === "root") return null;
+    if (!row) return null;
+    if (row.kind === "root") return row.root?.kind === "vault" && this.loc.mode === "vault" ? { rel: row.path, dir: true, vault: true } : null;
     return { rel: row.path, dir: row.kind === "dir" };
+  }
+
+  /** The plan moving an item to `to`: a note's, a folder's, or a nested vault's (18.3, 18.7). */
+  private movePlan(item: ExplorerItem, to: string): () => RenamePlan {
+    return () => (item.vault ? planVaultFolderMove(this.graph, item.rel, to) : item.dir ? planFolderMove(this.graph, item.rel, to) : planNoteRename(this.graph, item.rel, to));
   }
 
   /** Select a path in the explorer, unfolding its folders. */
@@ -1954,40 +1973,103 @@ export class App {
   }
 
   /** Rename in place: a new name, in the same folder; every link fixed after a preview. */
-  renameItem(item: { rel: string; dir: boolean }): void {
+  renameItem(item: ExplorerItem): void {
     const name = posix.basename(item.rel);
     const dir = posix.dirname(item.rel) === "." ? "" : posix.dirname(item.rel);
     this.prompt(`rename ${item.rel}${item.dir ? "/" : ""} to: `, (text) => {
       const typed = text.trim().replace(/\/+$/, "");
       if (!typed || typed === name) return;
       if (typed.includes("/")) return this.message("warn", `a name, not a path: m moves ${name} to another folder`);
-      const to = dir ? `${dir}/${typed}` : typed;
-      this.previewRename(() => (item.dir ? planFolderMove(this.graph, item.rel, to) : planNoteRename(this.graph, item.rel, to)));
+      this.previewRename(this.movePlan(item, dir ? `${dir}/${typed}` : typed));
     });
     (this.overlay as PromptOverlay).text = item.dir ? name : name.replace(/\.(md|markdown)$/i, "");
   }
 
-  /** Move to another folder, picked from the vault's folders; every link fixed after a preview. */
-  moveItem(item: { rel: string; dir: boolean }): void {
+  /** Move to another folder, picked from the vault's folders as a tree; links fixed after a preview. */
+  moveItem(item: ExplorerItem): void {
     const here = posix.dirname(item.rel) === "." ? "" : posix.dirname(item.rel);
     const name = posix.basename(item.rel);
-    const folders = ["", ...[...this.graph.dirs].filter((d) => d).sort()].filter((d) => d !== here && !(item.dir && (d === item.rel || d.startsWith(`${item.rel}/`))));
+    this.pickFolder({
+      title: `Move ${item.rel}${item.dir ? "/" : ""} to… — type to filter, ← → fold`,
+      current: here,
+      // A folder can't move into itself.
+      exclude: (d) => item.dir && (d === item.rel || d.startsWith(`${item.rel}/`)),
+      pick: (d) => this.previewRename(this.movePlan(item, d ? `${d}/${name}` : name)),
+    });
+  }
+
+  /**
+   * Pick a folder of the vault (18.8): a tree like the explorer's — its folds to begin with — the
+   * root first; ← folds, → unfolds; typing filters to the matching folders under their parents.
+   */
+  pickFolder(opts: { title: string; current: string; exclude: (dir: string) => boolean; pick: (dir: string) => void }): void {
+    const g = this.glyphs;
+    const open = new Set(this.expanded);
+    for (let d = opts.current; d; d = posix.dirname(d) === "." ? "" : posix.dirname(d)) open.add(d); // where it is, unfolded
+    const dirs = [...new Set(this.graph.dirs)].filter((d) => d && !opts.exclude(d)).sort((a, b) => {
+      const pa = a.split("/");
+      const pb = b.split("/");
+      for (let i = 0; i < Math.min(pa.length, pb.length); i++) if (pa[i] !== pb[i]) return pa[i]!.localeCompare(pb[i]!, undefined, { sensitivity: "base" });
+      return pa.length - pb.length;
+    });
+    const kids = new Set(dirs.map((d) => posix.dirname(d)).filter((d) => d !== "."));
+    const row = (d: string, unfolded: boolean, context = false): ListItem => ({
+      label: `${"  ".repeat(d.split("/").length)}${kids.has(d) && unfolded ? g.dirOpen : g.dirClosed} ${posix.basename(d)}`,
+      hint: d === opts.current ? "here" : "",
+      data: d,
+      ...(context ? { context } : {}),
+    });
+    const source = (input: string): ListItem[] => {
+      const out: ListItem[] = [{ label: `${g.dirOpen} / (the vault's root)`, hint: opts.current === "" ? "here" : "", data: "" }];
+      const q = input.trim();
+      if (q) {
+        // The matches, with their parents for where they are; enter takes the first match.
+        const shown = new Set<string>();
+        const hits = new Set<string>();
+        for (const d of dirs) {
+          if (!fuzzy(q, d)) continue;
+          hits.add(d);
+          const parts = d.split("/");
+          for (let i = 1; i <= parts.length; i++) shown.add(parts.slice(0, i).join("/"));
+        }
+        out[0]!.context = true;
+        return [...out, ...dirs.filter((d) => shown.has(d)).map((d) => row(d, true, !hits.has(d)))];
+      }
+      for (const d of dirs) {
+        const parts = d.split("/");
+        if (parts.slice(0, -1).every((_, i) => open.has(parts.slice(0, i + 1).join("/")))) out.push(row(d, open.has(d)));
+      }
+      return out;
+    };
+    const first = source("");
     this.openList({
-      title: `Move ${item.rel}${item.dir ? "/" : ""} to…`,
-      items: folders.map((d) => ({ label: d ? `${d}/` : "/ (the vault's root)", data: d })),
-      accept: (it) => {
-        const to = it.data ? `${it.data}/${name}` : name;
-        this.previewRename(() => (item.dir ? planFolderMove(this.graph, item.rel, to) : planNoteRename(this.graph, item.rel, to)));
+      title: opts.title,
+      items: [],
+      source,
+      selected: Math.max(0, first.findIndex((it) => it.data === opts.current)),
+      accept: (it) => opts.pick(it.data as string),
+      fold: (it, unfold) => {
+        const d = it.data as string;
+        if (!d || !kids.has(d)) return false;
+        if (unfold === open.has(d)) return false;
+        if (unfold) open.add(d);
+        else open.delete(d);
+        return true;
       },
     });
   }
 
   /** Delete to the vault's trash, after asking — saying how many links it breaks. */
-  deleteItem(item: { rel: string; dir: boolean }): void {
+  deleteItem(item: ExplorerItem): void {
     const unsaved = this.unsavedIn(item.rel);
     if (unsaved.length) return this.message("warn", `unsaved: ${unsaved.map((b) => this.displayName(b)).join(", ")} — save or revert it first`);
     const breaking = linksInto(this.graph, item.rel);
-    const what = item.dir ? `${item.rel}/ and everything in it` : item.rel;
+    let what = item.dir ? `${item.rel}/ and everything in it` : item.rel;
+    if (item.vault) {
+      // A whole vault: said so, with how much it holds.
+      const g = openVault(join(this.loc.root, item.rel));
+      what = `the vault ${g.loc.name} (${item.rel}/, ${g.notes.size} note${g.notes.size === 1 ? "" : "s"})`;
+    }
     const warn = breaking ? ` ${breaking} link${breaking === 1 ? "" : "s"} to it will break.` : "";
     this.prompt(`delete ${what}?${warn} (to the trash: u restores) y then enter: `, (text) => {
       if (text.trim().toLowerCase() !== "y") return;
@@ -2037,7 +2119,7 @@ export class App {
   }
 
   /** Copy or cut the selected item, for `p`. */
-  clipItem(mode: "copy" | "cut", item: { rel: string; dir: boolean }): void {
+  clipItem(mode: "copy" | "cut", item: ExplorerItem): void {
     this.fileClip = { mode, ...item };
     this.message("info", `${mode === "copy" ? "copied" : "cut"} ${item.rel}${item.dir ? "/" : ""} — p pastes it in the selected folder`);
   }
@@ -2057,7 +2139,7 @@ export class App {
     if (clip.mode === "cut") {
       if (into === from) return this.message("info", `${clip.rel} is already in ${into || "the vault's root"}`);
       if (clip.dir && (into === clip.rel || into.startsWith(`${clip.rel}/`))) return this.message("warn", `${clip.rel} can't move into itself`);
-      return this.previewRename(() => (clip.dir ? planFolderMove(this.graph, clip.rel, to) : planNoteRename(this.graph, clip.rel, to)));
+      return this.previewRename(this.movePlan(clip, to));
     }
     let r: ReturnType<typeof copyPath>;
     try {
@@ -2077,6 +2159,19 @@ export class App {
     this.watcher?.sync(this.loc.mode !== "home" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
     for (const b of this.buffers.values()) b.invalidateLayouts();
     this.relayoutAll();
+  }
+
+  /** A nested vault's name (`R`, the row's button): its `[[name:…]]` links fixed everywhere (17.15). */
+  renameVaultItem(item: ExplorerItem): void {
+    if (!item.vault) return this.message("info", "R renames a vault: select one (its folder has its own icon)");
+    const root = join(this.loc.root, item.rel);
+    const name = rootAt(root).name ?? posix.basename(item.rel);
+    this.prompt(`rename the vault ${name} to: `, (text) => {
+      const typed = text.trim();
+      if (!typed || typed === name) return;
+      this.previewRename(() => planVaultRename(openVault(root), rootAt(root), typed, [this.graph]));
+    });
+    (this.overlay as PromptOverlay).text = name;
   }
 
   /** Ask for a new folder's name and make it. */
@@ -2839,13 +2934,15 @@ export class App {
       case "new_folder":
         return this.promptNewFolder(this.newItemBase());
       case "rename":
+      case "rename_vault":
       case "move":
       case "delete":
       case "copy":
       case "cut": {
-        // On the selected note, file or folder (18.x).
+        // On the selected note, file, folder or vault (18.x).
         const item = this.explorerItem();
-        if (!item) return this.message("info", `${action}: select a note, file or folder first`);
+        if (!item) return this.message("info", `${action.replace("_", " ")}: select a note, file or folder first`);
+        if (action === "rename_vault") return this.renameVaultItem(item);
         if (action === "rename") return this.renameItem(item);
         if (action === "move") return this.moveItem(item);
         if (action === "delete") return this.deleteItem(item);
@@ -3044,6 +3141,7 @@ export class App {
     anchor?: { x: number; y: number };
     /** Already typed in its filter. */
     input?: string;
+    fold?: (item: ListItem, open: boolean) => boolean;
   }): void {
     const o: ListOverlay = {
       kind: "list",
@@ -3063,6 +3161,7 @@ export class App {
       keepGroups: opts.keepGroups,
       alignKeysAcrossList: opts.alignKeysAcrossList,
       anchor: opts.anchor,
+      fold: opts.fold,
     };
     refilter(o);
     if (opts.selected !== undefined) o.selected = selectable(o, Math.max(0, Math.min(opts.selected, o.filtered.length - 1)), 1);
@@ -3451,6 +3550,16 @@ export class App {
       else return;
       o.change?.(o.text);
       if (o.replace && o.view) R.refresh(this, o, o.view); // the count of what enter would replace, as you type
+      return;
+    }
+    // A tree (the folder picker): ← folds, → unfolds; the selection stays on its item.
+    if (o.fold && (key === "left" || key === "right")) {
+      const cur = o.filtered[o.selected]?.item;
+      if (cur && o.fold(cur, key === "right")) {
+        refilter(o);
+        const at = o.filtered.findIndex((e) => e.item.data === cur.data);
+        if (at >= 0) o.selected = at;
+      }
       return;
     }
     const n = o.filtered.length;
@@ -4787,7 +4896,16 @@ export class App {
       const b = byAbs(abs);
       if (b && !moved.has(b.abs)) this.reloadBuffer(b);
     }
-    if (plan.kind === "vault") {
+    if (plan.vaults?.length) {
+      // Vaults moved with a vault's folder (18.7): the machine's list, and this vault's own walk.
+      for (const [, to] of plan.vaults) recordLocation(rootAt(to));
+      this.graph.build(true, "lazy");
+      if (this.live) this.indexInBackground();
+    }
+    // A vault renamed: this one (its name here), or one nested in it (the explorer's dimmed name).
+    const renamedConfig = plan.kind === "vault" ? plan.files.find((f) => f.abs.endsWith(`${sep}.slipbox${sep}config.toml`))?.abs : undefined;
+    if (renamedConfig && renamedConfig !== vaultConfigFile(this.loc.root)) recordLocation(rootAt(dirname(dirname(renamedConfig))));
+    if (renamedConfig === vaultConfigFile(this.loc.root)) {
       this.loc = rootAt(this.loc.root);
       recordLocation(this.loc);
       this.reach = new Reach(this.loc);
@@ -5001,7 +5119,8 @@ export function refilter(o: ListOverlay): void {
   }
   o.scroll = 0;
   o.wheeled = false;
-  o.selected = selectable(o, 0, 1);
+  const hit = o.filtered.findIndex((e) => e.item.context);
+  o.selected = hit >= 0 ? Math.max(0, o.filtered.findIndex((e) => !e.item.context && !e.item.header)) : selectable(o, 0, 1);
 }
 
 /** One entry up or down, skipping headings, wrapping around past the first or last entry. */

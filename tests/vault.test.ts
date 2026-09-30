@@ -1048,6 +1048,25 @@ describe("nested vaults, known to each other without being opened (17.17)", () =
     const r = await cli(["resolve", "[[dparent2:index]]"], join(fresh, "kid"));
     expect(r.json.data).toMatchObject({ status: "resolved", abs: join(fresh, "index.md"), vault: "dparent2" });
   });
+
+  test("a second copy (a second clone): each one's names mean its own nested vault, and its links stay its own", async () => {
+    const second = mkdtempSync(join(tmpdir(), "slipbox-nest-copy-"));
+    cpSync(parent, second, { recursive: true });
+    // Its nested vault not yet recorded, the first one's is, by the same name: its own still meant.
+    const first = (await cli(["links", "index"], second)).json.data;
+    expect(first[0]).toMatchObject({ status: "note", path: join(second, "kid", "note.md") });
+    for (const root of [parent, second]) await cli(["backlinks", "index"], root); // each indexed, as when opened
+    for (const [root, other] of [[parent, second], [second, parent]] as const) {
+      const links = (await cli(["links", "index"], root)).json.data;
+      for (const l of links) expect(l).toMatchObject({ status: "note", path: join(root, "kid", "note.md"), vault: "dkid" });
+      const up = await cli(["resolve", "[[dparent:index]]"], join(root, "kid"));
+      expect(up.json.data).toMatchObject({ status: "resolved", abs: join(root, "index.md") });
+      // The other copy's links to its own nested vault aren't backlinks here.
+      const bl = (await cli(["backlinks", "note"], join(root, "kid"))).json.data.backlinks;
+      expect(bl.map((b: { from: string }) => b.from)).toContain(join(root, "index.md"));
+      expect(bl.map((b: { from: string }) => b.from)).not.toContain(join(other, "index.md"));
+    }
+  });
 });
 
 describe("moving a folder (18.3)", () => {
@@ -1085,5 +1104,46 @@ describe("moving a folder (18.3)", () => {
     expect(g.notes.has("x/y/sub/three.md")).toBe(true);
     expect(g.redirects!.follow("a/one.md")).toBe("x/y/one.md");
     expect(() => planFolderMove(g, "x", "x/y/z")).toThrow(/can't move into itself/);
+  });
+});
+
+describe("moving a vault's folder (18.7)", () => {
+  test("links into it by path are fixed, from its parent and other vaults; its links out too; by name, nothing", async () => {
+    const { planVaultFolderMove, applyPlan } = await import("../src/core/rename.ts");
+    const { openVault } = await import("../src/core/reach.ts");
+    const base = mkdtempSync(join(tmpdir(), "slipbox-vaultmove-"));
+    const parent = join(base, "parent");
+    const other = join(base, "other");
+    const files: Record<string, string> = {
+      "parent/.slipbox/config.toml": '[vault]\nid = "vmparent000001"\nname = "vmparent"\n',
+      "parent/home.md": "# Home\n\n[p](box/index.md) [[box/index]] [[vmbox:index]]\n",
+      "parent/box/.slipbox/config.toml": '[vault]\nid = "vmbox00000001"\nname = "vmbox"\n',
+      "parent/box/index.md": "# Box\n\n[up](../home.md) [in](inner.md) [kid](kid/k.md)\n",
+      "parent/box/inner.md": "# Inner\n",
+      "parent/box/kid/.slipbox/config.toml": '[vault]\nid = "vmkid00000001"\nname = "vmkid"\n',
+      "parent/box/kid/k.md": "# Kid\n\n[up](../../home.md)\n",
+      "other/.slipbox/config.toml": '[vault]\nid = "vmother000001"\nname = "vmother"\n',
+      "other/o.md": "[o](../parent/box/index.md)\n",
+    };
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(base, rel, ".."), { recursive: true });
+      writeFileSync(join(base, rel), text);
+    }
+    // This machine has seen them all, with their indexes.
+    for (const root of [other, join(parent, "box", "kid"), join(parent, "box"), parent]) openVault(root).ensureAll();
+    const g = openVault(parent);
+    const plan = planVaultFolderMove(g, "box", "shelf/box");
+    expect(plan.vaults!.map(([, to]) => to)).toEqual([join(parent, "shelf", "box"), join(parent, "shelf", "box", "kid")]);
+    applyPlan(g, plan);
+    const read = (p: string) => readFileSync(join(base, p), "utf8");
+    expect(read("parent/home.md")).toBe("# Home\n\n[p](shelf/box/index.md) [[shelf/box/index]] [[vmbox:index]]\n");
+    expect(read("other/o.md")).toBe("[o](../parent/shelf/box/index.md)\n");
+    // Its own links: out of it, from where it is now; within it, as they were.
+    expect(read("parent/shelf/box/index.md")).toBe("# Box\n\n[up](../../home.md) [in](inner.md) [kid](kid/k.md)\n");
+    expect(read("parent/shelf/box/kid/k.md")).toBe("# Kid\n\n[up](../../../home.md)\n");
+    // The same vault, where it is now: its id, and by name.
+    expect(locateVault({ path: join(parent, "shelf", "box") })).toMatchObject({ id: "vmbox00000001", name: "vmbox" });
+    // The parent no longer walks around it there, nor keeps its files as its own.
+    expect(g.notes.has("shelf/box/index.md")).toBe(false);
   });
 });

@@ -271,6 +271,11 @@ new path has none) and rewrites every link to it, in this vault and in every vau
 too — and rewrites every link to anything in it, from where each linking file will be; links between two files that
 move together stay as they are.
 
+**A nested vault's folder** (`18.7`) is a folder of the vault holding it, whichever one the path names: `mv` moves it,
+rewriting the links into it by path — this vault's, and those of the vaults that reach it — and its own relative links
+out; its id and name go with it (`[[name:…]]` links stay right), and it's recorded at its new place. `rm` counts the
+links into it, by path or by name, as the ones that break.
+
 **Deleting and copying** (`18.4`, `18.5`): `slipbox rm` moves a note, file or folder to the vault's trash — in its
 state, never in the folder — and says how many links from other notes break (`breaking`, and a warning); `--dry-run`
 only says. `slipbox trash` lists what's there; `slipbox trash restore <id|path>` puts an item back where it was,

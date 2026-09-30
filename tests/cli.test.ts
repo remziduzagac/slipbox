@@ -305,6 +305,16 @@ describe("the vault and the tool", () => {
     expect(slipbox(["trash", "restore", "work/deep"], { cwd: dir }).code).toBe(0);
     expect(existsSync(join(dir, "work", "deep", "detail.md"))).toBe(true);
     expect(slipbox(["rm", ".slipbox"], { cwd: dir }).code).not.toBe(0);
+    // A vault nested in it: the links into it — by path and by its name — are what break (18.7).
+    mkdirSync(join(dir, "inner"));
+    writeFileSync(join(dir, "inner", "note.md"), "# Inner\n");
+    expect(slipbox(["init", join(dir, "inner"), "--name", "fileops-inner"]).code).toBe(0);
+    writeFileSync(join(dir, "to-inner.md"), "[i](inner/note.md) and [[fileops-inner:note]]\n");
+    const vrm = slipbox(["rm", "inner", "--dry-run", "--json"], { cwd: dir }).json;
+    expect(vrm.data).toMatchObject({ path: "inner", dryRun: true, breaking: 2 });
+    // …and moved as a folder of this vault: the path link fixed, the name link left (still right).
+    expect(slipbox(["mv", "inner", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "folder", from: "inner", to: "box" });
+    expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md) and [[fileops-inner:note]]\n");
   });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);

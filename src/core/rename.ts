@@ -14,6 +14,7 @@ import { VAULT_LINK } from "./graph.ts";
 import { formatPathLink, normKey, pathForm, pathLink } from "./links.ts";
 import { contentHash } from "./redirects.ts";
 import { HOME_NAME, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
+import { openVault } from "./reach.ts";
 import { findVaultRoot, isInside, type VaultLocation } from "./vault.ts";
 
 export class RenameError extends Error {}
@@ -45,6 +46,8 @@ export interface RenamePlan {
   move: { from: string; to: string; dir: boolean } | null;
   /** Every file that moves, vault paths old → new (a folder's: each file in it). */
   moves?: [string, string][];
+  /** Vaults that move with a vault's folder (18.7), absolute roots old → new: the machine's list follows. */
+  vaults?: [string, string][];
   files: FileChange[];
   warnings: string[];
   /** Links the index knew of that the file no longer has where it said: left alone. */
@@ -422,6 +425,120 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
   return { ...head, moves: [...moves], files, warnings, skipped: c.skipped };
 }
 
+/**
+ * Plan moving or renaming the folder of a vault nested in `parent` (18.7). The vault moves whole —
+ * the vaults nested in it too — and every link into it by path, from the parent and from the other
+ * vaults this machine reaches, is rewritten, as are its notes' relative links out of it. Links within
+ * what moves, and `[[name:…]]` ones, stay as they are: the vault is the same vault, keyed by its id.
+ */
+export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: string): RenamePlan {
+  const from = posix.normalize(fromRel.replace(/\/+$/, ""));
+  if (!parent.nestedRoots().includes(from)) throw new RenameError(`no vault nested at ${fromRel} in ${parent.root}`);
+  const to = cleanTarget(parent, toInput);
+  if (to === from) throw new RenameError(`${from} is already there`);
+  if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);
+  if (existsSync(join(parent.root, to))) throw new RenameError(`${to} exists; not overwriting it`);
+  const fromAbs = join(parent.root, from);
+  const toAbs = join(parent.root, to);
+  const moving = (abs: string) => abs === fromAbs || abs.startsWith(`${fromAbs}/`);
+  const shift = (abs: string) => (moving(abs) ? toAbs + abs.slice(fromAbs.length) : abs);
+  // Other vaults' links are read from their indexes: the parent's, fresh.
+  parent.ensureAll();
+  const graphs: Graph[] = [];
+  for (const root of [fromAbs]) {
+    const queue = [root];
+    while (queue.length) {
+      const g = openVault(queue.shift()!);
+      graphs.push(g);
+      for (const n of g.nestedRoots()) queue.push(join(g.root, n));
+    }
+  }
+  const c = new Collector(parent);
+  // The parent's own links into it, from its index in memory…
+  for (const l of linksIntoFolder(parent, fromAbs)) {
+    const next = retargetInto(l.backlink, l.targetAbs, shift(l.targetAbs));
+    if (next !== null) c.edit({ abs: l.backlink.from, kind: l.backlink.kind, target: l.backlink.target, line: l.backlink.line, column: l.backlink.column }, next, null);
+  }
+  for (const g of graphs) {
+    g.ensureAll();
+    // …and other vaults', from theirs.
+    for (const rel of [...g.notes.keys(), ...g.filePaths()]) {
+      const targetAbs = join(g.root, rel);
+      for (const b of g.backlinks(rel)) {
+        if (!isAbsolute(b.from) || moving(b.from) || isInside(parent.root, b.from)) continue;
+        const next = retargetInto(b, targetAbs, shift(targetAbs));
+        if (next !== null) c.edit({ abs: b.from, kind: b.kind, target: b.target, line: b.line, column: b.column }, next, b.vault ?? null);
+      }
+    }
+    // Out of it, from where its notes will be.
+    for (const [rel, entry] of g.notes) {
+      const noteAbs = join(g.root, rel);
+      for (const l of entry.links) {
+        const wiki = l.kind === "wiki" || l.kind === "embed";
+        if (wiki ? !/^\.\.?\//.test(l.target) : /^[a-z][a-z0-9+.-]*:/i.test(l.target) || /^[#/~]/.test(l.target)) continue;
+        const r = g.resolveLink(l, rel);
+        if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || !isAbsolute(r.path) || moving(r.path)) continue;
+        const next = wiki ? formatPathLink("relative", r.path, shift(noteAbs), /\.[A-Za-z0-9]+$/.test(l.target)) : mdTarget(l.target, shift(noteAbs), r.path, null);
+        c.edit({ abs: noteAbs, kind: l.kind, target: l.target, line: l.line, column: l.column }, next, null);
+      }
+    }
+  }
+  const files = c.result();
+  const warnings = dirtyTrees([fromAbs, ...files.map((f) => f.abs)]);
+  return {
+    kind: "folder",
+    from,
+    to,
+    move: { from: fromAbs, to: toAbs, dir: true },
+    moves: [],
+    vaults: graphs.map((g) => [g.root, shift(g.root)]),
+    files,
+    warnings,
+    skipped: c.skipped,
+  };
+}
+
+/** The links of `g`'s notes that reach into the folder at `folderAbs` (a vault nested in it), each as
+ *  a backlink from its note (absolute), with the file it reaches. */
+export function linksIntoFolder(g: Graph, folderAbs: string): { backlink: Backlink; targetAbs: string }[] {
+  g.ensureAll();
+  const out: { backlink: Backlink; targetAbs: string }[] = [];
+  for (const [rel, entry] of g.notes) {
+    for (const l of entry.links) {
+      const r = g.resolveLink(l, rel);
+      if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || !isAbsolute(r.path)) continue;
+      if (r.path !== folderAbs && !r.path.startsWith(`${folderAbs}/`)) continue;
+      out.push({ backlink: { from: join(g.root, rel), line: l.line, column: l.column, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias }, targetAbs: r.path });
+    }
+  }
+  return out;
+}
+
+/** A link from another vault to a file of a moving vault, rewritten to where the file will be; null
+ *  when it needs nothing (by the vault's name). */
+function retargetInto(b: Backlink, oldAbs: string, newAbs: string): string | null {
+  const wiki = b.kind === "wiki" || b.kind === "embed";
+  if (wiki && VAULT_LINK.exec(b.target)) return null;
+  if (pathForm(b.target)) {
+    const byPath = pathRetarget(b.target, b.from, b.from, oldAbs, newAbs, wiki);
+    if (byPath !== null) return byPath;
+    // `/x.md`: the linking vault's root, kept so.
+    if (!b.target.startsWith("/")) return null;
+  }
+  const linkRoot = findVaultRoot(b.from) ?? dirname(b.from);
+  if (wiki) {
+    // A vault path into a vault nested in the linking one (17.17): the new vault path.
+    const ext = /\.[A-Za-z0-9]+$/.test(b.target) ? "" : NOTE_EXT;
+    const p = relative(linkRoot, newAbs).split("\\").join("/");
+    return (b.target.startsWith("/") ? "/" : "") + (ext ? p.replace(ext, "") : p);
+  }
+  if (b.target.startsWith("/")) {
+    const hash = b.target.indexOf("#");
+    return `/${relative(linkRoot, newAbs).split("\\").join("/")}${hash >= 0 ? b.target.slice(hash) : ""}`;
+  }
+  return mdTarget(b.target, b.from, newAbs, null);
+}
+
 /** The new target text of a link to a moved file, written in `linking` (which will be at `linkingAfter`). */
 function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: string, fromRel: string, toRel: string, aliases: Set<string>, oldName: string): string {
   const toAbs = join(g.root, toRel);
@@ -443,7 +560,7 @@ function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: 
  * Plan renaming a vault (17.15): its config's `name`, the old name kept in `previous_names`, and
  * every `[[old:…]]` rewritten — in this vault and in the vaults whose indexes link into it.
  */
-export function planVaultRename(g: Graph, loc: VaultLocation, newName: string): RenamePlan {
+export function planVaultRename(g: Graph, loc: VaultLocation, newName: string, also: Graph[] = []): RenamePlan {
   if (loc.mode !== "vault") throw new RenameError(loc.mode === "home" ? "the home vault's name is fixed" : `${loc.root} has no .slipbox/: make it a vault first (slipbox init)`);
   if (!VAULT_NAME.test(newName)) throw new RenameError(`"${newName}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
   if (newName.toLowerCase() === HOME_NAME) throw new RenameError(`"${HOME_NAME}" is the home vault's name`);
@@ -456,18 +573,23 @@ export function planVaultRename(g: Graph, loc: VaultLocation, newName: string): 
     const m = VAULT_LINK.exec(target);
     return m && m[1]!.toLowerCase() === oldName.toLowerCase() ? `${newName}:${m[2]}` : null;
   };
-  // This vault's own [[old:…]] links.
-  g.ensureAll();
-  for (const [rel, e] of g.notes) {
-    for (const l of e.links) {
-      if (l.kind !== "wiki" && l.kind !== "embed") continue;
-      const next = retarget(l.target);
-      if (next) c.edit({ abs: join(g.root, rel), kind: l.kind, target: l.target, line: l.line, column: l.column }, next, null);
+  // This vault's own [[old:…]] links, and those of the vaults open here (`also`: the one holding
+  // it, when it's renamed from its parent), from their indexes in memory…
+  const inMemory = [g, ...also.filter((x) => x.root !== g.root)];
+  for (const m of inMemory) {
+    m.ensureAll();
+    for (const [rel, e] of m.notes) {
+      for (const l of e.links) {
+        if (l.kind !== "wiki" && l.kind !== "embed") continue;
+        const next = retarget(l.target);
+        if (next) c.edit({ abs: join(m.root, rel), kind: l.kind, target: l.target, line: l.line, column: l.column }, next, null);
+      }
     }
   }
-  // Other vaults' links into it.
+  // …and other vaults', from theirs.
   for (const list of g.reach?.inbound(g).values() ?? []) {
     for (const b of list) {
+      if (inMemory.some((m) => m !== g && isInside(m.root, b.from) && !isInside(g.root, b.from))) continue;
       const next = b.kind === "wiki" || b.kind === "embed" ? retarget(b.target) : null;
       if (next) c.edit({ abs: b.from, kind: b.kind, target: b.target, line: b.line, column: b.column }, next, b.vault ?? null);
     }
@@ -598,6 +720,8 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   const touched = new Set([...written, ...(plan.moves ?? []).map(([, to]) => join(g.root, to))]);
   for (const abs of touched) {
     if (!isInside(g.root, abs)) continue;
+    // A moved vault's files are its own, not this vault's (18.7).
+    if (plan.vaults?.length && mv && (abs === mv.to || abs.startsWith(`${mv.to}/`))) continue;
     const rel = relative(g.root, abs);
     try {
       const st = statSync(abs);
@@ -605,7 +729,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       else g.addAsset(rel);
     } catch {}
   }
-  if (mv?.dir) {
+  if (mv?.dir && !plan.vaults?.length) {
     const from = relative(g.root, mv.from);
     const to = relative(g.root, mv.to);
     g.dirs = [...new Set(g.dirs.map((d) => (d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d)).concat(to.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"))))];

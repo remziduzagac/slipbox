@@ -329,6 +329,7 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   n: "new_note",
   "shift+n": "new_folder",
   r: "rename",
+  "shift+r": "rename_vault",
   m: "move",
   d: "delete",
   u: "restore",
@@ -341,7 +342,7 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
 
 export const EXPLORER_ACTIONS = [
   "down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files",
-  "new_note", "new_folder", "rename", "move", "delete", "restore", "copy", "cut", "paste", "close", "leave",
+  "new_note", "new_folder", "rename", "rename_vault", "move", "delete", "restore", "copy", "cut", "paste", "close", "leave",
 ];
 
 /** Keys inside the outline pane: key → outline action. */
@@ -400,6 +401,7 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   new_note: { title: "New note here", desc: "Asks for a name and makes the note in the selected folder (or beside the selected file)" },
   new_folder: { title: "New folder here", desc: "Asks for a name and makes the folder in the selected folder (or beside the selected file)" },
   rename: { title: "Rename", desc: "A new name for the selected note, file or folder, in its folder; every link to it fixed after a preview" },
+  rename_vault: { title: "Rename the vault", desc: "On a vault's row: its name (r renames its folder); [[name:…]] links fixed everywhere after a preview" },
   move: { title: "Move to…", desc: "Picks a folder for the selected note, file or folder; every link to it fixed after a preview" },
   delete: { title: "Delete", desc: "Moves the selected note, file or folder to the vault's trash (asks first; u restores)" },
   restore: { title: "Restore", desc: "Puts back what was deleted last (the trash, :trash, has the rest)" },

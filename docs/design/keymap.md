@@ -225,15 +225,16 @@ Inside the explorer (`[keys.explorer]` in config):
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
 | `a` | show every text file, or back to what `files.show` lists (notes and data files) |
 | `n` / `shift+n` | a new note / folder in the selected folder (beside a selected file); `space n n` too |
-| `r` | rename the selected note, file or folder, in its folder: links fixed after a preview |
-| `m` | move it to a folder, picked from a list: links fixed after a preview |
+| `r` | rename the selected note, file or folder (a nested vault's folder too), in its folder: links fixed |
+| `shift+r` | on a nested vault's row: rename the vault (its name; the folder stays) |
+| `m` | move it to a folder picked from a tree (`←` `→` fold, typing filters): links fixed after a preview |
 | `d` | delete it to the vault's trash, after asking (it says how many links break) |
 | `u` | restore what was deleted last (`space v t`, `:trash`: the rest) |
 | `y` / `x` / `p` | copy / cut it; paste in the selected folder: a copy (`name-copy` beside it), or a move |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
 | mouse | click a folder to fold or unfold it; click a note to select it, double-click to open it as a tab |
-| buttons | the title's new note and new folder; the selected row's rename, move and delete |
+| buttons | the title's new note and new folder; the selected row's rename, move, delete (a vault's: rename vault) |
 
 The history view (`space h h`, the left rail's `◷`) takes the same keys: `j` / `k` move, `enter`,
 `l` or a click jumps to the place, `/` filters, `q` closes, `esc` goes back to the note.

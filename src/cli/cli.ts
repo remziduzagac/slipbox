@@ -34,10 +34,10 @@ import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
 import { Reach } from "../core/reach.ts";
-import { type Applied, applyPlan, planFolderMove, planNoteRename, planRelink, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
+import { type Applied, applyPlan, planFolderMove, planNoteRename, planVaultFolderMove, planRelink, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { readRegistry, vaultNamed } from "../core/registry.ts";
-import { gitRootOf, homeAt, initVault, isInside, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { findVaultRoot, gitRootOf, homeAt, initVault, isInside, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -219,7 +219,12 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
     // The note argument, when it names a file, also says which vault this is.
     const noteAt = ["render", "links", "backlinks", "outline", "replace", "task", "read", "stat", "write", "send", "mv", "relink", "cp", "rm"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
-    const pathArg = noteArgPath(noteAt, io.cwd);
+    let pathArg = noteArgPath(noteAt, io.cwd);
+    // A nested vault's folder, moved, copied or deleted, is a folder of the vault holding it (18.7).
+    if (pathArg && ["mv", "cp", "rm"].includes(command)) {
+      const abs = isAbsolute(pathArg) ? pathArg : join(io.cwd, pathArg);
+      if (isVaultRoot(abs) && findVaultRoot(dirname(abs))) pathArg = dirname(abs);
+    }
     // init makes the vault: opening the folder as one first would name it before --name could.
     const loc = command === "init" ? homeAt(io.cwd) : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
     session = new Session(args, loc, io);
@@ -680,6 +685,8 @@ const HANDLERS: Record<string, Handler> = {
     if (!to) throw new UsageError("missing the new path (mv <note|folder> <new-path>)");
     // A folder moves with everything in it, every link to any of it fixed (18.3).
     const dir = folderArg(s, what);
+    // A vault nested in this one moves as a vault (18.7): links into it by path fixed, its id kept.
+    if (dir !== null && isVaultRoot(join(s.loc.root, dir))) return renameResult(s, () => planVaultFolderMove(s.graph, dir, to));
     if (dir !== null) return renameResult(s, () => planFolderMove(s.graph, dir, to));
     const rel = resolveNote(s, what, false);
     return renameResult(s, () => planNoteRename(s.graph, rel, to));
@@ -1262,7 +1269,10 @@ function renameResult(s: Session, plan: () => RenamePlan): Result {
   let applied: Applied | null = null;
   try {
     p = plan();
-    if (!has(s.args, "dry-run")) applied = applyPlan(s.graph, p);
+    if (!has(s.args, "dry-run")) {
+      applied = applyPlan(s.graph, p);
+      for (const [, to] of p.vaults ?? []) recordLocation(rootAt(to)); // the machine's list follows
+    }
   } catch (err) {
     if (err instanceof RenameError) throw new CliError(err.message, EXIT.refused);
     throw err;
