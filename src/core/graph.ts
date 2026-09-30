@@ -4,13 +4,13 @@
 // query time against the LinkIndex, so adding or removing a note never leaves stale answers.
 // The CLI reads a fresh cache instead of reparsing every note on every agent call (9.4).
 
-import { existsSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
-import { basename, isAbsolute, join, posix } from "node:path";
+import { basename, isAbsolute, join, posix, relative } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, readJson, readText, writeJson } from "./fsutil.ts";
-import { LinkIndex, type MdLinkTarget, normKey, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
+import { LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
 import { cacheDir, stateDir } from "./paths.ts";
@@ -424,6 +424,8 @@ export class Graph {
       const r = this.index.resolveWiki(link.target, fromRel);
       if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates };
       if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
+      const byPath = this.byFilesystemPath(link.target, fromRel, true);
+      if (byPath) return byPath;
       const inter = VAULT_LINK.exec(link.target);
       if (inter) {
         // This vault by its own name reaches its own notes; another's is looked up.
@@ -447,17 +449,21 @@ export class Graph {
       if (moved) return moved;
       return { resolvedKind: "unresolved", path: null, candidates: [] };
     }
+    // A `file://` URL or a `~/` path names a file, not a web page (17.16).
+    if (/^file:\/\//i.test(link.target) || link.target.startsWith("~/")) {
+      const path = /^file:/i.test(link.target) ? link.target : link.target.split("#")[0]!;
+      return this.byFilesystemPath(path, fromRel, false) ?? { resolvedKind: "unresolved", path: null, candidates: [] };
+    }
     const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index);
     if (m.kind === "missing" && !m.target.startsWith("../")) {
       const to = this.movedTo(m.target);
       if (to) return { resolvedKind: this.notes.has(to) ? "note" : "file", path: to, candidates: [], via: "redirect" };
     }
-    if (m.kind === "missing" && m.target.startsWith("../")) {
-      // A path out of this root (17.9): the file wherever it is, in whichever root holds it.
-      const abs = join(this.root, m.target);
-      if (existsSync(abs) && !isDirectory(abs)) {
-        return { resolvedKind: classify(abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: abs, candidates: [], vault: this.reach?.vaultOf(abs) ?? null };
-      }
+    if (m.kind === "missing") {
+      // A path out of this root (17.9), or `/…` that isn't the vault's but the filesystem's (17.16):
+      // the file wherever it is, in whichever root holds it.
+      const byPath = this.byFilesystemPath(link.target.split("#")[0]!, fromRel, false);
+      if (byPath) return byPath;
     }
     switch (m.kind) {
       case "external":
@@ -471,6 +477,23 @@ export class Graph {
       default:
         return { resolvedKind: "unresolved", path: null, candidates: [] };
     }
+  }
+
+  /**
+   * A target written as a filesystem path (17.16): relative out of the root, `~/`, absolute, a
+   * `file://` URL. Inside this vault, its note or file like any other link's (a backlink too);
+   * elsewhere, the file by its absolute path, in whichever root holds it.
+   */
+  private byFilesystemPath(target: string, fromRel: string, wiki: boolean): Target | null {
+    // From the linking note; with none (a lookup), from the vault's root.
+    const hit = pathLink(target, join(this.root, fromRel || "_"), wiki);
+    if (!hit) return null;
+    const rel = relative(this.root, hit.abs);
+    if (!rel.startsWith("..") && !isAbsolute(rel)) {
+      if (this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel] };
+      if (this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel] };
+    }
+    return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], vault: this.reach?.vaultOf(hit.abs) ?? null };
   }
 
   /** Whether `[[name:…]]` names this vault: its name, an alias, or a previous name. */
@@ -702,13 +725,6 @@ function stub(f: NoteFile): NoteEntry {
 /** `[[vault:name]]`: a vault's name, a colon, the rest (17.8). */
 export const VAULT_LINK = /^([\p{L}\p{N}][\p{L}\p{N}._-]*):(.+)$/u;
 
-function isDirectory(p: string): boolean {
-  try {
-    return statSync(p).isDirectory();
-  } catch {
-    return false;
-  }
-}
 
 /** Parse one note and extract what the graph needs. */
 export function extractNote(file: NoteFile): NoteEntry {

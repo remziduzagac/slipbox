@@ -143,6 +143,12 @@ note's own name and path:
   the name (several: ambiguous); for a vault, `[vault] previous_names`, counted only while that vault's config still
   says so under the same id — a new vault that took an old name can't take its links.
 - **Paths out of the root:** `[t](../other/x.md)` reaches the file when it exists, in whichever root holds it.
+- **Filesystem paths** (`17.16`), for what other editors and agents write: `../` out of the root, `~/` (the home
+  folder), an absolute path, a `file://` URL — in a markdown link (percent-decoded) or a wikilink (without an
+  extension, a note: `.md`, `.markdown`). A leading `/` is the vault's root first (GitHub's reading), the
+  filesystem's when nothing there matches. A path landing in this vault is its note or file like any other link's
+  (and a backlink); elsewhere, the file by its absolute path. Other vaults' links in these forms count as backlinks
+  here too.
 - **Moves** (`17.12`), last: a path, `[[dir/old]]` or `[[old]]` that reaches nothing follows the vault's redirects
   (`redirects.json` in its state), chains included, to where the note is now (`via: "redirect"`). A move is detected
   by content, whoever made it (slipbox, `mv`, git, a file manager): the index keeps each note's content hash, and a

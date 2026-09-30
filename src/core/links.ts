@@ -5,7 +5,8 @@
 // shortest path. Still tied means ambiguous, and the caller shows a picker.
 
 import { existsSync, statSync } from "node:fs";
-import { posix } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join, posix, relative, resolve } from "node:path";
 
 export type Resolution =
   | { status: "resolved"; path: string; candidates: string[] }
@@ -192,6 +193,79 @@ export function resolveMarkdownUrl(url: string, fromRel: string, root: string, i
     return { kind: fileExists(root, rel) ? "file" : "missing", target: rel, fragment };
   }
   return { kind: fileExists(root, rel) ? "file" : "missing", target: rel, fragment };
+}
+
+/**
+ * How a link can name a file by its filesystem path rather than through the vault (17.16), as other
+ * editors and agents write them: a relative path (`../other/x.md`), one from the home folder
+ * (`~/notes/x.md`), an absolute one (`/home/me/notes/x.md`), a `file://` URL.
+ */
+export type PathForm = "relative" | "home" | "absolute" | "file-url";
+
+export function homeDir(): string {
+  return process.env.HOME || homedir();
+}
+
+/** The form of a target written as a filesystem path, or null (a name, a vault path, a URL). */
+export function pathForm(target: string): PathForm | null {
+  if (/^file:\/\//i.test(target)) return "file-url";
+  if (target.startsWith("~/")) return "home";
+  if (target.startsWith("/")) return "absolute";
+  if (target.startsWith("../") || target.startsWith("./")) return "relative";
+  return null;
+}
+
+/**
+ * The file a path link names (17.16): `target` (without its `#fragment`) from the linking file.
+ * A markdown link's path is percent-decoded; a wikilink's without an extension names a note
+ * (`.md`, `.markdown`). Null when it isn't a path form, or names no file.
+ */
+export function pathLink(target: string, linkingAbs: string, wiki: boolean): { form: PathForm; abs: string } | null {
+  const form = pathForm(target);
+  if (!form) return null;
+  let p: string;
+  if (form === "file-url") {
+    try {
+      p = decodeURIComponent(new URL(target).pathname);
+    } catch {
+      return null;
+    }
+  } else {
+    const raw = wiki ? target : decodeSafe(target);
+    p = form === "home" ? join(homeDir(), raw.slice(2)) : form === "absolute" ? raw : resolve(dirname(linkingAbs), raw);
+  }
+  const candidates = wiki && !/\.[A-Za-z0-9]+$/.test(p) ? [`${p}.md`, `${p}.markdown`] : [p];
+  const hit = candidates.find((c) => {
+    try {
+      return statSync(c).isFile();
+    } catch {
+      return false;
+    }
+  });
+  return hit ? { form, abs: hit } : null;
+}
+
+/**
+ * A path link to `toAbs` written the way `form` was (a rename's rewrite): relative from the linking
+ * file, `~/` when under the home folder, absolute, or a `file://` URL. `ext`: keep the extension
+ * (a wikilink written without one drops it).
+ */
+export function formatPathLink(form: PathForm, toAbs: string, linkingAbs: string, ext: boolean): string {
+  const target = ext ? toAbs : toAbs.replace(NOTE_EXT, "");
+  switch (form) {
+    case "file-url":
+      return `file://${encodeURI(toAbs)}`;
+    case "home": {
+      const r = relative(homeDir(), target);
+      return r.startsWith("..") ? target : `~/${r}`;
+    }
+    case "absolute":
+      return target;
+    default: {
+      const r = relative(dirname(linkingAbs), target);
+      return r.startsWith("../") ? r : `./${r}`;
+    }
+  }
 }
 
 /** Resolve a non-note wikilink target (`![[diagram.png]]`): relative to the note, then the root. */

@@ -709,7 +709,11 @@ personal data ever has to travel with a folder, or be visible beside it.
 - **A vault this machine doesn't have** makes a broken link that says so ("unknown vault `app`"),
   and where the vault was last seen, if it ever was — with an offer to point slipbox at it.
 - **Path links** name a place, need no namespace, and cross vaults freely. The target vault's index
-  keeps them working after a move (below).
+  keeps them working after a move (below). For compatibility with what other editors and agents
+  write, every way of writing a path reaches the file — relative out of the root (`[t](../app/x.md)`,
+  `[[../app/x]]`), from the home folder (`~/notes/x.md`), absolute (`/home/me/notes/x.md`: a
+  leading `/` is the vault's root first, as on GitHub, then the filesystem's), and `file://` URLs —
+  in markdown links and wikilinks alike.
 
 ### Moves, renames and backlinks
 

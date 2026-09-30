@@ -436,7 +436,9 @@ const HANDLERS: Record<string, Handler> = {
     // URL has none), and when no note by that name exists: "Meeting: Q3" is a note.
     const bracketed = /^!?\[\[/.test(raw);
     const noteNamed = s.graph.findNote(parts.target, s.io.cwd).status !== "unresolved";
-    if (mdLink && /^[a-z][a-z0-9+.-]*:/i.test(inner)) {
+    // A file:// URL names a file (17.16): resolved, not external.
+    const fileUrl = /^file:\/\//i.test(inner);
+    if (mdLink && /^[a-z][a-z0-9+.-]*:/i.test(inner) && !fileUrl) {
       status = "external";
       path = inner;
     } else if (mdLink && parts.target) {
@@ -445,7 +447,7 @@ const HANDLERS: Record<string, Handler> = {
       path = status === "resolved" ? md.path : null;
       candidates = md.candidates;
       found = md;
-    } else if (!bracketed && /^[a-z][a-z0-9+.-]*:\S*$/i.test(inner) && !noteNamed && !vaultNamed(inner.slice(0, inner.indexOf(":"))).length) {
+    } else if (!bracketed && /^[a-z][a-z0-9+.-]*:\S*$/i.test(inner) && !fileUrl && !noteNamed && !vaultNamed(inner.slice(0, inner.indexOf(":"))).length) {
       status = "external";
       path = inner;
     } else if (!parts.target && from) {

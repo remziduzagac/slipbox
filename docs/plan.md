@@ -581,6 +581,11 @@ links across vaults, then the TUI, then renames.*
 | 17.13 | **Done.** Explorer: vault and repository folders with their own icons, the vault's name dimmed beside |
 | 17.14 | **Done.** The launcher: `~`, or a loose folder opened without a file, shows the known vaults and the folder |
 | 17.15 | **Done.** Renames across vaults (with `7.1`–`7.3`): links fixed in every reachable vault after a preview |
+| 17.16 | **Done.** Path links as other tools write them: `../` out of the root, `~/`, absolute, `file://`; wiki too |
+
+`17.16` is for compatibility: links written by other editors and agents name files by their paths,
+not by vault names, and every form of it reaches the file, counts as a backlink, and survives a
+rename in its own form.
 
 `17.15` is where `7.1`–`7.3` land: a note's rename rewrites links as byte-range edits, previews every
 file it touches (7.2), and warns when a vault's git tree already has changes (7.3); the old name goes

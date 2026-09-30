@@ -5,13 +5,13 @@
 // (7.3); applying it checks that no file it touches changed since.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, renameSync, statSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, renameSync, statSync, unlinkSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative } from "node:path";
 import { classify } from "./filetypes.ts";
 import { atomicWrite, landsInside, readText } from "./fsutil.ts";
 import type { Backlink, Graph, LinkKind, NoteEntry } from "./graph.ts";
 import { VAULT_LINK } from "./graph.ts";
-import { normKey } from "./links.ts";
+import { formatPathLink, normKey, pathForm, pathLink } from "./links.ts";
 import { contentHash } from "./redirects.ts";
 import { HOME_NAME, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
 import { findRoot, isInside, type VaultLocation } from "./vault.ts";
@@ -81,11 +81,36 @@ function wikiTarget(written: string, fromRelDir: string | null, toRel: string, g
     if (!r.startsWith("../")) r = `./${r}`;
     return prefix + r;
   }
-  if (t.includes("/")) return prefix + stem(toRel) + ext;
+  if (t.includes("/")) return prefix + (t.startsWith("/") ? "/" : "") + stem(toRel) + ext;
   const name = stem(posix.basename(toRel));
   // Another note with that name: the path, so it can't reach the wrong one.
   const taken = [...g.notes.keys()].some((p) => p !== movedFrom && p !== toRel && normKey(posix.basename(p).replace(NOTE_EXT, "")) === normKey(name));
   return prefix + (taken ? stem(toRel) : name) + ext;
+}
+
+function real(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
+
+/**
+ * A link written as a filesystem path (17.16) — relative, `~/`, absolute, `file://` — that reaches
+ * `fromAbs`: the same form, reaching `toAbs`. Null when it isn't one, or reaches something else.
+ */
+function pathRetarget(written: string, linkingAbs: string, fromAbs: string, toAbs: string, wiki: boolean): string | null {
+  const hash = wiki ? -1 : written.indexOf("#");
+  const frag = hash >= 0 ? written.slice(hash) : "";
+  const path = hash >= 0 ? written.slice(0, hash) : written;
+  const hit = pathLink(path, linkingAbs, wiki);
+  if (!hit || real(hit.abs) !== real(fromAbs)) return null;
+  // A wikilink written without its extension stays without it; a markdown link names the file.
+  const ext = !wiki || /\.[A-Za-z0-9]+$/.test(path) || !NOTE_EXT.test(toAbs);
+  let next = formatPathLink(hit.form, toAbs, linkingAbs, ext);
+  if (!wiki && hit.form !== "file-url" && (/%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(next))) next = encodeURI(next);
+  return next + frag;
 }
 
 /** A markdown link's new URL: the new path from the linking file (root-relative stays so). */
@@ -322,12 +347,18 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
   if (entry && posix.dirname(fromRel) !== posix.dirname(toRel)) {
     for (const l of entry.links) {
       if (l.kind !== "markdown" && l.kind !== "image" && !((l.kind === "wiki" || l.kind === "embed") && /^\.\.?\//.test(l.target))) continue;
-      if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("#") || l.target.startsWith("/")) continue;
+      if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("#") || l.target.startsWith("/") || l.target.startsWith("~/")) continue;
       const r = g.resolveLink(l, fromRel);
       if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path) continue;
       const targetAbs = isAbsolute(r.path) ? r.path : join(g.root, r.path);
       const site: Site = { abs: fromAbs, kind: l.kind, target: l.target, line: l.line, column: l.column };
-      const next = l.kind === "wiki" || l.kind === "embed" ? wikiTarget(l.target, posix.dirname(toRel), r.path, g, "") : mdTarget(l.target, toAbs, targetAbs, g);
+      const wiki = l.kind === "wiki" || l.kind === "embed";
+      // Out of the vault (17.16): a relative path from where the note will be.
+      const next = wiki
+        ? isAbsolute(r.path)
+          ? formatPathLink("relative", targetAbs, toAbs, /\.[A-Za-z0-9]+$/.test(l.target))
+          : wikiTarget(l.target, posix.dirname(toRel), r.path, g, "")
+        : mdTarget(l.target, toAbs, targetAbs, g);
       c.edit(site, next, null);
     }
   }
@@ -351,6 +382,8 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
 
 /** The new target text of a link to the renamed note. */
 function retargetBacklink(g: Graph, b: Backlink, linkingAbs: string, fromRel: string, toRel: string, toAbs: string, aliases: Set<string>, oldName: string): string {
+  const byPath = pathForm(b.target) ? pathRetarget(b.target, linkingAbs, join(g.root, fromRel), toAbs, b.kind === "wiki" || b.kind === "embed") : null;
+  if (byPath) return byPath;
   if (b.kind === "wiki" || b.kind === "embed") {
     const inter = VAULT_LINK.exec(b.target);
     const bare = inter && !g.notes.has(`${b.target}.md`) ? inter[2]! : b.target;

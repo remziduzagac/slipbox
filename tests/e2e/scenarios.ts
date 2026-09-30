@@ -1044,6 +1044,8 @@ export const SCENARIOS: Scenario[] = [
         "app/links.md": "# Links\n\nBack to [[demo:home]].\n",
       },
       setup: (s) => {
+        // A path link as other tools write it (17.16): the scenario's own folder is known only now.
+        s.write("vault-links.md", `${s.read("vault-links.md")}- [by path](file://${s.dir}/app/design.md#goals)\n`);
         s.cli("init", s.vault, "--name", "demo");
         s.cli("init", join(s.dir, "app"), "--name", "e2eapp");
         s.cli("ls", "--root", join(s.dir, "app")); // the app's index: its link back to demo:home
@@ -1062,6 +1064,12 @@ export const SCENARIOS: Scenario[] = [
       await s.see("Vault links");
       await s.keys("tab", "tab", "enter");
       await s.message('unknown vault "nope"');
+      // A file:// link: followed into the vault that holds it, not copied as a URL.
+      await s.keys("tab", "enter");
+      await s.status("design.md");
+      await s.see(/L5:/);
+      await s.keys("ctrl+o");
+      await s.status("vault-links.md");
       // The machine's vaults.
       await leader(s, "v", "v");
       await s.see(/Vaults \(\d+\)/);

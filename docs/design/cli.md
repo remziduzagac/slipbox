@@ -231,8 +231,9 @@ resolves the way a link inside that note does: same directory first, per decisio
 markdown-relative paths. With a heading, `line` is that heading's source line. External URLs come
 back as `status: "external"`. `links --all` lists every note's, each with `from`.
 
-**Across vaults** (plan `17.8`–`17.11`): `[[vault:note]]`, bare `vault:note` too when `vault` is a vault's name, and a
-path out of the root resolve into the other vault: `path` and `abs` are absolute, and `vault` names it. `via` says
+**Across vaults** (plan `17.8`–`17.11`, `17.16`): `[[vault:note]]`, bare `vault:note` too when `vault` is a vault's
+name, and a path out of the root (relative, `~/`, absolute, or a `file://` URL — a file, not an external link) resolve
+into the other vault: `path` and `abs` are absolute, and `vault` names it. `via` says
 when a link got there by an `alias`, a `previous-name` or a `redirect` (and a warning says so); `reason` says why one
 didn't (`unknown vault "x"`). A backlink from another vault has an absolute `from` and its `vault`.
 
@@ -248,7 +249,8 @@ new path has none) and rewrites every link to it, in this vault and in every vau
   the new name — then the path, so it can't reach the wrong one; a path stays a path, a relative one relative, an
   extension written stays, `#heading`, `^block`, `|text` and `\|` stay, a `vault:` prefix stays, a percent-encoded
   URL is encoded again, a reference link's definition is rewritten where it is. A link written as the note's alias is
-  still right, and left alone.
+  still right, and left alone. A filesystem path (`17.16`) stays in its form: relative from the linking file, `~/`,
+  absolute, or a `file://` URL.
 - **Byte ranges, never re-serialised** (`7.6`): each edit replaces the target at the line and column the index
   recorded (of the links there with that target, the nearest — so the same text in code nearby is left). A file
   whose link isn't there any more (another vault's index older than its file) is skipped, and said so.

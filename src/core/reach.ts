@@ -5,10 +5,11 @@
 // refreshed then (indexing on demand).
 
 import { existsSync, realpathSync, statSync } from "node:fs";
-import { basename, dirname, join, posix, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { loadConfig } from "./config.ts";
 import { readJson } from "./fsutil.ts";
 import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, type Target, VAULT_LINK, type VaultReach } from "./graph.ts";
+import { pathLink } from "./links.ts";
 import { cacheDir } from "./paths.ts";
 import { type KnownVault, namesOf, readIdentity, readRegistry, vaultConfigFile } from "./registry.ts";
 import { findRoot, isInside, rootAt, type VaultLocation, vaultConfigPath } from "./vault.ts";
@@ -132,23 +133,37 @@ export class Reach implements VaultReach {
 
   /** The note of `g` a link in another vault reaches, if it reaches one. */
   private landsHere(g: Graph, v: KnownVault, rel: string, l: LinkRef): string | null {
+    const linking = join(v.path, rel);
+    // A file of `g` by its absolute path: its vault path there.
+    const inG = (abs: string) => {
+      if (!isInside(g.root, abs)) return null;
+      const r = g.resolveLink({ kind: "markdown", target: `/${posix.normalize(relative(g.root, abs))}` }, "");
+      return (r.resolvedKind === "note" || r.resolvedKind === "file") && r.path && !isAbsolute(r.path) ? r.path : null;
+    };
     if (l.kind === "wiki" || l.kind === "embed") {
       const m = VAULT_LINK.exec(l.target);
-      if (!m || !g.answersTo(m[1]!)) return null;
-      const r = g.resolveLink({ kind: "wiki", target: m[2]! }, "");
-      return r.resolvedKind === "note" && r.path && !r.path.startsWith("/") ? r.path : null;
+      if (m && g.answersTo(m[1]!)) {
+        const r = g.resolveLink({ kind: "wiki", target: m[2]! }, "");
+        return r.resolvedKind === "note" && r.path && !isAbsolute(r.path) ? r.path : null;
+      }
+      // By its path (17.16): `[[../notes/x]]`, `[[~/notes/x]]`, an absolute one.
+      const hit = pathLink(l.target, linking, true);
+      return hit ? inG(hit.abs) : null;
     }
-    if (l.kind !== "markdown" || /^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("/")) return null;
-    const path = l.target.split("#")[0]!;
+    if (l.kind !== "markdown") return null;
+    const fileUrl = /^file:\/\//i.test(l.target);
+    if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) && !fileUrl) return null;
+    const path = fileUrl ? l.target : l.target.split("#")[0]!;
     if (!path) return null;
+    const hit = pathLink(path, linking, false);
+    if (hit) return inG(hit.abs);
+    // `/x.md` is the other vault's own root; any other relative path, from the linking note.
+    if (path.startsWith("/") || fileUrl || path.startsWith("~/")) return null;
     let decoded = path;
     try {
       decoded = decodeURIComponent(path);
     } catch {}
-    const abs = resolve(dirname(join(v.path, rel)), decoded);
-    if (!isInside(g.root, abs)) return null;
-    const r = g.resolveLink({ kind: "markdown", target: `/${posix.normalize(relative(g.root, abs))}` }, "");
-    return (r.resolvedKind === "note" || r.resolvedKind === "file") && r.path ? r.path : null;
+    return inG(resolve(dirname(linking), decoded));
   }
 }
 

@@ -5524,4 +5524,26 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("enter");
     expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
   });
+
+  test("a file:// link and a ~/ wikilink are followed into the other vault, at the heading (17.16)", async () => {
+    const { base, notes, app } = await twoVaults();
+    writeFileSync(join(notes, "paths.md"), `# Paths\n\n[url](file://${app}/design.md#goals)\n\n[[~/app/design#Goals]]\n`);
+    const before = process.env.HOME;
+    process.env.HOME = base;
+    try {
+      const h = await harness({ root: notes, open: "paths.md" });
+      await h.keys("tab", "enter");
+      expect(h.app.loc.root).toBe(app);
+      expect(h.app.view!.buf.rel).toBe("design.md");
+      expect(h.app.view!.curAnchor.anchor.line).toBe(5);
+      expect(h.copied).toEqual([]); // followed, not copied as a URL
+      await h.app.run("history.back");
+      expect(h.app.view!.buf.rel).toBe("paths.md");
+      await h.keys("tab", "tab", "enter");
+      expect(h.app.loc.root).toBe(app);
+      expect(h.app.view!.curAnchor.anchor.line).toBe(5);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
 });

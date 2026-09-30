@@ -315,6 +315,7 @@ Each kind of link does something different when followed:
 | `[t](other.md#frag)` | opens relative to the note |
 | `[t](run.py#L42)` | opens the file at line 42 (as in a code comment's `run.py:42`) |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
+| `file://…`, `~/x.md`, `/home/me/x.md`, `[[../other/x]]` | opens the file, in whichever vault holds it (`17.16`) |
 | attachment `![[x.png]]` | copies the path; images are phase 6 |
 | footnote `[1]` | jumps to the definition |
 
