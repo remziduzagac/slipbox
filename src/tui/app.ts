@@ -2036,6 +2036,31 @@ export class App {
     }
   }
 
+  /** The vault's tags (1.6), with how many notes carry each, nested ones under their parents: pick one for its notes. */
+  openTagList(): void {
+    const tags = this.graph.tags();
+    if (!tags.length) return this.message("info", "no tags in this vault: #tag in a note, or tags: in its frontmatter");
+    this.openList({
+      title: `Tags (${tags.length})`,
+      items: tags.map((t) => ({ label: `#${t.tag}`, hint: `${t.count} note${t.count === 1 ? "" : "s"}`, indent: t.tag.split("/").length - 1, data: t.tag })),
+      accept: (it) => this.openTagNotes(it.data as string),
+    });
+  }
+
+  /** The notes with a tag (1.6) — its nested tags' too: pick one to open. */
+  openTagNotes(tag: string): void {
+    const t = this.graph.tagged(tag);
+    if (!t) return this.message("info", `no note has #${tag.replace(/^#/, "")}`);
+    this.openList({
+      title: `#${t.tag} — ${t.notes.length} note${t.notes.length === 1 ? "" : "s"}`,
+      items: t.notes.map((rel) => ({ label: rel, hint: this.graph.notes.get(rel)?.title ?? "", data: rel })),
+      accept: (it) => {
+        this.region = "content";
+        this.open(it.data as string);
+      },
+    });
+  }
+
   /** Whether the explorer has the keys (its tree shown and focused). */
   explorerFocused(): boolean {
     return this.region === "sidebar" && this.sidebarShown && this.leftView === "explorer";

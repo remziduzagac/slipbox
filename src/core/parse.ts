@@ -1,4 +1,4 @@
-// Parse pipeline (plan 1.3): remark + gfm + frontmatter + wikilinks.
+// Parse pipeline (plan 1.3): remark + gfm + frontmatter + wikilinks + tags (1.6).
 // mdast carries source positions, which is why remark was chosen over marked.
 
 import type { Heading, Nodes, Root, Yaml } from "mdast";
@@ -9,18 +9,21 @@ import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
+import { remarkHashtag } from "./tags.ts";
 import { remarkWikiLink, type WikiLink } from "./wikilink.ts";
 
 const processor = unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(remarkFrontmatter, ["yaml", "toml"])
-  .use(remarkWikiLink as never);
+  .use(remarkWikiLink as never)
+  .use(remarkHashtag as never);
 /** For chunks after the first: frontmatter is only ever at the note's start. */
 const bodyProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm)
-  .use(remarkWikiLink as never);
+  .use(remarkWikiLink as never)
+  .use(remarkHashtag as never);
 
 export interface Frontmatter {
   raw: string;
@@ -472,6 +475,11 @@ export function headingText(node: Heading): string {
     if (n.type === "wikiLink") {
       const w = n as WikiLink;
       parts.push(w.alias ?? w.value);
+      return false;
+    }
+    // A tag keeps its `#` (the node holds its name).
+    if ((n.type as string) === "hashtag") {
+      parts.push(`#${(n as { value: string }).value}`);
       return false;
     }
     if (n.type === "text" || n.type === "inlineCode") parts.push(n.value);

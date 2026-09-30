@@ -170,6 +170,15 @@ note's own name and path:
 
 This opens an existing Obsidian vault unchanged for the default "shortest path when possible" setting.
 
+## `1.6` — tags
+
+Obsidian's tags, so a vault's read the same in both. A note's tags are its frontmatter's `tags:` (a list or a string,
+`#` optional) and the `#tags` in its text: letters, digits, `_`, `-` and `/`, not digits only, after a space or at a
+line's start — so never `a#b`, `page#part` in a URL, `[[a#b]]`, a heading's `#` marker, or anything in code (a
+micromark extension, as wikilinks are). `/` nests: `#dome/shutter` is under `#dome`, and a parent's notes include its
+children's. `#Dome` and `#dome` are one tag, shown as first written (the first note by path, its frontmatter before
+its text).
+
 ## `3.5` — reload anchoring
 
 A buffer stores **source lines, never rendered rows**. Rendered rows change with every resize.

@@ -202,6 +202,9 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
     a.open(path, anchor);
   };
   switch (link.kind) {
+    case "tag":
+      // A tag (1.6): the notes that carry it.
+      return a.openTagNotes(link.target);
     case "footnote": {
       const layout = lay(a, view);
       // The definition's first row, by identifier (whatever the label's case, in a quote or a list).
@@ -367,6 +370,7 @@ function cycleLink(a: App, dir: 1 | -1): void {
 }
 
 function linkTarget(a: App, v: View, link: LayoutLink): string {
+  if (link.kind === "tag") return `#${link.target}`;
   if (!v.buf.rel || link.kind === "footnote") return link.target;
   const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, v.buf.rel);
   return r.path && r.resolvedKind !== "external" ? join(a.loc.root, r.path) : link.target;
@@ -386,6 +390,8 @@ function argCandidates(a: App, cmd: string): string[] | null {
       return listThemes().map((t) => t.name);
     case "glyphs.set":
       return ["nerd", "unicode", "ascii", "auto"];
+    case "tag.list":
+      return a.graph.tags().map((t) => t.tag);
     default:
       return null;
   }
@@ -1525,6 +1531,7 @@ export function registerActions(app: App): void {
         }
       }),
     "trash.open": (a) => a.openTrash(),
+    "tag.list": (a, arg) => (arg ? a.openTagNotes(arg) : a.openTagList()),
     "vault.init": (a) => {
       // In a vault: the explorer's selected folder (or this note's) a vault of its own (18.11).
       if (a.loc.mode === "vault") return a.makeVaultHere();

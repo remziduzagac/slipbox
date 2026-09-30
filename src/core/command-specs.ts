@@ -216,6 +216,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "vault.rename", title: "Rename the vault", cli: "slipbox rename-vault <name>", desc: "This one, or the explorer's selected vault: [[old:…]] links rewritten in every vault reached, after a preview; the old name kept" },
   { id: "link.relink", title: "Relink old names and moves", cli: "slipbox relink [note]", desc: "Rewrites this note's links that reach notes by an old name or a move" },
   { id: "vault.init", title: "Make a vault", cli: "slipbox init [dir] [--private]", desc: "This loose folder (or its git repository) gets its .slipbox/; in a vault, the explorer's selected folder (or this note's) becomes a vault of its own, links fixed after a preview" },
+  { id: "tag.list", title: "Tags", cli: "slipbox tags [tag]", desc: "The vault's tags, with how many notes carry each; pick one (or :tag name) for its notes" },
   { id: "vault.switch", title: "Switch vault", cli: "slipbox vaults", desc: "The vaults this machine knows: pick one to go to (back returns)" },
   { id: "config.reload", title: "Reload configuration", cli: "slipbox info", desc: "Applies config changes now (saving does too)" },
   { id: "messages.open", title: "Messages", cli: null, desc: "Lists everything slipbox has said" },

@@ -320,6 +320,15 @@ describe("the vault and the tool", () => {
     expect(existsSync(join(dir, "box", ".slipbox"))).toBe(false);
     expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md) and [[note]]\n");
   });
+  test("tags: the vault's, with counts; a tag's notes (1.6)", () => {
+    // The demo's: frontmatter tags, and #tags in the text, nested (#dome/shutter under #dome).
+    const all = slipbox(["tags", "--json"], { cwd: DEMO }).json.data as { tag: string; count: number }[];
+    expect(all).toContainEqual({ tag: "dome", count: 2 });
+    expect(all).toContainEqual({ tag: "dome/shutter", count: 2 });
+    const notes = ["projects/dome-refit.md", "projects/variable-star-survey.md"];
+    expect(slipbox(["tags", "#dome/shutter", "--json"], { cwd: DEMO }).json.data).toEqual({ tag: "dome/shutter", notes });
+    expect(slipbox(["tags", "dome/shutter"], { cwd: DEMO }).out).toBe(notes.map((n) => `${n}\n`).join(""));
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);

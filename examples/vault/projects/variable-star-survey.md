@@ -473,3 +473,5 @@ Actions:
 5. The volunteer co-authorship rule. ✅ once it is written down, not before.
 
 Anything not on this list waits until after the first month of the real survey.
+
+Related: #dome/shutter (the refit sets our first observing season) and #survey/planning.

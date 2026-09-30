@@ -117,6 +117,8 @@ slipbox resolve '[[alpha#Section Two]]' --from index.md --json
 slipbox links <note> --json              # outgoing links, each with status and path
 slipbox backlinks <note> --json          # notes linking here: line, column, and how each is written
 slipbox links --all --json               # every link in the vault, each with `from`: the broken ones
+slipbox tags --json                      # every tag with its count (#a/b counts under #a too)
+slipbox tags '#project' --json           # {tag, notes}: the notes carrying it, nested tags included
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
 ```
 

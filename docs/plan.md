@@ -305,7 +305,7 @@ common, and the only reason they are step 0.
 | 1.3 | Parse pipeline: remark + gfm + frontmatter + wiki-link |
 | 1.4 | **decide** link resolution, then build it: `nameToPath` as lists, collisions, case policy |
 | 1.5 | Backlinks map |
-| 1.6 | Tags map |
+| 1.6 | **Done.** Tags map: frontmatter `tags` and `#tags` in the text, nested, one tag whatever its case |
 | 1.7 | Unresolved-link set |
 | 1.8 | Incremental single-file graph update |
 | 1.9 | Index persistence: when, and to the cache location from 0.10 |
@@ -440,7 +440,7 @@ common, and the only reason they are step 0.
 | 9.4 | Cross-process semantics — **decided**: disk is the contract. See Agent integration |
 | 9.9 | Advisory staleness file — TUI writes dirty paths plus its pid; CLI surfaces them |
 | 9.10 | `--if-unchanged` for writers that must not clobber |
-| 9.5 | Graph queries: links and backlinks built; orphans and tags wait for `1.6`/`1.7` (phase 4) |
+| 9.5 | Graph queries: links, backlinks and `tags` built; orphans wait for `1.7` (phase 4) |
 | 9.6 | `capture` subcommand |
 | 9.7 | **Context-bundle assembler** — shared with 10.1 |
 | 9.8 | The agent-facing skill that teaches the CLI |

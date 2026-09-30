@@ -63,6 +63,10 @@ house style that writing-guide describes.
 │ projects/dome-refit.md (again)    │ * and + bullets, a www. autolink, an     │
 │                                   │ image that exists (attachments/)         │
 ├───────────────────────────────────┼──────────────────────────────────────────┤
+│ projects/*.md (tags)              │ #tags in the text beside frontmatter     │
+│                                   │ tags, nested ones (#dome/shutter): space │
+│                                   │ f t                                      │
+├───────────────────────────────────┼──────────────────────────────────────────┤
 │ people/partners-and-names.md      │ every link form, broken links,           │
 │                                   │ footnotes; CJK, emoji, ZWJ, RTL widths   │
 ├───────────────────────────────────┼──────────────────────────────────────────┤
@@ -3393,7 +3397,10 @@ repair.
   ◦ wiring loom
 • rail grease
 
-The old gear goes to the instrument-inventory shelf, not the skip."
+The old gear goes to the instrument-inventory shelf, not the skip.
+
+Filed under #dome/shutter and #budget/2026: the shutter is most of the refit,
+and of this year's spend."
 `;
 
 exports[`snapshots of the layout IR as text projects/variable-star-survey.md @ 80 1`] = `
@@ -4027,7 +4034,10 @@ Actions:
 4. halley's rejection-step crash reporting.
 5. The volunteer co-authorship rule. ✅ once it is written down, not before.
 
-Anything not on this list waits until after the first month of the real survey."
+Anything not on this list waits until after the first month of the real survey.
+
+Related: #dome/shutter (the refit sets our first observing season) and
+#survey/planning."
 `;
 
 exports[`snapshots of the layout IR as text scratch/broken-frontmatter.md @ 80 1`] = `

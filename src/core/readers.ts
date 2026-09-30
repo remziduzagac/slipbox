@@ -11,6 +11,7 @@ import { noteFormat } from "./filetypes.ts";
 import type { LayoutHeading, LinkKind } from "./layout/ir.ts";
 import { scanHeadings } from "./layout/source.ts";
 import { type ParseCache, type ParsedNote, parseMarkdown } from "./parse.ts";
+import { tagsInLine } from "./tags.ts";
 import { parseWikiTarget } from "./wikilink.ts";
 
 /** A link read from a line of source text. */
@@ -47,6 +48,9 @@ const markdown: NoteReader = {
       if (col < m.index || col >= m.index + m[0].length) continue;
       return { kind: m[0].startsWith("!") ? "image" : "markdown", target: m[2]!, heading: null, text: m[1]! };
     }
+    // A tag (1.6).
+    const t = tagsInLine(text).find((x) => col >= x.index && col < x.index + x.length);
+    if (t) return { kind: "tag", target: t.name, heading: null, text: `#${t.name}` };
     return null;
   },
   language: null,

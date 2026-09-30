@@ -302,6 +302,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | the whole word under the cursor, forward / backward | `*` / `#` | — |
 | quick switcher: find a note by name | `ctrl+p` | `space f f` |
 | outline picker: find a heading in this note | — | `space f o` |
+| the vault's tags (`:tags`), then a tag's notes (`:tag name`) | — | `space f t` |
 | heading path: the breadcrumb's headings as a dropdown | — | `space f b` |
 | search the vault's notes and files (open ones as they are); enter opens at the match | `ctrl+shift+f` | `space f g` |
 | go to a line by number (`:42` too) | `ctrl+g` | `space f l` |
@@ -330,6 +331,7 @@ config.
 | `:help` | all keys and commands |
 | `:lens`, `:live` | open or close the lens |
 | `:e <note>`, `:open <note>` | open a note, or any text file of the vault by its path (`:e tool.py`) |
+| `:tags`, `:tag <name>` | the vault's tags; a tag's notes |
 | `:theme <name>` | set the theme |
 | `:glyphs <nerd\|unicode\|ascii\|auto>` | set the glyph set |
 | `:zen` | toggle zen mode |

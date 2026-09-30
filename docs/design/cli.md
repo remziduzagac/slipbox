@@ -74,6 +74,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
 | `resolve <link>` | `{link, status, path, abs, heading, line, candidates[], vault, via, reason}` |
 | `links <note>` | `[{kind, target, heading, text, line, column, status, path, candidates, vault, via, reason}]` |
+| `tags [tag]` | `[{tag, count}]`, or a tag's `{tag, notes[]}` (its nested tags' too); exit 3: no note has it |
 | `backlinks <note>` | `{path, backlinks[{from, vault, line, column, text, kind, target, heading, block, alias}]}` |
 
 These churn freely before 1.0:

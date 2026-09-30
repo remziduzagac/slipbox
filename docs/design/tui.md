@@ -386,6 +386,11 @@ Each kind of link does something different when followed:
 | `file://…`, `~/x.md`, `/home/me/x.md`, `[[../other/x]]` | opens the file, in whichever vault holds it (`17.16`) |
 | attachment `![[x.png]]` | copies the path; images are phase 6 |
 | footnote `[1]` | jumps to the definition |
+| tag `#dome/shutter` | lists the notes with the tag (its nested ones too, `#dome/shutter/…`); enter opens one |
+
+**Tags** (`1.6`): `space f t` (`:tags`) lists the vault's tags, each with how many notes carry it — a nested tag
+indented under its parent, whose count includes its children's — and picking one lists its notes; `:tag name` goes
+straight there. A note's tags are its frontmatter's `tags:` and the `#tags` in its text (`docs/design/rendering.md`).
 
 A link reached by a note's alias or previous name, or through a redirect (the note moved: `17.12`),
 follows too, and says so. The backlinks list

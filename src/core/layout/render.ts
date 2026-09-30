@@ -10,6 +10,7 @@ import { headingText, ORIGIN, parseMarkdown, type Frontmatter, slugify } from ".
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../width.ts";
+import type { Hashtag } from "../tags.ts";
 import type { WikiLink } from "../wikilink.ts";
 import { highlight } from "./highlight.ts";
 import { A_BOLD, A_ITALIC, A_STRIKE, type Layout, type LayoutHeading, type LayoutLink, type Line, type LinkStatus, type Span } from "./ir.ts";
@@ -852,6 +853,12 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
         }
         default:
           if ((n.type as string) === "wikiLink") wiki(n as unknown as WikiLink, st);
+          else if ((n.type as string) === "hashtag") {
+            // A tag (1.6): followed, the notes that carry it.
+            const name = (n as unknown as Hashtag).value;
+            const id = addLink(ctx, { kind: "tag", target: name, heading: null, text: `#${name}`, status: "resolved", src: line });
+            push(`#${sanitize(name)}`, { role: "tag", attrs: st.attrs }, { link: id });
+          }
           else if ("children" in n) walk((n as unknown as Parents).children as PhrasingContent[], st, extra);
           else if ("value" in n) text(String((n as { value: unknown }).value), st, extra);
       }
@@ -906,6 +913,7 @@ function addLink(ctx: Ctx, l: Omit<LayoutLink, "line" | "col">): number {
 }
 
 function textOf(n: Nodes): string {
+  if ((n.type as string) === "hashtag") return `#${(n as unknown as Hashtag).value}`;
   if ("value" in n && typeof n.value === "string") return n.value;
   if ((n.type as string) === "wikiLink") return (n as unknown as WikiLink).alias ?? (n as unknown as WikiLink).value;
   const ch = (n as Parents).children;

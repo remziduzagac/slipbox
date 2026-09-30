@@ -580,6 +580,28 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: "tags: space f t lists them with counts, a tag its notes; a #tag in the text followed",
+    run: async (s) => {
+      await leader(s, "f", "t");
+      await s.see(/Tags \(\d+\)/);
+      await s.see(/#dome\/shutter +2 notes/);
+      await s.type("shutter");
+      await s.keys("enter");
+      await s.see("#dome/shutter — 2 notes");
+      await s.see("projects/variable-star-survey.md");
+      await s.keys("enter");
+      await s.status("dome-refit.md");
+      // The tags on its last line, one link after the other; the second followed, its notes.
+      await s.keys("shift+g", "]", "l");
+      await s.status("→ #dome/shutter");
+      await s.keys("]", "l");
+      await s.status("→ #budget/2026");
+      await s.keys("enter");
+      await s.see("#budget/2026 — 1 note");
+      await s.keys("escape");
+    },
+  },
+  {
     name: "panes: the explorer, reveal, the outline, the heading picker, the path dropdown",
     needs: { cols: 100 },
     options: { open: HANDBOOK },

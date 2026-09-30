@@ -47,7 +47,7 @@ export interface Line {
   footnoteDef?: string;
 }
 
-export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote";
+export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote" | "tag";
 
 export interface LayoutLink {
   kind: LinkKind;

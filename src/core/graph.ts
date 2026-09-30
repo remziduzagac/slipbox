@@ -19,6 +19,7 @@ import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
 import type { VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, WalkFilter, walkVault } from "./walk.ts";
+import { type Hashtag, tagKey, tagName } from "./tags.ts";
 import type { WikiLink } from "./wikilink.ts";
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image";
@@ -104,7 +105,7 @@ export interface Backlink {
 }
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-const INDEX_VERSION = 5;
+const INDEX_VERSION = 6; // 6: inline #tags (1.6)
 
 interface IndexFile {
   version: number;
@@ -132,6 +133,7 @@ export class Graph {
   errors: string[] = [];
   stats: GraphStats = { notes: 0, parsed: 0, cached: 0, ms: 0 };
   private backlinkCache: Map<string, Backlink[]> | null = null;
+  private tagCache: Map<string, { tag: string; notes: string[] }> | null = null;
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
   /** Aliases and previous names → notes, from the entries parsed so far (null: rebuild). */
   private nameCache: { aliases: Map<string, string[]>; previous: Map<string, string[]> } | null = null;
@@ -193,6 +195,7 @@ export class Graph {
       if (vanished.length) this.detectMoves(vanished, walk.files.filter((f) => !old[f.rel]));
     }
     this.backlinkCache = null;
+    this.tagCache = null;
     this.nameCache = null;
     this.cacheDirty = Object.keys(old).length !== reused;
     const toParse = this.unparsed.size;
@@ -246,6 +249,7 @@ export class Graph {
       this.unparsed.delete(rel);
       this.cacheDirty = true;
       this.backlinkCache = null;
+      this.tagCache = null;
       this.nameCache = null;
     }
     return this.notes.get(rel);
@@ -347,6 +351,7 @@ export class Graph {
     if (isNew && entry.size > 0) this.pairMove(entry.hash, rel, "came");
     if (isNew) this.index.add(rel);
     this.backlinkCache = null;
+    this.tagCache = null;
     this.nameCache = null;
     return true;
   }
@@ -364,6 +369,7 @@ export class Graph {
     else if (!list.includes(rel)) list.push(rel);
     else return false;
     this.backlinkCache = null;
+    this.tagCache = null;
     this.nameCache = null;
     this.dataLinkCache.clear(); // a path in a data file or a comment may resolve now
     return true;
@@ -379,6 +385,7 @@ export class Graph {
     else this.assets.delete(key);
     this.dataLinkCache.clear(); // and paths to it no longer resolve
     this.backlinkCache = null;
+    this.tagCache = null;
     this.nameCache = null;
     return true;
   }
@@ -391,6 +398,7 @@ export class Graph {
     this.cacheDirty = true;
     this.index.remove(rel);
     this.backlinkCache = null;
+    this.tagCache = null;
     this.nameCache = null;
   }
 
@@ -600,6 +608,45 @@ export class Graph {
     return links.map((l) => ({ ...l, ...this.resolveLink(l, rel) }));
   }
 
+  /**
+   * Every tag and the notes carrying it (1.6), by its key (lower-cased: `#Project` is `#project`),
+   * shown as first written. A nested tag's notes count for its parents too: `#a/b` is under `#a`.
+   * Every note is read first, so the list is whole.
+   */
+  tagIndex(): Map<string, { tag: string; notes: string[] }> {
+    if (this.unparsed.size) this.ensureAll();
+    if (this.tagCache) return this.tagCache;
+    const index = new Map<string, { tag: string; notes: string[] }>();
+    for (const [rel, e] of [...this.notes].sort(([a], [b]) => a.localeCompare(b))) {
+      const mine = new Set<string>();
+      for (const tag of e.tags) {
+        const parts = tag.split("/");
+        for (let i = 1; i <= parts.length; i++) {
+          const name = parts.slice(0, i).join("/");
+          const key = tagKey(name);
+          if (mine.has(key)) continue;
+          mine.add(key);
+          const t = index.get(key) ?? { tag: name, notes: [] };
+          t.notes.push(rel);
+          index.set(key, t);
+        }
+      }
+    }
+    this.tagCache = new Map([...index].sort(([a], [b]) => a.localeCompare(b)));
+    return this.tagCache;
+  }
+
+  /** The vault's tags, with how many notes carry each (a parent's count includes its children's). */
+  tags(): { tag: string; count: number }[] {
+    return [...this.tagIndex().values()].map((t) => ({ tag: t.tag, count: t.notes.length }));
+  }
+
+  /** The notes with a tag (`#` optional; its nested tags' too), or null when none has it. */
+  tagged(name: string): { tag: string; notes: string[] } | null {
+    const clean = tagName(name);
+    return clean ? (this.tagIndex().get(tagKey(clean)) ?? null) : null;
+  }
+
   backlinks(rel: string): Backlink[] {
     this.ensureAll();
     if (!this.backlinkCache) {
@@ -651,12 +698,14 @@ export class Graph {
     }
     await Promise.all([...gs].map((g) => grammar(g)));
     this.backlinkCache = null;
+    this.tagCache = null;
     this.nameCache = null;
   }
 
   /** A grammar finished loading: code files' links can be read now (the TUI hears of it). */
   grammarsChanged(): void {
     this.backlinkCache = null;
+    this.tagCache = null;
     this.nameCache = null;
   }
 
@@ -737,6 +786,7 @@ export class Graph {
   fileChanged(rel: string): void {
     this.dataLinkCache.delete(rel);
     this.backlinkCache = null;
+    this.tagCache = null;
     this.nameCache = null;
   }
 }
@@ -776,9 +826,11 @@ export function extractNote(file: NoteFile): NoteEntry {
 export function extractFromSource(file: NoteFile, text: string, flags: string[] = []): NoteEntry {
   const parsed = parseNoteFile(file.rel, text);
   const links: LinkRef[] = [];
+  const inline: string[] = [];
   const definitions = new Map<string, string>();
   visit(parsed.tree, (n) => {
     if (n.type === "definition") definitions.set((n as Definition).identifier.toLowerCase(), (n as Definition).url);
+    else if ((n.type as string) === "hashtag") inline.push((n as unknown as Hashtag).value);
   });
   visit(parsed.tree, (n: Nodes) => {
     const pos = n.position?.start;
@@ -813,7 +865,16 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
     }
   });
   const fm = parsed.frontmatter?.data;
-  const tags = normaliseTags(fm?.tags ?? fm?.tag);
+  // The frontmatter's first, then the text's, each once (as first written).
+  const tags: string[] = [];
+  const seen = new Set<string>();
+  for (const t of [...normaliseTags(fm?.tags ?? fm?.tag), ...inline]) {
+    const name = tagName(t);
+    if (name && !seen.has(tagKey(name))) {
+      seen.add(tagKey(name));
+      tags.push(name);
+    }
+  }
   return {
     rel: file.rel,
     title: noteTitle(parsed, basename(file.rel)),

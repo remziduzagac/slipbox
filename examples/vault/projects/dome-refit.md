@@ -46,3 +46,5 @@ The photo above is the shutter's drive plate, taken by Rosa before the last repa
 * rail grease
 
 The old gear goes to the [[instrument-inventory]] shelf, not the skip.
+
+Filed under #dome/shutter and #budget/2026: the shutter is most of the refit, and of this year's spend.

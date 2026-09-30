@@ -190,6 +190,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "ctrl+p": "switcher.open",
   "leader f f": "switcher.open",
   "leader f o": "outline.pick",
+  "leader f t": "tag.list",
   "leader f b": "breadcrumb.path",
   ":": "palette.open",
   "ctrl+shift+p": "palette.open",
@@ -484,7 +485,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader h": "history: back, forward, everywhere visited",
   "leader w": "window: split, focus, move, resize",
   "leader t": "tabs: open, switch, reorder, close",
-  "leader f": "find: notes, headings, text, commands",
+  "leader f": "find: notes, headings, tags, text, commands",
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
   "leader n": "note: new, rename, move, delete, copy, cut, source, the lens, save, edit elsewhere, reload, info",
@@ -508,6 +509,8 @@ export function parseGroup(value: string): { name: string; desc: string } {
 
 /** `:` aliases: alias → command spec. The rest of the typed line becomes the argument. */
 export const DEFAULT_ALIASES: Record<string, string> = {
+  tags: "tag.list",
+  tag: "tag.list",
   q: "window.close_or_quit",
   quit: "window.close_or_quit",
   qa: "app.quit",

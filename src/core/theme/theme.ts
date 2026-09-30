@@ -26,7 +26,7 @@ export const ROLES = [
   "table_border", "table_header",
   "fm_key", "fm_value", "fm_border", "fm_error",
   "callout_note", "callout_tip", "callout_important", "callout_warning", "callout_caution",
-  "footnote", "html", "image",
+  "footnote", "tag", "html", "image",
   // syntax inside code blocks
   "syn_keyword", "syn_function", "syn_string", "syn_number", "syn_comment", "syn_type",
   "syn_variable", "syn_constant", "syn_operator", "syn_punctuation", "syn_tag", "syn_attr",
@@ -166,6 +166,7 @@ export function themeFromPalette(
     callout_warning: { fg: p.yellow, bold: true },
     callout_caution: { fg: p.red, bold: true },
     footnote: { fg: p.cyan },
+    tag: { fg: p.orange },
     html: { fg: p.comment },
     image: { fg: p.magenta },
     syn_keyword: { fg: p.magenta, bold: true },
@@ -350,6 +351,7 @@ export function monoTheme(): Theme {
   roles.link_ambiguous = { underline: true, italic: true };
   roles.code_inline = { bold: true };
   roles.footnote = { underline: true };
+  roles.tag = { bold: true };
   roles.image = { underline: true, italic: true };
   roles.url = { dim: true };
   roles.html = { dim: true };

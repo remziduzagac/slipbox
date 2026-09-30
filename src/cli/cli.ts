@@ -127,6 +127,7 @@ Usage:
   slipbox resolve <link>            follow a link to a path        [--from <note>]
   slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
+  slipbox tags [tag]                the vault's tags and how many notes carry each; a tag's notes
   slipbox ls                        list the vault's notes         [--files: data and text files too]
   slipbox outline <note>            headings with source lines
   slipbox find <query> [note]       find text in a note, or the vault  [--regex] [--whole] [--ignore-case] [--files]
@@ -171,7 +172,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "relink", "cp", "rm", "trash", "deinit",
+  "mv", "rename-vault", "relink", "cp", "rm", "trash", "deinit", "tags",
   "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
@@ -274,7 +275,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1,
+  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -538,6 +539,18 @@ const HANDLERS: Record<string, Handler> = {
       })),
       human,
     };
+  },
+
+  tags(s, rest) {
+    // A tag's notes — its nested tags' too (1.6) — or every tag with its count.
+    const want = rest[0];
+    if (want !== undefined) {
+      const t = s.graph.tagged(want);
+      if (!t) throw new CliError(`no note has #${want.replace(/^#/, "")}`, EXIT.notFound);
+      return { data: t, human: t.notes.map((n) => `${n}\n`).join("") };
+    }
+    const tags = s.graph.tags();
+    return { data: tags, human: tags.map((t) => `${String(t.count).padStart(4)}  #${t.tag}\n`).join("") };
   },
 
   async backlinks(s, rest) {
