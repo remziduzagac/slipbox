@@ -14,7 +14,7 @@ import { locateVault } from "../src/core/vault.ts";
 import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
-import { fuzzy, rank } from "../src/tui/fuzzy.ts";
+import { match, rank } from "../src/tui/match.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
 
@@ -2932,11 +2932,34 @@ describe("review round 3", () => {
     expect(h.app.currentLayout(wide)).toBe(before); // no link to beta: the same layout object
     expect(h.app.currentLayout(alpha)).not.toBe(alphaBefore); // links to beta: re-laid out
   });
-  test("fuzzy: a contiguous match ranks first and highlights where it matched", () => {
-    const r = rank("readme", ["r/e/a/d/m/e.md", "notes/rename-adme.md", "areas/readme.md"], (x) => x);
-    expect(r[0]!.item).toBe("areas/readme.md");
-    expect(fuzzy("read", "areas/readme.md")!.positions).toEqual([6, 7, 8, 9]);
-    expect(fuzzy("stan", "İİstanbul.md")!.positions).toEqual([2, 3, 4, 5]);
+  test("matching: each word as typed, its letters together, the words in any order; smart case; highlights (3.16)", () => {
+    expect(match("ab", "cab.md")).not.toBeNull();
+    expect(match("ab", "a-b.md")).toBeNull(); // not letter by letter
+    expect(rank("readme", ["r/e/a/d/m/e.md", "notes/rename-adme.md", "areas/readme.md"], (x) => x).map((r) => r.item)).toEqual(["areas/readme.md"]);
+    const path = "handbook/operations-handbook.md";
+    expect(match("oper hand", path)).not.toBeNull();
+    expect(match("hand oper", path)).not.toBeNull(); // any order
+    expect(match("oper xyz", path)).toBeNull(); // every word
+    expect(match("oper hand", path)!.positions).toEqual([9, 10, 11, 12, 20, 21, 22, 23]); // in the file name, each word's best place
+    // Smart case, word by word.
+    expect(match("Tel", "telescope.md")).toBeNull();
+    expect(match("tel Scope", "tel-Scope.md")).not.toBeNull();
+    // Highlights follow the text even where lowercasing changes its length.
+    expect(match("read", "areas/readme.md")!.positions).toEqual([6, 7, 8, 9]);
+    expect(match("stan", "İİstanbul.md")!.positions).toEqual([2, 3, 4, 5]);
+    // Ranked: the file name over a folder, a word start, the shorter.
+    expect(rank("readme", ["readme-old/notes.md", "areas/the-readme-of-it.md", "areas/readme.md"], (x) => x).map((r) => r.item)).toEqual([
+      "areas/readme.md",
+      "areas/the-readme-of-it.md",
+      "readme-old/notes.md",
+    ]);
+    // A label over its description — even mid-word over a word start — which still counts.
+    const items = [
+      { label: "Delete the note", detail: "moves it to the trash" },
+      { label: "Remove the tag", detail: "from every note" },
+    ];
+    expect(rank("move", items, (i) => [i.label, i.detail]).map((r) => r.item.label)).toEqual(["Remove the tag", "Delete the note"]);
+    expect(rank("move trash", items, (i) => [i.label, i.detail]).map((r) => r.item.label)).toEqual(["Delete the note"]);
   });
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   test("the scratch's own writes never read as external changes (polled directories included)", async () => {
@@ -5796,7 +5819,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
   }
   const prompt = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
   const type = async (h: Harness, text: string) => {
-    for (const c of text) await h.keys(c);
+    for (const c of text) await h.keys(c === " " ? "space" : c);
   };
 
   test("r renames in place, m moves to a picked folder: links fixed after the preview", async () => {
@@ -6110,6 +6133,39 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(h.app.loc.root).toBe(root);
     expect(h.app.view!.buf.rel).toBe("nested-vault/inner.md");
     expect(readFileSync(join(root, "to-nested.md"), "utf8")).toBe("[[inner]]\n");
+  });
+
+  test("filters: each word as typed, in any order — the explorer's (its name lit where it matched) and the palette's (3.16)", async () => {
+    const root = makeVault();
+    const h = await at(root, "index.md");
+    await h.keys("/");
+    await type(h, "alpha notes");
+    expect(h.app.explorerRows().filter((r) => r.kind === "note").map((r) => r.path)).toEqual(["notes/alpha.md"]);
+    await h.keys("ctrl+u");
+    await type(h, "al");
+    const al = h.app.explorerRows().filter((r) => r.kind === "note").map((r) => r.path);
+    expect(al).toContain("notes/alpha.md");
+    expect(al.filter((p) => !p.toLowerCase().includes("al"))).toEqual([]); // never a…l scattered
+    const c = h.canvas();
+    const rowsNow = c.toString().split("\n");
+    const y = rowsNow.findIndex((r) => r.includes("alpha.md"));
+    const x = [...rowsNow[y]!.slice(0, rowsNow[y]!.indexOf("alpha.md"))].length; // its column
+    const lit = h.app.theme.roles.overlay_match.fg;
+    expect(c.styles[y]![x]!.fg).toBe(lit!); // "al" lit
+    expect(c.styles[y]![x + 1]!.fg).toBe(lit!);
+    expect(c.styles[y]![x + 2]!.fg).not.toBe(lit!); // "p" not
+    // A word matching the folder: the name's own match still lit.
+    await h.keys("ctrl+u");
+    await type(h, "notes al");
+    const c2 = h.canvas();
+    expect(c2.styles[y]![x]!.fg).toBe(lit!);
+    expect(c2.styles[y]![x + 1]!.fg).toBe(lit!);
+    // The palette: both words, in the label first.
+    await h.keys("escape", "escape", ":");
+    await type(h, "folder move");
+    const labels = (h.app.overlay as ListOverlay).filtered.map((e) => e.item.label);
+    expect(labels.slice(0, 2)).toEqual(["Move the folder…", "Move the note to a folder…"]);
+    expect(labels).not.toContain("Delete the note");
   });
 
   test("the move picker is a tree: the explorer's folds, ← → fold, typing filters under the parents (18.8)", async () => {

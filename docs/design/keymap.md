@@ -318,7 +318,7 @@ longer words, smart case like `/`.
 ### The `:` prompt
 
 You can type part of a command's name and pick it from the list. You can also type an exact
-**alias**, which always wins over the fuzzy match. Typing an alias that takes an argument, then
+**alias**, which always wins over the matches. Typing an alias that takes an argument, then
 a space, lists the candidates: notes, themes, glyph sets. Aliases come from `[aliases]` in
 config.
 

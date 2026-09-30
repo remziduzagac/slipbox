@@ -26,7 +26,7 @@ import { readerFor } from "../core/readers.ts";
 import * as E from "./editing.ts";
 import * as R from "./replacing.ts";
 import * as V from "./vim.ts";
-import { rank } from "./fuzzy.ts";
+import { rank } from "./match.ts";
 import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, HISTORY_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, RESIZE_ACTIONS, spellKey } from "./keys.ts";
 
 type Run = Command<App>["run"];
@@ -373,7 +373,7 @@ function linkTarget(a: App, v: View, link: LayoutLink): string {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The `:` prompt: fuzzy commands, plus exact aliases that win, plus argument completion.
+// The `:` prompt: matching commands, plus exact aliases that win, plus argument completion.
 
 function argCandidates(a: App, cmd: string): string[] | null {
   switch (cmd) {
@@ -487,7 +487,7 @@ function openPalette(a: App): void {
         }
       }
       const exact = a.aliases[input.trim()];
-      const ranked = rank(input.trim(), commandItems, (i) => `${i.label} ${i.detail}`).map((r) => r.item);
+      const ranked = rank(input.trim(), commandItems, (i) => [i.label, i.detail ?? ""]).map((r) => r.item);
       if (exact) {
         const title = a.registry.get(exact.split(" ")[0]!)?.title ?? exact;
         return [{ label: title, detail: `alias for ${exact}`, keys: ["", `:${input.trim()}`], data: exact }, ...ranked.filter((i) => i.data !== exact)];
@@ -511,7 +511,7 @@ function openPalette(a: App): void {
         void a.run(`cursor.goto_line ${input.trim()}`).then(() => a.host.requestRender());
         return true;
       }
-      // An exact alias (optionally with an argument) wins over the fuzzy match, unless another
+      // An exact alias (optionally with an argument) wins over the matches, unless another
       // entry was picked: moved to with the keys, or clicked (its row is first while unmoved).
       const m = /^(\S+)(?:\s+(.*))?$/.exec(input.trim());
       if (!m) return false;

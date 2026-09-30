@@ -715,10 +715,10 @@ describe("review cycle 5 (core, from mutation testing)", () => {
     expect(re.flags).not.toContain("i");
     expect(findAll("ärzte Ärzte", re).map((m) => m.from)).toEqual([6]);
   });
-  test("the switcher's fuzzy match is smart-case too", async () => {
-    const { fuzzy } = await import("../src/tui/fuzzy.ts");
-    expect(fuzzy("Tel", "telescope.md")).toBeNull();
-    expect(fuzzy("tel", "Telescope.md")).not.toBeNull();
+  test("the switcher's match is smart-case too", async () => {
+    const { match } = await import("../src/tui/match.ts");
+    expect(match("Tel", "telescope.md")).toBeNull();
+    expect(match("tel", "Telescope.md")).not.toBeNull();
   });
   test("truncateStart keeps as much of the end as fits", async () => {
     const { truncateStart } = await import("../src/core/width.ts");

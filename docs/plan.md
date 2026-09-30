@@ -348,6 +348,7 @@ common, and the only reason they are step 0.
 | 3.13 | **Message sink** — one place for errors, warnings and script stderr |
 | 3.14 | Narrow-terminal collapse |
 | 3.15 | Session restore |
+| 3.16 | **Done.** Filters match each typed word with its letters together, words in any order — not letter by letter |
 
 ## Editing — `4.x`
 

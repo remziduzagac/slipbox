@@ -14,7 +14,7 @@ import { type Canvas, drawText } from "./canvas.ts";
 import { countWords } from "../core/words.ts";
 import type { CommentLink, SyntaxError } from "../core/syntax.ts";
 import { cells, ordered } from "./cursor.ts";
-import { fuzzy } from "./fuzzy.ts";
+import { match } from "./match.ts";
 import { prettyKey, spellKey } from "./keys.ts";
 
 export interface Rect {
@@ -1207,12 +1207,13 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     const nameEnd = withButtons ? room : rect.w;
     if (vaultName && !sv.left && w + 1 < nameEnd) drawText(c, rect.x + w + 1, y, vaultName, { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, nameEnd - w - 1);
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
-    // The letters the filter matched in a note's name.
-    const m = q && row.kind === "note" ? fuzzy(q, nameOf(row)) : null;
+    // What the filter matched in a note's name (it matches the path: a word may be a folder's).
+    const m = q && row.kind === "note" && row.path.endsWith(nameOf(row)) ? match(q, row.path) : null;
     if (m) {
       const name = nameOf(row);
       const off = stringWidth(prefix(row));
-      for (const p of m.positions) {
+      const base = row.path.length - name.length;
+      for (const p of m.positions.filter((x) => x >= base).map((x) => x - base)) {
         const x = rect.x + off + stringWidth(name.slice(0, p)) - sv.left;
         if (x >= rect.x && x < rect.x + sv.cols) c.cell(x, y, name[p]!, 1, { ...st, fg: matchSt.fg, bold: true });
       }

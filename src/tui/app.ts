@@ -65,7 +65,7 @@ import { NoteBuffer } from "./buffer.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, clampPos, ordered, type Pos, snap, wordAt } from "./cursor.ts";
 import { drawApp, type Geometry } from "./draw.ts";
-import { fuzzy, rank } from "./fuzzy.ts";
+import { match, rank } from "./match.ts";
 import {
   DEFAULT_ALIASES,
   DEFAULT_EXPLORER_KEYS,
@@ -249,7 +249,7 @@ export interface ListOverlay {
   input: string;
   filterable: boolean;
   items: ListItem[];
-  /** Items computed from the input instead of fuzzy-filtering `items` (the `:` prompt). */
+  /** Items computed from the input instead of filtering `items` (the `:` prompt). */
   source?: (input: string) => ListItem[];
   filtered: { item: ListItem; positions: number[] }[];
   selected: number;
@@ -2186,7 +2186,7 @@ export class App {
         const shown = new Set<string>();
         const hits = new Set<string>();
         for (const d of dirs) {
-          if (!fuzzy(q, d)) continue;
+          if (!match(q, d)) continue;
           hits.add(d);
           const parts = d.split("/");
           for (let i = 1; i <= parts.length; i++) shown.add(parts.slice(0, i).join("/"));
@@ -2692,7 +2692,7 @@ export class App {
     const rows: TreeRow[] = [];
     const seen = new Set<string>();
     for (const row of this.allNotesInTreeOrder()) {
-      if (!fuzzy(q, row)) continue;
+      if (!match(q, row)) continue;
       const parts = row.split("/");
       for (let i = 0; i < parts.length - 1; i++) {
         const dir = parts.slice(0, i + 1).join("/");
@@ -2753,8 +2753,8 @@ export class App {
       .slice(0, this.config.ui.history_limit)
       .map((r) => ({ label: r.key.split("/").pop()!, path: r.key, hint: r.hint, index: -1, here: false, recent: r.key }));
     const q = this.sidebar.filter ?? "";
-    const mine = q ? rows.filter((r) => fuzzy(q, r.path)) : rows;
-    const others = q ? recent.filter((r) => fuzzy(q, r.path)) : recent;
+    const mine = q ? rows.filter((r) => match(q, r.path)) : rows;
+    const others = q ? recent.filter((r) => match(q, r.path)) : recent;
     return others.length ? [...mine, { label: "recent in this vault", path: "", hint: "", index: -1, here: false, heading: true }, ...others] : mine;
   }
 
@@ -2908,7 +2908,7 @@ export class App {
     let bestScore = Number.NEGATIVE_INFINITY;
     if (q) {
       next.forEach((r, i) => {
-        const m = fuzzy(q, r.text);
+        const m = match(q, r.text);
         if (m && m.score > bestScore) {
           bestScore = m.score;
           best = i;
@@ -3183,7 +3183,7 @@ export class App {
     if (q) {
       const keep = new Set<number>();
       hs.forEach((h, i) => {
-        if (!fuzzy(q, h.text)) return;
+        if (!match(q, h.text)) return;
         keep.add(i);
         let level = h.level;
         for (let k = i - 1; k >= 0 && level > 1; k--) {
@@ -5305,7 +5305,7 @@ export function refilter(o: ListOverlay): void {
   } else if (o.keepGroups && o.input.trim()) {
     // The matches in their original order, each under its group heading (with its blank row and
     // rule); a group with no match disappears, and the list never starts with a blank row.
-    const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => (i.detail ? `${i.label} ${i.detail}` : i.label));
+    const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => [i.label, i.detail ?? ""]);
     const hit = new Map(ranked.map((r) => [r.item, r.match.positions]));
     o.filtered = [];
     let heading: ListItem[] = [];
@@ -5324,7 +5324,7 @@ export function refilter(o: ListOverlay): void {
       o.filtered.push({ item, positions: hit.get(item)! });
     }
   } else if (o.input.trim()) {
-    const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => (i.detail ? `${i.label} ${i.detail}` : i.label));
+    const ranked = rank(o.input, o.items.filter((i) => !i.header), (i) => [i.label, i.detail ?? ""]);
     o.filtered = ranked.map((r) => ({ item: r.item, positions: r.match.positions }));
   } else {
     o.filtered = o.items.map((item) => ({ item, positions: [] }));

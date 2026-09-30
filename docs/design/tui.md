@@ -21,7 +21,7 @@ Code, in `src/tui/`:
 | `editing.ts` | the cursor as a text offset; insert mode |
 | `vim.ts` | normal mode in source and the lens: counts, operators, the register, `.` |
 | `replacing.ts` | find and replace: the replace row, `:s` and its confirm |
-| `fuzzy.ts` | the fuzzy ranking every list filters with |
+| `match.ts` | the matching and ranking every list and filter uses |
 | `keys.ts` | the default keymaps, groups, aliases, and the in-pane actions' titles |
 | `run.ts`, `opentui.ts` | the OpenTUI binding |
 
@@ -513,10 +513,12 @@ past theirs), so the content behind never runs up to the edge.
   switcher lists recent notes and files first (kept in the session), the previous one on top, so
   `ctrl+p enter` goes back; vault search (`ctrl+shift+f`, `space f g`) lists each matching line as
   `path:line` with the line, an open note searched as it is now.
-- **Filtering:** fuzzy, with smart case. A contiguous match wins (its best occurrence: in the
-  file name, at a word start); otherwise the tightest subsequence, preferring word and path starts
-  and file names over directories. Highlights follow the original text even where lowercasing
-  changes its length.
+- **Filtering** (`3.16`): each space-separated word as typed — its letters together, never one by
+  one — and every word, in any order (`hand oper` finds `handbook/operations-handbook.md`); smart
+  case, word by word. Ranked by where each word lands: in the label over its description, in the
+  file name over its folders, at a word start, earlier; the shorter first. The explorer, the history
+  and the outline filter the same way. Highlights follow the original text even where lowercasing
+  changes its length; the explorer lights the note's name where a word matched it.
 - **Keys:** as in [keymap.md](keymap.md), "In lists and prompts": the arrows, `tab` and
   `ctrl+n`/`ctrl+p` move (wrapping around), `enter` accepts, `esc` cancels. The wheel scrolls the
   list three rows a notch (the selection moves only to stay in view), a click picks, and a click
