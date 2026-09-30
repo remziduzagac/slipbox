@@ -255,6 +255,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader d p": "folder.paste",
   "leader v shift+m": "vault.unmake",
   "leader v u": "trash.restore",
+  "leader v shift+u": "rename.undo",
   "leader m": "messages.open",
   "?": "help.open",
   "leader ?": "help.open",
@@ -352,6 +353,7 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   m: "move",
   d: "delete",
   u: "restore",
+  "shift+u": "undo_rename",
   y: "copy",
   x: "cut",
   p: "paste",
@@ -366,7 +368,7 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
 
 export const EXPLORER_ACTIONS = [
   "down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files",
-  "new_note", "new_folder", "rename", "rename_vault", "move", "delete", "restore", "copy", "cut", "paste", "make_vault", "unmake_vault", "menu", "close", "leave",
+  "new_note", "new_folder", "rename", "rename_vault", "move", "delete", "restore", "undo_rename", "copy", "cut", "paste", "make_vault", "unmake_vault", "menu", "close", "leave",
 ];
 
 /** Keys inside the outline pane: key → outline action. */
@@ -461,6 +463,7 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   move: { title: "Move to…", desc: "Picks a folder for the selected note, file or folder; every link to it fixed after a preview" },
   delete: { title: "Delete", desc: "Moves the selected note, file or folder to the vault's trash (asks first; u restores)" },
   restore: { title: "Restore", desc: "Puts back what was deleted last (the trash, :trash, has the rest)" },
+  undo_rename: { title: "Undo the last rename", desc: "Takes back the vault's last rename, move or relink after a preview (u puts back a delete)" },
   copy: { title: "Copy", desc: "Copies the selected note, file or folder: p pastes a copy in the selected folder" },
   cut: { title: "Cut", desc: "Cuts the selected note, file or folder: p moves it to the selected folder, links fixed" },
   paste: { title: "Paste", desc: "Into the selected folder (or beside the selected file): a copy, or what was cut, moved" },
@@ -622,6 +625,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   rename: "note.rename",
   mv: "note.rename",
   relink: "link.relink",
+  "undo-rename": "rename.undo",
   delete: "note.delete",
   trash: "trash.open",
   config: "config.reload",

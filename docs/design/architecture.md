@@ -163,6 +163,7 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | scratch | `$XDG_STATE_HOME/slipbox/<key>/scratch.md`, or in the vault by config |
 | staleness | `$XDG_STATE_HOME/slipbox/<key>/dirty/<pid>.json` |
 | redirects (moves seen: `17.12`) | `$XDG_STATE_HOME/slipbox/<key>/redirects.json` |
+| renames, to undo (`7.4`) | `$XDG_STATE_HOME/slipbox/<key>/renames.json` (the last 20) |
 | the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, and an item per folder) |
 
 `<key>` is the vault's id, else `<basename>-<sha256(realpath)[:12]>` (`docs/design/decisions.md`, `0.10`). The home

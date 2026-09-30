@@ -308,7 +308,7 @@ repository isn't asked about again. Made a vault, the TUI goes into it with the 
 `space v m` (`:init`, `vault.init`) asks again, for the loose folder's repository or the folder
 itself.
 
-## Renames (plans `17.15`, `7.1`–`7.3`)
+## Renames (plans `17.15`, `7.1`–`7.4`)
 
 `space n m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already; the explorer's `r`
 for the selected note's, file's or folder's new name, `m` for a folder to move it to (18.x, below); `space v n` for
@@ -319,6 +319,12 @@ at the top; `enter` carries it out, `esc` leaves everything as it was. What it d
 `rename-vault`'s and `relink`'s (`docs/design/cli.md`, "Renames"). **Refused while a file it rewrites is unsaved.**
 After it, the open notes it changed are reloaded, and a window on a renamed or moved note shows it under its new
 path, its history following — every note of a moved folder alike.
+
+**Undo** (`7.4`): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the vault's last rename,
+move or relink — made here or by `slipbox mv` — as `slipbox undo` does (`docs/design/cli.md`, "Renames"): its
+preview first (`undo: notes/first.md → notes/alpha.md`, each line the other way), then every file as it was and what
+moved back where it was, open notes following it back. Refused when a file it wrote has changed since. `u` puts
+back a delete; `shift+u` a rename.
 
 ## Files in the explorer (plans `18.1`–`18.10`)
 

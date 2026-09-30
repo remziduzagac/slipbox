@@ -10,7 +10,7 @@ import { loadError } from "../core/lazy.ts";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, statSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
@@ -36,7 +36,7 @@ import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
 import { openVault, Reach } from "../core/reach.ts";
-import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planRelink, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
+import { type Applied, applyPlan, loggedRenames, planFolderMove, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { readIdentity, readRegistry, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { findVaultRoot, gitRootOf, homeAt, initVault, isInside, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
@@ -148,6 +148,7 @@ Usage:
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
   slipbox rename-vault <name>       rename this vault; [[old:…]] links fixed, the old name kept  [--dry-run]
   slipbox relink [note]             rewrite links that reach notes by an old name or a move  [--dry-run]
+  slipbox undo                      take back the vault's last rename, move or relink  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
@@ -177,7 +178,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "relink", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
+  "mv", "rename-vault", "relink", "undo", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
@@ -328,6 +329,7 @@ const FLAGS: Record<string, string[]> = {
   rm: ["dry-run"],
   "rename-vault": ["dry-run"],
   relink: ["dry-run"],
+  undo: ["dry-run"],
 };
 
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
@@ -896,6 +898,15 @@ const HANDLERS: Record<string, Handler> = {
     return renameResult(s, () => planRelink(s.graph, rels));
   },
 
+  undo(s) {
+    if (!loggedRenames(s.graph).length) throw new CliError("nothing to undo: no rename, move or relink has been done in this vault", EXIT.notFound);
+    const r = renameResult(s, () => planUndo(s.graph));
+    // A vault's rename taken back: the machine's list learns its name again.
+    const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };
+    if (d.kind === "vault" && !d.dryRun) for (const f of d.files) if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
+    return r;
+  },
+
   vaults() {
     // Newest first; a vault whose folder is gone is still listed (a link to it says where it was).
     const list = readRegistry()
@@ -1432,11 +1443,18 @@ function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Result {
   }
   s.warnings.push(...p.warnings, ...p.skipped.map((x) => `${x.shown}:${x.line}: ${x.reason}`));
   const links = p.files.reduce((n, f) => n + f.edits.length, 0);
-  const verb = applied
+  const verb = p.undo
+    ? applied
+      ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "undid the relink of", "make-vault": "", "unmake-vault": "" }[p.kind]
+      : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would undo the relink of", "make-vault": "", "unmake-vault": "" }[p.kind]
+    : applied
     ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "relinked", "make-vault": "made", "unmake-vault": "made" }[p.kind]
     : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would relink", "make-vault": "would make", "unmake-vault": "would make" }[p.kind];
-  const head =
-    p.kind === "relink"
+  const head = p.undo
+    ? p.kind === "relink"
+      ? `${verb} ${p.to}`
+      : `${verb} ${p.from} back to ${p.to}`
+    : p.kind === "relink"
       ? `${verb} ${p.from}`
       : p.kind === "make-vault"
         ? `${verb} ${p.from}/ the vault ${p.to}`
@@ -1459,6 +1477,7 @@ function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Result {
       warnings: p.warnings,
       skipped: p.skipped,
       written: applied?.written ?? [],
+      ...(p.undo ? { undo: { id: p.undo.id, at: p.undo.at } } : {}),
     },
     human,
   };

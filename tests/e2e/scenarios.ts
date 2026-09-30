@@ -1445,6 +1445,18 @@ export const SCENARIOS: Scenario[] = [
       await s.see("relink: 1 change in 1 file");
       await s.keys("enter");
       await s.file("late-note.md", (t) => t.includes("Ask [[kenji]] about Aster."), "the link relinked");
+      // Undo (7.4), newest first, each previewed: the relink, then the rename — every file as it was.
+      await leader(s, "v", "shift+u");
+      await s.see("undo: relink: 1 change in 1 file");
+      await s.keys("enter");
+      await s.file("late-note.md", (t) => t.includes("Ask [[kenji-mori]] about Aster."), "the relink undone");
+      await leader(s, "v", "shift+u");
+      await s.see(/undo: people\/kenji\.md → people\/kenji-mori\.md: \d+ changes/);
+      await s.keys("enter");
+      await s.message("renamed people/kenji.md back to"); // the toast wraps the rest
+      await s.file("people/kenji-mori.md", (t) => !t.includes("previous_names"), "the note back, as it was");
+      s.expect(!s.exists("people/kenji.md"), "the new name is gone");
+      s.expect(s.read("home.md").includes("- [[kenji-mori]] — our visiting astronomer"), "home's link back");
       // The explorer's r asks for the selected note's new name; esc cancels.
       await leader(s, "e");
       await s.keys("r");

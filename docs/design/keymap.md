@@ -230,6 +230,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `m` | move it to a folder picked from a tree (`←` `→` fold, typing filters): links fixed after a preview |
 | `d` | delete it to the vault's trash, after asking (it says how many links break) |
 | `u` | restore what was deleted last (`space v t`, `:trash`: the rest) |
+| `shift+u` | undo the vault's last rename, move or relink, after a preview (`7.4`) |
 | `y` / `x` / `p` | copy / cut it; paste in the selected folder: a copy (`name-copy` beside it), or a move |
 | `v` / `shift+v` | make the selected folder a vault (its name asked) / a nested vault a plain folder; links previewed |
 | `.` | the selected row's menu, as its `…` button opens it: each entry with its key, which picks it there |
@@ -259,6 +260,7 @@ file's folder); elsewhere on the current note, its folder, or this vault.
 | `space d p` | paste into the folder: what was copied, or cut |
 | `space n shift+y` | a copy of the note beside it (`name-copy`), opened |
 | `space v t` / `space v u` | the trash (`:trash`) / restore what was deleted last |
+| `space v shift+u` | undo the last rename, move or relink (`:undo-rename`, `7.4`): its preview, then as it was |
 | `space v p` | the problems (`:problems`, `1.7`): broken and ambiguous links, in the left panel |
 | `space v m` | make a vault (`:init`): this loose folder; in a vault, the selected folder (or this note's) |
 | `space v shift+m` | make the vault a plain folder of the one holding it (this one: then into its parent) |

@@ -5627,6 +5627,35 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.messages.at(-1)!.text).toMatch(/^renamed notes\/alpha.md → notes\/first.md: \d+ changes in \d+ files$/);
   });
 
+  test("space v shift+u undoes the last rename: its preview, then every file as it was; open notes follow it back (7.4)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    const index = readFileSync(join(root, "index.md"), "utf8");
+    const alpha = readFileSync(join(root, "notes", "alpha.md"), "utf8");
+    await h.app.run("note.rename notes/first");
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/first.md");
+    await h.keys("space", "v", "shift+u");
+    const list = h.app.overlay as ListOverlay;
+    expect(list.title).toStartWith("undo: notes/first.md → notes/alpha.md: ");
+    expect(list.items.some((it) => it.label.startsWith("index.md:") && /\[\[first\]\].*→.*\[\[alpha\]\]/.test(it.detail!))).toBe(true);
+    expect(existsSync(join(root, "notes", "first.md"))).toBe(true); // a preview writes nothing
+    await h.keys("enter");
+    expect(readFileSync(join(root, "index.md"), "utf8")).toBe(index);
+    expect(readFileSync(join(root, "notes", "alpha.md"), "utf8")).toBe(alpha); // its previous name gone too
+    expect(existsSync(join(root, "notes", "first.md"))).toBe(false);
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    expect(h.app.graph.notes.has("notes/alpha.md")).toBe(true);
+    expect(h.app.graph.notes.has("notes/first.md")).toBe(false);
+    expect(h.app.messages.at(-1)!.text).toMatch(/^renamed notes\/first.md back to notes\/alpha.md: \d+ changes in \d+ files$/);
+    // Nothing more: said so. The explorer's shift+u is the same command.
+    h.app.showSidebar(true);
+    h.app.region = "sidebar";
+    await h.keys("shift+u");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toContain("nothing to undo");
+  });
+
   test("a rename is refused while a file it rewrites is unsaved; :rename takes the path; the explorer's r asks", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });

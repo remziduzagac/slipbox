@@ -1,8 +1,8 @@
 # slipbox — implementation plan
 
 Status: **phases 0–3 built**; **phase 3b (`16.x`, files beyond markdown) is next**, then 4. Phase 3
-left open `4.9` (moved to `15.1`), `5.9`, the lint surface (since built, `3.21`), and `7.2`–`7.4` (which wait for renames,
-`7.1`). Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
+left open `4.9` (moved to `15.1`), `5.9`, the lint surface, and `7.2`–`7.4`, which waited for renames (`7.1`) — all
+but `5.9` and `15.1` built since. Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
 2026-09-28 — how it was built is in `docs/design/`, the decisions it needed in
 `docs/design/decisions.md`.
 
@@ -416,7 +416,7 @@ common, and the only reason they are step 0.
 | 7.1 | **Done** (`17.15`). Rename with link fixing, as byte-range edits from mdast positions |
 | 7.2 | **Done** (`17.15`). **Multi-file preview** of the transaction |
 | 7.3 | **Done** (`17.15`). Confirm, and warn when the tree is already dirty |
-| 7.4 | Undo a rename |
+| 7.4 | **Done.** Undo a rename: `space v shift+u`, `slipbox undo` — the files as they were, what moved back |
 | 7.5 | **constraint** never write outside the vault root — decide what a symlink out means |
 | 7.6 | **decide** frontmatter is spliced by byte range, never parsed and re-serialised |
 

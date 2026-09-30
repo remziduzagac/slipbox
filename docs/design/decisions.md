@@ -196,6 +196,16 @@ one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back,
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
 
+## `7.4` — undoing a rename
+
+A rename is undone by restoring, not by renaming back: renaming back would plan again from the vault as it is now, and
+a name only one way round (a link that became a path to stay unambiguous, a previous name added) wouldn't come back as
+it was written. So each rename logs, in the vault's state, every file it wrote with the span of text that was different
+before, and the undo gives exactly that back — as a plan of its own, so it's previewed, guarded and followed by the
+index and the open notes the way a rename is. It's refused when a file has changed since the rename wrote it: the
+text around the span is no longer the rename's to take back. The log is a stack, the newest undone first; there's no
+redo — a rename does it again.
+
 ## `3.21` — the lint surface
 
 slipbox runs your linter rather than shipping one: rules of its own would fight the ones you've written. The default is

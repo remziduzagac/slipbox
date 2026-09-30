@@ -92,6 +92,7 @@ These churn freely before 1.0:
 | `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
 | `vaults` | `[{key, id, kind, name, aliases, previous_names, path, seen, exists}]`, newest first |
 | `mv`, `rename-vault`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, written}` (see Renames) |
+| `undo` | as `mv`: the rename taken back (`from` and `to` the other way), plus `undo{id, at}`; exit 3: nothing |
 | `cp <note\|folder> [path]` | `{from, to, dir}` — beside it as `name-copy` without a path; exit 5 onto a file |
 | `rm <note\|folder>` | `{path, dryRun, breaking, trashed{id, abs, shown, dir, at}}` — to the vault's trash |
 | `trash [restore <item>]` | the items, newest first; `restore`: the item put back (exit 5 over something there) |
@@ -249,7 +250,7 @@ into the other vault: `path` and `abs` are absolute, and `vault` names it. `via`
 when a link got there by an `alias`, a `previous-name` or a `redirect` (and a warning says so); `reason` says why one
 didn't (`unknown vault "x"`). A backlink from another vault has an absolute `from` and its `vault`.
 
-## Renames (plans `17.15`, `7.1`–`7.3`)
+## Renames (plans `17.15`, `7.1`–`7.4`)
 
 Each `files` entry is `{path, abs, vault, edits[{line, before, after}]}`.
 
@@ -291,6 +292,15 @@ refused when something is there now. `slipbox cp` copies a note, file or folder,
 `previous_names`, and every `[[old:…]]` rewritten, here and in the vaults linking into it. `slipbox relink [note]`
 rewrites the links of a note (or every note) that reach their note only by a previous name or a redirect, to its name
 or path now. Both take `--dry-run`.
+
+**Undo** (`7.4`): `slipbox undo` takes back the vault's last rename, move, vault rename or relink — the TUI's or the
+CLI's alike: every file it rewrote gets back the text it had, byte for byte (a note's added previous name too), what
+moved moves back, and the folders the move made go if they're empty. It's a rename like the others — `--dry-run`
+previews it, each changed line the other way; open notes, the index and the redirects follow — and it's refused,
+nothing written (exit 5), when a file the rename wrote has changed since, or what moved isn't where it went; it
+stays next to undo, so putting the file back lets it through. Undone, it's forgotten: the next `undo` takes the one
+before (the vault keeps the last 20, in its state). A folder made a vault or a vault made a folder (`18.11`) isn't
+among them: `deinit` and `init` take each other back.
 
 **A folder made a vault, and back** (`18.11`): `slipbox init <folder>` on a folder inside a vault makes it a vault of
 its own — its `.slipbox/`, a distinct name suggested unless `--name` — and first rewrites the links that would stop

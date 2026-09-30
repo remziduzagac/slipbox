@@ -54,7 +54,7 @@ import {
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
 import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
-import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
+import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
@@ -4014,6 +4014,8 @@ export class App {
         return this.openItemMenu();
       case "restore":
         return this.restoreLast();
+      case "undo_rename":
+        return this.undoRename();
       case "all_files": {
         // Every text file, or back to what files.show lists; the selection stays on its row.
         const at = row?.path;
@@ -6014,7 +6016,7 @@ export class App {
                 ? `the vault ${plan.from}/ → a folder of ${plan.to}`
                 : "relink";
     this.openList({
-      title: `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"} — enter: do it, esc: cancel`,
+      title: `${plan.undo ? "undo: " : ""}${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"} — enter: do it, esc: cancel`,
       items,
       filterable: false,
       footer: true,
@@ -6088,8 +6090,9 @@ export class App {
     if (plan.move) this.selectInExplorer(relative(this.loc.root, plan.move.to));
     if (plan.makeVault || plan.unmakeVault) this.selectInExplorer(plan.from);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
-    const what =
-      plan.kind === "note"
+    const what = plan.undo
+      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `renamed the vault ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "" }[plan.kind]
+      : plan.kind === "note"
         ? `renamed ${plan.from} → ${plan.to}`
         : plan.kind === "folder"
           ? `moved ${plan.from}/ → ${plan.to}/`
@@ -6101,6 +6104,11 @@ export class App {
                 ? `made ${plan.from}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash)`
                 : "relinked";
     this.message("info", `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"}`);
+  }
+
+  /** Undo the vault's last rename, move or relink (7.4): its preview, then carried out as a rename is. */
+  undoRename(): void {
+    this.previewRename(() => planUndo(this.graph));
   }
 
   /** Ask for a note's new path, then preview its rename. */

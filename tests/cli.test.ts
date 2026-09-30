@@ -268,6 +268,14 @@ describe("the vault and the tool", () => {
     writeFileSync(join(dir, "late.md"), "[[plan]]\n");
     const rl = slipbox(["relink", "late", "--json"], { cwd: dir }).json;
     expect(rl.data.files[0].edits[0]).toMatchObject({ before: "[[plan]]", after: "[[roadmap]]" });
+    // undo (7.4): the newest first — the relink, the vault's name, then the move.
+    expect(slipbox(["undo", "--dry-run"], { cwd: dir }).out).toStartWith("would undo the relink of late.md: 1 change in 1 file\n");
+    expect(slipbox(["undo"], { cwd: dir }).out).toStartWith("undid the relink of late.md: 1 change in 1 file\n");
+    expect(readFileSync(join(dir, "late.md"), "utf8")).toBe("[[plan]]\n");
+    expect(slipbox(["undo"], { cwd: dir }).out).toStartWith("renamed vault cliren2 back to cliren: ");
+    expect(slipbox(["undo", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "note", from: "roadmap.md", to: "notes/plan.md", undo: { at: expect.any(String) } });
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[[plan]] and [p](notes/plan.md)\n");
+    expect(slipbox(["undo"], { cwd: dir }).code).toBe(3); // nothing more
   });
   test("cp, rm, trash, and mv of a folder (18.x)", () => {
     const dir = join(sandbox, "fileops");

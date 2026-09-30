@@ -220,6 +220,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "note.rename", title: "Rename or move the note", cli: "slipbox mv <note> <new-path>", desc: "Its links rewritten in every vault reached, after a preview; the old name kept" },
   { id: "vault.rename", title: "Rename the vault", cli: "slipbox rename-vault <name>", desc: "This one, or the explorer's selected vault: [[old:…]] links rewritten in every vault reached, after a preview; the old name kept" },
   { id: "link.relink", title: "Relink old names and moves", cli: "slipbox relink [note]", desc: "Rewrites this note's links that reach notes by an old name or a move" },
+  { id: "rename.undo", title: "Undo the last rename", cli: "slipbox undo", desc: "The vault's last rename, move or relink taken back after a preview: the files it rewrote as they were, what moved back where it was" },
   { id: "vault.init", title: "Make a vault", cli: "slipbox init [dir] [--private]", desc: "This loose folder (or its git repository) gets its .slipbox/; in a vault, the explorer's selected folder (or this note's) becomes a vault of its own, links fixed after a preview" },
   { id: "problems.open", title: "Problems: open, focus, close", cli: "slipbox problems", desc: "What's wrong in the vault, in the left panel: links that reach nothing, links that reach several notes" },
   { id: "tag.list", title: "Tags", cli: "slipbox tags [tag]", desc: "The vault's tags, with how many notes carry each; pick one (or :tag name) for its notes" },

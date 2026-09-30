@@ -5,7 +5,8 @@
 // (7.3); applying it checks that no file it touches changed since.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, realpathSync, renameSync, statSync, unlinkSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, realpathSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { atomicWrite, landsInside, readText } from "./fsutil.ts";
@@ -14,6 +15,7 @@ import { VAULT_LINK } from "./graph.ts";
 import { formatPathLink, normKey, pathForm, pathLink } from "./links.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
+import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
 import { forgetVault, HOME_NAME, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
 import { openVault } from "./reach.ts";
 import { findVaultRoot, initVault, isInside, type VaultLocation } from "./vault.ts";
@@ -57,6 +59,8 @@ export interface RenamePlan {
   warnings: string[];
   /** Links the index knew of that the file no longer has where it said: left alone. */
   skipped: { shown: string; line: number; reason: string }[];
+  /** A plan that undoes a rename (7.4): the rename's id in the vault's log, and when it was done. */
+  undo?: { id: string; at: string; made: string | null };
 }
 
 /** A link as found in a file: where, how it's written, and where it should point now. */
@@ -898,6 +902,44 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
 }
 
 // -------------------------------------------------------------------------------------------
+// Undoing (7.4)
+
+/** The vault's renames that can be undone, newest last (its log). */
+export function loggedRenames(g: Graph): LoggedRename[] {
+  return readRenames(g.loc);
+}
+
+/**
+ * Undo the vault's last rename, move or relink (7.4): the newest in its log, as a plan of its own —
+ * each file it rewrote given back the text it had, what moved moved back — so it's previewed and
+ * carried out as a rename is, and the index, redirects and open notes follow it the same way.
+ * Refused when a file it wrote has changed since, or what moved isn't where it went.
+ */
+export function planUndo(g: Graph): RenamePlan {
+  const r = readRenames(g.loc).at(-1);
+  if (!r) throw new RenameError("nothing to undo: no rename, move or relink has been done in this vault");
+  const what = r.kind === "relink" ? "relink" : r.kind === "folder" ? `move of ${r.from}/` : r.kind === "vault" ? `vault's rename to ${r.to}` : `rename of ${r.from}`;
+  const files: FileChange[] = [];
+  for (const f of r.files) {
+    let now: string;
+    try {
+      now = readText(f.abs).text;
+    } catch {
+      throw new RenameError(`${f.shown} isn't there any more: the ${what} can't be undone`);
+    }
+    if (contentHash(now) !== f.hash) throw new RenameError(`${f.shown} has changed since: the ${what} can't be undone`);
+    const edits = f.edits.map((e) => ({ line: e.line, before: e.after, after: e.before }));
+    files.push({ abs: f.abs, shown: f.shown, vault: f.vault, edits, text: now, next: now.slice(0, f.at) + f.was + now.slice(f.at + f.length) });
+  }
+  const move = r.move ? { from: r.move.to, to: r.move.from, dir: r.move.dir } : null;
+  if (move && !existsSync(move.from)) throw new RenameError(`${relative(g.root, move.from)} isn't there any more: the ${what} can't be undone`);
+  if (move && existsSync(move.to) && normKey(move.to) !== normKey(move.from)) throw new RenameError(`${relative(g.root, move.to)} exists again: the ${what} can't be undone`);
+  const back = (pairs: [string, string][]) => pairs.map(([a, b]): [string, string] => [b, a]);
+  const warnings = dirtyTrees(files.map((f) => f.abs));
+  return { kind: r.kind, from: r.to, to: r.from, move, moves: back(r.moves), vaults: back(r.vaults), files, warnings, skipped: [], undo: { id: r.id, at: r.at, made: r.made ?? null } };
+}
+
+// -------------------------------------------------------------------------------------------
 // Applying
 
 export interface Applied {
@@ -928,9 +970,11 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     return mv.dir && fileAbs.startsWith(`${mv.from}/`) ? mv.to + fileAbs.slice(mv.from.length) : fileAbs;
   };
   const written: string[] = [];
+  /** The first folder the move made to hold it, if it made any: an undo takes it away again, empty. */
+  let made: string | null = null;
   // A folder moves whole — everything in it, whatever the walk lists — before its files' edits.
   if (mv?.dir) {
-    mkdirSync(dirname(mv.to), { recursive: true });
+    made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
     renameSync(mv.from, mv.to);
   }
   for (const f of plan.files) {
@@ -939,7 +983,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     written.push(dest(f.abs));
   }
   if (mv && !mv.dir) {
-    mkdirSync(dirname(mv.to), { recursive: true });
+    made = mkdirSync(dirname(mv.to), { recursive: true }) ?? null;
     const own = plan.files.find((f) => f.abs === mv.from);
     if (own) {
       atomicWrite(mv.to, own.next);
@@ -974,6 +1018,34 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     return { written, moved: null };
   }
   reindexOthers();
+  // The vault's log (7.4): a rename carried out is logged, so it can be undone; an undo, forgotten.
+  if (plan.undo) {
+    forgetRename(g.loc, plan.undo.id);
+    // The folders the rename made to hold what moved, if they're empty now.
+    const gone: string[] = [];
+    for (let d = mv ? dirname(mv.from) : null; plan.undo.made && d && isInside(plan.undo.made, d); d = dirname(d)) {
+      try {
+        rmdirSync(d);
+        gone.push(relative(g.root, d));
+      } catch {
+        break;
+      }
+    }
+    if (gone.length) g.dirs = g.dirs.filter((x) => !gone.includes(x));
+  } else if (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink") {
+    logRename(g.loc, {
+      id: randomUUID(),
+      at: new Date().toISOString(),
+      kind: plan.kind,
+      from: plan.from,
+      to: plan.to,
+      move: mv,
+      made,
+      moves: plan.moves ?? [],
+      vaults: plan.vaults ?? [],
+      files: plan.files.map((f) => ({ abs: dest(f.abs), shown: f.shown, vault: f.vault, edits: f.edits, hash: contentHash(f.next), ...changedSpan(f.text, f.next) })),
+    });
+  }
   // Links to the old places still find the new ones (17.12); the vault's index follows.
   if (plan.moves?.length) g.redirects?.add(plan.moves);
   for (const [from] of plan.moves ?? []) {

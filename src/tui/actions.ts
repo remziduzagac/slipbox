@@ -1500,6 +1500,7 @@ export function registerActions(app: App): void {
     },
     "folder.paste": (a) => a.pasteItem(),
     "trash.restore": (a) => a.restoreLast(),
+    "rename.undo": (a) => a.undoRename(),
     "vault.unmake": (a) => a.unmakeVaultHere(),
     "note.copy": (a) =>
       withView(a, (v) => {
