@@ -44,10 +44,11 @@ export interface Glyphs {
   dirClosed: string;
   /** A folder that is its own root (17.13): a vault (a `.slipbox/`). */
   vault: string;
-  /** The explorer's buttons (18.1): a new note, a new folder on its title; rename, move and
-   *  delete on the selected row. */
+  /** The explorer's buttons (18.1): a new note, a new folder on its title; on the selected row,
+   *  one that opens its menu, whose entries carry the rest. */
   newNote: string;
   newFolder: string;
+  itemMenu: string;
   renameItem: string;
   moveItem: string;
   deleteItem: string;
@@ -121,6 +122,7 @@ const unicode: Glyphs = {
   vault: "◈",
   newNote: "+",
   newFolder: "+▸",
+  itemMenu: "…",
   renameItem: "✎",
   moveItem: "↦",
   deleteItem: "✕",
@@ -172,6 +174,7 @@ const nerd: Glyphs = {
   vault: "\u{f125f}", // nf-md-bookshelf
   newNote: "\u{f0752}", // nf-md-file_plus
   newFolder: "\u{f0257}", // nf-md-folder_plus
+  itemMenu: "\u{f01d8}", // nf-md-dots_horizontal
   renameItem: "\u{f03eb}", // nf-md-pencil
   moveItem: "\u{f0ab9}", // nf-md-file_move
   deleteItem: "\u{f0a7a}", // nf-md-trash_can_outline
@@ -213,6 +216,7 @@ const ascii: Glyphs = {
   vault: "#",
   newNote: "+",
   newFolder: "+>",
+  itemMenu: "...",
   renameItem: "r",
   moveItem: "m",
   deleteItem: "d",

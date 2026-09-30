@@ -514,8 +514,13 @@ export const SCENARIOS: Scenario[] = [
       // The explorer on contacts.md (space E reveals it).
       await leader(s, "E");
       await s.status("FILES");
+      // The row's menu (its … button; . by key): the entries with their keys; r there renames.
+      await s.keys(".");
+      await s.see(/Move to… +m/);
+      await s.see(/Delete +d/);
       await s.keys("r");
-      await s.see("rename people/contacts.md to:");
+      await s.see("rename people/contacts.md to:"); // a question in its own window
+      await s.see("OK  enter");
       await s.keys("ctrl+u");
       await s.type("people-contacts");
       await s.keys("enter");
@@ -533,9 +538,9 @@ export const SCENARIOS: Scenario[] = [
       await s.file("handbook/people-contacts.md", (t) => t.length > 0, "moved to the handbook");
       // d, then u.
       await s.keys("d");
-      await s.see(/delete handbook\/people-contacts\.md\?/);
+      await s.see(/Delete handbook\/people-contacts\.md\?/); // a question in its own window: y answers
+      await s.see("Yes  y");
       await s.type("y");
-      await s.keys("enter");
       await s.message("deleted handbook/");
       s.expect(!s.exists("handbook/people-contacts.md"), "gone from the vault");
       await s.keys("u");
@@ -555,9 +560,8 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("enter");
       await s.status("people-contacts-copy-2.md");
       await leader(s, "n", "d");
-      await s.see(/delete handbook\/people-contacts-copy-2\.md\?/);
+      await s.see(/Delete handbook\/people-contacts-copy-2\.md\?/);
       await s.type("y");
-      await s.keys("enter");
       await s.message("deleted handbook/");
       s.expect(!s.exists("handbook/people-contacts-copy-2.md"), "the copy deleted");
     },
@@ -1045,9 +1049,8 @@ export const SCENARIOS: Scenario[] = [
       // What space s a added: home's third row, with its path and line.
       await s.until(() => /home\.md:\d+/.test(s.clipboard()), 3000, "the scratch holding home.md:line");
       await leader(s, "s", "d");
-      await s.status("clear the scratch?");
+      await s.see("Clear the scratch?"); // a question: its own window
       await s.type("y");
-      await s.keys("enter");
       await leader(s, "s", "y");
       await s.message("the scratch is empty");
     },

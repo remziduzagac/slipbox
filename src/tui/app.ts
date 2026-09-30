@@ -269,6 +269,8 @@ export interface ListOverlay {
   alignKeysAcrossList?: boolean;
   /** A dropdown hanging under this cell (the breadcrumb's `…`) instead of a centred list. */
   anchor?: { x: number; y: number };
+  /** With `anchor`: a menu — as narrow as its entries, from the cell's column (the explorer's …). */
+  menu?: boolean;
   /** A tree's ← / →: fold or unfold the selected item (true when something changed; `source`
    *  then gives the rows again). */
   fold?: (item: ListItem, open: boolean) => boolean;
@@ -278,6 +280,8 @@ export interface PromptOverlay {
   kind: "prompt";
   label: string;
   text: string;
+  /** A yes-or-no question: `y` answers yes (`accept`), `n` or `esc` no (`cancel`); nothing typed. */
+  confirm?: boolean;
   change?: (text: string) => void;
   accept: (text: string) => void;
   cancel?: () => void;
@@ -1967,6 +1971,43 @@ export class App {
     if (at >= 0) this.sidebar.selected = at;
   }
 
+  /**
+   * The selected row's menu (its `…` button, `.`): what can be done to it, each with its key in the
+   * explorer, which picks it here too. It hangs from the button (by key without one: the row).
+   */
+  openItemMenu(): void {
+    const item = this.explorerItem();
+    const row = this.explorerRows()[this.sidebar.selected];
+    if (!item || !row) return this.message("info", "menu: select a note, file or folder first");
+    const actions: [string, string][] = [];
+    if (item.dir && !item.vault) actions.push(["new_note", "New note here"], ["new_folder", "New folder here"]);
+    actions.push(["rename", item.vault ? "Rename the folder" : "Rename"]);
+    if (item.vault) actions.push(["rename_vault", "Rename the vault"]);
+    actions.push(["move", "Move to…"], ["copy", "Copy"], ["cut", "Cut"]);
+    if (this.fileClip) actions.push(["paste", this.fileClip.mode === "cut" ? `Paste ${posix.basename(this.fileClip.rel)} here (move)` : `Paste a copy of ${posix.basename(this.fileClip.rel)} here`]);
+    actions.push(["delete", item.vault ? "Delete the vault" : "Delete"]);
+    const items: ListItem[] = actions.map(([action, label]) => {
+      const key = this.explorerKeys.keysFor(action)[0];
+      const shifted = key ? /^shift\+(.)$/.exec(key) : null;
+      const hotkey = shifted ? shifted[1]!.toUpperCase() : key && [...key].length === 1 ? key : undefined;
+      return { label, hint: hotkey ?? (key ? prettyKey(key, this.leader) : undefined), ...(hotkey ? { hotkey } : {}), data: action };
+    });
+    const g = this.geometry;
+    const button = g?.hot.find((h) => h.id === "xrow:menu");
+    const anchor = button ? { x: button.x, y: button.y } : g?.sidebar ? { x: g.sidebar.x + 2, y: g.sidebar.y + this.sidebar.selected - this.sidebar.scroll } : undefined;
+    this.openList({
+      title: `${row.name}${item.dir ? "/" : ""}`,
+      items,
+      filterable: false,
+      anchor,
+      menu: true,
+      accept: (it) => {
+        this.region = "sidebar";
+        this.explorerAction(it.data as string);
+      },
+    });
+  }
+
   /** Unsaved notes among `rel` and what's in it: a file operation would leave them behind. */
   private unsavedIn(rel: string): NoteBuffer[] {
     return this.dirtyBuffers().filter((b) => b.rel !== null && (b.rel === rel || b.rel.startsWith(`${rel}/`)));
@@ -2070,8 +2111,7 @@ export class App {
       what = `the vault ${g.loc.name} (${item.rel}/, ${g.notes.size} note${g.notes.size === 1 ? "" : "s"})`;
     }
     const warn = breaking ? ` ${breaking} link${breaking === 1 ? "" : "s"} to it will break.` : "";
-    this.prompt(`delete ${what}?${warn} (to the trash: u restores) y then enter: `, (text) => {
-      if (text.trim().toLowerCase() !== "y") return;
+    this.confirm(`Delete ${what}?${warn} It goes to the trash: u restores it.`, () => {
       let t: ReturnType<typeof trashPath>;
       try {
         t = trashPath(this.graph, this.loc, item.rel);
@@ -2949,6 +2989,8 @@ export class App {
       }
       case "paste":
         return this.pasteItem();
+      case "menu":
+        return this.openItemMenu();
       case "restore":
         return this.restoreLast();
       case "all_files": {
@@ -3138,6 +3180,7 @@ export class App {
     keepGroups?: boolean;
     alignKeysAcrossList?: boolean;
     anchor?: { x: number; y: number };
+    menu?: boolean;
     /** Already typed in its filter. */
     input?: string;
     fold?: (item: ListItem, open: boolean) => boolean;
@@ -3160,6 +3203,7 @@ export class App {
       keepGroups: opts.keepGroups,
       alignKeysAcrossList: opts.alignKeysAcrossList,
       anchor: opts.anchor,
+      menu: opts.menu,
       fold: opts.fold,
     };
     refilter(o);
@@ -3223,6 +3267,20 @@ export class App {
 
   prompt(label: string, accept: (text: string) => void, change?: (text: string) => void, cancel?: () => void, view?: View): void {
     this.overlay = { kind: "prompt", label, text: "", accept, change, cancel, view };
+  }
+
+  /** Ask a yes-or-no question (a floating window, like every question): `y` yes, `n` or `esc` no. */
+  confirm(question: string, yes: () => void, no?: () => void): void {
+    this.overlay = { kind: "prompt", label: question, text: "", confirm: true, accept: () => yes(), cancel: no };
+  }
+
+  /** A question's buttons, clicked: OK or Yes accepts, Cancel or No cancels. */
+  answerDialog(ok: boolean): void {
+    const o = this.overlay;
+    if (o?.kind !== "prompt" || o.view) return;
+    if (!ok) return this.closeOverlay(true);
+    this.overlay = null;
+    o.accept(o.text);
   }
 
   closeOverlay(cancelled: boolean): void {
@@ -3517,6 +3575,11 @@ export class App {
     }
     if (key === "escape" || key === "ctrl+c" || key === "ctrl+g") return this.closeOverlay(true);
     const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+    if (o.kind === "prompt" && o.confirm) {
+      if (typed === "y" || typed === "Y") return this.answerDialog(true);
+      if (typed === "n" || typed === "N") return this.answerDialog(false);
+      return;
+    }
     if (o.kind === "prompt") {
       // The find row's toggles, while typing in it.
       if (o.view && (key === "alt+r" || key === "alt+w")) {
@@ -3600,7 +3663,9 @@ export class App {
     }
     if (!o.filterable) {
       // An item's own key picks it.
-      const hot = o.filtered.findIndex((e) => e.item.hotkey && e.item.hotkey === (typed ?? "").toLowerCase());
+      // Its case first (a menu's `R` isn't its `r`), then either.
+      const exact = o.filtered.findIndex((e) => e.item.hotkey && e.item.hotkey === typed);
+      const hot = exact >= 0 ? exact : o.filtered.findIndex((e) => e.item.hotkey && e.item.hotkey === (typed ?? "").toLowerCase());
       if (hot >= 0) {
         o.selected = hot;
         return this.overlayKey(o, "enter");
@@ -3666,6 +3731,14 @@ export class App {
     if (o.kind === "prompt" && o.view && ev.type === "down") {
       const hot = g.hot.find((h) => inRect(h, ev.x, ev.y));
       if (hot?.id.startsWith("findopt:") || hot?.id.startsWith("findrep:")) return this.clickHot(hot.id);
+    }
+    // A question's window: its buttons answer; a click elsewhere in it does nothing, outside it cancels.
+    if (o.kind === "prompt" && !o.view && g.dialog) {
+      if (ev.type !== "down") return;
+      const hot = g.hot.find((h) => inRect(h, ev.x, ev.y));
+      if (hot?.id.startsWith("dlg:")) return this.answerDialog(hot.id === "dlg:ok");
+      if (!inRect(g.dialog, ev.x, ev.y)) this.closeOverlay(true);
+      return;
     }
     if (o.kind !== "list" || !g.overlay) {
       if (ev.type === "down") this.closeOverlay(true);

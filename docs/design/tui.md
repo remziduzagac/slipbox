@@ -42,7 +42,7 @@ Code, in `src/tui/`:
         │     Opens the link…      Moves to the…│ ┃
         └──────────── backspace up · esc cancel ┘ ┃
 ━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
- READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line, or a prompt
+ READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line
 ```
 
 **The frame.** Right under the top bar, a `━` rule in the `border` role runs across the top of
@@ -147,7 +147,7 @@ regex (`alt+r`) and `ab` whole words (`alt+w`), kept for the window's next searc
 The query is plain text by default, smart case (a capital makes it case-sensitive); it matches the
 note's text as a layout shows it — the look of a pane's filter. The row stays while the search is on
 (`n`, `shift+n`, `*` move through the matches) and goes with it (`esc`, `:noh`); the text moves down
-two rows while it's there. A window too short for it has its prompt on the status line.
+two rows while it's there. A window too short for it asks in a question's window (below).
 
 **Replace** (`ctrl+h`, `space f r`, or `tab` from the find field) is the same find row with a second
 row under it: `⇄ replacement` with `replace` and `all` buttons at its right, the rule under both. It works on the
@@ -164,7 +164,7 @@ while the rows are open. The text moves down three rows.
 Vim's `:s` (`docs/design/keymap.md`) uses the same engine, `core/replace.ts`; with its `c` flag the
 same two rows ask at each match, `replace? y n a q` where the buttons were.
 
-**Messages and prompts never take a row of their own,** so the note never changes height for them.
+**Messages and questions never take a row of their own,** so the note never changes height for them.
 Messages float as boxes at the top right of the content, hanging from the rule under the chrome at
 the top of the window under them (its breadcrumb, find and replace rows, which stay in sight),
 newest on top and stacked down, four at most:
@@ -172,9 +172,17 @@ each framed in its level's colour with its glyph first — `✗` error, `!` warn
 `x`, `!`, `-`; an info message that starts with its own symbol, such as `↻`, keeps just that) —
 and wrapped to three rows. Each shows 4 s (8 s an error); the same message again refreshes its box
 rather than stacking a second. Clicking one opens the messages list and clears the boxes. Popups
-and prompts draw over them. On a screen too small for a box (under 30 columns), a message takes
-over the status line while it shows. A prompt takes over the status line while it's open (find's
-is in its window, above). In zen, with neither bar, a prompt is drawn over the screen's last row.
+and questions draw over them. On a screen too small for a box (under 30 columns), a message takes
+over the status line while it shows.
+
+**Questions** — anything slipbox asks: a name for a new note, a rename, "delete it?" — float in a
+window of their own near the top of the content, framed like the lists: the question (wrapped, six
+rows at most), the answer typed on its own row after `›` (its end kept in view as it grows), and
+buttons at the bottom right, `OK enter` and `Cancel esc`. A yes-or-no question has no answer row and
+`Yes y`, `No n` (`esc` is no too; `enter` isn't an answer). The buttons click; a click outside the
+window cancels. The status line stays. Find's is in its window (above). On a screen too small for
+the window (under 30 columns, or too short), a question takes over the status line — a yes-or-no
+one ending `y / n` — and in zen, with neither bar, the screen's last row.
 
 **Scrollbars.** The last column of each window is its scrollbar: a `▐` track (`scrollbar_track`)
 with a `▐` thumb (`scrollbar` in the active window, `border` in the other); ascii `|` and `#`. The
@@ -311,7 +319,7 @@ at the top; `enter` carries it out, `esc` leaves everything as it was. What it d
 After it, the open notes it changed are reloaded, and a window on a renamed or moved note shows it under its new
 path, its history following — every note of a moved folder alike.
 
-## Files in the explorer (plans `18.1`–`18.8`)
+## Files in the explorer (plans `18.1`–`18.10`)
 
 The explorer makes and changes files by keys and by buttons, on the selected row — a note, a file, or a folder:
 
@@ -326,22 +334,26 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   all unfolded, `enter` taking the first match. A folder being moved, and what's in it, isn't offered. Both go through
   the rename's **preview** above: every link to it — and, for a folder, to anything in it — fixed, links between notes
   that move together left as they are, what the walk doesn't list (pictures, hidden files) moving with its folder.
-- **Delete (`d`):** asks first, saying how many links from other notes will break, then moves it to the vault's
-  **trash** (in its state, never in the folder). `u` puts back what was deleted last; `space v t` (`:trash`) lists
-  the trash, `enter` restoring an item — refused when something is at its place again. An open note deleted shows its
-  last text, marked deleted; restored, it's reloaded. Refused while a note it takes is unsaved.
+- **Delete (`d`):** asks first (a yes-or-no question: `y`), saying how many links from other notes will break, then
+  moves it to the vault's **trash** (in its state, never in the folder). `u` puts back what was deleted last;
+  `space v t` (`:trash`) lists the trash, `enter` restoring an item — refused when something is at its place again. An
+  open note deleted shows its last text, marked deleted; restored, it's reloaded. Refused while a note it takes is
+  unsaved.
 - **Copy, cut, paste (`y`, `x`, `p`):** `p` pastes into the selected folder (or beside the selected file): a copy —
   `name-copy`, `-2`… when pasted beside the original, the copy's links as written — or what was cut, moved (the
   preview, links fixed).
-- **Buttons on the selected row** while the explorer has focus: rename, move, delete (Nerd: a pencil, a file with an
-  arrow, a trash can; unicode `✎` `↦` `✕`; ascii `r` `m` `d`), at the row's end, under the title's buttons. A name
-  that doesn't fit beside them widens the tree: the explorer's horizontal scrollbar appears, and scrolled to its end
-  the name ends just before them.
+- **The selected row's menu:** while the explorer has focus, the selected row has one button at its end, under the
+  title's buttons: `…` (Nerd: three dots; ascii `...`). It opens a menu hanging from it (`.` opens it by key, from the
+  row), titled with the row's name, each entry with its key in the explorer, which picks it there too: for a folder
+  "New note here" and "New folder here", then "Rename", "Move to…", "Copy", "Cut", "Paste … here" (when something is
+  copied or cut), "Delete". `enter` or a click does the selected one; `esc` or a click outside closes it. A name that
+  doesn't fit beside the button widens the tree: the explorer's horizontal scrollbar appears, and scrolled to its end
+  the name ends just before it.
 - **A nested vault's row** (`18.7`) is a folder of this vault: `r` renames its folder and `m` moves it — links into it
   by path fixed here and in the vaults that reach it, its own relative links out fixed, its id and name kept (it's
   recorded at its new place); `d` deletes it whole, saying so ("the vault outreach (outreach/, 12 notes)") with the
-  links into it — by path or by its name — that break. Its name is a fourth button, beside rename, and `shift+r`
-  (Nerd: a tag with a pencil; unicode `✎◈`; ascii `R`): `rename-vault` for it, its folder left where it is.
+  links into it — by path or by its name — that break. Its menu has "Rename the folder" and, beside it, "Rename the
+  vault" (`shift+r`, `R` in the menu): `rename-vault` for it, its folder left where it is.
 
 The current note has `space n d` (`:delete`), `space n m` (rename or move by path), and the palette's "Copy the
 note". What they do is the CLI's `rm`, `mv` and `cp` (`docs/design/cli.md`).

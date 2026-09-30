@@ -613,6 +613,8 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | 18.6 | **Done.** CLI: `slipbox cp`, `rm`, `trash [restore]`; `mv` takes a folder |
 | 18.7 | **Done.** A nested vault's row: its folder renamed, moved, deleted; a fourth button renames the vault |
 | 18.8 | **Done.** The move picker is a tree: the explorer's folds, `←` / `→` fold, typing filters under the parents |
+| 18.9 | **Done.** The selected row's buttons become one, `…` (and `.`): a menu of its actions, each with its key |
+| 18.10 | **Done.** Questions float in a window: the answer typed, OK / Cancel; a yes-or-no's Yes / No (`y`, `n`) |
 
 ## Deferred — in the design, not in this breakdown
 

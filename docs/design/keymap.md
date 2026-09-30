@@ -231,10 +231,11 @@ Inside the explorer (`[keys.explorer]` in config):
 | `d` | delete it to the vault's trash, after asking (it says how many links break) |
 | `u` | restore what was deleted last (`space v t`, `:trash`: the rest) |
 | `y` / `x` / `p` | copy / cut it; paste in the selected folder: a copy (`name-copy` beside it), or a move |
+| `.` | the selected row's menu, as its `…` button opens it: each entry with its key, which picks it there |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
 | mouse | click a folder to fold or unfold it; click a note to select it, double-click to open it as a tab |
-| buttons | the title's new note and new folder; the selected row's rename, move, delete (a vault's: rename vault) |
+| buttons | the title's new note and new folder; the selected row's `…`: its menu (rename, move, delete…) |
 
 The history view (`space h h`, the left rail's `◷`) takes the same keys: `j` / `k` move, `enter`,
 `l` or a click jumps to the place, `/` filters, `q` closes, `esc` goes back to the note.
@@ -352,7 +353,7 @@ source first.
 | cut the character under the cursor (it goes to the clipboard, as vim's `x`) | `x` (source) |
 | undo / redo (an insert session is one step) | `u`, `ctrl+z` / `ctrl+r`, `ctrl+y`, `shift+u` |
 | a new note beside this one (`:new name`; `projects/idea` makes the folder too) | `ctrl+n`, `space n n` |
-| a new folder beside this note (`:mkdir name`) | `space v d` |
+| a new folder beside this note (`:mkdir name`) | `ctrl+shift+n`, `space v d` |
 | rename or move the note (`:rename path`, `:mv path`): a preview, then `enter` | `space n m` |
 | rename the vault: a preview, then `enter` | `space v n` |
 | delete the note to the vault's trash, after asking (`:delete`) | `space n d` |
@@ -489,6 +490,8 @@ Pickers, the palette and help share these keys (a prompt, such as `/`, takes `ba
 | `backspace`, `ctrl+w` or `ctrl+backspace` | delete a character / a word of the filter |
 | paste | the first line of the pasted text goes into the filter or prompt |
 | `ctrl+u` | clear a prompt |
+| an entry's key | in a menu (the explorer row's `…`): pick that entry (`R` isn't `r`) |
+| `y` / `n` | answer a yes-or-no question (`esc` is no; `enter` isn't an answer) |
 
 ## Mouse
 
@@ -527,7 +530,8 @@ mouse off, which gives it back to the terminal.
 | explorer, outline | a click anywhere in the pane focuses it; rows as in their sections above |
 | lists, wheel | scroll the list; the selection moves only to stay in view |
 | explorer, outline, wheel | scroll the pane (the selection stays) |
-| outside a list, or anywhere during a prompt | close it |
+| a question's buttons | OK, Cancel; Yes, No |
+| outside a list or a question's window | close it (the question: cancelled) |
 
 ## Platform notes
 

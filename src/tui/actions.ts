@@ -1438,8 +1438,7 @@ export function registerActions(app: App): void {
       a.copy(text);
     },
     "scratch.clear": (a) => {
-      a.prompt("clear the scratch? type y then enter: ", (t) => {
-        if (t.trim().toLowerCase() !== "y") return;
+      a.confirm("Clear the scratch?", () => {
         clearScratch(a.scratch());
         a.message("info", "scratch cleared");
         const buf = a.buffers.get(a.scratch().path);

@@ -660,7 +660,8 @@ describe("overlays and the : prompt", () => {
       return l.indexOf(` ${key} `, l.indexOf(label) + label.length);
     };
     expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "Messages", "space m"));
-    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "New folder", "space v d"));
+    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "New folder", "ctrl+shift+n")); // its first key
+    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "Vault info", "space v i"));
     expect(colOf(g, "Reload note from disk", ":reload")).toBe(colOf(g, "Quit", ":qa"));
     expect(h.app.recentCommands[0]).toBe("ui.zen");
   });
@@ -2573,13 +2574,16 @@ describe("top bar, tab strip, status line", () => {
     expect(boxes).toHaveLength(2);
     expect(boxes[0]!.y).toBeLessThan(boxes[1]!.y);
     expect(lines()[boxes[0]!.y + 1]).toContain("and a warning");
-    // A prompt (here the scratch's clear) takes over the status line; the note keeps its height.
+    // A question (here the scratch's clear) floats in a window of its own, its buttons in it; the
+    // status line stays, the note keeps its height.
     await h.keys("space", "s", "d");
     expect(h.app.overlay?.kind).toBe("prompt");
     f = lines();
     expect(h.app.view!.height).toBe(height);
-    expect(f.at(-1)).toContain("clear the scratch?");
-    expect(f.at(-1)).not.toContain("READ");
+    const d = h.app.geometry!.dialog!;
+    expect(f[d.y + 2]).toContain("Clear the scratch?");
+    expect(f.slice(d.y, d.y + d.h).join("\n")).toMatch(/Yes {2}y.*No {2}n/);
+    expect(f.at(-1)).toContain("READ");
     await h.keys("escape");
     // Find is the window's own: its row under the header, with the count; the status line stays.
     await h.keys("/", "B");
@@ -4480,13 +4484,16 @@ describe("review cycle 5 (TUI, behaviour no test had pinned)", () => {
     mkdirSync(dirname(scratch), { recursive: true });
     writeFileSync(scratch, "keep me\n");
     await h.app.run("scratch.clear");
-    await h.keys("n", "enter");
+    await h.keys("n");
     expect(readFileSync(scratch, "utf8")).toBe("keep me\n");
+    expect(h.app.overlay).toBeNull();
     await h.app.run("scratch.clear");
-    await h.keys("enter"); // nothing typed: not a yes either
+    await h.keys("enter"); // not an answer: the question stays
+    expect(h.app.overlay?.kind).toBe("prompt");
     expect(readFileSync(scratch, "utf8")).toBe("keep me\n");
+    await h.keys("escape");
     await h.app.run("scratch.clear");
-    await h.keys("y", "enter");
+    await h.keys("y");
     expect(existsSync(scratch) ? readFileSync(scratch, "utf8") : "").toBe("");
     writeFileSync(join(root, "late.md"), "# Late\n");
     await h.keys("space", "v", "r");
@@ -5682,6 +5689,100 @@ describe("vaults in the TUI (17.x)", () => {
   });
 });
 
+describe("questions float in a window of their own", () => {
+  const ask = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+  const click = (h: Harness, x: number, y: number) => {
+    h.app.handleMouse({ type: "down", x, y, button: 0 });
+    h.app.handleMouse({ type: "up", x, y, button: 0 });
+  };
+  const clickHot = (h: Harness, id: string) => {
+    const r = h.app.geometry!.hot.find((x) => x.id === id)!;
+    click(h, r.x + 1, r.y);
+  };
+
+  test("a prompt: the question, the answer typed under it, OK and Cancel clicked; outside it cancels; too small: the status line", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    await h.keys("ctrl+n");
+    const d = h.app.geometry!.dialog!;
+    for (const ch of "fresh") await h.keys(ch);
+    let f = h.frame().split("\n");
+    expect(f[d.y + 2]).toContain("new note in notes/");
+    expect(f[d.y + 3]).toContain("› fresh");
+    expect(f.slice(d.y, d.y + d.h).join("\n")).toMatch(/OK {2}enter.*Cancel {2}esc/);
+    expect(f.at(-1)).toContain("READ"); // the status line stays
+    // A long answer keeps its end in view.
+    for (const ch of "-and-a-rather-long-name-to-type-in-here-far-past-the-width-of-the-window-and-its-end") await h.keys(ch);
+    expect(h.frame().split("\n")[d.y + 3]).toContain("its-end");
+    clickHot(h, "dlg:cancel");
+    expect(h.app.overlay).toBeNull();
+    expect(existsSync(join(root, "notes", "fresh-and-a-rather-long-name-to-type-in-here-far-past-the-width-of-the-window-and-its-end.md"))).toBe(false);
+    // OK, clicked: done.
+    await h.keys("ctrl+n");
+    for (const ch of "fresh") await h.keys(ch);
+    clickHot(h, "dlg:ok");
+    expect(existsSync(join(root, "notes", "fresh.md"))).toBe(true);
+    // A click outside the window cancels.
+    await h.keys("escape", "ctrl+n");
+    for (const ch of "other") await h.keys(ch);
+    click(h, 1, h.app.geometry!.dialog!.y + h.app.geometry!.dialog!.h + 2);
+    expect(h.app.overlay).toBeNull();
+    expect(existsSync(join(root, "notes", "other.md"))).toBe(false);
+    // A screen too small for the window: over the status line, as before.
+    const small = await harness({ root, open: "notes/alpha.md", height: 8 });
+    await small.keys("ctrl+n");
+    expect(small.app.geometry!.dialog ?? null).toBeNull();
+    expect(statusRow(small.frame())).toContain("new note in notes/");
+  });
+
+  test("a yes-or-no: y and n answer, the buttons too; enter isn't an answer", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    let asked = 0;
+    const said: { v: boolean | null } = { v: null };
+    const question = () => {
+      asked++;
+      h.app.confirm("Really?", () => (said.v = true), () => (said.v = false));
+    };
+    question();
+    let f = h.frame().split("\n");
+    const d = h.app.geometry!.dialog!;
+    expect(f[d.y + 2]).toContain("Really?");
+    expect(f.slice(d.y, d.y + d.h).join("\n")).not.toContain("›"); // nothing to type
+    await h.keys("enter", "x");
+    expect(ask(h).confirm).toBe(true);
+    await h.keys("n");
+    expect(said.v).toBe(false);
+    question();
+    await h.keys("y");
+    expect(said.v).toBe(true);
+    question();
+    h.frame();
+    clickHot(h, "dlg:cancel");
+    expect(said.v).toBe(false);
+    question();
+    h.frame();
+    clickHot(h, "dlg:ok");
+    expect(said.v).toBe(true);
+    expect(asked).toBe(4);
+    // Too small to float: the status line says how to answer.
+    const small = await harness({ root, open: "notes/alpha.md", height: 8 });
+    small.app.confirm("Really?", () => {});
+    f = small.frame().split("\n");
+    expect(f.at(-1)).toContain("Really? y / n");
+  });
+
+  test("ctrl+shift+n makes a folder, as space v d does", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    await h.keys("ctrl+shift+n");
+    expect(ask(h).label).toBe("new folder in notes/");
+    for (const ch of "ideas") await h.keys(ch);
+    await h.keys("enter");
+    expect(existsSync(join(root, "notes", "ideas"))).toBe(true);
+  });
+});
+
 describe("the explorer's file operations and buttons (18.x)", () => {
   /** The explorer focused, `rel` selected. */
   async function at(root: string, rel: string, open = "index.md") {
@@ -5725,10 +5826,12 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     const root = makeVault();
     const h = await at(root, "notes/alpha.md");
     await h.keys("d");
-    expect(prompt(h).label).toMatch(/^delete notes\/alpha\.md\? \d+ links to it will break\./);
+    expect(prompt(h)).toMatchObject({ confirm: true, label: expect.stringMatching(/^Delete notes\/alpha\.md\? \d+ links to it will break\. It goes to the trash/) });
     await h.keys("escape");
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true); // esc: nothing
-    await h.keys("d", "y", "enter");
+    await h.keys("d", "n");
+    expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true); // n: nothing
+    await h.keys("d", "y");
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
     expect(h.app.graph.notes.has("notes/alpha.md")).toBe(false);
     expect(h.app.messages.at(-1)!.text).toContain("deleted notes/alpha.md to the trash");
@@ -5737,7 +5840,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(h.app.graph.notes.has("notes/alpha.md")).toBe(true);
     // A folder, with everything in it; the trash lists it, enter restores.
     h.app.selectInExplorer("projects");
-    await h.keys("d", "y", "enter");
+    await h.keys("d", "y");
     expect(existsSync(join(root, "projects"))).toBe(false);
     await h.app.run("trash.open");
     expect((h.app.overlay as ListOverlay).items.map((it) => it.label)).toEqual(["projects/"]);
@@ -5781,51 +5884,72 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(h.app.graph.notes.has("papers/alpha.md")).toBe(true);
   });
 
-  test("buttons: a new note and a new folder on the title; rename, move, delete on the selected row", async () => {
+  test("buttons: a new note and a new folder on the title; on the selected row, … opens its menu", async () => {
     const root = makeVault();
     const h = await at(root, "notes/alpha.md");
     const f = h.frame();
-    expect(f.split("\n").find((r) => r.includes("Explorer"))).toMatch(/Explorer\s+\+\s+\+▸/);
-    const row = f.split("\n").find((r) => r.includes("alpha.md"))!;
-    expect(row).toMatch(/✎\s+↦\s+✕/);
-    // Their right edges line up: the row's last button under the title's (by column).
     const title = f.split("\n").find((r) => r.includes("Explorer"))!;
-    expect([...row].indexOf("✕")).toBe([...title].lastIndexOf("▸"));
+    expect(title).toMatch(/Explorer\s+\+\s+\+▸/);
+    const row = f.split("\n").find((r) => r.includes("alpha.md"))!;
+    expect(row).toMatch(/alpha\.md\s+… /);
+    // Its right edge under the title's last button's (by column).
+    expect([...row].lastIndexOf("…")).toBe([...title].lastIndexOf("▸"));
     const hot = (id: string) => h.app.geometry!.hot.find((x) => x.id === id)!;
-    const click = (id: string) => {
-      const r = hot(id);
-      h.app.handleMouse({ type: "down", x: r.x + 1, y: r.y, button: 0 });
-      h.app.handleMouse({ type: "up", x: r.x + 1, y: r.y, button: 0 });
+    const click = (x: number, y: number) => {
+      h.app.handleMouse({ type: "down", x, y, button: 0 });
+      h.app.handleMouse({ type: "up", x, y, button: 0 });
     };
-    click("xrow:delete");
-    expect(prompt(h).label).toStartWith("delete notes/alpha.md?");
-    await h.keys("escape");
-    click("xrow:rename");
-    expect(prompt(h).text).toBe("alpha");
-    await h.keys("escape");
-    click("xrow:move");
-    expect((h.app.overlay as ListOverlay).title).toStartWith("Move notes/alpha.md to…");
-    await h.keys("escape");
-    click("xnew:folder");
+    const clickHot = (id: string) => click(hot(id).x + 1, hot(id).y);
+    click(hot("xnew:folder").x + 1, hot("xnew:folder").y);
     expect(prompt(h).label).toBe("new folder in notes/");
     await h.keys("escape");
     h.frame();
-    click("xnew:note");
+    clickHot("xnew:note");
     expect(prompt(h).label).toBe("new note in notes/");
-    // Not focused: no row buttons.
     await h.keys("escape");
+    // The row's … : a menu under it, from its column; each entry with its key.
+    h.frame();
+    const button = { ...hot("xrow:menu") };
+    clickHot("xrow:menu");
+    const menu = () => h.app.overlay as ListOverlay;
+    expect(menu()).toMatchObject({ menu: true, title: "alpha.md" });
+    expect(menu().items.map((it) => [it.label, it.hint])).toEqual([["Rename", "r"], ["Move to…", "m"], ["Copy", "y"], ["Cut", "x"], ["Delete", "d"]]);
+    h.frame();
+    const m = h.app.geometry!.overlay!;
+    expect({ x: m.x, y: m.y }).toEqual({ x: button.x, y: button.y + 1 });
+    expect(h.frame().split("\n")[m.y]).toContain("alpha.md");
+    // A click on an entry does it.
+    click(m.x + 2, m.listY + 4);
+    expect(prompt(h)).toMatchObject({ confirm: true, label: expect.stringMatching(/^Delete notes\/alpha\.md\?/) });
+    await h.keys("escape");
+    // `.` opens it by key; an entry's key picks it there.
+    await h.keys(".");
+    expect(menu().menu).toBe(true);
+    await h.keys("r");
+    expect(prompt(h).text).toBe("alpha");
+    await h.keys("escape", ".", "m");
+    expect(menu().title).toStartWith("Move notes/alpha.md to…");
+    await h.keys("escape");
+    // A folder's: new note and folder in it, and, with something copied, paste.
+    await h.keys("y");
+    h.app.selectInExplorer("projects");
+    await h.keys(".");
+    expect(menu().items.map((it) => it.label)).toEqual(["New note here", "New folder here", "Rename", "Move to…", "Copy", "Cut", "Paste a copy of alpha.md here", "Delete"]);
+    await h.keys("p");
+    expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
+    // Not focused: no row button.
     h.app.region = "content";
-    expect(h.frame().split("\n").find((r) => r.includes("alpha.md"))).not.toMatch(/✎/);
-    // A long name beside them: the pane scrolls sideways — a scrollbar, and its end reachable.
-    writeFileSync(join(root, "notes", "a-longish-note-x.md"), "# long\n"); // fits the pane, not beside them
-    const long = await at(root, "notes/a-longish-note-x.md");
-    const longRow = () => long.frame().split("\n").find((r) => r.includes("longish") || r.includes("note-x"))!;
-    expect(longRow()).toMatch(/a-longish\S*[^…\s]\s+✎\s+↦\s+✕/);
-    expect(longRow()).not.toContain("note-x.md");
+    expect(h.frame().split("\n").find((r) => r.includes("alpha.md"))).not.toMatch(/…/);
+    // A long name beside it: the pane scrolls sideways — a scrollbar, and its end reachable.
+    writeFileSync(join(root, "notes", "a-longish-note-xyz12.md"), "# long\n"); // fits the pane, not beside it
+    const long = await at(root, "notes/a-longish-note-xyz12.md");
+    const longRow = () => long.frame().split("\n").find((r) => r.includes("longish") || r.includes("note-xyz12"))!;
+    expect(longRow()).toMatch(/a-longish\S*[^…\s] +… /);
+    expect(longRow()).not.toContain("note-xyz12.md");
     expect(long.app.geometry!.scrollbars.some((b) => b.pane === "sidebar" && b.horizontal)).toBe(true);
     long.app.sidebar.left = 999;
-    expect(longRow()).toMatch(/note-x\.md\s+✎\s+↦\s+✕/);
-    // Not focused, no buttons: the names fit, no scrollbar.
+    expect(longRow()).toMatch(/note-xyz12\.md +… /);
+    // Not focused, no button: the names fit, no scrollbar.
     long.app.region = "content";
     long.frame();
     expect(long.app.geometry!.scrollbars.some((b) => b.pane === "sidebar" && b.horizontal)).toBe(false);
@@ -5834,22 +5958,35 @@ describe("the explorer's file operations and buttons (18.x)", () => {
   test("space n d deletes the note; space v t lists the trash", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/beta.md" });
-    await h.keys("space", "n", "d", "y", "enter");
+    await h.keys("space", "n", "d", "y");
     expect(existsSync(join(root, "notes", "beta.md"))).toBe(false);
     expect(h.app.view!.buf.deleted).toBe(true);
     await h.keys("space", "v", "t");
     expect((h.app.overlay as ListOverlay).title).toBe("Trash (1) — enter restores");
   });
 
-  test("a vault's row: rename (its folder), move, delete, and rename the vault — four buttons (18.7)", async () => {
+  test("a vault's row: rename (its folder), move, delete, and rename the vault — its menu (18.7)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "vault-links.md"), "[in](nested-vault/inner.md) and [[fixture-nested:inner]]\n");
     const h = await at(root, "nested-vault");
     const row = h.frame().split("\n").find((r) => r.includes("nested-vault"))!;
-    expect(row).toMatch(/✎\s+✎◈\s+↦\s+✕/); // the vault's name beside its folder's
+    expect(row).toMatch(/nested-vault.*… /);
+    await h.keys(".");
+    const menu = h.app.overlay as ListOverlay;
+    expect(menu.items.map((it) => [it.label, it.hint])).toEqual([
+      ["Rename the folder", "r"],
+      ["Rename the vault", "R"], // beside its folder's
+      ["Move to…", "m"],
+      ["Copy", "y"],
+      ["Cut", "x"],
+      ["Delete the vault", "d"],
+    ]);
+    await h.keys("R"); // its own case: not the folder's r
+    expect(prompt(h).label).toBe("rename the vault fixture-nested to: ");
+    await h.keys("escape");
     // d: the whole vault, said so.
     await h.keys("d");
-    expect(prompt(h).label).toMatch(/^delete the vault fixture-nested \(nested-vault\/, 1 note\)\? 2 links to it will break\./); // by path and by name
+    expect(prompt(h).label).toMatch(/^Delete the vault fixture-nested \(nested-vault\/, 1 note\)\? 2 links to it will break\./); // by path and by name
     await h.keys("escape");
     // R: the vault's name; its folder stays.
     await h.keys("shift+r");

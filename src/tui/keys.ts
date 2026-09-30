@@ -228,6 +228,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n m": "note.rename",
   "leader n d": "note.delete",
   "ctrl+n": "note.create",
+  "ctrl+shift+n": "folder.create",
   "leader v d": "folder.create",
   "leader v r": "vault.reindex",
   "leader v i": "vault.info",
@@ -336,13 +337,15 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   y: "copy",
   x: "cut",
   p: "paste",
+  // The selected row's menu, as its … button opens it.
+  ".": "menu",
   q: "close",
   escape: "leave",
 };
 
 export const EXPLORER_ACTIONS = [
   "down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files",
-  "new_note", "new_folder", "rename", "rename_vault", "move", "delete", "restore", "copy", "cut", "paste", "close", "leave",
+  "new_note", "new_folder", "rename", "rename_vault", "move", "delete", "restore", "copy", "cut", "paste", "menu", "close", "leave",
 ];
 
 /** Keys inside the outline pane: key → outline action. */
@@ -408,6 +411,7 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   copy: { title: "Copy", desc: "Copies the selected note, file or folder: p pastes a copy in the selected folder" },
   cut: { title: "Cut", desc: "Cuts the selected note, file or folder: p moves it to the selected folder, links fixed" },
   paste: { title: "Paste", desc: "Into the selected folder (or beside the selected file): a copy, or what was cut, moved" },
+  menu: { title: "Actions…", desc: "The selected row's menu, as its … button opens it: rename, move, delete, copy…" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
 };

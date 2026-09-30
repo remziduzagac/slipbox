@@ -9,7 +9,7 @@ import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { sanitize } from "../core/sanitize.ts";
-import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
+import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, type PromptOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { countWords } from "../core/words.ts";
 import type { CommentLink, SyntaxError } from "../core/syntax.ts";
@@ -71,6 +71,8 @@ export interface Geometry {
   verticals: { x: number; y0: number; y1: number; style: CellStyle }[];
   /** Find's prompt is drawn in its window (its find row), not on the bottom line. */
   findInWindow?: boolean;
+  /** A question's floating window, with its margin: clicks there never reach what's under it. */
+  dialog?: Rect | null;
 }
 
 const CHANGE_MARKER_MS = 3000;
@@ -189,18 +191,127 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // shows one (none drew it, or an overlaid pane hides it).
   if (topBar) drawTopBar(app, c, { y: 0, h: 1 }, geo);
 
-  // Messages and prompts never take a row of their own, so the note never changes height for
+  // Messages and questions never take a row of their own, so the note never changes height for
   // them. Messages float as boxes at the top right of the content (a screen too small for them:
-  // over the status line). A prompt takes over the status line while it's open (in zen, the
-  // screen's last row); find's is in its window when that window had room for its find row.
-  const prompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow);
+  // over the status line). A question — anything a prompt asks — floats in a window of its own
+  // (a screen too small for it: over the status line; in zen, the screen's last row); find's is
+  // in its window when that window had room for its find row.
+  const prompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow) ? app.overlay : null;
   const float = W >= TOAST_MIN_W && mainH >= 5;
-  if (prompt || (app.transient && !float)) drawBottomLine(app, c, H - 1, geo);
+  const dialog = prompt && W >= DIALOG_MIN_W && mainH >= dialogHeight(prompt, dialogWidth(W)) ? prompt : null;
+  if ((prompt && !dialog) || (app.transient && !float)) drawBottomLine(app, c, H - 1, geo, prompt && !dialog ? prompt : null);
   else if (status) drawStatus(app, c, { y: H - status, h: 1 }, geo);
   if (float && app.toasts.length) drawToasts(app, c, mainY, mainY + mainH, geo);
   if (((app.whichKey && app.pending.length) || (app.resizeMode && !app.pending.length)) && !app.overlay) drawWhichKey(app, c, mainY, mainY + mainH, geo);
-  if (app.overlay?.kind === "list") geo.overlay = app.overlay.anchor ? drawDropdown(app, c, app.overlay, app.overlay.anchor, mainY + mainH) /* above the frame's bottom rule, never on the status line */ : drawList(app, c, app.overlay, mainY, mainH);
+  if (app.overlay?.kind === "list") {
+    const o = app.overlay;
+    // Above the frame's bottom rule, never on the status line.
+    geo.overlay = o.anchor && o.menu ? drawMenu(app, c, o, o.anchor, mainY, mainY + mainH) : o.anchor ? drawDropdown(app, c, o, o.anchor, mainY + mainH) : drawList(app, c, o, mainY, mainH);
+  }
+  if (dialog) geo.dialog = drawDialog(app, c, dialog, mainY, mainH, geo);
   return geo;
+}
+
+/** Narrower than this, a question goes over the status line instead of floating. */
+const DIALOG_MIN_W = 30;
+
+function dialogWidth(W: number): number {
+  return Math.max(24, Math.min(64, W - 8));
+}
+
+/** The question's lines, wrapped to the window (at most six). */
+function dialogLines(o: PromptOverlay, w: number): string[] {
+  return wrapWords(sanitize(o.label.trim()), w - 4).slice(0, 6);
+}
+
+/** Its rows: the frame, the question, the answer's row (not a yes-or-no's), a blank, the buttons. */
+function dialogHeight(o: PromptOverlay, w: number): number {
+  return 2 + dialogLines(o, w).length + (o.confirm ? 0 : 1) + 2;
+}
+
+/**
+ * A question in a floating window near the top of the content, framed like the lists: the
+ * question, the answer typed on its own row (`›`, its end kept in view), and its buttons at the
+ * bottom right — OK and Cancel (enter, esc), or Yes and No (y, n) — each clickable.
+ */
+function drawDialog(app: App, c: Canvas, o: PromptOverlay, mainY: number, mainH: number, geo: Geometry): Rect {
+  const theme = app.theme;
+  const W = c.width;
+  const w = dialogWidth(W);
+  const lines = dialogLines(o, w);
+  const h = dialogHeight(o, w);
+  const x = Math.floor((W - w) / 2);
+  const y = mainY + Math.max(0, Math.min(2, mainH - h));
+  const bg = roleStyle(theme, "overlay", null);
+  const border = roleStyle(theme, "overlay_border", null);
+  const b = app.glyphs.box;
+  // A margin in the window's own colour, as the lists have: a row above and below, two columns.
+  c.fill(x - 2, y - 1, w + 4, h + 2, bg.bg);
+  drawText(c, x, y, `${b.tl}${b.h.repeat(w - 2)}${b.tr}`, border);
+  for (let k = 1; k < h - 1; k++) {
+    drawText(c, x, y + k, b.v, border, 1);
+    drawText(c, x + w - 1, y + k, b.v, border, 1);
+  }
+  drawText(c, x, y + h - 1, `${b.bl}${b.h.repeat(w - 2)}${b.br}`, border);
+  lines.forEach((line, i) => drawText(c, x + 2, y + 1 + i, line, { ...bg, bold: true }, w - 4));
+  let row = y + 1 + lines.length;
+  if (!o.confirm) {
+    const px = drawText(c, x + 2, row, "› ", border);
+    const room = w - 4 - px - 1;
+    const tw = drawText(c, x + 2 + px, row, stringWidth(o.text) > room ? truncateStart(o.text, room) : o.text, bg);
+    drawText(c, x + 2 + px + tw, row, " ", roleStyle(theme, "cursor", null));
+    row++;
+  }
+  row++;
+  const buttons: [string, string][] = o.confirm ? [[" Yes  y ", "dlg:ok"], [" No  n ", "dlg:cancel"]] : [[" OK  enter ", "dlg:ok"], [" Cancel  esc ", "dlg:cancel"]];
+  let bx = x + w - 2 - buttons.reduce((n, [t]) => n + stringWidth(t), 0) - (buttons.length - 1);
+  for (const [text, id] of buttons) bx += smallButton(app, c, bx, row, text, id, geo, bg.bg) + 1;
+  return { x: x - 2, y: y - 1, w: w + 4, h: h + 2 };
+}
+
+/**
+ * A menu hanging from `anchor` (the explorer row's `…`): framed, its title the row's name, as wide
+ * as its entries — each a label and, dim at the right, its key — from the anchor's column (moved
+ * left to fit), under its row, or over it when there's no room below.
+ */
+function drawMenu(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; y: number }, mainY: number, maxY: number): Rect & { listY: number; rows: number } {
+  const theme = app.theme;
+  const W = c.width;
+  const hintW = (item: ListItem) => (item.hint ? stringWidth(item.hint) + 2 : 0);
+  const content = Math.max(stringWidth(o.title) + 4, ...o.items.map((item) => stringWidth(item.label) + hintW(item)));
+  const w = Math.min(content + 4, W);
+  const h = Math.min(o.filtered.length + 2, Math.max(3, maxY - mainY));
+  const x = Math.max(0, Math.min(anchor.x, W - w));
+  let y = anchor.y + 1;
+  if (y + h > maxY) y = Math.max(mainY, anchor.y - h);
+  const bg = roleStyle(theme, "overlay", null);
+  const border = roleStyle(theme, "overlay_border", null);
+  const dim = roleStyle(theme, "overlay_dim", null);
+  const b = app.glyphs.box;
+  c.fill(x, y, w, h, bg.bg);
+  drawText(c, x, y, `${b.tl}${b.h}`, border);
+  const tw = drawText(c, x + 2, y, truncate(` ${sanitize(o.title)} `, w - 4), { ...border, bold: true });
+  drawText(c, x + 2 + tw, y, b.h.repeat(Math.max(0, w - 3 - tw)) + b.tr, border);
+  for (let k = 1; k < h - 1; k++) {
+    drawText(c, x, y + k, b.v, border, 1);
+    drawText(c, x + w - 1, y + k, b.v, border, 1);
+  }
+  drawText(c, x, y + h - 1, `${b.bl}${b.h.repeat(w - 2)}${b.br}`, border);
+  const rows = h - 2;
+  if (o.selected < o.scroll) o.scroll = o.selected;
+  if (o.selected >= o.scroll + rows) o.scroll = o.selected - rows + 1;
+  for (let i = 0; i < rows; i++) {
+    const idx = o.scroll + i;
+    const entry = o.filtered[idx];
+    if (!entry) break;
+    const item = entry.item;
+    const st = idx === o.selected ? roleStyle(theme, "overlay_selected", null) : bg;
+    c.fill(x + 1, y + 1 + i, w - 2, 1, st.bg);
+    const hw = hintW(item);
+    drawText(c, x + 2, y + 1 + i, truncate(sanitize(item.label), Math.max(1, w - 4 - hw)), st);
+    if (item.hint) drawText(c, x + w - 2 - stringWidth(item.hint), y + 1 + i, item.hint, { ...dim, bg: st.bg });
+  }
+  return { x, y, w, h, listY: y + 1, rows };
 }
 
 /**
@@ -1051,15 +1162,11 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     row.root ? (row.root.kind === "vault" ? g.vault : g.dirClosed) : row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file;
   const prefix = (row: TreeRow) => `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
   const text = (row: TreeRow) => prefix(row) + nameOf(row);
-  // The selected note, file or folder: rename, move and delete at the row's end (18.1), their
-  // right edge under the title's buttons'. A vault nested in this one has a fourth beside rename:
-  // its name (rename is its folder's). The buttons are drawn from the right.
+  // The selected note, file, folder or nested vault: a button at the row's end opening its menu
+  // (18.1) — rename, move, delete… — its right edge under the title's buttons'.
   const buttonsOf = (row: TreeRow) => {
-    const vaultRow = row.root?.kind === "vault" && app.loc.mode === "vault";
-    if (row.kind === "root" && !vaultRow) return null;
-    const bs: (readonly [string, string])[] = [[g.deleteItem, "xrow:delete"], [g.moveItem, "xrow:move"]];
-    if (vaultRow) bs.push([g.renameVault, "xrow:rename_vault"]);
-    bs.push([g.renameItem, "xrow:rename"]);
+    if (row.kind === "root" && !(row.root?.kind === "vault" && app.loc.mode === "vault")) return null;
+    const bs: (readonly [string, string])[] = [[g.itemMenu, "xrow:menu"]];
     return { bs, w: bs.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0) };
   };
   const sel = app.region === "sidebar" ? rows[Math.max(0, Math.min(s.selected, rows.length - 1))] : undefined;
@@ -1315,14 +1422,14 @@ function pathMarker(app: App, view: View, short = false): string {
   return buf.deleted ? " ✖ deleted on disk" : buf.conflictKept ? " • unsaved ⚠ differs from disk" : buf.dirty ? " • unsaved" : changed ? " ↻ reloaded" : "";
 }
 
-/** A prompt, or a message with no top bar to sit in, over the status line (zen: the last row). */
-function drawBottomLine(app: App, c: Canvas, y: number, geo: Geometry): void {
+/** A question with no room to float, or a message with no top bar to sit in, over the status
+ *  line (zen: the last row). */
+function drawBottomLine(app: App, c: Canvas, y: number, geo: Geometry, o: PromptOverlay | null): void {
   const theme = app.theme;
   const bg = app.ui.zen ? pageBg(theme) : roleStyle(theme, "status", pageBg(theme)).bg;
   c.fill(0, y, c.width, 1, bg);
-  const o = app.overlay;
-  if (o?.kind === "prompt" && !(o.view && geo.findInWindow)) {
-    const x = drawText(c, 1, y, o.label, { ...roleStyle(theme, "info", bg), bg }) + 1;
+  if (o) {
+    const x = drawText(c, 1, y, o.confirm ? `${o.label.trim()} y / n` : o.label, { ...roleStyle(theme, "info", bg), bg }) + 1;
     const w = drawText(c, x, y, truncate(o.text, c.width - x - 2), { ...roleStyle(theme, "text", bg), bg });
     drawText(c, x + w, y, " ", roleStyle(theme, "cursor", bg));
     return;
