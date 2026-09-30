@@ -989,3 +989,45 @@ describe("path links, as other tools write them (17.16)", () => {
     expect(readFileSync(join(notes, "index.md"), "utf8")).toContain("[spaced](<../app/your design.md>) [encoded](../app/your%20design.md)");
   });
 });
+
+describe("nested vaults, known to each other without being opened (17.17)", () => {
+  const io = (cwd: string) => {
+    const out: string[] = [];
+    return { io: { out: (s: string) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env }, out };
+  };
+  const cli = async (args: string[], cwd: string) => {
+    const r = io(cwd);
+    const code = await runCli([...args, "--json"], r.io);
+    return { code, json: JSON.parse(r.out.join("")) };
+  };
+  const parent = mkdtempSync(join(tmpdir(), "slipbox-nest-parent-"));
+  const kid = join(parent, "kid");
+  const files: Record<string, string> = {
+    ".slipbox/config.toml": '[vault]\nid = "dparent00000001"\nname = "dparent"\n',
+    "index.md": "# Index\n\n[[dkid:note]] and [k](kid/note.md) and [[kid/note]]\n",
+    "kid/.slipbox/config.toml": '[vault]\nid = "dkid0000000001"\nname = "dkid"\n',
+    "kid/note.md": "# Note\n\nUp: [[dparent:index]]\n",
+  };
+  for (const [rel, text] of Object.entries(files)) {
+    mkdirSync(join(parent, rel, ".."), { recursive: true });
+    writeFileSync(join(parent, rel), text);
+  }
+
+  test("a vault nested in this one: by its name, by a path into it — never opened on this machine", async () => {
+    const links = (await cli(["links", "index"], parent)).json.data;
+    for (const l of links) expect(l).toMatchObject({ status: "note", path: join(kid, "note.md"), vault: "dkid" });
+    // …and its links count as backlinks here: indexed when found.
+    const bl = (await cli(["backlinks", "index"], parent)).json.data.backlinks;
+    expect(bl).toContainEqual(expect.objectContaining({ from: join(kid, "note.md"), vault: "dkid" }));
+  });
+
+  test("from inside, the vault it sits in is known by name too", async () => {
+    const fresh = mkdtempSync(join(tmpdir(), "slipbox-nest-up-"));
+    cpSync(parent, fresh, { recursive: true });
+    writeFileSync(join(fresh, ".slipbox", "config.toml"), '[vault]\nid = "dparent00000002"\nname = "dparent2"\n');
+    writeFileSync(join(fresh, "kid", ".slipbox", "config.toml"), '[vault]\nid = "dkid0000000002"\nname = "dkid2"\n');
+    writeFileSync(join(fresh, "kid", "note.md"), "Up: [[dparent2:index]]\n");
+    const r = await cli(["resolve", "[[dparent2:index]]"], join(fresh, "kid"));
+    expect(r.json.data).toMatchObject({ status: "resolved", abs: join(fresh, "index.md"), vault: "dparent2" });
+  });
+});

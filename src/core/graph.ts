@@ -77,8 +77,8 @@ export type Target = Omit<ResolvedLink, keyof LinkRef>;
  * holding a path outside this one, and the links other vaults make into this one.
  */
 export interface VaultReach {
-  /** `[[vault:target]]`; null when `vault` names no vault and the link is something else. */
-  wiki(vault: string, target: string): Target | null;
+  /** `[[vault:target]]` from `g`; null when `vault` names no vault and the link is something else. */
+  wiki(vault: string, target: string, g: Graph): Target | null;
   /** The name (or folder) of the root holding an absolute path outside this vault. */
   vaultOf(abs: string): string | null;
   /** Links from other vaults' indexes into `g`, by the vault-relative path they reach. */
@@ -424,13 +424,13 @@ export class Graph {
       const r = this.index.resolveWiki(link.target, fromRel);
       if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates };
       if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
-      const byPath = this.byFilesystemPath(link.target, fromRel, true);
+      const byPath = this.byFilesystemPath(link.target, fromRel, true) ?? this.intoNested(link.target.replace(/^\/+/, ""), true);
       if (byPath) return byPath;
       const inter = VAULT_LINK.exec(link.target);
       if (inter) {
         // This vault by its own name reaches its own notes; another's is looked up.
         if (this.answersTo(inter[1]!)) return this.resolveLink({ kind: link.kind, target: inter[2]! }, fromRel);
-        const other = this.reach?.wiki(inter[1]!, inter[2]!);
+        const other = this.reach?.wiki(inter[1]!, inter[2]!, this);
         if (other) return other;
       }
       if (classify(link.target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(link.target)) {
@@ -455,6 +455,11 @@ export class Graph {
       return this.byFilesystemPath(path, fromRel, false) ?? { resolvedKind: "unresolved", path: null, candidates: [] };
     }
     const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index);
+    if ((m.kind === "file" || m.kind === "missing") && !m.target.startsWith("../")) {
+      // Into a vault nested in this one: its note, there (17.17).
+      const nested = this.intoNested(m.target, false);
+      if (nested) return nested;
+    }
     if (m.kind === "missing" && !m.target.startsWith("../")) {
       const to = this.movedTo(m.target);
       if (to) return { resolvedKind: this.notes.has(to) ? "note" : "file", path: to, candidates: [], via: "redirect" };
@@ -494,6 +499,31 @@ export class Graph {
       if (this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel] };
     }
     return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], vault: this.reach?.vaultOf(hit.abs) ?? null };
+  }
+
+  /** The vaults and repositories nested in this one: folders the walk leaves to them. */
+  nestedRoots(): string[] {
+    return this.skipped.filter((s) => s.reason === "nested vault" || s.reason === "nested repository").map((s) => s.rel);
+  }
+
+  /**
+   * A vault path that leads into a vault nested in this one (17.17): `[t](outreach/index.md)`,
+   * `[[outreach/index]]` — the note there, by its absolute path, as a path out of the root is.
+   */
+  private intoNested(rel: string, wiki: boolean): Target | null {
+    const p = posix.normalize(rel);
+    if (!this.nestedRoots().some((r) => p.startsWith(`${r}/`))) return null;
+    const abs = join(this.root, p);
+    const candidates = wiki && !/\.[A-Za-z0-9]+$/.test(p) ? [`${abs}.md`, `${abs}.markdown`] : [abs];
+    const hit = candidates.find((c) => {
+      try {
+        return statSync(c).isFile();
+      } catch {
+        return false;
+      }
+    });
+    if (!hit) return null;
+    return { resolvedKind: classify(hit, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit, candidates: [], vault: this.reach?.vaultOf(hit) ?? null };
   }
 
   /** Whether `[[name:…]]` names this vault: its name, an alias, or a previous name. */

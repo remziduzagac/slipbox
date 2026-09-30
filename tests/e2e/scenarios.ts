@@ -1041,12 +1041,12 @@ export const SCENARIOS: Scenario[] = [
       beside: {
         "app/.slipbox/version": "1\n",
         "app/design.md": "# App design\n\nIntro.\n\n## Goals\n\nShip the dome software.\n",
-        "app/links.md": "# Links\n\nBack to [[demo:home]].\n",
+        "app/links.md": "# Links\n\nBack to [[halden:home]].\n",
       },
       setup: (s) => {
         // A path link as other tools write it (17.16): the scenario's own folder is known only now.
         s.write("vault-links.md", `${s.read("vault-links.md")}- [by path](file://${s.dir}/app/design.md#goals)\n`);
-        s.cli("init", s.vault, "--name", "demo");
+        s.cli("ls"); // the demo vault, halden, as this machine sees it
         s.cli("init", join(s.dir, "app"), "--name", "e2eapp");
         s.cli("ls", "--root", join(s.dir, "app")); // the app's index: its link back to demo:home
       },
@@ -1084,15 +1084,43 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "e");
       await s.see("inner-vault inner-name");
       await s.keys("escape");
-      // Renaming the vault: e2eapp's link to demo:home follows.
+      // Renaming the vault: e2eapp's link to halden:home follows (and outreach's, nested in it).
       await leader(s, "v", "n");
-      await s.see("rename vault demo to:");
-      await s.type("demo2");
+      await s.see("rename vault halden to:");
+      await s.type("halden2");
       await s.keys("enter");
-      await s.see(/vault demo → demo2: \d+ changes? in \d+ files?/);
+      await s.see(/vault halden → halden2: \d+ changes? in \d+ files?/);
       await s.keys("enter");
-      await s.message("renamed the vault demo → demo2");
-      s.expect(readFileSync(join(s.dir, "app", "links.md"), "utf8").includes("[[demo2:home]]"), "the other vault's link follows");
+      await s.message("renamed the vault halden → halden2");
+      s.expect(readFileSync(join(s.dir, "app", "links.md"), "utf8").includes("[[halden2:home]]"), "the other vault's link follows");
+      s.expect(s.read("outreach/index.md").includes("[[halden2:home]]"), "the nested vault's link follows");
+    },
+  },
+  {
+    name: "nested vaults: the demo's outreach — in by name, back, backlinks, the explorer, two deep",
+    run: async (s) => {
+      // home's last link: [[outreach:index]], a vault nested in this one (enter: the row's link).
+      await s.keys("shift+g", "enter");
+      await s.message("vault outreach");
+      await s.status("index.md");
+      await s.see("The observatory's public programme");
+      // Two deep, by name: the school visits.
+      await s.keys("g", "g", "tab", "tab", "enter");
+      await s.message("vault outreach-school-visits");
+      await s.see("A vault nested two deep");
+      // Back, and back again: to the observatory's home.
+      await s.keys("ctrl+o");
+      await s.status("index.md");
+      await s.keys("ctrl+o");
+      await s.status("home.md");
+      await s.see("Halden Ridge Observatory");
+      // home's backlinks: from both nested vaults.
+      await leader(s, "l", "b");
+      await s.see("outreach: index.md");
+      await s.see("outreach-school-visits: index.md");
+      await s.keys("escape");
+      await leader(s, "e");
+      await s.see("outreach");
     },
   },
   {
@@ -1135,21 +1163,21 @@ export const SCENARIOS: Scenario[] = [
       startAt: "loose",
       beside: { "loose/jotting.md": "# A loose jotting\n", "loose/sub/deeper.md": "# Deeper\n" },
       setup: (s) => {
-        s.cli("init", s.vault, "--name", "demo");
+        s.cli("ls"); // halden, the demo vault: known to this machine
       },
     },
     run: async (s) => {
       await s.see(/Vaults \(\d+\)/);
-      await s.see("demo");
+      await s.see("halden");
       await s.keys("escape");
       await s.see("home vault");
       await s.see("jotting.md");
       await s.see(/\.\./);
       await s.see("sub");
       await leader(s, "v", "v");
-      await s.see("demo");
+      await s.see("halden");
       await s.keys("enter");
-      await s.message("vault demo");
+      await s.message("vault halden");
       await s.status("home.md");
     },
   },

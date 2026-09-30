@@ -317,6 +317,7 @@ describe("the vault and the tool", () => {
     expect(r.err).not.toContain("\u001b");
     rmSync(join(vault, ".slipbox", "config.toml"));
     const state = slipbox(["info", "--json"]).json.data.state;
+    mkdirSync(state, { recursive: true }); // keyed by path now the config (and its id) is gone
     writeFileSync(join(state, "session.json"), JSON.stringify({ version: 1, tabs: [{ panes: [{ path: "home.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }], active: 0 }], activeTab: 0, sidebar: true }));
     expect(slipbox(["history", "--json"]).json.data.open).toEqual([["home.md"]]);
     mkdirSync(join(vault, ".hidden"), { recursive: true });

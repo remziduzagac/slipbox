@@ -47,6 +47,27 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `software/halley/dome.lua` | Lua: `local function`, `function t.m`, long strings and comments |
 | `scratch/half-written.py`, `broken-config.json` | a syntax error in code; a data file that doesn't parse |
 | `logs/dome-log.org`, `handbook/safety-card.adoc` | formats slipbox doesn't read as notes: text files, source mode |
+| `outreach/`, `outreach/school-visits/` | vaults nested in this one: links across vaults, by name and by path (below) |
+
+## Nested vaults
+
+This vault is named `halden` (`.slipbox/config.toml`, `[vault]`), and holds two more, each with a
+`.slipbox/` of its own — boundaries, not folders of this one:
+
+- `outreach/`, the vault `outreach` (alias `public`): the public programme;
+- `outreach/school-visits/`, the vault `outreach-school-visits`, nested in that.
+
+Their notes link across all three, every way slipbox knows: by the vault's name
+(`[[halden:home]]`, `[[outreach:index]]`), with a heading and text, by an alias of the vault
+(`[[public:…]]`) and of a note (`[[outreach:open nights]]`), by a path into a nested vault
+(`[…](school-visits/index.md)`) and out of one (`../handbook/operations-handbook.md`,
+`../../handbook/safety-card.adoc`), and to a vault this machine doesn't have
+(`[[archive:2019-season]]`). To try them: open this vault, and
+
+- the explorer shows `outreach` with a vault's icon; `enter` goes into it;
+- `[[outreach:index]]` at the end of [[home]] goes there too, and `ctrl+o` comes back;
+- `space l b` on `home.md` lists the backlinks from `outreach` and `school-visits`;
+- `space v v` lists the vaults; `space n m` renames a note and fixes the links in all three.
 
 `scripts/sample-metrics.ts` measures what each note exercises (lines, longest line, tables and
 rows, fences and their languages, headings, links, wide and right-to-left characters), so a change
@@ -68,11 +89,12 @@ terminal escapes, symlinks, ignored folders, a nested vault — live in the test
 
 Some links are unresolved on purpose, so the link index always has failures to report:
 
-- `people/partners-and-names.md`: `[[visiting-rota]]`, `![[dome-diagram.png]]`,
-  `<../scratch/wrap probe copy.md>`, and the aliases `[[Kenji]]` and `[[森健二]]` (until aliases are
-  read). `[[home#No such heading]]` and `[[variable-star-survey^nope]]` will join them once a
-  reference's heading and block are checked; for now they reach their notes.
+- `people/partners-and-names.md`: `[[visiting-rota]]`, `![[dome-diagram.png]]` and
+  `<../scratch/wrap probe copy.md>`. `[[home#No such heading]]` and
+  `[[variable-star-survey^nope]]` will join them once a reference's heading and block are checked;
+  for now they reach their notes.
 - `handbook/writing-guide.md`: `../projects/dunmore-refurbishment.md`,
   `../incidents/2026-03-14-fw8-stuck.md`, `../reports/template.md` and `glossary.md` (twice).
 - `equipment/instrument-inventory.md`: `images/lyra-slit.png`, `images/tern-frame.jpg` and
   `![[missing-flat-field.png]]`, placeholders for photos not yet taken.
+- `outreach/index.md`: `[[archive:2019-season]]`, in a vault no machine has.

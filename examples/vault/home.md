@@ -28,3 +28,8 @@ there to exercise.
 - [[kenji-mori]] — our visiting astronomer
 - [[contacts]] — deliberately ambiguous: there are two, `people/contacts.md` and
   `equipment/contacts.md`, so following it asks which
+
+## Outreach
+
+- [[outreach:index]] — the public programme: a vault of its own, nested in this one (`outreach/`),
+  reached by its name

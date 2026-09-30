@@ -582,6 +582,7 @@ links across vaults, then the TUI, then renames.*
 | 17.14 | **Done.** The launcher: `~`, or a loose folder opened without a file, shows the known vaults and the folder |
 | 17.15 | **Done.** Renames across vaults (with `7.1`–`7.3`): links fixed in every reachable vault after a preview |
 | 17.16 | **Done.** Path links as other tools write them: `../` out of the root, `~/`, absolute, `file://`; wiki too |
+| 17.17 | **Done.** Nested vaults known to each other unopened; paths into them; the demo vault holds two, to test |
 
 `17.16` is for compatibility: links written by other editors and agents name files by their paths,
 not by vault names, and every form of it reaches the file, counts as a backlink, and survives a

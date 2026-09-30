@@ -62,7 +62,7 @@ describe("snapshots of the layout IR as text", () => {
     });
   }
   // The samples beyond markdown, each read by its own reader (16.11–16.13, 16.16, 16.17).
-  const others = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => /\.(toml|ya?ml|json|csv|tsv|ini|cfg|properties|env)$/.test(f) && !/broken|photometry/.test(f) && !f.startsWith(".slipbox")).sort();
+  const others = (readdirSync(SAMPLES, { recursive: true }) as string[]).filter((f) => /\.(toml|ya?ml|json|csv|tsv|ini|cfg|properties|env)$/.test(f) && !/broken|photometry/.test(f) && !f.split("/").includes(".slipbox")).sort(); // a vault's marker, nested ones too
   test("the samples beyond markdown are there", () => {
     expect(others.length).toBeGreaterThanOrEqual(6);
   });

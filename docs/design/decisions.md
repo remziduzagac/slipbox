@@ -156,8 +156,13 @@ note's own name and path:
   moved. The watcher's removal and arrival pair up the same way, in either order, within a minute. Redirects are
   state, not cache: only seeing the move teaches one.
 - **Backlinks across vaults:** a note's backlinks include the links other vaults' indexes (in the cache) make into
-  it — `[[thisvault:name]]` and paths — as fresh as each one's last indexing. A vault nested in this one, or holding
-  it, isn't counted: its paths are this vault's.
+  it — `[[thisvault:name]]` and paths — as fresh as each one's last indexing. Vaults nested in this one and the ones
+  holding it count like any other: the walk leaves their files to them.
+- **Nested vaults know each other** (`17.17`): the vaults nested in this one (the walk's boundaries) and the ones it
+  sits in (the folders above) are recorded in `vaults.json` when a link or backlink needs them, so `[[name:note]]`
+  reaches them, and their links count, without their having been opened on this machine first; a nested one with no
+  index yet is indexed then. A vault path into a nested vault — `[t](outreach/index.md)`, `[[outreach/index]]` —
+  reaches the note there, as a path out of the root does.
 
 This opens an existing Obsidian vault unchanged for the default "shortest path when possible" setting.
 

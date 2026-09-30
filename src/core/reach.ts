@@ -12,7 +12,7 @@ import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, typ
 import { pathLink } from "./links.ts";
 import { cacheDir } from "./paths.ts";
 import { type KnownVault, namesOf, readIdentity, readRegistry, vaultConfigFile } from "./registry.ts";
-import { findRoot, isInside, rootAt, type VaultLocation, vaultConfigPath } from "./vault.ts";
+import { findRoot, findVaultRoot, isInside, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "./vault.ts";
 
 function real(p: string): string {
   try {
@@ -61,9 +61,37 @@ export class Reach implements VaultReach {
     return g;
   }
 
-  wiki(vault: string, target: string): Target | null {
+  /**
+   * The vaults nested in `g` and the ones it sits in (17.17): the walk and the folders above know
+   * them, so they're recorded — linked by name at once, their links counted as backlinks — without
+   * having been opened first. A nested vault with no index yet is indexed now (they're small; an
+   * enclosing one isn't: it's used as of its last indexing).
+   */
+  private discovered = false;
+
+  discover(g: Graph): void {
+    if (this.discovered) return;
+    this.discovered = true;
+    const roots: { root: string; nested: boolean }[] = g.skipped.filter((s) => s.reason === "nested vault").map((s) => ({ root: join(g.root, s.rel), nested: true }));
+    for (let up = findVaultRoot(dirname(g.root)); up; up = findVaultRoot(dirname(up))) roots.push({ root: up, nested: false });
+    for (const { root, nested } of roots) {
+      let loc: VaultLocation;
+      try {
+        loc = rootAt(root, "vault");
+      } catch {
+        continue;
+      }
+      recordLocation(loc);
+      if (nested && !existsSync(join(cacheDir(loc), "index.json"))) this.graphAt(root)?.ensureAll();
+    }
+    this.knownCache = null;
+  }
+
+  wiki(vault: string, target: string, g: Graph): Target | null {
     const n = vault.toLowerCase();
     const here = real(this.here.root);
+    const named = () => this.known().filter((v) => (v.kind === "vault" || v.kind === "home") && real(v.path) !== here && namesOf(v).includes(n));
+    if (!named().length) this.discover(g);
     const others = this.known().filter((v) => (v.kind === "vault" || v.kind === "home") && real(v.path) !== here);
     let hits = others.filter((v) => namesOf(v).includes(n));
     let via: Target["via"];
@@ -80,10 +108,10 @@ export class Reach implements VaultReach {
     if (!existsSync(join(v.path, ".slipbox"))) {
       return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `vault "${vault}" was last seen at ${v.path} (${v.seen.slice(0, 10)})` };
     }
-    const g = this.graphAt(v.path);
-    if (!g) return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `vault "${vault}" at ${v.path} can't be read` };
-    const r = g.resolveLink({ kind: "wiki", target }, "");
-    const abs = (p: string) => join(g.root, p);
+    const there = this.graphAt(v.path);
+    if (!there) return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `vault "${vault}" at ${v.path} can't be read` };
+    const r = there.resolveLink({ kind: "wiki", target }, "");
+    const abs = (p: string) => join(there.root, p);
     const name = shown(v);
     if (r.resolvedKind === "note" || r.resolvedKind === "file") return { ...r, path: abs(r.path!), candidates: r.candidates.map(abs), vault: name, via: via ?? r.via };
     if (r.resolvedKind === "ambiguous") return { ...r, candidates: r.candidates.map(abs), vault: name };
@@ -106,6 +134,7 @@ export class Reach implements VaultReach {
   }
 
   inbound(g: Graph): Map<string, Backlink[]> {
+    this.discover(g);
     const here = real(g.root);
     const sources = this.known().filter((v) => (v.kind === "vault" || v.kind === "repo") && real(v.path) !== here && existsSync(v.path));
     const indexes = sources.map((v) => ({ v, file: join(cacheDir(v), "index.json") }));
@@ -113,8 +142,6 @@ export class Reach implements VaultReach {
     if (this.inboundCache?.stamp === stamp) return this.inboundCache.map;
     const map = new Map<string, Backlink[]>();
     for (const { v, file } of indexes) {
-      // A vault inside this one, or holding it, links by its own paths: those aren't cross-vault.
-      if (isInside(here, real(v.path)) || isInside(real(v.path), here)) continue;
       const index = readJson<{ entries?: Record<string, NoteEntry> } | null>(file, null);
       if (!index?.entries || typeof index.entries !== "object") continue;
       for (const [rel, entry] of Object.entries(index.entries)) {
