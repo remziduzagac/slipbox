@@ -60,6 +60,8 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
 | `core/vault.ts` | 1.1, 1.10, 0.12, 17.1 | a file's root: a vault, a repository, or the home vault; `init` |
 | `core/registry.ts` | 17.2–17.6 | a vault's identity, the home vault, the machine's vaults, storage keys, names |
+| `core/reach.ts` | 17.8–17.11 | other vaults: `[[vault:note]]`, paths out of the root, their backlinks here |
+| `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
 | `core/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
 | `core/wikilink.ts` | 1.3 | micromark tokenizer for `[[link]]` and `![[embed]]` |
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
@@ -157,6 +159,7 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | clipboard fallback (no OSC 52 or clipboard tool) | `$XDG_STATE_HOME/slipbox/<key>/clipboard.txt` |
 | scratch | `$XDG_STATE_HOME/slipbox/<key>/scratch.md`, or in the vault by config |
 | staleness | `$XDG_STATE_HOME/slipbox/<key>/dirty/<pid>.json` |
+| redirects (moves seen: `17.12`) | `$XDG_STATE_HOME/slipbox/<key>/redirects.json` |
 
 `<key>` is the vault's id, else `<basename>-<sha256(realpath)[:12]>` (`docs/design/decisions.md`, `0.10`). The home
 vault's session is per loose folder: `sessions/<basename>-<hash>.json`.

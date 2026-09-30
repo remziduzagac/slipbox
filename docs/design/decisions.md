@@ -13,7 +13,7 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | --- | --- | --- | --- |
 | config | `$XDG_CONFIG_HOME/slipbox/config.toml`, then the vault's | user and vault settings | no |
 | cache | `$XDG_CACHE_HOME/slipbox/<key>/` | the persisted link index | yes, rebuilt on demand |
-| state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness | loses your place |
+| state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness, redirects | loses your place |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/vaults.json` | the vaults this machine has seen | re-added on open |
 | data | `$XDG_DATA_HOME/slipbox/home/` | the home vault's `.slipbox/`: its config | a new id: loses state |
 
@@ -143,6 +143,12 @@ note's own name and path:
   the name (several: ambiguous); for a vault, `[vault] previous_names`, counted only while that vault's config still
   says so under the same id — a new vault that took an old name can't take its links.
 - **Paths out of the root:** `[t](../other/x.md)` reaches the file when it exists, in whichever root holds it.
+- **Moves** (`17.12`), last: a path, `[[dir/old]]` or `[[old]]` that reaches nothing follows the vault's redirects
+  (`redirects.json` in its state), chains included, to where the note is now (`via: "redirect"`). A move is detected
+  by content, whoever made it (slipbox, `mv`, git, a file manager): the index keeps each note's content hash, and a
+  note gone from one path whose text turns up at exactly one new path — and no other gone note had that text — was
+  moved. The watcher's removal and arrival pair up the same way, in either order, within a minute. Redirects are
+  state, not cache: only seeing the move teaches one.
 - **Backlinks across vaults:** a note's backlinks include the links other vaults' indexes (in the cache) make into
   it — `[[thisvault:name]]` and paths — as fresh as each one's last indexing. A vault nested in this one, or holding
   it, isn't counted: its paths are this vault's.

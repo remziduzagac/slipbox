@@ -13,7 +13,8 @@ import { ensureDir, readJson, readText, writeJson } from "./fsutil.ts";
 import { LinkIndex, type MdLinkTarget, normKey, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
-import { cacheDir } from "./paths.ts";
+import { cacheDir, stateDir } from "./paths.ts";
+import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
 import type { VaultLocation } from "./vault.ts";
@@ -45,6 +46,8 @@ export interface NoteEntry {
   aliases: string[];
   /** Frontmatter `previous_names`: names it had; a fallback only (17.7). */
   previous: string[];
+  /** Its content hash: a note that vanished and turns up elsewhere with it was moved (17.12). */
+  hash: string;
   mtimeMs: number;
   size: number;
   flags: string[];
@@ -100,8 +103,8 @@ export interface Backlink {
   alias: string | null;
 }
 
-/** Bumped when what a note's entry holds changes: 4, aliases and previous names (17.7). */
-const INDEX_VERSION = 4;
+/** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
+const INDEX_VERSION = 5;
 
 interface IndexFile {
   version: number;
@@ -184,6 +187,11 @@ export class Graph {
       }
     }
     this.index = new LinkIndex(this.notes.keys());
+    // Notes the index had that the walk no longer finds: moved, if one new file has the same text.
+    if (this.useCache) {
+      const vanished = Object.values(old).filter((e) => !this.notes.has(e.rel));
+      if (vanished.length) this.detectMoves(vanished, walk.files.filter((f) => !old[f.rel]));
+    }
     this.backlinkCache = null;
     this.nameCache = null;
     this.cacheDirty = Object.keys(old).length !== reused;
@@ -273,12 +281,70 @@ export class Graph {
     }
   }
 
+  // -------------------------------------------------------------------------------------------
+  // Moves (17.12)
+
+  private redirectStore: Redirects | null | undefined;
+
+  /** The vault's redirects, from its state; none for a loose folder (never indexed). */
+  get redirects(): Redirects | null {
+    if (this.redirectStore === undefined) this.redirectStore = this.loc.mode === "home" ? null : new Redirects(join(stateDir(this.loc), "redirects.json"));
+    return this.redirectStore;
+  }
+
+  /**
+   * A note is moved when its text is gone from one path and turns up at exactly one new path, and
+   * no other vanished note had the same text (an empty template made twice is no move).
+   */
+  private detectMoves(vanished: NoteEntry[], fresh: NoteFile[]): void {
+    const hashed = vanished.filter((e) => e.hash && e.size > 0);
+    if (!hashed.length || !fresh.length) return;
+    const sizes = new Set(hashed.map((e) => e.size));
+    const freshHash = new Map<string, string[]>();
+    for (const f of fresh) {
+      if (!sizes.has(f.size)) continue;
+      let h: string;
+      try {
+        h = contentHash(readText(f.abs).text);
+      } catch {
+        continue;
+      }
+      freshHash.set(h, [...(freshHash.get(h) ?? []), f.rel]);
+    }
+    const moves: [string, string][] = [];
+    for (const e of hashed) {
+      const to = freshHash.get(e.hash);
+      if (to?.length === 1 && hashed.filter((x) => x.hash === e.hash).length === 1) moves.push([e.rel, to[0]!]);
+    }
+    if (moves.length) this.redirects?.add(moves);
+  }
+
+  /** Notes that went (removed) and came (added) lately, by hash: a watcher sees a move as both. */
+  private readonly went = new Map<string, { rel: string; at: number }>();
+  private readonly came = new Map<string, { rel: string; at: number }>();
+
+  private pairMove(hash: string, rel: string, side: "went" | "came"): void {
+    if (!hash || this.loc.mode === "home") return;
+    const now = Date.now();
+    for (const m of [this.went, this.came]) for (const [h, v] of m) if (now - v.at > 60_000) m.delete(h);
+    const other = side === "went" ? this.came : this.went;
+    const match = other.get(hash);
+    if (match && match.rel !== rel) {
+      other.delete(hash);
+      this.redirects?.add(side === "went" ? [[rel, match.rel]] : [[match.rel, rel]]);
+      return;
+    }
+    (side === "went" ? this.went : this.came).set(hash, { rel, at: now });
+  }
+
   /** Incremental single-file update (1.8). Returns false when the file is not part of the vault. */
   updateFile(rel: string, file: NoteFile): boolean {
     const isNew = !this.notes.has(rel);
     this.unparsed.delete(rel);
     this.cacheDirty = true;
-    this.notes.set(rel, extractNote(file));
+    const entry = extractNote(file);
+    this.notes.set(rel, entry);
+    if (isNew && entry.size > 0) this.pairMove(entry.hash, rel, "came");
     if (isNew) this.index.add(rel);
     this.backlinkCache = null;
     this.nameCache = null;
@@ -319,7 +385,9 @@ export class Graph {
 
   removeFile(rel: string): void {
     this.unparsed.delete(rel);
+    const gone = this.notes.get(rel);
     if (!this.notes.delete(rel)) return;
+    if (gone && gone.size > 0) this.pairMove(gone.hash, rel, "went");
     this.cacheDirty = true;
     this.index.remove(rel);
     this.backlinkCache = null;
@@ -375,9 +443,15 @@ export class Graph {
       }
       const named = this.byOtherName(link.target, fromRel);
       if (named) return named;
+      const moved = this.movedWiki(link.target);
+      if (moved) return moved;
       return { resolvedKind: "unresolved", path: null, candidates: [] };
     }
     const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index);
+    if (m.kind === "missing" && !m.target.startsWith("../")) {
+      const to = this.movedTo(m.target);
+      if (to) return { resolvedKind: this.notes.has(to) ? "note" : "file", path: to, candidates: [], via: "redirect" };
+    }
     if (m.kind === "missing" && m.target.startsWith("../")) {
       // A path out of this root (17.9): the file wherever it is, in whichever root holds it.
       const abs = join(this.root, m.target);
@@ -444,6 +518,26 @@ export class Graph {
     const prev = names.previous.get(normKey(stem));
     if (prev?.length === 1) return { resolvedKind: "note", path: prev[0]!, candidates: prev, via: "previous-name" };
     if (prev && prev.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: [...prev].sort(), via: "previous-name" };
+    return null;
+  }
+
+  /** Where a path went (17.12), when that's a note or file of the vault now. */
+  movedTo(rel: string): string | null {
+    const to = this.redirects?.follow(rel);
+    return to && (this.notes.has(to) || this.known(to)) ? to : null;
+  }
+
+  /** `[[dir/old]]` or `[[old]]` whose note moved: by its old path, else its old name when unique. */
+  private movedWiki(target: string): Target | null {
+    if (!this.redirects) return null;
+    const t = target.trim().replace(/^\/+/, "");
+    const withExt = /\.(md|markdown)$/i.test(t) ? [t] : [`${t}.md`, `${t}.markdown`];
+    const byPath = t.includes("/") ? withExt.map((p) => this.movedTo(p)).find((p) => p) : null;
+    if (byPath) return { resolvedKind: "note", path: byPath, candidates: [byPath], via: "redirect" };
+    if (t.includes("/")) return null;
+    const to = [...new Set(this.redirects.named(t).map((p) => this.movedTo(p)).filter((p): p is string => !!p))];
+    if (to.length === 1) return { resolvedKind: "note", path: to[0]!, candidates: to, via: "redirect" };
+    if (to.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: to.sort(), via: "redirect" };
     return null;
   }
 
@@ -602,7 +696,7 @@ function isUnreadable(e: NoteEntry): boolean {
 }
 
 function stub(f: NoteFile): NoteEntry {
-  return { rel: f.rel, title: basename(f.rel).replace(/\.(md|markdown)$/i, ""), headings: [], links: [], tags: [], aliases: [], previous: [], mtimeMs: f.mtimeMs, size: f.size, flags: ["unparsed"] };
+  return { rel: f.rel, title: basename(f.rel).replace(/\.(md|markdown)$/i, ""), headings: [], links: [], tags: [], aliases: [], previous: [], hash: "", mtimeMs: f.mtimeMs, size: f.size, flags: ["unparsed"] };
 }
 
 /** `[[vault:name]]`: a vault's name, a colon, the rest (17.8). */
@@ -681,6 +775,7 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
     tags,
     aliases: names(fm?.aliases ?? fm?.alias),
     previous: names(fm?.previous_names),
+    hash: contentHash(text),
     mtimeMs: file.mtimeMs,
     size: file.size,
     flags,

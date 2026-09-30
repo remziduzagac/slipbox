@@ -703,3 +703,73 @@ describe("links across vaults: aliases, previous names, [[vault:note]], paths (1
     await cli(["ls"], app);
   });
 });
+
+describe("moves: detected by content, kept as redirects (17.12)", () => {
+  const io = (cwd: string) => {
+    const out: string[] = [];
+    return { io: { out: (s: string) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env }, out };
+  };
+  const cli = async (args: string[], cwd: string) => {
+    const r = io(cwd);
+    const code = await runCli([...args, "--json"], r.io);
+    return { code, json: JSON.parse(r.out.join("")) };
+  };
+  const vault = (files: Record<string, string>) => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-moves-"));
+    mkdirSync(join(dir, ".slipbox"));
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(dir, rel, ".."), { recursive: true });
+      writeFileSync(join(dir, rel), text);
+    }
+    return dir;
+  };
+
+  test("a note moved outside slipbox (mv) is found again: path links, [[dir/old]] and [[old]] follow it", async () => {
+    const { renameSync } = await import("node:fs");
+    const dir = vault({ "notes/plan.md": "# The plan\n\nSteps.\n", "index.md": "[p](notes/plan.md) [[notes/plan]] [[plan]]\n" });
+    await cli(["ls"], dir); // indexed: plan.md's text is known
+    mkdirSync(join(dir, "archive"));
+    renameSync(join(dir, "notes", "plan.md"), join(dir, "archive", "old-plan.md"));
+    const links = (await cli(["links", "index"], dir)).json.data;
+    expect(links.map((l: { status: string; path: string; via: string }) => [l.status, l.path, l.via])).toEqual([
+      ["note", "archive/old-plan.md", "redirect"],
+      ["note", "archive/old-plan.md", "redirect"],
+      ["note", "archive/old-plan.md", "redirect"],
+    ]);
+    const r = await cli(["resolve", "[p](notes/plan.md)", "--from", "index.md"], dir);
+    expect(r.json.data.path).toBe("archive/old-plan.md");
+    expect(r.json.warnings.join()).toContain("by a redirect");
+    // It counts as a backlink of where the note is now.
+    expect((await cli(["backlinks", "archive/old-plan.md"], dir)).json.data.backlinks).toHaveLength(3);
+    // Moved again: the chain is followed.
+    renameSync(join(dir, "archive", "old-plan.md"), join(dir, "plan-final.md"));
+    expect((await cli(["resolve", "[p](notes/plan.md)", "--from", "index.md"], dir)).json.data.path).toBe("plan-final.md");
+  });
+
+  test("two notes with the same text gone at once: no move is guessed", async () => {
+    const { renameSync } = await import("node:fs");
+    const dir = vault({ "a.md": "# same\n", "b.md": "# same\n", "index.md": "[a](a.md)\n" });
+    await cli(["ls"], dir);
+    // One moved, one deleted: which went where can't be told.
+    renameSync(join(dir, "a.md"), join(dir, "c.md"));
+    rmSync(join(dir, "b.md"));
+    expect((await cli(["resolve", "[a](a.md)", "--from", "index.md"], dir)).code).toBe(3);
+  });
+
+  test("the watcher's removal and arrival pair into a move, in either order", () => {
+    const dir = vault({ "a.md": "# A text\n", "b.md": "# B text\n" });
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const file = (rel: string) => ({ rel, abs: join(dir, rel), size: statSync(join(dir, rel)).size, mtimeMs: statSync(join(dir, rel)).mtimeMs });
+    writeFileSync(join(dir, "a2.md"), "# A text\n");
+    rmSync(join(dir, "a.md"));
+    g.removeFile("a.md");
+    g.updateFile("a2.md", file("a2.md"));
+    expect(g.redirects!.follow("a.md")).toBe("a2.md");
+    writeFileSync(join(dir, "b2.md"), "# B text\n");
+    g.updateFile("b2.md", file("b2.md")); // arrived first
+    rmSync(join(dir, "b.md"));
+    g.removeFile("b.md");
+    expect(g.redirects!.follow("b.md")).toBe("b2.md");
+    expect(g.resolveLink({ kind: "markdown", target: "b.md" }, "a2.md")).toMatchObject({ resolvedKind: "note", path: "b2.md", via: "redirect" });
+  });
+});

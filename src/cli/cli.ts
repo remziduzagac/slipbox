@@ -436,6 +436,7 @@ const HANDLERS: Record<string, Handler> = {
       status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
       path = status === "resolved" ? md.path : null;
       candidates = md.candidates;
+      found = md;
     } else if (!bracketed && /^[a-z][a-z0-9+.-]*:\S*$/i.test(inner) && !noteNamed && !vaultNamed(inner.slice(0, inner.indexOf(":"))).length) {
       status = "external";
       path = inner;

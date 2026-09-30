@@ -307,7 +307,8 @@ Each kind of link does something different when followed:
 | attachment `![[x.png]]` | copies the path; images are phase 6 |
 | footnote `[1]` | jumps to the definition |
 
-A link reached by a note's alias or previous name follows too, and says so. The backlinks list
+A link reached by a note's alias or previous name, or through a redirect (the note moved: `17.12`),
+follows too, and says so. The backlinks list
 shows another vault's link with that vault's name: `app: design/plan.md`.
 
 `enter` follows the link under the cursor, or else the row's first link. In source mode and inside
