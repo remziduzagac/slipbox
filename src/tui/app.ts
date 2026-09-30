@@ -53,9 +53,9 @@ import {
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
 import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
-import { type Applied, applyPlan, planFolderMove, planNoteRename, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
+import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
-import { type KnownVault, readIdentity, readRegistry, vaultConfigFile } from "../core/registry.ts";
+import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
 import { gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { sanitize } from "../core/sanitize.ts";
@@ -1984,6 +1984,7 @@ export class App {
     actions.push(["rename", item.vault ? "Rename the folder" : "Rename"]);
     if (item.vault) actions.push(["rename_vault", "Rename the vault"]);
     actions.push(["move", "Move to…"], ["copy", "Copy"], ["cut", "Cut"]);
+    if (item.dir) actions.push(item.vault ? ["unmake_vault", "Make it a plain folder"] : ["make_vault", "Make it a vault"]);
     if (this.fileClip) actions.push(["paste", this.fileClip.mode === "cut" ? `Paste ${posix.basename(this.fileClip.rel)} here (move)` : `Paste a copy of ${posix.basename(this.fileClip.rel)} here`]);
     actions.push(["delete", item.vault ? "Delete the vault" : "Delete"]);
     const items: ListItem[] = actions.map(([action, label]) => {
@@ -2006,6 +2007,25 @@ export class App {
         this.explorerAction(it.data as string);
       },
     });
+  }
+
+  /**
+   * A folder made a vault of its own (18.11): its name asked (a distinct one suggested), then the
+   * preview of the links that would stop reaching across, fixed. A loose folder's: the offer
+   * `vault.init` makes (committed or private), and into it.
+   */
+  makeVaultItem(item: ExplorerItem): void {
+    const abs = join(this.loc.root, item.rel);
+    if (this.loc.mode !== "vault") return this.vaultChoices(abs, false);
+    this.prompt(`make ${item.rel}/ a vault named: `, (name) => {
+      if (name.trim()) this.previewRename(() => planMakeVault(this.graph, item.rel, name.trim()));
+    });
+    if (this.overlay?.kind === "prompt") this.overlay.text = suggestVaultName(abs, this.loc.name);
+  }
+
+  /** A vault nested here made a plain folder of this one (18.11): the preview, then done. */
+  unmakeVaultItem(item: ExplorerItem): void {
+    this.previewRename(() => planUnmakeVault(this.graph, item.rel));
   }
 
   /** Unsaved notes among `rel` and what's in it: a file operation would leave them behind. */
@@ -2989,6 +3009,12 @@ export class App {
       }
       case "paste":
         return this.pasteItem();
+      case "make_vault":
+      case "unmake_vault": {
+        const item = this.explorerItem();
+        if (action === "make_vault") return item?.dir && !item.vault ? this.makeVaultItem(item) : this.message("info", item?.vault ? `${item.rel} is a vault already — shift+v makes it a plain folder` : "make a vault: select a folder first");
+        return item?.vault ? this.unmakeVaultItem(item) : this.message("info", "make a plain folder: select a vault (its folder has its own icon)");
+      }
       case "menu":
         return this.openItemMenu();
       case "restore":
@@ -4920,7 +4946,18 @@ export class App {
       ...plan.files.flatMap((f) => f.edits.map((e) => ({ label: `${f.shown}:${e.line}`, detail: `${e.before.trim()}  →  ${e.after.trim()}`, data: plan }))),
     ];
     if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "every link reaches its note by its name now" : "no links to change", data: plan });
-    const what = plan.kind === "note" ? `${plan.from} → ${plan.to}` : plan.kind === "folder" ? `${plan.from}/ → ${plan.to}/` : plan.kind === "vault" ? `vault ${plan.from} → ${plan.to}` : "relink";
+    const what =
+      plan.kind === "note"
+        ? `${plan.from} → ${plan.to}`
+        : plan.kind === "folder"
+          ? `${plan.from}/ → ${plan.to}/`
+          : plan.kind === "vault"
+            ? `vault ${plan.from} → ${plan.to}`
+            : plan.kind === "make-vault"
+              ? `${plan.from}/ → the vault ${plan.to}`
+              : plan.kind === "unmake-vault"
+                ? `the vault ${plan.from}/ → a folder of ${plan.to}`
+                : "relink";
     this.openList({
       title: `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"} — enter: do it, esc: cancel`,
       items,
@@ -4968,6 +5005,13 @@ export class App {
       const b = byAbs(abs);
       if (b && !moved.has(b.abs)) this.reloadBuffer(b);
     }
+    if (plan.makeVault || plan.unmakeVault) {
+      // A vault made or unmade (18.11): the walk changed where it was (applyPlan rebuilt the index);
+      // the machine's vaults, as reached from here, too.
+      this.reach = new Reach(this.loc);
+      this.graph.reach = this.reach;
+      if (this.live) this.indexInBackground();
+    }
     if (plan.vaults?.length) {
       // Vaults moved with a vault's folder (18.7): the machine's list, and this vault's own walk.
       for (const [, to] of plan.vaults) recordLocation(rootAt(to));
@@ -4987,6 +5031,7 @@ export class App {
     }
     this.afterFileOp();
     if (plan.move) this.selectInExplorer(relative(this.loc.root, plan.move.to));
+    if (plan.makeVault || plan.unmakeVault) this.selectInExplorer(plan.from);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     const what =
       plan.kind === "note"
@@ -4995,7 +5040,11 @@ export class App {
           ? `moved ${plan.from}/ → ${plan.to}/`
           : plan.kind === "vault"
             ? `renamed the vault ${plan.from} → ${plan.to}`
-            : "relinked";
+            : plan.kind === "make-vault"
+              ? `made ${plan.from}/ the vault ${plan.to}`
+              : plan.kind === "unmake-vault"
+                ? `made ${plan.from}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash)`
+                : "relinked";
     this.message("info", `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"}`);
   }
 

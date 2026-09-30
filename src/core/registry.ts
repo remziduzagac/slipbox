@@ -176,6 +176,16 @@ export function recordVault(v: Omit<KnownVault, "seen">, now = new Date()): void
   } catch {}
 }
 
+/** Forget the vault at `root` (18.11: made a plain folder): the machine no longer lists it. */
+export function forgetVault(root: string): void {
+  const list = readRegistry();
+  const rest = list.filter((v) => real(v.path) !== real(root));
+  if (rest.length === list.length) return;
+  try {
+    writeJson(registryFile(), { version: 1, vaults: rest } satisfies RegistryFile);
+  } catch {}
+}
+
 /** Every name a vault answers to, lower-cased: its name and aliases. */
 export function namesOf(v: Pick<KnownVault, "name" | "aliases">): string[] {
   return [v.name, ...v.aliases].filter((n): n is string => !!n).map((n) => n.toLowerCase());

@@ -83,6 +83,7 @@ These churn freely before 1.0:
 | `ls` | `[{path, title, size, mtime, tags, links}]`; `--files` adds `[{path, group, format, size, mtime}]` |
 | `outline <note>` | `{path, headings[{depth, text, slug, line}]}` |
 | `init [dir]` | `{root, created, identified, id, name, excluded}` — `--name N`, `--private`; exit 5: name in use |
+| `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
 | `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
 | `vaults` | `[{key, id, kind, name, aliases, previous_names, path, seen, exists}]`, newest first |
 | `mv`, `rename-vault`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, written}` (see Renames) |
@@ -285,6 +286,18 @@ refused when something is there now. `slipbox cp` copies a note, file or folder,
 `previous_names`, and every `[[old:…]]` rewritten, here and in the vaults linking into it. `slipbox relink [note]`
 rewrites the links of a note (or every note) that reach their note only by a previous name or a redirect, to its name
 or path now. Both take `--dry-run`.
+
+**A folder made a vault, and back** (`18.11`): `slipbox init <folder>` on a folder inside a vault makes it a vault of
+its own — its `.slipbox/`, a distinct name suggested unless `--name` — and first rewrites the links that would stop
+reaching across the new boundary: the vault's links into it by name or a partial path become `[[name:…]]` (by its
+exact path, or any filesystem path, they still reach it); its notes' links out by name or a vault path become
+`[[parent:…]]`, from the root `/…` a relative path; its own paths from the parent's root, from its own; other vaults'
+`[[parent:…]]` into it, `[[name:…]]`. `slipbox deinit <folder>` undoes it for a vault nested in another: every
+`[[its-name:…]]` — the parent's, its own, other vaults' — becomes a name in the parent (a path where two notes would
+share the name), `parent:`-prefixed from other vaults; its paths from its root, from the parent's; its `.slipbox/`
+goes to the parent's trash (`trash restore` makes it a vault again, the links as they are then), and the machine
+forgets it. Both take `--dry-run` and answer like `mv`, `init` adding the vault's `root`, `name` and `id`. Every plan's
+writes into another vault's files reach that vault's index at once, as if it had been opened.
 
 ## Capture and the scratch (plans `8.1`–`8.4`)
 

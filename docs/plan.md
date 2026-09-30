@@ -615,6 +615,8 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | 18.8 | **Done.** The move picker is a tree: the explorer's folds, `←` / `→` fold, typing filters under the parents |
 | 18.9 | **Done.** The selected row's buttons become one, `…` (and `.`): a menu of its actions, each with its key |
 | 18.10 | **Done.** Questions float in a window: the answer typed, OK / Cancel; a yes-or-no's Yes / No (`y`, `n`) |
+| 18.11 | **Done.** `v` makes a folder a vault, `shift+v` a nested vault a plain folder; `init <folder>`, `deinit` |
+| 18.12 | **Done.** A plan's writes into another vault's files reach its index at once (a second rename finds them) |
 
 ## Deferred — in the design, not in this breakdown
 

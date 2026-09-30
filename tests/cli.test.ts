@@ -315,6 +315,10 @@ describe("the vault and the tool", () => {
     // …and moved as a folder of this vault: the path link fixed, the name link left (still right).
     expect(slipbox(["mv", "inner", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "folder", from: "inner", to: "box" });
     expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md) and [[fileops-inner:note]]\n");
+    // deinit: a plain folder of this vault again (18.11) — [[fileops-inner:note]] a name here now.
+    expect(slipbox(["deinit", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "unmake-vault", from: "box", to: "fileops" });
+    expect(existsSync(join(dir, "box", ".slipbox"))).toBe(false);
+    expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md) and [[note]]\n");
   });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);

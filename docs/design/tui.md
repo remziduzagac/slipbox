@@ -345,15 +345,21 @@ The explorer makes and changes files by keys and by buttons, on the selected row
 - **The selected row's menu:** while the explorer has focus, the selected row has one button at its end, under the
   title's buttons: `…` (Nerd: three dots; ascii `...`). It opens a menu hanging from it (`.` opens it by key, from the
   row), titled with the row's name, each entry with its key in the explorer, which picks it there too: for a folder
-  "New note here" and "New folder here", then "Rename", "Move to…", "Copy", "Cut", "Paste … here" (when something is
-  copied or cut), "Delete". `enter` or a click does the selected one; `esc` or a click outside closes it. A name that
-  doesn't fit beside the button widens the tree: the explorer's horizontal scrollbar appears, and scrolled to its end
-  the name ends just before it.
+  "New note here" and "New folder here", then "Rename", "Move to…", "Copy", "Cut", for a folder "Make it a vault" (a
+  vault's: "Make it a plain folder"), "Paste … here" (when something is copied or cut), "Delete". `enter` or a click
+  does the selected one; `esc` or a click outside closes it. A name that doesn't fit beside the button widens the
+  tree: the explorer's horizontal scrollbar appears, and scrolled to its end the name ends just before it.
 - **A nested vault's row** (`18.7`) is a folder of this vault: `r` renames its folder and `m` moves it — links into it
   by path fixed here and in the vaults that reach it, its own relative links out fixed, its id and name kept (it's
   recorded at its new place); `d` deletes it whole, saying so ("the vault outreach (outreach/, 12 notes)") with the
   links into it — by path or by its name — that break. Its menu has "Rename the folder" and, beside it, "Rename the
   vault" (`shift+r`, `R` in the menu): `rename-vault` for it, its folder left where it is.
+- **A folder made a vault, and back** (`18.11`): `v` on a folder asks for the new vault's name (a distinct one typed:
+  `halden-logs` for `logs/`), then previews the links that would stop reaching across the new boundary, rewritten —
+  `[[observing-log-2026]]` in the parent becomes `[[halden-logs:observing-log-2026]]`, and so on, as `slipbox init
+  <folder>` does (`docs/design/cli.md`); enter makes it. `shift+v` on a nested vault's row previews the way back —
+  its `[[name:…]]` links become names here — and enter puts its `.slipbox/` in the trash. The row turns into a vault's
+  or a folder's, selected. In a loose folder, `v` offers to make the folder a vault of its own and goes into it.
 
 The current note has `space n d` (`:delete`), `space n m` (rename or move by path), and the palette's "Copy the
 note". What they do is the CLI's `rm`, `mv` and `cp` (`docs/design/cli.md`).

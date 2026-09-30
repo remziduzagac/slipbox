@@ -119,6 +119,19 @@ export function trashPath(g: Graph, v: Keyed, rel: string, now = new Date()): Tr
 }
 
 /**
+ * A vault made a plain folder (18.11): its `.slipbox/` into the trash of the vault holding it,
+ * restored like anything deleted — which makes it a vault again.
+ */
+export function trashVaultMarker(v: Keyed, parentRoot: string, vaultRoot: string, now = new Date()): TrashItem {
+  const abs = join(vaultRoot, ".slipbox");
+  const id = `${now.toISOString().replace(/[:.]/g, "-")}-${randomBytes(3).toString("hex")}`;
+  move(abs, join(trashDir(v), id, ".slipbox"));
+  const item: TrashItem = { id, abs, shown: `${relative(parentRoot, vaultRoot)}/.slipbox`, dir: true, at: now.toISOString() };
+  saveTrash(v, [item, ...listTrash(v)]);
+  return item;
+}
+
+/**
  * Put a deleted note, file or folder back where it was (18.4): `which` is its id, or its path
  * (the latest of that path). Refused when something is there now.
  */

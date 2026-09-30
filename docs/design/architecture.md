@@ -62,7 +62,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/registry.ts` | 17.2–17.6 | a vault's identity, the home vault, the machine's vaults, storage keys, names |
 | `core/reach.ts` | 17.8–17.11 | other vaults: `[[vault:note]]`, paths out of the root, their backlinks here |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
-| `core/files.ts` | 18.4, 18.5 | delete to the vault's trash and restore; copy |
+| `core/files.ts` | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
 | `core/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
 | `core/wikilink.ts` | 1.3 | micromark tokenizer for `[[link]]` and `![[embed]]` |
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |

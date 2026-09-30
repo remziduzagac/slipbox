@@ -160,6 +160,10 @@ note's own name and path:
   reaches them, and their links count, without their having been opened on this machine first; a nested one with no
   index yet is indexed then. A vault path into a nested vault — `[t](outreach/index.md)`, `[[outreach/index]]` —
   reaches the note there, as a path out of the root does.
+- **Making and unmaking a vault** (`18.11`): a folder made a vault, or a nested vault made a plain folder, keeps every
+  link reaching what it reached — only the ones that would stop are rewritten, each as close to how it was written as
+  still works (a name stays a name, with the vault's name before it across the boundary; a name two notes would share
+  once merged becomes a path). Paths are left alone: they reach their file wherever the roots are.
 - **Same-named vaults:** several vaults a name reaches are ambiguous — unless exactly one of them is nested in the
   linking vault or holds it: that one is meant. Two clones of a repo holding a vault each reach their own, and a link
   from one isn't a backlink in the other.

@@ -892,6 +892,19 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
     expect(read(app, "self.md")).toBe("[[rapp2:links]]\n");
   });
 
+  test("a rename's writes into another vault reach its index at once: a second rename right after fixes them again", async () => {
+    const notes = vault({ "plan.md": "# plan\n" });
+    const app = vault({ "links.md": "[[rnotes3:plan]]\n" });
+    await cli(["init", notes, "--name", "rnotes3"], notes);
+    await cli(["init", app, "--name", "rapp3"], app);
+    await cli(["ls"], app);
+    await cli(["mv", "plan", "roadmap"], notes);
+    expect(read(app, "links.md")).toBe("[[rnotes3:roadmap]]\n");
+    // No opening of the other vault in between: its index already has the new link.
+    await cli(["mv", "roadmap", "vision"], notes);
+    expect(read(app, "links.md")).toBe("[[rnotes3:vision]]\n");
+  });
+
   test("relink: links that reach a note by an old name or a move are rewritten to where it is now", async () => {
     const { renameSync } = await import("node:fs");
     const dir = vault({ "notes/plan.md": "# Plan\n", "index.md": "[p](notes/plan.md) [[notes/plan]]\n" });
@@ -1145,5 +1158,87 @@ describe("moving a vault's folder (18.7)", () => {
     expect(locateVault({ path: join(parent, "shelf", "box") })).toMatchObject({ id: "vmbox00000001", name: "vmbox" });
     // The parent no longer walks around it there, nor keeps its files as its own.
     expect(g.notes.has("shelf/box/index.md")).toBe(false);
+  });
+});
+
+describe("a folder made a vault, and a vault made a plain folder again (18.11)", () => {
+  const cli = async (args: string[], cwd: string) => {
+    const out: string[] = [];
+    const code = await runCli([...args, "--json"], { out: (s: string) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return { code, json: JSON.parse(out.join("")) };
+  };
+  const base = mkdtempSync(join(tmpdir(), "slipbox-make-"));
+  const parent = join(base, "parent");
+  const other = join(base, "other");
+  const files: Record<string, string> = {
+    "parent/.slipbox/config.toml": '[vault]\nid = "mkparent000001"\nname = "mkparent"\n',
+    "parent/home.md": "# Home\n\n[[alpha]] [[proj/beta]] [[deep/gamma]] [b](proj/beta.md) [c](/proj/beta.md) [[mkparent:alpha]] ![[pic.png]]\n",
+    "parent/proj/alpha.md": "# Alpha\n\n[[home]] [[proj/beta]] [[beta]] [h](/home.md) [h2](../home.md) [[mkparent:home]]\n\n[[/proj/beta]] [[mkparent:beta]] [r](/proj/beta.md) [[deep/gamma]]\n",
+    "parent/proj/beta.md": "# Beta\n\n[[alpha]]\n",
+    "parent/proj/deep/gamma.md": "# Gamma\n\n[up](../alpha.md)\n",
+    "parent/proj/pic.png": "png",
+    "other/.slipbox/config.toml": '[vault]\nid = "mkother000001"\nname = "mkother"\n',
+    "other/index.md": "# Other\n\n[[mkparent:alpha]] [[mkparent:home]]\n",
+  };
+  for (const [rel, text] of Object.entries(files)) {
+    mkdirSync(join(base, rel, ".."), { recursive: true });
+    writeFileSync(join(base, rel), text);
+  }
+  const read = (rel: string) => readFileSync(join(base, rel), "utf8");
+  /** Every link's file, from each linking file, as absolute paths: what resolves, wherever it's indexed. */
+  const reached = async (roots: string[]) => {
+    const out: Record<string, string[]> = {};
+    for (const root of roots) {
+      for (const l of (await cli(["links", "--all"], root)).json.data as { from: string; status: string; path: string | null }[]) {
+        const from = join(root, l.from);
+        if (l.status !== "note" && l.status !== "file") continue;
+        (out[from] ??= []).push(l.path!.startsWith("/") ? l.path! : join(root, l.path!));
+      }
+    }
+    for (const k of Object.keys(out)) out[k]!.sort();
+    return out;
+  };
+
+  test("made a vault: what would stop reaching across is rewritten, the rest left; made a folder again: it all reaches the same", async () => {
+    await cli(["backlinks", "index"], other); // indexed and known, as when opened
+    await cli(["links", "home"], parent);
+    const before = await reached([parent]);
+    const dry = (await cli(["init", "proj", "--name", "mkproj", "--dry-run"], parent)).json;
+    expect(dry.data).toMatchObject({ kind: "make-vault", from: "proj", to: "mkproj", dryRun: true });
+    expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(false);
+    const made = (await cli(["init", "proj", "--name", "mkproj"], parent)).json;
+    expect(made.ok).toBe(true);
+    expect(existsSync(join(parent, "proj", ".slipbox", "config.toml"))).toBe(true);
+    // Into it: by name and by a partial path, its name; exact paths left.
+    expect(read("parent/home.md")).toBe("# Home\n\n[[mkproj:alpha]] [[proj/beta]] [[mkproj:deep/gamma]] [b](proj/beta.md) [c](/proj/beta.md) [[mkproj:alpha]] ![[mkproj:pic.png]]\n");
+    // Out of it and within it.
+    expect(read("parent/proj/alpha.md")).toBe(
+      "# Alpha\n\n[[mkparent:home]] [[beta]] [[beta]] [h](../home.md) [h2](../home.md) [[mkparent:home]]\n\n[[/beta]] [[beta]] [r](/beta.md) [[deep/gamma]]\n",
+    );
+    expect(read("parent/proj/beta.md")).toBe("# Beta\n\n[[alpha]]\n");
+    // Another vault's [[mkparent:…]] into it: the new name.
+    expect(read("other/index.md")).toBe("# Other\n\n[[mkproj:alpha]] [[mkparent:home]]\n");
+    // Everything that resolved still does, to the same file.
+    expect(await reached([parent, join(parent, "proj")])).toEqual(before);
+
+    // Back: a plain folder again, a name now taken in the parent written as a path.
+    writeFileSync(join(parent, "beta.md"), "# Another beta\n");
+    const back = (await cli(["deinit", "proj"], parent)).json;
+    expect(back.data).toMatchObject({ kind: "unmake-vault", from: "proj", to: "mkparent", dryRun: false });
+    expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(false);
+    expect(read("parent/home.md")).toBe("# Home\n\n[[alpha]] [[proj/beta]] [[deep/gamma]] [b](proj/beta.md) [c](/proj/beta.md) [[alpha]] ![[pic.png]]\n");
+    expect(read("parent/proj/alpha.md")).toBe(
+      "# Alpha\n\n[[mkparent:home]] [[proj/beta]] [[proj/beta]] [h](../home.md) [h2](../home.md) [[mkparent:home]]\n\n[[/proj/beta]] [[proj/beta]] [r](/proj/beta.md) [[deep/gamma]]\n",
+    );
+    expect(read("other/index.md")).toBe("# Other\n\n[[mkparent:alpha]] [[mkparent:home]]\n");
+    const after = await reached([parent]);
+    delete after[join(parent, "beta.md")];
+    expect(after).toEqual(before);
+    // The machine forgot it; its .slipbox/ is in the parent's trash, restorable.
+    expect((await cli(["vaults"], parent)).json.data.some((v: { name: string }) => v.name === "mkproj")).toBe(false);
+    expect((await cli(["trash"], parent)).json.data[0]).toMatchObject({ shown: "proj/.slipbox", dir: true });
+    // Refused: a folder that's already a vault; a vault not nested in another.
+    expect((await cli(["deinit", "proj"], parent)).code).toBe(5);
+    expect((await cli(["deinit", "."], other)).code).toBe(5);
   });
 });

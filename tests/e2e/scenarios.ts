@@ -47,6 +47,19 @@ async function open(s: Session, name: string): Promise<void> {
 /** Leader sequences: space, then the keys. */
 const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys);
 
+/** Select the explorer's row named `name` (it has focus, the row on screen): from the top, down to it. */
+async function explorerRow(s: Session, name: string): Promise<void> {
+  await s.keys("g", "g");
+  // Its rows: left of its border (in code points: the Nerd glyphs are two units), past the left rail.
+  const title = s.rowOf(/Explorer/);
+  const border = [...s.screen()[title]!].findIndex((c) => c === "│" || c === "┃");
+  const left = (r: string) => [...r].slice(3, border).join("");
+  const first = s.screen().findIndex((r, i) => i > title && /\S/.test(left(r)));
+  const at = s.screen().findIndex((r, i) => i >= first && new RegExp(`\\b${name}\\b`).test(left(r)));
+  s.expect(at >= first, `the explorer shows ${name}`);
+  for (let i = first; i < at; i++) await s.keys("j");
+}
+
 export const SCENARIOS: Scenario[] = [
   // --- start and quit -------------------------------------------------------------------------
   {
@@ -1190,15 +1203,7 @@ export const SCENARIOS: Scenario[] = [
       // Its row in the explorer (18.7): shift+r renames the vault; m moves its folder, picked from
       // the tree by typing — its links out (two deep too) follow, its name stays.
       await s.status("FILES");
-      await s.keys("g", "g");
-      // The explorer's rows: left of its border (in code points: the Nerd glyphs are two units),
-      // past the left rail.
-      const title = s.rowOf(/Explorer/);
-      const border = [...s.screen()[title]!].findIndex((c) => c === "│" || c === "┃");
-      const left = (r: string) => [...r].slice(3, border).join("");
-      const first = s.screen().findIndex((r, i) => i > title && /\S/.test(left(r)));
-      const at = s.screen().findIndex((r, i) => i >= first && /\boutreach\b/.test(left(r)));
-      for (let i = first; i < at; i++) await s.keys("j");
+      await explorerRow(s, "outreach");
       await s.keys("shift+r");
       await s.see("rename the vault outreach to:");
       await s.keys("escape");
@@ -1212,6 +1217,34 @@ export const SCENARIOS: Scenario[] = [
       await s.file("handbook/outreach/index.md", (t) => t.includes("[the operations handbook](../operations-handbook.md)"), "outreach's link out fixed");
       s.expect(s.read("handbook/outreach/school-visits/index.md").includes("(../../safety-card.adoc)"), "two deep: fixed too");
       s.expect(s.read("home.md").includes("[[outreach:index]]"), "the link by its name as it was");
+    },
+  },
+  {
+    name: "vaults: v makes a folder a vault, links across fixed after a preview; V makes it a plain folder again",
+    run: async (s) => {
+      const home = s.read("home.md");
+      await leader(s, "e");
+      await s.status("FILES");
+      await explorerRow(s, "logs");
+      // Its menu has it; v does it: the name asked, a distinct one offered.
+      await s.keys(".");
+      await s.see(/Make it a vault +v/);
+      await s.keys("v");
+      await s.see("make logs/ a vault named:");
+      await s.see("› halden-logs");
+      await s.keys("enter");
+      await s.see(/logs\/ → the vault halden-logs: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("made logs/ the vault halden-logs");
+      s.expect(s.exists("logs/.slipbox/config.toml"), "logs/ has its .slipbox/");
+      await s.file("home.md", (t) => t.includes("[[halden-logs:observing-log-2026]]"), "home's link by name, across now");
+      // V: back, the links as they were.
+      await s.keys("shift+v");
+      await s.see(/the vault logs\/ → a folder of halden/);
+      await s.keys("enter");
+      await s.message("made logs/ a plain folder of halden");
+      s.expect(!s.exists("logs/.slipbox"), "its .slipbox/ gone (to the trash)");
+      await s.file("home.md", (t) => t === home, "home as it was");
     },
   },
   {

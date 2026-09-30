@@ -5934,7 +5934,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("y");
     h.app.selectInExplorer("projects");
     await h.keys(".");
-    expect(menu().items.map((it) => it.label)).toEqual(["New note here", "New folder here", "Rename", "Move to…", "Copy", "Cut", "Paste a copy of alpha.md here", "Delete"]);
+    expect(menu().items.map((it) => it.label)).toEqual(["New note here", "New folder here", "Rename", "Move to…", "Copy", "Cut", "Make it a vault", "Paste a copy of alpha.md here", "Delete"]);
     await h.keys("p");
     expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
     // Not focused: no row button.
@@ -5979,6 +5979,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
       ["Move to…", "m"],
       ["Copy", "y"],
       ["Cut", "x"],
+      ["Make it a plain folder", "V"],
       ["Delete the vault", "d"],
     ]);
     await h.keys("R"); // its own case: not the folder's r
@@ -6007,6 +6008,41 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(existsSync(join(root, "box", "inner.md"))).toBe(true);
     expect(readFileSync(join(root, "vault-links.md"), "utf8")).toBe("[in](box/inner.md) and [[inner-box:inner]]\n");
     expect(h.app.explorerRows().some((r) => r.path === "box" && r.root?.kind === "vault")).toBe(true);
+  });
+
+  test("v makes a folder a vault (its name asked, the links previewed); V makes it a plain folder again (18.11)", async () => {
+    const root = makeVault();
+    const h = await at(root, "notes");
+    const index = () => readFileSync(join(root, "index.md"), "utf8");
+    const before = index();
+    await h.keys("v");
+    expect(prompt(h)).toMatchObject({ label: "make notes/ a vault named: ", text: "fixture-notes" });
+    await h.keys("enter");
+    const preview = h.app.overlay as ListOverlay;
+    expect(preview.title).toMatch(/^notes\/ → the vault fixture-notes: \d+ changes? in \d+ files?/);
+    expect(existsSync(join(root, "notes", ".slipbox"))).toBe(false); // nothing yet
+    await h.keys("enter");
+    expect(existsSync(join(root, "notes", ".slipbox", "config.toml"))).toBe(true);
+    expect(index()).toContain("Links: [[fixture-notes:alpha]], [[fixture-notes:Beta]], [[projects/index]]");
+    expect(index()).toContain("[alpha](notes/alpha.md)"); // a path still reaches it
+    expect(readFileSync(join(root, "notes", "alpha.md"), "utf8")).toContain("Back to [[fixture:index]] and on to [[beta]].");
+    // The explorer: its row a vault's now, selected; its notes the new vault's.
+    const row = h.app.explorerRows()[h.app.sidebar.selected]!;
+    expect(row).toMatchObject({ path: "notes", kind: "root" });
+    expect(h.app.graph.notes.has("notes/alpha.md")).toBe(false);
+    expect(h.app.messages.at(-1)!.text).toMatch(/^made notes\/ the vault fixture-notes/);
+    // V: back, its [[fixture-notes:…]] names here again.
+    await h.keys("shift+v");
+    expect((h.app.overlay as ListOverlay).title).toMatch(/^the vault notes\/ → a folder of fixture/);
+    await h.keys("enter");
+    expect(existsSync(join(root, "notes", ".slipbox"))).toBe(false);
+    expect(index()).toBe(before);
+    expect(h.app.graph.notes.has("notes/alpha.md")).toBe(true);
+    expect(h.app.explorerRows()[h.app.sidebar.selected]).toMatchObject({ path: "notes", kind: "dir" });
+    // On a note, and on a vault for v: said so.
+    h.app.selectInExplorer("notes/alpha.md");
+    await h.keys("v");
+    expect(h.app.messages.at(-1)!.text).toContain("select a folder first");
   });
 
   test("the move picker is a tree: the explorer's folds, ← → fold, typing filters under the parents (18.8)", async () => {

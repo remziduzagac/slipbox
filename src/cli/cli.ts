@@ -33,10 +33,10 @@ import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
-import { Reach } from "../core/reach.ts";
-import { type Applied, applyPlan, planFolderMove, planNoteRename, planVaultFolderMove, planRelink, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
+import { openVault, Reach } from "../core/reach.ts";
+import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planRelink, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
-import { readRegistry, vaultNamed } from "../core/registry.ts";
+import { readIdentity, readRegistry, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { findVaultRoot, gitRootOf, homeAt, initVault, isInside, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
@@ -146,7 +146,8 @@ Usage:
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
-  slipbox init [dir]                make <dir> a vault (creates .slipbox/ with its id and name)  [--name N] [--private]
+  slipbox init [dir]                make <dir> a vault (creates .slipbox/ with its id and name)  [--name N] [--private] [--dry-run]
+  slipbox deinit <dir>              make a vault nested in another a plain folder of it; links fixed  [--dry-run]
   slipbox info                      vault, paths, versions, staleness
   slipbox vaults                    the vaults this machine knows: name, kind, path, last seen
   slipbox themes                    list themes
@@ -170,7 +171,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "relink", "cp", "rm", "trash",
+  "mv", "rename-vault", "relink", "cp", "rm", "trash", "deinit",
   "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
@@ -273,7 +274,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1, cp: 2, rm: 1, trash: 2,
+  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -313,7 +314,8 @@ const FLAGS: Record<string, string[]> = {
   send: ["line", "server"],
   capture: ["ref", "snippet", "stdin", "lang"],
   scratch: ["if-unchanged"],
-  init: ["name", "private"],
+  init: ["name", "private", "dry-run"],
+  deinit: ["dry-run"],
   mv: ["dry-run"],
   rm: ["dry-run"],
   "rename-vault": ["dry-run"],
@@ -664,6 +666,19 @@ const HANDLERS: Record<string, Handler> = {
     const dir = rest[0] ?? flag(s.args, "root") ?? s.io.cwd;
     const name = flag(s.args, "name");
     if (name === "") throw new UsageError("--name needs a name");
+    // A folder inside a vault (18.11): a vault of its own, the links that would stop reaching
+    // across the new boundary fixed.
+    const abs = dir.startsWith("/") ? dir : join(s.io.cwd, dir);
+    const holder = existsSync(abs) && !isVaultRoot(abs) ? findVaultRoot(dirname(abs)) : null;
+    if (holder) {
+      const parent = openVault(holder);
+      const rel = relative(holder, abs);
+      const res = renameResult(s, () => planMakeVault(parent, rel, name ?? suggestVaultName(abs, parent.loc.name), { private: has(s.args, "private") }), parent);
+      // As init says it of any folder: the vault's root, name and id — and what changed.
+      const d = res.data as { to: string; dryRun: boolean };
+      return { ...res, data: { ...d, root: abs, name: d.to, id: d.dryRun ? null : readIdentity(vaultConfigFile(abs)).id, created: !d.dryRun } };
+    }
+    if (has(s.args, "dry-run")) return { data: { root: abs, dryRun: true }, human: `would make ${abs} a vault\n` };
     let r;
     try {
       r = initVault(dir.startsWith("/") ? dir : `${s.io.cwd}/${dir}`, name, { private: has(s.args, "private") });
@@ -677,6 +692,16 @@ const HANDLERS: Record<string, Handler> = {
         ? `${r.root} is a vault; gave it an id — vault "${r.name}"\n`
         : `${r.root} is already a vault — "${r.name}"\n`;
     return { data: r, human: r.excluded ? `${human}kept out of git: listed in ${r.excluded}\n` : human };
+  },
+
+  deinit(s, rest) {
+    const dir = requireArg(rest, "vault folder");
+    const abs = dir.startsWith("/") ? dir : join(s.io.cwd, dir);
+    if (!isVaultRoot(abs)) throw new CliError(`${abs} isn't a vault (no .slipbox/)`, EXIT.refused);
+    const holder = findVaultRoot(dirname(abs));
+    if (!holder) throw new CliError(`${abs} isn't in another vault: only a nested vault becomes a plain folder (of the vault holding it)`, EXIT.refused);
+    const parent = openVault(holder);
+    return renameResult(s, () => planUnmakeVault(parent, relative(holder, abs)), parent);
   },
 
   mv(s, rest) {
@@ -1264,13 +1289,13 @@ function folderArg(s: Session, arg: string): string | null {
 }
 
 /** A rename's plan (7.2), or, without --dry-run, the rename done. */
-function renameResult(s: Session, plan: () => RenamePlan): Result {
+function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Result {
   let p: RenamePlan;
   let applied: Applied | null = null;
   try {
     p = plan();
     if (!has(s.args, "dry-run")) {
-      applied = applyPlan(s.graph, p);
+      applied = applyPlan(g, p);
       for (const [, to] of p.vaults ?? []) recordLocation(rootAt(to)); // the machine's list follows
     }
   } catch (err) {
@@ -1280,9 +1305,16 @@ function renameResult(s: Session, plan: () => RenamePlan): Result {
   s.warnings.push(...p.warnings, ...p.skipped.map((x) => `${x.shown}:${x.line}: ${x.reason}`));
   const links = p.files.reduce((n, f) => n + f.edits.length, 0);
   const verb = applied
-    ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "relinked" }[p.kind]
-    : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would relink" }[p.kind];
-  const head = p.kind === "relink" ? `${verb} ${p.from}` : `${verb} ${p.from} → ${p.to}`;
+    ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "relinked", "make-vault": "made", "unmake-vault": "made" }[p.kind]
+    : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would relink", "make-vault": "would make", "unmake-vault": "would make" }[p.kind];
+  const head =
+    p.kind === "relink"
+      ? `${verb} ${p.from}`
+      : p.kind === "make-vault"
+        ? `${verb} ${p.from}/ the vault ${p.to}`
+        : p.kind === "unmake-vault"
+          ? `${verb} ${p.from}/ a plain folder of ${p.to}`
+          : `${verb} ${p.from} → ${p.to}`;
   const human = [
     `${head}: ${links} change${links === 1 ? "" : "s"} in ${p.files.length} file${p.files.length === 1 ? "" : "s"}`,
     ...p.files.flatMap((f) => f.edits.map((e) => `  ${f.shown}:${e.line}\n    - ${e.before}\n    + ${e.after}`)),

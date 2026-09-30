@@ -6,16 +6,17 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, realpathSync, renameSync, statSync, unlinkSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, posix, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { atomicWrite, landsInside, readText } from "./fsutil.ts";
 import type { Backlink, Graph, LinkKind, NoteEntry } from "./graph.ts";
 import { VAULT_LINK } from "./graph.ts";
 import { formatPathLink, normKey, pathForm, pathLink } from "./links.ts";
+import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
-import { HOME_NAME, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
+import { forgetVault, HOME_NAME, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
 import { openVault } from "./reach.ts";
-import { findVaultRoot, isInside, type VaultLocation } from "./vault.ts";
+import { findVaultRoot, initVault, isInside, type VaultLocation } from "./vault.ts";
 
 export class RenameError extends Error {}
 
@@ -39,7 +40,7 @@ export interface FileChange {
 }
 
 export interface RenamePlan {
-  kind: "note" | "folder" | "vault" | "relink";
+  kind: "note" | "folder" | "vault" | "relink" | "make-vault" | "unmake-vault";
   from: string;
   to: string;
   /** What moves: a file or a folder, absolute paths; null for a vault's rename or a relink. */
@@ -48,6 +49,10 @@ export interface RenamePlan {
   moves?: [string, string][];
   /** Vaults that move with a vault's folder (18.7), absolute roots old → new: the machine's list follows. */
   vaults?: [string, string][];
+  /** A folder made a vault of its own (18.11): its root, its name, and whether it's private. */
+  makeVault?: { root: string; name: string; private: boolean };
+  /** A vault nested here made a plain folder of it (18.11): its root and the name it had. */
+  unmakeVault?: { root: string; name: string };
   files: FileChange[];
   warnings: string[];
   /** Links the index knew of that the file no longer has where it said: left alone. */
@@ -662,6 +667,237 @@ export function planRelink(g: Graph, rels?: string[]): RenamePlan {
 }
 
 // -------------------------------------------------------------------------------------------
+// A folder made a vault of its own, and a vault made a plain folder again (18.11)
+
+/** A path as a wikilink writes it: a note's without its extension, unless written with one. */
+function wikiPath(rel: string, written: string): string {
+  return NOTE_EXT.test(rel) && !NOTE_EXT.test(written) ? rel.replace(NOTE_EXT, "") : rel;
+}
+
+/** A wikilink written as a filesystem path (17.16), reaching its file wherever the roots are; `/x`
+ *  is one only when it names the file itself (else it's the vault's root). */
+function fsWiki(target: string, targetAbs: string): boolean {
+  const form = pathForm(target);
+  if (form !== "absolute") return form !== null;
+  return [target, `${target}.md`, `${target}.markdown`].some((p) => p === targetAbs || real(p) === real(targetAbs));
+}
+
+/** A wikilink's `vault:` prefix, when it has one (a note named `a:b` has none). */
+function interwiki(g: Graph, target: string): { vault: string; rest: string } | null {
+  const m = VAULT_LINK.exec(target);
+  return m && !g.notes.has(`${target}.md`) ? { vault: m[1]!, rest: m[2]! } : null;
+}
+
+/** Whether a markdown link's URL, read as a path — from the linking file's folder, or `rootAbs`
+ *  for `/…` (or the filesystem's own `/…`) — reaches `targetAbs`. */
+function urlReaches(url: string, linkingAbs: string, rootAbs: string, targetAbs: string): boolean {
+  const path = safeDecode(url.split("#")[0]!);
+  if (!path) return false;
+  const abs = path.startsWith("/") ? join(rootAbs, path) : join(dirname(linkingAbs), path);
+  if (abs === targetAbs || real(abs) === real(targetAbs)) return true;
+  return path.startsWith("/") && real(path) === real(targetAbs);
+}
+
+/** A markdown link's URL rewritten to reach `targetAbs`: from `rootAbs` when written from a root, else relative. */
+function urlTo(written: string, linkingAbs: string, rootAbs: string, targetAbs: string): string {
+  if (!written.startsWith("/") || !isInside(rootAbs, targetAbs)) return mdTarget(written, linkingAbs, targetAbs, null);
+  const hash = written.indexOf("#");
+  const next = `/${relative(rootAbs, targetAbs).split(sep).join("/")}`;
+  return (/%[0-9A-Fa-f]{2}/.test(written) || /\s/.test(next) ? encodeURI(next) : next) + (hash >= 0 ? written.slice(hash) : "");
+}
+
+/** A markdown link that names a web page, a place in the note, or a file by the filesystem's own path. */
+function notARootPath(url: string): boolean {
+  return (/^[a-z][a-z0-9+.-]*:/i.test(url) && !/^file:/i.test(url)) || /^file:/i.test(url) || url.startsWith("~/") || url.startsWith("#");
+}
+
+/** Normalized folder path as typed, inside the vault. */
+function folderPath(g: Graph, folderRel: string): string {
+  const f = posix.normalize(folderRel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
+  if (!f || f === "." || f === ".." || f.startsWith("../")) throw new RenameError(`${folderRel} isn't a folder inside ${g.root}`);
+  return f;
+}
+
+/**
+ * Plan making the folder `folderRel` of `parent` a vault of its own, named `name` (18.11). What
+ * would stop reaching across the new boundary is rewritten, the rest left as written: the parent's
+ * links into it by name or a partial path become `[[name:…]]` (by its exact path, or any path, they
+ * still reach it); its notes' links out of it by name or a vault path become `[[parent:…]]`, and
+ * from the root, relative paths; its own vault paths from the parent's root, from its own; other
+ * vaults' `[[parent:…]]` into it, `[[name:…]]`.
+ */
+export function planMakeVault(parent: Graph, folderRel: string, name: string, opts: { private?: boolean } = {}): RenamePlan {
+  if (parent.loc.mode !== "vault") throw new RenameError(`${parent.root} isn't a vault: make it one first (slipbox init)`);
+  const F = folderPath(parent, folderRel);
+  if (parent.nestedRoots().includes(F)) throw new RenameError(`${F} is already a vault`);
+  if (!parent.dirs.includes(F)) throw new RenameError(`no folder ${F} in ${parent.root}`);
+  if (F.split("/").some((s) => s.startsWith("."))) throw new RenameError(`${F}: hidden folders aren't the vault's`);
+  checkVaultName(name);
+  const P = parent.loc.name!;
+  const Fabs = join(parent.root, F);
+  const inF = (rel: string) => rel.startsWith(`${F}/`);
+  const own = (rel: string) => rel.slice(F.length + 1);
+  parent.ensureAll();
+  const c = new Collector(parent);
+  for (const [rel, entry] of parent.notes) {
+    const linkingAbs = join(parent.root, rel);
+    const fromIn = inF(rel);
+    for (const l of entry.links) {
+      const r = parent.resolveLink(l, rel);
+      if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path) continue;
+      const targetAbs = isAbsolute(r.path) ? r.path : join(parent.root, r.path);
+      if (!isInside(parent.root, targetAbs)) continue; // elsewhere: this changes nothing about it
+      const targetRel = relative(parent.root, targetAbs).split(sep).join("/");
+      const toIn = inF(targetRel);
+      if (!fromIn && !toIn) continue;
+      let next: string | null = null;
+      if (l.kind === "wiki" || l.kind === "embed") {
+        if (fsWiki(l.target, targetAbs)) continue; // a filesystem path: it reaches the file wherever the roots are
+        const iw = interwiki(parent, l.target);
+        if (iw && !parent.answersTo(iw.vault)) continue; // another vault's name
+        const bare = iw ? iw.rest : l.target;
+        const b = bare.replace(/^\/+/, "");
+        if (!fromIn) {
+          // Into the new vault: its exact path still reaches it (a vault nested here); else its name.
+          if (bare.includes("/") && b === wikiPath(targetRel, bare)) continue;
+          next = `${name}:${bare.includes("/") ? wikiPath(own(targetRel), bare) : bare}`;
+        } else if (!toIn) {
+          // Out of it, to the parent: by the parent's name — as written when that reaches it from the parent's root.
+          if (iw) continue;
+          const r0 = parent.resolveLink({ kind: l.kind, target: b }, "");
+          const same = r0.path !== null && (isAbsolute(r0.path) ? r0.path : join(parent.root, r0.path)) === targetAbs;
+          next = `${P}:${same ? b : wikiPath(targetRel, bare)}`;
+        } else {
+          // Within it: a name still reaches its note; a path from the parent's root, from its own.
+          const inV = wikiPath(own(targetRel), bare);
+          if (!bare.includes("/") || (!bare.startsWith("/") && (inV === b || inV.endsWith(`/${b}`)))) next = iw ? bare : null;
+          else next = (bare.startsWith("/") ? "/" : "") + inV;
+        }
+      } else if (l.kind === "markdown" || l.kind === "image") {
+        if (notARootPath(l.target)) continue;
+        const rootAfter = fromIn ? Fabs : parent.root;
+        if (!urlReaches(l.target, linkingAbs, rootAfter, targetAbs)) next = urlTo(l.target, linkingAbs, rootAfter, targetAbs);
+      }
+      if (next !== null) c.edit({ abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column }, next, null);
+    }
+  }
+  // Other vaults' `[[parent:…]]` into it: the new vault's name.
+  for (const [rel, list] of parent.reach?.inbound(parent) ?? []) {
+    if (!inF(rel)) continue;
+    for (const b of list) {
+      if (b.kind !== "wiki" && b.kind !== "embed") continue;
+      const m = VAULT_LINK.exec(b.target);
+      if (!m || !parent.answersTo(m[1]!)) continue;
+      const rest = m[2]!;
+      c.edit({ abs: b.from, kind: b.kind, target: b.target, line: b.line, column: b.column }, `${name}:${rest.includes("/") ? wikiPath(own(rel), rest) : rest}`, b.vault ?? null);
+    }
+  }
+  const files = c.result();
+  return { kind: "make-vault", from: F, to: name, move: null, files, warnings: dirtyTrees([Fabs, ...files.map((f) => f.abs)]), skipped: c.skipped, makeVault: { root: Fabs, name, private: !!opts.private } };
+}
+
+/** A new vault's name: one a vault can have, and no other vault's on this machine. */
+function checkVaultName(name: string): void {
+  if (!VAULT_NAME.test(name)) throw new RenameError(`"${name}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
+  if (name.toLowerCase() === HOME_NAME) throw new RenameError(`"${HOME_NAME}" is the home vault's name`);
+  const other = vaultNamed(name, readRegistry());
+  if (other.length) throw new RenameError(`a vault named "${name}" is already at ${other[0]!.path}`);
+}
+
+/**
+ * Plan making the vault nested at `folderRel` a plain folder of `parent` (18.11): its notes become
+ * the parent's. `[[its-name:…]]` links — the parent's, its own, other vaults' — become names (or,
+ * a name that two notes would share once merged, paths) in the parent, prefixed with the parent's
+ * name from other vaults; its own paths from its root, from the parent's. Its `.slipbox/` goes to
+ * the parent's trash, and the machine forgets the vault.
+ */
+export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
+  const F = folderPath(parent, folderRel);
+  if (!parent.nestedRoots().includes(F)) throw new RenameError(`no vault nested at ${F} in ${parent.root}`);
+  const Vabs = join(parent.root, F);
+  const v = openVault(Vabs);
+  v.ensureAll();
+  parent.ensureAll();
+  const P = parent.loc.name!;
+  // The names notes answer to once merged — each note's name and aliases — and every note's path.
+  const names = new Map<string, number>();
+  for (const g of [parent, v]) {
+    for (const [rel, e] of g.notes) for (const n of new Set([posix.basename(rel).replace(NOTE_EXT, ""), ...e.aliases].map(normKey))) names.set(n, (names.get(n) ?? 0) + 1);
+  }
+  const merged = [...parent.notes.keys(), ...[...v.notes.keys()].map((r) => `${F}/${r}`)];
+  const files = new Set([...parent.filePaths(), ...v.filePaths().map((r) => `${F}/${r}`)]);
+  /** How a wikilink written `bare` reaches the file at merged path `rel`: as written while that's unambiguous, else its path. */
+  const inMerged = (bare: string, rel: string): string => {
+    const isNote = NOTE_EXT.test(rel);
+    if (!bare.includes("/")) {
+      const base = posix.basename(rel).toLowerCase();
+      const unique = isNote ? names.get(normKey(bare.replace(NOTE_EXT, ""))) === 1 : [...files].filter((p) => posix.basename(p).toLowerCase() === base).length === 1;
+      return unique ? bare : wikiPath(rel, bare);
+    }
+    if (bare.startsWith("/")) return `/${wikiPath(rel, bare)}`;
+    const hits = merged.filter((p) => {
+      const w = wikiPath(p, bare);
+      return w === bare || w.endsWith(`/${bare}`);
+    });
+    return hits.length === 1 && hits[0] === rel ? bare : wikiPath(rel, bare);
+  };
+  const c = new Collector(parent);
+  const site = (b: Backlink): Site => ({ abs: b.from, kind: b.kind, target: b.target, line: b.line, column: b.column });
+  // The parent's `[[its-name:…]]` (paths reach it where it is).
+  for (const { backlink: b, targetAbs } of linksIntoFolder(parent, Vabs)) {
+    if (b.kind !== "wiki" && b.kind !== "embed") continue;
+    const iw = interwiki(parent, b.target);
+    if (!iw || !v.answersTo(iw.vault)) continue;
+    c.edit(site(b), inMerged(iw.rest, relative(parent.root, targetAbs).split(sep).join("/")), null);
+  }
+  // Its own links within it.
+  for (const [vr, e] of v.notes) {
+    const linkingAbs = join(Vabs, vr);
+    for (const l of e.links) {
+      const r = v.resolveLink(l, vr);
+      if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path) continue;
+      const targetAbs = isAbsolute(r.path) ? r.path : join(Vabs, r.path);
+      if (!isInside(Vabs, targetAbs)) continue; // out of it: paths and `[[parent:…]]` reach the same
+      const rel = relative(parent.root, targetAbs).split(sep).join("/");
+      let next: string | null = null;
+      if (l.kind === "wiki" || l.kind === "embed") {
+        if (fsWiki(l.target, targetAbs)) continue;
+        const iw = interwiki(v, l.target);
+        if (iw && !v.answersTo(iw.vault)) continue;
+        const bare = iw ? iw.rest : l.target;
+        next = inMerged(bare, rel);
+        if (!iw && next === bare) next = null;
+      } else if (l.kind === "markdown" || l.kind === "image") {
+        if (notARootPath(l.target)) continue;
+        if (!urlReaches(l.target, linkingAbs, parent.root, targetAbs)) next = urlTo(l.target, linkingAbs, parent.root, targetAbs);
+      }
+      if (next !== null) c.edit({ abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column }, next, null);
+    }
+  }
+  // Other vaults' `[[its-name:…]]` (the ones nested in it too): the parent's name.
+  for (const [vr, list] of v.reach?.inbound(v) ?? []) {
+    for (const b of list) {
+      const from = findVaultRoot(b.from);
+      if (from && real(from) === real(parent.root)) continue; // the parent's: above
+      if (b.kind !== "wiki" && b.kind !== "embed") continue;
+      const m = VAULT_LINK.exec(b.target);
+      if (!m || !v.answersTo(m[1]!)) continue;
+      c.edit(site(b), `${P}:${inMerged(m[2]!, `${F}/${vr}`)}`, b.vault ?? null);
+    }
+  }
+  const out = c.result();
+  const warnings = dirtyTrees([Vabs, ...out.map((f) => f.abs)]);
+  // Settings of its own go with its .slipbox/.
+  let config = "";
+  try {
+    config = readText(vaultConfigFile(Vabs)).text;
+  } catch {}
+  const tables = [...config.matchAll(/^\[([^\]]+)\][ \t]*(#.*)?$/gm)].map((m) => m[1]!.trim()).filter((t) => t !== "vault");
+  if (tables.length) warnings.push(`${F}/.slipbox/config.toml has settings of its own (${tables.map((t) => `[${t}]`).join(", ")}): they go with its .slipbox/ to the trash`);
+  return { kind: "unmake-vault", from: F, to: P, move: null, files: out, warnings, skipped: c.skipped, unmakeVault: { root: Vabs, name: v.loc.name ?? basename(Vabs) } };
+}
+
+// -------------------------------------------------------------------------------------------
 // Applying
 
 export interface Applied {
@@ -711,6 +947,33 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     } else renameSync(mv.from, mv.to);
     written.push(mv.to);
   }
+  // A folder made a vault, or a vault a plain folder (18.11): its .slipbox/ made, or put in the
+  // trash; the parent's walk, and so its index, changes where the boundary was.
+  // Other vaults' files written: their indexes learn it now, as when they're next opened — the
+  // backlinks they give, and the next plan, read the links they hold now.
+  const others = new Set<string>();
+  for (const abs of written) {
+    const root = findVaultRoot(abs);
+    if (root && real(root) !== real(g.root)) others.add(root);
+  }
+  const reindexOthers = () => {
+    for (const root of others) {
+      try {
+        openVault(root).ensureAll();
+      } catch {}
+    }
+  };
+  if (plan.makeVault || plan.unmakeVault) {
+    if (plan.makeVault) initVault(plan.makeVault.root, plan.makeVault.name, { private: plan.makeVault.private });
+    else {
+      trashVaultMarker(g.loc, g.root, plan.unmakeVault!.root);
+      forgetVault(plan.unmakeVault!.root);
+    }
+    g.build(true, "lazy");
+    reindexOthers();
+    return { written, moved: null };
+  }
+  reindexOthers();
   // Links to the old places still find the new ones (17.12); the vault's index follows.
   if (plan.moves?.length) g.redirects?.add(plan.moves);
   for (const [from] of plan.moves ?? []) {

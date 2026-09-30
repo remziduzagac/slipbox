@@ -231,6 +231,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `d` | delete it to the vault's trash, after asking (it says how many links break) |
 | `u` | restore what was deleted last (`space v t`, `:trash`: the rest) |
 | `y` / `x` / `p` | copy / cut it; paste in the selected folder: a copy (`name-copy` beside it), or a move |
+| `v` / `shift+v` | make the selected folder a vault (its name asked) / a nested vault a plain folder; links previewed |
 | `.` | the selected row's menu, as its `…` button opens it: each entry with its key, which picks it there |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
