@@ -100,7 +100,7 @@ These churn freely before 1.0:
 | `task <note>` | `{path, sha, tasks[{line, checked, text, raw}]}` |
 | `task <note> <line>` | `{path, line, text, checked, changed, sha}` |
 | `read <note>` | `{path, abs, sha, bom, crlf, invalidUtf8, content}` |
-| `stat <note>` | `{path, abs, size, mtime, title, tags, headings, links, unresolved, backlinks}` + `read`'s flags |
+| `stat <note>` | `{path, abs, vault, properties, size, mtime, title, tags, headings, links, unresolved, backlinks}` |
 | `write <note>` | `{path, created, shadows (with --create), appended, previousSha, sha}` |
 | `mkdir <path>` | `{path, created}`; an existing path or one outside the vault is exit 5 |
 | `send <note>` | `{path, line, server, commands[]}` |

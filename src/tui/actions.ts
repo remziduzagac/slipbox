@@ -1448,24 +1448,9 @@ export function registerActions(app: App): void {
     },
     // note, vault, app
     "note.reload": (a) => withView(a, (v) => a.reloadBuffer(v.buf)),
-    "note.info": (a) =>
-      withView(a, (v) => {
-        const b = v.buf;
-        const entry = b.rel ? a.graph.entry(b.rel) : undefined;
-        infoList(a, `Note — ${b.name}`, [
-          ["path", b.abs],
-          ["size", `${b.stamp?.size ?? 0} bytes`],
-          ["modified", b.stamp ? new Date(b.stamp.mtimeMs).toLocaleString() : "?"],
-          ["title", entry?.title ?? "—"],
-          ["words", b.words().toLocaleString("en")],
-          ["characters", [...b.source].length.toLocaleString("en")],
-          ["headings", String(entry?.headings.length ?? lay(a, v).headings.length)],
-          ["links", String(lay(a, v).links.length)],
-          ["backlinks", b.rel ? String(a.graph.backlinks(b.rel).length) : "—"],
-          ["encoding", [b.invalidUtf8 ? "invalid UTF-8" : "UTF-8", ...(entry?.flags.filter((f) => f === "crlf" || f === "bom") ?? [])].join(", ")],
-          ["state", b.deleted ? "deleted on disk" : "on disk"],
-        ]);
-      }),
+    // The Info view (3.19), the right panel's first: what the file on screen is; its button above the outline's.
+    "note.info": (a) => a.openRightView("info", "cycle"),
+    "info.toggle": (a) => a.openRightView("info"),
     "vault.reindex": (a) => {
       a.graph.build(true, "lazy");
       a.indexInBackground();

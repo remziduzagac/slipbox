@@ -601,9 +601,13 @@ export const SCENARIOS: Scenario[] = [
       await s.message("added footnote [^2]");
       await s.file("people/partners-and-names.md", (t) => t.includes("[^2]: Checked against the ledger\n"), "the definition at the end");
       await s.see(/\[2\] C/); // the row, beside the message floating over the panel
-      // Back to the outline with space o: the panel's other view.
+      // Back to the outline with space o: the panel's other view; :footnotes toggles them back.
       await leader(s, "o");
       await s.status("OUTLINE");
+      await s.keys(":");
+      await s.type("footnotes");
+      await s.keys("enter");
+      await s.status("FOOTNOTES");
     },
   },
   {
@@ -1118,10 +1122,28 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
-    name: "info: note and vault info, reindex, config reload, messages, help",
+    name: "info: the Info view (the file's), vault info (its own window), reindex, config reload, messages, help",
     run: async (s) => {
+      // The Info view (3.19): the file on screen, in the right panel — its vault, properties, links.
+      await open(s, "kenji-mori");
       await leader(s, "n", "i");
-      await s.see("Note — home");
+      await s.status("INFO");
+      await s.see(/vault +halden/);
+      await s.see("Properties");
+      await s.see(/building +Workshop/);
+      await s.see(/backlinks +\d+/);
+      // Its toggle, from the palette: hidden, then shown again.
+      await s.keys(":");
+      await s.type("Show or hide the Info");
+      await s.keys("enter");
+      await s.until(() => !s.statusLine().includes("INFO"), 3000, "the Info hidden");
+      await s.keys(":");
+      await s.type("Show or hide the Info");
+      await s.keys("enter");
+      await s.status("INFO");
+      // A tag's row: its notes.
+      await s.keys("shift+g");
+      await s.until(() => /#visiting|#people/.test(s.text()), 3000, "its tags");
       await s.keys("escape");
       await leader(s, "v", "i");
       await s.see(s.vault);

@@ -2261,8 +2261,9 @@ describe("top bar, tab strip, status line", () => {
     click(h, ex.x, ex.y);
     expect(h.app.sidebarShown).toBe(true);
     const ol = hot(h, "btn:outline");
-    expect(ol.x + ol.w).toBe(160); // far right of the breadcrumb row
-    expect(ol.y).toBe(h.app.geometry!.panes[0]!.y - 2);
+    expect(ol.x + ol.w).toBe(160); // far right, the rail's second button: Info's is first (3.19), level with the breadcrumb
+    expect(hot(h, "btn:info").y).toBe(h.app.geometry!.panes[0]!.y - 2);
+    expect(ol.y).toBe(hot(h, "btn:info").y + 1);
     click(h, ol.x + 1, ol.y);
     expect(h.app.outlineShown).toBe(true);
     const chip = hot(h, "btn:palette");
@@ -6427,5 +6428,84 @@ describe("adding and changing footnotes (3.18)", () => {
     await h.keys("y");
     expect(read()).not.toContain("[^src]");
     expect(h.app.footnoteRows().map((r) => r.fn.label)).toEqual(["1"]);
+  });
+});
+
+describe("the Info view (3.19)", () => {
+  const NOTE = "---\ntitle: Planning\nowner:\n  name: Rosa\n  desk: 2\ntags: [Plan]\n---\n# Planning\n\nSee [[alpha]] and [[missing]]. #idea\n\n- [x] one\n- [ ] two\n";
+  const setup = async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "info.md"), NOTE);
+    writeFileSync(join(root, "linker.md"), "[[info]]\n");
+    return await harness({ root, open: "info.md", width: 140 });
+  };
+  const rows = (h: Harness) => h.app.infoRows().map((r) => (r.heading ? `# ${r.key}` : `${"  ".repeat(r.depth)}${r.key}: ${r.value}`));
+
+  test("space n i: the file on screen — where, which vault, its counts and state; its properties, tags and links; the rail's button above ▤", async () => {
+    const h = await setup();
+    await h.keys("space", "n", "i");
+    expect(h.app.rightView).toBe("info");
+    expect(h.app.region).toBe("outline");
+    const r = rows(h);
+    expect(r).toContain("path: info.md");
+    expect(r).toContain("vault: fixture");
+    expect(r).toContain("kind: note (markdown)");
+    expect(r).toContain("state: saved");
+    expect(r.slice(r.indexOf("# Properties"), r.indexOf("# Tags"))).toEqual(["# Properties", "title: Planning", "owner: ", "  name: Rosa", "  desk: 2", "tags: Plan"]);
+    expect(r.slice(r.indexOf("# Tags"), r.indexOf("# Links"))).toEqual(["# Tags", "#Plan: ", "#idea: "]);
+    expect(r).toContain("links: 2 (1 unresolved)");
+    expect(r).toContain("backlinks: 1");
+    expect(r).toContain("tasks: 1 of 2 done");
+    expect(statusRow(h.frame())).toContain("INFO");
+    const hot = (id: string) => h.app.geometry!.hot.find((x) => x.id === id)!;
+    expect(hot("btn:outline").y).toBe(hot("btn:info").y + 1);
+    // A change shows: unsaved.
+    await h.keys("escape");
+    h.app.view!.buf.edit(0, 0, "x");
+    expect(rows(h)).toContain("state: unsaved changes");
+    h.app.saveBuffer(h.app.view!.buf);
+    expect(rows(h)).toContain("state: saved"); // a save doesn't change the text: still shown
+    // Another note's link to it counts at once.
+    writeFileSync(join(h.root, "linker2.md"), "[[info]]\n");
+    const st = statSync(join(h.root, "linker2.md"));
+    h.app.graph.updateFile("linker2.md", { rel: "linker2.md", abs: join(h.root, "linker2.md"), size: st.size, mtimeMs: st.mtimeMs });
+    expect(rows(h)).toContain("backlinks: 2");
+  });
+
+  test("enter opens what a row names: a property's line, a tag's notes, the backlinks; y copies; h folds a section; / filters", async () => {
+    const h = await setup();
+    await h.keys("space", "n", "i");
+    const select = (label: string) => {
+      h.app.outline.selected = h.app.infoRows().findIndex((r) => (r.heading ? `# ${r.key}` : r.key) === label);
+      h.app.region = "outline";
+    };
+    select("title");
+    await h.keys("enter");
+    expect(h.app.region).toBe("content");
+    expect(h.app.cursorLine(h.app.view!)).toBe(2); // its line in the frontmatter
+    // A nested key: its own line in source mode (rendered, its map's row shows it).
+    await h.app.run("view.source");
+    select("desk");
+    await h.keys("enter");
+    expect(h.app.cursorLine(h.app.view!)).toBe(5);
+    await h.app.run("view.source");
+    select("#idea");
+    await h.keys("enter");
+    expect((h.app.overlay as ListOverlay).title).toBe("#idea — 1 note");
+    await h.keys("escape");
+    select("backlinks");
+    await h.keys("enter");
+    expect((h.app.overlay as ListOverlay).title).toBe("Linking to info.md (1)"); // the backlinks list
+    await h.keys("escape");
+    select("path");
+    await h.keys("y");
+    expect(h.copied.at(-1)).toBe(join(h.root, "info.md"));
+    select("# Properties");
+    await h.keys("h");
+    expect(rows(h)).not.toContain("title: Planning");
+    await h.keys("l");
+    expect(rows(h)).toContain("title: Planning");
+    await h.keys("/", "r", "o", "s", "a");
+    expect(rows(h)).toEqual(["# Properties", "  name: Rosa"]);
   });
 });

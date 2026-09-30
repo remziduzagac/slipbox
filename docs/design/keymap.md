@@ -293,6 +293,11 @@ footnote's references, `/` filters by label and text, `q` closes, `esc` goes bac
 `[keys.footnotes]`): `a` adds one at the note's cursor (as `space n shift+f` does anywhere, and the `+` on the view's
 title), `e` edits the selected one's text, `r` renames its label, `d` deletes it after asking.
 
+**Info** (`3.19`) is the right panel's first view, its button above the outline's: `space n i` cycles it. It takes
+the outline's keys (`[keys.info]`): `j` / `k` move, `enter` (or a click) opens what a row names — a property's line,
+a tag's notes, the links, backlinks, outline or footnotes — or copies its value, `y` copies, `h` / `l` fold and unfold
+a section, `/` filters, `q` closes, `esc` goes back to the note.
+
 Below `ui.narrow_width` columns (default 90), the explorer and the outline open over the content.
 
 ## Find — `space f`
@@ -499,7 +504,7 @@ edit the config and the config wins again.
 | `space n s` | send the note to your editor already running elsewhere: a running nvim by default |
 | `space n p` | choose which running nvim `space n s` sends to (it asks by itself when unsure) |
 | `space n r` | reload this note from disk |
-| `space n i` | note info: path, size, modified time, links, backlinks, encoding |
+| `space n i` | the Info view (`3.19`): open, focus, close — the file's path, vault, counts, properties, tags, links |
 | `space v v` | switch vault: the vaults this machine knows (`:vaults`); `back` returns |
 | `space v r` | reindex the vault |
 | `space v i` | vault info: root, notes, skipped paths, cache and state, watcher |
@@ -540,6 +545,7 @@ mouse off, which gives it back to the terminal.
 | `◷` (on the left rail) | show the history (and focus it) / hide it |
 | `▤` (on the right rail; without it the breadcrumb's or the top bar's) | show the outline (and focus it) / hide it |
 | superscript, `¹` (on the right rail, under `▤`) | show the footnotes (and focus them) / hide them |
+| info, `ℹ` (on the right rail, above `▤`) | show the Info (and focus it) / hide it |
 | top bar `slipbox` chip | open the command palette |
 | window breadcrumb | scroll that window to the heading, and focus it; its icon finds a heading |
 | breadcrumb `…` | the whole heading path as a dropdown; click or `enter` on one to jump there |

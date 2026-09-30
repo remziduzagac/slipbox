@@ -78,6 +78,8 @@ export interface Glyphs {
   outlineButton: string;
   /** The right rail's footnotes button (3.17), under the outline's. */
   footnotesButton: string;
+  /** The right rail's Info button (3.19), above the outline's. */
+  infoButton: string;
   /** The left rail's history button. */
   historyButton: string;
   close: string;
@@ -148,6 +150,7 @@ const unicode: Glyphs = {
   explorerButton: "≡",
   outlineButton: "▤",
   footnotesButton: "¹",
+  infoButton: "ℹ",
   historyButton: "◷",
   close: "×",
   pin: "⚑",
@@ -177,6 +180,7 @@ const nerd: Glyphs = {
   vault: "\u{f125f}", // nf-md-bookshelf
   newNote: "\u{f0752}", // nf-md-file_plus
   footnotesButton: "\u{f0283}", // nf-md-format_superscript
+  infoButton: "\u{f02fd}", // nf-md-information_outline
   newFolder: "\u{f0257}", // nf-md-folder_plus
   itemMenu: "\u{f01d8}", // nf-md-dots_horizontal
   renameItem: "\u{f03eb}", // nf-md-pencil
@@ -243,6 +247,7 @@ const ascii: Glyphs = {
   explorerButton: "=",
   outlineButton: "#",
   footnotesButton: "^",
+  infoButton: "i",
   historyButton: "~",
   close: "x",
   pin: "^",

@@ -354,6 +354,12 @@ describe("the vault and the tool", () => {
     slipbox(["footnotes", "fn-cli.md", "rm", "1"], { cwd: vault });
     expect(readFileSync(note, "utf8")).toBe("# F\r\n\r\nA claim here.[^later]\r\n\r\n[^later]: Second\r\n");
   });
+  test("stat: which vault a note is in, and its properties — the frontmatter, as the Info view shows it (3.19)", () => {
+    const r = slipbox(["stat", "people/kenji-mori.md", "--json"], { cwd: DEMO }).json.data;
+    expect(r.vault).toBe("halden");
+    expect(r.properties).toMatchObject({ title: "Kenji Mori", office: { building: "Workshop", desk: 2 } });
+    expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/vault\s+halden/);
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);

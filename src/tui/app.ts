@@ -16,7 +16,7 @@ import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { readJson, readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
-import { toggleTask } from "../core/tasks.ts";
+import { listTasks, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
@@ -79,6 +79,9 @@ import {
   DEFAULT_OUTLINE_KEYS,
   DEFAULT_FOOTNOTE_KEYS,
   FOOTNOTE_ACTIONS,
+  DEFAULT_INFO_KEYS,
+  INFO_ACTIONS,
+  INFO_ACTION_INFO,
   DEFAULT_RESIZE_KEYS,
   DEFAULT_VISUAL_KEYS,
   DEFAULT_SOURCE_KEYS,
@@ -317,8 +320,9 @@ export interface SidePaneState {
 
 /** What the left panel shows: the file tree or the window's history (more views to come). */
 export type LeftView = "explorer" | "history";
-/** What the right panel shows: the outline or the note's footnotes (more views to come: comments). */
-export type RightView = "outline" | "footnotes";
+/** What the right panel shows, always of the file on screen: its Info, its outline, its footnotes
+ *  (more to come: comments). */
+export type RightView = "info" | "outline" | "footnotes";
 
 /**
  * The panels' views, in rail order. Each side's panel shows one view at a time; its rail has a
@@ -338,9 +342,27 @@ export const LEFT_VIEWS: PanelView<LeftView>[] = [
 ];
 
 export const RIGHT_VIEWS: PanelView<RightView>[] = [
+  { id: "info", title: "Info", glyph: (g) => g.infoButton },
   { id: "outline", title: "Outline", glyph: (g) => g.outlineButton },
   { id: "footnotes", title: "Footnotes", glyph: (g) => g.footnotesButton },
 ];
+
+/**
+ * One row of the Info view (3.19): a section's heading, or a name and its value under one. `act`:
+ * what `enter` does with it.
+ */
+export interface InfoRow {
+  section: string;
+  heading: boolean;
+  key: string;
+  value: string;
+  /** A nested property's depth under its section. */
+  depth: number;
+  /** What the filter matches. */
+  text: string;
+  folded: boolean;
+  act?: { copy: string } | { line: number } | { tag: string } | { run: string };
+}
 
 /**
  * One row of the footnotes view (3.17): a footnote — its label and text — or, unfolded under it,
@@ -466,6 +488,7 @@ export class App {
   explorerKeys!: Keymap;
   outlineKeys!: Keymap;
   footnoteKeys!: Keymap;
+  infoKeys!: Keymap;
   resizeKeys!: Keymap;
   /** Resize mode: h j k l / arrows resize until esc (ctrl+alt+w, space w r). */
   resizeMode = false;
@@ -489,6 +512,9 @@ export class App {
   /** What the right panel shows (3.17); `outline` is its state, whichever view that is. */
   rightView: RightView = "outline";
   private rightPositions = new Map<RightView, Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">>();
+  /** The Info view's folded sections, by name (3.19). */
+  infoFolded = new Set<string>();
+  private infoCache: { key: string; rows: Omit<InfoRow, "folded">[] } | null = null;
   /** The footnotes whose references are unfolded in the footnotes view, by id. */
   footnotesOpen = new Set<string>();
   private footnoteCache: { key: string; list: Footnote[] } | null = null;
@@ -614,13 +640,14 @@ export class App {
       this.message("warn", `config: input.leader "${c.input.leader}" is also ${DEFAULT_KEYS[leader]}: that key now waits for more`);
     }
     this.leader = leader;
-    const { visual, explorer, outline, footnotes, resize, source, ...normal } = c.keys;
+    const { visual, explorer, outline, footnotes, info, resize, source, ...normal } = c.keys;
     this.keymap = new Keymap(DEFAULT_KEYS, normal as Record<string, string>, this.leader);
     this.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.leader);
     this.sourceKeys = new Keymap(DEFAULT_SOURCE_KEYS, source ?? {}, this.leader);
     this.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.leader);
     this.outlineKeys = new Keymap(DEFAULT_OUTLINE_KEYS, outline ?? {}, this.leader);
     this.footnoteKeys = new Keymap(DEFAULT_FOOTNOTE_KEYS, footnotes ?? {}, this.leader);
+    this.infoKeys = new Keymap(DEFAULT_INFO_KEYS, info ?? {}, this.leader);
     this.resizeKeys = new Keymap(DEFAULT_RESIZE_KEYS, resize ?? {}, this.leader);
     // No prototype: a typed :toString or :constructor is an unknown alias, not Object's.
     this.aliases = Object.assign(Object.create(null) as Record<string, string>, DEFAULT_ALIASES);
@@ -636,7 +663,7 @@ export class App {
     for (const [a, v] of Object.entries(this.aliases)) if (!ids.has(v.split(" ")[0]!)) this.message("warn", `config: [aliases] ${a} = unknown command "${v}"`);
     // Keys with a modifier slipbox doesn't know can never be pressed: say so.
     const tables: [string, Record<string, unknown>][] = [["keys", c.keys as Record<string, unknown>]];
-    for (const sub of ["visual", "source", "explorer", "outline", "footnotes", "resize"]) {
+    for (const sub of ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"]) {
       const t = (c.keys as Record<string, unknown>)[sub];
       if (t && typeof t === "object") tables.push([`keys.${sub}`, t as Record<string, unknown>]);
     }
@@ -651,6 +678,7 @@ export class App {
       ["keys.explorer", this.explorerKeys, EXPLORER_ACTIONS],
       ["keys.outline", this.outlineKeys, OUTLINE_ACTIONS],
       ["keys.footnotes", this.footnoteKeys, FOOTNOTE_ACTIONS],
+      ["keys.info", this.infoKeys, INFO_ACTIONS],
       ["keys.resize", this.resizeKeys, Object.keys(RESIZE_ACTIONS)],
     ];
     for (const [table, map, actions] of panes) {
@@ -2642,7 +2670,7 @@ export class App {
     if (restored) return;
     this.outline.filter = "";
     this.outline.pinned = false;
-    this.outline.selected = Math.max(0, view === "outline" ? this.currentSection() : this.currentFootnote());
+    this.outline.selected = Math.max(0, view === "outline" ? this.currentSection() : view === "footnotes" ? this.currentFootnote() : 0);
   }
 
   /** Put `view` in the right panel: each view keeps its own place, as the left panel's do. */
@@ -2722,6 +2750,173 @@ export class App {
     }
     this.region = "content";
     if (this.narrow || this.ui.zen) this.outline.overlay = false;
+  }
+
+  // The Info view (3.19): what the file on screen is — where, which vault, its size and dates, its
+  // text's counts and state — its properties (the frontmatter), its tags, its links and backlinks.
+
+  /** The Info view's rows, sections folded as the view has them, filtered by `/`. */
+  infoRows(): InfoRow[] {
+    const q = this.rightView === "info" ? (this.outline.filter ?? "") : "";
+    const out: InfoRow[] = [];
+    let section: InfoRow | null = null;
+    let kept: InfoRow[] = [];
+    const flush = () => {
+      if (section && (!q || kept.length)) out.push(section, ...(section.folded ? [] : kept));
+      kept = [];
+    };
+    for (const r of this.infoData()) {
+      if (r.heading) {
+        flush();
+        section = { ...r, folded: !q && this.infoFolded.has(r.section) };
+      } else if (!q || match(q, r.text)) kept.push({ ...r, folded: false });
+    }
+    flush();
+    return out;
+  }
+
+  /** The rows' data, for the file on screen: made again when its text, or the notes', change. */
+  private infoData(): Omit<InfoRow, "folded">[] {
+    const view = this.view;
+    if (!view) return [];
+    const b = view.buf;
+    const key = `${b.key}:${b.version}:${this.graph.generation}:${b.dirty}:${b.deleted}`;
+    if (this.infoCache?.key === key) return this.infoCache.rows;
+    const rows: Omit<InfoRow, "folded">[] = [];
+    const head = (section: string) => rows.push({ section, heading: true, key: section, value: "", depth: 0, text: section });
+    const row = (section: string, k: string, value: string, act?: InfoRow["act"], depth = 0) => rows.push({ section, heading: false, key: k, value, depth, text: `${k} ${value}`, act: act ?? { copy: value } });
+    const entry = b.rel ? this.graph.entry(b.rel) : undefined;
+    const note = b.kind.group === "note";
+    // The file.
+    head("File");
+    row("File", "path", b.rel ?? b.abs, { copy: b.abs });
+    row("File", "vault", this.loc.mode === "home" ? "home (loose files)" : (this.loc.name ?? basename(this.loc.root)), { copy: this.loc.root });
+    row("File", "kind", note ? `note (${b.kind.format})` : `${b.kind.group === "data" ? "data" : "text"} (${b.kind.format})`);
+    if (b.stamp) {
+      const size = b.stamp.size;
+      row("File", "size", size < 1024 ? `${size} bytes` : size < 1048576 ? `${(size / 1024).toFixed(1)} KB` : `${(size / 1048576).toFixed(1)} MB`);
+      row("File", "modified", new Date(b.stamp.mtimeMs).toLocaleString());
+    }
+    const words = b.words();
+    row("File", "words", note ? `${words.toLocaleString("en")} (~${Math.max(1, Math.round(words / 230))} min)` : words.toLocaleString("en"));
+    row("File", "lines", b.lineStarts().length.toLocaleString("en"));
+    row("File", "encoding", [b.invalidUtf8 ? "invalid UTF-8" : "UTF-8", b.eol === "\r\n" ? "CRLF" : "LF", ...(b.bom ? ["BOM"] : [])].join(", "));
+    row("File", "state", b.deleted ? "deleted on disk" : b.conflictKept ? "unsaved — differs from disk" : b.dirty ? "unsaved changes" : "saved");
+    // Its properties: the frontmatter, nested maps under their keys.
+    const fm = note ? b.parsed.frontmatter : null;
+    if (fm) {
+      head("Properties");
+      const lines = fm.raw.split("\n");
+      const lineOf = (k: string, from: number) => {
+        const re = new RegExp(`^\\s*\\[?\\s*["']?${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']?\\s*(\\]|[:=])`);
+        const i = lines.findIndex((l, n) => n >= from && re.test(l));
+        return i < 0 ? -1 : i;
+      };
+      const walk = (obj: Record<string, unknown>, depth: number, from: number) => {
+        for (const [k, v] of Object.entries(obj)) {
+          const at = lineOf(k, from);
+          const act = at >= 0 ? { line: at + 2 } : undefined;
+          if (v && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date)) {
+            row("Properties", k, "", act, depth);
+            walk(v as Record<string, unknown>, depth + 1, Math.max(from, at));
+          } else {
+            const shown = Array.isArray(v) ? v.map((x) => (x && typeof x === "object" ? JSON.stringify(x) : String(x))).join(", ") : v instanceof Date ? v.toISOString().slice(0, 10) : String(v);
+            row("Properties", k, shown, act, depth);
+          }
+        }
+      };
+      if (fm.error) row("Properties", "error", fm.error, { line: 1 });
+      else if (fm.data) walk(fm.data, 0, 0);
+    }
+    // Its tags.
+    const tags = entry?.tags ?? [];
+    if (tags.length) {
+      head("Tags");
+      for (const t of tags) row("Tags", `#${t}`, "", { tag: t });
+    }
+    // What it links to and what links to it.
+    head("Links");
+    const links = b.rel ? this.graph.linksOf(b.rel) : [];
+    const broken = links.filter((l) => l.resolvedKind === "unresolved").length;
+    row("Links", "links", `${links.length}${broken ? ` (${broken} unresolved)` : ""}`, { run: "links.open" });
+    row("Links", "backlinks", String(b.rel ? this.graph.backlinks(b.rel).length : 0), { run: "backlinks.open" });
+    row("Links", "headings", String(this.currentLayout(view).headings.length), { run: "outline.toggle" });
+    if (note) {
+      row("Links", "footnotes", String(this.footnotes().length), { run: "footnotes.toggle" });
+      const tasks = listTasks(b.parsed.tree);
+      if (tasks.length) row("Links", "tasks", `${tasks.filter((t) => t.checked).length} of ${tasks.length} done`);
+    }
+    this.infoCache = { key, rows };
+    return rows;
+  }
+
+  /** `enter` on an Info row: a property's line, a tag's notes, a list or view, else its value copied. */
+  openInfoRow(row: InfoRow): void {
+    if (row.heading) return this.infoAction(row.folded ? "unfold" : "fold");
+    const act = row.act;
+    const view = this.view;
+    if (!act || !view) return;
+    if ("tag" in act) return this.openTagNotes(act.tag);
+    if ("run" in act) {
+      this.region = "content";
+      return void this.run(act.run);
+    }
+    if ("line" in act) {
+      this.pushHistory(view);
+      placeAt(this, view, view.buf.lineStarts()[act.line - 1] ?? 0);
+      this.region = "content";
+      if (this.narrow || this.ui.zen) this.outline.overlay = false;
+      return;
+    }
+    this.copy(act.copy);
+  }
+
+  /** The Info view's keys (the outline's keymap, and `y`): move, open, fold its sections, filter, copy. */
+  infoAction(action: string): void {
+    this.outline.pinned = false;
+    if (action === "filter") {
+      this.outline.filtering = true;
+      return;
+    }
+    const rows = this.infoRows();
+    const row = rows[this.outline.selected];
+    switch (action) {
+      case "down":
+        this.outline.selected = Math.min(rows.length - 1, this.outline.selected + 1);
+        break;
+      case "up":
+        this.outline.selected = Math.max(0, this.outline.selected - 1);
+        break;
+      case "top":
+        this.outline.selected = 0;
+        break;
+      case "bottom":
+        this.outline.selected = rows.length - 1;
+        break;
+      case "jump":
+        if (row) this.openInfoRow(row);
+        break;
+      case "fold":
+        if (!row) break;
+        if (!row.heading) this.outline.selected = rows.findIndex((r) => r.heading && r.section === row.section);
+        else this.infoFolded.add(row.section);
+        break;
+      case "unfold":
+        if (row?.heading) this.infoFolded.delete(row.section);
+        break;
+      case "copy":
+        if (row && !row.heading) this.copy(row.act && "copy" in row.act ? row.act.copy : row.value);
+        break;
+      case "close":
+        this.showOutline(false);
+        break;
+      case "leave":
+        this.region = "content";
+        if (this.narrow || this.ui.zen) this.outline.overlay = false;
+        break;
+      default:
+        this.message("error", `unknown Info action: ${action}`);
+    }
   }
 
   // Adding and changing footnotes (3.18): the edits core/footnotes.ts makes, to the buffer as one
@@ -3199,9 +3394,10 @@ export class App {
   /** Keys while the outline's filter has them: type, move, jump, clear. */
   private outlineFilterKey(key: string): void {
     const o = this.outline;
-    // The footnotes view filters the same way (3.17).
+    // The footnotes and Info views filter the same way (3.17, 3.19).
     const notes = this.rightView === "footnotes";
-    const rows: { text: string; line?: number }[] = notes ? this.footnoteRows() : this.outlineRows();
+    const info = this.rightView === "info";
+    const rows: { text: string; line?: number }[] = notes ? this.footnoteRows() : info ? this.infoRows() : this.outlineRows();
     const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
     const done = () => {
       o.filter = "";
@@ -3218,6 +3414,7 @@ export class App {
         done();
         if (!row || !view) return;
         if (notes) return this.jumpToFootnote(row as FootnoteRow);
+        if (info) return this.openInfoRow(row as InfoRow);
         this.pushHistory(view);
         this.moveCursor(view, { row: row.line!, col: 0 });
         this.region = "content";
@@ -3254,7 +3451,7 @@ export class App {
     o.scroll = 0;
     o.pinned = false;
     const q = o.filter ?? "";
-    const next: { text: string }[] = notes ? this.footnoteRows() : this.outlineRows();
+    const next: { text: string; heading?: boolean }[] = notes ? this.footnoteRows() : info ? this.infoRows() : this.outlineRows();
     let best = 0;
     let bestScore = Number.NEGATIVE_INFINITY;
     if (q) {
@@ -3886,7 +4083,13 @@ export class App {
     // A pane's own actions carry their titles (which-key says "New note here", as help does).
     if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : EXPLORER_ACTION_INFO });
     if (this.region === "outline" && this.outlineShown) {
-      out.push(this.rightView === "footnotes" ? { map: this.footnoteKeys, run: (a) => this.footnoteAction(a), info: FOOTNOTE_ACTION_INFO } : { map: this.outlineKeys, run: (a) => this.outlineAction(a), info: OUTLINE_ACTION_INFO });
+      out.push(
+        this.rightView === "footnotes"
+          ? { map: this.footnoteKeys, run: (a) => this.footnoteAction(a), info: FOOTNOTE_ACTION_INFO }
+          : this.rightView === "info"
+            ? { map: this.infoKeys, run: (a) => this.infoAction(a), info: INFO_ACTION_INFO }
+            : { map: this.outlineKeys, run: (a) => this.outlineAction(a), info: OUTLINE_ACTION_INFO },
+      );
     }
     if (this.view?.visual) out.push({ map: this.visualKeys, run: (s) => this.run(s) });
     // Source mode's own keys (x deletes a character there) before the reading ones.
@@ -4348,6 +4551,15 @@ export class App {
       this.region = "outline";
       if (!g.outline || !inRect(g.outline, ev.x, ev.y)) return;
       const idx = ev.y - g.outline.y + this.outline.scroll;
+      if (this.rightView === "info") {
+        // A section's heading folds; a row opens (or copies) what it names.
+        const ir = this.infoRows()[idx];
+        if (!ir) return;
+        this.outline.selected = idx;
+        if (ir.heading) this.infoAction(ir.folded ? "unfold" : "fold");
+        else this.openInfoRow(ir);
+        return;
+      }
       if (this.rightView === "footnotes") {
         // A footnote's fold marker folds; a click elsewhere on a row jumps there.
         const fr = this.footnoteRows()[idx];
@@ -4580,6 +4792,7 @@ export class App {
         else if (arg === "history") this.openLeftView("history");
         else if (arg === "outline") void this.run("outline.toggle");
         else if (arg === "footnotes") void this.run("footnotes.toggle");
+        else if (arg === "info") void this.run("info.toggle");
         else if (arg === "palette") void this.run("palette.open");
         break;
       case "tabclose":

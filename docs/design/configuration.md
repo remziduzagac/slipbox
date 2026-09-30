@@ -136,6 +136,9 @@ poll_ms = 2000                 # backstop tick, unwatchable directories, degrade
 [keys.footnotes]               # key = footnotes action: the outline's, and add edit
 "x" = "delete"                 #   delete rename
 
+[keys.info]                    # key = Info action: the outline's, and copy
+"c" = "copy"
+
 [keys.resize]                  # key = resize action: narrower wider shorter taller
 "<" = "narrower"               #   equalize leave
 

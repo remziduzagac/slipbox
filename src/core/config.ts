@@ -140,6 +140,8 @@ export interface Config {
     outline?: Record<string, string>;
     /** The footnotes view's own keys (3.18): the outline's, and a / e / d / r. */
     footnotes?: Record<string, string>;
+    /** The Info view's own keys (3.19): the outline's, and y. */
+    info?: Record<string, string>;
     resize?: Record<string, string>;
   };
   /** `:` aliases: alias → command spec, e.g. `wq = "app.quit"`; `""` removes a default. */
@@ -334,8 +336,8 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       continue;
     }
     // String maps: key bindings (with context sub-tables), aliases, group names.
-    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|source|explorer|outline|footnotes|resize)$/.test(prefix)) {
-      const table = prefix === "keys" && ["visual", "source", "explorer", "outline", "footnotes", "resize"].includes(key);
+    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|source|explorer|outline|footnotes|info|resize)$/.test(prefix)) {
+      const table = prefix === "keys" && ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"].includes(key);
       if (table && !isPlainObject(value)) warnings.push(`config: ${file}: ${path} must be a table of key = "command" (a mode's own keys)`);
       else if (typeof value === "string") out[key] = value;
       else if (table) out[key] = merge((out[key] as Record<string, string> | undefined) ?? {}, value as Record<string, unknown>, file, `keys.${key}`, warnings);

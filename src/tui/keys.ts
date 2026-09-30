@@ -398,6 +398,26 @@ export const DEFAULT_FOOTNOTE_KEYS: Record<string, string> = {
 
 export const FOOTNOTE_ACTIONS = [...OUTLINE_ACTIONS, "add", "edit", "delete", "rename"];
 
+/** Keys inside the Info view (3.19): the outline's, and `y` to copy a row's value. */
+export const DEFAULT_INFO_KEYS: Record<string, string> = { ...DEFAULT_OUTLINE_KEYS, y: "copy" };
+
+export const INFO_ACTIONS = [...OUTLINE_ACTIONS, "copy"];
+
+/** What the Info view's actions do, for help and which-key. */
+export const INFO_ACTION_INFO: Record<string, { title: string; desc: string }> = {
+  down: { title: "Move down", desc: "Selects the next row" },
+  up: { title: "Move up", desc: "Selects the previous row" },
+  jump: { title: "Open", desc: "A property: its line in the frontmatter; a tag: its notes; links, backlinks, headings, footnotes: their list or view; else copies the value" },
+  fold: { title: "Fold", desc: "Folds the section, or goes from a row to its section" },
+  unfold: { title: "Unfold", desc: "Unfolds the section" },
+  top: { title: "Top", desc: "Selects the first row" },
+  bottom: { title: "Bottom", desc: "Selects the last row" },
+  filter: { title: "Filter", desc: "Type to narrow the rows by name and value; enter opens, esc clears" },
+  copy: { title: "Copy", desc: "Copies the row's value (a path whole)" },
+  close: { title: "Close the Info", desc: "Closes the right panel; focus returns to the note" },
+  leave: { title: "Back to the note", desc: "Focuses the note; the Info stays open" },
+};
+
 /** Keys in resize mode: key → resize action. Anything else leaves the mode. */
 export const DEFAULT_RESIZE_KEYS: Record<string, string> = {
   h: "narrower",

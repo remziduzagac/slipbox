@@ -134,6 +134,9 @@ export class Graph {
   stats: GraphStats = { notes: 0, parsed: 0, cached: 0, ms: 0 };
   private backlinkCache: Map<string, Backlink[]> | null = null;
   private tagCache: Map<string, { tag: string; notes: string[] }> | null = null;
+  /** Bumped whenever what the notes say changes (a note read, changed, gone): views that show
+   *  what's derived from them (the Info view's counts) know to look again. */
+  generation = 0;
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
   /** Aliases and previous names → notes, from the entries parsed so far (null: rebuild). */
   private nameCache: { aliases: Map<string, string[]>; previous: Map<string, string[]> } | null = null;
@@ -196,6 +199,7 @@ export class Graph {
     }
     this.backlinkCache = null;
     this.tagCache = null;
+    this.generation++;
     this.nameCache = null;
     this.cacheDirty = Object.keys(old).length !== reused;
     const toParse = this.unparsed.size;
@@ -250,6 +254,7 @@ export class Graph {
       this.cacheDirty = true;
       this.backlinkCache = null;
       this.tagCache = null;
+      this.generation++;
       this.nameCache = null;
     }
     return this.notes.get(rel);
@@ -352,6 +357,7 @@ export class Graph {
     if (isNew) this.index.add(rel);
     this.backlinkCache = null;
     this.tagCache = null;
+    this.generation++;
     this.nameCache = null;
     return true;
   }
@@ -370,6 +376,7 @@ export class Graph {
     else return false;
     this.backlinkCache = null;
     this.tagCache = null;
+    this.generation++;
     this.nameCache = null;
     this.dataLinkCache.clear(); // a path in a data file or a comment may resolve now
     return true;
@@ -386,6 +393,7 @@ export class Graph {
     this.dataLinkCache.clear(); // and paths to it no longer resolve
     this.backlinkCache = null;
     this.tagCache = null;
+    this.generation++;
     this.nameCache = null;
     return true;
   }
@@ -399,6 +407,7 @@ export class Graph {
     this.index.remove(rel);
     this.backlinkCache = null;
     this.tagCache = null;
+    this.generation++;
     this.nameCache = null;
   }
 
@@ -699,6 +708,7 @@ export class Graph {
     await Promise.all([...gs].map((g) => grammar(g)));
     this.backlinkCache = null;
     this.tagCache = null;
+    this.generation++;
     this.nameCache = null;
   }
 
@@ -706,6 +716,7 @@ export class Graph {
   grammarsChanged(): void {
     this.backlinkCache = null;
     this.tagCache = null;
+    this.generation++;
     this.nameCache = null;
   }
 
@@ -787,6 +798,7 @@ export class Graph {
     this.dataLinkCache.delete(rel);
     this.backlinkCache = null;
     this.tagCache = null;
+    this.generation++;
     this.nameCache = null;
   }
 }

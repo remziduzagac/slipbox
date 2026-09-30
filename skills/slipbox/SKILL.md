@@ -66,7 +66,8 @@ slipbox ls --json                        # every note: path, title, tags, link c
 ```
 
 `render` is for reading. `slipbox read <note> --json` gives the raw text and its `sha`;
-`slipbox stat <note> --json` its size, dates, title, tags and link counts without the text.
+`slipbox stat <note> --json` its vault, properties (the frontmatter), size, dates, title, tags and link counts
+without the text.
 
 ## Finding and changing notes
 

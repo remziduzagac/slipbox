@@ -174,7 +174,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     const top = mainY;
     const rect = { x: RW - w, y: top, w, h: bottom + 1 - top };
     if (!app.outlineBeside) clipRules(geo, { x: RW - w - 3, y: top, w: w + 3, h: bottom + 1 - top });
-    geo.outline = app.rightView === "footnotes" ? drawFootnotes(app, c, rect, geo) : drawOutline(app, c, rect, geo);
+    geo.outline = app.rightView === "footnotes" ? drawFootnotes(app, c, rect, geo) : app.rightView === "info" ? drawInfo(app, c, rect, geo) : drawOutline(app, c, rect, geo);
     geo.outlinePane = rect;
     if (!app.outlineBeside) {
       c.fill(RW - w - 3, top, 2, bottom + 1 - top, roleStyle(theme, "sidebar", page).bg);
@@ -1269,6 +1269,55 @@ function drawHistoryList(app: App, c: Canvas, list: Rect, bg: Color | null, geo:
 }
 
 /**
+ * The Info view (3.19): the file on screen, in sections — File, Properties, Tags, Links — each a
+ * heading that folds, over its rows: a name, dim, and its value, cut to the pane (never scrolled
+ * sideways). Nested properties indent under their key.
+ */
+function drawInfo(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
+  const theme = app.theme;
+  const page = pageBg(theme);
+  const base = roleStyle(theme, "sidebar", page);
+  c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
+  let rect = paneTitle(app, c, pane, RIGHT_VIEWS.find((v) => v.id === "info")!.title, app.region === "outline", base.bg);
+  rect = filterRow(app, c, rect, app.outline, app.region === "outline", base.bg, geo);
+  const rows = app.infoRows();
+  const o = app.outline;
+  const g = app.glyphs;
+  const sv = sideView(rect, rows, () => "", o);
+  rect = sv.list;
+  o.selected = Math.max(0, Math.min(o.selected, rows.length - 1));
+  if (!o.pinned && o.selected < o.scroll) o.scroll = o.selected;
+  if (!o.pinned && o.selected >= o.scroll + rect.h) o.scroll = o.selected - rect.h + 1;
+  o.scroll = Math.max(0, Math.min(o.scroll, Math.max(0, rows.length - rect.h)));
+  if (!rows.length) {
+    drawText(c, rect.x + 1, rect.y, o.filter ? "no matches" : "no file", roleStyle(theme, "dim", base.bg), rect.w - 1);
+    return rect;
+  }
+  // Names in a column, as wide as the longest one shown (at most a third of the pane).
+  const keyW = Math.min(Math.floor(sv.cols / 3), Math.max(4, ...rows.filter((r) => !r.heading).map((r) => r.depth * 2 + stringWidth(r.key))));
+  for (let i = 0; i < rect.h; i++) {
+    const idx = o.scroll + i;
+    const row = rows[idx];
+    if (!row) break;
+    const y = rect.y + i;
+    const selected = idx === o.selected && app.region === "outline";
+    const st = roleStyle(theme, selected ? "sidebar_selected" : "sidebar", base.bg);
+    if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
+    if (row.heading) {
+      drawText(c, rect.x, y, truncate(` ${row.folded ? g.foldClosed : g.foldOpen} ${row.key}`, sv.cols), { ...st, bold: true }, rect.w);
+      continue;
+    }
+    const name = `${"  ".repeat(row.depth)}${row.key}`;
+    const x0 = rect.x + 3;
+    drawText(c, x0, y, truncate(name, keyW), { ...roleStyle(theme, row.section === "Tags" ? "tag" : "dim", st.bg), bg: st.bg }, keyW);
+    const vx = x0 + keyW + 1;
+    if (vx < rect.x + sv.cols) drawText(c, vx, y, truncate(sanitize(row.value), rect.x + sv.cols - vx), st, rect.x + sv.cols - vx);
+  }
+  paneScrollbar(app, c, rect, rows.length, o.scroll, "outline", app.region === "outline", base.bg, geo);
+  return rect;
+}
+
+/**
  * The note's footnotes (3.17), the right panel's other view: each footnote — `[label]` and its
  * text, how many references it has at the right — and, unfolded under it, each reference with its
  * line. A footnote nothing refers to, or a reference with no definition, is marked. While the view
@@ -1331,7 +1380,7 @@ function drawOutline(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const page = pageBg(theme);
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
-  let rect = paneTitle(app, c, pane, RIGHT_VIEWS[0]!.title, app.region === "outline", base.bg);
+  let rect = paneTitle(app, c, pane, RIGHT_VIEWS.find((v) => v.id === "outline")!.title, app.region === "outline", base.bg);
   rect = filterRow(app, c, rect, app.outline, app.region === "outline", base.bg, geo);
   const rows = app.outlineRows();
   const lines = treeLines(rows.map((r) => r.level - 1));
@@ -1397,7 +1446,9 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
           : app.region === "outline"
             ? app.rightView === "footnotes"
               ? " FOOTNOTES "
-              : " OUTLINE "
+              : app.rightView === "info"
+                ? " INFO "
+                : " OUTLINE "
             : view?.insert
               ? " INSERT "
               : view?.source

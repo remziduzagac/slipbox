@@ -1071,9 +1071,13 @@ const HANDLERS: Record<string, Handler> = {
     const file = readNoteFile(s, abs, false);
     const e = s.graph.entry(rel);
     const links = s.graph.linksOf(rel);
+    // Its properties (3.19): the frontmatter as parsed, as the TUI's Info view shows it.
+    const fm = s.graph.notes.has(rel) ? parseNoteFile(rel, file.text).frontmatter : null;
     const data = {
       path: rel,
       abs,
+      vault: s.loc.mode === "home" ? null : (s.loc.name ?? null),
+      properties: fm?.data ?? null,
       size: file.bytes.length,
       mtime: new Date(statSync(abs).mtimeMs).toISOString(),
       title: e?.title ?? null,
@@ -1092,8 +1096,10 @@ const HANDLERS: Record<string, Handler> = {
       ["path", abs],
       ["size", `${data.size} bytes`],
       ["modified", data.mtime],
+      ["vault", data.vault ?? "home (loose files)"],
       ["title", data.title ?? "—"],
       ["tags", data.tags.join(", ") || "—"],
+      ...Object.entries(data.properties ?? {}).map(([k, v]): [string, string] => [`  ${k}`, typeof v === "object" ? JSON.stringify(v) : String(v)]),
       ["headings", String(data.headings)],
       ["links", `${data.links}${data.unresolved ? ` (${data.unresolved} unresolved)` : ""}`],
       ["backlinks", String(data.backlinks)],

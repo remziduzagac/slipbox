@@ -409,7 +409,7 @@ position under a repeated heading (a log's `## Weather` entries) keeps its entry
 prepended: the anchor also records the heading's occurrence counted from the bottom and the row's
 text, and keeps whichever count still finds that text.
 
-## Side panes: explorer (plan `3.7`), history, outline and footnotes
+## Side panes: explorer (plan `3.7`), history, Info, outline and footnotes
 
 Each side has one panel, which shows one of its views at a time; its rail has a button per view,
 bright while that view shows. Clicking a view's button shows the panel on it (and focuses it), or
@@ -452,6 +452,16 @@ keys.
   `ctrl+n` / `ctrl+p` move, `enter` or a click opens (in the explorer and the history, a
   double-click; the filter clears), `esc` clears it. `ctrl+p`
   stays the flat quick-open across the vault.
+- **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
+  Sections that fold (`h`/`l`): **File** (its path, the vault it belongs to, its kind, size, modified time, words and
+  reading time, lines, encoding and line endings, saved or not), **Properties** (the frontmatter's keys and values,
+  nested maps indented under their key), **Tags** (its own, frontmatter's and text's), **Links** (links and how many
+  are unresolved, backlinks, headings, footnotes, tasks done). `enter` opens what a row names: a property's line in
+  the frontmatter (source mode: its own line; rendered, the row that shows it), a tag's notes, the links or backlinks
+  list, the outline or the footnotes view; any other row copies its value, as `y` does. The vault's own information
+  — its notes, index and watcher — is `space v i`'s window: a vault isn't a file. Names are a column a third of the
+  pane at most, values cut to it (no sideways scrolling). `space n i`, the `ℹ` button, `slipbox stat` (its `vault`
+  and `properties` too).
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 - **Footnotes (right, `3.17`):** the current note's footnotes, in the order the note first refers to them (as GFM
@@ -471,7 +481,7 @@ keys.
   its label in every reference and its definition, `d` deletes both after asking. Each change is one undo step and
   is saved at once, as a task's tick is; the cursor stays where it was.
 
-Each pane starts with its view's title ("Explorer", "History", "Outline", "Footnotes") and a blank row before the
+Each pane starts with its view's title ("Explorer", "History", "Info", "Outline", "Footnotes") and a blank row before the
 list; panes under 8 rows skip both. The explorer runs from under the frame's top
 rule, beside the tab strip. The outline starts right under the tab strip too,
 beside the note's windows: their breadcrumbs and rules stop at its border (which meets the
@@ -489,9 +499,9 @@ rules it meets. Each is generic: a place for buttons, whatever they open.
   `◷` (ascii `~`), and the panel opens beside it. Without it, `≡` is the top bar's and the history
   opens with `space h h`.
 - **The right rail** runs from under the tab strip's rule, its first button level with the breadcrumb. It holds the
-  right panel's views, the outline's `▤` and under it the footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`),
-  and the panel opens beside it. Without it, `▤` sits at the breadcrumb's right end and the footnotes open with `space n
-  f`.
+  right panel's views: the Info's `ℹ` (Nerd: an i in a circle; ascii `i`), under it the outline's `▤`, then the
+  footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`); the panel opens beside it. Without it, `▤` sits at the
+  breadcrumb's right end, and the Info and the footnotes open with `space n i` and `space n f`.
 
 Every width (the panes, the note, the narrow cutoff) is shared out after the rails' columns.
 Zen mode hides both.
