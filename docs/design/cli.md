@@ -86,6 +86,9 @@ These churn freely before 1.0:
 | `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
 | `vaults` | `[{key, id, kind, name, aliases, previous_names, path, seen, exists}]`, newest first |
 | `mv`, `rename-vault`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, written}` (see Renames) |
+| `cp <note\|folder> [path]` | `{from, to, dir}` — beside it as `name-copy` without a path; exit 5 onto a file |
+| `rm <note\|folder>` | `{path, dryRun, breaking, trashed{id, abs, shown, dir, at}}` — to the vault's trash |
+| `trash [restore <item>]` | the items, newest first; `restore`: the item put back (exit 5 over something there) |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |
@@ -263,6 +266,15 @@ new path has none) and rewrites every link to it, in this vault and in every vau
 - **Refused, nothing written** (exit 5): a target that exists, a path outside the vault or hidden, a file changed
   between the plan and the writing.
 - **Git** (`7.3`): a root it writes to whose tree already has changes is named in `warnings`; the rename goes ahead.
+
+**A folder** (`18.3`): `slipbox mv <folder> <new-path>` moves it with everything in it — what the walk doesn't list
+too — and rewrites every link to anything in it, from where each linking file will be; links between two files that
+move together stay as they are.
+
+**Deleting and copying** (`18.4`, `18.5`): `slipbox rm` moves a note, file or folder to the vault's trash — in its
+state, never in the folder — and says how many links from other notes break (`breaking`, and a warning); `--dry-run`
+only says. `slipbox trash` lists what's there; `slipbox trash restore <id|path>` puts an item back where it was,
+refused when something is there now. `slipbox cp` copies a note, file or folder, as written.
 
 `slipbox rename-vault <name>` renames this vault: `[vault] name` in its config, the old name added to its
 `previous_names`, and every `[[old:…]]` rewritten, here and in the vaults linking into it. `slipbox relink [note]`

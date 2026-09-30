@@ -269,6 +269,43 @@ describe("the vault and the tool", () => {
     const rl = slipbox(["relink", "late", "--json"], { cwd: dir }).json;
     expect(rl.data.files[0].edits[0]).toMatchObject({ before: "[[plan]]", after: "[[roadmap]]" });
   });
+  test("cp, rm, trash, and mv of a folder (18.x)", () => {
+    const dir = join(sandbox, "fileops");
+    mkdirSync(join(dir, "projects", "deep"), { recursive: true });
+    writeFileSync(join(dir, "projects", "plan.md"), "# Plan\n\n[deeper](deep/detail.md)\n");
+    writeFileSync(join(dir, "projects", "deep", "detail.md"), "# Detail\n\n[up](../plan.md)\n");
+    writeFileSync(join(dir, "index.md"), "[[projects/plan]] and [d](projects/deep/detail.md)\n");
+    expect(slipbox(["init", dir, "--name", "fileops"]).code).toBe(0);
+    // A folder moves whole: links into it fixed, links inside it left as they are.
+    const mv = slipbox(["mv", "projects", "work", "--json"], { cwd: dir }).json;
+    expect(mv.data).toMatchObject({ kind: "folder", from: "projects", to: "work", dryRun: false });
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[[work/plan]] and [d](work/deep/detail.md)\n");
+    expect(readFileSync(join(dir, "work", "plan.md"), "utf8")).toBe("# Plan\n\n[deeper](deep/detail.md)\n");
+    expect(existsSync(join(dir, "projects"))).toBe(false);
+    // cp: beside it as name-copy, or where told.
+    expect(slipbox(["cp", "work/plan.md", "--json"], { cwd: dir }).json.data).toMatchObject({ from: "work/plan.md", to: "work/plan-copy.md" });
+    expect(slipbox(["cp", "work/plan.md", "elsewhere", "--json"], { cwd: dir }).json.data.to).toBe("elsewhere.md");
+    expect(slipbox(["cp", "work/plan.md", "elsewhere"], { cwd: dir }).code).toBe(5); // there now
+    // rm: to the trash, the links it breaks said; trash lists it; restore puts it back.
+    const rm = slipbox(["rm", "work/plan.md", "--json"], { cwd: dir }).json;
+    expect(rm.data.breaking).toBe(2);
+    expect(rm.warnings.join()).toContain("2 links from other notes to work/plan.md will break");
+    expect(existsSync(join(dir, "work", "plan.md"))).toBe(false);
+    const listed = slipbox(["trash", "--json"], { cwd: dir }).json.data;
+    expect(listed[0]).toMatchObject({ shown: "work/plan.md", dir: false });
+    expect(slipbox(["trash", "restore", "work/plan.md"], { cwd: dir }).code).toBe(0);
+    expect(readFileSync(join(dir, "work", "plan.md"), "utf8")).toContain("# Plan");
+    expect(slipbox(["trash", "--json"], { cwd: dir }).json.data).toEqual([]);
+    // A folder to the trash and back; restoring over something is refused.
+    slipbox(["rm", "work/deep"], { cwd: dir });
+    expect(existsSync(join(dir, "work", "deep"))).toBe(false);
+    mkdirSync(join(dir, "work", "deep"));
+    expect(slipbox(["trash", "restore", "work/deep"], { cwd: dir }).code).toBe(5);
+    rmSync(join(dir, "work", "deep"), { recursive: true });
+    expect(slipbox(["trash", "restore", "work/deep"], { cwd: dir }).code).toBe(0);
+    expect(existsSync(join(dir, "work", "deep", "detail.md"))).toBe(true);
+    expect(slipbox(["rm", ".slipbox"], { cwd: dir }).code).not.toBe(0);
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);

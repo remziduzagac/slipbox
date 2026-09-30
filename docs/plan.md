@@ -598,6 +598,20 @@ rename in its own form.
 file it touches (7.2), and warns when a vault's git tree already has changes (7.3); the old name goes
 to `previous_names`. `7.4` (undo) stays open.
 
+## Explorer: making and changing files — `18.x` (phase 4)
+
+*Decided 2026-09-30 with the user: buttons as well as keys, file operations with the rename's link fixing, a trash
+rather than an unlink, nvim-tree's keys where they fit. The design is `docs/design/tui.md`, "Files in the explorer".*
+
+| ID | Item |
+| --- | --- |
+| 18.1 | **Done.** Buttons: a new note and folder on the explorer's title; rename, move, delete on the selected row |
+| 18.2 | **Done.** Keys: `n` / `N` new note, folder (`%` too); `r` rename, `m` move, `d` delete, `u` restore |
+| 18.3 | **Done.** Folders renamed and moved like notes: every link to anything in them fixed, after a preview |
+| 18.4 | **Done.** Delete to the vault's trash (in its state), links that break said; restore; `:trash` |
+| 18.5 | **Done.** Copy, cut and paste (`y`, `x`, `p`): a copy (`name-copy`), or a move with links fixed |
+| 18.6 | **Done.** CLI: `slipbox cp`, `rm`, `trash [restore]`; `mv` takes a folder |
+
 ## Deferred — in the design, not in this breakdown
 
 Mermaid and LaTeX, git awareness, worktree handling, Tier 2 plugins, diffs,

@@ -13,7 +13,7 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | --- | --- | --- | --- |
 | config | `$XDG_CONFIG_HOME/slipbox/config.toml`, then the vault's | user and vault settings | no |
 | cache | `$XDG_CACHE_HOME/slipbox/<key>/` | the persisted link index | yes, rebuilt on demand |
-| state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness, redirects | loses your place |
+| state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness, redirects, trash | no: yours |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/vaults.json` | the vaults this machine has seen | re-added on open |
 | data | `$XDG_DATA_HOME/slipbox/home/` | the home vault's `.slipbox/`: its config | a new id: loses state |
 

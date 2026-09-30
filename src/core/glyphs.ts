@@ -44,6 +44,13 @@ export interface Glyphs {
   dirClosed: string;
   /** A folder that is its own root (17.13): a vault (a `.slipbox/`). */
   vault: string;
+  /** The explorer's buttons (18.1): a new note, a new folder on its title; rename, move and
+   *  delete on the selected row. */
+  newNote: string;
+  newFolder: string;
+  renameItem: string;
+  moveItem: string;
+  deleteItem: string;
   /** The outline's fold markers (the explorer uses dirOpen / dirClosed). */
   foldOpen: string;
   foldClosed: string;
@@ -110,6 +117,11 @@ const unicode: Glyphs = {
   dirOpen: "▾",
   dirClosed: "▸",
   vault: "◈",
+  newNote: "+",
+  newFolder: "+▸",
+  renameItem: "✎",
+  moveItem: "↦",
+  deleteItem: "✕",
   foldOpen: "▾",
   foldClosed: "▸",
   guide: "│",
@@ -155,6 +167,11 @@ const nerd: Glyphs = {
   dirClosed: "\u{f024b}", // nf-md-folder
   // Material, like the folders (so the same size), and nothing like one: shelves of notes.
   vault: "\u{f125f}", // nf-md-bookshelf
+  newNote: "\u{f0752}", // nf-md-file_plus
+  newFolder: "\u{f0257}", // nf-md-folder_plus
+  renameItem: "\u{f03eb}", // nf-md-pencil
+  moveItem: "\u{f0ab9}", // nf-md-file_move
+  deleteItem: "\u{f0a7a}", // nf-md-trash_can_outline
   file: "󰍔",
   dataFile: "\u{f0626}", // nf-md-code_json
   textFile: "\u{f022e}", // nf-md-file_code
@@ -190,6 +207,11 @@ const ascii: Glyphs = {
   dirOpen: "v",
   dirClosed: ">",
   vault: "#",
+  newNote: "+",
+  newFolder: "+>",
+  renameItem: "r",
+  moveItem: "m",
+  deleteItem: "d",
   foldOpen: "v",
   foldClosed: ">",
   guide: "|",

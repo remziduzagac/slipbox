@@ -301,14 +301,39 @@ itself.
 
 ## Renames (plans `17.15`, `7.1`–`7.3`)
 
-`space n m` (`:rename <path>`, `:mv`, the explorer's `shift+r`) asks for the note's new path, the old one typed
-already; `space v n` for the vault's new name; `space l r` (`:relink`) relinks this note's links that reach their
+`space n m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already; the explorer's `r`
+for the selected note's, file's or folder's new name, `m` for a folder to move it to (18.x, below); `space v n` for
+the vault's new name; `space l r` (`:relink`) relinks this note's links that reach their
 note by an old name or a move. Each shows its **preview** first: a list of every line it changes, in every vault
 (`notes/index.md:3  [[plan]]  →  [[roadmap]]`), with the git trees that already have changes and the links skipped
 at the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s,
 `rename-vault`'s and `relink`'s (`docs/design/cli.md`, "Renames"). **Refused while a file it rewrites is unsaved.**
-After it, the open notes it changed are reloaded, and a window on the renamed note shows it under its new path, its
-history following.
+After it, the open notes it changed are reloaded, and a window on a renamed or moved note shows it under its new
+path, its history following — every note of a moved folder alike.
+
+## Files in the explorer (plans `18.1`–`18.6`)
+
+The explorer makes and changes files by keys and by buttons, on the selected row — a note, a file, or a folder:
+
+- **New:** `n` a note, `shift+n` a folder (`%` too, netrw's), in the selected folder or beside the selected file; the
+  title's two buttons do the same (Nerd: a file and a folder with a plus; unicode `+`, `+▸`).
+- **Rename (`r`) and move (`m`):** `r` asks for the new name, in its folder (the old one typed); `m` lists the vault's
+  folders (the root first; its own folder and, for a folder, itself and what's in it left out) to pick one. Both go
+  through the rename's **preview** above: every link to it — and, for a folder, to anything in it — fixed, links
+  between notes that move together left as they are, what the walk doesn't list (pictures, hidden files) moving with
+  its folder.
+- **Delete (`d`):** asks first, saying how many links from other notes will break, then moves it to the vault's
+  **trash** (in its state, never in the folder). `u` puts back what was deleted last; `space v t` (`:trash`) lists
+  the trash, `enter` restoring an item — refused when something is at its place again. An open note deleted shows its
+  last text, marked deleted; restored, it's reloaded. Refused while a note it takes is unsaved.
+- **Copy, cut, paste (`y`, `x`, `p`):** `p` pastes into the selected folder (or beside the selected file): a copy —
+  `name-copy`, `-2`… when pasted beside the original, the copy's links as written — or what was cut, moved (the
+  preview, links fixed).
+- **Buttons on the selected row** while the explorer has focus: rename, move, delete (Nerd: a pencil, a file with an
+  arrow, a trash can; unicode `✎` `↦` `✕`; ascii `r` `m` `d`), at the row's end, a long name cut (`…`) to make room.
+
+The current note has `space n d` (`:delete`), `space n m` (rename or move by path), and the palette's "Copy the
+note". What they do is the CLI's `rm`, `mv` and `cp` (`docs/design/cli.md`).
 
 ## Following links
 
@@ -363,7 +388,8 @@ keys.
   notes" below). Moving the selection, or a click on a note, only selects. `enter`, `l` and a
   double-click open the note as a tab, or switch to the tab already showing it; `o` replaces the
   current window's note, and `s` opens it in the split's other window. A click on a folder folds or
-  unfolds it. **A folder that is another vault** (`17.13`), nested in this one (`◈`, Nerd: a
+  unfolds it. New notes and folders, renames, moves, deletes, copies: "Files in the explorer",
+  below. **A folder that is another vault** (`17.13`), nested in this one (`◈`, Nerd: a
   bookshelf), in a folder's blue (role `sidebar_vault`, for `[colors]` to set), is a row of its
   own, its icon telling it from a folder, the vault's name dimmed after the folder's when they
   differ; `enter` or a double-click goes into it (a switch, below). **In a loose folder** (the home

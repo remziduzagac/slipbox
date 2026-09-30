@@ -53,7 +53,8 @@ import {
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
 import { normKey } from "../core/links.ts";
 import { Reach } from "../core/reach.ts";
-import { type Applied, applyPlan, planNoteRename, type RenamePlan } from "../core/rename.ts";
+import { type Applied, applyPlan, planFolderMove, planNoteRename, type RenamePlan } from "../core/rename.ts";
+import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, vaultConfigFile } from "../core/registry.ts";
 import { gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
@@ -1919,6 +1920,162 @@ export class App {
     return { name, at, suggested: prefix + suggested };
   }
 
+  // -------------------------------------------------------------------------------------------
+  // File operations in the explorer (18.x)
+
+  /** Copied or cut in the explorer, for `p`. */
+  fileClip: { mode: "copy" | "cut"; rel: string; dir: boolean } | null = null;
+  /** What was deleted last this session: `u` in the explorer puts it back. */
+  private lastTrashed: string | null = null;
+
+  /** What the explorer's selected row names: a note or file, or a folder (a vault or `..`: none). */
+  explorerItem(): { rel: string; dir: boolean } | null {
+    if (this.leftView !== "explorer") return null;
+    const row = this.explorerRows()[this.sidebar.selected];
+    if (!row || row.kind === "root") return null;
+    return { rel: row.path, dir: row.kind === "dir" };
+  }
+
+  /** Select a path in the explorer, unfolding its folders. */
+  selectInExplorer(rel: string): void {
+    const parts = rel.split("/");
+    for (let i = 1; i < parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
+    this.invalidateTree();
+    const at = this.explorerRows().findIndex((r) => r.path === rel);
+    if (at >= 0) this.sidebar.selected = at;
+  }
+
+  /** Unsaved notes among `rel` and what's in it: a file operation would leave them behind. */
+  private unsavedIn(rel: string): NoteBuffer[] {
+    return this.dirtyBuffers().filter((b) => b.rel !== null && (b.rel === rel || b.rel.startsWith(`${rel}/`)));
+  }
+
+  /** Rename in place: a new name, in the same folder; every link fixed after a preview. */
+  renameItem(item: { rel: string; dir: boolean }): void {
+    const name = posix.basename(item.rel);
+    const dir = posix.dirname(item.rel) === "." ? "" : posix.dirname(item.rel);
+    this.prompt(`rename ${item.rel}${item.dir ? "/" : ""} to: `, (text) => {
+      const typed = text.trim().replace(/\/+$/, "");
+      if (!typed || typed === name) return;
+      if (typed.includes("/")) return this.message("warn", `a name, not a path: m moves ${name} to another folder`);
+      const to = dir ? `${dir}/${typed}` : typed;
+      this.previewRename(() => (item.dir ? planFolderMove(this.graph, item.rel, to) : planNoteRename(this.graph, item.rel, to)));
+    });
+    (this.overlay as PromptOverlay).text = item.dir ? name : name.replace(/\.(md|markdown)$/i, "");
+  }
+
+  /** Move to another folder, picked from the vault's folders; every link fixed after a preview. */
+  moveItem(item: { rel: string; dir: boolean }): void {
+    const here = posix.dirname(item.rel) === "." ? "" : posix.dirname(item.rel);
+    const name = posix.basename(item.rel);
+    const folders = ["", ...[...this.graph.dirs].filter((d) => d).sort()].filter((d) => d !== here && !(item.dir && (d === item.rel || d.startsWith(`${item.rel}/`))));
+    this.openList({
+      title: `Move ${item.rel}${item.dir ? "/" : ""} to…`,
+      items: folders.map((d) => ({ label: d ? `${d}/` : "/ (the vault's root)", data: d })),
+      accept: (it) => {
+        const to = it.data ? `${it.data}/${name}` : name;
+        this.previewRename(() => (item.dir ? planFolderMove(this.graph, item.rel, to) : planNoteRename(this.graph, item.rel, to)));
+      },
+    });
+  }
+
+  /** Delete to the vault's trash, after asking — saying how many links it breaks. */
+  deleteItem(item: { rel: string; dir: boolean }): void {
+    const unsaved = this.unsavedIn(item.rel);
+    if (unsaved.length) return this.message("warn", `unsaved: ${unsaved.map((b) => this.displayName(b)).join(", ")} — save or revert it first`);
+    const breaking = linksInto(this.graph, item.rel);
+    const what = item.dir ? `${item.rel}/ and everything in it` : item.rel;
+    const warn = breaking ? ` ${breaking} link${breaking === 1 ? "" : "s"} to it will break.` : "";
+    this.prompt(`delete ${what}?${warn} (to the trash: u restores) y then enter: `, (text) => {
+      if (text.trim().toLowerCase() !== "y") return;
+      let t: ReturnType<typeof trashPath>;
+      try {
+        t = trashPath(this.graph, this.loc, item.rel);
+      } catch (err) {
+        return this.message("warn", (err as Error).message);
+      }
+      this.lastTrashed = t.id;
+      // Open notes that went with it show their last text, marked deleted (as when deleted on disk).
+      for (const b of this.buffers.values()) if (b.rel !== null && (b.rel === item.rel || b.rel.startsWith(`${item.rel}/`))) b.deleted = true;
+      this.afterFileOp();
+      this.message("info", `deleted ${item.rel} to the trash — u in the explorer (or :trash) restores it`);
+    });
+  }
+
+  /** Put back what was deleted last; with nothing deleted this session, the trash. */
+  restoreLast(): void {
+    if (!this.lastTrashed) return this.openTrash();
+    this.restoreItem(this.lastTrashed);
+  }
+
+  private restoreItem(id: string): void {
+    let item: TrashItem;
+    try {
+      item = restorePath(this.graph, this.loc, id);
+    } catch (err) {
+      return this.message("warn", (err as Error).message);
+    }
+    if (this.lastTrashed === id) this.lastTrashed = null;
+    for (const b of this.buffers.values()) if (b.deleted && (b.abs === item.abs || b.abs.startsWith(`${item.abs}/`))) this.reloadBuffer(b);
+    this.afterFileOp();
+    this.selectInExplorer(item.shown);
+    this.message("info", `restored ${item.shown}`);
+  }
+
+  /** The vault's trash (`:trash`): enter restores an item. */
+  openTrash(): void {
+    const items = listTrash(this.loc);
+    if (!items.length) return this.message("info", "the trash is empty");
+    this.openList({
+      title: `Trash (${items.length}) — enter restores`,
+      items: items.map((i) => ({ label: `${i.shown}${i.dir ? "/" : ""}`, hint: i.at.slice(0, 16).replace("T", " "), data: i.id })),
+      accept: (it) => this.restoreItem(it.data as string),
+    });
+  }
+
+  /** Copy or cut the selected item, for `p`. */
+  clipItem(mode: "copy" | "cut", item: { rel: string; dir: boolean }): void {
+    this.fileClip = { mode, ...item };
+    this.message("info", `${mode === "copy" ? "copied" : "cut"} ${item.rel}${item.dir ? "/" : ""} — p pastes it in the selected folder`);
+  }
+
+  /** Paste into the selected folder (or beside the selected file): a copy, or what was cut, moved. */
+  pasteItem(): void {
+    const clip = this.fileClip;
+    if (!clip) return this.message("info", "nothing copied or cut: y copies, x cuts");
+    if (!existsSync(join(this.loc.root, clip.rel))) {
+      this.fileClip = null;
+      return this.message("warn", `${clip.rel} isn't there any more`);
+    }
+    const into = this.newItemBase();
+    const from = posix.dirname(clip.rel) === "." ? "" : posix.dirname(clip.rel);
+    const name = posix.basename(clip.rel);
+    const to = into ? `${into}/${name}` : name;
+    if (clip.mode === "cut") {
+      if (into === from) return this.message("info", `${clip.rel} is already in ${into || "the vault's root"}`);
+      if (clip.dir && (into === clip.rel || into.startsWith(`${clip.rel}/`))) return this.message("warn", `${clip.rel} can't move into itself`);
+      return this.previewRename(() => (clip.dir ? planFolderMove(this.graph, clip.rel, to) : planNoteRename(this.graph, clip.rel, to)));
+    }
+    let r: ReturnType<typeof copyPath>;
+    try {
+      // Into its own folder: beside it, as name-copy.
+      r = copyPath(this.graph, clip.rel, into === from ? undefined : to);
+    } catch (err) {
+      return this.message("warn", (err as Error).message);
+    }
+    this.afterFileOp();
+    this.selectInExplorer(r.to);
+    this.message("info", `copied ${r.from} → ${r.to}`);
+  }
+
+  /** After files moved, came or went: the tree, the watcher and the layouts follow. */
+  private afterFileOp(): void {
+    this.invalidateTree();
+    this.watcher?.sync(this.loc.mode !== "home" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
+    for (const b of this.buffers.values()) b.invalidateLayouts();
+    this.relayoutAll();
+  }
+
   /** Ask for a new folder's name and make it. */
   promptNewFolder(base = this.newItemBase()): void {
     this.prompt(`new folder in ${base ? `${base}/` : "the vault"}`, (text) => void this.createFolder(text, base));
@@ -2676,11 +2833,25 @@ export class App {
         break;
       case "new_note":
         return this.promptNewNote(this.newItemBase());
-      case "rename":
-        if (row?.kind === "note") return this.promptRename(row.path);
-        return this.message("info", "rename a note or file: select it first");
       case "new_folder":
         return this.promptNewFolder(this.newItemBase());
+      case "rename":
+      case "move":
+      case "delete":
+      case "copy":
+      case "cut": {
+        // On the selected note, file or folder (18.x).
+        const item = this.explorerItem();
+        if (!item) return this.message("info", `${action}: select a note, file or folder first`);
+        if (action === "rename") return this.renameItem(item);
+        if (action === "move") return this.moveItem(item);
+        if (action === "delete") return this.deleteItem(item);
+        return this.clipItem(action, item);
+      }
+      case "paste":
+        return this.pasteItem();
+      case "restore":
+        return this.restoreLast();
       case "all_files": {
         // Every text file, or back to what files.show lists; the selection stays on its row.
         const at = row?.path;
@@ -3725,6 +3896,12 @@ export class App {
   clickHot(id: string): void {
     const [kind, arg] = [id.slice(0, id.indexOf(":")), id.slice(id.indexOf(":") + 1)];
     switch (kind) {
+      // The explorer's buttons (18.1): as its keys, on its selection.
+      case "xnew":
+      case "xrow":
+        this.region = "sidebar";
+        this.explorerAction(kind === "xnew" ? (arg === "note" ? "new_note" : "new_folder") : arg);
+        break;
       case "btn":
         if (arg === "explorer") this.openLeftView("explorer");
         else if (arg === "history") this.openLeftView("history");
@@ -4555,7 +4732,7 @@ export class App {
       ...plan.files.flatMap((f) => f.edits.map((e) => ({ label: `${f.shown}:${e.line}`, detail: `${e.before.trim()}  →  ${e.after.trim()}`, data: plan }))),
     ];
     if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "every link reaches its note by its name now" : "no links to change", data: plan });
-    const what = plan.kind === "note" ? `${plan.from} → ${plan.to}` : plan.kind === "vault" ? `vault ${plan.from} → ${plan.to}` : "relink";
+    const what = plan.kind === "note" ? `${plan.from} → ${plan.to}` : plan.kind === "folder" ? `${plan.from}/ → ${plan.to}/` : plan.kind === "vault" ? `vault ${plan.from} → ${plan.to}` : "relink";
     this.openList({
       title: `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"} — enter: do it, esc: cancel`,
       items,
@@ -4575,23 +4752,33 @@ export class App {
       return this.message("error", (err as Error).message);
     }
     const byAbs = (abs: string) => [...this.buffers.values()].find((b) => b.abs === abs);
-    if (plan.move) {
-      const old = byAbs(plan.move.from);
-      if (old) {
-        const nb = this.buffer(plan.move.to);
-        if (nb) {
-          for (const v of this.allViews()) {
-            for (const l of [...v.back, ...v.fwd]) if (l.key === old.key) l.key = nb.key;
-            if (v.buf === old) Object.assign(v, this.makeView(nb, v.topAnchor, v.curAnchor), { back: v.back, fwd: v.fwd });
-          }
-          this.recentNotes = this.recentNotes.map((k) => (k === old.key ? nb.key : k));
+    // Every file that moved (a folder's: each in it): its open buffer, views, history and recents
+    // follow it to its new path.
+    const moved = new Set<string>();
+    for (const [fromRel, toRel] of plan.moves ?? []) {
+      const old = byAbs(join(this.loc.root, fromRel));
+      if (!old) continue;
+      const nb = this.buffer(toRel);
+      if (nb) {
+        for (const v of this.allViews()) {
+          for (const l of [...v.back, ...v.fwd]) if (l.key === old.key) l.key = nb.key;
+          if (v.buf === old) Object.assign(v, this.makeView(nb, v.topAnchor, v.curAnchor), { back: v.back, fwd: v.fwd });
         }
-        this.buffers.delete(old.key);
+        this.recentNotes = this.recentNotes.map((k) => (k === old.key ? nb.key : k));
+        moved.add(nb.abs);
       }
+      this.buffers.delete(old.key);
     }
+    if (plan.move?.dir) {
+      // The folder's folds and selection go with it.
+      const [from, to] = [relative(this.loc.root, plan.move.from), relative(this.loc.root, plan.move.to)];
+      this.expanded = new Set([...this.expanded].map((d) => (d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d)));
+    }
+    // A cut that was pasted: done.
+    if (plan.move && this.fileClip?.mode === "cut" && join(this.loc.root, this.fileClip.rel) === plan.move.from) this.fileClip = null;
     for (const abs of applied.written) {
       const b = byAbs(abs);
-      if (b && b.abs !== plan.move?.to) this.reloadBuffer(b);
+      if (b && !moved.has(b.abs)) this.reloadBuffer(b);
     }
     if (plan.kind === "vault") {
       this.loc = rootAt(this.loc.root);
@@ -4601,11 +4788,17 @@ export class App {
       this.graph.reach = this.reach;
       if (this.live) this.indexInBackground();
     }
-    this.invalidateTree();
-    for (const b of this.buffers.values()) b.invalidateLayouts();
-    this.relayoutAll();
+    this.afterFileOp();
+    if (plan.move) this.selectInExplorer(relative(this.loc.root, plan.move.to));
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
-    const what = plan.kind === "note" ? `renamed ${plan.from} → ${plan.to}` : plan.kind === "vault" ? `renamed the vault ${plan.from} → ${plan.to}` : "relinked";
+    const what =
+      plan.kind === "note"
+        ? `renamed ${plan.from} → ${plan.to}`
+        : plan.kind === "folder"
+          ? `moved ${plan.from}/ → ${plan.to}/`
+          : plan.kind === "vault"
+            ? `renamed the vault ${plan.from} → ${plan.to}`
+            : "relinked";
     this.message("info", `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"}`);
   }
 

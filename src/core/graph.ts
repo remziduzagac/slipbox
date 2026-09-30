@@ -609,7 +609,8 @@ export class Graph {
       const sources: [string, LinkRef[]][] = [...[...this.notes].map(([from, note]) => [from, note.links] as [string, LinkRef[]]), ...this.linkingFiles().map((f) => [f, this.fileLinksOf(f)] as [string, LinkRef[]])];
       for (const [from, links] of sources) {
         for (const l of links) {
-          if (l.kind === "image") continue;
+          // An image's link counts too: the notes that show a picture are its backlinks (and a
+          // rename or move of it fixes them, 18.3).
           const r = this.resolveLink(l, from);
           if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || r.path === from || isAbsolute(r.path)) continue;
           const list = map.get(r.path) ?? [];

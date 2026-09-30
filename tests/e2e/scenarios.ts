@@ -278,8 +278,10 @@ export const SCENARIOS: Scenario[] = [
       await open(s, "writing-guide");
       // The windows' notes in screen order, from their breadcrumbs (not the status line's path).
       // (Below the tab bar and right of the explorer's border: both name files too.)
-      const border = () => Math.max(0, s.screen()[2]?.search(/[│┃]/) ?? 0);
-      const order = () => (s.screen().slice(3, -1).map((r) => r.slice(border() + 1)).join("\n").match(/\b(home|writing-guide)\.md\b/g) ?? []).join(" ");
+      // By code point, not string index: Nerd glyphs outside the BMP (the explorer's buttons, its
+      // icons) take two UTF-16 units for one column.
+      const border = () => Math.max(0, [...(s.screen()[2] ?? "")].findIndex((ch) => ch === "│" || ch === "┃"));
+      const order = () => (s.screen().slice(3, -1).map((r) => [...r].slice(border() + 1).join("")).join("\n").match(/\b(home|writing-guide)\.md\b/g) ?? []).join(" ");
       await s.until(() => order().split(" ").length === 2, 3000, "two windows, two notes");
       const before = order();
       await s.keys("ctrl+w", "x");
@@ -475,7 +477,7 @@ export const SCENARIOS: Scenario[] = [
   },
 
   {
-    name: "create: ctrl+n a note, typed and saved; the explorer's d a folder and % a note in it",
+    name: "create: ctrl+n a note, typed and saved; the explorer's N a folder and n a note in it",
     options: { open: HANDBOOK },
     run: async (s) => {
       await s.keys("ctrl+n");
@@ -488,12 +490,12 @@ export const SCENARIOS: Scenario[] = [
       await s.file("handbook/checklist.md", (t) => t === "# checklist\n\nFirst item\n", "the new note saved");
       // In the explorer: a folder, then a note in it.
       for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
-      await s.keys("d");
+      await s.keys("shift+n");
       await s.see("new folder in");
       await s.type("ideas");
       await s.keys("enter");
       await s.see("ideas");
-      await s.keys("%");
+      await s.keys("n");
       await s.type("spark");
       await s.keys("enter");
       await s.status("ideas/spark.md");
@@ -505,6 +507,61 @@ export const SCENARIOS: Scenario[] = [
   },
 
   // --- panes ----------------------------------------------------------------------------------
+  {
+    name: "explorer files: r renames, m moves, d deletes and u restores, y p copies — links fixed",
+    options: { open: "people/contacts.md" },
+    run: async (s) => {
+      // The explorer on contacts.md (space E reveals it).
+      await leader(s, "E");
+      await s.status("FILES");
+      await s.keys("r");
+      await s.see("rename people/contacts.md to:");
+      await s.keys("ctrl+u");
+      await s.type("people-contacts");
+      await s.keys("enter");
+      await s.see(/people\/contacts\.md → people\/people-contacts\.md: \d+ changes? in \d+ files?/);
+      await s.keys("enter");
+      await s.message("renamed people/contacts.md");
+      s.expect(s.exists("people/people-contacts.md") && !s.exists("people/contacts.md"), "renamed on disk");
+      // m: to the handbook folder.
+      await s.keys("m");
+      await s.see("Move people/people-contacts.md to…");
+      await s.type("handbook");
+      await s.keys("enter");
+      await s.see(/→ handbook\/people-contacts\.md/);
+      await s.keys("enter");
+      await s.file("handbook/people-contacts.md", (t) => t.length > 0, "moved to the handbook");
+      // d, then u.
+      await s.keys("d");
+      await s.see(/delete handbook\/people-contacts\.md\?/);
+      await s.type("y");
+      await s.keys("enter");
+      await s.message("deleted handbook/");
+      s.expect(!s.exists("handbook/people-contacts.md"), "gone from the vault");
+      await s.keys("u");
+      await s.message("restored handbook/");
+      s.expect(s.exists("handbook/people-contacts.md"), "back");
+      // y p: a copy beside it.
+      await s.keys("y", "p");
+      await s.message("copied handbook/");
+      s.expect(s.exists("handbook/people-contacts-copy.md"), "the copy made");
+      // The trash is listed, empty now.
+      await leader(s, "v", "t");
+      await s.message("the trash is empty");
+      // The current note: a copy of it (the palette), opened; then that copy deleted (space n d).
+      await s.keys("escape");
+      await s.keys(":");
+      await s.type("Copy the note");
+      await s.keys("enter");
+      await s.status("people-contacts-copy-2.md");
+      await leader(s, "n", "d");
+      await s.see(/delete handbook\/people-contacts-copy-2\.md\?/);
+      await s.type("y");
+      await s.keys("enter");
+      await s.message("deleted handbook/");
+      s.expect(!s.exists("handbook/people-contacts-copy-2.md"), "the copy deleted");
+    },
+  },
   {
     name: "panes: the explorer, reveal, the outline, the heading picker, the path dropdown",
     needs: { cols: 100 },
@@ -520,8 +577,9 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("escape");
       await leader(s, "shift+e");
       await s.status("FILES");
-      // Revealed: the note's own row in the explorer, left of the border.
-      await s.until(() => s.screen().some((r) => /operations-handbook\.md\s*[│┃]/.test(r)), 3000, "the note revealed in the explorer");
+      // Revealed: the note's own row in the explorer, left of the border (its name cut where the
+      // selected row's buttons sit).
+      await s.until(() => s.screen().some((r) => /operations-han\S*…?.*[│┃]/.test(r) && !/╞|├─/.test(r.slice(r.search(/[│┃]/)))), 3000, "the note revealed in the explorer");
       await s.keys("escape");
       await focus("o", "OUTLINE");
       await s.see("Outline");
@@ -1155,10 +1213,10 @@ export const SCENARIOS: Scenario[] = [
       await s.see("relink: 1 change in 1 file");
       await s.keys("enter");
       await s.file("late-note.md", (t) => t.includes("Ask [[kenji]] about Aster."), "the link relinked");
-      // The explorer's R asks for the selected note's new path; esc cancels.
+      // The explorer's r asks for the selected note's new name; esc cancels.
       await leader(s, "e");
-      await s.keys("shift+r");
-      await s.see(/rename or move .* to:/);
+      await s.keys("r");
+      await s.see(/rename .* to:/);
       await s.keys("escape");
     },
   },

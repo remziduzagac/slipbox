@@ -5,6 +5,7 @@
 import { join, posix, relative } from "node:path";
 import { findVaultRoot, gitRootOf, isNeverRoot } from "../core/vault.ts";
 import { planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
+import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
@@ -1474,6 +1475,23 @@ export function registerActions(app: App): void {
       a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
     },
     "vault.switch": (a) => a.openVaultList(),
+    "note.delete": (a) =>
+      withView(a, (v) => {
+        if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be deleted here");
+        a.deleteItem({ rel: v.buf.rel, dir: false });
+      }),
+    "note.copy": (a) =>
+      withView(a, (v) => {
+        if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be copied here");
+        try {
+          const r = copyPath(a.graph, v.buf.rel);
+          a.open(r.to);
+          a.message("info", `copied ${r.from} → ${r.to}`);
+        } catch (err) {
+          a.message("warn", (err as Error).message);
+        }
+      }),
+    "trash.open": (a) => a.openTrash(),
     "vault.init": (a) => {
       if (a.loc.mode === "vault") return a.message("info", `already a vault: ${a.loc.name} (${a.loc.root})`);
       const dir = gitRootOf(a.loc.root) ?? a.loc.root;

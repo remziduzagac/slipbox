@@ -38,11 +38,13 @@ export interface FileChange {
 }
 
 export interface RenamePlan {
-  kind: "note" | "vault" | "relink";
+  kind: "note" | "folder" | "vault" | "relink";
   from: string;
   to: string;
-  /** The note's move: absolute paths; null for a vault's rename or a relink. */
-  move: { from: string; to: string } | null;
+  /** What moves: a file or a folder, absolute paths; null for a vault's rename or a relink. */
+  move: { from: string; to: string; dir: boolean } | null;
+  /** Every file that moves, vault paths old → new (a folder's: each file in it). */
+  moves?: [string, string][];
   files: FileChange[];
   warnings: string[];
   /** Links the index knew of that the file no longer has where it said: left alone. */
@@ -97,10 +99,11 @@ function real(p: string): string {
 }
 
 /**
- * A link written as a filesystem path (17.16) — relative, `~/`, absolute, `file://` — that reaches
- * `fromAbs`: the same form, reaching `toAbs`. Null when it isn't one, or reaches something else.
+ * A link written as a filesystem path (17.16) — relative, `~/`, absolute, `file://` — in a file at
+ * `linkingAbs` (to be at `linkingAfter`), that reaches `fromAbs`: the same form, reaching `toAbs`
+ * from where the file will be. Null when it isn't one, or reaches something else.
  */
-function pathRetarget(written: string, linkingAbs: string, fromAbs: string, toAbs: string, wiki: boolean): string | null {
+function pathRetarget(written: string, linkingAbs: string, linkingAfter: string, fromAbs: string, toAbs: string, wiki: boolean): string | null {
   const hash = wiki ? -1 : written.indexOf("#");
   const frag = hash >= 0 ? written.slice(hash) : "";
   const path = hash >= 0 ? written.slice(0, hash) : written;
@@ -108,7 +111,7 @@ function pathRetarget(written: string, linkingAbs: string, fromAbs: string, toAb
   if (!hit || real(hit.abs) !== real(fromAbs)) return null;
   // A wikilink written without its extension stays without it; a markdown link names the file.
   const ext = !wiki || /\.[A-Za-z0-9]+$/.test(path) || !NOTE_EXT.test(toAbs);
-  let next = formatPathLink(hit.form, toAbs, linkingAbs, ext);
+  let next = formatPathLink(hit.form, toAbs, linkingAfter, ext);
   if (!wiki && hit.form !== "file-url" && (/%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(next))) next = encodeURI(next);
   return next + frag;
 }
@@ -314,6 +317,15 @@ function dirtyTrees(paths: string[]): string[] {
   return out;
 }
 
+/** A vault path as the user typed it: normalized, inside the vault, and not somewhere hidden. */
+function cleanTarget(g: Graph, input: string): string {
+  const rel = posix.normalize(input.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
+  if (rel.startsWith("../") || rel === ".." || rel === "." || isAbsolute(rel)) throw new RenameError(`${input} isn't inside the vault`);
+  if (rel.split("/").some((s) => s.startsWith(".") || s === "node_modules")) throw new RenameError(`${input}: the walk leaves hidden folders and node_modules out`);
+  if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} would land outside the vault`);
+  return rel;
+}
+
 /**
  * Plan renaming or moving a note (or any file of the vault) to `toRel` (7.1, 17.15): every link to
  * it — in this vault, and in other vaults' indexes — rewritten; its own relative links fixed for
@@ -322,67 +334,98 @@ function dirtyTrees(paths: string[]): string[] {
 export function planNoteRename(g: Graph, fromRel: string, toInput: string): RenamePlan {
   const isNote = g.notes.has(fromRel);
   if (!isNote && !g.filePaths().includes(fromRel)) throw new RenameError(`no note or file ${fromRel} in ${g.root}`);
-  let toRel = posix.normalize(toInput.replace(/\\/g, "/").replace(/^\/+/, ""));
+  let toRel = cleanTarget(g, toInput);
   if (posix.extname(toRel) === "" || (isNote && !NOTE_EXT.test(toRel))) toRel += posix.extname(fromRel);
   if (toRel === fromRel) throw new RenameError(`${fromRel} is already there`);
-  if (toRel.startsWith("../") || toRel === ".." || isAbsolute(toRel)) throw new RenameError(`${toInput} isn't inside the vault`);
-  if (toRel.split("/").some((s) => s.startsWith(".") || s === "node_modules")) throw new RenameError(`${toInput}: the walk leaves hidden folders and node_modules out`);
-  const fromAbs = join(g.root, fromRel);
-  const toAbs = join(g.root, toRel);
-  if (existsSync(toAbs) && normKey(toRel) !== normKey(fromRel)) throw new RenameError(`${toRel} exists; not overwriting it`);
-  if (!landsInside(g.root, toAbs)) throw new RenameError(`${toRel} would land outside the vault`);
+  if (existsSync(join(g.root, toRel)) && normKey(toRel) !== normKey(fromRel)) throw new RenameError(`${toRel} exists; not overwriting it`);
+  return planMove(g, new Map([[fromRel, toRel]]), { kind: "note", from: fromRel, to: toRel, move: { from: join(g.root, fromRel), to: join(g.root, toRel), dir: false } });
+}
+
+/**
+ * Plan renaming or moving a folder (18.3): every note and file in it moves with it, and every link to
+ * any of them is rewritten — links between two of them that move together stay as they are.
+ */
+export function planFolderMove(g: Graph, fromDir: string, toInput: string): RenamePlan {
+  const from = posix.normalize(fromDir.replace(/\/+$/, ""));
+  if (!g.dirs.includes(from) || !from || from === ".") throw new RenameError(`no folder ${fromDir} in ${g.root}`);
+  const to = cleanTarget(g, toInput);
+  if (to === from) throw new RenameError(`${from} is already there`);
+  if (to.startsWith(`${from}/`)) throw new RenameError(`${from} can't move into itself`);
+  if (existsSync(join(g.root, to))) throw new RenameError(`${to} exists; not overwriting it`);
+  const moves = new Map<string, string>();
+  for (const rel of [...g.notes.keys(), ...g.filePaths()]) if (rel.startsWith(`${from}/`)) moves.set(rel, `${to}${rel.slice(from.length)}`);
+  return planMove(g, moves, { kind: "folder", from, to, move: { from: join(g.root, from), to: join(g.root, to), dir: true } });
+}
+
+/**
+ * The plan for moving files (`moves`: vault paths, old → new): each link to a moved file rewritten
+ * from where its file will be, each moved note's relative links to what stays put rewritten from
+ * where it will be; a single note renamed keeps its old name (`previous_names`).
+ */
+function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "kind" | "from" | "to" | "move">): RenamePlan {
   const c = new Collector(g);
-  const oldName = posix.basename(fromRel).replace(NOTE_EXT, "");
-  const entry: NoteEntry | undefined = isNote ? g.entry(fromRel) : undefined;
-  const aliases = new Set((entry?.aliases ?? []).map(normKey));
-
-  // Every link to it: this vault's and other vaults' (17.11).
-  for (const b of g.backlinks(fromRel)) {
-    const abs = isAbsolute(b.from) ? b.from : join(g.root, b.from);
-    const site: Site = { abs, kind: b.kind, target: b.target, line: b.line, column: b.column };
-    c.edit(site, retargetBacklink(g, b, abs, fromRel, toRel, toAbs, aliases, oldName), b.vault ?? null);
-  }
-
-  // Its own relative links, from its new folder.
-  if (entry && posix.dirname(fromRel) !== posix.dirname(toRel)) {
+  const abs = (rel: string) => join(g.root, rel);
+  /** Where a file will be: its new place if it moves, else where it is. */
+  const after = (fileAbs: string) => {
+    if (!isInside(g.root, fileAbs)) return fileAbs;
+    const moved = moves.get(relative(g.root, fileAbs));
+    return moved ? abs(moved) : fileAbs;
+  };
+  for (const [fromRel, toRel] of moves) {
+    const isNote = g.notes.has(fromRel);
+    const entry: NoteEntry | undefined = isNote ? g.entry(fromRel) : undefined;
+    const aliases = new Set((entry?.aliases ?? []).map(normKey));
+    const oldName = posix.basename(fromRel).replace(NOTE_EXT, "");
+    // Every link to it: this vault's and other vaults' (17.11).
+    for (const b of g.backlinks(fromRel)) {
+      const linking = isAbsolute(b.from) ? b.from : abs(b.from);
+      const site: Site = { abs: linking, kind: b.kind, target: b.target, line: b.line, column: b.column };
+      c.edit(site, retargetBacklink(g, b, linking, after(linking), fromRel, toRel, aliases, oldName), b.vault ?? null);
+    }
+    // Its own relative links to what stays put, from where it will be.
+    if (!entry || posix.dirname(fromRel) === posix.dirname(toRel)) continue;
     for (const l of entry.links) {
       if (l.kind !== "markdown" && l.kind !== "image" && !((l.kind === "wiki" || l.kind === "embed") && /^\.\.?\//.test(l.target))) continue;
       if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("#") || l.target.startsWith("/") || l.target.startsWith("~/")) continue;
       const r = g.resolveLink(l, fromRel);
       if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path) continue;
-      const targetAbs = isAbsolute(r.path) ? r.path : join(g.root, r.path);
-      const site: Site = { abs: fromAbs, kind: l.kind, target: l.target, line: l.line, column: l.column };
+      if (!isAbsolute(r.path) && moves.has(r.path)) continue; // moving too: its backlink above
+      const targetAbs = isAbsolute(r.path) ? r.path : abs(r.path);
+      const site: Site = { abs: abs(fromRel), kind: l.kind, target: l.target, line: l.line, column: l.column };
       const wiki = l.kind === "wiki" || l.kind === "embed";
       // Out of the vault (17.16): a relative path from where the note will be.
       const next = wiki
         ? isAbsolute(r.path)
-          ? formatPathLink("relative", targetAbs, toAbs, /\.[A-Za-z0-9]+$/.test(l.target))
+          ? formatPathLink("relative", targetAbs, abs(toRel), /\.[A-Za-z0-9]+$/.test(l.target))
           : wikiTarget(l.target, posix.dirname(toRel), r.path, g, "")
-        : mdTarget(l.target, toAbs, targetAbs, g);
+        : mdTarget(l.target, abs(toRel), targetAbs, g);
       c.edit(site, next, null);
     }
   }
-
   const files = c.result();
-  // Its old name, kept where links this machine can't reach will look (17.7).
-  const moved = files.find((f) => f.abs === fromAbs);
-  const ownText = moved?.next ?? (isNote ? readText(fromAbs).text : null);
-  let ownNext = ownText;
-  const newName = posix.basename(toRel).replace(NOTE_EXT, "");
-  if (isNote && ownText !== null && g.config.rename.previous_names && normKey(newName) !== normKey(oldName)) ownNext = addPreviousName(ownText, oldName);
-  if (isNote && ownText !== null && ownNext !== ownText) {
-    if (moved) moved.next = ownNext!;
-    else files.push({ abs: fromAbs, shown: fromRel, vault: null, edits: [], text: ownText, next: ownNext! });
-    const f = files.find((x) => x.abs === fromAbs)!;
-    f.edits.push({ line: 1, before: "(frontmatter)", after: `previous_names: + ${oldName}` });
+  // One note renamed: its old name, kept where links this machine can't reach will look (17.7).
+  if (head.kind === "note") {
+    const [fromRel, toRel] = [...moves][0]!;
+    const fromAbs = abs(fromRel);
+    const oldName = posix.basename(fromRel).replace(NOTE_EXT, "");
+    const newName = posix.basename(toRel).replace(NOTE_EXT, "");
+    const moved = files.find((f) => f.abs === fromAbs);
+    const ownText = moved?.next ?? (g.notes.has(fromRel) ? readText(fromAbs).text : null);
+    const ownNext = ownText !== null && g.config.rename.previous_names && normKey(newName) !== normKey(oldName) ? addPreviousName(ownText, oldName) : ownText;
+    if (ownText !== null && ownNext !== ownText) {
+      if (moved) moved.next = ownNext!;
+      else files.push({ abs: fromAbs, shown: fromRel, vault: null, edits: [], text: ownText, next: ownNext! });
+      files.find((x) => x.abs === fromAbs)!.edits.push({ line: 1, before: "(frontmatter)", after: `previous_names: + ${oldName}` });
+    }
   }
-  const warnings = dirtyTrees([fromAbs, ...files.map((f) => f.abs)]);
-  return { kind: "note", from: fromRel, to: toRel, move: { from: fromAbs, to: toAbs }, files, warnings, skipped: c.skipped };
+  const warnings = dirtyTrees([head.move!.from, ...files.map((f) => f.abs)]);
+  return { ...head, moves: [...moves], files, warnings, skipped: c.skipped };
 }
 
-/** The new target text of a link to the renamed note. */
-function retargetBacklink(g: Graph, b: Backlink, linkingAbs: string, fromRel: string, toRel: string, toAbs: string, aliases: Set<string>, oldName: string): string {
-  const byPath = pathForm(b.target) ? pathRetarget(b.target, linkingAbs, join(g.root, fromRel), toAbs, b.kind === "wiki" || b.kind === "embed") : null;
+/** The new target text of a link to a moved file, written in `linking` (which will be at `linkingAfter`). */
+function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: string, fromRel: string, toRel: string, aliases: Set<string>, oldName: string): string {
+  const toAbs = join(g.root, toRel);
+  const byPath = pathForm(b.target) ? pathRetarget(b.target, linking, linkingAfter, join(g.root, fromRel), toAbs, b.kind === "wiki" || b.kind === "embed") : null;
   if (byPath) return byPath;
   if (b.kind === "wiki" || b.kind === "embed") {
     const inter = VAULT_LINK.exec(b.target);
@@ -390,10 +433,10 @@ function retargetBacklink(g: Graph, b: Backlink, linkingAbs: string, fromRel: st
     const name = posix.basename(bare).replace(NOTE_EXT, "");
     // Written as an alias: still right after the rename.
     if (!bare.includes("/") && aliases.has(normKey(name)) && normKey(name) !== normKey(oldName)) return b.target;
-    const fromDir = isInside(g.root, linkingAbs) ? posix.dirname(relative(g.root, linkingAbs)) : null;
+    const fromDir = isInside(g.root, linkingAfter) ? posix.dirname(relative(g.root, linkingAfter)) : null;
     return wikiTarget(b.target, fromDir, toRel, g, fromRel);
   }
-  return mdTarget(b.target, linkingAbs, toAbs, isInside(g.root, linkingAbs) ? g : null);
+  return mdTarget(b.target, linkingAfter, toAbs, isInside(g.root, linkingAfter) ? g : null);
 }
 
 /**
@@ -518,33 +561,42 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     }
     if (contentHash(now) !== contentHash(f.text)) throw new RenameError(`${f.shown} changed since the preview; nothing changed — plan again`);
   }
-  if (plan.move && existsSync(plan.move.to) && normKey(plan.move.to) !== normKey(plan.move.from)) throw new RenameError(`${plan.move.to} exists now; nothing changed`);
+  const mv = plan.move;
+  if (mv && existsSync(mv.to) && normKey(mv.to) !== normKey(mv.from)) throw new RenameError(`${mv.to} exists now; nothing changed`);
+  /** Where a file of the plan is written: at its new place when it moves. */
+  const dest = (fileAbs: string) => {
+    if (!mv) return fileAbs;
+    if (fileAbs === mv.from) return mv.to;
+    return mv.dir && fileAbs.startsWith(`${mv.from}/`) ? mv.to + fileAbs.slice(mv.from.length) : fileAbs;
+  };
   const written: string[] = [];
+  // A folder moves whole — everything in it, whatever the walk lists — before its files' edits.
+  if (mv?.dir) {
+    mkdirSync(dirname(mv.to), { recursive: true });
+    renameSync(mv.from, mv.to);
+  }
   for (const f of plan.files) {
-    if (plan.move && f.abs === plan.move.from) continue; // written at its new place, below
-    atomicWrite(f.abs, f.next);
-    written.push(f.abs);
+    if (mv && !mv.dir && f.abs === mv.from) continue; // written at its new place, below
+    atomicWrite(dest(f.abs), f.next);
+    written.push(dest(f.abs));
   }
-  if (plan.move) {
-    const { from, to } = plan.move;
-    mkdirSync(dirname(to), { recursive: true });
-    const own = plan.files.find((f) => f.abs === from);
+  if (mv && !mv.dir) {
+    mkdirSync(dirname(mv.to), { recursive: true });
+    const own = plan.files.find((f) => f.abs === mv.from);
     if (own) {
-      atomicWrite(to, own.next);
-      if (normKey(to) !== normKey(from)) unlinkSync(from);
-      written.push(to);
-    } else {
-      renameSync(from, to);
-      written.push(to);
-    }
-    const fromRel = relative(g.root, from);
-    const toRel = relative(g.root, to);
-    g.redirects?.add([[fromRel, toRel]]);
-    if (g.notes.has(fromRel)) g.removeFile(fromRel);
-    else g.removeAsset(fromRel);
+      atomicWrite(mv.to, own.next);
+      if (normKey(mv.to) !== normKey(mv.from)) unlinkSync(mv.from);
+    } else renameSync(mv.from, mv.to);
+    written.push(mv.to);
   }
-  // The vault's index follows what was written (other vaults' follow when they're next opened).
-  for (const abs of written) {
+  // Links to the old places still find the new ones (17.12); the vault's index follows.
+  if (plan.moves?.length) g.redirects?.add(plan.moves);
+  for (const [from] of plan.moves ?? []) {
+    if (g.notes.has(from)) g.removeFile(from);
+    else g.removeAsset(from);
+  }
+  const touched = new Set([...written, ...(plan.moves ?? []).map(([, to]) => join(g.root, to))]);
+  for (const abs of touched) {
     if (!isInside(g.root, abs)) continue;
     const rel = relative(g.root, abs);
     try {
@@ -553,5 +605,10 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       else g.addAsset(rel);
     } catch {}
   }
-  return { written, moved: plan.move };
+  if (mv?.dir) {
+    const from = relative(g.root, mv.from);
+    const to = relative(g.root, mv.to);
+    g.dirs = [...new Set(g.dirs.map((d) => (d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d)).concat(to.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"))))];
+  }
+  return { written, moved: mv ? { from: mv.from, to: mv.to } : null };
 }

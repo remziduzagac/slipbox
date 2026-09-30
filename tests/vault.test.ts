@@ -1049,3 +1049,41 @@ describe("nested vaults, known to each other without being opened (17.17)", () =
     expect(r.json.data).toMatchObject({ status: "resolved", abs: join(fresh, "index.md"), vault: "dparent2" });
   });
 });
+
+describe("moving a folder (18.3)", () => {
+  test("links between notes that move together stay; links out of it and into it are fixed; everything in it moves", async () => {
+    const { openGraph: open } = await import("../src/core/graph.ts");
+    const { planFolderMove, applyPlan } = await import("../src/core/rename.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-foldermove-"));
+    const files: Record<string, string> = {
+      "a/one.md": "# One\n\n[two](two.md) [[two]] [sub](sub/three.md) [out](../b/four.md) [[../b/four]]\n",
+      "a/two.md": "# Two\n\n[one](./one.md)\n",
+      "a/sub/three.md": "# Three\n\n[up](../one.md)\n",
+      "a/pic.png": "png",
+      "a/.hidden": "kept",
+      "b/four.md": "# Four\n\n[one](../a/one.md) [[a/one]] ![p](../a/pic.png)\n",
+    };
+    mkdirSync(join(dir, ".slipbox"));
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(dir, rel, ".."), { recursive: true });
+      writeFileSync(join(dir, rel), text);
+    }
+    const g = open(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const plan = planFolderMove(g, "a", "x/y");
+    applyPlan(g, plan);
+    const read = (rel: string) => readFileSync(join(dir, rel), "utf8");
+    // Inside: left alone; out of it: from the new place.
+    expect(read("x/y/one.md")).toBe("# One\n\n[two](two.md) [[two]] [sub](sub/three.md) [out](../../b/four.md) [[../../b/four]]\n");
+    expect(read("x/y/two.md")).toBe("# Two\n\n[one](./one.md)\n");
+    expect(read("x/y/sub/three.md")).toBe("# Three\n\n[up](../one.md)\n");
+    // Into it, from what stays.
+    expect(read("b/four.md")).toBe("# Four\n\n[one](../x/y/one.md) [[x/y/one]] ![p](../x/y/pic.png)\n");
+    // Everything moved, what the walk doesn't list too.
+    expect(read("x/y/.hidden")).toBe("kept");
+    expect(existsSync(join(dir, "a"))).toBe(false);
+    // The index and the redirects follow.
+    expect(g.notes.has("x/y/sub/three.md")).toBe(true);
+    expect(g.redirects!.follow("a/one.md")).toBe("x/y/one.md");
+    expect(() => planFolderMove(g, "x", "x/y/z")).toThrow(/can't move into itself/);
+  });
+});

@@ -990,6 +990,21 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const history = app.leftView === "history";
   const title = LEFT_VIEWS.find((v) => v.id === app.leftView)!.title;
   let rect = paneTitle(app, c, pane, title, app.region === "sidebar", base.bg);
+  // The explorer's title: a new note and a new folder, at its right end (18.1).
+  if (!history && rect !== pane) {
+    const g = app.glyphs;
+    const buttons: [string, string][] = [
+      [g.newNote, "xnew:note"],
+      [g.newFolder, "xnew:folder"],
+    ];
+    let x = pane.x + pane.w - 1;
+    for (const [glyph, id] of buttons.reverse()) {
+      const w = stringWidth(glyph) + 2;
+      x -= w;
+      if (x < pane.x + stringWidth(title) + 3) break;
+      smallButton(app, c, x, pane.y, ` ${glyph} `, id, geo, base.bg);
+    }
+  }
   const s = app.sidebar;
   rect = filterRow(app, c, rect, s, app.region === "sidebar", base.bg, geo);
   return history ? drawHistoryList(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
@@ -1051,7 +1066,20 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
-    const w = drawText(c, rect.x, y, sideRow(text(row), sv), st, rect.w);
+    // The selected note, file or folder: rename, move and delete at the row's end (18.1), a long
+    // name cut (…) to make room for them.
+    const rowButtons = [[g.deleteItem, "xrow:delete"], [g.moveItem, "xrow:move"], [g.renameItem, "xrow:rename"]] as const;
+    const buttonsW = rowButtons.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0);
+    const withButtons = selected && row.kind !== "root" && sv.cols - buttonsW >= 10;
+    const shown = sideRow(text(row), sv);
+    const w = drawText(c, rect.x, y, withButtons ? truncate(shown, sv.cols - buttonsW - 1) : shown, st, rect.w);
+    if (withButtons) {
+      let x = rect.x + sv.cols - 1;
+      for (const [glyph, id] of rowButtons) {
+        x -= stringWidth(glyph) + 2;
+        smallButton(app, c, x, y, ` ${glyph} `, id, geo, st.bg);
+      }
+    }
     // A vault named otherwise than its folder: the name, dimmed, after it (17.13).
     const vaultName = row.root?.name;
     if (vaultName && !sv.left && w + 1 < rect.w) drawText(c, rect.x + w + 1, y, vaultName, { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, rect.w - w - 1);
@@ -1070,6 +1098,14 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
   sideHScrollbar(app, c, sv, "sidebar", app.region === "sidebar", bg, geo);
   return rect;
+}
+
+/** A one-row button: its text, the hover role under the mouse, a hot region for clicks. */
+function smallButton(app: App, c: Canvas, x: number, y: number, text: string, id: string, geo: Geometry, bg: Color | null): number {
+  const st = app.hover === id ? roleStyle(app.theme, "hover", bg) : { ...roleStyle(app.theme, "topbar_button", bg), bg };
+  const w = drawText(c, x, y, text, st);
+  geo.hot.push({ id, x, y, w, h: 1 });
+  return w;
 }
 
 /** The history: the window's timeline, newest first, the current place marked `here`. */

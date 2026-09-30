@@ -224,11 +224,16 @@ Inside the explorer (`[keys.explorer]` in config):
 | `g g` / `shift+g` | top / bottom |
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
 | `a` | show every text file, or back to what `files.show` lists (notes and data files) |
-| `%` / `d` | a new note / folder in the selected folder (beside a selected file): netrw's keys |
-| `shift+r` | rename or move the selected note or file (netrw's `R`) |
+| `n` / `shift+n` | a new note / folder in the selected folder (beside a selected file); `%` too |
+| `r` | rename the selected note, file or folder, in its folder: links fixed after a preview |
+| `m` | move it to a folder, picked from a list: links fixed after a preview |
+| `d` | delete it to the vault's trash, after asking (it says how many links break) |
+| `u` | restore what was deleted last (`space v t`, `:trash`: the rest) |
+| `y` / `x` / `p` | copy / cut it; paste in the selected folder: a copy (`name-copy` beside it), or a move |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
 | mouse | click a folder to fold or unfold it; click a note to select it, double-click to open it as a tab |
+| buttons | the title's new note and new folder; the selected row's rename, move and delete |
 
 The history view (`space h h`, the left rail's `◷`) takes the same keys: `j` / `k` move, `enter`,
 `l` or a click jumps to the place, `/` filters, `q` closes, `esc` goes back to the note.
@@ -313,6 +318,8 @@ config.
 | `:reindex` | reindex the vault |
 | `:vaults` | the vaults this machine knows: pick one to switch to |
 | `:init` | make this loose folder (or its git repository) a vault |
+| `:delete` | delete the note to the vault's trash (asks first) |
+| `:trash` | the trash: `enter` restores an item |
 | `:config` | reload the configuration |
 
 **Substitute** is vim's, typed at the `:` prompt (`find.substitute`): `:s/old/new/` on the cursor's
@@ -347,6 +354,8 @@ source first.
 | a new folder beside this note (`:mkdir name`) | `space v d` |
 | rename or move the note (`:rename path`, `:mv path`): a preview, then `enter` | `space n m` |
 | rename the vault: a preview, then `enter` | `space v n` |
+| delete the note to the vault's trash, after asking (`:delete`) | `space n d` |
+| the trash: what was deleted, `enter` restores (`:trash`) | `space v t` |
 | make this loose folder (or its git repository) a vault (`:init`): committed, or private | `space v m` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |

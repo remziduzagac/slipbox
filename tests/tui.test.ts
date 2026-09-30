@@ -659,7 +659,8 @@ describe("overlays and the : prompt", () => {
       const l = lines.find((x) => x.includes(label))!;
       return l.indexOf(` ${key} `, l.indexOf(label) + label.length);
     };
-    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "Clear the scratch", "space s d"));
+    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "Messages", "space m"));
+    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "New folder", "space v d"));
     expect(colOf(g, "Reload note from disk", ":reload")).toBe(colOf(g, "Quit", ":qa"));
     expect(h.app.recentCommands[0]).toBe("ui.zen");
   });
@@ -5283,25 +5284,31 @@ describe("creating notes and folders", () => {
     expect(h.app.messages.at(-1)!.text).toContain("not inside the vault");
     expect(existsSync(join(root, "..", "escape.md"))).toBe(false);
   });
-  test("the explorer: % a note in the selected folder, d a folder — shown though empty, and selected", async () => {
+  test("the explorer: n a note in the selected folder, N a folder — shown though empty, and selected (% too)", async () => {
     const root = makeVault();
     const h = await harness({ root });
     await h.keys("space", "e");
     const at = h.app.explorerRows().findIndex((r) => r.kind === "dir" && r.path === "notes");
     h.app.sidebar.selected = at;
     h.app.region = "sidebar";
-    await h.keys("d");
+    await h.keys("shift+n");
     for (const c of "drafts") await h.keys(c);
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "drafts"))).toBe(true);
     const sel = h.app.explorerRows()[h.app.sidebar.selected]!;
     expect([sel.kind, sel.path]).toEqual(["dir", "notes/drafts"]);
     expect(h.frame()).toContain("drafts"); // empty, still listed
-    await h.keys("%");
+    await h.keys("n");
     for (const c of "first") await h.keys(c);
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "drafts", "first.md"))).toBe(true);
     expect(h.app.view!.buf.rel).toBe("notes/drafts/first.md");
+    // netrw's % as well.
+    await h.keys("escape", "space", "e");
+    h.app.region = "sidebar";
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "notes/drafts");
+    await h.keys("%");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "new note in notes/drafts/" });
   });
   test("following a link to a note that doesn't exist asks to create it, the name filled in", async () => {
     const root = makeVault();
@@ -5571,7 +5578,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.messages.at(-1)!.text).toMatch(/^renamed notes\/alpha.md → notes\/first.md: \d+ changes in \d+ files$/);
   });
 
-  test("a rename is refused while a file it rewrites is unsaved; :rename takes the path; the explorer's R asks", async () => {
+  test("a rename is refused while a file it rewrites is unsaved; :rename takes the path; the explorer's r asks", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });
     await h.keys("space", "n", "v", "shift+a", "!", "escape");
@@ -5587,12 +5594,12 @@ describe("vaults in the TUI (17.x)", () => {
     expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → notes/first.md");
     await h.keys("escape"); // cancelled: nothing changed
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true);
-    // The explorer: R on the selected note.
+    // The explorer: r on the selected note asks for its new name, in its folder.
     h.app.showSidebar(true);
     h.app.region = "sidebar";
     h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "notes/beta.md");
-    await h.keys("shift+r");
-    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).text).toBe("notes/beta");
+    await h.keys("r");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "rename notes/beta.md to: ", text: "beta" });
   });
 
   test("renaming the vault, and relinking a moved note's links, from the TUI", async () => {
@@ -5657,5 +5664,153 @@ describe("vaults in the TUI (17.x)", () => {
     } finally {
       process.env.HOME = before;
     }
+  });
+});
+
+describe("the explorer's file operations and buttons (18.x)", () => {
+  /** The explorer focused, `rel` selected. */
+  async function at(root: string, rel: string, open = "index.md") {
+    const h = await harness({ root, open });
+    h.app.showSidebar(true);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    h.app.selectInExplorer(rel);
+    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe(rel);
+    return h;
+  }
+  const prompt = (h: Harness) => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+  const type = async (h: Harness, text: string) => {
+    for (const c of text) await h.keys(c);
+  };
+
+  test("r renames in place, m moves to a picked folder: links fixed after the preview", async () => {
+    const root = makeVault();
+    const h = await at(root, "notes/alpha.md");
+    await h.keys("r", "ctrl+u");
+    await type(h, "first");
+    await h.keys("enter");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → notes/first.md");
+    await h.keys("enter");
+    expect(existsSync(join(root, "notes", "first.md"))).toBe(true);
+    expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[[first]]");
+    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("notes/first.md"); // still selected
+    // m: the folders, this one left out; the root first.
+    await h.keys("m");
+    const list = h.app.overlay as ListOverlay;
+    expect(list.title).toBe("Move notes/first.md to…");
+    expect(list.items[0]!.label).toBe("/ (the vault's root)");
+    expect(list.items.some((it) => it.data === "notes")).toBe(false);
+    await type(h, "projects");
+    await h.keys("enter", "enter");
+    expect(existsSync(join(root, "projects", "first.md"))).toBe(true);
+    expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[alpha](projects/first.md)");
+  });
+
+  test("d deletes to the trash after asking, saying what breaks; u puts it back", async () => {
+    const root = makeVault();
+    const h = await at(root, "notes/alpha.md");
+    await h.keys("d");
+    expect(prompt(h).label).toMatch(/^delete notes\/alpha\.md\? \d+ links to it will break\./);
+    await h.keys("escape");
+    expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true); // esc: nothing
+    await h.keys("d", "y", "enter");
+    expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
+    expect(h.app.graph.notes.has("notes/alpha.md")).toBe(false);
+    expect(h.app.messages.at(-1)!.text).toContain("deleted notes/alpha.md to the trash");
+    await h.keys("u");
+    expect(readFileSync(join(root, "notes", "alpha.md"), "utf8")).toContain("Alpha");
+    expect(h.app.graph.notes.has("notes/alpha.md")).toBe(true);
+    // A folder, with everything in it; the trash lists it, enter restores.
+    h.app.selectInExplorer("projects");
+    await h.keys("d", "y", "enter");
+    expect(existsSync(join(root, "projects"))).toBe(false);
+    await h.app.run("trash.open");
+    expect((h.app.overlay as ListOverlay).items.map((it) => it.label)).toEqual(["projects/"]);
+    await h.keys("enter");
+    expect(existsSync(join(root, "projects", "index.md"))).toBe(true);
+  });
+
+  test("y and p copy beside it (name-copy) or into the selected folder; x and p move it there", async () => {
+    const root = makeVault();
+    const h = await at(root, "notes/beta.md");
+    await h.keys("y");
+    await h.keys("p"); // the selection is beside it: a copy there
+    expect(existsSync(join(root, "notes", "beta-copy.md"))).toBe(true);
+    h.app.selectInExplorer("projects");
+    await h.keys("p");
+    expect(existsSync(join(root, "projects", "beta.md"))).toBe(true);
+    // Cut, then paste into a folder: a move, links fixed after the preview.
+    h.app.selectInExplorer("notes/alpha.md");
+    await h.keys("x");
+    h.app.selectInExplorer("projects");
+    await h.keys("p");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → projects/alpha.md");
+    await h.keys("enter");
+    expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
+    expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
+    expect(h.app.fileClip).toBeNull(); // pasted: done
+  });
+
+  test("a folder renamed or moved takes its notes, their open windows and every link along", async () => {
+    const root = makeVault();
+    const h = await at(root, "notes", "notes/beta.md");
+    await h.keys("r", "ctrl+u");
+    await type(h, "papers");
+    await h.keys("enter");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("notes/ → papers/");
+    await h.keys("enter");
+    expect(existsSync(join(root, "papers", "beta.md"))).toBe(true);
+    expect(existsSync(join(root, "notes"))).toBe(false);
+    expect(h.app.view!.buf.rel).toBe("papers/beta.md"); // the open note went with it
+    expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[alpha](papers/alpha.md)");
+    expect(h.app.graph.notes.has("papers/alpha.md")).toBe(true);
+  });
+
+  test("buttons: a new note and a new folder on the title; rename, move, delete on the selected row", async () => {
+    const root = makeVault();
+    const h = await at(root, "notes/alpha.md");
+    const f = h.frame();
+    expect(f.split("\n").find((r) => r.includes("Explorer"))).toMatch(/Explorer\s+\+\s+\+▸/);
+    const row = f.split("\n").find((r) => r.includes("alpha.md"))!;
+    expect(row).toMatch(/✎\s+↦\s+✕/);
+    const hot = (id: string) => h.app.geometry!.hot.find((x) => x.id === id)!;
+    const click = (id: string) => {
+      const r = hot(id);
+      h.app.handleMouse({ type: "down", x: r.x + 1, y: r.y, button: 0 });
+      h.app.handleMouse({ type: "up", x: r.x + 1, y: r.y, button: 0 });
+    };
+    click("xrow:delete");
+    expect(prompt(h).label).toStartWith("delete notes/alpha.md?");
+    await h.keys("escape");
+    click("xrow:rename");
+    expect(prompt(h).text).toBe("alpha");
+    await h.keys("escape");
+    click("xrow:move");
+    expect((h.app.overlay as ListOverlay).title).toBe("Move notes/alpha.md to…");
+    await h.keys("escape");
+    click("xnew:folder");
+    expect(prompt(h).label).toBe("new folder in notes/");
+    await h.keys("escape");
+    h.frame();
+    click("xnew:note");
+    expect(prompt(h).label).toBe("new note in notes/");
+    // Not focused: no row buttons.
+    await h.keys("escape");
+    h.app.region = "content";
+    expect(h.frame().split("\n").find((r) => r.includes("alpha.md"))).not.toMatch(/✎/);
+    // A long name is cut (…) to make room for them.
+    writeFileSync(join(root, "notes", "a-rather-long-note-name-indeed.md"), "# long\n");
+    const long = await at(root, "notes/a-rather-long-note-name-indeed.md");
+    expect(long.frame().split("\n").find((r) => r.includes("a-rather"))).toMatch(/a-rather\S*…\s+✎\s+↦\s+✕/);
+  });
+
+  test("space n d deletes the note; space v t lists the trash", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/beta.md" });
+    await h.keys("space", "n", "d", "y", "enter");
+    expect(existsSync(join(root, "notes", "beta.md"))).toBe(false);
+    expect(h.app.view!.buf.deleted).toBe(true);
+    await h.keys("space", "v", "t");
+    expect((h.app.overlay as ListOverlay).title).toBe("Trash (1) — enter restores");
   });
 });

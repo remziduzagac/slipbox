@@ -226,6 +226,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n i": "note.info",
   "leader n n": "note.create",
   "leader n m": "note.rename",
+  "leader n d": "note.delete",
   "ctrl+n": "note.create",
   "leader v d": "folder.create",
   "leader v r": "vault.reindex",
@@ -234,6 +235,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader v v": "vault.switch",
   "leader v n": "vault.rename",
   "leader v m": "vault.init",
+  "leader v t": "trash.open",
   "leader m": "messages.open",
   "?": "help.open",
   "leader ?": "help.open",
@@ -321,16 +323,27 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   "shift+g": "bottom",
   "/": "filter",
   a: "all_files",
-  // netrw's (vim's own explorer): % a new file, d a new folder — in the selected folder
+  // Making and changing files (18.x), in the selected folder or on the selected row. nvim-tree's
+  // keys where they fit: r renames, d deletes (to the trash), y x p copy, cut and paste; n and N
+  // make a note and a folder (netrw's % too).
+  n: "new_note",
+  "shift+n": "new_folder",
   "%": "new_note",
-  d: "new_folder",
-  // …and R renames, as netrw's does.
-  "shift+r": "rename",
+  r: "rename",
+  m: "move",
+  d: "delete",
+  u: "restore",
+  y: "copy",
+  x: "cut",
+  p: "paste",
   q: "close",
   escape: "leave",
 };
 
-export const EXPLORER_ACTIONS = ["down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files", "new_note", "new_folder", "rename", "close", "leave"];
+export const EXPLORER_ACTIONS = [
+  "down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files",
+  "new_note", "new_folder", "rename", "move", "delete", "restore", "copy", "cut", "paste", "close", "leave",
+];
 
 /** Keys inside the outline pane: key → outline action. */
 export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {
@@ -387,6 +400,13 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   all_files: { title: "All files", desc: "Shows every text file, or back to files.show (notes and data files)" },
   new_note: { title: "New note here", desc: "Asks for a name and makes the note in the selected folder (or beside the selected file)" },
   new_folder: { title: "New folder here", desc: "Asks for a name and makes the folder in the selected folder (or beside the selected file)" },
+  rename: { title: "Rename", desc: "A new name for the selected note, file or folder, in its folder; every link to it fixed after a preview" },
+  move: { title: "Move to…", desc: "Picks a folder for the selected note, file or folder; every link to it fixed after a preview" },
+  delete: { title: "Delete", desc: "Moves the selected note, file or folder to the vault's trash (asks first; u restores)" },
+  restore: { title: "Restore", desc: "Puts back what was deleted last (the trash, :trash, has the rest)" },
+  copy: { title: "Copy", desc: "Copies the selected note, file or folder: p pastes a copy in the selected folder" },
+  cut: { title: "Cut", desc: "Cuts the selected note, file or folder: p moves it to the selected folder, links fixed" },
+  paste: { title: "Paste", desc: "Into the selected folder (or beside the selected file): a copy, or what was cut, moved" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
 };
@@ -444,8 +464,8 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader f": "find: notes, headings, text, commands",
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
-  "leader n": "note: new, source, the lens, save, edit elsewhere, reload, info",
-  "leader v": "vault: switch, make, rename, new folder, reindex, info, reload config",
+  "leader n": "note: new, rename, delete, source, the lens, save, edit elsewhere, reload, info",
+  "leader v": "vault: switch, make, rename, new folder, the trash, reindex, info, reload config",
   "leader q": "session: quit",
   y: "copy: selection, path, reference, link",
   "ctrl+w": "window: split, focus, move, resize",
@@ -506,6 +526,8 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   rename: "note.rename",
   mv: "note.rename",
   relink: "link.relink",
+  delete: "note.delete",
+  trash: "trash.open",
   config: "config.reload",
 };
 
