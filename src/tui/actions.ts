@@ -2,7 +2,8 @@
 // can list them and the parity test can check them; this is where each one does its work. The
 // keys are in keys.ts and docs/design/keymap.md.
 
-import { join, posix } from "node:path";
+import { join, posix, relative } from "node:path";
+import { findRoot } from "../core/vault.ts";
 import { classify } from "../core/filetypes.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
@@ -216,6 +217,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       }
       if (!from) return a.message("warn", `[[${link.target}]]: links resolve only inside the vault`);
       const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, from);
+      if (r.via) a.message("info", `[[${link.target}]] reached ${r.path} by ${r.via === "alias" ? "an alias" : r.via === "previous-name" ? "a previous name" : "a redirect"}`);
       if (r.resolvedKind === "note") return go(r.path!, link.heading);
       if (r.resolvedKind === "file") return fileLink(a, r.path!, link.heading, inSplit);
       if (r.resolvedKind === "ambiguous") {
@@ -225,6 +227,8 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
           accept: (item) => go(item.data as string, link.heading),
         });
       }
+      // In another vault, or a vault this machine doesn't know: say which (17.8).
+      if (r.reason) return a.message("warn", `[[${link.target}]]: ${r.reason}`);
       // No note by that name yet: make it (beside the note linking to it), the name typed already.
       return a.promptNewNote(posix.dirname(from) === "." ? "" : posix.dirname(from), link.target);
     }
@@ -247,6 +251,12 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       return a.message("warn", `broken link: ${link.target}`);
     }
   }
+}
+
+/** A path in another vault, shown from that vault's root. */
+function relativeToVault(abs: string): string {
+  const found = findRoot(abs);
+  return found ? relative(found.root, abs) : abs;
 }
 
 /** `g;` / `g,`: the change before or after in the note's change list. */
@@ -883,7 +893,8 @@ export function registerActions(app: App): void {
         if (!bl.length) return a.message("info", `no notes link to ${v.buf.rel}`);
         a.openList({
           title: `Linking to ${v.buf.name} (${bl.length})`,
-          items: bl.map((b) => ({ label: b.from, detail: b.text, hint: `${b.line}`, data: b })),
+          // Another vault's link (17.11): its vault's name before its path.
+          items: bl.map((b) => ({ label: b.vault ? `${b.vault}: ${relativeToVault(b.from)}` : b.from, detail: b.text, hint: `${b.line}`, data: b })),
           accept: (item) => {
             const b = item.data as { from: string; line: number };
             a.open(b.from, { heading: null, headingIndex: 0, offset: b.line - 1, line: b.line });

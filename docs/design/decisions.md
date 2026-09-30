@@ -128,6 +128,25 @@ One policy everywhere, never the filesystem's:
   then by file name anywhere in the vault (several matches are ambiguous).
 - **A loose file** (the home vault) resolves only within its own directory, not below it.
 
+Extended 2026-09-30 by the vault design (plan `17.7`–`17.11`; `docs/idea.md`, "Links"), in this order after a
+note's own name and path:
+
+- **`[[vault:name]]`** (also `#heading`, `|text`): `vault` is a vault this machine knows (`vaults.json`) by its name or
+  an alias; `name` then resolves there by the rules above, from the vault's root. The vault is opened once, with its
+  own config, and its index refreshed (indexing on demand). This vault's own name reaches its own notes. A note named
+  `a:b` here wins over vault `a`. Unknown, it's **unresolved** with a reason — `unknown vault "x"`, `no note "y" in
+  vault "x"`, or `vault "x" was last seen at <path>` when the list knows it but the folder is gone. The home vault is
+  never a target.
+- **Aliases:** frontmatter `aliases` (or `alias`) reach the note like its name, after every file name; several go
+  through the same disambiguation.
+- **Previous names**, a fallback only and said so (`via`): frontmatter `previous_names` when exactly one note claims
+  the name (several: ambiguous); for a vault, `[vault] previous_names`, counted only while that vault's config still
+  says so under the same id — a new vault that took an old name can't take its links.
+- **Paths out of the root:** `[t](../other/x.md)` reaches the file when it exists, in whichever root holds it.
+- **Backlinks across vaults:** a note's backlinks include the links other vaults' indexes (in the cache) make into
+  it — `[[thisvault:name]]` and paths — as fresh as each one's last indexing. A vault nested in this one, or holding
+  it, isn't counted: its paths are this vault's.
+
 This opens an existing Obsidian vault unchanged for the default "shortest path when possible" setting.
 
 ## `3.5` — reload anchoring

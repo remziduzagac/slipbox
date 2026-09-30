@@ -279,11 +279,16 @@ Each kind of link does something different when followed:
 | `[[#heading]]`, `[t](#frag)` | jumps within the note |
 | ambiguous `[[name]]` | a picker of the candidates |
 | unresolved `[[name]]` | the new-note prompt, the name typed: `enter` makes it beside this note |
+| `[[vault:name]]`, `[t](../other/x.md)` | opens the note in the other vault (`17.8`, `17.9`) |
+| `[[vault:name]]` that doesn't resolve | says why: `unknown vault "x"`, or where it was last seen |
 | `[t](other.md#frag)` | opens relative to the note |
 | `[t](run.py#L42)` | opens the file at line 42 (as in a code comment's `run.py:42`) |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
 | attachment `![[x.png]]` | copies the path; images are phase 6 |
 | footnote `[1]` | jumps to the definition |
+
+A link reached by a note's alias or previous name follows too, and says so. The backlinks list
+shows another vault's link with that vault's name: `app: design/plan.md`.
 
 `enter` follows the link under the cursor, or else the row's first link. In source mode and inside
 the lens, where rows are the markdown itself, `enter` and `space l f` / `s` read the link around the

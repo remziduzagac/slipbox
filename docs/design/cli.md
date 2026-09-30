@@ -72,9 +72,9 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `scratch path` | `{path, exists}` |
 | `scratch clear` | `{path, cleared, previousSha}` |
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
-| `resolve <link>` | `{link, status, path, abs, heading, line, candidates[]}` |
-| `links <note>` | `[{kind, target, heading, text, line, column, status, path, candidates}]`; `--all`: each has `from` |
-| `backlinks <note>` | `{path, backlinks[{from, line, column, text, kind, target, heading, block, alias}]}` |
+| `resolve <link>` | `{link, status, path, abs, heading, line, candidates[], vault, via, reason}` |
+| `links <note>` | `[{kind, target, heading, text, line, column, status, path, candidates, vault, via, reason}]` |
+| `backlinks <note>` | `{path, backlinks[{from, vault, line, column, text, kind, target, heading, block, alias}]}` |
 
 These churn freely before 1.0:
 
@@ -227,16 +227,21 @@ It uses the same resolver as `links` and the TUI, so it is the CLI equivalent of
 attachments included. Takes `[[target#heading|alias]]` or a bare `target`. With `--from <note>` it
 resolves the way a link inside that note does: same directory first, per decision `1.4`, then
 markdown-relative paths. With a heading, `line` is that heading's source line. External URLs come
-back as `status: "external"`.
+back as `status: "external"`. `links --all` lists every note's, each with `from`.
+
+**Across vaults** (plan `17.8`–`17.11`): `[[vault:note]]`, bare `vault:note` too when `vault` is a vault's name, and a
+path out of the root resolve into the other vault: `path` and `abs` are absolute, and `vault` names it. `via` says
+when a link got there by an `alias`, a `previous-name` or a `redirect` (and a warning says so); `reason` says why one
+didn't (`unknown vault "x"`). A backlink from another vault has an absolute `from` and its `vault`.
 
 ## Capture and the scratch (plans `8.1`–`8.4`)
 
 `slipbox capture` **is** the capture path (plan `8.1`). An nvim keybinding, an agent or a shell
 calls it, and the user reads the scratch in the TUI.
 
-- **Where.** In the state dir per project by default; with `capture.location = "vault"`, in the
-  vault. The project is the vault root; with no vault, the git top-level; with no repo, the
-  current directory, which keeps `prompt-buffer.lua`'s per-project behaviour.
+- **Where.** In the state dir per vault by default; with `capture.location = "vault"`, in the
+  vault. The project is the root: the vault, else the git repository (`17.1`); a loose folder's
+  scratch is the home vault's, always in its state.
 - **Reference forms**, as `prompt-buffer.lua` emits them: `path:42`, `path:42-50`,
   `path:42:10-30`, `path:42:10-50:30`. Paths inside the project are stored relative to it.
   Lines count from 1 and ranges must be in order; `--snippet` past the end of the file exits 3.

@@ -4,13 +4,13 @@
 // query time against the LinkIndex, so adding or removing a note never leaves stale answers.
 // The CLI reads a fresh cache instead of reparsing every note on every agent call (9.4).
 
-import { statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
-import { basename, join, posix } from "node:path";
+import { basename, isAbsolute, join, posix } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, readJson, readText, writeJson } from "./fsutil.ts";
-import { LinkIndex, type MdLinkTarget, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
+import { LinkIndex, type MdLinkTarget, normKey, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
 import { cacheDir } from "./paths.ts";
@@ -41,20 +41,54 @@ export interface NoteEntry {
   headings: HeadingInfo[];
   links: LinkRef[];
   tags: string[];
+  /** Frontmatter `aliases` (and `alias`): names `[[…]]` reaches the note by, like its own (17.7). */
+  aliases: string[];
+  /** Frontmatter `previous_names`: names it had; a fallback only (17.7). */
+  previous: string[];
   mtimeMs: number;
   size: number;
   flags: string[];
 }
 
+/** How a link was resolved when not by the note's own name or path. */
+export type Via = "alias" | "previous-name" | "redirect";
+
 export interface ResolvedLink extends LinkRef {
   /** note: a vault note; file: an attachment; external: a URL; anchor: within this note. */
   resolvedKind: "note" | "file" | "external" | "anchor" | "unresolved" | "ambiguous";
+  /** Vault-relative; absolute when the target is in another root (17.8, 17.9). */
   path: string | null;
   candidates: string[];
+  /** The other vault's name (or folder), when the target is in another root. */
+  vault?: string | null;
+  via?: Via;
+  /** Why it didn't resolve, when there's more to say than "no such note" ("unknown vault"). */
+  reason?: string;
+}
+
+/** What resolving a link found, without the link's own fields. */
+export type Target = Omit<ResolvedLink, keyof LinkRef>;
+
+/**
+ * Other vaults, as this one reaches them (17.8–17.11; core/reach.ts): `[[vault:note]]`, the root
+ * holding a path outside this one, and the links other vaults make into this one.
+ */
+export interface VaultReach {
+  /** `[[vault:target]]`; null when `vault` names no vault and the link is something else. */
+  wiki(vault: string, target: string): Target | null;
+  /** The name (or folder) of the root holding an absolute path outside this vault. */
+  vaultOf(abs: string): string | null;
+  /** Links from other vaults' indexes into `g`, by the vault-relative path they reach. */
+  inbound(g: Graph): Map<string, Backlink[]>;
+  /** The entry of a note in another root, by its absolute path. */
+  entryAt(abs: string): NoteEntry | undefined;
 }
 
 export interface Backlink {
+  /** Vault-relative; absolute for a link from another vault (17.11). */
   from: string;
+  /** The linking vault's name, for a link from another vault. */
+  vault?: string | null;
   line: number;
   column: number;
   text: string;
@@ -66,8 +100,8 @@ export interface Backlink {
   alias: string | null;
 }
 
-/** Bumped when what a note's entry holds changes: 3, readers per note format (16.2, 16.16, 16.17). */
-const INDEX_VERSION = 3;
+/** Bumped when what a note's entry holds changes: 4, aliases and previous names (17.7). */
+const INDEX_VERSION = 4;
 
 interface IndexFile {
   version: number;
@@ -96,6 +130,15 @@ export class Graph {
   stats: GraphStats = { notes: 0, parsed: 0, cached: 0, ms: 0 };
   private backlinkCache: Map<string, Backlink[]> | null = null;
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
+  /** Aliases and previous names → notes, from the entries parsed so far (null: rebuild). */
+  private nameCache: { aliases: Map<string, string[]>; previous: Map<string, string[]> } | null = null;
+  /** Other vaults (17.8–17.11); the CLI and the TUI set it, a graph opened alone has none. */
+  reach: VaultReach | null = null;
+  /**
+   * Parse every note before calling a link unresolved: its alias may be in a note not parsed yet.
+   * The CLI wants the right answer now; the TUI indexes in the background and lays out again.
+   */
+  thorough = false;
 
   constructor(
     readonly loc: VaultLocation,
@@ -142,6 +185,7 @@ export class Graph {
     }
     this.index = new LinkIndex(this.notes.keys());
     this.backlinkCache = null;
+    this.nameCache = null;
     this.cacheDirty = Object.keys(old).length !== reused;
     const toParse = this.unparsed.size;
     if (parse === "all") this.ensureAll();
@@ -194,6 +238,7 @@ export class Graph {
       this.unparsed.delete(rel);
       this.cacheDirty = true;
       this.backlinkCache = null;
+      this.nameCache = null;
     }
     return this.notes.get(rel);
   }
@@ -236,6 +281,7 @@ export class Graph {
     this.notes.set(rel, extractNote(file));
     if (isNew) this.index.add(rel);
     this.backlinkCache = null;
+    this.nameCache = null;
     return true;
   }
 
@@ -252,6 +298,7 @@ export class Graph {
     else if (!list.includes(rel)) list.push(rel);
     else return false;
     this.backlinkCache = null;
+    this.nameCache = null;
     this.dataLinkCache.clear(); // a path in a data file or a comment may resolve now
     return true;
   }
@@ -266,6 +313,7 @@ export class Graph {
     else this.assets.delete(key);
     this.dataLinkCache.clear(); // and paths to it no longer resolve
     this.backlinkCache = null;
+    this.nameCache = null;
     return true;
   }
 
@@ -275,6 +323,7 @@ export class Graph {
     this.cacheDirty = true;
     this.index.remove(rel);
     this.backlinkCache = null;
+    this.nameCache = null;
   }
 
   abs(rel: string): string {
@@ -296,12 +345,24 @@ export class Graph {
     return this.index.resolveWiki(cleaned, null);
   }
 
-  resolveLink(link: Pick<LinkRef, "kind" | "target">, fromRel: string): Omit<ResolvedLink, keyof LinkRef> {
+  /**
+   * Resolve a link found in `fromRel`. A wikilink: the note's name or path in this vault; then
+   * `[[vault:name]]` (17.8); an attachment; a note's alias; its previous name (17.7). A markdown
+   * link: its path, into another root when it climbs out of this one (17.9).
+   */
+  resolveLink(link: Pick<LinkRef, "kind" | "target">, fromRel: string): Target {
     if (link.kind === "wiki" || link.kind === "embed") {
       if (!link.target) return { resolvedKind: "anchor", path: fromRel, candidates: [] };
       const r = this.index.resolveWiki(link.target, fromRel);
       if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates };
       if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
+      const inter = VAULT_LINK.exec(link.target);
+      if (inter) {
+        // This vault by its own name reaches its own notes; another's is looked up.
+        if (this.answersTo(inter[1]!)) return this.resolveLink({ kind: link.kind, target: inter[2]! }, fromRel);
+        const other = this.reach?.wiki(inter[1]!, inter[2]!);
+        if (other) return other;
+      }
       if (classify(link.target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(link.target)) {
         const att = resolveAttachment(link.target, fromRel, this.root);
         if (att) return { resolvedKind: "file", path: att, candidates: [] };
@@ -312,9 +373,18 @@ export class Graph {
         if (hits.length === 1) return { resolvedKind: "file", path: hits[0]!, candidates: hits };
         if (hits.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: hits.sort() };
       }
+      const named = this.byOtherName(link.target, fromRel);
+      if (named) return named;
       return { resolvedKind: "unresolved", path: null, candidates: [] };
     }
     const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index);
+    if (m.kind === "missing" && m.target.startsWith("../")) {
+      // A path out of this root (17.9): the file wherever it is, in whichever root holds it.
+      const abs = join(this.root, m.target);
+      if (existsSync(abs) && !isDirectory(abs)) {
+        return { resolvedKind: classify(abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: abs, candidates: [], vault: this.reach?.vaultOf(abs) ?? null };
+      }
+    }
     switch (m.kind) {
       case "external":
         return { resolvedKind: "external", path: m.target, candidates: [] };
@@ -327,6 +397,54 @@ export class Graph {
       default:
         return { resolvedKind: "unresolved", path: null, candidates: [] };
     }
+  }
+
+  /** Whether `[[name:…]]` names this vault: its name, an alias, or a previous name. */
+  answersTo(name: string): boolean {
+    const n = name.toLowerCase();
+    return [this.loc.name, ...this.loc.aliases, ...this.loc.previous_names].some((x) => x?.toLowerCase() === n);
+  }
+
+  /** The names notes declare in their frontmatter, from the entries parsed so far. */
+  private otherNames(): NonNullable<Graph["nameCache"]> {
+    if (this.thorough && this.unparsed.size) this.ensureAll();
+    if (!this.nameCache) {
+      const aliases = new Map<string, string[]>();
+      const previous = new Map<string, string[]>();
+      const add = (map: Map<string, string[]>, name: string, rel: string) => {
+        const k = normKey(name.trim());
+        if (!k) return;
+        const list = map.get(k) ?? [];
+        if (!list.includes(rel)) list.push(rel);
+        map.set(k, list);
+      };
+      for (const [rel, e] of this.notes) {
+        for (const a of e.aliases ?? []) add(aliases, a, rel);
+        for (const p of e.previous ?? []) add(previous, p, rel);
+      }
+      this.nameCache = { aliases, previous };
+    }
+    return this.nameCache;
+  }
+
+  /**
+   * A name no note has as its file name (17.7): a note's alias, resolved like a name (several go
+   * through the same disambiguation); else a previous name, when exactly one note claims it.
+   */
+  private byOtherName(target: string, fromRel: string): Target | null {
+    if (target.includes("/")) return null;
+    const stem = target.replace(/\.(md|markdown)$/i, "");
+    const names = this.otherNames();
+    const aliased = names.aliases.get(normKey(stem));
+    if (aliased?.length) {
+      const r = pickCandidate(aliased, stem, fromRel);
+      if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates, via: "alias" };
+      return { resolvedKind: "ambiguous", path: null, candidates: r.candidates, via: "alias" };
+    }
+    const prev = names.previous.get(normKey(stem));
+    if (prev?.length === 1) return { resolvedKind: "note", path: prev[0]!, candidates: prev, via: "previous-name" };
+    if (prev && prev.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: [...prev].sort(), via: "previous-name" };
+    return null;
   }
 
   linksOf(rel: string): ResolvedLink[] {
@@ -346,15 +464,24 @@ export class Graph {
         for (const l of links) {
           if (l.kind === "image") continue;
           const r = this.resolveLink(l, from);
-          if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || r.path === from) continue;
+          if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || r.path === from || isAbsolute(r.path)) continue;
           const list = map.get(r.path) ?? [];
           list.push({ from, line: l.line, column: l.column, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
           map.set(r.path, list);
         }
       }
+      // And other vaults' links into this one, as of their last indexing (17.11).
+      for (const [rel, list] of this.reach?.inbound(this) ?? []) map.set(rel, [...(map.get(rel) ?? []), ...list]);
       this.backlinkCache = map;
     }
     return this.backlinkCache.get(rel) ?? [];
+  }
+
+  /** A note's entry by a path `resolveLink` gave: vault-relative, or absolute in another root. */
+  entryAnywhere(path: string): NoteEntry | undefined {
+    if (!isAbsolute(path)) return this.entry(path);
+    if (path.startsWith(`${this.root}/`)) return this.entry(path.slice(this.root.length + 1));
+    return this.reach?.entryAt(path);
   }
 
   /** The vault's files with links besides notes: data files (JSON, YAML, TOML, INI, CSV), and
@@ -376,11 +503,13 @@ export class Graph {
     }
     await Promise.all([...gs].map((g) => grammar(g)));
     this.backlinkCache = null;
+    this.nameCache = null;
   }
 
   /** A grammar finished loading: code files' links can be read now (the TUI hears of it). */
   grammarsChanged(): void {
     this.backlinkCache = null;
+    this.nameCache = null;
   }
 
   /** Whether a vault-relative path is a note or a file of the vault (by the index: no disk). */
@@ -460,6 +589,7 @@ export class Graph {
   fileChanged(rel: string): void {
     this.dataLinkCache.delete(rel);
     this.backlinkCache = null;
+    this.nameCache = null;
   }
 }
 
@@ -472,7 +602,18 @@ function isUnreadable(e: NoteEntry): boolean {
 }
 
 function stub(f: NoteFile): NoteEntry {
-  return { rel: f.rel, title: basename(f.rel).replace(/\.(md|markdown)$/i, ""), headings: [], links: [], tags: [], mtimeMs: f.mtimeMs, size: f.size, flags: ["unparsed"] };
+  return { rel: f.rel, title: basename(f.rel).replace(/\.(md|markdown)$/i, ""), headings: [], links: [], tags: [], aliases: [], previous: [], mtimeMs: f.mtimeMs, size: f.size, flags: ["unparsed"] };
+}
+
+/** `[[vault:name]]`: a vault's name, a colon, the rest (17.8). */
+export const VAULT_LINK = /^([\p{L}\p{N}][\p{L}\p{N}._-]*):(.+)$/u;
+
+function isDirectory(p: string): boolean {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 /** Parse one note and extract what the graph needs. */
@@ -538,6 +679,8 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
     headings: headingsOf(parsed.tree),
     links,
     tags,
+    aliases: names(fm?.aliases ?? fm?.alias),
+    previous: names(fm?.previous_names),
     mtimeMs: file.mtimeMs,
     size: file.size,
     flags,
@@ -554,6 +697,12 @@ function plain(n: Nodes): string {
     if (c.type === "text" || c.type === "inlineCode") parts.push(c.value);
   });
   return parts.join("");
+}
+
+/** A frontmatter list of names (or one name); anything else is none. */
+function names(v: unknown): string[] {
+  const list = Array.isArray(v) ? v : typeof v === "string" ? [v] : [];
+  return list.filter((n): n is string | number => typeof n === "string" || typeof n === "number").map((n) => String(n).trim()).filter(Boolean);
 }
 
 function normaliseTags(v: unknown): string[] {

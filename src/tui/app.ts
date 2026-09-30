@@ -50,6 +50,7 @@ import {
   type UiOverride,
 } from "../core/position.ts";
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
+import { Reach } from "../core/reach.ts";
 import { type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { sanitize } from "../core/sanitize.ts";
@@ -448,6 +449,8 @@ export class App {
   /** Id of the clickable region under the mouse, for hover highlighting. */
   hover: string | null = null;
   positions: PositionStore;
+  /** Other vaults, reached by `[[vault:note]]`, paths out of this root, and their backlinks. */
+  reach: Reach;
   watcher: VaultWatcher | null = null;
   ui: UiState;
   private drawFailed = false;
@@ -469,6 +472,8 @@ export class App {
     this.loc = opts.loc;
     this.config = opts.config;
     this.graph = opts.graph;
+    this.reach = new Reach(opts.loc);
+    this.graph.reach ??= this.reach;
     this.host = opts.host;
     this.configFile = opts.configFile;
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
@@ -665,6 +670,7 @@ export class App {
     }
     if (changed.includes("walk")) {
       this.graph = new Graph(this.loc, this.config).build(true, "lazy");
+      this.graph.reach = this.reach;
       this.indexInBackground();
       this.invalidateTree();
       for (const b of this.buffers.values()) b.invalidateLayouts();
@@ -3747,6 +3753,9 @@ export class App {
         return;
       }
       this.invalidateTree();
+      // A link that reaches a note by its alias resolves only now that every note is parsed (17.7).
+      for (const b of this.buffers.values()) b.invalidateLayouts();
+      this.relayoutAll();
       if (total > 200) this.message("info", `indexed ${total} notes in ${((this.now() - t0) / 1000).toFixed(1)} s`);
       this.host.requestRender();
     };

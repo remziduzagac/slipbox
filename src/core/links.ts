@@ -119,6 +119,11 @@ function unresolved(): Resolution {
   return { status: "unresolved", path: null, candidates: [] };
 }
 
+/** Pick among notes a name reaches, by the disambiguation rules (an alias's notes too: 17.7). */
+export function pickCandidate(candidates: string[], stem: string, fromRel: string | null): Resolution {
+  return pick(candidates, stem, fromRel);
+}
+
 function pick(candidates: string[], stem: string, fromRel: string | null): Resolution {
   if (candidates.length === 0) return unresolved();
   if (candidates.length === 1) return resolved(candidates[0]!);

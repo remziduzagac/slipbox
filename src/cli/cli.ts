@@ -16,7 +16,7 @@ import { copyText } from "../core/clipboard.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
-import { type Graph, openGraph } from "../core/graph.ts";
+import { type Graph, openGraph, type Target } from "../core/graph.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { headingsOf, parseAround, type ParsedNote, slugify } from "../core/parse.ts";
@@ -33,6 +33,8 @@ import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
+import { Reach } from "../core/reach.ts";
+import { vaultNamed } from "../core/registry.ts";
 import { initVault, isInside, locateVault, readVaultVersion, recordLocation, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
@@ -92,7 +94,13 @@ class Session {
   }
 
   get graph(): Graph {
-    if (!this._graph) this._graph = openGraph(this.loc, this.config, true, "lazy");
+    if (!this._graph) {
+      this._graph = openGraph(this.loc, this.config, true, "lazy");
+      // One process, one answer: an alias in a note not parsed yet still counts (17.7), and other
+      // vaults are reached through the machine's list (17.8).
+      this._graph.thorough = true;
+      this._graph.reach = new Reach(this.loc);
+    }
     return this._graph;
   }
 
@@ -414,6 +422,7 @@ const HANDLERS: Record<string, Handler> = {
     let status: string;
     let path: string | null = null;
     let candidates: string[] = [];
+    let found: Target | null = null;
     // A scheme makes it external only outside [[…]] (as the renderer has it), with no spaces (a
     // URL has none), and when no note by that name exists: "Meeting: Q3" is a note.
     const bracketed = /^!?\[\[/.test(raw);
@@ -426,7 +435,7 @@ const HANDLERS: Record<string, Handler> = {
       status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
       path = status === "resolved" ? md.path : null;
       candidates = md.candidates;
-    } else if (!bracketed && /^[a-z][a-z0-9+.-]*:\S*$/i.test(inner) && !noteNamed) {
+    } else if (!bracketed && /^[a-z][a-z0-9+.-]*:\S*$/i.test(inner) && !noteNamed && !vaultNamed(inner.slice(0, inner.indexOf(":"))).length) {
       status = "external";
       path = inner;
     } else if (!parts.target && from) {
@@ -442,21 +451,25 @@ const HANDLERS: Record<string, Handler> = {
         candidates = r.candidates;
       } else {
         const w = s.graph.resolveLink({ kind: "wiki", target: parts.target }, from ?? "");
-        const md = w.resolvedKind === "unresolved" && from ? s.graph.resolveLink({ kind: "markdown", target: parts.target }, from) : w;
+        const md = w.resolvedKind === "unresolved" && from && !w.reason ? s.graph.resolveLink({ kind: "markdown", target: parts.target }, from) : w;
         status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
         path = status === "resolved" ? md.path : null;
         candidates = md.candidates;
+        found = md;
       }
     }
     let line: number | null = null;
-    if (path && parts.heading && s.graph.notes.has(path)) {
-      const h = s.graph.entry(path)!.headings.find((x) => x.slug === slugify(parts.heading!) || x.text.toLowerCase() === parts.heading!.toLowerCase());
+    const entry = path && parts.heading && status === "resolved" ? s.graph.entryAnywhere(path) : undefined;
+    if (entry) {
+      const h = entry.headings.find((x) => x.slug === slugify(parts.heading!) || x.text.toLowerCase() === parts.heading!.toLowerCase());
       line = h?.line ?? null;
     }
-    const data = { link: raw, status, path, abs: path && status !== "external" ? s.graph.abs(path) : null, heading: parts.heading, line, candidates };
-    if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}": ${candidates.join(", ")}`, EXIT.ambiguous, data);
-    if (status === "unresolved") throw new CliError(`unresolved link "${raw}"`, EXIT.notFound, data);
-    return { data, human: `${data.abs ?? path}${line ? `:${line}` : ""}\n` };
+    const abs = path && status !== "external" ? (isAbsolute(path) ? path : s.graph.abs(path)) : null;
+    const data = { link: raw, status, path, abs, heading: parts.heading, line, candidates, vault: found?.vault ?? null, via: found?.via ?? null, reason: found?.reason ?? null };
+    if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`, EXIT.ambiguous, data);
+    if (status === "unresolved") throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);
+    if (data.via) s.warnings.push(`"${raw}" reached ${abs} by ${data.via === "alias" ? "an alias" : data.via === "previous-name" ? "a previous name" : "a redirect"}`);
+    return { data, human: `${abs ?? path}${line ? `:${line}` : ""}\n` };
   },
 
   async links(s, rest) {
@@ -469,13 +482,32 @@ const HANDLERS: Record<string, Handler> = {
     const human = links
       .map((l) => {
         const where = `${all ? `${l.from}:` : ""}${l.line}:${l.column}`.padEnd(8);
-        const dest = l.resolvedKind === "unresolved" ? "UNRESOLVED" : l.resolvedKind === "ambiguous" ? `AMBIGUOUS (${l.candidates.join(", ")})` : (l.path ?? "");
+        const dest =
+          l.resolvedKind === "unresolved"
+            ? `UNRESOLVED${l.reason ? ` (${l.reason})` : ""}`
+            : l.resolvedKind === "ambiguous"
+              ? `AMBIGUOUS (${l.candidates.join(", ")})`
+              : `${l.path ?? ""}${l.vault ? ` (vault ${l.vault})` : ""}${l.via ? ` [${l.via}]` : ""}`;
         const shown = l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]` : l.target;
         return `${where} ${l.kind.padEnd(8)} ${shown} -> ${dest}\n`;
       })
       .join("");
     return {
-      data: links.map((l) => ({ ...(all ? { from: l.from } : {}), kind: l.kind, target: l.target, heading: l.heading, text: l.text, line: l.line, column: l.column, status: l.resolvedKind, path: l.path, candidates: l.candidates })),
+      data: links.map((l) => ({
+        ...(all ? { from: l.from } : {}),
+        kind: l.kind,
+        target: l.target,
+        heading: l.heading,
+        text: l.text,
+        line: l.line,
+        column: l.column,
+        status: l.resolvedKind,
+        path: l.path,
+        candidates: l.candidates,
+        vault: l.vault ?? null,
+        via: l.via ?? null,
+        reason: l.reason ?? null,
+      })),
       human,
     };
   },
@@ -484,7 +516,7 @@ const HANDLERS: Record<string, Handler> = {
     const rel = resolveNote(s, requireArg(rest, "note"));
     await s.graph.loadGrammars(); // code files link from their comments (16.10)
     const bl = s.graph.backlinks(rel);
-    return { data: { path: rel, backlinks: bl }, human: bl.map((b) => `${b.from}:${b.line}  ${b.text}\n`).join("") };
+    return { data: { path: rel, backlinks: bl.map((b) => ({ ...b, vault: b.vault ?? null })) }, human: bl.map((b) => `${b.vault ? `${b.vault}: ` : ""}${b.from}:${b.line}  ${b.text}\n`).join("") };
   },
 
   ls(s) {

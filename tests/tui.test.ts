@@ -5288,3 +5288,45 @@ describe("saving keeps the index true (found by the creation scenario)", () => {
     expect(existsSync(join(root, "box", "one.md"))).toBe(true);
   });
 });
+
+describe("vaults in the TUI (17.x)", () => {
+  let made = 0;
+  /** Two vaults the machine knows: `tnotesN` (opened) and `tappN`, whose index links into it.
+   *  Names are unique on a machine, so each call numbers its own. */
+  async function twoVaults() {
+    const n = ++made;
+    const { initVault, locateVault: locate } = await import("../src/core/vault.ts");
+    const base = mkdtempSync(join(sandbox, "two-"));
+    const notes = join(base, "notes");
+    const app = join(base, "app");
+    const files: Record<string, string> = {
+      "notes/index.md": `# Index\n\n[[nope:x]]\n\n[[tapp${n}:design#Goals]]\n\n[out](../app/design.md)\n`,
+      "notes/todo.md": "# Todo\n",
+      "app/design.md": "# Design\n\nIntro.\n\n## Goals\n\nShip.\n",
+      "app/links.md": `See [[tnotes${n}:todo]].\n`,
+    };
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(base, rel)), { recursive: true });
+      writeFileSync(join(base, rel), text);
+    }
+    initVault(notes, `tnotes${n}`);
+    initVault(app, `tapp${n}`);
+    openGraph(locate({ root: app }), DEFAULT_CONFIG, true); // tapp's index, as of now
+    return { base, notes, app, n };
+  }
+
+  test("a link into a vault this machine doesn't know says so, and offers no new note", async () => {
+    const { notes } = await twoVaults();
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.keys("tab", "enter");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toBe('[[nope:x]]: unknown vault "nope"');
+  });
+
+  test("backlinks from another vault are listed with its name", async () => {
+    const { notes, n } = await twoVaults();
+    const h = await harness({ root: notes, open: "todo.md" });
+    await h.app.run("backlinks.open");
+    expect(h.frame()).toContain(`tapp${n}: links.md`);
+  });
+});

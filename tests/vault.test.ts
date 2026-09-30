@@ -593,3 +593,113 @@ describe("vault identity, storage and the machine's vaults (17.3–17.6)", () =>
     expect(loadSession(b)).toBeNull();
   });
 });
+
+describe("links across vaults: aliases, previous names, [[vault:note]], paths (17.7–17.11)", () => {
+  const io = (cwd: string) => {
+    const out: string[] = [];
+    const err: string[] = [];
+    return { io: { out: (s: string) => out.push(s), err: (s: string) => err.push(s), stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env }, out, err };
+  };
+  const cli = async (args: string[], cwd: string) => {
+    const r = io(cwd);
+    const code = await runCli([...args, "--json"], r.io);
+    return { code, json: JSON.parse(r.out.join("")) };
+  };
+  const base = mkdtempSync(join(tmpdir(), "slipbox-reach-"));
+  const notes = join(base, "notes");
+  const app = join(base, "app");
+  const files: Record<string, string> = {
+    "notes/index.md": "# Index\n\n[[xapp:design]] [[xapp:design#Goals|the goals]] [[xapp:missing]] [[nope:x]] [[xnotes:todo]]\n\n[[nick]] [[old-name]] [paths](../app/design.md)\n",
+    "notes/todo.md": "# Todo\n",
+    "notes/person.md": "---\naliases: [nick]\n---\n# Person\n",
+    "notes/renamed.md": "---\nprevious_names: [old-name]\n---\n# Renamed\n",
+    "notes/a:b.md": "# colon\n",
+    "app/design.md": "# Design\n\nIntro.\n\n## Goals\n",
+    "app/links.md": "[[xnotes:todo]] and [t](../notes/person.md)\n",
+  };
+  for (const [rel, text] of Object.entries(files)) {
+    mkdirSync(join(base, rel, ".."), { recursive: true });
+    writeFileSync(join(base, rel), text);
+  }
+  const ready = (async () => {
+    await cli(["init", notes, "--name", "xnotes"], notes);
+    await cli(["init", app, "--name", "xapp"], app);
+    await cli(["ls"], app); // app's index, as of now: its links into notes
+  })();
+
+  test("[[vault:note]] reaches the note in the named vault, with its heading's line (17.8)", async () => {
+    await ready;
+    const r = await cli(["resolve", "[[xapp:design#Goals]]"], notes);
+    expect(r.code).toBe(0);
+    expect(r.json.data).toMatchObject({ status: "resolved", abs: join(app, "design.md"), vault: "xapp", line: 5 });
+    // Bare, it's the same link — not a URL with a scheme.
+    expect((await cli(["resolve", "xapp:design"], notes)).json.data.abs).toBe(join(app, "design.md"));
+    // This vault by its own name reaches its own notes.
+    expect((await cli(["resolve", "[[xnotes:todo]]"], notes)).json.data.path).toBe("todo.md");
+    // A note named with a colon is still a note here.
+    expect((await cli(["resolve", "[[a:b]]"], notes)).json.data.path).toBe("a:b.md");
+  });
+
+  test("a note or vault that isn't there says which (17.8)", async () => {
+    await ready;
+    const missing = await cli(["resolve", "[[xapp:missing]]"], notes);
+    expect(missing.code).toBe(3);
+    expect(missing.json.data.reason).toBe('no note "missing" in vault "xapp"');
+    const unknown = await cli(["resolve", "[[nope:x]]"], notes);
+    expect(unknown.code).toBe(3);
+    expect(unknown.json.error.message).toContain('unknown vault "nope"');
+    const links = (await cli(["links", "index"], notes)).json.data;
+    expect(links.find((l: { target: string }) => l.target === "nope:x")).toMatchObject({ status: "unresolved", reason: 'unknown vault "nope"' });
+    expect(links.find((l: { target: string }) => l.target === "xapp:design")).toMatchObject({ status: "note", path: join(app, "design.md"), vault: "xapp" });
+  });
+
+  test("aliases resolve like names; a previous name is a fallback, said so (17.7)", async () => {
+    await ready;
+    const nick = await cli(["resolve", "[[nick]]"], notes);
+    expect(nick.json.data).toMatchObject({ path: "person.md", via: "alias" });
+    const old = await cli(["resolve", "[[old-name]]"], notes);
+    expect(old.json.data).toMatchObject({ path: "renamed.md", via: "previous-name" });
+    expect(old.json.warnings.join()).toContain("by a previous name");
+    // A file named like an alias wins over the alias.
+    writeFileSync(join(notes, "nick.md"), "# the real nick\n");
+    expect((await cli(["resolve", "[[nick]]"], notes)).json.data).toMatchObject({ path: "nick.md", via: null });
+    rmSync(join(notes, "nick.md"));
+    // Two notes claiming one previous name: ambiguous, never a guess.
+    writeFileSync(join(notes, "other.md"), "---\nprevious_names: old-name\n---\n# Other\n");
+    expect((await cli(["resolve", "[[old-name]]"], notes)).code).toBe(4);
+    rmSync(join(notes, "other.md"));
+  });
+
+  test("a path out of the root reaches the file in the other vault (17.9)", async () => {
+    await ready;
+    const links = (await cli(["links", "index"], notes)).json.data;
+    expect(links.find((l: { target: string }) => l.target === "../app/design.md")).toMatchObject({ status: "note", path: join(app, "design.md"), vault: "xapp" });
+  });
+
+  test("backlinks come from other vaults' indexes too, as of their last indexing (17.11)", async () => {
+    await ready;
+    const todo = (await cli(["backlinks", "todo"], notes)).json.data.backlinks;
+    expect(todo).toContainEqual(expect.objectContaining({ from: join(app, "links.md"), vault: "xapp", kind: "wiki" }));
+    const person = (await cli(["backlinks", "person"], notes)).json.data.backlinks;
+    expect(person).toContainEqual(expect.objectContaining({ from: join(app, "links.md"), vault: "xapp", kind: "markdown" }));
+  });
+
+  test("a renamed vault's old name still reaches it, checked by its id; a moved-away vault says where it was", async () => {
+    await ready;
+    const cfg = join(app, ".slipbox", "config.toml");
+    const before = readFileSync(cfg, "utf8");
+    writeFileSync(cfg, before.replace('name = "xapp"', 'name = "xapp2"\nprevious_names = ["xapp"]'));
+    await cli(["ls"], app); // the machine sees the new name
+    const r = await cli(["resolve", "[[xapp:design]]"], notes);
+    expect(r.json.data).toMatchObject({ abs: join(app, "design.md"), via: "previous-name", vault: "xapp2" });
+    const moved = join(base, "app-moved");
+    const { renameSync } = await import("node:fs");
+    renameSync(app, moved);
+    const gone = await cli(["resolve", "[[xapp2:design]]"], notes);
+    expect(gone.code).toBe(3);
+    expect(gone.json.data.reason).toContain(`was last seen at ${app}`);
+    renameSync(moved, app);
+    writeFileSync(cfg, before);
+    await cli(["ls"], app);
+  });
+});
