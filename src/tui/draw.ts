@@ -73,6 +73,8 @@ export interface Geometry {
   findInWindow?: boolean;
   /** A question's floating window, with its margin: clicks there never reach what's under it. */
   dialog?: Rect | null;
+  /** The floating editor's box (3.20), with its margin. */
+  floating?: Rect | null;
 }
 
 const CHANGE_MARKER_MS = 3000;
@@ -196,6 +198,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
   // over the status line). A question — anything a prompt asks — floats in a window of its own
   // (a screen too small for it: over the status line; in zen, the screen's last row); find's is
   // in its window when that window had room for its find row.
+  if (app.floating) geo.floating = drawFloating(app, c, mainY, mainH, geo);
   const prompt = app.overlay?.kind === "prompt" && !(app.overlay.view && geo.findInWindow) ? app.overlay : null;
   const float = W >= TOAST_MIN_W && mainH >= 5;
   const dialog = prompt && W >= DIALOG_MIN_W && mainH >= dialogHeight(prompt, dialogWidth(W)) ? prompt : null;
@@ -210,6 +213,39 @@ export function drawApp(app: App, c: Canvas): Geometry {
   }
   if (dialog) geo.dialog = drawDialog(app, c, dialog, mainY, mainH, geo);
   return geo;
+}
+
+/**
+ * The floating editor (3.20): a framed window over the others, centred near the top of the content,
+ * as tall as its text (at most the content's height); its title says what it edits, its bottom
+ * border how it closes. Inside, a window like any, in source mode.
+ */
+function drawFloating(app: App, c: Canvas, mainY: number, mainH: number, geo: Geometry): Rect {
+  const f = app.floating!;
+  const theme = app.theme;
+  const W = c.width;
+  const w = Math.max(24, Math.min(100, W - 8));
+  const h = Math.max(6, Math.min(mainH - 1, f.view.buf.lineStarts().length + 5));
+  const x = Math.floor((W - w) / 2);
+  const y = mainY + Math.max(0, Math.min(1, mainH - h));
+  const bg = roleStyle(theme, "overlay", null);
+  const border = roleStyle(theme, "overlay_border", null);
+  const dim = roleStyle(theme, "overlay_dim", null);
+  const b = app.glyphs.box;
+  c.fill(x - 2, y - 1, w + 4, h + 2, bg.bg);
+  drawText(c, x, y, `${b.tl}${b.h}`, border);
+  const tw = drawText(c, x + 2, y, truncate(` ${f.title} `, w - 6), { ...border, bold: true });
+  drawText(c, x + 2 + tw, y, b.h.repeat(Math.max(0, w - 3 - tw)) + b.tr, border);
+  for (let k = 1; k < h - 1; k++) {
+    drawText(c, x, y + k, b.v, border, 1);
+    drawText(c, x + w - 1, y + k, b.v, border, 1);
+  }
+  const hint = ` esc · q closes, writing back · ctrl+s writes `;
+  const bottom = `${b.bl}${b.h.repeat(Math.max(0, w - 2 - stringWidth(hint)))}`;
+  drawText(c, x, y + h - 1, bottom, border);
+  drawText(c, x + stringWidth(bottom), y + h - 1, truncate(hint, w - stringWidth(bottom) - 1) + b.br, dim);
+  drawPane(app, c, f.view, { x: x + 1, y: y + 1, w: w - 2, h: h - 2 }, true, false, true, false, geo);
+  return { x: x - 2, y: y - 1, w: w + 4, h: h + 2 };
 }
 
 /** Narrower than this, a question goes over the status line instead of floating. */
@@ -644,6 +680,8 @@ function drawContent(app: App, c: Canvas, area: Rect, ruleAbove: boolean, geo: G
 }
 
 function paneIsActive(app: App, view: View): boolean {
+  // The floating editor, while it's open, is the only active window (3.20).
+  if (app.floating) return app.floating.view === view;
   const t: Tab | null = app.tab;
   return !!t && t.views[t.active] === view;
 }
@@ -659,7 +697,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const active = paneIsActive(app, view);
   let body = rect;
   // The header: a split window's title, then the breadcrumb, then a blank row before the text.
-  const crumbs = app.ui.breadcrumb && !app.ui.zen && rect.h >= 8;
+  const crumbs = app.ui.breadcrumb && !app.ui.zen && rect.h >= 8 && app.floating?.view !== view;
   const typing = app.overlay?.kind === "prompt" && app.overlay.view === view ? app.overlay : null;
   {
     // The window's text size, set before anything lays it out: the breadcrumb asks for the layout

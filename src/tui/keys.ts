@@ -230,6 +230,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n d": "note.delete",
   "leader n f": "footnotes.cycle",
   "leader n shift+f": "footnote.add",
+  "leader n shift+p": "note.properties",
   "leader n shift+m": "note.move",
   "leader n y": "note.yank",
   "leader n x": "note.cut",
@@ -399,9 +400,9 @@ export const DEFAULT_FOOTNOTE_KEYS: Record<string, string> = {
 export const FOOTNOTE_ACTIONS = [...OUTLINE_ACTIONS, "add", "edit", "delete", "rename"];
 
 /** Keys inside the Info view (3.19): the outline's, and `y` to copy a row's value. */
-export const DEFAULT_INFO_KEYS: Record<string, string> = { ...DEFAULT_OUTLINE_KEYS, y: "copy" };
+export const DEFAULT_INFO_KEYS: Record<string, string> = { ...DEFAULT_OUTLINE_KEYS, y: "copy", e: "edit" };
 
-export const INFO_ACTIONS = [...OUTLINE_ACTIONS, "copy"];
+export const INFO_ACTIONS = [...OUTLINE_ACTIONS, "copy", "edit"];
 
 /** What the Info view's actions do, for help and which-key. */
 export const INFO_ACTION_INFO: Record<string, { title: string; desc: string }> = {
@@ -414,6 +415,7 @@ export const INFO_ACTION_INFO: Record<string, { title: string; desc: string }> =
   bottom: { title: "Bottom", desc: "Selects the last row" },
   filter: { title: "Filter", desc: "Type to narrow the rows by name and value; enter opens, esc clears" },
   copy: { title: "Copy", desc: "Copies the row's value (a path whole)" },
+  edit: { title: "Edit the properties", desc: "The note's frontmatter in a floating editor (every editing key); closed or saved, written back" },
   close: { title: "Close the Info", desc: "Closes the right panel; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the Info stays open" },
 };

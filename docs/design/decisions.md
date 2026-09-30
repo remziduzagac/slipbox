@@ -188,6 +188,14 @@ rewrite footnotes nobody touched. Its reference goes after the word the cursor i
 only by line, so the word is found in its paragraph's source by how many times it came before, and never lands
 inside a link's or code's syntax. Edits, renames and deletes change the text they name and nothing else.
 
+## `3.20` — the properties editor
+
+A note's properties are its frontmatter's text, edited as text: in a floating window holding a view of a buffer that
+isn't a file — the same editing keys, undo and highlighting as any — and written back into the note's frontmatter as
+one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back, as leaving the lens keeps its edits;
+there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
+you say so, and so is text written over a frontmatter that changed under it.
+
 ## `3.5` — reload anchoring
 
 A buffer stores **source lines, never rendered rows**. Rendered rows change with every resize.

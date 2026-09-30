@@ -1141,6 +1141,16 @@ export const SCENARIOS: Scenario[] = [
       await s.type("Show or hide the Info");
       await s.keys("enter");
       await s.status("INFO");
+      // Its properties, edited in a floating editor (3.20): a line added; esc esc writes it back.
+      await leader(s, "n", "shift+p");
+      await s.see("Properties — people/kenji-mori.md (YAML)");
+      await s.keys("shift+g", "o");
+      await s.type("status: visiting");
+      await s.keys("escape", "escape");
+      await s.message("properties written");
+      await s.file("people/kenji-mori.md", (t) => t.includes("status: visiting\n---"), "the property in the frontmatter");
+      await leader(s, "n", "i");
+      await s.see(/status +visiting/);
       // A tag's row: its notes.
       await s.keys("shift+g");
       await s.until(() => /#visiting|#people/.test(s.text()), 3000, "its tags");

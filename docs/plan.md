@@ -352,6 +352,7 @@ common, and the only reason they are step 0.
 | 3.17 | **Done.** Footnotes: the right panel's second view (`space n f`): each footnote, its references, jumps |
 | 3.18 | **Done.** Footnotes added (`space n shift+f`, `a`, `+`), edited, renamed, deleted; `slipbox footnotes … add` |
 | 3.19 | **Done.** Info: the right panel's first view — the file's place, vault, counts, state, properties, tags |
+| 3.20 | **Done.** Properties edited in a floating editor (`e`, `space n shift+p`): the frontmatter, written back |
 
 ## Editing — `4.x`
 

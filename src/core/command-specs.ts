@@ -199,6 +199,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "note.send", title: "Send to your running editor", cli: "slipbox send <note> --line <n>", desc: "Opens the note at the cursor's line in an editor already running elsewhere: by default, a running nvim" },
   { id: "note.send_pick", title: "Choose the editor to send to", cli: "slipbox send <note> --server <socket>", desc: "Lists the running nvims to pick the one space n s sends to, then sends the note there" },
   { id: "note.info", title: "Info: open, focus, close", cli: "slipbox stat <note>", desc: "The Info view in the right panel: the file's path, vault, size, dates, counts, state, properties, tags, links" },
+  { id: "note.properties", title: "Edit the properties", cli: "slipbox write <note> --stdin", desc: "The note's frontmatter (YAML or TOML) in a floating editor; closed (esc, q) or saved (ctrl+s), written back as one undo step" },
   { id: "info.toggle", title: "Show or hide the Info", cli: "slipbox stat <note>", desc: "The file on screen: where, which vault, its properties (frontmatter), tags, links and backlinks" },
   { id: "vault.reindex", title: "Reindex the vault", cli: "slipbox ls", desc: "Re-walks and re-reads every note" },
   { id: "vault.info", title: "Vault info", cli: "slipbox info", desc: "Shows root, notes, watcher, cache and state" },

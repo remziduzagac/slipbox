@@ -461,7 +461,15 @@ keys.
   list, the outline or the footnotes view; any other row copies its value, as `y` does. The vault's own information
   — its notes, index and watcher — is `space v i`'s window: a vault isn't a file. Names are a column a third of the
   pane at most, values cut to it (no sideways scrolling). `space n i`, the `ℹ` button, `slipbox stat` (its `vault`
-  and `properties` too).
+  and `properties` too). `e` edits the properties (below).
+- **The properties editor** (`3.20`): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter — YAML
+  or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
+  tall as its text. Inside is a window like any, in source mode, with every editing key there is; the keys and
+  commands act on it while it's open. `esc` (in normal mode), `q` or `:q` close it, writing its text back when it
+  changed, and a click outside its box does too; `ctrl+s` (`:w`) writes it back and keeps it open. The write is one
+  edit to the note — one undo step there — and the note is saved. A note without a frontmatter gets one first; an
+  emptied one is removed. Text that doesn't parse asks before it's written (no keeps you editing), as does a
+  frontmatter changed in the note meanwhile. Following a link from inside it closes it first.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 - **Footnotes (right, `3.17`):** the current note's footnotes, in the order the note first refers to them (as GFM

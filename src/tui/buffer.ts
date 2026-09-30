@@ -65,6 +65,10 @@ export class NoteBuffer {
   /** The render's blocks, reused across edits and reloads (only a changed block renders again). */
   private renderCache = newRenderCache();
 
+  /** A buffer that isn't a file of its own (3.20): its text given, saved by `save` (into a note's
+   *  frontmatter), never read from or compared with the disk. */
+  virtual: { save: (text: string) => boolean } | null = null;
+
   /** What the file is (16.1): a note, a data file or a text file — which modes and layouts it has. */
   kind: FileKind = { group: "note", format: "markdown" };
 
@@ -87,8 +91,19 @@ export class NoteBuffer {
     return (this.rel ?? this.abs).split("/").pop()!;
   }
 
+  /** A virtual buffer's text, as if just read (3.20): clean, its own undo history from here. */
+  loadText(text: string): void {
+    this.source = text;
+    this.version++;
+    this.loaded = true;
+    this.savedVersion = this.version;
+    this.savedText = text;
+    this.layouts.clear();
+  }
+
   /** Read from disk. Returns false when the file is gone. */
   load(): boolean {
+    if (this.virtual) return true;
     try {
       const d = readText(this.abs);
       this.bom = d.bom;
@@ -127,6 +142,7 @@ export class NoteBuffer {
 
   /** True when the file on disk differs from what we loaded. */
   changedOnDisk(): boolean {
+    if (this.virtual) return false;
     const s = stamp(this.abs);
     if (!s) return !this.deleted;
     return !this.stamp || s.mtimeMs !== this.stamp.mtimeMs || s.size !== this.stamp.size;

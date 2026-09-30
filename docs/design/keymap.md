@@ -296,7 +296,11 @@ title), `e` edits the selected one's text, `r` renames its label, `d` deletes it
 **Info** (`3.19`) is the right panel's first view, its button above the outline's: `space n i` cycles it. It takes
 the outline's keys (`[keys.info]`): `j` / `k` move, `enter` (or a click) opens what a row names — a property's line,
 a tag's notes, the links, backlinks, outline or footnotes — or copies its value, `y` copies, `h` / `l` fold and unfold
-a section, `/` filters, `q` closes, `esc` goes back to the note.
+a section, `/` filters, `e` edits the properties, `q` closes, `esc` goes back to the note.
+
+**The properties editor** (`3.20`: `e` there, or `space n shift+p`) floats over the windows with the note's
+frontmatter: every editing key works in it. `esc` in normal mode, `q` or `:q` close it, writing back what changed;
+`ctrl+s` or `:w` write it back and keep it open.
 
 Below `ui.narrow_width` columns (default 90), the explorer and the outline open over the content.
 

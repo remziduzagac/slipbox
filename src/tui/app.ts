@@ -62,6 +62,7 @@ import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
+import { parseMarkdown } from "../core/parse.ts";
 import { NoteBuffer } from "./buffer.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, clampPos, ordered, type Pos, snap, wordAt } from "./cursor.ts";
@@ -846,6 +847,8 @@ export class App {
   }
 
   get view(): View | null {
+    // The floating editor (3.20), while it's open, is the window the keys and commands act on.
+    if (this.floating) return this.floating.view;
     const t = this.tab;
     return t ? (t.views[t.active] ?? null) : null;
   }
@@ -990,6 +993,12 @@ export class App {
 
   /** Open a note in a view, pushing history (3.6) and remembering the old position (3.4). */
   open(path: string, anchor?: Anchor, view = this.view): void {
+    // From the floating editor (a link in the properties): it closes first, and the window under it opens it.
+    if (this.floating) {
+      const from = view === this.floating.view;
+      if (!this.closeFloating()) return;
+      if (from) view = this.view;
+    }
     if (!view) return this.openInNewTab(path, anchor);
     if (this.intoOtherVault(path, anchor)) return;
     const buf = this.buffer(path);
@@ -1579,6 +1588,7 @@ export class App {
 
   /** `:q`: this window, or its tab; the very last one quits. */
   closeOrQuit(): void {
+    if (this.floating) return void this.closeFloating();
     const t = this.tab;
     if (!t || (t.views.length <= 1 && this.tabs.length <= 1)) return this.requestQuit();
     this.closeWindow();
@@ -1832,6 +1842,7 @@ export class App {
   }
 
   closeWindow(): void {
+    if (this.floating) return void this.closeFloating();
     const t = this.tab;
     if (!t) return;
     if (t.views.length > 1) {
@@ -2752,6 +2763,89 @@ export class App {
     if (this.narrow || this.ui.zen) this.outline.overlay = false;
   }
 
+  // The floating editor (3.20): a view over the windows, of text that isn't a file of its own — a
+  // note's frontmatter — with every editing key there is; closed (esc, q, :q) or saved (ctrl+s,
+  // :w), its text goes back where it came from, as one undo step there.
+
+  floating: { view: View; note: NoteBuffer; format: "yaml" | "toml"; original: string; title: string } | null = null;
+
+  /** The frontmatter's span in a note's text: the fences, and the text between them; null without one. */
+  private frontmatterSpan(source: string): { start: number; end: number; innerStart: number; innerEnd: number; format: "yaml" | "toml" } | null {
+    const m = /^(---|\+\+\+)[ \t]*\n([\s\S]*?)(?:^|\n)(---|\.\.\.|\+\+\+)[ \t]*(?:\n|$)/.exec(source);
+    if (!m || (m[1] === "+++") !== (m[3] === "+++")) return null;
+    const innerStart = m[1]!.length + (/^[ \t]*\n/.exec(source.slice(m[1]!.length))?.[0].length ?? 1);
+    const innerEnd = innerStart + m[2]!.length;
+    return { start: 0, end: m[0].length, innerStart, innerEnd, format: m[1] === "+++" ? "toml" : "yaml" };
+  }
+
+  /** Edit the current note's properties — its frontmatter, YAML or TOML — in a floating editor (3.20). */
+  openPropertiesEditor(): void {
+    const view = this.view;
+    if (this.floating) return;
+    if (!view || view.buf.kind.group !== "note" || view.buf.rel === null) return this.message("info", "properties are a note's: its frontmatter");
+    const note = view.buf;
+    const span = this.frontmatterSpan(note.source);
+    const original = span ? note.source.slice(span.innerStart, span.innerEnd) : "";
+    const format = span?.format ?? "yaml";
+    const buf = new NoteBuffer(null, `${note.abs}#properties`, `${note.key}#properties`);
+    buf.kind = { group: "data", format };
+    buf.virtual = { save: (text) => this.writeProperties(text) };
+    buf.loadText(original ? `${original}\n` : "");
+    const fv = this.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
+    this.floating = { view: fv, note, format, original, title: `Properties — ${this.displayName(note)} (${format === "toml" ? "TOML" : "YAML"})` };
+    this.setViewMode(fv, "source");
+    this.region = "content";
+  }
+
+  /**
+   * Write the floating editor's text into its note's frontmatter: one undo step there, the note
+   * saved. Text that doesn't parse, or a frontmatter changed under it meanwhile, asks first; false
+   * while it asks (the editor stays).
+   */
+  private writeProperties(text: string, sure = false): boolean {
+    const f = this.floating;
+    if (!f) return false;
+    const note = f.note;
+    const body = text.replace(/\s+$/, "");
+    const span = this.frontmatterSpan(note.source);
+    const now = span ? note.source.slice(span.innerStart, span.innerEnd) : "";
+    if (!sure && now !== f.original) {
+      this.confirm(`${this.displayName(note)}'s properties changed while you edited them. Write yours over them?`, () => {
+        if (this.writeProperties(text, true)) this.floating = null;
+      });
+      return false;
+    }
+    if (!sure && body) {
+      const probe = parseMarkdown(f.format === "toml" ? `+++\n${body}\n+++\n` : `---\n${body}\n---\n`).frontmatter;
+      if (probe?.error) {
+        this.confirm(`The properties don't parse (${probe.error.split("\n")[0]}). Write them anyway?`, () => {
+          if (this.writeProperties(text, true)) this.floating = null;
+        });
+        return false;
+      }
+    }
+    const fence = f.format === "toml" ? "+++" : "---";
+    // Emptied: the frontmatter goes; new: it comes first.
+    const edit = span ? (body ? { at: span.innerStart, length: span.innerEnd - span.innerStart, text: body } : { at: 0, length: span.end, text: "" }) : body ? { at: 0, length: 0, text: `${fence}\n${body}\n${fence}\n` } : null;
+    if (edit && !(span && body === now)) {
+      note.edit(edit.at, edit.length, edit.text); // one edit: one undo step
+      for (const v of this.allViews()) if (v.buf === note) v.layoutKey = "";
+      if (!this.saveBuffer(note, true)) this.message("warn", `${this.displayName(note)}'s properties changed — not saved yet (the file changed on disk: space n w decides)`);
+      else this.message("info", `properties written to ${this.displayName(note)}`);
+    }
+    f.original = body;
+    return true;
+  }
+
+  /** Close the floating editor, writing its text back first when it changed; false while that asks. */
+  closeFloating(): boolean {
+    const f = this.floating;
+    if (!f) return true;
+    if (f.view.buf.dirty && !this.writeProperties(f.view.buf.source)) return false;
+    this.floating = null;
+    return true;
+  }
+
   // The Info view (3.19): what the file on screen is — where, which vault, its size and dates, its
   // text's counts and state — its properties (the frontmatter), its tags, its links and backlinks.
 
@@ -2907,6 +3001,8 @@ export class App {
       case "copy":
         if (row && !row.heading) this.copy(row.act && "copy" in row.act ? row.act.copy : row.value);
         break;
+      case "edit":
+        return this.openPropertiesEditor();
       case "close":
         this.showOutline(false);
         break;
@@ -4635,10 +4731,12 @@ export class App {
       this.scrollbarTo(bar, ev.y, ev.x);
       return;
     }
-    const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
+    // The floating editor (3.20): a click in it is its; outside its box, it closes.
+    if (this.floating && g.floating && !inRect(g.floating, ev.x, ev.y)) return void this.closeFloating();
+    const pane = (this.floating ? g.panes.find((p) => p.view === this.floating!.view && inRect(p, ev.x, ev.y)) : undefined) ?? (this.floating ? undefined : g.panes.find((p) => inRect(p, ev.x, ev.y)));
     if (!pane) return;
     const t = this.tab!;
-    t.active = t.views.indexOf(pane.view);
+    if (!this.floating) t.active = t.views.indexOf(pane.view);
     this.region = "content";
     const view = pane.view;
     const layout = this.currentLayout(view);
@@ -4953,7 +5051,7 @@ export class App {
   }
 
   allViews(): View[] {
-    return this.tabs.flatMap((t) => t.views);
+    return [...this.tabs.flatMap((t) => t.views), ...(this.floating ? [this.floating.view] : [])];
   }
 
   displayName(buf: NoteBuffer): string {
@@ -5270,6 +5368,12 @@ export class App {
    * otherwise the conflict prompt decides.
    */
   saveBuffer(buf: NoteBuffer, quiet = false): boolean {
+    // A virtual buffer (3.20): its text written where it belongs (a note's frontmatter).
+    if (buf.virtual) {
+      if (!buf.virtual.save(buf.source)) return false;
+      buf.markSaved();
+      return true;
+    }
     if (buf.invalidUtf8) {
       this.message("error", `${buf.key} isn't valid UTF-8 — not saving over it`);
       return false;

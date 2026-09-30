@@ -831,6 +831,7 @@ export function registerActions(app: App): void {
       const v = a.view;
       if (!v) return;
       if (v.sel || v.visual) Object.assign(v, { visual: null, sel: null });
+      else if (a.floating && v === a.floating.view && !v.find) a.closeFloating(); // the floating editor: closed, written back (3.20)
       else if (v.live) a.setViewMode(v, "rendered"); // esc in normal mode closes the lens
       else if (v.find) v.find = null;
       else if (a.region !== "content") a.region = "content";
@@ -1451,6 +1452,7 @@ export function registerActions(app: App): void {
     // The Info view (3.19), the right panel's first: what the file on screen is; its button above the outline's.
     "note.info": (a) => a.openRightView("info", "cycle"),
     "info.toggle": (a) => a.openRightView("info"),
+    "note.properties": (a) => a.openPropertiesEditor(),
     "vault.reindex": (a) => {
       a.graph.build(true, "lazy");
       a.indexInBackground();
