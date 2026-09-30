@@ -155,8 +155,9 @@ const nerd: Glyphs = {
   fmOpen: "󰈮",
   dirOpen: "\u{f0770}", // nf-md-folder_open (escaped: private-use characters get lost in editing)
   dirClosed: "\u{f024b}", // nf-md-folder
-  vault: "\u{f02d}", // nf-fa-book
-  repo: "\u{f401}", // nf-oct-repo
+  // Material, like the folders (so the same size), and nothing like one: shelves of notes, git's mark.
+  vault: "\u{f125f}", // nf-md-bookshelf
+  repo: "\u{f02a2}", // nf-md-git
   file: "󰍔",
   dataFile: "\u{f0626}", // nf-md-code_json
   textFile: "\u{f022e}", // nf-md-file_code

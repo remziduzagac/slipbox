@@ -354,7 +354,8 @@ keys.
   double-click open the note as a tab, or switch to the tab already showing it; `o` replaces the
   current window's note, and `s` opens it in the split's other window. A click on a folder folds or
   unfolds it. **A folder that is another root** (`17.13`) — a vault nested in this one (`◈`, Nerd:
-  a book) or a repository nested in a repository (`⎇`, Nerd: a repo) — is a row of its own, the
+  a bookshelf; magenta, `sidebar_vault`) or a repository nested in a repository (`⎇`, Nerd: git's
+  mark; orange, `sidebar_repo`), both bold — is a row of its own, never taken for a folder (blue), the
   vault's name dimmed after the folder's when they differ; `enter` or a double-click goes into it
   (a switch, below). **In a loose folder** (the home vault) the explorer lists the folder alone:
   `..` to go up, then each folder in it — a vault, a repository, or a loose folder — and its files;

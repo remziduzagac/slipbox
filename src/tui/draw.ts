@@ -1046,7 +1046,8 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (!row) break;
     const y = rect.y + i;
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
-    let role: Role = row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
+    let role: Role =
+      row.root?.kind === "vault" ? "sidebar_vault" : row.root?.kind === "repo" ? "sidebar_repo" : row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
