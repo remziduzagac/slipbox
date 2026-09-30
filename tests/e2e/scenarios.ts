@@ -1027,4 +1027,78 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("escape");
     },
   },
+
+  // --- vaults (17.x) ----------------------------------------------------------------------------
+  {
+    name: "vaults: [[vault:note]] switches into another vault and back; unknown vault; the list; a nested vault",
+    options: {
+      open: "vault-links.md",
+      files: {
+        "vault-links.md": "# Vault links\n\n- [[e2eapp:design#Goals|the app's goals]]\n- [[nope:somewhere]]\n",
+        "inner-vault/.slipbox/config.toml": '[vault]\nid = "e2einner0001"\nname = "inner-name"\n',
+        "inner-vault/inside.md": "# Inside the inner vault\n",
+      },
+      beside: {
+        "app/.slipbox/version": "1\n",
+        "app/design.md": "# App design\n\nIntro.\n\n## Goals\n\nShip the dome software.\n",
+        "app/links.md": "# Links\n\nBack to [[demo:home]].\n",
+      },
+      setup: (s) => {
+        s.cli("init", s.vault, "--name", "demo");
+        s.cli("init", join(s.dir, "app"), "--name", "e2eapp");
+        s.cli("ls", "--root", join(s.dir, "app")); // the app's index: its link back to demo:home
+      },
+    },
+    run: async (s) => {
+      await s.see("Vault links");
+      await s.keys("tab", "enter");
+      await s.message("vault e2eapp");
+      await s.status("design.md");
+      await s.see("Ship the dome software");
+      await s.see(/L5:/); // at ## Goals
+      // Back from its first place: the vault before, at the link.
+      await s.keys("ctrl+o");
+      await s.status("vault-links.md");
+      await s.see("Vault links");
+      await s.keys("tab", "tab", "enter");
+      await s.message('unknown vault "nope"');
+      // The machine's vaults.
+      await leader(s, "v", "v");
+      await s.see(/Vaults \(\d+\)/);
+      await s.see("e2eapp");
+      await s.keys("escape");
+      // A backlink from the other vault: home's list has app's links.md.
+      await open(s, "home");
+      await leader(s, "l", "b");
+      await s.see("e2eapp: links.md");
+      await s.keys("escape");
+      // The nested vault in the explorer, with its name.
+      await leader(s, "e");
+      await s.see("inner-vault inner-name");
+    },
+  },
+  {
+    name: "vaults: opened on a loose folder, the known vaults first; .. and folders in the explorer",
+    options: {
+      startAt: "loose",
+      beside: { "loose/jotting.md": "# A loose jotting\n", "loose/sub/deeper.md": "# Deeper\n" },
+      setup: (s) => {
+        s.cli("init", s.vault, "--name", "demo");
+      },
+    },
+    run: async (s) => {
+      await s.see(/Vaults \(\d+\)/);
+      await s.see("demo");
+      await s.keys("escape");
+      await s.see("home vault");
+      await s.see("jotting.md");
+      await s.see(/\.\./);
+      await s.see("sub");
+      await leader(s, "v", "v");
+      await s.see("demo");
+      await s.keys("enter");
+      await s.message("vault demo");
+      await s.status("home.md");
+    },
+  },
 ];

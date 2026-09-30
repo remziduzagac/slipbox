@@ -18,6 +18,12 @@ export interface SessionOptions {
   config?: string;
   /** More files in the vault before it starts: path → content. */
   files?: Record<string, string>;
+  /** Files beside the vault, in the scenario's own folder (another vault, a loose folder). */
+  beside?: Record<string, string>;
+  /** Run before slipbox starts, with the CLI at hand (`s.cli`): `init` another vault, say. */
+  setup?: (s: Session) => void;
+  /** Start here instead (a path relative to the scenario's folder: `loose` is `<dir>/loose`). */
+  startAt?: string;
 }
 
 export class CheckFailed extends Error {}
@@ -39,6 +45,10 @@ export class Session {
     this.vault = join(this.dir, "vault");
     cpSync(DEMO, this.vault, { recursive: true });
     for (const [rel, text] of Object.entries(opts.files ?? {})) this.write(rel, text);
+    for (const [rel, text] of Object.entries(opts.beside ?? {})) {
+      mkdirSync(join(this.dir, rel, ".."), { recursive: true });
+      writeFileSync(join(this.dir, rel), text);
+    }
     for (const d of ["config/slipbox", "state", "cache"]) mkdirSync(join(this.dir, d), { recursive: true });
     // {vault} in a scenario's config is this scenario's own copy of the vault.
     writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), (opts.config ?? "").replaceAll("{vault}", this.vault));
@@ -59,7 +69,8 @@ export class Session {
       `SLIPBOX_CONFIG=${this.dir}/config/slipbox/config.toml`,
       "SLIPBOX_CLIPBOARD=file", // copies land in the state dir, not on your clipboard
     ].join(" ");
-    const file = join(this.vault, this.opts.open ?? "home.md");
+    this.opts.setup?.(this);
+    const file = this.opts.startAt !== undefined ? join(this.dir, this.opts.startAt) : join(this.vault, this.opts.open ?? "home.md");
     this.pane.run(`clear; cd ${REPO} && ${env} bun src/main.ts '${file}'; echo ${this.marker} $?`);
     await this.until(() => this.statusLine().includes("READ") || this.statusLine().includes("SOURCE"), 10000, "slipbox to start");
   }
@@ -77,8 +88,8 @@ export class Session {
       await this.until(() => this.exited(), 5000, "slipbox to quit").catch(() => undefined);
     }
     if (!this.exited()) {
-      // Its command line names this scenario's own vault, so this kills nothing else.
-      spawnSync("pkill", ["-f", this.vault]);
+      // Its command line names this scenario's own folder, so this kills nothing else.
+      spawnSync("pkill", ["-f", this.dir]);
       await this.until(() => this.exited(), 5000, "slipbox to be killed").catch(() => undefined);
       if (!this.exited()) throw new Stuck(`slipbox in pane ${this.pane.id} would not quit or die; stopping`);
       return false;

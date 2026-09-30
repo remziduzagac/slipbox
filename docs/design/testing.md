@@ -94,9 +94,11 @@ bun run e2e --pane w1:p2     # that pane (also SLIPBOX_E2E_PANE); it must be at 
 bun run e2e find replace     # only the scenarios whose names contain these
 ```
 
-- **Isolated.** Each scenario gets a fresh copy of the demo vault and its own config, state and
-  cache directories. Nothing in the repo or in your own setup is touched, and a given pane that is
-  running slipbox is refused rather than typed into.
+- **Isolated.** Each scenario gets a fresh copy of the demo vault and its own config, state, cache
+  and data directories (its own list of vaults, its own home vault). Nothing in the repo or in your
+  own setup is touched, and a given pane that is running slipbox is refused rather than typed into.
+  A scenario can put files beside the vault (`beside`: another vault, a loose folder), run the CLI
+  before slipbox starts (`setup`: `init` that vault), and start somewhere else (`startAt`).
 - **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
   contains something, the status line's mode, a message's floating box, a file on disk.
 - **Coverage is measured.** slipbox appends each command it runs to `SLIPBOX_TRACE`; the runner
