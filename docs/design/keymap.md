@@ -131,6 +131,7 @@ back to slipbox's own register when it can't be read (over SSH, say). The termin
 | copy its target | `y l` | `space l y` |
 | links from this note (list) | — | `space l l` |
 | backlinks: notes linking here (list) | — | `space l b` |
+| relink: this note's links that reach a note by an old name or a move, to its name now (`:relink`) | — | `space l r` |
 
 ## History — `space h`
 
@@ -224,6 +225,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
 | `a` | show every text file, or back to what `files.show` lists (notes and data files) |
 | `%` / `d` | a new note / folder in the selected folder (beside a selected file): netrw's keys |
+| `shift+r` | rename or move the selected note or file (netrw's `R`) |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
 | mouse | click a folder to fold or unfold it; click a note to select it, double-click to open it as a tab |
@@ -342,6 +344,8 @@ source first.
 | undo / redo (an insert session is one step) | `u`, `ctrl+z` / `ctrl+r`, `ctrl+y`, `shift+u` |
 | a new note beside this one (`:new name`; `projects/idea` makes the folder too) | `ctrl+n`, `space n n` |
 | a new folder beside this note (`:mkdir name`) | `space v d` |
+| rename or move the note (`:rename path`, `:mv path`): a preview, then `enter` | `space n m` |
+| rename the vault: a preview, then `enter` | `space v n` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |

@@ -247,6 +247,28 @@ describe("the vault and the tool", () => {
     expect(slipbox(["help"]).out).toContain("slipbox find <query>");
     expect(slipbox(["--version"]).out).toMatch(/^slipbox \d+\.\d+\.\d+/);
   });
+  test("mv, rename-vault, relink: a preview, then the change (17.15)", () => {
+    const dir = join(sandbox, "renames");
+    mkdirSync(join(dir, "notes"), { recursive: true });
+    writeFileSync(join(dir, "notes", "plan.md"), "# Plan\n");
+    writeFileSync(join(dir, "index.md"), "[[plan]] and [p](notes/plan.md)\n");
+    expect(slipbox(["init", dir, "--name", "cliren"]).code).toBe(0);
+    const dry = slipbox(["mv", "plan", "roadmap", "--dry-run"], { cwd: dir });
+    expect(dry.out).toContain("would rename notes/plan.md → roadmap.md: 2 changes in 2 files");
+    expect(dry.out).toContain("- [[plan]] and [p](notes/plan.md)");
+    expect(dry.out).toContain("+ [[roadmap]] and [p](roadmap.md)");
+    expect(existsSync(join(dir, "notes", "plan.md"))).toBe(true);
+    const done = slipbox(["mv", "plan", "roadmap", "--json"], { cwd: dir }).json;
+    expect(done.data).toMatchObject({ kind: "note", from: "notes/plan.md", to: "roadmap.md", dryRun: false });
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[[roadmap]] and [p](roadmap.md)\n");
+    expect(slipbox(["mv", "roadmap", "index"], { cwd: dir }).code).toBe(5); // index.md is there
+    const vr = slipbox(["rename-vault", "cliren2", "--json"], { cwd: dir }).json;
+    expect(vr.data).toMatchObject({ kind: "vault", from: "cliren", to: "cliren2" });
+    expect(slipbox(["info", "--json"], { cwd: dir }).json.data.vault.name).toBe("cliren2");
+    writeFileSync(join(dir, "late.md"), "[[plan]]\n");
+    const rl = slipbox(["relink", "late", "--json"], { cwd: dir }).json;
+    expect(rl.data.files[0].edits[0]).toMatchObject({ before: "[[plan]]", after: "[[roadmap]]" });
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);

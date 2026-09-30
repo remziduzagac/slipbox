@@ -1,7 +1,7 @@
 // The fixture vault (0.5) against the walk (0.11), discovery (1.1), the graph and the CLI (9.x).
 
 import { describe, expect, test } from "bun:test";
-import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { CLI_COMMANDS, runCli } from "../src/cli/cli.ts";
@@ -771,5 +771,135 @@ describe("moves: detected by content, kept as redirects (17.12)", () => {
     g.removeFile("b.md");
     expect(g.redirects!.follow("b.md")).toBe("b2.md");
     expect(g.resolveLink({ kind: "markdown", target: "b.md" }, "a2.md")).toMatchObject({ resolvedKind: "note", path: "b2.md", via: "redirect" });
+  });
+});
+
+describe("renames across vaults (17.15, 7.1–7.3)", () => {
+  const io = (cwd: string) => {
+    const out: string[] = [];
+    return { io: { out: (s: string) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env }, out };
+  };
+  const cli = async (args: string[], cwd: string) => {
+    const r = io(cwd);
+    const code = await runCli([...args, "--json"], r.io);
+    return { code, json: JSON.parse(r.out.join("")) };
+  };
+  let made = 0;
+  const vault = (files: Record<string, string>) => {
+    const dir = mkdtempSync(join(tmpdir(), `slipbox-rename-${++made}-`));
+    mkdirSync(join(dir, ".slipbox"));
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(dir, rel, ".."), { recursive: true });
+      writeFileSync(join(dir, rel), text);
+    }
+    return dir;
+  };
+  const read = (dir: string, rel: string) => readFileSync(join(dir, rel), "utf8");
+
+  test("a note's rename rewrites every link form, keeps how each was written, and keeps its old name", async () => {
+    const dir = vault({
+      "notes/plan.md": "---\ntitle: Plan\n---\n# Plan\n\n## Steps\n\nUp: [home](../index.md) and [[index]].\n",
+      "index.md":
+        "# Index\n\n[[plan]] and [[notes/plan#Steps|the steps]] and ![[plan]]\n\n" +
+        "[p](notes/plan.md#steps) and [r][ref] and [[nickname]]\n\n| a | b |\n| - | - |\n| [[plan\\|x]] | y |\n\n[ref]: notes/plan.md\n",
+      "notes/other.md": "---\naliases: [nickname]\n---\nSee [x](plan.md), [[plan]] 🔭 [[plan]].\n",
+      "code.md": "`[[plan]]` and `[p](notes/plan.md)` are code; [[plan]] and [p](notes/plan.md) aren't.\n",
+    });
+    const dry = await cli(["mv", "plan", "archive/2026/roadmap", "--dry-run"], dir);
+    expect(dry.code).toBe(0);
+    expect(dry.json.data.dryRun).toBe(true);
+    expect(existsSync(join(dir, "notes", "plan.md"))).toBe(true); // nothing written by a preview
+    expect(dry.json.data.files.map((f: { path: string }) => f.path).sort()).toEqual(["code.md", "index.md", "notes/other.md", "notes/plan.md"]);
+    const done = await cli(["mv", "plan", "archive/2026/roadmap"], dir);
+    expect(done.code).toBe(0);
+    expect(read(dir, "index.md")).toBe(
+      "# Index\n\n[[roadmap]] and [[archive/2026/roadmap#Steps|the steps]] and ![[roadmap]]\n\n" +
+        "[p](archive/2026/roadmap.md#steps) and [r][ref] and [[nickname]]\n\n| a | b |\n| - | - |\n| [[roadmap\\|x]] | y |\n\n[ref]: archive/2026/roadmap.md\n",
+    );
+    expect(read(dir, "notes/other.md")).toBe("---\naliases: [nickname]\n---\nSee [x](../archive/2026/roadmap.md), [[roadmap]] 🔭 [[roadmap]].\n");
+    // The link at the index's position, not the same text in code before it.
+    expect(read(dir, "code.md")).toBe("`[[plan]]` and `[p](notes/plan.md)` are code; [[roadmap]] and [p](archive/2026/roadmap.md) aren't.\n");
+    // It moved two folders deeper: its own relative link follows; its old name is kept.
+    expect(existsSync(join(dir, "notes", "plan.md"))).toBe(false);
+    expect(read(dir, "archive/2026/roadmap.md")).toBe("---\ntitle: Plan\nprevious_names: [plan]\n---\n# Plan\n\n## Steps\n\nUp: [home](../../index.md) and [[index]].\n");
+    // Every link resolves to it now, by its new name.
+    const links = (await cli(["links", "index"], dir)).json.data;
+    expect(links.filter((l: { path: string }) => l.path === "archive/2026/roadmap.md").every((l: { via: string | null }) => l.via === null)).toBe(true);
+    // Somewhere slipbox couldn't reach, [[plan]] still finds it: by its previous name.
+    writeFileSync(join(dir, "late.md"), "[[plan]]\n");
+    expect((await cli(["resolve", "[[plan]]", "--from", "late.md"], dir)).json.data).toMatchObject({ path: "archive/2026/roadmap.md", via: "previous-name" });
+  });
+
+  test("a name another note has: links get the path, so they can't reach the wrong one", async () => {
+    const dir = vault({ "a/plan.md": "# plan\n", "b/roadmap.md": "# the other roadmap\n", "index.md": "[[plan]]\n" });
+    await cli(["mv", "a/plan", "a/roadmap"], dir);
+    expect(read(dir, "index.md")).toBe("[[a/roadmap]]\n");
+  });
+
+  test("refused: an existing target, outside the vault, a file changed since the preview", async () => {
+    const dir = vault({ "a.md": "# a\n", "b.md": "# b\n", "index.md": "[[a]]\n" });
+    expect((await cli(["mv", "a", "b"], dir)).code).toBe(5);
+    expect((await cli(["mv", "a", "../elsewhere"], dir)).code).toBe(5);
+    const { openGraph: open } = await import("../src/core/graph.ts");
+    const { planNoteRename, applyPlan } = await import("../src/core/rename.ts");
+    const g = open(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const plan = planNoteRename(g, "a.md", "c");
+    writeFileSync(join(dir, "index.md"), "[[a]] edited meanwhile\n");
+    expect(() => applyPlan(g, plan)).toThrow(/changed since the preview/);
+    expect(existsSync(join(dir, "a.md"))).toBe(true);
+    expect(read(dir, "index.md")).toBe("[[a]] edited meanwhile\n");
+  });
+
+  test("links from other vaults are rewritten too; a vault's rename keeps its old name (17.15)", async () => {
+    const notes = vault({ "plan.md": "# plan\n" });
+    const app = vault({ "links.md": "[[rnotes:plan]] and [t](../NOTES/plan.md)\n".replace("NOTES", basename(notes)), "self.md": "[[rapp:links]]\n" });
+    await cli(["init", notes, "--name", "rnotes"], notes);
+    await cli(["init", app, "--name", "rapp"], app);
+    await cli(["ls"], app); // its index: the links into rnotes
+    await cli(["mv", "plan", "roadmap"], notes);
+    expect(read(app, "links.md")).toBe(`[[rnotes:roadmap]] and [t](../${basename(notes)}/roadmap.md)\n`);
+    // The vault's rename: [[rnotes:…]] everywhere reached, the config, the old name kept.
+    await cli(["ls"], app);
+    const r = await cli(["rename-vault", "rnotes2"], notes);
+    expect(r.code).toBe(0);
+    expect(read(app, "links.md")).toStartWith("[[rnotes2:roadmap]]");
+    const cfg = read(notes, ".slipbox/config.toml");
+    expect(cfg).toContain('name = "rnotes2"');
+    expect(cfg).toContain('previous_names = ["rnotes"]');
+    // A link this machine didn't reach still works, by the old name, checked by the id.
+    writeFileSync(join(app, "late.md"), "[[rnotes:roadmap]]\n");
+    expect((await cli(["resolve", "[[rnotes:roadmap]]"], app)).json.data).toMatchObject({ abs: join(notes, "roadmap.md"), via: "previous-name" });
+    // Its own self-links follow its new name.
+    await cli(["rename-vault", "rapp2"], app);
+    expect(read(app, "self.md")).toBe("[[rapp2:links]]\n");
+  });
+
+  test("relink: links that reach a note by an old name or a move are rewritten to where it is now", async () => {
+    const { renameSync } = await import("node:fs");
+    const dir = vault({ "notes/plan.md": "# Plan\n", "index.md": "[p](notes/plan.md) [[notes/plan]]\n" });
+    await cli(["ls"], dir);
+    renameSync(join(dir, "notes", "plan.md"), join(dir, "roadmap.md"));
+    const r = await cli(["relink", "index"], dir);
+    expect(r.code).toBe(0);
+    expect(read(dir, "index.md")).toBe("[p](roadmap.md) [[roadmap]]\n");
+  });
+
+  test("a git tree that already has changes is named in the plan (7.3)", async () => {
+    const dir = vault({ "a.md": "# a\n", "index.md": "[[a]]\n" });
+    const git = Bun.spawnSync(["git", "init", "-q", dir]);
+    if (git.exitCode !== 0) return; // no git here
+    const r = await cli(["mv", "a", "b", "--dry-run"], dir);
+    expect(r.json.data.warnings.join()).toContain("uncommitted changes");
+  });
+
+  test("previous_names is spliced into the frontmatter, never rewritten", async () => {
+    const { addPreviousName } = await import("../src/core/rename.ts");
+    expect(addPreviousName("# x\n", "old")).toBe("---\nprevious_names: [old]\n---\n# x\n");
+    expect(addPreviousName("---\ntitle: T # kept\n---\nx\n", "old")).toBe("---\ntitle: T # kept\nprevious_names: [old]\n---\nx\n");
+    expect(addPreviousName("---\nprevious_names: [a, \"b c\"]\n---\n", "old")).toBe("---\nprevious_names: [a, \"b c\", old]\n---\n");
+    expect(addPreviousName("---\nprevious_names:\n  - a\ntags: [t]\n---\n", "old")).toBe("---\nprevious_names:\n  - a\n  - old\ntags: [t]\n---\n");
+    expect(addPreviousName("---\nprevious_names: a\n---\n", "old")).toBe("---\nprevious_names: [a, old]\n---\n");
+    expect(addPreviousName("---\nprevious_names: [old]\n---\n", "old")).toBe("---\nprevious_names: [old]\n---\n");
+    expect(addPreviousName("﻿---\r\ntitle: T\r\n---\r\nx\r\n", "o:ld")).toBe('﻿---\r\ntitle: T\r\nprevious_names: ["o:ld"]\r\n---\r\nx\r\n');
   });
 });

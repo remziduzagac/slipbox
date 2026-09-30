@@ -94,6 +94,9 @@ which_key = true               # the popup for pending key sequences
 which_key_delay_ms = 500       # before it shows for prefixes other than the leader; also how long a
                                # key that is both a binding and a prefix waits before it runs
 
+[rename]
+previous_names = true          # a renamed note keeps its old name in its frontmatter (17.15)
+
 [capture]
 location = "state"             # state (never committed) | vault
 file = "scratch.md"            # a relative .md path; no "..", no hidden part (else the default);

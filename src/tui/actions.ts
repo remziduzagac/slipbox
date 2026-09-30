@@ -4,6 +4,7 @@
 
 import { join, posix, relative } from "node:path";
 import { findRoot } from "../core/vault.ts";
+import { planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { classify } from "../core/filetypes.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
@@ -390,7 +391,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
 }
 
 /** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
-const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault"]);
+const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "note.rename", "vault.rename"]);
 
 /** Commands in the order of core/command-specs.ts, which follows docs/design/keymap.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
@@ -1471,6 +1472,24 @@ export function registerActions(app: App): void {
       a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
     },
     "vault.switch": (a) => a.openVaultList(),
+    "note.rename": (a, arg) =>
+      withView(a, (v) => {
+        if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be renamed here");
+        const rel = v.buf.rel;
+        if (arg) return a.previewRename(() => planNoteRename(a.graph, rel, arg));
+        a.promptRename(rel);
+      }),
+    "vault.rename": (a, arg) => {
+      const go = (name: string) => a.previewRename(() => planVaultRename(a.graph, a.loc, name.trim()));
+      if (arg) return go(arg);
+      a.prompt(`rename vault ${a.loc.name ?? a.loc.root} to: `, (t) => t.trim() && go(t));
+    },
+    "link.relink": (a) =>
+      withView(a, (v) => {
+        if (!v.buf.rel) return a.message("warn", "only this vault's notes are relinked");
+        const rel = v.buf.rel;
+        a.previewRename(() => planRelink(a.graph, [rel]));
+      }),
     "vault.info": (a) => {
       const g = a.graph;
       infoList(a, "Vault", [

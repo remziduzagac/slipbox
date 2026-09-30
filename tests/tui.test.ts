@@ -5429,4 +5429,77 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.frame()).toContain(`tapp${n}`);
     expect((h.app.overlay as ListOverlay).items.some((it) => it.detail === app)).toBe(true);
   });
+
+  test("space n m renames a note: a preview of every change, then enter; open notes follow (17.15)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    await h.keys("space", "n", "m");
+    const p = h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    expect(p.kind).toBe("prompt");
+    expect(p.text).toBe("notes/alpha");
+    p.text = "notes/first";
+    await h.keys("enter");
+    const list = h.app.overlay as ListOverlay;
+    expect(list.title).toStartWith("notes/alpha.md → notes/first.md: ");
+    expect(list.items.some((it) => it.label.startsWith("index.md:") && it.detail!.includes("[[first]]"))).toBe(true);
+    expect(list.items.some((it) => it.label.startsWith("crlf.md:"))).toBe(true);
+    expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true); // a preview writes nothing
+    await h.keys("enter");
+    expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
+    expect(readFileSync(join(root, "notes", "first.md"), "utf8")).toContain("previous_names: [alpha]");
+    const index = readFileSync(join(root, "index.md"), "utf8");
+    expect(index).toContain("[[first]], [[Beta]]");
+    expect(index).toContain("[[first#Section One]]");
+    expect(index).toContain("[alpha](notes/first.md)");
+    expect(index).toContain("[[first\\|aliased]]");
+    expect(readFileSync(join(root, "crlf.md"), "utf8")).toContain("line two with [[first]]\r\n");
+    expect(h.app.view!.buf.rel).toBe("notes/first.md");
+    expect(h.app.graph.notes.has("notes/first.md")).toBe(true);
+    expect(h.app.graph.backlinks("notes/first.md").length).toBeGreaterThan(3);
+    expect(h.app.messages.at(-1)!.text).toMatch(/^renamed notes\/alpha.md → notes\/first.md: \d+ changes in \d+ files$/);
+  });
+
+  test("a rename is refused while a file it rewrites is unsaved; :rename takes the path; the explorer's R asks", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    await h.keys("space", "n", "v", "shift+a", "!", "escape");
+    await h.app.run("tab.new");
+    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("note.rename notes/first");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toContain("unsaved: index.md");
+    await h.app.run("tab.prev");
+    await h.keys("ctrl+s");
+    await h.app.run("tab.next");
+    await h.app.run("note.rename notes/first");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → notes/first.md");
+    await h.keys("escape"); // cancelled: nothing changed
+    expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true);
+    // The explorer: R on the selected note.
+    h.app.showSidebar(true);
+    h.app.region = "sidebar";
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "notes/beta.md");
+    await h.keys("shift+r");
+    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).text).toBe("notes/beta");
+  });
+
+  test("renaming the vault, and relinking a moved note's links, from the TUI", async () => {
+    const { notes, n } = await twoVaults();
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.app.run(`vault.rename tnotes${n}b`);
+    await h.keys("enter");
+    expect(h.app.loc.name).toBe(`tnotes${n}b`);
+    expect(readFileSync(join(notes, ".slipbox", "config.toml"), "utf8")).toContain(`previous_names = ["tnotes${n}"]`);
+    // A note moved outside slipbox: its links reach it by a redirect; relink rewrites them.
+    const { renameSync } = await import("node:fs");
+    writeFileSync(join(notes, "todo-link.md"), "[t](todo.md)\n");
+    h.app.graph.build(true);
+    renameSync(join(notes, "todo.md"), join(notes, "tasks.md"));
+    h.app.graph.build(true);
+    await h.app.run("note.open todo-link.md");
+    await h.app.run("link.relink");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("relink: 1 change in 1 file");
+    await h.keys("enter");
+    expect(readFileSync(join(notes, "todo-link.md"), "utf8")).toBe("[t](tasks.md)\n");
+  });
 });

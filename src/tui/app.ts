@@ -51,6 +51,7 @@ import {
 } from "../core/position.ts";
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
 import { Reach } from "../core/reach.ts";
+import { type Applied, applyPlan, planNoteRename, type RenamePlan } from "../core/rename.ts";
 import { type KnownVault, readIdentity, readRegistry, vaultConfigFile } from "../core/registry.ts";
 import { homeAt, isRepoRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
@@ -2580,6 +2581,9 @@ export class App {
         break;
       case "new_note":
         return this.promptNewNote(this.newItemBase());
+      case "rename":
+        if (row?.kind === "note") return this.promptRename(row.path);
+        return this.message("info", "rename a note or file: select it first");
       case "new_folder":
         return this.promptNewFolder(this.newItemBase());
       case "all_files": {
@@ -4424,6 +4428,92 @@ export class App {
     }
     if (!this.switchVault(target, existsSync(t.path) ? t.path : null, t.anchor, { back: true })) this.vaultTrail.push(t);
     return true;
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Renames (17.15, 7.1–7.3)
+
+  /**
+   * A rename's preview (7.2): every line it changes, in every vault, and the warnings (7.3); enter
+   * carries it out, esc leaves everything as it was. Refused while a file it touches is unsaved.
+   */
+  previewRename(make: () => RenamePlan): void {
+    let plan: RenamePlan;
+    try {
+      plan = make();
+    } catch (err) {
+      return this.message("warn", (err as Error).message);
+    }
+    const touched = new Set([...plan.files.map((f) => f.abs), ...(plan.move ? [plan.move.from] : [])]);
+    const dirty = this.dirtyBuffers().filter((b) => touched.has(b.abs));
+    if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the rename rewrites ${dirty.length === 1 ? "it" : "them"}`);
+    const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
+    const items: ListItem[] = [
+      ...plan.warnings.map((w) => ({ label: `! ${w}`, data: plan })),
+      ...plan.skipped.map((s) => ({ label: `skipped ${s.shown}:${s.line}`, detail: s.reason, data: plan })),
+      ...plan.files.flatMap((f) => f.edits.map((e) => ({ label: `${f.shown}:${e.line}`, detail: `${e.before.trim()}  →  ${e.after.trim()}`, data: plan }))),
+    ];
+    if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "every link reaches its note by its name now" : "no links to change", data: plan });
+    const what = plan.kind === "note" ? `${plan.from} → ${plan.to}` : plan.kind === "vault" ? `vault ${plan.from} → ${plan.to}` : "relink";
+    this.openList({
+      title: `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"} — enter: do it, esc: cancel`,
+      items,
+      filterable: false,
+      footer: true,
+      accept: () => this.applyRename(plan),
+    });
+  }
+
+  /** Carry out a previewed rename; open notes follow it (the moved one under its new path). */
+  applyRename(plan: RenamePlan): void {
+    if (plan.kind === "relink" && !plan.files.length) return;
+    let applied: Applied;
+    try {
+      applied = applyPlan(this.graph, plan);
+    } catch (err) {
+      return this.message("error", (err as Error).message);
+    }
+    const byAbs = (abs: string) => [...this.buffers.values()].find((b) => b.abs === abs);
+    if (plan.move) {
+      const old = byAbs(plan.move.from);
+      if (old) {
+        const nb = this.buffer(plan.move.to);
+        if (nb) {
+          for (const v of this.allViews()) {
+            for (const l of [...v.back, ...v.fwd]) if (l.key === old.key) l.key = nb.key;
+            if (v.buf === old) Object.assign(v, this.makeView(nb, v.topAnchor, v.curAnchor), { back: v.back, fwd: v.fwd });
+          }
+          this.recentNotes = this.recentNotes.map((k) => (k === old.key ? nb.key : k));
+        }
+        this.buffers.delete(old.key);
+      }
+    }
+    for (const abs of applied.written) {
+      const b = byAbs(abs);
+      if (b && b.abs !== plan.move?.to) this.reloadBuffer(b);
+    }
+    if (plan.kind === "vault") {
+      this.loc = rootAt(this.loc.root, "vault");
+      recordLocation(this.loc);
+      this.reach = new Reach(this.loc);
+      this.graph = new Graph(this.loc, this.config).build(true, "lazy");
+      this.graph.reach = this.reach;
+      if (this.live) this.indexInBackground();
+    }
+    this.invalidateTree();
+    for (const b of this.buffers.values()) b.invalidateLayouts();
+    this.relayoutAll();
+    const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
+    const what = plan.kind === "note" ? `renamed ${plan.from} → ${plan.to}` : plan.kind === "vault" ? `renamed the vault ${plan.from} → ${plan.to}` : "relinked";
+    this.message("info", `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"}`);
+  }
+
+  /** Ask for a note's new path, then preview its rename. */
+  promptRename(rel: string): void {
+    this.prompt(`rename or move ${rel} to: `, (to) => {
+      if (to.trim()) this.previewRename(() => planNoteRename(this.graph, rel, to.trim()));
+    });
+    (this.overlay as PromptOverlay).text = rel.replace(/\.(md|markdown)$/i, "");
   }
 
   /** The vaults this machine knows (17.14): pick one to switch to. */

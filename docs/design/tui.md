@@ -289,6 +289,17 @@ or a repository; `enter` switches. **The launcher:** slipbox opened on a loose f
 file (`slipbox ~`) shows this list at once, over the folder's explorer, when there are vaults to
 show.
 
+## Renames (plans `17.15`, `7.1`–`7.3`)
+
+`space n m` (`:rename <path>`, `:mv`, the explorer's `shift+r`) asks for the note's new path, the old one typed
+already; `space v n` for the vault's new name; `space l r` (`:relink`) relinks this note's links that reach their
+note by an old name or a move. Each shows its **preview** first: a list of every line it changes, in every vault
+(`notes/index.md:3  [[plan]]  →  [[roadmap]]`), with the git trees that already have changes and the links skipped
+at the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s,
+`rename-vault`'s and `relink`'s (`docs/design/cli.md`, "Renames"). **Refused while a file it rewrites is unsaved.**
+After it, the open notes it changed are reloaded, and a window on the renamed note shows it under its new path, its
+history following.
+
 ## Following links
 
 Each kind of link does something different when followed:

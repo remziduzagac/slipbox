@@ -80,6 +80,12 @@ export interface Config {
     /** Delay before the popup appears for prefixes other than the leader. */
     which_key_delay_ms: number;
   };
+  /** Renames (17.15). */
+  rename: {
+    /** A renamed note keeps its old name in its frontmatter's `previous_names`, so links this
+     *  machine can't reach still find it. */
+    previous_names: boolean;
+  };
   capture: {
     location: "state" | "vault";
     /** Scratch file name; relative to the vault root when location = "vault". */
@@ -172,6 +178,7 @@ export const DEFAULT_CONFIG: Config = {
     scrolloff: 3,
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
+  rename: { previous_names: true },
   capture: { location: "state", file: "scratch.md" },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },

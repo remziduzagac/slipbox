@@ -85,6 +85,7 @@ These churn freely before 1.0:
 | `init [dir]` | `{root, created, identified, id, name}` — `--name N`; a name in use is exit 5 |
 | `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
 | `vaults` | `[{key, id, kind, name, aliases, previous_names, path, seen, exists}]`, newest first |
+| `mv`, `rename-vault`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, written}` (see Renames) |
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |
@@ -234,6 +235,34 @@ back as `status: "external"`. `links --all` lists every note's, each with `from`
 path out of the root resolve into the other vault: `path` and `abs` are absolute, and `vault` names it. `via` says
 when a link got there by an `alias`, a `previous-name` or a `redirect` (and a warning says so); `reason` says why one
 didn't (`unknown vault "x"`). A backlink from another vault has an absolute `from` and its `vault`.
+
+## Renames (plans `17.15`, `7.1`–`7.3`)
+
+Each `files` entry is `{path, abs, vault, edits[{line, before, after}]}`.
+
+`slipbox mv <note> <new-path>` renames or moves a note (or any file of the vault; the extension is kept when the
+new path has none) and rewrites every link to it, in this vault and in every vault whose index links into it
+(`17.11`). `--dry-run` is the preview (`7.2`): each changed line, before and after, and nothing written.
+
+- **Each link keeps how it was written:** a name stays a name (`[[plan]]` → `[[roadmap]]`), unless another note has
+  the new name — then the path, so it can't reach the wrong one; a path stays a path, a relative one relative, an
+  extension written stays, `#heading`, `^block`, `|text` and `\|` stay, a `vault:` prefix stays, a percent-encoded
+  URL is encoded again, a reference link's definition is rewritten where it is. A link written as the note's alias is
+  still right, and left alone.
+- **Byte ranges, never re-serialised** (`7.6`): each edit replaces the target at the line and column the index
+  recorded (of the links there with that target, the nearest — so the same text in code nearby is left). A file
+  whose link isn't there any more (another vault's index older than its file) is skipped, and said so.
+- **The note itself:** its own relative links follow it to its new folder; when its name changes, its old name is
+  added to its frontmatter's `previous_names` (`rename.previous_names`), spliced in, so links this machine can't
+  reach still find it (`17.7`). A redirect is kept too (`17.12`).
+- **Refused, nothing written** (exit 5): a target that exists, a path outside the vault or hidden, a file changed
+  between the plan and the writing.
+- **Git** (`7.3`): a root it writes to whose tree already has changes is named in `warnings`; the rename goes ahead.
+
+`slipbox rename-vault <name>` renames this vault: `[vault] name` in its config, the old name added to its
+`previous_names`, and every `[[old:…]]` rewritten, here and in the vaults linking into it. `slipbox relink [note]`
+rewrites the links of a note (or every note) that reach their note only by a previous name or a redirect, to its name
+or path now. Both take `--dry-run`.
 
 ## Capture and the scratch (plans `8.1`–`8.4`)
 

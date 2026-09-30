@@ -70,6 +70,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader l y": "copy.link",
   "leader l l": "links.open",
   "leader l b": "backlinks.open",
+  "leader l r": "link.relink",
   // history
   "ctrl+o": "history.back",
   "alt+left": "history.back",
@@ -224,12 +225,14 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n p": "note.send_pick",
   "leader n i": "note.info",
   "leader n n": "note.create",
+  "leader n m": "note.rename",
   "ctrl+n": "note.create",
   "leader v d": "folder.create",
   "leader v r": "vault.reindex",
   "leader v i": "vault.info",
   "leader v c": "config.reload",
   "leader v v": "vault.switch",
+  "leader v n": "vault.rename",
   "leader m": "messages.open",
   "?": "help.open",
   "leader ?": "help.open",
@@ -320,11 +323,13 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   // netrw's (vim's own explorer): % a new file, d a new folder — in the selected folder
   "%": "new_note",
   d: "new_folder",
+  // …and R renames, as netrw's does.
+  "shift+r": "rename",
   q: "close",
   escape: "leave",
 };
 
-export const EXPLORER_ACTIONS = ["down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files", "new_note", "new_folder", "close", "leave"];
+export const EXPLORER_ACTIONS = ["down", "up", "open_tab", "expand", "open", "collapse", "open_split", "top", "bottom", "filter", "all_files", "new_note", "new_folder", "rename", "close", "leave"];
 
 /** Keys inside the outline pane: key → outline action. */
 export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {
@@ -439,7 +444,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
   "leader n": "note: new, source, the lens, save, edit elsewhere, reload, info",
-  "leader v": "vault: switch, new folder, reindex, info, reload config",
+  "leader v": "vault: switch, rename, new folder, reindex, info, reload config",
   "leader q": "session: quit",
   y: "copy: selection, path, reference, link",
   "ctrl+w": "window: split, focus, move, resize",
@@ -496,6 +501,9 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   reload: "note.reload",
   reindex: "vault.reindex",
   vaults: "vault.switch",
+  rename: "note.rename",
+  mv: "note.rename",
+  relink: "link.relink",
   config: "config.reload",
 };
 

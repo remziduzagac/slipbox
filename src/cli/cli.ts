@@ -34,8 +34,9 @@ import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
 import { Reach } from "../core/reach.ts";
+import { type Applied, applyPlan, planNoteRename, planRelink, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { readRegistry, vaultNamed } from "../core/registry.ts";
-import { initVault, isInside, locateVault, readVaultVersion, recordLocation, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { initVault, isInside, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -131,6 +132,9 @@ Usage:
   slipbox stat <note>               a note's size, dates, title, counts, encoding (the TUI's note info)
   slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
   slipbox mkdir <path>              make a folder in the vault (and its parents)
+  slipbox mv <note> <new-path>      rename or move a note; its links fixed in every vault reached  [--dry-run]
+  slipbox rename-vault <name>       rename this vault; [[old:…]] links fixed, the old name kept  [--dry-run]
+  slipbox relink [note]             rewrite links that reach notes by an old name or a move  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
@@ -159,6 +163,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
+  "mv", "rename-vault", "relink",
   "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
@@ -206,7 +211,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     const color = flag(args, "color");
     if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
     // The note argument, when it names a file, also says which vault this is.
-    const noteAt = ["render", "links", "backlinks", "outline", "replace", "task", "read", "stat", "write", "send"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
+    const noteAt = ["render", "links", "backlinks", "outline", "replace", "task", "read", "stat", "write", "send", "mv", "relink"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
     const pathArg = noteArgPath(noteAt, io.cwd);
     const loc = locateVault({ root: command === "init" ? undefined : flag(args, "root"), path: pathArg, cwd: io.cwd });
     session = new Session(args, loc, io);
@@ -255,7 +260,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1,
+  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -296,6 +301,9 @@ const FLAGS: Record<string, string[]> = {
   capture: ["ref", "snippet", "stdin", "lang"],
   scratch: ["if-unchanged"],
   init: ["name"],
+  mv: ["dry-run"],
+  "rename-vault": ["dry-run"],
+  relink: ["dry-run"],
 };
 
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
@@ -653,6 +661,25 @@ const HANDLERS: Record<string, Handler> = {
         ? `${r.root} is a vault; gave it an id — vault "${r.name}"\n`
         : `${r.root} is already a vault — "${r.name}"\n`;
     return { data: r, human };
+  },
+
+  mv(s, rest) {
+    const rel = resolveNote(s, requireArg(rest, "note"), false);
+    const to = rest[1];
+    if (!to) throw new UsageError("missing the new path (mv <note> <new-path>)");
+    return renameResult(s, () => planNoteRename(s.graph, rel, to));
+  },
+
+  "rename-vault"(s, rest) {
+    const name = requireArg(rest, "the vault's new name");
+    const r = renameResult(s, () => planVaultRename(s.graph, s.loc, name));
+    if (!has(s.args, "dry-run")) recordLocation(rootAt(s.loc.root, "vault"));
+    return r;
+  },
+
+  relink(s, rest) {
+    const rels = rest[0] ? [resolveNote(s, rest[0])] : undefined;
+    return renameResult(s, () => planRelink(s.graph, rels));
   },
 
   vaults() {
@@ -1156,6 +1183,42 @@ function pickNvim(s: Session, abs: string): string {
   if (holding.length && (holding.length === 1 || holding[0]!.cwd.length > holding[1]!.cwd.length)) return holding[0]!.socket;
   const candidates = found.map((n) => ({ socket: n.socket, cwd: n.cwd, file: n.file }));
   throw new CliError(`${found.length} nvims are running; pick one with --server (${found.map((n) => n.socket).join(", ")})`, EXIT.ambiguous, { candidates });
+}
+
+/** A rename's plan (7.2), or, without --dry-run, the rename done. */
+function renameResult(s: Session, plan: () => RenamePlan): Result {
+  let p: RenamePlan;
+  let applied: Applied | null = null;
+  try {
+    p = plan();
+    if (!has(s.args, "dry-run")) applied = applyPlan(s.graph, p);
+  } catch (err) {
+    if (err instanceof RenameError) throw new CliError(err.message, EXIT.refused);
+    throw err;
+  }
+  s.warnings.push(...p.warnings, ...p.skipped.map((x) => `${x.shown}:${x.line}: ${x.reason}`));
+  const links = p.files.reduce((n, f) => n + f.edits.length, 0);
+  const verb = applied ? { note: "renamed", vault: "renamed vault", relink: "relinked" }[p.kind] : { note: "would rename", vault: "would rename vault", relink: "would relink" }[p.kind];
+  const head = p.kind === "relink" ? `${verb} ${p.from}` : `${verb} ${p.from} → ${p.to}`;
+  const human = [
+    `${head}: ${links} change${links === 1 ? "" : "s"} in ${p.files.length} file${p.files.length === 1 ? "" : "s"}`,
+    ...p.files.flatMap((f) => f.edits.map((e) => `  ${f.shown}:${e.line}\n    - ${e.before}\n    + ${e.after}`)),
+    "",
+  ].join("\n");
+  return {
+    data: {
+      kind: p.kind,
+      from: p.from,
+      to: p.to,
+      dryRun: !applied,
+      move: p.move,
+      files: p.files.map((f) => ({ path: f.shown, abs: f.abs, vault: f.vault, edits: f.edits })),
+      warnings: p.warnings,
+      skipped: p.skipped,
+      written: applied?.written ?? [],
+    },
+    human,
+  };
 }
 
 export function defaultIo(): Io {
