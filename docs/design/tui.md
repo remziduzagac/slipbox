@@ -947,7 +947,9 @@ not with a merge's conflict markers in it, and not while git holds its `index.lo
 progress: it tries again later; in a worktree or submodule, the lock in the git directory its
 `.git` file names). **Hand-offs
 save first** (`4.10`): `space n e`, `space n s` and a capture into an open scratch write unsaved
-changes before the other side reads the file.
+changes before the other side reads the file; `space s c` saves every unsaved note before it gathers the context
+bundle (`9.7`), which it copies: the note, what it links to and what links to it, as `slipbox context` writes it
+(`docs/design/cli.md`), as far as `[context]` says.
 
 Quitting with unsaved changes is refused (`:q!` quits anyway); a signal still quits.
 

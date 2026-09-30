@@ -196,6 +196,17 @@ one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back,
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
 
+## `9.7` — the context bundle
+
+The bundle is the scratch's other half: the scratch is hand-picked, the bundle is gathered from the link graph, and
+both are written the same way: a reference, then the text fenced as it is on disk. So one writer serves both
+(`docs/idea.md`, "Scratch capture"). It isn't the export assembler (`10.1`): an agent reads a note's `[[links]]`
+as they are, and the bundle's own references tell it where each file is; rewriting links or resolving embeds would
+only make the text differ from the file it'll edit. Gathering is deterministic — breadth first, links in the order
+they're written, backlinks by path — so the same vault gives the same bundle. A limit on files, not characters,
+keeps whole notes whole; what's past it is named, so the agent knows to ask. The TUI saves unsaved notes first
+(`4.10`): the bundle is read from disk, like everything an agent reads.
+
 ## `7.4` — undoing a rename
 
 A rename is undone by restoring, not by renaming back: renaming back would plan again from the vault as it is now, and

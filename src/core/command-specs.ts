@@ -185,6 +185,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "scratch.open", title: "Open the scratch", cli: "slipbox scratch show", desc: "Opens the scratch; it updates as agents add" },
   { id: "scratch.add", title: "Add to the scratch", cli: "slipbox capture --ref <path:line> [--snippet]", desc: "Adds the selection or cursor row, with path:line" },
   { id: "scratch.copy", title: "Copy the scratch", cli: "slipbox scratch copy", desc: "Copies the whole scratch" },
+  { id: "context.copy", title: "Copy the note's context for an agent", cli: "slipbox context <note> --copy", desc: "The note, what it links to and what links to it, as one markdown document on the clipboard ([context] sets how far); unsaved notes saved first" },
   { id: "scratch.clear", title: "Clear the scratch", cli: "slipbox scratch clear", desc: "Empties the scratch (asks first)" },
   // note, vault, app
   { id: "note.create", title: "New note", cli: "slipbox write <path> --create", desc: "Asks for a name (folders too: projects/idea) and makes the note beside this one; it opens, typed into below its title" },

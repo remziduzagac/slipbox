@@ -104,6 +104,15 @@ export interface Config {
     /** Scratch file name; relative to the vault root when location = "vault". */
     file: string;
   };
+  /** The context bundle (9.7): a note with what it links to and what links to it, for an agent. */
+  context: {
+    /** Links followed out from the note: 1, what it links to; 0, none. */
+    depth: number;
+    /** The notes linking to it, too. */
+    backlinks: boolean;
+    /** At most this many files; the rest are named. */
+    limit: number;
+  };
   editor: {
     /**
      * The editor slipbox steps aside for (4.1): it runs in this terminal and slipbox waits. `{file}`
@@ -199,6 +208,7 @@ export const DEFAULT_CONFIG: Config = {
   rename: { previous_names: true },
   lint: { enabled: "auto", command: [] },
   capture: { location: "state", file: "scratch.md" },
+  context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
@@ -237,6 +247,8 @@ const RANGES: Record<string, [number, number]> = {
   "ui.narrow_width": [0, 1000],
   "watch.debounce_ms": [0, 10_000],
   "watch.poll_ms": [50, 600_000],
+  "context.depth": [0, 5],
+  "context.limit": [1, 500],
 };
 
 export interface LoadedConfig {

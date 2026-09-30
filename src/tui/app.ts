@@ -54,6 +54,7 @@ import {
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
 import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
+import { buildContext } from "../core/context.ts";
 import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
@@ -5300,12 +5301,30 @@ export class App {
     return { text: clip, linewise: false };
   }
 
-  copy(text: string, announce = true): boolean {
+  /** Text on the clipboard; said so (`what` names it: "copied <what>"), unless `announce` is false. */
+  copy(text: string, announce = true, what = `${text.length} characters`): boolean {
     const r = copyText(text, { osc52: (t) => this.host.osc52(t), fallbackDir: stateDir(this.loc) });
     // SLIPBOX_CLIPBOARD=file sends copies to the file on purpose; otherwise the file means no clipboard answered.
     const onPurpose = process.env.SLIPBOX_CLIPBOARD === "file";
-    if (announce) this.message("info", r.file ? (onPurpose ? `copied ${text.length} characters to ${r.file}` : `clipboard unavailable — wrote ${r.file}`) : `copied ${text.length} characters`);
+    if (announce) this.message("info", r.file ? (onPurpose ? `copied ${what} to ${r.file}` : `clipboard unavailable — wrote ${r.file} (${what})`) : `copied ${what}`);
     return !r.file;
+  }
+
+  /**
+   * The note's context bundle (9.7) on the clipboard: it, what it links to and what links to it
+   * (`[context]`), as one markdown document for an agent. A handoff (4.10): unsaved notes are
+   * saved first, so the bundle holds what's on screen.
+   */
+  copyContext(): void {
+    const buf = this.view?.buf;
+    if (!buf || buf.rel === null || buf.virtual) return this.message("info", "context: open a note first");
+    for (const b of this.dirtyBuffers()) if (!b.virtual && !this.saveBuffer(b, true)) return;
+    const b = buildContext(this.graph, [buf.rel], this.config.context);
+    const n = (k: number, one: string) => `${k} ${one}${k === 1 ? "" : "s"}`;
+    const links = b.items.filter((i) => i.why === "link").length;
+    const backs = b.items.filter((i) => i.why === "backlink").length;
+    const out = b.left.filter((l) => l.reason === "limit").length;
+    this.copy(b.text, true, `the context of ${buf.rel}: ${n(b.items.length, "file")} (${links} linked, ${backs} linking to it${out ? `; ${out} past the limit` : ""}), ${b.text.length} characters`);
   }
 
   scratch() {

@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
+import { buildContext } from "../core/context.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
@@ -129,6 +130,8 @@ Usage:
   slipbox resolve <link>            follow a link to a path        [--from <note>]
   slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
+  slipbox context <note>…           the notes, what they link to and what links to them, as one document for an agent
+                                    [--depth N] [--no-backlinks] [--limit N] [--copy]
   slipbox tags [tag]                the vault's tags and how many notes carry each; a tag's notes
   slipbox problems                  the vault's broken and ambiguous links, and notes nothing links to  [--lint]
   slipbox ls                        list the vault's notes         [--files: data and text files too]
@@ -178,7 +181,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "relink", "undo", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
+  "mv", "rename-vault", "relink", "undo", "context", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
@@ -330,6 +333,7 @@ const FLAGS: Record<string, string[]> = {
   "rename-vault": ["dry-run"],
   relink: ["dry-run"],
   undo: ["dry-run"],
+  context: ["depth", "no-backlinks", "limit", "copy"],
 };
 
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
@@ -595,6 +599,27 @@ const HANDLERS: Record<string, Handler> = {
     }
     const tags = s.graph.tags();
     return { data: tags, human: tags.map((t) => `${String(t.count).padStart(4)}  #${t.tag}\n`).join("") };
+  },
+
+  // The context bundle (9.7): the notes, what they link to and what links to them, as one document.
+  async context(s, rest) {
+    if (!rest.length) throw new UsageError("missing a note (context <note>…)");
+    const start = [...new Set(rest.map((r) => resolveNote(s, r)))];
+    const num = (name: string, fallback: number, lo: number, hi: number) => {
+      const v = flag(s.args, name);
+      if (v === undefined) return fallback;
+      if (!/^\d+$/.test(v) || Number(v) < lo || Number(v) > hi) throw new UsageError(`--${name} must be a whole number from ${lo} to ${hi}`);
+      return Number(v);
+    };
+    const opts = { depth: num("depth", s.config.context.depth, 0, 5), backlinks: s.config.context.backlinks && !has(s.args, "no-backlinks"), limit: num("limit", s.config.context.limit, 1, 500) };
+    await s.graph.loadGrammars(); // code files link from their comments (16.10): backlinks too
+    const b = buildContext(s.graph, start, opts);
+    const files = b.items.map(({ text: _, ...i }) => i);
+    const data = { start, ...opts, files, left: b.left, chars: b.text.length, text: b.text };
+    if (!has(s.args, "copy")) return { data, human: b.text };
+    const r = copyText(b.text, { fallbackDir: stateDir(s.loc) });
+    const how = r.file ? `wrote ${r.file}` : `copied via ${r.methods.join(" + ")}${r.confirmed ? "" : " (OSC 52 is unconfirmed)"}`;
+    return { data: { ...data, copied: r }, human: `${how}: ${b.items.length} file${b.items.length === 1 ? "" : "s"}, ${b.text.length} chars\n` };
   },
 
   async backlinks(s, rest) {

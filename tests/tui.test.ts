@@ -5656,6 +5656,30 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.messages.at(-1)!.text).toContain("nothing to undo");
   });
 
+  test("space s c copies the note's context for an agent: it, what it links to, what links to it — unsaved notes saved first (9.7)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "ctx.md"), "# Ctx\n\nSee [[beta]].\n");
+    writeFileSync(join(root, "back.md"), "Back to [[ctx]].\n");
+    const h = await harness({ root, open: "ctx.md" });
+    // An edit not saved yet: a handoff saves it (4.10), so the bundle has what's on screen.
+    await h.keys("shift+g", "shift+a", ...[..." and [[alpha]]"].map((c) => (c === " " ? "space" : c)), "escape");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    await h.keys("space", "s", "c");
+    expect(h.app.view!.buf.dirty).toBe(false);
+    expect(readFileSync(join(root, "ctx.md"), "utf8")).toBe("# Ctx\n\nSee [[beta]]. and [[alpha]]\n");
+    const text = h.copied.at(-1)!;
+    expect(text).toStartWith("# Context: ctx.md\n");
+    /** The files in a bundle, by their reference lines (a note's own headings are inside its fence). */
+    const files = (t: string) => [...t.matchAll(/^`([^`:]+)(?::[\d-]+)?` — /gm)].map((m) => m[1]);
+    expect(files(text)).toEqual(["ctx.md", "notes/beta.md", "notes/alpha.md", "back.md"]);
+    expect(text).toContain("`ctx.md:1-3` — asked for\n\n```markdown\n# Ctx\n\nSee [[beta]]. and [[alpha]]\n```");
+    expect(h.app.messages.at(-1)!.text).toBe(`copied the context of ctx.md: 4 files (2 linked, 1 linking to it), ${text.length} characters`);
+    // [context] says how far: no backlinks, nothing linked.
+    h.app.config.context = { depth: 0, backlinks: false, limit: 25 };
+    await h.keys("space", "s", "c");
+    expect(files(h.copied.at(-1)!)).toEqual(["ctx.md"]);
+  });
+
   test("a rename is refused while a file it rewrites is unsaved; :rename takes the path; the explorer's r asks", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });

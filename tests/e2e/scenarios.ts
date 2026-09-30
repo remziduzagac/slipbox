@@ -1140,7 +1140,7 @@ export const SCENARIOS: Scenario[] = [
 
   // --- scratch, info, messages, help ----------------------------------------------------------
   {
-    name: "scratch: add, open, copy, clear",
+    name: "scratch: add, open, copy, clear; a note's context copied for an agent",
     run: async (s) => {
       await s.keys("j", "j");
       await leader(s, "s", "a");
@@ -1155,6 +1155,13 @@ export const SCENARIOS: Scenario[] = [
       await s.type("y");
       await leader(s, "s", "y");
       await s.message("the scratch is empty");
+      // The context bundle (9.7): the note, what it links to and what links to it, copied.
+      await open(s, "kenji-mori");
+      await leader(s, "s", "c");
+      await s.message("copied the context of people/kenji-mori.md");
+      await s.until(() => s.clipboard().startsWith("# Context: people/kenji-mori.md\n"), 3000, "the bundle copied");
+      s.expect(s.clipboard().includes("`projects/variable-star-survey.md:1-"), "what it links to, with its lines");
+      s.expect(/`home\.md:1-\d+` — links to people\/kenji-mori\.md/.test(s.clipboard()), "what links to it");
     },
   },
   {

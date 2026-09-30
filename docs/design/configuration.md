@@ -104,6 +104,11 @@ location = "state"             # state (never committed) | vault
 file = "scratch.md"            # a relative .md path; no "..", no hidden part (else the default);
                                # in the vault, a symlinked scratch or folder puts it in the state dir
 
+[context]                      # the context bundle (9.7): space s c, slipbox context
+depth = 1                      # links followed out from the note (0–5): 1, what it links to; 0, none
+backlinks = true               # the files linking to it, too
+limit = 25                     # at most this many files (1–500); the rest are named, not included
+
 [editor]                       # {file} and {line} fill in inside arguments; never through a shell
 command = ""                   # space n e: runs here, slipbox waits; "" = $VISUAL, $EDITOR, vi (+line)
 autosave_ms = 30000            # save a changed note after this long without a key; 0 = off

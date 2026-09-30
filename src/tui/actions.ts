@@ -1434,6 +1434,7 @@ export function registerActions(app: App): void {
         const line = layout.lines[v.cur.row]?.src ?? 1;
         a.capture(formatEntry({ ref: { path: v.buf.abs, startLine: line, endLine: line } }, a.loc.root));
       }),
+    "context.copy": (a) => a.copyContext(),
     "scratch.copy": (a) => {
       const text = readScratch(a.scratch());
       if (!text.trim()) return a.message("info", "the scratch is empty");

@@ -501,6 +501,7 @@ edit the config and the config wins again.
 | `space s s` | open the scratch (it updates live as agents capture) |
 | `space s a` | add the selection with its `path:line-line`, or `path:line` of the cursor row |
 | `space s y` | copy the whole scratch |
+| `space s c` | copy the note's context for an agent: it, what it links to, what links to it (`:context`, `9.7`) |
 | `space s d` | clear the scratch (asks first) |
 
 ## Note, vault, app

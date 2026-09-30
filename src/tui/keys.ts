@@ -212,6 +212,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader s s": "scratch.open",
   "leader s a": "scratch.add",
   "leader s y": "scratch.copy",
+  "leader s c": "context.copy",
   "leader s d": "scratch.clear",
   // note, vault, app
   "leader n r": "note.reload",
@@ -625,6 +626,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   rename: "note.rename",
   mv: "note.rename",
   relink: "link.relink",
+  context: "context.copy",
   "undo-rename": "rename.undo",
   delete: "note.delete",
   trash: "trash.open",

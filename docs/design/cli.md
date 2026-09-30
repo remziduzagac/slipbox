@@ -85,6 +85,7 @@ These churn freely before 1.0:
 | --- | --- |
 | `ls` | `[{path, title, size, mtime, tags, links}]`; `--files` adds `[{path, group, format, size, mtime}]` |
 | `outline <note>` | `{path, headings[{depth, text, slug, line}]}` |
+| `context <note>…` | `{start[], depth, backlinks, limit, files[{path, why, depth, from, lines}], left[], text}` |
 | `footnotes <note>` | `{path, sha, footnotes[{label, id, text, line, def, references[{line, column, start, end}]}]}` |
 | `footnotes <note> add\|edit\|rm\|rename …` | `{path, sha, footnotes[…]}` after it; `--if-unchanged`; exit 5: refused |
 | `init [dir]` | `{root, created, identified, id, name, excluded}` — `--name N`, `--private`; exit 5: name in use |
@@ -350,6 +351,25 @@ vim.keymap.set("v", "<leader>pC", function()
   vim.fn.system({ "slipbox", "capture", "--snippet", "--ref", ("%s:%d-%d"):format(vim.fn.expand("%:p"), s, e) })
 end)
 ```
+
+## The context bundle (plan `9.7`)
+
+`slipbox context <note>…` writes one markdown document for an agent: the notes asked for, what they link to and what
+links to them — the scratch's other half, gathered from the link graph instead of by hand, and written the same way.
+Each file is a `## path` section: its reference (`` `path:1-N` ``) and why it's there (`asked for`, `linked from x`,
+`links to x`), then its text as it is on disk, fenced (`markdown` for a note, the language for code; the fence
+longer than any inside it). Links are left as written: an agent can read `[[name]]` and `slipbox resolve` it.
+
+- **What's in it**, breadth first: the notes asked for; what they link to, in the order the links are written (a note,
+  or a file of the vault: code, data); the files linking to them, by path; then, with `--depth N` (0–5; default 1),
+  what those links link to, a level at a time. Another vault's note, linked or linking, is included but not followed.
+  `--no-backlinks` leaves out the files linking in.
+- **What's left out**, named in a last `## Left out` section (and `left[]`): a picture or another binary file, a
+  file over 256 KB, and whatever is past `--limit N` (1–500; default 25) — the first 20 named, the rest counted.
+- **`[context]`** sets the defaults (`depth`, `backlinks`, `limit`); the flags win.
+- **`--copy`** puts it on the clipboard instead, as `scratch copy` does; the output says how, and how big.
+
+The human output is the bundle itself, to pipe into an agent; `--json` has it as `text`, beside what went in.
 
 ## Installing for agents
 

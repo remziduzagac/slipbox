@@ -126,7 +126,12 @@ slipbox footnotes <note> --json          # each footnote: label, text, definitio
 slipbox footnotes <note> add 12:30 'Source: the dome log'   # [^N] at line 12, column 30; its definition at the end
 slipbox footnotes <note> edit 3 'New text'   # also: rm <label>, rename <label> <new>; --if-unchanged <sha>
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
+slipbox context <note>                   # the note, what it links to and what links to it: one markdown document
+slipbox context <note> --depth 2 --limit 40 --no-backlinks   # further out, more files, nothing linking in
 ```
+
+`slipbox context` is the quickest way into a topic: each file comes as a `## path` section, its `path:1-N` and why
+it's included, then its text fenced as on disk; what didn't fit is named under `## Left out`.
 
 Quote wikilinks on the command line: zsh treats unquoted `[[…]]` as a glob and fails with "no
 matches found" before slipbox runs. Resolution is case-insensitive on every OS. A name shared by

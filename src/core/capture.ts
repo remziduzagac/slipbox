@@ -141,7 +141,8 @@ export function formatEntry(input: CaptureInput, project: string): string {
   return parts.join("\n\n");
 }
 
-function fence(body: string, lang: string): string {
+/** Text fenced, the fence longer than any inside it; the scratch's and the context bundle's (9.7). */
+export function fence(body: string, lang: string): string {
   // A longer fence when the snippet itself contains fences.
   const longest = Math.max(2, ...[...body.matchAll(/`{3,}/g)].map((m) => m[0].length));
   const f = "`".repeat(longest + 1);
