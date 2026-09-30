@@ -361,12 +361,12 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   its `[[name:…]]` links become names here — and enter puts its `.slipbox/` in the trash. The row turns into a vault's
   or a folder's, selected. In a loose folder, `v` offers to make the folder a vault of its own and goes into it.
 
-Every one of these is also `space x` and the explorer's key (`18.13`: `space x r`, `space x shift+v`…), from
-anywhere, so which-key lists them: on the explorer's selected row when it has focus, else on the current note — its
-folder for a new note or folder and for making a vault, this vault for renaming it or making it a plain folder of the
-vault holding it (then into that vault, the note still open). The current note also has `space n d` (`:delete`),
-`space n m` (rename or move by path) and `space n y` (a copy beside it, opened). What they do is the CLI's `rm`, `mv`,
-`cp`, `init` and `deinit` (`docs/design/cli.md`).
+Every one of these has a leader key too, so which-key lists them (`18.13`): `space n` for a note (rename or move by
+path, move, delete, copy, cut, `shift+y` a copy beside it), `space d` for a folder (new, rename, move, delete, copy,
+cut, paste), `space v` for a vault (make one, make it a plain folder, rename it, the trash, restore). With the explorer
+focused they act on its selected row, elsewhere on the current note, its folder, or this vault — made a plain folder,
+it's left for the vault holding it, the note still open. What they do is the CLI's `rm`, `mv`, `cp`, `init` and
+`deinit` (`docs/design/cli.md`).
 
 ## Following links
 
@@ -817,7 +817,7 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
   (`home.md`, `halley.toml`): the formats sit side by side, and the extension says which is which.
   Folders show whether or not anything in them is listed, so a new or empty one is there to open and
   create in.
-- **New notes and folders** (`ctrl+n`, `space n n`, `:new`; `space v d`, `:mkdir`; `%` and `d` in
+- **New notes and folders** (`ctrl+n`, `space n n`, `:new`; `space d n`, `:mkdir`; `n` and `shift+n` in
   the explorer): a name, from the current note's folder — or the explorer's selected folder when it
   has focus, or the vault's root with a leading `/` — and folders on the way are made. `.md` is added
   unless the name has a known extension (`.toml`, `.py`…). A note starts with its title (`# Name`),

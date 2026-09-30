@@ -566,10 +566,10 @@ export const SCENARIOS: Scenario[] = [
       // The trash is listed, empty now.
       await leader(s, "v", "t");
       await s.message("the trash is empty");
-      // The current note: a copy of it (the palette), opened; then that copy deleted (space n d).
+      // The current note: duplicated (the palette), opened; then that copy deleted (space n d).
       await s.keys("escape");
       await s.keys(":");
-      await s.type("Copy the note");
+      await s.type("Duplicate the note");
       await s.keys("enter");
       await s.status("people-contacts-copy-2.md");
       await leader(s, "n", "d");
@@ -1245,51 +1245,59 @@ export const SCENARIOS: Scenario[] = [
       await s.message("made logs/ a plain folder of halden");
       s.expect(!s.exists("logs/.slipbox"), "its .slipbox/ gone (to the trash)");
       await s.file("home.md", (t) => t === home, "home as it was");
-      // All of it after space x too, from anywhere: which-key lists the explorer's keys.
+      // From anywhere too: which-key lists them under space d (folders) and space v (vaults).
       await s.keys("escape");
-      await leader(s, "x");
-      await s.see("Rename in place");
-      await s.see("Make the folder a vault");
+      await leader(s, "d");
+      await s.see("Rename the folder");
+      await s.keys("escape");
+      await leader(s, "v");
+      await s.see("Make a vault");
       await s.see("Make the vault a plain folder");
       await s.keys("escape");
     },
   },
   {
-    name: "files: space x — the explorer's keys from a note: rename, move, copy, cut, paste, delete, restore, menu, vaults",
+    name: "files: space n the note, space d its folder, space v the vault — move, copy, cut, paste, delete, restore, vaults",
     options: { open: "people/contacts.md" },
     run: async (s) => {
-      await leader(s, "x", "r");
-      await s.see("rename people/contacts.md to:");
-      await s.keys("escape");
-      await leader(s, "x", "m");
+      await leader(s, "n", "shift+m");
       await s.see("Move people/contacts.md to…");
       await s.keys("escape");
-      await leader(s, "x", "y");
+      await leader(s, "n", "y");
       await s.message("copied people/contacts.md");
-      await leader(s, "x", "p");
+      await leader(s, "d", "p");
       await s.file("people/contacts-copy.md", (t) => t.length > 0, "a copy beside it");
-      await leader(s, "x", "x");
+      await leader(s, "n", "x");
       await s.message("cut people/contacts.md");
-      await leader(s, "x", "p");
+      await leader(s, "d", "p");
       await s.message("already in people");
-      await leader(s, "x", "d");
+      await leader(s, "n", "d");
       await s.see(/Delete people\/contacts\.md\?/);
       await s.type("y");
       await s.message("deleted people/contacts.md");
       s.expect(!s.exists("people/contacts.md"), "gone to the trash");
-      await leader(s, "x", "u");
+      await leader(s, "v", "u");
       await s.message("restored people/contacts.md");
       s.expect(s.exists("people/contacts.md"), "back");
-      await leader(s, "x", ".");
-      await s.see(/Rename +r/);
+      // Its folder.
+      await leader(s, "d", "r");
+      await s.see("rename people/ to:");
       await s.keys("escape");
-      await leader(s, "x", "v");
+      await leader(s, "d", "m");
+      await s.see("Move people/ to…");
+      await s.keys("escape");
+      await leader(s, "d", "d");
+      await s.see(/Delete people\/ and everything in it\?/);
+      await s.keys("escape");
+      await leader(s, "d", "y");
+      await s.message("copied people/");
+      await leader(s, "d", "x");
+      await s.message("cut people/");
+      // The vault.
+      await leader(s, "v", "m");
       await s.see("make people/ a vault named:");
       await s.keys("escape");
-      await leader(s, "x", "shift+r");
-      await s.see("rename vault halden to:");
-      await s.keys("escape");
-      await leader(s, "x", "shift+v");
+      await leader(s, "v", "shift+m");
       await s.message("isn't inside another vault");
     },
   },

@@ -1474,11 +1474,45 @@ export function registerActions(app: App): void {
       a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
     },
     "vault.switch": (a) => a.openVaultList(),
-    "note.delete": (a) =>
-      withView(a, (v) => {
-        if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be deleted here");
-        a.deleteItem({ rel: v.buf.rel, dir: false });
-      }),
+    "note.delete": (a) => {
+      const t = a.noteTarget();
+      if (t) a.deleteItem(t);
+    },
+    "note.move": (a) => {
+      const t = a.noteTarget();
+      if (t) a.moveItem(t);
+    },
+    "note.yank": (a) => {
+      const t = a.noteTarget();
+      if (t) a.clipItem("copy", t);
+    },
+    "note.cut": (a) => {
+      const t = a.noteTarget();
+      if (t) a.clipItem("cut", t);
+    },
+    "folder.rename": (a) => {
+      const f = a.folderTarget();
+      if (f) a.renameItem(f);
+    },
+    "folder.move": (a) => {
+      const f = a.folderTarget();
+      if (f) a.moveItem(f);
+    },
+    "folder.delete": (a) => {
+      const f = a.folderTarget();
+      if (f) a.deleteItem(f);
+    },
+    "folder.yank": (a) => {
+      const f = a.folderTarget();
+      if (f) a.clipItem("copy", f);
+    },
+    "folder.cut": (a) => {
+      const f = a.folderTarget();
+      if (f) a.clipItem("cut", f);
+    },
+    "folder.paste": (a) => a.pasteItem(),
+    "trash.restore": (a) => a.restoreLast(),
+    "vault.unmake": (a) => a.unmakeVaultHere(),
     "note.copy": (a) =>
       withView(a, (v) => {
         if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be copied here");
@@ -1491,31 +1525,23 @@ export function registerActions(app: App): void {
         }
       }),
     "trash.open": (a) => a.openTrash(),
-    "file.rename": (a) => a.fileAction("rename"),
-    "file.move": (a) => a.fileAction("move"),
-    "file.delete": (a) => a.fileAction("delete"),
-    "file.restore": (a) => a.fileAction("restore"),
-    "file.copy": (a) => a.fileAction("copy"),
-    "file.cut": (a) => a.fileAction("cut"),
-    "file.paste": (a) => a.fileAction("paste"),
-    "file.make_vault": (a) => a.fileAction("make_vault"),
-    "file.unmake_vault": (a) => a.fileAction("unmake_vault"),
-    "file.rename_vault": (a) => a.fileAction("rename_vault"),
-    "file.menu": (a) => a.fileAction("menu"),
     "vault.init": (a) => {
-      if (a.loc.mode === "vault") return a.message("info", `already a vault: ${a.loc.name} (${a.loc.root})`);
+      // In a vault: the explorer's selected folder (or this note's) a vault of its own (18.11).
+      if (a.loc.mode === "vault") return a.makeVaultHere();
       const dir = gitRootOf(a.loc.root) ?? a.loc.root;
       if (isNeverRoot(dir)) return a.message("warn", `${dir} can't be a vault: slipbox never indexes all of it`);
       a.vaultChoices(dir, false);
     },
-    "note.rename": (a, arg) =>
-      withView(a, (v) => {
-        if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be renamed here");
-        const rel = v.buf.rel;
-        if (arg) return a.previewRename(() => planNoteRename(a.graph, rel, arg));
-        a.promptRename(rel);
-      }),
+    "note.rename": (a, arg) => {
+      const t = a.noteTarget();
+      if (!t) return;
+      if (arg) return a.previewRename(() => planNoteRename(a.graph, t.rel, arg));
+      a.promptRename(t.rel);
+    },
     "vault.rename": (a, arg) => {
+      // The explorer's selected vault (one nested here), when it has focus.
+      const item = a.explorerFocused() ? a.explorerItem() : null;
+      if (item?.vault && !arg) return a.renameVaultItem(item);
       const go = (name: string) => a.previewRename(() => planVaultRename(a.graph, a.loc, name.trim()));
       if (arg) return go(arg);
       a.prompt(`rename vault ${a.loc.name ?? a.loc.root} to: `, (t) => t.trim() && go(t));

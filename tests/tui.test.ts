@@ -441,7 +441,7 @@ describe("which-key", () => {
     const left = rows[head]!.indexOf("┌");
     expect(rows[head + 1]!.slice(left + 1, rows[head + 1]!.lastIndexOf("│")).trim()).toBe(""); // a blank row inside, above
     expect(rows[head + 2]!.slice(left)).toMatch(/^│ \S+ +→ \+\w+/);
-    expect(rows[head + 3]).toContain("notes, headings, text, commands"); // +find's explanation
+    expect(rows[head + 3]).toContain("new, rename, move, delete, copy, cut, paste"); // +folder's explanation
     const arrows = rows[head + 2]!.split("→").length - 1;
     expect(arrows).toBeLessThanOrEqual(3);
     const foot = rows.findIndex((r, i) => i > head && r.includes("└"));
@@ -659,10 +659,10 @@ describe("overlays and the : prompt", () => {
       const l = lines.find((x) => x.includes(label))!;
       return l.indexOf(` ${key} `, l.indexOf(label) + label.length);
     };
-    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "Messages", "space m"));
-    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "New folder", "ctrl+shift+n")); // its first key
-    expect(colOf(g, "Reload note from disk", "space n r")).toBe(colOf(g, "Vault info", "space v i"));
-    expect(colOf(g, "Reload note from disk", ":reload")).toBe(colOf(g, "Quit", ":qa"));
+    expect(colOf(g, "Reindex the vault", "space v r")).toBe(colOf(g, "Messages", "space m"));
+    expect(colOf(g, "Reindex the vault", "space v r")).toBe(colOf(g, "Move the note to a folder…", "space n shift+m"));
+    expect(colOf(g, "Reindex the vault", "space v r")).toBe(colOf(g, "Vault info", "space v i"));
+    expect(colOf(g, "Reindex the vault", ":reindex")).toBe(colOf(g, "Quit", ":qa"));
     expect(h.app.recentCommands[0]).toBe("ui.zen");
   });
   test("messages, note info, vault info", async () => {
@@ -5772,7 +5772,7 @@ describe("questions float in a window of their own", () => {
     expect(f.at(-1)).toContain("Really? y / n");
   });
 
-  test("ctrl+shift+n makes a folder, as space v d does", async () => {
+  test("ctrl+shift+n makes a folder, as space d n does", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
     await h.keys("ctrl+shift+n");
@@ -6045,66 +6045,65 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(h.app.messages.at(-1)!.text).toContain("select a folder first");
   });
 
-  test("space x: the explorer's keys after the leader — which-key lists them all; on the selected row, or from a note on the note (18.13)", async () => {
+  test("space n notes, space d folders, space v vaults: which-key lists them; the explorer's selection, or this note (18.13)", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
-    await h.keys("space", "x");
-    const listed = Object.fromEntries(h.app.whichKeyEntries().map((e) => [e.key, e.label]));
-    expect(listed).toMatchObject({
-      r: "Rename in place",
-      "shift+r": "Rename the vault",
-      m: "Move to a folder…",
-      d: "Delete to the trash",
-      u: "Restore the last deleted",
-      y: "Copy, to paste",
-      x: "Cut, to paste",
-      p: "Paste here",
-      n: "New note",
-      "shift+n": "New folder",
-      v: "Make the folder a vault",
-      "shift+v": "Make the vault a plain folder",
-      t: "The trash",
-      ".": "Actions…",
-    });
-    await h.keys("escape");
-    // From the note: it.
-    await h.keys("space", "x", "r");
-    expect(prompt(h)).toMatchObject({ label: "rename notes/alpha.md to: ", text: "alpha" });
-    await h.keys("escape", "space", "x", "m");
+    const group = async (...keys: string[]) => {
+      await h.keys("space", ...keys);
+      const out = Object.fromEntries(h.app.whichKeyEntries().map((e) => [e.key, e.label]));
+      await h.keys("escape");
+      return out;
+    };
+    expect(await group("n")).toMatchObject({ n: "New note", m: "Rename or move the note", "shift+m": "Move the note to a folder…", d: "Delete the note", y: "Copy the note, to paste", x: "Cut the note, to paste", "shift+y": "Duplicate the note" });
+    expect(await group("d")).toMatchObject({ n: "New folder", r: "Rename the folder", m: "Move the folder…", d: "Delete the folder", y: "Copy the folder, to paste", x: "Cut the folder, to paste", p: "Paste into the folder" });
+    expect(await group("v")).toMatchObject({ m: "Make a vault", "shift+m": "Make the vault a plain folder", n: "Rename the vault", t: "The trash", u: "Restore the last deleted", v: "Switch vault" });
+    expect(await group("v")).not.toHaveProperty("d"); // a new folder is space d n now
+    // From the note: it, its folder, this vault.
+    await h.keys("space", "n", "shift+m");
     expect((h.app.overlay as ListOverlay).title).toStartWith("Move notes/alpha.md to…");
-    await h.keys("escape", "space", "x", "d");
-    expect(prompt(h)).toMatchObject({ confirm: true, label: expect.stringMatching(/^Delete notes\/alpha\.md\?/) });
-    await h.keys("escape", "space", "x", "y", "space", "x", "p");
+    await h.keys("escape", "space", "d", "r");
+    expect(prompt(h)).toMatchObject({ label: "rename notes/ to: ", text: "notes" });
+    await h.keys("escape", "space", "d", "m");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("Move notes/ to…");
+    await h.keys("escape", "space", "d", "d");
+    expect(prompt(h)).toMatchObject({ confirm: true, label: expect.stringMatching(/^Delete notes\/ and everything in it\?/) });
+    await h.keys("escape", "space", "n", "y", "space", "d", "p");
     expect(existsSync(join(root, "notes", "alpha-copy.md"))).toBe(true);
-    await h.keys("space", "x", "v");
+    await h.keys("space", "v", "m");
     expect(prompt(h)).toMatchObject({ label: "make notes/ a vault named: " });
-    await h.keys("escape", "space", "x", "shift+r");
-    expect(prompt(h).label).toStartWith("rename vault fixture to: ");
-    await h.keys("escape", "space", "x", ".");
-    expect(h.app.overlay as ListOverlay).toMatchObject({ menu: true, title: "alpha.md" });
-    await h.keys("d", "y"); // the menu's d, answered
+    await h.keys("escape", "space", "n", "d", "y");
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
-    await h.keys("space", "x", "u");
+    await h.keys("space", "v", "u");
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true);
-    await h.keys("space", "x", "shift+v"); // this vault isn't nested in another
+    await h.keys("space", "v", "shift+m"); // this vault isn't nested in another
     expect(h.app.messages.at(-1)!.text).toContain("isn't inside another vault");
-    // space n y: the note's copy beside it, opened.
-    await h.keys("space", "n", "y");
+    await h.keys("space", "n", "shift+y");
     expect(h.app.view!.buf.rel).toBe("notes/alpha-copy-2.md");
-    // With the explorer focused: its selected row.
+    // A note at the root has no folder for space d.
+    await h.app.run("note.open index.md");
+    await h.keys("space", "d", "r");
+    expect(h.app.messages.at(-1)!.text).toContain("index.md is at the vault's root");
+    // With the explorer focused: its selected row — a folder for space d, a note for space n, a vault for space v.
     const e = await at(root, "projects");
-    await e.keys("space", "x", "r");
+    await e.keys("space", "d", "r");
     expect(prompt(e).label).toBe("rename projects/ to: ");
-    await e.keys("escape", "space", "x", "v");
+    await e.keys("escape", "space", "n", "d");
+    expect(e.app.messages.at(-1)!.text).toContain("space n acts on a note");
+    await e.keys("space", "v", "m");
     expect(prompt(e).label).toBe("make projects/ a vault named: ");
+    const v = await at(root, "nested-vault");
+    await v.keys("space", "v", "n");
+    expect(prompt(v).label).toBe("rename the vault fixture-nested to: ");
+    await v.keys("escape", "space", "v", "shift+m");
+    expect((v.app.overlay as ListOverlay).title).toMatch(/^the vault nested-vault\/ → a folder of fixture/);
   });
 
-  test("space x V inside a vault nested in another: made a plain folder of it, and into it, the note still open (18.13)", async () => {
+  test("space v shift+m inside a vault nested in another: made a plain folder of it, and into it, the note still open (18.13)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "to-nested.md"), "[[fixture-nested:inner]]\n");
     const h = await harness({ root: join(root, "nested-vault"), open: "inner.md" });
     expect(h.app.loc.name).toBe("fixture-nested");
-    await h.keys("space", "x", "shift+v");
+    await h.keys("space", "v", "shift+m");
     expect((h.app.overlay as ListOverlay).title).toMatch(/^the vault nested-vault\/ → a folder of fixture/);
     await h.keys("enter");
     expect(existsSync(join(root, "nested-vault", ".slipbox"))).toBe(false);

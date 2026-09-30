@@ -1975,9 +1975,9 @@ export class App {
    * The selected row's menu (its `…` button, `.`): what can be done to it, each with its key in the
    * explorer, which picks it here too. It hangs from the button (by key without one: the row).
    */
-  openItemMenu(item = this.explorerItem(), onRow = true): void {
-    const row = onRow ? this.explorerRows()[this.sidebar.selected] : null;
-    if (!item || (onRow && !row)) return this.message("info", "menu: select a note, file or folder first");
+  openItemMenu(): void {
+    const item = this.explorerItem();
+    if (!item) return this.message("info", "menu: select a note, file or folder first");
     const actions: [string, string][] = [];
     if (item.dir && !item.vault) actions.push(["new_note", "New note here"], ["new_folder", "New folder here"]);
     actions.push(["rename", item.vault ? "Rename the folder" : "Rename"]);
@@ -1993,9 +1993,8 @@ export class App {
       return { label, hint: hotkey ?? (key ? prettyKey(key, this.leader) : undefined), ...(hotkey ? { hotkey } : {}), data: action };
     });
     const g = this.geometry;
-    const button = onRow ? g?.hot.find((h) => h.id === "xrow:menu") : undefined;
-    const anchor = button ? { x: button.x, y: button.y } : onRow && g?.sidebar ? { x: g.sidebar.x + 2, y: g.sidebar.y + this.sidebar.selected - this.sidebar.scroll } : undefined;
-    const region = this.region;
+    const button = g?.hot.find((h) => h.id === "xrow:menu");
+    const anchor = button ? { x: button.x, y: button.y } : g?.sidebar ? { x: g.sidebar.x + 2, y: g.sidebar.y + this.sidebar.selected - this.sidebar.scroll } : undefined;
     this.openList({
       title: `${posix.basename(item.rel)}${item.dir ? "/" : ""}`,
       items,
@@ -2003,13 +2002,13 @@ export class App {
       anchor,
       menu: true,
       accept: (it) => {
-        this.region = region;
+        this.region = "sidebar";
         this.itemAction(it.data as string, item);
       },
     });
   }
 
-  /** An explorer action on a note, file, folder or nested vault: its menu's, its keys', `space x`'s. */
+  /** An explorer action on a note, file, folder or nested vault: its keys' and its menu's. */
   itemAction(action: string, item: ExplorerItem): void {
     const folder = item.dir ? item.rel : posix.dirname(item.rel) === "." ? "" : posix.dirname(item.rel);
     switch (action) {
@@ -2037,30 +2036,54 @@ export class App {
     }
   }
 
-  /**
-   * `space x …` (18.13): the explorer's key, after the leader, anywhere. With the explorer focused,
-   * on its selected row, as the key there; from a note, on the note — its folder for what makes
-   * something of a folder, this vault for what a vault's row does.
-   */
-  fileAction(action: string): void {
-    if (this.region === "sidebar" && this.sidebarShown && this.leftView === "explorer") return this.explorerAction(action);
-    if (action === "restore") return this.restoreLast();
-    if (action === "paste") return this.pasteItem();
-    if (action === "rename_vault") return void this.run("vault.rename");
-    if (action === "unmake_vault") return this.unmakeThisVault();
-    const rel = this.view?.buf.rel ?? null;
-    if (rel === null) return this.message("info", "open a note of this vault, or select a row in the explorer (space e)");
-    if (action === "make_vault") {
-      const folder = posix.dirname(rel);
-      if (folder === ".") return this.message("info", `${rel} is at the vault's root: select a folder in the explorer to make it a vault`);
-      return this.makeVaultItem({ rel: folder, dir: true });
+  /** Whether the explorer has the keys (its tree shown and focused). */
+  explorerFocused(): boolean {
+    return this.region === "sidebar" && this.sidebarShown && this.leftView === "explorer";
+  }
+
+  /** What `space n …` acts on (18.13): the explorer's selected note or file when it has focus, else
+   *  this note; null (and said) without one. */
+  noteTarget(): ExplorerItem | null {
+    if (this.explorerFocused()) {
+      const item = this.explorerItem();
+      if (item && !item.dir) return item;
+      this.message("info", "space n acts on a note: select one (space d on a folder)");
+      return null;
     }
-    if (action === "menu") return this.openItemMenu({ rel, dir: false }, false);
-    this.itemAction(action, { rel, dir: false });
+    const rel = this.view?.buf.rel ?? null;
+    if (rel === null) this.message("info", "open a note of this vault, or select one in the explorer");
+    return rel === null ? null : { rel, dir: false };
+  }
+
+  /** What `space d …` acts on (18.13): the explorer's selected folder (or vault, or a file's folder)
+   *  when it has focus, else this note's folder; null (and said) at the vault's root. */
+  folderTarget(): ExplorerItem | null {
+    const item = this.explorerFocused() ? this.explorerItem() : this.view?.buf.rel ? { rel: this.view.buf.rel, dir: false } : null;
+    if (item?.dir) return item;
+    const folder = item ? posix.dirname(item.rel) : ".";
+    if (folder !== ".") return { rel: folder, dir: true };
+    this.message("info", item ? `${item.rel} is at the vault's root: select a folder in the explorer` : "select a folder in the explorer, or open a note in one");
+    return null;
+  }
+
+  /** `space v m` in a vault (18.13): the explorer's selected folder (or this note's) made a vault. */
+  makeVaultHere(): void {
+    const f = this.folderTarget();
+    if (!f) return;
+    if (f.vault) return this.message("info", `${f.rel} is a vault already — space v shift+m makes it a plain folder`);
+    this.makeVaultItem(f);
+  }
+
+  /** `space v shift+m` (18.13): the explorer's selected vault, or this one, made a plain folder of the vault holding it. */
+  unmakeVaultHere(): void {
+    const item = this.explorerFocused() ? this.explorerItem() : null;
+    if (item?.vault) return this.unmakeVaultItem(item);
+    if (item) return this.message("info", "make a plain folder: select a vault (its folder has its own icon)");
+    this.unmakeThisVault();
   }
 
   /**
-   * This vault, nested in another, made a plain folder of it (18.11, `space x V` from a note): the
+   * This vault, nested in another, made a plain folder of it (18.11, `space v shift+m` from a note): the
    * preview from the vault holding it; then into that vault, the note still open.
    */
   unmakeThisVault(): void {
@@ -2256,7 +2279,7 @@ export class App {
   /** Copy or cut the selected item, for `p`. */
   clipItem(mode: "copy" | "cut", item: ExplorerItem): void {
     this.fileClip = { mode, ...item };
-    this.message("info", `${mode === "copy" ? "copied" : "cut"} ${item.rel}${item.dir ? "/" : ""} — p pastes it in the selected folder`);
+    this.message("info", `${mode === "copy" ? "copied" : "cut"} ${item.rel}${item.dir ? "/" : ""} — p in the explorer (space d p) pastes it in a folder`);
   }
 
   /** Paste into the selected folder (or beside the selected file): a copy, or what was cut, moved. */
@@ -2314,7 +2337,7 @@ export class App {
     this.prompt(`new folder in ${base ? `${base}/` : "the vault"}`, (text) => void this.createFolder(text, base));
   }
 
-  /** Create a folder (`d` in the explorer, `space v d`, `:mkdir`): selected in the explorer. */
+  /** Create a folder (`shift+n` in the explorer, `space d n`, `:mkdir`): selected in the explorer. */
   createFolder(input: string, base: string): string | null {
     const rel = this.newPath(input, base);
     if (!rel) return null;

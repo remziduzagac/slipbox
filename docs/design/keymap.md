@@ -241,22 +241,27 @@ Inside the explorer (`[keys.explorer]` in config):
 The history view (`space h h`, the left rail's `◷`) takes the same keys: `j` / `k` move, `enter`,
 `l` or a click jumps to the place, `/` filters, `q` closes, `esc` goes back to the note.
 
-### Files — `space x`
+### Notes, folders, vaults — `space n`, `space d`, `space v`
 
-The explorer's file keys after `space x`, from anywhere, so which-key lists them (`18.13`). With the explorer
-focused they act on its selected row, as the key alone does; from a note, on the note — its folder for `n`,
-`shift+n` and `v`, this vault for `shift+r` and `shift+v`:
+Everything the explorer does to files has a leader key too, so which-key lists it (`18.13`): `space n` for a note,
+`space d` for a folder, `space v` for a vault. With the explorer focused they act on its selected row (`space d`: a
+file's folder); elsewhere on the current note, its folder, or this vault.
 
 | Keys | Action |
 | --- | --- |
-| `space x r` / `space x m` | rename in place / move to a folder picked from a tree: links fixed after a preview |
-| `space x d` / `space x u` | delete to the trash, after asking / restore what was deleted last |
-| `space x y` / `space x x` / `space x p` | copy / cut, to paste; paste in the selected folder (or this note's) |
-| `space x n` / `space x shift+n` | a new note / folder there |
-| `space x v` | make the folder a vault of its own (its name asked): links fixed after a preview |
-| `space x shift+v` | make the vault a plain folder of the one holding it (from a note: this vault, then its parent) |
-| `space x shift+r` | rename the vault (the selected one, or this one) |
-| `space x t` / `space x .` | the trash / the row's menu (from a note, the note's) |
+| `space n n` / `space d n` | a new note / folder in the selected folder, or beside this note |
+| `space n m` | rename or move the note by its path (`:rename`, `:mv`): links fixed after a preview |
+| `space n shift+m` / `space d m` | move the note / the folder to a folder picked from a tree |
+| `space d r` | rename the folder in place |
+| `space n d` / `space d d` | delete the note / the folder to the vault's trash, after asking (`:delete`) |
+| `space n y` / `space d y` | copy the note / the folder, to paste |
+| `space n x` / `space d x` | cut the note / the folder, to paste (a move, links fixed) |
+| `space d p` | paste into the folder: what was copied, or cut |
+| `space n shift+y` | a copy of the note beside it (`name-copy`), opened |
+| `space v t` / `space v u` | the trash (`:trash`) / restore what was deleted last |
+| `space v m` | make a vault (`:init`): this loose folder; in a vault, the selected folder (or this note's) |
+| `space v shift+m` | make the vault a plain folder of the one holding it (this one: then into its parent) |
+| `space v n` | rename the vault (the selected one, or this one) |
 
 ## Outline — right pane
 
@@ -371,13 +376,13 @@ source first.
 | cut the character under the cursor (it goes to the clipboard, as vim's `x`) | `x` (source) |
 | undo / redo (an insert session is one step) | `u`, `ctrl+z` / `ctrl+r`, `ctrl+y`, `shift+u` |
 | a new note beside this one (`:new name`; `projects/idea` makes the folder too) | `ctrl+n`, `space n n` |
-| a new folder beside this note (`:mkdir name`) | `ctrl+shift+n`, `space v d` |
+| a new folder beside this note (`:mkdir name`) | `ctrl+shift+n`, `space d n` |
 | rename or move the note (`:rename path`, `:mv path`): a preview, then `enter` | `space n m` |
 | rename the vault: a preview, then `enter` | `space v n` |
 | delete the note to the vault's trash, after asking (`:delete`) | `space n d` |
-| a copy of the note beside it (`name-copy`), opened | `space n y` |
+| a copy of the note beside it (`name-copy`), opened | `space n shift+y` |
 | the trash: what was deleted, `enter` restores (`:trash`) | `space v t` |
-| make this loose folder (or its git repository) a vault (`:init`): committed, or private | `space v m` |
+| make this loose folder (or its git repository) a vault (`:init`), or in a vault a folder of it | `space v m` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |
