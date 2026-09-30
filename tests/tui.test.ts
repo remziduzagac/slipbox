@@ -1013,7 +1013,7 @@ describe("the left panel's views and filter", () => {
     await h.keys("space", "h", "h");
     const rows = h.app.historyRows();
     expect(rows.map((r) => (r.heading ? "--" : r.label))).toEqual(["beta.md", "--", "alpha.md", "index.md"]);
-    expect(rows[2]!.hint).toMatch(/^\d\d:\d\d$/); // read today: the time
+    expect(rows[2]!.hint).toBe("tab 2"); // open in another tab: which
     expect(h.frame()).toContain("recent in this vault");
     // Moving steps over the heading; enter opens the note here, in this window's history.
     await h.keys("down");
@@ -1029,6 +1029,22 @@ describe("the left panel's views and filter", () => {
     expect(v.back.map((l) => l.key)).toEqual(["notes/beta.md"]);
     await again.app.run("history.back");
     expect(again.app.view!.buf.rel).toBe("notes/beta.md");
+  });
+  test("history: every note with a reading position is there, newest first, with when (found in use: only 4)", async () => {
+    const root = makeVault();
+    const h = await harness({ root });
+    // Read in earlier sessions: their reading positions, with their times.
+    const { PositionStore } = await import("../src/core/position.ts");
+    const ps = new PositionStore(h.app.loc);
+    const top = { heading: null, headingIndex: 0, offset: 0, line: 1 };
+    const files = ["notes/alpha.md", "notes/beta.md", "crlf.md", "bom.md", "escapes.md", "latin1.md", "no-newline.md"];
+    for (const f of files) ps.set(f, top);
+    ps.save();
+    const later = await harness({ root });
+    await later.keys("space", "h", "h");
+    const recent = later.app.historyRows().filter((r) => r.recent);
+    expect(recent.map((r) => r.path).sort()).toEqual([...files].sort());
+    expect(recent.every((r) => /^\d\d:\d\d$/.test(r.hint))).toBe(true);
   });
   test("the history filters too", async () => {
     const h = await harness();

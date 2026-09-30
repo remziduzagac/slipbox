@@ -2332,24 +2332,47 @@ export class App {
         };
       })
       .reverse();
-    // Notes read lately in this vault, in other windows and tabs and in earlier sessions: the
-    // history of more than this window, newest first.
+    // Notes read in this vault, in other windows and tabs and in earlier sessions: the history of
+    // more than this window, newest first.
     const inTimeline = new Set(timeline.map((l) => l.key));
-    const recent: HistoryRow[] = this.recentNotes
-      .filter((k) => !inTimeline.has(k) && existsSync(isAbsolute(k) ? k : join(this.loc.root, k)))
-      .map((k) => ({ label: k.split("/").pop()!, path: k, hint: this.whenRead(k), index: -1, here: false, recent: k }));
+    const recent: HistoryRow[] = this.readNotes()
+      .filter((r) => !inTimeline.has(r.key))
+      .slice(0, HISTORY_READ_MAX)
+      .map((r) => ({ label: r.key.split("/").pop()!, path: r.key, hint: r.hint, index: -1, here: false, recent: r.key }));
     const q = this.sidebar.filter ?? "";
     const mine = q ? rows.filter((r) => fuzzy(q, r.path)) : rows;
     const others = q ? recent.filter((r) => fuzzy(q, r.path)) : recent;
     return others.length ? [...mine, { label: "recent in this vault", path: "", hint: "", index: -1, here: false, heading: true }, ...others] : mine;
   }
 
-  /** When a note was last read, briefly: the time today, else the day. */
-  private whenRead(key: string): string {
-    const opened = this.openedAt.get(key);
-    const at = opened !== undefined ? new Date(opened).toISOString() : this.positions.readAt(key);
-    if (!at) return "";
-    const d = new Date(at);
+  /**
+   * The notes read in this vault, newest first, each with its hint: opened this session, every
+   * open tab's, and every note with a reading position (earlier sessions: `positions.json`, what
+   * `slipbox history` lists). A note open in another tab says which.
+   */
+  private readNotes(): { key: string; hint: string }[] {
+    const when = new Map<string, number>();
+    const root = `${this.loc.root}/`;
+    for (const e of this.positions.entries()) {
+      // The home vault keeps every loose folder's by absolute path: this folder's by its own.
+      const key = this.loc.mode === "home" && e.key.startsWith(root) ? e.key.slice(root.length) : e.key;
+      when.set(key, Date.parse(e.at) || 0);
+    }
+    for (const [k, t] of this.openedAt) when.set(k, Math.max(t, when.get(k) ?? 0));
+    const tabOf = new Map<string, number>();
+    this.tabs.forEach((t, i) => t.views.forEach((v) => tabOf.set(v.buf.key, tabOf.get(v.buf.key) ?? i + 1)));
+    for (const k of [...tabOf.keys(), ...this.recentNotes]) if (!when.has(k)) when.set(k, 0);
+    const order = new Map(this.recentNotes.map((k, i) => [k, i] as [string, number]));
+    return [...when]
+      .filter(([k]) => existsSync(isAbsolute(k) ? k : join(this.loc.root, k)))
+      .sort((a, b) => b[1] - a[1] || (order.get(a[0]) ?? 1e9) - (order.get(b[0]) ?? 1e9) || a[0].localeCompare(b[0]))
+      .map(([key, t]) => ({ key, hint: tabOf.has(key) && tabOf.get(key) !== this.activeTab + 1 ? `tab ${tabOf.get(key)}` : this.whenRead(t) }));
+  }
+
+  /** When a note was last read, briefly: the time today, else the day; nothing when unknown. */
+  private whenRead(ms: number): string {
+    if (!ms) return "";
+    const d = new Date(ms);
     const now = new Date(this.now());
     if (d.toDateString() === now.toDateString()) return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -4703,6 +4726,8 @@ function inRect(r: { x: number; y: number; w: number; h: number }, x: number, y:
 const RECENT_MAX = 5;
 /** Notes the switcher lists first, most recent first. */
 const RECENT_NOTES_MAX = 30;
+/** Notes read elsewhere the history lists under this window's timeline (it scrolls, and filters). */
+const HISTORY_READ_MAX = 100;
 /** The note keeps at least this many columns beside the side panes. */
 const MIN_CONTENT = 24;
 /** The rail: its border, then a button (a glyph with a space either side). */

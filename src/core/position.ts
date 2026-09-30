@@ -135,6 +135,11 @@ export class PositionStore {
     return this.base && !isAbsolute(rel) ? join(this.base, rel) : rel;
   }
 
+  /** Every note read here, with when (its stored key: absolute in the home vault). */
+  entries(): { key: string; at: string }[] {
+    return Object.entries(this.data).map(([key, v]) => ({ key, at: v.at }));
+  }
+
   /** When a note was last read here (ISO 8601), if it ever was. */
   readAt(rel: string): string | null {
     return this.data[this.k(rel)]?.at ?? null;
