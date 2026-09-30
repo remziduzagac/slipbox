@@ -50,6 +50,7 @@ import {
   type UiOverride,
 } from "../core/position.ts";
 import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
+import { normKey } from "../core/links.ts";
 import { Reach } from "../core/reach.ts";
 import { type Applied, applyPlan, planNoteRename, type RenamePlan } from "../core/rename.ts";
 import { type KnownVault, readIdentity, readRegistry, vaultConfigFile } from "../core/registry.ts";
@@ -1855,8 +1856,15 @@ export class App {
    * Ask for a new note's name and make it: opened, and typed into below its title. `prefill`: the
    * name already typed (a link to a note that doesn't exist yet).
    */
-  promptNewNote(base = this.newItemBase(), prefill = ""): void {
+  promptNewNote(base = this.newItemBase(), prefill = "", allowed = ""): void {
     const make = (text: string) => {
+      // A name another note already has makes [[name]] ambiguous (17.5): a distinct one is
+      // suggested, from the folder; typed again, the name is made anyway (a suggestion, not a rule).
+      const clash = text.trim() !== allowed ? this.nameClash(text, base) : null;
+      if (clash) {
+        this.message("info", `a note named ${clash.name} is at ${clash.at}: [[${clash.name}]] would reach either — suggested ${clash.suggested} (type ${clash.name} again to keep it)`);
+        return this.promptNewNote(base, clash.suggested, text.trim());
+      }
       const r = this.createNote(text, base);
       if (!r) return;
       this.region = "content";
@@ -1871,6 +1879,29 @@ export class App {
     };
     this.prompt(`new note in ${base ? `${base}/` : "the vault"}`, make);
     if (prefill && this.overlay?.kind === "prompt") this.overlay.text = prefill;
+  }
+
+  /**
+   * A new note's name another note of the vault already has (17.5): where that one is, and a
+   * distinct name from the new one's folder (`ideas-plan`, `ideas-plan-2`…).
+   */
+  nameClash(input: string, base: string): { name: string; at: string; suggested: string } | null {
+    const rel = this.newPath(input, base);
+    if (!rel) return null;
+    const ext = extensionOf(rel);
+    const full = !ext || !isKnownExtension(ext) ? `${rel}.md` : rel;
+    if (classify(full, this.config.walk.extensions).group !== "note" || this.graph.notes.has(full)) return null;
+    const name = posix.basename(full).replace(/\.(md|markdown)$/i, "");
+    const same = (n: string) => [...this.graph.notes.keys()].find((p) => normKey(posix.basename(p).replace(/\.(md|markdown)$/i, "")) === normKey(n));
+    const at = same(name);
+    if (!at) return null;
+    const dir = posix.dirname(full);
+    const folder = dir === "." ? (this.loc.name ?? basename(this.loc.root)) : posix.basename(dir);
+    const stem = `${folder}-${name}`;
+    let suggested = stem;
+    for (let i = 2; same(suggested); i++) suggested = `${stem}-${i}`;
+    const prefix = input.includes("/") ? input.slice(0, input.lastIndexOf("/") + 1) : "";
+    return { name, at, suggested: prefix + suggested };
   }
 
   /** Ask for a new folder's name and make it. */

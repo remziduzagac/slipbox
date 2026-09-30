@@ -5502,4 +5502,26 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("enter");
     expect(readFileSync(join(notes, "todo-link.md"), "utf8")).toBe("[t](tasks.md)\n");
   });
+
+  test("a new note named like another is offered a distinct name from its folder; typed again, it's kept (17.5)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "projects/index.md" });
+    await h.keys("ctrl+n");
+    for (const c of "alpha") await h.keys(c);
+    await h.keys("enter");
+    expect(h.app.messages.at(-1)!.text).toContain("a note named alpha is at notes/alpha.md");
+    const p = h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    expect(p.text).toBe("projects-alpha");
+    await h.keys("enter");
+    expect(existsSync(join(root, "projects", "projects-alpha.md"))).toBe(true);
+    // Insisting: the same name typed again is made.
+    await h.keys("escape"); // the new note opened to be typed into
+    await h.app.run("note.open projects/index.md");
+    await h.keys("ctrl+n");
+    for (const c of "alpha") await h.keys(c);
+    await h.keys("enter", "ctrl+u");
+    for (const c of "alpha") await h.keys(c);
+    await h.keys("enter");
+    expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
+  });
 });

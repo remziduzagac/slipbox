@@ -748,6 +748,9 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
   unless the name has a known extension (`.toml`, `.py`…). A note starts with its title (`# Name`),
   opens, and is typed into on the line after the blank one; an
   existing file just opens. Nothing is made outside the vault, through a symlink or otherwise.
+  **A name another note has** (`17.5`) would make `[[name]]` reach either: the prompt comes back
+  with a distinct one from the new note's folder (`projects-alpha`, then `-2`…), and says where the
+  other is; typing the name again makes it anyway — a suggestion, not a rule.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
 
