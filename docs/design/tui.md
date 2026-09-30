@@ -376,7 +376,8 @@ keys.
   tabs and in earlier sessions — every note with a reading position (`slipbox history`'s list),
   and every open tab's — not already in the timeline, newest first, up to 100: each with when (the
   time today, else the day), or `tab N` when it's open in another tab; `enter` opens one in this
-  window. The heading is stepped over.
+  window. The heading is stepped over. The history never scrolls sideways: a name too long for the
+  pane beside its hint is cut (`…`), the hint kept.
 - **Filter (`/`, the explorer, the history and the outline):** a `› text` row at the top of the
   list, a rule under it (joined to the pane's border), then the list —
   while the pane has focus (otherwise `/` is find in the note); typing narrows the rows (`/`

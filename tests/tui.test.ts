@@ -1045,6 +1045,14 @@ describe("the left panel's views and filter", () => {
     const recent = later.app.historyRows().filter((r) => r.recent);
     expect(recent.map((r) => r.path).sort()).toEqual([...files].sort());
     expect(recent.every((r) => /^\d\d:\d\d$/.test(r.hint))).toBe(true);
+    // A name too long for the pane beside its hint is cut, the hint kept.
+    writeFileSync(join(root, "a-rather-long-note-name-here.md"), "# long\n");
+    ps.set("a-rather-long-note-name-here.md", top);
+    ps.save();
+    const narrow = await harness({ root, config: (c) => (c.ui.sidebar_width = 26) });
+    await narrow.keys("space", "h", "h");
+    const row = narrow.frame().split("\n").find((r) => r.includes("a-rather"))!;
+    expect(row).toMatch(/a-rather-long-\S*…\s+\d\d:\d\d/);
   });
   test("the history filters too", async () => {
     const h = await harness();
