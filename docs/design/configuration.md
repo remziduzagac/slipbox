@@ -190,7 +190,7 @@ The chrome roles most worth tuning:
 | `pane_title`, `pane_title_active` | the Explorer and Outline titles, unfocused and focused |
 | `breadcrumb*` | the breadcrumb row (`_band` its background, `_icon`, `_sep`, `_current`) |
 | `tree_guide` | the explorer's and the outline's tree lines |
-| `sidebar_vault`, `sidebar_repo` | in the explorer, a folder that is another vault (magenta) or repository (orange) |
+| `sidebar_vault`, `sidebar_repo` | in the explorer, a folder that is another vault or repository (a folder's blue) |
 | `scrollbar`, `scrollbar_track` | the scrollbar's thumb and track |
 | `cursor`, `cursor_line` | the cursor and its row |
 | `overlay*`, `keycap*` | popups: background, border, selection, headings, keycaps |

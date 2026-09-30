@@ -5377,19 +5377,19 @@ describe("vaults in the TUI (17.x)", () => {
   test("the explorer shows a nested vault with its own icon; enter goes into it (17.13)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "nested-vault", ".slipbox", "config.toml"), '[vault]\nid = "nestedid1"\nname = "inner-notes"\n');
-    const h = await harness({ root, open: "index.md" });
+    const h = await harness({ root, open: "index.md", config: (c) => (c.colors = { sidebar_vault: "#ff00aa" }) });
     h.app.region = "sidebar";
     const rows = h.app.explorerRows();
     const i = rows.findIndex((r) => r.path === "nested-vault");
     expect(rows[i]).toMatchObject({ kind: "root", root: { kind: "vault", name: "inner-notes" } });
     const f = h.frame();
     expect(f).toContain("◈ nested-vault inner-notes");
-    // Its own colour, bold — not a folder's.
+    // A folder's colour by default (its icon tells it apart), from a role of its own: set here.
+    expect(h.app.theme.roles.sidebar_vault.fg).not.toEqual(h.app.theme.roles.sidebar_dir.fg);
     const c = h.canvas();
     const y = c.toString().split("\n").findIndex((r) => r.includes("◈ nested-vault"));
     const x = c.toString().split("\n")[y]!.indexOf("◈");
-    expect(c.styles[y]![x]).toMatchObject({ fg: h.app.theme.roles.sidebar_vault.fg, bold: true });
-    expect(h.app.theme.roles.sidebar_vault.fg).not.toEqual(h.app.theme.roles.sidebar_dir.fg);
+    expect(c.styles[y]![x]).toMatchObject({ fg: h.app.theme.roles.sidebar_vault.fg });
     h.app.sidebar.selected = i;
     await h.keys("enter");
     expect(h.app.loc.root).toBe(join(root, "nested-vault"));
@@ -5413,7 +5413,8 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.frame()).toContain("⎇ code");
     const c = h.canvas();
     const y = c.toString().split("\n").findIndex((r) => r.includes("⎇ code"));
-    expect(c.styles[y]![c.toString().split("\n")[y]!.indexOf("⎇")]).toMatchObject({ fg: h.app.theme.roles.sidebar_repo.fg, bold: true });
+    expect(c.styles[y]![c.toString().split("\n")[y]!.indexOf("⎇")]).toMatchObject({ fg: h.app.theme.roles.sidebar_repo.fg });
+    expect(h.app.theme.roles.sidebar_repo.fg).toEqual(h.app.theme.roles.sidebar_dir.fg); // a folder's blue
     expect(topRow(h.frame())).toContain("home vault");
     h.app.enterRoot(h.app.explorerRows()[2]!);
     expect(h.app.loc).toMatchObject({ mode: "home", root: join(dir, "plain") });

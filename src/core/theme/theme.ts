@@ -195,9 +195,10 @@ export function themeFromPalette(
     sidebar_dir: { fg: p.blue },
     sidebar_selected: { fg: p.fg_strong, bg: p.surface, bold: true },
     sidebar_active: { fg: p.cyan },
-    // A folder that is a root of its own (17.13): never mistaken for a folder of this vault.
-    sidebar_vault: { fg: p.magenta, bold: true },
-    sidebar_repo: { fg: p.orange, bold: true },
+    // A folder that is a root of its own (17.13): a folder's colour — its icon tells it apart — and
+    // a role of its own, for [colors] to set.
+    sidebar_vault: { fg: p.blue },
+    sidebar_repo: { fg: p.blue },
     tab: { fg: p.comment },
     tab_active: { fg: p.fg_strong, bg: p.bg, bold: true },
     // Focus shows as brightness, never as colour: the active tab and the side panes' titles are
@@ -337,8 +338,6 @@ export function monoTheme(): Theme {
   roles.hover = { inverse: true };
   roles.topbar_button_on = { bold: true };
   roles.sidebar_active = { bold: true }; // the current note / section, without colour
-  roles.sidebar_vault = { bold: true }; // another vault: its icon says which kind
-  roles.sidebar_repo = { bold: true, italic: true };
   // Focus without colour: the focused title and the active tab are underlined too.
   roles.pane_title = { bold: true };
   roles.pane_title_active = { bold: true, underline: true };
