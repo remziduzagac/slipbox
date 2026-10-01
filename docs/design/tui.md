@@ -1055,12 +1055,12 @@ file's) — and, later, the language servers' (`19.x`). Each has a severity: err
 `[diagnostics] severity` (`warning`) is the least that shows, so a vault's notes not written yet — information —
 don't mark every page; `"info"` shows them too.
 
-- **The bar** (`space u e`, `[diagnostics] bar`): a column beside the text, left of the line numbers. On the row a
+- **The bar** (`space u d`, `[diagnostics] bar`): a column beside the text, left of the line numbers. On the row a
   line starts on — in the rendered view, the row its text starts on, or the next one drawn — how many problems start
   there (`+` past 9), in the worst one's colour (`error`, `warn`, `info`). With `"auto"`, the default, it takes its two
   columns once a file has had a problem, and keeps them while the file is open, so the text doesn't move as problems
   come and go; `"on"` keeps them always, `"off"` never. A line's number takes the worst one's colour too.
-- **The marks** (`space u shift+e`, `[diagnostics] marks`): where each problem is, underlined in its severity's
+- **The marks** (`space u shift+d`, `[diagnostics] marks`): where each problem is, underlined in its severity's
   colour (`problem_error`, `problem_warn`, `problem_info`; a syntax error keeps `syntax_error`). Source mode and the
   lens know each character's place: the problem's own characters. The rendered view knows each piece of text's line:
   a link's problem marks the link as drawn, any other the text its lines became.

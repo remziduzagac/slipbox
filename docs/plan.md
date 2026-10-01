@@ -197,6 +197,7 @@ changed.
 | Files beyond markdown: three groups, phase 3b before the vault | 2026-09-29 | `docs/idea.md`, `16.x` below |
 | `6.1` search: our own index, Scout later | 2026-10-01 | `docs/design/decisions.md` |
 | Phase 5: language servers both ways, linters, diagnostics everywhere | 2026-10-01 | below |
+| `19.6` trust: everything trusted, as in nvim and Helix | 2026-10-01 | `docs/design/decisions.md` |
 
 ### Phase 3 decided 2026-09-28 — editing, in five steps
 
@@ -304,6 +305,11 @@ optional `--if-unchanged` for careful writers.
 6. **New languages** (`16.18`–`16.23`): Swift, HTML and CSS, PHP, Dockerfile, the web frameworks (Vue, Svelte,
    Astro); Ruby and C/C++ to decide.
 
+**Trust (`19.6`), decided with the user:** everything is trusted. Servers and linters run wherever slipbox opens a
+file, the project's own copies (`node_modules/.bin`, `.venv/bin`, `vendor/bin`) included, and they run the project's
+code — build scripts, `eslint.config.js` — as they do under nvim or Helix; nothing asks first. What stays is the rule
+above: a vault's committed config never names a program to run.
+
 **Order:** `11.1` (the protocol library, for both directions), then the markdown server (`11.x`), then the
 diagnostics display on today's findings (`19.8`–`19.11`), then the client and finding servers (`19.1`–`19.7`),
 reading features, editing features, linters, and the languages.
@@ -312,7 +318,6 @@ reading features, editing features, linters, and the languages.
 
 | ID | Decision | Gates |
 | --- | --- | --- |
-| `19.6` | Trust: servers and linters run the project's code (build scripts, eslint configs, its binaries) | `19.4` |
 | `16.23` | Ruby and C/C++ | Phase 5 |
 | `10.5` | PDF base — `pdfkit` or `@react-pdf/renderer` | Phase 6+ |
 
@@ -551,12 +556,12 @@ source shown alike in every mode.*
 | 19.3 | Roots per language, from markers (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`…) |
 | 19.4 | Finding: the user's config, the project (`node_modules/.bin`, `.venv/bin`, `vendor/bin`), `PATH`, Mason |
 | 19.5 | Private installs: npm packages with Bun into slipbox's data folder, pinned, scripts off; `[lsp] auto_install` |
-| 19.6 | **decide** trust: servers and linters run the project's code — where, and asked how often |
+| 19.6 | **Decided:** trusted everywhere — servers and linters run the project's code, as in nvim and Helix |
 | 19.7 | `slipbox doctor`: per language, each server and linter — found where, installed, or missing and how to get it |
 | 19.8 | **Done.** Diagnostics: one list per file from every source — syntax, lint, links; servers to come |
 | 19.9 | **Done.** The bar: a column beside the text, each line's count coloured by its worst severity, every mode |
 | 19.10 | **Done.** Ranges marked: underlined in source mode, the lens and the rendered view |
-| 19.11 | **Done.** Toggles (`space u e`, `shift+e`) and `[diagnostics]`; the status line takes every source |
+| 19.11 | **Done.** Toggles (`space u d`, `shift+d`) and `[diagnostics]`; the status line takes every source |
 | 19.12 | Hover and signature help in a float |
 | 19.13 | Definition, references, implementation, type definition: a jump, or a list when there are several |
 | 19.14 | Document and workspace symbols: the outline and the switcher take the server's when there is one |

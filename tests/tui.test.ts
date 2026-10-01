@@ -3413,7 +3413,7 @@ describe("UI settings (space u)", () => {
     expect(h.canvas().line(pane.y).slice(pane.x, pane.textX).trim()).toBe("1");
     const full = h.app.currentLayout(h.app.view!).width;
     expect(full).toBeGreaterThan(100); // 200 columns: the toggle below has something to cap
-    await h.keys("space", "u", "d");
+    await h.keys("space", "u", "shift+w");
     expect(h.app.currentLayout(h.app.view!).width).toBeLessThanOrEqual(100);
     await h.keys("space", "u", "z");
     const f = h.frame();
@@ -7366,14 +7366,14 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     expect(statusRow(h.frame())).toMatch(/⚠ 1 {2}ℹ 1/);
   });
 
-  test("space u e hides the bar (the text takes its room), space u shift+e the marks; bar = \"off\" never shows it", async () => {
+  test("space u d hides the bar (the text takes its room), space u shift+d the marks; bar = \"off\" never shows it", async () => {
     const h = await harness({ root: vault(), open: "p.md" });
     h.frame();
     const before = rowOf(h, "See").at("See");
-    await h.keys("space", "u", "e");
+    await h.keys("space", "u", "d");
     expect(rowOf(h, "See").at("See")).toBe(before - 2);
     expect(h.app.messages.at(-1)!.text).toBe("Problems bar: off");
-    await h.keys("space", "u", "shift+e");
+    await h.keys("space", "u", "shift+d");
     const see = rowOf(h, "See");
     expect(see.styles[see.at("twin")]!.fg).not.toBe(h.app.theme.roles.problem_warn.fg!);
     const off = await harness({ root: vault(), open: "p.md", config: (c) => (c.diagnostics.bar = "off") });

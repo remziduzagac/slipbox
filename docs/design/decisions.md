@@ -197,6 +197,15 @@ one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back,
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
 
+## `19.6` — trust
+
+Language servers and linters run the project's code: rust-analyzer its build scripts, the ESLint server its
+`eslint.config.js`, the project's own `node_modules/.bin` and `.venv/bin`. Decided 2026-10-01 with the user:
+**everything is trusted**, as nvim and Helix trust it — no question per folder or repository, no list of trusted
+places. Unchanged by it: a vault's committed config never names a program to run (`command`, `args`, `environment`,
+`lint-command` are the user's config's only), so cloning a vault can't choose what runs; what the project's own
+tools do is the project's.
+
 ## `11.1` — the protocol library, both ways
 
 `vscode-languageserver` (10.1, the server's side) and `vscode-languageserver-protocol` (3.18, the client's: the

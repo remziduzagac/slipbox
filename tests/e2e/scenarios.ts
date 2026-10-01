@@ -672,12 +672,12 @@ export const SCENARIOS: Scenario[] = [
     run: async (s) => {
       await s.status("⚠ 1", 6000); // how many of each severity (19.8); the linter runs once the note opens
       // The problems bar (19.9) and the marks (19.10), each toggled off and back.
-      await leader(s, "u", "e");
+      await leader(s, "u", "d");
       await s.message("Problems bar: off");
-      await leader(s, "u", "e");
-      await leader(s, "u", "shift+e");
+      await leader(s, "u", "d");
+      await leader(s, "u", "shift+d");
       await s.message("Problems marked in the text: off");
-      await leader(s, "u", "shift+e");
+      await leader(s, "u", "shift+d");
       await leader(s, "v", "p");
       await s.see(/Lint \(1\)/);
       await s.see(/L3 +MD013 line-len/); // cut to the panel

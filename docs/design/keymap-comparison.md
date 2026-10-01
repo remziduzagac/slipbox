@@ -98,7 +98,8 @@ keys are its Linux and Windows defaults. `?` marks an Obsidian default not confi
 | outline | — | — | — | `␣o` |
 | rendered ↔ source | — | `C-S-v` | `C-e` | `C-e`, `␣nv`, `:source` |
 | the lens | — | — | live preview | `␣nl`, `:lens` |
-| wrap / readable width / zen | `:set wrap` | `A-z` / — / `C-k z` | — | `A-z`, `␣uw` / `␣ud` / `␣uz` |
+| wrap / readable width / zen | `:set wrap` | `A-z` / — / `C-k z` | — | `A-z`, `␣uw` / `␣uW` / `␣uz` |
+| problems bar / marks | `:set signcolumn` / — | — | — | `␣ud` / `␣uD` |
 | file info | `C-g` | — | — | `␣ni` |
 | help | `:help` | `F1` (palette) | — | `?`, `␣?`, `:help` |
 | quit | `:qa` | `C-q` | `C-q` | `C-q`, `␣qq`, `:qa`, `:q` on the last window |
