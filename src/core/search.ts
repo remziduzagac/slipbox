@@ -16,6 +16,7 @@ import { classify } from "./filetypes.ts";
 import { readText } from "./fsutil.ts";
 import type { Graph } from "./graph.ts";
 import { SearchIndex, WEIGHTS } from "./search-index.ts";
+import { sanitize } from "./sanitize.ts";
 import { tagName, tagsInLine } from "./tags.ts";
 
 // -------------------------------------------------------------------------------------------
@@ -387,7 +388,8 @@ function locate(path: string, group: "note" | "data", text: string, score: numbe
 
 /** A line as a snippet: white space run together, cut to about 120 characters around its first match, the words marked. */
 function snippetOf(raw: string, pos: QueryTerm[]): { snippet: string; marks: [number, number][] } {
-  let line = raw.replace(/\s+/g, " ").trim();
+  // Sanitized first, so the marks are where the words are in what's shown.
+  let line = sanitize(raw).replace(/\s+/g, " ").trim();
   const find = () => {
     const { folded, at } = fold(line);
     const marks: [number, number][] = [];
@@ -408,9 +410,10 @@ function snippetOf(raw: string, pos: QueryTerm[]): { snippet: string; marks: [nu
 
 /**
  * Search the vault: with the index when it's given (complete and caught up), else by scanning the
- * files. `texts`: files' text to use instead of the disk's (a scan of the TUI's unsaved notes).
+ * files. For a scan: `texts`, files' text to use instead of the disk's (the TUI's unsaved notes);
+ * `only`, just these files; `relax` false, never some of the words for want of all of them.
  */
-export function search(g: Graph, idx: SearchIndex | null, input: string, opts: { limit?: number; texts?: Map<string, string> } = {}): SearchResult {
+export function search(g: Graph, idx: SearchIndex | null, input: string, opts: { limit?: number; texts?: Map<string, string>; only?: string[]; relax?: boolean } = {}): SearchResult {
   const limit = opts.limit ?? 50;
   const q = parseQuery(input);
   const engine = idx ? "index" : "scan";
@@ -420,7 +423,7 @@ export function search(g: Graph, idx: SearchIndex | null, input: string, opts: {
     const files = idx ? idx.filesWhere({ tags: q.tags, pathPrefix: q.paths, limit }) : scanFiles(g, q, opts.texts).slice(0, limit);
     return { engine, relaxed: false, hits: files.map((path) => ({ path, line: 1, column: 1, heading: "", score: 0, snippet: "", marks: [], more: 0 })) };
   }
-  if (!idx) return scanSearch(g, q, limit, opts.texts);
+  if (!idx) return scanSearch(g, q, limit, opts.texts, opts.only, opts.relax ?? true);
   for (const relaxed of [false, true]) {
     if (relaxed && q.terms.filter((t) => !t.not).length < 2) break;
     const rows = idx.query(ftsMatch(q, relaxed)!, { tags: q.tags, pathPrefix: q.paths, limit }) ?? [];
@@ -439,9 +442,11 @@ interface Scanned {
   doc: Doc;
 }
 
-function scanned(g: Graph, texts?: Map<string, string>): Scanned[] {
+function scanned(g: Graph, texts?: Map<string, string>, only?: string[]): Scanned[] {
   const out: Scanned[] = [];
+  const keep = only ? new Set(only) : null;
   for (const [path, s] of searchable(g)) {
+    if (keep && !keep.has(path)) continue;
     let text = texts?.get(path);
     if (text === undefined) {
       try {
@@ -469,10 +474,10 @@ function scanFiles(g: Graph, q: SearchQuery, texts?: Map<string, string>): strin
 }
 
 /** The scan: each file's fields folded; every positive term in it (or some, relaxed), none of the rest; scored as BM25 roughly is. */
-function scanSearch(g: Graph, q: SearchQuery, limit: number, texts?: Map<string, string>): SearchResult {
+function scanSearch(g: Graph, q: SearchQuery, limit: number, texts?: Map<string, string>, only?: string[], relax = true): SearchResult {
   const pos = q.terms.filter((t) => !t.not);
   const neg = q.terms.filter((t) => t.not);
-  const files = scanned(g, texts).filter((f) => keeps(f, q));
+  const files = scanned(g, texts, only).filter((f) => keeps(f, q));
   const cands: { f: Scanned; counts: number[][] }[] = [];
   for (const f of files) {
     const d = f.doc;
@@ -483,7 +488,7 @@ function scanSearch(g: Graph, q: SearchQuery, limit: number, texts?: Map<string,
   }
   const has = (c: (typeof cands)[number], i: number) => c.counts[i]!.some((n) => n > 0);
   for (const relaxed of [false, true]) {
-    if (relaxed && pos.length < 2) break;
+    if (relaxed && (pos.length < 2 || !relax)) break;
     const kept = cands.filter((c) => (relaxed ? pos.some((_, i) => has(c, i)) : pos.every((_, i) => has(c, i))));
     if (!kept.length) continue;
     const idf = pos.map((_, i) => {

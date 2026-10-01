@@ -323,7 +323,8 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | outline picker: find a heading in this note | — | `space f o` |
 | the vault's tags (`:tags`), then a tag's notes (`:tag name`) | — | `space f t` |
 | heading path: the breadcrumb's headings as a dropdown | — | `space f b` |
-| search the vault's notes and files (open ones as they are); enter opens at the match | `ctrl+shift+f` | `space f g` |
+| find in every note and file: each line with the text (open ones as they are) | `ctrl+shift+f` | `space f g` |
+| search the vault: notes ranked by the words as you type (`:search`); enter opens at the match | — | `space f s` |
 | go to a line by number (`:42` too) | `ctrl+g` | `space f l` |
 | command palette / command line | `:`, `ctrl+shift+p` | `space f p` |
 | *(reserved for phase 4)* tags | — | `space f t` |

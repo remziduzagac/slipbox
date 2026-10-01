@@ -104,7 +104,7 @@ location = "state"             # state (never committed) | vault
 file = "scratch.md"            # a relative .md path; no "..", no hidden part (else the default);
                                # in the vault, a symlinked scratch or folder puts it in the state dir
 
-[search]                       # search (6.x): slipbox search
+[search]                       # search (6.x): slipbox search, space f s
 engine = "auto"                # auto: the index once built, else a scan | index (built first) | scan (no index)
 
 [context]                      # the context bundle (9.7): space s c, slipbox context

@@ -398,7 +398,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
 }
 
 /** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
-const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "note.rename", "vault.rename"]);
+const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "vault.rename"]);
 
 /** Commands in the order of core/command-specs.ts, which follows docs/design/keymap.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
@@ -1080,6 +1080,7 @@ export function registerActions(app: App): void {
       }),
     // Search the vault (ctrl+shift+f, space f g): every note and every file the explorer shows, an
     // open one as it is now (unsaved changes and all); enter opens it at the match.
+    "search.open": (a, arg) => a.openSearch(arg ?? ""),
     "find.vault": (a, arg) => {
       const run = (query: string) => {
         if (!query.trim()) return;

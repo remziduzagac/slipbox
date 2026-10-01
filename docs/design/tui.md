@@ -571,8 +571,16 @@ past theirs), so the content behind never runs up to the edge.
 - **Pickers:** quick switcher, heading picker, links, backlinks, history, tabs, theme and glyph
   pickers (with live preview; `esc` restores), UI settings, messages, info, and keys. The quick
   switcher lists recent notes and files first (kept in the session), the previous one on top, so
-  `ctrl+p enter` goes back; vault search (`ctrl+shift+f`, `space f g`) lists each matching line as
-  `path:line` with the line, an open note searched as it is now.
+  `ctrl+p enter` goes back; find in every note (`ctrl+shift+f`, `space f g`) lists each line with
+  the text or regex as `path:line` with the line, an open note searched as it is now.
+- **Search** (`6.5`, `6.9`; `space f s`, `:search words`): the vault's notes ranked by the words as they're typed —
+  as `slipbox search` ranks them (`docs/design/cli.md`, "Search") — each a row: `path:line`, the section's heading
+  and the line, its words marked, `+n` for the file's other sections with some of them. `enter` opens it on that
+  line (rendered, at the line's start; in source mode, on the word). The index is the app's to keep: opened (or made)
+  as the vault opens and brought up to the files in idle slices — the list says `the vault is being indexed: n of m
+  files…` the first time, and fills when it's done — then each file again as the graph hears it change (a save here,
+  the watcher, a rename, a CLI write). An unsaved note is searched as it's shown, in place of what the index has of
+  it. Without an index (a loose folder, `[search] engine = "scan"`) the files are scanned, and the title says so.
 - **Filtering** (`3.16`): each space-separated word as typed — its letters together, never one by
   one — and every word, in any order (`hand oper` finds `handbook/operations-handbook.md`); smart
   case, word by word. Ranked by where each word lands: in the label over its description, in the

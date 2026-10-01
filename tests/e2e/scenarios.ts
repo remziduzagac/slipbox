@@ -780,6 +780,25 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "search: space f s ranks the vault's notes as you type, the words marked; enter opens at the match",
+    run: async (s) => {
+      await leader(s, "f", "s");
+      await s.see("search the vault — words");
+      await s.type("dome shutter");
+      await s.see(/"dome shutter" — \d+ files/, 5000);
+      await s.see("projects/dome-refit.md:");
+      await s.keys("enter");
+      await s.status("dome-refit.md");
+      // :search takes the words; a phrase, a tag.
+      await s.keys(":");
+      await s.type('search "variable star" #survey');
+      await s.keys("enter");
+      await s.see("projects/variable-star-survey.md:");
+      await s.keys("escape");
+    },
+  },
+
   // --- editing --------------------------------------------------------------------------------
   {
     name: "source mode: i a I A o O type; esc; u, ctrl+r, U; ctrl+s writes",

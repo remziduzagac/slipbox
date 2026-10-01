@@ -1924,7 +1924,20 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     }
     if (item.detail && !footer) {
       const room = x + 2 + avail - cx - 2;
-      if (room > 4) cx += drawText(c, cx + 2, ry, truncate(item.detail, room), { ...dim, bg: st.bg }) + 2;
+      if (room > 4 && item.detailMarks?.length) {
+        // A search hit's words, marked in its line.
+        const detail = truncate(sanitize(item.detail), room);
+        let dx = cx + 2;
+        let di = 0;
+        for (const g of graphemes(detail)) {
+          const gw = graphemeWidth(g);
+          const on = item.detailMarks.some(([a, b]) => di >= a && di < b);
+          if (gw > 0) c.cell(dx, ry, g, gw, on ? { ...st, fg: matchSt.fg, bold: true } : { ...dim, bg: st.bg });
+          dx += gw;
+          di += g.length;
+        }
+        cx = dx + 2;
+      } else if (room > 4) cx += drawText(c, cx + 2, ry, truncate(item.detail, room), { ...dim, bg: st.bg }) + 2;
     }
     if (hint) drawText(c, x + w - 2 - stringWidth(hint), ry, hint, { ...dim, bg: st.bg });
   }

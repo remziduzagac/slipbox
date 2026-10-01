@@ -55,6 +55,7 @@ import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/
 import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { buildContext } from "../core/context.ts";
+import { IndexJob, indexFile, search, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
@@ -237,6 +238,8 @@ export interface Tab {
 export interface ListItem {
   label: string;
   detail?: string;
+  /** Where to mark `detail` (UTF-16 ranges): a search hit's words. */
+  detailMarks?: [number, number][];
   hint?: string;
   /** Key bindings, drawn as separate keycaps at the right (instead of `hint`). */
   keys?: string[];
@@ -602,6 +605,7 @@ export class App {
     this.host = opts.host;
     this.configFile = opts.configFile;
     this.live = opts.watch !== false;
+    this.startSearch();
     this.explicitTheme = opts.themeName;
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
     loadConfig({ vaultFile: vaultConfigPath(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood });
@@ -781,6 +785,7 @@ export class App {
     this.lintCmd = lintCommand(next.lint, this.loc.root);
     const differs = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
     const changed = (Object.keys(next) as (keyof Config)[]).filter((s) => differs(before[s], next[s]));
+    if (changed.includes("search") && !changed.includes("walk")) this.startSearch();
 
     const oldUi = uiDefaults(before);
     const newUi = uiDefaults(next);
@@ -806,6 +811,7 @@ export class App {
     if (changed.includes("walk")) {
       this.graph = new Graph(this.loc, this.config).build(true, "lazy");
       this.graph.reach = this.reach;
+      this.startSearch();
       this.indexInBackground();
       this.invalidateTree();
       for (const b of this.buffers.values()) b.invalidateLayouts();
@@ -1032,6 +1038,133 @@ export class App {
     if (!this.lintCmd) return;
     this.lintCmd = null;
     this.message("warn", `lint: ${this.config.lint.command.length ? "[lint] command" : "markdownlint-cli2 (through npx)"} couldn't run — [lint] command sets another; enabled = "off" stops trying`);
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Search (6.5, 6.9): the vault's index kept as the app runs — brought up to the files in idle
+  // slices when the vault opens, then each file as the graph hears it change (a save here, the
+  // watcher, a rename) — and a list ranked as you type.
+
+  /** The vault's search index; null: none here (a loose folder, `[search] engine = "scan"`, SQLite couldn't). */
+  searchIndex: SearchIndex | null = null;
+  /** Bringing the index up to the files, a slice at a time; null when it's done. */
+  searchJob: IndexJob | null = null;
+  private stopSearchFeed: (() => void) | null = null;
+  /** The search list on screen, refreshed when the index is ready. */
+  private searchList: ListOverlay | null = null;
+
+  /** The index opened (or made) and caught up in the background; the graph's changes followed. */
+  startSearch(): void {
+    this.stopSearchFeed?.();
+    this.stopSearchFeed = null;
+    this.searchIndex?.close();
+    this.searchIndex = null;
+    this.searchJob = null;
+    if (this.loc.mode === "home" || this.config.search.engine === "scan") return;
+    const idx = SearchIndex.open(this.loc);
+    if (!idx) return;
+    const g = this.graph;
+    this.searchIndex = idx;
+    // Every change the graph hears of, at once: a file is quick to index again.
+    this.stopSearchFeed = g.onChange((c) => {
+      if (this.searchIndex !== idx || c.kind === "moved") return;
+      try {
+        indexFile(g, idx, c.path);
+      } catch {}
+    });
+    let job: IndexJob;
+    try {
+      job = new IndexJob(g, idx);
+    } catch {
+      return;
+    }
+    if (job.done) {
+      job.step();
+      return;
+    }
+    this.searchJob = job;
+    const tick = () => {
+      if (this.searchJob !== job) return;
+      let done = false;
+      try {
+        done = job.step(12);
+      } catch {
+        done = true;
+      }
+      if (!done) {
+        const t = setTimeout(tick, 0);
+        (t as { unref?: () => void }).unref?.();
+        return;
+      }
+      this.searchJob = null;
+      if (this.overlay && this.overlay === this.searchList) refilter(this.overlay);
+      this.host.requestRender();
+    };
+    const t = setTimeout(tick, 0);
+    (t as { unref?: () => void }).unref?.();
+  }
+
+  /** Once the index is built and caught up (tests). */
+  async whenSearchIndexed(): Promise<void> {
+    while (this.searchJob) await new Promise((r) => setTimeout(r, 5));
+  }
+
+  /**
+   * Search the vault: the index once it's caught up, else a scan of the files. Unsaved notes count
+   * as they are on screen: scanned, in place of what the index has of them.
+   */
+  searchVault(input: string, limit = 50): SearchResult {
+    const idx = this.searchIndex && !this.searchJob ? this.searchIndex : null;
+    const unsaved = new Map<string, string>();
+    for (const b of this.dirtyBuffers()) if (b.rel !== null && !b.virtual && (this.graph.notes.has(b.rel) || b.kind.group === "data")) unsaved.set(b.rel, b.source);
+    if (!idx) return search(this.graph, null, input, { limit, texts: unsaved });
+    const r = search(this.graph, idx, input, { limit });
+    if (!unsaved.size) return r;
+    const mine = new Map(search(this.graph, null, input, { limit, texts: unsaved, only: [...unsaved.keys()], relax: r.relaxed }).hits.map((h) => [h.path, h]));
+    const hits = r.hits.filter((h) => !unsaved.has(h.path) || mine.has(h.path)).map((h) => mine.get(h.path) ?? h);
+    for (const h of mine.values()) if (!hits.includes(h)) hits.unshift(h);
+    return { ...r, hits: hits.slice(0, limit) };
+  }
+
+  /** The search list (6.5): notes ranked by the words as they're typed; enter opens one at its match. */
+  openSearch(seed = ""): void {
+    let list: ListOverlay | null = null;
+    const titled = (t: string) => {
+      if (list) list.title = t;
+      return t;
+    };
+    const HELP = 'search the vault — words, "a phrase", prefix*, -not, title:word, #tag, path:folder/';
+    const source = (input: string): ListItem[] => {
+      if (!input.trim()) return (titled(HELP), []);
+      const job = this.searchJob;
+      if (job && this.searchIndex) return (titled(`search — the vault is being indexed: ${job.indexed.toLocaleString("en")} of ${job.todo.length.toLocaleString("en")} files…`), []);
+      const r = this.searchVault(input);
+      const n = r.hits.length;
+      titled(`"${input.trim()}" — ${n} ${n === 1 ? "file" : "files"}${r.relaxed ? " with some of the words" : ""}${r.engine === "scan" ? " (scanned: no index here)" : ""}`);
+      return r.hits.map((h) => {
+        const lead = h.heading ? `${h.heading} — ` : "";
+        return {
+          label: `${h.path}:${h.line}`,
+          detail: `${lead}${h.snippet}`,
+          detailMarks: h.marks.map(([a, b]) => [a + lead.length, b + lead.length] as [number, number]),
+          hint: h.more ? `+${h.more}` : undefined,
+          data: h,
+        };
+      });
+    };
+    this.openList({
+      title: HELP,
+      items: [],
+      source,
+      input: seed,
+      accept: (item) => {
+        const h = item.data as { path: string; line: number; column: number };
+        this.openAt(h.path, h.line, h.column);
+      },
+    });
+    list = this.overlay as ListOverlay;
+    this.searchList = list;
+    if (seed) list.title = titled(list.title);
   }
 
   /** A note's findings for the text as it is now, by line; null when there are none to show. */
@@ -3047,15 +3180,26 @@ export class App {
 
   /** Open a linter's finding: its note at its line (and column, when it says one). */
   jumpToLint(i: LintIssue): void {
-    const rel = relative(this.loc.root, i.file);
-    this.open(rel, { heading: null, headingIndex: 0, offset: 0, line: i.line });
+    this.openAt(relative(this.loc.root, i.file), i.line, i.column ?? 1);
+  }
+
+  /**
+   * Open a file at a line and column (1-based; the column in code points): rendered, at the start of
+   * the line's row — a rendered row has no source columns; in source mode, on the column.
+   */
+  openAt(rel: string, line: number, column = 1): void {
+    this.open(rel, { heading: null, headingIndex: 0, offset: 0, line });
     const v = this.view;
     if (v && v.buf.rel === rel) {
-      // Rendered, the start of its line's row (a rendered row has no source columns); in source mode, the column.
       const layout = this.currentLayout(v);
-      const row = layout.lines.findIndex((l) => l.src === i.line && !l.decor);
+      const row = layout.lines.findIndex((l) => l.src === line && !l.decor);
       if (row >= 0 && !layout.lines[row]!.srcMap) this.moveCursor(v, { row, col: 0 });
-      else placeAt(this, v, (v.buf.lineStarts()[i.line - 1] ?? 0) + Math.max(0, (i.column ?? 1) - 1));
+      else {
+        const start = v.buf.lineStarts()[line - 1] ?? 0;
+        const end = v.buf.source.indexOf("\n", start);
+        const text = v.buf.source.slice(start, end < 0 ? undefined : end);
+        placeAt(this, v, start + [...text].slice(0, Math.max(0, column - 1)).join("").length);
+      }
     }
     this.region = "content";
     if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
@@ -5932,6 +6076,7 @@ export class App {
     this.reach = new Reach(target);
     this.graph = new Graph(target, this.config).build(true, "lazy");
     this.graph.reach = this.reach;
+    this.startSearch();
     for (const e of this.graph.errors) this.message("warn", e);
     this.positions = new PositionStore(target);
     this.buffers.clear();
@@ -6137,6 +6282,7 @@ export class App {
       this.reach = new Reach(this.loc);
       this.graph = new Graph(this.loc, this.config).build(true, "lazy");
       this.graph.reach = this.reach;
+      this.startSearch();
       if (this.live) this.indexInBackground();
     }
     this.afterFileOp();

@@ -405,11 +405,11 @@ common, and the only reason they are step 0.
 | 6.2 | **Done** (`find`, `space f g`). Literal search: every match |
 | 6.3 | **Done** (`find --regex`). Regex search |
 | 6.4 | **Done.** Scoping by tag and folder: `#tag` / `tag:x` (nested tags too), `path:folder/` |
-| 6.5 | Results list and navigation in the TUI: ranked, as you type |
+| 6.5 | **Done.** Results list and navigation in the TUI (`space f s`): ranked as you type, the words marked |
 | 6.6 | **Done.** The search index: FTS5 in the cache, a row per file, BM25; caught up by size and mtime |
 | 6.7 | **Done.** The change feed: every change to the vault's files through the graph (`onChange`) |
 | 6.8 | **Done.** `slipbox search` (ranked; the index, else a scan), `slipbox index`; `[search] engine` |
-| 6.9 | The TUI keeps the index: built in the background, kept by the feed; unsaved notes searched too |
+| 6.9 | **Done.** The TUI keeps the index: built in idle slices, kept by the feed; unsaved notes searched as shown |
 | 6.10 | Scout, an outside engine: behind the same API, told of changes by the feed (`slipbox changes`) |
 
 ## Write safety — `7.x`

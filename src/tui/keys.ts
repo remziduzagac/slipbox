@@ -186,6 +186,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "ctrl+backspace": "find.replace", // what many terminals send for ctrl+h (the same byte)
   "ctrl+shift+f": "find.vault",
   "leader f g": "find.vault",
+  "leader f s": "search.open",
   "leader f r": "find.replace",
   "ctrl+p": "switcher.open",
   "leader f f": "switcher.open",
@@ -627,6 +628,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   mv: "note.rename",
   relink: "link.relink",
   context: "context.copy",
+  search: "search.open",
   "undo-rename": "rename.undo",
   delete: "note.delete",
   trash: "trash.open",

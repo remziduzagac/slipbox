@@ -119,7 +119,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   // find
   { id: "find.open", title: "Find in note", cli: "slipbox find <query> [<note>]", desc: "Searches this note; the cursor goes to matches" },
   { id: "find.replace", title: "Find and replace", cli: "slipbox replace <note> <old> <new>", desc: "Find with a replace row under it: enter replaces one, alt+enter all, as one undo step" },
-  { id: "find.vault", title: "Search the vault", cli: "slipbox find <query>", desc: "Searches every note (and open files) for text; enter opens the note at the match" },
+  { id: "find.vault", title: "Find in every note", cli: "slipbox find <query>", desc: "Every line of every note (and open file) with the text or regex; enter opens the note at the match" },
+  { id: "search.open", title: "Search the vault", cli: "slipbox search <words…>", desc: 'Notes ranked by the words as you type: "a phrase", prefix*, -not, title:, #tag, path:; enter opens one at its match' },
   { id: "find.substitute", title: "Substitute: s/old/new/", cli: "slipbox replace <note> <old> <new> --regex --first-per-line [--lines A-B]", desc: "Vim's :s — on this line, % the note, '<,'> the selection; g all on a line, i ignore case, c confirm" },
   { id: "find.next", title: "Next match", cli: "slipbox find <query> <note>", desc: "Moves to the next match after the cursor, wrapping at the end" },
   { id: "find.prev", title: "Previous match", cli: "slipbox find <query> <note>", desc: "Moves to the previous match before the cursor, wrapping at the top" },
