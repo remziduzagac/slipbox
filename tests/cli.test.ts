@@ -437,6 +437,22 @@ describe("the vault and the tool", () => {
     expect(slipbox(["search", "木曽原"], { cwd: dir }).out).toBe("people/partners-and-names.md:84:35  Contacts — - Kiso-Hara Astronomical Society ([木曽原])\n");
     expect(slipbox(["info"], { cwd: dir }).out).toMatch(/\nsearch {4}auto — index: \d+ files\n/);
   });
+  test("changed, diff, worktrees: this branch against main (5.13, 5.14)", () => {
+    const dir = join(sandbox, "gitcli");
+    mkdirSync(dir, { recursive: true });
+    const git = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", dir, ...args]);
+    writeFileSync(join(dir, "plan.md"), "# Plan\n\nfirst\n");
+    expect(slipbox(["init", dir, "--name", "gitcli"]).code).toBe(0);
+    if (git("init", "-q", "-b", "main").exitCode !== 0) return;
+    git("add", "-A");
+    git("commit", "-q", "-m", "start");
+    git("checkout", "-q", "-b", "feat");
+    writeFileSync(join(dir, "plan.md"), "# Plan\n\nsecond\n");
+    expect(slipbox(["changed"], { cwd: dir }).out).toBe("M plan.md\n");
+    expect(slipbox(["diff", "plan.md"], { cwd: dir }).out).toBe("@@ line 3\n  # Plan\n  \n- first\n+ second\n");
+    expect(slipbox(["worktrees", "--json"], { cwd: dir }).json.data).toMatchObject([{ path: dir, branch: "feat", main: true, current: true }]);
+    expect(slipbox(["changed", "--base", "nope"], { cwd: dir }).code).toBe(3);
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);

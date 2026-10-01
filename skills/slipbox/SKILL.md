@@ -127,6 +127,8 @@ slipbox footnotes <note> add 12:30 'Source: the dome log'   # [^N] at line 12, c
 slipbox footnotes <note> edit 3 'New text'   # also: rm <label>, rename <label> <new>; --if-unchanged <sha>
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
 slipbox search dome shutter --json       # notes ranked by the words: hits[{path, line, column, heading, snippet}]
+slipbox changed --json                   # what this branch changed against main: files[{path, state, from?}]
+slipbox diff <note> --json               # the note's diff against where the branch left main: rows[{kind, text, line}]
 slipbox search '"exact phrase" -draft #project path:notes/'   # phrases, -not, a tag, a folder; prefix* too
 slipbox context <note>                   # the note, what it links to and what links to it: one markdown document
 slipbox context <note> --depth 2 --limit 40 --no-backlinks   # further out, more files, nothing linking in

@@ -35,7 +35,7 @@ import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { Graph, type LinkProblem } from "../core/graph.ts";
 import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
-import type { Layout } from "../core/layout/ir.ts";
+import { type Layout, posOfSrc, srcAt } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
 import { stateDir, userConfigFile } from "../core/paths.ts";
 import {
@@ -53,12 +53,14 @@ import {
   TOP,
   type UiOverride,
 } from "../core/position.ts";
-import { applyColorOverrides, listThemes, loadTheme, type Theme } from "../core/theme/index.ts";
+import { applyColorOverrides, listThemes, loadTheme, type Role, type Theme } from "../core/theme/index.ts";
 import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { buildContext } from "../core/context.ts";
 import { IndexJob, indexFile, search, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
+import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusLater, worktreeList } from "../core/gitops.ts";
+import { diffRows } from "../core/merge.ts";
 import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
@@ -99,6 +101,18 @@ import {
   parseGroup,
   prettyKey,
 } from "./keys.ts";
+
+/** A folder's git state is its strongest file's (5.11). */
+const GIT_RANK: Record<GitState, number> = { deleted: 0, renamed: 1, modified: 2, new: 3, conflict: 4 };
+
+/** The first line of a file with a merge's conflict marker, or 0. */
+function conflictLine(abs: string): number {
+  try {
+    return readText(abs).text.split(/\r?\n/).findIndex((l) => /^<{7}( |$)/.test(l)) + 1;
+  } catch {
+    return 0;
+  }
+}
 
 /** A branch switch's files keep arriving for a moment after HEAD moved (the watcher's debounce,
  *  a big checkout): not taken for moves until then (5.9). */
@@ -244,6 +258,8 @@ export interface Tab {
 
 export interface ListItem {
   label: string;
+  /** The label's colour (a diff's lines, a change's state), when not the list's. */
+  role?: Role;
   detail?: string;
   /** Where to mark `detail` (UTF-16 ranges): a search hit's words. */
   detailMarks?: [number, number][];
@@ -371,6 +387,8 @@ export interface ProblemRow {
   link?: LinkProblem;
   /** A linter's finding (3.21). */
   lint?: LintIssue;
+  /** A file in a merge's conflict (5.12), at its first marker. */
+  conflict?: { path: string; line: number };
 }
 
 export const RIGHT_VIEWS: PanelView<RightView>[] = [
@@ -659,6 +677,7 @@ export class App {
       if (this.config.watch.enabled) this.startWatcher();
       this.startPolling();
       this.indexInBackground();
+      this.refreshGit();
     }
   }
 
@@ -1121,6 +1140,7 @@ export class App {
     this.checkHead();
     if (!batches.length) return;
     const merged: WatchBatch = { changes: batches.flatMap((b) => b.changes), rescan: batches.some((b) => b.rescan) };
+    this.refreshGit();
     if (this.now() - this.switchedAt < SWITCH_SETTLE_MS) this.graph.pauseMoves(() => this.applyChanges(merged));
     else this.applyChanges(merged);
     this.host.requestRender();
@@ -1134,11 +1154,161 @@ export class App {
     const was = this.head;
     this.head = now;
     if (now?.branch === was?.branch && now?.commit === was?.commit) return false;
+    this.refreshGit();
     // A repository that appeared (`git init`) or went: only the top bar has news.
     if (!now || !was) return true;
     this.switchedAt = this.now();
     this.headMoved(was, now);
     return true;
+  }
+
+  // What git knows of the files (5.11–5.14): each one's state for the explorer's marks and the
+  // Problems' conflicts — asked of git in the background, a moment after anything changed — and,
+  // on request, what this branch changed against the base, a note's diff, the worktrees.
+
+  /** Each changed file's state, by vault path; null until git has answered (or with no git). */
+  gitStates: Map<string, GitState> | null = null;
+  /** A folder's: the strongest of what's in it. */
+  gitFolders = new Map<string, GitState>();
+  private gitTimer: ReturnType<typeof setTimeout> | null = null;
+  private gitAsking: Promise<void> | null = null;
+
+  /** Ask git again, a moment from now (many changes, one question). */
+  refreshGit(): void {
+    if (this.gitTimer || !this.live) return;
+    this.gitTimer = setTimeout(() => {
+      this.gitTimer = null;
+      void this.refreshGitNow().then(() => this.host.requestRender());
+    }, 250);
+    (this.gitTimer as { unref?: () => void }).unref?.();
+  }
+
+  /** Ask git now: each file's state, by vault path, and each folder's. */
+  refreshGitNow(): Promise<void> {
+    if (this.gitAsking) return this.gitAsking;
+    const c = this.checkout;
+    const root = this.loc.root;
+    if (!c) {
+      this.gitStates = null;
+      this.gitFolders.clear();
+      return Promise.resolve();
+    }
+    this.gitAsking = statusLater(c)
+      .then((status) => {
+        if (this.loc.root !== root) return;
+        const states = new Map<string, GitState>();
+        const folders = new Map<string, GitState>();
+        for (const [path, st] of status ?? []) {
+          const rel = inVault(c, root, path);
+          if (rel === null || st === "deleted") continue;
+          states.set(rel, st);
+          for (let d = posix.dirname(rel); d !== "."; d = posix.dirname(d)) {
+            const had = folders.get(d);
+            if (!had || GIT_RANK[st] > GIT_RANK[had]) folders.set(d, st);
+          }
+        }
+        this.gitStates = status ? states : null;
+        this.gitFolders = folders;
+        this.invalidateTree();
+      })
+      .finally(() => {
+        this.gitAsking = null;
+      });
+    return this.gitAsking;
+  }
+
+  /** The base branch here: `[git] base`, else main or master; null (said) when there's none. */
+  private gitBase(c: Checkout): string | null {
+    const base = baseBranch(c, this.config.git.base);
+    if (!base) this.message("warn", this.config.git.base ? `no branch or commit "${this.config.git.base}" ([git] base)` : "no base branch: neither main nor master is there — [git] base sets one");
+    return base;
+  }
+
+  /** `space g c` (5.13): what this branch changed against the base, committed or not; enter: its diff. */
+  openChanges(): void {
+    const c = this.checkout;
+    if (!c) return this.message("info", "not in a git repository");
+    const base = this.gitBase(c);
+    if (!base) return;
+    const r = changedSince(c, base);
+    if (!r) return this.message("warn", "git couldn't say what changed");
+    const files = r.files.map((f) => ({ ...f, rel: inVault(c, this.loc.root, f.path) })).filter((f) => f.rel !== null);
+    if (!files.length) return this.message("info", `nothing changed against ${base}`);
+    const letter: Record<GitState, string> = { new: "+", modified: "M", renamed: "R", deleted: "D", conflict: "!" };
+    const role: Record<GitState, Role> = { new: "git_new", modified: "git_modified", renamed: "git_modified", deleted: "diff_del", conflict: "git_conflict" };
+    this.openList({
+      title: `Changed against ${base} (${files.length}) — enter: the diff`,
+      items: files.map((f) => ({ label: `${letter[f.state]} ${f.rel}`, role: role[f.state], detail: f.from ? `from ${inVault(c, this.loc.root, f.from) ?? f.from}` : undefined, data: f })),
+      accept: (item) => {
+        const f = item.data as { rel: string; path: string; state: GitState };
+        this.showGitDiff(f.rel, () => this.openChanges());
+      },
+    });
+  }
+
+  /** `space g d` (5.13): this note's changes on the branch — against where it left the base. */
+  openGitDiff(): void {
+    const rel = this.view?.buf.rel;
+    if (!rel) return this.message("info", "diff: open a note first");
+    this.showGitDiff(rel);
+  }
+
+  /** A file's diff against the merge base, a row a line, coloured; enter goes to the line; esc: `back`. */
+  showGitDiff(rel: string, back?: () => void): void {
+    const c = this.checkout;
+    if (!c) return this.message("info", "not in a git repository");
+    const base = this.gitBase(c);
+    if (!base) return;
+    const mergeBase = mergeBaseOf(c, base);
+    if (!mergeBase) return this.message("warn", `this branch and ${base} have no commit in common`);
+    const before = showAt(c, mergeBase, inCheckout(c, this.loc.root, rel)) ?? "";
+    let now = "";
+    const open = this.buffers.get(rel);
+    try {
+      now = open ? open.source : readText(join(this.loc.root, rel)).text;
+    } catch {}
+    const rows = diffRows(before, now);
+    const role: Record<string, Role> = { "@@": "diff_head", "+": "diff_add", "-": "diff_del" };
+    this.openList({
+      title: `${rel} against ${base}${back ? " — esc: the changes" : ""}`,
+      filterable: false,
+      items: rows.length
+        ? rows.map((r) => ({ label: r.kind === "@@" ? `@@ ${r.text}` : `${r.kind} ${sanitize(r.text.replace(/\t/g, "  "))}`, role: role[r.kind], data: r }))
+        : [{ label: `no differences from ${base}`, data: null }],
+      accept: (item) => {
+        const r = item.data as { line: number } | null;
+        if (r && existsSync(join(this.loc.root, rel))) this.openAt(rel, r.line);
+      },
+      ...(back ? { cancel: back } : {}),
+    });
+  }
+
+  /** `space g w` (5.14): the repository's checkouts by branch; enter goes into one, at this note. */
+  openWorktrees(): void {
+    const c = this.checkout;
+    if (!c) return this.message("info", "not in a git repository");
+    const list = worktreeList(c);
+    if (!list?.length) return this.message("warn", "git couldn't list the worktrees");
+    const here = relative(c.root, this.loc.root);
+    const note = this.view?.buf.rel ?? null;
+    this.openList({
+      title: `Worktrees (${list.length}) — enter: this note there`,
+      items: list.map((w) => ({
+        label: `${w.path === c.root ? "● " : "  "}${this.glyphs.branch} ${w.branch ?? `(${w.head?.slice(0, 7) ?? "detached"})`}`,
+        detail: `${w.path}${w.main ? "  (main)" : ""}`,
+        data: w,
+      })),
+      accept: (item) => {
+        const w = item.data as { path: string };
+        if (w.path === c.root) return;
+        const vault = join(w.path, here);
+        if (!isVaultRoot(vault)) return this.message("warn", `${vault} isn't a vault (no .slipbox/ on that branch)`);
+        const there = note && existsSync(join(vault, note)) ? join(vault, note) : null;
+        const v = this.view;
+        this.switchVault(rootAt(vault), there, there && v ? { ...v.topAnchor } : undefined);
+        if (note && !there) this.message("info", `${note} isn't on that branch: its vault opened instead`);
+      },
+    });
   }
 
   private headMoved(was: { branch: string | null; commit: string | null }, now: { branch: string | null; commit: string | null }): void {
@@ -2079,6 +2249,7 @@ export class App {
     }
     // Stamped as written: an agent's write landing right after is a change, not ours.
     if (buf.rel !== null) this.watcher?.noteOwnWrite(buf.rel, written);
+    this.refreshGit();
     // The index learns what we wrote (the watcher skips our own writes): the note's links, for
     // backlinks, and its stamp — a later watcher resync from the index must not take our own
     // save for someone else's change.
@@ -2096,8 +2267,10 @@ export class App {
   }
 
   /** The source line under the cursor: where a hand-off opens the note. */
+  /** The source line under the cursor: the span's it's on (a rendered paragraph's rows carry only its first). */
   cursorLine(view: View): number {
-    return this.currentLayout(view).lines[view.cur.row]?.src ?? 1;
+    const line = this.currentLayout(view).lines[view.cur.row];
+    return line ? srcAt(line, view.cur.col) : 1;
   }
 
   /** Step aside for the editor (4.1): it runs in this terminal; the note reloads after it. */
@@ -2785,6 +2958,7 @@ export class App {
 
   /** After files moved, came or went: the tree, the watcher and the layouts follow. */
   private afterFileOp(): void {
+    this.refreshGit();
     this.invalidateTree();
     this.watcher?.sync(this.loc.mode !== "home" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
     for (const b of this.buffers.values()) b.invalidateLayouts();
@@ -3276,6 +3450,19 @@ export class App {
         }
       }
     }
+    // A merge's conflicts (5.12): the files git says are unmerged, each at its first marker.
+    const conflicts = [...(this.gitStates ?? [])].filter(([, st]) => st === "conflict").map(([path]) => path).sort();
+    const shownConflicts = conflicts.filter((n) => !q || match(q, n));
+    if (shownConflicts.length) {
+      const folded = !q && this.problemsFolded.has("Conflicts");
+      out.push({ section: "Conflicts", heading: true, label: `Conflicts (${conflicts.length})`, detail: "", text: "Conflicts", folded });
+      if (!folded) {
+        for (const path of shownConflicts) {
+          const line = conflictLine(join(this.loc.root, path));
+          out.push({ section: "Conflicts", heading: false, label: path, detail: line ? `L${line}` : "", text: path, folded: false, conflict: { path, line: Math.max(1, line) } });
+        }
+      }
+    }
     // Orphans (9.5): each a note's row alone.
     const orphans = p.orphans.filter((n) => !q || match(q, n));
     if (!q || orphans.length) {
@@ -3313,10 +3500,24 @@ export class App {
   openAt(rel: string, line: number, column = 1): void {
     this.open(rel, { heading: null, headingIndex: 0, offset: 0, line });
     const v = this.view;
-    if (v && v.buf.rel === rel) {
+    if (v && v.buf.rel === rel) this.placeAtLine(v, line, column);
+    this.region = "content";
+    if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
+  }
+
+  /**
+   * The cursor onto a source line (1-based; the column in code points): rendered, onto that line's
+   * text — at its row's start, or inside a paragraph joined from several lines; in source mode, on
+   * the column. A rendered row has no source columns: the column counts there only in source mode.
+   */
+  placeAtLine(v: View, line: number, column = 1): void {
+    {
       const layout = this.currentLayout(v);
       const row = layout.lines.findIndex((l) => l.src === line && !l.decor);
-      if (row >= 0 && !layout.lines[row]!.srcMap) this.moveCursor(v, { row, col: 0 });
+      // Rendered: inside a paragraph joined from several lines, onto that line's text.
+      const inside = row < 0 && !v.source ? posOfSrc(layout.lines, line) : null;
+      if (inside && !layout.lines[inside.row]!.srcMap) this.moveCursor(v, inside);
+      else if (row >= 0 && !layout.lines[row]!.srcMap) this.moveCursor(v, { row, col: 0 });
       else {
         const start = v.buf.lineStarts()[line - 1] ?? 0;
         const end = v.buf.source.indexOf("\n", start);
@@ -3324,13 +3525,12 @@ export class App {
         placeAt(this, v, start + [...text].slice(0, Math.max(0, column - 1)).join("").length);
       }
     }
-    this.region = "content";
-    if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
   }
 
   /** A Problems row opened: its problem; a note's row, the note at its first in that section, of `rows` (the ones
    *  shown, so a filter's pick) — an orphan's, the note. A heading's does nothing. */
   private openProblemRow(row: ProblemRow, rows: ProblemRow[]): void {
+    if (row.conflict) return this.openAt(row.conflict.path, row.conflict.line);
     if (row.link) return this.jumpToProblem(row.link);
     if (row.lint) return this.jumpToLint(row.lint);
     if (!row.note || row.heading) return;

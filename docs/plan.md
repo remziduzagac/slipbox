@@ -394,6 +394,10 @@ common, and the only reason they are step 0.
 | 5.8 | Incremental graph update from watch events |
 | 5.9 | **Done.** `HEAD` moves as one event: git's changes held while it writes; no moves; each branch its tabs |
 | 5.10 | **Done.** Autosave waits out git's index lock, and so does the watcher's news (`5.9`) |
+| 5.11 | **Done.** Git's marks in the explorer: each changed file's state, a folder with one; asked in the background |
+| 5.12 | **Done.** A merge's conflicts in Problems and `slipbox problems`: each unmerged file at its first marker |
+| 5.13 | **Done.** What this branch changed against the base, and a note's diff: `space g c`, `space g d`; CLI |
+| 5.14 | **Done.** The worktrees by branch: `space g w` opens this note in another; `slipbox worktrees` |
 
 ## Search — `6.x`
 

@@ -61,6 +61,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 17.18 | a file's root: a vault or the home vault; identity on open; `init` |
 | `core/registry.ts` | 17.2–17.6 | a vault's identity, the home vault, the machine's vaults, storage keys, names |
 | `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
+| `core/gitops.ts` | 5.11–5.14 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
 | `core/reach.ts` | 17.8–17.11 | other vaults: `[[vault:note]]`, paths out of the root, their backlinks here |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
 | `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |

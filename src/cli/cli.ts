@@ -15,6 +15,9 @@ import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readS
 import { copyText } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
 import { catchUp, search, SearchIndex } from "../core/search.ts";
+import { type Checkout, checkoutOf } from "../core/git.ts";
+import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusOf, worktreeList } from "../core/gitops.ts";
+import { diffRows } from "../core/merge.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
@@ -134,6 +137,9 @@ Usage:
   slipbox search <words…>           the vault's notes ranked by the words: "phrases", prefix*, -not, title:, #tag, path:
                                     [--limit N]
   slipbox index                     build or bring up to date the vault's search index  [--rebuild]
+  slipbox changed                   what this branch changed against the base (main), committed or not  [--base <ref>]
+  slipbox diff <note>               the note's changes on this branch: against where it left the base  [--base <ref>]
+  slipbox worktrees                 the repository's checkouts: the main one and its worktrees, by branch
   slipbox context <note>…           the notes, what they link to and what links to them, as one document for an agent
                                     [--depth N] [--no-backlinks] [--limit N] [--copy]
   slipbox tags [tag]                the vault's tags and how many notes carry each; a tag's notes
@@ -185,7 +191,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "relink", "undo", "context", "search", "index", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
+  "mv", "rename-vault", "relink", "undo", "context", "search", "index", "changed", "diff", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
@@ -340,6 +346,8 @@ const FLAGS: Record<string, string[]> = {
   context: ["depth", "no-backlinks", "limit", "copy"],
   search: ["limit"],
   index: ["rebuild"],
+  changed: ["base"],
+  diff: ["base"],
 };
 
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
@@ -573,6 +581,15 @@ const HANDLERS: Record<string, Handler> = {
       `orphans (${p.orphans.length})`,
       ...p.orphans.map((x) => `  ${x}`),
     ];
+    // A merge's conflicts (5.12): the files git says are unmerged, at their first marker.
+    const c = checkoutOf(s.loc.root);
+    const status = c ? statusOf(c) : null;
+    const conflicts = [...(status ?? [])]
+      .filter(([, st]) => st === "conflict")
+      .map(([p]) => inVault(c!, s.loc.root, p))
+      .filter((p): p is string => p !== null)
+      .map((path) => ({ path, line: conflictLine(join(s.loc.root, path)) }));
+    if (conflicts.length) human.push(`conflicts (${conflicts.length})`, ...conflicts.map((x) => `  ${x.path}:${x.line}`));
     // --lint (3.21): your linter's findings too — markdownlint-cli2 with your config, as the TUI runs it.
     let lint: (Omit<LintIssue, "file"> & { file: string })[] | undefined;
     if (has(s.args, "lint")) {
@@ -592,7 +609,7 @@ const HANDLERS: Record<string, Handler> = {
         human.push(`lint (${lint.length})`, ...lint.map((x) => `  ${x.file}:${x.line}${x.column ? `:${x.column}` : ""}  ${x.rule} ${x.name}  ${x.description}`));
       }
     }
-    return { data: { broken: p.broken, ambiguous: p.ambiguous, orphans: p.orphans, ...(lint ? { lint } : {}) }, human: `${human.join("\n")}\n` };
+    return { data: { broken: p.broken, ambiguous: p.ambiguous, orphans: p.orphans, conflicts, ...(lint ? { lint } : {}) }, human: `${human.join("\n")}\n` };
   },
 
   tags(s, rest) {
@@ -605,6 +622,40 @@ const HANDLERS: Record<string, Handler> = {
     }
     const tags = s.graph.tags();
     return { data: tags, human: tags.map((t) => `${String(t.count).padStart(4)}  #${t.tag}\n`).join("") };
+  },
+
+  // Git (5.11–5.14): what this branch changed against the base, a note's diff, the worktrees.
+  changed(s) {
+    const c = checkoutFor(s);
+    const base = baseFor(s, c);
+    const r = changedSince(c, base);
+    if (!r) throw new CliError("git couldn't say what changed", 1);
+    const files = r.files
+      .map((f) => ({ path: inVault(c, s.loc.root, f.path), state: f.state, ...(f.from ? { from: inVault(c, s.loc.root, f.from) ?? f.from } : {}) }))
+      .filter((f): f is typeof f & { path: string } => f.path !== null);
+    const human = files.map((f) => `${STATE_LETTER[f.state]} ${f.path}${f.from ? `  (from ${f.from})` : ""}\n`).join("");
+    return { data: { base, mergeBase: r.mergeBase, files }, human: human || `nothing changed against ${base}\n` };
+  },
+
+  diff(s, rest) {
+    const rel = resolveNote(s, requireArg(rest, "note"), false);
+    const c = checkoutFor(s);
+    const base = baseFor(s, c);
+    const mergeBase = mergeBaseOf(c, base);
+    if (!mergeBase) throw new CliError(`this branch and ${base} have no commit in common`, EXIT.notFound);
+    const before = showAt(c, mergeBase, inCheckout(c, s.loc.root, rel));
+    const now = readText(s.graph.abs(rel)).text;
+    const rows = diffRows(before ?? "", now);
+    const human = rows.map((r) => (r.kind === "@@" ? `@@ ${r.text}` : `${r.kind} ${sanitize(r.text)}`)).join("\n");
+    return { data: { path: rel, base, mergeBase, new: before === null, rows }, human: rows.length ? `${human}\n` : `no differences from ${base}\n` };
+  },
+
+  worktrees(s) {
+    const c = checkoutFor(s);
+    const list = worktreeList(c);
+    if (!list) throw new CliError("git couldn't list the worktrees", 1);
+    const data = list.map((w) => ({ ...w, vault: join(w.path, relative(c.root, s.loc.root)), current: w.path === c.root }));
+    return { data, human: data.map((w) => `${w.current ? "*" : " "} ${w.branch ?? `(${w.head?.slice(0, 7) ?? "detached"})`}  ${w.path}${w.main ? "  (main)" : ""}\n`).join("") };
   },
 
   // Search (6.x): ranked by the words, from the index (caught up first) or a scan of the files.
@@ -1493,6 +1544,34 @@ function pickNvim(s: Session, abs: string): string {
   if (holding.length && (holding.length === 1 || holding[0]!.cwd.length > holding[1]!.cwd.length)) return holding[0]!.socket;
   const candidates = found.map((n) => ({ socket: n.socket, cwd: n.cwd, file: n.file }));
   throw new CliError(`${found.length} nvims are running; pick one with --server (${found.map((n) => n.socket).join(", ")})`, EXIT.ambiguous, { candidates });
+}
+
+/** The vault's git checkout, for the git commands (5.11–5.14); refused outside one (exit 3). */
+function checkoutFor(s: Session): Checkout {
+  const c = checkoutOf(s.loc.root);
+  if (!c) throw new CliError(`${s.loc.root} isn't in a git repository`, EXIT.notFound);
+  return c;
+}
+
+/** The base branch: `--base`, else `[git] base`, else main or master (exit 3 when there's none). */
+function baseFor(s: Session, c: Checkout): string {
+  const asked = flag(s.args, "base") ?? s.config.git.base;
+  const base = baseBranch(c, asked);
+  if (!base) throw new CliError(asked ? `no branch or commit "${asked}" in the repository` : "no base branch: neither main nor master is there — --base <ref>, or [git] base", EXIT.notFound);
+  return base;
+}
+
+/** A file's state as one letter: what the explorer marks it with. */
+const STATE_LETTER: Record<GitState, string> = { new: "+", modified: "M", renamed: "R", deleted: "D", conflict: "!" };
+
+/** The first line of a file with a merge's conflict marker, or 0. */
+function conflictLine(abs: string): number {
+  try {
+    const i = readText(abs).text.split(/\r?\n/).findIndex((l) => /^<{7}( |$)/.test(l));
+    return i + 1;
+  } catch {
+    return 0;
+  }
 }
 
 /** Which search engine answers here, and the index's size when there is one (`info`). */

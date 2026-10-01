@@ -104,6 +104,10 @@ export interface Config {
     /** Scratch file name; relative to the vault root when location = "vault". */
     file: string;
   };
+  /** Git (5.11–5.14). `base`: the branch changes and diffs are measured against; empty: `main`, else `master`. */
+  git: {
+    base: string;
+  };
   /** Search (6.x): `auto`, the index when it's built, else a scan of the files; `index`, the index
    *  (built first when there's none); `scan`, the files every time (no index kept). */
   search: {
@@ -213,6 +217,7 @@ export const DEFAULT_CONFIG: Config = {
   rename: { previous_names: true },
   lint: { enabled: "auto", command: [] },
   capture: { location: "state", file: "scratch.md" },
+  git: { base: "" },
   search: { engine: "auto" },
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },

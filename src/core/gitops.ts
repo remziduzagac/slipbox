@@ -1,0 +1,157 @@
+// What git knows about a vault's files (plan 5.11–5.14): each one's status, what changed on this
+// branch since it left the base branch, a file as the base has it, and the repository's worktrees.
+// These run git — unlike `git.ts`, which only reads `.git` — since status and history aren't in
+// files slipbox could read cheaply. A git that isn't there, or fails, is "nothing known".
+
+import { execFile, execFileSync } from "node:child_process";
+import { join, posix, relative, sep } from "node:path";
+import type { Checkout } from "./git.ts";
+
+/** A file's state, as the explorer marks it: new (untracked or added), modified, renamed, deleted, or in conflict (a merge). */
+export type GitState = "new" | "modified" | "renamed" | "deleted" | "conflict";
+
+const OPTS = { encoding: "utf8" as const, stdio: ["ignore", "pipe", "ignore"] as ["ignore", "pipe", "ignore"], timeout: 15_000, maxBuffer: 64 * 1024 * 1024 };
+
+function run(c: Pick<Checkout, "root">, args: string[]): string | null {
+  try {
+    return execFileSync("git", ["-C", c.root, ...args], OPTS);
+  } catch {
+    return null;
+  }
+}
+
+/** git's porcelain status (v1, `-z`): each path (from the checkout's top folder) and its state. */
+export function parseStatus(z: string): Map<string, GitState> {
+  const out = new Map<string, GitState>();
+  const parts = z.split("\0");
+  for (let i = 0; i < parts.length; i++) {
+    const e = parts[i]!;
+    if (e.length < 4) continue;
+    const xy = e.slice(0, 2);
+    const path = e.slice(3);
+    // A rename or copy names where it came from next.
+    if (xy[0] === "R" || xy[0] === "C") i++;
+    out.set(path, stateOf(xy));
+  }
+  return out;
+}
+
+function stateOf(xy: string): GitState {
+  if (/^(DD|AU|UD|UA|DU|AA|UU)$/.test(xy)) return "conflict";
+  if (xy === "??" || xy.includes("A")) return "new";
+  if (xy[0] === "R" || xy[0] === "C") return "renamed";
+  if (xy.includes("D")) return "deleted";
+  return "modified";
+}
+
+const STATUS_ARGS = ["status", "--porcelain=v1", "-z", "--untracked-files=all"];
+
+/** The checkout's status now; null without git. */
+export function statusOf(c: Pick<Checkout, "root">): Map<string, GitState> | null {
+  const out = run(c, STATUS_ARGS);
+  return out === null ? null : parseStatus(out);
+}
+
+/** The same, not waiting on git (the TUI's explorer marks). */
+export function statusLater(c: Pick<Checkout, "root">): Promise<Map<string, GitState> | null> {
+  return new Promise((done) => {
+    execFile("git", ["-C", c.root, ...STATUS_ARGS], OPTS, (err, out) => done(err ? null : parseStatus(out)));
+  });
+}
+
+/** Whether a ref names a commit in the repository. */
+function exists(c: Pick<Checkout, "root">, ref: string): boolean {
+  return run(c, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]) !== null;
+}
+
+/**
+ * The branch changes are measured against: `[git] base` when set (any ref), else `main`, else
+ * `master`. Null when none is there.
+ */
+export function baseBranch(c: Pick<Checkout, "root">, configured = ""): string | null {
+  for (const ref of configured ? [configured] : ["main", "master"]) if (exists(c, ref)) return ref;
+  return null;
+}
+
+/** Where this checkout's branch left `base`: what it changed is measured from there. */
+export function mergeBaseOf(c: Pick<Checkout, "root">, base: string): string | null {
+  return run(c, ["merge-base", base, "HEAD"])?.trim() || null;
+}
+
+export interface Changed {
+  /** From the checkout's top folder. */
+  path: string;
+  state: GitState;
+  /** A rename's old path. */
+  from?: string;
+}
+
+/**
+ * What this checkout has that `base` hasn't: everything changed since this branch left it (the
+ * merge base), committed or not, and what isn't tracked yet. Null without git or the base.
+ */
+export function changedSince(c: Pick<Checkout, "root">, base: string): { mergeBase: string; files: Changed[] } | null {
+  const mergeBase = mergeBaseOf(c, base);
+  if (!mergeBase) return null;
+  const diff = run(c, ["diff", "--name-status", "-z", "-M", mergeBase]);
+  const status = statusOf(c);
+  if (diff === null || status === null) return null;
+  const files = new Map<string, Changed>();
+  const parts = diff.split("\0");
+  for (let i = 0; i < parts.length; i++) {
+    const code = parts[i]!;
+    if (!code) continue;
+    if (code[0] === "R" || code[0] === "C") {
+      const from = parts[++i]!;
+      const to = parts[++i]!;
+      files.set(to, { path: to, state: "renamed", from });
+    } else {
+      const path = parts[++i]!;
+      files.set(path, { path, state: code[0] === "A" ? "new" : code[0] === "D" ? "deleted" : code[0] === "U" ? "conflict" : "modified" });
+    }
+  }
+  for (const [path, state] of status) if (state === "new" && !files.has(path)) files.set(path, { path, state });
+  for (const [path, state] of status) if (state === "conflict") files.set(path, { path, state });
+  return { mergeBase, files: [...files.values()].sort((a, b) => (a.path < b.path ? -1 : 1)) };
+}
+
+/** A file as `ref` has it (path from the checkout's top folder); null where it hasn't one. */
+export function showAt(c: Pick<Checkout, "root">, ref: string, path: string): string | null {
+  return run(c, ["show", `${ref}:${path.split(sep).join(posix.sep)}`]);
+}
+
+export interface WorktreeEntry {
+  /** Its top folder. */
+  path: string;
+  /** The branch checked out; null when detached (then `head`). */
+  branch: string | null;
+  head: string | null;
+  /** The main checkout (the first git lists). */
+  main: boolean;
+}
+
+/** The repository's checkouts, the main one first (`git worktree list`); null without git. */
+export function worktreeList(c: Pick<Checkout, "root">): WorktreeEntry[] | null {
+  const out = run(c, ["worktree", "list", "--porcelain"]);
+  if (out === null) return null;
+  const list: WorktreeEntry[] = [];
+  for (const block of out.split(/\n\n+/)) {
+    const path = /^worktree (.+)$/m.exec(block)?.[1];
+    if (!path || /^bare$/m.test(block)) continue;
+    const branch = /^branch refs\/heads\/(.+)$/m.exec(block)?.[1] ?? null;
+    const head = /^HEAD ([0-9a-f]+)$/m.exec(block)?.[1] ?? null;
+    list.push({ path, branch, head, main: list.length === 0 });
+  }
+  return list;
+}
+
+/** A path of the checkout as one of the vault's, or null when it's outside the vault's folder. */
+export function inVault(c: Pick<Checkout, "root">, vaultRoot: string, path: string): string | null {
+  const rel = relative(vaultRoot, join(c.root, path));
+  return rel && !rel.startsWith("..") && !rel.startsWith(sep) ? rel.split(sep).join("/") : null;
+}
+
+/** A vault path as the checkout's (from its top folder). */
+export function inCheckout(c: Pick<Checkout, "root">, vaultRoot: string, rel: string): string {
+  return relative(c.root, join(vaultRoot, rel)).split(sep).join("/");
+}

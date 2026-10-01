@@ -138,7 +138,8 @@ On the right it shows the link under the cursor and its status (`→ [[beta]] (r
 the note's words (`1,234 words`; the selection's in visual mode, `12 words selected`; frontmatter
 not counted, each Han or kana character a word; dropped first when short of room), then
 `tab N/M` when there are two or more tabs, then `L<source line>:<column>` and the percentage (`all`
-when the note fits), which always shows. Find's progress is in its window's find row, not here.
+when the note fits), which always shows — the source line of the text under the cursor (a rendered paragraph's row
+holds several). Find's progress is in its window's find row, not here.
 
 **Find** (`/`, `ctrl+f`) belongs to a window, so it's typed there: a row of its own under the
 breadcrumb (or at the window's top when there's none), `› query` with the match count at its right
@@ -446,7 +447,10 @@ keys.
   differ — a worktree's branch instead (`⎇ feat`, `17.19`); `enter` or a double-click goes into
   it (a switch, below). **In a loose folder** (the home vault) the explorer lists the folder
   alone: `..` to go up, then each folder in it — a vault or a loose folder — and its files; going
-  into a loose folder lists that one (`17.14`).
+  into a loose folder lists that one (`17.14`). **Git's marks** (`5.11`): in a git checkout each changed file has
+  its state at its row's end — `M` modified, `+` new (untracked or added), `R` renamed, `!` in a merge's conflict
+  (`git_modified`, `git_new`, `git_conflict`) — and a folder with one in it a `•`. git is asked in the background, a
+  moment after anything changed (a save, the watcher, a file operation, a branch switch).
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
@@ -470,6 +474,7 @@ keys.
   file's. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link set: each link that
   reaches nothing, and why when there's a reason, such as an unknown vault), **Ambiguous links** (each that reaches
   several notes, and how many), **Lint** (`3.21`: the linter's findings, when one runs — see "The lint surface"),
+  **Conflicts** (`5.12`: during a merge, each file git says is unmerged, at its first `<<<<<<<` marker),
   **Orphans** (`9.5`: the notes no other note links to — another vault's links count, a note's own don't — each opened
   by `enter`). Under the first three, the notes with such links, and under a note its
   problems: the line and the link as written, in the link's colour (a finding: its line, rule and what's wrong).
@@ -1036,6 +1041,22 @@ name it, never a vault's.
   note's row, at its first.
 - **A linter that can't run** (not installed, or failing without a finding) is said once, and not tried again until
   the config changes.
+
+## Git (plans `5.11`–`5.14`)
+
+`space g` holds what git knows of the vault, measured against the base branch (`[git] base`, else `main`, else
+`master`) from where this branch left it (the merge base) — what an agent's worktree changed, ready to review:
+
+- **`space g c`** (`:changes`): the files this branch changed, committed or not, and the new ones — `M a.md`,
+  `+ c.md`, `R notes/new.md  from notes/old.md`, coloured by state. `enter` shows a file's diff; `esc` there comes
+  back to the list.
+- **`space g d`** (`:diff`): this note's diff, as it is now (unsaved changes too): each group under its `@@ line N`,
+  removed lines red, added green (`diff_del`, `diff_add`, `diff_head`). `enter` on a line goes there.
+- **`space g w`** (`:worktrees`): the repository's checkouts — the main one first, this one marked `●` — each by its
+  branch. `enter` switches into the vault there, at the same note when that branch has it.
+
+A jump to a line inside a rendered paragraph (a diff's line, a conflict, a finding, `:42` and `ctrl+g`) lands on that
+line's text, not the paragraph's first line or its row's end.
 
 ## Modes and dispatch (decision `3.11`)
 

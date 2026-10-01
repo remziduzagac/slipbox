@@ -769,9 +769,9 @@ export function registerActions(app: App): void {
         const go = (text: string) => {
           const n = Number(text.trim());
           if (!Number.isInteger(n) || n < 1) return a.message("warn", `not a line number: ${text}`);
-          const starts = v.buf.lineStarts();
           a.pushHistory(v);
-          E.placeAt(a, v, starts[Math.min(n, starts.length) - 1] ?? 0);
+          // Onto that line's text: in a rendered paragraph joined from several, not its row's end.
+          a.placeAtLine(v, Math.min(n, v.buf.lineStarts().length));
         };
         if (arg) return go(arg);
         a.prompt("line", go, undefined, undefined, v);
@@ -1081,6 +1081,9 @@ export function registerActions(app: App): void {
     // Search the vault (ctrl+shift+f, space f g): every note and every file the explorer shows, an
     // open one as it is now (unsaved changes and all); enter opens it at the match.
     "search.open": (a, arg) => a.openSearch(arg ?? ""),
+    "git.changes": (a) => a.openChanges(),
+    "git.diff": (a) => a.openGitDiff(),
+    "git.worktrees": (a) => a.openWorktrees(),
     "find.vault": (a, arg) => {
       const run = (query: string) => {
         if (!query.trim()) return;

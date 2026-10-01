@@ -3,6 +3,7 @@
 // what insulates slipbox from OpenTUI churn and makes rendering snapshot-testable.
 
 import type { Role } from "../theme/theme.ts";
+import { stringWidth } from "../width.ts";
 
 export const A_BOLD = 1;
 export const A_ITALIC = 2;
@@ -85,4 +86,30 @@ export interface Layout {
 
 export function spanWidthText(spans: Span[]): string {
   return spans.map((s) => s.text).join("");
+}
+
+/**
+ * The source line of what's at column `col` of a row: its span's own (a rendered paragraph joins
+ * its source lines into rows that carry only the first), else the row's.
+ */
+export function srcAt(line: Line, col: number): number {
+  let x = 0;
+  for (const span of line.spans) {
+    const w = stringWidth(span.text);
+    if (col < x + w) return span.src ?? line.src;
+    x += w;
+  }
+  return line.src;
+}
+
+/** Where line `src`'s text starts among the rows: the first row with a span from it, and its column. */
+export function posOfSrc(lines: Line[], src: number): { row: number; col: number } | null {
+  for (let row = 0; row < lines.length; row++) {
+    let x = 0;
+    for (const span of lines[row]!.spans) {
+      if (span.src === src && span.text.trim()) return { row, col: x };
+      x += stringWidth(span.text);
+    }
+  }
+  return null;
 }

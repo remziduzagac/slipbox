@@ -4,11 +4,12 @@
 // Returns the geometry of what was drawn, which the mouse handler hit-tests against.
 
 import type { Glyphs } from "../core/glyphs.ts";
-import type { Line } from "../core/layout/ir.ts";
+import { type Line, srcAt } from "../core/layout/ir.ts";
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { sanitize } from "../core/sanitize.ts";
+import type { GitState } from "../core/gitops.ts";
 import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, type PromptOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { countWords } from "../core/words.ts";
@@ -1236,7 +1237,15 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     const buttonsW = withButtons ? selButtons!.w : 0;
     const shown = sideRow(text(row), sv);
     const room = sv.cols - buttonsW;
-    const w = drawText(c, rect.x, y, !withButtons ? shown : sv.hbar ? splitAtWidth(shown, room)[0] : truncate(shown, room), st, rect.w);
+    // Its git state at the row's end (5.11): a file's letter, a folder's dot — not under its buttons.
+    const gst = withButtons ? undefined : row.kind === "note" ? app.gitStates?.get(row.path) : app.gitFolders.get(row.path);
+    const markW = gst ? 3 : 0; // a space, the mark, the last column
+    const w = drawText(c, rect.x, y, !withButtons ? shown : sv.hbar ? splitAtWidth(shown, room)[0] : truncate(shown, room), st, rect.w - markW);
+    if (gst) {
+      const mark = row.kind === "note" ? GIT_MARK[gst] : "•";
+      const role: Role = gst === "conflict" ? "git_conflict" : gst === "new" ? "git_new" : "git_modified";
+      drawText(c, rect.x + rect.w - 2, y, mark, { ...roleStyle(theme, role, st.bg), bg: st.bg }, 1);
+    }
     if (withButtons) {
       let x = rect.x + rect.w - 1;
       for (const [glyph, id] of selButtons!.bs) {
@@ -1549,7 +1558,8 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const shownTotal = layout.lines.length - hiddenIn(0, layout.lines.length);
   const shownTop = view.top - hiddenIn(0, view.top);
   const pct = shownTotal <= view.height ? "all" : `${Math.round((shownTop / Math.max(1, shownTotal - view.height)) * 100)}%`;
-  const src = layout.lines[view.cur.row]?.src ?? 1;
+  const cursorRow = layout.lines[view.cur.row];
+  const src = cursorRow ? srcAt(cursorRow, view.cur.col) : 1;
   // The right side: the position always; the tab count and the link under the cursor only while
   // the path keeps a readable width (the link goes first, then the tab count).
   const pos = `L${src}:${view.cur.col + 1} ${pct}`;
@@ -1918,10 +1928,12 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     let cx = x + 2 + indent;
     const label = truncate(sanitize(item.label), Math.max(4, avail - indent));
     const pos = new Set(positions);
+    // Its own colour (a diff's line, a change's state), unless selected.
+    const own = item.role && !selected ? { ...st, fg: roleStyle(theme, item.role, null).fg ?? st.fg, bold: roleStyle(theme, item.role, null).bold ?? st.bold } : st;
     let ci = 0;
     for (const g of graphemes(label)) {
       const gw = graphemeWidth(g);
-      if (gw > 0) c.cell(cx, ry, g, gw, pos.has(ci) ? { ...st, fg: matchSt.fg, bold: true } : st);
+      if (gw > 0) c.cell(cx, ry, g, gw, pos.has(ci) ? { ...st, fg: matchSt.fg, bold: true } : own);
       cx += gw;
       ci += g.length;
     }
@@ -1949,6 +1961,9 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
 }
 
 const FOOTER_ROWS = 4;
+
+/** A file's git state as the explorer marks it (5.11). */
+const GIT_MARK: Record<GitState, string> = { new: "+", modified: "M", renamed: "R", deleted: "D", conflict: "!" };
 
 /**
  * A list as a dropdown hanging under `anchor` (the breadcrumb's `…`): framed like the other

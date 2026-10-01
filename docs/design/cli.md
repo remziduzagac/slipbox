@@ -76,6 +76,10 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `links <note>` | `[{kind, target, heading, text, line, column, status, path, candidates, vault, via, reason}]` |
 | `problems` | `{broken[], ambiguous[], orphans[]}`: a link's `{from, line, column, kind, target, reason, …}`; paths |
 | `problems --lint` | adds `lint[{file, line, column, rule, name, description}]`; a warning when lint is off or fails |
+| `problems` (git) | `conflicts[{path, line}]`: during a merge, the unmerged files at their first marker (`5.12`) |
+| `changed` | `{base, mergeBase, files[{path, state, from?}]}`: `state` new, modified, renamed, deleted, conflict |
+| `diff <note>` | `{path, base, mergeBase, new, rows[{kind, text, line}]}`: `kind` `@@` ` ` `-` `+`; `line`: now |
+| `worktrees` | `[{path, branch, head, main, vault, current}]`: the main checkout first |
 | `tags [tag]` | `[{tag, count}]`, or a tag's `{tag, notes[]}` (its nested tags' too); exit 3: no note has it |
 | `backlinks <note>` | `{path, backlinks[{from, vault, line, column, text, kind, target, heading, block, alias}]}` |
 
@@ -252,6 +256,20 @@ name, and a path out of the root (relative, `~/`, absolute, or a `file://` URL �
 into the other vault: `path` and `abs` are absolute, and `vault` names it. `via` says
 when a link got there by an `alias`, a `previous-name` or a `redirect` (and a warning says so); `reason` says why one
 didn't (`unknown vault "x"`). A backlink from another vault has an absolute `from` and its `vault`.
+
+## Git (plans `5.11`–`5.14`)
+
+What changed on this branch, measured against the base branch (`--base <ref>`, else `[git] base`, else `main`, else
+`master`) from where the branch left it — the merge base, as a pull request's diff is:
+
+- **`slipbox changed`**: every file of the vault this branch changed, committed or not, and the untracked ones —
+  `M a.md`, `+ b.md`, `D gone.md`, `R notes/new.md  (from notes/old.md)`; files outside the vault's folder left out.
+- **`slipbox diff <note>`**: the note's diff, each group after `@@ line N`, `-` and `+` lines with three lines of
+  context; `rows[].line` is the line in the note as it is now. A note the base hasn't is all `+` (`new: true`).
+- **`slipbox worktrees`**: the repository's checkouts, the main one first — branch, path, and the vault's folder there.
+- **`slipbox problems`** lists a merge's unmerged files as `conflicts`, each at its first `<<<<<<<` line.
+
+Outside a git repository, or with no base branch, these exit 3.
 
 ## Search (plans `6.1`–`6.8`)
 

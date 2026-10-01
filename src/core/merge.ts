@@ -113,6 +113,48 @@ export function unifiedDiff(from: string, to: string, context = 2): string[] {
   return out;
 }
 
+/** A row of a diff, `from` → `to`: a group's head, a line both have, one only `from` has, one only `to` has. */
+export interface DiffRow {
+  kind: "@@" | " " | "-" | "+";
+  text: string;
+  /** The line of `to` (1-based) the row is at — a removed line's: the line it was before. */
+  line: number;
+}
+
+/**
+ * A diff as rows (5.13): each changed run with up to `context` unchanged lines around it, and a
+ * head before each group — every row with its line in `to`, so a click goes there.
+ */
+export function diffRows(from: string, to: string, context = 3): DiffRow[] {
+  // A final line break ends the last line; it doesn't start another one to show.
+  const lines = (text: string) => {
+    if (text === "") return [];
+    const l = splitLines(text);
+    if (l.length && l[l.length - 1] === "" && /\r?\n$/.test(text)) l.pop();
+    return l;
+  };
+  const a = lines(from);
+  const b = lines(to);
+  const hunks = diffLines(a, b);
+  const out: DiffRow[] = [];
+  let shownTo = -1;
+  hunks.forEach((h, i) => {
+    const start = Math.max(0, h.aStart - context, shownTo + 1);
+    // Unchanged lines line up: `to`'s line for `from`'s line k is k + (bStart - aStart).
+    const shift = h.bStart - h.aStart;
+    if (start > shownTo + 1 || i === 0) out.push({ kind: "@@", text: `line ${h.bStart + 1}`, line: h.bStart + 1 });
+    for (let k = start; k < h.aStart; k++) out.push({ kind: " ", text: a[k]!, line: k + shift + 1 });
+    for (let k = 0; k < h.aLen; k++) out.push({ kind: "-", text: a[h.aStart + k]!, line: h.bStart + 1 });
+    for (let k = 0; k < h.bLen; k++) out.push({ kind: "+", text: b[h.bStart + k]!, line: h.bStart + k + 1 });
+    const next = hunks[i + 1];
+    const end = Math.min(a.length, h.aStart + h.aLen + context, next ? next.aStart : a.length);
+    const after = h.bStart + h.bLen - (h.aStart + h.aLen);
+    for (let k = h.aStart + h.aLen; k < end; k++) out.push({ kind: " ", text: a[k]!, line: k + after + 1 });
+    shownTo = end - 1;
+  });
+  return out;
+}
+
 export interface MergeResult {
   text: string;
   /** How many places both sides changed differently (marked in the text). */

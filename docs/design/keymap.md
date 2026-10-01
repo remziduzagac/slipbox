@@ -505,6 +505,14 @@ edit the config and the config wins again.
 | `space s c` | copy the note's context for an agent: it, what it links to, what links to it (`:context`, `9.7`) |
 | `space s d` | clear the scratch (asks first) |
 
+## Git — `space g`
+
+| Keys | Action |
+| --- | --- |
+| `space g c` | the files this branch changed against the base (`:changes`); enter: a file's diff (`5.13`) |
+| `space g d` | this note's diff against the base, as it is now (`:diff`); enter goes to the line |
+| `space g w` | the worktrees by branch (`:worktrees`); enter opens this note in the one picked (`5.14`) |
+
 ## Note, vault, app
 
 | Keys | Action |

@@ -467,8 +467,8 @@ describe("which-key", () => {
     expect(f).toContain("q enter escape");
     const short = await harness({ width: 60, height: 14 });
     const s2 = await short.keys("space");
-    expect(s2).toContain("+links");
-    expect(s2).not.toContain("follow, list and copy links");
+    expect(s2).toContain("+find");
+    expect(s2).not.toContain("notes, headings, tags, text, commands");
   });
   test("group names and explanations come from [groups]", async () => {
     const h = await harness({ config: (c) => (c.groups = { "leader l": "LINKS: everything about links" }) });
@@ -4050,7 +4050,8 @@ describe("review cycle 2 (TUI navigation)", () => {
     await h.keys("space");
     expect(h.app.pending.length).toBe(1);
     const pane = (h.frame(), h.app.geometry!.panes[0]!);
-    click(h, pane.textX + 1, pane.y + 1);
+    // On the note beside the which-key window (a click on one of its entries picks it).
+    click(h, pane.x + pane.w - 2, pane.y + 1);
     expect(h.app.pending.length).toBe(0);
     await h.keys("ctrl+t", "c");
     h.app.showSidebar(true);
@@ -7090,5 +7091,154 @@ describe("a branch switch as one event (5.9)", () => {
       rescan: false,
     });
     expect(h.app.graph.redirects!.follow("c.md")).toBe("d.md");
+  });
+});
+
+describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflicts (5.11–5.14)", () => {
+  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+  /** A vault and its repository: on main a.md and notes/b.md; on feat (checked out) a.md changed, c.md new. */
+  const repo = () => {
+    const root = mkdtempSync(join(sandbox, "gitui-"));
+    mkdirSync(join(root, ".slipbox"));
+    mkdirSync(join(root, "notes"));
+    writeFileSync(join(root, ".slipbox", "config.toml"), `[vault]\nid = "g${root.slice(-6).replace(/[^a-z0-9]/gi, "")}"\nname = "g${root.slice(-6).replace(/[^a-z0-9]/gi, "")}"\n`);
+    writeFileSync(join(root, "a.md"), "# A\n\none\ntwo\nthree\n");
+    writeFileSync(join(root, "notes", "b.md"), "# B\n");
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return null;
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    git(root, "checkout", "-q", "-b", "feat");
+    writeFileSync(join(root, "a.md"), "# A\n\none\nTWO\nthree\n");
+    writeFileSync(join(root, "c.md"), "# C\n");
+    writeFileSync(join(root, "notes", "b.md"), "# B, changed\n");
+    return root;
+  };
+
+  test("the explorer marks each changed file at its row's end, and a folder with one in it", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await harness({ root, open: "a.md" });
+    await h.app.refreshGitNow();
+    h.app.showSidebar(true);
+    h.app.expanded.add("notes");
+    h.app.invalidateTree();
+    const rows = h.frame().split("\n");
+    const row = (name: string) => rows.find((r) => new RegExp(`\\b${name.replace(".", "\\.")}\\b`).test(r.split(/[┃┣]/)[0]!))!.split(/[┃┣]/)[0]!;
+    expect(row("a.md").trimEnd()).toMatch(/a\.md +M$/);
+    expect(row("c.md").trimEnd()).toMatch(/c\.md +\+$/);
+    expect(row("notes").trimEnd()).toMatch(/notes +•$/);
+    expect(row("b.md").trimEnd()).toMatch(/b\.md +M$/);
+    // A name as long as the row: cut short of its mark, never under it.
+    writeFileSync(join(root, "a-rather-long-note-name-that-fills-the-whole-row.md"), "# Long\n");
+    h.app.graph.build(true, "lazy");
+    await h.app.refreshGitNow();
+    const long = h.frame().split("\n").find((r) => r.includes("a-rather-long"))!.split(/[┃┣]/)[0]!;
+    expect(long.trimEnd()).toMatch(/[^ ] \+$/);
+  });
+
+  test("space g c lists what this branch changed; enter shows a file's diff; esc goes back; enter on a line goes there", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await harness({ root, open: "c.md" });
+    await h.keys("space", "g", "c");
+    let list = h.app.overlay as ListOverlay;
+    expect(list.title).toBe("Changed against main (3) — enter: the diff");
+    expect(list.items.map((i) => [i.label, i.role])).toEqual([
+      ["M a.md", "git_modified"],
+      ["+ c.md", "git_new"],
+      ["M notes/b.md", "git_modified"],
+    ]);
+    await h.keys("enter"); // a.md's diff
+    list = h.app.overlay as ListOverlay;
+    expect(list.title).toBe("a.md against main — esc: the changes");
+    expect(list.items.filter((i) => i.role).map((i) => [i.label, i.role])).toEqual([
+      ["@@ line 4", "diff_head"],
+      ["- two", "diff_del"],
+      ["+ TWO", "diff_add"],
+    ]);
+    await h.keys("escape");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("Changed against main");
+    await h.keys("enter");
+    list = h.app.overlay as ListOverlay;
+    list.selected = list.items.findIndex((i) => i.label === "+ TWO");
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("a.md");
+    expect(statusRow(h.frame())).toMatch(/ L4:\d+ /); // on that line, inside its paragraph
+  });
+
+  test("space g d: this note's diff, as it is now (unsaved too); nothing different, said so", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await harness({ root, open: "a.md" });
+    await h.keys("space", "n", "v", "shift+g", "o", ...[..."four"], "escape");
+    await h.keys("space", "g", "d");
+    const labels = (h.app.overlay as ListOverlay).items.map((i) => i.label);
+    expect(labels).toContain("+ four");
+    expect(labels).toContain("+ TWO");
+    await h.keys("escape", "u");
+    git(root, "checkout", "-q", "--", "a.md");
+    await h.app.run("note.open notes/../c.md");
+    git(root, "add", "c.md");
+    git(root, "commit", "-q", "-m", "c");
+    git(root, "checkout", "-q", "main");
+    git(root, "merge", "-q", "feat");
+    await h.keys("space", "g", "d");
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["no differences from main"]);
+  });
+
+  test("space g w: the worktrees by branch; enter opens this note in the one picked", async () => {
+    const root = repo();
+    if (!root) return;
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "feat's");
+    const wt = `${root}-other`;
+    git(root, "worktree", "add", "-q", "-b", "other", wt, "main");
+    const h = await harness({ root, open: "notes/b.md" });
+    await h.keys("space", "g", "w");
+    const list = h.app.overlay as ListOverlay;
+    expect(list.items.map((i) => [i.label, i.detail])).toEqual([
+      ["● ⎇ feat", `${root}  (main)`],
+      ["  ⎇ other", wt],
+    ]);
+    await h.keys("down", "enter");
+    expect(h.app.loc.root).toBe(wt);
+    expect(h.app.view!.buf.rel).toBe("notes/b.md"); // the same note, there
+    expect(h.app.view!.buf.source).toBe("# B\n"); // as the other branch has it
+    expect(topRow(h.frame())).toContain("other (worktree)"); // the worktree's own config: its glyphs
+  });
+
+  test("a merge's conflicts in Problems: each file at its first marker; enter goes there", async () => {
+    const root = repo();
+    if (!root) return;
+    git(root, "commit", "-q", "-am", "feat's two");
+    git(root, "checkout", "-q", "main");
+    writeFileSync(join(root, "a.md"), "# A\n\none\nmain's two\nthree\n");
+    git(root, "commit", "-q", "-am", "main's two");
+    git(root, "merge", "-q", "feat");
+    const h = await harness({ root, open: "notes/b.md" });
+    await h.app.refreshGitNow();
+    const rows = h.app.problemRows().filter((r) => r.section === "Conflicts");
+    expect(rows.map((r) => [r.label, r.detail])).toEqual([
+      ["Conflicts (1)", ""],
+      ["a.md", "L4"],
+    ]);
+    await h.keys("space", "v", "p");
+    h.app.sidebar.selected = h.app.problemRows().findIndex((r) => r.label === "a.md" && r.section === "Conflicts");
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("a.md");
+    expect(h.app.cursorLine(h.app.view!)).toBe(4);
+  });
+});
+
+describe("lines inside a rendered paragraph (a regression)", () => {
+  test("goto a line whose paragraph joins it with others on one row: the cursor on that line's text, the status saying it", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), "# P\n\nfirst line\nsecond line\nthird line\n");
+    const h = await harness({ root, open: "p.md" });
+    await h.app.run("cursor.goto_line 4");
+    expect(h.app.cursorLine(h.app.view!)).toBe(4);
+    expect(statusRow(h.frame())).toMatch(/ L4:\d+ /);
+    await h.app.run("cursor.goto_line 5");
+    expect(h.app.cursorLine(h.app.view!)).toBe(5);
   });
 });

@@ -36,6 +36,8 @@ export const ROLES = [
   // chrome
   "border", "status", "status_accent", "status_dim",
   "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active", "sidebar_vault",
+  // a file's git state in the explorer (5.11); a diff's added and removed lines (5.13)
+  "git_new", "git_modified", "git_conflict", "diff_add", "diff_del", "diff_head",
   "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
   "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
   "cursor", "cursor_line", "line_number", "line_number_current",
@@ -199,6 +201,12 @@ export function themeFromPalette(
     // A folder that is a vault of its own (17.13): a folder's colour — its icon tells it apart —
     // and a role of its own, for [colors] to set.
     sidebar_vault: { fg: p.blue },
+    git_new: { fg: p.green },
+    git_modified: { fg: p.yellow },
+    git_conflict: { fg: p.red, bold: true },
+    diff_add: { fg: p.green },
+    diff_del: { fg: p.red },
+    diff_head: { fg: p.cyan },
     tab: { fg: p.comment },
     tab_active: { fg: p.fg_strong, bg: p.bg, bold: true },
     // Focus shows as brightness, never as colour: the active tab and the side panes' titles are
@@ -352,6 +360,8 @@ export function monoTheme(): Theme {
   roles.code_inline = { bold: true };
   roles.footnote = { underline: true };
   roles.tag = { bold: true };
+  roles.git_conflict = { bold: true };
+  roles.diff_head = { bold: true };
   roles.image = { underline: true, italic: true };
   roles.url = { dim: true };
   roles.html = { dim: true };

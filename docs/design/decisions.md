@@ -213,6 +213,15 @@ each batch, decides what it was:
 - **Undo is the branch's**: each rename records the branch it was made on, and is offered only there; on another it's
   in the way of nothing, and the hash check would refuse it anyway.
 
+## `5.11`–`5.14` — git, for reviewing
+
+Worktrees are agents' tasks, so what slipbox shows of git is what a review needs: which files a branch changed, and
+how. Changes are measured from the **merge base** with the base branch, as a pull request's diff is — against the base's
+tip, what `main` did since would show up too, backwards. Uncommitted and untracked files count: an agent's work isn't
+always committed. The explorer's marks come from `git status` asked in the background, a moment after anything
+changed — never on the keystroke's path; what's on request (a diff, the changes, the worktrees) asks git there and
+then. Staging and committing stay git's: slipbox shows, it doesn't commit.
+
 ## `17.19` — git worktrees
 
 A linked worktree (`git worktree add`) is a separate vault of the same repository: the same id and name, its own

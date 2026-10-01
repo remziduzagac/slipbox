@@ -1292,6 +1292,35 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "git: the explorer's marks; space g c what changed, a file's diff; space g d this note's",
+    run: async (s) => {
+      const git = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
+      if (git("init", "-q", "-b", "main").exitCode !== 0) return; // no git here
+      git("add", "-A");
+      git("commit", "-q", "-m", "the demo");
+      git("checkout", "-q", "-b", "review");
+      s.write("home.md", `${s.read("home.md")}\nA line the agent added.\n`);
+      await s.see(/home\.md +M/, 6000); // the explorer's mark, once git has been asked
+      await leader(s, "g", "c");
+      await s.see("Changed against main (1) — enter: the diff");
+      await s.see("M home.md");
+      await s.keys("enter");
+      await s.see("home.md against main — esc: the changes");
+      await s.see("+ A line the agent added.");
+      await s.keys("escape");
+      await s.see("Changed against main (1)");
+      await s.keys("escape");
+      await leader(s, "g", "d");
+      await s.see("+ A line the agent added.");
+      await s.keys("escape");
+      await leader(s, "g", "w");
+      await s.see("Worktrees (1) — enter: this note there");
+      await s.see(/● .+ review/);
+      await s.keys("escape");
+    },
+  },
+
   // --- vaults (17.x) ----------------------------------------------------------------------------
   {
     name: "vaults: [[vault:note]] switches into another vault and back; unknown vault; the list; a nested vault",
