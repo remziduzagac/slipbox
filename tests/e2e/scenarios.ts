@@ -1568,6 +1568,20 @@ export const SCENARIOS: Scenario[] = [
       await s.file("people/kenji-mori.md", (t) => !t.includes("previous_names"), "the note back, as it was");
       s.expect(!s.exists("people/kenji.md"), "the new name is gone");
       s.expect(s.read("home.md").includes("- [[kenji-mori]] — our visiting astronomer"), "home's link back");
+      // A heading renamed (11.9): its line, and the embed of it elsewhere.
+      await open(s, "kenji-mori");
+      await s.keys(":");
+      await s.type("14");
+      await s.keys("enter");
+      await leader(s, "n", "h");
+      await s.see('rename the heading "Kenji Mori" to:');
+      await s.keys("ctrl+u");
+      await s.type("Kenji Mori, astronomer");
+      await s.keys("enter");
+      await s.see("#Kenji Mori → people/kenji-mori.md#Kenji Mori, astronomer: 2 changes"); // the title is cut there
+      await s.keys("enter");
+      await s.file("people/kenji-mori.md", (t) => t.includes("# Kenji Mori, astronomer\n"), "the heading renamed");
+      s.expect(s.read("people/partners-and-names.md").includes("![[kenji-mori#Kenji Mori, astronomer]]"), "the embed follows");
       // The explorer's r asks for the selected note's new name; esc cancels.
       await leader(s, "e");
       await s.keys("r");

@@ -95,6 +95,8 @@ Every answer is about a note as the editor has it, and a request takes its lates
   lines then the file's move, which the editor previews and applies; slipbox writes nothing, so it isn't in
   slipbox's undo (`7.4`) — the editor's undo and git have it. Refused, with why, when a file it changes has unsaved
   changes in the editor (the plan is made from the files), when the editor can't move a file in an edit, or when
-  the new name is taken. Elsewhere — off a link — there's nothing to rename yet (a heading's rename is `11.9`).
+  the new name is taken. On a heading's line, the heading (`11.9`): its text is what's offered, and the rename is
+  `slipbox rename-heading`'s — its line and every link to it, in their forms — an edit with no move, so any editor
+  can apply it. Elsewhere there's nothing to rename.
 
-Still to come: a heading's rename (`11.9`), a file moved in the editor (`11.10`) and code actions (`11.11`).
+Still to come: a file moved in the editor (`11.10`) and code actions (`11.11`).

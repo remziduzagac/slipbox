@@ -25,7 +25,7 @@ export interface LoggedRename {
   id: string;
   /** When (ISO). */
   at: string;
-  kind: "note" | "folder" | "vault" | "relink";
+  kind: "note" | "folder" | "vault" | "relink" | "heading";
   from: string;
   to: string;
   move: { from: string; to: string; dir: boolean } | null;

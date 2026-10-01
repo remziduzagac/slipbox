@@ -232,6 +232,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n i": "note.info",
   "leader n n": "note.create",
   "leader n m": "note.rename",
+  "leader n h": "heading.rename",
   "leader n d": "note.delete",
   "leader n f": "footnotes.cycle",
   "leader n shift+f": "footnote.add",
@@ -376,8 +377,8 @@ export const EXPLORER_ACTIONS = [
   "new_note", "new_folder", "rename", "rename_vault", "move", "delete", "restore", "undo_rename", "copy", "cut", "paste", "make_vault", "unmake_vault", "menu", "close", "leave",
 ];
 
-/** Keys inside the outline pane: key → outline action. */
-export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {
+/** Moving about a list pane — the outline, the footnotes, Info: key → action. */
+const PANE_KEYS: Record<string, string> = {
   j: "down",
   down: "down",
   k: "up",
@@ -394,23 +395,28 @@ export const DEFAULT_OUTLINE_KEYS: Record<string, string> = {
   escape: "leave",
 };
 
-export const OUTLINE_ACTIONS = ["down", "up", "jump", "fold", "unfold", "top", "bottom", "filter", "close", "leave"];
+const PANE_ACTIONS = ["down", "up", "jump", "fold", "unfold", "top", "bottom", "filter", "close", "leave"];
+
+/** Keys inside the outline pane: key → outline action. */
+export const DEFAULT_OUTLINE_KEYS: Record<string, string> = { ...PANE_KEYS, r: "rename" };
+
+export const OUTLINE_ACTIONS = [...PANE_ACTIONS, "rename"];
 
 /** Keys inside the footnotes view (3.18): the outline's, and adding and changing footnotes. */
 export const DEFAULT_FOOTNOTE_KEYS: Record<string, string> = {
-  ...DEFAULT_OUTLINE_KEYS,
+  ...PANE_KEYS,
   a: "add",
   e: "edit",
   d: "delete",
   r: "rename",
 };
 
-export const FOOTNOTE_ACTIONS = [...OUTLINE_ACTIONS, "add", "edit", "delete", "rename"];
+export const FOOTNOTE_ACTIONS = [...PANE_ACTIONS, "add", "edit", "delete", "rename"];
 
 /** Keys inside the Info view (3.19): the outline's, and `y` to copy a row's value. */
-export const DEFAULT_INFO_KEYS: Record<string, string> = { ...DEFAULT_OUTLINE_KEYS, y: "copy", e: "edit" };
+export const DEFAULT_INFO_KEYS: Record<string, string> = { ...PANE_KEYS, y: "copy", e: "edit" };
 
-export const INFO_ACTIONS = [...OUTLINE_ACTIONS, "copy", "edit"];
+export const INFO_ACTIONS = [...PANE_ACTIONS, "copy", "edit"];
 
 /** What the Info view's actions do, for help and which-key. */
 export const INFO_ACTION_INFO: Record<string, { title: string; desc: string }> = {
@@ -525,6 +531,7 @@ export const OUTLINE_ACTION_INFO: Record<string, { title: string; desc: string }
   filter: { title: "Filter", desc: "Type to narrow the headings (their parents kept); enter jumps, esc clears" },
   close: { title: "Close the outline", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the outline stays open" },
+  rename: { title: "Rename the heading", desc: "Every link to it fixed in every vault reached, after a preview (a note's headings)" },
 };
 
 /** The footnotes view takes the outline's keymap (3.17); what its actions do there, for help. */

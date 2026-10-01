@@ -5629,6 +5629,33 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.messages.at(-1)!.text).toMatch(/^renamed notes\/alpha.md → notes\/first.md: \d+ changes in \d+ files$/);
   });
 
+  test("space n h renames the cursor's heading, r the outline's: a preview, then its links (11.9)", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    await h.app.run("cursor.goto_line 9"); // in Section One
+    await h.keys("space", "n", "h");
+    const p = h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    expect(p.text).toBe("Section One");
+    p.text = "Part One";
+    await h.keys("enter");
+    const list = h.app.overlay as ListOverlay;
+    expect(list.title).toStartWith("notes/alpha.md#Section One → notes/alpha.md#Part One: 2 changes in 2 files");
+    await h.keys("enter");
+    expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[[alpha#Part One]]");
+    expect(h.app.view!.buf.source).toContain("## Part One\n");
+    // The outline's r: its selected heading.
+    await h.app.run("outline.toggle");
+    const rows = h.app.outlineRows();
+    h.app.outline.selected = rows.findIndex((r) => r.text === "Section Two");
+    await h.keys("r");
+    expect((h.app.overlay as import("../src/tui/app.ts").PromptOverlay).text).toBe("Section Two");
+    await h.keys("escape");
+    // Above the first heading: nothing to rename.
+    await h.app.run("cursor.goto_line 1");
+    await h.keys("space", "n", "h");
+    expect(h.app.messages.at(-1)!.text).toBe("no heading here: the cursor is above the first");
+  });
+
   test("space v shift+u undoes the last rename: its preview, then every file as it was; open notes follow it back (7.4)", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });

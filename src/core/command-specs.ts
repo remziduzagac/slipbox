@@ -223,6 +223,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "vault.unmake", title: "Make the vault a plain folder", cli: "slipbox deinit <folder>", desc: "The explorer's selected vault (or this one, nested in another) a folder of the vault holding it; links fixed after a preview" },
   { id: "trash.open", title: "The trash", cli: "slipbox trash", desc: "What was deleted in this vault, newest first; enter restores it" },
   { id: "note.rename", title: "Rename or move the note", cli: "slipbox mv <note> <new-path>", desc: "Its links rewritten in every vault reached, after a preview; the old name kept" },
+  { id: "heading.rename", title: "Rename the heading", cli: "slipbox rename-heading <note> <heading> <new>", desc: "The section the cursor is in: every link to it rewritten in every vault reached, after a preview" },
   { id: "vault.rename", title: "Rename the vault", cli: "slipbox rename-vault <name>", desc: "This one, or the explorer's selected vault: [[old:…]] links rewritten in every vault reached, after a preview; the old name kept" },
   { id: "link.relink", title: "Relink old names and moves", cli: "slipbox relink [note]", desc: "Rewrites this note's links that reach notes by an old name or a move" },
   { id: "rename.undo", title: "Undo the last rename", cli: "slipbox undo", desc: "The vault's last rename, move or relink taken back after a preview: the files it rewrote as they were, what moved back where it was" },

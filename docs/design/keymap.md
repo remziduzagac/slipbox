@@ -252,6 +252,7 @@ file's folder); elsewhere on the current note, its folder, or this vault.
 | --- | --- |
 | `space n n` / `space d n` | a new note / folder in the selected folder, or beside this note |
 | `space n m` | rename or move the note by its path (`:rename`, `:mv`): links fixed after a preview |
+| `space n h` | rename the heading the cursor is under: every link to it fixed after a preview (`11.9`) |
 | `space n shift+m` / `space d m` | move the note / the folder to a folder picked from a tree |
 | `space d r` | rename the folder in place |
 | `space n d` / `space d d` | delete the note / the folder to the vault's trash, after asking (`:delete`) |
@@ -286,6 +287,7 @@ and, while unfocused, keeps its selection on the section the cursor is in. Insid
 | `h` / `l`, `left` / `right` | fold / unfold |
 | `g g` / `shift+g` | top / bottom |
 | `/` | filter: type to narrow the headings (their parents kept); `enter` jumps, `esc` clears |
+| `r` | rename the selected heading: every link to it fixed after a preview (`11.9`) |
 | `q` | close the outline |
 | `esc` | back to the note (over the content, the outline closes) |
 

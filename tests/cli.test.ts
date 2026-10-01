@@ -277,6 +277,21 @@ describe("the vault and the tool", () => {
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[[plan]] and [p](notes/plan.md)\n");
     expect(slipbox(["undo"], { cwd: dir }).code).toBe(3); // nothing more
   });
+  test("rename-heading: a preview, then the heading and its links (11.9)", () => {
+    const dir = join(sandbox, "headings");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "plan.md"), "# Plan\n\n## Goals\n");
+    writeFileSync(join(dir, "index.md"), "[[plan#Goals]] and [g](plan.md#goals)\n");
+    expect(slipbox(["init", dir, "--name", "cliheads"]).code).toBe(0);
+    const dry = slipbox(["rename-heading", "plan", "Goals", "Aims", "--dry-run"], { cwd: dir });
+    expect(dry.out).toContain("would rename heading plan.md#Goals → plan.md#Aims: 2 changes in 2 files");
+    expect(dry.out).toContain("+ [[plan#Aims]] and [g](plan.md#aims)");
+    expect(slipbox(["rename-heading", "plan", "Goals", "Aims", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "heading", dryRun: false });
+    expect(readFileSync(join(dir, "plan.md"), "utf8")).toBe("# Plan\n\n## Aims\n");
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[[plan#Aims]] and [g](plan.md#aims)\n");
+    expect(slipbox(["rename-heading", "plan", "Nope", "X"], { cwd: dir }).code).toBe(5);
+    expect(slipbox(["rename-heading", "plan", "Aims"], { cwd: dir }).code).toBe(2);
+  });
   test("cp, rm, trash, and mv of a folder (18.x)", () => {
     const dir = join(sandbox, "fileops");
     mkdirSync(join(dir, "projects", "deep"), { recursive: true });

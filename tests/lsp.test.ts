@@ -498,7 +498,7 @@ describe("renaming a note (11.4)", () => {
       range: { start: { line: 2, character: 4 }, end: { line: 2, character: 13 } },
       placeholder: "kenji",
     });
-    expect(await client.sendRequest(PrepareRenameRequest.type, { textDocument: a, position: { line: 0, character: 1 } })).toBeNull();
+    expect(await client.sendRequest(PrepareRenameRequest.type, { textDocument: a, position: { line: 1, character: 0 } })).toBeNull(); // off a link and a heading
     const edit = (await client.sendRequest(RenameRequest.type, { textDocument: a, position: { line: 2, character: 7 }, newName: "kenji-mori" }))!;
     expect(edit.documentChanges!.at(-1)).toEqual({ kind: "rename", oldUri: uri(join(root, "people/kenji.md")), newUri: uri(join(root, "people/kenji-mori.md")) });
     apply(edit);
@@ -551,5 +551,35 @@ describe("edits for the editor (11.4)", () => {
       expect(TextDocument.applyEdits(doc, textEdits(text, next))).toBe(next);
     }
     expect(textEdits("a\nb\nc\n", "a\nB\nc\n")).toEqual([{ range: { start: { line: 1, character: 0 }, end: { line: 2, character: 0 } }, newText: "B\n" }]);
+  });
+});
+
+describe("renaming a heading (11.9)", () => {
+  test("on a heading's line: its text, renamed with every link to it — an edit with no move", async () => {
+    const root = folder({ "a.md": "# A\n\n[[b#Old]] [x](b.md#old)\n", "b.md": "# B\n\n## Old ##\n\n[[#Old]]\n" });
+    const up = new PassThrough();
+    const down = new PassThrough();
+    const server = new LspServer({ input: up, output: down, watch: false });
+    const client = createProtocolConnection(new StreamMessageReader(down), new StreamMessageWriter(up));
+    client.listen();
+    await client.sendRequest(InitializeRequest.type, { processId: null, rootUri: uri(root), capabilities: {} });
+    const b = { uri: uri(join(root, "b.md")) };
+    expect(await client.sendRequest(PrepareRenameRequest.type, { textDocument: b, position: { line: 2, character: 1 } })).toEqual({
+      range: { start: { line: 2, character: 3 }, end: { line: 2, character: 6 } },
+      placeholder: "Old",
+    });
+    const edit = (await client.sendRequest(RenameRequest.type, { textDocument: b, position: { line: 2, character: 1 }, newName: "New" }))!;
+    expect(edit.documentChanges!.some((c) => "kind" in c)).toBe(false); // nothing moves: an editor that can't move files still can
+    const texts = Object.fromEntries(
+      edit.documentChanges!.map((c) => {
+        const d = c as { textDocument: { uri: string }; edits: { range: Range; newText: string }[] };
+        const path = fileURLToPath(d.textDocument.uri);
+        return [path.slice(root.length + 1), TextDocument.applyEdits(TextDocument.create("", "", 0, readFileSync(path, "utf8")), d.edits)];
+      }),
+    );
+    expect(texts).toEqual({ "a.md": "# A\n\n[[b#New]] [x](b.md#new)\n", "b.md": "# B\n\n## New ##\n\n[[#New]]\n" });
+    await client.sendRequest(ShutdownRequest.type);
+    await client.sendNotification(ExitNotification.type);
+    expect(await server.exited).toBe(0);
   });
 });

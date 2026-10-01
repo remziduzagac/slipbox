@@ -96,7 +96,7 @@ These churn freely before 1.0:
 | `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
 | `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
 | `vaults` | `[{key, id, kind, name, aliases, previous_names, path, seen, exists, worktree?{name, main}}]` |
-| `mv`, `rename-vault`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, written}` (see Renames) |
+| `mv`, `rename-vault`, `rename-heading`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, …}` |
 | `undo` | as `mv`: the rename taken back (`from` and `to` the other way), plus `undo{id, at}`; exit 3: nothing |
 | `cp <note\|folder> [path]` | `{from, to, dir}` — beside it as `name-copy` without a path; exit 5 onto a file |
 | `rm <note\|folder>` | `{path, dryRun, breaking, trashed{id, abs, shown, dir, at}}` — to the vault's trash |
@@ -337,6 +337,13 @@ refused when something is there now. `slipbox cp` copies a note, file or folder,
 `previous_names`, and every `[[old:…]]` rewritten, here and in the vaults linking into it. `slipbox relink [note]`
 rewrites the links of a note (or every note) that reach their note only by a previous name or a redirect, to its name
 or path now. Both take `--dry-run`.
+
+`slipbox rename-heading <note> <heading> <new>` renames a heading (`11.9`) — found by its text in any case, or its
+slug — and every link to it: `[[note#Heading]]` and `![[note#Heading]]` (their `|text` kept), `[x](note.md#heading)`
+in the form it has, the slug (`#new-name`) or the text (`#New%20Name`, `<note.md#New Name>`), the note's own
+`[[#Heading]]` and `[x](#heading)`, in this vault and the vaults linking into it; the heading's closing `#`s stay.
+Refused (exit 5) when the note has no such heading, has two of its name (a link can't tell them apart), or has a
+heading with the new name already. It takes `--dry-run`, and `undo` takes it back.
 
 **Undo** (`7.4`): `slipbox undo` takes back the vault's last rename, move, vault rename or relink — the TUI's or the
 CLI's alike: every file it rewrote gets back the text it had, byte for byte (a note's added previous name too), what

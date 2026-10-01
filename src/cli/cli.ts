@@ -41,7 +41,7 @@ import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
 import { openVault, Reach } from "../core/reach.ts";
-import { type Applied, applyPlan, loggedRenames, planFolderMove, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
+import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { readIdentity, readRegistry, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { findVaultRoot, gitRootOf, homeAt, initVault, isInside, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
@@ -160,6 +160,7 @@ Usage:
   slipbox rm <note|folder>          delete to the vault's trash (slipbox trash restore puts it back)  [--dry-run]
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
   slipbox rename-vault <name>       rename this vault; [[old:…]] links fixed, the old name kept  [--dry-run]
+  slipbox rename-heading <note> <heading> <new>  rename a heading; [[note#heading]] links fixed everywhere  [--dry-run]
   slipbox relink [note]             rewrite links that reach notes by an old name or a move  [--dry-run]
   slipbox undo                      take back the vault's last rename, move or relink  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
@@ -192,7 +193,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "relink", "undo", "context", "search", "index", "changed", "diff", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
+  "mv", "rename-vault", "rename-heading", "relink", "undo", "context", "search", "index", "changed", "diff", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
@@ -240,7 +241,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     const color = flag(args, "color");
     if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
     // The note argument, when it names a file, also says which vault this is.
-    const noteAt = ["render", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "relink", "cp", "rm"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
+    const noteAt = ["render", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "cp", "rm"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
     let pathArg = noteArgPath(noteAt, io.cwd);
     // A nested vault's folder, moved, copied or deleted, is a folder of the vault holding it (18.7).
     if (pathArg && ["mv", "cp", "rm"].includes(command)) {
@@ -295,7 +296,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
+  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -342,6 +343,7 @@ const FLAGS: Record<string, string[]> = {
   mv: ["dry-run"],
   rm: ["dry-run"],
   "rename-vault": ["dry-run"],
+  "rename-heading": ["dry-run"],
   relink: ["dry-run"],
   undo: ["dry-run"],
   context: ["depth", "no-backlinks", "limit", "copy"],
@@ -1015,6 +1017,13 @@ const HANDLERS: Record<string, Handler> = {
     return r;
   },
 
+  "rename-heading"(s, rest) {
+    const rel = resolveNote(s, requireArg(rest, "note"), false);
+    const [, heading, to] = rest;
+    if (heading === undefined || to === undefined) throw new UsageError("rename-heading takes the note, the heading and its new name");
+    return renameResult(s, () => planHeadingRename(s.graph, rel, heading, to));
+  },
+
   relink(s, rest) {
     const rels = rest[0] ? [resolveNote(s, rest[0])] : undefined;
     return renameResult(s, () => planRelink(s.graph, rels));
@@ -1650,11 +1659,11 @@ function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Result {
   const links = p.files.reduce((n, f) => n + f.edits.length, 0);
   const verb = p.undo
     ? applied
-      ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "undid the relink of", "make-vault": "", "unmake-vault": "" }[p.kind]
-      : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would undo the relink of", "make-vault": "", "unmake-vault": "" }[p.kind]
+      ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "undid the relink of", "make-vault": "", "unmake-vault": "", heading: "renamed heading" }[p.kind]
+      : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would undo the relink of", "make-vault": "", "unmake-vault": "", heading: "would rename heading" }[p.kind]
     : applied
-    ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "relinked", "make-vault": "made", "unmake-vault": "made" }[p.kind]
-    : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would relink", "make-vault": "would make", "unmake-vault": "would make" }[p.kind];
+    ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "relinked", "make-vault": "made", "unmake-vault": "made", heading: "renamed heading" }[p.kind]
+    : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would relink", "make-vault": "would make", "unmake-vault": "would make", heading: "would rename heading" }[p.kind];
   const head = p.undo
     ? p.kind === "relink"
       ? `${verb} ${p.to}`

@@ -4,7 +4,7 @@
 
 import { join, posix, relative } from "node:path";
 import { findVaultRoot, gitRootOf, isNeverRoot } from "../core/vault.ts";
-import { planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
+import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
@@ -402,7 +402,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
 }
 
 /** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
-const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "vault.rename"]);
+const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "heading.rename", "vault.rename"]);
 
 /** Commands in the order of core/command-specs.ts, which follows docs/design/keymap.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
@@ -1543,6 +1543,17 @@ export function registerActions(app: App): void {
       if (arg) return a.previewRename(() => planNoteRename(a.graph, t.rel, arg));
       a.promptRename(t.rel);
     },
+    "heading.rename": (a, arg) =>
+      withView(a, (v) => {
+        const rel = v.buf.rel;
+        if (!rel || !a.graph.notes.has(rel)) return a.message("warn", "only a vault note's headings are renamed with their links");
+        // The section the cursor is in: the last heading at or above its line.
+        const line = a.cursorLine(v);
+        const h = [...(a.graph.entry(rel)?.headings ?? [])].reverse().find((x) => x.line <= line);
+        if (!h) return a.message("warn", "no heading here: the cursor is above the first");
+        if (arg) return a.previewRename(() => planHeadingRename(a.graph, rel, h.text, arg));
+        a.promptHeadingRename(rel, h.text);
+      }),
     "vault.rename": (a, arg) => {
       // The explorer's selected vault (one nested here), when it has focus.
       const item = a.explorerFocused() ? a.explorerItem() : null;

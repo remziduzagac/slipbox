@@ -61,7 +61,7 @@ import { IndexJob, indexFile, search, SearchIndex, type SearchResult } from "../
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
 import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusLater, worktreeList } from "../core/gitops.ts";
 import { diffRows } from "../core/merge.ts";
-import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
+import { type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
@@ -4669,6 +4669,11 @@ export class App {
         this.region = "content";
         if (this.narrow || this.ui.zen) this.outline.overlay = false;
         break;
+      case "rename":
+        if (!row || !view) break;
+        if (!view.buf.rel || !this.graph.notes.has(view.buf.rel)) this.message("warn", "only a vault note's headings are renamed with their links");
+        else this.promptHeadingRename(view.buf.rel, row.text);
+        break;
       default:
         this.message("error", `unknown outline action: ${action}`);
     }
@@ -6480,7 +6485,7 @@ export class App {
     ];
     if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "every link reaches its note by its name now" : "no links to change", data: plan });
     const what =
-      plan.kind === "note"
+      plan.kind === "note" || plan.kind === "heading"
         ? `${plan.from} → ${plan.to}`
         : plan.kind === "folder"
           ? `${plan.from}/ → ${plan.to}/`
@@ -6568,8 +6573,8 @@ export class App {
     if (plan.makeVault || plan.unmakeVault) this.selectInExplorer(plan.from);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     const what = plan.undo
-      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `renamed the vault ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "" }[plan.kind]
-      : plan.kind === "note"
+      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `renamed the vault ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "", heading: `renamed the heading ${plan.from} back to ${plan.to}` }[plan.kind]
+      : plan.kind === "note" || plan.kind === "heading"
         ? `renamed ${plan.from} → ${plan.to}`
         : plan.kind === "folder"
           ? `moved ${plan.from}/ → ${plan.to}/`
@@ -6594,6 +6599,14 @@ export class App {
       if (to.trim()) this.previewRename(() => planNoteRename(this.graph, rel, to.trim()));
     });
     (this.overlay as PromptOverlay).text = rel.replace(/\.(md|markdown)$/i, "");
+  }
+
+  /** Ask for a heading's new name, then preview its rename (11.9): every link to it fixed. */
+  promptHeadingRename(rel: string, heading: string): void {
+    this.prompt(`rename the heading "${heading}" to: `, (to) => {
+      if (to.trim()) this.previewRename(() => planHeadingRename(this.graph, rel, heading, to.trim()));
+    });
+    (this.overlay as PromptOverlay).text = heading;
   }
 
   /** The file where repositories declined as vaults are remembered (the home vault's state). */

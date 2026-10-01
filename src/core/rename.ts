@@ -13,6 +13,7 @@ import { atomicWrite, landsInside, readText } from "./fsutil.ts";
 import type { Backlink, Graph, LinkKind, NoteEntry } from "./graph.ts";
 import { VAULT_LINK } from "./graph.ts";
 import { formatPathLink, normKey, pathForm, pathLink } from "./links.ts";
+import { slugify } from "./parse.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
@@ -42,7 +43,7 @@ export interface FileChange {
 }
 
 export interface RenamePlan {
-  kind: "note" | "folder" | "vault" | "relink" | "make-vault" | "unmake-vault";
+  kind: "note" | "folder" | "vault" | "relink" | "make-vault" | "unmake-vault" | "heading";
   from: string;
   to: string;
   /** What moves: a file or a folder, absolute paths; null for a vault's rename or a relink. */
@@ -303,6 +304,23 @@ class Collector {
     const same = f.edits.find((e) => e.line === r.line);
     if (same) same.after = after;
     else f.edits.push({ line: r.line, before: before.replace(/\r$/, ""), after: after.replace(/\r$/, "") });
+  }
+
+  /** Rewrite one line of a file by `fn` (null: the line isn't what was expected; skipped, with why). */
+  line(abs: string, vault: string | null, line: number, fn: (text: string) => string | null, why: string): void {
+    const f = this.file(abs, vault);
+    if (!f) return void this.skipped.push({ shown: shownFor(this.g, abs, vault), line, reason: "can't be read" });
+    const lines = f.next.split("\n");
+    const before = lines[line - 1];
+    const cr = before?.endsWith("\r") ? "\r" : "";
+    const after = before === undefined ? null : fn(before.replace(/\r$/, ""));
+    if (after === null) return void this.skipped.push({ shown: f.shown, line, reason: why });
+    if (after === before!.replace(/\r$/, "")) return;
+    lines[line - 1] = after + cr;
+    f.next = lines.join("\n");
+    const same = f.edits.find((e) => e.line === line);
+    if (same) same.after = after;
+    else f.edits.push({ line, before: before!.replace(/\r$/, ""), after });
   }
 
   result(): FileChange[] {
@@ -1040,7 +1058,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       }
     }
     if (gone.length) g.dirs = g.dirs.filter((x) => !gone.includes(x));
-  } else if (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink") {
+  } else if (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink" || plan.kind === "heading") {
     logRename(g.loc, {
       id: randomUUID(),
       at: new Date().toISOString(),
@@ -1082,4 +1100,99 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     g.dirs = [...new Set(g.dirs.map((d) => (d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d)).concat(to.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"))))];
   }
   return { written, moved: mv ? { from: mv.from, to: mv.to } : null };
+}
+
+// -------------------------------------------------------------------------------------------
+// A heading renamed (11.9)
+
+/** Whether a link's `#fragment` names a heading: by its text (any case) or its slug. */
+function namesHeading(fragment: string, text: string): boolean {
+  return fragment.trim().toLowerCase() === text.toLowerCase() || slugify(fragment) === slugify(text);
+}
+
+/**
+ * A link's `#heading` rewritten on a line at its site: in `[[target#Heading|text]]` the heading part,
+ * in `[x](path#fragment)` the fragment — kept in its form, the slug (`#new-name`) or the text
+ * (`#New%20Name`). The link nearest the site's column; null when it isn't there any more.
+ */
+function retitle(line: string, site: Site, old: string, next: string): string | null {
+  const col = Math.max(0, site.column - 1);
+  const hits: { at: number; from: number; to: number; put: string }[] = [];
+  if (site.kind === "wiki" || site.kind === "embed") {
+    for (let open = line.indexOf("[["); open >= 0; open = line.indexOf("[[", open + 2)) {
+      const close = line.indexOf("]]", open + 2);
+      if (close < 0) break;
+      const inner = line.slice(open + 2, close);
+      const hash = inner.indexOf("#");
+      const bar = inner.search(/\\?\|/);
+      if (hash < 0 || (bar >= 0 && bar < hash) || inner.slice(0, hash).trim() !== site.target) continue;
+      const end = bar >= 0 ? bar : inner.length;
+      const frag = inner.slice(hash + 1, end);
+      if (!namesHeading(frag, old)) continue;
+      hits.push({ at: open > 0 && line[open - 1] === "!" ? open - 1 : open, from: open + 3 + hash, to: open + 2 + end, put: next });
+    }
+  } else {
+    for (const m of line.matchAll(/\]\(\s*(<[^>\n]*>|[^)\s]*)/g)) {
+      const raw = m[1]!;
+      const angled = raw.startsWith("<");
+      const url = angled ? raw.slice(1, -1) : raw;
+      if (url !== site.target && safeDecode(url) !== site.target) continue;
+      const hash = url.indexOf("#");
+      if (hash < 0) continue;
+      const frag = url.slice(hash + 1);
+      const decoded = safeDecode(frag);
+      if (!namesHeading(decoded, old)) continue;
+      // Written as the heading's text (`#My%20Heading`), it stays text; else the slug.
+      const asText = decoded.toLowerCase() === old.toLowerCase() && decoded !== slugify(old);
+      const put = asText ? (angled ? next : next.replace(/ /g, "%20")) : slugify(next);
+      const start = m.index + m[0].length - raw.length + (angled ? 1 : 0) + hash + 1;
+      const open = line.lastIndexOf("[", m.index);
+      hits.push({ at: open > 0 && line[open - 1] === "!" ? open - 1 : open, from: start, to: start + frag.length, put });
+    }
+  }
+  const hit = hits.sort((a, b) => Math.abs(a.at - col) - Math.abs(b.at - col))[0];
+  return hit ? line.slice(0, hit.from) + hit.put + line.slice(hit.to) : null;
+}
+
+/**
+ * Plan renaming a heading of a note (11.9): its line, and every link to it — `[[note#Heading]]`,
+ * `![[note#Heading]]`, `[x](note.md#heading)`, the note's own `[[#Heading]]` and `[x](#heading)` — in
+ * this vault and the others reached. Refused when two of its headings share the name (a link can't
+ * tell them apart), or another heading has the new one.
+ */
+export function planHeadingRename(g: Graph, rel: string, heading: string, toText: string): RenamePlan {
+  const entry = g.entry(rel);
+  if (!entry) throw new RenameError(`no note ${rel} in ${g.root}`);
+  const h = entry.headings.find((x) => namesHeading(heading, x.text));
+  if (!h) throw new RenameError(`no heading "${heading}" in ${rel}`);
+  const next = toText.trim();
+  if (!next) throw new RenameError("a heading needs a name");
+  if (entry.headings.some((x) => x !== h && slugify(x.text) === slugify(h.text))) throw new RenameError(`${rel} has two headings "${h.text}": links can't tell them apart`);
+  if (next === h.text) throw new RenameError(`the heading is "${next}" already`);
+  if (entry.headings.some((x) => x !== h && slugify(x.text) === slugify(next))) throw new RenameError(`${rel} has a heading "${next}" already`);
+  const c = new Collector(g);
+  const own = join(g.root, rel);
+  c.line(own, null, h.line, (line) => {
+    const m = /^(\s{0,3}#{1,6}[ \t]+)(.*?)([ \t]+#+[ \t]*)?$/.exec(line);
+    return m ? `${m[1]}${next}${m[3] ?? ""}` : null;
+  }, "the heading isn't on its line any more");
+  const fragment = (l: { kind: LinkKind; target: string; heading: string | null }) => {
+    if (l.kind === "wiki" || l.kind === "embed") return l.heading;
+    const i = l.target.indexOf("#");
+    return i < 0 ? null : safeDecode(l.target.slice(i + 1));
+  };
+  const site = (abs: string, l: { kind: LinkKind; target: string; line: number; column: number }) => ({ abs, kind: l.kind, target: l.target, line: l.line, column: l.column });
+  for (const b of g.backlinks(rel)) {
+    const f = fragment(b);
+    if (f === null || !namesHeading(f, h.text)) continue;
+    const abs = isAbsolute(b.from) ? b.from : join(g.root, b.from);
+    c.line(abs, b.vault ?? null, b.line, (line) => retitle(line, site(abs, b), h.text, next), "no link to the heading there any more");
+  }
+  for (const l of entry.links) {
+    const f = fragment(l);
+    if (f === null || !namesHeading(f, h.text) || g.resolveLink(l, rel).resolvedKind !== "anchor") continue;
+    c.line(own, null, l.line, (line) => retitle(line, site(own, l), h.text, next), "no link to the heading there any more");
+  }
+  const files = c.result();
+  return { kind: "heading", from: `${rel}#${h.text}`, to: `${rel}#${next}`, move: null, files, warnings: dirtyTrees(files.map((f) => f.abs)), skipped: c.skipped };
 }

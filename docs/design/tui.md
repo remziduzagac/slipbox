@@ -317,13 +317,14 @@ itself.
 
 ## Renames (plans `17.15`, `7.1`–`7.4`)
 
-`space n m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already; the explorer's `r`
-for the selected note's, file's or folder's new name, `m` for a folder to move it to (18.x, below); `space v n` for
-the vault's new name; `space l r` (`:relink`) relinks this note's links that reach their
-note by an old name or a move. Each shows its **preview** first: a list of every line it changes, in every vault
-(`notes/index.md:3  [[plan]]  →  [[roadmap]]`), with the git trees that already have changes and the links skipped
-at the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s,
-`rename-vault`'s and `relink`'s (`docs/design/cli.md`, "Renames"). **Refused while a file it rewrites is unsaved.**
+`space n m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already; the explorer's `r` for
+the selected note's, file's or folder's new name, `m` for a folder to move it to (18.x, below); `space v n` for the
+vault's new name; `space n h` for a new name of the heading the cursor is under (the outline's `r`, its selected
+heading's; `11.9`); `space l r` (`:relink`) relinks this note's links that reach their note by an old name or a move.
+Each shows its **preview** first: a list of every line it changes, in every vault
+(`notes/index.md:3  [[plan]]  →  [[roadmap]]`), with the git trees that already have changes and the links skipped at
+the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s, `rename-vault`'s,
+`rename-heading`'s and `relink`'s (`docs/design/cli.md`, "Renames"). **Refused while a file it rewrites is unsaved.**
 After it, the open notes it changed are reloaded, and a window on a renamed or moved note shows it under its new
 path, its history following — every note of a moved folder alike.
 

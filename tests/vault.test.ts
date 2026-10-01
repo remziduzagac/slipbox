@@ -8,6 +8,7 @@ import { CLI_COMMANDS, runCli } from "../src/cli/cli.ts";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
+import { applyPlan, planHeadingRename, planUndo } from "../src/core/rename.ts";
 import { findVaultRoot, gitRootOf, initVault, locateVault, recordLocation } from "../src/core/vault.ts";
 import { vaultKey } from "../src/core/paths.ts";
 
@@ -2121,5 +2122,54 @@ describe("an editor's unsaved text (11.8)", () => {
     expect(g.entry("a.md")!.title).toBe("Typed again");
     g.overlay("nowhere.md", "# N\n");
     expect(g.notes.has("nowhere.md")).toBe(false);
+  });
+});
+
+describe("renaming a heading (11.9)", () => {
+  test("its line and every link to it, in each link's form; undone like any rename", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-heading-"));
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, "b.md"), "# B\n\n## Old Name ##\n\ntext ^blk\n\nsee [[#Old Name]] and [up](#old-name)\n");
+    const a = [
+      "[[b#Old Name]] [[b#old name|shown]] ![[b#Old Name]] [[b#^blk]] [[b#Other]]",
+      "[s](b.md#old-name) [t](b.md#Old%20Name) [u](<b.md#Old Name>) [v](b.md)",
+      "",
+    ].join("\n");
+    writeFileSync(join(dir, "a.md"), a);
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    const plan = planHeadingRename(g, "b.md", "Old Name", "New Title");
+    expect(plan).toMatchObject({ kind: "heading", from: "b.md#Old Name", to: "b.md#New Title", move: null });
+    applyPlan(g, plan);
+    expect(readFileSync(join(dir, "a.md"), "utf8")).toBe(
+      [
+        "[[b#New Title]] [[b#New Title|shown]] ![[b#New Title]] [[b#^blk]] [[b#Other]]",
+        "[s](b.md#new-title) [t](b.md#New%20Title) [u](<b.md#New Title>) [v](b.md)",
+        "",
+      ].join("\n"),
+    );
+    expect(readFileSync(join(dir, "b.md"), "utf8")).toBe("# B\n\n## New Title ##\n\ntext ^blk\n\nsee [[#New Title]] and [up](#new-title)\n");
+    // Undone like any rename (7.4).
+    applyPlan(g, planUndo(g));
+    expect(readFileSync(join(dir, "a.md"), "utf8")).toBe(a);
+  });
+
+  test("refused: no such heading, two of its name, a name another heading has, the same name", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-heading-"));
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, "b.md"), "# B\n\n## Twice\n\n## Twice\n\n## One\n\n## Two\n");
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    const why = (heading: string, to: string) => {
+      try {
+        planHeadingRename(g, "b.md", heading, to);
+        return "planned";
+      } catch (err) {
+        return (err as Error).message;
+      }
+    };
+    expect(why("Nope", "X")).toBe('no heading "Nope" in b.md');
+    expect(why("Twice", "X")).toBe('b.md has two headings "Twice": links can\'t tell them apart');
+    expect(why("One", "two")).toBe('b.md has a heading "two" already');
+    expect(why("One", "One")).toBe('the heading is "One" already');
+    expect(why("one", "Uno")).toBe("planned"); // found by its name in any case, or its slug
   });
 });

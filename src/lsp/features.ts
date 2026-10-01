@@ -24,7 +24,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import type { Graph, LinkRef, Pos, ResolvedLink } from "../core/graph.ts";
 import { blockIds, landingLine, landingText } from "../core/landing.ts";
 import { diffLines } from "../core/merge.ts";
-import { planNoteRename, RenameError, type RenamePlan } from "../core/rename.ts";
+import { planHeadingRename, planNoteRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { slugify } from "../core/parse.ts";
 
 /** The protocol's range for a span of the graph's (lines and columns from 1, the end after its last character). */
@@ -382,28 +382,38 @@ export function workspaceSymbols(g: Graph, query: string): WorkspaceSymbol[] {
   return [...notes, ...headings].slice(0, WORKSPACE_MAX);
 }
 
-/** The note a rename at a position renames (11.4): a link's, in this vault — and the link's span. */
-function renameTarget(g: Graph, rel: string, pos: Position): { path: string; range: Range } | null {
+type RenameTarget = { kind: "note"; path: string; range: Range } | { kind: "heading"; text: string; range: Range };
+
+/** What a rename at a position renames: on a link, its note (11.4) in this vault; on a heading's line, the heading (11.9). */
+function renameTarget(g: Graph, rel: string, pos: Position): RenameTarget | null {
   const l = linkAt(g, rel, pos);
-  if (!l || l.resolvedKind !== "note" || !l.path || isAbsolute(l.path)) return null;
-  return { path: l.path, range: rangeOf(l, l.end) };
+  if (l) return l.resolvedKind === "note" && l.path && !isAbsolute(l.path) ? { kind: "note", path: l.path, range: rangeOf(l, l.end) } : null;
+  const h = g.entry(rel)?.headings.find((x) => x.line === pos.line + 1 && x.text.trim());
+  if (!h) return null;
+  // The heading's text on its line: after the #s, before any closing ones.
+  const line = (g.textOf(rel) ?? "").split("\n")[h.line - 1]?.replace(/\r$/, "") ?? "";
+  const m = /^(\s{0,3}#{1,6}[ \t]+)(.*?)([ \t]+#+[ \t]*)?$/.exec(line);
+  const from = m ? m[1]!.length : 0;
+  return { kind: "heading", text: h.text, range: { start: { line: h.line - 1, character: from }, end: { line: h.line - 1, character: from + (m?.[2]!.length ?? line.length) } } };
 }
 
 /** What a rename at a position would rename, and its name now; null where there's nothing to rename. */
 export function prepareRename(g: Graph, rel: string, pos: Position): { range: Range; placeholder: string } | null {
   const t = renameTarget(g, rel, pos);
-  return t ? { range: t.range, placeholder: posix.basename(t.path).replace(NOTE_EXT, "") } : null;
+  if (!t) return null;
+  return { range: t.range, placeholder: t.kind === "note" ? posix.basename(t.path).replace(NOTE_EXT, "") : t.text };
 }
 
 /**
- * The rename planned (11.4), as the TUI and `slipbox mv` plan it: the linked note to `newName` — in its
- * own folder, or a path from the vault's root when it has a `/` — every link to it fixed.
+ * The rename planned, as the TUI and the CLI plan it: the linked note to `newName` — in its own folder,
+ * or a path from the vault's root when it has a `/` (11.4) — or the heading (11.9); every link fixed.
  */
 export function renamePlan(g: Graph, rel: string, pos: Position, newName: string): RenamePlan {
   const t = renameTarget(g, rel, pos);
-  if (!t) throw new RenameError("nothing to rename here: on a link, its note is renamed");
+  if (!t) throw new RenameError("nothing to rename here: on a link, its note is renamed; on a heading, the heading");
   const name = newName.trim();
   if (!name) throw new RenameError("a new name is needed");
+  if (t.kind === "heading") return planHeadingRename(g, rel, t.text, name);
   return planNoteRename(g, t.path, name.includes("/") ? name : posix.join(posix.dirname(t.path), name));
 }
 
