@@ -6,7 +6,7 @@
 
 import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, posix, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 
 export type Resolution =
   | { status: "resolved"; path: string; candidates: string[] }
@@ -220,7 +220,7 @@ export function pathForm(target: string): PathForm | null {
  * A markdown link's path is percent-decoded; a wikilink's without an extension names a note
  * (`.md`, `.markdown`). Null when it isn't a path form, or names no file.
  */
-export function pathLink(target: string, linkingAbs: string, wiki: boolean): { form: PathForm; abs: string } | null {
+export function pathLink(target: string, linkingAbs: string, wiki: boolean, rebase?: { from: string; to: string }): { form: PathForm; abs: string } | null {
   const form = pathForm(target);
   if (!form) return null;
   let p: string;
@@ -233,6 +233,11 @@ export function pathLink(target: string, linkingAbs: string, wiki: boolean): { f
   } else {
     const raw = wiki ? target : decodeSafe(target);
     p = form === "home" ? join(homeDir(), raw.slice(2)) : form === "absolute" ? raw : resolve(dirname(linkingAbs), raw);
+    // A relative path out of `from` (a worktree's checkout), taken as from `to` (the main one's).
+    if (form === "relative" && rebase) {
+      const out = relative(rebase.from, p);
+      if (out.startsWith("..") || isAbsolute(out)) p = resolve(rebase.to, out);
+    }
   }
   const candidates = wiki && !/\.[A-Za-z0-9]+$/.test(p) ? [`${p}.md`, `${p}.markdown`] : [p];
   const hit = candidates.find((c) => {

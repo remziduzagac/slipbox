@@ -8,11 +8,12 @@
 // never share a session.
 
 import { randomBytes } from "node:crypto";
-import { existsSync, realpathSync, statSync } from "node:fs";
+import { existsSync, realpathSync, rmSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { atomicWrite, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
-import { dataHome, stateHome, vaultKey } from "./paths.ts";
+import { checkoutOf } from "./git.ts";
+import { cacheHome, dataHome, stateHome, vaultKey } from "./paths.ts";
 
 export const MARKER = ".slipbox";
 
@@ -40,6 +41,8 @@ export interface KnownVault {
   path: string;
   /** When (ISO 8601). */
   seen: string;
+  /** A vault in a linked git worktree (17.19): git's name for it, and the main checkout's vault. */
+  worktree?: { name: string; main: string | null };
 }
 
 /** A vault name: letters, digits, `.`, `_`, `-`; no spaces and no colon (`[[name:note]]`). */
@@ -215,9 +218,36 @@ function idAt(root: string): string | null {
  */
 export function storageKey(root: string, id: string | null, known = readRegistry()): string {
   if (!id) return vaultKey(root);
-  const primary = known.find((v) => v.key === id);
+  // A worktree's own key is never the id (17.19): one recorded under it before is no primary.
+  const primary = known.find((v) => v.key === id && !v.worktree && !checkoutOf(v.path)?.worktree);
   if (!primary || real(primary.path) === real(root) || idAt(primary.path) !== id) return id;
   return `${id}-${vaultKey(root).slice(-8)}`;
+}
+
+/** A worktree's folder gone this long has its state removed too, not only its cache (17.19). */
+const WORKTREE_STATE_DAYS = 30;
+
+/**
+ * Worktrees that are gone (17.19: merged, `git worktree remove`): their cache removed at once — it's
+ * derived — and, a month after they were last seen, their state (the scratch, positions, session)
+ * and their entry in the list. Until then they're listed as gone.
+ */
+export function pruneWorktrees(now = Date.now()): void {
+  const list = readRegistry();
+  const gone = list.filter((v) => v.worktree && !existsSync(join(v.path, ".git")) && !existsSync(join(v.path, MARKER)));
+  if (!gone.length) return;
+  const drop: string[] = [];
+  for (const v of gone) {
+    rmSync(join(cacheHome(), v.key), { recursive: true, force: true });
+    if (now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000) {
+      rmSync(join(stateHome(), v.key), { recursive: true, force: true });
+      drop.push(v.key);
+    }
+  }
+  if (!drop.length) return;
+  try {
+    writeJson(registryFile(), { version: 1, vaults: list.filter((v) => !drop.includes(v.key)) } satisfies RegistryFile);
+  } catch {}
 }
 
 /**

@@ -29,9 +29,10 @@ of SHA-256 over the root's **real path**; state kept under a path's key before v
 Consequences, accepted deliberately:
 
 - State does not travel between the Mac and the VMs. Reading position is machine-local anyway.
-- **A copy of a vault carries its id** (`cp -r`, a second clone, a worktree). The copy that isn't where
-  `vaults.json` last saw the vault keys by `<id>-<hash>` of its path, so two live copies never share a session; when
-  the original is gone (the folder was moved), the copy is the vault and takes the id's key.
+- **A copy of a vault carries its id** (`cp -r`, a second clone). The copy that isn't where `vaults.json` last saw
+  the vault keys by `<id>-<hash>` of its path, so two live copies never share a session; when the original is gone
+  (the folder was moved), the copy is the vault and takes the id's key. **A git worktree** is told apart by git, not
+  by which was opened first (`17.19`): the main checkout keys by the id, a linked worktree by `<id>-wt-<name>`.
 - The home vault holds every loose folder: its positions are keyed by absolute path, and each folder has its own
   session (`sessions/<basename>-<hash>.json`).
 
@@ -195,6 +196,30 @@ isn't a file — the same editing keys, undo and highlighting as any — and wri
 one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back, as leaving the lens keeps its edits;
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
+
+## `17.19` — git worktrees
+
+A linked worktree (`git worktree add`) is a separate vault of the same repository: the same id and name, its own
+state and cache — worktrees are an agent's task, each its own context (scratch, positions, session, indexes) — and
+which checkout it is comes from the files under `.git` (a worktree's `.git` is a file naming
+`.git/worktrees/<name>`, whose `commondir` is the repository's), never a git process and never where the folder is:
+`project/worktrees/x/feat` is a worktree of `project/x` as surely as `x/.worktrees/feat` would be.
+
+- **Keys:** the main checkout's state is the id's, a worktree's `<id>-wt-<name>` — git's name for it, so moving the
+  folder keeps it. Not "whichever was opened first": that would hand the main checkout's key to an agent's worktree.
+- **Identity is never written from a worktree.** Each would write its own id (and a distinct name), and merging the
+  branches would conflict over the vault's identity. A worktree whose config has none takes the main checkout's;
+  with none there either, its path keys it until the main checkout has one, committed.
+- **`[[x:note]]` from another vault means the main checkout**, the stable one — not the most recently opened, which
+  an agent's CLI calls in a worktree would keep changing. Inside a worktree, its own name means itself: its branch.
+- **Backlinks don't count a worktree's links**: its notes are copies of the main checkout's.
+- **A relative path out of the repository is taken from the main checkout** in a worktree: `../y/plan.md` names the
+  sibling repository beside the main one, wherever the worktree is kept; inside the repository, the worktree's own.
+- **A worktree that's gone** (merged, removed) has its cache removed at once; its state — an agent's scratch — a month
+  after it was last seen.
+
+`.slipbox/` is committed, so a merge merges it; there's little in it — the identity, written once, and settings — and
+nothing slipbox writes while it's used: state and caches are outside the repository, per checkout.
 
 ## `6.1` — search
 

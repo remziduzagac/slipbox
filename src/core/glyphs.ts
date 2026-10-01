@@ -82,6 +82,8 @@ export interface Glyphs {
   infoButton: string;
   /** The left rail's Problems button (1.7), under the history's. */
   problemsButton: string;
+  /** A git branch (17.19): beside the vault's state, a worktree's in the vault list. */
+  branch: string;
   /** The left rail's history button. */
   historyButton: string;
   close: string;
@@ -154,6 +156,7 @@ const unicode: Glyphs = {
   footnotesButton: "¹",
   infoButton: "ℹ",
   problemsButton: "⚠",
+  branch: "⎇",
   historyButton: "◷",
   close: "×",
   pin: "⚑",
@@ -185,6 +188,7 @@ const nerd: Glyphs = {
   footnotesButton: "\u{f0283}", // nf-md-format_superscript
   infoButton: "\u{f02fd}", // nf-md-information_outline
   problemsButton: "\u{f05d6}", // nf-md-alert_circle_outline
+  branch: "\u{e725}", // nf-dev-git_branch
   newFolder: "\u{f0257}", // nf-md-folder_plus
   itemMenu: "\u{f01d8}", // nf-md-dots_horizontal
   renameItem: "\u{f03eb}", // nf-md-pencil
@@ -253,6 +257,7 @@ const ascii: Glyphs = {
   footnotesButton: "^",
   infoButton: "i",
   problemsButton: "!",
+  branch: "git:",
   historyButton: "~",
   close: "x",
   pin: "^",

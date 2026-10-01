@@ -596,6 +596,7 @@ links across vaults, then the TUI, then renames.*
 | 17.16 | **Done.** Path links as other tools write them: `../` out of the root, `~/`, absolute, `file://`; wiki too |
 | 17.17 | **Done.** Nested vaults known to each other unopened; paths into them; the demo vault holds two, to test |
 | 17.18 | **Done.** Every vault has `.slipbox/` with id and name; a git repository is offered, not assumed |
+| 17.19 | **Done.** Git worktrees: separate vaults of one repository, told apart from `.git`; the branch shown |
 
 `17.18` revised `17.1` (2026-09-30): a git repository without `.slipbox/` was a root of its own;
 now every vault has a `.slipbox/` — one model, no fallbacks — and a repository is offered: made a
@@ -633,7 +634,7 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 
 ## Deferred — in the design, not in this breakdown
 
-Mermaid and LaTeX, git awareness, worktree handling, Tier 2 plugins, diffs,
+Mermaid and LaTeX, git awareness (beyond `5.9`, `5.10`, `17.19`), Tier 2 plugins, diffs,
 document-type awareness, frontmatter validation, running the repo's linter, composing notes
 into one document, and everything under the design's community-plugin tier. They get IDs
 when they get scheduled.

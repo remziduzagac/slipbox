@@ -56,6 +56,7 @@ import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { buildContext } from "../core/context.ts";
 import { IndexJob, indexFile, search, SearchIndex, type SearchResult } from "../core/search.ts";
+import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
 import { type Applied, applyPlan, planFolderMove, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
@@ -1044,6 +1045,22 @@ export class App {
   // Search (6.5, 6.9): the vault's index kept as the app runs — brought up to the files in idle
   // slices when the vault opens, then each file as the graph hears it change (a save here, the
   // watcher, a rename) — and a list ranked as you type.
+
+  private checkoutMemo: { root: string; c: Checkout | null } | null = null;
+
+  /** The git checkout the vault is in (17.19), read once per vault: the main one or a worktree. */
+  get checkout(): Checkout | null {
+    if (this.checkoutMemo?.root !== this.loc.root) this.checkoutMemo = { root: this.loc.root, c: this.loc.mode === "vault" ? checkoutOf(this.loc.root) : null };
+    return this.checkoutMemo.c;
+  }
+
+  /** The branch checked out (a detached HEAD: its commit, short), or null outside git. */
+  branch(): string | null {
+    const c = this.checkout;
+    if (!c) return null;
+    const h = headOf(c);
+    return h.branch ?? (h.commit ? h.commit.slice(0, 7) : null);
+  }
 
   /** The vault's search index; null: none here (a loose folder, `[search] engine = "scan"`, SQLite couldn't). */
   searchIndex: SearchIndex | null = null;
@@ -3676,7 +3693,13 @@ export class App {
     const out = new Map<string, NonNullable<TreeRow["root"]>>();
     const named = (abs: string) => {
       const n = readIdentity(vaultConfigFile(abs)).name;
-      return n && n !== basename(abs) ? n : undefined;
+      const name = n && n !== basename(abs) ? n : undefined;
+      // A worktree of a repository (17.19): its branch beside it — every worktree has the
+      // repository's name, so the branch is what tells them apart.
+      const c = checkoutOf(abs);
+      if (!c?.worktree) return name;
+      const h = headOf(c);
+      return `${this.glyphs.branch} ${h.branch ?? h.commit?.slice(0, 7) ?? c.worktree}`;
     };
     if (this.loc.mode !== "home") {
       for (const s of this.graph.skipped) {
@@ -6384,9 +6407,28 @@ export class App {
       .filter((v) => v.kind !== "home" && v.path !== here && existsSync(v.path))
       .sort((a, b) => (a.seen < b.seen ? 1 : -1));
     if (!known.length) return this.message("info", "no other vaults yet: open one with slipbox <folder>, or make one with slipbox init");
+    // A repository's worktrees under its main checkout (17.19), each by its branch; the groups by
+    // when any of them was last opened.
+    const branchAt = (path: string) => {
+      const c = checkoutOf(path);
+      const h = c ? headOf(c) : null;
+      return h?.branch ?? h?.commit?.slice(0, 7) ?? null;
+    };
+    const groupOf = (v: KnownVault) => v.worktree?.main ?? v.path;
+    const groups = new Map<string, KnownVault[]>();
+    for (const v of known) groups.set(groupOf(v), [...(groups.get(groupOf(v)) ?? []), v]);
+    const items: ListItem[] = [];
+    for (const [main, list] of groups) {
+      const head = list.find((v) => v.path === main && !v.worktree);
+      if (head) items.push({ label: head.name ?? basename(head.path), detail: head.path, hint: branchAt(head.path) ? `${this.glyphs.branch} ${branchAt(head.path)}` : undefined, data: head });
+      for (const v of list.filter((x) => x !== head).sort((a, b) => a.path.localeCompare(b.path))) {
+        const b = branchAt(v.path);
+        items.push({ label: `${head ? "" : `${v.name ?? basename(v.path)} `}${this.glyphs.branch} ${b ?? v.worktree?.name ?? basename(v.path)}`, detail: v.path, indent: head ? 1 : 0, data: v });
+      }
+    }
     this.openList({
       title: `Vaults (${known.length})`,
-      items: known.map((v) => ({ label: v.name ?? basename(v.path), detail: v.path, data: v })),
+      items,
       accept: (item) => {
         const v = item.data as KnownVault;
         this.switchVault(rootAt(v.path), null);

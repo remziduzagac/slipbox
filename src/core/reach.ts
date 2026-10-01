@@ -141,14 +141,17 @@ export class Reach implements VaultReach {
   /**
    * The vaults `[[name:…]]` in the vault at `from` means, by their names and aliases. Copies of a
    * vault (a second clone) share its nested vaults' names: of several, the one nested in `from`, or
-   * holding it, is meant.
+   * holding it, is meant. A repository's worktrees answer to its name too (17.19): from elsewhere,
+   * its main checkout is meant — the stable one, not an agent's task branch.
    */
   private meant(n: string, from: string): KnownVault[] {
     const at = real(from);
     const hits = this.known().filter((v) => (v.kind === "vault" || v.kind === "home") && real(v.path) !== at && namesOf(v).includes(n));
     if (hits.length < 2) return hits;
     const near = hits.filter((v) => kin(at, v));
-    return near.length === 1 ? near : hits;
+    if (near.length === 1) return near;
+    const mains = (near.length ? near : hits).filter((v) => !v.worktree);
+    return mains.length === 1 ? mains : hits;
   }
 
   vaultOf(abs: string): string | null {
@@ -169,7 +172,8 @@ export class Reach implements VaultReach {
   inbound(g: Graph): Map<string, Backlink[]> {
     this.discover(g);
     const here = real(g.root);
-    const sources = this.known().filter((v) => v.kind === "vault" && real(v.path) !== here && existsSync(v.path));
+    // Not a worktree's (17.19): its notes are copies of the main checkout's, its links counted there.
+    const sources = this.known().filter((v) => v.kind === "vault" && !v.worktree && real(v.path) !== here && existsSync(v.path));
     const indexes = sources.map((v) => ({ v, file: join(cacheDir(v), "index.json") }));
     const stamp = indexes.map((x) => `${x.file}:${mtime(x.file)}`).join("|");
     if (this.inboundCache?.stamp === stamp) return this.inboundCache.map;

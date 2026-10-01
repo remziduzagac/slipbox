@@ -1877,7 +1877,8 @@ These are the *design* questions still open. Build-order decisions and their sta
    default, the vault on request (`capture.location`).
 5. **Native PDF typesetting** (`10.5`) — how far to take it, and `pdfkit` or
    `@react-pdf/renderer` as the base. The only genuinely hard part of export.
-6. **Worktree handling** — one vault per repo does not answer several worktrees of one repo.
+6. **Worktree handling** — **settled**: each worktree a separate vault of one repository, told apart
+   from `.git`; see `docs/design/decisions.md` (`17.19`).
 7. **The optional multiplexer hand-off** (`13.6`) — whether "run it beside me" is worth
    building at all. The three built-in output sinks are settled; this is the extra.
 8. **Whether `vscode-languageserver` runs cleanly under Bun** (`11.1`) — the LSP face must work

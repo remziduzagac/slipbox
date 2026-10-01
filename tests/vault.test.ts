@@ -8,7 +8,7 @@ import { CLI_COMMANDS, runCli } from "../src/cli/cli.ts";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
-import { findVaultRoot, gitRootOf, initVault, locateVault } from "../src/core/vault.ts";
+import { findVaultRoot, gitRootOf, initVault, locateVault, recordLocation } from "../src/core/vault.ts";
 import { vaultKey } from "../src/core/paths.ts";
 
 const VAULT = join(import.meta.dir, "fixtures", "vault");
@@ -1633,6 +1633,126 @@ describe("search: the index and the scan (6.x)", () => {
     const cfg = join(dir, "..", `${basename(dir)}-scan.toml`);
     writeFileSync(cfg, '[search]\nengine = "scan"\n');
     expect((await out(["search", "shutter", "--config", cfg])).json.data.engine).toBe("scan");
+  });
+});
+
+describe("git worktrees: separate vaults of one repository (17.19)", () => {
+  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+  const cli = async (args: string[], cwd: string) => {
+    const out: string[] = [];
+    const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return { code, json: JSON.parse(out.join("")) };
+  };
+  /** project/x (a vault, its repository), project/y beside it, and x's worktree at project/worktrees/x/feat. */
+  const layout = async (n: number) => {
+    const base = mkdtempSync(join(tmpdir(), "slipbox-wt-"));
+    const x = join(base, "project", "x");
+    const y = join(base, "project", "y");
+    mkdirSync(join(x, "notes"), { recursive: true });
+    mkdirSync(join(x, "src"), { recursive: true });
+    mkdirSync(y, { recursive: true });
+    writeFileSync(join(y, "plan.md"), "# Y's plan\n");
+    writeFileSync(join(x, "notes", "a.md"), `# A\n\nSee [y's plan](../../y/plan.md), [the code](../src/x.md) and [[y${n}:plan]].\n`);
+    writeFileSync(join(x, "src", "x.md"), "# Code notes\n");
+    if (git(x, "init", "-q", "-b", "main").exitCode !== 0) return null; // no git here
+    await cli(["init", x, "--name", `x${n}`], x);
+    await cli(["init", y, "--name", `y${n}`], y);
+    git(x, "add", "-A");
+    git(x, "commit", "-q", "-m", "x");
+    const wt = join(base, "project", "worktrees", "x", "feat");
+    if (git(x, "worktree", "add", "-q", "-b", "feat", wt).exitCode !== 0) return null;
+    return { base, x, y, wt };
+  };
+  let n = 0;
+
+  test("read from .git: the main checkout, a worktree, its name and branch; a vault below the top folder too", async () => {
+    const { checkoutOf, headOf, inMain } = await import("../src/core/git.ts");
+    const l = await layout(++n);
+    if (!l) return;
+    expect(checkoutOf(l.x)).toEqual({ root: l.x, gitDir: join(l.x, ".git"), common: join(l.x, ".git"), main: l.x, worktree: null });
+    const c = checkoutOf(join(l.wt, "notes"))!;
+    expect(c).toMatchObject({ root: l.wt, main: l.x, worktree: "feat", common: join(l.x, ".git") });
+    expect(headOf(c)).toMatchObject({ branch: "feat", commit: null });
+    expect(headOf(checkoutOf(l.x)!).branch).toBe("main");
+    expect(inMain(c, join(l.wt, "notes"))).toBe(join(l.x, "notes"));
+    git(l.wt, "checkout", "-q", "--detach");
+    expect(headOf(c)).toMatchObject({ branch: null, commit: expect.stringMatching(/^[0-9a-f]{40}$/) });
+    expect(checkoutOf(l.y)).toBeNull();
+  });
+
+  test("its own state, by git's name for it; the main checkout keeps the id's — whichever was opened first", async () => {
+    const l = await layout(++n);
+    if (!l) return;
+    const wt = locateVault({ root: l.wt });
+    const id = wt.id!;
+    expect(wt).toMatchObject({ key: `${id}-wt-feat`, name: `x${n}`, worktree: { name: "feat", checkout: l.wt, main: l.x, mainVault: l.x } });
+    recordLocation(wt); // seen first
+    expect(locateVault({ root: l.x })).toMatchObject({ key: id, worktree: null });
+    // Recorded under the bare id before worktrees were told apart: still no primary for the id.
+    const { recordVault } = await import("../src/core/registry.ts");
+    recordVault({ key: id, id, kind: "vault", name: `x${n}`, aliases: [], previous_names: [], path: l.wt });
+    expect(locateVault({ root: l.x }).key).toBe(id);
+    // The machine's list knows which is which.
+    expect((await cli(["vaults"], l.x)).json.data.find((v: { path: string }) => v.path === l.wt)).toMatchObject({ key: `${id}-wt-feat`, worktree: { name: "feat", main: l.x } });
+  });
+
+  test("a worktree never writes the vault's identity: it takes the main checkout's (else its path keys it)", async () => {
+    const l = await layout(++n);
+    if (!l) return;
+    // The branch was made before the vault had an id: the worktree's config has none.
+    const cfg = join(l.wt, ".slipbox", "config.toml");
+    writeFileSync(cfg, "# no identity on this branch yet\n");
+    const loc = locateVault({ root: l.wt });
+    expect(loc.id).toBe(locateVault({ root: l.x }).id);
+    expect(loc.name).toBe(`x${n}`);
+    expect(readFileSync(cfg, "utf8")).toBe("# no identity on this branch yet\n"); // untouched: nothing to merge
+    // Neither has one: keyed by its path, still nothing written.
+    writeFileSync(join(l.x, ".slipbox", "config.toml"), "# none here either\n");
+    const bare = locateVault({ root: l.wt });
+    expect(bare.id).toBeNull();
+    expect(bare.key).toMatch(/^feat-[0-9a-f]{12}$/);
+    expect(readFileSync(cfg, "utf8")).toBe("# no identity on this branch yet\n");
+  });
+
+  test("links: [[x:…]] from elsewhere means the main checkout; out of the repository, a worktree's paths as the main's; its links aren't backlinks twice", async () => {
+    const l = await layout(++n);
+    if (!l) return;
+    await cli(["ls"], l.wt); // the worktree seen, its index written
+    await cli(["ls"], l.x);
+    // Elsewhere: [[x:a]] reaches the main checkout's note, not ambiguous with the worktree's.
+    writeFileSync(join(l.y, "back.md"), `[[x${n}:a]]\n`);
+    const r = (await cli(["resolve", `[[x${n}:a]]`, "--from", "back.md"], l.y)).json.data;
+    expect(r).toMatchObject({ status: "resolved", abs: join(l.x, "notes", "a.md") });
+    // In the worktree: ../../y/plan.md leaves the repository — as from the main checkout; ../src stays in the worktree.
+    const links = (await cli(["links", "notes/a.md"], l.wt)).json.data;
+    expect(links.map((x: { target: string; status: string; path: string }) => [x.target, x.status, x.path])).toEqual([
+      ["../../y/plan.md", "note", join(l.y, "plan.md")],
+      ["../src/x.md", "note", "src/x.md"],
+      [`y${n}:plan`, "note", join(l.y, "plan.md")],
+    ]);
+    // y's backlinks: the main checkout's links, not the worktree's copies of them.
+    const back = (await cli(["backlinks", "plan.md"], l.y)).json.data.backlinks;
+    expect(back.map((b: { from: string }) => b.from)).toEqual([join(l.x, "notes", "a.md"), join(l.x, "notes", "a.md")]);
+  });
+
+  test("a worktree gone: its cache removed at once, its state and entry a month after it was last seen", async () => {
+    const { pruneWorktrees, readRegistry } = await import("../src/core/registry.ts");
+    const { cacheDir, stateDir } = await import("../src/core/paths.ts");
+    const l = await layout(++n);
+    if (!l) return;
+    await cli(["ls"], l.wt);
+    const wt = locateVault({ root: l.wt });
+    mkdirSync(stateDir(wt), { recursive: true });
+    writeFileSync(join(stateDir(wt), "scratch.md"), "an agent's notes\n");
+    expect(existsSync(cacheDir(wt))).toBe(true);
+    git(l.x, "worktree", "remove", "--force", l.wt);
+    recordLocation(locateVault({ root: l.x })); // any open prunes
+    expect(existsSync(cacheDir(wt))).toBe(false);
+    expect(readFileSync(join(stateDir(wt), "scratch.md"), "utf8")).toBe("an agent's notes\n");
+    expect(readRegistry().some((v) => v.key === wt.key)).toBe(true);
+    pruneWorktrees(Date.now() + 31 * 86_400_000);
+    expect(existsSync(stateDir(wt))).toBe(false);
+    expect(readRegistry().some((v) => v.key === wt.key)).toBe(false);
   });
 });
 

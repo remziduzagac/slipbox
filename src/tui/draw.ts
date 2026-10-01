@@ -435,6 +435,9 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
   if (app.loc.mode === "home") items.push({ text: "home vault", role: "status_dim" });
+  // The branch checked out (17.19); in a worktree, which one it is besides.
+  const branch = app.branch();
+  if (branch) items.push({ text: `${g.branch} ${branch}${app.loc.worktree ? " (worktree)" : ""}`, role: "status_dim" });
   for (const it of items) {
     const w = stringWidth(it.text) + 2;
     if (rx - w < x + 12) break;

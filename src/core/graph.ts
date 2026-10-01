@@ -554,8 +554,11 @@ export class Graph {
    * elsewhere, the file by its absolute path, in whichever root holds it.
    */
   private byFilesystemPath(target: string, fromRel: string, wiki: boolean): Target | null {
-    // From the linking note; with none (a lookup), from the vault's root.
-    const hit = pathLink(target, join(this.root, fromRel || "_"), wiki);
+    // From the linking note; with none (a lookup), from the vault's root. In a linked worktree, a
+    // relative path out of its checkout is taken from the main checkout (17.19): `../y/plan.md`
+    // means the sibling repository beside the main one, wherever the worktree is kept.
+    const wt = this.loc.worktree;
+    const hit = pathLink(target, join(this.root, fromRel || "_"), wiki, wt?.main ? { from: wt.checkout, to: wt.main } : undefined);
     if (!hit) return null;
     const rel = relative(this.root, hit.abs);
     if (!rel.startsWith("..") && !isAbsolute(rel)) {

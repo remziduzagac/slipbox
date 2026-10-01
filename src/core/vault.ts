@@ -12,6 +12,7 @@ import { parse as parseToml } from "smol-toml";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { VAULT_CONFIG_TEMPLATE } from "./config.ts";
+import { checkoutOf, inMain } from "./git.ts";
 import { readRegular } from "./fsutil.ts";
 import { stateHome, vaultKey } from "./paths.ts";
 import {
@@ -22,6 +23,7 @@ import {
   implicitName,
   MARKER,
   newVaultId,
+  pruneWorktrees,
   readIdentity,
   readRegistry,
   recordVault,
@@ -35,6 +37,17 @@ import {
 } from "./registry.ts";
 
 export { MARKER };
+
+/** A vault in a linked git worktree: separate from the main checkout's, of the same repository. */
+export interface Worktree {
+  /** Git's name for it (its folder under `.git/worktrees/`). */
+  name: string;
+  /** The worktree's top folder, and the main checkout's (null for a bare repository). */
+  checkout: string;
+  main: string | null;
+  /** This vault's folder in the main checkout. */
+  mainVault: string | null;
+}
 
 /** Format version of the marker directory. Bump with a migration, never silently. */
 export const VAULT_FORMAT_VERSION = 1;
@@ -57,6 +70,11 @@ export interface VaultLocation {
   name: string | null;
   aliases: string[];
   previous_names: string[];
+  /**
+   * A vault in a linked git worktree (17.19): the worktree's name, its checkout's top folder, the
+   * main checkout's, and this vault's place there. Null for the main checkout, or outside git.
+   */
+  worktree?: Worktree | null;
   /** Said once when the root was found, when there is something to say. */
   note?: string;
 }
@@ -141,10 +159,13 @@ export function locateVault(opts: LocateOptions): VaultLocation {
 
 /** The location of a vault root (a folder with `.slipbox/`). */
 export function rootAt(root: string, file: string | null = null): VaultLocation {
-  const ident = ensureIdentity(root);
-  const key = storageKey(root, ident.id);
+  const c = checkoutOf(root);
+  const worktree: Worktree | null = c?.worktree ? { name: c.worktree, checkout: c.root, main: c.main, mainVault: inMain(c, root) } : null;
+  const ident = ensureIdentity(root, worktree?.mainVault ?? null);
+  // A worktree keeps its own state, by git's name for it: it survives moving the folder (17.19).
+  const key = worktree && ident.id ? `${ident.id}-wt-${worktree.name.replace(/[^A-Za-z0-9._-]/g, "_")}` : storageKey(root, ident.id);
   if (ident.id && key === ident.id) adoptPathState(root, key);
-  return { root, mode: "vault", file, key, id: ident.id, name: ident.name ?? implicitName(root), aliases: ident.aliases, previous_names: ident.previous_names };
+  return { root, mode: "vault", file, key, id: ident.id, name: ident.name ?? implicitName(root), aliases: ident.aliases, previous_names: ident.previous_names, worktree };
 }
 
 /**
@@ -152,11 +173,19 @@ export function rootAt(root: string, file: string | null = null): VaultLocation 
  * made before vaults had ids, or a `.slipbox/` made by hand. Every vault then has an `id` and a
  * `name`. A config that doesn't parse is left alone (a typo mid-edit), as is a read-only one: that
  * vault is keyed by its path this time.
+ *
+ * A linked worktree (17.19) never writes it: each would write its own, and merging the branches
+ * would then conflict over the vault's id. It takes the main checkout's — keyed by its path until
+ * the main checkout has one (opened there, or `slipbox init`, then committed).
  */
-function ensureIdentity(root: string): VaultIdentity {
+function ensureIdentity(root: string, mainVault: string | null = null): VaultIdentity {
   const file = vaultConfigFile(root);
   const have = readIdentity(file);
   if (have.id && have.name) return have;
+  if (mainVault) {
+    const main = readIdentity(vaultConfigFile(mainVault));
+    return { id: have.id ?? main.id, name: have.name ?? main.name, aliases: have.aliases.length ? have.aliases : main.aliases, previous_names: have.previous_names.length ? have.previous_names : main.previous_names };
+  }
   if (existsSync(file) && !parsesAsToml(file)) return have;
   const fields = { id: have.id ?? newVaultId(), name: have.name ?? suggestVaultName(root, parentVaultName(root)) };
   try {
@@ -201,7 +230,9 @@ export function recordLocation(loc: VaultLocation): void {
     aliases: loc.aliases,
     previous_names: loc.previous_names,
     path: loc.mode === "home" ? homeVaultDir() : loc.root,
+    ...(loc.worktree ? { worktree: { name: loc.worktree.name, main: loc.worktree.mainVault } } : {}),
   });
+  pruneWorktrees();
 }
 
 export function isInside(root: string, path: string): boolean {

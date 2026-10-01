@@ -62,8 +62,8 @@ strip and the titles get from theirs:
 
 - on the left, the `slipbox` chip (plain accent text), which opens the command palette; before
   it, without the left rail, the explorer's `≡`;
-- at the right end, vault-wide state (`indexing N…`, `home vault` for a loose folder), dropped when fewer than 12
-  columns are left.
+- at the right end, vault-wide state (`indexing N…`, `home vault` for a loose folder, the branch checked out:
+  `⎇ main`, `⎇ feat (worktree)` in a linked worktree, `17.19`), dropped when fewer than 12 columns are left.
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is
 closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, as
@@ -296,7 +296,9 @@ loose file opens as it is, beside the current vault's notes: it has no vault to 
 the note and place you left; each switch is remembered, so a chain of them unwinds one by one.
 
 **The known vaults** (`space v v`, `:vaults`, `vault.switch`): the machine's list (`vaults.json`,
-`slipbox vaults`), most recently seen first — each by its name and its path; `enter` switches.
+`slipbox vaults`), most recently seen first — each by its name and its path; `enter` switches. A repository's
+worktrees (`17.19`) are listed under its main checkout, each by its branch (`⎇ feat`); the main checkout's branch
+beside it.
 **The launcher:** slipbox opened on a loose folder without a file (`slipbox ~`) shows this list at
 once, over the folder's explorer, when there are vaults to show.
 
@@ -437,9 +439,10 @@ keys.
   below. **A folder that is another vault** (`17.13`), nested in this one (`◈`, Nerd: a
   bookshelf), in a folder's blue (role `sidebar_vault`, for `[colors]` to set), is a row of its
   own, its icon telling it from a folder, the vault's name dimmed after the folder's when they
-  differ; `enter` or a double-click goes into it (a switch, below). **In a loose folder** (the home
-  vault) the explorer lists the folder alone: `..` to go up, then each folder in it — a vault or a
-  loose folder — and its files; going into a loose folder lists that one (`17.14`).
+  differ — a worktree's branch instead (`⎇ feat`, `17.19`); `enter` or a double-click goes into
+  it (a switch, below). **In a loose folder** (the home vault) the explorer lists the folder
+  alone: `..` to go up, then each folder in it — a vault or a loose folder — and its files; going
+  into a loose folder lists that one (`17.14`).
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and

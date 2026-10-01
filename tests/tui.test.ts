@@ -6925,3 +6925,56 @@ describe("search in the TUI (6.5, 6.9)", () => {
     expect((s.app.overlay as ListOverlay).title).toBe('"walrus" — 1 file (scanned: no index here)');
   });
 });
+
+describe("git worktrees in the TUI (17.19)", () => {
+  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+  /** project/x, a vault and its repository, and two worktrees of it in project/worktrees/x/. */
+  const layout = () => {
+    const base = mkdtempSync(join(sandbox, "wt-"));
+    const x = join(base, "project", "x");
+    mkdirSync(join(x, ".slipbox"), { recursive: true });
+    writeFileSync(join(x, ".slipbox", "config.toml"), `[vault]\nid = "wt${base.slice(-6).replace(/[^a-z0-9]/gi, "")}"\nname = "wtx${base.slice(-6).replace(/[^a-z0-9]/gi, "")}"\n`);
+    writeFileSync(join(x, "index.md"), "# X\n");
+    if (git(x, "init", "-q", "-b", "main").exitCode !== 0) return null;
+    git(x, "add", "-A");
+    git(x, "commit", "-q", "-m", "x");
+    const wts = join(base, "project", "worktrees", "x");
+    for (const b of ["feat", "fix"]) if (git(x, "worktree", "add", "-q", "-b", b, join(wts, b)).exitCode !== 0) return null;
+    return { base, x, wts };
+  };
+
+  test("the branch beside the vault's state, a worktree said so; the vault list groups a repository's worktrees under it", async () => {
+    const l = layout();
+    if (!l) return;
+    const main = await harness({ root: l.x, open: "index.md" });
+    expect(topRow(main.frame())).toContain("⎇ main");
+    expect(topRow(main.frame())).not.toContain("(worktree)");
+    const feat = await harness({ root: join(l.wts, "feat"), open: "index.md" });
+    expect(topRow(feat.frame())).toContain("⎇ feat (worktree)");
+    await harness({ root: join(l.wts, "fix"), open: "index.md" }); // seen too
+    // From elsewhere: x, then its worktrees under it by branch.
+    const other = await harness({ open: "index.md" });
+    await other.app.run("vault.switch");
+    const items = (other.app.overlay as ListOverlay).items;
+    const at = items.findIndex((i) => i.detail === l.x);
+    expect(items[at]).toMatchObject({ hint: "⎇ main" });
+    expect(items.slice(at + 1, at + 3).map((i) => [i.label, i.indent, i.detail])).toEqual([
+      ["⎇ feat", 1, join(l.wts, "feat")],
+      ["⎇ fix", 1, join(l.wts, "fix")],
+    ]);
+    // A checkout switched to another branch: the top bar follows it.
+    git(join(l.wts, "feat"), "checkout", "-q", "-b", "feat-2");
+    expect(topRow(feat.frame())).toContain("⎇ feat-2 (worktree)");
+  });
+
+  test("the folder holding the worktrees: each its own vault, its branch beside it", async () => {
+    const l = layout();
+    if (!l) return;
+    const { homeAt } = await import("../src/core/vault.ts");
+    const h = await harness({ loc: homeAt(l.wts), open: null });
+    h.app.showSidebar(true);
+    const f = h.frame();
+    expect(f).toMatch(/feat +⎇ feat/);
+    expect(f).toMatch(/fix +⎇ fix/);
+  });
+});
