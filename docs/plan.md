@@ -527,7 +527,7 @@ common, and the only reason they are step 0.
 | --- | --- |
 | 11.1 | **Done.** `vscode-languageserver` and the protocol package under Bun and compiled, both ways (decisions) |
 | 11.2 | **Done.** Server skeleton over stdio: `slipbox lsp`, a graph per vault (`.slipbox/` only), kept current |
-| 11.3 | `completion`, `definition`, `references`, `hover`: notes, aliases, `#heading`, `#^block`, embeds, vaults |
+| 11.3 | **Done.** `completion`, `definition`, `references`, `hover`: notes, aliases, `#heading`, `#^block`, embeds |
 | 11.4 | `rename` returning a `WorkspaceEdit` — the editor supplies the preview |
 | 11.5 | `publishDiagnostics`: broken and ambiguous links, conflicts; lint only with `[lsp] lint = true` |
 | 11.6 | `documentSymbol` and `workspace/symbol` |

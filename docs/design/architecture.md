@@ -81,7 +81,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
 | `core/lazy.ts` | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
 | `core/syntax.ts` | 16.7–16.9 | tree-sitter grammars: multi-line spans, outline, syntax errors, comments |
-| `core/landing.ts` | 11.3 | where a link lands in its note: a heading's line, a block's `^id`, `L42` |
+| `core/landing.ts` | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
 | `core/note.ts` | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
 | `core/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
 | `core/layout/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
@@ -106,7 +106,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `cli/cli.ts` | 9.1–9.6 | the CLI face |
 | `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |
 | `lsp/server.ts` | 11.x | the LSP face: `slipbox lsp`, a graph per vault served to an editor ([lsp.md](lsp.md)) |
-| `lsp/features.ts` | 11.3–11.6 | its answers: definition, references, …; the protocol's positions |
+| `lsp/features.ts` | 11.3–11.6 | its answers: definition, references, hover, completion; the protocol's positions |
 | `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
 | `tui/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |

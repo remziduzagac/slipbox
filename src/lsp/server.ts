@@ -16,7 +16,7 @@ import { findVaultRoot, recordLocation, rootAt, type VaultLocation, vaultConfigP
 import { applyToGraph, VaultFeed } from "../core/vault-feed.ts";
 import { VaultWatcher } from "../core/watch.ts";
 import { VERSION } from "../version.ts";
-import { definition, references } from "./features.ts";
+import { completion, definition, hover, references } from "./features.ts";
 
 export interface LspOptions {
   input: NodeJS.ReadableStream;
@@ -88,6 +88,10 @@ export class LspServer {
     });
     this.documents.listen(this.connection);
     this.connection.onDefinition((p) => this.asked(p.textDocument.uri, (g, rel) => definition(g, rel, p.position), []));
+    this.connection.onCompletion((p) =>
+      this.asked(p.textDocument.uri, (g, rel) => completion(g, rel, this.lineOf(p.textDocument.uri, g, rel, p.position.line), p.position), null),
+    );
+    this.connection.onHover((p) => this.asked(p.textDocument.uri, (g, rel) => hover(g, rel, p.position), null));
     this.connection.onReferences((p) => this.asked(p.textDocument.uri, (g, rel) => references(g, rel, p.position, p.context.includeDeclaration), []));
     this.connection.listen();
   }
@@ -104,6 +108,8 @@ export class LspServer {
         workspace: { workspaceFolders: { supported: true } },
         definitionProvider: true,
         referencesProvider: true,
+        hoverProvider: true,
+        completionProvider: { triggerCharacters: ["[", "#", "^"] },
       },
       serverInfo: { name: "slipbox", version: VERSION },
     };
@@ -162,6 +168,7 @@ export class LspServer {
       });
     }
     this.vaults.set(root, served);
+    this.parseInBackground(graph);
     return served;
   }
 
@@ -212,9 +219,26 @@ export class LspServer {
     }
   }
 
+  /** A line of a note: the editor's document's, else the file's. */
+  private lineOf(uri: string, g: Graph, rel: string, line: number): string {
+    const doc = this.documents.get(uri);
+    const text = doc ? doc.getText({ start: { line, character: 0 }, end: { line: line + 1, character: 0 } }) : (g.textOf(rel) ?? "").split("\n")[line] ?? "";
+    return text.replace(/\r?\n$/, "");
+  }
+
   /** A message for the editor's log (never a pop-up: these are slipbox's, not the user's doing). */
   log(text: string): void {
     void this.connection.console.log(`slipbox: ${text}`);
+  }
+
+  /** The vault's notes parsed a little at a time, between requests: titles, aliases and headings
+   *  for completion, without a first request waiting on the whole vault. */
+  private parseInBackground(graph: Graph): void {
+    const later = () => (setTimeout(step, 0) as { unref?: () => void }).unref?.();
+    const step = () => {
+      if (!this.done && graph.parseSome(20) > 0) later();
+    };
+    later();
   }
 
   /** The editor that started this gone (its process id no longer there): end, as it would have. */

@@ -56,6 +56,21 @@ Every answer is about a note as the editor has it, and a request takes its lates
   note; on another heading's line, the links to that heading (a markdown link's `#fragment` by its slug), this note's
   own `[[#Heading]]` among them; on a link, the links to where it goes. With the declaration asked for, the note's top
   or the heading's line comes first.
+- **Hover** (`11.3`): on a link, where it lands as the note has it now — its start without the frontmatter, a
+  heading's section (up to the next heading as high), or a block with its `^id` taken off — fenced, at most 20 lines
+  and `…`; with the note's path, and how it was reached when not by name (an alias, a previous name, a redirect). An
+  ambiguous link lists its candidates, an unresolved one says why (`no note named x yet`, an unknown vault), and an
+  external one shows its URL.
+- **Completion** (`11.3`), on `[`, `#` and `^` as they're typed:
+  - after `[[`, the notes whose name, title, alias or path holds every word typed — each written the way a link from
+    here reaches it (its name, or its path when another note shares the name), an alias as `name|alias`; after
+    `![[`, the vault's other files too. At most 100 at a time, the list marked incomplete so typing asks again;
+  - after `[[note#`, its headings; after `[[note#^`, its blocks, each previewed; `[[#` is this note's;
+  - after a `#` that starts a word, the tags notes carry, with how many — not the one being typed, and not after a
+    `#` alone at a line's start, where a heading begins;
+  - `]]` is added unless the editor put it there already.
 
-Still to come: hover and completion (`11.3`), diagnostics (`11.5`), symbols (`11.6`), renames (`11.4`, `11.9`, `11.10`)
-and code actions (`11.11`).
+  Notes are parsed in the background once a vault opens, a little at a time, so their titles and aliases are known
+  by the time `[[` is typed; a completion before then reads the rest first.
+
+Still to come: diagnostics (`11.5`), symbols (`11.6`), renames (`11.4`, `11.9`, `11.10`) and code actions (`11.11`).

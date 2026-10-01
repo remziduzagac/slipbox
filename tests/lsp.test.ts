@@ -9,12 +9,15 @@ import { basename, join } from "node:path";
 import { PassThrough } from "node:stream";
 import { pathToFileURL } from "node:url";
 import {
+  CompletionRequest,
+  type CompletionList,
   createProtocolConnection,
   DefinitionRequest,
   DidChangeTextDocumentNotification,
   DidCloseTextDocumentNotification,
   DidOpenTextDocumentNotification,
   ExitNotification,
+  HoverRequest,
   InitializedNotification,
   type InitializeResult,
   InitializeRequest,
@@ -256,6 +259,85 @@ describe("definition and references (11.3)", () => {
     expect(await refs("b.md", 4, 3, true)).toEqual(["b.md:4:0", ...second].sort());
     expect(await refs("a.md", 2, 15)).toEqual(second); // on a link to the heading
     expect(await refs("a.md", 5, 3)).toEqual(["a.md:3:36"]); // its own [[#Local]]
+    expect(await s.end()).toBe(0);
+  });
+});
+
+describe("hover (11.3)", () => {
+  test("a link shows where it lands — the note's start, a heading's section, a block — or why it reaches nothing", async () => {
+    const root = folder({
+      "a.md": "# A\n\n[[b]] [[b#Second]] [[b#^blk]] [[twin]] [[nope]] [[al]] [[#Local]] [ext](https://x.org)\n[[d]]\n\n## Local\n\nlocal text\n",
+      "b.md": "---\ntags: [x]\n---\n# B\n\nintro\n\npara one\npara two ^blk\n\n## Second\n\nsecond body\n\n### Under\n\nstill second\n\n## Third\n\nthird\n",
+      "c.md": "---\naliases: [al]\n---\n# C\n",
+      "d.md": `# D\n\n${Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join("\n")}\n`,
+      "x/twin.md": "# X\n",
+      "y/twin.md": "# Y\n",
+    });
+    const s = await session([root]);
+    const hov = async (line: number, character: number) => {
+      const h = await s.client.sendRequest(HoverRequest.type, { textDocument: { uri: uri(join(root, "a.md")) }, position: { line, character } });
+      return h ? { text: (h.contents as { value: string }).value, range: h.range } : null;
+    };
+    const start = (await hov(2, 1))!.text;
+    expect(start).toStartWith("`b.md`\n\n```markdown\n# B\n\nintro");
+    expect(start).not.toContain("tags:"); // no frontmatter
+    const second = (await hov(2, 8))!;
+    expect(second.text).toStartWith("`b.md` › Second");
+    expect(second.text).toContain("second body\n\n### Under\n\nstill second\n```"); // up to the next heading as high
+    expect(second.range).toEqual({ start: { line: 2, character: 6 }, end: { line: 2, character: 18 } });
+    expect((await hov(2, 20))!.text).toEndWith("```markdown\npara one\npara two\n```"); // the block, its ^id taken off
+    expect((await hov(2, 31))!.text).toBe("matches 2 notes:\n\n- `x/twin.md`\n- `y/twin.md`");
+    expect((await hov(2, 40))!.text).toBe("no note named `nope` yet");
+    expect((await hov(2, 50))!.text).toStartWith("`c.md` — reached by an alias");
+    expect((await hov(2, 57))!.text).toBe("this note › Local\n\n```markdown\n## Local\n\nlocal text\n```");
+    expect((await hov(2, 70))!.text).toBe("https://x.org");
+    expect((await hov(3, 1))!.text).toEndWith("line 18\n…\n```"); // 20 lines at most
+    expect(await hov(2, 5)).toBeNull();
+    expect(await s.end()).toBe(0);
+  });
+});
+
+describe("completion (11.3)", () => {
+  test("after [[: notes by name, title or alias, each as a link from here reaches it; ]] added unless there", async () => {
+    const root = folder({
+      "a.md": "# A\n\n[[\n[[ke]]\n![[\n[[twin\n[[mori\n[[ker\n",
+      "people/kenji.md": "---\naliases: [Ken]\n---\n# Kenji Mori\n",
+      "x/twin.md": "# Twin X\n",
+      "y/twin.md": "# Twin Y\n",
+      "pic.png": "png",
+    });
+    const s = await session([root]);
+    const complete = async (line: number, character: number) =>
+      (await s.client.sendRequest(CompletionRequest.type, { textDocument: { uri: uri(join(root, "a.md")) }, position: { line, character } })) as CompletionList | null;
+    const edits = (l: CompletionList | null) => (l?.items ?? []).map((i) => (i.textEdit as { newText: string }).newText).sort();
+    expect(edits(await complete(2, 2))).toEqual(["a]]", "kenji]]", "kenji|Ken]]", "x/twin]]", "y/twin]]"]); // a twin by its path
+    const ken = (await s.client.sendRequest(CompletionRequest.type, { textDocument: { uri: uri(join(root, "a.md")) }, position: { line: 3, character: 4 } })) as CompletionList;
+    expect(edits(ken)).toEqual(["kenji", "kenji|Ken"]); // "ke": before ]] already there
+    expect(ken.items[0]!.textEdit).toMatchObject({ range: { start: { line: 3, character: 2 }, end: { line: 3, character: 4 } } });
+    expect(edits(await complete(4, 3))).toContain("pic.png]]"); // ![[: files too
+    expect(edits(await complete(5, 6))).toEqual(["x/twin]]", "y/twin]]"]);
+    expect(edits(await complete(6, 6))).toEqual(["kenji]]"]); // by its title, Kenji Mori
+    expect(edits(await complete(7, 5))).toEqual([]); // "ker": in no name, title, alias or path
+    expect(await complete(1, 0)).toBeNull();
+    expect(await s.end()).toBe(0);
+  });
+
+  test("after [[note#: its headings; after #^: its blocks; after a word's #: the vault's tags", async () => {
+    const root = folder({
+      "a.md": "# A\n\n[[b#\n[[b#^\n[[#\nsee #pro\n#\n",
+      "b.md": "# B\n\n## Setup\n\ntext ^blk\n\n#project/one\n",
+      "c.md": "#project/two #other\n",
+    });
+    const s = await session([root]);
+    const labels = async (line: number, character: number) =>
+      ((await s.client.sendRequest(CompletionRequest.type, { textDocument: { uri: uri(join(root, "a.md")) }, position: { line, character } })) as CompletionList | null)?.items.map(
+        (i) => (i.textEdit as { newText: string }).newText,
+      ) ?? null;
+    expect(await labels(2, 4)).toEqual(["B]]", "Setup]]"]);
+    expect(await labels(3, 5)).toEqual(["^blk]]"]);
+    expect(await labels(4, 3)).toEqual(["A]]"]); // this note's
+    expect((await labels(5, 8))!.sort()).toEqual(["#other", "#project/one", "#project/two"]);
+    expect(await labels(6, 1)).toBeNull(); // a heading begins
     expect(await s.end()).toBe(0);
   });
 });
