@@ -1047,7 +1047,10 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     });
   }
   // Links to the old places still find the new ones (17.12); the vault's index follows.
-  if (plan.moves?.length) g.redirects?.add(plan.moves);
+  if (plan.moves?.length) {
+    g.redirects?.add(plan.moves);
+    g.moved(plan.moves);
+  }
   for (const [from] of plan.moves ?? []) {
     if (g.notes.has(from)) g.removeFile(from);
     else g.removeAsset(from);

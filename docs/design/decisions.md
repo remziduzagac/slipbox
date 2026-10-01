@@ -196,6 +196,24 @@ one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back,
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
 
+## `6.1` — search
+
+Search is our own, in the core, so the CLI, the TUI and later the LSP share it: an SQLite FTS5 index (Bun has SQLite
+and FTS5 built in — no dependency) in the vault's cache, and a scan of the files with the same query and a BM25-like
+score while there's none, so a search always answers. It's deliberately small — words, phrases, prefixes, exclusions,
+`title:`, tags and folders, ranked by BM25 with the title weighing most — because a fuller engine (Scout: semantic
+search, the graph) will sit behind the same API when it's there; slipbox's is the fallback.
+
+- **A row per file, not per section.** A search's words are a note's, wherever in it; with a row per section, words
+  in two sections of one note found nothing. The hit still opens at the section with most of the words.
+- **Read by a quick pass over the lines**, not the markdown parser: frontmatter, headings outside code, tags, the text
+  as written. The tokenizer skips the markup; the parser would make a first build of a big vault take a minute.
+- **Kept current two ways.** Each catch-up compares every file's size and mtime with the index's — whoever changed
+  it, git or an agent with nothing running. And whatever changes a file through slipbox, or is seen by its watcher,
+  reaches the graph, which says so to its listeners (`onChange`): the TUI's index updates a file as it changes, and
+  an outside engine will hear of the same changes — moves too, which a watcher sees only as a delete and a create.
+- **`find` stays**: every match of a literal or a regex, for when the question is "where exactly", not "which notes".
+
 ## `15.1` — a big note on other threads
 
 A big note's parse runs on workers because its chunks already parse the same apart as whole: each worker takes a run

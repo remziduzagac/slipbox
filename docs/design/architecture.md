@@ -71,7 +71,9 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/parse.ts` | 1.3 | remark + gfm + frontmatter + wikilinks; headings, slugs |
 | `core/parse-pool.ts` | 15.1 | a big note's chunks parsed on up to four workers (`parse-worker.ts`), into its cache |
 | `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
-| `core/graph.ts` | 1.5, 1.8, 1.9 | notes, links, backlinks, lazy parsing, persisted index |
+| `core/search.ts` | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
+| `core/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
+| `core/graph.ts` | 1.5, 1.8, 1.9, 6.7 | notes, links, backlinks, lazy parsing, persisted index; the change feed |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
@@ -161,6 +163,7 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | the machine's vaults | `$XDG_STATE_HOME/slipbox/vaults.json` |
 | user themes | `$XDG_CONFIG_HOME/slipbox/themes/*.yaml` (base16 / base24) |
 | link index | `$XDG_CACHE_HOME/slipbox/<key>/index.json` |
+| search index (`6.6`) | `$XDG_CACHE_HOME/slipbox/<key>/search.db` (SQLite FTS5, WAL) |
 | reading positions | `$XDG_STATE_HOME/slipbox/<key>/positions.json` |
 | session | `$XDG_STATE_HOME/slipbox/<key>/session.json` |
 | clipboard fallback (no OSC 52 or clipboard tool) | `$XDG_STATE_HOME/slipbox/<key>/clipboard.txt` |

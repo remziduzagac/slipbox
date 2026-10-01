@@ -421,6 +421,22 @@ describe("the vault and the tool", () => {
     expect(slipbox(["context", "home", "--copy", "--config", cfg], { cwd: DEMO }).out).toMatch(/^wrote .*clipboard\.txt: 1 file, \d+ chars\n$/);
     rmSync(cfg);
   });
+  test("search: ranked by the words, scanned until `index` builds the index (6.x)", () => {
+    const dir = join(sandbox, "search");
+    cpSync(DEMO, dir, { recursive: true });
+    const scan = slipbox(["search", "dome", "shutter", "--json"], { cwd: dir }).json;
+    expect(scan.data.engine).toBe("scan");
+    expect(scan.warnings.join()).toContain("slipbox index builds it");
+    expect(slipbox(["index"], { cwd: dir }).out).toMatch(/^search index: \d+ files — \d+ indexed, 0 removed \(\d+ ms\)\n$/);
+    const r = slipbox(["search", "dome", "shutter", "--json"], { cwd: dir }).json.data;
+    expect(r.engine).toBe("index");
+    const files = (x: { hits: { path: string }[] }) => x.hits.map((h) => h.path).sort();
+    expect(files(r)).toEqual(files(scan.data)); // the same notes, either way
+    expect(r.hits[0]).toMatchObject({ path: "projects/dome-refit.md", line: expect.any(Number), column: expect.any(Number), heading: expect.any(String) });
+    // Human output: path:line:column, the section, the line with its words marked.
+    expect(slipbox(["search", "木曽原"], { cwd: dir }).out).toBe("people/partners-and-names.md:84:35  Contacts — - Kiso-Hara Astronomical Society ([木曽原])\n");
+    expect(slipbox(["info"], { cwd: dir }).out).toMatch(/\nsearch {4}auto — index: \d+ files\n/);
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);

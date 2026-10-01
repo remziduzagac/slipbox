@@ -104,6 +104,11 @@ export interface Config {
     /** Scratch file name; relative to the vault root when location = "vault". */
     file: string;
   };
+  /** Search (6.x): `auto`, the index when it's built, else a scan of the files; `index`, the index
+   *  (built first when there's none); `scan`, the files every time (no index kept). */
+  search: {
+    engine: "auto" | "index" | "scan";
+  };
   /** The context bundle (9.7): a note with what it links to and what links to it, for an agent. */
   context: {
     /** Links followed out from the note: 1, what it links to; 0, none. */
@@ -208,6 +213,7 @@ export const DEFAULT_CONFIG: Config = {
   rename: { previous_names: true },
   lint: { enabled: "auto", command: [] },
   capture: { location: "state", file: "scratch.md" },
+  search: { engine: "auto" },
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
@@ -223,6 +229,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.show_urls": ["auto", "always", "never"],
   "capture.location": ["state", "vault"],
   "lint.enabled": ["auto", "on", "off"],
+  "search.engine": ["auto", "index", "scan"],
   "ui.lines": ["light", "heavy"],
   "files.show": ["notes", "renderable", "all"],
   "editor.edit_in": ["source", "live"],

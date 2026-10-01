@@ -211,7 +211,7 @@ mermaid     mermaid-ascii (npm v1.0.0 — TESTED, label parsing broken; see Veri
 templates   knap (first-party Obsidian, npm v0.6.0)
 export      own writers — rehype (HTML), `docx`, pdfkit or react-pdf; pandoc optional
 themes      hand-tuned first-class set + base16/base24 loader for the long tail
-search      UNDESIGNED — tobi/qmd is a candidate
+search      own index: SQLite FTS5 (decision 6.1); an outside engine (Scout) later, behind the same API
 PKM         own in-process implementation over remark
 agents      a CLI (shape settled); the command surface itself is still undesigned
 ```
@@ -844,7 +844,7 @@ Criterion: a *markdown note-taking* feature belongs; a *life-management* feature
 
 - backlinks and outgoing links — one graph, both directions
 - outline / TOC
-- **vault-wide search** — not yet designed; `tobi/qmd` is a candidate
+- **vault-wide search** — our own index (SQLite FTS5, decision `6.1`), an outside engine later
 - quick switcher / file picker
 - properties view — frontmatter rendered, as leaf does
 - tags view — same map pass as the link graph
@@ -1868,8 +1868,8 @@ worth writing early only because it is what we run.
 These are the *design* questions still open. Build-order decisions and their status live in
 `docs/plan.md`; the item IDs below point there.
 
-1. **Vault-wide search** (`6.1`) — undesigned. `tobi/qmd` and `zk` are the candidates, and `zk`
-   already ships it. It has to live in the core, since the CLI and LSP faces need it too.
+1. **Vault-wide search** (`6.1`) — **settled**: our own index in the core (SQLite FTS5), a scan until
+   it's built, and an outside engine behind the same API later; see `docs/design/decisions.md`.
 2. **Link resolution** (`1.4`) — **settled**: see `docs/design/decisions.md`.
 3. **The agent command surface** (`9.1`) — **settled**: the command list and the JSON contract are
    decision `9.1` and `docs/design/cli.md`.

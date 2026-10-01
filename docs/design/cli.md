@@ -100,6 +100,8 @@ These churn freely before 1.0:
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |
+| `search <words…>` | `{query, engine, relaxed, hits[{path, line, column, heading, score, snippet, marks, more}]}` |
+| `index` | `{path, rebuilt, indexed, removed, files, ms}` |
 | `replace <note> <old> <new>` | `{path, count, dryRun, sha, newSha, changes[{line, before, after}]}` |
 | `task <note>` | `{path, sha, tasks[{line, checked, text, raw}]}` |
 | `task <note> <line>` | `{path, line, text, checked, changed, sha}` |
@@ -250,6 +252,27 @@ name, and a path out of the root (relative, `~/`, absolute, or a `file://` URL �
 into the other vault: `path` and `abs` are absolute, and `vault` names it. `via` says
 when a link got there by an `alias`, a `previous-name` or a `redirect` (and a warning says so); `reason` says why one
 didn't (`unknown vault "x"`). A backlink from another vault has an absolute `from` and its `vault`.
+
+## Search (plans `6.1`–`6.8`)
+
+`slipbox search <words…>` ranks the vault's notes and data files by the words: each one somewhere in the file (else,
+`relaxed` and a warning, files with some of them), by BM25, a word in the title or an alias counting most, then tags,
+headings and the path, then the text. A hit opens at the section with most of the words — `line` and `column` are its
+first line with one — and `snippet` is that line, cut around the match, `marks` the words' places in it; `more`
+counts the file's other sections with some of the words. `--limit N` (default 20, up to 500).
+
+- **The query**: words (all of them); `"a phrase"`; `prefix*`; `-word` (none of it); `title:word` (in the title or
+  an alias); `#tag` or `tag:x` (notes carrying the tag, or one nested under it); `path:folder/` (files whose path
+  starts so). Nothing is passed on as FTS5 syntax: every word is quoted. Accents and case don't count. Words are
+  whole words: `cat` isn't `catalogue` (`cat*` is).
+- **The index** is SQLite FTS5 in the vault's cache (`search.db`). `slipbox index` builds it, or brings it up to the
+  files — `--rebuild` starts it again; the TUI keeps it as it runs. Before each search the index catches up with every
+  file whose size or mtime changed since, whoever changed it. Until it's been built, a search scans the files with
+  the same query, `engine: "scan"` and a warning — slower, the same notes. An index of another version, or one SQLite
+  can't read, is made again. A loose folder (the home vault) keeps none: it's scanned.
+- **`[search] engine`**: `auto` (the index when it's built, else a scan), `index` (built first when there's none),
+  `scan` (never an index).
+- **`find`** is the other tool: every match of a literal or a regex, not ranked.
 
 ## Renames (plans `17.15`, `7.1`–`7.4`)
 

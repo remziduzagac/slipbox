@@ -54,6 +54,13 @@ export interface NoteEntry {
   flags: string[];
 }
 
+/**
+ * A change to the vault's files as the graph hears of it (6.7): whatever made it — the watcher, a
+ * save here, a CLI write, a rename — it passes through the graph, and whoever keeps something
+ * derived from the files (the search index; later, an outside indexer) listens here.
+ */
+export type VaultChange = { kind: "changed"; path: string } | { kind: "removed"; path: string } | { kind: "moved"; from: string; to: string };
+
 /** How a link was resolved when not by the note's own name or path. */
 export type Via = "alias" | "previous-name" | "redirect";
 
@@ -353,10 +360,33 @@ export class Graph {
     const match = other.get(hash);
     if (match && match.rel !== rel) {
       other.delete(hash);
-      this.redirects?.add(side === "went" ? [[rel, match.rel]] : [[match.rel, rel]]);
+      const move: [string, string] = side === "went" ? [rel, match.rel] : [match.rel, rel];
+      this.redirects?.add([move]);
+      this.moved([move]);
       return;
     }
     (side === "went" ? this.went : this.came).set(hash, { rel, at: now });
+  }
+
+  private readonly listeners = new Set<(c: VaultChange) => void>();
+
+  /** Hear of every change to the vault's files (6.7); the returned function stops it. */
+  onChange(fn: (c: VaultChange) => void): () => void {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  private emit(c: VaultChange): void {
+    for (const fn of this.listeners) {
+      try {
+        fn(c);
+      } catch {}
+    }
+  }
+
+  /** Files moved (by a rename here, or seen by their content): said to the listeners. */
+  moved(pairs: [string, string][]): void {
+    for (const [from, to] of pairs) this.emit({ kind: "moved", from, to });
   }
 
   /** Incremental single-file update (1.8). Returns false when the file is not part of the vault. */
@@ -372,6 +402,7 @@ export class Graph {
     this.tagCache = null;
     this.generation++;
     this.nameCache = null;
+    this.emit({ kind: "changed", path: rel });
     return true;
   }
 
@@ -392,6 +423,7 @@ export class Graph {
     this.generation++;
     this.nameCache = null;
     this.dataLinkCache.clear(); // a path in a data file or a comment may resolve now
+    this.emit({ kind: "changed", path: rel });
     return true;
   }
 
@@ -408,6 +440,7 @@ export class Graph {
     this.tagCache = null;
     this.generation++;
     this.nameCache = null;
+    this.emit({ kind: "removed", path: rel });
     return true;
   }
 
@@ -422,6 +455,7 @@ export class Graph {
     this.tagCache = null;
     this.generation++;
     this.nameCache = null;
+    this.emit({ kind: "removed", path: rel });
   }
 
   abs(rel: string): string {
@@ -841,6 +875,7 @@ export class Graph {
     this.tagCache = null;
     this.generation++;
     this.nameCache = null;
+    this.emit({ kind: "changed", path: rel });
   }
 }
 

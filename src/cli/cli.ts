@@ -14,6 +14,7 @@ import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
+import { catchUp, search, SearchIndex } from "../core/search.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
@@ -130,6 +131,9 @@ Usage:
   slipbox resolve <link>            follow a link to a path        [--from <note>]
   slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
+  slipbox search <words…>           the vault's notes ranked by the words: "phrases", prefix*, -not, title:, #tag, path:
+                                    [--limit N]
+  slipbox index                     build or bring up to date the vault's search index  [--rebuild]
   slipbox context <note>…           the notes, what they link to and what links to them, as one document for an agent
                                     [--depth N] [--no-backlinks] [--limit N] [--copy]
   slipbox tags [tag]                the vault's tags and how many notes carry each; a tag's notes
@@ -181,7 +185,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "relink", "undo", "context", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
+  "mv", "rename-vault", "relink", "undo", "context", "search", "index", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
 ]);
 
@@ -334,6 +338,8 @@ const FLAGS: Record<string, string[]> = {
   relink: ["dry-run"],
   undo: ["dry-run"],
   context: ["depth", "no-backlinks", "limit", "copy"],
+  search: ["limit"],
+  index: ["rebuild"],
 };
 
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
@@ -601,16 +607,55 @@ const HANDLERS: Record<string, Handler> = {
     return { data: tags, human: tags.map((t) => `${String(t.count).padStart(4)}  #${t.tag}\n`).join("") };
   },
 
+  // Search (6.x): ranked by the words, from the index (caught up first) or a scan of the files.
+  search(s, rest) {
+    if (!rest.length) throw new UsageError("missing what to search for (search <words…>)");
+    const query = rest.join(" ");
+    const limit = wholeFlag(s, "limit", 20, 1, 500);
+    const idx = searchIndex(s);
+    try {
+      const r = search(s.graph, idx, query, { limit });
+      if (r.relaxed) s.warnings.push("no note has every word: these have some of them");
+      const mark = (h: { snippet: string; marks: [number, number][] }) => {
+        let out = "";
+        let at = 0;
+        for (const [a, b] of h.marks) {
+          out += `${h.snippet.slice(at, a)}[${h.snippet.slice(a, b)}]`;
+          at = b;
+        }
+        return sanitize(out + h.snippet.slice(at));
+      };
+      const human = r.hits.map((h) => `${h.path}:${h.line}:${h.column}  ${h.heading ? `${sanitize(h.heading)} — ` : ""}${mark(h)}${h.more ? `  (+${h.more} more)` : ""}\n`).join("");
+      return { data: { query, engine: r.engine, relaxed: r.relaxed, hits: r.hits }, human };
+    } finally {
+      idx?.close();
+    }
+  },
+
+  index(s) {
+    if (s.loc.mode === "home") throw new CliError("not in a vault: the search index is a vault's — slipbox init makes one; a loose folder is scanned", EXIT.refused);
+    const idx = SearchIndex.open(s.loc);
+    if (!idx) throw new CliError("the search index can't be opened", 1);
+    try {
+      const t = performance.now();
+      if (has(s.args, "rebuild")) idx.clear();
+      const r = catchUp(s.graph, idx);
+      const st = idx.stats();
+      const ms = Math.round(performance.now() - t);
+      return {
+        data: { path: idx.file, rebuilt: has(s.args, "rebuild"), indexed: r.indexed, removed: r.removed, files: st.files, ms },
+        human: `search index: ${st.files} files — ${r.indexed} indexed, ${r.removed} removed (${ms} ms)\n`,
+      };
+    } finally {
+      idx.close();
+    }
+  },
+
   // The context bundle (9.7): the notes, what they link to and what links to them, as one document.
   async context(s, rest) {
     if (!rest.length) throw new UsageError("missing a note (context <note>…)");
     const start = [...new Set(rest.map((r) => resolveNote(s, r)))];
-    const num = (name: string, fallback: number, lo: number, hi: number) => {
-      const v = flag(s.args, name);
-      if (v === undefined) return fallback;
-      if (!/^\d+$/.test(v) || Number(v) < lo || Number(v) > hi) throw new UsageError(`--${name} must be a whole number from ${lo} to ${hi}`);
-      return Number(v);
-    };
+    const num = (name: string, fallback: number, lo: number, hi: number) => wholeFlag(s, name, fallback, lo, hi);
     const opts = { depth: num("depth", s.config.context.depth, 0, 5), backlinks: s.config.context.backlinks && !has(s.args, "no-backlinks"), limit: num("limit", s.config.context.limit, 1, 500) };
     await s.graph.loadGrammars(); // code files link from their comments (16.10): backlinks too
     const b = buildContext(s.graph, start, opts);
@@ -958,6 +1003,7 @@ const HANDLERS: Record<string, Handler> = {
       scratch: scratch.path,
       notes: g.notes.size,
       index: g.stats,
+      search: searchInfo(s),
       skipped: g.skipped,
       stale: s.stale(),
     };
@@ -969,6 +1015,7 @@ const HANDLERS: Record<string, Handler> = {
       `theme     ${data.config.theme}`,
       `config    ${data.config.sources.length ? data.config.sources.join(", then ") : `none (${data.config.user} doesn't exist)`}`,
       `cache     ${data.cache}`,
+      `search    ${data.search.engine}${data.search.index ? ` — index: ${data.search.index.files} files${data.search.index.complete ? "" : " (being built)"}` : " — no index"}`,
       `state     ${data.state}`,
       `scratch   ${data.scratch}`,
       ...g.skipped.map((x) => `skipped   ${x.rel} — ${x.reason}`),
@@ -1439,6 +1486,52 @@ function pickNvim(s: Session, abs: string): string {
   if (holding.length && (holding.length === 1 || holding[0]!.cwd.length > holding[1]!.cwd.length)) return holding[0]!.socket;
   const candidates = found.map((n) => ({ socket: n.socket, cwd: n.cwd, file: n.file }));
   throw new CliError(`${found.length} nvims are running; pick one with --server (${found.map((n) => n.socket).join(", ")})`, EXIT.ambiguous, { candidates });
+}
+
+/** Which search engine answers here, and the index's size when there is one (`info`). */
+function searchInfo(s: Session): { engine: string; index: { files: number; complete: boolean } | null } {
+  if (s.loc.mode === "home" || s.config.search.engine === "scan" || !SearchIndex.exists(s.loc)) return { engine: s.config.search.engine, index: null };
+  const idx = SearchIndex.open(s.loc);
+  if (!idx) return { engine: s.config.search.engine, index: null };
+  try {
+    return { engine: s.config.search.engine, index: { ...idx.stats(), complete: idx.complete } };
+  } finally {
+    idx.close();
+  }
+}
+
+/** A whole-number flag within `lo`–`hi`, or `fallback` when it isn't given. */
+function wholeFlag(s: Session, name: string, fallback: number, lo: number, hi: number): number {
+  const v = flag(s.args, name);
+  if (v === undefined) return fallback;
+  if (!/^\d+$/.test(v) || Number(v) < lo || Number(v) > hi) throw new UsageError(`--${name} must be a whole number from ${lo} to ${hi}`);
+  return Number(v);
+}
+
+/**
+ * The vault's search index for a CLI run (6.x), brought up to the files — or null, and the files
+ * are scanned: when `[search] engine` says so, in a loose folder (the home vault keeps none), or
+ * while it's never been built (`slipbox index` builds it; the TUI does as it runs).
+ */
+function searchIndex(s: Session): SearchIndex | null {
+  const engine = s.config.search.engine;
+  if (engine === "scan" || s.loc.mode === "home") return null;
+  if (engine === "auto" && !SearchIndex.exists(s.loc)) {
+    s.warnings.push("no search index yet: the files were scanned — slipbox index builds it (the TUI does as it runs)");
+    return null;
+  }
+  const idx = SearchIndex.open(s.loc);
+  if (!idx) {
+    s.warnings.push("the search index can't be opened: the files were scanned");
+    return null;
+  }
+  if (engine === "auto" && !idx.complete) {
+    idx.close();
+    s.warnings.push("the search index is still being built: the files were scanned");
+    return null;
+  }
+  catchUp(s.graph, idx);
+  return idx;
 }
 
 /** A folder of the vault named on the command line (from cwd, or the vault's root), or null. */
