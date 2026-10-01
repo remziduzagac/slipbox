@@ -6,6 +6,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+/**
+ * What a server is used for, by Helix's names (`only-features`, `except-features`): several servers on
+ * one file each do what they're for — the main one everything, a linter's its diagnostics and fixes.
+ */
+export type Feature = "diagnostics" | "hover" | "goto-definition" | "goto-reference" | "document-symbols" | "completion" | "signature-help" | "rename-symbol" | "code-action" | "format";
+
+/** An add-on's features unless the config says: a linter's. */
+export const ADD_ON_FEATURES: Feature[] = ["diagnostics", "code-action", "format"];
+
 /** A server slipbox can run. */
 export interface ServerDef {
   name: string;
@@ -41,6 +50,16 @@ export interface LanguageDef {
   roots: string[];
   /** Its servers by name: the first found is the main one; add-ons run beside it. */
   servers: string[];
+  /** A server's features for this language, as the config limits them (Helix's `only-features`, `except-features`). */
+  features?: Record<string, { only?: Feature[]; except?: Feature[] }>;
+}
+
+/** Whether a server does a feature for a language: as the language's config says, else a main server everything, an add-on a linter's. */
+export function does(def: ServerDef, lang: LanguageDef, feature: Feature): boolean {
+  const f = lang.features?.[def.name];
+  if (f?.only) return f.only.includes(feature);
+  if (f?.except) return !f.except.includes(feature);
+  return !def.requires || ADD_ON_FEATURES.includes(feature);
 }
 
 const ESLINT_CONFIGS = [
@@ -180,7 +199,7 @@ export interface ServerConfig {
 /** A language in Helix's shape (`[[language]]`). */
 export interface LanguageConfig {
   name: string;
-  "language-servers"?: (string | { name: string })[];
+  "language-servers"?: (string | { name: string; "only-features"?: Feature[]; "except-features"?: Feature[] })[];
   roots?: string[];
   "file-types"?: string[];
   "language-id"?: string;
@@ -209,7 +228,12 @@ export function serverTable(servers: Record<string, ServerConfig> = {}, language
   for (const c of languages) {
     const known = langs.find((l) => l.name === c.name);
     const l = known ?? { name: c.name, languageId: c["language-id"] ?? c.name, fileTypes: [], roots: [".git"], servers: [] };
-    if (c["language-servers"]) l.servers = c["language-servers"].map((s) => (typeof s === "string" ? s : s.name));
+    if (c["language-servers"]) {
+      l.servers = c["language-servers"].map((s) => (typeof s === "string" ? s : s.name));
+      l.features = Object.fromEntries(
+        c["language-servers"].flatMap((s) => (typeof s === "string" ? [] : [[s.name, { only: s["only-features"], except: s["except-features"] }]])),
+      );
+    }
     if (c.roots) l.roots = c.roots;
     if (c["file-types"]) l.fileTypes = c["file-types"];
     if (c["language-id"]) l.languageId = c["language-id"];

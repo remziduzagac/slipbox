@@ -9,7 +9,7 @@ import type { Problem, Severity } from "../diagnostics.ts";
 import { LanguageClient } from "./client.ts";
 import { chooseServers, type Found, findServer, rootFor } from "./find.ts";
 import { installPackages } from "./install.ts";
-import { languageOf, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
+import { does, type Feature, languageOf, type LanguageDef, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
 
 export interface ManagerOptions {
   /** The servers and languages in effect (the config's over the built-in). */
@@ -31,6 +31,8 @@ interface Doc {
   text: string;
   /** Its servers, by key, the main one first. */
   servers: string[];
+  /** Its language: what each server does for it. */
+  lang: LanguageDef;
 }
 
 interface Running {
@@ -83,7 +85,7 @@ export class ServerManager {
     const root = rootFor(path, lang.roots);
     const choice = chooseServers(lang, table.servers, root, (r) => projectAsks(root, r));
     for (const d of choice.missing) this.missing(d, lang.name);
-    const doc: Doc = { path, languageId: lang.languageId, version, text, servers: [] };
+    const doc: Doc = { path, languageId: lang.languageId, version, text, servers: [], lang };
     this.docs.set(path, doc);
     for (const { def, found } of choice.run) {
       const r = this.server(def, root, found, lang.name);
@@ -122,16 +124,37 @@ export class ServerManager {
     return this.docs.has(path);
   }
 
-  /** A request about a file, to its first running server that offers it (`capability`): its answer, or null. */
-  async request<R>(path: string, method: string, params: unknown, capability: string): Promise<{ server: string; result: R } | null> {
+  /** A file's running servers that do a feature for it and offer it (`capability`), the main one first. */
+  private async serving(path: string, feature: Feature, capability: string): Promise<LanguageClient[]> {
     const doc = this.docs.get(path);
+    const out: LanguageClient[] = [];
     for (const key of doc?.servers ?? []) {
-      const client = await this.running.get(key)?.ready;
-      if (!client || !(client.capabilities as Record<string, unknown> | null)?.[capability]) continue;
+      const r = this.running.get(key);
+      const client = await r?.ready;
+      if (!client || !does(r!.def, doc!.lang, feature) || !(client.capabilities as Record<string, unknown> | null)?.[capability]) continue;
+      out.push(client);
+    }
+    return out;
+  }
+
+  /** A request about a file, to its first server that does the feature and answers: its answer, or null. */
+  async request<R>(path: string, method: string, params: unknown, capability: string, feature: Feature): Promise<{ server: string; result: R } | null> {
+    for (const client of await this.serving(path, feature, capability)) {
       const result = await client.request<R>(method, params);
       if (result !== null) return { server: client.spec.name, result };
     }
     return null;
+  }
+
+  /** A request to every server of a file that does the feature (references, code actions): their answers, together. */
+  async requestAll<R>(path: string, method: string, params: unknown, capability: string, feature: Feature): Promise<{ server: string; result: R }[]> {
+    const clients = await this.serving(path, feature, capability);
+    const out: { server: string; result: R }[] = [];
+    for (const c of clients) {
+      const result = await c.request<R>(method, params);
+      if (result !== null) out.push({ server: c.spec.name, result });
+    }
+    return out;
   }
 
   /** What's running, for `slipbox doctor` and the UI: each server, its project, its state. */
@@ -183,7 +206,11 @@ export class ServerManager {
       {
         diagnostics: (uri, diagnostics, version) => {
           if (!uri.startsWith("file:")) return;
-          this.o.problems(fileURLToPath(uri), r.def.name, version, diagnostics.map((d) => problemOf(d, r.def.name)));
+          const path = fileURLToPath(uri);
+          // A server limited away from diagnostics for this file's language says nothing here.
+          const doc = this.docs.get(path);
+          if (doc && !does(r.def, doc.lang, "diagnostics")) return;
+          this.o.problems(path, r.def.name, version, diagnostics.map((d) => problemOf(d, r.def.name)));
         },
         log: (text) => this.o.log?.(text),
         exited: (expected, why) => {

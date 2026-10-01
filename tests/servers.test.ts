@@ -249,10 +249,42 @@ describe("the servers of open files (19.1)", () => {
     ]);
     m.change(join(a, "one.fk"), 2, "fine\nBAD BAD\n");
     expect(await until(() => problems.get(join(a, "one.fk"))?.version === 2)).toBe(true);
-    const hover = await m.request<{ contents: { kind: string; value: string } }>(join(a, "one.fk"), "textDocument/hover", { textDocument: { uri: pathToFileURL(join(a, "one.fk")).href }, position: { line: 1, character: 0 } }, "hoverProvider");
+    const hover = await m.request<{ contents: { kind: string; value: string } }>(join(a, "one.fk"), "textDocument/hover", { textDocument: { uri: pathToFileURL(join(a, "one.fk")).href }, position: { line: 1, character: 0 } }, "hoverProvider", "hover");
     expect(hover).toEqual({ server: "fake", result: { contents: { kind: "markdown", value: "line 1: BAD BAD" } } });
     await m.stopAll();
     expect(m.list().map((s) => s.state)).toEqual(["stopped", "stopped"]);
+  });
+
+  test("several servers on a file: each does its features — an add-on a linter's; the config limits them, Helix's way", async () => {
+    const main = { name: "fake", command: launcher("fake-main"), args: ["--stdio"] };
+    const addon = { name: "fake-lint", command: launcher("fake-addon"), args: ["--stdio"], requires: ["lint.cfg"] };
+    const root = project("pg");
+    writeFileSync(join(root, "lint.cfg"), "");
+    const file = join(root, "a.fk");
+    const uri = pathToFileURL(file).href;
+    const heard: string[] = [];
+    const t = table({ fake: main, "fake-lint": addon });
+    const m = new ServerManager({ table: () => t, autoInstall: () => false, problems: (_p, server, _v, list) => list.length && heard.push(server), message: () => {} });
+    m.open(file, 1, "BAD\nREF a\n");
+    expect(await until(() => heard.includes("fake") && heard.includes("fake-lint"))).toBe(true); // both its diagnostics
+    const hover = await m.requestAll(file, "textDocument/hover", { textDocument: { uri }, position: { line: 0, character: 0 } }, "hoverProvider", "hover");
+    expect(hover.map((h) => h.server)).toEqual(["fake"]); // an add-on doesn't hover
+    const refs = await m.requestAll(file, "textDocument/references", { textDocument: { uri }, position: { line: 0, character: 0 }, context: { includeDeclaration: false } }, "referencesProvider", "goto-reference");
+    expect(refs.map((r) => r.server)).toEqual(["fake"]); // nor find references
+    await m.stopAll();
+    // The config limits it: the main server for hover only — its diagnostics unheard.
+    const limited: ServerTable = { ...t, languages: [{ ...t.languages[0]!, features: { fake: { only: ["hover"] }, "fake-lint": { except: ["diagnostics"] } } }] };
+    const quiet: string[] = [];
+    const m2 = new ServerManager({ table: () => limited, autoInstall: () => false, problems: (_p, server, _v, list) => list.length && quiet.push(server), message: () => {} });
+    m2.open(file, 1, "BAD\n");
+    const h2 = await m2.request(file, "textDocument/hover", { textDocument: { uri }, position: { line: 0, character: 0 } }, "hoverProvider", "hover");
+    expect(h2?.server).toBe("fake");
+    await Bun.sleep(400);
+    expect(quiet).toEqual([]);
+    await m2.stopAll();
+    // Helix's shape in the config: an entry with only-features.
+    const helix = serverTable({}, [{ name: "python", "language-servers": ["pyright", { name: "ruff", "only-features": ["diagnostics", "format"] }] }]);
+    expect(languageOf(helix, "a.py")!.features).toEqual({ ruff: { only: ["diagnostics", "format"], except: undefined } });
   });
 
   test("a crash: started again, its files told again; one that keeps crashing is left stopped", async () => {

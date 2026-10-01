@@ -1062,7 +1062,7 @@ export class App {
     const s = this.servers;
     if (!s || buf.kind.group === "note" || grammarFor(buf.kind.format, extensionOf(buf.name))) return;
     const version = buf.version;
-    const answer = await s.request<DocumentSymbol[] | SymbolInformation[]>(buf.abs, "textDocument/documentSymbol", { textDocument: { uri: pathToFileURL(buf.abs).href } }, "documentSymbolProvider");
+    const answer = await s.request<DocumentSymbol[] | SymbolInformation[]>(buf.abs, "textDocument/documentSymbol", { textDocument: { uri: pathToFileURL(buf.abs).href } }, "documentSymbolProvider", "document-symbols");
     if (!answer || buf.version !== version) return;
     buf.serverOutline = outlineOf(answer.result);
     buf.invalidateLayouts();

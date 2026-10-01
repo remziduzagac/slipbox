@@ -1571,7 +1571,7 @@ export function registerActions(app: App): void {
         }
         const s = a.servers;
         if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
-        const answer = await s.request<Hover>(v.buf.abs, "textDocument/hover", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "hoverProvider");
+        const answer = await s.request<Hover>(v.buf.abs, "textDocument/hover", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "hoverProvider", "hover");
         const text = answer ? hoverText(answer.result) : "";
         if (!text.trim()) return a.message("info", "the language server has nothing to say here");
         a.openHover(text, `${answer!.server}`);
@@ -1581,7 +1581,7 @@ export function registerActions(app: App): void {
         if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("link.follow");
         const s = a.servers;
         if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
-        const answer = await s.request<Location | Location[] | LocationLink[]>(v.buf.abs, "textDocument/definition", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "definitionProvider");
+        const answer = await s.request<Location | Location[] | LocationLink[]>(v.buf.abs, "textDocument/definition", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "definitionProvider", "goto-definition");
         const locs = answer ? locations(answer.result) : [];
         if (!locs.length) return a.message("info", "no definition found here");
         if (locs.length === 1) return a.openLocation(locs[0]!.path, locs[0]!.line, locs[0]!.character);
@@ -1592,8 +1592,13 @@ export function registerActions(app: App): void {
         if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("backlinks.open");
         const s = a.servers;
         if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
-        const answer = await s.request<Location[]>(v.buf.abs, "textDocument/references", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v), context: { includeDeclaration: false } }, "referencesProvider");
-        const locs = answer ? locations(answer.result) : [];
+        // Every server that finds references has its say, together.
+        const answers = await s.requestAll<Location[]>(v.buf.abs, "textDocument/references", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v), context: { includeDeclaration: false } }, "referencesProvider", "goto-reference");
+        const seen = new Set<string>();
+        const locs = answers.flatMap((x) => locations(x.result)).filter((l) => {
+          const key = `${l.path}:${l.line}:${l.character}`;
+          return !seen.has(key) && !!seen.add(key);
+        });
         if (!locs.length) return a.message("info", "no references found");
         pickLocation(a, `${locs.length} reference${locs.length === 1 ? "" : "s"}`, locs);
       }),

@@ -571,7 +571,7 @@ source shown alike in every mode.*
 | 19.14 | **Done** (the outline; the vault's symbols with `19.22`). The server's symbols where tree-sitter has none |
 | 19.15 | Rename, code actions, formatting: through `App.writeBuffer`, previewed like slipbox's renames |
 | 19.16 | Completion in insert mode |
-| 19.17 | Several servers per file: a main one and add-ons, merged; Helix's `only-features` to split the work |
+| 19.17 | **Done.** Several servers per file: a main one and add-ons, merged; Helix's `only-features` to split the work |
 | 19.18 | Linters with an LSP mode as add-ons, where the project has their config; the project's copy first |
 | 19.19 | The lint surface widened: linters without LSP in efm-langserver's keys (`lint-command`, `lint-formats`) |
 | 19.20 | Server settings from a project's `.vscode/settings.json`: `workspace/configuration` as VS Code answers |

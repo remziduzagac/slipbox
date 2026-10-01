@@ -128,7 +128,7 @@ config = { python = { analysis = { typeCheckingMode = "strict" } } }   # its set
 
 [[language]]                   # a language: its servers (main first, add-ons after), roots, file types
 name = "python"
-language-servers = ["pyright", "ruff"]
+language-servers = ["pyright", "ruff"]   # or { name = "ruff", only-features = ["diagnostics", "format"] }
 
 [context]                      # the context bundle (9.7): space s c, slipbox context
 depth = 1                      # links followed out from the note (0–5): 1, what it links to; 0, none
