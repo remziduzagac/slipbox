@@ -10,6 +10,7 @@ import { loadError } from "../core/lazy.ts";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
@@ -41,6 +42,8 @@ import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
 import { openVault, Reach } from "../core/reach.ts";
+import { doctor, doctorFile, type ServerReport } from "../core/servers/doctor.ts";
+import { serverTable } from "../core/servers/languages.ts";
 import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { readIdentity, readRegistry, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
@@ -172,6 +175,7 @@ Usage:
   slipbox info                      vault, paths, versions, staleness
   slipbox lsp                       serve vaults to an editor over LSP, on stdio  [--config <file>]
   slipbox vaults                    the vaults this machine knows: name, kind, path, last seen
+  slipbox doctor [file]             language servers: each language's, found where, installed when needed, or missing
   slipbox themes                    list themes
   slipbox commands                  list named commands and their CLI equivalents
 
@@ -194,7 +198,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-vault", "rename-heading", "relink", "undo", "context", "search", "index", "changed", "diff", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
-  "capture", "scratch", "init", "info", "vaults", "themes", "commands", "help",
+  "capture", "scratch", "init", "info", "vaults", "doctor", "themes", "commands", "help",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -296,7 +300,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
+  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -1054,6 +1058,36 @@ const HANDLERS: Record<string, Handler> = {
       .map((v) => `${(v.name ?? basename(v.path)).padEnd(16)} ${v.kind.padEnd(6)} ${v.path}  ${v.seen.slice(0, 16).replace("T", " ")}${v.exists ? "" : "  (gone)"}\n`)
       .join("");
     return { data: list, human: human || "no vaults yet\n" };
+  },
+
+  // Language servers (19.7): each language's, and where each is; for a file, the ones serving it.
+  doctor(s, rest) {
+    const table = serverTable(s.config["language-server"], s.config.language);
+    const auto = s.config.lsp.auto_install;
+    const home = homedir();
+    const short = (p: string) => (p.startsWith(`${home}/`) ? `~${p.slice(home.length)}` : p);
+    const line = (r: ServerReport) => {
+      const what =
+        r.status === "found"
+          ? `${r.where}  ${short(r.path!)}`
+          : r.status === "installable"
+            ? `not found: slipbox installs ${r.package} when it's first needed`
+            : r.package
+              ? `not found, and installing is off ([lsp] auto_install): ${r.package}`
+              : `not found: ${r.hint ?? "install it, or name it in [language-server]"}`;
+      const role = r.role === "add-on" ? `  (where the project has ${r.requires!.slice(0, 2).join(" or ")}…)` : "";
+      return `  ${r.name.padEnd(28)} ${what}${role}\n`;
+    };
+    if (rest[0]) {
+      const abs = isAbsolute(rest[0]) ? rest[0] : join(s.io.cwd, rest[0]);
+      const f = doctorFile(table, abs, auto);
+      if (!f) throw new CliError(`${rest[0]}: slipbox serves no language of it`, EXIT.notFound);
+      const human = [`${rest[0]}: ${f.language}, its project ${short(f.root)}\n`, ...f.run.map(line), ...(f.missing.length ? ["missing:\n", ...f.missing.map(line)] : [])].join("");
+      return { data: f, human };
+    }
+    const groups = doctor(table, s.io.cwd, auto);
+    if (!s.config.lsp.enabled) s.warnings.push("language servers are off: [lsp] enabled = false");
+    return { data: groups, human: groups.map((g) => `${g.languages.join(", ")}\n${g.servers.map(line).join("")}`).join("") };
   },
 
   info(s) {

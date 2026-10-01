@@ -98,11 +98,13 @@ export function findServer(def: ServerDef, root: string): Found | null {
     const p = join(dir, def.command);
     if (isFile(p)) return runnable(p, def.args, "project");
   }
-  const onPath = Bun.which(def.command);
-  if (onPath) return runnable(onPath, def.args, "path");
-  for (const dir of userInstalls()) {
-    const p = join(dir, def.command);
-    if (isFile(p)) return runnable(p, def.args, "user-install");
+  if (!def.ownOnly) {
+    const onPath = Bun.which(def.command, { PATH: process.env.PATH ?? "" });
+    if (onPath) return runnable(onPath, def.args, "path");
+    for (const dir of userInstalls()) {
+      const p = join(dir, def.command);
+      if (isFile(p)) return runnable(p, def.args, "user-install");
+    }
   }
   if (def.npm) {
     const p = join(toolsDir(), "node_modules", ".bin", def.npm.bin);

@@ -209,7 +209,9 @@ else the file's own folder.
 **Where its program is** (`19.4`), in order: the path the user's config gives; the project's own
 (`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin`, from its folder up to its checkout's top); `PATH`; the
 places the user installs tools (Mason's `bin`, `~/.cargo/bin`, `~/go/bin`, `~/.local/bin`); slipbox's own installs.
-A program written for Node (`#!/usr/bin/env node`) runs on slipbox's own Bun — no Node needed. Everything is trusted
+A program written for Node (`#!/usr/bin/env node`) runs on slipbox's own Bun — no Node needed. A server whose
+program's name is common elsewhere is taken only from the project or slipbox's installs: a `tsc` on `PATH` may be an
+older TypeScript with no server. Everything is trusted
 (`19.6`): the project's own programs run, and its servers run its code, as under nvim or Helix.
 
 **Installing** (`19.5`, `core/servers/install.ts`): a server published on npm and found nowhere is installed when a

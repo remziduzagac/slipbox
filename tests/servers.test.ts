@@ -292,3 +292,21 @@ describe("the servers of open files (19.1)", () => {
     await install.m.stopAll();
   });
 });
+
+describe("found only where it's surely the one (19.4)", () => {
+  test("a server whose name is common elsewhere (tsc) is taken only from the project or slipbox's installs", () => {
+    const bin = join(sandbox, "pathbin");
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(bin, "slipbox-common-ls"), "#!/bin/sh\n");
+    chmodSync(join(bin, "slipbox-common-ls"), 0o755);
+    const was = process.env.PATH;
+    process.env.PATH = `${bin}:${was}`;
+    try {
+      const def = { name: "c", command: "slipbox-common-ls", args: [] };
+      expect(findServer(def, sandbox)?.where).toBe("path");
+      expect(findServer({ ...def, ownOnly: true }, sandbox)).toBeNull();
+    } finally {
+      process.env.PATH = was;
+    }
+  });
+});

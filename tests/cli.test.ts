@@ -292,6 +292,25 @@ describe("the vault and the tool", () => {
     expect(slipbox(["rename-heading", "plan", "Nope", "X"], { cwd: dir }).code).toBe(5);
     expect(slipbox(["rename-heading", "plan", "Aims"], { cwd: dir }).code).toBe(2);
   });
+  test("doctor: each language's servers and where each is; a file's, in its project (19.7)", () => {
+    const groups = slipbox(["doctor", "--json"]).json.data as { languages: string[]; servers: { name: string; role: string; package: string | null; hint: string | null }[] }[];
+    const ts = groups.find((g) => g.languages.includes("typescript"))!;
+    expect(ts.languages).toEqual(["typescript", "tsx", "javascript", "jsx"]);
+    expect(ts.servers.map((x) => [x.name, x.role])).toEqual([
+      ["typescript", "main"],
+      ["vtsls", "main"],
+      ["eslint", "add-on"],
+      ["biome", "add-on"],
+    ]);
+    expect(ts.servers[0]!.package).toBe("typescript@7.0.2");
+    expect(groups.find((g) => g.languages.includes("rust"))!.servers[0]!.hint).toBe("rustup component add rust-analyzer");
+    expect(slipbox(["doctor"]).out).toMatch(/^rust\n {2}rust-analyzer +/m);
+    writeFileSync(join(vault, "tool.ts"), "export const x = 1;\n");
+    const file = slipbox(["doctor", "tool.ts", "--json"]).json.data;
+    expect(file).toMatchObject({ language: "typescript", languageId: "typescript" });
+    expect(file.run[0].name).toBe("typescript");
+    expect(slipbox(["doctor", "home.md"]).code).toBe(3); // a note: slipbox itself serves it
+  });
   test("cp, rm, trash, and mv of a folder (18.x)", () => {
     const dir = join(sandbox, "fileops");
     mkdirSync(join(dir, "projects", "deep"), { recursive: true });

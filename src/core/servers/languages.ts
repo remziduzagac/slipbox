@@ -25,6 +25,10 @@ export interface ServerDef {
   requires?: string[];
   /** A main server used only where this holds of the project's top folder. */
   when?: (root: string) => boolean;
+  /** A native server: how to get it, for `slipbox doctor`. */
+  hint?: string;
+  /** Found only in the project or slipbox's installs: its name elsewhere may be another program (an older `tsc`). */
+  ownOnly?: boolean;
 }
 
 export interface LanguageDef {
@@ -48,24 +52,24 @@ const EXTRACTED = { package: "vscode-langservers-extracted", version: "4.10.0" }
 
 export const SERVERS: Record<string, ServerDef> = {
   // TypeScript 7 is native, its server built in: the project's own when it has one (19.4), else installed.
-  typescript: { name: "typescript", command: "tsc", args: ["--lsp", "--stdio"], npm: { package: "typescript", version: "7.0.2", bin: "tsc" }, when: (root) => !olderTypeScript(root) },
+  typescript: { name: "typescript", command: "tsc", args: ["--lsp", "--stdio"], npm: { package: "typescript", version: "7.0.2", bin: "tsc" }, when: (root) => !olderTypeScript(root), ownOnly: true },
   // A project on TypeScript 6 or older: vtsls, its own TypeScript bundled.
   vtsls: { name: "vtsls", command: "vtsls", args: ["--stdio"], npm: { package: "@vtsls/language-server", version: "0.3.0", bin: "vtsls" } },
   pyright: { name: "pyright", command: "pyright-langserver", args: ["--stdio"], npm: { package: "pyright", version: "1.1.414", bin: "pyright-langserver" }, config: { python: { analysis: { autoSearchPaths: true, useLibraryCodeForTypes: true, diagnosticMode: "openFilesOnly" } } } },
-  "rust-analyzer": { name: "rust-analyzer", command: "rust-analyzer", args: [] },
-  gopls: { name: "gopls", command: "gopls", args: [] },
-  "lua-language-server": { name: "lua-language-server", command: "lua-language-server", args: [] },
+  "rust-analyzer": { name: "rust-analyzer", command: "rust-analyzer", args: [], hint: "rustup component add rust-analyzer" },
+  gopls: { name: "gopls", command: "gopls", args: [], hint: "go install golang.org/x/tools/gopls@latest" },
+  "lua-language-server": { name: "lua-language-server", command: "lua-language-server", args: [], hint: "your package manager (brew install lua-language-server)" },
   "bash-language-server": { name: "bash-language-server", command: "bash-language-server", args: ["start"], npm: { package: "bash-language-server", version: "5.8.1", bin: "bash-language-server" } },
   "vscode-json-language-server": { name: "vscode-json-language-server", command: "vscode-json-language-server", args: ["--stdio"], npm: { ...EXTRACTED, bin: "vscode-json-language-server" }, config: { json: { validate: { enable: true } } }, initOptions: { provideFormatter: true } },
   "yaml-language-server": { name: "yaml-language-server", command: "yaml-language-server", args: ["--stdio"], npm: { package: "yaml-language-server", version: "1.24.0", bin: "yaml-language-server" }, config: { redhat: { telemetry: { enabled: false } }, yaml: { validate: true } } },
-  taplo: { name: "taplo", command: "taplo", args: ["lsp", "stdio"] },
+  taplo: { name: "taplo", command: "taplo", args: ["lsp", "stdio"], hint: "cargo install taplo-cli --locked --features lsp, or brew install taplo" },
   "vscode-css-language-server": { name: "vscode-css-language-server", command: "vscode-css-language-server", args: ["--stdio"], npm: { ...EXTRACTED, bin: "vscode-css-language-server" }, config: { css: { validate: true }, scss: { validate: true }, less: { validate: true } }, initOptions: { provideFormatter: true } },
   "vscode-html-language-server": { name: "vscode-html-language-server", command: "vscode-html-language-server", args: ["--stdio"], npm: { ...EXTRACTED, bin: "vscode-html-language-server" }, config: { html: { validate: { scripts: true, styles: true } } }, initOptions: { provideFormatter: true, embeddedLanguages: { css: true, javascript: true } } },
   "docker-langserver": { name: "docker-langserver", command: "docker-langserver", args: ["--stdio"], npm: { package: "dockerfile-language-server-nodejs", version: "0.15.0", bin: "docker-langserver" } },
   intelephense: { name: "intelephense", command: "intelephense", args: ["--stdio"], npm: { package: "intelephense", version: "1.18.5", bin: "intelephense" } },
-  "sourcekit-lsp": { name: "sourcekit-lsp", command: "sourcekit-lsp", args: [] },
-  clangd: { name: "clangd", command: "clangd", args: [] },
-  "ruby-lsp": { name: "ruby-lsp", command: "ruby-lsp", args: [] },
+  "sourcekit-lsp": { name: "sourcekit-lsp", command: "sourcekit-lsp", args: [], hint: "it comes with Xcode, or the Swift toolchain" },
+  clangd: { name: "clangd", command: "clangd", args: [], hint: "your package manager (clangd, or LLVM)" },
+  "ruby-lsp": { name: "ruby-lsp", command: "ruby-lsp", args: [], hint: "gem install ruby-lsp" },
   // Linters' servers: add-ons, where the project has their config (19.18). Settings as nvim-lspconfig's.
   eslint: {
     name: "eslint",
@@ -91,7 +95,7 @@ export const SERVERS: Record<string, ServerDef> = {
   },
   biome: { name: "biome", command: "biome", args: ["lsp-proxy"], npm: { package: "@biomejs/biome", version: "2.5.15", bin: "biome" }, requires: ["biome.json", "biome.jsonc"] },
   stylelint: { name: "stylelint", command: "stylelint-lsp", args: ["--stdio"], npm: { package: "stylelint-lsp", version: "2.0.1", bin: "stylelint-lsp" }, requires: STYLELINT_CONFIGS, config: { stylelintplus: {} } },
-  ruff: { name: "ruff", command: "ruff", args: ["server"], requires: ["ruff.toml", ".ruff.toml", "pyproject.toml:[tool.ruff"] },
+  ruff: { name: "ruff", command: "ruff", args: ["server"], requires: ["ruff.toml", ".ruff.toml", "pyproject.toml:[tool.ruff"], hint: "uv tool install ruff, pip install ruff, or brew install ruff" },
 };
 
 const JS_ROOTS = ["tsconfig.json", "jsconfig.json", "package.json", ".git"];

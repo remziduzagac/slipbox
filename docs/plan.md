@@ -557,7 +557,7 @@ source shown alike in every mode.*
 | 19.4 | **Done.** Finding: the user's config, the project (`node_modules/.bin`, `.venv/bin`…), `PATH`, Mason |
 | 19.5 | **Done.** Private installs: npm packages with Bun into slipbox's folder, pinned, scripts off; `auto_install` |
 | 19.6 | **Decided:** trusted everywhere — servers and linters run the project's code, as in nvim and Helix |
-| 19.7 | `slipbox doctor`: per language, each server and linter — found where, installed, or missing and how to get it |
+| 19.7 | **Done.** `slipbox doctor`: per language, each server and linter — found where, installable, or how to get it |
 | 19.8 | **Done.** Diagnostics: one list per file from every source — syntax, lint, links; servers to come |
 | 19.9 | **Done.** The bar: a column beside the text, each line's count coloured by its worst severity, every mode |
 | 19.10 | **Done.** Ranges marked: underlined in source mode, the lens and the rendered view |
