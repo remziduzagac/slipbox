@@ -10,6 +10,7 @@ import { LanguageClient } from "./client.ts";
 import { chooseServers, type Found, findServer, rootFor } from "./find.ts";
 import { installPackages } from "./install.ts";
 import { does, type Feature, languageOf, type LanguageDef, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
+import { mergeSettings, vscodeSettings } from "./vscode.ts";
 
 export interface ManagerOptions {
   /** The servers and languages in effect (the config's over the built-in). */
@@ -65,6 +66,13 @@ export function problemOf(d: Diagnostic, server: string): Problem {
     // 3.18 lets a message be markdown: its text either way.
     message: typeof d.message === "string" ? d.message : d.message.value,
   };
+}
+
+/** A server's settings in a project: its own (the defaults, the config's over them), then the project's
+ *  `.vscode/settings.json` over those, as VS Code puts a workspace's over the user's (19.20). */
+export function settingsFor(def: ServerDef, root: string): Record<string, unknown> | undefined {
+  const project = vscodeSettings(root);
+  return project ? mergeSettings(def.config ?? {}, project) : def.config;
 }
 
 export class ServerManager {
@@ -218,7 +226,7 @@ export class ServerManager {
       if (!f) return null;
     }
     const client = new LanguageClient(
-      { name: r.def.name, argv: f.argv, env: { ...f.env, ...r.def.environment }, settings: r.def.config, initOptions: r.def.initOptions, root: r.root },
+      { name: r.def.name, argv: f.argv, env: { ...f.env, ...r.def.environment }, settings: settingsFor(r.def, r.root), initOptions: r.def.initOptions, root: r.root },
       {
         diagnostics: (uri, diagnostics, version) => {
           if (!uri.startsWith("file:")) return;

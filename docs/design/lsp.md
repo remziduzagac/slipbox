@@ -206,6 +206,13 @@ the defaults, the rest replaced, a new name added. A vault's config may tune a k
 language's lists, never name what runs: its `command`, `args`, `environment`, and any server slipbox doesn't
 know, are ignored with a warning.
 
+**A project's `.vscode/settings.json`** (`19.20`) answers its servers' settings too, as VS Code would: the nearest one
+at or above the server's project folder (short of `~`), read when the server starts, as VS Code reads it — comments
+and trailing commas allowed — its dotted keys nested (`"python.analysis.typeCheckingMode"` is
+`python.analysis.typeCheckingMode`, merged with a nested form beside it). It goes over the config's, as VS Code puts a
+workspace's settings over the user's: the defaults, then your config, then the vault's, then the project's. VS
+Code's per-language overrides (`"[python]": {…}`) are left out. Changed, it counts from the server's next start.
+
 **Where its project is** (`19.3`): the nearest folder above the file holding the language's first root marker, then
 its next — `tsconfig.json` before `package.json` before `.git` — as nvim's `root_markers` have it; never `~` or `/`;
 else the file's own folder.

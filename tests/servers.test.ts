@@ -15,6 +15,7 @@ import { installPackages } from "../src/core/servers/install.ts";
 import { languageOf, projectAsks, type ServerDef, serverTable, type ServerTable } from "../src/core/servers/languages.ts";
 import { commandFor, compileFormat, type Format, type LinterConfig, linterRoot, LINTERS, linterTable, parseFindings, runLinter } from "../src/core/servers/linters.ts";
 import { ServerManager } from "../src/core/servers/manager.ts";
+import { vscodeSettings } from "../src/core/servers/vscode.ts";
 import type { Problem } from "../src/core/diagnostics.ts";
 
 setDefaultTimeout(30_000);
@@ -254,6 +255,28 @@ describe("the servers of open files (19.1)", () => {
     expect(hover).toEqual({ server: "fake", result: { contents: { kind: "markdown", value: "line 1: BAD BAD" } } });
     await m.stopAll();
     expect(m.list().map((s) => s.state)).toEqual(["stopped", "stopped"]);
+  });
+
+  test("a project's .vscode/settings.json answers its servers' settings, over the config's, as VS Code's workspace does (19.20)", async () => {
+    const fakeDef = { name: "fake", command: launcher("fake-vsc"), args: ["--stdio"], config: { fake: { level: 1, keep: "x", deep: { a: 1, b: 1 } } } };
+    const { m, problems } = managed(table({ fake: fakeDef }));
+    const top = project("vsc");
+    const pkg = join(top, "packages", "app");
+    mkdirSync(join(top, ".vscode"), { recursive: true });
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(join(pkg, "package.json"), "{}");
+    // JSON with comments and trailing commas; dotted keys and nested ones; a language's own left out.
+    writeFileSync(join(top, ".vscode", "settings.json"), '{\n  // the workspace\'s\n  "fake.level": 3,\n  "fake.deep": { "b": 2, },\n  "fake.deep.c": 3,\n  "[fake]": { "fake.level": 9 },\n  "editor.tabSize": 2,\n}\n');
+    const file = join(pkg, "a.fk");
+    m.open(file, 1, "BAD\n");
+    expect(await until(() => (problems.get(file)?.list.length ?? 0) > 0)).toBe(true);
+    m.change(file, 2, "BAD\n"); // told again once it has asked for its settings
+    expect(await until(() => problems.get(file)?.version === 2)).toBe(true);
+    expect(JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""))).toEqual({ level: 3, keep: "x", deep: { a: 1, b: 2, c: 3 } });
+    await m.stopAll();
+    expect(vscodeSettings(join(sandbox, "pa"))).toBeNull(); // none
+    // Found from a package below; VS Code's per-language overrides left out.
+    expect(vscodeSettings(pkg)).toEqual({ fake: { level: 3, deep: { b: 2, c: 3 } }, editor: { tabSize: 2 } });
   });
 
   test("several servers on a file: each does its features — an add-on a linter's; the config limits them, Helix's way", async () => {
