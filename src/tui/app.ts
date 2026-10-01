@@ -69,6 +69,8 @@ import { findVaultRoot, gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, 
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
+import { serverTable } from "../core/servers/languages.ts";
+import { ServerManager } from "../core/servers/manager.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
@@ -688,6 +690,7 @@ export class App {
     this.publishState();
     this.recordConfigStamps();
     if (opts.watch !== false) {
+      this.startServers();
       if (this.config.watch.enabled) this.startWatcher();
       this.startPolling();
       this.indexInBackground();
@@ -1019,6 +1022,53 @@ export class App {
   }
 
   private readonly syntaxTimers = new Map<NoteBuffer, ReturnType<typeof setTimeout>>();
+
+  // Language servers (19.x): the code's own servers — its problems, and later hover and jumps.
+
+  /** The servers of the files open here; null when off (`[lsp] enabled`) or in tests that don't run them. */
+  servers: ServerManager | null = null;
+  private readonly serverTimers = new Map<NoteBuffer, ReturnType<typeof setTimeout>>();
+
+  /** The manager started: it starts each server when a file first needs it. */
+  startServers(): void {
+    if (this.servers || !this.config.lsp.enabled) return;
+    this.servers = new ServerManager({
+      table: () => serverTable(this.config["language-server"], this.config.language),
+      autoInstall: () => this.config.lsp.auto_install,
+      problems: (path, server, version, list) => {
+        const buf = [...this.buffers.values()].find((b) => b.abs === path);
+        if (!buf) return;
+        // Without a version, they're for the text it was last told.
+        buf.serverProblems.set(server, { version: version ?? buf.serverVersion, list });
+        for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+        this.host.requestRender();
+      },
+      message: (level, text) => {
+        this.message(level, text);
+        this.host.requestRender();
+      },
+    });
+    // Exiting without quitting (a signal): the servers go too.
+    process.once("exit", () => this.servers?.killAll());
+  }
+
+  /** A file's servers told about it: opened the first time it's shown, its text again 150 ms after
+   *  typing pauses — never per key. */
+  ensureServers(buf: NoteBuffer): void {
+    const s = this.servers;
+    if (!s || buf.virtual || buf.deleted || buf.serverVersion === buf.version || this.serverTimers.has(buf)) return;
+    if (!s.isOpen(buf.abs)) {
+      buf.serverVersion = buf.version;
+      return s.open(buf.abs, buf.version, buf.source);
+    }
+    const t = setTimeout(() => {
+      this.serverTimers.delete(buf);
+      buf.serverVersion = buf.version;
+      s.change(buf.abs, buf.version, buf.source);
+    }, 150);
+    (t as { unref?: () => void }).unref?.();
+    this.serverTimers.set(buf, t);
+  }
 
   // The lint surface (3.21): your markdownlint-cli2 run on a note once it's saved — its findings
   // beside their lines, on the status line, in the Problems view — and on the vault for that view.
@@ -1642,6 +1692,7 @@ export class App {
         : this.nowrapWidth(view, paneWidth, gutter);
     if (view.source) this.ensureSyntax(view.buf);
     this.ensureLint(view.buf);
+    this.ensureServers(view.buf);
     const layout = view.source
       ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs)
       : view.live
@@ -1886,8 +1937,11 @@ export class App {
     const buf = view.buf;
     const out: Problem[] = [];
     const syn = buf.syntax;
-    if (syn?.errors.length && (any || (view.source && !view.insert && syn.version === buf.version))) out.push(...syntaxProblems(syn.errors));
+    // A language server, once it's said what it finds, has the file's syntax errors: tree-sitter's are then left out.
+    if (syn?.errors.length && !buf.serverProblems.size && (any || (view.source && !view.insert && syn.version === buf.version))) out.push(...syntaxProblems(syn.errors));
     if (buf.lint?.issues.length && (any || buf.lint.version === buf.version)) out.push(...lintProblems(buf.lint.issues));
+    // Its language servers' (19.1), for the text they were found in: typing hides them until they answer again.
+    for (const p of buf.serverProblems.values()) if (any || p.version === buf.version) out.push(...p.list);
     if (buf.rel && this.graph.notes.has(buf.rel) && (any || !buf.dirty)) {
       const key = `${this.graph.generation}:${buf.version}`;
       let hit = this.noteProblemCache.get(buf);
@@ -2278,6 +2332,7 @@ export class App {
       // The text on disk is what's in the buffer: keep it, its history and every cursor.
       buf.deleted = false;
       buf.markSaved(written);
+      this.servers?.save(buf.abs, buf.source);
       return true;
     }
     buf.load();
@@ -6348,6 +6403,7 @@ export class App {
   quit(): void {
     if (this.quitting) return;
     this.quitting = true;
+    this.servers?.killAll();
     try {
       writeDirty(this.loc, []);
     } catch {}
@@ -6397,6 +6453,7 @@ export class App {
     this.followGraph();
     for (const e of this.graph.errors) this.message("warn", e);
     this.positions = new PositionStore(target);
+    for (const b of this.buffers.values()) this.servers?.close(b.abs);
     this.buffers.clear();
     this.tabs = [];
     this.activeTab = 0;
@@ -6566,6 +6623,7 @@ export class App {
         moved.add(nb.abs);
       }
       this.buffers.delete(old.key);
+      this.servers?.close(old.abs);
     }
     if (plan.move?.dir) {
       // The folder's folds and selection go with it.

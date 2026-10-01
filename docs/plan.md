@@ -551,7 +551,7 @@ source shown alike in every mode.*
 
 | ID | Item |
 | --- | --- |
-| 19.1 | Client core: spawn, initialize, document sync, shutdown, restart after a crash; one per root and language |
+| 19.1 | **Done.** Client: spawn, initialize, document sync, shutdown, restart after a crash; one per server and root |
 | 19.2 | **Done.** Languages and servers: Helix's `[language-server.x]` and `[[language]]`; defaults per language |
 | 19.3 | **Done.** Roots per language, from markers (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`…) |
 | 19.4 | **Done.** Finding: the user's config, the project (`node_modules/.bin`, `.venv/bin`…), `PATH`, Mason |

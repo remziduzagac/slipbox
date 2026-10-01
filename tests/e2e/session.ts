@@ -53,7 +53,9 @@ export class Session {
     // {vault} in a scenario's config is this scenario's own copy of the vault.
     // The machine's own linter stays out of the scenarios unless one asks for it (3.21).
     const config = (opts.config ?? "").replaceAll("{vault}", this.vault);
-    writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), /^\[lint\]/m.test(config) ? config : `${config}\n[lint]\nenabled = "off"\n`);
+    // Lint and language servers off unless a scenario asks: they'd run npx, start servers, install them.
+    const off = `${/^\[lint\]/m.test(config) ? "" : '\n[lint]\nenabled = "off"\n'}${/^\[lsp\]/m.test(config) ? "" : "\n[lsp]\nenabled = false\n"}`;
+    writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), `${config}${off}`);
     this.trace = join(this.dir, "trace");
     writeFileSync(this.trace, "");
     this.marker = `__slipbox_e2e_exit_${Math.random().toString(36).slice(2, 8)}__`;

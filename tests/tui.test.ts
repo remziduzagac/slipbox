@@ -7408,3 +7408,36 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     expect(see.styles[see.at(" here")]!.fg).not.toBe(warn);
   });
 });
+
+describe("language servers in the TUI (19.1, 19.8)", () => {
+  /** A made-up language served by the fake server, as the user's config would name one. */
+  const served = (c: Config) => {
+    const launcher = join(sandbox, "fake-ls-launcher");
+    writeFileSync(launcher, `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`);
+    c["language-server"] = { fake: { command: launcher, args: ["--stdio"] } };
+    c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["fake"] }];
+  };
+  const until = async (ok: () => boolean, ms = 8000) => {
+    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+    return ok();
+  };
+
+  test("a file's server is told when it's shown, again after typing pauses; its problems join the file's", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "fine\nBAD here\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    h.app.startServers();
+    h.frame(); // shown: opened in its server
+    const buf = h.app.view!.buf;
+    expect(await until(() => h.app.problemsShown(h.app.view!).length === 1)).toBe(true);
+    expect(h.app.problemsShown(h.app.view!)[0]).toMatchObject({ start: { line: 2, column: 1 }, severity: "warning", source: "fake" });
+    expect(statusRow(h.frame())).toContain("⚠ 1");
+    // Typing: the old problems hidden (their text is gone), then the server's answer for the new text.
+    buf.edit(0, 0, "BAD ");
+    h.frame();
+    expect(h.app.problemsShown(h.app.view!)).toEqual([]);
+    expect(await until(() => (h.frame(), h.app.problemsShown(h.app.view!).length === 2))).toBe(true);
+    expect(h.app.servers!.list()).toMatchObject([{ name: "fake", state: "running", files: 1 }]);
+    await h.app.servers!.stopAll();
+  });
+});

@@ -12,7 +12,9 @@ import { loadConfig } from "../src/core/config.ts";
 import { LanguageClient, type ServerSpec, settingAt } from "../src/core/servers/client.ts";
 import { chooseServers, findServer, rootFor, toolsDir } from "../src/core/servers/find.ts";
 import { installPackages } from "../src/core/servers/install.ts";
-import { languageOf, projectAsks, serverTable } from "../src/core/servers/languages.ts";
+import { languageOf, projectAsks, type ServerDef, serverTable, type ServerTable } from "../src/core/servers/languages.ts";
+import { ServerManager } from "../src/core/servers/manager.ts";
+import type { Problem } from "../src/core/diagnostics.ts";
 
 setDefaultTimeout(30_000);
 const FAKE = join(import.meta.dir, "fixtures", "fake-lsp.ts");
@@ -197,5 +199,90 @@ describe("which servers, where (19.2–19.5)", () => {
     expect(existsSync(join(into, "node_modules/.bin/slipbox-fake-server"))).toBe(true);
     expect(existsSync(join(into, "node_modules/slipbox-fake-server/POSTINSTALL_RAN"))).toBe(false);
     expect(JSON.parse(readFileSync(join(into, "package.json"), "utf8")).dependencies["slipbox-fake-server"]).toBe(`file:${pkg}`);
+  });
+});
+
+describe("the servers of open files (19.1)", () => {
+  /** A Node-style launcher for the fake server: slipbox runs it on its own Bun. */
+  const launcher = (name: string, env = "") => {
+    const p = join(sandbox, "bin", name);
+    mkdirSync(join(sandbox, "bin"), { recursive: true });
+    writeFileSync(p, `#!/usr/bin/env node\n${env}await import(${JSON.stringify(FAKE)});\n`);
+    chmodSync(p, 0o755);
+    return p;
+  };
+  const table = (servers: Record<string, ServerDef>, names = Object.keys(servers)): ServerTable => ({
+    servers,
+    languages: [{ name: "fake", languageId: "fake", fileTypes: ["fk"], roots: [".git"], servers: names }],
+  });
+  const managed = (t: ServerTable, autoInstall = false) => {
+    const problems = new Map<string, { version: number | null; list: Problem[] }>();
+    const messages: string[] = [];
+    const m = new ServerManager({ table: () => t, autoInstall: () => autoInstall, problems: (path, _s, version, list) => problems.set(path, { version, list }), message: (_l, text) => messages.push(text) });
+    return { m, problems, messages };
+  };
+  const project = (name: string) => {
+    const root = join(sandbox, name);
+    mkdirSync(join(root, ".git"), { recursive: true });
+    return root;
+  };
+
+  test("one server per project, its files sharing it; their problems as the core's; a request answered", async () => {
+    const fakeDef = { name: "fake", command: launcher("fake-ls"), args: ["--stdio"] };
+    const { m, problems } = managed(table({ fake: fakeDef }));
+    const a = project("pa");
+    const b = project("pb");
+    m.open(join(a, "one.fk"), 1, "BAD\n");
+    m.open(join(a, "two.fk"), 1, "fine\n");
+    m.open(join(b, "three.fk"), 1, "x BAD\n");
+    expect(await until(() => problems.get(join(a, "one.fk"))?.list.length === 1 && problems.get(join(b, "three.fk"))?.list.length === 1)).toBe(true);
+    expect(problems.get(join(a, "one.fk"))!.list[0]).toMatchObject({ start: { line: 1, column: 1 }, end: { line: 1, column: 4 }, severity: "warning", source: "fake" });
+    expect(m.list().map((s) => [s.root, s.files]).sort()).toEqual([
+      [a, 2],
+      [b, 1],
+    ]);
+    m.change(join(a, "one.fk"), 2, "fine\nBAD BAD\n");
+    expect(await until(() => problems.get(join(a, "one.fk"))?.version === 2)).toBe(true);
+    const hover = await m.request<{ contents: { kind: string; value: string } }>(join(a, "one.fk"), "textDocument/hover", { textDocument: { uri: pathToFileURL(join(a, "one.fk")).href }, position: { line: 1, character: 0 } }, "hoverProvider");
+    expect(hover).toEqual({ server: "fake", result: { contents: { kind: "markdown", value: "line 1: BAD BAD" } } });
+    await m.stopAll();
+    expect(m.list().map((s) => s.state)).toEqual(["stopped", "stopped"]);
+  });
+
+  test("a crash: started again, its files told again; one that keeps crashing is left stopped", async () => {
+    const { m, problems, messages } = managed(table({ fake: { name: "fake", command: launcher("fake-crash"), args: ["--stdio"] } }));
+    const root = project("pc");
+    const file = join(root, "a.fk");
+    m.open(file, 1, "BAD\n");
+    expect(await until(() => problems.get(file)?.list.length === 1)).toBe(true);
+    problems.clear();
+    m.change(file, 2, "CRASH\n"); // it dies on this text, every time it's told it
+    expect(await until(() => messages.some((x) => x.includes("keeps crashing")), 15_000)).toBe(true);
+    expect(messages.filter((x) => x.startsWith("fake crashed")).length).toBe(3);
+    await m.stopAll();
+  });
+
+  test("a native server nowhere: said once; an npm one with auto_install off: said; on: installed, then started", async () => {
+    const native = { name: "slipbox-native-ls", command: "slipbox-native-ls", args: [] };
+    const off = managed(table({ "slipbox-native-ls": native }));
+    off.m.open(join(project("pd"), "a.fk"), 1, "");
+    off.m.open(join(project("pd"), "b.fk"), 1, "");
+    expect(off.messages).toEqual(["fake: slipbox-native-ls isn't installed (slipbox finds it on PATH; it doesn't install native servers) — slipbox doctor says more"]);
+    // An npm package of the fake server, installed from a folder (no network).
+    const pkg = join(sandbox, "fake-pkg");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "slipbox-fake-ls", version: "1.0.0", bin: { "slipbox-fake-ls": "ls.js" } }));
+    writeFileSync(join(pkg, "ls.js"), `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`);
+    const npmDef = { name: "fake-npm", command: "slipbox-fake-ls", args: ["--stdio"], npm: { package: "slipbox-fake-ls", version: `file:${pkg}`, bin: "slipbox-fake-ls" } };
+    const noInstall = managed(table({ "fake-npm": npmDef }));
+    noInstall.m.open(join(project("pe"), "a.fk"), 1, "");
+    expect(noInstall.messages).toEqual(["fake: fake-npm isn't installed — slipbox doctor says more"]);
+    const install = managed(table({ "fake-npm": npmDef }), true);
+    const file = join(project("pf"), "a.fk");
+    install.m.open(file, 1, "BAD\n");
+    expect(await until(() => install.problems.get(file)?.list.length === 1, 20_000)).toBe(true);
+    expect(install.messages).toEqual([`installing fake-npm (slipbox-fake-ls@file:${pkg}) into slipbox's own folder…`, "installed fake-npm"]);
+    expect(existsSync(join(toolsDir(), "node_modules/.bin/slipbox-fake-ls"))).toBe(true);
+    await install.m.stopAll();
   });
 });

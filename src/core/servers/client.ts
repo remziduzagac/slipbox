@@ -255,6 +255,13 @@ export class LanguageClient {
     clearTimeout(timer);
   }
 
+  /** Killed now, not asked: slipbox is exiting and can't wait for it. */
+  kill(): void {
+    if (!this.child || this.state === "stopped" || this.state === "failed") return;
+    this.state = "stopping";
+    this.child.kill();
+  }
+
   private ended(code: number | null, signal: string | null): void {
     const expected = this.state === "stopping";
     if (this.state !== "failed") this.state = "stopped";

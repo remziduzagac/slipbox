@@ -6,6 +6,7 @@
 // buffer dirty until it is saved. The parse is redone only when something needs it (the rendered
 // layout), not on every keystroke.
 
+import type { Problem } from "../core/diagnostics.ts";
 import type { LintIssue } from "../core/lint.ts";
 import type { Glyphs } from "../core/glyphs.ts";
 import { parseData } from "../core/data.ts";
@@ -74,6 +75,10 @@ export class NoteBuffer {
   lint: { version: number; issues: LintIssue[] } | null = null;
   /** Its problems bar is kept (19.9): it has had problems, and the text keeps its place as they go. */
   problemBar = false;
+  /** Its language servers' problems (19.1, 19.8), by server, with the version of the text they were found in. */
+  serverProblems = new Map<string, { version: number; list: Problem[] }>();
+  /** The version of its text its servers were last told. */
+  serverVersion = -1;
 
   /** The text's parse, running on other threads (15.1): until it lands, a view shows it's reading. */
   parsing: Promise<void> | null = null;

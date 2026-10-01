@@ -104,6 +104,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/servers/languages.ts` | 19.2 | languages and their servers, built in and in Helix's shape from the config |
 | `core/servers/find.ts` | 19.3, 19.4 | a file's project root; where a server's program is; which servers serve a file |
 | `core/servers/install.ts` | 19.5 | npm servers installed into slipbox's own folder, pinned, scripts off |
+| `core/servers/manager.ts` | 19.1 | the servers of open files: one per server and project, installed, restarted |
 | `core/servers/client.ts` | 19.1 | a language server as slipbox's client: started, files synced, diagnostics, stopped |
 | `core/diagnostics.ts` | 19.8, 11.5 | a file's problems from every source, one shape: links, conflicts, syntax, lint |
 | `core/clipboard.ts` | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / wl-copy / xclip, then a file |
