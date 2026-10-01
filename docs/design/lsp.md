@@ -89,5 +89,12 @@ Every answer is about a note as the editor has it, and a request takes its lates
 - **Symbols** (`11.6`): a note's outline is its headings, each holding the ones under it and spanning its section
   (to the next heading as high, or the note's end). Across the vault, a query finds the notes whose name, title or
   alias holds every word, then the headings that do — notes first, 200 at most; an empty query lists the notes.
+- **Rename** (`11.4`): on a link to a note of this vault, that note — renamed in its own folder, or moved when the
+  new name has a `/` (a path from the vault's root) — planned as the TUI and `slipbox mv` plan it: every link to it
+  fixed in every vault reached, its old name kept in `previous_names`. The answer is an edit, each file's changed
+  lines then the file's move, which the editor previews and applies; slipbox writes nothing, so it isn't in
+  slipbox's undo (`7.4`) — the editor's undo and git have it. Refused, with why, when a file it changes has unsaved
+  changes in the editor (the plan is made from the files), when the editor can't move a file in an edit, or when
+  the new name is taken. Elsewhere — off a link — there's nothing to rename yet (a heading's rename is `11.9`).
 
-Still to come: renames (`11.4`, `11.9`, `11.10`) and code actions (`11.11`).
+Still to come: a heading's rename (`11.9`), a file moved in the editor (`11.10`) and code actions (`11.11`).

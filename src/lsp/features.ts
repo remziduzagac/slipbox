@@ -4,9 +4,27 @@
 
 import { isAbsolute, posix } from "node:path";
 import { pathToFileURL } from "node:url";
-import { type CompletionItem, CompletionItemKind, type CompletionList, type Diagnostic, DiagnosticSeverity, type DocumentSymbol, type Hover, type Location, type Position, type Range, SymbolKind, type WorkspaceSymbol } from "vscode-languageserver";
+import {
+  type CompletionItem,
+  CompletionItemKind,
+  type CompletionList,
+  type Diagnostic,
+  DiagnosticSeverity,
+  type DocumentSymbol,
+  type Hover,
+  type Location,
+  type Position,
+  type Range,
+  SymbolKind,
+  type TextEdit,
+  type WorkspaceEdit,
+  type WorkspaceSymbol,
+} from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import type { Graph, LinkRef, Pos, ResolvedLink } from "../core/graph.ts";
 import { blockIds, landingLine, landingText } from "../core/landing.ts";
+import { diffLines } from "../core/merge.ts";
+import { planNoteRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { slugify } from "../core/parse.ts";
 
 /** The protocol's range for a span of the graph's (lines and columns from 1, the end after its last character). */
@@ -362,4 +380,63 @@ export function workspaceSymbols(g: Graph, query: string): WorkspaceSymbol[] {
   }
   // Notes first: a name is what's looked for most often.
   return [...notes, ...headings].slice(0, WORKSPACE_MAX);
+}
+
+/** The note a rename at a position renames (11.4): a link's, in this vault — and the link's span. */
+function renameTarget(g: Graph, rel: string, pos: Position): { path: string; range: Range } | null {
+  const l = linkAt(g, rel, pos);
+  if (!l || l.resolvedKind !== "note" || !l.path || isAbsolute(l.path)) return null;
+  return { path: l.path, range: rangeOf(l, l.end) };
+}
+
+/** What a rename at a position would rename, and its name now; null where there's nothing to rename. */
+export function prepareRename(g: Graph, rel: string, pos: Position): { range: Range; placeholder: string } | null {
+  const t = renameTarget(g, rel, pos);
+  return t ? { range: t.range, placeholder: posix.basename(t.path).replace(NOTE_EXT, "") } : null;
+}
+
+/**
+ * The rename planned (11.4), as the TUI and `slipbox mv` plan it: the linked note to `newName` — in its
+ * own folder, or a path from the vault's root when it has a `/` — every link to it fixed.
+ */
+export function renamePlan(g: Graph, rel: string, pos: Position, newName: string): RenamePlan {
+  const t = renameTarget(g, rel, pos);
+  if (!t) throw new RenameError("nothing to rename here: on a link, its note is renamed");
+  const name = newName.trim();
+  if (!name) throw new RenameError("a new name is needed");
+  return planNoteRename(g, t.path, name.includes("/") ? name : posix.join(posix.dirname(t.path), name));
+}
+
+/** The edits that make `text` into `next`, a run of changed lines each. */
+export function textEdits(text: string, next: string): TextEdit[] {
+  const from = TextDocument.create("", "", 0, text);
+  const a = text.split("\n");
+  const b = next.split("\n");
+  const offsets = (lines: string[]) => {
+    const at = [0];
+    for (const l of lines) at.push(at[at.length - 1]! + l.length + 1);
+    return at;
+  };
+  const ao = offsets(a);
+  const bo = offsets(b);
+  return diffLines(a, b).map((h) => {
+    // A run reaching the last line ends one past the text's end (positionAt and slice stop there),
+    // and starts at the newline before it: the text may not end in one, and neither may the next.
+    const last = h.aStart > 0 && h.aStart + h.aLen === a.length;
+    const part = next.slice(bo[h.bStart]!, bo[h.bStart + h.bLen]!);
+    return {
+      range: { start: from.positionAt(ao[h.aStart]! - (last ? 1 : 0)), end: from.positionAt(ao[h.aStart + h.aLen]!) },
+      newText: last ? (h.bLen ? `\n${part}` : "") : part,
+    };
+  });
+}
+
+/** A rename plan as the editor applies it: each file's edits (by its path before the move), then the move. */
+export function workspaceEdit(plan: RenamePlan, version: (uri: string) => number | null): WorkspaceEdit {
+  const changes: NonNullable<WorkspaceEdit["documentChanges"]> = plan.files.map((f) => {
+    const uri = pathToFileURL(f.abs).href;
+    return { textDocument: { uri, version: version(uri) }, edits: textEdits(f.text, f.next) };
+  });
+  if (plan.move) changes.push({ kind: "rename", oldUri: pathToFileURL(plan.move.from).href, newUri: pathToFileURL(plan.move.to).href });
+  return { documentChanges: changes };
 }

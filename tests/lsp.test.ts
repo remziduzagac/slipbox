@@ -3,11 +3,11 @@
 // must carry nothing but the protocol.
 
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { PassThrough } from "node:stream";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   CompletionRequest,
   type CompletionList,
@@ -26,15 +26,21 @@ import {
   InitializeRequest,
   type Location,
   LogMessageNotification,
+  PrepareRenameRequest,
   type ProtocolConnection,
   PublishDiagnosticsNotification,
+  type Range,
   ReferencesRequest,
+  RenameRequest,
   ShutdownRequest,
   StreamMessageReader,
   StreamMessageWriter,
+  type WorkspaceEdit,
   type WorkspaceSymbol,
   WorkspaceSymbolRequest,
 } from "vscode-languageserver-protocol/node";
+import { TextDocument } from "vscode-languageserver-textdocument";
+import { textEdits } from "../src/lsp/features.ts";
 import { LspServer } from "../src/lsp/server.ts";
 import { VERSION } from "../src/version.ts";
 
@@ -453,5 +459,97 @@ describe("symbols (11.6)", () => {
     expect(await find("second")).toEqual(["Bravo b.md"]); // by alias
     expect(await find("deep")).toEqual(["Deep a.md", "Deep water b.md"]);
     expect(await s.end()).toBe(0);
+  });
+});
+
+describe("renaming a note (11.4)", () => {
+  const caps = { workspace: { workspaceEdit: { documentChanges: true, resourceOperations: ["rename" as const] } } };
+  const begin = async (root: string, capabilities: object = caps) => {
+    const up = new PassThrough();
+    const down = new PassThrough();
+    const server = new LspServer({ input: up, output: down, watch: false });
+    const client = createProtocolConnection(new StreamMessageReader(down), new StreamMessageWriter(up));
+    client.listen();
+    await client.sendRequest(InitializeRequest.type, { processId: null, rootUri: uri(root), capabilities });
+    return { server, client };
+  };
+  /** An edit applied as an editor would: each file's edits, then the move. */
+  const apply = (edit: WorkspaceEdit) => {
+    for (const c of edit.documentChanges ?? []) {
+      if ("kind" in c) {
+        if (c.kind === "rename") renameSync(fileURLToPath(c.oldUri), fileURLToPath(c.newUri));
+        continue;
+      }
+      const path = fileURLToPath(c.textDocument.uri);
+      const doc = TextDocument.create(c.textDocument.uri, "markdown", 0, readFileSync(path, "utf8"));
+      writeFileSync(path, TextDocument.applyEdits(doc, c.edits as { range: Range; newText: string }[]));
+    }
+  };
+
+  test("on a link: its note renamed in its folder, every link to it fixed — the editor applies the edit", async () => {
+    const root = folder({
+      "a.md": "# A\n\nsee [[kenji]] and [[kenji#Bio]]\n",
+      "people/kenji.md": "# Kenji\n\n## Bio\n",
+      "c.md": "# C\n\n[k](people/kenji.md) and ![[kenji]]\n",
+    });
+    const { server, client } = await begin(root);
+    const a = { uri: uri(join(root, "a.md")) };
+    expect(await client.sendRequest(PrepareRenameRequest.type, { textDocument: a, position: { line: 2, character: 7 } })).toEqual({
+      range: { start: { line: 2, character: 4 }, end: { line: 2, character: 13 } },
+      placeholder: "kenji",
+    });
+    expect(await client.sendRequest(PrepareRenameRequest.type, { textDocument: a, position: { line: 0, character: 1 } })).toBeNull();
+    const edit = (await client.sendRequest(RenameRequest.type, { textDocument: a, position: { line: 2, character: 7 }, newName: "kenji-mori" }))!;
+    expect(edit.documentChanges!.at(-1)).toEqual({ kind: "rename", oldUri: uri(join(root, "people/kenji.md")), newUri: uri(join(root, "people/kenji-mori.md")) });
+    apply(edit);
+    expect(readFileSync(join(root, "a.md"), "utf8")).toBe("# A\n\nsee [[kenji-mori]] and [[kenji-mori#Bio]]\n");
+    expect(readFileSync(join(root, "c.md"), "utf8")).toBe("# C\n\n[k](people/kenji-mori.md) and ![[kenji-mori]]\n");
+    expect(readFileSync(join(root, "people/kenji-mori.md"), "utf8")).toContain("previous_names");
+    await client.sendRequest(ShutdownRequest.type);
+    await client.sendNotification(ExitNotification.type);
+    expect(await server.exited).toBe(0);
+  });
+
+  test("refused, with why: unsaved changes in a file it touches; an editor that can't move files; a name taken", async () => {
+    const root = folder({ "a.md": "# A\n\n[[b]]\n", "b.md": "# B\n", "taken.md": "# T\n" });
+    const at = { textDocument: { uri: uri(join(root, "a.md")) }, position: { line: 2, character: 3 } };
+    const refused = async (client: ProtocolConnection, newName: string) => {
+      try {
+        await client.sendRequest(RenameRequest.type, { ...at, newName });
+        return "applied";
+      } catch (err) {
+        return (err as Error).message;
+      }
+    };
+    const one = await begin(root);
+    expect(await refused(one.client, "taken")).toContain("taken.md exists");
+    await one.client.sendNotification(DidOpenTextDocumentNotification.type, { textDocument: { uri: at.textDocument.uri, languageId: "markdown", version: 1, text: "# A typed\n\n[[b]]\n" } });
+    expect(await refused(one.client, "c")).toBe("a.md has unsaved changes: save it, then rename");
+    const two = await begin(root, {});
+    expect(await refused(two.client, "c")).toContain("can't move a file");
+  });
+});
+
+describe("edits for the editor (11.4)", () => {
+  test("textEdits make the text the next one: lines changed, added, removed, at the end, without a last newline, CRLF", () => {
+    const cases: [string, string][] = [
+      ["a\nb\nc\n", "a\nB\nc\n"],
+      ["a\nb\nc\n", "a\nc\n"],
+      ["a\nb\n", "a\nb\nc\n"],
+      ["a\nb", "a\nB"],
+      ["a\nb\n", "a\n"],
+      ["a\nb", "a"],
+      ["a", "a\nb"],
+      ["a", "a\n"],
+      ["", "x\n"],
+      ["x\n", ""],
+      ["a\r\nb\r\nc\r\n", "a\r\nB\r\nc\r\n"],
+      ["one [[b]] two [[b]]\nthree\n[[b]]", "one [[c]] two [[c]]\nthree\n[[c]]"],
+    ];
+    for (const [text, next] of cases) {
+      const doc = TextDocument.create("file:///x.md", "markdown", 0, text);
+      expect(TextDocument.applyEdits(doc, textEdits(text, next))).toBe(next);
+    }
+    expect(textEdits("a\nb\nc\n", "a\nB\nc\n")).toEqual([{ range: { start: { line: 1, character: 0 }, end: { line: 2, character: 0 } }, newText: "B\n" }]);
   });
 });

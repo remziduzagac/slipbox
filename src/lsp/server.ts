@@ -4,20 +4,34 @@
 // whatever else the editor runs there (marksman). Nothing but the protocol reaches stdout.
 
 import { relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
-import { createConnection, type Connection, type Diagnostic, DiagnosticSeverity, type InitializeParams, type InitializeResult, TextDocuments, TextDocumentSyncKind, type WatchDog } from "vscode-languageserver";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  type Connection,
+  createConnection,
+  type Diagnostic,
+  DiagnosticSeverity,
+  type InitializeParams,
+  type InitializeResult,
+  LSPErrorCodes,
+  ResponseError,
+  TextDocuments,
+  TextDocumentSyncKind,
+  type WatchDog,
+  type WorkspaceEdit,
+} from "vscode-languageserver";
 import { createProtocolConnection, StreamMessageReader, StreamMessageWriter } from "vscode-languageserver-protocol/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { type Config, loadConfig } from "../core/config.ts";
 import { type Graph, openGraph } from "../core/graph.ts";
 import { Reach } from "../core/reach.ts";
+import { RenameError } from "../core/rename.ts";
 import { checkoutOf } from "../core/git.ts";
 import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
 import { findVaultRoot, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { applyToGraph, VaultFeed } from "../core/vault-feed.ts";
 import { VaultWatcher } from "../core/watch.ts";
 import { VERSION } from "../version.ts";
-import { completion, definition, diagnostics, documentSymbols, hover, references, workspaceSymbols } from "./features.ts";
+import { completion, definition, diagnostics, documentSymbols, hover, prepareRename, references, renamePlan, workspaceEdit, workspaceSymbols } from "./features.ts";
 
 export interface LspOptions {
   input: NodeJS.ReadableStream;
@@ -102,6 +116,8 @@ export class LspServer {
     );
     this.connection.onDocumentSymbol((p) => this.asked(p.textDocument.uri, (g, rel) => documentSymbols(g, rel), []));
     this.connection.onWorkspaceSymbol((p) => this.everywhere((g) => workspaceSymbols(g, p.query)));
+    this.connection.onPrepareRename((p) => this.asked(p.textDocument.uri, (g, rel) => prepareRename(g, rel, p.position), null));
+    this.connection.onRenameRequest((p) => this.rename(p.textDocument.uri, p.position, p.newName));
     this.connection.onHover((p) => this.asked(p.textDocument.uri, (g, rel) => hover(g, rel, p.position), null));
     this.connection.onReferences((p) => this.asked(p.textDocument.uri, (g, rel) => references(g, rel, p.position, p.context.includeDeclaration), []));
     this.connection.listen();
@@ -110,7 +126,12 @@ export class LspServer {
   /** The workspace folders the editor named (absolute paths). */
   private folders: string[] = [];
 
+  /** Whether the editor applies a file's rename sent in an edit (a note's rename moves its file). */
+  private renamesFiles = false;
+
   private initialize(params: InitializeParams): InitializeResult {
+    const edits = params.capabilities.workspace?.workspaceEdit;
+    this.renamesFiles = !!edits?.documentChanges && !!edits.resourceOperations?.includes("rename");
     const uris = params.workspaceFolders?.map((f) => f.uri) ?? (params.rootUri ? [params.rootUri] : []);
     this.folders = uris.map(pathOf).filter((p): p is string => p !== null);
     return {
@@ -121,6 +142,7 @@ export class LspServer {
         referencesProvider: true,
         hoverProvider: true,
         documentSymbolProvider: true,
+        renameProvider: { prepareProvider: true },
         workspaceSymbolProvider: true,
         completionProvider: { triggerCharacters: ["[", "#", "^"] },
       },
@@ -290,6 +312,31 @@ export class LspServer {
       this.log(`${n.rel}: ${(err as Error).stack ?? err}`);
       return none;
     }
+  }
+
+  /**
+   * A note renamed from a link to it (11.4): the plan as an edit for the editor to apply — it shows
+   * the preview — never written here. Refused, with why, when a file it changes has unsaved changes
+   * in the editor (the plan is made from the files), or the editor can't move files.
+   */
+  private rename(uri: string, pos: { line: number; character: number }, newName: string): WorkspaceEdit | ResponseError | null {
+    this.fresh(uri);
+    const n = this.noteOf(uri);
+    if (!n) return null;
+    const refuse = (message: string) => new ResponseError(LSPErrorCodes.RequestFailed, message);
+    let plan: ReturnType<typeof renamePlan>;
+    try {
+      plan = renamePlan(n.served.graph, n.rel, pos, newName);
+    } catch (err) {
+      if (err instanceof RenameError) return refuse(err.message);
+      throw err;
+    }
+    for (const f of plan.files) {
+      const doc = this.documents.get(pathToFileURL(f.abs).href);
+      if (doc && doc.getText() !== f.text) return refuse(`${f.shown} has unsaved changes: save it, then rename`);
+    }
+    if (plan.move && !this.renamesFiles) return refuse("this editor can't move a file in an edit: rename it in slipbox (space n m) or with slipbox mv");
+    return workspaceEdit(plan, (u) => this.documents.get(u)?.version ?? null);
   }
 
   /** A question for every served vault, the answers together; a vault that fails is logged and skipped. */
