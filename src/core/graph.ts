@@ -36,6 +36,14 @@ export interface LinkRef {
   text: string;
   line: number;
   column: number;
+  /** Where it ends: its last line, and the column after its last character (1-based, as remark counts). */
+  end: Pos;
+}
+
+/** A place in a file's text: a line and a column, both from 1 (a column counts UTF-16 units). */
+export interface Pos {
+  line: number;
+  column: number;
 }
 
 export interface NoteEntry {
@@ -103,6 +111,7 @@ export interface LinkProblem {
   from: string;
   line: number;
   column: number;
+  end: Pos;
   kind: LinkKind;
   target: string;
   text: string;
@@ -117,6 +126,7 @@ export interface Backlink {
   vault?: string | null;
   line: number;
   column: number;
+  end: Pos;
   text: string;
   /** How the link is written, so a caller can rewrite it (a rename): its kind and parts. */
   kind: LinkKind;
@@ -127,7 +137,7 @@ export interface Backlink {
 }
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-const INDEX_VERSION = 6; // 6: inline #tags (1.6)
+const INDEX_VERSION = 7; // 6: inline #tags (1.6); 7: where links end (11.7)
 
 interface IndexFile {
   version: number;
@@ -735,7 +745,7 @@ export class Graph {
     for (const rel of [...this.notes.keys()].sort()) {
       for (const l of this.linksOf(rel)) {
         if (l.resolvedKind !== "unresolved" && l.resolvedKind !== "ambiguous") continue;
-        const p: LinkProblem = { from: rel, line: l.line, column: l.column, kind: l.kind, target: l.target, text: l.text, reason: l.reason ?? null, candidates: l.candidates };
+        const p: LinkProblem = { from: rel, line: l.line, column: l.column, end: l.end, kind: l.kind, target: l.target, text: l.text, reason: l.reason ?? null, candidates: l.candidates };
         (l.resolvedKind === "unresolved" ? broken : ambiguous).push(p);
       }
     }
@@ -773,7 +783,7 @@ export class Graph {
           const r = this.resolveLink(l, from);
           if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || r.path === from || isAbsolute(r.path)) continue;
           const list = map.get(r.path) ?? [];
-          list.push({ from, line: l.line, column: l.column, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
+          list.push({ from, line: l.line, column: l.column, end: l.end, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
           map.set(r.path, list);
         }
       }
@@ -870,7 +880,7 @@ export class Graph {
       const d = parseData(kind.format, readText(join(this.root, rel)).text);
       links = dataLinks(d.tree)
         .filter((l) => l.explicit || ["note", "file"].includes(this.resolveLink({ kind: "markdown", target: l.target }, rel).resolvedKind))
-        .map((l) => ({ kind: "markdown", target: l.target, heading: null, block: null, alias: null, text: l.key, line: l.line, column: 1 }));
+        .map((l) => ({ kind: "markdown", target: l.target, heading: null, block: null, alias: null, text: l.key, line: l.line, column: 1, end: { line: l.line, column: 1 } }));
     } catch {}
     this.dataLinkCache.set(rel, { stamp, links });
     return links;
@@ -890,7 +900,7 @@ export class Graph {
       const path = l.url ? null : this.commentPath(l.target, rel);
       if (!l.url && !path) continue;
       const target = l.url ? l.target : `/${path}${l.at ? `#L${l.at}` : ""}`;
-      out.push({ kind: "markdown", target, heading: null, block: null, alias: null, text: lines[l.line - 1]!.slice(l.from, l.to), line: l.line, column: l.from + 1 });
+      out.push({ kind: "markdown", target, heading: null, block: null, alias: null, text: lines[l.line - 1]!.slice(l.from, l.to), line: l.line, column: l.from + 1, end: { line: l.line, column: l.to + 1 } });
     }
     tree.tree.delete();
     return out;
@@ -952,6 +962,7 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
     const pos = n.position?.start;
     const line = pos?.line ?? 1;
     const column = pos?.column ?? 1;
+    const end = n.position?.end ?? { line, column };
     switch (n.type) {
       case "wikiLink": {
         const w = n as WikiLink;
@@ -964,19 +975,20 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
           text: w.alias ?? w.value,
           line,
           column,
+          end: { line: end.line, column: end.column },
         });
         return false;
       }
       case "link":
-        links.push(mdLink("markdown", n.url, plain(n), line, column));
+        links.push(mdLink("markdown", n.url, plain(n), line, column, end));
         return;
       case "linkReference": {
         const url = definitions.get(n.identifier.toLowerCase());
-        if (url) links.push(mdLink("markdown", url, plain(n), line, column));
+        if (url) links.push(mdLink("markdown", url, plain(n), line, column, end));
         return;
       }
       case "image":
-        links.push(mdLink("image", n.url, n.alt ?? "", line, column));
+        links.push(mdLink("image", n.url, n.alt ?? "", line, column, end));
         return;
     }
   });
@@ -1006,8 +1018,8 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
   };
 }
 
-function mdLink(kind: LinkKind, url: string, text: string, line: number, column: number): LinkRef {
-  return { kind, target: url, heading: null, block: null, alias: null, text, line, column };
+function mdLink(kind: LinkKind, url: string, text: string, line: number, column: number, end: Pos): LinkRef {
+  return { kind, target: url, heading: null, block: null, alias: null, text, line, column, end: { line: end.line, column: end.column } };
 }
 
 function plain(n: Nodes): string {

@@ -517,7 +517,7 @@ export function linksIntoFolder(g: Graph, folderAbs: string): { backlink: Backli
       const r = g.resolveLink(l, rel);
       if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || !isAbsolute(r.path)) continue;
       if (r.path !== folderAbs && !r.path.startsWith(`${folderAbs}/`)) continue;
-      out.push({ backlink: { from: join(g.root, rel), line: l.line, column: l.column, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias }, targetAbs: r.path });
+      out.push({ backlink: { from: join(g.root, rel), line: l.line, column: l.column, end: l.end, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias }, targetAbs: r.path });
     }
   }
   return out;

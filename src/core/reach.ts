@@ -186,7 +186,8 @@ export class Reach implements VaultReach {
           const to = this.landsHere(g, v, rel, l);
           if (!to) continue;
           const list = map.get(to) ?? [];
-          list.push({ from: join(v.path, rel), vault: shown(v), line: l.line, column: l.column, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
+          // Another vault's index may be older than this one's: no ends then, the start stands in.
+          list.push({ from: join(v.path, rel), vault: shown(v), line: l.line, column: l.column, end: l.end ?? { line: l.line, column: l.column }, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
           map.set(to, list);
         }
       }

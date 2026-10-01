@@ -73,15 +73,15 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `scratch clear` | `{path, cleared, previousSha}` |
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
 | `resolve <link>` | `{link, status, path, abs, heading, line, candidates[], vault, via, reason}` |
-| `links <note>` | `[{kind, target, heading, text, line, column, status, path, candidates, vault, via, reason}]` |
-| `problems` | `{broken[], ambiguous[], orphans[]}`: a link's `{from, line, column, kind, target, reason, …}`; paths |
+| `links <note>` | `[{kind, target, heading, text, line, column, end, status, path, candidates, vault, via, reason}]` |
+| `problems` | `{broken[], ambiguous[], orphans[]}`: links `{from, line, column, end, kind, target, reason, …}`; paths |
 | `problems --lint` | adds `lint[{file, line, column, rule, name, description}]`; a warning when lint is off or fails |
 | `problems` (git) | `conflicts[{path, line}]`: during a merge, the unmerged files at their first marker (`5.12`) |
 | `changed` | `{base, mergeBase, files[{path, state, from?}]}`: `state` new, modified, renamed, deleted, conflict |
 | `diff <note>` | `{path, base, mergeBase, new, rows[{kind, text, line}]}`: `kind` `@@` ` ` `-` `+`; `line`: now |
 | `worktrees` | `[{path, branch, head, main, vault, current}]`: the main checkout first |
 | `tags [tag]` | `[{tag, count}]`, or a tag's `{tag, notes[]}` (its nested tags' too); exit 3: no note has it |
-| `backlinks <note>` | `{path, backlinks[{from, vault, line, column, text, kind, target, heading, block, alias}]}` |
+| `backlinks <note>` | `{path, backlinks[{from, vault, line, column, end, text, kind, target, heading, …}]}` |
 
 These churn freely before 1.0:
 
@@ -115,6 +115,9 @@ These churn freely before 1.0:
 | `mkdir <path>` | `{path, created}`; an existing path or one outside the vault is exit 5 |
 | `send <note>` | `{path, line, server, commands[]}` |
 | `history` | `{read[{path, at, line}], open[[path…]…]}` (open: the TUI's tabs, each its windows) |
+
+A link's `line` and `column` are where it starts and `end` (`{line, column}`) where it ends: the column after its last
+character. Columns count from 1 in UTF-16 units, as editors and LSP count them (`🌍` is two).
 
 `resolve` treats a target with a scheme (`https:`) as external only outside `[[…]]`, with no spaces,
 and when no note has that name: `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A markdown link

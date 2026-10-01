@@ -2068,3 +2068,25 @@ describe("the vault's problems (1.7)", () => {
     expect(after.orphans).toEqual(["a/twin.md", "b/twin.md", "index.md", "self.md"]); // missing.md is linked
   });
 });
+
+describe("where links end (11.7)", () => {
+  test("a link records its end as well as its start — columns in UTF-16 units — and backlinks and problems carry it", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-ends-"));
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, "b.md"), "# B\n");
+    writeFileSync(join(dir, "a.md"), "# A\n\n🌍 [[b|Bee]] then ![[b]]\n[md](b.md) and [ref][r] ![pic](p.png) [[gone]]\n\n[r]: b.md\n");
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    const ends = g.notes.get("a.md")!.links.map((l) => [l.kind, l.line, l.column, l.end.line, l.end.column]);
+    // 🌍 is two UTF-16 units: [[b|Bee]] starts at column 4, as an editor counts.
+    expect(ends).toEqual([
+      ["wiki", 3, 4, 3, 13],
+      ["embed", 3, 19, 3, 25],
+      ["markdown", 4, 1, 4, 11],
+      ["markdown", 4, 16, 4, 24],
+      ["image", 4, 25, 4, 38],
+      ["wiki", 4, 39, 4, 47],
+    ]);
+    expect(g.backlinks("b.md").map((b) => [b.line, b.column, b.end.column])).toContainEqual([3, 4, 13]);
+    expect(g.problems().broken.find((p) => p.target === "gone")).toMatchObject({ line: 4, column: 39, end: { line: 4, column: 47 } });
+  });
+});
