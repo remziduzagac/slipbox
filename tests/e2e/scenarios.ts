@@ -711,6 +711,23 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("g", "r");
       await s.see(/tool\.ts:2 +export const m = n;/, 10000);
       await s.keys("escape");
+      // Renamed by the server (19.15): n → count, both lines, after a preview.
+      await leader(s, "c", "r");
+      await s.see("rename n to:", 10000);
+      await s.keys("ctrl+u");
+      await s.type("count");
+      await s.keys("enter");
+      await s.see("rename n → count: 2 changes in 1 file", 10000);
+      await s.keys("enter");
+      await s.see("export const m = count;");
+      // Its code actions for the line, and its formatting: each says what it did.
+      await leader(s, "c", "a");
+      await s.until(() => /Code actions|no code actions here/.test(s.screen().join("\n")), 10000, "the code actions, or none");
+      await s.keys("escape");
+      await leader(s, "c", "f");
+      await s.until(() => /formatted|doesn't format/.test(s.screen().join("\n")), 10000, "formatted, or said it can't");
+      await s.keys("u"); // whatever it formatted, taken back
+      await s.keys("g", "g");
       // Fixed and typed in: gone once it's said so again.
       await s.keys("f", "\"", "d", "a", "\"", "i");
       await s.type("1");

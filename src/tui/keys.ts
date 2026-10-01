@@ -160,6 +160,10 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "shift+k": "lsp.hover",
   "g d": "lsp.definition",
   "g r": "lsp.references",
+  // What the code's language server changes (19.15), as LazyVim has them.
+  "leader c r": "lsp.rename",
+  "leader c a": "lsp.code_action",
+  "leader c f": "lsp.format",
   // the lens's size, by hand
   "+": "lens.grow",
   "-": "lens.shrink",
@@ -577,6 +581,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
   "leader g": "git: what changed, a note's diff, the worktrees",
+  "leader c": "code: rename, actions, format — the language server's",
   "leader n": "note: new, rename, move, delete, copy, cut, source, the lens, save, edit elsewhere, reload, info",
   "leader d": "folder: new, rename, move, delete, copy, cut, paste — the explorer's selected one, or this note's",
   "leader v": "vault: switch, make, make a plain folder, rename, the trash, restore, reindex, info, reload config",
@@ -584,7 +589,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   y: "copy: selection, path, reference, link",
   "ctrl+w": "window: split, focus, move, resize",
   "ctrl+t": "tabs: open, switch, reorder, close",
-  g: "go: top (g), link (f x), tabs (t T), changes (; ,), last insert (i)",
+  g: "go: top (g), definition (d), references (r), link (f x), tabs (t T), changes (; ,), last insert (i)",
   z: "scroll: the cursor's line to the middle (z), top (t), bottom (b)",
   "[": "previous: heading ([), link (l)",
   "]": "next: heading (]), link (l)",

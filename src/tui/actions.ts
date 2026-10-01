@@ -4,7 +4,7 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { Hover, Location, LocationLink, MarkedString, MarkupContent } from "vscode-languageserver-protocol";
+import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, TextEdit, WorkspaceEdit } from "vscode-languageserver-protocol";
 import { landingText } from "../core/landing.ts";
 import { join, posix, relative } from "node:path";
 import { findVaultRoot, gitRootOf, isInside, isNeverRoot } from "../core/vault.ts";
@@ -22,7 +22,7 @@ import { sanitize } from "../core/sanitize.ts";
 import type { Anchor } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
-import type { App, ListItem, Loc, UiState, View } from "./app.ts";
+import type { App, ListItem, Loc, PromptOverlay, UiState, View } from "./app.ts";
 import { editable, computeFind } from "./app.ts";
 import * as C from "./cursor.ts";
 import { linkTokens } from "../core/syntax.ts";
@@ -1569,6 +1569,7 @@ export function registerActions(app: App): void {
           const text = landingText(a.graph, path, link.heading, null);
           return a.openHover(text ?? "(nothing there)", `${path}${link.heading ? ` › ${link.heading}` : ""}`);
         }
+        a.syncServers(v.buf);
         const s = a.servers;
         if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
         const answer = await s.request<Hover>(v.buf.abs, "textDocument/hover", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "hoverProvider", "hover");
@@ -1579,6 +1580,7 @@ export function registerActions(app: App): void {
     "lsp.definition": (a) =>
       withView(a, async (v) => {
         if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("link.follow");
+        a.syncServers(v.buf);
         const s = a.servers;
         if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
         const answer = await s.request<Location | Location[] | LocationLink[]>(v.buf.abs, "textDocument/definition", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "definitionProvider", "goto-definition");
@@ -1590,6 +1592,7 @@ export function registerActions(app: App): void {
     "lsp.references": (a) =>
       withView(a, async (v) => {
         if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("backlinks.open");
+        a.syncServers(v.buf);
         const s = a.servers;
         if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
         // Every server that finds references has its say, together.
@@ -1601,6 +1604,59 @@ export function registerActions(app: App): void {
         });
         if (!locs.length) return a.message("info", "no references found");
         pickLocation(a, `${locs.length} reference${locs.length === 1 ? "" : "s"}`, locs);
+      }),
+    // What a code file's language server changes (19.15): a rename, its fixes, its formatting.
+    "lsp.rename": (a, arg) =>
+      withView(a, async (v) => {
+        if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run(arg ? `heading.rename ${arg}` : "heading.rename");
+        a.syncServers(v.buf);
+        const s = a.servers;
+        if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
+        const where = { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) };
+        const prep = await s.request<Range | { range: Range; placeholder: string } | { defaultBehavior: boolean }>(v.buf.abs, "textDocument/prepareRename", where, "renameProvider", "rename-symbol");
+        const range = prep && "start" in prep.result ? prep.result : prep && "range" in prep.result ? prep.result.range : null;
+        const word = range ? textIn(v.buf.source, v.buf.lineStarts(), range) : "";
+        const name = prep && "placeholder" in prep.result ? prep.result.placeholder : word;
+        const go = async (to: string) => {
+          const r = await s.request<WorkspaceEdit>(v.buf.abs, "textDocument/rename", { ...where, newName: to }, "renameProvider", "rename-symbol");
+          if (!r) return a.message("warn", "the language server can't rename this");
+          a.previewWorkspaceEdit(`rename ${name || "it"} → ${to}`, r.result);
+          a.host.requestRender();
+        };
+        if (arg) return go(arg);
+        a.prompt(`rename ${name || "this"} to: `, (to) => void (to.trim() && go(to.trim())));
+        (a.overlay as PromptOverlay).text = name;
+      }),
+    "lsp.code_action": (a) =>
+      withView(a, async (v) => {
+        a.syncServers(v.buf);
+        const s = a.servers;
+        if (!s?.isOpen(v.buf.abs)) return a.message("info", "code actions are a language server's: none for this file (slipbox doctor)");
+        const position = a.lspPosition(v);
+        const range = { start: position, end: position };
+        // The problems on this line, as each server gave them: its fixes for them.
+        const diagnostics = [...v.buf.serverProblems.values()].filter((p) => p.version === v.buf.version).flatMap((p) => p.raw).filter((d) => d.range.start.line <= position.line && position.line <= d.range.end.line);
+        const answers = await s.requestAll<(CodeAction | LspCommand)[]>(v.buf.abs, "textDocument/codeAction", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, range, context: { diagnostics } }, "codeActionProvider", "code-action");
+        const actions = answers.flatMap((x) => x.result.map((action) => ({ action, server: x.server }))).filter(({ action }) => !("disabled" in action && action.disabled));
+        if (!actions.length) return a.message("info", "no code actions here");
+        actions.sort((x, y) => Number("isPreferred" in y.action && !!y.action.isPreferred) - Number("isPreferred" in x.action && !!x.action.isPreferred));
+        a.openList({
+          title: "Code actions",
+          items: actions.map((x) => ({ label: x.action.title, hint: x.server, data: x })),
+          accept: (item) => void runAction(a, v.buf.abs, item.data as { action: CodeAction | LspCommand; server: string }),
+        });
+      }),
+    "lsp.format": (a) =>
+      withView(a, async (v) => {
+        a.syncServers(v.buf);
+        const s = a.servers;
+        if (!s?.isOpen(v.buf.abs)) return a.message("info", "formatting is a language server's: none for this file (slipbox doctor)");
+        const options = { tabSize: 2, insertSpaces: !v.buf.source.includes("\n\t") };
+        const r = await s.request<TextEdit[]>(v.buf.abs, "textDocument/formatting", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, options }, "documentFormattingProvider", "format");
+        if (!r) return a.message("info", "the language server doesn't format this");
+        if (!r.result.length) return a.message("info", `formatted already (${r.server})`);
+        a.applyWorkspaceEdit({ changes: { [pathToFileURL(v.buf.abs).href]: r.result } });
+        a.message("info", `formatted by ${r.server}`);
       }),
     "heading.rename": (a, arg) =>
       withView(a, (v) => {
@@ -1714,4 +1770,30 @@ function lineOf(path: string, line: number): string {
   } catch {
     return "";
   }
+}
+
+/** The text a range of the protocol's covers (lines and UTF-16 characters, from 0). */
+function textIn(source: string, starts: number[], r: Range): string {
+  const at = (p: Range["start"]) => (starts[p.line] ?? source.length) + p.character;
+  return source.slice(at(r.start), at(r.end));
+}
+
+/** A code action carried out: resolved first when it came without its edit, its edit made, then its command run. */
+async function runAction(a: App, path: string, chosen: { action: CodeAction | LspCommand; server: string }): Promise<void> {
+  const s = a.servers!;
+  let action = chosen.action;
+  if (!("command" in action && typeof action.command === "string")) {
+    const ca = action as CodeAction;
+    if (!ca.edit && !ca.command) action = (await s.requestOf<CodeAction>(path, chosen.server, "codeAction/resolve", ca)) ?? ca;
+  }
+  const command = typeof (action as LspCommand).command === "string" ? (action as LspCommand) : (action as CodeAction).command;
+  const edit = "edit" in action ? (action as CodeAction).edit : undefined;
+  if (edit) a.applyWorkspaceEdit(edit);
+  // The server has the text the edit made before it runs a command on it.
+  const buf = a.view?.buf;
+  if (buf) a.syncServers(buf);
+  // Its command is the server's to run; an edit it asks for then comes back as workspace/applyEdit.
+  if (command) await s.requestOf(path, chosen.server, "workspace/executeCommand", { command: command.command, arguments: command.arguments });
+  a.message("info", action.title);
+  a.host.requestRender();
 }

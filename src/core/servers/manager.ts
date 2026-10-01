@@ -4,7 +4,7 @@
 // become the file's problems (19.8), their positions the core's.
 
 import { pathToFileURL, fileURLToPath } from "node:url";
-import type { Diagnostic } from "vscode-languageserver-protocol";
+import type { Diagnostic, WorkspaceEdit } from "vscode-languageserver-protocol";
 import type { Problem, Severity } from "../diagnostics.ts";
 import { LanguageClient } from "./client.ts";
 import { chooseServers, type Found, findServer, rootFor } from "./find.ts";
@@ -16,8 +16,10 @@ export interface ManagerOptions {
   table: () => ServerTable;
   /** Whether npm servers are installed when missing (`[lsp] auto_install`). */
   autoInstall: () => boolean;
-  /** A file's problems from one server, for the text of `version` (null: the latest sent). */
-  problems: (path: string, server: string, version: number | null, problems: Problem[]) => void;
+  /** A file's problems from one server, for the text of `version` (null: the latest sent); `raw`, as the server gave them (a code action asks with them). */
+  problems: (path: string, server: string, version: number | null, problems: Problem[], raw: Diagnostic[]) => void;
+  /** An edit a server asks slipbox to make: true when it was. */
+  applyEdit?: (edit: WorkspaceEdit) => boolean;
   /** Something for the user: a server installed, missing, or crashing. */
   message: (level: "info" | "warn" | "error", text: string) => void;
   /** Servers' own log lines. */
@@ -146,6 +148,13 @@ export class ServerManager {
     return null;
   }
 
+  /** A request to one named server of a file (a code action resolved, or its command run, by the server that gave it). */
+  async requestOf<R>(path: string, server: string, method: string, params: unknown): Promise<R | null> {
+    const key = this.docs.get(path)?.servers.find((k) => this.running.get(k)?.def.name === server);
+    const client = key ? await this.running.get(key)?.ready : null;
+    return client ? client.request<R>(method, params) : null;
+  }
+
   /** A request to every server of a file that does the feature (references, code actions): their answers, together. */
   async requestAll<R>(path: string, method: string, params: unknown, capability: string, feature: Feature): Promise<{ server: string; result: R }[]> {
     const clients = await this.serving(path, feature, capability);
@@ -210,12 +219,13 @@ export class ServerManager {
           // A server limited away from diagnostics for this file's language says nothing here.
           const doc = this.docs.get(path);
           if (doc && !does(r.def, doc.lang, "diagnostics")) return;
-          this.o.problems(path, r.def.name, version, diagnostics.map((d) => problemOf(d, r.def.name)));
+          this.o.problems(path, r.def.name, version, diagnostics.map((d) => problemOf(d, r.def.name)), diagnostics);
         },
         log: (text) => this.o.log?.(text),
         exited: (expected, why) => {
           if (!expected) this.crashed(r, why);
         },
+        applyEdit: (edit) => this.o.applyEdit?.(edit) ?? false,
       },
     );
     r.client = client;

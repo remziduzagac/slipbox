@@ -142,6 +142,14 @@ note, slipbox does:
 | go to its definition; in a note, follow the link | `g d` |
 | its references, to pick from; in a note, its backlinks | `g r` |
 
+What a code file's language server changes (`19.15`) — `space c`, as LazyVim has it:
+
+| Action | Keys |
+| --- | --- |
+| rename the symbol under the cursor everywhere, after a preview; in a note, the cursor's heading | `space c r` |
+| code actions: the servers' fixes and refactorings for the cursor's line, to pick from | `space c a` |
+| format the file, as its server formats it: one undo step | `space c f` |
+
 ## History — `space h`
 
 | Action | Direct keys | Leader |

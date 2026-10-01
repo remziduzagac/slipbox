@@ -444,7 +444,7 @@ describe("which-key", () => {
     const left = rows[head]!.indexOf("┌");
     expect(rows[head + 1]!.slice(left + 1, rows[head + 1]!.lastIndexOf("│")).trim()).toBe(""); // a blank row inside, above
     expect(rows[head + 2]!.slice(left)).toMatch(/^│ \S+ +→ \+\w+/);
-    expect(rows[head + 3]).toContain("new, rename, move, delete, copy, cut, paste"); // +folder's explanation
+    expect(rows[head + 3]).toContain("rename, actions, format"); // +code's explanation, under its name
     const arrows = rows[head + 2]!.split("→").length - 1;
     expect(arrows).toBeLessThanOrEqual(3);
     const foot = rows.findIndex((r, i) => i > head && r.includes("└"));
@@ -7520,5 +7520,87 @@ describe("regression: :e of a file written a moment ago", () => {
     await h.app.run("note.open ../outside.ts");
     expect(h.app.view!.buf.rel).toBe("fresh-note.md");
     expect(h.app.messages.at(-1)!.text).toBe('no note or file "../outside.ts"');
+  });
+});
+
+describe("what a code file's server changes (19.15)", () => {
+  const served = (c: Config) => {
+    const launcher = join(sandbox, "fake-ls-launcher-2");
+    writeFileSync(launcher, `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`);
+    c["language-server"] = { fake: { command: launcher, args: ["--stdio"] } };
+    c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["fake"] }];
+  };
+  const until = async (ok: () => boolean, ms = 8000) => {
+    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+    return ok();
+  };
+  const ready = async (h: Harness) => {
+    h.app.startServers();
+    h.frame();
+    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
+  };
+
+  test("space c r: the symbol renamed everywhere the server says, after a preview; a file no window shows is saved", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "REF one REF\n");
+    writeFileSync(join(root, "other.fk"), "REF there\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("space", "c", "r");
+    expect(await until(() => h.app.overlay?.kind === "prompt")).toBe(true);
+    const p = h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    expect(p.text).toBe("REF");
+    p.text = "NAME";
+    await h.keys("enter");
+    expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+    const list = h.app.overlay as ListOverlay;
+    expect(list.title).toStartWith("rename REF → NAME: 2 changes in 2 files");
+    expect(list.items.map((i) => i.label)).toEqual(["a.fk:1", "other.fk:1"]);
+    await h.keys("enter");
+    expect(h.app.view!.buf.source).toBe("NAME one NAME\n");
+    expect(h.app.view!.buf.dirty).toBe(true); // shown: left for its saving
+    expect(readFileSync(join(root, "other.fk"), "utf8")).toBe("NAME there\n"); // not shown: saved
+    expect(readFileSync(join(root, "a.fk"), "utf8")).toBe("REF one REF\n");
+    await h.app.servers!.stopAll();
+  });
+
+  test("space c a: the server's fixes for the line's problems — its edit made, its command run (asking for an edit), resolved late", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "BAD here BAD\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    expect(await until(() => (h.frame(), h.app.problemsShown(h.app.view!).length === 1))).toBe(true); // a problem a line
+    const pick = async (title: string) => {
+      await h.keys("space", "c", "a");
+      expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+      const list = h.app.overlay as ListOverlay;
+      const i = list.items.findIndex((x) => x.label === title);
+      expect(i).toBeGreaterThanOrEqual(0);
+      for (let k = 0; k < i; k++) await h.keys("down");
+      await h.keys("enter");
+    };
+    await h.keys("space", "c", "a");
+    expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+    expect((h.app.overlay as ListOverlay).items[0]!.label).toBe("Replace BAD with GOOD"); // the preferred first
+    await h.keys("escape");
+    await pick("Replace BAD with GOOD");
+    expect(h.app.view!.buf.source).toBe("GOOD here BAD\n");
+    await pick("Fix all (a command)");
+    expect(await until(() => h.app.view!.buf.source === "GOOD here FIXED\n")).toBe(true);
+    await pick("Lazy fix");
+    expect(await until(() => h.app.view!.buf.source === "LAZY GOOD here FIXED\n")).toBe(true);
+    await h.app.servers!.stopAll();
+  });
+
+  test("space c f: formatted as the server formats it, one undo step", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "a  b   c\nd    e\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("space", "c", "f");
+    expect(await until(() => h.app.view!.buf.source === "a b c\nd e\n")).toBe(true);
+    await h.keys("u");
+    expect(h.app.view!.buf.source).toBe("a  b   c\nd    e\n");
+    await h.app.servers!.stopAll();
   });
 });

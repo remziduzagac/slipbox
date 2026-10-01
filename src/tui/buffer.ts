@@ -6,6 +6,7 @@
 // buffer dirty until it is saved. The parse is redone only when something needs it (the rendered
 // layout), not on every keystroke.
 
+import type { Diagnostic } from "vscode-languageserver-protocol";
 import type { Problem } from "../core/diagnostics.ts";
 import type { LintIssue } from "../core/lint.ts";
 import type { Glyphs } from "../core/glyphs.ts";
@@ -76,7 +77,7 @@ export class NoteBuffer {
   /** Its problems bar is kept (19.9): it has had problems, and the text keeps its place as they go. */
   problemBar = false;
   /** Its language servers' problems (19.1, 19.8), by server, with the version of the text they were found in. */
-  serverProblems = new Map<string, { version: number; list: Problem[] }>();
+  serverProblems = new Map<string, { version: number; list: Problem[]; raw: Diagnostic[] }>();
   /** The version of its text its servers were last told. */
   serverVersion = -1;
   /** Its language server's symbols as an outline (19.14), for a file tree-sitter has none of. */

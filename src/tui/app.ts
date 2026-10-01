@@ -9,13 +9,14 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { commentLinks, grammarFor, grammarNow, type OutlineEntry, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
-import { type DocumentSymbol, type SymbolInformation, SymbolKind } from "vscode-languageserver-protocol";
+import { type DocumentSymbol, type SymbolInformation, SymbolKind, type TextEdit as LspTextEdit, type WorkspaceEdit } from "vscode-languageserver-protocol";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { onLoaded } from "../core/lazy.ts";
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
-import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { readJson, readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
@@ -62,7 +63,7 @@ import { buildContext } from "../core/context.ts";
 import { IndexJob, indexFile, search, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
 import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusLater, worktreeList } from "../core/gitops.ts";
-import { diffRows } from "../core/merge.ts";
+import { diffLines, diffRows } from "../core/merge.ts";
 import { type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
@@ -1037,17 +1038,22 @@ export class App {
     this.servers = new ServerManager({
       table: () => serverTable(this.config["language-server"], this.config.language),
       autoInstall: () => this.config.lsp.auto_install,
-      problems: (path, server, version, list) => {
+      problems: (path, server, version, list, raw) => {
         const buf = [...this.buffers.values()].find((b) => b.abs === path);
         if (!buf) return;
         // Without a version, they're for the text it was last told.
-        buf.serverProblems.set(server, { version: version ?? buf.serverVersion, list });
+        buf.serverProblems.set(server, { version: version ?? buf.serverVersion, list, raw });
         for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
         this.host.requestRender();
       },
       message: (level, text) => {
         this.message(level, text);
         this.host.requestRender();
+      },
+      applyEdit: (edit) => {
+        const r = this.applyWorkspaceEdit(edit);
+        this.host.requestRender();
+        return r.files > 0;
       },
     });
     // Exiting without quitting (a signal): the servers go too.
@@ -1068,6 +1074,100 @@ export class App {
     buf.invalidateLayouts();
     for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
     this.host.requestRender();
+  }
+
+  /** A server's edit as each file's text edits: `changes`, or `documentChanges`' text edits (a file to make, move or delete is left out). */
+  editsOf(edit: WorkspaceEdit): { path: string; edits: LspTextEdit[] }[] {
+    const out = new Map<string, LspTextEdit[]>();
+    const add = (uri: string, edits: LspTextEdit[]) => {
+      if (!uri.startsWith("file:")) return;
+      const path = fileURLToPath(uri);
+      out.set(path, [...(out.get(path) ?? []), ...edits]);
+    };
+    for (const [uri, edits] of Object.entries(edit.changes ?? {})) add(uri, edits);
+    for (const c of edit.documentChanges ?? []) if ("textDocument" in c) add(c.textDocument.uri, c.edits.filter((e): e is LspTextEdit => "newText" in e));
+    return [...out].map(([path, edits]) => ({ path, edits }));
+  }
+
+  /**
+   * A server's edit made (19.15), through the buffers: each file's edits one undo step; a file no window
+   * shows is saved (writeBuffer), so what's on disk is the edit's; one shown is left for its saving.
+   */
+  applyWorkspaceEdit(edit: WorkspaceEdit): { files: number; edits: number } {
+    let files = 0;
+    let count = 0;
+    const shown = new Set(this.allViews().map((v) => v.buf));
+    for (const { path, edits } of this.editsOf(edit)) {
+      const inVault = path.startsWith(`${this.loc.root}/`);
+      const buf = this.buffer(inVault ? path.slice(this.loc.root.length + 1) : path);
+      if (!buf || !edits.length) continue;
+      const wasDirty = buf.dirty;
+      const starts = buf.lineStarts();
+      const at = (p: { line: number; character: number }) => Math.min(buf.source.length, (starts[p.line] ?? buf.source.length) + p.character);
+      // Last first, so each edit's offsets still hold.
+      const sorted = edits.map((e) => ({ from: at(e.range.start), to: at(e.range.end), text: e.newText })).sort((a, b) => b.from - a.from);
+      buf.beginStep(sorted.at(-1)!.from);
+      for (const e of sorted) buf.edit(e.from, e.to - e.from, e.text);
+      buf.endStep(sorted.at(-1)!.from);
+      for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+      if (!shown.has(buf) && !wasDirty) this.saveBuffer(buf, true);
+      files++;
+      count += edits.length;
+    }
+    return { files, edits: count };
+  }
+
+  /** A server's edit previewed: each line it changes, in each file, before and after; enter makes it. */
+  previewWorkspaceEdit(title: string, edit: WorkspaceEdit, done: () => void = () => {}): void {
+    const items: ListItem[] = [];
+    let n = 0;
+    for (const { path, edits } of this.editsOf(edit)) {
+      const open = [...this.buffers.values()].find((b) => b.abs === path);
+      let text: string;
+      try {
+        text = open?.source ?? readFileSync(path, "utf8");
+      } catch {
+        continue;
+      }
+      const doc = TextDocument.create("", "", 0, text);
+      const next = TextDocument.applyEdits(doc, edits);
+      const a = text.split("\n");
+      const b = next.split("\n");
+      const shown = path.startsWith(`${this.loc.root}/`) ? path.slice(this.loc.root.length + 1) : path;
+      for (const h of diffLines(a, b)) {
+        for (let k = 0; k < Math.max(h.aLen, h.bLen); k++) {
+          items.push({ label: `${shown}:${h.aStart + k + 1}`, detail: `${(a[h.aStart + k] ?? "").trim()}  →  ${(b[h.bStart + k] ?? "").trim()}`, data: null });
+          n++;
+        }
+      }
+    }
+    if (!items.length) return this.message("info", "the server changes nothing");
+    const files = new Set(items.map((i) => i.label.slice(0, i.label.lastIndexOf(":")))).size;
+    this.openList({
+      title: `${title}: ${n} change${n === 1 ? "" : "s"} in ${files} file${files === 1 ? "" : "s"} — enter: do it, esc: cancel`,
+      items,
+      filterable: false,
+      accept: () => {
+        const r = this.applyWorkspaceEdit(edit);
+        this.message("info", `${title}: ${r.edits} change${r.edits === 1 ? "" : "s"} in ${r.files} file${r.files === 1 ? "" : "s"}`);
+        done();
+      },
+    });
+  }
+
+  /**
+   * A file's servers told its text now, not after the pause: a request about it (a hover, a rename, a
+   * code action) must be answered for the text as it is — a fix made a moment ago included. Sent
+   * before the request on the same connection, so the server has it first.
+   */
+  syncServers(buf: NoteBuffer): void {
+    const s = this.servers;
+    if (!s?.isOpen(buf.abs) || buf.serverVersion === buf.version) return;
+    const t = this.serverTimers.get(buf);
+    if (t) clearTimeout(t);
+    this.serverTimers.delete(buf);
+    buf.serverVersion = buf.version;
+    s.change(buf.abs, buf.version, buf.source);
   }
 
   /** A file's servers told about it: opened the first time it's shown, its text again 150 ms after

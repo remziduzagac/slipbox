@@ -1056,6 +1056,19 @@ once, in this vault or outside it (a dependency's types open as a loose file), s
 follows the link. `g r` lists the references, each `file:line` with the line's text, to pick from; in a note, its
 backlinks. A file with no server says so, and `slipbox doctor` says which it would have.
 
+**What a server changes** (`19.15`) is made through the buffers — never written behind them — each file's edits
+one undo step. A file no window shows is saved after (through the same atomic write as every save), so what an agent
+reads on disk is the edit's; one shown is left for its saving, `• unsaved`. Before each of these, and each hover or
+jump, the file's servers are told its text now rather than after the pause, so the answer is for the text as it is.
+
+- **`space c r`** renames the symbol under the cursor: the server's name for it typed already, then a preview of every
+  line it changes in every file, before and after — `enter` makes it. In a note, it's the heading rename (`11.9`).
+- **`space c a`** lists the code actions for the cursor's line — every server's, the preferred ones first, each with
+  its server — asked with the problems on that line as each server gave them. One chosen: resolved first when it came
+  without its edit, its edit made, then its command run by its server, which may ask slipbox for an edit in turn
+  (`workspace/applyEdit`), made the same way.
+- **`space c f`** formats the file as its server does (the first that formats), one undo step; left unsaved.
+
 A file tree-sitter has no outline of (`16.8`: CSS, YAML, PHP, Swift…) takes its language server's symbols as its
 outline and breadcrumb (`19.14`), nested as the server nests them, asked for when it opens and again after each change
 reaches the server. Where tree-sitter has one, it stays: it's there at once, and leaves out the variables and

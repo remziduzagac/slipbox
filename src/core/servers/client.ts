@@ -22,6 +22,7 @@ import {
   type ProtocolConnection,
   PublishDiagnosticsNotification,
   type ServerCapabilities,
+  type WorkspaceEdit,
   ShowMessageNotification,
   ShutdownRequest,
   StreamMessageReader,
@@ -54,6 +55,8 @@ export interface ClientHooks {
   log?: (message: string) => void;
   /** It ended: asked to (`expected`), or it crashed or couldn't start. */
   exited?: (expected: boolean, why: string) => void;
+  /** An edit it asks slipbox to make (after a command it was told to run): true when it was. */
+  applyEdit?: (edit: WorkspaceEdit) => boolean;
 }
 
 /** The parts of a client's capabilities slipbox uses: what a server may count on. */
@@ -67,8 +70,16 @@ export const CLIENT_CAPABILITIES: ClientCapabilities = {
     definition: { linkSupport: false },
     references: {},
     documentSymbol: { hierarchicalDocumentSymbolSupport: true },
+    rename: { prepareSupport: true },
+    codeAction: {
+      codeActionLiteralSupport: { codeActionKind: { valueSet: ["", "quickfix", "refactor", "refactor.extract", "refactor.inline", "refactor.rewrite", "source", "source.organizeImports", "source.fixAll"] } },
+      isPreferredSupport: true,
+      disabledSupport: true,
+      resolveSupport: { properties: ["edit"] },
+    },
+    formatting: {},
   },
-  workspace: { configuration: true, workspaceFolders: true, didChangeConfiguration: { dynamicRegistration: false } },
+  workspace: { configuration: true, workspaceFolders: true, didChangeConfiguration: { dynamicRegistration: false }, applyEdit: true, workspaceEdit: { documentChanges: true } },
   window: { workDoneProgress: true },
 };
 
@@ -171,8 +182,11 @@ export class LanguageClient {
     });
     conn.onRequest("window/workDoneProgress/create", () => null);
     conn.onRequest("window/showMessageRequest", () => null);
-    // Edits a server asks to make are slipbox's to make, through its own writes: not yet (19.15).
-    conn.onRequest("workspace/applyEdit", () => ({ applied: false, failureReason: "slipbox applies edits only it asked for" }));
+    // An edit it asks to make (a code action's command did): slipbox makes it, through its own writes.
+    conn.onRequest("workspace/applyEdit", (p: { edit: WorkspaceEdit }): { applied: boolean; failureReason?: string } => {
+      const applied = this.hooks.applyEdit?.(p.edit) ?? false;
+      return applied ? { applied } : { applied, failureReason: "slipbox couldn't apply it" };
+    });
     // Asked to ask again (a pull server's settings or files changed): every open file's diagnostics.
     conn.onRequest("workspace/diagnostic/refresh", () => {
       for (const uri of this.open.keys()) void this.pull(uri);
