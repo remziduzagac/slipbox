@@ -9,6 +9,8 @@ import { basename, join } from "node:path";
 import { PassThrough } from "node:stream";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  type CodeAction,
+  CodeActionRequest,
   CompletionRequest,
   type CompletionList,
   createProtocolConnection,
@@ -19,6 +21,7 @@ import {
   DidOpenTextDocumentNotification,
   type DocumentSymbol,
   DocumentSymbolRequest,
+  ExecuteCommandRequest,
   ExitNotification,
   HoverRequest,
   InitializedNotification,
@@ -32,6 +35,7 @@ import {
   type Range,
   ReferencesRequest,
   RenameRequest,
+  ShowDocumentRequest,
   ShowMessageNotification,
   ShutdownRequest,
   StreamMessageReader,
@@ -54,6 +58,7 @@ process.env.XDG_CACHE_HOME = join(sandbox, "cache");
 process.env.XDG_CONFIG_HOME = join(sandbox, "config");
 process.env.XDG_DATA_HOME = join(sandbox, "data");
 delete process.env.SLIPBOX_CONFIG; // never the developer's own config
+process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
 
 let made = 0;
@@ -631,5 +636,60 @@ describe("a file moved in the editor (11.10)", () => {
     expect(await until(() => warnings.length > 0)).toBe(true);
     expect(warnings[0]).toBe("slipbox: a.md has unsaved changes: links there weren't fixed — slipbox relink fixes them once saved");
     expect(await s.end()).toBe(0);
+  });
+});
+
+describe("code actions (11.11)", () => {
+  const caps = { workspace: { workspaceEdit: { documentChanges: true, resourceOperations: ["create" as const] } }, window: { showDocument: { support: true } } };
+  const start = async (root: string, capabilities: object) => {
+    const up = new PassThrough();
+    const down = new PassThrough();
+    const server = new LspServer({ input: up, output: down, watch: false });
+    const client = createProtocolConnection(new StreamMessageReader(down), new StreamMessageWriter(up));
+    const shown: string[] = [];
+    const messages: string[] = [];
+    client.onRequest(ShowDocumentRequest.type, (p) => {
+      shown.push(p.uri);
+      return { success: true };
+    });
+    client.onNotification(ShowMessageNotification.type, (p) => {
+      messages.push(p.message);
+    });
+    client.listen();
+    await client.sendRequest(InitializeRequest.type, { processId: null, rootUri: uri(root), capabilities });
+    return { server, client, shown, messages };
+  };
+  const at = (line: number, character: number) => ({ start: { line, character }, end: { line, character } });
+
+  test("a link to a note not written yet: the note made beside this one; an ambiguous one: each note by path", async () => {
+    const root = folder({ "people/a.md": "# A\n\n[[newcomer]] and [[twin#Bio|the twin]]\n", "x/twin.md": "# X\n", "y/twin.md": "# Y\n" });
+    const { client } = await start(root, caps);
+    const doc = { uri: uri(join(root, "people/a.md")) };
+    const actions = async (line: number, character: number) =>
+      (await client.sendRequest(CodeActionRequest.type, { textDocument: doc, range: at(line, character), context: { diagnostics: [] } })) as CodeAction[];
+    const make = (await actions(2, 3)).find((a) => a.title.startsWith("Make"))!;
+    expect(make.title).toBe("Make the note people/newcomer.md");
+    expect(make.edit!.documentChanges).toEqual([
+      { kind: "create", uri: uri(join(root, "people/newcomer.md")), options: { ignoreIfExists: true } },
+      { textDocument: { uri: uri(join(root, "people/newcomer.md")), version: null }, edits: [{ range: at(0, 0), newText: "# newcomer\n\n" }] },
+    ]);
+    const picks = (await actions(2, 22)).filter((a) => a.title.startsWith("Link to"));
+    expect(picks.map((a) => a.title)).toEqual(["Link to x/twin.md", "Link to y/twin.md"]);
+    expect(picks[0]!.edit!.changes![doc.uri]).toEqual([{ range: { start: { line: 2, character: 17 }, end: { line: 2, character: 38 } }, newText: "[[x/twin#Bio|the twin]]" }]);
+    expect((await actions(0, 0)).map((a) => a.title)).toEqual(["Copy this note's context for an agent"]); // off a link
+    const { client: plain } = await start(root, {});
+    const offered = (await plain.sendRequest(CodeActionRequest.type, { textDocument: doc, range: at(2, 3), context: { diagnostics: [] } })) as CodeAction[];
+    expect(offered.some((a) => a.title.startsWith("Make"))).toBe(false); // an editor that can't make files
+  });
+
+  test("the context bundle: written to the vault's state, said where, and opened in the editor", async () => {
+    const root = folder({ "a.md": "# A\n\n[[b]]\n", "b.md": "# B\n" });
+    const { client, shown, messages } = await start(root, caps);
+    await client.sendRequest(ExecuteCommandRequest.type, { command: "slipbox.context", arguments: [uri(join(root, "a.md"))] });
+    expect(await until(() => shown.length === 1 && messages.length === 1)).toBe(true);
+    const file = fileURLToPath(shown[0]!);
+    expect(file).toEndWith("/context.md");
+    expect(readFileSync(file, "utf8")).toContain("## b.md");
+    expect(messages[0]).toBe(`slipbox: a.md's context, 2 files: in ${file}`);
   });
 });

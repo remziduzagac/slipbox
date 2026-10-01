@@ -5,6 +5,8 @@
 import { isAbsolute, posix } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  type CodeAction,
+  CodeActionKind,
   type CompletionItem,
   CompletionItemKind,
   type CompletionList,
@@ -25,6 +27,7 @@ import type { Graph, LinkRef, Pos, ResolvedLink } from "../core/graph.ts";
 import { blockIds, landingLine, landingText } from "../core/landing.ts";
 import { diffLines } from "../core/merge.ts";
 import { planHeadingRename, planNoteRename, RenameError, type RenamePlan } from "../core/rename.ts";
+import { extensionOf, isKnownExtension } from "../core/filetypes.ts";
 import { slugify } from "../core/parse.ts";
 
 /** The protocol's range for a span of the graph's (lines and columns from 1, the end after its last character). */
@@ -449,4 +452,69 @@ export function workspaceEdit(plan: RenamePlan, version: (uri: string) => number
   });
   if (plan.move) changes.push({ kind: "rename", oldUri: pathToFileURL(plan.move.from).href, newUri: pathToFileURL(plan.move.to).href });
   return { documentChanges: changes };
+}
+
+/** The command that copies a note's context bundle (9.7) for an agent. */
+export const CONTEXT_COMMAND = "slipbox.context";
+
+/** Where a note a link names would be made: beside the linking note, or from the vault's root for a path. */
+function newNotePath(g: Graph, rel: string, target: string): string | null {
+  const name = target.replace(/\\/g, "/").replace(/^\/+/, "").trim();
+  if (!name || name.split("/").some((x) => x === ".." || x.startsWith("."))) return null;
+  const path = name.includes("/") || posix.dirname(rel) === "." ? name : `${posix.dirname(rel)}/${name}`;
+  const ext = extensionOf(path);
+  return ext && isKnownExtension(ext) ? path : `${path}.md`;
+}
+
+/**
+ * What can be done at a range of a note (11.11): a link to a note not written yet, the note made (as
+ * the TUI makes it: beside this one, its title a heading); an ambiguous link, pointed at each of its
+ * notes by path; and the note's context bundle, copied for an agent. `createsFiles`: the editor makes
+ * a file an edit names (else no note is offered).
+ */
+export function codeActions(g: Graph, rel: string, range: Range, line: (n: number) => string, createsFiles: boolean): CodeAction[] {
+  const out: CodeAction[] = [];
+  const entry = g.entry(rel);
+  const touches = (l: LinkRef) => {
+    const r = rangeOf(l, l.end);
+    const after = (a: Position, b: Position) => a.line > b.line || (a.line === b.line && a.character > b.character);
+    return !after(r.start, range.end) && !after(range.start, r.end);
+  };
+  for (const l of entry?.links ?? []) {
+    if (!touches(l) || (l.kind !== "wiki" && l.kind !== "embed")) continue;
+    const r = g.resolveLink(l, rel);
+    if (r.resolvedKind === "unresolved" && !r.reason && createsFiles) {
+      const path = newNotePath(g, rel, l.target);
+      if (!path || g.notes.has(path)) continue;
+      const uri = uriOf(g, path);
+      const name = posix.basename(path).replace(/\.[^.]+$/, "");
+      out.push({
+        title: `Make the note ${path}`,
+        kind: CodeActionKind.QuickFix,
+        isPreferred: true,
+        edit: {
+          documentChanges: [
+            { kind: "create", uri, options: { ignoreIfExists: true } },
+            { textDocument: { uri, version: null }, edits: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, newText: NOTE_EXT.test(path) ? `# ${name}\n\n` : "" }] },
+          ],
+        },
+      });
+    }
+    if (r.resolvedKind === "ambiguous") {
+      // The link as written, its target swapped for each note's path (its #heading and |text kept).
+      const text = line(l.line - 1);
+      const span = text.slice(l.column - 1, l.end.line === l.line ? l.end.column - 1 : undefined);
+      const open = span.indexOf("[[") + 2;
+      for (const c of r.candidates) {
+        const next = `${span.slice(0, open)}${span.slice(open).replace(l.target, c.replace(NOTE_EXT, ""))}`;
+        out.push({
+          title: `Link to ${c}`,
+          kind: CodeActionKind.QuickFix,
+          edit: { changes: { [uriOf(g, rel)]: [{ range: { start: { line: l.line - 1, character: l.column - 1 }, end: { line: l.line - 1, character: l.column - 1 + span.length } }, newText: next }] } },
+        });
+      }
+    }
+  }
+  if (entry) out.push({ title: "Copy this note's context for an agent", kind: CodeActionKind.Source, command: { title: "Copy this note's context for an agent", command: CONTEXT_COMMAND, arguments: [uriOf(g, rel)] } });
+  return out;
 }

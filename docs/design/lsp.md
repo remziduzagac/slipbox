@@ -104,5 +104,10 @@ Every answer is about a note as the editor has it, and a request takes its lates
   moves anything; a lone note's old name is kept in its `previous_names`. The move itself is the editor's. A file
   with unsaved changes in the editor is left out of the edit and the editor told — `slipbox relink` fixes its links
   once it's saved — and a move out of the vault fixes nothing.
-
-Still to come: code actions (`11.11`).
+- **Code actions** (`11.11`): on a link to a note not written yet, *Make the note* — beside this one (from the vault's
+  root when the link has a path), its name a heading, as the TUI makes it — when the editor makes files an edit names;
+  on an ambiguous link, *Link to* each of its notes, the link rewritten with the path (its `#heading` and `|text`
+  kept); anywhere, *Copy this note's context for an agent* (`slipbox.context`, `9.7`): the bundle written to the
+  vault's state as `context.md`, copied by the system's clipboard tools when there are any — never OSC 52, whose
+  sequence would land in the editor's own terminal — and opened in the editor when it can, the message saying
+  where.

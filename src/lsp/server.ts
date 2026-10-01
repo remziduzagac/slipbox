@@ -3,7 +3,7 @@
 // the TUI's is. Vaults only (a folder with `.slipbox/`): a markdown file elsewhere is left to
 // whatever else the editor runs there (marksman). Nothing but the protocol reaches stdout.
 
-import { relative, sep } from "node:path";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   type Connection,
@@ -12,6 +12,7 @@ import {
   DiagnosticSeverity,
   type InitializeParams,
   type InitializeResult,
+  CodeActionKind,
   LSPErrorCodes,
   MessageType,
   ResponseError,
@@ -29,11 +30,15 @@ import { Reach } from "../core/reach.ts";
 import { planMoves, RenameError } from "../core/rename.ts";
 import { checkoutOf } from "../core/git.ts";
 import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
+import { copyText } from "../core/clipboard.ts";
+import { buildContext } from "../core/context.ts";
+import { atomicWrite, ensureDir } from "../core/fsutil.ts";
+import { stateDir } from "../core/paths.ts";
 import { findVaultRoot, isInside, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { applyToGraph, VaultFeed } from "../core/vault-feed.ts";
 import { VaultWatcher } from "../core/watch.ts";
 import { VERSION } from "../version.ts";
-import { completion, definition, diagnostics, documentSymbols, hover, prepareRename, references, renamePlan, workspaceEdit, workspaceSymbols } from "./features.ts";
+import { CONTEXT_COMMAND, codeActions, completion, definition, diagnostics, documentSymbols, hover, prepareRename, references, renamePlan, workspaceEdit, workspaceSymbols } from "./features.ts";
 
 export interface LspOptions {
   input: NodeJS.ReadableStream;
@@ -120,6 +125,12 @@ export class LspServer {
     this.connection.onWorkspaceSymbol((p) => this.everywhere((g) => workspaceSymbols(g, p.query)));
     this.connection.onPrepareRename((p) => this.asked(p.textDocument.uri, (g, rel) => prepareRename(g, rel, p.position), null));
     this.connection.workspace.onWillRenameFiles((p) => this.willRename(p.files));
+    this.connection.onCodeAction((p) =>
+      this.asked(p.textDocument.uri, (g, rel) => codeActions(g, rel, p.range, (n) => this.lineOf(p.textDocument.uri, g, rel, n), this.createsFiles), []),
+    );
+    this.connection.onExecuteCommand(async (p) => {
+      if (p.command === CONTEXT_COMMAND && typeof p.arguments?.[0] === "string") await this.copyContext(p.arguments[0]);
+    });
     this.connection.onRenameRequest((p) => this.rename(p.textDocument.uri, p.position, p.newName));
     this.connection.onHover((p) => this.asked(p.textDocument.uri, (g, rel) => hover(g, rel, p.position), null));
     this.connection.onReferences((p) => this.asked(p.textDocument.uri, (g, rel) => references(g, rel, p.position, p.context.includeDeclaration), []));
@@ -131,10 +142,16 @@ export class LspServer {
 
   /** Whether the editor applies a file's rename sent in an edit (a note's rename moves its file). */
   private renamesFiles = false;
+  /** Whether it makes a file an edit names (a missing note made). */
+  private createsFiles = false;
+  /** Whether it opens a document when asked (`window/showDocument`). */
+  private showsDocuments = false;
 
   private initialize(params: InitializeParams): InitializeResult {
     const edits = params.capabilities.workspace?.workspaceEdit;
     this.renamesFiles = !!edits?.documentChanges && !!edits.resourceOperations?.includes("rename");
+    this.createsFiles = !!edits?.documentChanges && !!edits.resourceOperations?.includes("create");
+    this.showsDocuments = !!params.capabilities.window?.showDocument?.support;
     const uris = params.workspaceFolders?.map((f) => f.uri) ?? (params.rootUri ? [params.rootUri] : []);
     this.folders = uris.map(pathOf).filter((p): p is string => p !== null);
     return {
@@ -150,6 +167,8 @@ export class LspServer {
         hoverProvider: true,
         documentSymbolProvider: true,
         renameProvider: { prepareProvider: true },
+        codeActionProvider: { codeActionKinds: [CodeActionKind.QuickFix, CodeActionKind.Source] },
+        executeCommandProvider: { commands: [CONTEXT_COMMAND] },
         workspaceSymbolProvider: true,
         completionProvider: { triggerCharacters: ["[", "#", "^"] },
       },
@@ -390,6 +409,26 @@ export class LspServer {
       changes.push(...workspaceEdit(kept, (u) => this.documents.get(u)?.version ?? null).documentChanges!);
     }
     return changes.length ? { documentChanges: changes } : null;
+  }
+
+  /**
+   * A note's context bundle (9.7), for an agent: written to the vault's state (`context.md`), copied by the
+   * system's clipboard tools when there are any — never OSC 52, whose sequence would land in the
+   * editor's own terminal — and opened in the editor when it can, else where it is said.
+   */
+  private async copyContext(uri: string): Promise<void> {
+    const n = this.noteOf(uri);
+    if (!n) return;
+    const { graph, config, loc } = n.served;
+    await graph.loadGrammars(); // code files link from their comments (16.10)
+    const b = buildContext(graph, [n.rel], config.context);
+    const file = join(stateDir(loc), "context.md");
+    ensureDir(stateDir(loc));
+    atomicWrite(file, b.text);
+    const copied = copyText(b.text, { osc52: () => false, fallbackDir: stateDir(loc) });
+    const how = copied.confirmed ? `copied (${copied.methods.join(", ")})` : `in ${file}`;
+    void this.connection.sendNotification(ShowMessageNotification.type, { type: MessageType.Info, message: `slipbox: ${n.rel}'s context, ${b.items.length} file${b.items.length === 1 ? "" : "s"}: ${how}` });
+    if (this.showsDocuments) void this.connection.window.showDocument({ uri: pathToFileURL(file).href, takeFocus: true });
   }
 
   /** A question for every served vault, the answers together; a vault that fails is logged and skipped. */
