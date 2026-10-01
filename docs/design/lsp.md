@@ -2,7 +2,7 @@
 
 `slipbox lsp` serves vaults to an editor over the Language Server Protocol (plan `11.x`; why, in the plan's "Phase 5
 decided 2026-10-01"): nvim, or any editor, gets slipbox's graph — the same core the TUI and the CLI answer from. Later
-this document also covers slipbox's own client for code languages (`19.x`).
+this document also covers slipbox's own client for code languages (`19.x`), below.
 
 ## Starting it
 
@@ -160,4 +160,18 @@ and marksman's `root_dir` as above. LazyVim's keys then reach slipbox: `gd` foll
 here, `K` previews where a link lands, `space c r` renames the note a link names or the heading under the cursor,
 `space c a` offers the code actions, `space c shift+r` (snacks.nvim's rename) moves the file with its links fixed,
 `space s s` and `space s shift+s` find headings and notes, and `[[` completes as it's typed.
+
+## The client for code (`19.x`)
+
+slipbox is a client of the language servers of the code it opens (the plan's "Phase 5 decided 2026-10-01").
+
+**One server** (`19.1`, `core/servers/client.ts`) is started on stdio in the project's top folder, its stderr kept
+(the last of it says why when it fails), and initialized as slipbox: positions in UTF-16, the capabilities slipbox
+uses. Its settings answer its `workspace/configuration` questions, by section (`python.analysis`), and go with
+`didChangeConfiguration` once it's ready — a server asked and answered nothing checks nothing. A file is sent whole
+at each change, which every server takes. Its diagnostics come both ways: sent (`publishDiagnostics`), or asked for
+after each open, change and save from a server that wants that (`textDocument/diagnostic`, LSP 3.17) — an answer
+about an older text than the last sent is dropped. Its log and messages go to slipbox's; an edit it asks to make is
+declined until slipbox makes edits for servers (`19.15`). Stopping it is `shutdown` then `exit`, then a kill; an
+exit that wasn't asked for is a crash, said with its last words.
 

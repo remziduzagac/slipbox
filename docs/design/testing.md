@@ -17,6 +17,7 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/vault.test.ts` | discovery, the walk against the fixture vault, the graph, the CLI and parity |
 | `tests/cli.test.ts` | the CLI as an agent meets it: the real process on a copy of the demo vault; every command |
 | `tests/tui.test.ts` | the TUI model, the real watcher, state, keymap, OpenTUI end to end |
+| `tests/servers.test.ts` | slipbox as a client of language servers, against a fake one (`tests/fixtures/fake-lsp.ts`) |
 | `tests/lsp.test.ts` | the LSP face as an editor meets it: a client on the protocol; once, the real process |
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
 
