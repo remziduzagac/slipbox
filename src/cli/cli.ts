@@ -43,8 +43,11 @@ import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { doctor, doctorFile, type LinterReport, type ServerReport } from "../core/servers/doctor.ts";
-import { linterTable } from "../core/servers/linters.ts";
-import { serverTable } from "../core/servers/languages.ts";
+import { linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
+import { ServerManager } from "../core/servers/manager.ts";
+import { atLeast, lintProblems, noteProblems, type Problem, SEVERITIES, type Severity, syntaxProblems } from "../core/diagnostics.ts";
+import { languageOf, serverTable } from "../core/servers/languages.ts";
+import { rootFor } from "../core/servers/find.ts";
 import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { readIdentity, readRegistry, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
@@ -177,6 +180,7 @@ Usage:
   slipbox lsp                       serve vaults to an editor over LSP, on stdio  [--config <file>]
   slipbox vaults                    the vaults this machine knows: name, kind, path, last seen
   slipbox doctor [file]             language servers and linters: each language's, found where, installed when needed, or missing
+  slipbox diagnostics <file>        a file's problems: its servers', its linters', its syntax; a note's links and lint  [--severity S] [--timeout SECS]
   slipbox themes                    list themes
   slipbox commands                  list named commands and their CLI equivalents
 
@@ -199,7 +203,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-vault", "rename-heading", "relink", "undo", "context", "search", "index", "changed", "diff", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
-  "capture", "scratch", "init", "info", "vaults", "doctor", "themes", "commands", "help",
+  "capture", "scratch", "init", "info", "vaults", "doctor", "diagnostics", "themes", "commands", "help",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -298,10 +302,17 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
   }
 }
 
+/** A promise's value, or `fallback` after `ms` — the timer cleared either way, so nothing waits on it after. */
+function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<T>((done) => (timer = setTimeout(() => done(fallback), ms)));
+  return Promise.race([p, late]).finally(() => clearTimeout(timer));
+}
+
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
+  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -339,6 +350,7 @@ const FLAGS: Record<string, string[]> = {
   task: ["check", "uncheck", "if-unchanged"],
   footnotes: ["if-unchanged"],
   problems: ["lint"],
+  diagnostics: ["severity", "timeout"],
   write: ["stdin", "append", "paragraph", "create", "if-unchanged", "allow-empty"],
   send: ["line", "server"],
   capture: ["ref", "snippet", "stdin", "lang"],
@@ -1096,6 +1108,95 @@ const HANDLERS: Record<string, Handler> = {
     const groups = doctor(table, linters, s.io.cwd, auto);
     if (!s.config.lsp.enabled) s.warnings.push("language servers are off: [lsp] enabled = false");
     return { data: groups, human: groups.map((g) => `${g.languages.join(", ")}\n${g.servers.map(line).join("")}${g.linters.map(lintLine).join("")}`).join("") };
+  },
+
+  // A file's problems from every source (19.22), for agents and scripts: its language servers' — started,
+  // told the file, waited for until each has spoken and gone quiet — its linters' (19.19), its syntax
+  // errors when no server answered, and a vault note's own and the lint surface's. Exit 1 on an error.
+  async diagnostics(s, rest) {
+    const arg = requireArg(rest, "file");
+    const abs = isAbsolute(arg) ? arg : join(s.io.cwd, arg);
+    if (!existsSync(abs)) throw new CliError(`${arg}: no such file`, EXIT.notFound);
+    const min = (flag(s.args, "severity") ?? s.config.diagnostics.severity) as Severity;
+    if (!SEVERITIES.includes(min)) throw new UsageError(`--severity takes ${SEVERITIES.join(", ")}`);
+    const seconds = Number(flag(s.args, "timeout") ?? 60);
+    if (!(seconds > 0)) throw new UsageError("--timeout takes seconds, more than 0");
+    const text = readText(abs).text;
+    const table = serverTable(s.config["language-server"], s.config.language);
+    const lang = languageOf(table, abs);
+    const problems: Problem[] = [];
+    const sources: { name: string; kind: "server" | "linter" | "syntax" | "slipbox" | "lint"; status: string }[] = [];
+    // Its servers: each heard once, then quiet for a while — a server says what it finds in stages.
+    let answered = 0;
+    if (lang && s.config.lsp.enabled) {
+      const heard = new Map<string, Problem[]>();
+      let news = Date.now();
+      const m = new ServerManager({
+        table: () => table,
+        autoInstall: () => s.config.lsp.auto_install,
+        problems: (path, server, _v, list) => {
+          if (path !== abs) return;
+          heard.set(server, list);
+          news = Date.now();
+        },
+        message: (_level, text) => s.io.err(`${text}\n`),
+      });
+      const deadline = Date.now() + seconds * 1000;
+      m.open(abs, 1, text);
+      const running = await within(m.started(abs, "diagnostics"), seconds * 1000, [] as string[]);
+      while (Date.now() < deadline && !(running.every((n) => heard.has(n)) && Date.now() - news >= 750)) await Bun.sleep(50);
+      for (const name of running) sources.push({ name, kind: "server", status: heard.has(name) ? "answered" : "silent" });
+      for (const [name, list] of heard) problems.push(...list), answered++;
+      await within(m.stopAll(), 3000, undefined);
+      m.killAll();
+    }
+    // Its linters without a server, where its project asks for them.
+    const linters = linterTable(s.config.linter);
+    for (const def of (lang?.linters ?? []).map((n) => linters[n]).filter((d) => !!d?.command)) {
+      const root = linterRoot(def!, abs, rootFor(abs, lang!.roots));
+      if (!root) {
+        sources.push({ name: def!.name, kind: "linter", status: "not asked" });
+        continue;
+      }
+      const r = s.config.lint.enabled === "off" ? null : await runLinter(def!, abs, text, root);
+      if (r && "problems" in r) problems.push(...r.problems);
+      sources.push({ name: def!.name, kind: "linter", status: r === null ? "off" : "problems" in r ? "ran" : r.failed });
+    }
+    // Its syntax errors, when no server has spoken for the text (a server has them then).
+    const kind = classify(abs, s.config.walk.extensions);
+    const g = kind.group === "text" ? grammarFor(kind.format, extensionOf(abs)) : null;
+    if (g && !answered) {
+      const loaded = await grammar(g);
+      const tree = loaded ? parseSyntax(loaded, text) : null;
+      if (tree) {
+        problems.push(...syntaxProblems(tree.errors()));
+        tree.tree.delete();
+        sources.push({ name: "tree-sitter", kind: "syntax", status: "ran" });
+      }
+    }
+    // A vault note: its links and conflicts, and the lint surface's findings.
+    const rel = relative(s.loc.root, abs).split(sep).join("/");
+    if (kind.group === "note" && !rel.startsWith("..") && s.graph.notes.has(rel)) {
+      problems.push(...noteProblems(s.graph, rel));
+      sources.push({ name: "slipbox", kind: "slipbox", status: "ran" });
+      const cmd = lintCommand(s.config.lint, s.loc.root, undefined, s.config.lsp.auto_install);
+      if (cmd) {
+        const issues = await runLint(cmd, [abs], s.loc.root, undefined, (t) => s.io.err(`${t}\n`));
+        if (issues) problems.push(...lintProblems(issues.filter((i) => i.file === abs)));
+        sources.push({ name: "markdownlint", kind: "lint", status: issues ? "ran" : "failed" });
+      }
+    }
+    for (const src of sources) if (["silent", "missing", "timeout", "error", "failed"].includes(src.status)) s.warnings.push(`${src.name}: ${src.status === "silent" ? `said nothing in ${seconds} s` : src.status === "missing" ? "not installed" : `couldn't run (${src.status})`}`);
+    if (!lang && kind.group !== "note") s.warnings.push(`${arg}: slipbox knows no language of it — slipbox doctor`);
+    const shown = problems
+      .filter((p) => atLeast(p.severity, min))
+      .sort((a, b) => a.start.line - b.start.line || a.start.column - b.start.column || SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
+    const human = shown.map((p) => `${arg}:${p.start.line}:${p.start.column}: ${p.severity} ${p.source}${p.code ? ` ${p.code}` : ""}: ${p.message.replace(/\s*\n\s*/g, " ")}\n`).join("");
+    return {
+      data: { path: abs, language: lang?.name ?? null, problems: shown.map((p) => ({ line: p.start.line, column: p.start.column, endLine: p.end.line, endColumn: p.end.column, severity: p.severity, source: p.source, code: p.code, message: p.message })), sources },
+      human,
+      code: shown.some((p) => p.severity === "error") ? EXIT.error : EXIT.ok,
+    };
   },
 
   info(s) {

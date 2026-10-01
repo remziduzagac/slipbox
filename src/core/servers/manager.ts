@@ -109,6 +109,20 @@ export class ServerManager {
     }
   }
 
+  /** A file's servers once each has started or given up (a failed install, a crash): those running that
+   *  do `feature` for its language (`slipbox diagnostics` waits for their word). */
+  async started(path: string, feature: Feature): Promise<string[]> {
+    const doc = this.docs.get(path);
+    if (!doc) return [];
+    const out: string[] = [];
+    for (const key of doc.servers) {
+      const r = this.running.get(key);
+      const client = r ? await r.ready : null;
+      if (r && client?.state === "running" && does(r.def, doc.lang, feature)) out.push(r.def.name);
+    }
+    return out;
+  }
+
   /** Its text now: every server of it told. */
   change(path: string, version: number, text: string): void {
     const doc = this.docs.get(path);

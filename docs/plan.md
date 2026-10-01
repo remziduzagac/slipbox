@@ -568,7 +568,7 @@ source shown alike in every mode.*
 | 19.11 | **Done.** Toggles (`space u d`, `shift+d`) and `[diagnostics]`; the status line takes every source |
 | 19.12 | **Done.** Hover in a float; signature help as `(` and `,` are typed (`19.16`) |
 | 19.13 | **Done** (definition, references). A jump, or a list when there are several; implementation and types later |
-| 19.14 | **Done** (the outline; the vault's symbols with `19.22`). The server's symbols where tree-sitter has none |
+| 19.14 | **Done** (the outline; the switcher's workspace symbols to come). Server symbols where tree-sitter has none |
 | 19.15 | **Done.** Rename, code actions, formatting: through `App.writeBuffer`, previewed like slipbox's renames |
 | 19.16 | **Done.** Completion in insert mode: on a trigger at once, on a word after a pause; narrowed as typed |
 | 19.17 | **Done.** Several servers per file: a main one and add-ons, merged; Helix's `only-features` splits the work |
@@ -576,7 +576,7 @@ source shown alike in every mode.*
 | 19.19 | **Done.** Linters without LSP in efm-langserver's keys (`lint-command`, `lint-formats`); hadolint, yamllint |
 | 19.20 | **Done.** Server settings from a project's `.vscode/settings.json`, over the config's, as VS Code does |
 | 19.21 | **Done.** markdownlint-cli2 found as a server is, else from the private install, rather than `npx` |
-| 19.22 | CLI: `slipbox diagnostics <file>` — the servers' and linters' findings, `--json`, for agents and scripts |
+| 19.22 | **Done.** CLI: `slipbox diagnostics <file>` — servers' and linters' findings, `--json`, for agents, scripts |
 
 ## Images — `12.x`
 

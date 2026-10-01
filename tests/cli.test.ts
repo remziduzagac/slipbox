@@ -321,6 +321,50 @@ describe("the vault and the tool", () => {
     expect(slipbox(["doctor", "ops/Dockerfile", "--json"]).json.data.linters).toMatchObject([{ name: "hadolint", root: join(vault, "ops") }]);
     expect(slipbox(["doctor", "ops/Dockerfile"]).out).toMatch(/hadolint \(linter\) .*\(runs in .*ops\)/);
   });
+  test("diagnostics: a file's problems from its servers (waited for) and linters; a note's links and lint; exit 1 on an error (19.22)", () => {
+    const dir = join(sandbox, "diag");
+    mkdirSync(join(dir, ".git"), { recursive: true });
+    const launcher = join(dir, "fake-ls");
+    writeFileSync(launcher, `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`);
+    chmodSync(launcher, 0o755);
+    const cfg = join(dir, "config.toml");
+    writeFileSync(
+      cfg,
+      [
+        `[language-server.fake]\ncommand = ${JSON.stringify(launcher)}\nargs = ["--stdio"]\n`,
+        `[linter.todo]\nlint-command = "grep -n TODO | sed 's/^\\\\([0-9]*\\\\):.*/stdin:\\\\1:1: [error] a TODO/'; exit 1"\nlint-formats = ["%f:%l:%c: [%trror] %m"]\n`,
+        `[[language]]\nname = "fake"\nfile-types = ["fk"]\nlanguage-servers = ["fake"]\nlinters = ["todo"]\n`,
+        `[lint]\nenabled = "on"\ncommand = ["sh", "-c", "for f; do printf '%s:2 error MD041/first-line-heading First line\\\\n' \\"$f\\"; done; exit 1", "lint"]\n`,
+      ].join("\n"),
+    );
+    writeFileSync(join(dir, "a.fk"), "fine\nBAD here\nTODO later\n");
+    const r = slipbox(["diagnostics", "a.fk", "--config", cfg, "--json"], { cwd: dir });
+    expect(r.code).toBe(1); // the linter's error
+    expect(r.json.ok).toBe(true); // it ran: the exit says what it found
+    expect(r.json.data.problems.map((p: { line: number; severity: string; source: string; message: string }) => [p.line, p.severity, p.source, p.message.split(",")[0]])).toEqual([
+      [2, "warning", "fake", "bad"],
+      [3, "error", "todo", "a TODO"],
+    ]);
+    expect(r.json.data.sources).toEqual([
+      { name: "fake", kind: "server", status: "answered" },
+      { name: "todo", kind: "linter", status: "ran" },
+    ]);
+    expect(slipbox(["diagnostics", "a.fk", "--config", cfg], { cwd: dir }).out).toMatch(/^a\.fk:2:1: warning fake: bad.*\na\.fk:3:1: error todo: a TODO\n$/);
+    // The least severity shown; a clean file is exit 0, nothing printed.
+    expect(slipbox(["diagnostics", "a.fk", "--config", cfg, "--severity", "error", "--json"], { cwd: dir }).json.data.problems).toHaveLength(1);
+    writeFileSync(join(dir, "b.fk"), "fine\n");
+    expect(slipbox(["diagnostics", "b.fk", "--config", cfg], { cwd: dir })).toMatchObject({ code: 0, out: "" });
+    expect(slipbox(["diagnostics", "a.fk", "--severity", "bad"], { cwd: dir }).code).toBe(2);
+    expect(slipbox(["diagnostics", "nope.fk"], { cwd: dir }).code).toBe(3);
+    // A vault note: its links, and the lint surface's findings.
+    writeFileSync(join(vault, "diag-note.md"), "# Diag\n\nSee [[no-such-note-anywhere]].\n");
+    const n = slipbox(["diagnostics", "diag-note.md", "--config", cfg, "--severity", "info", "--json"]);
+    expect(n.json.data.problems.map((p: { line: number; source: string }) => [p.line, p.source])).toEqual([
+      [2, "markdownlint"],
+      [3, "slipbox"],
+    ]);
+    expect(n.code).toBe(0); // warnings: no error among them
+  });
   test("cp, rm, trash, and mv of a folder (18.x)", () => {
     const dir = join(sandbox, "fileops");
     mkdirSync(join(dir, "projects", "deep"), { recursive: true });

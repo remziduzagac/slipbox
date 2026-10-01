@@ -440,6 +440,25 @@ slipbox serves notes itself. `--json`: an array of `{languages, servers[{name, r
 hint, requires}], linters[{name, program, where, path, hint, markers, required}]}`, or for a file `{language,
 languageId, root, run[], missing[], linters[]}`, each linter with its `root` (null: not run).
 
+## `slipbox diagnostics` (plan `19.22`)
+
+`slipbox diagnostics <file>` gives a file's problems from every source, for agents and scripts — one line each, `file:line:column:
+severity source code: message`, sorted by place:
+
+- its language servers' (`19.x`): started as the TUI starts them (installed first when on npm), told the file, then
+  waited for until each has said what it finds and gone quiet for 750 ms, since a server says it in stages; at most
+  `--timeout` seconds (60), a server that said nothing by then named in a warning;
+- its linters without a server (`19.19`), where its project has their config;
+- its syntax errors from tree-sitter, when no server answered (a server has them then);
+- for a vault note, its own (`11.5`: links that reach nothing, headings and blocks its targets haven't, conflict
+  markers) and the lint surface's (`3.21`).
+
+`--severity` (`error`, `warning`, `info`, `hint`; `[diagnostics] severity` by default, `warning`) is the least shown.
+The exit is 1 when one shown is an error, 0 otherwise — the run itself succeeded either way (`--json`'s `ok`). `--json`:
+`{path, language, problems[{line, column, endLine, endColumn, severity, source, code, message}], sources[{name, kind,
+status}]}`, each source `server` (`answered`, `silent`), `linter` (`ran`, `not asked`, `missing`, `timeout`, `error`,
+`off`), `syntax`, `slipbox` or `lint`. A missing file is exit 3.
+
 ## `slipbox lsp` (plan `11.x`)
 
 Not a command like the others: it serves vaults to an editor over LSP on stdio until the editor ends the session, and
