@@ -46,4 +46,16 @@ the file changing under an open note (an agent's write) leaves the editor's text
 
 ## What it serves
 
-So far the session and the vault as the editor has it (`11.2`, `11.7`, `11.8`); the features follow `11.3`–`11.11`.
+Every answer is about a note as the editor has it, and a request takes its latest text first.
+
+- **Definition** (`11.3`): on a link — `[[note]]`, `[[note#Heading]]`, `[[note#^block]]`, `![[embed]]`, `[x](path.md#heading)`,
+  `[[vault:note]]` — its note (or file), at the heading's or the block's line; each candidate of an ambiguous link, so
+  the editor offers the list; this note's heading for `[[#Heading]]` and `[x](#heading)`. A link holds the position of
+  each of its characters, the last included; external and unresolved links go nowhere.
+- **References** (`11.3`): anywhere in a note, every link to it — its title heading included, which stands for the
+  note; on another heading's line, the links to that heading (a markdown link's `#fragment` by its slug), this note's
+  own `[[#Heading]]` among them; on a link, the links to where it goes. With the declaration asked for, the note's top
+  or the heading's line comes first.
+
+Still to come: hover and completion (`11.3`), diagnostics (`11.5`), symbols (`11.6`), renames (`11.4`, `11.9`, `11.10`)
+and code actions (`11.11`).

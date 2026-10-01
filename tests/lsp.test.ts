@@ -10,6 +10,7 @@ import { PassThrough } from "node:stream";
 import { pathToFileURL } from "node:url";
 import {
   createProtocolConnection,
+  DefinitionRequest,
   DidChangeTextDocumentNotification,
   DidCloseTextDocumentNotification,
   DidOpenTextDocumentNotification,
@@ -17,8 +18,10 @@ import {
   InitializedNotification,
   type InitializeResult,
   InitializeRequest,
+  type Location,
   LogMessageNotification,
   type ProtocolConnection,
+  ReferencesRequest,
   ShutdownRequest,
   StreamMessageReader,
   StreamMessageWriter,
@@ -207,6 +210,52 @@ describe("unsaved text (11.8)", () => {
     expect(await until(() => !graph().overlaid("a.md"))).toBe(true);
     await Bun.sleep(200); // nothing left settling
     expect(backlinks()).toBe(0);
+    expect(await s.end()).toBe(0);
+  });
+});
+
+describe("definition and references (11.3)", () => {
+  const files = {
+    "a.md": "# A\n\n[[b]] and [[b#Second]] and [[b#^blk]] and ![[b]]\n[md](b.md#second) [[twin]] [[nope]] [[#Local]]\n\n## Local\n",
+    "b.md": "# B\n\ntext ^blk\n\n## Second\n",
+    "c.md": "# C\n\n[[b#Second]]\n",
+    "x/twin.md": "# X twin\n",
+    "y/twin.md": "# Y twin\n",
+  };
+  const at = (line: number, character: number) => ({ line, character });
+  const short = (root: string, locs: Location[] | null) => (locs ?? []).map((l) => `${l.uri.slice(uri(root).length + 1)}:${l.range.start.line}:${l.range.start.character}`);
+
+  test("definition: a link's note, at its heading or block; each candidate of an ambiguous one; nothing off a link", async () => {
+    const root = folder(files);
+    const s = await session([root]);
+    const def = async (line: number, character: number) =>
+      short(root, (await s.client.sendRequest(DefinitionRequest.type, { textDocument: { uri: uri(join(root, "a.md")) }, position: at(line, character) })) as Location[]);
+    expect(await def(2, 1)).toEqual(["b.md:0:0"]);
+    expect(await def(2, 4)).toEqual(["b.md:0:0"]); // its last character
+    expect(await def(2, 5)).toEqual([]); // what follows it
+    expect(await def(2, 15)).toEqual(["b.md:4:0"]); // [[b#Second]]
+    expect(await def(2, 30)).toEqual(["b.md:2:0"]); // [[b#^blk]]
+    expect(await def(2, 43)).toEqual(["b.md:0:0"]); // ![[b]]
+    expect(await def(3, 5)).toEqual(["b.md:4:0"]); // [md](b.md#second)
+    expect(await def(3, 20)).toEqual(["x/twin.md:0:0", "y/twin.md:0:0"]);
+    expect(await def(3, 30)).toEqual([]); // [[nope]]
+    expect(await def(3, 40)).toEqual(["a.md:5:0"]); // [[#Local]]
+    expect(await s.end()).toBe(0);
+  });
+
+  test("references: to the note anywhere in it (its title too), to a heading on its line or on a link to it", async () => {
+    const root = folder(files);
+    const s = await session([root]);
+    const refs = async (rel: string, line: number, character: number, includeDeclaration = false) =>
+      short(root, await s.client.sendRequest(ReferencesRequest.type, { textDocument: { uri: uri(join(root, rel)) }, position: at(line, character), context: { includeDeclaration } })).sort();
+    const all = ["a.md:2:0", "a.md:2:10", "a.md:2:27", "a.md:2:42", "a.md:3:0", "c.md:2:0"];
+    expect(await refs("b.md", 2, 0)).toEqual(all);
+    expect(await refs("b.md", 0, 1)).toEqual(all); // the title is the note
+    const second = ["a.md:2:10", "a.md:3:0", "c.md:2:0"]; // a markdown link's #second too
+    expect(await refs("b.md", 4, 3)).toEqual(second);
+    expect(await refs("b.md", 4, 3, true)).toEqual(["b.md:4:0", ...second].sort());
+    expect(await refs("a.md", 2, 15)).toEqual(second); // on a link to the heading
+    expect(await refs("a.md", 5, 3)).toEqual(["a.md:3:36"]); // its own [[#Local]]
     expect(await s.end()).toBe(0);
   });
 });

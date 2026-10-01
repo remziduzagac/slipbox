@@ -533,6 +533,18 @@ export class Graph {
     return this.overlays.has(rel);
   }
 
+  /** A note's text: an editor's when it has the note open (11.8), else the file's; null when it can't be read. */
+  textOf(path: string): string | null {
+    const rel = path.startsWith(`${this.root}/`) ? path.slice(this.root.length + 1) : path;
+    const over = this.overlays.get(rel);
+    if (over) return over.text;
+    try {
+      return readText(isAbsolute(rel) ? rel : join(this.root, rel)).text;
+    } catch {
+      return null;
+    }
+  }
+
   abs(rel: string): string {
     return join(this.root, rel);
   }

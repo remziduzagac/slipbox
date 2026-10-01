@@ -16,6 +16,7 @@ import { findVaultRoot, recordLocation, rootAt, type VaultLocation, vaultConfigP
 import { applyToGraph, VaultFeed } from "../core/vault-feed.ts";
 import { VaultWatcher } from "../core/watch.ts";
 import { VERSION } from "../version.ts";
+import { definition, references } from "./features.ts";
 
 export interface LspOptions {
   input: NodeJS.ReadableStream;
@@ -86,6 +87,8 @@ export class LspServer {
       n?.served.graph.overlay(n.rel, null);
     });
     this.documents.listen(this.connection);
+    this.connection.onDefinition((p) => this.asked(p.textDocument.uri, (g, rel) => definition(g, rel, p.position), []));
+    this.connection.onReferences((p) => this.asked(p.textDocument.uri, (g, rel) => references(g, rel, p.position, p.context.includeDeclaration), []));
     this.connection.listen();
   }
 
@@ -99,6 +102,8 @@ export class LspServer {
       capabilities: {
         textDocumentSync: { openClose: true, change: TextDocumentSyncKind.Incremental, save: { includeText: false } },
         workspace: { workspaceFolders: { supported: true } },
+        definitionProvider: true,
+        referencesProvider: true,
       },
       serverInfo: { name: "slipbox", version: VERSION },
     };
@@ -191,6 +196,20 @@ export class LspServer {
     const doc = this.documents.get(uri);
     const n = this.noteOf(uri);
     if (doc && n) n.served.graph.overlay(n.rel, doc.getText());
+  }
+
+  /** A request about a note, answered from its text as the editor has it; `none` outside a vault.
+   *  A failure is logged and answered with `none`: one bad note never ends the session. */
+  private asked<T>(uri: string, answer: (g: Graph, rel: string) => T, none: T): T {
+    this.fresh(uri);
+    const n = this.noteOf(uri);
+    if (!n) return none;
+    try {
+      return answer(n.served.graph, n.rel);
+    } catch (err) {
+      this.log(`${n.rel}: ${(err as Error).stack ?? err}`);
+      return none;
+    }
   }
 
   /** A message for the editor's log (never a pop-up: these are slipbox's, not the user's doing). */
