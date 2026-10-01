@@ -358,7 +358,9 @@ redo — a rename does it again.
 ## `3.21` — the lint surface
 
 slipbox runs your linter rather than shipping one: rules of its own would fight the ones you've written. The default is
-markdownlint-cli2 through `npx`, with the vault's markdownlint config or else `~/.markdownlint-cli2.jsonc`, and "auto"
+markdownlint-cli2 (through `npx` at first; since `19.21` found as a server is, else installed into slipbox's own folder,
+pinned — `npx` fetched whatever was newest, each machine its own), with the vault's markdownlint config or else
+`~/.markdownlint-cli2.jsonc`, and "auto"
 lints only where such a config exists — without one, markdownlint's defaults would flag every note that was never
 meant to follow them. A note is linted from its file, so only once it's saved, and its findings show only while its
 text is the text they were found in: a stale line number is worse than none. The linter is a program, so which one

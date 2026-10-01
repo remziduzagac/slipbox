@@ -37,7 +37,7 @@ import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from ".
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { Graph, type LinkProblem } from "../core/graph.ts";
-import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
+import { type LintCmd, type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
 import { type Layout, posOfSrc, srcAt } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
 import { stateDir, userConfigFile } from "../core/paths.ts";
@@ -637,7 +637,7 @@ export class App {
     recordLocation(opts.loc);
     this.reach = new Reach(opts.loc);
     this.graph.reach ??= this.reach;
-    this.lintCmd = lintCommand(opts.config.lint, opts.loc.root);
+    this.lintCmd = lintCommand(opts.config.lint, opts.loc.root, undefined, opts.config.lsp.auto_install);
     this.host = opts.host;
     this.configFile = opts.configFile;
     this.live = opts.watch !== false;
@@ -832,7 +832,7 @@ export class App {
     const before = this.config;
     const next = loaded.config;
     this.config = next;
-    this.lintCmd = lintCommand(next.lint, this.loc.root);
+    this.lintCmd = lintCommand(next.lint, this.loc.root, undefined, next.lsp.auto_install);
     const differs = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
     const changed = (Object.keys(next) as (keyof Config)[]).filter((s) => differs(before[s], next[s]));
     if (changed.includes("search") && !changed.includes("walk")) this.startSearch();
@@ -1282,7 +1282,7 @@ export class App {
   // beside their lines, on the status line, in the Problems view — and on the vault for that view.
 
   /** The linter (`[lint]`), or null: lint off, or it couldn't run. */
-  lintCmd: { argv: string[]; literal: boolean } | null = null;
+  lintCmd: LintCmd | null = null;
   private readonly lintRuns = new Map<NoteBuffer, ReturnType<typeof setTimeout> | "running">();
   /** The whole vault's findings, as last linted (the Problems view's): null until it's run. */
   vaultLint: { running: boolean; issues: LintIssue[] | null } = { running: false, issues: null };
@@ -1296,7 +1296,7 @@ export class App {
     const version = buf.version;
     const t = setTimeout(() => {
       this.lintRuns.set(buf, "running");
-      void runLint(cmd, [buf.abs], this.loc.root).then((issues) => {
+      void runLint(cmd, [buf.abs], this.loc.root, undefined, this.sayInstalling).then((issues) => {
         this.lintRuns.delete(buf);
         if (issues === null) return this.lintFailed();
         buf.lint = { version, issues: issues.filter((i) => i.file === buf.abs) };
@@ -1319,7 +1319,7 @@ export class App {
     void (async () => {
       const all: LintIssue[] = [];
       for (let i = 0; i < files.length; i += 300) {
-        const got = await runLint(cmd, files.slice(i, i + 300), this.loc.root);
+        const got = await runLint(cmd, files.slice(i, i + 300), this.loc.root, undefined, this.sayInstalling);
         if (got === null) {
           this.vaultLint = { running: false, issues: null };
           this.lintFailed();
@@ -1332,11 +1332,17 @@ export class App {
     })();
   }
 
+  /** markdownlint-cli2 installed first (19.21): said, as a server's install is. */
+  private readonly sayInstalling = (text: string) => {
+    this.message("info", text);
+    this.host.requestRender();
+  };
+
   /** The linter couldn't run: said once, and not tried again until the config says otherwise. */
   private lintFailed(): void {
     if (!this.lintCmd) return;
     this.lintCmd = null;
-    this.message("warn", `lint: ${this.config.lint.command.length ? "[lint] command" : "markdownlint-cli2 (through npx)"} couldn't run — [lint] command sets another; enabled = "off" stops trying`);
+    this.message("warn", `lint: ${lintFailure(this.config)} — [lint] command sets another; enabled = "off" stops trying`);
   }
 
   // -------------------------------------------------------------------------------------------
@@ -6701,7 +6707,7 @@ export class App {
     this.configLastGood.clear();
     const loaded = loadConfig({ vaultFile: vaultConfigPath(target), configFile: this.configFile, lastGood: this.configLastGood });
     this.config = loaded.config;
-    this.lintCmd = lintCommand(this.config.lint, target.root);
+    this.lintCmd = lintCommand(this.config.lint, target.root, undefined, this.config.lsp.auto_install);
     this.vaultLint = { running: false, issues: null };
     this.relint();
     for (const w of loaded.warnings) this.message("warn", w);

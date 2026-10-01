@@ -94,8 +94,8 @@ export interface Config {
    * The lint surface (3.21): your markdownlint-cli2's findings in notes — slipbox ships no linter.
    * `enabled`: "auto" when a markdownlint config is there (~/.markdownlint-cli2.jsonc, or the
    * vault's own), "on", "off". `command`: the linter, the files appended; empty: markdownlint-cli2
-   * through npx, with ~/.markdownlint-cli2.jsonc unless the vault has a config of its own. Your
-   * own config only (it names a program).
+   * (found, else installed into slipbox's own folder: 19.21), with ~/.markdownlint-cli2.jsonc unless
+   * the vault has a config of its own. Your own config only (it names a program).
    */
   lint: {
     enabled: "auto" | "on" | "off";
@@ -138,7 +138,8 @@ export interface Config {
     /** Language servers for the code slipbox opens (19.x): its problems, hover, jumps. */
     enabled: boolean;
     lint: boolean;
-    /** Servers published on npm installed into slipbox's own folder when first needed (19.5). */
+    /** Servers published on npm installed into slipbox's own folder when first needed (19.5), and
+     *  markdownlint-cli2 for the lint surface (19.21). */
     auto_install: boolean;
   };
   /** The context bundle (9.7): a note with what it links to and what links to it, for an agent. */

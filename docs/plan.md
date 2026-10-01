@@ -575,7 +575,7 @@ source shown alike in every mode.*
 | 19.18 | **Done.** Linters with an LSP mode as add-ons, where the project has their config; the project's copy first |
 | 19.19 | **Done.** Linters without LSP in efm-langserver's keys (`lint-command`, `lint-formats`); hadolint, yamllint |
 | 19.20 | **Done.** Server settings from a project's `.vscode/settings.json`, over the config's, as VS Code does |
-| 19.21 | markdownlint-cli2 from the private install rather than `npx` |
+| 19.21 | **Done.** markdownlint-cli2 found as a server is, else from the private install, rather than `npx` |
 | 19.22 | CLI: `slipbox diagnostics <file>` — the servers' and linters' findings, `--json`, for agents and scripts |
 
 ## Images — `12.x`

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatEntry, formatRef, parseRef, scratchLocation } from "../src/core/capture.ts";
@@ -1183,18 +1183,60 @@ describe("the lint surface (3.21)", () => {
     ]);
   });
 
-  test("which linter: off; auto only with a markdownlint config (yours, or the vault's); npx markdownlint-cli2 with yours unless the vault has its own; [lint] command as given", () => {
+  test("which linter: off; auto only with a markdownlint config (yours, or the vault's); markdownlint-cli2 with yours unless the vault has its own — found as a server is, the vault's own first, else installed first (19.21); [lint] command as given", () => {
     const home = mkdtempSync(join(sandbox, "home-"));
     const vault = mkdtempSync(join(sandbox, "vault-"));
     const cfg = (enabled: "auto" | "on" | "off", command: string[] = []) => ({ enabled, command });
-    expect(lintCommand(cfg("off"), vault, home)).toBeNull();
-    expect(lintCommand(cfg("auto"), vault, home)).toBeNull(); // no config anywhere: markdownlint's defaults are no one's rules
-    expect(lintCommand(cfg("on"), vault, home)).toEqual({ argv: ["npx", "--yes", "markdownlint-cli2"], literal: true });
-    writeFileSync(join(home, ".markdownlint-cli2.jsonc"), "{}");
-    expect(lintCommand(cfg("auto"), vault, home)).toEqual({ argv: ["npx", "--yes", "markdownlint-cli2", "--config", join(home, ".markdownlint-cli2.jsonc")], literal: true });
-    writeFileSync(join(vault, ".markdownlint.json"), "{}");
-    expect(lintCommand(cfg("auto"), vault, home)).toEqual({ argv: ["npx", "--yes", "markdownlint-cli2"], literal: true }); // the vault's own
-    expect(lintCommand(cfg("auto", ["mdl", "--config", "~/mdl.json"]), vault, home)).toEqual({ argv: ["mdl", "--config", join(home, "mdl.json")], literal: false });
+    const install = "markdownlint-cli2@0.23.3";
+    const was = process.env.PATH;
+    process.env.PATH = "/usr/bin:/bin"; // never the machine's own
+    try {
+      expect(lintCommand(cfg("off"), vault, home)).toBeNull();
+      expect(lintCommand(cfg("auto"), vault, home)).toBeNull(); // no config anywhere: markdownlint's defaults are no one's rules
+      expect(lintCommand(cfg("on"), vault, home)).toEqual({ argv: [], literal: true, install });
+      expect(lintCommand(cfg("on"), vault, home, false)).toEqual({ argv: ["markdownlint-cli2"], literal: true }); // installing off: it won't run, and says so
+      const user = join(home, ".markdownlint-cli2.jsonc");
+      writeFileSync(user, "{}");
+      expect(lintCommand(cfg("auto"), vault, home)).toEqual({ argv: ["--config", user], literal: true, install });
+      // The vault's own copy, a Node script: run on slipbox's Bun.
+      const own = join(vault, "node_modules", ".bin", "markdownlint-cli2");
+      mkdirSync(join(own, ".."), { recursive: true });
+      writeFileSync(own, "#!/usr/bin/env node\n");
+      chmodSync(own, 0o755);
+      expect(lintCommand(cfg("auto"), vault, home)).toEqual({ argv: [process.execPath, own, "--config", user], literal: true, env: { BUN_BE_BUN: "1" } });
+      writeFileSync(join(vault, ".markdownlint.json"), "{}");
+      expect(lintCommand(cfg("auto"), vault, home)!.argv).toEqual([process.execPath, own]); // the vault's own config
+      expect(lintCommand(cfg("auto", ["mdl", "--config", "~/mdl.json"]), vault, home)).toEqual({ argv: ["mdl", "--config", join(home, "mdl.json")], literal: false });
+    } finally {
+      process.env.PATH = was;
+    }
+  });
+
+  test("markdownlint-cli2 installed into slipbox's own folder when first needed — once, however many runs ask — then run (19.21)", async () => {
+    const pkg = mkdtempSync(join(sandbox, "fake-mdl-"));
+    writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "fake-mdl", version: "1.0.0", bin: { "markdownlint-cli2": "bin.mjs" } }));
+    writeFileSync(join(pkg, "bin.mjs"), "#!/usr/bin/env node\nfor (const f of process.argv.slice(2)) console.log(`${f.slice(1)}:1 error MD001/heading-increment Heard`);\nprocess.exit(1);\n");
+    const v = mkdtempSync(join(sandbox, "lint-"));
+    const said: string[] = [];
+    const cmd = { argv: [], literal: true, install: `file:${pkg}` };
+    const was = process.env.PATH;
+    process.env.PATH = "/usr/bin:/bin";
+    try {
+      const [a, b] = await Promise.all([runLint(cmd, ["/v/a.md"], v, undefined, (t) => said.push(t)), runLint(cmd, ["/v/b.md"], v, undefined, (t) => said.push(t))]);
+      expect(a).toMatchObject([{ file: "/v/a.md", line: 1, rule: "MD001", description: "Heard" }]);
+      expect(b).toMatchObject([{ file: "/v/b.md" }]);
+      expect(said).toEqual([`installing file:${pkg} into slipbox's own folder…`]);
+      expect(existsSync(join(process.env.XDG_DATA_HOME!, "slipbox", "tools", "node_modules", ".bin", "markdownlint-cli2"))).toBe(true);
+      // Installed: found there from then on, never installed again.
+      expect(lintCommand({ enabled: "on", command: [] }, v)!.argv[1]).toBe(realpathSync(join(process.env.XDG_DATA_HOME!, "slipbox", "tools", "node_modules", ".bin", "markdownlint-cli2")));
+      // An install that fails: the linter doesn't run, and the next run tries again.
+      const broken = { argv: [], literal: true, install: `file:${join(sandbox, "no-such-package")}` };
+      expect(await runLint(broken, ["/v/a.md"], v, undefined, (t) => said.push(t))).toBeNull();
+      expect(await runLint(broken, ["/v/a.md"], v, undefined, (t) => said.push(t))).toBeNull();
+      expect(said.filter((t) => t.includes("no-such-package"))).toHaveLength(2);
+    } finally {
+      process.env.PATH = was;
+    }
   });
 
   test("run: the files given (literal paths for markdownlint-cli2), the findings read; a linter that isn't there, or fails saying nothing, is null", async () => {

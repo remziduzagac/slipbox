@@ -1030,8 +1030,11 @@ produces one error message, `⚠ not watching` in the status line, and polling o
 ## The lint surface (plan `3.21`)
 
 slipbox runs the linter you already use and shows what it finds where it is; it ships no rules of its own
-(`docs/idea.md`, "Run this repo's linter, don't ship one"). By default that's `markdownlint-cli2` through `npx`: with
-the vault's own markdownlint config when it has one (the linter finds it), else with `~/.markdownlint-cli2.jsonc`.
+(`docs/idea.md`, "Run this repo's linter, don't ship one"). By default that's `markdownlint-cli2`, found as a
+language server is (`19.21`: the vault's own `node_modules/.bin`, `PATH`, your installs), else installed into
+slipbox's own folder the first time it's needed, pinned (`[lsp] auto_install`; "installing markdownlint-cli2@0.23.3
+into slipbox's own folder…"), and run on slipbox's Bun: with the vault's own markdownlint config when it has one (the
+linter finds it), else with `~/.markdownlint-cli2.jsonc`.
 `[lint] enabled = "auto"` lints only where one of those configs is — markdownlint's defaults are no one's rules for
 notes; `"on"` lints anyway, `"off"` never. `[lint] command` runs another linter, the files appended, as long as it
 prints markdownlint-cli2's lines (`path:line[:column] MD013/line-length what's wrong`) — only your own config can

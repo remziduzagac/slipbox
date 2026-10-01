@@ -119,7 +119,8 @@ severity = "warning"           # the least shown: error | warning | info (a note
 [lsp]                          # slipbox lsp (11.x), serving vaults to an editor
 enabled = true                 # language servers for the code slipbox opens (19.x): problems, hover, jumps
 lint = false                   # the lint surface's findings among its diagnostics; off: the editor lints
-auto_install = true            # servers on npm installed into slipbox's own folder when first needed (19.5)
+auto_install = true            # servers on npm installed into slipbox's own folder when first needed (19.5),
+                               # and markdownlint-cli2 for [lint] (19.21)
 
 [language-server.pyright]      # a language server (19.2), in Helix's languages.toml shape: changed by name
 config = { python = { analysis = { typeCheckingMode = "strict" } } }   # its settings, over the defaults
@@ -161,8 +162,9 @@ remote = ["nvim"]              # space n s: "nvim" finds the running nvims (spac
 [lint]                         # the lint surface (3.21): your linter's findings in notes and the Problems view
 enabled = "auto"               # auto: only with a markdownlint config (the vault's, or ~/.markdownlint-cli2.jsonc)
                                # | on | off (off: [linter.<name>] runs none either)
-command = []                   # [] = npx markdownlint-cli2 (--config ~/.markdownlint-cli2.jsonc unless the
-                               # vault has its own); else argv, files appended, "~/" expanded; yours only
+command = []                   # [] = markdownlint-cli2, found or installed into slipbox's own folder (19.21)
+                               # (--config ~/.markdownlint-cli2.jsonc unless the vault has its own);
+                               # else argv, files appended, "~/" expanded; yours only
 
 [watch]
 enabled = true

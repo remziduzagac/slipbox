@@ -29,7 +29,7 @@ import { Reach } from "../core/reach.ts";
 import { planMoves, RenameError } from "../core/rename.ts";
 import { checkoutOf } from "../core/git.ts";
 import { lintProblems } from "../core/diagnostics.ts";
-import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
+import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
 import { copyText } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
 import { atomicWrite, ensureDir } from "../core/fsutil.ts";
@@ -315,11 +315,11 @@ export class LspServer {
     const doc = this.documents.get(uri);
     const n = this.noteOf(uri);
     if (!doc || !n || !n.served.config.lsp.lint) return;
-    const cmd = lintCommand(n.served.config.lint, n.served.loc.root);
+    const cmd = lintCommand(n.served.config.lint, n.served.loc.root, undefined, n.served.config.lsp.auto_install);
     if (!cmd) return;
     const version = doc.version;
-    void runLint(cmd, [n.served.graph.abs(n.rel)], n.served.loc.root).then((issues) => {
-      if (issues === null) return this.log(`the linter couldn't run: ${cmd.argv.join(" ")}`);
+    void runLint(cmd, [n.served.graph.abs(n.rel)], n.served.loc.root, undefined, (text) => this.log(text)).then((issues) => {
+      if (issues === null) return this.log(`lint: ${lintFailure(n.served.config)}`);
       if (this.documents.get(uri)?.version !== version) return;
       this.linted.set(uri, { version, issues });
       this.publish(uri);

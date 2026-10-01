@@ -23,7 +23,7 @@ import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { type Graph, type LinkProblem, openGraph, type Target } from "../core/graph.ts";
-import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
+import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { headingsOf, parseAround, type ParsedNote, slugify } from "../core/parse.ts";
@@ -601,17 +601,17 @@ const HANDLERS: Record<string, Handler> = {
     // --lint (3.21): your linter's findings too — markdownlint-cli2 with your config, as the TUI runs it.
     let lint: (Omit<LintIssue, "file"> & { file: string })[] | undefined;
     if (has(s.args, "lint")) {
-      const cmd = lintCommand(s.config.lint, s.loc.root);
+      const cmd = lintCommand(s.config.lint, s.loc.root, undefined, s.config.lsp.auto_install);
       const files = [...s.graph.notes.keys()].filter((rel) => /\.(md|markdown)$/i.test(rel)).sort().map((rel) => s.graph.abs(rel));
       const found: LintIssue[] = [];
       let ran = !!cmd;
       for (let i = 0; cmd && ran && i < files.length; i += 300) {
-        const got = await runLint(cmd, files.slice(i, i + 300), s.loc.root);
+        const got = await runLint(cmd, files.slice(i, i + 300), s.loc.root, undefined, (text) => s.io.err(`${text}\n`));
         if (got === null) ran = false;
         else found.push(...got);
       }
       if (!cmd) s.warnings.push(s.config.lint.enabled === "off" ? 'lint is off: [lint] enabled = "off"' : 'lint is off: no markdownlint config (~/.markdownlint-cli2.jsonc, or the vault\'s) and [lint] enabled isn\'t "on"');
-      else if (!ran) s.warnings.push(`lint: ${s.config.lint.command.length ? "[lint] command" : "markdownlint-cli2 (through npx)"} couldn't run`);
+      else if (!ran) s.warnings.push(`lint: ${lintFailure(s.config)}`);
       else {
         lint = found.map((x) => ({ ...x, file: relative(s.loc.root, x.file) }));
         human.push(`lint (${lint.length})`, ...lint.map((x) => `  ${x.file}:${x.line}${x.column ? `:${x.column}` : ""}  ${x.rule} ${x.name}  ${x.description}`));
