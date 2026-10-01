@@ -22,8 +22,13 @@ import { tagName, tagsInLine } from "./tags.ts";
 // -------------------------------------------------------------------------------------------
 // What's read
 
-/** Data and text files are cut into sections of this many lines (a match lands near its line). */
-const FILE_SECTION = 80;
+/**
+ * The size band sections are cut to (scout's Stage 4, so a scout result and a slipbox hit are the same
+ * section): a section is kept on its own tokens — its text without its sub-sections' — from 400 to
+ * 1500; above, split at paragraphs; below, merged into its parent. A starting point, tunable.
+ */
+export const BAND_MIN = 400;
+export const BAND_MAX = 1500;
 /** Frontmatter bigger than this isn't read for a title, aliases and tags. */
 const MAX_FRONTMATTER = 64 * 1024;
 
@@ -40,34 +45,176 @@ function strings(v: unknown, split = false): string[] {
   return [];
 }
 
-/** A section of a file: from a heading to the next (a data file's: 80 lines). */
-export interface DocSection {
+/** A line of a file, with its number (1-based): a section merged from others isn't contiguous. */
+export interface DocLine {
   line: number;
-  heading: string;
   text: string;
 }
 
-/** What search reads of a file: its title, aliases and tags, and its sections. */
+/**
+ * A section a hit can land in (scout's model, Stage 4): a node of the file's containment tree — a
+ * heading owns everything to the next heading as high — kept when its own text is in the size band,
+ * split when it's over, merged into its parent when it's under; the root (`§:file`) always kept.
+ */
+export interface DocSection {
+  /** scout's name for it, after the path's `#`: the heading chain (`Auth/How auth works`), or `§:file`, `§:part~2`, `§:chunk~3`. */
+  name: string;
+  /** Its heading's text ("" for the root and the pieces cut from it). */
+  heading: string;
+  /** Its first and last line (1-based): a range for jumping to and for matching a scout result's. */
+  line: number;
+  end: number;
+  /** Its own text and what merged into it, line by line, in document order. */
+  lines: DocLine[];
+  /** Its own text's tokens, as bytes / 4 (slipbox has no tokenizer, nor needs one). */
+  tokens: number;
+  /** Over the band and couldn't be split (one long paragraph): kept whole. */
+  oversized: boolean;
+}
+
+/** What search reads of a file: its title, aliases, tags and headings, and its sections. */
 export interface Doc {
   title: string;
   aliases: string[];
   tags: string[];
+  /** Every heading, its line and text, in order: the index's headings column, and a hit's nearest. */
+  headings: { line: number; text: string }[];
+  /** The sections a hit is cited by, cut to the band (scout's). */
   sections: DocSection[];
+  /**
+   * Where a hit opens is found finer: each heading's own text, uncut and unmerged (a data file's, each
+   * blank-line paragraph) — the band merges a short note into one section, and the hit would open at
+   * any word rather than among most of them.
+   */
+  units: DocLine[][];
+}
+
+/** A text's tokens, approximated as its UTF-8 bytes / 4. */
+function tokensOf(text: string): number {
+  return Buffer.byteLength(text, "utf8") / 4;
+}
+
+/** A node of the containment tree, as it's built and then cut to the band. */
+interface Node {
+  heading: string;
+  level: number;
+  /** Its own lines; text merged into it is appended, a part at a time. */
+  lines: DocLine[];
+  /** Its text as scout hashes and measures it: its own, then each absorbed part, joined by a blank line. */
+  text: string;
+  children: Node[];
+}
+
+/** A name segment, encoded as scout's grammar has it: `%`, `~`, `/`, `#`, in that order. */
+function segment(text: string): string {
+  return text.replaceAll("%", "%25").replaceAll("~", "%7E").replaceAll("/", "%2F").replaceAll("#", "%23");
+}
+
+/** Sibling segments made distinct: a later one normKey-equal to an earlier gets `~2`, `~3`. */
+function distinct(names: string[]): string[] {
+  const seen = new Map<string, number>();
+  return names.map((n) => {
+    const key = n.normalize("NFC").toLowerCase();
+    const k = (seen.get(key) ?? 0) + 1;
+    seen.set(key, k);
+    return k === 1 ? n : `${n}~${k}`;
+  });
+}
+
+/** A text's units for packing: its paragraphs (blank-line runs apart), a fenced block never cut. */
+function units(lines: DocLine[]): DocLine[][] {
+  const out: DocLine[][] = [];
+  let cur: DocLine[] = [];
+  let fence: string | null = null;
+  for (const l of lines) {
+    const f = FENCE.exec(l.text);
+    if (fence) {
+      if (f && f[1]![0] === fence[0] && f[1]!.length >= fence.length) fence = null;
+    } else if (f) fence = f[1]!;
+    else if (!l.text.trim()) {
+      if (cur.length) out.push(cur);
+      cur = [];
+      continue;
+    }
+    cur.push(l);
+  }
+  if (cur.length) out.push(cur);
+  return out;
 }
 
 /**
- * A file read for search: a note's title, aliases and tags, and its sections — cut at its headings
- * (ATX, and setext under a paragraph line), never inside fenced code; its frontmatter is its first
- * section's text (its values are searchable). Other text is cut every 80 lines.
+ * Units packed into band-sized pieces, in order: a piece is flushed when the next unit would take it
+ * over the band's top; a last piece under its bottom goes onto the one before.
+ */
+function pack(us: DocLine[][]): DocLine[][] {
+  const pieces: DocLine[][] = [];
+  let cur: DocLine[] = [];
+  const text = (ls: DocLine[]) => ls.map((l) => l.text).join("\n");
+  for (const u of us) {
+    if (cur.length && tokensOf(`${text(cur)}\n\n${text(u)}`) > BAND_MAX) {
+      pieces.push(cur);
+      cur = [];
+    }
+    cur = [...cur, ...u];
+  }
+  if (cur.length) {
+    if (pieces.length && tokensOf(text(cur)) < BAND_MIN) pieces[pieces.length - 1] = [...pieces[pieces.length - 1]!, ...cur];
+    else pieces.push(cur);
+  }
+  return pieces;
+}
+
+function section(name: string, heading: string, lines: DocLine[], text: string): DocSection {
+  const nums = lines.map((l) => l.line);
+  const tokens = tokensOf(text);
+  return { name, heading, line: nums.length ? Math.min(...nums) : 1, end: nums.length ? Math.max(...nums) : 1, lines, tokens, oversized: tokens > BAND_MAX };
+}
+
+/** Pieces cut from a node over the band: `§:part` (`§:chunk` with no structure), `~2`, `~3` — each kept. */
+function pieces(prefix: string, kind: "part" | "chunk", heading: string, lines: DocLine[]): DocSection[] {
+  const cut = pack(units(lines));
+  return cut.map((p, i) => section(`${prefix}§:${kind}${i ? `~${i + 1}` : ""}`, heading, p, p.map((l) => l.text).join("\n")));
+}
+
+/**
+ * The tree cut to the band, bottom-up: each node on its own tokens — in the band, kept; over, split at
+ * paragraphs into pieces; under, merged into its parent (heading line and body, after the parent's own
+ * text), which is then tested carrying it. The root is kept whatever its size, split only when over.
+ */
+function cut(root: Node): DocSection[] {
+  const kept: DocSection[] = [];
+  const visit = (node: Node, name: string | null): void => {
+    const names = distinct(node.children.map((c) => segment(c.heading)));
+    node.children.forEach((child, i) => {
+      const childName = name === null ? names[i]! : `${name}/${names[i]}`;
+      visit(child, childName);
+      if (tokensOf(child.text) < BAND_MIN) {
+        node.lines.push(...child.lines);
+        node.text = node.text ? `${node.text}\n\n${child.text}` : child.text;
+      } else if (tokensOf(child.text) > BAND_MAX) kept.push(...pieces(`${childName}/`, "part", child.heading, child.lines));
+      else kept.push(section(childName, child.heading, child.lines, child.text));
+    });
+  };
+  visit(root, null);
+  if (tokensOf(root.text) > BAND_MAX) kept.push(...pieces("", "part", "", root.lines));
+  else kept.push(section("§:file", "", root.lines, root.text));
+  return kept.sort((a, b) => a.line - b.line);
+}
+
+/**
+ * A file read for search: a note's title, aliases, tags and headings, and its sections — its
+ * containment tree (headings: ATX, and setext under a paragraph line; never inside fenced code; its
+ * frontmatter and any text before the first heading its root's) cut to the size band. A file with no
+ * headings to cut at (a data file) is one section, or packed into band-sized chunks at blank lines.
  */
 export function indexDoc(rel: string, text: string, group: "note" | "data" | "text"): Doc {
   const lines = text.split(/\r?\n/);
   if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+  const all: DocLine[] = lines.map((t, i) => ({ line: i + 1, text: t }));
   const name = basename(rel).replace(/\.[^.]+$/, "");
   if (group !== "note") {
-    const sections: DocSection[] = [];
-    for (let i = 0; i < lines.length; i += FILE_SECTION) sections.push({ line: i + 1, heading: "", text: lines.slice(i, i + FILE_SECTION).join("\n") });
-    return { title: basename(rel), aliases: [], tags: [], sections };
+    const sections = tokensOf(text) > BAND_MAX ? pieces("", "chunk", "", all) : [section("§:file", "", all, all.map((l) => l.text).join("\n"))];
+    return { title: basename(rel), aliases: [], tags: [], headings: [], sections, units: units(all) };
   }
   let fm: Record<string, unknown> | null = null;
   let body = 0;
@@ -91,46 +238,60 @@ export function indexDoc(rel: string, text: string, group: "note" | "data" | "te
     if (n) tags.add(n);
   }
   let title = typeof fm?.title === "string" && fm.title.trim() ? fm.title.trim() : "";
-  const sections: DocSection[] = [];
-  let cur: { line: number; heading: string; lines: string[] } = { line: 1, heading: "", lines: lines.slice(0, body) };
-  const flush = () => {
-    if (cur.heading || cur.lines.some((l) => l.trim())) sections.push({ line: cur.line, heading: cur.heading, text: cur.lines.join("\n") });
+  const headings: { line: number; text: string }[] = [];
+  // The tree: the root holds the frontmatter and the lead text; a heading owns what follows it, a
+  // lower one nested under it, to the next as high.
+  const root: Node = { heading: "", level: 0, lines: all.slice(0, body), text: "", children: [] };
+  const stack: Node[] = [root];
+  const open = (heading: string, level: number, own: DocLine[]) => {
+    headings.push({ line: own[0]!.line, text: heading });
+    while (stack.length > 1 && stack[stack.length - 1]!.level >= level) stack.pop();
+    const node: Node = { heading, level, lines: own, text: "", children: [] };
+    stack[stack.length - 1]!.children.push(node);
+    stack.push(node);
   };
   let fence: string | null = null;
   for (let i = body; i < lines.length; i++) {
     const line = lines[i]!;
+    const top = stack[stack.length - 1]!;
     const f = FENCE.exec(line);
     if (fence) {
       if (f && f[1]![0] === fence[0] && f[1]!.length >= fence.length && !line.slice(f[0].length).trim()) fence = null;
-      cur.lines.push(line);
+      top.lines.push(all[i]!);
       continue;
     }
     if (f) {
       fence = f[1]!;
-      cur.lines.push(line);
+      top.lines.push(all[i]!);
       continue;
     }
     const atx = ATX.exec(line);
     if (atx) {
-      flush();
       const heading = (atx[2] ?? "").trim();
       if (!title && atx[1] === "#" && heading) title = heading;
-      cur = { line: i + 1, heading, lines: [line] };
+      open(heading, atx[1]!.length, [all[i]!]);
       continue;
     }
     // A setext underline: the paragraph line above it is the heading.
-    if (SETEXT.test(line) && cur.lines.length && i - 1 >= body && !NOT_PARAGRAPH.test(lines[i - 1]!) && cur.line !== i) {
-      const above = cur.lines.pop()!;
-      flush();
-      if (!title && line.trim().startsWith("=")) title = above.trim();
-      cur = { line: i, heading: above.trim(), lines: [above, line] };
+    const above = top.lines[top.lines.length - 1];
+    if (SETEXT.test(line) && above && above.line === i && i - 1 >= body && !NOT_PARAGRAPH.test(lines[i - 1]!) && !(top !== root && top.lines.length === 1)) {
+      top.lines.pop();
+      if (!title && line.trim().startsWith("=")) title = above.text.trim();
+      open(above.text.trim(), line.trim().startsWith("=") ? 1 : 2, [above, all[i]!]);
       continue;
     }
     for (const t of tagsInLine(line)) tags.add(t.name);
-    cur.lines.push(line);
+    top.lines.push(all[i]!);
   }
-  flush();
-  return { title: title || name, aliases: [...strings(fm?.aliases), ...strings(fm?.alias)], tags: [...tags], sections };
+  // Each node's own text, before the band merges any: where a hit opens is found among these.
+  const own: DocLine[][] = [];
+  const textOf = (n: Node) => {
+    n.text = n.lines.map((l) => l.text).join("\n");
+    if (n.lines.length) own.push([...n.lines]);
+    n.children.forEach(textOf);
+  };
+  textOf(root);
+  return { title: title || name, aliases: [...strings(fm?.aliases), ...strings(fm?.alias)], tags: [...tags], headings, sections: cut(root), units: own };
 }
 
 /** The files search reads, as the walk last saw them: notes and data files. */
@@ -168,7 +329,7 @@ export function indexFile(g: Graph, idx: SearchIndex, rel: string, group?: "note
   try {
     const text = readText(g.abs(rel)).text;
     const d = indexDoc(rel, text, kind);
-    idx.put(rel, { group: kind, title: d.title, aliases: d.aliases, tags: d.tags, headings: d.sections.map((x) => x.heading).filter(Boolean), body: text }, { size: st.size, mtime: st.mtimeMs });
+    idx.put(rel, { group: kind, title: d.title, aliases: d.aliases, tags: d.tags, headings: d.headings.map((h) => h.text).filter(Boolean), body: text }, { size: st.size, mtime: st.mtimeMs });
   } catch {
     idx.remove(rel);
   }
@@ -304,8 +465,13 @@ export interface SearchHit {
   /** Where to open it: the first line with one of the words, in the section with most of them (1-based), and its column. */
   line: number;
   column: number;
-  /** That section's heading. */
+  /** The nearest heading at or above that line ("" above the first). */
   heading: string;
+  /**
+   * The section it's in, as scout names and bounds it (Stage 4): a scout result for the same file
+   * and range is the same hit — what a search that adds scout's results dedupes on.
+   */
+  section: { name: string; line: number; end: number };
   /** Higher is better. */
   score: number;
   /** That line, cut around the match; `marks` say where the words are in it. */
@@ -361,14 +527,16 @@ const SNIPPET = 120;
  */
 function locate(path: string, group: "note" | "data", text: string, score: number, q: SearchQuery): SearchHit {
   const pos = q.terms.filter((t) => !t.not && !t.title);
-  let best: { found: number; line: number; column: number; heading: string; raw: string } | null = null;
+  const doc = indexDoc(path, text, group);
+  let best: { found: number; line: number; column: number; raw: string } | null = null;
   let withWords = 0;
-  for (const s of indexDoc(path, text, group).sections) {
-    const lines = s.text.split("\n");
+  // The unit with most of the words (a heading's own text), at its first line with one.
+  for (const u of doc.units) {
     const seen = new Set<QueryTerm>();
     let first: { line: number; column: number; raw: string } | null = null;
-    for (let k = 0; k < lines.length && seen.size < pos.length; k++) {
-      const { folded, at } = fold(lines[k]!);
+    for (const l of u) {
+      if (seen.size >= pos.length) break;
+      const { folded, at } = fold(l.text);
       let col = -1;
       for (const t of pos) {
         const o = occurrences(folded, t)[0];
@@ -376,14 +544,19 @@ function locate(path: string, group: "note" | "data", text: string, score: numbe
         seen.add(t);
         if (col < 0 || o < col) col = o;
       }
-      if (col >= 0 && !first) first = { line: s.line + k, column: [...lines[k]!.slice(0, at[col])].length + 1, raw: lines[k]! };
+      if (col >= 0 && !first) first = { line: l.line, column: [...l.text.slice(0, at[col])].length + 1, raw: l.text };
     }
     if (!first) continue;
     withWords++;
-    if (!best || seen.size > best.found) best = { found: seen.size, ...first, heading: s.heading };
+    if (!best || seen.size > best.found) best = { found: seen.size, ...first };
   }
-  if (!best) return { path, line: 1, column: 1, heading: "", score, snippet: "", marks: [], more: 0 };
-  return { path, line: best.line, column: best.column, heading: best.heading, score, ...snippetOf(best.raw, pos), more: withWords - 1 };
+  // Cited by the band's section holding that line (scout's, for a search adding its results to dedupe).
+  const at = best?.line ?? 1;
+  const s = doc.sections.find((x) => x.lines.some((l) => l.line === at)) ?? doc.sections[0]!;
+  const section = { name: s.name, line: s.line, end: s.end };
+  if (!best) return { path, line: 1, column: 1, heading: "", section, score, snippet: "", marks: [], more: 0 };
+  const heading = doc.headings.filter((h) => h.line <= best!.line).at(-1)?.text ?? "";
+  return { path, line: best.line, column: best.column, heading, section, score, ...snippetOf(best.raw, pos), more: withWords - 1 };
 }
 
 /** A line as a snippet: white space run together, cut to about 120 characters around its first match, the words marked. */
@@ -421,7 +594,8 @@ export function search(g: Graph, idx: SearchIndex | null, input: string, opts: {
     // Filters alone: the files they keep, by path.
     if (!q.tags.length && !q.paths.length) return { engine, relaxed: false, hits: [] };
     const files = idx ? idx.filesWhere({ tags: q.tags, pathPrefix: q.paths, limit }) : scanFiles(g, q, opts.texts).slice(0, limit);
-    return { engine, relaxed: false, hits: files.map((path) => ({ path, line: 1, column: 1, heading: "", score: 0, snippet: "", marks: [], more: 0 })) };
+    // Nothing read: the file's top stands for where it's hit.
+    return { engine, relaxed: false, hits: files.map((path) => ({ path, line: 1, column: 1, heading: "", section: { name: "§:file", line: 1, end: 1 }, score: 0, snippet: "", marks: [], more: 0 })) };
   }
   if (!idx) return scanSearch(g, q, limit, opts.texts, opts.only, opts.relax ?? true);
   for (const relaxed of [false, true]) {
@@ -481,7 +655,7 @@ function scanSearch(g: Graph, q: SearchQuery, limit: number, texts?: Map<string,
   const cands: { f: Scanned; counts: number[][] }[] = [];
   for (const f of files) {
     const d = f.doc;
-    const fields = [d.title, d.aliases.join("\n"), d.tags.join("\n"), f.path, d.sections.map((x) => x.heading).join("\n"), f.text].map((x) => fold(x).folded);
+    const fields = [d.title, d.aliases.join("\n"), d.tags.join("\n"), f.path, d.headings.map((h) => h.text).join("\n"), f.text].map((x) => fold(x).folded);
     const count = (t: QueryTerm) => fields.map((x, k) => (t.title && k > 1 ? 0 : occurrences(x, t).length));
     if (neg.some((t) => count(t).some((n) => n > 0))) continue;
     cands.push({ f, counts: pos.map(count) });

@@ -301,6 +301,20 @@ search, the graph) will sit behind the same API when it's there; slipbox's is th
   embeds, where the default entry would look for the build machine's `node_modules` at run time.
 - **A row per file, not per section.** A search's words are a note's, wherever in it; with a row per section, words
   in two sections of one note found nothing. The hit still opens at the section with most of the words.
+- **Sections are scout's** (since 2026-10-01, scout's Stage 4; before, a data file was cut every 80 lines): a file's
+  containment tree — a root (`§:file`: the frontmatter and what comes before the first heading), each heading owning
+  what follows to the next as high, never cut in fenced code — cut to a size band on each node's **own** tokens
+  (bytes / 4, its text without its sub-sections'): from 400 to 1500 kept; over, split at paragraphs into `§:part`
+  pieces (a fenced block one unit, kept whole and marked oversized when it alone is over; a last piece under 400
+  onto the one before); under, merged into its parent, bottom-up, the parent then tested carrying it. The root is
+  always kept. A data file, with no headings, is one section or band-sized `§:chunk`s at blank lines. Names are
+  scout's (`Auth/How auth works`, `§:part~2`; `%`, `~`, `/`, `#` encoded; a repeated name `~2` by `normKey`). So a
+  hit carries the section it's in, name and line range, as scout would cite it: a scout result for the same file and
+  range is the same hit. Two models agree that way, and tier 2 can append scout's results deduped on them.
+- **Where a hit opens is found finer than the band**: among each heading's own text, uncut (a data file's, each
+  paragraph). The band merges a short note — the commonest — into its root, and a hit found only in band sections
+  opens at any of the words rather than where most are: measured on this suite, `alpha beta` opened at a line with
+  only `alpha`. The matching itself is unchanged (a row per file).
 - **Read by a quick pass over the lines**, not the markdown parser: frontmatter, headings outside code, tags, the text
   as written. The tokenizer skips the markup; the parser would make a first build of a big vault take a minute.
 - **Kept current two ways.** Each catch-up compares every file's size and mtime with the index's — whoever changed

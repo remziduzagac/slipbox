@@ -104,7 +104,7 @@ These churn freely before 1.0:
 | `themes` | `[{name, source, path?, current}]` |
 | `commands` | `[{id, title, cli, desc}]` — the registry with CLI equivalents |
 | `find <query> [note]` | `{query, regex, whole, count, matches[{path, line, column, match, text}]}` |
-| `search <words…>` | `{query, engine, relaxed, hits[{path, line, column, heading, score, snippet, marks, more}]}` |
+| `search <words…>` | `{query, engine, relaxed, hits[{path, line, column, heading, section, score, snippet, …}]}` |
 | `index` | `{path, rebuilt, indexed, removed, files, ms}` |
 | `replace <note> <old> <new>` | `{path, count, dryRun, sha, newSha, changes[{line, before, after}]}` |
 | `task <note>` | `{path, sha, tasks[{line, checked, text, raw}]}` |
@@ -293,6 +293,9 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   can't read, is made again. A loose folder (the home vault) keeps none: it's scanned.
 - **`[search] engine`**: `auto` (the index when it's built, else a scan), `index` (built first when there's none),
   `scan` (never an index).
+- **A hit's `section`** is the section it's in, as scout names and bounds it (`{name, line, end}`: `Auth/Setup`,
+  `§:file`, `§:part~2`) — the size band's, not the line's heading (that's `heading`); `docs/design/decisions.md`,
+  `6.1`, says how files are cut.
 - **`find`** is the other tool: every match of a literal or a regex, not ranked.
 
 ## Renames (plans `17.15`, `7.1`–`7.4`)
