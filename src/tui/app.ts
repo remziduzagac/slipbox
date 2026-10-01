@@ -9,7 +9,9 @@
 // This module does not import OpenTUI. It draws through `Canvas` and talks to the terminal
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
-import { commentLinks, grammarFor, grammarNow, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
+import { pathToFileURL } from "node:url";
+import { commentLinks, grammarFor, grammarNow, type OutlineEntry, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
+import { type DocumentSymbol, type SymbolInformation, SymbolKind } from "vscode-languageserver-protocol";
 import { onLoaded } from "../core/lazy.ts";
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
@@ -1052,6 +1054,22 @@ export class App {
     process.once("exit", () => this.servers?.killAll());
   }
 
+  /**
+   * A file's symbols from its language server, as its outline (19.14) — only for a file tree-sitter
+   * has no outline of (16.8): tree-sitter's is there at once, and leaves out the variables a server lists.
+   */
+  async serverSymbols(buf: NoteBuffer): Promise<void> {
+    const s = this.servers;
+    if (!s || buf.kind.group === "note" || grammarFor(buf.kind.format, extensionOf(buf.name))) return;
+    const version = buf.version;
+    const answer = await s.request<DocumentSymbol[] | SymbolInformation[]>(buf.abs, "textDocument/documentSymbol", { textDocument: { uri: pathToFileURL(buf.abs).href } }, "documentSymbolProvider");
+    if (!answer || buf.version !== version) return;
+    buf.serverOutline = outlineOf(answer.result);
+    buf.invalidateLayouts();
+    for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+    this.host.requestRender();
+  }
+
   /** A file's servers told about it: opened the first time it's shown, its text again 150 ms after
    *  typing pauses — never per key. */
   ensureServers(buf: NoteBuffer): void {
@@ -1059,12 +1077,14 @@ export class App {
     if (!s || buf.virtual || buf.deleted || buf.serverVersion === buf.version || this.serverTimers.has(buf)) return;
     if (!s.isOpen(buf.abs)) {
       buf.serverVersion = buf.version;
-      return s.open(buf.abs, buf.version, buf.source);
+      s.open(buf.abs, buf.version, buf.source);
+      return void this.serverSymbols(buf);
     }
     const t = setTimeout(() => {
       this.serverTimers.delete(buf);
       buf.serverVersion = buf.version;
       s.change(buf.abs, buf.version, buf.source);
+      void this.serverSymbols(buf);
     }, 150);
     (t as { unref?: () => void }).unref?.();
     this.serverTimers.set(buf, t);
@@ -7032,4 +7052,21 @@ export function computeFind(layout: Layout, query: string, current = 0, whole = 
     }
   }
   return { query, matches, current: Math.min(current, Math.max(0, matches.length - 1)), whole, regex, error };
+}
+
+/** A symbol's kind by its number, as the outline names it (`function`, `class`). */
+const KIND_NAMES: Record<number, string> = Object.fromEntries(Object.entries(SymbolKind).map(([name, n]) => [n, name.toLowerCase()]));
+
+/** A server's symbols as an outline: nested ones (`DocumentSymbol`) by their depth, flat ones in line order. */
+function outlineOf(symbols: DocumentSymbol[] | SymbolInformation[]): OutlineEntry[] {
+  const out: OutlineEntry[] = [];
+  const walk = (list: DocumentSymbol[], depth: number) => {
+    for (const d of [...list].sort((a, b) => a.selectionRange.start.line - b.selectionRange.start.line)) {
+      out.push({ name: d.name, kind: KIND_NAMES[d.kind] ?? "symbol", line: d.selectionRange.start.line + 1, depth });
+      if (d.children?.length) walk(d.children, depth + 1);
+    }
+  };
+  if (symbols.length && "selectionRange" in symbols[0]!) walk(symbols as DocumentSymbol[], 0);
+  else for (const i of [...(symbols as SymbolInformation[])].sort((a, b) => a.location.range.start.line - b.location.range.start.line)) out.push({ name: i.name, kind: KIND_NAMES[i.kind] ?? "symbol", line: i.location.range.start.line + 1, depth: 0 });
+  return out;
 }

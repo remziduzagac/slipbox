@@ -17,6 +17,7 @@ conn.onInitialize((p) => ({
     hoverProvider: true,
     definitionProvider: true,
     referencesProvider: true,
+    documentSymbolProvider: true,
     ...(pull ? { diagnosticProvider: { interFileDependencies: false, workspaceDiagnostics: false } } : {}),
   },
   serverInfo: { name: `fake (root ${p.rootUri})` },
@@ -66,5 +67,18 @@ const linesWith = (uri: string, word: string) =>
   (docs.get(uri)?.getText().split("\n") ?? []).flatMap((l, i) => (l.includes(word) ? [{ uri, range: { start: { line: i, character: l.indexOf(word) }, end: { line: i, character: l.indexOf(word) + word.length } } }] : []));
 conn.onDefinition((p) => linesWith(p.textDocument.uri, "DEF")[0] ?? null);
 conn.onReferences((p) => linesWith(p.textDocument.uri, "REF"));
+// Symbols: each `function NAME` line, its `method NAME` lines nested under it.
+conn.onDocumentSymbol((p) => {
+  const out: { name: string; kind: number; range: unknown; selectionRange: unknown; children: unknown[] }[] = [];
+  (docs.get(p.textDocument.uri)?.getText().split("\n") ?? []).forEach((l, i) => {
+    const m = /^\s*(function|method) (\w+)/.exec(l);
+    if (!m) return;
+    const range = { start: { line: i, character: 0 }, end: { line: i, character: l.length } };
+    const sym = { name: m[2]!, kind: m[1] === "function" ? 12 : 6, range, selectionRange: range, children: [] };
+    if (m[1] === "method" && out.length) out[out.length - 1]!.children.push(sym);
+    else out.push(sym);
+  });
+  return out as never;
+});
 docs.listen(conn);
 conn.listen();

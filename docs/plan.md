@@ -564,7 +564,7 @@ source shown alike in every mode.*
 | 19.11 | **Done.** Toggles (`space u d`, `shift+d`) and `[diagnostics]`; the status line takes every source |
 | 19.12 | **Done** (hover; signature help with completion, `19.16`). Hover in a float |
 | 19.13 | **Done** (definition, references). A jump, or a list when there are several; implementation and types later |
-| 19.14 | Document and workspace symbols: the outline and the switcher take the server's when there is one |
+| 19.14 | **Done** (the outline; the vault's symbols with `19.22`). The server's symbols where tree-sitter has none |
 | 19.15 | Rename, code actions, formatting: through `App.writeBuffer`, previewed like slipbox's renames |
 | 19.16 | Completion in insert mode |
 | 19.17 | Several servers per file: a main one and add-ons, merged; Helix's `only-features` to split the work |

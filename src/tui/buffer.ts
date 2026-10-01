@@ -79,6 +79,8 @@ export class NoteBuffer {
   serverProblems = new Map<string, { version: number; list: Problem[] }>();
   /** The version of its text its servers were last told. */
   serverVersion = -1;
+  /** Its language server's symbols as an outline (19.14), for a file tree-sitter has none of. */
+  serverOutline: OutlineEntry[] | null = null;
 
   /** The text's parse, running on other threads (15.1): until it lands, a view shows it's reading. */
   parsing: Promise<void> | null = null;
@@ -372,7 +374,9 @@ export class NoteBuffer {
       // are highlighted by their language, with no headings from the text (a `# comment` in a
       // shell script is no heading) — a source file's outline (16.8) stands in for them.
       const note = this.kind.group === "note" ? readerFor(this.kind.format) : null;
-      const code = this.syntax ? this.syntax.outline.map((o) => ({ level: Math.min(6, o.depth + 1), text: o.name, slug: slugify(o.name), src: o.line })) : [];
+      // Tree-sitter's outline where it has one; else the language server's symbols (19.14).
+      const outline = this.syntax?.outline.length ? this.syntax.outline : (this.serverOutline ?? []);
+      const code = outline.map((o) => ({ level: Math.min(6, o.depth + 1), text: o.name, slug: slugify(o.name), src: o.line }));
       const fromParse = () => headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line }));
       const headings = !note ? code : parsed ? fromParse() : note.language === null ? "scan" : note.scanHeadings(this.source);
       const spans = this.syntax?.spans;

@@ -1056,6 +1056,11 @@ once, in this vault or outside it (a dependency's types open as a loose file), s
 follows the link. `g r` lists the references, each `file:line` with the line's text, to pick from; in a note, its
 backlinks. A file with no server says so, and `slipbox doctor` says which it would have.
 
+A file tree-sitter has no outline of (`16.8`: CSS, YAML, PHP, Swift…) takes its language server's symbols as its
+outline and breadcrumb (`19.14`), nested as the server nests them, asked for when it opens and again after each change
+reaches the server. Where tree-sitter has one, it stays: it's there at once, and leaves out the variables and
+properties a server lists.
+
 ## Problems where they are (plans `19.8`–`19.11`)
 
 A file's problems, from every source alike, show where they are, in source mode, the lens and the rendered view: its

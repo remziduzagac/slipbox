@@ -7467,6 +7467,20 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     await h.app.servers!.stopAll();
   });
 
+  test("a file tree-sitter has no outline of takes its server's symbols as its outline, nested; again as it changes (19.14)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "function first\n  method inner\nfunction second\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    h.app.startServers();
+    h.frame();
+    const outline = () => h.app.outlineRows().map((r) => `${r.level}:${r.text}`);
+    expect(await until(() => (h.frame(), outline().length === 3))).toBe(true);
+    expect(outline()).toEqual(["1:first", "2:inner", "1:second"]);
+    h.app.view!.buf.edit(h.app.view!.buf.source.length, 0, "function third\n");
+    expect(await until(() => (h.frame(), outline().length === 4))).toBe(true);
+    await h.app.servers!.stopAll();
+  });
+
   test("in a note slipbox answers itself: shift+k where a link lands, g d follows it, g r its backlinks", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });
