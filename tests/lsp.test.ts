@@ -17,6 +17,8 @@ import {
   DidChangeTextDocumentNotification,
   DidCloseTextDocumentNotification,
   DidOpenTextDocumentNotification,
+  type DocumentSymbol,
+  DocumentSymbolRequest,
   ExitNotification,
   HoverRequest,
   InitializedNotification,
@@ -30,6 +32,8 @@ import {
   ShutdownRequest,
   StreamMessageReader,
   StreamMessageWriter,
+  type WorkspaceSymbol,
+  WorkspaceSymbolRequest,
 } from "vscode-languageserver-protocol/node";
 import { LspServer } from "../src/lsp/server.ts";
 import { VERSION } from "../src/version.ts";
@@ -428,5 +432,26 @@ describe("diagnostics (11.5)", () => {
     };
     expect(await run(false)).toEqual([]);
     expect(await run(true)).toEqual(["0:2 2 MD041 first-line-heading: First line"]);
+  });
+});
+
+describe("symbols (11.6)", () => {
+  test("a note's outline: headings nested by level, each spanning its section; the vault's notes and headings by query", async () => {
+    const root = folder({
+      "a.md": "# A\n\nintro\n\n## One\n\ntext\n\n### Deep\n\nmore\n\n## Two\n\nlast\n",
+      "b.md": "---\naliases: [Second]\n---\n# Bravo\n\n## Deep water\n",
+    });
+    const s = await session([root]);
+    const outline = (await s.client.sendRequest(DocumentSymbolRequest.type, { textDocument: { uri: uri(join(root, "a.md")) } })) as DocumentSymbol[];
+    const tree = (list: DocumentSymbol[]): unknown[] => list.map((d) => [d.name, d.range.start.line, d.range.end.line, ...(d.children?.length ? [tree(d.children)] : [])]);
+    expect(tree(outline)).toEqual([["A", 0, 14, [["One", 4, 11, [["Deep", 8, 11]]], ["Two", 12, 14]]]]);
+    expect(outline[0]!.selectionRange).toEqual({ start: { line: 0, character: 0 }, end: { line: 0, character: 3 } });
+    expect(await until(() => s.server.vaults.has(root))).toBe(true);
+    const find = async (query: string) =>
+      ((await s.client.sendRequest(WorkspaceSymbolRequest.type, { query })) as WorkspaceSymbol[]).map((w) => `${w.name} ${w.containerName}`);
+    expect(await find("")).toEqual(["A a.md", "Bravo b.md"]); // the notes; headings only for a query
+    expect(await find("second")).toEqual(["Bravo b.md"]); // by alias
+    expect(await find("deep")).toEqual(["Deep a.md", "Deep water b.md"]);
+    expect(await s.end()).toBe(0);
   });
 });

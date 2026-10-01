@@ -86,5 +86,8 @@ Every answer is about a note as the editor has it, and a request takes its lates
   With `[lsp] lint = true`, the lint surface's findings (`3.21`) join them as warnings from `markdownlint`, run when
   a note opens and when it's saved, and shown only while its text is what was linted. Off by default: the editor
   most likely runs that linter already.
+- **Symbols** (`11.6`): a note's outline is its headings, each holding the ones under it and spanning its section
+  (to the next heading as high, or the note's end). Across the vault, a query finds the notes whose name, title or
+  alias holds every word, then the headings that do — notes first, 200 at most; an empty query lists the notes.
 
-Still to come: symbols (`11.6`), renames (`11.4`, `11.9`, `11.10`) and code actions (`11.11`).
+Still to come: renames (`11.4`, `11.9`, `11.10`) and code actions (`11.11`).

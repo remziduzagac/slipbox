@@ -17,7 +17,7 @@ import { findVaultRoot, recordLocation, rootAt, type VaultLocation, vaultConfigP
 import { applyToGraph, VaultFeed } from "../core/vault-feed.ts";
 import { VaultWatcher } from "../core/watch.ts";
 import { VERSION } from "../version.ts";
-import { completion, definition, diagnostics, hover, references } from "./features.ts";
+import { completion, definition, diagnostics, documentSymbols, hover, references, workspaceSymbols } from "./features.ts";
 
 export interface LspOptions {
   input: NodeJS.ReadableStream;
@@ -100,6 +100,8 @@ export class LspServer {
     this.connection.onCompletion((p) =>
       this.asked(p.textDocument.uri, (g, rel) => completion(g, rel, this.lineOf(p.textDocument.uri, g, rel, p.position.line), p.position), null),
     );
+    this.connection.onDocumentSymbol((p) => this.asked(p.textDocument.uri, (g, rel) => documentSymbols(g, rel), []));
+    this.connection.onWorkspaceSymbol((p) => this.everywhere((g) => workspaceSymbols(g, p.query)));
     this.connection.onHover((p) => this.asked(p.textDocument.uri, (g, rel) => hover(g, rel, p.position), null));
     this.connection.onReferences((p) => this.asked(p.textDocument.uri, (g, rel) => references(g, rel, p.position, p.context.includeDeclaration), []));
     this.connection.listen();
@@ -118,6 +120,8 @@ export class LspServer {
         definitionProvider: true,
         referencesProvider: true,
         hoverProvider: true,
+        documentSymbolProvider: true,
+        workspaceSymbolProvider: true,
         completionProvider: { triggerCharacters: ["[", "#", "^"] },
       },
       serverInfo: { name: "slipbox", version: VERSION },
@@ -286,6 +290,20 @@ export class LspServer {
       this.log(`${n.rel}: ${(err as Error).stack ?? err}`);
       return none;
     }
+  }
+
+  /** A question for every served vault, the answers together; a vault that fails is logged and skipped. */
+  private everywhere<T>(answer: (g: Graph) => T[]): T[] {
+    for (const d of this.documents.all()) this.fresh(d.uri);
+    const out: T[] = [];
+    for (const s of this.vaults.values()) {
+      try {
+        out.push(...answer(s.graph));
+      } catch (err) {
+        this.log(`${s.loc.root}: ${(err as Error).stack ?? err}`);
+      }
+    }
+    return out;
   }
 
   /** A line of a note: the editor's document's, else the file's. */

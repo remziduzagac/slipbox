@@ -4,7 +4,7 @@
 
 import { isAbsolute, posix } from "node:path";
 import { pathToFileURL } from "node:url";
-import { type CompletionItem, CompletionItemKind, type CompletionList, type Diagnostic, DiagnosticSeverity, type Hover, type Location, type Position, type Range } from "vscode-languageserver";
+import { type CompletionItem, CompletionItemKind, type CompletionList, type Diagnostic, DiagnosticSeverity, type DocumentSymbol, type Hover, type Location, type Position, type Range, SymbolKind, type WorkspaceSymbol } from "vscode-languageserver";
 import type { Graph, LinkRef, Pos, ResolvedLink } from "../core/graph.ts";
 import { blockIds, landingLine, landingText } from "../core/landing.ts";
 import { slugify } from "../core/parse.ts";
@@ -312,4 +312,54 @@ export function diagnostics(g: Graph, rel: string): Diagnostic[] {
     });
   }
   return out;
+}
+
+/** A note's outline (11.6): its headings, each holding the ones under it, its range its whole section. */
+export function documentSymbols(g: Graph, rel: string): DocumentSymbol[] {
+  const headings = (g.entry(rel)?.headings ?? []).filter((h) => h.text.trim());
+  const lines = (g.textOf(rel) ?? "").split("\n").map((l) => l.replace(/\r$/, ""));
+  const lastLine = Math.max(0, lines.length - (lines.at(-1) === "" ? 2 : 1));
+  const top: DocumentSymbol[] = [];
+  const open: { depth: number; sym: DocumentSymbol }[] = [];
+  headings.forEach((h, i) => {
+    // Its section ends before the next heading as high, or at the note's end.
+    const next = headings.slice(i + 1).find((x) => x.depth <= h.depth);
+    const end = next ? next.line - 2 : lastLine;
+    const line = h.line - 1;
+    const sym: DocumentSymbol = {
+      name: h.text,
+      detail: "#".repeat(h.depth),
+      kind: SymbolKind.String,
+      range: { start: { line, character: 0 }, end: { line: Math.max(line, end), character: lines[Math.max(line, end)]?.length ?? 0 } },
+      selectionRange: { start: { line, character: 0 }, end: { line, character: lines[line]?.length ?? 0 } },
+      children: [],
+    };
+    while (open.length && open[open.length - 1]!.depth >= h.depth) open.pop();
+    (open.length ? open[open.length - 1]!.sym.children! : top).push(sym);
+    open.push({ depth: h.depth, sym });
+  });
+  return top;
+}
+
+/** At most this many symbols for a query across the vault. */
+const WORKSPACE_MAX = 200;
+
+/** The vault's notes — by name, title or alias — and headings that hold every word of a query (11.6). */
+export function workspaceSymbols(g: Graph, query: string): WorkspaceSymbol[] {
+  g.ensureAll();
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const has = (...fields: string[]) => words.every((w) => fields.some((f) => f.toLowerCase().includes(w)));
+  const notes: WorkspaceSymbol[] = [];
+  const headings: WorkspaceSymbol[] = [];
+  for (const [path, e] of [...g.notes].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    const uri = uriOf(g, path);
+    if (has(posix.basename(path).replace(NOTE_EXT, ""), e.title, ...e.aliases)) {
+      notes.push({ name: e.title, kind: SymbolKind.File, containerName: path, location: { uri, range: lineRange(1) } });
+    }
+    for (const h of e.headings) {
+      if (h.text.trim() && words.length && has(h.text)) headings.push({ name: h.text, kind: SymbolKind.String, containerName: path, location: { uri, range: lineRange(h.line) } });
+    }
+  }
+  // Notes first: a name is what's looked for most often.
+  return [...notes, ...headings].slice(0, WORKSPACE_MAX);
 }

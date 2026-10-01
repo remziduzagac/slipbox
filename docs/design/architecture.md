@@ -106,7 +106,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `cli/cli.ts` | 9.1–9.6 | the CLI face |
 | `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |
 | `lsp/server.ts` | 11.x | the LSP face: `slipbox lsp`, a graph per vault served to an editor ([lsp.md](lsp.md)) |
-| `lsp/features.ts` | 11.3–11.6 | its answers: definition, references, hover, completion; the protocol's positions |
+| `lsp/features.ts` | 11.3–11.6 | its answers: links followed and found, hover, completion, problems, symbols |
 | `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
 | `tui/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
