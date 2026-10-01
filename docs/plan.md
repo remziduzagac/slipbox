@@ -1,9 +1,10 @@
 # slipbox — implementation plan
 
 Status: **phases 0–4 built** — 3b (`16.x`, files beyond markdown) and 4 (vaults, renames, search, git, embeds)
-included; **phase 5 (`11.x`, `19.x`: language servers, both ways) has begun**. Scout (`6.10`) waits for Scout.
-Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3 2026-09-28, phases 3b and 4 by
-2026-10-01 — how it was built is in `docs/design/`, the decisions it needed in `docs/design/decisions.md`.
+included; **phase 5 (`11.x`, `19.x`: language servers, both ways) has begun**. Scout (`6.10`) waits for Scout; how
+slipbox will use it is decided (`docs/design/scout.md`). Captured 2026-09-25, phased 2026-09-25, phases 0–2
+implemented 2026-09-25, phase 3 2026-09-28, phases 3b and 4 by 2026-10-01 — how it was built is in `docs/design/`, the
+decisions it needed in `docs/design/decisions.md`.
 
 The design lives in `docs/idea.md` — what slipbox is, why each decision went the
 way it did, and what was ruled out. This file is the other half: the units of work, with
@@ -464,7 +465,10 @@ common, and the only reason they are step 0.
 | 6.7 | **Done.** The change feed: every change to the vault's files through the graph (`onChange`) |
 | 6.8 | **Done.** `slipbox search` (ranked; the index, else a scan), `slipbox index`; `[search] engine` |
 | 6.9 | **Done.** The TUI keeps the index: built in idle slices, kept by the feed; unsaved notes searched as shown |
-| 6.10 | Scout, an outside engine: behind the same API, told of changes by the feed (`slipbox changes`) |
+| 6.10 | Scout, when it exists: a library behind `import()`; three tiers, appended; its `index()` from the feed |
+| 6.11 | **Done.** better-sqlite3 for the index (scout's binding too): its own SQLite; Bun 1.4.2 and up |
+| 6.12 | **Done.** Sections are scout's: the containment tree cut to the 400–1500 band; a hit cites its section |
+| 6.13 | `@slipbox/links`: the link rules extracted into a package scout shares — a scout-blocking prerequisite |
 
 ## Write safety — `7.x`
 
