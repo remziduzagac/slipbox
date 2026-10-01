@@ -32,9 +32,11 @@ import {
   type Range,
   ReferencesRequest,
   RenameRequest,
+  ShowMessageNotification,
   ShutdownRequest,
   StreamMessageReader,
   StreamMessageWriter,
+  WillRenameFilesRequest,
   type WorkspaceEdit,
   type WorkspaceSymbol,
   WorkspaceSymbolRequest,
@@ -581,5 +583,53 @@ describe("renaming a heading (11.9)", () => {
     await client.sendRequest(ShutdownRequest.type);
     await client.sendNotification(ExitNotification.type);
     expect(await server.exited).toBe(0);
+  });
+});
+
+describe("a file moved in the editor (11.10)", () => {
+  /** The edit applied as an editor applies it before moving: each file's edits; never a move. */
+  const applyEdits = (edit: WorkspaceEdit | null) => {
+    for (const c of edit?.documentChanges ?? []) {
+      expect("kind" in c).toBe(false);
+      const d = c as { textDocument: { uri: string }; edits: { range: Range; newText: string }[] };
+      const path = fileURLToPath(d.textDocument.uri);
+      writeFileSync(path, TextDocument.applyEdits(TextDocument.create("", "", 0, readFileSync(path, "utf8")), d.edits));
+    }
+  };
+
+  test("a note and a folder moved: every link fixed before the editor moves them; a vault leaving, nothing", async () => {
+    const root = folder({
+      "a.md": "# A\n\n[[b]] and [p](people/kenji.md) and [[people/kenji]]\n",
+      "b.md": "# B\n",
+      "people/kenji.md": "# Kenji\n\n[[../a]]\n",
+    });
+    const s = await session([root]);
+    expect(s.init.capabilities.workspace?.fileOperations?.willRename?.filters[0]!.pattern.glob).toBe("**/*");
+    const willRename = (files: [string, string][]) =>
+      s.client.sendRequest(WillRenameFilesRequest.type, { files: files.map(([a, b]) => ({ oldUri: uri(join(root, a)), newUri: uri(join(root, b)) })) });
+    applyEdits(await willRename([["b.md", "bee.md"]]));
+    renameSync(join(root, "b.md"), join(root, "bee.md"));
+    expect(readFileSync(join(root, "a.md"), "utf8")).toBe("# A\n\n[[bee]] and [p](people/kenji.md) and [[people/kenji]]\n");
+    expect(readFileSync(join(root, "bee.md"), "utf8")).toContain("previous_names: [b]");
+    s.server.vaultAt(root)!.feed.receive({ changes: [{ rel: "b.md", kind: "deleted", isNote: true }, { rel: "bee.md", kind: "created", isNote: true }], rescan: false });
+    applyEdits(await willRename([["people", "persons"]]));
+    expect(readFileSync(join(root, "a.md"), "utf8")).toBe("# A\n\n[[bee]] and [p](persons/kenji.md) and [[persons/kenji]]\n");
+    expect(await willRename([["a.md", "../elsewhere.md"]])).toBeNull();
+    expect(await s.end()).toBe(0);
+  });
+
+  test("a file with unsaved changes is left out, and the editor told", async () => {
+    const root = folder({ "a.md": "# A\n\n[[b]]\n", "c.md": "[[b]]\n", "b.md": "# B\n" });
+    const s = await session([root]);
+    const warnings: string[] = [];
+    s.client.onNotification(ShowMessageNotification.type, (p) => {
+      warnings.push(p.message);
+    });
+    await s.client.sendNotification(DidOpenTextDocumentNotification.type, { textDocument: { uri: uri(join(root, "a.md")), languageId: "markdown", version: 1, text: "# A typed\n\n[[b]]\n" } });
+    const edit = await s.client.sendRequest(WillRenameFilesRequest.type, { files: [{ oldUri: uri(join(root, "b.md")), newUri: uri(join(root, "bee.md")) }] });
+    expect(edit!.documentChanges!.map((c) => fileURLToPath((c as { textDocument: { uri: string } }).textDocument.uri).slice(root.length + 1)).sort()).toEqual(["b.md", "c.md"]);
+    expect(await until(() => warnings.length > 0)).toBe(true);
+    expect(warnings[0]).toBe("slipbox: a.md has unsaved changes: links there weren't fixed — slipbox relink fixes them once saved");
+    expect(await s.end()).toBe(0);
   });
 });

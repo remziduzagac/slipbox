@@ -372,6 +372,24 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
 }
 
 /**
+ * Plan the moves an editor makes itself (11.10): files and folders, vault paths old → new, every link
+ * to each fixed — a single note's old name kept, as `planNoteRename` keeps it. Where they land isn't
+ * checked: the editor moves them, and its own checks hold.
+ */
+export function planMoves(g: Graph, pairs: [string, string][]): RenamePlan {
+  const moves = new Map<string, string>();
+  const files = [...g.notes.keys(), ...g.filePaths()];
+  for (const [from, to] of pairs) {
+    if (g.notes.has(from) || g.filePaths().includes(from)) moves.set(from, to);
+    else if (g.dirs.includes(from)) for (const rel of files) if (rel.startsWith(`${from}/`)) moves.set(rel, `${to}${rel.slice(from.length)}`);
+  }
+  if (!moves.size) throw new RenameError("nothing of the vault moves");
+  const [from, to] = pairs[0]!;
+  const one = pairs.length === 1 && g.notes.has(from);
+  return planMove(g, moves, { kind: one ? "note" : "folder", from, to, move: { from: join(g.root, from), to: join(g.root, to), dir: !one } });
+}
+
+/**
  * Plan renaming or moving a folder (18.3): every note and file in it moves with it, and every link to
  * any of them is rewritten — links between two of them that move together stay as they are.
  */

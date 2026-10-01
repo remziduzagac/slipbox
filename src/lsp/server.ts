@@ -13,7 +13,9 @@ import {
   type InitializeParams,
   type InitializeResult,
   LSPErrorCodes,
+  MessageType,
   ResponseError,
+  ShowMessageNotification,
   TextDocuments,
   TextDocumentSyncKind,
   type WatchDog,
@@ -24,10 +26,10 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { type Config, loadConfig } from "../core/config.ts";
 import { type Graph, openGraph } from "../core/graph.ts";
 import { Reach } from "../core/reach.ts";
-import { RenameError } from "../core/rename.ts";
+import { planMoves, RenameError } from "../core/rename.ts";
 import { checkoutOf } from "../core/git.ts";
 import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
-import { findVaultRoot, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { findVaultRoot, isInside, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { applyToGraph, VaultFeed } from "../core/vault-feed.ts";
 import { VaultWatcher } from "../core/watch.ts";
 import { VERSION } from "../version.ts";
@@ -117,6 +119,7 @@ export class LspServer {
     this.connection.onDocumentSymbol((p) => this.asked(p.textDocument.uri, (g, rel) => documentSymbols(g, rel), []));
     this.connection.onWorkspaceSymbol((p) => this.everywhere((g) => workspaceSymbols(g, p.query)));
     this.connection.onPrepareRename((p) => this.asked(p.textDocument.uri, (g, rel) => prepareRename(g, rel, p.position), null));
+    this.connection.workspace.onWillRenameFiles((p) => this.willRename(p.files));
     this.connection.onRenameRequest((p) => this.rename(p.textDocument.uri, p.position, p.newName));
     this.connection.onHover((p) => this.asked(p.textDocument.uri, (g, rel) => hover(g, rel, p.position), null));
     this.connection.onReferences((p) => this.asked(p.textDocument.uri, (g, rel) => references(g, rel, p.position, p.context.includeDeclaration), []));
@@ -137,7 +140,11 @@ export class LspServer {
     return {
       capabilities: {
         textDocumentSync: { openClose: true, change: TextDocumentSyncKind.Incremental, save: { includeText: false } },
-        workspace: { workspaceFolders: { supported: true } },
+        workspace: {
+          workspaceFolders: { supported: true },
+          // A note or folder moved in the editor's file tree: its links fixed first (11.10).
+          fileOperations: { willRename: { filters: [{ scheme: "file", pattern: { glob: "**/*" } }] } },
+        },
         definitionProvider: true,
         referencesProvider: true,
         hoverProvider: true,
@@ -337,6 +344,52 @@ export class LspServer {
     }
     if (plan.move && !this.renamesFiles) return refuse("this editor can't move a file in an edit: rename it in slipbox (space n m) or with slipbox mv");
     return workspaceEdit(plan, (u) => this.documents.get(u)?.version ?? null);
+  }
+
+  /**
+   * Files and folders the editor is about to move itself (11.10): every link to them fixed, as an edit it
+   * applies before moving — never the move. A file with unsaved changes in the editor is left out, and
+   * said so: the edit is made from the files, and `slipbox relink` fixes it once it's saved.
+   */
+  private willRename(files: { oldUri: string; newUri: string }[]): WorkspaceEdit | null {
+    const byVault = new Map<Served, [string, string][]>();
+    for (const f of files) {
+      const from = pathOf(f.oldUri);
+      const to = pathOf(f.newUri);
+      const served = from ? this.vaultAt(from) : null;
+      if (!from || !to || !served) continue;
+      const root = served.loc.root;
+      const rel = (p: string) => relative(root, p).split(sep).join("/");
+      if (!isInside(root, to)) {
+        this.log(`${rel(from)} leaves the vault: links to it aren't fixed`);
+        continue;
+      }
+      byVault.set(served, [...(byVault.get(served) ?? []), [rel(from), rel(to)]]);
+    }
+    const changes: NonNullable<WorkspaceEdit["documentChanges"]> = [];
+    for (const [served, pairs] of byVault) {
+      let plan: ReturnType<typeof planMoves>;
+      try {
+        plan = planMoves(served.graph, pairs);
+      } catch (err) {
+        if (!(err instanceof RenameError)) throw err;
+        this.log(err.message);
+        continue;
+      }
+      const unsaved = plan.files.filter((f) => {
+        const doc = this.documents.get(pathToFileURL(f.abs).href);
+        return doc !== undefined && doc.getText() !== f.text;
+      });
+      if (unsaved.length) {
+        void this.connection.sendNotification(ShowMessageNotification.type, {
+          type: MessageType.Warning,
+          message: `slipbox: ${unsaved.map((f) => f.shown).join(", ")} ${unsaved.length === 1 ? "has" : "have"} unsaved changes: links there weren't fixed — slipbox relink fixes them once saved`,
+        });
+      }
+      const kept = { ...plan, move: null, files: plan.files.filter((f) => !unsaved.includes(f)) };
+      changes.push(...workspaceEdit(kept, (u) => this.documents.get(u)?.version ?? null).documentChanges!);
+    }
+    return changes.length ? { documentChanges: changes } : null;
   }
 
   /** A question for every served vault, the answers together; a vault that fails is logged and skipped. */

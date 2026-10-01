@@ -98,5 +98,11 @@ Every answer is about a note as the editor has it, and a request takes its lates
   the new name is taken. On a heading's line, the heading (`11.9`): its text is what's offered, and the rename is
   `slipbox rename-heading`'s — its line and every link to it, in their forms — an edit with no move, so any editor
   can apply it. Elsewhere there's nothing to rename.
+- **A file moved in the editor** (`11.10`): a note, a file or a folder moved in the editor's file tree — oil.nvim,
+  snacks.nvim's rename (LazyVim's `space c shift+r`), neo-tree with nvim-lsp-file-operations, VS Code — is asked
+  about first (`workspace/willRenameFiles`), and every link to it is fixed in an edit the editor applies before it
+  moves anything; a lone note's old name is kept in its `previous_names`. The move itself is the editor's. A file
+  with unsaved changes in the editor is left out of the edit and the editor told — `slipbox relink` fixes its links
+  once it's saved — and a move out of the vault fixes nothing.
 
-Still to come: a file moved in the editor (`11.10`) and code actions (`11.11`).
+Still to come: code actions (`11.11`).
