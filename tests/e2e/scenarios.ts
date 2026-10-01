@@ -19,6 +19,8 @@ export interface Scenario {
 const HANDBOOK = "handbook/operations-handbook.md";
 const MEETING = "meetings/2026-09-14-weekly.md";
 const TOML = "software/halley/halley.toml";
+/** The repository's own TypeScript 7: a real language server the scenarios can run offline (19.x). */
+const TSC = join(import.meta.dir, "..", "..", "node_modules", ".bin", "tsc");
 
 /** The cursor's line and column, from the status line (`L12:3`). */
 function pos(s: Session): { line: number; col: number } {
@@ -686,6 +688,23 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("enter");
       await s.status("L3:1"); // rendered: the line's start
       await s.status("⚠ MD013 line-length: Line length [Expected: 80]");
+    },
+  },
+  {
+    name: "language servers: a TypeScript file's errors from TypeScript's own server, in the bar and the status line",
+    options: { config: `[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n` },
+    run: async (s) => {
+      s.write("scratch/tool.ts", 'const n: number = "x";\nexport const m = n;\n');
+      await s.ex("e scratch/tool.ts");
+      await s.status("tool.ts");
+      // The error under the cursor, from the server; the bar beside its line.
+      await s.status(/✖ 2322 Type 'string' is not assignable to type 'number'/, 15000);
+      await s.see(/│ ?1 +const n: number/);
+      // Fixed and typed in: gone once it's said so again.
+      await s.keys("f", "\"", "d", "a", "\"", "i");
+      await s.type("1");
+      await s.keys("escape");
+      await s.until(() => !s.statusLine().includes("✖"), 10000, "the error gone with the fix");
     },
   },
   {

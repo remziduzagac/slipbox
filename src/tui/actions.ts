@@ -2,8 +2,9 @@
 // can list them and the parity test can check them; this is where each one does its work. The
 // keys are in keys.ts and docs/design/keymap.md.
 
+import { statSync } from "node:fs";
 import { join, posix, relative } from "node:path";
-import { findVaultRoot, gitRootOf, isNeverRoot } from "../core/vault.ts";
+import { findVaultRoot, gitRootOf, isInside, isNeverRoot } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
@@ -1396,6 +1397,14 @@ export function registerActions(app: App): void {
       // Any other file of the vault, by its path with its extension (16.4), as :e opens it in vim.
       const rel = arg.replace(/^\.?\//, "");
       if (a.graph.filePaths().includes(rel)) return fileLink(a, rel);
+      // There on disk, but the vault hasn't heard of it yet (written a moment ago, the watcher not yet
+      // told): the vault told now, as the watcher would, and it opened as its own.
+      const abs = join(a.loc.root, rel);
+      if (rel && isInside(a.loc.root, abs) && isFile(abs) && walked(a, rel)) {
+        const isNote = classify(rel, a.config.walk.extensions).group === "note";
+        a.applyChanges({ changes: [{ rel, kind: "created", isNote }], rescan: false });
+        return fileLink(a, rel);
+      }
       a.message("warn", `no note or file "${arg}"`);
     },
     // ui
@@ -1605,4 +1614,18 @@ export function registerActions(app: App): void {
     app.registry.register({ id: spec.id, title: spec.title, description: spec.desc, run, hidden: spec.id === "app.escape" });
   }
   for (const id of Object.keys(impl)) if (!app.registry.get(id)) throw new Error(`command ${id} has no spec in core/command-specs.ts`);
+}
+
+function isFile(abs: string): boolean {
+  try {
+    return statSync(abs).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/** Whether the vault's walk takes a path: it and each folder above it (a hidden folder, node_modules, an ignored one aren't). */
+function walked(a: App, rel: string): boolean {
+  const parts = rel.split("/");
+  return parts.every((_, i) => a.graph.filter.exclusion(parts.slice(0, i + 1).join("/"), i < parts.length - 1) === null);
 }

@@ -857,7 +857,9 @@ their files open as text.
 
 - **Opening.** A data or text file opens from the explorer, `ctrl+p`, `:e path`, or a link to it
   (`[config](cfg/app.toml)`, `[[run.py]]`, `[[cfg/app.toml#editor]]` at that section; binary links
-  still copy their path).
+  still copy their path). `:e path` opens a file written a moment ago too, before the watcher has told the vault:
+  the vault learns of it then, as the watcher would have it — if the walk takes it (not hidden, ignored or in
+  `node_modules`).
 - **Data files open rendered** (`16.11`–`16.13`, [rendering.md](rendering.md), "Data files"), with
   source mode a key away and the lens editing a card at a time: in YAML and JSON a key with the
   plain values listed right under it (`defaults` and its settings), in TOML and INI one key — never

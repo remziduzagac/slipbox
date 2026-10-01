@@ -7441,3 +7441,26 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     await h.app.servers!.stopAll();
   });
 });
+
+describe("regression: :e of a file written a moment ago", () => {
+  test("opens it though the vault hasn't heard of it yet (the watcher not yet told); nothing outside the vault", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    writeFileSync(join(root, "fresh.ts"), "export const x = 1;\n");
+    writeFileSync(join(root, "fresh-note.md"), "# Fresh\n");
+    expect(h.app.graph.filePaths()).not.toContain("fresh.ts"); // no watcher here: unknown, as in the race
+    await h.app.run("note.open fresh.ts");
+    expect(h.app.view!.buf.rel).toBe("fresh.ts");
+    await h.app.run("note.open fresh-note.md");
+    expect(h.app.view!.buf.rel).toBe("fresh-note.md");
+    // Nor one the walk leaves out: it isn't the vault's.
+    mkdirSync(join(root, "node_modules"), { recursive: true });
+    writeFileSync(join(root, "node_modules", "dep.ts"), "");
+    await h.app.run("note.open node_modules/dep.ts");
+    expect(h.app.view!.buf.rel).toBe("fresh-note.md");
+    writeFileSync(join(dirname(root), "outside.ts"), "");
+    await h.app.run("note.open ../outside.ts");
+    expect(h.app.view!.buf.rel).toBe("fresh-note.md");
+    expect(h.app.messages.at(-1)!.text).toBe('no note or file "../outside.ts"');
+  });
+});
