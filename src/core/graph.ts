@@ -233,6 +233,10 @@ export class Graph {
       const vanished = Object.values(old).filter((e) => !this.notes.has(e.rel));
       if (vanished.length) this.detectMoves(vanished, walk.files.filter((f) => !old[f.rel]));
     }
+    // An editor's unsaved text stays over the new walk's entries (11.8); a note gone takes its own.
+    const texts = [...this.overlays].map(([rel, o]) => [rel, o.text] as const);
+    this.overlays.clear();
+    for (const [rel, text] of texts) this.overlay(rel, text);
     this.backlinkCache = null;
     this.tagCache = null;
     this.generation++;
@@ -317,7 +321,7 @@ export class Graph {
     if (!this.useCache) return;
     const entries: Record<string, NoteEntry> = {};
     // A read failure is not a fact about the note: never cache it (chmod does not touch mtime).
-    for (const [rel, e] of this.notes) if (!this.unparsed.has(rel) && !isUnreadable(e)) entries[rel] = e;
+    for (const [rel, e] of this.notes) if (!this.unparsed.has(rel) && !isUnreadable(e)) entries[rel] = this.overlays.get(rel)?.disk ?? e;
     try {
       ensureDir(cacheDir(this.loc));
       writeJson(this.cachePath, { version: INDEX_VERSION, entries, branch: this.branchNow() } satisfies IndexFile);
@@ -430,7 +434,10 @@ export class Graph {
     this.unparsed.delete(rel);
     this.cacheDirty = true;
     const entry = extractNote(file);
-    this.notes.set(rel, entry);
+    // An editor's unsaved text still stands for the note: the file's entry is kept behind it.
+    const over = this.overlays.get(rel);
+    if (over) over.disk = entry;
+    else this.notes.set(rel, entry);
     if (isNew && entry.size > 0) this.pairMove(entry.hash, rel, "came");
     if (isNew) this.index.add(rel);
     this.backlinkCache = null;
@@ -481,7 +488,9 @@ export class Graph {
 
   removeFile(rel: string): void {
     this.unparsed.delete(rel);
-    const gone = this.notes.get(rel);
+    // A move is known by the file's text, not by what an editor had of it.
+    const gone = this.overlays.get(rel)?.disk ?? this.notes.get(rel);
+    this.overlays.delete(rel);
     if (!this.notes.delete(rel)) return;
     if (gone && gone.size > 0) this.pairMove(gone.hash, rel, "went");
     this.cacheDirty = true;
@@ -491,6 +500,37 @@ export class Graph {
     this.generation++;
     this.nameCache = null;
     this.emit({ kind: "removed", path: rel });
+  }
+
+  /** Notes an editor has open (11.8): the text it has, and the file's own entry behind it. */
+  private readonly overlays = new Map<string, { disk: NoteEntry; text: string }>();
+
+  /**
+   * A note's text as an editor has it, saved or not (11.8): its links, headings, tags and names count
+   * instead of the file's until `overlay(rel, null)` lets it go. The persisted index keeps the file's,
+   * and no listener hears of it — the file didn't change. A note the graph doesn't know is left alone.
+   */
+  overlay(rel: string, text: string | null): void {
+    const had = this.overlays.get(rel);
+    if (text === null) {
+      if (!had) return;
+      this.overlays.delete(rel);
+      this.notes.set(rel, had.disk);
+    } else {
+      const disk = had?.disk ?? (this.notes.has(rel) ? this.entry(rel) : undefined);
+      if (!disk) return;
+      this.overlays.set(rel, { disk, text });
+      this.notes.set(rel, extractFromSource({ rel, abs: join(this.root, rel), size: disk.size, mtimeMs: disk.mtimeMs }, text, disk.flags));
+    }
+    this.backlinkCache = null;
+    this.tagCache = null;
+    this.generation++;
+    this.nameCache = null;
+  }
+
+  /** Whether an editor's text stands for the note (11.8). */
+  overlaid(rel: string): boolean {
+    return this.overlays.has(rel);
   }
 
   abs(rel: string): string {

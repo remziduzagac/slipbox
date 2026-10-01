@@ -10,6 +10,8 @@ import { PassThrough } from "node:stream";
 import { pathToFileURL } from "node:url";
 import {
   createProtocolConnection,
+  DidChangeTextDocumentNotification,
+  DidCloseTextDocumentNotification,
   DidOpenTextDocumentNotification,
   ExitNotification,
   InitializedNotification,
@@ -176,5 +178,35 @@ describe("the session (11.2)", () => {
     const bad = Bun.spawnSync(["bun", MAIN, "lsp", "--bogus"], { cwd: root, env, stdin: "ignore" });
     expect(bad.exitCode).toBe(2);
     expect(bad.stdout.toString()).toBe("");
+  });
+});
+
+describe("unsaved text (11.8)", () => {
+  test("an open note's text stands for it: at once when opened, after a pause when typed in, gone when closed", async () => {
+    const root = folder({ "a.md": "# A\n", "b.md": "# B\n" });
+    const s = await session([root]);
+    const doc = { uri: uri(join(root, "a.md")), languageId: "markdown", version: 1, text: "# A\n\n[[b]]\n" };
+    const graph = () => s.server.vaultAt(root)!.graph;
+    const backlinks = () => graph().backlinks("b.md").length;
+    await s.client.sendNotification(DidOpenTextDocumentNotification.type, { textDocument: doc });
+    expect(await until(() => s.server.documents.get(doc.uri) !== undefined)).toBe(true);
+    expect(backlinks()).toBe(1); // as it opened, not after a pause
+    await s.client.sendNotification(DidChangeTextDocumentNotification.type, {
+      textDocument: { uri: doc.uri, version: 2 },
+      contentChanges: [{ range: { start: { line: 2, character: 5 }, end: { line: 2, character: 5 } }, text: " [[b]]" }],
+    });
+    await Bun.sleep(30);
+    expect(backlinks()).toBe(1); // still typing
+    expect(await until(() => backlinks() === 2)).toBe(true); // paused
+    await s.client.sendNotification(DidChangeTextDocumentNotification.type, { textDocument: { uri: doc.uri, version: 3 }, contentChanges: [{ text: "# A\n" }] });
+    expect(await until(() => s.server.documents.get(doc.uri)?.version === 3)).toBe(true);
+    s.server.fresh(doc.uri); // a request asking first
+    expect(backlinks()).toBe(0);
+    await s.client.sendNotification(DidChangeTextDocumentNotification.type, { textDocument: { uri: doc.uri, version: 4 }, contentChanges: [{ text: "[[b]]\n" }] });
+    await s.client.sendNotification(DidCloseTextDocumentNotification.type, { textDocument: { uri: doc.uri } });
+    expect(await until(() => !graph().overlaid("a.md"))).toBe(true);
+    await Bun.sleep(200); // nothing left settling
+    expect(backlinks()).toBe(0);
+    expect(await s.end()).toBe(0);
   });
 });

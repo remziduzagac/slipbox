@@ -75,7 +75,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
 | `core/search.ts` | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
 | `core/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
-| `core/graph.ts` | 1.5, 1.8, 1.9, 6.7 | notes, links, backlinks, lazy parsing, persisted index; the change feed |
+| `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |

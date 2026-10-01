@@ -3,6 +3,7 @@
 // the TUI's is. Vaults only (a folder with `.slipbox/`): a markdown file elsewhere is left to
 // whatever else the editor runs there (marksman). Nothing but the protocol reaches stdout.
 
+import { relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConnection, type Connection, type InitializeParams, type InitializeResult, TextDocuments, TextDocumentSyncKind, type WatchDog } from "vscode-languageserver";
 import { createProtocolConnection, StreamMessageReader, StreamMessageWriter } from "vscode-languageserver-protocol/node";
@@ -70,6 +71,19 @@ export class LspServer {
       setTimeout(() => {
         for (const root of this.folders) this.vaultAt(root);
       }, 0);
+    });
+    // An open note's text stands for it as the editor has it (11.8): at once when it opens, then
+    // once typing pauses — a parse per pause, not per key; a request that needs it now asks first.
+    this.documents.onDidChangeContent((e) => {
+      const n = this.noteOf(e.document.uri);
+      if (!n) return;
+      if (!n.served.graph.overlaid(n.rel)) this.fresh(e.document.uri);
+      else this.settle(e.document.uri);
+    });
+    this.documents.onDidClose((e) => {
+      this.unsettle(e.document.uri);
+      const n = this.noteOf(e.document.uri);
+      n?.served.graph.overlay(n.rel, null);
     });
     this.documents.listen(this.connection);
     this.connection.listen();
@@ -146,6 +160,39 @@ export class LspServer {
     return served;
   }
 
+  /** A document's note: its vault and its path there; null outside a vault, or for a file that isn't a note. */
+  noteOf(uri: string): { served: Served; rel: string } | null {
+    const path = pathOf(uri);
+    const served = path ? this.vaultAt(path) : null;
+    if (!path || !served) return null;
+    const rel = relative(served.loc.root, path).split(sep).join("/");
+    return served.graph.notes.has(rel) ? { served, rel } : null;
+  }
+
+  /** Documents typed in, waiting for a pause to stand for their notes. */
+  private readonly settling = new Map<string, ReturnType<typeof setTimeout>>();
+
+  private settle(uri: string): void {
+    this.unsettle(uri);
+    const t = setTimeout(() => this.fresh(uri), SETTLE_MS);
+    (t as { unref?: () => void }).unref?.();
+    this.settling.set(uri, t);
+  }
+
+  private unsettle(uri: string): void {
+    const t = this.settling.get(uri);
+    if (t) clearTimeout(t);
+    this.settling.delete(uri);
+  }
+
+  /** An open document's text, standing for its note now: what a request about it needs. */
+  fresh(uri: string): void {
+    this.unsettle(uri);
+    const doc = this.documents.get(uri);
+    const n = this.noteOf(uri);
+    if (doc && n) n.served.graph.overlay(n.rel, doc.getText());
+  }
+
   /** A message for the editor's log (never a pop-up: these are slipbox's, not the user's doing). */
   log(text: string): void {
     void this.connection.console.log(`slipbox: ${text}`);
@@ -169,6 +216,7 @@ export class LspServer {
     if (this.done) return;
     this.done = true;
     if (this.parentWatch) clearInterval(this.parentWatch);
+    for (const t of this.settling.values()) clearTimeout(t);
     for (const s of this.vaults.values()) {
       s.watcher?.close();
       s.feed.close();
@@ -179,6 +227,9 @@ export class LspServer {
     this.finish(code);
   }
 }
+
+/** How long typing pauses before an open note's text is parsed again. */
+const SETTLE_MS = 150;
 
 function known(g: Graph): Map<string, number> {
   return new Map([...g.notes.values()].map((n) => [n.rel, n.mtimeMs] as [string, number]));

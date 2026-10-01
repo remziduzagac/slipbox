@@ -33,6 +33,17 @@ take a branch switch's files for moves (`5.9`, `5.10`). A server and a TUI on on
 - **An editor gone without a word:** the process id `initialize` gives is looked at every 3 seconds, and the server
   ends when it's no longer there.
 
+## Unsaved text
+
+An editor's open note stands for the note as the editor has it (`11.8`): its links, headings, tags and names count —
+for this note's requests and for others', so a link typed and not yet saved is already a backlink. Its text counts as
+soon as it opens, then again once typing pauses for 150 ms: a parse per pause, not per key, and a request about the
+note asks for its latest text first. Closing it gives the file back.
+
+Only the server's answers see it. The persisted index keeps the file's entry, moves are known by the file's text, and
+the file changing under an open note (an agent's write) leaves the editor's text standing until the editor reloads. So
+"disk is the contract" (`9.4`) still holds for the CLI and the TUI, which the editor's unsaved text never reaches.
+
 ## What it serves
 
-So far the session alone (`11.2`); the features follow `11.3`–`11.11` in the plan.
+So far the session and the vault as the editor has it (`11.2`, `11.7`, `11.8`); the features follow `11.3`–`11.11`.
