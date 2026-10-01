@@ -2,7 +2,10 @@
 // can list them and the parity test can check them; this is where each one does its work. The
 // keys are in keys.ts and docs/design/keymap.md.
 
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import type { Hover, Location, LocationLink, MarkedString, MarkupContent } from "vscode-languageserver-protocol";
+import { landingText } from "../core/landing.ts";
 import { join, posix, relative } from "node:path";
 import { findVaultRoot, gitRootOf, isInside, isNeverRoot } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
@@ -1554,6 +1557,46 @@ export function registerActions(app: App): void {
       if (arg) return a.previewRename(() => planNoteRename(a.graph, t.rel, arg));
       a.promptRename(t.rel);
     },
+    // What's under the cursor (19.12, 19.13): a code file's language server answers; in a note, slipbox does.
+    "lsp.hover": (a) =>
+      withView(a, async (v) => {
+        if (v.buf.rel && a.graph.notes.has(v.buf.rel)) {
+          const link = a.linkUnderCursor(v) >= 0 ? a.currentLayout(v).links[a.linkUnderCursor(v)] : undefined;
+          if (!link) return a.message("info", "nothing to show here: on a link, where it lands");
+          const r = a.graph.resolveLink({ kind: link.kind === "embed" ? "embed" : link.kind === "wiki" ? "wiki" : "markdown", target: link.target }, link.from ?? v.buf.rel);
+          if (r.resolvedKind !== "note" && r.resolvedKind !== "anchor") return a.message("info", `${link.target}: ${r.resolvedKind === "ambiguous" ? `matches ${r.candidates.join(", ")}` : r.resolvedKind === "external" ? link.target : r.reason ?? "no such note yet"}`);
+          const path = r.resolvedKind === "anchor" ? v.buf.rel : r.path!;
+          const text = landingText(a.graph, path, link.heading, null);
+          return a.openHover(text ?? "(nothing there)", `${path}${link.heading ? ` › ${link.heading}` : ""}`);
+        }
+        const s = a.servers;
+        if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
+        const answer = await s.request<Hover>(v.buf.abs, "textDocument/hover", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "hoverProvider");
+        const text = answer ? hoverText(answer.result) : "";
+        if (!text.trim()) return a.message("info", "the language server has nothing to say here");
+        a.openHover(text, `${answer!.server}`);
+      }),
+    "lsp.definition": (a) =>
+      withView(a, async (v) => {
+        if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("link.follow");
+        const s = a.servers;
+        if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
+        const answer = await s.request<Location | Location[] | LocationLink[]>(v.buf.abs, "textDocument/definition", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "definitionProvider");
+        const locs = answer ? locations(answer.result) : [];
+        if (!locs.length) return a.message("info", "no definition found here");
+        if (locs.length === 1) return a.openLocation(locs[0]!.path, locs[0]!.line, locs[0]!.character);
+        pickLocation(a, `${locs.length} definitions`, locs);
+      }),
+    "lsp.references": (a) =>
+      withView(a, async (v) => {
+        if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("backlinks.open");
+        const s = a.servers;
+        if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
+        const answer = await s.request<Location[]>(v.buf.abs, "textDocument/references", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v), context: { includeDeclaration: false } }, "referencesProvider");
+        const locs = answer ? locations(answer.result) : [];
+        if (!locs.length) return a.message("info", "no references found");
+        pickLocation(a, `${locs.length} reference${locs.length === 1 ? "" : "s"}`, locs);
+      }),
     "heading.rename": (a, arg) =>
       withView(a, (v) => {
         const rel = v.buf.rel;
@@ -1628,4 +1671,42 @@ function isFile(abs: string): boolean {
 function walked(a: App, rel: string): boolean {
   const parts = rel.split("/");
   return parts.every((_, i) => a.graph.filter.exclusion(parts.slice(0, i + 1).join("/"), i < parts.length - 1) === null);
+}
+
+/** A hover's contents as markdown: markup, a marked string, or several. */
+function hoverText(h: Hover): string {
+  const one = (c: MarkupContent | MarkedString): string => (typeof c === "string" ? c : "kind" in c ? c.value : `\`\`\`${c.language}\n${c.value}\n\`\`\``);
+  return Array.isArray(h.contents) ? h.contents.map(one).join("\n\n") : one(h.contents);
+}
+
+/** Locations a server gives, as files and positions (a `LocationLink`'s target). */
+function locations(r: Location | Location[] | LocationLink[] | null): { path: string; line: number; character: number }[] {
+  const list = r === null ? [] : Array.isArray(r) ? r : [r];
+  return list.flatMap((l) => {
+    const uri = "targetUri" in l ? l.targetUri : l.uri;
+    const range = "targetSelectionRange" in l ? l.targetSelectionRange : l.range;
+    return uri.startsWith("file:") ? [{ path: fileURLToPath(uri), line: range.start.line, character: range.start.character }] : [];
+  });
+}
+
+/** Several locations: a list to pick from, each its file and line, its text there. */
+function pickLocation(a: App, title: string, locs: { path: string; line: number; character: number }[]): void {
+  const shown = (p: string) => (p.startsWith(`${a.loc.root}/`) ? p.slice(a.loc.root.length + 1) : p);
+  a.openList({
+    title,
+    items: locs.map((l) => ({ label: `${shown(l.path)}:${l.line + 1}`, detail: lineOf(l.path, l.line), data: l })),
+    accept: (item) => {
+      const l = item.data as { path: string; line: number; character: number };
+      a.openLocation(l.path, l.line, l.character);
+    },
+  });
+}
+
+/** A file's line, trimmed (for a list of locations); empty when it can't be read. */
+function lineOf(path: string, line: number): string {
+  try {
+    return (readFileSync(path, "utf8").split("\n")[line] ?? "").trim();
+  } catch {
+    return "";
+  }
 }

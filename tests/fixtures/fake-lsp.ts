@@ -15,6 +15,8 @@ conn.onInitialize((p) => ({
   capabilities: {
     textDocumentSync: { openClose: true, change: TextDocumentSyncKind.Incremental, save: { includeText: true } },
     hoverProvider: true,
+    definitionProvider: true,
+    referencesProvider: true,
     ...(pull ? { diagnosticProvider: { interFileDependencies: false, workspaceDiagnostics: false } } : {}),
   },
   serverInfo: { name: `fake (root ${p.rootUri})` },
@@ -59,5 +61,10 @@ conn.languages.diagnostics.on(async (p) => {
   return { kind: "full", items };
 });
 conn.onHover((p) => ({ contents: { kind: "markdown", value: `line ${p.position.line}: ${docs.get(p.textDocument.uri)?.getText().split("\n")[p.position.line] ?? ""}` } }));
+// The definition: the first line holding DEF; the references: each line holding REF.
+const linesWith = (uri: string, word: string) =>
+  (docs.get(uri)?.getText().split("\n") ?? []).flatMap((l, i) => (l.includes(word) ? [{ uri, range: { start: { line: i, character: l.indexOf(word) }, end: { line: i, character: l.indexOf(word) + word.length } } }] : []));
+conn.onDefinition((p) => linesWith(p.textDocument.uri, "DEF")[0] ?? null);
+conn.onReferences((p) => linesWith(p.textDocument.uri, "REF"));
 docs.listen(conn);
 conn.listen();

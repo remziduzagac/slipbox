@@ -1047,6 +1047,15 @@ name it, never a vault's.
 - **A linter that can't run** (not installed, or failing without a finding) is said once, and not tried again until
   the config changes.
 
+## What's under the cursor (plans `19.12`, `19.13`)
+
+`shift+k` shows what's under the cursor in a floating window, rendered — a code file's language server's hover
+(its type, its docs), or, on a note's link, where it lands (as the LSP face's hover: the heading's section, the
+note's start); read-only, `esc` or `q` closes it. `g d` goes to the definition — the server's; a single one opens at
+once, in this vault or outside it (a dependency's types open as a loose file), several are a list — and in a note it
+follows the link. `g r` lists the references, each `file:line` with the line's text, to pick from; in a note, its
+backlinks. A file with no server says so, and `slipbox doctor` says which it would have.
+
 ## Problems where they are (plans `19.8`–`19.11`)
 
 A file's problems, from every source alike, show where they are, in source mode, the lens and the rendered view: its

@@ -7440,6 +7440,50 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     expect(h.app.servers!.list()).toMatchObject([{ name: "fake", state: "running", files: 1 }]);
     await h.app.servers!.stopAll();
   });
+
+  test("shift+k: the server's hover, floating; g d its definition; g r its references, to pick from (19.12, 19.13)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "  DEF here\nuse it\nREF one\nREF two\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    h.app.startServers();
+    h.frame();
+    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
+    await h.app.run("cursor.goto_line 2");
+    await h.keys("shift+k");
+    expect(await until(() => h.app.floating?.kind === "hover")).toBe(true);
+    expect(h.app.floating!.view.buf.source).toBe("line 1: use it\n");
+    expect(h.frame()).toContain("line 1: use it");
+    h.app.floating!.view.buf.edit(0, 0, "typed "); // typed into: still nothing to write back, it closes
+    await h.keys("escape");
+    expect(h.app.floating).toBeNull();
+    await h.keys("g", "d");
+    expect(await until(() => h.app.cursorLine(h.app.view!) === 1)).toBe(true);
+    expect(h.app.view!.cur.col).toBe(2); // at DEF, past the indent
+    await h.keys("g", "r");
+    expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["a.fk:3", "a.fk:4"]);
+    await h.keys("down", "enter");
+    expect(h.app.cursorLine(h.app.view!)).toBe(4);
+    await h.app.servers!.stopAll();
+  });
+
+  test("in a note slipbox answers itself: shift+k where a link lands, g d follows it, g r its backlinks", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    const view = h.app.view!;
+    const row = h.app.currentLayout(view).links.findIndex((l) => l.target === "alpha" && l.heading === "Section One");
+    const link = h.app.currentLayout(view).links[row]!;
+    h.app.moveCursor(view, { row: link.line, col: link.col });
+    await h.keys("shift+k");
+    expect(h.app.floating?.kind).toBe("hover");
+    expect(h.app.floating!.title).toBe("notes/alpha.md › Section One");
+    expect(h.app.floating!.view.buf.source).toStartWith("## Section One\n\nBack to [[index]]");
+    await h.keys("escape");
+    await h.keys("g", "d");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    await h.keys("g", "r");
+    expect((h.app.overlay as ListOverlay).title).toMatch(/^Linking to alpha\.md \(\d+\)$/);
+  });
 });
 
 describe("regression: :e of a file written a moment ago", () => {

@@ -156,6 +156,10 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "g ;": "change.prev",
   "g ,": "change.next",
   "g i": "edit.insert_last",
+  // What's under the cursor (19.12, 19.13), as vim and LazyVim have it.
+  "shift+k": "lsp.hover",
+  "g d": "lsp.definition",
+  "g r": "lsp.references",
   // the lens's size, by hand
   "+": "lens.grow",
   "-": "lens.shrink",

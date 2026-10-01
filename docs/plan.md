@@ -562,8 +562,8 @@ source shown alike in every mode.*
 | 19.9 | **Done.** The bar: a column beside the text, each line's count coloured by its worst severity, every mode |
 | 19.10 | **Done.** Ranges marked: underlined in source mode, the lens and the rendered view |
 | 19.11 | **Done.** Toggles (`space u d`, `shift+d`) and `[diagnostics]`; the status line takes every source |
-| 19.12 | Hover and signature help in a float |
-| 19.13 | Definition, references, implementation, type definition: a jump, or a list when there are several |
+| 19.12 | **Done** (hover; signature help with completion, `19.16`). Hover in a float |
+| 19.13 | **Done** (definition, references). A jump, or a list when there are several; implementation and types later |
 | 19.14 | Document and workspace symbols: the outline and the switcher take the server's when there is one |
 | 19.15 | Rename, code actions, formatting: through `App.writeBuffer`, previewed like slipbox's renames |
 | 19.16 | Completion in insert mode |

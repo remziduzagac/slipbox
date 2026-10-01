@@ -700,6 +700,17 @@ export const SCENARIOS: Scenario[] = [
       // The error under the cursor, from the server; the bar beside its line.
       await s.status(/✖ 2322 Type 'string' is not assignable to type 'number'/, 15000);
       await s.see(/│ ?1 +const n: number/);
+      // What's under the cursor (19.12, 19.13): n's type, floating; from its use, its declaration; its uses.
+      await s.keys("w");
+      await s.keys("shift+k");
+      await s.see("const n: number", 10000);
+      await s.keys("escape");
+      await s.keys("j", "$", "h"); // on the n of `= n;`
+      await s.keys("g", "d");
+      await s.status(/L1:7\b/, 10000);
+      await s.keys("g", "r");
+      await s.see(/tool\.ts:2 +export const m = n;/, 10000);
+      await s.keys("escape");
       // Fixed and typed in: gone once it's said so again.
       await s.keys("f", "\"", "d", "a", "\"", "i");
       await s.type("1");

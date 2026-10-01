@@ -133,6 +133,15 @@ back to slipbox's own register when it can't be read (over SSH, say). The termin
 | backlinks: notes linking here (list) | — | `space l b` |
 | relink: this note's links that reach a note by an old name or a move, to its name now (`:relink`) | — | `space l r` |
 
+What's under the cursor, as vim and LazyVim have it (`19.12`, `19.13`) — in code, its language server answers; in a
+note, slipbox does:
+
+| Action | Keys |
+| --- | --- |
+| hover: what it is, floating (types, docs); on a note's link, where it lands | `shift+k` |
+| go to its definition; in a note, follow the link | `g d` |
+| its references, to pick from; in a note, its backlinks | `g r` |
+
 ## History — `space h`
 
 | Action | Direct keys | Leader |

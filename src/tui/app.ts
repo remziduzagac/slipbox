@@ -3395,7 +3395,7 @@ export class App {
   // note's frontmatter — with every editing key there is; closed (esc, q, :q) or saved (ctrl+s,
   // :w), its text goes back where it came from, as one undo step there.
 
-  floating: { view: View; note: NoteBuffer; format: "yaml" | "toml"; original: string; title: string } | null = null;
+  floating: ({ kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string } | { kind: "hover" }) & { view: View; title: string } | null = null;
 
   /** The frontmatter's span in a note's text: the fences, and the text between them; null without one. */
   private frontmatterSpan(source: string): { start: number; end: number; innerStart: number; innerEnd: number; format: "yaml" | "toml" } | null {
@@ -3420,7 +3420,7 @@ export class App {
     buf.virtual = { save: (text) => this.writeProperties(text) };
     buf.loadText(original ? `${original}\n` : "");
     const fv = this.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
-    this.floating = { view: fv, note, format, original, title: `Properties — ${this.displayName(note)} (${format === "toml" ? "TOML" : "YAML"})` };
+    this.floating = { kind: "properties", view: fv, note, format, original, title: `Properties — ${this.displayName(note)} (${format === "toml" ? "TOML" : "YAML"})` };
     this.setViewMode(fv, "source");
     this.region = "content";
   }
@@ -3432,7 +3432,7 @@ export class App {
    */
   private writeProperties(text: string, sure = false): boolean {
     const f = this.floating;
-    if (!f) return false;
+    if (f?.kind !== "properties") return false;
     const note = f.note;
     const body = text.replace(/\s+$/, "");
     const span = this.frontmatterSpan(note.source);
@@ -3469,9 +3469,46 @@ export class App {
   closeFloating(): boolean {
     const f = this.floating;
     if (!f) return true;
-    if (f.view.buf.dirty && !this.writeProperties(f.view.buf.source)) return false;
+    if (f.kind === "properties" && f.view.buf.dirty && !this.writeProperties(f.view.buf.source)) return false;
     this.floating = null;
     return true;
+  }
+
+  /**
+   * What's under the cursor, in the floating window (19.12): markdown, rendered — a language server's
+   * hover, or where a note's link lands. Read-only; esc or q closes it.
+   */
+  openHover(markdown: string, title: string): void {
+    if (this.floating && !this.closeFloating()) return;
+    const buf = new NoteBuffer(null, `hover:${title}`, `hover:${title}`);
+    buf.kind = { group: "note", format: "markdown" };
+    buf.virtual = { save: () => true };
+    buf.loadText(markdown.endsWith("\n") ? markdown : `${markdown}\n`);
+    const fv = this.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
+    this.floating = { kind: "hover", view: fv, title };
+    this.region = "content";
+  }
+
+  /** A position in a source-mode view as the protocol counts it: line and UTF-16 character, from 0. */
+  lspPosition(view: View): { line: number; character: number } {
+    const at = offsetOf(this, view);
+    const starts = view.buf.lineStarts();
+    let line = starts.length - 1;
+    while (line > 0 && starts[line]! > at) line--;
+    return { line, character: at - starts[line]! };
+  }
+
+  /** Open a file (absolute) at a line and a UTF-16 character, from 0: a location a server gives. */
+  openLocation(abs: string, line: number, character: number): void {
+    const inVault = abs.startsWith(`${this.loc.root}/`);
+    const target = inVault ? abs.slice(this.loc.root.length + 1) : abs;
+    this.open(target, { heading: null, headingIndex: 0, offset: 0, line: line + 1 });
+    const v = this.view;
+    if (!v || v.buf.abs !== abs) return;
+    const start = v.buf.lineStarts()[line] ?? 0;
+    const text = v.buf.source.slice(start, start + character);
+    this.placeAtLine(v, line + 1, [...text].length + 1);
+    this.region = "content";
   }
 
   // The Problems view (1.7), the left panel's third: what's wrong in the vault — links that reach
