@@ -52,6 +52,8 @@ export interface LanguageDef {
   servers: string[];
   /** A server's features for this language, as the config limits them (Helix's `only-features`, `except-features`). */
   features?: Record<string, { only?: Feature[]; except?: Feature[] }>;
+  /** Its linters without a server (19.19), by name: each runs where the project asks for it. */
+  linters?: string[];
 }
 
 /** Whether a server does a feature for a language: as the language's config says, else a main server everything, an add-on a linter's. */
@@ -143,13 +145,13 @@ export const LANGUAGES: LanguageDef[] = [
   { name: "bash", languageId: "shellscript", fileTypes: ["sh", "bash", ".bashrc", ".bash_profile", ".profile"], roots: [".git"], servers: ["bash-language-server"] },
   { name: "json", languageId: "json", fileTypes: ["json"], roots: [".git"], servers: ["vscode-json-language-server", "biome"] },
   { name: "jsonc", languageId: "jsonc", fileTypes: ["jsonc"], roots: [".git"], servers: ["vscode-json-language-server", "biome"] },
-  { name: "yaml", languageId: "yaml", fileTypes: ["yaml", "yml"], roots: [".git"], servers: ["yaml-language-server"] },
+  { name: "yaml", languageId: "yaml", fileTypes: ["yaml", "yml"], roots: [".git"], servers: ["yaml-language-server"], linters: ["yamllint"] },
   { name: "toml", languageId: "toml", fileTypes: ["toml"], roots: [".git"], servers: ["taplo"] },
   { name: "css", languageId: "css", fileTypes: ["css"], roots: ["package.json", ".git"], servers: ["vscode-css-language-server", "stylelint", "biome"] },
   { name: "scss", languageId: "scss", fileTypes: ["scss"], roots: ["package.json", ".git"], servers: ["vscode-css-language-server", "stylelint"] },
   { name: "less", languageId: "less", fileTypes: ["less"], roots: ["package.json", ".git"], servers: ["vscode-css-language-server", "stylelint"] },
   { name: "html", languageId: "html", fileTypes: ["html", "htm"], roots: ["package.json", ".git"], servers: ["vscode-html-language-server"] },
-  { name: "dockerfile", languageId: "dockerfile", fileTypes: ["Dockerfile", "Containerfile", "dockerfile"], roots: [".git"], servers: ["docker-langserver"] },
+  { name: "dockerfile", languageId: "dockerfile", fileTypes: ["Dockerfile", "Containerfile", "dockerfile"], roots: [".git"], servers: ["docker-langserver"], linters: ["hadolint"] },
   { name: "php", languageId: "php", fileTypes: ["php"], roots: ["composer.json", ".git"], servers: ["intelephense"] },
   { name: "swift", languageId: "swift", fileTypes: ["swift"], roots: ["Package.swift", ".git"], servers: ["sourcekit-lsp"] },
   { name: "c", languageId: "c", fileTypes: ["c", "h"], roots: ["compile_commands.json", "compile_flags.txt", ".clangd", ".git"], servers: ["clangd"] },
@@ -203,6 +205,8 @@ export interface LanguageConfig {
   roots?: string[];
   "file-types"?: string[];
   "language-id"?: string;
+  /** Its linters without a server (19.19), by name (`[linter.<name>]`). */
+  linters?: string[];
 }
 
 /**
@@ -237,6 +241,7 @@ export function serverTable(servers: Record<string, ServerConfig> = {}, language
     if (c.roots) l.roots = c.roots;
     if (c["file-types"]) l.fileTypes = c["file-types"];
     if (c["language-id"]) l.languageId = c["language-id"];
+    if (c.linters) l.linters = c.linters;
     if (!known) langs.push(l);
   }
   return { servers: out, languages: langs };

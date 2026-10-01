@@ -573,7 +573,7 @@ source shown alike in every mode.*
 | 19.16 | **Done.** Completion in insert mode: on a trigger at once, on a word after a pause; narrowed as typed |
 | 19.17 | **Done.** Several servers per file: a main one and add-ons, merged; Helix's `only-features` splits the work |
 | 19.18 | **Done.** Linters with an LSP mode as add-ons, where the project has their config; the project's copy first |
-| 19.19 | The lint surface widened: linters without LSP in efm-langserver's keys (`lint-command`, `lint-formats`) |
+| 19.19 | **Done.** Linters without LSP in efm-langserver's keys (`lint-command`, `lint-formats`); hadolint, yamllint |
 | 19.20 | Server settings from a project's `.vscode/settings.json`: `workspace/configuration` as VS Code answers |
 | 19.21 | markdownlint-cli2 from the private install rather than `npx` |
 | 19.22 | CLI: `slipbox diagnostics <file>` — the servers' and linters' findings, `--json`, for agents and scripts |

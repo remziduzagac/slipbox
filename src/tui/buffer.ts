@@ -80,6 +80,10 @@ export class NoteBuffer {
   serverProblems = new Map<string, { version: number; list: Problem[]; raw: Diagnostic[] }>();
   /** The version of its text its servers were last told. */
   serverVersion = -1;
+  /** Its linters' problems without a server (19.19), by linter, with the version of the text they were found in;
+   *  and the versions last linted — as typed (linters reading their input), and as saved (the others). */
+  linterProblems = new Map<string, { version: number; list: Problem[] }>();
+  linted = { typed: -1, saved: -1 };
   /** Its language server's symbols as an outline (19.14), for a file tree-sitter has none of. */
   serverOutline: OutlineEntry[] | null = null;
 

@@ -310,6 +310,16 @@ describe("the vault and the tool", () => {
     expect(file).toMatchObject({ language: "typescript", languageId: "typescript" });
     expect(file.run[0].name).toBe("typescript");
     expect(slipbox(["doctor", "home.md"]).code).toBe(3); // a note: slipbox itself serves it
+    // Linters without a server (19.19): a language's, and for a file whether its project asks for one.
+    const yaml = groups.find((g) => g.languages.includes("yaml")) as unknown as { linters: { name: string; required: boolean; markers: string[] }[] };
+    expect(yaml.linters).toMatchObject([{ name: "yamllint", required: true, markers: [".yamllint", ".yamllint.yaml", ".yamllint.yml"] }]);
+    expect(slipbox(["doctor"]).out).toMatch(/^ {2}yamllint \(linter\) +.*\(where the project has \.yamllint or \.yamllint\.yaml…\)$/m);
+    mkdirSync(join(vault, "ops"), { recursive: true });
+    writeFileSync(join(vault, "ops", "Dockerfile"), "FROM x\n");
+    expect(slipbox(["doctor", "ops/Dockerfile", "--json"]).json.data.linters).toMatchObject([{ name: "hadolint", root: null }]);
+    writeFileSync(join(vault, "ops", ".hadolint.yaml"), "ignored: []\n");
+    expect(slipbox(["doctor", "ops/Dockerfile", "--json"]).json.data.linters).toMatchObject([{ name: "hadolint", root: join(vault, "ops") }]);
+    expect(slipbox(["doctor", "ops/Dockerfile"]).out).toMatch(/hadolint \(linter\) .*\(runs in .*ops\)/);
   });
   test("cp, rm, trash, and mv of a folder (18.x)", () => {
     const dir = join(sandbox, "fileops");

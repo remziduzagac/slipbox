@@ -432,10 +432,13 @@ The human output is the bundle itself, to pipe into an agent; `--json` has it as
 project, on `PATH`, in a place the user installs tools (Mason's, cargo's, go's), or in slipbox's own installs — and
 where; not found but on npm, so installed when it's first needed (its pinned package); or native and nowhere, with how
 to get it (`rustup component add rust-analyzer`). An add-on says where it runs: where the project has its config.
-`slipbox doctor <file>` takes one file: its language, its project's top folder, and the servers that would serve it
-there, the main one first, then what it would have had and hasn't. A note is exit 3: slipbox serves notes itself.
-`--json`: an array of `{languages, servers[{name, role, status, where, path, package, hint, requires}]}`, or for a
-file `{language, languageId, root, run[], missing[]}`.
+Each language's linters without a server (`19.19`) follow, `(linter)` after the name: found in the project or on
+`PATH`, or how to get it, and the config files it runs beside. `slipbox doctor <file>` takes one file: its language,
+its project's top folder, and the servers that would serve it there, the main one first, then its linters — where each
+would run, or that the project has no config for it — then what it would have had and hasn't. A note is exit 3:
+slipbox serves notes itself. `--json`: an array of `{languages, servers[{name, role, status, where, path, package,
+hint, requires}], linters[{name, program, where, path, hint, markers, required}]}`, or for a file `{language,
+languageId, root, run[], missing[], linters[]}`, each linter with its `root` (null: not run).
 
 ## `slipbox lsp` (plan `11.x`)
 

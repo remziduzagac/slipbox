@@ -1090,8 +1090,10 @@ A file's problems, from every source alike, show where they are, in source mode,
 syntax errors (`16.9`; in source mode, out of insert, for the text as it is), the linter's findings (`3.21`; for the
 text they were found in), a vault note's own (`11.5`: a link that reaches nothing or several notes, a `#heading` or
 `#^block` its note hasn't, git's conflict markers; while the note is as saved, since the vault's index has the
-file's), and its language servers' (`19.1`; for the text they were found in — typing hides them until they answer
-again; once a server has answered, its syntax errors stand for tree-sitter's). Each has a severity: error, warning,
+file's), its language servers' (`19.1`; for the text they were found in — typing hides them until they answer
+again; once a server has answered, its syntax errors stand for tree-sitter's), and its linters without a server
+(`19.19`: one reading its input on the text as typed, 500 ms after typing pauses; one reading the file after each save,
+its findings hidden while the text differs). Each has a severity: error, warning,
 information, hint. `[diagnostics] severity` (`warning`) is the least that shows, so a vault's notes not written yet —
 information — don't mark every page; `"info"` shows them too.
 

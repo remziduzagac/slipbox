@@ -1,9 +1,10 @@
 // `slipbox doctor` (plan 19.7): each language's servers, and for each where it is — found, and
-// where; on npm, so installed when first needed; native and nowhere, and how to get it. For a file:
-// its language, its project, and the servers that would serve it there.
+// where; on npm, so installed when first needed; native and nowhere, and how to get it. Its linters
+// without a server too (19.19). For a file: its language, its project, and what would serve it there.
 
 import { type Choice, chooseServers, findServer, rootFor, type Where } from "./find.ts";
-import { languageOf, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
+import { type LanguageDef, languageOf, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
+import { type LinterDef, linterRoot, projectPath } from "./linters.ts";
 
 export interface ServerReport {
   name: string;
@@ -21,11 +22,34 @@ export interface ServerReport {
   requires: string[] | null;
 }
 
+export interface LinterReport {
+  name: string;
+  /** Its program, as its command names it, and where it was found: the project's own, or on `PATH`. */
+  program: string;
+  where: "project" | "path" | null;
+  path: string | null;
+  hint: string | null;
+  /** The config files it runs beside; `required`: only where one of them is. */
+  markers: string[];
+  required: boolean;
+  /** For a file: where it would run, or null when its project doesn't ask for it. */
+  root?: string | null;
+}
+
 export interface LanguageReport {
-  /** Languages that share these servers. */
+  /** Languages that share these servers and linters. */
   languages: string[];
   servers: ServerReport[];
+  linters: LinterReport[];
 }
+
+function linterReport(def: LinterDef, root: string): LinterReport {
+  const program = def.command.trim().split(/\s+/)[0] ?? "";
+  const path = program ? Bun.which(program, { PATH: projectPath(root) }) : null;
+  return { name: def.name, program, where: path ? (path.startsWith(`${root}/`) ? "project" : "path") : null, path, hint: def.hint ?? null, markers: def.rootMarkers, required: def.requireMarker };
+}
+
+const lintersOf = (lang: LanguageDef, linters: Record<string, LinterDef>) => (lang.linters ?? []).map((n) => linters[n]).filter((d): d is LinterDef => !!d?.command);
 
 function report(def: ServerDef, root: string, autoInstall: boolean): ServerReport {
   const f = findServer(def, root);
@@ -41,18 +65,18 @@ function report(def: ServerDef, root: string, autoInstall: boolean): ServerRepor
   };
 }
 
-/** Every language's servers, as found from `root` (a project's own programs count there). */
-export function doctor(table: ServerTable, root: string, autoInstall: boolean): LanguageReport[] {
+/** Every language's servers and linters, as found from `root` (a project's own programs count there). */
+export function doctor(table: ServerTable, linters: Record<string, LinterDef>, root: string, autoInstall: boolean): LanguageReport[] {
   const groups = new Map<string, LanguageReport>();
   for (const lang of table.languages) {
-    const key = lang.servers.join(",");
+    const key = `${lang.servers.join(",")};${(lang.linters ?? []).join(",")}`;
     const g = groups.get(key);
     if (g) {
       g.languages.push(lang.name);
       continue;
     }
     const servers = lang.servers.map((n) => table.servers[n]).filter((d): d is ServerDef => !!d);
-    groups.set(key, { languages: [lang.name], servers: servers.map((d) => report(d, root, autoInstall)) });
+    groups.set(key, { languages: [lang.name], servers: servers.map((d) => report(d, root, autoInstall)), linters: lintersOf(lang, linters).map((d) => linterReport(d, root)) });
   }
   return [...groups.values()];
 }
@@ -65,10 +89,12 @@ export interface FileReport {
   /** The servers that would serve it there, the main one first; and those it would have had, missing. */
   run: ServerReport[];
   missing: ServerReport[];
+  /** Its linters without a server, each with where it would run (null: the project doesn't ask for it). */
+  linters: LinterReport[];
 }
 
 /** One file: its language, its project, and its servers there; null when slipbox serves no language of it. */
-export function doctorFile(table: ServerTable, path: string, autoInstall: boolean): FileReport | null {
+export function doctorFile(table: ServerTable, linters: Record<string, LinterDef>, path: string, autoInstall: boolean): FileReport | null {
   const lang = languageOf(table, path);
   if (!lang) return null;
   const root = rootFor(path, lang.roots);
@@ -79,5 +105,9 @@ export function doctorFile(table: ServerTable, path: string, autoInstall: boolea
     root,
     run: choice.run.map((r) => report(r.def, root, autoInstall)),
     missing: choice.missing.map((d) => report(d, root, autoInstall)),
+    linters: lintersOf(lang, linters).map((d) => {
+      const at = linterRoot(d, path, root);
+      return { ...linterReport(d, at ?? root), root: at };
+    }),
   };
 }

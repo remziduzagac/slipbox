@@ -3,6 +3,7 @@
 // warnings in the message sink.
 
 import { type LanguageConfig, type ServerConfig, SERVERS } from "./servers/languages.ts";
+import { type LinterConfig, LINTERS } from "./servers/linters.ts";
 import { existsSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { join } from "node:path";
@@ -125,8 +126,12 @@ export interface Config {
   /** Language servers in Helix's shape (19.2): each changed or added by name — its command, args,
    *  settings (`config`), environment — over the built-in ones (`core/servers/languages.ts`). */
   "language-server": Record<string, ServerConfig>;
-  /** Languages in Helix's shape (`[[language]]`): a language's servers, roots and file types. */
+  /** Languages in Helix's shape (`[[language]]`): a language's servers, roots and file types — and its
+   *  linters without a server (`linters`, 19.19). */
   language: LanguageConfig[];
+  /** Linters without a server (19.19), in efm-langserver's keys (`lint-command`, `lint-formats`,
+   *  `lint-stdin`…): each changed or added by name over the built-in ones (`core/servers/linters.ts`). */
+  linter: Record<string, LinterConfig>;
   /** The LSP face (11.x). `lint`: the lint surface's findings (3.21) among its diagnostics — off, since
    *  an editor runs its own linter and would show them twice. */
   lsp: {
@@ -245,6 +250,7 @@ export const DEFAULT_CONFIG: Config = {
   diagnostics: { bar: "auto", marks: true, severity: "warning" },
   "language-server": {},
   language: [],
+  linter: {},
   lsp: { enabled: true, lint: false, auto_install: true },
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
@@ -399,6 +405,21 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
       }
     }
   }
+  // A linter's likewise (19.19): its command, or a linter slipbox doesn't know.
+  const linters = data.linter;
+  if (isPlainObject(linters)) {
+    for (const [name, l] of Object.entries(linters)) {
+      if (!(name in LINTERS)) {
+        delete linters[name];
+        warnings.push(`config: ${file} adds the linter ${name}, which only your own config may (it runs a program); ignored`);
+        continue;
+      }
+      if (isPlainObject(l) && "lint-command" in l) {
+        delete l["lint-command"];
+        warnings.push(`config: ${file} sets linter.${name}.lint-command, which only your own config may set (it runs a program); ignored`);
+      }
+    }
+  }
   for (const key of USER_ONLY) {
     const [table, name] = key.split(".") as [string, string];
     const t = data[table];
@@ -430,6 +451,15 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
           next[name] = { ...before, ...s, ...(before.config && s.config ? { config: { ...before.config, ...s.config } } : {}) };
         }
         out[key] = next;
+      }
+      continue;
+    }
+    // Linters (19.19): each by name, the keys given replacing its own.
+    if (!prefix && key === "linter") {
+      if (!isPlainObject(value) || !Object.values(value).every(isPlainObject)) warnings.push(`config: ${file}: [linter.<name>] must be tables`);
+      else {
+        const was = out[key] as Record<string, LinterConfig>;
+        out[key] = { ...was, ...Object.fromEntries(Object.entries(value as Record<string, LinterConfig>).map(([name, l]) => [name, { ...was[name], ...l }])) };
       }
       continue;
     }

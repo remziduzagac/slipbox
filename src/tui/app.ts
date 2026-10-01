@@ -72,7 +72,9 @@ import { findVaultRoot, gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, 
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
-import { serverTable } from "../core/servers/languages.ts";
+import { languageOf, serverTable, type ServerTable } from "../core/servers/languages.ts";
+import { type LinterDef, linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
+import { rootFor } from "../core/servers/find.ts";
 import { ServerManager } from "../core/servers/manager.ts";
 import { afterInsertKey, type CompletionState, completionKey, type SignatureState } from "./completion.ts";
 import { sanitize } from "../core/sanitize.ts";
@@ -834,6 +836,8 @@ export class App {
     const differs = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
     const changed = (Object.keys(next) as (keyof Config)[]).filter((s) => differs(before[s], next[s]));
     if (changed.includes("search") && !changed.includes("walk")) this.startSearch();
+    // Linters (19.19) tried again, and every file linted again, under the new ones.
+    if (changed.some((s) => s === "linter" || s === "language" || s === "lint")) this.relint();
 
     const oldUi = uiDefaults(before);
     const newUi = uiDefaults(next);
@@ -1202,6 +1206,76 @@ export class App {
     }, 150);
     (t as { unref?: () => void }).unref?.();
     this.serverTimers.set(buf, t);
+  }
+
+  // Linters without a server (19.19): a file's, by its language, each where its project asks for it —
+  // one reading its input on the text as typed, once typing pauses; the others on the file as saved.
+
+  private tablesMemo: { config: Config; servers: ServerTable; linters: Record<string, LinterDef> } | null = null;
+  /** The languages and linters in effect, as the config has them. */
+  private tables(): { servers: ServerTable; linters: Record<string, LinterDef> } {
+    if (this.tablesMemo?.config !== this.config) this.tablesMemo = { config: this.config, servers: serverTable(this.config["language-server"], this.config.language), linters: linterTable(this.config.linter) };
+    return this.tablesMemo;
+  }
+  private readonly linterRuns = new Map<NoteBuffer, { timer: ReturnType<typeof setTimeout>; version: number } | "running">();
+  /** Linters that couldn't run: said once, and not tried again until the config changes. */
+  private readonly linterFailed = new Set<string>();
+
+  /** A file's linters, run when its text (or its saved text) hasn't been linted as it is: at once the first
+   *  time, then 500 ms after typing pauses, or after a save. */
+  ensureLinters(buf: NoteBuffer): void {
+    if (this.config.lint.enabled === "off" || buf.virtual || buf.deleted) return;
+    const typed = buf.linted.typed !== buf.version;
+    const saved = !buf.dirty && buf.linted.saved !== buf.version;
+    if (!typed && !saved) return;
+    const pending = this.linterRuns.get(buf);
+    if (pending === "running" || pending?.version === buf.version) return;
+    const { servers, linters } = this.tables();
+    const lang = languageOf(servers, buf.abs);
+    const defs = (lang?.linters ?? []).map((n) => linters[n]).filter((d): d is LinterDef => !!d?.command && !this.linterFailed.has(d.name));
+    if (!lang || !defs.some((d) => (d.stdin ? typed : saved))) return;
+    if (pending) clearTimeout(pending.timer);
+    const project = rootFor(buf.abs, lang.roots);
+    const t = setTimeout(() => {
+      const version = buf.version;
+      const text = buf.source;
+      const due = defs.filter((d) => (d.stdin ? buf.linted.typed !== version : !buf.dirty && buf.linted.saved !== version));
+      buf.linted = { typed: version, saved: buf.dirty ? buf.linted.saved : version };
+      this.linterRuns.set(buf, "running");
+      void Promise.all(
+        due.map(async (d) => {
+          const root = linterRoot(d, buf.abs, project);
+          if (!root) return void buf.linterProblems.delete(d.name); // the project doesn't ask for it
+          const r = await runLinter(d, buf.abs, text, root);
+          if ("problems" in r) buf.linterProblems.set(d.name, { version, list: r.problems });
+          else this.linterCouldNot(d, r.failed, r.detail);
+        }),
+      ).then(() => {
+        this.linterRuns.delete(buf);
+        for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+        this.host.requestRender();
+      });
+    }, buf.linted.typed >= 0 || buf.linted.saved >= 0 ? 500 : 0);
+    (t as { unref?: () => void }).unref?.();
+    this.linterRuns.set(buf, { timer: t, version: buf.version });
+  }
+
+  /** Linters tried again, and every open file linted again: the config changed. */
+  private relint(): void {
+    this.linterFailed.clear();
+    for (const b of this.buffers.values()) {
+      b.linted = { typed: -1, saved: -1 };
+      b.linterProblems.clear();
+    }
+  }
+
+  /** A linter that couldn't run: said once — not installed (and how to get it), too slow, or failing. */
+  private linterCouldNot(def: LinterDef, why: "missing" | "timeout" | "error", detail: string): void {
+    if (this.linterFailed.has(def.name)) return;
+    this.linterFailed.add(def.name);
+    const program = def.command.trim().split(/\s+/)[0];
+    const text = why === "missing" ? `linter ${def.name}: ${program} not found${def.hint ? ` — ${def.hint}` : ""}` : `linter ${def.name} couldn't run: ${detail}`;
+    this.message("warn", text);
   }
 
   // The lint surface (3.21): your markdownlint-cli2 run on a note once it's saved — its findings
@@ -1826,6 +1900,7 @@ export class App {
         : this.nowrapWidth(view, paneWidth, gutter);
     if (view.source) this.ensureSyntax(view.buf);
     this.ensureLint(view.buf);
+    this.ensureLinters(view.buf);
     this.ensureServers(view.buf);
     const layout = view.source
       ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs)
@@ -2076,6 +2151,8 @@ export class App {
     if (buf.lint?.issues.length && (any || buf.lint.version === buf.version)) out.push(...lintProblems(buf.lint.issues));
     // Its language servers' (19.1), for the text they were found in: typing hides them until they answer again.
     for (const p of buf.serverProblems.values()) if (any || p.version === buf.version) out.push(...p.list);
+    // Its linters' (19.19), likewise: one reading the file, until it's saved and run again.
+    for (const p of buf.linterProblems.values()) if (any || p.version === buf.version) out.push(...p.list);
     if (buf.rel && this.graph.notes.has(buf.rel) && (any || !buf.dirty)) {
       const key = `${this.graph.generation}:${buf.version}`;
       let hit = this.noteProblemCache.get(buf);
@@ -6626,6 +6703,7 @@ export class App {
     this.config = loaded.config;
     this.lintCmd = lintCommand(this.config.lint, target.root);
     this.vaultLint = { running: false, issues: null };
+    this.relint();
     for (const w of loaded.warnings) this.message("warn", w);
     this.reach = new Reach(target);
     this.graph = new Graph(target, this.config).build(true, "lazy");

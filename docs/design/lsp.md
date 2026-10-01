@@ -244,3 +244,20 @@ the same place once. Completion asks its servers in turn and shows the first one
 server before its add-ons, which by default don't complete); its trigger characters, and signature help's, are every
 server's together.
 
+**Linters without a server** (`19.19`, `core/servers/linters.ts`) are described in efm-langserver's keys, so a linter
+set up for efm pastes in — `[linter.<name>]` with `lint-command`, `lint-formats` (vim's errorformat), `lint-stdin`,
+`lint-source`, `lint-severity`, `lint-ignore-exit-code`, `root-markers`, `require-marker` — and a language's
+`linters` names its own. Each runs as efm runs it: through the shell, from the nearest folder holding one of its
+`root-markers` (with `require-marker`, only where there is one; else from the file's project), the project's own
+copy first (`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin` before `PATH`); its output and errors read
+together, each line by the first format matching it whole; and an exit of 0 is nothing found, unless
+`lint-ignore-exit-code`. A finding about another file is passed over; one about `-`, `stdin` or `<stdin>` is this
+file's. Built in, each only where the project has its config: **hadolint** for Dockerfiles (`.hadolint.yaml`) and
+**yamllint** for YAML (`.yamllint`). One not installed is said once (`linter hadolint: hadolint not found — …`), and
+tried again when the config changes; `[lint] enabled = "off"` runs none.
+
+The errorformat read is the part linters use: `%f %l %c %v %e %k %t %n %m %r %p %s`; `%-G` for a line to pass over;
+`%E %W %I %N` on one line, setting the severity where there's no `%t`; and the pattern items `%.`, `%#`, `%*\d`,
+`%*[^:]`, `%\s`, `%[…]`. Multi-line formats (`%A`, `%C`, `%Z`) and the file stack (`%D`, `%P`) aren't read: a
+linter whose formats need them says so when it would run.
+

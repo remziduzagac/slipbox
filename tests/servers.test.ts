@@ -13,6 +13,7 @@ import { LanguageClient, type ServerSpec, settingAt } from "../src/core/servers/
 import { chooseServers, findServer, rootFor, toolsDir } from "../src/core/servers/find.ts";
 import { installPackages } from "../src/core/servers/install.ts";
 import { languageOf, projectAsks, type ServerDef, serverTable, type ServerTable } from "../src/core/servers/languages.ts";
+import { commandFor, compileFormat, type Format, type LinterConfig, linterRoot, LINTERS, linterTable, parseFindings, runLinter } from "../src/core/servers/linters.ts";
 import { ServerManager } from "../src/core/servers/manager.ts";
 import type { Problem } from "../src/core/diagnostics.ts";
 
@@ -340,5 +341,98 @@ describe("found only where it's surely the one (19.4)", () => {
     } finally {
       process.env.PATH = was;
     }
+  });
+});
+
+describe("linters without a server (19.19)", () => {
+  const dir = (name: string, files: Record<string, string>) => {
+    const root = join(sandbox, name);
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(root, rel, ".."), { recursive: true });
+      writeFileSync(join(root, rel), text);
+    }
+    return root;
+  };
+  /** A linter as a config would write it, over efm's defaults. */
+  const linter = (c: LinterConfig) => linterTable({ t: c }).t!;
+  const formats = (...fs: string[]) => fs.map((f) => compileFormat(f) as Format);
+
+  test("vim's errorformat, the part linters use: fields, patterns, lines passed over; multi-line ones refused", () => {
+    const f = compileFormat("%f:%l:%c: %*[^:]: %m") as Format;
+    expect(f.fields).toEqual(["f", "l", "c", "m"]);
+    expect(f.re.exec("a.sh:3:7: SC2086: Double quote")?.slice(1)).toEqual(["a.sh", "3", "7", "Double quote"]);
+    expect((compileFormat("%f:%l%\\s%#%m") as Format).re.exec("x:2   hi")?.slice(1)).toEqual(["x", "2", "hi"]);
+    expect((compileFormat("%f(%l): %*\\d %m") as Format).re.source).toBe("^(.+?)\\((\\d+)\\): \\d+ (.*)$");
+    expect((compileFormat("%-G%.%#warning%.%#") as Format).ignore).toBe(true);
+    expect((compileFormat("%Wwarn %f:%l %m") as Format).type).toBe("w");
+    expect(compileFormat("%C%m")).toContain("multi-line");
+    expect(compileFormat("%f:%l %q")).toContain("%q isn't read");
+  });
+
+  test("findings: severity by %t, else the linter's; this file's only; columns, ends, codes, pointers", () => {
+    const file = join(sandbox, "lint", "a.yaml");
+    const def = { source: "yl", severity: "warning" as const };
+    const fs = formats("%-G%.%#ignored%.%#", "%f:%l:%c: [%trror] %m", "%f:%l:%c: [%tarning] %m", "%f:%l:%c-%e:%k E%n %m", "%f:%l %m", "%p^ %m");
+    const out = parseFindings(
+      ["stdin:1:1: [warning] missing start", "-:2:5: [error] too many spaces", "other.yaml:3:1: [error] not this file", "a.yaml:4:2-5:9 E42 spans", "<stdin>:6 bare", "this is ignored here", "    ^ pointed", "noise"].join("\n"),
+      fs,
+      def,
+      file,
+      join(sandbox, "lint"),
+    );
+    expect(out.map((p) => [p.start.line, p.start.column, p.end.line, p.end.column, p.severity, p.code, p.message])).toEqual([
+      [1, 1, 1, 2, "warning", null, "missing start"],
+      [2, 5, 2, 6, "error", null, "too many spaces"],
+      [4, 2, 5, 9, "warning", "42", "spans"],
+      [6, 1, 6, 1, "warning", null, "bare"],
+      [1, 5, 1, 6, "warning", null, "pointed"],
+    ]);
+    expect(out.every((p) => p.source === "yl")).toBe(true);
+  });
+
+  test("run as efm runs it: its input the text, from its project, the project's own copy first; exit 0 is nothing found", async () => {
+    const root = dir("efm", { ".fakelintrc": "", "src/a b's.txt": "on disk\n", "node_modules/.bin/fakelint": "#!/bin/sh\necho \"-:1:2: [error] own copy, in $(basename \"$PWD\")\"\nexit 1\n" });
+    chmodSync(join(root, "node_modules/.bin/fakelint"), 0o755);
+    const file = join(root, "src/a b's.txt");
+    // Its input, read: a finding per line holding BAD.
+    const reads = linter({ "lint-command": "grep -n BAD | sed 's/^\\([0-9]*\\):.*/stdin:\\1:1: [error] found BAD/'; exit 1", "lint-formats": ["%f:%l:%c: [%trror] %m"] });
+    expect(await runLinter(reads, file, "ok\nBAD here\n", root)).toEqual({ problems: [{ start: { line: 2, column: 1 }, end: { line: 2, column: 2 }, severity: "error", source: "t", code: null, message: "found BAD" }] });
+    // An exit of 0 is efm's "nothing found", whatever it printed — unless told to ignore it.
+    const zero = linter({ "lint-command": "echo 'stdin:1:1: [error] said, but exit 0'", "lint-formats": ["%f:%l:%c: [%trror] %m"] });
+    expect(await runLinter(zero, file, "", root)).toEqual({ problems: [] });
+    expect(await runLinter({ ...zero, ignoreExitCode: true }, file, "", root)).toMatchObject({ problems: [{ message: "said, but exit 0" }] });
+    // The file as saved: its path in place of ${INPUT}, quoted; appended when there's none.
+    const onDisk = linter({ "lint-command": "sed -n 's/^\\(.*\\)$/1: \\1/p' ${INPUT}; exit 1", "lint-stdin": false, "lint-formats": ["%l: %m"] });
+    expect(await runLinter(onDisk, file, "typed, unsaved", root)).toMatchObject({ problems: [{ start: { line: 1 }, message: "on disk" }] });
+    expect(commandFor(linter({ "lint-command": "cat", "lint-stdin": false }), file)).toBe(`cat '${root}/src/a b'\\''s.txt'`);
+    // The project's copy, before PATH's, run from the project's top folder.
+    expect(await runLinter(linter({ "lint-command": "fakelint", "lint-formats": ["%f:%l:%c: [%trror] %m"] }), file, "", root)).toMatchObject({ problems: [{ message: "own copy, in efm" }] });
+    // Not there: the shell's 127, said as missing.
+    expect(await runLinter(linter({ "lint-command": "slipbox-no-such-linter" }), file, "", root)).toMatchObject({ failed: "missing" });
+    expect(await runLinter(linter({ "lint-command": "cat", "lint-formats": ["%C%m"] }), file, "", root)).toMatchObject({ failed: "error" });
+  });
+
+  test("where it runs: the folder with its config; one needing it doesn't run without; built in by language", () => {
+    const root = dir("marks", { ".git/HEAD": "", "svc/.hadolint.yaml": "", "svc/api/Dockerfile": "", "web/Dockerfile": "" });
+    const hadolint = linterTable().hadolint!;
+    expect(linterRoot(hadolint, join(root, "svc/api/Dockerfile"), root)).toBe(join(root, "svc"));
+    expect(linterRoot(hadolint, join(root, "web/Dockerfile"), root)).toBeNull(); // the project doesn't ask
+    expect(linterRoot({ ...hadolint, requireMarker: false }, join(root, "web/Dockerfile"), root)).toBe(root);
+    expect(languageOf(serverTable(), "Dockerfile")!.linters).toEqual(["hadolint"]);
+    expect(languageOf(serverTable({}, [{ name: "yaml", linters: ["mine"] }]), "a.yml")!.linters).toEqual(["mine"]);
+    // A config's keys over the built-in's.
+    expect(linterTable({ yamllint: { "lint-command": "yamllint --strict -f parsable -" } }).yamllint).toMatchObject({ command: "yamllint --strict -f parsable -", formats: LINTERS.yamllint!.formats, requireMarker: true });
+  });
+
+  test("a vault's config tunes known linters, never names a program", () => {
+    const root = dir("lintcfg", {
+      "user.toml": '[linter.mine]\nlint-command = "mine -"\n\n[[language]]\nname = "yaml"\nlinters = ["yamllint", "mine"]\n',
+      "vault.toml": '[linter.yamllint]\nlint-command = "/tmp/evil"\nrequire-marker = false\n\n[linter.evil]\nlint-command = "/tmp/evil"\n',
+    });
+    const { config, warnings } = loadConfig({ configFile: join(root, "user.toml"), vaultFile: join(root, "vault.toml") });
+    expect(config.linter).toEqual({ mine: { "lint-command": "mine -" }, yamllint: { "require-marker": false } });
+    expect(config.language).toEqual([{ name: "yaml", linters: ["yamllint", "mine"] }]);
+    expect(warnings.some((w) => w.includes("sets linter.yamllint.lint-command, which only your own config may set"))).toBe(true);
+    expect(warnings.some((w) => w.includes("adds the linter evil, which only your own config may"))).toBe(true);
   });
 });

@@ -42,7 +42,8 @@ import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
 import { loadSession } from "../core/position.ts";
 import { openVault, Reach } from "../core/reach.ts";
-import { doctor, doctorFile, type ServerReport } from "../core/servers/doctor.ts";
+import { doctor, doctorFile, type LinterReport, type ServerReport } from "../core/servers/doctor.ts";
+import { linterTable } from "../core/servers/linters.ts";
 import { serverTable } from "../core/servers/languages.ts";
 import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
@@ -175,7 +176,7 @@ Usage:
   slipbox info                      vault, paths, versions, staleness
   slipbox lsp                       serve vaults to an editor over LSP, on stdio  [--config <file>]
   slipbox vaults                    the vaults this machine knows: name, kind, path, last seen
-  slipbox doctor [file]             language servers: each language's, found where, installed when needed, or missing
+  slipbox doctor [file]             language servers and linters: each language's, found where, installed when needed, or missing
   slipbox themes                    list themes
   slipbox commands                  list named commands and their CLI equivalents
 
@@ -1060,9 +1061,11 @@ const HANDLERS: Record<string, Handler> = {
     return { data: list, human: human || "no vaults yet\n" };
   },
 
-  // Language servers (19.7): each language's, and where each is; for a file, the ones serving it.
+  // Language servers (19.7) and linters (19.19): each language's, and where each is; for a file, the
+  // ones serving it.
   doctor(s, rest) {
     const table = serverTable(s.config["language-server"], s.config.language);
+    const linters = linterTable(s.config.linter);
     const auto = s.config.lsp.auto_install;
     const home = homedir();
     const short = (p: string) => (p.startsWith(`${home}/`) ? `~${p.slice(home.length)}` : p);
@@ -1078,16 +1081,21 @@ const HANDLERS: Record<string, Handler> = {
       const role = r.role === "add-on" ? `  (where the project has ${r.requires!.slice(0, 2).join(" or ")}…)` : "";
       return `  ${r.name.padEnd(28)} ${what}${role}\n`;
     };
+    const lintLine = (r: LinterReport) => {
+      const what = r.path ? `${r.where}  ${short(r.path)}` : `not found: ${r.hint ?? `${r.program}, on your PATH or the project's`}`;
+      const at = r.root === undefined ? (r.required ? `  (where the project has ${r.markers.slice(0, 2).join(" or ")}…)` : "") : r.root === null ? "  (not run: the project has no config for it)" : `  (runs in ${short(r.root)})`;
+      return `  ${`${r.name} (linter)`.padEnd(28)} ${what}${at}\n`;
+    };
     if (rest[0]) {
       const abs = isAbsolute(rest[0]) ? rest[0] : join(s.io.cwd, rest[0]);
-      const f = doctorFile(table, abs, auto);
+      const f = doctorFile(table, linters, abs, auto);
       if (!f) throw new CliError(`${rest[0]}: slipbox serves no language of it`, EXIT.notFound);
-      const human = [`${rest[0]}: ${f.language}, its project ${short(f.root)}\n`, ...f.run.map(line), ...(f.missing.length ? ["missing:\n", ...f.missing.map(line)] : [])].join("");
+      const human = [`${rest[0]}: ${f.language}, its project ${short(f.root)}\n`, ...f.run.map(line), ...f.linters.map(lintLine), ...(f.missing.length ? ["missing:\n", ...f.missing.map(line)] : [])].join("");
       return { data: f, human };
     }
-    const groups = doctor(table, s.io.cwd, auto);
+    const groups = doctor(table, linters, s.io.cwd, auto);
     if (!s.config.lsp.enabled) s.warnings.push("language servers are off: [lsp] enabled = false");
-    return { data: groups, human: groups.map((g) => `${g.languages.join(", ")}\n${g.servers.map(line).join("")}`).join("") };
+    return { data: groups, human: groups.map((g) => `${g.languages.join(", ")}\n${g.servers.map(line).join("")}${g.linters.map(lintLine).join("")}`).join("") };
   },
 
   info(s) {

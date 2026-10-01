@@ -22,7 +22,8 @@ previous_names = ["old-notes"] # names it had: a fallback only (17.7)
 **What only you can set.** The vault file comes with whatever you clone, so it never chooses a
 program slipbox runs: `editor.command`, `editor.remote` and `lint.command` there are ignored, with a
 warning, and only your user file sets them (`USER_ONLY` in `core/config.ts`). The rest of `[editor]`
-and `[lint]` applies.
+and `[lint]` applies. Likewise a language server's `command`, `args` and `environment`, a linter's
+`lint-command`, and any server or linter slipbox doesn't build in: a vault tunes the known ones only.
 Nor may its `[keys]` or `[aliases]` name a command that throws work away — `app.quit_force`,
 `note.revert`, `note.save_force`, `scratch.clear` (`VAULT_FORBIDDEN_COMMANDS`) — so a clone can't put
 one on `ctrl+s` or `:wq`; those bindings are dropped with a warning.
@@ -129,6 +130,18 @@ config = { python = { analysis = { typeCheckingMode = "strict" } } }   # its set
 [[language]]                   # a language: its servers (main first, add-ons after), roots, file types
 name = "python"
 language-servers = ["pyright", "ruff"]   # or { name = "ruff", only-features = ["diagnostics", "format"] }
+linters = ["mypy"]             # its linters without a server (19.19), each a [linter.<name>]
+
+[linter.mypy]                  # a linter without a server (19.19), in efm-langserver's keys: changed by name
+lint-command = "mypy --show-column-numbers --no-error-summary"   # through the shell; yours only, never a vault's
+lint-stdin = false             # true (efm's default): the text as typed on its input; false: the file as saved,
+                               # its path appended unless the command has ${INPUT}
+lint-formats = ["%f:%l:%c: %trror: %m", "%f:%l:%c: %tarning: %m", "%f:%l:%c: %tote: %m"]   # vim's errorformat
+lint-source = "mypy"           # who it says found them (default: its name)
+lint-severity = 2              # without a %t: 1 error (default), 2 warning, 3 information, 4 hint
+lint-ignore-exit-code = false  # true: read what it prints even when it exits 0 (efm takes 0 as nothing found)
+root-markers = ["mypy.ini", ".mypy.ini"]   # it runs in the nearest folder holding one…
+require-marker = true          # …and only where there is one
 
 [context]                      # the context bundle (9.7): space s c, slipbox context
 depth = 1                      # links followed out from the note (0–5): 1, what it links to; 0, none
@@ -147,7 +160,7 @@ remote = ["nvim"]              # space n s: "nvim" finds the running nvims (spac
 
 [lint]                         # the lint surface (3.21): your linter's findings in notes and the Problems view
 enabled = "auto"               # auto: only with a markdownlint config (the vault's, or ~/.markdownlint-cli2.jsonc)
-                               # | on | off
+                               # | on | off (off: [linter.<name>] runs none either)
 command = []                   # [] = npx markdownlint-cli2 (--config ~/.markdownlint-cli2.jsonc unless the
                                # vault has its own); else argv, files appended, "~/" expanded; yours only
 
