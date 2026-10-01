@@ -6,7 +6,14 @@
 import { parseArgs } from "./cli/args.ts";
 import { CLI_COMMANDS, defaultIo, EXIT, runCli } from "./cli/cli.ts";
 
+/** The Bun slipbox needs: better-sqlite3 (the search index) panics the process on Bun 1.3. */
+const BUN_FLOOR = ">=1.4.2";
+
 async function main(): Promise<number> {
+  if (!Bun.semver.satisfies(Bun.version, BUN_FLOOR)) {
+    process.stderr.write(`slipbox: needs Bun 1.4.2 or later (this is ${Bun.version}): SQLite, for search, crashes older ones\n`);
+    return EXIT.error;
+  }
   const argv = process.argv.slice(2);
   // The LSP (11.2) owns stdout: nothing but the protocol may reach it, so it starts before the CLI.
   if (argv[0] === "lsp") return lsp(argv.slice(1));

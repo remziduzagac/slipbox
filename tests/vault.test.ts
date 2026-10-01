@@ -1606,10 +1606,12 @@ describe("search: the index and the scan (6.x)", () => {
     expect(idx).not.toBeNull();
     expect(idx.stats()).toEqual({ files: 0 });
     expect(idx.complete).toBe(false);
-    idx.db.run("pragma user_version = 99");
+    idx.db.pragma("user_version = 99");
     idx.close();
     const fresh = SearchIndex.open(g.loc)!;
-    expect((fresh.db.query("pragma user_version").get() as { user_version: number }).user_version).toBe(2);
+    expect(fresh.db.pragma("user_version", { simple: true })).toBe(3);
+    // better-sqlite3's own SQLite, bundled, whatever the host has (FTS5 in it).
+    expect(fresh.db.prepare("select sqlite_version() as v").get()).toEqual({ v: "3.53.4" });
     fresh.close();
   });
 

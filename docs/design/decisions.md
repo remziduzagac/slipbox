@@ -285,12 +285,20 @@ nothing slipbox writes while it's used: state and caches are outside the reposit
 
 ## `6.1` — search
 
-Search is our own, in the core, so the CLI, the TUI and later the LSP share it: an SQLite FTS5 index (Bun has SQLite
-and FTS5 built in — no dependency) in the vault's cache, and a scan of the files with the same query and a BM25-like
+Search is our own, in the core, so the CLI, the TUI and later the LSP share it: an SQLite FTS5 index in the vault's
+cache, and a scan of the files with the same query and a BM25-like
 score while there's none, so a search always answers. It's deliberately small — words, phrases, prefixes, exclusions,
 `title:`, tags and folders, ranked by BM25 with the title weighing most — because a fuller engine (Scout: semantic
 search, the graph) will sit behind the same API when it's there; slipbox's is the fallback.
 
+- **SQLite is better-sqlite3** (since 2026-10-01; Bun's own `bun:sqlite` before). It bundles its own SQLite (3.53.4)
+  rather than linking the host's, works the same under Node and Bun on macOS and Linux with no workaround (`bun:sqlite`
+  needs `setCustomSQLite()` on macOS), and is what scout uses — a process holding both loads one SQLite. Measured
+  with scout: Bun 1.3 panics on it (exit 133), so slipbox needs Bun 1.4.2 and says so at start. Every JS number binds
+  as a double (`bun:sqlite` narrowed integral ones), so an integer the schema needs is bound `CAST(? AS INTEGER)` —
+  audited: FTS5's rowid and `LIMIT` accept a double in 3.53.4, cast anyway, since vec0's key does not. It loads
+  through its per-platform entry by a literal name (`core/sqlite.ts`): that one's binary `bun build --compile`
+  embeds, where the default entry would look for the build machine's `node_modules` at run time.
 - **A row per file, not per section.** A search's words are a note's, wherever in it; with a row per section, words
   in two sections of one note found nothing. The hit still opens at the section with most of the words.
 - **Read by a quick pass over the lines**, not the markdown parser: frontmatter, headings outside code, tags, the text

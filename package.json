@@ -8,6 +8,9 @@
   "bin": {
     "slipbox": "src/main.ts"
   },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
   "scripts": {
     "start": "bun src/main.ts",
     "test": "bun test",
@@ -20,6 +23,7 @@
   "dependencies": {
     "@opentui/core": "0.5.12",
     "@tree-sitter-grammars/tree-sitter-lua": "0.4.1",
+    "better-sqlite3": "13.0.3",
     "get-east-asian-width": "1.7.0",
     "highlight.js": "^11.12.0",
     "ignore": "^7.0.10",
@@ -42,6 +46,7 @@
     "yaml": "^2.9.1"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "9.6.0",
     "@types/bun": "^1.4.2",
     "@types/mdast": "^4.0.4",
     "typescript": "^7.0.2"
