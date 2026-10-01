@@ -180,7 +180,11 @@ exit that wasn't asked for is a crash, said with its last error line.
 **Which servers** (`19.2`, `core/servers/languages.ts`): a file's language is its whole name (`Dockerfile`), else
 its extension, and each language has root markers and servers — the first that applies and is found is its main
 server, and add-ons, a linter's server each, run beside it where the project has that linter's config
-(`eslint.config.js`, `biome.json`, `.stylelintrc`, `ruff.toml` or `[tool.ruff]` in `pyproject.toml`). Built in:
+(`eslint.config.js`, `biome.json`, `.stylelintrc`, `ruff.toml` or `[tool.ruff]` in `pyproject.toml`). A linter's
+server runs the project's linter: eslint's server loads the project's ESLint (8.57 or 9, flat config or `.eslintrc`,
+as that ESLint decides), stylelint's reads the project's config and its plugins, and biome is the project's own
+`node_modules/.bin/biome` when it has one. Their findings, fixes and rule suppressions come as any server's
+(`space c a`). Built in:
 
 | Languages | Servers, the main first (npm: installed when missing) |
 | --- | --- |
