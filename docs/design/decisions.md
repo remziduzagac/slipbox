@@ -197,6 +197,24 @@ one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back,
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
 
+## `11.1` — the protocol library, both ways
+
+`vscode-languageserver` (10.1, the server's side) and `vscode-languageserver-protocol` (3.18, the client's: the
+JSON-RPC connection and every message's type) run under Bun as they do under Node, and in the compiled binary —
+checked 2026-10-01 with a server and client of a few lines, then the client against vtsls, pyright,
+bash-language-server, lua-language-server and vscode-css-language-server. One library serves both directions;
+`vscode-languageclient` is VS Code's own and needs its API. What the client learned:
+
+- **npm servers run on slipbox's own Bun.** vtsls, pyright and bash-language-server run under Bun, and the compiled
+  binary is Bun when `BUN_BE_BUN=1` is set: it installs a server (`add --ignore-scripts --exact`, into a folder of
+  its own, in two seconds) and runs it. No Node, nothing global (`19.5`).
+- **Diagnostics come both ways.** Older servers send them; newer ones — the CSS server, for one — wait to be asked
+  (`textDocument/diagnostic`, LSP 3.17). The client does both.
+- **A server needs its settings.** Asked for them and given none, the CSS server checks nothing, so each server
+  slipbox knows comes with defaults, as nvim-lspconfig's do (`19.2`).
+- **A server finds its helpers on `PATH`.** bash-language-server runs shellcheck only when it's there; Mason's `bin`,
+  where it often is, goes on the servers' `PATH` when slipbox finds Mason (`19.4`).
+
 ## `1.11` — embeds
 
 An Obsidian vault is full of `![[…]]`: every pasted picture, and — for anyone who writes long pieces from small notes,
