@@ -72,6 +72,8 @@ export class NoteBuffer {
 
   /** The linter's findings (3.21), and the version of the text they're for (the file as saved). */
   lint: { version: number; issues: LintIssue[] } | null = null;
+  /** Its problems bar is kept (19.9): it has had problems, and the text keeps its place as they go. */
+  problemBar = false;
 
   /** The text's parse, running on other threads (15.1): until it lands, a view shows it's reading. */
   parsing: Promise<void> | null = null;

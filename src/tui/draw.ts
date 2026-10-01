@@ -4,7 +4,8 @@
 // Returns the geometry of what was drawn, which the mouse handler hit-tests against.
 
 import type { Glyphs } from "../core/glyphs.ts";
-import { type Line, srcAt } from "../core/layout/ir.ts";
+import { type Layout, type Line, srcAt } from "../core/layout/ir.ts";
+import { type Problem, SEVERITIES, type Severity, worst } from "../core/diagnostics.ts";
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
@@ -13,7 +14,7 @@ import type { GitState } from "../core/gitops.ts";
 import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, type PromptOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { countWords } from "../core/words.ts";
-import type { CommentLink, SyntaxError } from "../core/syntax.ts";
+import type { CommentLink } from "../core/syntax.ts";
 import { cells, ordered } from "./cursor.ts";
 import { match } from "./match.ts";
 import { prettyKey, spellKey } from "./keys.ts";
@@ -851,8 +852,12 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   view.left = app.ui.wrap ? 0 : Math.max(0, Math.min(view.left, Math.max(0, layout.width - textW)));
   const cursorSrc = layout.lines[view.cur.row]?.src;
 
-  const errors = syntaxErrorsShown(view);
-  const lint = app.lintShown(view.buf);
+  // The file's problems (19.8): by each source line they cover, and in the bar by the row that line starts on.
+  const problems = app.problemsShown(view);
+  const onLine = problemLines(problems);
+  const barW = app.barWidth(view);
+  const barAt = barW ? barRows(layout, problems) : null;
+  const marksOn = app.ui.problem_marks && problems.length > 0;
   const links = commentLinksShown(view);
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
   // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
@@ -866,10 +871,14 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const isCursorRow = showCursor && row === view.cur.row;
     const band = isCursorRow ? cursorBg : null;
     if (band) c.fill(body.x, y, body.w - 1, 1, band);
-    if (gutter) {
-      const num = line.src !== prevSrc ? String(line.src).padStart(gutter - 1) : "";
-      const role: Role = errors?.has(line.src) ? "error" : lint?.has(line.src) ? "warn" : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
-      if (num) drawText(c, gutterX, y, num, { ...roleStyle(theme, role, page), bg: band ?? page });
+    // The problems bar (19.9): on the row a line starts on, how many problems start there, in the worst one's colour.
+    const here = barAt?.get(row);
+    if (here) drawText(c, gutterX, y, here.length > 9 ? "+" : String(here.length), { ...roleStyle(theme, SEVERITY_ROLE[worst(here)], page), bold: true, bg: band ?? page });
+    if (gutter > barW) {
+      const num = line.src !== prevSrc ? String(line.src).padStart(gutter - barW - 1) : "";
+      const on = onLine.get(line.src);
+      const role: Role = on ? SEVERITY_ROLE[worst(on)] : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
+      if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), bg: band ?? page });
     }
     prevSrc = line.src;
     const fill = line.fill ? theme.roles[line.fill].bg : undefined;
@@ -886,7 +895,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const to = sel.line || row !== sel.range[1].row ? 1e9 : sel.range[1].col + 1;
       marks.push({ from, to, role: "selection" });
     }
-    if (errors) marks.push(...offsetMarks(line, errors.get(line.src), layout.lines[row + 1]?.src !== line.src, "syntax_error"));
+    if (marksOn) marks.push(...problemMarks(line, layout, onLine, layout.lines[row + 1]?.src !== line.src));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
     // An oversized lens's rules say how much of it is out of sight: ↑ above, ↓ below.
@@ -938,15 +947,78 @@ function drawHScrollbar(app: App, c: Canvas, r: Rect, total: number, left: numbe
   drawText(c, r.x + pos, r.y, app.glyphs.hScrollThumb.repeat(thumb), st, thumb);
 }
 
+/** Each severity's sign in the status line. */
+const SEVERITY_GLYPH: Record<Severity, string> = { error: "✖", warning: "⚠", info: "ℹ", hint: "·" };
+
+/** Each severity's colour, in the bar, the line numbers and the status line. */
+const SEVERITY_ROLE: Record<Severity, Role> = { error: "error", warning: "warn", info: "info", hint: "status_dim" };
+/** Each severity's mark over the text (19.10); a syntax error keeps its own role (16.9). */
+const MARK_ROLE: Record<Severity, Role> = { error: "problem_error", warning: "problem_warn", info: "problem_info", hint: "problem_info" };
+
+/** Problems by each source line they cover (a long one's first 200). */
+function problemLines(problems: Problem[]): Map<number, Problem[]> {
+  const out = new Map<number, Problem[]>();
+  for (const p of problems) {
+    for (let l = p.start.line; l <= Math.min(p.end.line, p.start.line + 200); l++) out.set(l, [...(out.get(l) ?? []), p]);
+  }
+  return out;
+}
+
+/** Each source line's first row in a layout: where the bar counts its problems. */
+const firstRowCache = new WeakMap<Layout, Map<number, number>>();
+function firstRows(layout: Layout): Map<number, number> {
+  let m = firstRowCache.get(layout);
+  if (m) return m;
+  m = new Map();
+  layout.lines.forEach((line, row) => {
+    if (line.decor) return;
+    if (!m!.has(line.src)) m!.set(line.src, row);
+    for (const span of line.spans) if (span.src !== undefined && span.text.trim() && !m!.has(span.src)) m!.set(span.src, row);
+  });
+  firstRowCache.set(layout, m);
+  return m;
+}
+
+/** The bar's problems by row: each at the first row of its line, or of the next line drawn (a line the
+ *  rendered view doesn't show, as a blank one between blocks). */
+function barRows(layout: Layout, problems: Problem[]): Map<number, Problem[]> {
+  const first = firstRows(layout);
+  const out = new Map<number, Problem[]>();
+  for (const p of problems) {
+    let row = first.get(p.start.line);
+    if (row === undefined) row = layout.lines.findIndex((l) => !l.decor && l.src >= p.start.line);
+    if (row >= 0) out.set(row, [...(out.get(row) ?? []), p]);
+  }
+  return out;
+}
+
 /**
- * A source file's syntax errors by line (16.9), while they're worth showing: in source mode, out
- * of insert (a half-typed line is always broken), and only for the text as it is now.
+ * Where a row's problems are, to underline (19.10). A source row knows each cell's offset: the span
+ * itself. A rendered one knows each span's line: a link's problem marks the link as drawn, any other
+ * the text that came from its lines.
  */
-function syntaxErrorsShown(view: View): Map<number, SyntaxError[]> | null {
-  const syn = view.buf.syntax;
-  if (!view.source || view.insert || !syn?.errors.length || syn.version !== view.buf.version) return null;
-  const out = new Map<number, SyntaxError[]>();
-  for (const e of syn.errors) out.set(e.line, [...(out.get(e.line) ?? []), e]);
+function problemMarks(line: Line, layout: Layout, onLine: Map<number, Problem[]>, lastRow: boolean): { from: number; to: number; role: Role }[] {
+  const out: { from: number; to: number; role: Role }[] = [];
+  const role = (p: Problem): Role => (p.source === "syntax" ? "syntax_error" : MARK_ROLE[p.severity]);
+  if (line.srcMap) {
+    for (const p of onLine.get(line.src) ?? []) {
+      const from = line.src === p.start.line ? p.start.column - 1 : 0;
+      const to = line.src === p.end.line ? Math.max(p.end.column - 1, from + 1) : Number.POSITIVE_INFINITY;
+      out.push(...offsetMarks(line, [{ from, to }], lastRow, role(p)));
+    }
+    return out;
+  }
+  let x = 0;
+  for (const span of line.spans) {
+    const w = stringWidth(span.text);
+    const src = span.src ?? line.src;
+    const link = span.link !== undefined ? layout.links[span.link] : undefined;
+    for (const p of onLine.get(src) ?? []) {
+      const hit = p.target !== undefined ? link !== undefined && link.src === p.start.line && link.target === p.target : span.text.trim() !== "";
+      if (hit) out.push({ from: x, to: x + w, role: role(p) });
+    }
+    x += w;
+  }
   return out;
 }
 
@@ -1603,22 +1675,19 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
       ? { text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`, role: "check_done" as Role }
       : { text: "○ not watching", role: "status_dim" as Role };
   const rx = c.width - rightW;
-  // A source file's syntax errors (16.9): the one on the cursor's line, else how many there are.
-  const errs = syntaxErrorsShown(view);
-  if (errs) {
-    const here = errs.get(src)?.[0];
-    const n = [...errs.values()].reduce((k, l) => k + l.length, 0);
-    const text = here ? `  ✖ ${here.message}` : `  ✖ ${n} syntax error${n === 1 ? "" : "s"}`;
-    if (x + stringWidth(text) + 1 < rx) x += drawText(c, x, y, text, { ...roleStyle(theme, "error", st.bg), bg: st.bg });
-  }
-  // A note's lint findings (3.21): the one on the cursor's line, else how many there are.
-  const lint = errs ? null : app.lintShown(view.buf);
-  if (lint) {
-    const here = lint.get(src)?.[0];
-    const n = [...lint.values()].reduce((k, l) => k + l.length, 0);
-    const text = here ? `  ⚠ ${here.rule} ${here.name}: ${here.description}` : `  ⚠ ${n} lint`;
+  // The file's problems (19.8), from every source: the worst on the cursor's line, else how many of each.
+  const problems = app.problemsShown(view);
+  if (problems.length) {
+    const mine = problems.filter((p) => p.start.line <= src && src <= p.end.line).sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
+    const top = mine[0];
+    const text = top
+      ? `  ${SEVERITY_GLYPH[top.severity]} ${top.code ? `${top.code} ` : ""}${top.message}`
+      : `  ${SEVERITIES.map((sev) => [sev, problems.filter((p) => p.severity === sev).length] as const)
+          .filter(([, n]) => n)
+          .map(([sev, n]) => `${SEVERITY_GLYPH[sev]} ${n}`)
+          .join("  ")}`;
     const room = rx - x - 3 - stringWidth(watch.text);
-    if (room > 8) x += drawText(c, x, y, truncate(sanitize(text), room), { ...roleStyle(theme, "warn", st.bg), bg: st.bg });
+    if (room > 8) x += drawText(c, x, y, truncate(sanitize(text), room), { ...roleStyle(theme, SEVERITY_ROLE[top?.severity ?? worst(problems)], st.bg), bg: st.bg });
   }
   if (x + stringWidth(watch.text) + 3 < rx) x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
   if (rx > x) drawText(c, rx, y, right, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });

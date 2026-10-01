@@ -24,6 +24,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import type { Graph, LinkRef, Pos, ResolvedLink } from "../core/graph.ts";
+import { fragmentOf, noteProblems, type Problem } from "../core/diagnostics.ts";
 import { blockIds, landingLine, landingText } from "../core/landing.ts";
 import { diffLines } from "../core/merge.ts";
 import { planHeadingRename, planNoteRename, RenameError, type RenamePlan } from "../core/rename.ts";
@@ -53,18 +54,6 @@ export function linkAt(g: Graph, rel: string, pos: Position): ResolvedLink | nul
   const before = (a: Pos, b: Pos) => a.line < b.line || (a.line === b.line && a.column < b.column);
   const l = entry.links.find((x) => !before(at, x) && before(at, x.end));
   return l ? { ...l, ...g.resolveLink(l, rel) } : null;
-}
-
-/** A link's `#fragment`: a wikilink's heading, or a markdown link's part after `#` (decoded). */
-function fragmentOf(l: Pick<LinkRef, "kind" | "target" | "heading">): string | null {
-  if (l.kind === "wiki" || l.kind === "embed") return l.heading;
-  const i = l.target.indexOf("#");
-  if (i < 0) return null;
-  try {
-    return decodeURIComponent(l.target.slice(i + 1));
-  } catch {
-    return l.target.slice(i + 1);
-  }
 }
 
 /** Where a link goes: its note (or file), at its heading or block; each candidate when it's ambiguous. */
@@ -285,54 +274,16 @@ function within(g: Graph, rel: string, target: string, typed: string, replace: (
   }));
 }
 
-/**
- * A note's problems, for the editor (11.5): a link that reaches nothing — a note not written yet is
- * information, a missing file or an unknown vault a warning — or several notes; a heading or block a
- * link names that its note hasn't; git's conflict markers, an error.
- */
+const SEVERITY = { error: DiagnosticSeverity.Error, warning: DiagnosticSeverity.Warning, info: DiagnosticSeverity.Information, hint: DiagnosticSeverity.Hint } as const;
+
+/** A problem as the protocol has it. */
+export function toDiagnostic(p: Problem): Diagnostic {
+  return { range: rangeOf(p.start, p.end), severity: SEVERITY[p.severity], ...(p.code ? { code: p.code } : {}), source: p.source, message: p.message };
+}
+
+/** A note's problems, for the editor (11.5): the core's, as the TUI shows them. */
 export function diagnostics(g: Graph, rel: string): Diagnostic[] {
-  const out: Diagnostic[] = [];
-  const add = (l: LinkRef, severity: DiagnosticSeverity, code: string, message: string) =>
-    out.push({ range: rangeOf(l, l.end), severity, code, source: "slipbox", message });
-  for (const l of g.linksOf(rel)) {
-    const wiki = l.kind === "wiki" || l.kind === "embed";
-    const frag = fragmentOf(l);
-    switch (l.resolvedKind) {
-      case "unresolved":
-        if (l.reason) add(l, DiagnosticSeverity.Warning, "unresolved", l.reason);
-        else if (wiki) add(l, DiagnosticSeverity.Information, "unresolved", `no note named "${l.target}" yet`);
-        else add(l, DiagnosticSeverity.Warning, "unresolved", `broken link: ${l.target}`);
-        break;
-      case "ambiguous":
-        add(l, DiagnosticSeverity.Warning, "ambiguous", `"${l.target}" matches ${l.candidates.length} notes: ${l.candidates.join(", ")}`);
-        break;
-      case "note":
-      case "anchor": {
-        if ((!frag && !l.block) || (frag && /^L\d+$/.test(frag))) break;
-        const path = l.resolvedKind === "anchor" ? rel : l.path!;
-        if (landingLine(g, path, frag, l.block) !== null) break;
-        const where = l.resolvedKind === "anchor" ? "this note" : isAbsolute(path) ? posix.basename(path) : path;
-        const block = l.block ?? (frag!.startsWith("^") ? frag!.slice(1) : null);
-        if (block) add(l, DiagnosticSeverity.Warning, "no-block", `no block ^${block} in ${where}`);
-        else add(l, DiagnosticSeverity.Warning, "no-heading", `no heading "${frag}" in ${where}`);
-        break;
-      }
-    }
-  }
-  const lines = (g.textOf(rel) ?? "").split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    if (!/^<{7}(\s|$)/.test(lines[i]!)) continue;
-    let end = lines.findIndex((x, j) => j > i && /^>{7}(\s|$)/.test(x));
-    if (end < 0) end = i;
-    out.push({
-      range: { start: { line: i, character: 0 }, end: { line: end, character: lines[end]!.replace(/\r$/, "").length } },
-      severity: DiagnosticSeverity.Error,
-      code: "conflict",
-      source: "slipbox",
-      message: "a merge conflict: both sides are still here",
-    });
-  }
-  return out;
+  return noteProblems(g, rel).map(toDiagnostic);
 }
 
 /** A note's outline (11.6): its headings, each holding the ones under it, its range its whole section. */

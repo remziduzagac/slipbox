@@ -553,10 +553,10 @@ source shown alike in every mode.*
 | 19.5 | Private installs: npm packages with Bun into slipbox's data folder, pinned, scripts off; `[lsp] auto_install` |
 | 19.6 | **decide** trust: servers and linters run the project's code — where, and asked how often |
 | 19.7 | `slipbox doctor`: per language, each server and linter — found where, installed, or missing and how to get it |
-| 19.8 | Diagnostics: one store per file from every source — syntax, lint, servers, linters — by severity |
-| 19.9 | The bar: a column beside the text, each line's count coloured by its worst severity, in every mode |
-| 19.10 | Ranges marked: underlined or highlighted in source mode, the lens and the rendered view |
-| 19.11 | Toggles (`space u`) and `[diagnostics]`; the status line and Problems take every source |
+| 19.8 | **Done.** Diagnostics: one list per file from every source — syntax, lint, links; servers to come |
+| 19.9 | **Done.** The bar: a column beside the text, each line's count coloured by its worst severity, every mode |
+| 19.10 | **Done.** Ranges marked: underlined in source mode, the lens and the rendered view |
+| 19.11 | **Done.** Toggles (`space u e`, `shift+e`) and `[diagnostics]`; the status line takes every source |
 | 19.12 | Hover and signature help in a float |
 | 19.13 | Definition, references, implementation, type definition: a jump, or a list when there are several |
 | 19.14 | Document and workspace symbols: the outline and the switcher take the server's when there is one |

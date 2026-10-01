@@ -113,6 +113,14 @@ export interface Config {
   search: {
     engine: "auto" | "index" | "scan";
   };
+  /** A file's problems shown where they are (19.8–19.11): `bar`, a column beside the text with each
+   *  line's count — `auto` while the file has had any, `on` always, `off` never; `marks`, the text
+   *  underlined; `severity`, the least that shows (a note not written yet is `info`). */
+  diagnostics: {
+    bar: "auto" | "on" | "off";
+    marks: boolean;
+    severity: "error" | "warning" | "info" | "hint";
+  };
   /** The LSP face (11.x). `lint`: the lint surface's findings (3.21) among its diagnostics — off, since
    *  an editor runs its own linter and would show them twice. */
   lsp: {
@@ -224,6 +232,7 @@ export const DEFAULT_CONFIG: Config = {
   capture: { location: "state", file: "scratch.md" },
   git: { base: "" },
   search: { engine: "auto" },
+  diagnostics: { bar: "auto", marks: true, severity: "warning" },
   lsp: { lint: false },
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
@@ -241,6 +250,8 @@ const ENUMS: Record<string, readonly string[]> = {
   "capture.location": ["state", "vault"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],
+  "diagnostics.bar": ["auto", "on", "off"],
+  "diagnostics.severity": ["error", "warning", "info", "hint"],
   "ui.lines": ["light", "heavy"],
   "files.show": ["notes", "renderable", "all"],
   "editor.edit_in": ["source", "live"],

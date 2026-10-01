@@ -6767,27 +6767,32 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     const { h } = await setup();
     h.frame();
     await until(() => h.app.view!.buf.lint !== null);
-    expect(statusRow(h.frame())).toContain("⚠ 1 lint");
+    expect(statusRow(h.frame())).toContain("⚠ 1"); // how many of each severity (19.8)
     await h.keys("j", "j"); // line 3
     expect(statusRow(h.frame())).toContain("⚠ MD013 line-length: Line length [Expected: 80]");
     const c = h.canvas();
     const rows = c.toString().split("\n");
     const at = (n: string, text: string) => {
-      const y = rows.findIndex((r) => new RegExp(`┃\\s*${n}\\s.*${text}`).test(r));
+      const y = rows.findIndex((r) => new RegExp(`┃.{0,4}${n}\\s.*${text}`).test(r));
       return c.styles[y]![[...rows[y]!].indexOf(n, [...rows[y]!].indexOf("┃"))]!.fg;
     };
     expect(at("3", "A long")).toBe(h.app.theme.roles.warn.fg!);
     expect(at("1", "L")).not.toBe(h.app.theme.roles.warn.fg!);
+    // The problems bar (19.9): beside the number, how many start on the line, in the worst one's colour.
+    const y3 = rows.findIndex((r) => /A long/.test(r));
+    const bar = [...rows[y3]!].indexOf("┃") + 2; // the border, a margin, then the bar
+    expect([...rows[y3]!].slice(bar, bar + 4).join("")).toBe("1 3 "); // the bar's count, then the line's number
+    expect(c.styles[y3]![bar]!.fg).toBe(h.app.theme.roles.warn.fg!);
     // Typing: its text isn't the file's any more — nothing shown until it's saved (and linted again).
     h.app.view!.buf.edit(0, 0, "x");
     h.frame();
     await new Promise((r) => setTimeout(r, 450)); // past a re-lint's 300 ms: none while it's unsaved
     h.frame();
-    expect(h.app.lintShown(h.app.view!.buf)).toBeNull();
+    expect(h.app.problemsShown(h.app.view!)).toEqual([]);
     expect(statusRow(h.frame())).not.toContain("⚠");
     h.app.saveBuffer(h.app.view!.buf);
     h.frame();
-    await until(() => h.app.lintShown(h.app.view!.buf) !== null);
+    await until(() => h.app.problemsShown(h.app.view!).length > 0);
   });
 
   test("the Problems view lints the vault: a Lint section by note; enter opens a finding; a linter that can't run says so once", async () => {
@@ -7313,5 +7318,93 @@ describe("embeds in the TUI (1.11)", () => {
     await h.keys("space", "n", "v", "shift+g", "o", ...[..."and a line"].map((c) => (c === " " ? "space" : c)), "escape", "ctrl+s");
     await h.app.run("tab.prev");
     expect(h.frame()).toContain("▎ rewritten by an agent and a line"); // one paragraph
+  });
+});
+
+describe("problems where they are: the bar, the marks, the status line (19.8–19.11)", () => {
+  const vault = (text = "# P\n\nSee [[twin]] here.\n\nAnd [[nope]] there.\n") => {
+    const root = makeVault();
+    mkdirSync(join(root, "x"));
+    mkdirSync(join(root, "y"));
+    writeFileSync(join(root, "x", "twin.md"), "# X\n");
+    writeFileSync(join(root, "y", "twin.md"), "# Y\n");
+    writeFileSync(join(root, "p.md"), text);
+    return root;
+  };
+  /** The row showing `text`, its cells, and their styles. */
+  const rowOf = (h: Harness, text: string) => {
+    const c = h.canvas();
+    const rows = c.toString().split("\n");
+    const y = rows.findIndex((r) => r.includes(text));
+    const cellsOf = [...rows[y]!];
+    const left = cellsOf.indexOf("┃");
+    return { cells: cellsOf, styles: c.styles[y]!, bar: cellsOf[left + 2]!, barFg: c.styles[y]![left + 2]!.fg, at: (s: string) => cellsOf.join("").indexOf(s) };
+  };
+
+  test("the bar counts a line's problems in the worst one's colour; the link marked; the status line says what", async () => {
+    const h = await harness({ root: vault(), open: "p.md" });
+    h.frame();
+    const see = rowOf(h, "See");
+    expect(see.bar).toBe("1");
+    expect(see.barFg).toBe(h.app.theme.roles.warn.fg!);
+    // The ambiguous link, marked as a warning; the text around it not.
+    expect(see.styles[see.at("twin")]!.fg).toBe(h.app.theme.roles.problem_warn.fg!);
+    expect(see.styles[see.at("here")]!.fg).not.toBe(h.app.theme.roles.problem_warn.fg!);
+    // [[nope]] is a note not written yet: information, under the default threshold.
+    expect(rowOf(h, "And").bar).toBe(" ");
+    expect(statusRow(h.frame())).toContain("⚠ 1");
+    await h.app.run("cursor.goto_line 3");
+    expect(statusRow(h.frame())).toContain('⚠ ambiguous "twin" matches 2 notes: x/twin.md, y/twin.md');
+  });
+
+  test("[diagnostics] severity = \"info\": the notes not written yet too, in their colour", async () => {
+    const h = await harness({ root: vault(), open: "p.md", config: (c) => (c.diagnostics.severity = "info") });
+    h.frame();
+    const and = rowOf(h, "And");
+    expect(and.bar).toBe("1");
+    expect(and.barFg).toBe(h.app.theme.roles.info.fg!);
+    expect(statusRow(h.frame())).toMatch(/⚠ 1 {2}ℹ 1/);
+  });
+
+  test("space u e hides the bar (the text takes its room), space u shift+e the marks; bar = \"off\" never shows it", async () => {
+    const h = await harness({ root: vault(), open: "p.md" });
+    h.frame();
+    const before = rowOf(h, "See").at("See");
+    await h.keys("space", "u", "e");
+    expect(rowOf(h, "See").at("See")).toBe(before - 2);
+    expect(h.app.messages.at(-1)!.text).toBe("Problems bar: off");
+    await h.keys("space", "u", "shift+e");
+    const see = rowOf(h, "See");
+    expect(see.styles[see.at("twin")]!.fg).not.toBe(h.app.theme.roles.problem_warn.fg!);
+    const off = await harness({ root: vault(), open: "p.md", config: (c) => (c.diagnostics.bar = "off") });
+    off.frame();
+    expect(rowOf(off, "See").at("See")).toBe(before - 2);
+  });
+
+  test("auto: no bar while a note has had no problems; once it has, it stays as they go", async () => {
+    const root = vault("# P\n\nSee [[x/twin]] here.\n");
+    const h = await harness({ root, open: "p.md" });
+    h.frame();
+    const clean = rowOf(h, "See").at("See");
+    writeFileSync(join(root, "p.md"), "# P\n\nSee [[twin]] here.\n");
+    h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
+    h.frame();
+    expect(rowOf(h, "See").at("See")).toBe(clean + 2);
+    writeFileSync(join(root, "p.md"), "# P\n\nSee [[x/twin]] here.\n");
+    h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
+    h.frame();
+    expect(rowOf(h, "See").bar).toBe(" ");
+    expect(rowOf(h, "See").at("See")).toBe(clean + 2); // kept: the text doesn't move back
+  });
+
+  test("in source mode the mark is the link's own characters", async () => {
+    const h = await harness({ root: vault(), open: "p.md" });
+    await h.app.run("view.source");
+    h.frame();
+    const see = rowOf(h, "See [[twin]]");
+    const warn = h.app.theme.roles.problem_warn.fg!;
+    expect(see.styles[see.at("[[twin]]")]!.fg).toBe(warn);
+    expect(see.styles[see.at("[[twin]]") + 7]!.fg).toBe(warn);
+    expect(see.styles[see.at(" here")]!.fg).not.toBe(warn);
   });
 });

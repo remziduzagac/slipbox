@@ -68,6 +68,7 @@ import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultCon
 import { findVaultRoot, gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
+import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
@@ -477,6 +478,9 @@ export interface UiState {
   urls: boolean;
   breadcrumb: boolean;
   top_bar: boolean;
+  /** The problems bar beside the text (19.9), and the problems' text marked (19.10). */
+  problems_bar: boolean;
+  problem_marks: boolean;
   theme: string;
   glyphs: string;
 }
@@ -492,6 +496,8 @@ export function uiDefaults(c: Config): UiState {
     mouse: c.ui.mouse,
     breadcrumb: c.ui.breadcrumb,
     top_bar: c.ui.top_bar,
+    problems_bar: c.diagnostics.bar !== "off",
+    problem_marks: c.diagnostics.marks,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
     urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,
@@ -1444,14 +1450,6 @@ export class App {
     if (seed) list.title = titled(list.title);
   }
 
-  /** A note's findings for the text as it is now, by line; null when there are none to show. */
-  lintShown(buf: NoteBuffer): Map<number, LintIssue[]> | null {
-    const l = buf.lint;
-    if (!l || l.version !== buf.version || !l.issues.length) return null;
-    const out = new Map<number, LintIssue[]>();
-    for (const i of l.issues) out.set(i.line, [...(out.get(i.line) ?? []), i]);
-    return out;
-  }
   private stopLazy: (() => void) | null = null;
 
   /** Whether a file has a rendered view: markdown notes do, data files while they parse
@@ -1860,10 +1858,47 @@ export class App {
     return this.layoutFor(view, view.width, this.gutterWidth(view));
   }
 
-  /** Source line-number gutter width for a view (0 when line numbers are off). */
+  /** The gutter's width for a view: the problems bar's, then the line numbers' (0 when both are off). */
   gutterWidth(view: View): number {
-    if (!this.ui.line_numbers) return 0;
-    return String(view.buf.lineStarts().length).length + 1;
+    return this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0);
+  }
+
+  /** The problems bar's width (19.9): a count and a space, while it's on — with `auto`, once the file
+   *  has had problems, and from then on, so the text doesn't move as they come and go. */
+  barWidth(view: View): number {
+    if (!this.ui.problems_bar) return 0;
+    if (this.config.diagnostics.bar === "on" || view.buf.problemBar) return 2;
+    if (this.problemsShown(view, true).length) view.buf.problemBar = true;
+    return view.buf.problemBar ? 2 : 0;
+  }
+
+  /** A note's own problems — its links, its conflicts — kept until the vault or the note changes. */
+  private readonly noteProblemCache = new WeakMap<NoteBuffer, { key: string; list: Problem[] }>();
+
+  /**
+   * A file's problems as they are now (19.8), from every source, at least `[diagnostics] severity`:
+   * its syntax errors (16.9; in source mode, out of insert, for the text as it is), the linter's
+   * findings (3.21; for the text they were found in), and a vault note's links and conflict markers
+   * (while it's as saved: the graph has the file's). `any`: whether there are some at all — the syntax
+   * errors of the last parse too, insert or not.
+   */
+  problemsShown(view: View, any = false): Problem[] {
+    const buf = view.buf;
+    const out: Problem[] = [];
+    const syn = buf.syntax;
+    if (syn?.errors.length && (any || (view.source && !view.insert && syn.version === buf.version))) out.push(...syntaxProblems(syn.errors));
+    if (buf.lint?.issues.length && (any || buf.lint.version === buf.version)) out.push(...lintProblems(buf.lint.issues));
+    if (buf.rel && this.graph.notes.has(buf.rel) && (any || !buf.dirty)) {
+      const key = `${this.graph.generation}:${buf.version}`;
+      let hit = this.noteProblemCache.get(buf);
+      if (hit?.key !== key) {
+        hit = { key, list: noteProblems(this.graph, buf.rel) };
+        this.noteProblemCache.set(buf, hit);
+      }
+      out.push(...hit.list);
+    }
+    const min = this.config.diagnostics.severity;
+    return out.filter((p) => atLeast(p.severity, min));
   }
 
   /** The view's top, remembered as its source line and the row within it: a re-layout (a resize, a

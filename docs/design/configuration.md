@@ -110,6 +110,11 @@ base = ""                      # the branch changes are measured against; "" = m
 [search]                       # search (6.x): slipbox search, space f s
 engine = "auto"                # auto: the index once built, else a scan | index (built first) | scan (no index)
 
+[diagnostics]                  # a file's problems where they are (19.8–19.11)
+bar = "auto"                   # the bar beside the text: auto (once a file has had problems) | on | off
+marks = true                   # problems underlined in the text
+severity = "warning"           # the least shown: error | warning | info (a note not written yet) | hint
+
 [lsp]                          # slipbox lsp (11.x), serving vaults to an editor
 lint = false                   # the lint surface's findings among its diagnostics; off: the editor lints
 

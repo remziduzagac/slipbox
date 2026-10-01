@@ -9,7 +9,6 @@ import {
   type Connection,
   createConnection,
   type Diagnostic,
-  DiagnosticSeverity,
   type InitializeParams,
   type InitializeResult,
   CodeActionKind,
@@ -29,6 +28,7 @@ import { type Graph, openGraph } from "../core/graph.ts";
 import { Reach } from "../core/reach.ts";
 import { planMoves, RenameError } from "../core/rename.ts";
 import { checkoutOf } from "../core/git.ts";
+import { lintProblems } from "../core/diagnostics.ts";
 import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
 import { copyText } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
@@ -38,7 +38,7 @@ import { findVaultRoot, isInside, recordLocation, rootAt, type VaultLocation, va
 import { applyToGraph, VaultFeed } from "../core/vault-feed.ts";
 import { VaultWatcher } from "../core/watch.ts";
 import { VERSION } from "../version.ts";
-import { CONTEXT_COMMAND, codeActions, completion, definition, diagnostics, documentSymbols, hover, prepareRename, references, renamePlan, workspaceEdit, workspaceSymbols } from "./features.ts";
+import { CONTEXT_COMMAND, codeActions, toDiagnostic, completion, definition, diagnostics, documentSymbols, hover, prepareRename, references, renamePlan, workspaceEdit, workspaceSymbols } from "./features.ts";
 
 export interface LspOptions {
   input: NodeJS.ReadableStream;
@@ -303,7 +303,7 @@ export class LspServer {
       return;
     }
     const lint = this.linted.get(uri);
-    if (lint?.version === doc.version) list.push(...lint.issues.map(lintDiagnostic));
+    if (lint?.version === doc.version) list.push(...lintProblems(lint.issues).map(toDiagnostic));
     void this.connection.sendDiagnostics({ uri, version: doc.version, diagnostics: list });
   }
 
@@ -496,12 +496,6 @@ export class LspServer {
     } catch {}
     this.finish(code);
   }
-}
-
-/** A linter's finding as a diagnostic: a warning at its line (and column, when it gives one). */
-function lintDiagnostic(i: LintIssue): Diagnostic {
-  const at = { line: i.line - 1, character: (i.column ?? 1) - 1 };
-  return { range: { start: at, end: { line: at.line, character: i.column ? at.character + 1 : 0 } }, severity: DiagnosticSeverity.Warning, code: i.rule, source: "markdownlint", message: `${i.name}: ${i.description}` };
 }
 
 /** How long typing pauses before an open note's text is parsed again. */

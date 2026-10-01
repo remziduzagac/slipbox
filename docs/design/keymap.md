@@ -484,14 +484,16 @@ gets one when a line is added after its last.
 | `space u u` | list the UI settings with their current values; pick one to change it |
 | `space u t` | theme picker, previewed live (`esc` restores) |
 | `space u g` | glyph picker: nerd, unicode, ascii or auto (previewed live) |
-| `space u w` | readable width: the text column capped at `ui.readable_max` (100), centred |
+| `space u d` | readable width: the text column capped at `ui.readable_max` (100), centred |
 | `space u z` | zen: no bars, frame, panes, tabs or breadcrumbs; readable width on |
 | `space u l` | cursor-row highlight on / off |
 | `space u n` | source line numbers in a left gutter |
-| `space u s` | wrap long lines (on by default); off, notes keep their natural width and scroll sideways |
+| `space u w` | wrap long lines (on by default; `alt+z` too); off, notes keep their width and scroll sideways |
 | `space u r` | link URLs shown after the link text |
 | `space u m` | mouse on / off; off gives the mouse back to the terminal for native selection |
 | `space u b` | top bar on / off (the palette chip and vault state); the note takes its row |
+| `space u e` | the problems bar on / off: each line's problems, counted, coloured by the worst (`19.9`) |
+| `space u shift+e` | problems marked in the text on / off: underlined where they are (`19.10`) |
 
 **Persistence.** UI settings apply at once and are remembered in the session. Config sets the
 defaults, and a session setting is kept only while the config value it overrode is unchanged:

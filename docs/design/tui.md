@@ -128,8 +128,9 @@ session keeps them.
   note's own name stays;
 - a marker: `• unsaved`, `• unsaved ⚠ differs from disk` (after keeping yours in a conflict),
   `↻ reloaded` after an external change, or `✖ deleted on disk` — in symbols only (`• ⚠`) on a
-  narrow screen, so the path and the position keep their room; then the lint finding on the cursor's line
-  (`⚠ MD013 line-length: …`), or how many the note has (`⚠ 3 lint`; see "The lint surface");
+  narrow screen, so the path and the position keep their room; then the worst problem on the cursor's line
+  (`⚠ MD013 line-length: …`, `✖ missing ")"`), or how many the file has of each severity (`✖ 1  ⚠ 3`; see
+  "Problems where they are");
 - whether external changes will show up: `● watching` (with a count of polled directories, if
   any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
   dropped when the line is too short.
@@ -677,6 +678,7 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - zen (no chrome; panes only on demand)
 - the cursor-row band
 - source line numbers in a gutter
+- the problems bar, and the problems marked in the text (below, "Problems where they are")
 - the breadcrumb (no key of its own: the `space u u` list, or the palette)
 - wrapping (below)
 - link URLs
@@ -882,8 +884,8 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
     interfaces, enums, Rust's structs, traits, impls and modules — as headings nested by where they
     sit, from a query per language. `space o`, `]]` and the breadcrumb use them as a note's.
   - **Syntax errors** (syntax only: no types, no lint). Where the parser found an error or had to
-    invent a missing token, the text is underlined (`syntax_error`), and its line number is red
-    when numbers show; the status line says `✖ n syntax errors`, or the error itself on the
+    invent a missing token, the text is underlined (`syntax_error`), counted in the problems bar, and its line
+    number is red when numbers show; the status line counts it (`✖ 1`), or says the error itself on the
     cursor's line. Never during insert mode — a half-typed line is always broken — and only for
     the text as it is now: after an edit the marks come back when the new parse lands.
   - **Links in comments** (`16.10`): URLs, and paths with an extension that name a file of the
@@ -1035,13 +1037,37 @@ name it, never a vault's.
 
 - **A note** is linted once its text is the file's: when it opens, and 300 ms after each save — never while it's
   unsaved, since the linter reads the file. Its findings show only for the text they were found in: typing hides
-  them until the next save's run. A line with a finding has its number in `warn` (when numbers show); the status
-  line says `⚠ MD013 line-length: …` on such a line, else `⚠ n lint`.
+  them until the next save's run. A finding is a warning among the file's problems ("Problems where they are"):
+  counted in the bar, its line's number in `warn`, the status line saying `⚠ MD013 line-length: …` on its line.
 - **The vault** is linted when the Problems view opens: its **Lint** section lists the findings by note, and a note's
   own run keeps its rows current. `enter` on one opens the note at that line (in source mode, its column); on a
   note's row, at its first.
 - **A linter that can't run** (not installed, or failing without a finding) is said once, and not tried again until
   the config changes.
+
+## Problems where they are (plans `19.8`–`19.11`)
+
+A file's problems, from every source alike, show where they are, in source mode, the lens and the rendered view:
+its syntax errors (`16.9`; in source mode, out of insert, for the text as it is), the linter's findings (`3.21`; for
+the text they were found in), a vault note's own (`11.5`: a link that reaches nothing or several notes, a `#heading` or
+`#^block` its note hasn't, git's conflict markers; while the note is as saved, since the vault's index has the
+file's) — and, later, the language servers' (`19.x`). Each has a severity: error, warning, information, hint.
+`[diagnostics] severity` (`warning`) is the least that shows, so a vault's notes not written yet — information —
+don't mark every page; `"info"` shows them too.
+
+- **The bar** (`space u e`, `[diagnostics] bar`): a column beside the text, left of the line numbers. On the row a
+  line starts on — in the rendered view, the row its text starts on, or the next one drawn — how many problems start
+  there (`+` past 9), in the worst one's colour (`error`, `warn`, `info`). With `"auto"`, the default, it takes its two
+  columns once a file has had a problem, and keeps them while the file is open, so the text doesn't move as problems
+  come and go; `"on"` keeps them always, `"off"` never. A line's number takes the worst one's colour too.
+- **The marks** (`space u shift+e`, `[diagnostics] marks`): where each problem is, underlined in its severity's
+  colour (`problem_error`, `problem_warn`, `problem_info`; a syntax error keeps `syntax_error`). Source mode and the
+  lens know each character's place: the problem's own characters. The rendered view knows each piece of text's line:
+  a link's problem marks the link as drawn, any other the text its lines became.
+- **The status line**: the worst problem on the cursor's line, its code first (`⚠ MD013 line-length: …`), else how
+  many of each severity (`✖ 1  ⚠ 3  ℹ 2`).
+
+Both switches are UI settings (`space u u`), remembered as the others are.
 
 ## Git (plans `5.11`–`5.14`)
 

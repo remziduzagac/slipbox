@@ -31,8 +31,9 @@ export const ROLES = [
   "syn_keyword", "syn_function", "syn_string", "syn_number", "syn_comment", "syn_type",
   "syn_variable", "syn_constant", "syn_operator", "syn_punctuation", "syn_tag", "syn_attr",
   "syn_builtin", "syn_meta", "syn_regexp", "syn_section", "syn_addition", "syn_deletion",
-  // a source file's syntax error (16.9), drawn over the text in source mode
-  "syntax_error",
+  // a source file's syntax error (16.9), drawn over the text in source mode; other problems by
+  // severity (19.10), in source mode and the rendered view
+  "syntax_error", "problem_error", "problem_warn", "problem_info",
   // chrome
   "border", "status", "status_accent", "status_dim",
   "sidebar", "sidebar_dir", "sidebar_selected", "sidebar_active", "sidebar_vault",
@@ -162,6 +163,9 @@ export function themeFromPalette(
     fm_border: { fg: p.surface2 },
     fm_error: { fg: p.red },
     syntax_error: { fg: p.red, underline: true },
+    problem_error: { fg: p.red, underline: true },
+    problem_warn: { fg: p.yellow, underline: true },
+    problem_info: { fg: p.cyan, underline: true },
     callout_note: { fg: p.blue, bold: true },
     callout_tip: { fg: p.green, bold: true },
     callout_important: { fg: p.purple, bold: true },
@@ -368,6 +372,9 @@ export function monoTheme(): Theme {
   roles.dim = { dim: true };
   roles.fm_error = { bold: true };
   roles.syntax_error = { bold: true, underline: true };
+  roles.problem_error = { bold: true, underline: true };
+  roles.problem_warn = { underline: true };
+  roles.problem_info = { underline: true };
   roles.lens_edit = { bold: true, underline: true }; // editing: the label says so too
   return { ...t, name: "mono", roles };
 }

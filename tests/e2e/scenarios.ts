@@ -670,7 +670,14 @@ export const SCENARIOS: Scenario[] = [
       config: `[lint]\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(`for f; do case "$f" in */home.md) printf '%s:3:6 error MD013/line-length Line length [Expected: 80]\\n' "$f";; esac; done; exit 1`)}, "lint"]\n`,
     },
     run: async (s) => {
-      await s.status("⚠ 1 lint");
+      await s.status("⚠ 1", 6000); // how many of each severity (19.8); the linter runs once the note opens
+      // The problems bar (19.9) and the marks (19.10), each toggled off and back.
+      await leader(s, "u", "e");
+      await s.message("Problems bar: off");
+      await leader(s, "u", "e");
+      await leader(s, "u", "shift+e");
+      await s.message("Problems marked in the text: off");
+      await leader(s, "u", "shift+e");
       await leader(s, "v", "p");
       await s.see(/Lint \(1\)/);
       await s.see(/L3 +MD013 line-len/); // cut to the panel

@@ -183,6 +183,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "ui.wrap", title: "Wrap long lines", cli: I, desc: "Wraps to the pane, or scrolls sideways when off" },
   { id: "ui.breadcrumb", title: "Breadcrumb", cli: I, desc: "Shows or hides the heading path at the top of each window" },
   { id: "ui.top_bar", title: "Top bar", cli: I, desc: "Shows or hides the top bar (the palette chip, vault state)" },
+  { id: "ui.problems_bar", title: "Problems bar", cli: I, desc: "Shows or hides the column beside the text with each line's problems, counted and coloured by the worst" },
+  { id: "ui.problem_marks", title: "Problems marked in the text", cli: I, desc: "Underlines where each problem is, in source mode and the rendered view" },
   { id: "ui.urls", title: "Show link URLs", cli: I, desc: "Prints link addresses after their text" },
   { id: "ui.mouse", title: "Mouse", cli: I, desc: "Turns the mouse off so the terminal selects" },
   // scratch
