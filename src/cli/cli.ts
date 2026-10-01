@@ -169,6 +169,7 @@ Usage:
   slipbox init [dir]                make <dir> a vault (creates .slipbox/ with its id and name)  [--name N] [--private] [--dry-run]
   slipbox deinit <dir>              make a vault nested in another a plain folder of it; links fixed  [--dry-run]
   slipbox info                      vault, paths, versions, staleness
+  slipbox lsp                       serve vaults to an editor over LSP, on stdio  [--config <file>]
   slipbox vaults                    the vaults this machine knows: name, kind, path, last seen
   slipbox themes                    list themes
   slipbox commands                  list named commands and their CLI equivalents

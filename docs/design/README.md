@@ -13,5 +13,6 @@ behaviour, the matching document changes in the same commit.
 | [keymap.md](keymap.md) | every key: the conventions, the direct keys, the leader groups, the `:` aliases |
 | [keymap-comparison.md](keymap-comparison.md) | the keys beside vim's, VS Code's and Obsidian's, and where they differ |
 | [cli.md](cli.md) | the agent surface: commands, JSON contract, exit codes, capture |
+| [lsp.md](lsp.md) | phase 5: `slipbox lsp` serving vaults to editors; later, slipbox's client for code |
 | [configuration.md](configuration.md) | every config key and environment variable |
 | [testing.md](testing.md) | test strategy and the fixture vault |

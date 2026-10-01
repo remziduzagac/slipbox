@@ -13,8 +13,8 @@ decisions that gated this code are in [decisions.md](decisions.md).
                  └───────┬──────────────┬──────────────┬────┘
                          ▼              ▼              ▼
                     src/tui         src/cli        src/lsp
-                    OpenTUI         agents,        (phase 5,
-                    reader          scripts         empty)
+                    OpenTUI         agents,        editors,
+                    reader          scripts        `slipbox lsp`
 ```
 
 `src/main.ts` picks a face. A known subcommand runs the CLI. Anything else opens the TUI, but only
@@ -96,6 +96,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/command-specs.ts` | 0.8, parity | every command id with its CLI equivalent |
 | `core/position.ts` | 3.4, 3.5, 3.15 | anchors, reading positions, session file |
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
+| `core/vault-feed.ts` | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI, LSP) |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
 | `core/context.ts` | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
 | `core/lint.ts` | 3.21 | the lint surface: your markdownlint-cli2 run, its findings read |
@@ -103,6 +104,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face |
 | `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |
+| `lsp/server.ts` | 11.x | the LSP face: `slipbox lsp`, a graph per vault served to an editor ([lsp.md](lsp.md)) |
 | `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
 | `tui/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
@@ -136,6 +138,7 @@ Runtime dependencies, all pure JavaScript except OpenTUI:
 | `get-east-asian-width` | the width function |
 | `ignore` | gitignore semantics for the walk |
 | `smol-toml`, `yaml` | config; frontmatter and base16 schemes |
+| `vscode-languageserver` (and `-protocol`, `-textdocument`) | the LSP face's protocol, an editor's documents |
 
 No external binary is required (hard constraint 1). The clipboard tools are used when present
 and never needed.

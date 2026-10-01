@@ -413,6 +413,12 @@ longer than any inside it). Links are left as written: an agent can read `[[name
 
 The human output is the bundle itself, to pipe into an agent; `--json` has it as `text`, beside what went in.
 
+## `slipbox lsp` (plan `11.x`)
+
+Not a command like the others: it serves vaults to an editor over LSP on stdio until the editor ends the session, and
+nothing but the protocol reaches stdout. It takes `--config <file>` (and ignores `--stdio` and `--clientProcessId`,
+which editors pass by habit); any other argument is exit 2. What it serves, and how, is [lsp.md](lsp.md).
+
 ## Installing for agents
 
 `scripts/install-local.sh` writes a `slipbox` launcher into `~/.local/bin` that runs this

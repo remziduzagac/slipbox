@@ -66,6 +66,7 @@ import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, 
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
 import { findVaultRoot, gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
@@ -113,10 +114,6 @@ function conflictLine(abs: string): number {
     return 0;
   }
 }
-
-/** A branch switch's files keep arriving for a moment after HEAD moved (the watcher's debounce,
- *  a big checkout): not taken for moves until then (5.9). */
-const SWITCH_SETTLE_MS = 3000;
 
 export interface Host {
   requestRender(): void;
@@ -635,7 +632,18 @@ export class App {
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
     loadConfig({ vaultFile: vaultConfigPath(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood });
     this.now = opts.now ?? Date.now;
-    this.head = this.headNow();
+    this.feed = new VaultFeed({
+      checkout: () => this.checkout,
+      graph: () => this.graph,
+      now: () => this.now(),
+      locked: () => this.gitIndexLocked(),
+      apply: (b) => {
+        this.applyChanges(b);
+        this.host.requestRender();
+      },
+      headMoved: (was, now) => this.headMoved(was, now),
+      gitNews: () => this.refreshGit(),
+    });
     this.ui = uiDefaults(opts.config);
     if (opts.themeName) this.ui.theme = opts.themeName;
     if (process.env.NO_COLOR) this.ui.theme = "mono";
@@ -1087,18 +1095,12 @@ export class App {
   // reset. The watcher's batches are held while git holds its index lock, then applied together;
   // the files a branch switch brings and takes aren't taken for moves; each branch keeps its tabs.
 
-  /** HEAD as last seen: its branch, or (detached) its commit. */
-  private head: { branch: string | null; commit: string | null } | null = null;
-  private heldBatches: WatchBatch[] = [];
-  private gitWait: ReturnType<typeof setTimeout> | null = null;
-  /** When HEAD last moved: the watcher's batches for a moment after are the switch's too. */
-  private switchedAt = Number.NEGATIVE_INFINITY;
+  /** The watcher's news, held while git writes, applied to the graph (5.9, 5.10). */
+  readonly feed: VaultFeed;
 
-  private headNow(): { branch: string | null; commit: string | null } | null {
-    const c = this.checkout;
-    if (!c) return null;
-    const h = headOf(c);
-    return { branch: h.branch, commit: h.commit };
+  /** HEAD as last seen: its branch, or (detached) its commit. */
+  private get head(): Head | null {
+    return this.feed.head;
   }
 
   /** git is mid-commit (or mid-anything) in the vault's checkout (5.10). Looked up afresh when none
@@ -1111,55 +1113,13 @@ export class App {
 
   /** A batch from the watcher: applied now — or, while git writes, held with the rest it writes. */
   receiveBatch(b: WatchBatch): void {
-    this.heldBatches.push(b);
-    if (this.gitIndexLocked()) return this.waitForGit();
-    this.flushBatches();
-  }
-
-  private waitForGit(): void {
-    if (this.gitWait) return;
-    const tick = () => {
-      this.gitWait = null;
-      if (this.quitting) return;
-      if (this.gitIndexLocked()) {
-        this.gitWait = setTimeout(tick, 100);
-        (this.gitWait as { unref?: () => void }).unref?.();
-        return;
-      }
-      this.flushBatches();
-    };
-    this.gitWait = setTimeout(tick, 100);
-    (this.gitWait as { unref?: () => void }).unref?.();
-  }
-
-  /** The held batches applied as one — a switch that came with them seen first, and their files
-   *  not taken for moves (a note only one branch has comes and goes; nothing moved). */
-  flushBatches(): void {
-    const batches = this.heldBatches;
-    this.heldBatches = [];
-    this.checkHead();
-    if (!batches.length) return;
-    const merged: WatchBatch = { changes: batches.flatMap((b) => b.changes), rescan: batches.some((b) => b.rescan) };
-    this.refreshGit();
-    if (this.now() - this.switchedAt < SWITCH_SETTLE_MS) this.graph.pauseMoves(() => this.applyChanges(merged));
-    else this.applyChanges(merged);
-    this.host.requestRender();
+    this.feed.receive(b);
   }
 
   /** HEAD looked at (the poll, each batch): when it moved, said so, and the branch's tabs back.
    *  True when it moved. Not while git still writes: then it hasn't finished moving. */
   checkHead(): boolean {
-    if (this.gitIndexLocked()) return false;
-    const now = this.headNow();
-    const was = this.head;
-    this.head = now;
-    if (now?.branch === was?.branch && now?.commit === was?.commit) return false;
-    this.refreshGit();
-    // A repository that appeared (`git init`) or went: only the top bar has news.
-    if (!now || !was) return true;
-    this.switchedAt = this.now();
-    this.headMoved(was, now);
-    return true;
+    return this.feed.checkHead();
   }
 
   // What git knows of the files (5.11–5.14): each one's state for the explorer's marks and the
@@ -6000,51 +5960,20 @@ export class App {
   }
 
   private applyChangesNow(batch: WatchBatch): void {
-    let setChanged = false;
+    const { structural: setChanged, warnings } = applyToGraph(this.graph, batch, this.config.walk.max_file_size);
+    for (const w of warnings) this.message("warn", w);
     if (batch.rescan) {
-      this.graph.build(true, "lazy");
       this.indexInBackground();
       this.watcher?.sync(this.loc.mode !== "home" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
-      setChanged = true;
       // The walk itself changed: any open note may have changed, appeared or gone.
       for (const buf of this.buffers.values()) if (buf.changedOnDisk()) this.reloadBuffer(buf);
     }
     for (const c of batch.changes) {
-      if (!c.isNote) {
-        // An attachment appeared or went: ![[embeds]] of it change status.
-        // Only a real change to the index re-lays anything out (a rewrite of a known image doesn't).
-        if (c.kind === "deleted" ? this.graph.removeAsset(c.rel) : this.graph.addAsset(c.rel)) setChanged = true;
-        this.graph.fileChanged(c.rel); // a data or code file's links may have changed (16.15, 16.10)
-        // An open data or text file reloads like a note (16.4).
-        const open = this.buffers.get(c.rel);
-        if (open) this.reloadBuffer(open, c.kind === "deleted");
-        continue;
-      }
-      if (c.kind === "deleted") {
-        this.graph.removeFile(c.rel);
-        setChanged = true;
-      } else {
-        const abs = join(this.loc.root, c.rel);
-        let st: { size: number; mtimeMs: number } | null = null;
-        try {
-          st = statSync(abs);
-        } catch {}
-        if (!st) continue;
-        // The walk's size cap holds for notes that appear or grow later too: out of the index (an
-        // open buffer still reloads below); back in when it shrinks under the cap again.
-        if (st.size > this.config.walk.max_file_size) {
-          if (this.graph.notes.has(c.rel)) {
-            this.graph.removeFile(c.rel);
-            this.message("warn", `${c.rel} is larger than walk.max_file_size — left out of the index`);
-          }
-          setChanged = true;
-        } else {
-          if (c.kind === "created" || !this.graph.notes.has(c.rel)) setChanged = true;
-          this.graph.updateFile(c.rel, { rel: c.rel, abs, size: st.size, mtimeMs: st.mtimeMs });
-        }
-      }
+      // An open note reloads — a data or text file too, like a note (16.4) — and a big one still
+      // does when it's out of the index. One gone again before it was looked at comes as deleted.
       const buf = this.buffers.get(c.rel);
-      if (buf) this.reloadBuffer(buf, c.kind === "deleted");
+      if (!buf || (c.isNote && c.kind !== "deleted" && !existsSync(buf.abs))) continue;
+      this.reloadBuffer(buf, c.kind === "deleted");
     }
     if (setChanged) {
       // New or removed notes change link statuses everywhere and the explorer.
@@ -6414,8 +6343,7 @@ export class App {
     this.watcher = null;
     // Enter.
     this.loc = target;
-    this.head = this.headNow();
-    this.heldBatches = [];
+    this.feed.reset();
     recordLocation(target);
     this.configLastGood.clear();
     const loaded = loadConfig({ vaultFile: vaultConfigPath(target), configFile: this.configFile, lastGood: this.configLastGood });

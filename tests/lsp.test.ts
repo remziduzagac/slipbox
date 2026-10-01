@@ -1,0 +1,180 @@
+// The LSP face (plan 11.x) as an editor meets it: a client speaking the protocol to the server in
+// this process, over a pair of pipes — and once to the real `slipbox lsp` process, whose stdout
+// must carry nothing but the protocol.
+
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
+import { PassThrough } from "node:stream";
+import { pathToFileURL } from "node:url";
+import {
+  createProtocolConnection,
+  DidOpenTextDocumentNotification,
+  ExitNotification,
+  InitializedNotification,
+  type InitializeResult,
+  InitializeRequest,
+  LogMessageNotification,
+  type ProtocolConnection,
+  ShutdownRequest,
+  StreamMessageReader,
+  StreamMessageWriter,
+} from "vscode-languageserver-protocol/node";
+import { LspServer } from "../src/lsp/server.ts";
+import { VERSION } from "../src/version.ts";
+
+setDefaultTimeout(30_000);
+const MAIN = join(import.meta.dir, "..", "src", "main.ts");
+const sandbox = mkdtempSync(join(tmpdir(), "slipbox-lsp-"));
+process.env.XDG_STATE_HOME = join(sandbox, "state");
+process.env.XDG_CACHE_HOME = join(sandbox, "cache");
+process.env.XDG_CONFIG_HOME = join(sandbox, "config");
+process.env.XDG_DATA_HOME = join(sandbox, "data");
+delete process.env.SLIPBOX_CONFIG; // never the developer's own config
+afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+
+let made = 0;
+/** A vault of these files (a `.slipbox/` and its notes), or a plain folder with `vault: false`. */
+function folder(files: Record<string, string>, vault = true): string {
+  const root = join(sandbox, `f${made++}`);
+  mkdirSync(root, { recursive: true });
+  if (vault) mkdirSync(join(root, ".slipbox"));
+  for (const [rel, text] of Object.entries(files)) {
+    mkdirSync(join(root, rel, ".."), { recursive: true });
+    writeFileSync(join(root, rel), text);
+  }
+  return root;
+}
+
+const uri = (path: string) => pathToFileURL(path).href;
+
+interface Session {
+  server: LspServer;
+  client: ProtocolConnection;
+  init: InitializeResult;
+  logs: string[];
+  /** Shutdown, then exit: the server's exit code. */
+  end(): Promise<number>;
+}
+
+async function session(folders: string[], opts: { watch?: boolean } = {}): Promise<Session> {
+  const up = new PassThrough();
+  const down = new PassThrough();
+  const server = new LspServer({ input: up, output: down, watch: opts.watch ?? false });
+  const client = createProtocolConnection(new StreamMessageReader(down), new StreamMessageWriter(up));
+  const logs: string[] = [];
+  client.onNotification(LogMessageNotification.type, (p) => {
+    logs.push(p.message);
+  });
+  client.listen();
+  const init = await client.sendRequest(InitializeRequest.type, {
+    processId: null,
+    rootUri: null,
+    workspaceFolders: folders.map((f) => ({ uri: uri(f), name: basename(f) })),
+    capabilities: {},
+  });
+  await client.sendNotification(InitializedNotification.type, {});
+  return {
+    server,
+    client,
+    init,
+    logs,
+    async end() {
+      await client.sendRequest(ShutdownRequest.type);
+      await client.sendNotification(ExitNotification.type);
+      return server.exited;
+    },
+  };
+}
+
+const until = async (ok: () => boolean, ms = 3000) => {
+  for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+  return ok();
+};
+
+describe("the session (11.2)", () => {
+  test("initialize names slipbox; the workspace's vault is opened once the editor is ready", async () => {
+    const root = folder({ "a.md": "# A\n\n[[b]]\n", "b.md": "# B\n" });
+    const s = await session([root]);
+    expect(s.init.serverInfo).toEqual({ name: "slipbox", version: VERSION });
+    expect(s.init.capabilities.textDocumentSync).toMatchObject({ openClose: true, change: 2 });
+    expect(await until(() => s.server.vaults.has(root))).toBe(true);
+    expect([...s.server.vaults.get(root)!.graph.notes.keys()].sort()).toEqual(["a.md", "b.md"]);
+    expect(await s.end()).toBe(0);
+  });
+
+  test("slipbox's own news — a vault config that doesn't parse — goes to the editor's log", async () => {
+    const root = folder({ "a.md": "# A\n", ".slipbox/config.toml": "this isn't toml\n" });
+    const s = await session([root]);
+    expect(await until(() => s.logs.some((l) => l.startsWith("slipbox: config: ") && l.includes(".slipbox/config.toml")))).toBe(true);
+    expect(await s.end()).toBe(0);
+  });
+
+  test("exit without shutdown is 1, as the protocol has it; so is the editor's pipe closing", async () => {
+    const s = await session([]);
+    await s.client.sendNotification(ExitNotification.type);
+    expect(await s.server.exited).toBe(1);
+    const up = new PassThrough();
+    const gone = new LspServer({ input: up, output: new PassThrough(), watch: false });
+    up.end();
+    expect(await gone.exited).toBe(1);
+  });
+
+  test("only vaults are served: a file outside one opens nothing; another vault's file opens it", async () => {
+    const root = folder({ "a.md": "# A\n" });
+    const loose = folder({ "x.md": "# X\n" }, false);
+    const other = folder({ "o.md": "# O\n" });
+    const s = await session([root]);
+    for (const [path, text] of [
+      [join(loose, "x.md"), "# X\n"],
+      [join(other, "o.md"), "# O\n"],
+    ] as const) {
+      await s.client.sendNotification(DidOpenTextDocumentNotification.type, { textDocument: { uri: uri(path), languageId: "markdown", version: 1, text } });
+    }
+    expect(await until(() => s.server.documents.all().length === 2)).toBe(true);
+    expect(s.server.vaultAt(join(loose, "x.md"))).toBeNull();
+    expect(s.server.vaultAt(join(other, "o.md"))!.graph.notes.has("o.md")).toBe(true);
+    expect(await s.end()).toBe(0);
+  });
+
+  test("the vault's graph follows its files, as the TUI's does: a note written elsewhere is in it", async () => {
+    const root = folder({ "a.md": "# A\n" });
+    const s = await session([root], { watch: true });
+    expect(await until(() => s.server.vaults.has(root))).toBe(true);
+    writeFileSync(join(root, "new.md"), "# New\n");
+    expect(await until(() => s.server.vaults.get(root)!.graph.notes.has("new.md"))).toBe(true);
+    rmSync(join(root, "a.md"));
+    expect(await until(() => !s.server.vaults.get(root)!.graph.notes.has("a.md"))).toBe(true);
+    expect(await s.end()).toBe(0);
+  });
+
+  test("slipbox lsp, the process: the protocol alone on stdout, exit 0 after shutdown; a bad argument is 2", async () => {
+    const root = folder({ "a.md": "# A\n" });
+    const env = { ...process.env, NO_COLOR: "1" };
+    const p = Bun.spawn(["bun", MAIN, "lsp", "--stdio"], { cwd: root, env, stdin: "pipe", stdout: "pipe", stderr: "pipe" });
+    const up = new PassThrough();
+    const down = new PassThrough();
+    up.on("data", (d: Buffer) => p.stdin.write(d));
+    void (async () => {
+      for await (const chunk of p.stdout) down.write(chunk);
+      down.end();
+    })();
+    const client = createProtocolConnection(new StreamMessageReader(down), new StreamMessageWriter(up));
+    let garbage = false;
+    client.onError(() => {
+      garbage = true;
+    });
+    client.listen();
+    const init = await client.sendRequest(InitializeRequest.type, { processId: process.pid, rootUri: uri(root), capabilities: {} });
+    expect(init.serverInfo?.name).toBe("slipbox");
+    await client.sendNotification(InitializedNotification.type, {});
+    await client.sendRequest(ShutdownRequest.type);
+    await client.sendNotification(ExitNotification.type);
+    expect(await p.exited).toBe(0);
+    expect(garbage).toBe(false);
+    const bad = Bun.spawnSync(["bun", MAIN, "lsp", "--bogus"], { cwd: root, env, stdin: "ignore" });
+    expect(bad.exitCode).toBe(2);
+    expect(bad.stdout.toString()).toBe("");
+  });
+});
