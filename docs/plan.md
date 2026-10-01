@@ -1,9 +1,9 @@
 # slipbox — implementation plan
 
 Status: **phases 0–4 built** — 3b (`16.x`, files beyond markdown) and 4 (vaults, renames, search, git, embeds)
-included; **phase 5 (`11.x`, the LSP) is next**. Scout (`6.10`) waits for Scout. Captured 2026-09-25, phased
-2026-09-25, phases 0–2 implemented 2026-09-25, phase 3 2026-09-28, phases 3b and 4 by 2026-10-01 — how it was built
-is in `docs/design/`, the decisions it needed in `docs/design/decisions.md`.
+included; **phase 5 (`11.x`, `19.x`: language servers, both ways) has begun**. Scout (`6.10`) waits for Scout.
+Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3 2026-09-28, phases 3b and 4 by
+2026-10-01 — how it was built is in `docs/design/`, the decisions it needed in `docs/design/decisions.md`.
 
 The design lives in `docs/idea.md` — what slipbox is, why each decision went the
 way it did, and what was ruled out. This file is the other half: the units of work, with
@@ -40,7 +40,7 @@ cited, not to imply an order.
 | **3** | Editing | all of `4.x`, `5.5`–`5.10`, `7.2`–`7.5`, lint surface | Small edits stop provoking `$EDITOR` |
 | **3b** | Files beyond markdown | all of `16.x` | Any text file opens; data files render; code has an outline |
 | **4** | Vault and structure | `17.x`, rest of `1.x`, `6.x`, `7.1`, embeds | Backlinks and search on a real vault |
-| **5** | LSP | all of `11.x` | nvim gets slipbox's graph |
+| **5** | LSP, code intelligence | `11.x`, `19.x`, `16.18`–`16.23` | nvim gets slipbox's graph; slipbox the servers' |
 | **6+** | Export, images, extensibility | `10.x`, `12.x`, `13.x` | — |
 
 `14.x` distribution is not a phase. It lands whenever the thing first needs to run on a VM,
@@ -195,6 +195,8 @@ changed.
 | Phase 2 is read-only; `4.1`–`4.2` stay in phase 3 | 2026-09-25 | `docs/design/decisions.md` |
 | Phase 3 order and editing design | 2026-09-28 | below |
 | Files beyond markdown: three groups, phase 3b before the vault | 2026-09-29 | `docs/idea.md`, `16.x` below |
+| `6.1` search: our own index, Scout later | 2026-10-01 | `docs/design/decisions.md` |
+| Phase 5: language servers both ways, linters, diagnostics everywhere | 2026-10-01 | below |
 
 ### Phase 3 decided 2026-09-28 — editing, in five steps
 
@@ -264,11 +266,54 @@ rather than rebuild the graph every time an agent calls; and concurrent CLI writ
 last-writer-wins at the byte level, which atomic writes make safe (no torn files), with an
 optional `--if-unchanged` for careful writers.
 
+### Phase 5 decided 2026-10-01 — language servers, linters, and slipbox's own
+
+1. **slipbox is an LSP client for the code it opens** (`19.x`). A language's servers are found: the user's config
+   first, then the project, then `PATH` and known places. Those published on npm — JavaScript ones, and prebuilt
+   binaries shipped through npm such as Biome or tsgo — are installed when first needed, into slipbox's own data
+   folder: pinned, their install scripts off, never globally (`[lsp] auto_install = false` stops it). Native servers
+   are never installed — the system is the user's — only found, or set in the config.
+2. **Linters, by the same rule.** Where a server lints already (pyright; clippy through rust-analyzer; gopls's
+   staticcheck; clangd's clang-tidy; shellcheck through bash-language-server), that is used. Other linters run only
+   where the project has their config, the project's own copy first (`node_modules/.bin`, `.venv/bin`,
+   `vendor/bin`, bundler): one on npm is installed like a server, a native one is found or configured. A linter with
+   an LSP mode joins as an add-on server; one without runs through the lint surface (`3.21`, widened).
+3. **Settings in the formats other tools already read** — nothing slipbox-only to learn or keep in step:
+   - a tool's own config files (`eslint.config.js`, `ruff.toml`, `pyrightconfig.json`, `.markdownlint-cli2.jsonc`)
+     are its settings, and slipbox never restates them, so the editor, CI and slipbox agree;
+   - which servers run, and how, takes Helix's `languages.toml` shape — `[language-server.<name>]` (`command`,
+     `args`, `config`, `environment`) and `[[language]]` (`name`, `language-servers`, `roots`, `formatter`) — so a
+     Helix section pastes in;
+   - a server's `config` is its own settings, the same JSON nvim's `settings`, Zed's and VS Code's take;
+   - a linter without LSP is described in efm-langserver's keys (`lint-command`, `lint-formats` in vim's
+     errorformat, `lint-stdin`);
+   - a project's `.vscode/settings.json` answers its servers' settings requests, as VS Code would.
+
+   A program to run stays the user's choice: `command`, `args`, `environment` and `lint-command` are read from the
+   user's config only, never a vault's (as `lint.command` is).
+4. **Diagnostics from every source look alike, in every mode** — syntax (`16.9`), lint (`3.21`), servers, linters —
+   in source mode, the lens and the rendered view:
+   - a bar beside the text: a line with problems shows how many, coloured by the worst (error, warning, info,
+     hint); in the rendered view, on the row its source line starts on;
+   - the text itself underlined or highlighted where the problem is, mapped through the layout when rendered;
+   - the bar and the marks each toggled on its own (`space u`), and remembered like the other UI settings.
+5. **slipbox serves markdown to editors** (`11.x`): `slipbox lsp`, in vaults only (`.slipbox/`), marksman staying
+   for markdown elsewhere. A thin layer on the core, with `vscode-languageserver` for the protocol; the TUI keeps
+   calling the core directly. Renames are edits the editor applies (they skip slipbox's undo log), and lint
+   findings stay off over the LSP, since the editor runs its own linter.
+6. **New languages** (`16.18`–`16.23`): Swift, HTML and CSS, PHP, Dockerfile, the web frameworks (Vue, Svelte,
+   Astro); Ruby and C/C++ to decide.
+
+**Order:** `11.1` (the protocol library, for both directions), then the markdown server (`11.x`), then the
+diagnostics display on today's findings (`19.8`–`19.11`), then the client and finding servers (`19.1`–`19.7`),
+reading features, editing features, linters, and the languages.
+
 ### Still open, and each gates work
 
 | ID | Decision | Gates |
 | --- | --- | --- |
-| `6.1` | Search — own, `qmd`, or an optional `zk` tier | Phase 4 |
+| `19.6` | Trust: servers and linters run the project's code (build scripts, eslint configs, its binaries) | `19.4` |
+| `16.23` | Ruby and C/C++ | Phase 5 |
 | `10.5` | PDF base — `pdfkit` or `@react-pdf/renderer` | Phase 6+ |
 
 ## Step 0 — codebase
@@ -480,12 +525,49 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 11.1 | Verify `vscode-languageserver` runs under Bun without OpenTUI |
-| 11.2 | Server skeleton over stdio |
-| 11.3 | `completion`, `definition`, `references`, `hover` |
+| 11.1 | Verify `vscode-languageserver` under Bun and in the compiled binary, no OpenTUI; the client's side too |
+| 11.2 | Server skeleton over stdio: `slipbox lsp`, the vault found from the workspace folder (`.slipbox/` only) |
+| 11.3 | `completion`, `definition`, `references`, `hover`: notes, aliases, `#heading`, `#^block`, embeds, vaults |
 | 11.4 | `rename` returning a `WorkspaceEdit` — the editor supplies the preview |
-| 11.5 | `publishDiagnostics` for unresolved links |
+| 11.5 | `publishDiagnostics`: broken and ambiguous links, conflicts; lint only with `[lsp] lint = true` |
 | 11.6 | `documentSymbol` and `workspace/symbol` |
+| 11.7 | Link ranges: where each link ends as well as where it starts, in the graph's records |
+| 11.8 | Unsaved text: an open document's text stands for its file's until it's closed |
+| 11.9 | Heading rename in the core: `[[note#Heading]]` and `note.md#heading` fixed everywhere; TUI and CLI too |
+| 11.10 | `willRenameFiles`: a note moved in the editor's file tree has its links fixed |
+| 11.11 | Code actions: make a missing note, pick an ambiguous link's target; the context bundle as a command |
+| 11.12 | nvim's setup documented: slipbox where `.slipbox/` is, marksman elsewhere |
+
+## Code intelligence — `19.x`
+
+*Phase 5. Decided 2026-10-01 (Decisions, above): slipbox is an LSP client for the languages it opens; servers and
+linters found, the npm ones installed privately; settings in the formats other tools read; diagnostics from every
+source shown alike in every mode.*
+
+| ID | Item |
+| --- | --- |
+| 19.1 | Client core: spawn, initialize, document sync, shutdown, restart after a crash; one per root and language |
+| 19.2 | Languages and servers: Helix's `[language-server.x]` and `[[language]]`; defaults per language |
+| 19.3 | Roots per language, from markers (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`…) |
+| 19.4 | Finding: the user's config, the project (`node_modules/.bin`, `.venv/bin`, `vendor/bin`), `PATH`, Mason |
+| 19.5 | Private installs: npm packages with Bun into slipbox's data folder, pinned, scripts off; `[lsp] auto_install` |
+| 19.6 | **decide** trust: servers and linters run the project's code — where, and asked how often |
+| 19.7 | `slipbox doctor`: per language, each server and linter — found where, installed, or missing and how to get it |
+| 19.8 | Diagnostics: one store per file from every source — syntax, lint, servers, linters — by severity |
+| 19.9 | The bar: a column beside the text, each line's count coloured by its worst severity, in every mode |
+| 19.10 | Ranges marked: underlined or highlighted in source mode, the lens and the rendered view |
+| 19.11 | Toggles (`space u`) and `[diagnostics]`; the status line and Problems take every source |
+| 19.12 | Hover and signature help in a float |
+| 19.13 | Definition, references, implementation, type definition: a jump, or a list when there are several |
+| 19.14 | Document and workspace symbols: the outline and the switcher take the server's when there is one |
+| 19.15 | Rename, code actions, formatting: through `App.writeBuffer`, previewed like slipbox's renames |
+| 19.16 | Completion in insert mode |
+| 19.17 | Several servers per file: a main one and add-ons, merged; Helix's `only-features` to split the work |
+| 19.18 | Linters with an LSP mode as add-ons, where the project has their config; the project's copy first |
+| 19.19 | The lint surface widened: linters without LSP in efm-langserver's keys (`lint-command`, `lint-formats`) |
+| 19.20 | Server settings from a project's `.vscode/settings.json`: `workspace/configuration` as VS Code answers |
+| 19.21 | markdownlint-cli2 from the private install rather than `npx` |
+| 19.22 | CLI: `slipbox diagnostics <file>` — the servers' and linters' findings, `--json`, for agents and scripts |
 
 ## Images — `12.x`
 
@@ -569,6 +651,12 @@ the link graph), data files (JSON, YAML, TOML, INI, CSV: rendered, not notes), a
 | 16.15 | **Done.** Links out of data files: paths that resolve, URLs, `$ref`, includes; into the graph |
 | 16.16 | **Dropped** (built, then removed 2026-09-30). Org as a note format — see `docs/idea.md` |
 | 16.17 | **Dropped** (built, then removed 2026-09-30). AsciiDoc as a note format — see `docs/idea.md` |
+| 16.18 | Swift: grammar, highlighting, outline (phase 5, as are the rest) |
+| 16.19 | HTML and CSS, SCSS with it: grammars, outlines (HTML's headings and ids, CSS's rules) |
+| 16.20 | PHP |
+| 16.21 | Dockerfile |
+| 16.22 | Vue, Svelte, Astro: a file's template, script and style, each in its own language |
+| 16.23 | **decide** Ruby and C/C++ |
 
 Later, on the same render: slipbox's own settings as a TOML screen with the config's schema
 (defaults, allowed values, unknown keys). Diffs are a separate discussion.
@@ -639,7 +727,7 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 ## Deferred — in the design, not in this breakdown
 
 Mermaid and LaTeX, git awareness (beyond `5.9`, `5.10`, `17.19`), Tier 2 plugins, diffs,
-document-type awareness, frontmatter validation, running the repo's linter, composing notes
+document-type awareness, frontmatter validation, composing notes
 into one document, and everything under the design's community-plugin tier. They get IDs
 when they get scheduled.
 
