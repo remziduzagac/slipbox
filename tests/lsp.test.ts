@@ -3,7 +3,7 @@
 // must carry nothing but the protocol.
 
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -12,6 +12,7 @@ import {
   CompletionRequest,
   type CompletionList,
   createProtocolConnection,
+  type Diagnostic,
   DefinitionRequest,
   DidChangeTextDocumentNotification,
   DidCloseTextDocumentNotification,
@@ -24,6 +25,7 @@ import {
   type Location,
   LogMessageNotification,
   type ProtocolConnection,
+  PublishDiagnosticsNotification,
   ReferencesRequest,
   ShutdownRequest,
   StreamMessageReader,
@@ -208,6 +210,10 @@ describe("unsaved text (11.8)", () => {
     expect(await until(() => s.server.documents.get(doc.uri)?.version === 3)).toBe(true);
     s.server.fresh(doc.uri); // a request asking first
     expect(backlinks()).toBe(0);
+    // Asked again with nothing typed since: not parsed again.
+    const generation = graph().generation;
+    s.server.fresh(doc.uri);
+    expect(graph().generation).toBe(generation);
     await s.client.sendNotification(DidChangeTextDocumentNotification.type, { textDocument: { uri: doc.uri, version: 4 }, contentChanges: [{ text: "[[b]]\n" }] });
     await s.client.sendNotification(DidCloseTextDocumentNotification.type, { textDocument: { uri: doc.uri } });
     expect(await until(() => !graph().overlaid("a.md"))).toBe(true);
@@ -339,5 +345,88 @@ describe("completion (11.3)", () => {
     expect((await labels(5, 8))!.sort()).toEqual(["#other", "#project/one", "#project/two"]);
     expect(await labels(6, 1)).toBeNull(); // a heading begins
     expect(await s.end()).toBe(0);
+  });
+});
+
+describe("diagnostics (11.5)", () => {
+  /** The diagnostics last sent for each document. */
+  const sent = (s: Session) => {
+    const last = new Map<string, Diagnostic[]>();
+    s.client.onNotification(PublishDiagnosticsNotification.type, (p) => {
+      last.set(p.uri, p.diagnostics);
+    });
+    return last;
+  };
+  const open = (s: Session, path: string, text: string, version = 1) =>
+    s.client.sendNotification(DidOpenTextDocumentNotification.type, { textDocument: { uri: uri(path), languageId: "markdown", version, text } });
+  const brief = (d: Diagnostic[] | undefined) => (d ?? []).map((x) => `${x.range.start.line}:${x.range.start.character} ${x.severity} ${x.code} ${x.message}`);
+
+  test("links that reach nothing or several notes, headings and blocks not there, conflict markers", async () => {
+    const text =
+      "# A\n\n[[b]] [[nope]] [[b#Missing]] [[b#^nob]] [[b#Here]] [x](gone.md) [[twin]] [[nowhere:x]] [y](b.md#here) [[b#^blk]]\n\n<<<<<<< HEAD\nmine\n=======\ntheirs\n>>>>>>> other\n";
+    const root = folder({ "a.md": text, "b.md": "# B\n\n## Here\n\nx ^blk\n", "x/twin.md": "# X\n", "y/twin.md": "# Y\n" });
+    const s = await session([root]);
+    const last = sent(s);
+    await open(s, join(root, "a.md"), text);
+    const a = uri(join(root, "a.md"));
+    expect(await until(() => last.has(a))).toBe(true);
+    expect(brief(last.get(a))).toEqual([
+      '2:6 3 unresolved no note named "nope" yet',
+      '2:15 2 no-heading no heading "Missing" in b.md',
+      "2:29 2 no-block no block ^nob in b.md",
+      "2:51 2 unresolved broken link: gone.md",
+      '2:64 2 ambiguous "twin" matches 2 notes: x/twin.md, y/twin.md',
+      expect.stringMatching(/^2:73 2 unresolved .*nowhere/),
+      "4:0 1 conflict a merge conflict: both sides are still here",
+    ]);
+    expect(last.get(a)!.at(-1)!.range).toEqual({ start: { line: 4, character: 0 }, end: { line: 8, character: 13 } });
+    expect(await s.end()).toBe(0);
+  });
+
+  test("sent again when the vault changes — a note made, a heading typed elsewhere — and cleared on close", async () => {
+    const root = folder({ "a.md": "# A\n\n[[c]] [[b#Later]]\n", "b.md": "# B\n" });
+    const s = await session([root], { watch: true });
+    const last = sent(s);
+    const a = uri(join(root, "a.md"));
+    await open(s, join(root, "a.md"), "# A\n\n[[c]] [[b#Later]]\n");
+    expect(await until(() => last.get(a)?.length === 2)).toBe(true);
+    writeFileSync(join(root, "c.md"), "# C\n");
+    expect(await until(() => last.get(a)?.length === 1)).toBe(true);
+    await open(s, join(root, "b.md"), "# B\n");
+    await s.client.sendNotification(DidChangeTextDocumentNotification.type, { textDocument: { uri: uri(join(root, "b.md")), version: 2 }, contentChanges: [{ text: "# B\n\n## Later\n" }] });
+    expect(await until(() => last.get(a)?.length === 0)).toBe(true);
+    await s.client.sendNotification(DidChangeTextDocumentNotification.type, { textDocument: { uri: a, version: 2 }, contentChanges: [{ text: "[[gone]]\n" }] });
+    expect(await until(() => last.get(a)?.length === 1)).toBe(true);
+    await s.client.sendNotification(DidCloseTextDocumentNotification.type, { textDocument: { uri: a } });
+    expect(await until(() => last.get(a)?.length === 0)).toBe(true);
+    expect(await s.end()).toBe(0);
+  });
+
+  test("the linter's findings only with [lsp] lint, for the text they were found in", async () => {
+    const root = folder({ "a.md": "# A\n" });
+    const linter = join(root, "..", `lint-${made}.sh`);
+    writeFileSync(linter, '#!/bin/sh\nfor f; do echo "$f:1:3 MD041/first-line-heading First line"; done\nexit 1\n');
+    chmodSync(linter, 0o755);
+    const config = join(root, "..", `config-${made}.toml`);
+    const run = async (lint: boolean) => {
+      writeFileSync(config, `[lsp]\nlint = ${lint}\n[lint]\nenabled = "on"\ncommand = ["${linter}"]\n`);
+      const up = new PassThrough();
+      const down = new PassThrough();
+      const server = new LspServer({ input: up, output: down, watch: false, configFile: config });
+      const client = createProtocolConnection(new StreamMessageReader(down), new StreamMessageWriter(up));
+      const s: Session = { server, client, init: null as never, logs: [], end: async () => 0 };
+      const last = sent(s);
+      client.listen();
+      await client.sendRequest(InitializeRequest.type, { processId: null, rootUri: uri(root), capabilities: {} });
+      await open(s, join(root, "a.md"), "# A\n");
+      await until(() => last.get(uri(join(root, "a.md")))?.some((d) => d.source === "markdownlint") ?? false, 1500);
+      const got = brief(last.get(uri(join(root, "a.md"))));
+      await client.sendRequest(ShutdownRequest.type);
+      await client.sendNotification(ExitNotification.type);
+      await server.exited;
+      return got;
+    };
+    expect(await run(false)).toEqual([]);
+    expect(await run(true)).toEqual(["0:2 2 MD041 first-line-heading: First line"]);
   });
 });

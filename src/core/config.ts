@@ -113,6 +113,11 @@ export interface Config {
   search: {
     engine: "auto" | "index" | "scan";
   };
+  /** The LSP face (11.x). `lint`: the lint surface's findings (3.21) among its diagnostics — off, since
+   *  an editor runs its own linter and would show them twice. */
+  lsp: {
+    lint: boolean;
+  };
   /** The context bundle (9.7): a note with what it links to and what links to it, for an agent. */
   context: {
     /** Links followed out from the note: 1, what it links to; 0, none. */
@@ -219,6 +224,7 @@ export const DEFAULT_CONFIG: Config = {
   capture: { location: "state", file: "scratch.md" },
   git: { base: "" },
   search: { engine: "auto" },
+  lsp: { lint: false },
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },

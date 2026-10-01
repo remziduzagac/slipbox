@@ -529,7 +529,7 @@ common, and the only reason they are step 0.
 | 11.2 | **Done.** Server skeleton over stdio: `slipbox lsp`, a graph per vault (`.slipbox/` only), kept current |
 | 11.3 | **Done.** `completion`, `definition`, `references`, `hover`: notes, aliases, `#heading`, `#^block`, embeds |
 | 11.4 | `rename` returning a `WorkspaceEdit` — the editor supplies the preview |
-| 11.5 | `publishDiagnostics`: broken and ambiguous links, conflicts; lint only with `[lsp] lint = true` |
+| 11.5 | **Done.** `publishDiagnostics`: broken and ambiguous links, conflicts; lint only with `[lsp] lint = true` |
 | 11.6 | `documentSymbol` and `workspace/symbol` |
 | 11.7 | **Done.** Link ranges: where each link ends as well as where it starts, in the graph's records |
 | 11.8 | **Done.** Unsaved text: an open document's text stands for its file's until it's closed |

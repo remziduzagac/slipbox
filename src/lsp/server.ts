@@ -5,18 +5,19 @@
 
 import { relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createConnection, type Connection, type InitializeParams, type InitializeResult, TextDocuments, TextDocumentSyncKind, type WatchDog } from "vscode-languageserver";
+import { createConnection, type Connection, type Diagnostic, DiagnosticSeverity, type InitializeParams, type InitializeResult, TextDocuments, TextDocumentSyncKind, type WatchDog } from "vscode-languageserver";
 import { createProtocolConnection, StreamMessageReader, StreamMessageWriter } from "vscode-languageserver-protocol/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { type Config, loadConfig } from "../core/config.ts";
 import { type Graph, openGraph } from "../core/graph.ts";
 import { Reach } from "../core/reach.ts";
 import { checkoutOf } from "../core/git.ts";
+import { type LintIssue, lintCommand, runLint } from "../core/lint.ts";
 import { findVaultRoot, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { applyToGraph, VaultFeed } from "../core/vault-feed.ts";
 import { VaultWatcher } from "../core/watch.ts";
 import { VERSION } from "../version.ts";
-import { completion, definition, hover, references } from "./features.ts";
+import { completion, definition, diagnostics, hover, references } from "./features.ts";
 
 export interface LspOptions {
   input: NodeJS.ReadableStream;
@@ -82,10 +83,18 @@ export class LspServer {
       else this.settle(e.document.uri);
     });
     this.documents.onDidClose((e) => {
-      this.unsettle(e.document.uri);
-      const n = this.noteOf(e.document.uri);
-      n?.served.graph.overlay(n.rel, null);
+      const uri = e.document.uri;
+      this.unsettle(uri);
+      this.applied.delete(uri);
+      this.linted.delete(uri);
+      const n = this.noteOf(uri);
+      if (!n) return;
+      n.served.graph.overlay(n.rel, null);
+      void this.connection.sendDiagnostics({ uri, diagnostics: [] });
+      this.republish(n.served);
     });
+    this.documents.onDidOpen((e) => this.lint(e.document.uri));
+    this.documents.onDidSave((e) => this.lint(e.document.uri));
     this.documents.listen(this.connection);
     this.connection.onDefinition((p) => this.asked(p.textDocument.uri, (g, rel) => definition(g, rel, p.position), []));
     this.connection.onCompletion((p) =>
@@ -150,6 +159,7 @@ export class LspServer {
           const { warnings } = applyToGraph(graph, batch, config.walk.max_file_size);
           for (const w of warnings) this.log(w);
           if (batch.rescan) served.watcher?.sync(graph.dirs, known(graph), sizes(graph));
+          this.republish(served);
         },
       }),
     };
@@ -197,12 +207,71 @@ export class LspServer {
     this.settling.delete(uri);
   }
 
-  /** An open document's text, standing for its note now: what a request about it needs. */
+  /** Each open document's version its note has (11.8). */
+  private readonly applied = new Map<string, number>();
+
+  /** An open document's text, standing for its note now: what a request about it needs. Its vault's
+   *  open notes' diagnostics are sent again when it changed. */
   fresh(uri: string): void {
     this.unsettle(uri);
     const doc = this.documents.get(uri);
     const n = this.noteOf(uri);
-    if (doc && n) n.served.graph.overlay(n.rel, doc.getText());
+    if (!doc || !n || this.applied.get(uri) === doc.version) return;
+    n.served.graph.overlay(n.rel, doc.getText());
+    this.applied.set(uri, doc.version);
+    this.republish(n.served);
+  }
+
+  /** Vaults whose open notes' diagnostics are about to be sent again. */
+  private readonly republishing = new Map<Served, ReturnType<typeof setTimeout>>();
+
+  /** A vault changed — a note typed in, written, made or gone: its open notes' diagnostics again,
+   *  a moment later (one send for a burst). */
+  republish(served: Served): void {
+    if (this.republishing.has(served) || this.done) return;
+    const t = setTimeout(() => {
+      this.republishing.delete(served);
+      for (const doc of this.documents.all()) if (this.noteOf(doc.uri)?.served === served) this.publish(doc.uri);
+    }, 50);
+    (t as { unref?: () => void }).unref?.();
+    this.republishing.set(served, t);
+  }
+
+  /** A document's diagnostics, sent: the note's problems, and the linter's (`[lsp] lint`) for the
+   *  text it was run on. */
+  publish(uri: string): void {
+    const doc = this.documents.get(uri);
+    const n = this.noteOf(uri);
+    if (!doc || !n) return;
+    let list: Diagnostic[];
+    try {
+      list = diagnostics(n.served.graph, n.rel);
+    } catch (err) {
+      this.log(`${n.rel}: ${(err as Error).stack ?? err}`);
+      return;
+    }
+    const lint = this.linted.get(uri);
+    if (lint?.version === doc.version) list.push(...lint.issues.map(lintDiagnostic));
+    void this.connection.sendDiagnostics({ uri, version: doc.version, diagnostics: list });
+  }
+
+  /** The linter's findings for each open document, with the version they were found in. */
+  private readonly linted = new Map<string, { version: number; issues: LintIssue[] }>();
+
+  /** The note linted as saved (on open and on save), when `[lsp] lint` asks for it (3.21). */
+  private lint(uri: string): void {
+    const doc = this.documents.get(uri);
+    const n = this.noteOf(uri);
+    if (!doc || !n || !n.served.config.lsp.lint) return;
+    const cmd = lintCommand(n.served.config.lint, n.served.loc.root);
+    if (!cmd) return;
+    const version = doc.version;
+    void runLint(cmd, [n.served.graph.abs(n.rel)], n.served.loc.root).then((issues) => {
+      if (issues === null) return this.log(`the linter couldn't run: ${cmd.argv.join(" ")}`);
+      if (this.documents.get(uri)?.version !== version) return;
+      this.linted.set(uri, { version, issues });
+      this.publish(uri);
+    });
   }
 
   /** A request about a note, answered from its text as the editor has it; `none` outside a vault.
@@ -260,6 +329,7 @@ export class LspServer {
     this.done = true;
     if (this.parentWatch) clearInterval(this.parentWatch);
     for (const t of this.settling.values()) clearTimeout(t);
+    for (const t of this.republishing.values()) clearTimeout(t);
     for (const s of this.vaults.values()) {
       s.watcher?.close();
       s.feed.close();
@@ -269,6 +339,12 @@ export class LspServer {
     } catch {}
     this.finish(code);
   }
+}
+
+/** A linter's finding as a diagnostic: a warning at its line (and column, when it gives one). */
+function lintDiagnostic(i: LintIssue): Diagnostic {
+  const at = { line: i.line - 1, character: (i.column ?? 1) - 1 };
+  return { range: { start: at, end: { line: at.line, character: i.column ? at.character + 1 : 0 } }, severity: DiagnosticSeverity.Warning, code: i.rule, source: "markdownlint", message: `${i.name}: ${i.description}` };
 }
 
 /** How long typing pauses before an open note's text is parsed again. */

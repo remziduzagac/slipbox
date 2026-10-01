@@ -110,6 +110,9 @@ base = ""                      # the branch changes are measured against; "" = m
 [search]                       # search (6.x): slipbox search, space f s
 engine = "auto"                # auto: the index once built, else a scan | index (built first) | scan (no index)
 
+[lsp]                          # slipbox lsp (11.x), serving vaults to an editor
+lint = false                   # the lint surface's findings among its diagnostics; off: the editor lints
+
 [context]                      # the context bundle (9.7): space s c, slipbox context
 depth = 1                      # links followed out from the note (0–5): 1, what it links to; 0, none
 backlinks = true               # the files linking to it, too

@@ -72,5 +72,19 @@ Every answer is about a note as the editor has it, and a request takes its lates
 
   Notes are parsed in the background once a vault opens, a little at a time, so their titles and aliases are known
   by the time `[[` is typed; a completion before then reads the rest first.
+- **Diagnostics** (`11.5`), sent for each open note as it opens, once typing pauses, and again whenever its vault
+  changes — a note made or gone on disk, a heading typed in another open note — then cleared when it closes:
 
-Still to come: diagnostics (`11.5`), symbols (`11.6`), renames (`11.4`, `11.9`, `11.10`) and code actions (`11.11`).
+  | Problem | Severity | Code |
+  | --- | --- | --- |
+  | `[[name]]` with no note yet (a note to write, in a vault) | information | `unresolved` |
+  | `[x](missing.md)`, an unknown vault (`[[nowhere:x]]`) | warning | `unresolved` |
+  | a link several notes answer to, with them named | warning | `ambiguous` |
+  | `#Heading` or `#^block` its note hasn't (a markdown link's `#slug` too) | warning | `no-heading`, `no-block` |
+  | git's conflict markers, `<<<<<<<` to `>>>>>>>` | error | `conflict` |
+
+  With `[lsp] lint = true`, the lint surface's findings (`3.21`) join them as warnings from `markdownlint`, run when
+  a note opens and when it's saved, and shown only while its text is what was linted. Off by default: the editor
+  most likely runs that linter already.
+
+Still to come: symbols (`11.6`), renames (`11.4`, `11.9`, `11.10`) and code actions (`11.11`).
