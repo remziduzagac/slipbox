@@ -72,11 +72,17 @@ describe("the client (19.1)", () => {
     expect(await until(() => f.heard.get(uri)?.diagnostics.length === 1)).toBe(true);
     await f.client.didChange(uri, 2, "fine\n");
     expect(await until(() => f.heard.get(uri)?.diagnostics.length === 0)).toBe(true);
+    // Asked to ask again (pyright does), it asks again — the server, answered, lives on.
+    await f.client.didChange(uri, 3, "REFRESH BAD\n");
+    expect(await until(() => f.heard.get(uri)?.version === 3 && f.heard.get(uri)!.diagnostics.length === 2)).toBe(true); // asked again
+    await f.client.didChange(uri, 4, "ASK\n"); // a method slipbox doesn't know: answered, not refused
+    await Bun.sleep(300);
+    expect(f.client.state).toBe("running");
     // An answer about an older text, arriving after the newer one's, is dropped.
-    await f.client.didChange(uri, 3, "SLOW BAD\n");
-    await f.client.didChange(uri, 4, "fine\n");
+    await f.client.didChange(uri, 5, "SLOW BAD\n");
+    await f.client.didChange(uri, 6, "fine\n");
     await Bun.sleep(700);
-    expect(f.heard.get(uri)).toEqual({ diagnostics: [], version: 4 });
+    expect(f.heard.get(uri)).toEqual({ diagnostics: [], version: 6 });
     await f.client.stop();
   });
 

@@ -172,8 +172,10 @@ uses. Its settings answer its `workspace/configuration` questions, by section (`
 at each change, which every server takes. Its diagnostics come both ways: sent (`publishDiagnostics`), or asked for
 after each open, change and save from a server that wants that (`textDocument/diagnostic`, LSP 3.17) — an answer
 about an older text than the last sent is dropped. Its log and messages go to slipbox's; an edit it asks to make is
-declined until slipbox makes edits for servers (`19.15`). Stopping it is `shutdown` then `exit`, then a kill; an
-exit that wasn't asked for is a crash, said with its last words.
+declined until slipbox makes edits for servers (`19.15`). Asked to ask again (`workspace/diagnostic/refresh`, which
+pyright sends), it asks about every open file; anything else it's asked and doesn't know gets an empty answer, never
+an error — pyright crashed on that error, unhandled. Stopping it is `shutdown` then `exit`, then a kill; an
+exit that wasn't asked for is a crash, said with its last error line.
 
 **Which servers** (`19.2`, `core/servers/languages.ts`): a file's language is its whole name (`Dockerfile`), else
 its extension, and each language has root markers and servers — the first that applies and is found is its main

@@ -173,8 +173,20 @@ export class LanguageClient {
     conn.onRequest("window/showMessageRequest", () => null);
     // Edits a server asks to make are slipbox's to make, through its own writes: not yet (19.15).
     conn.onRequest("workspace/applyEdit", () => ({ applied: false, failureReason: "slipbox applies edits only it asked for" }));
+    // Asked to ask again (a pull server's settings or files changed): every open file's diagnostics.
+    conn.onRequest("workspace/diagnostic/refresh", () => {
+      for (const uri of this.open.keys()) void this.pull(uri);
+      return null;
+    });
     conn.onNotification("$/progress", () => {});
     conn.onNotification("telemetry/event", () => {});
+    // Anything else asked of slipbox — another refresh, a feature it doesn't have — gets an empty
+    // answer, never an error: some servers crash on an error they don't expect (pyright did).
+    // (The connection takes a handler for any method; the protocol's types leave that out.)
+    (conn as unknown as { onRequest(h: (method: string) => null): void }).onRequest((method) => {
+      this.hooks.log?.(`${this.spec.name}: asked ${method}, which slipbox doesn't answer`);
+      return null;
+    });
   }
 
   /** Whether the server wants to be asked for a document's diagnostics (pull, 3.17). */
@@ -272,8 +284,10 @@ export class LanguageClient {
     this.hooks.exited?.(expected, expected ? "stopped" : `it exited (${signal ?? `code ${code}`})${this.stderrTail()}`);
   }
 
+  /** Why it ended, from its stderr: its last error line, else its last line. */
   private stderrTail(): string {
-    const last = this.stderr.trim().split("\n").at(-1)?.trim();
+    const lines = this.stderr.trim().split("\n").map((l) => l.trim()).filter(Boolean);
+    const last = lines.findLast((l) => /\b(error|panic|exception|fatal)\b/i.test(l)) ?? lines.at(-1);
     return last ? `: ${last.slice(0, 300)}` : "";
   }
 }
