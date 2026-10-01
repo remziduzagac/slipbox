@@ -101,7 +101,10 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
 | `core/context.ts` | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
 | `core/lint.ts` | 3.21 | the lint surface: your markdownlint-cli2 run, its findings read |
-| `core/servers/client.ts` | 19.1 | one language server as slipbox's client: started, files synced, diagnostics, stopped |
+| `core/servers/languages.ts` | 19.2 | languages and their servers, built in and in Helix's shape from the config |
+| `core/servers/find.ts` | 19.3, 19.4 | a file's project root; where a server's program is; which servers serve a file |
+| `core/servers/install.ts` | 19.5 | npm servers installed into slipbox's own folder, pinned, scripts off |
+| `core/servers/client.ts` | 19.1 | a language server as slipbox's client: started, files synced, diagnostics, stopped |
 | `core/diagnostics.ts` | 19.8, 11.5 | a file's problems from every source, one shape: links, conflicts, syntax, lint |
 | `core/clipboard.ts` | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / wl-copy / xclip, then a file |
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |

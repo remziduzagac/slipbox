@@ -2,6 +2,7 @@
 // Must run correctly with no config at all, and never crash on a bad one — problems become
 // warnings in the message sink.
 
+import { type LanguageConfig, type ServerConfig, SERVERS } from "./servers/languages.ts";
 import { existsSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { join } from "node:path";
@@ -121,10 +122,17 @@ export interface Config {
     marks: boolean;
     severity: "error" | "warning" | "info" | "hint";
   };
+  /** Language servers in Helix's shape (19.2): each changed or added by name — its command, args,
+   *  settings (`config`), environment — over the built-in ones (`core/servers/languages.ts`). */
+  "language-server": Record<string, ServerConfig>;
+  /** Languages in Helix's shape (`[[language]]`): a language's servers, roots and file types. */
+  language: LanguageConfig[];
   /** The LSP face (11.x). `lint`: the lint surface's findings (3.21) among its diagnostics — off, since
    *  an editor runs its own linter and would show them twice. */
   lsp: {
     lint: boolean;
+    /** Servers published on npm installed into slipbox's own folder when first needed (19.5). */
+    auto_install: boolean;
   };
   /** The context bundle (9.7): a note with what it links to and what links to it, for an agent. */
   context: {
@@ -233,7 +241,9 @@ export const DEFAULT_CONFIG: Config = {
   git: { base: "" },
   search: { engine: "auto" },
   diagnostics: { bar: "auto", marks: true, severity: "warning" },
-  lsp: { lint: false },
+  "language-server": {},
+  language: [],
+  lsp: { lint: false, auto_install: true },
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
@@ -369,6 +379,24 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
   };
   strip(data.keys, "keys");
   strip(data.aliases, "aliases");
+  // A server's program is the user's choice (19.2): a vault may tune a known server's settings, never
+  // name what runs — its command, arguments, environment, or a server slipbox doesn't know (its name
+  // would be the program run).
+  const servers = data["language-server"];
+  if (isPlainObject(servers)) {
+    for (const [name, s] of Object.entries(servers)) {
+      if (!(name in SERVERS)) {
+        delete servers[name];
+        warnings.push(`config: ${file} adds the language server ${name}, which only your own config may (it runs a program); ignored`);
+        continue;
+      }
+      for (const k of ["command", "args", "environment"]) {
+        if (!isPlainObject(s) || !(k in s)) continue;
+        delete s[k];
+        warnings.push(`config: ${file} sets language-server.${name}.${k}, which only your own config may set (it runs a program); ignored`);
+      }
+    }
+  }
   for (const key of USER_ONLY) {
     const [table, name] = key.split(".") as [string, string];
     const t = data[table];
@@ -387,6 +415,33 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
     if (prefix === "colors") {
       const prev = out[key];
       out[key] = isPlainObject(prev) && isPlainObject(value) ? { ...prev, ...value } : value;
+      continue;
+    }
+    // Language servers (19.2): each by name, its settings merged, the rest replaced; languages by name.
+    if (!prefix && key === "language-server") {
+      if (!isPlainObject(value) || !Object.values(value).every(isPlainObject)) warnings.push(`config: ${file}: [language-server.<name>] must be tables`);
+      else {
+        const was = out[key] as Record<string, ServerConfig>;
+        const next: Record<string, ServerConfig> = { ...was };
+        for (const [name, s] of Object.entries(value as Record<string, ServerConfig>)) {
+          const before = next[name] ?? {};
+          next[name] = { ...before, ...s, ...(before.config && s.config ? { config: { ...before.config, ...s.config } } : {}) };
+        }
+        out[key] = next;
+      }
+      continue;
+    }
+    if (!prefix && key === "language") {
+      if (!Array.isArray(value) || !value.every((l) => isPlainObject(l) && typeof l.name === "string")) warnings.push(`config: ${file}: [[language]] entries need a name`);
+      else {
+        const list = [...(out[key] as LanguageConfig[])];
+        for (const l of value as LanguageConfig[]) {
+          const i = list.findIndex((x) => x.name === l.name);
+          if (i >= 0) list[i] = { ...list[i]!, ...l };
+          else list.push(l);
+        }
+        out[key] = list;
+      }
       continue;
     }
     // String maps: key bindings (with context sub-tables), aliases, group names.

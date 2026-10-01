@@ -175,3 +175,44 @@ about an older text than the last sent is dropped. Its log and messages go to sl
 declined until slipbox makes edits for servers (`19.15`). Stopping it is `shutdown` then `exit`, then a kill; an
 exit that wasn't asked for is a crash, said with its last words.
 
+**Which servers** (`19.2`, `core/servers/languages.ts`): a file's language is its whole name (`Dockerfile`), else
+its extension, and each language has root markers and servers — the first that applies and is found is its main
+server, and add-ons, a linter's server each, run beside it where the project has that linter's config
+(`eslint.config.js`, `biome.json`, `.stylelintrc`, `ruff.toml` or `[tool.ruff]` in `pyproject.toml`). Built in:
+
+| Languages | Servers, the main first (npm: installed when missing) |
+| --- | --- |
+| TypeScript, JavaScript, TSX, JSX | TypeScript 7's own (npm), vtsls for an older TypeScript (npm); eslint, biome |
+| Python | pyright (npm); ruff |
+| Rust, Go, Lua | rust-analyzer, gopls, lua-language-server |
+| bash | bash-language-server (npm) |
+| JSON, YAML, TOML | vscode-json-language-server (npm), biome; yaml-language-server (npm); taplo |
+| CSS, SCSS, Less, HTML | vscode-css-language-server (npm), stylelint, biome; vscode-html-language-server (npm) |
+| Dockerfile, PHP | docker-langserver (npm); intelephense (npm) |
+| Swift, C, C++, Ruby | sourcekit-lsp; clangd; ruby-lsp |
+
+TypeScript 7 is native with its server built in (`tsc --lsp --stdio`): it's used where the project's TypeScript is
+7 or there is none, and vtsls, its own TypeScript bundled, where the project's is older. Each server's settings by
+default are nvim-lspconfig's where it has some. The user's config changes them in Helix's `languages.toml` shape —
+`[language-server.<name>]` (`command`, `args`, `config`, `environment`, `required-root-patterns`) and
+`[[language]]` (`name`, `language-servers`, `roots`, `file-types`, `language-id`), a server's `config` merged over
+the defaults, the rest replaced, a new name added. A vault's config may tune a known server's `config` and a
+language's lists, never name what runs: its `command`, `args`, `environment`, and any server slipbox doesn't
+know, are ignored with a warning.
+
+**Where its project is** (`19.3`): the nearest folder above the file holding the language's first root marker, then
+its next — `tsconfig.json` before `package.json` before `.git` — as nvim's `root_markers` have it; never `~` or `/`;
+else the file's own folder.
+
+**Where its program is** (`19.4`), in order: the path the user's config gives; the project's own
+(`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin`, from its folder up to its checkout's top); `PATH`; the
+places the user installs tools (Mason's `bin`, `~/.cargo/bin`, `~/go/bin`, `~/.local/bin`); slipbox's own installs.
+A program written for Node (`#!/usr/bin/env node`) runs on slipbox's own Bun — no Node needed. Everything is trusted
+(`19.6`): the project's own programs run, and its servers run its code, as under nvim or Helix.
+
+**Installing** (`19.5`, `core/servers/install.ts`): a server published on npm and found nowhere is installed when a
+file first needs it — `[lsp] auto_install = false` stops that — into slipbox's own package folder
+(`$XDG_DATA_HOME/slipbox/tools`), at the version slipbox pins, with its install scripts off and nothing global, by
+slipbox's own Bun (the compiled binary is Bun when told to be), one install at a time. A native server is never
+installed: found, or named in the config — the system is the user's.
+

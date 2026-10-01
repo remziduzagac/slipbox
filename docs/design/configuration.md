@@ -117,6 +117,17 @@ severity = "warning"           # the least shown: error | warning | info (a note
 
 [lsp]                          # slipbox lsp (11.x), serving vaults to an editor
 lint = false                   # the lint surface's findings among its diagnostics; off: the editor lints
+auto_install = true            # servers on npm installed into slipbox's own folder when first needed (19.5)
+
+[language-server.pyright]      # a language server (19.2), in Helix's languages.toml shape: changed by name
+config = { python = { analysis = { typeCheckingMode = "strict" } } }   # its settings, over the defaults
+# command = "/opt/bin/pyright-langserver"   # these three only in your own config, never a vault's:
+# args = ["--stdio"]                        #   what runs is yours to say
+# environment = { PYTHONPATH = "src" }
+
+[[language]]                   # a language: its servers (main first, add-ons after), roots, file types
+name = "python"
+language-servers = ["pyright", "ruff"]
 
 [context]                      # the context bundle (9.7): space s c, slipbox context
 depth = 1                      # links followed out from the note (0–5): 1, what it links to; 0, none

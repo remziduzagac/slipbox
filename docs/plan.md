@@ -552,10 +552,10 @@ source shown alike in every mode.*
 | ID | Item |
 | --- | --- |
 | 19.1 | Client core: spawn, initialize, document sync, shutdown, restart after a crash; one per root and language |
-| 19.2 | Languages and servers: Helix's `[language-server.x]` and `[[language]]`; defaults per language |
-| 19.3 | Roots per language, from markers (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`…) |
-| 19.4 | Finding: the user's config, the project (`node_modules/.bin`, `.venv/bin`, `vendor/bin`), `PATH`, Mason |
-| 19.5 | Private installs: npm packages with Bun into slipbox's data folder, pinned, scripts off; `[lsp] auto_install` |
+| 19.2 | **Done.** Languages and servers: Helix's `[language-server.x]` and `[[language]]`; defaults per language |
+| 19.3 | **Done.** Roots per language, from markers (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`…) |
+| 19.4 | **Done.** Finding: the user's config, the project (`node_modules/.bin`, `.venv/bin`…), `PATH`, Mason |
+| 19.5 | **Done.** Private installs: npm packages with Bun into slipbox's folder, pinned, scripts off; `auto_install` |
 | 19.6 | **Decided:** trusted everywhere — servers and linters run the project's code, as in nvim and Helix |
 | 19.7 | `slipbox doctor`: per language, each server and linter — found where, installed, or missing and how to get it |
 | 19.8 | **Done.** Diagnostics: one list per file from every source — syntax, lint, links; servers to come |
