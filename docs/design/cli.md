@@ -66,7 +66,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 
 | Command | `data` in `--json` |
 | --- | --- |
-| `render <note>` | `{path, width, lines[], headings[{level, text, slug, line}]}` |
+| `render <note>` | `{path, width, lines[], headings[{level, text, slug, line}]}` — embedded notes drawn in place |
 | `capture [text]` | `{scratch, project, entry}` |
 | `scratch show` (also plain `scratch`) | `{path, content, sha}` |
 | `scratch path` | `{path, exists}` |

@@ -87,6 +87,10 @@ export const SCENARIOS: Scenario[] = [
       await s.see("properties"); // the frontmatter, rendered
       await s.see(/bash|python/);
       await open(s, "partners-and-names");
+      // Its table of scripts, below the notes it embeds now (1.11).
+      await s.keys(":");
+      await s.type("74");
+      await s.keys("enter");
       await s.see("木曽原天文同好会");
       await s.see("يوسف حداد");
       await s.see("🔭");
@@ -142,6 +146,16 @@ export const SCENARIOS: Scenario[] = [
       // The explorer toggled: the whole note re-wrapped at another width, still at its end.
       await leader(s, "e");
       await s.see("Line 7999 of the big note");
+    },
+  },
+
+  {
+    name: "render: embeds drawn in place — a whole note, a heading's section — their links followed from where they are",
+    run: async (s) => {
+      await open(s, "partners-and-names");
+      await s.see("Table A — ordinary prose, no long tokens."); // wrap-probe's text, embedded
+      await s.see("Visiting astronomer from the Kiso-Hara"); // kenji-mori's section, embedded
+      await s.see(/▎ .*Kenji Mori/);
     },
   },
 

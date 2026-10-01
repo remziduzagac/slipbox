@@ -197,6 +197,16 @@ one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back,
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
 
+## `1.11` — embeds
+
+An Obsidian vault is full of `![[…]]`: every pasted picture, and — for anyone who writes long pieces from small notes,
+or keeps notes that gather others' sections — notes and headings. A reader that draws them as references shows those
+notes nearly empty, so slipbox draws an embedded note in place. Read-only: editing another note inside this one would
+make every key ask which note it's in; `enter` on the header opens it instead. Its rows sit at the embed's line, so
+everything that knows a note by its lines — anchors, the cursor, the lens, the outline — knows only the note shown,
+and nothing about them changes. Its links are its own, resolved and followed from where it is, as Obsidian does.
+Search, backlinks and the context bundle are untouched: an embed is a link already, and its text belongs to its note.
+
 ## `5.9` — a branch switch as one event
 
 A checkout rewrites any number of files at once, and the watcher sees each on its own: reloads, moves detected by

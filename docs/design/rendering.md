@@ -62,8 +62,23 @@ Images render as `▣ alt`: phase 6 adds pixels, and alt text plus path stay the
 tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 
 **Wikilinks** render as their alias, or as `target › heading`. Colour shows status: `wikilink`
-resolved, `link_unresolved` red, `link_ambiguous` orange. Embeds (`![[x]]`) render as a
-reference, `⧉ x`. Transclusion is phase 4.
+resolved, `link_unresolved` red, `link_ambiguous` orange.
+
+**Embeds** (`1.11`): a paragraph of nothing but embeds — each `![[x]]` on its line, as Obsidian writes them — draws
+each embedded note in place: a header with its name (`⧉ inner`, `⧉ note › Heading`, `⧉ note ^id`; a link to it),
+then its text behind a bar (role `embed`). `![[note]]` is the whole note but its frontmatter; `![[note#Heading]]` the
+heading and what follows, to the next heading as high; `![[note#^id]]` the block whose id that is — a paragraph's or
+a list item's, at the end of its text, or the table, quote or list on the line before a lone `^id`. Read-only:
+
+- **Where it is.** Its rows are all at the embed's line: the note shown has the cursor, anchors and the lens; the
+  embedded note's headings stay out of its outline. Its links are its own: their status, and where they lead, are
+  as from the embedded note (`[sibling](sibling.md)` beside it, `[[#Heading]]` its own heading).
+- **Loops and depth.** An embed of a note already being drawn says `embeds itself: not drawn again`; embeds inside
+  embeds go three deep, then `embedded deeper still: enter opens it`. A heading or block that isn't there says so.
+- **Current.** It's read from its file (re-read when that changes); a block holding one is never kept in the render
+  cache, and the note showing it lays out again when the graph hears the embedded note change.
+- **References still.** A picture (`![[pic.png]]`), any other file, an embed that reaches nothing, and an embed with
+  text around it render as a reference, `⧉ x` — pixels are phase 6.
 
 ## Data files (plans `16.11`–`16.14`)
 

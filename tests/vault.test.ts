@@ -1926,6 +1926,115 @@ describe("git: status, what changed, diffs, worktrees, conflicts (5.11–5.14)",
   });
 });
 
+describe("embeds drawn in place (1.11)", () => {
+  const vaultOf = (files: Record<string, string>) => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-embed-"));
+    mkdirSync(join(dir, ".slipbox"));
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(dir, rel, ".."), { recursive: true });
+      writeFileSync(join(dir, rel), text);
+    }
+    return { dir, g: openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true) };
+  };
+  /** `caches`: the parse's and the render's, as a buffer keeps them (blocks reused between renders). */
+  const draw = async (g: ReturnType<typeof openGraph>, rel: string, caches?: { parse: import("../src/core/parse.ts").ParseCache; render: import("../src/core/layout/render.ts").RenderCache }) => {
+    const { layoutNote } = await import("../src/core/note.ts");
+    const { parseMarkdown } = await import("../src/core/parse.ts");
+    const { glyphsFor } = await import("../src/core/glyphs.ts");
+    return layoutNote(parseMarkdown(readFileSync(g.abs(rel), "utf8"), caches?.parse), g, rel, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }, caches?.render);
+  };
+  const text = (l: { lines: { spans: { text: string }[] }[] }) => l.lines.map((r) => r.spans.map((x) => x.text).join("").trimEnd());
+
+  test("a note in a frame where it's embedded: its name, then its text behind a bar — no frontmatter; its headings not this note's", async () => {
+    const { g } = vaultOf({
+      "host.md": "# Host\n\nBefore.\n\n![[sub/inner]]\n\nAfter.\n",
+      "sub/inner.md": "---\ntitle: Inner\n---\n# Inner\n\nSee [the sibling](sibling.md) and [[sibling]].\n",
+      "sub/sibling.md": "# Sibling\n",
+    });
+    const l = await draw(g, "host.md");
+    expect(text(l)).toEqual(["▌ Host", "", "Before.", "", "⧉ inner", "▎ ▌ Inner", "▎", "▎ See the sibling and sibling.", "", "After."]);
+    expect(l.headings.map((h) => h.text)).toEqual(["Host"]); // not the embedded note's
+    expect(l.lines.slice(4, 8).every((r) => r.src === 5)).toBe(true); // at the embed's line
+    expect(l.embedded).toEqual([g.abs("sub/inner.md")]);
+    // Its links: from where it is (sibling.md is beside it), and followed from there.
+    const inner = l.links.filter((x) => x.target.includes("sibling"));
+    expect(inner.map((x) => [x.status, x.from, x.src])).toEqual([
+      ["resolved", "sub/inner.md", 5],
+      ["resolved", "sub/inner.md", 5],
+    ]);
+    // The header, its name, is a link to it.
+    expect(l.links.find((x) => x.kind === "embed")).toMatchObject({ target: "sub/inner", text: "inner", line: 4 });
+  });
+
+  test("a heading's section, a block by its ^id (a paragraph's, a list item's, a table's on the line after); missing ones said", async () => {
+    const { g } = vaultOf({
+      "host.md": "![[src#Two]]\n\n![[src#^para]]\n\n![[src#^item]]\n\n![[src#^tab]]\n\n![[src#Nope]]\n\n![[src#^nope]]\n",
+      "src.md": "# One\n\nfirst\n\n## Two\n\nsecond ^para\n\n### Two-a\n\ndeeper\n\n## Three\n\n- a\n- b ^item\n\n| x |\n| - |\n| 1 |\n\n^tab\n",
+    });
+    expect(text(await draw(g, "host.md"))).toEqual([
+      "⧉ src › Two",
+      "▎ ▌ Two",
+      "▎",
+      "▎ second ^para",
+      "▎",
+      "▎ ▌ Two-a",
+      "▎",
+      "▎ deeper",
+      "",
+      "⧉ src ^para",
+      "▎ second",
+      "",
+      "⧉ src ^item",
+      "▎ • b",
+      "",
+      "⧉ src ^tab",
+      "▎ ┌───┐",
+      "▎ │ x │",
+      "▎ ╞═══╡",
+      "▎ │ 1 │",
+      "▎ └───┘",
+      "",
+      "⧉ src › Nope",
+      '▎ no heading "Nope" in src',
+      "",
+      "⧉ src ^nope",
+      "▎ no block ^nope in src",
+    ]);
+  });
+
+  test("a loop is drawn once, said so; past three deep, a line says to open it; a picture, text around it, nothing found: references", async () => {
+    const { g } = vaultOf({
+      "a.md": "A\n\n![[b]]\n",
+      "b.md": "B\n\n![[a]]\n",
+      "self.md": "S\n\n![[self]]\n",
+      "d1.md": "![[d2]]\n",
+      "d2.md": "![[d3]]\n",
+      "d3.md": "![[d4]]\n",
+      "d4.md": "![[d5]]\n",
+      "d5.md": "bottom\n",
+      "refs.md": "![[pic.png]]\n\nsee ![[b]] here\n\n![[missing]]\n",
+      "pic.png": "png",
+    });
+    expect(text(await draw(g, "a.md"))).toEqual(["A", "", "⧉ b", "▎ B", "▎", "▎ ⧉ a", "▎ ▎ embeds itself: not drawn again"]);
+    expect(text(await draw(g, "self.md"))).toEqual(["S", "", "⧉ self", "▎ embeds itself: not drawn again"]);
+    const deep = text(await draw(g, "d1.md"));
+    expect(deep.at(-1)).toBe("▎ ▎ ▎ ▎ embedded deeper still: enter opens it");
+    expect(deep.join("\n")).not.toContain("bottom");
+    expect(text(await draw(g, "refs.md"))).toEqual(["⧉ pic.png", "", "see ⧉ b here", "", "⧉ missing"]);
+    expect((await draw(g, "d1.md")).embedded!.sort()).toEqual(["d2.md", "d3.md", "d4.md"].map((r) => g.abs(r)));
+  });
+
+  test("the embedded note changed: drawn as it is now, through the render cache too", async () => {
+    const { newRenderCache } = await import("../src/core/layout/render.ts");
+    const { newParseCache } = await import("../src/core/parse.ts");
+    const { g } = vaultOf({ "host.md": "# H\n\n![[inner]]\n\nkept\n", "inner.md": "old text\n" });
+    const cache = { parse: newParseCache(), render: newRenderCache() };
+    expect(text(await draw(g, "host.md", cache))).toContain("▎ old text");
+    writeFileSync(g.abs("inner.md"), "new text, longer\n");
+    expect(text(await draw(g, "host.md", cache))).toContain("▎ new text, longer");
+  });
+});
+
 describe("the vault's problems (1.7)", () => {
   const cli = async (args: string[], cwd: string) => {
     const out: string[] = [];

@@ -62,6 +62,8 @@ export interface LayoutLink {
   line: number;
   col: number;
   src: number;
+  /** A link drawn inside an embed (1.11): the embedded note it's resolved from, not the one shown. */
+  from?: string;
 }
 
 export type LinkStatus = "resolved" | "unresolved" | "ambiguous" | "external" | "unknown";
@@ -82,6 +84,8 @@ export interface Layout {
   width: number;
   /** Rows the last line of defence had to cut to the width: a block's bug, lost text. Always 0. */
   clipped?: number;
+  /** The notes drawn inside this one (1.11), nested ones too, by absolute path: a change to one re-lays it out. */
+  embedded?: string[];
 }
 
 export function spanWidthText(spans: Span[]): string {

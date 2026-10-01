@@ -81,7 +81,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
 | `core/lazy.ts` | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
 | `core/syntax.ts` | 16.7–16.9 | tree-sitter grammars: multi-line spans, outline, syntax errors, comments |
-| `core/note.ts` | 2.x | a note rendered for a pane: parse, resolve links, lay out (CLI and TUI) |
+| `core/note.ts` | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
 | `core/layout/*` | 2.1–2.8 | mdast → layout IR; tables; wrap; highlighting; ANSI |
 | `core/layout/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
 | `core/layout/live.ts` | 4.14 | a note's blocks; the lens composed into the render |

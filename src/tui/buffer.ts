@@ -376,11 +376,15 @@ export class NoteBuffer {
     return l;
   }
 
+  /** The notes its layouts draw inside it (1.11), by absolute path: a change to one re-lays it out. */
+  readonly embedded = new Set<string>();
+
   layout(width: number, glyphs: Glyphs, showUrls: boolean, graph: Graph | null): Layout {
     const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}`;
     let l = this.layouts.get(key);
     if (!l) {
       l = layoutNote(this.parsed, graph, this.rel, { width, glyphs, showUrls }, this.renderCache);
+      for (const p of l.embedded ?? []) this.embedded.add(p);
       // Keep the last few widths (a drag back and forth, a toggle and back): evict the oldest.
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);

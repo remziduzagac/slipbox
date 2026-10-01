@@ -25,6 +25,29 @@ export interface RenderOptions {
   showUrls: boolean;
   /** Link status for styling; without it every wikilink renders as resolved. */
   resolveLink?: (kind: "wiki" | "embed" | "markdown" | "image", target: string) => LinkStatus;
+  /**
+   * What an embed (`![[note]]`, `![[note#Heading]]`, `![[note#^block]]`) shows, to draw it in place
+   * (1.11); null where it isn't a note (a picture, a file, nothing): then it's a reference.
+   */
+  embed?: (target: string, heading: string | null, block: string | null) => Embedded | null;
+  /** The note being drawn (absolute): an embed of it, however deep, is a loop. */
+  embedFrom?: string;
+}
+
+/** A note embedded, as the caller found it: what to draw, and how its own links resolve. */
+export interface Embedded {
+  /** Absolute: what loops are told by. */
+  path: string;
+  /** Its name, and the heading or block embedded. */
+  title: string;
+  /** The blocks to draw; null when the heading or block named isn't there (`missing` says so). */
+  nodes: RootContent[] | null;
+  missing?: string;
+  /** Its links' status, its embeds — from where it is, not from the note embedding it. */
+  resolveLink?: RenderOptions["resolveLink"];
+  embed?: RenderOptions["embed"];
+  /** Its path in this vault, for following its links from there; absent in another vault. */
+  from?: string;
 }
 
 interface Ctx {
@@ -35,7 +58,17 @@ interface Ctx {
   slugCounts: Map<string, number>;
   /** How many containers (quotes, lists, footnotes) deep the block being rendered is. */
   nesting: number;
+  /** The notes being drawn, the outermost first: an embed of one of them is a loop (1.11). */
+  embedChain: string[];
+  /** Every note embedded so far, nested ones too. */
+  embedded: Set<string>;
+  /** Inside an embed: its links are at the embed's line, and resolved from the embedded note. */
+  linkSrc?: number;
+  linkFrom?: string;
 }
+
+/** Embeds inside embeds are drawn this deep, no deeper: past it, a line says to open it. */
+const MAX_EMBED_DEPTH = 3;
 
 /** Containers deeper than this render as their plain text: nobody reads 60 levels of quote, and a
  *  hostile note 5,000 deep must not overflow the stack (the note would then show nothing at all). */
@@ -77,7 +110,7 @@ export function newRenderCache(): RenderCache {
 }
 
 export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontmatter | null, cache?: RenderCache): Layout {
-  const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), slugCounts: new Map(), nesting: 0 };
+  const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), slugCounts: new Map(), nesting: 0, embedChain: opts.embedFrom ? [opts.embedFrom] : [], embedded: new Set() };
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
   if (!cache) return finish(blocks(tree.children, ctx, width, TEXT, frontmatter), ctx, width);
@@ -93,11 +126,13 @@ export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontm
     let hit = origin ? cache.blocks.get(origin) : undefined;
     if (!hit) {
       // Rendered on its own: its links and headings numbered from 0, renumbered when placed.
-      const own: Ctx = { ...ctx, links: [], headings: [] };
+      const own: Ctx = { ...ctx, links: [], headings: [], embedded: new Set() };
       const rows = block(node, own, width, TEXT, frontmatter);
       if (rows === null) continue;
       hit = { lines: rows, links: own.links, headings: own.headings, src: srcOf(node) };
-      if (origin) cache.blocks.set(origin, hit);
+      // A block with an embed draws another note, which changes on its own: never kept (1.11).
+      for (const p of own.embedded) ctx.embedded.add(p);
+      if (origin && !own.embedded.size) cache.blocks.set(origin, hit);
     }
     const delta = srcOf(node) - hit.src;
     const linkBase = ctx.links.length;
@@ -127,6 +162,11 @@ function placed(line: Line, delta: number, linkBase: number, headBase: number): 
 }
 
 function finish(lines: Line[], ctx: Ctx, width: number): Layout {
+  const out = finishRows(lines, ctx, width);
+  return ctx.embedded.size ? { ...out, embedded: [...ctx.embedded] } : out;
+}
+
+function finishRows(lines: Line[], ctx: Ctx, width: number): Layout {
   const headings: LayoutHeading[] = [];
   let clipped = 0;
   lines.forEach((line, i) => {
@@ -313,8 +353,71 @@ function heading(depth: number, children: PhrasingContent[], src: number, ctx: C
 }
 
 function paragraph(children: PhrasingContent[], src: number, ctx: Ctx, width: number, base: Style): Line[] {
+  // Embeds alone in their paragraph (1.11), each on its line: a note's drawn in place.
+  const framed = embedsAlone(children, src, ctx, width, base);
+  if (framed) return framed;
   const spans = inline(children, ctx, base, src);
   return wrapSpans(spans, width).map((row) => ({ spans: row, src: row[0]?.src ?? src }));
+}
+
+/**
+ * A paragraph of nothing but embeds (and the line breaks between them), as Obsidian draws one
+ * (1.11): each embedded note framed in place, a picture or anything else a reference as before.
+ * Null when there's other text, or no embed of a note: then it's a paragraph like any.
+ */
+function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: number, base: Style): Line[] | null {
+  if (!ctx.opts.embed) return null;
+  const embeds: WikiLink[] = [];
+  for (const c of children) {
+    if ((c.type as string) === "wikiLink" && (c as unknown as WikiLink).embed) embeds.push(c as unknown as WikiLink);
+    else if (!(c.type === "break" || (c.type === "text" && !c.value.trim()))) return null;
+  }
+  const found = embeds.map((w) => ({ w, e: ctx.opts.embed!(w.target, w.heading, w.block) }));
+  if (!found.some((f) => f.e)) return null;
+  const out: Line[] = [];
+  for (const { w, e } of found) {
+    const at = (w as unknown as { position?: { start: { line: number } } }).position?.start.line ?? src;
+    if (e) out.push(...embedFrame(w, e, at, ctx, width));
+    else out.push(...wrapSpans(inline([w as unknown as PhrasingContent], ctx, base, at), width).map((row) => ({ spans: row, src: at })));
+  }
+  return out;
+}
+
+/**
+ * An embedded note drawn in place: a header naming it (a link to it), then its blocks behind a bar,
+ * read-only. Every row is at the embed's own line — the anchors and the cursor know only the note
+ * shown — and its headings stay out of that note's outline. Loops and depth are capped, said so.
+ */
+function embedFrame(w: WikiLink, e: Embedded, src: number, ctx: Ctx, width: number): Line[] {
+  const g = ctx.opts.glyphs;
+  const id = addLink(ctx, { kind: "embed", target: w.target, heading: w.heading, text: e.title, status: "resolved", src });
+  const head = wrapSpans([{ text: `${g.embed} `, role: "embed", attrs: 0, link: id }, { text: sanitize(e.title), role: "embed", attrs: A_BOLD, link: id }], width).map((row) => ({ spans: row, src }));
+  const note = (text: string): Line[] => [{ spans: [{ text, role: "dim", attrs: A_ITALIC }], src }];
+  let body: Line[];
+  if (ctx.embedChain.includes(e.path)) body = note("embeds itself: not drawn again");
+  else if (ctx.embedChain.length > MAX_EMBED_DEPTH) body = note("embedded deeper still: enter opens it");
+  else if (!e.nodes) body = note(e.missing ?? "nothing there");
+  else {
+    ctx.embedded.add(e.path);
+    const inner: Ctx = {
+      opts: { ...ctx.opts, resolveLink: e.resolveLink ?? ctx.opts.resolveLink, embed: e.embed },
+      links: ctx.links,
+      headings: [],
+      definitions: new Map(),
+      slugCounts: new Map(),
+      nesting: ctx.nesting + 1,
+      embedChain: [...ctx.embedChain, e.path],
+      embedded: ctx.embedded,
+      linkSrc: ctx.linkSrc ?? src,
+      linkFrom: e.from,
+    };
+    collectDefinitions({ type: "root", children: e.nodes }, inner);
+    body = blocks(e.nodes, inner, Math.max(MIN_NESTED, width - 2), TEXT);
+    if (!body.length) body = note("empty");
+  }
+  // At the embed's line, its own lines and headings forgotten: they're another note's.
+  const placed = body.map((l) => ({ ...l, src, heading: undefined, spans: l.spans.map((s) => ({ ...s, src: undefined })) }));
+  return [...head, ...prefixed(placed, [{ text: `${g.quoteBar} `, role: "embed", attrs: 0 }], src, true)];
 }
 
 function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, width: number, firstLine = 1): Line[] {
@@ -909,7 +1012,9 @@ function status(ctx: Ctx, kind: "wiki" | "embed" | "markdown" | "image", target:
 }
 
 function addLink(ctx: Ctx, l: Omit<LayoutLink, "line" | "col">): number {
-  return ctx.links.push({ ...l, line: -1, col: 0 }) - 1;
+  // Inside an embed: at the embed's line in the note shown, followed from the embedded note.
+  const inEmbed = ctx.linkSrc !== undefined ? { src: ctx.linkSrc, ...(ctx.linkFrom ? { from: ctx.linkFrom } : {}) } : {};
+  return ctx.links.push({ ...l, ...inEmbed, line: -1, col: 0 }) - 1;
 }
 
 function textOf(n: Nodes): string {

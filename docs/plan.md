@@ -1,10 +1,9 @@
 # slipbox — implementation plan
 
-Status: **phases 0–3 built**; **phase 3b (`16.x`, files beyond markdown) is next**, then 4. Phase 3
-left open `4.9` (moved to `15.1`), `5.9`, the lint surface, and `7.2`–`7.4`, which waited for renames (`7.1`) — all
-but `5.9` built since. Captured 2026-09-25, phased 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3
-2026-09-28 — how it was built is in `docs/design/`, the decisions it needed in
-`docs/design/decisions.md`.
+Status: **phases 0–4 built** — 3b (`16.x`, files beyond markdown) and 4 (vaults, renames, search, git, embeds)
+included; **phase 5 (`11.x`, the LSP) is next**. Scout (`6.10`) waits for Scout. Captured 2026-09-25, phased
+2026-09-25, phases 0–2 implemented 2026-09-25, phase 3 2026-09-28, phases 3b and 4 by 2026-10-01 — how it was built
+is in `docs/design/`, the decisions it needed in `docs/design/decisions.md`.
 
 The design lives in `docs/idea.md` — what slipbox is, why each decision went the
 way it did, and what was ruled out. This file is the other half: the units of work, with
@@ -310,6 +309,7 @@ common, and the only reason they are step 0.
 | 1.8 | Incremental single-file graph update |
 | 1.9 | Index persistence: when, and to the cache location from 0.10 |
 | 1.10 | `slipbox init` and the no-marker path — announce the degradation, offer to create |
+| 1.11 | **Done.** Embeds drawn in place: `![[note]]`, `#Heading`, `#^block`; read-only, loops and depth capped |
 
 ## Rendering — `2.x`
 

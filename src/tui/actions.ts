@@ -195,7 +195,8 @@ function sourceLinkAt(a: App, v: View): LayoutLink | null {
 function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
   const view = a.view;
   if (!view) return;
-  const from = view.buf.rel;
+  // A link drawn inside an embed (1.11) is the embedded note's: followed from there.
+  const from = link.from ?? view.buf.rel;
   const go = (path: string, heading: string | null) => {
     const anchor = heading ? (lineAnchor(heading) ?? headingAnchor(a, path, heading)) : undefined;
     if (inSplit) a.otherWindow();
@@ -217,6 +218,8 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
     case "wiki":
     case "embed": {
       if (!link.target) {
+        // `[[#Heading]]` inside an embed: the embedded note's heading, in it.
+        if (link.heading && link.from && link.from !== view.buf.rel) return go(link.from, link.heading);
         if (link.heading) jumpToHeading(a, view, link.heading);
         return;
       }
@@ -248,6 +251,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       }
       const frag = link.target.includes("#") ? decodeURIComponent(link.target.split("#")[1]!) : null;
       if (r.resolvedKind === "anchor") {
+        if (frag && link.from && link.from !== view.buf.rel) return go(link.from, frag);
         if (frag) jumpToHeading(a, view, frag);
         return;
       }

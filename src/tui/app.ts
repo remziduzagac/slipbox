@@ -630,7 +630,7 @@ export class App {
     this.host = opts.host;
     this.configFile = opts.configFile;
     this.live = opts.watch !== false;
-    this.startSearch();
+    this.followGraph();
     this.explicitTheme = opts.themeName;
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
     loadConfig({ vaultFile: vaultConfigPath(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood });
@@ -838,7 +838,7 @@ export class App {
     if (changed.includes("walk")) {
       this.graph = new Graph(this.loc, this.config).build(true, "lazy");
       this.graph.reach = this.reach;
-      this.startSearch();
+      this.followGraph();
       this.indexInBackground();
       this.invalidateTree();
       for (const b of this.buffers.values()) b.invalidateLayouts();
@@ -1345,6 +1345,30 @@ export class App {
   private stopSearchFeed: (() => void) | null = null;
   /** The search list on screen, refreshed when the index is ready. */
   private searchList: ListOverlay | null = null;
+
+  private stopEmbedFeed: (() => void) | null = null;
+
+  /** A new graph (the vault opened, switched, walked again): the search index and embeds follow it. */
+  private followGraph(): void {
+    this.startSearch();
+    // A note drawn inside another (1.11) changed: whatever shows it lays out again.
+    this.stopEmbedFeed?.();
+    const g = this.graph;
+    this.stopEmbedFeed = g.onChange((c) => {
+      const paths = c.kind === "moved" ? [c.from, c.to] : [c.path];
+      const abs = new Set(paths.map((p) => g.abs(p)));
+      let again = false;
+      for (const b of this.buffers.values()) {
+        if (![...b.embedded].some((p) => abs.has(p))) continue;
+        b.invalidateLayouts();
+        again = true;
+      }
+      if (again) {
+        for (const v of this.allViews()) v.layoutKey = "";
+        this.host.requestRender();
+      }
+    });
+  }
 
   /** The index opened (or made) and caught up in the background; the graph's changes followed. */
   startSearch(): void {
@@ -6402,7 +6426,7 @@ export class App {
     this.reach = new Reach(target);
     this.graph = new Graph(target, this.config).build(true, "lazy");
     this.graph.reach = this.reach;
-    this.startSearch();
+    this.followGraph();
     for (const e of this.graph.errors) this.message("warn", e);
     this.positions = new PositionStore(target);
     this.buffers.clear();
@@ -6608,7 +6632,7 @@ export class App {
       this.reach = new Reach(this.loc);
       this.graph = new Graph(this.loc, this.config).build(true, "lazy");
       this.graph.reach = this.reach;
-      this.startSearch();
+      this.followGraph();
       if (this.live) this.indexInBackground();
     }
     this.afterFileOp();
