@@ -235,6 +235,8 @@ Helix's names: `diagnostics`, `hover`, `goto-definition`, `goto-reference`, `doc
 `diagnostics`, `code-action`, `format`. A language's `language-servers` in the config can limit any of them as Helix
 does — an entry `{ name = "ruff", only-features = ["diagnostics", "format"] }`, or `except-features`. Every server's
 diagnostics are the file's (one limited away from them says nothing); a request that wants one answer (hover, a
-definition) goes to the first that does it and answers; references, and later code actions, are every server's
-together, the same place once.
+definition) goes to the first that does it and answers; references and code actions are every server's together,
+the same place once. Completion asks its servers in turn and shows the first one that answers (a main
+server before its add-ons, which by default don't complete); its trigger characters, and signature help's, are every
+server's together.
 

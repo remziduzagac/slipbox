@@ -150,6 +150,16 @@ What a code file's language server changes (`19.15`) — `space c`, as LazyVim h
 | code actions: the servers' fixes and refactorings for the cursor's line, to pick from | `space c a` |
 | format the file, as its server formats it: one undo step | `space c f` |
 
+Typing in a code file, its server's completion shows under the cursor (`19.16`); while it shows, these keys are its,
+as vim's and blink.cmp's:
+
+| Action | Keys |
+| --- | --- |
+| the next / previous item | `ctrl+n`, `down` / `ctrl+p`, `up` |
+| put the chosen one in (with its import, if it has one) | `tab`, `enter` |
+| close it, still typing | `ctrl+e` |
+| close it and leave insert | `esc` |
+
 ## History — `space h`
 
 | Action | Direct keys | Leader |
@@ -476,7 +486,8 @@ marker, ending the list; `backspace` / `delete` a character (joining lines at an
 the word before; `ctrl+u` what was typed on the line, then the rest before the cursor, and at the
 line's start joins it to the one above (`ctrl+w` too stops once where the insert began); `tab` /
 `shift+tab` indent or outdent the line by two spaces; the arrows, `home` and `end` move; `ctrl+s`
-saves. A paste goes into the text.
+saves. A paste goes into the text. While a code file's completion shows, `tab`, `enter`, `ctrl+n`, `ctrl+p`, `up`,
+`down` and `ctrl+e` are its (`space c`, above).
 Source mode's own keys are `[keys.source]` in config: the operators and edits above (`d c y > < D C s
 S r J p P ~ . x`), which win over the reading keys there.
 

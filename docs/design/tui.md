@@ -1069,6 +1069,16 @@ jump, the file's servers are told its text now rather than after the pause, so t
   (`workspace/applyEdit`), made the same way.
 - **`space c f`** formats the file as its server does (the first that formats), one undo step; left unsaved.
 
+**Completion** (`19.16`) shows as a code file is typed, under the cursor (above it with no room below): at once
+after one of its servers' trigger characters (`.`), else once a word is begun and typing pauses (100 ms). Up to ten
+items, each with its detail dimmed, the best first — by how well the word typed so far matches, then the server's
+order. Typing on narrows the list without asking again, unless the server said its list was partial; a word ended
+(a space, an operator) closes it. `tab` or `enter` puts the chosen item in — its edit if it has one, else its text over
+the word, a snippet's tab stops dropped — then its other edits (an import at the top), the cursor staying on its
+text. Only the last ask's answer is shown: one arriving after a later ask is dropped. **Signature help** shows after
+`(` and `,` (as the server names them): the signature on a line above the cursor, the active parameter marked; `)`
+or leaving insert closes it. Both are insert mode's, and leaving it closes both.
+
 A file tree-sitter has no outline of (`16.8`: CSS, YAML, PHP, Swift…) takes its language server's symbols as its
 outline and breadcrumb (`19.14`), nested as the server nests them, asked for when it opens and again after each change
 reaches the server. Where tree-sitter has one, it stays: it's there at once, and leaves out the variables and

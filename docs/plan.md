@@ -566,11 +566,11 @@ source shown alike in every mode.*
 | 19.9 | **Done.** The bar: a column beside the text, each line's count coloured by its worst severity, every mode |
 | 19.10 | **Done.** Ranges marked: underlined in source mode, the lens and the rendered view |
 | 19.11 | **Done.** Toggles (`space u d`, `shift+d`) and `[diagnostics]`; the status line takes every source |
-| 19.12 | **Done** (hover; signature help with completion, `19.16`). Hover in a float |
+| 19.12 | **Done.** Hover in a float; signature help as `(` and `,` are typed (`19.16`) |
 | 19.13 | **Done** (definition, references). A jump, or a list when there are several; implementation and types later |
 | 19.14 | **Done** (the outline; the vault's symbols with `19.22`). The server's symbols where tree-sitter has none |
 | 19.15 | **Done.** Rename, code actions, formatting: through `App.writeBuffer`, previewed like slipbox's renames |
-| 19.16 | Completion in insert mode |
+| 19.16 | **Done.** Completion in insert mode: on a trigger at once, on a word after a pause; narrowed as typed |
 | 19.17 | **Done.** Several servers per file: a main one and add-ons, merged; Helix's `only-features` splits the work |
 | 19.18 | Linters with an LSP mode as add-ons, where the project has their config; the project's copy first |
 | 19.19 | The lint surface widened: linters without LSP in efm-langserver's keys (`lint-command`, `lint-formats`) |

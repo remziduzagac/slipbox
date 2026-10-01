@@ -733,6 +733,17 @@ export const SCENARIOS: Scenario[] = [
       await s.type("1");
       await s.keys("escape");
       await s.until(() => !s.statusLine().includes("✖"), 10000, "the error gone with the fix");
+      // Completion as it's typed (19.16): Math's members after `.`, narrowed by what follows, one put in; then
+      // the signature being typed, after `(`.
+      await s.keys("shift+g", "o");
+      await s.type("Math.rou");
+      await s.see("round", 10000);
+      await s.keys("enter");
+      await s.see("Math.round");
+      await s.type("(");
+      await s.see(/round\(x: number\): number/, 10000);
+      await s.keys("escape");
+      await s.see("Math.round(");
     },
   },
   {

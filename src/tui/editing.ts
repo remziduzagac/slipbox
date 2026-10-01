@@ -149,6 +149,9 @@ function insertStop(view: View, lineStart: number, at: number): number {
 export function stopInsert(app: App, view: View): void {
   if (!view.insert) return;
   view.insert = false;
+  // Completion's popup and the signature are typing's (19.16).
+  app.completion = null;
+  app.signature = null;
   const at = offsetOf(app, view);
   view.buf.lastInsert = at; // gi comes back here
   view.buf.endStep(at);

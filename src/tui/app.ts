@@ -74,6 +74,7 @@ import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
 import { serverTable } from "../core/servers/languages.ts";
 import { ServerManager } from "../core/servers/manager.ts";
+import { afterInsertKey, type CompletionState, completionKey, type SignatureState } from "./completion.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
@@ -1030,6 +1031,19 @@ export class App {
 
   /** The servers of the files open here; null when off (`[lsp] enabled`) or in tests that don't run them. */
   servers: ServerManager | null = null;
+  /** Completion's popup while typing (19.16), and the signature being typed. */
+  completion: CompletionState | null = null;
+  signature: SignatureState | null = null;
+  /** Each file's servers' trigger characters, asked once its servers run. */
+  private readonly triggerCache = new Map<string, { completion: string[]; signature: string[] }>();
+
+  /** The characters that ask a file's servers for completion and signature help (none until they've said). */
+  serverTriggers(path: string): { completion: string[]; signature: string[] } {
+    const known = this.triggerCache.get(path);
+    if (known) return known;
+    void this.servers?.triggers(path).then((t) => this.triggerCache.set(path, t));
+    return { completion: [], signature: [] };
+  }
   private readonly serverTimers = new Map<NoteBuffer, ReturnType<typeof setTimeout>>();
 
   /** The manager started: it starts each server when a file first needs it. */
@@ -1822,7 +1836,7 @@ export class App {
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
     if (view.layoutKey !== key) {
       view.layoutKey = key;
-      view.cur = this.cursorFromAnchor(layout, view.curAnchor);
+      view.cur = this.cursorFromAnchor(layout, view.curAnchor, view.insert);
       // Re-derive the anchor from where the cursor landed, so its fallback line tracks the file:
       // after an insertion above, a later removal of the heading must not use a stale line. Only
       // when the text changed: a re-wrap alone can leave no row starting on the anchor's line (the
@@ -2092,12 +2106,18 @@ export class App {
     return row;
   }
 
-  private cursorFromAnchor(layout: Layout, c: CursorAnchor): Pos {
+  private cursorFromAnchor(layout: Layout, c: CursorAnchor, insert = false): Pos {
     const first = rowFor(layout, c.anchor);
     const src = layout.lines[first]?.src;
     let row = first;
     for (let k = 0; k < c.sub && layout.lines[row + 1]?.src === src; k++) row++;
-    return clampPos(layout, { row, col: c.col });
+    const pos = clampPos(layout, { row, col: c.col });
+    // Typing at a line's end, the cursor is past its last character: a relayout then (the
+    // problems bar appearing, a resize) keeps it there, or the next key goes in before that one.
+    const cs = insert ? cells(layout.lines[pos.row]) : [];
+    const last = cs[cs.length - 1];
+    if (last && c.col >= last.x + last.w) pos.col = last.x + last.w;
+    return pos;
   }
 
   /** After placing `view.cur` directly (editing): its anchor, and the view following it. */
@@ -5272,7 +5292,10 @@ export class App {
     const iv = this.view;
     if (this.region === "content" && iv?.insert && !this.pending.length) {
       if (key === "ctrl+s") return void this.run("note.save");
+      // The completion popup's keys first (19.16): moving in it, accepting, closing.
+      if (completionKey(this, iv, key)) return;
       insertKey(this, iv, key);
+      afterInsertKey(this, iv, key);
       return insertRecord(this, iv, key);
     }
     // A command waiting for one character (f, t) in the render; in source vim.ts has it.

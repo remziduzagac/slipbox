@@ -7604,3 +7604,118 @@ describe("what a code file's server changes (19.15)", () => {
     await h.app.servers!.stopAll();
   });
 });
+
+describe("completion while typing (19.16)", () => {
+  const served = (c: Config) => {
+    const launcher = join(sandbox, "fake-ls-launcher-3");
+    writeFileSync(launcher, `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`);
+    c["language-server"] = { fake: { command: launcher, args: ["--stdio"] } };
+    c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["fake"] }];
+  };
+  const until = async (ok: () => boolean, ms = 8000) => {
+    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+    return ok();
+  };
+  const ready = async (h: Harness) => {
+    h.app.startServers();
+    h.frame();
+    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
+    h.app.serverTriggers(h.app.view!.buf.abs); // asked once its servers run
+    await until(() => h.app.serverTriggers(h.app.view!.buf.abs).completion.length > 0);
+  };
+  const shown = (h: Harness) => h.app.completion?.shown.map((i) => i.label) ?? [];
+
+  test("a word begun: the server's items after a pause, narrowed as it's typed, under the cursor; tab puts one in", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "alpha beta alpine\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "a", "l");
+    expect(await until(() => shown(h).length > 0)).toBe(true);
+    expect(shown(h)).toEqual(["alpha", "alpine"]); // narrowed by "al"
+    expect(h.frame()).toMatch(/alpha\s*\n.*alpine/); // drawn, one under the other
+    await h.keys("p", "i");
+    expect(shown(h)).toEqual(["alpine"]); // narrowed again, not asked again
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toBe("alpha beta alpine\nalpine\n");
+    expect(h.app.completion).toBeNull();
+    expect(h.app.view!.insert).toBe(true);
+    await h.keys("space", "z", "q");
+    await Bun.sleep(300);
+    expect(h.app.completion).toBeNull(); // nothing for zq
+    await h.app.servers!.stopAll();
+  });
+
+  test("after a trigger character at once: ctrl+n moves, enter puts it in with its import; escape closes and leaves insert", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "start\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "x", ".");
+    expect(await until(() => shown(h).length === 2)).toBe(true);
+    expect(shown(h)).toEqual(["member", "method"]);
+    await h.keys("ctrl+n", "enter");
+    expect(h.app.view!.buf.source).toBe("import x\nstart\nx.method\n");
+    expect(h.app.view!.insert).toBe(true);
+    await h.keys("space", "y", ".");
+    expect(h.app.view!.buf.source).toBe("import x\nstart\nx.method y.\n"); // the cursor moved down with its line
+    expect(await until(() => shown(h).length === 2)).toBe(true);
+    await h.keys("ctrl+e"); // closed, still typing
+    expect(h.app.completion).toBeNull();
+    expect(h.app.view!.insert).toBe(true);
+    await h.keys(".");
+    expect(await until(() => shown(h).length === 2)).toBe(true);
+    await h.keys("escape");
+    expect(h.app.completion).toBeNull();
+    expect(h.app.view!.insert).toBe(false);
+    await h.app.servers!.stopAll();
+  });
+
+  test("the last ask's answer stands: a pause's ask gives way to a trigger's, an older answer arriving late is dropped", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "SLOW start\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    const members = ["member", "method"];
+    // A word's pause asks (answered late); then `.` asks again before that answer comes.
+    await h.keys("o", "s", "t");
+    await Bun.sleep(150);
+    await h.keys(".");
+    expect(await until(() => shown(h).length === 2)).toBe(true);
+    await Bun.sleep(400);
+    expect(shown(h)).toEqual(members);
+    // `.` right after a word begun: its pause never asks.
+    await h.keys("escape", "o", "x", ".");
+    expect(await until(() => shown(h).length === 2)).toBe(true);
+    await Bun.sleep(500);
+    expect(shown(h)).toEqual(members);
+    await h.app.servers!.stopAll();
+  });
+
+  test("signature help: after ( the signature, its parameter marked; after , the next; ) closes it", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "start\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "f", "n", "(");
+    expect(await until(() => h.app.signature !== null)).toBe(true);
+    const marked = () => h.app.signature!.label.slice(...h.app.signature!.active!);
+    expect(marked()).toBe("a: number");
+    expect(h.frame()).toContain("fn(a: number, b: string)");
+    await h.keys("1", ",");
+    expect(await until(() => marked() === "b: string")).toBe(true);
+    await h.keys(")");
+    expect(h.app.signature).toBeNull();
+    await h.app.servers!.stopAll();
+  });
+});
+
+test("a relayout while typing at a line's end — a resize, the problems bar appearing — keeps the cursor after it", async () => {
+  const root = makeVault();
+  writeFileSync(join(root, "a.ts"), "const a = 1;\n");
+  const h = await harness({ root, open: "a.ts" });
+  await h.keys("A", "x");
+  h.app.draw(new TextCanvas(100, 30)); // the terminal narrowed: laid out again
+  await h.keys("y");
+  expect(h.app.view!.buf.source).toBe("const a = 1;xy\n"); // not "1;yx"
+});

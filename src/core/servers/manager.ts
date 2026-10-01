@@ -148,6 +148,13 @@ export class ServerManager {
     return null;
   }
 
+  /** The characters that ask a file's servers for completion, and for signature help, by their capabilities. */
+  async triggers(path: string): Promise<{ completion: string[]; signature: string[] }> {
+    const caps = (await this.serving(path, "completion", "completionProvider")).map((c) => c.capabilities?.completionProvider?.triggerCharacters ?? []);
+    const sig = (await this.serving(path, "signature-help", "signatureHelpProvider")).map((c) => c.capabilities?.signatureHelpProvider?.triggerCharacters ?? []);
+    return { completion: [...new Set(caps.flat())], signature: [...new Set(sig.flat())] };
+  }
+
   /** A request to one named server of a file (a code action resolved, or its command run, by the server that gave it). */
   async requestOf<R>(path: string, server: string, method: string, params: unknown): Promise<R | null> {
     const key = this.docs.get(path)?.servers.find((k) => this.running.get(k)?.def.name === server);

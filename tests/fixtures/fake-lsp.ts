@@ -24,6 +24,8 @@ conn.onInitialize((p) => ({
     codeActionProvider: { resolveProvider: true },
     executeCommandProvider: { commands: ["fake.fixAll"] },
     documentFormattingProvider: true,
+    completionProvider: { triggerCharacters: ["."] },
+    signatureHelpProvider: { triggerCharacters: ["(", ","] },
     ...(pull ? { diagnosticProvider: { interFileDependencies: false, workspaceDiagnostics: false } } : {}),
   },
   serverInfo: { name: `fake (root ${p.rootUri})` },
@@ -127,5 +129,22 @@ conn.onExecuteCommand(async (p) => {
 conn.onDocumentFormatting((p) =>
   docs.get(p.textDocument.uri)!.getText().split("\n").flatMap((l, i) => (/ {2,}/.test(l) ? [{ range: { start: { line: i, character: 0 }, end: { line: i, character: l.length } }, newText: l.replace(/ {2,}/g, " ") }] : [])),
 );
+// Completion: after a `.`, a member and a method (which adds an import at the top); else the file's words.
+conn.onCompletion(async (p) => {
+  if (p.context?.triggerCharacter === ".") {
+    return [{ label: "member", detail: "a field" }, { label: "method", detail: "fn()", additionalTextEdits: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, newText: "import x\n" }] }];
+  }
+  const text = docs.get(p.textDocument.uri)!.getText();
+  // SLOW: a word's items answered late, after a trigger's asked later.
+  if (text.includes("SLOW")) await new Promise((r) => setTimeout(r, 300));
+  return [...new Set(text.match(/\w{3,}/g) ?? [])].map((w) => ({ label: w }));
+});
+// Signature help: fn(a: number, b: string), its parameter by the commas typed since the `(`.
+conn.onSignatureHelp((p) => {
+  const line = docs.get(p.textDocument.uri)!.getText().split("\n")[p.position.line]!.slice(0, p.position.character);
+  const open = line.lastIndexOf("(");
+  if (open < 0) return null;
+  return { signatures: [{ label: "fn(a: number, b: string)", parameters: [{ label: "a: number" }, { label: "b: string" }] }], activeSignature: 0, activeParameter: line.slice(open).split(",").length - 1 };
+});
 docs.listen(conn);
 conn.listen();
