@@ -969,7 +969,14 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   undo(s) {
-    if (!loggedRenames(s.graph).length) throw new CliError("nothing to undo: no rename, move or relink has been done in this vault", EXIT.notFound);
+    // Nothing to undo here (none at all, or only another branch's): said as planUndo says it, exit 3.
+    if (!loggedRenames(s.graph).length) {
+      try {
+        planUndo(s.graph);
+      } catch (err) {
+        throw new CliError((err as Error).message, EXIT.notFound);
+      }
+    }
     const r = renameResult(s, () => planUndo(s.graph));
     // A vault's rename taken back: the machine's list learns its name again.
     const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };

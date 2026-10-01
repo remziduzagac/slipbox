@@ -39,6 +39,8 @@ import type { Layout } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
 import { stateDir, userConfigFile } from "../core/paths.ts";
 import {
+  SESSION_BRANCHES,
+  type SessionTab,
   type Anchor,
   anchorAt,
   type CursorAnchor,
@@ -97,6 +99,10 @@ import {
   parseGroup,
   prettyKey,
 } from "./keys.ts";
+
+/** A branch switch's files keep arriving for a moment after HEAD moved (the watcher's debounce,
+ *  a big checkout): not taken for moves until then (5.9). */
+const SWITCH_SETTLE_MS = 3000;
 
 export interface Host {
   requestRender(): void;
@@ -611,6 +617,7 @@ export class App {
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
     loadConfig({ vaultFile: vaultConfigPath(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood });
     this.now = opts.now ?? Date.now;
+    this.head = this.headNow();
     this.ui = uiDefaults(opts.config);
     if (opts.themeName) this.ui.theme = opts.themeName;
     if (process.env.NO_COLOR) this.ui.theme = "mono";
@@ -1046,12 +1053,111 @@ export class App {
   // slices when the vault opens, then each file as the graph hears it change (a save here, the
   // watcher, a rename) — and a list ranked as you type.
 
-  private checkoutMemo: { root: string; c: Checkout | null } | null = null;
+  private checkoutMemo: { root: string; c: Checkout | null; at: number } | null = null;
 
-  /** The git checkout the vault is in (17.19), read once per vault: the main one or a worktree. */
+  /** The git checkout the vault is in (17.19): the main one or a worktree. Read once per vault —
+   *  none, again after a second (`git init` may make one). */
   get checkout(): Checkout | null {
-    if (this.checkoutMemo?.root !== this.loc.root) this.checkoutMemo = { root: this.loc.root, c: this.loc.mode === "vault" ? checkoutOf(this.loc.root) : null };
-    return this.checkoutMemo.c;
+    const m = this.checkoutMemo;
+    if (m?.root !== this.loc.root || (!m.c && this.now() - m.at > 1000)) this.checkoutMemo = { root: this.loc.root, c: this.loc.mode === "vault" ? checkoutOf(this.loc.root) : null, at: this.now() };
+    return this.checkoutMemo!.c;
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Git (5.9, 5.10): what git does to the vault's files as one event — a branch switch, a merge, a
+  // reset. The watcher's batches are held while git holds its index lock, then applied together;
+  // the files a branch switch brings and takes aren't taken for moves; each branch keeps its tabs.
+
+  /** HEAD as last seen: its branch, or (detached) its commit. */
+  private head: { branch: string | null; commit: string | null } | null = null;
+  private heldBatches: WatchBatch[] = [];
+  private gitWait: ReturnType<typeof setTimeout> | null = null;
+  /** When HEAD last moved: the watcher's batches for a moment after are the switch's too. */
+  private switchedAt = Number.NEGATIVE_INFINITY;
+
+  private headNow(): { branch: string | null; commit: string | null } | null {
+    const c = this.checkout;
+    if (!c) return null;
+    const h = headOf(c);
+    return { branch: h.branch, commit: h.commit };
+  }
+
+  /** git is mid-commit (or mid-anything) in the vault's checkout (5.10). Looked up afresh when none
+   *  is known — a repository can appear, and a loose folder's is checked too: it runs only when an
+   *  autosave is due or the watcher has news. */
+  private gitIndexLocked(): boolean {
+    const c = this.checkout ?? checkoutOf(this.loc.root);
+    return !!c && existsSync(join(c.gitDir, "index.lock"));
+  }
+
+  /** A batch from the watcher: applied now — or, while git writes, held with the rest it writes. */
+  receiveBatch(b: WatchBatch): void {
+    this.heldBatches.push(b);
+    if (this.gitIndexLocked()) return this.waitForGit();
+    this.flushBatches();
+  }
+
+  private waitForGit(): void {
+    if (this.gitWait) return;
+    const tick = () => {
+      this.gitWait = null;
+      if (this.quitting) return;
+      if (this.gitIndexLocked()) {
+        this.gitWait = setTimeout(tick, 100);
+        (this.gitWait as { unref?: () => void }).unref?.();
+        return;
+      }
+      this.flushBatches();
+    };
+    this.gitWait = setTimeout(tick, 100);
+    (this.gitWait as { unref?: () => void }).unref?.();
+  }
+
+  /** The held batches applied as one — a switch that came with them seen first, and their files
+   *  not taken for moves (a note only one branch has comes and goes; nothing moved). */
+  flushBatches(): void {
+    const batches = this.heldBatches;
+    this.heldBatches = [];
+    this.checkHead();
+    if (!batches.length) return;
+    const merged: WatchBatch = { changes: batches.flatMap((b) => b.changes), rescan: batches.some((b) => b.rescan) };
+    if (this.now() - this.switchedAt < SWITCH_SETTLE_MS) this.graph.pauseMoves(() => this.applyChanges(merged));
+    else this.applyChanges(merged);
+    this.host.requestRender();
+  }
+
+  /** HEAD looked at (the poll, each batch): when it moved, said so, and the branch's tabs back.
+   *  True when it moved. Not while git still writes: then it hasn't finished moving. */
+  checkHead(): boolean {
+    if (this.gitIndexLocked()) return false;
+    const now = this.headNow();
+    const was = this.head;
+    this.head = now;
+    if (now?.branch === was?.branch && now?.commit === was?.commit) return false;
+    // A repository that appeared (`git init`) or went: only the top bar has news.
+    if (!now || !was) return true;
+    this.switchedAt = this.now();
+    this.headMoved(was, now);
+    return true;
+  }
+
+  private headMoved(was: { branch: string | null; commit: string | null }, now: { branch: string | null; commit: string | null }): void {
+    const name = (h: typeof now) => (h.branch ? `branch ${h.branch}` : `a detached HEAD (${h.commit?.slice(0, 7) ?? "?"})`);
+    // The branch left keeps its tabs; the one switched to has its own back — when it has some, and
+    // nothing open is unsaved (closing it would lose that).
+    if (this.config.ui.restore_session) {
+      this.saveState(was.branch);
+      const theirs = now.branch ? loadSession(this.loc)?.branches?.[now.branch] : undefined;
+      if (theirs?.tabs.length) {
+        if (this.dirtyBuffers().length) return this.message("info", `switched to ${name(now)} — unsaved notes stay open, so its tabs aren't brought back`);
+        this.overlay = null;
+        this.tabs = [];
+        this.openTabs(theirs.tabs, theirs.activeTab);
+        if (!this.tabs.length) this.restoreSession();
+        return this.message("info", `switched to ${name(now)}: its tabs are back`);
+      }
+    }
+    this.message("info", `switched to ${name(now)}`);
   }
 
   /** The branch checked out (a detached HEAD: its commit, short), or null outside git. */
@@ -5601,10 +5707,7 @@ export class App {
       pollMs: this.config.watch.poll_ms,
       known: this.knownFromGraph(),
       sizes: this.sizesFromGraph(),
-      onBatch: (b) => {
-        this.applyChanges(b);
-        this.host.requestRender();
-      },
+      onBatch: (b) => this.receiveBatch(b),
       onDegraded: (reason) => {
         this.message("error", `watching degraded: ${reason}`);
         this.host.requestRender();
@@ -5634,6 +5737,8 @@ export class App {
         this.reloadConfig("file changed");
         changed = true;
       }
+      // HEAD moved without a file changing with it (5.9): a switch between branches alike.
+      if (this.checkHead()) changed = true;
       if (changed) this.host.requestRender();
     }, Math.min(this.config.watch.poll_ms, 1000));
     (t as { unref?: () => void }).unref?.();
@@ -5796,7 +5901,21 @@ export class App {
   private restoreSession(): boolean {
     const s = loadSession(this.loc);
     if (!s) return false;
-    for (const t of s.tabs) {
+    // This branch's tabs, when it has kept some (5.9); else the last ones.
+    const mine = this.head?.branch ? s.branches?.[this.head.branch] : undefined;
+    this.openTabs(mine?.tabs.length ? mine.tabs : s.tabs, mine?.tabs.length ? mine.activeTab : s.activeTab);
+    if (!this.tabs.length) return false;
+    this.sidebar.visible = s.sidebar;
+    if (s.outline !== undefined) this.outline.visible = s.outline;
+    if (s.sidebar_width) this.sideW = s.sidebar_width;
+    if (s.outline_width) this.outW = s.outline_width;
+    this.revealInSidebar();
+    return true;
+  }
+
+  /** Tabs from the session opened, after any there are; the active one as it was. */
+  private openTabs(tabs: SessionTab[], activeTab: number): void {
+    for (const t of tabs) {
       const views: View[] = [];
       for (const p of t.panes) {
         const buf = this.buffer(p.path);
@@ -5809,18 +5928,12 @@ export class App {
       }
       if (views.length) this.tabs.push({ views, active: Math.min(t.active, views.length - 1), orientation: t.orientation ?? "side", ratio: t.ratio ?? this.config.ui.split_ratio, ...(t.pinned ? { pinned: true } : {}) });
     }
-    if (!this.tabs.length) return false;
-    this.activeTab = Math.max(0, Math.min(s.activeTab, this.tabs.length - 1));
+    this.activeTab = Math.max(0, Math.min(activeTab, this.tabs.length - 1));
     for (const t of this.tabs) t.active = Math.max(0, Math.min(t.active, t.views.length - 1));
-    this.sidebar.visible = s.sidebar;
-    if (s.outline !== undefined) this.outline.visible = s.outline;
-    if (s.sidebar_width) this.sideW = s.sidebar_width;
-    if (s.outline_width) this.outW = s.outline_width;
-    this.revealInSidebar();
-    return true;
   }
 
-  saveState(): void {
+  /** The session saved: the tabs, as the last ones and as `branch`'s (by default, HEAD's as last seen). */
+  saveState(branch: string | null = this.head?.branch ?? null): void {
     for (const v of this.allViews()) this.remember(v);
     this.positions.save();
     const s: SessionState = {
@@ -5842,6 +5955,14 @@ export class App {
       recent_notes: this.recentNotes,
       ...(this.remoteServer ? { remote_server: this.remoteServer } : {}),
     };
+    // Each branch's tabs, as it was left (5.9): the most recent few kept.
+    const branches = { ...(loadSession(this.loc)?.branches ?? {}) };
+    if (branch) branches[branch] = { tabs: s.tabs, activeTab: s.activeTab, at: new Date(this.now()).toISOString() };
+    s.branches = Object.fromEntries(
+      Object.entries(branches)
+        .sort((a, b) => (a[1].at < b[1].at ? 1 : -1))
+        .slice(0, SESSION_BRANCHES),
+    );
     saveSession(this.loc, s);
   }
 
@@ -6031,26 +6152,6 @@ export class App {
     this.publishDirty();
   }
 
-  /** git is mid-commit (or mid-anything) in the vault's repository. Looked up each time: it runs
-   *  only when an autosave is due, and a repository can appear. */
-  private gitIndexLocked(): boolean {
-    for (let d = this.loc.root; ; d = dirname(d)) {
-      const dotGit = join(d, ".git");
-      if (existsSync(dotGit)) {
-        // A worktree or submodule has a .git file pointing at its git directory.
-        let gitDir = dotGit;
-        try {
-          if (statSync(dotGit).isFile()) {
-            const m = /^gitdir:\s*(.+)$/m.exec(readRegular(dotGit, SMALL_FILE).toString("utf8"));
-            if (m) gitDir = resolve(d, m[1]!.trim());
-          }
-        } catch {}
-        return existsSync(join(gitDir, "index.lock"));
-      }
-      if (dirname(d) === d) return false;
-    }
-  }
-
   quit(): void {
     if (this.quitting) return;
     this.quitting = true;
@@ -6089,6 +6190,8 @@ export class App {
     this.watcher = null;
     // Enter.
     this.loc = target;
+    this.head = this.headNow();
+    this.heldBatches = [];
     recordLocation(target);
     this.configLastGood.clear();
     const loaded = loadConfig({ vaultFile: vaultConfigPath(target), configFile: this.configFile, lastGood: this.configLastGood });

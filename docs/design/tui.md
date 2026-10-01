@@ -272,6 +272,10 @@ heading later falls back to a current line, not a stale one.
   widths, UI setting overrides, the palette's recent commands and the recent notes, in
   `session.json`. The tabs and windows are restored when slipbox starts with
   no path, if `ui.restore_session` is on; UI setting overrides and recent commands on every start.
+- **Each branch's tabs** (`5.9`): in a git checkout the session keeps the tabs each branch had when it was left (the
+  30 left most recently). Started on a branch, slipbox opens its tabs; a switch to another branch while it runs
+  brings that branch's back — unless a note is unsaved, which stays open (said so). A branch it has none for keeps
+  what's open.
 
 ## History (plan `3.6`)
 
@@ -980,6 +984,12 @@ directory, sharing the walk's `WalkFilter` (decision `0.11`). Events are debounc
 - **New directories** are watched through their whole depth. A `.gitignore` change rescans, and
   open notes that changed during the rescan reload.
 - **Files outside the vault** (the scratch in the state dir) are polled while open.
+- **What git does lands as one change** (`5.9`, `5.10`): while git holds its index lock (a checkout, a merge, a
+  rebase, a commit) the watcher's news waits; when it lets go, everything it changed is applied together. HEAD is
+  looked at each second and with each batch: when it moved, `switched to branch feat` — and that branch's tabs back
+  (above). The files a branch switch brings and takes for a few seconds after aren't taken for moves (`17.12`): a
+  note only one branch has comes and goes, nothing moved. A pull or merge on the same branch is no switch: a rename it
+  brings is a move.
 
 ### Bun's watcher, and what covers its gaps
 

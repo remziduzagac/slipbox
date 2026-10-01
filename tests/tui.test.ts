@@ -6978,3 +6978,117 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(f).toMatch(/fix +⎇ fix/);
   });
 });
+
+describe("a branch switch as one event (5.9)", () => {
+  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+  /** A vault and its repository on main: a.md and b.md committed. */
+  const repo = () => {
+    const root = mkdtempSync(join(sandbox, "branch-"));
+    mkdirSync(join(root, ".slipbox"));
+    writeFileSync(join(root, ".slipbox", "config.toml"), `[vault]\nid = "br${root.slice(-6).replace(/[^a-z0-9]/gi, "")}"\nname = "br${root.slice(-6).replace(/[^a-z0-9]/gi, "")}"\n`);
+    writeFileSync(join(root, "a.md"), "# A\n\nThe first note, long enough to know again by its text.\n");
+    writeFileSync(join(root, "b.md"), "# B\n");
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return null;
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    return root;
+  };
+  const shown = (h: Harness) => h.app.tabs.map((t) => t.views.map((v) => v.buf.rel).join("|"));
+
+  test("each branch keeps its tabs: switching back brings them back; not over an unsaved note", async () => {
+    const root = repo();
+    if (!root) return;
+    const h = await harness({ root, open: "a.md", config: (c) => (c.ui.restore_session = true) });
+    expect(h.app.checkHead()).toBe(false);
+    git(root, "checkout", "-q", "-b", "feat");
+    expect(h.app.checkHead()).toBe(true);
+    expect(h.app.messages.at(-1)!.text).toBe("switched to branch feat"); // none kept for feat yet: these stay
+    await h.app.run("note.open b.md");
+    expect(shown(h)).toEqual(["b.md"]);
+    git(root, "checkout", "-q", "main");
+    h.app.checkHead();
+    expect(h.app.messages.at(-1)!.text).toBe("switched to branch main: its tabs are back");
+    expect(shown(h)).toEqual(["a.md"]);
+    git(root, "checkout", "-q", "feat");
+    h.app.checkHead();
+    expect(shown(h)).toEqual(["b.md"]);
+    // Unsaved: what's open stays open.
+    await h.keys("space", "n", "v", "shift+a", "!", "escape");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    git(root, "checkout", "-q", "main");
+    h.app.checkHead();
+    expect(h.app.messages.at(-1)!.text).toBe("switched to branch main — unsaved notes stay open, so its tabs aren't brought back");
+    expect(shown(h)).toEqual(["b.md"]);
+  });
+
+  test("a repository made while it runs: the branch shows up (a regression: nothing redrew)", async () => {
+    const root = mkdtempSync(join(sandbox, "late-git-"));
+    mkdirSync(join(root, ".slipbox"));
+    writeFileSync(join(root, "a.md"), "# A\n");
+    const h = await harness({ root, open: "a.md" });
+    expect(topRow(h.frame())).not.toContain("⎇");
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    const later = Date.now() + 5_000; // the next look for a repository
+    (h.app as unknown as { now: () => number }).now = () => later;
+    expect(h.app.checkHead()).toBe(true); // news for the top bar
+    expect(topRow(h.frame())).toContain("⎇ main");
+    expect(h.app.messages.some((m) => m.text.startsWith("switched"))).toBe(false); // not a switch
+  });
+
+  test("started again, each branch opens on its own tabs", async () => {
+    const root = repo();
+    if (!root) return;
+    const restore = (c: Config) => (c.ui.restore_session = true);
+    const h = await harness({ root, open: "a.md", config: restore });
+    git(root, "checkout", "-q", "-b", "feat");
+    h.app.checkHead(); // main's tabs kept: a.md
+    await h.app.run("note.open b.md");
+    h.app.saveState(); // feat's: b.md
+    expect(shown(await harness({ root, open: null, config: restore }))).toEqual(["b.md"]);
+    git(root, "checkout", "-q", "main");
+    expect(shown(await harness({ root, open: null, config: restore }))).toEqual(["a.md"]);
+  });
+
+  test("while git writes (its index lock) the watcher's news waits, then lands as one; a switch's files aren't moves", async () => {
+    const root = repo();
+    if (!root) return;
+    // feat renames a.md to c.md: on main it's a.md, on feat c.md — the same text.
+    git(root, "checkout", "-q", "-b", "feat");
+    git(root, "mv", "a.md", "c.md");
+    git(root, "commit", "-q", "-m", "rename");
+    git(root, "checkout", "-q", "main");
+    const h = await harness({ root, open: "b.md" });
+    // git busy: held.
+    writeFileSync(join(root, ".git", "index.lock"), "");
+    writeFileSync(join(root, "b.md"), "# B, changed\n");
+    h.app.receiveBatch({ changes: [{ rel: "b.md", kind: "changed", isNote: true }], rescan: false });
+    expect(h.app.view!.buf.source).toBe("# B\n");
+    rmSync(join(root, ".git", "index.lock"));
+    for (let i = 0; i < 50 && h.app.view!.buf.source !== "# B, changed\n"; i++) await Bun.sleep(20);
+    expect(h.app.view!.buf.source).toBe("# B, changed\n");
+    git(root, "checkout", "-q", "--", "b.md");
+    // The switch: a.md goes, c.md comes with its text — not a move, so no redirect.
+    git(root, "checkout", "-q", "feat");
+    h.app.receiveBatch({
+      changes: [
+        { rel: "a.md", kind: "deleted", isNote: true },
+        { rel: "c.md", kind: "created", isNote: true },
+      ],
+      rescan: false,
+    });
+    expect(h.app.graph.notes.has("c.md")).toBe(true);
+    expect(h.app.graph.redirects!.follow("a.md")).toBeNull();
+    // On one branch, the same thing is a move (17.12): a redirect.
+    renameSync(join(root, "c.md"), join(root, "d.md"));
+    const later = Date.now() + 10_000; // past the switch's settling
+    (h.app as unknown as { now: () => number }).now = () => later;
+    h.app.receiveBatch({
+      changes: [
+        { rel: "c.md", kind: "deleted", isNote: true },
+        { rel: "d.md", kind: "created", isNote: true },
+      ],
+      rescan: false,
+    });
+    expect(h.app.graph.redirects!.follow("c.md")).toBe("d.md");
+  });
+});

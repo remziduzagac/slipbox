@@ -14,6 +14,7 @@ import { LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Re
 import { type HeadingInfo, headingsOf, noteTitle, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
 import { cacheDir, stateDir } from "./paths.ts";
+import { checkoutOf, headOf } from "./git.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf } from "./filetypes.ts";
@@ -129,6 +130,8 @@ const INDEX_VERSION = 6; // 6: inline #tags (1.6)
 interface IndexFile {
   version: number;
   entries: Record<string, NoteEntry>;
+  /** The branch checked out when it was written (5.9): from another, its vanished notes weren't moved. */
+  branch?: string | null;
 }
 
 export interface GraphStats {
@@ -212,8 +215,9 @@ export class Graph {
       }
     }
     this.index = new LinkIndex(this.notes.keys());
-    // Notes the index had that the walk no longer finds: moved, if one new file has the same text.
-    if (this.useCache) {
+    // Notes the index had that the walk no longer finds: moved, if one new file has the same text —
+    // unless the index was written on another branch (5.9): a note only one branch has is no move.
+    if (this.useCache && (cached?.branch === undefined || cached.branch === this.branchNow())) {
       const vanished = Object.values(old).filter((e) => !this.notes.has(e.rel));
       if (vanished.length) this.detectMoves(vanished, walk.files.filter((f) => !old[f.rel]));
     }
@@ -304,7 +308,7 @@ export class Graph {
     for (const [rel, e] of this.notes) if (!this.unparsed.has(rel) && !isUnreadable(e)) entries[rel] = e;
     try {
       ensureDir(cacheDir(this.loc));
-      writeJson(this.cachePath, { version: INDEX_VERSION, entries } satisfies IndexFile);
+      writeJson(this.cachePath, { version: INDEX_VERSION, entries, branch: this.branchNow() } satisfies IndexFile);
     } catch (err) {
       this.errors.push(`cache: ${(err as Error).message}`);
     }
@@ -352,8 +356,27 @@ export class Graph {
   private readonly went = new Map<string, { rel: string; at: number }>();
   private readonly came = new Map<string, { rel: string; at: number }>();
 
+  /** While a branch switch lands (5.9): files only one branch has come and go, but nothing moved. */
+  private movesPaused = 0;
+
+  /** Run `fn` with move detection off: a branch switch's mass of files coming and going. */
+  pauseMoves<T>(fn: () => T): T {
+    this.movesPaused++;
+    try {
+      return fn();
+    } finally {
+      this.movesPaused--;
+    }
+  }
+
+  /** The branch the vault's checkout has (null: detached, or no git). */
+  branchNow(): string | null {
+    const c = this.loc.mode === "vault" ? checkoutOf(this.root) : null;
+    return c ? headOf(c).branch : null;
+  }
+
   private pairMove(hash: string, rel: string, side: "went" | "came"): void {
-    if (!hash || this.loc.mode === "home") return;
+    if (!hash || this.loc.mode === "home" || this.movesPaused) return;
     const now = Date.now();
     for (const m of [this.went, this.came]) for (const [h, v] of m) if (now - v.at > 60_000) m.delete(h);
     const other = side === "went" ? this.came : this.went;

@@ -1271,6 +1271,27 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "git: a branch switch while it runs — the branch in the top bar, said once, each branch's tabs back",
+    run: async (s) => {
+      const git = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
+      if (git("init", "-q", "-b", "main").exitCode !== 0) return; // no git here
+      git("add", "-A");
+      git("commit", "-q", "-m", "the demo");
+      await s.see(/main/, 5000); // the top bar: the branch, from the next poll
+      git("checkout", "-q", "-b", "feat");
+      await s.message("switched to branch feat", 5000);
+      await open(s, "kenji-mori");
+      await s.status("kenji-mori.md");
+      git("checkout", "-q", "main");
+      await s.message("switched to branch main: its tabs are back", 5000);
+      await s.status("home.md");
+      git("checkout", "-q", "feat");
+      await s.message("switched to branch feat: its tabs are back", 5000);
+      await s.status("kenji-mori.md");
+    },
+  },
+
   // --- vaults (17.x) ----------------------------------------------------------------------------
   {
     name: "vaults: [[vault:note]] switches into another vault and back; unknown vault; the list; a nested vault",

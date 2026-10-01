@@ -904,9 +904,10 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
 // -------------------------------------------------------------------------------------------
 // Undoing (7.4)
 
-/** The vault's renames that can be undone, newest last (its log). */
+/** The vault's renames that can be undone here — made on this branch — newest last (its log). */
 export function loggedRenames(g: Graph): LoggedRename[] {
-  return readRenames(g.loc);
+  const branch = g.branchNow();
+  return readRenames(g.loc).filter((x) => x.branch === undefined || x.branch === branch);
 }
 
 /**
@@ -916,8 +917,15 @@ export function loggedRenames(g: Graph): LoggedRename[] {
  * Refused when a file it wrote has changed since, or what moved isn't where it went.
  */
 export function planUndo(g: Graph): RenamePlan {
-  const r = readRenames(g.loc).at(-1);
-  if (!r) throw new RenameError("nothing to undo: no rename, move or relink has been done in this vault");
+  // The newest made on this branch (5.9): one made on another is that branch's to undo.
+  const all = readRenames(g.loc);
+  const branch = g.branchNow();
+  const r = all.filter((x) => x.branch === undefined || x.branch === branch).at(-1);
+  if (!r) {
+    const other = all.at(-1);
+    if (other) throw new RenameError(`nothing to undo on ${branch ? `branch ${branch}` : "this checkout"}: the last rename was made on ${other.branch ? `branch ${other.branch}` : "a detached HEAD"}`);
+    throw new RenameError("nothing to undo: no rename, move or relink has been done in this vault");
+  }
   const what = r.kind === "relink" ? "relink" : r.kind === "folder" ? `move of ${r.from}/` : r.kind === "vault" ? `vault's rename to ${r.to}` : `rename of ${r.from}`;
   const files: FileChange[] = [];
   for (const f of r.files) {
@@ -1041,6 +1049,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       to: plan.to,
       move: mv,
       made,
+      branch: g.branchNow(),
       moves: plan.moves ?? [],
       vaults: plan.vaults ?? [],
       files: plan.files.map((f) => ({ abs: dest(f.abs), shown: f.shown, vault: f.vault, edits: f.edits, hash: contentHash(f.next), ...changedSpan(f.text, f.next) })),

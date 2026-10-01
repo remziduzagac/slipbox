@@ -213,10 +213,21 @@ export interface UiOverride {
   base: unknown;
 }
 
+export interface SessionTab {
+  panes: SessionPane[];
+  active: number;
+  orientation?: "side" | "stacked";
+  ratio?: number;
+  pinned?: boolean;
+}
+
 export interface SessionState {
   version: 1;
-  tabs: { panes: SessionPane[]; active: number; orientation?: "side" | "stacked"; ratio?: number; pinned?: boolean }[];
+  /** The tabs as they were last — whatever the branch. */
+  tabs: SessionTab[];
   activeTab: number;
+  /** The tabs each branch had when it was left (5.9): a switch back brings them back. */
+  branches?: Record<string, { tabs: SessionTab[]; activeTab: number; at: string }>;
   sidebar: boolean;
   outline?: boolean;
   sidebar_width?: number;
@@ -248,7 +259,34 @@ export function sessionFile(place: StatePlace): string {
 export function loadSession(place: StatePlace): SessionState | null {
   const s = readJson<SessionState | null>(sessionFile(place), null);
   if (!s || typeof s !== "object" || s.version !== 1 || !Array.isArray(s.tabs)) return null;
-  const tabs = s.tabs
+  const tabs = sessionTabs(s.tabs);
+  const branches: NonNullable<SessionState["branches"]> = {};
+  if (s.branches && typeof s.branches === "object" && !Array.isArray(s.branches)) {
+    for (const [b, v] of Object.entries(s.branches)) {
+      if (!v || typeof v !== "object" || !Array.isArray(v.tabs)) continue;
+      branches[b] = { tabs: sessionTabs(v.tabs), activeTab: Number.isInteger(v.activeTab) ? v.activeTab : 0, at: typeof v.at === "string" ? v.at : "" };
+    }
+  }
+  return {
+    version: 1,
+    tabs,
+    activeTab: Number.isInteger(s.activeTab) ? s.activeTab : 0,
+    branches,
+    sidebar: typeof s.sidebar === "boolean" ? s.sidebar : true,
+    outline: typeof s.outline === "boolean" ? s.outline : undefined,
+    sidebar_width: validWidth(s.sidebar_width),
+    outline_width: validWidth(s.outline_width),
+    theme: typeof s.theme === "string" ? s.theme : undefined,
+    ui: s.ui && typeof s.ui === "object" && !Array.isArray(s.ui) ? s.ui : {},
+    recent_commands: Array.isArray(s.recent_commands) ? s.recent_commands.filter((x) => typeof x === "string") : [],
+    recent_notes: Array.isArray(s.recent_notes) ? s.recent_notes.filter((x) => typeof x === "string") : [],
+    remote_server: typeof s.remote_server === "string" ? s.remote_server : undefined,
+  };
+}
+
+/** Tabs as the session holds them, anything malformed dropped. */
+function sessionTabs(list: unknown[]): SessionTab[] {
+  return (list as SessionTab[])
     .filter((t) => t && Array.isArray(t.panes))
     .map((t) => ({
       panes: t.panes
@@ -261,21 +299,10 @@ export function loadSession(place: StatePlace): SessionState | null {
       pinned: t.pinned === true ? true : undefined,
     }))
     .filter((t) => t.panes.length);
-  return {
-    version: 1,
-    tabs,
-    activeTab: Number.isInteger(s.activeTab) ? s.activeTab : 0,
-    sidebar: typeof s.sidebar === "boolean" ? s.sidebar : true,
-    outline: typeof s.outline === "boolean" ? s.outline : undefined,
-    sidebar_width: validWidth(s.sidebar_width),
-    outline_width: validWidth(s.outline_width),
-    theme: typeof s.theme === "string" ? s.theme : undefined,
-    ui: s.ui && typeof s.ui === "object" && !Array.isArray(s.ui) ? s.ui : {},
-    recent_commands: Array.isArray(s.recent_commands) ? s.recent_commands.filter((x) => typeof x === "string") : [],
-    recent_notes: Array.isArray(s.recent_notes) ? s.recent_notes.filter((x) => typeof x === "string") : [],
-    remote_server: typeof s.remote_server === "string" ? s.remote_server : undefined,
-  };
 }
+
+/** How many branches' tabs a session keeps: the ones left most recently. */
+export const SESSION_BRANCHES = 30;
 
 function validWidth(v: unknown): number | undefined {
   return typeof v === "number" && Number.isInteger(v) && v >= 12 && v <= 200 ? v : undefined;

@@ -197,6 +197,22 @@ one edit, never parsed and re-serialised (as `7.6` has it). Closing writes back,
 there's nothing to lose by accident, since the note's undo takes it back. Text that doesn't parse is written only if
 you say so, and so is text written over a frontmatter that changed under it.
 
+## `5.9` — a branch switch as one event
+
+A checkout rewrites any number of files at once, and the watcher sees each on its own: reloads, moves detected by
+content hash, a session's tabs on notes that may not exist here. So git's own lock decides when to look — the watcher's
+news is held while `index.lock` exists and applied together after — and HEAD, read from `.git` each second and with
+each batch, decides what it was:
+
+- **Not moves.** A note only one branch has goes and comes back at each switch; taken for a move, it would leave
+  redirects that make `[[name]]` find the other branch's note, never offering to make it. So the files of a switch
+  aren't paired, nor, at the next open, those of an index written on another branch (it records its branch). A pull or
+  a merge keeps the branch: a rename it brings is a real one.
+- **Each branch its tabs**, kept in the one session: switching back to a branch is going back to what you had there.
+  Never over an unsaved note — closing it would lose it.
+- **Undo is the branch's**: each rename records the branch it was made on, and is offered only there; on another it's
+  in the way of nothing, and the hash check would refuse it anyway.
+
 ## `17.19` — git worktrees
 
 A linked worktree (`git worktree add`) is a separate vault of the same repository: the same id and name, its own

@@ -31,6 +31,8 @@ export interface LoggedRename {
   move: { from: string; to: string; dir: boolean } | null;
   /** The first folder the move made to hold what moved (absolute), if it made one. */
   made: string | null;
+  /** The branch it was made on (5.9): undone only there. Absent in a log written before. */
+  branch?: string | null;
   moves: [string, string][];
   vaults: [string, string][];
   files: LoggedFile[];

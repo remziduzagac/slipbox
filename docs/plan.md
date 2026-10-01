@@ -392,8 +392,8 @@ common, and the only reason they are step 0.
 | 5.6 | Autosave aborts on mtime change |
 | 5.7 | Post-`(K)eep` state: autosave off until an explicit, confirmed save |
 | 5.8 | Incremental graph update from watch events |
-| 5.9 | `HEAD`-change detection as a distinct event class — a branch switch is a mass reload |
-| 5.10 | Suppress autosave during an index lock, so a half-written note misses an agent's commit |
+| 5.9 | **Done.** `HEAD` moves as one event: git's changes held while it writes; no moves; each branch its tabs |
+| 5.10 | **Done.** Autosave waits out git's index lock, and so does the watcher's news (`5.9`) |
 
 ## Search — `6.x`
 

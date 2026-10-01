@@ -323,8 +323,9 @@ moved moves back, and the folders the move made go if they're empty. It's a rena
 previews it, each changed line the other way; open notes, the index and the redirects follow — and it's refused,
 nothing written (exit 5), when a file the rename wrote has changed since, or what moved isn't where it went; it
 stays next to undo, so putting the file back lets it through. Undone, it's forgotten: the next `undo` takes the one
-before (the vault keeps the last 20, in its state). A folder made a vault or a vault made a folder (`18.11`) isn't
-among them: `deinit` and `init` take each other back.
+before (the vault keeps the last 20, in its state). In a git checkout, each rename is undone only on the branch it was
+made on (`5.9`): on another, `nothing to undo on branch main: the last rename was made on branch feat` (exit 3).
+A folder made a vault or a vault made a folder (`18.11`) isn't among them: `deinit` and `init` take each other back.
 
 **A folder made a vault, and back** (`18.11`): `slipbox init <folder>` on a folder inside a vault makes it a vault of
 its own — its `.slipbox/`, a distinct name suggested unless `--name` — and first rewrites the links that would stop
