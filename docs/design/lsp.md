@@ -111,3 +111,53 @@ Every answer is about a note as the editor has it, and a request takes its lates
   vault's state as `context.md`, copied by the system's clipboard tools when there are any — never OSC 52, whose
   sequence would land in the editor's own terminal — and opened in the editor when it can, the message saying
   where.
+
+## Setting up nvim (`11.12`)
+
+Two servers, each where it belongs: slipbox in a vault — a folder with `.slipbox/` above the file — and marksman (or
+whatever else serves markdown) outside one. `workspace_required` keeps nvim from starting slipbox for a lone file
+when no `.slipbox/` is found; marksman's `root_dir` declines a vault's files. `slipbox` must be on nvim's `PATH`
+(`scripts/install-local.sh` puts a launcher in `~/.local/bin`). Checked with nvim 0.12, both ways.
+
+With LazyVim, a plugin spec (`lua/plugins/slipbox.lua`); LazyVim hands each server's options to `vim.lsp.config`
+and enables the ones Mason doesn't install:
+
+```lua
+return {
+  "neovim/nvim-lspconfig",
+  opts = {
+    servers = {
+      slipbox = {
+        cmd = { "slipbox", "lsp" },
+        filetypes = { "markdown" },
+        root_markers = { ".slipbox" },
+        workspace_required = true,
+      },
+      marksman = {
+        root_dir = function(buf, on_dir)
+          if vim.fs.root(buf, ".slipbox") then return end -- slipbox's
+          on_dir(vim.fs.root(buf, { ".marksman.toml", ".git" }) or vim.fs.dirname(vim.api.nvim_buf_get_name(buf)))
+        end,
+      },
+    },
+  },
+}
+```
+
+Without a distribution (nvim 0.11 or later), the same through `vim.lsp.config`:
+
+```lua
+vim.lsp.config("slipbox", {
+  cmd = { "slipbox", "lsp" },
+  filetypes = { "markdown" },
+  root_markers = { ".slipbox" },
+  workspace_required = true,
+})
+vim.lsp.enable("slipbox")
+```
+
+and marksman's `root_dir` as above. LazyVim's keys then reach slipbox: `gd` follows a link, `gr` lists what links
+here, `K` previews where a link lands, `space c r` renames the note a link names or the heading under the cursor,
+`space c a` offers the code actions, `space c shift+r` (snacks.nvim's rename) moves the file with its links fixed,
+`space s s` and `space s shift+s` find headings and notes, and `[[` completes as it's typed.
+

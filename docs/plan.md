@@ -536,7 +536,7 @@ common, and the only reason they are step 0.
 | 11.9 | **Done.** Heading rename in the core: `[[note#Heading]]`, `note.md#heading` fixed everywhere; TUI, CLI too |
 | 11.10 | **Done.** `willRenameFiles`: a note moved in the editor's file tree has its links fixed |
 | 11.11 | **Done.** Code actions: make a missing note, pick an ambiguous link's target; the context bundle |
-| 11.12 | nvim's setup documented: slipbox where `.slipbox/` is, marksman elsewhere |
+| 11.12 | **Done.** nvim's setup documented: slipbox where `.slipbox/` is, marksman elsewhere |
 
 ## Code intelligence — `19.x`
 
