@@ -89,6 +89,7 @@ export const SCENARIOS: Scenario[] = [
       await s.see("properties"); // the frontmatter, rendered
       await s.see(/bash|python/);
       await open(s, "partners-and-names");
+      await s.see("following it offers to make it"); // visiting-rota.md exists nowhere: a note not written yet
       // Its table of scripts, below the notes it embeds now (1.11).
       await s.keys(":");
       await s.type("74");
@@ -96,7 +97,6 @@ export const SCENARIOS: Scenario[] = [
       await s.see("木曽原天文同好会");
       await s.see("يوسف حداد");
       await s.see("🔭");
-      await s.see("following it offers to make it"); // visiting-rota.md exists nowhere: a note not written yet
     },
   },
 
@@ -1265,7 +1265,7 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("escape");
       // Each toggle says its own name and the new state, then flips back (the message names it,
       // so a stale message from the one before can't pass).
-      const names: Record<string, string> = { d: "Readable width", z: "Zen mode", l: "Cursor-row highlight", n: "Line numbers", w: "Wrap long lines", r: "Show link URLs", m: "Mouse" };
+      const names: Record<string, string> = { "shift+w": "Readable width", d: "Problems bar", z: "Zen mode", l: "Cursor-row highlight", n: "Line numbers", w: "Wrap long lines", r: "Show link URLs", m: "Mouse" };
       for (const [k, name] of Object.entries(names)) {
         await leader(s, "u", k);
         await s.see(new RegExp(`${name}: (on|off)`)); // on the top bar, or the last row in zen
