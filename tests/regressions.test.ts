@@ -11,7 +11,7 @@ import { glyphsFor } from "../src/core/glyphs.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { LinkIndex } from "../src/core/links.ts";
-import { loadSession, saveSession } from "../src/core/position.ts";
+import { loadSession, rowForSource, saveSession } from "../src/core/position.ts";
 import { listThemes } from "../src/core/theme/index.ts";
 import { homeAt, locateVault } from "../src/core/vault.ts";
 import { WalkFilter, walkVault } from "../src/core/walk.ts";
@@ -354,4 +354,15 @@ test("the scratch, open in the TUI, follows appends from the CLI", async () => {
   } finally {
     app.quit();
   }
+});
+
+test("a line inside a block that wraps lands on that block, not the next (a converted [[note#^id]] at a paragraph's last line)", () => {
+  // Rows by the source line their first text is on: a heading (1), a paragraph of lines 3–5 wrapped
+  // into rows starting on lines 3, 3 and 4, then a heading (7).
+  const layout = { lines: [1, 3, 3, 4, 7].map((src) => ({ spans: [], src })) } as unknown as Parameters<typeof rowForSource>[0];
+  expect(rowForSource(layout, 3)).toBe(1); // a row's own line: its first row
+  expect(rowForSource(layout, 5)).toBe(3); // inside the paragraph: its row, not the heading after
+  expect(rowForSource(layout, 7)).toBe(4);
+  expect(rowForSource(layout, 9)).toBe(4); // past the end: the last row
+  expect(rowForSource({ lines: [{ spans: [], src: 4 }] } as unknown as Parameters<typeof rowForSource>[0], 2)).toBe(0); // before the first: the first
 });

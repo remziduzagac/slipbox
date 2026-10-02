@@ -86,9 +86,19 @@ export function rowFor(layout: Layout, anchor: Anchor): number {
   return rowForSource(layout, targetSrc);
 }
 
-/** First row whose source line is ≥ `src` (rows are in source order). */
+/**
+ * The row holding source line `src` (rows are in source order): the first row of that line; else —
+ * a line inside a block that wraps, where no row starts (a paragraph's later line) — the last row
+ * before it, the block holding it, not the next block; past the end, the last row.
+ */
 export function rowForSource(layout: Layout, src: number): number {
-  for (let i = 0; i < layout.lines.length; i++) if (layout.lines[i]!.src >= src) return i;
+  let before = -1;
+  for (let i = 0; i < layout.lines.length; i++) {
+    const at = layout.lines[i]!.src;
+    if (at === src) return i;
+    if (at > src) return before >= 0 ? before : i;
+    before = i;
+  }
   return Math.max(0, layout.lines.length - 1);
 }
 

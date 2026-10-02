@@ -412,8 +412,9 @@ Each kind of link does something different when followed:
 indented under its parent, whose count includes its children's — and picking one lists its notes; `:tag name` goes
 straight there. A note's tags are its frontmatter's `tags:` and the `#tags` in its text (`docs/design/rendering.md`).
 
-A link reached by a note's alias or previous name, or through a redirect (the note moved: `17.12`),
-follows too, and says so. The backlinks list
+A link reached by a note's alias or previous name, or through a redirect (the note moved: `17.12`), follows too, and
+says so. A link landing on a line (`#L42`, a block's `^id`, a problem, a search hit) lands where that line is shown: in
+the rendered view, a line inside a paragraph that wraps lands on the paragraph, not the block after. The backlinks list
 shows another vault's link with that vault's name: `app: design/plan.md`.
 
 `enter` follows the link under the cursor, or else the row's first link. In source mode and inside

@@ -161,6 +161,40 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "convert-links: every note's links made plain paths after a preview, an ambiguous one picked; embeds still drawn, a block followed, undone",
+    run: async (s) => {
+      await s.ex("convert-links");
+      await s.see(/links → plain paths: \d+ changes? in \d+ files?/, 10000);
+      await s.see("pick home.md:29");
+      // The ambiguous [[contacts]], first in the list: its notes, one picked; the preview again, with it.
+      await s.keys("enter");
+      await s.see("[[contacts]] in home.md:29 — which note?");
+      await s.keys("down", "enter");
+      await s.see(/links → plain paths: \d+ changes? in \d+ files?/);
+      await s.notSee("pick home.md:29");
+      await s.keys("enter");
+      await s.message(/converted links to plain paths: \d+ changes/); // short: the box wraps the rest
+      await s.file("home.md", (t) => t.includes("[contacts](people/contacts.md)") && !t.includes("[[about-this-vault]]"), "home.md converted");
+      // Embeds written as paths now, still drawn in place.
+      await open(s, "partners-and-names");
+      await s.see("Table A — ordinary prose, no long tokens."); // wrap-probe's text, embedded
+      await s.see(/▎ .*Kenji Mori/);
+      // The block link, a path now, followed: at the line its ^id marks.
+      await s.keys("ctrl+f");
+      await s.type("thread-one");
+      await s.keys("enter", "escape", "enter");
+      await s.status("variable-star-survey.md");
+      await s.status(/L3[123]:/); // in the paragraph its ^id closes (lines 31–33), not the heading after
+      // Undone: every file as it was.
+      await s.ex("undo-rename");
+      await s.see(/undo: links → plain paths/);
+      await s.keys("enter");
+      await s.message(/undid the conversion to plain paths/);
+      await s.file("home.md", (t) => t.includes("[[contacts]]") && t.includes("[[about-this-vault]]"), "home.md as it was");
+    },
+  },
+
   // --- reading: every motion ------------------------------------------------------------------
   {
     name: "motions: j k h l, words, row ends, top and bottom, headings, paragraphs, pages",
