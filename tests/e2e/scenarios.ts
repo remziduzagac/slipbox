@@ -3,7 +3,7 @@
 // headless tests can't: key encodings, timing, the idle loop, what the screen really shows. Mouse
 // clicks can't be sent through herdr; the headless tests cover them.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import { UNSAFE } from "../../src/core/sanitize.ts";
 import type { Session, SessionOptions } from "./session.ts";
@@ -1715,6 +1715,27 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("tab", "enter");
       await s.status("guide.md");
       await s.see("Found across the repository");
+    },
+  },
+  {
+    name: "vaults: a vault moved by hand is asked about — did it move here? yes brings its reading places along (20.5)",
+    run: async (s) => {
+      // Read to the end of a note, then quit: the place is kept, by this copy's instance.
+      await open(s, "kenji-mori");
+      await moveTo(s, ["shift+g"], (l) => l > 10, "the end of the note");
+      const left = pos(s).line;
+      await s.quit();
+      // Moved by hand, then opened where it is now.
+      const moved = join(s.dir, "moved");
+      renameSync(s.vault, moved);
+      (s.opts as SessionOptions).startAt = "moved/home.md";
+      await s.start();
+      await s.see("was elsewhere before — did it move here?");
+      await s.see(`Moved here from ${s.vault}`);
+      await s.keys("enter");
+      await s.message("moved here from");
+      await open(s, "kenji-mori");
+      await s.until(() => pos(s).line === left, 3000, `kenji-mori at line ${left} again`);
     },
   },
   {
