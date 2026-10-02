@@ -35,7 +35,7 @@ export class Session {
   readonly dir: string;
   readonly vault: string;
   readonly trace: string;
-  private readonly marker: string;
+  private marker: string;
 
   constructor(
     readonly pane: Pane,
@@ -75,6 +75,8 @@ export class Session {
     ].join(" ");
     this.opts.setup?.(this);
     const file = this.opts.startAt !== undefined ? join(this.dir, this.opts.startAt) : join(this.vault, this.opts.open ?? "home.md");
+    // A marker of this start's own: started again in one scenario, the last exit's is still on screen.
+    this.marker = `__slipbox_e2e_exit_${Math.random().toString(36).slice(2, 8)}__`;
     this.pane.run(`clear; cd ${REPO} && ${env} bun src/main.ts '${file}'; echo ${this.marker} $?`);
     await this.until(() => this.statusLine().includes("READ") || this.statusLine().includes("SOURCE"), 10000, "slipbox to start");
   }
