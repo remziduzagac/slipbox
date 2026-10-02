@@ -2,3 +2,7 @@
 # wasm, so no install script runs (a failed native build would fail the install).
 [install]
 ignoreScripts = true
+
+# Each run's temporary files in one folder, removed at its end (tests/setup.ts).
+[test]
+preload = ["./tests/setup.ts"]

@@ -2,7 +2,8 @@
 
 `bun test` runs the headless tests, and `bun run check` adds the typecheck and the boundary check.
 CI runs all three (`.github/workflows/ci.yml`). `bun run e2e` runs the terminal tests, slipbox itself
-in a herdr pane (below).
+in a herdr pane (below). A run's temporary files — the tests' vaults, the CLI's — go in one folder of its own,
+removed when it ends (`tests/setup.ts`, preloaded by `bunfig.toml`).
 
 ## Strategy (plan `0.4`)
 
