@@ -132,12 +132,10 @@ export interface Config {
   /** Linters without a server (19.19), in efm-langserver's keys (`lint-command`, `lint-formats`,
    *  `lint-stdin`…): each changed or added by name over the built-in ones (`core/servers/linters.ts`). */
   linter: Record<string, LinterConfig>;
-  /** The LSP face (11.x). `lint`: the lint surface's findings (3.21) among its diagnostics — off, since
-   *  an editor runs its own linter and would show them twice. */
+  /** Language servers for the code slipbox opens (19.x). */
   lsp: {
     /** Language servers for the code slipbox opens (19.x): its problems, hover, jumps. */
     enabled: boolean;
-    lint: boolean;
     /** Servers published on npm installed into slipbox's own folder when first needed (19.5), and
      *  markdownlint-cli2 for the lint surface (19.21). */
     auto_install: boolean;
@@ -252,7 +250,7 @@ export const DEFAULT_CONFIG: Config = {
   "language-server": {},
   language: [],
   linter: {},
-  lsp: { enabled: true, lint: false, auto_install: true },
+  lsp: { enabled: true, auto_install: true },
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },

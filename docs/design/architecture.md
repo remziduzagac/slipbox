@@ -3,19 +3,21 @@
 How the code is laid out and why, as built in phases 0–3. The *why* of the product is in `docs/idea.md`; the
 decisions that gated this code are in [decisions.md](decisions.md).
 
-## One core, three faces
+## One core, two faces
 
 ```text
                  ┌──────────────────────────────────────────┐
                  │ src/core — pure TypeScript, no terminal   │
                  │ vault · walk · parse · links · graph      │
                  │ layout IR · themes · capture · watch      │
-                 └───────┬──────────────┬──────────────┬────┘
-                         ▼              ▼              ▼
-                    src/tui         src/cli        src/lsp
-                    OpenTUI         agents,        editors,
-                    reader          scripts        `slipbox lsp`
+                 └───────┬──────────────┬───────────────────┘
+                         ▼              ▼
+                    src/tui         src/cli
+                    OpenTUI         agents,
+                    reader          scripts
 ```
+
+A third face, `src/lsp` (`slipbox lsp`, serving notes to editors, `11.x`), was removed with plain paths (`20.23`).
 
 `src/main.ts` picks a face. A known subcommand runs the CLI. Anything else opens the TUI, but only
 when stdin and stdout are terminals (plan `9.3`). The TUI is loaded with a dynamic `import()`, so a
@@ -27,9 +29,8 @@ CLI call never loads OpenTUI's native renderer.
 
 | Directory | May not import |
 | --- | --- |
-| `src/core/` | `src/tui/`, `src/cli/`, `src/lsp/`, `@opentui/*` |
+| `src/core/` | `src/tui/`, `src/cli/`, `@opentui/*` |
 | `src/cli/` | `src/tui/`, `@opentui/*` |
-| `src/lsp/` | `src/tui/`, `@opentui/*` |
 
 It runs in CI (`.github/workflows/ci.yml`) and in `bun run check`.
 
@@ -113,8 +114,6 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
 | `cli/cli.ts` | 9.1–9.6 | the CLI face |
 | `cli/args.ts` | 9.1 | flag parsing: flags anywhere, `--x=v` or `--x v`, `--` ends flags |
-| `lsp/server.ts` | 11.x | the LSP face: `slipbox lsp`, a graph per vault served to an editor ([lsp.md](lsp.md)) |
-| `lsp/features.ts` | 11.3–11.6 | its answers: links followed and found, hover, completion, problems, symbols |
 | `version.ts` | — | the version, one source |
 | `tui/*` | 3.x, 5.3–5.7 | the app: reading, panes, saving and conflicts |
 | `tui/buffer.ts` | 4.5–4.8 | a note's text, its undo steps, unsaved state, BOM and line endings |
@@ -149,7 +148,7 @@ package — no build toolchain):
 | `get-east-asian-width` | the width function |
 | `ignore` | gitignore semantics for the walk |
 | `smol-toml`, `yaml` | config; frontmatter and base16 schemes |
-| `vscode-languageserver` (and `-protocol`, `-textdocument`) | the LSP face's protocol, an editor's documents |
+| `vscode-languageserver-protocol`, `-textdocument` | the client's protocol (19.x), a file's text as a server has it |
 | `better-sqlite3` | the search index's SQLite, its own (3.53.4) bundled; needs Bun 1.4.2 |
 
 No external binary is required (hard constraint 1). The clipboard tools are used when present

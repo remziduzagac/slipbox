@@ -240,7 +240,7 @@ LSP face (`11.x`), and `17.20` below. In short:
 - **Search** ranks the current vault, then linked vaults, then everything on a key (`--scope vault|linked|all`).
 - **Settings,** deeper over broader: the nearest `.slipbox/config.toml`, outer ones, the user's; programs from the
   user's own config only.
-- **The LSP face goes;** the client for code stays.
+- **The LSP face goes** (gone: `20.23`, built first, 2026-10-02); the client for code stays.
 
 ## `17.20` — a folder is enough: scope, settings and identity apart
 
@@ -293,8 +293,8 @@ opened.
 
 ## `11.1` — the protocol library, both ways
 
-*The server's half goes with the LSP face (`20.23`, decided 2026-10-02, not built): `vscode-languageserver` stays only
-for the tests' fake server. The client's half — `vscode-languageserver-protocol`, for code — stays.*
+*The server's half went with the LSP face (`20.23`, 2026-10-02): `vscode-languageserver` is a dev dependency now,
+for the tests' fake server only. The client's half — `vscode-languageserver-protocol`, for code — stays.*
 
 `vscode-languageserver` (10.1, the server's side) and `vscode-languageserver-protocol` (3.18, the client's: the
 JSON-RPC connection and every message's type) run under Bun as they do under Node, and in the compiled binary —

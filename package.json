@@ -39,7 +39,6 @@
     "tree-sitter-rust": "0.24.0",
     "tree-sitter-typescript": "0.23.2",
     "unified": "^11.0.5",
-    "vscode-languageserver": "10.1.2",
     "vscode-languageserver-protocol": "3.18.4",
     "vscode-languageserver-textdocument": "1.0.15",
     "web-tree-sitter": "0.25.10",
@@ -49,6 +48,7 @@
     "@types/better-sqlite3": "9.6.0",
     "@types/bun": "^1.4.2",
     "@types/mdast": "^4.0.4",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vscode-languageserver": "10.1.2"
   }
 }

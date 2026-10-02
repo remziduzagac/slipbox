@@ -15,8 +15,11 @@ async function main(): Promise<number> {
     return EXIT.error;
   }
   const argv = process.argv.slice(2);
-  // The LSP (11.2) owns stdout: nothing but the protocol may reach it, so it starts before the CLI.
-  if (argv[0] === "lsp") return lsp(argv.slice(1));
+  // The LSP face is gone (20.23): an editor still starting it is told why, in its log.
+  if (argv[0] === "lsp") {
+    process.stderr.write("slipbox lsp was removed: links are plain paths now, which editors' own markdown servers follow\n");
+    return EXIT.usage;
+  }
   let args: ReturnType<typeof parseArgs>;
   try {
     // Parse the way the CLI does, so a flag's value (`--root .`) is never taken for the command.
@@ -40,30 +43,6 @@ async function main(): Promise<number> {
   }
   const { runTui } = await import("./tui/run.ts");
   return runTui(tuiArgs);
-}
-
-/**
- * `slipbox lsp [--config <file>]`: serve vaults to an editor on stdio. `--stdio` and
- * `--clientProcessId` are what editors pass by habit: taken and ignored (the parent is watched
- * through `initialize`'s process id).
- */
-async function lsp(argv: string[]): Promise<number> {
-  let configFile: string | undefined;
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!;
-    if (a === "--config") configFile = argv[++i];
-    else if (a.startsWith("--config=")) configFile = a.slice("--config=".length);
-    else if (a === "--clientProcessId") i++;
-    else if (a === "--stdio" || a.startsWith("--clientProcessId=")) continue;
-    else {
-      process.stderr.write(`slipbox lsp: unknown argument ${a} (it takes --config <file>)\n`);
-      return EXIT.usage;
-    }
-  }
-  const { runLsp } = await import("./lsp/server.ts");
-  const code = await runLsp({ input: process.stdin, output: process.stdout, configFile });
-  // Watchers and timers would keep the process alive once the editor has gone.
-  process.exit(code);
 }
 
 main().then(

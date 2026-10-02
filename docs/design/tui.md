@@ -593,7 +593,7 @@ past theirs), so the content behind never runs up to the edge.
   `ctrl+p enter` goes back. A query starting with `#` (VS Code's) lists the workspace's symbols instead
   (`19.14`): in a code file, its servers' (`workspace/symbol`), asked as it's typed, each with its kind and
   `path:line`, the last query's answer the one shown; in a note, or where no server gives them, the vault's
-  headings, as slipbox's LSP face gives them to editors. `enter` opens the file there. Find in every
+  headings, slipbox's own symbols. `enter` opens the file there. Find in every
   note (`ctrl+shift+f`, `space f g`) lists each line with the text or regex as `path:line` with the
   line, an open note searched as it is now.
 - **Search** (`6.5`, `6.9`; `space f s`, `:search words`): the vault's notes ranked by the words as they're typed —
@@ -1061,12 +1061,12 @@ name it, never a vault's.
 
 ## What's under the cursor (plans `19.12`, `19.13`)
 
-`shift+k` shows what's under the cursor in a floating window, rendered — a code file's language server's hover
-(its type, its docs), or, on a note's link, where it lands (as the LSP face's hover: the heading's section, the
-note's start); read-only, `esc` or `q` closes it. `g d` goes to the definition — the server's; a single one opens at
-once, in this vault or outside it (a dependency's types open as a loose file), several are a list — and in a note it
-follows the link. `g r` lists the references, each `file:line` with the line's text, to pick from; in a note, its
-backlinks. A file with no server says so, and `slipbox doctor` says which it would have.
+`shift+k` shows what's under the cursor in a floating window, rendered — a code file's language server's hover (its
+type, its docs), or, on a note's link, where it lands (the heading's section, the note's start); read-only, `esc` or `q`
+closes it. `g d` goes to the definition — the server's; a single one opens at once, in this vault or outside it (a
+dependency's types open as a loose file), several are a list — and in a note it follows the link. `g r` lists the
+references, each `file:line` with the line's text, to pick from; in a note, its backlinks. A file with no server says
+so, and `slipbox doctor` says which it would have.
 
 **What a server changes** (`19.15`) is made through the buffers — never written behind them — each file's edits
 one undo step. A file no window shows is saved after (through the same atomic write as every save), so what an agent

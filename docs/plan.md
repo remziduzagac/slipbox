@@ -536,8 +536,8 @@ common, and the only reason they are step 0.
 
 ## LSP face — `11.x`
 
-*Phase 5. To be removed in phase 5b (`20.23`, decided 2026-10-02): with plain paths, editors' own servers follow the
-links, and agents use the CLI.*
+*Phase 5. Removed in phase 5b (`20.23`, 2026-10-02): with plain paths, editors' own servers follow the links, and
+agents use the CLI. The rows below record what was built.*
 
 | ID | Item |
 | --- | --- |
@@ -615,9 +615,11 @@ the merge review after; the removals as their replacements land, the sweep last.
 | 20.20 | The CLI: `vault:path` in and out; answers about files as saved; diagnostics, scoped search, the link fix |
 | 20.21 | The merge review: links broken in `git merge-tree`'s result; after a merge, git's renames as evidence |
 | 20.22 | Removed: the home vault, the vault prompt, `[[vault:note]]`, resolving by name, links through redirects |
-| 20.23 | Removed: the LSP face (`slipbox lsp`, `src/lsp/`, `[lsp] lint`, the nvim setup); the client for code stays |
+| 20.23 | **Done.** Removed: the LSP face (`slipbox lsp`, `src/lsp/`, `[lsp] lint`, the nvim setup); the client stays |
 
-`20.1` comes before `20.2`: the converter needs today's resolution, which `20.2` and `20.22` remove. `20.17`–`20.19`
+`20.1` comes before `20.2`: the converter needs today's resolution, which `20.2` and `20.22` remove from reading (the
+converter keeps it, as a legacy reader of its own). `20.23` was done second: the LSP face read wikilinks throughout,
+and removing it first spared rewriting its tests only to delete them. `20.17`–`20.19`
 reuse today's rename and move engine (`7.1`–`7.3`, `17.12`, `17.15`) on paths; `17.12`'s redirects become evidence
 for a repair. Performance (`20.11`) is measured, not assumed. Each item ends with its tests listed for the user's
 approval before any is run.

@@ -475,13 +475,10 @@ The exit is 1 when one shown is an error, 0 otherwise — the run itself succeed
 status}]}`, each source `server` (`answered`, `silent`), `linter` (`ran`, `not asked`, `missing`, `timeout`, `error`,
 `off`), `syntax`, `slipbox` or `lint`. A missing file is exit 3.
 
-## `slipbox lsp` (plan `11.x`)
+## `slipbox lsp` (removed)
 
-*To be removed with the LSP face (plan `20.23`, decided 2026-10-02).*
-
-Not a command like the others: it serves vaults to an editor over LSP on stdio until the editor ends the session, and
-nothing but the protocol reaches stdout. It takes `--config <file>` (and ignores `--stdio` and `--clientProcessId`,
-which editors pass by habit); any other argument is exit 2. What it serves, and how, is [lsp.md](lsp.md).
+It served notes to editors over LSP (`11.x`) until links became plain paths (`20.23`). It now says so on stderr and
+exits 2, so an editor still starting it shows why in its log.
 
 ## Installing for agents
 

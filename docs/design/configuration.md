@@ -116,9 +116,8 @@ bar = "auto"                   # the bar beside the text: auto (once a file has 
 marks = true                   # problems underlined in the text
 severity = "warning"           # the least shown: error | warning | info (a note not written yet) | hint
 
-[lsp]                          # slipbox lsp (11.x), serving vaults to an editor
-enabled = true                 # language servers for the code slipbox opens (19.x): problems, hover, jumps
-lint = false                   # the lint surface's findings among its diagnostics; off: the editor lints
+[lsp]                          # language servers for the code slipbox opens (19.x)
+enabled = true                 # their problems, hover, jumps, renames, completion
 auto_install = true            # servers on npm installed into slipbox's own folder when first needed (19.5),
                                # and markdownlint-cli2 for [lint] (19.21)
 

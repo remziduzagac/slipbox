@@ -77,8 +77,8 @@ asset.
 because it is cheap now and expensive later. Two deserve special attention:
 
 - **`0.3` — a CI check that `core/` never imports `tui/`.** The whole architecture is one core
-  with three faces (TUI, CLI, LSP). The CLI and LSP must run without a terminal renderer, and
-  the only thing that keeps that true is a check that fails the build.
+  with two faces (TUI, CLI; a third, the LSP face, was removed in `20.23`). The CLI must run without a terminal
+  renderer, and the only thing that keeps that true is a check that fails the build.
 - **`0.8` — every action is a named command from the first commit.** The palette, the keymaps,
   the modal editing layer and any future plugin tier all consume that registry. Retrofitting it
   means touching every action.
