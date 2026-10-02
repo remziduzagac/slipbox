@@ -554,6 +554,10 @@ belongs to the home vault), slipbox offers to make a git repository a vault, and
 
 ## Vaults — decided 2026-09-30
 
+*Revised 2026-10-02 (decisions.md `17.20`): a folder is enough. Its scope — the files links, search and the watcher
+cover — needs no `.slipbox/`; settings and identity (an id, a name for `[[name:note]]`) are layers `slipbox init`
+adds, and opening a folder writes nothing. The home vault's role passes to each folder's own scope.*
+
 The worry that started this: Obsidian locks you into its vaults — you create one before you can
 work, and a markdown file outside it is out of reach. slipbox should open any folder or file, and
 leave the files readable by anything else. At the same time, links, backlinks, history, comments

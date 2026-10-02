@@ -698,6 +698,15 @@ links across vaults, then the TUI, then renames.*
 | 17.17 | **Done.** Nested vaults known to each other unopened; paths into them; the demo vault holds two, to test |
 | 17.18 | **Done.** Every vault has `.slipbox/` with id and name; a git repository is offered, not assumed |
 | 17.19 | **Done.** Git worktrees: separate vaults of one repository, told apart from `.git`; the branch shown |
+| 17.20 | Scope, settings and identity apart (one root context): discovery only reads; `init` writes an identity |
+| 17.21 | Any folder fully working: recursive walk, cache, search index, watcher, moves, git; `--root` with no marker |
+| 17.22 | One scope rule for the CLI, the TUI and the LSP face; the scope shown; the LSP serves workspace folders |
+| 17.23 | Identity optional: `init` names a folder, its state follows; home-vault state moved; recent folders apart |
+| 17.24 | The worktree picker opens the matching folder in another worktree, `.slipbox/` there or not |
+
+`17.20`–`17.24` (decided 2026-10-02, decisions.md `17.20`) revise `17.18` and `17.2`: a folder is enough for
+everything but `[[name:note]]` and state that survives a move, which an identity adds. In order: `17.21` (most of the
+benefit, the names kept as they are), then `17.22` and `17.24`, then `17.20` and `17.23`.
 
 `17.18` revised `17.1` (2026-09-30): a git repository without `.slipbox/` was a root of its own;
 now every vault has a `.slipbox/` — one model, no fallbacks — and a repository is offered: made a

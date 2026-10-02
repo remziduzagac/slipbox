@@ -206,6 +206,52 @@ places. Unchanged by it: a vault's committed config never names a program to run
 `lint-command` are the user's config's only), so cloning a vault can't choose what runs; what the project's own
 tools do is the project's.
 
+## `17.20` — a folder is enough: scope, settings and identity apart
+
+Decided 2026-10-02, revising `17.18` (every root has a `.slipbox/`) and `17.2` (loose files in the home vault). Not
+built yet: plan `17.20`–`17.24`.
+
+A vault bundled three things: **scope** — the files a `[[name]]` is looked up among, that search covers, the watcher
+follows and a rename updates; **settings** — `.slipbox/config.toml`; **identity** — an id that keeps state across a
+move, and a name `[[name:note]]` reaches. Reading, editing, links, backlinks and search need only the scope. What
+makes links fast is the index — each file's names, headings and links, cached per scope — and it's the same however
+the scope was found. So a folder is enough, and settings and identity are layers added on purpose.
+
+**Which scope:**
+
+| Opened as | Scope |
+| --- | --- |
+| `--root DIR` (the CLI, agents) | `DIR`, exactly: no marker needed |
+| a folder (`slipbox ./notes`) | the nearest `.slipbox/` at or above it, else the folder itself |
+| a file | the nearest `.slipbox/` above it, else its git checkout, else its folder |
+| nothing | the current folder, by the folder's rule |
+| an editor (the LSP face) | each workspace folder, by the folder's rule |
+
+- `~` and `/` are never walked: a file directly in one is a scope of its folder one level deep, as loose files are now.
+- A nested `.slipbox/` stays a boundary.
+- One rule for the CLI, the TUI and the LSP face. A link means what its scope makes it mean, so the scope and why
+  (`explicit`, `configured`, `git`, `folder`) shows in the TUI's file info and in `slipbox info --json`; an agent that
+  needs a fixed answer passes `--root`.
+- Which markdown server an editor attaches where (slipbox's or marksman) stays the editor's config: its root markers.
+
+**Every scope works alike:** a recursive walk, the cached index, the search index, the watcher, move detection and
+redirects, git — keyed by its real path (`vaultKey`), or by its id when it has one. Opening a folder writes nothing
+into it.
+
+**Settings and identity are explicit.** `slipbox init` writes `.slipbox/config.toml` with an id and a name: then
+`[[name:note]]` reaches the folder, and its state follows it when it moves (its path-keyed state moved over once).
+Discovery only reads — a `.slipbox/` without an id is keyed by its path until `init` gives it one — and the prompt to
+make a repository a vault goes. The launcher's recent folders are a list of their own, apart from named vaults: two
+folders called `docs` both open, and neither takes the name.
+
+**Git:** a branch switch changes a scope's files, handled as now (`5.9`); each worktree is a scope of its own, with its
+own index and state (`17.19`, its key unchanged); the worktree picker opens the matching folder in another worktree
+whether it has a `.slipbox/` or not.
+
+**Kept:** existing vaults — their ids and keys, names, aliases, previous names, `[[name:note]]`, renames across
+vaults. **Moved:** the home vault's per-folder sessions and positions, into each folder's own key the first time it's
+opened.
+
 ## `11.1` — the protocol library, both ways
 
 `vscode-languageserver` (10.1, the server's side) and `vscode-languageserver-protocol` (3.18, the client's: the
