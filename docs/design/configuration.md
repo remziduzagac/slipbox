@@ -1,12 +1,15 @@
 # Configuration
 
-TOML, in two levels, with the vault winning (plan `0.9`):
+TOML, deeper over broader (plans `0.9`, `20.7`): each file over the ones before it.
 
 1. built-in defaults
 2. the user file: `--config <file>`, else `$SLIPBOX_CONFIG`, else
    `$XDG_CONFIG_HOME/slipbox/config.toml`
-3. the vault file: `<vault>/.slipbox/config.toml` (a git vault without `.slipbox/` has none, `20.3`); for a loose
+3. the files of the vaults enclosing this one, broadest first: each `.slipbox/config.toml` above it
+4. the vault file: `<vault>/.slipbox/config.toml` (a git vault without `.slipbox/` has none, `20.3`); for a loose
    file, the home vault's, `$XDG_DATA_HOME/slipbox/home/config.toml`
+
+`slipbox info` lists the files that applied, in this order; a change to any of them reloads the TUI's settings.
 
 **The vault's identity** is the vault file's `[vault]` table (plan `17.4`), read on its own and never merged into
 the settings; in the user file it's ignored with a warning:
@@ -19,8 +22,8 @@ aliases = ["n"]                # other names it answers to
 previous_names = ["old-notes"] # names it had: a fallback only (17.7)
 ```
 
-**What only you can set.** The vault file comes with whatever you clone, so it never chooses a
-program slipbox runs: `editor.command`, `editor.remote` and `lint.command` there are ignored, with a
+**What only you can set.** A vault file — the vault's own or an enclosing one's — comes with whatever you clone, so it
+never chooses a program slipbox runs: `editor.command`, `editor.remote` and `lint.command` there are ignored, with a
 warning, and only your user file sets them (`USER_ONLY` in `core/config.ts`). The rest of `[editor]`
 and `[lint]` applies. Likewise a language server's `command`, `args` and `environment`, a linter's
 `lint-command`, and any server or linter slipbox doesn't build in: a vault tunes the known ones only.

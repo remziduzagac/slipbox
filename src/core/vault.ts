@@ -283,6 +283,19 @@ export function homeAt(dir: string, file: string | null = null): VaultLocation {
   return { root: dir, mode: "home", file, key: ident.id, id: ident.id, name: HOME_NAME, aliases: ident.aliases, previous_names: ident.previous_names };
 }
 
+/**
+ * The config files that set a vault's settings besides your own (20.7): its own `.slipbox/config.toml`,
+ * and those of the vaults enclosing it, broadest first — deeper over broader. A loose file has the
+ * home vault's.
+ */
+export function configFilesFor(loc: Pick<VaultLocation, "mode" | "root">): { vaultFile: string; outerFiles: string[] } {
+  const outerFiles: string[] = [];
+  if (loc.mode === "vault") {
+    for (let up = findVaultRoot(dirname(loc.root)); up; up = findVaultRoot(dirname(up))) if (hasMarker(up)) outerFiles.unshift(vaultConfigFile(up));
+  }
+  return { vaultFile: vaultConfigPath(loc), outerFiles };
+}
+
 /** The vault's config file: `.slipbox/config.toml`, or the home vault's. */
 export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): string {
   return loc.mode === "vault" ? vaultConfigFile(loc.root) : join(homeVaultDir(), "config.toml");

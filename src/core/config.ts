@@ -307,6 +307,11 @@ export interface LoadConfigOptions {
   vaultRoot?: string | null;
   /** The vault's config file, in place of `vaultRoot` (the home vault's is elsewhere: 17.2). */
   vaultFile?: string | null;
+  /**
+   * The config files of the vaults enclosing it (20.7), broadest first: deeper over broader, each
+   * over your own and under the vault's. A vault's file all the same: it never names a program.
+   */
+  outerFiles?: string[];
   /** `--config` flag; overrides `SLIPBOX_CONFIG` and the XDG location. */
   configFile?: string;
   /**
@@ -322,7 +327,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
   let config = structuredClone(DEFAULT_CONFIG);
 
   const userFile = opts.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile();
-  const files = [userFile];
+  const files = [userFile, ...(opts.outerFiles ?? []).filter((f) => f !== userFile)];
   if (opts.vaultFile) files.push(opts.vaultFile);
   else if (opts.vaultRoot) files.push(join(opts.vaultRoot, ".slipbox", "config.toml"));
 

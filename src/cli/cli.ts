@@ -54,7 +54,7 @@ import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } f
 import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { displayNames, locName } from "../core/names.ts";
-import { findVaultRoot, hasMarker, homeAt, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { findVaultRoot, hasMarker, homeAt, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -104,7 +104,7 @@ class Session {
     readonly loc: VaultLocation,
     readonly io: Io,
   ) {
-    const loaded = loadConfig({ vaultFile: vaultConfigPath(loc), configFile: flag(args, "config") });
+    const loaded = loadConfig({ ...configFilesFor(loc), configFile: flag(args, "config") });
     this.config = loaded.config;
     this.configSources = loaded.sources;
     this.warnings.push(...loaded.warnings);

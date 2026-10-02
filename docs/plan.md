@@ -599,7 +599,7 @@ the merge review after; the removals as their replacements land, the sweep last.
 | 20.4 | **Done.** Collections apart from instances: local ids; remotes and first commits as evidence; plain folders |
 | 20.5 | **Done.** Durable state: instances, their locations, confirmed moves; state by instance; today's moved once |
 | 20.6 | **Done.** Names: short, unique here, `.` for a collision, a worktree's branch now (`@`); never in a file |
-| 20.7 | Settings: the nearest `.slipbox/config.toml`, then outer ones, then the user's; programs from the user's only |
+| 20.7 | **Done.** Settings: the nearest `.slipbox/config.toml`, then outer ones, then yours; programs yours only |
 | 20.8 | The index on demand: folders opened, links followed, CLI paths; ignored and hidden files when reached |
 | 20.9 | The background auto-index of the home folder: low priority, paused while working, resumable, can be off |
 | 20.10 | Freshness: sizes and times checked, folders listed again; coverage shown; a CLI refresh; drives unavailable |

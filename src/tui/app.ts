@@ -71,7 +71,7 @@ import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath 
 import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
 import { sameCollection } from "../core/collection.ts";
 import { displayNames, locName } from "../core/names.ts";
-import { findVaultRoot, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { findVaultRoot, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
@@ -647,7 +647,7 @@ export class App {
     this.followGraph();
     this.explicitTheme = opts.themeName;
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
-    loadConfig({ vaultFile: vaultConfigPath(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood });
+    loadConfig({ ...configFilesFor(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood });
     this.now = opts.now ?? Date.now;
     this.feed = new VaultFeed({
       checkout: () => this.checkout,
@@ -807,10 +807,9 @@ export class App {
   }
 
   private configFiles(): string[] {
-    const files = [this.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile()];
-    const vaultFile = vaultConfigPath(this.loc);
-    if (vaultFile) files.push(vaultFile);
-    return files;
+    // Yours, the enclosing vaults' (20.7) and the vault's own: a change to any is a reload.
+    const { vaultFile, outerFiles } = configFilesFor(this.loc);
+    return [this.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile(), ...outerFiles, vaultFile];
   }
 
   private recordConfigStamps(): void {
@@ -830,7 +829,7 @@ export class App {
    */
   reloadConfig(reason: "manual" | "file changed" = "manual"): void {
     this.recordConfigStamps();
-    const loaded = loadConfig({ vaultFile: vaultConfigPath(this.loc), configFile: this.configFile, lastGood: this.configLastGood });
+    const loaded = loadConfig({ ...configFilesFor(this.loc), configFile: this.configFile, lastGood: this.configLastGood });
     this.clearPending(); // a sequence begun under the old keys means nothing under the new ones
     const before = this.config;
     const next = loaded.config;
@@ -6708,7 +6707,7 @@ export class App {
     this.feed.reset();
     recordLocation(target);
     this.configLastGood.clear();
-    const loaded = loadConfig({ vaultFile: vaultConfigPath(target), configFile: this.configFile, lastGood: this.configLastGood });
+    const loaded = loadConfig({ ...configFilesFor(target), configFile: this.configFile, lastGood: this.configLastGood });
     this.config = loaded.config;
     this.lintCmd = lintCommand(this.config.lint, target.root, undefined, this.config.lsp.auto_install);
     this.vaultLint = { running: false, issues: null };

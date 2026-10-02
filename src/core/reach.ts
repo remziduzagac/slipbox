@@ -13,7 +13,7 @@ import { pathLink } from "./links.ts";
 import { cacheDir } from "./paths.ts";
 import { displayNames } from "./names.ts";
 import { type KnownVault, namesOf, readIdentity, readRegistry, vaultConfigFile } from "./registry.ts";
-import { findVaultRoot, isInside, isVaultRoot, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "./vault.ts";
+import { findVaultRoot, isInside, isVaultRoot, recordLocation, rootAt, type VaultLocation, configFilesFor } from "./vault.ts";
 
 function real(p: string): string {
   try {
@@ -31,7 +31,7 @@ function real(p: string): string {
 export function openVault(root: string): Graph {
   const loc = rootAt(root);
   recordLocation(loc); // seen, like every open (17.6)
-  const g = openGraph(loc, loadConfig({ vaultFile: vaultConfigPath(loc) }).config, true, "lazy");
+  const g = openGraph(loc, loadConfig({ ...configFilesFor(loc) }).config, true, "lazy");
   g.thorough = true;
   g.reach = new Reach(loc);
   return g;
@@ -76,7 +76,7 @@ export class Reach implements VaultReach {
     let g: Graph | null = null;
     try {
       const loc = rootAt(root);
-      const config = loadConfig({ vaultFile: vaultConfigPath(loc) }).config;
+      const config = loadConfig({ ...configFilesFor(loc) }).config;
       g = openGraph(loc, config, true, "lazy");
       g.thorough = true;
     } catch {

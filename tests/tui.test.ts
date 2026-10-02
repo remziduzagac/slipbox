@@ -6952,6 +6952,24 @@ describe("search in the TUI (6.5, 6.9)", () => {
   });
 });
 
+describe("settings from the vaults around this one (20.7)", () => {
+  test("a change to an enclosing vault's config is noticed and applied, as the vault's own is", async () => {
+    const outer = mkdtempSync(join(sandbox, "outer-"));
+    mkdirSync(join(outer, ".slipbox"));
+    const cfg = join(outer, ".slipbox", "config.toml");
+    writeFileSync(cfg, "[ui]\nsidebar_width = 30\n");
+    const inner = join(outer, "inner");
+    mkdirSync(join(inner, ".slipbox"), { recursive: true });
+    writeFileSync(join(inner, "n.md"), "# N\n");
+    const h = await harness({ root: inner, open: "n.md" });
+    expect(h.app.configChangedOnDisk()).toBe(false);
+    writeFileSync(cfg, "[ui]\nsidebar_width = 41\n");
+    expect(h.app.configChangedOnDisk()).toBe(true);
+    h.app.reloadConfig("file changed");
+    expect(h.app.config.ui.sidebar_width).toBe(41);
+  });
+});
+
 describe("git worktrees in the TUI (17.19)", () => {
   const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
   /** project/x, a vault and its repository, and two worktrees of it in project/worktrees/x/. */
