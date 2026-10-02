@@ -585,8 +585,12 @@ past theirs), so the content behind never runs up to the edge.
 - **Pickers:** quick switcher, heading picker, links, backlinks, history, tabs, theme and glyph
   pickers (with live preview; `esc` restores), UI settings, messages, info, and keys. The quick
   switcher lists recent notes and files first (kept in the session), the previous one on top, so
-  `ctrl+p enter` goes back; find in every note (`ctrl+shift+f`, `space f g`) lists each line with
-  the text or regex as `path:line` with the line, an open note searched as it is now.
+  `ctrl+p enter` goes back. A query starting with `#` (VS Code's) lists the workspace's symbols instead
+  (`19.14`): in a code file, its servers' (`workspace/symbol`), asked as it's typed, each with its kind and
+  `path:line`, the last query's answer the one shown; in a note, or where no server gives them, the vault's
+  headings, as slipbox's LSP face gives them to editors. `enter` opens the file there. Find in every
+  note (`ctrl+shift+f`, `space f g`) lists each line with the text or regex as `path:line` with the
+  line, an open note searched as it is now.
 - **Search** (`6.5`, `6.9`; `space f s`, `:search words`): the vault's notes ranked by the words as they're typed —
   as `slipbox search` ranks them (`docs/design/cli.md`, "Search") — each a row: `path:line`, the section's heading
   and the line, its words marked, `+n` for the file's other sections with some of them. `enter` opens it on that

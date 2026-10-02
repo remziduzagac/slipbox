@@ -2,7 +2,7 @@
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
 
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -7777,5 +7777,68 @@ describe("linters without a server (19.19)", () => {
     await Bun.sleep(400);
     h.frame();
     expect(h.app.problemsShown(h.app.view!)).toEqual([]);
+  });
+});
+
+describe("the switcher's workspace symbols (19.14)", () => {
+  const until = async (ok: () => boolean, ms = 8000) => {
+    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+    return ok();
+  };
+
+  test("# in a note: the vault's headings, by name; enter opens the note there", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "deep.md"), "# Deep\n\nintro\n\n## Zebra crossing\n\ntext\n");
+    const h = await harness({ root });
+    await h.keys("ctrl+p", "#", "z", "e", "b");
+    const o = h.app.overlay as ListOverlay;
+    expect(o.filtered.map((e) => [e.item.label, e.item.detail])).toEqual([["Zebra crossing", "deep.md:5"]]);
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("deep.md");
+    expect(statusRow(h.frame())).toMatch(/L5:/);
+    // Without #: notes and files by name, as ever.
+    await h.keys("ctrl+p", "d", "e", "e", "p");
+    expect((h.app.overlay as ListOverlay).filtered[0]!.item.label).toBe("deep.md");
+  });
+
+  test("# in a code file: its servers' workspace symbols, asked as typed; enter opens the file at the symbol", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "start\nfunction alpha\nfunction beta\n  method alpine\n");
+    const launcher = join(sandbox, "fake-ls-launcher-ws");
+    writeFileSync(launcher, `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`);
+    chmodSync(launcher, 0o755);
+    const h = await harness({
+      root,
+      open: "a.fk",
+      config: (c) => {
+        c["language-server"] = { fake: { command: launcher, args: ["--stdio"] } };
+        c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["fake"] }];
+      },
+    });
+    h.app.startServers();
+    h.frame();
+    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
+    await h.keys("ctrl+p", "#", "a", "l");
+    const shown = () => ((h.app.overlay as ListOverlay | null)?.filtered ?? []).map((e) => [e.item.label, e.item.hint, e.item.detail]);
+    expect(await until(() => shown().length === 2)).toBe(true);
+    expect(shown()).toEqual([
+      ["alpha", "function", "a.fk:2"],
+      ["alpine", "method", "a.fk:4"],
+    ]);
+    await h.keys("p", "h"); // asked again as it's typed
+    expect(await until(() => shown().length === 1)).toBe(true);
+    expect(shown()[0]![0]).toBe("alpha");
+    await h.keys("backspace", "backspace");
+    expect(await until(() => shown().length === 2)).toBe(true);
+    // An older query's answer, arriving after a later one's, is dropped.
+    await h.keys("backspace", "backspace", "z");
+    await Bun.sleep(250); // asked, answered late
+    await h.keys("backspace", "a", "l");
+    expect(await until(() => shown().length === 2)).toBe(true);
+    await Bun.sleep(400);
+    expect(shown().length).toBe(2);
+    await h.keys("down", "enter");
+    expect(statusRow(h.frame())).toMatch(/L4:10\b/);
+    await h.app.servers!.stopAll();
   });
 });

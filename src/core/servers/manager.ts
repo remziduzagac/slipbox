@@ -170,6 +170,11 @@ export class ServerManager {
     return null;
   }
 
+  /** Whether any of a file's servers does a feature for it (the switcher's workspace symbols). */
+  async offers(path: string, feature: Feature, capability: string): Promise<boolean> {
+    return (await this.serving(path, feature, capability)).length > 0;
+  }
+
   /** The characters that ask a file's servers for completion, and for signature help, by their capabilities. */
   async triggers(path: string): Promise<{ completion: string[]; signature: string[] }> {
     const caps = (await this.serving(path, "completion", "completionProvider")).map((c) => c.capabilities?.completionProvider?.triggerCharacters ?? []);

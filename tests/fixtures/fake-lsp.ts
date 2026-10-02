@@ -20,6 +20,7 @@ conn.onInitialize((p) => ({
     definitionProvider: true,
     referencesProvider: true,
     documentSymbolProvider: true,
+    workspaceSymbolProvider: true,
     renameProvider: { prepareProvider: true },
     codeActionProvider: { resolveProvider: true },
     executeCommandProvider: { commands: ["fake.fixAll"] },
@@ -87,6 +88,21 @@ conn.onDocumentSymbol((p) => {
     else out.push(sym);
   });
   return out as never;
+});
+// The workspace's symbols: each open file's functions and methods whose name holds the query (a query
+// starting with z answered late, after a later one's).
+conn.onWorkspaceSymbol(async (p) => {
+  if (p.query.startsWith("z")) await new Promise((r) => setTimeout(r, 400));
+  return docs.all().flatMap((d) =>
+    d
+      .getText()
+      .split("\n")
+      .flatMap((l, i) => {
+        const m = /^\s*(function|method) (\w+)/.exec(l);
+        if (!m || !m[2]!.toLowerCase().includes(p.query.toLowerCase())) return [];
+        return [{ name: m[2]!, kind: m[1] === "function" ? 12 : 6, location: { uri: d.uri, range: { start: { line: i, character: l.indexOf(m[2]!) }, end: { line: i, character: l.indexOf(m[2]!) + m[2]!.length } } } }];
+      }),
+  );
 });
 // Rename: the word under the cursor, everywhere in the file — and in other.fk beside it, on disk.
 const wordAt = (text: string, line: number, character: number) => {

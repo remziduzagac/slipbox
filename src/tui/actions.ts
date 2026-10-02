@@ -4,7 +4,7 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, TextEdit, WorkspaceEdit } from "vscode-languageserver-protocol";
+import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, SymbolInformation, TextEdit, WorkspaceEdit, WorkspaceSymbol } from "vscode-languageserver-protocol";
 import { landingText } from "../core/landing.ts";
 import { join, posix, relative } from "node:path";
 import { findVaultRoot, gitRootOf, isInside, isNeverRoot } from "../core/vault.ts";
@@ -23,7 +23,7 @@ import type { Anchor } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
 import type { App, ListItem, Loc, PromptOverlay, UiState, View } from "./app.ts";
-import { editable, computeFind } from "./app.ts";
+import { editable, computeFind, KIND_NAMES, refilter } from "./app.ts";
 import * as C from "./cursor.ts";
 import { linkTokens } from "../core/syntax.ts";
 import { readerFor } from "../core/readers.ts";
@@ -39,6 +39,67 @@ function withView<T>(a: App, fn: (v: View) => T): T | void {
   const v = a.view;
   if (!v) return a.message("info", "no note open");
   return fn(v); // an async command's promise goes back to the dispatcher, which awaits it
+}
+
+/** Where a symbol is: a vault note's line (its heading), else a file's line and character. */
+type Spot = { rel: string; line: number } | { rel: null; abs: string; line: number; character: number };
+
+/**
+ * The switcher's `#` (VS Code's): the workspace's symbols — the current file's servers', asked as the
+ * query's typed (each answer refilling the list it was asked from, the last asked's only), or, where
+ * no server gives them (a note), the vault's headings: slipbox's own symbols, as its LSP face gives them.
+ */
+function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: string) => ListItem[] } {
+  const from = a.view?.buf.abs ?? null;
+  const servers = a.servers;
+  let viaServer = false;
+  let answered: ListItem[] = [];
+  let asked: string | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const refresh = () => {
+    const o = a.overlay;
+    if (o !== overlay || o?.kind !== "list" || !o.input.startsWith("#")) return;
+    refilter(o);
+    a.host.requestRender();
+  };
+  if (servers && from && servers.isOpen(from)) {
+    void servers.offers(from, "workspace-symbols", "workspaceSymbolProvider").then((yes) => {
+      viaServer = yes;
+      if (yes) refresh();
+    });
+  }
+  const ask = (query: string) => {
+    if (asked === query) return;
+    asked = query;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(async () => {
+      if (a.view) a.syncServers(a.view.buf);
+      const got = await servers!.requestAll<(SymbolInformation | WorkspaceSymbol)[]>(from!, "workspace/symbol", { query }, "workspaceSymbolProvider", "workspace-symbols");
+      if (asked !== query) return;
+      answered = got.flatMap((g) => g.result ?? []).map((sym): ListItem => {
+        const abs = fileURLToPath(sym.location.uri);
+        const range = "range" in sym.location ? sym.location.range : null;
+        const line = (range?.start.line ?? 0) + 1;
+        const rel = relative(a.loc.root, abs);
+        const where = rel.startsWith("..") ? abs : rel;
+        const data: Spot = { rel: null, abs, line, character: range?.start.character ?? 0 };
+        return { label: sym.name, hint: KIND_NAMES[sym.kind] ?? "", detail: `${sym.containerName ? `${sym.containerName} · ` : ""}${where}:${line}`, data };
+      });
+      refresh();
+    }, 120);
+    (timer as { unref?: () => void }).unref?.();
+  };
+  let headings: ListItem[] | null = null;
+  return {
+    list: (query) => {
+      if (viaServer) {
+        ask(query);
+        return answered;
+      }
+      headings ??= [...a.graph.notes.values()].flatMap((n) => n.headings.map((h): ListItem => ({ label: h.text, hint: "#".repeat(h.depth), detail: `${n.rel}:${h.line}`, data: { rel: n.rel, line: h.line } as Spot })));
+      return query.trim() ? rank(query, headings, (i) => [i.label, i.detail ?? ""]).slice(0, 500).map((r) => r.item) : headings.slice(0, 500);
+    },
+  };
 }
 
 /** A cursor command: compute the target from the layout, then move (extending when asked). */
@@ -1373,8 +1434,15 @@ export function registerActions(app: App): void {
       a.openList({
         title: files.length ? `Open (${notes.length} notes, ${files.length} files)` : `Open note (${notes.length})`,
         items: ordered,
-        accept: (item) => a.open(item.data as string),
+        source: (input) => (input.startsWith("#") ? symbols.list(input.slice(1)) : null),
+        accept: (item) => {
+          const at = item.data as string | Spot;
+          if (typeof at === "string") a.open(at);
+          else if (at.rel !== null) a.openAt(at.rel, at.line);
+          else a.openLocation(at.abs, at.line - 1, at.character);
+        },
       });
+      const symbols = workspaceSymbols(a, a.overlay);
     },
     "outline.pick": (a) =>
       withView(a, (v) => {

@@ -348,7 +348,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | onto the next / previous character typed on the line; just before it | `f` / `shift+f`; `t` / `shift+t` | — |
 | the last `f` `t` again / the other way | `;` / `,` | — |
 | the whole word under the cursor, forward / backward | `*` / `#` | — |
-| quick switcher: find a note by name | `ctrl+p` | `space f f` |
+| quick switcher: find a note by name; `#` first, a symbol (a server's, else a heading) | `ctrl+p` | `space f f` |
 | outline picker: find a heading in this note | — | `space f o` |
 | the vault's tags (`:tags`), then a tag's notes (`:tag name`) | — | `space f t` |
 | heading path: the breadcrumb's headings as a dropdown | — | `space f b` |

@@ -292,8 +292,8 @@ export interface ListOverlay {
   input: string;
   filterable: boolean;
   items: ListItem[];
-  /** Items computed from the input instead of filtering `items` (the `:` prompt). */
-  source?: (input: string) => ListItem[];
+  /** Items computed from the input instead of filtering `items` (the `:` prompt); null: `items` filtered. */
+  source?: (input: string) => ListItem[] | null;
   filtered: { item: ListItem; positions: number[] }[];
   selected: number;
   scroll: number;
@@ -5040,7 +5040,7 @@ export class App {
     cancel?: () => void;
     filterable?: boolean;
     selected?: number;
-    source?: (input: string) => ListItem[];
+    source?: (input: string) => ListItem[] | null;
     submit?: (input: string) => boolean;
     footer?: boolean;
     keepGroups?: boolean;
@@ -7138,8 +7138,9 @@ export function naturalWidth(layout: Layout): number {
 }
 
 export function refilter(o: ListOverlay): void {
-  if (o.source) {
-    o.filtered = o.source(o.input).map((item) => ({ item, positions: [] }));
+  const computed = o.source?.(o.input) ?? null;
+  if (computed) {
+    o.filtered = computed.map((item) => ({ item, positions: [] }));
   } else if (o.keepGroups && o.input.trim()) {
     // The matches in their original order, each under its group heading (with its blank row and
     // rule); a group with no match disappears, and the list never starts with a blank row.
@@ -7262,7 +7263,7 @@ export function computeFind(layout: Layout, query: string, current = 0, whole = 
 }
 
 /** A symbol's kind by its number, as the outline names it (`function`, `class`). */
-const KIND_NAMES: Record<number, string> = Object.fromEntries(Object.entries(SymbolKind).map(([name, n]) => [n, name.toLowerCase()]));
+export const KIND_NAMES: Record<number, string> = Object.fromEntries(Object.entries(SymbolKind).map(([name, n]) => [n, name.toLowerCase()]));
 
 /** A server's symbols as an outline: nested ones (`DocumentSymbol`) by their depth, flat ones in line order. */
 function outlineOf(symbols: DocumentSymbol[] | SymbolInformation[]): OutlineEntry[] {
