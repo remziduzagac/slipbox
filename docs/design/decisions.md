@@ -24,11 +24,13 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) on
 macOS too — the terminal stack here is XDG-shaped on both machines.
 
-**The key** is the vault's `id` — `[vault] id` in `.slipbox/config.toml`, random, made by `slipbox init` (or
-written into a `.slipbox/` that has none the first time it's opened, `17.18`) and never changed — so its cache and
-state survive moving the folder. Loose files (the home vault) key by the home vault's id. Only a vault whose config
-can't be written (read-only, or not parsing) keys by path: `<basename>-<hash>`, the hash the first 12 hex characters
-of SHA-256 over the root's **real path**; state kept under a path's key before vaults had ids moves over once.
+**The key** is the vault's `id` — `[vault] id` in `.slipbox/config.toml`, random, made by `slipbox init` (or written
+into a `.slipbox/` that has none the first time it's opened, `17.18`) and never changed — so its cache and state survive
+moving the folder. A git vault without `.slipbox/` (`20.3`) has nowhere to keep one, and nothing is written into it: it
+keys by path until instances have ids of their own (`20.4`, `20.5`). Loose files (the home vault) key by the home
+vault's id. Only a vault whose config can't be written (read-only, or not parsing) keys by path: `<basename>-<hash>`,
+the hash the first 12 hex characters of SHA-256 over the root's **real path**; state kept under a path's key before
+vaults had ids moves over once.
 
 Consequences, accepted deliberately:
 
@@ -56,9 +58,9 @@ One predicate, used by both the walk and the watcher (`5.2` is this decision see
   `.gitignore` from the root down applies, and the deepest one with an opinion wins, so `!keep.md` re-includes. Case
   follows git's default `core.ignorecase`: insensitive on macOS, sensitive on Linux.
 - **`walk.exclude`** adds gitignore-syntax patterns from config.
-- **Nested vaults are boundaries.** A subdirectory holding its own `.slipbox/` is a different vault and is not
-  walked. One vault per repo is the norm; this keeps a fixture vault inside a repo from leaking into it. Only a
-  `.slipbox/` is a boundary: a vault walks into a repository inside it (`17.18`).
+- **Nested vaults are boundaries.** A subdirectory holding its own `.slipbox/`, or a git checkout's top (a
+  repository, a submodule), is a different vault and is not walked (`20.3`; before, only a `.slipbox/` was, `17.18`).
+  This keeps a fixture vault inside a repo from leaking into it, and a repository's notes its own.
 - **Symlinks:** a symlinked *file* is included when its real path is inside the vault root, unless that target is
   already walked, since the same note twice would double every backlink. A symlinked *directory* is never followed:
   no cycles, no escaping the root. Anything pointing outside the root is skipped and reported (`7.5` constraint),
@@ -217,7 +219,7 @@ tools do is the project's.
 
 ## `20.x` — plain paths, virtual vaults
 
-Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`, `20.2` and
+Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.3` and
 `20.23` done). The model in full
 is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the

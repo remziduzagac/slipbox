@@ -18,7 +18,7 @@ import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
-import { readJson, readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
+import { readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
@@ -69,7 +69,7 @@ import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRen
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
-import { findVaultRoot, gitRootOf, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { findVaultRoot, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
@@ -685,9 +685,8 @@ export class App {
       if (first) this.openInNewTab(first);
     }
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
-    // A loose file in a git repository: the offer to make it a vault (17.18); else, opened on a
-    // loose folder, the known vaults (17.14).
-    if (!this.offerVault() && opts.launcher && readRegistry().some((v) => v.kind !== "home" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
+    // Opened on a loose folder: the known vaults (17.14).
+    if (opts.launcher && readRegistry().some((v) => v.kind !== "home" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
     this.stopLazy = onLoaded(() => {
       this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
@@ -3053,12 +3052,12 @@ export class App {
 
   /**
    * A folder made a vault of its own (18.11): its name asked (a distinct one suggested), then the
-   * preview of the links that would stop reaching across, fixed. A loose folder's: the offer
-   * `vault.init` makes (committed or private), and into it.
+   * preview of the links that would stop reaching across, fixed. A loose folder's: the choice
+   * `vault.init` gives, and into it.
    */
   makeVaultItem(item: ExplorerItem): void {
     const abs = join(this.loc.root, item.rel);
-    if (this.loc.mode !== "vault") return this.vaultChoices(abs, false);
+    if (this.loc.mode !== "vault") return this.vaultChoices(abs);
     this.prompt(`make ${item.rel}/ a vault named: `, (name) => {
       if (name.trim()) this.previewRename(() => planMakeVault(this.graph, item.rel, name.trim()));
     });
@@ -6758,7 +6757,6 @@ export class App {
     }
     if (from && !how.back) this.vaultTrail.push(from);
     this.region = "content";
-    this.offerVault();
     this.relayoutAll();
     this.publishState();
     this.recordConfigStamps();
@@ -7007,49 +7005,21 @@ export class App {
     (this.overlay as PromptOverlay).text = heading;
   }
 
-  /** The file where repositories declined as vaults are remembered (the home vault's state). */
-  private declinedFile(): string {
-    return join(stateDir(homeAt(this.loc.root)), "declined-vaults.json");
-  }
-
   /**
-   * In a loose folder of a git repository without `.slipbox/` (17.18): offer to make the repository
-   * a vault — committed with it, or private (kept out of git) — once; declining is remembered. True
-   * when the offer is showing.
+   * Make a loose folder `dir` a vault (`vault.init`): the choice, as a list. A git checkout is a vault
+   * already (20.3), so a loose folder is never one: `.slipbox/` is the only way.
    */
-  offerVault(): boolean {
-    if (this.loc.mode !== "home" || this.overlay) return false;
-    const repo = gitRootOf(this.loc.root);
-    if (!repo) return false;
-    const declined = readJson<string[]>(this.declinedFile(), []);
-    if (Array.isArray(declined) && declined.includes(repo)) return false;
-    this.vaultChoices(repo, true);
-    return true;
-  }
-
-  /** Make `dir` a vault (`vault.init`, the offer): the choices, as a list. */
-  vaultChoices(dir: string, offered: boolean): void {
-    const repo = gitRootOf(dir) === dir;
-    const decline = () => {
-      if (!offered) return;
-      const declined = readJson<string[]>(this.declinedFile(), []);
-      try {
-        writeJson(this.declinedFile(), [...(Array.isArray(declined) ? declined : []), dir]);
-      } catch {}
-      this.message("info", `not a vault: ${dir} — space v m (:init) makes it one`);
-    };
+  vaultChoices(dir: string): void {
     const items: ListItem[] = [
       { label: "Make it a vault", detail: ".slipbox/ with its id and name — committed with the folder like any file", data: "vault" },
-      ...(repo ? [{ label: "Make it a private vault", detail: ".slipbox/ listed in .git/info/exclude: never in git status or a commit", data: "private" }] : []),
-      { label: offered ? "Not now" : "Cancel", detail: offered ? "links reach only this folder's notes; not asked again for this repository" : "", data: "no" },
+      { label: "Cancel", detail: "", data: "no" },
     ];
     this.openList({
-      title: `${dir} ${repo ? "is a git repository" : "is a folder"} without .slipbox/ — make it a vault?`,
+      title: `${dir} is a folder without .slipbox/ — make it a vault?`,
       items,
       filterable: false,
       footer: true,
-      accept: (item) => (item.data === "no" ? decline() : this.makeVault(dir, item.data === "private")),
-      cancel: decline,
+      accept: (item) => (item.data === "no" ? undefined : this.makeVault(dir, false)),
     });
   }
 

@@ -595,7 +595,7 @@ the merge review after; the removals as their replacements land, the sweep last.
 | --- | --- |
 | 20.1 | **Done.** The converter: `[[…]]` and `/…` links as relative paths, labels kept, fragments checked; previewed |
 | 20.2 | **Done.** Links are paths: `[[…]]` is text; `/` the filesystem's root; a broken link stays so till fixed |
-| 20.3 | Vault boundaries: the nearest `.slipbox/` or git checkout; both in one folder, one vault; nested ones apart |
+| 20.3 | **Done.** Vault boundaries: the nearest `.slipbox/` or git checkout; both in one folder, one; nested apart |
 | 20.4 | Collections apart from instances: local instance ids; remotes and first commits as evidence; plain folders |
 | 20.5 | Durable state: instances, their locations, confirmed moves; personal state by instance; today's moved once |
 | 20.6 | Names: short, unique here, `.` for a collision, a worktree's branch now (`@`) as display; never in a file |
@@ -614,7 +614,7 @@ the merge review after; the removals as their replacements land, the sweep last.
 | 20.19 | Renames and moves on paths: the files linking in, and the moved file's own relative links |
 | 20.20 | The CLI: `vault:path` in and out; answers about files as saved; diagnostics, scoped search, the link fix |
 | 20.21 | The merge review: links broken in `git merge-tree`'s result; after a merge, git's renames as evidence |
-| 20.22 | Removed: the home vault, the vault prompt, `[[vault:note]]`, resolving by name, links through redirects |
+| 20.22 | Removed: the home vault, `[[vault:note]]`, resolving by name, links through redirects (the prompt: `20.3`) |
 | 20.23 | **Done.** Removed: the LSP face (`slipbox lsp`, `src/lsp/`, `[lsp] lint`, the nvim setup); the client stays |
 
 `20.1` comes before `20.2`: the converter needs today's resolution, which `20.2` and `20.22` remove from reading (the

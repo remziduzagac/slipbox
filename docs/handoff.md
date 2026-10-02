@@ -26,10 +26,10 @@ it is and is kept in step with it; `docs/design/decisions.md` answers the decide
 files beyond markdown (`16.x`; the design is `docs/idea.md`, "Files beyond markdown"), is done: data
 files render and source code goes through tree-sitter (Org and AsciiDoc were tried and dropped).
 Phase 4 has begun with the vaults (`17.x`, done 2026-09-30; the design is `docs/idea.md`, "Vaults —
-decided"): a file's root is its `.slipbox/` or the home vault (a git repository is offered, not
-assumed); storage keyed by a vault's id; aliases and previous names; `[[vault:note]]`, paths and
-backlinks across vaults; moves kept as redirects; switching vaults in the TUI; renames across vaults
-with a preview (`7.1`–`7.3`).
+decided"): a file's root is its `.slipbox/` or the home vault (a git repository was offered, not
+assumed; since `20.3` it's a vault by itself); storage keyed by a vault's id; aliases and previous
+names; `[[vault:note]]`, paths and backlinks across vaults; moves kept as redirects; switching
+vaults in the TUI; renames across vaults with a preview (`7.1`–`7.3`).
 Next in phase 4: the rest of `1.x`, search (`6.x`), embeds. Still open: `7.4` (rename undo); `4.9`
 (incremental reparse) moved to `15.1`, now mostly done (a note re-parses by chunk); `5.9` (a `HEAD`
 change as a branch switch) and the lint surface (markdownlint-cli2) are not built.
@@ -38,8 +38,9 @@ change as a branch switch) and the lint surface (markdownlint-cli2) are not buil
 and phase 5's LSP face (`11.x`) and code intelligence (`19.x`: language servers and linters for code). Left in phase
 5: `16.18`–`16.23`. **Decided the same day, being built:** plain paths and virtual vaults (`20.x`; `docs/idea.md`,
 "Plain paths, virtual vaults"). Done: the converter (`20.1`), links as plain paths (`20.2`: `[[…]]` is text, `/` the
-filesystem's root, a move never resolves a link), the LSP face removed (`20.23`). Next: vaults derived from
-`.slipbox/` and git instead of managed (`20.3`–`20.6`); until then, the vault paragraph above is how vaults work.
+filesystem's root, a move never resolves a link), vault boundaries (`20.3`: the nearest `.slipbox/` or git
+checkout), the LSP face removed (`20.23`). Next: collections apart from instances, durable state and names
+(`20.4`–`20.6`); until then, vaults keep the ids and names of the vault paragraph above.
 
 ## The documents
 
@@ -139,10 +140,10 @@ spend a day on:
 - **Stack:** Bun + OpenTUI + remark. remark over marked because mdast carries source positions
   and slipbox edits. OpenTUI over Ink because Ink renders to a string and has no scroll
   container.
-- **A file's root** is the nearest `.slipbox/` above it, else the home vault (loose files, a folder
-  at a time); `$HOME` and `/` never. Every vault has a `.slipbox/` with its id and name; a git
-  repository without one is offered (committed or private), never assumed and never written to
-  unasked. See `docs/idea.md`, "Vaults — decided".
+- **A file's root** is its nearest boundary — a `.slipbox/` or a git checkout's top, one vault when
+  both share a folder (`20.3`) — else the home vault (loose files, a folder at a time); `$HOME` and
+  `/` never. A git vault without `.slipbox/` is never written into: named by its folder, keyed by
+  its path. See `docs/idea.md`, "Plain paths, virtual vaults".
 - **PKM layer in-process**, not by depending on a language server. slipbox *offering* an LSP is a
   separate and approved thing (phase 5).
 - **Editing:** an in-app editor *and* `$EDITOR` hand-off (or a running nvim). Live preview is a

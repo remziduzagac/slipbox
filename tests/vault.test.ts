@@ -9,7 +9,8 @@ import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { applyPlan, planHeadingRename, planUndo } from "../src/core/rename.ts";
-import { findVaultRoot, gitRootOf, initVault, locateVault, recordLocation } from "../src/core/vault.ts";
+import { findVaultRoot, gitRootOf, initVault, isVaultRoot, locateVault, recordLocation } from "../src/core/vault.ts";
+import { implicitName } from "../src/core/registry.ts";
 import { vaultKey } from "../src/core/paths.ts";
 
 const VAULT = join(import.meta.dir, "fixtures", "vault");
@@ -28,22 +29,25 @@ describe("vault discovery (1.1)", () => {
     expect(findVaultRoot(join(VAULT, "notes", "alpha.md"))).toBe(VAULT);
     expect(findVaultRoot(join(VAULT, "nested-vault", "inner.md"))).toBe(join(VAULT, "nested-vault"));
   });
-  test("no marker: a file in a git repository is loose until the repository is made a vault (17.18)", async () => {
+  test("a git checkout's top is a vault by itself: keyed by its path, named by its folder, nothing written (20.3)", async () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-repo-"));
     mkdirSync(join(dir, ".git"));
     mkdirSync(join(dir, "docs"));
     writeFileSync(join(dir, "docs", "n.md"), "# n\n");
     const loc = locateVault({ path: join(dir, "docs", "n.md") });
-    expect(loc.mode).toBe("home");
-    expect(loc.root).toBe(join(dir, "docs"));
-    expect(gitRootOf(loc.root)).toBe(dir);
-    // The CLI says what would make it a vault.
+    expect(loc).toMatchObject({ mode: "vault", root: dir, id: null, name: implicitName(dir) });
+    expect(loc.key).not.toBe(""); // its path's
+    // The CLI opens it as the vault, says nothing about it, and makes no .slipbox/.
     const out: string[] = [];
     await runCli(["ls", "--json"], { out: (s) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: join(dir, "docs"), env: process.env });
-    expect(JSON.parse(out.join("")).warnings.join()).toContain(`not in a vault: ${dir} is a git repository without .slipbox/ — slipbox init ${dir} makes it one`);
-    // A worktree's or submodule's .git is a file: a repository too.
+    const r = JSON.parse(out.join(""));
+    expect(JSON.stringify(r.data)).toContain("docs/n.md");
+    expect(r.warnings.join()).not.toContain(".slipbox");
+    expect(existsSync(join(dir, ".slipbox"))).toBe(false);
+    // A worktree's or submodule's .git is a file: a checkout too.
     const wt = mkdtempSync(join(tmpdir(), "slipbox-worktree-"));
     writeFileSync(join(wt, ".git"), "gitdir: /elsewhere\n");
+    expect(findVaultRoot(join(wt, "x.md"))).toBe(wt);
     expect(gitRootOf(wt)).toBe(wt);
   });
   test("neither: the home vault — the loose file's folder, keyed by the home vault's id (17.2)", () => {
@@ -61,15 +65,20 @@ describe("vault discovery (1.1)", () => {
     const other = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
     expect(locateVault({ path: other }).key).toBe(loc.key);
   });
-  test("a vault walks into a repository inside it: only a .slipbox/ is a boundary (17.18)", () => {
+  test("a repository inside a vault is a vault of its own; .slipbox/ and .git in one folder are one vault (20.3)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-nest-"));
     mkdirSync(join(dir, ".slipbox"));
     mkdirSync(join(dir, "sub", ".git"), { recursive: true });
     writeFileSync(join(dir, "top.md"), "# top\n");
     writeFileSync(join(dir, "sub", "inner.md"), "# inner\n");
     const vault = openGraph(locateVault({ path: dir }), DEFAULT_CONFIG, false);
-    expect([...vault.notes.keys()].sort()).toEqual(["sub/inner.md", "top.md"]);
-    expect(locateVault({ path: join(dir, "sub", "inner.md") }).root).toBe(dir);
+    expect([...vault.notes.keys()]).toEqual(["top.md"]);
+    expect(vault.nestedRoots()).toEqual(["sub"]);
+    expect(locateVault({ path: join(dir, "sub", "inner.md") }).root).toBe(join(dir, "sub"));
+    // Both in one folder: one vault, its name from .slipbox/ — the repository's own top.
+    mkdirSync(join(dir, ".git"));
+    writeFileSync(join(dir, ".slipbox", "config.toml"), '[vault]\nid = "both-id"\nname = "both-named"\n');
+    expect(locateVault({ path: join(dir, "top.md") })).toMatchObject({ mode: "vault", root: dir, id: "both-id", name: "both-named" });
   });
   test("$HOME and / are never a root, whatever they hold (17.1)", () => {
     const home = mkdtempSync(join(tmpdir(), "slipbox-home-"));
@@ -81,6 +90,8 @@ describe("vault discovery (1.1)", () => {
     process.env.HOME = home;
     try {
       expect(findVaultRoot(join(home, "notes", "n.md"))).toBeNull();
+      // Nor a vault seen from above (a dotfiles repository in $HOME): the explorer, a walk (20.3).
+      expect(isVaultRoot(home)).toBe(false);
       const loc = locateVault({ path: join(home, "notes", "n.md") });
       expect(loc.mode).toBe("home");
       expect(loc.root).toBe(join(home, "notes"));
@@ -89,9 +100,12 @@ describe("vault discovery (1.1)", () => {
       process.env.HOME = before;
     }
   });
-  test("--root names a vault: it takes precedence, and must have a .slipbox/ (17.18)", () => {
+  test("--root names a vault: it takes precedence, and must be one — .slipbox/ or a git checkout (20.3)", () => {
     expect(locateVault({ root: join(VAULT, "nested-vault"), path: join(VAULT, "nested-vault", "inner.md") }).root).toBe(join(VAULT, "nested-vault"));
-    expect(() => locateVault({ root: join(VAULT, "notes") })).toThrow(/isn't a vault \(no \.slipbox\/\): slipbox init/);
+    expect(() => locateVault({ root: join(VAULT, "notes") })).toThrow(/isn't a vault \(no \.slipbox\/, not a git checkout\): slipbox init/);
+    const repo = mkdtempSync(join(tmpdir(), "slipbox-repo-"));
+    mkdirSync(join(repo, ".git"));
+    expect(locateVault({ root: repo })).toMatchObject({ mode: "vault", root: repo });
   });
 });
 
@@ -587,11 +601,24 @@ describe("vault identity, storage and the machine's vaults (17.3–17.6)", () =>
     await Bun.sleep(20);
     await cli(["ls"], dir);
     expect(statSync(registryFile()).mtimeMs).toBe(stamp);
-    // A git repository without .slipbox/ is no vault: not listed.
+    // A git checkout is one by itself (20.3): listed by its path, with no id, under its folder's name.
     const repo = fresh("regrepo");
     mkdirSync(join(repo, ".git"));
     await cli(["ls"], repo);
-    expect(readRegistry().find((v) => v.path === repo)).toBeUndefined();
+    expect(readRegistry().find((v) => v.path === repo)).toMatchObject({ kind: "vault", id: null, name: implicitName(repo) });
+    expect(existsSync(join(repo, ".slipbox"))).toBe(false);
+  });
+
+  test("a git vault without .slipbox/: named by its folder, so rename-vault is refused; init gives it .slipbox/ (20.3)", async () => {
+    const repo = fresh("gitname");
+    mkdirSync(join(repo, ".git"));
+    const refused = await cli(["rename-vault", "other", "--json"], repo);
+    expect(refused.code).toBe(5);
+    expect(refused.json.error.message).toContain("git checkout without .slipbox/, named by its folder");
+    expect(existsSync(join(repo, ".slipbox"))).toBe(false);
+    const made = (await cli(["init", "--name", "gitnamed", "--json"], repo)).json.data;
+    expect(made).toMatchObject({ root: repo, created: true, name: "gitnamed" });
+    expect(locateVault({ path: repo })).toMatchObject({ root: repo, name: "gitnamed", id: made.id });
   });
 
   test("the home vault keeps every loose folder's positions by absolute path, and a session per folder", async () => {
@@ -1333,6 +1360,14 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
     // Refused: a folder that's already a vault; a vault not nested in another.
     expect((await cli(["deinit", "proj"], parent)).code).toBe(5);
     expect((await cli(["deinit", "."], other)).code).toBe(5);
+    // And a git checkout (20.3): a vault by itself, with .slipbox/ or without — nothing changes.
+    mkdirSync(join(parent, "proj", ".git"));
+    const repo = (await cli(["deinit", "proj"], parent)).json;
+    expect(repo.error.message).toContain("a git checkout is a vault by itself");
+    await cli(["init", "proj", "--name", "mkrepo"], parent);
+    const both = (await cli(["deinit", "proj"], parent)).json;
+    expect(both.error.message).toContain("proj is a git checkout: a vault by itself, with or without .slipbox/");
+    expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(true);
   });
 });
 
@@ -1655,6 +1690,23 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
     return { base, x, y, wt };
   };
   let n = 0;
+
+  test("a worktree without .slipbox/ — the main checkout's kept private — reads the main's id and name, writing nothing (20.3)", async () => {
+    const base = mkdtempSync(join(tmpdir(), "slipbox-wtpriv-"));
+    const x = join(base, "x");
+    mkdirSync(x);
+    writeFileSync(join(x, "a.md"), "# A\n");
+    if (git(x, "init", "-q", "-b", "main").exitCode !== 0) return; // no git here
+    git(x, "add", "-A");
+    git(x, "commit", "-q", "-m", "x");
+    await cli(["init", x, "--name", `xpriv${++n}`, "--private"], x);
+    const wt = join(base, "wt");
+    if (git(x, "worktree", "add", "-q", "-b", "feat", wt).exitCode !== 0) return;
+    expect(existsSync(join(wt, ".slipbox"))).toBe(false);
+    const main = locateVault({ path: x });
+    expect(locateVault({ path: join(wt, "a.md") })).toMatchObject({ mode: "vault", root: wt, id: main.id, name: main.name, worktree: { name: "wt" } });
+    expect(existsSync(join(wt, ".slipbox"))).toBe(false);
+  });
 
   test("read from .git: the main checkout, a worktree, its name and branch; a vault below the top folder too", async () => {
     const { checkoutOf, headOf, inMain } = await import("../src/core/git.ts");

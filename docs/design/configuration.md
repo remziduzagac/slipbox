@@ -5,8 +5,8 @@ TOML, in two levels, with the vault winning (plan `0.9`):
 1. built-in defaults
 2. the user file: `--config <file>`, else `$SLIPBOX_CONFIG`, else
    `$XDG_CONFIG_HOME/slipbox/config.toml`
-3. the vault file: `<vault>/.slipbox/config.toml`; for a loose file, the home vault's,
-   `$XDG_DATA_HOME/slipbox/home/config.toml`
+3. the vault file: `<vault>/.slipbox/config.toml` (a git vault without `.slipbox/` has none, `20.3`); for a loose
+   file, the home vault's, `$XDG_DATA_HOME/slipbox/home/config.toml`
 
 **The vault's identity** is the vault file's `[vault]` table (plan `17.4`), read on its own and never merged into
 the settings; in the user file it's ignored with a warning:

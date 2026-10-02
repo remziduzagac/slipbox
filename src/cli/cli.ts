@@ -52,7 +52,7 @@ import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRena
 import { planConvert } from "../core/convert.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { readIdentity, readRegistry, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
-import { findVaultRoot, gitRootOf, homeAt, initVault, isInside, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { findVaultRoot, hasMarker, homeAt, initVault, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -107,9 +107,6 @@ class Session {
     this.configSources = loaded.sources;
     this.warnings.push(...loaded.warnings);
     if (loc.note) this.warnings.push(loc.note);
-    // A loose file in a git repository without .slipbox/ (17.18): links reach only its folder.
-    const repo = loc.mode === "home" && args.positional[0] !== "init" ? gitRootOf(loc.root) : null;
-    if (repo) this.warnings.push(`not in a vault: ${repo} is a git repository without .slipbox/ — slipbox init ${repo} makes it one (--private keeps .slipbox/ out of git)`);
     recordLocation(loc);
   }
 
@@ -187,7 +184,7 @@ Usage:
   slipbox commands                  list named commands and their CLI equivalents
 
 Global options:
-  --root <dir>      the vault (default: the nearest .slipbox/ above the path or cwd; none: a loose folder)
+  --root <dir>      the vault (default: the nearest .slipbox/ or git checkout above the path or cwd; none: loose)
   --config <file>   user config file (default: $SLIPBOX_CONFIG or ~/.config/slipbox/config.toml)
   --json            one JSON object on stdout: {schema, ok, command, data, warnings, stale}
   --color <when>    auto | always | never
@@ -965,7 +962,7 @@ const HANDLERS: Record<string, Handler> = {
   deinit(s, rest) {
     const dir = requireArg(rest, "vault folder");
     const abs = dir.startsWith("/") ? dir : join(s.io.cwd, dir);
-    if (!isVaultRoot(abs)) throw new CliError(`${abs} isn't a vault (no .slipbox/)`, EXIT.refused);
+    if (!hasMarker(abs)) throw new CliError(`${abs} isn't a vault made with .slipbox/ (${isRepoRoot(abs) ? "a git checkout is a vault by itself" : "no .slipbox/"})`, EXIT.refused);
     const holder = findVaultRoot(dirname(abs));
     if (!holder) throw new CliError(`${abs} isn't in another vault: only a nested vault becomes a plain folder (of the vault holding it)`, EXIT.refused);
     const parent = openVault(holder);

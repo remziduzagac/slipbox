@@ -234,13 +234,13 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   where the walk lists notes: never `.slipbox/`, `.git/`, a hidden folder or `node_modules`, and
   never a path outside `--root` when that names the root. `replace --dry-run` only reads, so it
   previews any note; its `newSha` is `null`.
-- **Where a command works.** The root is decided by the file: the nearest `.slipbox/` above the
-  note argument (or cwd), else the home vault (the file's own folder, listed alone). `$HOME` and
-  `/` are never a root. `--root` must name a vault (a folder with `.slipbox/`). Each command records
-  the vault in `vaults.json`. A loose file in a git repository gets a warning — `slipbox init
-  <root>` would make the repository a vault (`--private` keeps `.slipbox/` out of git) — and the
-  CLI never makes one on its own (`17.18`). A `.slipbox/` without an id and a name gets them
-  written into its config on first open.
+- **Where a command works.** The root is decided by the file: its nearest boundary above the note
+  argument (or cwd) — a folder with `.slipbox/` or a git checkout's top, one vault when both share a
+  folder (`20.3`) — else the home vault (the file's own folder, listed alone). `$HOME` and `/` are
+  never a root. `--root` must name a vault (`.slipbox/` or a git checkout). Each command records the
+  vault in `vaults.json`. A `.slipbox/` without an id and a name gets them written into its config
+  on first open; a git vault without one is never written into — named by its folder, keyed by its
+  path — and `slipbox init` gives it `.slipbox/` (`--private` keeps that out of git).
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4
@@ -333,7 +333,8 @@ state, never in the folder — and says how many links from other notes break (`
 only says. `slipbox trash` lists what's there; `slipbox trash restore <id|path>` puts an item back where it was,
 refused when something is there now. `slipbox cp` copies a note, file or folder, as written.
 
-`slipbox rename-vault <name>` renames this vault: `[vault] name` in its config, the old name added to its
+`slipbox rename-vault <name>` renames this vault (one with `.slipbox/`: a git vault without it is named by its folder,
+and refused): `[vault] name` in its config, the old name added to its
 `previous_names`; links are paths, which a vault's name doesn't change. `slipbox relink [note]` rewrites the links of
 a note (or every note) that reach nothing but whose file was seen to move (`17.12`) — broken, since a move never
 resolves a link (`20.2`) — to its path now. Both take `--dry-run`.
@@ -373,10 +374,11 @@ A folder made a vault or a vault made a folder (`18.11`) isn't among them: `dein
 
 **A folder made a vault, and back** (`18.11`): `slipbox init <folder>` on a folder inside a vault makes it a vault of
 its own — its `.slipbox/`, a distinct name suggested unless `--name`. Links are paths (`20.2`), which reach across the
-new boundary as before, so there's nothing of them to rewrite. `slipbox deinit <folder>` undoes it for a vault nested
-in another: its `.slipbox/` goes to the parent's trash (`trash restore` makes it a vault again), and the machine
-forgets it. Both take `--dry-run` and answer like `mv`, `init` adding the vault's `root`, `name` and `id`. Every plan's
-writes into another vault's files reach that vault's index at once, as if it had been opened.
+new boundary as before, so there's nothing of them to rewrite. `slipbox deinit <folder>` undoes it for a vault nested in
+another: its `.slipbox/` goes to the parent's trash (`trash restore` makes it a vault again), and the machine forgets
+it. A git checkout is refused, with `.slipbox/` or without: it's a vault by itself (`20.3`). Both take `--dry-run` and
+answer like `mv`, `init` adding the vault's `root`, `name` and `id`. Every plan's writes into another vault's files
+reach that vault's index at once, as if it had been opened.
 
 ## Capture and the scratch (plans `8.1`–`8.4`)
 

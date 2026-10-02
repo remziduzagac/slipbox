@@ -5527,60 +5527,47 @@ describe("vaults in the TUI (17.x)", () => {
     writeFileSync(join(dir, "note.md"), "# loose\n");
     mkdirSync(join(dir, "plain"));
     writeFileSync(join(dir, "plain", "p.md"), "# p\n");
-    mkdirSync(join(dir, "code", ".git"), { recursive: true }); // a repository: a folder, until it's a vault
+    mkdirSync(join(dir, "code", ".git"), { recursive: true }); // a repository: a vault by itself (20.3)
     mkdirSync(join(dir, "box", ".slipbox"), { recursive: true });
     const h = await harness({ loc: homeAt(dir), open: "note.md" });
     expect(h.app.explorerRows().map((r) => [r.name, r.kind, r.root?.kind])).toEqual([
       ["..", "root", "folder"],
       ["box", "root", "vault"],
-      ["code", "root", "folder"],
+      ["code", "root", "vault"],
       ["plain", "root", "folder"],
       ["note.md", "note", undefined],
     ]);
     expect(h.frame()).toContain("◈ box");
+    expect(h.frame()).toContain("◈ code");
     expect(topRow(h.frame())).toContain("home vault");
     h.app.enterRoot(h.app.explorerRows()[3]!);
     expect(h.app.loc).toMatchObject({ mode: "home", root: join(dir, "plain") });
     expect(h.app.view!.buf.rel).toBe("p.md");
   });
 
-  test("a loose file in a git repository: the offer to make it a vault — committed, private, not now (17.18)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
-    const repo = (name: string) => {
-      const dir = join(mkdtempSync(join(sandbox, "offer-")), name);
-      mkdirSync(join(dir, "docs"), { recursive: true });
-      Bun.spawnSync(["git", "init", "-q", dir]);
-      mkdirSync(join(dir, ".git"), { recursive: true }); // without git installed, a repository all the same
-      writeFileSync(join(dir, "docs", "readme.md"), "# Readme\n");
-      return dir;
-    };
-    const offered = (h: Harness) => (h.app.overlay as ListOverlay | null)?.title ?? "";
-    // Not now: remembered, never offered again for that repository.
-    const a = repo("alpha");
-    let h = await harness({ loc: homeAt(join(a, "docs")), open: "readme.md" });
-    expect(offered(h)).toBe(`${a} is a git repository without .slipbox/ — make it a vault?`);
-    expect((h.app.overlay as ListOverlay).items.map((it) => it.label)).toEqual(["Make it a vault", "Make it a private vault", "Not now"]);
-    await h.keys("escape");
-    expect(existsSync(join(a, ".slipbox"))).toBe(false);
-    h = await harness({ loc: homeAt(join(a, "docs")), open: "readme.md" });
+  test("a note in a git repository opens the repository as its vault: nothing offered, nothing written (20.3)", async () => {
+    const { homeAt, locateVault } = await import("../src/core/vault.ts");
+    const repo = join(mkdtempSync(join(sandbox, "repo-")), "alpha");
+    mkdirSync(join(repo, "docs"), { recursive: true });
+    mkdirSync(join(repo, ".git"));
+    writeFileSync(join(repo, "docs", "readme.md"), "# Readme\n\n[top](../top.md)\n");
+    writeFileSync(join(repo, "top.md"), "# Top\n");
+    const h = await harness({ loc: locateVault({ path: join(repo, "docs", "readme.md") }), open: "docs/readme.md" });
+    expect(h.app.loc).toMatchObject({ mode: "vault", root: repo, name: "alpha" });
     expect(h.app.overlay).toBeNull();
-    // …though :init asks again, when asked.
-    await h.app.run("vault.init");
-    expect(offered(h)).toContain(`${a} is a git repository without .slipbox/`);
-    await h.keys("escape");
-    // Made a vault: the TUI goes into it, the note open, its links across the repository now.
-    const b = repo("beta");
-    h = await harness({ loc: homeAt(join(b, "docs")), open: "readme.md" });
-    await h.keys("enter");
-    expect(h.app.loc).toMatchObject({ mode: "vault", root: b, name: "beta" });
-    expect(h.app.view!.buf.rel).toBe("docs/readme.md");
-    expect(h.app.messages.some((m) => m.text === `made ${b} a vault: "beta"`)).toBe(true);
-    // Private: kept out of git.
-    const c = repo("gamma");
-    h = await harness({ loc: homeAt(join(c, "docs")), open: "readme.md" });
-    await h.keys("down", "enter");
-    expect(h.app.loc).toMatchObject({ mode: "vault", root: c });
-    expect(readFileSync(join(c, ".git", "info", "exclude"), "utf8").split("\n")).toContain("/.slipbox/");
+    expect(h.app.graph.notes.has("top.md")).toBe(true); // the whole repository, from its top
+    expect(existsSync(join(repo, ".slipbox"))).toBe(false);
+    // A loose folder: :init offers .slipbox/, and goes into the vault it makes.
+    const loose = mkdtempSync(join(sandbox, "loose-"));
+    writeFileSync(join(loose, "n.md"), "# N\n");
+    const l = await harness({ loc: homeAt(loose), open: "n.md" });
+    expect(l.app.overlay).toBeNull();
+    await l.app.run("vault.init");
+    expect((l.app.overlay as ListOverlay).title).toBe(`${loose} is a folder without .slipbox/ — make it a vault?`);
+    expect((l.app.overlay as ListOverlay).items.map((it) => it.label)).toEqual(["Make it a vault", "Cancel"]);
+    await l.keys("enter");
+    expect(l.app.loc).toMatchObject({ mode: "vault", root: loose });
+    expect(existsSync(join(loose, ".slipbox", "config.toml"))).toBe(true);
   });
 
   test("opened on a loose folder, the known vaults come first; space v v lists them anywhere (17.14)", async () => {

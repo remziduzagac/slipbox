@@ -1,12 +1,12 @@
 // The file walk (plan 1.2), implementing decision 0.11. The watcher uses the same `WalkFilter`,
 // so what the walk excludes is exactly what the watcher does not subscribe to (5.2).
 
-import { type Dirent, existsSync, lstatSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { type Dirent, lstatSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
 import type { Config } from "./config.ts";
-import { isInside, MARKER } from "./vault.ts";
+import { isInside, isVaultRoot, MARKER } from "./vault.ts";
 
 export interface NoteFile {
   /** Vault-relative, always `/`-separated. */
@@ -80,7 +80,8 @@ export class WalkFilter {
       dir = dir ? `${dir}/${parts[i]}` : parts[i]!;
     }
     if (ignored) return ".gitignore";
-    if (isDir && existsSync(join(this.root, rel, MARKER))) return "nested vault";
+    // A `.slipbox/` folder or a git checkout (a repository, a submodule) inside: a vault of its own (20.3).
+    if (isDir && isVaultRoot(join(this.root, rel))) return "nested vault";
     return null;
   }
 

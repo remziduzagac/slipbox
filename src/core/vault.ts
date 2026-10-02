@@ -1,10 +1,11 @@
-// Root discovery (plan 1.1, 17.1, 17.18), the marker version stamp (0.12) and `init` (1.10, 17.4).
+// Root discovery (plan 1.1, 17.1, 20.3), the marker version stamp (0.12) and `init` (1.10, 17.4).
 //
-// A file's root is decided by the file (docs/idea.md, "Vaults — decided 2026-09-30"): the nearest
-// `.slipbox/` above it, else the home vault, which holds every loose file and lists a folder at a
-// time. Every vault has a `.slipbox/` with its `id` and `name`: a git repository without one is
-// loose until it's made a vault (the TUI offers; `slipbox init`). `$HOME` and `/` are never a root:
-// that would index everything. `--root` names a vault outright.
+// A file's vault is its nearest boundary (docs/idea.md, "Plain paths, virtual vaults"): walking up
+// from the file, the first folder that holds `.slipbox/` or is a git checkout's top. Both in one
+// folder make one vault, its name and settings from `.slipbox/`; a repository or a `.slipbox/` folder
+// inside a vault is a vault of its own. A git vault needs nothing, and nothing is written into it.
+// A file under neither is loose: the home vault, which lists a folder at a time (until `20.22`).
+// `$HOME` and `/` are never a root: that would index everything. `--root` names a vault outright.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from "node:fs";
@@ -52,8 +53,8 @@ export interface Worktree {
 /** Format version of the marker directory. Bump with a migration, never silently. */
 export const VAULT_FORMAT_VERSION = 1;
 
-/** `vault`: a `.slipbox/` root. `home`: a loose file's folder, listed alone; its data is the home
- *  vault's (17.18: a git repository without `.slipbox/` is loose too, until it's made a vault). */
+/** `vault`: a `.slipbox/` folder or a git checkout's top (20.3). `home`: a loose file's folder,
+ *  listed alone; its data is the home vault's. */
 export type VaultMode = RootKind;
 
 export interface VaultLocation {
@@ -81,12 +82,18 @@ export interface VaultLocation {
 
 export class VaultError extends Error {}
 
-export function isVaultRoot(dir: string): boolean {
+/** A `.slipbox/` folder: an explicit vault, its name and settings travelling with it (20.3). */
+export function hasMarker(dir: string): boolean {
   try {
     return statSync(join(dir, MARKER)).isDirectory();
   } catch {
     return false;
   }
+}
+
+/** A vault's boundary (20.3): `.slipbox/`, or a git checkout's top — both in one folder, one vault. */
+export function isVaultRoot(dir: string): boolean {
+  return !isNeverRoot(dir) && (hasMarker(dir) || isRepoRoot(dir));
 }
 
 /** A `.git` directory, or the `.git` file of a worktree or submodule. */
@@ -113,16 +120,13 @@ function startDir(start: string): string {
   }
 }
 
-/** Walk up from `start` (a file or directory); the first `.slipbox/` wins. Stops below $HOME or /. */
+/** Walk up from `start` (a file or directory); the first boundary wins (20.3). Stops below $HOME or /. */
 export function findVaultRoot(start: string): string | null {
   for (let dir = startDir(start); !isNeverRoot(dir); dir = dirname(dir)) if (isVaultRoot(dir)) return dir;
   return null;
 }
 
-/**
- * The git repository a path is in (its top folder), never `$HOME` or `/`: not a root, only where
- * slipbox offers to make one (17.18).
- */
+/** The git repository a path is in (its top folder), never `$HOME` or `/`. */
 export function gitRootOf(start: string): string | null {
   for (let dir = startDir(start); !isNeverRoot(dir); dir = dirname(dir)) if (isRepoRoot(dir)) return dir;
   return null;
@@ -147,7 +151,7 @@ export function locateVault(opts: LocateOptions): VaultLocation {
   if (opts.root) {
     const root = resolve(cwd, opts.root);
     if (!existsSync(root) || !statSync(root).isDirectory()) throw new VaultError(`--root is not a directory: ${opts.root}`);
-    if (!isVaultRoot(root)) throw new VaultError(`--root ${opts.root} isn't a vault (no .slipbox/): slipbox init ${opts.root} makes it one`);
+    if (!isVaultRoot(root)) throw new VaultError(`--root ${opts.root} isn't a vault (no .slipbox/, not a git checkout): slipbox init ${opts.root} makes it one`);
     if (file && !isInside(root, file)) throw new VaultError(`${opts.path} is outside --root ${opts.root}`);
     return rootAt(root, file);
   }
@@ -157,11 +161,13 @@ export function locateVault(opts: LocateOptions): VaultLocation {
   return homeAt(file ? dirname(file) : (target ?? cwd), file);
 }
 
-/** The location of a vault root (a folder with `.slipbox/`). */
+/** The location of a vault root: a folder with `.slipbox/`, or a git checkout's top (20.3). */
 export function rootAt(root: string, file: string | null = null): VaultLocation {
   const c = checkoutOf(root);
   const worktree: Worktree | null = c?.worktree ? { name: c.worktree, checkout: c.root, main: c.main, mainVault: inMain(c, root) } : null;
-  const ident = ensureIdentity(root, worktree?.mainVault ?? null);
+  // A git vault has no `.slipbox/` to hold an id or a name, and none is made for it: it's keyed by
+  // its path and named by its folder (a worktree reads its main checkout's, never writing).
+  const ident = hasMarker(root) ? ensureIdentity(root, worktree?.mainVault ?? null) : worktree?.mainVault ? readIdentity(vaultConfigFile(worktree.mainVault)) : readIdentity(vaultConfigFile(root));
   // A worktree keeps its own state, by git's name for it: it survives moving the folder (17.19).
   const key = worktree && ident.id ? `${ident.id}-wt-${worktree.name.replace(/[^A-Za-z0-9._-]/g, "_")}` : storageKey(root, ident.id);
   if (ident.id && key === ident.id) adoptPathState(root, key);
@@ -273,7 +279,8 @@ export function initVault(dir: string, name?: string, opts: { private?: boolean 
   const root = resolve(dir);
   if (isNeverRoot(root)) throw new VaultError(`${root} can't be a vault: slipbox never indexes all of ${root === homeFolder() ? "your home folder" : "/"}`);
   const marker = join(root, MARKER);
-  const exists = isVaultRoot(root);
+  // `.slipbox/` itself: a git checkout is a vault already, and gets one all the same (20.3).
+  const exists = hasMarker(root);
   const have = exists ? readIdentity(vaultConfigFile(root)) : null;
   const known = readRegistry();
   if (name !== undefined) {

@@ -308,13 +308,11 @@ beside it.
 **The launcher:** slipbox opened on a loose folder without a file (`slipbox ~`) shows this list at
 once, over the folder's explorer, when there are vaults to show.
 
-**A git repository without `.slipbox/`** (`17.18`): opening a file in one offers to make it a vault
-— "`<root>` is a git repository without .slipbox/ — make it a vault?" — with three answers: make it
-a vault (`.slipbox/` committed with it like any file), make it a **private** vault (listed in its
-`.git/info/exclude`: never in `git status`), or not now (`esc` too): the file stays loose, and that
-repository isn't asked about again. Made a vault, the TUI goes into it with the note open.
-`space v m` (`:init`, `vault.init`) asks again, for the loose folder's repository or the folder
-itself.
+**A git repository is a vault by itself** (`20.3`): opening a file in one opens the repository, from its top —
+nothing asked, nothing written into it; a repository inside a vault is a vault of its own, its folder marked in the
+explorer. `.slipbox/` gives one a name and settings of its own (`slipbox init`; `--private` keeps it out of git).
+`space v m` (`:init`, `vault.init`) in a loose folder makes it a vault — "`<folder>` is a folder without .slipbox/ —
+make it a vault?" — its `.slipbox/` committed with it like any file; the TUI goes into it with the note open.
 
 ## Renames (plans `17.15`, `7.1`–`7.4`)
 

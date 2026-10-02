@@ -19,7 +19,7 @@ import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
 import { forgetVault, HOME_NAME, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
 import { openVault } from "./reach.ts";
-import { findVaultRoot, initVault, isInside, type VaultLocation } from "./vault.ts";
+import { findVaultRoot, hasMarker, initVault, isInside, isRepoRoot, type VaultLocation } from "./vault.ts";
 
 export class RenameError extends Error {}
 
@@ -622,6 +622,8 @@ function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: 
  */
 export function planVaultRename(g: Graph, loc: VaultLocation, newName: string, also: Graph[] = []): RenamePlan {
   if (loc.mode !== "vault") throw new RenameError(loc.mode === "home" ? "the home vault's name is fixed" : `${loc.root} has no .slipbox/: make it a vault first (slipbox init)`);
+  // A git vault's name is its folder's, held nowhere (20.3): `.slipbox/` gives it one of its own.
+  if (!hasMarker(loc.root)) throw new RenameError(`${loc.root} is a git checkout without .slipbox/, named by its folder: slipbox init gives it .slipbox/ and a name of its own`);
   if (!VAULT_NAME.test(newName)) throw new RenameError(`"${newName}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
   if (newName.toLowerCase() === HOME_NAME) throw new RenameError(`"${HOME_NAME}" is the home vault's name`);
   const oldName = loc.name!;
@@ -861,6 +863,8 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
   const F = folderPath(parent, folderRel);
   if (!parent.nestedRoots().includes(F)) throw new RenameError(`no vault nested at ${F} in ${parent.root}`);
   const Vabs = join(parent.root, F);
+  // A git checkout is a vault by itself (20.3): without its .slipbox/ it would be one still.
+  if (isRepoRoot(Vabs)) throw new RenameError(`${F} is a git checkout: a vault by itself, with or without .slipbox/`);
   const v = openVault(Vabs);
   v.ensureAll();
   parent.ensureAll();

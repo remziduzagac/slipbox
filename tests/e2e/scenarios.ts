@@ -1697,7 +1697,7 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
-    name: "vaults: a git repository without .slipbox/ is offered; made a vault, its links reach across it",
+    name: "vaults: a git repository is a vault by itself — opened from its top, nothing asked or written; its links followed",
     options: {
       startAt: "project/docs/readme.md",
       beside: {
@@ -1707,18 +1707,11 @@ export const SCENARIOS: Scenario[] = [
       },
     },
     run: async (s) => {
-      await s.see("is a git repository without .slipbox/ — make it a vault?");
-      await s.see("Make it a private vault");
-      // Not now: the file stays loose, and space v m (:init) asks again.
-      await s.keys("escape");
-      await s.message("not a vault:");
-      s.expect(!existsSync(join(s.dir, "project", ".slipbox")), "nothing made");
-      await leader(s, "v", "m");
-      await s.see("is a git repository without .slipbox/ — make it a vault?");
-      await s.keys("enter");
-      await s.message("a vault:");
+      // The repository's own path for the note: its top is the vault's (20.3).
       await s.status("docs/readme.md");
-      s.expect(existsSync(join(s.dir, "project", ".slipbox", "config.toml")), "the .slipbox/ made");
+      await s.see("The guide is in another folder");
+      s.expect(!s.text().includes("make it a vault?"), "nothing offered");
+      s.expect(!existsSync(join(s.dir, "project", ".slipbox")), "nothing written into the repository");
       await s.keys("tab", "enter");
       await s.status("guide.md");
       await s.see("Found across the repository");

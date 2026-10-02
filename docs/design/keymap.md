@@ -394,7 +394,7 @@ config.
 | `:reload` | reload the note from disk |
 | `:reindex` | reindex the vault |
 | `:vaults` | the vaults this machine knows: pick one to switch to |
-| `:init` | make this loose folder (or its git repository) a vault |
+| `:init` | make this loose folder a vault |
 | `:delete` | delete the note to the vault's trash (asks first) |
 | `:trash` | the trash: `enter` restores an item |
 | `:config` | reload the configuration |
@@ -434,7 +434,7 @@ source first.
 | delete the note to the vault's trash, after asking (`:delete`) | `space n d` |
 | a copy of the note beside it (`name-copy`), opened | `space n shift+y` |
 | the trash: what was deleted, `enter` restores (`:trash`) | `space v t` |
-| make this loose folder (or its git repository) a vault (`:init`), or in a vault a folder of it | `space v m` |
+| make this loose folder a vault (`:init`), or in a vault a folder of it | `space v m` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |

@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, SymbolInformation, TextEdit, WorkspaceEdit, WorkspaceSymbol } from "vscode-languageserver-protocol";
 import { blockLine, landingText } from "../core/landing.ts";
 import { join, posix, relative } from "node:path";
-import { findVaultRoot, gitRootOf, isInside, isNeverRoot } from "../core/vault.ts";
+import { findVaultRoot, isInside, isNeverRoot } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
@@ -1642,9 +1642,9 @@ export function registerActions(app: App): void {
     "vault.init": (a) => {
       // In a vault: the explorer's selected folder (or this note's) a vault of its own (18.11).
       if (a.loc.mode === "vault") return a.makeVaultHere();
-      const dir = gitRootOf(a.loc.root) ?? a.loc.root;
+      const dir = a.loc.root;
       if (isNeverRoot(dir)) return a.message("warn", `${dir} can't be a vault: slipbox never indexes all of it`);
-      a.vaultChoices(dir, false);
+      a.vaultChoices(dir);
     },
     "note.rename": (a, arg) => {
       const t = a.noteTarget();
