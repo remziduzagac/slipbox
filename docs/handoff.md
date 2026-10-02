@@ -6,8 +6,9 @@ Read this, then `docs/idea.md`, then `docs/plan.md`, then `docs/design/` for how
 
 ## What you are building
 
-A terminal markdown notes app: **Obsidian's model without the GUI, with agent integration as
-the distinguishing feature.** Not a markdown previewer with extras.
+A terminal markdown notes app: **a shared workspace for humans and agents over plain files** — the same files,
+links and answers for a person in the TUI and an agent on the CLI. Not a markdown previewer with extras, and not
+Obsidian without the GUI (reframed 2026-10-02; `docs/idea.md`, "What it is").
 
 It exists because markdown notes are central to working with AI agents, Obsidian needs a GUI
 and most of its features aren't wanted, and nvim's markdown rendering was the specific
@@ -32,6 +33,12 @@ with a preview (`7.1`–`7.3`).
 Next in phase 4: the rest of `1.x`, search (`6.x`), embeds. Still open: `7.4` (rename undo); `4.9`
 (incremental reparse) moved to `15.1`, now mostly done (a note re-parses by chunk); `5.9` (a `HEAD`
 change as a branch switch) and the lint surface (markdownlint-cli2) are not built.
+
+**Updated 2026-10-02.** Built since: search (`6.x`), the lint surface (`3.21`), a branch switch as one event (`5.9`),
+and phase 5's LSP face (`11.x`) and code intelligence (`19.x`: language servers and linters for code). Left in phase
+5: `16.18`–`16.23`. **Decided the same day, next:** plain paths and virtual vaults (`20.x`; `docs/idea.md`, "Plain
+paths, virtual vaults") — links become plain paths, vaults are derived from `.slipbox/` and git instead of managed,
+the home vault and the LSP face go. Until it's built, the vault paragraph above is how the code works.
 
 ## The documents
 

@@ -9,8 +9,10 @@ This document is the *what and why*. The work breakdown and the phasing are in
 
 ## What it is
 
-A terminal markdown notes app: Obsidian's model without the GUI, with agent communication as
-the distinguishing feature. Not a markdown previewer with extras.
+A terminal markdown notes app: **a shared workspace for humans and agents over plain files.** A person in the
+TUI and an agent on the CLI see the same files, the same links and the same answers, and a feature earns its place by
+how well it serves that shared work. Not a markdown previewer with extras, and not Obsidian without the GUI — though
+"Obsidian's model without the GUI" was where it started (reframed 2026-10-02).
 
 The motivating problem: markdown notes are central to working with AI agents, Obsidian needs a
 GUI and most of its features aren't wanted, and nvim's markdown rendering is the thing that
@@ -554,9 +556,9 @@ belongs to the home vault), slipbox offers to make a git repository a vault, and
 
 ## Vaults — decided 2026-09-30
 
-*Revised 2026-10-02 (decisions.md `17.20`): a folder is enough. Its scope — the files links, search and the watcher
-cover — needs no `.slipbox/`; settings and identity (an id, a name for `[[name:note]]`) are layers `slipbox init`
-adds, and opening a folder writes nothing. The home vault's role passes to each folder's own scope.*
+*Superseded 2026-10-02 by "Plain paths, virtual vaults" below: links are plain paths, vaults are derived from
+`.slipbox/` and git rather than managed, and there's no home vault. (An earlier revision the same day, "a folder is
+enough", decisions.md `17.20`, is superseded with it.) Kept as the record of how the vaults were built until then.*
 
 The worry that started this: Obsidian locks you into its vaults — you create one before you can
 work, and a markdown file outside it is out of reach. slipbox should open any folder or file, and
@@ -751,6 +753,152 @@ personal data ever has to travel with a folder, or be visible beside it.
 - **A rename journal** — move detection covers it, and also catches moves made outside slipbox.
 - **Rewriting other vaults' files at rename time without asking** — only with the preview.
 - **`.slipbox.local/`** — see above.
+
+## Plain paths, virtual vaults — decided 2026-10-02
+
+Decided with the user over a long discussion; not built yet (plan `20.x`). It replaces "Vaults — decided
+2026-09-30" above. The aim: open any file or folder and work — nothing to set up, no vault to manage, no wondering
+whether a link will resolve.
+
+### Principles
+
+1. **Files are the truth.** Nothing derived or personal is written into the user's folders.
+2. **Links are plain paths.** A link means the same everywhere — to slipbox, GitHub, other editors and agents.
+3. **Vaults are virtual.** They're derived from what's on disk (`.git`, `.slipbox/`), live in the index and on
+   screen, and are never managed.
+4. **The index is a cache.** It makes slipbox fast and gives backlinks; it never decides where a link points, and
+   deleting it loses nothing.
+5. **Nothing is rewritten silently.** An edit to a file is shown and confirmed first.
+
+### Links
+
+- **Forms:** relative to the file (the form slipbox writes), `~/…`, absolute (a leading `/` is the filesystem's root),
+  `file://` URLs. Any valid path: another repository, an external drive, `/tmp`.
+- **A link resolves without the index:** its target exists or it doesn't. A missing target is a broken link — one that
+  leaves a repository too, where its target is missing (a clone, CI).
+- **Wikilinks (`[[…]]`) aren't read:** plain text, no link, backlink or rename, until a compatibility layer for
+  Obsidian-style tools is designed. A one-time **converter** rewrites them as path links, by the resolution rules of
+  the time: alias as the link text, heading as a `#fragment` (`[[plan#Aims|the aims]]` →
+  `[the aims](docs/plan.md#aims)`); previewed before anything is written; ambiguous ones listed to pick, missing ones
+  left as text and reported. A CLI command, with the same preview in the TUI.
+
+### Virtual vaults
+
+Which vault a file belongs to is decided by where the file is, nothing else:
+
+| Order | Vault | Made by |
+| --- | --- | --- |
+| 1 | the nearest folder with `.slipbox/` | the user, deliberately (optional) |
+| 2 | its git checkout | git — nothing to do |
+| 3 | none: a loose file | — |
+
+- **An explicit vault** (`.slipbox/`) gives a folder a name and settings that travel with it through version
+  control; its stable id is written once, when it's made. A `.slipbox/` inside a repository makes that folder a vault
+  of its own.
+- **A git vault** needs nothing: its stable id comes from git — the remote, else the first commit. Nested repositories
+  and submodules are vaults of their own.
+- **Loose files** have no vault; they're known by their absolute path.
+- **Copies are separate vaults:** a worktree or a second clone is another folder, another instance. A worktree is named
+  by its branch: `pathfinder@refactor`.
+- **Display names** are as short as they can be and unique on this machine — usually the repository's or the folder's
+  name; a collision is qualified with `.` (`work.docs`, `home.docs`), never `/`. `:` separates a vault from a path.
+- **The index keeps a table of the vaults it knows** — id to where it is now — rebuilt from disk: how a moved vault is
+  recognised.
+- **A vault's name is never written into a file.** `vault:path` is on screen, in completion and in the CLI only.
+
+### The index
+
+- **Everything under the home folder**, walked in the background (the file opened shows at once). Always skipped:
+  `.git`, `node_modules`, `.venv`/`venv`, `__pycache__` and the like, `~/Library` on macOS, and what the user
+  excludes. **Git-ignored files and hidden folders** aren't walked, but are indexed when needed — a link from an
+  indexed file points into them, or the user opens a file or folder there (local notes in a project's ignored `tmp/`)
+  — and stay indexed after. **Places outside the home folder** (drives, `/tmp`) are indexed when opened or linked to;
+  an unplugged drive's entries are kept, its links broken until it's back.
+- **Per file:** its outgoing links, headings and tags, and a content hash; keyed by vault id and the path within the
+  vault, a loose file by its absolute path. Parsed results are shared by content, so a branch switch back or another
+  worktree costs almost nothing.
+- **Backlinks are derived** from every indexed link, never stored in files: complete for what's indexed. Indexing more
+  only adds backlinks; it never changes where a link points.
+- **Kept current:** the folders open are watched; any other is re-checked by modification time when next touched —
+  opened, linked to, searched.
+
+### What's shown
+
+- **Source mode** shows the original paths. **Rendered text** — the rendered view, the lens's rendered blocks — shows a
+  link's text; a link with none shows its vault form, `research:algorithms/dijkstra.md`. A link within its own vault
+  has no prefix (`docs/plan.md`); only one crossing vaults has. A key in normal mode (the lens and source) shows the
+  original paths wherever they're replaced.
+- **Completion** offers the vault form and the full path; picking one writes the right relative path.
+- **Backlinks, hover, search results and link pickers** use the vault form.
+- **The status line** shows the vault and its branch, `pathfinder · main`; a worktree, `pathfinder@refactor`.
+- **The explorer has roots:** the vault opened (or a loose file's folder); a vault a link was followed into, added
+  beside it rather than replacing the tree; worktrees under their repository's root. **Roots never overlap** — a
+  broader one takes in a narrower one (its folders kept open), a narrower one is never added (the tree reveals the
+  file), a vault inside a root is a folder with a vault icon — so a file shows once. A root added by following a link
+  goes when the last file open from it closes, unless pinned; the main root and pinned ones are kept with the session.
+
+### Search
+
+Ranked by how near a vault is, by links: **the current vault**, then **linked vaults** (linked to or from the current
+one) under a divider, then **everything indexed** only when widened with a key. The CLI takes `--scope
+vault|linked|all`, `vault` by default, so an agent's results are predictable.
+
+### Changes and repairs
+
+- **Changes made elsewhere** — an editor, an agent, git, a file manager — the index repairs by itself, moves found by
+  content hash or git's renames.
+- **A repair that needs files edited is asked for:** each broken link with the target found, fixed in one step —
+  previewed, an undo step per file. A **moved vault** is exact: the index knows the link aimed at `research:…`, and
+  where `research` is now.
+- **A rename or move in slipbox** rewrites exactly the files linking in (from backlinks) and the moved file's own
+  relative links: previewed, an undo step per file, files no window shows saved. Links from places not indexed yet
+  can't be: they show broken once indexed, and the same repair applies.
+
+### Git
+
+Git adds to vaults; it doesn't bound them.
+
+- **A branch switch** is one event: changed files read again, unchanged ones from the cache, unsaved edits kept.
+- **A worktree** is a vault instance of its own — its index entries and state — sharing parsed results by content;
+  "this note in another worktree" is a path lookup.
+- **Before a merge,** both branches' links, read from git without a checkout, compared: the links the merge would break
+  ("`refactor` moves `docs/plan.md`; `main` has a new link to it in `docs/b.md`") — in review for people, from the CLI
+  for agents. Git can't see this: the two branches changed different files, so it merges cleanly.
+- **After a merge or a pull,** `HEAD` moved: git's renames between the old and new `HEAD`, and each link broken by the
+  change that points at a renamed file shown as "moved to …" with the one-step fix — in the TUI and the CLI; an
+  optional `post-merge` hook can run it. Git pairs a move by similarity: a file also rewritten in the same change may
+  not be paired, and then the target is the user's to pick.
+
+### Humans and agents
+
+- **One answer everywhere:** the TUI and the CLI on the same index.
+- **The CLI takes and gives `vault:path`** as well as paths: an agent asks for a link to
+  `research:algorithms/dijkstra.md` and slipbox writes the relative path. Diagnostics, backlinks, scoped search, a
+  branch's link review, the link fix.
+- **The LSP face goes** (`slipbox lsp`, serving notes to other apps): with paths, editors' own markdown servers follow
+  links and find references, a move made in an editor is repaired from the watcher, and agents have the CLI. **The
+  client stays:** language servers for code in the TUI (`19.x`); a markdown server can be added in the config.
+- **The usual setup:** an agent works in its own worktree on its own branch; the user reviews its changes in slipbox,
+  their effect on links included, before merging.
+
+### Settings and storage
+
+- **Settings, deeper over broader:** the nearest `.slipbox/config.toml`, then outer ones, then
+  `~/.config/slipbox/config.toml`. A key that names a program to run (a linter, an editor) comes from the user's own
+  config only: cloning a repository never chooses what runs.
+- **Index** in `~/.cache/slipbox/` (deletable). **Personal state** — reading positions, sessions, the scratch — in
+  `~/.local/state/slipbox/`, keyed by vault id and path: it survives a vault's move or re-clone; a loose file's, keyed
+  by its absolute path, starts fresh when moved.
+
+### What changes from the vaults of 2026-09-30
+
+- **Gone:** managing vaults, the "make this a vault?" prompt, the home vault, vault names written into files
+  (`[[vault:note]]` becomes the virtual `vault:path`), wikilinks and resolving by name (until the compatibility
+  layer), the LSP face.
+- **Kept and reused:** `.slipbox/` (optional now), the index and its cache, backlinks, the rename and move engine, move
+  detection, the branch switch, worktrees apart, review diffs, the CLI, the client for code.
+- **New:** the vault table and the `vault:path` form, an index beyond one folder, the explorer's roots, search by
+  linked vaults, the link review before a merge and the fix after.
 
 ## Effort
 

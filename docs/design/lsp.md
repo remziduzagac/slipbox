@@ -1,5 +1,8 @@
 # The LSP face
 
+*To be removed (plan `20.18`, decided 2026-10-02; `docs/idea.md`, "Plain paths, virtual vaults"): with plain paths,
+editors' own servers follow links. The second half of this page — the client for code, `19.x` — stays.*
+
 `slipbox lsp` serves vaults to an editor over the Language Server Protocol (plan `11.x`; why, in the plan's "Phase 5
 decided 2026-10-01"): nvim, or any editor, gets slipbox's graph — the same core the TUI and the CLI answer from. Later
 this document also covers slipbox's own client for code languages (`19.x`), below.

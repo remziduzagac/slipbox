@@ -42,6 +42,7 @@ cited, not to imply an order.
 | **3b** | Files beyond markdown | all of `16.x` | Any text file opens; data files render; code has an outline |
 | **4** | Vault and structure | `17.x`, rest of `1.x`, `6.x`, `7.1`, embeds | Backlinks and search on a real vault |
 | **5** | LSP, code intelligence | `11.x`, `19.x`, `16.18`–`16.23` | nvim gets slipbox's graph; slipbox the servers' |
+| **5b** | Plain paths, virtual vaults | `20.x` | Open any file or folder and work: paths, derived vaults |
 | **6+** | Export, images, extensibility | `10.x`, `12.x`, `13.x` | — |
 
 `14.x` distribution is not a phase. It lands whenever the thing first needs to run on a VM,
@@ -52,6 +53,11 @@ probably during phase 2.
 **Phase 3b comes before the vault (decided 2026-09-29).** Viewing and editing come first: the
 review work slipbox serves — reading what agents produced, configs and code as much as notes — needs
 every text file to open well before the vault grows broader concepts.
+
+**Phase 5b is next (decided 2026-10-02).** Plain paths and virtual vaults (`docs/idea.md`, "Plain paths, virtual
+vaults") change what a link is and what a vault is; the rest of phase 5 (`16.18`–`16.23`) waits, since it doesn't
+depend on either. The LSP face phase 5 built (`11.x`) is removed in it: with plain paths, editors' own servers follow
+the links, and agents have the CLI.
 
 **Phase 1 is rendering because it de-risks the premise.** If the rendering is not better than
 leaf's, nothing after it matters. It is also self-contained — parse, layout, theme — and needs
@@ -530,7 +536,8 @@ common, and the only reason they are step 0.
 
 ## LSP face — `11.x`
 
-*Phase 5.*
+*Phase 5. To be removed in phase 5b (`20.18`, decided 2026-10-02): with plain paths, editors' own servers follow the
+links, and agents use the CLI.*
 
 | ID | Item |
 | --- | --- |
@@ -577,6 +584,37 @@ source shown alike in every mode.*
 | 19.20 | **Done.** Server settings from a project's `.vscode/settings.json`, over the config's, as VS Code does |
 | 19.21 | **Done.** markdownlint-cli2 found as a server is, else from the private install, rather than `npx` |
 | 19.22 | **Done.** CLI: `slipbox diagnostics <file>` — servers' and linters' findings, `--json`, for agents, scripts |
+
+## Plain paths, virtual vaults — `20.x` (phase 5b)
+
+*The design, and why, is `docs/idea.md`, "Plain paths, virtual vaults" (decided 2026-10-02). In order: the converter
+first, while today's resolution still exists to convert with; then vaults and the index; links, display and search
+on them; repairs, renames and git; the CLI, settings and state; the removals last.*
+
+| ID | Item |
+| --- | --- |
+| 20.1 | The converter: `[[…]]` rewritten as path links by today's rules, previewed; CLI and TUI; the demo vault |
+| 20.2 | Virtual vaults: the nearest `.slipbox/`, else the git checkout, else none; ids, short names, the vault table |
+| 20.3 | The index everywhere: the home folder in the background, skips; ignored and hidden files when needed |
+| 20.4 | Entries keyed by vault id and path (a loose file by its absolute path); parses shared by content hash |
+| 20.5 | Links are paths only: `[[…]]` no longer read; backlinks from every indexed file |
+| 20.6 | The `vault:path` form: link without text, hover, backlinks, pickers, results; the original paths on a key |
+| 20.7 | Completion offers `vault:path` and the full path, and writes the relative path |
+| 20.8 | The status line: the vault and its branch (`pathfinder · main`), a worktree as `pathfinder@refactor` |
+| 20.9 | The explorer's roots: the vault opened, vaults followed into, worktrees under theirs; roots never overlap |
+| 20.10 | Search by vault: the current one, then linked ones, then everything on a key; the CLI's `--scope` |
+| 20.11 | Repairs: changes made elsewhere fix the index; link fixes asked for, previewed; a moved vault's exactly |
+| 20.12 | Renames and moves on paths: the files linking in, and the moved file's own relative links |
+| 20.13 | Git: the links a merge would break, from both branches' objects; after one, fixes from git's renames |
+| 20.14 | The CLI takes and gives `vault:path`: diagnostics, backlinks, scoped search, link review, the link fix |
+| 20.15 | Settings: the nearest `.slipbox/config.toml`, then outer ones, then the user's; programs from the user's |
+| 20.16 | State keyed by vault id and path, a loose file's by its absolute path; today's state moved over once |
+| 20.17 | Removed: the home vault, the vault prompt, `[[vault:note]]`, resolving by name, the vault registry as is |
+| 20.18 | Removed: the LSP face (`slipbox lsp`, `src/lsp/`, `[lsp] lint`, the nvim setup); the client for code stays |
+
+`20.1` comes first because it needs today's resolution, which `20.5` and `20.17` remove. `20.11`–`20.13` reuse
+today's rename and move engine (`7.1`–`7.3`, `17.12`, `17.15`) on paths. Each item ends with its tests listed for the
+user's approval before any is run.
 
 ## Images — `12.x`
 
@@ -698,15 +736,14 @@ links across vaults, then the TUI, then renames.*
 | 17.17 | **Done.** Nested vaults known to each other unopened; paths into them; the demo vault holds two, to test |
 | 17.18 | **Done.** Every vault has `.slipbox/` with id and name; a git repository is offered, not assumed |
 | 17.19 | **Done.** Git worktrees: separate vaults of one repository, told apart from `.git`; the branch shown |
-| 17.20 | Scope, settings and identity apart (one root context): discovery only reads; `init` writes an identity |
-| 17.21 | Any folder fully working: recursive walk, cache, search index, watcher, moves, git; `--root` with no marker |
-| 17.22 | One scope rule for the CLI, the TUI and the LSP face; the scope shown; the LSP serves workspace folders |
-| 17.23 | Identity optional: `init` names a folder, its state follows; home-vault state moved; recent folders apart |
-| 17.24 | The worktree picker opens the matching folder in another worktree, `.slipbox/` there or not |
+| 17.20 | **Superseded** by `20.x` (2026-10-02, the same day, before it was built) |
+| 17.21 | **Superseded** by `20.x` (2026-10-02, the same day, before it was built) |
+| 17.22 | **Superseded** by `20.x` (2026-10-02, the same day, before it was built) |
+| 17.23 | **Superseded** by `20.x` (2026-10-02, the same day, before it was built) |
+| 17.24 | **Superseded** by `20.x` (2026-10-02, the same day, before it was built) |
 
-`17.20`–`17.24` (decided 2026-10-02, decisions.md `17.20`) revise `17.18` and `17.2`: a folder is enough for
-everything but `[[name:note]]` and state that survives a move, which an identity adds. In order: `17.21` (most of the
-benefit, the names kept as they are), then `17.22` and `17.24`, then `17.20` and `17.23`.
+`17.20`–`17.24` (decided 2026-10-02 morning, decisions.md `17.20`) made a folder enough: a scope without a marker,
+identity optional. Superseded the same day by `20.x`, which goes further — links are paths and vaults derived.
 
 `17.18` revised `17.1` (2026-09-30): a git repository without `.slipbox/` was a root of its own;
 now every vault has a `.slipbox/` — one model, no fallbacks — and a repository is offered: made a

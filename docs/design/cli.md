@@ -461,6 +461,8 @@ status}]}`, each source `server` (`answered`, `silent`), `linter` (`ran`, `not a
 
 ## `slipbox lsp` (plan `11.x`)
 
+*To be removed with the LSP face (plan `20.18`, decided 2026-10-02).*
+
 Not a command like the others: it serves vaults to an editor over LSP on stdio until the editor ends the session, and
 nothing but the protocol reaches stdout. It takes `--config <file>` (and ignores `--stdio` and `--clientProcessId`,
 which editors pass by habit); any other argument is exit 2. What it serves, and how, is [lsp.md](lsp.md).

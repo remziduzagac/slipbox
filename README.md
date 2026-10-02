@@ -1,9 +1,8 @@
 # slipbox
 
-A terminal markdown notes app: Obsidian's model without the GUI, with agent integration as the
-distinguishing feature. It reads a vault of markdown notes, renders them properly (tables that
-fit, highlighted code, themes), follows `[[wikilinks]]`, and reloads the instant an agent rewrites
-a note. Every state change is also reachable from a CLI that agents drive.
+A terminal markdown notes app: a shared workspace for humans and agents over plain files. It reads a vault of
+markdown notes, renders them properly (tables that fit, highlighted code, themes), follows `[[wikilinks]]`, and
+reloads the instant an agent rewrites a note. Every state change is also reachable from a CLI that agents drive.
 
 Status: **phases 0–3** — rendering (leaf parity), a TUI that reads and edits (source mode, vim-shaped
 editing, the lens, autosave and a conflict prompt), and an agent-drivable CLI. See
