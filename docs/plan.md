@@ -593,7 +593,7 @@ the merge review after; the removals as their replacements land, the sweep last.
 
 | ID | Item |
 | --- | --- |
-| 20.1 | The converter: `[[…]]` and `/…` links rewritten as relative paths, labels kept, fragments checked; previewed |
+| 20.1 | **Done.** The converter: `[[…]]` and `/…` links as relative paths, labels kept, fragments checked; previewed |
 | 20.2 | Links are paths only: `[[…]]` not read; `/` the filesystem's root; a broken link stays so until repaired |
 | 20.3 | Vault boundaries: the nearest `.slipbox/` or git checkout; both in one folder, one vault; nested ones apart |
 | 20.4 | Collections apart from instances: local instance ids; remotes and first commits as evidence; plain folders |

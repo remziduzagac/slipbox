@@ -131,9 +131,10 @@ function blockOf(tree: Root, id: string): RootContent[] | null {
  * from where it is. Null for a picture or any file that isn't a note: those stay references.
  */
 export function embedder(g: Graph, fromRel: string): RenderOptions["embed"] {
-  return (target, heading, block) => {
+  return (target, heading, block, kind = "embed") => {
     if (!target) return null;
-    const r = g.resolveLink({ kind: "embed", target }, fromRel);
+    // A path's (`![…](note.md)`, 20.1) from the note's folder; a wikilink's by its name.
+    const r = g.resolveLink({ kind, target }, fromRel);
     if (r.resolvedKind !== "note" || !r.path) return null;
     const abs = isAbsolute(r.path) ? r.path : g.abs(r.path);
     if (!/\.(md|markdown)$/i.test(abs)) return null;
@@ -144,9 +145,11 @@ export function embedder(g: Graph, fromRel: string): RenderOptions["embed"] {
     const there = isAbsolute(r.path) ? (g.reach?.graphAt(findVaultRoot(abs) ?? dirname(abs)) ?? null) : g;
     const rel = there ? relative(there.root, abs) : null;
     const nodes = heading ? sectionOf(parsed.tree, heading) : block ? blockOf(parsed.tree, block) : parsed.tree.children.filter((n) => n.type !== "yaml" && (n.type as string) !== "toml");
+    // A heading named by its slug (a path's fragment) is titled as it's written.
+    const shown = heading && nodes?.[0]?.type === "heading" ? headingText(nodes[0]) : heading;
     return {
       path: abs,
-      title: heading ? `${name} › ${heading}` : block ? `${name} ^${block}` : name,
+      title: heading ? `${name} › ${shown}` : block ? `${name} ^${block}` : name,
       nodes,
       ...(nodes ? {} : { missing: heading ? `no heading "${heading}" in ${name}` : `no block ^${block} in ${name}` }),
       resolveLink: there && rel ? linkResolver(there, rel) : undefined,

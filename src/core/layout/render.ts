@@ -26,10 +26,11 @@ export interface RenderOptions {
   /** Link status for styling; without it every wikilink renders as resolved. */
   resolveLink?: (kind: "wiki" | "embed" | "markdown" | "image", target: string) => LinkStatus;
   /**
-   * What an embed (`![[note]]`, `![[note#Heading]]`, `![[note#^block]]`) shows, to draw it in place
-   * (1.11); null where it isn't a note (a picture, a file, nothing): then it's a reference.
+   * What an embed (`![[note]]`, `![[note#Heading]]`, `![[note#^block]]`; or written as a path,
+   * `![text](note.md#heading)`, kind `image`, 20.1) shows, to draw it in place (1.11); null where it
+   * isn't a note (a picture, a file, nothing): then it's a reference.
    */
-  embed?: (target: string, heading: string | null, block: string | null) => Embedded | null;
+  embed?: (target: string, heading: string | null, block: string | null, kind?: "embed" | "image") => Embedded | null;
   /** The note being drawn (absolute): an embed of it, however deep, is a loop. */
   embedFrom?: string;
 }
@@ -367,20 +368,49 @@ function paragraph(children: PhrasingContent[], src: number, ctx: Ctx, width: nu
  */
 function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: number, base: Style): Line[] | null {
   if (!ctx.opts.embed) return null;
-  const embeds: WikiLink[] = [];
+  const embeds: EmbedRef[] = [];
   for (const c of children) {
-    if ((c.type as string) === "wikiLink" && (c as unknown as WikiLink).embed) embeds.push(c as unknown as WikiLink);
+    if ((c.type as string) === "wikiLink" && (c as unknown as WikiLink).embed) {
+      const w = c as unknown as WikiLink;
+      embeds.push({ kind: "embed", target: w.target, heading: w.heading, block: w.block, link: w.target, node: c });
+    } else if (c.type === "image" && NOTE_URL.test(c.url.split("#")[0]!)) embeds.push({ kind: "image", ...urlParts(c.url), link: c.url, node: c });
+    else if (c.type === "image") embeds.push({ kind: "image", target: "", heading: null, block: null, link: c.url, node: c });
     else if (!(c.type === "break" || (c.type === "text" && !c.value.trim()))) return null;
   }
-  const found = embeds.map((w) => ({ w, e: ctx.opts.embed!(w.target, w.heading, w.block) }));
+  const found = embeds.map((r) => ({ r, e: r.target ? ctx.opts.embed!(r.target, r.heading, r.block, r.kind) : null }));
   if (!found.some((f) => f.e)) return null;
   const out: Line[] = [];
-  for (const { w, e } of found) {
-    const at = (w as unknown as { position?: { start: { line: number } } }).position?.start.line ?? src;
-    if (e) out.push(...embedFrame(w, e, at, ctx, width));
-    else out.push(...wrapSpans(inline([w as unknown as PhrasingContent], ctx, base, at), width).map((row) => ({ spans: row, src: at })));
+  for (const { r, e } of found) {
+    const at = (r.node as unknown as { position?: { start: { line: number } } }).position?.start.line ?? src;
+    if (e) out.push(...embedFrame(r, e, at, ctx, width));
+    else out.push(...wrapSpans(inline([r.node], ctx, base, at), width).map((row) => ({ spans: row, src: at })));
   }
   return out;
+}
+
+/** An embed as written: a wikilink's (`![[…]]`), or a path's (`![…](note.md)`, 20.1). */
+interface EmbedRef {
+  kind: "embed" | "image";
+  target: string;
+  heading: string | null;
+  block: string | null;
+  /** What its header links to: a wikilink's target, a path's whole URL (its fragment followed too). */
+  link: string;
+  node: PhrasingContent;
+}
+
+/** A URL that names a note: an image-syntax link to it embeds it. */
+const NOTE_URL = /\.(md|markdown)$/i;
+
+/** An image URL's path and its fragment: `#^id` a block, any other a heading. */
+function urlParts(url: string): { target: string; heading: string | null; block: string | null } {
+  const hash = url.indexOf("#");
+  const target = hash >= 0 ? url.slice(0, hash) : url;
+  let frag = hash >= 0 ? url.slice(hash + 1) : "";
+  try {
+    frag = decodeURIComponent(frag);
+  } catch {}
+  return { target, heading: frag && !frag.startsWith("^") ? frag : null, block: frag.startsWith("^") ? frag.slice(1) : null };
 }
 
 /**
@@ -388,9 +418,9 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
  * read-only. Every row is at the embed's own line — the anchors and the cursor know only the note
  * shown — and its headings stay out of that note's outline. Loops and depth are capped, said so.
  */
-function embedFrame(w: WikiLink, e: Embedded, src: number, ctx: Ctx, width: number): Line[] {
+function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: number): Line[] {
   const g = ctx.opts.glyphs;
-  const id = addLink(ctx, { kind: "embed", target: w.target, heading: w.heading, text: e.title, status: "resolved", src });
+  const id = addLink(ctx, { kind: w.kind, target: w.link, heading: w.heading, text: e.title, status: "resolved", src });
   const head = wrapSpans([{ text: `${g.embed} `, role: "embed", attrs: 0, link: id }, { text: sanitize(e.title), role: "embed", attrs: A_BOLD, link: id }], width).map((row) => ({ spans: row, src }));
   const note = (text: string): Line[] => [{ spans: [{ text, role: "dim", attrs: A_ITALIC }], src }];
   let body: Line[];

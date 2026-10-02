@@ -1,0 +1,207 @@
+// The converter (plan 20.1; docs/idea.md, "Plain paths, virtual vaults"): a vault's links made plain
+// paths, once, by the resolution rules they were written for — before those rules go (20.2). Each
+// `[[…]]` becomes a relative markdown link (`![[…]]` an image-syntax one, which embeds a note as
+// before), its text kept and its heading a fragment that's checked to exist; each `/…` markdown link,
+// which meant the vault's root and would mean the filesystem's, becomes relative. A plan like a
+// rename's: previewed, then written with every file as it was planned from, and undone the same way.
+// A link it can't decide is left as written and said why; one several notes answer to, for a pick.
+
+import { existsSync } from "node:fs";
+import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
+import type { Graph, ResolvedLink } from "./graph.ts";
+import { blockLine } from "./landing.ts";
+import { slugify } from "./parse.ts";
+import { type Ambiguous, Collector, dirtyTrees, type RenamePlan } from "./rename.ts";
+import { parseWikiTarget } from "./wikilink.ts";
+
+/** A wikilink as written: `!`, then `[[target#heading|alias]]`. */
+const WIKI = /(!?)\[\[([^\]\n]*?)\]\]/g;
+
+/** A path as a markdown link's URL: what would break it (a space, a parenthesis, `#`, `%`…) percent-encoded, the rest as it is. */
+function urlPath(p: string): string {
+  return p.replace(/[\s%()<>#?[\]\\]/gu, (c) => encodeURIComponent(c));
+}
+
+/** Link text: brackets escaped, so the text can't end the link early. */
+function linkText(t: string): string {
+  return t.replace(/([[\]])/g, "\\$1");
+}
+
+/** One replacement on a line: where it starts and ends in the line as read, and what goes there. */
+interface Job {
+  /** Finds its span in the line's text; null when the link isn't there any more. */
+  locate: (line: string) => { from: number; to: number } | null;
+  text: string;
+  /** Said when it can't be made. */
+  shown: string;
+  line: number;
+}
+
+/** The match nearest a column (0-based), among the line's matches of `re` that `keep` accepts. */
+function nearest(line: string, re: RegExp, col: number, keep: (m: RegExpMatchArray) => boolean): RegExpMatchArray | null {
+  const hits = [...line.matchAll(re)].filter(keep);
+  hits.sort((a, b) => Math.abs(a.index! - col) - Math.abs(b.index! - col));
+  return hits[0] ?? null;
+}
+
+/**
+ * Plan converting the links of `rels` (vault-relative notes; every note when absent) to plain
+ * paths. `picks` names a target (vault-relative) for an ambiguous wikilink, by its `rel:line:column`.
+ */
+export function planConvert(g: Graph, rels?: string[], picks: Map<string, string> = new Map()): RenamePlan {
+  g.ensureAll();
+  const c = new Collector(g);
+  const ambiguous: Ambiguous[] = [];
+  const notes = rels ?? [...g.notes.keys()].sort();
+  for (const rel of notes) {
+    const abs = join(g.root, rel);
+    const jobs = new Map<number, Job[]>();
+    const add = (j: Job) => jobs.set(j.line, [...(jobs.get(j.line) ?? []), j]);
+    const skip = (l: ResolvedLink, reason: string) => c.skipped.push({ shown: rel, line: l.line, reason });
+    for (const l of g.linksOf(rel)) {
+      const wiki = l.kind === "wiki" || l.kind === "embed";
+      if (!wiki && !((l.kind === "markdown" || l.kind === "image") && l.target.startsWith("/") && !l.target.startsWith("//"))) continue;
+      if (wiki) wikiJob(g, rel, l, picks, ambiguous, add, skip);
+      else rootJob(g, rel, l, add);
+    }
+    for (const [line, list] of jobs) {
+      c.line(
+        abs,
+        null,
+        line,
+        (before) => {
+          // Every replacement on the line found in it as it is, then made from the right, so the
+          // columns of those to their left hold.
+          const spans: { from: number; to: number; text: string }[] = [];
+          for (const j of list) {
+            const at = j.locate(before);
+            // Not there, or where another of the line's links was found (one gone since): left.
+            if (!at || spans.some((s) => at.from < s.to && s.from < at.to)) c.skipped.push({ shown: rel, line, reason: `${j.shown}: not where the index has it (the file changed since)` });
+            else spans.push({ ...at, text: j.text });
+          }
+          let after = before;
+          for (const s of spans.sort((a, b) => b.from - a.from)) after = after.slice(0, s.from) + s.text + after.slice(s.to);
+          return after;
+        },
+        "the line isn't there any more",
+      );
+    }
+  }
+  const files = c.result();
+  return {
+    kind: "convert",
+    from: rels?.join(", ") ?? "every note",
+    to: "",
+    move: null,
+    files,
+    warnings: dirtyTrees(files.map((f) => f.abs)),
+    skipped: c.skipped,
+    ambiguous,
+  };
+}
+
+/** A wikilink's replacement, when it can be made: its target as a relative path, its text kept, its fragment checked. */
+function wikiJob(g: Graph, rel: string, l: ResolvedLink, picks: Map<string, string>, ambiguous: Ambiguous[], add: (j: Job) => void, skip: (l: ResolvedLink, reason: string) => void): void {
+  const embed = l.kind === "embed";
+  const written = `${embed ? "!" : ""}[[${l.target}${l.heading ? `#${l.heading}` : ""}${l.block ? `#^${l.block}` : ""}${l.alias ? `|${l.alias}` : ""}]]`;
+  const key = `${rel}:${l.line}:${l.column}`;
+  let path: string | null = null;
+  switch (l.resolvedKind) {
+    case "note":
+    case "file":
+      path = l.path;
+      break;
+    case "anchor":
+      path = rel;
+      break;
+    case "ambiguous":
+      path = picks.get(key) ?? null;
+      if (path && !l.candidates.includes(path)) path = null;
+      if (!path) {
+        ambiguous.push({ key, shown: rel, line: l.line, written, candidates: l.candidates });
+        return;
+      }
+      break;
+    default:
+      return skip(l, `${written}: ${l.reason ?? (/\.[A-Za-z0-9]+$/.test(l.target) && !/\.(md|markdown)$/i.test(l.target) ? `no file "${l.target}"` : `no note named "${l.target}"`)} — left as it is`);
+  }
+  // The fragment: a heading as its slug, checked to be there; a block as `^id`; a line as `L12`.
+  let frag = "";
+  if (l.block) {
+    if (blockLine(g, path!, l.block) === null) return skip(l, `${written}: no block ^${l.block} there — left as it is`);
+    frag = `#^${l.block}`;
+  } else if (l.heading) {
+    if (/^L\d+$/.test(l.heading)) frag = `#${l.heading}`;
+    else if (/\.(md|markdown)$/i.test(path!)) {
+      const entry = g.entryAnywhere(path!);
+      const want = slugify(l.heading);
+      const h = entry?.headings.find((x) => x.slug === want || x.text.toLowerCase() === l.heading!.toLowerCase());
+      if (!h) return skip(l, `${written}: no heading "${l.heading}" there — left as it is`);
+      frag = `#${h.slug}`;
+    } else frag = `#${urlPath(l.heading)}`; // a PDF's page, or the like: as written
+  }
+  // The URL: the target's path from the note's folder; a link within the note, its fragment alone.
+  const abs = join(g.root, rel);
+  const targetAbs = isAbsolute(path!) ? path! : join(g.root, path!);
+  const within = l.resolvedKind === "anchor";
+  const url = within ? frag : urlPath(relative(dirname(abs), targetAbs).split(sep).join("/")) + frag;
+  if (!url) return skip(l, `${written}: nothing to point at — left as it is`);
+  // The text: the alias, else the link as it was drawn — `note › Heading`; within the note, the
+  // heading alone. A picture's size (`|300`, `|300x200`) stays in Obsidian's markdown form,
+  // `![name|300](…)`.
+  const size = embed && l.alias && /^\d+(x\d+)?$/.test(l.alias) && !/\.(md|markdown)$/i.test(targetAbs);
+  const part = l.heading ?? (l.block ? `^${l.block}` : null);
+  const shown = within ? part! : part ? `${l.target} › ${part}` : l.target;
+  const label = size ? `${posix.basename(l.target)}|${l.alias}` : (l.alias ?? shown);
+  const next = `${embed ? "!" : ""}[${linkText(label)}](${url})`;
+  add({
+    line: l.line,
+    shown: written,
+    text: next,
+    locate: (line) => {
+      // The parser's own reading of each wikilink on the line, matched against the index's.
+      const m = nearest(line, WIKI, l.column - 1, (x) => {
+        const w = parseWikiTarget(x[2]!);
+        return (x[1] === "!") === embed && w.target === l.target && w.heading === l.heading && w.block === l.block && w.alias === l.alias;
+      });
+      return m ? { from: m.index!, to: m.index! + m[0].length } : null;
+    },
+  });
+}
+
+/**
+ * A markdown link written from the vault's root (`/docs/x.md`): its URL from the note's folder
+ * instead. Only when that's what it reached — the file there under the vault's root; one that
+ * names the filesystem's own path already means what it will mean.
+ */
+function rootJob(g: Graph, rel: string, l: ResolvedLink, add: (j: Job) => void): void {
+  if ((l.resolvedKind !== "note" && l.resolvedKind !== "file") || !l.path || isAbsolute(l.path)) return;
+  const hash = l.target.indexOf("#");
+  const path = hash >= 0 ? l.target.slice(0, hash) : l.target;
+  const frag = hash >= 0 ? l.target.slice(hash) : "";
+  let decoded = path;
+  try {
+    decoded = decodeURIComponent(path);
+  } catch {}
+  if (!existsSync(join(g.root, decoded))) return;
+  const abs = join(g.root, rel);
+  const relPath = relative(dirname(abs), join(g.root, l.path)).split(sep).join("/");
+  const next = (/%[0-9A-Fa-f]{2}/.test(path) || /[\s()<>#?[\]\\]/.test(relPath) ? urlPath(relPath) : relPath) + frag;
+  add({
+    line: l.line,
+    shown: l.target,
+    text: next,
+    locate: (line) => {
+      // The URL right after a `](`, written bare or in `<…>`.
+      const re = /\]\(\s*(<[^>\n]*>|[^)\s]*)/g;
+      const m = nearest(line, re, l.column - 1, (x) => {
+        const raw = x[1]!;
+        return (raw.startsWith("<") ? raw.slice(1, -1) : raw) === l.target;
+      });
+      if (!m) return null;
+      const raw = m[1]!;
+      const from = m.index! + m[0].length - raw.length;
+      return raw.startsWith("<") ? { from: from + 1, to: from + raw.length - 1 } : { from, to: from + raw.length };
+    },
+  });
+}

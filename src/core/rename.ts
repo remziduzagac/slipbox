@@ -43,7 +43,7 @@ export interface FileChange {
 }
 
 export interface RenamePlan {
-  kind: "note" | "folder" | "vault" | "relink" | "make-vault" | "unmake-vault" | "heading";
+  kind: "note" | "folder" | "vault" | "relink" | "make-vault" | "unmake-vault" | "heading" | "convert";
   from: string;
   to: string;
   /** What moves: a file or a folder, absolute paths; null for a vault's rename or a relink. */
@@ -62,6 +62,20 @@ export interface RenamePlan {
   skipped: { shown: string; line: number; reason: string }[];
   /** A plan that undoes a rename (7.4): the rename's id in the vault's log, and when it was done. */
   undo?: { id: string; at: string; made: string | null };
+  /** Links the plan can't decide for itself (20.1: a wikilink several notes answer to): each to pick. */
+  ambiguous?: Ambiguous[];
+}
+
+/** A link with several possible targets, for the user to pick one of. */
+export interface Ambiguous {
+  /** The link's place, `rel:line:column`: what a pick names. */
+  key: string;
+  shown: string;
+  line: number;
+  /** The link as written. */
+  written: string;
+  /** Vault-relative. */
+  candidates: string[];
 }
 
 /** A link as found in a file: where, how it's written, and where it should point now. */
@@ -268,7 +282,7 @@ function shownFor(g: Graph, abs: string, vault: string | null | undefined): stri
   return `${vault ?? (root ? basename(root) : "")}: ${root ? relative(root, abs) : abs}`;
 }
 
-class Collector {
+export class Collector {
   readonly files = new Map<string, FileChange>();
   readonly skipped: RenamePlan["skipped"] = [];
 
@@ -329,7 +343,7 @@ class Collector {
 }
 
 /** Roots with uncommitted changes in git, among those the plan writes to (7.3). */
-function dirtyTrees(paths: string[]): string[] {
+export function dirtyTrees(paths: string[]): string[] {
   const roots = new Set<string>();
   for (const p of paths) {
     // git answers for any folder in the tree; the vault's root, else the file's folder, is asked.
@@ -962,7 +976,7 @@ export function planUndo(g: Graph): RenamePlan {
     if (other) throw new RenameError(`nothing to undo on ${branch ? `branch ${branch}` : "this checkout"}: the last rename was made on ${other.branch ? `branch ${other.branch}` : "a detached HEAD"}`);
     throw new RenameError("nothing to undo: no rename, move or relink has been done in this vault");
   }
-  const what = r.kind === "relink" ? "relink" : r.kind === "folder" ? `move of ${r.from}/` : r.kind === "vault" ? `vault's rename to ${r.to}` : `rename of ${r.from}`;
+  const what = r.kind === "relink" ? "relink" : r.kind === "convert" ? "conversion to path links" : r.kind === "folder" ? `move of ${r.from}/` : r.kind === "vault" ? `vault's rename to ${r.to}` : `rename of ${r.from}`;
   const files: FileChange[] = [];
   for (const f of r.files) {
     let now: string;
@@ -1076,7 +1090,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       }
     }
     if (gone.length) g.dirs = g.dirs.filter((x) => !gone.includes(x));
-  } else if (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink" || plan.kind === "heading") {
+  } else if (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink" || plan.kind === "heading" || plan.kind === "convert") {
     logRename(g.loc, {
       id: randomUUID(),
       at: new Date().toISOString(),

@@ -649,6 +649,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   rename: "note.rename",
   mv: "note.rename",
   relink: "link.relink",
+  "convert-links": "link.convert",
   context: "context.copy",
   search: "search.open",
   changes: "git.changes",

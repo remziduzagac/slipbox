@@ -1745,6 +1745,13 @@ export function registerActions(app: App): void {
       if (arg) return go(arg);
       a.prompt(`rename vault ${a.loc.name ?? a.loc.root} to: `, (t) => t.trim() && go(t));
     },
+    "link.convert": (a, arg) => {
+      // A note named: its links; else every note's.
+      if (!arg) return a.previewConvert();
+      const r = a.graph.findNote(arg, a.loc.root);
+      if (r.status !== "resolved") return a.message("warn", r.status === "ambiguous" ? `"${arg}" matches ${r.candidates.join(", ")}` : `no note "${arg}"`);
+      a.previewConvert([r.path]);
+    },
     "link.relink": (a) =>
       withView(a, (v) => {
         if (!v.buf.rel) return a.message("warn", "only this vault's notes are relinked");

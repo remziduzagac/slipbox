@@ -7842,3 +7842,31 @@ describe("the switcher's workspace symbols (19.14)", () => {
     await h.app.servers!.stopAll();
   });
 });
+
+test("the converter from the TUI (20.1): previewed; an ambiguous link's row picks its note, then it's planned again; enter writes it", async () => {
+  const root = makeVault();
+  writeFileSync(join(root, "conv.md"), "See [[beta]] and [[dup]].\n");
+  mkdirSync(join(root, "x"));
+  mkdirSync(join(root, "y"));
+  writeFileSync(join(root, "x", "dup.md"), "# X\n");
+  writeFileSync(join(root, "y", "dup.md"), "# Y\n");
+  const h = await harness({ root, open: "conv.md" });
+  h.app.graph.build(true);
+  await h.app.run("link.convert conv");
+  let o = h.app.overlay as ListOverlay;
+  expect(o.title).toStartWith("links → plain paths: 1 change in 1 file");
+  const rows = () => (h.app.overlay as ListOverlay).items.map((i) => i.label);
+  expect(rows()).toEqual(["pick conv.md:1", "conv.md:1"]);
+  // The ambiguous one: enter lists its notes; one picked, the preview comes back with it.
+  await h.keys("enter");
+  o = h.app.overlay as ListOverlay;
+  expect(o.title).toBe("[[dup]] in conv.md:1 — which note?");
+  expect(o.items.map((i) => i.label)).toEqual(["x/dup.md", "y/dup.md"]);
+  await h.keys("down", "enter");
+  expect((h.app.overlay as ListOverlay).title).toStartWith("links → plain paths: 1 change in 1 file"); // a line changed
+  expect(rows()).toEqual(["conv.md:1"]);
+  expect((h.app.overlay as ListOverlay).items[0]!.detail).toBe("See [[beta]] and [[dup]].  →  See [beta](notes/beta.md) and [dup](y/dup.md).");
+  await h.keys("enter");
+  expect(readFileSync(join(root, "conv.md"), "utf8")).toBe("See [beta](notes/beta.md) and [dup](y/dup.md).\n");
+  expect(h.app.messages.at(-1)?.text).toBe("converted links to plain paths: 1 change in 1 file");
+});

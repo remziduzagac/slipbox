@@ -64,7 +64,8 @@ import { IndexJob, indexFile, search, SearchIndex, type SearchResult } from "../
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
 import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusLater, worktreeList } from "../core/gitops.ts";
 import { diffLines, diffRows } from "../core/merge.ts";
-import { type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
+import { planConvert } from "../core/convert.ts";
+import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
@@ -6823,7 +6824,12 @@ export class App {
    * A rename's preview (7.2): every line it changes, in every vault, and the warnings (7.3); enter
    * carries it out, esc leaves everything as it was. Refused while a file it touches is unsaved.
    */
-  previewRename(make: () => RenamePlan, apply: (plan: RenamePlan) => void = (plan) => this.applyRename(plan)): void {
+  previewRename(
+    make: () => RenamePlan,
+    apply: (plan: RenamePlan) => void = (plan) => this.applyRename(plan),
+    /** Rows of the plan's own (the converter's links to pick for), and what enter on one does: true when it's theirs. */
+    extra?: (plan: RenamePlan) => { items: ListItem[]; pick: (item: ListItem) => boolean },
+  ): void {
     let plan: RenamePlan;
     try {
       plan = make();
@@ -6834,12 +6840,14 @@ export class App {
     const dirty = this.dirtyBuffers().filter((b) => touched.has(b.abs));
     if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the rename rewrites ${dirty.length === 1 ? "it" : "them"}`);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
+    const more = extra?.(plan);
     const items: ListItem[] = [
       ...plan.warnings.map((w) => ({ label: `! ${w}`, data: plan })),
+      ...(more?.items ?? []),
       ...plan.skipped.map((s) => ({ label: `skipped ${s.shown}:${s.line}`, detail: s.reason, data: plan })),
       ...plan.files.flatMap((f) => f.edits.map((e) => ({ label: `${f.shown}:${e.line}`, detail: `${e.before.trim()}  →  ${e.after.trim()}`, data: plan }))),
     ];
-    if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "every link reaches its note by its name now" : "no links to change", data: plan });
+    if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "every link reaches its note by its name now" : plan.kind === "convert" ? "nothing left to convert" : "no links to change", data: plan });
     const what =
       plan.kind === "note" || plan.kind === "heading"
         ? `${plan.from} → ${plan.to}`
@@ -6851,19 +6859,50 @@ export class App {
               ? `${plan.from}/ → the vault ${plan.to}`
               : plan.kind === "unmake-vault"
                 ? `the vault ${plan.from}/ → a folder of ${plan.to}`
-                : "relink";
+                : plan.kind === "convert"
+                  ? "links → plain paths"
+                  : "relink";
     this.openList({
       title: `${plan.undo ? "undo: " : ""}${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"} — enter: do it, esc: cancel`,
       items,
       filterable: false,
       footer: true,
-      accept: () => apply(plan),
+      accept: (item) => {
+        if (!more?.pick(item)) apply(plan);
+      },
     });
+  }
+
+  /**
+   * The converter (20.1): links made plain paths, previewed as a rename is. A link several notes
+   * answer to is a row of its own: enter picks its note, and the plan is made again with the pick.
+   */
+  previewConvert(rels?: string[], picks: Map<string, string> = new Map()): void {
+    this.previewRename(
+      () => planConvert(this.graph, rels, picks),
+      undefined,
+      (plan) => ({
+        items: (plan.ambiguous ?? []).map((a) => ({ label: `pick ${a.shown}:${a.line}`, detail: `${a.written} — ${a.candidates.length} notes answer to it: enter picks one`, data: a })),
+        pick: (item) => {
+          const a = item.data as Ambiguous | undefined;
+          if (!a || !("candidates" in a)) return false;
+          this.openList({
+            title: `${a.written} in ${a.shown}:${a.line} — which note?`,
+            items: a.candidates.map((c) => ({ label: c, data: c })),
+            accept: (it) => {
+              picks.set(a.key, it.data as string);
+              this.previewConvert(rels, picks);
+            },
+          });
+          return true;
+        },
+      }),
+    );
   }
 
   /** Carry out a previewed rename; open notes follow it (the moved one under its new path). */
   applyRename(plan: RenamePlan): void {
-    if (plan.kind === "relink" && !plan.files.length) return;
+    if ((plan.kind === "relink" || plan.kind === "convert") && !plan.files.length) return;
     let applied: Applied;
     try {
       applied = applyPlan(this.graph, plan);
@@ -6930,7 +6969,7 @@ export class App {
     if (plan.makeVault || plan.unmakeVault) this.selectInExplorer(plan.from);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     const what = plan.undo
-      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `renamed the vault ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "", heading: `renamed the heading ${plan.from} back to ${plan.to}` }[plan.kind]
+      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `renamed the vault ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "", heading: `renamed the heading ${plan.from} back to ${plan.to}`, convert: "undid the conversion to plain paths" }[plan.kind]
       : plan.kind === "note" || plan.kind === "heading"
         ? `renamed ${plan.from} → ${plan.to}`
         : plan.kind === "folder"
@@ -6941,7 +6980,9 @@ export class App {
               ? `made ${plan.from}/ the vault ${plan.to}`
               : plan.kind === "unmake-vault"
                 ? `made ${plan.from}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash)`
-                : "relinked";
+                : plan.kind === "convert"
+                  ? "converted links to plain paths"
+                  : "relinked";
     this.message("info", `${what}: ${n} change${n === 1 ? "" : "s"} in ${plan.files.length} file${plan.files.length === 1 ? "" : "s"}`);
   }
 

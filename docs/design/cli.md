@@ -97,6 +97,7 @@ These churn freely before 1.0:
 | `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
 | `vaults` | `[{key, id, kind, name, aliases, previous_names, path, seen, exists, worktree?{name, main}}]` |
 | `mv`, `rename-vault`, `rename-heading`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, …}` |
+| `convert-links` | as `mv`, kind `convert`, plus `ambiguous[]`: the links several notes answer to |
 | `undo` | as `mv`: the rename taken back (`from` and `to` the other way), plus `undo{id, at}`; exit 3: nothing |
 | `cp <note\|folder> [path]` | `{from, to, dir}` — beside it as `name-copy` without a path; exit 5 onto a file |
 | `rm <note\|folder>` | `{path, dryRun, breaking, trashed{id, abs, shown, dir, at}}` — to the vault's trash |
@@ -340,6 +341,17 @@ refused when something is there now. `slipbox cp` copies a note, file or folder,
 `previous_names`, and every `[[old:…]]` rewritten, here and in the vaults linking into it. `slipbox relink [note]`
 rewrites the links of a note (or every note) that reach their note only by a previous name or a redirect, to its name
 or path now. Both take `--dry-run`.
+
+`slipbox convert-links [note]` (plan `20.1`) makes a note's links — or every note's — plain paths, once, by today's
+resolution rules: each `[[…]]` a relative markdown link (`![[…]]` an image-syntax one, which still embeds a note),
+its alias kept as the text, else the link as it was drawn (`[[plan#Aims]]` → `[plan › Aims](docs/plan.md#aims)`); a
+heading becomes its slug, checked to be in the note, a block `#^id`, a picture's size Obsidian's markdown form
+(`![[pic.png|300]]` → `![pic.png|300](pic.png)`); and each markdown link written from the vault's root
+(`[x](/docs/x.md)`, which will mean the filesystem's root) relative. Spaces, parentheses, `#` and `%` in a path are
+percent-encoded. Left as written, each said in the warnings: a link that reaches nothing, a heading or block that
+isn't there, one not where the index has it; and a link several notes answer to, listed in `ambiguous` (`{key, shown,
+line, written, candidates[]}`) — written as a path by hand, or picked in the TUI. Wikilinks in code are text, and
+stay. `--dry-run` previews it; `undo` takes it back.
 
 `slipbox rename-heading <note> <heading> <new>` renames a heading (`11.9`) — found by its text in any case, or its
 slug — and every link to it: `[[note#Heading]]` and `![[note#Heading]]` (their `|text` kept), `[x](note.md#heading)`

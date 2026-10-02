@@ -132,6 +132,7 @@ back to slipbox's own register when it can't be read (over SSH, say). The termin
 | links from this note (list) | — | `space l l` |
 | backlinks: notes linking here (list) | — | `space l b` |
 | relink: this note's links that reach a note by an old name or a move, to its name now (`:relink`) | — | `space l r` |
+| convert every note's links to plain paths, after a preview (`:convert-links`, `20.1`) | — | — |
 
 What's under the cursor, as vim and LazyVim have it (`19.12`, `19.13`) — in code, its language server answers; in a
 note, slipbox does:

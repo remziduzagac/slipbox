@@ -64,11 +64,13 @@ tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 **Wikilinks** render as their alias, or as `target › heading`. Colour shows status: `wikilink`
 resolved, `link_unresolved` red, `link_ambiguous` orange.
 
-**Embeds** (`1.11`): a paragraph of nothing but embeds — each `![[x]]` on its line, as Obsidian writes them — draws
-each embedded note in place: a header with its name (`⧉ inner`, `⧉ note › Heading`, `⧉ note ^id`; a link to it),
-then its text behind a bar (role `embed`). `![[note]]` is the whole note but its frontmatter; `![[note#Heading]]` the
-heading and what follows, to the next heading as high; `![[note#^id]]` the block whose id that is — a paragraph's or
-a list item's, at the end of its text, or the table, quote or list on the line before a lone `^id`. Read-only:
+**Embeds** (`1.11`): a paragraph of nothing but embeds — each `![[x]]` on its line, as Obsidian writes them, or a note
+by its path, `![text](note.md)` (`#heading`, by its text or slug, or `#^id`), as the converter writes them (`20.1`) and
+Obsidian does without wikilinks — draws each embedded note in place: a header with its name (`⧉ inner`,
+`⧉ note › Heading`, `⧉ note ^id`; a link to it), then its text behind a bar (role `embed`). `![[note]]` is the whole
+note but its frontmatter; `![[note#Heading]]` the heading and what follows, to the next heading as high; `![[note#^id]]`
+the block whose id that is — a paragraph's or a list item's, at the end of its text, or the table, quote or list on the
+line before a lone `^id`. Read-only:
 
 - **Where it is.** Its rows are all at the embed's line: the note shown has the cursor, anchors and the lens; the
   embedded note's headings stay out of its outline. Its links are its own: their status, and where they lead, are

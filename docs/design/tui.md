@@ -321,11 +321,15 @@ itself.
 `space n m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already; the explorer's `r` for
 the selected note's, file's or folder's new name, `m` for a folder to move it to (18.x, below); `space v n` for the
 vault's new name; `space n h` for a new name of the heading the cursor is under (the outline's `r`, its selected
-heading's; `11.9`); `space l r` (`:relink`) relinks this note's links that reach their note by an old name or a move.
+heading's; `11.9`); `space l r` (`:relink`) relinks this note's links that reach their note by an old name or a move;
+`:convert-links` (`20.1`) makes every note's links plain paths (`:convert-links <note>`, one note's) — each link
+several notes answer to a row of its own at the top, `pick notes/x.md:3`: `enter` lists its notes, and the one
+picked comes back as part of the preview.
 Each shows its **preview** first: a list of every line it changes, in every vault
 (`notes/index.md:3  [[plan]]  →  [[roadmap]]`), with the git trees that already have changes and the links skipped at
 the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s, `rename-vault`'s,
-`rename-heading`'s and `relink`'s (`docs/design/cli.md`, "Renames"). **Refused while a file it rewrites is unsaved.**
+`rename-heading`'s, `relink`'s and `convert-links`'s (`docs/design/cli.md`, "Renames"). **Refused while a file it
+rewrites is unsaved.**
 After it, the open notes it changed are reloaded, and a window on a renamed or moved note shows it under its new
 path, its history following — every note of a moved folder alike.
 

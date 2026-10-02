@@ -365,6 +365,14 @@ describe("the vault and the tool", () => {
     ]);
     expect(n.code).toBe(0); // warnings: no error among them
   });
+  test("convert-links (20.1): the demo vault's wikilinks as paths, previewed with --dry-run; an ambiguous one said", () => {
+    const r = slipbox(["convert-links", "--dry-run", "--json"]);
+    expect(r.code).toBe(0);
+    expect(r.json.data).toMatchObject({ kind: "convert", dryRun: true });
+    expect(r.json.data.files.find((f: { path: string }) => f.path === "home.md").edits[0]).toMatchObject({ before: expect.stringContaining("[[about-this-vault]]"), after: expect.stringContaining("[about-this-vault](about-this-vault.md)") });
+    expect(r.json.data.ambiguous).toMatchObject([{ shown: "home.md", written: "[[contacts]]", candidates: ["equipment/contacts.md", "people/contacts.md"] }]);
+    expect(readFileSync(join(vault, "home.md"), "utf8")).toContain("[[about-this-vault]]"); // nothing written
+  });
   test("cp, rm, trash, and mv of a folder (18.x)", () => {
     const dir = join(sandbox, "fileops");
     mkdirSync(join(dir, "projects", "deep"), { recursive: true });
