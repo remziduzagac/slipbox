@@ -5,7 +5,7 @@
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, SymbolInformation, TextEdit, WorkspaceEdit, WorkspaceSymbol } from "vscode-languageserver-protocol";
-import { landingText } from "../core/landing.ts";
+import { blockLine, landingText } from "../core/landing.ts";
 import { join, posix, relative } from "node:path";
 import { findVaultRoot, gitRootOf, isInside, isNeverRoot } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
@@ -314,13 +314,29 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
         a.copy(link.target, false);
         return a.message("info", `copied: ${link.target}`);
       }
-      const frag = link.target.includes("#") ? decodeURIComponent(link.target.split("#")[1]!) : null;
+      // The fragment, decoded when it can be (`%zz` can't); a block's `^id` lands on its block, as
+      // the line it marks (a converted `[[note#^id]]`, 20.1), or at the top when it isn't there.
+      const raw = link.target.includes("#") ? link.target.slice(link.target.indexOf("#") + 1) : "";
+      let frag: string | null = null;
+      if (raw) {
+        try {
+          frag = decodeURIComponent(raw);
+        } catch {
+          frag = raw;
+        }
+      }
+      const at = (path: string) => {
+        if (!frag?.startsWith("^")) return frag;
+        const line = blockLine(a.graph, path, frag.slice(1));
+        return line === null ? null : `L${line}`;
+      };
       if (r.resolvedKind === "anchor") {
-        if (frag && link.from && link.from !== view.buf.rel) return go(link.from, frag);
+        const here = link.from ?? view.buf.rel;
+        if (frag && here && (here !== view.buf.rel || frag.startsWith("^"))) return go(here, at(here));
         if (frag) jumpToHeading(a, view, frag);
         return;
       }
-      if (r.resolvedKind === "note") return go(r.path!, frag);
+      if (r.resolvedKind === "note") return go(r.path!, at(r.path!));
       if (r.resolvedKind === "file") return fileLink(a, r.path!, frag, inSplit);
       return a.message("warn", `broken link: ${link.target}`);
     }

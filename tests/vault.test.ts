@@ -2351,6 +2351,7 @@ describe("the converter: links made plain paths (20.1)", () => {
     ]);
     expect(plan.skipped.map((s) => s.reason).sort()).toEqual([
       '![[gone.png]]: no file "gone.png" — left as it is',
+      "/missing.md: nothing there — left as it is",
       '[[b#No Such]]: no heading "No Such" there — left as it is',
       "[[b#^none]]: no block ^none there — left as it is",
       '[[nope]]: no note named "nope" — left as it is',
@@ -2399,6 +2400,70 @@ describe("the converter: links made plain paths (20.1)", () => {
     expect(readFileSync(join(dir, "c.md"), "utf8")).toBe("[[b]] edited\n");
   });
 
+  test("links from the root found in their own span (a shorter one first on the line; an image inside a link); reference links by their definition, once", async () => {
+    const { planConvert } = await import("../src/core/convert.ts");
+    const { g } = vault({
+      "n/a.md": [
+        "[a](/c/c.md)[a much longer text than the first link has](/c/c.md)",
+        "[![i](/c/c.md)](/c/c.md)",
+        "",
+        "[x][r] and [y][r]; [z][s].",
+        "",
+        "[r]: /c/c.md",
+        "[s]: </c/c.md#top>",
+        "",
+      ].join("\n"),
+      "c/c.md": "# C\n",
+    });
+    const plan = planConvert(g);
+    expect(plan.skipped).toEqual([]);
+    expect(plan.files[0]!.next.split("\n")).toEqual([
+      "[a](../c/c.md)[a much longer text than the first link has](../c/c.md)",
+      "[![i](../c/c.md)](../c/c.md)",
+      "",
+      "[x][r] and [y][r]; [z][s].",
+      "",
+      "[r]: ../c/c.md",
+      "[s]: <../c/c.md#top>",
+      "",
+    ]);
+  });
+
+  test("a link's text stays literal: what markdown would act on in a label is escaped; a table's | too; a heading with no slug is left", async () => {
+    const { planConvert } = await import("../src/core/convert.ts");
+    const { parseMarkdown } = await import("../src/core/parse.ts");
+    const { g } = vault({
+      "a.md": "[[b|a\\]] [[b|2*3*4]] [[b|x<y>]] [[b|`c`]] [[b|snake_case and _x_]] [[b|a & b ~ c]]\n\n| p |\n| --- |\n| ![[pic.png\\|300]] |\n\n[[e#🎉]]\n",
+      "b.md": B,
+      "e.md": "# E\n\n## 🎉\n",
+      "pic.png": "png",
+    });
+    const plan = planConvert(g);
+    const out = plan.files[0]!.next;
+    expect(out.split("\n")[0]).toBe("[a\\\\](b.md) [2\\*3\\*4](b.md) [x\\<y>](b.md) [\\`c\\`](b.md) [snake_case and \\_x\\_](b.md) [a \\& b \\~ c](b.md)");
+    // Read back: one link each, its text exactly the alias.
+    const para = (parseMarkdown(out).tree.children[0] as { children: { type: string; children?: { value?: string }[] }[] }).children.filter((c) => c.type === "link");
+    expect(para.map((l) => (l.children ?? []).map((t) => t.value).join(""))).toEqual(["a\\", "2*3*4", "x<y>", "`c`", "snake_case and _x_", "a & b ~ c"]);
+    expect(out).toContain("| ![pic.png\\|300](pic.png) |"); // the table's divider kept escaped
+    expect(out).toContain("[[e#🎉]]");
+    expect(plan.skipped.map((s) => s.reason)).toEqual(['[[e#🎉]]: the heading "🎉" has no slug to link to — left as it is']);
+  });
+
+  test("a conversion with nothing to change isn't logged: undo still takes back the last real one", async () => {
+    const { planConvert } = await import("../src/core/convert.ts");
+    const { dir, g } = vault({ "a.md": "[[b]]\n", "b.md": B });
+    applyPlan(g, planConvert(g));
+    g.build(true);
+    const nothing = planConvert(g);
+    expect(nothing.files).toEqual([]);
+    applyPlan(g, nothing);
+    g.build(true);
+    const undo = planUndo(g);
+    expect(undo.files.map((f) => f.shown)).toEqual(["a.md"]);
+    applyPlan(g, undo);
+    expect(readFileSync(join(dir, "a.md"), "utf8")).toBe("[[b]]\n");
+  });
+
   test("the CLI: --dry-run shows it, ambiguous and skipped ones said; without, it's written; slipbox undo takes it back", async () => {
     const { dir } = vault({ "a.md": "[[b]], [[dup]], [[nope]]\n", "b.md": B, "x/dup.md": "", "y/dup.md": "" });
     const run = async (args: string[]) => {
@@ -2406,9 +2471,12 @@ describe("the converter: links made plain paths (20.1)", () => {
       const code = await runCli([...args, "--json"], { out: (s: string) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: dir, env: process.env });
       return { code, json: JSON.parse(out.join("")) };
     };
+    // A note named: its links only.
+    writeFileSync(join(dir, "other.md"), "[[b]]\n");
+    expect((await run(["convert-links", "a.md", "--dry-run"])).json.data.files.map((f: { path: string }) => f.path)).toEqual(["a.md"]);
     const dry = await run(["convert-links", "--dry-run"]);
     expect(dry.code).toBe(0);
-    expect(dry.json.data).toMatchObject({ kind: "convert", dryRun: true, files: [{ path: "a.md", edits: [{ line: 1, before: "[[b]], [[dup]], [[nope]]", after: "[b](b.md), [[dup]], [[nope]]" }] }] });
+    expect(dry.json.data).toMatchObject({ kind: "convert", dryRun: true, files: [{ path: "a.md", edits: [{ line: 1, before: "[[b]], [[dup]], [[nope]]", after: "[b](b.md), [[dup]], [[nope]]" }] }, { path: "other.md" }] });
     expect(dry.json.data.ambiguous).toMatchObject([{ written: "[[dup]]", candidates: ["x/dup.md", "y/dup.md"] }]);
     expect(dry.json.warnings).toContain('a.md:1: [[nope]]: no note named "nope" — left as it is');
     expect(dry.json.warnings.some((w: string) => w.startsWith("a.md:1: [[dup]] matches 2 notes (x/dup.md, y/dup.md)"))).toBe(true);

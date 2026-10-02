@@ -1090,7 +1090,9 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       }
     }
     if (gone.length) g.dirs = g.dirs.filter((x) => !gone.includes(x));
-  } else if (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink" || plan.kind === "heading" || plan.kind === "convert") {
+  } else if ((plan.files.length || mv) && (plan.kind === "note" || plan.kind === "folder" || plan.kind === "vault" || plan.kind === "relink" || plan.kind === "heading" || plan.kind === "convert")) {
+    // Only one that changed something: an empty one would stand in front of the last real one, and
+    // an undo would take back nothing.
     logRename(g.loc, {
       id: randomUUID(),
       at: new Date().toISOString(),

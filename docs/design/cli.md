@@ -344,14 +344,18 @@ or path now. Both take `--dry-run`.
 
 `slipbox convert-links [note]` (plan `20.1`) makes a note's links — or every note's — plain paths, once, by today's
 resolution rules: each `[[…]]` a relative markdown link (`![[…]]` an image-syntax one, which still embeds a note),
-its alias kept as the text, else the link as it was drawn (`[[plan#Aims]]` → `[plan › Aims](docs/plan.md#aims)`); a
-heading becomes its slug, checked to be in the note, a block `#^id`, a picture's size Obsidian's markdown form
-(`![[pic.png|300]]` → `![pic.png|300](pic.png)`); and each markdown link written from the vault's root
-(`[x](/docs/x.md)`, which will mean the filesystem's root) relative. Spaces, parentheses, `#` and `%` in a path are
-percent-encoded. Left as written, each said in the warnings: a link that reaches nothing, a heading or block that
-isn't there, one not where the index has it; and a link several notes answer to, listed in `ambiguous` (`{key, shown,
-line, written, candidates[]}`) — written as a path by hand, or picked in the TUI. Wikilinks in code are text, and
-stay. `--dry-run` previews it; `undo` takes it back.
+its alias kept as the text, else the link as it was drawn (`[[plan#Aims]]` → `[plan › Aims](docs/plan.md#aims)`) —
+literal still: what a markdown label would act on (a backslash, brackets, `*`, a backtick, `<`, `&`, `~`, a `_` at a
+word's edge) is escaped, and in a table the `|` too. A heading becomes its slug, checked to be in the note, a block
+`#^id`, a picture's size Obsidian's markdown form (`![[pic.png|300]]` → `![pic.png|300](pic.png)`). And each markdown
+link written from the vault's root (`[x](/docs/x.md)`, which will mean the filesystem's root) is made relative — a
+reference link's in its definition, once however many use it; one naming the filesystem's own path is left, as it
+means the same after. Spaces, parentheses, `#` and `%` in a path are percent-encoded. Left as written, each said in
+the warnings: a link that reaches nothing, a heading or block that isn't there (or a heading no slug can reach,
+`## 🎉`), one not where the index has it; and a link several notes answer to, listed in `ambiguous` (`{key, shown,
+line, written, candidates[]}`) — written as a path by hand, or picked in the TUI. Wikilinks in code and in the
+frontmatter are text, not links, and stay. `--dry-run` previews it; `undo` takes it back (a run that changed nothing
+isn't logged, so it can't stand in front of the one that did).
 
 `slipbox rename-heading <note> <heading> <new>` renames a heading (`11.9`) — found by its text in any case, or its
 slug — and every link to it: `[[note#Heading]]` and `![[note#Heading]]` (their `|text` kept), `[x](note.md#heading)`

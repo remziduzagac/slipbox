@@ -7870,3 +7870,61 @@ test("the converter from the TUI (20.1): previewed; an ambiguous link's row pick
   expect(readFileSync(join(root, "conv.md"), "utf8")).toBe("See [beta](notes/beta.md) and [dup](y/dup.md).\n");
   expect(h.app.messages.at(-1)?.text).toBe("converted links to plain paths: 1 change in 1 file");
 });
+
+test("the converter's other TUI paths (20.1): every note, a note that isn't, nothing left, unsaved refused, undone", async () => {
+  const root = makeVault();
+  writeFileSync(join(root, "c1.md"), "[[beta]]\n");
+  writeFileSync(join(root, "c2.md"), "[[beta]] too\n");
+  const h = await harness({ root, open: "c1.md" });
+  h.app.graph.build(true);
+  await h.app.run("link.convert nope");
+  expect(h.app.messages.at(-1)?.text).toBe('no note "nope"');
+  // Unsaved: refused, as a rename is.
+  h.app.view!.buf.edit(0, 0, "x");
+  await h.app.run("link.convert c1");
+  expect(h.app.messages.at(-1)?.text).toStartWith("unsaved: c1.md");
+  h.app.view!.buf.edit(0, 1, "");
+  await h.app.run("note.save");
+  // No note named: every note's.
+  await h.app.run("link.convert");
+  const rows = (h.app.overlay as ListOverlay).items.map((i) => i.label);
+  expect(rows).toContain("c1.md:1");
+  expect(rows).toContain("c2.md:1");
+  await h.keys("escape");
+  await h.app.run("link.convert c1");
+  await h.keys("enter");
+  expect(readFileSync(join(root, "c1.md"), "utf8")).toBe("[beta](notes/beta.md)\n");
+  await h.app.run("link.convert c1");
+  expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["nothing left to convert"]);
+  await h.keys("escape");
+  await h.app.run("rename.undo");
+  await h.keys("enter");
+  expect(h.app.messages.at(-1)?.text).toBe("undid the conversion to plain paths: 1 change in 1 file");
+  expect(readFileSync(join(root, "c1.md"), "utf8")).toBe("[[beta]]\n");
+});
+
+test("following a path link's fragment: a block's ^id lands on its block (an embed's header too); a % that doesn't decode doesn't throw", async () => {
+  const root = makeVault();
+  mkdirSync(join(root, "sub"));
+  writeFileSync(join(root, "sub", "b.md"), "# B\n\nOne.\n\nThe block. ^abc\n");
+  writeFileSync(join(root, "host.md"), "# Host\n\n![c](sub/b.md#^abc)\n\nOdd [x](sub/b.md#a%zz) here.\n");
+  const h = await harness({ root, open: "host.md" });
+  h.app.graph.build(true);
+  const v = () => h.app.view!;
+  const onRow = (text: string) => {
+    const lines = h.app.currentLayout(v()).lines;
+    const row = lines.findIndex((l) => l.spans.map((s) => s.text).join("").includes(text));
+    h.app.moveCursor(v(), { row, col: [...lines[row]!.spans.map((s) => s.text).join("")].indexOf(text[0]!) + 1 });
+  };
+  h.frame();
+  onRow("⧉ b ^abc");
+  await h.app.run("link.follow");
+  expect(v().buf.rel).toBe("sub/b.md");
+  expect(statusRow(h.frame())).toMatch(/L5:/);
+  expect(h.app.messages.some((m) => m.text.includes("no heading"))).toBe(false);
+  await h.app.run("history.back");
+  h.frame();
+  onRow("Odd x here");
+  await h.app.run("link.follow");
+  expect(v().buf.rel).toBe("sub/b.md");
+});

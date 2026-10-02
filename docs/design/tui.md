@@ -400,7 +400,7 @@ Each kind of link does something different when followed:
 | unresolved `[[name]]` | the new-note prompt, the name typed: `enter` makes it beside this note |
 | `[[vault:name]]`, `[t](../other/x.md)` | opens the note in the other vault (`17.8`, `17.9`) |
 | `[[vault:name]]` that doesn't resolve | says why: `unknown vault "x"`, or where it was last seen |
-| `[t](other.md#frag)` | opens relative to the note |
+| `[t](other.md#frag)` | opens relative to the note; `#^id` at the block (`20.1`); a bad `%` read as written |
 | `[t](run.py#L42)` | opens the file at line 42 (as in a code comment's `run.py:42`) |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
 | `file://…`, `~/x.md`, `/home/me/x.md`, `[[../other/x]]` | opens the file, in whichever vault holds it (`17.16`) |
