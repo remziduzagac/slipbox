@@ -94,8 +94,8 @@ These churn freely before 1.0:
 | `footnotes <note> add\|edit\|rm\|rename …` | `{path, sha, footnotes[…]}` after it; `--if-unchanged`; exit 5: refused |
 | `init [dir]` | `{root, created, identified, id, name, excluded}` — `--name N`, `--private`; exit 5: name in use |
 | `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
-| `info` | root, mode, `vault{…, shown, key}`, `instance`, `collection`, `copies[]`, paths, index stats, stale |
-| `vaults` | `[{key, instance, id, kind, name, shown, …, collection, path, seen, moved?[], exists, worktree?}]` |
+| `info` | root, mode, `vault{…, shown}`, `instance`, `collection`, `copies[]`, `index{…, written}`, `background` |
+| `vaults` | `[{key, instance, id, kind, name, shown, …, path, seen, indexed, exists, unavailable, worktree?}]` |
 | `vault-moved [path]` | `[{instance, name, path, seen}]`; with a path `{moved, from, to}`; `--not`: `{declined}` |
 | `mv`, `rename-vault`, `rename-heading`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, …}` |
 | `convert-links` | as `mv`, kind `convert`, plus `ambiguous[]`: the links several notes answer to |
@@ -307,6 +307,13 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   builds its index, so its links count as backlinks of the vaults they reach. `--json`: `{root, found, indexed, left,
   started, finished}`. Every command notes the time it ran (`activity` in the state folder): the TUI's auto-index
   waits while an agent works.
+- **Freshness** (`20.10`): `slipbox index --refresh [path]` brings a vault's index up to date now — this vault's, or
+  that of the vault holding `path`, opened or not: every file's size and time checked, every folder listed again.
+  `--json`: `{root, notes, changed, unchanged, gone, reached, indexed, ms}`. `info` says when this vault's index was
+  written (`index.written`) and where the background index has got to (`background`); `vaults` gives each vault's
+  `indexed` time. A vault on a drive that isn't there (under `/Volumes`, `/media`, `/run/media`, `/mnt`) is
+  `unavailable`, not gone: kept, never pruned, and a link into it is broken with that said ("its drive isn't
+  there") until the drive is back.
 - **`[search] engine`**: `auto` (the index when it's built, else a scan), `index` (built first when there's none),
   `scan` (never an index).
 - **A hit's `section`** is the section it's in, as scout names and bounds it (`{name, line, end}`: `Auth/Setup`,

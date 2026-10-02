@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, SymbolInformation, TextEdit, WorkspaceEdit, WorkspaceSymbol } from "vscode-languageserver-protocol";
 import { blockLine, landingText } from "../core/landing.ts";
 import { join, posix, relative } from "node:path";
+import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { locName } from "../core/names.ts";
 import { findVaultRoot, hasMarker, instanceOf, isInside, isNeverRoot } from "../core/vault.ts";
@@ -1813,6 +1814,9 @@ export function registerActions(app: App): void {
         ...(here.entry?.instance ? [["instance", `${here.entry.instance} — holds ${describeCollection(here.entry.collection)}`] as [string, string]] : []),
         ["notes", String(g.notes.size)],
         ["indexing", a.indexing ? `${a.indexing} left` : "done"],
+        // How fresh, and what else is covered (20.10).
+        ["index", `${g.indexedAt() ? `written ${g.indexedAt()!.toISOString().slice(0, 16).replace("T", " ")}` : "not written yet"}${g.reached.size ? `, ${g.reached.size} reached outside the walk` : ""}`],
+        ["home", describeBackground(backgroundStatus(a.config))],
         ["watcher", a.watcher ? (a.watcher.degraded ? `degraded: ${a.watcher.degraded}` : `${a.watcher.watchedCount} directories${a.watcher.polledDirs.length ? `, ${a.watcher.polledDirs.length} polled` : ""}`) : "off"],
         ["cache", cacheDir(a.loc)],
         ["state", stateDir(a.loc)],

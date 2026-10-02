@@ -151,6 +151,8 @@ export interface GraphStats {
   notes: number;
   parsed: number;
   cached: number;
+  /** Notes the index had that the walk found gone (20.10). */
+  gone: number;
   ms: number;
 }
 
@@ -166,7 +168,7 @@ export class Graph {
   assets = new Map<string, string[]>();
   skipped: Skipped[] = [];
   errors: string[] = [];
-  stats: GraphStats = { notes: 0, parsed: 0, cached: 0, ms: 0 };
+  stats: GraphStats = { notes: 0, parsed: 0, cached: 0, gone: 0, ms: 0 };
   private backlinkCache: Map<string, Backlink[]> | null = null;
   private tagCache: Map<string, { tag: string; notes: string[] }> | null = null;
   /** Bumped whenever what the notes say changes (a note read, changed, gone): views that show
@@ -256,7 +258,8 @@ export class Graph {
     const toParse = this.unparsed.size;
     if (parse === "all") this.ensureAll();
     else if (this.cacheDirty && !toParse) this.writeCache();
-    this.stats = { notes: this.notes.size, parsed: parse === "all" ? toParse : 0, cached: reused, ms: performance.now() - t0 };
+    const gone = Object.keys(old).filter((rel) => !this.notes.has(rel)).length;
+    this.stats = { notes: this.notes.size, parsed: parse === "all" ? toParse : 0, cached: reused, gone, ms: performance.now() - t0 };
     return this;
   }
 
@@ -266,6 +269,15 @@ export class Graph {
 
   private get cachePath(): string {
     return join(cacheDir(this.loc), "index.json");
+  }
+
+  /** When the index on disk was last written (20.10): how fresh it is; null when there's none. */
+  indexedAt(): Date | null {
+    try {
+      return statSync(this.cachePath).mtime;
+    } catch {
+      return null;
+    }
   }
 
   /** Notes still waiting to be parsed. */

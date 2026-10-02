@@ -2,10 +2,12 @@
 // findings (3.21), its links (1.7, 11.5) and git's conflict markers — later, language servers'.
 // One shape, so the TUI's bar and marks, its status line and the LSP face show them the same way.
 
-import { isAbsolute, posix } from "node:path";
+import { homedir } from "node:os";
+import { dirname, isAbsolute, join, posix } from "node:path";
 import type { Graph, LinkRef, Pos } from "./graph.ts";
 import { landingLine } from "./landing.ts";
 import type { LintIssue } from "./lint.ts";
+import { unavailable } from "./registry.ts";
 import type { SyntaxError } from "./syntax.ts";
 
 /** How bad, worst first. */
@@ -52,6 +54,18 @@ export function fragmentOf(l: Pick<LinkRef, "kind" | "target" | "heading">): str
  * missing file or an unknown vault a warning — or several notes; a heading or block a link names that
  * its note hasn't; git's conflict markers, an error.
  */
+/** A link's file on a drive that isn't there (20.10): unavailable, not gone — said so. */
+function onUnplugged(g: Graph, rel: string, target: string): boolean {
+  let path = target.split("#")[0]!;
+  try {
+    path = decodeURIComponent(path);
+  } catch {}
+  if (path.startsWith("~/")) path = join(homedir(), path.slice(2));
+  else if (/^file:\/\//i.test(path)) path = path.replace(/^file:\/\//i, "");
+  else if (!path.startsWith("/")) path = join(g.root, dirname(rel), path);
+  return unavailable(path);
+}
+
 export function noteProblems(g: Graph, rel: string): Problem[] {
   const out: Problem[] = [];
   const add = (l: LinkRef, severity: Severity, code: string, message: string) => out.push({ start: { line: l.line, column: l.column }, end: l.end, severity, source: "slipbox", code, message, target: l.target });
@@ -68,7 +82,7 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
           const to = g.movedTarget(l, rel);
           const yet = to ? null : g.missingNote(l, rel);
           if (yet) add(l, "info", "unresolved", `no note at ${yet} yet`);
-          else add(l, "warning", "unresolved", to ? `broken link: ${l.target} — moved to ${to} (relink fixes it)` : `broken link: ${l.target}`);
+          else add(l, "warning", "unresolved", to ? `broken link: ${l.target} — moved to ${to} (relink fixes it)` : onUnplugged(g, rel, l.target) ? `broken link: ${l.target} — its drive isn't there` : `broken link: ${l.target}`);
         }
         break;
       case "ambiguous":

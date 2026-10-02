@@ -22,7 +22,7 @@ import { diffRows } from "../core/merge.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
-import { type Graph, type LinkProblem, openGraph, type Target } from "../core/graph.ts";
+import { Graph, type LinkProblem, openGraph, type Target } from "../core/graph.ts";
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
@@ -51,8 +51,8 @@ import { rootFor } from "../core/servers/find.ts";
 import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { planConvert } from "../core/convert.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
-import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
-import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
+import { confirmMove, declineMove, type KnownVault, noteIndexed, readIdentity, readRegistry, removeStorage, suggestVaultName, unavailable, vaultConfigFile, vaultNamed } from "../core/registry.ts";
+import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { displayNames, locName } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeAt, homeFolder, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
@@ -155,6 +155,7 @@ Usage:
                                     [--limit N]
   slipbox index                     build or bring up to date the vault's search index  [--rebuild]
   slipbox index --home              the background auto-index of the home folder, run now  [--budget MS] [--rebuild]
+  slipbox index --refresh [path]    bring a vault's index up to date now — this one, or the one holding path
   slipbox changed                   what this branch changed against the base (main), committed or not  [--base <ref>]
   slipbox diff <note>               the note's changes on this branch: against where it left the base  [--base <ref>]
   slipbox worktrees                 the repository's checkouts: the main one and its worktrees, by branch
@@ -324,7 +325,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
+  scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -379,7 +380,7 @@ const FLAGS: Record<string, string[]> = {
   undo: ["dry-run"],
   context: ["depth", "no-backlinks", "limit", "copy"],
   search: ["limit"],
-  index: ["rebuild", "home", "budget"],
+  index: ["rebuild", "home", "budget", "refresh"],
   changed: ["base"],
   diff: ["base"],
 };
@@ -718,7 +719,25 @@ const HANDLERS: Record<string, Handler> = {
     }
   },
 
-  index(s) {
+  index(s, rest) {
+    // A vault's index brought up to date now (20.10) — this one, or the one holding a path: every
+    // file's size and time checked, every folder listed again; any vault, opened or not.
+    if (has(s.args, "refresh")) {
+      const at = rest[0] ? (isAbsolute(rest[0]) ? rest[0] : join(s.io.cwd, rest[0])) : s.loc.root;
+      if (!existsSync(at)) throw new CliError(`no such file or folder: ${rest[0]}`, EXIT.notFound);
+      const root = findVaultRoot(at);
+      if (!root) throw new CliError(`${rest[0] ?? at} isn't in a vault: a loose folder has no index (it's listed when opened)`, EXIT.refused);
+      const t = performance.now();
+      const loc = rootAt(root);
+      const g = new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "all");
+      noteIndexed(loc.key);
+      const ms = Math.round(performance.now() - t);
+      const st = g.stats;
+      return {
+        data: { root, notes: st.notes, changed: st.parsed, unchanged: st.cached, gone: st.gone, reached: g.reached.size, indexed: g.indexedAt()?.toISOString() ?? null, ms },
+        human: `refreshed ${root}: ${st.notes} note${st.notes === 1 ? "" : "s"} — ${st.parsed} read again, ${st.gone} gone (${ms} ms)\n`,
+      };
+    }
     // The background auto-index of the home folder (20.9), run here in the foreground: a pass, or as
     // much as --budget allows; where it is, either way.
     if (has(s.args, "home")) {
@@ -1131,9 +1150,16 @@ const HANDLERS: Record<string, Handler> = {
     const names = displayNames(known);
     const list = known
       .sort((a, b) => (a.seen < b.seen ? 1 : -1))
-      .map((v) => ({ ...v, shown: names.get(v.key) ?? (v.kind === "home" ? "home" : null), exists: v.kind === "vault" ? isVaultRoot(v.path) : existsSync(v.path) }));
+      .map((v) => ({
+        ...v,
+        shown: names.get(v.key) ?? (v.kind === "home" ? "home" : null),
+        exists: v.kind === "vault" ? isVaultRoot(v.path) : existsSync(v.path),
+        // How fresh its index is (20.10): when it was last built, by anyone; on a drive unplugged, unavailable.
+        indexed: v.indexed ?? indexTime(v),
+        unavailable: unavailable(v.path),
+      }));
     const human = list
-      .map((v) => `${(v.shown ?? basename(v.path)).padEnd(16)} ${v.kind.padEnd(6)} ${v.path}  ${v.seen.slice(0, 16).replace("T", " ")}${v.exists ? "" : "  (gone)"}\n`)
+      .map((v) => `${(v.shown ?? basename(v.path)).padEnd(16)} ${v.kind.padEnd(6)} ${v.path}  ${v.seen.slice(0, 16).replace("T", " ")}${v.exists ? "" : v.unavailable ? "  (unavailable: its drive isn't there)" : "  (gone)"}\n`)
       .join("");
     return { data: list, human: human || "no vaults yet\n" };
   },
@@ -1283,7 +1309,9 @@ const HANDLERS: Record<string, Handler> = {
       state: stateDir(s.loc),
       scratch: scratch.path,
       notes: g.notes.size,
-      index: g.stats,
+      index: { ...g.stats, written: g.indexedAt()?.toISOString() ?? null, reached: g.reached.size },
+      // The background auto-index of the home folder (20.9): where it is.
+      background: backgroundStatus(s.config),
       search: searchInfo(s),
       skipped: g.skipped,
       stale: s.stale(),
@@ -1294,6 +1322,8 @@ const HANDLERS: Record<string, Handler> = {
       ...(s.loc.name ? [`vault     ${data.vault.shown}${s.loc.aliases.length ? ` (also ${s.loc.aliases.join(", ")})` : ""}${s.loc.id || !hasMarker(s.loc.root) ? "" : " — no id yet: slipbox init gives it one"}`] : []),
       ...(data.instance ? [`instance  ${data.instance} — holds ${describeCollection(here.entry?.collection)}`] : []),
       `notes     ${data.notes} (parsed ${g.stats.parsed}, cached ${g.stats.cached}, ${g.stats.ms.toFixed(0)} ms)`,
+      `index     ${data.index.written ? `written ${data.index.written.slice(0, 16).replace("T", " ")}` : "not written yet"}${g.reached.size ? `, ${g.reached.size} reached outside the walk` : ""}`,
+      `home      ${describeBackground(data.background)}`,
       `theme     ${data.config.theme}`,
       `config    ${data.config.sources.length ? data.config.sources.join(", then ") : `none (${data.config.user} doesn't exist)`}`,
       `cache     ${data.cache}`,
@@ -1724,6 +1754,15 @@ function checkWritable(s: Session, abs: string): void {
   // .slipbox never are, nor node_modules.
   if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel)) refuse("in a folder the vault doesn't list");
   if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
+}
+
+/** When a known vault's index on disk was last written (20.10), else null. */
+function indexTime(v: KnownVault): string | null {
+  try {
+    return statSync(join(cacheDir(v), "index.json")).mtime.toISOString();
+  } catch {
+    return null;
+  }
 }
 
 /** `--if-unchanged <sha>`: refuse (exit 5) unless the note's bytes still have that sha. */

@@ -508,8 +508,9 @@ keys.
   are unresolved, backlinks, headings, footnotes, tasks done). `enter` opens what a row names: a property's line in
   the frontmatter (source mode: its own line; rendered, the row that shows it), a tag's notes, the links or backlinks
   list, the outline or the footnotes view; any other row copies its value, as `y` does. The vault's own information
-  — its notes, index and watcher, this copy's instance id and what it holds, the other copies this machine knows
-  (`20.4`, the five seen last) — is `space v i`'s window: a vault isn't a file. Names are a column a third of the
+  — its notes, index (when it was written, what was reached outside the walk, `20.10`) and watcher, the background
+  index of the home folder, this copy's instance id and what it holds, the other copies this machine knows (`20.4`,
+  the five seen last) — is `space v i`'s window: a vault isn't a file. Names are a column a third of the
   pane at most, values cut to it (no sideways scrolling). `space n i`, the `ℹ` button, `slipbox stat` (its `vault`
   and `properties` too). `e` edits the properties (below).
 - **The properties editor** (`3.20`): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter — YAML

@@ -257,6 +257,26 @@ export function removeStorage(key: string): void {
   rmSync(join(stateHome(), key), { recursive: true, force: true });
 }
 
+/** The instance `key` had its index built now (20.9, 20.10): how fresh it is, for the lists. */
+export function noteIndexed(key: string, at = new Date()): void {
+  const list = readRegistry();
+  const v = list.find((x) => x.key === key);
+  if (!v) return;
+  v.indexed = at.toISOString();
+  writeRegistry(list);
+}
+
+/** Where removable drives are mounted: a path under one that isn't there is on a drive unplugged. */
+const MOUNTS = ["/Volumes", "/media", "/run/media", "/mnt"];
+
+/**
+ * A path on a drive that isn't there (20.10): unavailable, not deleted — its entry is kept, and
+ * links into it are broken until it's back. A path gone elsewhere is just gone.
+ */
+export function unavailable(path: string): boolean {
+  return MOUNTS.some((m) => path.startsWith(`${m}/`)) && !existsSync(path);
+}
+
 /**
  * Forget the vault at `root` (18.11: made a plain folder): the machine no longer lists it. With
  * `kinds`, only entries of those kinds there (a plain folder's, when it has become a vault: 20.4).
@@ -315,9 +335,10 @@ const WORKTREE_STATE_DAYS = 30;
  */
 export function pruneWorktrees(now = Date.now()): void {
   const list = readRegistry();
-  const gone = list.filter((v) => v.worktree && !existsSync(join(v.path, ".git")) && !existsSync(join(v.path, MARKER)));
+  // On a drive that isn't there (20.10), nothing is gone: kept as it was until the drive is back.
+  const gone = list.filter((v) => v.worktree && !unavailable(v.path) && !existsSync(join(v.path, ".git")) && !existsSync(join(v.path, MARKER)));
   // A plain folder (20.4) gone as long: forgotten too — it has nothing of its own to remove.
-  const drop = list.filter((v) => v.kind === "folder" && !existsSync(v.path) && now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000).map((v) => v.key);
+  const drop = list.filter((v) => v.kind === "folder" && !unavailable(v.path) && !existsSync(v.path) && now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000).map((v) => v.key);
   if (!gone.length && !drop.length) return;
   for (const v of gone) {
     rmSync(join(cacheHome(), v.key), { recursive: true, force: true });

@@ -3118,3 +3118,75 @@ describe("the background auto-index of the home folder (20.9)", () => {
     }
   });
 });
+
+describe("freshness and coverage (20.10)", () => {
+  const out: string[] = [];
+  const cli = async (args: string[], cwd: string) => {
+    out.length = 0;
+    const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return { code, json: JSON.parse(out.join("")) };
+  };
+  const vaultAt = (dir: string, files: Record<string, string>) => {
+    mkdirSync(join(dir, ".slipbox"), { recursive: true });
+    for (const [rel, text] of Object.entries(files)) writeFileSync(join(dir, rel), text);
+    return dir;
+  };
+
+  test("slipbox index --refresh <path>: any vault's index brought up to date, opened or not — read again, gone, how fresh", async () => {
+    const base = mkdtempSync(join(tmpdir(), "slipbox-fresh-"));
+    const here = vaultAt(join(base, "here"), { "h.md": "# H\n" });
+    const there = vaultAt(join(base, "there"), { "a.md": "# A\n", "b.md": "# B\n" });
+    const first = await cli(["index", "--refresh", there], here);
+    expect(first.json.data).toMatchObject({ root: there, notes: 2, changed: 2, gone: 0 });
+    expect(first.json.data.indexed).not.toBeNull();
+    const { readRegistry } = await import("../src/core/registry.ts");
+    expect(readRegistry().find((v) => v.path === there)?.indexed).toBeDefined();
+    writeFileSync(join(there, "a.md"), "# A, longer now\n");
+    rmSync(join(there, "b.md"));
+    expect((await cli(["index", "--refresh", join(there, "a.md")], here)).json.data).toMatchObject({ root: there, notes: 1, changed: 1, unchanged: 0, gone: 1 });
+    expect((await cli(["index", "--refresh"], here)).json.data.root).toBe(here); // this one, unnamed
+    const loose = mkdtempSync(join(tmpdir(), "slipbox-fresh-loose-"));
+    expect((await cli(["index", "--refresh", loose], here)).code).toBe(5);
+    expect((await cli(["index", "--refresh", join(base, "nope")], here)).code).toBe(3);
+  });
+
+  test("info says how fresh this vault's index is, and where the background index of the home folder has got to", async () => {
+    const dir = vaultAt(mkdtempSync(join(tmpdir(), "slipbox-fresh-info-")), { "n.md": "# N\n" });
+    await cli(["ls"], dir);
+    const info = (await cli(["info"], dir)).json.data;
+    expect(info.index.written).not.toBeNull();
+    expect(info.index).toMatchObject({ reached: 0, gone: 0 });
+    expect(info.background).toMatchObject({ on: true });
+    const lines: string[] = [];
+    await runCli(["info"], { out: (x: string) => lines.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: dir, env: process.env });
+    expect(lines.join("")).toMatch(/\nindex {5}written \d{4}-\d\d-\d\d \d\d:\d\d\n/);
+    expect(lines.join("")).toMatch(/\nhome {6}background index\b/);
+    const { describeBackground } = await import("../src/core/autoindex.ts");
+    expect(describeBackground({ on: false, found: 0, indexed: 0, left: 0, finished: null, started: null })).toBe("background index off ([index] background)");
+    expect(describeBackground({ on: true, found: 2, indexed: 1, left: 7, finished: null, started: "x" })).toBe("background index: 2 vaults found so far, 7 folders left");
+  });
+
+  test("a drive unplugged: its vaults unavailable, not gone — kept, never pruned, and a link into one says why it's broken", async () => {
+    const { pruneWorktrees, readRegistry, recordVault, unavailable } = await import("../src/core/registry.ts");
+    const drive = `/media/slipbox-test-nodrive-${basename(mkdtempSync(join(tmpdir(), "slipbox-nd-")))}`;
+    expect(unavailable(`${drive}/notes`)).toBe(true);
+    expect(unavailable("/tmp/certainly/not/here")).toBe(false);
+    expect(unavailable(tmpdir())).toBe(false);
+    const long = new Date(Date.now() - 60 * 86_400_000);
+    recordVault({ key: `${basename(drive)}-v`, id: null, kind: "vault", name: "ondrive", aliases: [], previous_names: [], path: `${drive}/notes` }, long);
+    recordVault({ key: `${basename(drive)}-w`, id: null, kind: "vault", name: "ondrive", aliases: [], previous_names: [], path: `${drive}/wt`, worktree: { name: "wt", main: `${drive}/notes` } }, long);
+    recordVault({ key: `${basename(drive)}-f`, id: null, kind: "folder", name: null, aliases: [], previous_names: [], path: `${drive}/loose` }, long);
+    pruneWorktrees();
+    expect(readRegistry().filter((v) => v.path.startsWith(`${drive}/`)).map((v) => v.kind).sort()).toEqual(["folder", "vault", "vault"]);
+    const dir = vaultAt(mkdtempSync(join(tmpdir(), "slipbox-fresh-drive-")), { "n.md": `[far](${drive}/notes/a.md) [near](gone.md)\n` });
+    const listed = (await cli(["vaults"], dir)).json.data.find((v: { path: string }) => v.path === `${drive}/notes`);
+    expect(listed).toMatchObject({ exists: false, unavailable: true });
+    const human: string[] = [];
+    await runCli(["vaults"], { out: (x: string) => human.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: dir, env: process.env });
+    expect(human.join("")).toContain(`${drive}/notes`);
+    expect(human.join("")).toContain("(unavailable: its drive isn't there)");
+    const problems = (await cli(["diagnostics", "n.md", "--severity", "info"], dir)).json.data.problems.map((p: { message: string }) => p.message);
+    expect(problems).toContain(`broken link: ${drive}/notes/a.md — its drive isn't there`);
+    expect(problems).toContain("no note at gone.md yet");
+  });
+});

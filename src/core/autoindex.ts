@@ -6,11 +6,11 @@
 
 import { type Dirent, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { loadConfig } from "./config.ts";
+import { type Config, loadConfig } from "./config.ts";
 import { readJson, writeJson, ensureDir } from "./fsutil.ts";
 import { Graph } from "./graph.ts";
 import { stateHome } from "./paths.ts";
-import { readRegistry, writeRegistry } from "./registry.ts";
+import { noteIndexed, readRegistry, writeRegistry } from "./registry.ts";
 import { configFilesFor, isNeverRoot, isVaultRoot, rootAt } from "./vault.ts";
 
 /** Folders the walk of the home folder never goes into: tools' and caches', and every hidden one. */
@@ -139,11 +139,8 @@ export class AutoIndex {
   }
 
   private markIndexed(root: string): void {
-    const list = readRegistry();
-    const v = list.find((x) => x.kind === "vault" && x.path === root);
-    if (!v) return;
-    v.indexed = new Date(this.now()).toISOString();
-    writeRegistry(list);
+    const v = readRegistry().find((x) => x.kind === "vault" && x.path === root);
+    if (v) noteIndexed(v.key, new Date(this.now()));
   }
 
   private save(): void {
@@ -157,4 +154,18 @@ export class AutoIndex {
 /** When an agent last ran a command (the CLI notes it): the auto-index waits while one works. */
 export function activityFile(): string {
   return join(stateHome(), "activity");
+}
+
+/** The background auto-index of the home folder (20.9), as far as it's got: off, a pass done, or folders left. */
+export function backgroundStatus(config: Pick<Config, "index">): { on: boolean; found: number; indexed: number; left: number; finished: string | null; started: string | null } {
+  const p = readJson<{ queue?: string[]; current?: string | null; found?: number; indexed?: number; passFinished?: string | null; passStarted?: string | null } | null>(autoIndexFile(), null);
+  return { on: config.index.background, found: p?.found ?? 0, indexed: p?.indexed ?? 0, left: (p?.queue?.length ?? 0) + (p?.current ? 1 : 0), finished: p?.passFinished ?? null, started: p?.passStarted ?? null };
+}
+
+/** Where the background auto-index is, in words (`info`, `space v i`). */
+export function describeBackground(b: ReturnType<typeof backgroundStatus>): string {
+  if (!b.on) return "background index off ([index] background)";
+  if (!b.started) return "background index not started yet";
+  if (b.finished) return `background index: pass done ${b.finished.slice(0, 16).replace("T", " ")} — ${b.found} vault${b.found === 1 ? "" : "s"} found`;
+  return `background index: ${b.found} vault${b.found === 1 ? "" : "s"} found so far, ${b.left} folder${b.left === 1 ? "" : "s"} left`;
 }

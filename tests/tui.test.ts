@@ -696,6 +696,10 @@ describe("overlays and the : prompt", () => {
     expect(h.frame()).toContain("backlinks");
     await h.keys("escape", "space", "v", "i");
     expect(h.frame()).toContain("watcher");
+    // How fresh its index is, and the background index of the home folder (20.10).
+    const rows = (h.app.overlay as ListOverlay).items.map((i) => i.label);
+    expect(rows.some((r) => /^index\b/.test(r))).toBe(true);
+    expect(rows.some((r) => /^home\b.*background index/.test(r))).toBe(true);
   });
 });
 
