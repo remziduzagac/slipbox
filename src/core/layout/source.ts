@@ -297,7 +297,7 @@ function highlightLine(raw: string, state: string, i: number): { roles: Role[]; 
       paint(b, b + 3, li[4] === "[ ]" ? "check_todo" : "check_done");
     }
   }
-  // Inline: code spans, then links (wikilinks and [text](url)) outside them.
+  // Inline: code spans, then links (`[text](url)`; `[[…]]` is text, 20.2) outside them.
   if (text.includes("`") || text.includes("[")) {
     const code: [number, number][] = [];
     for (const m of text.matchAll(/(`+)[^`]*?\1/g)) {
@@ -305,7 +305,6 @@ function highlightLine(raw: string, state: string, i: number): { roles: Role[]; 
       code.push([m.index, m.index + m[0].length]);
     }
     const inCode = (k: number) => code.some(([a, b]) => k >= a && k < b);
-    for (const m of text.matchAll(/!?\[\[[^\]\n]+\]\]/g)) if (!inCode(m.index)) paint(m.index, m.index + m[0].length, "wikilink");
     for (const m of text.matchAll(/!?\[[^\]\n]*\]\([^)\n]*\)/g)) if (!inCode(m.index)) paint(m.index, m.index + m[0].length, "link");
   }
   return { roles, out: "" };

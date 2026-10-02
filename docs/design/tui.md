@@ -42,7 +42,7 @@ Code, in `src/tui/`:
         │     Opens the link…      Moves to the…│ ┃
         └──────────── backspace up · esc cancel ┘ ┃
 ━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━  ← the frame's bottom rule
- READ  notes/alpha.md ↻ reloaded  ● watching  → [[beta]] (resolved)  L12:7 40%  ← status line
+ READ  notes/alpha.md ↻ reloaded  ● watching  → beta.md (resolved)  L12:7 40%  ← status line
 ```
 
 **The frame.** Right under the top bar, a `━` rule in the `border` role runs across the top of
@@ -135,7 +135,7 @@ session keeps them.
   any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
   dropped when the line is too short.
 
-On the right it shows the link under the cursor and its status (`→ [[beta]] (resolved)`), then
+On the right it shows the link under the cursor and its status (`→ beta.md (resolved)`), then
 the note's words (`1,234 words`; the selection's in visual mode, `12 words selected`; frontmatter
 not counted, each Han or kana character a word; dropped first when short of room), then
 `tab N/M` when there are two or more tabs, then `L<source line>:<column>` and the percentage (`all`
@@ -291,7 +291,7 @@ starts a timeline of its own, and is still found there.
 
 The TUI is always in one root: a vault, or a loose folder of the home vault (the top bar says
 `home vault` then). **Opening a note of another vault switches to it** —
-following `[[vault:note]]` or a path out of the root, a backlink from another vault, a vault picked
+following a path out of the root, a backlink from another vault, a vault picked
 from the list or the explorer: the TUI becomes that root's, as if started there — its config, its
 index (refreshed), its watcher, its reading positions and its session, whose tabs come back, with
 the note open (at its heading). Leaving saves the one before as quitting does. **Refused while a
@@ -321,17 +321,15 @@ itself.
 `space n m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already; the explorer's `r` for
 the selected note's, file's or folder's new name, `m` for a folder to move it to (18.x, below); `space v n` for the
 vault's new name; `space n h` for a new name of the heading the cursor is under (the outline's `r`, its selected
-heading's; `11.9`); `space l r` (`:relink`) relinks this note's links that reach their note by an old name or a move;
-`:convert-links` (`20.1`) makes every note's links plain paths (`:convert-links <note>`, one note's) — each link
-several notes answer to a row of its own at the top, `pick notes/x.md:3`: `enter` lists its notes, and the one
-picked comes back as part of the preview.
-Each shows its **preview** first: a list of every line it changes, in every vault
-(`notes/index.md:3  [[plan]]  →  [[roadmap]]`), with the git trees that already have changes and the links skipped at
-the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s, `rename-vault`'s,
-`rename-heading`'s, `relink`'s and `convert-links`'s (`docs/design/cli.md`, "Renames"). **Refused while a file it
-rewrites is unsaved.**
-After it, the open notes it changed are reloaded, and a window on a renamed or moved note shows it under its new
-path, its history following — every note of a moved folder alike.
+heading's; `11.9`); `space l r` (`:relink`) relinks this note's links broken by a move it saw (`20.2`);
+`:convert-links` (`20.1`) makes every note's links plain paths (`:convert-links <note>`, one note's) — each link several
+notes answer to a row of its own at the top, `pick notes/x.md:3`: `enter` lists its notes, and the one picked comes back
+as part of the preview. Each shows its **preview** first: a list of every line it changes, in every vault
+(`notes/index.md:3 [plan](plan.md) → [plan](roadmap.md)`), with the git trees that already have changes and the links
+skipped at the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s,
+`rename-vault`'s, `rename-heading`'s, `relink`'s and `convert-links`'s (`docs/design/cli.md`, "Renames"). **Refused
+while a file it rewrites is unsaved.** After it, the open notes it changed are reloaded, and a window on a renamed or
+moved note shows it under its new path, its history following — every note of a moved folder alike.
 
 **Undo** (`7.4`): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the vault's last rename,
 move or relink — made here or by `slipbox mv` — as `slipbox undo` does (`docs/design/cli.md`, "Renames"): its
@@ -375,11 +373,11 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   links into it — by path or by its name — that break. Its menu has "Rename the folder" and, beside it, "Rename the
   vault" (`shift+r`, `R` in the menu): `rename-vault` for it, its folder left where it is.
 - **A folder made a vault, and back** (`18.11`): `v` on a folder asks for the new vault's name (a distinct one typed:
-  `halden-logs` for `logs/`), then previews the links that would stop reaching across the new boundary, rewritten —
-  `[[observing-log-2026]]` in the parent becomes `[[halden-logs:observing-log-2026]]`, and so on, as `slipbox init
-  <folder>` does (`docs/design/cli.md`); enter makes it. `shift+v` on a nested vault's row previews the way back —
-  its `[[name:…]]` links become names here — and enter puts its `.slipbox/` in the trash. The row turns into a vault's
-  or a folder's, selected. In a loose folder, `v` offers to make the folder a vault of its own and goes into it.
+  `halden-logs` for `logs/`), then a preview — links are paths, which reach across the new boundary as before, so
+  there's nothing of them to rewrite (`20.2`) — as `slipbox init <folder>` does (`docs/design/cli.md`); enter makes it.
+  `shift+v` on a nested vault's row previews the way back, and enter puts its `.slipbox/` in the trash. The row turns
+  into a vault's or a folder's, selected. In a loose folder, `v` offers to make the folder a vault of its own and goes
+  into it.
 
 Every one of these has a leader key too, so which-key lists them (`18.13`): `space n` for a note (rename or move by
 path, move, delete, copy, cut, `shift+y` a copy beside it), `space d` for a folder (new, rename, move, delete, copy,
@@ -394,17 +392,17 @@ Each kind of link does something different when followed:
 
 | Link | Following it |
 | --- | --- |
-| `[[note]]`, `[[note#heading]]` | opens the note, at the heading |
-| `[[#heading]]`, `[t](#frag)` | jumps within the note |
-| ambiguous `[[name]]` | a picker of the candidates |
-| unresolved `[[name]]` | the new-note prompt, the name typed: `enter` makes it beside this note |
-| `[[vault:name]]`, `[t](../other/x.md)` | opens the note in the other vault (`17.8`, `17.9`) |
-| `[[vault:name]]` that doesn't resolve | says why: `unknown vault "x"`, or where it was last seen |
+| `[t](note.md)`, `[t](note.md#heading)` | opens the note, at the heading (by its slug or text) |
+| `[t](#frag)` | jumps within the note |
+| `[t](not-yet.md)`, a note not written yet | the new-note prompt, its name typed: `enter` makes it at that path |
+| a broken link whose file moved | says where it went (`17.12`): `space l r` relinks it — a move never resolves it |
+| `[t](../other/x.md)` | opens the note in the other vault (`17.9`) |
+| `[[…]]` | text, not a link (`20.2`): `:convert-links` makes it a path |
 | `[t](other.md#frag)` | opens relative to the note; `#^id` at the block (`20.1`); a bad `%` read as written |
 | `[t](run.py#L42)` | opens the file at line 42 (as in a code comment's `run.py:42`) |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
-| `file://…`, `~/x.md`, `/home/me/x.md`, `[[../other/x]]` | opens the file, in whichever vault holds it (`17.16`) |
-| attachment `![[x.png]]` | copies the path; images are phase 6 |
+| `file://…`, `~/x.md`, `/home/me/x.md` (`/` the filesystem's root) | opens the file, in whichever vault holds it |
+| attachment `![x](x.png)` | copies the path; images are phase 6 |
 | footnote `[1]` | jumps to the definition |
 | tag `#dome/shutter` | lists the notes with the tag (its nested ones too, `#dome/shutter/…`); enter opens one |
 
@@ -412,14 +410,13 @@ Each kind of link does something different when followed:
 indented under its parent, whose count includes its children's — and picking one lists its notes; `:tag name` goes
 straight there. A note's tags are its frontmatter's `tags:` and the `#tags` in its text (`docs/design/rendering.md`).
 
-A link reached by a note's alias or previous name, or through a redirect (the note moved: `17.12`), follows too, and
-says so. A link landing on a line (`#L42`, a block's `^id`, a problem, a search hit) lands where that line is shown: in
-the rendered view, a line inside a paragraph that wraps lands on the paragraph, not the block after. The backlinks list
+A link landing on a line (`#L42`, a block's `^id`, a problem, a search hit) lands where that line is shown: in the
+rendered view, a line inside a paragraph that wraps lands on the paragraph, not the block after. The backlinks list
 shows another vault's link with that vault's name: `app: design/plan.md`.
 
 `enter` follows the link under the cursor, or else the row's first link. In source mode and inside
 the lens, where rows are the markdown itself, `enter` and `space l f` / `s` read the link around the
-cursor from the text (`[[…]]`, `![[…]]`, `[text](url)`); in a text file, a URL or a path naming a
+cursor from the text (`[text](url)`, `![alt](path)`; `[[…]]` is text); in a text file, a URL or a path naming a
 file of the vault (`16.10`); a click there places the cursor for editing. A click follows a link
 only when it lands on the link: blank space past a row's end or below the note, which the cursor is
 clamped from, follows nothing.
@@ -865,7 +862,7 @@ the only one: Org and AsciiDoc readers were built and dropped (`16.16`, `16.17`;
 their files open as text.
 
 - **Opening.** A data or text file opens from the explorer, `ctrl+p`, `:e path`, or a link to it
-  (`[config](cfg/app.toml)`, `[[run.py]]`, `[[cfg/app.toml#editor]]` at that section; binary links
+  (`[config](cfg/app.toml)`, `[run](run.py)`, `[editor](cfg/app.toml#editor)` at that section; binary links
   still copy their path). `:e path` opens a file written a moment ago too, before the watcher has told the vault:
   the vault learns of it then, as the watcher would have it — if the walk takes it (not hidden, ignored or in
   `node_modules`).
@@ -900,7 +897,7 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
     cursor's line. Never during insert mode — a half-typed line is always broken — and only for
     the text as it is now: after an edit the marks come back when the new parse lands.
   - **Links in comments** (`16.10`): URLs, and paths with an extension that name a file of the
-    vault — relative to the file, then to the vault's root, where a repo's paths start —
+    vault — relative to the file, then to the vault's root, where a repo's paths start (a leading `/` too) —
     `path:42` at that line. No wikilinks: code has none. They're drawn as links, `enter` follows
     them (a path in a string too: an import's is worth following), and they count as backlinks
     of what they name.
@@ -999,7 +996,7 @@ directory, sharing the walk's `WalkFilter` (decision `0.11`). Events are debounc
   changes opens the conflict prompt instead ("Writing notes").
 - **Deleted:** the buffer keeps showing the last version, marked `✖ deleted on disk`.
 - **Created or deleted notes:** these change link statuses, so every layout and the explorer
-  refresh. A red `[[link]]` turns resolved when its note appears.
+  refresh. A red link turns resolved when its note appears.
 - **New directories** are watched through their whole depth. A `.gitignore` change rescans, and
   open notes that changed during the rescan reload.
 - **Files outside the vault** (the scratch in the state dir) are polled while open.
@@ -1026,7 +1023,7 @@ backstops:
 The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes. A change counts
 when a note's mtime or size differs, so a rewrite in the same second is still seen. Attachments (any
 non-note file but editors' temporary files) are reported too, re-laying out only when the attachment
-index actually changes, so `![[image.png]]` embeds change status as images come and go; a note that
+index actually changes, so `![x](image.png)` images change status as they come and go; a note that
 appears or grows larger than `walk.max_file_size` is skipped (and dropped from the index), as the
 walk would. Events come coalesced (a burst of writes in one folder may report one file), so a
 batch also re-stats the known notes in each folder that had events. The TUI's own writes (notes,

@@ -116,16 +116,17 @@ describe("blocks and inlines (2.2)", () => {
     expect(out).toContain("red text");
   });
   test("links: statuses become roles; hard breaks and <br> split lines", () => {
-    const layout = renderMarkdown("[[a]] [[b]] [[c]] [x](https://e.invalid)<br>next", {
+    const layout = renderMarkdown("[a](a.md) [b](b.md) [[c]] [x](https://e.invalid)<br>next", {
       width: 60,
       glyphs: unicode,
       showUrls: false,
-      resolveLink: (_k, t) => (t === "a" ? "resolved" : t === "b" ? "unresolved" : "ambiguous"),
+      resolveLink: (_k, t) => (t === "a.md" ? "resolved" : "unresolved"),
     });
     const roles = layout.lines[0]!.spans.filter((s) => s.link !== undefined).map((s) => s.role);
-    expect(roles).toEqual(["wikilink", "link_unresolved", "link_ambiguous", "link"]);
+    expect(roles).toEqual(["link", "link_unresolved", "link"]); // [[c]] is text (20.2)
+    expect(layout.lines[0]!.spans.map((s) => s.text).join("")).toBe("a b [[c]] x");
     expect(layout.lines[1]!.spans.map((s) => s.text).join("")).toBe("next");
-    expect(layout.links.map((l) => [l.line, l.col])).toEqual([[0, 0], [0, 2], [0, 4], [0, 6]]);
+    expect(layout.links.map((l) => [l.line, l.col])).toEqual([[0, 0], [0, 2], [0, 10]]);
   });
   test("source lines survive wrapping (3.5 anchors on them)", () => {
     const layout = renderMarkdown("# H\n\npara one\nline two\n\nsecond para\n", { width: 6, glyphs: unicode, showUrls: false });

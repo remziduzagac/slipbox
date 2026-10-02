@@ -104,7 +104,7 @@ describe("links", () => {
   });
   test("links and backlinks, with their status", () => {
     const l = slipbox(["links", "partners-and-names", "--json"]).json.data;
-    expect(l.some((x: { target: string; status: string }) => x.target === "visiting-rota" && x.status === "unresolved")).toBe(true);
+    expect(l.some((x: { target: string; status: string }) => x.target === "visiting-rota.md" && x.status === "unresolved")).toBe(true);
     expect(slipbox(["links", "partners-and-names"]).out).toContain("UNRESOLVED");
     const b = slipbox(["backlinks", "kenji-mori", "--json"]).json.data;
     expect(b.backlinks.map((x: { from: string }) => x.from)).toContain("home.md");
@@ -251,44 +251,44 @@ describe("the vault and the tool", () => {
     const dir = join(sandbox, "renames");
     mkdirSync(join(dir, "notes"), { recursive: true });
     writeFileSync(join(dir, "notes", "plan.md"), "# Plan\n");
-    writeFileSync(join(dir, "index.md"), "[[plan]] and [p](notes/plan.md)\n");
+    writeFileSync(join(dir, "index.md"), "[plan](notes/plan.md) and [p](notes/plan.md)\n");
     expect(slipbox(["init", dir, "--name", "cliren"]).code).toBe(0);
     const dry = slipbox(["mv", "plan", "roadmap", "--dry-run"], { cwd: dir });
     expect(dry.out).toContain("would rename notes/plan.md → roadmap.md: 2 changes in 2 files");
-    expect(dry.out).toContain("- [[plan]] and [p](notes/plan.md)");
-    expect(dry.out).toContain("+ [[roadmap]] and [p](roadmap.md)");
+    expect(dry.out).toContain("- [plan](notes/plan.md) and [p](notes/plan.md)");
+    expect(dry.out).toContain("+ [plan](roadmap.md) and [p](roadmap.md)");
     expect(existsSync(join(dir, "notes", "plan.md"))).toBe(true);
     const done = slipbox(["mv", "plan", "roadmap", "--json"], { cwd: dir }).json;
     expect(done.data).toMatchObject({ kind: "note", from: "notes/plan.md", to: "roadmap.md", dryRun: false });
-    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[[roadmap]] and [p](roadmap.md)\n");
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[plan](roadmap.md) and [p](roadmap.md)\n");
     expect(slipbox(["mv", "roadmap", "index"], { cwd: dir }).code).toBe(5); // index.md is there
     const vr = slipbox(["rename-vault", "cliren2", "--json"], { cwd: dir }).json;
     expect(vr.data).toMatchObject({ kind: "vault", from: "cliren", to: "cliren2" });
     expect(slipbox(["info", "--json"], { cwd: dir }).json.data.vault.name).toBe("cliren2");
-    writeFileSync(join(dir, "late.md"), "[[plan]]\n");
+    writeFileSync(join(dir, "late.md"), "[plan](notes/plan.md)\n");
     const rl = slipbox(["relink", "late", "--json"], { cwd: dir }).json;
-    expect(rl.data.files[0].edits[0]).toMatchObject({ before: "[[plan]]", after: "[[roadmap]]" });
+    expect(rl.data.files[0].edits[0]).toMatchObject({ before: "[plan](notes/plan.md)", after: "[plan](roadmap.md)" });
     // undo (7.4): the newest first — the relink, the vault's name, then the move.
     expect(slipbox(["undo", "--dry-run"], { cwd: dir }).out).toStartWith("would undo the relink of late.md: 1 change in 1 file\n");
     expect(slipbox(["undo"], { cwd: dir }).out).toStartWith("undid the relink of late.md: 1 change in 1 file\n");
-    expect(readFileSync(join(dir, "late.md"), "utf8")).toBe("[[plan]]\n");
+    expect(readFileSync(join(dir, "late.md"), "utf8")).toBe("[plan](notes/plan.md)\n");
     expect(slipbox(["undo"], { cwd: dir }).out).toStartWith("renamed vault cliren2 back to cliren: ");
     expect(slipbox(["undo", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "note", from: "roadmap.md", to: "notes/plan.md", undo: { at: expect.any(String) } });
-    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[[plan]] and [p](notes/plan.md)\n");
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[plan](notes/plan.md) and [p](notes/plan.md)\n");
     expect(slipbox(["undo"], { cwd: dir }).code).toBe(3); // nothing more
   });
   test("rename-heading: a preview, then the heading and its links (11.9)", () => {
     const dir = join(sandbox, "headings");
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "plan.md"), "# Plan\n\n## Goals\n");
-    writeFileSync(join(dir, "index.md"), "[[plan#Goals]] and [g](plan.md#goals)\n");
+    writeFileSync(join(dir, "index.md"), "[the goals](plan.md#goals) and [g](plan.md#goals)\n");
     expect(slipbox(["init", dir, "--name", "cliheads"]).code).toBe(0);
     const dry = slipbox(["rename-heading", "plan", "Goals", "Aims", "--dry-run"], { cwd: dir });
     expect(dry.out).toContain("would rename heading plan.md#Goals → plan.md#Aims: 2 changes in 2 files");
-    expect(dry.out).toContain("+ [[plan#Aims]] and [g](plan.md#aims)");
+    expect(dry.out).toContain("+ [the goals](plan.md#aims) and [g](plan.md#aims)");
     expect(slipbox(["rename-heading", "plan", "Goals", "Aims", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "heading", dryRun: false });
     expect(readFileSync(join(dir, "plan.md"), "utf8")).toBe("# Plan\n\n## Aims\n");
-    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[[plan#Aims]] and [g](plan.md#aims)\n");
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[the goals](plan.md#aims) and [g](plan.md#aims)\n");
     expect(slipbox(["rename-heading", "plan", "Nope", "X"], { cwd: dir }).code).toBe(5);
     expect(slipbox(["rename-heading", "plan", "Aims"], { cwd: dir }).code).toBe(2);
   });
@@ -357,7 +357,7 @@ describe("the vault and the tool", () => {
     expect(slipbox(["diagnostics", "a.fk", "--severity", "bad"], { cwd: dir }).code).toBe(2);
     expect(slipbox(["diagnostics", "nope.fk"], { cwd: dir }).code).toBe(3);
     // A vault note: its links, and the lint surface's findings.
-    writeFileSync(join(vault, "diag-note.md"), "# Diag\n\nSee [[no-such-note-anywhere]].\n");
+    writeFileSync(join(vault, "diag-note.md"), "# Diag\n\nSee [the note](no-such-note-anywhere.md).\n");
     const n = slipbox(["diagnostics", "diag-note.md", "--config", cfg, "--severity", "info", "--json"]);
     expect(n.json.data.problems.map((p: { line: number; source: string }) => [p.line, p.source])).toEqual([
       [2, "markdownlint"],
@@ -365,25 +365,34 @@ describe("the vault and the tool", () => {
     ]);
     expect(n.code).toBe(0); // warnings: no error among them
   });
-  test("convert-links (20.1): the demo vault's wikilinks as paths, previewed with --dry-run; an ambiguous one said", () => {
-    const r = slipbox(["convert-links", "--dry-run", "--json"]);
+  test("convert-links (20.1): a vault's wikilinks as paths, previewed with --dry-run; an ambiguous one said", () => {
+    // The demo vault is converted already: a vault written as it was before (as the demo's home.md was).
+    const dir = join(sandbox, "convert");
+    mkdirSync(join(dir, "people"), { recursive: true });
+    mkdirSync(join(dir, "equipment"), { recursive: true });
+    writeFileSync(join(dir, "about-this-vault.md"), "# About\n");
+    writeFileSync(join(dir, "people", "contacts.md"), "# People\n");
+    writeFileSync(join(dir, "equipment", "contacts.md"), "# Suppliers\n");
+    writeFileSync(join(dir, "home.md"), "# Home\n\n- [[about-this-vault]]\n- [[contacts]]\n");
+    expect(slipbox(["init", dir, "--name", "convert"]).code).toBe(0);
+    const r = slipbox(["convert-links", "--dry-run", "--json"], { cwd: dir });
     expect(r.code).toBe(0);
     expect(r.json.data).toMatchObject({ kind: "convert", dryRun: true });
     expect(r.json.data.files.find((f: { path: string }) => f.path === "home.md").edits[0]).toMatchObject({ before: expect.stringContaining("[[about-this-vault]]"), after: expect.stringContaining("[about-this-vault](about-this-vault.md)") });
     expect(r.json.data.ambiguous).toMatchObject([{ shown: "home.md", written: "[[contacts]]", candidates: ["equipment/contacts.md", "people/contacts.md"] }]);
-    expect(readFileSync(join(vault, "home.md"), "utf8")).toContain("[[about-this-vault]]"); // nothing written
+    expect(readFileSync(join(dir, "home.md"), "utf8")).toContain("[[about-this-vault]]"); // nothing written
   });
   test("cp, rm, trash, and mv of a folder (18.x)", () => {
     const dir = join(sandbox, "fileops");
     mkdirSync(join(dir, "projects", "deep"), { recursive: true });
     writeFileSync(join(dir, "projects", "plan.md"), "# Plan\n\n[deeper](deep/detail.md)\n");
     writeFileSync(join(dir, "projects", "deep", "detail.md"), "# Detail\n\n[up](../plan.md)\n");
-    writeFileSync(join(dir, "index.md"), "[[projects/plan]] and [d](projects/deep/detail.md)\n");
+    writeFileSync(join(dir, "index.md"), "[plan](projects/plan.md) and [d](projects/deep/detail.md)\n");
     expect(slipbox(["init", dir, "--name", "fileops"]).code).toBe(0);
     // A folder moves whole: links into it fixed, links inside it left as they are.
     const mv = slipbox(["mv", "projects", "work", "--json"], { cwd: dir }).json;
     expect(mv.data).toMatchObject({ kind: "folder", from: "projects", to: "work", dryRun: false });
-    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[[work/plan]] and [d](work/deep/detail.md)\n");
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[plan](work/plan.md) and [d](work/deep/detail.md)\n");
     expect(readFileSync(join(dir, "work", "plan.md"), "utf8")).toBe("# Plan\n\n[deeper](deep/detail.md)\n");
     expect(existsSync(join(dir, "projects"))).toBe(false);
     // cp: beside it as name-copy, or where told.
@@ -409,20 +418,20 @@ describe("the vault and the tool", () => {
     expect(slipbox(["trash", "restore", "work/deep"], { cwd: dir }).code).toBe(0);
     expect(existsSync(join(dir, "work", "deep", "detail.md"))).toBe(true);
     expect(slipbox(["rm", ".slipbox"], { cwd: dir }).code).not.toBe(0);
-    // A vault nested in it: the links into it — by path and by its name — are what break (18.7).
+    // A vault nested in it: the links into it are what break (18.7).
     mkdirSync(join(dir, "inner"));
     writeFileSync(join(dir, "inner", "note.md"), "# Inner\n");
     expect(slipbox(["init", join(dir, "inner"), "--name", "fileops-inner"]).code).toBe(0);
-    writeFileSync(join(dir, "to-inner.md"), "[i](inner/note.md) and [[fileops-inner:note]]\n");
+    writeFileSync(join(dir, "to-inner.md"), "[i](inner/note.md)\n");
     const vrm = slipbox(["rm", "inner", "--dry-run", "--json"], { cwd: dir }).json;
-    expect(vrm.data).toMatchObject({ path: "inner", dryRun: true, breaking: 2 });
-    // …and moved as a folder of this vault: the path link fixed, the name link left (still right).
+    expect(vrm.data).toMatchObject({ path: "inner", dryRun: true, breaking: 1 });
+    // …and moved as a folder of this vault: the path link fixed.
     expect(slipbox(["mv", "inner", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "folder", from: "inner", to: "box" });
-    expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md) and [[fileops-inner:note]]\n");
-    // deinit: a plain folder of this vault again (18.11) — [[fileops-inner:note]] a name here now.
+    expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md)\n");
+    // deinit: a plain folder of this vault again (18.11); the path link means the same.
     expect(slipbox(["deinit", "box", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "unmake-vault", from: "box", to: "fileops" });
     expect(existsSync(join(dir, "box", ".slipbox"))).toBe(false);
-    expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md) and [[note]]\n");
+    expect(readFileSync(join(dir, "to-inner.md"), "utf8")).toBe("[i](box/note.md)\n");
   });
   test("tags: the vault's, with counts; a tag's notes (1.6)", () => {
     // The demo's: frontmatter tags, and #tags in the text, nested (#dome/shutter under #dome).
@@ -464,10 +473,10 @@ describe("the vault and the tool", () => {
     expect(r.properties).toMatchObject({ title: "Kenji Mori", office: { building: "Workshop", desk: 2 } });
     expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/vault\s+halden/);
   });
-  test("problems: the demo's broken and ambiguous links (1.7)", () => {
+  test("problems: the demo's broken links; a path is never ambiguous (1.7)", () => {
     const p = slipbox(["problems", "--json"], { cwd: DEMO }).json.data;
     expect(p.broken.length).toBeGreaterThan(5);
-    expect(p.ambiguous).toMatchObject([{ from: "home.md", target: "contacts" }]);
+    expect(p.ambiguous).toEqual([]); // home.md's contacts link names people/contacts.md, of the two
     expect(slipbox(["problems"], { cwd: DEMO }).out).toMatch(/^broken links \(\d+\)\n/);
   });
   test("problems --lint: your linter's findings on every note (3.21); a vault's config never picks the linter", () => {
@@ -681,7 +690,7 @@ describe("the vault and the tool", () => {
     expect(changes[1]).toMatchObject({ column: 14, textAfter: "Asterion and Vega" });
     const tasks = slipbox(["task", "2026-09-14-weekly", "--json"]).json.data;
     expect(tasks.sha).toMatch(/^[0-9a-f]{16}$/);
-    expect(tasks.tasks.some((t: { raw: string }) => t.raw.includes("[["))).toBe(true);
+    expect(tasks.tasks.some((t: { raw: string }) => t.raw.includes("](../software/pipeline-cookbook.md)"))).toBe(true);
     expect(slipbox(["write", "brand-new-name", "x"]).err).toContain("--create makes a new note");
     // --create is vault-relative from anywhere in it, unless it says ./ or ../
     slipbox(["write", "meetings/from-root", "x", "--create"], { cwd: join(vault, "meetings") });
@@ -770,12 +779,12 @@ describe("the vault and the tool", () => {
     expect(st.backlinks).toBeGreaterThan(0);
     const all = slipbox(["links", "--all", "--json"]).json.data;
     expect(all.some((l: { from: string; status: string }) => l.from === "people/partners-and-names.md" && l.status === "unresolved")).toBe(true);
-    const bl = slipbox(["backlinks", "kenji-mori", "--json"]).json.data.backlinks;
+    const bl = slipbox(["backlinks", "people/kenji-mori.md", "--json"]).json.data.backlinks;
     expect(bl[0]).toHaveProperty("kind");
     expect(bl[0]).toHaveProperty("target");
     const created = slipbox(["write", "contacts", "# c", "--create", "--json"]);
     expect(created.json.data.shadows.sort()).toEqual(["equipment/contacts.md", "people/contacts.md"]);
-    expect(created.json.warnings.join(" ")).toContain("[[contacts]]");
+    expect(created.json.warnings.join(" ")).toContain("naming it in a command takes a path");
     rmSync(join(vault, "contacts.md"));
     rmSync(join(vault, "big-replace.md"));
   }, 30_000);

@@ -1,5 +1,6 @@
 // The converter (plan 20.1; docs/idea.md, "Plain paths, virtual vaults"): a vault's links made plain
-// paths, once, by the resolution rules they were written for — before those rules go (20.2). Each
+// paths, once, by the resolution rules they were written for. Since 20.2 nothing else reads them: the
+// converter reads a note's wikilinks itself (`parseLegacy`) and resolves them by name as before. Each
 // `[[…]]` becomes a relative markdown link (`![[…]]` an image-syntax one, which embeds a note as
 // before), its text kept and its heading a fragment that's checked to exist; each `/…` markdown link,
 // which meant the vault's root and would mean the filesystem's, becomes relative. A plan like a
@@ -8,12 +9,12 @@
 
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
-import type { Graph, ResolvedLink } from "./graph.ts";
+import type { Graph, LinkRef, ResolvedLink } from "./graph.ts";
 import { blockLine } from "./landing.ts";
-import { slugify } from "./parse.ts";
+import { parseLegacy, slugify, visit } from "./parse.ts";
 import { readText } from "./fsutil.ts";
 import { type Ambiguous, Collector, dirtyTrees, type RenamePlan } from "./rename.ts";
-import { parseWikiTarget } from "./wikilink.ts";
+import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 
 /** A wikilink as written: `!`, then `[[target#heading|alias]]`. */
 const WIKI = /(!?)\[\[([^\]\n]*?)\]\]/g;
@@ -68,9 +69,11 @@ export function planConvert(g: Graph, rels?: string[], picks: Map<string, string
   const notes = rels ?? [...g.notes.keys()].sort();
   for (const rel of notes) {
     const abs = join(g.root, rel);
+    let text: string;
     let lines: string[];
     try {
-      lines = readText(abs).text.split("\n");
+      text = readText(abs).text;
+      lines = text.split("\n");
     } catch {
       c.skipped.push({ shown: rel, line: 1, reason: "can't be read" });
       continue;
@@ -80,11 +83,10 @@ export function planConvert(g: Graph, rels?: string[], picks: Map<string, string
     const skip = (l: ResolvedLink, reason: string) => c.skipped.push({ shown: rel, line: l.line, reason });
     // A reference definition several links share is rewritten once.
     const definitions = new Set<number>();
+    // Its wikilinks, read as they were, each resolved by name as it was.
+    for (const l of legacyWikiLinks(text)) wikiJob(g, rel, { ...l, ...g.resolveLink(l, rel) }, picks, ambiguous, add, skip);
     for (const l of g.linksOf(rel)) {
-      const wiki = l.kind === "wiki" || l.kind === "embed";
-      if (!wiki && !((l.kind === "markdown" || l.kind === "image") && l.target.startsWith("/") && !l.target.startsWith("//"))) continue;
-      if (wiki) wikiJob(g, rel, l, picks, ambiguous, add, skip);
-      else rootJob(g, rel, l, lines, definitions, add, skip);
+      if ((l.kind === "markdown" || l.kind === "image") && l.target.startsWith("/") && !l.target.startsWith("//")) rootJob(g, rel, l, lines, definitions, add, skip);
     }
     for (const [line, list] of jobs) {
       c.line(
@@ -120,6 +122,20 @@ export function planConvert(g: Graph, rels?: string[], picks: Map<string, string
     skipped: c.skipped,
     ambiguous,
   };
+}
+
+/** A note's wikilinks, as the parser read them before plain paths (20.2): where each is, how it's written. */
+function legacyWikiLinks(text: string): LinkRef[] {
+  const out: LinkRef[] = [];
+  visit(parseLegacy(text), (n) => {
+    if ((n.type as string) !== "wikiLink") return;
+    const w = n as unknown as WikiLink & { position?: { start: { line: number; column: number }; end: { line: number; column: number } } };
+    const start = w.position?.start ?? { line: 1, column: 1 };
+    const end = w.position?.end ?? start;
+    out.push({ kind: w.embed ? "embed" : "wiki", target: w.target, heading: w.heading, block: w.block, alias: w.alias, text: w.alias ?? w.value, line: start.line, column: start.column, end: { line: end.line, column: end.column } });
+    return false;
+  });
+  return out;
 }
 
 /** A wikilink's replacement, when it can be made: its target as a relative path, its text kept, its fragment checked. */
@@ -223,8 +239,6 @@ const DEFINITION = /^( {0,3}\[[^\]]+\]:[ \t]*)(<[^>\n]*>|\S+)/;
  * the filesystem's own path already means what it will mean; one that reaches nothing is said.
  */
 function rootJob(g: Graph, rel: string, l: ResolvedLink, lines: string[], definitions: Set<number>, add: (j: Job) => void, skip: (l: ResolvedLink, reason: string) => void): void {
-  if (l.resolvedKind !== "note" && l.resolvedKind !== "file") return skip(l, `${l.target}: nothing there — left as it is`);
-  if (!l.path || isAbsolute(l.path)) return;
   const hash = l.target.indexOf("#");
   const path = hash >= 0 ? l.target.slice(0, hash) : l.target;
   const frag = hash >= 0 ? l.target.slice(hash) : "";
@@ -232,9 +246,15 @@ function rootJob(g: Graph, rel: string, l: ResolvedLink, lines: string[], defini
   try {
     decoded = decodeURIComponent(path);
   } catch {}
-  if (!existsSync(join(g.root, decoded))) return;
+  // What it meant before: the vault's root first — the file there, by the vault's own spelling.
+  const was = g.resolveLink({ kind: "markdown", target: l.target.slice(1) }, "");
+  if ((was.resolvedKind !== "note" && was.resolvedKind !== "file") || !was.path || isAbsolute(was.path)) {
+    // Else the filesystem's own path, which means the same after; else nothing at all.
+    if (existsSync(decoded)) return;
+    return skip(l, `${l.target}: nothing there — left as it is`);
+  }
   const abs = join(g.root, rel);
-  const relPath = relative(dirname(abs), join(g.root, l.path)).split(sep).join("/");
+  const relPath = relative(dirname(abs), join(g.root, was.path)).split(sep).join("/");
   const next = (/%[0-9A-Fa-f]{2}/.test(path) || /[\s()<>#?[\]\\]/.test(relPath) ? urlPath(relPath) : relPath) + frag;
   // An inline link: its `](URL` within the link's own span — the last there, so a link around an
   // image (`[![i](/x.md)](/x.md)`) is the outer one — else, the file changed since, the nearest.

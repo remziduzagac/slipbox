@@ -1,4 +1,4 @@
 # CRLF note
 
 Line one
-line two with [[alpha]]
+line two with [alpha](notes/alpha.md)

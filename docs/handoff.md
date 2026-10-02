@@ -36,9 +36,10 @@ change as a branch switch) and the lint surface (markdownlint-cli2) are not buil
 
 **Updated 2026-10-02.** Built since: search (`6.x`), the lint surface (`3.21`), a branch switch as one event (`5.9`),
 and phase 5's LSP face (`11.x`) and code intelligence (`19.x`: language servers and linters for code). Left in phase
-5: `16.18`–`16.23`. **Decided the same day, next:** plain paths and virtual vaults (`20.x`; `docs/idea.md`, "Plain
-paths, virtual vaults") — links become plain paths, vaults are derived from `.slipbox/` and git instead of managed,
-the home vault and the LSP face go. Until it's built, the vault paragraph above is how the code works.
+5: `16.18`–`16.23`. **Decided the same day, being built:** plain paths and virtual vaults (`20.x`; `docs/idea.md`,
+"Plain paths, virtual vaults"). Done: the converter (`20.1`), links as plain paths (`20.2`: `[[…]]` is text, `/` the
+filesystem's root, a move never resolves a link), the LSP face removed (`20.23`). Next: vaults derived from
+`.slipbox/` and git instead of managed (`20.3`–`20.6`); until then, the vault paragraph above is how vaults work.
 
 ## The documents
 

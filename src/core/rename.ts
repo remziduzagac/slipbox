@@ -149,7 +149,8 @@ function mdTarget(written: string, linkingAbs: string, toAbs: string, g: Graph |
   const frag = hash >= 0 ? written.slice(hash) : "";
   const path = hash >= 0 ? written.slice(0, hash) : written;
   let next: string;
-  if (path.startsWith("/") && g && isInside(g.root, toAbs)) next = `/${relative(g.root, toAbs)}`;
+  // From the vault's root in a code or data file (16.10, 16.15); in a note `/` is the filesystem's (20.2).
+  if (path.startsWith("/") && g && isInside(g.root, toAbs) && classify(linkingAbs, g.config.walk.extensions).group !== "note") next = `/${relative(g.root, toAbs)}`;
   else {
     next = relative(dirname(linkingAbs), toAbs).split("\\").join("/");
     if (path.startsWith("./") && !next.startsWith("../")) next = `./${next}`;
@@ -699,21 +700,12 @@ export function planRelink(g: Graph, rels?: string[]): RenamePlan {
   const c = new Collector(g);
   for (const rel of rels ?? [...g.notes.keys()]) {
     for (const l of g.linksOf(rel)) {
-      if ((l.via !== "previous-name" && l.via !== "redirect") || l.resolvedKind !== "note" || !l.path) continue;
+      // A path that reaches nothing, whose file was seen to move (20.2: evidence, not resolution).
+      const to = g.movedTarget(l, rel);
+      if (!to) continue;
       const abs = join(g.root, rel);
-      const toAbs = isAbsolute(l.path) ? l.path : join(g.root, l.path);
       const site: Site = { abs, kind: l.kind, target: l.target, line: l.line, column: l.column };
-      let next: string;
-      if (l.kind === "wiki" || l.kind === "embed") {
-        const inter = VAULT_LINK.exec(l.target);
-        if (inter && isAbsolute(l.path)) {
-          const root = findVaultRoot(l.path) ?? dirname(l.path);
-          next = `${l.vault ?? inter[1]}:${relative(root, l.path).replace(NOTE_EXT, "")}`;
-          const name = posix.basename(next.slice(next.indexOf(":") + 1));
-          if (!inter[2]!.includes("/")) next = `${l.vault ?? inter[1]}:${name}`;
-        } else next = wikiTarget(l.target, posix.dirname(rel), l.path, g, "");
-      } else next = mdTarget(l.target, abs, toAbs, g);
-      c.edit(site, next, null);
+      c.edit(site, mdTarget(l.target, abs, join(g.root, to), g), null);
     }
   }
   const files = c.result();

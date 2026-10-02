@@ -1,3 +1,3 @@
 # Beta
 
-Beta links to [[alpha|the alpha]] and to [[../index]] relatively.
+Beta links to [the alpha](alpha.md) and to [../index](../index.md) relatively.

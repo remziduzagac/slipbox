@@ -6,7 +6,7 @@ tags: [greek]
 
 ## Section One
 
-Back to [[index]] and on to [[beta]].
+Back to [index](../index.md) and on to [beta](beta.md).
 
 ## Section Two
 

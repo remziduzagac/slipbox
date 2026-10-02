@@ -13,8 +13,8 @@ Owners, roughly:
 - **Kenji Mori** — visiting, comparison-star sequences and the period analysis.
 - **Min-jun Seo** — intern, target list, finding charts, a lot of spreadsheet archaeology.
 
-Related notes: [[operations-handbook]] for the night routine, [[telescope-comparison]] for why Aster does the survey
-and Brill does the follow-up, and [[pipeline-cookbook]] for the halley recipes referenced below.
+Related notes: [operations-handbook](../handbook/operations-handbook.md) for the night routine, [telescope-comparison](../equipment/telescope-comparison.md) for why Aster does the survey
+and Brill does the follow-up, and [pipeline-cookbook](../software/pipeline-cookbook.md) for the halley recipes referenced below.
 
 Status as of 2026-03-18: threads 1 and 2 are mostly decided, thread 3 is in pilot, thread 4 is half-built, thread 5 is a
 list of worries. 🔭
@@ -113,7 +113,7 @@ Options considered:
 >
 > — Tomasz, calibration meeting, 2026-01-08
 
-Decision: Tomasz's policy, as quoted. The halley check is described in [[pipeline-cookbook]] under "flat drift".
+Decision: Tomasz's policy, as quoted. The halley check is described in [pipeline-cookbook](../software/pipeline-cookbook.md) under "flat drift".
 
 ### Comparison stars
 
@@ -332,7 +332,7 @@ passed; the third found an airmass rounding bug that was, happily, ours and not 
 ### Light-curve storage
 
 Measurements plus a cache keyed by star and config hash: fast, and a stale cache is obvious because the hash changes.
-Details are in [[pipeline-cookbook]] under "light-curve cache".
+Details are in [pipeline-cookbook](../software/pipeline-cookbook.md) under "light-curve cache".
 
 ### Known issues
 

@@ -202,7 +202,8 @@ export class Reach implements VaultReach {
     // A file of `g` by its absolute path: its vault path there.
     const inG = (abs: string) => {
       if (!isInside(g.root, abs)) return null;
-      const r = g.resolveLink({ kind: "markdown", target: `/${posix.normalize(relative(g.root, abs))}` }, "");
+      // Its path from the vault's root, as a link from there reads it (its own spelling, 1.4).
+      const r = g.resolveLink({ kind: "markdown", target: posix.normalize(relative(g.root, abs)) }, "");
       return (r.resolvedKind === "note" || r.resolvedKind === "file") && r.path && !isAbsolute(r.path) ? r.path : null;
     };
     if (l.kind === "wiki" || l.kind === "embed") {

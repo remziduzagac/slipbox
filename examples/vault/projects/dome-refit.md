@@ -12,10 +12,10 @@ role = "facilities"
 # Dome refit
 
 The dome shutter has jammed twice this winter. This note plans its refit over the summer shutdown;
-the history is in [[observing-log-2026]] and the safety rules in [[operations-handbook]]. Supplier
+the history is in [observing-log-2026](../logs/observing-log-2026.md) and the safety rules in [operations-handbook](../handbook/operations-handbook.md). Supplier
 pages live at www.shutter-supply.example.invalid and <https://drives.example.invalid/catalogue>.
 
-![[dome-shutter.png]]
+![dome-shutter.png](attachments/dome-shutter.png)
 
 The photo above is the shutter's drive plate, taken by Rosa before the last repair.
 
@@ -45,6 +45,6 @@ The photo above is the shutter's drive plate, taken by Rosa before the last repa
   + wiring loom
 * rail grease
 
-The old gear goes to the [[instrument-inventory]] shelf, not the skip.
+The old gear goes to the [instrument-inventory](../equipment/instrument-inventory.md) shelf, not the skip.
 
 Filed under #dome/shutter and #budget/2026: the shutter is most of the refit, and of this year's spend.

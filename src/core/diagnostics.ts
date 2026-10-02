@@ -62,7 +62,14 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
       case "unresolved":
         if (l.reason) add(l, "warning", "unresolved", l.reason);
         else if (wiki) add(l, "info", "unresolved", `no note named "${l.target}" yet`);
-        else add(l, "warning", "unresolved", `broken link: ${l.target}`);
+        else {
+          // A note not written yet: information, as a wikilink's was. Its file seen to move (17.12):
+          // said, with the fix — a move never resolves it (20.2). Else broken.
+          const to = g.movedTarget(l, rel);
+          const yet = to ? null : g.missingNote(l, rel);
+          if (yet) add(l, "info", "unresolved", `no note at ${yet} yet`);
+          else add(l, "warning", "unresolved", to ? `broken link: ${l.target} — moved to ${to} (relink fixes it)` : `broken link: ${l.target}`);
+        }
         break;
       case "ambiguous":
         add(l, "warning", "ambiguous", `"${l.target}" matches ${l.candidates.length} notes: ${l.candidates.join(", ")}`);

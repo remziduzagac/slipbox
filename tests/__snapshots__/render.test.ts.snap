@@ -15,118 +15,119 @@ house style that writing-guide describes.
 
 ▌ What each note is for
 
-┌───────────────────────────────────┬──────────────────────────────────────────┐
-│ Note                              │ Exercises                                │
-╞═══════════════════════════════════╪══════════════════════════════════════════╡
-│ equipment/telescope-comparison.md │ the table allocator's hardest case:      │
-│                                   │ seven columns, cells of 250 characters   │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ equipment/instrument-inventory.md │ table rows of 500+ characters to wrap,   │
-│                                   │ never overflow; emoji in cells           │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ logs/observing-log-2026.md        │ throughput: 30 tables and 216 rows in    │
-│                                   │ one note                                 │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ scratch/wrap-probe.md             │ a small wide-table case with unbreakable │
-│                                   │ tokens, for fast iteration               │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ handbook/writing-guide.md         │ YAML frontmatter, tables and fences: the │
-│                                   │ common mixture                           │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/pipeline-cookbook.md     │ fences in a dozen languages, mermaid, $$ │
-│                                   │ math, ~~~, indented code, tabs           │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ handbook/operations-handbook.md   │ 1,200+ lines, h1–h6, setext, callouts, a │
-│                                   │ 4-deep checklist, a long heading         │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ handbook/writing-guide.md (HTML)  │ inline HTML, a comment, <details>; lists │
-│                                   │ from 0), 7., 998.                        │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ equipment/instrument-inventory.md │ broken images: missing file, empty alt   │
-│ (photos)                          │ text, a missing ![[embed]]               │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ meetings/2026-09-14-weekly.md     │ hard breaks (two spaces, backslash) and  │
-│                                   │ a struck-out decision                    │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ people/kenji-mori.md              │ frontmatter with a nested map, a block   │
-│                                   │ string and a long key                    │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ scratch/broken-frontmatter.md     │ frontmatter that is not valid YAML       │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ projects/variable-star-survey.md  │ long prose with code, tables, quotes and │
-│                                   │ a block id: the ordinary case            │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ projects/dome-refit.md            │ TOML frontmatter, every callout kind     │
-│                                   │ (GitHub's capitals, nested), numbered    │
-│                                   │ tasks                                    │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ projects/dome-refit.md (again)    │ * and + bullets, a www. autolink, an     │
-│                                   │ image that exists (attachments/)         │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ projects/*.md (tags)              │ #tags in the text beside frontmatter     │
-│                                   │ tags, nested ones (#dome/shutter): space │
-│                                   │ f t                                      │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ people/partners-and-names.md      │ every link form, broken links,           │
-│                                   │ footnotes; CJK, emoji, ZWJ, RTL widths   │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ home.md, people/, meetings/       │ a linked graph: backlinks, tasks,        │
-│                                   │ heading references, an ambiguous link    │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ logs/observing-log-2026.md        │ repeated ### Weather headings, an        │
-│ (again)                           │ in-note #anchor link                     │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/halley/halley.toml       │ a data file: sections, comments,         │
-│                                   │ [[telescope]] records, path links        │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/halley/targets.yaml,     │ YAML records as a table, nested maps;    │
-│ .schema.json                      │ JSON with $schema, $ref                  │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/nightjar/openapi.json    │ deep JSON as a tree: $ref pointers       │
-│                                   │ followed, records in the tree            │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/nightjar/deploy.yaml     │ a YAML tree: uneven lists of objects,    │
-│                                   │ anchors and aliases, a block string      │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/nightjar/environments.   │ several YAML documents (---); a flat     │
-│ yaml, package.json                │ manifest                                 │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/halley/logging.ini,      │ INI: ;, # comments, a comment after a    │
-│ archive.properties                │ value; dotted keys                       │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ equipment/mount-aster.cfg,        │ .cfg with dotted sections; .env with     │
-│ nightjar/nightjar.env             │ export, quotes                           │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ equipment/eyepieces.tsv           │ TSV: tabs, a quoted field, cells that    │
-│                                   │ wrap                                     │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ logs/photometry-2026.csv          │ 2,600 rows: past the 2,000-row render    │
-│                                   │ cap, quoted fields, empty cells          │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ equipment/filters.csv             │ CSV: quoted fields with commas and "",   │
-│                                   │ empty cells                              │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/halley/reduce.py,        │ tree-sitter: docstrings, heredocs, an    │
-│ night.sh                          │ outline, links in comments               │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ nightjar/src/server.ts,           │ TypeScript, JavaScript: enums,           │
-│ public/app.js                     │ interfaces, classes, template strings    │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ uploader/main.go,                 │ Go and Rust: types, methods, traits,     │
-│ stacker/src/main.rs               │ impl, raw strings, doc comments          │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ software/halley/dome.lua          │ Lua: local function, function t.m, long  │
-│                                   │ strings and comments                     │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ scratch/half-written.py,          │ a syntax error in code; a data file that │
-│ broken-config.json                │ doesn't parse                            │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ logs/dome-log.org,                │ formats slipbox doesn't read as notes:   │
-│ handbook/safety-card.adoc         │ text files, source mode                  │
-├───────────────────────────────────┼──────────────────────────────────────────┤
-│ outreach/,                        │ vaults nested in this one: links across  │
-│ outreach/school-visits/           │ vaults, by name and by path (below)      │
-└───────────────────────────────────┴──────────────────────────────────────────┘
+┌────────────────────────────────────┬─────────────────────────────────────────┐
+│ Note                               │ Exercises                               │
+╞════════════════════════════════════╪═════════════════════════════════════════╡
+│ equipment/telescope-comparison.md  │ the table allocator's hardest case:     │
+│                                    │ seven columns, cells of 250 characters  │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/instrument-inventory.md  │ table rows of 500+ characters to wrap,  │
+│                                    │ never overflow; emoji in cells          │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ logs/observing-log-2026.md         │ throughput: 30 tables and 216 rows in   │
+│                                    │ one note                                │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ scratch/wrap-probe.md              │ a small wide-table case with            │
+│                                    │ unbreakable tokens, for fast iteration  │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ handbook/writing-guide.md          │ YAML frontmatter, tables and fences:    │
+│                                    │ the common mixture                      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/pipeline-cookbook.md      │ fences in a dozen languages, mermaid,   │
+│                                    │ $$ math, ~~~, indented code, tabs       │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ handbook/operations-handbook.md    │ 1,200+ lines, h1–h6, setext, callouts,  │
+│                                    │ a 4-deep checklist, a long heading      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ handbook/writing-guide.md (HTML)   │ inline HTML, a comment, <details>;      │
+│                                    │ lists from 0), 7., 998.                 │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/instrument-inventory.md  │ broken images: missing files, empty alt │
+│ (photos)                           │ text                                    │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ meetings/2026-09-14-weekly.md      │ hard breaks (two spaces, backslash) and │
+│                                    │ a struck-out decision                   │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ people/kenji-mori.md               │ frontmatter with a nested map, a block  │
+│                                    │ string and a long key                   │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ scratch/broken-frontmatter.md      │ frontmatter that is not valid YAML      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ projects/variable-star-survey.md   │ long prose with code, tables, quotes    │
+│                                    │ and a block id: the ordinary case       │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ projects/dome-refit.md             │ TOML frontmatter, every callout kind    │
+│                                    │ (GitHub's capitals, nested), numbered   │
+│                                    │ tasks                                   │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ projects/dome-refit.md (again)     │ * and + bullets, a www. autolink, an    │
+│                                    │ image that exists (attachments/)        │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ projects/*.md (tags)               │ #tags in the text beside frontmatter    │
+│                                    │ tags, nested ones (#dome/shutter):      │
+│                                    │ space f t                               │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ people/partners-and-names.md       │ every link form, broken links,          │
+│                                    │ footnotes; CJK, emoji, ZWJ, RTL widths  │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ home.md, people/, meetings/        │ a linked graph: backlinks, tasks,       │
+│                                    │ heading references, two notes of one    │
+│                                    │ name                                    │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ logs/observing-log-2026.md (again) │ repeated ### Weather headings, an       │
+│                                    │ in-note #anchor link                    │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/halley.toml        │ a data file: sections, comments,        │
+│                                    │ [[telescope]] records, path links       │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/targets.yaml,      │ YAML records as a table, nested maps;   │
+│ .schema.json                       │ JSON with $schema, $ref                 │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/nightjar/openapi.json     │ deep JSON as a tree: $ref pointers      │
+│                                    │ followed, records in the tree           │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/nightjar/deploy.yaml      │ a YAML tree: uneven lists of objects,   │
+│                                    │ anchors and aliases, a block string     │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/nightjar/environments.    │ several YAML documents (---); a flat    │
+│ yaml, package.json                 │ manifest                                │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/logging.ini,       │ INI: ;, # comments, a comment after a   │
+│ archive.properties                 │ value; dotted keys                      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/mount-aster.cfg,         │ .cfg with dotted sections; .env with    │
+│ nightjar/nightjar.env              │ export, quotes                          │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/eyepieces.tsv            │ TSV: tabs, a quoted field, cells that   │
+│                                    │ wrap                                    │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ logs/photometry-2026.csv           │ 2,600 rows: past the 2,000-row render   │
+│                                    │ cap, quoted fields, empty cells         │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ equipment/filters.csv              │ CSV: quoted fields with commas and "",  │
+│                                    │ empty cells                             │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/reduce.py,         │ tree-sitter: docstrings, heredocs, an   │
+│ night.sh                           │ outline, links in comments              │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ nightjar/src/server.ts,            │ TypeScript, JavaScript: enums,          │
+│ public/app.js                      │ interfaces, classes, template strings   │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ uploader/main.go,                  │ Go and Rust: types, methods, traits,    │
+│ stacker/src/main.rs                │ impl, raw strings, doc comments         │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ software/halley/dome.lua           │ Lua: local function, function t.m, long │
+│                                    │ strings and comments                    │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ scratch/half-written.py,           │ a syntax error in code; a data file     │
+│ broken-config.json                 │ that doesn't parse                      │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ logs/dome-log.org,                 │ formats slipbox doesn't read as notes:  │
+│ handbook/safety-card.adoc          │ text files, source mode                 │
+├────────────────────────────────────┼─────────────────────────────────────────┤
+│ outreach/, outreach/school-visits/ │ vaults nested in this one: links across │
+│                                    │ vaults, by path (below)                 │
+└────────────────────────────────────┴─────────────────────────────────────────┘
 
 ▌ Nested vaults
 
@@ -136,16 +137,15 @@ each with a .slipbox/ of its own — boundaries, not folders of this one:
 • outreach/, the vault outreach (alias public): the public programme;
 • outreach/school-visits/, the vault outreach-school-visits, nested in that.
 
-Their notes link across all three, every way slipbox knows: by the vault's name
-([[halden:home]], [[outreach:index]]), with a heading and text, by an alias of
-the vault ([[public:…]]) and of a note ([[outreach:open nights]]), by a path
-into a nested vault ([…](school-visits/index.md)) and out of one
-(../handbook/operations-handbook.md, ../../handbook/safety-card.adoc), and to a
-vault this machine doesn't have ([[archive:2019-season]]). To try them: open
-this vault, and
+Their notes link across all three by path, as every link is (slipbox's links are
+plain paths): into a nested vault ([…](school-visits/index.md)), out of one
+(../handbook/operations-handbook.md, ../../handbook/safety-card.adoc), with a
+heading (#o2-night-assistant-owns-the-night-2025-02), and to a folder this
+machine doesn't have (../../archive/2019-season.md). To try them: open this
+vault, and
 
 • the explorer shows outreach with a vault's icon; enter goes into it;
-• [[outreach:index]] at the end of home goes there too, and ctrl+o comes back;
+• the outreach link at the end of home goes there too, and ctrl+o comes back;
 • space l b on home.md lists the backlinks from outreach and school-visits;
 • space v v lists the vaults; space n m renames a note and fixes the links in
   all three.
@@ -167,25 +167,20 @@ in a demo. Still missing anywhere:
 • Mermaid and LaTeX, rendered. software/pipeline-cookbook.md now has a mermaid
   fence and a $$ block, but slipbox shows both as code; drawing them is a
   deferred feature.
-• Checked heading and block references. [[home#No such heading]] resolves to its
-  note, since a reference's heading or block isn't checked yet: phase 4 link
-  work (plan 1.x), and this link is the test material for it. ([[Kenji]] and [[
-  森健二]] in people/partners-and-names.md reach people/kenji-mori.md through
-  the aliases it declares.)
 
 Some links are unresolved on purpose, so the link index always has failures to
 report:
 
-• people/partners-and-names.md: [[visiting-rota]], ![[dome-diagram.png]] and
-  <../scratch/wrap probe copy.md>. [[home#No such heading]] and
-  [[variable-star-survey^nope]] will join them once a reference's heading and
-  block are checked; for now they reach their notes.
+• people/partners-and-names.md: visiting-rota.md (a note nobody has written
+  yet), dome-diagram.png and <../scratch/wrap probe copy.md>; and
+  ../home.md#no-such-heading and ../projects/variable-star-survey.md#^nope,
+  whose notes exist but whose heading and block don't.
 • handbook/writing-guide.md: ../projects/dunmore-refurbishment.md,
   ../incidents/2026-03-14-fw8-stuck.md, ../reports/template.md and glossary.md
   (twice).
 • equipment/instrument-inventory.md: images/lyra-slit.png, images/tern-frame.jpg
-  and ![[missing-flat-field.png]], placeholders for photos not yet taken.
-• outreach/index.md: [[archive:2019-season]], in a vault no machine has."
+  and missing-flat-field.png, placeholders for photos not yet taken.
+• outreach/index.md: ../../archive/2019-season.md, in a folder no machine has."
 `;
 
 exports[`snapshots of the layout IR as text equipment/contacts.md @ 80 1`] = `
@@ -448,7 +443,7 @@ The Tern housing, from below, with the heater cable visible (no caption yet):
 The flat field that should be pinned here, for comparing against a suspect
 night:
 
-⧉ missing-flat-field.png
+▣ the missing flat field <missing-flat-field.png>
 
 ▌ History
 
@@ -2523,13 +2518,13 @@ about-this-vault says what each note is there to exercise.
 • partners-and-names — partners, and names in their own scripts
 • 2026-09-14-weekly — the last weekly meeting
 • kenji-mori — our visiting astronomer
-• contacts — deliberately ambiguous: there are two, people/contacts.md and
-  equipment/contacts.md, so following it asks which
+• contacts — two notes are called contacts, people/contacts.md and
+  equipment/contacts.md: a path names one
 
 ▌ Outreach
 
-• outreach:index — the public programme: a vault of its own, nested in this one
-  (outreach/), reached by its name"
+• outreach — the public programme: a vault of its own, nested in this one
+  (outreach/)"
 `;
 
 exports[`snapshots of the layout IR as text logs/observing-log-2026.md @ 80 1`] = `
@@ -3102,18 +3097,14 @@ volunteers who run it can clone just this folder.
 ▌ Programme
 
 • public-nights — the open-night calendar and what each one needs
-• School visits — a vault nested in this one, by its name
-• the school visits, by path — the same note, by its path
+• School visits — a vault nested in this one
 
 ▌ The observatory
 
-• halden:home — the observatory's own notes, by the vault's name
+• the observatory's home — the observatory's own notes, the vault this one is in
 • the opening checklist — a heading in a note there
 • the operations handbook — a path out of this vault
-• public:public-nights — this vault by its alias, public: a link to one of its
-  own notes
-• archive:2019-season — a vault this machine doesn't have: a broken link that
-  says so"
+• the 2019 season — a folder this machine doesn't have: a broken link"
 `;
 
 exports[`snapshots of the layout IR as text outreach/public-nights.md @ 80 1`] = `
@@ -3125,25 +3116,22 @@ exports[`snapshots of the layout IR as text outreach/public-nights.md @ 80 1`] =
 ▌ Public nights
 
 First Friday of each month, weather allowing. Two volunteers and a night
-assistant: the observatory's rule, [[halden:operations-handbook#O2: Night
-assistant owns the night (2025-02)|the night assistant owns the night]], holds
+assistant: the observatory's rule, the night assistant owns the night, holds
 here too.
 
-┌────────────┬─────────────────────┬───────────┬───────────────────────────────┐
-│ Date       │ Target              │ Telescope │ Volunteers                    │
-╞════════════╪═════════════════════╪═══════════╪═══════════════════════════════╡
-│ 2026-10-02 │ Saturn, the Double  │ Aster     │ Mira, Tomás                   │
-│            │ Cluster             │           │                               │
-├────────────┼─────────────────────┼───────────┼───────────────────────────────┤
-│ 2026-11-06 │ the Pleiades, M31   │ Brill     │ Kenji (halden:kenji-mori),    │
-│            │                     │           │ Ana                           │
-├────────────┼─────────────────────┼───────────┼───────────────────────────────┤
-│ 2026-12-04 │ the Geminids        │ naked eye │ everyone                      │
-└────────────┴─────────────────────┴───────────┴───────────────────────────────┘
+┌────────────┬────────────────────────────┬───────────┬────────────────────────┐
+│ Date       │ Target                     │ Telescope │ Volunteers             │
+╞════════════╪════════════════════════════╪═══════════╪════════════════════════╡
+│ 2026-10-02 │ Saturn, the Double Cluster │ Aster     │ Mira, Tomás            │
+├────────────┼────────────────────────────┼───────────┼────────────────────────┤
+│ 2026-11-06 │ the Pleiades, M31          │ Brill     │ Kenji (kenji-mori),    │
+│            │                            │           │ Ana                    │
+├────────────┼────────────────────────────┼───────────┼────────────────────────┤
+│ 2026-12-04 │ the Geminids               │ naked eye │ everyone               │
+└────────────┴────────────────────────────┴───────────┴────────────────────────┘
 
 ☐ book the car park for 2026-10-02
-☐ print the star charts (halden:telescope-comparison says which eyepieces fit
-  Brill)
+☐ print the star charts (telescope-comparison says which eyepieces fit Brill)
 
 Back to index."
 `;
@@ -3155,16 +3143,15 @@ Year 5, 28 pupils, 10:00–12:00. Sun projection with Aster's solar filter; the
 dome tour follows the catwalk rule.
 
 ☐ confirm the bus with the school
-☐ check the solar filter (halden:instrument-inventory)
+☐ check the solar filter (instrument-inventory)
 
-See index, and outreach:open nights for the evenings — an alias of a note in
-another vault."
+See index, and the open nights for the evenings — a note in the vault above."
 `;
 
 exports[`snapshots of the layout IR as text outreach/school-visits/index.md @ 80 1`] = `
 "▌ School visits
 
-A vault nested two deep: in outreach:index, itself in halden:home. Its name,
+A vault nested two deep: in outreach, itself in the observatory's. Its name,
 outreach-school-visits, is what slipbox init suggests for a vault made inside
 outreach.
 
@@ -3224,18 +3211,18 @@ its owner does.
 ▌ Links
 
 The main instrument list is in telescope-comparison, and the visiting-astronomer
-rota lives in visiting-rota, which nobody has written yet — it should show up as
-unresolved.
+rota lives in the visiting rota, which nobody has written yet — following it
+offers to make it.
 
 Night reports follow the 2026 observing log, and the probe note (wrap-probe)
 shows what happens to a table whose cells cannot wrap.
 
 How we file documents is in operations-handbook › O25: Documentation categories,
-and the survey's first thread is variable-star-survey ^thread-one.
+and the survey's first thread is variable-star-survey › ^thread-one.
 
 The wrap probe, embedded rather than linked:
 
-⧉ wrap-probe
+⧉ wrap-probe <../scratch/wrap-probe.md>
 
 Links that must not be links:
 
@@ -3249,13 +3236,12 @@ A standard markdown link to the vault's overview, a bare autolink
 https://partners.example.invalid/directory, and a reference-style link
 <https://partners.example.invalid/charter>.
 
-Kenji's own note can be reached several ways, and all of them should land on the
-same page: kenji-mori.md with its extension, people/kenji-mori by folder path,
-and through either of the aliases it declares, Kenji or 森健二. The table of
-scripts further down is #Names in their own scripts, a link to a heading in this
-very note. His heading, embedded:
+Kenji's own note is kenji-mori.md; the names it declares, Kenji and 森健二, are
+in its frontmatter, for search to find it by — Kenji and 森健二 link it by its
+path. The table of scripts further down is Names in their own scripts, a link to
+a heading in this very note. His heading, embedded:
 
-⧉ kenji-mori › Kenji Mori
+⧉ kenji-mori › Kenji Mori <kenji-mori.md#kenji-mori>
 
 Standard links can carry a heading too: the survey's calibration jumps straight
 to the second thread.
@@ -3263,12 +3249,13 @@ to the second thread.
 Some links here are deliberately broken, so the renderer and the link index have
 something to refuse politely:
 
-• ⧉ dome-diagram.png — an image embed; nobody has drawn the dome diagram yet
+• ▣ the dome diagram <dome-diagram.png> — an image; nobody has drawn the dome
+  diagram yet
 • a path with spaces — the copy was never made, so it stays unresolved
-• home › No such heading — the note exists, the heading does not (slipbox
-  doesn't check a reference's heading yet, so for now this one lands on the
-  note)
-• variable-star-survey ^nope — the note exists, the block id does not (the same)
+• home › No such heading — the note exists, the heading does not (a problem says
+  so; following it lands on the note)
+• variable-star-survey › ^nope — the note exists, the block id does not (the
+  same)
 
 ▌ Names in their own scripts
 
@@ -3366,7 +3353,7 @@ the summer shutdown; the history is in observing-log-2026 and the safety rules
 in operations-handbook. Supplier pages live at
 www.shutter-supply.example.invalid and https://drives.example.invalid/catalogue.
 
-⧉ dome-shutter.png
+▣ dome-shutter.png <attachments/dome-shutter.png>
 
 The photo above is the shutter's drive plate, taken by Rosa before the last
 repair.

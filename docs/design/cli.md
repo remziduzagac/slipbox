@@ -137,8 +137,8 @@ rewrite them.
    or under `node_modules`, is still read when named explicitly, as in the TUI. It never joins
    the vault's index.
 2. A vault-relative path.
-3. A note name, resolved like a `[[wikilink]]` with no linking note. Collisions then go to the
-   shortest path, and a real tie exits 4.
+3. A note name: its file name without the extension (or a declared alias). Collisions then go to the shortest path,
+   and a real tie exits 4. That's how a command names a note; links in notes are paths (`20.2`).
 4. A data or text file of the vault (`16.4`), by its path with its extension (`cfg/app.toml`,
    `tool.py`), from the current folder or the vault's root. It's read and written as it is, never
    parsed as a note. A data file renders (`render`, as in the TUI) and has an outline (its
@@ -189,7 +189,7 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   purpose. Stdin that isn't valid UTF-8 is refused (exit 5), never written as U+FFFD.
   `--append --paragraph` puts a blank line first, so the text is a block of its own and doesn't
   become the next row of a table or the end of a paragraph. `--create` with a name other notes
-  have warns, and lists them in `shadows`: `[[name]]` links may now reach the new note.
+  have warns, and lists them in `shadows`, the name a command's `<note>` now finds two notes by.
 - **`replace`** builds its answer before it writes, from each changed line alone, so it takes time
   in proportion to the note and a note is never changed without an answer.
 - **`find`** across the vault warns about the notes the walk left out for their size (name one to
@@ -250,16 +250,15 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
 ## `resolve`
 
 It uses the same resolver as `links` and the TUI, so it is the CLI equivalent of following a link,
-attachments included. Takes `[[target#heading|alias]]` or a bare `target`. With `--from <note>` it
-resolves the way a link inside that note does: same directory first, per decision `1.4`, then
-markdown-relative paths. With a heading, `line` is that heading's source line. External URLs come
-back as `status: "external"`. `links --all` lists every note's, each with `from`.
+attachments included: a path, from `--from`'s folder (`[a](../home.md)`, given whole, as markdown), with a heading,
+`line` is that heading's source line. External URLs come back as `status: "external"`. `links --all` lists every
+note's, each with `from`. It still takes `[[target#heading|alias]]` too, looked up by name as wikilinks were (decision
+`1.4`) — for converting by hand; links in notes never resolve so (`20.2`).
 
-**Across vaults** (plan `17.8`–`17.11`, `17.16`): `[[vault:note]]`, bare `vault:note` too when `vault` is a vault's
-name, and a path out of the root (relative, `~/`, absolute, or a `file://` URL — a file, not an external link) resolve
-into the other vault: `path` and `abs` are absolute, and `vault` names it. `via` says
-when a link got there by an `alias`, a `previous-name` or a `redirect` (and a warning says so); `reason` says why one
-didn't (`unknown vault "x"`). A backlink from another vault has an absolute `from` and its `vault`.
+**Across vaults** (plan `17.9`–`17.11`, `17.16`): a path out of the root (relative, `~/`, absolute — `/` is the
+filesystem's root — or a `file://` URL; a file, not an external link) resolves into the other vault: `path` and `abs`
+are absolute, and `vault` names it. A path that reaches nothing is broken, whatever moved (`20.2`). A backlink from
+another vault has an absolute `from` and its `vault`.
 
 ## Git (plans `5.11`–`5.14`)
 
@@ -307,18 +306,15 @@ Each `files` entry is `{path, abs, vault, edits[{line, before, after}]}`.
 new path has none) and rewrites every link to it, in this vault and in every vault whose index links into it
 (`17.11`). `--dry-run` is the preview (`7.2`): each changed line, before and after, and nothing written.
 
-- **Each link keeps how it was written:** a name stays a name (`[[plan]]` → `[[roadmap]]`), unless another note has
-  the new name — then the path, so it can't reach the wrong one; a path stays a path, a relative one relative, an
-  extension written stays, `#heading`, `^block`, `|text` and `\|` stay, a `vault:` prefix stays, a percent-encoded
-  URL is encoded again, a reference link's definition is rewritten where it is. A link written as the note's alias is
-  still right, and left alone. A filesystem path (`17.16`) stays in its form: relative from the linking file, `~/`,
-  absolute, or a `file://` URL.
+- **Each link keeps how it was written:** a relative path stays relative, `#heading` and `#^block` stay, a
+  percent-encoded URL is encoded again, a reference link's definition is rewritten where it is; a filesystem path
+  (`17.16`) stays in its form — `~/`, absolute, or a `file://` URL.
 - **Byte ranges, never re-serialised** (`7.6`): each edit replaces the target at the line and column the index
   recorded (of the links there with that target, the nearest — so the same text in code nearby is left). A file
   whose link isn't there any more (another vault's index older than its file) is skipped, and said so.
 - **The note itself:** its own relative links follow it to its new folder; when its name changes, its old name is
-  added to its frontmatter's `previous_names` (`rename.previous_names`), spliced in, so links this machine can't
-  reach still find it (`17.7`). A redirect is kept too (`17.12`).
+  added to its frontmatter's `previous_names` (`rename.previous_names`), spliced in. A redirect is kept too (`17.12`):
+  evidence for `relink` to fix a link this rename couldn't reach, never a way to resolve it.
 - **Refused, nothing written** (exit 5): a target that exists, a path outside the vault or hidden, a file changed
   between the plan and the writing.
 - **Git** (`7.3`): a root it writes to whose tree already has changes is named in `warnings`; the rename goes ahead.
@@ -329,8 +325,8 @@ move together stay as they are.
 
 **A nested vault's folder** (`18.7`) is a folder of the vault holding it, whichever one the path names: `mv` moves it,
 rewriting the links into it by path — this vault's, and those of the vaults that reach it — and its own relative links
-out; its id and name go with it (`[[name:…]]` links stay right), and it's recorded at its new place. `rm` counts the
-links into it, by path or by name, as the ones that break.
+out; its id and name go with it, and it's recorded at its new place. `rm` counts the links into it as the ones that
+break.
 
 **Deleting and copying** (`18.4`, `18.5`): `slipbox rm` moves a note, file or folder to the vault's trash — in its
 state, never in the folder — and says how many links from other notes break (`breaking`, and a warning); `--dry-run`
@@ -338,9 +334,9 @@ only says. `slipbox trash` lists what's there; `slipbox trash restore <id|path>`
 refused when something is there now. `slipbox cp` copies a note, file or folder, as written.
 
 `slipbox rename-vault <name>` renames this vault: `[vault] name` in its config, the old name added to its
-`previous_names`, and every `[[old:…]]` rewritten, here and in the vaults linking into it. `slipbox relink [note]`
-rewrites the links of a note (or every note) that reach their note only by a previous name or a redirect, to its name
-or path now. Both take `--dry-run`.
+`previous_names`; links are paths, which a vault's name doesn't change. `slipbox relink [note]` rewrites the links of
+a note (or every note) that reach nothing but whose file was seen to move (`17.12`) — broken, since a move never
+resolves a link (`20.2`) — to its path now. Both take `--dry-run`.
 
 `slipbox convert-links [note]` (plan `20.1`) makes a note's links — or every note's — plain paths, once, by today's
 resolution rules: each `[[…]]` a relative markdown link (`![[…]]` an image-syntax one, which still embeds a note),
@@ -354,13 +350,14 @@ means the same after. Spaces, parentheses, `#` and `%` in a path are percent-enc
 the warnings: a link that reaches nothing, a heading or block that isn't there (or a heading no slug can reach,
 `## 🎉`), one not where the index has it; and a link several notes answer to, listed in `ambiguous` (`{key, shown,
 line, written, candidates[]}`) — written as a path by hand, or picked in the TUI. Wikilinks in code and in the
-frontmatter are text, not links, and stay. `--dry-run` previews it; `undo` takes it back (a run that changed nothing
-isn't logged, so it can't stand in front of the one that did).
+frontmatter are text, not links, and stay. A vault nested in this one is converted on its own, run there: its notes
+aren't this vault's. `--dry-run` previews it; `undo` takes it back (a run that changed nothing isn't logged, so it
+can't stand in front of the one that did).
 
 `slipbox rename-heading <note> <heading> <new>` renames a heading (`11.9`) — found by its text in any case, or its
-slug — and every link to it: `[[note#Heading]]` and `![[note#Heading]]` (their `|text` kept), `[x](note.md#heading)`
-in the form it has, the slug (`#new-name`) or the text (`#New%20Name`, `<note.md#New Name>`), the note's own
-`[[#Heading]]` and `[x](#heading)`, in this vault and the vaults linking into it; the heading's closing `#`s stay.
+slug — and every link to it: `[x](note.md#heading)` and `![x](note.md#heading)` in the form each has, the slug
+(`#new-name`) or the text (`#New%20Name`, `<note.md#New Name>`), and the note's own `[x](#heading)`, in this vault and
+the vaults linking into it; the heading's closing `#`s stay.
 Refused (exit 5) when the note has no such heading, has two of its name (a link can't tell them apart), or has a
 heading with the new name already. It takes `--dry-run`, and `undo` takes it back.
 
@@ -375,14 +372,9 @@ made on (`5.9`): on another, `nothing to undo on branch main: the last rename wa
 A folder made a vault or a vault made a folder (`18.11`) isn't among them: `deinit` and `init` take each other back.
 
 **A folder made a vault, and back** (`18.11`): `slipbox init <folder>` on a folder inside a vault makes it a vault of
-its own — its `.slipbox/`, a distinct name suggested unless `--name` — and first rewrites the links that would stop
-reaching across the new boundary: the vault's links into it by name or a partial path become `[[name:…]]` (by its
-exact path, or any filesystem path, they still reach it); its notes' links out by name or a vault path become
-`[[parent:…]]`, from the root `/…` a relative path; its own paths from the parent's root, from its own; other vaults'
-`[[parent:…]]` into it, `[[name:…]]`. `slipbox deinit <folder>` undoes it for a vault nested in another: every
-`[[its-name:…]]` — the parent's, its own, other vaults' — becomes a name in the parent (a path where two notes would
-share the name), `parent:`-prefixed from other vaults; its paths from its root, from the parent's; its `.slipbox/`
-goes to the parent's trash (`trash restore` makes it a vault again, the links as they are then), and the machine
+its own — its `.slipbox/`, a distinct name suggested unless `--name`. Links are paths (`20.2`), which reach across the
+new boundary as before, so there's nothing of them to rewrite. `slipbox deinit <folder>` undoes it for a vault nested
+in another: its `.slipbox/` goes to the parent's trash (`trash restore` makes it a vault again), and the machine
 forgets it. Both take `--dry-run` and answer like `mv`, `init` adding the vault's `root`, `name` and `id`. Every plan's
 writes into another vault's files reach that vault's index at once, as if it had been opened.
 
@@ -429,7 +421,7 @@ end)
 links to them — the scratch's other half, gathered from the link graph instead of by hand, and written the same way.
 Each file is a `## path` section: its reference (`` `path:1-N` ``) and why it's there (`asked for`, `linked from x`,
 `links to x`), then its text as it is on disk, fenced (`markdown` for a note, the language for code; the fence
-longer than any inside it). Links are left as written: an agent can read `[[name]]` and `slipbox resolve` it.
+longer than any inside it). Links are left as written: paths, which an agent reads as they are.
 
 - **What's in it**, breadth first: the notes asked for; what they link to, in the order the links are written (a note,
   or a file of the vault: code, data); the files linking to them, by path; then, with `--depth N` (0–5; default 1),

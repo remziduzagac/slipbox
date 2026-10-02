@@ -968,7 +968,10 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
           // Inside a link (a badge: [![alt](img)](url)) the image is that link's text: it follows
           // the link, not the image.
           const id = extra.link ?? addLink(ctx, { kind: "image", target: url, heading: null, text: alt, status: status(ctx, "image", url), src: line });
-          push(`${ctx.opts.glyphs.image} ${sanitize(alt)}`, { role: "image", attrs: 0 }, { link: id });
+          // A note's (`![x](note.md)`, 20.1) where it isn't drawn in place — beside other text, or not
+          // there — is a reference to an embed, as `![[note]]`'s was; a picture's is a picture's.
+          const note = NOTE_URL.test(url.split("#")[0]!);
+          push(`${note ? ctx.opts.glyphs.embed : ctx.opts.glyphs.image} ${sanitize(alt)}`, { role: note ? "embed" : "image", attrs: 0 }, { link: id });
           if (ctx.opts.showUrls && url) push(` <${sanitize(url)}>`, { role: "url", attrs: 0 });
           break;
         }

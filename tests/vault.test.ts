@@ -130,15 +130,15 @@ describe("the walk (0.11)", () => {
     expect(withVaultCfg.notes.get("latin1.md")!.flags).toContain("invalid-utf8");
     expect(withVaultCfg.notes.get("no-newline.md")!.title).toBe("No trailing newline");
   });
-  test("graph: links resolve, attachments by name, backlinks", () => {
+  test("graph: links resolve, attachments by path, backlinks", () => {
     const links = withVaultCfg.linksOf("index.md");
     const byTarget = Object.fromEntries(links.map((l) => [l.target, l]));
-    expect(byTarget["Beta"]!.path).toBe("notes/beta.md");
-    expect(byTarget["README"]!.path).toBe("notes/Readme.md");
-    expect(byTarget["missing-note"]!.resolvedKind).toBe("unresolved");
-    expect(byTarget["diagram.png"]!.path).toBe("attachments/diagram.png");
+    expect(byTarget["notes/beta.md"]!.path).toBe("notes/beta.md");
+    expect(byTarget["notes/Readme.md"]!.path).toBe("notes/Readme.md");
+    expect(byTarget["missing-note.md"]!.resolvedKind).toBe("unresolved");
+    expect(byTarget["attachments/diagram.png"]!.path).toBe("attachments/diagram.png");
     expect(withVaultCfg.backlinks("notes/beta.md").map((b) => b.from)).toContain("index.md");
-    expect(withVaultCfg.notes.get("cjk/日本語.md")!.links[0]!.target).toBe("alpha");
+    expect(withVaultCfg.notes.get("cjk/日本語.md")!.links[0]!.target).toBe("../notes/alpha.md");
   });
 });
 
@@ -203,7 +203,7 @@ describe("CLI (9.x)", () => {
     await cli(["capture", "--ref", "notes/alpha.md:7-9", "--snippet"]);
     await cli(["capture", "--ref", "index.md:3", "--stdin"], "piped selection");
     const shown = JSON.parse((await cli(["scratch", "show", "--json"])).out).data;
-    expect(shown.content).toBe("first thought\n\n`notes/alpha.md:7-9`\n\n```markdown\n## Section One\n\nBack to [[index]] and on to [[beta]].\n```\n\n`index.md:3`\n\n```markdown\npiped selection\n```\n");
+    expect(shown.content).toBe("first thought\n\n`notes/alpha.md:7-9`\n\n```markdown\n## Section One\n\nBack to [index](../index.md) and on to [beta](beta.md).\n```\n\n`index.md:3`\n\n```markdown\npiped selection\n```\n");
     expect((await cli(["scratch", "clear", "--if-unchanged", "0000"])).code).toBe(5);
     expect((await cli(["scratch", "clear", "--if-unchanged", shown.sha])).code).toBe(0);
     expect((await cli(["scratch", "show"])).out).toBe("");
@@ -634,7 +634,7 @@ describe("links across vaults: aliases, previous names, [[vault:note]], paths (1
     "notes/renamed.md": "---\nprevious_names: [old-name]\n---\n# Renamed\n",
     "notes/a:b.md": "# colon\n",
     "app/design.md": "# Design\n\nIntro.\n\n## Goals\n",
-    "app/links.md": "[[xnotes:todo]] and [t](../notes/person.md)\n",
+    "app/links.md": "[todo](../notes/todo.md) and [t](../notes/person.md)\n",
   };
   for (const [rel, text] of Object.entries(files)) {
     mkdirSync(join(base, rel, ".."), { recursive: true });
@@ -667,9 +667,6 @@ describe("links across vaults: aliases, previous names, [[vault:note]], paths (1
     const unknown = await cli(["resolve", "[[nope:x]]"], notes);
     expect(unknown.code).toBe(3);
     expect(unknown.json.error.message).toContain('unknown vault "nope"');
-    const links = (await cli(["links", "index"], notes)).json.data;
-    expect(links.find((l: { target: string }) => l.target === "nope:x")).toMatchObject({ status: "unresolved", reason: 'unknown vault "nope"' });
-    expect(links.find((l: { target: string }) => l.target === "xapp:design")).toMatchObject({ status: "note", path: join(app, "design.md"), vault: "xapp" });
   });
 
   test("aliases resolve like names; a previous name is a fallback, said so (17.7)", async () => {
@@ -698,7 +695,7 @@ describe("links across vaults: aliases, previous names, [[vault:note]], paths (1
   test("backlinks come from other vaults' indexes too, as of their last indexing (17.11)", async () => {
     await ready;
     const todo = (await cli(["backlinks", "todo"], notes)).json.data.backlinks;
-    expect(todo).toContainEqual(expect.objectContaining({ from: join(app, "links.md"), vault: "xapp", kind: "wiki" }));
+    expect(todo).toContainEqual(expect.objectContaining({ from: join(app, "links.md"), vault: "xapp", kind: "markdown" }));
     const person = (await cli(["backlinks", "person"], notes)).json.data.backlinks;
     expect(person).toContainEqual(expect.objectContaining({ from: join(app, "links.md"), vault: "xapp", kind: "markdown" }));
   });
@@ -743,26 +740,41 @@ describe("moves: detected by content, kept as redirects (17.12)", () => {
     return dir;
   };
 
-  test("a note moved outside slipbox (mv) is found again: path links, [[dir/old]] and [[old]] follow it", async () => {
+  test("a note moved outside slipbox (mv) is found again: its path links are broken, and the relink knows where it went", async () => {
     const { renameSync } = await import("node:fs");
-    const dir = vault({ "notes/plan.md": "# The plan\n\nSteps.\n", "index.md": "[p](notes/plan.md) [[notes/plan]] [[plan]]\n" });
+    const dir = vault({ "notes/plan.md": "# The plan\n\nSteps.\n", "index.md": "[p](notes/plan.md) [s](notes/plan.md#the-plan)\n" });
     await cli(["ls"], dir); // indexed: plan.md's text is known
     mkdirSync(join(dir, "archive"));
     renameSync(join(dir, "notes", "plan.md"), join(dir, "archive", "old-plan.md"));
+    // A move is evidence for a fix, never a way to resolve (20.2).
     const links = (await cli(["links", "index"], dir)).json.data;
     expect(links.map((l: { status: string; path: string; via: string }) => [l.status, l.path, l.via])).toEqual([
-      ["note", "archive/old-plan.md", "redirect"],
-      ["note", "archive/old-plan.md", "redirect"],
-      ["note", "archive/old-plan.md", "redirect"],
+      ["unresolved", null, null],
+      ["unresolved", null, null],
     ]);
-    const r = await cli(["resolve", "[p](notes/plan.md)", "--from", "index.md"], dir);
-    expect(r.json.data.path).toBe("archive/old-plan.md");
-    expect(r.json.warnings.join()).toContain("by a redirect");
-    // It counts as a backlink of where the note is now.
-    expect((await cli(["backlinks", "archive/old-plan.md"], dir)).json.data.backlinks).toHaveLength(3);
+    expect((await cli(["resolve", "[p](notes/plan.md)", "--from", "index.md"], dir)).code).toBe(3);
+    expect((await cli(["backlinks", "archive/old-plan.md"], dir)).json.data.backlinks).toHaveLength(0);
+    const relink = await cli(["relink", "--dry-run"], dir);
+    expect(relink.json.data.files[0].edits[0].after).toBe("[p](archive/old-plan.md) [s](archive/old-plan.md#the-plan)");
+    // Its problem says where it went, and the fix; a note seen to move is no note still to write.
+    const problems = (await cli(["diagnostics", "index.md"], dir)).json.data.problems.map((p: { severity: string; message: string }) => [p.severity, p.message]);
+    expect(problems[0]).toEqual(["warning", "broken link: notes/plan.md — moved to archive/old-plan.md (relink fixes it)"]);
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    expect(g.movedTarget({ kind: "markdown", target: "notes/plan.md" }, "index.md")).toBe("archive/old-plan.md");
+    expect(g.missingNote({ kind: "markdown", target: "notes/plan.md" }, "index.md")).toBeNull();
+    expect(g.missingNote({ kind: "markdown", target: "notes/never.md" }, "index.md")).toBe("notes/never.md");
     // Moved again: the chain is followed.
     renameSync(join(dir, "archive", "old-plan.md"), join(dir, "plan-final.md"));
-    expect((await cli(["resolve", "[p](notes/plan.md)", "--from", "index.md"], dir)).json.data.path).toBe("plan-final.md");
+    expect((await cli(["relink", "--dry-run"], dir)).json.data.files[0].edits[0].after).toBe("[p](plan-final.md) [s](plan-final.md#the-plan)");
+  });
+
+  test("a leading / is the filesystem's root in a note, the vault's in a code file (20.2, 16.10)", () => {
+    const dir = vault({ "notes/a.md": "# A\n", "run.py": "# see /notes/a.md\n" });
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const at = (target: string, from: string) => g.resolveLink({ kind: "markdown", target }, from);
+    expect(at("/notes/a.md", "index.md").resolvedKind).toBe("unresolved");
+    expect(at(join(dir, "notes", "a.md"), "index.md")).toMatchObject({ resolvedKind: "note", path: "notes/a.md" });
+    expect(at("/notes/a.md", "run.py")).toMatchObject({ resolvedKind: "note", path: "notes/a.md" });
   });
 
   test("two notes with the same text gone at once: no move is guessed", async () => {
@@ -789,7 +801,9 @@ describe("moves: detected by content, kept as redirects (17.12)", () => {
     rmSync(join(dir, "b.md"));
     g.removeFile("b.md");
     expect(g.redirects!.follow("b.md")).toBe("b2.md");
-    expect(g.resolveLink({ kind: "markdown", target: "b.md" }, "a2.md")).toMatchObject({ resolvedKind: "note", path: "b2.md", via: "redirect" });
+    // Evidence for a fix, not a way to resolve (20.2).
+    expect(g.resolveLink({ kind: "markdown", target: "b.md" }, "a2.md").resolvedKind).toBe("unresolved");
+    expect(g.movedTarget({ kind: "markdown", target: "b.md" }, "a2.md")).toBe("b2.md");
   });
 });
 
@@ -817,12 +831,12 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
 
   test("a note's rename rewrites every link form, keeps how each was written, and keeps its old name", async () => {
     const dir = vault({
-      "notes/plan.md": "---\ntitle: Plan\n---\n# Plan\n\n## Steps\n\nUp: [home](../index.md) and [[index]].\n",
+      "notes/plan.md": "---\ntitle: Plan\n---\n# Plan\n\n## Steps\n\nUp: [home](../index.md) and [index](../index.md).\n",
       "index.md":
-        "# Index\n\n[[plan]] and [[notes/plan#Steps|the steps]] and ![[plan]]\n\n" +
-        "[p](notes/plan.md#steps) and [r][ref] and [[nickname]]\n\n| a | b |\n| - | - |\n| [[plan\\|x]] | y |\n\n[ref]: notes/plan.md\n",
-      "notes/other.md": "---\naliases: [nickname]\n---\nSee [x](plan.md), [[plan]] 🔭 [[plan]].\n",
-      "code.md": "`[[plan]]` and `[p](notes/plan.md)` are code; [[plan]] and [p](notes/plan.md) aren't.\n",
+        "# Index\n\n[plan](notes/plan.md) and [the steps](notes/plan.md#steps) and ![plan](notes/plan.md)\n\n" +
+        "[p](notes/plan.md#steps) and [r][ref] and [nickname](notes/other.md)\n\n| a | b |\n| - | - |\n| [x](notes/plan.md) | y |\n\n[ref]: notes/plan.md\n",
+      "notes/other.md": "---\naliases: [nickname]\n---\nSee [x](plan.md), [plan](plan.md) 🔭 [plan](plan.md).\n",
+      "code.md": "`[plan](notes/plan.md)` and `[p](notes/plan.md)` are code; [plan](notes/plan.md) and [p](notes/plan.md) aren't.\n",
     });
     const dry = await cli(["mv", "plan", "archive/2026/roadmap", "--dry-run"], dir);
     expect(dry.code).toBe(0);
@@ -832,88 +846,73 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
     const done = await cli(["mv", "plan", "archive/2026/roadmap"], dir);
     expect(done.code).toBe(0);
     expect(read(dir, "index.md")).toBe(
-      "# Index\n\n[[roadmap]] and [[archive/2026/roadmap#Steps|the steps]] and ![[roadmap]]\n\n" +
-        "[p](archive/2026/roadmap.md#steps) and [r][ref] and [[nickname]]\n\n| a | b |\n| - | - |\n| [[roadmap\\|x]] | y |\n\n[ref]: archive/2026/roadmap.md\n",
+      "# Index\n\n[plan](archive/2026/roadmap.md) and [the steps](archive/2026/roadmap.md#steps) and ![plan](archive/2026/roadmap.md)\n\n" +
+        "[p](archive/2026/roadmap.md#steps) and [r][ref] and [nickname](notes/other.md)\n\n| a | b |\n| - | - |\n| [x](archive/2026/roadmap.md) | y |\n\n[ref]: archive/2026/roadmap.md\n",
     );
-    expect(read(dir, "notes/other.md")).toBe("---\naliases: [nickname]\n---\nSee [x](../archive/2026/roadmap.md), [[roadmap]] 🔭 [[roadmap]].\n");
+    expect(read(dir, "notes/other.md")).toBe("---\naliases: [nickname]\n---\nSee [x](../archive/2026/roadmap.md), [plan](../archive/2026/roadmap.md) 🔭 [plan](../archive/2026/roadmap.md).\n");
     // The link at the index's position, not the same text in code before it.
-    expect(read(dir, "code.md")).toBe("`[[plan]]` and `[p](notes/plan.md)` are code; [[roadmap]] and [p](archive/2026/roadmap.md) aren't.\n");
-    // It moved two folders deeper: its own relative link follows; its old name is kept.
+    expect(read(dir, "code.md")).toBe("`[plan](notes/plan.md)` and `[p](notes/plan.md)` are code; [plan](archive/2026/roadmap.md) and [p](archive/2026/roadmap.md) aren't.\n");
+    // It moved two folders deeper: its own relative links follow; its old name is kept.
     expect(existsSync(join(dir, "notes", "plan.md"))).toBe(false);
-    expect(read(dir, "archive/2026/roadmap.md")).toBe("---\ntitle: Plan\nprevious_names: [plan]\n---\n# Plan\n\n## Steps\n\nUp: [home](../../index.md) and [[index]].\n");
-    // Every link resolves to it now, by its new name.
+    expect(read(dir, "archive/2026/roadmap.md")).toBe("---\ntitle: Plan\nprevious_names: [plan]\n---\n# Plan\n\n## Steps\n\nUp: [home](../../index.md) and [index](../../index.md).\n");
+    // Every link resolves to it now, by its new path.
     const links = (await cli(["links", "index"], dir)).json.data;
     expect(links.filter((l: { path: string }) => l.path === "archive/2026/roadmap.md").every((l: { via: string | null }) => l.via === null)).toBe(true);
-    // Somewhere slipbox couldn't reach, [[plan]] still finds it: by its previous name.
-    writeFileSync(join(dir, "late.md"), "[[plan]]\n");
-    expect((await cli(["resolve", "[[plan]]", "--from", "late.md"], dir)).json.data).toMatchObject({ path: "archive/2026/roadmap.md", via: "previous-name" });
-  });
-
-  test("a name another note has: links get the path, so they can't reach the wrong one", async () => {
-    const dir = vault({ "a/plan.md": "# plan\n", "b/roadmap.md": "# the other roadmap\n", "index.md": "[[plan]]\n" });
-    await cli(["mv", "a/plan", "a/roadmap"], dir);
-    expect(read(dir, "index.md")).toBe("[[a/roadmap]]\n");
   });
 
   test("refused: an existing target, outside the vault, a file changed since the preview", async () => {
-    const dir = vault({ "a.md": "# a\n", "b.md": "# b\n", "index.md": "[[a]]\n" });
+    const dir = vault({ "a.md": "# a\n", "b.md": "# b\n", "index.md": "[a](a.md)\n" });
     expect((await cli(["mv", "a", "b"], dir)).code).toBe(5);
     expect((await cli(["mv", "a", "../elsewhere"], dir)).code).toBe(5);
     const { openGraph: open } = await import("../src/core/graph.ts");
     const { planNoteRename, applyPlan } = await import("../src/core/rename.ts");
     const g = open(locateVault({ root: dir }), DEFAULT_CONFIG, true);
     const plan = planNoteRename(g, "a.md", "c");
-    writeFileSync(join(dir, "index.md"), "[[a]] edited meanwhile\n");
+    writeFileSync(join(dir, "index.md"), "[a](a.md) edited meanwhile\n");
     expect(() => applyPlan(g, plan)).toThrow(/changed since the preview/);
     expect(existsSync(join(dir, "a.md"))).toBe(true);
-    expect(read(dir, "index.md")).toBe("[[a]] edited meanwhile\n");
+    expect(read(dir, "index.md")).toBe("[a](a.md) edited meanwhile\n");
   });
 
   test("links from other vaults are rewritten too; a vault's rename keeps its old name (17.15)", async () => {
     const notes = vault({ "plan.md": "# plan\n" });
-    const app = vault({ "links.md": "[[rnotes:plan]] and [t](../NOTES/plan.md)\n".replace("NOTES", basename(notes)), "self.md": "[[rapp:links]]\n" });
+    const app = vault({ "links.md": "[p](../NOTES/plan.md) and [t](../NOTES/plan.md)\n".replaceAll("NOTES", basename(notes)) });
     await cli(["init", notes, "--name", "rnotes"], notes);
     await cli(["init", app, "--name", "rapp"], app);
     await cli(["ls"], app); // its index: the links into rnotes
     await cli(["mv", "plan", "roadmap"], notes);
-    expect(read(app, "links.md")).toBe(`[[rnotes:roadmap]] and [t](../${basename(notes)}/roadmap.md)\n`);
-    // The vault's rename: [[rnotes:…]] everywhere reached, the config, the old name kept.
+    expect(read(app, "links.md")).toBe(`[p](../${basename(notes)}/roadmap.md) and [t](../${basename(notes)}/roadmap.md)\n`);
+    // The vault's rename: the config, the old name kept; a path link has no vault name to fix.
     await cli(["ls"], app);
     const r = await cli(["rename-vault", "rnotes2"], notes);
     expect(r.code).toBe(0);
-    expect(read(app, "links.md")).toStartWith("[[rnotes2:roadmap]]");
+    expect(read(app, "links.md")).toBe(`[p](../${basename(notes)}/roadmap.md) and [t](../${basename(notes)}/roadmap.md)\n`);
     const cfg = read(notes, ".slipbox/config.toml");
     expect(cfg).toContain('name = "rnotes2"');
     expect(cfg).toContain('previous_names = ["rnotes"]');
-    // A link this machine didn't reach still works, by the old name, checked by the id.
-    writeFileSync(join(app, "late.md"), "[[rnotes:roadmap]]\n");
-    expect((await cli(["resolve", "[[rnotes:roadmap]]"], app)).json.data).toMatchObject({ abs: join(notes, "roadmap.md"), via: "previous-name" });
-    // Its own self-links follow its new name.
-    await cli(["rename-vault", "rapp2"], app);
-    expect(read(app, "self.md")).toBe("[[rapp2:links]]\n");
   });
 
   test("a rename's writes into another vault reach its index at once: a second rename right after fixes them again", async () => {
     const notes = vault({ "plan.md": "# plan\n" });
-    const app = vault({ "links.md": "[[rnotes3:plan]]\n" });
+    const app = vault({ "links.md": `[p](../${basename(notes)}/plan.md)\n` });
     await cli(["init", notes, "--name", "rnotes3"], notes);
     await cli(["init", app, "--name", "rapp3"], app);
     await cli(["ls"], app);
     await cli(["mv", "plan", "roadmap"], notes);
-    expect(read(app, "links.md")).toBe("[[rnotes3:roadmap]]\n");
+    expect(read(app, "links.md")).toBe(`[p](../${basename(notes)}/roadmap.md)\n`);
     // No opening of the other vault in between: its index already has the new link.
     await cli(["mv", "roadmap", "vision"], notes);
-    expect(read(app, "links.md")).toBe("[[rnotes3:vision]]\n");
+    expect(read(app, "links.md")).toBe(`[p](../${basename(notes)}/vision.md)\n`);
   });
 
-  test("relink: links that reach a note by an old name or a move are rewritten to where it is now", async () => {
+  test("relink: links to a note seen to move are rewritten to where it is now", async () => {
     const { renameSync } = await import("node:fs");
-    const dir = vault({ "notes/plan.md": "# Plan\n", "index.md": "[p](notes/plan.md) [[notes/plan]]\n" });
+    const dir = vault({ "notes/plan.md": "# Plan\n", "index.md": "[p](notes/plan.md) [s](notes/plan.md#plan)\n" });
     await cli(["ls"], dir);
     renameSync(join(dir, "notes", "plan.md"), join(dir, "roadmap.md"));
     const r = await cli(["relink", "index"], dir);
     expect(r.code).toBe(0);
-    expect(read(dir, "index.md")).toBe("[p](roadmap.md) [[roadmap]]\n");
+    expect(read(dir, "index.md")).toBe("[p](roadmap.md) [s](roadmap.md#plan)\n");
   });
 
   test("a git tree that already has changes is named in the plan (7.3)", async () => {
@@ -972,9 +971,9 @@ describe("undoing a rename (7.4)", () => {
 
   test("a note's rename taken back: every file as it was, byte for byte, the folders it made gone; previewed first", async () => {
     const dir = vault({
-      "notes/plan.md": "---\ntitle: Plan\n---\n# Plan\n\nUp: [home](../index.md) and [[index]].\n",
-      "index.md": "# Index\n\n[[plan]] and [p](notes/plan.md) 🔭 [[plan#Plan|the plan]]\n",
-      "other.md": "untouched [[index]]\n",
+      "notes/plan.md": "---\ntitle: Plan\n---\n# Plan\n\nUp: [home](../index.md) and [index](../index.md).\n",
+      "index.md": "# Index\n\n[plan](notes/plan.md) and [p](notes/plan.md) 🔭 [the plan](notes/plan.md#plan)\n",
+      "other.md": "untouched [index](index.md)\n",
     });
     const before = snapshot(dir);
     expect((await cli(["mv", "plan", "archive/2026/roadmap"], dir)).code).toBe(0);
@@ -982,13 +981,13 @@ describe("undoing a rename (7.4)", () => {
     // The preview: the rename's lines, the other way; nothing written.
     const dry = await cli(["undo", "--dry-run"], dir);
     expect(dry.json.data).toMatchObject({ kind: "note", from: "archive/2026/roadmap.md", to: "notes/plan.md", dryRun: true, undo: { at: expect.any(String) } });
-    expect(dry.json.data.files.find((f: { path: string }) => f.path === "index.md").edits[0]).toMatchObject({ line: 3, before: "[[roadmap]] and [p](archive/2026/roadmap.md) 🔭 [[roadmap#Plan|the plan]]", after: "[[plan]] and [p](notes/plan.md) 🔭 [[plan#Plan|the plan]]" });
+    expect(dry.json.data.files.find((f: { path: string }) => f.path === "index.md").edits[0]).toMatchObject({ line: 3, before: "[plan](archive/2026/roadmap.md) and [p](archive/2026/roadmap.md) 🔭 [the plan](archive/2026/roadmap.md#plan)", after: "[plan](notes/plan.md) and [p](notes/plan.md) 🔭 [the plan](notes/plan.md#plan)" });
     expect(existsSync(join(dir, "notes", "plan.md"))).toBe(false);
     const done = await cli(["undo"], dir);
     expect(done.code).toBe(0);
     expect(snapshot(dir)).toEqual(before); // its previous name, the moved links, the folders it made: all gone
     // The index follows: it's where it was, and a link to it reaches it again, not by a redirect.
-    expect((await cli(["resolve", "[[plan]]", "--from", "index.md"], dir)).json.data).toMatchObject({ path: "notes/plan.md", via: null });
+    expect((await cli(["resolve", "[p](notes/plan.md)", "--from", "index.md"], dir)).json.data).toMatchObject({ path: "notes/plan.md", via: null });
     // Taken back, it's out of the log: nothing more to undo.
     const none = await cli(["undo"], dir);
     expect(none.code).toBe(3);
@@ -996,49 +995,49 @@ describe("undoing a rename (7.4)", () => {
   });
 
   test("newest first: a folder's move, then a note's rename, then the move; a file changed since stops it, and it waits", async () => {
-    const dir = vault({ "a/one.md": "# One\n\n[[two]]\n", "a/two.md": "# Two\n", "index.md": "[x](a/one.md) [[two]]\n" });
+    const dir = vault({ "a/one.md": "# One\n\n[two](two.md)\n", "a/two.md": "# Two\n", "index.md": "[x](a/one.md) [y](a/two.md)\n" });
     const before = snapshot(dir);
     await cli(["mv", "a", "b"], dir);
     await cli(["mv", "b/two", "b/deux"], dir);
     const mid = snapshot(dir);
-    expect(mid["index.md"]).toBe("[x](b/one.md) [[deux]]\n");
+    expect(mid["index.md"]).toBe("[x](b/one.md) [y](b/deux.md)\n");
     // Changed since: refused, nothing written, the rename still next.
-    writeFileSync(join(dir, "index.md"), "[x](b/one.md) [[deux]] edited\n");
+    writeFileSync(join(dir, "index.md"), "[x](b/one.md) [y](b/deux.md) edited\n");
     const refused = await cli(["undo"], dir);
     expect(refused.code).toBe(5);
     expect(refused.json.error.message).toBe("index.md has changed since: the rename of b/two.md can't be undone");
     expect(existsSync(join(dir, "b", "deux.md"))).toBe(true);
-    writeFileSync(join(dir, "index.md"), "[x](b/one.md) [[deux]]\n");
+    writeFileSync(join(dir, "index.md"), "[x](b/one.md) [y](b/deux.md)\n");
     await cli(["undo"], dir);
-    expect(read(dir, "index.md")).toBe("[x](b/one.md) [[two]]\n");
-    expect(read(dir, "b/one.md")).toBe("# One\n\n[[two]]\n");
+    expect(read(dir, "index.md")).toBe("[x](b/one.md) [y](b/two.md)\n");
+    expect(read(dir, "b/one.md")).toBe("# One\n\n[two](two.md)\n");
     const back = await cli(["undo"], dir);
     expect(back.json.data).toMatchObject({ kind: "folder", from: "b", to: "a", dryRun: false });
     expect(snapshot(dir)).toEqual(before);
   });
 
-  test("a vault's rename taken back: its name, and the [[name:…]] links in other vaults; a relink too", async () => {
+  test("a vault's rename taken back: its name; a relink too", async () => {
     const one = vault({ "n.md": "# N\n" });
-    const two = vault({ "x.md": "[[undo-one:n]] and [[n]]\n" });
+    const two = vault({ "x.md": `[n](../${basename(one)}/n.md)\n` });
     await cli(["init", one, "--name", "undo-one"], one);
     await cli(["init", two, "--name", "undo-two"], two);
     await cli(["ls"], two); // its index: the links into undo-one
     const cfg = read(one, ".slipbox/config.toml");
     await cli(["rename-vault", "undo-uno"], one);
-    expect(read(two, "x.md")).toBe("[[undo-uno:n]] and [[n]]\n");
     const r = await cli(["undo"], one);
     expect(r.json.data).toMatchObject({ kind: "vault", from: "undo-uno", to: "undo-one" });
-    expect(read(two, "x.md")).toBe("[[undo-one:n]] and [[n]]\n");
+    expect(read(two, "x.md")).toBe(`[n](../${basename(one)}/n.md)\n`);
     expect(read(one, ".slipbox/config.toml")).toBe(cfg);
     // The machine's list has its name back at once, as seen from another vault.
     expect((await cli(["vaults"], two)).json.data.find((v: { path: string }) => v.path === one)).toMatchObject({ name: "undo-one" });
-    expect((await cli(["resolve", "[[undo-one:n]]", "--from", "x.md"], two)).json.data).toMatchObject({ status: "resolved", via: null });
-    // A relink: the old names back as they were written.
-    const dir = vault({ "new.md": "---\nprevious_names: [old]\n---\n# New\n", "i.md": "[[old]] and [[old|x]]\n" });
+    // A relink: the moved note's old paths back as they were written.
+    const dir = vault({ "notes/plan.md": "# Plan\n", "i.md": "[p](notes/plan.md) and [x](notes/plan.md#plan)\n" });
+    await cli(["ls"], dir);
+    renameSync(join(dir, "notes", "plan.md"), join(dir, "plan.md"));
     await cli(["relink"], dir);
-    expect(read(dir, "i.md")).toBe("[[new]] and [[new|x]]\n");
+    expect(read(dir, "i.md")).toBe("[p](plan.md) and [x](plan.md#plan)\n");
     expect((await cli(["undo"], dir)).json.data.kind).toBe("relink");
-    expect(read(dir, "i.md")).toBe("[[old]] and [[old|x]]\n");
+    expect(read(dir, "i.md")).toBe("[p](notes/plan.md) and [x](notes/plan.md#plan)\n");
   });
 });
 
@@ -1071,18 +1070,18 @@ describe("path links, as other tools write them (17.16)", () => {
   };
   write(join(notes, "todo.md"), "# Todo\n");
   write(join(notes, "index.md"), [
-    "[rel](../app/design.md) [[../app/design]] [[../app/design#Goals]] ![[../app/pic.png]]",
-    "[home](~/app/design.md) [[~/app/design]]",
-    `[abs](${app}/design.md) [[${app}/design]]`,
+    "[rel](../app/design.md) [goals](../app/design.md#goals) ![pic](../app/pic.png)",
+    "[home](~/app/design.md)",
+    `[abs](${app}/design.md)`,
     `[url](file://${app}/design.md#goals)`,
-    `[inside](${notes}/todo.md) [[${notes}/todo]] [iu](file://${notes}/todo.md) [root](/todo.md)`,
+    `[inside](${notes}/todo.md) [iu](file://${notes}/todo.md)`,
     "[spaced](<../app/my design.md>) [encoded](../app/my%20design.md)",
     "",
   ].join("\n\n"));
   write(join(app, "design.md"), "# Design\n\n## Goals\n");
   write(join(app, "my design.md"), "# Spaced\n");
   write(join(app, "pic.png"), "png");
-  write(join(app, "links.md"), `[[../notes/todo]] [t](~/notes/todo.md) [u](file://${notes}/todo.md)\n`);
+  write(join(app, "links.md"), `[r](../notes/todo.md) [t](~/notes/todo.md) [u](file://${notes}/todo.md)\n`);
   const ready = withHome(async () => {
     await cli(["init", notes, "--name", "pnotes"], notes);
     await cli(["init", app, "--name", "papp"], app);
@@ -1093,11 +1092,11 @@ describe("path links, as other tools write them (17.16)", () => {
     await ready;
     const links = await withHome(async () => (await cli(["links", "index"], notes)).json.data);
     const at = (target: string) => links.find((l: { target: string }) => l.target === target);
-    for (const t of ["../app/design.md", "../app/design", "~/app/design.md", "~/app/design", `${app}/design.md`, `${app}/design`, `file://${app}/design.md#goals`]) {
+    for (const t of ["../app/design.md", "../app/design.md#goals", "~/app/design.md", `${app}/design.md`, `file://${app}/design.md#goals`]) {
       expect(at(t)).toMatchObject({ status: "note", path: join(app, "design.md"), vault: "papp" });
     }
     expect(at("../app/pic.png")).toMatchObject({ status: "file", path: join(app, "pic.png") });
-    for (const t of [`${notes}/todo.md`, `${notes}/todo`, `file://${notes}/todo.md`, "/todo.md"]) expect(at(t)).toMatchObject({ status: "note", path: "todo.md" });
+    for (const t of [`${notes}/todo.md`, `file://${notes}/todo.md`]) expect(at(t)).toMatchObject({ status: "note", path: "todo.md" });
     expect(at("../app/my design.md")).toMatchObject({ status: "note", path: join(app, "my design.md") });
     expect(at("../app/my%20design.md")).toMatchObject({ status: "note", path: join(app, "my design.md") });
     // resolve takes them too: a file:// URL is a file, not a web page.
@@ -1109,8 +1108,8 @@ describe("path links, as other tools write them (17.16)", () => {
   test("backlinks: this vault's absolute links, and another vault's path links in every form", async () => {
     await ready;
     const bl = await withHome(async () => (await cli(["backlinks", "todo"], notes)).json.data.backlinks);
-    expect(bl.filter((b: { from: string }) => b.from === "index.md")).toHaveLength(4);
-    expect(bl.filter((b: { vault: string | null }) => b.vault === "papp").map((b: { target: string }) => b.target).sort()).toEqual(["../notes/todo", `file://${notes}/todo.md`, "~/notes/todo.md"].sort());
+    expect(bl.filter((b: { from: string }) => b.from === "index.md")).toHaveLength(2);
+    expect(bl.filter((b: { vault: string | null }) => b.vault === "papp").map((b: { target: string }) => b.target).sort()).toEqual(["../notes/todo.md", `file://${notes}/todo.md`, "~/notes/todo.md"].sort());
   });
 
   test("a rename keeps each path link in its form: absolute, ~/, file://, relative, encoded", async () => {
@@ -1119,8 +1118,8 @@ describe("path links, as other tools write them (17.16)", () => {
     const r = await withHome(() => cli(["mv", "todo", "tasks"], notes));
     expect(r.code).toBe(0);
     const index = readFileSync(join(notes, "index.md"), "utf8");
-    expect(index).toContain(`[inside](${notes}/tasks.md) [[${notes}/tasks]] [iu](file://${notes}/tasks.md) [root](/tasks.md)`);
-    expect(readFileSync(join(app, "links.md"), "utf8")).toBe(`[[../notes/tasks]] [t](~/notes/tasks.md) [u](file://${notes}/tasks.md)\n`);
+    expect(index).toContain(`[inside](${notes}/tasks.md) [iu](file://${notes}/tasks.md)`);
+    expect(readFileSync(join(app, "links.md"), "utf8")).toBe(`[r](../notes/tasks.md) [t](~/notes/tasks.md) [u](file://${notes}/tasks.md)\n`);
     // In the other vault: the spaced note renamed, each link keeps its encoding.
     await withHome(() => cli(["ls"], notes));
     await withHome(() => cli(["mv", "my design", "your design"], app));
@@ -1142,16 +1141,16 @@ describe("nested vaults, known to each other without being opened (17.17)", () =
   const kid = join(parent, "kid");
   const files: Record<string, string> = {
     ".slipbox/config.toml": '[vault]\nid = "dparent00000001"\nname = "dparent"\n',
-    "index.md": "# Index\n\n[[dkid:note]] and [k](kid/note.md) and [[kid/note]]\n",
+    "index.md": "# Index\n\n[k](kid/note.md) and [n](kid/note.md#note)\n",
     "kid/.slipbox/config.toml": '[vault]\nid = "dkid0000000001"\nname = "dkid"\n',
-    "kid/note.md": "# Note\n\nUp: [[dparent:index]]\n",
+    "kid/note.md": "# Note\n\nUp: [index](../index.md)\n",
   };
   for (const [rel, text] of Object.entries(files)) {
     mkdirSync(join(parent, rel, ".."), { recursive: true });
     writeFileSync(join(parent, rel), text);
   }
 
-  test("a vault nested in this one: by its name, by a path into it — never opened on this machine", async () => {
+  test("a vault nested in this one: by a path into it — never opened on this machine", async () => {
     const links = (await cli(["links", "index"], parent)).json.data;
     for (const l of links) expect(l).toMatchObject({ status: "note", path: join(kid, "note.md"), vault: "dkid" });
     // …and its links count as backlinks here: indexed when found.
@@ -1195,12 +1194,12 @@ describe("moving a folder (18.3)", () => {
     const { planFolderMove, applyPlan } = await import("../src/core/rename.ts");
     const dir = mkdtempSync(join(tmpdir(), "slipbox-foldermove-"));
     const files: Record<string, string> = {
-      "a/one.md": "# One\n\n[two](two.md) [[two]] [sub](sub/three.md) [out](../b/four.md) [[../b/four]]\n",
+      "a/one.md": "# One\n\n[two](two.md) [2](two.md#two) [sub](sub/three.md) [out](../b/four.md) [4](../b/four.md#four)\n",
       "a/two.md": "# Two\n\n[one](./one.md)\n",
       "a/sub/three.md": "# Three\n\n[up](../one.md)\n",
       "a/pic.png": "png",
       "a/.hidden": "kept",
-      "b/four.md": "# Four\n\n[one](../a/one.md) [[a/one]] ![p](../a/pic.png)\n",
+      "b/four.md": "# Four\n\n[one](../a/one.md) [1](../a/one.md#one) ![p](../a/pic.png)\n",
     };
     mkdirSync(join(dir, ".slipbox"));
     for (const [rel, text] of Object.entries(files)) {
@@ -1212,11 +1211,11 @@ describe("moving a folder (18.3)", () => {
     applyPlan(g, plan);
     const read = (rel: string) => readFileSync(join(dir, rel), "utf8");
     // Inside: left alone; out of it: from the new place.
-    expect(read("x/y/one.md")).toBe("# One\n\n[two](two.md) [[two]] [sub](sub/three.md) [out](../../b/four.md) [[../../b/four]]\n");
+    expect(read("x/y/one.md")).toBe("# One\n\n[two](two.md) [2](two.md#two) [sub](sub/three.md) [out](../../b/four.md) [4](../../b/four.md#four)\n");
     expect(read("x/y/two.md")).toBe("# Two\n\n[one](./one.md)\n");
     expect(read("x/y/sub/three.md")).toBe("# Three\n\n[up](../one.md)\n");
     // Into it, from what stays.
-    expect(read("b/four.md")).toBe("# Four\n\n[one](../x/y/one.md) [[x/y/one]] ![p](../x/y/pic.png)\n");
+    expect(read("b/four.md")).toBe("# Four\n\n[one](../x/y/one.md) [1](../x/y/one.md#one) ![p](../x/y/pic.png)\n");
     // Everything moved, what the walk doesn't list too.
     expect(read("x/y/.hidden")).toBe("kept");
     expect(existsSync(join(dir, "a"))).toBe(false);
@@ -1228,7 +1227,7 @@ describe("moving a folder (18.3)", () => {
 });
 
 describe("moving a vault's folder (18.7)", () => {
-  test("links into it by path are fixed, from its parent and other vaults; its links out too; by name, nothing", async () => {
+  test("links into it by path are fixed, from its parent and other vaults; its links out too", async () => {
     const { planVaultFolderMove, applyPlan } = await import("../src/core/rename.ts");
     const { openVault } = await import("../src/core/reach.ts");
     const base = mkdtempSync(join(tmpdir(), "slipbox-vaultmove-"));
@@ -1236,7 +1235,7 @@ describe("moving a vault's folder (18.7)", () => {
     const other = join(base, "other");
     const files: Record<string, string> = {
       "parent/.slipbox/config.toml": '[vault]\nid = "vmparent000001"\nname = "vmparent"\n',
-      "parent/home.md": "# Home\n\n[p](box/index.md) [[box/index]] [[vmbox:index]]\n",
+      "parent/home.md": "# Home\n\n[p](box/index.md) [i](box/index.md#box)\n",
       "parent/box/.slipbox/config.toml": '[vault]\nid = "vmbox00000001"\nname = "vmbox"\n',
       "parent/box/index.md": "# Box\n\n[up](../home.md) [in](inner.md) [kid](kid/k.md)\n",
       "parent/box/inner.md": "# Inner\n",
@@ -1256,7 +1255,7 @@ describe("moving a vault's folder (18.7)", () => {
     expect(plan.vaults!.map(([, to]) => to)).toEqual([join(parent, "shelf", "box"), join(parent, "shelf", "box", "kid")]);
     applyPlan(g, plan);
     const read = (p: string) => readFileSync(join(base, p), "utf8");
-    expect(read("parent/home.md")).toBe("# Home\n\n[p](shelf/box/index.md) [[shelf/box/index]] [[vmbox:index]]\n");
+    expect(read("parent/home.md")).toBe("# Home\n\n[p](shelf/box/index.md) [i](shelf/box/index.md#box)\n");
     expect(read("other/o.md")).toBe("[o](../parent/shelf/box/index.md)\n");
     // Its own links: out of it, from where it is now; within it, as they were.
     expect(read("parent/shelf/box/index.md")).toBe("# Box\n\n[up](../../home.md) [in](inner.md) [kid](kid/k.md)\n");
@@ -1279,13 +1278,13 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
   const other = join(base, "other");
   const files: Record<string, string> = {
     "parent/.slipbox/config.toml": '[vault]\nid = "mkparent000001"\nname = "mkparent"\n',
-    "parent/home.md": "# Home\n\n[[alpha]] [[proj/beta]] [[deep/gamma]] [b](proj/beta.md) [c](/proj/beta.md) [[mkparent:alpha]] ![[pic.png]]\n",
-    "parent/proj/alpha.md": "# Alpha\n\n[[home]] [[proj/beta]] [[beta]] [h](/home.md) [h2](../home.md) [[mkparent:home]]\n\n[[/proj/beta]] [[mkparent:beta]] [r](/proj/beta.md) [[deep/gamma]]\n",
-    "parent/proj/beta.md": "# Beta\n\n[[alpha]]\n",
+    "parent/home.md": "# Home\n\n[a](proj/alpha.md) [g](proj/deep/gamma.md) [b](proj/beta.md) [b2](proj/beta.md#beta) ![p](proj/pic.png)\n",
+    "parent/proj/alpha.md": "# Alpha\n\n[h](../home.md) [b](beta.md) [b2](./beta.md#beta) [g](deep/gamma.md)\n",
+    "parent/proj/beta.md": "# Beta\n\n[a](alpha.md)\n",
     "parent/proj/deep/gamma.md": "# Gamma\n\n[up](../alpha.md)\n",
     "parent/proj/pic.png": "png",
     "other/.slipbox/config.toml": '[vault]\nid = "mkother000001"\nname = "mkother"\n',
-    "other/index.md": "# Other\n\n[[mkparent:alpha]] [[mkparent:home]]\n",
+    "other/index.md": "# Other\n\n[a](../parent/proj/alpha.md) [h](../parent/home.md)\n",
   };
   for (const [rel, text] of Object.entries(files)) {
     mkdirSync(join(base, rel, ".."), { recursive: true });
@@ -1306,9 +1305,10 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
     return out;
   };
 
-  test("made a vault: what would stop reaching across is rewritten, the rest left; made a folder again: it all reaches the same", async () => {
+  test("made a vault: path links across it are left, and reach the same; made a folder again: it all reaches the same", async () => {
     await cli(["backlinks", "index"], other); // indexed and known, as when opened
     await cli(["links", "home"], parent);
+    const texts = Object.fromEntries(Object.keys(files).map((rel) => [rel, read(rel)]));
     const before = await reached([parent]);
     const dry = (await cli(["init", "proj", "--name", "mkproj", "--dry-run"], parent)).json;
     expect(dry.data).toMatchObject({ kind: "make-vault", from: "proj", to: "mkproj", dryRun: true });
@@ -1316,31 +1316,17 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
     const made = (await cli(["init", "proj", "--name", "mkproj"], parent)).json;
     expect(made.ok).toBe(true);
     expect(existsSync(join(parent, "proj", ".slipbox", "config.toml"))).toBe(true);
-    // Into it: by name and by a partial path, its name; exact paths left.
-    expect(read("parent/home.md")).toBe("# Home\n\n[[mkproj:alpha]] [[proj/beta]] [[mkproj:deep/gamma]] [b](proj/beta.md) [c](/proj/beta.md) [[mkproj:alpha]] ![[mkproj:pic.png]]\n");
-    // Out of it and within it.
-    expect(read("parent/proj/alpha.md")).toBe(
-      "# Alpha\n\n[[mkparent:home]] [[beta]] [[beta]] [h](../home.md) [h2](../home.md) [[mkparent:home]]\n\n[[/beta]] [[beta]] [r](/beta.md) [[deep/gamma]]\n",
-    );
-    expect(read("parent/proj/beta.md")).toBe("# Beta\n\n[[alpha]]\n");
-    // Another vault's [[mkparent:…]] into it: the new name.
-    expect(read("other/index.md")).toBe("# Other\n\n[[mkproj:alpha]] [[mkparent:home]]\n");
+    // Into it, out of it, within it, from another vault: relative paths reach across as they are.
+    for (const rel of Object.keys(files)) expect([rel, read(rel)]).toEqual([rel, texts[rel]!]);
     // Everything that resolved still does, to the same file.
     expect(await reached([parent, join(parent, "proj")])).toEqual(before);
 
-    // Back: a plain folder again, a name now taken in the parent written as a path.
-    writeFileSync(join(parent, "beta.md"), "# Another beta\n");
+    // Back: a plain folder again, nothing to rewrite either.
     const back = (await cli(["deinit", "proj"], parent)).json;
     expect(back.data).toMatchObject({ kind: "unmake-vault", from: "proj", to: "mkparent", dryRun: false });
     expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(false);
-    expect(read("parent/home.md")).toBe("# Home\n\n[[alpha]] [[proj/beta]] [[deep/gamma]] [b](proj/beta.md) [c](/proj/beta.md) [[alpha]] ![[pic.png]]\n");
-    expect(read("parent/proj/alpha.md")).toBe(
-      "# Alpha\n\n[[mkparent:home]] [[proj/beta]] [[proj/beta]] [h](../home.md) [h2](../home.md) [[mkparent:home]]\n\n[[/proj/beta]] [[proj/beta]] [r](/proj/beta.md) [[deep/gamma]]\n",
-    );
-    expect(read("other/index.md")).toBe("# Other\n\n[[mkparent:alpha]] [[mkparent:home]]\n");
-    const after = await reached([parent]);
-    delete after[join(parent, "beta.md")];
-    expect(after).toEqual(before);
+    for (const rel of Object.keys(files)) expect([rel, read(rel)]).toEqual([rel, texts[rel]!]);
+    expect(await reached([parent])).toEqual(before);
     // The machine forgot it; its .slipbox/ is in the parent's trash, restorable.
     expect((await cli(["vaults"], parent)).json.data.some((v: { name: string }) => v.name === "mkproj")).toBe(false);
     expect((await cli(["trash"], parent)).json.data[0]).toMatchObject({ shown: "proj/.slipbox", dir: true });
@@ -1386,12 +1372,12 @@ describe("the context bundle (9.7)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-context-"));
     mkdirSync(join(dir, ".slipbox"));
     const files: Record<string, string> = {
-      "a.md": "# A\n\n[[b]], [c](c.md), [code](s.ts), ![p](pic.png), [[missing]], [log](big.log) and [[b]] again.\n",
-      "b.md": "# B\n\n```js\nlet x;\n```\n\nOn to [[d]].\n",
+      "a.md": "# A\n\n[b](b.md), [c](c.md), [code](s.ts), ![p](pic.png), [missing](missing.md), [log](big.log) and [b](b.md) again.\n",
+      "b.md": "# B\n\n```js\nlet x;\n```\n\nOn to [d](d.md).\n",
       "c.md": "# C\n",
       "d.md": "# D\n\nDeep.\n",
-      "e.md": "Back to [[a]].\n",
-      "f.md": "[[a]] and [[a#A]]\n",
+      "e.md": "Back to [a](a.md).\n",
+      "f.md": "[a](a.md) and [a](a.md#a)\n",
       "ab.json": '{"see": "a.md"}\n', // a data file's link: listed after the notes', and sorted in by path
       "s.ts": "export const s = 1;\n",
       "pic.png": "png",
@@ -1415,7 +1401,7 @@ describe("the context bundle (9.7)", () => {
     expect(b.items[1]).toMatchObject({ depth: 1, from: "a.md", lines: 7 });
     // Written as the scratch is: each file's reference and why, its text fenced (longer than a fence inside it).
     expect(b.text).toStartWith("# Context: a.md\n\nThe note, 3 files it links to and 3 files linking to it: each with its path and lines, fenced as it is on disk.\n\n## a.md\n\n`a.md:1-3` — asked for\n\n```markdown\n# A\n");
-    expect(b.text).toContain("## b.md\n\n`b.md:1-7` — linked from a.md\n\n````markdown\n# B\n\n```js\nlet x;\n```\n\nOn to [[d]].\n````\n");
+    expect(b.text).toContain("## b.md\n\n`b.md:1-7` — linked from a.md\n\n````markdown\n# B\n\n```js\nlet x;\n```\n\nOn to [d](d.md).\n````\n");
     expect(b.text).toContain("## s.ts\n\n`s.ts:1` — linked from a.md\n\n```typescript\nexport const s = 1;\n```\n");
     expect(b.text).toContain("## e.md\n\n`e.md:1` — links to a.md\n");
     expect(b.text).toEndWith("## Left out\n\n- `pic.png` — linked from a.md: not text\n- `big.log` — linked from a.md: too large\n");
@@ -1434,7 +1420,7 @@ describe("the context bundle (9.7)", () => {
     expect(two.text).toStartWith("# Context: a.md, d.md\n\nThe notes, 1 file they link to:");
     expect(two.text).toContain("- `c.md` — linked from a.md: past the limit of 3\n");
     // A long list of what's left out: the first 20 named, the rest counted.
-    writeFileSync(join(g.root, "hub.md"), Array.from({ length: 25 }, (_, i) => `[[n${i}]]`).join("\n"));
+    writeFileSync(join(g.root, "hub.md"), Array.from({ length: 25 }, (_, i) => `[n${i}](n${i}.md)`).join("\n"));
     for (let i = 0; i < 25; i++) writeFileSync(join(g.root, `n${i}.md`), `# ${i}\n`);
     const hub = buildContext(openGraph(locateVault({ root: g.root }), DEFAULT_CONFIG, true), ["hub.md"], { depth: 1, backlinks: false, limit: 1 });
     expect(hub.left).toHaveLength(25);
@@ -1657,7 +1643,7 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
     mkdirSync(join(x, "src"), { recursive: true });
     mkdirSync(y, { recursive: true });
     writeFileSync(join(y, "plan.md"), "# Y's plan\n");
-    writeFileSync(join(x, "notes", "a.md"), `# A\n\nSee [y's plan](../../y/plan.md), [the code](../src/x.md) and [[y${n}:plan]].\n`);
+    writeFileSync(join(x, "notes", "a.md"), `# A\n\nSee [y's plan](../../y/plan.md) and [the code](../src/x.md).\n`);
     writeFileSync(join(x, "src", "x.md"), "# Code notes\n");
     if (git(x, "init", "-q", "-b", "main").exitCode !== 0) return null; // no git here
     await cli(["init", x, "--name", `x${n}`], x);
@@ -1733,11 +1719,10 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
     expect(links.map((x: { target: string; status: string; path: string }) => [x.target, x.status, x.path])).toEqual([
       ["../../y/plan.md", "note", join(l.y, "plan.md")],
       ["../src/x.md", "note", "src/x.md"],
-      [`y${n}:plan`, "note", join(l.y, "plan.md")],
     ]);
     // y's backlinks: the main checkout's links, not the worktree's copies of them.
     const back = (await cli(["backlinks", "plan.md"], l.y)).json.data.backlinks;
-    expect(back.map((b: { from: string }) => b.from)).toEqual([join(l.x, "notes", "a.md"), join(l.x, "notes", "a.md")]);
+    expect(back.map((b: { from: string }) => b.from)).toEqual([join(l.x, "notes", "a.md")]);
   });
 
   test("a worktree gone: its cache removed at once, its state and entry a month after it was last seen", async () => {
@@ -1952,8 +1937,8 @@ describe("embeds drawn in place (1.11)", () => {
 
   test("a note in a frame where it's embedded: its name, then its text behind a bar — no frontmatter; its headings not this note's", async () => {
     const { g } = vaultOf({
-      "host.md": "# Host\n\nBefore.\n\n![[sub/inner]]\n\nAfter.\n",
-      "sub/inner.md": "---\ntitle: Inner\n---\n# Inner\n\nSee [the sibling](sibling.md) and [[sibling]].\n",
+      "host.md": "# Host\n\nBefore.\n\n![inner](sub/inner.md)\n\nAfter.\n",
+      "sub/inner.md": "---\ntitle: Inner\n---\n# Inner\n\nSee [the sibling](sibling.md) and [sibling](./sibling.md).\n",
       "sub/sibling.md": "# Sibling\n",
     });
     const l = await draw(g, "host.md");
@@ -1968,12 +1953,12 @@ describe("embeds drawn in place (1.11)", () => {
       ["resolved", "sub/inner.md", 5],
     ]);
     // The header, its name, is a link to it.
-    expect(l.links.find((x) => x.kind === "embed")).toMatchObject({ target: "sub/inner", text: "inner", line: 4 });
+    expect(l.links.find((x) => x.line === 4)).toMatchObject({ kind: "image", target: "sub/inner.md", text: "inner", line: 4 });
   });
 
   test("a heading's section, a block by its ^id (a paragraph's, a list item's, a table's on the line after); missing ones said", async () => {
     const { g } = vaultOf({
-      "host.md": "![[src#Two]]\n\n![[src#^para]]\n\n![[src#^item]]\n\n![[src#^tab]]\n\n![[src#Nope]]\n\n![[src#^nope]]\n",
+      "host.md": "![src › Two](src.md#two)\n\n![src › ^para](src.md#^para)\n\n![src › ^item](src.md#^item)\n\n![src › ^tab](src.md#^tab)\n\n![src › Nope](src.md#nope)\n\n![src › ^nope](src.md#^nope)\n",
       "src.md": "# One\n\nfirst\n\n## Two\n\nsecond ^para\n\n### Two-a\n\ndeeper\n\n## Three\n\n- a\n- b ^item\n\n| x |\n| - |\n| 1 |\n\n^tab\n",
     });
     expect(text(await draw(g, "host.md"))).toEqual([
@@ -1999,8 +1984,8 @@ describe("embeds drawn in place (1.11)", () => {
       "▎ │ 1 │",
       "▎ └───┘",
       "",
-      "⧉ src › Nope",
-      '▎ no heading "Nope" in src',
+      "⧉ src › nope",
+      '▎ no heading "nope" in src',
       "",
       "⧉ src ^nope",
       "▎ no block ^nope in src",
@@ -2009,15 +1994,15 @@ describe("embeds drawn in place (1.11)", () => {
 
   test("a loop is drawn once, said so; past three deep, a line says to open it; a picture, text around it, nothing found: references", async () => {
     const { g } = vaultOf({
-      "a.md": "A\n\n![[b]]\n",
-      "b.md": "B\n\n![[a]]\n",
-      "self.md": "S\n\n![[self]]\n",
-      "d1.md": "![[d2]]\n",
-      "d2.md": "![[d3]]\n",
-      "d3.md": "![[d4]]\n",
-      "d4.md": "![[d5]]\n",
+      "a.md": "A\n\n![b](b.md)\n",
+      "b.md": "B\n\n![a](a.md)\n",
+      "self.md": "S\n\n![self](self.md)\n",
+      "d1.md": "![d2](d2.md)\n",
+      "d2.md": "![d3](d3.md)\n",
+      "d3.md": "![d4](d4.md)\n",
+      "d4.md": "![d5](d5.md)\n",
       "d5.md": "bottom\n",
-      "refs.md": "![[pic.png]]\n\nsee ![[b]] here\n\n![[missing]]\n",
+      "refs.md": "![pic.png](pic.png)\n\nsee ![b](b.md) here\n\n![missing](missing.md)\n",
       "pic.png": "png",
     });
     expect(text(await draw(g, "a.md"))).toEqual(["A", "", "⧉ b", "▎ B", "▎", "▎ ⧉ a", "▎ ▎ embeds itself: not drawn again"]);
@@ -2025,14 +2010,14 @@ describe("embeds drawn in place (1.11)", () => {
     const deep = text(await draw(g, "d1.md"));
     expect(deep.at(-1)).toBe("▎ ▎ ▎ ▎ embedded deeper still: enter opens it");
     expect(deep.join("\n")).not.toContain("bottom");
-    expect(text(await draw(g, "refs.md"))).toEqual(["⧉ pic.png", "", "see ⧉ b here", "", "⧉ missing"]);
+    expect(text(await draw(g, "refs.md"))).toEqual(["▣ pic.png", "", "see ⧉ b here", "", "⧉ missing"]);
     expect((await draw(g, "d1.md")).embedded!.sort()).toEqual(["d2.md", "d3.md", "d4.md"].map((r) => g.abs(r)));
   });
 
   test("the embedded note changed: drawn as it is now, through the render cache too", async () => {
     const { newRenderCache } = await import("../src/core/layout/render.ts");
     const { newParseCache } = await import("../src/core/parse.ts");
-    const { g } = vaultOf({ "host.md": "# H\n\n![[inner]]\n\nkept\n", "inner.md": "old text\n" });
+    const { g } = vaultOf({ "host.md": "# H\n\n![inner](inner.md)\n\nkept\n", "inner.md": "old text\n" });
     const cache = { parse: newParseCache(), render: newRenderCache() };
     expect(text(await draw(g, "host.md", cache))).toContain("▎ old text");
     writeFileSync(g.abs("inner.md"), "new text, longer\n");
@@ -2046,30 +2031,27 @@ describe("the vault's problems (1.7)", () => {
     const code = await runCli([...args, "--json"], { out: (s: string) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
     return { code, json: JSON.parse(out.join("")) };
   };
-  test("every link that reaches nothing, and every one that reaches several notes — with where, how written, and why", async () => {
+  test("every link that reaches nothing — with where and how written", async () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-problems-"));
     mkdirSync(join(dir, ".slipbox"));
     mkdirSync(join(dir, "a"));
     mkdirSync(join(dir, "b"));
     writeFileSync(join(dir, "a", "twin.md"), "# Twin A\n");
     writeFileSync(join(dir, "b", "twin.md"), "# Twin B\n");
-    writeFileSync(join(dir, "index.md"), "# Index\n\n[[missing]] and [x](gone.md) and [[nowhere:x]].\n\n[[twin]] and [[alive]] and [ok](https://example.org)\n");
+    writeFileSync(join(dir, "index.md"), "# Index\n\n[missing](missing.md) and [x](gone.md).\n\n[alive](alive.md) and [ok](https://example.org)\n");
     writeFileSync(join(dir, "alive.md"), "# Alive\n");
-    writeFileSync(join(dir, "self.md"), "# Self\n\nSee [[self]], [top](#self).\n");
+    writeFileSync(join(dir, "self.md"), "# Self\n\nSee [self](self.md), [top](#self).\n");
     const p = (await cli(["problems"], dir)).json.data;
     expect(p.broken.map((x: { line: number; column: number; target: string }) => [x.line, x.column, x.target])).toEqual([
-      [3, 1, "missing"],
-      [3, 17, "gone.md"],
-      [3, 34, "nowhere:x"],
+      [3, 1, "missing.md"],
+      [3, 27, "gone.md"],
     ]);
-    expect(p.broken[2].reason).toContain('unknown vault "nowhere"');
-    expect(p.ambiguous).toMatchObject([{ from: "index.md", line: 5, target: "twin", candidates: ["a/twin.md", "b/twin.md"] }]);
-    // Orphans (9.5): nothing links to them — an ambiguous link reaches neither twin.
+    // Orphans (9.5): nothing links to them.
     expect(p.orphans).toEqual(["a/twin.md", "b/twin.md", "index.md", "self.md"]); // its own link isn't one
     // Made: gone from the list.
     writeFileSync(join(dir, "missing.md"), "# Missing\n");
     const after = (await cli(["problems"], dir)).json.data;
-    expect(after.broken.map((x: { target: string }) => x.target)).toEqual(["gone.md", "nowhere:x"]);
+    expect(after.broken.map((x: { target: string }) => x.target)).toEqual(["gone.md"]);
     expect(after.orphans).toEqual(["a/twin.md", "b/twin.md", "index.md", "self.md"]); // missing.md is linked
   });
 });
@@ -2079,20 +2061,20 @@ describe("where links end (11.7)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-ends-"));
     mkdirSync(join(dir, ".slipbox"));
     writeFileSync(join(dir, "b.md"), "# B\n");
-    writeFileSync(join(dir, "a.md"), "# A\n\n🌍 [[b|Bee]] then ![[b]]\n[md](b.md) and [ref][r] ![pic](p.png) [[gone]]\n\n[r]: b.md\n");
+    writeFileSync(join(dir, "a.md"), "# A\n\n🌍 [Bee](b.md) then ![b](b.md)\n[md](b.md) and [ref][r] ![pic](p.png) [gone](gone.md)\n\n[r]: b.md\n");
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
     const ends = g.notes.get("a.md")!.links.map((l) => [l.kind, l.line, l.column, l.end.line, l.end.column]);
-    // 🌍 is two UTF-16 units: [[b|Bee]] starts at column 4, as an editor counts.
+    // 🌍 is two UTF-16 units: [Bee](b.md) starts at column 4, as an editor counts.
     expect(ends).toEqual([
-      ["wiki", 3, 4, 3, 13],
-      ["embed", 3, 19, 3, 25],
+      ["markdown", 3, 4, 3, 15],
+      ["image", 3, 21, 3, 31],
       ["markdown", 4, 1, 4, 11],
       ["markdown", 4, 16, 4, 24],
       ["image", 4, 25, 4, 38],
-      ["wiki", 4, 39, 4, 47],
+      ["markdown", 4, 39, 4, 54],
     ]);
-    expect(g.backlinks("b.md").map((b) => [b.line, b.column, b.end.column])).toContainEqual([3, 4, 13]);
-    expect(g.problems().broken.find((p) => p.target === "gone")).toMatchObject({ line: 4, column: 39, end: { line: 4, column: 47 } });
+    expect(g.backlinks("b.md").map((b) => [b.line, b.column, b.end.column])).toContainEqual([3, 4, 15]);
+    expect(g.problems().broken.find((p) => p.target === "gone.md")).toMatchObject({ line: 4, column: 39, end: { line: 4, column: 54 } });
   });
 });
 
@@ -2105,7 +2087,7 @@ describe("an editor's unsaved text (11.8)", () => {
     const loc = locateVault({ root: dir });
     const g = openGraph(loc, DEFAULT_CONFIG, true);
     const from = () => g.backlinks("b.md").map((b) => b.from);
-    g.overlay("a.md", "# A, typed\n\n## New\n\n[[b]]\n");
+    g.overlay("a.md", "# A, typed\n\n## New\n\n[b](b.md)\n");
     expect(from()).toEqual(["a.md"]);
     expect(g.notes.get("a.md")!.headings.map((h) => h.text)).toEqual(["A, typed", "New"]);
     // Another note changes: the index is written — with the file's a.md, no link, read afresh.
@@ -2114,7 +2096,7 @@ describe("an editor's unsaved text (11.8)", () => {
     g.ensureAll();
     expect(openGraph(loc, DEFAULT_CONFIG, true).backlinks("b.md")).toEqual([]);
     // The file changes under it (an agent, a save): the editor's text still stands; let go, the file's.
-    writeFileSync(join(dir, "a.md"), "# A, saved\n\n[[b]] [[b]]\n");
+    writeFileSync(join(dir, "a.md"), "# A, saved\n\n[b](b.md) [b](b.md)\n");
     g.updateFile("a.md", { rel: "a.md", abs: join(dir, "a.md"), size: 22, mtimeMs: Date.now() });
     expect(g.notes.get("a.md")!.title).toBe("A, typed");
     g.overlay("a.md", null);
@@ -2133,9 +2115,9 @@ describe("renaming a heading (11.9)", () => {
   test("its line and every link to it, in each link's form; undone like any rename", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-heading-"));
     mkdirSync(join(dir, ".slipbox"));
-    writeFileSync(join(dir, "b.md"), "# B\n\n## Old Name ##\n\ntext ^blk\n\nsee [[#Old Name]] and [up](#old-name)\n");
+    writeFileSync(join(dir, "b.md"), "# B\n\n## Old Name ##\n\ntext ^blk\n\nsee [Old Name](#old-name) and [up](#old-name)\n");
     const a = [
-      "[[b#Old Name]] [[b#old name|shown]] ![[b#Old Name]] [[b#^blk]] [[b#Other]]",
+      "[x](b.md#old-name) [shown](./b.md#old-name) ![e](b.md#old-name) [k](b.md#^blk) [o](b.md#other)",
       "[s](b.md#old-name) [t](b.md#Old%20Name) [u](<b.md#Old Name>) [v](b.md)",
       "",
     ].join("\n");
@@ -2146,12 +2128,12 @@ describe("renaming a heading (11.9)", () => {
     applyPlan(g, plan);
     expect(readFileSync(join(dir, "a.md"), "utf8")).toBe(
       [
-        "[[b#New Title]] [[b#New Title|shown]] ![[b#New Title]] [[b#^blk]] [[b#Other]]",
+        "[x](b.md#new-title) [shown](./b.md#new-title) ![e](b.md#new-title) [k](b.md#^blk) [o](b.md#other)",
         "[s](b.md#new-title) [t](b.md#New%20Title) [u](<b.md#New Title>) [v](b.md)",
         "",
       ].join("\n"),
     );
-    expect(readFileSync(join(dir, "b.md"), "utf8")).toBe("# B\n\n## New Title ##\n\ntext ^blk\n\nsee [[#New Title]] and [up](#new-title)\n");
+    expect(readFileSync(join(dir, "b.md"), "utf8")).toBe("# B\n\n## New Title ##\n\ntext ^blk\n\nsee [Old Name](#new-title) and [up](#new-title)\n");
     // Undone like any rename (7.4).
     applyPlan(g, planUndo(g));
     expect(readFileSync(join(dir, "a.md"), "utf8")).toBe(a);
@@ -2380,12 +2362,18 @@ describe("the converter: links made plain paths (20.1)", () => {
     expect(() => applyPlan(g, stale)).toThrow("c.md changed since the preview; nothing changed");
     expect(readFileSync(join(dir, "a.md"), "utf8")).toBe("[[b]] and [[b]]\n");
     g.build(true);
-    // An index older than the file: two links it knows, one left on the line — the one there
-    // converted, the other said, never written twice.
+    // Wikilinks are read from the file as it is: an index older than it changes nothing.
     writeFileSync(join(dir, "a.md"), "[[b]] gone\n");
-    const older = planConvert(g, ["a.md"]);
-    expect(older.files[0]!.next).toBe("[b](b.md) gone\n");
-    expect(older.skipped.map((s) => s.reason)).toEqual(["[[b]]: not where the index has it (the file changed since)"]);
+    expect(planConvert(g, ["a.md"]).files[0]!.next).toBe("[b](b.md) gone\n");
+    // A link from the root is the index's: two it knows, one left on the line — the one there
+    // converted, the other said, never written twice.
+    writeFileSync(join(dir, "r.md"), "[x](/b.md) and [x](/b.md)\n");
+    g.build(true);
+    writeFileSync(join(dir, "r.md"), "[x](/b.md) gone\n");
+    const older = planConvert(g, ["r.md"]);
+    expect(older.files[0]!.next).toBe("[x](b.md) gone\n");
+    expect(older.skipped.map((s) => s.reason)).toEqual(["/b.md: not where the index has it (the file changed since)"]);
+    writeFileSync(join(dir, "r.md"), "nothing here\n");
     writeFileSync(join(dir, "a.md"), "[[b]] and [[b]]\n");
     // One note's links only.
     expect(planConvert(g, ["a.md"]).files.map((f) => [f.shown, f.next])).toEqual([["a.md", "[b](b.md) and [b](b.md)\n"]]);

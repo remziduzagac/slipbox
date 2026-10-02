@@ -96,7 +96,7 @@ export const SCENARIOS: Scenario[] = [
       await s.see("木曽原天文同好会");
       await s.see("يوسف حداد");
       await s.see("🔭");
-      await s.see("unresolved"); // [[visiting-rota]] exists nowhere; the text says so, drawn as such
+      await s.see("following it offers to make it"); // visiting-rota.md exists nowhere: a note not written yet
     },
   },
 
@@ -163,35 +163,43 @@ export const SCENARIOS: Scenario[] = [
 
   {
     name: "convert-links: every note's links made plain paths after a preview, an ambiguous one picked; embeds still drawn, a block followed, undone",
+    // A note written before plain paths: wikilinks, which slipbox reads as text now (20.2), and the
+    // converter reads as they were — `[[contacts]]` two notes answer to.
+    options: {
+      files: {
+        "old-note.md": "# Old note\n\nSee [[about-this-vault]] and [[contacts]]; the first thread is [[variable-star-survey^thread-one]].\n\n![[wrap-probe]]\n",
+      },
+    },
     run: async (s) => {
+      // Read now, its wikilinks are text.
+      await open(s, "old-note");
+      await s.see("See [[about-this-vault]] and [[contacts]]");
       await s.ex("convert-links");
       await s.see(/links → plain paths: \d+ changes? in \d+ files?/, 10000);
-      await s.see("pick home.md:29");
+      await s.see("pick old-note.md:3");
       // The ambiguous [[contacts]], first in the list: its notes, one picked; the preview again, with it.
       await s.keys("enter");
-      await s.see("[[contacts]] in home.md:29 — which note?");
+      await s.see("[[contacts]] in old-note.md:3 — which note?");
       await s.keys("down", "enter");
       await s.see(/links → plain paths: \d+ changes? in \d+ files?/);
-      await s.notSee("pick home.md:29");
+      await s.notSee("pick old-note.md:3");
       await s.keys("enter");
       await s.message(/converted links to plain paths: \d+ changes/); // short: the box wraps the rest
-      await s.file("home.md", (t) => t.includes("[contacts](people/contacts.md)") && !t.includes("[[about-this-vault]]"), "home.md converted");
-      // Embeds written as paths now, still drawn in place.
-      await open(s, "partners-and-names");
+      await s.file("old-note.md", (t) => t.includes("[contacts](people/contacts.md)") && t.includes("[about-this-vault](about-this-vault.md)"), "converted");
+      // The embed, a path now, still drawn in place.
       await s.see("Table A — ordinary prose, no long tokens."); // wrap-probe's text, embedded
-      await s.see(/▎ .*Kenji Mori/);
-      // The block link, a path now, followed: at the line its ^id marks.
+      // The block link, a path now, followed: at the paragraph its ^id closes.
       await s.keys("ctrl+f");
       await s.type("thread-one");
       await s.keys("enter", "escape", "enter");
       await s.status("variable-star-survey.md");
       await s.status(/L3[123]:/); // in the paragraph its ^id closes (lines 31–33), not the heading after
-      // Undone: every file as it was.
+      // Undone: the note as it was.
       await s.ex("undo-rename");
       await s.see(/undo: links → plain paths/);
       await s.keys("enter");
       await s.message(/undid the conversion to plain paths/);
-      await s.file("home.md", (t) => t.includes("[[contacts]]") && t.includes("[[about-this-vault]]"), "home.md as it was");
+      await s.file("old-note.md", (t) => t.includes("[[contacts]]") && t.includes("![[wrap-probe]]"), "as it was");
     },
   },
 
@@ -682,21 +690,21 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
-    name: "problems: space v p lists the vault's broken and ambiguous links by note; enter goes onto one",
+    name: "problems: space v p lists the vault's broken links by note; enter goes onto one",
     run: async (s) => {
       await leader(s, "v", "p");
       await s.status("FILES");
       await s.see(/Broken links \(\d+\)/);
-      await s.see(/Ambiguous links \(1\)/);
-      await s.see(/L29 +\[\[contacts\]\]/);
+      await s.see(/L16 +visiting-rota\.md/);
       await s.see(/Orphans \(\d+\)/);
       await s.see(/scratch\/broken-front/);
-      // Filtered to contacts: home's row first, over its ambiguous [[contacts]]; enter opens it there, on the link.
+      // Filtered to the rota: partners-and-names's row, over its link to a note not written yet; enter opens it
+      // there, on the link.
       await s.keys("/");
-      await s.type("contacts");
+      await s.type("visiting-rota");
       await s.keys("enter");
-      await s.status("home.md");
-      await s.status("→ [[contacts]] (ambiguous)");
+      await s.status("partners-and-names.md");
+      await s.status("→ visiting-rota.md (unresolved)");
     },
   },
   {
@@ -1436,18 +1444,18 @@ export const SCENARIOS: Scenario[] = [
 
   // --- vaults (17.x) ----------------------------------------------------------------------------
   {
-    name: "vaults: [[vault:note]] switches into another vault and back; unknown vault; the list; a nested vault",
+    name: "vaults: a path into another vault switches into it and back; a broken one; the list; a nested vault",
     options: {
       open: "vault-links.md",
       files: {
-        "vault-links.md": "# Vault links\n\n- [[e2eapp:design#Goals|the app's goals]]\n- [[nope:somewhere]]\n",
+        "vault-links.md": "# Vault links\n\n- [the app's goals](../app/design.md#goals)\n- [somewhere](../nope/somewhere.md)\n",
         "inner-vault/.slipbox/config.toml": '[vault]\nid = "e2einner0001"\nname = "inner-name"\n',
         "inner-vault/inside.md": "# Inside the inner vault\n",
       },
       beside: {
         "app/.slipbox/version": "1\n",
         "app/design.md": "# App design\n\nIntro.\n\n## Goals\n\nShip the dome software.\n",
-        "app/links.md": "# Links\n\nBack to [[halden:home]].\n",
+        "app/links.md": "# Links\n\nBack to [home](../vault/home.md).\n",
       },
       setup: (s) => {
         // A path link as other tools write it (17.16): the scenario's own folder is known only now.
@@ -1469,7 +1477,7 @@ export const SCENARIOS: Scenario[] = [
       await s.status("vault-links.md");
       await s.see("Vault links");
       await s.keys("tab", "tab", "enter");
-      await s.message('unknown vault "nope"');
+      await s.message("broken link: ../nope/somewhere.md");
       // A file:// link: followed into the vault that holds it, not copied as a URL.
       await s.keys("tab", "enter");
       await s.status("design.md");
@@ -1490,7 +1498,7 @@ export const SCENARIOS: Scenario[] = [
       await leader(s, "e");
       await s.see("inner-vault inner-name");
       await s.keys("escape");
-      // Renaming the vault: e2eapp's link to halden:home follows (and outreach's, nested in it).
+      // Renaming the vault: a name, so the paths into it don't change.
       await leader(s, "v", "n");
       await s.see("rename vault halden to:");
       await s.type("halden2");
@@ -1498,19 +1506,19 @@ export const SCENARIOS: Scenario[] = [
       await s.see(/vault halden → halden2: \d+ changes? in \d+ files?/);
       await s.keys("enter");
       await s.message("renamed the vault halden → halden2");
-      s.expect(readFileSync(join(s.dir, "app", "links.md"), "utf8").includes("[[halden2:home]]"), "the other vault's link follows");
-      s.expect(s.read("outreach/index.md").includes("[[halden2:home]]"), "the nested vault's link follows");
+      s.expect(readFileSync(join(s.dir, "app", "links.md"), "utf8").includes("[home](../vault/home.md)"), "the other vault's path as it was");
+      s.expect(s.read("outreach/index.md").includes("[the observatory's home](../home.md)"), "the nested vault's path as it was");
     },
   },
   {
-    name: "nested vaults: the demo's outreach — in by name, back, backlinks, the explorer, two deep",
+    name: "nested vaults: the demo's outreach — in by path, back, backlinks, the explorer, two deep",
     run: async (s) => {
-      // home's last link: [[outreach:index]], a vault nested in this one (enter: the row's link).
+      // home's last link: outreach/index.md, in a vault nested in this one (enter: the row's link).
       await s.keys("shift+g", "enter");
       await s.message("vault outreach");
       await s.status("index.md");
       await s.see("The observatory's public programme");
-      // Two deep, by name: the school visits.
+      // Two deep: the school visits.
       await s.keys("g", "g", "tab", "tab", "enter");
       await s.message("vault outreach-school-visits");
       await s.see("A vault nested two deep");
@@ -1543,11 +1551,11 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("enter");
       await s.file("handbook/outreach/index.md", (t) => t.includes("[the operations handbook](../operations-handbook.md)"), "outreach's link out fixed");
       s.expect(s.read("handbook/outreach/school-visits/index.md").includes("(../../safety-card.adoc)"), "two deep: fixed too");
-      s.expect(s.read("home.md").includes("[[outreach:index]]"), "the link by its name as it was");
+      s.expect(s.read("home.md").includes("[outreach](handbook/outreach/index.md)"), "home's path into it follows");
     },
   },
   {
-    name: "vaults: v makes a folder a vault, links across fixed after a preview; V makes it a plain folder again",
+    name: "vaults: v makes a folder a vault after a preview, paths across untouched; V makes it a plain folder again",
     run: async (s) => {
       const home = s.read("home.md");
       await leader(s, "e");
@@ -1564,7 +1572,7 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("enter");
       await s.message("made logs/ the vault halden-logs");
       s.expect(s.exists("logs/.slipbox/config.toml"), "logs/ has its .slipbox/");
-      await s.file("home.md", (t) => t.includes("[[halden-logs:observing-log-2026]]"), "home's link by name, across now");
+      s.expect(s.read("home.md") === home, "home's path into it, across now, as it was");
       // V: back, the links as they were.
       await s.keys("shift+v");
       await s.see(/the vault logs\/ → a folder of halden/);
@@ -1644,29 +1652,29 @@ export const SCENARIOS: Scenario[] = [
       await s.status("kenji.md");
       s.expect(!s.exists("people/kenji-mori.md"), "the old file is gone");
       await s.file("people/kenji.md", (t) => t.includes("previous_names: [kenji-mori]"), "the old name kept");
-      s.expect(s.read("home.md").includes("- [[kenji]] — our visiting astronomer"), "home's link follows");
-      s.expect(s.read("people/partners-and-names.md").includes("[[kenji.md]] with its extension, [[people/kenji]] by folder path"), "each form kept");
-      s.expect(s.read("people/partners-and-names.md").includes("![[kenji#Kenji Mori]]"), "the embed follows");
-      // A link written later with the old name: relink rewrites it to the new one.
-      s.write("late-note.md", "# Late\n\nAsk [[kenji-mori]] about Aster.\n");
+      s.expect(s.read("home.md").includes("- [kenji-mori](people/kenji.md) — our visiting astronomer"), "home's link follows");
+      s.expect(s.read("people/partners-and-names.md").includes("[kenji-mori.md](kenji.md); the names"), "the note beside it too");
+      s.expect(s.read("people/partners-and-names.md").includes("![kenji-mori › Kenji Mori](kenji.md#kenji-mori)"), "the embed follows");
+      // A link written later with the old path: broken, its move known — relink rewrites it.
+      s.write("late-note.md", "# Late\n\nAsk [Kenji](people/kenji-mori.md) about Aster.\n");
       await s.see("late-note.md"); // the watcher has it: the switcher lists it
       await open(s, "late-note");
       await leader(s, "l", "r");
       await s.see("relink: 1 change in 1 file");
       await s.keys("enter");
-      await s.file("late-note.md", (t) => t.includes("Ask [[kenji]] about Aster."), "the link relinked");
+      await s.file("late-note.md", (t) => t.includes("Ask [Kenji](people/kenji.md) about Aster."), "the link relinked");
       // Undo (7.4), newest first, each previewed: the relink, then the rename — every file as it was.
       await leader(s, "v", "shift+u");
       await s.see("undo: relink: 1 change in 1 file");
       await s.keys("enter");
-      await s.file("late-note.md", (t) => t.includes("Ask [[kenji-mori]] about Aster."), "the relink undone");
+      await s.file("late-note.md", (t) => t.includes("Ask [Kenji](people/kenji-mori.md) about Aster."), "the relink undone");
       await leader(s, "v", "shift+u");
       await s.see(/undo: people\/kenji\.md → people\/kenji-mori\.md: \d+ changes/);
       await s.keys("enter");
       await s.message("renamed people/kenji.md back to"); // the toast wraps the rest
       await s.file("people/kenji-mori.md", (t) => !t.includes("previous_names"), "the note back, as it was");
       s.expect(!s.exists("people/kenji.md"), "the new name is gone");
-      s.expect(s.read("home.md").includes("- [[kenji-mori]] — our visiting astronomer"), "home's link back");
+      s.expect(s.read("home.md").includes("- [kenji-mori](people/kenji-mori.md) — our visiting astronomer"), "home's link back");
       // A heading renamed (11.9): its line, and the embed of it elsewhere.
       await open(s, "kenji-mori");
       await s.keys(":");
@@ -1677,10 +1685,10 @@ export const SCENARIOS: Scenario[] = [
       await s.keys("ctrl+u");
       await s.type("Kenji Mori, astronomer");
       await s.keys("enter");
-      await s.see("#Kenji Mori → people/kenji-mori.md#Kenji Mori, astronomer: 2 changes"); // the title is cut there
+      await s.see(/#Kenji Mori → people\/kenji-mori\.md#Kenji Mori, astronomer: \d+ changes/); // the title is cut there
       await s.keys("enter");
       await s.file("people/kenji-mori.md", (t) => t.includes("# Kenji Mori, astronomer\n"), "the heading renamed");
-      s.expect(s.read("people/partners-and-names.md").includes("![[kenji-mori#Kenji Mori, astronomer]]"), "the embed follows");
+      s.expect(s.read("people/partners-and-names.md").includes("(kenji-mori.md#kenji-mori-astronomer)"), "the embed follows");
       // The explorer's r asks for the selected note's new name; esc cancels.
       await leader(s, "e");
       await s.keys("r");
@@ -1694,7 +1702,7 @@ export const SCENARIOS: Scenario[] = [
       startAt: "project/docs/readme.md",
       beside: {
         "project/.git/HEAD": "ref: refs/heads/main\n",
-        "project/docs/readme.md": "# Readme\n\nThe [[guide]] is in another folder.\n",
+        "project/docs/readme.md": "# Readme\n\nThe [guide](guide/guide.md) is in another folder.\n",
         "project/docs/guide/guide.md": "# The guide\n\nFound across the repository.\n",
       },
     },

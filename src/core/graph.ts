@@ -21,7 +21,6 @@ import { classify, extensionOf } from "./filetypes.ts";
 import type { VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, WalkFilter, walkVault } from "./walk.ts";
 import { type Hashtag, tagKey, tagName } from "./tags.ts";
-import type { WikiLink } from "./wikilink.ts";
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image";
 
@@ -605,19 +604,19 @@ export class Graph {
       const path = /^file:/i.test(link.target) ? link.target : link.target.split("#")[0]!;
       return this.byFilesystemPath(path, fromRel, false) ?? { resolvedKind: "unresolved", path: null, candidates: [] };
     }
-    const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index);
-    if ((m.kind === "file" || m.kind === "missing") && !m.target.startsWith("../")) {
+    // A code or data file's paths (16.10, 16.15) are a project's: `/` its root; a note's are plain (20.2).
+    const rootSlash = !!fromRel && classify(fromRel, this.config.walk.extensions).group !== "note";
+    const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index, rootSlash);
+    if ((m.kind === "file" || m.kind === "missing") && !m.target.startsWith("../") && !m.target.startsWith("/")) {
       // Into a vault nested in this one: its note, there (17.17).
       const nested = this.intoNested(m.target, false);
       if (nested) return nested;
     }
-    if (m.kind === "missing" && !m.target.startsWith("../")) {
-      const to = this.movedTo(m.target);
-      if (to) return { resolvedKind: this.notes.has(to) ? "note" : "file", path: to, candidates: [], via: "redirect" };
-    }
+    // A path that reaches nothing is broken, whatever moved (20.2): a move is evidence for a fix
+    // (`movedTo`, the relink), never a way to resolve.
     if (m.kind === "missing") {
-      // A path out of this root (17.9), or `/…` that isn't the vault's but the filesystem's (17.16):
-      // the file wherever it is, in whichever root holds it.
+      // A path out of this root (17.9), or the filesystem's own `/…` (20.2): the file wherever it
+      // is, in whichever root holds it.
       const byPath = this.byFilesystemPath(link.target.split("#")[0]!, fromRel, false);
       if (byPath) return byPath;
     }
@@ -732,6 +731,40 @@ export class Graph {
   movedTo(rel: string): string | null {
     const to = this.redirects?.follow(rel);
     return to && (this.notes.has(to) || this.known(to)) ? to : null;
+  }
+
+  /**
+   * Where a broken path link's file went, when a move of it was seen (17.12): evidence for a fix —
+   * the relink, a problem saying so — never a way to resolve it (20.2). Null when it isn't broken,
+   * isn't a vault path, or no move of it is known.
+   */
+  movedTarget(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
+    const rel = this.brokenPath(link, fromRel);
+    return rel === null ? null : this.movedTo(rel);
+  }
+
+  /**
+   * The note a broken path link names, not written yet (vault-relative): what following it offers to
+   * make, and a problem calls information rather than a warning (as a wikilink's was). Null when it
+   * isn't broken, isn't a note's path in this vault, or its note was seen to move (`movedTarget`).
+   */
+  missingNote(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
+    const rel = this.brokenPath(link, fromRel);
+    return rel !== null && /\.(md|markdown)$/i.test(rel) && !this.movedTo(rel) ? rel : null;
+  }
+
+  /** A broken link's path in this vault (vault-relative, decoded): null for one that resolves, or isn't a vault path. */
+  private brokenPath(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
+    if (link.kind !== "markdown" && link.kind !== "image") return null;
+    if (this.resolveLink(link, fromRel).resolvedKind !== "unresolved") return null;
+    const path = link.target.split("#")[0]!;
+    if (!path || /^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("/") || path.startsWith("~/")) return null;
+    let decoded = path;
+    try {
+      decoded = decodeURIComponent(path);
+    } catch {}
+    const rel = posix.normalize(posix.join(posix.dirname(fromRel), decoded));
+    return rel.startsWith("../") ? null : rel;
   }
 
   /** `[[dir/old]]` or `[[old]]` whose note moved: by its old path, else its old name when unique. */
@@ -1016,21 +1049,6 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
     const column = pos?.column ?? 1;
     const end = n.position?.end ?? { line, column };
     switch (n.type) {
-      case "wikiLink": {
-        const w = n as WikiLink;
-        links.push({
-          kind: w.embed ? "embed" : "wiki",
-          target: w.target,
-          heading: w.heading,
-          block: w.block,
-          alias: w.alias,
-          text: w.alias ?? w.value,
-          line,
-          column,
-          end: { line: end.line, column: end.column },
-        });
-        return false;
-      }
       case "link":
         links.push(mdLink("markdown", n.url, plain(n), line, column, end));
         return;

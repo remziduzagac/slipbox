@@ -193,8 +193,8 @@ Global options:
   --color <when>    auto | always | never
   -h, --help        this help        -V, --version   print the version
 
-<note> is a path (a data or text file too, with its extension), or a note name resolved like a
-[[wikilink]]; a name several notes share is exit 4,
+<note> is a path (a data or text file too, with its extension), or a note's name (its file's, or an
+alias); a name several notes share is exit 4,
 unless --from <note> picks the one a link from there reaches. After --, nothing is an option:
 slipbox read -- -dash.md names a note that starts with a dash.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
@@ -1488,11 +1488,11 @@ const HANDLERS: Record<string, Handler> = {
       checkWritable(s, abs);
       if (existsSync(abs)) throw new CliError(`${rel} already exists; not overwriting it (drop --create to write it)`, EXIT.refused, { path: rel });
       created = true;
-      // A name other notes have: [[name]] links may now reach the new note instead.
+      // A name other notes have: a command naming it by that name now needs a path (links are paths, 20.2).
       const name = rel.replace(/\.(md|markdown)$/i, "").split("/").pop()!;
       const same = s.graph.findNote(name, s.loc.root);
       shadows = same.status === "resolved" ? [same.path] : same.status === "ambiguous" ? same.candidates : [];
-      if (shadows.length) s.warnings.push(`${rel}: other notes are named "${name}" (${shadows.join(", ")}); [[${name}]] links may now reach this one`);
+      if (shadows.length) s.warnings.push(`${rel}: other notes are named "${name}" (${shadows.join(", ")}); naming it in a command takes a path now`);
     } else {
       try {
         rel = resolveNote(s, noteArg, false);

@@ -2,12 +2,12 @@
 
 slipbox's demo vault, and the material its tests render. Everything in it is invented: the Halden
 Ridge Observatory, its town, its people and its instruments do not exist. Open it with
-`bun src/main.ts examples/vault`, or start at [[home]].
+`bun src/main.ts examples/vault`, or start at [home](home.md).
 
 The notes read like a real team's working notes on purpose. Real notes contain awkward things —
 tables too wide for any screen, unbreakable paths, lines over the length limit, a malformed
 heading — and a renderer is only as good as its worst input. So these notes keep those things, and
-some deliberately break the house style that [[writing-guide]] describes.
+some deliberately break the house style that [writing-guide](handbook/writing-guide.md) describes.
 
 ## What each note is for
 
@@ -21,7 +21,7 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `software/pipeline-cookbook.md` | fences in a dozen languages, mermaid, `$$` math, `~~~`, indented code, tabs |
 | `handbook/operations-handbook.md` | 1,200+ lines, h1–h6, setext, callouts, a 4-deep checklist, a long heading |
 | `handbook/writing-guide.md` (HTML) | inline HTML, a comment, `<details>`; lists from `0)`, `7.`, `998.` |
-| `equipment/instrument-inventory.md` (photos) | broken images: missing file, empty alt text, a missing `![[embed]]` |
+| `equipment/instrument-inventory.md` (photos) | broken images: missing files, empty alt text |
 | `meetings/2026-09-14-weekly.md` | hard breaks (two spaces, backslash) and a struck-out decision |
 | `people/kenji-mori.md` | frontmatter with a nested map, a block string and a long key |
 | `scratch/broken-frontmatter.md` | frontmatter that is not valid YAML |
@@ -30,7 +30,7 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `projects/dome-refit.md` (again) | `*` and `+` bullets, a `www.` autolink, an image that exists (`attachments/`) |
 | `projects/*.md` (tags) | `#tags` in the text beside frontmatter `tags`, nested ones (`#dome/shutter`): `space f t` |
 | `people/partners-and-names.md` | every link form, broken links, footnotes; CJK, emoji, ZWJ, RTL widths |
-| `home.md`, `people/`, `meetings/` | a linked graph: backlinks, tasks, heading references, an ambiguous link |
+| `home.md`, `people/`, `meetings/` | a linked graph: backlinks, tasks, heading references, two notes of one name |
 | `logs/observing-log-2026.md` (again) | repeated `### Weather` headings, an in-note `#anchor` link |
 | `software/halley/halley.toml` | a data file: sections, comments, `[[telescope]]` records, path links |
 | `software/halley/targets.yaml`, `.schema.json` | YAML records as a table, nested maps; JSON with `$schema`, `$ref` |
@@ -48,7 +48,7 @@ some deliberately break the house style that [[writing-guide]] describes.
 | `software/halley/dome.lua` | Lua: `local function`, `function t.m`, long strings and comments |
 | `scratch/half-written.py`, `broken-config.json` | a syntax error in code; a data file that doesn't parse |
 | `logs/dome-log.org`, `handbook/safety-card.adoc` | formats slipbox doesn't read as notes: text files, source mode |
-| `outreach/`, `outreach/school-visits/` | vaults nested in this one: links across vaults, by name and by path (below) |
+| `outreach/`, `outreach/school-visits/` | vaults nested in this one: links across vaults, by path (below) |
 
 ## Nested vaults
 
@@ -58,15 +58,13 @@ This vault is named `halden` (`.slipbox/config.toml`, `[vault]`), and holds two 
 - `outreach/`, the vault `outreach` (alias `public`): the public programme;
 - `outreach/school-visits/`, the vault `outreach-school-visits`, nested in that.
 
-Their notes link across all three, every way slipbox knows: by the vault's name
-(`[[halden:home]]`, `[[outreach:index]]`), with a heading and text, by an alias of the vault
-(`[[public:…]]`) and of a note (`[[outreach:open nights]]`), by a path into a nested vault
-(`[…](school-visits/index.md)`) and out of one (`../handbook/operations-handbook.md`,
-`../../handbook/safety-card.adoc`), and to a vault this machine doesn't have
-(`[[archive:2019-season]]`). To try them: open this vault, and
+Their notes link across all three by path, as every link is (slipbox's links are plain paths): into a nested vault
+(`[…](school-visits/index.md)`), out of one (`../handbook/operations-handbook.md`, `../../handbook/safety-card.adoc`),
+with a heading (`#o2-night-assistant-owns-the-night-2025-02`), and to a folder this machine doesn't have
+(`../../archive/2019-season.md`). To try them: open this vault, and
 
 - the explorer shows `outreach` with a vault's icon; `enter` goes into it;
-- `[[outreach:index]]` at the end of [[home]] goes there too, and `ctrl+o` comes back;
+- the outreach link at the end of [home](home.md) goes there too, and `ctrl+o` comes back;
 - `space l b` on `home.md` lists the backlinks from `outreach` and `school-visits`;
 - `space v v` lists the vaults; `space n m` renames a note and fixes the links in all three.
 
@@ -83,19 +81,14 @@ terminal escapes, symlinks, ignored folders, a nested vault — live in the test
 - **A pathological file.** No multi-megabyte note, and no `.md` file that is really a log.
 - **Mermaid and LaTeX, rendered.** `software/pipeline-cookbook.md` now has a mermaid fence and a
   `$$` block, but slipbox shows both as code; drawing them is a deferred feature.
-- **Checked heading and block references.** `[[home#No such heading]]` resolves to its note,
-  since a reference's heading or block isn't checked yet: phase 4 link work (plan `1.x`), and this
-  link is the test material for it. (`[[Kenji]]` and `[[森健二]]` in
-  `people/partners-and-names.md` reach `people/kenji-mori.md` through the aliases it declares.)
 
 Some links are unresolved on purpose, so the link index always has failures to report:
 
-- `people/partners-and-names.md`: `[[visiting-rota]]`, `![[dome-diagram.png]]` and
-  `<../scratch/wrap probe copy.md>`. `[[home#No such heading]]` and
-  `[[variable-star-survey^nope]]` will join them once a reference's heading and block are checked;
-  for now they reach their notes.
+- `people/partners-and-names.md`: `visiting-rota.md` (a note nobody has written yet), `dome-diagram.png` and
+  `<../scratch/wrap probe copy.md>`; and `../home.md#no-such-heading` and
+  `../projects/variable-star-survey.md#^nope`, whose notes exist but whose heading and block don't.
 - `handbook/writing-guide.md`: `../projects/dunmore-refurbishment.md`,
   `../incidents/2026-03-14-fw8-stuck.md`, `../reports/template.md` and `glossary.md` (twice).
 - `equipment/instrument-inventory.md`: `images/lyra-slit.png`, `images/tern-frame.jpg` and
-  `![[missing-flat-field.png]]`, placeholders for photos not yet taken.
-- `outreach/index.md`: `[[archive:2019-season]]`, in a vault no machine has.
+  `missing-flat-field.png`, placeholders for photos not yet taken.
+- `outreach/index.md`: `../../archive/2019-season.md`, in a folder no machine has.

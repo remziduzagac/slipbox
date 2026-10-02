@@ -7,7 +7,7 @@ import { copyText } from "../src/core/clipboard.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
-import { newParseCache, parseMarkdown, visit } from "../src/core/parse.ts";
+import { newParseCache, parseLegacy, parseMarkdown, visit } from "../src/core/parse.ts";
 import { lintCommand, parseLint, runLint } from "../src/core/lint.ts";
 import { addFootnote, applyEdits, deleteFootnote, editFootnote, footnotesOf, renameFootnote, type TextEdit } from "../src/core/footnotes.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
@@ -64,14 +64,20 @@ describe("sanitize (2.9)", () => {
   });
 });
 
-describe("wikilink syntax", () => {
+// Only the converter (20.1) reads wikilinks, by parseLegacy; a note's parse leaves them text (20.2).
+describe("wikilink syntax, as the converter reads it", () => {
   const links = (src: string) => {
     const out: WikiLink[] = [];
-    visit(parseMarkdown(src).tree, (n) => {
+    visit(parseLegacy(src), (n) => {
       if ((n.type as string) === "wikiLink") out.push(n as unknown as WikiLink);
     });
     return out;
   };
+  test("a note's parse has none: [[…]] is text (20.2)", () => {
+    const types: string[] = [];
+    visit(parseMarkdown("[[Foo Bar|x]] ![[img.png]]").tree, (n) => void types.push(n.type));
+    expect(types).not.toContain("wikiLink");
+  });
   test("targets, headings, blocks, aliases and embeds", () => {
     const [a, b, c, d] = links("[[Foo Bar|x]] ![[img.png]] [[n#Head]] [[n#^blk]]");
     expect(a).toMatchObject({ target: "Foo Bar", alias: "x", embed: false });
@@ -441,7 +447,7 @@ describe("source layout (4.13)", () => {
     expect(nowrap.width).toBe(19);
   });
   test("light highlighting, and headings placed on their rows", () => {
-    const src = "---\ntitle: x\n---\n# Head\n\n- [ ] task `code` [[link]]\n```ts\nconst a = 1;\n```\n";
+    const src = "---\ntitle: x\n---\n# Head\n\n- [ ] task `code` [link](l.md)\n```ts\nconst a = 1;\n```\n";
     const L = layoutSource(src, { width: 80, wrap: true, headings: [{ level: 1, text: "Head", slug: "head", src: 4 }] });
     const roleAt = (row: number, col: number) => {
       let x = 0;
@@ -456,7 +462,7 @@ describe("source layout (4.13)", () => {
     expect(roleAt(5, 0)).toBe("list_marker");
     expect(roleAt(5, 2)).toBe("check_todo");
     expect(roleAt(5, 13)).toBe("code_inline");
-    expect(roleAt(5, 20)).toBe("wikilink");
+    expect(roleAt(5, 20)).toBe("link");
     expect(roleAt(6, 0)).toBe("code_label");
     expect(roleAt(7, 0)).toBe("code_block");
     expect(L.headings).toEqual([{ level: 1, text: "Head", slug: "head", src: 4, line: 3 }]);
@@ -1075,7 +1081,8 @@ describe("a reader per note format (16.2)", () => {
     expect([noteFormat("a.md"), noteFormat("b.markdown"), noteFormat("c.org"), noteFormat("d.txt")]).toEqual(["markdown", "markdown", "markdown", "markdown"]);
     const md = readerFor("markdown");
     expect(md.scanHeadings("# One\n\n```\n# not\n```\n## Two\n").map((h) => h.text)).toEqual(["One", "Two"]);
-    expect(md.linkAt("see [[alpha#Intro|the intro]] and [x](b.md)", 6)).toEqual({ kind: "wiki", target: "alpha", heading: "Intro", text: "the intro" });
+    expect(md.linkAt("see [the intro](alpha.md#intro) and [x](b.md)", 6)).toEqual({ kind: "markdown", target: "alpha.md#intro", heading: null, text: "the intro" });
+    expect(md.linkAt("see [[alpha]] and [x](b.md)", 6)).toBeNull(); // [[…]] is text (20.2)
     expect(md.linkAt("see [[alpha]] and [x](b.md)", 20)).toMatchObject({ kind: "markdown", target: "b.md" });
     expect(parseNoteFile("x.md", "# T\n").tree.children[0]!.type).toBe("heading");
     expect(readerFor("no-such-format")).toBe(md);
@@ -1136,7 +1143,7 @@ describe("tags (1.6)", () => {
 describe("footnotes (3.17)", () => {
   test("numbered as GFM numbers them: by first reference, then the ones nothing refers to; the definition's label", () => {
     // A definition before the text: the order is still the references'.
-    const list = footnotesOf(parseMarkdown("[^a]: Alpha *one*\n    and [[two|Two]] #tag.\n\nB[^b] then A[^A] and B[^b] again.\n\n[^spare]: Unused.\n[^b]: Beta.\n"));
+    const list = footnotesOf(parseMarkdown("[^a]: Alpha *one*\n    and [Two](two.md) #tag.\n\nB[^b] then A[^A] and B[^b] again.\n\n[^spare]: Unused.\n[^b]: Beta.\n"));
     expect(list.map((f) => [f.label, f.line, f.references.length])).toEqual([["b", 7, 2], ["a", 1, 1], ["spare", 6, 0]]);
     expect(list[1]!.text).toBe("Alpha one and Two #tag.");
     expect(list[0]!.references).toMatchObject([{ line: 4, column: 2 }, { line: 4, column: 23 }]);

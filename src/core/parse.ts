@@ -1,4 +1,5 @@
-// Parse pipeline (plan 1.3): remark + gfm + frontmatter + wikilinks + tags (1.6).
+// Parse pipeline (plan 1.3): remark + gfm + frontmatter + tags (1.6). Links are markdown's, plain
+// paths (20.2): `[[…]]` is text. The converter (20.1) alone reads wikilinks, by `parseLegacy`.
 // mdast carries source positions, which is why remark was chosen over marked.
 
 import type { Heading, Nodes, Root, Yaml } from "mdast";
@@ -16,14 +17,24 @@ const processor = unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(remarkFrontmatter, ["yaml", "toml"])
-  .use(remarkWikiLink as never)
   .use(remarkHashtag as never);
 /** For chunks after the first: frontmatter is only ever at the note's start. */
 const bodyProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm)
+  .use(remarkHashtag as never);
+/** Wikilinks too, as notes were read before plain paths (20.2): the converter's only (20.1). */
+const legacyProcessor = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(remarkFrontmatter, ["yaml", "toml"])
   .use(remarkWikiLink as never)
   .use(remarkHashtag as never);
+
+/** A note's tree with its wikilinks read (`wikiLink` nodes), as before plain paths: for the converter. */
+export function parseLegacy(source: string): Root {
+  return legacyProcessor.parse(source) as Root;
+}
 
 export interface Frontmatter {
   raw: string;

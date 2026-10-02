@@ -1,3 +1,3 @@
 # Readme
 
-Target of the [[README]] case test.
+Target of the [README](Readme.md) case test.

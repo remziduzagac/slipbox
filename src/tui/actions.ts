@@ -338,7 +338,18 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       }
       if (r.resolvedKind === "note") return go(r.path!, at(r.path!));
       if (r.resolvedKind === "file") return fileLink(a, r.path!, frag, inSplit);
-      return a.message("warn", `broken link: ${link.target}`);
+      // Its file seen to move (17.12): where, and the fix (20.2: a move never resolves a link).
+      const as = { kind: link.kind === "image" ? ("image" as const) : ("markdown" as const), target: link.target };
+      const to = from ? a.graph.movedTarget(as, from) : null;
+      // A note not written yet: made where the link names it, its name typed already (a wikilink's
+      // was offered so; a path names its place, so no other note's name stands in the way).
+      const yet = from && !to ? a.graph.missingNote(as, from) : null;
+      if (yet) {
+        const dir = posix.dirname(yet);
+        const name = posix.basename(yet).replace(/\.(md|markdown)$/i, "");
+        return a.promptNewNote(dir === "." ? "" : dir, name, name);
+      }
+      return a.message("warn", to ? `broken link: ${link.target} — moved to ${to}: space l r relinks it` : `broken link: ${link.target}`);
     }
   }
 }
@@ -1650,8 +1661,18 @@ export function registerActions(app: App): void {
           const r = a.graph.resolveLink({ kind: link.kind === "embed" ? "embed" : link.kind === "wiki" ? "wiki" : "markdown", target: link.target }, link.from ?? v.buf.rel);
           if (r.resolvedKind !== "note" && r.resolvedKind !== "anchor") return a.message("info", `${link.target}: ${r.resolvedKind === "ambiguous" ? `matches ${r.candidates.join(", ")}` : r.resolvedKind === "external" ? link.target : r.reason ?? "no such note yet"}`);
           const path = r.resolvedKind === "anchor" ? v.buf.rel : r.path!;
-          const text = landingText(a.graph, path, link.heading, null);
-          return a.openHover(text ?? "(nothing there)", `${path}${link.heading ? ` › ${link.heading}` : ""}`);
+          // A path's `#fragment`: a heading (by its slug or text), or a block's `^id` (20.2).
+          let frag = link.heading;
+          if (!frag && link.target.includes("#")) {
+            frag = link.target.slice(link.target.indexOf("#") + 1);
+            try {
+              frag = decodeURIComponent(frag);
+            } catch {}
+          }
+          const block = frag?.startsWith("^") ? frag.slice(1) : null;
+          const text = landingText(a.graph, path, block ? null : frag, block);
+          const heading = block ? null : (frag && a.graph.entryAnywhere(path)?.headings.find((h) => h.slug === slugify(frag!) || h.text.toLowerCase() === frag!.toLowerCase())?.text) || frag;
+          return a.openHover(text ?? "(nothing there)", `${path}${block ? ` ^${block}` : heading ? ` › ${heading}` : ""}`);
         }
         a.syncServers(v.buf);
         const s = a.servers;

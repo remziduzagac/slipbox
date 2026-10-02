@@ -6,15 +6,13 @@ folder.
 
 ## Programme
 
-- [[public-nights]] — the open-night calendar and what each one needs
-- [[outreach-school-visits:index|School visits]] — a vault nested in this one, by its name
-- [the school visits, by path](school-visits/index.md) — the same note, by its path
+- [public-nights](public-nights.md) — the open-night calendar and what each one needs
+- [School visits](school-visits/index.md) — a vault nested in this one
 
 ## The observatory
 
-- [[halden:home]] — the observatory's own notes, by the vault's name
-- [[halden:operations-handbook#O4: The opening checklist (2025-03)|the opening checklist]] — a
+- [the observatory's home](../home.md) — the observatory's own notes, the vault this one is in
+- [the opening checklist](../handbook/operations-handbook.md#o4-the-opening-checklist-2025-03) — a
   heading in a note there
 - [the operations handbook](../handbook/operations-handbook.md) — a path out of this vault
-- [[public:public-nights]] — this vault by its alias, `public`: a link to one of its own notes
-- [[archive:2019-season]] — a vault this machine doesn't have: a broken link that says so
+- [the 2019 season](../../archive/2019-season.md) — a folder this machine doesn't have: a broken link

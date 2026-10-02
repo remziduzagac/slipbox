@@ -176,15 +176,16 @@ export interface MdLinkTarget {
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
 /** Classify and resolve a markdown link URL `[t](url)` found in `fromRel`. */
-export function resolveMarkdownUrl(url: string, fromRel: string, root: string, index: LinkIndex): MdLinkTarget {
+export function resolveMarkdownUrl(url: string, fromRel: string, root: string, index: LinkIndex, rootSlash = false): MdLinkTarget {
   if (SCHEME.test(url) || url.startsWith("//")) return { kind: "external", target: url, fragment: null };
   const hash = url.indexOf("#");
   const fragment = hash >= 0 ? decodeSafe(url.slice(hash + 1)) : null;
   const pathPart = decodeSafe(hash >= 0 ? url.slice(0, hash) : url);
   if (!pathPart) return { kind: "anchor", target: fromRel, fragment };
-  const rel = pathPart.startsWith("/")
-    ? posix.normalize(pathPart.slice(1))
-    : posix.normalize(posix.join(posix.dirname(fromRel), pathPart));
+  // A leading `/` is the filesystem's root in a note (20.2): the file at that path, wherever it is. In a
+  // code or data file (`rootSlash`, 16.10, 16.15) it's the vault's, as a project's own paths are.
+  if (pathPart.startsWith("/") && !rootSlash) return { kind: "missing", target: pathPart, fragment };
+  const rel = pathPart.startsWith("/") ? posix.normalize(pathPart.slice(1)) : posix.normalize(posix.join(posix.dirname(fromRel), pathPart));
   if (rel.startsWith("..")) return { kind: "missing", target: rel, fragment };
   if (NOTE_EXT.test(rel)) {
     // The note's own spelling, not the link's: a path that exists, and the key backlinks use.

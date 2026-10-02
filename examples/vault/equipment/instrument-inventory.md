@@ -144,7 +144,7 @@ The Tern housing, from below, with the heater cable visible (no caption yet):
 
 The flat field that should be pinned here, for comparing against a suspect night:
 
-![[missing-flat-field.png]]
+![the missing flat field](missing-flat-field.png)
 
 ## History
 

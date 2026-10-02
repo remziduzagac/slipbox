@@ -115,9 +115,10 @@ interactions; the state they change, a note's text, is reached by `write`, `repl
 
 ## `1.4` — link resolution
 
-*To be superseded by `20.x` (decided 2026-10-02, not built): links become plain paths, wikilinks aren't read (a
-converter rewrites them), nothing resolves by name, and a leading `/` is the filesystem's root. Until then, this is
-how links resolve.*
+*Superseded by `20.2` (built 2026-10-02): links are plain paths. Wikilinks aren't read — only the converter (`20.1`)
+reads them, by the rules below, to rewrite them as paths — nothing resolves by name, a leading `/` is the
+filesystem's root, and a move is evidence for a fix, never a way to resolve. What follows is the record of how
+wikilinks resolved, which the converter still follows.*
 
 One policy everywhere, never the filesystem's:
 
@@ -216,13 +217,15 @@ tools do is the project's.
 
 ## `20.x` — plain paths, virtual vaults
 
-Decided 2026-10-02 with the user, revised the same day after a review; not built yet (plan `20.x`). The model in full
+Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`, `20.2` and
+`20.23` done). The model in full
 is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the
 LSP face (`11.x`), and `17.20` below. In short:
 
 - **Links are plain paths** — relative (written so), `~/`, absolute (`/` is the filesystem's root), `file://`.
-  Relative links within a repository are portable; the others depend on the machine's layout. A link resolves without
+  Relative links within a repository are portable; the others depend on the machine's layout. In code and data files
+  (`16.10`, `16.15`) a leading `/` keeps meaning the vault's root, as a repository's own paths do. A link resolves without
   the index, and a broken one stays broken until repaired. Wikilinks aren't read until a compatibility layer exists;
   a one-time converter rewrites them, and today's `/…` links, as relative paths, previewed.
 - **Vaults are virtual:** a file's is its nearest boundary — `.slipbox/` or a git checkout, one vault when both share

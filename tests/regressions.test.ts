@@ -111,7 +111,7 @@ describe("medium", () => {
     expect(app.view!.fwd).toHaveLength(0);
   });
   test("watcher: directories moved out and in (nested), mkdir -p, and .gitignore edits", async () => {
-    const dir = vault({ "a.md": "[[p]]\n", "proj/p.md": "# P\n" });
+    const dir = vault({ "a.md": "[p](proj/p.md)\n", "proj/p.md": "# P\n" });
     const elsewhere = mkdtempSync(join(sandbox, "out-"));
     const config: Config = structuredClone(DEFAULT_CONFIG);
     config.ui.restore_session = false;
@@ -133,7 +133,7 @@ describe("medium", () => {
       await until(() => app.graph.notes.has("incoming/sub/q.md"));
       expect(app.graph.notes.has("incoming/sub/q.md")).toBe(true);
       await wait(50);
-      writeFileSync(join(dir, "incoming", "sub", "q.md"), "# Q\n\n[[a]]\n");
+      writeFileSync(join(dir, "incoming", "sub", "q.md"), "# Q\n\n[a](../../a.md)\n");
       await until(() => app.graph.linksOf("incoming/sub/q.md").length === 1);
       expect(app.graph.linksOf("incoming/sub/q.md")).toHaveLength(1);
       mkdirSync(join(dir, "x", "y", "z"), { recursive: true });
@@ -179,7 +179,7 @@ describe("medium", () => {
   });
   test("an unreadable note is never cached as empty", async () => {
     if (process.getuid?.() === 0) return; // root reads everything
-    const dir = vault({ "keep.md": "# keep\n", "unread.md": "[[keep]]\n" });
+    const dir = vault({ "keep.md": "# keep\n", "unread.md": "[keep](keep.md)\n" });
     chmodSync(join(dir, "unread.md"), 0o000);
     const first = await cli(["ls", "--json"], dir);
     expect(JSON.parse(first.out).warnings.join("\n")).toContain("unread.md");
@@ -280,9 +280,6 @@ describe("low", () => {
     cfg.walk.max_file_size = 1000;
     const g = openGraph(homeAt(dir, join(dir, "ok.md")), cfg, false);
     expect([...g.notes.keys()]).toEqual(["ok.md"]);
-  });
-  test("[[#heading]] renders without a leading separator", () => {
-    expect(rows("see [[#Top]]\n")[0]).toBe("see #Top");
   });
   test("a user theme shadowing a built-in is listed once", () => {
     const dir = mkdtempSync(join(sandbox, "themes-"));

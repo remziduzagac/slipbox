@@ -311,9 +311,9 @@ describe("links and history", () => {
   test("tab puts the cursor on a link (] l too); enter, gf follow; ctrl+o / alt+left back, alt+right forward", async () => {
     const h = await harness();
     await h.keys("tab");
-    expect(statusRow(h.frame())).toContain("[[alpha]]");
+    expect(statusRow(h.frame())).toContain("→ notes/alpha.md (resolved)");
     await h.keys("tab", "shift+tab"); // on and back
-    expect(statusRow(h.frame())).toContain("[[alpha]]");
+    expect(statusRow(h.frame())).toContain("→ notes/alpha.md (resolved)");
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     await h.keys("ctrl+o");
@@ -388,15 +388,11 @@ describe("links and history", () => {
     at("up");
     expect(h.app.view!.buf.rel).toBe("index.md"); // the double-click jumps
   });
-  test("ambiguous, unresolved, external and attachment links", async () => {
+  test("unresolved, external and attachment links", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "notes", "dup.md"), "# a\n");
-    writeFileSync(join(root, "projects", "dup.md"), "# b\n");
-    writeFileSync(join(root, "amb.md"), "[[dup]] [[nothing-here]] [web](https://example.invalid) ![[diagram.png]]\n");
+    writeFileSync(join(root, "amb.md"), "[nothing-here](nothing-here.md) [web](https://example.invalid) ![diagram](attachments/diagram.png)\n");
     const h = await harness({ root, open: "amb.md" });
-    await h.keys("enter"); // the cursor starts on [[dup]]
-    expect(h.app.overlay?.kind).toBe("list");
-    await h.keys("escape", "tab", "enter");
+    await h.keys("enter"); // the cursor starts on [nothing-here]
     // No such note: the new-note prompt, its name typed already.
     expect(h.app.overlay).toMatchObject({ kind: "prompt", text: "nothing-here" });
     await h.keys("escape");
@@ -405,11 +401,27 @@ describe("links and history", () => {
     await h.keys("tab", "enter");
     expect(h.copied.at(-1)).toEndWith("attachments/diagram.png");
   });
+  test("a link to a note seen to move is broken: following it says where it went and the fix, and offers no new note (20.2)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "plan.md"), "# The plan\n\nSteps only this note has.\n");
+    writeFileSync(join(root, "cites.md"), "[p](plan.md)\n");
+    const h = await harness({ root, open: "cites.md" });
+    mkdirSync(join(root, "moved"));
+    writeFileSync(join(root, "moved", "plan.md"), "# The plan\n\nSteps only this note has.\n");
+    rmSync(join(root, "plan.md"));
+    h.app.graph.removeFile("plan.md");
+    const st = statSync(join(root, "moved", "plan.md"));
+    h.app.graph.updateFile("moved/plan.md", { rel: "moved/plan.md", abs: join(root, "moved", "plan.md"), size: st.size, mtimeMs: st.mtimeMs });
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("cites.md");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)?.text).toBe("broken link: plan.md — moved to moved/plan.md: space l r relinks it");
+  });
   test("clicking a link follows it", async () => {
     const h = await harness();
     const v = h.app.view!;
     const pane = h.app.geometry!.panes[0]!;
-    const link = h.app.currentLayout(v).links.find((l) => l.target === "Beta")!;
+    const link = h.app.currentLayout(v).links.find((l) => l.target === "notes/beta.md")!;
     const x = pane.textX + link.col + 1;
     const y = pane.y + link.line - v.top;
     h.app.handleMouse({ type: "down", x, y, button: 0 });
@@ -2031,7 +2043,7 @@ describe("source mode (space n v)", () => {
     expect(v.source).toBe(true);
     const f = h.frame();
     expect(f).toContain("# Alpha"); // the markdown itself
-    expect(f).toContain("[[beta]]");
+    expect(f).toContain("[beta](beta.md)");
     expect(statusRow(f)).toContain("SOURCE");
     expect(h.app.cursorLine(v)).toBe(line);
     // Everything on the layout works: find lands in the source; the outline has the headings.
@@ -3562,7 +3574,7 @@ describe("external changes (5.3, 5.4) and anchoring (3.5)", () => {
     expect(role()).toBe("link_unresolved");
     writeFileSync(join(h.root, "missing-note.md"), "# now exists\n");
     h.app.applyChanges({ changes: [{ rel: "missing-note.md", kind: "created", isNote: true }], rescan: false });
-    expect(role()).toBe("wikilink");
+    expect(role()).toBe("link");
     await h.app.run("note.open missing-note.md");
     rmSync(join(h.root, "missing-note.md"));
     h.app.applyChanges({ changes: [{ rel: "missing-note.md", kind: "deleted", isNote: true }], rescan: false });
@@ -3997,18 +4009,18 @@ describe("review cycle 2 (TUI navigation)", () => {
   test("enter follows a link in source mode and in the lens", async () => {
     for (const mode of ["v", "l"]) {
       const root = makeVault();
-      writeFileSync(join(root, "s.md"), "# S\n\nSee [[notes/alpha]] and [beta](notes/beta.md).\n");
+      writeFileSync(join(root, "s.md"), "# S\n\nSee [alpha](notes/alpha.md) and [beta](notes/beta.md).\n");
       const h = await harness({ root, open: "s.md", width: 100, height: 30 });
       const v = h.app.view!;
       await h.keys("space", "n", mode);
-      h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.srcMap && l.spans.map((x) => x.text).join("").includes("See [[")), col: 0 });
+      h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.srcMap && l.spans.map((x) => x.text).join("").includes("See [")), col: 0 });
       await h.keys("f", "[", "enter");
       expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     }
   });
   test("a click on blank space never follows a link: past a row's end, below the note", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "c.md"), "See also [[notes/alpha]]\n");
+    writeFileSync(join(root, "c.md"), "See also [alpha](notes/alpha.md)\n");
     const h = await harness({ root, open: "c.md", width: 100, height: 30, config: (c) => ((c.ui.sidebar = false), (c.ui.outline = false)) });
     h.frame();
     const pane = h.app.geometry!.panes[0]!;
@@ -4200,9 +4212,9 @@ describe("review cycle 4 (TUI)", () => {
     const future = Date.now() / 1000 + 5;
     (await import("node:fs")).utimesSync(file, future, future);
   };
-  test("a footnote with capitals is followed; [[#Title]] finds a heading with a footnote mark", async () => {
+  test("a footnote with capitals is followed; [Title](#title) finds a heading with a footnote mark", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "f.md"), "# Title[^1]\n\nSee[^Note] here and [[#Title]].\n\n[^Note]: The note text.\n[^1]: one\n");
+    writeFileSync(join(root, "f.md"), "# Title[^1]\n\nSee[^Note] here and [Title](#title).\n\n[^Note]: The note text.\n[^1]: one\n");
     const h = await harness({ root, open: "f.md", width: 100, height: 30 });
     const v = h.app.view!;
     const layout = () => h.app.currentLayout(v);
@@ -4210,7 +4222,7 @@ describe("review cycle 4 (TUI)", () => {
     h.app.moveCursor(v, { row: layout().links[note]!.line, col: layout().links[note]!.col });
     await h.keys("enter");
     expect(rowText(h)).toContain("The note text.");
-    const title = layout().links.findIndex((l) => l.kind === "wiki" && l.heading === "Title");
+    const title = layout().links.findIndex((l) => l.kind === "markdown" && l.target === "#title");
     h.app.moveCursor(v, { row: layout().links[title]!.line, col: layout().links[title]!.col });
     await h.keys("enter");
     expect(h.app.messages.some((m) => m.text.includes("no heading"))).toBe(false);
@@ -4304,7 +4316,7 @@ describe("review cycle 4 (TUI, a hostile vault's names)", () => {
   test("names with bidi overrides, C1 and escapes never put a control on screen", async () => {
     const root = makeVault();
     const bad = "n-bidi\u202edcba\u202c\u200f\u2028-\u009b31m-\x1b]0;PWNED\x07.md";
-    writeFileSync(join(root, bad), "# Bad\u202e name\n\n[[alpha]]\n");
+    writeFileSync(join(root, bad), "# Bad\u202e name\n\n[alpha](notes/alpha.md)\n");
     mkdirSync(join(root, ".slipbox"), { recursive: true });
     writeFileSync(join(root, ".slipbox", "config.toml"), '[groups]\n"leader z" = "\u202eevil"\n');
     const h = await harness({ root, open: bad, width: 140, height: 40 });
@@ -4420,7 +4432,7 @@ describe("review cycle 5 (vim edges)", () => {
 });
 
 describe("review cycle 5 (TUI, behaviour no test had pinned)", () => {
-  const LINKS = "# M\n\n[to alpha](notes/alpha.md) [two](notes/alpha.md#section-two) [far](#far) [broken](nope.md) [[notes/alpha#Section Two]]\n\nfiller\n\n## Far\n\nend\n";
+  const LINKS = "# M\n\n[to alpha](notes/alpha.md) [two](notes/alpha.md#section-two) [far](#far) [broken](nope.pdf)\n\nfiller\n\n## Far\n\nend\n";
   const follow = async (h: Harness, k: number) => {
     const v = h.app.view!;
     const l = h.app.currentLayout(v).links[k]!;
@@ -4428,7 +4440,7 @@ describe("review cycle 5 (TUI, behaviour no test had pinned)", () => {
     await h.keys("enter");
   };
   const at = (h: Harness) => ({ rel: h.app.view!.buf.rel, row: rowText(h).trim() });
-  test("markdown links, heading anchors and [[note#heading]] are followed to the place", async () => {
+  test("markdown links and heading anchors are followed to the place", async () => {
     const root = makeVault();
     writeFileSync(join(root, "m.md"), LINKS);
     const h = await harness({ root, open: "m.md", width: 160, height: 40 });
@@ -4447,9 +4459,7 @@ describe("review cycle 5 (TUI, behaviour no test had pinned)", () => {
     await h.app.run("history.back");
     await follow(h, 3);
     expect(h.app.view!.buf.rel).toBe("m.md"); // a broken link opens nothing…
-    expect(h.app.messages.some((m) => m.text.includes("nope.md"))).toBe(true); // …and says so
-    await follow(h, 4);
-    expect(at(h)).toMatchObject({ rel: "notes/alpha.md", row: expect.stringContaining("Section Two") });
+    expect(h.app.messages.some((m) => m.text.includes("nope.pdf"))).toBe(true); // …and says so
   });
   test("in source mode the markdown link under the cursor is followed too", async () => {
     const root = makeVault();
@@ -4538,7 +4548,7 @@ describe("review cycle 5 (TUI journeys: the mouse)", () => {
   test("a double-click on a link follows it once: nothing in the note it opens is clicked or copied", async () => {
     const h = await harness({ open: "index.md", width: 130, height: 34 });
     const v = h.app.view!;
-    const l = h.app.currentLayout(v).links.find((x) => x.kind === "wiki" && x.target === "alpha")!;
+    const l = h.app.currentLayout(v).links.find((x) => x.kind === "markdown" && x.target === "notes/alpha.md")!;
     const pane = h.app.geometry!.panes[0]!;
     const x = pane.textX + l.col + 1;
     const y = pane.y + l.line - v.top;
@@ -4680,7 +4690,7 @@ describe("files beyond notes (16.3–16.5)", () => {
     writeFileSync(join(root, "cfg", "app.toml"), '[editor]\nfont = "x" # a comment\n');
     writeFileSync(join(root, "run.py"), 'def main():\n    print("hi")  # [[alpha]] in a comment\n');
     writeFileSync(join(root, "blob.dat"), "\u0000\u0001binary");
-    writeFileSync(join(root, "links-out.md"), "# L\n\nSee [the config](cfg/app.toml) and [[run.py]].\n");
+    writeFileSync(join(root, "links-out.md"), "# L\n\nSee [the config](cfg/app.toml) and [run.py](run.py).\n");
     return root;
   };
   test("the explorer lists data files by default; `a` shows every text file; binary never", async () => {
@@ -4752,7 +4762,7 @@ describe("data files render as documents (16.11–16.14)", () => {
     mkdirSync(join(root, "cfg"), { recursive: true });
     writeFileSync(join(root, "cfg", "app.toml"), TOML);
     writeFileSync(join(root, "people.yaml"), "team:\n  - name: Ada\n    role: lead\n  - name: Rosa\n    role: ops\n");
-    writeFileSync(join(root, "to-config.md"), "# T\n\nThe [[cfg/app.toml#ui]] section.\n");
+    writeFileSync(join(root, "to-config.md"), "# T\n\nThe [ui](cfg/app.toml#ui) section.\n");
     return root;
   };
   test("TOML opens rendered: sections as headings (outline, breadcrumb), keys lined up, comments dimmed", async () => {
@@ -5082,7 +5092,7 @@ describe("pinned tabs", () => {
     const h = await harness();
     await h.keys("ctrl+t", "m");
     const v = h.app.view!;
-    const l = h.app.currentLayout(v).links.find((x) => x.target === "alpha")!;
+    const l = h.app.currentLayout(v).links.find((x) => x.target === "notes/alpha.md")!;
     h.app.moveCursor(v, { row: l.line, col: l.col });
     await h.keys("enter");
     expect(h.app.tabs.length).toBe(2);
@@ -5363,7 +5373,7 @@ describe("creating notes and folders", () => {
   });
   test("following a link to a note that doesn't exist asks to create it, the name filled in", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "notes", "hub.md"), "# Hub\n\nSee [[future note]].\n");
+    writeFileSync(join(root, "notes", "hub.md"), "# Hub\n\nSee [future note](future%20note.md).\n");
     const h = await harness({ root, open: "notes/hub.md" });
     const v = h.app.view!;
     const l = h.app.currentLayout(v).links[0]!;
@@ -5384,7 +5394,7 @@ describe("saving keeps the index true (found by the creation scenario)", () => {
     const h = await harness({ root, open: "notes/alpha.md" });
     expect(h.app.graph.backlinks("crlf.md").some((b) => b.from === "notes/alpha.md")).toBe(false);
     await h.keys("space", "n", "v", "shift+g", "o");
-    for (const c of "[[crlf]]") await h.keys(c);
+    for (const c of "[crlf](../crlf.md)") await h.keys(c);
     await h.keys("escape", "ctrl+s");
     expect(h.app.graph.backlinks("crlf.md").some((b) => b.from === "notes/alpha.md")).toBe(true);
     expect(h.app.graph.entry("notes/alpha.md")!.mtimeMs).toBe(statSync(join(root, "notes", "alpha.md")).mtimeMs);
@@ -5426,10 +5436,10 @@ describe("vaults in the TUI (17.x)", () => {
     const notes = join(base, "notes");
     const app = join(base, "app");
     const files: Record<string, string> = {
-      "notes/index.md": `# Index\n\n[[nope:x]]\n\n[[tapp${n}:design#Goals]]\n\n[out](../app/design.md)\n`,
+      "notes/index.md": "# Index\n\n[goals](../app/design.md#goals)\n\n[out](../app/design.md)\n",
       "notes/todo.md": "# Todo\n",
       "app/design.md": "# Design\n\nIntro.\n\n## Goals\n\nShip.\n",
-      "app/links.md": `See [[tnotes${n}:todo]].\n`,
+      "app/links.md": "See [todo](../notes/todo.md).\n",
     };
     for (const [rel, text] of Object.entries(files)) {
       mkdirSync(dirname(join(base, rel)), { recursive: true });
@@ -5441,14 +5451,6 @@ describe("vaults in the TUI (17.x)", () => {
     return { base, notes, app, n };
   }
 
-  test("a link into a vault this machine doesn't know says so, and offers no new note", async () => {
-    const { notes } = await twoVaults();
-    const h = await harness({ root: notes, open: "index.md" });
-    await h.keys("tab", "enter");
-    expect(h.app.overlay).toBeNull();
-    expect(h.app.messages.at(-1)!.text).toBe('[[nope:x]]: unknown vault "nope"');
-  });
-
   test("backlinks from another vault are listed with its name", async () => {
     const { notes, n } = await twoVaults();
     const h = await harness({ root: notes, open: "todo.md" });
@@ -5456,10 +5458,10 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.frame()).toContain(`tapp${n}: links.md`);
   });
 
-  test("following [[vault:note#heading]] switches the TUI into that vault; back returns (17.10)", async () => {
+  test("following a path link into another vault, at a heading, switches the TUI into it; back returns (17.10)", async () => {
     const { notes, app, n } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
-    await h.keys("tab", "tab", "enter");
+    await h.keys("tab", "enter");
     expect(h.app.loc.root).toBe(app);
     expect(h.app.loc.name).toBe(`tapp${n}`);
     expect(h.app.view!.buf.rel).toBe("design.md");
@@ -5471,8 +5473,8 @@ describe("vaults in the TUI (17.x)", () => {
     await h.app.run("history.back");
     expect(h.app.loc.root).toBe(notes);
     expect(h.app.view!.buf.rel).toBe("index.md");
-    // A path out of the root goes there too.
-    await h.keys("tab", "tab", "tab", "enter");
+    // A path out of the root, without a heading, goes there too.
+    await h.keys("tab", "tab", "enter");
     expect(h.app.loc.root).toBe(app);
     expect(h.app.view!.buf.rel).toBe("design.md");
   });
@@ -5611,18 +5613,18 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("enter");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toStartWith("notes/alpha.md → notes/first.md: ");
-    expect(list.items.some((it) => it.label.startsWith("index.md:") && it.detail!.includes("[[first]]"))).toBe(true);
+    expect(list.items.some((it) => it.label.startsWith("index.md:") && it.detail!.includes("[alpha](notes/first.md)"))).toBe(true);
     expect(list.items.some((it) => it.label.startsWith("crlf.md:"))).toBe(true);
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true); // a preview writes nothing
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
     expect(readFileSync(join(root, "notes", "first.md"), "utf8")).toContain("previous_names: [alpha]");
     const index = readFileSync(join(root, "index.md"), "utf8");
-    expect(index).toContain("[[first]], [[Beta]]");
-    expect(index).toContain("[[first#Section One]]");
-    expect(index).toContain("[alpha](notes/first.md)");
-    expect(index).toContain("[[first\\|aliased]]");
-    expect(readFileSync(join(root, "crlf.md"), "utf8")).toContain("line two with [[first]]\r\n");
+    expect(index).toContain("[alpha](notes/first.md), [Beta](notes/beta.md)");
+    expect(index).toContain("[alpha › Section One](notes/first.md#section-one)");
+    expect(index).toContain("a markdown link to [alpha](notes/first.md)");
+    expect(index).toContain("| [aliased](notes/first.md) |");
+    expect(readFileSync(join(root, "crlf.md"), "utf8")).toContain("line two with [alpha](notes/first.md)\r\n");
     expect(h.app.view!.buf.rel).toBe("notes/first.md");
     expect(h.app.graph.notes.has("notes/first.md")).toBe(true);
     expect(h.app.graph.backlinks("notes/first.md").length).toBeGreaterThan(3);
@@ -5641,7 +5643,7 @@ describe("vaults in the TUI (17.x)", () => {
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toStartWith("notes/alpha.md#Section One → notes/alpha.md#Part One: 2 changes in 2 files");
     await h.keys("enter");
-    expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[[alpha#Part One]]");
+    expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[alpha › Section One](notes/alpha.md#part-one)");
     expect(h.app.view!.buf.source).toContain("## Part One\n");
     // The outline's r: its selected heading.
     await h.app.run("outline.toggle");
@@ -5667,7 +5669,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("space", "v", "shift+u");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toStartWith("undo: notes/first.md → notes/alpha.md: ");
-    expect(list.items.some((it) => it.label.startsWith("index.md:") && /\[\[first\]\].*→.*\[\[alpha\]\]/.test(it.detail!))).toBe(true);
+    expect(list.items.some((it) => it.label.startsWith("index.md:") && /\(notes\/first\.md\).*→.*\(notes\/alpha\.md\)/.test(it.detail!))).toBe(true);
     expect(existsSync(join(root, "notes", "first.md"))).toBe(true); // a preview writes nothing
     await h.keys("enter");
     expect(readFileSync(join(root, "index.md"), "utf8")).toBe(index);
@@ -5687,21 +5689,21 @@ describe("vaults in the TUI (17.x)", () => {
 
   test("space s c copies the note's context for an agent: it, what it links to, what links to it — unsaved notes saved first (9.7)", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "ctx.md"), "# Ctx\n\nSee [[beta]].\n");
-    writeFileSync(join(root, "back.md"), "Back to [[ctx]].\n");
+    writeFileSync(join(root, "ctx.md"), "# Ctx\n\nSee [beta](notes/beta.md).\n");
+    writeFileSync(join(root, "back.md"), "Back to [ctx](ctx.md).\n");
     const h = await harness({ root, open: "ctx.md" });
     // An edit not saved yet: a handoff saves it (4.10), so the bundle has what's on screen.
-    await h.keys("shift+g", "shift+a", ...[..." and [[alpha]]"].map((c) => (c === " " ? "space" : c)), "escape");
+    await h.keys("shift+g", "shift+a", ...[..." and [alpha](notes/alpha.md)"].map((c) => (c === " " ? "space" : c)), "escape");
     expect(h.app.view!.buf.dirty).toBe(true);
     await h.keys("space", "s", "c");
     expect(h.app.view!.buf.dirty).toBe(false);
-    expect(readFileSync(join(root, "ctx.md"), "utf8")).toBe("# Ctx\n\nSee [[beta]]. and [[alpha]]\n");
+    expect(readFileSync(join(root, "ctx.md"), "utf8")).toBe("# Ctx\n\nSee [beta](notes/beta.md). and [alpha](notes/alpha.md)\n");
     const text = h.copied.at(-1)!;
     expect(text).toStartWith("# Context: ctx.md\n");
     /** The files in a bundle, by their reference lines (a note's own headings are inside its fence). */
     const files = (t: string) => [...t.matchAll(/^`([^`:]+)(?::[\d-]+)?` — /gm)].map((m) => m[1]);
     expect(files(text)).toEqual(["ctx.md", "notes/beta.md", "notes/alpha.md", "back.md"]);
-    expect(text).toContain("`ctx.md:1-3` — asked for\n\n```markdown\n# Ctx\n\nSee [[beta]]. and [[alpha]]\n```");
+    expect(text).toContain("`ctx.md:1-3` — asked for\n\n```markdown\n# Ctx\n\nSee [beta](notes/beta.md). and [alpha](notes/alpha.md)\n```");
     expect(h.app.messages.at(-1)!.text).toBe(`copied the context of ctx.md: 4 files (2 linked, 1 linking to it), ${text.length} characters`);
     // [context] says how far: no backlinks, nothing linked.
     h.app.config.context = { depth: 0, backlinks: false, limit: 25 };
@@ -5740,7 +5742,7 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("enter");
     expect(h.app.loc.name).toBe(`tnotes${n}b`);
     expect(readFileSync(join(notes, ".slipbox", "config.toml"), "utf8")).toContain(`previous_names = ["tnotes${n}"]`);
-    // A note moved outside slipbox: its links reach it by a redirect; relink rewrites them.
+    // A note moved outside slipbox: its links are broken, the move known; relink rewrites them.
     const { renameSync } = await import("node:fs");
     writeFileSync(join(notes, "todo-link.md"), "[t](todo.md)\n");
     h.app.graph.build(true);
@@ -5775,9 +5777,9 @@ describe("vaults in the TUI (17.x)", () => {
     expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
   });
 
-  test("a file:// link and a ~/ wikilink are followed into the other vault, at the heading (17.16)", async () => {
+  test("a file:// link and a ~/ link are followed into the other vault, at the heading (17.16)", async () => {
     const { base, notes, app } = await twoVaults();
-    writeFileSync(join(notes, "paths.md"), `# Paths\n\n[url](file://${app}/design.md#goals)\n\n[[~/app/design#Goals]]\n`);
+    writeFileSync(join(notes, "paths.md"), `# Paths\n\n[url](file://${app}/design.md#goals)\n\n[home](~/app/design.md#goals)\n`);
     const before = process.env.HOME;
     process.env.HOME = base;
     try {
@@ -5917,7 +5919,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → notes/first.md");
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "first.md"))).toBe(true);
-    expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[[first]]");
+    expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[alpha](notes/first.md)");
     expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("notes/first.md"); // still selected
     // m: the folders as a tree, the root first, this one marked (18.8).
     await h.keys("m");
@@ -6076,7 +6078,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
 
   test("a vault's row: rename (its folder), move, delete, and rename the vault — its menu (18.7)", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "vault-links.md"), "[in](nested-vault/inner.md) and [[fixture-nested:inner]]\n");
+    writeFileSync(join(root, "vault-links.md"), "[in](nested-vault/inner.md)\n");
     const h = await at(root, "nested-vault");
     const row = h.frame().split("\n").find((r) => r.includes("nested-vault"))!;
     expect(row).toMatch(/nested-vault.*… /);
@@ -6096,7 +6098,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("escape");
     // d: the whole vault, said so.
     await h.keys("d");
-    expect(prompt(h).label).toMatch(/^Delete the vault fixture-nested \(nested-vault\/, 1 note\)\? 2 links to it will break\./); // by path and by name
+    expect(prompt(h).label).toMatch(/^Delete the vault fixture-nested \(nested-vault\/, 1 note\)\? 1 link to it will break\./); // by its path
     await h.keys("escape");
     // R: the vault's name; its folder stays.
     await h.keys("shift+r");
@@ -6105,9 +6107,8 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await type(h, "inner-box");
     await h.keys("enter", "enter");
     expect(readFileSync(join(root, "nested-vault", ".slipbox", "config.toml"), "utf8")).toContain('name = "inner-box"');
-    expect(readFileSync(join(root, "vault-links.md"), "utf8")).toContain("[[inner-box:inner]]");
     expect(existsSync(join(root, "nested-vault"))).toBe(true);
-    // r: its folder; links into it by path fixed, by name left.
+    // r: its folder; links into it by path fixed.
     h.app.selectInExplorer("nested-vault");
     await h.keys("r", "ctrl+u");
     await type(h, "box");
@@ -6115,7 +6116,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect((h.app.overlay as ListOverlay).title).toStartWith("nested-vault/ → box/");
     await h.keys("enter");
     expect(existsSync(join(root, "box", "inner.md"))).toBe(true);
-    expect(readFileSync(join(root, "vault-links.md"), "utf8")).toBe("[in](box/inner.md) and [[inner-box:inner]]\n");
+    expect(readFileSync(join(root, "vault-links.md"), "utf8")).toBe("[in](box/inner.md)\n");
     expect(h.app.explorerRows().some((r) => r.path === "box" && r.root?.kind === "vault")).toBe(true);
   });
 
@@ -6132,15 +6133,14 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(existsSync(join(root, "notes", ".slipbox"))).toBe(false); // nothing yet
     await h.keys("enter");
     expect(existsSync(join(root, "notes", ".slipbox", "config.toml"))).toBe(true);
-    expect(index()).toContain("Links: [[fixture-notes:alpha]], [[fixture-notes:Beta]], [[projects/index]]");
-    expect(index()).toContain("[alpha](notes/alpha.md)"); // a path still reaches it
-    expect(readFileSync(join(root, "notes", "alpha.md"), "utf8")).toContain("Back to [[fixture:index]] and on to [[beta]].");
+    expect(index()).toBe(before); // a path still reaches its notes: nothing to rewrite
+    expect(readFileSync(join(root, "notes", "alpha.md"), "utf8")).toContain("Back to [index](../index.md) and on to [beta](beta.md).");
     // The explorer: its row a vault's now, selected; its notes the new vault's.
     const row = h.app.explorerRows()[h.app.sidebar.selected]!;
     expect(row).toMatchObject({ path: "notes", kind: "root" });
     expect(h.app.graph.notes.has("notes/alpha.md")).toBe(false);
     expect(h.app.messages.at(-1)!.text).toMatch(/^made notes\/ the vault fixture-notes/);
-    // V: back, its [[fixture-notes:…]] names here again.
+    // V: back.
     await h.keys("shift+v");
     expect((h.app.overlay as ListOverlay).title).toMatch(/^the vault notes\/ → a folder of fixture/);
     await h.keys("enter");
@@ -6209,7 +6209,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
 
   test("space v shift+m inside a vault nested in another: made a plain folder of it, and into it, the note still open (18.13)", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "to-nested.md"), "[[fixture-nested:inner]]\n");
+    writeFileSync(join(root, "to-nested.md"), "[inner](nested-vault/inner.md)\n");
     const h = await harness({ root: join(root, "nested-vault"), open: "inner.md" });
     expect(h.app.loc.name).toBe("fixture-nested");
     await h.keys("space", "v", "shift+m");
@@ -6218,7 +6218,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(existsSync(join(root, "nested-vault", ".slipbox"))).toBe(false);
     expect(h.app.loc.root).toBe(root);
     expect(h.app.view!.buf.rel).toBe("nested-vault/inner.md");
-    expect(readFileSync(join(root, "to-nested.md"), "utf8")).toBe("[[inner]]\n");
+    expect(readFileSync(join(root, "to-nested.md"), "utf8")).toBe("[inner](nested-vault/inner.md)\n"); // a path: nothing to rewrite
   });
 
   test("filters: each word as typed, in any order — the explorer's (its name lit where it matched) and the palette's (3.16)", async () => {
@@ -6428,7 +6428,7 @@ describe("footnotes in the right panel (3.17)", () => {
 });
 
 describe("adding and changing footnotes (3.18)", () => {
-  const NOTE = "# Notes\n\nThe dome logged nights and more nights, see [[alpha]] here.\n\n[^old]: An old one.\n";
+  const NOTE = "# Notes\n\nThe dome logged nights and more nights, see [alpha](notes/alpha.md) here.\n\n[^old]: An old one.\n";
   const setup = async (source = NOTE) => {
     const root = makeVault();
     writeFileSync(join(root, "fn.md"), source);
@@ -6460,17 +6460,17 @@ describe("adding and changing footnotes (3.18)", () => {
     expect(prompt(h).label).toBe("Add a footnote — its text:");
     await type(h, "Counted by hand");
     await h.keys("enter");
-    expect(read()).toBe("# Notes\n\nThe dome logged nights and more nights[^1], see [[alpha]] here.\n\n[^old]: An old one.\n[^1]: Counted by hand\n");
+    expect(read()).toBe("# Notes\n\nThe dome logged nights and more nights[^1], see [alpha](notes/alpha.md) here.\n\n[^old]: An old one.\n[^1]: Counted by hand\n");
     expect(h.app.messages.at(-1)!.text).toBe("added footnote [^1]");
     expect(h.app.view!.buf.dirty).toBe(false); // saved
     await h.keys("ctrl+z");
     expect(h.app.view!.buf.source).toBe(NOTE); // both edits, one step
-    // On a wikilink's word: after the link, never inside its brackets.
+    // On a link's word: after the link, never inside its brackets.
     onWord(h, "alpha");
     await h.keys("space", "n", "shift+f");
     await type(h, "Linked");
     await h.keys("enter");
-    expect(read()).toContain("see [[alpha]][^1] here.");
+    expect(read()).toContain("see [alpha](notes/alpha.md)[^1] here.");
   });
 
   test("in source mode: after the word under the cursor; a note without footnotes gets them after a blank line", async () => {
@@ -6516,11 +6516,11 @@ describe("adding and changing footnotes (3.18)", () => {
 });
 
 describe("the Info view (3.19)", () => {
-  const NOTE = "---\ntitle: Planning\nowner:\n  name: Rosa\n  desk: 2\ntags: [Plan]\n---\n# Planning\n\nSee [[alpha]] and [[missing]]. #idea\n\n- [x] one\n- [ ] two\n";
+  const NOTE = "---\ntitle: Planning\nowner:\n  name: Rosa\n  desk: 2\ntags: [Plan]\n---\n# Planning\n\nSee [alpha](notes/alpha.md) and [missing](missing.md). #idea\n\n- [x] one\n- [ ] two\n";
   const setup = async () => {
     const root = makeVault();
     writeFileSync(join(root, "info.md"), NOTE);
-    writeFileSync(join(root, "linker.md"), "[[info]]\n");
+    writeFileSync(join(root, "linker.md"), "[info](info.md)\n");
     return await harness({ root, open: "info.md", width: 140 });
   };
   const rows = (h: Harness) => h.app.infoRows().map((r) => (r.heading ? `# ${r.key}` : `${"  ".repeat(r.depth)}${r.key}: ${r.value}`));
@@ -6550,7 +6550,7 @@ describe("the Info view (3.19)", () => {
     h.app.saveBuffer(h.app.view!.buf);
     expect(rows(h)).toContain("state: saved"); // a save doesn't change the text: still shown
     // Another note's link to it counts at once.
-    writeFileSync(join(h.root, "linker2.md"), "[[info]]\n");
+    writeFileSync(join(h.root, "linker2.md"), "[info](info.md)\n");
     const st = statSync(join(h.root, "linker2.md"));
     h.app.graph.updateFile("linker2.md", { rel: "linker2.md", abs: join(h.root, "linker2.md"), size: st.size, mtimeMs: st.mtimeMs });
     expect(rows(h)).toContain("backlinks: 2");
@@ -6684,13 +6684,13 @@ describe("the Problems view (1.7)", () => {
     mkdirSync(join(root, "b"));
     writeFileSync(join(root, "a", "twin.md"), "# Twin A\n");
     writeFileSync(join(root, "b", "twin.md"), "# Twin B\n");
-    writeFileSync(join(root, "index.md"), "# Index\n\nSee [[missing]] here.\n\nAnd [[twin]].\n");
+    writeFileSync(join(root, "index.md"), "# Index\n\nSee [missing](missing.md) here.\n");
     writeFileSync(join(root, "other.md"), "# Other\n\n![pic](nope.png)\n");
     return await harness({ root, open: "other.md", width: 140 });
   };
   const rows = (h: Harness) => h.app.problemRows().map((r) => (r.heading ? `# ${r.label}` : r.note ? `  ${r.label}` : `    ${r.label}  ${r.detail}`));
 
-  test("space v p: the vault's broken and ambiguous links, by note; enter goes there, onto the link; its button under the history's", async () => {
+  test("space v p: the vault's broken links, by note; enter goes there, onto the link; its button under the history's", async () => {
     const h = await setup();
     await h.keys("space", "v", "p");
     expect(h.app.leftView).toBe("problems");
@@ -6698,13 +6698,11 @@ describe("the Problems view (1.7)", () => {
     expect(rows(h)).toEqual([
       "# Broken links (2)",
       "  index.md",
-      "    L3  [[missing]]",
+      "    L3  missing.md",
       "  other.md",
       "    L3  nope.png",
-      "# Ambiguous links (1)",
-      "  index.md",
-      "    L5  [[twin]]  — 2 notes",
-      // Nothing links to them (an ambiguous link reaches neither twin): orphans (9.5).
+      "# Ambiguous links (0)",
+      // Nothing links to them: orphans (9.5).
       "# Orphans (4)",
       "  a/twin.md",
       "  b/twin.md",
@@ -6719,7 +6717,7 @@ describe("the Problems view (1.7)", () => {
     const v = h.app.view!;
     expect(v.buf.rel).toBe("index.md");
     expect(h.app.region).toBe("content");
-    expect(h.app.currentLayout(v).links[h.app.linkUnderCursor(v)]).toMatchObject({ target: "missing" });
+    expect(h.app.currentLayout(v).links[h.app.linkUnderCursor(v)]).toMatchObject({ target: "missing.md" });
     // Fixed: gone at once.
     writeFileSync(join(h.root, "missing.md"), "# Missing\n");
     const st = statSync(join(h.root, "missing.md"));
@@ -6733,13 +6731,13 @@ describe("the Problems view (1.7)", () => {
     h.app.sidebar.selected = 0;
     await h.keys("h");
     expect(rows(h)[0]).toBe("# Broken links (2)");
-    expect(rows(h)[1]).toBe("# Ambiguous links (1)");
+    expect(rows(h)[1]).toBe("# Ambiguous links (0)");
     await h.keys("l");
     h.app.sidebar.selected = 3; // other.md's row
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("other.md");
     await h.keys("space", "v", "p", "/", "t", "w", "i", "n");
-    expect(rows(h)).toEqual(["# Ambiguous links (1)", "  index.md", "    L5  [[twin]]  — 2 notes", "# Orphans (4)", "  a/twin.md", "  b/twin.md"]);
+    expect(rows(h)).toEqual(["# Orphans (4)", "  a/twin.md", "  b/twin.md"]);
     // An orphan's row: the note.
     await h.keys("escape");
     h.app.sidebar.selected = h.app.problemRows().findIndex((r) => r.section === "Orphans" && r.note === "b/twin.md");
@@ -7279,8 +7277,8 @@ describe("embeds in the TUI (1.11)", () => {
   const setup = async () => {
     const root = makeVault();
     mkdirSync(join(root, "sub"), { recursive: true });
-    writeFileSync(join(root, "host.md"), "# Host\n\n![[sub/inner]]\n\nAfter.\n");
-    writeFileSync(join(root, "sub", "inner.md"), "# Inner\n\nSee [the sibling](sibling.md), and [[#Deep]].\n\n## Deep\n\nbottom\n");
+    writeFileSync(join(root, "host.md"), "# Host\n\n![inner](sub/inner.md)\n\nAfter.\n");
+    writeFileSync(join(root, "sub", "inner.md"), "# Inner\n\nSee [the sibling](sibling.md), and [Deep](#deep).\n\n## Deep\n\nbottom\n");
     writeFileSync(join(root, "sub", "sibling.md"), "# Sibling\n");
     return { root, h: await harness({ root, open: "host.md" }) };
   };
@@ -7293,12 +7291,12 @@ describe("embeds in the TUI (1.11)", () => {
 
   test("drawn in place; its links followed from where it is; its header opens it", async () => {
     const { h } = await setup();
-    expect(h.frame()).toContain("▎ See the sibling, and #Deep.");
+    expect(h.frame()).toContain("▎ See the sibling, and Deep.");
     await follow(h, linkAt(h, "the sibling"));
     expect(h.app.view!.buf.rel).toBe("sub/sibling.md"); // beside the embedded note, not the host
     await h.keys("ctrl+o");
-    await follow(h, linkAt(h, "#Deep"));
-    expect(h.app.view!.buf.rel).toBe("sub/inner.md"); // [[#Deep]] is the embedded note's heading
+    await follow(h, linkAt(h, "Deep"));
+    expect(h.app.view!.buf.rel).toBe("sub/inner.md"); // #deep is the embedded note's heading
     expect(statusRow(h.frame())).toMatch(/ L5:/);
     await h.keys("ctrl+o");
     await follow(h, linkAt(h, "inner"));
@@ -7322,7 +7320,7 @@ describe("embeds in the TUI (1.11)", () => {
 });
 
 describe("problems where they are: the bar, the marks, the status line (19.8–19.11)", () => {
-  const vault = (text = "# P\n\nSee [[twin]] here.\n\nAnd [[nope]] there.\n") => {
+  const vault = (text = "# P\n\nSee [twin](twin.png) here.\n\nAnd [nope](nope.md) there.\n") => {
     const root = makeVault();
     mkdirSync(join(root, "x"));
     mkdirSync(join(root, "y"));
@@ -7347,14 +7345,14 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     const see = rowOf(h, "See");
     expect(see.bar).toBe("1");
     expect(see.barFg).toBe(h.app.theme.roles.warn.fg!);
-    // The ambiguous link, marked as a warning; the text around it not.
+    // The broken link, marked as a warning; the text around it not.
     expect(see.styles[see.at("twin")]!.fg).toBe(h.app.theme.roles.problem_warn.fg!);
     expect(see.styles[see.at("here")]!.fg).not.toBe(h.app.theme.roles.problem_warn.fg!);
-    // [[nope]] is a note not written yet: information, under the default threshold.
+    // nope.md is a note not written yet: information, under the default threshold.
     expect(rowOf(h, "And").bar).toBe(" ");
     expect(statusRow(h.frame())).toContain("⚠ 1");
     await h.app.run("cursor.goto_line 3");
-    expect(statusRow(h.frame())).toContain('⚠ ambiguous "twin" matches 2 notes: x/twin.md, y/twin.md');
+    expect(statusRow(h.frame())).toContain("⚠ unresolved broken link: twin.png");
   });
 
   test("[diagnostics] severity = \"info\": the notes not written yet too, in their colour", async () => {
@@ -7382,15 +7380,15 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
   });
 
   test("auto: no bar while a note has had no problems; once it has, it stays as they go", async () => {
-    const root = vault("# P\n\nSee [[x/twin]] here.\n");
+    const root = vault("# P\n\nSee [twin](x/twin.md) here.\n");
     const h = await harness({ root, open: "p.md" });
     h.frame();
     const clean = rowOf(h, "See").at("See");
-    writeFileSync(join(root, "p.md"), "# P\n\nSee [[twin]] here.\n");
+    writeFileSync(join(root, "p.md"), "# P\n\nSee [twin](twin.png) here.\n");
     h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
     h.frame();
     expect(rowOf(h, "See").at("See")).toBe(clean + 2);
-    writeFileSync(join(root, "p.md"), "# P\n\nSee [[x/twin]] here.\n");
+    writeFileSync(join(root, "p.md"), "# P\n\nSee [twin](x/twin.md) here.\n");
     h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
     h.frame();
     expect(rowOf(h, "See").bar).toBe(" ");
@@ -7401,10 +7399,10 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     const h = await harness({ root: vault(), open: "p.md" });
     await h.app.run("view.source");
     h.frame();
-    const see = rowOf(h, "See [[twin]]");
+    const see = rowOf(h, "See [twin](twin.png)");
     const warn = h.app.theme.roles.problem_warn.fg!;
-    expect(see.styles[see.at("[[twin]]")]!.fg).toBe(warn);
-    expect(see.styles[see.at("[[twin]]") + 7]!.fg).toBe(warn);
+    expect(see.styles[see.at("[twin](twin.png)")]!.fg).toBe(warn);
+    expect(see.styles[see.at("[twin](twin.png)") + 15]!.fg).toBe(warn);
     expect(see.styles[see.at(" here")]!.fg).not.toBe(warn);
   });
 });
@@ -7485,18 +7483,39 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });
     const view = h.app.view!;
-    const row = h.app.currentLayout(view).links.findIndex((l) => l.target === "alpha" && l.heading === "Section One");
+    const row = h.app.currentLayout(view).links.findIndex((l) => l.target === "notes/alpha.md#section-one");
     const link = h.app.currentLayout(view).links[row]!;
     h.app.moveCursor(view, { row: link.line, col: link.col });
     await h.keys("shift+k");
     expect(h.app.floating?.kind).toBe("hover");
     expect(h.app.floating!.title).toBe("notes/alpha.md › Section One");
-    expect(h.app.floating!.view.buf.source).toStartWith("## Section One\n\nBack to [[index]]");
+    expect(h.app.floating!.view.buf.source).toStartWith("## Section One\n\nBack to [index](../index.md)");
     await h.keys("escape");
     await h.keys("g", "d");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     await h.keys("g", "r");
     expect((h.app.overlay as ListOverlay).title).toMatch(/^Linking to alpha\.md \(\d+\)$/);
+  });
+
+  test("shift+k on a path link reads its #fragment: a block's ^id, a heading written percent-encoded (20.2)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "claims.md"), "# Claims\n\nThe first claim holds. ^claim-one\n\n## The Plan\n\nShip it.\n");
+    writeFileSync(join(root, "cites.md"), "[c](claims.md#^claim-one)\n\n[p](claims.md#The%20Plan)\n");
+    const h = await harness({ root, open: "cites.md" });
+    const view = h.app.view!;
+    const hoverOn = async (target: string) => {
+      const link = h.app.currentLayout(view).links.find((l) => l.target === target)!;
+      h.app.moveCursor(view, { row: link.line, col: link.col });
+      await h.keys("shift+k");
+      expect(h.app.floating?.kind).toBe("hover");
+      const got = { title: h.app.floating!.title, source: h.app.floating!.view.buf.source };
+      await h.keys("escape");
+      return got;
+    };
+    expect(await hoverOn("claims.md#^claim-one")).toEqual({ title: "claims.md ^claim-one", source: "The first claim holds.\n" });
+    const plan = await hoverOn("claims.md#The%20Plan");
+    expect(plan.title).toBe("claims.md › The Plan");
+    expect(plan.source).toStartWith("## The Plan\n\nShip it.");
   });
 });
 

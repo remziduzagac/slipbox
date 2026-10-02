@@ -30,7 +30,7 @@ turns it into a string for `slipbox render`.
 
 ## Blocks and inlines (plan `2.2`)
 
-`layout/render.ts` handles every mdast node remark-gfm produces, plus wikilinks. Containers lay
+`layout/render.ts` handles every mdast node remark-gfm produces, plus `#tags`. Containers lay
 their children out at reduced width and prefix every row, so nesting composes.
 
 | Node | Rendering |
@@ -61,31 +61,31 @@ as their text; the URL follows as `<url>` when colour is off or `render.show_url
 Images render as `▣ alt`: phase 6 adds pixels, and alt text plus path stay the floor. Inline
 tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 
-**Wikilinks** render as their alias, or as `target › heading`. Colour shows status: `wikilink`
-resolved, `link_unresolved` red, `link_ambiguous` orange.
+**Links are plain paths** (`20.2`): `[[…]]` is text, drawn as written — only the converter reads it (`20.1`,
+`docs/design/cli.md`, `convert-links`). A link's colour shows its status: resolved, or `link_unresolved` red.
 
-**Embeds** (`1.11`): a paragraph of nothing but embeds — each `![[x]]` on its line, as Obsidian writes them, or a note
-by its path, `![text](note.md)` (`#heading`, by its text or slug, or `#^id`), as the converter writes them (`20.1`) and
-Obsidian does without wikilinks — draws each embedded note in place: a header with its name (`⧉ inner`,
-`⧉ note › Heading`, `⧉ note ^id`; a link to it), then its text behind a bar (role `embed`). `![[note]]` is the whole
-note but its frontmatter; `![[note#Heading]]` the heading and what follows, to the next heading as high; `![[note#^id]]`
-the block whose id that is — a paragraph's or a list item's, at the end of its text, or the table, quote or list on the
-line before a lone `^id`. Read-only:
+**Embeds** (`1.11`): a paragraph of nothing but embeds — each a note by its path, `![text](note.md)`, on its line, as
+the converter writes them (`20.1`) and Obsidian does without wikilinks — draws each embedded note in place (beside
+other text, or with no note there, it's a reference, `⧉ text`, as a picture's is `▣ alt`): a header
+with its name (`⧉ inner`, `⧉ note › Heading`, `⧉ note ^id`; a link to it), then its text behind a bar (role
+`embed`). `![x](note.md)` is the whole note but its frontmatter; `![x](note.md#heading)` the heading (by its text or
+slug) and what follows, to the next heading as high; `![x](note.md#^id)` the block whose id that is — a paragraph's or
+a list item's, at the end of its text, or the table, quote or list on the line before a lone `^id`. Read-only:
 
 - **Where it is.** Its rows are all at the embed's line: the note shown has the cursor, anchors and the lens; the
   embedded note's headings stay out of its outline. Its links are its own: their status, and where they lead, are
-  as from the embedded note (`[sibling](sibling.md)` beside it, `[[#Heading]]` its own heading).
+  as from the embedded note (`[sibling](sibling.md)` beside it, `[x](#heading)` its own heading).
 - **Loops and depth.** An embed of a note already being drawn says `embeds itself: not drawn again`; embeds inside
   embeds go three deep, then `embedded deeper still: enter opens it`. A heading or block that isn't there says so.
 - **Current.** It's read from its file (re-read when that changes); a block holding one is never kept in the render
   cache, and the note showing it lays out again when the graph hears the embedded note change.
-- **References still.** A picture (`![[pic.png]]`), any other file, an embed that reaches nothing, and an embed with
-  text around it render as a reference, `⧉ x` — pixels are phase 6.
+- **References still.** A picture (`![x](pic.png)`), any other file, an embed that reaches nothing, and an embed with
+  text around it render as a reference — pixels are phase 6.
 
 ## Data files (plans `16.11`–`16.14`)
 
 A data file is read into the same tree a note is (`core/data.ts`), so the renderer, the outline,
-the breadcrumb, `[[file.toml#section]]`, find and the lens work unchanged:
+the breadcrumb, `[x](file.toml#section)`, find and the lens work unchanged:
 
 - **TOML and INI sections become headings**: a `[table]` or `[section]`, deeper by its dots — the
   file itself is flat sections, so headings say what it says.
@@ -126,12 +126,13 @@ JSON (and `.jsonc`, comments allowed) is validated by `JSON.parse`. **Nothing is
 re-serialized**: edits are always on the text, so comments, order and formatting survive. A file
 that doesn't parse has no render (`16.14`): its error is shown and source mode opens.
 
-## The wikilink tokenizer
+## The wikilink tokenizer (the converter's)
 
-`core/wikilink.ts` is a micromark extension, not a regex. That is why `[[links]]` inside code
-spans and fenced blocks are never links, and why `\[[escaped]]` stays literal. Every node also
-carries its source position. It parses `![[embeds]]`, which `remark-wiki-link` does not, and
-treats `\|` as an alias divider, since that is how an alias is written inside a table cell.
+`core/wikilink.ts` is a micromark extension, not a regex — since `20.2` used only by the converter (`20.1`), through
+`parseLegacy`, to read notes written before plain paths. That is why `[[links]]` inside code spans and fenced blocks
+are never converted, and why `\[[escaped]]` stays literal. Every node also carries its source position. It parses
+`![[embeds]]`, which `remark-wiki-link` does not, and treats `\|` as an alias divider, since that is how an alias is
+written inside a table cell.
 
 ## The table allocator (plan `2.3`)
 

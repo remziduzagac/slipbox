@@ -140,7 +140,7 @@ ORDER BY p.mjd;
 halley reads `halley.toml` from the working directory. Paths are relative to the data root unless they start with a slash.
 
 The deployed copy is [halley.toml](halley/halley.toml), checked against [its schema](halley/halley.schema.json); the
-season's targets are [[halley/targets.yaml]], and the reduction itself is [[halley/reduce.py]], run by
+season's targets are [halley/targets.yaml](halley/targets.yaml), and the reduction itself is [halley/reduce.py](halley/reduce.py), run by
 [night.sh](halley/night.sh).
 
 ```toml
@@ -190,7 +190,7 @@ scratch = "/scratch/halley"
 ## Talk to nightjar over HTTP
 
 nightjar has a tiny HTTP API on `ridge-ctl:8420`. Its full description is [the OpenAPI spec](nightjar/openapi.json);
-how it runs is [[nightjar/deploy.yaml]] (per environment: [[nightjar/environments.yaml]]), and its
+how it runs is [nightjar/deploy.yaml](nightjar/deploy.yaml) (per environment: [nightjar/environments.yaml](nightjar/environments.yaml)), and its
 manifest is [package.json](nightjar/package.json). Adding a target to tonight's queue:
 
 ```json

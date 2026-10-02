@@ -5,8 +5,8 @@
 # Extra gitignore-syntax patterns to leave out of the vault, on top of .gitignore.
 exclude = ["scratch/trash/"]
 
-# The vault's identity (docs/design/configuration.md): what [[halden:home]] reaches it by — from
-# the vaults nested in it (outreach/, outreach/school-visits/) and from any other.
+# The vault's identity (docs/design/configuration.md): its name, shown wherever it's named — in the
+# vaults nested in it (outreach/, outreach/school-visits/) and elsewhere.
 [vault]
 id = "4a1d3e5c7b9f0261"
 name = "halden"
