@@ -115,6 +115,12 @@ export interface Config {
   search: {
     engine: "auto" | "index" | "scan";
   };
+  /** The background auto-index of the home folder (20.9): on or off, and how long nobody has been
+   *  working — no key in the TUI, no CLI command from an agent — before it works. */
+  index: {
+    background: boolean;
+    idle_seconds: number;
+  };
   /** A file's problems shown where they are (19.8–19.11): `bar`, a column beside the text with each
    *  line's count — `auto` while the file has had any, `on` always, `off` never; `marks`, the text
    *  underlined; `severity`, the least that shows (a note not written yet is `info`). */
@@ -246,6 +252,7 @@ export const DEFAULT_CONFIG: Config = {
   capture: { location: "state", file: "scratch.md" },
   git: { base: "" },
   search: { engine: "auto" },
+  index: { background: true, idle_seconds: 30 },
   diagnostics: { bar: "auto", marks: true, severity: "warning" },
   "language-server": {},
   language: [],
@@ -282,6 +289,7 @@ const RANGES: Record<string, [number, number]> = {
   "render.inset": [0, 40],
   "render.max_width": [0, 1000],
   "walk.max_file_size": [1, 1 << 30],
+  "index.idle_seconds": [1, 86_400],
   "ui.sidebar_width": [8, 200],
   "ui.outline_width": [8, 200],
   "ui.split_ratio": [0.2, 0.8],

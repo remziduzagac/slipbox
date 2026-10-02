@@ -42,8 +42,8 @@ filesystem's root, a move never resolves a link), vault boundaries (`20.3`: the 
 checkout), collections apart from instances (`20.4`: local instance ids in `vaults.json`, copies told by their
 evidence), personal state by instance (`20.5`: moves confirmed, never guessed; today's state moved once), the LSP
 face removed (`20.23`), names for display (`20.6`: unique here, `work.docs`, `name@branch`), settings deeper over broader
-(`20.7`), git-ignored and hidden files indexed when reached (`20.8`). Next: the background auto-index, freshness and
-the parse cache (`20.9`–`20.11`).
+(`20.7`), git-ignored and hidden files indexed when reached (`20.8`), the background auto-index of `~` (`20.9`). Next:
+freshness and the parse cache (`20.10`, `20.11`).
 
 ## The documents
 

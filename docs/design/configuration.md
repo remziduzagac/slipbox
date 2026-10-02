@@ -114,6 +114,10 @@ base = ""                      # the branch changes are measured against; "" = m
 [search]                       # search (6.x): slipbox search, space f s
 engine = "auto"                # auto: the index once built, else a scan | index (built first) | scan (no index)
 
+[index]                        # the background auto-index of the home folder (20.9)
+background = true              # walk ~ slowly for vaults, index them: their links become backlinks; false: never
+idle_seconds = 30              # nobody working this long first: no key in the TUI, no CLI command
+
 [diagnostics]                  # a file's problems where they are (19.8–19.11)
 bar = "auto"                   # the bar beside the text: auto (once a file has had problems) | on | off
 marks = true                   # problems underlined in the text

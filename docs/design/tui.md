@@ -309,6 +309,12 @@ aren't vaults, and aren't listed. **Names** (`20.6`) here, in `space v i`, the I
 vault's name on this machine: its `.slipbox/` name, else its repository's, else its folder's — two that would share
 one each with as few folders as tell them apart (`work.docs`, `home.docs`), a worktree as `name@branch`.
 
+**The background auto-index** (`20.9`): while nobody is working — no key or click for `index.idle_seconds`, no CLI
+command from an agent as long, this vault's own index done — the TUI walks the home folder for vaults a slice at a
+time and indexes each, so backlinks from vaults never opened appear by themselves. Its place is kept: it resumes
+where it stopped, and a pass done, the next is a day later. `[index] background = false` turns it off;
+`slipbox index --home` runs it now.
+
 **A vault moved** (`20.5`): opened where it wasn't seen before, while a copy of it is gone from where it was (seen
 last before this one appeared), the TUI asks "`<name>` was elsewhere before — did it move here?": `Moved here from
 <path>` takes that copy's instance — its reading positions, sessions and scratch, the vault opened again with them —

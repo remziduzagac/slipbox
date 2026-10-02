@@ -69,9 +69,10 @@ import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRen
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
+import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { sameCollection } from "../core/collection.ts";
 import { displayNames, locName } from "../core/names.ts";
-import { findVaultRoot, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import { findVaultRoot, homeAt, homeFolder, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
@@ -704,6 +705,7 @@ export class App {
       this.startPolling();
       this.indexInBackground();
       this.refreshGit();
+      this.startAutoIndex();
     }
   }
 
@@ -5204,6 +5206,7 @@ export class App {
    * another is still being handled (a fast typist, a paste, a command that awaits) waits its turn.
    */
   handleKey(key: string): Promise<void> {
+    this.lastInputAt = this.now();
     const start = () => {
       this.keysInFlight++;
       return this.processKey(key).finally(() => this.keysInFlight--);
@@ -5574,6 +5577,7 @@ export class App {
 
   /** Everything visible is clickable (docs/design/keymap.md, "Mouse"). */
   handleMouse(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
+    if (ev.type !== "move") this.lastInputAt = this.now();
     // A big note still parsing (15.1): a click or a scroll would land on its placeholder.
     if (this.parses.size) return;
     this.handleMouseNow(ev);
@@ -6262,6 +6266,37 @@ export class App {
       },
       pollTargets: () => [...this.buffers.values()].filter((b) => b.rel).map((b) => b.rel!),
     });
+  }
+
+  /** When a key or a click last came: the background auto-index waits while someone works (20.9). */
+  lastInputAt = 0;
+  autoIndex: AutoIndex | null = null;
+
+  /**
+   * Whether the background auto-index may work now (20.9): it's on, this vault's own index is done,
+   * and nobody is working — no key or click here, no CLI command from an agent — for `idle_seconds`.
+   */
+  autoIndexDue(now = this.now()): boolean {
+    if (!this.config.index.background || this.indexing) return false;
+    const quiet = this.config.index.idle_seconds * 1000;
+    if (now - this.lastInputAt < quiet) return false;
+    try {
+      if (now - statSync(activityFile()).mtimeMs < quiet) return false;
+    } catch {}
+    return true;
+  }
+
+  /** The background auto-index of the home folder (20.9): a slice of it every quarter second while due. */
+  private startAutoIndex(): void {
+    this.lastInputAt = this.now();
+    const t = setInterval(() => {
+      if (this.quitting) return clearInterval(t);
+      if (!this.autoIndexDue()) return;
+      this.autoIndex ??= new AutoIndex(homeFolder());
+      if (this.autoIndex.idle) return;
+      this.autoIndex.step(15);
+    }, 250);
+    (t as { unref?: () => void }).unref?.();
   }
 
   /** Poll what the vault watcher cannot see: files open from outside the vault (the scratch)
@@ -7084,9 +7119,10 @@ export class App {
   /** The vaults this machine knows (17.14): pick one to switch to. */
   openVaultList(): void {
     const here = this.loc.root;
+    // Opened ones first, most recently seen first; then those the auto-index only found (20.9).
     const known = readRegistry()
       .filter((v) => v.kind === "vault" && v.path !== here && existsSync(v.path))
-      .sort((a, b) => (a.seen < b.seen ? 1 : -1));
+      .sort((a, b) => Number(!!a.found) - Number(!!b.found) || (a.seen < b.seen ? 1 : -1));
     if (!known.length) return this.message("info", "no other vaults yet: open one with slipbox <folder>, or make one with slipbox init");
     // Copies of one collection together (20.4): a repository's clones and worktrees (17.19), under
     // the main checkout seen last, each worktree by its branch; the groups by when any of them was

@@ -9,7 +9,7 @@ import { grammar, grammarFor, parseSyntax } from "../core/syntax.ts";
 import { loadError } from "../core/lazy.ts";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
@@ -31,11 +31,11 @@ import { addFootnote, applyEdits, deleteFootnote, editFootnote, type Footnote, f
 import { parseNoteFile } from "../core/readers.ts";
 import { dataOutline, parseData } from "../core/data.ts";
 import { classify, extensionOf, isKnownExtension, noteFormat } from "../core/filetypes.ts";
-import { cacheDir, stateDir, userConfigFile } from "../core/paths.ts";
+import { cacheDir, stateDir, stateHome, userConfigFile } from "../core/paths.ts";
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
 import { sanitize, UNSAFE } from "../core/sanitize.ts";
-import { type DecodedFile, decodeText, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
@@ -52,9 +52,10 @@ import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRena
 import { planConvert } from "../core/convert.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
+import { activityFile, AutoIndex, autoIndexFile } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { displayNames, locName } from "../core/names.ts";
-import { findVaultRoot, hasMarker, homeAt, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import { findVaultRoot, hasMarker, homeAt, homeFolder, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -109,6 +110,11 @@ class Session {
     this.configSources = loaded.sources;
     this.warnings.push(...loaded.warnings);
     if (loc.note) this.warnings.push(loc.note);
+    // An agent is working (20.9): the TUI's background auto-index waits a while.
+    try {
+      ensureDir(stateHome());
+      writeFileSync(activityFile(), `${Date.now()}\n`);
+    } catch {}
     // A copy of this vault gone from where it was (20.5): asked, never taken on a guess.
     if (args.positional[0] !== "vault-moved") {
       for (const v of loc.movedHere ?? []) this.warnings.push(`${v.name ?? basename(v.path)} was last seen at ${v.path} (${v.seen.slice(0, 10)}), gone from there: if it moved here, slipbox vault-moved ${v.path} takes its positions, sessions and scratch (--not: it didn't)`);
@@ -148,6 +154,7 @@ Usage:
   slipbox search <words…>           the vault's notes ranked by the words: "phrases", prefix*, -not, title:, #tag, path:
                                     [--limit N]
   slipbox index                     build or bring up to date the vault's search index  [--rebuild]
+  slipbox index --home              the background auto-index of the home folder, run now  [--budget MS] [--rebuild]
   slipbox changed                   what this branch changed against the base (main), committed or not  [--base <ref>]
   slipbox diff <note>               the note's changes on this branch: against where it left the base  [--base <ref>]
   slipbox worktrees                 the repository's checkouts: the main one and its worktrees, by branch
@@ -372,7 +379,7 @@ const FLAGS: Record<string, string[]> = {
   undo: ["dry-run"],
   context: ["depth", "no-backlinks", "limit", "copy"],
   search: ["limit"],
-  index: ["rebuild"],
+  index: ["rebuild", "home", "budget"],
   changed: ["base"],
   diff: ["base"],
 };
@@ -712,6 +719,23 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   index(s) {
+    // The background auto-index of the home folder (20.9), run here in the foreground: a pass, or as
+    // much as --budget allows; where it is, either way.
+    if (has(s.args, "home")) {
+      const budget = Number(flag(s.args, "budget") ?? 0);
+      if (!(budget >= 0)) throw new UsageError("--budget takes milliseconds (0: the whole pass)");
+      // --rebuild: a new pass now, whatever was done.
+      if (has(s.args, "rebuild")) rmSync(autoIndexFile(), { force: true });
+      const job = new AutoIndex(homeFolder());
+      const t = performance.now();
+      while (job.step(budget ? Math.max(1, budget - (performance.now() - t)) : 200) && (!budget || performance.now() - t < budget)) {}
+      const p = job.status;
+      const done = !!p.passFinished;
+      return {
+        data: { root: p.root, found: p.found, indexed: p.indexed, left: p.queue.length + (p.current ? 1 : 0), finished: p.passFinished, started: p.passStarted },
+        human: `home folder ${p.root}: ${p.found} vault${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : ` — ${p.queue.length} folder${p.queue.length === 1 ? "" : "s"} left`}\n`,
+      };
+    }
     if (s.loc.mode === "home") throw new CliError("not in a vault: the search index is a vault's — slipbox init makes one; a loose folder is scanned", EXIT.refused);
     const idx = SearchIndex.open(s.loc);
     if (!idx) throw new CliError("the search index can't be opened", 1);

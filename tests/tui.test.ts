@@ -2,7 +2,7 @@
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
 
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
@@ -6973,6 +6973,47 @@ describe("the index on demand in the TUI (20.8)", () => {
     await h.app.run("note.open node_modules/dep.md");
     expect(h.app.view!.buf.rel).toBe(".private/p.md");
     expect(h.app.messages.at(-1)?.text).toBe('no note or file "node_modules/dep.md"');
+  });
+});
+
+describe("the background auto-index in the TUI (20.9)", () => {
+  test("it works only while nobody is: no key or click here, no agent's command, this vault indexed; and it can be off", async () => {
+    const { activityFile } = await import("../src/core/autoindex.ts");
+    const h = await harness();
+    const quiet = h.app.config.index.idle_seconds * 1000;
+    const now = Date.now();
+    writeFileSync(activityFile(), "0\n");
+    utimesSync(activityFile(), new Date(now - 2 * quiet), new Date(now - 2 * quiet));
+    h.app.lastInputAt = now - 2 * quiet;
+    expect(h.app.autoIndexDue(now)).toBe(true);
+    await h.keys("j"); // a key now
+    expect(h.app.autoIndexDue(Date.now())).toBe(false);
+    h.app.lastInputAt = now - 2 * quiet;
+    utimesSync(activityFile(), new Date(now), new Date(now)); // an agent just ran a command
+    expect(h.app.autoIndexDue(now)).toBe(false);
+    utimesSync(activityFile(), new Date(now - 2 * quiet), new Date(now - 2 * quiet));
+    h.app.indexing = 3; // this vault's own index first
+    expect(h.app.autoIndexDue(now)).toBe(false);
+    h.app.indexing = 0;
+    h.app.config.index.background = false;
+    expect(h.app.autoIndexDue(now)).toBe(false);
+  });
+
+  test("the vault list: those opened first, then those the auto-index only found", async () => {
+    const { recordVault } = await import("../src/core/registry.ts");
+    const base = mkdtempSync(join(sandbox, "foundlist-"));
+    const [opened, found] = ["opened", "found"].map((d) => join(base, d)) as [string, string];
+    for (const d of [opened, found]) mkdirSync(join(d, ".slipbox"), { recursive: true });
+    const tag = basename(base);
+    recordVault({ key: `${tag}-o`, id: null, kind: "vault", name: `${tag}-o`, aliases: [], previous_names: [], path: opened }, new Date(Date.now() - 60_000));
+    recordVault({ key: `${tag}-f`, id: null, kind: "vault", name: `${tag}-f`, aliases: [], previous_names: [], path: found, found: true }, new Date(Date.now() + 60_000));
+    const h = await harness();
+    await h.app.run("vault.switch");
+    const items = (h.app.overlay as ListOverlay).items;
+    const details = items.map((i) => i.detail);
+    // Seen later, but only found: after the one opened.
+    expect(details.indexOf(opened)).toBeGreaterThanOrEqual(0);
+    expect(details.indexOf(opened)).toBeLessThan(details.indexOf(found));
   });
 });
 

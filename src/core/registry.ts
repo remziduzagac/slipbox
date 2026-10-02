@@ -59,6 +59,10 @@ export interface KnownVault {
   moved?: { from: string; to: string; at: string }[];
   /** The instances asked about and said not to have moved here (20.5): not asked again. */
   declined?: string[];
+  /** Found by the background auto-index, never opened (20.9): listed after those opened. */
+  found?: boolean;
+  /** When the auto-index last built its index (20.9). */
+  indexed?: string;
   /** A vault in a linked git worktree (17.19): git's name for it, and the main checkout's vault. */
   worktree?: { name: string; main: string | null };
 }
@@ -197,6 +201,8 @@ export function recordVault(v: Omit<KnownVault, "seen" | "instance" | "since"> &
   const old = list[i];
   const since = old ? old.since : now.toISOString();
   const fresh: KnownVault = { ...old, ...v, instance: v.instance ?? old?.instance ?? newInstanceId(), seen: now.toISOString(), ...(since ? { since } : {}) };
+  // Opened, it's no longer only found (20.9).
+  if (!v.found) delete fresh.found;
   const same = old && JSON.stringify({ ...old, seen: "" }) === JSON.stringify({ ...fresh, seen: "" });
   if (same && now.getTime() - Date.parse(old.seen) < SEEN_REFRESH_MS) return old;
   if (i >= 0) list[i] = fresh;

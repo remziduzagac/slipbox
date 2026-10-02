@@ -300,6 +300,13 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   file whose size or mtime changed since, whoever changed it. Until it's been built, a search scans the files with
   the same query, `engine: "scan"` and a warning — slower, the same notes. An index of another version, or one SQLite
   can't read, is made again. A loose folder (the home vault) keeps none: it's scanned.
+- **The home folder** (`20.9`): `slipbox index --home` runs the background auto-index now, in the foreground — the
+  whole pass, or as much as `--budget <ms>` allows, from where it stopped; `--rebuild` starts a pass again. It walks
+  `~` for vaults (never into a hidden folder, `node_modules`, `venv`, `__pycache__` or `~/Library`; into a vault only
+  for the vaults nested in it), records each in `vaults.json` as found (listed after those opened, until one is) and
+  builds its index, so its links count as backlinks of the vaults they reach. `--json`: `{root, found, indexed, left,
+  started, finished}`. Every command notes the time it ran (`activity` in the state folder): the TUI's auto-index
+  waits while an agent works.
 - **`[search] engine`**: `auto` (the index when it's built, else a scan), `index` (built first when there's none),
   `scan` (never an index).
 - **A hit's `section`** is the section it's in, as scout names and bounds it (`{name, line, end}`: `Auth/Setup`,

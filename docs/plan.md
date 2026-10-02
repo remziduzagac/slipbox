@@ -601,7 +601,7 @@ the merge review after; the removals as their replacements land, the sweep last.
 | 20.6 | **Done.** Names: short, unique here, `.` for a collision, a worktree's branch now (`@`); never in a file |
 | 20.7 | **Done.** Settings: the nearest `.slipbox/config.toml`, then outer ones, then yours; programs yours only |
 | 20.8 | **Done.** The index on demand: folders opened, links followed, CLI paths; ignored and hidden when reached |
-| 20.9 | The background auto-index of the home folder: low priority, paused while working, resumable, can be off |
+| 20.9 | **Done.** The background auto-index of the home folder: low priority, paused while working, resumable |
 | 20.10 | Freshness: sizes and times checked, folders listed again; coverage shown; a CLI refresh; drives unavailable |
 | 20.11 | The parse cache by content hash, parser version and settings; links and backlinks resolved per instance |
 | 20.12 | The `vault:path` form: link without text, hover, backlinks, pickers, results; the original paths on a key |
