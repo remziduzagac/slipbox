@@ -95,7 +95,8 @@ These churn freely before 1.0:
 | `init [dir]` | `{root, created, identified, id, name, excluded}` — `--name N`, `--private`; exit 5: name in use |
 | `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
 | `info` | root, mode, `vault{…, key}`, `instance`, `collection`, `copies[]`, paths, index stats, skipped, stale |
-| `vaults` | `[{key, instance, id, kind, name, …, collection, path, seen, exists, worktree?{name, main}}]` |
+| `vaults` | `[{key, instance, id, kind, name, …, collection, path, seen, since?, moved?[], exists, worktree?}]` |
+| `vault-moved [path]` | `[{instance, name, path, seen}]`; with a path `{moved, from, to}`; `--not`: `{declined}` |
 | `mv`, `rename-vault`, `rename-heading`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, …}` |
 | `convert-links` | as `mv`, kind `convert`, plus `ambiguous[]`: the links several notes answer to |
 | `undo` | as `mv`: the rename taken back (`from` and `to` the other way), plus `undo{id, at}`; exit 3: nothing |
@@ -234,15 +235,17 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   where the walk lists notes: never `.slipbox/`, `.git/`, a hidden folder or `node_modules`, and
   never a path outside `--root` when that names the root. `replace --dry-run` only reads, so it
   previews any note; its `newSha` is `null`.
-- **Where a command works.** The root is decided by the file: its nearest boundary above the note
-  argument (or cwd) — a folder with `.slipbox/` or a git checkout's top, one vault when both share a
-  folder (`20.3`) — else the home vault (the file's own folder, listed alone). `$HOME` and `/` are
-  never a root. `--root` must name a vault (`.slipbox/` or a git checkout). Each command records the
-  vault in `vaults.json` — an instance of it (`20.4`), given a local id the first time, with its
-  collection's evidence; a plain folder opened in the home vault is recorded too, by its path. A
-  `.slipbox/` without an id and a name gets them written into its config on first open; a git vault
-  without one is never written into — named by its folder, keyed by its path — and `slipbox init`
-  gives it `.slipbox/` (`--private` keeps that out of git).
+- **Where a command works.** The root is decided by the file: its nearest boundary above the note argument (or cwd)
+  — a folder with `.slipbox/` or a git checkout's top, one vault when both share a folder (`20.3`) — else the home
+  vault (the file's own folder, listed alone). `$HOME` and `/` are never a root. `--root` must name a vault
+  (`.slipbox/` or a git checkout). Each command records the vault in `vaults.json` — an instance of it (`20.4`),
+  given a local id the first time, with its collection's evidence; a plain folder opened in the home vault is
+  recorded too, by its path. A vault's cache and state are its instance's (`20.5`). Opened where it wasn't seen
+  before, while a copy of it is gone from where it was, every command warns until `slipbox vault-moved <old-path>`
+  takes the gone copy's instance and state — or `--not` says it didn't move; with no path it lists the copies that
+  may have. Moves are never taken on a guess. A `.slipbox/` without an id and a name gets them written into its
+  config on first open; a git vault without one is never written into — named by its folder, keyed by its path — and
+  `slipbox init` gives it `.slipbox/` (`--private` keeps that out of git).
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4

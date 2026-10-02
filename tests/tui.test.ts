@@ -5,6 +5,7 @@ import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
+import { randomBytes } from "node:crypto";
 import { basename, dirname, join } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { canonKey, canonSeq } from "../src/core/commands.ts";
@@ -39,6 +40,11 @@ function makeVault(): string {
   // The demo vault's notes, as a folder of this one (without its marker, which would make it a
   // nested vault: a boundary, not walked).
   cpSync(DEMO, join(dir, "samples"), { recursive: true, filter: (src) => !src.endsWith(".slipbox") });
+  // Each copy a vault of its own (20.4): a shared id would make every copy the same collection, and
+  // one moved by an earlier test a question for every later one (20.5).
+  for (const cfg of [join(dir, ".slipbox", "config.toml"), join(dir, "nested-vault", ".slipbox", "config.toml")]) {
+    writeFileSync(cfg, readFileSync(cfg, "utf8").replace(/^id = "[0-9a-f]+"$/m, `id = "${randomBytes(8).toString("hex")}"`));
+  }
   return dir;
 }
 
@@ -674,10 +680,11 @@ describe("overlays and the : prompt", () => {
       const l = lines.find((x) => x.includes(label))!;
       return l.indexOf(` ${key} `, l.indexOf(label) + label.length);
     };
-    expect(colOf(g, "Reindex the vault", "space v r")).toBe(colOf(g, "Messages", "space m"));
-    expect(colOf(g, "Reindex the vault", "space v r")).toBe(colOf(g, "Move the note to a folder…", "space n shift+m"));
-    expect(colOf(g, "Reindex the vault", "space v r")).toBe(colOf(g, "Vault info", "space v i"));
-    expect(colOf(g, "Reindex the vault", ":reindex")).toBe(colOf(g, "Quit", ":qa"));
+    expect(colOf(g, "Switch vault", "space v v")).toBe(colOf(g, "Messages", "space m"));
+    expect(colOf(g, "Switch vault", "space v v")).toBe(colOf(g, "Move the note to a folder…", "space n shift+m"));
+    expect(colOf(g, "Switch vault", "space v v")).toBe(colOf(g, "Vault info", "space v i"));
+    expect(colOf(g, "Switch vault", ":vaults")).toBe(colOf(g, "Quit", ":qa"));
+    expect(colOf(g, "Switch vault", ":vaults")).toBe(colOf(g, "Vault moved here", ":vault-moved")); // an alias without a key
     expect(h.app.recentCommands[0]).toBe("ui.zen");
   });
   test("messages, note info, vault info", async () => {
@@ -6983,6 +6990,54 @@ describe("git worktrees in the TUI (17.19)", () => {
     // A checkout switched to another branch: the top bar follows it.
     git(join(l.wts, "feat"), "checkout", "-q", "-b", "feat-2");
     expect(topRow(feat.frame())).toContain("⎇ feat-2 (worktree)");
+  });
+
+  test("a vault opened where a copy of it, gone from where it was, may have moved: asked — yes takes its state, no isn't asked again, esc asks next time (20.5)", async () => {
+    const { PositionStore } = await import("../src/core/position.ts");
+    const { stateDir } = await import("../src/core/paths.ts");
+    const { locateVault } = await import("../src/core/vault.ts");
+    const vault = (name: string) => {
+      const dir = join(mkdtempSync(join(sandbox, "mv-")), name);
+      mkdirSync(join(dir, ".slipbox"), { recursive: true });
+      writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${basename(dirname(dir)).replace(/[^a-z0-9]/gi, "")}"\nname = "${name}${basename(dirname(dir)).slice(-6).replace(/[^a-z0-9]/gi, "")}"\n`);
+      writeFileSync(join(dir, "n.md"), "# N\n\none\n\ntwo\n");
+      return dir;
+    };
+    const a = vault("mva");
+    const first = locateVault({ path: a });
+    const ps = new PositionStore(first);
+    ps.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 5 });
+    ps.save();
+    const moved = join(dirname(a), "elsewhere");
+    renameSync(a, moved);
+    // Not now (esc): asked again the next time.
+    let h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
+    const title = () => (h.app.overlay as ListOverlay | null)?.title ?? "";
+    expect(title()).toContain("was elsewhere before — did it move here?");
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual([`Moved here from ${a}`, "No: a copy of its own"]);
+    await h.keys("escape");
+    h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
+    expect(title()).toContain("did it move here?");
+    // Yes: its instance, its reading position; the one made here meanwhile gone.
+    const fresh = h.app.loc.key;
+    await h.keys("enter");
+    expect(h.app.loc.key).toBe(first.key);
+    expect(new PositionStore(h.app.loc).get("n.md")?.line).toBe(5);
+    expect(existsSync(stateDir({ key: fresh }))).toBe(false);
+    expect(h.app.messages.some((m) => m.text.startsWith(`moved here from ${a}`))).toBe(true);
+    expect((await harness({ loc: locateVault({ path: moved }), open: "n.md" })).app.overlay).toBeNull();
+    // No: a copy of its own, and not asked again — :vault-moved says so.
+    const b = vault("mvb");
+    locateVault({ path: b });
+    const copy = join(dirname(b), "copy");
+    renameSync(b, copy);
+    h = await harness({ loc: locateVault({ path: copy }), open: "n.md" });
+    await h.keys("down", "enter");
+    expect(h.app.overlay).toBeNull();
+    h = await harness({ loc: locateVault({ path: copy }), open: "n.md" });
+    expect(h.app.overlay).toBeNull();
+    await h.app.run("vault.moved");
+    expect(h.app.messages.at(-1)?.text).toBe("nothing seems to have moved here");
   });
 
   test("a clone is a copy of the same collection: listed with it, by its name and branch (20.4)", async () => {

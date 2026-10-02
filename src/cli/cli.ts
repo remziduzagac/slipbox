@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
@@ -51,7 +51,7 @@ import { rootFor } from "../core/servers/find.ts";
 import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { planConvert } from "../core/convert.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
-import { readIdentity, readRegistry, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
+import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { findVaultRoot, hasMarker, homeAt, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
@@ -108,6 +108,10 @@ class Session {
     this.configSources = loaded.sources;
     this.warnings.push(...loaded.warnings);
     if (loc.note) this.warnings.push(loc.note);
+    // A copy of this vault gone from where it was (20.5): asked, never taken on a guess.
+    if (args.positional[0] !== "vault-moved") {
+      for (const v of loc.movedHere ?? []) this.warnings.push(`${v.name ?? basename(v.path)} was last seen at ${v.path} (${v.seen.slice(0, 10)}), gone from there: if it moved here, slipbox vault-moved ${v.path} takes its positions, sessions and scratch (--not: it didn't)`);
+    }
     recordLocation(loc);
   }
 
@@ -165,9 +169,9 @@ Usage:
   slipbox cp <note|folder> [path]   copy a note or folder (beside it, as name-copy, when no path)
   slipbox rm <note|folder>          delete to the vault's trash (slipbox trash restore puts it back)  [--dry-run]
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
-  slipbox rename-vault <name>       rename this vault; [[old:…]] links fixed, the old name kept  [--dry-run]
-  slipbox rename-heading <note> <heading> <new>  rename a heading; [[note#heading]] links fixed everywhere  [--dry-run]
-  slipbox relink [note]             rewrite links that reach notes by an old name or a move  [--dry-run]
+  slipbox rename-vault <name>       rename this vault (one with .slipbox/); the old name kept  [--dry-run]
+  slipbox rename-heading <note> <heading> <new>  rename a heading; links to it fixed everywhere  [--dry-run]
+  slipbox relink [note]             rewrite links broken by a move slipbox saw, to where the file is  [--dry-run]
   slipbox convert-links [note]      wikilinks and links from the vault's root rewritten as relative paths  [--dry-run]
   slipbox undo                      take back the vault's last rename, move or relink  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
@@ -176,9 +180,9 @@ Usage:
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
   slipbox init [dir]                make <dir> a vault (creates .slipbox/ with its id and name)  [--name N] [--private] [--dry-run]
   slipbox deinit <dir>              make a vault nested in another a plain folder of it; links fixed  [--dry-run]
-  slipbox info                      vault, paths, versions, staleness
-  slipbox lsp                       serve vaults to an editor over LSP, on stdio  [--config <file>]
+  slipbox info                      vault, its instance and copies, paths, versions, staleness
   slipbox vaults                    the vaults this machine knows: name, kind, path, last seen
+  slipbox vault-moved [old-path]    a copy of this vault, gone from where it was: did it move here?  [--not]
   slipbox doctor [file]             language servers and linters: each language's, found where, installed when needed, or missing
   slipbox diagnostics <file>        a file's problems: its servers', its linters', its syntax; a note's links and lint  [--severity S] [--timeout SECS]
   slipbox themes                    list themes
@@ -203,7 +207,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-vault", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
-  "capture", "scratch", "init", "info", "vaults", "doctor", "diagnostics", "themes", "commands", "help",
+  "capture", "scratch", "init", "info", "vaults", "vault-moved", "doctor", "diagnostics", "themes", "commands", "help",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -312,7 +316,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
+  scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -357,6 +361,7 @@ const FLAGS: Record<string, string[]> = {
   scratch: ["if-unchanged"],
   init: ["name", "private", "dry-run"],
   deinit: ["dry-run"],
+  "vault-moved": ["not"],
   mv: ["dry-run"],
   rm: ["dry-run"],
   "rename-vault": ["dry-run"],
@@ -1068,6 +1073,28 @@ const HANDLERS: Record<string, Handler> = {
     const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };
     if (d.kind === "vault" && !d.dryRun) for (const f of d.files) if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
     return r;
+  },
+
+  // A copy of this vault gone from where it was (20.5): those that may have moved here; one taken
+  // (its positions, sessions and scratch this copy's), or said not to have moved (not asked again).
+  "vault-moved"(s, rest) {
+    if (s.loc.mode !== "vault") throw new CliError("not in a vault: a vault's copies move, loose files don't", EXIT.refused);
+    const candidates = s.loc.movedHere ?? [];
+    const shown = (v: KnownVault) => ({ instance: v.instance ?? v.key, name: v.name, path: v.path, seen: v.seen });
+    if (!rest[0]) {
+      const human = candidates.map((v) => `${v.path}  ${v.name ?? ""}  last seen ${v.seen.slice(0, 16).replace("T", " ")}\n`).join("");
+      return { data: candidates.map(shown), human: human || "nothing seems to have moved here\n" };
+    }
+    const from = resolve(s.io.cwd, rest[0]);
+    const v = candidates.find((c) => c.path === from);
+    if (!v) throw new CliError(`${rest[0]}: no copy of this vault gone from there (slipbox vault-moved lists those that are)`, EXIT.notFound);
+    if (has(s.args, "not")) {
+      declineMove(s.loc.key, v);
+      return { data: { declined: shown(v) }, human: `not asked again: ${v.path} didn't move here\n` };
+    }
+    const moved = confirmMove(v, s.loc.root, s.loc.key);
+    removeStorage(s.loc.key);
+    return { data: { moved: shown(moved), from: v.path, to: s.loc.root }, human: `moved: ${v.path} → ${s.loc.root} — its positions, sessions and scratch are this copy's now\n` };
   },
 
   vaults() {

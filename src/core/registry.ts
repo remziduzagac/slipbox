@@ -53,6 +53,12 @@ export interface KnownVault {
   path: string;
   /** When (ISO 8601). */
   seen: string;
+  /** When it was first seen (20.5): a copy that was gone before then may have moved here. */
+  since?: string;
+  /** Its moves, each confirmed (20.5): where it was, where it went, when. */
+  moved?: { from: string; to: string; at: string }[];
+  /** The instances asked about and said not to have moved here (20.5): not asked again. */
+  declined?: string[];
   /** A vault in a linked git worktree (17.19): git's name for it, and the main checkout's vault. */
   worktree?: { name: string; main: string | null };
 }
@@ -182,13 +188,15 @@ export function newInstanceId(): string {
 
 /**
  * Record a vault as seen now: once per change, and at most every ten minutes otherwise. Its instance
- * id is the one it was given when first seen, else a new one. The entry as recorded.
+ * id is the one given (a vault's is its key, 20.5), else the one it had, else a new one; it was first
+ * seen now when it's new (an entry from before 20.5 has no such date). The entry as recorded.
  */
-export function recordVault(v: Omit<KnownVault, "seen" | "instance">, now = new Date()): KnownVault {
+export function recordVault(v: Omit<KnownVault, "seen" | "instance" | "since"> & { instance?: string }, now = new Date()): KnownVault {
   const list = readRegistry();
   const i = list.findIndex((x) => x.key === v.key);
   const old = list[i];
-  const fresh: KnownVault = { ...v, instance: old?.instance ?? newInstanceId(), seen: now.toISOString() };
+  const since = old ? old.since : now.toISOString();
+  const fresh: KnownVault = { ...old, ...v, instance: v.instance ?? old?.instance ?? newInstanceId(), seen: now.toISOString(), ...(since ? { since } : {}) };
   const same = old && JSON.stringify({ ...old, seen: "" }) === JSON.stringify({ ...fresh, seen: "" });
   if (same && now.getTime() - Date.parse(old.seen) < SEEN_REFRESH_MS) return old;
   if (i >= 0) list[i] = fresh;
@@ -198,6 +206,49 @@ export function recordVault(v: Omit<KnownVault, "seen" | "instance">, now = new 
     writeJson(registryFile(), { version: 1, vaults: list } satisfies RegistryFile);
   } catch {}
   return fresh;
+}
+
+/** The list written whole; false when it can't be (a read-only state directory). */
+export function writeRegistry(vaults: KnownVault[]): boolean {
+  try {
+    ensureDir(stateHome());
+    writeJson(registryFile(), { version: 1, vaults } satisfies RegistryFile);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The instance `from`, gone from where it was, confirmed moved to `root` (20.5): its entry follows,
+ * the move kept; the instance made there meanwhile (`fresh`) forgotten — its storage is the caller's
+ * to remove once nothing writes to it any more (`removeStorage`).
+ */
+export function confirmMove(from: KnownVault, root: string, fresh: string | null, now = new Date()): KnownVault {
+  const list = readRegistry();
+  const old = list.find((v) => v.key === from.key);
+  if (!old) throw new Error(`no instance ${from.key} on this machine`);
+  const at = now.toISOString();
+  const moved: KnownVault = { ...old, path: root, seen: at, moved: [...(old.moved ?? []), { from: old.path, to: root, at }] };
+  writeRegistry([...list.filter((v) => v !== old && (fresh === null || v.key !== fresh)), moved]);
+  return moved;
+}
+
+/** `from` didn't move to the instance `key` (20.5): it isn't asked about there again. */
+export function declineMove(key: string, from: KnownVault): void {
+  const list = readRegistry();
+  const here = list.find((v) => v.key === key);
+  if (!here) return;
+  const id = from.instance ?? from.key;
+  if (here.declined?.includes(id)) return;
+  here.declined = [...(here.declined ?? []), id];
+  writeRegistry(list);
+}
+
+/** An instance's cache and state removed (one made by mistake: a move confirmed after it). */
+export function removeStorage(key: string): void {
+  rmSync(join(cacheHome(), key), { recursive: true, force: true });
+  rmSync(join(stateHome(), key), { recursive: true, force: true });
 }
 
 /**

@@ -59,7 +59,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
 | `core/paths.ts` | 0.10 | config, cache and state directories; the vault key |
 | `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
-| `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3 | a file's root: `.slipbox/`, a git checkout or the home vault; `init` |
+| `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 20.5 | a file's root, its instance and the moves to ask about; `init` |
 | `core/registry.ts` | 17.2–17.6, 20.4 | identity, the home vault, the machine's instances, storage keys, names |
 | `core/collection.ts` | 20.4 | a collection's evidence: `.slipbox/` id, remotes, first commits; copies of one |
 | `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |

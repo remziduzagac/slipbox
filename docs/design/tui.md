@@ -306,6 +306,13 @@ the note and place you left; each switch is remembered, so a chain of them unwin
 collection (`20.4`) are listed together: under the checkout seen last, a repository's worktrees (`17.19`) each by its
 branch (`⎇ feat`), and its other clones each by its name and branch; the head's branch beside it. Plain folders
 aren't vaults, and aren't listed.
+
+**A vault moved** (`20.5`): opened where it wasn't seen before, while a copy of it is gone from where it was (seen
+last before this one appeared), the TUI asks "`<name>` was elsewhere before — did it move here?": `Moved here from
+<path>` takes that copy's instance — its reading positions, sessions and scratch, the vault opened again with them —
+and the instance made here meanwhile goes; `No: a copy of its own` isn't asked again; `esc` asks next time.
+`:vault-moved` (`vault.moved`) asks again. A worktree `git worktree move` took elsewhere is found by git's name for it,
+without asking.
 **The launcher:** slipbox opened on a loose folder without a file (`slipbox ~`) shows this list at
 once, over the folder's explorer, when there are vaults to show.
 

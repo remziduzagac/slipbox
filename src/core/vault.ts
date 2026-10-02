@@ -16,7 +16,7 @@ import { VAULT_CONFIG_TEMPLATE } from "./config.ts";
 import { collectionOf, sameCollection } from "./collection.ts";
 import { checkoutOf, inMain } from "./git.ts";
 import { readRegular } from "./fsutil.ts";
-import { stateHome, vaultKey } from "./paths.ts";
+import { cacheHome, stateHome, vaultKey } from "./paths.ts";
 import {
   addIdentity,
   forgetVault,
@@ -26,6 +26,8 @@ import {
   implicitName,
   type KnownVault,
   MARKER,
+  confirmMove,
+  newInstanceId,
   newVaultId,
   pruneWorktrees,
   readIdentity,
@@ -36,6 +38,7 @@ import {
   VAULT_NAME,
   vaultConfigFile,
   vaultNamed,
+  writeRegistry,
   type RootKind,
   type VaultIdentity,
 } from "./registry.ts";
@@ -81,6 +84,11 @@ export interface VaultLocation {
   worktree?: Worktree | null;
   /** Said once when the root was found, when there is something to say. */
   note?: string;
+  /**
+   * Copies of this vault gone from where they were, seen last before this one was first (20.5): what
+   * may have moved here, for the person to confirm (`confirmMove`) — never taken on a guess.
+   */
+  movedHere?: KnownVault[];
 }
 
 export class VaultError extends Error {}
@@ -171,10 +179,71 @@ export function rootAt(root: string, file: string | null = null): VaultLocation 
   // A git vault has no `.slipbox/` to hold an id or a name, and none is made for it: it's keyed by
   // its path and named by its folder (a worktree reads its main checkout's, never writing).
   const ident = hasMarker(root) ? ensureIdentity(root, worktree?.mainVault ?? null) : worktree?.mainVault ? readIdentity(vaultConfigFile(worktree.mainVault)) : readIdentity(vaultConfigFile(root));
-  // A worktree keeps its own state, by git's name for it: it survives moving the folder (17.19).
-  const key = worktree && ident.id ? `${ident.id}-wt-${worktree.name.replace(/[^A-Za-z0-9._-]/g, "_")}` : storageKey(root, ident.id);
-  if (ident.id && key === ident.id) adoptPathState(root, key);
-  return { root, mode: "vault", file, key, id: ident.id, name: ident.name ?? implicitName(root), aliases: ident.aliases, previous_names: ident.previous_names, worktree };
+  const loc: VaultLocation = { root, mode: "vault", file, key: "", id: ident.id, name: ident.name ?? implicitName(root), aliases: ident.aliases, previous_names: ident.previous_names, worktree };
+  const { key, movedHere } = instanceFor(loc);
+  return { ...loc, key, ...(movedHere.length ? { movedHere } : {}) };
+}
+
+/**
+ * This copy's instance (20.5): its personal state and cache are found by its id. Found by its path in
+ * the machine's list — its state moved over once from the key it had before instances (an id, a
+ * copy's, a worktree's, a path's); a worktree `git worktree move` took elsewhere found again by git's
+ * name for it (17.19). Else a new one, recorded at once so every open of it agrees. With what may have
+ * moved here (`movedHere`).
+ */
+function instanceFor(loc: VaultLocation): { key: string; movedHere: KnownVault[] } {
+  const known = readRegistry();
+  const here = realPath(loc.root);
+  let entry = known.find((v) => v.kind === "vault" && realPath(v.path) === here);
+  const wt = loc.worktree;
+  if (!entry && wt) {
+    const was = known.find((v) => v.kind === "vault" && v.worktree?.name === wt.name && v.worktree.main === wt.mainVault && !isVaultRoot(v.path));
+    if (was) entry = confirmMove(was, loc.root, null);
+  }
+  if (entry) {
+    const key = entry.instance ?? newInstanceId();
+    if (entry.key !== key) {
+      // Today's state, moved once: under the key it had, to its instance's (20.5).
+      adoptStorage(entry.key, key);
+      writeRegistry(readRegistry().map((v) => (v.key === entry!.key ? { ...v, key, instance: key } : v)));
+    }
+    return { key, movedHere: movedHere(known, { ...entry, key }, loc.root) };
+  }
+  // New here. State kept before instances, under a key no instance has taken: this vault's, by the
+  // keys it had (17.3: its id, or a copy's; a path's before ids).
+  const key = newInstanceId();
+  for (const before of [storageKey(loc.root, loc.id, known), vaultKey(loc.root)]) {
+    if (known.some((v) => v.key === before) || !existsSync(join(stateHome(), before))) continue;
+    adoptStorage(before, key);
+    break;
+  }
+  const fresh = recordLocation({ ...loc, key });
+  // A list that can't be written: the path's key, the same each time.
+  if (fresh.key !== key || !readRegistry().some((v) => v.key === key)) return { key: vaultKey(loc.root), movedHere: [] };
+  return { key, movedHere: movedHere(known, fresh, loc.root) };
+}
+
+/**
+ * The copies that may have moved to `entry`'s folder (20.5): the same collection, gone from where they
+ * were — no vault there now — and seen last before this one was first; not worktrees (git names
+ * those), not ones said no to. An entry from before 20.5 has no first sight, and is asked nothing.
+ */
+function movedHere(known: KnownVault[], entry: KnownVault, root: string): KnownVault[] {
+  if (!entry.since || entry.worktree) return [];
+  const since = Date.parse(entry.since);
+  const collection = entry.collection ?? collectionOf(root);
+  return known.filter(
+    (v) => v.kind === "vault" && v.key !== entry.key && !v.worktree && !entry.declined?.includes(v.instance ?? v.key) && Date.parse(v.seen) <= since && sameCollection(v.collection, collection) && !isVaultRoot(v.path),
+  );
+}
+
+/** Cache and state from one key to another, when the other has none yet. */
+function adoptStorage(from: string, to: string): void {
+  for (const home of [stateHome(), cacheHome()]) {
+    try {
+      if (!existsSync(join(home, to)) && existsSync(join(home, from))) renameSync(join(home, from), join(home, to));
+    } catch {}
+  }
 }
 
 /**
@@ -212,18 +281,6 @@ export function homeAt(dir: string, file: string | null = null): VaultLocation {
   return { root: dir, mode: "home", file, key: ident.id, id: ident.id, name: HOME_NAME, aliases: ident.aliases, previous_names: ident.previous_names };
 }
 
-/**
- * A vault that has just got its id kept its state under its path's key: move it over, once, so
- * reading positions and the session aren't lost (17.3).
- */
-function adoptPathState(root: string, key: string): void {
-  const now = join(stateHome(), key);
-  const before = join(stateHome(), vaultKey(root));
-  try {
-    if (!existsSync(now) && existsSync(before)) renameSync(before, now);
-  } catch {}
-}
-
 /** The vault's config file: `.slipbox/config.toml`, or the home vault's. */
 export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): string {
   return loc.mode === "vault" ? vaultConfigFile(loc.root) : join(homeVaultDir(), "config.toml");
@@ -247,6 +304,7 @@ export function recordLocation(loc: VaultLocation): KnownVault {
     forgetVault(loc.root, ["folder"]);
     entry = recordVault({
       key: loc.key,
+      instance: loc.key,
       id: loc.id,
       kind: loc.mode,
       name: loc.name,

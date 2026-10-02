@@ -646,6 +646,7 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   reindex: "vault.reindex",
   vaults: "vault.switch",
   init: "vault.init",
+  "vault-moved": "vault.moved",
   rename: "note.rename",
   mv: "note.rename",
   relink: "link.relink",

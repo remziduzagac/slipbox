@@ -6,9 +6,9 @@ here.
 
 ## `0.10` — storage layout
 
-*To be superseded by `20.x` (decided 2026-10-02, not built): no home vault; personal state by instance, kept with
-the instances and confirmed moves in the durable state; the cache shared by content. Until then, this is how
-storage works.*
+*Being superseded by `20.x` (decided 2026-10-02): personal state by instance, kept with the instances and confirmed
+moves in the durable state (built, `20.5`); no home vault and the cache shared by content (not yet). This is how
+storage works now.*
 
 Four kinds of data, four places. Nothing derived ever lives in the vault. Revised 2026-09-30 by the vault design
 (`docs/idea.md`, "Vaults — decided 2026-09-30"; plan `17.3`).
@@ -18,27 +18,38 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | config | `$XDG_CONFIG_HOME/slipbox/config.toml`, then the vault's | user and vault settings | no |
 | cache | `$XDG_CACHE_HOME/slipbox/<key>/` | the persisted link index | yes, rebuilt on demand |
 | state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness, redirects, trash | no: yours |
-| state, the machine's | `$XDG_STATE_HOME/slipbox/vaults.json` | the vaults this machine has seen | re-added on open |
+| state, the machine's | `$XDG_STATE_HOME/slipbox/vaults.json` | the instances seen, their moves | no: the keys |
 | data | `$XDG_DATA_HOME/slipbox/home/` | the home vault's `.slipbox/`: its config | a new id: loses state |
 
 XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) on
 macOS too — the terminal stack here is XDG-shaped on both machines.
 
-**The key** is the vault's `id` — `[vault] id` in `.slipbox/config.toml`, random, made by `slipbox init` (or written
-into a `.slipbox/` that has none the first time it's opened, `17.18`) and never changed — so its cache and state survive
-moving the folder. A git vault without `.slipbox/` (`20.3`) has nowhere to keep one, and nothing is written into it: it
-keys by path until personal state is keyed by instance (`20.5`). Loose files (the home vault) key by the home
-vault's id. Only a vault whose config can't be written (read-only, or not parsing) keys by path: `<basename>-<hash>`,
-the hash the first 12 hex characters of SHA-256 over the root's **real path**; state kept under a path's key before
-vaults had ids moves over once.
+**The key** is the instance's id (`20.5`): one copy of a vault on this machine — a clone, a worktree, a folder with
+`.slipbox/` — has a local id slipbox gives it the first time it's seen, kept in `vaults.json` with where it is, and
+never written into the folder. It's found by the folder's path. So two copies of a vault never share a session,
+whatever their `.slipbox/` ids say, and a git vault without `.slipbox/` (`20.3`) has state of its own like any other.
+A worktree that `git worktree move` took elsewhere is found again by git's name for it. Any other copy that turns
+up where none was is new — unless it's confirmed to be one gone from where it was (below). Loose files (the home
+vault) key by the home vault's id. Only when `vaults.json` can't be written is a vault keyed by its path:
+`<basename>-<hash>`, the hash the first 12 hex characters of SHA-256 over the root's **real path**.
+
+**Moves are confirmed, not guessed** (`20.5`). A vault opened where it wasn't seen before, while a copy of the same
+collection (`20.4`) is gone from where it was and was last seen before this one appeared, is asked about: "did it move
+here?" In the TUI, a question when the vault opens — yes takes the gone copy's instance and its state (the one made
+here meanwhile goes), no isn't asked again, `esc` asks next time; in the CLI, a warning on every command until
+`slipbox vault-moved <old-path>` (or `--not`) answers. Each confirmed move is kept with the instance. The last time a
+vault was seen is written at most every ten minutes, so a copy gone within minutes of another appearing may be asked
+about too: no is the answer.
+
+**Today's state moved once** (`20.5`): state and cache kept under the keys of before — a vault's id, a copy's
+`<id>-<hash>`, a worktree's `<id>-wt-<name>`, a path's `<basename>-<hash>` — move to the instance's key the first
+time it's opened, and `vaults.json` follows.
 
 Consequences, accepted deliberately:
 
 - State does not travel between the Mac and the VMs. Reading position is machine-local anyway.
-- **A copy of a vault carries its id** (`cp -r`, a second clone). The copy that isn't where `vaults.json` last saw
-  the vault keys by `<id>-<hash>` of its path, so two live copies never share a session; when the original is gone
-  (the folder was moved), the copy is the vault and takes the id's key. **A git worktree** is told apart by git, not
-  by which was opened first (`17.19`): the main checkout keys by the id, a linked worktree by `<id>-wt-<name>`.
+- **A vault moved by hand loses its state until confirmed:** the question is the price of never handing one copy's
+  session to another.
 - The home vault holds every loose folder: its positions are keyed by absolute path, and each folder has its own
   session (`sessions/<basename>-<hash>.json`).
 
@@ -219,7 +230,7 @@ tools do is the project's.
 
 ## `20.x` — plain paths, virtual vaults
 
-Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.4` and
+Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.5` and
 `20.23` done). The model in full
 is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the

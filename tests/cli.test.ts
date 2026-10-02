@@ -244,6 +244,10 @@ describe("the vault and the tool", () => {
     expect(vaults[0]).toMatchObject({ id: made.id, name: "fresh", kind: "vault", path: fresh, exists: true });
     expect(vaults.some((v: { path: string }) => v.path === vault)).toBe(true);
     expect(slipbox(["vaults"]).out).toContain(`fresh            vault  ${fresh}`);
+    // Nothing gone from elsewhere that may have moved here (20.5); out of a vault, nothing to ask.
+    expect(slipbox(["vault-moved", "--json"]).json.data).toEqual([]);
+    expect(slipbox(["vault-moved"]).out).toBe("nothing seems to have moved here\n");
+    expect(slipbox(["vault-moved", "/nowhere", "--json"]).code).toBe(3);
     expect(slipbox(["help"]).out).toContain("slipbox find <query>");
     expect(slipbox(["--version"]).out).toMatch(/^slipbox \d+\.\d+\.\d+/);
   });

@@ -1796,6 +1796,9 @@ export function registerActions(app: App): void {
         const rel = v.buf.rel;
         a.previewRename(() => planRelink(a.graph, [rel]));
       }),
+    "vault.moved": (a) => {
+      if (!a.offerMove()) a.message("info", "nothing seems to have moved here");
+    },
     "vault.info": (a) => {
       const g = a.graph;
       // This copy (20.4): its local id, what it holds, and the other copies this machine knows.

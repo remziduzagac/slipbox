@@ -395,6 +395,7 @@ config.
 | `:reindex` | reindex the vault |
 | `:vaults` | the vaults this machine knows: pick one to switch to |
 | `:init` | make this loose folder a vault |
+| `:vault-moved` | a copy of this vault gone from where it was: did it move here? (`20.5`) |
 | `:delete` | delete the note to the vault's trash (asks first) |
 | `:trash` | the trash: `enter` restores an item |
 | `:config` | reload the configuration |

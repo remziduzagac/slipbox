@@ -68,7 +68,7 @@ import { planConvert } from "../core/convert.ts";
 import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
-import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
+import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
 import { sameCollection } from "../core/collection.ts";
 import { findVaultRoot, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
@@ -686,8 +686,9 @@ export class App {
       if (first) this.openInNewTab(first);
     }
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
-    // Opened on a loose folder: the known vaults (17.14).
-    if (opts.launcher && readRegistry().some((v) => v.kind === "vault" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
+    // A copy of this vault gone from where it was (20.5): did it move here? Else, opened on a loose
+    // folder, the known vaults (17.14).
+    if (!this.offerMove() && opts.launcher && readRegistry().some((v) => v.kind === "vault" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
     this.stopLazy = onLoaded(() => {
       this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
@@ -6758,6 +6759,7 @@ export class App {
     }
     if (from && !how.back) this.vaultTrail.push(from);
     this.region = "content";
+    this.offerMove();
     this.relayoutAll();
     this.publishState();
     this.recordConfigStamps();
@@ -7022,6 +7024,48 @@ export class App {
       footer: true,
       accept: (item) => (item.data === "no" ? undefined : this.makeVault(dir, false)),
     });
+  }
+
+  /**
+   * A copy of this vault gone from where it was, seen last before this one was first (20.5): did it
+   * move here? Yes takes its reading positions, sessions and scratch (this copy's own, made meanwhile,
+   * go); no isn't asked again; `esc` asks next time. True when the question is showing.
+   */
+  offerMove(): boolean {
+    const candidates = this.loc.movedHere ?? [];
+    if (!candidates.length || this.overlay) return false;
+    const name = this.loc.name ?? basename(this.loc.root);
+    const items: ListItem[] = [
+      ...candidates.map((v) => ({ label: `Moved here from ${v.path}`, detail: `last seen ${v.seen.slice(0, 10)}: its reading positions, sessions and scratch come along`, data: v as KnownVault | "no" })),
+      { label: candidates.length > 1 ? "None of them: a copy of its own" : "No: a copy of its own", detail: "not asked again", data: "no" },
+    ];
+    this.openList({
+      title: `${name} was elsewhere before — did it move here?`,
+      items,
+      filterable: false,
+      footer: true,
+      accept: (item) => {
+        if (item.data === "no") {
+          for (const v of candidates) declineMove(this.loc.key, v);
+          this.loc = { ...this.loc, movedHere: [] };
+          return this.message("info", "not asked again: a copy of its own");
+        }
+        this.takeMove(item.data as KnownVault);
+      },
+    });
+    return true;
+  }
+
+  /** `from` confirmed moved here (20.5): its instance this copy's, its state with it. */
+  private takeMove(from: KnownVault): void {
+    const dirty = this.dirtyBuffers();
+    if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save (:wa) or revert, then :vault-moved`);
+    const fresh = this.loc.key;
+    confirmMove(from, this.loc.root, fresh);
+    const open = this.view?.buf.abs ?? null;
+    // Into its instance, as a switch is; this copy's own storage goes once nothing writes to it.
+    if (this.switchVault(rootAt(this.loc.root), open, undefined, { back: true })) removeStorage(fresh);
+    this.message("info", `moved here from ${from.path}: its reading positions, sessions and scratch came along`);
   }
 
   /** Make `dir` a vault and go into it, the note open (17.18). */
