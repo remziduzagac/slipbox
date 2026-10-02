@@ -9,7 +9,7 @@ import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax,
 import { basename, isAbsolute, join, posix, relative } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
-import { ensureDir, readJson, readText, writeJson } from "./fsutil.ts";
+import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
 import { LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
@@ -143,6 +143,8 @@ interface IndexFile {
   entries: Record<string, NoteEntry>;
   /** The branch checked out when it was written (5.9): from another, its vanished notes weren't moved. */
   branch?: string | null;
+  /** Files the walk leaves out that were reached (20.8): indexed all the same, and kept so. */
+  reached?: string[];
 }
 
 export interface GraphStats {
@@ -215,7 +217,17 @@ export class Graph {
     let reused = 0;
     this.notes.clear();
     this.unparsed.clear();
-    for (const f of walk.files) {
+    // Files reached before (20.8), still there and still left out by the walk: indexed again.
+    this.reached.clear();
+    const reachedFiles: NoteFile[] = [];
+    for (const rel of this.useCache ? (cached?.reached ?? []) : []) {
+      const f = this.reachable(rel);
+      if (!f || walk.files.some((w) => w.rel === rel)) continue;
+      this.reached.add(rel);
+      if (this.filter.isNoteName(basename(rel))) reachedFiles.push(f);
+      else this.addAsset(rel);
+    }
+    for (const f of [...walk.files, ...reachedFiles]) {
       const prev = old[f.rel];
       if (prev && prev.mtimeMs === f.mtimeMs && prev.size === f.size && !isUnreadable(prev)) {
         this.notes.set(f.rel, prev);
@@ -261,7 +273,74 @@ export class Graph {
     return this.unparsed.size;
   }
 
-  /** Files read on explicit request that the walk excludes. Not part of the vault's index. */
+  /**
+   * Files the walk leaves out — under a hidden folder, or git-ignored — reached since (20.8): a link
+   * points at one, or it was opened or named. Indexed as the walked ones are, and kept with the index.
+   */
+  readonly reached = new Set<string>();
+
+  /** `rel` as a file to index when reached: there, a file inside the vault, and only left out softly. */
+  private reachable(rel: string): NoteFile | null {
+    if (this.loc.mode === "home" || !this.filter.reachable(rel)) return null;
+    const abs = join(this.root, rel);
+    try {
+      const st = statSync(abs);
+      if (!st.isFile() || st.size > this.filter.maxFileSize || !landsInside(this.root, abs)) return null;
+      return { rel, abs, size: st.size, mtimeMs: st.mtimeMs };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Index `rel`, a file the walk leaves out, now that it's reached (20.8): a note joins the notes (its
+   * links, its backlinks), any other file the files. True when it's the vault's now — or was already.
+   * `keep`: reached by being opened or named, it's parsed and the index written at once, so it stays.
+   */
+  reachFile(rel: string, opts: { keep?: boolean } = {}): boolean {
+    if (this.known(rel)) return true;
+    const f = this.reachable(rel);
+    if (!f) return false;
+    this.reached.add(rel);
+    this.cacheDirty = true;
+    if (!this.filter.isNoteName(basename(rel))) {
+      this.addAsset(rel);
+      if (opts.keep) this.writeCache();
+      return true;
+    }
+    this.notes.set(rel, stub(f));
+    this.unparsed.set(rel, f);
+    this.index.add(rel);
+    this.backlinkCache = null;
+    this.tagCache = null;
+    this.generation++;
+    this.nameCache = null;
+    this.emit({ kind: "changed", path: rel });
+    if (opts.keep) {
+      this.entry(rel);
+      this.writeCache();
+    }
+    return true;
+  }
+
+  /** The files a note links to that the walk leaves out: reached by the link (20.8). */
+  private reachLinked(e: NoteEntry): void {
+    if (this.loc.mode === "home") return;
+    for (const l of e.links) {
+      if (l.kind !== "markdown" && l.kind !== "image") continue;
+      const path = l.target.split("#")[0]!;
+      if (!path || /^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("~/")) continue;
+      let decoded = path;
+      try {
+        decoded = decodeURIComponent(path);
+      } catch {}
+      const rel = decoded.startsWith("/") ? relative(this.root, decoded) : posix.normalize(posix.join(posix.dirname(e.rel), decoded));
+      if (rel.startsWith("..") || isAbsolute(rel) || this.known(rel)) continue;
+      this.reachFile(rel);
+    }
+  }
+
+  /** Files read on explicit request that the walk excludes, and can't reach (20.8). Not part of the vault's index. */
   private readonly adopted = new Map<string, NoteEntry>();
 
   /** Read a file the walk excluded because the user named it; it never joins the index. */
@@ -290,6 +369,7 @@ export class Graph {
       if (isUnreadable(e)) this.errors.push(`${rel}: ${e.flags.find((x) => x.startsWith("unreadable"))}`);
       this.notes.set(rel, e);
       this.unparsed.delete(rel);
+      this.reachLinked(e);
       this.cacheDirty = true;
       this.backlinkCache = null;
       this.tagCache = null;
@@ -311,7 +391,8 @@ export class Graph {
   }
 
   ensureAll(): void {
-    for (const rel of [...this.unparsed.keys()]) this.entry(rel);
+    // Until none is left: a note parsed can reach more (20.8).
+    while (this.unparsed.size) for (const rel of [...this.unparsed.keys()]) this.entry(rel);
     if (this.cacheDirty) this.writeCache();
   }
 
@@ -323,7 +404,7 @@ export class Graph {
     for (const [rel, e] of this.notes) if (!this.unparsed.has(rel) && !isUnreadable(e)) entries[rel] = this.overlays.get(rel)?.disk ?? e;
     try {
       ensureDir(cacheDir(this.loc));
-      writeJson(this.cachePath, { version: INDEX_VERSION, entries, branch: this.branchNow() } satisfies IndexFile);
+      writeJson(this.cachePath, { version: INDEX_VERSION, entries, branch: this.branchNow(), reached: [...this.reached] } satisfies IndexFile);
     } catch (err) {
       this.errors.push(`cache: ${(err as Error).message}`);
     }
@@ -486,6 +567,7 @@ export class Graph {
   }
 
   removeFile(rel: string): void {
+    this.reached.delete(rel);
     this.unparsed.delete(rel);
     // A move is known by the file's text, not by what an editor had of it.
     const gone = this.overlays.get(rel)?.disk ?? this.notes.get(rel);

@@ -6952,6 +6952,30 @@ describe("search in the TUI (6.5, 6.9)", () => {
   });
 });
 
+describe("the index on demand in the TUI (20.8)", () => {
+  test(":e of a git-ignored or hidden file opens it and indexes it; node_modules stays out", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, ".gitignore"), "tmp/\n");
+    mkdirSync(join(root, "tmp"));
+    mkdirSync(join(root, ".private"));
+    mkdirSync(join(root, "node_modules"), { recursive: true });
+    writeFileSync(join(root, "tmp", "scratchpad.md"), "# Scratchpad\n\n[back](../index.md)\n");
+    writeFileSync(join(root, ".private", "p.md"), "# P\n");
+    writeFileSync(join(root, "node_modules", "dep.md"), "# Dep\n");
+    const h = await harness({ root, open: "index.md" });
+    expect(h.app.graph.notes.has("tmp/scratchpad.md")).toBe(false);
+    await h.app.run("note.open tmp/scratchpad.md");
+    expect(h.app.view!.buf.rel).toBe("tmp/scratchpad.md");
+    expect(h.app.graph.notes.has("tmp/scratchpad.md")).toBe(true);
+    expect(h.app.graph.backlinks("index.md").map((b) => b.from)).toContain("tmp/scratchpad.md");
+    await h.app.run("note.open .private/p.md");
+    expect(h.app.view!.buf.rel).toBe(".private/p.md");
+    await h.app.run("note.open node_modules/dep.md");
+    expect(h.app.view!.buf.rel).toBe(".private/p.md");
+    expect(h.app.messages.at(-1)?.text).toBe('no note or file "node_modules/dep.md"');
+  });
+});
+
 describe("settings from the vaults around this one (20.7)", () => {
   test("a change to an enclosing vault's config is noticed and applied, as the vault's own is", async () => {
     const outer = mkdtempSync(join(sandbox, "outer-"));

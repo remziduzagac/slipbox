@@ -1,7 +1,7 @@
 // The fixture vault (0.5) against the walk (0.11), discovery (1.1), the graph and the CLI (9.x).
 
 import { describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { CLI_COMMANDS, runCli } from "../src/cli/cli.ts";
@@ -2910,4 +2910,107 @@ describe("settings, deeper over broader (20.7)", () => {
     await runCli(["info", "--json", "--config", user], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: inner, env: process.env });
     expect(JSON.parse(out.join("")).data.config.sources).toEqual([user, outerCfg, innerCfg]);
   });
+});
+
+describe("the index on demand: what the walk leaves out, indexed when reached (20.8)", () => {
+  const make = () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-reach-"));
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, ".gitignore"), "tmp/\n");
+    for (const d of ["tmp", ".notes", "node_modules", "drafts"]) mkdirSync(join(dir, d));
+    writeFileSync(join(dir, "index.md"), "[l](tmp/local.md) [h](.notes/hidden.md) [n](node_modules/dep.md) [d](drafts/wip.md) [p](tmp/pic.png)\n");
+    writeFileSync(join(dir, "tmp", "local.md"), "# Local\n\n[deeper](deeper.md)\n");
+    writeFileSync(join(dir, "tmp", "deeper.md"), "# Deeper\n");
+    writeFileSync(join(dir, "tmp", "pic.png"), "png");
+    writeFileSync(join(dir, "tmp", "other.md"), "# Other\n");
+    writeFileSync(join(dir, ".notes", "hidden.md"), "# Hidden\n");
+    writeFileSync(join(dir, "node_modules", "dep.md"), "# Dep\n");
+    writeFileSync(join(dir, "drafts", "wip.md"), "# WIP\n");
+    // A link into an ignored folder that leads out of the vault: never the vault's.
+    const outside = mkdtempSync(join(tmpdir(), "slipbox-reach-out-"));
+    writeFileSync(join(outside, "secret.md"), "# Secret\n");
+    symlinkSync(join(outside, "secret.md"), join(dir, "tmp", "out.md"));
+    writeFileSync(join(dir, "index.md"), `${readFileSync(join(dir, "index.md"), "utf8")}[o](tmp/out.md)\n`);
+    return dir;
+  };
+  const cfg = () => {
+    const c = structuredClone(DEFAULT_CONFIG);
+    c.walk.exclude = ["drafts/"];
+    return c;
+  };
+
+  test("git-ignored and hidden files a link points at are indexed — and what they link to; node_modules and walk.exclude never", () => {
+    const dir = make();
+    const g = openGraph(locateVault({ root: dir }), cfg(), true);
+    expect([...g.notes.keys()].sort()).toEqual([".notes/hidden.md", "index.md", "tmp/deeper.md", "tmp/local.md"]);
+    expect(g.filePaths()).toContain("tmp/pic.png");
+    expect([...g.reached].sort()).toEqual([".notes/hidden.md", "tmp/deeper.md", "tmp/local.md", "tmp/pic.png"]);
+    expect(g.resolveLink({ kind: "markdown", target: "tmp/local.md" }, "index.md")).toMatchObject({ resolvedKind: "note", path: "tmp/local.md" });
+    expect(g.backlinks("tmp/local.md").map((b) => b.from)).toEqual(["index.md"]);
+    expect(g.backlinks("tmp/deeper.md").map((b) => b.from)).toEqual(["tmp/local.md"]);
+    // The filter: only a hidden folder or .gitignore keeps a path from being reached.
+    expect(["tmp/x.md", ".notes/x.md", "a/.b/c.md"].map((p) => g.filter.reachable(p))).toEqual([true, true, true]);
+    expect(["node_modules/x.md", "drafts/x.md", ".git/x.md", ".slipbox/x.md", "../x.md", "a//b.md"].map((p) => g.filter.reachable(p))).toEqual([false, false, false, false, false, false]);
+  });
+
+  test("once reached, it stays: the link gone, opened again from the cache; deleted, it goes", () => {
+    const dir = make();
+    openGraph(locateVault({ root: dir }), cfg(), true);
+    writeFileSync(join(dir, "index.md"), "# no links now\n");
+    const again = openGraph(locateVault({ root: dir }), cfg(), true);
+    expect(again.notes.has("tmp/local.md")).toBe(true);
+    expect(again.notes.has(".notes/hidden.md")).toBe(true);
+    // The watcher saying it's gone: it is.
+    again.removeFile("tmp/local.md");
+    expect(again.reached.has("tmp/local.md")).toBe(false);
+    rmSync(join(dir, "tmp", "local.md"));
+    const after = openGraph(locateVault({ root: dir }), cfg(), true);
+    expect(after.notes.has("tmp/local.md")).toBe(false);
+    expect(after.reached.has("tmp/local.md")).toBe(false);
+    expect(after.notes.has("tmp/deeper.md")).toBe(true);
+    // No longer left out (the .gitignore line gone): walked like any other, not "reached".
+    writeFileSync(join(dir, ".gitignore"), "");
+    expect(openGraph(locateVault({ root: dir }), cfg(), true).reached.has("tmp/deeper.md")).toBe(false);
+  });
+
+  test("the CLI reaches what it's told to read; a loose folder reaches nothing", async () => {
+    const dir = make();
+    writeFileSync(join(dir, ".slipbox", "config.toml"), 'walk.exclude = ["drafts/"]\n');
+    const out: string[] = [];
+    const cli = async (args: string[], cwd = dir) => {
+      out.length = 0;
+      const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+      return { code, json: JSON.parse(out.join("")) };
+    };
+    expect((await cli(["read", "tmp/other.md"])).json.data.content).toBe("# Other\n");
+    expect((await cli(["ls"])).json.data.map((n: { path: string }) => n.path)).toContain("tmp/other.md");
+    // Never: under node_modules, read all the same, but not the vault's.
+    expect((await cli(["read", "node_modules/dep.md"])).code).toBe(0);
+    expect((await cli(["ls"])).json.data.map((n: { path: string }) => n.path)).not.toContain("node_modules/dep.md");
+    // A loose folder is listed, never indexed: it reaches nothing.
+    const loose = mkdtempSync(join(tmpdir(), "slipbox-reach-loose-"));
+    mkdirSync(join(loose, ".hid"));
+    writeFileSync(join(loose, "a.md"), "[h](.hid/h.md)\n");
+    writeFileSync(join(loose, ".hid", "h.md"), "# H\n");
+    expect(openGraph(locateVault({ path: join(loose, "a.md") }), DEFAULT_CONFIG, false).reachFile(".hid/h.md")).toBe(false);
+  });
+});
+
+test("writers change a reached note in a hidden folder; never one the vault hasn't reached, nor .slipbox/ (20.8)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "slipbox-reachw-"));
+  mkdirSync(join(dir, ".slipbox"));
+  mkdirSync(join(dir, ".notes"));
+  writeFileSync(join(dir, "index.md"), "[h](.notes/h.md)\n");
+  writeFileSync(join(dir, ".notes", "h.md"), "# H\n");
+  writeFileSync(join(dir, ".notes", "u.md"), "# U\n");
+  const out: string[] = [];
+  const cli = async (args: string[]) => {
+    out.length = 0;
+    return runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: dir, env: process.env });
+  };
+  expect(await cli(["write", ".notes/h.md", "# H\n\nmore"])).toBe(0);
+  expect(readFileSync(join(dir, ".notes", "h.md"), "utf8")).toBe("# H\n\nmore\n");
+  expect(await cli(["write", ".slipbox/x.md", "no", "--create"])).toBe(5);
+  expect(await cli(["write", ".notes/new.md", "no", "--create"])).toBe(5);
+  expect(existsSync(join(dir, ".notes", "new.md"))).toBe(false);
 });

@@ -1505,6 +1505,8 @@ export function registerActions(app: App): void {
         a.applyChanges({ changes: [{ rel, kind: "created", isNote }], rescan: false });
         return fileLink(a, rel);
       }
+      // Git-ignored, or in a hidden folder: reached by opening it (20.8), it's the vault's from now on.
+      if (rel && isInside(a.loc.root, abs) && a.graph.reachFile(rel, { keep: true })) return a.graph.notes.has(rel) ? a.open(rel) : fileLink(a, rel);
       a.message("warn", `no note or file "${arg}"`);
     },
     // ui

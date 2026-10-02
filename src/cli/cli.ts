@@ -414,11 +414,12 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
   if (s.loc.file && isInside(s.loc.root, s.loc.file)) {
     const rel = relative(s.loc.root, s.loc.file);
     if (s.graph.notes.has(rel)) return rel;
-    // An existing file the walk leaves out (gitignored, hidden, under node_modules): the user
-    // named it explicitly, so read it — as the TUI does — without adding it to the vault.
+    // An existing file the walk leaves out: named, it's reached (20.8) — git-ignored or under a
+    // hidden folder, it's indexed from now on, as the TUI does; under node_modules, excluded by
+    // walk.exclude, it's read without joining the vault.
     if (arg && existsSync(arg.startsWith("/") ? arg : `${s.io.cwd}/${arg}`)) {
       // A data or text file is itself (16.4): never parsed as a note.
-      if (parse && classify(rel, s.config.walk.extensions).group === "note") s.graph.adopt(rel);
+      if (!s.graph.reachFile(rel, { keep: true }) && parse && classify(rel, s.config.walk.extensions).group === "note") s.graph.adopt(rel);
       return rel;
     }
   }
@@ -1695,7 +1696,9 @@ function checkWritable(s: Session, abs: string): void {
   const rel = relative(s.loc.root, abs);
   // Notes, data and text files are written (16.4); binary files never are.
   if (classify(rel, s.config.walk.extensions).group === "binary") refuse("a binary file");
-  if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules")) refuse("in a folder the vault doesn't list");
+  // A hidden folder's note the vault has reached (20.8) is the vault's like any other; .git and
+  // .slipbox never are, nor node_modules.
+  if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel)) refuse("in a folder the vault doesn't list");
   if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
 }
 

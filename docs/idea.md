@@ -758,7 +758,7 @@ personal data ever has to travel with a folder, or be visible beside it.
 
 Decided with the user over a long discussion, then revised the same day after a review; being built (plan `20.x`:
 the converter, links as plain paths, vault boundaries, collections and instances, state by instance, names, settings
-deeper over broader, and the LSP face's removal done).
+deeper over broader, files indexed when reached, and the LSP face's removal done).
 It replaces "Vaults — decided 2026-09-30" above. The aim: open any file or folder and work — nothing to set up, no
 vault to manage, no wondering whether a link will resolve.
 

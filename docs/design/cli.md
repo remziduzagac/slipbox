@@ -134,9 +134,9 @@ rewrite them.
 `<note>` is tried in order:
 
 1. An existing file path, relative to the current directory. That also picks the vault, by
-   walking up from the file. A file the walk excludes, such as one that is gitignored, hidden
-   or under `node_modules`, is still read when named explicitly, as in the TUI. It never joins
-   the vault's index.
+   walking up from the file. A file the walk excludes is still read when named explicitly, as in
+   the TUI: one git-ignored or under a hidden folder is reached, and joins the vault's index from
+   then on (`20.8`); one under `node_modules` or `walk.exclude` never joins it.
 2. A vault-relative path.
 3. A note name: its file name without the extension (or a declared alias). Collisions then go to the shortest path,
    and a real tie exits 4. That's how a command names a note; links in notes are paths (`20.2`).
@@ -231,10 +231,10 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   as a window around the match (`…` where cut), so its output grows with the matches, not with the
   line; a note it can't read is a warning, and the rest are still searched.
 - **What a writer may change.** `write`, `replace` and `task` change a file of the note's root — a
-  vault, or a loose file's own folder (`17.1`) — inside it by its real path, and
-  where the walk lists notes: never `.slipbox/`, `.git/`, a hidden folder or `node_modules`, and
-  never a path outside `--root` when that names the root. `replace --dry-run` only reads, so it
-  previews any note; its `newSha` is `null`.
+  vault, or a loose file's own folder (`17.1`) — inside it by its real path, and where the walk
+  lists notes (or a note it reached, `20.8`): never `.slipbox/`, `.git/`, a hidden folder or
+  `node_modules`, and never a path outside `--root` when that names the root. `replace --dry-run`
+  only reads, so it previews any note; its `newSha` is `null`.
 - **Where a command works.** The root is decided by the file: its nearest boundary above the note argument (or cwd)
   — a folder with `.slipbox/` or a git checkout's top, one vault when both share a folder (`20.3`) — else the home
   vault (the file's own folder, listed alone). `$HOME` and `/` are never a root. `--root` must name a vault

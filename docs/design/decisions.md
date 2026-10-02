@@ -69,6 +69,12 @@ One predicate, used by both the walk and the watcher (`5.2` is this decision see
   `.gitignore` from the root down applies, and the deepest one with an opinion wins, so `!keep.md` re-includes. Case
   follows git's default `core.ignorecase`: insensitive on macOS, sensitive on Linux.
 - **`walk.exclude`** adds gitignore-syntax patterns from config.
+- **Reached, then indexed** (`20.8`): a git-ignored file, or one under a hidden folder, isn't walked, but is indexed
+  when it's reached — a note's link points at it (and then its own links reach further), or it's opened in the TUI or
+  named to the CLI — and stays indexed after (the list kept with the index). `.git`, `.slipbox`, `node_modules`,
+  `walk.exclude` and a vault of its own are never reached: named, such a file is read and nothing more. A loose
+  folder is listed, not indexed, and reaches nothing. Reached files aren't watched: they're read again when the
+  index is next built.
 - **Nested vaults are boundaries.** A subdirectory holding its own `.slipbox/`, or a git checkout's top (a
   repository, a submodule), is a different vault and is not walked (`20.3`; before, only a `.slipbox/` was, `17.18`).
   This keeps a fixture vault inside a repo from leaking into it, and a repository's notes its own.
@@ -230,7 +236,7 @@ tools do is the project's.
 
 ## `20.x` — plain paths, virtual vaults
 
-Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.7` and
+Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.8` and
 `20.23` done). The model in full
 is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the

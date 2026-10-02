@@ -57,6 +57,21 @@ export class WalkFilter {
     return this.walk.max_file_size;
   }
 
+  /**
+   * Whether `rel` may be indexed when it's reached though the walk leaves it out (20.8): nothing on
+   * its way is always skipped, excluded by `walk.exclude` or a vault of its own — only a hidden
+   * folder or `.gitignore` keeps it from the walk.
+   */
+  reachable(rel: string): boolean {
+    const parts = rel.split("/");
+    if (parts.some((p) => !p || p === "." || p === "..")) return false;
+    for (let i = 0; i < parts.length; i++) {
+      const why = this.exclusion(parts.slice(0, i + 1).join("/"), i < parts.length - 1);
+      if (why !== null && why !== "hidden" && why !== ".gitignore") return false;
+    }
+    return true;
+  }
+
   /** Why `rel` is excluded, or null when it is part of the vault. Ancestors are assumed walked. */
   exclusion(rel: string, isDir: boolean): string | null {
     const name = rel.slice(rel.lastIndexOf("/") + 1);
