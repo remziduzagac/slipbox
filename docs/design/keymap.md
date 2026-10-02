@@ -557,7 +557,7 @@ edit the config and the config wins again.
 | `space n i` | the Info view (`3.19`): open, focus, close — the file's path, vault, counts, properties, tags, links |
 | `space v v` | switch vault: the vaults this machine knows (`:vaults`); `back` returns |
 | `space v r` | reindex the vault |
-| `space v i` | vault info: root, notes, skipped paths, cache and state, watcher |
+| `space v i` | vault info: root, instance, notes, skipped paths, cache and state, watcher, copies |
 | `space v c` | reload the configuration (it also reloads by itself when a config file is saved) |
 | `space m` | messages |
 | `?`, `space ?` | help: every key, grouped, searchable (commands, panes, resize mode, mouse); `enter` runs a command |

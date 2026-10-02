@@ -5,7 +5,7 @@ import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { canonKey, canonSeq } from "../src/core/commands.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
@@ -6983,6 +6983,73 @@ describe("git worktrees in the TUI (17.19)", () => {
     // A checkout switched to another branch: the top bar follows it.
     git(join(l.wts, "feat"), "checkout", "-q", "-b", "feat-2");
     expect(topRow(feat.frame())).toContain("⎇ feat-2 (worktree)");
+  });
+
+  test("a clone is a copy of the same collection: listed with it, by its name and branch (20.4)", async () => {
+    const l = layout();
+    if (!l) return;
+    const clone = join(l.base, "clone");
+    if (git(l.base, "clone", "-q", l.x, clone).exitCode !== 0) return;
+    await harness({ root: l.x, open: "index.md" });
+    await harness({ root: clone, open: "index.md" }); // seen last: the group's head
+    // A plain folder opened is an instance, but not a vault: not listed.
+    const { homeAt } = await import("../src/core/vault.ts");
+    const plain = mkdtempSync(join(sandbox, "plain-"));
+    writeFileSync(join(plain, "p.md"), "# P\n");
+    await harness({ loc: homeAt(plain), open: "p.md" });
+    const other = await harness({ open: "index.md" });
+    await other.app.run("vault.switch");
+    const items = (other.app.overlay as ListOverlay).items;
+    expect(items.some((i) => i.detail === plain)).toBe(false);
+    const head = items.findIndex((i) => i.detail === clone);
+    expect(items[head]!.indent).toBeUndefined();
+    expect(items[head + 1]).toMatchObject({ detail: l.x, indent: 1 });
+    expect(items[head + 1]!.label).toEndWith("⎇ main");
+  });
+
+  test("entries recorded before collections: a worktree seen before its main checkout still joins it (20.4)", async () => {
+    const { recordVault } = await import("../src/core/registry.ts");
+    const base = mkdtempSync(join(sandbox, "oldlist-"));
+    const [x, feat, fix] = ["x", "feat", "fix"].map((d) => join(base, d)) as [string, string, string];
+    for (const d of [x, feat, fix]) mkdirSync(join(d, ".slipbox"), { recursive: true });
+    const tag = basename(base);
+    const old = (name: string, path: string, at: number, worktree?: { name: string; main: string }) =>
+      recordVault({ key: `${tag}-${name}`, id: null, kind: "vault", name: `${tag}-${name}`, aliases: [], previous_names: [], path, ...(worktree ? { worktree } : {}) }, new Date(Date.now() + at));
+    old("x", x, 1000);
+    old("feat", feat, 2000, { name: "feat", main: x });
+    old("fix", fix, 3000, { name: "fix", main: x }); // seen last: listed first, before x is met
+    const other = await harness({ open: "index.md" });
+    await other.app.run("vault.switch");
+    const items = (other.app.overlay as ListOverlay).items;
+    const head = items.findIndex((i) => i.detail === x);
+    expect(items.slice(head, head + 3).map((i) => [i.detail, i.indent])).toEqual([
+      [x, undefined],
+      [feat, 1],
+      [fix, 1],
+    ]);
+  });
+
+  test("copies told by different evidence are one group: a remote shared with one, a first commit with another (20.4)", async () => {
+    const { recordVault } = await import("../src/core/registry.ts");
+    const base = mkdtempSync(join(sandbox, "chain-"));
+    const [a, b, c] = ["a", "b", "c"].map((d) => join(base, d)) as [string, string, string];
+    for (const d of [a, b, c]) mkdirSync(join(d, ".slipbox"), { recursive: true });
+    const tag = basename(base);
+    const seen = (name: string, path: string, at: number, collection: { slipbox: null; remotes: string[]; roots: string[] }) =>
+      recordVault({ key: `${tag}-${name}`, id: null, kind: "vault", name: `${tag}-${name}`, aliases: [], previous_names: [], path, collection }, new Date(Date.now() + at));
+    // a and c share nothing; b shares a remote with a and a first commit with c. Seen: a, c, then b.
+    seen("b", b, 1000, { slipbox: null, remotes: [`host/${tag}`], roots: [`${tag}1`] });
+    seen("c", c, 2000, { slipbox: null, remotes: [], roots: [`${tag}1`] });
+    seen("a", a, 3000, { slipbox: null, remotes: [`host/${tag}`], roots: [] });
+    const other = await harness({ open: "index.md" });
+    await other.app.run("vault.switch");
+    const items = (other.app.overlay as ListOverlay).items;
+    const head = items.findIndex((i) => i.detail === a);
+    expect(items.slice(head, head + 3).map((i) => [i.detail, i.indent])).toEqual([
+      [a, undefined],
+      [b, 1],
+      [c, 1],
+    ]);
   });
 
   test("the folder holding the worktrees: each its own vault, its branch beside it", async () => {

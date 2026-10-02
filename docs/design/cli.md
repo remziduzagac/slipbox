@@ -94,8 +94,8 @@ These churn freely before 1.0:
 | `footnotes <note> add\|edit\|rm\|rename …` | `{path, sha, footnotes[…]}` after it; `--if-unchanged`; exit 5: refused |
 | `init [dir]` | `{root, created, identified, id, name, excluded}` — `--name N`, `--private`; exit 5: name in use |
 | `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
-| `info` | root, mode, `vault{id, name, aliases, previous_names, key}`, paths, index stats, skipped, stale |
-| `vaults` | `[{key, id, kind, name, aliases, previous_names, path, seen, exists, worktree?{name, main}}]` |
+| `info` | root, mode, `vault{…, key}`, `instance`, `collection`, `copies[]`, paths, index stats, skipped, stale |
+| `vaults` | `[{key, instance, id, kind, name, …, collection, path, seen, exists, worktree?{name, main}}]` |
 | `mv`, `rename-vault`, `rename-heading`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, …}` |
 | `convert-links` | as `mv`, kind `convert`, plus `ambiguous[]`: the links several notes answer to |
 | `undo` | as `mv`: the rename taken back (`from` and `to` the other way), plus `undo{id, at}`; exit 3: nothing |
@@ -238,9 +238,11 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   argument (or cwd) — a folder with `.slipbox/` or a git checkout's top, one vault when both share a
   folder (`20.3`) — else the home vault (the file's own folder, listed alone). `$HOME` and `/` are
   never a root. `--root` must name a vault (`.slipbox/` or a git checkout). Each command records the
-  vault in `vaults.json`. A `.slipbox/` without an id and a name gets them written into its config
-  on first open; a git vault without one is never written into — named by its folder, keyed by its
-  path — and `slipbox init` gives it `.slipbox/` (`--private` keeps that out of git).
+  vault in `vaults.json` — an instance of it (`20.4`), given a local id the first time, with its
+  collection's evidence; a plain folder opened in the home vault is recorded too, by its path. A
+  `.slipbox/` without an id and a name gets them written into its config on first open; a git vault
+  without one is never written into — named by its folder, keyed by its path — and `slipbox init`
+  gives it `.slipbox/` (`--private` keeps that out of git).
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4

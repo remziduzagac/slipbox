@@ -1695,7 +1695,7 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
     const base = mkdtempSync(join(tmpdir(), "slipbox-wtpriv-"));
     const x = join(base, "x");
     mkdirSync(x);
-    writeFileSync(join(x, "a.md"), "# A\n");
+    writeFileSync(join(x, "a.md"), `# A\n\n${base}\n`); // its own first commit
     if (git(x, "init", "-q", "-b", "main").exitCode !== 0) return; // no git here
     git(x, "add", "-A");
     git(x, "commit", "-q", "-m", "x");
@@ -2549,5 +2549,134 @@ describe("the converter: links made plain paths (20.1)", () => {
       ["image", "sub/inner.md"],
       ["image", "sub/inner.md#second-part"],
     ]);
+  });
+});
+
+describe("collections apart from instances (20.4)", () => {
+  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+  const cli = async (args: string[], cwd: string) => {
+    const out: string[] = [];
+    const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return { code, json: JSON.parse(out.join("")) };
+  };
+  const fresh = (prefix: string) => mkdtempSync(join(tmpdir(), `slipbox-${prefix}-`));
+
+  test("a remote as evidence: host and path, never a user or a password; ssh and https alike; local ones by path", async () => {
+    const { normalizeRemote, remotesIn } = await import("../src/core/collection.ts");
+    expect(normalizeRemote("git@github.com:Owner/Repo.git", "/r")).toBe("github.com/Owner/Repo");
+    expect(normalizeRemote("git@GitHub.COM:Owner/Repo.git", "/r")).toBe("github.com/Owner/Repo"); // a host in any case
+    expect(normalizeRemote("https://user:secret@GitHub.com/Owner/Repo.git/", "/r")).toBe("github.com/Owner/Repo");
+    expect(normalizeRemote("ssh://git@github.com:22/Owner/Repo", "/r")).toBe("github.com/Owner/Repo");
+    expect(normalizeRemote("/srv/git/repo.git", "/r")).toBe("file:/srv/git/repo");
+    expect(normalizeRemote("file:///srv/x/.git", "/r")).toBe("file:/srv/x");
+    expect(normalizeRemote("../other", "/a/b")).toBe("file:/a/other");
+    expect(normalizeRemote("  ", "/r")).toBeNull();
+    const config = ['[core]', "\tbare = false", '[remote "origin"]', "\turl = git@github.com:o/r.git", "\tfetch = +refs/heads/*:refs/remotes/origin/*", "# a comment", '[branch "main"]', "\turl = not-a-remote", '[remote "up"]', '\turl = "https://github.com/o/r"', '\turl = https://gitlab.com/o/r'].join("\n");
+    expect(remotesIn(config, "/r")).toEqual(["github.com/o/r", "gitlab.com/o/r"]);
+  });
+
+  test("the same collection: a .slipbox/ id, a remote or a first commit shared; plain folders never", async () => {
+    const { NO_COLLECTION, sameCollection } = await import("../src/core/collection.ts");
+    const c = (slipbox: string | null, remotes: string[] = [], roots: string[] = []) => ({ slipbox, remotes, roots });
+    expect(sameCollection(c("a"), c("a"))).toBe(true);
+    expect(sameCollection(c("a"), c("b"))).toBe(false);
+    expect(sameCollection(c(null, ["github.com/o/r", "x"]), c(null, ["github.com/o/r"]))).toBe(true);
+    expect(sameCollection(c(null, [], ["1a"]), c(null, ["y"], ["1a", "2b"]))).toBe(true);
+    expect(sameCollection(c(null, ["x"], ["1a"]), c(null, ["y"], ["2b"]))).toBe(false);
+    expect(sameCollection(NO_COLLECTION, NO_COLLECTION)).toBe(false);
+    expect(sameCollection(undefined, c("a"))).toBe(false);
+  });
+
+  test("a clone and a worktree: instances of their own, one collection — info lists the others as copies", async () => {
+    const base = fresh("coll");
+    const x = join(base, "x");
+    mkdirSync(x);
+    // Its own text: two repositories committed alike in the same second share their first commit.
+    writeFileSync(join(x, "a.md"), `# A\n\n${base}\n`);
+    if (git(x, "init", "-q", "-b", "main").exitCode !== 0) return; // no git here
+    git(x, "add", "-A");
+    git(x, "commit", "-q", "-m", "x");
+    const clone = join(base, "clone");
+    if (git(base, "clone", "-q", x, clone).exitCode !== 0) return;
+    const wt = join(base, "wt");
+    if (git(x, "worktree", "add", "-q", "-b", "feat", wt).exitCode !== 0) return;
+    const root = git(x, "rev-list", "--max-parents=0", "HEAD").stdout.toString().trim();
+    const info = async (dir: string) => (await cli(["info"], dir)).json.data;
+    const ix = await info(x);
+    const ic = await info(clone);
+    const iw = await info(wt);
+    // Each its own local id; the evidence what git says: no remote for x, x itself for the clone.
+    expect(new Set([ix.instance, ic.instance, iw.instance]).size).toBe(3);
+    expect(ix.collection).toEqual({ slipbox: null, remotes: [], roots: [root] });
+    expect(ic.collection).toEqual({ slipbox: null, remotes: [`file:${x}`], roots: [root] });
+    // The others, once seen, from each: the same first commit. The id is given once: opened again, the same.
+    const again = await info(x);
+    expect(again.instance).toBe(ix.instance);
+    expect(again.copies.map((c: { path: string }) => c.path).sort()).toEqual([clone, wt].sort());
+    expect(iw.copies.map((c: { path: string }) => c.path).sort()).toEqual([clone, x].sort());
+    // Nothing of it written into the folders.
+    for (const d of [x, clone, wt]) expect(existsSync(join(d, ".slipbox"))).toBe(false);
+    // Human: the instance, what it holds, the copies.
+    const out: string[] = [];
+    await runCli(["info"], { out: (s: string) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: x, env: process.env });
+    expect(out.join("")).toContain(`instance  ${ix.instance} — holds first commit ${root.slice(0, 7)}`);
+    expect(out.join("")).toContain(`copy      ${wt} (worktree wt)`);
+  });
+
+  test("a plain folder opened is an instance, by its path; made a vault, it's the vault's instance; gone a month, forgotten", async () => {
+    const { pruneWorktrees, readRegistry, registryFile } = await import("../src/core/registry.ts");
+    const dir = fresh("plainf");
+    writeFileSync(join(dir, "n.md"), "# N\n");
+    await cli(["ls"], dir);
+    const folder = readRegistry().filter((v) => v.path === dir);
+    expect(folder).toHaveLength(1);
+    expect(folder[0]).toMatchObject({ kind: "folder", id: null, name: null, key: vaultKey(dir) });
+    expect(folder[0]!.instance).toMatch(/^[0-9a-f]{12}$/);
+    // Not a vault: the TUI's list and `vaults` say what it is.
+    expect((await cli(["vaults"], dir)).json.data.find((v: { path: string }) => v.path === dir)).toMatchObject({ kind: "folder", exists: true });
+    await cli(["init", dir, "--name", "plainmade"], dir);
+    expect(readRegistry().filter((v) => v.path === dir).map((v) => v.kind)).toEqual(["vault"]);
+    // A folder gone a month is dropped; one gone a day is kept.
+    const gone = fresh("plaingone");
+    await cli(["ls"], gone);
+    rmSync(gone, { recursive: true });
+    pruneWorktrees(Date.now() + 86_400_000);
+    expect(readRegistry().some((v) => v.path === gone)).toBe(true);
+    pruneWorktrees(Date.now() + 31 * 86_400_000);
+    expect(readRegistry().some((v) => v.path === gone)).toBe(false);
+    expect(existsSync(registryFile())).toBe(true);
+  });
+
+  test("info lists the five copies seen last, then how many more", async () => {
+    const { copiesShown } = await import("../src/core/collection.ts");
+    const copies = Array.from({ length: 7 }, (_, i) => ({ path: `/c${i}`, seen: `2026-10-0${i + 1}T00:00:00Z`, ...(i === 6 ? { worktree: { name: "w" } } : {}) }));
+    expect(copiesShown(copies)).toEqual(["/c6 (worktree w)", "/c5", "/c4", "/c3", "/c2", "and 2 more: slipbox vaults lists them"]);
+    expect(copiesShown(copies.slice(0, 2))).toEqual(["/c1", "/c0"]);
+  });
+
+  test("a plain folder's entry at a vault's path (a list edited by hand, an old one): the vault's name is shown", async () => {
+    const { readRegistry, registryFile } = await import("../src/core/registry.ts");
+    const { writeJson } = await import("../src/core/fsutil.ts");
+    const base = fresh("vaultof");
+    const notes = join(base, "notes");
+    const app = join(base, "app");
+    mkdirSync(notes);
+    mkdirSync(app);
+    writeFileSync(join(app, "design.md"), "# Design\n");
+    writeFileSync(join(notes, "index.md"), "[d](../app/design.md)\n");
+    await cli(["init", notes, "--name", "vonotes"], notes);
+    await cli(["init", app, "--name", "voapp"], app);
+    // The folder's entry first in the list, as a hand edit or an older slipbox could leave it.
+    const folder = { key: `${vaultKey(app)}-folder`, instance: "f0f0f0f0f0f0", id: null, kind: "folder", name: null, aliases: [], previous_names: [], path: app, seen: new Date().toISOString() };
+    writeJson(registryFile(), { version: 1, vaults: [folder, ...readRegistry()] });
+    const links = (await cli(["links", "index"], notes)).json.data;
+    expect(links[0]).toMatchObject({ status: "note", vault: "voapp" });
+  });
+
+  test("slipbox vaults: a git vault without .slipbox/ is there, not gone (20.3)", async () => {
+    const repo = fresh("vlgit");
+    mkdirSync(join(repo, ".git"));
+    await cli(["ls"], repo);
+    expect((await cli(["vaults"], repo)).json.data.find((v: { path: string }) => v.path === repo)).toMatchObject({ kind: "vault", exists: true });
   });
 });

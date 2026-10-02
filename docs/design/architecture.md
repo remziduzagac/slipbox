@@ -60,7 +60,8 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/paths.ts` | 0.10 | config, cache and state directories; the vault key |
 | `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
 | `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3 | a file's root: `.slipbox/`, a git checkout or the home vault; `init` |
-| `core/registry.ts` | 17.2–17.6 | a vault's identity, the home vault, the machine's vaults, storage keys, names |
+| `core/registry.ts` | 17.2–17.6, 20.4 | identity, the home vault, the machine's instances, storage keys, names |
+| `core/collection.ts` | 20.4 | a collection's evidence: `.slipbox/` id, remotes, first commits; copies of one |
 | `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
 | `core/gitops.ts` | 5.11–5.14 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
 | `core/reach.ts` | 17.8–17.11 | other vaults: `[[vault:note]]`, paths out of the root, their backlinks here |

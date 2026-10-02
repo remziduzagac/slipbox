@@ -52,7 +52,8 @@ import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRena
 import { planConvert } from "../core/convert.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { readIdentity, readRegistry, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
-import { findVaultRoot, hasMarker, homeAt, initVault, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
+import { copiesShown, describeCollection } from "../core/collection.ts";
+import { findVaultRoot, hasMarker, homeAt, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
@@ -1071,9 +1072,10 @@ const HANDLERS: Record<string, Handler> = {
 
   vaults() {
     // Newest first; a vault whose folder is gone is still listed (a link to it says where it was).
+    // Each is an instance (20.4): its local id, and its collection's evidence.
     const list = readRegistry()
       .sort((a, b) => (a.seen < b.seen ? 1 : -1))
-      .map((v) => ({ ...v, exists: existsSync(v.kind === "home" ? v.path : join(v.path, v.kind === "vault" ? ".slipbox" : "")) }));
+      .map((v) => ({ ...v, exists: v.kind === "vault" ? isVaultRoot(v.path) : existsSync(v.path) }));
     const human = list
       .map((v) => `${(v.name ?? basename(v.path)).padEnd(16)} ${v.kind.padEnd(6)} ${v.path}  ${v.seen.slice(0, 16).replace("T", " ")}${v.exists ? "" : "  (gone)"}\n`)
       .join("");
@@ -1208,12 +1210,17 @@ const HANDLERS: Record<string, Handler> = {
 
   info(s) {
     const g = s.graph;
+    const here = instanceOf(s.loc);
     const scratch = scratchLocation(s.loc, s.config);
     const data = {
       version: VERSION,
       root: s.loc.root,
       mode: s.loc.mode,
       vault: { id: s.loc.id, name: s.loc.name, aliases: s.loc.aliases, previous_names: s.loc.previous_names, key: s.loc.key },
+      // This copy (20.4): its local id, what it holds, and the other copies this machine knows.
+      instance: here.entry?.instance ?? null,
+      collection: here.entry?.collection ?? null,
+      copies: here.copies.map((v) => ({ instance: v.instance ?? null, path: v.path, worktree: v.worktree?.name ?? null })),
       markerVersion: s.loc.mode === "vault" ? readVaultVersion(s.loc.root) : null,
       config: { user: flag(s.args, "config") ?? s.io.env.SLIPBOX_CONFIG ?? userConfigFile(), sources: s.configSources, theme: s.config.theme },
       cache: cacheDir(s.loc),
@@ -1228,7 +1235,8 @@ const HANDLERS: Record<string, Handler> = {
     const human = [
       `slipbox   ${VERSION}`,
       `root      ${data.root} (${data.mode}${data.markerVersion ? `, marker v${data.markerVersion}` : ""})`,
-      ...(s.loc.name ? [`vault     ${s.loc.name}${s.loc.aliases.length ? ` (also ${s.loc.aliases.join(", ")})` : ""}${s.loc.id ? "" : " — no id yet: slipbox init gives it one"}`] : []),
+      ...(s.loc.name ? [`vault     ${s.loc.name}${s.loc.aliases.length ? ` (also ${s.loc.aliases.join(", ")})` : ""}${s.loc.id || !hasMarker(s.loc.root) ? "" : " — no id yet: slipbox init gives it one"}`] : []),
+      ...(data.instance ? [`instance  ${data.instance} — holds ${describeCollection(here.entry?.collection)}`] : []),
       `notes     ${data.notes} (parsed ${g.stats.parsed}, cached ${g.stats.cached}, ${g.stats.ms.toFixed(0)} ms)`,
       `theme     ${data.config.theme}`,
       `config    ${data.config.sources.length ? data.config.sources.join(", then ") : `none (${data.config.user} doesn't exist)`}`,
@@ -1237,6 +1245,7 @@ const HANDLERS: Record<string, Handler> = {
       `state     ${data.state}`,
       `scratch   ${data.scratch}`,
       ...g.skipped.map((x) => `skipped   ${x.rel} — ${x.reason}`),
+      ...copiesShown(here.copies).map((c) => `copy      ${c}`),
       "",
     ].join("\n");
     return { data, human };

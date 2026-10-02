@@ -6,18 +6,26 @@
 // survives moving the folder. A copy of a vault (`cp -r`, a second clone) carries the same id; the
 // copy that isn't where the list last saw the vault is keyed by id and path, so two live copies
 // never share a session.
+//
+// Each entry is an instance (20.4): one copy on this machine, with a local id slipbox gives it once,
+// and its collection's evidence (collection.ts) — what tells two copies of one thing. A plain folder
+// opened is an instance too, by its path.
 
 import { randomBytes } from "node:crypto";
 import { existsSync, realpathSync, rmSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { atomicWrite, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
+import type { Collection } from "./collection.ts";
 import { checkoutOf } from "./git.ts";
 import { cacheHome, dataHome, stateHome, vaultKey } from "./paths.ts";
 
 export const MARKER = ".slipbox";
 
 export type RootKind = "vault" | "home";
+
+/** What the machine's list holds: vaults, the home vault, and plain folders opened (20.4). */
+export type KnownKind = RootKind | "folder";
 
 export interface VaultIdentity {
   id: string | null;
@@ -27,12 +35,16 @@ export interface VaultIdentity {
   previous_names: string[];
 }
 
-/** One vault as this machine knows it. */
+/** One vault — an instance of it (20.4) — as this machine knows it. */
 export interface KnownVault {
   /** Its storage key: the id, `<id>-<hash>` for a second copy, `<folder>-<hash>` without an id. */
   key: string;
+  /** The instance's local id: given once, the first time it's seen, and kept (20.4). */
+  instance?: string;
   id: string | null;
-  kind: RootKind;
+  kind: KnownKind;
+  /** The evidence for what it holds: copies of one collection share some of it (20.4). */
+  collection?: Collection;
   /** The name `[[name:note]]` reaches it by; null for a repository without `.slipbox/`. */
   name: string | null;
   aliases: string[];
@@ -157,32 +169,44 @@ export function readRegistry(): KnownVault[] {
   const f = readJson<RegistryFile | null>(registryFile(), null);
   if (!f || f.version !== 1 || !Array.isArray(f.vaults)) return [];
   // A kind no longer made ("repo", before 17.18) is dropped.
-  return f.vaults.filter((v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "home"));
+  return f.vaults.filter((v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "home" || v.kind === "folder"));
 }
 
 /** A seen vault is written again only when something about it changed, or after this long. */
 const SEEN_REFRESH_MS = 10 * 60 * 1000;
 
-/** Record a vault as seen now: once per change, and at most every ten minutes otherwise. */
-export function recordVault(v: Omit<KnownVault, "seen">, now = new Date()): void {
+/** An instance's local id (20.4): random, this machine's only, never written into a folder. */
+export function newInstanceId(): string {
+  return randomBytes(6).toString("hex");
+}
+
+/**
+ * Record a vault as seen now: once per change, and at most every ten minutes otherwise. Its instance
+ * id is the one it was given when first seen, else a new one. The entry as recorded.
+ */
+export function recordVault(v: Omit<KnownVault, "seen" | "instance">, now = new Date()): KnownVault {
   const list = readRegistry();
   const i = list.findIndex((x) => x.key === v.key);
   const old = list[i];
-  const same = old && JSON.stringify({ ...old, seen: "" }) === JSON.stringify({ ...v, seen: "" });
-  if (same && now.getTime() - Date.parse(old.seen) < SEEN_REFRESH_MS) return;
-  const entry: KnownVault = { ...v, seen: now.toISOString() };
-  if (i >= 0) list[i] = entry;
-  else list.push(entry);
+  const fresh: KnownVault = { ...v, instance: old?.instance ?? newInstanceId(), seen: now.toISOString() };
+  const same = old && JSON.stringify({ ...old, seen: "" }) === JSON.stringify({ ...fresh, seen: "" });
+  if (same && now.getTime() - Date.parse(old.seen) < SEEN_REFRESH_MS) return old;
+  if (i >= 0) list[i] = fresh;
+  else list.push(fresh);
   try {
     ensureDir(stateHome());
     writeJson(registryFile(), { version: 1, vaults: list } satisfies RegistryFile);
   } catch {}
+  return fresh;
 }
 
-/** Forget the vault at `root` (18.11: made a plain folder): the machine no longer lists it. */
-export function forgetVault(root: string): void {
+/**
+ * Forget the vault at `root` (18.11: made a plain folder): the machine no longer lists it. With
+ * `kinds`, only entries of those kinds there (a plain folder's, when it has become a vault: 20.4).
+ */
+export function forgetVault(root: string, kinds?: KnownKind[]): void {
   const list = readRegistry();
-  const rest = list.filter((v) => real(v.path) !== real(root));
+  const rest = list.filter((v) => real(v.path) !== real(root) || (kinds && !kinds.includes(v.kind)));
   if (rest.length === list.length) return;
   try {
     writeJson(registryFile(), { version: 1, vaults: rest } satisfies RegistryFile);
@@ -230,13 +254,14 @@ const WORKTREE_STATE_DAYS = 30;
 /**
  * Worktrees that are gone (17.19: merged, `git worktree remove`): their cache removed at once — it's
  * derived — and, a month after they were last seen, their state (the scratch, positions, session)
- * and their entry in the list. Until then they're listed as gone.
+ * and their entry in the list. Until then they're listed as gone. Plain folders gone a month, too.
  */
 export function pruneWorktrees(now = Date.now()): void {
   const list = readRegistry();
   const gone = list.filter((v) => v.worktree && !existsSync(join(v.path, ".git")) && !existsSync(join(v.path, MARKER)));
-  if (!gone.length) return;
-  const drop: string[] = [];
+  // A plain folder (20.4) gone as long: forgotten too — it has nothing of its own to remove.
+  const drop = list.filter((v) => v.kind === "folder" && !existsSync(v.path) && now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000).map((v) => v.key);
+  if (!gone.length && !drop.length) return;
   for (const v of gone) {
     rmSync(join(cacheHome(), v.key), { recursive: true, force: true });
     if (now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000) {

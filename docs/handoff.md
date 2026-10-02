@@ -39,8 +39,9 @@ and phase 5's LSP face (`11.x`) and code intelligence (`19.x`: language servers 
 5: `16.18`–`16.23`. **Decided the same day, being built:** plain paths and virtual vaults (`20.x`; `docs/idea.md`,
 "Plain paths, virtual vaults"). Done: the converter (`20.1`), links as plain paths (`20.2`: `[[…]]` is text, `/` the
 filesystem's root, a move never resolves a link), vault boundaries (`20.3`: the nearest `.slipbox/` or git
-checkout), the LSP face removed (`20.23`). Next: collections apart from instances, durable state and names
-(`20.4`–`20.6`); until then, vaults keep the ids and names of the vault paragraph above.
+checkout), collections apart from instances (`20.4`: local instance ids in `vaults.json`, copies told by their
+evidence), the LSP face removed (`20.23`). Next: personal state by instance and names (`20.5`, `20.6`); until then,
+storage keys and names are the vault paragraph's.
 
 ## The documents
 

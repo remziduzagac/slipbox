@@ -27,7 +27,7 @@ macOS too — the terminal stack here is XDG-shaped on both machines.
 **The key** is the vault's `id` — `[vault] id` in `.slipbox/config.toml`, random, made by `slipbox init` (or written
 into a `.slipbox/` that has none the first time it's opened, `17.18`) and never changed — so its cache and state survive
 moving the folder. A git vault without `.slipbox/` (`20.3`) has nowhere to keep one, and nothing is written into it: it
-keys by path until instances have ids of their own (`20.4`, `20.5`). Loose files (the home vault) key by the home
+keys by path until personal state is keyed by instance (`20.5`). Loose files (the home vault) key by the home
 vault's id. Only a vault whose config can't be written (read-only, or not parsing) keys by path: `<basename>-<hash>`,
 the hash the first 12 hex characters of SHA-256 over the root's **real path**; state kept under a path's key before
 vaults had ids moves over once.
@@ -219,7 +219,7 @@ tools do is the project's.
 
 ## `20.x` — plain paths, virtual vaults
 
-Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.3` and
+Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.4` and
 `20.23` done). The model in full
 is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the

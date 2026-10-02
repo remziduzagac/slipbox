@@ -12,7 +12,7 @@ import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, typ
 import { pathLink } from "./links.ts";
 import { cacheDir } from "./paths.ts";
 import { type KnownVault, namesOf, readIdentity, readRegistry, vaultConfigFile } from "./registry.ts";
-import { findVaultRoot, isInside, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "./vault.ts";
+import { findVaultRoot, isInside, isVaultRoot, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "./vault.ts";
 
 function real(p: string): string {
   try {
@@ -125,7 +125,7 @@ export class Reach implements VaultReach {
     if (hits.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: hits.map((v) => v.path).sort(), vault, reason: `several vaults are named "${vault}"` };
     const v = hits[0]!;
     if (v.kind === "home") return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: "the home vault isn't a link target: link a loose file by its path" };
-    if (!existsSync(join(v.path, ".slipbox"))) {
+    if (!isVaultRoot(v.path)) {
       return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `vault "${vault}" was last seen at ${v.path} (${v.seen.slice(0, 10)})` };
     }
     const there = this.graphAt(v.path);
@@ -157,7 +157,7 @@ export class Reach implements VaultReach {
   vaultOf(abs: string): string | null {
     const found = findVaultRoot(abs);
     if (!found) return null;
-    const known = this.known().find((v) => real(v.path) === real(found));
+    const known = this.known().find((v) => v.kind !== "folder" && real(v.path) === real(found));
     if (known) return shown(known);
     return readIdentity(vaultConfigFile(found)).name ?? basename(found);
   }

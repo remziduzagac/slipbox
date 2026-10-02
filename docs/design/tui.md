@@ -302,9 +302,10 @@ loose file opens as it is, beside the current vault's notes: it has no vault to 
 the note and place you left; each switch is remembered, so a chain of them unwinds one by one.
 
 **The known vaults** (`space v v`, `:vaults`, `vault.switch`): the machine's list (`vaults.json`,
-`slipbox vaults`), most recently seen first — each by its name and its path; `enter` switches. A repository's
-worktrees (`17.19`) are listed under its main checkout, each by its branch (`⎇ feat`); the main checkout's branch
-beside it.
+`slipbox vaults`), most recently seen first — each by its name and its path; `enter` switches. Copies of one
+collection (`20.4`) are listed together: under the checkout seen last, a repository's worktrees (`17.19`) each by its
+branch (`⎇ feat`), and its other clones each by its name and branch; the head's branch beside it. Plain folders
+aren't vaults, and aren't listed.
 **The launcher:** slipbox opened on a loose folder without a file (`slipbox ~`) shows this list at
 once, over the folder's explorer, when there are vaults to show.
 
@@ -492,7 +493,8 @@ keys.
   are unresolved, backlinks, headings, footnotes, tasks done). `enter` opens what a row names: a property's line in
   the frontmatter (source mode: its own line; rendered, the row that shows it), a tag's notes, the links or backlinks
   list, the outline or the footnotes view; any other row copies its value, as `y` does. The vault's own information
-  — its notes, index and watcher — is `space v i`'s window: a vault isn't a file. Names are a column a third of the
+  — its notes, index and watcher, this copy's instance id and what it holds, the other copies this machine knows
+  (`20.4`, the five seen last) — is `space v i`'s window: a vault isn't a file. Names are a column a third of the
   pane at most, values cut to it (no sideways scrolling). `space n i`, the `ℹ` button, `slipbox stat` (its `vault`
   and `properties` too). `e` edits the properties (below).
 - **The properties editor** (`3.20`): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter — YAML

@@ -8,20 +8,23 @@
 // `$HOME` and `/` are never a root: that would index everything. `--root` names a vault outright.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { parse as parseToml } from "smol-toml";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { VAULT_CONFIG_TEMPLATE } from "./config.ts";
+import { collectionOf, sameCollection } from "./collection.ts";
 import { checkoutOf, inMain } from "./git.ts";
 import { readRegular } from "./fsutil.ts";
 import { stateHome, vaultKey } from "./paths.ts";
 import {
   addIdentity,
+  forgetVault,
   HOME_NAME,
   homeIdentity,
   homeVaultDir,
   implicitName,
+  type KnownVault,
   MARKER,
   newVaultId,
   pruneWorktrees,
@@ -226,19 +229,53 @@ export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): stri
   return loc.mode === "vault" ? vaultConfigFile(loc.root) : join(homeVaultDir(), "config.toml");
 }
 
-/** Record the vault in the machine's list (17.6). The home vault is listed by its own folder. */
-export function recordLocation(loc: VaultLocation): void {
-  recordVault({
-    key: loc.key,
-    id: loc.id,
-    kind: loc.mode,
-    name: loc.name,
-    aliases: loc.aliases,
-    previous_names: loc.previous_names,
-    path: loc.mode === "home" ? homeVaultDir() : loc.root,
-    ...(loc.worktree ? { worktree: { name: loc.worktree.name, main: loc.worktree.mainVault } } : {}),
-  });
+/**
+ * Record the vault in the machine's list (17.6): an instance of it, with its collection's evidence
+ * (20.4). The home vault is listed by its own folder, and the plain folder opened in it as an
+ * instance of its own, by its path. The instance as recorded.
+ */
+export function recordLocation(loc: VaultLocation): KnownVault {
+  const known = readRegistry();
+  const was = (key: string) => known.find((v) => v.key === key);
+  let entry: KnownVault;
+  if (loc.mode === "home") {
+    recordVault({ key: loc.key, id: loc.id, kind: "home", name: loc.name, aliases: loc.aliases, previous_names: loc.previous_names, path: homeVaultDir() });
+    const key = vaultKey(loc.root);
+    entry = recordVault({ key, id: null, kind: "folder", name: null, aliases: [], previous_names: [], path: loc.root, collection: collectionOf(loc.root, was(key)?.collection) });
+  } else {
+    // A plain folder that has become a vault: the same place, one instance — the vault's now.
+    forgetVault(loc.root, ["folder"]);
+    entry = recordVault({
+      key: loc.key,
+      id: loc.id,
+      kind: loc.mode,
+      name: loc.name,
+      aliases: loc.aliases,
+      previous_names: loc.previous_names,
+      path: loc.root,
+      collection: collectionOf(loc.root, was(loc.key)?.collection),
+      ...(loc.worktree ? { worktree: { name: loc.worktree.name, main: loc.worktree.mainVault } } : {}),
+    });
+  }
   pruneWorktrees();
+  return entry;
+}
+
+/** The instance at `loc` as the machine's list has it, and the others of its collection (20.4). */
+export function instanceOf(loc: VaultLocation, known = readRegistry()): { entry: KnownVault | null; copies: KnownVault[] } {
+  const here = realPath(loc.root);
+  const entry = known.find((v) => (loc.mode === "home" ? v.kind === "folder" : v.key === loc.key) && realPath(v.path) === here) ?? null;
+  if (!entry) return { entry, copies: [] };
+  const copies = known.filter((v) => v !== entry && v.kind !== "home" && sameCollection(v.collection, entry.collection));
+  return { entry, copies };
+}
+
+function realPath(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
 }
 
 export function isInside(root: string, path: string): boolean {

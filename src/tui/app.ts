@@ -69,6 +69,7 @@ import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRen
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { type KnownVault, readIdentity, readRegistry, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
+import { sameCollection } from "../core/collection.ts";
 import { findVaultRoot, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
@@ -686,7 +687,7 @@ export class App {
     }
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
     // Opened on a loose folder: the known vaults (17.14).
-    if (opts.launcher && readRegistry().some((v) => v.kind !== "home" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
+    if (opts.launcher && readRegistry().some((v) => v.kind === "vault" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
     this.stopLazy = onLoaded(() => {
       this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
@@ -7040,26 +7041,35 @@ export class App {
   openVaultList(): void {
     const here = this.loc.root;
     const known = readRegistry()
-      .filter((v) => v.kind !== "home" && v.path !== here && existsSync(v.path))
+      .filter((v) => v.kind === "vault" && v.path !== here && existsSync(v.path))
       .sort((a, b) => (a.seen < b.seen ? 1 : -1));
     if (!known.length) return this.message("info", "no other vaults yet: open one with slipbox <folder>, or make one with slipbox init");
-    // A repository's worktrees under its main checkout (17.19), each by its branch; the groups by
-    // when any of them was last opened.
+    // Copies of one collection together (20.4): a repository's clones and worktrees (17.19), under
+    // the main checkout seen last, each worktree by its branch; the groups by when any of them was
+    // last opened.
     const branchAt = (path: string) => {
       const c = checkoutOf(path);
       const h = c ? headOf(c) : null;
       return h?.branch ?? h?.commit?.slice(0, 7) ?? null;
     };
-    const groupOf = (v: KnownVault) => v.worktree?.main ?? v.path;
-    const groups = new Map<string, KnownVault[]>();
-    for (const v of known) groups.set(groupOf(v), [...(groups.get(groupOf(v)) ?? []), v]);
+    // Grouped transitively (a worktree seen before its main checkout joins it all the same): by the
+    // collection's evidence, or by the main checkout a worktree names (an entry recorded before 20.4).
+    const top = known.map((_, i) => i);
+    const find = (i: number): number => (top[i] === i ? i : (top[i] = find(top[i]!)));
+    const related = (a: KnownVault, b: KnownVault) => sameCollection(a.collection, b.collection) || (a.worktree?.main ?? a.path) === (b.worktree?.main ?? b.path);
+    for (let i = 0; i < known.length; i++) for (let j = i + 1; j < known.length; j++) if (related(known[i]!, known[j]!)) top[find(j)] = find(i);
+    const byTop = new Map<number, KnownVault[]>();
+    known.forEach((v, i) => byTop.set(find(i), [...(byTop.get(find(i)) ?? []), v]));
+    const groups = [...byTop.values()];
     const items: ListItem[] = [];
-    for (const [main, list] of groups) {
-      const head = list.find((v) => v.path === main && !v.worktree);
+    for (const list of groups) {
+      const head = list.find((v) => !v.worktree);
       if (head) items.push({ label: head.name ?? basename(head.path), detail: head.path, hint: branchAt(head.path) ? `${this.glyphs.branch} ${branchAt(head.path)}` : undefined, data: head });
       for (const v of list.filter((x) => x !== head).sort((a, b) => a.path.localeCompare(b.path))) {
         const b = branchAt(v.path);
-        items.push({ label: `${head ? "" : `${v.name ?? basename(v.path)} `}${this.glyphs.branch} ${b ?? v.worktree?.name ?? basename(v.path)}`, detail: v.path, indent: head ? 1 : 0, data: v });
+        // Another clone by its name, a worktree by its branch.
+        const label = v.worktree ? `${head ? "" : `${v.name ?? basename(v.path)} `}${this.glyphs.branch} ${b ?? v.worktree.name}` : `${v.name ?? basename(v.path)}${b ? ` ${this.glyphs.branch} ${b}` : ""}`;
+        items.push({ label, detail: v.path, indent: head ? 1 : 0, data: v });
       }
     }
     this.openList({

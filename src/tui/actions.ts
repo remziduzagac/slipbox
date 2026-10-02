@@ -7,7 +7,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, SymbolInformation, TextEdit, WorkspaceEdit, WorkspaceSymbol } from "vscode-languageserver-protocol";
 import { blockLine, landingText } from "../core/landing.ts";
 import { join, posix, relative } from "node:path";
-import { findVaultRoot, isInside, isNeverRoot } from "../core/vault.ts";
+import { copiesShown, describeCollection } from "../core/collection.ts";
+import { findVaultRoot, hasMarker, instanceOf, isInside, isNeverRoot } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
@@ -1797,10 +1798,13 @@ export function registerActions(app: App): void {
       }),
     "vault.info": (a) => {
       const g = a.graph;
+      // This copy (20.4): its local id, what it holds, and the other copies this machine knows.
+      const here = instanceOf(a.loc);
       infoList(a, "Vault", [
         ["root", a.loc.root],
         ["mode", a.loc.mode],
-        ...(a.loc.name ? [["vault", `${a.loc.name}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}${a.loc.id ? "" : " — no id yet"}`] as [string, string]] : []),
+        ...(a.loc.name ? [["vault", `${a.loc.name}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}${a.loc.id || !hasMarker(a.loc.root) ? "" : " — no id yet"}`] as [string, string]] : []),
+        ...(here.entry?.instance ? [["instance", `${here.entry.instance} — holds ${describeCollection(here.entry.collection)}`] as [string, string]] : []),
         ["notes", String(g.notes.size)],
         ["indexing", a.indexing ? `${a.indexing} left` : "done"],
         ["watcher", a.watcher ? (a.watcher.degraded ? `degraded: ${a.watcher.degraded}` : `${a.watcher.watchedCount} directories${a.watcher.polledDirs.length ? `, ${a.watcher.polledDirs.length} polled` : ""}`) : "off"],
@@ -1808,6 +1812,7 @@ export function registerActions(app: App): void {
         ["state", stateDir(a.loc)],
         ["scratch", a.scratch().path],
         ...g.skipped.map((s) => ["skipped", `${s.rel} — ${s.reason}`] as [string, string]),
+        ...copiesShown(here.copies).map((c) => ["copy", c] as [string, string]),
       ]);
     },
     "config.reload": (a) => a.reloadConfig("manual"),
