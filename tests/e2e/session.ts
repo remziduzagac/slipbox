@@ -54,7 +54,8 @@ export class Session {
     // The machine's own linter stays out of the scenarios unless one asks for it (3.21).
     const config = (opts.config ?? "").replaceAll("{vault}", this.vault);
     // Lint and language servers off unless a scenario asks: they'd run npx, start servers, install them.
-    const off = `${/^\[lint\]/m.test(config) ? "" : '\n[lint]\nenabled = "off"\n'}${/^\[lsp\]/m.test(config) ? "" : "\n[lsp]\nenabled = false\n"}`;
+    // The background auto-index too (20.9): it would walk your own home folder.
+    const off = `${/^\[lint\]/m.test(config) ? "" : '\n[lint]\nenabled = "off"\n'}${/^\[lsp\]/m.test(config) ? "" : "\n[lsp]\nenabled = false\n"}${/^\[index\]/m.test(config) ? "" : "\n[index]\nbackground = false\n"}`;
     writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), `${config}${off}`);
     this.trace = join(this.dir, "trace");
     writeFileSync(this.trace, "");
