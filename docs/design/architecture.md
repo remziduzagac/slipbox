@@ -62,6 +62,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 20.5 | a file's root, its instance and the moves to ask about; `init` |
 | `core/registry.ts` | 17.2–17.6, 20.4 | identity, the home vault, the machine's instances, storage keys, names |
 | `core/collection.ts` | 20.4 | a collection's evidence: `.slipbox/` id, remotes, first commits; copies of one |
+| `core/names.ts` | 20.6 | each vault's name to show: unique here, `.` for a collision, `name@branch` for a worktree |
 | `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
 | `core/gitops.ts` | 5.11–5.14 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
 | `core/reach.ts` | 17.8–17.11 | other vaults: `[[vault:note]]`, paths out of the root, their backlinks here |

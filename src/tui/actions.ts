@@ -8,6 +8,7 @@ import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, 
 import { blockLine, landingText } from "../core/landing.ts";
 import { join, posix, relative } from "node:path";
 import { copiesShown, describeCollection } from "../core/collection.ts";
+import { locName } from "../core/names.ts";
 import { findVaultRoot, hasMarker, instanceOf, isInside, isNeverRoot } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
@@ -1806,7 +1807,7 @@ export function registerActions(app: App): void {
       infoList(a, "Vault", [
         ["root", a.loc.root],
         ["mode", a.loc.mode],
-        ...(a.loc.name ? [["vault", `${a.loc.name}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}${a.loc.id || !hasMarker(a.loc.root) ? "" : " — no id yet"}`] as [string, string]] : []),
+        ...(a.loc.name ? [["vault", `${locName(a.loc)}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}${a.loc.id || !hasMarker(a.loc.root) ? "" : " — no id yet"}`] as [string, string]] : []),
         ...(here.entry?.instance ? [["instance", `${here.entry.instance} — holds ${describeCollection(here.entry.collection)}`] as [string, string]] : []),
         ["notes", String(g.notes.size)],
         ["indexing", a.indexing ? `${a.indexing} left` : "done"],

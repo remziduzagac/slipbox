@@ -70,6 +70,7 @@ import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, 
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
 import { sameCollection } from "../core/collection.ts";
+import { displayNames, locName } from "../core/names.ts";
 import { findVaultRoot, homeAt, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
@@ -3970,7 +3971,7 @@ export class App {
     // The file.
     head("File");
     row("File", "path", b.rel ?? b.abs, { copy: b.abs });
-    row("File", "vault", this.loc.mode === "home" ? "home (loose files)" : (this.loc.name ?? basename(this.loc.root)), { copy: this.loc.root });
+    row("File", "vault", this.loc.mode === "home" ? "home (loose files)" : locName(this.loc), { copy: this.loc.root });
     row("File", "kind", note ? `note (${b.kind.format})` : `${b.kind.group === "data" ? "data" : "text"} (${b.kind.format})`);
     if (b.stamp) {
       const size = b.stamp.size;
@@ -6773,9 +6774,9 @@ export class App {
   }
 
   /** How a root is named to the user: its vault's name, "home" for a loose folder, a repo's folder. */
-  vaultLabel(loc: Pick<VaultLocation, "mode" | "name" | "root">): string {
+  vaultLabel(loc: Pick<VaultLocation, "mode" | "key" | "name" | "root">): string {
     if (loc.mode === "home") return `home vault (${loc.root})`;
-    return loc.mode === "vault" ? `vault ${loc.name ?? basename(loc.root)}` : `repository ${basename(loc.root)}`;
+    return loc.mode === "vault" ? `vault ${locName(loc)}` : `repository ${basename(loc.root)}`;
   }
 
   /** A root row of the explorer: go into it (17.13). */
@@ -7105,14 +7106,17 @@ export class App {
     const byTop = new Map<number, KnownVault[]>();
     known.forEach((v, i) => byTop.set(find(i), [...(byTop.get(find(i)) ?? []), v]));
     const groups = [...byTop.values()];
+    // Each by the name it's shown by (20.6): unique on this machine.
+    const names = displayNames(readRegistry());
+    const nameOf = (v: KnownVault) => names.get(v.key) ?? v.name ?? basename(v.path);
     const items: ListItem[] = [];
     for (const list of groups) {
       const head = list.find((v) => !v.worktree);
-      if (head) items.push({ label: head.name ?? basename(head.path), detail: head.path, hint: branchAt(head.path) ? `${this.glyphs.branch} ${branchAt(head.path)}` : undefined, data: head });
+      if (head) items.push({ label: nameOf(head), detail: head.path, hint: branchAt(head.path) ? `${this.glyphs.branch} ${branchAt(head.path)}` : undefined, data: head });
       for (const v of list.filter((x) => x !== head).sort((a, b) => a.path.localeCompare(b.path))) {
         const b = branchAt(v.path);
         // Another clone by its name, a worktree by its branch.
-        const label = v.worktree ? `${head ? "" : `${v.name ?? basename(v.path)} `}${this.glyphs.branch} ${b ?? v.worktree.name}` : `${v.name ?? basename(v.path)}${b ? ` ${this.glyphs.branch} ${b}` : ""}`;
+        const label = v.worktree ? (head ? `${this.glyphs.branch} ${b ?? v.worktree.name}` : nameOf(v)) : `${nameOf(v)}${b ? ` ${this.glyphs.branch} ${b}` : ""}`;
         items.push({ label, detail: v.path, indent: head ? 1 : 0, data: v });
       }
     }

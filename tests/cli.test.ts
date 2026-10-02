@@ -473,9 +473,9 @@ describe("the vault and the tool", () => {
   });
   test("stat: which vault a note is in, and its properties — the frontmatter, as the Info view shows it (3.19)", () => {
     const r = slipbox(["stat", "people/kenji-mori.md", "--json"], { cwd: DEMO }).json.data;
-    expect(r.vault).toBe("halden");
+    expect(r.vault).toMatch(/^(examples\.)?halden$/); // this file's own copy of the demo shares its name (20.6)
     expect(r.properties).toMatchObject({ title: "Kenji Mori", office: { building: "Workshop", desk: 2 } });
-    expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/vault\s+halden/);
+    expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/vault\s+(examples\.)?halden\n/);
   });
   test("problems: the demo's broken links; a path is never ambiguous (1.7)", () => {
     const p = slipbox(["problems", "--json"], { cwd: DEMO }).json.data;

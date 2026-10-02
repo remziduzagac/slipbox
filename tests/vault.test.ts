@@ -10,7 +10,7 @@ import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { applyPlan, planHeadingRename, planUndo } from "../src/core/rename.ts";
 import { findVaultRoot, gitRootOf, initVault, isVaultRoot, locateVault, recordLocation } from "../src/core/vault.ts";
-import { implicitName } from "../src/core/registry.ts";
+import { implicitName, type KnownVault } from "../src/core/registry.ts";
 import { vaultKey } from "../src/core/paths.ts";
 
 const VAULT = join(import.meta.dir, "fixtures", "vault");
@@ -1314,7 +1314,8 @@ describe("nested vaults, known to each other without being opened (17.17)", () =
     for (const root of [parent, second]) await cli(["backlinks", "index"], root); // each indexed, as when opened
     for (const [root, other] of [[parent, second], [second, parent]] as const) {
       const links = (await cli(["links", "index"], root)).json.data;
-      for (const l of links) expect(l).toMatchObject({ status: "note", path: join(root, "kid", "note.md"), vault: "dkid" });
+      // Two copies of dkid on this machine: each shown with its folder (20.6).
+      for (const l of links) expect(l).toMatchObject({ status: "note", path: join(root, "kid", "note.md"), vault: `${basename(root)}.dkid` });
       const up = await cli(["resolve", "[[dparent:index]]"], join(root, "kid"));
       expect(up.json.data).toMatchObject({ status: "resolved", abs: join(root, "index.md") });
       // The other copy's links to its own nested vault aren't backlinks here.
@@ -2790,5 +2791,86 @@ describe("collections apart from instances (20.4)", () => {
     mkdirSync(join(repo, ".git"));
     await cli(["ls"], repo);
     expect((await cli(["vaults"], repo)).json.data.find((v: { path: string }) => v.path === repo)).toMatchObject({ kind: "vault", exists: true });
+  });
+});
+
+describe("names for display (20.6)", () => {
+  const v = (key: string, name: string | null, path: string, extra: Partial<KnownVault> = {}): KnownVault => ({ key, id: null, kind: "vault", name, aliases: [], previous_names: [], path, seen: "", ...extra });
+
+  test("short and unique: a shared name takes as few folders as tell them apart, joined with .; case counts as the same", async () => {
+    const { displayNames } = await import("../src/core/names.ts");
+    // Its own folder first when its name isn't the folder's; a level every one of them shares is left out.
+    const copies = displayNames([v("p", "halden", "/home/me/src/slipbox/examples/vault"), v("q", "halden", "/tmp/run/vault"), v("r", "fixture", "/t/vault-ab12"), v("s", "fixture", "/t/vault-cd34")]);
+    expect(Object.fromEntries(copies)).toEqual({ p: "examples.halden", q: "run.halden", r: "vault-ab12.fixture", s: "vault-cd34.fixture" });
+    const names = displayNames([
+      v("a", "docs", "/home/me/work/docs"),
+      v("b", "Docs", "/home/me/home/docs"),
+      v("c", "notes", "/home/me/notes"),
+      v("d", "plan", "/x/a/same/plan"),
+      v("e", "plan", "/x/b/same/plan"),
+      v("f", null, "/srv/My Folder"),
+      v("g", "plain", "/p", { kind: "folder" }),
+    ]);
+    expect(Object.fromEntries(names)).toEqual({ a: "work.docs", b: "home.Docs", c: "notes", d: "a.plan", e: "b.plan", f: "My-Folder" });
+  });
+
+  test("a worktree: its main checkout's name and the branch now; two entries at one place keep a piece of their key", async () => {
+    const { displayNames } = await import("../src/core/names.ts");
+    const branch = (p: string) => (p.endsWith("feat") ? "refactor" : null);
+    const names = displayNames(
+      [
+        v("m", "pathfinder", "/src/pathfinder"),
+        v("w", "pathfinder", "/src/wt/feat", { worktree: { name: "feat", main: "/src/pathfinder" } }),
+        v("w2", "pathfinder", "/src/wt/fix", { worktree: { name: "fix", main: "/gone" } }),
+        v("s1", "same", "/one/same", { instance: "aaaa1111" }),
+        v("s2", "same", "/one/same", { instance: "bbbb2222" }),
+      ],
+      branch,
+    );
+    expect(names.get("m")).toBe("pathfinder");
+    expect(names.get("w")).toBe("pathfinder@refactor");
+    expect(names.get("w2")).toBe("pathfinder@fix"); // no main known, no branch: git's name for it
+    expect([names.get("s1"), names.get("s2")]).toEqual(["same.aaaa", "same.bbbb"]);
+  });
+
+  test("a git vault without .slipbox/ is named after its repository (origin's, else the first remote's), else its folder", async () => {
+    const { repositoryName } = await import("../src/core/collection.ts");
+    const dir = join(mkdtempSync(join(tmpdir(), "slipbox-repname-")), "pf");
+    mkdirSync(dir);
+    if (Bun.spawnSync(["git", "init", "-q", dir]).exitCode !== 0) return; // no git here
+    expect(repositoryName(dir)).toBeNull();
+    expect(locateVault({ path: dir }).name).toBe("pf");
+    Bun.spawnSync(["git", "-C", dir, "remote", "add", "upstream", "https://example.invalid/them/other.git"]);
+    expect(repositoryName(dir)).toBe("other");
+    Bun.spawnSync(["git", "-C", dir, "remote", "add", "origin", "git@example.invalid:me/pathfinder.git"]);
+    expect(repositoryName(dir)).toBe("pathfinder");
+    expect(locateVault({ path: dir }).name).toBe("pathfinder");
+    // .slipbox/ declares its own, which wins.
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, ".slipbox", "config.toml"), '[vault]\nid = "pfid"\nname = "pf-notes"\n');
+    expect(locateVault({ path: dir }).name).toBe("pf-notes");
+  });
+
+  test("slipbox vaults and info show each by its name here; the name in .slipbox/ is unchanged", async () => {
+    const base = mkdtempSync(join(tmpdir(), "slipbox-shown-"));
+    const one = join(base, "work", "docs");
+    const two = join(base, "home", "docs");
+    for (const d of [one, two]) {
+      mkdirSync(join(d, ".slipbox"), { recursive: true });
+      writeFileSync(join(d, ".slipbox", "config.toml"), `[vault]\nid = "${basename(dirname(d))}${basename(base)}"\nname = "docs-${basename(base)}"\n`);
+    }
+    const out: string[] = [];
+    const run = async (args: string[], cwd: string) => {
+      out.length = 0;
+      await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+      return JSON.parse(out.join("")).data;
+    };
+    await run(["ls"], one);
+    const info = await run(["info"], two);
+    const name = `docs-${basename(base)}`;
+    expect(info.vault).toMatchObject({ name, shown: `home.${name}` });
+    const listed = (await run(["vaults"], one)).filter((x: { path: string }) => x.path === one || x.path === two);
+    expect(listed.map((x: { shown: string }) => x.shown).sort()).toEqual([`home.${name}`, `work.${name}`]);
+    expect(readFileSync(join(one, ".slipbox", "config.toml"), "utf8")).toContain(`name = "${name}"`);
   });
 });

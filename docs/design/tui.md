@@ -305,7 +305,9 @@ the note and place you left; each switch is remembered, so a chain of them unwin
 `slipbox vaults`), most recently seen first — each by its name and its path; `enter` switches. Copies of one
 collection (`20.4`) are listed together: under the checkout seen last, a repository's worktrees (`17.19`) each by its
 branch (`⎇ feat`), and its other clones each by its name and branch; the head's branch beside it. Plain folders
-aren't vaults, and aren't listed.
+aren't vaults, and aren't listed. **Names** (`20.6`) here, in `space v i`, the Info view and messages are each
+vault's name on this machine: its `.slipbox/` name, else its repository's, else its folder's — two that would share
+one each with as few folders as tell them apart (`work.docs`, `home.docs`), a worktree as `name@branch`.
 
 **A vault moved** (`20.5`): opened where it wasn't seen before, while a copy of it is gone from where it was (seen
 last before this one appeared), the TUI asks "`<name>` was elsewhere before — did it move here?": `Moved here from

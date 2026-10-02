@@ -11,6 +11,7 @@ import { readJson } from "./fsutil.ts";
 import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, type Target, VAULT_LINK, type VaultReach } from "./graph.ts";
 import { pathLink } from "./links.ts";
 import { cacheDir } from "./paths.ts";
+import { displayNames } from "./names.ts";
 import { type KnownVault, namesOf, readIdentity, readRegistry, vaultConfigFile } from "./registry.ts";
 import { findVaultRoot, isInside, isVaultRoot, recordLocation, rootAt, type VaultLocation, vaultConfigPath } from "./vault.ts";
 
@@ -22,10 +23,6 @@ function real(p: string): string {
   }
 }
 
-/** The shown name of a known vault: its name, else its folder's. */
-function shown(v: Pick<KnownVault, "name" | "path">): string {
-  return v.name ?? basename(v.path);
-}
 
 /**
  * A vault opened on its own (a rename or move of it, 18.x): its config, its index refreshed, other
@@ -61,6 +58,15 @@ export class Reach implements VaultReach {
     const now = Date.now();
     if (!this.knownCache || now - this.knownCache.at > 1000) this.knownCache = { at: now, list: readRegistry() };
     return this.knownCache.list;
+  }
+
+  private namesFor: { list: KnownVault[]; names: Map<string, string> } | null = null;
+
+  /** A known vault's name to show (20.6): unique on this machine, worked out once per reading of the list. */
+  private shown(v: Pick<KnownVault, "key" | "name" | "path">): string {
+    const list = this.known();
+    if (this.namesFor?.list !== list) this.namesFor = { list, names: displayNames(list) };
+    return this.namesFor.names.get(v.key) ?? v.name ?? basename(v.path);
   }
 
   /** The graph of another root, opened on first use with its own config; its index refreshed. */
@@ -132,7 +138,7 @@ export class Reach implements VaultReach {
     if (!there) return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `vault "${vault}" at ${v.path} can't be read` };
     const r = there.resolveLink({ kind: "wiki", target }, "");
     const abs = (p: string) => join(there.root, p);
-    const name = shown(v);
+    const name = this.shown(v);
     if (r.resolvedKind === "note" || r.resolvedKind === "file") return { ...r, path: abs(r.path!), candidates: r.candidates.map(abs), vault: name, via: via ?? r.via };
     if (r.resolvedKind === "ambiguous") return { ...r, candidates: r.candidates.map(abs), vault: name };
     return { resolvedKind: "unresolved", path: null, candidates: [], vault: name, reason: `no note "${target}" in vault "${name}"` };
@@ -158,7 +164,7 @@ export class Reach implements VaultReach {
     const found = findVaultRoot(abs);
     if (!found) return null;
     const known = this.known().find((v) => v.kind !== "folder" && real(v.path) === real(found));
-    if (known) return shown(known);
+    if (known) return this.shown(known);
     return readIdentity(vaultConfigFile(found)).name ?? basename(found);
   }
 
@@ -187,7 +193,7 @@ export class Reach implements VaultReach {
           if (!to) continue;
           const list = map.get(to) ?? [];
           // Another vault's index may be older than this one's: no ends then, the start stands in.
-          list.push({ from: join(v.path, rel), vault: shown(v), line: l.line, column: l.column, end: l.end ?? { line: l.line, column: l.column }, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
+          list.push({ from: join(v.path, rel), vault: this.shown(v), line: l.line, column: l.column, end: l.end ?? { line: l.line, column: l.column }, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
           map.set(to, list);
         }
       }

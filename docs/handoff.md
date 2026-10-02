@@ -41,7 +41,8 @@ and phase 5's LSP face (`11.x`) and code intelligence (`19.x`: language servers 
 filesystem's root, a move never resolves a link), vault boundaries (`20.3`: the nearest `.slipbox/` or git
 checkout), collections apart from instances (`20.4`: local instance ids in `vaults.json`, copies told by their
 evidence), personal state by instance (`20.5`: moves confirmed, never guessed; today's state moved once), the LSP
-face removed (`20.23`). Next: names (`20.6`); until then, names are the vault paragraph's.
+face removed (`20.23`), names for display (`20.6`: unique here, `work.docs`, `name@branch`). Next: settings deeper over
+broader (`20.7`), then the index on demand (`20.8`–`20.11`).
 
 ## The documents
 

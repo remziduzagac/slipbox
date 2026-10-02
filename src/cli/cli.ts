@@ -53,6 +53,7 @@ import { planConvert } from "../core/convert.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
+import { displayNames, locName } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeAt, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, vaultConfigPath } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
@@ -1100,11 +1101,14 @@ const HANDLERS: Record<string, Handler> = {
   vaults() {
     // Newest first; a vault whose folder is gone is still listed (a link to it says where it was).
     // Each is an instance (20.4): its local id, and its collection's evidence.
-    const list = readRegistry()
+    // Each by the name it's shown by (20.6): unique on this machine; a plain folder by its path.
+    const known = readRegistry();
+    const names = displayNames(known);
+    const list = known
       .sort((a, b) => (a.seen < b.seen ? 1 : -1))
-      .map((v) => ({ ...v, exists: v.kind === "vault" ? isVaultRoot(v.path) : existsSync(v.path) }));
+      .map((v) => ({ ...v, shown: names.get(v.key) ?? (v.kind === "home" ? "home" : null), exists: v.kind === "vault" ? isVaultRoot(v.path) : existsSync(v.path) }));
     const human = list
-      .map((v) => `${(v.name ?? basename(v.path)).padEnd(16)} ${v.kind.padEnd(6)} ${v.path}  ${v.seen.slice(0, 16).replace("T", " ")}${v.exists ? "" : "  (gone)"}\n`)
+      .map((v) => `${(v.shown ?? basename(v.path)).padEnd(16)} ${v.kind.padEnd(6)} ${v.path}  ${v.seen.slice(0, 16).replace("T", " ")}${v.exists ? "" : "  (gone)"}\n`)
       .join("");
     return { data: list, human: human || "no vaults yet\n" };
   },
@@ -1243,7 +1247,7 @@ const HANDLERS: Record<string, Handler> = {
       version: VERSION,
       root: s.loc.root,
       mode: s.loc.mode,
-      vault: { id: s.loc.id, name: s.loc.name, aliases: s.loc.aliases, previous_names: s.loc.previous_names, key: s.loc.key },
+      vault: { id: s.loc.id, name: s.loc.name, shown: locName(s.loc), aliases: s.loc.aliases, previous_names: s.loc.previous_names, key: s.loc.key },
       // This copy (20.4): its local id, what it holds, and the other copies this machine knows.
       instance: here.entry?.instance ?? null,
       collection: here.entry?.collection ?? null,
@@ -1262,7 +1266,7 @@ const HANDLERS: Record<string, Handler> = {
     const human = [
       `slipbox   ${VERSION}`,
       `root      ${data.root} (${data.mode}${data.markerVersion ? `, marker v${data.markerVersion}` : ""})`,
-      ...(s.loc.name ? [`vault     ${s.loc.name}${s.loc.aliases.length ? ` (also ${s.loc.aliases.join(", ")})` : ""}${s.loc.id || !hasMarker(s.loc.root) ? "" : " — no id yet: slipbox init gives it one"}`] : []),
+      ...(s.loc.name ? [`vault     ${data.vault.shown}${s.loc.aliases.length ? ` (also ${s.loc.aliases.join(", ")})` : ""}${s.loc.id || !hasMarker(s.loc.root) ? "" : " — no id yet: slipbox init gives it one"}`] : []),
       ...(data.instance ? [`instance  ${data.instance} — holds ${describeCollection(here.entry?.collection)}`] : []),
       `notes     ${data.notes} (parsed ${g.stats.parsed}, cached ${g.stats.cached}, ${g.stats.ms.toFixed(0)} ms)`,
       `theme     ${data.config.theme}`,
@@ -1451,7 +1455,7 @@ const HANDLERS: Record<string, Handler> = {
     const data = {
       path: rel,
       abs,
-      vault: s.loc.mode === "home" ? null : (s.loc.name ?? null),
+      vault: s.loc.mode === "home" ? null : locName(s.loc),
       properties: fm?.data ?? null,
       size: file.bytes.length,
       mtime: new Date(statSync(abs).mtimeMs).toISOString(),

@@ -6526,7 +6526,8 @@ describe("the Info view (3.19)", () => {
     expect(h.app.region).toBe("outline");
     const r = rows(h);
     expect(r).toContain("path: info.md");
-    expect(r).toContain("vault: fixture");
+    // Qualified by its folder when other copies are known (20.6).
+    expect(r.find((row) => row.startsWith("vault: "))).toMatch(/^vault: (vault-\w+\.)?fixture$/);
     expect(r).toContain("kind: note (markdown)");
     expect(r).toContain("state: saved");
     expect(r.slice(r.indexOf("# Properties"), r.indexOf("# Tags"))).toEqual(["# Properties", "title: Planning", "owner: ", "  name: Rosa", "  desk: 2", "tags: Plan"]);

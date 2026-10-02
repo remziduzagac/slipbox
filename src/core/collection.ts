@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import { isAbsolute, join, normalize, resolve } from "node:path";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
 import { checkoutOf } from "./git.ts";
-import { readIdentity, vaultConfigFile } from "./registry.ts";
+import { readIdentity, slugName, vaultConfigFile } from "./registry.ts";
 
 /** What a folder holds, as evidence: any one shared with another folder's says it's the same. */
 export interface Collection {
@@ -67,26 +67,52 @@ export function normalizeRemote(url: string, top: string): string | null {
   return local(resolve(top, u));
 }
 
-/** The `[remote "…"] url`s of a git config file, as evidence. */
-export function remotesIn(configText: string, top: string): string[] {
-  const out = new Set<string>();
-  let inRemote = false;
+/** The `[remote "…"] url`s of a git config file, in order, with each remote's name. */
+function remoteUrls(configText: string): { remote: string; url: string }[] {
+  const out: { remote: string; url: string }[] = [];
+  let remote: string | null = null;
   for (const raw of configText.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith("#") || line.startsWith(";")) continue;
     if (line.startsWith("[")) {
-      inRemote = /^\[\s*remote\s+"(?:[^"\\]|\\.)*"\s*\]/i.test(line);
+      remote = /^\[\s*remote\s+"((?:[^"\\]|\\.)*)"\s*\]/i.exec(line)?.[1] ?? null;
       continue;
     }
-    if (!inRemote) continue;
+    if (remote === null) continue;
     const kv = /^url\s*=\s*(.*)$/i.exec(line);
     if (!kv) continue;
     let value = kv[1]!.trim();
     if (value.length > 1 && value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
-    const n = normalizeRemote(value, top);
+    out.push({ remote, url: value });
+  }
+  return out;
+}
+
+/** The `[remote "…"] url`s of a git config file, as evidence. */
+export function remotesIn(configText: string, top: string): string[] {
+  const out = new Set<string>();
+  for (const { url } of remoteUrls(configText)) {
+    const n = normalizeRemote(url, top);
     if (n) out.add(n);
   }
   return [...out].sort();
+}
+
+/**
+ * A repository's name (20.6): the last part of its remote's path — `origin`'s, else the first one's —
+ * as a vault name. Null without a remote, or outside git.
+ */
+export function repositoryName(root: string): string | null {
+  const c = checkoutOf(root);
+  if (!c) return null;
+  let config = "";
+  try {
+    config = readRegular(join(c.common, "config"), SMALL_FILE).toString("utf8");
+  } catch {}
+  const urls = remoteUrls(config);
+  const pick = urls.find((u) => u.remote === "origin") ?? urls[0];
+  const n = pick ? normalizeRemote(pick.url, c.main ?? c.root) : null;
+  return n ? slugName(n.split("/").pop()!) || null : null;
 }
 
 /** The first commits of the checkout at `top` (git's answer), or none: no git, no commit yet. */

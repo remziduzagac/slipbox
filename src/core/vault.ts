@@ -13,7 +13,7 @@ import { parse as parseToml } from "smol-toml";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { VAULT_CONFIG_TEMPLATE } from "./config.ts";
-import { collectionOf, sameCollection } from "./collection.ts";
+import { collectionOf, repositoryName, sameCollection } from "./collection.ts";
 import { checkoutOf, inMain } from "./git.ts";
 import { readRegular } from "./fsutil.ts";
 import { cacheHome, stateHome, vaultKey } from "./paths.ts";
@@ -179,7 +179,9 @@ export function rootAt(root: string, file: string | null = null): VaultLocation 
   // A git vault has no `.slipbox/` to hold an id or a name, and none is made for it: it's keyed by
   // its path and named by its folder (a worktree reads its main checkout's, never writing).
   const ident = hasMarker(root) ? ensureIdentity(root, worktree?.mainVault ?? null) : worktree?.mainVault ? readIdentity(vaultConfigFile(worktree.mainVault)) : readIdentity(vaultConfigFile(root));
-  const loc: VaultLocation = { root, mode: "vault", file, key: "", id: ident.id, name: ident.name ?? implicitName(root), aliases: ident.aliases, previous_names: ident.previous_names, worktree };
+  // Its own name (20.6): what `.slipbox/` declares, else its repository's, else its folder's.
+  const name = ident.name ?? repositoryName(root) ?? implicitName(root);
+  const loc: VaultLocation = { root, mode: "vault", file, key: "", id: ident.id, name, aliases: ident.aliases, previous_names: ident.previous_names, worktree };
   const { key, movedHere } = instanceFor(loc);
   return { ...loc, key, ...(movedHere.length ? { movedHere } : {}) };
 }
