@@ -536,7 +536,7 @@ common, and the only reason they are step 0.
 
 ## LSP face — `11.x`
 
-*Phase 5. To be removed in phase 5b (`20.18`, decided 2026-10-02): with plain paths, editors' own servers follow the
+*Phase 5. To be removed in phase 5b (`20.23`, decided 2026-10-02): with plain paths, editors' own servers follow the
 links, and agents use the CLI.*
 
 | ID | Item |
@@ -587,34 +587,40 @@ source shown alike in every mode.*
 
 ## Plain paths, virtual vaults — `20.x` (phase 5b)
 
-*The design, and why, is `docs/idea.md`, "Plain paths, virtual vaults" (decided 2026-10-02). In order: the converter
-first, while today's resolution still exists to convert with; then vaults and the index; links, display and search
-on them; repairs, renames and git; the CLI, settings and state; the removals last.*
+*The design, and why, is `docs/idea.md`, "Plain paths, virtual vaults" (decided 2026-10-02, revised after a review).
+In order: link semantics, the migration and identity first; the index and what it shows second; repairs, the CLI and
+the merge review after; the removals as their replacements land, the sweep last.*
 
 | ID | Item |
 | --- | --- |
-| 20.1 | The converter: `[[…]]` rewritten as path links by today's rules, previewed; CLI and TUI; the demo vault |
-| 20.2 | Virtual vaults: the nearest `.slipbox/`, else the git checkout, else none; ids, short names, the vault table |
-| 20.3 | The index everywhere: the home folder in the background, skips; ignored and hidden files when needed |
-| 20.4 | Entries keyed by vault id and path (a loose file by its absolute path); parses shared by content hash |
-| 20.5 | Links are paths only: `[[…]]` no longer read; backlinks from every indexed file |
-| 20.6 | The `vault:path` form: link without text, hover, backlinks, pickers, results; the original paths on a key |
-| 20.7 | Completion offers `vault:path` and the full path, and writes the relative path |
-| 20.8 | The status line: the vault and its branch (`pathfinder · main`), a worktree as `pathfinder@refactor` |
-| 20.9 | The explorer's roots: the vault opened, vaults followed into, worktrees under theirs; roots never overlap |
-| 20.10 | Search by vault: the current one, then linked ones, then everything on a key; the CLI's `--scope` |
-| 20.11 | Repairs: changes made elsewhere fix the index; link fixes asked for, previewed; a moved vault's exactly |
-| 20.12 | Renames and moves on paths: the files linking in, and the moved file's own relative links |
-| 20.13 | Git: the links a merge would break, from both branches' objects; after one, fixes from git's renames |
-| 20.14 | The CLI takes and gives `vault:path`: diagnostics, backlinks, scoped search, link review, the link fix |
-| 20.15 | Settings: the nearest `.slipbox/config.toml`, then outer ones, then the user's; programs from the user's |
-| 20.16 | State keyed by vault id and path, a loose file's by its absolute path; today's state moved over once |
-| 20.17 | Removed: the home vault, the vault prompt, `[[vault:note]]`, resolving by name, the vault registry as is |
-| 20.18 | Removed: the LSP face (`slipbox lsp`, `src/lsp/`, `[lsp] lint`, the nvim setup); the client for code stays |
+| 20.1 | The converter: `[[…]]` and `/…` links rewritten as relative paths, labels kept, fragments checked; previewed |
+| 20.2 | Links are paths only: `[[…]]` not read; `/` the filesystem's root; a broken link stays so until repaired |
+| 20.3 | Vault boundaries: the nearest `.slipbox/` or git checkout; both in one folder, one vault; nested ones apart |
+| 20.4 | Collections apart from instances: local instance ids; remotes and first commits as evidence; plain folders |
+| 20.5 | Durable state: instances, their locations, confirmed moves; personal state by instance; today's moved once |
+| 20.6 | Names: short, unique here, `.` for a collision, a worktree's branch now (`@`) as display; never in a file |
+| 20.7 | Settings: the nearest `.slipbox/config.toml`, then outer ones, then the user's; programs from the user's only |
+| 20.8 | The index on demand: folders opened, links followed, CLI paths; ignored and hidden files when reached |
+| 20.9 | The background auto-index of the home folder: low priority, paused while working, resumable, can be off |
+| 20.10 | Freshness: sizes and times checked, folders listed again; coverage shown; a CLI refresh; drives unavailable |
+| 20.11 | The parse cache by content hash, parser version and settings; links and backlinks resolved per instance |
+| 20.12 | The `vault:path` form: link without text, hover, backlinks, pickers, results; the original paths on a key |
+| 20.13 | Completion offers `vault:path` and the full path, and writes the relative path |
+| 20.14 | The status line: the vault and its branch (`pathfinder · main`), a worktree as `pathfinder@refactor` |
+| 20.15 | The explorer's roots: the vault opened, vaults followed into, worktrees under theirs; never overlapping |
+| 20.16 | Search by vault: the current one, then linked ones, then everything on a key; the CLI's `--scope` |
+| 20.17 | Repairs: changes made elsewhere fix the index; link fixes as plans; a moved vault's from the state |
+| 20.18 | Generated edits as plans: tied to file hashes, stale ones refused; the CLI plans and applies in two steps |
+| 20.19 | Renames and moves on paths: the files linking in, and the moved file's own relative links |
+| 20.20 | The CLI: `vault:path` in and out; answers about files as saved; diagnostics, scoped search, the link fix |
+| 20.21 | The merge review: links broken in `git merge-tree`'s result; after a merge, git's renames as evidence |
+| 20.22 | Removed: the home vault, the vault prompt, `[[vault:note]]`, resolving by name, links through redirects |
+| 20.23 | Removed: the LSP face (`slipbox lsp`, `src/lsp/`, `[lsp] lint`, the nvim setup); the client for code stays |
 
-`20.1` comes first because it needs today's resolution, which `20.5` and `20.17` remove. `20.11`–`20.13` reuse
-today's rename and move engine (`7.1`–`7.3`, `17.12`, `17.15`) on paths. Each item ends with its tests listed for the
-user's approval before any is run.
+`20.1` comes before `20.2`: the converter needs today's resolution, which `20.2` and `20.22` remove. `20.17`–`20.19`
+reuse today's rename and move engine (`7.1`–`7.3`, `17.12`, `17.15`) on paths; `17.12`'s redirects become evidence
+for a repair. Performance (`20.11`) is measured, not assumed. Each item ends with its tests listed for the user's
+approval before any is run.
 
 ## Images — `12.x`
 

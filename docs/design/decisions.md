@@ -6,8 +6,9 @@ here.
 
 ## `0.10` — storage layout
 
-*To be superseded by `20.1` (decided 2026-10-02, not built): no home vault, state keyed by a virtual vault's id and
-path, a loose file's by its absolute path. Until then, this is how storage works.*
+*To be superseded by `20.x` (decided 2026-10-02, not built): no home vault; personal state by instance, kept with
+the instances and confirmed moves in the durable state; the cache shared by content. Until then, this is how
+storage works.*
 
 Four kinds of data, four places. Nothing derived ever lives in the vault. Revised 2026-09-30 by the vault design
 (`docs/idea.md`, "Vaults — decided 2026-09-30"; plan `17.3`).
@@ -114,8 +115,9 @@ interactions; the state they change, a note's text, is reached by `write`, `repl
 
 ## `1.4` — link resolution
 
-*To be superseded by `20.1` (decided 2026-10-02, not built): links become plain paths, wikilinks aren't read (a
-converter rewrites them), and nothing resolves by name. Until then, this is how links resolve.*
+*To be superseded by `20.x` (decided 2026-10-02, not built): links become plain paths, wikilinks aren't read (a
+converter rewrites them), nothing resolves by name, and a leading `/` is the filesystem's root. Until then, this is
+how links resolve.*
 
 One policy everywhere, never the filesystem's:
 
@@ -212,24 +214,29 @@ places. Unchanged by it: a vault's committed config never names a program to run
 `lint-command` are the user's config's only), so cloning a vault can't choose what runs; what the project's own
 tools do is the project's.
 
-## `20.1` — plain paths, virtual vaults
+## `20.x` — plain paths, virtual vaults
 
-Decided 2026-10-02 with the user; not built yet (plan `20.x`). The model in full is `docs/idea.md`, "Plain paths,
-virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault; every root a `.slipbox/`), `1.4`'s
-name resolution, `0.10`'s keys, the LSP face (`11.x`), and `17.20` below. In short:
+Decided 2026-10-02 with the user, revised the same day after a review; not built yet (plan `20.x`). The model in full
+is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault;
+every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the
+LSP face (`11.x`), and `17.20` below. In short:
 
-- **Links are plain paths** — relative (written so), `~/`, absolute (`/` is the filesystem's root), `file://`. A link
-  resolves without the index. Wikilinks aren't read until a compatibility layer exists; a one-time converter rewrites
-  them as paths, previewed.
-- **Vaults are virtual:** a file's is the nearest `.slipbox/`, else its git checkout, else none. Stable ids (a
-  `.slipbox/`'s written once; a repository's from its remote, else its first commit), short display names unique on
-  the machine (`.` to qualify a collision, `@branch` for a worktree), never written into files. `vault:path` is on
-  screen, in completion and in the CLI only.
-- **The index is a cache** of everything under the home folder (skips, ignored and hidden files on demand, other
-  places when opened or linked), keyed by vault id and path; backlinks derived from it, never stored. It decides no
-  link's target.
-- **Repairs:** the index repairs itself after changes made elsewhere; file edits are asked for and previewed. Before a
-  merge, the links it would break are reported; after one, git's renames give the fixes.
+- **Links are plain paths** — relative (written so), `~/`, absolute (`/` is the filesystem's root), `file://`.
+  Relative links within a repository are portable; the others depend on the machine's layout. A link resolves without
+  the index, and a broken one stays broken until repaired. Wikilinks aren't read until a compatibility layer exists;
+  a one-time converter rewrites them, and today's `/…` links, as relative paths, previewed.
+- **Vaults are virtual:** a file's is its nearest boundary — `.slipbox/` or a git checkout, one vault when both share
+  a folder; a plain folder opened is an unnamed instance. **Collections** (a `.slipbox/` id; a repository, recognised
+  by its remote or first commit) are apart from **instances** (a clone, a worktree, a folder: a local id with personal
+  state). Names are display: short, unique here, `.` for a collision, a worktree's branch shown with `@`; never in a
+  file — `vault:path` is on screen, in completion and in the CLI.
+- **The index is a cache, history is state.** On demand carries the load (folders opened, links followed, CLI paths);
+  a background auto-index of the home folder fills in. Freshness is checked by each file's size and time; coverage is
+  shown, and the CLI can refresh. Parsed content is shared by content hash, parser version and settings; links and
+  backlinks are resolved per instance. Instances, their locations and confirmed moves are durable state.
+- **Generated edits are plans,** tied to file hashes, refused when stale; the CLI plans and applies in two steps.
+  Changes made elsewhere repair the index; file fixes are asked for. Before a merge, `git merge-tree`'s result is
+  checked for broken links; after one, git's renames are evidence for fixes. Hooks are opt-in.
 - **Search** ranks the current vault, then linked vaults, then everything on a key (`--scope vault|linked|all`).
 - **Settings,** deeper over broader: the nearest `.slipbox/config.toml`, outer ones, the user's; programs from the
   user's own config only.
@@ -237,7 +244,7 @@ name resolution, `0.10`'s keys, the LSP face (`11.x`), and `17.20` below. In sho
 
 ## `17.20` — a folder is enough: scope, settings and identity apart
 
-*Superseded the same day by `20.1` above, before any of it was built: links are paths and vaults virtual, rather than
+*Superseded the same day by `20.x` above, before any of it was built: links are paths and vaults virtual, rather than
 a folder's scope deciding what a name means. Kept as a record of the step between.*
 
 Decided 2026-10-02, revising `17.18` (every root has a `.slipbox/`) and `17.2` (loose files in the home vault). Not
@@ -286,7 +293,7 @@ opened.
 
 ## `11.1` — the protocol library, both ways
 
-*The server's half goes with the LSP face (`20.1`, decided 2026-10-02, not built): `vscode-languageserver` stays only
+*The server's half goes with the LSP face (`20.23`, decided 2026-10-02, not built): `vscode-languageserver` stays only
 for the tests' fake server. The client's half — `vscode-languageserver-protocol`, for code — stays.*
 
 `vscode-languageserver` (10.1, the server's side) and `vscode-languageserver-protocol` (3.18, the client's: the
