@@ -7267,6 +7267,27 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(h.app.messages.at(-1)?.text).toBe("nothing seems to have moved here");
   });
 
+  test("a move confirmed: the links it broke, their fix previewed at once (20.17)", async () => {
+    const { locateVault } = await import("../src/core/vault.ts");
+    const base = mkdtempSync(join(sandbox, "mvfix-"));
+    const a = join(base, "v");
+    mkdirSync(join(a, ".slipbox"), { recursive: true });
+    writeFileSync(join(a, ".slipbox", "config.toml"), `[vault]\nid = "${basename(base).replace(/[^a-z0-9]/gi, "")}"\nname = "mvfix${basename(base).slice(-6).replace(/[^a-z0-9]/gi, "")}"\n`);
+    writeFileSync(join(a, "n.md"), "# N\n\n[s](../shared.md)\n");
+    writeFileSync(join(base, "shared.md"), "# Shared\n");
+    locateVault({ path: a });
+    const moved = join(base, "deep", "v");
+    mkdirSync(dirname(moved), { recursive: true });
+    renameSync(a, moved);
+    const h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
+    expect((h.app.overlay as ListOverlay).title).toContain("did it move here?");
+    await h.keys("enter");
+    expect(h.app.overlay?.kind).toBe("list");
+    expect(JSON.stringify((h.app.overlay as ListOverlay).items)).toContain("../../shared.md");
+    await h.keys("enter"); // applied
+    expect(readFileSync(join(moved, "n.md"), "utf8")).toBe("# N\n\n[s](../../shared.md)\n");
+  });
+
   test("a clone is a copy of the same collection: listed with it, by its name and branch (20.4)", async () => {
     const l = layout();
     if (!l) return;

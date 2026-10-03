@@ -321,7 +321,8 @@ where it stopped, and a pass done, the next is a day later. `[index] background 
 **A vault moved** (`20.5`): opened where it wasn't seen before, while a copy of it is gone from where it was (seen
 last before this one appeared), the TUI asks "`<name>` was elsewhere before — did it move here?": `Moved here from
 <path>` takes that copy's instance — its reading positions, sessions and scratch, the vault opened again with them —
-and the instance made here meanwhile goes; `No: a copy of its own` isn't asked again; `esc` asks next time.
+and the instance made here meanwhile goes — then, if the move broke links in or out of it, their fix, previewed
+(`relink`'s, `20.17`); `No: a copy of its own` isn't asked again; `esc` asks next time.
 `:vault-moved` (`vault.moved`) asks again. A worktree `git worktree move` took elsewhere is found by git's name for it,
 without asking.
 **The launcher:** slipbox opened on a loose folder without a file (`slipbox ~`) shows this list at

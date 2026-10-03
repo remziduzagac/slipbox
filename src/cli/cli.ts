@@ -1143,7 +1143,10 @@ const HANDLERS: Record<string, Handler> = {
     }
     const moved = confirmMove(v, s.loc.root, s.loc.key);
     removeStorage(s.loc.key);
-    return { data: { moved: shown(moved), from: v.path, to: s.loc.root }, human: `moved: ${v.path} → ${s.loc.root} — its positions, sessions and scratch are this copy's now\n` };
+    // The links its move broke, in and out of it (20.17): counted, for relink to fix.
+    const broken = planRelink(openVault(s.loc.root)).files.reduce((n, f) => n + f.edits.length, 0);
+    const fix = broken ? ` — its move broke links on ${broken} line${broken === 1 ? "" : "s"}: slipbox relink fixes them (--dry-run shows how)` : "";
+    return { data: { moved: shown(moved), from: v.path, to: s.loc.root, broken }, human: `moved: ${v.path} → ${s.loc.root} — its positions, sessions and scratch are this copy's now${fix}\n` };
   },
 
   vaults() {

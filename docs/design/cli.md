@@ -365,7 +365,11 @@ refused when something is there now. `slipbox cp` copies a note, file or folder,
 and refused): `[vault] name` in its config, the old name added to its
 `previous_names`; links are paths, which a vault's name doesn't change. `slipbox relink [note]` rewrites the links of
 a note (or every note) that reach nothing but whose file was seen to move (`17.12`) — broken, since a move never
-resolves a link (`20.2`) — to its path now. Both take `--dry-run`.
+resolves a link (`20.2`) — to its path now. For every note, it also fixes what the vault's own last confirmed move
+broke (`20.17`), from what the state knows of where it was: its links out by a path, now reaching nothing, to where
+they reached from there; and the other vaults' links into where it was (as of their index) to where it is — each in
+its own form (relative, `~/`, absolute), a link that still reaches something left alone. `vault-moved` says how many
+lines that is (`broken`). Both take `--dry-run`.
 
 `slipbox convert-links [note]` (plan `20.1`) makes a note's links — or every note's — plain paths, once, by today's
 resolution rules: each `[[…]]` a relative markdown link (`![[…]]` an image-syntax one, which still embeds a note),

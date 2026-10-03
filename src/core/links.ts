@@ -221,6 +221,24 @@ export function pathForm(target: string): PathForm | null {
  * A markdown link's path is percent-decoded; a wikilink's without an extension names a note
  * (`.md`, `.markdown`). Null when it isn't a path form, or names no file.
  */
+/**
+ * The file a path link names, there or not (20.17: where a moved vault's files were): its form and
+ * absolute path, read as `pathLink` reads it but without asking the disk.
+ */
+export function pathNamed(target: string, linkingAbs: string): { form: PathForm; abs: string } | null {
+  const form = pathForm(target);
+  if (!form) return null;
+  if (form === "file-url") {
+    try {
+      return { form, abs: decodeURIComponent(new URL(target).pathname) };
+    } catch {
+      return null;
+    }
+  }
+  const raw = decodeSafe(target);
+  return { form, abs: form === "home" ? join(homeDir(), raw.slice(2)) : form === "absolute" ? raw : resolve(dirname(linkingAbs), raw) };
+}
+
 export function pathLink(target: string, linkingAbs: string, wiki: boolean, rebase?: { from: string; to: string }): { form: PathForm; abs: string } | null {
   const form = pathForm(target);
   if (!form) return null;

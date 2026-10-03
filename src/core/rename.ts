@@ -12,7 +12,7 @@ import { classify } from "./filetypes.ts";
 import { atomicWrite, landsInside, readText } from "./fsutil.ts";
 import type { Backlink, Graph, LinkKind, NoteEntry } from "./graph.ts";
 import { VAULT_LINK } from "./graph.ts";
-import { formatPathLink, normKey, pathForm, pathLink } from "./links.ts";
+import { formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
 import { slugify } from "./parse.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
@@ -710,8 +710,66 @@ export function planRelink(g: Graph, rels?: string[]): RenamePlan {
       c.edit(site, mdTarget(l.target, abs, join(g.root, to), g), null);
     }
   }
+  // The whole vault: the links its own move broke, too (20.17).
+  const moved = rels ? null : lastMove(g);
+  if (moved) vaultMoveFixes(g, moved, c);
   const files = c.result();
   return { kind: "relink", from: rels?.join(", ") ?? "every note", to: "", move: null, files, warnings: dirtyTrees(files.map((f) => f.abs)), skipped: c.skipped };
+}
+
+/** This vault's last confirmed move to where it is now (20.5), if it has one. */
+function lastMove(g: Graph): string | null {
+  const entry = readRegistry().find((v) => v.kind === "vault" && v.key === g.loc.key);
+  const m = entry?.moved?.filter((x) => x.to === g.root).at(-1);
+  return m && m.from !== g.root ? m.from : null;
+}
+
+/**
+ * The links a vault's move broke (20.17), fixed from what the state knows — where it was (`from`) and
+ * is now — rather than guessed: its own links out of it by a path from where it was, now reaching
+ * nothing, to where they reached from there; and the links into where it was, in the other vaults
+ * this machine knows (as of their index), to where it is. Each in its own form (relative, `~/`,
+ * absolute).
+ */
+function vaultMoveFixes(g: Graph, from: string, c: Collector): void {
+  const to = g.root;
+  const pathOf = (target: string) => {
+    const p = target.split("#")[0]!;
+    return p && !/^[a-z][a-z0-9+.-]*:/i.test(p) ? p : null;
+  };
+  // In its own form, reaching `abs` from `linking`: the fragment kept, encoded as written.
+  const retarget = (written: string, form: PathForm, abs: string, linking: string) => {
+    const hash = written.indexOf("#");
+    const path = hash >= 0 ? written.slice(0, hash) : written;
+    let next = formatPathLink(form, abs, linking, true);
+    if (form !== "file-url" && (/%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(next))) next = encodeURI(next);
+    return next + (hash >= 0 ? written.slice(hash) : "");
+  };
+  for (const rel of g.notes.keys()) {
+    for (const l of g.linksOf(rel)) {
+      if ((l.kind !== "markdown" && l.kind !== "image") || !pathOf(l.target) || l.target.startsWith("/") || l.target.startsWith("~/")) continue;
+      if (g.resolveLink(l, rel).resolvedKind !== "unresolved") continue;
+      const was = pathNamed(pathOf(l.target)!, join(from, rel));
+      if (!was || isInside(from, was.abs) || !existsSync(was.abs)) continue;
+      c.edit({ abs: join(to, rel), kind: l.kind, target: l.target, line: l.line, column: l.column }, retarget(l.target, was.form, was.abs, join(to, rel)), null);
+    }
+  }
+  for (const v of readRegistry()) {
+    if (v.kind !== "vault" || v.path === to || isInside(to, v.path) || !existsSync(v.path)) continue;
+    const og = g.reach?.graphAt(v.path) ?? null;
+    if (!og) continue;
+    for (const rel of og.notes.keys()) {
+      const linking = join(og.root, rel);
+      for (const l of og.linksOf(rel)) {
+        if ((l.kind !== "markdown" && l.kind !== "image") || !pathOf(l.target)) continue;
+        const was = pathNamed(pathOf(l.target)!, linking);
+        if (!was || !isInside(from, was.abs) || existsSync(was.abs)) continue;
+        const now = join(to, relative(from, was.abs));
+        if (!existsSync(now)) continue;
+        c.edit({ abs: linking, kind: l.kind, target: l.target, line: l.line, column: l.column }, retarget(l.target, was.form, now, linking), g.reach?.vaultOf(og.root) ?? null);
+      }
+    }
+  }
 }
 
 // -------------------------------------------------------------------------------------------

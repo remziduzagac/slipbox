@@ -65,7 +65,7 @@ import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
 import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusLater, worktreeList } from "../core/gitops.ts";
 import { diffLines, diffRows } from "../core/merge.ts";
 import { planConvert } from "../core/convert.ts";
-import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
+import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
 import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
@@ -7235,6 +7235,8 @@ export class App {
     // Into its instance, as a switch is; this copy's own storage goes once nothing writes to it.
     if (this.switchVault(rootAt(this.loc.root), open, undefined, { back: true })) removeStorage(fresh);
     this.message("info", `moved here from ${from.path}: its reading positions, sessions and scratch came along`);
+    // The links the move broke, in and out of it (20.17): their fix, previewed — never written unasked.
+    if (planRelink(this.graph).files.length) this.previewRename(() => planRelink(this.graph));
   }
 
   /** Make `dir` a vault and go into it, the note open (17.18). */

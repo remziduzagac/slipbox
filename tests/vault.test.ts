@@ -3,7 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { cpSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { CLI_COMMANDS, runCli } from "../src/cli/cli.ts";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
@@ -3342,5 +3342,61 @@ describe("search by vault (20.16)", () => {
     expect(hit).toMatchObject({ abs: join(at("b"), "b-note.md"), path: "b-note.md", line: 3 });
     expect(files(await cli(["search", "narwhal", "--scope", "all"], at("a")))).toContain(`d${tag}:d-note.md`);
     expect((await cli(["search", "narwhal", "--scope", "near"], at("a"))).code).toBe(2);
+  });
+});
+
+describe("repairs from what the state knows (20.17)", () => {
+  test("a vault moved: relink fixes its links out by a path, and the other vaults' links into it, each in its form", async () => {
+    const out: string[] = [];
+    const cli = async (args: string[], cwd: string) => {
+      out.length = 0;
+      const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+      return { code, json: JSON.parse(out.join("")) };
+    };
+    const base = mkdtempSync(join(tmpdir(), "slipbox-repair-"));
+    const tag = basename(base).replace(/[^a-z0-9]/gi, "");
+    const [a, b, c] = ["a", "b", "c"].map((v) => join(base, "x", v)) as [string, string, string];
+    for (const [v, dir] of [["a", a], ["b", b], ["c", c]] as const) {
+      mkdirSync(dir, { recursive: true });
+      await cli(["init", dir, "--name", `${v}${tag}`], dir);
+    }
+    writeFileSync(join(a, "t.md"), "# T\n");
+    writeFileSync(join(a, "out.md"), "[n](../b/n.md#top) and [in](t.md)\n\n[near](../near.md)\n");
+    writeFileSync(join(base, "x", "near.md"), "# Near, by the old place\n");
+    writeFileSync(join(b, "n.md"), "# Top\n");
+    writeFileSync(join(c, "in.md"), `[t](../a/t.md) [abs](${a}/t.md)\n`);
+    for (const dir of [a, b, c]) await cli(["ls"], dir);
+    // Moved by hand, deeper; opened there and confirmed: its move broke links on two lines (three links).
+    const moved = join(base, "y", "deeper", "a");
+    mkdirSync(dirname(moved), { recursive: true });
+    // A link out that reaches something where it's gone too: not broken, so not touched.
+    writeFileSync(join(base, "y", "deeper", "near.md"), "# Near, by the new place\n");
+    renameSync(a, moved);
+    await cli(["ls"], moved);
+    const confirmed = await cli(["vault-moved", a], moved);
+    expect(confirmed.json.data.broken).toBe(2);
+    const dry = await cli(["relink", "--dry-run"], moved);
+    const edits = dry.json.data.files.flatMap((f: { abs: string; edits: { before: string; after: string }[] }) => f.edits.map((e) => [relative(base, f.abs), e.before, e.after]));
+    expect(edits.sort()).toEqual(
+      [
+        ["x/c/in.md", `[t](../a/t.md) [abs](${a}/t.md)`, `[t](../../y/deeper/a/t.md) [abs](${moved}/t.md)`],
+        ["y/deeper/a/out.md", "[n](../b/n.md#top) and [in](t.md)", "[n](../../../x/b/n.md#top) and [in](t.md)"],
+      ].sort(),
+    );
+    expect(readFileSync(join(c, "in.md"), "utf8")).toBe(`[t](../a/t.md) [abs](${a}/t.md)\n`); // only shown so far
+    expect((await cli(["relink"], moved)).code).toBe(0);
+    expect(readFileSync(join(moved, "out.md"), "utf8")).toBe("[n](../../../x/b/n.md#top) and [in](t.md)\n\n[near](../near.md)\n");
+    expect(readFileSync(join(c, "in.md"), "utf8")).toBe(`[t](../../y/deeper/a/t.md) [abs](${moved}/t.md)\n`);
+    // Fixed: nothing more to do.
+    expect((await cli(["relink", "--dry-run"], moved)).json.data.files).toEqual([]);
+    // Moved again: the last move is the one to read from.
+    const again = join(base, "z", "a");
+    mkdirSync(dirname(again), { recursive: true });
+    renameSync(moved, again);
+    await cli(["ls"], again);
+    await cli(["vault-moved", moved], again);
+    expect((await cli(["relink"], again)).code).toBe(0);
+    expect(readFileSync(join(again, "out.md"), "utf8").split("\n")[0]).toBe("[n](../../x/b/n.md#top) and [in](t.md)");
+    expect(readFileSync(join(c, "in.md"), "utf8")).toBe(`[t](../../z/a/t.md) [abs](${again}/t.md)\n`);
   });
 });
