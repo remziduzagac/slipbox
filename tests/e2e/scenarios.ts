@@ -1443,6 +1443,43 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 
+  {
+    name: "git: space g m — a merge's broken links before it, each fix said; after it, git's rename says where a file went (20.21)",
+    run: async (s) => {
+      const git = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", s.vault, ...args]);
+      if (git("init", "-q", "-b", "main").exitCode !== 0) return; // no git here
+      git("add", "-A");
+      git("commit", "-q", "-m", "the demo");
+      // refactor renames Kenji's note, every link to it fixed — as slipbox's mv does.
+      git("checkout", "-q", "-b", "refactor");
+      s.expect(s.cli("mv", "people/kenji-mori.md", "people/kenji.md").code === 0, "slipbox mv ran");
+      git("add", "-A");
+      git("commit", "-q", "-m", "kenji renamed");
+      git("checkout", "-q", "main");
+      // Meanwhile main gains a note linking to it where it was.
+      s.write("late-note.md", "# Late\n\nAsk [Kenji](people/kenji-mori.md) about Aster.\n");
+      git("add", "-A");
+      git("commit", "-q", "-m", "a late note");
+      await s.status(/ · main/, 5000);
+      await leader(s, "g", "m");
+      await s.see("Review a merge — enter: the links it would break");
+      await s.see("refactor → main");
+      await s.keys("enter");
+      await s.see("Merging refactor into main: 1 link would break");
+      await s.see("late-note.md:3  people/kenji-mori.md");
+      await s.see("refactor moves people/kenji-mori.md to people/kenji.md"); // the fix after it, cut at the list's width
+      await s.keys("enter");
+      await s.status("late-note.md");
+      // Merged: git's rename is evidence here — the link says where its file went; space l r fixes it.
+      git("merge", "-q", "--no-edit", "refactor");
+      await s.message("branch main moved on: git moved 1 file", 8000);
+      await leader(s, "l", "r");
+      await s.see("relink: 1 change in 1 file", 5000);
+      await s.keys("enter");
+      await s.file("late-note.md", (t) => t.includes("Ask [Kenji](people/kenji.md) about Aster."), "the link relinked");
+    },
+  },
+
   // --- vaults (17.x) ----------------------------------------------------------------------------
   {
     name: "vaults: a path into another vault switches into it and back; a broken one; the list; a nested vault",

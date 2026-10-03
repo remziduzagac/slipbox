@@ -3747,6 +3747,9 @@ describe("the merge review (20.21)", () => {
     git(root, "commit", "-q", "-am", "moved");
     git(root, "checkout", "-q", "main");
     await cli(["ls"], root); // seen on main, as it was
+    git(root, "checkout", "-q", "elsewhere");
+    await cli(["ls"], root); // and on elsewhere: each branch's place kept apart
+    git(root, "checkout", "-q", "main");
     git(root, "merge", "-q", "--ff-only", "elsewhere"); // a pull, as far as this copy can tell
     git(root, "pack-refs", "--all"); // the branch's commit in packed-refs only
     const p = (await cli(["problems"], root)).json.data;
@@ -3755,6 +3758,34 @@ describe("the merge review (20.21)", () => {
     expect(openVault(root).redirects?.all()["a.md"]).toMatchObject({ to: "docs/a.md", by: expect.stringMatching(/^[0-9a-f]{7}\.\.[0-9a-f]{7}$/) });
     await cli(["relink"], root);
     expect(readFileSync(join(root, "b.md"), "utf8")).toBe("# B\n\n[a](docs/a.md)\n");
+  });
+
+  test("a repository appearing while it's watched: where its branch is, seen at once — its next merge has a before", async () => {
+    const { VaultFeed } = await import("../src/core/vault-feed.ts");
+    const { checkoutOf } = await import("../src/core/git.ts");
+    const { openVault } = await import("../src/core/reach.ts");
+    const root = mkdtempSync(join(tmpdir(), "slipbox-appear-"));
+    put(root, ".slipbox/config.toml", `[vault]\nid = "ap${basename(root).replace(/[^a-z0-9]/gi, "")}"\nname = "appear"\n`);
+    put(root, "a.md", "# A\n\nThe first note, long enough for git to know it again when it moves.\n");
+    put(root, "b.md", "# B\n\n[a](a.md)\n");
+    const g = openVault(root);
+    let c: ReturnType<typeof checkoutOf> = null;
+    const heard: [string, string][][] = [];
+    const feed = new VaultFeed({ checkout: () => c, graph: () => g, now: () => Date.now(), apply: () => {}, headMoved: (_was, _now, moves) => heard.push(moves) });
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    c = checkoutOf(root);
+    expect(feed.checkHead()).toBe(true); // it appeared: nothing moved, but where main is, kept
+    expect(heard).toEqual([]);
+    git(root, "checkout", "-q", "-b", "elsewhere");
+    mkdirSync(join(root, "docs"));
+    git(root, "mv", "a.md", "docs/a.md");
+    git(root, "commit", "-q", "-m", "moved");
+    git(root, "checkout", "-q", "main");
+    git(root, "merge", "-q", "--ff-only", "elsewhere");
+    expect(feed.checkHead()).toBe(true);
+    expect(heard).toEqual([[["a.md", "docs/a.md"]]]);
   });
 
   test("a branch switch isn't a merge: what only the other branch moved is no move here", async () => {

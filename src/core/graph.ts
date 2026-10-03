@@ -473,35 +473,41 @@ export class Graph {
   }
 
   /**
-   * After a merge or a pull (20.21): HEAD moved on its branch since this copy last looked, so git's
-   * renames between the two commits — paired by similarity — are evidence of moves, recorded as
-   * redirects by that change: a broken link to a renamed file then says where it went, and the relink
-   * fixes it. A branch switch isn't: a file only one branch has comes and goes, and nothing moved.
-   * HEAD as seen is kept per copy (its state). Returns the moves recorded, vault paths old → new.
+   * After a merge or a pull (20.21): a branch moved since this copy last saw it, so git's renames
+   * between the two commits — paired by similarity — are evidence of moves, recorded as redirects by
+   * that change: a broken link to a renamed file then says where it went, and the relink fixes it.
+   * The last commit seen is kept per branch, per copy (its state): a branch switch compares a branch
+   * with itself, never with another — a file only one branch has comes and goes, and nothing moved.
+   * Returns the moves recorded, vault paths old → new.
    */
   catchUpWithGit(): [string, string][] {
     if (this.loc.mode !== "vault") return [];
     const c = checkoutOf(this.root);
-    if (!c) return [];
-    const now = { branch: headOf(c).branch, commit: headCommit(c) };
-    const file = join(stateDir(this.loc), "head.json");
-    const seen = readJson<{ branch?: string | null; commit?: string | null } | null>(file, null);
-    if (seen?.branch === now.branch && seen?.commit === now.commit) return [];
+    const branch = c ? headOf(c).branch : null;
+    const commit = c ? headCommit(c) : null;
+    if (!c || !branch || !commit) return [];
+    const file = join(stateDir(this.loc), "heads.json");
+    const seen = readJson<{ version?: number; branches?: Record<string, string> } | null>(file, null)?.branches ?? {};
+    const was = seen[branch];
+    if (was === commit) return [];
     const moves: [string, string][] = [];
-    if (seen?.commit && now.commit && now.branch && seen.branch === now.branch) {
-      for (const f of changedBetween(c, seen.commit, now.commit) ?? []) {
+    if (was) {
+      for (const f of changedBetween(c, was, commit) ?? []) {
         const from = f.from ? inVault(c, this.root, f.from) : null;
         const to = inVault(c, this.root, f.path);
         if (f.state === "renamed" && from && to) moves.push([from, to]);
       }
       if (moves.length) {
-        this.redirects?.add(moves, new Date(), `${seen.commit.slice(0, 7)}..${now.commit.slice(0, 7)}`);
+        this.redirects?.add(moves, new Date(), `${was.slice(0, 7)}..${commit.slice(0, 7)}`);
         this.problemCache = null;
       }
     }
+    // The newest last: a long-lived copy's branches, as many as it has had lately.
+    delete seen[branch];
+    const kept = Object.entries(seen).slice(-199);
     try {
       ensureDir(stateDir(this.loc));
-      writeJson(file, { branch: now.branch, commit: now.commit });
+      writeJson(file, { version: 1, branches: Object.fromEntries([...kept, [branch, commit]]) });
     } catch {}
     return moves;
   }

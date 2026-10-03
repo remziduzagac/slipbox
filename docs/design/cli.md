@@ -319,12 +319,13 @@ there, and wasn't broken in `--into`, comes with its `cause`:
 `conflicts` are the files git couldn't merge. Committed work only: what isn't committed is in neither branch. A branch
 or commit that isn't there is exit 3.
 
-**After a merge or a pull** — HEAD moved on its branch since this copy last looked, as each command and the TUI check
-— git's renames between the two commits are evidence of moves (`17.12`'s redirects, each kept with the commits it came
-between). A link broken by one says so: `problems` gives it `moved` (where the file is now) and the reason `moved to …
-— relink fixes it`, `diagnostics` the same, and `slipbox relink` fixes it. A branch switch isn't evidence: a file only
-one branch has comes and goes, and nothing moved. Git pairs a move by similarity, so a file also rewritten in the same
-change may not be paired: then the link is just broken, the target yours to pick.
+**After a merge or a pull** — a branch moved on since this copy last saw it (each command and the TUI look; the last
+commit seen is kept per branch, per copy) — git's renames between the two commits are evidence of moves (`17.12`'s
+redirects, each kept with the commits it came between). A link broken by one says so: `problems` gives it `moved`
+(where the file is now) and the reason `moved to … — relink fixes it`, `diagnostics` the same, and `slipbox relink`
+fixes it. A branch is only ever compared with itself: a switch isn't evidence — a file only one branch has comes and
+goes, and nothing moved. Git pairs a move by similarity, so a file also rewritten in the same change may not be
+paired: then the link is just broken, the target yours to pick.
 
 ## Search (plans `6.1`–`6.8`)
 

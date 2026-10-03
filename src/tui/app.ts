@@ -669,7 +669,7 @@ export class App {
         this.applyChanges(b);
         this.host.requestRender();
       },
-      headMoved: (was, now) => this.headMoved(was, now),
+      headMoved: (was, now, moves) => this.headMoved(was, now, moves),
       gitNews: () => this.refreshGit(),
     });
     this.ui = uiDefaults(opts.config);
@@ -1614,11 +1614,10 @@ export class App {
     });
   }
 
-  private headMoved(was: { branch: string | null; commit: string | null }, now: { branch: string | null; commit: string | null }): void {
+  private headMoved(was: { branch: string | null; commit: string | null }, now: { branch: string | null; commit: string | null }, moves: [string, string][] = []): void {
     const name = (h: typeof now) => (h.branch ? `branch ${h.branch}` : `a detached HEAD (${h.commit?.slice(0, 7) ?? "?"})`);
     // HEAD moved on its branch — a merge, a pull, a commit — is no switch (20.21): git's renames since
-    // are evidence of moves, so a link broken by one says where its file went.
-    const moves = this.graph.catchUpWithGit();
+    // (`moves`, taken as evidence) let a link broken by one say where its file went.
     if (was.branch && was.branch === now.branch) {
       const n = moves.length;
       if (n) this.message("info", `${name(now)} moved on: git moved ${n} file${n === 1 ? "" : "s"} — links to ${n === 1 ? "it" : "them"} say where (space v p); space l r relinks a note's`);

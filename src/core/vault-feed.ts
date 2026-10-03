@@ -72,8 +72,9 @@ export interface FeedOptions {
   now: () => number;
   /** The batches held so far, as one: apply it (with `applyToGraph`, then whatever the face does). */
   apply: (batch: WatchBatch) => void;
-  /** HEAD moved from one place to another (not a repository appearing or going). */
-  headMoved?: (was: Head, now: Head) => void;
+  /** HEAD moved from one place to another (not a repository appearing or going); `moves`: git's
+   *  renames the graph took as evidence, if the branch moved on (20.21). */
+  headMoved?: (was: Head, now: Head, moves: [string, string][]) => void;
   /** Anything git did: HEAD moved, or files changed. */
   gitNews?: () => void;
   /** Whether git holds its index lock, when the face looks it up its own way. */
@@ -151,9 +152,11 @@ export class VaultFeed {
     this.head = now;
     if (now?.branch === was?.branch && now?.commit === was?.commit) return false;
     this.o.gitNews?.();
+    // Where each branch is, seen (20.21): a repository appearing too — so its next merge has a "before".
+    const moves = now ? this.o.graph().catchUpWithGit() : [];
     if (!now || !was) return true;
     this.switchedAt = this.o.now();
-    this.o.headMoved?.(was, now);
+    this.o.headMoved?.(was, now, moves);
     return true;
   }
 
