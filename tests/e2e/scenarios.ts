@@ -1492,7 +1492,7 @@ export const SCENARIOS: Scenario[] = [
       // A backlink from the other vault: home's list has app's links.md.
       await open(s, "home");
       await leader(s, "l", "b");
-      await s.see("e2eapp: links.md");
+      await s.see("e2eapp:links.md");
       await s.keys("escape");
       // The nested vault in the explorer, with its name.
       await leader(s, "e");
@@ -1530,8 +1530,8 @@ export const SCENARIOS: Scenario[] = [
       await s.see("Halden Ridge Observatory");
       // home's backlinks: from both nested vaults.
       await leader(s, "l", "b");
-      await s.see("outreach: index.md");
-      await s.see("outreach-school-visits: index.md");
+      await s.see("outreach:index.md");
+      await s.see("outreach-school-visits:index.md");
       await s.keys("escape");
       await leader(s, "e");
       await s.see("outreach");
