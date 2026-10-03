@@ -1180,6 +1180,7 @@ export function registerActions(app: App): void {
     "git.changes": (a) => a.openChanges(),
     "git.diff": (a) => a.openGitDiff(),
     "git.worktrees": (a) => a.openWorktrees(),
+    "git.merge_review": (a) => a.openMergeReview(),
     "find.vault": (a, arg) => {
       const run = (query: string) => {
         if (!query.trim()) return;

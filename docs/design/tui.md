@@ -1169,6 +1169,16 @@ Both switches are UI settings (`space u u`), remembered as the others are.
   removed lines red, added green (`diff_del`, `diff_add`, `diff_head`). `enter` on a line goes there.
 - **`space g w`** (`:worktrees`): the repository's checkouts — the main one first, this one marked `●` — each by its
   branch. `enter` switches into the vault there, at the same note when that branch has it.
+- **`space g m`** (`:merge-review`, `20.21`): before a merge, the links it would break. A merge picked — this branch
+  into the base, or another branch into this one — and git's tentative result is checked (`slipbox merge-review`): each
+  broken link by its note and line, what broke it ("`main` moves `a.md` to `docs/a.md` — the fix: `docs/a.md`"),
+  yellow when there's a fix, red when there isn't. `enter` goes to the link (a note only the other branch has, said
+  so); `esc` comes back to the branches. Nothing broken, a message says so.
+
+**After a merge or a pull** (`20.21`): HEAD moving on its branch isn't a switch — the tabs stay. Git's renames between
+the two commits are evidence of moves; when there are some, a message says so ("branch main moved on: git moved 2
+files — …"), and each link broken by one says where its file went, in Problems (`space v p`) and when followed;
+`space l r` relinks a note's.
 
 A jump to a line inside a rendered paragraph (a diff's line, a conflict, a finding, `:42` and `ctrl+g`) lands on that
 line's text, not the paragraph's first line or its row's end.

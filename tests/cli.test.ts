@@ -564,6 +564,9 @@ describe("the vault and the tool", () => {
     expect(slipbox(["diff", "plan.md"], { cwd: dir }).out).toBe("@@ line 3\n  # Plan\n  \n- first\n+ second\n");
     expect(slipbox(["worktrees", "--json"], { cwd: dir }).json.data).toMatchObject([{ path: dir, branch: "feat", main: true, current: true }]);
     expect(slipbox(["changed", "--base", "nope"], { cwd: dir }).code).toBe(3);
+    // Before a merge (20.21): what merging feat into main would break — committed work only.
+    git("commit", "-q", "-am", "second");
+    expect(slipbox(["merge-review", "feat", "--into", "main"], { cwd: dir }).out).toBe("merging feat into main: no link would break\n");
   });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);

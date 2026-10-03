@@ -613,7 +613,7 @@ the merge review after; the removals as their replacements land, the sweep last.
 | 20.18 | **Done.** Generated edits as plans: tied to file hashes, stale ones refused; the CLI plans, then applies |
 | 20.19 | **Done.** Renames and moves on paths: the files linking in, and the moved file's own relative links |
 | 20.20 | **Done.** The CLI: `vault:path` in and out (`href` to write); files as saved; diagnostics, search, fixes |
-| 20.21 | The merge review: links broken in `git merge-tree`'s result; after a merge, git's renames as evidence |
+| 20.21 | **Done.** The merge review: links `git merge-tree`'s result breaks; after a merge, git's renames as evidence |
 | 20.22 | Removed: the home vault, `[[vault:note]]`, resolving by name, links through redirects (the prompt: `20.3`) |
 | 20.23 | **Done.** Removed: the LSP face (`slipbox lsp`, `src/lsp/`, `[lsp] lint`, the nvim setup); the client stays |
 

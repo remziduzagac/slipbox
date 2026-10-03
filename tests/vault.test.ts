@@ -3596,3 +3596,183 @@ describe("the CLI's vault:path (20.20)", () => {
     expect(existsSync(join(at("b"), "algorithms", "copy.md"))).toBe(true);
   });
 });
+
+describe("the merge review (20.21)", () => {
+  const out: string[] = [];
+  const cli = async (args: string[], cwd: string) => {
+    out.length = 0;
+    const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return { code, json: code === 2 ? null : JSON.parse(out.join("")) };
+  };
+  const human = async (args: string[], cwd: string) => {
+    const lines: string[] = [];
+    await runCli(args, { out: (x: string) => lines.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return lines.join("");
+  };
+  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+  const put = (root: string, rel: string, text: string) => {
+    mkdirSync(dirname(join(root, rel)), { recursive: true });
+    writeFileSync(join(root, rel), text);
+  };
+  /**
+   * main and refactor parted at a base. refactor moves docs/plan.md, deletes docs/old.md, moves
+   * docs/e.md without its link, adds docs/d.md linking nowhere; main adds docs/b.md linking to both.
+   * Both change shared.md: a conflict.
+   */
+  const branches = () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-merge-"));
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return null;
+    put(root, "docs/plan.md", "# Plan\n\n## Goals\n\nThe plan, long enough to be known by its text when it moves.\n");
+    put(root, "docs/old.md", "# Old\n");
+    put(root, "docs/plan2.md", "# Plan two\n");
+    put(root, "docs/my plan.md", "# Mine\n\nA plan of my own, long enough to be known by its text when it moves.\n");
+    put(root, "docs/e.md", "# E\n\n[two](plan2.md)\n");
+    put(root, "docs/f.md", "# F\n\n[gone](gone.md)\n");
+    put(root, "docs/g.md", "# G\n\n[old](old.md)\n");
+    put(root, "docs/h.md", "# H\n\n[two](plan2.md) [up](../shared.md) [case](Plan2.md)\n");
+    put(root, "shared.md", "one\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "base");
+    git(root, "checkout", "-q", "-b", "refactor");
+    git(root, "mv", "docs/plan.md", "docs/new-plan.md");
+    mkdirSync(join(root, "docs", "new"));
+    git(root, "mv", "docs/new-plan.md", "docs/new/plan.md");
+    git(root, "rm", "-q", "docs/old.md");
+    git(root, "mv", "docs/my plan.md", "docs/new/my plan.md");
+    mkdirSync(join(root, "notes"));
+    git(root, "mv", "docs/e.md", "notes/e.md");
+    put(root, "docs/d.md", "# D\n\n[nowhere](nowhere.md) [two](Plan2.md)\n"); // a note's path in any case reaches it
+    put(root, ".hidden/x.md", "[nowhere](nowhere.md)\n"); // not the vault's: the walk leaves it out
+    put(root, "shared.md", "theirs\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "refactor");
+    git(root, "checkout", "-q", "main");
+    put(root, "docs/b.md", `# B\n\n[the plan](plan.md#goals) and [old](old.md)\n\n[by its path](${root}/docs/plan.md) [mine](my%20plan.md)\n`);
+    put(root, "shared.md", "ours\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "main");
+    return root;
+  };
+  const brief = (r: { json: { data: { breaks: { path: string; target: string; cause: string; by: string; to: string | null; fix: string | null }[] } } }) =>
+    r.json.data.breaks.map((b) => [b.path, b.target, b.cause, b.by, b.to, b.fix]);
+
+  test("merging a branch here: each link its result breaks, with the cause and the fix; nothing written", async () => {
+    const root = branches();
+    if (!root) return;
+    const head = git(root, "rev-parse", "HEAD").stdout.toString().trim();
+    const r = await cli(["merge-review", "refactor"], root);
+    expect(r.code).toBe(0);
+    expect(r.json.data).toMatchObject({ into: "main", from: "refactor", conflicts: ["shared.md"] });
+    expect(brief(r)).toEqual([
+      ["docs/b.md", "plan.md#goals", "moved", "refactor", "docs/new/plan.md", "new/plan.md#goals"],
+      ["docs/b.md", "old.md", "deleted", "refactor", null, null],
+      ["docs/b.md", `${root}/docs/plan.md`, "moved", "refactor", "docs/new/plan.md", "new/plan.md"],
+      ["docs/b.md", "my%20plan.md", "moved", "refactor", "docs/new/my plan.md", "new/my%20plan.md"],
+      ["docs/d.md", "nowhere.md", "missing", "refactor", null, null],
+      ["docs/g.md", "old.md", "deleted", "refactor", null, null], // unchanged here: what it names went
+      ["notes/e.md", "plan2.md", "note-moved", "refactor", "docs/plan2.md", "../docs/plan2.md"],
+    ]);
+    expect(r.json.data.breaks[0]).toMatchObject({ line: 3, column: 1, names: "docs/plan.md" });
+    // Broken already here (f.md), or reaching (h.md): not the merge's.
+    // The working tree and HEAD as they were.
+    expect(git(root, "rev-parse", "HEAD").stdout.toString().trim()).toBe(head);
+    expect(git(root, "status", "--porcelain").stdout.toString()).toBe("");
+    const text = await human(["merge-review", "refactor"], root);
+    expect(text).toStartWith("merging refactor into main: 7 links would break; git can't merge 1 file (shared.md)\n");
+    expect(text).toContain("  docs/b.md:3:1  plan.md#goals — refactor moves docs/plan.md to docs/new/plan.md — the fix: new/plan.md#goals\n");
+    expect(text).toContain("  notes/e.md:3:1  plan2.md — refactor moves this note; the link named docs/plan2.md — the fix: ../docs/plan2.md\n");
+  });
+
+  test("--into: this branch into another, the same result; the other way round, only what breaks there", async () => {
+    const root = branches();
+    if (!root) return;
+    const here = brief(await cli(["merge-review", "refactor"], root));
+    git(root, "checkout", "-q", "refactor");
+    expect(brief(await cli(["merge-review", "refactor", "--into", "main"], root))).toEqual(here);
+    // main into refactor: refactor's own broken links aren't the merge's; main's new note's are.
+    const back = await cli(["merge-review", "main"], root);
+    expect(back.json.data).toMatchObject({ into: "refactor", from: "main" });
+    expect(brief(back)).toEqual([
+      ["docs/b.md", "plan.md#goals", "moved", "refactor", "docs/new/plan.md", "new/plan.md#goals"],
+      ["docs/b.md", "old.md", "deleted", "refactor", null, null],
+      ["docs/b.md", `${root}/docs/plan.md`, "moved", "refactor", "docs/new/plan.md", "new/plan.md"],
+      ["docs/b.md", "my%20plan.md", "moved", "refactor", "docs/new/my plan.md", "new/my%20plan.md"],
+    ]);
+    // A link refactor wrote to nothing, merged back into main: refactor's own (main's view: `missing`, by refactor).
+    git(root, "checkout", "-q", "main");
+    expect(brief(await cli(["merge-review", "refactor"], root)).find((b) => b[0] === "docs/d.md")).toEqual(["docs/d.md", "nowhere.md", "missing", "refactor", null, null]);
+    git(root, "checkout", "-q", "refactor");
+    expect((await cli(["merge-review", "nope"], root)).code).toBe(3);
+    // Nothing to break: said so.
+    git(root, "checkout", "-q", "-b", "same", "main");
+    expect(await human(["merge-review", "main"], root)).toBe("merging main into same: no link would break\n");
+  });
+
+  test("a vault in a folder of its repository: its own paths; a file moved out of it is gone from it", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-mergesub-"));
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    const vault = join(root, "notes");
+    put(root, "notes/.slipbox/config.toml", `[vault]\nid = "sub${basename(root).replace(/[^a-z0-9]/gi, "")}"\nname = "sub"\n`);
+    put(root, "notes/a.md", "# A\n\nLong enough to be the same file once it moves out.\n");
+    put(root, "notes/b.md", "# B\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "base");
+    git(root, "checkout", "-q", "-b", "out");
+    git(root, "mv", "notes/a.md", "a.md");
+    git(root, "commit", "-q", "-m", "a leaves the vault");
+    git(root, "checkout", "-q", "main");
+    put(root, "notes/b.md", "# B\n\n[a](a.md)\n");
+    git(root, "commit", "-q", "-am", "b links a");
+    const r = await cli(["merge-review", "out"], vault);
+    expect(brief(r)).toEqual([["b.md", "a.md", "deleted", "out", null, null]]);
+  });
+
+  test("outside git: exit 3", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-nogit-"));
+    mkdirSync(join(dir, ".slipbox"));
+    expect((await cli(["merge-review", "main"], dir)).code).toBe(3);
+  });
+
+  test("after a merge or a pull: git's renames are evidence — a broken link says where its file went; relink fixes it", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-merged-"));
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    put(root, "a.md", "# A\n\nThe first note, long enough for git to know it again when it moves.\nA second line.\n");
+    put(root, "b.md", "# B\n\n[a](a.md)\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    git(root, "checkout", "-q", "-b", "elsewhere");
+    mkdirSync(join(root, "docs"));
+    git(root, "mv", "a.md", "docs/a.md");
+    writeFileSync(join(root, "docs", "a.md"), `${readFileSync(join(root, "docs", "a.md"), "utf8")}Changed as it moved: no longer the same text.\n`);
+    git(root, "commit", "-q", "-am", "moved");
+    git(root, "checkout", "-q", "main");
+    await cli(["ls"], root); // seen on main, as it was
+    git(root, "merge", "-q", "--ff-only", "elsewhere"); // a pull, as far as this copy can tell
+    git(root, "pack-refs", "--all"); // the branch's commit in packed-refs only
+    const p = (await cli(["problems"], root)).json.data;
+    expect(p.broken).toContainEqual(expect.objectContaining({ from: "b.md", target: "a.md", moved: "docs/a.md", reason: "moved to docs/a.md — relink fixes it" }));
+    const { openVault } = await import("../src/core/reach.ts");
+    expect(openVault(root).redirects?.all()["a.md"]).toMatchObject({ to: "docs/a.md", by: expect.stringMatching(/^[0-9a-f]{7}\.\.[0-9a-f]{7}$/) });
+    await cli(["relink"], root);
+    expect(readFileSync(join(root, "b.md"), "utf8")).toBe("# B\n\n[a](docs/a.md)\n");
+  });
+
+  test("a branch switch isn't a merge: what only the other branch moved is no move here", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-switched-"));
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    put(root, "a.md", "# A\n\nThe first note, long enough for git to know it again when it moves.\n");
+    put(root, "b.md", "# B\n\n[a](a.md)\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    git(root, "checkout", "-q", "-b", "elsewhere");
+    git(root, "mv", "a.md", "c.md");
+    git(root, "commit", "-q", "-m", "moved");
+    git(root, "checkout", "-q", "main");
+    await cli(["ls"], root);
+    git(root, "checkout", "-q", "elsewhere");
+    const p = (await cli(["problems"], root)).json.data;
+    expect(p.broken).toContainEqual(expect.objectContaining({ from: "b.md", target: "a.md", moved: null, reason: null }));
+    const { openVault } = await import("../src/core/reach.ts");
+    expect(openVault(root).redirects?.all()["a.md"]).toBeUndefined();
+  });
+});

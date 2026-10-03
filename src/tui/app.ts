@@ -62,7 +62,8 @@ import { openVault, Reach } from "../core/reach.ts";
 import { buildContext } from "../core/context.ts";
 import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
-import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusLater, worktreeList } from "../core/gitops.ts";
+import { baseBranch, branchesOf, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusLater, worktreeList } from "../core/gitops.ts";
+import { describeBreak, type MergeBreak, type MergeReview, reviewMerge } from "../core/mergereview.ts";
 import { diffLines, diffRows } from "../core/merge.ts";
 import { planConvert } from "../core/convert.ts";
 import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
@@ -1569,8 +1570,60 @@ export class App {
     });
   }
 
+  /**
+   * `space g m` (20.21): before a merge, the links it would break — git's tentative result, the working
+   * tree untouched. A branch picked: this branch into the base, or another branch into this one.
+   */
+  openMergeReview(): void {
+    const c = this.checkout;
+    if (!c) return this.message("info", "not in a git repository");
+    const here = headOf(c).branch;
+    if (!here) return this.message("info", "merge review: HEAD is detached — check out the branch to merge into");
+    const base = baseBranch(c, this.config.git.base);
+    const others = (branchesOf(c) ?? []).filter((b) => b !== here);
+    const choices = [...(base && base !== here ? [{ from: here, into: base }] : []), ...others.map((b) => ({ from: b, into: here }))];
+    if (!choices.length) return this.message("info", "merge review: no other branch to merge");
+    this.openList({
+      title: "Review a merge — enter: the links it would break",
+      items: choices.map((m) => ({ label: `${this.glyphs.branch} ${m.from} → ${m.into}`, detail: m.into === here ? "into this branch" : "this branch into the base", data: m })),
+      accept: (item) => this.showMergeReview(item.data as { from: string; into: string }),
+    });
+  }
+
+  /** The links merging `from` into `into` would break, each with its cause; enter goes to one; esc: the branches. */
+  showMergeReview(m: { from: string; into: string }): void {
+    const c = this.checkout;
+    if (!c) return;
+    let r: MergeReview;
+    try {
+      r = reviewMerge(c, this.loc.root, m.from, m.into);
+    } catch (err) {
+      return this.message("warn", `merge review: ${(err as Error).message}`);
+    }
+    const conflicts = r.conflicts.length ? ` — git can't merge ${r.conflicts.length} file${r.conflicts.length === 1 ? "" : "s"}` : "";
+    if (!r.breaks.length) return this.message("info", `merging ${r.from} into ${r.into} breaks no link${conflicts}`);
+    this.openList({
+      title: `Merging ${r.from} into ${r.into}: ${r.breaks.length} link${r.breaks.length === 1 ? "" : "s"} would break${conflicts} — esc: the branches`,
+      items: r.breaks.map((b) => ({ label: `${b.path}:${b.line}  ${sanitize(b.target)}`, role: b.fix ? "git_modified" : "diff_del", detail: sanitize(describeBreak(b)), data: b })),
+      accept: (item) => {
+        const b = item.data as MergeBreak;
+        if (!existsSync(join(this.loc.root, b.path))) return this.message("info", `${b.path} isn't here yet: it comes with ${r.from}`);
+        this.openAt(b.path, b.line, b.column);
+      },
+      cancel: () => this.openMergeReview(),
+    });
+  }
+
   private headMoved(was: { branch: string | null; commit: string | null }, now: { branch: string | null; commit: string | null }): void {
     const name = (h: typeof now) => (h.branch ? `branch ${h.branch}` : `a detached HEAD (${h.commit?.slice(0, 7) ?? "?"})`);
+    // HEAD moved on its branch — a merge, a pull, a commit — is no switch (20.21): git's renames since
+    // are evidence of moves, so a link broken by one says where its file went.
+    const moves = this.graph.catchUpWithGit();
+    if (was.branch && was.branch === now.branch) {
+      const n = moves.length;
+      if (n) this.message("info", `${name(now)} moved on: git moved ${n} file${n === 1 ? "" : "s"} — links to ${n === 1 ? "it" : "them"} say where (space v p); space l r relinks a note's`);
+      return;
+    }
     // The branch left keeps its tabs; the one switched to has its own back — when it has some, and
     // nothing open is unsaved (closing it would lose that).
     if (this.config.ui.restore_session) {

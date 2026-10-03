@@ -79,6 +79,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `problems` (git) | `conflicts[{path, line}]`: during a merge, the unmerged files at their first marker (`5.12`) |
 | `changed` | `{base, mergeBase, files[{path, state, from?}]}`: `state` new, modified, renamed, deleted, conflict |
 | `diff <note>` | `{path, base, mergeBase, new, rows[{kind, text, line}]}`: `kind` `@@` ` ` `-` `+`; `line`: now |
+| `merge-review <branch>` | `{into, from, base, tree, conflicts[], breaks[{path, line, target, cause, to, fix, …}]}` |
 | `worktrees` | `[{path, branch, head, main, vault, current}]`: the main checkout first |
 | `tags [tag]` | `[{tag, count}]`, or a tag's `{tag, notes[]}` (its nested tags' too); exit 3: no note has it |
 | `backlinks <note>` | `{path, backlinks[{from, vault, shown, line, column, end, text, kind, target, heading, …}]}` |
@@ -299,6 +300,31 @@ What changed on this branch, measured against the base branch (`--base <ref>`, e
 - **`slipbox problems`** lists a merge's unmerged files as `conflicts`, each at its first `<<<<<<<` line.
 
 Outside a git repository, or with no base branch, these exit 3.
+
+### Before and after a merge (plan `20.21`)
+
+**`slipbox merge-review <branch> [--into <ref>]`**: the links merging `<branch>` into `--into` (default: the branch
+checked out) would break — git's own tentative result (`git merge-tree --write-tree`, git 2.38 or newer), read without
+touching the working tree or HEAD. Git can't see these itself: "`refactor` moves `docs/plan.md`; `main` added a link to
+it in `docs/b.md`" changes different files and merges cleanly. Each link of the result's notes that reaches nothing
+there, and wasn't broken in `--into`, comes with its `cause`:
+
+- `moved`: a branch (`by`) renamed the file it names (git pairs renames by similarity) to `to`; `fix` is the target to
+  write instead, from the note, its `#fragment` kept and encoded as a link is;
+- `deleted`: a branch deleted it, or moved it out of the vault;
+- `note-moved`: the note itself moved without its relative link; `to` is what it named from where it was, and `fix`;
+- `missing`: neither branch had it — the merged branch's link to nothing.
+
+`--json`: `{into, from, base, tree, conflicts[], breaks[{path, line, column, target, names, cause, by, to, fix}]}`;
+`conflicts` are the files git couldn't merge. Committed work only: what isn't committed is in neither branch. A branch
+or commit that isn't there is exit 3.
+
+**After a merge or a pull** — HEAD moved on its branch since this copy last looked, as each command and the TUI check
+— git's renames between the two commits are evidence of moves (`17.12`'s redirects, each kept with the commits it came
+between). A link broken by one says so: `problems` gives it `moved` (where the file is now) and the reason `moved to …
+— relink fixes it`, `diagnostics` the same, and `slipbox relink` fixes it. A branch switch isn't evidence: a file only
+one branch has comes and goes, and nothing moved. Git pairs a move by similarity, so a file also rewritten in the same
+change may not be paired: then the link is just broken, the target yours to pick.
 
 ## Search (plans `6.1`–`6.8`)
 

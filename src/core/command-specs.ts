@@ -129,6 +129,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "git.changes", title: "Changed on this branch", cli: "slipbox changed [--base <ref>]", desc: "What this branch changed against the base (main), committed or not; enter shows a file's diff" },
   { id: "git.diff", title: "Diff this note against the base", cli: "slipbox diff <note> [--base <ref>]", desc: "This note's changes on the branch, against where it left main; enter goes to the line" },
   { id: "git.worktrees", title: "Open in another worktree", cli: "slipbox worktrees", desc: "The repository's checkouts by branch; enter opens this note in the one picked" },
+  { id: "git.merge_review", title: "Review a merge's links", cli: "slipbox merge-review <branch> [--into <ref>]", desc: "Before a merge: the links git's tentative result would break, each with its cause and fix; enter goes to one" },
   { id: "search.open", title: "Search the vault", cli: "slipbox search <words…>", desc: 'Notes ranked by the words as you type: "a phrase", prefix*, -not, title:, #tag, path:; enter opens one at its match' },
   { id: "find.substitute", title: "Substitute: s/old/new/", cli: "slipbox replace <note> <old> <new> --regex --first-per-line [--lines A-B]", desc: "Vim's :s — on this line, % the note, '<,'> the selection; g all on a line, i ignore case, c confirm" },
   { id: "find.next", title: "Next match", cli: "slipbox find <query> <note>", desc: "Moves to the next match after the cursor, wrapping at the end" },

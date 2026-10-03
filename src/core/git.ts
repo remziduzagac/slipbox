@@ -84,3 +84,21 @@ export function headOf(c: Pick<Checkout, "gitDir">): { branch: string | null; co
   heads.set(file, head);
   return head;
 }
+
+/**
+ * The commit HEAD is at: a detached HEAD's own; a branch's, read from its ref — loose, else packed —
+ * in the repository's shared git directory. Null before the first commit (or in a ref store it can't
+ * read); files only, no git run.
+ */
+export function headCommit(c: Pick<Checkout, "gitDir" | "common">): string | null {
+  const h = headOf(c);
+  if (!h.branch) return h.commit;
+  const sha = /^[0-9a-f]{40,64}$/;
+  const loose = read(join(c.common, "refs", "heads", h.branch))?.trim();
+  if (loose && sha.test(loose)) return loose;
+  for (const line of (read(join(c.common, "packed-refs")) ?? "").split("\n")) {
+    const [id, ref] = line.trim().split(" ");
+    if (ref === `refs/heads/${h.branch}` && id && sha.test(id)) return id;
+  }
+  return null;
+}

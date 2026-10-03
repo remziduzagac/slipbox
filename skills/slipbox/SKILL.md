@@ -130,6 +130,7 @@ slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, res
 slipbox resolve research:algorithms/dijkstra.md --from notes/plan.md --json   # data.href: the path to write in a link
 slipbox search dome shutter --json       # notes ranked by the words: hits[{path, line, column, heading, snippet}]
 slipbox changed --json                   # what this branch changed against main: files[{path, state, from?}]
+slipbox merge-review feat --json         # before merging feat here: breaks[{path, line, target, cause, by, fix}]
 slipbox diff <note> --json               # the note's diff against where the branch left main: rows[{kind, text, line}]
 slipbox search '"exact phrase" -draft #project path:notes/'   # phrases, -not, a tag, a folder; prefix* too
 slipbox context <note>                   # the note, what it links to and what links to it: one markdown document

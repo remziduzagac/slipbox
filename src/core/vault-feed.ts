@@ -5,11 +5,11 @@
 
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { type Checkout, headOf } from "./git.ts";
+import { type Checkout, headCommit, headOf } from "./git.ts";
 import type { Graph } from "./graph.ts";
 import type { WatchBatch } from "./watch.ts";
 
-/** HEAD as seen: its branch, or (detached) its commit. */
+/** HEAD as seen: its branch and its commit — a merge, a pull, a commit move it on the branch (20.21). */
 export interface Head {
   branch: string | null;
   commit: string | null;
@@ -96,8 +96,7 @@ export class VaultFeed {
   headNow(): Head | null {
     const c = this.o.checkout();
     if (!c) return null;
-    const h = headOf(c);
-    return { branch: h.branch, commit: h.commit };
+    return { branch: headOf(c).branch, commit: headCommit(c) };
   }
 
   /** git is mid-commit (or mid-anything) in the vault's checkout (5.10). */

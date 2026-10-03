@@ -548,6 +548,7 @@ edit the config and the config wins again.
 | `space g c` | the files this branch changed against the base (`:changes`); enter: a file's diff (`5.13`) |
 | `space g d` | this note's diff against the base, as it is now (`:diff`); enter goes to the line |
 | `space g w` | the worktrees by branch (`:worktrees`); enter opens this note in the one picked (`5.14`) |
+| `space g m` | a merge picked: the links it would break, with their fixes (`:merge-review`, `20.21`) |
 
 ## Note, vault, app
 

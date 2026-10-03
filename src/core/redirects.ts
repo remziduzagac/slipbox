@@ -12,9 +12,17 @@ export function contentHash(text: string): string {
   return createHash("sha256").update(text).digest("hex").slice(0, 20);
 }
 
+/** A move seen: where to, when, and — git's renames after a merge or a pull (20.21) — by which change. */
+export interface Redirect {
+  to: string;
+  at: string;
+  /** The commits the move came between (`1a2b3c4..5d6e7f8`), when git's renames said it. */
+  by?: string;
+}
+
 interface RedirectFile {
   version: 1;
-  redirects: Record<string, { to: string; at: string }>;
+  redirects: Record<string, Redirect>;
 }
 
 const MAX_REDIRECTS = 5000;
@@ -22,20 +30,20 @@ const MAX_REDIRECTS = 5000;
 const MAX_HOPS = 20;
 
 export class Redirects {
-  private data: Record<string, { to: string; at: string }> = {};
+  private data: Record<string, Redirect> = {};
 
   constructor(private readonly file: string) {
     const f = readJson<RedirectFile | null>(file, null);
     if (f?.version === 1 && f.redirects && typeof f.redirects === "object") {
-      for (const [from, r] of Object.entries(f.redirects)) if (r && typeof r.to === "string") this.data[from] = { to: r.to, at: typeof r.at === "string" ? r.at : "" };
+      for (const [from, r] of Object.entries(f.redirects)) if (r && typeof r.to === "string") this.data[from] = { to: r.to, at: typeof r.at === "string" ? r.at : "", ...(typeof r.by === "string" ? { by: r.by } : {}) };
     }
   }
 
-  /** Record moves, and save. A path that is a note again stops redirecting. */
-  add(moves: [from: string, to: string][], now = new Date()): void {
+  /** Record moves (`by`: the commits git's renames were between), and save. A path that is a note again stops redirecting. */
+  add(moves: [from: string, to: string][], now = new Date(), by?: string): void {
     for (const [from, to] of moves) {
       if (from === to) continue;
-      this.data[from] = { to, at: now.toISOString() };
+      this.data[from] = { to, at: now.toISOString(), ...(by ? { by } : {}) };
       delete this.data[to];
     }
     const entries = Object.entries(this.data);
@@ -62,7 +70,7 @@ export class Redirects {
     return Object.keys(this.data).filter((p) => normKey(posix.basename(p).replace(/\.(md|markdown)$/i, "")) === k);
   }
 
-  all(): Record<string, { to: string; at: string }> {
+  all(): Record<string, Redirect> {
     return { ...this.data };
   }
 }

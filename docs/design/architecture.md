@@ -66,6 +66,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/names.ts` | 20.6 | each vault's name to show: unique here, `.` for a collision, `name@branch` for a worktree |
 | `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
 | `core/gitops.ts` | 5.11–5.14 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
+| `core/mergereview.ts` | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
 | `core/reach.ts` | 17.8–17.11 | other vaults: `[[vault:note]]`, paths out of the root, their backlinks here |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
 | `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |

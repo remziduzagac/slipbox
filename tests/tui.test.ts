@@ -7423,6 +7423,35 @@ describe("a branch switch as one event (5.9)", () => {
     expect(shown(h)).toEqual(["b.md"]);
   });
 
+  test("a merge or a pull on the branch is no switch: git's renames are evidence, said when there are some (20.21)", async () => {
+    const root = repo();
+    if (!root) return;
+    writeFileSync(join(root, "b.md"), "# B\n\n[a](a.md)\n");
+    git(root, "commit", "-q", "-am", "b links a");
+    const h = await harness({ root, open: "b.md", config: (c) => (c.ui.restore_session = true) });
+    h.app.checkHead();
+    const said = h.app.messages.length;
+    // A commit moving nothing: HEAD moved, nothing to say, the tabs as they are.
+    writeFileSync(join(root, "a.md"), "# A\n\nThe first note, long enough to know again by its text.\nMore.\n");
+    git(root, "commit", "-q", "-am", "more");
+    expect(h.app.checkHead()).toBe(true);
+    expect(h.app.messages.length).toBe(said);
+    // As a pull brings it: a.md moved, and changed as it went; b.md's link left as it was.
+    git(root, "checkout", "-q", "-b", "upstream");
+    mkdirSync(join(root, "docs"));
+    git(root, "mv", "a.md", "docs/a.md");
+    writeFileSync(join(root, "docs", "a.md"), "# A\n\nThe first note, long enough to know again by its text.\nMore.\nAnd moved.\n");
+    git(root, "commit", "-q", "-am", "moved");
+    git(root, "checkout", "-q", "main");
+    h.app.checkHead(); // a switch, and back: nothing moved
+    git(root, "merge", "-q", "--ff-only", "upstream");
+    h.app.checkHead();
+    expect(h.app.messages.at(-1)!.text).toBe("branch main moved on: git moved 1 file — links to it say where (space v p); space l r relinks a note's");
+    expect(shown(h)).toEqual(["b.md"]);
+    h.app.graph.build(true, "lazy"); // the watcher's news, as it would come
+    expect(h.app.graph.problems().broken).toContainEqual(expect.objectContaining({ from: "b.md", target: "a.md", moved: "docs/a.md" }));
+  });
+
   test("a repository made while it runs: the branch shows up (a regression: nothing redrew)", async () => {
     const root = mkdtempSync(join(sandbox, "late-git-"));
     mkdirSync(join(root, ".slipbox"));
@@ -7565,6 +7594,46 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("a.md");
     expect(statusRow(h.frame())).toMatch(/ L4:\d+ /); // on that line, inside its paragraph
+  });
+
+  test("space g m: a branch picked, the links its merge would break; enter goes to one; esc back to the branches (20.21)", async () => {
+    const root = repo();
+    if (!root) return;
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "feat");
+    // main moves a.md; feat (checked out) links to it from c.md.
+    git(root, "checkout", "-q", "main");
+    mkdirSync(join(root, "docs"));
+    git(root, "mv", "a.md", "docs/a.md");
+    git(root, "commit", "-q", "-m", "a moved");
+    git(root, "checkout", "-q", "feat");
+    writeFileSync(join(root, "c.md"), "# C\n\nSee [a](a.md).\n");
+    git(root, "commit", "-q", "-am", "c links a");
+    const h = await harness({ root, open: "c.md" });
+    await h.keys("space", "g", "m");
+    let list = h.app.overlay as ListOverlay;
+    expect(list.title).toBe("Review a merge — enter: the links it would break");
+    expect(list.items.map((i) => [i.label.replace(/^\S+ /, ""), i.detail])).toEqual([
+      ["feat → main", "this branch into the base"],
+      ["main → feat", "into this branch"],
+    ]);
+    await h.keys("enter");
+    list = h.app.overlay as ListOverlay;
+    expect(list.title).toBe("Merging feat into main: 1 link would break — esc: the branches");
+    expect(list.items.map((i) => [i.label, i.detail, i.role])).toEqual([["c.md:3  a.md", "main moves a.md to docs/a.md — the fix: docs/a.md", "git_modified"]]);
+    await h.keys("escape");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("Review a merge");
+    await h.keys("enter", "enter");
+    expect(h.app.view!.buf.rel).toBe("c.md");
+    expect(statusRow(h.frame())).toMatch(/ L3:\d+ /);
+    // Nothing would break: said so, no list.
+    git(root, "checkout", "-q", "-b", "quiet", "main");
+    h.app.checkHead();
+    await h.keys("space", "g", "m");
+    list = h.app.overlay as ListOverlay;
+    list.selected = list.items.findIndex((i) => i.label.endsWith("main → quiet"));
+    await h.keys("enter");
+    expect(h.app.messages.at(-1)!.text).toBe("merging main into quiet breaks no link");
   });
 
   test("space g d: this note's diff, as it is now (unsaved too); nothing different, said so", async () => {

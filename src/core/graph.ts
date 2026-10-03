@@ -16,7 +16,8 @@ import { parseNoteFile } from "./readers.ts";
 import { vaultForm } from "./names.ts";
 import { ParseCache, sharedParseCache } from "./parsecache.ts";
 import { cacheDir, stateDir } from "./paths.ts";
-import { checkoutOf, headOf } from "./git.ts";
+import { checkoutOf, headCommit, headOf } from "./git.ts";
+import { changedBetween, inVault } from "./gitops.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf, noteFormat } from "./filetypes.ts";
@@ -118,6 +119,8 @@ export interface LinkProblem {
   text: string;
   reason: string | null;
   candidates: string[];
+  /** A broken link's file, seen to move: where it is now (vault path), the relink's fix. */
+  moved?: string | null;
 }
 
 export interface Backlink {
@@ -248,6 +251,8 @@ export class Graph {
       const vanished = Object.values(old).filter((e) => !this.notes.has(e.rel));
       if (vanished.length) this.detectMoves(vanished, walk.files.filter((f) => !old[f.rel]));
     }
+    // And git's renames, when HEAD moved on the branch since this copy last looked (20.21).
+    if (this.useCache) this.catchUpWithGit();
     // An editor's unsaved text stays over the new walk's entries (11.8); a note gone takes its own.
     const texts = [...this.overlays].map(([rel, o]) => [rel, o.text] as const);
     this.overlays.clear();
@@ -465,6 +470,40 @@ export class Graph {
       if (to?.length === 1 && hashed.filter((x) => x.hash === e.hash).length === 1) moves.push([e.rel, to[0]!]);
     }
     if (moves.length) this.redirects?.add(moves);
+  }
+
+  /**
+   * After a merge or a pull (20.21): HEAD moved on its branch since this copy last looked, so git's
+   * renames between the two commits — paired by similarity — are evidence of moves, recorded as
+   * redirects by that change: a broken link to a renamed file then says where it went, and the relink
+   * fixes it. A branch switch isn't: a file only one branch has comes and goes, and nothing moved.
+   * HEAD as seen is kept per copy (its state). Returns the moves recorded, vault paths old → new.
+   */
+  catchUpWithGit(): [string, string][] {
+    if (this.loc.mode !== "vault") return [];
+    const c = checkoutOf(this.root);
+    if (!c) return [];
+    const now = { branch: headOf(c).branch, commit: headCommit(c) };
+    const file = join(stateDir(this.loc), "head.json");
+    const seen = readJson<{ branch?: string | null; commit?: string | null } | null>(file, null);
+    if (seen?.branch === now.branch && seen?.commit === now.commit) return [];
+    const moves: [string, string][] = [];
+    if (seen?.commit && now.commit && now.branch && seen.branch === now.branch) {
+      for (const f of changedBetween(c, seen.commit, now.commit) ?? []) {
+        const from = f.from ? inVault(c, this.root, f.from) : null;
+        const to = inVault(c, this.root, f.path);
+        if (f.state === "renamed" && from && to) moves.push([from, to]);
+      }
+      if (moves.length) {
+        this.redirects?.add(moves, new Date(), `${seen.commit.slice(0, 7)}..${now.commit.slice(0, 7)}`);
+        this.problemCache = null;
+      }
+    }
+    try {
+      ensureDir(stateDir(this.loc));
+      writeJson(file, { branch: now.branch, commit: now.commit });
+    } catch {}
+    return moves;
   }
 
   /** Notes that went (removed) and came (added) lately, by hash: a watcher sees a move as both. */
@@ -931,7 +970,9 @@ export class Graph {
     for (const rel of [...this.notes.keys()].sort()) {
       for (const l of this.linksOf(rel)) {
         if (l.resolvedKind !== "unresolved" && l.resolvedKind !== "ambiguous") continue;
-        const p: LinkProblem = { from: rel, line: l.line, column: l.column, end: l.end, kind: l.kind, target: l.target, text: l.text, reason: l.reason ?? null, candidates: l.candidates };
+        // A broken path whose file was seen to move (17.12, git's renames 20.21): where it went, for the fix.
+        const moved = l.resolvedKind === "unresolved" ? this.movedTarget(l, rel) : null;
+        const p: LinkProblem = { from: rel, line: l.line, column: l.column, end: l.end, kind: l.kind, target: l.target, text: l.text, reason: l.reason ?? (moved ? `moved to ${moved} — relink fixes it` : null), candidates: l.candidates, moved };
         (l.resolvedKind === "unresolved" ? broken : ambiguous).push(p);
       }
     }
@@ -1133,6 +1174,11 @@ export function extractNote(file: NoteFile, cache: ParseCache | null = sharedPar
     flags.push(`unreadable: ${(err as NodeJS.ErrnoException).code ?? "error"}`);
     return extractFromSource(file, text, flags);
   }
+  return extractText(file, text, flags, cache);
+}
+
+/** A note's text parsed, from the parse cache when any copy parsed it before (20.11): a file's, or git's (20.21). */
+export function extractText(file: NoteFile, text: string, flags: string[] = [], cache: ParseCache | null = sharedParseCache()): NoteEntry {
   // Parsed before, by any copy of it on this machine (20.11): its content as it was, its place its own.
   const hash = contentHash(text);
   const key = ParseCache.key(hash, noteFormat(file.rel), INDEX_VERSION);

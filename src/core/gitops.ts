@@ -97,22 +97,41 @@ export function changedSince(c: Pick<Checkout, "root">, base: string): { mergeBa
   const status = statusOf(c);
   if (diff === null || status === null) return null;
   const files = new Map<string, Changed>();
-  const parts = diff.split("\0");
+  for (const f of parseNameStatus(diff)) files.set(f.path, f);
+  for (const [path, state] of status) if (state === "new" && !files.has(path)) files.set(path, { path, state });
+  for (const [path, state] of status) if (state === "conflict") files.set(path, { path, state });
+  return { mergeBase, files: [...files.values()].sort((a, b) => (a.path < b.path ? -1 : 1)) };
+}
+
+/** `git diff --name-status -z` read: each file, its state, a rename's old path (a copy's source isn't one). */
+export function parseNameStatus(z: string): Changed[] {
+  const out: Changed[] = [];
+  const parts = z.split("\0");
   for (let i = 0; i < parts.length; i++) {
     const code = parts[i]!;
     if (!code) continue;
     if (code[0] === "R" || code[0] === "C") {
       const from = parts[++i]!;
       const to = parts[++i]!;
-      files.set(to, { path: to, state: "renamed", from });
+      out.push(code[0] === "R" ? { path: to, state: "renamed", from } : { path: to, state: "new" });
     } else {
       const path = parts[++i]!;
-      files.set(path, { path, state: code[0] === "A" ? "new" : code[0] === "D" ? "deleted" : code[0] === "U" ? "conflict" : "modified" });
+      out.push({ path, state: code[0] === "A" ? "new" : code[0] === "D" ? "deleted" : code[0] === "U" ? "conflict" : "modified" });
     }
   }
-  for (const [path, state] of status) if (state === "new" && !files.has(path)) files.set(path, { path, state });
-  for (const [path, state] of status) if (state === "conflict") files.set(path, { path, state });
-  return { mergeBase, files: [...files.values()].sort((a, b) => (a.path < b.path ? -1 : 1)) };
+  return out;
+}
+
+/** What changed from commit `from` to `to`, renames paired by git (`-M`, by similarity); null without git. */
+export function changedBetween(c: Pick<Checkout, "root">, from: string, to: string): Changed[] | null {
+  const out = run(c, ["diff", "--name-status", "-z", "-M", from, to]);
+  return out === null ? null : parseNameStatus(out);
+}
+
+/** The repository's local branches, by name; null without git. */
+export function branchesOf(c: Pick<Checkout, "root">): string[] | null {
+  const out = run(c, ["for-each-ref", "--format=%(refname:short)", "refs/heads"]);
+  return out === null ? null : out.split("\n").filter(Boolean).sort();
 }
 
 /** A file as `ref` has it (path from the checkout's top folder); null where it hasn't one. */

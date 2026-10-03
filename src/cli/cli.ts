@@ -50,6 +50,7 @@ import { languageOf, serverTable } from "../core/servers/languages.ts";
 import { rootFor } from "../core/servers/find.ts";
 import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
 import { planConvert, urlPath } from "../core/convert.ts";
+import { describeBreak, type MergeReview, MergeReviewError, reviewMerge } from "../core/mergereview.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { confirmMove, declineMove, type KnownVault, noteIndexed, readIdentity, readRegistry, removeStorage, suggestVaultName, unavailable, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackground } from "../core/autoindex.ts";
@@ -160,6 +161,7 @@ Usage:
   slipbox index --refresh [path]    bring a vault's index up to date now — this one, or the one holding path
   slipbox changed                   what this branch changed against the base (main), committed or not  [--base <ref>]
   slipbox diff <note>               the note's changes on this branch: against where it left the base  [--base <ref>]
+  slipbox merge-review <branch>     the links merging <branch> here would break, from git's tentative result  [--into <ref>]
   slipbox worktrees                 the repository's checkouts: the main one and its worktrees, by branch
   slipbox context <note>…           the notes, what they link to and what links to them, as one document for an agent
                                     [--depth N] [--no-backlinks] [--limit N] [--copy]
@@ -220,7 +222,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
+  "mv", "rename-vault", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "vaults", "vault-moved", "apply", "doctor", "diagnostics", "themes", "commands", "help",
 ]);
 
@@ -338,7 +340,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
+  scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -396,6 +398,7 @@ const FLAGS: Record<string, string[]> = {
   search: ["limit", "scope"],
   index: ["rebuild", "home", "budget", "refresh"],
   changed: ["base"],
+  "merge-review": ["into"],
   diff: ["base"],
 };
 
@@ -707,6 +710,25 @@ const HANDLERS: Record<string, Handler> = {
       .filter((f): f is typeof f & { path: string } => f.path !== null);
     const human = files.map((f) => `${STATE_LETTER[f.state]} ${f.path}${f.from ? `  (from ${f.from})` : ""}\n`).join("");
     return { data: { base, mergeBase: r.mergeBase, files }, human: human || `nothing changed against ${base}\n` };
+  },
+
+  "merge-review"(s, rest) {
+    // Before a merge (20.21): the links git's tentative result would break, the working tree untouched.
+    const from = requireArg(rest, "branch to merge");
+    const c = checkoutFor(s);
+    let r: MergeReview;
+    try {
+      r = reviewMerge(c, s.loc.root, from, flag(s.args, "into") ?? "HEAD");
+    } catch (err) {
+      if (err instanceof MergeReviewError) throw new CliError(err.message, /^no branch or commit/.test(err.message) ? EXIT.notFound : EXIT.error);
+      throw err;
+    }
+    const n = r.breaks.length;
+    const human = [
+      `merging ${r.from} into ${r.into}: ${n ? `${n} link${n === 1 ? "" : "s"} would break` : "no link would break"}${r.conflicts.length ? `; git can't merge ${r.conflicts.length} file${r.conflicts.length === 1 ? "" : "s"} (${r.conflicts.join(", ")})` : ""}`,
+      ...r.breaks.map((b) => `  ${b.path}:${b.line}:${b.column}  ${b.target} — ${describeBreak(b)}`),
+    ];
+    return { data: r, human: `${human.join("\n")}\n` };
   },
 
   diff(s, rest) {
