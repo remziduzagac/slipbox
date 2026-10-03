@@ -2,9 +2,18 @@
 // cursor — at once after one of its trigger characters (`.`), else once a word is begun, after a
 // pause — narrowed as typing goes on, asked again only when the server said its list was partial.
 // And signature help after `(` and `,`. A popup under the cursor; the keys are vim's and blink's.
+// In a note, a link's target is slipbox's own to complete (20.13): the files it could reach, in
+// their vault form and their full path; the one picked written as the path from the note.
 
+import { existsSync } from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CompletionItem, CompletionList, SignatureHelp, TextEdit } from "vscode-languageserver-protocol";
+import { urlPath } from "../core/convert.ts";
+import { readJson } from "../core/fsutil.ts";
+import { cacheDir } from "../core/paths.ts";
+import { readRegistry } from "../core/registry.ts";
+import { homeFolder } from "../core/vault.ts";
 import type { App, View } from "./app.ts";
 import { offsetOf, placeAt } from "./editing.ts";
 import { rank } from "./match.ts";
@@ -19,6 +28,8 @@ export interface CompletionState {
   selected: number;
   /** The server said its list was partial: typing asks it again. */
   incomplete: boolean;
+  /** A link's target being completed (20.13): slipbox's list, no server's. */
+  links?: boolean;
 }
 
 /** A signature being typed: its label, and the active parameter's span in it. */
@@ -77,6 +88,18 @@ let asked = 0;
 
 /** After a key typed in insert mode: the popup narrowed, asked for or closed; signature help on `(` and `,`. */
 export function afterInsertKey(app: App, view: View, key: string): void {
+  // A link's target in a note (20.13): from just after `](`, narrowed as it's typed.
+  if (view.insert && view.buf.kind.group === "note") {
+    const at = offsetOf(app, view);
+    const from = linkTargetStart(view.buf.source, at);
+    const c = app.completion;
+    if (from !== null) {
+      if (c?.links && c.view === view && c.from === from) return narrow(app, c);
+      app.completion = { view, from, items: linkItems(app, view), shown: [], selected: 0, incomplete: false, links: true };
+      return narrow(app, app.completion);
+    }
+    if (c?.links) app.completion = null;
+  }
   const s = app.servers;
   if (!s?.isOpen(view.buf.abs) || !view.insert) {
     app.completion = null;
@@ -108,6 +131,47 @@ export function afterInsertKey(app: App, view: View, key: string): void {
   }
   // Anything else typed — a space, an operator — ends the word.
   app.completion = null;
+}
+
+/** Inside a markdown link's target (`[text](do|`): where the target starts, else null. */
+export function linkTargetStart(source: string, at: number): number | null {
+  const line = source.slice(source.lastIndexOf("\n", at - 1) + 1, at);
+  const m = /\]\(([^()\s<>]*)$/.exec(line);
+  return m ? at - m[1]!.length : null;
+}
+
+/**
+ * The files a link from this note could reach (20.13): this vault's notes and files, each by its path
+ * here, and other vaults' notes, each as `name:path` — the full path beside each, and either typed
+ * narrows. Picked, the path from the note is written, encoded as a link's path is (`%20`).
+ */
+function linkItems(app: App, view: View): CompletionItem[] {
+  const g = app.graph;
+  const fromDir = dirname(view.buf.abs);
+  const home = homeFolder();
+  const tilde = (abs: string) => (abs.startsWith(`${home}/`) ? `~/${relative(home, abs)}` : abs);
+  const item = (abs: string, form: string, here: boolean): CompletionItem => ({
+    label: form,
+    detail: tilde(abs),
+    filterText: `${form} ${abs}`,
+    sortText: `${here ? 0 : 1}${form}`,
+    insertText: urlPath(relative(fromDir, abs).split(sep).join("/")),
+  });
+  const out: CompletionItem[] = [];
+  for (const rel of [...g.notes.keys(), ...g.filePaths()]) {
+    const abs = g.abs(rel);
+    if (abs !== view.buf.abs) out.push(item(abs, rel, true));
+  }
+  // Other vaults' notes, as of their last index: what the machine knows, read once per completion.
+  for (const v of readRegistry()) {
+    if (v.kind !== "vault" || v.worktree || v.path === g.root || !existsSync(v.path)) continue;
+    const entries = readJson<{ entries?: Record<string, unknown> } | null>(join(cacheDir(v), "index.json"), null)?.entries;
+    for (const rel of Object.keys(entries ?? {})) {
+      const abs = join(v.path, rel);
+      out.push(item(abs, g.shownPath(abs), false));
+    }
+  }
+  return out;
 }
 
 /** Asked of the file's servers: what goes at the cursor (`trigger`, the character that asked). */

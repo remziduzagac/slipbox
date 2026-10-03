@@ -151,7 +151,8 @@ What a code file's language server changes (`19.15`) — `space c`, as LazyVim h
 | code actions: the servers' fixes and refactorings for the cursor's line, to pick from | `space c a` |
 | format the file, as its server formats it: one undo step | `space c f` |
 
-Typing in a code file, its server's completion shows under the cursor (`19.16`); while it shows, these keys are its,
+Typing in a code file, its server's completion shows under the cursor (`19.16`) — in a note, a link's target after
+`](`, slipbox's own (`20.13`); while it shows, these keys are its,
 as vim's and blink.cmp's:
 
 | Action | Keys |

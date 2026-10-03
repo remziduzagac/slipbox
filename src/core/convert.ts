@@ -20,7 +20,7 @@ import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 const WIKI = /(!?)\[\[([^\]\n]*?)\]\]/g;
 
 /** A path as a markdown link's URL: what would break it (a space, a parenthesis, `#`, `%`…) percent-encoded, the rest as it is. */
-function urlPath(p: string): string {
+export function urlPath(p: string): string {
   return p.replace(/[\s%()<>#?[\]\\]/gu, (c) => encodeURIComponent(c));
 }
 

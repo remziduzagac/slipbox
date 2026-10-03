@@ -1105,6 +1105,12 @@ text. Only the last ask's answer is shown: one arriving after a later ask is dro
 `(` and `,` (as the server names them): the signature on a line above the cursor, the active parameter marked; `)`
 or leaving insert closes it. Both are insert mode's, and leaving it closes both.
 
+**A link's target** (`20.13`) in a note is completed by slipbox itself, server or not: right after `](`, the files the
+link could reach — this vault's notes and files by their path here, other vaults' notes (as of their last index) as
+`name:path`, the note itself not — each with its full path beside it, this vault's first. What's typed narrows by
+either form. `tab` or `enter` writes the path from the note, encoded as a link's path is (`a%20b.md`); typing past
+the target (`)`, a space) closes it. Same keys as above.
+
 A file tree-sitter has no outline of (`16.8`: CSS, YAML, PHP, Swift…) takes its language server's symbols as its
 outline and breadcrumb (`19.14`), nested as the server nests them, asked for when it opens and again after each change
 reaches the server. Where tree-sitter has one, it stays: it's there at once, and leaves out the variables and

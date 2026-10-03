@@ -5486,6 +5486,48 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.floating?.title).toBe(`tapp${n}:design.md › Goals`);
   });
 
+  test("a link's target completed (20.13): after ]( the files it could reach — this vault's by path, another's as name:path — narrowed as typed; the path from the note written", async () => {
+    const { notes, app, n } = await twoVaults();
+    mkdirSync(join(notes, "sub"), { recursive: true });
+    writeFileSync(join(notes, "sub", "here.md"), "# Here\n");
+    writeFileSync(join(notes, "a b.md"), "# Spaced\n");
+    const h = await harness({ root: notes, open: "sub/here.md" });
+    await h.app.run("view.source");
+    await h.keys("shift+g", "o");
+    for (const k of "[x](") await h.keys(k);
+    const shown = (h: Harness) => h.app.completion?.shown.map((i) => i.label) ?? [];
+    expect(h.app.completion?.links).toBe(true);
+    expect(shown(h)).toContain("todo.md");
+    expect(shown(h)).toContain(`tapp${n}:design.md`);
+    expect(shown(h)).not.toContain("sub/here.md"); // not the note itself
+    // This vault's first; each with its full path beside it.
+    expect(shown(h).indexOf("todo.md")).toBeLessThan(shown(h).indexOf(`tapp${n}:design.md`));
+    expect(h.app.completion!.shown.find((i) => i.label === `tapp${n}:design.md`)!.detail).toMatch(/design\.md$/);
+    // Typed as it's shown, the vault's name first (other test vaults have a design.md too).
+    for (const k of `tapp${n}:desi`) await h.keys(k);
+    expect(shown(h)[0]).toBe(`tapp${n}:design.md`);
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toBe(`# Here\n[x](../../${basename(app)}/design.md\n`);
+    expect(h.app.completion).toBeNull();
+    // Closed by the link's end; a space is a path's too, written encoded.
+    await h.keys(")", "space");
+    expect(h.app.completion).toBeNull();
+    for (const k of "[y](a") await h.keys(k);
+    expect(shown(h)[0]).toBe("a b.md");
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toEndWith("[y](../a%20b.md\n");
+    // Narrowed by the full path too: its folder's name, which no vault form has.
+    await h.keys(")", "space");
+    for (const k of `[z](${basename(dirname(notes))}`) await h.keys(k);
+    expect(shown(h)).toContain("todo.md");
+    // Typing past the target closes it; a ( that isn't a link's opens nothing.
+    await h.keys(")");
+    expect(h.app.completion).toBeNull();
+    for (const k of " f(") await h.keys(k);
+    expect(h.app.completion).toBeNull();
+    await h.keys("escape");
+  });
+
   test("following a path link into another vault, at a heading, switches the TUI into it; back returns (17.10)", async () => {
     const { notes, app, n } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });

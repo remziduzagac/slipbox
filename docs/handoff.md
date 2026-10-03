@@ -44,8 +44,8 @@ their evidence), personal state by instance (`20.5`: moves confirmed, never gues
 LSP face removed (`20.23`), names for display (`20.6`: unique here, `work.docs`, `name@branch`), settings deeper
 over broader (`20.7`), git-ignored and hidden files indexed when reached (`20.8`), the background auto-index of `~`
 (`20.9`), freshness and coverage (`20.10`), the parse cache shared by content (`20.11`: a second copy read ~150×
-faster). The `vault:path` form on screen (`20.12`). Next: completion, the status line, the explorer's roots and
-search by vault (`20.13`–`20.16`).
+faster). The `vault:path` form on screen (`20.12`) and in link completion (`20.13`). Next: the status line, the
+explorer's roots and search by vault (`20.14`–`20.16`).
 
 ## The documents
 
