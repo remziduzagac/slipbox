@@ -444,9 +444,7 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
   if (app.loc.mode === "home") items.push({ text: "home vault", role: "status_dim" });
-  // The branch checked out (17.19); in a worktree, which one it is besides.
-  const branch = app.branch();
-  if (branch) items.push({ text: `${g.branch} ${branch}${app.loc.worktree ? " (worktree)" : ""}`, role: "status_dim" });
+  // The branch is the status line's, with the vault's name (20.14).
   for (const it of items) {
     const w = stringWidth(it.text) + 2;
     if (rx - w < x + 12) break;
@@ -1702,6 +1700,9 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const rightW = stringWidth(right) + 1;
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
   x += drawText(c, x, y, " ", st);
+  // The vault and its branch (20.14), while the path keeps a readable width (it goes before the path does).
+  const vault = app.vaultStatus();
+  if (vault && c.width - x - rightW - stringWidth(vault) - 4 >= 24) x += drawText(c, x, y, `${sanitize(vault)}  `, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
   const pathId = "status:path";
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.

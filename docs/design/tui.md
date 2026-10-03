@@ -62,8 +62,8 @@ strip and the titles get from theirs:
 
 - on the left, the `slipbox` chip (plain accent text), which opens the command palette; before
   it, without the left rail, the explorer's `≡`;
-- at the right end, vault-wide state (`indexing N…`, `home vault` for a loose folder, the branch checked out:
-  `⎇ main`, `⎇ feat (worktree)` in a linked worktree, `17.19`), dropped when fewer than 12 columns are left.
+- at the right end, vault-wide state (`indexing N…`, `home vault` for a loose folder), dropped when fewer than 12
+  columns are left. The branch is the status line's (`20.14`).
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is
 closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, as
@@ -124,6 +124,9 @@ session keeps them.
 - a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES` (the explorer or
   the history), `OUTLINE`, `RESIZE`, or what's pending: keys of a sequence in short form (`␣ l`,
   `C-w`), or an operator, count or `r` (`2d`, `di`);
+- the vault and its branch (`20.14`), dimmed: `pathfinder · main` — its name on this machine (`20.6`) and the branch
+  checked out now (a detached head: its commit); a linked worktree as `pathfinder@refactor`; nothing for loose
+  files. It's the first to go when the path would be left fewer than 24 columns;
 - the note's path (click to copy its absolute path), cut from the front when short of room, so the
   note's own name stays;
 - a marker: `• unsaved`, `• unsaved ⚠ differs from disk` (after keeping yours in a conflict),

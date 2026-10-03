@@ -1572,6 +1572,22 @@ export class App {
     return h.branch ?? (h.commit ? h.commit.slice(0, 7) : null);
   }
 
+  private shownName: { key: string; at: number; name: string } | null = null;
+
+  /**
+   * The vault and its branch, as the status line shows them (20.14): `pathfinder · main`; a worktree,
+   * its name and branch in one (`pathfinder@refactor`); loose files, nothing. The name is the one
+   * shown on this machine (20.6), looked up again every few seconds, not every frame.
+   */
+  vaultStatus(): string {
+    if (this.loc.mode !== "vault") return "";
+    const now = this.now();
+    if (!this.shownName || this.shownName.key !== this.loc.key || now - this.shownName.at > 5000) this.shownName = { key: this.loc.key, at: now, name: locName(this.loc) };
+    if (this.loc.worktree) return this.shownName.name.replace(/@[^@]*$/, "") + (this.branch() ? `@${this.branch()}` : "");
+    const b = this.branch();
+    return b ? `${this.shownName.name} · ${b}` : this.shownName.name;
+  }
+
   /** The vault's search index; null: none here (a loose folder, `[search] engine = "scan"`, SQLite couldn't). */
   searchIndex: SearchIndex | null = null;
   /** Bringing the index up to the files, a slice at a time; null when it's done. */

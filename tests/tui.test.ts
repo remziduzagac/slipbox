@@ -7115,14 +7115,16 @@ describe("git worktrees in the TUI (17.19)", () => {
     return { base, x, wts };
   };
 
-  test("the branch beside the vault's state, a worktree said so; the vault list groups a repository's worktrees under it", async () => {
+  test("the status line: the vault and its branch, a worktree as name@branch (20.14); the vault list groups a repository's worktrees under it", async () => {
     const l = layout();
     if (!l) return;
     const main = await harness({ root: l.x, open: "index.md" });
-    expect(topRow(main.frame())).toContain("⎇ main");
-    expect(topRow(main.frame())).not.toContain("(worktree)");
+    const name = main.app.loc.name!;
+    expect(statusRow(main.frame())).toContain(`${name} · main`);
+    expect(topRow(main.frame())).not.toContain("⎇"); // the top bar's no longer
     const feat = await harness({ root: join(l.wts, "feat"), open: "index.md" });
-    expect(topRow(feat.frame())).toContain("⎇ feat (worktree)");
+    expect(statusRow(feat.frame())).toContain(`${name}@feat`);
+    expect(statusRow(feat.frame())).not.toContain(" · ");
     await harness({ root: join(l.wts, "fix"), open: "index.md" }); // seen too
     // From elsewhere: x, then its worktrees under it by branch.
     const other = await harness({ open: "index.md" });
@@ -7134,9 +7136,9 @@ describe("git worktrees in the TUI (17.19)", () => {
       ["⎇ feat", 1, join(l.wts, "feat")],
       ["⎇ fix", 1, join(l.wts, "fix")],
     ]);
-    // A checkout switched to another branch: the top bar follows it.
+    // A checkout switched to another branch: the status line follows it.
     git(join(l.wts, "feat"), "checkout", "-q", "-b", "feat-2");
-    expect(topRow(feat.frame())).toContain("⎇ feat-2 (worktree)");
+    expect(statusRow(feat.frame())).toContain(`${name}@feat-2`);
   });
 
   test("a vault opened where a copy of it, gone from where it was, may have moved: asked — yes takes its state, no isn't asked again, esc asks next time (20.5)", async () => {
@@ -7313,12 +7315,12 @@ describe("a branch switch as one event (5.9)", () => {
     mkdirSync(join(root, ".slipbox"));
     writeFileSync(join(root, "a.md"), "# A\n");
     const h = await harness({ root, open: "a.md" });
-    expect(topRow(h.frame())).not.toContain("⎇");
+    expect(statusRow(h.frame())).not.toContain(" · ");
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
     const later = Date.now() + 5_000; // the next look for a repository
     (h.app as unknown as { now: () => number }).now = () => later;
-    expect(h.app.checkHead()).toBe(true); // news for the top bar
-    expect(topRow(h.frame())).toContain("⎇ main");
+    expect(h.app.checkHead()).toBe(true); // news for the status line (20.14)
+    expect(statusRow(h.frame())).toContain(" · main");
     expect(h.app.messages.some((m) => m.text.startsWith("switched"))).toBe(false); // not a switch
   });
 
@@ -7490,7 +7492,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     expect(h.app.loc.root).toBe(wt);
     expect(h.app.view!.buf.rel).toBe("notes/b.md"); // the same note, there
     expect(h.app.view!.buf.source).toBe("# B\n"); // as the other branch has it
-    expect(topRow(h.frame())).toContain("other (worktree)"); // the worktree's own config: its glyphs
+    expect(statusRow(h.frame())).toContain("@other"); // the worktree, by its branch (20.14)
   });
 
   test("a merge's conflicts in Problems: each file at its first marker; enter goes there", async () => {
