@@ -135,6 +135,18 @@ It isn't part of `bun run check`: timings depend on the machine. The incremental
 are held to their from-scratch results by the tests ("the incremental source layout", "the chunked
 parse", "the render cache", "parseAround").
 
+**The parse cache by content** (`20.11`, `bun scripts/bench.ts "2,000 notes"`): 2,000 notes of 120 lines each, the
+first copy parsed and the cache filled, then a second copy (a worktree, a clone) read with it and without it.
+Measured 2026-10-03 on the VM:
+
+| Case | Median |
+| --- | --- |
+| the first copy: parsed, the cache filled | 6,162 ms |
+| a second copy: parsed again, no cache | 5,998 ms |
+| a second copy: from the cache | 40 ms |
+
+Filling it costs about 3% of a first parse; a second copy is read about 150 times faster.
+
 ## Manual checks that stay manual
 
 Some things are only real in a terminal and a pair of eyes: glyph rendering in the actual font,

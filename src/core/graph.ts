@@ -13,11 +13,12 @@ import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.
 import { LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
+import { ParseCache, sharedParseCache } from "./parsecache.ts";
 import { cacheDir, stateDir } from "./paths.ts";
 import { checkoutOf, headOf } from "./git.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
-import { classify, extensionOf } from "./filetypes.ts";
+import { classify, extensionOf, noteFormat } from "./filetypes.ts";
 import type { VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, WalkFilter, walkVault } from "./walk.ts";
 import { type Hashtag, tagKey, tagName } from "./tags.ts";
@@ -136,7 +137,7 @@ export interface Backlink {
 }
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-const INDEX_VERSION = 7; // 6: inline #tags (1.6); 7: where links end (11.7)
+export const INDEX_VERSION = 7; // 6: inline #tags (1.6); 7: where links end (11.7)
 
 interface IndexFile {
   version: number;
@@ -1113,7 +1114,7 @@ export const VAULT_LINK = /^([\p{L}\p{N}][\p{L}\p{N}._-]*):(.+)$/u;
 
 
 /** Parse one note and extract what the graph needs. */
-export function extractNote(file: NoteFile): NoteEntry {
+export function extractNote(file: NoteFile, cache: ParseCache | null = sharedParseCache()): NoteEntry {
   const flags: string[] = [];
   let text = "";
   try {
@@ -1124,9 +1125,39 @@ export function extractNote(file: NoteFile): NoteEntry {
     if (decoded.crlf) flags.push("crlf");
   } catch (err) {
     flags.push(`unreadable: ${(err as NodeJS.ErrnoException).code ?? "error"}`);
+    return extractFromSource(file, text, flags);
   }
-  return extractFromSource(file, text, flags);
+  // Parsed before, by any copy of it on this machine (20.11): its content as it was, its place its own.
+  const hash = contentHash(text);
+  const key = ParseCache.key(hash, noteFormat(file.rel), INDEX_VERSION);
+  const hit = cache?.get(key);
+  if (hit) {
+    return {
+      rel: file.rel,
+      title: hit.title ?? fileTitle(file.rel),
+      headings: hit.headings as HeadingInfo[],
+      links: hit.links as LinkRef[],
+      tags: hit.tags,
+      aliases: hit.aliases,
+      previous: hit.previous,
+      hash,
+      mtimeMs: file.mtimeMs,
+      size: file.size,
+      flags,
+    };
+  }
+  const e = extractFromSource(file, text, flags);
+  cache?.put(key, { title: ownTitle.get(e) ? e.title : null, headings: e.headings, links: e.links, tags: e.tags, aliases: e.aliases, previous: e.previous });
+  return e;
 }
+
+/** A note's title from its file's name: what stands in when it has none of its own. */
+function fileTitle(rel: string): string {
+  return basename(rel).replace(/\.(md|markdown)$/i, "");
+}
+
+/** Whether an entry's title is its own (frontmatter, a `#` heading), not its file's name. */
+const ownTitle = new WeakMap<NoteEntry, boolean>();
 
 export function extractFromSource(file: NoteFile, text: string, flags: string[] = []): NoteEntry {
   const parsed = parseNoteFile(file.rel, text);
@@ -1167,9 +1198,10 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
       tags.push(name);
     }
   }
-  return {
+  const own = noteTitle(parsed, "");
+  const entry: NoteEntry = {
     rel: file.rel,
-    title: noteTitle(parsed, basename(file.rel)),
+    title: own || fileTitle(file.rel),
     headings: headingsOf(parsed.tree),
     links,
     tags,
@@ -1180,6 +1212,8 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
     size: file.size,
     flags,
   };
+  ownTitle.set(entry, !!own);
+  return entry;
 }
 
 function mdLink(kind: LinkKind, url: string, text: string, line: number, column: number, end: Pos): LinkRef {

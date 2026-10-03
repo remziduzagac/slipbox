@@ -17,6 +17,7 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | --- | --- | --- | --- |
 | config | `$XDG_CONFIG_HOME/slipbox/config.toml`, then the vault's | user and vault settings | no |
 | cache | `$XDG_CACHE_HOME/slipbox/<key>/` | the persisted link index | yes, rebuilt on demand |
+| cache, shared | `$XDG_CACHE_HOME/slipbox/parsed.db` | parsed content, by content (`20.11`) | yes, rebuilt as read |
 | state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness, redirects, trash | no: yours |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/vaults.json` | the instances seen, their moves | no: the keys |
 | data | `$XDG_DATA_HOME/slipbox/home/` | the home vault's `.slipbox/`: its config | a new id: loses state |
@@ -52,6 +53,13 @@ Consequences, accepted deliberately:
   session to another.
 - The home vault holds every loose folder: its positions are keyed by absolute path, and each folder has its own
   session (`sessions/<basename>-<hash>.json`).
+
+**The parse cache is shared by content** (`20.11`): what a note says once parsed — links as written, headings, tags,
+aliases, a title of its own — is kept in one SQLite file by its text's hash, its format and the parser's version
+(`INDEX_VERSION`, bumped whenever what's extracted changes), for every copy on this machine: a worktree, a branch
+switched to, a clone parses only what no copy has. A title from the file's name, the file's BOM and line endings are
+the file's own, never cached; where a link points depends on where the file is, so links are resolved and backlinks
+derived per copy. `SLIPBOX_PARSE_CACHE=off` goes without it.
 
 **The scratch (`8.2`)** lives in the state dir by default, because a scratch inside the repo gets committed by
 accident. It is not invisible to agents: `slipbox scratch path` and `slipbox scratch show` expose it. Setting
@@ -236,7 +244,7 @@ tools do is the project's.
 
 ## `20.x` — plain paths, virtual vaults
 
-Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.10` and
+Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.11` and
 `20.23` done). The model in full
 is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the

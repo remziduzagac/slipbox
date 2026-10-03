@@ -193,4 +193,35 @@ await bench("cli: render k20 --plain", async () => [await cli(["render", "k20", 
 await bench("cli: find link-7 (the vault)", async () => [await cli(["find", "link-7"]), await cli(["find", "link-7"])]);
 await bench("cli: backlinks link-7", async () => [await cli(["backlinks", "k1"]), await cli(["backlinks", "k1"])]);
 
+// The parse cache by content (20.11): a vault of many notes indexed once, then a second copy of it —
+// a worktree, a clone — indexed with the parse cache shared, and without it. Measured, not assumed.
+{
+  const { cpSync, mkdirSync } = await import("node:fs");
+  const { ParseCache } = await import("../src/core/parsecache.ts");
+  const { Graph } = await import("../src/core/graph.ts");
+  const { rootAt } = await import("../src/core/vault.ts");
+  const many = join(dir, "many");
+  mkdirSync(join(many, ".slipbox"), { recursive: true });
+  // Each note's own text (a shared one would be parsed once, whatever the copy).
+  for (let i = 0; i < 2000; i++) writeFileSync(join(many, `n${i}.md`), `# Note ${i}\n\n${mixed(120).replace(/link-(\d+)/g, `n${i % 97}`)}\nThe end of note ${i}.\n`);
+  const build = (root: string, cache: import("../src/core/parsecache.ts").ParseCache | null) =>
+    time(async () => {
+      const loc = rootAt(root);
+      const g = new Graph(loc, DEFAULT_CONFIG).build(false, "lazy");
+      for (const rel of g.notes.keys()) (await import("../src/core/graph.ts")).extractNote({ rel, abs: join(root, rel), size: 0, mtimeMs: 0 }, cache);
+    });
+  const shared = ParseCache.open(join(dir, "cache", "bench-parsed.db"))!;
+  await bench("2,000 notes, the first copy: parsed, the parse cache filled", async () => [await build(many, shared)]);
+  const copies: number[] = [];
+  const unshared: number[] = [];
+  for (let k = 0; k < 3; k++) {
+    const copy = join(dir, `copy-${k}`);
+    cpSync(many, copy, { recursive: true });
+    copies.push(await build(copy, shared));
+    unshared.push(await build(copy, null));
+  }
+  await bench("2,000 notes, a second copy: from the parse cache", async () => copies);
+  await bench("2,000 notes, a second copy: parsed again (no cache)", async () => unshared);
+}
+
 rmSync(dir, { recursive: true, force: true });
