@@ -985,7 +985,7 @@ const HANDLERS: Record<string, Handler> = {
     }
   },
 
-  init(s, rest) {
+  async init(s, rest) {
     const dir = rest[0] ?? flag(s.args, "root") ?? s.io.cwd;
     const name = flag(s.args, "name");
     if (name === "") throw new UsageError("--name needs a name");
@@ -996,7 +996,7 @@ const HANDLERS: Record<string, Handler> = {
     if (holder) {
       const parent = openVault(holder);
       const rel = relative(holder, abs);
-      const res = renameResult(s, () => planMakeVault(parent, rel, name ?? suggestVaultName(abs, parent.loc.name), { private: has(s.args, "private") }), parent);
+      const res = await renameResult(s, () => planMakeVault(parent, rel, name ?? suggestVaultName(abs, parent.loc.name), { private: has(s.args, "private") }), parent);
       // As init says it of any folder: the vault's root, name and id — and what changed.
       const d = res.data as { to: string; dryRun: boolean };
       return { ...res, data: { ...d, root: abs, name: d.to, id: d.dryRun ? null : readIdentity(vaultConfigFile(abs)).id, created: !d.dryRun } };
@@ -1085,9 +1085,9 @@ const HANDLERS: Record<string, Handler> = {
     }
   },
 
-  "rename-vault"(s, rest) {
+  async "rename-vault"(s, rest) {
     const name = requireArg(rest, "the vault's new name");
-    const r = renameResult(s, () => planVaultRename(s.graph, s.loc, name));
+    const r = await renameResult(s, () => planVaultRename(s.graph, s.loc, name));
     if (!has(s.args, "dry-run")) recordLocation(rootAt(s.loc.root));
     return r;
   },
@@ -1111,7 +1111,7 @@ const HANDLERS: Record<string, Handler> = {
     return renameResult(s, () => planConvert(s.graph, rels));
   },
 
-  undo(s) {
+  async undo(s) {
     // Nothing to undo here (none at all, or only another branch's): said as planUndo says it, exit 3.
     if (!loggedRenames(s.graph).length) {
       try {
@@ -1120,7 +1120,7 @@ const HANDLERS: Record<string, Handler> = {
         throw new CliError((err as Error).message, EXIT.notFound);
       }
     }
-    const r = renameResult(s, () => planUndo(s.graph));
+    const r = await renameResult(s, () => planUndo(s.graph));
     // A vault's rename taken back: the machine's list learns its name again.
     const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };
     if (d.kind === "vault" && !d.dryRun) for (const f of d.files) if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
@@ -1130,7 +1130,7 @@ const HANDLERS: Record<string, Handler> = {
   // A plan saved by --plan (20.18), applied: refused, nothing written, when any of its files changed
   // since it was made. --dry-run shows it, and says whether it's still good. With no id, the plans
   // waiting, newest first.
-  apply(s, rest) {
+  async apply(s, rest) {
     if (!rest[0]) {
       const waiting = listPlans();
       return {
@@ -1152,7 +1152,7 @@ const HANDLERS: Record<string, Handler> = {
       if (stale.length) s.warnings.push(`stale: ${stale.map((f) => f.shown).join(", ")} changed since it was planned — applying it would be refused`);
       return renameResult(s, () => saved.plan, g);
     }
-    const r = renameResult(s, () => saved.plan, g);
+    const r = await renameResult(s, () => saved.plan, g);
     forgetPlan(saved.id);
     return r;
   },
@@ -1938,7 +1938,9 @@ function folderArg(s: Session, arg: string): string | null {
 }
 
 /** A rename's plan (7.2), or, without --dry-run, the rename done. */
-function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Result {
+async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Promise<Result> {
+  // A code file links from its comments (16.10): its grammar loaded first, so a move finds those too (20.19).
+  await g.loadGrammars();
   let p: RenamePlan;
   let applied: Applied | null = null;
   let saved: SavedPlan | null = null;

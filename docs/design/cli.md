@@ -334,7 +334,9 @@ Each `files` entry is `{path, abs, vault, edits[{line, before, after}]}`.
 
 `slipbox mv <note> <new-path>` renames or moves a note (or any file of the vault; the extension is kept when the
 new path has none) and rewrites every link to it, in this vault and in every vault whose index links into it
-(`17.11`). `--dry-run` is the preview (`7.2`): each changed line, before and after, and nothing written.
+(`17.11`) — a note's, a reached note's (`20.8`), a data file's value, a code comment's path (`20.19`: the code files'
+grammars are loaded before it plans, so their comments count however fresh the process). `--dry-run` is the preview
+(`7.2`): each changed line, before and after, and nothing written.
 
 - **Each link keeps how it was written:** a relative path stays relative, `#heading` and `#^block` stay, a
   percent-encoded URL is encoded again, a reference link's definition is rewritten where it is; a filesystem path

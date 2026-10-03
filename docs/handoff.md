@@ -46,8 +46,8 @@ over broader (`20.7`), git-ignored and hidden files indexed when reached (`20.8`
 (`20.9`), freshness and coverage (`20.10`), the parse cache shared by content (`20.11`: a second copy read ~150×
 faster). The `vault:path` form on screen (`20.12`) and in link completion (`20.13`). The vault and its branch in the
 status line (`20.14`). The explorer's roots (`20.15`). Search by vault (`20.16`). Repairs from what the state knows
-(`20.17`). Generated edits as plans (`20.18`: `--plan`, `slipbox apply`). Next: renames on paths, the CLI and the
-merge review (`20.19`–`20.21`), then the removals (`20.22`).
+(`20.17`). Generated edits as plans (`20.18`: `--plan`, `slipbox apply`). Renames and moves on paths, code comments
+included (`20.19`). Next: the CLI and the merge review (`20.20`, `20.21`), then the removals (`20.22`).
 
 ## The documents
 

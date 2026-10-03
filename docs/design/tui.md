@@ -930,7 +930,8 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
     vault — relative to the file, then to the vault's root, where a repo's paths start (a leading `/` too) —
     `path:42` at that line. No wikilinks: code has none. They're drawn as links, `enter` follows
     them (a path in a string too: an import's is worth following), and they count as backlinks
-    of what they name.
+    of what they name — the vault's code grammars load in the background as it opens (`20.19`), so they count
+    before any code file is opened, and a rename or move rewrites them.
 - **Editing and saving** work as for notes: the same undo, saves, autosave and conflict prompt; an
   agent's change to an open file reloads it.
 - **What lists them.** The explorer and the switcher show what `files.show` says (`notes`,

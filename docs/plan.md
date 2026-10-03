@@ -611,7 +611,7 @@ the merge review after; the removals as their replacements land, the sweep last.
 | 20.16 | **Done.** Search by vault: the current one, then linked ones, then everything on a key; `--scope` |
 | 20.17 | **Done.** Repairs: changes made elsewhere fix the index; link fixes as plans; a moved vault's from the state |
 | 20.18 | **Done.** Generated edits as plans: tied to file hashes, stale ones refused; the CLI plans, then applies |
-| 20.19 | Renames and moves on paths: the files linking in, and the moved file's own relative links |
+| 20.19 | **Done.** Renames and moves on paths: the files linking in, and the moved file's own relative links |
 | 20.20 | The CLI: `vault:path` in and out; answers about files as saved; diagnostics, scoped search, the link fix |
 | 20.21 | The merge review: links broken in `git merge-tree`'s result; after a merge, git's renames as evidence |
 | 20.22 | Removed: the home vault, `[[vault:note]]`, resolving by name, links through redirects (the prompt: `20.3`) |

@@ -715,7 +715,22 @@ export class App {
       this.indexInBackground();
       this.refreshGit();
       this.startAutoIndex();
+      this.loadCodeGrammars();
     }
+  }
+
+  /**
+   * The vault's code files' grammars, loaded in the background (20.19): their comments' links count
+   * as backlinks, and a rename or move rewrites them — laid out again once they're in.
+   */
+  loadCodeGrammars(): void {
+    const g = this.graph;
+    void g.loadGrammars().then(() => {
+      if (this.graph !== g || this.quitting) return;
+      for (const b of this.buffers.values()) b.invalidateLayouts();
+      this.relayoutAll();
+      this.host.requestRender();
+    });
   }
 
   // -------------------------------------------------------------------------------------------
@@ -6886,6 +6901,7 @@ export class App {
     this.graph = new Graph(target, this.config).build(true, "lazy");
     this.graph.reach = this.reach;
     this.followGraph();
+    if (this.live) this.loadCodeGrammars();
     for (const e of this.graph.errors) this.message("warn", e);
     this.positions = new PositionStore(target);
     for (const b of this.buffers.values()) this.servers?.close(b.abs);
