@@ -4,9 +4,9 @@
 // (`work.docs`, `home.docs`) — never `/`, and never `:`, which separates a vault from a path. A
 // worktree shows the branch checked out in it now: `pathfinder@refactor`. Never written into a file.
 
-import { basename, dirname, relative, sep } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import { checkoutOf, headOf } from "./git.ts";
-import { HOME_NAME, type KnownVault, readRegistry, slugName } from "./registry.ts";
+import { HOME_NAME, type KnownVault, readRegistry, slugName, vaultNamed } from "./registry.ts";
 import { findVaultRoot, homeFolder, isInside, type VaultLocation } from "./vault.ts";
 
 /** The branch checked out at `path` now (a detached head: its commit, short); null outside git. */
@@ -92,4 +92,26 @@ export function vaultForm(abs: string, here: string | null, nameOf: (root: strin
   if (root) return `${nameOf(root) ?? (slugName(basename(root)) || "vault")}:${posixRel(root)}`;
   const home = homeFolder();
   return abs.startsWith(`${home}/`) ? `~/${posixRel(home)}` : abs;
+}
+
+/**
+ * A file named in the `vault:path` form (20.20): the vault, among those this machine knows, by the
+ * name it's shown with (20.6) — or by its own, or an old one, when no other vault has it; the path in
+ * it, from its root. Null when the part before `:` names no vault: a note's name can have a colon.
+ * A path that climbs out of the vault (`..`) names nothing in it: null too.
+ */
+export function fromVaultForm(form: string, known = readRegistry(), branch?: (path: string) => string | null): { root: string; rel: string; abs: string } | null {
+  const at = form.indexOf(":");
+  if (at <= 0) return null;
+  const name = form.slice(0, at).toLowerCase();
+  const shown = displayNames(known, branch);
+  let v = known.find((x) => shown.get(x.key)?.toLowerCase() === name);
+  if (!v) {
+    const own = vaultNamed(name, known).filter((x) => x.kind === "vault" && !x.worktree);
+    if (own.length === 1) v = own[0];
+  }
+  if (!v) return null;
+  const abs = join(v.path, form.slice(at + 1));
+  if (!isInside(v.path, abs)) return null;
+  return { root: v.path, rel: relative(v.path, abs).split(sep).join("/"), abs };
 }

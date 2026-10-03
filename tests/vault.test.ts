@@ -3482,3 +3482,117 @@ describe("renames and moves on paths (20.19)", () => {
     expect(read("docs/a.md")).toBe("# A\n\n[up](../sub/x.md) [self](#a)\n");
   });
 });
+
+describe("the CLI's vault:path (20.20)", () => {
+  const v = (key: string, name: string | null, path: string, extra: Partial<KnownVault> = {}): KnownVault => ({ key, id: null, kind: "vault", name, aliases: [], previous_names: [], path, seen: "", ...extra });
+
+  test("a vault by the name it's shown with, or its own when no other has it; the path from its root, never out of it", async () => {
+    const { fromVaultForm } = await import("../src/core/names.ts");
+    const known = [v("a", "docs", "/home/me/work/docs"), v("b", "docs", "/home/me/home/docs"), v("c", "research", "/r/research", { aliases: ["old-research"] }), v("w", "research", "/r/wt", { aliases: ["old-research"], worktree: { name: "wt", main: "/r/research" } }), v("f", "loose", "/f", { kind: "folder" })];
+    const branch = () => "refactor";
+    expect(fromVaultForm("work.docs:a/b.md", known, branch)).toEqual({ root: "/home/me/work/docs", rel: "a/b.md", abs: "/home/me/work/docs/a/b.md" });
+    expect(fromVaultForm("Research:algorithms/dijkstra.md", known, branch)?.abs).toBe("/r/research/algorithms/dijkstra.md");
+    expect(fromVaultForm("WORK.docs:a.md", known, branch)?.abs).toBe("/home/me/work/docs/a.md"); // case doesn't count
+    expect(fromVaultForm("research@refactor:x.md", known, branch)?.abs).toBe("/r/wt/x.md");
+    expect(fromVaultForm("old-research:x.md", known, branch)?.abs).toBe("/r/research/x.md"); // its old name, no other's
+    expect(fromVaultForm("research:", known, branch)).toEqual({ root: "/r/research", rel: "", abs: "/r/research" });
+    expect(fromVaultForm("docs:a.md", known, branch)).toBeNull(); // two vaults' own name: neither
+    expect(fromVaultForm("research:../other/x.md", known, branch)).toBeNull();
+    expect(fromVaultForm("loose:x.md", known, branch)).toBeNull(); // a folder isn't a vault
+    expect(fromVaultForm("Meeting: Q3", known, branch)).toBeNull();
+    expect(fromVaultForm(":x.md", known, branch)).toBeNull();
+  });
+
+  const out: string[] = [];
+  const cli = async (args: string[], cwd: string) => {
+    out.length = 0;
+    const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return { code, json: code === 2 ? null : JSON.parse(out.join("")) };
+  };
+  const human = async (args: string[], cwd: string) => {
+    const lines: string[] = [];
+    await runCli(args, { out: (x: string) => lines.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return lines.join("");
+  };
+  /** a's notes/plan.md links to b's algorithms/dijkstra.md. */
+  const two = async () => {
+    const base = mkdtempSync(join(tmpdir(), "slipbox-vform-"));
+    const tag = basename(base).replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const at = (x: string) => join(base, x);
+    for (const x of ["a", "b"]) {
+      mkdirSync(at(x), { recursive: true });
+      await cli(["init", at(x), "--name", `${x}${tag}`], at(x));
+    }
+    mkdirSync(join(at("a"), "notes"));
+    mkdirSync(join(at("b"), "algorithms"));
+    writeFileSync(join(at("a"), "notes", "plan.md"), "# Plan\n\n[shortest](../../b/algorithms/dijkstra.md)\n");
+    writeFileSync(join(at("a"), "notes", "other.md"), "# Other\n");
+    writeFileSync(join(at("b"), "algorithms", "dijkstra.md"), "# Dijkstra\n\n## Relaxation\n\nEdges.\n");
+    for (const x of ["a", "b"]) await cli(["ls"], at(x)); // each indexed and known, as when opened
+    return { at, a: `a${tag}`, b: `b${tag}` };
+  };
+
+  test("in: a note argument names a file of that vault, and the command works there", async () => {
+    const { at, a, b } = await two();
+    const read = await cli(["read", `${b}:algorithms/dijkstra.md`], at("a"));
+    expect(read.code).toBe(0);
+    expect(read.json.data).toMatchObject({ path: "algorithms/dijkstra.md" });
+    expect(read.json.data.content).toContain("## Relaxation");
+    expect((await cli(["outline", `${b}:algorithms/dijkstra.md`], at("a"))).json.data.headings[1]).toMatchObject({ text: "Relaxation" });
+    // Backlinks of b's note, asked from a: a's link among them, a's own path shown as a's.
+    const bl = (await cli(["backlinks", `${b}:algorithms/dijkstra.md`], at("a"))).json.data.backlinks;
+    expect(bl).toContainEqual(expect.objectContaining({ from: join(at("a"), "notes", "plan.md"), shown: `${a}:notes/plan.md` }));
+    // find's note is its second argument; context takes several.
+    expect((await cli(["find", "Edges", `${b}:algorithms/dijkstra.md`], at("a"))).code).toBe(0);
+    expect((await cli(["context", `${a}:notes/other.md`, `${a}:notes/plan.md`], at("b"))).json.data.start).toEqual(["notes/other.md", "notes/plan.md"]);
+    // Each argument itself: the first saying which vault never stands for the rest.
+    expect((await cli(["context", "notes/other.md", "notes/plan.md"], at("a"))).json.data.start).toEqual(["notes/other.md", "notes/plan.md"]);
+    // --from too.
+    expect((await cli(["resolve", "other.md", "--from", `${a}:notes/plan.md`], at("b"))).json.data).toMatchObject({ status: "resolved", path: "notes/other.md" });
+    // No vault by that name: a name, as before — not found.
+    expect((await cli(["read", "nope:x.md"], at("a"))).code).toBe(3);
+    // A file by that very name is itself: a path wins.
+    mkdirSync(join(at("a"), `${b}:algorithms`));
+    writeFileSync(join(at("a"), `${b}:algorithms`, "dijkstra.md"), "# Local\n");
+    expect((await cli(["read", `${b}:algorithms/dijkstra.md`], at("a"))).json.data.content).toBe("# Local\n");
+  });
+
+  test("resolve: a vault:path, and with --from the relative path a link there would carry", async () => {
+    const { at, a, b } = await two();
+    const r = await cli(["resolve", `${b}:algorithms/dijkstra.md#Relaxation`, "--from", "notes/plan.md"], at("a"));
+    expect(r.json.data).toMatchObject({ status: "resolved", path: join(at("b"), "algorithms", "dijkstra.md"), abs: join(at("b"), "algorithms", "dijkstra.md"), shown: `${b}:algorithms/dijkstra.md`, href: "../../b/algorithms/dijkstra.md#relaxation", heading: "Relaxation", line: 3, vault: b });
+    // This vault's own: its path here.
+    const own = await cli(["resolve", `${a}:notes/other.md`, "--from", "notes/plan.md"], at("a"));
+    expect(own.json.data).toMatchObject({ status: "resolved", path: "notes/other.md", shown: "notes/other.md", href: "other.md", vault: null });
+    // A folder too; a file that isn't there, not.
+    expect((await cli(["resolve", `${b}:algorithms`, "--from", "notes/plan.md"], at("a"))).json.data).toMatchObject({ status: "resolved", abs: join(at("b"), "algorithms"), href: "../../b/algorithms" });
+    expect((await cli(["resolve", `${b}:algorithms/nope.md`, "--from", "notes/plan.md"], at("a"))).code).toBe(3);
+    // Without --from: no link to write.
+    expect((await cli(["resolve", `${b}:algorithms/dijkstra.md`], at("a"))).json.data).toMatchObject({ status: "resolved", href: null });
+    // A path's href too, with the spaces a link encodes.
+    writeFileSync(join(at("a"), "notes", "a note.md"), "# A note\n");
+    expect((await cli(["resolve", "a note.md", "--from", "notes/plan.md"], at("a"))).json.data.href).toBe("a%20note.md");
+  });
+
+  test("out: links and backlinks show another vault's file as vault:path", async () => {
+    const { at, a, b } = await two();
+    const links = (await cli(["links", "notes/plan.md"], at("a"))).json.data;
+    expect(links[0]).toMatchObject({ path: join(at("b"), "algorithms", "dijkstra.md"), shown: `${b}:algorithms/dijkstra.md`, vault: b });
+    expect(await human(["links", "notes/plan.md"], at("a"))).toContain(`-> ${b}:algorithms/dijkstra.md\n`);
+    const bl = (await cli(["backlinks", "algorithms/dijkstra.md"], at("b"))).json.data.backlinks;
+    expect(bl[0]).toMatchObject({ shown: `${a}:notes/plan.md` });
+    expect(await human(["backlinks", "algorithms/dijkstra.md"], at("b"))).toContain(`${a}:notes/plan.md:3  shortest`);
+  });
+
+  test("mv and cp: a destination in this vault by vault:path; another vault's is refused", async () => {
+    const { at, a, b } = await two();
+    const moved = await cli(["mv", `${b}:algorithms/dijkstra.md`, `${b}:graphs/dijkstra.md`, "--dry-run"], at("a"));
+    expect(moved.code).toBe(0);
+    expect(moved.json.data).toMatchObject({ from: "algorithms/dijkstra.md", to: "graphs/dijkstra.md", dryRun: true });
+    const across = await cli(["mv", `${b}:algorithms/dijkstra.md`, `${a}:dijkstra.md`, "--dry-run"], at("a"));
+    expect(across.code).toBe(5);
+    expect(across.json.error.message).toContain("in another vault");
+    expect((await cli(["cp", `${b}:algorithms/dijkstra.md`, `${b}:algorithms/copy.md`], at("a"))).code).toBe(0);
+    expect(existsSync(join(at("b"), "algorithms", "copy.md"))).toBe(true);
+  });
+});

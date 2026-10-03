@@ -49,14 +49,14 @@ import { atLeast, lintProblems, noteProblems, type Problem, SEVERITIES, type Sev
 import { languageOf, serverTable } from "../core/servers/languages.ts";
 import { rootFor } from "../core/servers/find.ts";
 import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, RenameError, type RenamePlan } from "../core/rename.ts";
-import { planConvert } from "../core/convert.ts";
+import { planConvert, urlPath } from "../core/convert.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
 import { confirmMove, declineMove, type KnownVault, noteIndexed, readIdentity, readRegistry, removeStorage, suggestVaultName, unavailable, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
-import { displayNames, locName } from "../core/names.ts";
+import { displayNames, fromVaultForm, locName } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeAt, homeFolder, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
@@ -207,9 +207,11 @@ Global options:
   --color <when>    auto | always | never
   -h, --help        this help        -V, --version   print the version
 
-<note> is a path (a data or text file too, with its extension), or a note's name (its file's, or an
+<note> is a path (a data or text file too, with its extension), a vault's file as vault:path
+(research:algorithms/dijkstra.md, the vault as slipbox vaults shows it), or a note's name (its file's, or an
 alias); a name several notes share is exit 4,
-unless --from <note> picks the one a link from there reaches. After --, nothing is an option:
+unless --from <note> picks the one a link from there reaches. resolve <vault:path> --from <note> gives
+href, the relative path a link there carries. After --, nothing is an option:
 slipbox read -- -dash.md names a note that starts with a dash.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
 5 refused (--if-unchanged, a write outside the vault or over an existing note, invalid UTF-8,
@@ -265,8 +267,16 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // Flags every command shares are checked for every command, used or not.
     const color = flag(args, "color");
     if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
-    // The note argument, when it names a file, also says which vault this is.
-    const noteAt = ["render", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm"].includes(command) ? rest[0] : command === "find" ? rest[1] : undefined;
+    // A file named `vault:path` (20.20) is that file: its path from here on, so the command works in
+    // that vault as it would with the path.
+    const NOTE_FIRST = ["render", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
+    const named = command === "context" ? rest.map((_, i) => i) : NOTE_FIRST.includes(command) || ["diagnostics", "doctor", "deinit", "index"].includes(command) ? [0] : command === "find" ? [1] : [];
+    for (const i of named) if (rest[i] !== undefined) rest[i] = vaultFormArg(rest[i]!, io.cwd);
+    const from = flag(args, "from");
+    if (from !== undefined) args.flags.set("from", vaultFormArg(from, io.cwd));
+    // The note argument, when it names a file, also says which vault this is (resolve's is --from:
+    // where the link is written).
+    const noteAt = NOTE_FIRST.includes(command) ? rest[0] : command === "find" ? rest[1] : command === "resolve" ? flag(args, "from") : undefined;
     let pathArg = noteArgPath(noteAt, io.cwd);
     // A nested vault's folder, moved, copied or deleted, is a folder of the vault holding it (18.7).
     if (pathArg && ["mv", "cp", "rm"].includes(command)) {
@@ -389,6 +399,15 @@ const FLAGS: Record<string, string[]> = {
   diff: ["base"],
 };
 
+/**
+ * A file argument in the `vault:path` form (20.20), as the file's path; any other as it is. An existing
+ * file by that name is itself: a path wins.
+ */
+function vaultFormArg(arg: string, cwd: string): string {
+  if (existsSync(isAbsolute(arg) ? arg : join(cwd, arg))) return arg;
+  return fromVaultForm(arg)?.abs ?? arg;
+}
+
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
 function noteArgPath(arg: string | undefined, cwd: string): string | undefined {
   if (!arg) return undefined;
@@ -423,7 +442,8 @@ function resolveNote(s: Session, arg: string, parse = true): string {
 }
 
 function findNoteArg(s: Session, arg: string, parse: boolean): string {
-  if (s.loc.file && isInside(s.loc.root, s.loc.file)) {
+  // The file that said which vault this is: only the argument naming it (context takes several).
+  if (s.loc.file && isInside(s.loc.root, s.loc.file) && resolve(s.io.cwd, arg) === s.loc.file) {
     const rel = relative(s.loc.root, s.loc.file);
     if (s.graph.notes.has(rel)) return rel;
     // An existing file the walk leaves out: named, it's reached (20.8) — git-ignored or under a
@@ -516,15 +536,23 @@ const HANDLERS: Record<string, Handler> = {
     let path: string | null = null;
     let candidates: string[] = [];
     let found: Target | null = null;
+    let formedVault: string | null = null;
     // A scheme makes it external only outside [[…]] (as the renderer has it), with no spaces (a
     // URL has none), and when no note by that name exists: "Meeting: Q3" is a note.
     const bracketed = /^!?\[\[/.test(raw);
     const noteNamed = s.graph.findNote(parts.target, s.io.cwd).status !== "unresolved";
     // A file:// URL names a file (17.16): resolved, not external.
     const fileUrl = /^file:\/\//i.test(inner);
+    // `vault:path` (20.20): a file or folder of that vault, by its path there; `#heading` after it.
+    const hash = inner.indexOf("#");
+    const formed = mdLink || bracketed ? null : fromVaultForm(hash < 0 ? inner : inner.slice(0, hash));
     if (mdLink && /^[a-z][a-z0-9+.-]*:/i.test(inner) && !fileUrl) {
       status = "external";
       path = inner;
+    } else if (formed && existsSync(formed.abs)) {
+      status = "resolved";
+      path = formed.root === s.loc.root ? formed.rel : formed.abs;
+      if (formed.root !== s.loc.root) formedVault = s.graph.reach?.vaultOf(formed.root) ?? null;
     } else if (mdLink && parts.target) {
       const md = s.graph.resolveLink({ kind: "markdown", target: inner }, from ?? "");
       status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
@@ -561,7 +589,9 @@ const HANDLERS: Record<string, Handler> = {
       line = h?.line ?? null;
     }
     const abs = path && status !== "external" ? (isAbsolute(path) ? path : s.graph.abs(path)) : null;
-    const data = { link: raw, status, path, abs, heading: parts.heading, line, candidates, vault: found?.vault ?? null, via: found?.via ?? null, reason: found?.reason ?? null };
+    // With --from, the link to write there (20.20): the relative path, as a link carries it.
+    const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${slugify(parts.heading)}` : ""}` : null;
+    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, vault: found?.vault ?? formedVault, via: found?.via ?? null, reason: found?.reason ?? null };
     if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`, EXIT.ambiguous, data);
     if (status === "unresolved") throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);
     if (data.via) s.warnings.push(`"${raw}" reached ${abs} by ${data.via === "alias" ? "an alias" : data.via === "previous-name" ? "a previous name" : "a redirect"}`);
@@ -574,7 +604,8 @@ const HANDLERS: Record<string, Handler> = {
     if (all && rest.length) throw new UsageError("links takes a note or --all, not both");
     const notes = all ? (s.graph.ensureAll(), [...s.graph.notes.keys()].sort()) : [resolveNote(s, requireArg(rest, "note"))];
     if (!all) await s.graph.loadGrammars(); // a code file's links are in its comments (16.10)
-    const links = notes.flatMap((from) => s.graph.linksOf(from).map((l) => ({ ...l, from })));
+    // Each link's file as shown (20.12): its path here, `vault:path` in another vault.
+    const links = notes.flatMap((from) => s.graph.linksOf(from).map((l) => ({ ...l, from, shown: l.path ? s.graph.shownPath(isAbsolute(l.path) ? l.path : s.graph.abs(l.path)) : null })));
     const human = links
       .map((l) => {
         const where = `${all ? `${l.from}:` : ""}${l.line}:${l.column}`.padEnd(8);
@@ -583,7 +614,7 @@ const HANDLERS: Record<string, Handler> = {
             ? `UNRESOLVED${l.reason ? ` (${l.reason})` : ""}`
             : l.resolvedKind === "ambiguous"
               ? `AMBIGUOUS (${l.candidates.join(", ")})`
-              : `${l.path ?? ""}${l.vault ? ` (vault ${l.vault})` : ""}${l.via ? ` [${l.via}]` : ""}`;
+              : `${l.shown ?? ""}${l.via ? ` [${l.via}]` : ""}`;
         const shown = l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]` : l.target;
         return `${where} ${l.kind.padEnd(8)} ${shown} -> ${dest}\n`;
       })
@@ -599,6 +630,7 @@ const HANDLERS: Record<string, Handler> = {
         column: l.column,
         status: l.resolvedKind,
         path: l.path,
+        shown: l.shown,
         candidates: l.candidates,
         vault: l.vault ?? null,
         via: l.via ?? null,
@@ -799,8 +831,9 @@ const HANDLERS: Record<string, Handler> = {
   async backlinks(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
     await s.graph.loadGrammars(); // code files link from their comments (16.10)
-    const bl = s.graph.backlinks(rel);
-    return { data: { path: rel, backlinks: bl.map((b) => ({ ...b, vault: b.vault ?? null })) }, human: bl.map((b) => `${b.vault ? `${b.vault}: ` : ""}${b.from}:${b.line}  ${b.text}\n`).join("") };
+    // Each from as shown (20.12): its path here, `vault:path` from another vault.
+    const bl = s.graph.backlinks(rel).map((b) => ({ ...b, vault: b.vault ?? null, shown: s.graph.shownPath(isAbsolute(b.from) ? b.from : s.graph.abs(b.from)) }));
+    return { data: { path: rel, backlinks: bl }, human: bl.map((b) => `${b.shown}:${b.line}  ${b.text}\n`).join("") };
   },
 
   ls(s) {
@@ -1029,7 +1062,7 @@ const HANDLERS: Record<string, Handler> = {
 
   mv(s, rest) {
     const what = requireArg(rest, "note or folder");
-    const to = rest[1];
+    const to = destArg(s, rest[1]);
     if (!to) throw new UsageError("missing the new path (mv <note|folder> <new-path>)");
     // A folder moves with everything in it, every link to any of it fixed (18.3).
     const dir = folderArg(s, what);
@@ -1044,7 +1077,7 @@ const HANDLERS: Record<string, Handler> = {
     const what = requireArg(rest, "note or folder");
     const rel = folderArg(s, what) ?? resolveNote(s, what, false);
     try {
-      const r = copyPath(s.graph, rel, rest[1]);
+      const r = copyPath(s.graph, rel, destArg(s, rest[1]));
       return { data: r, human: `copied ${r.from} → ${r.to}\n` };
     } catch (err) {
       if (err instanceof FileOpError) throw new CliError(err.message, EXIT.refused);
@@ -1927,6 +1960,14 @@ function searchIndex(s: Session): SearchIndex | null {
 }
 
 /** A folder of the vault named on the command line (from cwd, or the vault's root), or null. */
+/** Where a move or copy goes, given as `vault:path` (20.20): its path in this vault; another's is refused. */
+function destArg(s: Session, to: string | undefined): string | undefined {
+  const f = to === undefined ? null : fromVaultForm(to);
+  if (!f) return to;
+  if (f.root !== s.loc.root) throw new CliError(`${to} is in another vault: a file moves or is copied within its own`, EXIT.refused);
+  return f.rel;
+}
+
 function folderArg(s: Session, arg: string): string | null {
   for (const abs of [arg.startsWith("/") ? arg : join(s.io.cwd, arg), join(s.loc.root, arg)]) {
     if (!isInside(s.loc.root, abs) || abs === s.loc.root) continue;

@@ -55,8 +55,9 @@ the user gets a conflict prompt. Tell them, or ask, before writing it.
 
 ## Reading notes
 
-`<note>` is a path (relative to the current directory or the vault) or a note name, which
-resolves like a `[[wikilink]]`.
+`<note>` is a path (relative to the current directory or the vault), a file of another vault as `vault:path`
+(`research:algorithms/dijkstra.md`, the vault named as `slipbox vaults` shows it; the command then works in that
+vault), or a note name, which resolves like a `[[wikilink]]`.
 
 ```bash
 slipbox render <note> --plain            # readable text, tables laid out, no colour
@@ -116,7 +117,7 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
 slipbox resolve '[[alpha#Section Two]]' --from index.md --json
 # data: {status: "resolved", path, abs, heading, line, candidates}
 slipbox links <note> --json              # outgoing links, each with status and path
-slipbox backlinks <note> --json          # notes linking here: line, column, and how each is written
+slipbox backlinks <note> --json          # notes linking here: line, column, how each is written; `shown`: vault:path
 slipbox links --all --json               # every link in the vault, each with `from`: the broken ones
 slipbox problems --json                  # broken and ambiguous links (where, why), and orphans: notes nothing links to
 slipbox problems --lint --json           # …and the user's markdownlint-cli2 findings: lint[{file, line, rule, …}]
@@ -126,6 +127,7 @@ slipbox footnotes <note> --json          # each footnote: label, text, definitio
 slipbox footnotes <note> add 12:30 'Source: the dome log'   # [^N] at line 12, column 30; its definition at the end
 slipbox footnotes <note> edit 3 'New text'   # also: rm <label>, rename <label> <new>; --if-unchanged <sha>
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
+slipbox resolve research:algorithms/dijkstra.md --from notes/plan.md --json   # data.href: the path to write in a link
 slipbox search dome shutter --json       # notes ranked by the words: hits[{path, line, column, heading, snippet}]
 slipbox changed --json                   # what this branch changed against main: files[{path, state, from?}]
 slipbox diff <note> --json               # the note's diff against where the branch left main: rows[{kind, text, line}]

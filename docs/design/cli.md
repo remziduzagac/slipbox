@@ -72,8 +72,8 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `scratch path` | `{path, exists}` |
 | `scratch clear` | `{path, cleared, previousSha}` |
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
-| `resolve <link>` | `{link, status, path, abs, heading, line, candidates[], vault, via, reason}` |
-| `links <note>` | `[{kind, target, heading, text, line, column, end, status, path, candidates, vault, via, reason}]` |
+| `resolve <link>` | `{link, status, path, abs, shown, href, heading, line, candidates[], vault, via, reason}` |
+| `links <note>` | `[{kind, target, heading, text, line, column, end, status, path, shown, candidates, vault, …}]` |
 | `problems` | `{broken[], ambiguous[], orphans[]}`: links `{from, line, column, end, kind, target, reason, …}`; paths |
 | `problems --lint` | adds `lint[{file, line, column, rule, name, description}]`; a warning when lint is off or fails |
 | `problems` (git) | `conflicts[{path, line}]`: during a merge, the unmerged files at their first marker (`5.12`) |
@@ -81,7 +81,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `diff <note>` | `{path, base, mergeBase, new, rows[{kind, text, line}]}`: `kind` `@@` ` ` `-` `+`; `line`: now |
 | `worktrees` | `[{path, branch, head, main, vault, current}]`: the main checkout first |
 | `tags [tag]` | `[{tag, count}]`, or a tag's `{tag, notes[]}` (its nested tags' too); exit 3: no note has it |
-| `backlinks <note>` | `{path, backlinks[{from, vault, line, column, end, text, kind, target, heading, …}]}` |
+| `backlinks <note>` | `{path, backlinks[{from, vault, shown, line, column, end, text, kind, target, heading, …}]}` |
 
 These churn freely before 1.0:
 
@@ -139,10 +139,17 @@ rewrite them.
    walking up from the file. A file the walk excludes is still read when named explicitly, as in
    the TUI: one git-ignored or under a hidden folder is reached, and joins the vault's index from
    then on (`20.8`); one under `node_modules` or `walk.exclude` never joins it.
-2. A vault-relative path.
-3. A note name: its file name without the extension (or a declared alias). Collisions then go to the shortest path,
+2. `vault:path` (`20.20`): a file of a vault this machine knows, by the name it's shown with (`20.6`: `research`,
+   `work.docs`, `pathfinder@refactor`; any case) — or by its own or an old one when no other vault has it — and its
+   path from that vault's root. It's that file's path from then on, so the command works in that vault, as with
+   the path: `slipbox backlinks research:algorithms/dijkstra.md` from anywhere. A path that climbs out (`..`) names
+   nothing; a part before `:` that names no vault leaves it a name (`Meeting: Q3`); an existing file by that very
+   name wins. Every note argument takes it (`find`'s second, each of `context`'s), and `--from`; `mv` and `cp` take
+   a destination so too, in the same vault (another vault's is exit 5).
+3. A vault-relative path.
+4. A note name: its file name without the extension (or a declared alias). Collisions then go to the shortest path,
    and a real tie exits 4. That's how a command names a note; links in notes are paths (`20.2`).
-4. A data or text file of the vault (`16.4`), by its path with its extension (`cfg/app.toml`,
+5. A data or text file of the vault (`16.4`), by its path with its extension (`cfg/app.toml`,
    `tool.py`), from the current folder or the vault's root. It's read and written as it is, never
    parsed as a note. A data file renders (`render`, as in the TUI) and has an outline (its
    sections); one that doesn't parse is exit 1 with its error. A text file has no rendered form:
@@ -270,6 +277,14 @@ note's, each with `from`. It still takes `[[target#heading|alias]]` too, looked 
 filesystem's root — or a `file://` URL; a file, not an external link) resolves into the other vault: `path` and `abs`
 are absolute, and `vault` names it. A path that reaches nothing is broken, whatever moved (`20.2`). A backlink from
 another vault has an absolute `from` and its `vault`.
+
+**`vault:path` in and out** (`20.20`): `shown` is the file as the TUI shows it (`20.12`) — its path in this vault,
+`research:algorithms/dijkstra.md` in another — in `resolve`, in each of `links`' and `backlinks`', and in their
+text output in place of the absolute path. `resolve` takes the form too, a folder included, `#heading` after it:
+`slipbox resolve research:algorithms/dijkstra.md#Relaxation --from notes/plan.md` gives `href`, the relative path
+a link from `--from` carries (`../../research/algorithms/dijkstra.md#relaxation`, encoded as a link is), to write.
+With `--from`, every resolve gives `href`; without, it's null. `--from` also says which vault the link is resolved
+in, as a note argument does. The form is never written into a file: links stay paths.
 
 ## Git (plans `5.11`–`5.14`)
 
