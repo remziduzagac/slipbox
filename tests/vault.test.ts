@@ -3265,3 +3265,29 @@ describe("the parse cache by content (20.11)", () => {
     expect(sharedParseCache()).not.toBeNull();
   });
 });
+
+describe("the vault:path form (20.12)", () => {
+  test("a file as it's shown: its path in this vault; name:path in another, a nested one too; ~/ or its path in none", async () => {
+    const { vaultForm } = await import("../src/core/names.ts");
+    const base = mkdtempSync(join(tmpdir(), "slipbox-form-"));
+    const here = join(base, "here");
+    const other = join(base, "other");
+    for (const d of [here, other, join(here, "kid")]) mkdirSync(join(d, ".slipbox"), { recursive: true });
+    mkdirSync(join(here, "docs"), { recursive: true });
+    mkdirSync(join(base, "loose"), { recursive: true });
+    const names: Record<string, string> = { [here]: "here", [other]: "research", [join(here, "kid")]: "kid" };
+    const nameOf = (root: string) => names[root] ?? null;
+    expect(vaultForm(join(here, "docs", "plan.md"), here, nameOf)).toBe("docs/plan.md");
+    expect(vaultForm(join(other, "algorithms", "dijkstra.md"), here, nameOf)).toBe("research:algorithms/dijkstra.md");
+    expect(vaultForm(join(here, "kid", "k.md"), here, nameOf)).toBe("kid:k.md"); // a vault of its own, inside
+    expect(vaultForm(join(here, "docs", "plan.md"), null, nameOf)).toBe("here:docs/plan.md");
+    expect(vaultForm(join(base, "loose", "l.md"), here, nameOf)).toBe(join(base, "loose", "l.md"));
+    const before = process.env.HOME;
+    process.env.HOME = base;
+    try {
+      expect(vaultForm(join(base, "loose", "l.md"), here, nameOf)).toBe("~/loose/l.md");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+});

@@ -6,11 +6,11 @@ import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, SymbolInformation, TextEdit, WorkspaceEdit, WorkspaceSymbol } from "vscode-languageserver-protocol";
 import { blockLine, landingText } from "../core/landing.ts";
-import { join, posix, relative } from "node:path";
+import { isAbsolute, join, posix, relative } from "node:path";
 import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { locName } from "../core/names.ts";
-import { findVaultRoot, hasMarker, instanceOf, isInside, isNeverRoot } from "../core/vault.ts";
+import { hasMarker, instanceOf, isInside, isNeverRoot } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
@@ -355,12 +355,6 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       return a.message("warn", to ? `broken link: ${link.target} — moved to ${to}: space l r relinks it` : `broken link: ${link.target}`);
     }
   }
-}
-
-/** A path in another vault, shown from that vault's root. */
-function relativeToVault(abs: string): string {
-  const found = findVaultRoot(abs);
-  return found ? relative(found, abs) : abs;
 }
 
 /** `g;` / `g,`: the change before or after in the note's change list. */
@@ -1005,7 +999,8 @@ export function registerActions(app: App): void {
         a.openList({
           title: `Linking to ${v.buf.name} (${bl.length})`,
           // Another vault's link (17.11): its vault's name before its path.
-          items: bl.map((b) => ({ label: b.vault ? `${b.vault}: ${relativeToVault(b.from)}` : b.from, detail: b.text, hint: `${b.line}`, data: b })),
+          // Another vault's, in its vault form (20.12): `name:path`.
+          items: bl.map((b) => ({ label: b.vault ? a.graph.shownPath(b.from) : b.from, detail: b.text, hint: `${b.line}`, data: b })),
           accept: (item) => {
             const b = item.data as { from: string; line: number };
             a.open(b.from, { heading: null, headingIndex: 0, offset: b.line - 1, line: b.line });
@@ -1677,7 +1672,9 @@ export function registerActions(app: App): void {
           const block = frag?.startsWith("^") ? frag.slice(1) : null;
           const text = landingText(a.graph, path, block ? null : frag, block);
           const heading = block ? null : (frag && a.graph.entryAnywhere(path)?.headings.find((h) => h.slug === slugify(frag!) || h.text.toLowerCase() === frag!.toLowerCase())?.text) || frag;
-          return a.openHover(text ?? "(nothing there)", `${path}${block ? ` ^${block}` : heading ? ` › ${heading}` : ""}`);
+          // Titled in its vault form (20.12): its path here, or `vault:path`.
+          const shown = isAbsolute(path) ? a.graph.shownPath(path) : path;
+          return a.openHover(text ?? "(nothing there)", `${shown}${block ? ` ^${block}` : heading ? ` › ${heading}` : ""}`);
         }
         a.syncServers(v.buf);
         const s = a.servers;

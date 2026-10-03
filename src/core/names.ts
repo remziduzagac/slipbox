@@ -4,10 +4,10 @@
 // (`work.docs`, `home.docs`) — never `/`, and never `:`, which separates a vault from a path. A
 // worktree shows the branch checked out in it now: `pathfinder@refactor`. Never written into a file.
 
-import { basename, dirname } from "node:path";
+import { basename, dirname, relative, sep } from "node:path";
 import { checkoutOf, headOf } from "./git.ts";
 import { HOME_NAME, type KnownVault, readRegistry, slugName } from "./registry.ts";
-import type { VaultLocation } from "./vault.ts";
+import { findVaultRoot, homeFolder, isInside, type VaultLocation } from "./vault.ts";
 
 /** The branch checked out at `path` now (a detached head: its commit, short); null outside git. */
 export function branchAt(path: string): string | null {
@@ -78,4 +78,18 @@ export function displayName(v: Pick<KnownVault, "key" | "name" | "path">, known:
 /** The opened vault's name to show: unique on this machine (20.6); `home` for loose files. */
 export function locName(loc: Pick<VaultLocation, "mode" | "key" | "name" | "root">, known = readRegistry()): string {
   return loc.mode === "home" ? HOME_NAME : displayName({ key: loc.key, name: loc.name, path: loc.root }, known);
+}
+
+/**
+ * A file as it's shown (20.12): in the vault `here`, its path there (`docs/plan.md`); in another
+ * vault, a nested one too, that vault's name and its path there (`research:algorithms/dijkstra.md`);
+ * in none, its path (`~/` for the home folder's). On screen and in the CLI only — never in a file.
+ */
+export function vaultForm(abs: string, here: string | null, nameOf: (root: string) => string | null): string {
+  const posixRel = (from: string) => relative(from, abs).split(sep).join("/") || ".";
+  const root = findVaultRoot(abs);
+  if (here && (root === here || (!root && isInside(here, abs)))) return posixRel(here);
+  if (root) return `${nameOf(root) ?? (slugName(basename(root)) || "vault")}:${posixRel(root)}`;
+  const home = homeFolder();
+  return abs.startsWith(`${home}/`) ? `~/${posixRel(home)}` : abs;
 }

@@ -47,10 +47,26 @@ export function linkResolver(graph: Graph | null, rel: string | null) {
   };
 }
 
+/**
+ * A path link's target as a link without text shows it (20.12): the file it reaches, in its vault form
+ * (`docs/plan.md`, `research:algorithms/dijkstra.md`) and the fragment as written; null for anything
+ * else (a web page, a place in the note, a link that reaches nothing: shown as written).
+ */
+export function pathShower(graph: Graph | null, rel: string | null) {
+  if (!graph || rel === null) return undefined;
+  return (target: string): string | null => {
+    if (target.startsWith("#") || (/^[a-z][a-z0-9+.-]*:/i.test(target) && !/^file:/i.test(target))) return null;
+    const r = graph.resolveLink({ kind: "markdown", target }, rel);
+    if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path) return null;
+    const hash = target.indexOf("#");
+    return graph.shownPath(isAbsolute(r.path) ? r.path : graph.abs(r.path)) + (hash >= 0 ? target.slice(hash) : "");
+  };
+}
+
 /** `cache`: the note's blocks from its last render (the TUI's buffers keep one; see renderTree). */
 export function layoutNote(parsed: ParsedNote, graph: Graph | null, rel: string | null, opts: NoteRenderOptions, cache?: RenderCache): Layout {
   const embeds = graph && rel !== null ? { embed: embedder(graph, rel), embedFrom: graph.abs(rel) } : {};
-  return renderTree(parsed.tree, { ...opts, resolveLink: linkResolver(graph, rel), ...embeds }, parsed.frontmatter, cache);
+  return renderTree(parsed.tree, { ...opts, resolveLink: linkResolver(graph, rel), pathShown: pathShower(graph, rel), ...embeds }, parsed.frontmatter, cache);
 }
 
 // -------------------------------------------------------------------------------------------

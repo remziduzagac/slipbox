@@ -25,6 +25,8 @@ export interface RenderOptions {
   showUrls: boolean;
   /** Link status for styling; without it every wikilink renders as resolved. */
   resolveLink?: (kind: "wiki" | "embed" | "markdown" | "image", target: string) => LinkStatus;
+  /** A path link's target as a link without text shows it: its vault form (20.12); null: as written. */
+  pathShown?: (target: string) => string | null;
   /**
    * What an embed (`![[note]]`, `![[note#Heading]]`, `![[note#^block]]`; or written as a path,
    * `![text](note.md#heading)`, kind `image`, 20.1) shows, to draw it in place (1.11); null where it
@@ -1005,7 +1007,11 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
     const s = status(ctx, "markdown", url);
     const id = addLink(ctx, { kind: "markdown", target: url, heading: null, text: visible || url, status: s, src: at });
     const role: Role = s === "unresolved" ? "link_unresolved" : "link";
-    if (children.length) walk(children, { role, attrs: st.attrs }, { link: id });
+    // A link without text of its own (`[](docs/plan.md)`, `<docs/plan.md>`): the file it reaches in its
+    // vault form (20.12) — `space u r` (show link URLs) shows the path as written instead.
+    const form = !ctx.opts.showUrls && (!children.length || visible === url) ? (ctx.opts.pathShown?.(url) ?? null) : null;
+    if (form !== null) push(sanitize(form), { role, attrs: st.attrs }, { link: id });
+    else if (children.length) walk(children, { role, attrs: st.attrs }, { link: id });
     else push(sanitize(url), { role, attrs: st.attrs }, { link: id });
     const external = /^[a-z][a-z0-9+.-]*:/i.test(url);
     // The URL after the text, unless the text already is it (www. autolinks, empty link text).

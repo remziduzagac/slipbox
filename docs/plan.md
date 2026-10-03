@@ -604,7 +604,7 @@ the merge review after; the removals as their replacements land, the sweep last.
 | 20.9 | **Done.** The background auto-index of the home folder: low priority, paused while working, resumable |
 | 20.10 | **Done.** Freshness: sizes and times checked, folders listed again; coverage; a CLI refresh; drives away |
 | 20.11 | **Done.** The parse cache by content hash, parser version and format; links resolved per instance |
-| 20.12 | The `vault:path` form: link without text, hover, backlinks, pickers, results; the original paths on a key |
+| 20.12 | **Done.** The `vault:path` form: link without text, hover, backlinks, previews; the original on `space u r` |
 | 20.13 | Completion offers `vault:path` and the full path, and writes the relative path |
 | 20.14 | The status line: the vault and its branch (`pathfinder · main`), a worktree as `pathfinder@refactor` |
 | 20.15 | The explorer's roots: the vault opened, vaults followed into, worktrees under theirs; never overlapping |

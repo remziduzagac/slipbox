@@ -64,6 +64,13 @@ tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 **Links are plain paths** (`20.2`): `[[…]]` is text, drawn as written — only the converter reads it (`20.1`,
 `docs/design/cli.md`, `convert-links`). A link's colour shows its status: resolved, or `link_unresolved` red.
 
+**The vault form** (`20.12`): a link without text of its own — `[](docs/plan.md)`, or text that is just its target —
+shows the file it reaches as a path in this vault (`docs/plan.md`, wherever the linking note is), or in another
+vault — a nested one too — as that vault's name and its path there (`research:algorithms/dijkstra.md`), its
+`#fragment` as written; a link that reaches nothing, or a web page, as written. Source mode shows the path as
+written, and so does the rendered view with link URLs shown (`space u r`, `render.show_urls`). The form is on screen
+and in the CLI only, never in a file; hovers, backlinks from other vaults and rename previews use it too.
+
 **Embeds** (`1.11`): a paragraph of nothing but embeds — each a note by its path, `![text](note.md)`, on its line, as
 the converter writes them (`20.1`) and Obsidian does without wikilinks — draws each embedded note in place (beside
 other text, or with no note there, it's a reference, `⧉ text`, as a picture's is `▣ alt`): a header

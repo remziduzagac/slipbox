@@ -5462,11 +5462,28 @@ describe("vaults in the TUI (17.x)", () => {
     return { base, notes, app, n };
   }
 
-  test("backlinks from another vault are listed with its name", async () => {
+  test("backlinks from another vault are listed in its vault form, name:path (20.12)", async () => {
     const { notes, n } = await twoVaults();
     const h = await harness({ root: notes, open: "todo.md" });
     await h.app.run("backlinks.open");
-    expect(h.frame()).toContain(`tapp${n}: links.md`);
+    expect(h.frame()).toContain(`tapp${n}:links.md`);
+  });
+
+  test("a link without text shows the file it reaches in its vault form; show link URLs, the path as written (20.12)", async () => {
+    const { notes, app, n } = await twoVaults();
+    mkdirSync(join(notes, "sub"), { recursive: true });
+    writeFileSync(join(notes, "sub", "forms.md"), "[](../todo.md) [../todo.md](../todo.md) [](../../APP/design.md#goals) [](nowhere.md) [named](../todo.md)\n".replace("APP", basename(app)));
+    const h = await harness({ root: notes, open: "sub/forms.md" });
+    const row = () => h.frame().split("\n").find((r) => r.includes("nowhere.md"))!;
+    expect(row()).toContain(`todo.md todo.md tapp${n}:design.md#goals nowhere.md named`);
+    await h.app.run("ui.urls");
+    expect(row()).toContain(`../todo.md ../todo.md ../../${basename(app)}/design.md#goals nowhere.md`); // the toast covers the rest
+    // Its hover is titled so too.
+    await h.app.run("ui.urls");
+    const link = h.app.currentLayout(h.app.view!).links.find((l) => l.target.endsWith("design.md#goals"))!;
+    h.app.moveCursor(h.app.view!, { row: link.line, col: link.col });
+    await h.keys("shift+k");
+    expect(h.app.floating?.title).toBe(`tapp${n}:design.md › Goals`);
   });
 
   test("following a path link into another vault, at a heading, switches the TUI into it; back returns (17.10)", async () => {
