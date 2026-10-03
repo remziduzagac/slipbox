@@ -18,7 +18,7 @@ import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
-import { readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { ensureDir, readJson, readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
@@ -72,7 +72,7 @@ import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, 
 import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { sameCollection } from "../core/collection.ts";
 import { displayNames, locName } from "../core/names.ts";
-import { findVaultRoot, homeAt, homeFolder, initVault, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import { configFilesFor, findVaultRoot, homeAt, homeFolder, initVault, isInside, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
@@ -473,8 +473,11 @@ export interface TreeRow {
   depth: number;
   /** A file beyond notes: its group (16.x). */
   group?: FileGroup;
-  /** A root row: what it is, where it is, and the vault's name when it isn't the folder's. */
-  root?: { kind: "vault" | "folder"; abs: string; name?: string };
+  /** A root row: what it is, where it is, and the vault's name when it isn't the folder's; `other`:
+   *  another of the explorer's roots (20.15), beside the vault open — unfolded, not entered. */
+  root?: { kind: "vault" | "folder"; abs: string; name?: string; other?: boolean };
+  /** A row of another root (20.15): that root's folder. Opening its file switches into it. */
+  under?: string;
 }
 
 export type Region = "content" | "sidebar" | "outline";
@@ -635,6 +638,9 @@ export class App {
 
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
+    this.mainRoot = opts.loc.root;
+    this.mainKey = opts.loc.key;
+    this.pinnedRoots = new Set(readJson<string[]>(this.pinnedRootsFile(), []).filter((r) => typeof r === "string"));
     this.config = opts.config;
     this.graph = opts.graph;
     // This machine sees the vault (17.6): a copy of it opened later keys its state apart (17.3).
@@ -2890,6 +2896,8 @@ export class App {
     if (this.leftView !== "explorer") return null;
     const row = this.explorerRows()[this.sidebar.selected];
     if (!row) return null;
+    // Another root's (20.15): its files are its vault's, not this one's to rename, move or delete here.
+    if (row.under || row.root?.other) return null;
     if (row.kind === "root") return row.root?.kind === "vault" && this.loc.mode === "vault" ? { rel: row.path, dir: true, vault: true } : null;
     return { rel: row.path, dir: row.kind === "dir" };
   }
@@ -4426,12 +4434,92 @@ export class App {
       if (visible && roots.has(p)) rows.push({ kind: "root", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, root: roots.get(p)! });
       else if (visible && !folders.has(p)) rows.push({ kind: "note", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(groups.has(p) ? { group: groups.get(p) } : {}) });
     }
+    // The explorer's other roots (20.15), each by its name, unfolded on a key; their rows are theirs.
+    for (const abs of this.otherRoots()) {
+      const vault = isVaultRoot(abs);
+      const name = vault ? (this.reach?.vaultOf(abs) ?? basename(abs)) : basename(abs);
+      rows.push({ kind: "root", path: abs, name, depth: 0, root: { kind: vault ? "vault" : "folder", abs, name, other: true } });
+      if (vault && this.expanded.has(abs)) this.otherRootRows(abs, rows);
+    }
     this.tree = rows;
     return rows;
   }
 
   invalidateTree(): void {
     this.tree = null;
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // The explorer's roots (20.15)
+
+  /** The vault or folder slipbox was opened on: always one of the explorer's roots. */
+  readonly mainRoot: string;
+  /** Roots kept beside it (`:pin-root`), with the opened vault's state. */
+  readonly pinnedRoots: Set<string>;
+  /** The opened vault's state key: where the pinned roots are kept. */
+  private readonly mainKey: string;
+
+  private pinnedRootsFile(): string {
+    return join(stateDir({ key: this.mainKey }), "roots.json");
+  }
+
+  /**
+   * The explorer's other roots, beside the vault open (20.15): the one opened, and those pinned. A
+   * vault followed into is the vault open while it is; left, it goes unless pinned. Never
+   * overlapping: one inside the vault open, or around it, isn't listed apart — its folder is in the
+   * tree, or the tree is in it.
+   */
+  otherRoots(): string[] {
+    const here = this.loc.root;
+    const out: string[] = [];
+    for (const r of [this.mainRoot, ...this.pinnedRoots]) {
+      if (out.includes(r) || r === here || isInside(here, r) || isInside(r, here) || !existsSync(r)) continue;
+      if (out.some((o) => isInside(o, r) || isInside(r, o))) continue;
+      out.push(r);
+    }
+    return out;
+  }
+
+  /** Keep the vault open among the explorer's roots, or no longer (`:pin-root`). */
+  togglePinnedRoot(): void {
+    const r = this.loc.root;
+    if (r === this.mainRoot) return this.message("info", "the vault slipbox was opened on is always a root");
+    if (this.pinnedRoots.has(r)) this.pinnedRoots.delete(r);
+    else this.pinnedRoots.add(r);
+    this.saveRoots();
+    this.invalidateTree();
+    this.message("info", this.pinnedRoots.has(r) ? `${this.vaultLabel(this.loc)}: a root of the explorer from now on` : `${this.vaultLabel(this.loc)}: no longer kept as a root`);
+  }
+
+  private saveRoots(): void {
+    try {
+      ensureDir(stateDir({ key: this.mainKey }));
+      writeJson(this.pinnedRootsFile(), [...this.pinnedRoots]);
+    } catch {}
+  }
+
+  /** Another root's rows (20.15): its notes and files as its index has them, its folders as unfolded. */
+  private otherRootRows(abs: string, rows: TreeRow[]): void {
+    const g = this.reach?.graphAt(abs) ?? null;
+    if (!g) return;
+    const paths = [...g.notes.keys(), ...g.filePaths()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    const seen = new Set<string>();
+    for (const p of paths) {
+      const parts = p.split("/");
+      let visible = true;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const dir = `${abs}/${parts.slice(0, i + 1).join("/")}`;
+        if (!seen.has(dir)) {
+          seen.add(dir);
+          rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i + 1, under: abs });
+        }
+        if (!this.expanded.has(dir)) {
+          visible = false;
+          break;
+        }
+      }
+      if (visible) rows.push({ kind: "note", path: `${abs}/${p}`, name: parts[parts.length - 1]!, depth: parts.length, under: abs });
+    }
   }
 
   /** The explorer's rows: the tree, or while filtering the matching notes under their folders
@@ -4825,6 +4913,14 @@ export class App {
     const row = rows[this.sidebar.selected];
     const openNote = (where: "here" | "tab" | "split") => {
       if (!row) return;
+      // Another root (20.15): unfolded and folded like a folder; a file of it, opened there.
+      if (row.root?.other && row.root.kind === "vault") {
+        if (this.expanded.has(row.path)) this.expanded.delete(row.path);
+        else this.expanded.add(row.path);
+        this.invalidateTree();
+        return;
+      }
+      if (row.under && row.kind === "note") return void this.switchVault(rootAt(row.under), row.path);
       if (row.kind === "root") return this.enterRoot(row);
       if (row.kind === "dir") {
         this.expanded.add(row.path);

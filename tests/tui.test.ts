@@ -680,11 +680,14 @@ describe("overlays and the : prompt", () => {
       const l = lines.find((x) => x.includes(label))!;
       return l.indexOf(` ${key} `, l.indexOf(label) + label.length);
     };
-    expect(colOf(g, "Switch vault", "space v v")).toBe(colOf(g, "Messages", "space m"));
-    expect(colOf(g, "Switch vault", "space v v")).toBe(colOf(g, "Move the note to a folder…", "space n shift+m"));
-    expect(colOf(g, "Switch vault", "space v v")).toBe(colOf(g, "Vault info", "space v i"));
-    expect(colOf(g, "Switch vault", ":vaults")).toBe(colOf(g, "Quit", ":qa"));
-    expect(colOf(g, "Switch vault", ":vaults")).toBe(colOf(g, "Vault moved here", ":vault-moved")); // an alias without a key
+    // Every entry in view, whichever they are: its key in one column, its alias in another.
+    const inView = po.filtered.map((e) => e.item).filter((it) => !it.header && g.some((l) => l.includes(` ${it.label} `)));
+    const keyCols = inView.filter((it) => it.keys?.[0]).map((it) => colOf(g, ` ${it.label} `, it.keys![0]!));
+    const aliasCols = inView.filter((it) => it.keys?.[1]).map((it) => colOf(g, ` ${it.label} `, it.keys![1]!));
+    expect(keyCols.length).toBeGreaterThan(5);
+    expect(aliasCols.length).toBeGreaterThan(2);
+    expect(new Set(keyCols).size).toBe(1);
+    expect(new Set(aliasCols).size).toBe(1);
     expect(h.app.recentCommands[0]).toBe("ui.zen");
   });
   test("messages, note info, vault info", async () => {
@@ -5526,6 +5529,54 @@ describe("vaults in the TUI (17.x)", () => {
     for (const k of " f(") await h.keys(k);
     expect(h.app.completion).toBeNull();
     await h.keys("escape");
+  });
+
+  test("the explorer's roots (20.15): the vault opened stays beside one followed into; its files open there; pinned, a root stays", async () => {
+    const { notes, app, n } = await twoVaults();
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.keys("tab", "enter"); // into the app vault, by the link
+    expect(h.app.loc.root).toBe(app);
+    const others = () => h.app.explorerRows().filter((r) => r.root?.other).map((r) => r.root!.abs);
+    expect(others()).toEqual([notes]);
+    expect(h.app.explorerRows().find((r) => r.root?.other)!.name).toBe(`tnotes${n}`);
+    // Unfolded: its files, as its index has them; none of this vault's file operations on them.
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.root?.other);
+    h.app.explorerAction("open");
+    const rows = h.app.explorerRows();
+    const todo = rows.findIndex((r) => r.under === notes && r.name === "todo.md");
+    expect(todo).toBeGreaterThan(0);
+    h.app.sidebar.selected = todo;
+    expect(h.app.explorerItem()).toBeNull();
+    // Opened: into that vault, the file there; the one left isn't kept (not pinned).
+    h.app.explorerAction("open");
+    expect(h.app.loc.root).toBe(notes);
+    expect(h.app.view!.buf.rel).toBe("todo.md");
+    expect(others()).toEqual([]);
+    // Pinned: kept beside, and from then on (with the opened vault's state).
+    await h.app.run("note.open index.md");
+    await h.keys("tab", "enter"); // into app again, by the link
+    expect(h.app.loc.root).toBe(app);
+    await h.app.run("vault.pin_root");
+    h.app.switchVault((await import("../src/core/vault.ts")).rootAt(notes), join(notes, "todo.md"));
+    expect(h.app.loc.root).toBe(notes);
+    expect(others()).toEqual([app]);
+    const again = await harness({ root: notes, open: "index.md" });
+    expect(again.app.otherRoots()).toEqual([app]);
+    await again.app.switchVault((await import("../src/core/vault.ts")).rootAt(app), null);
+    await again.app.run("vault.pin_root");
+    expect((await harness({ root: notes, open: "index.md" })).app.otherRoots()).toEqual([]);
+  });
+
+  test("the explorer's roots never overlap (20.15): a vault inside the one open, or around it, isn't one apart", async () => {
+    const { locateVault } = await import("../src/core/vault.ts");
+    const outer = makeVault(); // its nested-vault/ is a vault of its own
+    const inner = join(outer, "nested-vault");
+    const h = await harness({ loc: locateVault({ path: inner }), open: null });
+    expect(h.app.otherRoots()).toEqual([]); // opened on the inner: nothing apart
+    h.app.switchVault(locateVault({ path: outer }), null);
+    expect(h.app.otherRoots()).toEqual([]); // around it: the tree is in it
   });
 
   test("following a path link into another vault, at a heading, switches the TUI into it; back returns (17.10)", async () => {

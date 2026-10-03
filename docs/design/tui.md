@@ -468,7 +468,13 @@ keys.
   differ — a worktree's branch instead (`⎇ feat`, `17.19`); `enter` or a double-click goes into
   it (a switch, below). **In a loose folder** (the home vault) the explorer lists the folder
   alone: `..` to go up, then each folder in it — a vault or a loose folder — and its files; going
-  into a loose folder lists that one (`17.14`). **Git's marks** (`5.11`): in a git checkout each changed file has
+  into a loose folder lists that one (`17.14`). **The explorer's roots** (`20.15`): under the vault open, the other
+  roots, each by its name (`◈`): the vault or folder slipbox was opened on, and the vaults pinned with
+  `:pin-root` (`vault.pin_root`, kept with the opened vault's state). A vault followed into by a link is the vault
+  open while it is, the opened one beside it; left, it goes unless pinned. `enter` on another root unfolds it — its
+  notes and files as its index has them — and a file of it opens there (a switch); none of this vault's file
+  operations act on its rows. Roots never overlap: one inside the vault open, or around it, isn't listed apart — its
+  folder is in the tree, or the tree is in it. **Git's marks** (`5.11`): in a git checkout each changed file has
   its state at its row's end — `M` modified, `+` new (untracked or added), `R` renamed, `!` in a merge's conflict
   (`git_modified`, `git_new`, `git_conflict`) — and a folder with one in it a `•`. git is asked in the background, a
   moment after anything changed (a save, the watcher, a file operation, a branch switch).

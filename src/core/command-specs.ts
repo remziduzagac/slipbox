@@ -237,6 +237,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "link.convert", title: "Convert links to plain paths", cli: "slipbox convert-links [note]", desc: "Rewrites wikilinks, and links from the vault's root, as relative path links after a preview (a note's, or every note's); a link several notes answer to is picked" },
   { id: "rename.undo", title: "Undo the last rename", cli: "slipbox undo", desc: "The vault's last rename, move or relink taken back after a preview: the files it rewrote as they were, what moved back where it was" },
   { id: "vault.init", title: "Make a vault", cli: "slipbox init [dir] [--private]", desc: "This loose folder gets its .slipbox/; in a vault, the explorer's selected folder (or this note's) becomes a vault of its own, links fixed after a preview" },
+  { id: "vault.pin_root", title: "Pin this vault as a root", cli: null, desc: "Keeps the vault open among the explorer's roots after leaving it, or no longer" },
   { id: "vault.moved", title: "Vault moved here", cli: "slipbox vault-moved [old-path] [--not]", desc: "A copy of this vault gone from where it was: take its reading positions, sessions and scratch, or say it didn't move here" },
   { id: "problems.open", title: "Problems: open, focus, close", cli: "slipbox problems", desc: "What's wrong in the vault, in the left panel: links that reach nothing, links that reach several notes" },
   { id: "tag.list", title: "Tags", cli: "slipbox tags [tag]", desc: "The vault's tags, with how many notes carry each; pick one (or :tag name) for its notes" },

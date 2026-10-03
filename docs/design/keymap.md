@@ -397,6 +397,7 @@ config.
 | `:vaults` | the vaults this machine knows: pick one to switch to |
 | `:init` | make this loose folder a vault |
 | `:vault-moved` | a copy of this vault gone from where it was: did it move here? (`20.5`) |
+| `:pin-root` | keep this vault among the explorer's roots after leaving it, or no longer (`20.15`) |
 | `:delete` | delete the note to the vault's trash (asks first) |
 | `:trash` | the trash: `enter` restores an item |
 | `:config` | reload the configuration |

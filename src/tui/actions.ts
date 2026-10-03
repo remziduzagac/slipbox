@@ -1797,6 +1797,7 @@ export function registerActions(app: App): void {
         const rel = v.buf.rel;
         a.previewRename(() => planRelink(a.graph, [rel]));
       }),
+    "vault.pin_root": (a) => a.togglePinnedRoot(),
     "vault.moved": (a) => {
       if (!a.offerMove()) a.message("info", "nothing seems to have moved here");
     },

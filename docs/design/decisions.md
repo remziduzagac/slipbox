@@ -244,7 +244,7 @@ tools do is the project's.
 
 ## `20.x` — plain paths, virtual vaults
 
-Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.14` and
+Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.15` and
 `20.23` done). The model in full
 is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the
