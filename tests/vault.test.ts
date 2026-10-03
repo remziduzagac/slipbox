@@ -3291,3 +3291,56 @@ describe("the vault:path form (20.12)", () => {
     }
   });
 });
+
+describe("search by vault (20.16)", () => {
+  const out: string[] = [];
+  const cli = async (args: string[], cwd: string) => {
+    out.length = 0;
+    const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return { code, json: code === 2 ? null : JSON.parse(out.join("")) };
+  };
+  /** a links to b; c links to a; d stands apart. Each has a note with the word. */
+  const four = async () => {
+    const base = mkdtempSync(join(tmpdir(), "slipbox-scope-"));
+    const tag = basename(base).replace(/[^a-z0-9]/gi, "");
+    const at = (v: string) => join(base, v);
+    for (const v of ["a", "b", "c", "d"]) {
+      mkdirSync(at(v), { recursive: true });
+      await cli(["init", at(v), "--name", `${v}${tag}`], at(v));
+      writeFileSync(join(at(v), `${v}-note.md`), `# ${v}\n\nA narwhal in ${v}.\n`);
+    }
+    writeFileSync(join(at("a"), "out.md"), "[b](../b/b-note.md)\n");
+    writeFileSync(join(at("c"), "in.md"), "[a](../a/a-note.md)\n");
+    for (const v of ["a", "b", "c", "d"]) await cli(["ls"], at(v)); // each indexed, as when opened
+    return { at, tag };
+  };
+
+  test("a scope's vaults: linked, those linked to or from this one; all, every other vault this machine knows", async () => {
+    const { scopeRoots } = await import("../src/core/scope.ts");
+    const { at } = await four();
+    const { openVault } = await import("../src/core/reach.ts");
+    const g = openVault(at("a"));
+    g.ensureAll();
+    expect(scopeRoots(g, "vault")).toEqual([]);
+    expect(scopeRoots(g, "linked").sort()).toEqual([at("b"), at("c")].sort());
+    const all = scopeRoots(g, "all");
+    expect(all.slice(0, 2).sort()).toEqual([at("b"), at("c")].sort()); // nearest first
+    expect(all).toContain(at("d"));
+    expect(all).not.toContain(at("a"));
+  });
+
+  test("slipbox search --scope: this vault by default; linked and all add others', each by name:path, after this one's", async () => {
+    const { at, tag } = await four();
+    const files = (r: { json: { data: { hits: { shown: string }[] } } }) => r.json.data.hits.map((h) => h.shown);
+    const here = await cli(["search", "narwhal"], at("a"));
+    expect(files(here)).toEqual(["a-note.md"]);
+    expect(here.json.data.scope).toBe("vault");
+    const linked = await cli(["search", "narwhal", "--scope", "linked"], at("a"));
+    expect(files(linked)[0]).toBe("a-note.md");
+    expect(files(linked).slice(1).sort()).toEqual([`b${tag}:b-note.md`, `c${tag}:c-note.md`].sort());
+    const hit = linked.json.data.hits.find((h: { vault: string | null }) => h.vault === `b${tag}`);
+    expect(hit).toMatchObject({ abs: join(at("b"), "b-note.md"), path: "b-note.md", line: 3 });
+    expect(files(await cli(["search", "narwhal", "--scope", "all"], at("a")))).toContain(`d${tag}:d-note.md`);
+    expect((await cli(["search", "narwhal", "--scope", "near"], at("a"))).code).toBe(2);
+  });
+});

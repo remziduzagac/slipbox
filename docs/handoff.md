@@ -45,7 +45,8 @@ LSP face removed (`20.23`), names for display (`20.6`: unique here, `work.docs`,
 over broader (`20.7`), git-ignored and hidden files indexed when reached (`20.8`), the background auto-index of `~`
 (`20.9`), freshness and coverage (`20.10`), the parse cache shared by content (`20.11`: a second copy read ~150×
 faster). The `vault:path` form on screen (`20.12`) and in link completion (`20.13`). The vault and its branch in the
-status line (`20.14`). The explorer's roots (`20.15`). Next: search by vault (`20.16`).
+status line (`20.14`). The explorer's roots (`20.15`). Search by vault (`20.16`). Next: repairs, generated edits as
+plans, renames on paths, the CLI and the merge review (`20.17`–`20.21`), then the removals (`20.22`).
 
 ## The documents
 

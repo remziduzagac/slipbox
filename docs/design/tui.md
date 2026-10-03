@@ -626,6 +626,9 @@ past theirs), so the content behind never runs up to the edge.
   files…` the first time, and fills when it's done — then each file again as the graph hears it change (a save here,
   the watcher, a rename, a CLI write). An unsaved note is searched as it's shown, in place of what the index has of
   it. Without an index (a loose folder, `[search] engine = "scan"`) the files are scanned, and the title says so.
+  **By vault** (`20.16`): `ctrl+a` widens it to the vaults linked to or from this one, their hits under a `linked
+  vaults` divider as `name:path:line`; again, to every vault this machine knows; again, back to this one. The title
+  says which. `enter` on another vault's hit goes into it, at that line.
 - **Filtering** (`3.16`): each space-separated word as typed — its letters together, never one by
   one — and every word, in any order (`hand oper` finds `handbook/operations-handbook.md`); smart
   case, word by word. Ranked by where each word lands: in the label over its description, in the

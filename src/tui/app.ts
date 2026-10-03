@@ -60,7 +60,7 @@ import { applyColorOverrides, listThemes, loadTheme, type Role, type Theme } fro
 import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { buildContext } from "../core/context.ts";
-import { IndexJob, indexFile, search, SearchIndex, type SearchResult } from "../core/search.ts";
+import { IndexJob, indexFile, search, type SearchHit, SearchIndex, type SearchResult } from "../core/search.ts";
 import { type Checkout, checkoutOf, headOf } from "../core/git.ts";
 import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusLater, worktreeList } from "../core/gitops.ts";
 import { diffLines, diffRows } from "../core/merge.ts";
@@ -71,6 +71,7 @@ import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath 
 import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { sameCollection } from "../core/collection.ts";
+import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { displayNames, locName } from "../core/names.ts";
 import { configFilesFor, findVaultRoot, homeAt, homeFolder, initVault, isInside, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
@@ -321,6 +322,8 @@ export interface ListOverlay {
   /** A tree's ← / →: fold or unfold the selected item (true when something changed; `source`
    *  then gives the rows again). */
   fold?: (item: ListItem, open: boolean) => boolean;
+  /** `ctrl+a`: widen what the list covers (search: more vaults, 20.16); `source` then gives it again. */
+  widen?: () => void;
 }
 
 export interface PromptOverlay {
@@ -1702,28 +1705,35 @@ export class App {
   /** The search list (6.5): notes ranked by the words as they're typed; enter opens one at its match. */
   openSearch(seed = ""): void {
     let list: ListOverlay | null = null;
+    // By vault (20.16): this one; ctrl+a widens to the vaults linked to or from it, then to every one.
+    let scope: Scope = "vault";
     const titled = (t: string) => {
       if (list) list.title = t;
       return t;
     };
-    const HELP = 'search the vault — words, "a phrase", prefix*, -not, title:word, #tag, path:folder/';
+    const where = () => (scope === "vault" ? "" : scope === "linked" ? " — and the vaults linked to it" : " — and every vault");
+    const HELP = 'search the vault — words, "a phrase", prefix*, -not, title:word, #tag, path:folder/ — ctrl+a: more vaults';
+    const item = (h: SearchHit & { shown?: string }): ListItem => {
+      const lead = h.heading ? `${h.heading} — ` : "";
+      return {
+        label: `${h.shown ?? h.path}:${h.line}`,
+        detail: `${lead}${h.snippet}`,
+        detailMarks: h.marks.map(([a, b]) => [a + lead.length, b + lead.length] as [number, number]),
+        hint: h.more ? `+${h.more}` : undefined,
+        data: h,
+      };
+    };
     const source = (input: string): ListItem[] => {
-      if (!input.trim()) return (titled(HELP), []);
+      if (!input.trim()) return (titled(`${HELP}${where()}`), []);
       const job = this.searchJob;
       if (job && this.searchIndex) return (titled(`search — the vault is being indexed: ${job.indexed.toLocaleString("en")} of ${job.todo.length.toLocaleString("en")} files…`), []);
       const r = this.searchVault(input);
-      const n = r.hits.length;
-      titled(`"${input.trim()}" — ${n} ${n === 1 ? "file" : "files"}${r.relaxed ? " with some of the words" : ""}${r.engine === "scan" ? " (scanned: no index here)" : ""}`);
-      return r.hits.map((h) => {
-        const lead = h.heading ? `${h.heading} — ` : "";
-        return {
-          label: `${h.path}:${h.line}`,
-          detail: `${lead}${h.snippet}`,
-          detailMarks: h.marks.map(([a, b]) => [a + lead.length, b + lead.length] as [number, number]),
-          hint: h.more ? `+${h.more}` : undefined,
-          data: h,
-        };
-      });
+      const others = scope === "vault" ? null : searchOthers(this.graph, input, scope);
+      const n = r.hits.length + (others?.hits.length ?? 0);
+      titled(`"${input.trim()}" — ${n} ${n === 1 ? "file" : "files"}${r.relaxed ? " with some of the words" : ""}${r.engine === "scan" ? " (scanned: no index here)" : ""}${where()}`);
+      const items = r.hits.map(item);
+      if (others?.hits.length) items.push({ label: scope === "linked" ? "linked vaults" : "other vaults", header: true, data: null }, ...others.hits.map(item));
+      return items;
     };
     this.openList({
       title: HELP,
@@ -1731,8 +1741,13 @@ export class App {
       source,
       input: seed,
       accept: (item) => {
-        const h = item.data as { path: string; line: number; column: number };
+        const h = item.data as { path: string; line: number; column: number; abs?: string; vault?: string | null };
+        // Another vault's: into it, at the line (a switch, as a link into it is).
+        if (h.vault !== undefined && h.vault !== null && h.abs) return void this.intoOtherVault(h.abs, { heading: null, headingIndex: 0, offset: 0, line: h.line });
         this.openAt(h.path, h.line, h.column);
+      },
+      widen: () => {
+        scope = SCOPES[(SCOPES.indexOf(scope) + 1) % SCOPES.length]!;
       },
     });
     list = this.overlay as ListOverlay;
@@ -5166,6 +5181,7 @@ export class App {
     /** Already typed in its filter. */
     input?: string;
     fold?: (item: ListItem, open: boolean) => boolean;
+    widen?: () => void;
   }): void {
     const o: ListOverlay = {
       kind: "list",
@@ -5187,6 +5203,7 @@ export class App {
       anchor: opts.anchor,
       menu: opts.menu,
       fold: opts.fold,
+      widen: opts.widen,
     };
     refilter(o);
     if (opts.selected !== undefined) o.selected = selectable(o, Math.max(0, Math.min(opts.selected, o.filtered.length - 1)), 1);
@@ -5656,6 +5673,11 @@ export class App {
       case "pageup":
       case "ctrl+u":
         return moveTo(o.selected - 10);
+      case "ctrl+a":
+        if (!o.widen) break;
+        o.widen();
+        refilter(o);
+        return;
     }
     if (!o.filterable) {
       // An item's own key picks it.

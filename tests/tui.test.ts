@@ -78,6 +78,8 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   config.ui.restore_session = false;
   config.lint.enabled = "off"; // the machine's own linter never runs in a test (the lint tests bring theirs)
   config.search.engine = "scan"; // no index built behind every test (the search tests ask for one)
+  // Never the background auto-index (20.9): a live test app, idle long enough, would walk your home folder.
+  config.index.background = false;
   config.render.glyphs = "unicode";
   // The frame tests read heavy lines; the light set has its own test.
   config.ui.lines = "heavy";
@@ -5493,7 +5495,7 @@ describe("vaults in the TUI (17.x)", () => {
     const { notes, app, n } = await twoVaults();
     mkdirSync(join(notes, "sub"), { recursive: true });
     writeFileSync(join(notes, "sub", "here.md"), "# Here\n");
-    writeFileSync(join(notes, "a b.md"), "# Spaced\n");
+    writeFileSync(join(notes, "zq b.md"), "# Spaced\n");
     const h = await harness({ root: notes, open: "sub/here.md" });
     await h.app.run("view.source");
     await h.keys("shift+g", "o");
@@ -5515,10 +5517,10 @@ describe("vaults in the TUI (17.x)", () => {
     // Closed by the link's end; a space is a path's too, written encoded.
     await h.keys(")", "space");
     expect(h.app.completion).toBeNull();
-    for (const k of "[y](a") await h.keys(k);
-    expect(shown(h)[0]).toBe("a b.md");
+    for (const k of "[y](zq") await h.keys(k);
+    expect(shown(h)[0]).toBe("zq b.md");
     await h.keys("tab");
-    expect(h.app.view!.buf.source).toEndWith("[y](../a%20b.md\n");
+    expect(h.app.view!.buf.source).toEndWith("[y](../zq%20b.md\n");
     // Narrowed by the full path too: its folder's name, which no vault form has.
     await h.keys(")", "space");
     for (const k of `[z](${basename(dirname(notes))}`) await h.keys(k);
@@ -5529,6 +5531,31 @@ describe("vaults in the TUI (17.x)", () => {
     for (const k of " f(") await h.keys(k);
     expect(h.app.completion).toBeNull();
     await h.keys("escape");
+  });
+
+  test("search by vault (20.16): this vault's hits; ctrl+a adds the linked vaults' under a divider, then every vault's; one opens there", async () => {
+    const { notes, app, n } = await twoVaults();
+    writeFileSync(join(notes, "w.md"), "# W\n\nA walrus here.\n");
+    writeFileSync(join(app, "w2.md"), "# W2\n\nA walrus there.\n");
+    const h = await harness({ root: notes, open: "index.md" });
+    h.app.graph.reach!.graphAt(app)?.ensureAll(); // the app vault's index, as when opened
+    await h.keys("space", "f", "s");
+    for (const k of "walrus") await h.keys(k);
+    const labels = () => (h.app.overlay as ListOverlay).filtered.map((e) => e.item.label);
+    expect(labels()).toEqual(["w.md:3"]);
+    await h.keys("ctrl+a");
+    expect(labels()).toEqual(["w.md:3", "linked vaults", `tapp${n}:w2.md:3`]);
+    expect((h.app.overlay as ListOverlay).title).toContain("and the vaults linked to it");
+    await h.keys("ctrl+a");
+    expect((h.app.overlay as ListOverlay).title).toContain("and every vault");
+    await h.keys("ctrl+a"); // and back to this one
+    expect(labels()).toEqual(["w.md:3"]);
+    await h.keys("ctrl+a");
+    (h.app.overlay as ListOverlay).selected = 2;
+    await h.keys("enter");
+    expect(h.app.loc.root).toBe(app);
+    expect(h.app.view!.buf.rel).toBe("w2.md");
+    expect(h.app.view!.curAnchor.anchor.line).toBe(3);
   });
 
   test("the explorer's roots (20.15): the vault opened stays beside one followed into; its files open there; pinned, a root stays", async () => {
@@ -7093,7 +7120,7 @@ describe("the index on demand in the TUI (20.8)", () => {
 describe("the background auto-index in the TUI (20.9)", () => {
   test("it works only while nobody is: no key or click here, no agent's command, this vault indexed; and it can be off", async () => {
     const { activityFile } = await import("../src/core/autoindex.ts");
-    const h = await harness();
+    const h = await harness({ config: (c) => (c.index.background = true) }); // off in tests unless asked
     const quiet = h.app.config.index.idle_seconds * 1000;
     const now = Date.now();
     writeFileSync(activityFile(), "0\n");

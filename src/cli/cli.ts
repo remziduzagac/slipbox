@@ -54,6 +54,7 @@ import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } f
 import { confirmMove, declineMove, type KnownVault, noteIndexed, readIdentity, readRegistry, removeStorage, suggestVaultName, unavailable, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
+import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
 import { displayNames, locName } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeAt, homeFolder, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { parseWikiTarget } from "../core/wikilink.ts";
@@ -151,7 +152,7 @@ Usage:
   slipbox resolve <link>            follow a link to a path        [--from <note>]
   slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
-  slipbox search <words…>           the vault's notes ranked by the words: "phrases", prefix*, -not, title:, #tag, path:
+  slipbox search <words…>           the vault's notes ranked by the words: "phrases", prefix*, -not, title:, #tag, path:  [--scope vault|linked|all]
                                     [--limit N]
   slipbox index                     build or bring up to date the vault's search index  [--rebuild]
   slipbox index --home              the background auto-index of the home folder, run now  [--budget MS] [--rebuild]
@@ -379,7 +380,7 @@ const FLAGS: Record<string, string[]> = {
   "convert-links": ["dry-run"],
   undo: ["dry-run"],
   context: ["depth", "no-backlinks", "limit", "copy"],
-  search: ["limit"],
+  search: ["limit", "scope"],
   index: ["rebuild", "home", "budget", "refresh"],
   changed: ["base"],
   diff: ["base"],
@@ -699,9 +700,12 @@ const HANDLERS: Record<string, Handler> = {
     if (!rest.length) throw new UsageError("missing what to search for (search <words…>)");
     const query = rest.join(" ");
     const limit = wholeFlag(s, "limit", 20, 1, 500);
+    // By vault (20.16): this one by default, so an agent's results are predictable; linked, all.
+    const scope = (flag(s.args, "scope") ?? "vault") as Scope;
+    if (!SCOPES.includes(scope)) throw new UsageError(`--scope takes ${SCOPES.join(", ")}`);
     const idx = searchIndex(s);
     try {
-      const r = search(s.graph, idx, query, { limit });
+      const r = searchScoped(s.graph, idx, query, scope, { limit });
       if (r.relaxed) s.warnings.push("no note has every word: these have some of them");
       const mark = (h: { snippet: string; marks: [number, number][] }) => {
         let out = "";
@@ -712,8 +716,8 @@ const HANDLERS: Record<string, Handler> = {
         }
         return sanitize(out + h.snippet.slice(at));
       };
-      const human = r.hits.map((h) => `${h.path}:${h.line}:${h.column}  ${h.heading ? `${sanitize(h.heading)} — ` : ""}${mark(h)}${h.more ? `  (+${h.more} more)` : ""}\n`).join("");
-      return { data: { query, engine: r.engine, relaxed: r.relaxed, hits: r.hits }, human };
+      const human = r.hits.map((h) => `${h.shown}:${h.line}:${h.column}  ${h.heading ? `${sanitize(h.heading)} — ` : ""}${mark(h)}${h.more ? `  (+${h.more} more)` : ""}\n`).join("");
+      return { data: { query, scope, engine: r.engine, relaxed: r.relaxed, vaults: r.vaults, hits: r.hits }, human };
     } finally {
       idx?.close();
     }

@@ -291,6 +291,11 @@ headings and the path, then the text. A hit opens at the section with most of th
 first line with one — and `snippet` is that line, cut around the match, `marks` the words' places in it; `more`
 counts the file's other sections with some of the words. `--limit N` (default 20, up to 500).
 
+- **By vault** (`20.16`): `--scope vault` (the default, so an agent's results are predictable) searches this vault;
+  `--scope linked` adds the vaults linked to or from it — those its notes link into, those whose notes (as of their
+  index) link here; `--scope all` every other vault this machine knows. This vault's hits come first, then the
+  others' by score (`--limit` each), each searched with its own index (a scan where it has none). A hit of another
+  vault has `vault` (its name) and `abs`, and `shown` is `name:path`; `vaults` lists those searched.
 - **The query**: words (all of them); `"a phrase"`; `prefix*`; `-word` (none of it); `title:word` (in the title or
   an alias); `#tag` or `tag:x` (notes carrying the tag, or one nested under it); `path:folder/` (files whose path
   starts so). Nothing is passed on as FTS5 syntax: every word is quoted. Accents and case don't count. Words are
