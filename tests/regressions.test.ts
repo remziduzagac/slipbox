@@ -196,11 +196,16 @@ describe("medium", () => {
   });
   test("resolve agrees with links about attachments", async () => {
     const fx = join(import.meta.dir, "fixtures", "vault");
-    for (const argv of [["resolve", "diagram.png", "--from", "index"], ["resolve", "![[diagram.png]]"]]) {
+    for (const argv of [["resolve", "attachments/diagram.png", "--from", "index"], ["resolve", "![d](attachments/diagram.png)", "--from", "index"]]) {
       const r = await cli([...argv, "--json"], fx);
       expect(r.code).toBe(0);
       expect(JSON.parse(r.out).data.path).toBe("attachments/diagram.png");
     }
+    // Without --from: a path from the vault's root, a file as well as a note.
+    expect(JSON.parse((await cli(["resolve", "attachments/diagram.png", "--json"], fx)).out).data.path).toBe("attachments/diagram.png");
+    // By its name alone, as a wikilink found it: not a link (20.22).
+    expect((await cli(["resolve", "![[diagram.png]]", "--json"], fx)).code).toBe(3);
+    expect((await cli(["resolve", "diagram.png", "--from", "index", "--json"], fx)).code).toBe(3);
   });
   test(".gitignore: deeper negation re-includes; case follows git on this platform", () => {
     const dir = vault({ ".gitignore": "*.md\n", "sub/.gitignore": "!inner-keep.md\n", "sub/inner-keep.md": "#\n", "sub/other.md": "#\n", "UPPER.MD": "#\n" });

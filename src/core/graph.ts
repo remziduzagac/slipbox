@@ -141,7 +141,7 @@ export interface Backlink {
 }
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-export const INDEX_VERSION = 7; // 6: inline #tags (1.6); 7: where links end (11.7)
+export const INDEX_VERSION = 8; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22)
 
 interface IndexFile {
   version: number;
@@ -694,7 +694,15 @@ export class Graph {
     return join(this.root, rel);
   }
 
-  /** Find a note by user input: a vault-relative path, a path relative to cwd, or a link name. */
+  /**
+   * The note a command's argument names by its name, nearest `fromRel` when several share it — how a
+   * command names a note (`slipbox read plan --from notes/a.md`); never how a link resolves (20.22).
+   */
+  nearestNamed(name: string, fromRel: string): Resolution {
+    return this.index.resolveWiki(name, fromRel);
+  }
+
+  /** Find a note by user input: a vault-relative path, a path relative to cwd, or its name. */
   findNote(input: string, cwd = process.cwd()): Resolution {
     const cleaned = input.replace(/^\[\[|\]\]$/g, "");
     const full = join(cwd, cleaned);
@@ -710,41 +718,53 @@ export class Graph {
   }
 
   /**
-   * Resolve a link found in `fromRel`. A wikilink: the note's name or path in this vault; then
-   * `[[vault:name]]` (17.8); an attachment; a note's alias; its previous name (17.7). A markdown
-   * link: its path, into another root when it climbs out of this one (17.9).
+   * Resolve a link found in `fromRel`: its path (20.2), into another root when it climbs out of this
+   * one (17.9). A wikilink isn't a link — text, never resolved by a name (20.22); the converter reads
+   * one with its legacy reader, `resolveLegacyWiki`.
    */
   resolveLink(link: Pick<LinkRef, "kind" | "target">, fromRel: string): Target {
-    if (link.kind === "wiki" || link.kind === "embed") {
-      if (!link.target) return { resolvedKind: "anchor", path: fromRel, candidates: [] };
-      const r = this.index.resolveWiki(link.target, fromRel);
-      if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates };
-      if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
-      const byPath = this.byFilesystemPath(link.target, fromRel, true) ?? this.intoNested(link.target.replace(/^\/+/, ""), true);
-      if (byPath) return byPath;
-      const inter = VAULT_LINK.exec(link.target);
-      if (inter) {
-        // This vault by its own name reaches its own notes; another's is looked up.
-        if (this.answersTo(inter[1]!)) return this.resolveLink({ kind: link.kind, target: inter[2]! }, fromRel);
-        const other = this.reach?.wiki(inter[1]!, inter[2]!, this);
-        if (other) return other;
-      }
-      if (classify(link.target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(link.target)) {
-        const att = resolveAttachment(link.target, fromRel, this.root);
-        if (att) return { resolvedKind: "file", path: att, candidates: [] };
-        // Obsidian finds attachments anywhere in the vault by name.
-        const named = this.assets.get(link.target.split("/").pop()!.normalize("NFC").toLowerCase()) ?? [];
-        const suffix = link.target.normalize("NFC").toLowerCase();
-        const hits = named.filter((p) => p.toLowerCase() === suffix || p.toLowerCase().endsWith(`/${suffix}`));
-        if (hits.length === 1) return { resolvedKind: "file", path: hits[0]!, candidates: hits };
-        if (hits.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: hits.sort() };
-      }
-      const named = this.byOtherName(link.target, fromRel);
-      if (named) return named;
-      const moved = this.movedWiki(link.target);
-      if (moved) return moved;
-      return { resolvedKind: "unresolved", path: null, candidates: [] };
+    if (link.kind === "wiki" || link.kind === "embed") return { resolvedKind: "unresolved", path: null, candidates: [], reason: "a wikilink isn't a link: slipbox convert-links rewrites it as a path" };
+    return this.resolvePath(link, fromRel);
+  }
+
+  /**
+   * How a wikilink resolved before links were paths (1.4, 17.7, 17.8, 17.12): the note's name or path
+   * in this vault; `[[vault:name]]`; an attachment, by its name; a note's alias; its previous name; a
+   * move remembered. The converter's legacy reader (20.1, 20.22): nothing else resolves a link by a name.
+   */
+  resolveLegacyWiki(link: Pick<LinkRef, "kind" | "target">, fromRel: string): Target {
+    if (!link.target) return { resolvedKind: "anchor", path: fromRel, candidates: [] };
+    const r = this.index.resolveWiki(link.target, fromRel);
+    if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates };
+    if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
+    const byPath = this.byFilesystemPath(link.target, fromRel, true) ?? this.intoNested(link.target.replace(/^\/+/, ""), true);
+    if (byPath) return byPath;
+    const inter = VAULT_LINK.exec(link.target);
+    if (inter) {
+      // This vault by its own name reaches its own notes; another's is looked up.
+      if (this.answersTo(inter[1]!)) return this.resolveLegacyWiki({ kind: link.kind, target: inter[2]! }, fromRel);
+      const other = this.reach?.wiki(inter[1]!, inter[2]!, this);
+      if (other) return other;
     }
+    if (classify(link.target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(link.target)) {
+      const att = resolveAttachment(link.target, fromRel, this.root);
+      if (att) return { resolvedKind: "file", path: att, candidates: [] };
+      // Obsidian finds attachments anywhere in the vault by name.
+      const named = this.assets.get(link.target.split("/").pop()!.normalize("NFC").toLowerCase()) ?? [];
+      const suffix = link.target.normalize("NFC").toLowerCase();
+      const hits = named.filter((p) => p.toLowerCase() === suffix || p.toLowerCase().endsWith(`/${suffix}`));
+      if (hits.length === 1) return { resolvedKind: "file", path: hits[0]!, candidates: hits };
+      if (hits.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: hits.sort() };
+    }
+    const named = this.byOtherName(link.target, fromRel);
+    if (named) return named;
+    const moved = this.movedWiki(link.target);
+    if (moved) return moved;
+    return { resolvedKind: "unresolved", path: null, candidates: [] };
+  }
+
+  /** A link's path, from the note at `fromRel` (20.2). */
+  private resolvePath(link: Pick<LinkRef, "kind" | "target">, fromRel: string): Target {
     // A `file://` URL or a `~/` path names a file, not a web page (17.16).
     if (/^file:\/\//i.test(link.target) || link.target.startsWith("~/")) {
       const path = /^file:/i.test(link.target) ? link.target : link.target.split("#")[0]!;

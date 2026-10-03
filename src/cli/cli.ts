@@ -52,14 +52,13 @@ import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRena
 import { planConvert, urlPath } from "../core/convert.ts";
 import { describeBreak, type MergeReview, MergeReviewError, reviewMerge } from "../core/mergereview.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
-import { confirmMove, declineMove, type KnownVault, noteIndexed, readIdentity, readRegistry, removeStorage, suggestVaultName, unavailable, vaultConfigFile, vaultNamed } from "../core/registry.ts";
+import { confirmMove, declineMove, type KnownVault, noteIndexed, readIdentity, readRegistry, removeStorage, suggestVaultName, unavailable, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
-import { displayNames, fromVaultForm, locName } from "../core/names.ts";
+import { displayNames, fromVaultForm, locName, vaultFormChoices } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeAt, homeFolder, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
-import { parseWikiTarget } from "../core/wikilink.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 
@@ -408,6 +407,8 @@ const FLAGS: Record<string, string[]> = {
  */
 function vaultFormArg(arg: string, cwd: string): string {
   if (existsSync(isAbsolute(arg) ? arg : join(cwd, arg))) return arg;
+  const choices = vaultFormChoices(arg);
+  if (choices.length) throw new CliError(`several vaults are named ${arg.slice(0, arg.indexOf(":"))}: ${choices.join(", ")}`, EXIT.ambiguous, { candidates: choices });
   return fromVaultForm(arg)?.abs ?? arg;
 }
 
@@ -465,8 +466,8 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
   if (r.status === "ambiguous" && fromArg !== undefined && fromArg !== arg) {
     const from = s.graph.findNote(fromArg, s.io.cwd);
     if (from.status === "resolved") {
-      const l = s.graph.resolveLink({ kind: "wiki", target: arg }, from.path);
-      if (l.resolvedKind === "note" && l.path) return l.path;
+      const l = s.graph.nearestNamed(arg, from.path);
+      if (l.status === "resolved") return l.path;
     }
   }
   if (r.status === "ambiguous") {
@@ -528,11 +529,12 @@ const HANDLERS: Record<string, Handler> = {
 
   resolve(s, rest) {
     const raw = requireArg(rest, "link");
-    // A markdown link, [text](target): resolved as one (a path relative to --from's folder), as
-    // `links` and the TUI resolve it — never by name like a [[wikilink]].
+    // A markdown link, [text](target), given whole: its target, resolved as `links` and the TUI do.
     const mdLink = /^!?\[[^\]]*\]\(\s*<?([^>)]*?)>?\s*\)$/.exec(raw);
-    const inner = mdLink ? mdLink[1]! : raw.replace(/^!?\[\[/, "").replace(/\]\]$/, "");
-    const parts = mdLink ? { target: decodeURIComponentSafe(inner.split("#")[0]!), heading: inner.includes("#") ? decodeURIComponentSafe(inner.slice(inner.indexOf("#") + 1)) : null } : parseWikiTarget(inner);
+    const inner = mdLink ? mdLink[1]! : raw;
+    // A path, `#heading` after it, as in a link.
+    const hash = inner.indexOf("#");
+    const parts = { target: decodeURIComponentSafe(hash < 0 ? inner : inner.slice(0, hash)), heading: hash < 0 ? null : decodeURIComponentSafe(inner.slice(hash + 1)) || null };
     const fromArg = flag(s.args, "from");
     const from = fromArg ? resolveNote(s, fromArg) : null;
     let status: string;
@@ -540,48 +542,55 @@ const HANDLERS: Record<string, Handler> = {
     let candidates: string[] = [];
     let found: Target | null = null;
     let formedVault: string | null = null;
-    // A scheme makes it external only outside [[…]] (as the renderer has it), with no spaces (a
-    // URL has none), and when no note by that name exists: "Meeting: Q3" is a note.
+    // A wikilink isn't a link (20.2): text, resolved by no name (20.22).
     const bracketed = /^!?\[\[/.test(raw);
-    const noteNamed = s.graph.findNote(parts.target, s.io.cwd).status !== "unresolved";
     // A file:// URL names a file (17.16): resolved, not external.
     const fileUrl = /^file:\/\//i.test(inner);
-    // `vault:path` (20.20): a file or folder of that vault, by its path there; `#heading` after it.
-    const hash = inner.indexOf("#");
+    // `vault:path` (20.20): a file or folder of that vault, by its path there.
     const formed = mdLink || bracketed ? null : fromVaultForm(hash < 0 ? inner : inner.slice(0, hash));
-    if (mdLink && /^[a-z][a-z0-9+.-]*:/i.test(inner) && !fileUrl) {
-      status = "external";
-      path = inner;
-    } else if (formed && existsSync(formed.abs)) {
-      status = "resolved";
-      path = formed.root === s.loc.root ? formed.rel : formed.abs;
-      if (formed.root !== s.loc.root) formedVault = s.graph.reach?.vaultOf(formed.root) ?? null;
-    } else if (mdLink && parts.target) {
-      const md = s.graph.resolveLink({ kind: "markdown", target: inner }, from ?? "");
-      status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
-      path = status === "resolved" ? md.path : null;
-      candidates = md.candidates;
-      found = md;
-    } else if (!bracketed && /^[a-z][a-z0-9+.-]*:\S*$/i.test(inner) && !fileUrl && !noteNamed && !vaultNamed(inner.slice(0, inner.indexOf(":"))).length) {
+    // A scheme makes it external, with no spaces (a URL has none) and when no note is named so:
+    // "Meeting: Q3" is a note.
+    const external = /^[a-z][a-z0-9+.-]*:/i.test(inner) && !fileUrl && !formed && (!!mdLink || (/^\S*$/.test(inner) && s.graph.findNote(parts.target, s.io.cwd).status === "unresolved"));
+    // A vault name several vaults have (20.20): each by the name it's shown with, to pick from.
+    const choices = formed || mdLink || bracketed ? [] : vaultFormChoices(hash < 0 ? inner : inner.slice(0, hash));
+    if (choices.length) {
+      status = "ambiguous";
+      candidates = choices;
+      found = { resolvedKind: "ambiguous", path: null, candidates: choices, reason: "several vaults have that name" };
+    } else if (bracketed) {
+      status = "unresolved";
+      found = { resolvedKind: "unresolved", path: null, candidates: [], reason: "a wikilink isn't a link: slipbox convert-links rewrites it as a path" };
+    } else if (formed) {
+      const there = formed.root === s.loc.root ? null : (s.graph.reach?.vaultOf(formed.root) ?? null);
+      status = existsSync(formed.abs) ? "resolved" : "unresolved";
+      path = status === "resolved" ? (formed.root === s.loc.root ? formed.rel : formed.abs) : null;
+      formedVault = there;
+      if (status === "unresolved") found = { resolvedKind: "unresolved", path: null, candidates: [], reason: `no ${formed.rel} in ${there ?? "this vault"}` };
+    } else if (external) {
       status = "external";
       path = inner;
     } else if (!parts.target && from) {
       status = "resolved";
       path = from;
+    } else if (from || mdLink) {
+      // A link written in --from (or at the vault's root): its path — the resolver `links` and the
+      // TUI use, so `resolve` is link.follow's CLI equivalent.
+      const md = s.graph.resolveLink({ kind: "markdown", target: inner }, from ?? "");
+      status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
+      path = status === "resolved" ? md.path : null;
+      candidates = md.candidates;
+      found = md;
     } else {
-      // The same resolver `links` and the TUI use, so `resolve` is link.follow's CLI equivalent,
-      // attachments included. Without --from, a path or note name is tried first.
-      const r = from ? null : s.graph.findNote(parts.target, s.io.cwd);
-      if (r && r.status !== "unresolved") {
+      // No --from: the note a command would name — a path, from here or the vault's root, or its name.
+      const r = s.graph.findNote(parts.target, s.io.cwd);
+      if (r.status !== "unresolved") {
         status = r.status;
         path = r.path;
         candidates = r.candidates;
       } else {
-        const w = s.graph.resolveLink({ kind: "wiki", target: parts.target }, from ?? "");
-        const md = w.resolvedKind === "unresolved" && from && !w.reason ? s.graph.resolveLink({ kind: "markdown", target: parts.target }, from) : w;
-        status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
+        const md = s.graph.resolveLink({ kind: "markdown", target: inner }, "");
+        status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : "unresolved";
         path = status === "resolved" ? md.path : null;
-        candidates = md.candidates;
         found = md;
       }
     }
@@ -594,10 +603,9 @@ const HANDLERS: Record<string, Handler> = {
     const abs = path && status !== "external" ? (isAbsolute(path) ? path : s.graph.abs(path)) : null;
     // With --from, the link to write there (20.20): the relative path, as a link carries it.
     const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${slugify(parts.heading)}` : ""}` : null;
-    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, vault: found?.vault ?? formedVault, via: found?.via ?? null, reason: found?.reason ?? null };
+    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, vault: found?.vault ?? formedVault, reason: found?.reason ?? null };
     if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`, EXIT.ambiguous, data);
     if (status === "unresolved") throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);
-    if (data.via) s.warnings.push(`"${raw}" reached ${abs} by ${data.via === "alias" ? "an alias" : data.via === "previous-name" ? "a previous name" : "a redirect"}`);
     return { data, human: `${abs ?? path}${line ? `:${line}` : ""}\n` };
   },
 
@@ -617,7 +625,7 @@ const HANDLERS: Record<string, Handler> = {
             ? `UNRESOLVED${l.reason ? ` (${l.reason})` : ""}`
             : l.resolvedKind === "ambiguous"
               ? `AMBIGUOUS (${l.candidates.join(", ")})`
-              : `${l.shown ?? ""}${l.via ? ` [${l.via}]` : ""}`;
+              : (l.shown ?? "");
         const shown = l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]` : l.target;
         return `${where} ${l.kind.padEnd(8)} ${shown} -> ${dest}\n`;
       })
@@ -636,7 +644,6 @@ const HANDLERS: Record<string, Handler> = {
         shown: l.shown,
         candidates: l.candidates,
         vault: l.vault ?? null,
-        via: l.via ?? null,
         reason: l.reason ?? null,
       })),
       human,
@@ -1142,7 +1149,7 @@ const HANDLERS: Record<string, Handler> = {
 
   async "rename-vault"(s, rest) {
     const name = requireArg(rest, "the vault's new name");
-    const r = await renameResult(s, () => planVaultRename(s.graph, s.loc, name));
+    const r = await renameResult(s, () => planVaultRename(s.loc, name));
     if (!has(s.args, "dry-run")) recordLocation(rootAt(s.loc.root));
     return r;
   },

@@ -1,7 +1,7 @@
 # slipbox
 
 A terminal markdown notes app: a shared workspace for humans and agents over plain files. It reads a vault of
-markdown notes, renders them properly (tables that fit, highlighted code, themes), follows `[[wikilinks]]`, and
+markdown notes, renders them properly (tables that fit, highlighted code, themes), follows links as plain paths, and
 reloads the instant an agent rewrites a note. Every state change is also reachable from a CLI that agents drive.
 
 Status: **phases 0–3** — rendering (leaf parity), a TUI that reads and edits (source mode, vim-shaped
@@ -49,7 +49,7 @@ The configuration reloads itself when you save it.
 On the demo vault (`cd examples/vault`; `bun ../../src/main.ts` if `slipbox` isn't installed):
 
 ```bash
-slipbox resolve '[[telescope-comparison#Summary]]' --from home.md --json
+slipbox resolve 'equipment/telescope-comparison.md#Summary' --from home.md --json
 slipbox backlinks telescope-comparison --json
 slipbox find 'Aster' --json                  # a note's text, or the whole vault's
 slipbox read home --json                     # the raw text and its sha

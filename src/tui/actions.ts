@@ -1781,7 +1781,7 @@ export function registerActions(app: App): void {
       // The explorer's selected vault (one nested here), when it has focus.
       const item = a.explorerFocused() ? a.explorerItem() : null;
       if (item?.vault && !arg) return a.renameVaultItem(item);
-      const go = (name: string) => a.previewRename(() => planVaultRename(a.graph, a.loc, name.trim()));
+      const go = (name: string) => a.previewRename(() => planVaultRename(a.loc, name.trim()));
       if (arg) return go(arg);
       a.prompt(`rename vault ${a.loc.name ?? a.loc.root} to: `, (t) => t.trim() && go(t));
     },

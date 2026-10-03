@@ -115,3 +115,17 @@ export function fromVaultForm(form: string, known = readRegistry(), branch?: (pa
   if (!isInside(v.path, abs)) return null;
   return { root: v.path, rel: relative(v.path, abs).split(sep).join("/"), abs };
 }
+
+/**
+ * A `vault:path` whose vault name several vaults share as their own (20.20): each one's form by the
+ * name it's shown with (`work.docs:a.md`, `home.docs:a.md`), to pick from — never a guess between
+ * them. Empty when it names one vault, or none.
+ */
+export function vaultFormChoices(form: string, known = readRegistry(), branch?: (path: string) => string | null): string[] {
+  const at = form.indexOf(":");
+  if (at <= 0 || fromVaultForm(form, known, branch)) return [];
+  const own = vaultNamed(form.slice(0, at), known).filter((x) => x.kind === "vault" && !x.worktree);
+  if (own.length < 2) return [];
+  const shown = displayNames(known, branch);
+  return own.map((v) => `${shown.get(v.key) ?? v.name}:${form.slice(at + 1)}`).sort();
+}

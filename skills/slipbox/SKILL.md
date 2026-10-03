@@ -3,7 +3,7 @@ name: slipbox
 description: >-
   Drive the slipbox markdown vault from the shell: find text across notes, read and safely write
   notes (atomic, never clobbering a note the user changed), replace text, tick tasks, render a
-  note as readable text, follow [[wikilinks]], list links and backlinks, outline a note, see what
+  note as readable text, follow links (plain paths), list links and backlinks, outline a note, see what
   the user is reading, and append file:line references or text to the per-project scratch the user
   reads in the slipbox TUI. Use when the user mentions slipbox, their notes vault, the scratch, or
   asks to capture a reference for later; or when a directory contains a `.slipbox/` marker and you
@@ -57,7 +57,7 @@ the user gets a conflict prompt. Tell them, or ask, before writing it.
 
 `<note>` is a path (relative to the current directory or the vault), a file of another vault as `vault:path`
 (`research:algorithms/dijkstra.md`, the vault named as `slipbox vaults` shows it; the command then works in that
-vault), or a note name, which resolves like a `[[wikilink]]`.
+vault), or a note name (its file's, or an alias) — how a command names a note; links themselves are paths.
 
 ```bash
 slipbox render <note> --plain            # readable text, tables laid out, no colour
@@ -101,7 +101,7 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
   line; `--append --paragraph` adds a block of its own (after a table or paragraph, plain `--append`
   would join it). `--create` paths are from the vault root unless they start with `./` or `../`;
   exit 3 on `write` means the note doesn't exist yet: add `--create`. A `--create` warning with
-  `data.shadows` means other notes have that name: `[[name]]` links may now reach the new one.
+  `data.shadows` means other notes have that name: naming it by that name may now be exit 4.
 - **Names:** a bare name resolves the same from any folder; if several notes share it you get exit 4
   and `data.candidates` — pick one by path, or add `--from <note>` for the one nearest it. (For
   `send`, the candidates are nvims: objects with `socket`, `cwd`, `file`.)
@@ -114,7 +114,7 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
 ## Following links
 
 ```bash
-slipbox resolve '[[alpha#Section Two]]' --from index.md --json
+slipbox resolve 'notes/alpha.md#Section Two' --from index.md --json
 # data: {status: "resolved", path, abs, heading, line, candidates}
 slipbox links <note> --json              # outgoing links, each with status and path
 slipbox backlinks <note> --json          # notes linking here: line, column, how each is written; `shown`: vault:path
@@ -140,11 +140,11 @@ slipbox context <note> --depth 2 --limit 40 --no-backlinks   # further out, more
 `slipbox context` is the quickest way into a topic: each file comes as a `## path` section, its `path:1-N` and why
 it's included, then its text fenced as on disk; what didn't fit is named under `## Left out`.
 
-Quote wikilinks on the command line: zsh treats unquoted `[[…]]` as a glob and fails with "no
-matches found" before slipbox runs. Resolution is case-insensitive on every OS. A name shared by
-several notes resolves to the one nearest the linking note, so always pass `--from` when you are
-following a link found inside a note. With no single nearest match, you get exit 4 and the
-candidates. Pick one, or ask the user.
+Links are paths: relative to the note (what slipbox writes), `~/…`, absolute, or `file://`. Pass `--from` when you
+follow a link found inside a note — its path is from that note's folder. A note's path resolves whatever its case.
+Wikilinks (`[[…]]`) aren't links: text, never resolved by a name (`resolve` says so, exit 3);
+`slipbox convert-links --plan` rewrites a vault's as paths, for you to review and `slipbox apply`. A note name on the
+command line, shared by several notes, is exit 4 with the candidates: pick one, or add `--from` for the nearest.
 
 ## Capturing for the user — the scratch
 

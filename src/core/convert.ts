@@ -84,7 +84,7 @@ export function planConvert(g: Graph, rels?: string[], picks: Map<string, string
     // A reference definition several links share is rewritten once.
     const definitions = new Set<number>();
     // Its wikilinks, read as they were, each resolved by name as it was.
-    for (const l of legacyWikiLinks(text)) wikiJob(g, rel, { ...l, ...g.resolveLink(l, rel) }, picks, ambiguous, add, skip);
+    for (const l of legacyWikiLinks(text)) wikiJob(g, rel, { ...l, ...g.resolveLegacyWiki(l, rel) }, picks, ambiguous, add, skip);
     for (const l of g.linksOf(rel)) {
       if ((l.kind === "markdown" || l.kind === "image") && l.target.startsWith("/") && !l.target.startsWith("//")) rootJob(g, rel, l, lines, definitions, add, skip);
     }

@@ -3380,7 +3380,7 @@ export class App {
     this.prompt(`rename the vault ${name} to: `, (text) => {
       const typed = text.trim();
       if (!typed || typed === name) return;
-      this.previewRename(() => planVaultRename(openVault(root), rootAt(root), typed, [this.graph]));
+      this.previewRename(() => planVaultRename(rootAt(root), typed));
     });
     (this.overlay as PromptOverlay).text = name;
   }

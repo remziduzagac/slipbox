@@ -72,7 +72,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `scratch path` | `{path, exists}` |
 | `scratch clear` | `{path, cleared, previousSha}` |
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
-| `resolve <link>` | `{link, status, path, abs, shown, href, heading, line, candidates[], vault, via, reason}` |
+| `resolve <link>` | `{link, status, path, abs, shown, href, heading, line, candidates[], vault, reason}` |
 | `links <note>` | `[{kind, target, heading, text, line, column, end, status, path, shown, candidates, vault, …}]` |
 | `problems` | `{broken[], ambiguous[], orphans[]}`: links `{from, line, column, end, kind, target, reason, …}`; paths |
 | `problems --lint` | adds `lint[{file, line, column, rule, name, description}]`; a warning when lint is off or fails |
@@ -124,11 +124,11 @@ These churn freely before 1.0:
 A link's `line` and `column` are where it starts and `end` (`{line, column}`) where it ends: the column after its last
 character. Columns count from 1 in UTF-16 units, as editors and LSP count them (`🌍` is two).
 
-`resolve` treats a target with a scheme (`https:`) as external only outside `[[…]]`, with no spaces,
-and when no note has that name: `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A markdown link
-resolves to the note's own path whatever case the link uses (`[x](Note.md)` → `note.md`), so it
-counts as a backlink. A markdown link given whole, `resolve '[a](../home.md)' --from people/x.md`,
-resolves as markdown (a path from `--from`'s folder), as `links` and the TUI do; never by name.
+`resolve` treats a target with a scheme (`https:`) as external only with no spaces, when no note has that name and no
+vault (`vault:path`): `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A markdown link resolves to the note's own path
+whatever case the link uses (`[x](Note.md)` → `note.md`), so it counts as a backlink. A markdown link given whole,
+`resolve '[a](../home.md)' --from people/x.md`, resolves as markdown (a path from `--from`'s folder), as `links` and
+the TUI do; never by name.
 Backlinks exclude a note's links to itself, and carry how each link is written, so a caller can
 rewrite them.
 
@@ -270,9 +270,15 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
 
 It uses the same resolver as `links` and the TUI, so it is the CLI equivalent of following a link,
 attachments included: a path, from `--from`'s folder (`[a](../home.md)`, given whole, as markdown), with a heading,
-`line` is that heading's source line. External URLs come back as `status: "external"`. `links --all` lists every
-note's, each with `from`. It still takes `[[target#heading|alias]]` too, looked up by name as wikilinks were (decision
-`1.4`) — for converting by hand; links in notes never resolve so (`20.2`).
+`line` is that heading's source line. Without `--from`, the note a command would name — a path from here or the
+vault's root, or its name — else a file by its path from the vault's root. External URLs come back as
+`status: "external"`. `links --all` lists every note's, each with `from`.
+
+**Nothing resolves by a name** (`20.22`): a wikilink, `[[target]]` or `[[vault:note]]`, is text — `resolve` says so
+(exit 3, "a wikilink isn't a link: slipbox convert-links rewrites it as a path"), and so do links and the TUI. Aliases,
+previous names, an attachment found by its name, a move remembered: only the converter still reads them (`20.1`), as
+the legacy reader it keeps for what it rewrites. A vault name several vaults share as their own, `docs:a.md`, is
+ambiguous (exit 4) — `candidates` gives each by the name it's shown with, `work.docs:a.md`.
 
 **Across vaults** (plan `17.9`–`17.11`, `17.16`): a path out of the root (relative, `~/`, absolute — `/` is the
 filesystem's root — or a `file://` URL; a file, not an external link) resolves into the other vault: `path` and `abs`

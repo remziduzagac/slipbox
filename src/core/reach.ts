@@ -8,7 +8,7 @@ import { existsSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { loadConfig } from "./config.ts";
 import { readJson } from "./fsutil.ts";
-import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, type Target, VAULT_LINK, type VaultReach } from "./graph.ts";
+import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, type Target, type VaultReach } from "./graph.ts";
 import { pathLink } from "./links.ts";
 import { cacheDir } from "./paths.ts";
 import { displayNames } from "./names.ts";
@@ -136,7 +136,7 @@ export class Reach implements VaultReach {
     }
     const there = this.graphAt(v.path);
     if (!there) return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `vault "${vault}" at ${v.path} can't be read` };
-    const r = there.resolveLink({ kind: "wiki", target }, "");
+    const r = there.resolveLegacyWiki({ kind: "wiki", target }, "");
     const abs = (p: string) => join(there.root, p);
     const name = this.shown(v);
     if (r.resolvedKind === "note" || r.resolvedKind === "file") return { ...r, path: abs(r.path!), candidates: r.candidates.map(abs), vault: name, via: via ?? r.via };
@@ -212,28 +212,6 @@ export class Reach implements VaultReach {
       const r = g.resolveLink({ kind: "markdown", target: posix.normalize(relative(g.root, abs)) }, "");
       return (r.resolvedKind === "note" || r.resolvedKind === "file") && r.path && !isAbsolute(r.path) ? r.path : null;
     };
-    if (l.kind === "wiki" || l.kind === "embed") {
-      const m = VAULT_LINK.exec(l.target);
-      if (m && g.answersTo(m[1]!)) {
-        // Only when the name means this vault there: not a same-named one, not several.
-        const meant = this.meant(m[1]!.toLowerCase(), v.path);
-        if (meant.length > 1 || (meant.length === 1 && real(meant[0]!.path) !== real(g.root))) return null;
-        const r = g.resolveLink({ kind: "wiki", target: m[2]! }, "");
-        return r.resolvedKind === "note" && r.path && !isAbsolute(r.path) ? r.path : null;
-      }
-      // By its path (17.16): `[[../notes/x]]`, `[[~/notes/x]]`, an absolute one.
-      const hit = pathLink(l.target, linking, true);
-      if (hit) return inG(hit.abs);
-      // A vault path into a vault nested in the linking one (17.17): `[[outreach/index]]`.
-      if (l.target.includes("/") && isInside(real(v.path), real(g.root))) {
-        const base = join(v.path, l.target.replace(/^\/+/, ""));
-        for (const abs of /\.[A-Za-z0-9]+$/.test(base) ? [base] : [`${base}.md`, `${base}.markdown`]) {
-          const rel = inG(abs);
-          if (rel) return rel;
-        }
-      }
-      return null;
-    }
     if (l.kind !== "markdown") return null;
     const fileUrl = /^file:\/\//i.test(l.target);
     if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) && !fileUrl) return null;
