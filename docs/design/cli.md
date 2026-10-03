@@ -96,6 +96,8 @@ These churn freely before 1.0:
 | `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
 | `info` | root, mode, `vault{…, shown}`, `instance`, `collection`, `copies[]`, `index{…, written}`, `background` |
 | `vaults` | `[{key, instance, id, kind, name, shown, …, path, seen, indexed, exists, unavailable, worktree?}]` |
+| `--plan` (`mv`, `relink`…) | as `--dry-run`, plus `plan{id, made}`: saved for `apply` (`20.18`) |
+| `apply [plan]` | as the command that planned it, applied; no plan: `[{id, made, root, command, kind, files}]` |
 | `vault-moved [path]` | `[{instance, name, path, seen}]`; with a path `{moved, from, to}`; `--not`: `{declined}` |
 | `mv`, `rename-vault`, `rename-heading`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, …}` |
 | `convert-links` | as `mv`, kind `convert`, plus `ambiguous[]`: the links several notes answer to |
@@ -370,6 +372,14 @@ broke (`20.17`), from what the state knows of where it was: its links out by a p
 they reached from there; and the other vaults' links into where it was (as of their index) to where it is — each in
 its own form (relative, `~/`, absolute), a link that still reaches something left alone. `vault-moved` says how many
 lines that is (`broken`). Both take `--dry-run`.
+
+**Plans, in two steps** (`20.18`): every command that generates edits — `mv`, `rename-vault`, `rename-heading`,
+`relink`, `convert-links`, `init <folder>`, `deinit`, `undo` — takes `--plan`: it says what it would do, as
+`--dry-run` does, writing nothing, and saves the plan (its `id`) in the state folder, tied to each file as it is.
+`slipbox apply <id>` writes it — refused, nothing written (exit 5), when any of its files changed since, so a stale
+plan is never applied — and it's gone; `--dry-run` shows it again and says whether it's still good (`stale: …`
+in the warnings). `slipbox apply` alone lists the plans waiting, newest first. So an agent plans, reviews, then
+applies; without `--plan` a command still applies at once.
 
 `slipbox convert-links [note]` (plan `20.1`) makes a note's links — or every note's — plain paths, once, by today's
 resolution rules: each `[[…]]` a relative markdown link (`![[…]]` an image-syntax one, which still embeds a note),

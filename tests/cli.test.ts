@@ -248,6 +248,9 @@ describe("the vault and the tool", () => {
     expect(slipbox(["vault-moved", "--json"]).json.data).toEqual([]);
     expect(slipbox(["vault-moved"]).out).toBe("nothing seems to have moved here\n");
     expect(slipbox(["vault-moved", "/nowhere", "--json"]).code).toBe(3);
+    // Plans waiting to be applied (20.18): a list, maybe empty; one that isn't there, not found.
+    expect(Array.isArray(slipbox(["apply", "--json"]).json.data)).toBe(true);
+    expect(slipbox(["apply", "00000000", "--json"]).code).toBe(3);
     expect(slipbox(["help"]).out).toContain("slipbox find <query>");
     expect(slipbox(["--version"]).out).toMatch(/^slipbox \d+\.\d+\.\d+/);
   });

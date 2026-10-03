@@ -54,6 +54,7 @@ import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } f
 import { confirmMove, declineMove, type KnownVault, noteIndexed, readIdentity, readRegistry, removeStorage, suggestVaultName, unavailable, vaultConfigFile, vaultNamed } from "../core/registry.ts";
 import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
+import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
 import { displayNames, locName } from "../core/names.ts";
 import { findVaultRoot, hasMarker, homeAt, homeFolder, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
@@ -184,6 +185,7 @@ Usage:
   slipbox relink [note]             rewrite links broken by a move slipbox saw, to where the file is  [--dry-run]
   slipbox convert-links [note]      wikilinks and links from the vault's root rewritten as relative paths  [--dry-run]
   slipbox undo                      take back the vault's last rename, move or relink  [--dry-run]
+  slipbox apply [plan]              write a plan --plan saved (refused if a file changed since); none: those waiting  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
@@ -217,7 +219,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-vault", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
-  "capture", "scratch", "init", "info", "vaults", "vault-moved", "doctor", "diagnostics", "themes", "commands", "help",
+  "capture", "scratch", "init", "info", "vaults", "vault-moved", "apply", "doctor", "diagnostics", "themes", "commands", "help",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -326,7 +328,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
+  scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -369,16 +371,17 @@ const FLAGS: Record<string, string[]> = {
   send: ["line", "server"],
   capture: ["ref", "snippet", "stdin", "lang"],
   scratch: ["if-unchanged"],
-  init: ["name", "private", "dry-run"],
-  deinit: ["dry-run"],
+  init: ["name", "private", "dry-run", "plan"],
+  deinit: ["dry-run", "plan"],
   "vault-moved": ["not"],
-  mv: ["dry-run"],
+  apply: ["dry-run"],
+  mv: ["dry-run", "plan"],
   rm: ["dry-run"],
-  "rename-vault": ["dry-run"],
-  "rename-heading": ["dry-run"],
-  relink: ["dry-run"],
-  "convert-links": ["dry-run"],
-  undo: ["dry-run"],
+  "rename-vault": ["dry-run", "plan"],
+  "rename-heading": ["dry-run", "plan"],
+  relink: ["dry-run", "plan"],
+  "convert-links": ["dry-run", "plan"],
+  undo: ["dry-run", "plan"],
   context: ["depth", "no-backlinks", "limit", "copy"],
   search: ["limit", "scope"],
   index: ["rebuild", "home", "budget", "refresh"],
@@ -1121,6 +1124,36 @@ const HANDLERS: Record<string, Handler> = {
     // A vault's rename taken back: the machine's list learns its name again.
     const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };
     if (d.kind === "vault" && !d.dryRun) for (const f of d.files) if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
+    return r;
+  },
+
+  // A plan saved by --plan (20.18), applied: refused, nothing written, when any of its files changed
+  // since it was made. --dry-run shows it, and says whether it's still good. With no id, the plans
+  // waiting, newest first.
+  apply(s, rest) {
+    if (!rest[0]) {
+      const waiting = listPlans();
+      return {
+        data: waiting.map((p) => ({ id: p.id, made: p.made, root: p.root, command: p.command, kind: p.plan.kind, from: p.plan.from, to: p.plan.to, files: p.plan.files.length })),
+        human: waiting.map((p) => `${p.id}  ${p.made.slice(0, 16).replace("T", " ")}  ${p.command} ${p.plan.from}${p.plan.to ? ` → ${p.plan.to}` : ""}  (${p.plan.files.length} file${p.plan.files.length === 1 ? "" : "s"}, ${p.root})\n`).join("") || "no plans waiting\n",
+      };
+    }
+    const saved = loadPlan(rest[0]);
+    if (!saved) throw new CliError(`no plan ${rest[0]} (slipbox apply lists those waiting)`, EXIT.notFound);
+    const g = openVault(saved.root);
+    const stale = saved.plan.files.filter((f) => {
+      try {
+        return readText(f.abs).text !== f.text;
+      } catch {
+        return true;
+      }
+    });
+    if (has(s.args, "dry-run")) {
+      if (stale.length) s.warnings.push(`stale: ${stale.map((f) => f.shown).join(", ")} changed since it was planned — applying it would be refused`);
+      return renameResult(s, () => saved.plan, g);
+    }
+    const r = renameResult(s, () => saved.plan, g);
+    forgetPlan(saved.id);
     return r;
   },
 
@@ -1908,9 +1941,12 @@ function folderArg(s: Session, arg: string): string | null {
 function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Result {
   let p: RenamePlan;
   let applied: Applied | null = null;
+  let saved: SavedPlan | null = null;
   try {
     p = plan();
-    if (!has(s.args, "dry-run")) {
+    // Two steps (20.18): the plan saved, tied to each file as it is now, for `slipbox apply` to write.
+    if (has(s.args, "plan")) saved = savePlan(g.root, s.args.positional[0] ?? "", p);
+    else if (!has(s.args, "dry-run")) {
       applied = applyPlan(g, p);
       for (const [, to] of p.vaults ?? []) recordLocation(rootAt(to)); // the machine's list follows
     }
@@ -1943,7 +1979,7 @@ function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Result {
           ? `${verb} ${p.from}/ a plain folder of ${p.to}`
           : `${verb} ${p.from} → ${p.to}`;
   const human = [
-    `${head}: ${links} change${links === 1 ? "" : "s"} in ${p.files.length} file${p.files.length === 1 ? "" : "s"}`,
+    `${head}: ${links} change${links === 1 ? "" : "s"} in ${p.files.length} file${p.files.length === 1 ? "" : "s"}${saved ? ` — planned: slipbox apply ${saved.id} writes it (refused if any of these files changes first)` : ""}`,
     ...p.files.flatMap((f) => f.edits.map((e) => `  ${f.shown}:${e.line}\n    - ${e.before}\n    + ${e.after}`)),
     "",
   ].join("\n");
@@ -1960,6 +1996,7 @@ function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Result {
       ...(p.ambiguous ? { ambiguous: p.ambiguous } : {}),
       written: applied?.written ?? [],
       ...(p.undo ? { undo: { id: p.undo.id, at: p.undo.at } } : {}),
+      ...(saved ? { plan: { id: saved.id, made: saved.made } } : {}),
     },
     human,
   };
