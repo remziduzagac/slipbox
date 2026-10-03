@@ -60,7 +60,7 @@ export function stateHome(): string {
   return join(xdg("XDG_STATE_HOME", ".local/state"), "slipbox");
 }
 
-/** Kept data that is neither settings nor derived: the home vault's `.slipbox/` (17.2). */
+/** Kept data that is neither settings nor derived: tools installed for language servers (19.x). */
 export function dataHome(): string {
   return join(xdg("XDG_DATA_HOME", ".local/share"), "slipbox");
 }

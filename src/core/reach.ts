@@ -118,7 +118,7 @@ export class Reach implements VaultReach {
     // Unknown, or known only elsewhere (a second clone's own nested vault isn't recorded yet): look
     // at the vaults nested in this one and holding it.
     if (!this.meant(n, here).some((v) => kin(here, v))) this.discover(g);
-    const others = this.known().filter((v) => (v.kind === "vault" || v.kind === "home") && real(v.path) !== here);
+    const others = this.known().filter((v) => v.kind === "vault" && real(v.path) !== here);
     let hits = this.meant(n, here);
     let via: Target["via"];
     if (!hits.length) {
@@ -130,7 +130,6 @@ export class Reach implements VaultReach {
     if (!hits.length) return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `unknown vault "${vault}"` };
     if (hits.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: hits.map((v) => v.path).sort(), vault, reason: `several vaults are named "${vault}"` };
     const v = hits[0]!;
-    if (v.kind === "home") return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: "the home vault isn't a link target: link a loose file by its path" };
     if (!isVaultRoot(v.path)) {
       return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `vault "${vault}" was last seen at ${v.path} (${v.seen.slice(0, 10)})` };
     }
@@ -152,7 +151,7 @@ export class Reach implements VaultReach {
    */
   private meant(n: string, from: string): KnownVault[] {
     const at = real(from);
-    const hits = this.known().filter((v) => (v.kind === "vault" || v.kind === "home") && real(v.path) !== at && namesOf(v).includes(n));
+    const hits = this.known().filter((v) => v.kind === "vault" && real(v.path) !== at && namesOf(v).includes(n));
     if (hits.length < 2) return hits;
     const near = hits.filter((v) => kin(at, v));
     if (near.length === 1) return near;

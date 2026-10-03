@@ -443,7 +443,6 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
-  if (app.loc.mode === "home") items.push({ text: "home vault", role: "status_dim" });
   // The branch is the status line's, with the vault's name (20.14).
   for (const it of items) {
     const w = stringWidth(it.text) + 2;

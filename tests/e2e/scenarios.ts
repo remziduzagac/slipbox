@@ -1777,7 +1777,7 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
-    name: "vaults: opened on a loose folder, the known vaults first; .. and folders in the explorer",
+    name: "vaults: opened on a plain folder, the known vaults first; its tree, by its path, and .. to go up (20.22)",
     options: {
       startAt: "loose",
       beside: { "loose/jotting.md": "# A loose jotting\n", "loose/sub/deeper.md": "# Deeper\n" },
@@ -1789,10 +1789,15 @@ export const SCENARIOS: Scenario[] = [
       await s.see(/Vaults \(\d+\)/);
       await s.see("halden");
       await s.keys("escape");
-      await s.see("home vault");
+      await s.status(/\/loose\b/); // unnamed: its path where a vault's name would be
       await s.see("jotting.md");
       await s.see(/\.\./);
       await s.see("sub");
+      // Walked as a vault is: a note in a folder of it, found by search.
+      await leader(s, "f", "s");
+      await s.type("Deeper");
+      await s.see("sub/deeper.md");
+      await s.keys("escape");
       await leader(s, "v", "v");
       await s.see("halden");
       await s.keys("enter");

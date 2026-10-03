@@ -241,25 +241,26 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   as a window around the match (`…` where cut), so its output grows with the matches, not with the
   line; a note it can't read is a warning, and the rest are still searched.
 - **What a writer may change.** `write`, `replace` and `task` change a file of the note's root — a
-  vault, or a loose file's own folder (`17.1`) — inside it by its real path, and where the walk
+  vault, or the plain folder a loose file is in (`20.22`) — inside it by its real path, and where the walk
   lists notes (or a note it reached, `20.8`): never `.slipbox/`, `.git/`, a hidden folder or
   `node_modules`, and never a path outside `--root` when that names the root. `replace --dry-run`
   only reads, so it previews any note; its `newSha` is `null`.
-- **Where a command works.** The root is decided by the file: its nearest boundary above the note argument (or cwd)
-  — a folder with `.slipbox/` or a git checkout's top, one vault when both share a folder (`20.3`) — else the home
-  vault (the file's own folder, listed alone). `$HOME` and `/` are never a root. `--root` must name a vault
-  (`.slipbox/` or a git checkout). Each command records the vault in `vaults.json` — an instance of it (`20.4`),
-  given a local id the first time, with its collection's evidence; a plain folder opened in the home vault is
-  recorded too, by its path. A vault's cache and state are its instance's (`20.5`). Opened where it wasn't seen
-  before, while a copy of it is gone from where it was, every command warns until `slipbox vault-moved <old-path>`
-  takes the gone copy's instance and state — or `--not` says it didn't move; with no path it lists the copies that
-  may have. Moves are never taken on a guess. A vault is named, wherever the CLI names one (`vaults`, `info`,
-  `stat`, a link into another vault), by its name here (`20.6`): what its `.slipbox/` declares, else its
-  repository's (`origin`'s remote), else its folder's — vaults that would share one each with as few of their
-  folders as tell them apart, joined with `.` (`work.docs`, `home.docs`), and a worktree as `name@branch`. Never
-  written into a file. A `.slipbox/` without an id and a name gets them written into its config on first open; a git
-  vault without one is never written into — named by its folder, keyed by its path — and `slipbox init` gives it
-  `.slipbox/` (`--private` keeps that out of git).
+- **Where a command works.** The root is decided by the file: its nearest boundary above the note argument (or cwd) — a
+  folder with `.slipbox/` or a git checkout's top, one vault when both share a folder (`20.3`) — else the plain folder
+  the file is in (or the current one): an unnamed instance known by its path (`20.22`), walked and indexed as a vault
+  is, its state its own. `$HOME` and `/` are never a root; opened as a plain folder, they're listed a level at a time,
+  never walked or indexed (the background index walks `~`). `--root` must name a vault (`.slipbox/` or a git checkout).
+  Each command records the vault in `vaults.json` — an instance of it (`20.4`), given a local id the first time, with
+  its collection's evidence; a plain folder too, by its path. A vault's cache and state are its instance's (`20.5`).
+  Opened where it wasn't seen before, while a copy of it is gone from where it was, every command warns until
+  `slipbox vault-moved <old-path>` takes the gone copy's instance and state — or `--not` says it didn't move; with no
+  path it lists the copies that may have. Moves are never taken on a guess. A vault is named, wherever the CLI names one
+  (`vaults`, `info`, `stat`, a link into another vault), by its name here (`20.6`): what its `.slipbox/` declares, else
+  its repository's (`origin`'s remote), else its folder's — vaults that would share one each with as few of their
+  folders as tell them apart, joined with `.` (`work.docs`, `home.docs`), and a worktree as `name@branch`. Never written
+  into a file. A `.slipbox/` without an id and a name gets them written into its config on first open; a git vault
+  without one is never written into — named by its folder, keyed by its path — and `slipbox init` gives it `.slipbox/`
+  (`--private` keeps that out of git).
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4
@@ -354,7 +355,7 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   files — `--rebuild` starts it again; the TUI keeps it as it runs. Before each search the index catches up with every
   file whose size or mtime changed since, whoever changed it. Until it's been built, a search scans the files with
   the same query, `engine: "scan"` and a warning — slower, the same notes. An index of another version, or one SQLite
-  can't read, is made again. A loose folder (the home vault) keeps none: it's scanned.
+  can't read, is made again. `$HOME` or `/` opened as a plain folder keeps none: it's scanned.
 - **The home folder** (`20.9`): `slipbox index --home` runs the background auto-index now, in the foreground — the
   whole pass, or as much as `--budget <ms>` allows, from where it stopped; `--rebuild` starts a pass again. It walks
   `~` for vaults (never into a hidden folder, `node_modules`, `venv`, `__pycache__` or `~/Library`; into a vault only
@@ -363,9 +364,10 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   started, finished}`. Every command notes the time it ran (`activity` in the state folder): the TUI's auto-index
   waits while an agent works.
 - **Freshness** (`20.10`): `slipbox index --refresh [path]` brings a vault's index up to date now — this vault's, or
-  that of the vault holding `path`, opened or not: every file's size and time checked, every folder listed again.
-  `--json`: `{root, notes, changed, unchanged, gone, reached, indexed, ms}`. `info` says when this vault's index was
-  written (`index.written`) and where the background index has got to (`background`); `vaults` gives each vault's
+  that of the vault holding `path` (outside every vault, the plain folder it's in), opened or not: every file's size
+  and time checked, every folder listed again. `--json`: `{root, notes, changed, unchanged, gone, reached, indexed,
+  ms}`. `info` says when this vault's index was written (`index.written`) and where the background index has got to
+  (`background`); `vaults` gives each vault's
   `indexed` time. A vault on a drive that isn't there (under `/Volumes`, `/media`, `/run/media`, `/mnt`) is
   `unavailable`, not gone: kept, never pruned, and a link into it is broken with that said ("its drive isn't
   there") until the drive is back.
@@ -478,7 +480,7 @@ reach that vault's index at once, as if it had been opened.
 calls it, and the user reads the scratch in the TUI.
 
 - **Where.** In the state dir per vault by default; with `capture.location = "vault"`, in the
-  vault. A loose folder's scratch is the home vault's, always in its state.
+  vault. A plain folder's scratch is its own, always in its state: nothing is written into it.
 - **Reference forms**, as `prompt-buffer.lua` emits them: `path:42`, `path:42-50`,
   `path:42:10-30`, `path:42:10-50:30`. Paths inside the project are stored relative to it.
   Lines count from 1 and ranges must be in order; `--snippet` past the end of the file exits 3.

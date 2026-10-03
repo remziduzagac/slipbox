@@ -21,7 +21,7 @@ import { changedBetween, inVault } from "./gitops.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf, noteFormat } from "./filetypes.ts";
-import type { VaultLocation } from "./vault.ts";
+import { isListed, type VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, WalkFilter, walkVault } from "./walk.ts";
 import { type Hashtag, tagKey, tagName } from "./tags.ts";
 
@@ -211,14 +211,14 @@ export class Graph {
    */
   build(useCache = true, parse: "all" | "lazy" = "all"): this {
     const t0 = performance.now();
-    const walk = this.loc.mode === "home" ? listDirectory(this.root, this.filter) : walkVault(this.root, this.filter);
+    const walk = isListed(this.loc) ? listDirectory(this.root, this.filter) : walkVault(this.root, this.filter);
     this.dirs = walk.dirs;
     this.assets.clear();
     for (const a of walk.assets) this.addAsset(a);
     this.skipped = walk.skipped;
     this.errors = walk.errors;
-    // A loose folder is listed, never indexed: nothing to keep.
-    this.useCache = useCache && this.loc.mode !== "home";
+    // `$HOME` or `/` opened as a plain folder is listed, never indexed: nothing to keep (20.22).
+    this.useCache = useCache && !isListed(this.loc);
     const cached = this.useCache ? readJson<IndexFile | null>(this.cachePath, null) : null;
     const old = cached?.version === INDEX_VERSION ? cached.entries : {};
     let reused = 0;
@@ -305,7 +305,7 @@ export class Graph {
 
   /** `rel` as a file to index when reached: there, a file inside the vault, and only left out softly. */
   private reachable(rel: string): NoteFile | null {
-    if (this.loc.mode === "home" || !this.filter.reachable(rel)) return null;
+    if (isListed(this.loc) || !this.filter.reachable(rel)) return null;
     const abs = join(this.root, rel);
     try {
       const st = statSync(abs);
@@ -349,7 +349,7 @@ export class Graph {
 
   /** The files a note links to that the walk leaves out: reached by the link (20.8). */
   private reachLinked(e: NoteEntry): void {
-    if (this.loc.mode === "home") return;
+    if (isListed(this.loc)) return;
     for (const l of e.links) {
       if (l.kind !== "markdown" && l.kind !== "image") continue;
       const path = l.target.split("#")[0]!;
@@ -439,9 +439,9 @@ export class Graph {
 
   private redirectStore: Redirects | null | undefined;
 
-  /** The vault's redirects, from its state; none for a loose folder (never indexed). */
+  /** The vault's redirects, from its state; none for `$HOME` or `/` opened as a plain folder (never indexed). */
   get redirects(): Redirects | null {
-    if (this.redirectStore === undefined) this.redirectStore = this.loc.mode === "home" ? null : new Redirects(join(stateDir(this.loc), "redirects.json"));
+    if (this.redirectStore === undefined) this.redirectStore = isListed(this.loc) ? null : new Redirects(join(stateDir(this.loc), "redirects.json"));
     return this.redirectStore;
   }
 
@@ -536,7 +536,7 @@ export class Graph {
   }
 
   private pairMove(hash: string, rel: string, side: "went" | "came"): void {
-    if (!hash || this.loc.mode === "home" || this.movesPaused) return;
+    if (!hash || isListed(this.loc) || this.movesPaused) return;
     const now = Date.now();
     for (const m of [this.went, this.came]) for (const [h, v] of m) if (now - v.at > 60_000) m.delete(h);
     const other = side === "went" ? this.came : this.went;

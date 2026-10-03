@@ -60,7 +60,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/paths.ts` | 0.10 | config, cache and state directories; the vault key |
 | `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
 | `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 20.5 | a file's root, its instance and the moves to ask about; `init` |
-| `core/registry.ts` | 17.2–17.6, 20.4 | identity, the home vault, the machine's instances, storage keys, names |
+| `core/registry.ts` | 17.3–17.6, 20.4 | identity, the machine's instances (vaults, plain folders), storage keys |
 | `core/collection.ts` | 20.4 | a collection's evidence: `.slipbox/` id, remotes, first commits; copies of one |
 | `core/parsecache.ts` | 20.11 | notes' parsed content by content hash, shared by every copy on the machine |
 | `core/names.ts` | 20.6 | each vault's name to show: unique here, `.` for a collision, `name@branch` for a worktree |
@@ -179,7 +179,6 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | --- | --- |
 | user config | `$XDG_CONFIG_HOME/slipbox/config.toml` (or `--config`, `$SLIPBOX_CONFIG`) |
 | vault config and identity | `<vault>/.slipbox/config.toml` (`[vault]`: `id`, `name`…), plus `.slipbox/version` |
-| the home vault's | `$XDG_DATA_HOME/slipbox/home/config.toml` |
 | the machine's vaults | `$XDG_STATE_HOME/slipbox/vaults.json` |
 | user themes | `$XDG_CONFIG_HOME/slipbox/themes/*.yaml` (base16 / base24) |
 | link index | `$XDG_CACHE_HOME/slipbox/<key>/index.json` |
@@ -193,8 +192,8 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | renames, to undo (`7.4`) | `$XDG_STATE_HOME/slipbox/<key>/renames.json` (the last 20) |
 | the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, and an item per folder) |
 
-`<key>` is the vault's id, else `<basename>-<sha256(realpath)[:12]>` (`docs/design/decisions.md`, `0.10`). The home
-vault's session is per loose folder: `sessions/<basename>-<hash>.json`.
+`<key>` is the instance's local id (`20.5`); a plain folder's, `<basename>-<sha256(realpath)[:12]>`, by its path
+(`docs/design/decisions.md`, `0.10`).
 
 ## Performance, measured
 

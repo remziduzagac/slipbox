@@ -17,7 +17,7 @@ import { slugify } from "./parse.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
-import { forgetVault, HOME_NAME, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
+import { forgetVault, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
 import { openVault } from "./reach.ts";
 import { vaultForm } from "./names.ts";
 import { findVaultRoot, hasMarker, initVault, isInside, isRepoRoot, type VaultLocation } from "./vault.ts";
@@ -621,11 +621,10 @@ function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: 
  * paths (20.2), never a vault's name (20.22): nothing else changes.
  */
 export function planVaultRename(loc: VaultLocation, newName: string): RenamePlan {
-  if (loc.mode !== "vault") throw new RenameError(loc.mode === "home" ? "the home vault's name is fixed" : `${loc.root} has no .slipbox/: make it a vault first (slipbox init)`);
+  if (loc.mode !== "vault") throw new RenameError(`${loc.root} has no .slipbox/: make it a vault first (slipbox init)`);
   // A git vault's name is its folder's, held nowhere (20.3): `.slipbox/` gives it one of its own.
   if (!hasMarker(loc.root)) throw new RenameError(`${loc.root} is a git checkout without .slipbox/, named by its folder: slipbox init gives it .slipbox/ and a name of its own`);
   if (!VAULT_NAME.test(newName)) throw new RenameError(`"${newName}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
-  if (newName.toLowerCase() === HOME_NAME) throw new RenameError(`"${HOME_NAME}" is the home vault's name`);
   const oldName = loc.name!;
   if (newName === oldName) throw new RenameError(`the vault is already named ${oldName}`);
   const other = vaultNamed(newName, readRegistry(), loc.root);
@@ -815,7 +814,6 @@ export function planMakeVault(parent: Graph, folderRel: string, name: string, op
 /** A new vault's name: one a vault can have, and no other vault's on this machine. */
 function checkVaultName(name: string): void {
   if (!VAULT_NAME.test(name)) throw new RenameError(`"${name}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
-  if (name.toLowerCase() === HOME_NAME) throw new RenameError(`"${HOME_NAME}" is the home vault's name`);
   const other = vaultNamed(name, readRegistry());
   if (other.length) throw new RenameError(`a vault named "${name}" is already at ${other[0]!.path}`);
 }

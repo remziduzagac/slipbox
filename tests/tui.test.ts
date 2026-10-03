@@ -5669,32 +5669,33 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.view!.buf.rel).toBe("inner.md");
   });
 
-  test("a loose folder lists its folders — vaults and folders — and .. to go up (17.13, 17.14)", async () => {
-    const { homeAt } = await import("../src/core/vault.ts");
+  test("a plain folder is walked: its folders, the vaults in it, and .. to go up (17.13, 17.14, 20.22)", async () => {
+    const { folderAt } = await import("../src/core/vault.ts");
     const dir = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(dir, "note.md"), "# loose\n");
     mkdirSync(join(dir, "plain"));
     writeFileSync(join(dir, "plain", "p.md"), "# p\n");
     mkdirSync(join(dir, "code", ".git"), { recursive: true }); // a repository: a vault by itself (20.3)
     mkdirSync(join(dir, "box", ".slipbox"), { recursive: true });
-    const h = await harness({ loc: homeAt(dir), open: "note.md" });
+    const h = await harness({ loc: folderAt(dir), open: "note.md" });
+    // Walked as a vault is (20.22): its folders in the tree, the vaults in it roots of their own.
     expect(h.app.explorerRows().map((r) => [r.name, r.kind, r.root?.kind])).toEqual([
       ["..", "root", "folder"],
       ["box", "root", "vault"],
       ["code", "root", "vault"],
-      ["plain", "root", "folder"],
+      ["plain", "dir", undefined],
       ["note.md", "note", undefined],
     ]);
     expect(h.frame()).toContain("◈ box");
     expect(h.frame()).toContain("◈ code");
-    expect(topRow(h.frame())).toContain("home vault");
-    h.app.enterRoot(h.app.explorerRows()[3]!);
-    expect(h.app.loc).toMatchObject({ mode: "home", root: join(dir, "plain") });
-    expect(h.app.view!.buf.rel).toBe("p.md");
+    expect(h.app.vaultStatus()).toBe(dir); // unnamed: its path (20.22)
+    expect(statusRow(h.frame())).toContain(dir.slice(-12));
+    h.app.enterRoot(h.app.explorerRows()[1]!);
+    expect(h.app.loc).toMatchObject({ mode: "vault", root: join(dir, "box") });
   });
 
   test("a note in a git repository opens the repository as its vault: nothing offered, nothing written (20.3)", async () => {
-    const { homeAt, locateVault } = await import("../src/core/vault.ts");
+    const { folderAt, locateVault } = await import("../src/core/vault.ts");
     const repo = join(mkdtempSync(join(sandbox, "repo-")), "alpha");
     mkdirSync(join(repo, "docs"), { recursive: true });
     mkdirSync(join(repo, ".git"));
@@ -5708,7 +5709,7 @@ describe("vaults in the TUI (17.x)", () => {
     // A loose folder: :init offers .slipbox/, and goes into the vault it makes.
     const loose = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(loose, "n.md"), "# N\n");
-    const l = await harness({ loc: homeAt(loose), open: "n.md" });
+    const l = await harness({ loc: folderAt(loose), open: "n.md" });
     expect(l.app.overlay).toBeNull();
     await l.app.run("vault.init");
     expect((l.app.overlay as ListOverlay).title).toBe(`${loose} is a folder without .slipbox/ — make it a vault?`);
@@ -5720,9 +5721,9 @@ describe("vaults in the TUI (17.x)", () => {
 
   test("opened on a loose folder, the known vaults come first; space v v lists them anywhere (17.14)", async () => {
     const { notes, app, n } = await twoVaults();
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { folderAt } = await import("../src/core/vault.ts");
     const dir = mkdtempSync(join(sandbox, "launch-"));
-    const h = await harness({ loc: homeAt(dir), open: null, launcher: true });
+    const h = await harness({ loc: folderAt(dir), open: null, launcher: true });
     expect(h.app.overlay?.kind).toBe("list");
     const f = h.frame();
     expect(f).toContain(`tnotes${n}`);
@@ -7310,10 +7311,10 @@ describe("git worktrees in the TUI (17.19)", () => {
     await harness({ root: l.x, open: "index.md" });
     await harness({ root: clone, open: "index.md" }); // seen last: the group's head
     // A plain folder opened is an instance, but not a vault: not listed.
-    const { homeAt } = await import("../src/core/vault.ts");
+    const { folderAt } = await import("../src/core/vault.ts");
     const plain = mkdtempSync(join(sandbox, "plain-"));
     writeFileSync(join(plain, "p.md"), "# P\n");
-    await harness({ loc: homeAt(plain), open: "p.md" });
+    await harness({ loc: folderAt(plain), open: "p.md" });
     const other = await harness({ open: "index.md" });
     await other.app.run("vault.switch");
     const items = (other.app.overlay as ListOverlay).items;
@@ -7372,8 +7373,8 @@ describe("git worktrees in the TUI (17.19)", () => {
   test("the folder holding the worktrees: each its own vault, its branch beside it", async () => {
     const l = layout();
     if (!l) return;
-    const { homeAt } = await import("../src/core/vault.ts");
-    const h = await harness({ loc: homeAt(l.wts), open: null });
+    const { folderAt } = await import("../src/core/vault.ts");
+    const h = await harness({ loc: folderAt(l.wts), open: null });
     h.app.showSidebar(true);
     const f = h.frame();
     expect(f).toMatch(/feat +⎇ feat/);

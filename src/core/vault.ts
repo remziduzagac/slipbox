@@ -4,8 +4,10 @@
 // from the file, the first folder that holds `.slipbox/` or is a git checkout's top. Both in one
 // folder make one vault, its name and settings from `.slipbox/`; a repository or a `.slipbox/` folder
 // inside a vault is a vault of its own. A git vault needs nothing, and nothing is written into it.
-// A file under neither is loose: the home vault, which lists a folder at a time (until `20.22`).
-// `$HOME` and `/` are never a root: that would index everything. `--root` names a vault outright.
+// A file under neither is loose (20.22): the plain folder opened is an unnamed instance, known by its
+// path, walked and indexed as a vault is — but `$HOME` and `/`, never a root: that would index
+// everything (the background index walks the home folder, slowly), so those are listed a folder at a
+// time. `--root` names a vault outright.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
@@ -20,9 +22,6 @@ import { cacheHome, stateHome, vaultKey } from "./paths.ts";
 import {
   addIdentity,
   forgetVault,
-  HOME_NAME,
-  homeIdentity,
-  homeVaultDir,
   implicitName,
   type KnownVault,
   MARKER,
@@ -59,21 +58,21 @@ export interface Worktree {
 /** Format version of the marker directory. Bump with a migration, never silently. */
 export const VAULT_FORMAT_VERSION = 1;
 
-/** `vault`: a `.slipbox/` folder or a git checkout's top (20.3). `home`: a loose file's folder,
- *  listed alone; its data is the home vault's. */
+/** `vault`: a `.slipbox/` folder or a git checkout's top (20.3). `folder`: a plain folder outside
+ *  every vault, opened — an unnamed instance, by its path (20.22). */
 export type VaultMode = RootKind;
 
 export interface VaultLocation {
-  /** The root; for the home vault, the folder being looked at (a loose file's own). */
+  /** The root: the vault's, or the plain folder opened (a loose file's own). */
   root: string;
   mode: VaultMode;
   /** The note that was named on the command line, if any (absolute). */
   file: string | null;
   /** The storage key: what the cache and state directories are named by (17.3). */
   key: string;
-  /** The vault's id; null only for a vault whose config can't be written (read-only). */
+  /** The vault's id; null for a git vault without `.slipbox/`, a plain folder, or a config that can't be written. */
   id: string | null;
-  /** The name `[[name:note]]` reaches it by. */
+  /** The vault's own name (20.6: its `.slipbox/`'s, else its repository's or folder's); null for a plain folder. */
   name: string | null;
   aliases: string[];
   previous_names: string[];
@@ -169,7 +168,7 @@ export function locateVault(opts: LocateOptions): VaultLocation {
 
   const found = findVaultRoot(target ?? cwd);
   if (found) return rootAt(found, file);
-  return homeAt(file ? dirname(file) : (target ?? cwd), file);
+  return folderAt(file ? dirname(file) : (target ?? cwd), file);
 }
 
 /** The location of a vault root: a folder with `.slipbox/`, or a git checkout's top (20.3). */
@@ -277,18 +276,25 @@ function ensureIdentity(root: string, mainVault: string | null = null): VaultIde
   return readIdentity(file);
 }
 
-/** A loose folder, in the home vault. */
-export function homeAt(dir: string, file: string | null = null): VaultLocation {
-  const ident = homeIdentity();
-  return { root: dir, mode: "home", file, key: ident.id, id: ident.id, name: HOME_NAME, aliases: ident.aliases, previous_names: ident.previous_names };
+/**
+ * A plain folder opened, outside every vault (20.22): an unnamed instance, keyed by its path — moved,
+ * it starts afresh. Walked and indexed as a vault is, unless it's `$HOME` or `/` (`isListed`).
+ */
+export function folderAt(dir: string, file: string | null = null): VaultLocation {
+  return { root: dir, mode: "folder", file, key: vaultKey(dir), id: null, name: null, aliases: [], previous_names: [] };
+}
+
+/** A plain folder only listed, a level at a time: `$HOME` or `/`, whose walk is the background index's (20.9). */
+export function isListed(loc: Pick<VaultLocation, "mode" | "root">): boolean {
+  return loc.mode === "folder" && isNeverRoot(loc.root);
 }
 
 /**
  * The config files that set a vault's settings besides your own (20.7): its own `.slipbox/config.toml`,
- * and those of the vaults enclosing it, broadest first — deeper over broader. A loose file has the
- * home vault's.
+ * and those of the vaults enclosing it, broadest first — deeper over broader. A plain folder has only
+ * yours (20.22).
  */
-export function configFilesFor(loc: Pick<VaultLocation, "mode" | "root">): { vaultFile: string; outerFiles: string[] } {
+export function configFilesFor(loc: Pick<VaultLocation, "mode" | "root">): { vaultFile: string | null; outerFiles: string[] } {
   const outerFiles: string[] = [];
   if (loc.mode === "vault") {
     for (let up = findVaultRoot(dirname(loc.root)); up; up = findVaultRoot(dirname(up))) if (hasMarker(up)) outerFiles.unshift(vaultConfigFile(up));
@@ -296,24 +302,22 @@ export function configFilesFor(loc: Pick<VaultLocation, "mode" | "root">): { vau
   return { vaultFile: vaultConfigPath(loc), outerFiles };
 }
 
-/** The vault's config file: `.slipbox/config.toml`, or the home vault's. */
-export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): string {
-  return loc.mode === "vault" ? vaultConfigFile(loc.root) : join(homeVaultDir(), "config.toml");
+/** The vault's config file, `.slipbox/config.toml`; a plain folder has none (20.22). */
+export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): string | null {
+  return loc.mode === "vault" ? vaultConfigFile(loc.root) : null;
 }
 
 /**
  * Record the vault in the machine's list (17.6): an instance of it, with its collection's evidence
- * (20.4). The home vault is listed by its own folder, and the plain folder opened in it as an
- * instance of its own, by its path. The instance as recorded.
+ * (20.4). A plain folder opened is an instance of its own, by its path (20.22). The instance as
+ * recorded.
  */
 export function recordLocation(loc: VaultLocation): KnownVault {
   const known = readRegistry();
   const was = (key: string) => known.find((v) => v.key === key);
   let entry: KnownVault;
-  if (loc.mode === "home") {
-    recordVault({ key: loc.key, id: loc.id, kind: "home", name: loc.name, aliases: loc.aliases, previous_names: loc.previous_names, path: homeVaultDir() });
-    const key = vaultKey(loc.root);
-    entry = recordVault({ key, id: null, kind: "folder", name: null, aliases: [], previous_names: [], path: loc.root, collection: collectionOf(loc.root, was(key)?.collection) });
+  if (loc.mode === "folder") {
+    entry = recordVault({ key: loc.key, id: null, kind: "folder", name: null, aliases: [], previous_names: [], path: loc.root, collection: collectionOf(loc.root, was(loc.key)?.collection) });
   } else {
     // A plain folder that has become a vault: the same place, one instance — the vault's now.
     forgetVault(loc.root, ["folder"]);
@@ -337,9 +341,9 @@ export function recordLocation(loc: VaultLocation): KnownVault {
 /** The instance at `loc` as the machine's list has it, and the others of its collection (20.4). */
 export function instanceOf(loc: VaultLocation, known = readRegistry()): { entry: KnownVault | null; copies: KnownVault[] } {
   const here = realPath(loc.root);
-  const entry = known.find((v) => (loc.mode === "home" ? v.kind === "folder" : v.key === loc.key) && realPath(v.path) === here) ?? null;
+  const entry = known.find((v) => (loc.mode === "folder" ? v.kind === "folder" : v.key === loc.key) && realPath(v.path) === here) ?? null;
   if (!entry) return { entry, copies: [] };
-  const copies = known.filter((v) => v !== entry && v.kind !== "home" && sameCollection(v.collection, entry.collection));
+  const copies = known.filter((v) => v !== entry && sameCollection(v.collection, entry.collection));
   return { entry, copies };
 }
 
@@ -395,7 +399,6 @@ export function initVault(dir: string, name?: string, opts: { private?: boolean 
   const known = readRegistry();
   if (name !== undefined) {
     if (!VAULT_NAME.test(name)) throw new VaultError(`"${name}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
-    if (name.toLowerCase() === HOME_NAME) throw new VaultError(`"${HOME_NAME}" is the home vault's name`);
     const other = vaultNamed(name, known, root);
     if (other.length) throw new VaultError(`a vault named "${name}" is already at ${other[0]!.path}; try "${suggestVaultName(root, parentVaultName(root), known)}"`);
   }

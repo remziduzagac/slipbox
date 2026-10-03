@@ -6,7 +6,7 @@
 
 import { basename, dirname, join, relative, sep } from "node:path";
 import { checkoutOf, headOf } from "./git.ts";
-import { HOME_NAME, type KnownVault, readRegistry, slugName, vaultNamed } from "./registry.ts";
+import { type KnownVault, readRegistry, slugName, vaultNamed } from "./registry.ts";
 import { findVaultRoot, homeFolder, isInside, type VaultLocation } from "./vault.ts";
 
 /** The branch checked out at `path` now (a detached head: its commit, short); null outside git. */
@@ -75,9 +75,15 @@ export function displayName(v: Pick<KnownVault, "key" | "name" | "path">, known:
   return displayNames(known, branch).get(v.key) ?? v.name ?? (slugName(basename(v.path)) || "vault");
 }
 
-/** The opened vault's name to show: unique on this machine (20.6); `home` for loose files. */
+/** The opened vault's name to show: unique on this machine (20.6); a plain folder, unnamed, its path (20.22). */
 export function locName(loc: Pick<VaultLocation, "mode" | "key" | "name" | "root">, known = readRegistry()): string {
-  return loc.mode === "home" ? HOME_NAME : displayName({ key: loc.key, name: loc.name, path: loc.root }, known);
+  return loc.mode === "folder" ? tildePath(loc.root) : displayName({ key: loc.key, name: loc.name, path: loc.root }, known);
+}
+
+/** A path as it's shown: `~/…` in the home folder. */
+export function tildePath(abs: string): string {
+  const home = homeFolder();
+  return abs === home ? "~" : abs.startsWith(`${home}/`) ? `~/${abs.slice(home.length + 1)}` : abs;
 }
 
 /**

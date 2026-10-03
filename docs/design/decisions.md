@@ -6,8 +6,8 @@ here.
 
 ## `0.10` — storage layout
 
-*Being superseded by `20.x` (decided 2026-10-02): personal state by instance, kept with the instances and confirmed
-moves in the durable state (built, `20.5`); no home vault and the cache shared by content (not yet). This is how
+*Superseded by `20.x` (decided 2026-10-02, built): personal state by instance, kept with the instances and confirmed
+moves in the durable state (`20.5`); the cache shared by content (`20.11`); no home vault (`20.22`). This is how
 storage works now.*
 
 Four kinds of data, four places. Nothing derived ever lives in the vault. Revised 2026-09-30 by the vault design
@@ -20,7 +20,7 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | cache, shared | `$XDG_CACHE_HOME/slipbox/parsed.db` | parsed content, by content (`20.11`) | yes, rebuilt as read |
 | state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness, redirects, trash | no: yours |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/vaults.json` | the instances seen, their moves | no: the keys |
-| data | `$XDG_DATA_HOME/slipbox/home/` | the home vault's `.slipbox/`: its config | a new id: loses state |
+| data | `$XDG_DATA_HOME/slipbox/tools/` | language servers installed for you (`19.x`) | yes, installed again |
 
 XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) on
 macOS too — the terminal stack here is XDG-shaped on both machines.
@@ -30,9 +30,9 @@ macOS too — the terminal stack here is XDG-shaped on both machines.
 never written into the folder. It's found by the folder's path. So two copies of a vault never share a session,
 whatever their `.slipbox/` ids say, and a git vault without `.slipbox/` (`20.3`) has state of its own like any other.
 A worktree that `git worktree move` took elsewhere is found again by git's name for it. Any other copy that turns
-up where none was is new — unless it's confirmed to be one gone from where it was (below). Loose files (the home
-vault) key by the home vault's id. Only when `vaults.json` can't be written is a vault keyed by its path:
-`<basename>-<hash>`, the hash the first 12 hex characters of SHA-256 over the root's **real path**.
+up where none was is new — unless it's confirmed to be one gone from where it was (below). A plain folder opened
+outside every vault (`20.22`) is keyed by its path, `<basename>-<hash>`, the hash the first 12 hex characters of
+SHA-256 over the root's **real path**: moved, it starts afresh. So is a vault when `vaults.json` can't be written.
 
 **Moves are confirmed, not guessed** (`20.5`). A vault opened where it wasn't seen before, while a copy of the same
 collection (`20.4`) is gone from where it was and was last seen before this one appeared, is asked about: "did it move
@@ -51,8 +51,8 @@ Consequences, accepted deliberately:
 - State does not travel between the Mac and the VMs. Reading position is machine-local anyway.
 - **A vault moved by hand loses its state until confirmed:** the question is the price of never handing one copy's
   session to another.
-- The home vault holds every loose folder: its positions are keyed by absolute path, and each folder has its own
-  session (`sessions/<basename>-<hash>.json`).
+- A plain folder's state is its own, by its path (`20.22`): moved, it starts afresh. The home vault that held every
+  loose folder's (`17.2`) is gone; its `$XDG_DATA_HOME/slipbox/home/config.toml` is no longer read.
 
 **The parse cache is shared by content** (`20.11`): what a note says once parsed — links as written, headings, tags,
 aliases, a title of its own — is kept in one SQLite file by its text's hash, its format and the parser's version
@@ -94,8 +94,8 @@ One predicate, used by both the walk and the watcher (`5.2` is this decision see
   FIFO where a note, `.gitignore`, `.slipbox/config.toml` or `.slipbox/version` should be. Every such read
   (`readRegular` in `core/fsutil.ts`) opens without blocking and refuses anything but a regular file, and the small
   files have a size cap (1 MB), so a hostile vault gets a warning, never a hang.
-- **A loose folder** (the home vault, `17.2`) applies the same filter and size cap to its one directory, not below
-  it.
+- **A plain folder** opened outside every vault is walked as a vault is (`20.22`); `$HOME` or `/` opened so is
+  listed with the same filter and size cap, its one directory, not below it.
 - **Size cap:** files over `walk.max_file_size` (default 4 MiB) are listed as skipped, not parsed.
 - **Errors never abort.** Unreadable directories and files are collected and reported as warnings.
 - **Encoding:** read as UTF-8. Invalid sequences decode to U+FFFD and the file is flagged; a BOM is noted and
@@ -142,10 +142,10 @@ interactions; the state they change, a note's text, is reached by `write`, `repl
 
 ## `1.4` — link resolution
 
-*Superseded by `20.2` (built 2026-10-02): links are plain paths. Wikilinks aren't read — only the converter (`20.1`)
-reads them, by the rules below, to rewrite them as paths — nothing resolves by name, a leading `/` is the
-filesystem's root, and a move is evidence for a fix, never a way to resolve. What follows is the record of how
-wikilinks resolved, which the converter still follows.*
+*Superseded by `20.2` and `20.22` (built 2026-10-02/03): links are plain paths. Wikilinks aren't read — only the
+converter (`20.1`) reads them, by the rules below, to rewrite them as paths — nothing resolves by name, alias,
+previous name or `[[vault:note]]`, a leading `/` is the filesystem's root, and a move is evidence for a fix, never a
+way to resolve. What follows is the record of how wikilinks resolved, which the converter still follows.*
 
 One policy everywhere, never the filesystem's:
 
@@ -244,9 +244,8 @@ tools do is the project's.
 
 ## `20.x` — plain paths, virtual vaults
 
-Decided 2026-10-02 with the user, revised the same day after a review; being built (plan `20.x`: `20.1`–`20.21` and
-`20.23` done). The model in full
-is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes, once built: `17.2` and `17.18` (the home vault;
+Decided 2026-10-02 with the user, revised the same day after a review; built (plan `20.1`–`20.23`, done 2026-10-03).
+The model in full is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the
 LSP face (`11.x`), and `17.20` below. In short:
 

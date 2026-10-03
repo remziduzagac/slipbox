@@ -1,6 +1,6 @@
 // The vaults of this machine (17.2–17.6; docs/idea.md, "Vaults — decided 2026-09-30"): a vault's
-// identity in its `.slipbox/config.toml`, the home vault for loose files, the list of vaults this
-// machine has seen (`vaults.json`), and the storage key each vault's cache and state are found by.
+// identity in its `.slipbox/config.toml`, the list of vaults this machine has seen (`vaults.json`),
+// and the storage key each vault's cache and state are found by.
 //
 // A vault's `id` is random, made once and never changed: its personal data is keyed by it, so it
 // survives moving the folder. A copy of a vault (`cp -r`, a second clone) carries the same id; the
@@ -18,14 +18,15 @@ import { parse as parseToml } from "smol-toml";
 import { atomicWrite, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
 import type { Collection } from "./collection.ts";
 import { checkoutOf } from "./git.ts";
-import { cacheHome, dataHome, stateHome, vaultKey } from "./paths.ts";
+import { cacheHome, stateHome, vaultKey } from "./paths.ts";
 
 export const MARKER = ".slipbox";
 
-export type RootKind = "vault" | "home";
+/** What's opened: a vault, or a plain folder outside every vault — an unnamed instance (20.22). */
+export type RootKind = "vault" | "folder";
 
-/** What the machine's list holds: vaults, the home vault, and plain folders opened (20.4). */
-export type KnownKind = RootKind | "folder";
+/** What the machine's list holds: vaults, and plain folders opened (20.4). */
+export type KnownKind = RootKind;
 
 export interface VaultIdentity {
   id: string | null;
@@ -70,8 +71,6 @@ export interface KnownVault {
 /** A vault name: letters, digits, `.`, `_`, `-`; no spaces and no colon (`[[name:note]]`). */
 export const VAULT_NAME = /^[\p{L}\p{N}][\p{L}\p{N}._-]*$/u;
 
-/** The home vault's name; no other vault may take it (17.2). */
-export const HOME_NAME = "home";
 
 const NO_IDENTITY: VaultIdentity = { id: null, name: null, aliases: [], previous_names: [] };
 
@@ -136,34 +135,6 @@ export function addIdentity(configFile: string, fields: { id?: string; name?: st
 }
 
 // ---------------------------------------------------------------------------------------------
-// The home vault (17.2)
-
-/** The home vault's `.slipbox/`: its config, and later its comments and kept agent answers. */
-export function homeVaultDir(): string {
-  return join(dataHome(), HOME_NAME);
-}
-
-/** The home vault's identity, made on first use. */
-export function homeIdentity(): VaultIdentity & { id: string } {
-  const file = join(homeVaultDir(), "config.toml");
-  const have = existsSync(file) ? readIdentity(file) : { ...NO_IDENTITY };
-  if (have.id) return { ...have, id: have.id, name: HOME_NAME };
-  const id = newVaultId();
-  try {
-    ensureDir(homeVaultDir());
-    if (!existsSync(file)) atomicWrite(file, HOME_CONFIG_TEMPLATE);
-    addIdentity(file, { id, name: HOME_NAME });
-  } catch {
-    // A read-only data directory: the id still keys this run's state.
-  }
-  return { ...have, id, name: HOME_NAME };
-}
-
-const HOME_CONFIG_TEMPLATE = `# The home vault: files outside every vault and repository (docs/idea.md, "The home vault").
-# Settings here apply to those files, over ~/.config/slipbox/config.toml.
-`;
-
-// ---------------------------------------------------------------------------------------------
 // The machine's vaults (17.6)
 
 interface RegistryFile {
@@ -178,8 +149,8 @@ export function registryFile(): string {
 export function readRegistry(): KnownVault[] {
   const f = readJson<RegistryFile | null>(registryFile(), null);
   if (!f || f.version !== 1 || !Array.isArray(f.vaults)) return [];
-  // A kind no longer made ("repo", before 17.18) is dropped.
-  return f.vaults.filter((v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "home" || v.kind === "folder"));
+  // A kind no longer made ("repo", before 17.18; the home vault, before 20.22) is dropped.
+  return f.vaults.filter((v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "folder"));
 }
 
 /** A seen vault is written again only when something about it changed, or after this long. */
@@ -361,7 +332,7 @@ export function suggestVaultName(dir: string, parentName: string | null, known =
   const base = slugName(basename(dir)) || "vault";
   const stem = parentName ? `${parentName}-${base}` : base;
   const here = real(dir);
-  const taken = (n: string) => n.toLowerCase() === HOME_NAME || known.some((v) => real(v.path) !== here && namesOf(v).includes(n.toLowerCase()));
+  const taken = (n: string) => known.some((v) => real(v.path) !== here && namesOf(v).includes(n.toLowerCase()));
   let name = stem;
   for (let i = 2; taken(name); i++) name = `${stem}-${i}`;
   return name;
@@ -371,7 +342,7 @@ export function suggestVaultName(dir: string, parentName: string | null, known =
 export function vaultNamed(name: string, known = readRegistry(), except?: string): KnownVault[] {
   const n = name.toLowerCase();
   const skip = except ? real(except) : null;
-  return known.filter((v) => (v.kind === "vault" || v.kind === "home") && namesOf(v).includes(n) && real(v.path) !== skip);
+  return known.filter((v) => v.kind === "vault" && namesOf(v).includes(n) && real(v.path) !== skip);
 }
 
 /** The folder's name as a vault name, for a vault that declares none. */

@@ -18,7 +18,7 @@ export class FileOpError extends Error {}
 
 export interface TrashItem {
   id: string;
-  /** Where it was: absolute (a loose folder's files are the home vault's), and as shown. */
+  /** Where it was: absolute, and as shown. */
   abs: string;
   shown: string;
   dir: boolean;

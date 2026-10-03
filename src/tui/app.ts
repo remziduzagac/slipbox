@@ -74,7 +74,7 @@ import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { sameCollection } from "../core/collection.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { displayNames, locName } from "../core/names.ts";
-import { configFilesFor, findVaultRoot, homeAt, homeFolder, initVault, isInside, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation } from "../core/vault.ts";
+import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
@@ -836,7 +836,7 @@ export class App {
   private configFiles(): string[] {
     // Yours, the enclosing vaults' (20.7) and the vault's own: a change to any is a reload.
     const { vaultFile, outerFiles } = configFilesFor(this.loc);
-    return [this.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile(), ...outerFiles, vaultFile];
+    return [this.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile(), ...outerFiles, ...(vaultFile ? [vaultFile] : [])];
   }
 
   private recordConfigStamps(): void {
@@ -1656,7 +1656,8 @@ export class App {
    * shown on this machine (20.6), looked up again every few seconds, not every frame.
    */
   vaultStatus(): string {
-    if (this.loc.mode !== "vault") return "";
+    // A plain folder is unnamed: its path (20.22).
+    if (this.loc.mode === "folder") return locName(this.loc);
     const now = this.now();
     if (!this.shownName || this.shownName.key !== this.loc.key || now - this.shownName.at > 5000) this.shownName = { key: this.loc.key, at: now, name: locName(this.loc) };
     if (this.loc.worktree) return this.shownName.name.replace(/@[^@]*$/, "") + (this.branch() ? `@${this.branch()}` : "");
@@ -1703,7 +1704,7 @@ export class App {
     this.searchIndex?.close();
     this.searchIndex = null;
     this.searchJob = null;
-    if (this.loc.mode === "home" || this.config.search.engine === "scan") return;
+    if (isListed(this.loc) || this.config.search.engine === "scan") return;
     const idx = SearchIndex.open(this.loc);
     if (!idx) return;
     const g = this.graph;
@@ -2867,7 +2868,7 @@ export class App {
         added = true;
       }
     }
-    if (added) this.watcher?.sync(this.loc.mode !== "home" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
+    if (added) this.watcher?.sync(isListed(this.loc) ? [""] : this.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
   }
 
   /**
@@ -3367,7 +3368,7 @@ export class App {
   private afterFileOp(): void {
     this.refreshGit();
     this.invalidateTree();
-    this.watcher?.sync(this.loc.mode !== "home" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
+    this.watcher?.sync(isListed(this.loc) ? [""] : this.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
     for (const b of this.buffers.values()) b.invalidateLayouts();
     this.relayoutAll();
   }
@@ -4078,7 +4079,7 @@ export class App {
     // The file.
     head("File");
     row("File", "path", b.rel ?? b.abs, { copy: b.abs });
-    row("File", "vault", this.loc.mode === "home" ? "home (loose files)" : locName(this.loc), { copy: this.loc.root });
+    row("File", "vault", this.loc.mode === "folder" ? `none — the plain folder ${locName(this.loc)}` : locName(this.loc), { copy: this.loc.root });
     row("File", "kind", note ? `note (${b.kind.format})` : `${b.kind.group === "data" ? "data" : "text"} (${b.kind.format})`);
     if (b.stamp) {
       const size = b.stamp.size;
@@ -4451,7 +4452,7 @@ export class App {
       const h = headOf(c);
       return `${this.glyphs.branch} ${h.branch ?? h.commit?.slice(0, 7) ?? c.worktree}`;
     };
-    if (this.loc.mode !== "home") {
+    if (!isListed(this.loc)) {
       for (const s of this.graph.skipped) {
         if (s.reason !== "nested vault") continue;
         const abs = join(this.loc.root, s.rel);
@@ -4474,8 +4475,8 @@ export class App {
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
     const rows: TreeRow[] = [];
-    // A loose folder's parent, to go up: the file tree of the launcher (17.14).
-    if (this.loc.mode === "home" && dirname(this.loc.root) !== this.loc.root) {
+    // A plain folder's parent, to go up: the file tree of the launcher (17.14).
+    if (this.loc.mode === "folder" && dirname(this.loc.root) !== this.loc.root) {
       rows.push({ kind: "root", path: "..", name: "..", depth: 0, root: { kind: "folder", abs: dirname(this.loc.root) } });
     }
     const groups = new Map(this.shownFiles().map((f) => [f.path, f.group]));
@@ -4686,12 +4687,7 @@ export class App {
    */
   private readNotes(): { key: string; hint: string }[] {
     const when = new Map<string, number>();
-    const root = `${this.loc.root}/`;
-    for (const e of this.positions.entries()) {
-      // The home vault keeps every loose folder's by absolute path: this folder's by its own.
-      const key = this.loc.mode === "home" && e.key.startsWith(root) ? e.key.slice(root.length) : e.key;
-      when.set(key, Date.parse(e.at) || 0);
-    }
+    for (const e of this.positions.entries()) when.set(e.key, Date.parse(e.at) || 0);
     for (const [k, t] of this.openedAt) when.set(k, Math.max(t, when.get(k) ?? 0));
     const tabOf = new Map<string, number>();
     this.tabs.forEach((t, i) => t.views.forEach((v) => tabOf.set(v.buf.key, tabOf.get(v.buf.key) ?? i + 1)));
@@ -5445,8 +5441,7 @@ export class App {
    * CLI to warn agents about. Written when the list changes; removed when it's empty, and on quit.
    */
   publishDirty(): void {
-    // The home vault's list covers every loose folder: its paths are absolute (17.2).
-    const paths = this.dirtyBuffers().map((b) => (this.loc.mode === "home" ? b.abs : b.key)).sort();
+    const paths = this.dirtyBuffers().map((b) => b.key).sort();
     const key = paths.join("\n");
     if (key === this.lastDirty) return;
     this.lastDirty = key;
@@ -6451,7 +6446,7 @@ export class App {
     this.watcher = new VaultWatcher({
       root: this.loc.root,
       filter: this.graph.filter,
-      dirs: this.loc.mode !== "home" ? this.graph.dirs : [""],
+      dirs: isListed(this.loc) ? [""] : this.graph.dirs,
       debounceMs: this.config.watch.debounce_ms,
       pollMs: this.config.watch.poll_ms,
       known: this.knownFromGraph(),
@@ -6560,7 +6555,7 @@ export class App {
     for (const w of warnings) this.message("warn", w);
     if (batch.rescan) {
       this.indexInBackground();
-      this.watcher?.sync(this.loc.mode !== "home" ? this.graph.dirs : [""], this.knownFromGraph(), this.sizesFromGraph());
+      this.watcher?.sync(isListed(this.loc) ? [""] : this.graph.dirs, this.knownFromGraph(), this.sizesFromGraph());
       // The walk itself changed: any open note may have changed, appeared or gone.
       for (const buf of this.buffers.values()) if (buf.changedOnDisk()) this.reloadBuffer(buf);
     }
@@ -7009,17 +7004,16 @@ export class App {
     return true;
   }
 
-  /** How a root is named to the user: its vault's name, "home" for a loose folder, a repo's folder. */
+  /** How a root is named to the user: its vault's name; a plain folder, by its path (20.22). */
   vaultLabel(loc: Pick<VaultLocation, "mode" | "key" | "name" | "root">): string {
-    if (loc.mode === "home") return `home vault (${loc.root})`;
-    return loc.mode === "vault" ? `vault ${locName(loc)}` : `repository ${basename(loc.root)}`;
+    return loc.mode === "vault" ? `vault ${locName(loc)}` : `folder ${locName(loc)}`;
   }
 
   /** A root row of the explorer: go into it (17.13). */
   enterRoot(row: TreeRow): void {
     const r = row.root;
     if (!r) return;
-    this.switchVault(r.kind === "folder" ? homeAt(r.abs) : rootAt(r.abs), null);
+    this.switchVault(r.kind === "folder" ? folderAt(r.abs) : rootAt(r.abs), null);
   }
 
   /**
@@ -7035,7 +7029,7 @@ export class App {
     } catch {
       return false;
     }
-    if (target.mode === "home" || target.root === this.loc.root) return false;
+    if (target.mode === "folder" || target.root === this.loc.root) return false;
     this.switchVault(target, path, anchor);
     return true;
   }

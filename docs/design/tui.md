@@ -62,8 +62,8 @@ strip and the titles get from theirs:
 
 - on the left, the `slipbox` chip (plain accent text), which opens the command palette; before
   it, without the left rail, the explorer's `≡`;
-- at the right end, vault-wide state (`indexing N…`, `home vault` for a loose folder), dropped when fewer than 12
-  columns are left. The branch is the status line's (`20.14`).
+- at the right end, vault-wide state (`indexing N…`), dropped when fewer than 12 columns are left. The vault and its
+  branch are the status line's (`20.14`); a plain folder's, its path (`20.22`).
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is
 closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, as
@@ -292,8 +292,9 @@ starts a timeline of its own, and is still found there.
 
 ## Switching vaults (plans `17.10`, `17.14`)
 
-The TUI is always in one root: a vault, or a loose folder of the home vault (the top bar says
-`home vault` then). **Opening a note of another vault switches to it** —
+The TUI is always in one root: a vault, or a plain folder outside every vault — an unnamed instance known by its path,
+walked and indexed as a vault is, its session its own (`20.22`; the status line shows its path); `~` and `/` are
+listed a level at a time. **Opening a note of another vault switches to it** —
 following a path out of the root, a backlink from another vault, a vault picked
 from the list or the explorer: the TUI becomes that root's, as if started there — its config, its
 index (refreshed), its watcher, its reading positions and its session, whose tabs come back, with
@@ -325,13 +326,13 @@ and the instance made here meanwhile goes — then, if the move broke links in o
 (`relink`'s, `20.17`); `No: a copy of its own` isn't asked again; `esc` asks next time.
 `:vault-moved` (`vault.moved`) asks again. A worktree `git worktree move` took elsewhere is found by git's name for it,
 without asking.
-**The launcher:** slipbox opened on a loose folder without a file (`slipbox ~`) shows this list at
+**The launcher:** slipbox opened on a plain folder without a file (`slipbox ~`) shows this list at
 once, over the folder's explorer, when there are vaults to show.
 
 **A git repository is a vault by itself** (`20.3`): opening a file in one opens the repository, from its top —
 nothing asked, nothing written into it; a repository inside a vault is a vault of its own, its folder marked in the
 explorer. `.slipbox/` gives one a name and settings of its own (`slipbox init`; `--private` keeps it out of git).
-`space v m` (`:init`, `vault.init`) in a loose folder makes it a vault — "`<folder>` is a folder without .slipbox/ —
+`space v m` (`:init`, `vault.init`) in a plain folder makes it a vault — "`<folder>` is a folder without .slipbox/ —
 make it a vault?" — its `.slipbox/` committed with it like any file; the TUI goes into it with the note open.
 
 ## Renames (plans `17.15`, `7.1`–`7.4`)
@@ -394,7 +395,7 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   `halden-logs` for `logs/`), then a preview — links are paths, which reach across the new boundary as before, so
   there's nothing of them to rewrite (`20.2`) — as `slipbox init <folder>` does (`docs/design/cli.md`); enter makes it.
   `shift+v` on a nested vault's row previews the way back, and enter puts its `.slipbox/` in the trash. The row turns
-  into a vault's or a folder's, selected. In a loose folder, `v` offers to make the folder a vault of its own and goes
+  into a vault's or a folder's, selected. In a plain folder, `v` offers to make the folder a vault of its own and goes
   into it.
 
 Every one of these has a leader key too, so which-key lists them (`18.13`): `space n` for a note (rename or move by
@@ -467,9 +468,9 @@ keys.
   bookshelf), in a folder's blue (role `sidebar_vault`, for `[colors]` to set), is a row of its
   own, its icon telling it from a folder, the vault's name dimmed after the folder's when they
   differ — a worktree's branch instead (`⎇ feat`, `17.19`); `enter` or a double-click goes into
-  it (a switch, below). **In a loose folder** (the home vault) the explorer lists the folder
-  alone: `..` to go up, then each folder in it — a vault or a loose folder — and its files; going
-  into a loose folder lists that one (`17.14`). **The explorer's roots** (`20.15`): under the vault open, the other
+  it (a switch, below). **In a plain folder** (`20.22`) the explorer is its tree, as a vault's is, with `..` above it
+  to go up (`17.14`); in `~` or `/`, listed a level at a time, each folder in it is a row to go into — a vault or a
+  plain folder. **The explorer's roots** (`20.15`): under the vault open, the other
   roots, each by its name (`◈`): the vault or folder slipbox was opened on, and the vaults pinned with
   `:pin-root` (`vault.pin_root`, kept with the opened vault's state). A vault followed into by a link is the vault
   open while it is, the opened one beside it; left, it goes unless pinned. `enter` on another root unfolds it — its
@@ -626,7 +627,8 @@ past theirs), so the content behind never runs up to the edge.
   as the vault opens and brought up to the files in idle slices — the list says `the vault is being indexed: n of m
   files…` the first time, and fills when it's done — then each file again as the graph hears it change (a save here,
   the watcher, a rename, a CLI write). An unsaved note is searched as it's shown, in place of what the index has of
-  it. Without an index (a loose folder, `[search] engine = "scan"`) the files are scanned, and the title says so.
+  it. Without an index (`~` or `/` opened as a plain folder, `[search] engine = "scan"`) the files are scanned, and
+  the title says so.
   **By vault** (`20.16`): `ctrl+a` widens it to the vaults linked to or from this one, their hits under a `linked
   vaults` divider as `name:path:line`; again, to every vault this machine knows; again, back to this one. The title
   says which. `enter` on another vault's hit goes into it, at that line.

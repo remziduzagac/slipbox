@@ -42,7 +42,7 @@ export async function runTui(argv: string[]): Promise<number> {
     themeName: flag(args, "theme"),
     configFile: flag(args, "config"),
     // A loose folder opened without a file (`slipbox ~`): the known vaults first (17.14).
-    launcher: loc.mode === "home" && !loc.file,
+    launcher: loc.mode === "folder" && !loc.file,
     host: {
       requestRender: () => renderer.requestRender(),
       // SLIPBOX_CLIPBOARD=file keeps copies off the real clipboard (core/clipboard.ts).

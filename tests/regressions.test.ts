@@ -13,7 +13,7 @@ import { renderMarkdown } from "../src/core/layout/render.ts";
 import { LinkIndex } from "../src/core/links.ts";
 import { loadSession, rowForSource, saveSession } from "../src/core/position.ts";
 import { listThemes } from "../src/core/theme/index.ts";
-import { homeAt, locateVault } from "../src/core/vault.ts";
+import { folderAt, locateVault } from "../src/core/vault.ts";
 import { WalkFilter, walkVault } from "../src/core/walk.ts";
 import { stringWidth } from "../src/core/width.ts";
 import { App, computeFind, selectedText } from "../src/tui/app.ts";
@@ -283,7 +283,7 @@ describe("low", () => {
     writeFileSync(join(dir, "ok.md"), "#\n");
     const cfg = structuredClone(DEFAULT_CONFIG);
     cfg.walk.max_file_size = 1000;
-    const g = openGraph(homeAt(dir, join(dir, "ok.md")), cfg, false);
+    const g = openGraph(folderAt(dir, join(dir, "ok.md")), cfg, false);
     expect([...g.notes.keys()]).toEqual(["ok.md"]);
   });
   test("a user theme shadowing a built-in is listed once", () => {

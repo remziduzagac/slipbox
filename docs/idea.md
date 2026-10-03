@@ -756,10 +756,8 @@ personal data ever has to travel with a folder, or be visible beside it.
 
 ## Plain paths, virtual vaults — decided 2026-10-02
 
-Decided with the user over a long discussion, then revised the same day after a review; being built (plan `20.x`:
-the converter, links as plain paths, vault boundaries, collections and instances, state by instance, names, settings
-deeper over broader, files indexed when reached, the background auto-index, freshness, the parse cache by content,
-and the LSP face's removal done).
+Decided with the user over a long discussion, then revised the same day after a review; built by 2026-10-03 (plan
+`20.1`–`20.23`).
 It replaces "Vaults — decided 2026-09-30" above. The aim: open any file or folder and work — nothing to set up, no
 vault to manage, no wondering whether a link will resolve.
 

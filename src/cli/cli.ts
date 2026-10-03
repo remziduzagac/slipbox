@@ -57,8 +57,8 @@ import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackg
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
-import { displayNames, fromVaultForm, locName, vaultFormChoices } from "../core/names.ts";
-import { findVaultRoot, hasMarker, homeAt, homeFolder, initVault, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import { displayNames, fromVaultForm, locName, tildePath, vaultFormChoices } from "../core/names.ts";
+import { findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 
@@ -285,7 +285,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
       if (isVaultRoot(abs) && findVaultRoot(dirname(abs))) pathArg = dirname(abs);
     }
     // init makes the vault: opening the folder as one first would name it before --name could.
-    const loc = command === "init" ? homeAt(io.cwd) : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
+    const loc = command === "init" ? folderAt(io.cwd) : locateVault({ root: flag(args, "root"), path: pathArg, cwd: io.cwd });
     session = new Session(args, loc, io);
     const handler = HANDLERS[command];
     if (!handler) throw new UsageError(`unknown command: ${command} (see slipbox help)`);
@@ -793,10 +793,12 @@ const HANDLERS: Record<string, Handler> = {
     if (has(s.args, "refresh")) {
       const at = rest[0] ? (isAbsolute(rest[0]) ? rest[0] : join(s.io.cwd, rest[0])) : s.loc.root;
       if (!existsSync(at)) throw new CliError(`no such file or folder: ${rest[0]}`, EXIT.notFound);
-      const root = findVaultRoot(at);
-      if (!root) throw new CliError(`${rest[0] ?? at} isn't in a vault: a loose folder has no index (it's listed when opened)`, EXIT.refused);
+      const vault = findVaultRoot(at);
+      // Outside every vault: the plain folder it's in, or this one's (20.22) — its own index.
+      const loc = vault ? rootAt(vault) : !rest[0] ? s.loc : folderAt(statSync(at).isDirectory() ? at : dirname(at));
+      if (isListed(loc)) throw new CliError(`${loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`, EXIT.refused);
+      const root = loc.root;
       const t = performance.now();
-      const loc = rootAt(root);
       const g = new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "all");
       noteIndexed(loc.key);
       const ms = Math.round(performance.now() - t);
@@ -823,7 +825,7 @@ const HANDLERS: Record<string, Handler> = {
         human: `home folder ${p.root}: ${p.found} vault${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : ` — ${p.queue.length} folder${p.queue.length === 1 ? "" : "s"} left`}\n`,
       };
     }
-    if (s.loc.mode === "home") throw new CliError("not in a vault: the search index is a vault's — slipbox init makes one; a loose folder is scanned", EXIT.refused);
+    if (isListed(s.loc)) throw new CliError(`${s.loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`, EXIT.refused);
     const idx = SearchIndex.open(s.loc);
     if (!idx) throw new CliError("the search index can't be opened", 1);
     try {
@@ -1254,7 +1256,7 @@ const HANDLERS: Record<string, Handler> = {
       .sort((a, b) => (a.seen < b.seen ? 1 : -1))
       .map((v) => ({
         ...v,
-        shown: names.get(v.key) ?? (v.kind === "home" ? "home" : null),
+        shown: names.get(v.key) ?? (v.kind === "folder" ? tildePath(v.path) : null),
         exists: v.kind === "vault" ? isVaultRoot(v.path) : existsSync(v.path),
         // How fresh its index is (20.10): when it was last built, by anyone; on a drive unplugged, unavailable.
         indexed: v.indexed ?? indexTime(v),
@@ -1612,7 +1614,7 @@ const HANDLERS: Record<string, Handler> = {
     const data = {
       path: rel,
       abs,
-      vault: s.loc.mode === "home" ? null : locName(s.loc),
+      vault: s.loc.mode === "folder" ? null : locName(s.loc),
       properties: fm?.data ?? null,
       size: file.bytes.length,
       mtime: new Date(statSync(abs).mtimeMs).toISOString(),
@@ -1743,7 +1745,6 @@ const HANDLERS: Record<string, Handler> = {
 
   history(s) {
     const positions = readJson<Record<string, { line?: number; at?: string; cursor?: { anchor?: { line?: number } } }>>(join(stateDir(s.loc), "positions.json"), {});
-    // The home vault keeps every loose folder's positions, by absolute path (17.2).
     const read = Object.entries(positions)
       .filter(([, p]) => p && typeof p.at === "string")
       .sort((a, b) => (a[1].at! < b[1].at! ? 1 : -1))
@@ -1944,7 +1945,7 @@ function conflictLine(abs: string): number {
 
 /** Which search engine answers here, and the index's size when there is one (`info`). */
 function searchInfo(s: Session): { engine: string; index: { files: number; complete: boolean } | null } {
-  if (s.loc.mode === "home" || s.config.search.engine === "scan" || !SearchIndex.exists(s.loc)) return { engine: s.config.search.engine, index: null };
+  if (isListed(s.loc) || s.config.search.engine === "scan" || !SearchIndex.exists(s.loc)) return { engine: s.config.search.engine, index: null };
   const idx = SearchIndex.open(s.loc);
   if (!idx) return { engine: s.config.search.engine, index: null };
   try {
@@ -1964,12 +1965,12 @@ function wholeFlag(s: Session, name: string, fallback: number, lo: number, hi: n
 
 /**
  * The vault's search index for a CLI run (6.x), brought up to the files — or null, and the files
- * are scanned: when `[search] engine` says so, in a loose folder (the home vault keeps none), or
+ * are scanned: when `[search] engine` says so, in `$HOME` or `/` opened as a plain folder, or
  * while it's never been built (`slipbox index` builds it; the TUI does as it runs).
  */
 function searchIndex(s: Session): SearchIndex | null {
   const engine = s.config.search.engine;
-  if (engine === "scan" || s.loc.mode === "home") return null;
+  if (engine === "scan" || isListed(s.loc)) return null;
   if (engine === "auto" && !SearchIndex.exists(s.loc)) {
     s.warnings.push("no search index yet: the files were scanned — slipbox index builds it (the TUI does as it runs)");
     return null;

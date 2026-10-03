@@ -5,13 +5,13 @@
 // source-line offset from it, and the absolute source line as a fallback. An agent inserting a
 // paragraph above your reading position therefore does not move you.
 
-import { isAbsolute, join } from "node:path";
+import { join } from "node:path";
 import { readJson, writeJson } from "./fsutil.ts";
 import type { Layout } from "./layout/ir.ts";
-import { type Keyed, stateDir, vaultKey } from "./paths.ts";
+import { type Keyed, stateDir } from "./paths.ts";
 
-/** Where a vault's positions and session live: its state directory. The home vault holds every
- *  loose folder's, so its keys are absolute and each folder has its own session (17.2). */
+/** Where a vault's positions and session live: its state directory — a plain folder's too, its
+ *  own instance (20.22). */
 export interface StatePlace extends Keyed {
   mode: string;
   root: string;
@@ -122,12 +122,9 @@ const MAX_POSITIONS = 2000;
 export class PositionStore {
   private readonly file: string;
   private data: PositionMap;
-  /** The home vault's loose folder: keys are made absolute against it. */
-  private readonly base: string | null;
 
   constructor(place: StatePlace) {
     this.file = join(stateDir(place), "positions.json");
-    this.base = place.mode === "home" ? place.root : null;
     const raw = readJson<unknown>(this.file, {});
     this.data = {};
     if (raw && typeof raw === "object" && !Array.isArray(raw)) {
@@ -140,12 +137,12 @@ export class PositionStore {
     }
   }
 
-  /** The stored key for a buffer's key (a vault path, or absolute). */
+  /** The stored key for a buffer's key: a vault path, or absolute (a file outside it). */
   private k(rel: string): string {
-    return this.base && !isAbsolute(rel) ? join(this.base, rel) : rel;
+    return rel;
   }
 
-  /** Every note read here, with when (its stored key: absolute in the home vault). */
+  /** Every note read here, with when (its stored key). */
   entries(): { key: string; at: string }[] {
     return Object.entries(this.data).map(([key, v]) => ({ key, at: v.at }));
   }
@@ -260,9 +257,9 @@ export function isAnchor(v: unknown): v is Anchor {
   );
 }
 
-/** The session file: one per vault; in the home vault, one per loose folder. */
+/** The session file: one per vault, and per plain folder opened (each its own instance, 20.22). */
 export function sessionFile(place: StatePlace): string {
-  return place.mode === "home" ? join(stateDir(place), "sessions", `${vaultKey(place.root)}.json`) : join(stateDir(place), "session.json");
+  return join(stateDir(place), "session.json");
 }
 
 /** Load the session, dropping anything malformed rather than failing to start. */

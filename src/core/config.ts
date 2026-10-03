@@ -313,7 +313,7 @@ export interface LoadedConfig {
 
 export interface LoadConfigOptions {
   vaultRoot?: string | null;
-  /** The vault's config file, in place of `vaultRoot` (the home vault's is elsewhere: 17.2). */
+  /** The vault's config file, in place of `vaultRoot`; none for a plain folder (20.22). */
   vaultFile?: string | null;
   /**
    * The config files of the vaults enclosing it (20.7), broadest first: deeper over broader, each

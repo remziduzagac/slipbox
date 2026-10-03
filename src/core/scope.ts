@@ -8,7 +8,7 @@ import type { Graph } from "./graph.ts";
 import { readRegistry } from "./registry.ts";
 import { search, type SearchHit, type SearchResult } from "./search.ts";
 import { SearchIndex } from "./search-index.ts";
-import { findVaultRoot, isVaultRoot } from "./vault.ts";
+import { findVaultRoot, isListed, isVaultRoot } from "./vault.ts";
 
 export const SCOPES = ["vault", "linked", "all"] as const;
 export type Scope = (typeof SCOPES)[number];
@@ -33,7 +33,7 @@ export interface ScopedResult extends Omit<SearchResult, "hits"> {
  * other vault this machine knows (not worktrees: their notes are their main checkout's).
  */
 export function scopeRoots(g: Graph, scope: Scope): string[] {
-  if (scope === "vault" || g.loc.mode !== "vault") return [];
+  if (scope === "vault" || isListed(g.loc)) return [];
   const out = new Set<string>();
   const add = (abs: string) => {
     const root = findVaultRoot(abs);

@@ -25,12 +25,12 @@ export interface ScratchOwner extends Keyed {
 }
 
 /** Where the scratch lives for a vault (0.10 / 8.2): in its state, or in the vault itself when
- *  `capture.location` says so (never in a loose folder: those are the home vault's). */
+ *  `capture.location` says so (never in a plain folder: nothing is written into one, 20.22). */
 export function scratchLocation(owner: ScratchOwner, config: Config): ScratchLocation {
   const project = owner.root;
   // Config validation already refuses an unsafe name; this holds even if one got through.
   const file = isSafeRelative(config.capture.file) && /\.(md|markdown)$/i.test(config.capture.file) ? config.capture.file : "scratch.md";
-  if (config.capture.location === "vault" && owner.mode !== "home") {
+  if (config.capture.location === "vault" && owner.mode === "vault") {
     // In the vault, a committed symlink could make the scratch read a file from anywhere (and copy
     // it into the vault) or write out of it: then it lives in the state dir, as by default.
     const path = join(project, file);

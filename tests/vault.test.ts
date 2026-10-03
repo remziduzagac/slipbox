@@ -9,9 +9,9 @@ import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { applyPlan, planHeadingRename, planUndo } from "../src/core/rename.ts";
-import { findVaultRoot, gitRootOf, initVault, isVaultRoot, locateVault, recordLocation } from "../src/core/vault.ts";
+import { findVaultRoot, gitRootOf, initVault, isListed, isVaultRoot, locateVault, recordLocation } from "../src/core/vault.ts";
 import { implicitName, type KnownVault } from "../src/core/registry.ts";
-import { vaultKey } from "../src/core/paths.ts";
+import { cacheDir, vaultKey } from "../src/core/paths.ts";
 
 const VAULT = join(import.meta.dir, "fixtures", "vault");
 
@@ -50,20 +50,16 @@ describe("vault discovery (1.1)", () => {
     expect(findVaultRoot(join(wt, "x.md"))).toBe(wt);
     expect(gitRootOf(wt)).toBe(wt);
   });
-  test("neither: the home vault — the loose file's folder, keyed by the home vault's id (17.2)", () => {
+  test("neither: a plain folder — the loose file's own, an unnamed instance keyed by its path (20.22)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
     writeFileSync(join(dir, "n.md"), "# n\n");
     const loc = locateVault({ path: join(dir, "n.md") });
-    expect(loc.mode).toBe("home");
-    expect(loc.root).toBe(dir);
-    expect(loc.name).toBe("home");
-    // Made on first use, in the data directory: its .slipbox/, with an id that never changes.
-    const cfg = readFileSync(join(process.env.XDG_DATA_HOME!, "slipbox", "home", "config.toml"), "utf8");
-    expect(cfg).toContain(`id = "${loc.id}"`);
-    expect(cfg).toContain('name = "home"');
-    expect(loc.key).toBe(loc.id!);
+    expect(loc).toMatchObject({ mode: "folder", root: dir, id: null, name: null, key: vaultKey(dir) });
+    // No home vault: nothing made in the data directory.
+    expect(existsSync(join(process.env.XDG_DATA_HOME!, "slipbox", "home"))).toBe(false);
+    // Another folder, another instance.
     const other = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
-    expect(locateVault({ path: other }).key).toBe(loc.key);
+    expect(locateVault({ path: other }).key).not.toBe(loc.key);
   });
   test("a repository inside a vault is a vault of its own; .slipbox/ and .git in one folder are one vault (20.3)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-nest-"));
@@ -93,7 +89,7 @@ describe("vault discovery (1.1)", () => {
       // Nor a vault seen from above (a dotfiles repository in $HOME): the explorer, a walk (20.3).
       expect(isVaultRoot(home)).toBe(false);
       const loc = locateVault({ path: join(home, "notes", "n.md") });
-      expect(loc.mode).toBe("home");
+      expect(loc.mode).toBe("folder");
       expect(loc.root).toBe(join(home, "notes"));
       expect(() => initVault(home)).toThrow(/never indexes/);
     } finally {
@@ -335,16 +331,58 @@ describe("review cycle 5 (the repo carries the demo vault)", () => {
 });
 
 describe("review cycle 5 (vault, a loose folder)", () => {
-  test("a folder with no .slipbox or repository above it is listed alone: its notes, no walk", () => {
+  test("a folder with no .slipbox or repository above it is walked as a vault is: an unnamed instance (20.22)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-loose-"));
     mkdirSync(join(dir, "sub"));
-    writeFileSync(join(dir, "a.md"), "# A\n\n[[b]]\n");
+    writeFileSync(join(dir, "a.md"), "# A\n\n[b](b.md) [c](sub/c.md)\n");
     writeFileSync(join(dir, "b.md"), "# B\n");
     writeFileSync(join(dir, "sub", "c.md"), "# C\n");
     const loc = locateVault({ path: dir, cwd: dir });
-    expect(loc.mode).toBe("home");
-    const g = openGraph(loc, DEFAULT_CONFIG, false);
-    expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md"]);
+    expect(loc.mode).toBe("folder");
+    const g = openGraph(loc, DEFAULT_CONFIG, true);
+    expect([...g.notes.keys()].sort()).toEqual(["a.md", "b.md", "sub/c.md"]);
+    expect(g.backlinks("sub/c.md").map((b) => b.from)).toEqual(["a.md"]);
+    // Its index kept, in its own cache: a second open reads it back.
+    expect(openGraph(loc, DEFAULT_CONFIG, true).stats.cached).toBe(3);
+  });
+
+  test("a plain folder in the CLI: its search index, its scope reaching the vaults it links to (20.22)", async () => {
+    const base = mkdtempSync(join(tmpdir(), "slipbox-plainscope-"));
+    const plain = join(base, "plain");
+    const v = join(base, "v");
+    mkdirSync(plain);
+    mkdirSync(join(v, ".slipbox"), { recursive: true });
+    writeFileSync(join(v, "w.md"), "# W\n\nA walrus.\n");
+    writeFileSync(join(plain, "p.md"), "# P\n\n[w](../v/w.md) and a walrus.\n");
+    const out: string[] = [];
+    const cli = async (args: string[], cwd: string) => {
+      out.length = 0;
+      const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+      return { code, json: JSON.parse(out.join("")) };
+    };
+    await cli(["ls"], v);
+    expect((await cli(["index"], plain)).code).toBe(0);
+    const r = await cli(["search", "walrus", "--scope", "linked"], plain);
+    expect(r.json.data.engine).toBe("index");
+    expect(r.json.data.hits.map((h: { abs: string }) => h.abs).sort()).toEqual([join(plain, "p.md"), join(v, "w.md")]);
+  });
+
+  test("$HOME or / opened as a plain folder is listed a level at a time, never walked or indexed (20.22)", () => {
+    const home = mkdtempSync(join(tmpdir(), "slipbox-home-"));
+    mkdirSync(join(home, "sub"));
+    writeFileSync(join(home, "a.md"), "# A\n");
+    writeFileSync(join(home, "sub", "c.md"), "# C\n");
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const loc = locateVault({ path: home, cwd: home });
+      expect(loc.mode).toBe("folder");
+      expect(isListed(loc)).toBe(true);
+      expect([...openGraph(loc, DEFAULT_CONFIG, true).notes.keys()]).toEqual(["a.md"]);
+      expect(existsSync(join(cacheDir(loc), "index.json"))).toBe(false);
+    } finally {
+      process.env.HOME = before;
+    }
   });
 });
 
@@ -568,7 +606,6 @@ describe("vault identity, storage and the machine's vaults (17.3–17.6)", () =>
     expect(refused.code).toBe(5);
     expect(refused.json.error.message).toContain('a vault named "xnames" is already at');
     expect(refused.json.error.message).toContain('try "y"');
-    expect((await cli(["init", other, "--name", "home"], other)).code).toBe(5);
     expect((await cli(["init", other, "--name", "a:b"], other)).code).toBe(5);
     // The folder's name when free; a taken one gets -2.
     const again = join(fresh("names"), "xnames");
@@ -733,19 +770,18 @@ describe("vault identity, storage and the machine's vaults (17.3–17.6)", () =>
     expect(locateVault({ path: repo })).toMatchObject({ root: repo, name: "gitnamed", id: made.id });
   });
 
-  test("the home vault keeps every loose folder's positions by absolute path, and a session per folder", async () => {
+  test("a plain folder keeps its own positions and session, as its own instance (20.22)", async () => {
     const { PositionStore, loadSession, saveSession } = await import("../src/core/position.ts");
     const one = fresh("l1");
     const two = fresh("l2");
     const a = locateVault({ path: one });
     const b = locateVault({ path: two });
-    expect(a.key).toBe(b.key);
+    expect(a.key).not.toBe(b.key);
     const pa = new PositionStore(a);
     pa.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 3 });
     pa.save();
-    const pb = new PositionStore(b);
-    expect(pb.get("n.md")).toBeNull(); // another folder's n.md
-    expect(pb.get(join(one, "n.md"))?.line).toBe(3);
+    expect(new PositionStore(locateVault({ path: one })).get("n.md")?.line).toBe(3); // kept, by its own path
+    expect(new PositionStore(b).get("n.md")).toBeNull(); // another folder's n.md
     saveSession(a, { version: 1, tabs: [{ panes: [{ path: "n.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }], active: 0 }], activeTab: 0, sidebar: true });
     expect(loadSession(a)?.tabs).toHaveLength(1);
     expect(loadSession(b)).toBeNull();
@@ -2974,7 +3010,7 @@ describe("the index on demand: what the walk leaves out, indexed when reached (2
     expect(openGraph(locateVault({ root: dir }), cfg(), true).reached.has("tmp/deeper.md")).toBe(false);
   });
 
-  test("the CLI reaches what it's told to read; a loose folder reaches nothing", async () => {
+  test("the CLI reaches what it's told to read; a plain folder too, but $HOME, only listed (20.22)", async () => {
     const dir = make();
     writeFileSync(join(dir, ".slipbox", "config.toml"), 'walk.exclude = ["drafts/"]\n');
     const out: string[] = [];
@@ -2988,12 +3024,19 @@ describe("the index on demand: what the walk leaves out, indexed when reached (2
     // Never: under node_modules, read all the same, but not the vault's.
     expect((await cli(["read", "node_modules/dep.md"])).code).toBe(0);
     expect((await cli(["ls"])).json.data.map((n: { path: string }) => n.path)).not.toContain("node_modules/dep.md");
-    // A loose folder is listed, never indexed: it reaches nothing.
+    // A plain folder reaches as a vault does (20.22); `$HOME`, only listed, reaches nothing.
     const loose = mkdtempSync(join(tmpdir(), "slipbox-reach-loose-"));
     mkdirSync(join(loose, ".hid"));
     writeFileSync(join(loose, "a.md"), "[h](.hid/h.md)\n");
     writeFileSync(join(loose, ".hid", "h.md"), "# H\n");
-    expect(openGraph(locateVault({ path: join(loose, "a.md") }), DEFAULT_CONFIG, false).reachFile(".hid/h.md")).toBe(false);
+    expect(openGraph(locateVault({ path: join(loose, "a.md") }), DEFAULT_CONFIG, false).reachFile(".hid/h.md")).toBe(true);
+    const home = process.env.HOME;
+    process.env.HOME = loose;
+    try {
+      expect(openGraph(locateVault({ path: join(loose, "a.md") }), DEFAULT_CONFIG, false).reachFile(".hid/h.md")).toBe(false);
+    } finally {
+      process.env.HOME = home;
+    }
   });
 });
 
@@ -3146,8 +3189,17 @@ describe("freshness and coverage (20.10)", () => {
     rmSync(join(there, "b.md"));
     expect((await cli(["index", "--refresh", join(there, "a.md")], here)).json.data).toMatchObject({ root: there, notes: 1, changed: 1, unchanged: 0, gone: 1 });
     expect((await cli(["index", "--refresh"], here)).json.data.root).toBe(here); // this one, unnamed
+    // A plain folder has an index of its own (20.22); $HOME, only listed, has none.
     const loose = mkdtempSync(join(tmpdir(), "slipbox-fresh-loose-"));
-    expect((await cli(["index", "--refresh", loose], here)).code).toBe(5);
+    writeFileSync(join(loose, "l.md"), "# L\n");
+    expect((await cli(["index", "--refresh", loose], here)).json.data).toMatchObject({ root: loose, notes: 1 });
+    const home = process.env.HOME;
+    process.env.HOME = loose;
+    try {
+      expect((await cli(["index", "--refresh", loose], here)).code).toBe(5);
+    } finally {
+      process.env.HOME = home;
+    }
     expect((await cli(["index", "--refresh", join(base, "nope")], here)).code).toBe(3);
   });
 

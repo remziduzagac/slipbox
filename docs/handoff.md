@@ -34,9 +34,9 @@ Next in phase 4: the rest of `1.x`, search (`6.x`), embeds. Still open: `7.4` (r
 (incremental reparse) moved to `15.1`, now mostly done (a note re-parses by chunk); `5.9` (a `HEAD`
 change as a branch switch) and the lint surface (markdownlint-cli2) are not built.
 
-**Updated 2026-10-02.** Built since: search (`6.x`), the lint surface (`3.21`), a branch switch as one event
+**Updated 2026-10-03.** Built since: search (`6.x`), the lint surface (`3.21`), a branch switch as one event
 (`5.9`), and phase 5's LSP face (`11.x`) and code intelligence (`19.x`: language servers and linters for code). Left
-in phase 5: `16.18`–`16.23`. **Decided the same day, being built:** plain paths and virtual vaults (`20.x`;
+in phase 5: `16.18`–`16.23`. **Decided 2026-10-02, built by 2026-10-03:** plain paths and virtual vaults (`20.x`;
 `docs/idea.md`, "Plain paths, virtual vaults"). Done: the converter (`20.1`), links as plain paths (`20.2`: `[[…]]`
 is text, `/` the filesystem's root, a move never resolves a link), vault boundaries (`20.3`: the nearest `.slipbox/`
 or git checkout), collections apart from instances (`20.4`: local instance ids in `vaults.json`, copies told by
@@ -49,7 +49,10 @@ status line (`20.14`). The explorer's roots (`20.15`). Search by vault (`20.16`)
 (`20.17`). Generated edits as plans (`20.18`: `--plan`, `slipbox apply`). Renames and moves on paths, code comments
 included (`20.19`). The CLI takes and gives `vault:path` (`20.20`: any note argument, `--from`; `shown`; `resolve`'s
 `href`, the relative path to write). The merge review (`20.21`: `slipbox merge-review`, `space g m`; after a merge or a
-pull, git's renames are evidence for the relink). Next: the removals (`20.22`).
+pull, git's renames are evidence for the relink). The removals (`20.22`): nothing resolves by a name — wikilinks,
+`[[vault:note]]`, aliases, redirects are the converter's alone — and no home vault: a plain folder opened is an
+unnamed instance, walked and indexed as a vault is (`~` and `/` listed a level at a time). Next: phase 5's grammars
+(`16.18`–`16.22`; `16.23` asks about Ruby and C/C++).
 
 ## The documents
 
@@ -149,10 +152,10 @@ spend a day on:
 - **Stack:** Bun + OpenTUI + remark. remark over marked because mdast carries source positions
   and slipbox edits. OpenTUI over Ink because Ink renders to a string and has no scroll
   container.
-- **A file's root** is its nearest boundary — a `.slipbox/` or a git checkout's top, one vault when
-  both share a folder (`20.3`) — else the home vault (loose files, a folder at a time); `$HOME` and
-  `/` never. A git vault without `.slipbox/` is never written into: named by its folder, keyed by
-  its path. See `docs/idea.md`, "Plain paths, virtual vaults".
+- **A file's root** is its nearest boundary — a `.slipbox/` or a git checkout's top, one vault when both share a folder
+  (`20.3`) — else the plain folder it's in, an unnamed instance by its path, walked and indexed as a vault is (`20.22`);
+  `$HOME` and `/` never (opened, they're listed a level at a time). A git vault without `.slipbox/` is never written
+  into: named by its folder, keyed by its path. See `docs/idea.md`, "Plain paths, virtual vaults".
 - **PKM layer in-process**, not by depending on a language server. slipbox *offering* an LSP is a
   separate and approved thing (phase 5).
 - **Editing:** an in-app editor *and* `$EDITOR` hand-off (or a running nvim). Live preview is a

@@ -292,7 +292,7 @@ file's folder); elsewhere on the current note, its folder, or this vault.
 | `space v t` / `space v u` | the trash (`:trash`) / restore what was deleted last |
 | `space v shift+u` | undo the last rename, move or relink (`:undo-rename`, `7.4`): its preview, then as it was |
 | `space v p` | the problems (`:problems`, `1.7`): broken and ambiguous links, in the left panel |
-| `space v m` | make a vault (`:init`): this loose folder; in a vault, the selected folder (or this note's) |
+| `space v m` | make a vault (`:init`): this plain folder; in a vault, the selected folder (or this note's) |
 | `space v shift+m` | make the vault a plain folder of the one holding it (this one: then into its parent) |
 | `space v n` | rename the vault (the selected one, or this one) |
 
@@ -395,7 +395,7 @@ config.
 | `:reload` | reload the note from disk |
 | `:reindex` | reindex the vault |
 | `:vaults` | the vaults this machine knows: pick one to switch to |
-| `:init` | make this loose folder a vault |
+| `:init` | make this plain folder a vault |
 | `:vault-moved` | a copy of this vault gone from where it was: did it move here? (`20.5`) |
 | `:pin-root` | keep this vault among the explorer's roots after leaving it, or no longer (`20.15`) |
 | `:delete` | delete the note to the vault's trash (asks first) |
@@ -437,7 +437,7 @@ source first.
 | delete the note to the vault's trash, after asking (`:delete`) | `space n d` |
 | a copy of the note beside it (`name-copy`), opened | `space n shift+y` |
 | the trash: what was deleted, `enter` restores (`:trash`) | `space v t` |
-| make this loose folder a vault (`:init`), or in a vault a folder of it | `space v m` |
+| make this plain folder a vault (`:init`), or in a vault a folder of it | `space v m` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |

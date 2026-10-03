@@ -578,6 +578,8 @@ describe("review cycle 1 (core)", () => {
     expect(scratchLocation(owner, cfg).path).not.toBe(join(root, "scratch.md"));
     rmSync(join(root, "scratch.md"));
     expect(scratchLocation(owner, cfg).path).toBe(join(root, "scratch.md"));
+    // A plain folder's is always in its state: nothing is written into one (20.22).
+    expect(scratchLocation({ ...owner, mode: "folder" }, cfg).path).not.toBe(join(root, "scratch.md"));
   });
   test("regex ^ and $ are a line's; $ in CRLF ends before the \\r; empty matches only when asked", () => {
     const re = (q: string) => compilePattern(q, { regex: true, whole: false }) as RegExp;
