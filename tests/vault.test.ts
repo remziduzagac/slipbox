@@ -9,7 +9,7 @@ import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { applyPlan, planHeadingRename, planUndo } from "../src/core/rename.ts";
-import { findVaultRoot, gitRootOf, initVault, isListed, isVaultRoot, locateVault, recordLocation } from "../src/core/vault.ts";
+import { findVaultRoot, gitRootOf, initVault, isListed, isVaultRoot, locateVault, markersAt, recordLocation, setRootMarkers } from "../src/core/vault.ts";
 import { implicitName, type KnownVault } from "../src/core/registry.ts";
 import { cacheDir, vaultKey } from "../src/core/paths.ts";
 
@@ -96,9 +96,9 @@ describe("vault discovery (1.1)", () => {
       process.env.HOME = before;
     }
   });
-  test("--root names a vault: it takes precedence, and must be one — .slipbox/ or a git checkout (20.3)", () => {
+  test("--root names a vault: it takes precedence, and must be one — a root marker in it (20.3, 21.1)", () => {
     expect(locateVault({ root: join(VAULT, "nested-vault"), path: join(VAULT, "nested-vault", "inner.md") }).root).toBe(join(VAULT, "nested-vault"));
-    expect(() => locateVault({ root: join(VAULT, "notes") })).toThrow(/isn't a vault \(no \.slipbox\/, not a git checkout\): slipbox init/);
+    expect(() => locateVault({ root: join(VAULT, "notes") })).toThrow(/isn't a root \(none of \.git, \.slipbox, \.obsidian, \.zk in it\): slipbox init/);
     const repo = mkdtempSync(join(tmpdir(), "slipbox-repo-"));
     mkdirSync(join(repo, ".git"));
     expect(locateVault({ root: repo })).toMatchObject({ mode: "vault", root: repo });
@@ -763,7 +763,7 @@ describe("vault identity, storage and the machine's vaults (17.3–17.6)", () =>
     mkdirSync(join(repo, ".git"));
     const refused = await cli(["rename-vault", "other", "--json"], repo);
     expect(refused.code).toBe(5);
-    expect(refused.json.error.message).toContain("git checkout without .slipbox/, named by its folder");
+    expect(refused.json.error.message).toContain("has no .slipbox/ to hold a name: slipbox init gives it");
     expect(existsSync(join(repo, ".slipbox"))).toBe(false);
     const made = (await cli(["init", "--name", "gitnamed", "--json"], repo)).json.data;
     expect(made).toMatchObject({ root: repo, created: true, name: "gitnamed" });
@@ -1511,10 +1511,10 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
     // And a git checkout (20.3): a vault by itself, with .slipbox/ or without — nothing changes.
     mkdirSync(join(parent, "proj", ".git"));
     const repo = (await cli(["deinit", "proj"], parent)).json;
-    expect(repo.error.message).toContain("a git checkout is a vault by itself");
+    expect(repo.error.message).toContain("has no .slipbox/ to take away (it's a root by its .git)");
     await cli(["init", "proj", "--name", "mkrepo"], parent);
     const both = (await cli(["deinit", "proj"], parent)).json;
-    expect(both.error.message).toContain("proj is a git checkout: a vault by itself, with or without .slipbox/");
+    expect(both.error.message).toContain("proj is a root by its .git too: it stays one, with or without .slipbox/");
     expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(true);
   });
 });
@@ -3875,5 +3875,82 @@ describe("the merge review (20.21)", () => {
     expect(p.broken).toContainEqual(expect.objectContaining({ from: "b.md", target: "a.md", moved: null, reason: null }));
     const { openVault } = await import("../src/core/reach.ts");
     expect(openVault(root).redirects?.all()["a.md"]).toBeUndefined();
+  });
+});
+
+describe("roots from markers (21.1)", () => {
+  const out: string[] = [];
+  const cli = async (args: string[], cwd: string) => {
+    out.length = 0;
+    const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
+    return { code, json: JSON.parse(out.join("")) };
+  };
+  const tree = (files: Record<string, string>) => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-markers-"));
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, rel)), { recursive: true });
+      if (rel.endsWith("/")) mkdirSync(join(dir, rel), { recursive: true });
+      else writeFileSync(join(dir, rel), text);
+    }
+    return dir;
+  };
+
+  test("an Obsidian vault and a zk notebook are roots: found from inside, skipped by the root around them", async () => {
+    const dir = tree({ "top.md": "# Top\n", ".slipbox/": "", "obs/.obsidian/": "", "obs/deep/n.md": "# N\n", "zk/.zk/": "", "zk/z.md": "# Z\n" });
+    expect(findVaultRoot(join(dir, "obs", "deep", "n.md"))).toBe(join(dir, "obs"));
+    expect(findVaultRoot(join(dir, "zk", "z.md"))).toBe(join(dir, "zk"));
+    expect(locateVault({ path: join(dir, "obs", "deep", "n.md") })).toMatchObject({ mode: "vault", root: join(dir, "obs") });
+    // The root around them leaves them to themselves, as it does a nested repository.
+    expect((await cli(["ls"], dir)).json.data.map((n: { path: string }) => n.path)).toEqual(["top.md"]);
+    expect((await cli(["ls"], join(dir, "obs", "deep"))).json.data.map((n: { path: string }) => n.path)).toEqual(["deep/n.md"]);
+  });
+
+  test("several markers in one folder make one root; $HOME is never one, whatever it holds", () => {
+    const dir = tree({ ".git/": "", ".obsidian/": "", ".zk/": "", "a.md": "# A\n" });
+    expect(markersAt(dir)).toEqual([".git", ".obsidian", ".zk"]);
+    expect(findVaultRoot(join(dir, "a.md"))).toBe(dir);
+    const before = process.env.HOME;
+    process.env.HOME = dir;
+    try {
+      expect(isVaultRoot(dir)).toBe(false);
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("root_markers in your config decide what a root is; --config's too", async () => {
+    const dir = tree({ "top.md": "# Top\n", ".slipbox/": "", "obs/.obsidian/": "", "obs/n.md": "# N\n", "foam/.foam/": "", "foam/f.md": "# F\n" });
+    const cfg = join(dir, "..", `${basename(dir)}-config.toml`);
+    writeFileSync(cfg, '[walk]\nroot_markers = [".slipbox", ".foam"]\n');
+    try {
+      // .obsidian/ no longer marks a root: its notes are the outer root's; .foam/ does.
+      const notes = (await cli(["ls", "--config", cfg], dir)).json.data.map((n: { path: string }) => n.path).sort();
+      expect(notes).toEqual(["obs/n.md", "top.md"]);
+      expect(findVaultRoot(join(dir, "foam", "f.md"))).toBe(join(dir, "foam"));
+    } finally {
+      setRootMarkers(null);
+    }
+    expect(findVaultRoot(join(dir, "obs", "n.md"))).toBe(join(dir, "obs")); // the default again
+  });
+
+  test("a folder's own config can't say where roots are; names only, never paths", () => {
+    const dir = tree({ ".slipbox/config.toml": '[walk]\nroot_markers = [".nothing"]\n' });
+    const vaultSays = loadConfig({ vaultFile: join(dir, ".slipbox", "config.toml") });
+    expect(vaultSays.config.walk.root_markers).toEqual(DEFAULT_CONFIG.walk.root_markers);
+    expect(vaultSays.warnings.join()).toContain("sets walk.root_markers, which only your own config may set (it decides where roots are)");
+    const user = join(dir, "user.toml");
+    writeFileSync(user, '[walk]\nroot_markers = [".git", "a/b", "..", ""]\n');
+    const userSays = loadConfig({ configFile: user });
+    expect(userSays.config.walk.root_markers).toEqual([".git"]);
+    expect(userSays.warnings.join()).toContain('walk.root_markers takes names (".git", ".obsidian"), not paths; ignored ["a/b","..",""]');
+  });
+
+  test("deinit takes .slipbox/ away only where it's the only marker: an Obsidian vault stays a root", async () => {
+    const dir = tree({ ".slipbox/": "", "top.md": "# Top\n", "obs/.obsidian/": "", "obs/.slipbox/config.toml": '[vault]\nid = "obsdeinit000001"\nname = "obsd"\n', "obs/n.md": "# N\n" });
+    const r = await cli(["deinit", join(dir, "obs"), "--dry-run"], dir);
+    expect(r.code).toBe(5);
+    expect(r.json.error.message).toContain("obs is a root by its .obsidian too: it stays one, with or without .slipbox/");
+    const plain = await cli(["deinit", join(dir, "nope")], dir);
+    expect(plain.code).toBe(5);
   });
 });

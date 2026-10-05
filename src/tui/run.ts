@@ -5,7 +5,7 @@ import { createCliRenderer, type KeyEvent } from "@opentui/core";
 import { flag, parseArgs } from "../cli/args.ts";
 import { loadConfig } from "../core/config.ts";
 import { openGraph } from "../core/graph.ts";
-import { locateVault, recordLocation, configFilesFor } from "../core/vault.ts";
+import { locateVault, recordLocation, configFilesFor, setRootMarkers } from "../core/vault.ts";
 import { App } from "./app.ts";
 import { keyName } from "./keys.ts";
 import { AppRenderable, toRGBA } from "./opentui.ts";
@@ -13,6 +13,8 @@ import { AppRenderable, toRGBA } from "./opentui.ts";
 export async function runTui(argv: string[]): Promise<number> {
   const args = parseArgs(argv);
   const path = args.positional[0];
+  // Where roots are (21.1) is your config's to say, `--config` included: read before finding one.
+  setRootMarkers(loadConfig({ configFile: flag(args, "config") }).config.walk.root_markers);
   const loc = locateVault({ root: flag(args, "root"), path });
   const loaded = loadConfig({ ...configFilesFor(loc), configFile: flag(args, "config") });
   recordLocation(loc);

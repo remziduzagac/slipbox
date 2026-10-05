@@ -3520,6 +3520,20 @@ describe("configuration: everything from config, and live reload", () => {
     expect(h.app.ui.zen).toBe(true);
     expect(h.app.messages.some((m) => m.text.includes("config reloaded"))).toBe(true);
   });
+  test("a reload's root_markers decide where roots are from then on (21.1)", async () => {
+    const { rootMarkers, setRootMarkers } = await import("../src/core/vault.ts");
+    const dir = mkdtempSync(join(sandbox, "cfg-"));
+    const file = join(dir, "config.toml");
+    writeFileSync(file, 'theme = "nord"\n');
+    const h = await harness({ configFile: file });
+    try {
+      writeFileSync(file, '[walk]\nroot_markers = [".git", ".foam"]\n');
+      await h.keys("space", "v", "c");
+      expect(rootMarkers()).toEqual([".git", ".foam"]);
+    } finally {
+      setRootMarkers(null);
+    }
+  });
   test("[colors] overrides apply to the theme, the picker's preview and a live reload", async () => {
     const dir = mkdtempSync(join(sandbox, "cfg-"));
     const file = join(dir, "config.toml");

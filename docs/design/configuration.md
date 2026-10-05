@@ -66,6 +66,7 @@ show_urls = "auto"             # auto (only without colour) | always | never
 extensions = ["md", "markdown"] # a note's extensions (a note is markdown, whatever its name)
 exclude = []                   # gitignore syntax, on top of .gitignore
 max_file_size = 4194304        # bytes; larger notes are listed as skipped
+root_markers = [".git", ".slipbox", ".obsidian", ".zk"]  # a folder holding one is a root (21.1); yours only
 
 [files]                        # files beyond notes (16.x): what the explorer and ctrl+p list
 show = "renderable"            # notes | renderable (notes and data files) | all (every text file)

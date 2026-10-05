@@ -27,6 +27,11 @@ export interface Config {
     extensions: string[];
     exclude: string[];
     max_file_size: number;
+    /**
+     * What makes a folder a root (21.1): a file or folder of one of these names in it. Your own config
+     * only — a folder's can't decide where roots are, since it's found through them.
+     */
+    root_markers: string[];
   };
   /** Files beyond notes (16.x): which the explorer, the switcher and find show. */
   files: {
@@ -221,7 +226,7 @@ export interface Config {
 export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
   render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto" },
-  walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024 },
+  walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
   files: { show: "renderable", include: [], exclude: [] },
   ui: {
     sidebar: true,
@@ -363,6 +368,12 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     config = merge(config, data, file, "", warnings);
     sources.push(file);
   }
+  // Root markers (21.1): plain names, each a file or folder looked for in a folder — never a path.
+  const markers = config.walk.root_markers.filter((m) => typeof m === "string" && m !== "" && m !== "." && m !== ".." && !/[/\\]/.test(m));
+  if (markers.length !== config.walk.root_markers.length) {
+    warnings.push(`config: walk.root_markers takes names (".git", ".obsidian"), not paths; ignored ${JSON.stringify(config.walk.root_markers.filter((m) => !markers.includes(m)))}`);
+    config.walk.root_markers = markers;
+  }
   // The scratch's file name: a plain relative path inside the project, never empty, absolute or
   // climbing out (a cloned vault's config must not aim `slipbox capture` at any file; symlinks on
   // the way are refused where the path is used, in core/capture.ts).
@@ -431,6 +442,12 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
         warnings.push(`config: ${file} sets linter.${name}.lint-command, which only your own config may set (it runs a program); ignored`);
       }
     }
+  }
+  // Where roots are (21.1) is found before any folder's config is: only yours can say.
+  const walk = data.walk;
+  if (isPlainObject(walk) && "root_markers" in walk) {
+    delete walk.root_markers;
+    warnings.push(`config: ${file} sets walk.root_markers, which only your own config may set (it decides where roots are); ignored`);
   }
   for (const key of USER_ONLY) {
     const [table, name] = key.split(".") as [string, string];

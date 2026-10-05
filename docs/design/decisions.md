@@ -83,9 +83,10 @@ One predicate, used by both the walk and the watcher (`5.2` is this decision see
   `walk.exclude` and a vault of its own are never reached: named, such a file is read and nothing more. A loose
   folder is listed, not indexed, and reaches nothing. Reached files aren't watched: they're read again when the
   index is next built.
-- **Nested vaults are boundaries.** A subdirectory holding its own `.slipbox/`, or a git checkout's top (a
-  repository, a submodule), is a different vault and is not walked (`20.3`; before, only a `.slipbox/` was, `17.18`).
-  This keeps a fixture vault inside a repo from leaking into it, and a repository's notes its own.
+- **Nested roots are boundaries.** A subdirectory holding a root marker of its own — `.slipbox/`, a git checkout's
+  top (a repository, a submodule), an Obsidian vault's `.obsidian/`, a zk notebook's `.zk/` (`walk.root_markers`,
+  `21.1`) — is a different root and is not walked (`20.3`; before, only a `.slipbox/` was, `17.18`). This keeps a
+  fixture vault inside a repo from leaking into it, and a repository's notes, or an Obsidian vault's, its own.
 - **Symlinks:** a symlinked *file* is included when its real path is inside the vault root, unless that target is
   already walked, since the same note twice would double every backlink. A symlinked *directory* is never followed:
   no cycles, no escaping the root. Anything pointing outside the root is skipped and reported (`7.5` constraint),

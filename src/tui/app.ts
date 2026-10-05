@@ -74,7 +74,7 @@ import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { sameCollection } from "../core/collection.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { displayNames, locName } from "../core/names.ts";
-import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, type VaultLocation } from "../core/vault.ts";
+import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
@@ -861,6 +861,7 @@ export class App {
     const before = this.config;
     const next = loaded.config;
     this.config = next;
+    setRootMarkers(next.walk.root_markers); // where roots are, from now on (21.1): your config only
     this.lintCmd = lintCommand(next.lint, this.loc.root, undefined, next.lsp.auto_install);
     const differs = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
     const changed = (Object.keys(next) as (keyof Config)[]).filter((s) => differs(before[s], next[s]));
@@ -1561,7 +1562,7 @@ export class App {
         const w = item.data as { path: string };
         if (w.path === c.root) return;
         const vault = join(w.path, here);
-        if (!isVaultRoot(vault)) return this.message("warn", `${vault} isn't a vault (no .slipbox/ on that branch)`);
+        if (!isVaultRoot(vault)) return this.message("warn", `${vault} isn't a root on that branch (none of ${rootMarkers().join(", ")} in it)`);
         const there = note && existsSync(join(vault, note)) ? join(vault, note) : null;
         const v = this.view;
         this.switchVault(rootAt(vault), there, there && v ? { ...v.topAnchor } : undefined);

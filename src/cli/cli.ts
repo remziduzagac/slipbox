@@ -58,7 +58,7 @@ import { copiesShown, describeCollection } from "../core/collection.ts";
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
 import { displayNames, fromVaultForm, locName, tildePath, vaultFormChoices } from "../core/names.ts";
-import { findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, instanceOf, isInside, isRepoRoot, isVaultRoot, locateVault, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import { findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, instanceOf, isInside, isVaultRoot, locateVault, markersAt, setRootMarkers, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 
@@ -268,6 +268,8 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // Flags every command shares are checked for every command, used or not.
     const color = flag(args, "color");
     if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
+    // Where roots are (21.1) is your config's to say, `--config` included: read before finding one.
+    setRootMarkers(loadConfig({ configFile: flag(args, "config") }).config.walk.root_markers);
     // A file named `vault:path` (20.20) is that file: its path from here on, so the command works in
     // that vault as it would with the path.
     const NOTE_FIRST = ["render", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
@@ -1084,7 +1086,7 @@ const HANDLERS: Record<string, Handler> = {
   deinit(s, rest) {
     const dir = requireArg(rest, "vault folder");
     const abs = dir.startsWith("/") ? dir : join(s.io.cwd, dir);
-    if (!hasMarker(abs)) throw new CliError(`${abs} isn't a vault made with .slipbox/ (${isRepoRoot(abs) ? "a git checkout is a vault by itself" : "no .slipbox/"})`, EXIT.refused);
+    if (!hasMarker(abs)) throw new CliError(`${abs} has no .slipbox/ to take away${markersAt(abs).length ? ` (it's a root by its ${markersAt(abs).join(", ")})` : ""}`, EXIT.refused);
     const holder = findVaultRoot(dirname(abs));
     if (!holder) throw new CliError(`${abs} isn't in another vault: only a nested vault becomes a plain folder (of the vault holding it)`, EXIT.refused);
     const parent = openVault(holder);

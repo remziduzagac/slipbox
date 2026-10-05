@@ -246,21 +246,21 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   `node_modules`, and never a path outside `--root` when that names the root. `replace --dry-run`
   only reads, so it previews any note; its `newSha` is `null`.
 - **Where a command works.** The root is decided by the file: its nearest boundary above the note argument (or cwd) — a
-  folder with `.slipbox/` or a git checkout's top, one vault when both share a folder (`20.3`) — else the plain folder
-  the file is in (or the current one): an unnamed instance known by its path (`20.22`), walked and indexed as a vault
-  is, its state its own. `$HOME` and `/` are never a root; opened as a plain folder, they're listed a level at a time,
-  never walked or indexed (the background index walks `~`). `--root` must name a vault (`.slipbox/` or a git checkout).
-  Each command records the vault in `vaults.json` — an instance of it (`20.4`), given a local id the first time, with
-  its collection's evidence; a plain folder too, by its path. A vault's cache and state are its instance's (`20.5`).
-  Opened where it wasn't seen before, while a copy of it is gone from where it was, every command warns until
-  `slipbox vault-moved <old-path>` takes the gone copy's instance and state — or `--not` says it didn't move; with no
-  path it lists the copies that may have. Moves are never taken on a guess. A vault is named, wherever the CLI names one
-  (`vaults`, `info`, `stat`, a link into another vault), by its name here (`20.6`): what its `.slipbox/` declares, else
-  its repository's (`origin`'s remote), else its folder's — vaults that would share one each with as few of their
-  folders as tell them apart, joined with `.` (`work.docs`, `home.docs`), and a worktree as `name@branch`. Never written
-  into a file. A `.slipbox/` without an id and a name gets them written into its config on first open; a git vault
-  without one is never written into — named by its folder, keyed by its path — and `slipbox init` gives it `.slipbox/`
-  (`--private` keeps that out of git).
+  folder holding a root marker (`walk.root_markers`, `21.1`: `.git`, `.slipbox/`, `.obsidian/`, `.zk/`), one root
+  however many it holds (`20.3`) — else the plain folder the file is in (or the current one): an unnamed instance known
+  by its path (`20.22`), walked and indexed as a vault is, its state its own. `$HOME` and `/` are never a root; opened
+  as a plain folder, they're listed a level at a time, never walked or indexed (the background index walks `~`).
+  `--root` must name a root (one of the markers in it). Each command records the vault in `vaults.json` — an instance of
+  it (`20.4`), given a local id the first time, with its collection's evidence; a plain folder too, by its path. A
+  vault's cache and state are its instance's (`20.5`). Opened where it wasn't seen before, while a copy of it is gone
+  from where it was, every command warns until `slipbox vault-moved <old-path>` takes the gone copy's instance and state
+  — or `--not` says it didn't move; with no path it lists the copies that may have. Moves are never taken on a guess. A
+  vault is named, wherever the CLI names one (`vaults`, `info`, `stat`, a link into another vault), by its name here
+  (`20.6`): what its `.slipbox/` declares, else its repository's (`origin`'s remote), else its folder's — vaults that
+  would share one each with as few of their folders as tell them apart, joined with `.` (`work.docs`, `home.docs`), and
+  a worktree as `name@branch`. Never written into a file. A `.slipbox/` without an id and a name gets them written into
+  its config on first open; a git vault without one is never written into — named by its folder, keyed by its path — and
+  `slipbox init` gives it `.slipbox/` (`--private` keeps that out of git).
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4

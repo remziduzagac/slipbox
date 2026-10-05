@@ -329,7 +329,8 @@ without asking.
 **The launcher:** slipbox opened on a plain folder without a file (`slipbox ~`) shows this list at
 once, over the folder's explorer, when there are vaults to show.
 
-**A git repository is a vault by itself** (`20.3`): opening a file in one opens the repository, from its top —
+**A git repository is a vault by itself** (`20.3`), and so are an Obsidian vault and a zk notebook (`21.1`): any folder
+holding a root marker (`walk.root_markers`). Opening a file in a repository opens the repository, from its top —
 nothing asked, nothing written into it; a repository inside a vault is a vault of its own, its folder marked in the
 explorer. `.slipbox/` gives one a name and settings of its own (`slipbox init`; `--private` keeps it out of git).
 `space v m` (`:init`, `vault.init`) in a plain folder makes it a vault — "`<folder>` is a folder without .slipbox/ —

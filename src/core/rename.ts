@@ -20,7 +20,7 @@ import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } 
 import { forgetVault, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
 import { openVault } from "./reach.ts";
 import { vaultForm } from "./names.ts";
-import { findVaultRoot, hasMarker, initVault, isInside, isRepoRoot, type VaultLocation } from "./vault.ts";
+import { findVaultRoot, hasMarker, initVault, isInside, markersAt, type VaultLocation } from "./vault.ts";
 
 export class RenameError extends Error {}
 
@@ -623,7 +623,7 @@ function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: 
 export function planVaultRename(loc: VaultLocation, newName: string): RenamePlan {
   if (loc.mode !== "vault") throw new RenameError(`${loc.root} has no .slipbox/: make it a vault first (slipbox init)`);
   // A git vault's name is its folder's, held nowhere (20.3): `.slipbox/` gives it one of its own.
-  if (!hasMarker(loc.root)) throw new RenameError(`${loc.root} is a git checkout without .slipbox/, named by its folder: slipbox init gives it .slipbox/ and a name of its own`);
+  if (!hasMarker(loc.root)) throw new RenameError(`${loc.root} has no .slipbox/ to hold a name: slipbox init gives it .slipbox/ and a name of its own`);
   if (!VAULT_NAME.test(newName)) throw new RenameError(`"${newName}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
   const oldName = loc.name!;
   if (newName === oldName) throw new RenameError(`the vault is already named ${oldName}`);
@@ -828,7 +828,8 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
   if (!parent.nestedRoots().includes(F)) throw new RenameError(`no vault nested at ${F} in ${parent.root}`);
   const Vabs = join(parent.root, F);
   // A git checkout is a vault by itself (20.3): without its .slipbox/ it would be one still.
-  if (isRepoRoot(Vabs)) throw new RenameError(`${F} is a git checkout: a vault by itself, with or without .slipbox/`);
+  const others = markersAt(Vabs).filter((m) => m !== ".slipbox");
+  if (others.length) throw new RenameError(`${F} is a root by its ${others.join(", ")} too: it stays one, with or without .slipbox/`);
   const v = openVault(Vabs);
   v.ensureAll();
   parent.ensureAll();

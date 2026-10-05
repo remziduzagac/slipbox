@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, realpathSync, renameSync, statSync, writeFileSyn
 import { parse as parseToml } from "smol-toml";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { VAULT_CONFIG_TEMPLATE } from "./config.ts";
+import { loadConfig, VAULT_CONFIG_TEMPLATE } from "./config.ts";
 import { collectionOf, repositoryName, sameCollection } from "./collection.ts";
 import { checkoutOf, inMain } from "./git.ts";
 import { readRegular } from "./fsutil.ts";
@@ -101,9 +101,32 @@ export function hasMarker(dir: string): boolean {
   }
 }
 
-/** A vault's boundary (20.3): `.slipbox/`, or a git checkout's top — both in one folder, one vault. */
+let markers: string[] | null = null;
+
+/**
+ * What makes a folder a root (21.1): your config's `walk.root_markers` — `.git`, `.slipbox`,
+ * `.obsidian`, `.zk` unless it says otherwise — read once.
+ */
+export function rootMarkers(): string[] {
+  return (markers ??= loadConfig().config.walk.root_markers);
+}
+
+/** The root markers of your config as the CLI or the TUI loaded it (`--config` too); null reads it again. */
+export function setRootMarkers(list: string[] | null): void {
+  markers = list;
+}
+
+/** The root markers in `dir`: a file or folder of each name. */
+export function markersAt(dir: string): string[] {
+  return rootMarkers().filter((m) => existsSync(join(dir, m)));
+}
+
+/**
+ * A root (20.3, 21.1): a folder holding a root marker — a git checkout's top, `.slipbox/`, an
+ * Obsidian vault, a zk notebook. Several in one folder make one root. `$HOME` and `/` never are.
+ */
 export function isVaultRoot(dir: string): boolean {
-  return !isNeverRoot(dir) && (hasMarker(dir) || isRepoRoot(dir));
+  return !isNeverRoot(dir) && markersAt(dir).length > 0;
 }
 
 /** A `.git` directory, or the `.git` file of a worktree or submodule. */
@@ -161,7 +184,7 @@ export function locateVault(opts: LocateOptions): VaultLocation {
   if (opts.root) {
     const root = resolve(cwd, opts.root);
     if (!existsSync(root) || !statSync(root).isDirectory()) throw new VaultError(`--root is not a directory: ${opts.root}`);
-    if (!isVaultRoot(root)) throw new VaultError(`--root ${opts.root} isn't a vault (no .slipbox/, not a git checkout): slipbox init ${opts.root} makes it one`);
+    if (!isVaultRoot(root)) throw new VaultError(`--root ${opts.root} isn't a root (none of ${rootMarkers().join(", ")} in it): slipbox init ${opts.root} makes it one`);
     if (file && !isInside(root, file)) throw new VaultError(`${opts.path} is outside --root ${opts.root}`);
     return rootAt(root, file);
   }
