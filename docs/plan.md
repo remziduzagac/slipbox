@@ -43,6 +43,7 @@ cited, not to imply an order.
 | **4** | Vault and structure | `17.x`, rest of `1.x`, `6.x`, `7.1`, embeds | Backlinks and search on a real vault |
 | **5** | LSP, code intelligence | `11.x`, `19.x`, `16.18`–`16.23` | nvim gets slipbox's graph; slipbox the servers' |
 | **5b** | Plain paths, virtual vaults | `20.x` | Open any file or folder and work: paths, derived vaults |
+| **5c** | Paths inside, conventions at the edges (proposed) | `21.x` | Other tools' links read and written; no vaults |
 | **6+** | Export, images, extensibility | `10.x`, `12.x`, `13.x` | — |
 
 `14.x` distribution is not a phase. It lands whenever the thing first needs to run on a VM,
@@ -58,6 +59,11 @@ every text file to open well before the vault grows broader concepts.
 vaults") change what a link is and what a vault is; the rest of phase 5 (`16.18`–`16.23`) waits, since it doesn't
 depend on either. The LSP face phase 5 built (`11.x`) is removed in it: with plain paths, editors' own servers follow
 the links, and agents have the CLI.
+
+**Phase 5c is proposed (2026-10-05, reviewed).** Paths inside, conventions at the edges (`docs/idea.md`, "Paths
+inside, conventions at the edges") revises phase 5b after a survey of other tools: `/` as a root, other tools' link
+conventions followed, `slipbox://` pointers between named folders, and no vaults to meet. Nothing of it is built until
+it's approved; the rest of phase 5 (`16.18`–`16.23`) waits on it, as it did on 5b.
 
 **Phase 1 is rendering because it de-risks the premise.** If the rendering is not better than
 leaf's, nothing after it matters. It is also self-contained — parse, layout, theme — and needs
@@ -325,6 +331,7 @@ reading features, editing features, linters, and the languages.
 
 | ID | Decision | Gates |
 | --- | --- | --- |
+| `21.x` | Paths inside, conventions at the edges: approve the proposal | Phase 5c |
 | `16.23` | Ruby and C/C++ | Phase 5 |
 | `10.5` | PDF base — `pdfkit` or `@react-pdf/renderer` | Phase 6+ |
 
@@ -623,6 +630,34 @@ and removing it first spared rewriting its tests only to delete them. `20.17`–
 reuse today's rename and move engine (`7.1`–`7.3`, `17.12`, `17.15`) on paths; `17.12`'s redirects become evidence
 for a repair. Performance (`20.11`) is measured, not assumed. Each item ends with its tests listed for the user's
 approval before any is run.
+
+## Paths inside, conventions at the edges — `21.x` (phase 5c, proposed)
+
+*Proposed 2026-10-05 and reviewed with the user; not built until approved to start. The design, and why, is
+`docs/idea.md`, "Paths inside, conventions at the edges";
+the decision record `docs/design/decisions.md`, `21.x`. In order: roots and the one model inside first; the
+conventions read, then found, then written; names and pointers next; state, words and what's shown after; the
+removals as their replacements land, the sweep last.*
+
+| ID | Item |
+| --- | --- |
+| 21.1 | Roots from markers: `.git`, `.slipbox/`, `.obsidian/`, `.zk/`; `root_markers` in your config; the nearest |
+| 21.2 | Links as paths inside: a reader per form; `/` from the nearest root, then the filesystem; extensionless paths |
+| 21.3 | Wikilinks read within their root: names, paths, aliases, attachments; ties ambiguous; no root, no names |
+| 21.4 | Conventions found: the user's setting, the root's tool's (Obsidian, zk), its notes' majority, ours; in `info` |
+| 21.5 | Links written in the convention: completion, the link picker, capture; renames keep each link's form |
+| 21.6 | Named folders: by remote (short, qualified), by `.slipbox/` name and id; copies, defaults; the durable lookup |
+| 21.7 | `slipbox://` pointers, `@branch` too: read, followed, backlinked, renamed; clashes asked; relinked to |
+| 21.8 | Personal state by root, positions by file; carried with a named folder's move; today's moved once |
+| 21.9 | What's shown: the file's own forms; files by path in lists; the status line and the explorer by roots |
+| 21.10 | Words and commands: `folders [default]`, `name`, `root`/`name` in JSON, `--scope here`; pointers as args |
+| 21.11 | Repairs: the relink offered after moves made elsewhere; typed `research:x.md` flagged and fixed |
+| 21.12 | Removed: collections, instances, display names, `vault:path`, `vault-moved`, `previous_names`; vault list |
+| 21.13 | The sweep: the docs, the skill, the README, the e2e scenarios |
+
+`21.1` comes first: `/`, wikilinks and conventions each read a root. `21.2`–`21.5` change no behaviour for relative
+links, which stay as they are. `21.6` and `21.7` replace what vaults gave links between folders before `21.12` removes
+it. Each item ends with its tests listed for the user's approval before any is run.
 
 ## Images — `12.x`
 

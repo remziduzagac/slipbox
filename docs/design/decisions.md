@@ -245,6 +245,7 @@ tools do is the project's.
 ## `20.x` — plain paths, virtual vaults
 
 Decided 2026-10-02 with the user, revised the same day after a review; built (plan `20.1`–`20.23`, done 2026-10-03).
+Being revised by `21.x` below (proposed and reviewed 2026-10-05, not built yet).
 The model in full is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the
 LSP face (`11.x`), and `17.20` below. In short:
@@ -270,6 +271,39 @@ LSP face (`11.x`), and `17.20` below. In short:
 - **Settings,** deeper over broader: the nearest `.slipbox/config.toml`, outer ones, the user's; programs from the
   user's own config only.
 - **The LSP face goes** (gone: `20.23`, built first, 2026-10-02); the client for code stays.
+
+## `21.x` — paths inside, conventions at the edges
+
+*Proposed 2026-10-05 with the user, after a survey of how other tools handle links, and reviewed with the user the same
+day; not built yet (plan `21.x`). The model in full is `docs/idea.md`, "Paths inside, conventions at the edges". It
+revises `20.x` above.*
+
+- **Inside, a link is a path;** each written form — a relative path, `/…`, an extensionless path, a wikilink,
+  `file://`, `~/`, a `slipbox://` pointer — has a reader and, but for `~/`, a writer. The index, backlinks, renames,
+  repairs, the merge review and plans see only paths.
+- **A leading `/` means the nearest root, then the filesystem's path.** Every tool surveyed gives `/` a root's meaning;
+  none the filesystem's (`20.2`'s choice, reversed).
+- **Roots come from markers** — `.git`, `.slipbox/`, `.obsidian/`, `.zk/`, configurable in the user's config — and only
+  answer what `/` starts from, a wikilink's scope, whose convention applies, what travels together, and what's named.
+  The user never manages one.
+- **Wikilinks are read again,** within their root: names, paths, aliases, attachments by name; ties ambiguous, never
+  guessed; no root, no names. Previous names, `[[vault:note]]` and remembered moves aren't (`20.22`'s removals kept).
+- **Each folder's convention is followed:** the user's setting, else its tool's, else what its notes do, else relative
+  paths. Renames keep each link's form. The screen shows what the file says.
+- **Between files that travel together** (one repository or submodule, one folder tree outside git), the convention;
+  **into a named folder,** `slipbox://<name>/<path>` — a repository named by its remote (short, qualified on a clash), a
+  folder by its `.slipbox/` name, never by a folder's own; **otherwise,** a relative path. Relinking a link between
+  separate repositories to fit each machine's layout would fight itself across machines; a name doesn't.
+- **A pointer names what travels:** a repository (this machine's default copy, asked once when a second appears), or a
+  repository at a branch (`@refactor`); never a copy. Copies are told from different folders of one name by the
+  remote, or by the `.slipbox/` id; a clash between different folders asks to rename one when it matters. Where each
+  name lives is a durable lookup in the state folder.
+- **Vaults stop being a concept:** collections and instances, display names, `vault:path`, the move question and
+  `previous_names` on rename go. Personal state is kept in the state folder by root (else the folder opened),
+  positions by file; a named folder moved by hand takes its state along when the evidence matches, else starts fresh.
+  The `.slipbox/` id is written only by `slipbox init` and `slipbox name`, never on its own.
+- **Words:** folders, not vaults; `slipbox folders` (and `folders default`), `slipbox name`, `--scope here|linked|all`;
+  note arguments take `slipbox://` pointers.
 
 ## `17.20` — a folder is enough: scope, settings and identity apart
 

@@ -757,7 +757,9 @@ personal data ever has to travel with a folder, or be visible beside it.
 ## Plain paths, virtual vaults — decided 2026-10-02
 
 Decided with the user over a long discussion, then revised the same day after a review; built by 2026-10-03 (plan
-`20.1`–`20.23`).
+`20.1`–`20.23`). *Being revised by "Paths inside, conventions at the edges" below (proposed and reviewed 2026-10-05,
+not built yet): vaults stop being a concept, conventions are read and written at the edges, `/` means the nearest
+root.*
 It replaces "Vaults — decided 2026-09-30" above. The aim: open any file or folder and work — nothing to set up, no
 vault to manage, no wondering whether a link will resolve.
 
@@ -924,6 +926,241 @@ Git adds to vaults; it doesn't bound them.
 - **New:** collections and instances, the `vault:path` form, an index beyond one folder (on demand, and in the
   background), the explorer's roots, search by linked vaults, generated edits as plans, the merge review and the fix
   after.
+
+## Paths inside, conventions at the edges — proposed 2026-10-05
+
+*Proposed with the user on 2026-10-05, after comparing how other tools handle links, and reviewed with the user section
+by section the same day; not built yet (plan `21.x`). It revises "Plain paths, virtual vaults" above: the plain-path
+core stays; the vault stops being a concept the user meets; other tools' link conventions, wikilinks included, are read
+and written at the edges; and links between separate folders gain a pointer that survives a different layout on another
+machine.*
+
+### Why: what other tools do
+
+A survey of Obsidian, Logseq, VS Code, Foam, Dendron, marksman, markdown-oxide, zk, org-roam, Denote, the nvim note
+plugins, GitHub, Gitea and the static site generators (2026-10-05) found:
+
+- **Every tool has a root,** and the root gives a root-relative link its meaning: Obsidian's vault, Logseq's graph,
+  zk's notebook (`.zk/`), marksman's project (`.git` or `.marksman.toml`), VS Code's open folder, GitHub's
+  repository. Tools that support casual use either make the opened folder the root (VS Code) or offer fewer features
+  without one (marksman's single-file mode).
+- **A leading `/` means a root everywhere,** never the filesystem's: GitHub ("relative to the repository root"), VS
+  Code ("the current workspace root"), Gitea, Hugo, Docusaurus, Foam; zk switched to its notebook root, then the
+  filesystem, in September 2026; Obsidian never writes one, its developers calling it ambiguous. slipbox's filesystem
+  meaning (`20.2`) had no precedent.
+- **Linking by name breaks in known ways:** a link silently re-pointed at a newly made note of the same name (Markdown
+  Memo), a resolution order users can't predict (Obsidian), ambiguity settled alphabetically (Foam). Paths avoid all
+  of it; wikilinks stay common, so reading them matters.
+- **No tool updates links after a move made outside it,** and none links across vaults with backlinks: Obsidian and
+  Logseq only through `obsidian://`/`logseq://` URIs; Dendron through `dendron://vault/…`, its vaults declared in
+  config.
+- **A relative link between separate repositories** works for slipbox, editors, the shell and agents while the
+  folders are laid out alike, and for no one when they aren't. Relinking per machine then fights itself: a repository
+  shared by two machines with different layouts gets "fixed" back and forth.
+
+### Principles
+
+1. **Files are the truth.** Nothing derived or personal is written into the user's folders.
+2. **Inside, a link is a path.** The index, backlinks, renames, repairs, the merge review and plans see nothing else.
+   How a link is written is a convention, read and written at the edges.
+3. **Follow the folder's convention.** What its tool or its notes already do; ours only where nothing does.
+4. **Open any folder or file and work.** No vault to make, name or manage.
+5. **Names come from indicators,** never from a folder's name: a repository's remote, a `.slipbox/` name.
+6. **The index is a cache; personal state is personal,** kept in the state folder, by path.
+7. **Nothing is rewritten silently.** An edit to a file is shown and confirmed first.
+
+### Links: one model inside
+
+Every link, whatever its written form, is read as a file and a fragment (`#heading`, `#^block`); everything behind
+the reading works on that. A path resolves without the index: its target exists or it doesn't. A wikilink's name
+needs the index of its root. A broken link stays broken until it's repaired, never resolved quietly by a name or a
+remembered move.
+
+### Conventions: a reader and a writer each
+
+| Written as | Read as |
+| --- | --- |
+| `[t](../docs/plan.md)` | relative to the file: what slipbox writes by default |
+| `[t](/docs/plan.md)` | from the nearest root; if nothing's there, the filesystem's path |
+| `[t](plan)` | an extensionless path: `plan.md` when no file is called `plan` (zk, mkdnflow, Typora) |
+| `[[plan]]`, `[[docs/plan#Aims\|a]]` | a wikilink, by name or path, within its root |
+| `[t](file:///home/me/x.md)` | the filesystem's path |
+| `[t](~/notes/x.md)` | the home folder's path: read, never written |
+| `[t](slipbox://research/x.md)` | a named folder's path (below) |
+
+**Wikilinks,** read within their root: a note's name (its file's), or a path; aliases from front matter; an
+attachment by its name, as Obsidian finds one; `#heading` and `#^block`. Two notes of one name: the nearest the
+linking note, then the shortest path; a real tie is ambiguous, picked when followed, never guessed. With no root
+above it, a wikilink resolves to nothing, with a hint: names need a scope, and only a root gives one. Previous names,
+`[[vault:note]]` and remembered moves aren't read: no other tool writes them.
+
+**Which convention a file writes in,** the first that says: the user's setting (`[links]` in a `.slipbox/config.toml`
+or the user's config); the setting of the tool that owns the root (`.obsidian/app.json`, `.zk/config.toml`); what the
+root's notes already do, when one form clearly dominates (two-thirds or more of its links within the root); else
+ours. A convention has three parts — style (markdown or wiki), path (relative, from the root, or by name) and
+extension (kept or dropped) — each found the same way. `slipbox info` and the TUI's file info say which applies and
+where it came from.
+
+- **One convention per root:** every note in a root writes the same way, whichever note the link is made in.
+- **A folder with no root** has the user's setting, else ours: there's no root to count its notes within.
+- **A root mixing forms** — say 60% wikilinks, 40% paths — has no form at two-thirds: ours, unless the user sets one.
+
+**Renames keep each link's form:** a wikilink stays a wikilink, a path a path, `/…` from the root, an absolute path
+absolute. The convention decides only the links slipbox makes: completion, the link picker, capture.
+
+**The converter** (`slipbox convert-links`) stays, opt-in, for anyone who wants plain paths readable on GitHub; nothing
+asks to run it.
+
+### Roots
+
+A root is the nearest folder above a file holding a marker: `.git`, `.slipbox/`, `.obsidian/` or `.zk/` — the list
+configurable in the user's own config (`root_markers`). `$HOME` and `/` never are. A root is never a concept the user
+manages, and none is needed — a folder without one works — but where one exists, slipbox uses it:
+
+- **what's indexed and searched first:** opening any file or folder inside a root indexes the root — the whole
+  repository or Obsidian vault, not only the subfolder opened; with no root, the folder opened;
+- what `/` is measured from, and which notes a wikilink's name can match;
+- whose convention a file follows;
+- whether two files travel together (below);
+- what a named folder is (below);
+- **its settings,** when it holds a `.slipbox/config.toml` — optional: the user's config (`$XDG_CONFIG_HOME/slipbox/`)
+  is enough.
+
+One file has one root, however it's opened; a marker inside another root starts one of its own, its files its own.
+
+### Between folders
+
+A link from one file to another, in this order:
+
+1. **The two travel together** — written in the file's convention. They travel together when one clone, or one folder
+   moved as a whole, carries both: the same repository; a repository and a submodule it records; outside git, one
+   folder inside the other.
+2. **The target is in a named folder** — `slipbox://<name>/<path from its root>#fragment`.
+3. **Otherwise** — a relative path, which works while the folders are laid out alike.
+
+**Named folders.** A name has to travel with what it names, since the file holding a pointer goes to other machines:
+
+- a repository is named by its remote — short (`research`), or qualified (`github.com/me/research`) when two
+  different repositories share the short one;
+- a folder by the name in its `.slipbox/` (`slipbox init --name notes`): written into its config, carried with it;
+- never a folder's own name, nor a copy's path: neither travels. A root with no remote and no `.slipbox/` name
+  (`.obsidian/` or `.zk/` alone) is unnamed: linked by relative path.
+
+**Copies, and different folders of one name:**
+
+| Two folders named `notes` | Told apart by | A pointer means |
+| --- | --- | --- |
+| copies of one repository | the same remote | the repository: this machine's default copy |
+| different repositories | different remotes | each by its qualified name |
+| copies of one `.slipbox/` folder | the same id in `.slipbox/` | the folder: its default copy |
+| different `.slipbox/` folders | different ids | ambiguous until one is renamed |
+
+- **A name's default copy** here is the first one found. When a second copy appears, slipbox asks once which one links
+  should open, and remembers; `slipbox folders` shows each name's copies and changes the default. A worktree's name
+  means its main checkout.
+- **A branch:** `slipbox://research@refactor/x.md` names the repository at `refactor` — the copy with it checked out,
+  else the file as it is on that branch, read-only, from git. Branches travel; copies don't.
+- **A name for one copy only:** a private `.slipbox/` (`slipbox init --private --name research-review`), kept out of
+  git. Its pointers work on this machine only, and slipbox says so when it writes one.
+- **Different folders of one name:** `slipbox init` refuses a name this machine knows, and suggests one. A clash found
+  later — a folder synced or cloned in — isn't raised until it matters: writing a pointer to the name, or following an
+  ambiguous one, asks to rename one of them, the parent folder's name prefixed as a suggestion, the edit to its config
+  shown first (it may be committed). "Not now" leaves it ambiguous, picked when followed. The CLI warns and gives the
+  candidates (exit 4 when following one); `slipbox name <new>` fixes it.
+- **A folder renamed** keeps its old name in its config. A pointer resolves by the current name when the file is
+  there, else by an old one, said so, and the relink rewrites it.
+
+**Where names live** is a lookup in the state folder, durable: each name, its copies and the default — filled from the
+folders opened and by the background index finding `.git` and `.slipbox/`. A folder that's gone stays listed,
+unavailable, so an unplugged drive comes back. A pointer to a name not on this machine yet says so ("`notes` isn't on
+this machine yet: open it, or let the index find it").
+
+- **Agents** resolve a pointer as any link: `slipbox resolve slipbox://notes/inbox.md` gives the path.
+- **Relative links between folders that don't travel together** are read as they are; the relink offers each one's
+  pointer when its target is in a named folder.
+
+### What's shown
+
+- **What the file says.** A wikilink is shown as one, a path as a path, a pointer as a pointer; rendered text shows a
+  link's text, and a link without text its target as written. No form is invented for the screen.
+- **Files in lists** — backlinks, search results, pickers, hover — by path: from the root (else the folder opened), else
+  `~/…`, else absolute.
+- **The status line:** where the file is — its root's name if it has one, else the root's path, else the folder
+  opened; a repository's branch after it: `research · main`, `~/src/experiment · main` (no remote), `notes`,
+  `~/Obsidian/MyVault`, `~/scratch`; a worktree, `research@refactor`.
+- **The explorer:** the root of what's opened, else the folder opened, the file revealed in it; a folder a link was
+  followed into beside it — the nearest root of that file, else its folder — gone when its last file closes unless
+  pinned; roots never overlapping.
+- **Search:** the root (else the folder opened), then the folders linked to or from it, then everything indexed when
+  widened (`--scope here|linked|all`).
+
+### Changes and repairs
+
+- **A rename or move in slipbox** rewrites the files linking in, each link in its form — pointers from other folders
+  included (`slipbox://research/x.md`), found by backlinks like any link — the moved file's own links, and paths in
+  code comments: previewed, undoable, a plan in the CLI. No `previous_names` is written into a note.
+- **A named folder moved or renamed on disk** needs no link edited: pointers name it, and the lookup finds it again.
+  Only relative links between folders that don't travel together break; the relink offers their pointers.
+- **A move made elsewhere** — an editor, a file manager, git — breaks path links, as it should. A content hash, or
+  git's renames after a merge or a pull, are evidence: the link says "moved to …", and slipbox offers the relink once
+  for each batch of moves.
+- **A link naming a folder the old way** — `[[research:x]]`, `research:x.md` — isn't a link when no note or URL answers
+  to it: flagged, and the fix writes the pointer. Copies meant for a note give a link, never a label.
+
+### Personal state and settings
+
+- **Personal state** — reading positions, sessions, the scratch, the trash, undo, moves seen — in
+  `$XDG_STATE_HOME/slipbox/`, keyed by path: positions by file; the rest by root, else by the folder opened — so
+  opening `project/` or `project/docs/` brings back the same session. A worktree, another path, has its own.
+- **A named folder moved by hand** takes its state along when the lookup sees it: the same remote or `.slipbox/` id at
+  a new path, nothing left at the old one, and exactly one such copy. That isn't a guess, so nothing is asked;
+  otherwise the folder starts fresh.
+- **Settings, deeper over broader:** each `.slipbox/config.toml` above the file, then the user's. A key naming a
+  program to run comes from the user's own config only. A folder without `.slipbox/` takes the user's.
+- **`.slipbox/`** holds settings and, optionally, a name and an id — written only by `slipbox init [--name]` and
+  `slipbox name`, which the user runs; never on its own into a `.slipbox/` made by hand. The id tells a copy of the
+  folder from a different folder of the same name; two without one are taken as different.
+- **The named folders' lookup** — each name, its copies, the default — is durable state too, beside the rest.
+
+### Words and commands
+
+The user meets folders, not vaults. "Root" is a word of these documents; "named folder" of `slipbox://`'s.
+
+| Before | After |
+| --- | --- |
+| `slipbox vaults` | `slipbox folders`: the named folders here, their copies, which is default |
+| — | `slipbox folders default <name> <path>`: the copy a name's pointers open here |
+| `slipbox rename-vault <name>` | `slipbox name <name>`: a folder's name in `.slipbox/`, the old one kept |
+| `slipbox init [--name]` | the same: gives a folder `.slipbox/` — settings, and a name when one is given |
+| `slipbox deinit <dir>` | the same: takes a folder's `.slipbox/` away; pointers to its name relinked as paths |
+| `slipbox vault-moved` | gone, with the question it answered |
+| `vault`, `shown` in JSON | `root` (a path), `name` when it has one |
+| `research:x.md` (screen and CLI) | gone: the file's own link forms; files by path |
+| a note argument `research:x.md` | `slipbox://research/x.md`, as written in files |
+| `--scope vault` | `--scope here` |
+| `slipbox info` | the root, its name, the convention and where it came from |
+| `space v …` | the same keys, about the folder; the explorer's `v`/`shift+v` add or take away `.slipbox/` |
+
+A repository with both a remote and a `.slipbox/` name is named by the `.slipbox/` one: chosen, and committed with it.
+Taking `.slipbox/` away changes roots, never links: relative links reach what they did.
+
+### What changes from "Plain paths, virtual vaults"
+
+- **Kept:** paths as the core; the converter, opt-in; the index, the parse cache, the background index, freshness,
+  files indexed when reached; plans; repairs from evidence; the merge review; git's renames as evidence; worktrees
+  apart; search by links; the explorer's roots.
+- **Changed:** `/` means the nearest root, then the filesystem; wikilinks are read again, within their root, and
+  written where they're the convention; the screen shows what the file says; personal state is kept by root (else
+  the folder opened), positions by file, and a named folder moved by hand takes its state along; the `.slipbox/` id
+  is written only by commands the user runs; `.obsidian/` and `.zk/` mark roots too.
+- **Gone:** vaults as a concept; collections and instances (the `.slipbox/` id stays, to tell copies apart); display
+  names and the `vault:path` form; the move question (`vault-moved`); `previous_names` written on rename; an id
+  written into a hand-made `.slipbox/` on first open.
+- **New:** conventions read and written, and found from the folder; named folders, their copies and defaults, and
+  `slipbox://` pointers, at a branch too; the travel-together rule; the relink offer after moves made elsewhere.
+
+**To check before building:** the exact keys of Obsidian's (`.obsidian/app.json`) and zk's (`.zk/config.toml`) link
+settings.
 
 ## Effort
 
