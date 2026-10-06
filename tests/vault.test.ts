@@ -4761,3 +4761,32 @@ describe("where a link lands (trailscout's suggestions, 2026-10-06)", () => {
     expect(landingText(g, "n.md", "L3-L5", null)).toBe("```js\nconst a = 1; ^fake\n```");
   });
 });
+
+describe("links in front matter (Obsidian's properties)", () => {
+  test("a property's wikilinks are links: read where written, backlinked, renamed in place, drawn and checked; a comment's aren't", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-fmlinks-"));
+    mkdirSync(join(dir, ".obsidian"));
+    writeFileSync(join(dir, "Dal.md"), "# Dal\n");
+    writeFileSync(join(dir, "Home.md"), "# Home\n");
+    writeFileSync(join(dir, "pic.png"), "png");
+    writeFileSync(join(dir, "x.md"), '---\nrelated: "[[Dal]]"\nup: ["[[Home|home]]", "![[pic.png]]"]\n# not this: [[Nope]]\nmissing: "[[Gone]]"\n---\n# X\n');
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    expect(g.linksOf("x.md").map((l) => [l.kind, l.target, l.line, l.column, l.resolvedKind])).toEqual([
+      ["wiki", "Dal", 2, 11, "note"],
+      ["wiki", "Home", 3, 7, "note"],
+      ["embed", "pic.png", 3, 24, "file"],
+      ["wiki", "Gone", 5, 11, "unresolved"],
+    ]);
+    expect(g.backlinks("Dal.md").map((b) => b.from)).toEqual(["x.md"]);
+    const { noteProblems } = await import("../src/core/diagnostics.ts");
+    expect(noteProblems(g, "x.md").map((p) => [p.code, p.target, p.start.line])).toEqual([["unresolved", "Gone", 5]]);
+    // Drawn as links in the properties.
+    const parsed = (await import("../src/core/readers.ts")).parseNoteFile("x.md", readFileSync(join(dir, "x.md"), "utf8"));
+    const { renderTree } = await import("../src/core/layout/render.ts");
+    const r = renderTree(parsed.tree, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false, resolveLink: (_k, t) => (t === "Gone" ? "unresolved" : "resolved") }, parsed.frontmatter);
+    expect(r.links.map((l) => [l.kind, l.target, l.text])).toEqual([["wiki", "Dal", "Dal"], ["wiki", "Home", "home"], ["embed", "pic.png", "pic.png"], ["wiki", "Gone", "Gone"]]);
+    // Renamed: the property rewritten where it is.
+    expect((await cli(["--root", dir, "mv", "Dal.md", "Lentils.md"])).code).toBe(0);
+    expect(readFileSync(join(dir, "x.md"), "utf8")).toStartWith('---\nrelated: "[[Lentils]]"\n');
+  });
+});

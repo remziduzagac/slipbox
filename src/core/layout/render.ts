@@ -11,7 +11,7 @@ import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../width.ts";
 import type { Hashtag } from "../tags.ts";
-import type { WikiLink } from "../wikilink.ts";
+import { parseWikiTarget, type WikiLink } from "../wikilink.ts";
 import { highlight } from "./highlight.ts";
 import { A_BOLD, A_ITALIC, A_STRIKE, type Layout, type LayoutHeading, type LayoutLink, type Line, type LinkStatus, type Span } from "./ir.ts";
 import { allocate, PADDING } from "./table.ts";
@@ -675,9 +675,9 @@ function frontmatterBlock(fm: Frontmatter | null, raw: string, src: number, ctx:
     let line = src + 1;
     for (const key of keys) {
       const value = formatValue(data[key]);
-      const valueRows = wrapSpans([{ text: value, role: "fm_value", attrs: 0 }], Math.max(4, width - keyW - 3));
       const keyLine = findKeyLine(raw, key);
       const ksrc = keyLine >= 0 ? src + 1 + keyLine : line;
+      const valueRows = wrapSpans(propertySpans(value, ksrc, ctx), Math.max(4, width - keyW - 3));
       valueRows.forEach((row, i) => {
         // A key longer than the column is cut with an ellipsis, never silently.
         const k = i === 0 ? padEnd(truncate(sanitize(key), keyW), keyW) : " ".repeat(keyW);
@@ -692,6 +692,27 @@ function frontmatterBlock(fm: Frontmatter | null, raw: string, src: number, ctx:
     if (fm?.error) for (const row of wrapSpans([{ text: sanitize(fm.error), role: "fm_error", attrs: 0 }], Math.max(1, width - 1))) out.push({ spans: [{ text: " ", role: "fm_error", attrs: 0 }, ...row], src });
   }
   out.push({ spans: [{ text: g.rule.repeat(width), role: "fm_border", attrs: 0 }], src: src + raw.split("\n").length + 1 });
+  return out;
+}
+
+/**
+ * A property's value as spans: its text, and each wikilink in it a link (Obsidian's properties:
+ * `related: "[[Plan]]"`), drawn and followed as the text's are.
+ */
+function propertySpans(value: string, src: number, ctx: Ctx): Span[] {
+  const out: Span[] = [];
+  let last = 0;
+  for (const m of value.matchAll(/(!?)\[\[([^[\]\n]+)\]\]/g)) {
+    if (m.index! > last) out.push({ text: value.slice(last, m.index), role: "fm_value", attrs: 0 });
+    const w = parseWikiTarget(m[2]!);
+    const kind = m[1] ? "embed" : "wiki";
+    const s = status(ctx, kind, w.target);
+    const shown = w.alias ?? (w.heading ? `${w.target} › ${w.heading}` : w.block ? `${w.target} ^${w.block}` : w.target);
+    const id = addLink(ctx, { kind, target: w.target, heading: w.heading ?? (w.block ? `^${w.block}` : null), text: shown, status: s, src });
+    out.push({ text: sanitize(shown), role: s === "unresolved" ? "link_unresolved" : s === "ambiguous" ? "link_ambiguous" : "wikilink", attrs: 0, link: id });
+    last = m.index! + m[0].length;
+  }
+  if (last < value.length || !out.length) out.push({ text: value.slice(last), role: "fm_value", attrs: 0 });
   return out;
 }
 

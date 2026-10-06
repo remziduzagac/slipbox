@@ -321,7 +321,9 @@ conventions at the edges". It revises `20.x` above.*
   takes GitHub's slug, repeats numbered (`#setup-1`), and a wikilink the heading's text, as Obsidian reads it — of
   several, the first, and the link check says so (`ambiguous-heading`); a path of headings (`Install#Linux`) each
   inside the one before. Lines: `L42`, `L42-L50`, `L42C5-L45C10`. A `^id` in fenced code is code. Slugs keep marks
-  (GitHub's), so a converted link to a Devanagari heading works on GitHub too.
+  (GitHub's), so a converted link to a Devanagari heading works on GitHub too. **Links in front matter**, as Obsidian's
+  properties have them (`related: "[[Plan]]"`), are links: read where written (a comment's not), backlinked, renamed in
+  place, drawn as links in the properties block, checked.
 - **Links slipbox writes** (`21.5`, 2026-10-06): completion (`](` and `[[`), the link picker (`space l i`) and `slipbox
   link`, which prints one for an agent, all through `core/write-link.ts`. A wikilink is a name only where the name
   reaches the note from the linking file — else its path from the root, never a name that would land elsewhere; a

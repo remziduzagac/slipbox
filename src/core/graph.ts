@@ -10,7 +10,7 @@ import { basename, isAbsolute, join, posix, relative } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
-import type { WikiLink } from "./wikilink.ts";
+import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 import { countForms, type FormCounts } from "./convention.ts";
 import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { extensionless, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
@@ -149,7 +149,7 @@ export interface Backlink {
 }
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-export const INDEX_VERSION = 10; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors
+export const INDEX_VERSION = 11; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links
 
 interface IndexFile {
   version: number;
@@ -1340,6 +1340,21 @@ export function extractText(file: NoteFile, text: string, flags: string[] = [], 
   return e;
 }
 
+/** The wikilinks in a front matter's text (its lines from the note's second), each at its line and column. */
+export function frontmatterLinks(raw: string): LinkRef[] {
+  const out: LinkRef[] = [];
+  raw.split("\n").forEach((text, i) => {
+    if (/^\s*#/.test(text)) return;
+    for (const m of text.matchAll(/(!?)\[\[([^[\]\n]+)\]\]/g)) {
+      const w = parseWikiTarget(m[2]!);
+      if (!w.target && !w.heading && !w.block) continue;
+      const column = m.index! + 1;
+      out.push({ kind: m[1] ? "embed" : "wiki", target: w.target, heading: w.heading, block: w.block, alias: w.alias, text: w.alias ?? w.target, line: i + 2, column, end: { line: i + 2, column: column + m[0].length } });
+    }
+  });
+  return out;
+}
+
 /** A note's title from its file's name: what stands in when it has none of its own. */
 function fileTitle(rel: string): string {
   return basename(rel).replace(/\.(md|markdown)$/i, "");
@@ -1381,6 +1396,10 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
       links.push({ kind: w.embed ? "embed" : "wiki", target: w.target, heading: w.heading, block: w.block, alias: w.alias, text: w.alias ?? w.value, line, column, end: { line: end.line, column: end.column } });
     }
   });
+  // Wikilinks in the front matter's values (Obsidian's properties: `related: "[[Plan]]"`), each where
+  // it's written — read, backlinked and renamed as the text's are; not in a comment. First: they come first.
+  const fmRaw = parsed.frontmatter?.raw;
+  if (fmRaw) links.unshift(...frontmatterLinks(fmRaw));
   const fm = parsed.frontmatter?.data;
   // The frontmatter's first, then the text's, each once (as first written).
   const tags: string[] = [];
