@@ -65,6 +65,9 @@ export function findHeading(headings: Pick<HeadingInfo, "text" | "slug" | "depth
   };
   const found = wiki ? (byText() ?? bySlug()) : (bySlug() ?? byText());
   if (found) return found;
+  // A hosting's own forms (hosting.ts): Bitbucket's `#markdown-header-x`, GitHub's `#readme` (the top).
+  if (fragment.startsWith("markdown-header-")) return findHeading(headings, anchors, fragment.slice("markdown-header-".length), wiki);
+  if (want === "readme") return { line: 1, heading: null, ambiguous: false };
   // A path of headings (Obsidian's `Install#Linux`): each found inside the one before.
   const parts = fragment.split("#").filter((x) => x.trim());
   if (parts.length < 2) return null;

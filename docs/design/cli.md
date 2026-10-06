@@ -295,6 +295,12 @@ two ties make a link **fragile** (a note of the name nearer takes it): `problems
 `fix`, the path that names its note for sure; `diagnostics` too, as `fragile` with `fix{title, text}`. A command that
 makes or removes a note sending links by name elsewhere warns, each: `Home.md:3: [[Pie]] reached X; it reaches Y now`.
 
+**Links to a repository's own hosting** (`core/hosting.ts`): GitHub's `/blob/<ref>/`, `/tree/<ref>/`, `/raw/<ref>/`,
+GitLab's `/-/blob/<ref>/` (groups nested), Bitbucket's `/src/<ref>/` (its `#markdown-header-` headings), a repository's
+own page or `#readme` (its README) — of this checkout's remote, or a named folder's (`21.6`) — are the file in this copy:
+`resolve`, `links` and backlinks read them (`via: "hosting"`), a rename rewrites the URL's path, and another ref than
+the branch checked out is `inferred`, said by `diagnostics` (`other-ref`).
+
 **A folder's name** (`21.6`, `core/folders.ts`): what a pointer names it by (`slipbox://<name>/…`, `21.7`) — the name
 in its `.slipbox/` config, else its repository's remote's last part (`research`); never its folder's own name. `info`
 gives `folder{name, pointer, remote, id, private, copies[{path, seen, here, available}], default}` — `pointer` the

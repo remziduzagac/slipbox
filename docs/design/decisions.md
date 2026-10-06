@@ -327,7 +327,10 @@ conventions at the edges". It revises `20.x` above.*
   `graph.ts` `certainty`): by its path, a path's end, a unique name, an alias, or a tie broken; a tie broken by where the
   link is (the deepest shared folder, the shortest path) is **fragile** — linted with the path that names its note for
   sure, offered as a code action — and a note coming or going that moves a link by name (a namesake, a name an alias
-  had) is said, in the TUI and as the CLI's warning, not only a link that breaks or heals.
+  had) is said, in the TUI and as the CLI's warning, not only a link that breaks or heals. **A link to the
+  repository's own hosting** (`https://github.com/me/repo/blob/main/x.md`, GitLab's, Bitbucket's, its page, `#readme`)
+  is the file in this copy — this checkout's remote, or a named folder's — a backlink, rewritten in place by a rename;
+  another ref than the branch here is inferred and said (`core/hosting.ts`).
 - **Links slipbox writes** (`21.5`, 2026-10-06): completion (`](` and `[[`), the link picker (`space l i`) and `slipbox
   link`, which prints one for an agent, all through `core/write-link.ts`. A wikilink is a name only where the name
   reaches the note from the linking file — else its path from the root, never a name that would land elsewhere; a

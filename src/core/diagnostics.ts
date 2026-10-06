@@ -95,6 +95,8 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
         ...(fixed ? { fix: { title: `Name it for sure: [[${sure}]]`, text: fixed } } : {}),
       });
     }
+    // A link to the repository's hosting at another ref than the branch here: what it shows there may differ.
+    if (l.via === "hosting" && l.hosted && l.resolvedKind !== "unresolved") add(l, "info", "other-ref", `${l.target} names ${l.hosted.ref}; this copy is on ${l.hosted.branch ?? "no branch"}`);
     switch (l.resolvedKind) {
       case "unresolved":
         if (l.reason) add(l, "warning", "unresolved", l.reason);

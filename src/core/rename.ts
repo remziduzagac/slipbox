@@ -22,6 +22,8 @@ import { openVault } from "./reach.ts";
 import { vaultForm } from "./names.ts";
 import { copyAvailable, folderIdentity, pointerName, readFolders, travelTogether } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
+import { parseHosted } from "./hosting.ts";
+import { checkoutOf } from "./git.ts";
 import { findVaultRoot, hasMarker, initVault, isInside, markersAt, type VaultLocation } from "./vault.ts";
 
 export class RenameError extends Error {}
@@ -147,6 +149,17 @@ function pathRetarget(written: string, linkingAbs: string, linkingAfter: string,
   return next + frag;
 }
 
+/** A hosting URL with its path (the part after the ref) for another, encoded as a URL's path is; the rest kept. */
+function hostedPath(url: string, was: string, now: string): string {
+  const enc = (p: string) => p.split("/").map(encodeURIComponent).join("/");
+  const u = new URL(url);
+  const old = enc(was);
+  if (!u.pathname.endsWith(`/${old}`)) return url;
+  const extless = !/\.[A-Za-z0-9]+$/.test(was);
+  u.pathname = u.pathname.slice(0, u.pathname.length - old.length) + enc(extless ? now.replace(NOTE_EXT, "") : now);
+  return u.toString();
+}
+
 /**
  * A markdown link's new URL reaching `toAbs`, in the form it was written (21.2): from the root when it
  * started with `/` and the root holds the target, else relative from the linking file (`./` kept);
@@ -156,6 +169,12 @@ function mdTarget(written: string, linkingAbs: string, toAbs: string, g: Graph |
   const hash = written.indexOf("#");
   const frag = hash >= 0 ? written.slice(hash) : "";
   const path = hash >= 0 ? written.slice(0, hash) : written;
+  // A link to the repository's hosting stays one: the URL, its path to where the file is now.
+  const hosted = /^https?:\/\//i.test(written) ? parseHosted(written) : null;
+  if (hosted?.path) {
+    const top = checkoutOf(toAbs)?.root;
+    if (top && isInside(top, toAbs)) return hostedPath(written, hosted.path, relative(top, toAbs).split("\\").join("/"));
+  }
   // A pointer (21.7) stays one: its name and branch, the path from its folder's root to the file now —
   // without an extension, a folder's `/`, encoded, each as written. Out of that folder, into another
   // named one: a pointer to that one.

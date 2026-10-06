@@ -9,10 +9,12 @@ import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax,
 import { basename, isAbsolute, join, posix, relative } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
-import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
+import { ensureDir, landsInside, readJson, readRegular, readText, SMALL_FILE, writeJson } from "./fsutil.ts";
 import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 import { countForms, type FormCounts } from "./convention.ts";
 import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
+import { parseHosted, readmeAt } from "./hosting.ts";
+import { lookupFolder } from "./folders.ts";
 import { extensionless, type Landed, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type AnchorInfo, anchorsOf, type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
@@ -20,7 +22,8 @@ import { vaultForm } from "./names.ts";
 import { ParseCache, sharedParseCache } from "./parsecache.ts";
 import { cacheDir, stateDir } from "./paths.ts";
 import { checkoutOf, headCommit, headOf } from "./git.ts";
-import { changedBetween, inVault } from "./gitops.ts";
+import { branchesOf, changedBetween, inVault } from "./gitops.ts";
+import { remotesIn } from "./collection.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf, noteFormat } from "./filetypes.ts";
@@ -79,7 +82,7 @@ export type VaultChange = { kind: "changed"; path: string } | { kind: "removed";
 
 /** How a link was resolved when not by the note's own name or path. */
 /** How a link reached its target when not directly: an alias, a pointer's folder by an old name or another copy (21.7)… */
-export type Via = "alias" | "previous-name" | "redirect" | "old-name" | "another-copy";
+export type Via = "alias" | "previous-name" | "redirect" | "old-name" | "another-copy" | "hosting";
 
 export interface ResolvedLink extends LinkRef {
   /** note: a vault note; file: an attachment; folder: a folder (21.2); external: a URL; anchor: within this note. */
@@ -96,6 +99,8 @@ export interface ResolvedLink extends LinkRef {
   gitRef?: { root: string; rel: string; branch: string };
   /** How it landed (`links.ts` `Landed`): a link's own path, a name, a tie broken. */
   how?: Landed;
+  /** A hosting URL (via "hosting") naming another ref than the branch checked out: both. */
+  hosted?: { ref: string; branch: string | null };
 }
 
 /** A link that reached one note and reaches another now, after a note came or went. */
@@ -112,9 +117,10 @@ export interface Retarget {
  * a pointer; `inferred` — a tie broken, a path's end, a folder's old name or another copy; else
  * `ambiguous`, `broken`.
  */
-export function certainty(t: Pick<Target, "resolvedKind" | "how" | "via">): "exact" | "inferred" | "ambiguous" | "broken" {
+export function certainty(t: Pick<Target, "resolvedKind" | "how" | "via" | "hosted">): "exact" | "inferred" | "ambiguous" | "broken" {
   if (t.resolvedKind === "unresolved") return "broken";
   if (t.resolvedKind === "ambiguous") return "ambiguous";
+  if (t.via === "hosting") return t.hosted ? "inferred" : "exact";
   if (t.via === "previous-name" || t.via === "redirect" || t.via === "old-name" || t.via === "another-copy") return "inferred";
   return !t.how || t.how === "path" || t.how === "name" ? "exact" : "inferred";
 }
@@ -125,8 +131,9 @@ export function fragile(t: Pick<Target, "how">): boolean {
 }
 
 /** How a link landed, for people, when it wasn't by its own path: "the nearest of 2 named so". */
-export function describeLanding(t: Pick<Target, "how" | "via" | "candidates">): string | null {
+export function describeLanding(t: Pick<Target, "how" | "via" | "candidates" | "hosted">): string | null {
   const n = t.candidates.length;
+  if (t.via === "hosting") return t.hosted ? `its URL names ${t.hosted.ref}; this copy is on ${t.hosted.branch ?? "no branch"}` : null;
   if (t.via === "alias") return "by an alias";
   if (t.via === "old-name") return "by its folder's old name";
   if (t.via === "another-copy") return "in another copy of its folder";
@@ -938,6 +945,11 @@ export class Graph {
     }
     // A pointer into a named folder (21.7): wherever this machine has it.
     if (isPointer(link.target)) return this.byPointer(link.target, fromRel);
+    // This repository's hosting (a README's `https://github.com/me/repo/blob/main/x.md`): the file here.
+    if (/^https?:\/\//i.test(link.target)) {
+      const hosted = this.byHosting(link.target, fromRel);
+      if (hosted) return hosted;
+    }
     // `/` from the nearest root, every file's (21.2): this graph's root — a plain folder opened has
     // none, and there it's the filesystem's path alone.
     const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index, this.loc.mode !== "folder");
@@ -1016,6 +1028,65 @@ export class Graph {
     if (inside && this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel], ...via };
     if (inside && this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel], ...via };
     return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], vault: t.folder.name, ...via };
+  }
+
+  private remotesCache: string[] | null = null;
+
+  /** This checkout's remotes (`host/path`, lower case): what a hosting URL to it names. */
+  private ownRemotes(): string[] {
+    if (this.remotesCache) return this.remotesCache;
+    const c = checkoutOf(this.root);
+    let config = "";
+    try {
+      if (c) config = readRegular(join(c.common, "config"), SMALL_FILE).toString("utf8");
+    } catch {}
+    this.remotesCache = c ? remotesIn(config, c.main ?? c.root).map((r) => r.toLowerCase()) : [];
+    return this.remotesCache;
+  }
+
+  /**
+   * A link to a repository's hosting (`hosting.ts`): this checkout's own remote, or a named folder's
+   * (21.6) — the file in this copy, a note, file or folder like any link's (a backlink too). Another
+   * ref than the branch checked out is kept, to be said. Null when it isn't one, or names none here.
+   */
+  private byHosting(url: string, fromRel: string): Target | null {
+    const h = parseHosted(url);
+    if (!h) return null;
+    const own = checkoutOf(this.root);
+    let top: string | null = own && this.ownRemotes().includes(h.remote.toLowerCase()) ? own.root : null;
+    if (!top) {
+      const l = lookupFolder(h.remote);
+      if (l.status === "found") top = checkoutOf(l.path)?.root ?? l.path;
+    }
+    if (!top) return null;
+    const c = checkoutOf(top);
+    let ref = h.ref;
+    let path = h.path;
+    // A branch with a `/` (`feature/x`): the longest the repository has, the rest the path.
+    if (ref && c && path && !existsSync(join(top, path))) {
+      const branches = new Set(branchesOf(c) ?? []);
+      const segs = path.split("/");
+      for (let k = segs.length - 1; k >= 1; k--) {
+        if (branches.has([ref, ...segs.slice(0, k)].join("/"))) {
+          ref = [ref, ...segs.slice(0, k)].join("/");
+          path = segs.slice(k).join("/");
+          break;
+        }
+      }
+    }
+    if (!path && !h.folder) path = readmeAt(top) ?? "";
+    const branch = c ? headOf(c).branch : null;
+    const other = ref && ref !== "HEAD" && ref !== branch && !(branch === null && c && headOf(c).commit?.startsWith(ref)) ? { hosted: { ref, branch } } : {};
+    const abs = join(top, path);
+    const hit = pathLink(abs, join(this.root, fromRel || "_"), false, undefined, true);
+    if (!hit) return { resolvedKind: "unresolved", path: null, candidates: [], reason: `no ${path || "folder"} in this copy of ${h.remote}`, via: "hosting", ...other };
+    const rel = relative(this.root, hit.abs);
+    const inside = !rel.startsWith("..") && !isAbsolute(rel);
+    const at = (kind: "note" | "file" | "folder", p: string): Target => ({ resolvedKind: kind, path: p, candidates: [], via: "hosting", ...other });
+    if (hit.folder) return at("folder", inside ? rel || "." : hit.abs);
+    if (inside && this.notes.has(rel)) return at("note", rel);
+    if (inside && this.known(rel)) return at("file", rel);
+    return at(classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", hit.abs);
   }
 
   /** The vaults nested in this one: folders the walk leaves to them. */

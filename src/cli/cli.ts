@@ -603,11 +603,13 @@ const HANDLERS: Record<string, Handler> = {
     // A file:// URL names a file (17.16), a slipbox:// pointer a named folder's (21.7): resolved, not external.
     const fileUrl = /^file:\/\//i.test(inner);
     const pointer = isPointer(inner);
+    // This repository's hosting (`https://github.com/me/repo/blob/main/x.md`): the file here, not a URL to copy.
+    const hosted = /^https?:\/\//i.test(inner) && s.graph.resolveLink({ kind: "markdown", target: inner }, fromArg ? resolveNote(s, fromArg) : "").via === "hosting";
     // `vault:path` (20.20): a file or folder of that vault, by its path there.
     const formed = mdLink || bracketed ? null : fromVaultForm(hash < 0 ? inner : inner.slice(0, hash));
     // A scheme makes it external, with no spaces (a URL has none) and when no note is named so:
     // "Meeting: Q3" is a note.
-    const external = /^[a-z][a-z0-9+.-]*:/i.test(inner) && !fileUrl && !pointer && !formed && (!!mdLink || (/^\S*$/.test(inner) && s.graph.findNote(parts.target, s.io.cwd).status === "unresolved"));
+    const external = /^[a-z][a-z0-9+.-]*:/i.test(inner) && !fileUrl && !pointer && !hosted && !formed && (!!mdLink || (/^\S*$/.test(inner) && s.graph.findNote(parts.target, s.io.cwd).status === "unresolved"));
     // A vault name several vaults have (20.20): each by the name it's shown with, to pick from.
     const choices = formed || mdLink || bracketed ? [] : vaultFormChoices(hash < 0 ? inner : inner.slice(0, hash));
     if (choices.length) {
@@ -632,7 +634,7 @@ const HANDLERS: Record<string, Handler> = {
     } else if (!parts.target && from) {
       status = "resolved";
       path = from;
-    } else if (from || mdLink || pointer) {
+    } else if (from || mdLink || pointer || hosted) {
       // A link written in --from (or at the vault's root): its path — the resolver `links` and the
       // TUI use, so `resolve` is link.follow's CLI equivalent.
       const md = s.graph.resolveLink({ kind: "markdown", target: inner }, from ?? "");

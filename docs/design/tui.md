@@ -434,6 +434,7 @@ Each kind of link does something different when followed:
 | `[t](n.md#setup-1)` | the second "Setup" (GitHub's numbering); an id first (`{#id}`, `<a id>`), then text |
 | `[[n#Setup]]`, `[[n#Install#Linux]]` | the heading by its text (several: the first, said); a path of headings |
 | `[t](run.py#L42)`, `#L42-L50`, `#L42C5-L45C10` | opens the file at line 42 (as in a code comment's `run.py:42`) |
+| `https://github.com/me/repo/blob/main/x.md` | this repository's own: the file in this copy (a backlink); else a URL |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
 | `file://…`, `~/x.md`, `/home/me/x.md` (nothing there in the root) | opens the file, in whichever vault holds it |
 | attachment `![x](x.png)` | copies the path; images are phase 6 |
