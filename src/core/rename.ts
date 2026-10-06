@@ -1141,7 +1141,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
 
 /** Whether a link's `#fragment` names a heading: by its text (any case) or its slug. */
 function namesHeading(fragment: string, text: string): boolean {
-  return fragment.trim().toLowerCase() === text.toLowerCase() || slugify(fragment) === slugify(text);
+  return normKey(fragment.trim()) === normKey(text) || normKey(slugify(fragment)) === normKey(slugify(text));
 }
 
 /**

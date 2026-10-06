@@ -50,9 +50,12 @@ their children out at reduced width and prefix every row, so nesting composes.
 | tag | `#name` in the `tag` role, followable: Obsidian's tags (`1.6`, in `docs/design/decisions.md`) |
 | definition | hidden; reference links resolve through it, the first of a label winning (CommonMark) |
 
-**Headings** are linked to by their text as the outline shows it (inline code included; footnote
-marks and image glyphs left out) and slugged GitHub's way; a repeated heading keeps its plain slug (no `-1` suffix), and
-`#anchor` links find the first. A no-break space (U+00A0, U+2007, U+202F) is never a place to wrap.
+**Headings** are linked to by their text as the outline shows it (inline code included; footnote marks and image glyphs
+left out) and slugged GitHub's way — letters, marks, numbers, `_` and `-` kept, so a Devanagari heading keeps its vowel
+signs — with repeats numbered as GitHub numbers them (`#setup-1` is the second "Setup"). A trailing `{#id …}` (Pandoc,
+MkDocs, Docusaurus) is the heading's explicit id, not drawn; `<a id="x">` and `<a name="x">` are anchors too. Where a
+fragment lands is `core/landing.ts`'s one matcher (`docs/design/tui.md`, "Following links"). A no-break space (U+00A0,
+U+2007, U+202F) is never a place to wrap.
 
 **Inline:** `**strong**` gets the `strong` role, which has an explicitly lighter foreground,
 because bold alone does not read as bold in a terminal (plan `2.7`). Also: `*emphasis*`,

@@ -5,7 +5,8 @@
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, SymbolInformation, TextEdit, WorkspaceEdit, WorkspaceSymbol } from "vscode-languageserver-protocol";
-import { blockLine, landingText } from "../core/landing.ts";
+import { anchorsOf } from "../core/parse.ts";
+import { blockLine, findHeading, landingText, lineFragment } from "../core/landing.ts";
 import { isAbsolute, join, posix, relative } from "node:path";
 import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
@@ -269,7 +270,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
   // A link drawn inside an embed (1.11) is the embedded note's: followed from there.
   const from = link.from ?? view.buf.rel;
   const go = (path: string, heading: string | null) => {
-    const anchor = heading ? (lineAnchor(heading) ?? headingAnchor(a, path, heading)) : undefined;
+    const anchor = heading ? (lineAnchor(heading) ?? headingAnchor(a, path, heading, link.kind === "wiki" || link.kind === "embed")) : undefined;
     if (inSplit) a.otherWindow();
     a.open(path, anchor);
   };
@@ -291,7 +292,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       if (!link.target) {
         // `[[#Heading]]` inside an embed: the embedded note's heading, in it.
         if (link.heading && link.from && link.from !== view.buf.rel) return go(link.from, link.heading);
-        if (link.heading) jumpToHeading(a, view, link.heading);
+        if (link.heading) jumpToHeading(a, view, link.heading, true);
         return;
       }
       if (!from) return a.message("warn", `[[${link.target}]]: links resolve only inside the vault`);
@@ -450,21 +451,24 @@ function fileLink(a: App, rel: string, heading: string | null = null, inSplit = 
   a.message("info", `attachment ${rel} — path copied (images render in a later phase)`);
 }
 
-/** A `#L42` fragment (GitHub's, and a code comment's `path:42`, 16.10): that line. */
+/** A line fragment (GitHub's `L42`, `L42-L50`, `L42C5-L45C10`; a code comment's `path:42`, 16.10): its first line. */
 function lineAnchor(fragment: string): Anchor | undefined {
-  const m = /^L(\d+)$/.exec(fragment);
-  return m ? { heading: null, headingIndex: 0, offset: 0, line: Math.max(1, Number(m[1])) } : undefined;
+  const f = lineFragment(fragment);
+  return f ? { heading: null, headingIndex: 0, offset: 0, line: f.line } : undefined;
 }
 
-function headingAnchor(a: App, path: string, heading: string): Anchor | undefined {
+/** Where a fragment lands in a note (landing.ts: an id, a heading by slug or text, a path of headings), as an anchor. */
+function headingAnchor(a: App, path: string, heading: string, wiki = false): Anchor | undefined {
   // A note of another vault too (17.10): its heading is found in that vault's index.
   const note = a.graph.entryAnywhere(path);
-  const slug = slugify(heading);
-  const h = note?.headings.find((x) => x.slug === slug || x.text.toLowerCase() === heading.toLowerCase());
-  if (!h) {
+  const hit = note ? findHeading(note.headings, note.anchors ?? [], heading, wiki) : null;
+  if (!hit) {
     a.message("warn", `no heading "${heading}" in ${path}`);
     return undefined;
   }
+  if (hit.ambiguous) a.message("info", `${path} has several headings "${heading}": the first`);
+  if (hit.heading === null) return { heading: null, headingIndex: 0, offset: 0, line: hit.line };
+  const h = note!.headings[hit.heading]!;
   const idx = note!.headings.filter((x) => x.slug === h.slug && x.line < h.line).length;
   return { heading: h.slug, headingIndex: idx, offset: 0, line: h.line };
 }
@@ -496,14 +500,23 @@ function pointerHeading(headings: { level: number; text: string }[], pointer: st
   return at;
 }
 
-function jumpToHeading(a: App, view: View, heading: string): void {
+function jumpToHeading(a: App, view: View, heading: string, wiki = false): void {
   const layout = lay(a, view);
-  const slug = slugify(heading);
   const p = heading.startsWith("/") ? pointerHeading(layout.headings, heading) : -1;
-  const h = p >= 0 ? layout.headings[p] : layout.headings.find((x) => x.slug === slug || x.text.toLowerCase() === heading.toLowerCase());
-  if (!h) return a.message("warn", `no heading "${heading}" here`);
+  if (p >= 0) {
+    a.pushHistory(view);
+    return a.moveCursor(view, { row: layout.headings[p]!.line, col: 0 });
+  }
+  // As a link finds one (landing.ts): its id, an anchor (`<a id>`, from the note's parse), its slug, its text.
+  const heads = layout.headings.map((h) => ({ depth: h.level, text: h.text, slug: h.slug, line: h.src, id: h.id }));
+  const anchors = view.buf.kind.group === "note" && view.buf.parsed && !view.buf.parsing ? anchorsOf(view.buf.parsed.tree) : [];
+  const hit = findHeading(heads, anchors, heading, wiki);
+  if (!hit) return a.message("warn", `no heading "${heading}" here`);
+  if (hit.ambiguous) a.message("info", `several headings "${heading}" here: the first`);
   a.pushHistory(view);
-  a.moveCursor(view, { row: h.line, col: 0 });
+  if (hit.heading !== null) return a.moveCursor(view, { row: layout.headings[hit.heading]!.line, col: 0 });
+  const row = layout.lines.findIndex((l) => l.src >= hit.line);
+  a.moveCursor(view, { row: Math.max(0, row), col: 0 });
 }
 
 function cycleLink(a: App, dir: 1 | -1): void {
@@ -1730,8 +1743,11 @@ export function registerActions(app: App): void {
             } catch {}
           }
           const block = frag?.startsWith("^") ? frag.slice(1) : null;
-          const text = landingText(a.graph, path, block ? null : frag, block);
-          const heading = block ? null : (frag && a.graph.entryAnywhere(path)?.headings.find((h) => h.slug === slugify(frag!) || h.text.toLowerCase() === frag!.toLowerCase())?.text) || frag;
+          const wiki = link.kind === "wiki" || link.kind === "embed";
+          const text = landingText(a.graph, path, block ? null : frag, block, undefined, wiki);
+          const entry = frag && !block ? a.graph.entryAnywhere(path) : undefined;
+          const hit = entry && frag ? findHeading(entry.headings, entry.anchors ?? [], frag, wiki) : null;
+          const heading = block ? null : (hit?.heading != null ? entry!.headings[hit.heading]!.text : null) || frag;
           // Titled in its vault form (20.12): its path here, or `vault:path`.
           const shown = isAbsolute(path) ? a.graph.shownPath(path) : path;
           return a.openHover(text ?? "(nothing there)", `${shown}${block ? ` ^${block}` : heading ? ` › ${heading}` : ""}`);

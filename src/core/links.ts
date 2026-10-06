@@ -15,8 +15,13 @@ export type Resolution =
 
 const NOTE_EXT = /\.(md|markdown)$/i;
 
+/**
+ * The key names match by (1.4): NFC, lower case — the Turkish i's folded too, as plain lower case
+ * doesn't: `İ` lowers to `i` and a combining dot (its dot goes), and `ı` is `i`. The exact spelling
+ * still breaks a tie (`pick`).
+ */
 export function normKey(s: string): string {
-  return s.normalize("NFC").toLowerCase();
+  return s.normalize("NFC").toLowerCase().replace(/i\u0307/g, "i").replace(/ı/g, "i");
 }
 
 function stripExt(rel: string): string {

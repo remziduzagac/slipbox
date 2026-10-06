@@ -10,6 +10,7 @@ import type { Graph } from "./graph.ts";
 import type { Layout, LinkStatus } from "./layout/ir.ts";
 import { type RenderCache, type RenderOptions, renderTree } from "./layout/render.ts";
 import { headingText, type ParsedNote, parseMarkdown, slugify } from "./parse.ts";
+import { findHeading } from "./landing.ts";
 import { findVaultRoot } from "./vault.ts";
 
 /** Effective inset: the configured value, but never more than ~5% of a narrow pane, and ≥ 1 (2.7). */
@@ -98,10 +99,12 @@ function parsedAt(abs: string): ParsedNote | null {
 
 /** A heading's section: it and what follows, up to the next heading as high or higher. */
 function sectionOf(tree: Root, heading: string): RootContent[] | null {
-  const want = heading.trim().toLowerCase();
   const kids = tree.children;
-  const at = kids.findIndex((n) => n.type === "heading" && (headingText(n).trim().toLowerCase() === want || slugify(headingText(n)) === slugify(heading)));
-  if (at < 0) return null;
+  // The headings, as a link finds one (landing.ts): by text, slug, id, or a path of them.
+  const heads = kids.flatMap((n, i) => (n.type === "heading" ? [{ i, depth: n.depth, text: headingText(n).trim(), slug: slugify(headingText(n).trim()), line: i, id: (n.data as { id?: string } | undefined)?.id }] : []));
+  const hit = findHeading(heads, [], heading, true);
+  if (!hit || hit.heading === null) return null;
+  const at = heads[hit.heading]!.i;
   const depth = (kids[at] as Heading).depth;
   const end = kids.findIndex((n, i) => i > at && n.type === "heading" && n.depth <= depth);
   return kids.slice(at, end < 0 ? undefined : end);

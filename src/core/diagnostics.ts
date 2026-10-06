@@ -5,7 +5,7 @@
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, posix } from "node:path";
 import type { Graph, LinkRef, Pos } from "./graph.ts";
-import { landingLine } from "./landing.ts";
+import { landing, lineFragment } from "./landing.ts";
 import type { LintIssue } from "./lint.ts";
 import { unavailable } from "./registry.ts";
 import type { SyntaxError } from "./syntax.ts";
@@ -90,10 +90,13 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
         break;
       case "note":
       case "anchor": {
-        if ((!frag && !l.block) || (frag && /^L\d+$/.test(frag))) break;
+        if ((!frag && !l.block) || (frag && lineFragment(frag))) break;
         const path = l.resolvedKind === "anchor" ? rel : l.path!;
-        if (landingLine(g, path, frag, l.block) !== null) break;
         const where = l.resolvedKind === "anchor" ? "this note" : isAbsolute(path) ? posix.basename(path) : path;
+        const hit = landing(g, path, frag, l.block, wiki);
+        // A heading named by its text, several of that text: the first is meant — said, never silent.
+        if (hit?.ambiguous) add(l, "info", "ambiguous-heading", `several headings "${frag}" in ${where}: this link reaches the first`);
+        if (hit) break;
         const block = l.block ?? (frag!.startsWith("^") ? frag!.slice(1) : null);
         if (block) add(l, "warning", "no-block", `no block ^${block} in ${where}`);
         else add(l, "warning", "no-heading", `no heading "${frag}" in ${where}`);

@@ -151,7 +151,9 @@ never a way to resolve.*
 
 One policy everywhere, never the filesystem's:
 
-- **Case-insensitive**, after Unicode NFC. `[[Readme]]` resolves to `readme.md` on the Mac and on beaver alike.
+- **Case-insensitive**, after Unicode NFC. `[[Readme]]` resolves to `readme.md` on the Mac and on beaver alike. The
+  Turkish i's fold too (2026-10-06): `İ` lowers to `i` with a combining dot, which goes, and `ı` is `i` — so `[[izmir]]`
+  finds `İzmir.md` and `[[ILIK]]` `ılık.md`; the exact spelling still breaks a tie (`links.ts` `normKey`).
 - **Forms.** `[[name]]` matches file basenames without extension. `[[dir/name]]` matches a path suffix aligned on
   segments. `[[name.md]]` is accepted. `#heading`, `^block` and `|alias` are split off first; `\|` is an alias
   divider too, because that is how a wikilink is written inside a table cell.
@@ -314,6 +316,12 @@ conventions at the edges". It revises `20.x` above.*
   pointer. Followed: an unknown name or a gone copy says why, never offering a note by that name; a name of different
   `.slipbox/` folders lists each, and renaming one (the parent folder's name prefixed, the config edit previewed); a
   pointer from a file of no root follows like a URL. A wikilink root writes a pointer as a markdown link.
+- **Where a fragment lands** (2026-10-06, from trailscout's review): one matcher (`core/landing.ts`) for the follow,
+  the hover, the link check and the CLI. Explicit ids first (`{#id}`, `<a id>`, `<a name>`); then a markdown link
+  takes GitHub's slug, repeats numbered (`#setup-1`), and a wikilink the heading's text, as Obsidian reads it — of
+  several, the first, and the link check says so (`ambiguous-heading`); a path of headings (`Install#Linux`) each
+  inside the one before. Lines: `L42`, `L42-L50`, `L42C5-L45C10`. A `^id` in fenced code is code. Slugs keep marks
+  (GitHub's), so a converted link to a Devanagari heading works on GitHub too.
 - **Links slipbox writes** (`21.5`, 2026-10-06): completion (`](` and `[[`), the link picker (`space l i`) and `slipbox
   link`, which prints one for an agent, all through `core/write-link.ts`. A wikilink is a name only where the name
   reaches the note from the linking file — else its path from the root, never a name that would land elsewhere; a

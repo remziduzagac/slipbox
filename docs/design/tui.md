@@ -431,7 +431,9 @@ Each kind of link does something different when followed:
 | `[t](slipbox://kestrel@agent/x.md)` | that branch's checkout or worktree; else the file from git, read-only |
 | `[[name]]`, `[[name#h]]`, `![[dal.png]]` | within its root (`21.3`): name, path or alias; a tie lists them |
 | `[t](other.md#frag)` | opens relative to the note; `#^id` at the block (`20.1`); a bad `%` read as written |
-| `[t](run.py#L42)` | opens the file at line 42 (as in a code comment's `run.py:42`) |
+| `[t](n.md#setup-1)` | the second "Setup" (GitHub's numbering); an id first (`{#id}`, `<a id>`), then text |
+| `[[n#Setup]]`, `[[n#Install#Linux]]` | the heading by its text (several: the first, said); a path of headings |
+| `[t](run.py#L42)`, `#L42-L50`, `#L42C5-L45C10` | opens the file at line 42 (as in a code comment's `run.py:42`) |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
 | `file://…`, `~/x.md`, `/home/me/x.md` (nothing there in the root) | opens the file, in whichever vault holds it |
 | attachment `![x](x.png)` | copies the path; images are phase 6 |

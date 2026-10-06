@@ -14,7 +14,7 @@ import type { WikiLink } from "./wikilink.ts";
 import { countForms, type FormCounts } from "./convention.ts";
 import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { extensionless, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
-import { type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
+import { type AnchorInfo, anchorsOf, type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
 import { vaultForm } from "./names.ts";
 import { ParseCache, sharedParseCache } from "./parsecache.ts";
@@ -55,6 +55,8 @@ export interface NoteEntry {
   rel: string;
   title: string;
   headings: HeadingInfo[];
+  /** HTML anchors (`<a id>`) a fragment may name (an entry from an older index has none). */
+  anchors?: AnchorInfo[];
   links: LinkRef[];
   tags: string[];
   /** Frontmatter `aliases` (and `alias`): names `[[…]]` reaches the note by, like its own (17.7). */
@@ -147,7 +149,7 @@ export interface Backlink {
 }
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-export const INDEX_VERSION = 9; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3)
+export const INDEX_VERSION = 10; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors
 
 interface IndexFile {
   version: number;
@@ -1322,6 +1324,7 @@ export function extractText(file: NoteFile, text: string, flags: string[] = [], 
       rel: file.rel,
       title: hit.title ?? fileTitle(file.rel),
       headings: hit.headings as HeadingInfo[],
+      anchors: (hit.anchors ?? []) as AnchorInfo[],
       links: hit.links as LinkRef[],
       tags: hit.tags,
       aliases: hit.aliases,
@@ -1333,7 +1336,7 @@ export function extractText(file: NoteFile, text: string, flags: string[] = [], 
     };
   }
   const e = extractFromSource(file, text, flags, chunks);
-  cache?.put(key, { title: ownTitle.get(e) ? e.title : null, headings: e.headings, links: e.links, tags: e.tags, aliases: e.aliases, previous: e.previous });
+  cache?.put(key, { title: ownTitle.get(e) ? e.title : null, headings: e.headings, anchors: e.anchors ?? [], links: e.links, tags: e.tags, aliases: e.aliases, previous: e.previous });
   return e;
 }
 
@@ -1394,6 +1397,7 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
     rel: file.rel,
     title: own || fileTitle(file.rel),
     headings: headingsOf(parsed.tree),
+    anchors: anchorsOf(parsed.tree),
     links,
     tags,
     aliases: names(fm?.aliases ?? fm?.alias),

@@ -7598,6 +7598,24 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect((await harness({ root: g.b, open: "n.md" })).app.overlay).toBeNull();
   });
 
+  test("fragments followed as a link finds them: GitHub's #setup-1, a heading path, an <a id> in the same note", async () => {
+    const root = mkdtempSync(join(sandbox, "frag-"));
+    mkdirSync(join(root, ".slipbox"));
+    writeFileSync(join(root, "n.md"), "# N\n\n## Setup\n\none\n\n## Setup\n\ntwo\n\n## Install\n\n### Linux\n\nlx\n");
+    writeFileSync(join(root, "a.md"), "# A\n\n[second](n.md#setup-1) [[n#Install#Linux]] [faq](#faq)\n\nfiller\n\n<a id=\"faq\"></a>\n\nQ and A.\n");
+    const h = await harness({ root, open: "a.md" });
+    const src = () => h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!.src;
+    await h.keys("g", "g", "tab", "enter");
+    expect(h.app.view!.buf.rel).toBe("n.md");
+    expect(src()).toBe(7);
+    await h.keys("ctrl+o", "g", "g", "tab", "tab", "enter");
+    expect(h.app.view!.buf.rel).toBe("n.md");
+    expect(src()).toBe(13);
+    await h.keys("ctrl+o", "g", "g", "tab", "tab", "tab", "enter");
+    expect(h.app.view!.buf.rel).toBe("a.md");
+    expect(src()).toBe(7); // the anchor's own line
+  });
+
   test("a pointer followed (21.7): into another named folder, at its heading; by an old name, said; two folders of the name, picked — or one renamed", async () => {
     const { recordFolder } = await import("../src/core/folders.ts");
     const tag = basename(mkdtempSync(join(sandbox, "pt-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();

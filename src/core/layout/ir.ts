@@ -72,6 +72,8 @@ export interface LayoutHeading {
   level: number;
   text: string;
   slug: string;
+  /** An explicit id (`## Setup {#setup}`). */
+  id?: string;
   /** Row index in Layout.lines. */
   line: number;
   src: number;

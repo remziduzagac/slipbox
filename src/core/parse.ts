@@ -308,6 +308,23 @@ function shifted<T>(nodes: T[], delta: number): T[] {
  * wrote the brackets to be read, not a callout. Only the source tells (the escape is gone from the
  * text), so it's marked here, while the offsets are there.
  */
+/** A heading's trailing `{#id …}` (Pandoc's attributes): its id, kept on the node, the text without it. */
+function markHeadingIds(nodes: unknown[]): void {
+  for (const n of nodes) {
+    const node = n as Nodes;
+    if (node.type === "heading") {
+      const last = node.children[node.children.length - 1];
+      const m = last?.type === "text" ? /\s*\{#([^\s{}#]+)(?:\s[^{}]*)?\}\s*$/.exec(last.value) : null;
+      if (last?.type === "text" && m) {
+        last.value = last.value.slice(0, m.index);
+        ((node.data ??= {}) as { id?: string }).id = m[1]!;
+      }
+      continue;
+    }
+    if ("children" in node) markHeadingIds(node.children);
+  }
+}
+
 function markLiteralQuotes(nodes: unknown[], text: string): void {
   for (const n of nodes) {
     const node = n as Nodes;
@@ -405,6 +422,7 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
       const kids = stubs.length ? root.children.filter((n) => !isStub(n)) : root.children;
       const stubbed = !stubs.length || root.children.length - kids.length === stubs.length;
       markLiteralQuotes(kids, text);
+      markHeadingIds(kids);
       dropOffsets(kids);
       for (const k of kids) (k as unknown as Record<symbol, object>)[ORIGIN] = {};
       entry = { children: from - pre ? shifted(kids, from - pre) : kids, shift: from, stubbed };
@@ -497,9 +515,29 @@ export function visit(node: Nodes, fn: (node: Nodes, parent: Nodes | null) => bo
 export interface HeadingInfo {
   depth: number;
   text: string;
+  /** Its slug as GitHub makes it, before repeats are numbered (`landing.ts` numbers them). */
   slug: string;
   /** 1-based source line. */
   line: number;
+  /** An explicit id (`## Setup {#setup}`: Pandoc's, MkDocs', Docusaurus'), its text without it. */
+  id?: string;
+}
+
+/** An HTML anchor in a note (`<a id="x">`, `<a name="x">`, a README's): a fragment lands on its line. */
+export interface AnchorInfo {
+  id: string;
+  line: number;
+}
+
+/** Every HTML anchor (`<a id="x">`, `<a name="x">`) in a note's text, with its line. */
+export function anchorsOf(tree: Root): AnchorInfo[] {
+  const out: AnchorInfo[] = [];
+  visit(tree, (node) => {
+    if (node.type === "code") return false;
+    if (node.type !== "html") return;
+    for (const m of node.value.matchAll(/<a\s[^>]*?\b(?:id|name)\s*=\s*["']([^"']+)["']/gi)) out.push({ id: m[1]!, line: node.position?.start.line ?? 1 });
+  });
+  return out;
 }
 
 /** GitHub-style slug; also what `[[note#heading]]` compares against. */
@@ -508,7 +546,8 @@ export function slugify(text: string): string {
     .normalize("NFC")
     .toLowerCase()
     .trim()
-    .replace(/[^\p{L}\p{N}\s_-]/gu, "")
+    // GitHub's: letters, marks (a Devanagari vowel sign, the dot `İ` lowers to), numbers, `_`, `-`.
+    .replace(/[^\p{L}\p{M}\p{N}\p{Pc}\s-]/gu, "")
     .replace(/\s/g, "-");
 }
 
@@ -517,7 +556,8 @@ export function headingsOf(tree: Root): HeadingInfo[] {
   visit(tree, (node) => {
     if (node.type === "heading") {
       const text = headingText(node);
-      out.push({ depth: node.depth, text, slug: slugify(text), line: node.position?.start.line ?? 1 });
+      const id = (node.data as { id?: string } | undefined)?.id;
+      out.push({ depth: node.depth, text, slug: slugify(text), line: node.position?.start.line ?? 1, ...(id ? { id } : {}) });
       return false;
     }
     if (node.type === "code" || node.type === "html") return false;

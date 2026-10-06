@@ -31,6 +31,7 @@ import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
 import { headingsOf, parseAround, type ParsedNote, slugify } from "../core/parse.ts";
+import { findHeading, headingFragment } from "../core/landing.ts";
 import { addFootnote, applyEdits, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { parseNoteFile } from "../core/readers.ts";
 import { dataOutline, parseData } from "../core/data.ts";
@@ -647,14 +648,17 @@ const HANDLERS: Record<string, Handler> = {
       }
     }
     let line: number | null = null;
+    // The heading's fragment as a link writes it (its id, or GitHub's numbered slug).
+    let fragment: string | null = null;
     const entry = path && parts.heading && status === "resolved" ? s.graph.entryAnywhere(path) : undefined;
     if (entry) {
-      const h = entry.headings.find((x) => x.slug === slugify(parts.heading!) || x.text.toLowerCase() === parts.heading!.toLowerCase());
-      line = h?.line ?? null;
+      const hit = findHeading(entry.headings, entry.anchors ?? [], parts.heading!, bracketed);
+      line = hit?.line ?? null;
+      if (hit) fragment = hit.anchor ?? (hit.heading !== null ? headingFragment(entry.headings, hit.heading) : null);
     }
     const abs = path && status !== "external" ? (isAbsolute(path) ? path : s.graph.abs(path)) : null;
     // With --from, the link to write there (20.20): the relative path, as a link carries it.
-    const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${slugify(parts.heading)}` : ""}` : null;
+    const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${fragment ?? slugify(parts.heading)}` : ""}` : null;
     const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, vault: found?.vault ?? formedVault, reason: found?.reason ?? null, ...(found?.gitRef ? { git: found.gitRef } : {}) };
     if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`, EXIT.ambiguous, data);
     if (status === "unresolved") throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);

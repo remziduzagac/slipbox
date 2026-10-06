@@ -10,7 +10,7 @@
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import type { Graph, LinkRef, ResolvedLink } from "./graph.ts";
-import { blockLine } from "./landing.ts";
+import { blockLine, findHeading, headingFragment, lineFragment } from "./landing.ts";
 import { parseLegacy, slugify, visit } from "./parse.ts";
 import { readText } from "./fsutil.ts";
 import { type Ambiguous, Collector, dirtyTrees, type RenamePlan } from "./rename.ts";
@@ -169,15 +169,15 @@ function wikiJob(g: Graph, rel: string, l: ResolvedLink, picks: Map<string, stri
     if (blockLine(g, path!, l.block) === null) return skip(l, `${written}: no block ^${l.block} there — left as it is`);
     frag = `#^${l.block}`;
   } else if (l.heading) {
-    if (/^L\d+$/.test(l.heading)) frag = `#${l.heading}`;
+    if (lineFragment(l.heading)) frag = `#${l.heading}`;
     else if (/\.(md|markdown)$/i.test(path!)) {
       const entry = g.entryAnywhere(path!);
-      const want = slugify(l.heading);
-      const h = entry?.headings.find((x) => x.slug === want || x.text.toLowerCase() === l.heading!.toLowerCase());
-      if (!h) return skip(l, `${written}: no heading "${l.heading}" there — left as it is`);
-      // A heading of nothing a slug keeps (`## 🎉`): no fragment can reach it.
-      if (!h.slug) return skip(l, `${written}: the heading "${l.heading}" has no slug to link to — left as it is`);
-      frag = `#${h.slug}`;
+      const hit = entry ? findHeading(entry.headings, entry.anchors ?? [], l.heading, true) : null;
+      if (!hit) return skip(l, `${written}: no heading "${l.heading}" there — left as it is`);
+      // Its id, or its slug as GitHub numbers repeats; a heading of nothing a slug keeps (`## 🎉`): no fragment reaches it.
+      const to = hit.anchor ?? (hit.heading !== null ? headingFragment(entry!.headings, hit.heading) : "");
+      if (!to) return skip(l, `${written}: the heading "${l.heading}" has no slug to link to — left as it is`);
+      frag = `#${to}`;
     } else frag = `#${urlPath(l.heading)}`; // a PDF's page, or the like: as written
   }
   // The URL: the target's path from the note's folder; a link within the note, its fragment alone.

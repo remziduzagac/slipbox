@@ -12,13 +12,15 @@ import type { Statement } from "better-sqlite3";
 import { type Database, Sqlite } from "./sqlite.ts";
 
 /** The cache's own shape: bumped with it, the cache starts again. */
-const PARSE_CACHE_VERSION = 1;
+const PARSE_CACHE_VERSION = 2; // 2: a heading's `{#id}` kept (its text without it)
 
 /** A note's parsed content: nothing about where it is, or what it's called. */
 export interface ParsedContent {
   /** Its own title (frontmatter, else its first `#` heading); null: its file's name stands in. */
   title: string | null;
   headings: unknown[];
+  /** HTML anchors (`<a id>`): none in a record from before they were kept. */
+  anchors?: unknown[];
   links: unknown[];
   tags: string[];
   aliases: string[];

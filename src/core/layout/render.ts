@@ -278,7 +278,7 @@ function joined(prev: RootContent | undefined, node: RootContent): boolean {
 function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Frontmatter | null): Line[] | null {
   switch (node.type) {
     case "heading":
-      return heading(node.depth, node.children, srcOf(node), ctx, width);
+      return heading(node.depth, node.children, srcOf(node), ctx, width, (node.data as { id?: string } | undefined)?.id);
     case "paragraph":
       return paragraph(node.children, srcOf(node), ctx, width, base);
     case "thematicBreak":
@@ -334,7 +334,7 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
   }
 }
 
-function heading(depth: number, children: PhrasingContent[], src: number, ctx: Ctx, width: number): Line[] {
+function heading(depth: number, children: PhrasingContent[], src: number, ctx: Ctx, width: number, id?: string): Line[] {
   const role = `h${Math.min(6, Math.max(1, depth))}` as Role;
   const g = ctx.opts.glyphs;
   const icon = g.mode === "nerd" ? g.heading[depth - 1]! : `${g.heading[depth - 1]} `;
@@ -344,7 +344,7 @@ function heading(depth: number, children: PhrasingContent[], src: number, ctx: C
   // them apart (anchors count it), so [[#A-1]] is the heading "A-1", never the second "A".
   const text = headingText({ type: "heading", depth: depth as Heading["depth"], children }).replace(/\s+/g, " ").trim();
   const slug = slugify(text);
-  const idx = ctx.headings.push({ level: depth, text, slug, src }) - 1;
+  const idx = ctx.headings.push({ level: depth, text, slug, src, ...(id ? { id } : {}) }) - 1;
   const iconW = stringWidth(icon);
   const rows = wrapSpans(spans, width - iconW);
   return rows.map((row, i) => ({
