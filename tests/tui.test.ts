@@ -5891,6 +5891,32 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.otherRoots()).toEqual([]); // around it: the tree is in it
   });
 
+  test("the explorer's roots (21.9): a loose file open beside the root brings its folder, gone when none of its files is shown", async () => {
+    const root = makeVault();
+    const loose = mkdtempSync(join(sandbox, "beside-"));
+    writeFileSync(join(loose, "l.md"), "# Loose\n");
+    writeFileSync(join(loose, "m.md"), "# More\n");
+    writeFileSync(join(root, "beside.md"), `# Beside\n\n[l](${join(loose, "l.md")})\n`);
+    const h = await harness({ root, open: "beside.md" });
+    expect(h.app.otherRoots()).toEqual([]);
+    // Followed to: a loose file opens beside, as it is.
+    await h.keys("tab", "enter");
+    expect(h.app.loc.root).toBe(root);
+    expect(h.app.view?.buf.abs).toBe(join(loose, "l.md"));
+    expect(h.app.otherRoots()).toEqual([loose]);
+    const row = h.app.explorerRows().find((r) => r.kind === "root" && r.path === loose);
+    expect(row).toMatchObject({ root: { kind: "folder", abs: loose, other: true } });
+    // Another of its files open too: one folder; the first closed, still there; the last closed, gone.
+    h.app.openInNewTab(join(loose, "m.md"));
+    expect(h.app.otherRoots()).toEqual([loose]);
+    await h.app.run("tab.close");
+    expect(h.app.otherRoots()).toEqual([loose]);
+    await h.app.run("history.back"); // the window back at beside.md: none of its files shown any more
+    expect(h.app.view?.buf.rel).toBe("beside.md");
+    expect(h.app.otherRoots()).toEqual([]);
+    expect(h.app.explorerRows().some((r) => r.path === loose)).toBe(false);
+  });
+
   test("following a path link into another vault, at a heading, switches the TUI into it; back returns (17.10)", async () => {
     const { notes, app, n } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
@@ -5899,7 +5925,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.loc.name).toBe(`tapp${n}`);
     expect(h.app.view!.buf.rel).toBe("design.md");
     expect(h.app.view!.curAnchor.anchor.line).toBe(5); // at ## Goals
-    expect(h.app.messages.some((m) => m.text === `vault tapp${n} — ${app}`)).toBe(true);
+    expect(h.app.messages.some((m) => m.text === `tapp${n} — ${app}`)).toBe(true);
     expect(h.app.graph.root).toBe(app);
     expect(h.frame()).toContain("Design");
     // The first place in this vault: back goes to the vault before, at the link.
@@ -5979,7 +6005,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.loc).toMatchObject({ mode: "vault", root: join(dir, "box") });
   });
 
-  test("a note in a git repository opens the repository as its vault: nothing offered, nothing written (20.3)", async () => {
+  test("a note in a git repository opens the repository as its root: nothing offered, nothing written (20.3)", async () => {
     const { folderAt, locateVault } = await import("../src/core/vault.ts");
     const repo = join(mkdtempSync(join(sandbox, "repo-")), "alpha");
     mkdirSync(join(repo, "docs"), { recursive: true });
@@ -5987,7 +6013,7 @@ describe("vaults in the TUI (17.x)", () => {
     writeFileSync(join(repo, "docs", "readme.md"), "# Readme\n\n[top](../top.md)\n");
     writeFileSync(join(repo, "top.md"), "# Top\n");
     const h = await harness({ loc: locateVault({ path: join(repo, "docs", "readme.md") }), open: "docs/readme.md" });
-    expect(h.app.loc).toMatchObject({ mode: "vault", root: repo, name: "alpha" });
+    expect(h.app.loc).toMatchObject({ mode: "vault", root: repo, name: null }); // no remote: unnamed (21.6)
     expect(h.app.overlay).toBeNull();
     expect(h.app.graph.notes.has("top.md")).toBe(true); // the whole repository, from its top
     expect(existsSync(join(repo, ".slipbox"))).toBe(false);
@@ -6004,7 +6030,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(existsSync(join(loose, ".slipbox", "config.toml"))).toBe(true);
   });
 
-  test("opened on a loose folder, the known vaults come first; space v v lists them anywhere (17.14)", async () => {
+  test("opened on a loose folder, the named folders come first, seen last first; space v v lists them anywhere (17.14, 21.10)", async () => {
     const { notes, app, n } = await twoVaults();
     const { folderAt } = await import("../src/core/vault.ts");
     const dir = mkdtempSync(join(sandbox, "launch-"));
@@ -6156,10 +6182,10 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "rename notes/beta.md to: ", text: "beta" });
   });
 
-  test("renaming the vault, and relinking a moved note's links, from the TUI", async () => {
+  test("naming the folder anew, and relinking a moved note's links, from the TUI", async () => {
     const { notes, n } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
-    await h.app.run(`vault.rename tnotes${n}b`);
+    await h.app.run(`folder.name tnotes${n}b`);
     await h.keys("enter");
     expect(h.app.loc.name).toBe(`tnotes${n}b`);
     expect(readFileSync(join(notes, ".slipbox", "config.toml"), "utf8")).toContain(`previous_names = ["tnotes${n}"]`);
@@ -6544,16 +6570,16 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(h.app.explorerRows().some((r) => r.path === "box" && r.root?.kind === "vault")).toBe(true);
   });
 
-  test("v makes a folder a vault (its name asked, the links previewed); V makes it a plain folder again (18.11)", async () => {
+  test("v gives a folder .slipbox/ (its name asked, the links previewed); V makes it a plain folder again (18.11, 21.10)", async () => {
     const root = makeVault();
     const h = await at(root, "notes");
     const index = () => readFileSync(join(root, "index.md"), "utf8");
     const before = index();
     await h.keys("v");
-    expect(prompt(h)).toMatchObject({ label: "make notes/ a vault named: ", text: "fixture-notes" });
+    expect(prompt(h)).toMatchObject({ label: "give notes/ its .slipbox/, called (empty: no name): ", text: "fixture-notes" });
     await h.keys("enter");
     const preview = h.app.overlay as ListOverlay;
-    expect(preview.title).toMatch(/^notes\/ → the vault fixture-notes: \d+ changes? in \d+ files?/);
+    expect(preview.title).toMatch(/^notes\/ → a root of its own, called fixture-notes: \d+ changes? in \d+ files?/);
     expect(existsSync(join(root, "notes", ".slipbox"))).toBe(false); // nothing yet
     await h.keys("enter");
     expect(existsSync(join(root, "notes", ".slipbox", "config.toml"))).toBe(true);
@@ -6563,15 +6589,21 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     const row = h.app.explorerRows()[h.app.sidebar.selected]!;
     expect(row).toMatchObject({ path: "notes", kind: "root" });
     expect(h.app.graph.notes.has("notes/alpha.md")).toBe(false);
-    expect(h.app.messages.at(-1)!.text).toMatch(/^made notes\/ the vault fixture-notes/);
+    expect(h.app.messages.at(-1)!.text).toMatch(/^made notes\/ a root of its own, called fixture-notes/);
     // V: back.
     await h.keys("shift+v");
-    expect((h.app.overlay as ListOverlay).title).toMatch(/^the vault notes\/ → a folder of fixture/);
+    expect((h.app.overlay as ListOverlay).title).toMatch(/^notes\/ → a plain folder of fixture/);
     await h.keys("enter");
     expect(existsSync(join(root, "notes", ".slipbox"))).toBe(false);
     expect(index()).toBe(before);
     expect(h.app.graph.notes.has("notes/alpha.md")).toBe(true);
     expect(h.app.explorerRows()[h.app.sidebar.selected]).toMatchObject({ path: "notes", kind: "dir" });
+    // The name cleared: a root of its own, unnamed (21.10).
+    await h.keys("v");
+    (h.app.overlay as { text: string }).text = "";
+    await h.keys("enter");
+    expect((h.app.overlay as ListOverlay).title).toMatch(/^notes\/ → a root of its own: /);
+    await h.keys("escape");
     // On a note, and on a vault for v: said so.
     h.app.selectInExplorer("notes/alpha.md");
     await h.keys("v");
@@ -6589,7 +6621,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     };
     expect(await group("n")).toMatchObject({ n: "New note", m: "Rename or move the note", "shift+m": "Move the note to a folder…", d: "Delete the note", y: "Copy the note, to paste", x: "Cut the note, to paste", "shift+y": "Duplicate the note" });
     expect(await group("d")).toMatchObject({ n: "New folder", r: "Rename the folder", m: "Move the folder…", d: "Delete the folder", y: "Copy the folder, to paste", x: "Cut the folder, to paste", p: "Paste into the folder" });
-    expect(await group("v")).toMatchObject({ m: "Make a vault", "shift+m": "Make the vault a plain folder", n: "Rename the vault", t: "The trash", u: "Restore the last deleted", v: "Switch vault" });
+    expect(await group("v")).toMatchObject({ m: "Give a folder .slipbox/", "shift+m": "Take .slipbox/ away", n: "Name this folder, as pointers name it", t: "The trash", u: "Restore the last deleted", v: "Folders: go into a named one", "shift+v": "Which copy a folder's links open" });
     expect(await group("v")).not.toHaveProperty("d"); // a new folder is space d n now
     // From the note: it, its folder, this vault.
     await h.keys("space", "n", "shift+m");
@@ -6603,7 +6635,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("escape", "space", "n", "y", "space", "d", "p");
     expect(existsSync(join(root, "notes", "alpha-copy.md"))).toBe(true);
     await h.keys("space", "v", "m");
-    expect(prompt(h)).toMatchObject({ label: "make notes/ a vault named: " });
+    expect(prompt(h)).toMatchObject({ label: "give notes/ its .slipbox/, called (empty: no name): " });
     await h.keys("escape", "space", "n", "d", "y");
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
     await h.keys("space", "v", "u");
@@ -6623,12 +6655,12 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await e.keys("escape", "space", "n", "d");
     expect(e.app.messages.at(-1)!.text).toContain("space n acts on a note");
     await e.keys("space", "v", "m");
-    expect(prompt(e).label).toBe("make projects/ a vault named: ");
+    expect(prompt(e).label).toBe("give projects/ its .slipbox/, called (empty: no name): ");
     const v = await at(root, "nested-vault");
     await v.keys("space", "v", "n");
     expect(prompt(v).label).toBe("rename the vault fixture-nested to: ");
     await v.keys("escape", "space", "v", "shift+m");
-    expect((v.app.overlay as ListOverlay).title).toMatch(/^the vault nested-vault\/ → a folder of fixture/);
+    expect((v.app.overlay as ListOverlay).title).toMatch(/^nested-vault\/ → a plain folder of fixture/);
   });
 
   test("space v shift+m inside a vault nested in another: made a plain folder of it, and into it, the note still open (18.13)", async () => {
@@ -6637,7 +6669,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     const h = await harness({ root: join(root, "nested-vault"), open: "inner.md" });
     expect(h.app.loc.name).toBe("fixture-nested");
     await h.keys("space", "v", "shift+m");
-    expect((h.app.overlay as ListOverlay).title).toMatch(/^the vault nested-vault\/ → a folder of fixture/);
+    expect((h.app.overlay as ListOverlay).title).toMatch(/^nested-vault\/ → a plain folder of fixture/);
     await h.keys("enter");
     expect(existsSync(join(root, "nested-vault", ".slipbox"))).toBe(false);
     expect(h.app.loc.root).toBe(root);
@@ -6949,7 +6981,7 @@ describe("the Info view (3.19)", () => {
   };
   const rows = (h: Harness) => h.app.infoRows().map((r) => (r.heading ? `# ${r.key}` : `${"  ".repeat(r.depth)}${r.key}: ${r.value}`));
 
-  test("space n i: the file on screen — where, which vault, its counts and state; its properties, tags and links; the rail's button above ▤", async () => {
+  test("space n i: the file on screen — where, which root, its counts and state; its properties, tags and links; the rail's button above ▤", async () => {
     const h = await setup();
     await h.keys("space", "n", "i");
     expect(h.app.rightView).toBe("info");
@@ -6957,7 +6989,7 @@ describe("the Info view (3.19)", () => {
     const r = rows(h);
     expect(r).toContain("path: info.md");
     // Qualified by its folder when other copies are known (20.6).
-    expect(r.find((row) => row.startsWith("vault: "))).toMatch(/^vault: (vault-\w+\.)?fixture$/);
+    expect(r.find((row) => row.startsWith("root: "))).toBe("root: fixture"); // its name, as pointers give it (21.9)
     expect(r).toContain("kind: note (markdown)");
     expect(r).toContain("state: saved");
     expect(r.slice(r.indexOf("# Properties"), r.indexOf("# Tags"))).toEqual(["# Properties", "title: Planning", "owner: ", "  name: Rosa", "  desk: 2", "tags: Plan"]);
@@ -7479,23 +7511,6 @@ describe("the background auto-index in the TUI (20.9)", () => {
     h.app.config.index.background = false;
     expect(h.app.autoIndexDue(now)).toBe(false);
   });
-
-  test("the vault list: those opened first, then those the auto-index only found", async () => {
-    const { recordVault } = await import("../src/core/registry.ts");
-    const base = mkdtempSync(join(sandbox, "foundlist-"));
-    const [opened, found] = ["opened", "found"].map((d) => join(base, d)) as [string, string];
-    for (const d of [opened, found]) mkdirSync(join(d, ".slipbox"), { recursive: true });
-    const tag = basename(base);
-    recordVault({ key: `${tag}-o`, id: null, kind: "vault", name: `${tag}-o`, aliases: [], previous_names: [], path: opened }, new Date(Date.now() - 60_000));
-    recordVault({ key: `${tag}-f`, id: null, kind: "vault", name: `${tag}-f`, aliases: [], previous_names: [], path: found, found: true }, new Date(Date.now() + 60_000));
-    const h = await harness();
-    await h.app.run("vault.switch");
-    const items = (h.app.overlay as ListOverlay).items;
-    const details = items.map((i) => i.detail);
-    // Seen later, but only found: after the one opened.
-    expect(details.indexOf(opened)).toBeGreaterThanOrEqual(0);
-    expect(details.indexOf(opened)).toBeLessThan(details.indexOf(found));
-  });
 });
 
 describe("settings from the vaults around this one (20.7)", () => {
@@ -7533,7 +7548,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     return { base, x, wts };
   };
 
-  test("the status line: the vault and its branch, a worktree as name@branch (20.14); the vault list groups a repository's worktrees under it", async () => {
+  test("the status line: the root's name and its branch, a worktree as name@branch (20.14, 21.9); :folders lists the repository once", async () => {
     const l = layout();
     if (!l) return;
     const main = await harness({ root: l.x, open: "index.md" });
@@ -7544,16 +7559,12 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(statusRow(feat.frame())).toContain(`${name}@feat`);
     expect(statusRow(feat.frame())).not.toContain(" · ");
     await harness({ root: join(l.wts, "fix"), open: "index.md" }); // seen too
-    // From elsewhere: x, then its worktrees under it by branch.
+    // From elsewhere: :folders lists it once, by its name — its worktrees are its branches, not copies (21.6).
+    const { tildePath } = await import("../src/core/names.ts");
     const other = await harness({ open: "index.md" });
-    await other.app.run("vault.switch");
-    const items = (other.app.overlay as ListOverlay).items;
-    const at = items.findIndex((i) => i.detail === l.x);
-    expect(items[at]).toMatchObject({ hint: "⎇ main" });
-    expect(items.slice(at + 1, at + 3).map((i) => [i.label, i.indent, i.detail])).toEqual([
-      ["⎇ feat", 1, join(l.wts, "feat")],
-      ["⎇ fix", 1, join(l.wts, "fix")],
-    ]);
+    await other.app.run("folders.open");
+    const items = (other.app.overlay as ListOverlay).items.filter((i) => i.label === name);
+    expect(items.map((i) => i.detail)).toEqual([tildePath(l.x)]);
     // A checkout switched to another branch: the status line follows it.
     git(join(l.wts, "feat"), "checkout", "-q", "-b", "feat-2");
     expect(statusRow(feat.frame())).toContain(`${name}@feat-2`);
@@ -7600,8 +7611,9 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect((await harness({ root: g.b, open: "n.md" })).app.overlay).toBeNull();
   });
 
-  test("named folders' words (21.10): :folders lists them and sets the copy links open; :name names a repository; :open takes a pointer", async () => {
+  test("named folders' words (21.10): :folders goes into one; :folders-default sets the copy links open; :name names a repository; :open takes a pointer", async () => {
     const { readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const { tildePath } = await import("../src/core/names.ts");
     const tag = basename(mkdtempSync(join(sandbox, "wd-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
     const mk = () => {
       const d = join(mkdtempSync(join(sandbox, "wd-f-")), `f${tag}`);
@@ -7620,13 +7632,23 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(h.app.overlay).toBeNull();
     await h.app.run("folders.open");
     const list = h.app.overlay as ListOverlay;
-    list.selected = list.items.findIndex((i) => i.label === `f${tag}`);
+    const at = list.items.findIndex((i) => i.label === `f${tag}`);
+    expect(list.items[at]).toMatchObject({ detail: tildePath(one), hint: "2 copies" });
+    list.selected = at;
     await h.keys("enter");
+    // Into the copy its links open; a second copy here, never chosen: asked which, once (21.6).
+    expect(h.app.loc.root).toBe(one);
+    expect((h.app.overlay as ListOverlay).title).toBe(`f${tag}: 2 copies on this machine — which do links to it open?`);
+    await h.keys("escape");
+    // Chosen later: :folders-default.
+    await h.app.run("folders.default");
     expect((h.app.overlay as ListOverlay).title).toBe(`f${tag}: which copy do links open?`);
-    expect((h.app.overlay as ListOverlay).items.map((i) => [i.label, i.hint])).toEqual([[one, "links open it"], [two, undefined]]);
+    expect((h.app.overlay as ListOverlay).items.map((i) => [i.label, i.hint])).toEqual([[tildePath(one), "links open it"], [tildePath(two), undefined]]);
     await h.keys("down", "enter");
     expect(readFolders().find((f) => f.name === `f${tag}`)?.default).toBe(two);
-    // A repository named: a .slipbox/ to hold it.
+    // Back to the repository: named, a .slipbox/ to hold it.
+    await h.app.run("history.back");
+    expect(h.app.loc.root).toBe(repo);
     await h.app.run(`folder.name r${tag}`);
     expect(readFileSync(join(repo, ".slipbox", "config.toml"), "utf8")).toContain(`name = "r${tag}"`);
     expect(h.app.messages.at(-1)!.text).toContain(`is named r${tag}`);
@@ -7793,140 +7815,47 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(h.app.tabs.flatMap((t) => t.views.map((v) => v.buf.rel))).toEqual(["a.md"]); // nothing opened
   });
 
-  test("a vault opened where a copy of it, gone from where it was, may have moved: asked — yes takes its state, no isn't asked again, esc asks next time (20.5)", async () => {
+  test("a named folder opened where it was moved by hand: its state along, said once, nothing asked (21.8)", async () => {
     const { PositionStore } = await import("../src/core/position.ts");
-    const { stateDir } = await import("../src/core/paths.ts");
-    const { locateVault } = await import("../src/core/vault.ts");
-    const vault = (name: string) => {
-      const dir = join(mkdtempSync(join(sandbox, "mv-")), name);
-      mkdirSync(join(dir, ".slipbox"), { recursive: true });
-      writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${basename(dirname(dir)).replace(/[^a-z0-9]/gi, "")}"\nname = "${name}${basename(dirname(dir)).slice(-6).replace(/[^a-z0-9]/gi, "")}"\n`);
-      writeFileSync(join(dir, "n.md"), "# N\n\none\n\ntwo\n");
-      return dir;
-    };
-    const a = vault("mva");
-    const first = locateVault({ path: a });
+    const { locateVault, recordLocation } = await import("../src/core/vault.ts");
+    const { tildePath } = await import("../src/core/names.ts");
+    const dir = join(mkdtempSync(join(sandbox, "mv-")), "mva");
+    const tag = `mva${basename(dirname(dir)).slice(-6).replace(/[^a-z0-9]/gi, "").toLowerCase()}`;
+    mkdirSync(join(dir, ".slipbox"), { recursive: true });
+    writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${tag}"\nname = "${tag}"\n`);
+    writeFileSync(join(dir, "n.md"), "# N\n\none\n\ntwo\n");
+    const first = locateVault({ path: dir });
+    recordLocation(first); // opened there once
     const ps = new PositionStore(first);
     ps.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 5 });
     ps.save();
-    const moved = join(dirname(a), "elsewhere");
-    renameSync(a, moved);
-    // Not now (esc): asked again the next time.
-    let h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
-    const title = () => (h.app.overlay as ListOverlay | null)?.title ?? "";
-    expect(title()).toContain("was elsewhere before — did it move here?");
-    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual([`Moved here from ${a}`, "No: a copy of its own"]);
-    await h.keys("escape");
-    h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
-    expect(title()).toContain("did it move here?");
-    // Yes: its instance, its reading position; the one made here meanwhile gone.
-    const fresh = h.app.loc.key;
-    await h.keys("enter");
-    expect(h.app.loc.key).toBe(first.key);
+    const moved = join(dirname(dir), "elsewhere");
+    renameSync(dir, moved);
+    const h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
+    expect(h.app.overlay).toBeNull(); // sure, so nothing asked
+    expect(h.app.messages.some((m) => m.text.startsWith(`${tag} moved here from ${tildePath(dir)}: its sessions, scratch, trash and reading positions came along`))).toBe(true);
     expect(new PositionStore(h.app.loc).get("n.md")?.line).toBe(5);
-    expect(existsSync(stateDir({ key: fresh }))).toBe(false);
-    expect(h.app.messages.some((m) => m.text.startsWith(`moved here from ${a}`))).toBe(true);
-    expect((await harness({ loc: locateVault({ path: moved }), open: "n.md" })).app.overlay).toBeNull();
-    // No: a copy of its own, and not asked again — :vault-moved says so.
-    const b = vault("mvb");
-    locateVault({ path: b });
-    const copy = join(dirname(b), "copy");
-    renameSync(b, copy);
-    h = await harness({ loc: locateVault({ path: copy }), open: "n.md" });
-    await h.keys("down", "enter");
-    expect(h.app.overlay).toBeNull();
-    h = await harness({ loc: locateVault({ path: copy }), open: "n.md" });
-    expect(h.app.overlay).toBeNull();
-    await h.app.run("vault.moved");
-    expect(h.app.messages.at(-1)?.text).toBe("nothing seems to have moved here");
+    const again = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
+    expect(again.app.messages.some((m) => m.text.includes("moved here"))).toBe(false);
   });
 
-  test("a move confirmed: the links it broke, their fix previewed at once (20.17)", async () => {
-    const { locateVault } = await import("../src/core/vault.ts");
+  test("a named folder moved by hand: the links its move broke, their fix previewed at once (20.17, 21.8)", async () => {
+    const { locateVault, recordLocation } = await import("../src/core/vault.ts");
     const base = mkdtempSync(join(sandbox, "mvfix-"));
     const a = join(base, "v");
     mkdirSync(join(a, ".slipbox"), { recursive: true });
     writeFileSync(join(a, ".slipbox", "config.toml"), `[vault]\nid = "${basename(base).replace(/[^a-z0-9]/gi, "")}"\nname = "mvfix${basename(base).slice(-6).replace(/[^a-z0-9]/gi, "")}"\n`);
     writeFileSync(join(a, "n.md"), "# N\n\n[s](../shared.md)\n");
     writeFileSync(join(base, "shared.md"), "# Shared\n");
-    locateVault({ path: a });
+    recordLocation(locateVault({ path: a }));
     const moved = join(base, "deep", "v");
     mkdirSync(dirname(moved), { recursive: true });
     renameSync(a, moved);
     const h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
-    expect((h.app.overlay as ListOverlay).title).toContain("did it move here?");
-    await h.keys("enter");
     expect(h.app.overlay?.kind).toBe("list");
     expect(JSON.stringify((h.app.overlay as ListOverlay).items)).toContain("../../shared.md");
     await h.keys("enter"); // applied
     expect(readFileSync(join(moved, "n.md"), "utf8")).toBe("# N\n\n[s](../../shared.md)\n");
-  });
-
-  test("a clone is a copy of the same collection: listed with it, by its name and branch (20.4)", async () => {
-    const l = layout();
-    if (!l) return;
-    const clone = join(l.base, "clone");
-    if (git(l.base, "clone", "-q", l.x, clone).exitCode !== 0) return;
-    await harness({ root: l.x, open: "index.md" });
-    await harness({ root: clone, open: "index.md" }); // seen last: the group's head
-    // A plain folder opened is an instance, but not a vault: not listed.
-    const { folderAt } = await import("../src/core/vault.ts");
-    const plain = mkdtempSync(join(sandbox, "plain-"));
-    writeFileSync(join(plain, "p.md"), "# P\n");
-    await harness({ loc: folderAt(plain), open: "p.md" });
-    const other = await harness({ open: "index.md" });
-    await other.app.run("vault.switch");
-    const items = (other.app.overlay as ListOverlay).items;
-    expect(items.some((i) => i.detail === plain)).toBe(false);
-    const head = items.findIndex((i) => i.detail === clone);
-    expect(items[head]!.indent).toBeUndefined();
-    expect(items[head + 1]).toMatchObject({ detail: l.x, indent: 1 });
-    expect(items[head + 1]!.label).toEndWith("⎇ main");
-  });
-
-  test("entries recorded before collections: a worktree seen before its main checkout still joins it (20.4)", async () => {
-    const { recordVault } = await import("../src/core/registry.ts");
-    const base = mkdtempSync(join(sandbox, "oldlist-"));
-    const [x, feat, fix] = ["x", "feat", "fix"].map((d) => join(base, d)) as [string, string, string];
-    for (const d of [x, feat, fix]) mkdirSync(join(d, ".slipbox"), { recursive: true });
-    const tag = basename(base);
-    const old = (name: string, path: string, at: number, worktree?: { name: string; main: string }) =>
-      recordVault({ key: `${tag}-${name}`, id: null, kind: "vault", name: `${tag}-${name}`, aliases: [], previous_names: [], path, ...(worktree ? { worktree } : {}) }, new Date(Date.now() + at));
-    old("x", x, 1000);
-    old("feat", feat, 2000, { name: "feat", main: x });
-    old("fix", fix, 3000, { name: "fix", main: x }); // seen last: listed first, before x is met
-    const other = await harness({ open: "index.md" });
-    await other.app.run("vault.switch");
-    const items = (other.app.overlay as ListOverlay).items;
-    const head = items.findIndex((i) => i.detail === x);
-    expect(items.slice(head, head + 3).map((i) => [i.detail, i.indent])).toEqual([
-      [x, undefined],
-      [feat, 1],
-      [fix, 1],
-    ]);
-  });
-
-  test("copies told by different evidence are one group: a remote shared with one, a first commit with another (20.4)", async () => {
-    const { recordVault } = await import("../src/core/registry.ts");
-    const base = mkdtempSync(join(sandbox, "chain-"));
-    const [a, b, c] = ["a", "b", "c"].map((d) => join(base, d)) as [string, string, string];
-    for (const d of [a, b, c]) mkdirSync(join(d, ".slipbox"), { recursive: true });
-    const tag = basename(base);
-    const seen = (name: string, path: string, at: number, collection: { slipbox: null; remotes: string[]; roots: string[] }) =>
-      recordVault({ key: `${tag}-${name}`, id: null, kind: "vault", name: `${tag}-${name}`, aliases: [], previous_names: [], path, collection }, new Date(Date.now() + at));
-    // a and c share nothing; b shares a remote with a and a first commit with c. Seen: a, c, then b.
-    seen("b", b, 1000, { slipbox: null, remotes: [`host/${tag}`], roots: [`${tag}1`] });
-    seen("c", c, 2000, { slipbox: null, remotes: [], roots: [`${tag}1`] });
-    seen("a", a, 3000, { slipbox: null, remotes: [`host/${tag}`], roots: [] });
-    const other = await harness({ open: "index.md" });
-    await other.app.run("vault.switch");
-    const items = (other.app.overlay as ListOverlay).items;
-    const head = items.findIndex((i) => i.detail === a);
-    expect(items.slice(head, head + 3).map((i) => [i.detail, i.indent])).toEqual([
-      [a, undefined],
-      [b, 1],
-      [c, 1],
-    ]);
   });
 
   test("the folder holding the worktrees: each its own vault, its branch beside it", async () => {
@@ -8024,6 +7953,28 @@ describe("a branch switch as one event (5.9)", () => {
     expect(h.app.checkHead()).toBe(true); // news for the status line (20.14)
     expect(statusRow(h.frame())).toContain(" · main");
     expect(h.app.messages.some((m) => m.text.startsWith("switched"))).toBe(false); // not a switch
+  });
+
+  test("the status line says where the file is (21.9): an unnamed root by its path, cut from the front to fit, the branch kept; a plain folder by its path", async () => {
+    const { folderAt } = await import("../src/core/vault.ts");
+    const root = join(mkdtempSync(join(sandbox, "a-folder-with-a-rather-long-name-")), "experiment");
+    mkdirSync(root);
+    writeFileSync(join(root, "a.md"), "# A\n");
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    const h = await harness({ root, open: "a.md" });
+    expect(h.app.loc.name).toBeNull(); // no remote, no .slipbox/ name
+    const row = statusRow(h.frame());
+    expect(row).toMatch(/ …[^ ]*\/experiment · main /); // its last folders, and the branch
+    expect(row).not.toContain(root); // too long for its 40 columns
+    expect(h.app.vaultStatus(200)).toBe(`${root} · main`);
+    // However wide the screen, at most 40 columns: the note's own path comes first.
+    const wide = await harness({ root, open: "a.md", width: 300 });
+    expect(statusRow(wide.frame())).not.toContain(root);
+    // A plain folder: its path, no branch.
+    const plain = mkdtempSync(join(sandbox, "plain-status-"));
+    writeFileSync(join(plain, "p.md"), "# P\n");
+    const p = await harness({ loc: folderAt(plain), open: "p.md" });
+    expect(p.app.vaultStatus(200)).toBe(plain);
   });
 
   test("started again, each branch opens on its own tabs", async () => {

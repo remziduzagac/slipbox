@@ -1,19 +1,20 @@
-// Other vaults, as this one reaches them (17.8, 17.9, 17.11; docs/idea.md, "Links"):
-// `[[vault:name]]` found through the machine's list of vaults, the root holding a path outside this
-// one, and the links other vaults make into this one — read from their indexes, so as fresh as
-// each vault's last indexing. A vault reached is opened once, with its own config, and its index
-// refreshed then (indexing on demand).
+// Other roots, as this one reaches them (17.9, 17.11, 21.6; docs/idea.md, "Between folders"): the root
+// holding a path outside this one, and the links other roots make into this one — read from their
+// indexes, so as fresh as each one's last indexing. A root reached is opened once, with its own
+// config, and its index refreshed then (indexing on demand). The converter's `[[name:note]]` (17.8)
+// finds its folder as a pointer does, by name.
 
 import { existsSync, realpathSync, statSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { loadConfig } from "./config.ts";
 import { readJson } from "./fsutil.ts";
 import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, type Target, type VaultReach } from "./graph.ts";
 import { pathLink } from "./links.ts";
+import { folderIdentity, lookupFolder } from "./folders.ts";
 import { cacheDir } from "./paths.ts";
-import { displayNames } from "./names.ts";
-import { type KnownVault, namesOf, readIdentity, readRegistry, vaultConfigFile } from "./registry.ts";
-import { findVaultRoot, isInside, isVaultRoot, recordLocation, rootAt, type VaultLocation, configFilesFor } from "./vault.ts";
+import { tildePath } from "./names.ts";
+import { type KnownRoot, readRoots } from "./registry.ts";
+import { findVaultRoot, isInside, recordLocation, rootAt, type VaultLocation, configFilesFor } from "./vault.ts";
 import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 
 function real(p: string): string {
@@ -26,8 +27,8 @@ function real(p: string): string {
 
 
 /**
- * A vault opened on its own (a rename or move of it, 18.x): its config, its index refreshed, other
- * vaults reached from it — so its backlinks include theirs.
+ * A root opened on its own (a rename or move in it, 18.x): its config, its index refreshed, other
+ * roots reached from it — so its backlinks include theirs.
  */
 export function openVault(root: string): Graph {
   const loc = rootAt(root);
@@ -38,12 +39,6 @@ export function openVault(root: string): Graph {
   return g;
 }
 
-/** Whether a known vault is nested in the vault at `at` (real), or holds it. */
-function kin(at: string, v: KnownVault): boolean {
-  const p = real(v.path);
-  return isInside(at, p) || isInside(p, at);
-}
-
 export class Reach implements VaultReach {
   /** Other roots' graphs, by real path; null where one couldn't be opened. */
   private readonly graphs = new Map<string, Graph | null>();
@@ -51,23 +46,25 @@ export class Reach implements VaultReach {
 
   constructor(readonly here: VaultLocation) {}
 
-  private knownCache: { at: number; list: KnownVault[] } | null = null;
+  private knownCache: { at: number; list: KnownRoot[] } | null = null;
 
-  /** The machine's vaults: read again after a second (another slipbox may add one), not once per
-   *  link — the renderer resolves every `[[vault:note]]` on the screen. */
-  private known(): KnownVault[] {
+  /** The machine's roots: read again after a second (another slipbox may add one), not once per link. */
+  private known(): KnownRoot[] {
     const now = Date.now();
-    if (!this.knownCache || now - this.knownCache.at > 1000) this.knownCache = { at: now, list: readRegistry() };
+    if (!this.knownCache || now - this.knownCache.at > 1000) this.knownCache = { at: now, list: readRoots() };
     return this.knownCache.list;
   }
 
-  private namesFor: { list: KnownVault[]; names: Map<string, string> } | null = null;
+  private names = new Map<string, { at: number; name: string }>();
 
-  /** A known vault's name to show (20.6): unique on this machine, worked out once per reading of the list. */
-  private shown(v: Pick<KnownVault, "key" | "name" | "path">): string {
-    const list = this.known();
-    if (this.namesFor?.list !== list) this.namesFor = { list, names: displayNames(list) };
-    return this.namesFor.names.get(v.key) ?? v.name ?? basename(v.path);
+  /** A root as it's named to the user (21.9): its name (21.6), else its path; looked up again after a second. */
+  private shown(root: string): string {
+    const now = Date.now();
+    const hit = this.names.get(root);
+    if (hit && now - hit.at < 1000) return hit.name;
+    const name = folderIdentity(root)?.name ?? tildePath(root);
+    this.names.set(root, { at: now, name });
+    return name;
   }
 
   /** The graph of another root, opened on first use with its own config; its index refreshed. */
@@ -77,6 +74,7 @@ export class Reach implements VaultReach {
     let g: Graph | null = null;
     try {
       const loc = rootAt(root);
+      recordLocation(loc); // reached: known on this machine, its links counted as backlinks (17.11)
       const config = loadConfig({ ...configFilesFor(loc) }).config;
       g = openGraph(loc, config, true, "lazy");
       g.thorough = true;
@@ -88,10 +86,10 @@ export class Reach implements VaultReach {
   }
 
   /**
-   * The vaults nested in `g` and the ones it sits in (17.17): the walk and the folders above know
-   * them, so they're recorded — linked by name at once, their links counted as backlinks — without
-   * having been opened first. A nested vault with no index yet is indexed now (they're small; an
-   * enclosing one isn't: it's used as of its last indexing).
+   * The roots nested in `g` and the ones it sits in (17.17): the walk and the folders above know
+   * them, so they're recorded — their links counted as backlinks — without having been opened first.
+   * A nested root with no index yet is indexed now (they're small; an enclosing one isn't: it's used
+   * as of its last indexing).
    */
   private discovered = false;
 
@@ -113,59 +111,26 @@ export class Reach implements VaultReach {
     this.knownCache = null;
   }
 
-  wiki(vault: string, target: string, g: Graph): Target | null {
-    const n = vault.toLowerCase();
-    const here = real(this.here.root);
-    // Unknown, or known only elsewhere (a second clone's own nested vault isn't recorded yet): look
-    // at the vaults nested in this one and holding it.
-    if (!this.meant(n, here).some((v) => kin(here, v))) this.discover(g);
-    const others = this.known().filter((v) => v.kind === "vault" && real(v.path) !== here);
-    let hits = this.meant(n, here);
-    let via: Target["via"];
-    if (!hits.length) {
-      // A name the vault had (17.7): only when the vault itself still says so, under the same id,
-      // so a new vault that took an old name can't take its links.
-      hits = others.filter((v) => v.id && v.previous_names.some((p) => p.toLowerCase() === n) && existsSync(v.path) && readIdentity(vaultConfigFile(v.path)).id === v.id);
-      if (hits.length) via = "previous-name";
-    }
-    if (!hits.length) return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `unknown vault "${vault}"` };
-    if (hits.length > 1) return { resolvedKind: "ambiguous", path: null, candidates: hits.map((v) => v.path).sort(), vault, reason: `several vaults are named "${vault}"` };
-    const v = hits[0]!;
-    if (!isVaultRoot(v.path)) {
-      return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `vault "${vault}" was last seen at ${v.path} (${v.seen.slice(0, 10)})` };
-    }
-    const there = this.graphAt(v.path);
-    if (!there) return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `vault "${vault}" at ${v.path} can't be read` };
+  /** The converter's `[[name:note]]` (17.8): the note in the folder of that name (21.6), as a pointer finds it. */
+  wiki(vault: string, target: string, _g: Graph): Target | null {
+    const l = lookupFolder(vault);
+    if (l.status === "unknown") return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `unknown folder "${vault}"` };
+    if (l.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: l.folders.map((f) => f.default ?? f.copies[0]!.path).sort(), vault, reason: l.reason };
+    if (l.status === "unavailable") return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `folder "${vault}" was last seen at ${l.path}` };
+    const there = this.graphAt(l.path);
+    if (!there) return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `folder "${vault}" at ${l.path} can't be read` };
     const r = there.resolveLegacyWiki({ kind: "wiki", target }, "");
     const abs = (p: string) => join(there.root, p);
-    const name = this.shown(v);
-    if (r.resolvedKind === "note" || r.resolvedKind === "file") return { ...r, path: abs(r.path!), candidates: r.candidates.map(abs), vault: name, via: via ?? r.via };
+    const name = l.folder.name;
+    const via: Target["via"] = l.via === "old-name" ? "previous-name" : r.via;
+    if (r.resolvedKind === "note" || r.resolvedKind === "file") return { ...r, path: abs(r.path!), candidates: r.candidates.map(abs), vault: name, via };
     if (r.resolvedKind === "ambiguous") return { ...r, candidates: r.candidates.map(abs), vault: name };
-    return { resolvedKind: "unresolved", path: null, candidates: [], vault: name, reason: `no note "${target}" in vault "${name}"` };
-  }
-
-  /**
-   * The vaults `[[name:…]]` in the vault at `from` means, by their names and aliases. Copies of a
-   * vault (a second clone) share its nested vaults' names: of several, the one nested in `from`, or
-   * holding it, is meant. A repository's worktrees answer to its name too (17.19): from elsewhere,
-   * its main checkout is meant — the stable one, not an agent's task branch.
-   */
-  private meant(n: string, from: string): KnownVault[] {
-    const at = real(from);
-    const hits = this.known().filter((v) => v.kind === "vault" && real(v.path) !== at && namesOf(v).includes(n));
-    if (hits.length < 2) return hits;
-    const near = hits.filter((v) => kin(at, v));
-    if (near.length === 1) return near;
-    const mains = (near.length ? near : hits).filter((v) => !v.worktree);
-    return mains.length === 1 ? mains : hits;
+    return { resolvedKind: "unresolved", path: null, candidates: [], vault: name, reason: `no note "${target}" in folder "${name}"` };
   }
 
   vaultOf(abs: string): string | null {
     const found = findVaultRoot(abs);
-    if (!found) return null;
-    const known = this.known().find((v) => v.kind !== "folder" && real(v.path) === real(found));
-    if (known) return this.shown(known);
-    return readIdentity(vaultConfigFile(found)).name ?? basename(found);
+    return found ? this.shown(found) : null;
   }
 
   entryAt(abs: string): NoteEntry | undefined {
@@ -193,7 +158,7 @@ export class Reach implements VaultReach {
           if (!to) continue;
           const list = map.get(to) ?? [];
           // Another vault's index may be older than this one's: no ends then, the start stands in.
-          list.push({ from: join(v.path, rel), vault: this.shown(v), line: l.line, column: l.column, end: l.end ?? { line: l.line, column: l.column }, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
+          list.push({ from: join(v.path, rel), vault: this.shown(v.path), line: l.line, column: l.column, end: l.end ?? { line: l.line, column: l.column }, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
           map.set(to, list);
         }
       }
@@ -203,7 +168,7 @@ export class Reach implements VaultReach {
   }
 
   /** The note of `g` a link in another vault reaches, if it reaches one. */
-  private landsHere(g: Graph, v: KnownVault, rel: string, l: LinkRef): string | null {
+  private landsHere(g: Graph, v: KnownRoot, rel: string, l: LinkRef): string | null {
     const linking = join(v.path, rel);
     // A file of `g` by its absolute path: its vault path there.
     const inG = (abs: string) => {

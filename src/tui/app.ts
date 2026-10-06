@@ -71,12 +71,11 @@ import { planConvert } from "../core/convert.ts";
 import { type Ambiguous, type Applied, applyPlan, planFolderMove, planHeadingRename, planMakeVault, planNoteRename, planRelink, planUndo, planUnmakeVault, planVaultFolderMove, planVaultRename, type RenamePlan } from "../core/rename.ts";
 import { addFootnote, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { copyPath, linksInto, listTrash, restorePath, type TrashItem, trashPath } from "../core/files.ts";
-import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, removeStorage, suggestVaultName, vaultConfigFile } from "../core/registry.ts";
+import { readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex } from "../core/autoindex.ts";
-import { sameCollection } from "../core/collection.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
-import { displayNames, locName, tildePath } from "../core/names.ts";
-import { copyAvailable, folderIdentity, readFolders, setDefaultCopy } from "../core/folders.ts";
+import { rootLabel, tildePath } from "../core/names.ts";
+import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, readFolders, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
 import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
@@ -87,7 +86,7 @@ import { rootFor } from "../core/servers/find.ts";
 import { ServerManager } from "../core/servers/manager.ts";
 import { afterInsertKey, type CompletionState, completionKey, type SignatureState } from "./completion.ts";
 import { sanitize } from "../core/sanitize.ts";
-import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
+import { graphemes, graphemeWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
 import { newParseCache, parseMarkdown } from "../core/parse.ts";
 import { parseInBackground } from "../core/parse-pool.ts";
@@ -655,8 +654,8 @@ export class App {
     this.pinnedRoots = new Set(readJson<string[]>(this.pinnedRootsFile(), []).filter((r) => typeof r === "string"));
     this.config = opts.config;
     this.graph = opts.graph;
-    // This machine sees the vault (17.6): a copy of it opened later keys its state apart (17.3).
-    recordLocation(opts.loc);
+    // This machine sees the root (17.6); a named folder moved here by hand brought its state (21.8).
+    const { carriedFrom } = recordLocation(opts.loc);
     this.reach = new Reach(opts.loc);
     this.graph.reach ??= this.reach;
     this.lintCmd = lintCommand(opts.config.lint, opts.loc.root, undefined, opts.config.lsp.auto_install);
@@ -692,6 +691,7 @@ export class App {
     this.applyKeys();
     for (const w of opts.warnings ?? []) this.message("warn", w);
     for (const e of this.graph.errors) this.message("warn", e);
+    if (carriedFrom) this.message("info", carried(this.loc, carriedFrom));
 
     this.recentCommands = (loadSession(this.loc)?.recent_commands ?? []).filter((id) => typeof id === "string").slice(0, RECENT_MAX);
     this.remoteServer = loadSession(this.loc)?.remote_server;
@@ -706,9 +706,10 @@ export class App {
       if (first) this.openInNewTab(first);
     }
     if (!this.tabs.length) this.message("info", `no notes in ${this.loc.root}`);
-    // A copy of this vault gone from where it was (20.5): did it move here? Else, opened on a loose
-    // folder, the known vaults (17.14).
-    if (!this.offerMove() && opts.launcher && readRegistry().some((v) => v.kind === "vault" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
+    // Moved here by hand, its state along (21.8): the links the move broke, their fix previewed (20.17).
+    if (carriedFrom) this.offerMovedRelink();
+    // Opened on a loose folder, the named folders to go into (17.14, 21.10).
+    if (opts.launcher && !this.overlay && this.folderChoices().length) this.openFolders();
     // A second copy of this folder (21.6): which one links open, asked once.
     if (!this.overlay) this.askDefaultCopy();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
@@ -1675,21 +1676,19 @@ export class App {
     return h.branch ?? (h.commit ? h.commit.slice(0, 7) : null);
   }
 
-  private shownName: { key: string; at: number; name: string } | null = null;
-
   /**
-   * The vault and its branch, as the status line shows them (20.14): `pathfinder · main`; a worktree,
-   * its name and branch in one (`pathfinder@refactor`); loose files, nothing. The name is the one
-   * shown on this machine (20.6), looked up again every few seconds, not every frame.
+   * Where the file is, as the status line says it (21.9): the root's name if it has one, else its path,
+   * else the folder opened; a repository's branch after it — `research · main`, `~/src/experiment ·
+   * main`, `notes`, `~/scratch`; a named worktree, its name and branch in one, `research@refactor`.
    */
-  vaultStatus(): string {
-    // A plain folder is unnamed: its path (20.22).
-    if (this.loc.mode === "folder") return locName(this.loc);
-    const now = this.now();
-    if (!this.shownName || this.shownName.key !== this.loc.key || now - this.shownName.at > 5000) this.shownName = { key: this.loc.key, at: now, name: locName(this.loc) };
-    if (this.loc.worktree) return this.shownName.name.replace(/@[^@]*$/, "") + (this.branch() ? `@${this.branch()}` : "");
-    const b = this.branch();
-    return b ? `${this.shownName.name} · ${b}` : this.shownName.name;
+  vaultStatus(max = Number.POSITIVE_INFINITY): string {
+    const b = this.loc.mode === "vault" ? this.branch() : null;
+    const named = this.loc.mode === "vault" ? this.loc.name : null;
+    const where = named ?? tildePath(this.loc.root);
+    const after = named && this.loc.worktree ? (b ? `@${b}` : "") : b ? ` · ${b}` : "";
+    // Short of room, a path is cut from the front: its last folders, and the branch, are kept.
+    if (stringWidth(where + after) <= max) return where + after;
+    return named ? truncate(where + after, max) : truncateStart(where, Math.max(4, max - stringWidth(after))) + after;
   }
 
   /** The vault's search index; null: none here (a loose folder, `[search] engine = "scan"`, SQLite couldn't). */
@@ -3205,17 +3204,17 @@ export class App {
   }
 
   /**
-   * A folder made a vault of its own (18.11): its name asked (a distinct one suggested), then the
-   * preview of the links that would stop reaching across, fixed. A loose folder's: the choice
-   * `vault.init` gives, and into it.
+   * A folder given a `.slipbox/` of its own — a root (18.11): its name asked, a distinct one suggested,
+   * none when cleared (21.10); then the preview of the links that would stop reaching across, fixed. A
+   * loose folder's: the choice `vault.init` gives, and into it.
    */
   makeVaultItem(item: ExplorerItem): void {
     const abs = join(this.loc.root, item.rel);
     if (this.loc.mode !== "vault") return this.vaultChoices(abs);
-    this.prompt(`make ${item.rel}/ a vault named: `, (name) => {
-      if (name.trim()) this.previewRename(() => planMakeVault(this.graph, item.rel, name.trim()));
+    this.prompt(`give ${item.rel}/ its .slipbox/, called (empty: no name): `, (name) => {
+      this.previewRename(() => planMakeVault(this.graph, item.rel, name.trim() || null));
     });
-    if (this.overlay?.kind === "prompt") this.overlay.text = suggestVaultName(abs, this.loc.name);
+    if (this.overlay?.kind === "prompt") this.overlay.text = suggestFolderName(abs, this.loc.name);
   }
 
   /** A vault nested here made a plain folder of this one (18.11): the preview, then done. */
@@ -4136,7 +4135,7 @@ export class App {
     // The file.
     head("File");
     row("File", "path", b.rel ?? b.abs, { copy: b.abs });
-    row("File", "vault", this.loc.mode === "folder" ? `none — the plain folder ${locName(this.loc)}` : locName(this.loc), { copy: this.loc.root });
+    row("File", "root", this.loc.mode === "folder" ? `none — the plain folder ${tildePath(this.loc.root)}` : rootLabel(this.loc), { copy: this.loc.root });
     row("File", "kind", note ? `note (${b.kind.format})` : `${b.kind.group === "data" ? "data" : "text"} (${b.kind.format})`);
     if (b.stamp) {
       const size = b.stamp.size;
@@ -4595,7 +4594,10 @@ export class App {
   }
 
   treeRows(): TreeRow[] {
-    if (this.tree) return this.tree;
+    // The folders of files open beside this root come and go with their tabs (21.9).
+    const beside = this.besideRoots().join("\n");
+    if (this.tree && this.treeBeside === beside) return this.tree;
+    this.treeBeside = beside;
     const rows: TreeRow[] = [];
     // A plain folder's parent, to go up: the file tree of the launcher (17.14).
     if (this.loc.mode === "folder" && dirname(this.loc.root) !== this.loc.root) {
@@ -4642,7 +4644,7 @@ export class App {
     // The explorer's other roots (20.15), each by its name, unfolded on a key; their rows are theirs.
     for (const abs of this.otherRoots()) {
       const vault = isVaultRoot(abs);
-      const name = vault ? (this.reach?.vaultOf(abs) ?? basename(abs)) : basename(abs);
+      const name = vault ? (this.reach?.vaultOf(abs) ?? basename(abs)) : tildePath(abs);
       rows.push({ kind: "root", path: abs, name, depth: 0, root: { kind: vault ? "vault" : "folder", abs, name, other: true } });
       if (vault && this.expanded.has(abs)) this.otherRootRows(abs, rows);
     }
@@ -4669,15 +4671,15 @@ export class App {
   }
 
   /**
-   * The explorer's other roots, beside the vault open (20.15): the one opened, and those pinned. A
-   * vault followed into is the vault open while it is; left, it goes unless pinned. Never
-   * overlapping: one inside the vault open, or around it, isn't listed apart — its folder is in the
-   * tree, or the tree is in it.
+   * The explorer's other roots, beside the root open (20.15, 21.9): the one opened, those pinned, and
+   * the folders of files open beside it. A root followed into is the root open while it is; left, it
+   * goes unless pinned. Never overlapping: one inside the root open, or around it, isn't listed apart —
+   * its folder is in the tree, or the tree is in it.
    */
   otherRoots(): string[] {
     const here = this.loc.root;
     const out: string[] = [];
-    for (const r of [this.mainRoot, ...this.pinnedRoots]) {
+    for (const r of [this.mainRoot, ...this.pinnedRoots, ...this.besideRoots()]) {
       if (out.includes(r) || r === here || isInside(here, r) || isInside(r, here) || !existsSync(r)) continue;
       if (out.some((o) => isInside(o, r) || isInside(r, o))) continue;
       out.push(r);
@@ -4685,7 +4687,29 @@ export class App {
     return out;
   }
 
-  /** Keep the vault open among the explorer's roots, or no longer (`:pin-root`). */
+  private treeBeside = "";
+  private besideOf = new Map<string, string>();
+
+  /**
+   * The folders of the files open beside this root (21.9: a loose file a link was followed to, one
+   * opened by its path): each one's nearest root, else its folder — while a file of it is open.
+   */
+  private besideRoots(): string[] {
+    const here = this.loc.root;
+    const out: string[] = [];
+    for (const t of this.tabs) {
+      for (const v of t.views) {
+        const abs = v.buf.abs;
+        if (isInside(here, abs)) continue;
+        let r = this.besideOf.get(abs);
+        if (r === undefined) this.besideOf.set(abs, (r = findVaultRoot(abs) ?? dirname(abs)));
+        if (!out.includes(r)) out.push(r);
+      }
+    }
+    return out;
+  }
+
+  /** Keep the root open among the explorer's roots, or no longer (`:pin-root`). */
   togglePinnedRoot(): void {
     const r = this.loc.root;
     if (r === this.mainRoot) return this.message("info", "the vault slipbox was opened on is always a root");
@@ -7129,7 +7153,7 @@ export class App {
     // Enter.
     this.loc = target;
     this.feed.reset();
-    recordLocation(target);
+    const { carriedFrom } = recordLocation(target);
     this.configLastGood.clear();
     const loaded = loadConfig({ ...configFilesFor(target), configFile: this.configFile, lastGood: this.configLastGood });
     this.config = loaded.config;
@@ -7185,7 +7209,11 @@ export class App {
     }
     if (from && !how.back) this.vaultTrail.push(from);
     this.region = "content";
-    if (!this.offerMove()) this.askDefaultCopy();
+    if (carriedFrom) {
+      this.message("info", carried(target, carriedFrom));
+      this.offerMovedRelink();
+    }
+    this.askDefaultCopy();
     this.relayoutAll();
     this.publishState();
     this.recordConfigStamps();
@@ -7193,14 +7221,14 @@ export class App {
       if (this.config.watch.enabled) this.startWatcher();
       this.indexInBackground();
     }
-    this.message("info", `${this.vaultLabel(target)} — ${target.root}`);
+    this.message("info", target.mode === "vault" && target.name ? `${rootLabel(target)} — ${target.root}` : target.root);
     this.host.requestRender();
     return true;
   }
 
-  /** How a root is named to the user: its vault's name; a plain folder, by its path (20.22). */
-  vaultLabel(loc: Pick<VaultLocation, "mode" | "key" | "name" | "root">): string {
-    return loc.mode === "vault" ? `vault ${locName(loc)}` : `folder ${locName(loc)}`;
+  /** How a root is named to the user (21.9): its name, else its path; a plain folder, its path. */
+  vaultLabel(loc: Pick<VaultLocation, "mode" | "name" | "root" | "worktree">): string {
+    return rootLabel(loc);
   }
 
   /** A root row of the explorer: go into it (17.13). */
@@ -7280,11 +7308,11 @@ export class App {
         : plan.kind === "folder"
           ? `${plan.from}/ → ${plan.to}/`
           : plan.kind === "vault"
-            ? `vault ${plan.from} → ${plan.to}`
+            ? `name ${plan.from} → ${plan.to}`
             : plan.kind === "make-vault"
-              ? `${plan.from}/ → the vault ${plan.to}`
+              ? `${plan.from}/ → a root of its own${plan.to !== plan.from ? `, called ${plan.to}` : ""}`
               : plan.kind === "unmake-vault"
-                ? `the vault ${plan.from}/ → a folder of ${plan.to}`
+                ? `${plan.from}/ → a plain folder of ${plan.to}`
                 : plan.kind === "convert"
                   ? "links → plain paths"
                   : "relink";
@@ -7395,15 +7423,15 @@ export class App {
     if (plan.makeVault || plan.unmakeVault) this.selectInExplorer(plan.from);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     const what = plan.undo
-      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `renamed the vault ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "", heading: `renamed the heading ${plan.from} back to ${plan.to}`, convert: "undid the conversion to plain paths" }[plan.kind]
+      ? { note: `renamed ${plan.from} back to ${plan.to}`, folder: `moved ${plan.from}/ back to ${plan.to}/`, vault: `named the folder ${plan.from} back to ${plan.to}`, relink: "undid the relink", "make-vault": "", "unmake-vault": "", heading: `renamed the heading ${plan.from} back to ${plan.to}`, convert: "undid the conversion to plain paths" }[plan.kind]
       : plan.kind === "note" || plan.kind === "heading"
         ? `renamed ${plan.from} → ${plan.to}`
         : plan.kind === "folder"
           ? `moved ${plan.from}/ → ${plan.to}/`
           : plan.kind === "vault"
-            ? `renamed the vault ${plan.from} → ${plan.to}`
+            ? `named the folder ${plan.from} → ${plan.to}`
             : plan.kind === "make-vault"
-              ? `made ${plan.from}/ the vault ${plan.to}`
+              ? `made ${plan.from}/ a root of its own${plan.to !== plan.from ? `, called ${plan.to}` : ""}`
               : plan.kind === "unmake-vault"
                 ? `made ${plan.from}/ a plain folder of ${plan.to} (its .slipbox/ is in the trash)`
                 : plan.kind === "convert"
@@ -7451,51 +7479,15 @@ export class App {
     });
   }
 
-  /**
-   * A copy of this vault gone from where it was, seen last before this one was first (20.5): did it
-   * move here? Yes takes its reading positions, sessions and scratch (this copy's own, made meanwhile,
-   * go); no isn't asked again; `esc` asks next time. True when the question is showing.
-   */
-  offerMove(): boolean {
-    const candidates = this.loc.movedHere ?? [];
-    if (!candidates.length || this.overlay) return false;
-    const name = this.loc.name ?? basename(this.loc.root);
-    const items: ListItem[] = [
-      ...candidates.map((v) => ({ label: `Moved here from ${v.path}`, detail: `last seen ${v.seen.slice(0, 10)}: its reading positions, sessions and scratch come along`, data: v as KnownVault | "no" })),
-      { label: candidates.length > 1 ? "None of them: a copy of its own" : "No: a copy of its own", detail: "not asked again", data: "no" },
-    ];
-    this.openList({
-      title: `${name} was elsewhere before — did it move here?`,
-      items,
-      filterable: false,
-      footer: true,
-      accept: (item) => {
-        if (item.data === "no") {
-          for (const v of candidates) declineMove(this.loc.key, v);
-          this.loc = { ...this.loc, movedHere: [] };
-          return this.message("info", "not asked again: a copy of its own");
-        }
-        this.takeMove(item.data as KnownVault);
-      },
-    });
-    return true;
+  /** The links a move by hand broke, in and out of the root (20.17): their fix previewed — never written unasked. */
+  private offerMovedRelink(): void {
+    if (this.overlay) return;
+    try {
+      if (planRelink(this.graph).files.length) this.previewRename(() => planRelink(this.graph));
+    } catch {}
   }
 
-  /** `from` confirmed moved here (20.5): its instance this copy's, its state with it. */
-  private takeMove(from: KnownVault): void {
-    const dirty = this.dirtyBuffers();
-    if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save (:wa) or revert, then :vault-moved`);
-    const fresh = this.loc.key;
-    confirmMove(from, this.loc.root, fresh);
-    const open = this.view?.buf.abs ?? null;
-    // Into its instance, as a switch is; this copy's own storage goes once nothing writes to it.
-    if (this.switchVault(rootAt(this.loc.root), open, undefined, { back: true })) removeStorage(fresh);
-    this.message("info", `moved here from ${from.path}: its reading positions, sessions and scratch came along`);
-    // The links the move broke, in and out of it (20.17): their fix, previewed — never written unasked.
-    if (planRelink(this.graph).files.length) this.previewRename(() => planRelink(this.graph));
-  }
-
-  /** Make `dir` a vault and go into it, the note open (17.18). */
+  /** Give `dir` a `.slipbox/` and go into it, the note open (17.18). */
   makeVault(dir: string, privately: boolean): void {
     const open = this.view?.buf.abs ?? null;
     let r: ReturnType<typeof initVault>;
@@ -7505,57 +7497,64 @@ export class App {
       return this.message("warn", (err as Error).message);
     }
     this.switchVault(rootAt(r.root), open && existsSync(open) && open.startsWith(`${r.root}/`) ? open : null);
-    this.message("info", `made ${r.root} a vault: "${r.name}"${r.excluded ? ` (private: in ${r.excluded})` : ""}`);
+    this.message("info", `${tildePath(r.root)} has its .slipbox/ now${r.excluded ? ` (private: in ${r.excluded})` : ""} — :name names it for pointers`);
   }
 
-  /** The vaults this machine knows (17.14): pick one to switch to. */
-  openVaultList(): void {
+  /**
+   * The named folders to go into (21.6, 21.10): each by the name a pointer gives it, the copy it opens
+   * here (its default, else one that's here) — this folder's own left out; those seen last first.
+   */
+  folderChoices(): { folder: NamedFolder; path: string; name: string }[] {
+    const list = readFolders();
     const here = this.loc.root;
-    // Opened ones first, most recently seen first; then those the auto-index only found (20.9).
-    const known = readRegistry()
-      .filter((v) => v.kind === "vault" && v.path !== here && existsSync(v.path))
-      .sort((a, b) => Number(!!a.found) - Number(!!b.found) || (a.seen < b.seen ? 1 : -1));
-    if (!known.length) return this.message("info", "no other vaults yet: open one with slipbox <folder>, or make one with slipbox init");
-    // Copies of one collection together (20.4): a repository's clones and worktrees (17.19), under
-    // the main checkout seen last, each worktree by its branch; the groups by when any of them was
-    // last opened.
-    const branchAt = (path: string) => {
-      const c = checkoutOf(path);
-      const h = c ? headOf(c) : null;
-      return h?.branch ?? h?.commit?.slice(0, 7) ?? null;
-    };
-    // Grouped transitively (a worktree seen before its main checkout joins it all the same): by the
-    // collection's evidence, or by the main checkout a worktree names (an entry recorded before 20.4).
-    const top = known.map((_, i) => i);
-    const find = (i: number): number => (top[i] === i ? i : (top[i] = find(top[i]!)));
-    const related = (a: KnownVault, b: KnownVault) => sameCollection(a.collection, b.collection) || (a.worktree?.main ?? a.path) === (b.worktree?.main ?? b.path);
-    for (let i = 0; i < known.length; i++) for (let j = i + 1; j < known.length; j++) if (related(known[i]!, known[j]!)) top[find(j)] = find(i);
-    const byTop = new Map<number, KnownVault[]>();
-    known.forEach((v, i) => byTop.set(find(i), [...(byTop.get(find(i)) ?? []), v]));
-    const groups = [...byTop.values()];
-    // Each by the name it's shown by (20.6): unique on this machine.
-    const names = displayNames(readRegistry());
-    const nameOf = (v: KnownVault) => names.get(v.key) ?? v.name ?? basename(v.path);
-    const items: ListItem[] = [];
-    for (const list of groups) {
-      const head = list.find((v) => !v.worktree);
-      if (head) items.push({ label: nameOf(head), detail: head.path, hint: branchAt(head.path) ? `${this.glyphs.branch} ${branchAt(head.path)}` : undefined, data: head });
-      for (const v of list.filter((x) => x !== head).sort((a, b) => a.path.localeCompare(b.path))) {
-        const b = branchAt(v.path);
-        // Another clone by its name, a worktree by its branch.
-        const label = v.worktree ? (head ? `${this.glyphs.branch} ${b ?? v.worktree.name}` : nameOf(v)) : `${nameOf(v)}${b ? ` ${this.glyphs.branch} ${b}` : ""}`;
-        items.push({ label, detail: v.path, indent: head ? 1 : 0, data: v });
-      }
+    const out: { folder: NamedFolder; path: string; name: string; seen: string }[] = [];
+    for (const f of list) {
+      const l = lookupFolder(pointerName(f, list), list);
+      const path = l.status === "found" ? l.path : null;
+      const seen = f.copies.find((c) => c.path === path)?.seen ?? "";
+      if (path && path !== here) out.push({ folder: f, path, name: pointerName(f, list), seen });
     }
+    return out.sort((a, b) => b.seen.localeCompare(a.seen) || a.name.localeCompare(b.name));
+  }
+
+  /** The named folders (`:folders`, `space v v`): enter goes into one (17.10). */
+  openFolders(): void {
+    const choices = this.folderChoices();
+    if (!choices.length) return this.message("info", "no other named folders here yet: a .slipbox/ name (:name), or a repository's remote, names one");
     this.openList({
-      title: `Vaults (${known.length})`,
-      items,
+      title: `Folders (${choices.length}) — enter goes into one`,
+      items: choices.map((c) => ({ label: c.name, detail: tildePath(c.path), hint: c.folder.copies.length > 1 ? `${c.folder.copies.length} copies` : undefined, data: c.path })),
       accept: (item) => {
-        const v = item.data as KnownVault;
-        this.switchVault(rootAt(v.path), null);
+        this.switchVault(rootAt(item.data as string), null);
       },
     });
   }
+
+  /** Which copy a named folder's links open here (`:folders-default`; `slipbox folders default`). */
+  chooseDefaultCopy(): void {
+    const list = readFolders().filter((f) => f.copies.length > 1);
+    if (!list.length) return this.message("info", "no named folder has two copies here: each one's links open the only one");
+    const pick = (f: NamedFolder) =>
+      this.openList({
+        title: `${f.name}: which copy do links open?`,
+        filterable: false,
+        selected: Math.max(0, f.copies.findIndex((c) => c.path === f.default)),
+        items: f.copies.map((c) => ({ label: tildePath(c.path), hint: c.path === f.default ? "links open it" : copyAvailable(c.path) ? undefined : "not here", data: c.path })),
+        accept: (copy) => {
+          setDefaultCopy(f.key, copy.data as string);
+          this.message("info", `links to ${f.name} open ${tildePath(copy.data as string)}`);
+        },
+      });
+    const ident = this.loc.mode === "vault" ? folderIdentity(this.loc.root) : null;
+    const mine = list.find((f) => f.key === ident?.key);
+    if (mine || list.length === 1) return pick(mine ?? list[0]!);
+    this.openList({ title: "Which folder's copies?", items: list.map((f) => ({ label: pointerName(f, list), hint: `${f.copies.length} copies`, data: f })), accept: (item) => pick(item.data as NamedFolder) });
+  }
+}
+
+/** A named folder moved here by hand, its state along (21.8): said once. */
+function carried(loc: VaultLocation, from: string): string {
+  return `${rootLabel(loc)} moved here from ${tildePath(from)}: its sessions, scratch, trash and reading positions came along`;
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -94,16 +94,14 @@ These churn freely before 1.0:
 | `context <note>…` | `{start[], depth, backlinks, limit, files[{path, why, depth, from, lines}], left[], text}` |
 | `footnotes <note>` | `{path, sha, footnotes[{label, id, text, line, def, references[{line, column, start, end}]}]}` |
 | `footnotes <note> add\|edit\|rm\|rename …` | `{path, sha, footnotes[…]}` after it; `--if-unchanged`; exit 5: refused |
-| `init [dir]` | `{root, created, identified, id, name, excluded}` — `--name N`, `--private`; exit 5: name in use |
-| `name <new>` | a `.slipbox/` folder's: as `rename-vault`; a repository's: `{root, name, id, created}`; exit 5: taken |
+| `init [dir]` | `{root, created, identified, id, name, excluded}` — id, name with `--name N`; exit 5: name in use |
+| `name <new>` | a `.slipbox/` folder's: as `mv`, kind `vault`; a repository's: `{root, name, id, created}`; 5: taken |
 | `folders` | `[{name, pointer, remote, id, private, old, default, copies[{path, seen, found, available}]}]` |
 | `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
-| `info` | root, mode, `vault{…, shown}`, `instance`, `collection`, `copies[]`, `index{…, written}`, `background` |
-| `vaults` | `[{key, instance, id, kind, name, shown, …, path, seen, indexed, exists, unavailable, worktree?}]` |
+| `info` | `root`, `mode`, `name`, `key`, `folder{name, pointer, …, copies[]}`, `links`, `index{…, written}`, … |
 | `--plan` (`mv`, `relink`…) | as `--dry-run`, plus `plan{id, made}`: saved for `apply` (`20.18`) |
 | `apply [plan]` | as the command that planned it, applied; no plan: `[{id, made, root, command, kind, files}]` |
-| `vault-moved [path]` | `[{instance, name, path, seen}]`; with a path `{moved, from, to}`; `--not`: `{declined}` |
-| `mv`, `rename-vault`, `rename-heading`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, …}` |
+| `mv`, `name`, `rename-heading`, `relink` | `{kind, from, to, dryRun, move, files[], warnings, skipped, …}` |
 | `convert-links` | as `mv`, kind `convert`, plus `ambiguous[]`: the links several notes answer to |
 | `undo` | as `mv`: the rename taken back (`from` and `to` the other way), plus `undo{id, at}`; exit 3: nothing |
 | `cp <note\|folder> [path]` | `{from, to, dir}` — beside it as `name-copy` without a path; exit 5 onto a file |
@@ -251,22 +249,18 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   only reads, so it previews any note; its `newSha` is `null`.
 - **Where a command works.** The root is decided by the file: its nearest boundary above the note argument (or cwd) — a
   folder holding a root marker (`walk.root_markers`, `21.1`: `.git`, `.slipbox/`, `.obsidian/`, `.zk/`), one root
-  however many it holds (`20.3`) — else the plain folder the file is in (or the current one): an unnamed instance known
-  by its path (`20.22`), walked and indexed as a vault is, its state its own. `$HOME` and `/` are never a root; opened
-  as a plain folder, they're listed a level at a time, never walked or indexed (the background index walks `~`).
-  `--root` must name a root (one of the markers in it), and says where to start: a note named from it is found there,
-  but a file's root is its nearest — one in a root nested in `--root` is that root's (21.x). Each command records the
-  vault in `vaults.json` — an instance of it (`20.4`), given a local id the first time, with its collection's evidence;
-  a plain folder too, by its path. A
-  vault's cache and state are its instance's (`20.5`). Opened where it wasn't seen before, while a copy of it is gone
-  from where it was, every command warns until `slipbox vault-moved <old-path>` takes the gone copy's instance and state
-  — or `--not` says it didn't move; with no path it lists the copies that may have. Moves are never taken on a guess. A
-  vault is named, wherever the CLI names one (`vaults`, `info`, `stat`, a link into another vault), by its name here
-  (`20.6`): what its `.slipbox/` declares, else its repository's (`origin`'s remote), else its folder's — vaults that
-  would share one each with as few of their folders as tell them apart, joined with `.` (`work.docs`, `home.docs`), and
-  a worktree as `name@branch`. Never written into a file. A `.slipbox/` without an id and a name gets them written into
-  its config on first open; a git vault without one is never written into — named by its folder, keyed by its path — and
-  `slipbox init` gives it `.slipbox/` (`--private` keeps that out of git).
+  however many it holds (`20.3`) — else the plain folder the file is in (or the current one), known by its path
+  (`20.22`), walked and indexed as a root is, its state its own. `$HOME` and `/` are never a root; opened as a plain
+  folder, they're listed a level at a time, never walked or indexed (the background index walks `~`). `--root` must
+  name a root (one of the markers in it), and says where to start: a note named from it is found there, but a file's
+  root is its nearest — one in a root nested in `--root` is that root's (21.x). Each command records the root in
+  `roots.json` by its path, and its name in the named folders' lookup (`21.6`); its cache and state are its path's
+  (`21.8`), reading positions by file. A named folder moved by hand — its id or remote at a new path, the one copy that
+  was elsewhere gone — brings its state along: the command that first opens it there says so, and how many lines the
+  move broke for `relink` to fix. A root is named, wherever the CLI names one (`info`, `stat`, `folders`), by the name
+  pointers give it — its `.slipbox/` name, else its repository's remote's — else shown by its path; never its folder's
+  own name. Nothing is written into a root by opening it: `.slipbox/`'s id and name only by `slipbox init --name` and
+  `slipbox name` (`--private` keeps `.slipbox/` out of git).
 - **`send`** uses `editor.remote` exactly as `space n s` does: the nvim preset finds the running
   nvims (the one picked last in the TUI while it answers, else the only one, else the one working
   where the note lives) and `--server <socket>` names one. Several and no way to choose is exit 4
@@ -287,9 +281,8 @@ attachment by its file name, as Obsidian finds one. Two of a name, notes or atta
 folder, then the deepest folder shared, then the shortest path; a real tie is ambiguous (exit 4), never guessed. A
 root nested inside ends its names (a path into it is a path). A file with no root has no names: exit 3, saying what
 makes one. Previous names, `[[vault:note]]` and a move remembered aren't read (`20.22`'s removals kept): only the
-converter reads them (`20.1`), as the legacy reader it keeps for what it rewrites. A vault name several vaults share
-as their own, `docs:a.md`, is ambiguous (exit 4) — `candidates` gives each by the name it's shown with,
-`work.docs:a.md`.
+converter reads them (`20.1`), as the legacy reader it keeps for what it rewrites — `[[name:note]]` by the named
+folders' lookup (`21.6`).
 
 **How a link landed** (trailscout's review): `links` and `resolve` give `how` — `path`, `suffix` (the end of its path),
 `name` (the only note of it), or the tie broken: `exact-case`, `same-folder`, `deepest-shared`, `shortest`; or the
@@ -428,19 +421,18 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   can't read, is made again. `$HOME` or `/` opened as a plain folder keeps none: it's scanned.
 - **The home folder** (`20.9`): `slipbox index --home` runs the background auto-index now, in the foreground — the
   whole pass, or as much as `--budget <ms>` allows, from where it stopped; `--rebuild` starts a pass again. It walks
-  `~` for vaults (never into a hidden folder, `node_modules`, `venv`, `__pycache__` or `~/Library`; into a vault only
-  for the vaults nested in it), records each in `vaults.json` as found (listed after those opened, until one is) and
-  builds its index, so its links count as backlinks of the vaults they reach. `--json`: `{root, found, indexed, left,
-  started, finished}`. Every command notes the time it ran (`activity` in the state folder): the TUI's auto-index
-  waits while an agent works.
-- **Freshness** (`20.10`): `slipbox index --refresh [path]` brings a vault's index up to date now — this vault's, or
-  that of the vault holding `path` (outside every vault, the plain folder it's in), opened or not: every file's size
+  `~` for roots (never into a hidden folder, `node_modules`, `venv`, `__pycache__` or `~/Library`; into a root only
+  for the roots nested in it), records each in `roots.json` as found (until it's opened) and its name in the named
+  folders' lookup, and builds its index, so its links count as backlinks of the roots they reach. `--json`: `{root,
+  found, indexed, left, started, finished}`. Every command notes the time it ran (`activity` in the state folder): the
+  TUI's auto-index waits while an agent works.
+- **Freshness** (`20.10`): `slipbox index --refresh [path]` brings a root's index up to date now — this one's, or
+  that of the root holding `path` (outside every root, the plain folder it's in), opened or not: every file's size
   and time checked, every folder listed again. `--json`: `{root, notes, changed, unchanged, gone, reached, indexed,
-  ms}`. `info` says when this vault's index was written (`index.written`) and where the background index has got to
-  (`background`); `vaults` gives each vault's
-  `indexed` time. A vault on a drive that isn't there (under `/Volumes`, `/media`, `/run/media`, `/mnt`) is
-  `unavailable`, not gone: kept, never pruned, and a link into it is broken with that said ("its drive isn't
-  there") until the drive is back.
+  ms}`. `info` says when this root's index was written (`index.written`) and where the background index has got to
+  (`background`); `roots.json` keeps each root's `indexed` time. A root on a drive that isn't there (under
+  `/Volumes`, `/media`, `/run/media`, `/mnt`) is `unavailable`, not gone: kept, never pruned, and a link into it is
+  broken with that said ("its drive isn't there") until the drive is back; `folders` marks its copy "not here".
 - **`[search] engine`**: `auto` (the index when it's built, else a scan), `index` (built first when there's none),
   `scan` (never an index).
 - **A hit's `section`** is the section it's in, as scout names and bounds it (`{name, line, end}`: `Auth/Setup`,
@@ -485,17 +477,18 @@ state, never in the folder — and says how many links from other notes break (`
 only says. `slipbox trash` lists what's there; `slipbox trash restore <id|path>` puts an item back where it was,
 refused when something is there now. `slipbox cp` copies a note, file or folder, as written.
 
-`slipbox rename-vault <name>` renames this vault (one with `.slipbox/`: a git vault without it is named by its folder,
-and refused): `[vault] name` in its config, the old name added to its
-`previous_names`; links are paths, which a vault's name doesn't change. `slipbox relink [note]` rewrites the links of
+`slipbox name <name>` names this root (`21.10`): a `.slipbox/` folder's `[vault] name` changed, the old name added to
+its `previous_names` (a pointer by it still finds the folder, and the relink brings it to the new one), or — never
+named — a name and an id written; a repository without `.slipbox/` given one to hold the name. Previewed with
+`--dry-run`; a name a different folder has here is refused (exit 5). `slipbox relink [note]` rewrites the links of
 a note (or every note) that reach nothing but whose file was seen to move (`17.12`) — broken, since a move never
-resolves a link (`20.2`) — to its path now. For every note, it also fixes what the vault's own last confirmed move
-broke (`20.17`), from what the state knows of where it was: its links out by a path, now reaching nothing, to where
-they reached from there; and the other vaults' links into where it was (as of their index) to where it is — each in
-its own form (relative, `~/`, absolute), a link that still reaches something left alone. `vault-moved` says how many
-lines that is (`broken`). Both take `--dry-run`.
+resolves a link (`20.2`) — to its path now. For every note, it also fixes what the root's own last move by hand broke
+(`20.17`, `21.8`), from what the state knows of where it was: its links out by a path, now reaching nothing, to where
+they reached from there; and the other roots' links into where it was (as of their index) to where it is — each in
+its own form (relative, `~/`, absolute), a link that still reaches something left alone. The command that first opens
+a moved folder says how many lines that is. Both take `--dry-run`.
 
-**Plans, in two steps** (`20.18`): every command that generates edits — `mv`, `rename-vault`, `rename-heading`,
+**Plans, in two steps** (`20.18`): every command that generates edits — `mv`, `name`, `rename-heading`,
 `relink`, `convert-links`, `init <folder>`, `deinit`, `undo` — takes `--plan`: it says what it would do, as
 `--dry-run` does, writing nothing, and saves the plan (its `id`) in the state folder, tied to each file as it is.
 `slipbox apply <id>` writes it — refused, nothing written (exit 5), when any of its files changed since, so a stale

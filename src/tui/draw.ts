@@ -1710,8 +1710,10 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
   x += drawText(c, x, y, " ", st);
   // The vault and its branch (20.14), while the path keeps a readable width (it goes before the path does).
-  const vault = app.vaultStatus();
-  if (vault && c.width - x - rightW - stringWidth(vault) - 4 >= 24) x += drawText(c, x, y, `${sanitize(vault)}  `, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
+  // Where the file is (21.9), in the room the path leaves it — at most 40 columns.
+  const rootRoom = Math.min(40, c.width - x - rightW - 4 - 24);
+  const vault = rootRoom >= 8 ? app.vaultStatus(rootRoom) : "";
+  if (vault) x += drawText(c, x, y, `${sanitize(vault)}  `, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });
   const pathId = "status:path";
   // The path shrinks to leave room for its marker (reloaded / deleted) and the right-hand side;
   // the watch marker after it is dropped when it doesn't fit.

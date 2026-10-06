@@ -5,13 +5,13 @@
 // source-line offset from it, and the absolute source line as a fallback. An agent inserting a
 // paragraph above your reading position therefore does not move you.
 
-import { join } from "node:path";
-import { readJson, writeJson } from "./fsutil.ts";
+import { existsSync, rmSync } from "node:fs";
+import { isAbsolute, join, relative, sep } from "node:path";
+import { ensureDir, readJson, writeJson } from "./fsutil.ts";
 import type { Layout } from "./layout/ir.ts";
-import { type Keyed, stateDir } from "./paths.ts";
+import { type Keyed, stateDir, stateHome } from "./paths.ts";
 
-/** Where a vault's positions and session live: its state directory — a plain folder's too, its
- *  own instance (20.22). */
+/** Where a root's session lives: its state directory, by its path (21.8) — a plain folder's too. */
 export interface StatePlace extends Keyed {
   mode: string;
   root: string;
@@ -115,39 +115,108 @@ export function isCursorAnchor(v: unknown): v is CursorAnchor {
   return !!c && typeof c === "object" && isAnchor(c.anchor) && Number.isInteger(c.sub) && Number.isInteger(c.col);
 }
 
-type PositionMap = Record<string, Anchor & { at: string; cursor?: CursorAnchor }>;
+type PositionEntry = Anchor & { at: string; cursor?: CursorAnchor; /** The root it was read from. */ root?: string };
+type PositionMap = Record<string, PositionEntry>;
 
-const MAX_POSITIONS = 2000;
+/** The newest kept, across every root. */
+const MAX_POSITIONS = 5000;
 
+/** Reading positions, by file (21.8): one file for the machine, each note by its absolute path. */
+export function positionsFile(): string {
+  return join(stateHome(), "positions.json");
+}
+
+function readPositions(file: string): PositionMap {
+  const raw = readJson<unknown>(file, {});
+  const out: PositionMap = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!isAnchor(v)) continue;
+    const entry = v as PositionEntry;
+    if (typeof entry.at !== "string") continue;
+    if (entry.cursor !== undefined && !isCursorAnchor(entry.cursor)) delete entry.cursor;
+    out[k] = entry;
+  }
+  return out;
+}
+
+/** The newer of each note's, on disk and here: never last-quit-wins. */
+function merged(mine: PositionMap, theirs: PositionMap): PositionMap {
+  const out = { ...mine };
+  for (const [k, v] of Object.entries(theirs)) if (!out[k] || out[k].at < v.at) out[k] = v;
+  return out;
+}
+
+function writePositions(data: PositionMap): void {
+  let entries = Object.entries(data);
+  if (entries.length > MAX_POSITIONS) entries = entries.sort((a, b) => (a[1].at < b[1].at ? 1 : -1)).slice(0, MAX_POSITIONS);
+  try {
+    ensureDir(stateHome());
+    writeJson(positionsFile(), Object.fromEntries(entries));
+  } catch {}
+}
+
+/**
+ * A root moved by hand, its state carried along (21.8): its notes' positions, kept by path, follow
+ * it from `from` to `to`.
+ */
+export function carryPositions(from: string, to: string): void {
+  const data = readPositions(positionsFile());
+  const out: PositionMap = {};
+  let moved = false;
+  for (const [k, v] of Object.entries(data)) {
+    const rel = relative(from, k);
+    const inside = rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+    const root = v.root === from ? to : v.root;
+    if (inside || root !== v.root) moved = true;
+    out[inside ? join(to, rel) : k] = { ...v, ...(root ? { root } : {}) };
+  }
+  if (moved) writePositions(out);
+}
+
+/**
+ * The reading positions a root uses: the machine's, by file (21.8) — so a note opened from another
+ * root, or `project/docs/` opened instead of `project/`, is where it was left. Asked by a root path
+ * (`notes/a.md`) or an absolute one. The positions a root kept itself before are taken in once.
+ */
 export class PositionStore {
-  private readonly file: string;
   private data: PositionMap;
 
-  constructor(place: StatePlace) {
-    this.file = join(stateDir(place), "positions.json");
-    const raw = readJson<unknown>(this.file, {});
-    this.data = {};
-    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-      for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-        if (!isAnchor(v)) continue;
-        const entry = v as PositionMap[string];
-        if (entry.cursor !== undefined && !isCursorAnchor(entry.cursor)) delete entry.cursor;
-        this.data[k] = entry;
-      }
+  constructor(private readonly place: StatePlace) {
+    this.data = readPositions(positionsFile());
+    // Today's, moved once: the root's own positions.json (before 21.8), by its paths.
+    const own = join(stateDir(place), "positions.json");
+    if (existsSync(own)) {
+      const before: PositionMap = {};
+      for (const [k, v] of Object.entries(readPositions(own))) before[isAbsolute(k) ? k : join(place.root, k)] = { ...v, root: place.root };
+      this.data = merged(this.data, before);
+      writePositions(this.data);
+      rmSync(own, { force: true });
     }
   }
 
-  /** The stored key for a buffer's key: a vault path, or absolute (a file outside it). */
+  /** The stored key for a buffer's key: a root path, or absolute (a file outside it). */
   private k(rel: string): string {
-    return rel;
+    return isAbsolute(rel) ? rel : join(this.place.root, rel);
   }
 
-  /** Every note read here, with when (its stored key). */
-  entries(): { key: string; at: string }[] {
-    return Object.entries(this.data).map(([key, v]) => ({ key, at: v.at }));
+  /** A stored key as this root names it: a path in it, else absolute. */
+  private shown(abs: string): string {
+    const rel = relative(this.place.root, abs);
+    return rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel.split(sep).join("/") : abs;
   }
 
-  /** When a note was last read here (ISO 8601), if it ever was. */
+  /**
+   * The notes read here, with when and the line: this root's files, and those read from it outside
+   * it — each by the key a buffer has.
+   */
+  entries(): { key: string; at: string; line: number }[] {
+    return Object.entries(this.data)
+      .filter(([k, v]) => v.root === this.place.root || this.shown(k) !== k)
+      .map(([k, v]) => ({ key: this.shown(k), at: v.at, line: v.cursor?.anchor.line ?? v.line }));
+  }
+
+  /** When a note was last read (ISO 8601), if it ever was. */
   readAt(rel: string): string | null {
     return this.data[this.k(rel)]?.at ?? null;
   }
@@ -162,27 +231,14 @@ export class PositionStore {
   }
 
   set(rel: string, anchor: Anchor, cursor?: CursorAnchor): void {
-    this.data[this.k(rel)] = { ...anchor, at: new Date().toISOString(), ...(cursor ? { cursor } : {}) };
+    this.data[this.k(rel)] = { ...anchor, at: new Date().toISOString(), root: this.place.root, ...(cursor ? { cursor } : {}) };
   }
 
   save(): void {
-    // Another slipbox on this vault may have saved since this one loaded: its entries are kept,
-    // the newer of two for the same note winning (never last-quit-wins).
-    const onDisk = readJson<Record<string, { at?: string }>>(this.file, {});
-    if (onDisk && typeof onDisk === "object" && !Array.isArray(onDisk)) {
-      for (const [k, v] of Object.entries(onDisk)) {
-        const mine = this.data[k];
-        if (v && typeof v.at === "string" && isAnchor(v) && (!mine || mine.at < v.at)) this.data[k] = v as (typeof this.data)[string];
-      }
-    }
-    const entries = Object.entries(this.data);
-    if (entries.length > MAX_POSITIONS) {
-      entries.sort((a, b) => (a[1].at < b[1].at ? 1 : -1));
-      this.data = Object.fromEntries(entries.slice(0, MAX_POSITIONS));
-    }
-    try {
-      writeJson(this.file, this.data);
-    } catch {}
+    // Another slipbox may have saved since this one loaded: its entries are kept, the newer of two
+    // for the same note winning (never last-quit-wins).
+    this.data = merged(this.data, readPositions(positionsFile()));
+    writePositions(this.data);
   }
 }
 
@@ -257,7 +313,7 @@ export function isAnchor(v: unknown): v is Anchor {
   );
 }
 
-/** The session file: one per vault, and per plain folder opened (each its own instance, 20.22). */
+/** The session file: one per root, and per plain folder opened (21.8). */
 export function sessionFile(place: StatePlace): string {
   return join(stateDir(place), "session.json");
 }

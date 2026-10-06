@@ -276,7 +276,7 @@ export const GIT_SCENARIOS: Scenario[] = [
   },
 
   {
-    name: "world/git: :vault-moved asks again about a vault moved by hand; yes brings its places",
+    name: "world/git: a named folder moved by hand brings its places along, nothing asked (21.8)",
     options: { home: true, startAt: "home/hobbies/photography/index.md" },
     run: async (s) => {
       await moveTo(s, ["shift+g"], (l) => l > 10, "the end of the note");
@@ -284,15 +284,8 @@ export const GIT_SCENARIOS: Scenario[] = [
       await s.quit();
       renameSync(s.path("~/hobbies/photography"), s.path("~/hobbies/photography-moved"));
       await s.restart({ startAt: "home/hobbies/photography-moved/index.md" });
-      await s.see("was elsewhere before — did it move here?", 5000);
-      // esc: asked next time — and :vault-moved is next time.
-      await s.keys("escape");
+      await s.message(/photography moved here from .*hobbies\/photography/, 5000);
       await s.notSee("did it move here?");
-      await s.ex("vault-moved");
-      await s.see("was elsewhere before — did it move here?");
-      await s.see("Moved here from");
-      await s.keys("enter");
-      await s.message("moved here from");
       await s.until(() => pos(s).line === left, 5000, `index.md at line ${left} again`);
     },
   },
@@ -301,16 +294,17 @@ export const GIT_SCENARIOS: Scenario[] = [
     name: "world/git: the background auto-index finds $HOME's roots while nobody works",
     options: { home: true, startAt: "home/notes/index.md", config: "[index]\nbackground = true\nidle_seconds = 1\n" },
     run: async (s) => {
-      // Hands off (a key would pause it): the registry fills with roots never opened.
-      const registry = join(s.dir, "state", "slipbox", "vaults.json");
+      // Hands off (a key would pause it): the roots list fills with roots never opened.
+      const registry = join(s.dir, "state", "slipbox", "roots.json");
       const found = (rel: string) => existsSync(registry) && readFileSync(registry, "utf8").includes(JSON.stringify(s.path(rel)));
       const roots = ["~/hobbies/photography", "~/work/product", "~/hobbies/cycling"];
       s.expect(!roots.some(found), "none known before it ran");
       await s.until(() => roots.every(found), 60_000, "the auto-index to find photography, product and cycling");
+      // The named ones among them (21.6): photography by its .slipbox/ name, product by its remote; cycling (.zk/) has none.
       await leader(s, "v", "v");
-      await s.see(/Vaults \(\d+\)/);
-      await s.see(/photography +\//);
-      await s.see(/product +\//);
+      await s.see(/Folders \(\d+\)/);
+      await s.see(/photography +~\/hobbies\/photography/);
+      await s.see(/product +~\/work\/product/);
     },
   },
 

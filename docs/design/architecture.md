@@ -57,17 +57,17 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/width.ts` | 0.7 | the one width function: graphemes, East Asian width, emoji |
 | `core/fsutil.ts` | 4.6, 7.5 | atomic writes keeping the mode; `writeNote` (never out of the vault); reads |
 | `core/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
-| `core/paths.ts` | 0.10 | config, cache and state directories; the vault key |
+| `core/paths.ts` | 0.10, 21.8 | config, cache and state directories; a root's key, by its path |
 | `core/config.ts` | 0.9 | TOML: defaults ← user ← vault; warnings, never crashes |
-| `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 20.5 | a file's root, its instance and the moves to ask about; `init` |
-| `core/registry.ts` | 17.3–17.6, 20.4 | identity, the machine's instances (vaults, plain folders), storage keys |
-| `core/collection.ts` | 20.4 | a collection's evidence: `.slipbox/` id, remotes, first commits; copies of one |
+| `core/vault.ts` | 1.1, 1.10, 0.12, 17.1, 20.3, 21.8 | a file's root; recording it, a moved folder's state along |
+| `core/registry.ts` | 17.3–17.6, 21.8 | `[vault]` identity; the machine's roots by path (`roots.json`) |
+| `core/remotes.ts` | 21.6 | a repository's remotes as `host/path`: what names it, what hosting URLs are its |
 | `core/parsecache.ts` | 20.11 | notes' parsed content by content hash, shared by every copy on the machine |
-| `core/names.ts` | 20.6 | each vault's name to show: unique here, `.` for a collision, `name@branch` for a worktree |
+| `core/names.ts` | 21.9 | a root as it's told: its name, else its path (`~/…`); `name@branch` for a worktree |
 | `core/git.ts` | 17.19 | a vault's git checkout, from `.git`: the main one or a worktree, the branch |
 | `core/gitops.ts` | 5.11–5.14 | git run for what `.git` can't say cheaply: status, changes, a file at a commit |
 | `core/mergereview.ts` | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
-| `core/reach.ts` | 17.8–17.11 | other vaults: `[[vault:note]]`, paths out of the root, their backlinks here |
+| `core/reach.ts` | 17.9–17.11 | other roots: paths out of the root, their backlinks here; the converter's `[[x:…]]` |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
 | `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
 | `core/files.ts` | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
@@ -183,12 +183,13 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | What | Where |
 | --- | --- |
 | user config | `$XDG_CONFIG_HOME/slipbox/config.toml` (or `--config`, `$SLIPBOX_CONFIG`) |
-| vault config and identity | `<vault>/.slipbox/config.toml` (`[vault]`: `id`, `name`…), plus `.slipbox/version` |
-| the machine's vaults | `$XDG_STATE_HOME/slipbox/vaults.json` |
+| a root's config and identity | `<root>/.slipbox/config.toml` (`[vault]`: `id`, `name`…), plus `.slipbox/version` |
+| the machine's roots (`21.8`) | `$XDG_STATE_HOME/slipbox/roots.json` (by path; moves kept) |
+| named folders (`21.6`) | `$XDG_STATE_HOME/slipbox/folders.json` (names, copies, defaults) |
 | user themes | `$XDG_CONFIG_HOME/slipbox/themes/*.yaml` (base16 / base24) |
 | link index | `$XDG_CACHE_HOME/slipbox/<key>/index.json` |
 | search index (`6.6`) | `$XDG_CACHE_HOME/slipbox/<key>/search.db` (SQLite FTS5, WAL) |
-| reading positions | `$XDG_STATE_HOME/slipbox/<key>/positions.json` |
+| reading positions (`21.8`) | `$XDG_STATE_HOME/slipbox/positions.json` (by file, the machine's) |
 | session | `$XDG_STATE_HOME/slipbox/<key>/session.json` |
 | clipboard fallback (no OSC 52 or clipboard tool) | `$XDG_STATE_HOME/slipbox/<key>/clipboard.txt` |
 | scratch | `$XDG_STATE_HOME/slipbox/<key>/scratch.md`, or in the vault by config |
@@ -197,8 +198,8 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | renames, to undo (`7.4`) | `$XDG_STATE_HOME/slipbox/<key>/renames.json` (the last 20) |
 | the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, and an item per folder) |
 
-`<key>` is the instance's local id (`20.5`); a plain folder's, `<basename>-<sha256(realpath)[:12]>`, by its path
-(`docs/design/decisions.md`, `0.10`).
+`<key>` is the root's path — a plain folder's when there's none: `<basename>-<sha256(realpath)[:12]>` (`21.8`;
+`docs/design/decisions.md`, `0.10`). A named folder moved by hand takes it along.
 
 ## Performance, measured
 

@@ -127,9 +127,10 @@ session keeps them.
 - a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES` (the explorer or
   the history), `OUTLINE`, `RESIZE`, or what's pending: keys of a sequence in short form (`␣ l`,
   `C-w`), or an operator, count or `r` (`2d`, `di`);
-- the vault and its branch (`20.14`), dimmed: `pathfinder · main` — its name on this machine (`20.6`) and the branch
-  checked out now (a detached head: its commit); a linked worktree as `pathfinder@refactor`; nothing for loose
-  files. It's the first to go when the path would be left fewer than 24 columns;
+- where the file is, and its branch (`20.14`, `21.9`), dimmed: the root's name if it has one, else its path, else the
+  folder opened — `research · main`, `~/src/experiment · main` (no remote), `notes`, `~/scratch` — and the branch
+  checked out now (a detached head: its commit); a named worktree as `research@refactor`. At most 40 columns, a path
+  cut from the front to fit; it's the first to go when the path would be left fewer than 24 columns;
 - the note's path (click to copy its absolute path), cut from the front when short of room, so the
   note's own name stays;
 - a marker: `• unsaved`, `• unsaved ⚠ differs from disk` (after keeping yours in a conflict),
@@ -293,13 +294,13 @@ all push onto them. The history list (`space h h`) shows the whole timeline and 
 it, and under it the notes read lately in other tabs and sessions: a note opened in a tab of its own
 starts a timeline of its own, and is still found there.
 
-## Switching vaults (plans `17.10`, `17.14`)
+## Switching roots (plans `17.10`, `17.14`, `21.10`)
 
-The TUI is always in one root: a vault, or a plain folder outside every vault — an unnamed instance known by its path,
-walked and indexed as a vault is, its session its own (`20.22`; the status line shows its path); `~` and `/` are
-listed a level at a time. **Opening a note of another vault switches to it** —
-following a path out of the root, a backlink from another vault, a vault picked
-from the list or the explorer: the TUI becomes that root's, as if started there — its config, its
+The TUI is always in one root: a folder holding a root marker, or a plain folder outside every root — known by its
+path, walked and indexed as a root is, its session its own (`20.22`, `21.8`); `~` and `/` are listed a level at a
+time. **Opening a note of another root switches to it** — following a path out of the root, a pointer, a backlink
+from another root, a named folder picked from `:folders` or a root from the explorer: the TUI becomes that root's,
+as if started there — its config, its
 index (refreshed), its watcher, its reading positions and its session, whose tabs come back, with
 the note open (at its heading). Leaving saves the one before as quitting does. **Refused while a
 note is unsaved** (`unsaved: … — save (:wa) or revert before leaving`): it would be left behind. A
@@ -308,17 +309,16 @@ loose file opens as it is, beside the current vault's notes: it has no vault to 
 **Back returns.** `back` (`ctrl+o`) from the first place in a vault goes to the vault before, at
 the note and place you left; each switch is remembered, so a chain of them unwinds one by one.
 
-**The known vaults** (`space v v`, `:vaults`, `vault.switch`): the machine's list (`vaults.json`,
-`slipbox vaults`), most recently seen first — each by its name and its path; `enter` switches. Copies of one
-collection (`20.4`) are listed together: under the checkout seen last, a repository's worktrees (`17.19`) each by its
-branch (`⎇ feat`), and its other clones each by its name and branch; the head's branch beside it. Plain folders
-aren't vaults, and aren't listed. **Names** (`20.6`) here, in `space v i`, the Info view and messages are each
-vault's name on this machine: its `.slipbox/` name, else its repository's, else its folder's — two that would share
-one each with as few folders as tell them apart (`work.docs`, `home.docs`), a worktree as `name@branch`.
+**The named folders** (`space v v`, `:folders`, `folders.open`; `slipbox folders`): each by the name pointers give it
+(`21.6`) and the copy its links open here, those seen last first; `enter` goes into that copy. A repository's worktrees are its branches, not
+copies: listed once. **Which copy** a folder's links open (`space v shift+v`, `:folders-default`, `folders.default`;
+`slipbox folders default`): this folder's copies, else a pick of the folders with two. **Names** here, in the status
+line, `space v i`, the Info view and messages are each root's name as pointers give it — its `.slipbox/` name, else
+its repository's remote's — else its path (`~/…`); a named worktree as `name@branch` (`21.9`).
 
 **The background auto-index** (`20.9`): while nobody is working — no key or click for `index.idle_seconds`, no CLI
-command from an agent as long, this vault's own index done — the TUI walks the home folder for vaults a slice at a
-time and indexes each, so backlinks from vaults never opened appear by themselves. Its place is kept: it resumes
+command from an agent as long, this root's own index done — the TUI walks the home folder for roots a slice at a
+time and indexes each, so backlinks from roots never opened appear by themselves. Its place is kept: it resumes
 where it stopped, and a pass done, the next is a day later. `[index] background = false` turns it off;
 `slipbox index --home` runs it now.
 
@@ -329,26 +329,25 @@ written unasked; typing, or with something else open, it's a message instead. **
 (`[[research:x]]`, `[t](research:x.md)`, when a folder this machine knows has that name) is no link: followed, it says
 so, with the pointer that is one; `space c a` writes it (a markdown link, its heading or block kept).
 
-**A vault moved** (`20.5`): opened where it wasn't seen before, while a copy of it is gone from where it was (seen
-last before this one appeared), the TUI asks "`<name>` was elsewhere before — did it move here?": `Moved here from
-<path>` takes that copy's instance — its reading positions, sessions and scratch, the vault opened again with them —
-and the instance made here meanwhile goes — then, if the move broke links in or out of it, their fix, previewed
-(`relink`'s, `20.17`); `No: a copy of its own` isn't asked again; `esc` asks next time.
-`:vault-moved` (`vault.moved`) asks again. A worktree `git worktree move` took elsewhere is found by git's name for it,
-without asking.
+**A named folder moved by hand** (`21.8`): opened where it went — its id or remote at a new path, the one copy that
+was elsewhere gone — its session, scratch, trash and reading positions come along, nothing asked; a message says so
+("`<name>` moved here from `<path>`: …came along"), and if the move broke links in or out of it, their fix is
+previewed at once (`relink`'s, `20.17`). A worktree `git worktree move` took elsewhere is found by git's name for it.
+Anything less sure — an unnamed root, two copies gone — starts fresh.
 **A second copy of a named folder** (`21.6`, `core/folders.ts`): opened where another copy of it is here too — one
 `.slipbox/` id, or one remote — the TUI asks once "`<name>`: 2 copies on this machine — which do links to it open?",
 the first found marked `links open it now`; the answer is remembered, and `esc` keeps the first, not asking again. A
 copy gone (moved here, a drive unplugged) is no choice: not asked.
-**The launcher:** slipbox opened on a plain folder without a file (`slipbox ~`) shows this list at
-once, over the folder's explorer, when there are vaults to show.
+**The launcher:** slipbox opened on a plain folder without a file (`slipbox ~`) shows the named folders at once, over
+the folder's explorer, when there are any to go into.
 
-**A git repository is a vault by itself** (`20.3`), and so are an Obsidian vault and a zk notebook (`21.1`): any folder
+**A git repository is a root by itself** (`20.3`), and so are an Obsidian vault and a zk notebook (`21.1`): any folder
 holding a root marker (`walk.root_markers`). Opening a file in a repository opens the repository, from its top —
-nothing asked, nothing written into it; a repository inside a vault is a vault of its own, its folder marked in the
-explorer. `.slipbox/` gives one a name and settings of its own (`slipbox init`; `--private` keeps it out of git).
-`space v m` (`:init`, `vault.init`) in a plain folder makes it a vault — "`<folder>` is a folder without .slipbox/ —
-make it a vault?" — its `.slipbox/` committed with it like any file; the TUI goes into it with the note open.
+nothing asked, nothing written into it; a repository inside a root is a root of its own, its folder marked in the
+explorer. `.slipbox/` gives one settings of its own (`slipbox init`; `--private` keeps it out of git), and a name
+pointers use when asked (`slipbox init --name`, `space v n`, `:name`). `space v m` (`:init`, `vault.init`) in a plain
+folder gives it `.slipbox/` — "`<folder>` is a folder without .slipbox/ — give it one?" — committed with it like any
+file; the TUI goes into it with the note open.
 
 ## Renames (plans `17.15`, `7.1`–`7.4`)
 
@@ -361,7 +360,7 @@ notes answer to a row of its own at the top, `pick notes/x.md:3`: `enter` lists 
 as part of the preview. Each shows its **preview** first: a list of every line it changes, in every vault
 (`notes/index.md:3 [plan](plan.md) → [plan](roadmap.md)`), with the git trees that already have changes and the links
 skipped at the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s,
-`rename-vault`'s, `rename-heading`'s, `relink`'s and `convert-links`'s (`docs/design/cli.md`, "Renames"). **Refused
+`name`'s, `rename-heading`'s, `relink`'s and `convert-links`'s (`docs/design/cli.md`, "Renames"). **Refused
 while a file it rewrites is unsaved.** After it, the open notes it changed are reloaded, and a window on a renamed or
 moved note shows it under its new path, its history following — every note of a moved folder alike.
 
@@ -404,8 +403,8 @@ The explorer makes and changes files by keys and by buttons, on the selected row
 - **A nested vault's row** (`18.7`) is a folder of this vault: `r` renames its folder and `m` moves it — links into it
   by path fixed here and in the vaults that reach it, its own relative links out fixed, its id and name kept (it's
   recorded at its new place); `d` deletes it whole, saying so ("the vault outreach (outreach/, 12 notes)") with the
-  links into it — by path or by its name — that break. Its menu has "Rename the folder" and, beside it, "Rename the
-  vault" (`shift+r`, `R` in the menu): `rename-vault` for it, its folder left where it is.
+  links into it — by path or by its name — that break. Its menu has "Rename the folder" and, beside it, "Name it"
+  (`shift+r`, `R` in the menu): `slipbox name` for it, its folder left where it is.
 - **A folder made a vault, and back** (`18.11`): `v` on a folder asks for the new vault's name (a distinct one typed:
   `halden-logs` for `logs/`), then a preview — links are paths, which reach across the new boundary as before, so
   there's nothing of them to rewrite (`20.2`) — as `slipbox init <folder>` does (`docs/design/cli.md`); enter makes it.
@@ -504,12 +503,13 @@ keys.
   differ — a worktree's branch instead (`⎇ feat`, `17.19`); `enter` or a double-click goes into
   it (a switch, below). **In a plain folder** (`20.22`) the explorer is its tree, as a vault's is, with `..` above it
   to go up (`17.14`); in `~` or `/`, listed a level at a time, each folder in it is a row to go into — a vault or a
-  plain folder. **The explorer's roots** (`20.15`): under the vault open, the other
-  roots, each by its name (`◈`): the vault or folder slipbox was opened on, and the vaults pinned with
-  `:pin-root` (`vault.pin_root`, kept with the opened vault's state). A vault followed into by a link is the vault
-  open while it is, the opened one beside it; left, it goes unless pinned. `enter` on another root unfolds it — its
-  notes and files as its index has them — and a file of it opens there (a switch); none of this vault's file
-  operations act on its rows. Roots never overlap: one inside the vault open, or around it, isn't listed apart — its
+  plain folder. **The explorer's roots** (`20.15`, `21.9`): under the root open, the other roots, each by its name
+  (`◈`), else its path: the root or folder slipbox was opened on, the roots pinned with `:pin-root` (`vault.pin_root`,
+  kept with the opened root's state), and the folder of a file open beside this root — a loose file a link was
+  followed to, its nearest root else its folder — while one of its files is shown. A root followed into by a link is
+  the root open while it is, the opened one beside it; left, it goes unless pinned. `enter` on another root unfolds it
+  — its notes and files as its index has them — and a file of it opens there (a switch); none of this root's file
+  operations act on its rows. Roots never overlap: one inside the root open, or around it, isn't listed apart — its
   folder is in the tree, or the tree is in it. **Git's marks** (`5.11`): in a git checkout each changed file has
   its state at its row's end — `M` modified, `+` new (untracked or added), `R` renamed, `!` in a merge's conflict
   (`git_modified`, `git_new`, `git_conflict`) — and a folder with one in it a `•`. git is asked in the background, a
@@ -555,11 +555,11 @@ written here, `21.4` — `writes`, its `path` and `.md`, then `from` what said t
 copying it whole). `enter` opens what
   a row names: a property's line in the frontmatter (source mode: its own line; rendered, the row that shows it), a
   tag's notes, the links or backlinks list, the outline or the footnotes view; any other row copies its value, as `y`
-  does. The vault's own information — its notes, index (when it was written, what was reached outside the walk, `20.10`)
-  and watcher, the background index of the home folder, this copy's instance id and what it holds, the other copies this
-  machine knows (`20.4`, the five seen last) — is `space v i`'s window: a vault isn't a file. Names are a column a third
-  of the pane at most, values cut to it (no sideways scrolling). `space n i`, the `ℹ` button, `slipbox stat` (its
-  `vault` and `properties` too). `e` edits the properties (below).
+  does. The root's own information — its name and the other copies of it this machine knows (`21.6`), its notes,
+  index (when it was written, what was reached outside the walk, `20.10`) and watcher, the background index of the
+  home folder — is `space v i`'s window: a root isn't a file. Names are a column a third of the pane at most, values
+  cut to it (no sideways scrolling). `space n i`, the `ℹ` button, `slipbox stat` (its `root`, `name` and `properties`
+  too). `e` edits the properties (below).
 - **The properties editor** (`3.20`): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter — YAML
   or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
   tall as its text. Inside is a window like any, in source mode, with every editing key there is; the keys and

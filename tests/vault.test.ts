@@ -10,7 +10,7 @@ import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { applyPlan, planHeadingRename, planRelink, planUndo } from "../src/core/rename.ts";
 import { findVaultRoot, folderAt, gitRootOf, initVault, isListed, isVaultRoot, locateVault, markersAt, recordLocation, setRootMarkers } from "../src/core/vault.ts";
-import { implicitName, type KnownVault } from "../src/core/registry.ts";
+import { implicitName, type KnownRoot } from "../src/core/registry.ts";
 import { cacheDir, vaultKey } from "../src/core/paths.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
@@ -31,14 +31,14 @@ describe("vault discovery (1.1)", () => {
     expect(findVaultRoot(join(VAULT, "notes", "alpha.md"))).toBe(VAULT);
     expect(findVaultRoot(join(VAULT, "nested-vault", "inner.md"))).toBe(join(VAULT, "nested-vault"));
   });
-  test("a git checkout's top is a vault by itself: keyed by its path, named by its folder, nothing written (20.3)", async () => {
+  test("a git checkout's top is a root by itself: keyed by its path, unnamed without a remote, nothing written (20.3, 21.6)", async () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-repo-"));
     mkdirSync(join(dir, ".git"));
     mkdirSync(join(dir, "docs"));
     writeFileSync(join(dir, "docs", "n.md"), "# n\n");
     const loc = locateVault({ path: join(dir, "docs", "n.md") });
-    expect(loc).toMatchObject({ mode: "vault", root: dir, id: null, name: implicitName(dir) });
-    expect(loc.key).not.toBe(""); // its path's
+    // Never named by its folder's own name: it doesn't travel (21.6).
+    expect(loc).toMatchObject({ mode: "vault", root: dir, id: null, name: null, key: vaultKey(dir) });
     // The CLI opens it as the vault, says nothing about it, and makes no .slipbox/.
     const out: string[] = [];
     await runCli(["ls", "--json"], { out: (s) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: join(dir, "docs"), env: process.env });
@@ -572,7 +572,7 @@ describe("the demo vault's code samples", () => {
   });
 });
 
-describe("vault identity, storage and the machine's vaults (17.3–17.6)", () => {
+describe("a root's identity, its state by path, the machine's roots (17.3–17.6, 21.8)", () => {
   const io = (cwd: string) => {
     const out: string[] = [];
     const err: string[] = [];
@@ -585,55 +585,56 @@ describe("vault identity, storage and the machine's vaults (17.3–17.6)", () =>
   };
   const fresh = (prefix: string) => mkdtempSync(join(tmpdir(), `slipbox-${prefix}-`));
 
-  test("init gives a vault an id and a name (the folder's), in [vault]; the config loader skips it", async () => {
+  test("init: settings, and a name and an id only when one is given (21.10); the config loader skips [vault]", async () => {
     const dir = join(fresh("init"), "Field Notes");
     mkdirSync(dir);
     const r = await cli(["init", dir, "--json"], dir);
     expect(r.code).toBe(0);
-    expect(r.json.data).toMatchObject({ created: true, name: "Field-Notes" });
-    const cfg = readFileSync(join(dir, ".slipbox", "config.toml"), "utf8");
-    expect(cfg).toContain(`[vault]\nid = "${r.json.data.id}"\nname = "Field-Notes"`);
-    const loc = locateVault({ path: dir });
-    expect(loc).toMatchObject({ mode: "vault", id: r.json.data.id, name: "Field-Notes" });
-    expect(loc.key).toMatch(/^[0-9a-f]{12}$/); // this copy's instance (20.5), not the vault's id
+    expect(r.json.data).toMatchObject({ created: true, name: null, id: null });
+    const cfg = join(dir, ".slipbox", "config.toml");
+    expect(readFileSync(cfg, "utf8")).not.toContain("[vault]");
+    // Never named by its folder's own name (21.6): unnamed until one is given.
+    expect(locateVault({ path: dir })).toMatchObject({ mode: "vault", id: null, name: null, key: vaultKey(dir) });
+    const tag = `fn${basename(dirname(dir)).slice(-6).toLowerCase()}`;
+    const named = await cli(["init", dir, "--name", tag, "--json"], dir);
+    const id = named.json.data.id;
+    expect(id).toMatch(/^[0-9a-f]{16}$/);
+    expect(named.json.data).toMatchObject({ created: false, identified: true, name: tag });
+    expect(readFileSync(cfg, "utf8")).toContain(`[vault]\nid = "${id}"\nname = "${tag}"`);
     // [vault] is identity, not a setting: no "unknown key" warning.
     const info = await cli(["info", "--json"], dir);
     expect(info.json.warnings).toEqual([]);
-    expect(info.json.data.vault).toMatchObject({ id: r.json.data.id, name: "Field-Notes" });
+    expect(info.json.data).toMatchObject({ name: tag, folder: { name: tag, id } });
     // …and in the user's config it's a mistake worth a word.
     const user = join(fresh("user"), "config.toml");
     writeFileSync(user, '[vault]\nname = "x"\n');
     expect(loadConfig({ configFile: user }).warnings.join()).toContain("[vault] belongs in a vault's");
   });
 
-  test("a vault without an id gets one when first opened, its comments kept; its old state moves over (17.18)", async () => {
+  test("a .slipbox/ is never written to on its own (21.8): opened, read as it is; named only when asked", async () => {
     const dir = fresh("old");
     mkdirSync(join(dir, ".slipbox"));
     writeFileSync(join(dir, ".slipbox", "config.toml"), "# mine\n[walk]\nexclude = [\"x/\"]\n");
-    // Positions saved under the path's key, before vaults had ids.
-    const { PositionStore } = await import("../src/core/position.ts");
-    const ps = new PositionStore({ key: vaultKey(dir), mode: "vault", root: dir });
-    ps.set("a.md", { heading: null, headingIndex: 0, offset: 0, line: 7 });
-    ps.save();
     const loc = locateVault({ path: dir });
-    expect(loc.id).toMatch(/^[0-9a-f]{16}$/);
-    expect(loc.name).toBe(basename(dir).replace(/[^A-Za-z0-9._-]/g, ""));
-    expect(loc.key).toMatch(/^[0-9a-f]{12}$/);
+    expect(loc).toMatchObject({ id: null, name: null, key: vaultKey(dir) });
+    await cli(["ls"], dir);
+    expect(readFileSync(join(dir, ".slipbox", "config.toml"), "utf8")).toBe("# mine\n[walk]\nexclude = [\"x/\"]\n");
+    expect((await cli(["init", "--json"], dir)).json.data).toMatchObject({ created: false, identified: false, name: null });
+    // Named when asked: its comments kept.
+    const tag = `old${basename(dir).slice(-6).toLowerCase()}`;
+    const r = await cli(["init", "--name", tag, "--json"], dir);
+    expect(r.json.data).toMatchObject({ identified: true, name: tag });
     const cfg = readFileSync(join(dir, ".slipbox", "config.toml"), "utf8");
     expect(cfg.startsWith("# mine\n[walk]\nexclude = [\"x/\"]\n")).toBe(true);
-    expect(cfg).toContain(`[vault]\nid = "${loc.id}"`);
-    expect(new PositionStore(loc).get("a.md")?.line).toBe(7);
-    // Opened again: the same identity, nothing written.
-    expect(locateVault({ path: dir }).id).toBe(loc.id);
-    expect(readFileSync(join(dir, ".slipbox", "config.toml"), "utf8")).toBe(cfg);
-    expect((await cli(["init", "--json"], dir)).json.data).toMatchObject({ created: false, identified: false });
-    // init --name on a named vault: that's a rename, not an init.
-    expect((await cli(["init", "--name", "other-name", "--json"], dir)).json.error.message).toContain("rename-vault other-name");
-    // A config that doesn't parse (a typo mid-edit) is never written to.
+    expect(locateVault({ path: dir })).toMatchObject({ id: r.json.data.id, name: tag });
+    // init --name on a named one: that's slipbox name's.
+    expect((await cli(["init", "--name", "other-name", "--json"], dir)).json.error.message).toContain("slipbox name other-name");
+    // A config that doesn't parse (a typo mid-edit) is read as having no name, and never written to.
     const broken = fresh("broken");
     mkdirSync(join(broken, ".slipbox"));
     writeFileSync(join(broken, ".slipbox", "config.toml"), "[walk\n");
-    locateVault({ path: broken });
+    expect(locateVault({ path: broken }).name).toBeNull();
+    await cli(["ls"], broken);
     expect(readFileSync(join(broken, ".slipbox", "config.toml"), "utf8")).toBe("[walk\n");
   });
 
@@ -647,135 +648,171 @@ describe("vault identity, storage and the machine's vaults (17.3–17.6)", () =>
     expect(status).not.toContain(".slipbox");
   });
 
-  test("names: a vault inside vault x is suggested x-<folder>; a known name is refused with a suggestion (17.5)", async () => {
-    const top = join(fresh("names"), "x");
+  test("names: one a different folder has is refused, with one that isn't — x-<folder> inside x, -2 when taken (17.5, 21.6)", async () => {
+    const { suggestFolderName } = await import("../src/core/folders.ts");
+    const base = fresh("names");
+    const tag = `xn${basename(base).slice(-6).toLowerCase()}`;
+    const top = join(base, "x");
     mkdirSync(join(top, "plan"), { recursive: true });
-    expect((await cli(["init", top, "--name", "xnames", "--json"], top)).json.data.name).toBe("xnames");
-    const inner = await cli(["init", join(top, "plan"), "--json"], top);
-    expect(inner.json.data.name).toBe("xnames-plan");
-    const other = join(fresh("names"), "y");
+    expect((await cli(["init", top, "--name", tag, "--json"], top)).json.data.name).toBe(tag);
+    // A root inside it: one of its own, unnamed unless named.
+    expect((await cli(["init", join(top, "plan"), "--json"], top)).json.data).toMatchObject({ root: join(top, "plan"), name: null });
+    const other = join(base, "y");
     mkdirSync(other);
-    const refused = await cli(["init", other, "--name", "xnames", "--json"], other);
+    const refused = await cli(["init", other, "--name", tag, "--json"], other);
     expect(refused.code).toBe(5);
-    expect(refused.json.error.message).toContain('a vault named "xnames" is already at');
+    expect(refused.json.error.message).toContain(`a different folder is called "${tag}", at ${top}`);
     expect(refused.json.error.message).toContain('try "y"');
     expect((await cli(["init", other, "--name", "a:b"], other)).code).toBe(5);
-    // The folder's name when free; a taken one gets -2.
-    const again = join(fresh("names"), "xnames");
+    // The suggestion: prefixed with the root it sits in; a name taken gets -2.
+    expect(suggestFolderName(join(top, "notes"), tag)).toBe(`${tag}-notes`);
+    const again = join(base, tag);
     mkdirSync(again);
-    expect((await cli(["init", again, "--json"], again)).json.data.name).toBe("xnames-2");
+    expect(suggestFolderName(again, null)).toBe(`${tag}-2`);
   });
 
-  test("each copy its own state; one gone from where it was is asked about where a vault first appears, never taken on a guess (20.5)", async () => {
-    const { PositionStore } = await import("../src/core/position.ts");
-    const { readRegistry } = await import("../src/core/registry.ts");
-    const a = join(fresh("moves"), "orig");
+  test("state by path (21.8): each copy its own; a named folder moved by hand takes its state along — sure, never a guess", async () => {
+    const { PositionStore, loadSession, saveSession } = await import("../src/core/position.ts");
+    const { readRoots } = await import("../src/core/registry.ts");
+    const { lookupFolder } = await import("../src/core/folders.ts");
+    const { stateDir } = await import("../src/core/paths.ts");
+    const base = fresh("moves");
+    const tag = `mv${basename(base).slice(-6).toLowerCase()}`;
+    const a = join(base, "orig");
     mkdirSync(a);
-    await cli(["init", a, "--name", "orig-moves"], a);
+    await cli(["init", a, "--name", tag], a);
     const locA = locateVault({ path: a });
+    expect(locA.key).toBe(vaultKey(a));
     const pa = new PositionStore(locA);
     pa.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 9 });
     pa.save();
-    // A copy made while the original is there: its own instance, and nothing asked.
-    const b = join(fresh("moves"), "copy");
+    saveSession(locA, { version: 1, tabs: [{ panes: [{ path: "n.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }], active: 0 }], activeTab: 0, sidebar: true });
+    // A copy made while the original is there: its own state, by its path.
+    const b = join(base, "copy");
     cpSync(a, b, { recursive: true });
-    const locB = locateVault({ path: b });
-    expect(locB.id).toBe(locA.id);
-    expect(locB.key).not.toBe(locA.key);
-    expect(locB.movedHere).toBeUndefined();
-    // The original moved: where it is now, a new instance, and the question — its state not taken yet.
-    const c = join(fresh("moves"), "moved");
+    await cli(["ls"], b);
+    expect(new PositionStore(locateVault({ path: b })).get("n.md")).toBeNull();
+    expect(loadSession(locateVault({ path: b }))).toBeNull();
+    // The original moved by hand: its id at a new path, nothing at the old one, the only copy gone — its
+    // state comes along, and it's said once.
+    const c = join(base, "moved");
     renameSync(a, c);
-    const locC = locateVault({ path: c });
-    expect(locC.key).not.toBe(locA.key);
-    expect(locC.movedHere?.map((v) => v.path)).toEqual([a]);
-    expect(new PositionStore(locC).get("n.md")).toBeNull();
-    // Asked through the CLI: every command says so, until answered.
     const said = await cli(["ls", "--json"], c);
-    expect(said.json.warnings.join()).toContain(`was last seen at ${a}`);
-    expect(said.json.warnings.join()).toContain(`slipbox vault-moved ${a}`);
-    expect((await cli(["vault-moved", "--json"], c)).json.data.map((v: { path: string }) => v.path)).toEqual([a]);
-    // Confirmed: its instance, its state, its move kept; the one made meanwhile gone.
-    const { cacheDir, stateDir } = await import("../src/core/paths.ts");
-    const meanwhile = new PositionStore(locC); // read there while unanswered
-    meanwhile.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 1 });
-    meanwhile.save();
-    expect(existsSync(stateDir(locC))).toBe(true);
-    const moved = await cli(["vault-moved", a, "--json"], c);
-    expect(moved.json.data).toMatchObject({ from: a, to: c });
-    expect(existsSync(cacheDir(locC)) || existsSync(stateDir(locC))).toBe(false); // the one made meanwhile, gone
-    const after = locateVault({ path: c });
-    expect(after.key).toBe(locA.key);
-    expect(after.movedHere).toBeUndefined();
-    expect(new PositionStore(after).get("n.md")?.line).toBe(9);
-    const entry = readRegistry().find((v) => v.key === locA.key)!;
-    expect(entry.path).toBe(c);
-    expect(entry.moved?.map((m) => [m.from, m.to])).toEqual([[a, c]]);
-    expect(readRegistry().some((v) => v.key === locC.key)).toBe(false);
-    // The copy, moved too and said not to be the original's: its own, and not asked again.
-    const d = join(fresh("moves"), "copy-moved");
-    renameSync(b, d);
-    const locD = locateVault({ path: d });
-    expect(locD.movedHere?.map((v) => v.path)).toEqual([b]);
-    expect((await cli(["vault-moved", b, "--not", "--json"], d)).code).toBe(0);
-    expect(locateVault({ path: d }).movedHere).toBeUndefined();
-    expect(locateVault({ path: d }).key).toBe(locD.key);
-    expect((await cli(["vault-moved", "/nowhere", "--json"], d)).code).toBe(3);
-    // Not a move: a copy seen after this one first was (they were both there), and a worktree (git
-    // names those) — gone all the same.
-    const { recordVault } = await import("../src/core/registry.ts");
-    const e = join(fresh("moves"), "late");
-    cpSync(c, e, { recursive: true });
-    const locE = locateVault({ path: e });
-    const orig = readRegistry().find((v) => v.key === locA.key)!;
-    recordVault({ ...orig }, new Date(Date.now() + 11 * 60_000)); // seen after e appeared (past the ten-minute throttle)
-    recordVault({ key: `${locA.key}-wt`, id: locA.id, kind: "vault", name: "orig-moves", aliases: [], previous_names: [], path: join(c, "..", "gone-worktree"), collection: orig.collection, worktree: { name: "gone", main: c } }, new Date(0));
-    rmSync(c, { recursive: true });
-    // Of the three gone, only b: the original was seen after e appeared, and the worktree is git's.
-    expect(locateVault({ path: e }).movedHere?.map((v) => v.path)).toEqual([b]);
-    expect(locE.movedHere?.map((v) => v.path)).toEqual([b]);
+    expect(said.json.warnings.join()).toContain(`moved here from ${a}`);
+    const locC = locateVault({ path: c });
+    expect(new PositionStore(locC).get("n.md")?.line).toBe(9);
+    expect(loadSession(locC)?.tabs).toHaveLength(1);
+    expect(existsSync(stateDir(locA))).toBe(false);
+    // Its move kept (for the relink, 20.17); the old place forgotten; links to the name open it now.
+    expect(readRoots().find((v) => v.path === c)?.moved?.map((m) => [m.from, m.to])).toEqual([[a, c]]);
+    expect(readRoots().some((v) => v.path === a)).toBe(false);
+    expect(lookupFolder(tag)).toMatchObject({ status: "found", path: c });
+    expect((await cli(["ls", "--json"], c)).json.warnings.join()).not.toContain("moved here"); // once
+    // Found where it went by the background index before it's opened there: still its move, when opened.
+    const c3 = join(base, "found-first");
+    const { recordFolder } = await import("../src/core/folders.ts");
+    const { recordRoot } = await import("../src/core/registry.ts");
+    renameSync(c, c3);
+    recordRoot({ kind: "vault", path: c3, found: true });
+    recordFolder(c3, { found: true });
+    expect((await cli(["ls", "--json"], c3)).json.warnings.join()).toContain(`moved here from ${c}`);
+    expect(new PositionStore(locateVault({ path: c3 })).get("n.md")?.line).toBe(9);
+    renameSync(c3, c);
+    await cli(["ls"], c);
+    // Two copies gone at once: which one moved isn't sure — a fresh start, nothing said.
+    const c2 = join(base, "moved-again");
+    const b2 = join(base, "copy-moved");
+    renameSync(c, c2);
+    renameSync(b, b2);
+    const unsure = await cli(["ls", "--json"], c2);
+    expect(unsure.json.warnings.join()).not.toContain("moved here");
+    expect(new PositionStore(locateVault({ path: c2 })).get("n.md")).toBeNull();
+    // A root with no name has nothing to be known again by: moved, it starts fresh.
+    const plain = join(base, "plain");
+    mkdirSync(join(plain, ".slipbox"), { recursive: true });
+    const pp = new PositionStore(locateVault({ path: plain }));
+    pp.set("p.md", { heading: null, headingIndex: 0, offset: 0, line: 5 });
+    pp.save();
+    await cli(["ls"], plain);
+    renameSync(plain, join(base, "plain-moved"));
+    expect(new PositionStore(locateVault({ path: join(base, "plain-moved") })).get("p.md")).toBeNull();
   });
 
-  test("today's state moves to its instance once: a list from before instances, and state with no list at all (20.5)", async () => {
-    const { PositionStore } = await import("../src/core/position.ts");
-    const { readRegistry, recordVault } = await import("../src/core/registry.ts");
-    const { cacheDir, stateDir } = await import("../src/core/paths.ts");
-    // Listed under its id, as before instances; its state and cache under the id too.
-    const dir = fresh("before");
-    await cli(["init", dir, "--name", "before-inst"], dir);
-    const id = locateVault({ path: dir }).id!;
-    const now = locateVault({ path: dir }).key;
+  test("today's state moved once (21.8): the instances' list read into the roots', each one's state from its key to its path's", async () => {
+    const { readRoots, rootsFile } = await import("../src/core/registry.ts");
+    const { PositionStore, loadSession, positionsFile } = await import("../src/core/position.ts");
+    const { cacheDir, stateDir, stateHome, cacheHome } = await import("../src/core/paths.ts");
     const { writeJson } = await import("../src/core/fsutil.ts");
-    const { registryFile } = await import("../src/core/registry.ts");
-    writeJson(registryFile(), { version: 1, vaults: readRegistry().filter((v) => v.key !== now) });
-    recordVault({ key: id, id, kind: "vault", name: "before-inst", aliases: [], previous_names: [], path: dir }, new Date(0));
-    const list = readRegistry();
-    const i = list.findIndex((v) => v.key === id);
-    delete list[i]!.instance;
-    delete list[i]!.since;
-    writeJson(registryFile(), { version: 1, vaults: list });
-    const old = new PositionStore({ key: id, mode: "vault", root: dir });
-    old.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 4 });
-    old.save();
-    mkdirSync(cacheDir({ key: id }), { recursive: true });
-    const loc = locateVault({ path: dir });
-    expect(loc.key).toMatch(/^[0-9a-f]{12}$/);
-    expect(loc.movedHere).toBeUndefined(); // listed before instances: nothing asked
-    expect(new PositionStore(loc).get("n.md")?.line).toBe(4);
-    expect(existsSync(stateDir({ key: id }))).toBe(false);
-    expect(existsSync(cacheDir(loc))).toBe(true);
-    expect(readRegistry().filter((v) => v.path === dir).map((v) => [v.key, v.instance])).toEqual([[loc.key, loc.key]]);
-    expect(locateVault({ path: dir }).key).toBe(loc.key); // once
-    // No list entry at all, state under the path's key (before ids): taken all the same.
-    const lone = fresh("lone");
-    mkdirSync(join(lone, ".slipbox"));
-    const ps = new PositionStore({ key: vaultKey(lone), mode: "vault", root: lone });
-    ps.set("m.md", { heading: null, headingIndex: 0, offset: 0, line: 2 });
-    ps.save();
-    expect(new PositionStore(locateVault({ path: lone })).get("m.md")?.line).toBe(2);
+    // A machine of its own: the state and cache folders, for this test.
+    const before = { state: process.env.XDG_STATE_HOME, cache: process.env.XDG_CACHE_HOME };
+    const home = fresh("migrate");
+    process.env.XDG_STATE_HOME = join(home, "state");
+    process.env.XDG_CACHE_HOME = join(home, "cache");
+    try {
+      const dir = fresh("before");
+      mkdirSync(join(dir, ".git"));
+      const instance = "0123456789ab";
+      mkdirSync(join(stateHome(), instance), { recursive: true });
+      mkdirSync(join(cacheHome(), instance), { recursive: true });
+      writeJson(join(stateHome(), "vaults.json"), { version: 1, vaults: [{ key: instance, instance, id: null, kind: "vault", name: null, aliases: [], previous_names: [], path: dir, seen: new Date(0).toISOString() }] });
+      writeJson(join(stateHome(), instance, "positions.json"), { "n.md": { heading: null, headingIndex: 0, offset: 0, line: 4, at: new Date(0).toISOString() } });
+      writeJson(join(stateHome(), instance, "session.json"), { version: 1, tabs: [{ panes: [{ path: "n.md", anchor: { heading: null, headingIndex: 0, offset: 0, line: 1 } }], active: 0 }], activeTab: 0, sidebar: true });
+      writeFileSync(join(cacheHome(), instance, "index.json"), "{}");
+      expect(readRoots()).toEqual([expect.objectContaining({ key: vaultKey(dir), kind: "vault", path: dir })]);
+      expect(existsSync(join(stateHome(), "vaults.json"))).toBe(false);
+      expect(existsSync(rootsFile())).toBe(true);
+      const loc = locateVault({ path: dir });
+      expect(existsSync(stateDir({ key: instance }))).toBe(false);
+      expect(existsSync(join(cacheDir(loc), "index.json"))).toBe(true);
+      expect(loadSession(loc)?.tabs).toHaveLength(1);
+      // Its positions: by file now, for the machine; the root's own file taken in once.
+      expect(new PositionStore(loc).get("n.md")?.line).toBe(4);
+      expect(existsSync(join(stateDir(loc), "positions.json"))).toBe(false);
+      expect(Object.keys(JSON.parse(readFileSync(positionsFile(), "utf8")))).toEqual([join(dir, "n.md")]);
+    } finally {
+      process.env.XDG_STATE_HOME = before.state;
+      process.env.XDG_CACHE_HOME = before.cache;
+    }
   });
 
-  test("a list that can't be written: the path's key, the same each time (20.5)", () => {
+  test("positions by file (21.8): a note opened from the root, or from a folder inside it, is where it was left", async () => {
+    const { PositionStore } = await import("../src/core/position.ts");
+    const dir = fresh("byfile");
+    mkdirSync(join(dir, "docs"), { recursive: true });
+    mkdirSync(join(dir, ".git"));
+    const fromRoot = new PositionStore(locateVault({ path: dir }));
+    fromRoot.set("docs/a.md", { heading: null, headingIndex: 0, offset: 0, line: 12 });
+    fromRoot.save();
+    // The same file, asked by its absolute path (another root opened it, or the folder alone).
+    const loose = folderAt(join(dir, "docs"));
+    expect(new PositionStore(loose).get("a.md")?.line).toBe(12);
+    expect(new PositionStore(loose).get(join(dir, "docs", "a.md"))?.line).toBe(12);
+    // A root's list of what was read: its own files, by their paths in it; a file outside it read from it, by its own.
+    const outside = join(fresh("byfile-out"), "o.md");
+    const root = new PositionStore(locateVault({ path: dir }));
+    root.set(outside, { heading: null, headingIndex: 0, offset: 0, line: 2 });
+    root.save();
+    const listed = new PositionStore(locateVault({ path: dir })).entries().map((e) => [e.key, e.line]);
+    expect(listed).toContainEqual(["docs/a.md", 12]);
+    expect(listed).toContainEqual([outside, 2]);
+    expect(new PositionStore(loose).entries().map((e) => e.key)).not.toContain(outside); // not read from there
+  });
+
+  test("a root reached by a link is recorded: known on this machine from then on, its index found by its path (17.11, 21.8)", async () => {
+    const { readRoots } = await import("../src/core/registry.ts");
+    const base = fresh("reached");
+    const [a, b] = [join(base, "a"), join(base, "b")];
+    mkdirSync(join(a, ".slipbox"), { recursive: true });
+    mkdirSync(join(b, ".git"), { recursive: true });
+    writeFileSync(join(a, "a.md"), "# A\n\n[b](../b/b.md#top)\n");
+    writeFileSync(join(b, "b.md"), "# Top\n\n[back](../a/a.md)\n");
+    expect(readRoots().some((v) => v.path === b)).toBe(false);
+    // Its heading read there: the root is opened, and known from now on.
+    expect((await cli(["resolve", "../b/b.md#Top", "--from", "a.md", "--json"], a)).json.data).toMatchObject({ status: "resolved", abs: join(b, "b.md"), line: 1 });
+    expect(readRoots().find((v) => v.path === b)).toMatchObject({ kind: "vault", key: vaultKey(b) });
+  });
+
+  test("a list that can't be written: the path's key, the same each time", () => {
     const { chmodSync } = require("node:fs") as typeof import("node:fs");
     const { stateHome } = require("../src/core/paths.ts") as typeof import("../src/core/paths.ts");
     const dir = fresh("ro");
@@ -785,45 +822,43 @@ describe("vault identity, storage and the machine's vaults (17.3–17.6)", () =>
     try {
       const a = locateVault({ path: dir });
       expect(a.key).toBe(vaultKey(dir));
+      expect(() => recordLocation(a)).not.toThrow();
       expect(locateVault({ path: dir }).key).toBe(a.key);
     } finally {
       chmodSync(stateHome(), 0o755);
     }
   });
 
-  test("the machine's vaults: each open is recorded once, with its name, kind and path (17.6)", async () => {
-    const { readRegistry, registryFile } = await import("../src/core/registry.ts");
+  test("the machine's roots: each open recorded once, by its path and kind (17.6, 21.8)", async () => {
+    const { readRoots, rootsFile } = await import("../src/core/registry.ts");
     const dir = fresh("reg");
-    const r = await cli(["init", dir, "--name", "regvault", "--json"], dir);
+    await cli(["init", dir, "--name", `reg${basename(dir).slice(-6).toLowerCase()}`, "--json"], dir);
     await cli(["ls"], dir);
-    const entry = readRegistry().find((v) => v.id === r.json.data.id)!;
-    expect(entry).toMatchObject({ kind: "vault", name: "regvault", path: dir });
+    expect(readRoots().find((v) => v.path === dir)).toMatchObject({ kind: "vault", key: vaultKey(dir) });
     // Opened again at once: nothing changed, nothing written.
-    const stamp = statSync(registryFile()).mtimeMs;
+    const stamp = statSync(rootsFile()).mtimeMs;
     await Bun.sleep(20);
     await cli(["ls"], dir);
-    expect(statSync(registryFile()).mtimeMs).toBe(stamp);
-    // A git checkout is one by itself (20.3): listed by its path, with no id, under its folder's name.
+    expect(statSync(rootsFile()).mtimeMs).toBe(stamp);
+    // A git checkout is one by itself (20.3): listed by its path; nothing written into it.
     const repo = fresh("regrepo");
     mkdirSync(join(repo, ".git"));
     await cli(["ls"], repo);
-    expect(readRegistry().find((v) => v.path === repo)).toMatchObject({ kind: "vault", id: null, name: implicitName(repo) });
+    expect(readRoots().find((v) => v.path === repo)).toMatchObject({ kind: "vault", key: vaultKey(repo) });
     expect(existsSync(join(repo, ".slipbox"))).toBe(false);
   });
 
-  test("a git vault without .slipbox/: named by its folder, so rename-vault is refused; init gives it .slipbox/ (20.3)", async () => {
+  test("a repository without .slipbox/ or a remote: unnamed; slipbox name gives it .slipbox/ to hold one (21.10)", async () => {
     const repo = fresh("gitname");
     mkdirSync(join(repo, ".git"));
-    const refused = await cli(["rename-vault", "other", "--json"], repo);
-    expect(refused.code).toBe(5);
-    expect(refused.json.error.message).toContain("has no .slipbox/ to hold a name: slipbox init gives it");
-    expect(existsSync(join(repo, ".slipbox"))).toBe(false);
-    const made = (await cli(["init", "--name", "gitnamed", "--json"], repo)).json.data;
-    expect(made).toMatchObject({ root: repo, created: true, name: "gitnamed" });
-    expect(locateVault({ path: repo })).toMatchObject({ root: repo, name: "gitnamed", id: made.id });
+    expect(locateVault({ path: repo }).name).toBeNull();
+    const tag = `gn${basename(repo).slice(-6).toLowerCase()}`;
+    const made = (await cli(["name", tag, "--json"], repo)).json.data;
+    expect(made).toMatchObject({ root: repo, created: true, name: tag });
+    expect(locateVault({ path: repo })).toMatchObject({ root: repo, name: tag, id: made.id });
   });
 
-  test("a plain folder keeps its own positions and session, as its own instance (20.22)", async () => {
+  test("a plain folder keeps its own session, by its path; positions by file (20.22, 21.8)", async () => {
     const { PositionStore, loadSession, saveSession } = await import("../src/core/position.ts");
     const one = fresh("l1");
     const two = fresh("l2");
@@ -899,11 +934,11 @@ describe("links across vaults: paths; names only for the converter (17.7–17.11
     expect(c.after).toContain("[xnotes:todo](todo.md)"); // this vault, by its own name
   });
 
-  test("a note or vault that isn't there: the converter says which, and leaves it (17.8)", async () => {
+  test("a note or folder that isn't there: the converter says which, and leaves it (17.8, 21.6)", async () => {
     await ready;
     const { skipped } = await converted();
-    expect(skipped.some((x) => x.includes("[[xapp:missing]]") && x.includes('no note "missing" in vault "xapp"'))).toBe(true);
-    expect(skipped.some((x) => x.includes("[[nope:x]]") && x.includes('unknown vault "nope"'))).toBe(true);
+    expect(skipped.some((x) => x.includes("[[xapp:missing]]") && x.includes('no note "missing" in folder "xapp"'))).toBe(true);
+    expect(skipped.some((x) => x.includes("[[nope:x]]") && x.includes('unknown folder "nope"'))).toBe(true);
   });
 
   test("an alias is a name again (21.3), a previous name isn't — the converter reads both (17.7)", async () => {
@@ -1164,7 +1199,7 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
     expect(read(dir, "index.md")).toBe("[a](a.md) edited meanwhile\n");
   });
 
-  test("links from other vaults are rewritten too; a vault's rename keeps its old name (17.15)", async () => {
+  test("links from other roots are rewritten too; a folder's naming keeps its old name (17.15, 21.10)", async () => {
     const notes = vault({ "plan.md": "# plan\n" });
     const app = vault({ "links.md": "[p](../NOTES/plan.md) and [t](../NOTES/plan.md)\n".replaceAll("NOTES", basename(notes)) });
     await cli(["init", notes, "--name", "rnotes"], notes);
@@ -1172,9 +1207,9 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
     await cli(["ls"], app); // its index: the links into rnotes
     await cli(["mv", "plan", "roadmap"], notes);
     expect(read(app, "links.md")).toBe(`[p](../${basename(notes)}/roadmap.md) and [t](../${basename(notes)}/roadmap.md)\n`);
-    // The vault's rename: the config, the old name kept; a path link has no vault name to fix.
+    // The folder's name changed: the config, the old name kept; a path link has no name to fix.
     await cli(["ls"], app);
-    const r = await cli(["rename-vault", "rnotes2"], notes);
+    const r = await cli(["name", "rnotes2"], notes);
     expect(r.code).toBe(0);
     expect(read(app, "links.md")).toBe(`[p](../${basename(notes)}/roadmap.md) and [t](../${basename(notes)}/roadmap.md)\n`);
     const cfg = read(notes, ".slipbox/config.toml");
@@ -1295,20 +1330,20 @@ describe("undoing a rename (7.4)", () => {
     expect(snapshot(dir)).toEqual(before);
   });
 
-  test("a vault's rename taken back: its name; a relink too", async () => {
+  test("a folder's naming taken back: its name; a relink too", async () => {
     const one = vault({ "n.md": "# N\n" });
     const two = vault({ "x.md": `[n](../${basename(one)}/n.md)\n` });
     await cli(["init", one, "--name", "undo-one"], one);
     await cli(["init", two, "--name", "undo-two"], two);
     await cli(["ls"], two); // its index: the links into undo-one
     const cfg = read(one, ".slipbox/config.toml");
-    await cli(["rename-vault", "undo-uno"], one);
+    await cli(["name", "undo-uno"], one);
     const r = await cli(["undo"], one);
     expect(r.json.data).toMatchObject({ kind: "vault", from: "undo-uno", to: "undo-one" });
     expect(read(two, "x.md")).toBe(`[n](../${basename(one)}/n.md)\n`);
     expect(read(one, ".slipbox/config.toml")).toBe(cfg);
-    // The machine's list has its name back at once, as seen from another vault.
-    expect((await cli(["vaults"], two)).json.data.find((v: { path: string }) => v.path === one)).toMatchObject({ name: "undo-one" });
+    // The lookup has its name back at once, as seen from another root (21.6).
+    expect((await cli(["folders"], two)).json.data.find((f: { default: string }) => f.default === one)).toMatchObject({ name: "undo-one" });
     // A relink: the moved note's old paths back as they were written.
     const dir = vault({ "notes/plan.md": "# Plan\n", "i.md": "[p](notes/plan.md) and [x](notes/plan.md#plan)\n" });
     await cli(["ls"], dir);
@@ -1460,8 +1495,8 @@ describe("nested vaults, known to each other without being opened (17.17)", () =
     for (const root of [parent, second]) await cli(["backlinks", "index"], root); // each indexed, as when opened
     for (const [root, other] of [[parent, second], [second, parent]] as const) {
       const links = (await cli(["links", "index"], root)).json.data;
-      // Two copies of dkid on this machine: each shown with its folder (20.6).
-      for (const l of links) expect(l).toMatchObject({ status: "note", path: join(root, "kid", "note.md"), vault: `${basename(root)}.dkid` });
+      // Two copies of dkid on this machine: each its own, by its path; the name is the folder's (21.6).
+      for (const l of links) expect(l).toMatchObject({ status: "note", path: join(root, "kid", "note.md"), vault: "dkid" });
       // dparent by its old form: not a link, nor an argument (21.12); by its pointer, its default copy (21.6).
       expect((await cli(["resolve", "dparent:index.md"], join(root, "kid"))).code).toBe(3);
       expect((await cli(["read", "dparent:index.md"], join(root, "kid"))).code).toBe(3);
@@ -1616,8 +1651,10 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
     expect(existsSync(join(parent, "proj", ".slipbox"))).toBe(false);
     for (const rel of Object.keys(files)) expect([rel, read(rel)]).toEqual([rel, texts[rel]!]);
     expect(await reached([parent])).toEqual(before);
-    // The machine forgot it; its .slipbox/ is in the parent's trash, restorable.
-    expect((await cli(["vaults"], parent)).json.data.some((v: { name: string }) => v.name === "mkproj")).toBe(false);
+    // The machine forgot it — a root no more, its name gone with its .slipbox/ — which is in the parent's trash, restorable.
+    const { readRoots } = await import("../src/core/registry.ts");
+    expect(readRoots().some((v) => v.path === join(parent, "proj"))).toBe(false);
+    expect((await cli(["folders"], parent)).json.data.some((f: { name: string }) => f.name === "mkproj")).toBe(false);
     expect((await cli(["trash"], parent)).json.data[0]).toMatchObject({ shown: "proj/.slipbox", dir: true });
     // Refused: a folder that's already a vault; a vault not nested in another.
     expect((await cli(["deinit", "proj"], parent)).code).toBe(5);
@@ -1985,22 +2022,30 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
     expect(checkoutOf(l.y)).toBeNull();
   });
 
-  test("its own instance; moved by git (git worktree move), found again by git's name for it, nothing asked (20.5)", async () => {
+  test("its own state, by its path; moved by git (git worktree move), found again by git's name for it, its state along (17.19, 21.8)", async () => {
+    const { readRoots } = await import("../src/core/registry.ts");
+    const { PositionStore } = await import("../src/core/position.ts");
     const l = await layout(++n);
     if (!l) return;
     const wt = locateVault({ root: l.wt });
     const main = locateVault({ root: l.x });
-    expect(wt).toMatchObject({ name: `x${n}`, worktree: { name: "feat", checkout: l.wt, main: l.x, mainVault: l.x } });
+    expect(wt).toMatchObject({ name: `x${n}`, key: vaultKey(l.wt), worktree: { name: "feat", checkout: l.wt, main: l.x, mainVault: l.x } });
     expect(wt.key).not.toBe(main.key);
     expect(wt.id).toBe(main.id);
     // The machine's list knows which is which.
-    expect((await cli(["vaults"], l.x)).json.data.find((v: { path: string }) => v.path === l.wt)).toMatchObject({ key: wt.key, worktree: { name: "feat", main: l.x } });
+    await cli(["ls"], l.wt);
+    expect(readRoots().find((v) => v.path === l.wt)).toMatchObject({ key: wt.key, worktree: { name: "feat", main: l.x } });
+    const ps = new PositionStore(wt);
+    ps.set("notes/a.md", { heading: null, headingIndex: 0, offset: 0, line: 3 });
+    ps.save();
     const elsewhere = join(l.base, "elsewhere", "feat");
     mkdirSync(dirname(elsewhere), { recursive: true });
     if (git(l.x, "worktree", "move", l.wt, elsewhere).exitCode !== 0) return;
+    expect((await cli(["ls"], elsewhere)).json.warnings.join()).toContain(`moved here from ${l.wt}`);
     const there = locateVault({ root: elsewhere });
-    expect(there.key).toBe(wt.key);
-    expect(there.movedHere).toBeUndefined();
+    expect(there.key).toBe(vaultKey(elsewhere));
+    expect(new PositionStore(there).get("notes/a.md")?.line).toBe(3);
+    expect(readRoots().some((v) => v.path === l.wt)).toBe(false);
   });
 
   test("a worktree never writes the vault's identity: it takes the main checkout's (else its path keys it)", async () => {
@@ -2017,7 +2062,7 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
     writeFileSync(join(l.x, ".slipbox", "config.toml"), "# none here either\n");
     const bare = locateVault({ root: l.wt });
     expect(bare.id).toBeNull();
-    expect(bare.key).toBe(loc.key); // its instance, by its path
+    expect(bare.key).toBe(loc.key); // by its path
     expect(readFileSync(cfg, "utf8")).toBe("# no identity on this branch yet\n");
   });
 
@@ -2042,7 +2087,7 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
   });
 
   test("a worktree gone: its cache removed at once, its state and entry a month after it was last seen", async () => {
-    const { pruneWorktrees, readRegistry } = await import("../src/core/registry.ts");
+    const { pruneWorktrees, readRoots } = await import("../src/core/registry.ts");
     const { cacheDir, stateDir } = await import("../src/core/paths.ts");
     const l = await layout(++n);
     if (!l) return;
@@ -2055,10 +2100,10 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
     recordLocation(locateVault({ root: l.x })); // any open prunes
     expect(existsSync(cacheDir(wt))).toBe(false);
     expect(readFileSync(join(stateDir(wt), "scratch.md"), "utf8")).toBe("an agent's notes\n");
-    expect(readRegistry().some((v) => v.key === wt.key)).toBe(true);
+    expect(readRoots().some((v) => v.key === wt.key)).toBe(true);
     pruneWorktrees(Date.now() + 31 * 86_400_000);
     expect(existsSync(stateDir(wt))).toBe(false);
-    expect(readRegistry().some((v) => v.key === wt.key)).toBe(false);
+    expect(readRoots().some((v) => v.key === wt.key)).toBe(false);
   });
 });
 
@@ -2816,8 +2861,7 @@ describe("the converter: links made plain paths (20.1)", () => {
   });
 });
 
-describe("collections apart from instances (20.4)", () => {
-  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+describe("a root's name and entry: by its remote, its .slipbox/, its path (20.22, 21.6, 21.9)", () => {
   const cli = async (args: string[], cwd: string) => {
     const out: string[] = [];
     const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
@@ -2825,8 +2869,8 @@ describe("collections apart from instances (20.4)", () => {
   };
   const fresh = (prefix: string) => mkdtempSync(join(tmpdir(), `slipbox-${prefix}-`));
 
-  test("a remote as evidence: host and path, never a user or a password; ssh and https alike; local ones by path", async () => {
-    const { normalizeRemote, remotesIn } = await import("../src/core/collection.ts");
+  test("a remote as it names a repository: host and path, never a user or a password; ssh and https alike; local ones by path", async () => {
+    const { normalizeRemote, remotesIn } = await import("../src/core/remotes.ts");
     expect(normalizeRemote("git@github.com:Owner/Repo.git", "/r")).toBe("github.com/Owner/Repo");
     expect(normalizeRemote("git@GitHub.COM:Owner/Repo.git", "/r")).toBe("github.com/Owner/Repo"); // a host in any case
     expect(normalizeRemote("https://user:secret@GitHub.com/Owner/Repo.git/", "/r")).toBe("github.com/Owner/Repo");
@@ -2839,190 +2883,47 @@ describe("collections apart from instances (20.4)", () => {
     expect(remotesIn(config, "/r")).toEqual(["github.com/o/r", "gitlab.com/o/r"]);
   });
 
-  test("the same collection: a .slipbox/ id, a remote or a first commit shared; plain folders never", async () => {
-    const { NO_COLLECTION, sameCollection } = await import("../src/core/collection.ts");
-    const c = (slipbox: string | null, remotes: string[] = [], roots: string[] = []) => ({ slipbox, remotes, roots });
-    expect(sameCollection(c("a"), c("a"))).toBe(true);
-    expect(sameCollection(c("a"), c("b"))).toBe(false);
-    expect(sameCollection(c(null, ["github.com/o/r", "x"]), c(null, ["github.com/o/r"]))).toBe(true);
-    expect(sameCollection(c(null, [], ["1a"]), c(null, ["y"], ["1a", "2b"]))).toBe(true);
-    expect(sameCollection(c(null, ["x"], ["1a"]), c(null, ["y"], ["2b"]))).toBe(false);
-    expect(sameCollection(NO_COLLECTION, NO_COLLECTION)).toBe(false);
-    expect(sameCollection(undefined, c("a"))).toBe(false);
-  });
-
-  test("a clone and a worktree: instances of their own, one collection — info lists the others as copies", async () => {
-    const base = fresh("coll");
-    const x = join(base, "x");
-    mkdirSync(x);
-    // Its own text: two repositories committed alike in the same second share their first commit.
-    writeFileSync(join(x, "a.md"), `# A\n\n${base}\n`);
-    if (git(x, "init", "-q", "-b", "main").exitCode !== 0) return; // no git here
-    git(x, "add", "-A");
-    git(x, "commit", "-q", "-m", "x");
-    const clone = join(base, "clone");
-    if (git(base, "clone", "-q", x, clone).exitCode !== 0) return;
-    const wt = join(base, "wt");
-    if (git(x, "worktree", "add", "-q", "-b", "feat", wt).exitCode !== 0) return;
-    const root = git(x, "rev-list", "--max-parents=0", "HEAD").stdout.toString().trim();
-    const info = async (dir: string) => (await cli(["info"], dir)).json.data;
-    const ix = await info(x);
-    const ic = await info(clone);
-    const iw = await info(wt);
-    // Each its own local id; the evidence what git says: no remote for x, x itself for the clone.
-    expect(new Set([ix.instance, ic.instance, iw.instance]).size).toBe(3);
-    expect(ix.collection).toEqual({ slipbox: null, remotes: [], roots: [root] });
-    expect(ic.collection).toEqual({ slipbox: null, remotes: [`file:${x}`], roots: [root] });
-    // The others, once seen, from each: the same first commit. The id is given once: opened again, the same.
-    const again = await info(x);
-    expect(again.instance).toBe(ix.instance);
-    expect(again.copies.map((c: { path: string }) => c.path).sort()).toEqual([clone, wt].sort());
-    expect(iw.copies.map((c: { path: string }) => c.path).sort()).toEqual([clone, x].sort());
-    // Nothing of it written into the folders.
-    for (const d of [x, clone, wt]) expect(existsSync(join(d, ".slipbox"))).toBe(false);
-    // Human: the instance, what it holds, the copies.
-    const out: string[] = [];
-    await runCli(["info"], { out: (s: string) => out.push(s), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: x, env: process.env });
-    expect(out.join("")).toContain(`instance  ${ix.instance} — holds first commit ${root.slice(0, 7)}`);
-    expect(out.join("")).toContain(`copy      ${wt} (worktree wt)`);
-  });
-
-  test("a plain folder opened is an instance, by its path; made a vault, it's the vault's instance; gone a month, forgotten", async () => {
-    const { pruneWorktrees, readRegistry, registryFile } = await import("../src/core/registry.ts");
-    const dir = fresh("plainf");
-    writeFileSync(join(dir, "n.md"), "# N\n");
-    await cli(["ls"], dir);
-    const folder = readRegistry().filter((v) => v.path === dir);
-    expect(folder).toHaveLength(1);
-    expect(folder[0]).toMatchObject({ kind: "folder", id: null, name: null, key: vaultKey(dir) });
-    expect(folder[0]!.instance).toMatch(/^[0-9a-f]{12}$/);
-    // Not a vault: the TUI's list and `vaults` say what it is.
-    expect((await cli(["vaults"], dir)).json.data.find((v: { path: string }) => v.path === dir)).toMatchObject({ kind: "folder", exists: true });
-    await cli(["init", dir, "--name", "plainmade"], dir);
-    expect(readRegistry().filter((v) => v.path === dir).map((v) => v.kind)).toEqual(["vault"]);
-    // A folder gone a month is dropped; one gone a day is kept.
-    const gone = fresh("plaingone");
-    await cli(["ls"], gone);
-    rmSync(gone, { recursive: true });
-    pruneWorktrees(Date.now() + 86_400_000);
-    expect(readRegistry().some((v) => v.path === gone)).toBe(true);
-    pruneWorktrees(Date.now() + 31 * 86_400_000);
-    expect(readRegistry().some((v) => v.path === gone)).toBe(false);
-    expect(existsSync(registryFile())).toBe(true);
-  });
-
-  test("info lists the five copies seen last, then how many more", async () => {
-    const { copiesShown } = await import("../src/core/collection.ts");
-    const copies = Array.from({ length: 7 }, (_, i) => ({ path: `/c${i}`, seen: `2026-10-0${i + 1}T00:00:00Z`, ...(i === 6 ? { worktree: { name: "w" } } : {}) }));
-    expect(copiesShown(copies)).toEqual(["/c6 (worktree w)", "/c5", "/c4", "/c3", "/c2", "and 2 more: slipbox vaults lists them"]);
-    expect(copiesShown(copies.slice(0, 2))).toEqual(["/c1", "/c0"]);
-  });
-
-  test("a plain folder's entry at a vault's path (a list edited by hand, an old one): the vault's name is shown", async () => {
-    const { readRegistry, registryFile } = await import("../src/core/registry.ts");
-    const { writeJson } = await import("../src/core/fsutil.ts");
-    const base = fresh("vaultof");
-    const notes = join(base, "notes");
-    const app = join(base, "app");
-    mkdirSync(notes);
-    mkdirSync(app);
-    writeFileSync(join(app, "design.md"), "# Design\n");
-    writeFileSync(join(notes, "index.md"), "[d](../app/design.md)\n");
-    await cli(["init", notes, "--name", "vonotes"], notes);
-    await cli(["init", app, "--name", "voapp"], app);
-    // The folder's entry first in the list, as a hand edit or an older slipbox could leave it.
-    const folder = { key: `${vaultKey(app)}-folder`, instance: "f0f0f0f0f0f0", id: null, kind: "folder", name: null, aliases: [], previous_names: [], path: app, seen: new Date().toISOString() };
-    writeJson(registryFile(), { version: 1, vaults: [folder, ...readRegistry()] });
-    const links = (await cli(["links", "index"], notes)).json.data;
-    expect(links[0]).toMatchObject({ status: "note", vault: "voapp" });
-  });
-
-  test("slipbox vaults: a git vault without .slipbox/ is there, not gone (20.3)", async () => {
-    const repo = fresh("vlgit");
-    mkdirSync(join(repo, ".git"));
-    await cli(["ls"], repo);
-    expect((await cli(["vaults"], repo)).json.data.find((v: { path: string }) => v.path === repo)).toMatchObject({ kind: "vault", exists: true });
-  });
-});
-
-describe("names for display (20.6)", () => {
-  const v = (key: string, name: string | null, path: string, extra: Partial<KnownVault> = {}): KnownVault => ({ key, id: null, kind: "vault", name, aliases: [], previous_names: [], path, seen: "", ...extra });
-
-  test("short and unique: a shared name takes as few folders as tell them apart, joined with .; case counts as the same", async () => {
-    const { displayNames } = await import("../src/core/names.ts");
-    // Its own folder first when its name isn't the folder's; a level every one of them shares is left out.
-    const copies = displayNames([v("p", "halden", "/home/me/src/slipbox/examples/vault"), v("q", "halden", "/tmp/run/vault"), v("r", "fixture", "/t/vault-ab12"), v("s", "fixture", "/t/vault-cd34")]);
-    expect(Object.fromEntries(copies)).toEqual({ p: "examples.halden", q: "run.halden", r: "vault-ab12.fixture", s: "vault-cd34.fixture" });
-    const names = displayNames([
-      v("a", "docs", "/home/me/work/docs"),
-      v("b", "Docs", "/home/me/home/docs"),
-      v("c", "notes", "/home/me/notes"),
-      v("d", "plan", "/x/a/same/plan"),
-      v("e", "plan", "/x/b/same/plan"),
-      v("f", null, "/srv/My Folder"),
-      v("g", "plain", "/p", { kind: "folder" }),
-    ]);
-    expect(Object.fromEntries(names)).toEqual({ a: "work.docs", b: "home.Docs", c: "notes", d: "a.plan", e: "b.plan", f: "My-Folder" });
-  });
-
-  test("a worktree: its main checkout's name and the branch now; two entries at one place keep a piece of their key", async () => {
-    const { displayNames } = await import("../src/core/names.ts");
-    const branch = (p: string) => (p.endsWith("feat") ? "refactor" : null);
-    const names = displayNames(
-      [
-        v("m", "pathfinder", "/src/pathfinder"),
-        v("w", "pathfinder", "/src/wt/feat", { worktree: { name: "feat", main: "/src/pathfinder" } }),
-        v("w2", "pathfinder", "/src/wt/fix", { worktree: { name: "fix", main: "/gone" } }),
-        v("s1", "same", "/one/same", { instance: "aaaa1111" }),
-        v("s2", "same", "/one/same", { instance: "bbbb2222" }),
-      ],
-      branch,
-    );
-    expect(names.get("m")).toBe("pathfinder");
-    expect(names.get("w")).toBe("pathfinder@refactor");
-    expect(names.get("w2")).toBe("pathfinder@fix"); // no main known, no branch: git's name for it
-    expect([names.get("s1"), names.get("s2")]).toEqual(["same.aaaa", "same.bbbb"]);
-  });
-
-  test("a git vault without .slipbox/ is named after its repository (origin's, else the first remote's), else its folder", async () => {
-    const { repositoryName } = await import("../src/core/collection.ts");
-    const dir = join(mkdtempSync(join(tmpdir(), "slipbox-repname-")), "pf");
+  test("a repository is named after its remote (origin's, else the first one's), else unnamed; .slipbox/'s name wins", async () => {
+    const dir = join(fresh("repname"), "pf");
     mkdirSync(dir);
     if (Bun.spawnSync(["git", "init", "-q", dir]).exitCode !== 0) return; // no git here
-    expect(repositoryName(dir)).toBeNull();
-    expect(locateVault({ path: dir }).name).toBe("pf");
+    expect(locateVault({ path: dir }).name).toBeNull(); // never its folder's own name
     Bun.spawnSync(["git", "-C", dir, "remote", "add", "upstream", "https://example.invalid/them/other.git"]);
-    expect(repositoryName(dir)).toBe("other");
+    expect(locateVault({ path: dir }).name).toBe("other");
     Bun.spawnSync(["git", "-C", dir, "remote", "add", "origin", "git@example.invalid:me/pathfinder.git"]);
-    expect(repositoryName(dir)).toBe("pathfinder");
     expect(locateVault({ path: dir }).name).toBe("pathfinder");
-    // .slipbox/ declares its own, which wins.
     mkdirSync(join(dir, ".slipbox"));
     writeFileSync(join(dir, ".slipbox", "config.toml"), '[vault]\nid = "pfid"\nname = "pf-notes"\n');
     expect(locateVault({ path: dir }).name).toBe("pf-notes");
   });
 
-  test("slipbox vaults and info show each by its name here; the name in .slipbox/ is unchanged", async () => {
-    const base = mkdtempSync(join(tmpdir(), "slipbox-shown-"));
-    const one = join(base, "work", "docs");
-    const two = join(base, "home", "docs");
-    for (const d of [one, two]) {
-      mkdirSync(join(d, ".slipbox"), { recursive: true });
-      writeFileSync(join(d, ".slipbox", "config.toml"), `[vault]\nid = "${basename(dirname(d))}${basename(base)}"\nname = "docs-${basename(base)}"\n`);
-    }
-    const out: string[] = [];
-    const run = async (args: string[], cwd: string) => {
-      out.length = 0;
-      await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd, env: process.env });
-      return JSON.parse(out.join("")).data;
-    };
-    await run(["ls"], one);
-    const info = await run(["info"], two);
-    const name = `docs-${basename(base)}`;
-    expect(info.vault).toMatchObject({ name, shown: `home.${name}` });
-    const listed = (await run(["vaults"], one)).filter((x: { path: string }) => x.path === one || x.path === two);
-    expect(listed.map((x: { shown: string }) => x.shown).sort()).toEqual([`home.${name}`, `work.${name}`]);
-    expect(readFileSync(join(one, ".slipbox", "config.toml"), "utf8")).toContain(`name = "${name}"`);
+  test("a root as the user is told of it (21.9): its name, else its path from home, else its whole path", async () => {
+    const { rootLabel } = await import("../src/core/names.ts");
+    const { homeFolder } = await import("../src/core/vault.ts");
+    expect(rootLabel({ mode: "vault", name: "research", root: "/x/research", worktree: null })).toBe("research");
+    expect(rootLabel({ mode: "vault", name: null, root: join(homeFolder(), "src", "experiment"), worktree: null })).toBe("~/src/experiment");
+    expect(rootLabel({ mode: "folder", name: null, root: "/srv/scratch", worktree: null })).toBe("/srv/scratch");
+    expect(rootLabel({ mode: "folder", name: null, root: homeFolder(), worktree: null })).toBe("~");
+  });
+
+  test("a plain folder opened is listed by its path; given .slipbox/, the root's entry; gone a month, forgotten", async () => {
+    const { pruneWorktrees, readRoots, rootsFile } = await import("../src/core/registry.ts");
+    const dir = fresh("plainf");
+    writeFileSync(join(dir, "n.md"), "# N\n");
+    await cli(["ls"], dir);
+    const folder = readRoots().filter((v) => v.path === dir);
+    expect(folder).toEqual([expect.objectContaining({ kind: "folder", key: vaultKey(dir) })]);
+    await cli(["init", dir], dir);
+    expect(readRoots().filter((v) => v.path === dir).map((v) => v.kind)).toEqual(["vault"]);
+    // A folder gone a month is dropped; one gone a day is kept.
+    const gone = fresh("plaingone");
+    await cli(["ls"], gone);
+    rmSync(gone, { recursive: true });
+    pruneWorktrees(Date.now() + 86_400_000);
+    expect(readRoots().some((v) => v.path === gone)).toBe(true);
+    pruneWorktrees(Date.now() + 31 * 86_400_000);
+    expect(readRoots().some((v) => v.path === gone)).toBe(false);
+    expect(existsSync(rootsFile())).toBe(true);
   });
 });
 
@@ -3196,9 +3097,9 @@ describe("the background auto-index of the home folder (20.9)", () => {
     return home;
   };
 
-  test("finds the vaults in it, nested ones too, never in hidden folders or node_modules; indexes each; listed as found", async () => {
+  test("finds the roots in it, nested ones too, never in hidden folders or node_modules; indexes each; listed as found", async () => {
     const { AutoIndex } = await import("../src/core/autoindex.ts");
-    const { readRegistry } = await import("../src/core/registry.ts");
+    const { readRoots } = await import("../src/core/registry.ts");
     const { cacheDir } = await import("../src/core/paths.ts");
     const home = makeHome();
     const ai = new AutoIndex(home, join(home, "..", `${basename(home)}-progress.json`));
@@ -3206,7 +3107,7 @@ describe("the background auto-index of the home folder (20.9)", () => {
     while (ai.step(50)) slices++;
     expect(ai.status).toMatchObject({ found: 4, indexed: 4, queue: [], current: null });
     expect(ai.status.passFinished).not.toBeNull();
-    const mine = readRegistry().filter((v) => v.path.startsWith(`${home}/`));
+    const mine = readRoots().filter((v) => v.path.startsWith(`${home}/`));
     expect(mine.map((v) => v.path.slice(home.length + 1)).sort()).toEqual(["deep/x/y", "notes", "notes/inner", "proj"]);
     for (const v of mine) {
       expect(v.found).toBe(true);
@@ -3216,11 +3117,9 @@ describe("the background auto-index of the home folder (20.9)", () => {
     // In the lookup pointers use (21.6): the named one, as found; the unnamed ones not.
     const { readFolders } = await import("../src/core/folders.ts");
     const named = readFolders().filter((f) => f.copies.some((c) => c.path.startsWith(`${home}/`)));
-    // (notes/inner's .slipbox/ had no name: the open gave it one, as 17.x does.)
-    expect(named.map((f) => [f.name, f.copies.map((c) => [c.path.slice(home.length + 1), c.found])]).sort()).toEqual([
-      [`anotes-${basename(home)}`, [["notes", true]]],
-      [`anotes-${basename(home)}-inner`, [["notes/inner", true]]],
-    ]);
+    // (notes/inner's .slipbox/ has no name, and none is written into it: unnamed, 21.8.)
+    expect(named.map((f) => [f.name, f.copies.map((c) => [c.path.slice(home.length + 1), c.found])]).sort()).toEqual([[`anotes-${basename(home)}`, [["notes", true]]]]);
+    expect(readFileSync(join(home, "notes", "inner", ".slipbox", "config.toml"), "utf8")).toBe("");
     // A pass done: nothing more for a day.
     expect(ai.idle).toBe(true);
     expect(ai.step(50)).toBe(false);
@@ -3239,7 +3138,7 @@ describe("the background auto-index of the home folder (20.9)", () => {
 
   test("its place is kept: a new run resumes the pass; a day after one is done, the next starts; opened, a vault is no longer only found", async () => {
     const { AutoIndex, REPASS_MS } = await import("../src/core/autoindex.ts");
-    const { readRegistry } = await import("../src/core/registry.ts");
+    const { readRoots } = await import("../src/core/registry.ts");
     const home = makeHome();
     const file = join(home, "..", `${basename(home)}-progress.json`);
     const first = new AutoIndex(home, file);
@@ -3256,7 +3155,7 @@ describe("the background auto-index of the home folder (20.9)", () => {
     expect(later.status.passFinished).toBeNull();
     // Opened by hand: the mark goes.
     recordLocation(locateVault({ path: join(home, "deep", "x", "y") }));
-    expect(readRegistry().find((v) => v.path === join(home, "deep", "x", "y"))?.found).toBeUndefined();
+    expect(readRoots().find((v) => v.path === join(home, "deep", "x", "y"))?.found).toBeUndefined();
   });
 
   test("slipbox index --home runs it in the foreground: a pass, or as much as --budget allows", async () => {
@@ -3305,8 +3204,8 @@ describe("freshness and coverage (20.10)", () => {
     const first = await cli(["index", "--refresh", there], here);
     expect(first.json.data).toMatchObject({ root: there, notes: 2, changed: 2, gone: 0 });
     expect(first.json.data.indexed).not.toBeNull();
-    const { readRegistry } = await import("../src/core/registry.ts");
-    expect(readRegistry().find((v) => v.path === there)?.indexed).toBeDefined();
+    const { readRoots } = await import("../src/core/registry.ts");
+    expect(readRoots().find((v) => v.path === there)?.indexed).toBeDefined();
     writeFileSync(join(there, "a.md"), "# A, longer now\n");
     rmSync(join(there, "b.md"));
     expect((await cli(["index", "--refresh", join(there, "a.md")], here)).json.data).toMatchObject({ root: there, notes: 1, changed: 1, unchanged: 0, gone: 1 });
@@ -3341,25 +3240,19 @@ describe("freshness and coverage (20.10)", () => {
     expect(describeBackground({ on: true, found: 2, indexed: 1, left: 7, finished: null, started: "x" })).toBe("background index: 2 vaults found so far, 7 folders left");
   });
 
-  test("a drive unplugged: its vaults unavailable, not gone — kept, never pruned, and a link into one says why it's broken", async () => {
-    const { pruneWorktrees, readRegistry, recordVault, unavailable } = await import("../src/core/registry.ts");
+  test("a drive unplugged: its roots unavailable, not gone — kept, never pruned, and a link into one says why it's broken", async () => {
+    const { pruneWorktrees, readRoots, recordRoot, unavailable } = await import("../src/core/registry.ts");
     const drive = `/media/slipbox-test-nodrive-${basename(mkdtempSync(join(tmpdir(), "slipbox-nd-")))}`;
     expect(unavailable(`${drive}/notes`)).toBe(true);
     expect(unavailable("/tmp/certainly/not/here")).toBe(false);
     expect(unavailable(tmpdir())).toBe(false);
     const long = new Date(Date.now() - 60 * 86_400_000);
-    recordVault({ key: `${basename(drive)}-v`, id: null, kind: "vault", name: "ondrive", aliases: [], previous_names: [], path: `${drive}/notes` }, long);
-    recordVault({ key: `${basename(drive)}-w`, id: null, kind: "vault", name: "ondrive", aliases: [], previous_names: [], path: `${drive}/wt`, worktree: { name: "wt", main: `${drive}/notes` } }, long);
-    recordVault({ key: `${basename(drive)}-f`, id: null, kind: "folder", name: null, aliases: [], previous_names: [], path: `${drive}/loose` }, long);
+    recordRoot({ kind: "vault", path: `${drive}/notes` }, long);
+    recordRoot({ kind: "vault", path: `${drive}/wt`, worktree: { name: "wt", main: `${drive}/notes` } }, long);
+    recordRoot({ kind: "folder", path: `${drive}/loose` }, long);
     pruneWorktrees();
-    expect(readRegistry().filter((v) => v.path.startsWith(`${drive}/`)).map((v) => v.kind).sort()).toEqual(["folder", "vault", "vault"]);
+    expect(readRoots().filter((v) => v.path.startsWith(`${drive}/`)).map((v) => v.kind).sort()).toEqual(["folder", "vault", "vault"]);
     const dir = vaultAt(mkdtempSync(join(tmpdir(), "slipbox-fresh-drive-")), { "n.md": `[far](${drive}/notes/a.md) [near](gone.md)\n` });
-    const listed = (await cli(["vaults"], dir)).json.data.find((v: { path: string }) => v.path === `${drive}/notes`);
-    expect(listed).toMatchObject({ exists: false, unavailable: true });
-    const human: string[] = [];
-    await runCli(["vaults"], { out: (x: string) => human.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: dir, env: process.env });
-    expect(human.join("")).toContain(`${drive}/notes`);
-    expect(human.join("")).toContain("(unavailable: its drive isn't there)");
     const problems = (await cli(["diagnostics", "n.md", "--severity", "info"], dir)).json.data.problems.map((p: { message: string }) => p.message);
     expect(problems).toContain(`broken link: ${drive}/notes/a.md — its drive isn't there`);
     expect(problems).toContain("no note at gone.md yet");
@@ -3495,7 +3388,7 @@ describe("search by vault (20.16)", () => {
 });
 
 describe("repairs from what the state knows (20.17)", () => {
-  test("a vault moved: relink fixes its links out by a path, and the other vaults' links into it, each in its form", async () => {
+  test("a named folder moved by hand: relink fixes its links out by a path, and the other roots' links into it, each in its form", async () => {
     const out: string[] = [];
     const cli = async (args: string[], cwd: string) => {
       out.length = 0;
@@ -3515,15 +3408,15 @@ describe("repairs from what the state knows (20.17)", () => {
     writeFileSync(join(b, "n.md"), "# Top\n");
     writeFileSync(join(c, "in.md"), `[t](../a/t.md) [abs](${a}/t.md)\n`);
     for (const dir of [a, b, c]) await cli(["ls"], dir);
-    // Moved by hand, deeper; opened there and confirmed: its move broke links on two lines (three links).
+    // Moved by hand, deeper; opened there, its state came along (21.8): its move broke links on two lines (three links).
     const moved = join(base, "y", "deeper", "a");
     mkdirSync(dirname(moved), { recursive: true });
     // A link out that reaches something where it's gone too: not broken, so not touched.
     writeFileSync(join(base, "y", "deeper", "near.md"), "# Near, by the new place\n");
     renameSync(a, moved);
-    await cli(["ls"], moved);
-    const confirmed = await cli(["vault-moved", a], moved);
-    expect(confirmed.json.data.broken).toBe(2);
+    const said = (await cli(["ls"], moved)).json.warnings.join();
+    expect(said).toContain(`moved here from ${a}`);
+    expect(said).toContain("its move broke links on 2 lines: slipbox relink fixes them");
     const dry = await cli(["relink", "--dry-run"], moved);
     const edits = dry.json.data.files.flatMap((f: { abs: string; edits: { before: string; after: string }[] }) => f.edits.map((e) => [relative(base, f.abs), e.before, e.after]));
     expect(edits.sort()).toEqual(
@@ -3546,7 +3439,6 @@ describe("repairs from what the state knows (20.17)", () => {
     mkdirSync(dirname(again), { recursive: true });
     renameSync(moved, again);
     await cli(["ls"], again);
-    await cli(["vault-moved", moved], again);
     expect((await cli(["relink"], again)).code).toBe(0);
     expect(readFileSync(join(again, "out.md"), "utf8").split("\n")[0]).toBe(`[n](slipbox://b${tag}/n.md#top) and [in](t.md)`);
     expect(readFileSync(join(c, "in.md"), "utf8")).toBe(`[t](../../z/a/t.md) [abs](${again}/t.md)\n`);

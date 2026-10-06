@@ -2447,7 +2447,9 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (command-specs.ts)
 - `link.insert` — Insert a link to a note… — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`
   (command-specs.ts; 21.5)
-- `folders.open` — Named folders: their copies, the one links open — `notes/.slipbox/config.toml`,
+- `folders.open` — Folders: go into a named one — `notes/.slipbox/config.toml`, `work/product/README.md`
+  (command-specs.ts; 21.10)
+- `folders.default` — Which copy a folder's links open — `notes/.slipbox/config.toml`,
   `Downloads/notes-backup-2026-07/.slipbox/config.toml` (command-specs.ts; 21.10)
 - `folder.name` — Name this folder, as pointers name it — `hobbies/photography/.slipbox/config.toml`,
   `work/product/README.md` (command-specs.ts; 21.10)
@@ -2829,22 +2831,16 @@ Wide tables and code blocks to edit in place.
 
 ### vault
 
-- `vault.reindex` — Reindex the vault — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
+- `vault.reindex` — Reindex the folder — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
   (command-specs.ts)
-- `vault.info` — Vault info — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
+- `vault.info` — Folder info — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
   (command-specs.ts)
-- `vault.unmake` — Make the vault a plain folder — `notes/index.md`, `hobbies/cooking/Home.md`,
+- `vault.unmake` — Take .slipbox/ away — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
+  (command-specs.ts)
+- `vault.init` — Give a folder .slipbox/ — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
+  (command-specs.ts)
+- `vault.pin_root` — Pin this root in the explorer — `notes/index.md`, `hobbies/cooking/Home.md`,
   `hobbies/photography/index.md` (command-specs.ts)
-- `vault.rename` — Rename the vault — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
-  (command-specs.ts)
-- `vault.init` — Make a vault — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
-  (command-specs.ts)
-- `vault.pin_root` — Pin this vault as a root — `notes/index.md`, `hobbies/cooking/Home.md`,
-  `hobbies/photography/index.md` (command-specs.ts)
-- `vault.moved` — Vault moved here — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
-  (command-specs.ts)
-- `vault.switch` — Switch vault — `notes/index.md`, `hobbies/cooking/Home.md`, `hobbies/photography/index.md`
-  (command-specs.ts)
 
 ### trash
 

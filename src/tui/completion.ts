@@ -14,7 +14,7 @@ import { conventionOf, type LinkStyle } from "../core/convention.ts";
 import { linkDestination, linkEnds } from "../core/write-link.ts";
 import { readJson } from "../core/fsutil.ts";
 import { cacheDir } from "../core/paths.ts";
-import { readRegistry } from "../core/registry.ts";
+import { readRoots } from "../core/registry.ts";
 import { homeFolder } from "../core/vault.ts";
 import type { App, View } from "./app.ts";
 import { offsetOf, placeAt } from "./editing.ts";
@@ -180,7 +180,7 @@ function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
   }
   if (style === "wiki") return out;
   // Other vaults' notes, as of their last index: what the machine knows, read once per completion.
-  for (const v of readRegistry()) {
+  for (const v of readRoots()) {
     if (v.kind !== "vault" || v.worktree || v.path === g.root || !existsSync(v.path)) continue;
     const entries = readJson<{ entries?: Record<string, unknown> } | null>(join(cacheDir(v), "index.json"), null)?.entries;
     for (const rel of Object.keys(entries ?? {})) {

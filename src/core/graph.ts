@@ -23,7 +23,7 @@ import { ParseCache, sharedParseCache } from "./parsecache.ts";
 import { cacheDir, stateDir } from "./paths.ts";
 import { checkoutOf, headCommit, headOf } from "./git.ts";
 import { branchesOf, changedBetween, inVault } from "./gitops.ts";
-import { remotesIn } from "./collection.ts";
+import { remotesIn } from "./remotes.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf, noteFormat } from "./filetypes.ts";

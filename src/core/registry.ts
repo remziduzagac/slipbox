@@ -1,76 +1,54 @@
-// The vaults of this machine (17.2–17.6; docs/idea.md, "Vaults — decided 2026-09-30"): a vault's
-// identity in its `.slipbox/config.toml`, the list of vaults this machine has seen (`vaults.json`),
-// and the storage key each vault's cache and state are found by.
+// The roots this machine knows (17.6, 21.8; docs/idea.md, "Personal state and settings"): each folder
+// opened — a root, or a plain folder — and each root the background index found, by its path. A
+// root's cache and personal state are found by its path's key (`vaultKey`): opening `project/` or
+// `project/docs/` brings back the same session; a worktree, another path, has its own. A named folder
+// moved by hand takes its state along (vault.ts, `recordLocation`); any other move starts fresh.
 //
-// A vault's `id` is random, made once and never changed: its personal data is keyed by it, so it
-// survives moving the folder. A copy of a vault (`cp -r`, a second clone) carries the same id; the
-// copy that isn't where the list last saw the vault is keyed by id and path, so two live copies
-// never share a session.
-//
-// Each entry is an instance (20.4): one copy on this machine, with a local id slipbox gives it once,
-// and its collection's evidence (collection.ts) — what tells two copies of one thing. A plain folder
-// opened is an instance too, by its path.
+// A root's identity is in its `.slipbox/config.toml` (`[vault]`): an id that tells its copies from a
+// different folder of the same name, a name, the names it had — written only by `slipbox init` and
+// `slipbox name`, never on their own. The names themselves are looked up in `folders.json`.
 
 import { randomBytes } from "node:crypto";
-import { existsSync, realpathSync, rmSync, statSync } from "node:fs";
+import { existsSync, realpathSync, renameSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { atomicWrite, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
-import type { Collection } from "./collection.ts";
-import { checkoutOf } from "./git.ts";
 import { cacheHome, stateHome, vaultKey } from "./paths.ts";
 
 export const MARKER = ".slipbox";
 
-/** What's opened: a vault, or a plain folder outside every vault — an unnamed instance (20.22). */
+/** What's opened: a root (a folder holding a root marker), or a plain folder outside every root. */
 export type RootKind = "vault" | "folder";
-
-/** What the machine's list holds: vaults, and plain folders opened (20.4). */
-export type KnownKind = RootKind;
 
 export interface VaultIdentity {
   id: string | null;
-  /** The declared name; null when the config declares none (then the folder's name stands in). */
+  /** The declared name; null when the config declares none. */
   name: string | null;
   aliases: string[];
   previous_names: string[];
 }
 
-/** One vault — an instance of it (20.4) — as this machine knows it. */
-export interface KnownVault {
-  /** Its storage key: the id, `<id>-<hash>` for a second copy, `<folder>-<hash>` without an id. */
+/** One root (or plain folder opened) as this machine knows it, by its path. */
+export interface KnownRoot {
+  /** Its storage key: its path's (`vaultKey`), what its cache and state folders are named. */
   key: string;
-  /** The instance's local id: given once, the first time it's seen, and kept (20.4). */
-  instance?: string;
-  id: string | null;
-  kind: KnownKind;
-  /** The evidence for what it holds: copies of one collection share some of it (20.4). */
-  collection?: Collection;
-  /** The name `[[name:note]]` reaches it by; null for a repository without `.slipbox/`. */
-  name: string | null;
-  aliases: string[];
-  previous_names: string[];
-  /** Where it was last seen. */
+  kind: RootKind;
+  /** Where it is. */
   path: string;
-  /** When (ISO 8601). */
+  /** When it was last seen (ISO 8601). */
   seen: string;
-  /** When it was first seen (20.5): a copy that was gone before then may have moved here. */
-  since?: string;
-  /** Its moves, each confirmed (20.5): where it was, where it went, when. */
-  moved?: { from: string; to: string; at: string }[];
-  /** The instances asked about and said not to have moved here (20.5): not asked again. */
-  declined?: string[];
   /** Found by the background auto-index, never opened (20.9): listed after those opened. */
   found?: boolean;
-  /** When the auto-index last built its index (20.9). */
+  /** When its index was last built (20.9, 20.10): how fresh it is. */
   indexed?: string;
-  /** A vault in a linked git worktree (17.19): git's name for it, and the main checkout's vault. */
+  /** A root in a linked git worktree (17.19): git's name for it, and the main checkout's root. */
   worktree?: { name: string; main: string | null };
+  /** Where it was before, its state carried along (21.8): what the relink reads a move from (20.17). */
+  moved?: { from: string; to: string; at: string }[];
 }
 
-/** A vault name: letters, digits, `.`, `_`, `-`; no spaces and no colon (`[[name:note]]`). */
+/** A folder's name: letters, digits, `.`, `_`, `-`; no spaces, no `/` or `:`. */
 export const VAULT_NAME = /^[\p{L}\p{N}][\p{L}\p{N}._-]*$/u;
-
 
 const NO_IDENTITY: VaultIdentity = { id: null, name: null, aliases: [], previous_names: [] };
 
@@ -99,7 +77,7 @@ export function newVaultId(): string {
   return randomBytes(8).toString("hex");
 }
 
-/** A folder name as a vault name: spaces become `-`, anything else not allowed goes. */
+/** A folder name as a name a pointer can carry: spaces become `-`, anything else not allowed goes. */
 export function slugName(s: string): string {
   const slug = s
     .normalize("NFC")
@@ -107,6 +85,11 @@ export function slugName(s: string): string {
     .replace(/[^\p{L}\p{N}._-]/gu, "")
     .replace(/^[._-]+/, "");
   return VAULT_NAME.test(slug) ? slug : "";
+}
+
+/** The folder's own name as a name, for a suggestion. */
+export function implicitName(root: string): string {
+  return slugName(basename(root)) || "notes";
 }
 
 /**
@@ -118,123 +101,127 @@ export function addIdentity(configFile: string, fields: { id?: string; name?: st
   try {
     text = readRegular(configFile, SMALL_FILE).toString("utf8");
   } catch {}
-  const have = readIdentity(configFile);
+  const next = withIdentity(text, readIdentity(configFile), fields);
+  if (next !== text) atomicWrite(configFile, next);
+}
+
+/** A config's text with `id` and `name` added to its `[vault]` table, those it has (`have`) kept. */
+export function withIdentity(text: string, have: VaultIdentity, fields: { id?: string; name?: string }): string {
   const lines: string[] = [];
   if (fields.id && !have.id) lines.push(`id = ${JSON.stringify(fields.id)}`);
   if (fields.name && !have.name) lines.push(`name = ${JSON.stringify(fields.name)}`);
-  if (!lines.length) return;
+  if (!lines.length) return text;
   const header = /^\[vault\][ \t]*(#.*)?$/m.exec(text);
   if (header) {
     const at = header.index + header[0].length;
-    text = `${text.slice(0, at)}\n${lines.join("\n")}${text.slice(at)}`;
-  } else {
-    if (text && !text.endsWith("\n")) text += "\n";
-    text += `${text ? "\n" : ""}[vault]\n${lines.join("\n")}\n`;
+    return `${text.slice(0, at)}\n${lines.join("\n")}${text.slice(at)}`;
   }
-  atomicWrite(configFile, text);
+  let t = text;
+  if (t && !t.endsWith("\n")) t += "\n";
+  return `${t}${t ? "\n" : ""}[vault]\n${lines.join("\n")}\n`;
 }
 
 // ---------------------------------------------------------------------------------------------
-// The machine's vaults (17.6)
+// The machine's roots (17.6, 21.8)
 
-interface RegistryFile {
+interface RootsFile {
   version: 1;
-  vaults: KnownVault[];
+  roots: KnownRoot[];
 }
 
-export function registryFile(): string {
+export function rootsFile(): string {
+  return join(stateHome(), "roots.json");
+}
+
+/** The list before 21.8: instances (20.4), each keyed by an id of its own. */
+function oldListFile(): string {
   return join(stateHome(), "vaults.json");
 }
 
-export function readRegistry(): KnownVault[] {
-  const f = readJson<RegistryFile | null>(registryFile(), null);
-  if (!f || f.version !== 1 || !Array.isArray(f.vaults)) return [];
-  // A kind no longer made ("repo", before 17.18; the home vault, before 20.22) is dropped.
-  return f.vaults.filter((v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "folder"));
-}
-
-/** A seen vault is written again only when something about it changed, or after this long. */
-const SEEN_REFRESH_MS = 10 * 60 * 1000;
-
-/** An instance's local id (20.4): random, this machine's only, never written into a folder. */
-export function newInstanceId(): string {
-  return randomBytes(6).toString("hex");
+export function readRoots(): KnownRoot[] {
+  const f = readJson<RootsFile | null>(rootsFile(), null);
+  if (!f) return existsSync(oldListFile()) ? migrate() : [];
+  if (f.version !== 1 || !Array.isArray(f.roots)) return [];
+  return f.roots.filter((v) => v && typeof v.key === "string" && typeof v.path === "string" && (v.kind === "vault" || v.kind === "folder"));
 }
 
 /**
- * Record a vault as seen now: once per change, and at most every ten minutes otherwise. Its instance
- * id is the one given (a vault's is its key, 20.5), else the one it had, else a new one; it was first
- * seen now when it's new (an entry from before 20.5 has no such date). The entry as recorded.
+ * Today's state moved once (21.8): the instances' list (`vaults.json`, 20.4) read into the roots',
+ * each one's cache and state moved from its instance's key to its path's, and the old list gone.
  */
-export function recordVault(v: Omit<KnownVault, "seen" | "instance" | "since"> & { instance?: string }, now = new Date()): KnownVault {
-  const list = readRegistry();
-  const i = list.findIndex((x) => x.key === v.key);
+function migrate(): KnownRoot[] {
+  const old = readJson<{ vaults?: unknown[] } | null>(oldListFile(), null);
+  const out: KnownRoot[] = [];
+  for (const raw of Array.isArray(old?.vaults) ? old!.vaults : []) {
+    const v = raw as Partial<KnownRoot> & { key?: unknown; path?: unknown };
+    if (!v || typeof v.key !== "string" || typeof v.path !== "string" || (v.kind !== "vault" && v.kind !== "folder")) continue;
+    const key = vaultKey(v.path);
+    if (v.key !== key) adoptStorage(v.key, key);
+    if (out.some((x) => x.key === key)) continue;
+    out.push({
+      key,
+      kind: v.kind,
+      path: v.path,
+      seen: typeof v.seen === "string" ? v.seen : new Date(0).toISOString(),
+      ...(v.found ? { found: true } : {}),
+      ...(typeof v.indexed === "string" ? { indexed: v.indexed } : {}),
+      ...(v.worktree && typeof v.worktree.name === "string" ? { worktree: { name: v.worktree.name, main: v.worktree.main ?? null } } : {}),
+      ...(Array.isArray(v.moved) ? { moved: v.moved } : {}),
+    });
+  }
+  if (writeRoots(out)) rmSync(oldListFile(), { force: true });
+  return out;
+}
+
+/** A root's cache and state taken from one key to another, when the other has none yet. */
+export function adoptStorage(from: string, to: string): void {
+  if (from === to) return;
+  for (const home of [stateHome(), cacheHome()]) {
+    try {
+      if (!existsSync(join(home, to)) && existsSync(join(home, from))) renameSync(join(home, from), join(home, to));
+    } catch {}
+  }
+}
+
+/** A seen root is written again only when something about it changed, or after this long. */
+const SEEN_REFRESH_MS = 10 * 60 * 1000;
+
+/** The root at `path` recorded as seen now — once per change, else at most every ten minutes. */
+export function recordRoot(v: Omit<KnownRoot, "key" | "seen">, now = new Date()): KnownRoot {
+  const list = readRoots();
+  const key = vaultKey(v.path);
+  const i = list.findIndex((x) => x.key === key);
   const old = list[i];
-  const since = old ? old.since : now.toISOString();
-  const fresh: KnownVault = { ...old, ...v, instance: v.instance ?? old?.instance ?? newInstanceId(), seen: now.toISOString(), ...(since ? { since } : {}) };
+  const fresh: KnownRoot = { ...old, ...v, key, seen: now.toISOString() };
   // Opened, it's no longer only found (20.9).
   if (!v.found) delete fresh.found;
+  if (!v.worktree) delete fresh.worktree;
   const same = old && JSON.stringify({ ...old, seen: "" }) === JSON.stringify({ ...fresh, seen: "" });
   if (same && now.getTime() - Date.parse(old.seen) < SEEN_REFRESH_MS) return old;
   if (i >= 0) list[i] = fresh;
   else list.push(fresh);
-  try {
-    ensureDir(stateHome());
-    writeJson(registryFile(), { version: 1, vaults: list } satisfies RegistryFile);
-  } catch {}
+  writeRoots(list);
   return fresh;
 }
 
 /** The list written whole; false when it can't be (a read-only state directory). */
-export function writeRegistry(vaults: KnownVault[]): boolean {
+export function writeRoots(roots: KnownRoot[]): boolean {
   try {
     ensureDir(stateHome());
-    writeJson(registryFile(), { version: 1, vaults } satisfies RegistryFile);
+    writeJson(rootsFile(), { version: 1, roots } satisfies RootsFile);
     return true;
   } catch {
     return false;
   }
 }
 
-/**
- * The instance `from`, gone from where it was, confirmed moved to `root` (20.5): its entry follows,
- * the move kept; the instance made there meanwhile (`fresh`) forgotten — its storage is the caller's
- * to remove once nothing writes to it any more (`removeStorage`).
- */
-export function confirmMove(from: KnownVault, root: string, fresh: string | null, now = new Date()): KnownVault {
-  const list = readRegistry();
-  const old = list.find((v) => v.key === from.key);
-  if (!old) throw new Error(`no instance ${from.key} on this machine`);
-  const at = now.toISOString();
-  const moved: KnownVault = { ...old, path: root, seen: at, moved: [...(old.moved ?? []), { from: old.path, to: root, at }] };
-  writeRegistry([...list.filter((v) => v !== old && (fresh === null || v.key !== fresh)), moved]);
-  return moved;
-}
-
-/** `from` didn't move to the instance `key` (20.5): it isn't asked about there again. */
-export function declineMove(key: string, from: KnownVault): void {
-  const list = readRegistry();
-  const here = list.find((v) => v.key === key);
-  if (!here) return;
-  const id = from.instance ?? from.key;
-  if (here.declined?.includes(id)) return;
-  here.declined = [...(here.declined ?? []), id];
-  writeRegistry(list);
-}
-
-/** An instance's cache and state removed (one made by mistake: a move confirmed after it). */
-export function removeStorage(key: string): void {
-  rmSync(join(cacheHome(), key), { recursive: true, force: true });
-  rmSync(join(stateHome(), key), { recursive: true, force: true });
-}
-
-/** The instance `key` had its index built now (20.9, 20.10): how fresh it is, for the lists. */
+/** The root `key` had its index built now (20.9, 20.10): how fresh it is, for the lists. */
 export function noteIndexed(key: string, at = new Date()): void {
-  const list = readRegistry();
+  const list = readRoots();
   const v = list.find((x) => x.key === key);
   if (!v) return;
   v.indexed = at.toISOString();
-  writeRegistry(list);
+  writeRoots(list);
 }
 
 /** Where removable drives are mounted: a path under one that isn't there is on a drive unplugged. */
@@ -249,21 +236,13 @@ export function unavailable(path: string): boolean {
 }
 
 /**
- * Forget the vault at `root` (18.11: made a plain folder): the machine no longer lists it. With
- * `kinds`, only entries of those kinds there (a plain folder's, when it has become a vault: 20.4).
+ * Forget the root at `root` (18.11: made a plain folder): the machine no longer lists it. With
+ * `kinds`, only entries of those kinds there (a plain folder's, when it has become a root).
  */
-export function forgetVault(root: string, kinds?: KnownKind[]): void {
-  const list = readRegistry();
+export function forgetRoot(root: string, kinds?: RootKind[]): void {
+  const list = readRoots();
   const rest = list.filter((v) => real(v.path) !== real(root) || (kinds && !kinds.includes(v.kind)));
-  if (rest.length === list.length) return;
-  try {
-    writeJson(registryFile(), { version: 1, vaults: rest } satisfies RegistryFile);
-  } catch {}
-}
-
-/** Every name a vault answers to, lower-cased: its name and aliases. */
-export function namesOf(v: Pick<KnownVault, "name" | "aliases">): string[] {
-  return [v.name, ...v.aliases].filter((n): n is string => !!n).map((n) => n.toLowerCase());
+  if (rest.length !== list.length) writeRoots(rest);
 }
 
 function real(p: string): string {
@@ -272,28 +251,6 @@ function real(p: string): string {
   } catch {
     return p;
   }
-}
-
-/** The id at a vault root, if it's still a vault there. */
-function idAt(root: string): string | null {
-  try {
-    if (!statSync(join(root, MARKER)).isDirectory()) return null;
-  } catch {
-    return null;
-  }
-  return readIdentity(vaultConfigFile(root)).id;
-}
-
-/**
- * The storage key of a vault root (17.3). With an id: the id, unless the list saw this vault at
- * another path that still holds it (this is a copy): then the id and a hash of this path.
- */
-export function storageKey(root: string, id: string | null, known = readRegistry()): string {
-  if (!id) return vaultKey(root);
-  // A worktree's own key is never the id (17.19): one recorded under it before is no primary.
-  const primary = known.find((v) => v.key === id && !v.worktree && !checkoutOf(v.path)?.worktree);
-  if (!primary || real(primary.path) === real(root) || idAt(primary.path) !== id) return id;
-  return `${id}-${vaultKey(root).slice(-8)}`;
 }
 
 /** A worktree's folder gone this long has its state removed too, not only its cache (17.19). */
@@ -305,10 +262,10 @@ const WORKTREE_STATE_DAYS = 30;
  * and their entry in the list. Until then they're listed as gone. Plain folders gone a month, too.
  */
 export function pruneWorktrees(now = Date.now()): void {
-  const list = readRegistry();
+  const list = readRoots();
   // On a drive that isn't there (20.10), nothing is gone: kept as it was until the drive is back.
   const gone = list.filter((v) => v.worktree && !unavailable(v.path) && !existsSync(join(v.path, ".git")) && !existsSync(join(v.path, MARKER)));
-  // A plain folder (20.4) gone as long: forgotten too — it has nothing of its own to remove.
+  // A plain folder gone as long: forgotten too — it has nothing of its own to remove.
   const drop = list.filter((v) => v.kind === "folder" && !unavailable(v.path) && !existsSync(v.path) && now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000).map((v) => v.key);
   if (!gone.length && !drop.length) return;
   for (const v of gone) {
@@ -318,34 +275,5 @@ export function pruneWorktrees(now = Date.now()): void {
       drop.push(v.key);
     }
   }
-  if (!drop.length) return;
-  try {
-    writeJson(registryFile(), { version: 1, vaults: list.filter((v) => !drop.includes(v.key)) } satisfies RegistryFile);
-  } catch {}
-}
-
-/**
- * A distinct name for a new vault in `dir` (17.5): the folder's name, prefixed with the enclosing
- * vault's (`x-plan` inside `x`); a name this machine knows gets `-2`, `-3`….
- */
-export function suggestVaultName(dir: string, parentName: string | null, known = readRegistry()): string {
-  const base = slugName(basename(dir)) || "vault";
-  const stem = parentName ? `${parentName}-${base}` : base;
-  const here = real(dir);
-  const taken = (n: string) => known.some((v) => real(v.path) !== here && namesOf(v).includes(n.toLowerCase()));
-  let name = stem;
-  for (let i = 2; taken(name); i++) name = `${stem}-${i}`;
-  return name;
-}
-
-/** The vault this machine knows by `name` (or an alias), other than the one at `except`. */
-export function vaultNamed(name: string, known = readRegistry(), except?: string): KnownVault[] {
-  const n = name.toLowerCase();
-  const skip = except ? real(except) : null;
-  return known.filter((v) => v.kind === "vault" && namesOf(v).includes(n) && real(v.path) !== skip);
-}
-
-/** The folder's name as a vault name, for a vault that declares none. */
-export function implicitName(root: string): string {
-  return slugName(basename(root)) || "vault";
+  if (drop.length) writeRoots(list.filter((v) => !drop.includes(v.key)));
 }

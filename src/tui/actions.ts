@@ -9,14 +9,13 @@ import { anchorsOf } from "../core/parse.ts";
 import { blockLine, findHeading, landingText, lineFragment } from "../core/landing.ts";
 import { isAbsolute, join, posix, relative } from "node:path";
 import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
-import { copiesShown, describeCollection } from "../core/collection.ts";
-import { locName, tildePath } from "../core/names.ts";
+import { rootLabel, tildePath } from "../core/names.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { noteProblems, type Problem } from "../core/diagnostics.ts";
-import { copyAvailable, folderIdentity, type NamedFolder, pointerName, readFolders, recordFolder, setDefaultCopy } from "../core/folders.ts";
+import { copyAvailable, folderIdentity, readFolders, recordFolder } from "../core/folders.ts";
 import { slugName } from "../core/registry.ts";
 import { isNotePath } from "../core/links.ts";
-import { hasMarker, initVault, instanceOf, isInside, isNeverRoot, rootAt } from "../core/vault.ts";
+import { hasMarker, initVault, isInside, isNeverRoot, rootAt } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
@@ -1661,7 +1660,6 @@ export function registerActions(app: App): void {
       a.relayoutAll();
       a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
     },
-    "vault.switch": (a) => a.openVaultList(),
     "note.delete": (a) => {
       const t = a.noteTarget();
       if (t) a.deleteItem(t);
@@ -1877,28 +1875,12 @@ export function registerActions(app: App): void {
         if (arg) return a.previewRename(() => planHeadingRename(a.graph, rel, h.text, arg));
         a.promptHeadingRename(rel, h.text);
       }),
-    "folders.open": (a) => {
-      const list = readFolders();
-      if (!list.length) return a.message("info", "no named folders yet: a .slipbox/ name, or a repository's remote, names one");
-      a.openList({
-        title: "Named folders — enter: its copies",
-        items: list.map((f) => ({ label: pointerName(f, list), detail: f.remote ?? (f.id ? `.slipbox/ ${f.id}` : ""), hint: `${f.copies.length} cop${f.copies.length === 1 ? "y" : "ies"}`, data: f })),
-        accept: (item) => {
-          const f = item.data as NamedFolder;
-          a.openList({
-            title: `${f.name}: which copy do links open?`,
-            filterable: false,
-            selected: Math.max(0, f.copies.findIndex((c) => c.path === f.default)),
-            items: f.copies.map((c) => ({ label: tildePath(c.path), hint: c.path === f.default ? "links open it" : copyAvailable(c.path) ? undefined : "not here", data: c.path })),
-            accept: (copy) => {
-              setDefaultCopy(f.key, copy.data as string);
-              a.message("info", `links to ${f.name} open ${tildePath(copy.data as string)}`);
-            },
-          });
-        },
-      });
-    },
+    "folders.open": (a) => a.openFolders(),
+    "folders.default": (a) => a.chooseDefaultCopy(),
     "folder.name": (a, arg) => {
+      // The explorer's selected root (one nested here), when it has focus.
+      const item = a.explorerFocused() ? a.explorerItem() : null;
+      if (item?.vault && !arg) return a.renameVaultItem(item);
       if (a.loc.mode === "folder") return a.message("warn", `${a.loc.root} has no root to name: :init makes one`);
       const go = (name: string) => {
         const ident = folderIdentity(a.loc.root);
@@ -1912,14 +1894,6 @@ export function registerActions(app: App): void {
       };
       if (arg) return go(arg.trim());
       a.prompt(`name ${tildePath(a.loc.root)}, as pointers name it: `, (t) => t.trim() && go(t.trim()));
-    },
-    "vault.rename": (a, arg) => {
-      // The explorer's selected vault (one nested here), when it has focus.
-      const item = a.explorerFocused() ? a.explorerItem() : null;
-      if (item?.vault && !arg) return a.renameVaultItem(item);
-      const go = (name: string) => a.previewRename(() => planVaultRename(a.loc, name.trim()));
-      if (arg) return go(arg);
-      a.prompt(`rename vault ${a.loc.name ?? a.loc.root} to: `, (t) => t.trim() && go(t));
     },
     "link.convert": (a, arg) => {
       // A note named: its links; else every note's.
@@ -1935,18 +1909,15 @@ export function registerActions(app: App): void {
         a.previewRename(() => planRelink(a.graph, [rel]));
       }),
     "vault.pin_root": (a) => a.togglePinnedRoot(),
-    "vault.moved": (a) => {
-      if (!a.offerMove()) a.message("info", "nothing seems to have moved here");
-    },
     "vault.info": (a) => {
       const g = a.graph;
-      // This copy (20.4): its local id, what it holds, and the other copies this machine knows.
-      const here = instanceOf(a.loc);
-      infoList(a, "Vault", [
+      // Its name and copies, as pointers find it (21.6).
+      const ident = a.loc.mode === "vault" ? folderIdentity(a.loc.root) : null;
+      const named = ident ? readFolders().find((f) => f.key === ident.key) : undefined;
+      infoList(a, "Root", [
         ["root", a.loc.root],
         ["mode", a.loc.mode],
-        ...(a.loc.name ? [["vault", `${locName(a.loc)}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}${a.loc.id || !hasMarker(a.loc.root) ? "" : " — no id yet"}`] as [string, string]] : []),
-        ...(here.entry?.instance ? [["instance", `${here.entry.instance} — holds ${describeCollection(here.entry.collection)}`] as [string, string]] : []),
+        ["name", ident ? `${rootLabel(a.loc)}${a.loc.aliases.length ? ` (also ${a.loc.aliases.join(", ")})` : ""}` : `none — ${a.loc.mode === "folder" ? "no root" : "no remote and no .slipbox/ name"}: linked to by relative path`],
         ["notes", String(g.notes.size)],
         ["indexing", a.indexing ? `${a.indexing} left` : "done"],
         // How fresh, and what else is covered (20.10).
@@ -1957,7 +1928,7 @@ export function registerActions(app: App): void {
         ["state", stateDir(a.loc)],
         ["scratch", a.scratch().path],
         ...g.skipped.map((s) => ["skipped", `${s.rel} — ${s.reason}`] as [string, string]),
-        ...copiesShown(here.copies).map((c) => ["copy", c] as [string, string]),
+        ...(named?.copies ?? []).filter((c) => c.path !== ident?.copy).map((c) => ["copy", `${tildePath(c.path)}${copyAvailable(c.path) ? "" : " (not here)"}`] as [string, string]),
       ]);
     },
     "config.reload": (a) => a.reloadConfig("manual"),

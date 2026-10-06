@@ -313,7 +313,7 @@ const RANGES: Record<string, [number, number]> = {
   "ui.split_ratio": [0.2, 0.8],
   "ui.readable_max": [20, 1000],
   "ui.scrolloff": [0, 50],
-  // Up to every reading position kept (positions.json holds the newest 2,000).
+  // Up to 2,000 of the reading positions kept (positions.json holds the newest 5,000, every root's).
   "ui.history_limit": [0, 2000],
   "input.which_key_delay_ms": [0, 10_000],
   "ui.narrow_width": [0, 1000],

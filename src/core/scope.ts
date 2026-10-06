@@ -5,7 +5,7 @@
 
 import { isAbsolute } from "node:path";
 import type { Graph } from "./graph.ts";
-import { readRegistry } from "./registry.ts";
+import { readRoots } from "./registry.ts";
 import { search, type SearchHit, type SearchResult } from "./search.ts";
 import { SearchIndex } from "./search-index.ts";
 import { findVaultRoot, isListed, isVaultRoot } from "./vault.ts";
@@ -49,7 +49,7 @@ export function scopeRoots(g: Graph, scope: Scope): string[] {
   for (const list of g.reach?.inbound(g).values() ?? []) for (const b of list) add(b.from);
   const linked = [...out];
   if (scope === "linked") return linked;
-  const rest = readRegistry().filter((v) => v.kind === "vault" && !v.worktree && v.path !== g.root && !out.has(v.path) && isVaultRoot(v.path));
+  const rest = readRoots().filter((v) => v.kind === "vault" && !v.worktree && v.path !== g.root && !out.has(v.path) && isVaultRoot(v.path));
   return [...linked, ...rest.map((v) => v.path)];
 }
 

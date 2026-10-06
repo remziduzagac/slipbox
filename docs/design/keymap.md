@@ -256,7 +256,7 @@ Inside the explorer (`[keys.explorer]` in config):
 | `a` | show every text file, or back to what `files.show` lists (notes and data files) |
 | `n` / `shift+n` | a new note / folder in the selected folder (beside a selected file); `space n n` too |
 | `r` | rename the selected note, file or folder (a nested vault's folder too), in its folder: links fixed |
-| `shift+r` | on a nested vault's row: rename the vault (its name; the folder stays) |
+| `shift+r` | on a nested root's row: name it, as pointers name it (`slipbox name`; the folder stays) |
 | `m` | move it to a folder picked from a tree (`←` `→` fold, typing filters): links fixed after a preview |
 | `d` | delete it to the vault's trash, after asking (it says how many links break) |
 | `u` | restore what was deleted last (`space v t`, `:trash`: the rest) |
@@ -295,7 +295,9 @@ file's folder); elsewhere on the current note, its folder, or this vault.
 | `space v p` | the problems (`:problems`, `1.7`): broken and ambiguous links, in the left panel |
 | `space v m` | make a vault (`:init`): this plain folder; in a vault, the selected folder (or this note's) |
 | `space v shift+m` | make the vault a plain folder of the one holding it (this one: then into its parent) |
-| `space v n` | rename the vault (the selected one, or this one) |
+| `space v n` | name the folder as pointers name it (`:name`): the selected root, or this one |
+| `space v v` | the named folders (`:folders`): `enter` goes into one; `back` returns |
+| `space v shift+v` | which copy a named folder's links open (`:folders-default`) |
 
 ## Outline — right pane
 
@@ -395,9 +397,10 @@ config.
 | `:messages` | open the messages list |
 | `:reload` | reload the note from disk |
 | `:reindex` | reindex the vault |
-| `:vaults` | the vaults this machine knows: pick one to switch to |
+| `:folders` | the named folders this machine knows: pick one to go into |
+| `:folders-default` | which copy a named folder's links open |
+| `:name [new]` | name this folder as pointers name it |
 | `:init` | make this plain folder a vault |
-| `:vault-moved` | a copy of this vault gone from where it was: did it move here? (`20.5`) |
 | `:pin-root` | keep this vault among the explorer's roots after leaving it, or no longer (`20.15`) |
 | `:delete` | delete the note to the vault's trash (asks first) |
 | `:trash` | the trash: `enter` restores an item |
@@ -434,7 +437,7 @@ source first.
 | a new note beside this one (`:new name`; `projects/idea` makes the folder too) | `ctrl+n`, `space n n` |
 | a new folder beside this note (`:mkdir name`) | `ctrl+shift+n`, `space d n` |
 | rename or move the note (`:rename path`, `:mv path`): a preview, then `enter` | `space n m` |
-| rename the vault: a preview, then `enter` | `space v n` |
+| name the folder: a preview, then `enter` | `space v n` |
 | delete the note to the vault's trash, after asking (`:delete`) | `space n d` |
 | a copy of the note beside it (`name-copy`), opened | `space n shift+y` |
 | the trash: what was deleted, `enter` restores (`:trash`) | `space v t` |
@@ -560,9 +563,9 @@ edit the config and the config wins again.
 | `space n p` | choose which running nvim `space n s` sends to (it asks by itself when unsure) |
 | `space n r` | reload this note from disk |
 | `space n i` | the Info view (`3.19`): open, focus, close — the file's path, vault, counts, properties, tags, links |
-| `space v v` | switch vault: the vaults this machine knows (`:vaults`); `back` returns |
+| `space v v` | go into a named folder (`:folders`); `back` returns |
 | `space v r` | reindex the vault |
-| `space v i` | vault info: root, instance, notes, skipped paths, cache and state, watcher, copies |
+| `space v i` | folder info: root, name and copies, notes, skipped paths, cache and state, watcher |
 | `space v c` | reload the configuration (it also reloads by itself when a config file is saved) |
 | `space m` | messages |
 | `?`, `space ?` | help: every key, grouped, searchable (commands, panes, resize mode, mouse); `enter` runs a command |

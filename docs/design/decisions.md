@@ -6,9 +6,9 @@ here.
 
 ## `0.10` — storage layout
 
-*Superseded by `20.x` (decided 2026-10-02, built): personal state by instance, kept with the instances and confirmed
-moves in the durable state (`20.5`); the cache shared by content (`20.11`); no home vault (`20.22`). This is how
-storage works now.*
+*Revised by `20.x` (decided 2026-10-02, built) — the cache shared by content (`20.11`), no home vault (`20.22`) — and
+by `21.8` (built 2026-10-07): personal state by root's path, positions by file, a named folder's move carried along.
+This is how storage works now.*
 
 Four kinds of data, four places. Nothing derived ever lives in the vault. Revised 2026-09-30 by the vault design
 (`docs/idea.md`, "Vaults — decided 2026-09-30"; plan `17.3`).
@@ -18,39 +18,39 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | config | `$XDG_CONFIG_HOME/slipbox/config.toml`, then the vault's | user and vault settings | no |
 | cache | `$XDG_CACHE_HOME/slipbox/<key>/` | the persisted link index | yes, rebuilt on demand |
 | cache, shared | `$XDG_CACHE_HOME/slipbox/parsed.db` | parsed content, by content (`20.11`) | yes, rebuilt as read |
-| state | `$XDG_STATE_HOME/slipbox/<key>/` | positions, session, scratch, staleness, redirects, trash | no: yours |
-| state, the machine's | `$XDG_STATE_HOME/slipbox/vaults.json` | the instances seen, their moves | no: the keys |
-| data | `$XDG_DATA_HOME/slipbox/tools/` | language servers installed for you (`19.x`) | yes, installed again |
+| state | `$XDG_STATE_HOME/slipbox/<key>/` | session, scratch, staleness, redirects, trash, undo | no: yours |
+| state, the machine's | `$XDG_STATE_HOME/slipbox/positions.json` | reading positions, by file (`21.8`) | no |
+| state, the machine's | `$XDG_STATE_HOME/slipbox/roots.json` | the roots seen, by path; their moves | no: the moves |
+| state, the machine's | `$XDG_STATE_HOME/slipbox/folders.json` | named folders, their copies, defaults | no: names |
+| data | `$XDG_DATA_HOME/slipbox/tools/` | language servers installed for you (`19.x`) | yes, reinstalled |
 
 XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) on
 macOS too — the terminal stack here is XDG-shaped on both machines.
 
-**The key** is the instance's id (`20.5`): one copy of a vault on this machine — a clone, a worktree, a folder with
-`.slipbox/` — has a local id slipbox gives it the first time it's seen, kept in `vaults.json` with where it is, and
-never written into the folder. It's found by the folder's path. So two copies of a vault never share a session,
-whatever their `.slipbox/` ids say, and a git vault without `.slipbox/` (`20.3`) has state of its own like any other.
-A worktree that `git worktree move` took elsewhere is found again by git's name for it. Any other copy that turns
-up where none was is new — unless it's confirmed to be one gone from where it was (below). A plain folder opened
-outside every vault (`20.22`) is keyed by its path, `<basename>-<hash>`, the hash the first 12 hex characters of
-SHA-256 over the root's **real path**: moved, it starts afresh. So is a vault when `vaults.json` can't be written.
+**The key** is the root's path (`21.8`): `<basename>-<hash>`, the hash the first 12 hex characters of SHA-256 over its
+**real path** — a root's, else the plain folder opened (`20.22`). Opening `project/` or `project/docs/` brings back the
+same session, since both have the root `project/`; a worktree, another path, has its own. Nothing is written into the
+folder: `.slipbox/`'s id and name only by `slipbox init --name` and `slipbox name`, which the user runs.
 
-**Moves are confirmed, not guessed** (`20.5`). A vault opened where it wasn't seen before, while a copy of the same
-collection (`20.4`) is gone from where it was and was last seen before this one appeared, is asked about: "did it move
-here?" In the TUI, a question when the vault opens — yes takes the gone copy's instance and its state (the one made
-here meanwhile goes), no isn't asked again, `esc` asks next time; in the CLI, a warning on every command until
-`slipbox vault-moved <old-path>` (or `--not`) answers. Each confirmed move is kept with the instance. The last time a
-vault was seen is written at most every ten minutes, so a copy gone within minutes of another appearing may be asked
-about too: no is the answer.
+**Reading positions are by file** (`21.8`): one `positions.json` for the machine, each note by its absolute path and
+the root it was read from — a note opened from another root, or a folder inside its root, is where it was left. A
+root's history lists its own files and those read from it. The newest 5,000 are kept.
 
-**Today's state moved once** (`20.5`): state and cache kept under the keys of before — a vault's id, a copy's
-`<id>-<hash>`, a worktree's `<id>-wt-<name>`, a path's `<basename>-<hash>` — move to the instance's key the first
-time it's opened, and `vaults.json` follows.
+**A named folder moved by hand takes its state along** (`21.8`) when it's sure: its `.slipbox/` id or remote at a new
+path, nothing left at the old one, and exactly one such copy gone — also when the background index found it at the new
+path first. Its cache, session, scratch, trash, undo log and positions move to the new key; the move is kept with its
+entry in `roots.json`, for the relink (`20.17`), which is offered at once. Nothing is asked. A worktree `git worktree
+move` took elsewhere is found by git's name for it. Any other move — an unnamed root, two copies gone — starts fresh.
+
+**Today's state moved once** (`21.8`): the instances' list (`vaults.json`, `20.5`) is read into `roots.json` the first
+time slipbox runs, each instance's state and cache moved from its key to its path's, and the old list removed; a root's
+own `positions.json` is merged into the machine's the first time it's opened.
 
 Consequences, accepted deliberately:
 
 - State does not travel between the Mac and the VMs. Reading position is machine-local anyway.
-- **A vault moved by hand loses its state until confirmed:** the question is the price of never handing one copy's
-  session to another.
+- **An unnamed root moved by hand starts fresh:** nothing names it to be found again by. Naming it (`slipbox name`) is
+  the remedy.
 - A plain folder's state is its own, by its path (`20.22`): moved, it starts afresh. The home vault that held every
   loose folder's (`17.2`) is gone; its `$XDG_DATA_HOME/slipbox/home/config.toml` is no longer read.
 
@@ -250,7 +250,7 @@ tools do is the project's.
 ## `20.x` — plain paths, virtual vaults
 
 Decided 2026-10-02 with the user, revised the same day after a review; built (plan `20.1`–`20.23`, done 2026-10-03).
-Being revised by `21.x` below (proposed and reviewed 2026-10-05, not built yet).
+Revised by `21.x` below (built 2026-10-06 and 07): collections, instances and display names are gone.
 The model in full is `docs/idea.md`, "Plain paths, virtual vaults". It supersedes `17.2` and `17.18` (the home vault;
 every root a `.slipbox/`), `1.4`'s resolution by name, `0.10`'s keys, `17.12`'s redirects as a way to resolve, the
 LSP face (`11.x`), and `17.20` below. In short:
@@ -269,7 +269,8 @@ LSP face (`11.x`), and `17.20` below. In short:
 - **The index is a cache, history is state.** On demand carries the load (folders opened, links followed, CLI paths);
   a background auto-index of the home folder fills in. Freshness is checked by each file's size and time; coverage is
   shown, and the CLI can refresh. Parsed content is shared by content hash, parser version and settings; links and
-  backlinks are resolved per instance. Instances, their locations and confirmed moves are durable state.
+  backlinks are resolved per instance. Instances, their locations and confirmed moves are durable state. *Later:*
+  `21.8` keeps state by root's path, and carries a named folder's moves without asking.
 - **Generated edits are plans,** tied to file hashes, refused when stale; the CLI plans and applies in two steps.
   Changes made elsewhere repair the index; file fixes are asked for. Before a merge, `git merge-tree`'s result is
   checked for broken links; after one, git's renames are evidence for fixes. Hooks are opt-in.
@@ -353,6 +354,14 @@ same day; being built (plan `21.x`: `21.1`–`21.7` and `21.11` done; `21.9`, `2
   The `.slipbox/` id is written only by `slipbox init` and `slipbox name`, never on its own.
 - **Words:** folders, not vaults; `slipbox folders` (and `folders default`), `slipbox name`, `--scope here|linked|all`;
   note arguments take `slipbox://` pointers.
+- **Built** (`21.8`, `21.12`, 2026-10-07): the roots list (`roots.json`, by path) replaces the instances' (`vaults.json`);
+  state, cache and positions move to it once (see `0.10`). A root's name is the one pointers use — a `.slipbox/` name,
+  else its remote's — or none, never its folder's own: an unnamed root is shown by its path and linked by relative path.
+  A worktree whose own `.slipbox/` has no name takes its main checkout's. `slipbox init` without `--name` gives
+  settings only; with it, a name and an id. Gone: `slipbox vaults` (`folders`), `rename-vault` (`name`), `vault-moved`
+  and the move question; the TUI's vault list (`:folders` goes into a named folder, `:folders-default` sets which copy
+  its links open); collections (`collection.ts`; its remote helpers are `remotes.ts`). The converter reads
+  `[[name:note]]` through the named folders' lookup.
 
 ## `17.20` — a folder is enough: scope, settings and identity apart
 

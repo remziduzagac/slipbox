@@ -1499,7 +1499,7 @@ const CORE: Scenario[] = [
 
   // --- vaults (17.x) ----------------------------------------------------------------------------
   {
-    name: "vaults: a path into another vault switches into it and back; a broken one; the list; a nested vault",
+    name: "roots: a path into another root switches into it and back; a broken one; :folders; a nested root",
     options: {
       open: "vault-links.md",
       files: {
@@ -1523,7 +1523,7 @@ const CORE: Scenario[] = [
     run: async (s) => {
       await s.see("Vault links");
       await s.keys("tab", "enter");
-      await s.message("vault e2eapp");
+      await s.message(/e2eapp — .*\/app/);
       await s.status("design.md");
       await s.see("Ship the dome software");
       await s.see(/L5:/); // at ## Goals
@@ -1539,43 +1539,43 @@ const CORE: Scenario[] = [
       await s.see(/L5:/);
       await s.keys("ctrl+o");
       await s.status("vault-links.md");
-      // The machine's vaults.
+      // The named folders (21.10).
       await leader(s, "v", "v");
-      await s.see(/Vaults \(\d+\)/);
+      await s.see(/Folders \(\d+\)/);
       await s.see("e2eapp");
       await s.keys("escape");
-      // A backlink from the other vault: home's list has app's links.md.
+      // A backlink from the other root: home's list has app's links.md, by its path (21.9).
       await open(s, "home");
       await leader(s, "l", "b");
-      await s.see("e2eapp:links.md");
+      await s.see(/app\/links\.md/);
       await s.keys("escape");
       // The nested vault in the explorer, with its name.
       await leader(s, "e");
       await s.see("inner-vault inner-name");
       await s.keys("escape");
-      // Renaming the vault: a name, so the paths into it don't change.
+      // Naming the folder anew: a name, so the paths into it don't change.
       await leader(s, "v", "n");
-      await s.see("rename vault halden to:");
+      await s.see(/name .*, as pointers name it:/);
       await s.type("halden2");
       await s.keys("enter");
-      await s.see(/vault halden → halden2: \d+ changes? in \d+ files?/);
+      await s.see(/name halden → halden2: \d+ changes? in \d+ files?/);
       await s.keys("enter");
-      await s.message("renamed the vault halden → halden2");
+      await s.message("named the folder halden → halden2");
       s.expect(readFileSync(join(s.dir, "app", "links.md"), "utf8").includes("[home](../vault/home.md)"), "the other vault's path as it was");
       s.expect(s.read("outreach/index.md").includes("[the observatory's home](../home.md)"), "the nested vault's path as it was");
     },
   },
   {
-    name: "nested vaults: the demo's outreach — in by path, back, backlinks, the explorer, two deep",
+    name: "nested roots: the demo's outreach — in by path, back, backlinks, the explorer, two deep",
     run: async (s) => {
-      // home's last link: outreach/index.md, in a vault nested in this one (enter: the row's link).
+      // home's last link: outreach/index.md, in a root nested in this one (enter: the row's link).
       await s.keys("shift+g", "enter");
-      await s.message("vault outreach");
+      await s.message(/^outreach — /);
       await s.status("index.md");
       await s.see("The observatory's public programme");
       // Two deep: the school visits.
       await s.keys("g", "g", "tab", "tab", "enter");
-      await s.message("vault outreach-school-visits");
+      await s.message(/^outreach-school-visits — /);
       await s.see("A vault nested two deep");
       // Back, and back again: to the observatory's home.
       await s.keys("ctrl+o");
@@ -1773,28 +1773,26 @@ const CORE: Scenario[] = [
     },
   },
   {
-    name: "vaults: a vault moved by hand is asked about — did it move here? yes brings its reading places along (20.5)",
+    name: "roots: a named folder moved by hand brings its reading places along, nothing asked (21.8)",
     run: async (s) => {
-      // Read to the end of a note, then quit: the place is kept, by this copy's instance.
+      // Read to the end of a note, then quit: the place is kept, by file.
       await open(s, "kenji-mori");
       await moveTo(s, ["shift+g"], (l) => l > 10, "the end of the note");
       const left = pos(s).line;
       await s.quit();
-      // Moved by hand, then opened where it is now.
+      // Moved by hand, then opened where it is now: halden, by its .slipbox/ id, its state along.
       const moved = join(s.dir, "moved");
       renameSync(s.vault, moved);
       (s.opts as SessionOptions).startAt = "moved/home.md";
       await s.start();
-      await s.see("was elsewhere before — did it move here?");
-      await s.see(`Moved here from ${s.vault}`);
-      await s.keys("enter");
-      await s.message("moved here from");
+      await s.message("halden moved here from");
+      await s.notSee("did it move here?");
       await open(s, "kenji-mori");
       await s.until(() => pos(s).line === left, 3000, `kenji-mori at line ${left} again`);
     },
   },
   {
-    name: "vaults: opened on a plain folder, the known vaults first; its tree, by its path, and .. to go up (20.22)",
+    name: "roots: opened on a plain folder, the named folders first; its tree, by its path, and .. to go up (20.22)",
     options: {
       startAt: "loose",
       beside: { "loose/jotting.md": "# A loose jotting\n", "loose/sub/deeper.md": "# Deeper\n" },
@@ -1803,10 +1801,10 @@ const CORE: Scenario[] = [
       },
     },
     run: async (s) => {
-      await s.see(/Vaults \(\d+\)/);
+      await s.see(/Folders \(\d+\)/);
       await s.see("halden");
       await s.keys("escape");
-      await s.status(/\/loose\b/); // unnamed: its path where a vault's name would be
+      await s.status(/\/loose\b/); // unnamed: its path where a root's name would be
       await s.see("jotting.md");
       await s.see(/\.\./);
       await s.see("sub");
@@ -1818,7 +1816,7 @@ const CORE: Scenario[] = [
       await leader(s, "v", "v");
       await s.see("halden");
       await s.keys("enter");
-      await s.message("vault halden");
+      await s.message(/^halden — /);
       await s.status("home.md");
     },
   },

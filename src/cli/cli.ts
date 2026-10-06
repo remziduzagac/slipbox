@@ -46,7 +46,7 @@ import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatche
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
 import { discoverNvims, NVIM_REMOTE, probeNvim } from "../core/nvim.ts";
-import { loadSession } from "../core/position.ts";
+import { loadSession, PositionStore } from "../core/position.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { doctor, doctorFile, type LinterReport, type ServerReport } from "../core/servers/doctor.ts";
 import { linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
@@ -58,13 +58,12 @@ import { type Applied, applyPlan, loggedRenames, planFolderMove, planHeadingRena
 import { planConvert, urlPath } from "../core/convert.ts";
 import { describeBreak, type MergeReview, MergeReviewError, reviewMerge } from "../core/mergereview.ts";
 import { copyPath, FileOpError, linksInto, listTrash, restorePath, trashPath } from "../core/files.ts";
-import { confirmMove, declineMove, type KnownVault, noteIndexed, readIdentity, readRegistry, removeStorage, suggestVaultName, unavailable, vaultConfigFile } from "../core/registry.ts";
+import { noteIndexed, readIdentity, vaultConfigFile } from "../core/registry.ts";
 import { activityFile, AutoIndex, autoIndexFile, backgroundStatus, describeBackground } from "../core/autoindex.ts";
-import { copiesShown, describeCollection } from "../core/collection.ts";
 import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../core/plans.ts";
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
-import { displayNames, locName, tildePath } from "../core/names.ts";
-import { findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, instanceOf, isInside, isVaultRoot, locateVault, markersAt, setRootMarkers, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import { rootLabel, tildePath } from "../core/names.ts";
+import { findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, isInside, isVaultRoot, locateVault, markersAt, setRootMarkers, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 
@@ -126,11 +125,14 @@ class Session {
       ensureDir(stateHome());
       writeFileSync(activityFile(), `${Date.now()}\n`);
     } catch {}
-    // A copy of this vault gone from where it was (20.5): asked, never taken on a guess.
-    if (args.positional[0] !== "vault-moved") {
-      for (const v of loc.movedHere ?? []) this.warnings.push(`${v.name ?? basename(v.path)} was last seen at ${v.path} (${v.seen.slice(0, 10)}), gone from there: if it moved here, slipbox vault-moved ${v.path} takes its positions, sessions and scratch (--not: it didn't)`);
+    // A named folder moved here by hand (21.8): its state came along — sure, so nothing asked; said once.
+    const { carriedFrom } = recordLocation(loc);
+    if (carriedFrom) {
+      // The links its move broke, in and out of it (20.17): counted, for relink to fix.
+      const broken = planRelink(openVault(loc.root)).files.reduce((n, f) => n + f.edits.length, 0);
+      const fix = broken ? ` — its move broke links on ${broken} line${broken === 1 ? "" : "s"}: slipbox relink fixes them (--dry-run shows how)` : "";
+      this.warnings.push(`${rootLabel(loc)} moved here from ${carriedFrom}: its sessions, scratch, trash and reading positions came along${fix}`);
     }
-    recordLocation(loc);
   }
 
   get graph(): Graph {
@@ -194,7 +196,6 @@ Usage:
   slipbox cp <note|folder> [path]   copy a note or folder (beside it, as name-copy, when no path)
   slipbox rm <note|folder>          delete to the vault's trash (slipbox trash restore puts it back)  [--dry-run]
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
-  slipbox rename-vault <name>       rename this vault (one with .slipbox/); the old name kept  [--dry-run]
   slipbox name <new>                this folder's name, as a pointer names it: changed, the old kept; a repository given one
   slipbox folders [default <name> <path>]  the named folders: their copies, the one links open; or make one the one
   slipbox rename-heading <note> <heading> <new>  rename a heading; links to it fixed everywhere  [--dry-run]
@@ -206,11 +207,9 @@ Usage:
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
-  slipbox init [dir]                make <dir> a vault (creates .slipbox/ with its id and name)  [--name N] [--private] [--dry-run]
-  slipbox deinit <dir>              make a vault nested in another a plain folder of it; links fixed  [--dry-run]
-  slipbox info                      vault, its instance and copies, paths, versions, staleness
-  slipbox vaults                    the vaults this machine knows: name, kind, path, last seen
-  slipbox vault-moved [old-path]    a copy of this vault, gone from where it was: did it move here?  [--not]
+  slipbox init [dir]                give <dir> a .slipbox/: settings, and a name with --name  [--name N] [--private] [--dry-run]
+  slipbox deinit <dir>              take a nested root's .slipbox/ away: a plain folder of the root holding it  [--dry-run]
+  slipbox info                      the root, its name and copies, its link convention, paths, versions, staleness
   slipbox doctor [file]             language servers and linters: each language's, found where, installed when needed, or missing
   slipbox diagnostics <file>        a file's problems: its servers', its linters', its syntax; a note's links and lint  [--severity S] [--timeout SECS]
   slipbox themes                    list themes
@@ -236,8 +235,8 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "link", "links", "backlinks", "name", "folders", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
-  "mv", "rename-vault", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
-  "capture", "scratch", "init", "info", "vaults", "vault-moved", "apply", "doctor", "diagnostics", "themes", "commands", "help",
+  "mv", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
+  "capture", "scratch", "init", "info", "apply", "doctor", "diagnostics", "themes", "commands", "help",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -356,7 +355,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, link: 1, links: 1, name: 1, folders: 3, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
-  scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
+  scratch: 1, init: 1, info: 0, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
 };
 
 /** The vault's data and text files (not notes, not binary), with their group and format. */
@@ -402,11 +401,9 @@ const FLAGS: Record<string, string[]> = {
   scratch: ["if-unchanged"],
   init: ["name", "private", "dry-run", "plan"],
   deinit: ["dry-run", "plan"],
-  "vault-moved": ["not"],
   apply: ["dry-run"],
   mv: ["dry-run", "plan"],
   rm: ["dry-run"],
-  "rename-vault": ["dry-run", "plan"],
   name: ["dry-run", "plan"],
   "rename-heading": ["dry-run", "plan"],
   relink: ["dry-run", "plan"],
@@ -872,6 +869,7 @@ const HANDLERS: Record<string, Handler> = {
       const loc = vault ? rootAt(vault) : !rest[0] ? s.loc : folderAt(statSync(at).isDirectory() ? at : dirname(at));
       if (isListed(loc)) throw new CliError(`${loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`, EXIT.refused);
       const root = loc.root;
+      recordLocation(loc); // known on this machine from now on, as reaching it would make it (17.6)
       const t = performance.now();
       const g = new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "all");
       noteIndexed(loc.key);
@@ -1134,12 +1132,12 @@ const HANDLERS: Record<string, Handler> = {
     if (holder) {
       const parent = openVault(holder);
       const rel = relative(holder, abs);
-      const res = await renameResult(s, () => planMakeVault(parent, rel, name ?? suggestVaultName(abs, parent.loc.name), { private: has(s.args, "private") }), parent);
-      // As init says it of any folder: the vault's root, name and id — and what changed.
-      const d = res.data as { to: string; dryRun: boolean };
-      return { ...res, data: { ...d, root: abs, name: d.to, id: d.dryRun ? null : readIdentity(vaultConfigFile(abs)).id, created: !d.dryRun } };
+      const res = await renameResult(s, () => planMakeVault(parent, rel, name ?? null, { private: has(s.args, "private") }), parent);
+      // As init says it of any folder: the root, its name and id when it was given one — and what changed.
+      const d = res.data as { dryRun: boolean };
+      return { ...res, data: { ...d, root: abs, name: name ?? null, id: d.dryRun ? null : readIdentity(vaultConfigFile(abs)).id, created: !d.dryRun } };
     }
-    if (has(s.args, "dry-run")) return { data: { root: abs, dryRun: true }, human: `would make ${abs} a vault\n` };
+    if (has(s.args, "dry-run")) return { data: { root: abs, dryRun: true }, human: `would give ${abs} a .slipbox/${name ? ` called ${name}` : ""}\n` };
     let r;
     try {
       r = initVault(dir.startsWith("/") ? dir : `${s.io.cwd}/${dir}`, name, { private: has(s.args, "private") });
@@ -1147,11 +1145,8 @@ const HANDLERS: Record<string, Handler> = {
       if (err instanceof VaultError) throw new CliError(err.message, EXIT.refused);
       throw err;
     }
-    const human = r.created
-      ? `created ${r.root}/.slipbox/ — vault "${r.name}"\n`
-      : r.identified
-        ? `${r.root} is a vault; gave it an id — vault "${r.name}"\n`
-        : `${r.root} is already a vault — "${r.name}"\n`;
+    const called = r.name ? ` — called ${r.name}: slipbox://${r.name}/… names it` : "";
+    const human = r.created ? `created ${r.root}/.slipbox/${called}\n` : r.identified ? `${r.root} has its .slipbox/; named it${called}\n` : `${r.root} has its .slipbox/ already${called}\n`;
     return { data: r, human: r.excluded ? `${human}kept out of git: listed in ${r.excluded}\n` : human };
   },
 
@@ -1234,7 +1229,11 @@ const HANDLERS: Record<string, Handler> = {
     const ident = folderIdentity(s.loc.root);
     const taken = readFolders().find((f) => f.key !== ident?.key && f.name.toLowerCase() === name.toLowerCase());
     if (taken) throw new CliError(`a different folder is called ${name}, at ${taken.default ?? taken.copies[0]?.path}: pick another`, EXIT.refused);
-    if (hasMarker(s.loc.root)) return HANDLERS["rename-vault"]!(s, rest);
+    if (hasMarker(s.loc.root)) {
+      const r = await renameResult(s, () => planVaultRename(s.loc, name));
+      if (!has(s.args, "dry-run") && !has(s.args, "plan")) recordLocation(rootAt(s.loc.root));
+      return r;
+    }
     if (has(s.args, "dry-run")) return { data: { root: s.loc.root, name, dryRun: true }, human: `would give ${s.loc.root} a .slipbox/ named ${name}\n` };
     const r = initVault(s.loc.root, name);
     recordLocation(rootAt(s.loc.root));
@@ -1273,13 +1272,6 @@ const HANDLERS: Record<string, Handler> = {
       .map((f) => [`${f.pointer}${f.pointer !== f.name ? ` (${f.name})` : ""}${f.remote && f.pointer !== f.remote ? `  ${f.remote}` : ""}${f.private ? "  private" : ""}`, ...f.copies.map((c) => `  ${c.path === f.default ? "*" : " "} ${tildePath(c.path)}${c.available ? "" : "  (not here)"}${c.found ? "  (found)" : ""}`)].join("\n"))
       .join("\n");
     return { data, human: human ? `${human}\n` : "no named folders yet: a .slipbox/ name, or a repository's remote, names one\n" };
-  },
-
-  async "rename-vault"(s, rest) {
-    const name = requireArg(rest, "the vault's new name");
-    const r = await renameResult(s, () => planVaultRename(s.loc, name));
-    if (!has(s.args, "dry-run")) recordLocation(rootAt(s.loc.root));
-    return r;
   },
 
   "rename-heading"(s, rest) {
@@ -1345,53 +1337,6 @@ const HANDLERS: Record<string, Handler> = {
     const r = await renameResult(s, () => saved.plan, g);
     forgetPlan(saved.id);
     return r;
-  },
-
-  // A copy of this vault gone from where it was (20.5): those that may have moved here; one taken
-  // (its positions, sessions and scratch this copy's), or said not to have moved (not asked again).
-  "vault-moved"(s, rest) {
-    if (s.loc.mode !== "vault") throw new CliError("not in a vault: a vault's copies move, loose files don't", EXIT.refused);
-    const candidates = s.loc.movedHere ?? [];
-    const shown = (v: KnownVault) => ({ instance: v.instance ?? v.key, name: v.name, path: v.path, seen: v.seen });
-    if (!rest[0]) {
-      const human = candidates.map((v) => `${v.path}  ${v.name ?? ""}  last seen ${v.seen.slice(0, 16).replace("T", " ")}\n`).join("");
-      return { data: candidates.map(shown), human: human || "nothing seems to have moved here\n" };
-    }
-    const from = resolve(s.io.cwd, rest[0]);
-    const v = candidates.find((c) => c.path === from);
-    if (!v) throw new CliError(`${rest[0]}: no copy of this vault gone from there (slipbox vault-moved lists those that are)`, EXIT.notFound);
-    if (has(s.args, "not")) {
-      declineMove(s.loc.key, v);
-      return { data: { declined: shown(v) }, human: `not asked again: ${v.path} didn't move here\n` };
-    }
-    const moved = confirmMove(v, s.loc.root, s.loc.key);
-    removeStorage(s.loc.key);
-    // The links its move broke, in and out of it (20.17): counted, for relink to fix.
-    const broken = planRelink(openVault(s.loc.root)).files.reduce((n, f) => n + f.edits.length, 0);
-    const fix = broken ? ` — its move broke links on ${broken} line${broken === 1 ? "" : "s"}: slipbox relink fixes them (--dry-run shows how)` : "";
-    return { data: { moved: shown(moved), from: v.path, to: s.loc.root, broken }, human: `moved: ${v.path} → ${s.loc.root} — its positions, sessions and scratch are this copy's now${fix}\n` };
-  },
-
-  vaults() {
-    // Newest first; a vault whose folder is gone is still listed (a link to it says where it was).
-    // Each is an instance (20.4): its local id, and its collection's evidence.
-    // Each by the name it's shown by (20.6): unique on this machine; a plain folder by its path.
-    const known = readRegistry();
-    const names = displayNames(known);
-    const list = known
-      .sort((a, b) => (a.seen < b.seen ? 1 : -1))
-      .map((v) => ({
-        ...v,
-        shown: names.get(v.key) ?? (v.kind === "folder" ? tildePath(v.path) : null),
-        exists: v.kind === "vault" ? isVaultRoot(v.path) : existsSync(v.path),
-        // How fresh its index is (20.10): when it was last built, by anyone; on a drive unplugged, unavailable.
-        indexed: v.indexed ?? indexTime(v),
-        unavailable: unavailable(v.path),
-      }));
-    const human = list
-      .map((v) => `${(v.shown ?? basename(v.path)).padEnd(16)} ${v.kind.padEnd(6)} ${v.path}  ${v.seen.slice(0, 16).replace("T", " ")}${v.exists ? "" : v.unavailable ? "  (unavailable: its drive isn't there)" : "  (gone)"}\n`)
-      .join("");
-    return { data: list, human: human || "no vaults yet\n" };
   },
 
   // Language servers (19.7) and linters (19.19): each language's, and where each is; for a file, the
@@ -1522,7 +1467,6 @@ const HANDLERS: Record<string, Handler> = {
 
   info(s) {
     const g = s.graph;
-    const here = instanceOf(s.loc);
     const scratch = scratchLocation(s.loc, s.config);
     // Its name, as a pointer names it (21.6): the lookup's copies, the one links open.
     const ident = s.loc.mode === "vault" ? folderIdentity(s.loc.root) : null;
@@ -1541,13 +1485,12 @@ const HANDLERS: Record<string, Handler> = {
       : null;
     const data = {
       version: VERSION,
+      // The root (21.10): its path — a plain folder opened, that folder's — and its name, when it has one.
       root: s.loc.root,
       mode: s.loc.mode,
-      vault: { id: s.loc.id, name: s.loc.name, shown: locName(s.loc), aliases: s.loc.aliases, previous_names: s.loc.previous_names, key: s.loc.key },
-      // This copy (20.4): its local id, what it holds, and the other copies this machine knows.
-      instance: here.entry?.instance ?? null,
-      collection: here.entry?.collection ?? null,
-      copies: here.copies.map((v) => ({ instance: v.instance ?? null, path: v.path, worktree: v.worktree?.name ?? null })),
+      name: s.loc.name,
+      // What its cache and state are kept by (21.8): its path's key.
+      key: s.loc.key,
       markerVersion: s.loc.mode === "vault" ? readVaultVersion(s.loc.root) : null,
       config: { user: flag(s.args, "config") ?? s.io.env.SLIPBOX_CONFIG ?? userConfigFile(), sources: s.configSources, theme: s.config.theme },
       cache: cacheDir(s.loc),
@@ -1567,8 +1510,6 @@ const HANDLERS: Record<string, Handler> = {
     const human = [
       `slipbox   ${VERSION}`,
       `root      ${data.root} (${data.mode}${data.markerVersion ? `, marker v${data.markerVersion}` : ""})`,
-      ...(s.loc.name ? [`vault     ${data.vault.shown}${s.loc.aliases.length ? ` (also ${s.loc.aliases.join(", ")})` : ""}${s.loc.id || !hasMarker(s.loc.root) ? "" : " — no id yet: slipbox init gives it one"}`] : []),
-      ...(data.instance ? [`instance  ${data.instance} — holds ${describeCollection(here.entry?.collection)}`] : []),
       folder
         ? `name      ${folder.pointer}${folder.pointer !== folder.name ? ` (${folder.name} is another's too)` : ""}${folder.private ? ", private: this machine's only" : ""}${folder.copies.length > 1 ? ` — ${folder.copies.length} copies, links open ${tildePath(folder.default ?? "")}` : ""}`
         : `name      none — ${s.loc.mode === "folder" ? "no root" : "no remote and no .slipbox/ name"}: linked to by relative path`,
@@ -1583,7 +1524,7 @@ const HANDLERS: Record<string, Handler> = {
       `state     ${data.state}`,
       `scratch   ${data.scratch}`,
       ...g.skipped.map((x) => `skipped   ${x.rel} — ${x.reason}`),
-      ...copiesShown(here.copies).map((c) => `copy      ${c}`),
+      ...(folder?.copies ?? []).filter((c) => !c.here).map((c) => `copy      ${tildePath(c.path)}${c.available ? "" : " (not here)"}`),
       "",
     ].join("\n");
     return { data, human };
@@ -1762,7 +1703,9 @@ const HANDLERS: Record<string, Handler> = {
     const data = {
       path: rel,
       abs,
-      vault: s.loc.mode === "folder" ? null : locName(s.loc),
+      // Its root (21.10): the path, and the name when it has one.
+      root: s.loc.mode === "folder" ? null : s.loc.root,
+      name: s.loc.name,
       properties: fm?.data ?? null,
       size: file.bytes.length,
       mtime: new Date(statSync(abs).mtimeMs).toISOString(),
@@ -1782,7 +1725,7 @@ const HANDLERS: Record<string, Handler> = {
       ["path", abs],
       ["size", `${data.size} bytes`],
       ["modified", data.mtime],
-      ["vault", data.vault ?? "home (loose files)"],
+      ["root", s.loc.mode === "folder" ? `none (the folder ${tildePath(s.loc.root)})` : rootLabel(s.loc)],
       ["title", data.title ?? "—"],
       ["tags", data.tags.join(", ") || "—"],
       ...Object.entries(data.properties ?? {}).map(([k, v]): [string, string] => [`  ${k}`, typeof v === "object" ? JSON.stringify(v) : String(v)]),
@@ -1892,11 +1835,11 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   history(s) {
-    const positions = readJson<Record<string, { line?: number; at?: string; cursor?: { anchor?: { line?: number } } }>>(join(stateDir(s.loc), "positions.json"), {});
-    const read = Object.entries(positions)
-      .filter(([, p]) => p && typeof p.at === "string")
-      .sort((a, b) => (a[1].at! < b[1].at! ? 1 : -1))
-      .map(([path, p]) => ({ path, at: p.at!, line: p.cursor?.anchor?.line ?? p.line ?? 1, exists: existsSync(isAbsolute(path) ? path : join(s.loc.root, path)) }));
+    // Reading positions are kept by file, for the machine (21.8): this root's, and those read from it.
+    const read = new PositionStore(s.loc)
+      .entries()
+      .sort((a, b) => (a.at < b.at ? 1 : -1))
+      .map((p) => ({ path: p.key, at: p.at, line: p.line, exists: existsSync(isAbsolute(p.key) ? p.key : join(s.loc.root, p.key)) }));
     const session = loadSession(s.loc);
     const open = (session?.tabs ?? []).map((t) => t.panes.map((p) => p.path));
     // What the user is looking at: the active tab's active window's note.
@@ -2005,15 +1948,6 @@ function checkWritable(s: Session, abs: string): void {
   // .slipbox never are, nor node_modules.
   if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel)) refuse("in a folder the vault doesn't list");
   if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
-}
-
-/** When a known vault's index on disk was last written (20.10), else null. */
-function indexTime(v: KnownVault): string | null {
-  try {
-    return statSync(join(cacheDir(v), "index.json")).mtime.toISOString();
-  } catch {
-    return null;
-  }
 }
 
 /** `--if-unchanged <sha>`: refuse (exit 5) unless the note's bytes still have that sha. */
@@ -2181,11 +2115,11 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
   const links = p.files.reduce((n, f) => n + f.edits.length, 0);
   const verb = p.undo
     ? applied
-      ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "undid the relink of", "make-vault": "", "unmake-vault": "", heading: "renamed heading", convert: "undid the conversion of" }[p.kind]
-      : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would undo the relink of", "make-vault": "", "unmake-vault": "", heading: "would rename heading", convert: "would undo the conversion of" }[p.kind]
+      ? { note: "renamed", folder: "moved folder", vault: "renamed folder", relink: "undid the relink of", "make-vault": "", "unmake-vault": "", heading: "renamed heading", convert: "undid the conversion of" }[p.kind]
+      : { note: "would rename", folder: "would move folder", vault: "would rename folder", relink: "would undo the relink of", "make-vault": "", "unmake-vault": "", heading: "would rename heading", convert: "would undo the conversion of" }[p.kind]
     : applied
-    ? { note: "renamed", folder: "moved folder", vault: "renamed vault", relink: "relinked", "make-vault": "made", "unmake-vault": "made", heading: "renamed heading", convert: "converted" }[p.kind]
-    : { note: "would rename", folder: "would move folder", vault: "would rename vault", relink: "would relink", "make-vault": "would make", "unmake-vault": "would make", heading: "would rename heading", convert: "would convert" }[p.kind];
+    ? { note: "renamed", folder: "moved folder", vault: "renamed folder", relink: "relinked", "make-vault": "made", "unmake-vault": "made", heading: "renamed heading", convert: "converted" }[p.kind]
+    : { note: "would rename", folder: "would move folder", vault: "would rename folder", relink: "would relink", "make-vault": "would make", "unmake-vault": "would make", heading: "would rename heading", convert: "would convert" }[p.kind];
   const head = p.undo
     ? p.kind === "relink" || p.kind === "convert"
       ? `${verb} ${p.to}`
@@ -2193,7 +2127,7 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
     : p.kind === "relink" || p.kind === "convert"
       ? `${verb} ${p.from}`
       : p.kind === "make-vault"
-        ? `${verb} ${p.from}/ the vault ${p.to}`
+        ? `${verb} ${p.from}/ a root of its own${p.to !== p.from ? `, called ${p.to}` : ""}`
         : p.kind === "unmake-vault"
           ? `${verb} ${p.from}/ a plain folder of ${p.to}`
           : `${verb} ${p.from} → ${p.to}`;

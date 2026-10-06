@@ -1,46 +1,37 @@
-// Root discovery (plan 1.1, 17.1, 20.3), the marker version stamp (0.12) and `init` (1.10, 17.4).
+// Root discovery (plan 1.1, 17.1, 20.3, 21.1), the marker version stamp (0.12) and `init` (1.10, 17.4).
 //
-// A file's vault is its nearest boundary (docs/idea.md, "Plain paths, virtual vaults"): walking up
-// from the file, the first folder that holds `.slipbox/` or is a git checkout's top. Both in one
-// folder make one vault, its name and settings from `.slipbox/`; a repository or a `.slipbox/` folder
-// inside a vault is a vault of its own. A git vault needs nothing, and nothing is written into it.
-// A file under neither is loose (20.22): the plain folder opened is an unnamed instance, known by its
-// path, walked and indexed as a vault is — but `$HOME` and `/`, never a root: that would index
-// everything (the background index walks the home folder, slowly), so those are listed a folder at a
-// time. `--root` names a vault outright.
+// A file's root is the nearest folder above it holding a root marker (docs/idea.md, "Roots"): `.git`,
+// `.slipbox/`, `.obsidian/`, `.zk/`. Several in one folder make one root, its name and settings from
+// `.slipbox/`; a root inside another is a root of its own. Nothing is written into a root by opening
+// it: `.slipbox/`'s id and name only by `slipbox init` and `slipbox name` (21.8). A file under none is
+// loose: the plain folder opened stands in, known by its path, walked and indexed as a root is — but
+// `$HOME` and `/`, never a root: that would index everything (the background index walks the home
+// folder, slowly), so those are listed a folder at a time. `--root` names a root outright.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
-import { parse as parseToml } from "smol-toml";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadConfig, VAULT_CONFIG_TEMPLATE } from "./config.ts";
-import { collectionOf, repositoryName, sameCollection } from "./collection.ts";
 import { checkoutOf, inMain } from "./git.ts";
-import { recordFolder } from "./folders.ts";
+import { folderIdentity, folderNamed, identityAt, movedFrom, recordFolder, suggestFolderName } from "./folders.ts";
 import { readRegular } from "./fsutil.ts";
-import { cacheHome, stateHome, vaultKey } from "./paths.ts";
+import { vaultKey } from "./paths.ts";
+import { carryPositions } from "./position.ts";
 import {
   addIdentity,
-  forgetVault,
-  implicitName,
-  type KnownVault,
+  adoptStorage,
+  forgetRoot,
   MARKER,
-  confirmMove,
-  newInstanceId,
   newVaultId,
   pruneWorktrees,
   readIdentity,
-  readRegistry,
-  recordVault,
-  storageKey,
-  suggestVaultName,
+  readRoots,
+  recordRoot,
   VAULT_NAME,
   vaultConfigFile,
-  vaultNamed,
-  writeRegistry,
+  writeRoots,
   type RootKind,
-  type VaultIdentity,
 } from "./registry.ts";
 
 export { MARKER };
@@ -59,8 +50,8 @@ export interface Worktree {
 /** Format version of the marker directory. Bump with a migration, never silently. */
 export const VAULT_FORMAT_VERSION = 1;
 
-/** `vault`: a `.slipbox/` folder or a git checkout's top (20.3). `folder`: a plain folder outside
- *  every vault, opened — an unnamed instance, by its path (20.22). */
+/** `vault`: a root — a folder holding a root marker (21.1). `folder`: a plain folder outside every
+ *  root, opened — unnamed, known by its path (20.22). */
 export type VaultMode = RootKind;
 
 export interface VaultLocation {
@@ -69,11 +60,11 @@ export interface VaultLocation {
   mode: VaultMode;
   /** The note that was named on the command line, if any (absolute). */
   file: string | null;
-  /** The storage key: what the cache and state directories are named by (17.3). */
+  /** The storage key: its path's (21.8), what the cache and state directories are named by. */
   key: string;
-  /** The vault's id; null for a git vault without `.slipbox/`, a plain folder, or a config that can't be written. */
+  /** Its `.slipbox/`'s id; null without one (a repository, a plain folder, a `.slipbox/` never named). */
   id: string | null;
-  /** The vault's own name (20.6: its `.slipbox/`'s, else its repository's or folder's); null for a plain folder. */
+  /** Its name, as pointers name it (21.6): a `.slipbox/` name, else its repository's remote's; null for none. */
   name: string | null;
   aliases: string[];
   previous_names: string[];
@@ -84,11 +75,6 @@ export interface VaultLocation {
   worktree?: Worktree | null;
   /** Said once when the root was found, when there is something to say. */
   note?: string;
-  /**
-   * Copies of this vault gone from where they were, seen last before this one was first (20.5): what
-   * may have moved here, for the person to confirm (`confirmMove`) — never taken on a guess.
-   */
-  movedHere?: KnownVault[];
 }
 
 export class VaultError extends Error {}
@@ -198,114 +184,18 @@ export function locateVault(opts: LocateOptions): VaultLocation {
   return folderAt(file ? dirname(file) : (target ?? cwd), file);
 }
 
-/** The location of a vault root: a folder with `.slipbox/`, or a git checkout's top (20.3). */
+/** The location of a root (21.1): read, never written — its name, id and settings as they are. */
 export function rootAt(root: string, file: string | null = null): VaultLocation {
   const c = checkoutOf(root);
   const worktree: Worktree | null = c?.worktree ? { name: c.worktree, checkout: c.root, main: c.main, mainVault: inMain(c, root) } : null;
-  // A git vault has no `.slipbox/` to hold an id or a name, and none is made for it: it's keyed by
-  // its path and named by its folder (a worktree reads its main checkout's, never writing).
-  const ident = hasMarker(root) ? ensureIdentity(root, worktree?.mainVault ?? null) : worktree?.mainVault ? readIdentity(vaultConfigFile(worktree.mainVault)) : readIdentity(vaultConfigFile(root));
-  // Its own name (20.6): what `.slipbox/` declares, else its repository's, else its folder's.
-  const name = ident.name ?? repositoryName(root) ?? implicitName(root);
-  const loc: VaultLocation = { root, mode: "vault", file, key: "", id: ident.id, name, aliases: ident.aliases, previous_names: ident.previous_names, worktree };
-  const { key, movedHere } = instanceFor(loc);
-  return { ...loc, key, ...(movedHere.length ? { movedHere } : {}) };
+  // A worktree without an identity of its own reads its main checkout's (17.19), never writing.
+  const ident = identityAt(root);
+  return { root, mode: "vault", file, key: vaultKey(root), id: ident?.id ?? null, name: folderIdentity(root)?.name ?? null, aliases: ident?.aliases ?? [], previous_names: ident?.previous_names ?? [], worktree };
 }
 
 /**
- * This copy's instance (20.5): its personal state and cache are found by its id. Found by its path in
- * the machine's list — its state moved over once from the key it had before instances (an id, a
- * copy's, a worktree's, a path's); a worktree `git worktree move` took elsewhere found again by git's
- * name for it (17.19). Else a new one, recorded at once so every open of it agrees. With what may have
- * moved here (`movedHere`).
- */
-function instanceFor(loc: VaultLocation): { key: string; movedHere: KnownVault[] } {
-  const known = readRegistry();
-  const here = realPath(loc.root);
-  let entry = known.find((v) => v.kind === "vault" && realPath(v.path) === here);
-  const wt = loc.worktree;
-  if (!entry && wt) {
-    const was = known.find((v) => v.kind === "vault" && v.worktree?.name === wt.name && v.worktree.main === wt.mainVault && !isVaultRoot(v.path));
-    if (was) entry = confirmMove(was, loc.root, null);
-  }
-  if (entry) {
-    const key = entry.instance ?? newInstanceId();
-    if (entry.key !== key) {
-      // Today's state, moved once: under the key it had, to its instance's (20.5).
-      adoptStorage(entry.key, key);
-      writeRegistry(readRegistry().map((v) => (v.key === entry!.key ? { ...v, key, instance: key } : v)));
-    }
-    return { key, movedHere: movedHere(known, { ...entry, key }, loc.root) };
-  }
-  // New here. State kept before instances, under a key no instance has taken: this vault's, by the
-  // keys it had (17.3: its id, or a copy's; a path's before ids).
-  const key = newInstanceId();
-  for (const before of [storageKey(loc.root, loc.id, known), vaultKey(loc.root)]) {
-    if (known.some((v) => v.key === before) || !existsSync(join(stateHome(), before))) continue;
-    adoptStorage(before, key);
-    break;
-  }
-  const fresh = recordLocation({ ...loc, key });
-  // A list that can't be written: the path's key, the same each time.
-  if (fresh.key !== key || !readRegistry().some((v) => v.key === key)) return { key: vaultKey(loc.root), movedHere: [] };
-  return { key, movedHere: movedHere(known, fresh, loc.root) };
-}
-
-/**
- * The copies that may have moved to `entry`'s folder (20.5): the same collection, gone from where they
- * were — no vault there now — and seen last before this one was first; not worktrees (git names
- * those), not ones said no to. An entry from before 20.5 has no first sight, and is asked nothing.
- */
-function movedHere(known: KnownVault[], entry: KnownVault, root: string): KnownVault[] {
-  if (!entry.since || entry.worktree) return [];
-  const since = Date.parse(entry.since);
-  const collection = entry.collection ?? collectionOf(root);
-  return known.filter(
-    (v) => v.kind === "vault" && v.key !== entry.key && !v.worktree && !entry.declined?.includes(v.instance ?? v.key) && Date.parse(v.seen) <= since && sameCollection(v.collection, collection) && !isVaultRoot(v.path),
-  );
-}
-
-/** Cache and state from one key to another, when the other has none yet. */
-function adoptStorage(from: string, to: string): void {
-  for (const home of [stateHome(), cacheHome()]) {
-    try {
-      if (!existsSync(join(home, to)) && existsSync(join(home, from))) renameSync(join(home, from), join(home, to));
-    } catch {}
-  }
-}
-
-/**
- * A vault's identity, written into its config the first time a vault without one is opened (17.18):
- * made before vaults had ids, or a `.slipbox/` made by hand. Every vault then has an `id` and a
- * `name`. A config that doesn't parse is left alone (a typo mid-edit), as is a read-only one: that
- * vault is keyed by its path this time.
- *
- * A linked worktree (17.19) never writes it: each would write its own, and merging the branches
- * would then conflict over the vault's id. It takes the main checkout's — keyed by its path until
- * the main checkout has one (opened there, or `slipbox init`, then committed).
- */
-function ensureIdentity(root: string, mainVault: string | null = null): VaultIdentity {
-  const file = vaultConfigFile(root);
-  const have = readIdentity(file);
-  if (have.id && have.name) return have;
-  if (mainVault) {
-    const main = readIdentity(vaultConfigFile(mainVault));
-    return { id: have.id ?? main.id, name: have.name ?? main.name, aliases: have.aliases.length ? have.aliases : main.aliases, previous_names: have.previous_names.length ? have.previous_names : main.previous_names };
-  }
-  if (existsSync(file) && !parsesAsToml(file)) return have;
-  const fields = { id: have.id ?? newVaultId(), name: have.name ?? suggestVaultName(root, parentVaultName(root)) };
-  try {
-    if (!existsSync(file)) writeFileSync(file, VAULT_CONFIG_TEMPLATE);
-    addIdentity(file, fields);
-  } catch {
-    return have;
-  }
-  return readIdentity(file);
-}
-
-/**
- * A plain folder opened, outside every vault (20.22): an unnamed instance, keyed by its path — moved,
- * it starts afresh. Walked and indexed as a vault is, unless it's `$HOME` or `/` (`isListed`).
+ * A plain folder opened, outside every root (20.22): unnamed, keyed by its path — moved, it starts
+ * afresh. Walked and indexed as a root is, unless it's `$HOME` or `/` (`isListed`).
  */
 export function folderAt(dir: string, file: string | null = null): VaultLocation {
   return { root: dir, mode: "folder", file, key: vaultKey(dir), id: null, name: null, aliases: [], previous_names: [] };
@@ -335,54 +225,39 @@ export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): stri
 }
 
 /**
- * Record the vault in the machine's list (17.6): an instance of it, with its collection's evidence
- * (20.4). A plain folder opened is an instance of its own, by its path (20.22). The instance as
- * recorded.
+ * Record the root as seen (17.6, 21.8): in the machine's list by its path, and — a named one — in the
+ * lookup pointers are found by (21.6). A named folder moved here by hand (`movedFrom`: sure, never a
+ * guess) takes its state along — cache, session, scratch, trash, undo, positions — and its move is
+ * kept, for the relink (20.17). Where it came from, when it did.
  */
-export function recordLocation(loc: VaultLocation): KnownVault {
-  const known = readRegistry();
-  const was = (key: string) => known.find((v) => v.key === key);
-  let entry: KnownVault;
+export function recordLocation(loc: VaultLocation): { carriedFrom: string | null } {
   if (loc.mode === "folder") {
-    entry = recordVault({ key: loc.key, id: null, kind: "folder", name: null, aliases: [], previous_names: [], path: loc.root, collection: collectionOf(loc.root, was(loc.key)?.collection) });
-  } else {
-    // A plain folder that has become a vault: the same place, one instance — the vault's now.
-    forgetVault(loc.root, ["folder"]);
-    // Its name, in the lookup pointers are found by (21.6).
-    recordFolder(loc.root);
-    entry = recordVault({
-      key: loc.key,
-      instance: loc.key,
-      id: loc.id,
-      kind: loc.mode,
-      name: loc.name,
-      aliases: loc.aliases,
-      previous_names: loc.previous_names,
-      path: loc.root,
-      collection: collectionOf(loc.root, was(loc.key)?.collection),
-      ...(loc.worktree ? { worktree: { name: loc.worktree.name, main: loc.worktree.mainVault } } : {}),
-    });
+    recordRoot({ kind: "folder", path: loc.root });
+    pruneWorktrees();
+    return { carriedFrom: null };
   }
+  // A plain folder that has become a root: the same place, one entry — the root's now.
+  forgetRoot(loc.root, ["folder"]);
+  const known = readRoots();
+  // Opened before (not only found by the background index): no move to carry. A worktree moved by git
+  // (`git worktree move`) is found by git's name for it (17.19); a named folder, by its name (21.8).
+  const wt = loc.worktree;
+  const movedWorktree = () => known.find((v) => v.worktree && wt && v.worktree.name === wt.name && v.worktree.main === wt.mainVault && v.path !== loc.root && !isVaultRoot(v.path))?.path ?? null;
+  const from = known.some((v) => v.key === loc.key && !v.found) ? null : wt ? movedWorktree() : movedFrom(loc.root);
+  let moved = known.find((v) => v.key === loc.key)?.moved;
+  if (from) {
+    const was = known.find((v) => v.path === from);
+    adoptStorage(was?.key ?? vaultKey(from), loc.key);
+    carryPositions(from, loc.root);
+    moved = [...(was?.moved ?? []), { from, to: loc.root, at: new Date().toISOString() }];
+    if (was) writeRoots(known.filter((v) => v !== was));
+  }
+  recordFolder(loc.root, { replaces: wt ? null : from });
+  recordRoot({ kind: "vault", path: loc.root, ...(loc.worktree ? { worktree: { name: loc.worktree.name, main: loc.worktree.mainVault } } : {}), ...(moved ? { moved } : {}) });
   pruneWorktrees();
-  return entry;
+  return { carriedFrom: from };
 }
 
-/** The instance at `loc` as the machine's list has it, and the others of its collection (20.4). */
-export function instanceOf(loc: VaultLocation, known = readRegistry()): { entry: KnownVault | null; copies: KnownVault[] } {
-  const here = realPath(loc.root);
-  const entry = known.find((v) => (loc.mode === "folder" ? v.kind === "folder" : v.key === loc.key) && realPath(v.path) === here) ?? null;
-  if (!entry) return { entry, copies: [] };
-  const copies = known.filter((v) => v !== entry && sameCollection(v.collection, entry.collection));
-  return { entry, copies };
-}
-
-function realPath(p: string): string {
-  try {
-    return realpathSync(p);
-  } catch {
-    return p;
-  }
-}
 
 export function isInside(root: string, path: string): boolean {
   const rel = relative(root, path);
@@ -403,49 +278,50 @@ export interface InitResult {
   root: string;
   /** A `.slipbox/` was made. */
   created: boolean;
-  /** An existing vault got its id (and name, when it had none). */
+  /** An existing `.slipbox/` got its name (and an id) now. */
   identified: boolean;
-  id: string;
-  name: string;
+  /** Its id and name: written with a name, never without one. */
+  id: string | null;
+  name: string | null;
   /** Where `.slipbox/` was kept out of git (`private`), if it was. */
   excluded: string | null;
 }
 
 /**
- * Make `dir` a vault (1.10, 17.4): `.slipbox/` with its version and a config holding the vault's
- * `id` and `name`. The name is `name`, else a distinct suggestion (17.5); a name another vault on
- * this machine answers to is refused. An existing vault without an id gets one. `private`: a
- * vault in a repository you don't own — `.slipbox/` listed in its `.git/info/exclude`, never in
- * `git status` (17.18).
+ * Give `dir` a `.slipbox/` (1.10, 17.4, 21.10): settings, and — when `name` is given — a name pointers
+ * name it by and an id that tells its copies from a different folder of that name. A name a different
+ * folder has on this machine is refused, with one that isn't. `private`: in a repository you don't own,
+ * `.slipbox/` listed in its `.git/info/exclude`, never in `git status` (17.18); its name holds on this
+ * machine only.
  */
 export function initVault(dir: string, name?: string, opts: { private?: boolean } = {}): InitResult {
   const root = resolve(dir);
-  if (isNeverRoot(root)) throw new VaultError(`${root} can't be a vault: slipbox never indexes all of ${root === homeFolder() ? "your home folder" : "/"}`);
+  if (isNeverRoot(root)) throw new VaultError(`${root} can't have a .slipbox/: slipbox never indexes all of ${root === homeFolder() ? "your home folder" : "/"}`);
   const marker = join(root, MARKER);
-  // `.slipbox/` itself: a git checkout is a vault already, and gets one all the same (20.3).
   const exists = hasMarker(root);
   const have = exists ? readIdentity(vaultConfigFile(root)) : null;
-  const known = readRegistry();
   if (name !== undefined) {
-    if (!VAULT_NAME.test(name)) throw new VaultError(`"${name}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
-    const other = vaultNamed(name, known, root);
-    if (other.length) throw new VaultError(`a vault named "${name}" is already at ${other[0]!.path}; try "${suggestVaultName(root, parentVaultName(root), known)}"`);
+    if (!VAULT_NAME.test(name)) throw new VaultError(`"${name}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`);
+    const other = folderNamed(name, root);
+    if (other.length) throw new VaultError(`a different folder is called "${name}", at ${other[0]!.default ?? other[0]!.copies[0]?.path}; try "${suggestFolderName(root, parentName(root))}"`);
   }
   const excluded = opts.private ? excludeFromGit(root) : null;
-  if (exists && have?.id && have.name) {
-    if (name !== undefined && name !== have.name) throw new VaultError(`${root} is already the vault "${have.name}": slipbox rename-vault ${name} renames it`);
+  if (have?.name) {
+    if (name !== undefined && name !== have.name) throw new VaultError(`${root} is already called "${have.name}": slipbox name ${name} renames it`);
     return { root, created: false, identified: false, id: have.id, name: have.name, excluded };
   }
-  const chosen = have?.name ?? name ?? suggestVaultName(root, parentVaultName(root), known);
-  const id = have?.id ?? newVaultId();
   if (!exists) {
     mkdirSync(marker, { recursive: true });
     writeFileSync(join(marker, "version"), `${VAULT_FORMAT_VERSION}\n`);
     writeFileSync(join(marker, "config.toml"), VAULT_CONFIG_TEMPLATE);
   }
-  addIdentity(vaultConfigFile(root), { id, name: chosen });
+  let id = have?.id ?? null;
+  if (name !== undefined) {
+    id ??= newVaultId();
+    addIdentity(vaultConfigFile(root), { id, name });
+  }
   recordLocation(rootAt(root));
-  return { root, created: !exists, identified: exists, id, name: chosen, excluded };
+  return { root, created: !exists, identified: exists && name !== undefined, id, name: name ?? null, excluded };
 }
 
 /**
@@ -474,18 +350,8 @@ function excludeFromGit(root: string): string | null {
   return file;
 }
 
-function parsesAsToml(file: string): boolean {
-  try {
-    parseToml(readRegular(file, 1 << 20).toString("utf8"));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** The name of the vault enclosing `dir`, if any. */
-function parentVaultName(dir: string): string | null {
+/** The name of the root enclosing `dir`, if it has one: a suggestion's prefix. */
+export function parentName(dir: string): string | null {
   const parent = findVaultRoot(dirname(resolve(dir)));
-  if (!parent) return null;
-  return readIdentity(vaultConfigFile(parent)).name ?? implicitName(parent);
+  return parent ? (folderIdentity(parent)?.name ?? null) : null;
 }

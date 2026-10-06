@@ -17,9 +17,9 @@ import { slugify } from "./parse.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
-import { forgetVault, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
+import { forgetRoot, newVaultId, readIdentity, readRoots, VAULT_NAME, vaultConfigFile, withIdentity } from "./registry.ts";
 import { openVault } from "./reach.ts";
-import { copyAvailable, folderIdentity, pointerName, readFolders, travelTogether } from "./folders.ts";
+import { copyAvailable, folderIdentity, folderNamed, pointerName, readFolders, recordFolder, travelTogether } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { parseHosted } from "./hosting.ts";
 import { checkoutOf } from "./git.ts";
@@ -57,7 +57,7 @@ export interface RenamePlan {
   /** Vaults that move with a vault's folder (18.7), absolute roots old → new: the machine's list follows. */
   vaults?: [string, string][];
   /** A folder made a vault of its own (18.11): its root, its name, and whether it's private. */
-  makeVault?: { root: string; name: string; private: boolean };
+  makeVault?: { root: string; name: string | null; private: boolean };
   /** A vault nested here made a plain folder of it (18.11): its root and the name it had. */
   unmakeVault?: { root: string; name: string };
   files: FileChange[];
@@ -626,24 +626,24 @@ function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: 
 }
 
 /**
- * Plan renaming a vault (17.15): its config's `name`, the old name kept in `previous_names`. Links are
- * paths (20.2), never a vault's name (20.22): nothing else changes.
+ * Plan naming a `.slipbox/` folder (17.15, 21.10: `slipbox name`): its config's `name` — the old one
+ * kept in `previous_names`, so a pointer by it still finds the folder — or, never named, a name and an
+ * id. Links are paths, or pointers by name (which the relink brings to the new one): nothing else changes.
  */
 export function planVaultRename(loc: VaultLocation, newName: string): RenamePlan {
-  if (loc.mode !== "vault") throw new RenameError(`${loc.root} has no .slipbox/: make it a vault first (slipbox init)`);
-  // A git vault's name is its folder's, held nowhere (20.3): `.slipbox/` gives it one of its own.
-  if (!hasMarker(loc.root)) throw new RenameError(`${loc.root} has no .slipbox/ to hold a name: slipbox init gives it .slipbox/ and a name of its own`);
-  if (!VAULT_NAME.test(newName)) throw new RenameError(`"${newName}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
-  const oldName = loc.name!;
-  if (newName === oldName) throw new RenameError(`the vault is already named ${oldName}`);
-  const other = vaultNamed(newName, readRegistry(), loc.root);
-  if (other.length) throw new RenameError(`a vault named "${newName}" is already at ${other[0]!.path}`);
-  // The config: the new name, the old one kept.
+  if (loc.mode !== "vault" || !hasMarker(loc.root)) throw new RenameError(`${loc.root} has no .slipbox/ to hold a name: slipbox init --name gives it one`);
+  if (!VAULT_NAME.test(newName)) throw new RenameError(`"${newName}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`);
   const cfg = vaultConfigFile(loc.root);
+  const have = readIdentity(cfg);
+  const oldName = have.name;
+  if (newName === oldName) throw new RenameError(`the folder is already called ${oldName}`);
+  checkVaultName(newName, loc.root);
   const text = readText(cfg).text;
-  const next = renameInConfig(text, oldName, newName);
-  const files: FileChange[] = [{ abs: cfg, shown: ".slipbox/config.toml", vault: null, edits: [{ line: 0, before: `name = "${oldName}"`, after: `name = "${newName}" (previous_names + ${oldName})` }], text, next }];
-  return { kind: "vault", from: oldName, to: newName, move: null, files, warnings: dirtyTrees([cfg]), skipped: [] };
+  // Named before: the new name, the old one kept. Never: a name, and an id to tell its copies apart.
+  const next = oldName ? renameInConfig(text, oldName, newName) : withIdentity(text, have, { id: newVaultId(), name: newName });
+  const after = oldName ? `name = "${newName}" (previous_names + ${oldName})` : `name = "${newName}"`;
+  const files: FileChange[] = [{ abs: cfg, shown: ".slipbox/config.toml", vault: null, edits: [{ line: 0, before: oldName ? `name = "${oldName}"` : "(no name)", after }], text, next }];
+  return { kind: "vault", from: oldName ?? loc.root, to: newName, move: null, files, warnings: dirtyTrees([cfg]), skipped: [] };
 }
 
 /** `[vault] name` replaced, and the old name added to `previous_names`, as text. */
@@ -741,6 +741,16 @@ function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string): string | null
     const was = folders.flatMap((f) => f.copies.filter((c) => !copyAvailable(c.path) && isInside(c.path, abs!)).map((c) => ({ f, root: c.path })))[0];
     hit = was ?? null;
   }
+  // A named folder moved by hand, its state along (21.8): where it was, as its move was kept.
+  for (const r of hit?.f ? [] : readRoots()) {
+    const m = (r.moved ?? []).find((x) => !existsSync(x.from) && isInside(x.from, abs!));
+    const id = m ? folderIdentity(r.path) : null;
+    const f = id ? folders.find((x) => x.key === id.key) : undefined;
+    if (m && f) {
+      hit = { f, root: m.from };
+      break;
+    }
+  }
   if (!hit?.f || travelTogether(g.root, hit.root)) return null;
   const p = { name: pointerName(hit.f, folders), branch: null, path: relative(hit.root, abs).split(sep).join("/"), fragment: null };
   const t = resolvePointer(p, folders);
@@ -750,7 +760,7 @@ function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string): string | null
 
 /** This vault's last confirmed move to where it is now (20.5), if it has one. */
 function lastMove(g: Graph): string | null {
-  const entry = readRegistry().find((v) => v.kind === "vault" && v.key === g.loc.key);
+  const entry = readRoots().find((v) => v.kind === "vault" && v.key === g.loc.key);
   const m = entry?.moved?.filter((x) => x.to === g.root).at(-1);
   return m && m.from !== g.root ? m.from : null;
 }
@@ -785,7 +795,7 @@ function vaultMoveFixes(g: Graph, from: string, c: Collector): void {
       c.edit({ abs: join(to, rel), kind: l.kind, target: l.target, line: l.line, column: l.column }, retarget(l.target, was.form, was.abs, join(to, rel)), null);
     }
   }
-  for (const v of readRegistry()) {
+  for (const v of readRoots()) {
     if (v.kind !== "vault" || v.path === to || isInside(to, v.path) || !existsSync(v.path)) continue;
     const og = g.reach?.graphAt(v.path) ?? null;
     if (!og) continue;
@@ -837,17 +847,17 @@ function folderPath(g: Graph, folderRel: string): string {
 }
 
 /**
- * Plan making the folder `folderRel` of `parent` a vault of its own, named `name` (18.11). Links are
- * paths (20.2): relative, or the filesystem's own, they reach across the new boundary as they are;
- * one that wouldn't is rewritten to reach what it did.
+ * Plan giving the folder `folderRel` of `parent` a `.slipbox/` of its own — a root, named `name` when
+ * one is given (18.11, 21.10). Links are paths (20.2): relative, or the filesystem's own, they reach
+ * across the new boundary as they are; one that wouldn't is rewritten to reach what it did.
  */
-export function planMakeVault(parent: Graph, folderRel: string, name: string, opts: { private?: boolean } = {}): RenamePlan {
+export function planMakeVault(parent: Graph, folderRel: string, name: string | null, opts: { private?: boolean } = {}): RenamePlan {
   if (parent.loc.mode !== "vault") throw new RenameError(`${parent.root} isn't a vault: make it one first (slipbox init)`);
   const F = folderPath(parent, folderRel);
   if (parent.nestedRoots().includes(F)) throw new RenameError(`${F} is already a vault`);
   if (!parent.dirs.includes(F)) throw new RenameError(`no folder ${F} in ${parent.root}`);
   if (F.split("/").some((s) => s.startsWith("."))) throw new RenameError(`${F}: hidden folders aren't the vault's`);
-  checkVaultName(name);
+  if (name !== null) checkVaultName(name);
   const Fabs = join(parent.root, F);
   const inF = (rel: string) => rel.startsWith(`${F}/`);
   parent.ensureAll();
@@ -868,14 +878,14 @@ export function planMakeVault(parent: Graph, folderRel: string, name: string, op
     }
   }
   const files = c.result();
-  return { kind: "make-vault", from: F, to: name, move: null, files, warnings: dirtyTrees([Fabs, ...files.map((f) => f.abs)]), skipped: c.skipped, makeVault: { root: Fabs, name, private: !!opts.private } };
+  return { kind: "make-vault", from: F, to: name ?? F, move: null, files, warnings: dirtyTrees([Fabs, ...files.map((f) => f.abs)]), skipped: c.skipped, makeVault: { root: Fabs, name, private: !!opts.private } };
 }
 
-/** A new vault's name: one a vault can have, and no other vault's on this machine. */
-function checkVaultName(name: string): void {
-  if (!VAULT_NAME.test(name)) throw new RenameError(`"${name}" can't be a vault name: letters, digits, ".", "_" and "-" only, no spaces or ":"`);
-  const other = vaultNamed(name, readRegistry());
-  if (other.length) throw new RenameError(`a vault named "${name}" is already at ${other[0]!.path}`);
+/** A folder's new name: one a pointer can carry, and no different folder's on this machine (21.6). */
+function checkVaultName(name: string, except?: string): void {
+  if (!VAULT_NAME.test(name)) throw new RenameError(`"${name}" can't be a folder's name: letters, digits, ".", "_" and "-" only, no spaces, "/" or ":"`);
+  const other = folderNamed(name, except);
+  if (other.length) throw new RenameError(`a different folder is called "${name}", at ${other[0]!.default ?? other[0]!.copies[0]?.path}`);
 }
 
 /**
@@ -893,7 +903,7 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
   const v = openVault(Vabs);
   v.ensureAll();
   parent.ensureAll();
-  const P = parent.loc.name!;
+  const P = parent.loc.name ?? parent.root;
   const c = new Collector(parent);
   // Its own links within it.
   for (const [vr, e] of v.notes) {
@@ -944,7 +954,7 @@ export function planUndo(g: Graph): RenamePlan {
     if (other) throw new RenameError(`nothing to undo on ${branch ? `branch ${branch}` : "this checkout"}: the last rename was made on ${other.branch ? `branch ${other.branch}` : "a detached HEAD"}`);
     throw new RenameError("nothing to undo: no rename, move or relink has been done in this vault");
   }
-  const what = r.kind === "relink" ? "relink" : r.kind === "convert" ? "conversion to path links" : r.kind === "folder" ? `move of ${r.from}/` : r.kind === "vault" ? `vault's rename to ${r.to}` : `rename of ${r.from}`;
+  const what = r.kind === "relink" ? "relink" : r.kind === "convert" ? "conversion to path links" : r.kind === "folder" ? `move of ${r.from}/` : r.kind === "vault" ? `folder's naming as ${r.to}` : `rename of ${r.from}`;
   const files: FileChange[] = [];
   for (const f of r.files) {
     let now: string;
@@ -1034,10 +1044,11 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     }
   };
   if (plan.makeVault || plan.unmakeVault) {
-    if (plan.makeVault) initVault(plan.makeVault.root, plan.makeVault.name, { private: plan.makeVault.private });
+    if (plan.makeVault) initVault(plan.makeVault.root, plan.makeVault.name ?? undefined, { private: plan.makeVault.private });
     else {
       trashVaultMarker(g.loc, g.root, plan.unmakeVault!.root);
-      forgetVault(plan.unmakeVault!.root);
+      forgetRoot(plan.unmakeVault!.root);
+      recordFolder(plan.unmakeVault!.root); // its name gone with its .slipbox/ (21.6)
     }
     g.build(true, "lazy");
     reindexOthers();

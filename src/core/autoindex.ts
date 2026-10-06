@@ -1,6 +1,6 @@
 // The background auto-index (plan 20.9; docs/idea.md, "The index"): the home folder walked slowly, a
-// folder at a time, for the vaults in it — each recorded in the machine's list and its index built,
-// so links from vaults never opened count as backlinks (17.11) by themselves. The work is done in
+// folder at a time, for the roots in it — each recorded in the machine's list and its index built,
+// so links from roots never opened count as backlinks (17.11) by themselves. The work is done in
 // slices, only when asked (the TUI asks while nobody is working), and its place is kept, so it
 // resumes where it stopped. A pass done, the next starts a day later.
 
@@ -9,9 +9,9 @@ import { join } from "node:path";
 import { type Config, loadConfig } from "./config.ts";
 import { readJson, writeJson, ensureDir } from "./fsutil.ts";
 import { Graph } from "./graph.ts";
-import { markFolderFound, recordFolder } from "./folders.ts";
+import { recordFolder } from "./folders.ts";
 import { stateHome } from "./paths.ts";
-import { noteIndexed, readRegistry, writeRegistry } from "./registry.ts";
+import { noteIndexed, readRoots, recordRoot } from "./registry.ts";
 import { configFilesFor, isNeverRoot, isVaultRoot, rootAt } from "./vault.ts";
 
 /** Folders the walk of the home folder never goes into: tools' and caches', and every hidden one. */
@@ -118,33 +118,21 @@ export class AutoIndex {
     }
   }
 
-  /** The vault at `root`, its index read and refreshed lazily; recorded as found, not opened. */
+  /** The root at `root`, its index read and refreshed lazily; recorded as found, not opened. */
   private open(root: string): Graph | null {
-    const had = readRegistry().some((v) => v.kind === "vault" && v.path === root);
     try {
       const loc = rootAt(root);
-      // Its name in the lookup (21.6): new, as found; known, seen again.
-      if (!had) {
-        this.markFound(loc.key);
-        markFolderFound(root);
-      } else recordFolder(root, { found: true });
+      // Listed after those opened, until it's opened itself; its name in the lookup (21.6), as found.
+      if (!readRoots().some((v) => v.kind === "vault" && v.path === root)) recordRoot({ kind: "vault", path: root, found: true, ...(loc.worktree ? { worktree: { name: loc.worktree.name, main: loc.worktree.mainVault } } : {}) });
+      recordFolder(root, { found: true });
       return new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "lazy");
     } catch {
       return null;
     }
   }
 
-  /** A vault the auto-index found: listed after those opened, until it's opened itself. */
-  private markFound(key: string): void {
-    const list = readRegistry();
-    const v = list.find((x) => x.key === key);
-    if (!v || v.found) return;
-    v.found = true;
-    writeRegistry(list);
-  }
-
   private markIndexed(root: string): void {
-    const v = readRegistry().find((x) => x.kind === "vault" && x.path === root);
+    const v = readRoots().find((x) => x.kind === "vault" && x.path === root);
     if (v) noteIndexed(v.key, new Date(this.now()));
   }
 

@@ -12,12 +12,13 @@ TOML, deeper over broader (plans `0.9`, `20.7`): each file over the ones before 
 
 `slipbox info` lists the files that applied, in this order; a change to any of them reloads the TUI's settings.
 
-**The vault's identity** is the vault file's `[vault]` table (plan `17.4`), read on its own and never merged into
-the settings; in the user file it's ignored with a warning:
+**A folder's identity** is the `.slipbox/config.toml` `[vault]` table (plan `17.4`), read on its own and never merged
+into the settings; in the user file it's ignored with a warning. It's written only by `slipbox init --name` and
+`slipbox name` (`21.8`), never by opening the folder; without one, the folder is unnamed:
 
 ```toml
 [vault]
-id = "3f9c2a7be1d04c55"        # random, made by `slipbox init`, never changed: keys the cache and state
+id = "3f9c2a7be1d04c55"        # random, written with the name, never changed: tells its copies from another folder
 name = "notes"                 # what pointers name it by: slipbox://notes/page.md (21.6, 21.7)
 aliases = ["n"]                # other names it answers to
 previous_names = ["old-notes"] # names it had: a pointer by one still finds it, said so (21.10)

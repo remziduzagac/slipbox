@@ -15,11 +15,11 @@
 
 import { existsSync, realpathSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { normalizeRemote } from "./collection.ts";
+import { normalizeRemote, remoteUrls } from "./remotes.ts";
 import { ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
-import { checkoutOf } from "./git.ts";
+import { checkoutOf, inMain } from "./git.ts";
 import { stateHome } from "./paths.ts";
-import { MARKER, readIdentity, slugName, vaultConfigFile } from "./registry.ts";
+import { implicitName, MARKER, readIdentity, slugName, unavailable, vaultConfigFile, type VaultIdentity } from "./registry.ts";
 
 /** What a folder is, as its name and what tells its copies apart. */
 export interface FolderIdentity {
@@ -44,8 +44,8 @@ export interface FolderIdentity {
  * unnamed. A `.slipbox/` name wins over the remote's: someone chose it.
  */
 export function folderIdentity(root: string): FolderIdentity | null {
-  const ident = existsSync(join(root, MARKER)) ? readIdentity(vaultConfigFile(root)) : null;
   const c = checkoutOf(root);
+  const ident = identityAt(root);
   const inRepo = c !== null && c.root === root;
   const remote = inRepo ? originRemote(c.common, c.main ?? c.root) : null;
   const copy = inRepo && c.worktree && c.main ? c.main : root;
@@ -61,23 +61,27 @@ export function folderIdentity(root: string): FolderIdentity | null {
   return { key: `remote:${remote}`, name, remote, id: ident?.id ?? null, old, private: false, copy };
 }
 
+/**
+ * The `[vault]` identity a root has — its `.slipbox/`'s; null without one. A worktree reads its main
+ * checkout's where its own has none (17.19): the main's kept private, or a branch made before the folder
+ * was named. Never written: a worktree writing its own would conflict when the branches merge.
+ */
+export function identityAt(root: string): VaultIdentity | null {
+  const own = existsSync(join(root, MARKER)) ? readIdentity(vaultConfigFile(root)) : null;
+  const c = own?.id && own.name ? null : checkoutOf(root);
+  const mainAt = c?.worktree ? inMain(c, root) : null;
+  const main = mainAt && existsSync(join(mainAt, MARKER)) ? readIdentity(vaultConfigFile(mainAt)) : null;
+  if (!own || !main) return own ?? main;
+  return { id: own.id ?? main.id, name: own.name ?? main.name, aliases: own.aliases.length ? own.aliases : main.aliases, previous_names: own.previous_names.length ? own.previous_names : main.previous_names };
+}
+
 /** The remote a repository is named by: `origin`'s, else the first one's, as `host/path`. */
 function originRemote(common: string, top: string): string | null {
   let config = "";
   try {
     config = readRegular(join(common, "config"), SMALL_FILE).toString("utf8");
   } catch {}
-  const urls: { remote: string; url: string }[] = [];
-  let remote: string | null = null;
-  for (const raw of config.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (line.startsWith("[")) {
-      remote = /^\[\s*remote\s+"((?:[^"\\]|\\.)*)"\s*\]/i.exec(line)?.[1] ?? null;
-      continue;
-    }
-    const kv = remote !== null ? /^url\s*=\s*"?(.*?)"?\s*$/i.exec(line) : null;
-    if (kv) urls.push({ remote: remote!, url: kv[1]! });
-  }
+  const urls = remoteUrls(config);
   const pick = urls.find((u) => u.remote === "origin") ?? urls[0];
   return pick ? normalizeRemote(pick.url, top) : null;
 }
@@ -170,10 +174,18 @@ function writeFolders(folders: NamedFolder[]): void {
  * copy brought up to date, the copy moved out of any folder it no longer is. A second copy of one
  * folder asks, once, which one links open. The entry as recorded; null for an unnamed folder.
  */
-export function recordFolder(root: string, opts: { found?: boolean; now?: Date } = {}): NamedFolder | null {
+export function recordFolder(root: string, opts: { found?: boolean; now?: Date; replaces?: string | null } = {}): NamedFolder | null {
   const ident = folderIdentity(root);
   const list = readFolders();
   const at = ident?.copy ?? root;
+  // A copy moved here by hand (21.8, `movedFrom`): the one it was, gone.
+  if (opts.replaces) {
+    const f = list.find((x) => x.key === ident?.key);
+    if (f) {
+      f.copies = f.copies.filter((c) => c.path !== opts.replaces);
+      if (f.default === opts.replaces) f.default = at;
+    }
+  }
   // Not that folder any more (renamed, its remote changed, its `.slipbox/` gone): out of the old one.
   let changed = false;
   for (const f of list) {
@@ -211,16 +223,41 @@ export function recordFolder(root: string, opts: { found?: boolean; now?: Date }
 }
 
 /**
- * A copy the background index found, which nobody has opened: recorded on the way (opening a root
- * records it), then marked found, as the machine's list marks it.
+ * Where the named folder at `root` was moved from by hand (21.8), when that's sure: the same remote or
+ * `.slipbox/` id at a new path, nothing left at the old one, and exactly one such copy — then its state
+ * goes along, and nothing is asked. A worktree (git keeps those), a copy on a drive unplugged, a folder
+ * already known here, or two gone copies: null — it starts fresh.
  */
-export function markFolderFound(root: string): void {
-  const at = folderIdentity(root)?.copy ?? root;
-  const list = readFolders();
-  const copy = list.flatMap((f) => f.copies).find((c) => c.path === at);
-  if (!copy || copy.found) return;
-  copy.found = true;
-  writeFolders(list);
+export function movedFrom(root: string): string | null {
+  const ident = folderIdentity(root);
+  if (!ident || ident.copy !== root) return null;
+  const f = readFolders().find((x) => x.key === ident.key);
+  // Known here already — opened, not only found by the background index: no move.
+  if (!f || f.copies.some((c) => c.path === root && !c.found)) return null;
+  const gone = f.copies.filter((c) => !existsSync(c.path) && !unavailable(c.path));
+  return gone.length === 1 ? gone[0]!.path : null;
+}
+
+/**
+ * The named folders this machine knows by `name` (their name, or one they had), other than the one at
+ * `except`: a name `slipbox init` and `slipbox name` refuse.
+ */
+export function folderNamed(name: string, except?: string, folders = readFolders()): NamedFolder[] {
+  const n = name.toLowerCase();
+  const own = except ? folderIdentity(except)?.key : undefined;
+  return folders.filter((f) => f.key !== own && [f.name, ...f.old].some((x) => x.toLowerCase() === n));
+}
+
+/**
+ * A name for a new `.slipbox/` in `dir` (17.5): the folder's name, prefixed with the enclosing root's
+ * (`x-plan` inside `x`); a name this machine knows gets `-2`, `-3`….
+ */
+export function suggestFolderName(dir: string, parentName: string | null, folders = readFolders()): string {
+  const base = implicitName(dir);
+  const stem = parentName ? `${parentName}-${base}` : base;
+  let name = stem;
+  for (let i = 2; folderNamed(name, dir, folders).length; i++) name = `${stem}-${i}`;
+  return name;
 }
 
 /** The copy links to `key` open, from now on; the question asked, either way. */

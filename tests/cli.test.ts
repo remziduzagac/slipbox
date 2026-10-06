@@ -299,25 +299,25 @@ describe("the vault and the tool", () => {
     expect(c.find((x: { id: string }) => x.id === "task.toggle").cli).toStartWith("slipbox task");
     const fresh = join(sandbox, "fresh");
     mkdirSync(fresh);
+    // init: settings only — a name (and an id) when one is given (21.10).
     const made = slipbox(["init", fresh, "--json"]).json.data;
-    expect(made).toMatchObject({ created: true, name: "fresh" });
+    expect(made).toMatchObject({ created: true, name: null, id: null });
     expect(existsSync(join(fresh, ".slipbox"))).toBe(true);
-    // The machine's vaults: this one and the one just made, newest first (17.6).
-    const vaults = slipbox(["vaults", "--json"]).json.data;
-    expect(vaults[0]).toMatchObject({ id: made.id, name: "fresh", kind: "vault", path: fresh, exists: true });
-    expect(vaults.some((v: { path: string }) => v.path === vault)).toBe(true);
-    expect(slipbox(["vaults"]).out).toContain(`fresh            vault  ${fresh}`);
-    // Nothing gone from elsewhere that may have moved here (20.5); out of a vault, nothing to ask.
-    expect(slipbox(["vault-moved", "--json"]).json.data).toEqual([]);
-    expect(slipbox(["vault-moved"]).out).toBe("nothing seems to have moved here\n");
-    expect(slipbox(["vault-moved", "/nowhere", "--json"]).code).toBe(3);
+    expect(slipbox(["info", "--json"], { cwd: fresh }).json.data).toMatchObject({ root: fresh, name: null, folder: null });
+    const named = slipbox(["init", fresh, "--name", "clifresh", "--json"]).json.data;
+    expect(named).toMatchObject({ created: false, identified: true, name: "clifresh", id: expect.stringMatching(/^[0-9a-f]{16}$/) });
+    expect(slipbox(["info"], { cwd: fresh }).out).toContain("name      clifresh");
+    // The vault words are gone (21.12): `folders` lists the named ones.
+    expect(slipbox(["vaults"]).code).toBe(2);
+    expect(slipbox(["vault-moved"]).code).toBe(2);
+    expect(slipbox(["folders", "--json"]).json.data.some((f: { name: string; default: string }) => f.name === "clifresh" && f.default === fresh)).toBe(true);
     // Plans waiting to be applied (20.18): a list, maybe empty; one that isn't there, not found.
     expect(Array.isArray(slipbox(["apply", "--json"]).json.data)).toBe(true);
     expect(slipbox(["apply", "00000000", "--json"]).code).toBe(3);
     expect(slipbox(["help"]).out).toContain("slipbox find <query>");
     expect(slipbox(["--version"]).out).toMatch(/^slipbox \d+\.\d+\.\d+/);
   });
-  test("mv, rename-vault, relink: a preview, then the change (17.15)", () => {
+  test("mv, name, relink: a preview, then the change (17.15, 21.10)", () => {
     const dir = join(sandbox, "renames");
     mkdirSync(join(dir, "notes"), { recursive: true });
     writeFileSync(join(dir, "notes", "plan.md"), "# Plan\n");
@@ -332,9 +332,9 @@ describe("the vault and the tool", () => {
     expect(done.data).toMatchObject({ kind: "note", from: "notes/plan.md", to: "roadmap.md", dryRun: false });
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[plan](roadmap.md) and [p](roadmap.md)\n");
     expect(slipbox(["mv", "roadmap", "index"], { cwd: dir }).code).toBe(5); // index.md is there
-    const vr = slipbox(["rename-vault", "cliren2", "--json"], { cwd: dir }).json;
+    const vr = slipbox(["name", "cliren2", "--json"], { cwd: dir }).json;
     expect(vr.data).toMatchObject({ kind: "vault", from: "cliren", to: "cliren2" });
-    expect(slipbox(["info", "--json"], { cwd: dir }).json.data.vault.name).toBe("cliren2");
+    expect(slipbox(["info", "--json"], { cwd: dir }).json.data.name).toBe("cliren2");
     writeFileSync(join(dir, "late.md"), "[plan](notes/plan.md)\n");
     const rl = slipbox(["relink", "late", "--json"], { cwd: dir }).json;
     expect(rl.data.files[0].edits[0]).toMatchObject({ before: "[plan](notes/plan.md)", after: "[plan](roadmap.md)" });
@@ -342,7 +342,7 @@ describe("the vault and the tool", () => {
     expect(slipbox(["undo", "--dry-run"], { cwd: dir }).out).toStartWith("would undo the relink of late.md: 1 change in 1 file\n");
     expect(slipbox(["undo"], { cwd: dir }).out).toStartWith("undid the relink of late.md: 1 change in 1 file\n");
     expect(readFileSync(join(dir, "late.md"), "utf8")).toBe("[plan](notes/plan.md)\n");
-    expect(slipbox(["undo"], { cwd: dir }).out).toStartWith("renamed vault cliren2 back to cliren: ");
+    expect(slipbox(["undo"], { cwd: dir }).out).toStartWith("renamed folder cliren2 back to cliren: ");
     expect(slipbox(["undo", "--json"], { cwd: dir }).json.data).toMatchObject({ kind: "note", from: "roadmap.md", to: "notes/plan.md", undo: { at: expect.any(String) } });
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[plan](notes/plan.md) and [p](notes/plan.md)\n");
     expect(slipbox(["undo"], { cwd: dir }).code).toBe(3); // nothing more
@@ -537,11 +537,12 @@ describe("the vault and the tool", () => {
     slipbox(["footnotes", "fn-cli.md", "rm", "1"], { cwd: vault });
     expect(readFileSync(note, "utf8")).toBe("# F\r\n\r\nA claim here.[^later]\r\n\r\n[^later]: Second\r\n");
   });
-  test("stat: which vault a note is in, and its properties — the frontmatter, as the Info view shows it (3.19)", () => {
+  test("stat: which root a note is in, and its properties — the frontmatter, as the Info view shows it (3.19, 21.10)", () => {
     const r = slipbox(["stat", "people/kenji-mori.md", "--json"], { cwd: DEMO }).json.data;
-    expect(r.vault).toMatch(/^(examples\.)?halden$/); // this file's own copy of the demo shares its name (20.6)
+    expect(r).toMatchObject({ root: DEMO, name: "halden" }); // its path, and the name pointers give it
+    expect(r.vault).toBeUndefined();
     expect(r.properties).toMatchObject({ title: "Kenji Mori", office: { building: "Workshop", desk: 2 } });
-    expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/vault\s+(examples\.)?halden\n/);
+    expect(slipbox(["stat", "people/kenji-mori.md"], { cwd: DEMO }).out).toMatch(/root\s+halden\n/);
   });
   test("problems: the demo's broken links; a path is never ambiguous (1.7)", () => {
     const p = slipbox(["problems", "--json"], { cwd: DEMO }).json.data;
