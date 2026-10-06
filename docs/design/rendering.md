@@ -50,8 +50,8 @@ their children out at reduced width and prefix every row, so nesting composes.
 | tag | `#name` in the `tag` role, followable: Obsidian's tags (`1.6`, in `docs/design/decisions.md`) |
 | definition | hidden; reference links resolve through it, the first of a label winning (CommonMark) |
 
-**Headings** are linked to by their text as the renderer shows it (a footnote mark or inline code
-included) and slugged GitHub's way; a repeated heading keeps its plain slug (no `-1` suffix), and
+**Headings** are linked to by their text as the outline shows it (inline code included; footnote
+marks and image glyphs left out) and slugged GitHub's way; a repeated heading keeps its plain slug (no `-1` suffix), and
 `#anchor` links find the first. A no-break space (U+00A0, U+2007, U+202F) is never a place to wrap.
 
 **Inline:** `**strong**` gets the `strong` role, which has an explicitly lighter foreground,

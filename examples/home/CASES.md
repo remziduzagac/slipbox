@@ -16,7 +16,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Repeated heading text keeps the plain slug (no -1), #anchor finds the first —
   `hobbies/cycling/rides/202609131900-300k-brevet.md`, `notes/meetings/standup-log.md`,
   `notes/projects/kestrel-v2-3.md`, `notes/weekly/2026-W34.md` (rendering.md Headings; render.test review cycle 4)
-- Heading with a footnote mark: link text and slug include the rendered mark — `notes/reading/maps-and-territories.md`,
+- Heading with a footnote mark: link text and slug leave the mark out, as the outline does — `notes/reading/maps-and-territories.md`,
   `work/kestrel/docs/adr/0001-offline-first-sync.md` (rendering.md; render.test review cycle 4)
 - Heading with inline code, emphasis, link, image and tag — `notes/projects/sync-rewrite.md`,
   `work/kestrel/docs/qa/theme-showcase.md` (render.ts heading; outline slug)
@@ -298,8 +298,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/reading/the-quiet-queue.md` (render.test footnote definitions)
 - Unused definition (no reference), missing definition (reference to undefined), duplicate definitions —
   `notes/meetings/2026-09-17-priya-1on1.md`, `notes/reading/the-long-ride.md` (3.17 footnotes panel)
-- Footnote refs in heading, table cell, list item, quote, callout, link text, emphasis; inline footnote ^\[text\] —
-  `hobbies/cooking/Recipes/Family/Grandma's flan.md`, `notes/daily/2026-10-01.md`,
+- Footnote refs in heading, table cell, list item, quote, callout, link text, emphasis; an inline ^\[text\] stays
+  text (GFM has none) — `hobbies/cooking/Recipes/Family/Grandma's flan.md`, `notes/daily/2026-10-01.md`,
   `notes/reading/maps-and-territories.md` (rendering.md Headings; render.test)
 - Footnote definition in the middle of a document and at very end without trailing newline —
   `notes/reading/many-footnotes.md`, `notes/reading/the-long-ride.md` (edge)
@@ -518,7 +518,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - ls --files lists data and code files; links, find and replace work across groups; writers refuse binary (exit 5) —
   `Downloads/photo.PNG`, `work/kestrel/kestrel.toml` (test 'files beyond notes (16.4): read, replace, write and find
   them; ls --files; binary refused')
-- slipbox render of data/code at widths 40, 80, 120 and --json — `work/kestrel/config/regions.yaml`,
+- slipbox render of data files at widths 40, 80, 120 and --json (a code file is refused, exit 2) — `work/kestrel/config/regions.yaml`,
   `work/kestrel/kestrel.toml` (test 'render draws a note at a width, plain or as JSON lines')
 
 ### classify
@@ -527,8 +527,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/.hadolint.yaml`, `work/kestrel/api/settings.json5`, `work/kestrel/config/settings.conf`,
   `work/kestrel/docker-compose.yml`, `work/kestrel/package.json`, `work/kestrel/tsconfig.web.jsonc`
   (src/core/filetypes.ts DATA\_FORMATS)
-- Dotfile .env and a file named exactly .env render as INI data — `.build/extras.toml`, `work/infra/config/prod.env`,
-  `work/kestrel/.env.example` (filetypes.ts NAMED, tests 'INI and .env')
+- Dotfile .env and a file named exactly .env render as INI data — `.build/extras.toml`, `work/infra/config/prod.env`;
+  `work/kestrel/.env.example` is text, its extension `example` (filetypes.ts NAMED, tests 'INI and .env')
 - Whole-name languages open as text with their language: Makefile, Dockerfile, .zshrc, .bashrc, .profile —
   `work/infra/dotfiles/.bashrc`, `work/infra/dotfiles/.profile`, `work/infra/dotfiles/.zshrc`,
   `work/kestrel/Dockerfile`, `work/kestrel/Makefile` (filetypes.ts NAMED, plan 16.21)
@@ -663,9 +663,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Real-world YAMLs: GitHub Actions workflow, docker-compose, OpenAPI, Helm values, mkdocs.yml —
   `work/infra/helm/kestrel/values.yaml`, `work/infra/k8s/api.yaml`, `work/kestrel/.github/workflows/ci.yml`,
   `work/kestrel/api/openapi.yaml`, `work/kestrel/docker-compose.yml`, `work/kestrel/mkdocs.yml` (data.ts, rendering.md)
-- YAML that does not parse: bad indentation, tab indent, unclosed quote, duplicate anchor, flow collection unclosed —
-  `work/infra/config/local/empty.yaml`, `work/infra/k8s/broken-ingress.yaml`, `work/infra/k8s/tabs.yaml` (data.ts
-  readYaml error 'line N:')
+- YAML that does not parse: bad indentation, tab indent, unclosed quote, duplicate anchor, flow collection unclosed (an
+  empty file parses: `work/infra/config/local/empty.yaml`) — `work/infra/k8s/broken-ingress.yaml`,
+  `work/infra/k8s/tabs.yaml` (data.ts readYaml error 'line N:')
 - A top-level scalar or top-level list document renders as a 'value' row or rows 1..n —
   `work/infra/k8s/allowed-ips.yaml`, `work/infra/k8s/motd.yaml`, `work/infra/k8s/tiles.yaml` (data.ts walkYaml
   top-level non-map)
@@ -802,7 +802,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - TypeScript outline: functions, classes, methods, interfaces, types, enums, abstract classes, arrow functions in
   variable declarators, generators — `work/kestrel/src/App.tsx`, `work/kestrel/src/sync/queue.ts`,
   `work/kestrel/src/types.d.ts` (syntax.ts TS\_DEFS, tests 'the outline and breadcrumb come from the grammar')
-- TSX and JSX files use the tsx grammar — `work/kestrel/src/App.tsx`, `work/kestrel/src/legacy/widgets.jsx`,
+- TSX files use the tsx grammar, JSX the javascript one — `work/kestrel/src/App.tsx`, `work/kestrel/src/legacy/widgets.jsx`,
   `work/kestrel/src/routes/RouteMap.tsx` (syntax.ts grammarFor ext==='tsx')
 - mts/cts/js/mjs/cjs extension mapping — `work/kestrel/src/modern.ts`, `work/kestrel/src/util/compat.cjs`,
   `work/kestrel/src/util/format.mts`, `work/kestrel/src/util/geo.mjs` (filetypes.ts LANGUAGES)
@@ -1023,7 +1023,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### search
 
-- Search/find and the switcher over data and code — `work/kestrel/api/kestrel_api/sync.py`,
+- find --files and the switcher over data and code; search over data, never code — `work/kestrel/api/kestrel_api/sync.py`,
   `work/kestrel/src/sync/queue.ts` (search-index.ts; tui.md switcher (#symbols))
 - ranked search: phrase, prefix\*, -not, title:, #tag, path:, +n other sections, snippet marks, enter lands at line —
   `notes/research/offline-sync-options.md`, `notes/weekly/2026-W40.md` (search.open 6.5; tests on search)
@@ -1055,7 +1055,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/research/offline-sync-options.md`, `notes/weekly/2026-W40.md` (cli.md Search By vault (20.16))
 - Scan engine before `index` builds the index, with a warning; index engine afterwards — `notes/.slipbox/config.toml`,
   `notes/research/offline-sync-options.md` (cli.md Search The index; cli.test 'scanned until index builds')
-- Search covers data files and code (toml, yaml, py) and not binary — `work/kestrel/api/kestrel_api/sync.py`,
+- Search covers data files (toml, yaml), not code (py) nor binary — `work/kestrel/api/kestrel_api/sync.py`,
   `work/kestrel/kestrel.toml` (cli.md Search ('notes and data files'))
 - Search in a \$HOME-opened plain folder is scanned, never indexed — `Downloads/plan.md`, `Downloads/stray-note.md`
   (cli.md Search ('\$HOME or / opened as a plain folder keeps none'))
