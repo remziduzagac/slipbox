@@ -17,6 +17,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadConfig, VAULT_CONFIG_TEMPLATE } from "./config.ts";
 import { collectionOf, repositoryName, sameCollection } from "./collection.ts";
 import { checkoutOf, inMain } from "./git.ts";
+import { recordFolder } from "./folders.ts";
 import { readRegular } from "./fsutil.ts";
 import { cacheHome, stateHome, vaultKey } from "./paths.ts";
 import {
@@ -347,6 +348,8 @@ export function recordLocation(loc: VaultLocation): KnownVault {
   } else {
     // A plain folder that has become a vault: the same place, one instance — the vault's now.
     forgetVault(loc.root, ["folder"]);
+    // Its name, in the lookup pointers are found by (21.6).
+    recordFolder(loc.root);
     entry = recordVault({
       key: loc.key,
       instance: loc.key,

@@ -288,6 +288,17 @@ converter reads them (`20.1`), as the legacy reader it keeps for what it rewrite
 as their own, `docs:a.md`, is ambiguous (exit 4) — `candidates` gives each by the name it's shown with,
 `work.docs:a.md`.
 
+**A folder's name** (`21.6`, `core/folders.ts`): what a pointer names it by (`slipbox://<name>/…`, `21.7`) — the name
+in its `.slipbox/` config, else its repository's remote's last part (`research`); never its folder's own name. `info`
+gives `folder{name, pointer, remote, id, private, copies[{path, seen, here, available}], default}` — `pointer` the
+remote (`github.com/me/research`) when a different repository this machine knows shares the short name — and the line
+`name      research — 2 copies, links open ~/src/research`; a root with neither, `name      none — …: linked to by
+relative path`. The lookup (`folders.json` in the state folder) holds each name, its copies and the default one: the
+first found, or the one picked (the TUI asks once a second is here); filled from the folders opened and the background
+index. A name of two different folders is ambiguous: repositories each by their remote, `.slipbox/` folders until one
+is renamed; an old name (`aliases`, `previous_names`) still finds the folder; a copy that's gone stays listed,
+unavailable — another copy answers meanwhile.
+
 **The links' convention** (`21.4`): `info` says how the links slipbox makes in this root look — `links{style, path,
 extension}`, each `{value, source, why}`, `source` one of `setting`, `tool`, `notes` (with `share`, a percentage),
 `default` (`docs/design/configuration.md`, "The links' convention"). Its line: the parts, then what said each —

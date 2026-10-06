@@ -23,6 +23,7 @@ import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { conventionOf, describeConvention, type LinkStyle } from "../core/convention.ts";
 import { linkEnds, writeLink } from "../core/write-link.ts";
+import { copyAvailable, folderIdentity, pointerName, readFolders } from "../core/folders.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { Graph, type LinkProblem, openGraph, type Target } from "../core/graph.ts";
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
@@ -1444,6 +1445,21 @@ const HANDLERS: Record<string, Handler> = {
     const g = s.graph;
     const here = instanceOf(s.loc);
     const scratch = scratchLocation(s.loc, s.config);
+    // Its name, as a pointer names it (21.6): the lookup's copies, the one links open.
+    const ident = s.loc.mode === "vault" ? folderIdentity(s.loc.root) : null;
+    const known = readFolders();
+    const named = ident ? known.find((f) => f.key === ident.key) : undefined;
+    const folder = ident
+      ? {
+          name: ident.name,
+          pointer: pointerName({ key: ident.key, name: ident.name, remote: ident.remote }, known),
+          remote: ident.remote,
+          id: ident.id,
+          private: ident.private,
+          copies: (named?.copies ?? []).map((c) => ({ path: c.path, seen: c.seen, here: c.path === ident.copy, available: copyAvailable(c.path) })),
+          default: named?.default ?? null,
+        }
+      : null;
     const data = {
       version: VERSION,
       root: s.loc.root,
@@ -1464,6 +1480,7 @@ const HANDLERS: Record<string, Handler> = {
       background: backgroundStatus(s.config),
       search: searchInfo(s),
       skipped: g.skipped,
+      folder,
       // How the links slipbox makes here look, each part with what said it (21.4).
       links: conventionOf(g, s.config, s.configOrigins),
       stale: s.stale(),
@@ -1473,6 +1490,9 @@ const HANDLERS: Record<string, Handler> = {
       `root      ${data.root} (${data.mode}${data.markerVersion ? `, marker v${data.markerVersion}` : ""})`,
       ...(s.loc.name ? [`vault     ${data.vault.shown}${s.loc.aliases.length ? ` (also ${s.loc.aliases.join(", ")})` : ""}${s.loc.id || !hasMarker(s.loc.root) ? "" : " — no id yet: slipbox init gives it one"}`] : []),
       ...(data.instance ? [`instance  ${data.instance} — holds ${describeCollection(here.entry?.collection)}`] : []),
+      folder
+        ? `name      ${folder.pointer}${folder.pointer !== folder.name ? ` (${folder.name} is another's too)` : ""}${folder.private ? ", private: this machine's only" : ""}${folder.copies.length > 1 ? ` — ${folder.copies.length} copies, links open ${tildePath(folder.default ?? "")}` : ""}`
+        : `name      none — ${s.loc.mode === "folder" ? "no root" : "no remote and no .slipbox/ name"}: linked to by relative path`,
       `notes     ${data.notes} (parsed ${g.stats.parsed}, cached ${g.stats.cached}, ${g.stats.ms.toFixed(0)} ms)`,
       `index     ${data.index.written ? `written ${data.index.written.slice(0, 16).replace("T", " ")}` : "not written yet"}${g.reached.size ? `, ${g.reached.size} reached outside the walk` : ""}`,
       `home      ${describeBackground(data.background)}`,

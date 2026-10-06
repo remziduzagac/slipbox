@@ -173,4 +173,27 @@ export const LINK_SCENARIOS: Scenario[] = [
       s.expect(zk.out === "[Bike fit](../gear/202608201000-bike-fit)\n", `zk's link: ${zk.out}`);
     },
   },
+  {
+    name: "world/links: named folders — a second copy of notes asks once which links open; a repository named by its remote (21.6)",
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      // The backup in Downloads is a copy of notes (one .slipbox/ id): opened, it asks which copy links open.
+      await s.restart({ startAt: "home/Downloads/notes-backup-2026-07/index.md" });
+      await s.see("notes: 2 copies on this machine — which do links to it open?");
+      await s.see("links open it now"); // ~/notes: the first found
+      await s.keys("enter");
+      await s.message("links to notes open ~/notes");
+      const info = s.cliIn("~/Downloads/notes-backup-2026-07", "info");
+      s.expect(info.out.includes("name      notes — 2 copies, links open ~/notes"), `info:\n${info.out}`);
+      // Asked once: opened again, not asked.
+      await s.restart({ startAt: "home/Downloads/notes-backup-2026-07/index.md" });
+      await s.notSee("which do links to it open?", 1500);
+      // The product repository, no .slipbox/ name: named by its remote, its qualified name kept.
+      const product = JSON.parse(s.cliIn("~/work/product", "info", "--json").out).data.folder;
+      s.expect(product?.name === "product" && product.remote === "github.com/kestrel-labs/product", `product's name: ${JSON.stringify(product)}`);
+      // A folder with only Obsidian's marker: unnamed, linked by relative path.
+      const cooking = s.cliIn("~/hobbies/cooking", "info");
+      s.expect(cooking.out.includes("name      none — no remote and no .slipbox/ name"), `cooking:\n${cooking.out}`);
+    },
+  },
 ];

@@ -329,6 +329,10 @@ and the instance made here meanwhile goes — then, if the move broke links in o
 (`relink`'s, `20.17`); `No: a copy of its own` isn't asked again; `esc` asks next time.
 `:vault-moved` (`vault.moved`) asks again. A worktree `git worktree move` took elsewhere is found by git's name for it,
 without asking.
+**A second copy of a named folder** (`21.6`, `core/folders.ts`): opened where another copy of it is here too — one
+`.slipbox/` id, or one remote — the TUI asks once "`<name>`: 2 copies on this machine — which do links to it open?",
+the first found marked `links open it now`; the answer is remembered, and `esc` keeps the first, not asking again. A
+copy gone (moved here, a drive unplugged) is no choice: not asked.
 **The launcher:** slipbox opened on a plain folder without a file (`slipbox ~`) shows this list at
 once, over the folder's explorer, when there are vaults to show.
 

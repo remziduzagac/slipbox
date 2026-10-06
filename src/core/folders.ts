@@ -1,0 +1,259 @@
+// Named folders (plan 21.6; docs/idea.md, "Between folders"): what a pointer (`slipbox://<name>/…`,
+// 21.7) names, and where on this machine it is. A name travels with what it names:
+//
+// - a `.slipbox/` folder by the name in its config (`slipbox init --name notes`), its copies told apart
+//   from a different folder of that name by the `.slipbox/` id they share;
+// - else a repository by its remote — short (`research`), or qualified (`github.com/me/research`) when
+//   two different repositories share the short one — its copies by the remote they share;
+// - never a folder's own name, nor a copy's path: neither travels. A root with neither (`.obsidian/` or
+//   `.zk/` alone, a repository with no remote) is unnamed, and linked by relative path.
+//
+// The lookup is durable, in the state folder (`folders.json`): each named folder, its copies on this
+// machine and the default one — the first found; when a second appears, the TUI asks once which links
+// open. Filled from the folders opened and by the background index; a copy that's gone stays listed,
+// unavailable, so an unplugged drive comes back. A worktree's name means its main checkout.
+
+import { existsSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+import { normalizeRemote } from "./collection.ts";
+import { ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
+import { checkoutOf } from "./git.ts";
+import { stateHome } from "./paths.ts";
+import { MARKER, readIdentity, slugName, vaultConfigFile } from "./registry.ts";
+
+/** What a folder is, as its name and what tells its copies apart. */
+export interface FolderIdentity {
+  /** What its copies share: `slipbox:<id>`, else `remote:<host/path>`. */
+  key: string;
+  /** Its short name: `.slipbox/`'s, else the remote's last part. */
+  name: string;
+  /** A repository's remote (`host/path`): its qualified name. */
+  remote: string | null;
+  /** A `.slipbox/` folder's id. */
+  id: string | null;
+  /** Names it had (its config's `aliases` and `previous_names`): a pointer by one still finds it. */
+  old: string[];
+  /** A `.slipbox/` kept out of git (`init --private`): its name holds on this machine only. */
+  private: boolean;
+  /** The folder the copy is: a worktree's main checkout, else the folder itself. */
+  copy: string;
+}
+
+/**
+ * The named folder at `root` (a root: its own `.slipbox/` or `.git` is there), or null when it's
+ * unnamed. A `.slipbox/` name wins over the remote's: someone chose it.
+ */
+export function folderIdentity(root: string): FolderIdentity | null {
+  const ident = existsSync(join(root, MARKER)) ? readIdentity(vaultConfigFile(root)) : null;
+  const c = checkoutOf(root);
+  const inRepo = c !== null && c.root === root;
+  const remote = inRepo ? originRemote(c.common, c.main ?? c.root) : null;
+  const copy = inRepo && c.worktree && c.main ? c.main : root;
+  const old = ident ? [...ident.aliases, ...ident.previous_names] : [];
+  const priv = ident !== null && c !== null && excluded(c.common, c.root, root);
+  if (ident?.name) {
+    const key = ident.id ? `slipbox:${ident.id}` : remote ? `remote:${remote}` : `path:${copy}`;
+    return { key, name: ident.name, remote, id: ident.id, old, private: priv, copy };
+  }
+  if (!remote) return null;
+  const name = slugName(remote.split("/").pop()!);
+  if (!name) return null;
+  return { key: `remote:${remote}`, name, remote, id: ident?.id ?? null, old, private: false, copy };
+}
+
+/** The remote a repository is named by: `origin`'s, else the first one's, as `host/path`. */
+function originRemote(common: string, top: string): string | null {
+  let config = "";
+  try {
+    config = readRegular(join(common, "config"), SMALL_FILE).toString("utf8");
+  } catch {}
+  const urls: { remote: string; url: string }[] = [];
+  let remote: string | null = null;
+  for (const raw of config.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (line.startsWith("[")) {
+      remote = /^\[\s*remote\s+"((?:[^"\\]|\\.)*)"\s*\]/i.exec(line)?.[1] ?? null;
+      continue;
+    }
+    const kv = remote !== null ? /^url\s*=\s*"?(.*?)"?\s*$/i.exec(line) : null;
+    if (kv) urls.push({ remote: remote!, url: kv[1]! });
+  }
+  const pick = urls.find((u) => u.remote === "origin") ?? urls[0];
+  return pick ? normalizeRemote(pick.url, top) : null;
+}
+
+/** Whether git's exclude file keeps this `.slipbox/` out of git (`slipbox init --private`). */
+function excluded(common: string, top: string, root: string): boolean {
+  const line = `/${relative(top, join(root, MARKER)).split(sep).join("/")}/`;
+  try {
+    return readRegular(join(common, "info", "exclude"), SMALL_FILE).toString("utf8").split(/\r?\n/).includes(line);
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The lookup
+
+export interface FolderCopy {
+  path: string;
+  /** When it was last seen (ISO 8601). */
+  seen: string;
+  /** Found by the background index, never opened. */
+  found?: boolean;
+}
+
+/** A named folder as this machine knows it: its copies, and the one links open. */
+export interface NamedFolder extends Omit<FolderIdentity, "copy"> {
+  copies: FolderCopy[];
+  /** The copy links open: the first found, or the one picked. */
+  default: string | null;
+  /** A second copy came and nobody has said which links open: the TUI asks once. */
+  ask?: boolean;
+  /** Asked, answered or not: never again. */
+  asked?: boolean;
+}
+
+interface FoldersFile {
+  version: 1;
+  folders: NamedFolder[];
+}
+
+export function foldersFile(): string {
+  return join(stateHome(), "folders.json");
+}
+
+export function readFolders(): NamedFolder[] {
+  const f = readJson<FoldersFile | null>(foldersFile(), null);
+  if (!f || f.version !== 1 || !Array.isArray(f.folders)) return [];
+  return f.folders.filter((x) => x && typeof x.key === "string" && typeof x.name === "string" && Array.isArray(x.copies));
+}
+
+function writeFolders(folders: NamedFolder[]): void {
+  try {
+    ensureDir(stateHome());
+    writeJson(foldersFile(), { version: 1, folders } satisfies FoldersFile);
+  } catch {}
+}
+
+/**
+ * The folder at `root` recorded as seen (opened, or `found` by the background index): its name and
+ * copy brought up to date, the copy moved out of any folder it no longer is. A second copy of one
+ * folder asks, once, which one links open. The entry as recorded; null for an unnamed folder.
+ */
+export function recordFolder(root: string, opts: { found?: boolean; now?: Date } = {}): NamedFolder | null {
+  const ident = folderIdentity(root);
+  const list = readFolders();
+  const at = ident?.copy ?? root;
+  // Not that folder any more (renamed, its remote changed, its `.slipbox/` gone): out of the old one.
+  let changed = false;
+  for (const f of list) {
+    if (f.key === ident?.key) continue;
+    const before = f.copies.length;
+    f.copies = f.copies.filter((c) => c.path !== at);
+    if (f.copies.length !== before) {
+      changed = true;
+      if (f.default === at) f.default = f.copies[0]?.path ?? null;
+    }
+  }
+  if (!ident) {
+    if (changed) writeFolders(list.filter((f) => f.copies.length));
+    return null;
+  }
+  const now = (opts.now ?? new Date()).toISOString();
+  const { copy: _, ...named } = ident;
+  let entry = list.find((f) => f.key === ident.key);
+  if (!entry) {
+    entry = { ...named, copies: [], default: null };
+    list.push(entry);
+  } else Object.assign(entry, named);
+  const mine = entry.copies.find((c) => c.path === at);
+  if (mine) {
+    mine.seen = now;
+    if (!opts.found) delete mine.found;
+  } else {
+    entry.copies.push({ path: at, seen: now, ...(opts.found ? { found: true } : {}) });
+    // A second copy here: a choice to make. One gone (moved here, a drive unplugged) isn't one.
+    if (entry.copies.filter((c) => copyAvailable(c.path)).length > 1 && !entry.asked) entry.ask = true;
+  }
+  entry.default ??= at;
+  writeFolders(list.filter((f) => f.copies.length));
+  return entry;
+}
+
+/**
+ * A copy the background index found, which nobody has opened: recorded on the way (opening a root
+ * records it), then marked found, as the machine's list marks it.
+ */
+export function markFolderFound(root: string): void {
+  const at = folderIdentity(root)?.copy ?? root;
+  const list = readFolders();
+  const copy = list.flatMap((f) => f.copies).find((c) => c.path === at);
+  if (!copy || copy.found) return;
+  copy.found = true;
+  writeFolders(list);
+}
+
+/** The copy links to `key` open, from now on; the question asked, either way. */
+export function setDefaultCopy(key: string, path: string | null): void {
+  const list = readFolders();
+  const f = list.find((x) => x.key === key);
+  if (!f) return;
+  if (path && f.copies.some((c) => c.path === path)) f.default = path;
+  delete f.ask;
+  f.asked = true;
+  writeFolders(list);
+}
+
+/** Whether a copy is here now: its folder there (a drive unplugged, a folder deleted: not). */
+export function copyAvailable(path: string): boolean {
+  return existsSync(path);
+}
+
+export type FolderLookup =
+  | { status: "found"; folder: NamedFolder; path: string; via?: "old-name" | "another-copy" }
+  | { status: "ambiguous"; candidates: string[]; reason: string }
+  | { status: "unavailable"; folder: NamedFolder; path: string }
+  | { status: "unknown"; reason: string };
+
+/**
+ * Where a folder's name is on this machine: its default copy (another, when that one isn't here);
+ * a qualified name (`github.com/me/research`) by its remote. Different folders of one name are
+ * ambiguous, never guessed: repositories each by their qualified name, `.slipbox/` folders until one
+ * is renamed. A name it had still finds it, said so.
+ */
+export function lookupFolder(name: string, folders = readFolders()): FolderLookup {
+  const want = name.toLowerCase();
+  const qualified = name.includes("/");
+  let matches = folders.filter((f) => (qualified ? f.remote?.toLowerCase() === want : f.name.toLowerCase() === want));
+  let via: "old-name" | undefined;
+  if (!matches.length && !qualified) {
+    matches = folders.filter((f) => f.old.some((o) => o.toLowerCase() === want));
+    via = "old-name";
+  }
+  if (!matches.length) return { status: "unknown", reason: `${name} isn't on this machine yet: open it, or let the index find it` };
+  if (matches.length > 1) {
+    const repos = matches.every((f) => f.remote);
+    return {
+      status: "ambiguous",
+      candidates: matches.map((f) => (repos ? f.remote! : `${f.name} (${f.default ?? f.copies[0]?.path})`)).sort(),
+      reason: repos ? `${matches.length} repositories are called ${name}: name one by its remote` : `${matches.length} different folders are called ${name}: rename one (slipbox name <new>)`,
+    };
+  }
+  const f = matches[0]!;
+  const def = f.default ?? f.copies[0]!.path;
+  if (copyAvailable(def)) return { status: "found", folder: f, path: def, ...(via ? { via } : {}) };
+  const other = f.copies.find((c) => c.path !== def && copyAvailable(c.path));
+  if (other) return { status: "found", folder: f, path: other.path, via: via ?? "another-copy" };
+  return { status: "unavailable", folder: f, path: def };
+}
+
+/**
+ * The name to write for a folder (a pointer's): its short name, unless a different folder this
+ * machine knows has it too — then a repository's qualified name; a `.slipbox/` folder keeps its
+ * short one (ambiguous until one is renamed).
+ */
+export function pointerName(f: Pick<NamedFolder, "key" | "name" | "remote">, folders = readFolders()): string {
+  const clash = folders.some((x) => x.key !== f.key && x.name.toLowerCase() === f.name.toLowerCase());
+  return clash && f.remote ? f.remote : f.name;
+}

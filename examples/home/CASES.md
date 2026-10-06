@@ -2145,22 +2145,22 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### links/named-folders
 
-- Repo named by remote: short name — `.build/infra.toml`, `.build/kestrel.toml`, `.build/product.toml` (21.x; test 'a
-  remote as evidence: host and path, never a user or a password')
+- Repo named by remote: short name — `.build/infra.toml`, `.build/kestrel.toml`, `.build/product.toml` (21.6; test 'a
+  name travels with what it names'; e2e 'named folders')
 - Two different repos sharing a short name: qualified name — `.build/product.toml`, `notes/research/link-styles.md`
-  (21.x 'qualified when two different repositories share the short one')
-- Copies of one repository: default copy — `.build/kestrel.toml`, `notes/research/route-engine-spike/README.md` (21.x
-  copies table; test 'a second copy (a second clone)')
+  (21.6; test 'different folders of one name: repositories by their qualified names')
+- Copies of one repository: default copy — `.build/kestrel.toml`, `notes/research/route-engine-spike/README.md` (21.6;
+  test 'the lookup: the first copy found is the default')
 - Different repositories with different remotes, same folder name — `.build/product.toml` (21.x copies table)
 - Copies of one .slipbox/ folder vs different .slipbox/ folders of one name —
-  `Downloads/notes-backup-2026-07/.slipbox/config.toml`, `Downloads/notes-backup-2026-07/index.md` (21.x table; 'two
-  without one are taken as different')
+  `Downloads/notes-backup-2026-07/.slipbox/config.toml`, `Downloads/notes-backup-2026-07/index.md` (21.6; test 'a
+  second copy of a folder opened'; e2e 'named folders')
 - A .slipbox name overrides the repository's remote name — `notes/research/route-engine-spike/.slipbox/config.toml`,
-  `notes/research/route-engine-spike/README.md` (21.x 'named by the .slipbox one')
-- Private .slipbox (--private) names — `.build/infra.toml` (21.x 'A name for one copy only'; test 'init --private keeps
-  .slipbox/ out of git')
-- Renamed folder keeps its old name — `notes/.slipbox/config.toml`, `notes/research/link-styles.md` (21.x 'A folder
-  renamed')
+  `notes/research/route-engine-spike/README.md` (21.6; test 'a name travels with what it names')
+- Private .slipbox (--private) names — `.build/infra.toml` (21.6 'A name for one copy only'; tests 'init --private keeps
+  .slipbox/ out of git', 'a name travels with what it names')
+- Renamed folder keeps its old name — `notes/.slipbox/config.toml`, `notes/research/link-styles.md` (21.6; test
+  'different folders of one name… old names still find')
 - slipbox folders listing and default — `.build/product.toml`, `notes/.slipbox/config.toml` (21.x Words and commands)
 - Pointer to a name not on this machine — `notes/index.md`, `notes/research/link-styles.md` (21.x 'isn't on this
   machine yet')
@@ -2307,7 +2307,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `hobbies/photography/.slipbox/config.toml`, `work/infra/README.md` (21.x 'Personal state'; test 'a plain folder keeps
   its own positions and session')
 - Durable lookup survives and handles missing/hand-edited lists — `.build/extras.toml` (test 'a list that can't be
-  written: the path's key'; 'a plain folder's entry at a vault's path')
+  written: the path's key'; 'a plain folder's entry at a vault's path'; 21.6 'gone copies stay listed')
 - Settings: nearest .slipbox/config.toml, then outer, then user's; programs only from user config —
   `notes/.slipbox/config.toml`, `work/product/design/.slipbox/config.toml` (test 'a vault inside another: its own
   settings, then the outer one's, then yours; a program named in a vault's never runs')

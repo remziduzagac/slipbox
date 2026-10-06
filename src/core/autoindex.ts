@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { type Config, loadConfig } from "./config.ts";
 import { readJson, writeJson, ensureDir } from "./fsutil.ts";
 import { Graph } from "./graph.ts";
+import { markFolderFound, recordFolder } from "./folders.ts";
 import { stateHome } from "./paths.ts";
 import { noteIndexed, readRegistry, writeRegistry } from "./registry.ts";
 import { configFilesFor, isNeverRoot, isVaultRoot, rootAt } from "./vault.ts";
@@ -122,7 +123,11 @@ export class AutoIndex {
     const had = readRegistry().some((v) => v.kind === "vault" && v.path === root);
     try {
       const loc = rootAt(root);
-      if (!had) this.markFound(loc.key);
+      // Its name in the lookup (21.6): new, as found; known, seen again.
+      if (!had) {
+        this.markFound(loc.key);
+        markFolderFound(root);
+      } else recordFolder(root, { found: true });
       return new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "lazy");
     } catch {
       return null;

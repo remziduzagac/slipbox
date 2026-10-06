@@ -3214,6 +3214,14 @@ describe("the background auto-index of the home folder (20.9)", () => {
       expect(v.indexed).toBeDefined();
       expect(existsSync(join(cacheDir(v), "index.json"))).toBe(true);
     }
+    // In the lookup pointers use (21.6): the named one, as found; the unnamed ones not.
+    const { readFolders } = await import("../src/core/folders.ts");
+    const named = readFolders().filter((f) => f.copies.some((c) => c.path.startsWith(`${home}/`)));
+    // (notes/inner's .slipbox/ had no name: the open gave it one, as 17.x does.)
+    expect(named.map((f) => [f.name, f.copies.map((c) => [c.path.slice(home.length + 1), c.found])]).sort()).toEqual([
+      [`anotes-${basename(home)}`, [["notes", true]]],
+      [`anotes-${basename(home)}-inner`, [["notes/inner", true]]],
+    ]);
     // A pass done: nothing more for a day.
     expect(ai.idle).toBe(true);
     expect(ai.step(50)).toBe(false);
@@ -4376,5 +4384,141 @@ describe("links written in the convention (21.5)", () => {
     const bad = await cli(["--root", dir, "link", "sub/b.md", "--style", "fancy"]);
     expect(bad.code).toBe(2);
     expect(bad.err).toContain("--style is markdown or wiki (got fancy)");
+  });
+});
+
+describe("named folders (21.6)", () => {
+  const uniq = () => basename(mkdtempSync(join(tmpdir(), "n"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
+  /** A folder: a `.slipbox/` with this name and id, and/or a repository with this origin. */
+  const folder = (opts: { name?: string; id?: string; old?: string[]; remote?: string; obsidian?: boolean } = {}) => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-named-"));
+    if (opts.name || opts.id) {
+      mkdirSync(join(dir, ".slipbox"));
+      const fields = [opts.id ? `id = "${opts.id}"` : "", opts.name ? `name = "${opts.name}"` : "", opts.old ? `previous_names = ${JSON.stringify(opts.old)}` : ""].filter(Boolean);
+      writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\n${fields.join("\n")}\n`);
+    }
+    if (opts.remote !== undefined) {
+      mkdirSync(join(dir, ".git", "info"), { recursive: true });
+      writeFileSync(join(dir, ".git", "config"), `[core]\n\tbare = false\n${opts.remote ? `[remote "origin"]\n\turl = ${opts.remote}\n` : ""}`);
+    }
+    if (opts.obsidian) mkdirSync(join(dir, ".obsidian"));
+    return dir;
+  };
+
+  test("a name travels with what it names: .slipbox/'s, else the remote's; never a folder's own", async () => {
+    const { folderIdentity } = await import("../src/core/folders.ts");
+    const id = uniq();
+    expect(folderIdentity(folder({ name: "notes", id, old: ["kb"] }))).toMatchObject({ key: `slipbox:${id}`, name: "notes", remote: null, id, old: ["kb"], private: false });
+    expect(folderIdentity(folder({ remote: "git@github.com:me/Research.git" }))).toMatchObject({ key: "remote:github.com/me/Research", name: "Research", remote: "github.com/me/Research" });
+    // Two remotes: origin's names it, wherever it's listed.
+    const two = folder({ remote: "" });
+    writeFileSync(join(two, ".git", "config"), '[remote "mirror"]\n\turl = https://github.com/them/mirror-name\n[remote "origin"]\n\turl = git@github.com:me/fork-name.git\n[remote "upstream"]\n\turl = https://github.com/them/upstream-name\n');
+    expect(folderIdentity(two)).toMatchObject({ name: "fork-name", remote: "github.com/me/fork-name" });
+    // Both: the name someone chose; the remote kept, its qualified name.
+    expect(folderIdentity(folder({ name: "papers", id, remote: "https://gitlab.com/lab/research.git" }))).toMatchObject({ key: `slipbox:${id}`, name: "papers", remote: "gitlab.com/lab/research" });
+    // Unnamed: a tool's marker alone, a repository with no remote, a .slipbox/ without a name.
+    expect(folderIdentity(folder({ obsidian: true }))).toBeNull();
+    expect(folderIdentity(folder({ remote: "" }))).toBeNull();
+    expect(folderIdentity(folder({ id: uniq() }))).toBeNull();
+    // Private (`init --private`): git's exclude keeps its .slipbox/ out.
+    const priv = folder({ name: "review", id: uniq(), remote: "git@github.com:me/review.git" });
+    writeFileSync(join(priv, ".git", "info", "exclude"), "/.slipbox/\n");
+    expect(folderIdentity(priv)?.private).toBe(true);
+    // A worktree: its main checkout is the copy.
+    const main = folder({ remote: "git@github.com:me/wt.git" });
+    mkdirSync(join(main, ".git", "worktrees", "feature"), { recursive: true });
+    writeFileSync(join(main, ".git", "worktrees", "feature", "commondir"), "../..\n");
+    const wt = mkdtempSync(join(tmpdir(), "slipbox-named-wt-"));
+    writeFileSync(join(wt, ".git"), `gitdir: ${join(main, ".git", "worktrees", "feature")}\n`);
+    expect(folderIdentity(wt)).toMatchObject({ key: "remote:github.com/me/wt", name: "wt", copy: main });
+  });
+
+  test("the lookup: the first copy found is the default; a second asks once; gone copies stay listed", async () => {
+    const { lookupFolder, readFolders, recordFolder, setDefaultCopy } = await import("../src/core/folders.ts");
+    const name = `n${uniq()}`;
+    const id = uniq();
+    const a = folder({ name, id });
+    const b = folder({ name, id });
+    expect(recordFolder(a)).toMatchObject({ name, copies: [{ path: a }], default: a });
+    expect(recordFolder(a)?.ask).toBeUndefined(); // seen again: not a second copy
+    expect(recordFolder(b, { found: true })).toMatchObject({ default: a, ask: true, copies: [{ path: a }, { path: b, found: true }] });
+    expect(lookupFolder(name)).toMatchObject({ status: "found", path: a });
+    // Found by the index, then opened: no longer only found.
+    expect(recordFolder(b)?.copies[1]).toEqual({ path: b, seen: expect.any(String) });
+    setDefaultCopy(`slipbox:${id}`, "/not/a/copy");
+    expect(readFolders().find((f) => f.name === name)?.default).toBe(a); // not a copy: not the default
+    setDefaultCopy(`slipbox:${id}`, b);
+    expect(readFolders().find((f) => f.name === name)).toMatchObject({ default: b, asked: true });
+    expect(readFolders().find((f) => f.name === name)?.ask).toBeUndefined();
+    // A copy gone (moved, unplugged) and another come: nothing to choose between — not asked.
+    const lone = `l${uniq()}`;
+    const lid = uniq();
+    const gone = folder({ name: lone, id: lid });
+    recordFolder(gone);
+    rmSync(gone, { recursive: true });
+    expect(recordFolder(folder({ name: lone, id: lid }))?.ask).toBeUndefined();
+    // A third copy: asked already, never again.
+    const c = folder({ name, id });
+    expect(recordFolder(c)?.ask).toBeUndefined();
+    expect(lookupFolder(name.toUpperCase())).toMatchObject({ status: "found", path: b });
+    // The default gone: another copy, said so; all gone: unavailable, still listed.
+    rmSync(b, { recursive: true });
+    expect(lookupFolder(name)).toMatchObject({ status: "found", path: a, via: "another-copy" });
+    rmSync(a, { recursive: true });
+    rmSync(c, { recursive: true });
+    expect(lookupFolder(name)).toMatchObject({ status: "unavailable", path: b });
+    expect(lookupFolder(`gone${uniq()}`)).toMatchObject({ status: "unknown", reason: expect.stringContaining("isn't on this machine yet: open it, or let the index find it") });
+  });
+
+  test("different folders of one name: repositories by their qualified names, .slipbox/ folders until one is renamed; old names still find", async () => {
+    const { lookupFolder, pointerName, readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const short = `r${uniq()}`;
+    const mine = folder({ remote: `git@github.com:me/${short}.git` });
+    const theirs = folder({ remote: `https://gitlab.com/lab/${short}` });
+    recordFolder(mine);
+    recordFolder(theirs);
+    expect(lookupFolder(short)).toMatchObject({ status: "ambiguous", candidates: [`github.com/me/${short}`, `gitlab.com/lab/${short}`] });
+    expect(lookupFolder(`gitlab.com/lab/${short}`)).toMatchObject({ status: "found", path: theirs });
+    const entry = readFolders().find((f) => f.remote === `github.com/me/${short}`)!;
+    expect(pointerName(entry)).toBe(`github.com/me/${short}`);
+    // Two .slipbox/ folders, one name, different ids.
+    const same = `s${uniq()}`;
+    const x = folder({ name: same, id: uniq() });
+    recordFolder(x);
+    expect(pointerName(readFolders().find((f) => f.name === same)!)).toBe(same); // alone: its short name
+    recordFolder(folder({ name: same, id: uniq() }));
+    const amb = lookupFolder(same);
+    expect(amb).toMatchObject({ status: "ambiguous", reason: `2 different folders are called ${same}: rename one (slipbox name <new>)` });
+    // Renamed in its config, its old name kept: the old name still finds it, said so.
+    const was = `w${uniq()}`;
+    const now = `v${uniq()}`;
+    const id = uniq();
+    const p = folder({ name: was, id });
+    recordFolder(p);
+    writeFileSync(join(p, ".slipbox", "config.toml"), `[vault]\nid = "${id}"\nname = "${now}"\nprevious_names = ["${was}"]\n`);
+    recordFolder(p);
+    expect(lookupFolder(now)).toMatchObject({ status: "found", path: p });
+    expect(lookupFolder(was)).toMatchObject({ status: "found", path: p, via: "old-name" });
+    // No longer named (its .slipbox/ gone, no remote): out of the lookup.
+    rmSync(join(p, ".slipbox"), { recursive: true });
+    expect(recordFolder(p)).toBeNull();
+    expect(lookupFolder(now)).toMatchObject({ status: "unknown" });
+  });
+
+  test("opened, a folder is in the lookup; info says its name, copies and the one links open", async () => {
+    const name = `i${uniq()}`;
+    const id = uniq();
+    const a = folder({ name, id });
+    const b = folder({ name, id });
+    writeFileSync(join(a, "x.md"), "# X\n");
+    writeFileSync(join(b, "x.md"), "# X\n");
+    await cli(["--root", a, "ls"]);
+    const r = JSON.parse((await cli(["--root", b, "info", "--json"])).out).data.folder;
+    expect(r).toMatchObject({ name, pointer: name, remote: null, id, private: false, default: a });
+    expect(r.copies).toEqual([expect.objectContaining({ path: a, here: false, available: true }), expect.objectContaining({ path: b, here: true, available: true })]);
+    expect((await cli(["--root", b, "info"])).out).toContain(`name      ${name} — 2 copies, links open ${a}`);
+    const unnamed = folder({ obsidian: true });
+    writeFileSync(join(unnamed, "y.md"), "# Y\n");
+    expect((await cli(["--root", unnamed, "info"])).out).toContain("name      none — no remote and no .slipbox/ name: linked to by relative path");
   });
 });

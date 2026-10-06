@@ -75,7 +75,8 @@ import { confirmMove, declineMove, type KnownVault, readIdentity, readRegistry, 
 import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { sameCollection } from "../core/collection.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
-import { displayNames, locName } from "../core/names.ts";
+import { displayNames, locName, tildePath } from "../core/names.ts";
+import { copyAvailable, folderIdentity, readFolders, setDefaultCopy } from "../core/folders.ts";
 import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
@@ -708,6 +709,8 @@ export class App {
     // A copy of this vault gone from where it was (20.5): did it move here? Else, opened on a loose
     // folder, the known vaults (17.14).
     if (!this.offerMove() && opts.launcher && readRegistry().some((v) => v.kind === "vault" && v.path !== this.loc.root && existsSync(v.path))) this.openVaultList();
+    // A second copy of this folder (21.6): which one links open, asked once.
+    if (!this.overlay) this.askDefaultCopy();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
     this.stopLazy = onLoaded(() => {
       this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
@@ -4339,6 +4342,28 @@ export class App {
 
   /** Add a footnote (3.18): its text asked; `[^N]` after the cursor's word, `[^N]: text` at the end. */
   /**
+   * A second copy of this folder seen (21.6): which one links to its name open — asked once, the
+   * answer remembered; dismissed, the first found stays, and it isn't asked again.
+   */
+  askDefaultCopy(): void {
+    const ident = this.loc.mode === "vault" ? folderIdentity(this.loc.root) : null;
+    const f = ident ? readFolders().find((x) => x.key === ident.key) : undefined;
+    const here = f?.copies.filter((c) => copyAvailable(c.path)) ?? [];
+    if (!f?.ask || here.length < 2) return;
+    this.openList({
+      title: `${f.name}: ${here.length} copies on this machine — which do links to it open?`,
+      items: here.map((c) => ({ label: tildePath(c.path), hint: c.path === f.default ? "links open it now" : undefined, data: c.path })),
+      selected: Math.max(0, here.findIndex((c) => c.path === f.default)),
+      filterable: false,
+      accept: (item) => {
+        setDefaultCopy(f.key, item.data as string);
+        this.message("info", `links to ${f.name} open ${tildePath(item.data as string)}`);
+      },
+      cancel: () => setDefaultCopy(f.key, null),
+    });
+  }
+
+  /**
    * The link picker (21.5): a note or file of this root picked, and a link to it written at the
    * cursor as the root's convention writes one — typing, where the cursor is; reading, after the word
    * under it (out of a link or code span), as a footnote's reference goes — then saved.
@@ -7111,7 +7136,7 @@ export class App {
     }
     if (from && !how.back) this.vaultTrail.push(from);
     this.region = "content";
-    this.offerMove();
+    if (!this.offerMove()) this.askDefaultCopy();
     this.relayoutAll();
     this.publishState();
     this.recordConfigStamps();

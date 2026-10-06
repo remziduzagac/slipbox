@@ -277,7 +277,7 @@ LSP face (`11.x`), and `17.20` below. In short:
 ## `21.x` — paths inside, conventions at the edges
 
 *Proposed 2026-10-05 with the user, after a survey of how other tools handle links, and reviewed with the user the same
-day; being built (plan `21.x`: `21.1`–`21.5` done). The model in full is `docs/idea.md`, "Paths inside,
+day; being built (plan `21.x`: `21.1`–`21.6` done). The model in full is `docs/idea.md`, "Paths inside,
 conventions at the edges". It revises `20.x` above.*
 
 - **Inside, a link is a path;** each written form — a relative path, `/…`, an extensionless path, a wikilink,
@@ -303,6 +303,11 @@ conventions at the edges". It revises `20.x` above.*
   it — a tool's as it writes that style, the notes' among their links of that style. **A markdown link is never by
   name** (slipbox reads it as a path, `21.2`): Obsidian's default "shortest" says nothing of one, and the next source
   answers. Two-thirds exactly (6 of 9) is a majority.
+- **Named folders, built** (`21.6`, 2026-10-06): a `.slipbox/` name wins over a repository's remote (someone chose
+  it; the remote is kept as its qualified name); copies are one `.slipbox/` id, else one remote; a worktree's copy is
+  its main checkout; a `.slipbox/` git's exclude file keeps out is private. The question about a second copy comes only
+  when two copies are here — a copy gone (moved, unplugged) stays listed, unavailable, and lookups take another copy
+  meanwhile, said so. Built beside the 20.x model (display names, instances, `vault:path`), which `21.12` removes.
 - **Links slipbox writes** (`21.5`, 2026-10-06): completion (`](` and `[[`), the link picker (`space l i`) and `slipbox
   link`, which prints one for an agent, all through `core/write-link.ts`. A wikilink is a name only where the name
   reaches the note from the linking file — else its path from the root, never a name that would land elsewhere; a

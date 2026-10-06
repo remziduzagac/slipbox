@@ -7557,6 +7557,47 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(statusRow(feat.frame())).toContain(`${name}@feat-2`);
   });
 
+  test("a second copy of a folder opened: which one links to its name open — asked once, remembered; dismissed, the first stays (21.6)", async () => {
+    const { readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const copies = (tag: string) => {
+      const id = basename(mkdtempSync(join(sandbox, "cp-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
+      const name = `${tag}${id.slice(-6)}`;
+      const mk = () => {
+        const dir = mkdtempSync(join(sandbox, `${tag}-`));
+        mkdirSync(join(dir, ".slipbox"));
+        writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${id}"\nname = "${name}"\n`);
+        writeFileSync(join(dir, "n.md"), "# N\n");
+        return dir;
+      };
+      return { name, a: mk(), b: mk() };
+    };
+    const { name, a, b } = copies("pick");
+    recordFolder(a);
+    const h = await harness({ root: b, open: "n.md" });
+    const o = h.app.overlay as ListOverlay;
+    expect(o.title).toBe(`${name}: 2 copies on this machine — which do links to it open?`);
+    expect(o.items.map((i) => [i.label, i.hint])).toEqual([[a, "links open it now"], [b, undefined]]);
+    await h.keys("down", "enter");
+    expect(readFolders().find((f) => f.name === name)).toMatchObject({ default: b, asked: true });
+    expect(h.app.messages.at(-1)!.text).toBe(`links to ${name} open ${b}`);
+    // Opened again, either copy: not asked.
+    expect((await harness({ root: a, open: "n.md" })).app.overlay).toBeNull();
+    // Dismissed: the first found stays the one, and it isn't asked again.
+    const d = copies("esc");
+    recordFolder(d.a);
+    const e = await harness({ root: d.b, open: "n.md" });
+    expect((e.app.overlay as ListOverlay).title).toContain("which do links to it open?");
+    await e.keys("escape");
+    expect(readFolders().find((f) => f.name === d.name)).toMatchObject({ default: d.a, asked: true });
+    expect((await harness({ root: d.b, open: "n.md" })).app.overlay).toBeNull();
+    // To be asked, but one copy gone since: nothing to choose between — not asked.
+    const g = copies("gone");
+    recordFolder(g.a);
+    expect(recordFolder(g.b)?.ask).toBe(true);
+    rmSync(g.a, { recursive: true });
+    expect((await harness({ root: g.b, open: "n.md" })).app.overlay).toBeNull();
+  });
+
   test("a vault opened where a copy of it, gone from where it was, may have moved: asked — yes takes its state, no isn't asked again, esc asks next time (20.5)", async () => {
     const { PositionStore } = await import("../src/core/position.ts");
     const { stateDir } = await import("../src/core/paths.ts");
