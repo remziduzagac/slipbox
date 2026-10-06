@@ -1,0 +1,2002 @@
+id,date,title,route,km,moving_min,climb_m,avg_hr,bike,notes
+R0001,2020-01-07,Turbo: cadence drills,Indoor trainer,18,44,153,134,Roadie (steel),
+R0002,2020-01-09,Tempo blocks,Windmill lane loop,61,146,415,140,Roadie (steel),
+R0003,2020-01-10,Turbo: cadence drills,Indoor trainer,27,68,256,141,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R0004,2020-01-11,Long ride: Chalk ridge,Chalk ridge,119,315,1141,124,Roadie (steel),
+R0005,2020-01-12,Long ride: Chalk ridge,Chalk ridge,90,238,815,140,Roadie (steel),Rain from the start
+R0006,2020-01-13,Commute x2,Commute via the viaduct,27,76,199,120,Commuter,
+R0007,2020-01-15,Tempo blocks,Windmill lane loop,39,92,426,145,Roadie (steel),Rain from the start
+R0008,2020-01-17,Z2 endurance,Coast road out-and-back,53,143,501,133,Fixed winter bike,
+R0009,2020-01-18,Long ride: Lakes loop,Lakes loop,115,301,1116,124,Roadie (steel),"Coffee stop, then home"
+R0010,2020-01-19,Long ride: Lakes loop,Lakes loop,124,298,1225,131,Roadie (steel),
+R0011,2020-01-21,Turbo: cadence drills,Indoor trainer,27,63,243,126,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R0012,2020-01-26,Sunday club ride,Sunday club ride,45,105,283,141,Roadie (steel),
+R0013,2020-01-27,Group ride: Windmill lane loop,Windmill lane loop,62,172,379,128,Roadie (steel),
+R0014,2020-01-29,Tempo blocks,Windmill lane loop,43,109,264,156,Roadie (steel),
+R0015,2020-01-30,Tempo blocks,Windmill lane loop,58,141,364,147,Roadie (steel),"Cold, so overshoes, gloves on"
+R0016,2020-02-01,Long ride: Lakes loop,Lakes loop,99,252,1234,126,Roadie (steel),"Cold, so overshoes, gloves on"
+R0017,2020-02-02,Sunday club ride,Sunday club ride,50,126,369,128,Roadie (steel),
+R0018,2020-02-03,Tempo blocks,Windmill lane loop,45,105,345,152,Roadie (steel),
+R0019,2020-02-04,Sweet spot 2x20,Canal towpath,33,82,325,149,Roadie (steel),"Cold, so overshoes, gloves on"
+R0020,2020-02-05,Hill repeats,Hill repeats at Ashdown,24,80,388,150,Roadie (steel),
+R0021,2020-02-05,Evening spin,Windmill lane loop,16,44,118,126,Roadie (steel),
+R0022,2020-02-06,Tempo blocks,Windmill lane loop,52,126,349,145,Roadie (steel),"Cold, so overshoes, gloves on"
+R0023,2020-02-06,Evening spin,Windmill lane loop,19,55,139,116,Roadie (steel),"Cold, so overshoes, gloves on"
+R0024,2020-02-07,Turbo: cadence drills,Indoor trainer,26,68,230,127,Roadie (steel),
+R0025,2020-02-08,Long ride: Chalk ridge,Chalk ridge,87,236,1178,139,Roadie (steel),Headwind all the way back
+R0026,2020-02-09,Easy spin,River valley spin,24,63,189,121,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0027,2020-02-12,Commute x2,Commute via the viaduct,20,58,133,122,Fixed winter bike,Chain noisy; oiled after
+R0028,2020-02-13,Tempo blocks,Windmill lane loop,52,142,445,149,Roadie (steel),
+R0029,2020-02-15,Long ride: Coast road out-and-back,Coast road out-and-back,104,266,1504,139,Roadie (steel),Legs heavy
+R0030,2020-02-16,Long ride: Long way home,Long way home,119,320,1330,129,Roadie (steel),"Cold, so overshoes, gloves on"
+R0031,2020-02-17,Commute x2,Commute via the viaduct,19,54,136,121,Fixed winter bike,
+R0032,2020-02-17,Evening spin,Windmill lane loop,16,43,144,126,Roadie (steel),"Tailwind out, paid for it later"
+R0033,2020-02-18,Commute x2,Commute via the viaduct,27,77,228,112,Commuter,
+R0034,2020-02-19,Hill repeats,Hill repeats at Ashdown,36,126,576,148,Roadie (steel),
+R0035,2020-02-20,Tempo blocks,Windmill lane loop,47,132,304,155,Roadie (steel),
+R0036,2020-02-20,Evening spin,Windmill lane loop,16,41,137,114,Roadie (steel),
+R0037,2020-02-21,Recovery spin,River valley spin,39,109,316,113,Fixed winter bike,Felt great
+R0038,2020-02-21,Evening spin,Windmill lane loop,22,63,141,123,Roadie (steel),
+R0039,2020-02-22,Long ride: Coast road out-and-back,Coast road out-and-back,113,285,1408,122,Roadie (steel),
+R0040,2020-02-23,Long ride: Chalk ridge,Chalk ridge,95,253,1260,140,Roadie (steel),
+R0041,2020-02-24,Tempo blocks,Windmill lane loop,44,110,439,155,Roadie (steel),"Cold, so overshoes, gloves on"
+R0042,2020-02-25,Z2 endurance,Coast road out-and-back,55,147,500,134,Fixed winter bike,
+R0043,2020-02-25,Evening spin,Windmill lane loop,14,39,119,119,Roadie (steel),
+R0044,2020-02-26,Tempo blocks,Windmill lane loop,30,81,353,150,Roadie (steel),"Coffee stop, then home"
+R0045,2020-02-27,Tempo blocks,Windmill lane loop,61,163,630,152,Roadie (steel),
+R0046,2020-02-28,Commute x2,Commute via the viaduct,23,67,193,113,Fixed winter bike,
+R0047,2020-02-29,Long ride: Chalk ridge,Chalk ridge,124,302,1449,138,Roadie (steel),
+R0048,2020-03-01,Sunday club ride,Sunday club ride,30,76,190,141,Roadie (steel),
+R0049,2020-03-02,Group ride: Reservoir circuit,Reservoir circuit,31,85,223,132,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0050,2020-03-03,Sweet spot 2x20,Canal towpath,36,87,244,147,Roadie (steel),
+R0051,2020-03-04,Hill repeats,Hill repeats at Ashdown,28,88,400,146,Roadie (steel),"Coffee stop, then home"
+R0052,2020-03-05,Tempo blocks,Windmill lane loop,42,118,305,154,Roadie (steel),Felt great
+R0053,2020-03-06,Turbo: cadence drills,Indoor trainer,28,68,219,142,Roadie (steel),
+R0054,2020-03-06,Evening spin,Windmill lane loop,22,56,159,113,Roadie (steel),
+R0055,2020-03-07,Long ride: Lakes loop,Lakes loop,84,215,895,134,Roadie (steel),"Coffee stop, then home"
+R0056,2020-03-08,Easy spin,River valley spin,45,124,373,112,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0057,2020-03-09,Tempo blocks,Windmill lane loop,47,115,285,152,Roadie (steel),
+R0058,2020-03-09,Evening spin,Windmill lane loop,22,59,196,111,Roadie (steel),
+R0059,2020-03-11,Commute x2,Commute via the viaduct,25,68,249,122,Fixed winter bike,
+R0060,2020-03-11,Evening spin,Windmill lane loop,14,36,135,115,Roadie (steel),
+R0061,2020-03-12,Easy spin,River valley spin,23,66,117,122,Fixed winter bike,
+R0062,2020-03-13,Recovery spin,River valley spin,35,89,374,122,Fixed winter bike,
+R0063,2020-03-14,Long ride: Lakes loop,Lakes loop,97,227,1229,137,Roadie (steel),Rode with the club
+R0064,2020-03-15,Sunday club ride,Sunday club ride,33,91,385,133,Roadie (steel),"Tailwind out, paid for it later"
+R0065,2020-03-16,Group ride: Reservoir circuit,Reservoir circuit,38,103,347,128,Roadie (steel),
+R0066,2020-03-17,Z2 endurance,Coast road out-and-back,41,104,372,130,Fixed winter bike,Rain from the start
+R0067,2020-03-19,Group ride: Reservoir circuit,Reservoir circuit,42,104,454,145,Roadie (steel),
+R0068,2020-03-20,Commute x2,Commute via the viaduct,18,49,143,117,Commuter,
+R0069,2020-03-21,Long ride: Chalk ridge,Chalk ridge,83,210,664,132,Roadie (steel),
+R0070,2020-03-22,Long ride: Lakes loop,Lakes loop,101,240,1510,125,Roadie (steel),
+R0071,2020-03-23,Group ride: Reservoir circuit,Reservoir circuit,39,100,401,143,Roadie (steel),
+R0072,2020-03-24,Turbo: cadence drills,Indoor trainer,33,77,227,141,Roadie (steel),
+R0073,2020-03-26,Tempo blocks,Windmill lane loop,56,149,553,155,Roadie (steel),
+R0074,2020-03-28,Long ride: Chalk ridge,Chalk ridge,108,292,1164,130,Roadie (steel),
+R0075,2020-03-29,Sunday club ride,Sunday club ride,32,81,242,146,Roadie (steel),
+R0076,2020-03-30,Tempo blocks,Windmill lane loop,30,71,253,150,Roadie (steel),
+R0077,2020-03-31,Commute x2,Commute via the viaduct,18,48,120,127,Fixed winter bike,Chain noisy; oiled after
+R0078,2020-04-04,Long ride: Long way home,Long way home,112,311,1481,122,Roadie (steel),Sunrise start
+R0079,2020-04-06,Tempo blocks,Windmill lane loop,41,110,410,147,Roadie (steel),
+R0080,2020-04-06,Evening spin,Windmill lane loop,16,44,125,114,Roadie (steel),
+R0081,2020-04-08,Tempo blocks,Windmill lane loop,58,143,517,138,Roadie (steel),
+R0082,2020-04-09,Easy spin,River valley spin,24,70,210,110,Commuter,Felt great
+R0083,2020-04-10,Recovery spin,River valley spin,37,108,378,118,Commuter,Felt great
+R0084,2020-04-11,Long ride: Chalk ridge,Chalk ridge,102,246,1280,140,Roadie (steel),
+R0085,2020-04-12,Easy spin,River valley spin,38,104,271,116,Roadie (steel),
+R0086,2020-04-13,Commute x2,Commute via the viaduct,26,67,246,116,Commuter,
+R0087,2020-04-14,Z2 endurance,Coast road out-and-back,35,93,368,124,Roadie (steel),
+R0088,2020-04-15,Commute x2,Commute via the viaduct,20,53,199,124,Commuter,Chain noisy; oiled after
+R0089,2020-04-16,Easy spin,River valley spin,27,68,278,116,Commuter,
+R0090,2020-04-17,Recovery spin,River valley spin,24,65,188,117,Commuter,
+R0091,2020-04-19,Sunday club ride,Sunday club ride,49,127,536,146,Roadie (steel),
+R0092,2020-04-19,Evening spin,Windmill lane loop,22,55,144,124,Commuter,Rain from the start
+R0093,2020-04-20,Commute x2,Commute via the viaduct,20,60,181,122,Commuter,
+R0094,2020-04-20,Evening spin,Windmill lane loop,18,53,108,124,Roadie (steel),
+R0095,2020-04-21,Sweet spot 2x20,Canal towpath,37,97,297,154,Roadie (steel),
+R0096,2020-04-22,Tempo blocks,Windmill lane loop,53,134,442,146,Roadie (steel),Headwind all the way back
+R0097,2020-04-24,Commute x2,Commute via the viaduct,21,54,137,113,Commuter,Felt great
+R0098,2020-04-25,Long ride: Chalk ridge,Chalk ridge,87,229,882,134,Gravel (Kestrel-built),
+R0099,2020-04-26,Easy spin,River valley spin,40,108,360,118,Roadie (steel),
+R0100,2020-04-27,Tempo blocks,Windmill lane loop,53,147,620,144,Roadie (steel),"Coffee stop, then home"
+R0101,2020-04-28,Commute x2,Commute via the viaduct,27,79,181,117,Commuter,Rain from the start
+R0102,2020-04-30,Group ride: Reservoir circuit,Reservoir circuit,41,116,437,136,Roadie (steel),
+R0103,2020-05-01,Z2 endurance,Coast road out-and-back,47,127,330,125,Roadie (steel),
+R0104,2020-05-02,Long ride: Reservoir circuit,Reservoir circuit,90,217,965,122,Gravel (Kestrel-built),Sunrise start
+R0105,2020-05-03,Sunday club ride,Sunday club ride,37,90,387,133,Roadie (steel),
+R0106,2020-05-04,Tempo blocks,Windmill lane loop,37,89,439,143,Roadie (steel),
+R0107,2020-05-06,Hill repeats,Hill repeats at Ashdown,25,77,396,159,Roadie (steel),
+R0108,2020-05-07,Group ride: Windmill lane loop,Windmill lane loop,45,122,488,136,Roadie (steel),"Group of 6, steady pace"
+R0109,2020-05-08,Z2 endurance,Coast road out-and-back,49,122,468,121,Roadie (steel),Felt great
+R0110,2020-05-09,Long ride: Coast road out-and-back,Coast road out-and-back,96,262,1101,127,Roadie (steel),Rode with the club
+R0111,2020-05-10,Easy spin,River valley spin,35,98,229,115,Roadie (steel),
+R0112,2020-05-11,Commute x2,Commute via the viaduct,18,52,116,112,Commuter,Felt great
+R0113,2020-05-12,Sweet spot 2x20,Canal towpath,61,142,523,146,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0114,2020-05-13,Tempo blocks,Windmill lane loop,38,93,342,141,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0115,2020-05-14,Easy spin,River valley spin,22,66,207,123,Roadie (steel),
+R0116,2020-05-15,Commute x2,Commute via the viaduct,21,63,145,119,Commuter,
+R0117,2020-05-17,Tempo blocks,Windmill lane loop,43,100,349,154,Roadie (steel),Felt great
+R0118,2020-05-17,Evening spin,Windmill lane loop,18,50,179,124,Commuter,"Tailwind out, paid for it later"
+R0119,2020-05-18,Group ride: Chalk ridge,Chalk ridge,43,108,372,134,Roadie (steel),
+R0120,2020-05-20,Tempo blocks,Windmill lane loop,30,82,246,152,Roadie (steel),Felt great
+R0121,2020-05-21,Group ride: Reservoir circuit,Reservoir circuit,43,113,467,130,Roadie (steel),Headwind all the way back
+R0122,2020-05-22,Recovery spin,River valley spin,27,69,184,107,Commuter,"Easy spin, recovery"
+R0123,2020-05-23,Long ride: Coast road out-and-back,Coast road out-and-back,100,249,1151,125,Roadie (steel),
+R0124,2020-05-24,Tempo blocks,Windmill lane loop,44,124,427,149,Roadie (steel),
+R0125,2020-05-24,Evening spin,Windmill lane loop,16,47,148,112,Roadie (steel),
+R0126,2020-05-25,Commute x2,Commute via the viaduct,18,52,154,119,Commuter,
+R0127,2020-05-26,Z2 endurance,Coast road out-and-back,56,140,629,126,Roadie (steel),
+R0128,2020-05-27,Commute x2,Commute via the viaduct,20,51,193,130,Commuter,
+R0129,2020-05-28,Easy spin,River valley spin,35,101,213,110,Commuter,
+R0130,2020-05-29,Z2 endurance,Coast road out-and-back,41,110,428,121,Roadie (steel),"Coffee stop, then home"
+R0131,2020-05-30,Long ride: Reservoir circuit,Reservoir circuit,100,258,1289,136,Roadie (steel),Headwind all the way back
+R0132,2020-05-31,Sunday club ride,Sunday club ride,56,152,546,135,Roadie (steel),
+R0133,2020-06-01,Tempo blocks,Windmill lane loop,32,90,327,154,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0134,2020-06-02,Commute x2,Commute via the viaduct,26,72,160,127,Commuter,
+R0135,2020-06-03,Commute x2,Commute via the viaduct,23,64,214,123,Commuter,
+R0136,2020-06-04,Easy spin,River valley spin,25,70,266,119,Roadie (steel),
+R0137,2020-06-05,Recovery spin,River valley spin,46,115,441,107,Roadie (steel),
+R0138,2020-06-05,Evening spin,Windmill lane loop,18,53,148,115,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0139,2020-06-06,Long ride: Lakes loop,Lakes loop,92,224,858,124,Roadie (steel),Sunrise start
+R0140,2020-06-07,Sunday club ride,Sunday club ride,38,89,344,142,Roadie (steel),
+R0141,2020-06-08,Tempo blocks,Windmill lane loop,46,116,461,143,Roadie (steel),
+R0142,2020-06-11,Tempo blocks,Windmill lane loop,40,99,288,149,Roadie (steel),
+R0143,2020-06-12,Recovery spin,River valley spin,22,58,225,111,Commuter,
+R0144,2020-06-12,Evening spin,Windmill lane loop,15,40,90,121,Roadie (steel),
+R0145,2020-06-13,Long ride: Long way home,Long way home,107,280,1545,124,Roadie (steel),Sunrise start
+R0146,2020-06-14,Easy spin,River valley spin,22,62,113,106,Roadie (steel),
+R0147,2020-06-15,Group ride: Windmill lane loop,Windmill lane loop,49,115,300,136,Roadie (steel),
+R0148,2020-06-16,Sweet spot 2x20,Canal towpath,33,89,386,153,Roadie (steel),
+R0149,2020-06-17,Hill repeats,Hill repeats at Ashdown,35,116,650,149,Roadie (steel),
+R0150,2020-06-18,Group ride: Chalk ridge,Chalk ridge,40,101,420,136,Roadie (steel),
+R0151,2020-06-19,Recovery spin,River valley spin,37,104,320,115,Roadie (steel),
+R0152,2020-06-20,Long ride: Chalk ridge,Chalk ridge,88,233,1064,138,Gravel (Kestrel-built),
+R0153,2020-06-21,Long ride: Coast road out-and-back,Coast road out-and-back,99,229,1102,129,Roadie (steel),
+R0154,2020-06-22,Commute x2,Commute via the viaduct,18,49,134,127,Commuter,Chain noisy; oiled after
+R0155,2020-06-23,Commute x2,Commute via the viaduct,21,59,174,129,Commuter,Chain noisy; oiled after
+R0156,2020-06-24,Commute x2,Commute via the viaduct,21,61,201,118,Commuter,Chain noisy; oiled after
+R0157,2020-06-25,Group ride: Chalk ridge,Chalk ridge,53,137,494,134,Roadie (steel),
+R0158,2020-06-26,Recovery spin,River valley spin,33,99,165,109,Roadie (steel),Felt great
+R0159,2020-06-28,Easy spin,River valley spin,46,124,386,114,Commuter,"Coffee stop, then home"
+R0160,2020-06-29,Commute x2,Commute via the viaduct,23,65,184,113,Commuter,
+R0161,2020-06-29,Evening spin,Windmill lane loop,14,35,147,127,Commuter,
+R0162,2020-07-01,Commute x2,Commute via the viaduct,22,66,186,125,Commuter,
+R0163,2020-07-02,Tempo blocks,Windmill lane loop,40,97,339,155,Roadie (steel),
+R0164,2020-07-03,Z2 endurance,Coast road out-and-back,62,169,533,135,Roadie (steel),
+R0165,2020-07-04,Long ride: Lakes loop,Lakes loop,119,330,1688,140,Roadie (steel),"Said ""never again"" at the top"
+R0166,2020-07-07,Commute x2,Commute via the viaduct,28,81,196,123,Commuter,
+R0167,2020-07-07,Evening spin,Windmill lane loop,18,47,115,114,Commuter,
+R0168,2020-07-09,Easy spin,River valley spin,28,82,146,114,Commuter,
+R0169,2020-07-10,Commute x2,Commute via the viaduct,25,64,167,123,Commuter,
+R0170,2020-07-12,Tempo blocks,Windmill lane loop,58,146,467,146,Roadie (steel),Rain from the start
+R0171,2020-07-14,Z2 endurance,Coast road out-and-back,39,106,262,131,Roadie (steel),Legs heavy
+R0172,2020-07-15,Commute x2,Commute via the viaduct,21,55,153,130,Commuter,
+R0173,2020-07-18,Long ride: Lakes loop,Lakes loop,121,316,1372,131,Roadie (steel),
+R0174,2020-07-19,Easy spin,River valley spin,40,101,396,114,Roadie (steel),"Coffee stop, then home"
+R0175,2020-07-21,Commute x2,Commute via the viaduct,18,46,175,113,Commuter,
+R0176,2020-07-22,Hill repeats,Hill repeats at Ashdown,32,97,432,160,Roadie (steel),Headwind all the way back
+R0177,2020-07-23,Easy spin,River valley spin,31,79,246,107,Commuter,
+R0178,2020-07-27,Commute x2,Commute via the viaduct,20,56,136,121,Commuter,Rain from the start
+R0179,2020-07-29,Tempo blocks,Windmill lane loop,60,169,510,156,Roadie (steel),Rain from the start
+R0180,2020-08-01,Long ride: Coast road out-and-back,Coast road out-and-back,123,293,1149,132,Roadie (steel),
+R0181,2020-08-02,Tempo blocks,Windmill lane loop,37,85,397,152,Roadie (steel),
+R0182,2020-08-03,Group ride: Reservoir circuit,Reservoir circuit,51,136,521,139,Roadie (steel),"Group of 6, steady pace"
+R0183,2020-08-04,Z2 endurance,Coast road out-and-back,56,133,552,120,Roadie (steel),
+R0184,2020-08-05,Tempo blocks,Windmill lane loop,49,127,476,146,Roadie (steel),
+R0185,2020-08-06,Easy spin,River valley spin,38,108,269,112,Roadie (steel),
+R0186,2020-08-08,Long ride: Coast road out-and-back,Coast road out-and-back,111,271,1512,126,Roadie (steel),Sunrise start
+R0187,2020-08-09,Easy spin,River valley spin,36,97,289,116,Roadie (steel),
+R0188,2020-08-13,Tempo blocks,Windmill lane loop,33,84,285,142,Roadie (steel),Headwind all the way back
+R0189,2020-08-19,Commute x2,Commute via the viaduct,24,71,218,123,Commuter,
+R0190,2020-08-24,Tempo blocks,Windmill lane loop,48,112,521,155,Roadie (steel),Felt great
+R0191,2020-08-25,Sweet spot 2x20,Canal towpath,38,90,265,144,Roadie (steel),
+R0192,2020-08-27,Easy spin,River valley spin,30,86,292,114,Commuter,Rain from the start
+R0193,2020-08-28,Recovery spin,River valley spin,40,109,372,105,Commuter,"Easy spin, recovery"
+R0194,2020-08-29,Long ride: Coast road out-and-back,Coast road out-and-back,70,187,696,139,Gravel (Kestrel-built),
+R0195,2020-08-30,Sunday club ride,Sunday club ride,37,102,393,138,Roadie (steel),Rain from the start
+R0196,2020-09-01,Z2 endurance,Coast road out-and-back,33,82,229,123,Roadie (steel),
+R0197,2020-09-02,Tempo blocks,Windmill lane loop,31,81,307,140,Roadie (steel),Headwind all the way back
+R0198,2020-09-03,Tempo blocks,Windmill lane loop,54,153,625,153,Roadie (steel),
+R0199,2020-09-05,Long ride: Lakes loop,Lakes loop,97,241,834,134,Roadie (steel),Legs heavy
+R0200,2020-09-06,Long ride: Lakes loop,Lakes loop,85,222,988,133,Roadie (steel),Rode with the club
+R0201,2020-09-07,Commute x2,Commute via the viaduct,22,57,140,128,Commuter,
+R0202,2020-09-08,Z2 endurance,Coast road out-and-back,61,154,431,130,Roadie (steel),Felt great
+R0203,2020-09-09,Tempo blocks,Windmill lane loop,48,117,301,140,Roadie (steel),
+R0204,2020-09-11,Z2 endurance,Coast road out-and-back,40,95,417,133,Roadie (steel),
+R0205,2020-09-11,Evening spin,Windmill lane loop,14,41,102,122,Roadie (steel),
+R0206,2020-09-12,Long ride: Reservoir circuit,Reservoir circuit,115,272,1072,139,Roadie (steel),Sunrise start
+R0207,2020-09-13,Tempo blocks,Windmill lane loop,37,94,343,149,Roadie (steel),
+R0208,2020-09-14,Group ride: Windmill lane loop,Windmill lane loop,58,160,430,142,Roadie (steel),"Group of 6, steady pace"
+R0209,2020-09-16,Commute x2,Commute via the viaduct,19,48,160,127,Commuter,
+R0210,2020-09-17,Easy spin,River valley spin,31,81,221,112,Roadie (steel),
+R0211,2020-09-18,Z2 endurance,Coast road out-and-back,45,120,431,126,Roadie (steel),"Coffee stop, then home"
+R0212,2020-09-19,Long ride: Long way home,Long way home,71,184,710,127,Roadie (steel),Sunrise start
+R0213,2020-09-20,Tempo blocks,Windmill lane loop,54,137,488,140,Roadie (steel),"Coffee stop, then home"
+R0214,2020-09-21,Group ride: Windmill lane loop,Windmill lane loop,48,137,336,139,Roadie (steel),
+R0215,2020-09-22,Commute x2,Commute via the viaduct,19,50,148,116,Commuter,
+R0216,2020-09-25,Recovery spin,River valley spin,23,66,224,118,Roadie (steel),
+R0217,2020-09-26,Long ride: Reservoir circuit,Reservoir circuit,121,301,1039,127,Roadie (steel),
+R0218,2020-09-27,Tempo blocks,Windmill lane loop,41,98,436,148,Roadie (steel),Rain from the start
+R0219,2020-09-27,Evening spin,Windmill lane loop,22,59,146,121,Roadie (steel),Felt great
+R0220,2020-09-28,Group ride: Chalk ridge,Chalk ridge,51,122,601,133,Roadie (steel),Felt great
+R0221,2020-09-29,Sweet spot 2x20,Canal towpath,39,104,362,140,Roadie (steel),
+R0222,2020-09-30,Hill repeats,Hill repeats at Ashdown,32,118,557,153,Roadie (steel),
+R0223,2020-09-30,Evening spin,Windmill lane loop,15,41,156,124,Roadie (steel),
+R0224,2020-10-01,Easy spin,River valley spin,31,84,179,110,Roadie (steel),
+R0225,2020-10-02,Turbo: cadence drills,Indoor trainer,22,58,134,126,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R0226,2020-10-03,Long ride: Chalk ridge,Chalk ridge,100,248,992,137,Gravel (Kestrel-built),"Said ""never again"" at the top"
+R0227,2020-10-05,Tempo blocks,Windmill lane loop,51,145,532,141,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0228,2020-10-06,Sweet spot 2x20,Canal towpath,62,161,705,152,Roadie (steel),
+R0229,2020-10-10,Long ride: Chalk ridge,Chalk ridge,73,169,840,127,Roadie (steel),Dark by the last 10 km
+R0230,2020-10-11,Easy spin,River valley spin,25,64,165,118,Commuter,Legs heavy
+R0231,2020-10-13,Commute x2,Commute via the viaduct,24,69,185,121,Commuter,Felt great
+R0232,2020-10-14,Commute x2,Commute via the viaduct,28,70,188,130,Commuter,
+R0233,2020-10-15,Group ride: Reservoir circuit,Reservoir circuit,30,80,180,131,Roadie (steel),Felt great
+R0234,2020-10-16,Turbo: cadence drills,Indoor trainer,34,90,182,136,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R0235,2020-10-17,Long ride: Lakes loop,Lakes loop,123,310,1384,140,Roadie (steel),
+R0236,2020-10-18,Sunday club ride,Sunday club ride,56,131,601,146,Roadie (steel),
+R0237,2020-10-19,Group ride: Chalk ridge,Chalk ridge,62,146,438,135,Roadie (steel),Rain from the start
+R0238,2020-10-20,Turbo: cadence drills,Indoor trainer,29,76,182,134,Roadie (steel),
+R0239,2020-10-21,Commute x2,Commute via the viaduct,18,53,146,113,Commuter,
+R0240,2020-10-22,Group ride: Reservoir circuit,Reservoir circuit,48,123,385,131,Roadie (steel),
+R0241,2020-10-24,Long ride: Coast road out-and-back,Coast road out-and-back,92,234,1214,123,Roadie (steel),Rode with the club
+R0242,2020-10-25,Sunday club ride,Sunday club ride,35,85,345,135,Roadie (steel),
+R0243,2020-10-26,Commute x2,Commute via the viaduct,26,69,190,122,Commuter,
+R0244,2020-10-27,Turbo: cadence drills,Indoor trainer,37,104,241,135,Roadie (steel),"Fan on high, still soaked"
+R0245,2020-10-27,Evening spin,Windmill lane loop,21,53,210,121,Roadie (steel),
+R0246,2020-10-28,Tempo blocks,Windmill lane loop,30,72,348,156,Roadie (steel),
+R0247,2020-10-29,Tempo blocks,Windmill lane loop,33,91,332,153,Roadie (steel),
+R0248,2020-10-31,Long ride: Reservoir circuit,Reservoir circuit,83,195,1011,133,Roadie (steel),"Tailwind out, paid for it later"
+R0249,2020-11-01,Long ride: Coast road out-and-back,Coast road out-and-back,79,202,998,136,Roadie (steel),
+R0250,2020-11-02,Tempo blocks,Windmill lane loop,41,98,277,152,Roadie (steel),Legs heavy
+R0251,2020-11-02,Evening spin,Windmill lane loop,17,47,137,126,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0252,2020-11-04,Tempo blocks,Windmill lane loop,31,75,307,154,Roadie (steel),
+R0253,2020-11-05,Easy spin,River valley spin,30,89,306,116,Fixed winter bike,
+R0254,2020-11-06,Recovery spin,River valley spin,26,69,185,110,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0255,2020-11-07,Long ride: Coast road out-and-back,Coast road out-and-back,94,258,776,127,Roadie (steel),
+R0256,2020-11-09,Group ride: Reservoir circuit,Reservoir circuit,52,126,526,133,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0257,2020-11-10,Z2 endurance,Coast road out-and-back,53,145,435,135,Fixed winter bike,
+R0258,2020-11-11,Hill repeats,Hill repeats at Ashdown,41,136,679,157,Roadie (steel),Rain from the start
+R0259,2020-11-12,Tempo blocks,Windmill lane loop,35,85,330,155,Roadie (steel),
+R0260,2020-11-14,Long ride: Long way home,Long way home,77,185,929,127,Roadie (steel),"Cold, so overshoes, gloves on"
+R0261,2020-11-15,Sunday club ride,Sunday club ride,56,146,419,132,Roadie (steel),"Cold, so overshoes, gloves on"
+R0262,2020-11-16,Group ride: Reservoir circuit,Reservoir circuit,51,140,342,130,Roadie (steel),Legs heavy
+R0263,2020-11-17,Sweet spot 2x20,Canal towpath,32,88,306,154,Roadie (steel),"Coffee stop, then home"
+R0264,2020-11-17,Evening spin,Windmill lane loop,21,61,145,117,Roadie (steel),
+R0265,2020-11-18,Commute x2,Commute via the viaduct,24,62,225,112,Fixed winter bike,
+R0266,2020-11-19,Easy spin,River valley spin,41,112,366,108,Fixed winter bike,
+R0267,2020-11-20,Commute x2,Commute via the viaduct,24,69,174,114,Fixed winter bike,Headwind all the way back
+R0268,2020-11-20,Evening spin,Windmill lane loop,16,46,132,116,Roadie (steel),"Coffee stop, then home"
+R0269,2020-11-21,Long ride: Long way home,Long way home,102,247,1184,124,Roadie (steel),
+R0270,2020-11-22,Easy spin,River valley spin,41,119,422,121,Fixed winter bike,Rain from the start
+R0271,2020-11-24,Z2 endurance,Coast road out-and-back,52,139,495,137,Fixed winter bike,
+R0272,2020-11-25,Commute x2,Commute via the viaduct,20,52,161,125,Fixed winter bike,Rain from the start
+R0273,2020-11-26,Group ride: Chalk ridge,Chalk ridge,39,96,313,131,Roadie (steel),
+R0274,2020-11-26,Evening spin,Windmill lane loop,15,38,94,119,Roadie (steel),"Cold, so overshoes, gloves on"
+R0275,2020-11-27,Turbo: cadence drills,Indoor trainer,40,109,302,128,Roadie (steel),
+R0276,2020-11-27,Evening spin,Windmill lane loop,16,45,109,127,Roadie (steel),
+R0277,2020-11-28,Long ride: Chalk ridge,Chalk ridge,73,176,1048,125,Roadie (steel),
+R0278,2020-11-29,Tempo blocks,Windmill lane loop,62,151,670,143,Roadie (steel),
+R0279,2020-11-30,Tempo blocks,Windmill lane loop,42,111,423,138,Roadie (steel),
+R0280,2020-12-01,Turbo: cadence drills,Indoor trainer,33,86,143,139,Roadie (steel),
+R0281,2020-12-02,Hill repeats,Hill repeats at Ashdown,35,105,494,148,Roadie (steel),
+R0282,2020-12-03,Group ride: Reservoir circuit,Reservoir circuit,46,109,457,137,Roadie (steel),"Group of 6, steady pace"
+R0283,2020-12-04,Turbo: cadence drills,Indoor trainer,19,53,94,141,Roadie (steel),
+R0284,2020-12-05,Long ride: Coast road out-and-back,Coast road out-and-back,93,234,759,129,Roadie (steel),
+R0285,2020-12-06,Easy spin,River valley spin,22,57,182,123,Fixed winter bike,"Wet leaves, slow descents"
+R0286,2020-12-07,Group ride: Reservoir circuit,Reservoir circuit,53,135,491,131,Roadie (steel),Rain from the start
+R0287,2020-12-08,Turbo: cadence drills,Indoor trainer,34,80,265,139,Roadie (steel),"Fan on high, still soaked"
+R0288,2020-12-09,Hill repeats,Hill repeats at Ashdown,42,133,621,161,Roadie (steel),"Tailwind out, paid for it later"
+R0289,2020-12-10,Easy spin,River valley spin,45,121,371,111,Fixed winter bike,
+R0290,2020-12-12,Long ride: Reservoir circuit,Reservoir circuit,92,244,1094,124,Roadie (steel),Dark by the last 10 km
+R0291,2020-12-13,Tempo blocks,Windmill lane loop,54,135,409,151,Roadie (steel),
+R0292,2020-12-14,Group ride: Reservoir circuit,Reservoir circuit,49,117,476,139,Roadie (steel),
+R0293,2020-12-14,Evening spin,Windmill lane loop,15,38,92,112,Roadie (steel),
+R0294,2020-12-16,Hill repeats,Hill repeats at Ashdown,42,128,633,155,Roadie (steel),
+R0295,2020-12-18,Z2 endurance,Coast road out-and-back,40,104,421,131,Fixed winter bike,Felt great
+R0296,2020-12-19,Long ride: Long way home,Long way home,122,312,1615,129,Roadie (steel),
+R0297,2020-12-20,Tempo blocks,Windmill lane loop,45,115,458,154,Roadie (steel),
+R0298,2020-12-21,Tempo blocks,Windmill lane loop,59,137,591,140,Roadie (steel),
+R0299,2020-12-22,Z2 endurance,Coast road out-and-back,35,85,244,120,Fixed winter bike,
+R0300,2020-12-23,Commute x2,Commute via the viaduct,25,67,202,117,Fixed winter bike,
+R0301,2020-12-26,Long ride: Lakes loop,Lakes loop,89,209,1033,123,Roadie (steel),
+R0302,2020-12-27,Long ride: Reservoir circuit,Reservoir circuit,98,228,1141,129,Roadie (steel),Legs heavy
+R0303,2021-01-08,Commute x2,Commute via the viaduct,18,49,143,120,Fixed winter bike,Headwind all the way back
+R0304,2021-01-09,Long ride: Long way home,Long way home,95,232,1395,130,Roadie (steel),
+R0305,2021-01-10,Sunday club ride,Sunday club ride,48,133,440,129,Roadie (steel),
+R0306,2021-01-11,Tempo blocks,Windmill lane loop,57,145,640,140,Roadie (steel),
+R0307,2021-01-12,Z2 endurance,Coast road out-and-back,32,80,257,130,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0308,2021-01-13,Tempo blocks,Windmill lane loop,33,86,232,149,Roadie (steel),Legs heavy
+R0309,2021-01-14,Easy spin,River valley spin,23,65,117,119,Fixed winter bike,
+R0310,2021-01-15,Z2 endurance,Coast road out-and-back,51,126,378,137,Fixed winter bike,Dark by the last 10 km
+R0311,2021-01-16,Long ride: Lakes loop,Lakes loop,125,329,1043,134,Roadie (steel),
+R0312,2021-01-17,Sunday club ride,Sunday club ride,60,162,432,144,Roadie (steel),
+R0313,2021-01-17,Evening spin,Windmill lane loop,19,54,164,110,Roadie (steel),"Coffee stop, then home"
+R0314,2021-01-18,Group ride: Windmill lane loop,Windmill lane loop,50,120,363,143,Roadie (steel),
+R0315,2021-01-19,Z2 endurance,Coast road out-and-back,39,107,354,128,Fixed winter bike,
+R0316,2021-01-20,Commute x2,Commute via the viaduct,18,53,112,122,Commuter,
+R0317,2021-01-21,Tempo blocks,Windmill lane loop,51,137,559,153,Roadie (steel),Dark by the last 10 km
+R0318,2021-01-22,Commute x2,Commute via the viaduct,25,74,181,117,Commuter,
+R0319,2021-01-23,Long ride: Reservoir circuit,Reservoir circuit,101,253,1505,135,Roadie (steel),
+R0320,2021-01-24,Tempo blocks,Windmill lane loop,32,77,325,143,Roadie (steel),Rode with the club
+R0321,2021-01-25,Commute x2,Commute via the viaduct,27,76,164,114,Commuter,
+R0322,2021-01-26,Z2 endurance,Coast road out-and-back,32,82,368,128,Fixed winter bike,
+R0323,2021-01-27,Tempo blocks,Windmill lane loop,46,125,369,146,Roadie (steel),Legs heavy
+R0324,2021-01-28,Easy spin,River valley spin,27,73,285,121,Fixed winter bike,
+R0325,2021-01-29,Z2 endurance,Coast road out-and-back,34,87,230,120,Fixed winter bike,
+R0326,2021-01-30,Long ride: Coast road out-and-back,Coast road out-and-back,118,284,1282,127,Roadie (steel),
+R0327,2021-01-31,Tempo blocks,Windmill lane loop,33,81,387,139,Roadie (steel),Headwind all the way back
+R0328,2021-01-31,Evening spin,Windmill lane loop,18,47,179,117,Roadie (steel),
+R0329,2021-02-01,Tempo blocks,Windmill lane loop,38,101,402,156,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0330,2021-02-01,Evening spin,Windmill lane loop,22,55,236,117,Roadie (steel),
+R0331,2021-02-02,Sweet spot 2x20,Canal towpath,36,99,384,147,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0332,2021-02-03,Hill repeats,Hill repeats at Ashdown,30,95,513,153,Roadie (steel),
+R0333,2021-02-04,Tempo blocks,Windmill lane loop,44,107,338,153,Roadie (steel),
+R0334,2021-02-06,Long ride: Reservoir circuit,Reservoir circuit,113,276,1385,126,Roadie (steel),Rode with the club
+R0335,2021-02-07,Tempo blocks,Windmill lane loop,48,123,563,151,Roadie (steel),
+R0336,2021-02-08,Tempo blocks,Windmill lane loop,46,116,505,147,Roadie (steel),"Coffee stop, then home"
+R0337,2021-02-09,Turbo: cadence drills,Indoor trainer,35,82,342,133,Roadie (steel),
+R0338,2021-02-10,Tempo blocks,Windmill lane loop,37,98,288,151,Roadie (steel),
+R0339,2021-02-11,Tempo blocks,Windmill lane loop,31,85,343,141,Roadie (steel),
+R0340,2021-02-11,Evening spin,Windmill lane loop,19,53,191,124,Roadie (steel),"Cold, so overshoes, gloves on"
+R0341,2021-02-12,Recovery spin,River valley spin,41,104,413,104,Fixed winter bike,
+R0342,2021-02-13,Long ride: Coast road out-and-back,Coast road out-and-back,103,240,866,127,Roadie (steel),"Cold, so overshoes, gloves on"
+R0343,2021-02-14,Tempo blocks,Windmill lane loop,45,117,350,144,Roadie (steel),Legs heavy
+R0344,2021-02-23,Commute x2,Commute via the viaduct,25,64,218,115,Commuter,Rain from the start
+R0345,2021-02-24,Commute x2,Commute via the viaduct,26,77,170,128,Commuter,
+R0346,2021-02-25,Easy spin,River valley spin,23,62,243,108,Fixed winter bike,Legs heavy
+R0347,2021-02-26,Commute x2,Commute via the viaduct,19,49,161,125,Fixed winter bike,Headwind all the way back
+R0348,2021-02-27,Long ride: Long way home,Long way home,75,193,681,138,Roadie (steel),Felt great
+R0349,2021-02-28,Tempo blocks,Windmill lane loop,36,86,343,144,Roadie (steel),
+R0350,2021-03-01,Group ride: Reservoir circuit,Reservoir circuit,41,99,473,139,Roadie (steel),
+R0351,2021-03-02,Commute x2,Commute via the viaduct,28,83,224,117,Commuter,
+R0352,2021-03-03,Tempo blocks,Windmill lane loop,36,102,228,138,Roadie (steel),
+R0353,2021-03-04,Easy spin,River valley spin,44,117,396,108,Fixed winter bike,Legs heavy
+R0354,2021-03-05,Recovery spin,River valley spin,40,102,365,122,Fixed winter bike,
+R0355,2021-03-06,Long ride: Chalk ridge,Chalk ridge,110,295,1482,130,Roadie (steel),
+R0356,2021-03-07,Easy spin,River valley spin,27,71,205,117,Fixed winter bike,
+R0357,2021-03-08,Commute x2,Commute via the viaduct,24,62,234,116,Fixed winter bike,
+R0358,2021-03-09,Turbo: cadence drills,Indoor trainer,32,74,263,127,Roadie (steel),
+R0359,2021-03-10,Hill repeats,Hill repeats at Ashdown,28,87,450,160,Roadie (steel),"Cold, so overshoes, gloves on"
+R0360,2021-03-12,Commute x2,Commute via the viaduct,18,50,127,128,Fixed winter bike,
+R0361,2021-03-13,Long ride: Long way home,Long way home,103,277,1033,128,Roadie (steel),
+R0362,2021-03-14,Tempo blocks,Windmill lane loop,61,155,503,156,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0363,2021-03-16,Z2 endurance,Coast road out-and-back,38,98,384,126,Fixed winter bike,"Tailwind out, paid for it later"
+R0364,2021-03-17,Hill repeats,Hill repeats at Ashdown,36,117,619,154,Roadie (steel),
+R0365,2021-03-18,Tempo blocks,Windmill lane loop,36,89,239,155,Roadie (steel),
+R0366,2021-03-19,Recovery spin,River valley spin,31,79,273,104,Fixed winter bike,"Puncture near the canal lock, fixed in ten minutes"
+R0367,2021-03-20,Long ride: Long way home,Long way home,120,306,1618,130,Roadie (steel),Felt great
+R0368,2021-03-21,Tempo blocks,Windmill lane loop,36,85,313,144,Roadie (steel),"Tailwind out, paid for it later"
+R0369,2021-03-23,Sweet spot 2x20,Canal towpath,34,86,272,158,Roadie (steel),"Tailwind out, paid for it later"
+R0370,2021-03-25,Tempo blocks,Windmill lane loop,38,97,321,144,Roadie (steel),
+R0371,2021-03-26,Recovery spin,River valley spin,41,122,275,104,Fixed winter bike,
+R0372,2021-03-27,Long ride: Reservoir circuit,Reservoir circuit,112,304,1106,140,Roadie (steel),
+R0373,2021-03-28,Tempo blocks,Windmill lane loop,56,158,655,139,Roadie (steel),
+R0374,2021-03-29,Group ride: Chalk ridge,Chalk ridge,35,94,405,129,Roadie (steel),
+R0375,2021-03-30,Z2 endurance,Coast road out-and-back,44,105,450,121,Fixed winter bike,
+R0376,2021-03-31,Commute x2,Commute via the viaduct,25,63,199,113,Fixed winter bike,
+R0377,2021-04-01,Easy spin,River valley spin,39,101,316,112,Roadie (steel),
+R0378,2021-04-03,Long ride: Coast road out-and-back,Coast road out-and-back,100,231,857,136,Roadie (steel),
+R0379,2021-04-05,Commute x2,Commute via the viaduct,21,54,174,117,Commuter,Rain from the start
+R0380,2021-04-06,Commute x2,Commute via the viaduct,19,52,137,122,Commuter,
+R0381,2021-04-11,Tempo blocks,Windmill lane loop,49,117,518,138,Roadie (steel),Rode with the club
+R0382,2021-04-12,Tempo blocks,Windmill lane loop,36,87,273,150,Roadie (steel),
+R0383,2021-04-13,Z2 endurance,Coast road out-and-back,32,85,376,124,Roadie (steel),Headwind all the way back
+R0384,2021-04-13,Evening spin,Windmill lane loop,21,55,134,125,Commuter,
+R0385,2021-04-14,Tempo blocks,Windmill lane loop,44,112,410,145,Roadie (steel),Felt great
+R0386,2021-04-16,Z2 endurance,Coast road out-and-back,32,81,342,138,Roadie (steel),
+R0387,2021-04-17,Long ride: Reservoir circuit,Reservoir circuit,102,280,924,128,Roadie (steel),Headwind all the way back
+R0388,2021-04-18,Tempo blocks,Windmill lane loop,39,93,433,150,Roadie (steel),
+R0389,2021-04-19,Commute x2,Commute via the viaduct,25,68,162,113,Commuter,Felt great
+R0390,2021-04-19,Evening spin,Windmill lane loop,19,57,170,119,Roadie (steel),"Coffee stop, then home"
+R0391,2021-04-20,Z2 endurance,Coast road out-and-back,54,154,475,125,Roadie (steel),
+R0392,2021-04-21,Commute x2,Commute via the viaduct,24,69,215,118,Commuter,
+R0393,2021-04-22,Group ride: Chalk ridge,Chalk ridge,62,160,653,146,Roadie (steel),
+R0394,2021-04-24,Long ride: Lakes loop,Lakes loop,94,260,773,128,Roadie (steel),Sunrise start
+R0395,2021-04-25,Long ride: Lakes loop,Lakes loop,111,266,1472,138,Roadie (steel),
+R0396,2021-04-27,Commute x2,Commute via the viaduct,25,70,153,118,Commuter,Rain from the start
+R0397,2021-04-27,Evening spin,Windmill lane loop,20,58,192,122,Roadie (steel),
+R0398,2021-04-28,Hill repeats,Hill repeats at Ashdown,31,114,447,151,Roadie (steel),
+R0399,2021-04-29,Tempo blocks,Windmill lane loop,45,105,427,143,Roadie (steel),
+R0400,2021-04-30,Z2 endurance,Coast road out-and-back,46,125,338,120,Roadie (steel),
+R0401,2021-05-01,Long ride: Reservoir circuit,Reservoir circuit,75,185,969,129,Roadie (steel),
+R0402,2021-05-02,Tempo blocks,Windmill lane loop,46,119,305,146,Roadie (steel),"Tailwind out, paid for it later"
+R0403,2021-05-03,Group ride: Chalk ridge,Chalk ridge,44,125,280,145,Roadie (steel),Felt great
+R0404,2021-05-04,Z2 endurance,Coast road out-and-back,30,83,307,123,Roadie (steel),
+R0405,2021-05-05,Tempo blocks,Windmill lane loop,60,145,374,144,Roadie (steel),
+R0406,2021-05-06,Tempo blocks,Windmill lane loop,44,108,300,142,Roadie (steel),
+R0407,2021-05-07,Commute x2,Commute via the viaduct,22,59,201,116,Commuter,Headwind all the way back
+R0408,2021-05-08,Long ride: Reservoir circuit,Reservoir circuit,85,234,686,135,Roadie (steel),
+R0409,2021-05-09,Tempo blocks,Windmill lane loop,40,105,394,154,Roadie (steel),
+R0410,2021-05-10,Group ride: Windmill lane loop,Windmill lane loop,42,100,420,129,Roadie (steel),"Group of 6, steady pace"
+R0411,2021-05-10,Evening spin,Windmill lane loop,21,61,164,125,Roadie (steel),"Tailwind out, paid for it later"
+R0412,2021-05-13,Group ride: Reservoir circuit,Reservoir circuit,62,163,438,133,Roadie (steel),
+R0413,2021-05-14,Z2 endurance,Coast road out-and-back,58,155,661,133,Roadie (steel),
+R0414,2021-05-15,Long ride: Lakes loop,Lakes loop,76,178,670,140,Roadie (steel),
+R0415,2021-05-16,Easy spin,River valley spin,23,68,151,109,Roadie (steel),
+R0416,2021-05-16,Evening spin,Windmill lane loop,17,49,111,124,Roadie (steel),
+R0417,2021-05-17,Commute x2,Commute via the viaduct,24,71,186,120,Commuter,
+R0418,2021-05-18,Sweet spot 2x20,Canal towpath,58,159,515,156,Roadie (steel),
+R0419,2021-05-18,Evening spin,Windmill lane loop,15,38,96,127,Roadie (steel),
+R0420,2021-05-20,Easy spin,River valley spin,38,99,223,112,Commuter,"Coffee stop, then home"
+R0421,2021-05-22,Long ride: Lakes loop,Lakes loop,95,241,905,131,Roadie (steel),Sunrise start
+R0422,2021-05-23,Tempo blocks,Windmill lane loop,30,74,297,145,Roadie (steel),Headwind all the way back
+R0423,2021-05-25,Z2 endurance,Coast road out-and-back,40,113,403,130,Roadie (steel),Legs heavy
+R0424,2021-05-25,Evening spin,Windmill lane loop,16,43,140,113,Roadie (steel),"Coffee stop, then home"
+R0425,2021-05-26,Tempo blocks,Windmill lane loop,45,110,501,154,Roadie (steel),
+R0426,2021-05-26,Evening spin,Windmill lane loop,20,56,124,127,Roadie (steel),
+R0427,2021-05-27,Group ride: Windmill lane loop,Windmill lane loop,48,124,428,136,Roadie (steel),
+R0428,2021-05-28,Commute x2,Commute via the viaduct,23,58,189,119,Commuter,Felt great
+R0429,2021-05-29,Long ride: Long way home,Long way home,110,305,1043,130,Roadie (steel),
+R0430,2021-05-30,Sunday club ride,Sunday club ride,56,158,494,128,Roadie (steel),"Coffee stop, then home"
+R0431,2021-06-01,Sweet spot 2x20,Canal towpath,38,98,290,142,Roadie (steel),Felt great
+R0432,2021-06-03,Easy spin,River valley spin,32,83,285,120,Commuter,
+R0433,2021-06-04,Recovery spin,River valley spin,46,135,366,104,Roadie (steel),
+R0434,2021-06-05,Long ride: Lakes loop,Lakes loop,132,357,1348,128,Roadie (steel),
+R0435,2021-06-08,Sweet spot 2x20,Canal towpath,41,109,283,152,Roadie (steel),
+R0436,2021-06-09,Tempo blocks,Windmill lane loop,37,99,289,151,Roadie (steel),
+R0437,2021-06-10,Easy spin,River valley spin,40,109,437,108,Roadie (steel),
+R0438,2021-06-12,Long ride: Coast road out-and-back,Coast road out-and-back,104,281,1543,125,Roadie (steel),
+R0439,2021-06-13,Tempo blocks,Windmill lane loop,56,142,362,156,Roadie (steel),
+R0440,2021-06-14,Tempo blocks,Windmill lane loop,51,125,488,145,Roadie (steel),
+R0441,2021-06-15,Sweet spot 2x20,Canal towpath,45,116,388,158,Roadie (steel),
+R0442,2021-06-16,Hill repeats,Hill repeats at Ashdown,34,120,541,152,Roadie (steel),
+R0443,2021-06-17,Tempo blocks,Windmill lane loop,46,130,352,153,Roadie (steel),
+R0444,2021-06-18,Commute x2,Commute via the viaduct,28,80,274,115,Commuter,
+R0445,2021-06-19,Long ride: Reservoir circuit,Reservoir circuit,148,347,1819,122,Gravel (Kestrel-built),
+R0446,2021-06-23,Hill repeats,Hill repeats at Ashdown,33,108,433,160,Roadie (steel),"Coffee stop, then home"
+R0447,2021-06-24,Group ride: Reservoir circuit,Reservoir circuit,43,106,387,145,Roadie (steel),
+R0448,2021-06-26,Long ride: Reservoir circuit,Reservoir circuit,83,213,1037,126,Roadie (steel),
+R0449,2021-06-28,Tempo blocks,Windmill lane loop,38,106,395,156,Roadie (steel),
+R0450,2021-06-29,Sweet spot 2x20,Canal towpath,35,91,250,148,Roadie (steel),"Tailwind out, paid for it later"
+R0451,2021-06-30,Tempo blocks,Windmill lane loop,35,97,226,139,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0452,2021-06-30,Evening spin,Windmill lane loop,14,39,101,114,Roadie (steel),Felt great
+R0453,2021-07-01,Easy spin,River valley spin,35,91,311,117,Commuter,
+R0454,2021-07-03,Long ride: Lakes loop,Lakes loop,96,237,1122,140,Roadie (steel),
+R0455,2021-07-04,Sunday club ride,Sunday club ride,59,137,575,145,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0456,2021-07-05,Commute x2,Commute via the viaduct,28,83,279,130,Commuter,
+R0457,2021-07-06,Commute x2,Commute via the viaduct,26,74,180,125,Commuter,
+R0458,2021-07-07,Commute x2,Commute via the viaduct,19,50,146,129,Commuter,Chain noisy; oiled after
+R0459,2021-07-08,Group ride: Chalk ridge,Chalk ridge,56,140,394,135,Roadie (steel),
+R0460,2021-07-09,Commute x2,Commute via the viaduct,24,62,224,114,Commuter,Felt great
+R0461,2021-07-10,Long ride: Long way home,Long way home,99,239,818,133,Roadie (steel),Rain from the start
+R0462,2021-07-11,Easy spin,River valley spin,42,122,342,110,Commuter,"Easy spin, recovery"
+R0463,2021-07-12,Tempo blocks,Windmill lane loop,54,140,502,153,Roadie (steel),
+R0464,2021-07-12,Evening spin,Windmill lane loop,21,61,206,120,Roadie (steel),"Coffee stop, then home"
+R0465,2021-07-13,Z2 endurance,Coast road out-and-back,59,146,698,125,Roadie (steel),
+R0466,2021-07-14,Commute x2,Commute via the viaduct,22,57,168,126,Commuter,
+R0467,2021-07-16,Z2 endurance,Coast road out-and-back,43,108,494,130,Roadie (steel),
+R0468,2021-07-17,Long ride: Long way home,Long way home,100,248,885,128,Roadie (steel),
+R0469,2021-07-18,Long ride: Lakes loop,Lakes loop,153,403,2151,137,Roadie (steel),Rode with the club
+R0470,2021-07-20,Z2 endurance,Coast road out-and-back,56,159,447,133,Roadie (steel),
+R0471,2021-07-21,Hill repeats,Hill repeats at Ashdown,38,117,494,150,Roadie (steel),
+R0472,2021-07-22,Tempo blocks,Windmill lane loop,61,161,605,146,Roadie (steel),Legs heavy
+R0473,2021-07-23,Z2 endurance,Coast road out-and-back,58,163,694,138,Roadie (steel),
+R0474,2021-07-24,Long ride: Coast road out-and-back,Coast road out-and-back,89,220,1210,132,Roadie (steel),
+R0475,2021-07-26,Commute x2,Commute via the viaduct,25,73,198,118,Commuter,
+R0476,2021-07-26,Evening spin,Windmill lane loop,15,40,123,124,Roadie (steel),"Tailwind out, paid for it later"
+R0477,2021-07-27,Z2 endurance,Coast road out-and-back,50,130,493,134,Roadie (steel),
+R0478,2021-07-28,Hill repeats,Hill repeats at Ashdown,29,106,502,147,Roadie (steel),
+R0479,2021-07-29,Tempo blocks,Windmill lane loop,61,158,618,141,Roadie (steel),Felt great
+R0480,2021-07-30,Z2 endurance,Coast road out-and-back,59,145,536,120,Roadie (steel),
+R0481,2021-07-31,Long ride: Chalk ridge,Chalk ridge,111,257,1312,124,Gravel (Kestrel-built),
+R0482,2021-08-01,Sunday club ride,Sunday club ride,31,88,286,137,Roadie (steel),
+R0483,2021-08-03,Z2 endurance,Coast road out-and-back,35,86,369,121,Roadie (steel),
+R0484,2021-08-04,Tempo blocks,Windmill lane loop,33,93,333,142,Roadie (steel),
+R0485,2021-08-05,Tempo blocks,Windmill lane loop,31,83,206,138,Roadie (steel),"Tailwind out, paid for it later"
+R0486,2021-08-05,Evening spin,Windmill lane loop,17,46,127,122,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0487,2021-08-06,Recovery spin,River valley spin,28,78,294,122,Roadie (steel),"Easy spin, recovery"
+R0488,2021-08-06,Evening spin,Windmill lane loop,20,51,213,110,Roadie (steel),
+R0489,2021-08-07,Long ride: Long way home,Long way home,114,291,1097,132,Gravel (Kestrel-built),
+R0490,2021-08-08,Tempo blocks,Windmill lane loop,44,103,311,152,Roadie (steel),Rain from the start
+R0491,2021-08-18,Hill repeats,Hill repeats at Ashdown,30,99,453,162,Roadie (steel),
+R0492,2021-08-23,Tempo blocks,Windmill lane loop,41,100,264,150,Roadie (steel),
+R0493,2021-08-24,Z2 endurance,Coast road out-and-back,47,109,546,125,Roadie (steel),
+R0494,2021-08-24,Evening spin,Windmill lane loop,22,65,174,127,Roadie (steel),
+R0495,2021-08-25,Commute x2,Commute via the viaduct,24,68,204,125,Commuter,Rain from the start
+R0496,2021-08-26,Tempo blocks,Windmill lane loop,43,103,364,147,Roadie (steel),"Coffee stop, then home"
+R0497,2021-08-27,Z2 endurance,Coast road out-and-back,53,127,559,138,Roadie (steel),
+R0498,2021-08-28,Long ride: Lakes loop,Lakes loop,172,456,1999,124,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0499,2021-08-29,Long ride: Lakes loop,Lakes loop,75,184,939,132,Roadie (steel),
+R0500,2021-08-30,Commute x2,Commute via the viaduct,20,59,197,119,Commuter,Headwind all the way back
+R0501,2021-08-31,Commute x2,Commute via the viaduct,23,58,147,119,Commuter,Chain noisy; oiled after
+R0502,2021-09-01,Tempo blocks,Windmill lane loop,35,92,354,138,Roadie (steel),
+R0503,2021-09-02,Easy spin,River valley spin,42,110,447,118,Roadie (steel),"Easy spin, recovery"
+R0504,2021-09-03,Recovery spin,River valley spin,43,112,397,110,Roadie (steel),"Easy spin, recovery"
+R0505,2021-09-03,Evening spin,Windmill lane loop,15,38,95,125,Commuter,
+R0506,2021-09-04,Long ride: Coast road out-and-back,Coast road out-and-back,85,203,1096,139,Roadie (steel),Rode with the club
+R0507,2021-09-05,Tempo blocks,Windmill lane loop,52,139,410,152,Roadie (steel),
+R0508,2021-09-07,Z2 endurance,Coast road out-and-back,52,139,488,133,Roadie (steel),
+R0509,2021-09-08,Hill repeats,Hill repeats at Ashdown,33,108,447,153,Roadie (steel),
+R0510,2021-09-09,Group ride: Reservoir circuit,Reservoir circuit,40,101,258,132,Roadie (steel),
+R0511,2021-09-10,Recovery spin,River valley spin,35,92,273,110,Commuter,
+R0512,2021-09-11,Long ride: Chalk ridge,Chalk ridge,127,331,1047,134,Roadie (steel),"Said ""never again"" at the top"
+R0513,2021-09-12,Easy spin,River valley spin,27,71,227,110,Roadie (steel),
+R0514,2021-09-13,Group ride: Chalk ridge,Chalk ridge,49,139,430,135,Roadie (steel),Felt great
+R0515,2021-09-14,Z2 endurance,Coast road out-and-back,57,143,390,138,Roadie (steel),Rain from the start
+R0516,2021-09-15,Tempo blocks,Windmill lane loop,53,138,457,156,Roadie (steel),
+R0517,2021-09-16,Tempo blocks,Windmill lane loop,45,128,279,140,Roadie (steel),
+R0518,2021-09-16,Evening spin,Windmill lane loop,14,37,109,124,Roadie (steel),
+R0519,2021-09-18,Long ride: Lakes loop,Lakes loop,121,293,1551,131,Gravel (Kestrel-built),
+R0520,2021-09-20,Tempo blocks,Windmill lane loop,31,79,336,141,Roadie (steel),Rain from the start
+R0521,2021-09-21,Z2 endurance,Coast road out-and-back,34,89,310,132,Roadie (steel),
+R0522,2021-09-21,Evening spin,Windmill lane loop,15,39,129,126,Roadie (steel),"Coffee stop, then home"
+R0523,2021-09-22,Commute x2,Commute via the viaduct,22,55,154,127,Commuter,Headwind all the way back
+R0524,2021-09-23,Group ride: Chalk ridge,Chalk ridge,54,146,550,130,Roadie (steel),"Coffee stop, then home"
+R0525,2021-09-25,Long ride: Chalk ridge,Chalk ridge,113,300,921,126,Roadie (steel),Rode with the club
+R0526,2021-09-26,Long ride: Reservoir circuit,Reservoir circuit,98,257,1109,140,Roadie (steel),
+R0527,2021-09-27,Group ride: Reservoir circuit,Reservoir circuit,45,111,515,139,Roadie (steel),"Tailwind out, paid for it later"
+R0528,2021-09-28,Commute x2,Commute via the viaduct,20,57,157,123,Commuter,Rain from the start
+R0529,2021-09-29,Commute x2,Commute via the viaduct,22,58,211,124,Commuter,Rain from the start
+R0530,2021-09-30,Tempo blocks,Windmill lane loop,54,142,333,146,Roadie (steel),"Coffee stop, then home"
+R0531,2021-10-01,Turbo: cadence drills,Indoor trainer,39,107,231,125,Roadie (steel),
+R0532,2021-10-02,Long ride: Chalk ridge,Chalk ridge,108,292,1378,130,Roadie (steel),
+R0533,2021-10-03,Long ride: Reservoir circuit,Reservoir circuit,119,275,1242,139,Roadie (steel),"Tailwind out, paid for it later"
+R0534,2021-10-04,Commute x2,Commute via the viaduct,25,67,202,116,Commuter,
+R0535,2021-10-05,Commute x2,Commute via the viaduct,22,60,211,121,Commuter,Rain from the start
+R0536,2021-10-06,Commute x2,Commute via the viaduct,22,56,217,124,Commuter,Headwind all the way back
+R0537,2021-10-08,Commute x2,Commute via the viaduct,23,63,191,115,Commuter,
+R0538,2021-10-09,Long ride: Lakes loop,Lakes loop,104,275,1165,138,Roadie (steel),Dark by the last 10 km
+R0539,2021-10-10,Long ride: Coast road out-and-back,Coast road out-and-back,119,319,1312,139,Roadie (steel),
+R0540,2021-10-11,Group ride: Windmill lane loop,Windmill lane loop,53,148,373,140,Roadie (steel),"Tailwind out, paid for it later"
+R0541,2021-10-12,Z2 endurance,Coast road out-and-back,52,131,405,124,Roadie (steel),Felt great
+R0542,2021-10-15,Commute x2,Commute via the viaduct,26,76,163,123,Commuter,
+R0543,2021-10-16,Long ride: Lakes loop,Lakes loop,121,282,1593,137,Roadie (steel),Rode with the club
+R0544,2021-10-17,Sunday club ride,Sunday club ride,37,105,356,135,Roadie (steel),
+R0545,2021-10-18,Group ride: Reservoir circuit,Reservoir circuit,43,102,327,135,Roadie (steel),
+R0546,2021-10-18,Evening spin,Windmill lane loop,19,54,116,126,Roadie (steel),
+R0547,2021-10-19,Z2 endurance,Coast road out-and-back,61,151,698,132,Roadie (steel),"Tailwind out, paid for it later"
+R0548,2021-10-19,Evening spin,Windmill lane loop,17,44,140,121,Commuter,
+R0549,2021-10-20,Hill repeats,Hill repeats at Ashdown,26,88,463,162,Roadie (steel),"Tailwind out, paid for it later"
+R0550,2021-10-21,Easy spin,River valley spin,33,85,182,106,Commuter,
+R0551,2021-10-22,Commute x2,Commute via the viaduct,27,73,173,124,Commuter,
+R0552,2021-10-23,Long ride: Coast road out-and-back,Coast road out-and-back,91,225,1204,130,Roadie (steel),"Tailwind out, paid for it later"
+R0553,2021-10-25,Tempo blocks,Windmill lane loop,61,144,710,151,Roadie (steel),
+R0554,2021-10-26,Sweet spot 2x20,Canal towpath,37,92,298,152,Roadie (steel),Legs heavy
+R0555,2021-10-27,Commute x2,Commute via the viaduct,24,65,168,121,Commuter,
+R0556,2021-10-28,Group ride: Windmill lane loop,Windmill lane loop,48,113,424,134,Roadie (steel),Dark by the last 10 km
+R0557,2021-10-30,Long ride: Long way home,Long way home,128,321,1650,137,Roadie (steel),"Said ""never again"" at the top"
+R0558,2021-10-31,Long ride: Reservoir circuit,Reservoir circuit,81,195,943,129,Gravel (Kestrel-built),Headwind all the way back
+R0559,2021-11-01,Commute x2,Commute via the viaduct,20,52,123,123,Commuter,
+R0560,2021-11-02,Commute x2,Commute via the viaduct,22,56,201,115,Commuter,Felt great
+R0561,2021-11-03,Hill repeats,Hill repeats at Ashdown,27,97,512,145,Roadie (steel),
+R0562,2021-11-04,Tempo blocks,Windmill lane loop,37,100,361,141,Roadie (steel),
+R0563,2021-11-06,Long ride: Long way home,Long way home,97,231,868,125,Roadie (steel),
+R0564,2021-11-07,Sunday club ride,Sunday club ride,59,138,553,142,Roadie (steel),"Group of 6, steady pace"
+R0565,2021-11-08,Tempo blocks,Windmill lane loop,40,105,282,147,Roadie (steel),"Cold, so overshoes, gloves on"
+R0566,2021-11-10,Commute x2,Commute via the viaduct,27,69,184,115,Fixed winter bike,
+R0567,2021-11-11,Tempo blocks,Windmill lane loop,38,90,351,139,Roadie (steel),
+R0568,2021-11-13,Long ride: Long way home,Long way home,105,254,1032,123,Roadie (steel),Legs heavy
+R0569,2021-11-14,Long ride: Lakes loop,Lakes loop,122,299,1737,123,Roadie (steel),"Cold, so overshoes, gloves on"
+R0570,2021-11-15,Tempo blocks,Windmill lane loop,30,77,339,143,Roadie (steel),
+R0571,2021-11-16,Commute x2,Commute via the viaduct,24,63,166,124,Fixed winter bike,
+R0572,2021-11-17,Tempo blocks,Windmill lane loop,48,115,480,155,Roadie (steel),Legs heavy
+R0573,2021-11-18,Tempo blocks,Windmill lane loop,55,143,413,152,Roadie (steel),
+R0574,2021-11-19,Recovery spin,River valley spin,32,91,347,113,Fixed winter bike,
+R0575,2021-11-20,Long ride: Coast road out-and-back,Coast road out-and-back,86,228,955,137,Roadie (steel),
+R0576,2021-11-21,Easy spin,River valley spin,27,72,290,108,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0577,2021-11-24,Hill repeats,Hill repeats at Ashdown,31,111,562,162,Roadie (steel),"Wet leaves, slow descents"
+R0578,2021-11-25,Tempo blocks,Windmill lane loop,52,148,564,153,Roadie (steel),
+R0579,2021-11-26,Turbo: cadence drills,Indoor trainer,24,59,235,128,Roadie (steel),"Indoors, a film and the fan on"
+R0580,2021-11-30,Turbo: cadence drills,Indoor trainer,35,81,237,139,Roadie (steel),
+R0581,2021-12-01,Commute x2,Commute via the viaduct,21,54,201,117,Fixed winter bike,
+R0582,2021-12-03,Z2 endurance,Coast road out-and-back,53,148,436,128,Fixed winter bike,
+R0583,2021-12-04,Long ride: Lakes loop,Lakes loop,123,326,1514,132,Roadie (steel),
+R0584,2021-12-05,Easy spin,River valley spin,45,121,245,120,Fixed winter bike,
+R0585,2021-12-06,Group ride: Windmill lane loop,Windmill lane loop,33,82,347,133,Roadie (steel),
+R0586,2021-12-07,Z2 endurance,Coast road out-and-back,50,131,517,126,Fixed winter bike,
+R0587,2021-12-08,Commute x2,Commute via the viaduct,27,73,184,114,Commuter,
+R0588,2021-12-10,Commute x2,Commute via the viaduct,23,61,192,126,Commuter,Headwind all the way back
+R0589,2021-12-11,Long ride: Reservoir circuit,Reservoir circuit,117,318,1503,139,Roadie (steel),
+R0590,2021-12-12,Long ride: Chalk ridge,Chalk ridge,95,253,1270,133,Roadie (steel),Dark by the last 10 km
+R0591,2021-12-13,Commute x2,Commute via the viaduct,27,69,214,115,Fixed winter bike,
+R0592,2021-12-14,Commute x2,Commute via the viaduct,22,57,177,123,Fixed winter bike,Chain noisy; oiled after
+R0593,2021-12-16,Easy spin,River valley spin,37,93,245,106,Fixed winter bike,
+R0594,2021-12-18,Long ride: Reservoir circuit,Reservoir circuit,79,183,1147,127,Roadie (steel),
+R0595,2021-12-19,Long ride: Lakes loop,Lakes loop,76,192,1027,134,Roadie (steel),
+R0596,2021-12-21,Z2 endurance,Coast road out-and-back,52,130,573,120,Fixed winter bike,
+R0597,2021-12-22,Commute x2,Commute via the viaduct,18,48,114,115,Fixed winter bike,Headwind all the way back
+R0598,2021-12-23,Tempo blocks,Windmill lane loop,53,140,597,146,Roadie (steel),
+R0599,2021-12-24,Turbo: cadence drills,Indoor trainer,25,67,243,140,Roadie (steel),
+R0600,2021-12-25,Long ride: Lakes loop,Lakes loop,83,199,860,139,Roadie (steel),"Coffee stop, then home"
+R0601,2021-12-26,Long ride: Reservoir circuit,Reservoir circuit,112,288,1431,138,Roadie (steel),
+R0602,2022-01-03,Commute x2,Commute via the viaduct,23,60,162,129,Commuter,Chain noisy; oiled after
+R0603,2022-01-05,Tempo blocks,Windmill lane loop,31,82,284,149,Roadie (steel),Headwind all the way back
+R0604,2022-01-06,Group ride: Reservoir circuit,Reservoir circuit,58,146,438,138,Roadie (steel),
+R0605,2022-01-07,Recovery spin,River valley spin,23,63,239,116,Fixed winter bike,Headwind all the way back
+R0606,2022-01-08,Long ride: Reservoir circuit,Reservoir circuit,86,214,773,138,Roadie (steel),
+R0607,2022-01-09,Easy spin,River valley spin,30,84,195,112,Fixed winter bike,
+R0608,2022-01-10,Tempo blocks,Windmill lane loop,52,124,602,145,Roadie (steel),"Tailwind out, paid for it later"
+R0609,2022-01-11,Sweet spot 2x20,Canal towpath,38,94,234,146,Roadie (steel),
+R0610,2022-01-12,Commute x2,Commute via the viaduct,24,61,231,116,Fixed winter bike,
+R0611,2022-01-13,Group ride: Windmill lane loop,Windmill lane loop,43,102,475,131,Roadie (steel),
+R0612,2022-01-13,Evening spin,Windmill lane loop,16,44,123,121,Roadie (steel),
+R0613,2022-01-14,Recovery spin,River valley spin,24,65,216,106,Fixed winter bike,Headwind all the way back
+R0614,2022-01-15,Long ride: Chalk ridge,Chalk ridge,80,199,877,132,Roadie (steel),
+R0615,2022-01-16,Sunday club ride,Sunday club ride,38,89,421,134,Roadie (steel),"Tailwind out, paid for it later"
+R0616,2022-01-18,Turbo: cadence drills,Indoor trainer,35,96,159,142,Roadie (steel),"Indoors, a film and the fan on"
+R0617,2022-01-19,Hill repeats,Hill repeats at Ashdown,31,110,409,155,Roadie (steel),
+R0618,2022-01-21,Turbo: cadence drills,Indoor trainer,27,63,212,128,Roadie (steel),
+R0619,2022-01-22,Long ride: Reservoir circuit,Reservoir circuit,117,296,1704,131,Roadie (steel),
+R0620,2022-01-23,Long ride: Long way home,Long way home,134,368,1802,127,Roadie (steel),
+R0621,2022-01-24,Group ride: Chalk ridge,Chalk ridge,39,98,405,142,Roadie (steel),
+R0622,2022-01-25,Commute x2,Commute via the viaduct,23,63,185,115,Commuter,Headwind all the way back
+R0623,2022-01-26,Hill repeats,Hill repeats at Ashdown,33,112,569,161,Roadie (steel),
+R0624,2022-01-27,Group ride: Chalk ridge,Chalk ridge,44,108,406,132,Roadie (steel),"Cold, so overshoes, gloves on"
+R0625,2022-01-28,Turbo: cadence drills,Indoor trainer,22,52,168,134,Roadie (steel),
+R0626,2022-01-29,Long ride: Long way home,Long way home,81,209,888,137,Roadie (steel),"Cold, so overshoes, gloves on"
+R0627,2022-01-30,Easy spin,River valley spin,42,115,429,122,Fixed winter bike,Headwind all the way back
+R0628,2022-02-01,Turbo: cadence drills,Indoor trainer,27,77,153,131,Roadie (steel),
+R0629,2022-02-03,Easy spin,River valley spin,34,86,236,119,Fixed winter bike,
+R0630,2022-02-04,Z2 endurance,Coast road out-and-back,30,73,357,127,Fixed winter bike,
+R0631,2022-02-04,Evening spin,Windmill lane loop,20,53,129,113,Roadie (steel),"Cold, so overshoes, gloves on"
+R0632,2022-02-05,Long ride: Long way home,Long way home,96,240,1233,125,Roadie (steel),
+R0633,2022-02-06,Sunday club ride,Sunday club ride,62,160,388,141,Roadie (steel),"Group of 6, steady pace"
+R0634,2022-02-07,Tempo blocks,Windmill lane loop,38,99,274,138,Roadie (steel),Rain from the start
+R0635,2022-02-08,Turbo: cadence drills,Indoor trainer,39,103,213,126,Roadie (steel),
+R0636,2022-02-09,Commute x2,Commute via the viaduct,18,48,144,123,Commuter,
+R0637,2022-02-10,Group ride: Windmill lane loop,Windmill lane loop,33,89,211,139,Roadie (steel),
+R0638,2022-02-11,Recovery spin,River valley spin,34,85,336,111,Fixed winter bike,Headwind all the way back
+R0639,2022-02-12,Long ride: Chalk ridge,Chalk ridge,129,347,1445,123,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0640,2022-02-14,Commute x2,Commute via the viaduct,20,51,184,112,Commuter,
+R0641,2022-02-15,Turbo: cadence drills,Indoor trainer,26,62,227,128,Roadie (steel),
+R0642,2022-02-15,Evening spin,Windmill lane loop,14,40,87,119,Roadie (steel),Headwind all the way back
+R0643,2022-02-16,Hill repeats,Hill repeats at Ashdown,38,119,538,160,Roadie (steel),Legs heavy
+R0644,2022-02-19,Long ride: Coast road out-and-back,Coast road out-and-back,83,225,1034,122,Roadie (steel),
+R0645,2022-02-20,Sunday club ride,Sunday club ride,59,152,390,134,Roadie (steel),Rain from the start
+R0646,2022-02-21,Commute x2,Commute via the viaduct,19,53,147,127,Commuter,
+R0647,2022-02-22,Sweet spot 2x20,Canal towpath,56,146,381,154,Roadie (steel),
+R0648,2022-02-23,Commute x2,Commute via the viaduct,21,53,159,122,Fixed winter bike,
+R0649,2022-02-23,Evening spin,Windmill lane loop,18,51,137,110,Roadie (steel),"Coffee stop, then home"
+R0650,2022-02-24,Group ride: Chalk ridge,Chalk ridge,45,128,494,140,Roadie (steel),
+R0651,2022-02-26,Long ride: Reservoir circuit,Reservoir circuit,77,206,693,139,Roadie (steel),
+R0652,2022-02-27,Easy spin,River valley spin,38,99,301,115,Fixed winter bike,
+R0653,2022-03-01,Turbo: cadence drills,Indoor trainer,27,69,265,125,Roadie (steel),
+R0654,2022-03-04,Recovery spin,River valley spin,41,114,373,122,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0655,2022-03-05,Long ride: Lakes loop,Lakes loop,83,220,701,140,Roadie (steel),"Cold, so overshoes, gloves on"
+R0656,2022-03-06,Long ride: Long way home,Long way home,117,273,1701,123,Roadie (steel),
+R0657,2022-03-07,Tempo blocks,Windmill lane loop,43,101,260,152,Roadie (steel),
+R0658,2022-03-07,Evening spin,Windmill lane loop,22,66,239,120,Roadie (steel),"Tailwind out, paid for it later"
+R0659,2022-03-08,Turbo: cadence drills,Indoor trainer,26,71,163,127,Roadie (steel),
+R0660,2022-03-09,Hill repeats,Hill repeats at Ashdown,34,113,540,149,Roadie (steel),Felt great
+R0661,2022-03-11,Turbo: cadence drills,Indoor trainer,29,73,244,125,Roadie (steel),
+R0662,2022-03-11,Evening spin,Windmill lane loop,18,45,119,113,Roadie (steel),"Cold, so overshoes, gloves on"
+R0663,2022-03-12,Long ride: Coast road out-and-back,Coast road out-and-back,89,211,829,122,Roadie (steel),Felt great
+R0664,2022-03-13,Easy spin,River valley spin,23,63,213,124,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0665,2022-03-14,Tempo blocks,Windmill lane loop,40,110,272,154,Roadie (steel),
+R0666,2022-03-15,Sweet spot 2x20,Canal towpath,36,100,225,141,Roadie (steel),"Cold, so overshoes, gloves on"
+R0667,2022-03-16,Tempo blocks,Windmill lane loop,37,103,362,154,Roadie (steel),
+R0668,2022-03-17,Group ride: Reservoir circuit,Reservoir circuit,42,106,324,135,Roadie (steel),Rain from the start
+R0669,2022-03-17,Evening spin,Windmill lane loop,14,38,115,128,Roadie (steel),
+R0670,2022-03-18,Commute x2,Commute via the viaduct,27,71,198,119,Commuter,Rain from the start
+R0671,2022-03-19,Long ride: Lakes loop,Lakes loop,130,318,1045,131,Roadie (steel),
+R0672,2022-03-20,Long ride: Lakes loop,Lakes loop,120,287,1476,129,Roadie (steel),"Coffee stop, then home"
+R0673,2022-03-21,Group ride: Reservoir circuit,Reservoir circuit,51,136,396,146,Roadie (steel),
+R0674,2022-03-22,Z2 endurance,Coast road out-and-back,33,78,249,126,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0675,2022-03-23,Commute x2,Commute via the viaduct,18,47,163,129,Commuter,Rain from the start
+R0676,2022-03-24,Easy spin,River valley spin,26,76,207,123,Fixed winter bike,
+R0677,2022-03-24,Evening spin,Windmill lane loop,20,52,186,117,Roadie (steel),
+R0678,2022-03-25,Turbo: cadence drills,Indoor trainer,21,50,142,129,Roadie (steel),
+R0679,2022-03-26,Long ride: Chalk ridge,Chalk ridge,88,239,738,129,Roadie (steel),
+R0680,2022-03-27,Sunday club ride,Sunday club ride,44,117,472,129,Roadie (steel),
+R0681,2022-03-27,Evening spin,Windmill lane loop,17,45,109,110,Roadie (steel),
+R0682,2022-03-29,Z2 endurance,Coast road out-and-back,39,97,357,122,Fixed winter bike,
+R0683,2022-04-02,Long ride: Coast road out-and-back,Coast road out-and-back,79,212,1142,127,Roadie (steel),
+R0684,2022-04-05,Commute x2,Commute via the viaduct,20,53,125,116,Commuter,Felt great
+R0685,2022-04-06,Commute x2,Commute via the viaduct,21,59,152,122,Commuter,Felt great
+R0686,2022-04-07,Easy spin,River valley spin,33,92,276,114,Roadie (steel),Felt great
+R0687,2022-04-07,Evening spin,Windmill lane loop,18,46,146,114,Roadie (steel),
+R0688,2022-04-09,Long ride: Lakes loop,Lakes loop,100,234,995,129,Roadie (steel),Rode with the club
+R0689,2022-04-10,Sunday club ride,Sunday club ride,53,131,360,135,Roadie (steel),
+R0690,2022-04-11,Tempo blocks,Windmill lane loop,30,82,278,151,Roadie (steel),
+R0691,2022-04-12,Commute x2,Commute via the viaduct,21,53,144,117,Commuter,Rain from the start
+R0692,2022-04-12,Evening spin,Windmill lane loop,18,46,185,118,Roadie (steel),
+R0693,2022-04-13,Commute x2,Commute via the viaduct,23,66,207,113,Commuter,
+R0694,2022-04-16,Long ride: Chalk ridge,Chalk ridge,114,307,1385,138,Roadie (steel),"Tailwind out, paid for it later"
+R0695,2022-04-18,Tempo blocks,Windmill lane loop,41,98,316,147,Roadie (steel),
+R0696,2022-04-19,Z2 endurance,Coast road out-and-back,36,99,220,138,Roadie (steel),
+R0697,2022-04-20,Commute x2,Commute via the viaduct,25,73,226,122,Commuter,Rain from the start
+R0698,2022-04-21,Easy spin,River valley spin,45,126,489,113,Commuter,Felt great
+R0699,2022-04-23,Long ride: Reservoir circuit,Reservoir circuit,114,318,1088,125,Roadie (steel),
+R0700,2022-04-24,Sunday club ride,Sunday club ride,59,137,534,131,Roadie (steel),
+R0701,2022-04-24,Evening spin,Windmill lane loop,15,39,132,124,Commuter,Rode with the club
+R0702,2022-04-25,Commute x2,Commute via the viaduct,22,64,159,115,Commuter,Chain noisy; oiled after
+R0703,2022-04-26,Commute x2,Commute via the viaduct,19,56,145,112,Commuter,
+R0704,2022-04-27,Commute x2,Commute via the viaduct,25,73,207,112,Commuter,
+R0705,2022-04-28,Group ride: Windmill lane loop,Windmill lane loop,62,166,496,132,Roadie (steel),"Group of 6, steady pace"
+R0706,2022-04-28,Evening spin,Windmill lane loop,18,46,117,128,Roadie (steel),
+R0707,2022-04-30,Long ride: Chalk ridge,Chalk ridge,99,276,1443,131,Roadie (steel),
+R0708,2022-05-03,Z2 endurance,Coast road out-and-back,49,135,402,120,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0709,2022-05-04,Commute x2,Commute via the viaduct,25,63,168,121,Commuter,
+R0710,2022-05-05,Easy spin,River valley spin,26,71,178,111,Commuter,"Tailwind out, paid for it later"
+R0711,2022-05-07,Long ride: Chalk ridge,Chalk ridge,99,255,1458,135,Roadie (steel),
+R0712,2022-05-08,Long ride: Lakes loop,Lakes loop,89,218,867,130,Gravel (Kestrel-built),
+R0713,2022-05-09,Commute x2,Commute via the viaduct,27,75,241,129,Commuter,Rain from the start
+R0714,2022-05-10,Z2 endurance,Coast road out-and-back,42,105,400,137,Roadie (steel),Legs heavy
+R0715,2022-05-11,Hill repeats,Hill repeats at Ashdown,34,112,509,148,Roadie (steel),
+R0716,2022-05-12,Easy spin,River valley spin,37,107,282,118,Commuter,
+R0717,2022-05-13,Recovery spin,River valley spin,31,83,321,106,Commuter,
+R0718,2022-05-13,Evening spin,Windmill lane loop,16,46,105,116,Roadie (steel),
+R0719,2022-05-14,Long ride: Chalk ridge,Chalk ridge,133,343,1923,137,Roadie (steel),
+R0720,2022-05-15,Long ride: Long way home,Long way home,75,207,954,123,Roadie (steel),Sunrise start
+R0721,2022-05-16,Group ride: Windmill lane loop,Windmill lane loop,52,141,448,137,Roadie (steel),"Group of 6, steady pace"
+R0722,2022-05-17,Z2 endurance,Coast road out-and-back,49,125,584,122,Roadie (steel),
+R0723,2022-05-18,Hill repeats,Hill repeats at Ashdown,28,90,368,144,Roadie (steel),
+R0724,2022-05-18,Evening spin,Windmill lane loop,21,55,146,128,Roadie (steel),Rain from the start
+R0725,2022-05-21,Long ride: Chalk ridge,Chalk ridge,109,277,933,126,Roadie (steel),Sunrise start
+R0726,2022-05-22,Sunday club ride,Sunday club ride,53,151,404,136,Roadie (steel),Felt great
+R0727,2022-05-22,Evening spin,Windmill lane loop,21,54,131,110,Roadie (steel),Headwind all the way back
+R0728,2022-05-24,Z2 endurance,Coast road out-and-back,53,138,582,134,Roadie (steel),
+R0729,2022-05-25,Hill repeats,Hill repeats at Ashdown,41,149,718,146,Roadie (steel),
+R0730,2022-05-26,Group ride: Windmill lane loop,Windmill lane loop,53,126,602,138,Roadie (steel),
+R0731,2022-05-27,Z2 endurance,Coast road out-and-back,62,159,499,125,Roadie (steel),Rain from the start
+R0732,2022-05-28,Long ride: Chalk ridge,Chalk ridge,129,360,1200,138,Roadie (steel),
+R0733,2022-05-29,Long ride: Coast road out-and-back,Coast road out-and-back,78,191,633,134,Roadie (steel),Felt great
+R0734,2022-05-30,Commute x2,Commute via the viaduct,18,46,176,129,Commuter,
+R0735,2022-05-31,Sweet spot 2x20,Canal towpath,61,145,685,143,Roadie (steel),Headwind all the way back
+R0736,2022-06-01,Tempo blocks,Windmill lane loop,48,114,550,144,Roadie (steel),
+R0737,2022-06-02,Group ride: Windmill lane loop,Windmill lane loop,45,105,310,137,Roadie (steel),Legs heavy
+R0738,2022-06-03,Z2 endurance,Coast road out-and-back,33,91,291,125,Roadie (steel),
+R0739,2022-06-04,Long ride: Chalk ridge,Chalk ridge,81,216,873,137,Roadie (steel),
+R0740,2022-06-05,Tempo blocks,Windmill lane loop,30,71,214,150,Roadie (steel),Felt great
+R0741,2022-06-06,Commute x2,Commute via the viaduct,28,83,189,113,Commuter,
+R0742,2022-06-06,Evening spin,Windmill lane loop,16,46,166,124,Commuter,
+R0743,2022-06-07,Commute x2,Commute via the viaduct,25,65,178,129,Commuter,Headwind all the way back
+R0744,2022-06-08,Tempo blocks,Windmill lane loop,32,90,343,148,Roadie (steel),
+R0745,2022-06-08,Evening spin,Windmill lane loop,19,49,167,125,Roadie (steel),
+R0746,2022-06-09,Group ride: Windmill lane loop,Windmill lane loop,40,94,322,139,Roadie (steel),
+R0747,2022-06-10,Z2 endurance,Coast road out-and-back,62,168,609,123,Roadie (steel),
+R0748,2022-06-11,Long ride: Coast road out-and-back,Coast road out-and-back,148,350,2017,128,Gravel (Kestrel-built),"Coffee stop, then home"
+R0749,2022-06-12,Easy spin,River valley spin,44,129,406,109,Commuter,"Tailwind out, paid for it later"
+R0750,2022-06-14,Z2 endurance,Coast road out-and-back,59,146,589,120,Roadie (steel),
+R0751,2022-06-15,Hill repeats,Hill repeats at Ashdown,41,124,577,157,Roadie (steel),"Tailwind out, paid for it later"
+R0752,2022-06-17,Z2 endurance,Coast road out-and-back,58,135,627,131,Roadie (steel),
+R0753,2022-06-18,Long ride: Reservoir circuit,Reservoir circuit,107,251,1152,124,Roadie (steel),
+R0754,2022-06-19,Easy spin,River valley spin,39,111,387,116,Commuter,
+R0755,2022-06-20,Commute x2,Commute via the viaduct,26,76,243,114,Commuter,Headwind all the way back
+R0756,2022-06-21,Commute x2,Commute via the viaduct,27,75,266,121,Commuter,Chain noisy; oiled after
+R0757,2022-06-22,Tempo blocks,Windmill lane loop,54,148,476,139,Roadie (steel),Headwind all the way back
+R0758,2022-06-23,Tempo blocks,Windmill lane loop,30,76,195,150,Roadie (steel),"Coffee stop, then home"
+R0759,2022-06-24,Z2 endurance,Coast road out-and-back,53,133,612,127,Roadie (steel),Legs heavy
+R0760,2022-06-26,Tempo blocks,Windmill lane loop,43,114,473,149,Roadie (steel),
+R0761,2022-06-28,Commute x2,Commute via the viaduct,28,75,243,123,Commuter,
+R0762,2022-06-29,Hill repeats,Hill repeats at Ashdown,27,97,430,150,Roadie (steel),
+R0763,2022-07-01,Recovery spin,River valley spin,35,88,208,113,Roadie (steel),
+R0764,2022-07-02,Long ride: Coast road out-and-back,Coast road out-and-back,121,292,1620,134,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0765,2022-07-03,Easy spin,River valley spin,41,104,337,113,Roadie (steel),
+R0766,2022-07-06,Commute x2,Commute via the viaduct,21,58,208,114,Commuter,
+R0767,2022-07-07,Group ride: Chalk ridge,Chalk ridge,62,169,420,146,Roadie (steel),
+R0768,2022-07-08,Recovery spin,River valley spin,28,74,187,122,Roadie (steel),"Easy spin, recovery"
+R0769,2022-07-09,Long ride: Reservoir circuit,Reservoir circuit,131,304,1698,130,Roadie (steel),Sunrise start
+R0770,2022-07-11,Group ride: Reservoir circuit,Reservoir circuit,53,135,324,133,Roadie (steel),
+R0771,2022-07-12,Z2 endurance,Coast road out-and-back,38,104,229,128,Roadie (steel),
+R0772,2022-07-13,Commute x2,Commute via the viaduct,26,78,162,124,Commuter,
+R0773,2022-07-13,Evening spin,Windmill lane loop,17,43,163,128,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0774,2022-07-14,Group ride: Reservoir circuit,Reservoir circuit,58,144,695,137,Roadie (steel),
+R0775,2022-07-15,Commute x2,Commute via the viaduct,23,63,195,117,Commuter,
+R0776,2022-07-16,Long ride: Reservoir circuit,Reservoir circuit,88,209,1113,127,Gravel (Kestrel-built),Sunrise start
+R0777,2022-07-17,Easy spin,River valley spin,28,82,171,107,Roadie (steel),
+R0778,2022-07-18,Group ride: Windmill lane loop,Windmill lane loop,62,159,655,146,Roadie (steel),
+R0779,2022-07-22,Z2 endurance,Coast road out-and-back,34,91,305,135,Roadie (steel),
+R0780,2022-07-23,Long ride: Long way home,Long way home,127,335,1083,132,Roadie (steel),Legs heavy
+R0781,2022-07-24,Long ride: Reservoir circuit,Reservoir circuit,113,308,1458,137,Roadie (steel),
+R0782,2022-07-25,Group ride: Reservoir circuit,Reservoir circuit,47,112,561,137,Roadie (steel),
+R0783,2022-07-26,Sweet spot 2x20,Canal towpath,47,134,528,145,Roadie (steel),Rain from the start
+R0784,2022-07-26,Evening spin,Windmill lane loop,15,41,96,122,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0785,2022-07-27,Tempo blocks,Windmill lane loop,33,79,392,142,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R0786,2022-07-28,Tempo blocks,Windmill lane loop,31,78,317,150,Roadie (steel),
+R0787,2022-07-30,Long ride: Long way home,Long way home,78,194,1027,124,Gravel (Kestrel-built),
+R0788,2022-07-31,Easy spin,River valley spin,23,67,178,110,Commuter,Headwind all the way back
+R0789,2022-08-01,Group ride: Chalk ridge,Chalk ridge,62,155,705,135,Roadie (steel),
+R0790,2022-08-02,Z2 endurance,Coast road out-and-back,62,173,537,133,Roadie (steel),
+R0791,2022-08-03,Commute x2,Commute via the viaduct,18,45,136,125,Commuter,
+R0792,2022-08-05,Z2 endurance,Coast road out-and-back,52,123,462,127,Roadie (steel),
+R0793,2022-08-06,Long ride: Reservoir circuit,Reservoir circuit,126,313,1327,124,Gravel (Kestrel-built),
+R0794,2022-08-23,Commute x2,Commute via the viaduct,24,70,200,113,Commuter,
+R0795,2022-08-24,Hill repeats,Hill repeats at Ashdown,26,91,476,154,Roadie (steel),
+R0796,2022-08-26,Commute x2,Commute via the viaduct,27,76,254,119,Commuter,
+R0797,2022-08-27,Long ride: Chalk ridge,Chalk ridge,85,210,1184,135,Roadie (steel),
+R0798,2022-08-29,Tempo blocks,Windmill lane loop,60,141,389,156,Roadie (steel),
+R0799,2022-08-30,Z2 endurance,Coast road out-and-back,30,71,258,123,Roadie (steel),
+R0800,2022-08-31,Hill repeats,Hill repeats at Ashdown,32,109,593,161,Roadie (steel),Legs heavy
+R0801,2022-09-01,Easy spin,River valley spin,29,75,164,107,Roadie (steel),
+R0802,2022-09-02,Recovery spin,River valley spin,39,110,295,113,Commuter,"Tailwind out, paid for it later"
+R0803,2022-09-02,Evening spin,Windmill lane loop,20,52,165,118,Roadie (steel),
+R0804,2022-09-03,Long ride: Coast road out-and-back,Coast road out-and-back,96,223,957,130,Roadie (steel),
+R0805,2022-09-04,Long ride: Lakes loop,Lakes loop,86,230,955,135,Gravel (Kestrel-built),Sunrise start
+R0806,2022-09-05,Commute x2,Commute via the viaduct,20,59,120,121,Commuter,
+R0807,2022-09-07,Tempo blocks,Windmill lane loop,31,86,230,150,Roadie (steel),
+R0808,2022-09-09,Recovery spin,River valley spin,35,88,284,109,Roadie (steel),
+R0809,2022-09-10,Long ride: Lakes loop,Lakes loop,119,322,1485,140,Roadie (steel),Felt great
+R0810,2022-09-12,Commute x2,Commute via the viaduct,20,51,139,127,Commuter,
+R0811,2022-09-13,Z2 endurance,Coast road out-and-back,62,155,643,121,Roadie (steel),
+R0812,2022-09-14,Commute x2,Commute via the viaduct,25,73,169,124,Commuter,
+R0813,2022-09-15,Group ride: Reservoir circuit,Reservoir circuit,35,83,388,132,Roadie (steel),Legs heavy
+R0814,2022-09-16,Z2 endurance,Coast road out-and-back,37,91,442,128,Roadie (steel),"Tailwind out, paid for it later"
+R0815,2022-09-17,Long ride: Chalk ridge,Chalk ridge,87,238,946,133,Roadie (steel),Rode with the club
+R0816,2022-09-18,Long ride: Reservoir circuit,Reservoir circuit,103,284,1255,138,Roadie (steel),Sunrise start
+R0817,2022-09-19,Commute x2,Commute via the viaduct,22,56,136,122,Commuter,
+R0818,2022-09-19,Evening spin,Windmill lane loop,22,62,189,112,Roadie (steel),Legs heavy
+R0819,2022-09-20,Z2 endurance,Coast road out-and-back,36,91,396,131,Roadie (steel),
+R0820,2022-09-21,Commute x2,Commute via the viaduct,19,50,141,121,Commuter,Felt great
+R0821,2022-09-22,Tempo blocks,Windmill lane loop,37,104,252,155,Roadie (steel),
+R0822,2022-09-23,Z2 endurance,Coast road out-and-back,55,149,560,125,Roadie (steel),
+R0823,2022-09-24,Long ride: Reservoir circuit,Reservoir circuit,91,225,1350,128,Roadie (steel),
+R0824,2022-09-25,Sunday club ride,Sunday club ride,37,97,349,129,Roadie (steel),
+R0825,2022-09-26,Group ride: Windmill lane loop,Windmill lane loop,50,125,538,131,Roadie (steel),Felt great
+R0826,2022-09-27,Z2 endurance,Coast road out-and-back,47,125,344,136,Roadie (steel),
+R0827,2022-09-28,Commute x2,Commute via the viaduct,25,64,248,126,Commuter,
+R0828,2022-09-29,Tempo blocks,Windmill lane loop,62,165,697,143,Roadie (steel),
+R0829,2022-09-30,Z2 endurance,Coast road out-and-back,46,118,420,138,Roadie (steel),
+R0830,2022-10-01,Long ride: Reservoir circuit,Reservoir circuit,92,245,1220,124,Roadie (steel),
+R0831,2022-10-02,Long ride: Reservoir circuit,Reservoir circuit,101,263,1361,130,Roadie (steel),"Said ""never again"" at the top"
+R0832,2022-10-03,Group ride: Chalk ridge,Chalk ridge,30,77,225,145,Roadie (steel),
+R0833,2022-10-05,Tempo blocks,Windmill lane loop,41,96,471,150,Roadie (steel),
+R0834,2022-10-06,Tempo blocks,Windmill lane loop,31,87,273,151,Roadie (steel),
+R0835,2022-10-07,Turbo: cadence drills,Indoor trainer,24,57,149,132,Roadie (steel),
+R0836,2022-10-08,Long ride: Reservoir circuit,Reservoir circuit,96,223,878,125,Roadie (steel),Rain from the start
+R0837,2022-10-09,Tempo blocks,Windmill lane loop,30,84,328,140,Roadie (steel),Headwind all the way back
+R0838,2022-10-10,Tempo blocks,Windmill lane loop,62,144,581,151,Roadie (steel),"Coffee stop, then home"
+R0839,2022-10-11,Z2 endurance,Coast road out-and-back,54,133,557,129,Roadie (steel),
+R0840,2022-10-13,Tempo blocks,Windmill lane loop,30,70,337,152,Roadie (steel),
+R0841,2022-10-15,Long ride: Reservoir circuit,Reservoir circuit,102,251,904,131,Roadie (steel),"Said ""never again"" at the top"
+R0842,2022-10-17,Group ride: Reservoir circuit,Reservoir circuit,55,131,460,145,Roadie (steel),
+R0843,2022-10-18,Z2 endurance,Coast road out-and-back,52,128,486,133,Roadie (steel),Rain from the start
+R0844,2022-10-20,Group ride: Reservoir circuit,Reservoir circuit,33,89,226,137,Roadie (steel),
+R0845,2022-10-21,Z2 endurance,Coast road out-and-back,30,83,265,120,Roadie (steel),Felt great
+R0846,2022-10-22,Long ride: Chalk ridge,Chalk ridge,125,318,1199,133,Roadie (steel),"Coffee stop, then home"
+R0847,2022-10-23,Tempo blocks,Windmill lane loop,38,99,256,142,Roadie (steel),
+R0848,2022-10-30,Easy spin,River valley spin,42,119,453,124,Commuter,
+R0849,2022-10-31,Commute x2,Commute via the viaduct,28,82,227,126,Commuter,
+R0850,2022-11-01,Z2 endurance,Coast road out-and-back,45,108,497,124,Fixed winter bike,Felt great
+R0851,2022-11-02,Commute x2,Commute via the viaduct,27,77,268,121,Fixed winter bike,Headwind all the way back
+R0852,2022-11-03,Group ride: Reservoir circuit,Reservoir circuit,37,88,439,142,Roadie (steel),Felt great
+R0853,2022-11-04,Recovery spin,River valley spin,26,75,174,108,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0854,2022-11-05,Long ride: Chalk ridge,Chalk ridge,81,199,1063,123,Roadie (steel),
+R0855,2022-11-06,Sunday club ride,Sunday club ride,40,102,319,132,Roadie (steel),"Tailwind out, paid for it later"
+R0856,2022-11-07,Group ride: Windmill lane loop,Windmill lane loop,51,124,551,138,Roadie (steel),
+R0857,2022-11-08,Turbo: cadence drills,Indoor trainer,28,67,126,138,Roadie (steel),
+R0858,2022-11-09,Commute x2,Commute via the viaduct,25,64,164,127,Commuter,
+R0859,2022-11-10,Tempo blocks,Windmill lane loop,57,158,586,155,Roadie (steel),Legs heavy
+R0860,2022-11-12,Long ride: Coast road out-and-back,Coast road out-and-back,121,313,1286,138,Roadie (steel),
+R0861,2022-11-13,Easy spin,River valley spin,25,72,148,122,Fixed winter bike,
+R0862,2022-11-14,Group ride: Reservoir circuit,Reservoir circuit,60,152,504,146,Roadie (steel),
+R0863,2022-11-15,Commute x2,Commute via the viaduct,22,58,159,130,Commuter,
+R0864,2022-11-16,Commute x2,Commute via the viaduct,28,82,232,124,Fixed winter bike,
+R0865,2022-11-19,Long ride: Chalk ridge,Chalk ridge,115,316,1450,132,Roadie (steel),"Tailwind out, paid for it later"
+R0866,2022-11-20,Tempo blocks,Windmill lane loop,52,148,428,138,Roadie (steel),Headwind all the way back
+R0867,2022-11-21,Tempo blocks,Windmill lane loop,32,81,268,144,Roadie (steel),
+R0868,2022-11-21,Evening spin,Windmill lane loop,18,52,182,116,Roadie (steel),
+R0869,2022-11-22,Z2 endurance,Coast road out-and-back,53,146,415,130,Fixed winter bike,Headwind all the way back
+R0870,2022-11-23,Tempo blocks,Windmill lane loop,54,149,507,141,Roadie (steel),"Tailwind out, paid for it later"
+R0871,2022-11-24,Easy spin,River valley spin,23,58,218,113,Fixed winter bike,
+R0872,2022-11-24,Evening spin,Windmill lane loop,20,54,122,116,Roadie (steel),"Tailwind out, paid for it later"
+R0873,2022-11-25,Recovery spin,River valley spin,38,97,387,114,Fixed winter bike,
+R0874,2022-11-26,Long ride: Lakes loop,Lakes loop,92,216,1057,132,Roadie (steel),"Cold, so overshoes, gloves on"
+R0875,2022-11-28,Group ride: Chalk ridge,Chalk ridge,59,153,593,129,Roadie (steel),
+R0876,2022-11-29,Sweet spot 2x20,Canal towpath,48,114,381,147,Roadie (steel),
+R0877,2022-11-29,Evening spin,Windmill lane loop,18,54,120,118,Roadie (steel),
+R0878,2022-11-30,Commute x2,Commute via the viaduct,20,51,126,114,Fixed winter bike,
+R0879,2022-12-01,Easy spin,River valley spin,40,109,269,115,Fixed winter bike,Dark by the last 10 km
+R0880,2022-12-02,Z2 endurance,Coast road out-and-back,43,118,307,132,Fixed winter bike,Headwind all the way back
+R0881,2022-12-03,Long ride: Coast road out-and-back,Coast road out-and-back,105,287,1275,126,Roadie (steel),
+R0882,2022-12-04,Tempo blocks,Windmill lane loop,44,103,381,140,Roadie (steel),Rain from the start
+R0883,2022-12-05,Commute x2,Commute via the viaduct,24,62,219,113,Fixed winter bike,
+R0884,2022-12-05,Evening spin,Windmill lane loop,22,57,180,119,Roadie (steel),"Cold, so overshoes, gloves on"
+R0885,2022-12-06,Turbo: cadence drills,Indoor trainer,19,48,94,127,Roadie (steel),
+R0886,2022-12-08,Group ride: Windmill lane loop,Windmill lane loop,34,80,218,141,Roadie (steel),
+R0887,2022-12-09,Commute x2,Commute via the viaduct,22,56,170,114,Fixed winter bike,
+R0888,2022-12-09,Evening spin,Windmill lane loop,15,38,105,112,Roadie (steel),Legs heavy
+R0889,2022-12-10,Long ride: Lakes loop,Lakes loop,130,310,1061,124,Roadie (steel),Felt great
+R0890,2022-12-11,Sunday club ride,Sunday club ride,57,140,595,133,Roadie (steel),
+R0891,2022-12-12,Tempo blocks,Windmill lane loop,38,101,284,147,Roadie (steel),"Tailwind out, paid for it later"
+R0892,2022-12-13,Z2 endurance,Coast road out-and-back,52,131,375,135,Fixed winter bike,Rain from the start
+R0893,2022-12-14,Hill repeats,Hill repeats at Ashdown,30,104,463,154,Roadie (steel),"Cold, so overshoes, gloves on"
+R0894,2022-12-16,Turbo: cadence drills,Indoor trainer,23,66,201,141,Roadie (steel),
+R0895,2022-12-17,Long ride: Coast road out-and-back,Coast road out-and-back,90,238,1203,133,Roadie (steel),Rode with the club
+R0896,2022-12-18,Long ride: Lakes loop,Lakes loop,82,207,930,132,Roadie (steel),Felt great
+R0897,2022-12-19,Commute x2,Commute via the viaduct,25,63,158,122,Commuter,Felt great
+R0898,2022-12-20,Z2 endurance,Coast road out-and-back,41,116,388,129,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0899,2022-12-21,Tempo blocks,Windmill lane loop,49,140,561,139,Roadie (steel),
+R0900,2022-12-22,Group ride: Reservoir circuit,Reservoir circuit,33,78,372,136,Roadie (steel),
+R0901,2022-12-24,Long ride: Lakes loop,Lakes loop,132,359,1193,135,Roadie (steel),Dark by the last 10 km
+R0902,2022-12-28,Tempo blocks,Windmill lane loop,31,88,259,146,Roadie (steel),
+R0903,2022-12-29,Easy spin,River valley spin,32,95,240,120,Fixed winter bike,"Cold, so overshoes, gloves on"
+R0904,2022-12-31,Long ride: Coast road out-and-back,Coast road out-and-back,113,300,960,130,Roadie (steel),
+R0905,2023-01-02,Group ride: Windmill lane loop,Windmill lane loop,61,147,516,140,Roadie (steel),
+R0906,2023-01-03,Commute x2,Commute via the viaduct,27,69,246,125,Commuter,
+R0907,2023-01-04,Commute x2,Commute via the viaduct,26,74,186,117,Commuter,
+R0908,2023-01-07,Long ride: Long way home,Long way home,130,333,1388,135,Roadie (steel),
+R0909,2023-01-08,Long ride: Chalk ridge,Chalk ridge,120,292,1445,129,Roadie (steel),Rode with the club
+R0910,2023-01-10,Z2 endurance,Coast road out-and-back,59,151,658,132,Fixed winter bike,
+R0911,2023-01-11,Tempo blocks,Windmill lane loop,32,74,350,152,Roadie (steel),Felt great
+R0912,2023-01-16,Commute x2,Commute via the viaduct,20,54,156,126,Commuter,
+R0913,2023-01-17,Turbo: cadence drills,Indoor trainer,39,98,279,132,Roadie (steel),
+R0914,2023-01-19,Group ride: Windmill lane loop,Windmill lane loop,61,171,682,145,Roadie (steel),"Cold, so overshoes, gloves on"
+R0915,2023-01-20,Recovery spin,River valley spin,22,60,174,118,Fixed winter bike,
+R0916,2023-01-21,Long ride: Reservoir circuit,Reservoir circuit,110,275,1518,136,Roadie (steel),
+R0917,2023-01-22,Sunday club ride,Sunday club ride,59,163,573,140,Roadie (steel),
+R0918,2023-01-23,Commute x2,Commute via the viaduct,26,72,191,113,Fixed winter bike,
+R0919,2023-01-25,Commute x2,Commute via the viaduct,26,75,242,127,Commuter,
+R0920,2023-01-26,Tempo blocks,Windmill lane loop,55,133,627,139,Roadie (steel),
+R0921,2023-01-28,Long ride: Long way home,Long way home,123,309,1029,122,Roadie (steel),"Cold, so overshoes, gloves on"
+R0922,2023-01-29,Sunday club ride,Sunday club ride,33,85,303,129,Roadie (steel),
+R0923,2023-01-31,Sweet spot 2x20,Canal towpath,60,171,563,150,Roadie (steel),
+R0924,2023-02-01,Commute x2,Commute via the viaduct,27,69,188,130,Fixed winter bike,Felt great
+R0925,2023-02-02,Tempo blocks,Windmill lane loop,42,110,296,152,Roadie (steel),
+R0926,2023-02-04,Long ride: Long way home,Long way home,90,245,888,127,Roadie (steel),
+R0927,2023-02-05,Easy spin,River valley spin,36,96,390,120,Fixed winter bike,"Tailwind out, paid for it later"
+R0928,2023-02-11,Long ride: Chalk ridge,Chalk ridge,129,307,1916,140,Roadie (steel),"Coffee stop, then home"
+R0929,2023-02-13,Commute x2,Commute via the viaduct,25,71,186,129,Commuter,Rain from the start
+R0930,2023-02-14,Commute x2,Commute via the viaduct,21,57,135,114,Fixed winter bike,Felt great
+R0931,2023-02-16,Easy spin,River valley spin,41,104,280,110,Fixed winter bike,"Easy spin, recovery"
+R0932,2023-02-17,Commute x2,Commute via the viaduct,21,59,205,127,Fixed winter bike,Headwind all the way back
+R0933,2023-02-17,Evening spin,Windmill lane loop,22,64,183,113,Roadie (steel),
+R0934,2023-02-18,Long ride: Reservoir circuit,Reservoir circuit,133,318,1308,128,Roadie (steel),Felt great
+R0935,2023-02-19,Long ride: Reservoir circuit,Reservoir circuit,98,255,855,125,Roadie (steel),
+R0936,2023-02-20,Commute x2,Commute via the viaduct,23,62,185,113,Commuter,
+R0937,2023-02-21,Turbo: cadence drills,Indoor trainer,20,51,125,135,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R0938,2023-02-22,Hill repeats,Hill repeats at Ashdown,27,97,499,146,Roadie (steel),"Tailwind out, paid for it later"
+R0939,2023-02-22,Evening spin,Windmill lane loop,20,50,123,117,Roadie (steel),"Coffee stop, then home"
+R0940,2023-02-23,Group ride: Windmill lane loop,Windmill lane loop,61,150,691,132,Roadie (steel),
+R0941,2023-02-24,Commute x2,Commute via the viaduct,27,81,183,128,Fixed winter bike,
+R0942,2023-02-25,Long ride: Long way home,Long way home,105,279,1367,124,Roadie (steel),
+R0943,2023-02-27,Group ride: Windmill lane loop,Windmill lane loop,43,117,378,143,Roadie (steel),
+R0944,2023-02-28,Sweet spot 2x20,Canal towpath,46,118,327,143,Roadie (steel),"Cold, so overshoes, gloves on"
+R0945,2023-03-01,Commute x2,Commute via the viaduct,19,49,180,126,Fixed winter bike,
+R0946,2023-03-02,Group ride: Reservoir circuit,Reservoir circuit,60,151,549,140,Roadie (steel),"Cold, so overshoes, gloves on"
+R0947,2023-03-04,Long ride: Coast road out-and-back,Coast road out-and-back,105,254,1489,124,Roadie (steel),Felt great
+R0948,2023-03-05,Easy spin,River valley spin,45,123,309,108,Fixed winter bike,
+R0949,2023-03-06,Group ride: Chalk ridge,Chalk ridge,57,150,362,141,Roadie (steel),
+R0950,2023-03-07,Commute x2,Commute via the viaduct,28,81,258,119,Commuter,
+R0951,2023-03-08,Commute x2,Commute via the viaduct,18,50,171,120,Fixed winter bike,
+R0952,2023-03-10,Z2 endurance,Coast road out-and-back,36,99,368,120,Fixed winter bike,
+R0953,2023-03-11,Long ride: Long way home,Long way home,85,222,1190,127,Roadie (steel),Rain from the start
+R0954,2023-03-12,Tempo blocks,Windmill lane loop,30,80,200,139,Roadie (steel),
+R0955,2023-03-12,Evening spin,Windmill lane loop,18,52,130,114,Roadie (steel),"Cold, so overshoes, gloves on"
+R0956,2023-03-13,Commute x2,Commute via the viaduct,22,60,184,113,Fixed winter bike,
+R0957,2023-03-14,Turbo: cadence drills,Indoor trainer,32,80,275,138,Roadie (steel),
+R0958,2023-03-15,Hill repeats,Hill repeats at Ashdown,34,107,489,144,Roadie (steel),
+R0959,2023-03-16,Easy spin,River valley spin,27,75,289,109,Fixed winter bike,Legs heavy
+R0960,2023-03-18,Long ride: Chalk ridge,Chalk ridge,115,312,1009,130,Roadie (steel),"Cold, so overshoes, gloves on"
+R0961,2023-03-20,Commute x2,Commute via the viaduct,26,76,163,117,Fixed winter bike,
+R0962,2023-03-21,Commute x2,Commute via the viaduct,22,58,164,130,Commuter,Rain from the start
+R0963,2023-03-23,Tempo blocks,Windmill lane loop,37,88,261,156,Roadie (steel),
+R0964,2023-03-24,Turbo: cadence drills,Indoor trainer,22,53,167,126,Roadie (steel),
+R0965,2023-03-25,Long ride: Lakes loop,Lakes loop,90,224,1076,136,Roadie (steel),
+R0966,2023-03-26,Easy spin,River valley spin,43,111,472,110,Fixed winter bike,Headwind all the way back
+R0967,2023-03-27,Commute x2,Commute via the viaduct,22,64,203,125,Fixed winter bike,Headwind all the way back
+R0968,2023-03-29,Hill repeats,Hill repeats at Ashdown,30,106,542,146,Roadie (steel),"Said ""never again"" at the top"
+R0969,2023-03-30,Tempo blocks,Windmill lane loop,44,119,264,140,Roadie (steel),
+R0970,2023-03-31,Commute x2,Commute via the viaduct,22,64,143,117,Commuter,Chain noisy; oiled after
+R0971,2023-04-01,Long ride: Coast road out-and-back,Coast road out-and-back,103,263,1346,127,Roadie (steel),"Tailwind out, paid for it later"
+R0972,2023-04-02,Tempo blocks,Windmill lane loop,34,88,249,141,Roadie (steel),
+R0973,2023-04-04,Commute x2,Commute via the viaduct,22,57,197,125,Commuter,
+R0974,2023-04-05,Tempo blocks,Windmill lane loop,40,97,438,147,Roadie (steel),
+R0975,2023-04-05,Evening spin,Windmill lane loop,21,56,213,122,Commuter,Felt great
+R0976,2023-04-06,Easy spin,River valley spin,40,106,211,124,Commuter,
+R0977,2023-04-08,Long ride: Lakes loop,Lakes loop,105,267,891,134,Roadie (steel),
+R0978,2023-04-09,Tempo blocks,Windmill lane loop,35,92,312,151,Roadie (steel),
+R0979,2023-04-10,Tempo blocks,Windmill lane loop,59,163,402,155,Roadie (steel),
+R0980,2023-04-11,Z2 endurance,Coast road out-and-back,45,124,426,134,Roadie (steel),"Coffee stop, then home"
+R0981,2023-04-12,Tempo blocks,Windmill lane loop,49,140,459,154,Roadie (steel),Legs heavy
+R0982,2023-04-13,Easy spin,River valley spin,41,109,369,113,Roadie (steel),
+R0983,2023-04-13,Evening spin,Windmill lane loop,16,44,138,128,Roadie (steel),
+R0984,2023-04-15,Long ride: Chalk ridge,Chalk ridge,124,330,1297,134,Roadie (steel),
+R0985,2023-04-16,Sunday club ride,Sunday club ride,59,153,557,137,Roadie (steel),
+R0986,2023-04-17,Group ride: Reservoir circuit,Reservoir circuit,38,107,333,134,Roadie (steel),
+R0987,2023-04-18,Sweet spot 2x20,Canal towpath,60,155,469,140,Roadie (steel),
+R0988,2023-04-20,Easy spin,River valley spin,37,107,312,120,Roadie (steel),Rain from the start
+R0989,2023-04-21,Recovery spin,River valley spin,22,62,240,112,Roadie (steel),"Coffee stop, then home"
+R0990,2023-04-21,Evening spin,Windmill lane loop,21,58,174,110,Commuter,Felt great
+R0991,2023-04-22,Long ride: Lakes loop,Lakes loop,181,450,1900,132,Roadie (steel),
+R0992,2023-04-23,Tempo blocks,Windmill lane loop,32,81,337,155,Roadie (steel),
+R0993,2023-04-24,Group ride: Windmill lane loop,Windmill lane loop,61,143,509,144,Roadie (steel),Felt great
+R0994,2023-04-24,Evening spin,Windmill lane loop,21,60,184,111,Roadie (steel),
+R0995,2023-04-25,Z2 endurance,Coast road out-and-back,62,154,603,121,Roadie (steel),
+R0996,2023-04-26,Commute x2,Commute via the viaduct,22,60,219,114,Commuter,Chain noisy; oiled after
+R0997,2023-04-27,Tempo blocks,Windmill lane loop,33,79,314,143,Roadie (steel),"Coffee stop, then home"
+R0998,2023-04-29,Long ride: Long way home,Long way home,125,316,1684,128,Roadie (steel),
+R0999,2023-04-30,Sunday club ride,Sunday club ride,51,126,432,145,Roadie (steel),
+R1000,2023-04-30,Evening spin,Windmill lane loop,16,46,116,112,Roadie (steel),Rode with the club
+R1001,2023-05-01,Group ride: Windmill lane loop,Windmill lane loop,41,116,424,145,Roadie (steel),
+R1002,2023-05-02,Z2 endurance,Coast road out-and-back,59,145,624,134,Roadie (steel),
+R1003,2023-05-04,Tempo blocks,Windmill lane loop,48,119,420,150,Roadie (steel),
+R1004,2023-05-05,Commute x2,Commute via the viaduct,25,75,225,124,Commuter,Felt great
+R1005,2023-05-06,Long ride: Reservoir circuit,Reservoir circuit,127,338,1791,137,Roadie (steel),Legs heavy
+R1006,2023-05-07,Sunday club ride,Sunday club ride,58,135,434,128,Roadie (steel),Legs heavy
+R1007,2023-05-08,Tempo blocks,Windmill lane loop,48,127,380,146,Roadie (steel),
+R1008,2023-05-08,Evening spin,Windmill lane loop,22,66,222,127,Roadie (steel),Headwind all the way back
+R1009,2023-05-09,Z2 endurance,Coast road out-and-back,48,118,325,127,Roadie (steel),
+R1010,2023-05-11,Easy spin,River valley spin,26,68,140,113,Roadie (steel),"Coffee stop, then home"
+R1011,2023-05-12,Z2 endurance,Coast road out-and-back,47,132,283,128,Roadie (steel),
+R1012,2023-05-13,Long ride: Coast road out-and-back,Coast road out-and-back,90,221,1013,125,Gravel (Kestrel-built),
+R1013,2023-05-17,Commute x2,Commute via the viaduct,26,78,209,117,Commuter,Chain noisy; oiled after
+R1014,2023-05-18,Group ride: Reservoir circuit,Reservoir circuit,36,102,238,130,Roadie (steel),Felt great
+R1015,2023-05-18,Evening spin,Windmill lane loop,17,49,147,121,Roadie (steel),
+R1016,2023-05-19,Recovery spin,River valley spin,29,81,250,117,Roadie (steel),
+R1017,2023-05-20,Long ride: Long way home,Long way home,104,272,1072,135,Roadie (steel),
+R1018,2023-05-21,Long ride: Lakes loop,Lakes loop,138,341,2001,138,Roadie (steel),Felt great
+R1019,2023-05-22,Group ride: Chalk ridge,Chalk ridge,52,133,343,140,Roadie (steel),
+R1020,2023-05-22,Evening spin,Windmill lane loop,22,62,143,123,Roadie (steel),Headwind all the way back
+R1021,2023-05-24,Commute x2,Commute via the viaduct,23,65,154,130,Commuter,Felt great
+R1022,2023-05-25,Easy spin,River valley spin,38,104,263,124,Roadie (steel),
+R1023,2023-05-26,Z2 endurance,Coast road out-and-back,53,135,527,133,Roadie (steel),"Coffee stop, then home"
+R1024,2023-05-27,Long ride: Coast road out-and-back,Coast road out-and-back,131,325,1958,139,Roadie (steel),
+R1025,2023-05-28,Long ride: Long way home,Long way home,124,292,1137,125,Gravel (Kestrel-built),"Coffee stop, then home"
+R1026,2023-05-30,Sweet spot 2x20,Canal towpath,54,136,431,149,Roadie (steel),
+R1027,2023-05-31,Tempo blocks,Windmill lane loop,43,112,499,145,Roadie (steel),Rain from the start
+R1028,2023-06-01,Tempo blocks,Windmill lane loop,48,129,470,140,Roadie (steel),Headwind all the way back
+R1029,2023-06-01,Evening spin,Windmill lane loop,14,38,138,116,Roadie (steel),
+R1030,2023-06-03,Long ride: Coast road out-and-back,Coast road out-and-back,104,290,1474,138,Roadie (steel),
+R1031,2023-06-05,Commute x2,Commute via the viaduct,27,75,192,130,Commuter,Rain from the start
+R1032,2023-06-06,Z2 endurance,Coast road out-and-back,43,110,438,138,Roadie (steel),
+R1033,2023-06-07,Tempo blocks,Windmill lane loop,43,113,501,146,Roadie (steel),"Tailwind out, paid for it later"
+R1034,2023-06-08,Tempo blocks,Windmill lane loop,53,150,437,147,Roadie (steel),
+R1035,2023-06-09,Z2 endurance,Coast road out-and-back,42,107,319,122,Roadie (steel),
+R1036,2023-06-09,Evening spin,Windmill lane loop,17,48,150,121,Roadie (steel),
+R1037,2023-06-10,Long ride: Coast road out-and-back,Coast road out-and-back,120,305,1648,135,Roadie (steel),"Tailwind out, paid for it later"
+R1038,2023-06-11,Sunday club ride,Sunday club ride,36,90,400,137,Roadie (steel),
+R1039,2023-06-14,Commute x2,Commute via the viaduct,26,77,183,126,Commuter,
+R1040,2023-06-15,Group ride: Reservoir circuit,Reservoir circuit,62,173,428,139,Roadie (steel),
+R1041,2023-06-15,Evening spin,Windmill lane loop,14,37,151,118,Roadie (steel),Legs heavy
+R1042,2023-06-16,Z2 endurance,Coast road out-and-back,42,110,337,121,Roadie (steel),
+R1043,2023-06-19,Group ride: Windmill lane loop,Windmill lane loop,57,153,452,145,Roadie (steel),
+R1044,2023-06-21,Hill repeats,Hill repeats at Ashdown,26,82,361,156,Roadie (steel),
+R1045,2023-06-22,Group ride: Chalk ridge,Chalk ridge,55,129,344,136,Roadie (steel),
+R1046,2023-06-22,Evening spin,Windmill lane loop,17,50,146,120,Roadie (steel),Rain from the start
+R1047,2023-06-24,Long ride: Long way home,Long way home,104,289,1386,131,Roadie (steel),
+R1048,2023-06-25,Easy spin,River valley spin,31,92,334,117,Commuter,Rode with the club
+R1049,2023-06-27,Z2 endurance,Coast road out-and-back,34,79,401,130,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1050,2023-06-28,Tempo blocks,Windmill lane loop,38,96,228,153,Roadie (steel),
+R1051,2023-06-28,Evening spin,Windmill lane loop,15,42,114,117,Roadie (steel),
+R1052,2023-06-30,Recovery spin,River valley spin,46,130,262,113,Roadie (steel),"Coffee stop, then home"
+R1053,2023-07-01,Long ride: Lakes loop,Lakes loop,113,282,954,135,Roadie (steel),
+R1054,2023-07-02,Tempo blocks,Windmill lane loop,47,118,357,143,Roadie (steel),Headwind all the way back
+R1055,2023-07-03,Commute x2,Commute via the viaduct,22,58,168,115,Commuter,
+R1056,2023-07-03,Evening spin,Windmill lane loop,15,40,118,125,Roadie (steel),
+R1057,2023-07-04,Z2 endurance,Coast road out-and-back,30,76,282,132,Roadie (steel),
+R1058,2023-07-04,Evening spin,Windmill lane loop,21,61,217,117,Roadie (steel),
+R1059,2023-07-06,Easy spin,River valley spin,32,91,234,117,Roadie (steel),
+R1060,2023-07-07,Commute x2,Commute via the viaduct,22,60,207,126,Commuter,Chain noisy; oiled after
+R1061,2023-07-08,Long ride: Long way home,Long way home,116,308,1011,126,Gravel (Kestrel-built),Rode with the club
+R1062,2023-07-09,Tempo blocks,Windmill lane loop,34,94,273,138,Roadie (steel),
+R1063,2023-07-10,Group ride: Chalk ridge,Chalk ridge,33,89,229,130,Roadie (steel),Felt great
+R1064,2023-07-11,Sweet spot 2x20,Canal towpath,59,159,555,150,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1065,2023-07-13,Group ride: Reservoir circuit,Reservoir circuit,31,74,272,133,Roadie (steel),
+R1066,2023-07-14,Z2 endurance,Coast road out-and-back,38,107,257,130,Roadie (steel),Rain from the start
+R1067,2023-07-15,Long ride: Long way home,Long way home,121,325,1459,124,Roadie (steel),Felt great
+R1068,2023-07-16,Tempo blocks,Windmill lane loop,39,101,404,145,Roadie (steel),
+R1069,2023-07-17,Commute x2,Commute via the viaduct,21,60,155,113,Commuter,Felt great
+R1070,2023-07-18,Sweet spot 2x20,Canal towpath,45,113,304,152,Roadie (steel),
+R1071,2023-07-18,Evening spin,Windmill lane loop,21,54,159,122,Roadie (steel),
+R1072,2023-07-19,Commute x2,Commute via the viaduct,19,53,162,114,Commuter,Rain from the start
+R1073,2023-07-21,Z2 endurance,Coast road out-and-back,47,116,421,130,Roadie (steel),"Coffee stop, then home"
+R1074,2023-07-22,Long ride: Coast road out-and-back,Coast road out-and-back,132,322,1099,128,Roadie (steel),
+R1075,2023-07-23,Sunday club ride,Sunday club ride,30,76,356,141,Roadie (steel),Legs heavy
+R1076,2023-07-24,Tempo blocks,Windmill lane loop,33,87,230,151,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1077,2023-07-25,Commute x2,Commute via the viaduct,23,62,165,116,Commuter,Rain from the start
+R1078,2023-07-26,Commute x2,Commute via the viaduct,21,61,190,129,Commuter,Chain noisy; oiled after
+R1079,2023-07-27,Tempo blocks,Windmill lane loop,42,105,461,156,Roadie (steel),"Tailwind out, paid for it later"
+R1080,2023-07-28,Z2 endurance,Coast road out-and-back,40,114,368,129,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1081,2023-07-29,Long ride: Long way home,Long way home,102,261,955,138,Roadie (steel),Felt great
+R1082,2023-07-30,Long ride: Long way home,Long way home,117,281,1539,125,Roadie (steel),Headwind all the way back
+R1083,2023-07-31,Group ride: Chalk ridge,Chalk ridge,32,76,254,135,Roadie (steel),
+R1084,2023-08-02,Tempo blocks,Windmill lane loop,45,116,527,155,Roadie (steel),
+R1085,2023-08-03,Group ride: Chalk ridge,Chalk ridge,38,107,381,146,Roadie (steel),
+R1086,2023-08-03,Evening spin,Windmill lane loop,14,41,89,115,Roadie (steel),
+R1087,2023-08-05,Long ride: Coast road out-and-back,Coast road out-and-back,121,285,1274,134,Roadie (steel),
+R1088,2023-08-06,Tempo blocks,Windmill lane loop,58,158,582,149,Roadie (steel),
+R1089,2023-08-06,Evening spin,Windmill lane loop,19,54,133,111,Commuter,
+R1090,2023-08-07,Commute x2,Commute via the viaduct,28,82,185,120,Commuter,
+R1091,2023-08-08,Commute x2,Commute via the viaduct,21,62,138,112,Commuter,Chain noisy; oiled after
+R1092,2023-08-08,Evening spin,Windmill lane loop,16,42,130,124,Commuter,Legs heavy
+R1093,2023-08-09,Hill repeats,Hill repeats at Ashdown,30,111,420,154,Roadie (steel),"Coffee stop, then home"
+R1094,2023-08-11,Recovery spin,River valley spin,36,91,217,107,Commuter,"Puncture near the canal lock, fixed in ten minutes"
+R1095,2023-08-12,Long ride: Chalk ridge,Chalk ridge,104,272,912,140,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1096,2023-08-20,Sunday club ride,Sunday club ride,43,119,417,146,Roadie (steel),Legs heavy
+R1097,2023-08-22,Z2 endurance,Coast road out-and-back,58,141,402,129,Roadie (steel),
+R1098,2023-08-28,Commute x2,Commute via the viaduct,22,62,167,121,Commuter,Chain noisy; oiled after
+R1099,2023-08-29,Commute x2,Commute via the viaduct,18,51,143,124,Commuter,
+R1100,2023-08-30,Tempo blocks,Windmill lane loop,30,72,305,141,Roadie (steel),
+R1101,2023-08-31,Tempo blocks,Windmill lane loop,48,115,390,142,Roadie (steel),
+R1102,2023-09-02,Long ride: Long way home,Long way home,148,391,1255,135,Roadie (steel),Rain from the start
+R1103,2023-09-03,Long ride: Chalk ridge,Chalk ridge,90,231,732,123,Roadie (steel),
+R1104,2023-09-05,Z2 endurance,Coast road out-and-back,37,95,436,130,Roadie (steel),
+R1105,2023-09-07,Easy spin,River valley spin,43,126,300,116,Roadie (steel),"Easy spin, recovery"
+R1106,2023-09-08,Z2 endurance,Coast road out-and-back,47,123,365,129,Roadie (steel),
+R1107,2023-09-10,Tempo blocks,Windmill lane loop,61,141,709,146,Roadie (steel),
+R1108,2023-09-11,Tempo blocks,Windmill lane loop,40,104,380,152,Roadie (steel),
+R1109,2023-09-12,Z2 endurance,Coast road out-and-back,43,104,440,128,Roadie (steel),
+R1110,2023-09-13,Hill repeats,Hill repeats at Ashdown,25,86,354,160,Roadie (steel),Legs heavy
+R1111,2023-09-14,Easy spin,River valley spin,32,81,205,114,Commuter,
+R1112,2023-09-16,Long ride: Lakes loop,Lakes loop,112,274,930,134,Roadie (steel),
+R1113,2023-09-17,Easy spin,River valley spin,37,102,378,118,Commuter,Headwind all the way back
+R1114,2023-09-19,Sweet spot 2x20,Canal towpath,32,87,381,146,Roadie (steel),Rain from the start
+R1115,2023-09-20,Commute x2,Commute via the viaduct,26,76,241,124,Commuter,Chain noisy; oiled after
+R1116,2023-09-21,Group ride: Windmill lane loop,Windmill lane loop,45,115,515,135,Roadie (steel),
+R1117,2023-09-22,Commute x2,Commute via the viaduct,21,55,172,123,Commuter,
+R1118,2023-09-23,Long ride: Lakes loop,Lakes loop,94,257,1155,126,Gravel (Kestrel-built),
+R1119,2023-09-24,Sunday club ride,Sunday club ride,58,139,433,139,Roadie (steel),
+R1120,2023-09-25,Tempo blocks,Windmill lane loop,30,76,257,139,Roadie (steel),
+R1121,2023-09-26,Z2 endurance,Coast road out-and-back,30,74,327,125,Roadie (steel),Headwind all the way back
+R1122,2023-09-27,Tempo blocks,Windmill lane loop,51,134,392,152,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1123,2023-09-28,Easy spin,River valley spin,45,127,390,123,Commuter,
+R1124,2023-09-29,Z2 endurance,Coast road out-and-back,52,135,471,128,Roadie (steel),Legs heavy
+R1125,2023-09-29,Evening spin,Windmill lane loop,21,63,166,118,Roadie (steel),"Tailwind out, paid for it later"
+R1126,2023-09-30,Long ride: Lakes loop,Lakes loop,92,245,891,128,Roadie (steel),
+R1127,2023-10-01,Easy spin,River valley spin,40,104,211,112,Roadie (steel),Rain from the start
+R1128,2023-10-03,Commute x2,Commute via the viaduct,21,54,160,115,Commuter,
+R1129,2023-10-04,Hill repeats,Hill repeats at Ashdown,30,93,422,154,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1130,2023-10-05,Group ride: Reservoir circuit,Reservoir circuit,37,102,224,129,Roadie (steel),"Group of 6, steady pace"
+R1131,2023-10-06,Recovery spin,River valley spin,46,135,354,104,Commuter,
+R1132,2023-10-07,Long ride: Long way home,Long way home,100,274,1160,140,Roadie (steel),
+R1133,2023-10-08,Tempo blocks,Windmill lane loop,38,96,317,148,Roadie (steel),
+R1134,2023-10-09,Commute x2,Commute via the viaduct,21,58,171,113,Commuter,Headwind all the way back
+R1135,2023-10-10,Z2 endurance,Coast road out-and-back,54,142,399,136,Roadie (steel),
+R1136,2023-10-11,Hill repeats,Hill repeats at Ashdown,44,135,812,152,Roadie (steel),
+R1137,2023-10-12,Group ride: Reservoir circuit,Reservoir circuit,30,70,358,136,Roadie (steel),
+R1138,2023-10-13,Commute x2,Commute via the viaduct,18,52,136,126,Commuter,
+R1139,2023-10-15,Tempo blocks,Windmill lane loop,35,82,211,151,Roadie (steel),"Coffee stop, then home"
+R1140,2023-10-16,Group ride: Chalk ridge,Chalk ridge,50,119,477,131,Roadie (steel),
+R1141,2023-10-17,Commute x2,Commute via the viaduct,22,55,149,112,Commuter,
+R1142,2023-10-18,Commute x2,Commute via the viaduct,27,72,267,113,Commuter,
+R1143,2023-10-19,Group ride: Windmill lane loop,Windmill lane loop,44,105,486,133,Roadie (steel),
+R1144,2023-10-21,Long ride: Coast road out-and-back,Coast road out-and-back,88,225,988,128,Gravel (Kestrel-built),"Coffee stop, then home"
+R1145,2023-10-22,Tempo blocks,Windmill lane loop,35,86,308,146,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1146,2023-10-23,Commute x2,Commute via the viaduct,20,58,154,118,Commuter,Felt great
+R1147,2023-10-24,Commute x2,Commute via the viaduct,18,52,133,118,Commuter,
+R1148,2023-10-25,Hill repeats,Hill repeats at Ashdown,37,134,657,158,Roadie (steel),
+R1149,2023-10-26,Group ride: Windmill lane loop,Windmill lane loop,53,125,608,143,Roadie (steel),"Tailwind out, paid for it later"
+R1150,2023-10-28,Long ride: Reservoir circuit,Reservoir circuit,97,246,857,131,Roadie (steel),Dark by the last 10 km
+R1151,2023-10-29,Sunday club ride,Sunday club ride,39,99,277,145,Roadie (steel),Headwind all the way back
+R1152,2023-10-30,Commute x2,Commute via the viaduct,18,47,121,126,Commuter,Felt great
+R1153,2023-10-31,Sweet spot 2x20,Canal towpath,51,141,602,142,Roadie (steel),
+R1154,2023-11-02,Tempo blocks,Windmill lane loop,55,130,654,147,Roadie (steel),
+R1155,2023-11-04,Long ride: Coast road out-and-back,Coast road out-and-back,84,206,769,136,Roadie (steel),
+R1156,2023-11-05,Easy spin,River valley spin,23,68,199,118,Fixed winter bike,"Coffee stop, then home"
+R1157,2023-11-05,Evening spin,Windmill lane loop,14,36,99,124,Roadie (steel),
+R1158,2023-11-06,Tempo blocks,Windmill lane loop,59,149,537,142,Roadie (steel),"Cold, so overshoes, gloves on"
+R1159,2023-11-07,Z2 endurance,Coast road out-and-back,44,125,301,122,Fixed winter bike,
+R1160,2023-11-09,Easy spin,River valley spin,32,82,235,106,Fixed winter bike,"Coffee stop, then home"
+R1161,2023-11-10,Z2 endurance,Coast road out-and-back,58,137,485,136,Fixed winter bike,
+R1162,2023-11-11,Long ride: Coast road out-and-back,Coast road out-and-back,131,320,1760,133,Roadie (steel),"Tailwind out, paid for it later"
+R1163,2023-11-12,Tempo blocks,Windmill lane loop,48,113,437,142,Roadie (steel),
+R1164,2023-11-13,Tempo blocks,Windmill lane loop,56,155,463,156,Roadie (steel),
+R1165,2023-11-15,Tempo blocks,Windmill lane loop,50,127,447,140,Roadie (steel),
+R1166,2023-11-16,Tempo blocks,Windmill lane loop,42,97,420,141,Roadie (steel),"Wet leaves, slow descents"
+R1167,2023-11-17,Recovery spin,River valley spin,38,110,337,116,Fixed winter bike,
+R1168,2023-11-18,Long ride: Lakes loop,Lakes loop,88,231,1240,135,Roadie (steel),
+R1169,2023-11-20,Group ride: Reservoir circuit,Reservoir circuit,43,102,262,129,Roadie (steel),"Cold, so overshoes, gloves on"
+R1170,2023-11-22,Commute x2,Commute via the viaduct,27,77,172,127,Fixed winter bike,
+R1171,2023-11-23,Group ride: Chalk ridge,Chalk ridge,46,124,417,128,Roadie (steel),
+R1172,2023-11-24,Recovery spin,River valley spin,34,100,258,114,Fixed winter bike,
+R1173,2023-11-25,Long ride: Coast road out-and-back,Coast road out-and-back,114,269,1274,135,Roadie (steel),Rode with the club
+R1174,2023-11-26,Tempo blocks,Windmill lane loop,62,170,492,148,Roadie (steel),
+R1175,2023-11-27,Commute x2,Commute via the viaduct,27,75,206,115,Fixed winter bike,
+R1176,2023-11-28,Turbo: cadence drills,Indoor trainer,36,101,328,138,Roadie (steel),"Indoors, a film and the fan on"
+R1177,2023-11-30,Easy spin,River valley spin,23,59,137,109,Fixed winter bike,Legs heavy
+R1178,2023-12-01,Z2 endurance,Coast road out-and-back,47,112,303,122,Fixed winter bike,
+R1179,2023-12-02,Long ride: Reservoir circuit,Reservoir circuit,102,253,1378,126,Roadie (steel),
+R1180,2023-12-03,Long ride: Lakes loop,Lakes loop,115,310,1598,129,Roadie (steel),
+R1181,2023-12-06,Commute x2,Commute via the viaduct,23,63,146,126,Commuter,Headwind all the way back
+R1182,2023-12-12,Z2 endurance,Coast road out-and-back,55,150,576,130,Fixed winter bike,"Wet leaves, slow descents"
+R1183,2023-12-13,Hill repeats,Hill repeats at Ashdown,24,75,442,148,Roadie (steel),
+R1184,2023-12-14,Group ride: Chalk ridge,Chalk ridge,36,87,325,138,Roadie (steel),
+R1185,2023-12-14,Evening spin,Windmill lane loop,14,37,97,124,Roadie (steel),
+R1186,2023-12-16,Long ride: Long way home,Long way home,139,376,1958,122,Roadie (steel),
+R1187,2023-12-17,Tempo blocks,Windmill lane loop,47,110,293,148,Roadie (steel),"Cold, so overshoes, gloves on"
+R1188,2023-12-18,Group ride: Chalk ridge,Chalk ridge,43,115,478,139,Roadie (steel),
+R1189,2023-12-19,Turbo: cadence drills,Indoor trainer,22,56,134,133,Roadie (steel),
+R1190,2023-12-19,Evening spin,Windmill lane loop,17,44,127,116,Roadie (steel),
+R1191,2023-12-20,Commute x2,Commute via the viaduct,26,69,161,118,Commuter,
+R1192,2023-12-21,Group ride: Chalk ridge,Chalk ridge,35,98,213,130,Roadie (steel),
+R1193,2023-12-23,Long ride: Long way home,Long way home,84,221,872,124,Roadie (steel),
+R1194,2023-12-24,Sunday club ride,Sunday club ride,34,91,325,138,Roadie (steel),
+R1195,2023-12-24,Evening spin,Windmill lane loop,14,36,95,124,Roadie (steel),
+R1196,2023-12-29,Commute x2,Commute via the viaduct,27,74,173,120,Fixed winter bike,Chain noisy; oiled after
+R1197,2024-01-01,Tempo blocks,Windmill lane loop,30,79,307,155,Roadie (steel),
+R1198,2024-01-02,Turbo: cadence drills,Indoor trainer,22,61,148,127,Roadie (steel),
+R1199,2024-01-03,Hill repeats,Hill repeats at Ashdown,39,142,739,153,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1200,2024-01-04,Easy spin,River valley spin,39,104,338,110,Fixed winter bike,"Puncture near the canal lock, fixed in ten minutes"
+R1201,2024-01-05,Recovery spin,River valley spin,33,83,262,107,Fixed winter bike,"Cold, so overshoes, gloves on"
+R1202,2024-01-06,Long ride: Chalk ridge,Chalk ridge,121,335,1170,135,Roadie (steel),
+R1203,2024-01-07,Long ride: Long way home,Long way home,83,223,871,134,Roadie (steel),Rain from the start
+R1204,2024-01-08,Commute x2,Commute via the viaduct,18,47,173,116,Commuter,
+R1205,2024-01-11,Group ride: Reservoir circuit,Reservoir circuit,36,86,358,131,Roadie (steel),"Tailwind out, paid for it later"
+R1206,2024-01-12,Commute x2,Commute via the viaduct,25,63,211,126,Commuter,Headwind all the way back
+R1207,2024-01-15,Commute x2,Commute via the viaduct,28,80,269,129,Commuter,Felt great
+R1208,2024-01-16,Z2 endurance,Coast road out-and-back,61,159,494,120,Fixed winter bike,
+R1209,2024-01-18,Easy spin,River valley spin,28,72,271,115,Fixed winter bike,Rain from the start
+R1210,2024-01-19,Commute x2,Commute via the viaduct,21,57,205,118,Fixed winter bike,Chain noisy; oiled after
+R1211,2024-01-19,Evening spin,Windmill lane loop,19,50,147,120,Roadie (steel),"Coffee stop, then home"
+R1212,2024-01-20,Long ride: Reservoir circuit,Reservoir circuit,132,323,1715,139,Roadie (steel),"Cold, so overshoes, gloves on"
+R1213,2024-01-23,Commute x2,Commute via the viaduct,20,51,154,125,Fixed winter bike,
+R1214,2024-01-24,Tempo blocks,Windmill lane loop,55,141,618,141,Roadie (steel),
+R1215,2024-01-24,Evening spin,Windmill lane loop,17,49,116,127,Roadie (steel),"Cold, so overshoes, gloves on"
+R1216,2024-01-25,Tempo blocks,Windmill lane loop,45,104,289,143,Roadie (steel),Dark by the last 10 km
+R1217,2024-01-26,Recovery spin,River valley spin,44,114,405,108,Fixed winter bike,Headwind all the way back
+R1218,2024-01-27,Long ride: Long way home,Long way home,141,344,1700,125,Roadie (steel),
+R1219,2024-01-28,Tempo blocks,Windmill lane loop,42,113,347,139,Roadie (steel),
+R1220,2024-01-28,Evening spin,Windmill lane loop,20,58,214,123,Roadie (steel),"Cold, so overshoes, gloves on"
+R1221,2024-01-29,Commute x2,Commute via the viaduct,19,53,124,129,Fixed winter bike,Chain noisy; oiled after
+R1222,2024-01-30,Sweet spot 2x20,Canal towpath,43,110,321,157,Roadie (steel),Legs heavy
+R1223,2024-01-30,Evening spin,Windmill lane loop,20,56,130,125,Roadie (steel),"Cold, so overshoes, gloves on"
+R1224,2024-01-31,Tempo blocks,Windmill lane loop,30,78,281,146,Roadie (steel),
+R1225,2024-02-02,Turbo: cadence drills,Indoor trainer,26,66,235,131,Roadie (steel),
+R1226,2024-02-02,Evening spin,Windmill lane loop,18,52,131,119,Roadie (steel),
+R1227,2024-02-03,Long ride: Long way home,Long way home,115,279,1638,124,Roadie (steel),
+R1228,2024-02-04,Long ride: Coast road out-and-back,Coast road out-and-back,125,321,1504,136,Roadie (steel),
+R1229,2024-02-06,Turbo: cadence drills,Indoor trainer,27,76,269,139,Roadie (steel),
+R1230,2024-02-07,Tempo blocks,Windmill lane loop,42,115,311,154,Roadie (steel),
+R1231,2024-02-10,Long ride: Coast road out-and-back,Coast road out-and-back,84,194,705,134,Roadie (steel),Headwind all the way back
+R1232,2024-02-11,Long ride: Coast road out-and-back,Coast road out-and-back,131,333,1107,133,Roadie (steel),
+R1233,2024-02-12,Commute x2,Commute via the viaduct,26,66,242,125,Fixed winter bike,
+R1234,2024-02-13,Turbo: cadence drills,Indoor trainer,23,56,221,138,Roadie (steel),
+R1235,2024-02-13,Evening spin,Windmill lane loop,22,63,230,114,Roadie (steel),
+R1236,2024-02-14,Tempo blocks,Windmill lane loop,31,78,348,140,Roadie (steel),
+R1237,2024-02-15,Group ride: Reservoir circuit,Reservoir circuit,46,114,420,141,Roadie (steel),"Group of 6, steady pace"
+R1238,2024-02-16,Z2 endurance,Coast road out-and-back,36,86,397,132,Fixed winter bike,
+R1239,2024-02-17,Long ride: Coast road out-and-back,Coast road out-and-back,116,294,1225,135,Roadie (steel),"Cold, so overshoes, gloves on"
+R1240,2024-02-18,Tempo blocks,Windmill lane loop,38,94,454,154,Roadie (steel),"Cold, so overshoes, gloves on"
+R1241,2024-02-20,Commute x2,Commute via the viaduct,21,59,126,124,Commuter,
+R1242,2024-02-23,Turbo: cadence drills,Indoor trainer,24,68,196,129,Roadie (steel),"Indoors, a film and the fan on"
+R1243,2024-02-26,Commute x2,Commute via the viaduct,22,65,191,125,Fixed winter bike,Headwind all the way back
+R1244,2024-02-27,Z2 endurance,Coast road out-and-back,55,153,352,134,Fixed winter bike,
+R1245,2024-02-28,Commute x2,Commute via the viaduct,21,57,190,124,Commuter,Chain noisy; oiled after
+R1246,2024-02-29,Tempo blocks,Windmill lane loop,31,83,289,152,Roadie (steel),Rain from the start
+R1247,2024-03-02,Long ride: Lakes loop,Lakes loop,106,273,1481,127,Roadie (steel),
+R1248,2024-03-03,Sunday club ride,Sunday club ride,57,132,637,137,Roadie (steel),
+R1249,2024-03-04,Commute x2,Commute via the viaduct,27,79,253,116,Commuter,
+R1250,2024-03-04,Evening spin,Windmill lane loop,20,59,201,110,Roadie (steel),
+R1251,2024-03-05,Sweet spot 2x20,Canal towpath,42,113,501,142,Roadie (steel),Headwind all the way back
+R1252,2024-03-06,Commute x2,Commute via the viaduct,24,66,170,125,Fixed winter bike,Chain noisy; oiled after
+R1253,2024-03-08,Z2 endurance,Coast road out-and-back,53,135,397,131,Fixed winter bike,
+R1254,2024-03-09,Long ride: Lakes loop,Lakes loop,99,265,1107,134,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1255,2024-03-10,Tempo blocks,Windmill lane loop,36,99,279,147,Roadie (steel),Rain from the start
+R1256,2024-03-12,Z2 endurance,Coast road out-and-back,55,145,396,136,Fixed winter bike,Rain from the start
+R1257,2024-03-13,Commute x2,Commute via the viaduct,20,60,142,117,Commuter,Headwind all the way back
+R1258,2024-03-14,Tempo blocks,Windmill lane loop,48,120,562,147,Roadie (steel),
+R1259,2024-03-14,Evening spin,Windmill lane loop,22,61,142,113,Roadie (steel),
+R1260,2024-03-15,Turbo: cadence drills,Indoor trainer,37,94,269,131,Roadie (steel),
+R1261,2024-03-16,Long ride: Long way home,Long way home,122,283,1194,139,Roadie (steel),"Coffee stop, then home"
+R1262,2024-03-19,Sweet spot 2x20,Canal towpath,49,117,460,150,Roadie (steel),Rain from the start
+R1263,2024-03-21,Group ride: Chalk ridge,Chalk ridge,43,109,261,129,Roadie (steel),"Cold, so overshoes, gloves on"
+R1264,2024-03-22,Commute x2,Commute via the viaduct,23,62,174,125,Fixed winter bike,
+R1265,2024-03-23,Long ride: Chalk ridge,Chalk ridge,85,225,1162,133,Roadie (steel),
+R1266,2024-03-24,Tempo blocks,Windmill lane loop,43,101,463,141,Roadie (steel),
+R1267,2024-03-25,Group ride: Chalk ridge,Chalk ridge,55,132,628,133,Roadie (steel),"Group of 6, steady pace"
+R1268,2024-03-26,Sweet spot 2x20,Canal towpath,42,103,441,145,Roadie (steel),
+R1269,2024-03-27,Tempo blocks,Windmill lane loop,58,156,539,139,Roadie (steel),Felt great
+R1270,2024-03-29,Turbo: cadence drills,Indoor trainer,39,110,168,127,Roadie (steel),
+R1271,2024-03-30,Long ride: Long way home,Long way home,126,351,1255,136,Roadie (steel),"Cold, so overshoes, gloves on"
+R1272,2024-04-01,Tempo blocks,Windmill lane loop,44,107,416,151,Roadie (steel),Legs heavy
+R1273,2024-04-02,Z2 endurance,Coast road out-and-back,60,158,667,123,Roadie (steel),Rain from the start
+R1274,2024-04-03,Hill repeats,Hill repeats at Ashdown,39,129,663,154,Roadie (steel),
+R1275,2024-04-04,Easy spin,River valley spin,33,98,231,111,Commuter,"Coffee stop, then home"
+R1276,2024-04-05,Commute x2,Commute via the viaduct,22,65,202,126,Commuter,Chain noisy; oiled after
+R1277,2024-04-06,Long ride: Chalk ridge,Chalk ridge,81,193,1090,129,Roadie (steel),
+R1278,2024-04-07,Long ride: Reservoir circuit,Reservoir circuit,102,240,1003,123,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1279,2024-04-08,Commute x2,Commute via the viaduct,19,48,139,120,Commuter,
+R1280,2024-04-11,Group ride: Windmill lane loop,Windmill lane loop,56,139,391,128,Roadie (steel),
+R1281,2024-04-11,Evening spin,Windmill lane loop,20,56,147,123,Commuter,
+R1282,2024-04-12,Z2 endurance,Coast road out-and-back,53,129,457,127,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1283,2024-04-13,Long ride: Coast road out-and-back,Coast road out-and-back,125,322,1796,134,Roadie (steel),Rain from the start
+R1284,2024-04-14,Sunday club ride,Sunday club ride,46,118,546,132,Roadie (steel),"Group of 6, steady pace"
+R1285,2024-04-15,Group ride: Windmill lane loop,Windmill lane loop,52,121,406,133,Roadie (steel),
+R1286,2024-04-16,Z2 endurance,Coast road out-and-back,36,99,220,128,Roadie (steel),
+R1287,2024-04-16,Evening spin,Windmill lane loop,19,54,130,123,Commuter,Rain from the start
+R1288,2024-04-17,Commute x2,Commute via the viaduct,24,69,239,126,Commuter,
+R1289,2024-04-18,Group ride: Windmill lane loop,Windmill lane loop,47,116,507,146,Roadie (steel),"Tailwind out, paid for it later"
+R1290,2024-04-19,Recovery spin,River valley spin,41,112,366,104,Roadie (steel),Headwind all the way back
+R1291,2024-04-19,Evening spin,Windmill lane loop,21,57,204,126,Commuter,
+R1292,2024-04-20,Long ride: Reservoir circuit,Reservoir circuit,111,267,895,136,Roadie (steel),"Coffee stop, then home"
+R1293,2024-04-21,Long ride: Coast road out-and-back,Coast road out-and-back,87,202,1030,132,Gravel (Kestrel-built),"Tailwind out, paid for it later"
+R1294,2024-04-22,Tempo blocks,Windmill lane loop,51,130,358,145,Roadie (steel),
+R1295,2024-04-23,Z2 endurance,Coast road out-and-back,42,113,307,133,Roadie (steel),"Tailwind out, paid for it later"
+R1296,2024-04-24,Hill repeats,Hill repeats at Ashdown,28,98,446,152,Roadie (steel),
+R1297,2024-04-26,Z2 endurance,Coast road out-and-back,58,146,394,128,Roadie (steel),
+R1298,2024-04-27,Long ride: Chalk ridge,Chalk ridge,136,332,1186,125,Roadie (steel),"Said ""never again"" at the top"
+R1299,2024-04-29,Tempo blocks,Windmill lane loop,55,144,356,149,Roadie (steel),
+R1300,2024-04-30,Z2 endurance,Coast road out-and-back,49,128,533,126,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1301,2024-05-01,Tempo blocks,Windmill lane loop,45,120,335,154,Roadie (steel),Rain from the start
+R1302,2024-05-02,Tempo blocks,Windmill lane loop,59,144,687,146,Roadie (steel),Rain from the start
+R1303,2024-05-04,Long ride: Coast road out-and-back,Coast road out-and-back,189,483,2106,128,Roadie (steel),Sunrise start
+R1304,2024-05-05,Sunday club ride,Sunday club ride,62,145,429,144,Roadie (steel),"Group of 6, steady pace"
+R1305,2024-05-07,Z2 endurance,Coast road out-and-back,52,130,327,132,Roadie (steel),
+R1306,2024-05-07,Evening spin,Windmill lane loop,15,39,112,121,Roadie (steel),Headwind all the way back
+R1307,2024-05-08,Tempo blocks,Windmill lane loop,51,122,354,156,Roadie (steel),"Coffee stop, then home"
+R1308,2024-05-10,Commute x2,Commute via the viaduct,26,76,160,117,Commuter,
+R1309,2024-05-11,Long ride: Reservoir circuit,Reservoir circuit,92,228,1267,132,Gravel (Kestrel-built),
+R1310,2024-05-12,Tempo blocks,Windmill lane loop,55,128,604,146,Roadie (steel),Legs heavy
+R1311,2024-05-12,Evening spin,Windmill lane loop,21,58,171,125,Roadie (steel),Headwind all the way back
+R1312,2024-05-13,Tempo blocks,Windmill lane loop,49,124,551,152,Roadie (steel),"Tailwind out, paid for it later"
+R1313,2024-05-14,Z2 endurance,Coast road out-and-back,40,103,477,137,Roadie (steel),
+R1314,2024-05-14,Evening spin,Windmill lane loop,15,41,127,120,Roadie (steel),
+R1315,2024-05-15,Commute x2,Commute via the viaduct,28,80,269,128,Commuter,Rain from the start
+R1316,2024-05-16,Tempo blocks,Windmill lane loop,30,76,351,138,Roadie (steel),Felt great
+R1317,2024-05-17,Recovery spin,River valley spin,27,74,185,105,Commuter,
+R1318,2024-05-18,Long ride: Long way home,Long way home,120,317,1388,128,Gravel (Kestrel-built),"Puncture near the canal lock, fixed in ten minutes"
+R1319,2024-05-21,Z2 endurance,Coast road out-and-back,34,91,333,124,Roadie (steel),Felt great
+R1320,2024-05-22,Hill repeats,Hill repeats at Ashdown,37,136,625,147,Roadie (steel),"Tailwind out, paid for it later"
+R1321,2024-05-23,Group ride: Reservoir circuit,Reservoir circuit,55,151,612,140,Roadie (steel),"Group of 6, steady pace"
+R1322,2024-05-24,Recovery spin,River valley spin,33,89,294,115,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1323,2024-05-25,Long ride: Lakes loop,Lakes loop,85,214,941,132,Roadie (steel),"Coffee stop, then home"
+R1324,2024-05-26,Easy spin,River valley spin,32,88,165,110,Roadie (steel),
+R1325,2024-05-27,Group ride: Reservoir circuit,Reservoir circuit,59,139,424,138,Roadie (steel),
+R1326,2024-05-29,Commute x2,Commute via the viaduct,23,64,189,112,Commuter,
+R1327,2024-05-30,Easy spin,River valley spin,43,124,332,113,Commuter,
+R1328,2024-05-31,Z2 endurance,Coast road out-and-back,43,100,498,126,Roadie (steel),Legs heavy
+R1329,2024-06-01,Long ride: Coast road out-and-back,Coast road out-and-back,81,210,1163,129,Roadie (steel),Legs heavy
+R1330,2024-06-02,Long ride: Chalk ridge,Chalk ridge,160,420,1823,125,Roadie (steel),
+R1331,2024-06-03,Tempo blocks,Windmill lane loop,51,131,481,143,Roadie (steel),
+R1332,2024-06-05,Tempo blocks,Windmill lane loop,59,137,664,148,Roadie (steel),Headwind all the way back
+R1333,2024-06-06,Group ride: Chalk ridge,Chalk ridge,53,127,480,128,Roadie (steel),Headwind all the way back
+R1334,2024-06-08,Long ride: Lakes loop,Lakes loop,106,271,1016,125,Roadie (steel),
+R1335,2024-06-09,Long ride: Lakes loop,Lakes loop,84,217,1024,131,Roadie (steel),
+R1336,2024-06-10,Tempo blocks,Windmill lane loop,38,95,295,144,Roadie (steel),Headwind all the way back
+R1337,2024-06-11,Z2 endurance,Coast road out-and-back,41,102,354,131,Roadie (steel),
+R1338,2024-06-12,Hill repeats,Hill repeats at Ashdown,42,129,633,153,Roadie (steel),
+R1339,2024-06-12,Evening spin,Windmill lane loop,15,40,132,111,Roadie (steel),
+R1340,2024-06-14,Recovery spin,River valley spin,23,65,220,119,Commuter,"Easy spin, recovery"
+R1341,2024-06-15,Long ride: Coast road out-and-back,Coast road out-and-back,121,298,1105,125,Gravel (Kestrel-built),Rain from the start
+R1342,2024-06-16,Tempo blocks,Windmill lane loop,39,100,332,151,Roadie (steel),
+R1343,2024-06-17,Tempo blocks,Windmill lane loop,57,161,608,150,Roadie (steel),
+R1344,2024-06-18,Z2 endurance,Coast road out-and-back,44,108,339,122,Roadie (steel),Headwind all the way back
+R1345,2024-06-19,Commute x2,Commute via the viaduct,27,80,256,126,Commuter,
+R1346,2024-06-22,Long ride: Long way home,Long way home,130,346,1617,130,Gravel (Kestrel-built),
+R1347,2024-06-23,Easy spin,River valley spin,25,68,210,121,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1348,2024-06-23,Evening spin,Windmill lane loop,17,48,102,118,Roadie (steel),Headwind all the way back
+R1349,2024-06-25,Sweet spot 2x20,Canal towpath,59,143,424,146,Roadie (steel),
+R1350,2024-06-27,Easy spin,River valley spin,31,85,307,112,Roadie (steel),Felt great
+R1351,2024-06-29,Long ride: Lakes loop,Lakes loop,99,230,998,137,Roadie (steel),
+R1352,2024-06-30,Easy spin,River valley spin,28,79,252,124,Roadie (steel),
+R1353,2024-07-02,Commute x2,Commute via the viaduct,24,64,198,126,Commuter,Felt great
+R1354,2024-07-03,Commute x2,Commute via the viaduct,19,51,149,118,Commuter,
+R1355,2024-07-04,Group ride: Reservoir circuit,Reservoir circuit,49,124,568,141,Roadie (steel),
+R1356,2024-07-05,Z2 endurance,Coast road out-and-back,44,115,520,128,Roadie (steel),Legs heavy
+R1357,2024-07-05,Evening spin,Windmill lane loop,21,55,199,121,Roadie (steel),"Tailwind out, paid for it later"
+R1358,2024-07-06,Long ride: Reservoir circuit,Reservoir circuit,133,341,1738,130,Gravel (Kestrel-built),
+R1359,2024-07-07,Easy spin,River valley spin,46,128,241,118,Roadie (steel),
+R1360,2024-07-09,Z2 endurance,Coast road out-and-back,49,117,484,124,Roadie (steel),
+R1361,2024-07-10,Commute x2,Commute via the viaduct,18,52,151,116,Commuter,
+R1362,2024-07-12,Commute x2,Commute via the viaduct,19,49,129,130,Commuter,
+R1363,2024-07-13,Long ride: Lakes loop,Lakes loop,142,355,1991,134,Gravel (Kestrel-built),
+R1364,2024-07-14,Easy spin,River valley spin,39,113,371,107,Roadie (steel),"Tailwind out, paid for it later"
+R1365,2024-07-16,Z2 endurance,Coast road out-and-back,47,129,562,120,Roadie (steel),
+R1366,2024-07-17,Hill repeats,Hill repeats at Ashdown,29,102,415,151,Roadie (steel),
+R1367,2024-07-18,Easy spin,River valley spin,22,63,200,115,Roadie (steel),
+R1368,2024-07-20,Long ride: Reservoir circuit,Reservoir circuit,131,364,1781,140,Roadie (steel),
+R1369,2024-07-21,Sunday club ride,Sunday club ride,59,161,594,131,Roadie (steel),
+R1370,2024-07-23,Commute x2,Commute via the viaduct,23,58,225,123,Commuter,
+R1371,2024-07-24,Tempo blocks,Windmill lane loop,48,122,564,154,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1372,2024-07-25,Group ride: Reservoir circuit,Reservoir circuit,39,96,395,142,Roadie (steel),Legs heavy
+R1373,2024-07-27,Long ride: Coast road out-and-back,Coast road out-and-back,144,353,2112,123,Roadie (steel),
+R1374,2024-07-28,Sunday club ride,Sunday club ride,50,135,352,133,Roadie (steel),
+R1375,2024-07-29,Group ride: Chalk ridge,Chalk ridge,52,139,505,128,Roadie (steel),Felt great
+R1376,2024-07-30,Z2 endurance,Coast road out-and-back,31,82,290,137,Roadie (steel),
+R1377,2024-07-31,Commute x2,Commute via the viaduct,28,71,230,125,Commuter,Chain noisy; oiled after
+R1378,2024-08-01,Easy spin,River valley spin,23,60,249,113,Roadie (steel),
+R1379,2024-08-03,Long ride: Lakes loop,Lakes loop,105,268,1286,132,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1380,2024-08-06,Z2 endurance,Coast road out-and-back,31,73,235,121,Roadie (steel),"Tailwind out, paid for it later"
+R1381,2024-08-06,Evening spin,Windmill lane loop,16,45,130,115,Commuter,
+R1382,2024-08-07,Commute x2,Commute via the viaduct,27,69,207,128,Commuter,
+R1383,2024-08-08,Easy spin,River valley spin,38,97,217,124,Roadie (steel),"Easy spin, recovery"
+R1384,2024-08-09,Z2 endurance,Coast road out-and-back,50,139,518,136,Roadie (steel),
+R1385,2024-08-10,Long ride: Reservoir circuit,Reservoir circuit,106,251,1174,134,Gravel (Kestrel-built),
+R1386,2024-08-11,Tempo blocks,Windmill lane loop,61,159,367,156,Roadie (steel),
+R1387,2024-08-11,Evening spin,Windmill lane loop,14,40,119,115,Commuter,
+R1388,2024-08-13,Commute x2,Commute via the viaduct,19,57,148,115,Commuter,Chain noisy; oiled after
+R1389,2024-08-17,Long ride: Long way home,Long way home,108,251,884,138,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1390,2024-08-25,Tempo blocks,Windmill lane loop,30,79,262,139,Roadie (steel),
+R1391,2024-08-26,Commute x2,Commute via the viaduct,18,49,118,112,Commuter,
+R1392,2024-08-27,Z2 endurance,Coast road out-and-back,50,117,429,137,Roadie (steel),
+R1393,2024-08-28,Tempo blocks,Windmill lane loop,51,121,446,156,Roadie (steel),
+R1394,2024-08-29,Easy spin,River valley spin,27,70,202,113,Roadie (steel),"Coffee stop, then home"
+R1395,2024-08-31,Long ride: Chalk ridge,Chalk ridge,105,256,1491,140,Roadie (steel),"Coffee stop, then home"
+R1396,2024-09-01,Sunday club ride,Sunday club ride,57,136,511,137,Roadie (steel),
+R1397,2024-09-02,Commute x2,Commute via the viaduct,25,68,211,115,Commuter,Headwind all the way back
+R1398,2024-09-02,Evening spin,Windmill lane loop,20,53,211,117,Roadie (steel),Headwind all the way back
+R1399,2024-09-03,Commute x2,Commute via the viaduct,19,52,135,120,Commuter,Chain noisy; oiled after
+R1400,2024-09-04,Commute x2,Commute via the viaduct,28,75,227,125,Commuter,
+R1401,2024-09-05,Easy spin,River valley spin,36,94,184,116,Roadie (steel),"Easy spin, recovery"
+R1402,2024-09-06,Commute x2,Commute via the viaduct,24,61,206,120,Commuter,
+R1403,2024-09-07,Long ride: Lakes loop,Lakes loop,112,275,1425,132,Roadie (steel),Legs heavy
+R1404,2024-09-08,Long ride: Chalk ridge,Chalk ridge,131,355,1703,127,Roadie (steel),Rode with the club
+R1405,2024-09-09,Group ride: Chalk ridge,Chalk ridge,42,118,255,131,Roadie (steel),
+R1406,2024-09-09,Evening spin,Windmill lane loop,20,50,204,118,Roadie (steel),
+R1407,2024-09-10,Z2 endurance,Coast road out-and-back,58,137,388,133,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1408,2024-09-11,Hill repeats,Hill repeats at Ashdown,35,130,473,150,Roadie (steel),Felt great
+R1409,2024-09-11,Evening spin,Windmill lane loop,17,50,165,125,Roadie (steel),
+R1410,2024-09-13,Z2 endurance,Coast road out-and-back,37,86,332,124,Roadie (steel),
+R1411,2024-09-15,Easy spin,River valley spin,27,80,149,108,Commuter,"Easy spin, recovery"
+R1412,2024-09-17,Commute x2,Commute via the viaduct,22,60,173,128,Commuter,Rain from the start
+R1413,2024-09-18,Commute x2,Commute via the viaduct,21,61,156,117,Commuter,Headwind all the way back
+R1414,2024-09-19,Group ride: Reservoir circuit,Reservoir circuit,61,157,525,142,Roadie (steel),
+R1415,2024-09-20,Recovery spin,River valley spin,39,99,354,110,Roadie (steel),"Easy spin, recovery"
+R1416,2024-09-21,Long ride: Lakes loop,Lakes loop,191,463,2753,136,Roadie (steel),Felt great
+R1417,2024-09-22,Sunday club ride,Sunday club ride,44,117,480,139,Roadie (steel),"Coffee stop, then home"
+R1418,2024-09-23,Group ride: Windmill lane loop,Windmill lane loop,57,142,589,143,Roadie (steel),
+R1419,2024-09-24,Z2 endurance,Coast road out-and-back,42,111,315,131,Roadie (steel),
+R1420,2024-09-26,Group ride: Windmill lane loop,Windmill lane loop,49,124,319,134,Roadie (steel),
+R1421,2024-09-28,Long ride: Long way home,Long way home,119,309,1690,125,Gravel (Kestrel-built),
+R1422,2024-09-30,Tempo blocks,Windmill lane loop,49,114,404,139,Roadie (steel),
+R1423,2024-10-01,Commute x2,Commute via the viaduct,28,73,220,128,Commuter,Chain noisy; oiled after
+R1424,2024-10-03,Easy spin,River valley spin,31,83,200,109,Commuter,Legs heavy
+R1425,2024-10-04,Commute x2,Commute via the viaduct,24,67,218,129,Commuter,Headwind all the way back
+R1426,2024-10-05,Long ride: Coast road out-and-back,Coast road out-and-back,117,273,941,136,Roadie (steel),
+R1427,2024-10-06,Long ride: Lakes loop,Lakes loop,130,330,1888,134,Roadie (steel),Rode with the club
+R1428,2024-10-07,Group ride: Reservoir circuit,Reservoir circuit,59,141,677,128,Roadie (steel),
+R1429,2024-10-08,Z2 endurance,Coast road out-and-back,34,83,369,136,Roadie (steel),Legs heavy
+R1430,2024-10-09,Tempo blocks,Windmill lane loop,55,135,622,144,Roadie (steel),Rain from the start
+R1431,2024-10-09,Evening spin,Windmill lane loop,22,58,195,112,Roadie (steel),Legs heavy
+R1432,2024-10-12,Long ride: Long way home,Long way home,122,323,1057,140,Roadie (steel),"Said ""never again"" at the top"
+R1433,2024-10-14,Tempo blocks,Windmill lane loop,44,105,449,154,Roadie (steel),
+R1434,2024-10-15,Turbo: cadence drills,Indoor trainer,31,74,244,126,Roadie (steel),"Fan on high, still soaked"
+R1435,2024-10-16,Tempo blocks,Windmill lane loop,34,92,254,146,Roadie (steel),Rain from the start
+R1436,2024-10-17,Easy spin,River valley spin,43,112,435,120,Commuter,"Coffee stop, then home"
+R1437,2024-10-18,Recovery spin,River valley spin,22,60,193,111,Commuter,"Coffee stop, then home"
+R1438,2024-10-19,Long ride: Long way home,Long way home,94,256,1405,126,Roadie (steel),"Tailwind out, paid for it later"
+R1439,2024-10-20,Long ride: Chalk ridge,Chalk ridge,82,214,1021,131,Gravel (Kestrel-built),
+R1440,2024-10-21,Tempo blocks,Windmill lane loop,51,141,590,153,Roadie (steel),
+R1441,2024-10-22,Z2 endurance,Coast road out-and-back,43,103,488,123,Roadie (steel),
+R1442,2024-10-23,Hill repeats,Hill repeats at Ashdown,27,81,417,158,Roadie (steel),
+R1443,2024-10-24,Tempo blocks,Windmill lane loop,53,126,495,154,Roadie (steel),Dark by the last 10 km
+R1444,2024-10-25,Turbo: cadence drills,Indoor trainer,26,70,235,129,Roadie (steel),"Fan on high, still soaked"
+R1445,2024-10-26,Long ride: Reservoir circuit,Reservoir circuit,128,313,1448,130,Roadie (steel),Rode with the club
+R1446,2024-10-27,Long ride: Long way home,Long way home,113,264,910,129,Gravel (Kestrel-built),Rode with the club
+R1447,2024-10-28,Group ride: Chalk ridge,Chalk ridge,55,136,470,136,Roadie (steel),
+R1448,2024-10-29,Sweet spot 2x20,Canal towpath,52,137,434,155,Roadie (steel),
+R1449,2024-10-31,Group ride: Chalk ridge,Chalk ridge,62,159,517,130,Roadie (steel),
+R1450,2024-11-01,Z2 endurance,Coast road out-and-back,34,94,358,136,Fixed winter bike,"Cold, so overshoes, gloves on"
+R1451,2024-11-02,Long ride: Coast road out-and-back,Coast road out-and-back,110,265,1256,135,Roadie (steel),
+R1452,2024-11-03,Tempo blocks,Windmill lane loop,44,108,524,145,Roadie (steel),
+R1453,2024-11-04,Group ride: Windmill lane loop,Windmill lane loop,51,129,497,137,Roadie (steel),
+R1454,2024-11-08,Turbo: cadence drills,Indoor trainer,22,55,97,130,Roadie (steel),"Indoors, a film and the fan on"
+R1455,2024-11-09,Long ride: Long way home,Long way home,121,296,1273,128,Roadie (steel),
+R1456,2024-11-10,Easy spin,River valley spin,31,89,243,121,Fixed winter bike,"Coffee stop, then home"
+R1457,2024-11-12,Sweet spot 2x20,Canal towpath,44,102,301,145,Roadie (steel),Rain from the start
+R1458,2024-11-14,Easy spin,River valley spin,35,94,352,110,Fixed winter bike,
+R1459,2024-11-16,Long ride: Long way home,Long way home,97,242,1015,134,Roadie (steel),
+R1460,2024-11-17,Easy spin,River valley spin,23,66,136,118,Fixed winter bike,
+R1461,2024-11-17,Evening spin,Windmill lane loop,17,43,126,122,Roadie (steel),"Wet leaves, slow descents"
+R1462,2024-11-19,Commute x2,Commute via the viaduct,18,47,153,125,Fixed winter bike,
+R1463,2024-11-20,Tempo blocks,Windmill lane loop,44,111,421,145,Roadie (steel),
+R1464,2024-11-20,Evening spin,Windmill lane loop,19,54,195,117,Roadie (steel),
+R1465,2024-11-22,Turbo: cadence drills,Indoor trainer,26,74,238,138,Roadie (steel),"Indoors, a film and the fan on"
+R1466,2024-11-23,Long ride: Lakes loop,Lakes loop,109,281,1227,139,Roadie (steel),
+R1467,2024-11-25,Commute x2,Commute via the viaduct,20,50,154,130,Fixed winter bike,
+R1468,2024-11-26,Z2 endurance,Coast road out-and-back,62,160,455,137,Fixed winter bike,
+R1469,2024-11-27,Commute x2,Commute via the viaduct,24,67,193,119,Fixed winter bike,Chain noisy; oiled after
+R1470,2024-11-28,Tempo blocks,Windmill lane loop,37,99,310,153,Roadie (steel),"Cold, so overshoes, gloves on"
+R1471,2024-11-29,Z2 endurance,Coast road out-and-back,37,97,284,120,Fixed winter bike,
+R1472,2024-11-29,Evening spin,Windmill lane loop,15,44,144,122,Roadie (steel),
+R1473,2024-11-30,Long ride: Long way home,Long way home,91,244,1277,128,Roadie (steel),"Wet leaves, slow descents"
+R1474,2024-12-01,Long ride: Coast road out-and-back,Coast road out-and-back,93,228,1389,130,Roadie (steel),
+R1475,2024-12-02,Commute x2,Commute via the viaduct,24,72,205,115,Commuter,
+R1476,2024-12-02,Evening spin,Windmill lane loop,16,46,132,124,Roadie (steel),"Cold, so overshoes, gloves on"
+R1477,2024-12-03,Commute x2,Commute via the viaduct,18,47,113,122,Commuter,
+R1478,2024-12-05,Group ride: Reservoir circuit,Reservoir circuit,37,99,435,133,Roadie (steel),"Coffee stop, then home"
+R1479,2024-12-05,Evening spin,Windmill lane loop,20,50,137,110,Roadie (steel),
+R1480,2024-12-06,Recovery spin,River valley spin,27,68,158,119,Fixed winter bike,Felt great
+R1481,2024-12-07,Long ride: Chalk ridge,Chalk ridge,83,210,702,122,Roadie (steel),
+R1482,2024-12-08,Tempo blocks,Windmill lane loop,34,91,380,151,Roadie (steel),
+R1483,2024-12-09,Tempo blocks,Windmill lane loop,58,143,494,140,Roadie (steel),
+R1484,2024-12-09,Evening spin,Windmill lane loop,18,49,191,113,Roadie (steel),"Cold, so overshoes, gloves on"
+R1485,2024-12-10,Z2 endurance,Coast road out-and-back,39,102,278,128,Fixed winter bike,
+R1486,2024-12-11,Commute x2,Commute via the viaduct,20,50,199,113,Fixed winter bike,
+R1487,2024-12-14,Long ride: Reservoir circuit,Reservoir circuit,82,193,1046,124,Roadie (steel),
+R1488,2024-12-15,Tempo blocks,Windmill lane loop,41,95,306,152,Roadie (steel),"Cold, so overshoes, gloves on"
+R1489,2024-12-16,Commute x2,Commute via the viaduct,18,50,133,118,Commuter,
+R1490,2024-12-21,Long ride: Chalk ridge,Chalk ridge,138,333,1830,125,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1491,2024-12-28,Long ride: Reservoir circuit,Reservoir circuit,83,196,1113,132,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1492,2024-12-31,Turbo: cadence drills,Indoor trainer,24,64,194,133,Roadie (steel),
+R1493,2025-01-03,Commute x2,Commute via the viaduct,23,63,173,116,Commuter,
+R1494,2025-01-07,Commute x2,Commute via the viaduct,23,60,219,124,Commuter,Headwind all the way back
+R1495,2025-01-10,Recovery spin,River valley spin,42,124,431,110,Fixed winter bike,
+R1496,2025-01-11,Long ride: Reservoir circuit,Reservoir circuit,94,227,1306,131,Roadie (steel),Headwind all the way back
+R1497,2025-01-12,Tempo blocks,Windmill lane loop,60,140,558,156,Roadie (steel),
+R1498,2025-01-14,Z2 endurance,Coast road out-and-back,49,127,526,129,Fixed winter bike,
+R1499,2025-01-15,Hill repeats,Hill repeats at Ashdown,32,103,508,144,Roadie (steel),
+R1500,2025-01-17,Turbo: cadence drills,Indoor trainer,28,67,243,130,Roadie (steel),
+R1501,2025-01-18,Long ride: Chalk ridge,Chalk ridge,104,250,1072,125,Roadie (steel),
+R1502,2025-01-19,Tempo blocks,Windmill lane loop,54,131,342,138,Roadie (steel),Rain from the start
+R1503,2025-01-20,Tempo blocks,Windmill lane loop,62,145,502,140,Roadie (steel),
+R1504,2025-01-21,Sweet spot 2x20,Canal towpath,41,109,467,149,Roadie (steel),
+R1505,2025-01-22,Hill repeats,Hill repeats at Ashdown,32,110,431,156,Roadie (steel),
+R1506,2025-01-24,Turbo: cadence drills,Indoor trainer,33,84,198,131,Roadie (steel),
+R1507,2025-01-24,Evening spin,Windmill lane loop,21,60,178,127,Roadie (steel),Rain from the start
+R1508,2025-01-25,Long ride: Reservoir circuit,Reservoir circuit,117,271,1355,134,Roadie (steel),Headwind all the way back
+R1509,2025-01-26,Easy spin,River valley spin,44,114,480,117,Fixed winter bike,
+R1510,2025-01-29,Commute x2,Commute via the viaduct,24,64,163,122,Fixed winter bike,
+R1511,2025-01-30,Easy spin,River valley spin,27,72,138,119,Fixed winter bike,
+R1512,2025-02-03,Group ride: Windmill lane loop,Windmill lane loop,38,91,394,142,Roadie (steel),"Group of 6, steady pace"
+R1513,2025-02-04,Turbo: cadence drills,Indoor trainer,27,72,127,131,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R1514,2025-02-04,Evening spin,Windmill lane loop,18,49,181,125,Roadie (steel),
+R1515,2025-02-05,Tempo blocks,Windmill lane loop,46,106,526,142,Roadie (steel),
+R1516,2025-02-07,Turbo: cadence drills,Indoor trainer,25,59,212,139,Roadie (steel),"Indoors, a film and the fan on"
+R1517,2025-02-07,Evening spin,Windmill lane loop,22,56,195,118,Roadie (steel),
+R1518,2025-02-08,Long ride: Long way home,Long way home,128,354,1553,136,Roadie (steel),
+R1519,2025-02-10,Group ride: Windmill lane loop,Windmill lane loop,59,145,354,146,Roadie (steel),
+R1520,2025-02-11,Turbo: cadence drills,Indoor trainer,23,63,175,132,Roadie (steel),"Indoors, a film and the fan on"
+R1521,2025-02-11,Evening spin,Windmill lane loop,18,48,123,113,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1522,2025-02-13,Easy spin,River valley spin,37,101,303,119,Fixed winter bike,"Puncture near the canal lock, fixed in ten minutes"
+R1523,2025-02-14,Recovery spin,River valley spin,39,105,245,112,Fixed winter bike,"Tailwind out, paid for it later"
+R1524,2025-02-14,Evening spin,Windmill lane loop,16,46,158,110,Roadie (steel),"Cold, so overshoes, gloves on"
+R1525,2025-02-15,Long ride: Long way home,Long way home,147,386,1832,130,Roadie (steel),"Cold, so overshoes, gloves on"
+R1526,2025-02-16,Tempo blocks,Windmill lane loop,60,168,631,140,Roadie (steel),
+R1527,2025-02-17,Commute x2,Commute via the viaduct,25,63,177,121,Fixed winter bike,Rain from the start
+R1528,2025-02-18,Turbo: cadence drills,Indoor trainer,32,78,214,127,Roadie (steel),
+R1529,2025-02-19,Tempo blocks,Windmill lane loop,39,104,446,156,Roadie (steel),
+R1530,2025-02-20,Group ride: Reservoir circuit,Reservoir circuit,30,72,357,131,Roadie (steel),"Cold, so overshoes, gloves on"
+R1531,2025-02-20,Evening spin,Windmill lane loop,14,42,99,124,Roadie (steel),Legs heavy
+R1532,2025-02-21,Z2 endurance,Coast road out-and-back,58,136,542,122,Fixed winter bike,"Cold, so overshoes, gloves on"
+R1533,2025-02-22,Long ride: Chalk ridge,Chalk ridge,107,248,1277,132,Roadie (steel),
+R1534,2025-02-23,Easy spin,River valley spin,22,65,221,116,Fixed winter bike,
+R1535,2025-02-24,Tempo blocks,Windmill lane loop,40,105,307,146,Roadie (steel),"Tailwind out, paid for it later"
+R1536,2025-02-24,Evening spin,Windmill lane loop,16,44,117,120,Roadie (steel),"Tailwind out, paid for it later"
+R1537,2025-02-25,Commute x2,Commute via the viaduct,18,45,155,126,Commuter,Felt great
+R1538,2025-02-25,Evening spin,Windmill lane loop,19,48,119,113,Roadie (steel),
+R1539,2025-02-26,Commute x2,Commute via the viaduct,26,76,187,117,Commuter,Felt great
+R1540,2025-02-26,Evening spin,Windmill lane loop,21,56,152,119,Roadie (steel),
+R1541,2025-02-27,Group ride: Reservoir circuit,Reservoir circuit,38,107,349,134,Roadie (steel),"Group of 6, steady pace"
+R1542,2025-02-27,Evening spin,Windmill lane loop,21,55,171,123,Roadie (steel),"Cold, so overshoes, gloves on"
+R1543,2025-03-01,Long ride: Chalk ridge,Chalk ridge,118,287,1280,133,Roadie (steel),Rain from the start
+R1544,2025-03-04,Z2 endurance,Coast road out-and-back,56,146,565,125,Fixed winter bike,
+R1545,2025-03-10,Group ride: Chalk ridge,Chalk ridge,52,138,592,128,Roadie (steel),
+R1546,2025-03-11,Commute x2,Commute via the viaduct,23,59,154,129,Commuter,Rain from the start
+R1547,2025-03-12,Commute x2,Commute via the viaduct,23,60,226,117,Fixed winter bike,
+R1548,2025-03-13,Group ride: Chalk ridge,Chalk ridge,57,136,493,146,Roadie (steel),"Group of 6, steady pace"
+R1549,2025-03-14,Turbo: cadence drills,Indoor trainer,39,92,176,135,Roadie (steel),
+R1550,2025-03-15,Long ride: Chalk ridge,Chalk ridge,146,366,2131,132,Roadie (steel),
+R1551,2025-03-16,Sunday club ride,Sunday club ride,57,159,567,140,Roadie (steel),"Group of 6, steady pace"
+R1552,2025-03-16,Evening spin,Windmill lane loop,19,48,200,114,Roadie (steel),
+R1553,2025-03-17,Group ride: Chalk ridge,Chalk ridge,36,87,331,146,Roadie (steel),
+R1554,2025-03-18,Commute x2,Commute via the viaduct,19,56,146,128,Fixed winter bike,Chain noisy; oiled after
+R1555,2025-03-20,Tempo blocks,Windmill lane loop,51,119,565,143,Roadie (steel),
+R1556,2025-03-22,Long ride: Lakes loop,Lakes loop,95,260,1239,132,Roadie (steel),
+R1557,2025-03-23,Sunday club ride,Sunday club ride,35,98,298,137,Roadie (steel),"Group of 6, steady pace"
+R1558,2025-03-24,Group ride: Chalk ridge,Chalk ridge,54,148,618,129,Roadie (steel),
+R1559,2025-03-25,Sweet spot 2x20,Canal towpath,33,86,287,140,Roadie (steel),
+R1560,2025-03-25,Evening spin,Windmill lane loop,22,58,155,115,Roadie (steel),
+R1561,2025-03-26,Tempo blocks,Windmill lane loop,47,121,545,150,Roadie (steel),
+R1562,2025-03-27,Group ride: Reservoir circuit,Reservoir circuit,54,133,416,133,Roadie (steel),"Cold, so overshoes, gloves on"
+R1563,2025-03-29,Long ride: Chalk ridge,Chalk ridge,103,248,1033,123,Roadie (steel),"Cold, so overshoes, gloves on"
+R1564,2025-03-30,Sunday club ride,Sunday club ride,52,125,396,142,Roadie (steel),
+R1565,2025-03-30,Evening spin,Windmill lane loop,18,54,110,116,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1566,2025-03-31,Tempo blocks,Windmill lane loop,32,75,361,140,Roadie (steel),
+R1567,2025-04-01,Z2 endurance,Coast road out-and-back,59,149,670,130,Roadie (steel),
+R1568,2025-04-02,Commute x2,Commute via the viaduct,26,69,228,127,Commuter,Rain from the start
+R1569,2025-04-03,Tempo blocks,Windmill lane loop,37,93,282,145,Roadie (steel),
+R1570,2025-04-04,Recovery spin,River valley spin,25,63,181,118,Roadie (steel),"Coffee stop, then home"
+R1571,2025-04-05,Long ride: Coast road out-and-back,Coast road out-and-back,147,340,1961,123,Roadie (steel),
+R1572,2025-04-06,Long ride: Chalk ridge,Chalk ridge,217,564,2260,127,Roadie (steel),
+R1573,2025-04-07,Commute x2,Commute via the viaduct,19,53,152,120,Commuter,Chain noisy; oiled after
+R1574,2025-04-08,Commute x2,Commute via the viaduct,27,79,261,120,Commuter,
+R1575,2025-04-09,Commute x2,Commute via the viaduct,23,62,208,124,Commuter,
+R1576,2025-04-10,Group ride: Reservoir circuit,Reservoir circuit,60,168,430,139,Roadie (steel),
+R1577,2025-04-11,Z2 endurance,Coast road out-and-back,49,121,584,126,Roadie (steel),
+R1578,2025-04-12,Long ride: Lakes loop,Lakes loop,106,283,1092,128,Roadie (steel),Felt great
+R1579,2025-04-13,Sunday club ride,Sunday club ride,50,118,476,137,Roadie (steel),"Tailwind out, paid for it later"
+R1580,2025-04-13,Evening spin,Windmill lane loop,15,38,140,116,Commuter,
+R1581,2025-04-14,Group ride: Chalk ridge,Chalk ridge,54,127,556,138,Roadie (steel),
+R1582,2025-04-15,Sweet spot 2x20,Canal towpath,35,87,321,143,Roadie (steel),Legs heavy
+R1583,2025-04-16,Commute x2,Commute via the viaduct,28,78,212,130,Commuter,
+R1584,2025-04-17,Tempo blocks,Windmill lane loop,59,156,474,139,Roadie (steel),Headwind all the way back
+R1585,2025-04-20,Tempo blocks,Windmill lane loop,55,131,522,156,Roadie (steel),
+R1586,2025-04-23,Hill repeats,Hill repeats at Ashdown,32,108,565,160,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1587,2025-04-25,Recovery spin,River valley spin,44,123,271,117,Roadie (steel),
+R1588,2025-04-26,Long ride: Coast road out-and-back,Coast road out-and-back,127,297,1248,122,Roadie (steel),
+R1589,2025-04-27,Easy spin,River valley spin,28,70,164,122,Roadie (steel),
+R1590,2025-04-29,Commute x2,Commute via the viaduct,18,49,126,113,Commuter,Rain from the start
+R1591,2025-05-01,Group ride: Chalk ridge,Chalk ridge,52,123,532,129,Roadie (steel),Rain from the start
+R1592,2025-05-02,Commute x2,Commute via the viaduct,27,69,200,121,Commuter,Rain from the start
+R1593,2025-05-03,Long ride: Chalk ridge,Chalk ridge,115,319,1432,129,Roadie (steel),
+R1594,2025-05-04,Easy spin,River valley spin,29,79,159,107,Roadie (steel),"Easy spin, recovery"
+R1595,2025-05-05,Group ride: Windmill lane loop,Windmill lane loop,53,127,467,134,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1596,2025-05-05,Evening spin,Windmill lane loop,16,48,154,122,Commuter,"Puncture near the canal lock, fixed in ten minutes"
+R1597,2025-05-06,Z2 endurance,Coast road out-and-back,36,89,242,134,Roadie (steel),
+R1598,2025-05-07,Hill repeats,Hill repeats at Ashdown,34,108,611,144,Roadie (steel),"Tailwind out, paid for it later"
+R1599,2025-05-07,Evening spin,Windmill lane loop,15,43,111,116,Commuter,
+R1600,2025-05-08,Tempo blocks,Windmill lane loop,62,166,678,152,Roadie (steel),
+R1601,2025-05-09,Commute x2,Commute via the viaduct,21,57,134,118,Commuter,
+R1602,2025-05-10,Long ride: Chalk ridge,Chalk ridge,128,315,1118,137,Roadie (steel),Sunrise start
+R1603,2025-05-11,Long ride: Reservoir circuit,Reservoir circuit,109,291,1410,129,Roadie (steel),
+R1604,2025-05-13,Commute x2,Commute via the viaduct,25,72,176,122,Commuter,Rain from the start
+R1605,2025-05-14,Hill repeats,Hill repeats at Ashdown,33,100,442,151,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1606,2025-05-15,Group ride: Chalk ridge,Chalk ridge,51,118,504,138,Roadie (steel),
+R1607,2025-05-16,Recovery spin,River valley spin,40,106,374,113,Commuter,
+R1608,2025-05-17,Long ride: Coast road out-and-back,Coast road out-and-back,183,430,2098,138,Roadie (steel),
+R1609,2025-05-18,Sunday club ride,Sunday club ride,39,91,313,142,Roadie (steel),Headwind all the way back
+R1610,2025-05-19,Group ride: Windmill lane loop,Windmill lane loop,38,98,325,137,Roadie (steel),
+R1611,2025-05-20,Commute x2,Commute via the viaduct,18,51,136,118,Commuter,Chain noisy; oiled after
+R1612,2025-05-22,Easy spin,River valley spin,27,68,283,113,Roadie (steel),Rain from the start
+R1613,2025-05-24,Long ride: Long way home,Long way home,105,258,1473,138,Gravel (Kestrel-built),
+R1614,2025-05-25,Easy spin,River valley spin,34,96,239,115,Commuter,
+R1615,2025-05-25,Evening spin,Windmill lane loop,15,40,141,119,Commuter,"Puncture near the canal lock, fixed in ten minutes"
+R1616,2025-05-26,Tempo blocks,Windmill lane loop,41,106,349,140,Roadie (steel),
+R1617,2025-05-27,Z2 endurance,Coast road out-and-back,37,88,331,125,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1618,2025-05-28,Hill repeats,Hill repeats at Ashdown,37,124,543,161,Roadie (steel),
+R1619,2025-05-29,Group ride: Reservoir circuit,Reservoir circuit,37,87,416,143,Roadie (steel),
+R1620,2025-05-31,Long ride: Lakes loop,Lakes loop,105,243,1481,138,Roadie (steel),
+R1621,2025-06-01,Tempo blocks,Windmill lane loop,61,141,662,146,Roadie (steel),Headwind all the way back
+R1622,2025-06-02,Commute x2,Commute via the viaduct,21,63,182,113,Commuter,
+R1623,2025-06-03,Commute x2,Commute via the viaduct,25,75,159,113,Commuter,
+R1624,2025-06-03,Evening spin,Windmill lane loop,18,53,164,126,Roadie (steel),
+R1625,2025-06-04,Hill repeats,Hill repeats at Ashdown,40,125,676,144,Roadie (steel),"Said ""never again"" at the top"
+R1626,2025-06-05,Easy spin,River valley spin,45,114,241,119,Roadie (steel),Rain from the start
+R1627,2025-06-06,Commute x2,Commute via the viaduct,25,67,171,120,Commuter,
+R1628,2025-06-07,Long ride: Reservoir circuit,Reservoir circuit,103,243,1430,137,Roadie (steel),
+R1629,2025-06-08,Tempo blocks,Windmill lane loop,31,82,347,146,Roadie (steel),
+R1630,2025-06-09,Group ride: Reservoir circuit,Reservoir circuit,46,110,345,144,Roadie (steel),
+R1631,2025-06-10,Commute x2,Commute via the viaduct,25,69,220,112,Commuter,Chain noisy; oiled after
+R1632,2025-06-13,Recovery spin,River valley spin,43,113,267,111,Roadie (steel),
+R1633,2025-06-14,Long ride: Chalk ridge,Chalk ridge,144,370,2142,134,Roadie (steel),"Coffee stop, then home"
+R1634,2025-06-15,Long ride: Chalk ridge,Chalk ridge,103,276,1491,130,Roadie (steel),Rode with the club
+R1635,2025-06-17,Z2 endurance,Coast road out-and-back,30,74,261,130,Roadie (steel),
+R1636,2025-06-18,Commute x2,Commute via the viaduct,19,49,188,120,Commuter,
+R1637,2025-06-18,Evening spin,Windmill lane loop,21,53,197,118,Roadie (steel),Legs heavy
+R1638,2025-06-19,Group ride: Windmill lane loop,Windmill lane loop,32,85,279,141,Roadie (steel),Rain from the start
+R1639,2025-06-20,Recovery spin,River valley spin,25,69,148,109,Roadie (steel),
+R1640,2025-06-21,Long ride: Long way home,Long way home,115,289,1556,125,Gravel (Kestrel-built),
+R1641,2025-06-22,Long ride: Coast road out-and-back,Coast road out-and-back,113,266,1680,137,Roadie (steel),
+R1642,2025-06-23,Commute x2,Commute via the viaduct,22,56,177,114,Commuter,Headwind all the way back
+R1643,2025-06-24,Z2 endurance,Coast road out-and-back,36,84,365,137,Roadie (steel),Felt great
+R1644,2025-06-24,Evening spin,Windmill lane loop,19,49,118,120,Commuter,Rain from the start
+R1645,2025-06-25,Commute x2,Commute via the viaduct,24,61,215,130,Commuter,
+R1646,2025-06-28,Long ride: Long way home,Long way home,130,316,1730,138,Roadie (steel),Rain from the start
+R1647,2025-06-29,Long ride: Lakes loop,Lakes loop,99,248,1050,139,Roadie (steel),Felt great
+R1648,2025-06-30,Group ride: Reservoir circuit,Reservoir circuit,51,136,604,132,Roadie (steel),
+R1649,2025-07-01,Sweet spot 2x20,Canal towpath,60,162,547,142,Roadie (steel),
+R1650,2025-07-02,Commute x2,Commute via the viaduct,24,67,230,114,Commuter,
+R1651,2025-07-03,Group ride: Windmill lane loop,Windmill lane loop,56,154,569,134,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1652,2025-07-04,Recovery spin,River valley spin,27,70,235,113,Commuter,
+R1653,2025-07-05,Long ride: Chalk ridge,Chalk ridge,97,239,826,123,Roadie (steel),Rain from the start
+R1654,2025-07-06,Sunday club ride,Sunday club ride,46,123,466,141,Roadie (steel),
+R1655,2025-07-07,Commute x2,Commute via the viaduct,27,74,267,117,Commuter,Chain noisy; oiled after
+R1656,2025-07-08,Z2 endurance,Coast road out-and-back,52,132,382,122,Roadie (steel),Rain from the start
+R1657,2025-07-09,Hill repeats,Hill repeats at Ashdown,32,102,442,153,Roadie (steel),
+R1658,2025-07-11,Z2 endurance,Coast road out-and-back,60,164,406,135,Roadie (steel),Rain from the start
+R1659,2025-07-15,Sweet spot 2x20,Canal towpath,57,144,387,154,Roadie (steel),
+R1660,2025-07-16,Tempo blocks,Windmill lane loop,38,108,316,143,Roadie (steel),
+R1661,2025-07-17,Easy spin,River valley spin,38,97,235,118,Roadie (steel),
+R1662,2025-07-18,Z2 endurance,Coast road out-and-back,40,96,408,121,Roadie (steel),
+R1663,2025-07-19,Long ride: Chalk ridge,Chalk ridge,106,266,1542,140,Roadie (steel),Felt great
+R1664,2025-07-20,Long ride: Chalk ridge,Chalk ridge,88,209,1000,137,Roadie (steel),
+R1665,2025-07-21,Tempo blocks,Windmill lane loop,61,150,381,139,Roadie (steel),"Coffee stop, then home"
+R1666,2025-07-22,Z2 endurance,Coast road out-and-back,55,140,512,132,Roadie (steel),"Tailwind out, paid for it later"
+R1667,2025-07-25,Commute x2,Commute via the viaduct,22,58,166,123,Commuter,
+R1668,2025-07-26,Long ride: Lakes loop,Lakes loop,91,217,1149,124,Roadie (steel),"Said ""never again"" at the top"
+R1669,2025-07-27,Sunday club ride,Sunday club ride,43,101,297,140,Roadie (steel),
+R1670,2025-07-27,Evening spin,Windmill lane loop,20,51,211,122,Roadie (steel),
+R1671,2025-07-28,Group ride: Reservoir circuit,Reservoir circuit,54,132,399,140,Roadie (steel),
+R1672,2025-07-29,Sweet spot 2x20,Canal towpath,62,155,518,154,Roadie (steel),
+R1673,2025-07-30,Tempo blocks,Windmill lane loop,60,146,600,145,Roadie (steel),
+R1674,2025-07-31,Easy spin,River valley spin,31,83,274,113,Commuter,
+R1675,2025-08-01,Z2 endurance,Coast road out-and-back,47,109,476,121,Roadie (steel),Felt great
+R1676,2025-08-01,Evening spin,Windmill lane loop,22,58,203,127,Commuter,"Puncture near the canal lock, fixed in ten minutes"
+R1677,2025-08-02,Long ride: Reservoir circuit,Reservoir circuit,86,202,1028,140,Roadie (steel),
+R1678,2025-08-03,Sunday club ride,Sunday club ride,58,160,602,146,Roadie (steel),Legs heavy
+R1679,2025-08-05,Commute x2,Commute via the viaduct,26,76,208,112,Commuter,
+R1680,2025-08-06,Tempo blocks,Windmill lane loop,41,100,396,139,Roadie (steel),Felt great
+R1681,2025-08-07,Tempo blocks,Windmill lane loop,39,105,455,140,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1682,2025-08-08,Recovery spin,River valley spin,38,113,348,116,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1683,2025-08-12,Commute x2,Commute via the viaduct,24,65,205,119,Commuter,Rain from the start
+R1684,2025-08-26,Commute x2,Commute via the viaduct,21,58,170,112,Commuter,Chain noisy; oiled after
+R1685,2025-08-27,Commute x2,Commute via the viaduct,21,56,126,123,Commuter,
+R1686,2025-08-28,Group ride: Windmill lane loop,Windmill lane loop,50,119,438,134,Roadie (steel),Headwind all the way back
+R1687,2025-08-29,Recovery spin,River valley spin,30,76,206,117,Commuter,
+R1688,2025-08-30,Long ride: Long way home,Long way home,98,272,1101,134,Gravel (Kestrel-built),Rain from the start
+R1689,2025-09-02,Commute x2,Commute via the viaduct,18,49,164,127,Commuter,Rain from the start
+R1690,2025-09-02,Evening spin,Windmill lane loop,22,65,235,126,Roadie (steel),
+R1691,2025-09-03,Commute x2,Commute via the viaduct,27,70,265,122,Commuter,
+R1692,2025-09-04,Easy spin,River valley spin,26,68,145,119,Roadie (steel),
+R1693,2025-09-06,Long ride: Reservoir circuit,Reservoir circuit,103,257,1082,139,Gravel (Kestrel-built),
+R1694,2025-09-08,Tempo blocks,Windmill lane loop,53,125,380,143,Roadie (steel),
+R1695,2025-09-10,Hill repeats,Hill repeats at Ashdown,30,97,429,162,Roadie (steel),
+R1696,2025-09-11,Group ride: Windmill lane loop,Windmill lane loop,44,106,436,145,Roadie (steel),Felt great
+R1697,2025-09-13,Long ride: Coast road out-and-back,Coast road out-and-back,147,379,1762,133,Roadie (steel),Rain from the start
+R1698,2025-09-14,Tempo blocks,Windmill lane loop,49,130,572,149,Roadie (steel),
+R1699,2025-09-15,Tempo blocks,Windmill lane loop,43,119,404,152,Roadie (steel),Rain from the start
+R1700,2025-09-17,Hill repeats,Hill repeats at Ashdown,41,135,771,161,Roadie (steel),
+R1701,2025-09-18,Easy spin,River valley spin,43,128,228,111,Roadie (steel),
+R1702,2025-09-20,Long ride: Reservoir circuit,Reservoir circuit,127,311,1022,126,Roadie (steel),Rain from the start
+R1703,2025-09-21,Tempo blocks,Windmill lane loop,57,143,400,148,Roadie (steel),"Coffee stop, then home"
+R1704,2025-09-22,Tempo blocks,Windmill lane loop,38,89,339,150,Roadie (steel),Felt great
+R1705,2025-09-23,Sweet spot 2x20,Canal towpath,34,87,323,141,Roadie (steel),Felt great
+R1706,2025-09-24,Tempo blocks,Windmill lane loop,42,109,282,142,Roadie (steel),
+R1707,2025-09-25,Tempo blocks,Windmill lane loop,32,79,299,144,Roadie (steel),Felt great
+R1708,2025-09-26,Recovery spin,River valley spin,30,76,270,105,Roadie (steel),
+R1709,2025-09-27,Long ride: Long way home,Long way home,122,306,1772,133,Roadie (steel),
+R1710,2025-09-28,Sunday club ride,Sunday club ride,51,120,589,136,Roadie (steel),Felt great
+R1711,2025-09-28,Evening spin,Windmill lane loop,22,66,167,111,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1712,2025-09-29,Group ride: Windmill lane loop,Windmill lane loop,42,101,271,130,Roadie (steel),
+R1713,2025-09-29,Evening spin,Windmill lane loop,14,36,149,119,Roadie (steel),
+R1714,2025-09-30,Z2 endurance,Coast road out-and-back,40,106,264,136,Roadie (steel),"Tailwind out, paid for it later"
+R1715,2025-10-01,Commute x2,Commute via the viaduct,22,66,139,124,Commuter,
+R1716,2025-10-04,Long ride: Long way home,Long way home,138,374,1997,140,Gravel (Kestrel-built),
+R1717,2025-10-05,Sunday club ride,Sunday club ride,36,84,228,132,Roadie (steel),
+R1718,2025-10-07,Z2 endurance,Coast road out-and-back,51,120,314,126,Roadie (steel),Rain from the start
+R1719,2025-10-07,Evening spin,Windmill lane loop,20,53,124,119,Roadie (steel),
+R1720,2025-10-08,Tempo blocks,Windmill lane loop,38,93,443,142,Roadie (steel),
+R1721,2025-10-09,Tempo blocks,Windmill lane loop,59,144,422,147,Roadie (steel),
+R1722,2025-10-10,Recovery spin,River valley spin,31,79,211,110,Roadie (steel),
+R1723,2025-10-12,Long ride: Coast road out-and-back,Coast road out-and-back,145,353,1535,123,Roadie (steel),
+R1724,2025-10-14,Z2 endurance,Coast road out-and-back,32,80,302,138,Roadie (steel),
+R1725,2025-10-15,Hill repeats,Hill repeats at Ashdown,29,106,473,162,Roadie (steel),
+R1726,2025-10-16,Easy spin,River valley spin,37,110,367,106,Roadie (steel),
+R1727,2025-10-18,Long ride: Lakes loop,Lakes loop,138,334,1171,131,Gravel (Kestrel-built),
+R1728,2025-10-19,Tempo blocks,Windmill lane loop,48,112,367,148,Roadie (steel),
+R1729,2025-10-21,Commute x2,Commute via the viaduct,24,71,196,116,Commuter,
+R1730,2025-10-22,Hill repeats,Hill repeats at Ashdown,36,124,654,152,Roadie (steel),"Coffee stop, then home"
+R1731,2025-10-23,Easy spin,River valley spin,45,119,248,120,Roadie (steel),Headwind all the way back
+R1732,2025-10-25,Long ride: Chalk ridge,Chalk ridge,126,313,1129,133,Gravel (Kestrel-built),Rain from the start
+R1733,2025-10-26,Easy spin,River valley spin,45,133,321,113,Commuter,
+R1734,2025-10-27,Group ride: Windmill lane loop,Windmill lane loop,31,82,227,131,Roadie (steel),
+R1735,2025-10-28,Sweet spot 2x20,Canal towpath,49,140,478,143,Roadie (steel),
+R1736,2025-10-28,Evening spin,Windmill lane loop,16,44,143,121,Roadie (steel),
+R1737,2025-10-29,Hill repeats,Hill repeats at Ashdown,43,130,711,145,Roadie (steel),
+R1738,2025-10-29,Evening spin,Windmill lane loop,15,43,163,128,Commuter,
+R1739,2025-10-30,Group ride: Chalk ridge,Chalk ridge,44,103,276,138,Roadie (steel),
+R1740,2025-10-31,Z2 endurance,Coast road out-and-back,53,133,596,134,Roadie (steel),
+R1741,2025-11-01,Long ride: Reservoir circuit,Reservoir circuit,129,328,1885,138,Roadie (steel),Felt great
+R1742,2025-11-02,Long ride: Chalk ridge,Chalk ridge,146,344,1543,138,Roadie (steel),Rain from the start
+R1743,2025-11-03,Group ride: Windmill lane loop,Windmill lane loop,36,92,252,134,Roadie (steel),Rain from the start
+R1744,2025-11-03,Evening spin,Windmill lane loop,21,61,213,124,Roadie (steel),"Cold, so overshoes, gloves on"
+R1745,2025-11-04,Turbo: cadence drills,Indoor trainer,35,92,326,138,Roadie (steel),
+R1746,2025-11-06,Group ride: Chalk ridge,Chalk ridge,38,101,250,134,Roadie (steel),"Cold, so overshoes, gloves on"
+R1747,2025-11-08,Long ride: Long way home,Long way home,144,350,1354,137,Roadie (steel),
+R1748,2025-11-09,Sunday club ride,Sunday club ride,61,168,598,145,Roadie (steel),
+R1749,2025-11-09,Evening spin,Windmill lane loop,15,41,146,126,Roadie (steel),
+R1750,2025-11-10,Group ride: Reservoir circuit,Reservoir circuit,34,83,321,132,Roadie (steel),Headwind all the way back
+R1751,2025-11-11,Turbo: cadence drills,Indoor trainer,21,50,142,134,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R1752,2025-11-12,Commute x2,Commute via the viaduct,25,64,176,119,Fixed winter bike,
+R1753,2025-11-13,Tempo blocks,Windmill lane loop,62,165,396,150,Roadie (steel),"Cold, so overshoes, gloves on"
+R1754,2025-11-14,Turbo: cadence drills,Indoor trainer,37,93,271,134,Roadie (steel),"Fan on high, still soaked"
+R1755,2025-11-15,Long ride: Reservoir circuit,Reservoir circuit,95,241,1151,136,Roadie (steel),
+R1756,2025-11-16,Sunday club ride,Sunday club ride,36,85,311,135,Roadie (steel),Rain from the start
+R1757,2025-11-17,Tempo blocks,Windmill lane loop,62,160,696,143,Roadie (steel),
+R1758,2025-11-18,Sweet spot 2x20,Canal towpath,46,119,352,151,Roadie (steel),
+R1759,2025-11-22,Long ride: Long way home,Long way home,89,244,1094,134,Roadie (steel),"Cold, so overshoes, gloves on"
+R1760,2025-11-23,Long ride: Long way home,Long way home,125,303,1456,131,Roadie (steel),
+R1761,2025-11-24,Commute x2,Commute via the viaduct,18,50,135,113,Fixed winter bike,
+R1762,2025-11-24,Evening spin,Windmill lane loop,22,62,178,116,Roadie (steel),Rain from the start
+R1763,2025-11-25,Sweet spot 2x20,Canal towpath,46,120,411,158,Roadie (steel),Legs heavy
+R1764,2025-11-27,Group ride: Chalk ridge,Chalk ridge,35,94,347,146,Roadie (steel),"Coffee stop, then home"
+R1765,2025-11-28,Commute x2,Commute via the viaduct,18,49,137,128,Fixed winter bike,
+R1766,2025-11-29,Long ride: Coast road out-and-back,Coast road out-and-back,122,302,1808,122,Roadie (steel),
+R1767,2025-11-30,Tempo blocks,Windmill lane loop,46,126,526,152,Roadie (steel),
+R1768,2025-11-30,Evening spin,Windmill lane loop,15,40,103,115,Roadie (steel),
+R1769,2025-12-01,Group ride: Reservoir circuit,Reservoir circuit,32,84,378,134,Roadie (steel),
+R1770,2025-12-02,Sweet spot 2x20,Canal towpath,30,84,320,149,Roadie (steel),
+R1771,2025-12-06,Long ride: Coast road out-and-back,Coast road out-and-back,98,265,1131,128,Roadie (steel),
+R1772,2025-12-09,Sweet spot 2x20,Canal towpath,47,130,334,140,Roadie (steel),"Cold, so overshoes, gloves on"
+R1773,2025-12-10,Tempo blocks,Windmill lane loop,37,103,399,139,Roadie (steel),
+R1774,2025-12-11,Tempo blocks,Windmill lane loop,52,136,489,152,Roadie (steel),
+R1775,2025-12-12,Recovery spin,River valley spin,38,97,262,113,Fixed winter bike,
+R1776,2025-12-12,Evening spin,Windmill lane loop,18,50,136,124,Roadie (steel),
+R1777,2025-12-13,Long ride: Long way home,Long way home,118,324,1486,132,Roadie (steel),Rain from the start
+R1778,2025-12-14,Tempo blocks,Windmill lane loop,49,119,524,154,Roadie (steel),
+R1779,2025-12-15,Group ride: Windmill lane loop,Windmill lane loop,43,116,357,135,Roadie (steel),"Cold, so overshoes, gloves on"
+R1780,2025-12-18,Easy spin,River valley spin,32,92,335,110,Fixed winter bike,
+R1781,2025-12-19,Z2 endurance,Coast road out-and-back,54,137,575,122,Fixed winter bike,
+R1782,2025-12-20,Long ride: Chalk ridge,Chalk ridge,136,332,1323,129,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1783,2025-12-21,Long ride: Long way home,Long way home,143,370,1923,138,Roadie (steel),
+R1784,2025-12-24,Tempo blocks,Windmill lane loop,58,145,441,138,Roadie (steel),
+R1785,2025-12-27,Long ride: Lakes loop,Lakes loop,109,288,1058,129,Roadie (steel),Dark by the last 10 km
+R1786,2026-01-01,Tempo blocks,Windmill lane loop,46,115,369,138,Roadie (steel),
+R1787,2026-01-06,Sweet spot 2x20,Canal towpath,40,112,259,145,Roadie (steel),"Cold, so overshoes, gloves on"
+R1788,2026-01-08,Tempo blocks,Windmill lane loop,28,72,325,145,Roadie (steel),
+R1789,2026-01-09,Turbo: cadence drills,Indoor trainer,31,88,205,139,Roadie (steel),
+R1790,2026-01-10,Long ride: Chalk ridge,Chalk ridge,94,234,833,123,Roadie (steel),"Cold, so overshoes, gloves on"
+R1791,2026-01-11,Long ride: Lakes loop,Lakes loop,98,261,1134,123,Roadie (steel),"Cold, so overshoes, gloves on"
+R1792,2026-01-12,Tempo blocks,Windmill lane loop,19,49,256,141,Roadie (steel),
+R1793,2026-01-13,Turbo: cadence drills,Indoor trainer,35,82,350,141,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R1794,2026-01-14,Recovery spin,River valley spin,28,66,219,112,Fixed winter bike,
+R1795,2026-01-15,Long ride: Coast road out-and-back,Coast road out-and-back,110,263,787,130,Roadie (steel),
+R1796,2026-01-17,Long ride: Coast road out-and-back,Coast road out-and-back,102,280,831,123,Roadie (steel),
+R1797,2026-01-18,Sunday club ride,Sunday club ride,44,119,364,139,Roadie (steel),
+R1798,2026-01-21,Hill repeats,Hill repeats at Ashdown,28,79,221,152,Roadie (steel),"Coffee stop, then home"
+R1799,2026-01-22,Group ride: Reservoir circuit,Reservoir circuit,20,50,173,131,Roadie (steel),
+R1800,2026-01-23,Z2 endurance,Coast road out-and-back,23,61,278,135,Fixed winter bike,
+R1801,2026-01-24,Long ride: Lakes loop,Lakes loop,80,217,827,123,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1802,2026-01-25,Easy spin,River valley spin,41,116,218,122,Fixed winter bike,
+R1803,2026-01-26,Group ride: Chalk ridge,Chalk ridge,39,100,475,132,Roadie (steel),
+R1804,2026-01-27,Z2 endurance,Coast road out-and-back,41,100,303,137,Fixed winter bike,Rain from the start
+R1805,2026-01-28,Commute x2,Commute via the viaduct,20,57,184,127,Fixed winter bike,Headwind all the way back
+R1806,2026-01-29,Easy spin,River valley spin,44,111,480,117,Fixed winter bike,"Cold, so overshoes, gloves on"
+R1807,2026-01-30,Sweet spot 2x20,Canal towpath,19,50,253,157,Roadie (steel),
+R1808,2026-01-31,Long ride: Long way home,Long way home,94,246,719,139,Roadie (steel),"Cold, so overshoes, gloves on"
+R1809,2026-02-01,Tempo blocks,Windmill lane loop,38,92,503,152,Roadie (steel),Felt great
+R1810,2026-02-01,Evening spin,Windmill lane loop,16,41,151,112,Roadie (steel),Felt great
+R1811,2026-02-03,Sweet spot 2x20,Canal towpath,34,84,298,141,Roadie (steel),
+R1812,2026-02-05,Tempo blocks,Windmill lane loop,22,60,120,148,Roadie (steel),
+R1813,2026-02-06,Turbo: cadence drills,Indoor trainer,24,58,153,135,Roadie (steel),
+R1814,2026-02-07,Long ride: Reservoir circuit,Reservoir circuit,139,391,1349,136,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1815,2026-02-08,Long ride: Chalk ridge,Chalk ridge,98,259,810,131,Roadie (steel),
+R1816,2026-02-09,Tempo blocks,Windmill lane loop,37,103,496,143,Roadie (steel),Legs heavy
+R1817,2026-02-10,Turbo: cadence drills,Indoor trainer,28,69,177,132,Roadie (steel),"Fan on high, still soaked"
+R1818,2026-02-11,Recovery spin,River valley spin,27,63,168,121,Fixed winter bike,
+R1819,2026-02-12,Long ride: Coast road out-and-back,Coast road out-and-back,81,194,881,134,Roadie (steel),"Tailwind out, paid for it later"
+R1820,2026-02-14,Long ride: Reservoir circuit,Reservoir circuit,87,213,467,131,Roadie (steel),
+R1821,2026-02-15,Sunday club ride,Sunday club ride,21,55,248,128,Roadie (steel),"Cold, so overshoes, gloves on"
+R1822,2026-02-18,Hill repeats,Hill repeats at Ashdown,28,70,389,159,Roadie (steel),
+R1823,2026-02-19,Group ride: Chalk ridge,Chalk ridge,20,55,236,139,Roadie (steel),
+R1824,2026-02-20,Z2 endurance,Coast road out-and-back,43,113,409,132,Fixed winter bike,
+R1825,2026-02-21,Long ride: Long way home,Long way home,117,282,1450,122,Roadie (steel),Felt great
+R1826,2026-02-22,Easy spin,River valley spin,41,98,299,109,Fixed winter bike,
+R1827,2026-02-23,Group ride: Reservoir circuit,Reservoir circuit,38,106,450,143,Roadie (steel),"Group of 6, steady pace"
+R1828,2026-02-24,Z2 endurance,Coast road out-and-back,23,60,307,130,Fixed winter bike,
+R1829,2026-02-25,Commute x2,Commute via the viaduct,22,61,223,122,Fixed winter bike,
+R1830,2026-02-26,Easy spin,River valley spin,45,115,502,115,Fixed winter bike,Rain from the start
+R1831,2026-02-27,Sweet spot 2x20,Canal towpath,21,50,105,152,Roadie (steel),
+R1832,2026-02-28,Long ride: Lakes loop,Lakes loop,100,268,997,129,Roadie (steel),
+R1833,2026-03-01,Tempo blocks,Windmill lane loop,24,58,327,139,Roadie (steel),
+R1834,2026-03-01,Evening spin,Windmill lane loop,16,44,206,125,Roadie (steel),Rode with the club
+R1835,2026-03-03,Sweet spot 2x20,Canal towpath,22,59,234,147,Roadie (steel),Headwind all the way back
+R1836,2026-03-05,Tempo blocks,Windmill lane loop,27,74,230,148,Roadie (steel),
+R1837,2026-03-06,Turbo: cadence drills,Indoor trainer,29,75,228,129,Roadie (steel),
+R1838,2026-03-07,Long ride: Long way home,Long way home,128,313,858,139,Roadie (steel),
+R1839,2026-03-08,Long ride: Long way home,Long way home,132,375,1288,128,Roadie (steel),"Tailwind out, paid for it later"
+R1840,2026-03-09,Tempo blocks,Windmill lane loop,19,46,206,144,Roadie (steel),Legs heavy
+R1841,2026-03-10,Turbo: cadence drills,Indoor trainer,43,104,215,131,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R1842,2026-03-11,Recovery spin,River valley spin,33,83,344,122,Fixed winter bike,"Cold, so overshoes, gloves on"
+R1843,2026-03-12,Long ride: Lakes loop,Lakes loop,153,404,1810,139,Roadie (steel),Felt great
+R1844,2026-03-14,Long ride: Lakes loop,Lakes loop,126,329,1711,124,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1845,2026-03-15,Sunday club ride,Sunday club ride,32,90,436,139,Roadie (steel),
+R1846,2026-03-18,Hill repeats,Hill repeats at Ashdown,21,48,269,162,Roadie (steel),
+R1847,2026-03-19,Group ride: Windmill lane loop,Windmill lane loop,44,118,384,137,Roadie (steel),
+R1848,2026-03-20,Z2 endurance,Coast road out-and-back,40,103,359,130,Fixed winter bike,
+R1849,2026-03-21,Long ride: Lakes loop,Lakes loop,85,235,1128,128,Roadie (steel),"Cold, so overshoes, gloves on"
+R1850,2026-03-22,Easy spin,River valley spin,39,104,479,118,Fixed winter bike,"Easy spin, recovery"
+R1851,2026-03-23,Group ride: Chalk ridge,Chalk ridge,31,76,241,141,Roadie (steel),
+R1852,2026-03-24,Z2 endurance,Coast road out-and-back,40,103,298,120,Fixed winter bike,
+R1853,2026-03-25,Commute x2,Commute via the viaduct,23,63,206,114,Fixed winter bike,
+R1854,2026-03-26,Easy spin,River valley spin,37,87,400,124,Fixed winter bike,
+R1855,2026-03-27,Sweet spot 2x20,Canal towpath,32,83,374,145,Roadie (steel),Rain from the start
+R1856,2026-03-28,Long ride: Lakes loop,Lakes loop,119,334,1617,135,Roadie (steel),
+R1857,2026-03-29,Tempo blocks,Windmill lane loop,36,87,181,146,Roadie (steel),
+R1858,2026-03-29,Evening spin,Windmill lane loop,13,31,148,123,Roadie (steel),Rode with the club
+R1859,2026-03-31,Sweet spot 2x20,Canal towpath,42,102,495,153,Roadie (steel),Headwind all the way back
+R1860,2026-04-02,Tempo blocks,Windmill lane loop,44,108,604,149,Roadie (steel),
+R1861,2026-04-03,Turbo: cadence drills,Indoor trainer,39,96,428,133,Roadie (steel),
+R1862,2026-04-04,Long ride: Chalk ridge,Chalk ridge,147,396,1281,128,Roadie (steel),
+R1863,2026-04-05,Long ride: Long way home,Long way home,98,237,850,133,Roadie (steel),Sunrise start
+R1864,2026-04-06,Tempo blocks,Windmill lane loop,30,71,315,152,Roadie (steel),
+R1865,2026-04-07,Turbo: cadence drills,Indoor trainer,23,64,174,129,Roadie (steel),
+R1866,2026-04-08,Recovery spin,River valley spin,25,59,228,119,Commuter,"Tailwind out, paid for it later"
+R1867,2026-04-09,Long ride: Lakes loop,Lakes loop,184,499,2528,132,Roadie (steel),
+R1868,2026-04-11,Long ride: Lakes loop,Lakes loop,149,398,1129,132,Roadie (steel),Sunrise start
+R1869,2026-04-12,Sunday club ride,Sunday club ride,29,81,203,138,Roadie (steel),
+R1870,2026-04-15,Hill repeats,Hill repeats at Ashdown,31,78,349,152,Roadie (steel),Legs heavy
+R1871,2026-04-16,Group ride: Windmill lane loop,Windmill lane loop,18,42,214,140,Roadie (steel),Headwind all the way back
+R1872,2026-04-17,Z2 endurance,Coast road out-and-back,42,117,461,122,Roadie (steel),Legs heavy
+R1873,2026-04-18,Long ride: Coast road out-and-back,Coast road out-and-back,172,436,1345,135,Roadie (steel),Sunrise start
+R1874,2026-04-19,Easy spin,River valley spin,18,44,239,111,Roadie (steel),
+R1875,2026-04-20,Group ride: Reservoir circuit,Reservoir circuit,22,53,203,134,Roadie (steel),
+R1876,2026-04-21,Z2 endurance,Coast road out-and-back,32,84,291,130,Roadie (steel),Headwind all the way back
+R1877,2026-04-22,Commute x2,Commute via the viaduct,22,51,283,123,Commuter,
+R1878,2026-04-23,Easy spin,River valley spin,33,78,344,124,Roadie (steel),
+R1879,2026-04-24,Sweet spot 2x20,Canal towpath,24,59,272,156,Roadie (steel),
+R1880,2026-04-25,Long ride: Reservoir circuit,Reservoir circuit,134,375,1442,129,Roadie (steel),"Tailwind out, paid for it later"
+R1881,2026-04-26,Tempo blocks,Windmill lane loop,28,67,367,154,Roadie (steel),
+R1882,2026-04-26,Evening spin,Windmill lane loop,17,43,99,117,Commuter,
+R1883,2026-04-28,Sweet spot 2x20,Canal towpath,34,82,426,157,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1884,2026-04-30,Tempo blocks,Windmill lane loop,38,107,276,150,Roadie (steel),"Coffee stop, then home"
+R1885,2026-05-01,Turbo: cadence drills,Indoor trainer,34,85,302,141,Roadie (steel),
+R1886,2026-05-02,Long ride: Coast road out-and-back,Coast road out-and-back,207,502,1873,127,Roadie (steel),
+R1887,2026-05-03,Long ride: Reservoir circuit,Reservoir circuit,85,220,1146,126,Roadie (steel),
+R1888,2026-05-04,Tempo blocks,Windmill lane loop,28,75,340,151,Roadie (steel),
+R1889,2026-05-05,Turbo: cadence drills,Indoor trainer,31,72,189,127,Roadie (steel),"Fan on high, still soaked"
+R1890,2026-05-06,Recovery spin,River valley spin,28,68,293,104,Roadie (steel),"Easy spin, recovery"
+R1891,2026-05-07,Long ride: Reservoir circuit,Reservoir circuit,140,388,1954,127,Roadie (steel),
+R1892,2026-05-09,Long ride: Lakes loop,Lakes loop,219,523,2684,139,Roadie (steel),
+R1893,2026-05-10,Sunday club ride,Sunday club ride,44,102,447,142,Roadie (steel),"Group of 6, steady pace"
+R1894,2026-05-13,Hill repeats,Hill repeats at Ashdown,42,98,544,162,Roadie (steel),Headwind all the way back
+R1895,2026-05-14,Group ride: Reservoir circuit,Reservoir circuit,37,89,330,146,Roadie (steel),
+R1896,2026-05-15,Z2 endurance,Coast road out-and-back,28,67,207,127,Roadie (steel),"Tailwind out, paid for it later"
+R1897,2026-05-16,Long ride: Long way home,Long way home,195,534,2041,132,Roadie (steel),Felt great
+R1898,2026-05-17,Easy spin,River valley spin,31,84,191,121,Roadie (steel),
+R1899,2026-05-18,Group ride: Chalk ridge,Chalk ridge,33,81,266,129,Roadie (steel),
+R1900,2026-05-19,Z2 endurance,Coast road out-and-back,32,87,249,128,Roadie (steel),
+R1901,2026-05-20,Commute x2,Commute via the viaduct,25,61,170,128,Commuter,
+R1902,2026-05-21,Easy spin,River valley spin,27,70,145,121,Roadie (steel),"Easy spin, recovery"
+R1903,2026-05-22,Sweet spot 2x20,Canal towpath,27,64,319,146,Roadie (steel),Felt great
+R1904,2026-05-23,Long ride: Reservoir circuit,Reservoir circuit,101,273,841,140,Roadie (steel),
+R1905,2026-05-24,Tempo blocks,Windmill lane loop,36,96,358,143,Roadie (steel),Legs heavy
+R1906,2026-05-24,Evening spin,Windmill lane loop,15,39,162,113,Roadie (steel),
+R1907,2026-05-26,Sweet spot 2x20,Canal towpath,28,66,192,156,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1908,2026-05-28,Tempo blocks,Windmill lane loop,31,72,173,147,Roadie (steel),
+R1909,2026-05-29,Turbo: cadence drills,Indoor trainer,41,97,342,131,Roadie (steel),
+R1910,2026-05-30,Long ride: Coast road out-and-back,Coast road out-and-back,118,273,1332,129,Roadie (steel),"Coffee stop, then home"
+R1911,2026-05-31,Long ride: Long way home,Long way home,91,211,1121,129,Roadie (steel),
+R1912,2026-06-01,Tempo blocks,Windmill lane loop,20,56,277,146,Roadie (steel),Headwind all the way back
+R1913,2026-06-02,Turbo: cadence drills,Indoor trainer,40,107,512,142,Roadie (steel),"Indoors, a film and the fan on"
+R1914,2026-06-03,Recovery spin,River valley spin,38,100,462,119,Roadie (steel),
+R1915,2026-06-04,Long ride: Long way home,Long way home,185,458,1199,134,Roadie (steel),
+R1916,2026-06-06,Long ride: Chalk ridge,Chalk ridge,118,287,1499,126,Roadie (steel),"Coffee stop, then home"
+R1917,2026-06-07,Sunday club ride,Sunday club ride,39,101,345,131,Roadie (steel),"Tailwind out, paid for it later"
+R1918,2026-06-10,Hill repeats,Hill repeats at Ashdown,24,60,231,155,Roadie (steel),
+R1919,2026-06-11,Group ride: Reservoir circuit,Reservoir circuit,36,83,382,140,Roadie (steel),
+R1920,2026-06-12,Z2 endurance,Coast road out-and-back,44,107,331,128,Roadie (steel),Rain from the start
+R1921,2026-06-13,Long ride: Chalk ridge,Chalk ridge,134,347,1130,140,Roadie (steel),
+R1922,2026-06-14,Easy spin,River valley spin,28,70,303,110,Roadie (steel),
+R1923,2026-06-15,Group ride: Windmill lane loop,Windmill lane loop,27,69,303,131,Roadie (steel),"Group of 6, steady pace"
+R1924,2026-06-16,Z2 endurance,Coast road out-and-back,45,110,536,120,Roadie (steel),
+R1925,2026-06-17,Commute x2,Commute via the viaduct,23,59,229,124,Commuter,Felt great
+R1926,2026-06-18,Easy spin,River valley spin,31,80,425,118,Roadie (steel),
+R1927,2026-06-19,Sweet spot 2x20,Canal towpath,29,69,376,146,Roadie (steel),Rain from the start
+R1928,2026-06-20,Long ride: Chalk ridge,Chalk ridge,147,376,1946,130,Roadie (steel),Rode with the club
+R1929,2026-06-21,Tempo blocks,Windmill lane loop,44,117,274,148,Roadie (steel),Headwind all the way back
+R1930,2026-06-21,Evening spin,Windmill lane loop,18,48,150,128,Roadie (steel),Headwind all the way back
+R1931,2026-06-23,Sweet spot 2x20,Canal towpath,24,62,144,149,Roadie (steel),Rain from the start
+R1932,2026-06-25,Tempo blocks,Windmill lane loop,27,69,333,141,Roadie (steel),
+R1933,2026-06-26,Turbo: cadence drills,Indoor trainer,19,47,164,137,Roadie (steel),
+R1934,2026-06-27,Long ride: Reservoir circuit,Reservoir circuit,191,467,1970,133,Gravel (Kestrel-built),"Puncture near the canal lock, fixed in ten minutes"
+R1935,2026-06-28,Long ride: Long way home,Long way home,183,487,2414,130,Roadie (steel),
+R1936,2026-06-29,Tempo blocks,Windmill lane loop,27,71,262,156,Roadie (steel),
+R1937,2026-06-30,Turbo: cadence drills,Indoor trainer,26,60,255,141,Roadie (steel),"Fan on high, still soaked"
+R1938,2026-07-01,Recovery spin,River valley spin,45,115,581,115,Roadie (steel),"Coffee stop, then home"
+R1939,2026-07-02,Long ride: Reservoir circuit,Reservoir circuit,117,330,789,140,Roadie (steel),"Tailwind out, paid for it later"
+R1940,2026-07-04,Long ride: Long way home,Long way home,219,516,2223,132,Roadie (steel),Sunrise start
+R1941,2026-07-05,Sunday club ride,Sunday club ride,19,47,259,140,Roadie (steel),
+R1942,2026-07-08,Hill repeats,Hill repeats at Ashdown,39,102,328,153,Roadie (steel),
+R1943,2026-07-09,Group ride: Windmill lane loop,Windmill lane loop,40,113,402,128,Roadie (steel),Felt great
+R1944,2026-07-10,Z2 endurance,Coast road out-and-back,29,74,376,136,Roadie (steel),
+R1945,2026-07-11,Long ride: Reservoir circuit,Reservoir circuit,178,416,1889,139,Roadie (steel),"Puncture near the canal lock, fixed in ten minutes"
+R1946,2026-07-12,Easy spin,River valley spin,33,85,420,107,Roadie (steel),
+R1947,2026-07-13,Group ride: Windmill lane loop,Windmill lane loop,44,113,227,135,Roadie (steel),
+R1948,2026-07-14,Z2 endurance,Coast road out-and-back,45,119,333,124,Roadie (steel),Rain from the start
+R1949,2026-07-15,Commute x2,Commute via the viaduct,42,113,342,127,Commuter,
+R1950,2026-07-16,Easy spin,River valley spin,23,58,289,117,Roadie (steel),"Easy spin, recovery"
+R1951,2026-07-17,Sweet spot 2x20,Canal towpath,36,87,212,144,Roadie (steel),Rain from the start
+R1952,2026-07-18,Long ride: Long way home,Long way home,198,530,1996,137,Roadie (steel),"Coffee stop, then home"
+R1953,2026-07-19,Tempo blocks,Windmill lane loop,31,87,210,153,Roadie (steel),Legs heavy
+R1954,2026-07-21,Sweet spot 2x20,Canal towpath,40,93,317,145,Roadie (steel),"Coffee stop, then home"
+R1955,2026-07-23,Tempo blocks,Windmill lane loop,41,99,344,142,Roadie (steel),Rain from the start
+R1956,2026-07-24,Turbo: cadence drills,Indoor trainer,20,56,144,132,Roadie (steel),
+R1957,2026-07-25,Long ride: Reservoir circuit,Reservoir circuit,115,320,818,122,Roadie (steel),Rode with the club
+R1958,2026-07-26,Long ride: Lakes loop,Lakes loop,237,637,2147,135,Roadie (steel),Rode with the club
+R1959,2026-07-27,Tempo blocks,Windmill lane loop,23,54,214,144,Roadie (steel),"Tailwind out, paid for it later"
+R1960,2026-07-28,Turbo: cadence drills,Indoor trainer,42,119,390,135,Roadie (steel),"Cadence drills, 5 min on 5 off"
+R1961,2026-07-29,Recovery spin,River valley spin,44,102,384,112,Roadie (steel),"Tailwind out, paid for it later"
+R1962,2026-07-30,Long ride: Lakes loop,Lakes loop,148,367,1197,132,Roadie (steel),Legs heavy
+R1963,2026-08-01,Long ride: Chalk ridge,Chalk ridge,119,275,611,138,Roadie (steel),
+R1964,2026-08-02,Sunday club ride,Sunday club ride,35,86,394,138,Roadie (steel),
+R1965,2026-08-03,Group ride: Chalk ridge,Chalk ridge,38,92,380,143,Roadie (steel),
+R1966,2026-08-04,Sweet spot 2x20,Canal towpath,31,75,240,152,Roadie (steel),"Coffee stop, then home"
+R1967,2026-08-05,Recovery spin,River valley spin,30,70,260,121,Roadie (steel),"Coffee stop, then home"
+R1968,2026-08-06,Long ride: Lakes loop,Lakes loop,121,306,1240,129,Roadie (steel),
+R1969,2026-08-08,Long ride: Long way home,Long way home,134,327,1420,123,Roadie (steel),Sunrise start
+R1970,2026-08-09,Sunday club ride,Sunday club ride,41,99,410,132,Roadie (steel),"Group of 6, steady pace"
+R1971,2026-08-11,Tempo blocks,Windmill lane loop,34,80,300,138,Roadie (steel),Rain from the start
+R1972,2026-08-12,Hill repeats,Hill repeats at Ashdown,29,72,520,144,Roadie (steel),
+R1973,2026-08-14,Z2 endurance,Coast road out-and-back,44,104,390,135,Roadie (steel),"New tyres, rolling much better"
+R1974,2026-08-15,Long ride: Chalk ridge,Chalk ridge,162,396,1700,124,Roadie (steel),Sunrise start
+R1975,2026-08-16,Easy spin,River valley spin,40,94,260,114,Roadie (steel),
+R1976,2026-08-18,Z2 endurance,Coast road out-and-back,45,106,380,127,Roadie (steel),"Rain held off, just"
+R1977,2026-08-20,First ride on the new fit,Coast road out-and-back,42,100,300,122,Roadie (steel),"Saddle a touch back, hips quiet"
+R1978,2026-08-30,Kyoto: Kamo river loop,Kamo river Kyoto,42.6,128,190,118,Rented bike (Kyoto),"Shijo up to Kitayama and back down the west bank, ramen on the way"
+R1979,2026-09-01,Easy spin,River valley spin,30,72,230,111,Roadie (steel),
+R1980,2026-09-02,Evening spin: lights test,Windmill lane loop,28,66,200,108,Commuter,"Lights test, see gear note"
+R1981,2026-09-03,Tempo blocks,Windmill lane loop,34,80,290,139,Roadie (steel),
+R1982,2026-09-05,Long ride: Lakes loop,Lakes loop,121,300,1250,125,Roadie (steel),"Same first 40 km as the brevet, for the legs"
+R1983,2026-09-06,Gravel recon: forest tracks,Gravel: forest tracks,63.8,262,940,127,Gravel (Kestrel-built),"Two gates locked, see recon note"
+R1984,2026-09-08,Easy spin,River valley spin,35,82,250,108,Commuter,"Puncture near the canal lock, fixed in ten minutes"
+R1985,2026-09-09,Hill repeats,Hill repeats at Ashdown,30,74,510,145,Roadie (steel),
+R1986,2026-09-10,Easy spin,River valley spin,25,60,180,108,Commuter,"New bar tape, still tacky"
+R1987,2026-09-13,300k brevet: Lakes loop,300k Lakes loop,301.4,723,2860,131,Roadie (steel),Finished in 13 h 41 incl. controls
+R1988,2026-09-15,Recovery spin,River valley spin,24,60,150,117,Roadie (steel),Legs like wood
+R1989,2026-09-17,Easy spin,River valley spin,30,70,200,107,Roadie (steel),"Tailwind out, paid for it later"
+R1990,2026-09-19,Z2 endurance,Coast road out-and-back,55,128,420,138,Roadie (steel),Back in time for the observatory night
+R1991,2026-09-20,Long ride: Reservoir circuit,Reservoir circuit,92,224,880,133,Roadie (steel),"Coffee stop, then home"
+R1992,2026-09-21,Commute x2,Commute via the viaduct,22,56,170,122,Commuter,Chain noisy; rewaxed after
+R1993,2026-09-23,Commute x2,Commute via the viaduct,22,55,175,125,Commuter,Felt great
+R1994,2026-09-24,Commute x2,Commute via the viaduct,22,57,170,119,Commuter,
+R1995,2026-09-26,Long ride: Chalk ridge,Chalk ridge,112,274,1050,136,Roadie (steel),Felt great
+R1996,2026-09-27,Sunday club ride,Sunday club ride,46,110,390,136,Roadie (steel),
+R1997,2026-09-29,Z2 endurance,Coast road out-and-back,40,95,310,131,Roadie (steel),"Chain waxed the night before, silent at last"
+R1998,2026-10-01,Commute x2,Commute via the viaduct,22,54,165,112,Commuter,Headwind all the way back
+R1999,2026-10-02,Z2 endurance,Canal towpath,58,139,427,125,Roadie (steel),"Said ""never again"" to the headwind on the way back"
+R2000,2026-10-03,Long ride: Windmill lane loop,Windmill lane loop,84,205,720,138,Roadie (steel),Rode with the club
+R2001,2026-10-04,Sunday spin: persimmon orchard lane,Windmill lane loop,58.2,171,380,121,Gravel (Kestrel-built),Persimmons on the trees along the lane; the route home passes the new bakery

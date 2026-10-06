@@ -1,0 +1,26 @@
+# Tiles ingress, half edited on 2026-09-24 in the middle of the move to the new host
+apiVersion: v1
+kind: Service
+metadata:
+  name: kestrel-tiles
+  namespace: kestrel
+spec:
+  selector:
+    app: kestrel-tiles
+  ports:
+    - port: 80
+      targetPort: 8081
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kestrel-tiles
+  namespace: kestrel
+spec:
+  rules:
+    - host: tiles.kestrel.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: {service: {name: kestrel-tiles, port: {number: 80}

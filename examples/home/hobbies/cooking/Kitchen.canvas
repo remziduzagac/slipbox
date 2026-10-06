@@ -1,0 +1,15 @@
+{
+  "nodes": [
+    { "id": "n1", "type": "file", "file": "Meal plan.md", "x": 0, "y": 0, "width": 400, "height": 400 },
+    { "id": "n2", "type": "file", "file": "Recipes/Weeknight/Dal.md", "x": 480, "y": -80, "width": 400, "height": 300 },
+    { "id": "n3", "type": "file", "file": "Recipes/Weeknight/Shakshuka.md", "x": 480, "y": 260, "width": 400, "height": 300 },
+    { "id": "n4", "type": "text", "text": "Sunday prep:\n- rinse lentils\n- feed the starter\n- caramel for the flan", "x": -480, "y": 40, "width": 360, "height": 220 },
+    { "id": "n5", "type": "file", "file": "pantry.csv", "x": 0, "y": 480, "width": 400, "height": 240 }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "n4", "fromSide": "right", "toNode": "n1", "toSide": "left", "label": "first" },
+    { "id": "e2", "fromNode": "n1", "fromSide": "right", "toNode": "n2", "toSide": "left" },
+    { "id": "e3", "fromNode": "n1", "fromSide": "right", "toNode": "n3", "toSide": "left" },
+    { "id": "e4", "fromNode": "n5", "fromSide": "top", "toNode": "n1", "toSide": "bottom", "label": "check" }
+  ]
+}

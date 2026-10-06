@@ -19,7 +19,7 @@ export interface FileKind {
 /** Note formats by extension: which ones are notes is the vault's `walk.extensions`. */
 const NOTE_FORMATS: Record<string, string> = { md: "markdown", markdown: "markdown" };
 
-const DATA_FORMATS: Record<string, string> = {
+export const DATA_FORMATS: Record<string, string> = {
   json: "json",
   jsonc: "json",
   json5: "json",
@@ -36,7 +36,7 @@ const DATA_FORMATS: Record<string, string> = {
 };
 
 /** Source languages by extension, as highlight names. */
-const LANGUAGES: Record<string, string> = {
+export const LANGUAGES: Record<string, string> = {
   ts: "typescript",
   tsx: "typescript",
   mts: "typescript",
@@ -75,7 +75,7 @@ const LANGUAGES: Record<string, string> = {
 };
 
 /** Whole names that say their language (no extension, or one that misleads). */
-const NAMED: Record<string, string> = {
+export const NAMED: Record<string, string> = {
   makefile: "makefile",
   dockerfile: "dockerfile",
   ".zshrc": "bash",

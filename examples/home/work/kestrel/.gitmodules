@@ -1,0 +1,4 @@
+[submodule "vendor/geo-tiles"]
+	path = vendor/geo-tiles
+	url = https://github.com/kestrel-labs/geo-tiles.git
+	branch = main

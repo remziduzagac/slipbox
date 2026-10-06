@@ -1,0 +1,22 @@
+{
+  // Strict TypeScript for the web app. JSONC: tsc allows comments here, as does every editor.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./src/*"],      // the app
+      "@sync/*": ["./src/sync/*"]
+    }, /* the sync folder gets its own alias because it is imported from the worker */
+    "types": ["node"],
+  },
+  "include": ["src"],
+  "exclude": ["build", "src/generated", "src/**/*.wip.tsx"]
+}

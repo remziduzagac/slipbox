@@ -1,0 +1,6 @@
+{
+  "route_sharing": true,
+  "offline_sync": true,
+  "retry_budget": false,
+  "dark_map": true,
+}

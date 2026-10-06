@@ -1,0 +1,23 @@
+# dependencies and build output
+node_modules/
+build/
+dist/
+target/
+__pycache__/
+*.pyc
+
+# scratch and local state
+tmp/
+.env
+*.log
+coverage/
+.DS_Store
+*.swp
+
+# generated; regenerate with `make docs` (a copy is committed for the site, so it is tracked on purpose)
+docs/generated/
+
+# editor state we do not share
+.vscode/*
+!.vscode/settings.json
+.idea/

@@ -1,0 +1,30 @@
+# Regions Kestrel plans in. `tiles` is the vector tile set; `enabled: false` hides a region in the picker.
+- id: nl
+  name: Netherlands
+  endpoint: https://tiles.kestrel.dev/nl
+  tiles: nl-2026-08.pbf
+  enabled: true
+- id: dk
+  name: Denmark
+  endpoint: https://tiles.kestrel.dev/dk
+  tiles: dk-2026-08.pbf
+  enabled: true
+- id: at
+  name: Austria
+  endpoint: https://tiles.kestrel.dev/at
+  tiles: at-2026-06.pbf
+  enabled: true
+- id: ch
+  name: Switzerland
+  endpoint: http://tiles-staging.kestrel.dev/ch
+  tiles: ch-2026-06.pbf
+  enabled: false
+- id: de-bw
+  name: Baden-Württemberg
+  endpoint: https://tiles.kestrel.dev/de-bw
+  enabled: true
+- id: lab
+  name: Lab (internal)
+  endpoint: http://localhost:8081/lab
+  tiles: lab.pbf
+  enabled: false

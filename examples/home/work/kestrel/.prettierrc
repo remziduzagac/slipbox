@@ -1,0 +1,4 @@
+# Only the docs go through Prettier; code is formatted by biome.
+singleQuote: true
+printWidth: 120
+proseWrap: always

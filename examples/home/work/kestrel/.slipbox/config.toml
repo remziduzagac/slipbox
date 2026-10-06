@@ -1,0 +1,62 @@
+# Kestrel's slipbox settings, checked in so the team sees the docs the same way.
+# This is a vault file: slipbox applies what a clone may choose and warns about the rest.
+
+theme = "tokyo-night"
+
+[render]
+inset = 4
+max_width = 110
+# a stray paste from Sam's notes, left in: an escape sequence in a value (slipbox keeps the default)
+glyphs = "\u001b[31mnerd"
+
+[walk]
+extensions = ["md", "markdown"]
+exclude = ["vendor/", "docs/generated/"]
+# the team tried widening what counts as a root; a folder's own config can't (user file only)
+root_markers = [".git", ".slipbox", "Cargo.toml"]
+
+[files]
+show = "renderable"
+include = ["scripts/", "*.sh"]
+
+[git]
+base = "main"
+
+[language-server.pyright]
+config = { python = { analysis = { typeCheckingMode = "strict", diagnosticMode = "workspace" } } }
+# the team's pyright lives in a venv; this is ignored in a vault file (the command is the user's to say)
+command = "/srv/venvs/kestrel/bin/pyright-langserver"
+args = ["--stdio"]
+
+[[language]]
+name = "python"
+language-servers = ["pyright", "ruff"]
+linters = ["todo"]
+
+[linter.todo]
+lint-command = "grep -nH TODO"
+lint-formats = ["%f:%l:%m"]
+lint-source = "todo"
+lint-severity = 4
+
+[editor]
+autosave_ms = 20000
+# a team-wide editor would be nice; the vault may not choose what runs (ignored, warned)
+command = "code --wait -g {file}:{line}"
+remote = ["code -g {file}:{line}"]
+
+[lint]
+enabled = "auto"
+command = ["npx", "markdownlint-cli2"]
+
+[keys]
+"leader w" = "app.quit"
+"ctrl+s" = "note.save_force"
+
+[aliases]
+wq = "note.save_force"
+q = "app.quit"
+
+[vault]
+id = "6b9d14d1d7d2d54e"
+name = "slipbox-kestrel"

@@ -1,0 +1,17 @@
+// markdownlint-cli2 config for the product repository's docs.
+{
+  "config": {
+    "default": true,
+    // Wrapped at 120 columns, tables and code included.
+    "MD013": { "line_length": 120, "tables": true, "code_blocks": true },
+    // Every document opens with a top-level heading.
+    "MD041": true,
+    // Release notes and PRDs repeat headings such as "Goals" under different parents.
+    "MD024": { "siblings_only": true },
+    // The PRD template uses inline HTML for details blocks.
+    "MD033": { "allowed_elements": ["details", "summary", "kbd", "sup", "mark", "br", "p", "img", "a", "div"] },
+    // Consecutive GitHub alerts need a blank line between them.
+    "MD028": false
+  },
+  "ignores": ["node_modules/**"]
+}

@@ -1,0 +1,26 @@
+/* App styles. The logo lives at ../../public/logo.svg; the palette is mirrored in ./_tokens.scss */
+:root {
+  --kestrel: #c2410c;
+  --ink: #1c1917;
+}
+
+body {
+  margin: 0;
+  font: 16px/1.5 system-ui, sans-serif;
+  color: var(--ink);
+}
+
+.route-map {
+  background: url(../../public/logo.svg) no-repeat right 1rem bottom 1rem / 48px;
+  min-height: 320px;
+}
+
+.badge:hover {
+  color: var(--kestrel);
+}
+
+@media (max-width: 600px) {
+  .route-map { min-height: 200px; }
+}
+
+/* the share sheet is SCSS: ./share-sheet.scss, compiled by the build and loaded by the share dialog */

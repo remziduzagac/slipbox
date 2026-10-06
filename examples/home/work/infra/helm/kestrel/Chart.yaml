@@ -1,0 +1,49 @@
+apiVersion: v2
+name: kestrel
+description: "The Kestrel stack for a preview environment: API, sync worker, tile server and the route engine"
+type: application
+version: 1.2.3
+appVersion: "2.3.0"
+kubeVersion: ">=1.28.0-0"
+home: https://kestrel.dev
+icon: https://kestrel.dev/assets/kestrel-mark.svg
+keywords:
+  - cycling
+  - routing
+  - offline-sync
+sources:
+  - https://github.com/kestrel-labs/kestrel
+  - https://github.com/kestrel-labs/infra
+created: 2026-09-28
+minHelm: 3.14
+testCoverage: 0.87
+deprecated: false
+
+# Maintainers, as Helm wants them
+maintainers:
+  - name: Malik Haddad
+    email: malik@kestrel.dev
+  - name: Priya Nair
+    email: priya@kestrel.dev
+  - name: Aiko Tanaka
+    email: aiko@kestrel.dev
+
+# What the chart pulls in. Versions are pinned: bump them in their own pull request.
+dependencies:
+  - name: postgresql
+    version: 15.5.9
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 19.6.4
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: ingress-nginx
+    version: 4.11.2
+    repository: https://kubernetes.github.io/ingress-nginx
+    condition: ingress.managed
+
+annotations:
+  kestrel.dev/released: 2026-09-30
+  kestrel.dev/changes: Offline sync rewrite, route sharing
+  artifacthub.io/license: Apache-2.0

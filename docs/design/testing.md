@@ -21,6 +21,7 @@ through OpenTUI itself, to prove the adapter and real key parsing.
 | `tests/tui.test.ts` | the TUI model, the real watcher, state, keymap, OpenTUI end to end |
 | `tests/servers.test.ts` | slipbox as a client of language servers, against a fake one (`tests/fixtures/fake-lsp.ts`) |
 | `tests/regressions.test.ts` | one test per bug found in review (later: "review round/cycle N" blocks) |
+| `tests/home.test.ts` | the reference set's build (`scripts/build-home.ts`): histories, extras, the checks |
 
 Later reviews keep their regression tests in `describe("review round N …")` or `describe("review cycle
 N …")` blocks in the file for the area: `tui.test.ts`, `core.test.ts`, `vault.test.ts`,
@@ -83,6 +84,20 @@ into a temporary fixture vault as `samples/` (without its marker, which would ma
 vault). The demo vault is named `halden` and holds two nested vaults, `outreach/` and
 `outreach/school-visits/`, linked every way across (its `about-this-vault.md`, "Nested vaults"): the
 material for trying vaults by hand, and the e2e scenario "nested vaults".
+
+## The reference set: `examples/home/`
+
+`examples/home/` is a developer's home folder — Sam Rivera's notes, work repositories and hobbies — written so that
+every feature is there in realistic use, each case in several variations and combinations. Its `README.md` sets the
+person, the cast, the timeline, the roots and the writing rules; `CASES.md` lists every case (from the commands, the
+tests, the design docs and the plan) and the files that cover it. Halden is its sibling (`../vault`), linked from it.
+
+**Built, not used in place.** A `.git` folder can't be committed inside this repository, so the mock repositories
+(`work/kestrel`, `work/product`, `work/infra`) are committed as plain folders, their histories described in
+`.build/<repo>.toml` — commits, branches, merges, a worktree, a remote. `bun scripts/build-home.ts <dir>` copies the
+set to `<dir>/home` and halden to `<dir>/vault`, replays each history with git (its `main` checked to end at the
+folder as committed), and makes from `.build/extras.toml` the files that can't be committed: hostile names, symlinks,
+a file over the size cap, an unreadable one. Tests and e2e scenarios build a fresh copy and use it as `$HOME`.
 
 ## The terminal tests (`bun run e2e`)
 

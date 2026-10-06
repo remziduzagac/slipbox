@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kestrel.dev/schemas/config.json",
+  "title": "Kestrel config",
+  "description": "Shape of config/base.yaml and the environment files. See ../docs/config.md for the long explanation.",
+  "type": "object",
+  "properties": {
+    "app": { "type": "object", "properties": { "name": { "type": "string" }, "contract": { "type": "string" } } },
+    "regions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/region" }
+    },
+    "route": { "$ref": "../api/schemas/route.json#/definitions/point" },
+    "limits": { "$ref": "#/definitions/limits" },
+    "editor.formatOnSave": { "type": "boolean" },
+    "python.testing.pytestEnabled": { "type": "boolean" },
+    "log_level": { "enum": ["debug", "info", "warn", "error"] }
+  },
+  "definitions": {
+    "region": {
+      "type": "object",
+      "required": ["id", "name", "endpoint"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z]{2}(-[a-z]+)?$" },
+        "name": { "type": "string" },
+        "endpoint": { "type": "string", "format": "uri" },
+        "tiles": { "type": "string" },
+        "enabled": { "type": "boolean", "default": true }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "max_route_km": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "max_waypoints": { "type": "integer", "minimum": 2 },
+        "share_ttl_hours": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

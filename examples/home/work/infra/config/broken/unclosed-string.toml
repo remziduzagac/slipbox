@@ -1,0 +1,6 @@
+# Settings for the tile cache
+[cache]
+size_gb = 40
+evict = "lru"
+directory = "/var/cache/tiles"
+warm_on_start = "yes please

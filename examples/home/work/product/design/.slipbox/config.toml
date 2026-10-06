@@ -1,0 +1,9 @@
+# The design docs are opened in Obsidian (Tomás) but must also render on GitHub, so links in this folder are written
+# as relative markdown paths whatever the tool's convention says.
+
+[links]
+style = "markdown"
+
+[vault]
+id = "721510229ad8d247"
+name = "slipbox-design"

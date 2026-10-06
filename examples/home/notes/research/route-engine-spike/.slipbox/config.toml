@@ -1,0 +1,4 @@
+# The spike keeps its own name, whatever its .git file says about the remote.
+[vault]
+id = "e3a91d5b4c07f628"
+name = "engine-spike"

@@ -26,6 +26,9 @@ export type Grammar = "typescript" | "tsx" | "javascript" | "python" | "bash" | 
 
 const WASM: Record<Grammar, string> = { typescript, tsx, javascript, python, bash, lua, go, rust };
 
+/** Every grammar slipbox parses code with (16.8): what the reference set must have a file of each for. */
+export const GRAMMARS = Object.keys(WASM) as Grammar[];
+
 const TS_DEFS = `
 (function_declaration name: (_) @name) @def
 (generator_function_declaration name: (_) @name) @def

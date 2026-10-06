@@ -1,0 +1,11 @@
+# Priya's config, saved halfway through an edit on 2026-09-24
+theme = "kestrel-dark"
+
+[ui]
+sidebar = true
+sidebar_width = 34
+wrap = tru
+readable_width = true
+
+[editor]
+command = "nvim +{line} {file}"

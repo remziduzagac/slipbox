@@ -1,0 +1,27 @@
+{
+  "export": "partenaire-velo-fr",
+  "date": "2026-09-14",
+  "contact": "Camille Lefèvre",
+  "itinéraires": [
+    {
+      "nom": "Boucle des Crêtes",
+      "distance_km": 84.2,
+      "dénivelé_m": 1320,
+      "départ": "Saint-Étienne"
+    },
+    {
+      "nom": "Vallée de l'Ardèche",
+      "distance_km": 112.5,
+      "dénivelé_m": 960,
+      "départ": "Vallon-Pont-d'Arc"
+    },
+    {
+      "nom": "Col de l'Iseran",
+      "distance_km": 67.0,
+      "dénivelé_m": 1850,
+      "départ": "Bourg-Saint-Maurice"
+    }
+  ],
+  "remarques": "Les données sont fournies « telles quelles ». Prière de ne pas les redistribuer.",
+  "licence": "CC-BY-4.0"
+}

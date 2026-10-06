@@ -1,0 +1,36 @@
+# Tile server and its cache. Three small documents, then the CDN origins as a bare list.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kestrel-tiles
+  namespace: kestrel
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kestrel-tiles
+  template:
+    metadata:
+      labels:
+        app: kestrel-tiles
+    spec:
+      containers:
+        - name: tiles
+          image: ghcr.io/kestrel-labs/kestrel-tiles:2.3.0
+          args: ["--cache-dir=/var/cache/tiles", "--cache-gb=40"]
+...
+---
+---
+# The CDN rules lived here until August; the CDN reads its own config now.
+---
+- name: tiles-eu
+  url: https://tiles-eu.kestrel.dev
+  zoom: [0, 16]
+- name: tiles-us
+  url: https://tiles-us.kestrel.dev
+- name: tiles-lab
+  url: https://tiles.lab.kestrel.internal
+  zoom: [8, 14]
+  attribution: OpenStreetMap contributors
+...

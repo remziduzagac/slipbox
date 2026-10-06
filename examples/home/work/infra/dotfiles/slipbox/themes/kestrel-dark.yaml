@@ -1,0 +1,23 @@
+# Kestrel dark: the team's theme, sixteen base colours. The roles we tune by hand are in config.toml,
+# under [colors.kestrel-dark]. Copy this file to ~/.config/slipbox/themes/ and set  theme = "kestrel-dark"  in your config.
+name: "kestrel-dark"
+author: "Tomás Ruiz"
+variant: "dark"
+
+palette:
+  base00: "#14161d"   # background
+  base01: "#1b1e28"   # code blocks, sidebar
+  base02: "#262a38"   # selection, inline code
+  base03: "#5b627b"   # comments, line numbers
+  base04: "#8c95b0"   # dim text
+  base05: "#c9d1e8"   # text
+  base06: "#e6ebf8"   # strong text
+  base07: "#ffffff"
+  base08: "#f7768e"   # red: errors, unresolved links, deletions
+  base09: "#ff9e64"   # orange: numbers, constants, ambiguous links
+  base0A: "#e0af68"   # yellow: types, warnings
+  base0B: "#9ece6a"   # green: strings, additions, done tasks
+  base0C: "#7dcfff"   # cyan: wikilinks, escapes
+  base0D: "#7aa2f7"   # blue: links, functions, headings
+  base0E: "#bb9af7"   # purple: keywords, tags
+  base0F: "#c0956b"   # brown: embeds, deprecated

@@ -1,0 +1,35 @@
+// The share sheet (route sharing, 2.3). Tokens come from _tokens.scss, as in app.css.
+@use "tokens";
+
+$sheet-radius: 12px;
+$sheet-pad: 1rem;
+
+@mixin elevated($level: 1) {
+  box-shadow: 0 #{$level * 2}px #{$level * 8}px rgba(tokens.$ink, 0.16);
+}
+
+.share-sheet {
+  @include elevated(2);
+  background: #fff;
+  border-radius: $sheet-radius $sheet-radius 0 0;
+  padding: $sheet-pad;
+
+  &__title {
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+  }
+
+  &__link {
+    display: flex;
+    gap: 0.5rem;
+
+    input { flex: 1; font: inherit; }
+    button { background: tokens.$kestrel; color: #fff; border: 0; }
+  }
+
+  &--expired &__link { opacity: 0.5; }
+
+  @include tokens.phone {
+    border-radius: 0;
+  }
+}

@@ -1,0 +1,48 @@
+# Base settings every environment shares.
+#
+# Environment files (app.toml, ...) override these. Keep this file boring:
+# anything surprising belongs in a comment.
+$schema: ./schema.json
+
+docs: ../docs/architecture.md   # where the "about" screen links
+tiles: ./missing.yaml           # per-region tile lists moved to regions.yaml (broken here until cleaned up)
+
+app:
+  name: Kestrel
+  # API contract version the web app expects
+  contract: 1.2.3
+  # shown in the footer; the owner of the box in the staging network
+  host: 10.0.0.1
+  standup: 12:30
+  support: help@kestrel.dev
+  description: |
+    Kestrel plans cycling routes. Release checklist copied from the wiki: - [ ] bump tiles #routing.
+    See [[architecture]] or [the doc](architecture.md) on the old wiki.
+
+limits:
+  max_route_km: 500    # trailing comment: a safety net, not a product limit
+  max_waypoints: 25
+  share_ttl_hours: 72
+
+# files the build ignores, written the way .gitignore does
+ignore_globs:
+  - "*.ts"
+  - "*.log"
+
+paths:
+  schema: config/schema.json
+  logging: config/logging.ini
+  segments: data/segments.csv
+  runbook: docs/runbooks/sync-queue.md
+  deploy_script: scripts/deploy.sh
+  not_there: docs/runbooks/nothing-here.md
+  with spaces: ./a note with spaces.md
+  glob: src/**/*.tsx
+
+links:
+  homepage: https://kestrel.dev
+  status: https://status.kestrel.dev/incidents?id=2026-09-22
+
+features:
+  sharing: true
+  sync_retry_budget: false

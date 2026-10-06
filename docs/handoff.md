@@ -63,6 +63,7 @@ unnamed instance, walked and indexed as a vault is (`~` and `/` listed a level a
 | `docs/plan.md` | *what to do*. Work items with stable IDs, grouped into phases | before writing anything |
 | `docs/design/` | *how it's built*: the code as it is (start at its README) | before changing code |
 | `examples/vault/` | the demo vault, and the rendering fixtures; see `about-this-vault.md` | when you touch rendering |
+| `examples/home/` | the reference set: every case of every feature, listed in `CASES.md` | when you test a feature |
 
 Cite item IDs (`0.11`, `3.3`) rather than restating work. They are stable.
 
