@@ -8,8 +8,15 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 
+/**
+ * How a name or path landed (said for every link, trailscout's review): its path; the end of its path;
+ * its name, the only note of it; or a tie broken — the exact spelling, the same folder, the deepest
+ * folder shared, the shortest path. The last two are fragile: a note of that name nearer takes it.
+ */
+export type Landed = "path" | "suffix" | "name" | "exact-case" | "same-folder" | "deepest-shared" | "shortest";
+
 export type Resolution =
-  | { status: "resolved"; path: string; candidates: string[] }
+  | { status: "resolved"; path: string; candidates: string[]; how?: Landed }
   | { status: "ambiguous"; path: null; candidates: string[] }
   | { status: "unresolved"; path: null; candidates: [] };
 
@@ -92,20 +99,22 @@ export class LinkIndex {
     // Relative forms resolve against the linking note.
     if ((t.startsWith("../") || target.trim().startsWith("./")) && fromRel) {
       const joined = posix.normalize(posix.join(posix.dirname(fromRel), t));
-      return pick(withExt(this.atPath(joined), t), stripExt(joined), fromRel);
+      return pick(withExt(this.atPath(joined), t), stripExt(joined), fromRel, "path");
     }
     t = t.replace(/^\/+/, "");
     const stem = stripExt(t);
     let candidates: string[];
+    let how: Landed = "name";
     if (stem.includes("/")) {
       // Path suffix aligned on segments.
       const suffix = normKey(stem);
       const exact = this.byPath.get(suffix);
       candidates = exact ? [...exact] : [...this.byPath.entries()].filter(([k]) => k.endsWith(`/${suffix}`)).flatMap(([, v]) => v);
+      how = exact ? "path" : "suffix";
     } else {
       candidates = [...(this.byName.get(normKey(stem)) ?? [])];
     }
-    return pick(withExt(candidates, t), stem, fromRel);
+    return pick(withExt(candidates, t), stem, fromRel, how);
   }
 }
 
@@ -117,8 +126,8 @@ function withExt(candidates: string[], target: string): string[] {
   return narrowed.length ? narrowed : candidates;
 }
 
-function resolved(path: string, candidates: string[] = [path]): Resolution {
-  return { status: "resolved", path, candidates };
+function resolved(path: string, candidates: string[] = [path], how?: Landed): Resolution {
+  return { status: "resolved", path, candidates, ...(how ? { how } : {}) };
 }
 
 function unresolved(): Resolution {
@@ -130,32 +139,32 @@ export function pickCandidate(candidates: string[], stem: string, fromRel: strin
   return pick(candidates, stem, fromRel);
 }
 
-function pick(candidates: string[], stem: string, fromRel: string | null): Resolution {
+function pick(candidates: string[], stem: string, fromRel: string | null, single: Landed = "name"): Resolution {
   if (candidates.length === 0) return unresolved();
-  if (candidates.length === 1) return resolved(candidates[0]!);
+  if (candidates.length === 1) return resolved(candidates[0]!, candidates, single);
   const sorted = [...candidates].sort();
   let pool = sorted;
 
   const exactCase = pool.filter((c) => stripExt(c).normalize("NFC").endsWith(stem.normalize("NFC")));
-  if (exactCase.length === 1) return resolved(exactCase[0]!, sorted);
+  if (exactCase.length === 1) return resolved(exactCase[0]!, sorted, "exact-case");
   if (exactCase.length > 1) pool = exactCase;
 
   if (fromRel !== null) {
     const fromDir = posix.dirname(fromRel);
     const sameDir = pool.filter((c) => posix.dirname(c) === fromDir);
-    if (sameDir.length === 1) return resolved(sameDir[0]!, sorted);
+    if (sameDir.length === 1) return resolved(sameDir[0]!, sorted, "same-folder");
 
     const shared = (c: string) => sharedDepth(posix.dirname(c), fromDir);
     const best = Math.max(...pool.map(shared));
     const deepest = pool.filter((c) => shared(c) === best);
-    if (deepest.length === 1) return resolved(deepest[0]!, sorted);
+    if (deepest.length === 1) return resolved(deepest[0]!, sorted, "deepest-shared");
     pool = deepest;
   }
 
   const depth = (c: string) => c.split("/").length;
   const min = Math.min(...pool.map(depth));
   const shortest = pool.filter((c) => depth(c) === min);
-  if (shortest.length === 1) return resolved(shortest[0]!, sorted);
+  if (shortest.length === 1) return resolved(shortest[0]!, sorted, "shortest");
   return { status: "ambiguous", path: null, candidates: sorted };
 }
 

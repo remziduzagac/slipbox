@@ -44,7 +44,7 @@ their children out at reduced width and prefix every row, so nesting composes.
 | code | full width, background fill, language label at top right, highlighted, hard-wrapped |
 | table | the allocator below |
 | thematic break | a rule across the width |
-| frontmatter | a "properties" block: aligned rows, a long key cut with `…`; a value's `[[link]]` a link; raw if broken |
+| frontmatter | a "properties" block: aligned rows, a long key cut with `…`; a value's `[[link]]` a link; raw: broken |
 | html block | shown dim, verbatim; comments (each `<!-- -->` on its own) hidden; a lone `<br>` is a blank row |
 | footnote | `[1]` reference; the definition as `1.` with a hanging indent, its paragraphs apart |
 | tag | `#name` in the `tag` role, followable: Obsidian's tags (`1.6`, in `docs/design/decisions.md`) |

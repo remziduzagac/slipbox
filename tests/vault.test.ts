@@ -4790,3 +4790,104 @@ describe("links in front matter (Obsidian's properties)", () => {
     expect(readFileSync(join(dir, "x.md"), "utf8")).toStartWith('---\nrelated: "[[Lentils]]"\n');
   });
 });
+
+describe("how every link landed, and fragile links (trailscout's review)", () => {
+  const vault = (files: Record<string, string>) => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-how-"));
+    mkdirSync(join(dir, ".obsidian"));
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, rel)), { recursive: true });
+      writeFileSync(join(dir, rel), text);
+    }
+    return { dir, g: openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false) };
+  };
+  const files = {
+    "Home.md": "[[Notes]] [[Recipes/Notes]] [[Dal]] [[Weeknight/Dal]] [[Pie]] [[Starter]] [p](Recipes/Notes.md)\n",
+    "Notes.md": "# N\n",
+    "Recipes/Notes.md": "# RN\n",
+    "Recipes/Weeknight/Dal.md": "# D\n",
+    "Recipes/Baking/Pie.md": "# P\n",
+    "Archive/Old/Older/Pie.md": "# P2\n",
+    "Recipes/Baking/Starter.md": "# S\n",
+    "Archive/Starter.md": "# S2\n",
+    "Recipes/Baking/x.md": "[[Starter]]\n",
+  };
+
+  test("each says how: its path, its end, its name alone, a tie broken — and how sure: exact or inferred", async () => {
+    const { certainty, describeLanding } = await import("../src/core/graph.ts");
+    const { g } = vault(files);
+    const how = (target: string, from = "Home.md", kind: "wiki" | "markdown" = "wiki") => {
+      const r = g.resolveLink({ kind, target }, from);
+      return [r.path, r.how ?? null, certainty(r), describeLanding(r)];
+    };
+    expect(how("Notes")).toEqual(["Notes.md", "same-folder", "inferred", "in the same folder, of 2"]);
+    expect(how("Recipes/Notes")).toEqual(["Recipes/Notes.md", "path", "exact", null]);
+    expect(how("Dal")).toEqual(["Recipes/Weeknight/Dal.md", "name", "exact", null]);
+    expect(how("Weeknight/Dal")).toEqual(["Recipes/Weeknight/Dal.md", "suffix", "inferred", "by the end of its path"]);
+    expect(how("Pie")).toEqual(["Recipes/Baking/Pie.md", "shortest", "inferred", "the shortest path of 2 named so"]);
+    expect(how("Starter", "Recipes/Baking/x.md")).toEqual(["Recipes/Baking/Starter.md", "same-folder", "inferred", "in the same folder, of 2"]);
+    expect(how("Starter")).toEqual(["Archive/Starter.md", "shortest", "inferred", "the shortest path of 2 named so"]);
+    expect(how("Recipes/Notes.md", "Home.md", "markdown")[2]).toBe("exact");
+    expect(certainty({ resolvedKind: "ambiguous" })).toBe("ambiguous");
+    expect(certainty({ resolvedKind: "unresolved" })).toBe("broken");
+  });
+
+  test("a link won by where it's written is fragile: said, with the path that names it for sure, a fix; problems and the CLI list them", async () => {
+    const { dir, g } = vault(files);
+    const { noteProblems } = await import("../src/core/diagnostics.ts");
+    const fragile = noteProblems(g, "Home.md").filter((p) => p.code === "fragile");
+    expect(fragile.map((p) => [p.target, p.fix])).toEqual([
+      ["Pie", { title: "Name it for sure: [[Recipes/Baking/Pie]]", text: "[[Recipes/Baking/Pie]]" }],
+      ["Starter", { title: "Name it for sure: [[Archive/Starter]]", text: "[[Archive/Starter]]" }],
+    ]);
+    expect(fragile[0]!.message).toBe("[[Pie]] reaches Recipes/Baking/Pie.md as the shortest path of 2 named so — a note of that name nearer would take it; [[Recipes/Baking/Pie]] names it for sure");
+    expect(g.problems().fragile.map((p) => [p.from, p.target, p.fix])).toEqual([["Home.md", "Pie", "Recipes/Baking/Pie"], ["Home.md", "Starter", "Archive/Starter"]]);
+    const human = (await cli(["--root", dir, "problems"])).out;
+    expect(human).toContain("fragile links (2)");
+    expect(human).toContain("Home.md:1:55  [[Pie]]  — the shortest path of 2 named so; [[Recipes/Baking/Pie]] names it for sure");
+    const links = JSON.parse((await cli(["--root", dir, "links", "Home.md", "--json"])).out).data;
+    expect(links.map((l: { target: string; how: string; certainty: string }) => [l.target, l.how, l.certainty])).toEqual([
+      ["Notes", "same-folder", "inferred"],
+      ["Recipes/Notes", "path", "exact"],
+      ["Dal", "name", "exact"],
+      ["Weeknight/Dal", "suffix", "inferred"],
+      ["Pie", "shortest", "inferred"],
+      ["Starter", "shortest", "inferred"],
+      ["Recipes/Notes.md", null, "exact"],
+    ]);
+    expect((await cli(["--root", dir, "links", "Home.md"])).out).toContain("[[Pie]] -> Recipes/Baking/Pie.md (the shortest path of 2 named so)");
+  });
+
+  test("a note coming or going that sends links by name elsewhere is said — not a link that breaks or heals", async () => {
+    const { g } = vault(files);
+    const told: string[] = [];
+    g.onRetarget((rs) => told.push(...rs.map((r) => `${r.from}:${r.line} [[${r.target}]] ${r.was} → ${r.now}`)));
+    // A Pie nearer Home than both: [[Pie]] goes there.
+    const near = join(g.root, "Pie.md");
+    writeFileSync(near, "# P3\n");
+    g.updateFile("Pie.md", { rel: "Pie.md", abs: near, size: 5, mtimeMs: Date.now() });
+    expect(told).toEqual(["Home.md:1 [[Pie]] Recipes/Baking/Pie.md → Pie.md"]);
+    // A name of its own: nothing to say, and no link looked at to know it.
+    told.length = 0;
+    let looked = 0;
+    const resolve = g.resolveLink.bind(g);
+    g.resolveLink = (l, from) => (looked++, resolve(l, from));
+    writeFileSync(join(g.root, "Lone.md"), "# L\n");
+    g.updateFile("Lone.md", { rel: "Lone.md", abs: join(g.root, "Lone.md"), size: 4, mtimeMs: Date.now() });
+    expect([told, looked]).toEqual([[], 0]);
+    g.resolveLink = resolve;
+    // A link that reached a note by an alias, and a note of that name comes: it takes the link — said.
+    writeFileSync(join(g.root, "Recipes/Baking/Pie.md"), "---\naliases: [Crust]\n---\n# P\n");
+    g.updateFile("Recipes/Baking/Pie.md", { rel: "Recipes/Baking/Pie.md", abs: join(g.root, "Recipes/Baking/Pie.md"), size: 30, mtimeMs: Date.now() });
+    writeFileSync(join(g.root, "Home.md"), "[[Pie]] [[Crust]]\n");
+    g.updateFile("Home.md", { rel: "Home.md", abs: join(g.root, "Home.md"), size: 18, mtimeMs: Date.now() });
+    writeFileSync(join(g.root, "Crust.md"), "# C\n");
+    g.updateFile("Crust.md", { rel: "Crust.md", abs: join(g.root, "Crust.md"), size: 4, mtimeMs: Date.now() });
+    expect(told).toEqual(["Home.md:1 [[Crust]] Recipes/Baking/Pie.md → Crust.md"]);
+    g.removeFile("Crust.md");
+    told.length = 0;
+    // Gone again: back to where it was.
+    g.removeFile("Pie.md");
+    expect(told).toEqual(["Home.md:1 [[Pie]] Pie.md → Recipes/Baking/Pie.md"]);
+  });
+});

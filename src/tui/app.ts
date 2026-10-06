@@ -38,9 +38,9 @@ import { type Config, loadConfig } from "../core/config.ts";
 import { type ConventionPart, conventionOf, describeConvention } from "../core/convention.ts";
 import { linkEnds, writeLink } from "../core/write-link.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
-import { Graph, type LinkProblem } from "../core/graph.ts";
+import { describeLanding, Graph, type LinkProblem } from "../core/graph.ts";
 import { type LintCmd, type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
-import { type Layout, posOfSrc, srcAt } from "../core/layout/ir.ts";
+import { type Layout, type LayoutLink, posOfSrc, srcAt } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
 import { stateDir, userConfigFile } from "../core/paths.ts";
 import {
@@ -1701,10 +1701,24 @@ export class App {
   private searchList: ListOverlay | null = null;
 
   private stopEmbedFeed: (() => void) | null = null;
+  private stopRetargetFeed: (() => void) | null = null;
 
   /** A new graph (the vault opened, switched, walked again): the search index and embeds follow it. */
+  /** How a link under the cursor landed when a tie decided it ("the nearest of 2 named so"); else null. */
+  linkLanded(view: View, link: LayoutLink): string | null {
+    const from = link.from ?? view.buf.rel;
+    if (from === null || link.kind === "tag" || link.kind === "footnote") return null;
+    return describeLanding(this.graph.resolveLink({ kind: link.kind, target: link.target }, from));
+  }
+
   private followGraph(): void {
     this.startSearch();
+    // A note coming or going sent links by name elsewhere: said, never silent.
+    this.stopRetargetFeed?.();
+    this.stopRetargetFeed = this.graph.onRetarget((rs) => {
+      const first = rs[0]!;
+      this.message("warn", `${rs.length === 1 ? `[[${first.target}]] in ${first.from}` : `${rs.length} links by name`} reach${rs.length === 1 ? "es" : ""} ${first.now} now, not ${first.was}`);
+    });
     // A note drawn inside another (1.11) changed: whatever shows it lays out again.
     this.stopEmbedFeed?.();
     const g = this.graph;
@@ -3915,6 +3929,8 @@ export class App {
     };
     section("Broken links", p.broken, (l) => l.reason ?? "");
     section("Ambiguous links", p.ambiguous, (l) => `— ${l.candidates.length} notes`);
+    // Won by where they're written: a note of the name nearer would take them (code actions name them for sure).
+    section("Fragile links", p.fragile, (l) => `— ${l.reason}; [[${l.fix}]] for sure`);
     // Lint (3.21): the linter's findings over the vault, by note; while it runs, said so.
     if (this.lintCmd || this.vaultLint.issues) {
       const all = this.vaultLint.issues;
@@ -4326,7 +4342,7 @@ export class App {
   }
 
   /** The edits made to the current note as one undo step, then saved; `done` said when they are. */
-  private applyFootnoteEdits(edits: TextEdit[], done: string, cursorAfter?: number): void {
+  applyNoteEdits(edits: TextEdit[], done: string, cursorAfter?: number): void {
     const view = this.view;
     if (!view) return;
     const buf = view.buf;
@@ -4402,7 +4418,7 @@ export class App {
         const at = this.footnoteRefAt(view);
         const before = view.buf.source[at - 1];
         const text = `${before && !/\s/.test(before) ? " " : ""}${link}`;
-        this.applyFootnoteEdits([{ at, length: 0, text }], `linked ${item.data as string}: ${link}`, at + text.length);
+        this.applyNoteEdits([{ at, length: 0, text }], `linked ${item.data as string}: ${link}`, at + text.length);
       },
     });
   }
@@ -4416,7 +4432,7 @@ export class App {
       if (!text.trim()) return;
       if (view.buf.version !== version) return this.message("warn", "the note changed while you typed: add the footnote again");
       const r = addFootnote(view.buf.source, this.footnotes(), at, text);
-      this.applyFootnoteEdits(r.edits, `added footnote [^${r.label}]`, at + `[^${r.label}]`.length);
+      this.applyNoteEdits(r.edits, `added footnote [^${r.label}]`, at + `[^${r.label}]`.length);
     });
   }
 
@@ -4428,7 +4444,7 @@ export class App {
       if (!text.trim() || text.trim() === fn.text) return;
       const now = this.footnotes().find((f) => f.id === fn.id);
       if (!now) return this.message("warn", `footnote [^${fn.label}] isn't there any more`);
-      this.applyFootnoteEdits(editFootnote(this.view!.buf.source, now, text), `edited footnote [^${fn.label}]`);
+      this.applyNoteEdits(editFootnote(this.view!.buf.source, now, text), `edited footnote [^${fn.label}]`);
     });
     if (this.overlay?.kind === "prompt") this.overlay.text = fn.text ?? "";
   }
@@ -4440,7 +4456,7 @@ export class App {
     this.confirm(`Delete footnote [^${fn.label}]: its definition and ${n} reference${n === 1 ? "" : "s"}?`, () => {
       const now = this.footnotes().find((f) => f.id === fn.id);
       if (!now) return this.message("warn", `footnote [^${fn.label}] isn't there any more`);
-      this.applyFootnoteEdits(deleteFootnote(this.view!.buf.source, now), `deleted footnote [^${fn.label}]`);
+      this.applyNoteEdits(deleteFootnote(this.view!.buf.source, now), `deleted footnote [^${fn.label}]`);
     });
   }
 
@@ -4459,7 +4475,7 @@ export class App {
       } catch (err) {
         return this.message("warn", (err as Error).message);
       }
-      this.applyFootnoteEdits(edits, `renamed footnote [^${fn.label}] → [^${label}]`);
+      this.applyNoteEdits(edits, `renamed footnote [^${fn.label}] → [^${label}]`);
     });
     if (this.overlay?.kind === "prompt") this.overlay.text = fn.label;
   }

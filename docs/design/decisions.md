@@ -323,7 +323,11 @@ conventions at the edges". It revises `20.x` above.*
   inside the one before. Lines: `L42`, `L42-L50`, `L42C5-L45C10`. A `^id` in fenced code is code. Slugs keep marks
   (GitHub's), so a converted link to a Devanagari heading works on GitHub too. **Links in front matter**, as Obsidian's
   properties have them (`related: "[[Plan]]"`), are links: read where written (a comment's not), backlinked, renamed in
-  place, drawn as links in the properties block, checked.
+  place, drawn as links in the properties block, checked. **How every link landed** is said (`links.ts` `Landed`,
+  `graph.ts` `certainty`): by its path, a path's end, a unique name, an alias, or a tie broken; a tie broken by where the
+  link is (the deepest shared folder, the shortest path) is **fragile** — linted with the path that names its note for
+  sure, offered as a code action — and a note coming or going that moves a link by name (a namesake, a name an alias
+  had) is said, in the TUI and as the CLI's warning, not only a link that breaks or heals.
 - **Links slipbox writes** (`21.5`, 2026-10-06): completion (`](` and `[[`), the link picker (`space l i`) and `slipbox
   link`, which prints one for an agent, all through `core/write-link.ts`. A wikilink is a name only where the name
   reaches the note from the linking file — else its path from the root, never a name that would land elsewhere; a

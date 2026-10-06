@@ -4,7 +4,7 @@
 
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, posix } from "node:path";
-import type { Graph, LinkRef, Pos } from "./graph.ts";
+import { describeLanding, disambiguated, fragile, type Graph, type LinkRef, type Pos } from "./graph.ts";
 import { landing, lineFragment } from "./landing.ts";
 import type { LintIssue } from "./lint.ts";
 import { unavailable } from "./registry.ts";
@@ -25,6 +25,8 @@ export interface Problem {
   message: string;
   /** A link's problem: the link's target as written, so a rendered view can mark the link itself. */
   target?: string;
+  /** Its fix: the text that replaces `start`–`end` (offered as a code action), and what it's called. */
+  fix?: { title: string; text: string };
 }
 
 /** Whether a severity is at least as bad as `min`. */
@@ -69,9 +71,30 @@ function onUnplugged(g: Graph, rel: string, target: string): boolean {
 export function noteProblems(g: Graph, rel: string): Problem[] {
   const out: Problem[] = [];
   const add = (l: LinkRef, severity: Severity, code: string, message: string) => out.push({ start: { line: l.line, column: l.column }, end: l.end, severity, source: "slipbox", code, message, target: l.target });
+  const lines = (g.textOf(rel) ?? "").split("\n");
   for (const l of g.linksOf(rel)) {
     const wiki = l.kind === "wiki" || l.kind === "embed";
     const frag = fragmentOf(l);
+    // Won by where it's written (the nearest, the shortest of several of its name): a note of that
+    // name nearer would take it, silently. Said, with the path that names it for sure.
+    if (wiki && (l.resolvedKind === "note" || l.resolvedKind === "file") && fragile(l) && l.path && !isAbsolute(l.path)) {
+      const sure = disambiguated(l);
+      const at = lines[l.line - 1] ?? "";
+      const written = l.end.line === l.line ? at.slice(l.column - 1, l.end.column - 1) : "";
+      const open = written.indexOf("[[");
+      const i = open >= 0 ? written.indexOf(l.target, open + 2) : -1;
+      const fixed = i >= 0 ? written.slice(0, i) + sure + written.slice(i + l.target.length) : null;
+      out.push({
+        start: { line: l.line, column: l.column },
+        end: l.end,
+        severity: "info",
+        source: "slipbox",
+        code: "fragile",
+        message: `[[${l.target}]] reaches ${l.path} as ${describeLanding(l)} — a note of that name nearer would take it; [[${sure}]] names it for sure`,
+        target: l.target,
+        ...(fixed ? { fix: { title: `Name it for sure: [[${sure}]]`, text: fixed } } : {}),
+      });
+    }
     switch (l.resolvedKind) {
       case "unresolved":
         if (l.reason) add(l, "warning", "unresolved", l.reason);

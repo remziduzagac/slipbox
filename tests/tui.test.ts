@@ -7162,6 +7162,7 @@ describe("the Problems view (1.7)", () => {
       "  other.md",
       "    L3  nope.png",
       "# Ambiguous links (0)",
+      "# Fragile links (0)",
       // Nothing links to them: orphans (9.5).
       "# Orphans (4)",
       "  a/twin.md",
@@ -7596,6 +7597,29 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(recordFolder(g.b)?.ask).toBe(true);
     rmSync(g.a, { recursive: true });
     expect((await harness({ root: g.b, open: "n.md" })).app.overlay).toBeNull();
+  });
+
+  test("a fragile link: the status line says how it landed; a code action names it for sure; a nearer namesake is said", async () => {
+    const root = mkdtempSync(join(sandbox, "fragile-"));
+    mkdirSync(join(root, ".obsidian"));
+    for (const [rel, text] of Object.entries({ "Home.md": "# Home\n\nSee [[Pie]] now.\n", "Recipes/Baking/Pie.md": "# P\n", "Archive/Old/Older/Pie.md": "# P2\n" })) {
+      mkdirSync(dirname(join(root, rel)), { recursive: true });
+      writeFileSync(join(root, rel), text);
+    }
+    const h = await harness({ root, open: "Home.md", width: 160 });
+    await h.keys("g", "g", "tab");
+    expect(statusRow(h.frame())).toContain("→ [[Pie]] (resolved, the shortest path of 2 named so)");
+    // A nearer Pie, from outside (an agent's): said.
+    writeFileSync(join(root, "Pie.md"), "# P3\n");
+    h.app.graph.updateFile("Pie.md", { rel: "Pie.md", abs: join(root, "Pie.md"), size: 5, mtimeMs: Date.now() });
+    expect(h.app.messages.at(-1)!.text).toBe("[[Pie]] in Home.md reaches Pie.md now, not Recipes/Baking/Pie.md");
+    h.app.graph.removeFile("Pie.md");
+    // Named for sure, from the code actions (no server for a note: slipbox's own).
+    await h.app.run("lsp.code_action");
+    const o = h.app.overlay as ListOverlay;
+    expect(o.items.map((i) => [i.label, i.hint])).toEqual([["Name it for sure: [[Recipes/Baking/Pie]]", "slipbox"]]);
+    await h.keys("enter");
+    expect(readFileSync(join(root, "Home.md"), "utf8")).toBe("# Home\n\nSee [[Recipes/Baking/Pie]] now.\n");
   });
 
   test("fragments followed as a link finds them: GitHub's #setup-1, a heading path, an <a id> in the same note", async () => {

@@ -12,6 +12,7 @@ import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { locName, tildePath } from "../core/names.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
+import { noteProblems, type Problem } from "../core/diagnostics.ts";
 import { slugName } from "../core/registry.ts";
 import { isNotePath } from "../core/links.ts";
 import { hasMarker, instanceOf, isInside, isNeverRoot, rootAt } from "../core/vault.ts";
@@ -1814,19 +1815,35 @@ export function registerActions(app: App): void {
       withView(a, async (v) => {
         a.syncServers(v.buf);
         const s = a.servers;
-        if (!s?.isOpen(v.buf.abs)) return a.message("info", "code actions are a language server's: none for this file (slipbox doctor)");
+        // In a note, slipbox's own fixes for the cursor's line too (a fragile link named for sure).
+        const line = a.lspPosition(v).line + 1;
+        const own = v.buf.kind.group === "note" && v.buf.rel !== null ? noteProblems(a.graph, v.buf.rel).filter((p) => p.fix && p.start.line <= line && line <= p.end.line) : [];
+        const fix = (p: Problem) => {
+          const starts = v.buf.lineStarts();
+          const at = starts[p.start.line - 1]! + p.start.column - 1;
+          const to = starts[p.end.line - 1]! + p.end.column - 1;
+          a.applyNoteEdits([{ at, length: to - at, text: p.fix!.text }], p.fix!.title);
+        };
+        if (!s?.isOpen(v.buf.abs)) {
+          if (!own.length) return a.message("info", "code actions are a language server's: none for this file (slipbox doctor)");
+          return a.openList({ title: "Code actions", items: own.map((p) => ({ label: p.fix!.title, hint: "slipbox", data: p })), accept: (item) => fix(item.data as Problem) });
+        }
         const position = a.lspPosition(v);
         const range = { start: position, end: position };
         // The problems on this line, as each server gave them: its fixes for them.
         const diagnostics = [...v.buf.serverProblems.values()].filter((p) => p.version === v.buf.version).flatMap((p) => p.raw).filter((d) => d.range.start.line <= position.line && position.line <= d.range.end.line);
         const answers = await s.requestAll<(CodeAction | LspCommand)[]>(v.buf.abs, "textDocument/codeAction", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, range, context: { diagnostics } }, "codeActionProvider", "code-action");
         const actions = answers.flatMap((x) => x.result.map((action) => ({ action, server: x.server }))).filter(({ action }) => !("disabled" in action && action.disabled));
-        if (!actions.length) return a.message("info", "no code actions here");
+        if (!actions.length && !own.length) return a.message("info", "no code actions here");
         actions.sort((x, y) => Number("isPreferred" in y.action && !!y.action.isPreferred) - Number("isPreferred" in x.action && !!x.action.isPreferred));
         a.openList({
           title: "Code actions",
-          items: actions.map((x) => ({ label: x.action.title, hint: x.server, data: x })),
-          accept: (item) => void runAction(a, v.buf.abs, item.data as { action: CodeAction | LspCommand; server: string }),
+          items: [...own.map((p) => ({ label: p.fix!.title, hint: "slipbox", data: { own: p } })), ...actions.map((x) => ({ label: x.action.title, hint: x.server, data: x }))],
+          accept: (item) => {
+            const d = item.data as { own?: Problem } & { action: CodeAction | LspCommand; server: string };
+            if (d.own) return fix(d.own);
+            void runAction(a, v.buf.abs, d);
+          },
         });
       }),
     "lsp.format": (a) =>

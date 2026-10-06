@@ -13,7 +13,7 @@ import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.
 import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 import { countForms, type FormCounts } from "./convention.ts";
 import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
-import { extensionless, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
+import { extensionless, type Landed, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type AnchorInfo, anchorsOf, type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
 import { vaultForm } from "./names.ts";
@@ -94,6 +94,56 @@ export interface ResolvedLink extends LinkRef {
   reason?: string;
   /** A pointer to a branch not checked out here (21.7): the file as it is there, read from git. */
   gitRef?: { root: string; rel: string; branch: string };
+  /** How it landed (`links.ts` `Landed`): a link's own path, a name, a tie broken. */
+  how?: Landed;
+}
+
+/** A link that reached one note and reaches another now, after a note came or went. */
+export interface Retarget {
+  from: string;
+  line: number;
+  target: string;
+  was: string;
+  now: string;
+}
+
+/**
+ * How sure a link's target is (trailscout's terms): `exact` — by its path, a unique name, an alias,
+ * a pointer; `inferred` — a tie broken, a path's end, a folder's old name or another copy; else
+ * `ambiguous`, `broken`.
+ */
+export function certainty(t: Pick<Target, "resolvedKind" | "how" | "via">): "exact" | "inferred" | "ambiguous" | "broken" {
+  if (t.resolvedKind === "unresolved") return "broken";
+  if (t.resolvedKind === "ambiguous") return "ambiguous";
+  if (t.via === "previous-name" || t.via === "redirect" || t.via === "old-name" || t.via === "another-copy") return "inferred";
+  return !t.how || t.how === "path" || t.how === "name" ? "exact" : "inferred";
+}
+
+/** A tie broken by where the link is — the deepest folder shared, the shortest path: a note of the name nearer would take it. */
+export function fragile(t: Pick<Target, "how">): boolean {
+  return t.how === "deepest-shared" || t.how === "shortest";
+}
+
+/** How a link landed, for people, when it wasn't by its own path: "the nearest of 2 named so". */
+export function describeLanding(t: Pick<Target, "how" | "via" | "candidates">): string | null {
+  const n = t.candidates.length;
+  if (t.via === "alias") return "by an alias";
+  if (t.via === "old-name") return "by its folder's old name";
+  if (t.via === "another-copy") return "in another copy of its folder";
+  switch (t.how) {
+    case "suffix":
+      return "by the end of its path";
+    case "exact-case":
+      return `spelled exactly so, of ${n}`;
+    case "same-folder":
+      return `in the same folder, of ${n}`;
+    case "deepest-shared":
+      return `the nearest of ${n} named so`;
+    case "shortest":
+      return `the shortest path of ${n} named so`;
+    default:
+      return null;
+  }
 }
 
 /** What resolving a link found, without the link's own fields. */
@@ -129,6 +179,13 @@ export interface LinkProblem {
   candidates: string[];
   /** A broken link's file, seen to move: where it is now (vault path), the relink's fix. */
   moved?: string | null;
+  /** A fragile link's: the target that names its note for sure, its path from the root. */
+  fix?: string;
+}
+
+/** The target that names a link's note for sure: its path from the root, without `.md` when the link had none. */
+export function disambiguated(l: Pick<ResolvedLink, "target" | "path">): string {
+  return NOTE_EXT_RE.test(l.target) || !NOTE_EXT_RE.test(l.path!) ? l.path! : l.path!.replace(NOTE_EXT_RE, "");
 }
 
 export interface Backlink {
@@ -149,6 +206,8 @@ export interface Backlink {
 }
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
+const NOTE_EXT_RE = /\.(md|markdown)$/i;
+
 export const INDEX_VERSION = 11; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links
 
 interface IndexFile {
@@ -187,7 +246,7 @@ export class Graph {
   /** Bumped whenever what the notes say changes (a note read, changed, gone): views that show
    *  what's derived from them (the Info view's counts) know to look again. */
   generation = 0;
-  private problemCache: { generation: number; broken: LinkProblem[]; ambiguous: LinkProblem[]; orphans: string[] } | null = null;
+  private problemCache: { generation: number; broken: LinkProblem[]; ambiguous: LinkProblem[]; fragile: LinkProblem[]; orphans: string[] } | null = null;
   private formCache: { generation: number; counts: FormCounts } | null = null;
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
   /** Aliases and previous names → notes, from the entries parsed so far (null: rebuild). */
@@ -591,6 +650,7 @@ export class Graph {
   /** Incremental single-file update (1.8). Returns false when the file is not part of the vault. */
   updateFile(rel: string, file: NoteFile): boolean {
     const isNew = !this.notes.has(rel);
+    const watch = isNew ? this.namesakeLinks(rel) : null;
     this.unparsed.delete(rel);
     this.cacheDirty = true;
     const entry = extractNote(file);
@@ -605,7 +665,53 @@ export class Graph {
     this.generation++;
     this.nameCache = null;
     this.emit({ kind: "changed", path: rel });
+    if (watch) this.reportRetargets(watch);
     return true;
+  }
+
+  private readonly retargetListeners = new Set<(r: Retarget[]) => void>();
+
+  /** Told when a note coming or going sends links by name elsewhere (not when they break or heal). */
+  onRetarget(fn: (r: Retarget[]) => void): () => void {
+    this.retargetListeners.add(fn);
+    return () => this.retargetListeners.delete(fn);
+  }
+
+  /**
+   * Before a note comes or goes: the links by name it could send elsewhere — only when another note or
+   * an alias has its name, so a unique name costs nothing — each where it reaches now. Null when none can.
+   */
+  private namesakeLinks(rel: string): { from: string; link: LinkRef; was: string }[] | null {
+    if (!this.retargetListeners.size || !NOTE_EXT_RE.test(rel)) return null;
+    const name = posix.basename(rel).replace(NOTE_EXT_RE, "");
+    const key = normKey(name);
+    const named = this.index.resolveWiki(name, null).candidates.filter((c) => c !== rel).length;
+    if (!named && !this.otherNames().aliases.has(key)) return null;
+    const out: { from: string; link: LinkRef; was: string }[] = [];
+    for (const [from, e] of this.notes) {
+      for (const l of e.links) {
+        if ((l.kind !== "wiki" && l.kind !== "embed") || normKey(posix.basename(l.target).replace(NOTE_EXT_RE, "")) !== key) continue;
+        const r = this.resolveLink(l, from);
+        if ((r.resolvedKind === "note" || r.resolvedKind === "file") && r.path) out.push({ from, link: l, was: r.path });
+      }
+    }
+    return out.length ? out : null;
+  }
+
+  /** After: the watched links that reach somewhere else now, told to whoever listens. */
+  private reportRetargets(watch: { from: string; link: LinkRef; was: string }[]): void {
+    const moved: Retarget[] = [];
+    for (const w of watch) {
+      if (!this.notes.has(w.from)) continue;
+      const r = this.resolveLink(w.link, w.from);
+      if ((r.resolvedKind === "note" || r.resolvedKind === "file") && r.path && r.path !== w.was) moved.push({ from: w.from, line: w.link.line, target: w.link.target, was: w.was, now: r.path });
+    }
+    if (!moved.length) return;
+    for (const fn of this.retargetListeners) {
+      try {
+        fn(moved);
+      } catch {}
+    }
   }
 
   /** Every non-note file the walk saw (data, text and binary alike), vault-relative. */
@@ -647,6 +753,7 @@ export class Graph {
   }
 
   removeFile(rel: string): void {
+    const watch = this.notes.has(rel) ? this.namesakeLinks(rel) : null;
     this.reached.delete(rel);
     this.unparsed.delete(rel);
     // A move is known by the file's text, not by what an editor had of it.
@@ -661,6 +768,7 @@ export class Graph {
     this.generation++;
     this.nameCache = null;
     this.emit({ kind: "removed", path: rel });
+    if (watch) this.reportRetargets(watch);
   }
 
   /** Notes an editor has open (11.8): the text it has, and the file's own entry behind it. */
@@ -752,21 +860,21 @@ export class Graph {
     if (!target) return { resolvedKind: "anchor", path: fromRel, candidates: [] };
     if (this.loc.mode === "folder") return { resolvedKind: "unresolved", path: null, candidates: [], reason: "names need a root, and this folder has none: .git, .slipbox/, .obsidian/ or .zk/ makes one" };
     const r = this.index.resolveWiki(target, fromRel);
-    if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates };
+    if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates, ...(r.how ? { how: r.how } : {}) };
     if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
     // A path: out of the root (`../`), or into a root nested in it.
     const byPath = (/^\.\.?\//.test(target) ? this.byFilesystemPath(target, fromRel, true) : null) ?? this.intoNested(target.replace(/^\/+/, ""), true);
     if (byPath) return byPath;
     if (classify(target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(target)) {
       const att = resolveAttachment(target, fromRel, this.root);
-      if (att) return { resolvedKind: "file", path: att, candidates: [] };
+      if (att) return { resolvedKind: "file", path: att, candidates: [], how: "path" };
       // Obsidian finds attachments anywhere in the vault by name.
       const named = this.assets.get(target.split("/").pop()!.normalize("NFC").toLowerCase()) ?? [];
       const suffix = target.normalize("NFC").toLowerCase();
       const hits = named.filter((p) => p.toLowerCase() === suffix || p.toLowerCase().endsWith(`/${suffix}`));
       // Two of a name, as two notes are: the nearest, then the shortest; a real tie ambiguous.
       const r = pickCandidate(hits, target.normalize("NFC"), fromRel);
-      if (r.status === "resolved") return { resolvedKind: "file", path: r.path, candidates: r.candidates };
+      if (r.status === "resolved") return { resolvedKind: "file", path: r.path, candidates: r.candidates, ...(r.how ? { how: r.how } : {}) };
       if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
     }
     const aliased = this.byAlias(target, fromRel);
@@ -781,7 +889,7 @@ export class Graph {
     const aliased = this.otherNames().aliases.get(normKey(stem));
     if (!aliased?.length) return null;
     const r = pickCandidate(aliased, stem, fromRel);
-    if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates, via: "alias" };
+    if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates, via: "alias", ...(r.how ? { how: r.how } : {}) };
     return { resolvedKind: "ambiguous", path: null, candidates: r.candidates, via: "alias" };
   }
 
@@ -1088,13 +1196,19 @@ export class Graph {
    * count). Every note is read first. Made again when a note changes; `forgetProblems` makes it
    * again at once (another vault's notes changed: `[[vault:note]]` links may reach, or stop).
    */
-  problems(): { broken: LinkProblem[]; ambiguous: LinkProblem[]; orphans: string[] } {
+  problems(): { broken: LinkProblem[]; ambiguous: LinkProblem[]; fragile: LinkProblem[]; orphans: string[] } {
     this.ensureAll();
     if (this.problemCache?.generation === this.generation) return this.problemCache;
     const broken: LinkProblem[] = [];
     const ambiguous: LinkProblem[] = [];
+    const fragileLinks: LinkProblem[] = [];
     for (const rel of [...this.notes.keys()].sort()) {
       for (const l of this.linksOf(rel)) {
+        // Won by where it's written (the nearest, the shortest): a note of the name nearer would take it.
+        if ((l.resolvedKind === "note" || l.resolvedKind === "file") && fragile(l) && l.path && !isAbsolute(l.path)) {
+          fragileLinks.push({ from: rel, line: l.line, column: l.column, end: l.end, kind: l.kind, target: l.target, text: l.text, reason: describeLanding(l), candidates: l.candidates, fix: disambiguated(l) });
+          continue;
+        }
         if (l.resolvedKind !== "unresolved" && l.resolvedKind !== "ambiguous") continue;
         // A broken path whose file was seen to move (17.12, git's renames 20.21): where it went, for the fix.
         const moved = l.resolvedKind === "unresolved" ? this.movedTarget(l, rel) : null;
@@ -1103,7 +1217,7 @@ export class Graph {
       }
     }
     const orphans = [...this.notes.keys()].sort().filter((rel) => !this.backlinks(rel).some((b) => b.from !== rel));
-    this.problemCache = { generation: this.generation, broken, ambiguous, orphans };
+    this.problemCache = { generation: this.generation, broken, ambiguous, fragile: fragileLinks, orphans };
     return this.problemCache;
   }
 

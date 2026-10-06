@@ -450,6 +450,11 @@ the note's title as its text, or a wikilink by name where the name reaches the n
 Typing, it goes at the cursor; reading, after the word under the cursor (out of a link or a code span), a space
 before it, saved at once. Not in a data or text file: links are written in a root's notes.
 
+**How a link landed** (trailscout's review, 2026-10-06): the status line's link under the cursor says it when a tie
+decided it — `→ [[Pie]] (resolved, the shortest path of 2 named so)`; and a note coming or going that sends a link by
+name elsewhere (a nearer `Pie.md`, a note named like an alias) is said in a message: `[[Pie]] in Home.md reaches
+Pie.md now, not Recipes/Baking/Pie.md` — never only when a link breaks or heals.
+
 A link landing on a line (`#L42`, a block's `^id`, a problem, a search hit) lands where that line is shown: in the
 rendered view, a line inside a paragraph that wraps lands on the paragraph, not the block after. The backlinks list
 shows another vault's link with that vault's name: `app: design/plan.md`.
@@ -523,16 +528,16 @@ keys.
 - **Problems (left, `1.7`):** what's wrong in the vault — the left panel's views are the vault's, the right's the
   file's. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link set: each link that
   reaches nothing, and why when there's a reason, such as an unknown vault), **Ambiguous links** (each that reaches
-  several notes, and how many), **Lint** (`3.21`: the linter's findings, when one runs — see "The lint surface"),
-  **Conflicts** (`5.12`: during a merge, each file git says is unmerged, at its first `<<<<<<<` marker),
-  **Orphans** (`9.5`: the notes no other note links to — another vault's links count, a note's own don't — each opened
-  by `enter`). Under the first three, the notes with such links, and under a note its
-  problems: the line and the link as written, in the link's colour (a finding: its line, rule and what's wrong).
-  `enter` (or a double-click) opens the note there,
-  the cursor on the link as drawn (in source mode, on its text); on a note's row, at its first. It takes the explorer's
-  keys (`l` / `h` unfold and fold a section, `/` filters); a note's change shows at once. `space v p`, `:problems`, the
-  `⚠` button — each opening lints the vault again (`Lint (n) …` while it runs); `slipbox problems` gives the same
-  (`--lint` for the findings).
+  several notes, and how many), **Fragile links** (each won by where it's written — the nearest or the shortest of
+  several of its name — and the path that names its note for sure, `space c a` writing it), **Lint** (`3.21`: the
+  linter's findings, when one runs — see "The lint surface"), **Conflicts** (`5.12`: during a merge, each file git says
+  is unmerged, at its first `<<<<<<<` marker), **Orphans** (`9.5`: the notes no other note links to — another vault's
+  links count, a note's own don't — each opened by `enter`). Under the first three, the notes with such links, and under
+  a note its problems: the line and the link as written, in the link's colour (a finding: its line, rule and what's
+  wrong). `enter` (or a double-click) opens the note there, the cursor on the link as drawn (in source mode, on its
+  text); on a note's row, at its first. It takes the explorer's keys (`l` / `h` unfold and fold a section, `/` filters);
+  a note's change shows at once. `space v p`, `:problems`, the `⚠` button — each opening lints the vault again (`Lint
+  (n) …` while it runs); `slipbox problems` gives the same (`--lint` for the findings).
 - **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
   Sections that fold (`h`/`l`): **File** (its path, the vault it belongs to, its kind, size, modified time, words and
   reading time, lines, encoding and line endings, saved or not), **Properties** (the frontmatter's keys and values,
@@ -1134,7 +1139,8 @@ jump, the file's servers are told its text now rather than after the pause, so t
 - **`space c a`** lists the code actions for the cursor's line — every server's, the preferred ones first, each with
   its server — asked with the problems on that line as each server gave them. One chosen: resolved first when it came
   without its edit, its edit made, then its command run by its server, which may ask slipbox for an edit in turn
-  (`workspace/applyEdit`), made the same way.
+  (`workspace/applyEdit`), made the same way. In a note, slipbox's own fixes for the line come first, server or not:
+  a fragile link named for sure (`[[Pie]]` → `[[Recipes/Baking/Pie]]`), saved at once.
 - **`space c f`** formats the file as its server does (the first that formats), one undo step; left unsaved.
 
 **Completion** (`19.16`) shows as a code file is typed, under the cursor (above it with no room below): at once

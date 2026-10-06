@@ -73,9 +73,9 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `scratch path` | `{path, exists}` |
 | `scratch clear` | `{path, cleared, previousSha}` |
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
-| `resolve <link>` | `{link, status, path, abs, shown, href, heading, line, candidates[], vault, reason}` |
-| `links <note>` | `[{kind, target, heading, text, line, column, end, status, path, shown, candidates, vault, …}]` |
-| `problems` | `{broken[], ambiguous[], orphans[]}`: links `{from, line, column, end, kind, target, reason, …}`; paths |
+| `resolve <link>` | `{link, status, path, abs, shown, href, heading, line, candidates, vault, reason, how, …}` |
+| `links <note>` | `[{kind, target, heading, text, line, column, end, status, path, shown, …, how, certainty}]` |
+| `problems` | `{broken[], ambiguous[], fragile[], orphans[]}`: links `{from, line, column, end, kind, target, …}` |
 | `problems --lint` | adds `lint[{file, line, column, rule, name, description}]`; a warning when lint is off or fails |
 | `problems` (git) | `conflicts[{path, line}]`: during a merge, the unmerged files at their first marker (`5.12`) |
 | `changed` | `{base, mergeBase, files[{path, state, from?}]}`: `state` new, modified, renamed, deleted, conflict |
@@ -287,6 +287,13 @@ makes one. Previous names, `[[vault:note]]` and a move remembered aren't read (`
 converter reads them (`20.1`), as the legacy reader it keeps for what it rewrites. A vault name several vaults share
 as their own, `docs:a.md`, is ambiguous (exit 4) — `candidates` gives each by the name it's shown with,
 `work.docs:a.md`.
+
+**How a link landed** (trailscout's review): `links` and `resolve` give `how` — `path`, `suffix` (the end of its path),
+`name` (the only note of it), or the tie broken: `exact-case`, `same-folder`, `deepest-shared`, `shortest`; or the
+`via` (`alias`, `old-name`, `another-copy`) — and `certainty`: `exact`, `inferred`, `ambiguous`, `broken`. The last
+two ties make a link **fragile** (a note of the name nearer takes it): `problems` lists them as `fragile[]`, each with
+`fix`, the path that names its note for sure; `diagnostics` too, as `fragile` with `fix{title, text}`. A command that
+makes or removes a note sending links by name elsewhere warns, each: `Home.md:3: [[Pie]] reached X; it reaches Y now`.
 
 **A folder's name** (`21.6`, `core/folders.ts`): what a pointer names it by (`slipbox://<name>/…`, `21.7`) — the name
 in its `.slipbox/` config, else its repository's remote's last part (`research`); never its folder's own name. `info`

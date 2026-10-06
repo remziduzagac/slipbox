@@ -26,7 +26,7 @@ import { linkEnds, writeLink } from "../core/write-link.ts";
 import { copyAvailable, folderIdentity, pointerName, readFolders } from "../core/folders.ts";
 import { isPointer } from "../core/pointer.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
-import { Graph, type LinkProblem, openGraph, type Target } from "../core/graph.ts";
+import { certainty, describeLanding, Graph, type LinkProblem, openGraph, type Retarget, type Target } from "../core/graph.ts";
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
@@ -139,6 +139,8 @@ class Session {
       // vaults are reached through the machine's list (17.8).
       this._graph.thorough = true;
       this._graph.reach = new Reach(this.loc);
+      // A note this command made or removed sent links by name elsewhere: said, not silent.
+      this._graph.onRetarget((rs) => this.warnings.push(...rs.map(retargetSaid)));
     }
     return this._graph;
   }
@@ -453,6 +455,11 @@ function requireArg(rest: string[], what: string): string {
  * Resolve a note argument to a vault-relative path, or fail with exit 3/4. `parse` is false for
  * commands that need only the file's bytes: a big note the walk leaves out is then never parsed.
  */
+/** A link sent elsewhere by a note coming or going, for people. */
+export function retargetSaid(r: Retarget): string {
+  return `${r.from}:${r.line}: [[${r.target}]] reached ${r.was}; it reaches ${r.now} now`;
+}
+
 function resolveNote(s: Session, arg: string, parse = true): string {
   const rel = findNoteArg(s, arg, parse);
   // Reading follows the vault's rule too: a symlink pointing out of it is not a note of it (the
@@ -659,7 +666,7 @@ const HANDLERS: Record<string, Handler> = {
     const abs = path && status !== "external" ? (isAbsolute(path) ? path : s.graph.abs(path)) : null;
     // With --from, the link to write there (20.20): the relative path, as a link carries it.
     const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${fragment ?? slugify(parts.heading)}` : ""}` : null;
-    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, vault: found?.vault ?? formedVault, reason: found?.reason ?? null, ...(found?.gitRef ? { git: found.gitRef } : {}) };
+    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, vault: found?.vault ?? formedVault, reason: found?.reason ?? null, how: found?.via ?? found?.how ?? null, certainty: found ? certainty(found) : status === "resolved" ? "exact" : status, ...(found?.gitRef ? { git: found.gitRef } : {}) };
     if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`, EXIT.ambiguous, data);
     if (status === "unresolved") throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);
     return { data, human: `${abs ?? path}${line ? `:${line}` : ""}\n` };
@@ -681,7 +688,7 @@ const HANDLERS: Record<string, Handler> = {
             ? `UNRESOLVED${l.reason ? ` (${l.reason})` : ""}`
             : l.resolvedKind === "ambiguous"
               ? `AMBIGUOUS (${l.candidates.join(", ")})`
-              : (l.shown ?? "");
+              : `${l.shown ?? ""}${describeLanding(l) ? ` (${describeLanding(l)})` : ""}`;
         const shown = l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}${l.heading ? `#${l.heading}` : ""}]]` : l.target;
         return `${where} ${l.kind.padEnd(8)} ${shown} -> ${dest}\n`;
       })
@@ -701,6 +708,9 @@ const HANDLERS: Record<string, Handler> = {
         candidates: l.candidates,
         vault: l.vault ?? null,
         reason: l.reason ?? null,
+        // How it landed, and how sure that is (exact, inferred, ambiguous, broken).
+        how: l.via ?? l.how ?? null,
+        certainty: certainty(l),
       })),
       human,
     };
@@ -716,6 +726,9 @@ const HANDLERS: Record<string, Handler> = {
       ...p.broken.map((x) => `  ${shown(x)}${x.reason ? `  — ${x.reason}` : ""}`),
       `ambiguous links (${p.ambiguous.length})`,
       ...p.ambiguous.map((x) => `  ${shown(x)}  — ${x.candidates.join(", ")}`),
+      // Won by where they're written: a note of the name nearer would take them.
+      `fragile links (${p.fragile.length})`,
+      ...p.fragile.map((x) => `  ${shown(x)}  — ${x.reason}; [[${x.fix}]] names it for sure`),
       `orphans (${p.orphans.length})`,
       ...p.orphans.map((x) => `  ${x}`),
     ];
@@ -747,7 +760,7 @@ const HANDLERS: Record<string, Handler> = {
         human.push(`lint (${lint.length})`, ...lint.map((x) => `  ${x.file}:${x.line}${x.column ? `:${x.column}` : ""}  ${x.rule} ${x.name}  ${x.description}`));
       }
     }
-    return { data: { broken: p.broken, ambiguous: p.ambiguous, orphans: p.orphans, conflicts, ...(lint ? { lint } : {}) }, human: `${human.join("\n")}\n` };
+    return { data: { broken: p.broken, ambiguous: p.ambiguous, fragile: p.fragile, orphans: p.orphans, conflicts, ...(lint ? { lint } : {}) }, human: `${human.join("\n")}\n` };
   },
 
   tags(s, rest) {

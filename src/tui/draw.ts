@@ -1696,7 +1696,9 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const tabs = app.tabs.length > 1 ? `tab ${app.activeTab + 1}/${app.tabs.length}  ` : "";
   const li = app.linkUnderCursor(view);
   const link = li >= 0 ? layout.links[li] : null;
-  const linkText = link ? (link.kind === "tag" ? `→ #${link.target}  ` : `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status})  `) : "";
+  // How it landed, when a tie decided it (the nearest of 2 named so): a weak link shows as one.
+  const landed = link && link.kind !== "tag" && link.status === "resolved" ? app.linkLanded(view, link) : null;
+  const linkText = link ? (link.kind === "tag" ? `→ #${link.target}  ` : `→ ${link.kind === "wiki" || link.kind === "embed" ? `[[${link.target}${link.heading ? `#${link.heading}` : ""}]]` : link.target} (${link.status}${landed ? `, ${landed}` : ""})  `) : "";
   const markerW = stringWidth(pathMarker(app, view));
   const room = c.width - stringWidth(chip) - 2 - Math.min(16, stringWidth(app.displayName(view.buf))) - markerW;
   let right = `${linkText}${words}${tabs}${pos}`;
