@@ -2,6 +2,7 @@
 // paths without an extension, folders — and wikilinks within their root, whatever form a folder's tool
 // writes them in.
 
+import { readFileSync, writeFileSync } from "node:fs";
 import { leader, type Scenario } from "./helpers.ts";
 import type { Session } from "./session.ts";
 
@@ -220,6 +221,48 @@ export const LINK_SCENARIOS: Scenario[] = [
       await s.keys("enter", "escape", "tab", "enter");
       await s.status(/sync-retry/);
       await opened(s, "docs/sync.md");
+    },
+  },
+  {
+    name: "world/links: where a file is — a root by its name, an unnamed one by its path; :folders goes into one; a loose file's folder beside (21.9, 21.10)",
+    options: { home: true, startAt: "home/notes/index.md" },
+    run: async (s) => {
+      await s.status(/ notes[ ·]/); // named by its .slipbox/
+      s.cliIn("~/hobbies/photography", "ls"); // known here
+      await leader(s, "v", "v");
+      await s.see(/Folders \(\d+\)/);
+      await s.type("photography");
+      await s.keys("enter");
+      await s.message(/^photography — /);
+      await s.status(/ photography[ ·]/);
+      // An Obsidian vault with no .slipbox/ name and no remote: its path, from home.
+      writeFileSync(s.path("~/hobbies/cooking/stray-link.md"), `# Stray link\n\n[the stray note](${s.path("~/Downloads/stray-note.md")})\n`);
+      await s.restart({ startAt: "home/hobbies/cooking/stray-link.md" });
+      await s.status(/ ~\/hobbies\/cooking /);
+      // A loose file a link leads to opens beside the root: its folder among the explorer's roots while it's shown.
+      await follow(s, "the stray note");
+      await s.status(/stray-note\.md/);
+      await s.keys("ctrl+e");
+      await s.see("~/Downloads");
+      await s.keys("escape", "ctrl+o"); // back: the loose file no longer shown
+      await s.keys("ctrl+e");
+      await s.notSee("~/Downloads", 1500);
+    },
+  },
+  {
+    name: "world/links: naming a folder — :name gives the cooking vault a name its pointer finds; the vault words are gone (21.10, 21.12)",
+    options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
+    run: async (s) => {
+      await s.ex("name cooking");
+      await s.message(/is named cooking \(\.slipbox\/ made to hold it\)/);
+      await s.status(/ cooking /);
+      s.expect(readFileSync(s.path("~/hobbies/cooking/.slipbox/config.toml"), "utf8").includes('name = "cooking"'), "the name written into .slipbox/");
+      const r = JSON.parse(s.cliIn("~/notes", "resolve", "slipbox://cooking/Home.md", "--json").out).data;
+      s.expect(r.status === "resolved" && r.name === "cooking", `the pointer: ${JSON.stringify(r)}`);
+      s.expect(s.cliIn("~/notes", "vaults").code === 2, "slipbox vaults is gone");
+      s.expect(s.cliIn("~/notes", "vault-moved").code === 2, "slipbox vault-moved is gone");
+      const info = JSON.parse(s.cliIn("~/hobbies/cooking", "info", "--json").out).data;
+      s.expect(info.name === "cooking" && info.vault === undefined && info.instance === undefined, `info: ${JSON.stringify({ name: info.name, vault: info.vault })}`);
     },
   },
 ];

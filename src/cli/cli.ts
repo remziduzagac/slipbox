@@ -187,38 +187,38 @@ Usage:
   slipbox backlinks <note>          notes that link to <note>
   slipbox search <words…>           notes ranked by the words: "phrases", prefix*, -not, title:, #tag, path:  [--scope here|linked|all]
                                     [--limit N]
-  slipbox index                     build or bring up to date the vault's search index  [--rebuild]
+  slipbox index                     build or bring up to date the search index here  [--rebuild]
   slipbox index --home              the background auto-index of the home folder, run now  [--budget MS] [--rebuild]
-  slipbox index --refresh [path]    bring a vault's index up to date now — this one, or the one holding path
+  slipbox index --refresh [path]    bring a root's index up to date now — this one, or the one holding path
   slipbox changed                   what this branch changed against the base (main), committed or not  [--base <ref>]
   slipbox diff <note>               the note's changes on this branch: against where it left the base  [--base <ref>]
   slipbox merge-review <branch>     the links merging <branch> here would break, from git's tentative result  [--into <ref>]
   slipbox worktrees                 the repository's checkouts: the main one and its worktrees, by branch
   slipbox context <note>…           the notes, what they link to and what links to them, as one document for an agent
                                     [--depth N] [--no-backlinks] [--limit N] [--copy]
-  slipbox tags [tag]                the vault's tags and how many notes carry each; a tag's notes
-  slipbox problems                  the vault's broken and ambiguous links, and notes nothing links to  [--lint]
-  slipbox ls                        list the vault's notes         [--files: data and text files too]
+  slipbox tags [tag]                the tags here and how many notes carry each; a tag's notes
+  slipbox problems                  broken, ambiguous and fragile links here, and notes nothing links to  [--lint]
+  slipbox ls                        list the notes here            [--files: data and text files too]
   slipbox outline <note>            headings with source lines
   slipbox footnotes <note>          footnotes: each label, its text and line, and where it's referred to
                                     [add <line[:col]> <text> | edit <label> <text> | rm <label> | rename <label> <new>] [--if-unchanged <sha>]
-  slipbox find <query> [note]       find text in a note, or the vault  [--regex] [--whole] [--ignore-case] [--files]
+  slipbox find <query> [note]       find text in a note, or every note  [--regex] [--whole] [--ignore-case] [--files]
   slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first | --first-per-line] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
   slipbox read <note>               a note's text, and its sha
   slipbox stat <note>               a note's size, dates, title, counts, encoding (the TUI's note info)
-  slipbox write <note> [text]       write a note (atomic, in the vault)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
-  slipbox mkdir <path>              make a folder in the vault (and its parents)
-  slipbox mv <note|folder> <new-path>  rename or move a note or folder; links fixed in every vault reached  [--dry-run]
+  slipbox write <note> [text]       write a note (atomic, in the root)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
+  slipbox mkdir <path>              make a folder here (and its parents)
+  slipbox mv <note|folder> <new-path>  rename or move a note or folder; links fixed wherever they're reached  [--dry-run]
   slipbox cp <note|folder> [path]   copy a note or folder (beside it, as name-copy, when no path)
-  slipbox rm <note|folder>          delete to the vault's trash (slipbox trash restore puts it back)  [--dry-run]
+  slipbox rm <note|folder>          delete to the trash (slipbox trash restore puts it back)  [--dry-run]
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
   slipbox name <new>                this folder's name, as a pointer names it: changed, the old kept; a repository given one
   slipbox folders [default <name> <path>]  the named folders: their copies, the one links open; or make one the one
   slipbox rename-heading <note> <heading> <new>  rename a heading; links to it fixed everywhere  [--dry-run]
   slipbox relink [note]             rewrite links broken by a move slipbox saw, to where the file is  [--dry-run]
-  slipbox convert-links [note]      wikilinks and links from the vault's root rewritten as relative paths  [--dry-run]
-  slipbox undo                      take back the vault's last rename, move or relink  [--dry-run]
+  slipbox convert-links [note]      wikilinks and links from the root rewritten as relative paths  [--dry-run]
+  slipbox undo                      take back the last rename, move or relink here  [--dry-run]
   slipbox apply [plan]              write a plan --plan saved (refused if a file changed since); none: those waiting  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
@@ -233,7 +233,7 @@ Usage:
   slipbox commands                  list named commands and their CLI equivalents
 
 Global options:
-  --root <dir>      the vault (default: the nearest .slipbox/ or git checkout above the path or cwd; none: loose)
+  --root <dir>      the root to start from (default: the nearest folder above the path or cwd holding a root marker)
   --config <file>   user config file (default: $SLIPBOX_CONFIG or ~/.config/slipbox/config.toml)
   --json            one JSON object on stdout: {schema, ok, command, data, warnings, stale}
   --color <when>    auto | always | never
@@ -246,7 +246,7 @@ unless --from <note> picks the one a link from there reaches. resolve <link> --f
 href, the relative path a link there carries. After --, nothing is an option:
 slipbox read -- -dash.md names a note that starts with a dash.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
-5 refused (--if-unchanged, a write outside the vault or over an existing note, invalid UTF-8,
+5 refused (--if-unchanged, a write outside the root or over an existing note, invalid UTF-8,
   a read of a symlink leading out of the vault).
 `;
 
@@ -491,7 +491,7 @@ function resolveNote(s: Session, arg: string, parse = true): string {
   const rel = findNoteArg(s, arg, parse);
   // Reading follows the vault's rule too: a symlink pointing out of it is not a note of it (the
   // walk leaves it out), so naming it by path reads nothing from outside.
-  if (!landsInside(s.loc.root, join(s.loc.root, rel))) throw new CliError(`${rel} points outside the vault; not reading it`, EXIT.refused);
+  if (!landsInside(s.loc.root, join(s.loc.root, rel))) throw new CliError(`${rel} points outside the root; not reading it`, EXIT.refused);
   return rel;
 }
 
@@ -773,7 +773,7 @@ const HANDLERS: Record<string, Handler> = {
         if (got === null) ran = false;
         else found.push(...got);
       }
-      if (!cmd) s.warnings.push(s.config.lint.enabled === "off" ? 'lint is off: [lint] enabled = "off"' : 'lint is off: no markdownlint config (~/.markdownlint-cli2.jsonc, or the vault\'s) and [lint] enabled isn\'t "on"');
+      if (!cmd) s.warnings.push(s.config.lint.enabled === "off" ? 'lint is off: [lint] enabled = "off"' : 'lint is off: no markdownlint config (~/.markdownlint-cli2.jsonc, or the folder\'s) and [lint] enabled isn\'t "on"');
       else if (!ran) s.warnings.push(`lint: ${lintFailure(s.config)}`);
       else {
         lint = found.map((x) => ({ ...x, file: relative(s.loc.root, x.file) }));
@@ -918,7 +918,7 @@ const HANDLERS: Record<string, Handler> = {
       const done = !!p.passFinished;
       return {
         data: { root: p.root, found: p.found, indexed: p.indexed, left: p.queue.length + (p.current ? 1 : 0), finished: p.passFinished, started: p.passStarted },
-        human: `home folder ${p.root}: ${p.found} vault${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : ` — ${p.queue.length} folder${p.queue.length === 1 ? "" : "s"} left`}\n`,
+        human: `home folder ${p.root}: ${p.found} root${p.found === 1 ? "" : "s"} found, ${p.indexed} indexed${done ? ` — pass done ${p.passFinished!.slice(0, 16).replace("T", " ")}` : ` — ${p.queue.length} folder${p.queue.length === 1 ? "" : "s"} left`}\n`,
       };
     }
     if (isListed(s.loc)) throw new CliError(`${s.loc.root} is listed a folder at a time, never indexed (the background index walks it: slipbox index --home)`, EXIT.refused);
@@ -1178,11 +1178,11 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   deinit(s, rest) {
-    const dir = requireArg(rest, "vault folder");
+    const dir = requireArg(rest, "folder");
     const abs = dir.startsWith("/") ? dir : join(s.io.cwd, dir);
     if (!hasMarker(abs)) throw new CliError(`${abs} has no .slipbox/ to take away${markersAt(abs).length ? ` (it's a root by its ${markersAt(abs).join(", ")})` : ""}`, EXIT.refused);
     const holder = findVaultRoot(dirname(abs));
-    if (!holder) throw new CliError(`${abs} isn't in another vault: only a nested vault becomes a plain folder (of the vault holding it)`, EXIT.refused);
+    if (!holder) throw new CliError(`${abs} isn't in another root: only a root nested in another becomes a plain folder (of the root holding it)`, EXIT.refused);
     const parent = openVault(holder);
     return renameResult(s, () => planUnmakeVault(parent, relative(holder, abs)), parent);
   },
@@ -1770,7 +1770,7 @@ const HANDLERS: Record<string, Handler> = {
   mkdir(s, rest) {
     const arg = requireArg(rest, "path");
     const abs = arg.startsWith("/") ? arg : /^\.\.?\//.test(arg) ? join(s.io.cwd, arg) : join(s.loc.root, arg);
-    if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${arg} is outside the vault (${s.loc.root})`, EXIT.refused);
+    if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${arg} is outside the root (${s.loc.root})`, EXIT.refused);
     const rel = relative(s.loc.root, abs);
     if (existsSync(abs)) throw new CliError(`${rel} already exists`, EXIT.refused, { path: rel });
     mkdirSync(abs, { recursive: true });
@@ -1797,7 +1797,7 @@ const HANDLERS: Record<string, Handler> = {
       // A note unless the name says otherwise: `config.toml`, `run.py` keep their extension (16.4).
       const abs = isKnownExtension(extensionOf(base)) ? base : `${base}.md`;
       // Outside by its path, or by a symlinked folder on the way: checked before any folder is made.
-      if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${noteArg} is outside the vault (${s.loc.root})`, EXIT.refused);
+      if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${noteArg} is outside the root (${s.loc.root})`, EXIT.refused);
       rel = relative(s.loc.root, abs);
       checkWritable(s, abs);
       if (existsSync(abs)) throw new CliError(`${rel} already exists; not overwriting it (drop --create to write it)`, EXIT.refused, { path: rel });
@@ -1967,13 +1967,13 @@ function checkWritable(s: Session, abs: string): void {
   const refuse = (why: string) => {
     throw new CliError(`${relative(s.io.cwd, abs) || abs}: ${why}; not writing it`, EXIT.refused);
   };
-  if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the vault (${s.loc.root})`);
+  if (!isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) refuse(`outside the root (${s.loc.root})`);
   const rel = relative(s.loc.root, abs);
   // Notes, data and text files are written (16.4); binary files never are.
   if (classify(rel, s.config.walk.extensions).group === "binary") refuse("a binary file");
   // A hidden folder's note the vault has reached (20.8) is the vault's like any other; .git and
   // .slipbox never are, nor node_modules.
-  if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel)) refuse("in a folder the vault doesn't list");
+  if (rel.split("/").some((part) => part.startsWith(".") || part === "node_modules") && !s.graph.reached.has(rel)) refuse("in a folder the walk doesn't list");
   if (UNSAFE.test(rel) || /[\x1b\t\n]/.test(rel)) refuse("a control character in its name");
 }
 

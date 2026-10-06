@@ -192,7 +192,7 @@ function handleSymlink(abs: string, rel: string, realRoot: string, filter: WalkF
   }
   if (!filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) return;
   if (!isInside(realRoot, target)) {
-    out.skipped.push({ rel, reason: "symlink points outside the vault" });
+    out.skipped.push({ rel, reason: "symlink points outside the root" });
     return;
   }
   if (filter.exclusion(rel, false) !== null) return;

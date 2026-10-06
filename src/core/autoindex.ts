@@ -159,6 +159,6 @@ export function backgroundStatus(config: Pick<Config, "index">): { on: boolean; 
 export function describeBackground(b: ReturnType<typeof backgroundStatus>): string {
   if (!b.on) return "background index off ([index] background)";
   if (!b.started) return "background index not started yet";
-  if (b.finished) return `background index: pass done ${b.finished.slice(0, 16).replace("T", " ")} — ${b.found} vault${b.found === 1 ? "" : "s"} found`;
-  return `background index: ${b.found} vault${b.found === 1 ? "" : "s"} found so far, ${b.left} folder${b.left === 1 ? "" : "s"} left`;
+  if (b.finished) return `background index: pass done ${b.finished.slice(0, 16).replace("T", " ")} — ${b.found} root${b.found === 1 ? "" : "s"} found`;
+  return `background index: ${b.found} root${b.found === 1 ? "" : "s"} found so far, ${b.left} folder${b.left === 1 ? "" : "s"} left`;
 }

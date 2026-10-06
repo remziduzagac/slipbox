@@ -64,10 +64,10 @@ function move(from: string, to: string): void {
 /** A vault path of `g` that names a note, a file or a folder of it, checked. */
 function vaultPath(g: Graph, rel: string): { rel: string; abs: string; dir: boolean } {
   const clean = posix.normalize(rel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
-  if (!clean || clean === "." || clean.startsWith("../") || clean === "..") throw new FileOpError(`${rel} isn't inside the vault`);
+  if (!clean || clean === "." || clean.startsWith("../") || clean === "..") throw new FileOpError(`${rel} isn't inside the root`);
   if (clean.split("/").some((s) => s === ".slipbox" || s === ".git")) throw new FileOpError(`${rel}: slipbox's and git's own folders aren't notes`);
   const abs = join(g.root, clean);
-  if (!landsInside(g.root, abs)) throw new FileOpError(`${rel} resolves outside the vault`);
+  if (!landsInside(g.root, abs)) throw new FileOpError(`${rel} resolves outside the root`);
   let dir: boolean;
   try {
     dir = statSync(abs).isDirectory();
@@ -172,11 +172,11 @@ export function copyPath(g: Graph, rel: string, toRel?: string): { from: string;
   const p = vaultPath(g, rel);
   let to = toRel ? posix.normalize(toRel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, "")) : copyName(g, p.rel, p.dir);
   if (toRel && !p.dir && posix.extname(to) === "" && posix.extname(p.rel)) to += posix.extname(p.rel);
-  if (!to || to.startsWith("../") || to === "..") throw new FileOpError(`${toRel} isn't inside the vault`);
+  if (!to || to.startsWith("../") || to === "..") throw new FileOpError(`${toRel} isn't inside the root`);
   if (to === p.rel || to.startsWith(`${p.rel}/`)) throw new FileOpError(`${p.rel} can't be copied into itself`);
   const toAbs = join(g.root, to);
   if (existsSync(toAbs)) throw new FileOpError(`${to} exists; not overwriting it`);
-  if (!landsInside(g.root, toAbs)) throw new FileOpError(`${to} would land outside the vault`);
+  if (!landsInside(g.root, toAbs)) throw new FileOpError(`${to} would land outside the root`);
   mkdirSync(dirname(toAbs), { recursive: true });
   cpSync(p.abs, toAbs, { recursive: true, errorOnExist: true, force: false });
   if (p.dir) g.build(true, "lazy");

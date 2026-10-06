@@ -255,14 +255,14 @@ Inside the explorer (`[keys.explorer]` in config):
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
 | `a` | show every text file, or back to what `files.show` lists (notes and data files) |
 | `n` / `shift+n` | a new note / folder in the selected folder (beside a selected file); `space n n` too |
-| `r` | rename the selected note, file or folder (a nested vault's folder too), in its folder: links fixed |
+| `r` | rename the selected note, file or folder (a nested root's folder too), in its folder: links fixed |
 | `shift+r` | on a nested root's row: name it, as pointers name it (`slipbox name`; the folder stays) |
 | `m` | move it to a folder picked from a tree (`←` `→` fold, typing filters): links fixed after a preview |
-| `d` | delete it to the vault's trash, after asking (it says how many links break) |
+| `d` | delete it to the trash, after asking (it says how many links break) |
 | `u` | restore what was deleted last (`space v t`, `:trash`: the rest) |
-| `shift+u` | undo the vault's last rename, move or relink, after a preview (`7.4`) |
+| `shift+u` | undo the last rename, move or relink here, after a preview (`7.4`) |
 | `y` / `x` / `p` | copy / cut it; paste in the selected folder: a copy (`name-copy` beside it), or a move |
-| `v` / `shift+v` | make the selected folder a vault (its name asked) / a nested vault a plain folder; links previewed |
+| `v` / `shift+v` | give the selected folder `.slipbox/` (a name asked) / a nested root a plain folder; previewed |
 | `.` | the selected row's menu, as its `…` button opens it: each entry with its key, which picks it there |
 | `q` | close the explorer |
 | `esc` | back to the note; the explorer stays open (over the content, it closes) |
@@ -272,11 +272,11 @@ Inside the explorer (`[keys.explorer]` in config):
 The history view (`space h h`, the left rail's `◷`) takes the same keys: `j` / `k` move, `enter`,
 `l` or a click jumps to the place, `/` filters, `q` closes, `esc` goes back to the note.
 
-### Notes, folders, vaults — `space n`, `space d`, `space v`
+### Notes, folders, roots — `space n`, `space d`, `space v`
 
 Everything the explorer does to files has a leader key too, so which-key lists it (`18.13`): `space n` for a note,
-`space d` for a folder, `space v` for a vault. With the explorer focused they act on its selected row (`space d`: a
-file's folder); elsewhere on the current note, its folder, or this vault.
+`space d` for a folder, `space v` for a root. With the explorer focused they act on its selected row (`space d`: a
+file's folder); elsewhere on the current note, its folder, or this root.
 
 | Keys | Action |
 | --- | --- |
@@ -285,7 +285,7 @@ file's folder); elsewhere on the current note, its folder, or this vault.
 | `space n h` | rename the heading the cursor is under: every link to it fixed after a preview (`11.9`) |
 | `space n shift+m` / `space d m` | move the note / the folder to a folder picked from a tree |
 | `space d r` | rename the folder in place |
-| `space n d` / `space d d` | delete the note / the folder to the vault's trash, after asking (`:delete`) |
+| `space n d` / `space d d` | delete the note / the folder to the trash, after asking (`:delete`) |
 | `space n y` / `space d y` | copy the note / the folder, to paste |
 | `space n x` / `space d x` | cut the note / the folder, to paste (a move, links fixed) |
 | `space d p` | paste into the folder: what was copied, or cut |
@@ -293,8 +293,8 @@ file's folder); elsewhere on the current note, its folder, or this vault.
 | `space v t` / `space v u` | the trash (`:trash`) / restore what was deleted last |
 | `space v shift+u` | undo the last rename, move or relink (`:undo-rename`, `7.4`): its preview, then as it was |
 | `space v p` | the problems (`:problems`, `1.7`): broken and ambiguous links, in the left panel |
-| `space v m` | make a vault (`:init`): this plain folder; in a vault, the selected folder (or this note's) |
-| `space v shift+m` | make the vault a plain folder of the one holding it (this one: then into its parent) |
+| `space v m` | give a folder `.slipbox/` (`:init`): this plain one; in a root, the selected folder (or this note's) |
+| `space v shift+m` | make a nested root a plain folder of the one holding it (this one: then into its parent) |
 | `space v n` | name the folder as pointers name it (`:name`): the selected root, or this one |
 | `space v v` | the named folders (`:folders`): `enter` goes into one; `back` returns |
 | `space v shift+v` | which copy a named folder's links open (`:folders-default`) |
@@ -355,7 +355,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | the whole word under the cursor, forward / backward | `*` / `#` | — |
 | quick switcher: find a note by name; `#` first, a symbol (a server's, else a heading) | `ctrl+p` | `space f f` |
 | outline picker: find a heading in this note | — | `space f o` |
-| the vault's tags (`:tags`), then a tag's notes (`:tag name`) | — | `space f t` |
+| the tags here (`:tags`), then a tag's notes (`:tag name`) | — | `space f t` |
 | heading path: the breadcrumb's headings as a dropdown | — | `space f b` |
 | find in every note and file: each line with the text (open ones as they are) | `ctrl+shift+f` | `space f g` |
 | search here, ranked as you type (`:search`); `ctrl+a` more folders (`20.16`); enter opens | — | `space f s` |
@@ -384,25 +384,25 @@ config.
 | `:42` | go to line 42 |
 | `:help` | all keys and commands |
 | `:lens`, `:live` | open or close the lens |
-| `:e <note>`, `:open <note>` | open a note, or any text file of the vault by its path (`:e tool.py`) |
-| `:tags`, `:tag <name>` | the vault's tags; a tag's notes |
+| `:e <note>`, `:open <note>` | open a note, or any text file here by its path (`:e tool.py`), or a pointer |
+| `:tags`, `:tag <name>` | the tags here; a tag's notes |
 | `:theme <name>` | set the theme |
 | `:glyphs <nerd\|unicode\|ascii\|auto>` | set the glyph set |
 | `:zen` | toggle zen mode |
 | `:wrap` | toggle wrapping |
 | `:vs` / `:sp` | split side by side / stacked |
 | `:tabnew` | new tab with the current note |
-| `:new <name>` / `:mkdir <name>` | a new note / folder beside this note (a leading `/`: from the vault's root) |
+| `:new <name>` / `:mkdir <name>` | a new note / folder beside this note (a leading `/`: from the root) |
 | `:noh` | clear find highlights |
 | `:messages` | open the messages list |
 | `:reload` | reload the note from disk |
-| `:reindex` | reindex the vault |
+| `:reindex` | reindex the root (or the folder opened) |
 | `:folders` | the named folders this machine knows: pick one to go into |
 | `:folders-default` | which copy a named folder's links open |
 | `:name [new]` | name this folder as pointers name it |
-| `:init` | make this plain folder a vault |
-| `:pin-root` | keep this vault among the explorer's roots after leaving it, or no longer (`20.15`) |
-| `:delete` | delete the note to the vault's trash (asks first) |
+| `:init` | give this plain folder `.slipbox/` |
+| `:pin-root` | keep this root among the explorer's roots after leaving it, or no longer (`20.15`) |
+| `:delete` | delete the note to the trash (asks first) |
 | `:trash` | the trash: `enter` restores an item |
 | `:config` | reload the configuration |
 
@@ -419,7 +419,7 @@ to editing first. `'<,'>` is the last selection's lines, also after it ended.
 
 ## Editing
 
-Phase 3 (plan). The hand-offs (`space n e`, `space n s`) are under "Note, vault, app". Editing
+Phase 3 (plan). The hand-offs (`space n e`, `space n s`) are under "Note, folder, app". Editing
 happens in source mode; the keys that start it work from the render too, switching the window to
 source first.
 
@@ -438,10 +438,10 @@ source first.
 | a new folder beside this note (`:mkdir name`) | `ctrl+shift+n`, `space d n` |
 | rename or move the note (`:rename path`, `:mv path`): a preview, then `enter` | `space n m` |
 | name the folder: a preview, then `enter` | `space v n` |
-| delete the note to the vault's trash, after asking (`:delete`) | `space n d` |
+| delete the note to the trash, after asking (`:delete`) | `space n d` |
 | a copy of the note beside it (`name-copy`), opened | `space n shift+y` |
 | the trash: what was deleted, `enter` restores (`:trash`) | `space v t` |
-| make this plain folder a vault (`:init`), or in a vault a folder of it | `space v m` |
+| give this plain folder `.slipbox/` (`:init`), or in a root a folder of it | `space v m` |
 | save (`:w`, `:write`) | `ctrl+s`, `space n w` |
 | save every changed note (`:wa`, `:wall`); `:wqa`, `:xa` save all and quit | `space n shift+w` |
 | save over a file changed on disk / reload it, dropping changes (undoable) | `:w!` / `:e!` |
@@ -527,7 +527,7 @@ gets one when a line is added after its last.
 | `space u w` | wrap long lines (on by default; `alt+z` too); off, notes keep their width and scroll sideways |
 | `space u r` | link URLs shown after the link text |
 | `space u m` | mouse on / off; off gives the mouse back to the terminal for native selection |
-| `space u b` | top bar on / off (the palette chip and vault state); the note takes its row |
+| `space u b` | top bar on / off (the palette chip and the folder's state); the note takes its row |
 | `space u d` | the problems bar on / off: each line's problems, counted, coloured by the worst (`19.9`) |
 | `space u shift+d` | problems marked in the text on / off: underlined where they are (`19.10`) |
 
@@ -554,7 +554,7 @@ edit the config and the config wins again.
 | `space g w` | the worktrees by branch (`:worktrees`); enter opens this note in the one picked (`5.14`) |
 | `space g m` | a merge picked: the links it would break, with their fixes (`:merge-review`, `20.21`) |
 
-## Note, vault, app
+## Note, folder, app
 
 | Keys | Action |
 | --- | --- |
@@ -562,9 +562,9 @@ edit the config and the config wins again.
 | `space n s` | send the note to your editor already running elsewhere: a running nvim by default |
 | `space n p` | choose which running nvim `space n s` sends to (it asks by itself when unsure) |
 | `space n r` | reload this note from disk |
-| `space n i` | the Info view (`3.19`): open, focus, close — the file's path, vault, counts, properties, tags, links |
+| `space n i` | the Info view (`3.19`): open, focus, close — the file's path, root, counts, properties, tags, links |
 | `space v v` | go into a named folder (`:folders`); `back` returns |
-| `space v r` | reindex the vault |
+| `space v r` | reindex the root |
 | `space v i` | folder info: root, name and copies, notes, skipped paths, cache and state, watcher |
 | `space v c` | reload the configuration (it also reloads by itself when a config file is saved) |
 | `space m` | messages |

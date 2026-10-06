@@ -369,7 +369,7 @@ function cleanTarget(g: Graph, input: string): string {
   const rel = posix.normalize(input.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
   if (rel.startsWith("../") || rel === ".." || rel === "." || isAbsolute(rel)) throw new RenameError(`${input} isn't inside the vault`);
   if (rel.split("/").some((s) => s.startsWith(".") || s === "node_modules")) throw new RenameError(`${input}: the walk leaves hidden folders and node_modules out`);
-  if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} would land outside the vault`);
+  if (!landsInside(g.root, join(g.root, rel))) throw new RenameError(`${rel} would land outside the root`);
   return rel;
 }
 

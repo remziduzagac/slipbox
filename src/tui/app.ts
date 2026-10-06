@@ -1012,7 +1012,7 @@ export class App {
       // A path in the vault that a symlink leads out of: not a file of the vault (the walk leaves
       // it out, the CLI refuses it), so nothing from outside is read through it.
       if (inside && !landsInside(this.loc.root, abs)) {
-        this.message("warn", `${relRaw} points outside the vault; not opening it`);
+        this.message("warn", `${relRaw} points outside the root; not opening it`);
         return null;
       }
       buf = new NoteBuffer(rel, abs, key);
@@ -1593,7 +1593,7 @@ export class App {
         const there = note && existsSync(join(vault, note)) ? join(vault, note) : null;
         const v = this.view;
         this.switchVault(rootAt(vault), there, there && v ? { ...v.topAnchor } : undefined);
-        if (note && !there) this.message("info", `${note} isn't on that branch: its vault opened instead`);
+        if (note && !there) this.message("info", `${note} isn't on that branch: its root opened instead`);
       },
     });
   }
@@ -2882,7 +2882,7 @@ export class App {
     if (!typed) return null;
     const rel = posix.normalize(typed.startsWith("/") ? typed.slice(1) : posix.join(base, typed)).replace(/\/+$/, "");
     if (!rel || rel === "." || rel.startsWith("../") || rel === ".." || posix.isAbsolute(rel)) {
-      this.message("warn", `${typed}: not inside the vault`);
+      this.message("warn", `${typed}: not inside the root`);
       return null;
     }
     // Through a symlinked folder or not, never outside the vault.
@@ -2893,7 +2893,7 @@ export class App {
     } catch {}
     const r = relative(root, target);
     if (r.startsWith("..") || isAbsolute(r)) {
-      this.message("warn", `${typed} resolves outside the vault — not creating it`);
+      this.message("warn", `${typed} resolves outside the root — not creating it`);
       return null;
     }
     return rel;
@@ -2980,7 +2980,7 @@ export class App {
         insertText(this, v, v.buf.eol);
       }
     };
-    this.prompt(`new note in ${base ? `${base}/` : "the vault"}`, make);
+    this.prompt(`new note in ${base ? `${base}/` : "the root"}`, make);
     if (prefill && this.overlay?.kind === "prompt") this.overlay.text = prefill;
   }
 
@@ -3051,11 +3051,11 @@ export class App {
     const actions: [string, string][] = [];
     if (item.dir && !item.vault) actions.push(["new_note", "New note here"], ["new_folder", "New folder here"]);
     actions.push(["rename", item.vault ? "Rename the folder" : "Rename"]);
-    if (item.vault) actions.push(["rename_vault", "Rename the vault"]);
+    if (item.vault) actions.push(["rename_vault", "Name it"]);
     actions.push(["move", "Move to…"], ["copy", "Copy"], ["cut", "Cut"]);
-    if (item.dir) actions.push(item.vault ? ["unmake_vault", "Make it a plain folder"] : ["make_vault", "Make it a vault"]);
+    if (item.dir) actions.push(item.vault ? ["unmake_vault", "Make it a plain folder"] : ["make_vault", "Give it .slipbox/"]);
     if (this.fileClip) actions.push(["paste", this.fileClip.mode === "cut" ? `Paste ${posix.basename(this.fileClip.rel)} here (move)` : `Paste a copy of ${posix.basename(this.fileClip.rel)} here`]);
-    actions.push(["delete", item.vault ? "Delete the vault" : "Delete"]);
+    actions.push(["delete", item.vault ? "Delete the root" : "Delete"]);
     const items: ListItem[] = actions.map(([action, label]) => {
       const key = this.explorerKeys.keysFor(action)[0];
       const shifted = key ? /^shift\+(.)$/.exec(key) : null;
@@ -3100,16 +3100,16 @@ export class App {
       case "new_folder":
         return this.promptNewFolder(folder);
       case "make_vault":
-        return item.dir && !item.vault ? this.makeVaultItem(item) : this.message("info", item.vault ? `${item.rel} is a vault already — shift+v makes it a plain folder` : "make a vault: select a folder first");
+        return item.dir && !item.vault ? this.makeVaultItem(item) : this.message("info", item.vault ? `${item.rel} is a root already — shift+v makes it a plain folder` : "give a folder .slipbox/: select a folder first");
       case "unmake_vault":
-        return item.vault ? this.unmakeVaultItem(item) : this.message("info", "make a plain folder: select a vault (its folder has its own icon)");
+        return item.vault ? this.unmakeVaultItem(item) : this.message("info", "make a plain folder: select a nested root (its folder has its own icon)");
     }
   }
 
   /** The vault's tags (1.6), with how many notes carry each, nested ones under their parents: pick one for its notes. */
   openTagList(): void {
     const tags = this.graph.tags();
-    if (!tags.length) return this.message("info", "no tags in this vault: #tag in a note, or tags: in its frontmatter");
+    if (!tags.length) return this.message("info", "no tags here: #tag in a note, or tags: in its frontmatter");
     this.openList({
       title: `Tags (${tags.length})`,
       items: tags.map((t) => ({ label: `#${t.tag}`, hint: `${t.count} note${t.count === 1 ? "" : "s"}`, indent: t.tag.split("/").length - 1, data: t.tag })),
@@ -3146,7 +3146,7 @@ export class App {
       return null;
     }
     const rel = this.view?.buf.rel ?? null;
-    if (rel === null) this.message("info", "open a note of this vault, or select one in the explorer");
+    if (rel === null) this.message("info", "open a note of this root, or select one in the explorer");
     return rel === null ? null : { rel, dir: false };
   }
 
@@ -3157,7 +3157,7 @@ export class App {
     if (item?.dir) return item;
     const folder = item ? posix.dirname(item.rel) : ".";
     if (folder !== ".") return { rel: folder, dir: true };
-    this.message("info", item ? `${item.rel} is at the vault's root: select a folder in the explorer` : "select a folder in the explorer, or open a note in one");
+    this.message("info", item ? `${item.rel} is at the root: select a folder in the explorer` : "select a folder in the explorer, or open a note in one");
     return null;
   }
 
@@ -3165,7 +3165,7 @@ export class App {
   makeVaultHere(): void {
     const f = this.folderTarget();
     if (!f) return;
-    if (f.vault) return this.message("info", `${f.rel} is a vault already — space v shift+m makes it a plain folder`);
+    if (f.vault) return this.message("info", `${f.rel} is a root already — space v shift+m makes it a plain folder`);
     this.makeVaultItem(f);
   }
 
@@ -3173,7 +3173,7 @@ export class App {
   unmakeVaultHere(): void {
     const item = this.explorerFocused() ? this.explorerItem() : null;
     if (item?.vault) return this.unmakeVaultItem(item);
-    if (item) return this.message("info", "make a plain folder: select a vault (its folder has its own icon)");
+    if (item) return this.message("info", "make a plain folder: select a nested root (its folder has its own icon)");
     this.unmakeThisVault();
   }
 
@@ -3183,7 +3183,7 @@ export class App {
    */
   unmakeThisVault(): void {
     const holder = this.loc.mode === "vault" ? findVaultRoot(dirname(this.loc.root)) : null;
-    if (!holder) return this.message("info", `${this.loc.name ?? this.loc.root} isn't inside another vault: only a nested vault becomes a plain folder (of the vault holding it)`);
+    if (!holder) return this.message("info", `${this.loc.name ?? this.loc.root} isn't inside another root: only a root nested in another becomes a plain folder (of the root holding it)`);
     const parent = openVault(holder);
     const rel = relative(holder, this.loc.root);
     const open = this.view?.buf.abs ?? null;
@@ -3274,7 +3274,7 @@ export class App {
       ...(context ? { context } : {}),
     });
     const source = (input: string): ListItem[] => {
-      const out: ListItem[] = [{ label: `${g.dirOpen} / (the vault's root)`, hint: opts.current === "" ? "here" : "", data: "" }];
+      const out: ListItem[] = [{ label: `${g.dirOpen} / (the root)`, hint: opts.current === "" ? "here" : "", data: "" }];
       const q = input.trim();
       if (q) {
         // The matches, with their parents for where they are; enter takes the first match.
@@ -3322,7 +3322,7 @@ export class App {
     if (item.vault) {
       // A whole vault: said so, with how much it holds.
       const g = openVault(join(this.loc.root, item.rel));
-      what = `the vault ${g.loc.name} (${item.rel}/, ${g.notes.size} note${g.notes.size === 1 ? "" : "s"})`;
+      what = `the root ${g.loc.name ?? item.rel} (${item.rel}/, ${g.notes.size} note${g.notes.size === 1 ? "" : "s"})`;
     }
     const warn = breaking ? ` ${breaking} link${breaking === 1 ? "" : "s"} to it will break.` : "";
     this.confirm(`Delete ${what}?${warn} It goes to the trash: u restores it.`, () => {
@@ -3390,7 +3390,7 @@ export class App {
     const name = posix.basename(clip.rel);
     const to = into ? `${into}/${name}` : name;
     if (clip.mode === "cut") {
-      if (into === from) return this.message("info", `${clip.rel} is already in ${into || "the vault's root"}`);
+      if (into === from) return this.message("info", `${clip.rel} is already in ${into || "the root"}`);
       if (clip.dir && (into === clip.rel || into.startsWith(`${clip.rel}/`))) return this.message("warn", `${clip.rel} can't move into itself`);
       return this.previewRename(this.movePlan(clip, to));
     }
@@ -3417,10 +3417,10 @@ export class App {
 
   /** A nested vault's name (`R`, the row's button): its `[[name:…]]` links fixed everywhere (17.15). */
   renameVaultItem(item: ExplorerItem): void {
-    if (!item.vault) return this.message("info", "R renames a vault: select one (its folder has its own icon)");
+    if (!item.vault) return this.message("info", "R names a nested root: select one (its folder has its own icon)");
     const root = join(this.loc.root, item.rel);
     const name = rootAt(root).name ?? posix.basename(item.rel);
-    this.prompt(`rename the vault ${name} to: `, (text) => {
+    this.prompt(`name ${name}, as pointers name it: `, (text) => {
       const typed = text.trim();
       if (!typed || typed === name) return;
       this.previewRename(() => planVaultRename(rootAt(root), typed));
@@ -3430,7 +3430,7 @@ export class App {
 
   /** Ask for a new folder's name and make it. */
   promptNewFolder(base = this.newItemBase()): void {
-    this.prompt(`new folder in ${base ? `${base}/` : "the vault"}`, (text) => void this.createFolder(text, base));
+    this.prompt(`new folder in ${base ? `${base}/` : "the root"}`, (text) => void this.createFolder(text, base));
   }
 
   /** Create a folder (`shift+n` in the explorer, `space d n`, `:mkdir`): selected in the explorer. */
@@ -4361,7 +4361,7 @@ export class App {
   private footnoteNote(): boolean {
     const view = this.view;
     if (!view || view.buf.kind.group !== "note" || view.buf.rel === null) {
-      this.message("info", "footnotes are in this vault's notes");
+      this.message("info", "footnotes are in this root's notes");
       return false;
     }
     return true;
@@ -4712,7 +4712,7 @@ export class App {
   /** Keep the root open among the explorer's roots, or no longer (`:pin-root`). */
   togglePinnedRoot(): void {
     const r = this.loc.root;
-    if (r === this.mainRoot) return this.message("info", "the vault slipbox was opened on is always a root");
+    if (r === this.mainRoot) return this.message("info", "the folder slipbox was opened on is always a root");
     if (this.pinnedRoots.has(r)) this.pinnedRoots.delete(r);
     else this.pinnedRoots.add(r);
     this.saveRoots();
@@ -4823,7 +4823,7 @@ export class App {
     const q = this.sidebar.filter ?? "";
     const mine = q ? rows.filter((r) => match(q, r.path)) : rows;
     const others = q ? recent.filter((r) => match(q, r.path)) : recent;
-    return others.length ? [...mine, { label: "recent in this vault", path: "", hint: "", index: -1, here: false, heading: true }, ...others] : mine;
+    return others.length ? [...mine, { label: "recent here", path: "", hint: "", index: -1, here: false, heading: true }, ...others] : mine;
   }
 
   /**
@@ -5380,7 +5380,7 @@ export class App {
         break;
       case "rename":
         if (!row || !view) break;
-        if (!view.buf.rel || !this.graph.notes.has(view.buf.rel)) this.message("warn", "only a vault note's headings are renamed with their links");
+        if (!view.buf.rel || !this.graph.notes.has(view.buf.rel)) this.message("warn", "only a note of this root has its headings renamed with their links");
         else this.promptHeadingRename(view.buf.rel, row.text);
         break;
       default:
@@ -7467,11 +7467,11 @@ export class App {
    */
   vaultChoices(dir: string): void {
     const items: ListItem[] = [
-      { label: "Make it a vault", detail: ".slipbox/ with its id and name — committed with the folder like any file", data: "vault" },
+      { label: "Give it .slipbox/", detail: "settings of its own — committed with the folder like any file; :name names it for pointers", data: "vault" },
       { label: "Cancel", detail: "", data: "no" },
     ];
     this.openList({
-      title: `${dir} is a folder without .slipbox/ — make it a vault?`,
+      title: `${dir} is a folder without .slipbox/ — give it one?`,
       items,
       filterable: false,
       footer: true,

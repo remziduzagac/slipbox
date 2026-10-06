@@ -296,7 +296,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
         if (link.heading) jumpToHeading(a, view, link.heading, true);
         return;
       }
-      if (!from) return a.message("warn", `[[${link.target}]]: links resolve only inside the vault`);
+      if (!from) return a.message("warn", `[[${link.target}]]: a wikilink is read within a root — this file has none`);
       const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, from);
       if (r.via) a.message("info", `[[${link.target}]] reached ${r.path} by ${r.via === "alias" ? "an alias" : r.via === "previous-name" ? "a previous name" : "a redirect"}`);
       // `#^id`: the block it marks, by its line (21.3), as a path link's lands.
@@ -325,7 +325,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
     case "image": {
       // A URL — a pointer too (21.7), which names its folder: followed from a file of no root as well.
       const external = /^[a-z][a-z0-9+.-]*:/i.test(link.target);
-      if (!from && !external) return a.message("warn", `${link.target}: links resolve only inside the vault`);
+      if (!from && !external) return a.message("warn", `${link.target}: this file is outside the root — open its folder to follow its links`);
       const r = a.graph.resolveLink({ kind: link.kind === "image" ? "image" : "markdown", target: link.target }, from ?? "");
       if (r.resolvedKind === "external") {
         a.copy(link.target, false);
@@ -1067,7 +1067,7 @@ export function registerActions(app: App): void {
       }),
     "backlinks.open": (a) =>
       withView(a, (v) => {
-        if (!v.buf.rel) return a.message("info", "backlinks exist only for vault notes");
+        if (!v.buf.rel) return a.message("info", "backlinks are kept for the notes of a root (or the folder opened)");
         const bl = a.graph.backlinks(v.buf.rel);
         if (!bl.length) return a.message("info", `no notes link to ${v.buf.rel}`);
         a.openList({
@@ -1287,7 +1287,7 @@ export function registerActions(app: App): void {
             items.push({ label: `${rel}:${line}`, detail: row.length > 160 ? `${row.slice(0, 160)}…` : row, data: { rel, line } });
           }
         }
-        if (!items.length) return a.message("info", `not found in the vault: ${query}`);
+        if (!items.length) return a.message("info", `not found here: ${query}`);
         a.openList({
           title: `"${query}" — ${total} match${total === 1 ? "" : "es"} in ${new Set(items.map((i) => (i.data as { rel: string }).rel)).size} files${items.length >= VAULT_SEARCH_MAX ? ` (the first ${VAULT_SEARCH_MAX} lines)` : ""}`,
           items,
@@ -1300,7 +1300,7 @@ export function registerActions(app: App): void {
         });
       };
       if (arg) return run(arg);
-      a.prompt("search the vault", run);
+      a.prompt("find in every note", run);
     },
     // Find and replace: the find row with a replace row under it, on the markdown (replacing.ts).
     // A selection on one line is the query; across lines, it's where to replace.
@@ -1702,7 +1702,7 @@ export function registerActions(app: App): void {
     "vault.unmake": (a) => a.unmakeVaultHere(),
     "note.copy": (a) =>
       withView(a, (v) => {
-        if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be copied here");
+        if (!v.buf.rel) return a.message("warn", "only a note or file of this root can be copied here");
         try {
           const r = copyPath(a.graph, v.buf.rel);
           a.open(r.to);
@@ -1720,10 +1720,10 @@ export function registerActions(app: App): void {
       a.openLeftView("problems", "cycle");
     },
     "vault.init": (a) => {
-      // In a vault: the explorer's selected folder (or this note's) a vault of its own (18.11).
+      // In a root: the explorer's selected folder (or this note's) a root of its own (18.11).
       if (a.loc.mode === "vault") return a.makeVaultHere();
       const dir = a.loc.root;
-      if (isNeverRoot(dir)) return a.message("warn", `${dir} can't be a vault: slipbox never indexes all of it`);
+      if (isNeverRoot(dir)) return a.message("warn", `${dir} can't have a .slipbox/: slipbox never indexes all of it`);
       a.vaultChoices(dir);
     },
     "note.rename": (a, arg) => {
@@ -1867,7 +1867,7 @@ export function registerActions(app: App): void {
     "heading.rename": (a, arg) =>
       withView(a, (v) => {
         const rel = v.buf.rel;
-        if (!rel || !a.graph.notes.has(rel)) return a.message("warn", "only a vault note's headings are renamed with their links");
+        if (!rel || !a.graph.notes.has(rel)) return a.message("warn", "only a note of this root has its headings renamed with their links");
         // The section the cursor is in: the last heading at or above its line.
         const line = a.cursorLine(v);
         const h = [...(a.graph.entry(rel)?.headings ?? [])].reverse().find((x) => x.line <= line);
@@ -1888,8 +1888,14 @@ export function registerActions(app: App): void {
         if (taken) return a.message("warn", `a different folder is called ${name}, at ${tildePath(taken.default ?? taken.copies[0]?.path ?? "")}: pick another`);
         // A .slipbox/ folder's: renamed, its old name kept (previewed); a repository's: a .slipbox/ to hold one.
         if (hasMarker(a.loc.root)) return a.previewRename(() => planVaultRename(a.loc, name));
-        initVault(a.loc.root, name);
+        try {
+          initVault(a.loc.root, name);
+        } catch (err) {
+          return a.message("warn", (err as Error).message);
+        }
         recordFolder(a.loc.root);
+        // Its name from now on: the status line, the Info, what pointers are written with (21.9).
+        a.loc = rootAt(a.loc.root);
         a.message("info", `${tildePath(a.loc.root)} is named ${name} (.slipbox/ made to hold it)`);
       };
       if (arg) return go(arg.trim());
@@ -1904,7 +1910,7 @@ export function registerActions(app: App): void {
     },
     "link.relink": (a) =>
       withView(a, (v) => {
-        if (!v.buf.rel) return a.message("warn", "only this vault's notes are relinked");
+        if (!v.buf.rel) return a.message("warn", "only this root's notes are relinked");
         const rel = v.buf.rel;
         a.previewRename(() => planRelink(a.graph, [rel]));
       }),

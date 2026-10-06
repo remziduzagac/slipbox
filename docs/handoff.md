@@ -54,6 +54,19 @@ read wikilinks again within their root; `[[vault:note]]` and redirects stay the 
 plain folder opened is an unnamed instance, walked and indexed as a vault is (`~` and `/` listed a level at a time).
 Next: phase 5's grammars (`16.18`–`16.22`; `16.23` asks about Ruby and C/C++).
 
+**Updated 2026-10-07.** Built since: paths inside, conventions at the edges (`21.x`; `docs/idea.md`, "Paths inside,
+conventions at the edges"; `docs/design/decisions.md`, `21.x`). A file's **root** is its nearest folder holding
+`.git`, `.slipbox/`, `.obsidian/` or `.zk/` (`21.1`); a leading `/` starts from it, then the filesystem (`21.2`);
+wikilinks are read again within it — names, paths, aliases, attachments, ties ambiguous (`21.3`); each folder's link
+convention is found — your setting, its tool's, its notes', ours — and written (`21.4`, `21.5`). **Named folders**
+(`21.6`): a `.slipbox/` name, else a repository's remote, with its copies and a default here (`folders.json`);
+`slipbox://name[@branch]/path` pointers reach them (`21.7`). State is kept by root's path, positions by file, and a
+named folder moved by hand takes its state along (`21.8`); the screen shows what the file says, roots by name or path
+(`21.9`); `slipbox folders`, `slipbox name`, pointers as arguments, `root`/`name` in the JSON, `--scope here`
+(`21.10`); repairs offered after moves made elsewhere (`21.11`). Gone (`21.12`): vaults as a concept — collections,
+instances, display names, `vault:path`, the move question, `previous_names` written on rename, `slipbox vaults`. The
+terminal scenarios for `21.x` are written (`tests/e2e/world-links.ts` and others), not yet run.
+
 ## The documents
 
 | File | What it is | When to read it |
@@ -153,10 +166,11 @@ spend a day on:
 - **Stack:** Bun + OpenTUI + remark. remark over marked because mdast carries source positions
   and slipbox edits. OpenTUI over Ink because Ink renders to a string and has no scroll
   container.
-- **A file's root** is its nearest boundary — a `.slipbox/` or a git checkout's top, one vault when both share a folder
-  (`20.3`) — else the plain folder it's in, an unnamed instance by its path, walked and indexed as a vault is (`20.22`);
-  `$HOME` and `/` never (opened, they're listed a level at a time). A git vault without `.slipbox/` is never written
-  into: named by its folder, keyed by its path. See `docs/idea.md`, "Plain paths, virtual vaults".
+- **A file's root** is its nearest folder holding a root marker — `.git`, `.slipbox/`, `.obsidian/`, `.zk/`, one root
+  when several share a folder (`20.3`, `21.1`) — else the plain folder it's in, by its path, walked and indexed as a
+  root is (`20.22`); `$HOME` and `/` never (opened, they're listed a level at a time). Nothing is ever written into a
+  root by opening it; its state is kept by its path (`21.8`). See `docs/idea.md`, "Paths inside, conventions at the
+  edges".
 - **PKM layer in-process**, not by depending on a language server. slipbox *offering* an LSP is a
   separate and approved thing (phase 5).
 - **Editing:** an in-app editor *and* `$EDITOR` hand-off (or a running nvim). Live preview is a

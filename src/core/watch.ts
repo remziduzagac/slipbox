@@ -189,7 +189,7 @@ export class VaultWatcher {
   private pollDir(dirRel: string, reason: string): void {
     if (this.closed || this.polled.has(dirRel)) return;
     this.polled.add(dirRel);
-    this.opts.onWarn?.(`cannot watch ${dirRel || "the vault root"} (${reason.split("\n")[0]}) — polling it every ${every(this.opts.pollMs ?? 2000)} instead`);
+    this.opts.onWarn?.(`cannot watch ${dirRel || "the root"} (${reason.split("\n")[0]}) — polling it every ${every(this.opts.pollMs ?? 2000)} instead`);
     this.ensurePollTimer();
   }
 

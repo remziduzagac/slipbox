@@ -315,7 +315,7 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       // The vault's info says why each was left out of the walk.
       await leader(s, "v", "i");
       await s.see(/research\/zero\.md — symlink to something that isn't a file/);
-      await s.see(/research\/outside\.md — symlink points outside the vault/);
+      await s.see(/research\/outside\.md — symlink points outside the root/);
       await s.keys("escape");
       // A symlinked note, edited and saved: written through to its target, still a symlink.
       await edit(s, "projects/kestrel-current.md");

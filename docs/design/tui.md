@@ -396,8 +396,8 @@ The explorer makes and changes files by keys and by buttons, on the selected row
 - **The selected row's menu:** while the explorer has focus, the selected row has one button at its end, under the
   title's buttons: `…` (Nerd: three dots; ascii `...`). It opens a menu hanging from it (`.` opens it by key, from the
   row), titled with the row's name, each entry with its key in the explorer, which picks it there too: for a folder
-  "New note here" and "New folder here", then "Rename", "Move to…", "Copy", "Cut", for a folder "Make it a vault" (a
-  vault's: "Make it a plain folder"), "Paste … here" (when something is copied or cut), "Delete". `enter` or a click
+  "New note here" and "New folder here", then "Rename", "Move to…", "Copy", "Cut", for a folder "Give it .slipbox/" (a
+  nested root's: "Make it a plain folder"), "Paste … here" (when something is copied or cut), "Delete". `enter` or a click
   does the selected one; `esc` or a click outside closes it. A name that doesn't fit beside the button widens the
   tree: the explorer's horizontal scrollbar appears, and scrolled to its end the name ends just before it.
 - **A nested vault's row** (`18.7`) is a folder of this vault: `r` renames its folder and `m` moves it — links into it
@@ -517,7 +517,7 @@ keys.
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
-  those after it forward. Under it, **recent in this vault**: the notes read in other windows and
+  those after it forward. Under it, **recent here**: the notes read in other windows and
   tabs and in earlier sessions — every note with a reading position (`slipbox history`'s list),
   and every open tab's — not already in the timeline, newest first, up to `ui.history_limit` (100;
   0 lists none): each with when (the time today, else the day), or `tab N` when it's open in

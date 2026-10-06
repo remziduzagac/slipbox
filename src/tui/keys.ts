@@ -230,7 +230,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader g w": "git.worktrees",
   "leader g m": "git.merge_review",
   "leader s d": "scratch.clear",
-  // note, vault, app
+  // note, folder, app
   "leader n r": "note.reload",
   "leader n e": "note.edit",
   "leader n v": "view.source",
@@ -376,7 +376,7 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   y: "copy",
   x: "cut",
   p: "paste",
-  // A folder made a vault of its own; a vault nested here made a plain folder again (18.11).
+  // A folder given .slipbox/, a root of its own; a root nested here made a plain folder again (18.11).
   v: "make_vault",
   "shift+v": "unmake_vault",
   // The selected row's menu, as its … button opens it.
@@ -483,16 +483,16 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   new_note: { title: "New note here", desc: "Asks for a name and makes the note in the selected folder (or beside the selected file)" },
   new_folder: { title: "New folder here", desc: "Asks for a name and makes the folder in the selected folder (or beside the selected file)" },
   rename: { title: "Rename", desc: "A new name for the selected note, file or folder, in its folder; every link to it fixed after a preview" },
-  rename_vault: { title: "Rename the vault", desc: "On a vault's row: its name (r renames its folder); [[name:…]] links fixed everywhere after a preview" },
+  rename_vault: { title: "Name it", desc: "On a nested root's row: its name, as pointers name it (r renames its folder); after a preview" },
   move: { title: "Move to…", desc: "Picks a folder for the selected note, file or folder; every link to it fixed after a preview" },
-  delete: { title: "Delete", desc: "Moves the selected note, file or folder to the vault's trash (asks first; u restores)" },
+  delete: { title: "Delete", desc: "Moves the selected note, file or folder to the trash (asks first; u restores)" },
   restore: { title: "Restore", desc: "Puts back what was deleted last (the trash, :trash, has the rest)" },
-  undo_rename: { title: "Undo the last rename", desc: "Takes back the vault's last rename, move or relink after a preview (u puts back a delete)" },
+  undo_rename: { title: "Undo the last rename", desc: "Takes back the last rename, move or relink here after a preview (u puts back a delete)" },
   copy: { title: "Copy", desc: "Copies the selected note, file or folder: p pastes a copy in the selected folder" },
   cut: { title: "Cut", desc: "Cuts the selected note, file or folder: p moves it to the selected folder, links fixed" },
   paste: { title: "Paste", desc: "Into the selected folder (or beside the selected file): a copy, or what was cut, moved" },
-  make_vault: { title: "Make it a vault", desc: "The selected folder becomes a vault of its own (its .slipbox/); links that would stop reaching across fixed after a preview" },
-  unmake_vault: { title: "Make it a plain folder", desc: "The selected vault's notes become this vault's; [[its-name:…]] links fixed after a preview, its .slipbox/ to the trash" },
+  make_vault: { title: "Give it .slipbox/", desc: "The selected folder becomes a root of its own (its .slipbox/, a name if given); links that would stop reaching across fixed after a preview" },
+  unmake_vault: { title: "Make it a plain folder", desc: "The selected root's notes become this one's; links fixed after a preview, its .slipbox/ to the trash" },
   menu: { title: "Actions…", desc: "The selected row's menu, as its … button opens it: rename, move, delete, copy…" },
   close: { title: "Close the explorer", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the explorer stays open" },
@@ -544,7 +544,7 @@ export const OUTLINE_ACTION_INFO: Record<string, { title: string; desc: string }
   filter: { title: "Filter", desc: "Type to narrow the headings (their parents kept); enter jumps, esc clears" },
   close: { title: "Close the outline", desc: "Closes it; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the outline stays open" },
-  rename: { title: "Rename the heading", desc: "Every link to it fixed in every vault reached, after a preview (a note's headings)" },
+  rename: { title: "Rename the heading", desc: "Every link to it fixed wherever it's reached, after a preview (a note's headings)" },
 };
 
 /** The footnotes view takes the outline's keymap (3.17); what its actions do there, for help. */

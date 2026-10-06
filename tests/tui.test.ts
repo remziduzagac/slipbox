@@ -1125,7 +1125,7 @@ describe("the left panel's views and filter", () => {
     const rows = h.app.historyRows();
     expect(rows.map((r) => (r.heading ? "--" : r.label))).toEqual(["beta.md", "--", "alpha.md", "index.md"]);
     expect(rows[2]!.hint).toBe("tab 2"); // open in another tab: which
-    expect(h.frame()).toContain("recent in this vault");
+    expect(h.frame()).toContain("recent here");
     // Moving steps over the heading; enter opens the note here, in this window's history.
     await h.keys("down");
     expect(h.app.sidebar.selected).toBe(2);
@@ -4972,7 +4972,7 @@ describe("files beyond notes (16.3–16.5)", () => {
     symlinkSync(outside, join(root, "out.md"));
     symlinkSync(join(root, "links-out.md"), join(root, "in.md"));
     expect(h.app.buffer("out.md")).toBeNull();
-    expect(h.app.messages.at(-1)!.text).toBe("out.md points outside the vault; not opening it");
+    expect(h.app.messages.at(-1)!.text).toBe("out.md points outside the root; not opening it");
     expect(h.app.buffer("in.md")?.source).toBe(readFileSync(join(root, "links-out.md"), "utf8"));
   });
   test("the switcher lists the files the explorer shows", async () => {
@@ -5563,7 +5563,7 @@ describe("creating notes and folders", () => {
     await h.app.run("note.create notes/alpha");
     expect(h.app.messages.at(-1)!.text).toContain("exists");
     await h.app.run("note.create ../../escape"); // from notes/: past the root
-    expect(h.app.messages.at(-1)!.text).toContain("not inside the vault");
+    expect(h.app.messages.at(-1)!.text).toContain("not inside the root");
     expect(existsSync(join(root, "..", "escape.md"))).toBe(false);
   });
   test("the explorer: n a note in the selected folder (space n n too), N a folder — shown though empty, and selected", async () => {
@@ -6023,8 +6023,8 @@ describe("vaults in the TUI (17.x)", () => {
     const l = await harness({ loc: folderAt(loose), open: "n.md" });
     expect(l.app.overlay).toBeNull();
     await l.app.run("vault.init");
-    expect((l.app.overlay as ListOverlay).title).toBe(`${loose} is a folder without .slipbox/ — make it a vault?`);
-    expect((l.app.overlay as ListOverlay).items.map((it) => it.label)).toEqual(["Make it a vault", "Cancel"]);
+    expect((l.app.overlay as ListOverlay).title).toBe(`${loose} is a folder without .slipbox/ — give it one?`);
+    expect((l.app.overlay as ListOverlay).items.map((it) => it.label)).toEqual(["Give it .slipbox/", "Cancel"]);
     await l.keys("enter");
     expect(l.app.loc).toMatchObject({ mode: "vault", root: loose });
     expect(existsSync(join(loose, ".slipbox", "config.toml"))).toBe(true);
@@ -6375,7 +6375,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("m");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toBe("Move notes/first.md to… — type to filter, ← → fold");
-    expect(list.filtered[0]!.item.label.trim()).toBe("▾ / (the vault's root)");
+    expect(list.filtered[0]!.item.label.trim()).toBe("▾ / (the root)");
     expect(list.filtered.find((e) => e.item.data === "notes")!.item.hint).toBe("here");
     await type(h, "projects");
     await h.keys("enter", "enter");
@@ -6495,7 +6495,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("y");
     h.app.selectInExplorer("projects");
     await h.keys(".");
-    expect(menu().items.map((it) => it.label)).toEqual(["New note here", "New folder here", "Rename", "Move to…", "Copy", "Cut", "Make it a vault", "Paste a copy of alpha.md here", "Delete"]);
+    expect(menu().items.map((it) => it.label)).toEqual(["New note here", "New folder here", "Rename", "Move to…", "Copy", "Cut", "Give it .slipbox/", "Paste a copy of alpha.md here", "Delete"]);
     await h.keys("p");
     expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
     // Not focused: no row button.
@@ -6536,23 +6536,23 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     const menu = h.app.overlay as ListOverlay;
     expect(menu.items.map((it) => [it.label, it.hint])).toEqual([
       ["Rename the folder", "r"],
-      ["Rename the vault", "R"], // beside its folder's
+      ["Name it", "R"], // beside its folder's
       ["Move to…", "m"],
       ["Copy", "y"],
       ["Cut", "x"],
       ["Make it a plain folder", "V"],
-      ["Delete the vault", "d"],
+      ["Delete the root", "d"],
     ]);
     await h.keys("R"); // its own case: not the folder's r
-    expect(prompt(h).label).toBe("rename the vault fixture-nested to: ");
+    expect(prompt(h).label).toBe("name fixture-nested, as pointers name it: ");
     await h.keys("escape");
     // d: the whole vault, said so.
     await h.keys("d");
-    expect(prompt(h).label).toMatch(/^Delete the vault fixture-nested \(nested-vault\/, 1 note\)\? 1 link to it will break\./); // by its path
+    expect(prompt(h).label).toMatch(/^Delete the root fixture-nested \(nested-vault\/, 1 note\)\? 1 link to it will break\./); // by its path
     await h.keys("escape");
     // R: the vault's name; its folder stays.
     await h.keys("shift+r");
-    expect(prompt(h)).toMatchObject({ label: "rename the vault fixture-nested to: ", text: "fixture-nested" });
+    expect(prompt(h)).toMatchObject({ label: "name fixture-nested, as pointers name it: ", text: "fixture-nested" });
     await h.keys("ctrl+u");
     await type(h, "inner-box");
     await h.keys("enter", "enter");
@@ -6641,13 +6641,13 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("space", "v", "u");
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true);
     await h.keys("space", "v", "shift+m"); // this vault isn't nested in another
-    expect(h.app.messages.at(-1)!.text).toContain("isn't inside another vault");
+    expect(h.app.messages.at(-1)!.text).toContain("isn't inside another root");
     await h.keys("space", "n", "shift+y");
     expect(h.app.view!.buf.rel).toBe("notes/alpha-copy-2.md");
     // A note at the root has no folder for space d.
     await h.app.run("note.open index.md");
     await h.keys("space", "d", "r");
-    expect(h.app.messages.at(-1)!.text).toContain("index.md is at the vault's root");
+    expect(h.app.messages.at(-1)!.text).toContain("index.md is at the root");
     // With the explorer focused: its selected row — a folder for space d, a note for space n, a vault for space v.
     const e = await at(root, "projects");
     await e.keys("space", "d", "r");
@@ -6658,7 +6658,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(prompt(e).label).toBe("give projects/ its .slipbox/, called (empty: no name): ");
     const v = await at(root, "nested-vault");
     await v.keys("space", "v", "n");
-    expect(prompt(v).label).toBe("rename the vault fixture-nested to: ");
+    expect(prompt(v).label).toBe("name fixture-nested, as pointers name it: ");
     await v.keys("escape", "space", "v", "shift+m");
     expect((v.app.overlay as ListOverlay).title).toMatch(/^nested-vault\/ → a plain folder of fixture/);
   });
@@ -6720,7 +6720,7 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     await h.keys("m");
     const o = () => h.app.overlay as ListOverlay;
     const labels = () => o().filtered.map((e) => e.item.label.trim());
-    expect(labels()[0]).toBe("▾ / (the vault's root)");
+    expect(labels()[0]).toBe("▾ / (the root)");
     expect(labels()).toContain("▾ notes"); // where it is: unfolded, as in the explorer (no folders in it), marked, selected
     expect(o().filtered[o().selected]!.item).toMatchObject({ data: "notes", hint: "here" });
     expect(labels()).toContain("▸ projects"); // folded, as in the explorer
@@ -7652,6 +7652,8 @@ describe("git worktrees in the TUI (17.19)", () => {
     await h.app.run(`folder.name r${tag}`);
     expect(readFileSync(join(repo, ".slipbox", "config.toml"), "utf8")).toContain(`name = "r${tag}"`);
     expect(h.app.messages.at(-1)!.text).toContain(`is named r${tag}`);
+    expect(h.app.loc.name).toBe(`r${tag}`); // shown by it from now on
+    expect(statusRow(h.frame())).toContain(`r${tag}`);
     // :open with a pointer: the note in the copy links open.
     await h.app.run(`note.open slipbox://f${tag}/n.md`);
     expect(h.app.view!.buf.abs).toBe(join(two, "n.md"));

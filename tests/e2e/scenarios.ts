@@ -422,7 +422,7 @@ const CORE: Scenario[] = [
       await s.status("home.md");
       // The history: this window's timeline, and the handbook read in the other tab, under recent.
       await leader(s, "h", "h");
-      await s.see("recent in this vault");
+      await s.see("recent here");
       await s.see("operations-handbook.md");
       await s.keys("escape");
       await s.keys("ctrl+t");
@@ -1595,11 +1595,11 @@ const CORE: Scenario[] = [
       await s.status("FILES");
       await explorerRow(s, "outreach");
       await s.keys("shift+r");
-      await s.see("rename the vault outreach to:");
+      await s.see("name outreach, as pointers name it:");
       await s.keys("escape");
       await s.keys("m");
       await s.see("Move outreach/ to…");
-      await s.see("(the vault's root)");
+      await s.see("(the root)");
       await s.type("handbo");
       await s.keys("enter");
       await s.see(/outreach\/ → handbook\/outreach\//);
@@ -1618,7 +1618,7 @@ const CORE: Scenario[] = [
       await explorerRow(s, "logs");
       // Its menu has it; v does it: the name asked, a distinct one offered.
       await s.keys(".");
-      await s.see(/Make it a vault +v/);
+      await s.see(/Give it \.slipbox\/ +v/);
       await s.keys("v");
       await s.see("make logs/ a vault named:");
       await s.see("› halden-logs");
@@ -1688,7 +1688,7 @@ const CORE: Scenario[] = [
       await s.see("make people/ a vault named:");
       await s.keys("escape");
       await leader(s, "v", "shift+m");
-      await s.message("isn't inside another vault");
+      await s.message("isn't inside another root");
     },
   },
   {

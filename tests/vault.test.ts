@@ -3240,7 +3240,7 @@ describe("freshness and coverage (20.10)", () => {
     expect(lines.join("")).toMatch(/\nhome {6}background index\b/);
     const { describeBackground } = await import("../src/core/autoindex.ts");
     expect(describeBackground({ on: false, found: 0, indexed: 0, left: 0, finished: null, started: null })).toBe("background index off ([index] background)");
-    expect(describeBackground({ on: true, found: 2, indexed: 1, left: 7, finished: null, started: "x" })).toBe("background index: 2 vaults found so far, 7 folders left");
+    expect(describeBackground({ on: true, found: 2, indexed: 1, left: 7, finished: null, started: "x" })).toBe("background index: 2 roots found so far, 7 folders left");
   });
 
   test("a drive unplugged: its roots unavailable, not gone — kept, never pruned, and a link into one says why it's broken", async () => {

@@ -57,8 +57,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/daily/2026-09-22.md`, `work/kestrel/docs/runbooks/deploy.md` (rendering.md Inline, tabs; regressions tabs)
 - Links: inline, with title, angle-bracket target with spaces, relative path, #anchor, external URL, mailto, empty
   target — `notes/reading/list.md`, `work/kestrel/docs/qa/links.md` (rendering.md Links; links.test)
-- Vault form: \[\](path.md) and \[path.md\](path.md) show the path; other vault shows 'vault:path' —
-  `hobbies/cooking/Home.md`, `notes/index.md`, `notes/research/link-styles.md` (rendering.md Vault form (20.12))
+- What the file says: \[\](path.md) and \[path.md\](path.md) show the path as written; another root's file too, never
+  a name:path form — `hobbies/cooking/Home.md`, `notes/index.md`, `notes/research/link-styles.md` (rendering.md 21.9)
 - Reference links \[text\]\[label\], \[label\]\[\], \[label\] and definitions (case-insensitive, duplicate labels first
   wins, unused, undefined) — `notes/reading/list.md`, `work/kestrel/CHANGELOG.md` (rendering.md definition; render.test
   review cycle 4)
@@ -473,8 +473,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   'following a path link's fragment')
 - lsp.hover / shift+k on link in note and g d / g r — `notes/research/link-styles.md`,
   `work/kestrel/src/routes/share.ts` (lsp.hover/definition/references; test 'in a note slipbox answers itself')
-- link target completion after \]( with vault paths, other-vault name:path, encoding — `notes/index.md`,
-  `work/kestrel/docs/architecture.md` (tui.md A link's target (20.13))
+- link target completion after \]( with this root's paths, another root's by its path (a pointer written into a named
+  folder), encoding — `notes/index.md`, `work/kestrel/docs/architecture.md` (tui.md A link's target (20.13, 21.5))
 - relink and convert-links (preview, ambiguous pick, unsaved refused, undone) — `notes/daily/2026-09-22.md`,
   `notes/projects/kestrel-v2-3.md` (link.relink, link.convert; tests 'the converter from the TUI')
 - links lists outgoing links with kind, target, heading, text, line, column, end, status —
@@ -1136,7 +1136,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 - back/forward stacks across link follows, heading jumps, note opens, 200 deep, kept 50 in session —
   `notes/daily/2026-10-01.md`, `notes/index.md` (tui.md History 3.6; history.\*)
-- history list: here marked, click selects, enter jumps, recent in this vault section with 'tab N' and times —
+- history list: here marked, click selects, enter jumps, recent here section with 'tab N' and times —
   `notes/daily/2026-10-01.md`, `notes/projects/kestrel-v2-3.md` (history.list; tests 'history: notes read in other
   tabs...' )
 - history lists notes read lately, newest first with line, exists:false for deleted, open tabs, activeTab, current —
@@ -1368,8 +1368,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 - Info panel sections File/Properties/Tags/Links; folding; enter opens what a row names; y copies; names a third of
   pane — `notes/people/aiko-tanaka.md`, `notes/projects/kestrel-v2-3.md` (note.info 3.19)
-- info lists vault, mode, instance, collection, copies, paths, versions, config files applied in order, index written,
-  background — `Downloads/notes-backup-2026-07/index.md`, `hobbies/photography/.slipbox/config.toml`,
+- info lists root, mode, name, its copies, the link convention, paths, versions, config files applied in order, index
+  written, background — `Downloads/notes-backup-2026-07/index.md`, `hobbies/photography/.slipbox/config.toml`,
   `work/kestrel/README.md` (cli.md Where a command works; configuration.md; cli.test 'info')
 - Root markers: .git, .slipbox, .obsidian, .zk; walk.root\_markers yours only; \$HOME and / never a root —
   `notes/index.md`, `work/kestrel/README.md` (cli.md Where a command works (21.1); configuration.md \[walk\])
@@ -1437,8 +1437,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   (Renames 17.15)
 - heading rename (space n h, outline r): every link to #heading rewritten — `notes/projects/kestrel-v2-3.md`,
   `work/kestrel/docs/runbooks/sync-queue.md` (heading.rename 11.9)
-- vault rename: \[\[old:…\]\] links rewritten, old name kept; undo last rename (space v shift+u) refused when a file
-  changed — `hobbies/photography/.slipbox/config.toml`, `notes/.slipbox/config.toml` (vault.rename; rename.undo 7.4)
+- naming a folder (slipbox name, space v n): its .slipbox/ name changed, the old kept, pointers by it still found;
+  undo last rename (space v shift+u) refused when a file changed — `hobbies/photography/.slipbox/config.toml`,
+  `notes/.slipbox/config.toml` (folder.name 21.10; rename.undo 7.4)
 
 ### trash
 
@@ -1466,20 +1467,20 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   18\.11)
 - switching vaults by link/backlink/picker/explorer; back returns through a chain; refused when unsaved; each vault
   keeps own tabs and config — `Downloads/stray-note.md`, `notes/index.md` (Switching vaults 17.10)
-- vault moved: asked 'did it move here?', moved takes positions/sessions/scratch, no isn't asked again, esc asks next
-  time, :vault-moved; moved worktree detected without asking — `Downloads/notes-backup-2026-07/.slipbox/config.toml`,
-  `notes/.slipbox/config.toml` (vault.moved 20.5)
-- vault names: two sharing a name get distinguishing folders (work.docs, home.docs), worktree name@branch, repo name vs
-  .slipbox name — `Downloads/notes-backup-2026-07/.slipbox/config.toml`, `work/kestrel/README.md` (Switching vaults
-  20\.6)
+- a named folder moved by hand: its sessions, scratch, trash and positions come along, nothing asked; two copies gone,
+  or an unnamed root, start fresh; a worktree moved by git found by its name — `notes/.slipbox/config.toml`,
+  `Downloads/notes-backup-2026-07/.slipbox/config.toml` (21.8)
+- root names: .slipbox name over the remote's, never the folder's own; unnamed shown by path; worktree name@branch —
+  `hobbies/cooking/Home.md`, `work/kestrel/README.md` (21.6, 21.9)
 - git repo is a vault; Obsidian (.obsidian) and zk (.zk) markers; root\_markers; nested repo inside vault marked in
   explorer — `hobbies/cooking/Home.md`, `notes/index.md` (tui.md A git repository is a vault 20.3, 21.1)
-- launcher: slipbox on plain folder shows known vault list; plain folder explorer with ..; \~ and / one level at a time
-  — `Downloads/stray-note.md`, `notes/index.md` (The launcher 17.14, 20.22)
+- launcher: slipbox on plain folder shows the named folders, seen last first; plain folder explorer with ..; \~ and /
+  one level at a time — `Downloads/stray-note.md`, `notes/index.md` (The launcher 17.14, 20.22, 21.10)
 - background auto-index of home folder, idle only, resumable, daily — `Downloads/notes-backup-2026-07/index.md`,
   `notes/index.md` (The background auto-index 20.9)
-- vault list ordering: opened first then auto-index found; copies grouped (clone, worktree, shared remote/first commit)
-  — `Downloads/notes-backup-2026-07/index.md`, `notes/.slipbox/config.toml` (tests 20.4)
+- folders list: each named folder once (its worktrees are branches, not copies), the copy its links open, seen last
+  first; :folders-default picks the copy — `Downloads/notes-backup-2026-07/index.md`, `notes/.slipbox/config.toml`
+  (21.6, 21.10)
 
 ### git
 
@@ -1662,7 +1663,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/projects/kestrel-v2-3.md` (cli.test 'a symlink out of the vault is never read')
 - Names that begin with a dash read after `--` — `.build/extras.toml`, `notes/daily/2026-10-06.md` (cli.md Arguments;
   cli.test)
-- Naming resolution order: existing path, vault:path, vault-relative, note name, data file —
+- Naming resolution order: existing path, a pointer (slipbox://name/path), root-relative, note name, data file —
   `notes/meetings/Meeting: Q3.md`, `notes/people/contacts.md` (cli.md Naming notes)
 
 ### write
@@ -1710,8 +1711,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - resolve a path, name, heading, block, external, ambiguous, unresolved; with --from gives href —
   `notes/meetings/Meeting: Q3.md`, `work/kestrel/docs/architecture.md` (cli.md resolve; cli.test 'resolve follows
   names')
-- vault:path forms: shown/href, folder, heading; ambiguous vault name candidates — `notes/index.md`,
-  `notes/projects/halden-outreach.md` (cli.md vault:path in and out (20.20); Resolve)
+- pointers as arguments: shown/href, folder, heading; the old name:path form exit 3 with suggest — `notes/index.md`,
+  `notes/projects/halden-outreach.md` (cli.md Naming notes (21.10, 21.12); Resolve)
 
 ### diagnostics
 
@@ -1797,23 +1798,18 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### init
 
-- init \[dir\] makes a vault: .slipbox/ with id and name; --name N, --private, --dry-run —
+- init \[dir\] gives a folder .slipbox/: settings; with --name N, a name and an id; --private, --dry-run —
   `Downloads/notes-backup-2026-07/index.md`, `notes/research/route-engine-spike/README.md` (cli.md init (18.11);
   Stability table)
 - deinit \<folder\> makes a nested vault a plain folder: .slipbox/ to the parent's trash; refused for git checkouts;
   trash restore remakes it — `notes/research/route-engine-spike/README.md`, `work/product/handbook/how-we-write.md`
   (cli.md A folder made a vault (18.11))
 
-### vaults
+### folders
 
-- vaults lists machine's vaults: key, instance, id, kind, name, shown, path, seen, indexed, exists, unavailable,
-  worktree — `Downloads/notes-backup-2026-07/index.md`, `notes/.slipbox/config.toml` (cli.md vaults; Freshness)
-
-### vault-moved
-
-- vault-moved: a copy moved/copied? lists candidate copies; with a path takes the old instance and state; --not
-  declines — `Downloads/notes-backup-2026-07/.slipbox/config.toml`, `notes/.slipbox/config.toml` (cli.md Where a
-  command works (20.4))
+- folders lists the named folders: name, pointer, remote, id, private, old names, copies (available, found), the one
+  links open; folders default \<name\> \<path\> — `Downloads/notes-backup-2026-07/index.md`,
+  `notes/.slipbox/config.toml` (cli.md Named folders' words 21.10)
 
 ### config
 
@@ -2192,7 +2188,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Branch switch is not a merge — `.build/kestrel.toml`, `work/kestrel/docs/sync.md` (5.9; test 'a branch switch isn't a
   merge'; 'the index written on another branch')
 - Detached HEAD — `.build/kestrel.toml` (5.9, status line shows branch; slipbox://x@branch)
-- Worktree: same repo, separate instance — `.build/kestrel.toml`, `notes/weekly/2026-W41.md`,
+- Worktree: same repo, its own state by its path — `.build/kestrel.toml`, `notes/weekly/2026-W41.md`,
   `work/kestrel/src/sync/retry.ts` (17.19; test 'a worktree without .slipbox/…'; 'links: x:path from elsewhere means
   the main checkout')
 - Pointer @branch with a worktree on it vs not — `.build/kestrel.toml`, `work/kestrel/docs/sync.md` (21.x 'A branch')

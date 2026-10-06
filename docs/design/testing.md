@@ -47,7 +47,7 @@ slowly under a loaded test run, so fixed sleeps made them flaky.
 
 **Isolation.** Every test file points `XDG_STATE_HOME`, `XDG_CACHE_HOME`, `XDG_CONFIG_HOME` and
 `XDG_DATA_HOME` (tools installed) at its own temp directory and drops `SLIPBOX_CONFIG` (which would
-win over them), so a developer's config, editor, themes, session or list of vaults never leak into
+win over them), so a developer's config, editor, themes, session or list of roots never leak into
 a run; copies go to a file, never the clipboard (`SLIPBOX_CLIPBOARD=file`). TUI tests work on a
 temp copy of the fixture vault, so they can write, rename and delete notes.
 
@@ -119,7 +119,7 @@ bun run e2e find replace     # only the scenarios whose names contain these
 
 - **Isolated.** Each scenario gets a fresh copy of the demo vault — or the reference set built, its
   home folder as `$HOME` (`home`) — and its own config, state, cache and data directories (its own
-  list of vaults). Nothing in the repo or in your own setup is touched, and a given pane that is
+  list of roots). Nothing in the repo or in your own setup is touched, and a given pane that is
   running slipbox is refused rather than typed into. A scenario can put files beside the vault
   (`beside`: another vault, a plain folder), run the CLI before slipbox starts (`setup`: `init` that
   vault), and start slipbox another way: elsewhere (`startAt`), with no path (`startAt: null`), from

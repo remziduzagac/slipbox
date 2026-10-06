@@ -653,7 +653,7 @@ removals as their replacements land, the sweep last.*
 | 21.10 | **Done.** Words: `folders [default]`, `name`, pointers as args; `root`/`name` in JSON; `--scope here` |
 | 21.11 | **Done.** Repairs: the relink offered after moves made elsewhere; typed `research:x.md` flagged and fixed |
 | 21.12 | **Done.** Gone: `vault:path`, `previous_names`, collections, instances, display names, `vault-moved`, vaults |
-| 21.13 | The sweep: the docs, the skill, the README, the e2e scenarios |
+| 21.13 | **Done.** The sweep: the docs, the skill, the README, the e2e scenarios (written; to run when approved) |
 
 `21.1` comes first: `/`, wikilinks and conventions each read a root. `21.2`–`21.5` change no behaviour for relative
 links, which stay as they are. `21.6` and `21.7` replace what vaults gave links between folders before `21.12` removes
