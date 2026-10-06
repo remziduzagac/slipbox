@@ -153,7 +153,7 @@ export function wikiTargetStart(source: string, at: number): number | null {
 
 /**
  * The files a link from this note could reach (20.13): this vault's notes and files, each by its path
- * here, and (a markdown link's) other vaults' notes, each as `name:path` — the full path beside each,
+ * here, and (a markdown link's) other vaults' notes, each by its path as shown (21.9) — the full path beside each,
  * and either typed narrows. Picked, it's written as the root's convention writes it in `style` (21.5);
  * a wikilink reaches only its own root's (21.3).
  */

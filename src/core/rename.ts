@@ -19,7 +19,6 @@ import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
 import { forgetVault, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
 import { openVault } from "./reach.ts";
-import { vaultForm } from "./names.ts";
 import { copyAvailable, folderIdentity, pointerName, readFolders, travelTogether } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { parseHosted } from "./hosting.ts";
@@ -279,49 +278,6 @@ function safeDecode(s: string): string {
 }
 
 // -------------------------------------------------------------------------------------------
-// Frontmatter: `previous_names` spliced in (7.6)
-
-/** A YAML scalar for a name: bare when that's safe, else quoted. */
-function yamlName(name: string): string {
-  return /^[\p{L}\p{N}][\p{L}\p{N} ._-]*$/u.test(name) && !/ $/.test(name) ? name : JSON.stringify(name);
-}
-
-/** Add `name` to the note's frontmatter `previous_names`, splicing the text; the rest unchanged. */
-export function addPreviousName(text: string, name: string): string {
-  const bom = text.startsWith("\ufeff") ? "\ufeff" : "";
-  const body = text.slice(bom.length);
-  const nl = body.includes("\r\n") ? "\r\n" : "\n";
-  const fm = /^---[ \t]*\r?\n([\s\S]*?)(\r?\n)(---|\.\.\.)[ \t]*(\r?\n|$)/.exec(body);
-  if (!fm) return `${bom}---${nl}previous_names: [${yamlName(name)}]${nl}---${nl}${body}`;
-  const inner = fm[1]!;
-  const start = body.indexOf(inner);
-  const key = /^previous_names:[ \t]*(.*)$/m.exec(inner);
-  let next: string;
-  if (!key) next = `${inner}${nl}previous_names: [${yamlName(name)}]`;
-  else {
-    const value = key[1]!.replace(/\r$/, "").trim();
-    const keyEnd = key.index + key[0].replace(/\r$/, "").length;
-    if (value.startsWith("[") && value.endsWith("]")) {
-      const items = value.slice(1, -1).split(",").map((x) => x.trim().replace(/^["']|["']$/g, ""));
-      if (items.includes(name)) return text;
-      const close = key.index + key[0].lastIndexOf("]");
-      next = `${inner.slice(0, close)}${items.filter(Boolean).length ? ", " : ""}${yamlName(name)}${inner.slice(close)}`;
-    } else if (value === "") {
-      // A block list: after its last item, indented like it.
-      const rest = inner.slice(keyEnd);
-      const items = /^((?:\r?\n[ \t]*-[ \t]*.*)*)/.exec(rest)![1]!;
-      if (items.split(/\r?\n/).some((l) => l.replace(/^[ \t]*-[ \t]*/, "").trim().replace(/^["']|["']$/g, "") === name && l.trim())) return text;
-      const indent = /\r?\n([ \t]*)-/.exec(items)?.[1] ?? "  ";
-      next = `${inner.slice(0, keyEnd + items.length)}${nl}${indent}- ${yamlName(name)}${inner.slice(keyEnd + items.length)}`;
-    } else {
-      if (value.replace(/^["']|["']$/g, "") === name) return text;
-      next = `${inner.slice(0, key.index)}previous_names: [${value}, ${yamlName(name)}]${inner.slice(keyEnd)}`;
-    }
-  }
-  return `${bom}${body.slice(0, start)}${next}${body.slice(start + inner.length)}`;
-}
-
-// -------------------------------------------------------------------------------------------
 // Plans
 
 /** Where a link's file is, as shown (21.9): its path from this root, else from home (`~/…`), else absolute. */
@@ -420,7 +376,7 @@ function cleanTarget(g: Graph, input: string): string {
 /**
  * Plan renaming or moving a note (or any file of the vault) to `toRel` (7.1, 17.15): every link to
  * it — in this vault, and in other vaults' indexes — rewritten; its own relative links fixed for
- * its new folder; its old name added to its `previous_names` when the name changes.
+ * its new folder. Nothing else is written into it: links reach it by its path (21.12).
  */
 export function planNoteRename(g: Graph, fromRel: string, toInput: string): RenamePlan {
   const isNote = g.notes.has(fromRel);
@@ -480,7 +436,7 @@ function foldersMoving(g: Graph, from: string, to: string): Map<string, string> 
 /**
  * The plan for moving files (`moves`: vault paths, old → new): each link to a moved file rewritten
  * from where its file will be, each moved note's relative links to what stays put rewritten from
- * where it will be; a single note renamed keeps its old name (`previous_names`).
+ * where it will be.
  */
 function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "kind" | "from" | "to" | "move">, folders = new Map<string, string>()): RenamePlan {
   const c = new Collector(g);
@@ -532,21 +488,6 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
     }
   }
   const files = c.result();
-  // One note renamed: its old name, kept where links this machine can't reach will look (17.7).
-  if (head.kind === "note") {
-    const [fromRel, toRel] = [...moves][0]!;
-    const fromAbs = abs(fromRel);
-    const oldName = posix.basename(fromRel).replace(NOTE_EXT, "");
-    const newName = posix.basename(toRel).replace(NOTE_EXT, "");
-    const moved = files.find((f) => f.abs === fromAbs);
-    const ownText = moved?.next ?? (g.notes.has(fromRel) ? readText(fromAbs).text : null);
-    const ownNext = ownText !== null && g.config.rename.previous_names && normKey(newName) !== normKey(oldName) ? addPreviousName(ownText, oldName) : ownText;
-    if (ownText !== null && ownNext !== ownText) {
-      if (moved) moved.next = ownNext!;
-      else files.push({ abs: fromAbs, shown: fromRel, vault: null, edits: [], text: ownText, next: ownNext! });
-      files.find((x) => x.abs === fromAbs)!.edits.push({ line: 1, before: "(frontmatter)", after: `previous_names: + ${oldName}` });
-    }
-  }
   const warnings = dirtyTrees([head.move!.from, ...files.map((f) => f.abs)]);
   return { ...head, moves: [...moves], files, warnings, skipped: c.skipped };
 }

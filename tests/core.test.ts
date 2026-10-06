@@ -188,6 +188,14 @@ describe("config (0.9)", () => {
     expect(r.warnings.join("\n")).toContain("bogus");
     expect(r.warnings.join("\n")).toContain("render.inset");
   });
+  test("a retired section says why, not \"unknown key\" (21.12)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
+    const file = join(dir, "c.toml");
+    writeFileSync(file, '[rename]\nprevious_names = true\n');
+    const w = loadConfig({ configFile: file }).warnings.join("\n");
+    expect(w).toContain('"rename" is retired — renames no longer write a note\'s old name into it');
+    expect(w).not.toContain("unknown key");
+  });
   test("vault config wins over user config", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
     const user = join(dir, "user.toml");

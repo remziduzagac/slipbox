@@ -666,8 +666,8 @@ past theirs), so the content behind never runs up to the edge.
   it. Without an index (`~` or `/` opened as a plain folder, `[search] engine = "scan"`) the files are scanned, and
   the title says so.
   **By vault** (`20.16`): `ctrl+a` widens it to the vaults linked to or from this one, their hits under a `linked
-  vaults` divider as `name:path:line`; again, to every vault this machine knows; again, back to this one. The title
-  says which. `enter` on another vault's hit goes into it, at that line.
+  vaults` divider as `path:line` (`21.9`: from home, else absolute); again, to every vault this machine knows; again,
+  back to this one. The title says which. `enter` on another vault's hit goes into it, at that line.
 - **Filtering** (`3.16`): each space-separated word as typed — its letters together, never one by
   one — and every word, in any order (`hand oper` finds `handbook/operations-handbook.md`); smart
   case, word by word. Ranked by where each word lands: in the label over its description, in the
@@ -1162,11 +1162,12 @@ text. Only the last ask's answer is shown: one arriving after a later ask is dro
 or leaving insert closes it. Both are insert mode's, and leaving it closes both.
 
 **A link's target** (`20.13`) in a note is completed by slipbox itself, server or not: right after `](`, the files the
-link could reach — this vault's notes and files by their path here, other vaults' notes (as of their last index) as
-`name:path`, the note itself not — each with its full path beside it, this vault's first. What's typed narrows by
-either form. `tab` or `enter` writes it as the root's convention writes a markdown link's path (`21.5`: relative or
-from the root, with or without `.md`), encoded as a link's path is (`a%20b.md`); another vault's, the path from the
-note. Right after `[[` (or `![[`), this root's notes and files, each shown as the wikilink would write it — a name
+link could reach — this vault's notes and files by their path here, other vaults' notes (as of their last index) by
+theirs (`21.9`: from home, else absolute), the note itself not — each with its full path beside it, this vault's
+first. What's typed narrows by either form. `tab` or `enter` writes it as the root's convention writes a markdown
+link's path (`21.5`: relative or from the root, with or without `.md`), encoded as a link's path is (`a%20b.md`);
+another vault's, its pointer when a named folder holds it that doesn't travel with this one (`21.7`), else the path
+from the note. Right after `[[` (or `![[`), this root's notes and files, each shown as the wikilink would write it — a name
 where it reaches the note from here, else its path — with its path beside it. Typing past the target (`)`, a space,
 `]`, `|`, `#`) closes it. Same keys as above.
 

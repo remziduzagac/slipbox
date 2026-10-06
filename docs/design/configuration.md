@@ -18,9 +18,9 @@ the settings; in the user file it's ignored with a warning:
 ```toml
 [vault]
 id = "3f9c2a7be1d04c55"        # random, made by `slipbox init`, never changed: keys the cache and state
-name = "notes"                 # shown as notes:page (20.6); the repository's or folder's name until declared
+name = "notes"                 # what pointers name it by: slipbox://notes/page.md (21.6, 21.7)
 aliases = ["n"]                # other names it answers to
-previous_names = ["old-notes"] # names it had: a fallback only (17.7)
+previous_names = ["old-notes"] # names it had: a pointer by one still finds it, said so (21.10)
 ```
 
 **What only you can set.** A vault file — the vault's own or an enclosing one's — comes with whatever you clone, so it
@@ -39,7 +39,7 @@ it parses again.
 slipbox runs correctly with no config at all. None of these crash it:
 
 - a broken file
-- an unknown key
+- an unknown key, or a retired one (`[rename]`, gone in `21.12`: a renamed note keeps no old name), which says why
 - a wrong type
 - a value outside its set (`glyphs`, `show_urls`, `location`, `ui.lines`, `editor.edit_in`,
   `files.show`)
@@ -106,9 +106,6 @@ leader = "space"               # the key `leader` means in [keys] and [groups]
 which_key = true               # the popup for pending key sequences
 which_key_delay_ms = 500       # before it shows for prefixes other than the leader; also how long a
                                # key that is both a binding and a prefix waits before it runs
-
-[rename]
-previous_names = true          # a renamed note keeps its old name in its frontmatter (17.15)
 
 [capture]
 location = "state"             # state (never committed) | vault

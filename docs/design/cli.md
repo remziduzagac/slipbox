@@ -128,10 +128,10 @@ A link's `line` and `column` are where it starts and `end` (`{line, column}`) wh
 character. Columns count from 1 in UTF-16 units, as editors and LSP count them (`🌍` is two).
 
 `resolve` treats a target with a scheme (`https:`) as external only with no spaces, when no note has that name and no
-vault (`vault:path`): `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A markdown link resolves to the note's own path
-whatever case the link uses (`[x](Note.md)` → `note.md`), so it counts as a backlink. A markdown link given whole,
-`resolve '[a](../home.md)' --from people/x.md`, resolves as markdown (a path from `--from`'s folder), as `links` and
-the TUI do; never by name.
+folder has the part before `:` (that's the old form, `21.11`): `resolve "Meeting: Q3"` finds `Meeting: Q3.md`. A
+markdown link resolves to the note's own path whatever case the link uses (`[x](Note.md)` → `note.md`), so it counts as
+a backlink. A markdown link given whole, `resolve '[a](../home.md)' --from people/x.md`, resolves as markdown (a path
+from `--from`'s folder), as `links` and the TUI do; never by name.
 Backlinks exclude a note's links to itself, and carry how each link is written, so a caller can
 rewrite them.
 
@@ -143,13 +143,14 @@ rewrite them.
    walking up from the file. A file the walk excludes is still read when named explicitly, as in
    the TUI: one git-ignored or under a hidden folder is reached, and joins the vault's index from
    then on (`20.8`); one under `node_modules` or `walk.exclude` never joins it.
-2. `vault:path` (`20.20`): a file of a vault this machine knows, by the name it's shown with (`20.6`: `research`,
-   `work.docs`, `pathfinder@refactor`; any case) — or by its own or an old one when no other vault has it — and its
-   path from that vault's root. It's that file's path from then on, so the command works in that vault, as with
-   the path: `slipbox backlinks research:algorithms/dijkstra.md` from anywhere. A path that climbs out (`..`) names
-   nothing; a part before `:` that names no vault leaves it a name (`Meeting: Q3`); an existing file by that very
-   name wins. Every note argument takes it (`find`'s second, each of `context`'s), and `--from`; `mv` and `cp` take
-   a destination so too, in the same vault (another vault's is exit 5).
+2. A pointer (`21.10`): `slipbox://research/algorithms/dijkstra.md`, the file in that named folder's copy here
+   (`21.6`), found as a link's path is (no extension, a folder). It's that file's path from then on, so the command
+   works in its folder, as with the path: `slipbox backlinks slipbox://research/algorithms/dijkstra.md` from
+   anywhere. Exit 3 and why when the folder isn't here (or its branch isn't checked out), 4 when two folders have the
+   name. Every note argument takes it (`find`'s second, each of `context`'s), and `--from`; `mv` and `cp` take their
+   source so, the destination a path in that folder (a pointer there is exit 5). The old form, `research:x.md`
+   (`20.20`, gone in `21.12`), is exit 3 with its pointer when a folder has that name; else it stays a name
+   (`Meeting: Q3`). An existing file by that very name wins.
 3. A vault-relative path.
 4. A note name: its file name without the extension (or a declared alias). Collisions then go to the shortest path,
    and a real tie exits 4. That's how a command names a note; links in notes are paths (`20.2`).
@@ -355,13 +356,13 @@ filesystem's root — or a `file://` URL; a file, not an external link) resolves
 are absolute, and `vault` names it. A path that reaches nothing is broken, whatever moved (`20.2`). A backlink from
 another vault has an absolute `from` and its `vault`.
 
-**`vault:path` in** (`20.20`; `21.12` removes it): `shown` is the file by its path (`21.9`) — from this root, else
-`~/…`, else absolute — in `resolve`, in each of `links`' and `backlinks`', and in their text output; another vault's
-name is beside it, as `vault`. `resolve` still takes the `name:path` form, a folder included, `#heading` after it:
-`slipbox resolve research:algorithms/dijkstra.md#Relaxation --from notes/plan.md` gives `href`, the relative path
-a link from `--from` carries (`../../research/algorithms/dijkstra.md#relaxation`, encoded as a link is), to write.
-With `--from`, every resolve gives `href`; without, it's null. `--from` also says which vault the link is resolved
-in, as a note argument does. The form is never written into a file: links stay paths.
+**Shown, and `href`:** `shown` is the file by its path (`21.9`) — from this root, else `~/…`, else absolute — in
+`resolve`, in each of `links`' and `backlinks`', and in their text output; another folder's name is beside it, as
+`vault`. With `--from`, every resolve gives `href`, the relative path a link from `--from` carries, encoded as a link
+is: `slipbox resolve slipbox://research/algorithms/dijkstra.md#Relaxation --from notes/plan.md` gives
+`../../research/algorithms/dijkstra.md#relaxation`. Without `--from`, it's null. `--from` also says which root the
+link is resolved in, as a note argument does. The `name:path` form (`20.20`) is gone (`21.12`): unresolved, exit 3,
+with `suggest`, its pointer.
 
 ## Git (plans `5.11`–`5.14`)
 
@@ -415,7 +416,7 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   `--scope linked` adds the vaults linked to or from it — those its notes link into, those whose notes (as of their
   index) link here; `--scope all` every other vault this machine knows. This vault's hits come first, then the
   others' by score (`--limit` each), each searched with its own index (a scan where it has none). A hit of another
-  vault has `vault` (its name) and `abs`, and `shown` is `name:path`; `vaults` lists those searched.
+  vault has `vault` (its name) and `abs`, and `shown` is its path (`21.9`); `vaults` lists those searched.
 - **The query**: words (all of them); `"a phrase"`; `prefix*`; `-word` (none of it); `title:word` (in the title or
   an alias); `#tag` or `tag:x` (notes carrying the tag, or one nested under it); `path:folder/` (files whose path
   starts so). Nothing is passed on as FTS5 syntax: every word is quoted. Accents and case don't count. Words are
@@ -463,9 +464,9 @@ grammars are loaded before it plans, so their comments count however fresh the p
 - **Byte ranges, never re-serialised** (`7.6`): each edit replaces the target at the line and column the index
   recorded (of the links there with that target, the nearest — so the same text in code nearby is left). A file
   whose link isn't there any more (another vault's index older than its file) is skipped, and said so.
-- **The note itself:** its own relative links follow it to its new folder; when its name changes, its old name is
-  added to its frontmatter's `previous_names` (`rename.previous_names`), spliced in. A redirect is kept too (`17.12`):
-  evidence for `relink` to fix a link this rename couldn't reach, never a way to resolve it.
+- **The note itself:** its own relative links follow it to its new folder; nothing else is written into it — no
+  `previous_names` (`21.12`; `[rename]` is retired). A redirect is kept (`17.12`): evidence for `relink` to fix a link
+  this rename couldn't reach, never a way to resolve it.
 - **Refused, nothing written** (exit 5): a target that exists, a path outside the vault or hidden, a file changed
   between the plan and the writing.
 - **Git** (`7.3`): a root it writes to whose tree already has changes is named in `warnings`; the rename goes ahead.

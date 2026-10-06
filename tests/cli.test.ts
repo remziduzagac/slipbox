@@ -324,7 +324,7 @@ describe("the vault and the tool", () => {
     writeFileSync(join(dir, "index.md"), "[plan](notes/plan.md) and [p](notes/plan.md)\n");
     expect(slipbox(["init", dir, "--name", "cliren"]).code).toBe(0);
     const dry = slipbox(["mv", "plan", "roadmap", "--dry-run"], { cwd: dir });
-    expect(dry.out).toContain("would rename notes/plan.md → roadmap.md: 2 changes in 2 files");
+    expect(dry.out).toContain("would rename notes/plan.md → roadmap.md: 1 change in 1 file"); // no old name written into it (21.12)
     expect(dry.out).toContain("- [plan](notes/plan.md) and [p](notes/plan.md)");
     expect(dry.out).toContain("+ [plan](roadmap.md) and [p](roadmap.md)");
     expect(existsSync(join(dir, "notes", "plan.md"))).toBe(true);

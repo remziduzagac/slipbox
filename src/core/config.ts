@@ -100,11 +100,6 @@ export interface Config {
     which_key_delay_ms: number;
   };
   /** Renames (17.15). */
-  rename: {
-    /** A renamed note keeps its old name in its frontmatter's `previous_names`, so links this
-     *  machine can't reach still find it. */
-    previous_names: boolean;
-  };
   /**
    * The lint surface (3.21): your markdownlint-cli2's findings in notes — slipbox ships no linter.
    * `enabled`: "auto" when a markdownlint config is there (~/.markdownlint-cli2.jsonc, or the
@@ -263,7 +258,6 @@ export const DEFAULT_CONFIG: Config = {
     history_limit: 100,
   },
   input: { leader: "space", which_key: true, which_key_delay_ms: 500 },
-  rename: { previous_names: true },
   lint: { enabled: "auto", command: [] },
   capture: { location: "state", file: "scratch.md" },
   git: { base: "" },
@@ -281,6 +275,11 @@ export const DEFAULT_CONFIG: Config = {
   aliases: {},
   colors: {},
   groups: {},
+};
+
+/** Settings that were, and why they aren't: said once, never an unknown key's warning. */
+const RETIRED: Record<string, string> = {
+  rename: "renames no longer write a note's old name into it (21.12); links reach notes by their paths",
 };
 
 /** Keys whose values come from a fixed set. Anything else is a warning and the default stays. */
@@ -536,6 +535,10 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       else if (typeof value === "string") out[key] = value;
       else if (table) out[key] = merge((out[key] as Record<string, string> | undefined) ?? {}, value as Record<string, unknown>, file, `keys.${key}`, warnings);
       else warnings.push(`config: ${file}: ${path} must be a string`);
+      continue;
+    }
+    if (RETIRED[path]) {
+      warnings.push(`config: ${file}: "${path}" is retired — ${RETIRED[path]}`);
       continue;
     }
     if (!(key in out)) {

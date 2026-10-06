@@ -55,9 +55,10 @@ the user gets a conflict prompt. Tell them, or ask, before writing it.
 
 ## Reading notes
 
-`<note>` is a path (relative to the current directory or the vault), a file of another vault as `vault:path`
-(`research:algorithms/dijkstra.md`, the vault named as `slipbox vaults` shows it; the command then works in that
-vault), or a note name (its file's, or an alias) — how a command names a note; links themselves are paths.
+`<note>` is a path (relative to the current directory or the vault), a named folder's file by its pointer
+(`slipbox://research/algorithms/dijkstra.md`, the name as `slipbox folders` shows it; the command then works in that
+folder), or a note name (its file's, or an alias) — how a command names a note; links themselves are paths.
+`research:x.md` (the old form) is no longer read: exit 3, the pointer in its message.
 
 ```bash
 slipbox render <note> --plain            # readable text, tables laid out, no colour
@@ -117,7 +118,7 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
 slipbox resolve 'notes/alpha.md#Section Two' --from index.md --json
 # data: {status: "resolved", path, abs, heading, line, candidates}
 slipbox links <note> --json              # outgoing links, each with status and path
-slipbox backlinks <note> --json          # notes linking here: line, column, how each is written; `shown`: vault:path
+slipbox backlinks <note> --json          # notes linking here: line, column, how each is written; `shown`: its path
 slipbox links --all --json               # every link in the vault, each with `from`: the broken ones
 slipbox problems --json                  # broken and ambiguous links (where, why), and orphans: notes nothing links to
 slipbox problems --lint --json           # …and the user's markdownlint-cli2 findings: lint[{file, line, rule, …}]
@@ -127,7 +128,7 @@ slipbox footnotes <note> --json          # each footnote: label, text, definitio
 slipbox footnotes <note> add 12:30 'Source: the dome log'   # [^N] at line 12, column 30; its definition at the end
 slipbox footnotes <note> edit 3 'New text'   # also: rm <label>, rename <label> <new>; --if-unchanged <sha>
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
-slipbox resolve research:algorithms/dijkstra.md --from notes/plan.md --json   # data.href: the path to write in a link
+slipbox resolve slipbox://research/x.md --from notes/plan.md --json   # data.href: the relative path to a file there
 slipbox link <note> --from <note>        # a link to <note> as this folder writes them (wikilink or markdown, its path form)
 slipbox resolve slipbox://notes/inbox.md --json   # a pointer into a named folder: where it is on this machine
 slipbox folders --json                   # the named folders pointers use: each name, its copies, the one links open

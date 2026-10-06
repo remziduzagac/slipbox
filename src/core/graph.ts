@@ -64,7 +64,7 @@ export interface NoteEntry {
   tags: string[];
   /** Frontmatter `aliases` (and `alias`): names `[[…]]` reaches the note by, like its own (17.7). */
   aliases: string[];
-  /** Frontmatter `previous_names`: names it had; a fallback only (17.7). */
+  /** Frontmatter `previous_names`, as renames wrote them before 21.12: the converter reads them (21.3), links never. */
   previous: string[];
   /** Its content hash: a note that vanished and turns up elsewhere with it was moved (17.12). */
   hash: string;
@@ -355,7 +355,7 @@ export class Graph {
     return join(cacheDir(this.loc), "index.json");
   }
 
-  /** A file as it's shown from this vault (20.12): its path here, else `vault:path`, else its own path. */
+  /** A file as it's shown (21.9). */
   shownPath(abs: string): string {
     // By path (21.9): from this root (or the folder opened), else from home (`~/…`), else absolute.
     const rel = relative(this.root, abs);
@@ -899,7 +899,7 @@ export class Graph {
    * folder this machine knows has that name: not a link — said, with the pointer that is one.
    * Null when the part before `:` names no folder (`Meeting: Q3` is a note's name).
    */
-  private oldForm(target: string): Target | null {
+  oldForm(target: string): Target | null {
     const m = /^([^:/\s#]+):(?!\/\/)([^#]+)/.exec(target);
     if (!m) return null;
     const [, name, rest] = m as unknown as [string, string, string];

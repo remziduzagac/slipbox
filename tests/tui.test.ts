@@ -6039,7 +6039,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true); // a preview writes nothing
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
-    expect(readFileSync(join(root, "notes", "first.md"), "utf8")).toContain("previous_names: [alpha]");
+    expect(readFileSync(join(root, "notes", "first.md"), "utf8")).not.toContain("previous_names"); // nothing written into it (21.12)
     const index = readFileSync(join(root, "index.md"), "utf8");
     expect(index).toContain("[alpha](notes/first.md), [Beta](notes/beta.md)");
     expect(index).toContain("[alpha › Section One](notes/first.md#section-one)");
@@ -7390,7 +7390,7 @@ describe("search in the TUI (6.5, 6.9)", () => {
     const { planNoteRename } = await import("../src/core/rename.ts");
     h.app.previewRename(() => planNoteRename(h.app.graph, "b.md", "c"));
     await h.keys("enter");
-    expect(found("quokka")).toEqual(["c.md:6"]); // its old name added to its frontmatter
+    expect(found("quokka")).toEqual(["c.md:3"]); // as it was: nothing written into it (21.12)
     expect(h.app.searchIndex!.indexed().has("b.md")).toBe(false);
   });
 

@@ -179,7 +179,8 @@ note's own name and path:
   through the same disambiguation.
 - **Previous names**, a fallback only and said so (`via`): frontmatter `previous_names` when exactly one note claims
   the name (several: ambiguous); for a vault, `[vault] previous_names`, counted only while that vault's config still
-  says so under the same id — a new vault that took an old name can't take its links.
+  says so under the same id — a new vault that took an old name can't take its links. *Later:* `21.3` reads a note's
+  previous names only in the converter, and `21.12` stops writing them; a folder's still find it by pointer.
 - **Paths out of the root:** `[t](../other/x.md)` reaches the file when it exists, in whichever root holds it.
 - **Filesystem paths** (`17.16`), for what other editors and agents write: `../` out of the root, `~/` (the home
   folder), an absolute path, a `file://` URL — in a markdown link (percent-decoded) or a wikilink (without an
@@ -263,7 +264,8 @@ LSP face (`11.x`), and `17.20` below. In short:
   a folder; a plain folder opened is an unnamed instance. **Collections** (a `.slipbox/` id; a repository, recognised
   by its remote or first commit) are apart from **instances** (a clone, a worktree, a folder: a local id with personal
   state). Names are display: short, unique here, `.` for a collision, a worktree's branch shown with `@`; never in a
-  file — `vault:path` is on screen, in completion and in the CLI.
+  file — `vault:path` is on screen, in completion and in the CLI. *Later:* `21.9` shows files by path, and `21.12`
+  removes the form: an argument names another folder's file by its pointer.
 - **The index is a cache, history is state.** On demand carries the load (folders opened, links followed, CLI paths);
   a background auto-index of the home folder fills in. Freshness is checked by each file's size and time; coverage is
   shown, and the CLI can refresh. Parsed content is shared by content hash, parser version and settings; links and

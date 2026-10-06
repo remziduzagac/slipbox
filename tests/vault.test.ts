@@ -880,12 +880,17 @@ describe("links across vaults: paths; names only for the converter (17.7–17.11
     return { after: r.json.data.files.flatMap((f: { edits: { after: string }[] }) => f.edits.map((e) => e.after)).join("\n"), skipped: r.json.data.skipped.map((x: { reason: string }) => x.reason) as string[] };
   };
 
-  test("[[vault:note]] isn't read (20.22, kept by 21.3): nothing by that name; the converter reads it, into the named vault (17.8)", async () => {
+  test("[[vault:note]] and vault:path aren't read (20.22, 21.12): the old form, its pointer said; the converter reads it, into the named vault (17.8)", async () => {
     await ready;
     const r = await cli(["resolve", "[[xapp:design#Goals]]"], notes);
     expect(r.code).toBe(3);
-    // Bare, it's the vault:path form (20.20): a path in that vault, never a name.
-    expect((await cli(["resolve", "xapp:design.md#Goals"], notes)).json.data).toMatchObject({ status: "resolved", abs: join(app, "design.md"), vault: "xapp", line: 5 });
+    expect(r.json.data.reason).toContain("names a folder the old way");
+    // Bare, it was a path in that vault (20.20): gone with vaults (21.12), the pointer said instead.
+    const bare = await cli(["resolve", "xapp:design.md#Goals"], notes);
+    expect(bare.code).toBe(3);
+    expect(bare.json.data).toMatchObject({ status: "unresolved", abs: null, suggest: "slipbox://xapp/design.md" });
+    expect((await cli(["resolve", "[g](xapp:design.md#Goals)"], notes)).json.data.suggest).toBe("slipbox://xapp/design.md");
+    expect((await cli(["resolve", "slipbox://xapp/design.md#Goals"], notes)).json.data).toMatchObject({ status: "resolved", abs: join(app, "design.md"), vault: "xapp", line: 5 });
     expect((await cli(["resolve", "xapp:design"], notes)).code).toBe(3);
     // A note named with a colon is still a note here, by its name as a command names it.
     expect((await cli(["resolve", "a:b"], notes)).json.data.path).toBe("a:b.md");
@@ -1114,7 +1119,7 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
   };
   const read = (dir: string, rel: string) => readFileSync(join(dir, rel), "utf8");
 
-  test("a note's rename rewrites every link form, keeps how each was written, and keeps its old name", async () => {
+  test("a note's rename rewrites every link form, keeps how each was written, and writes nothing into it but its links (21.12)", async () => {
     const dir = vault({
       "notes/plan.md": "---\ntitle: Plan\n---\n# Plan\n\n## Steps\n\nUp: [home](../index.md) and [index](../index.md).\n",
       "index.md":
@@ -1137,9 +1142,9 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
     expect(read(dir, "notes/other.md")).toBe("---\naliases: [nickname]\n---\nSee [x](../archive/2026/roadmap.md), [plan](../archive/2026/roadmap.md) 🔭 [plan](../archive/2026/roadmap.md).\n");
     // The link at the index's position, not the same text in code before it.
     expect(read(dir, "code.md")).toBe("`[plan](notes/plan.md)` and `[p](notes/plan.md)` are code; [plan](archive/2026/roadmap.md) and [p](archive/2026/roadmap.md) aren't.\n");
-    // It moved two folders deeper: its own relative links follow; its old name is kept.
+    // It moved two folders deeper: its own relative links follow; no old name written in (21.12).
     expect(existsSync(join(dir, "notes", "plan.md"))).toBe(false);
-    expect(read(dir, "archive/2026/roadmap.md")).toBe("---\ntitle: Plan\nprevious_names: [plan]\n---\n# Plan\n\n## Steps\n\nUp: [home](../../index.md) and [index](../../index.md).\n");
+    expect(read(dir, "archive/2026/roadmap.md")).toBe("---\ntitle: Plan\n---\n# Plan\n\n## Steps\n\nUp: [home](../../index.md) and [index](../../index.md).\n");
     // Every link resolves to it now, by its new path.
     const links = (await cli(["links", "index"], dir)).json.data;
     expect(links.filter((l: { target: string }) => l.target.includes("roadmap")).every((l: { path: string }) => l.path === "archive/2026/roadmap.md")).toBe(true);
@@ -1206,17 +1211,6 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
     if (git.exitCode !== 0) return; // no git here
     const r = await cli(["mv", "a", "b", "--dry-run"], dir);
     expect(r.json.data.warnings.join()).toContain("uncommitted changes");
-  });
-
-  test("previous_names is spliced into the frontmatter, never rewritten", async () => {
-    const { addPreviousName } = await import("../src/core/rename.ts");
-    expect(addPreviousName("# x\n", "old")).toBe("---\nprevious_names: [old]\n---\n# x\n");
-    expect(addPreviousName("---\ntitle: T # kept\n---\nx\n", "old")).toBe("---\ntitle: T # kept\nprevious_names: [old]\n---\nx\n");
-    expect(addPreviousName("---\nprevious_names: [a, \"b c\"]\n---\n", "old")).toBe("---\nprevious_names: [a, \"b c\", old]\n---\n");
-    expect(addPreviousName("---\nprevious_names:\n  - a\ntags: [t]\n---\n", "old")).toBe("---\nprevious_names:\n  - a\n  - old\ntags: [t]\n---\n");
-    expect(addPreviousName("---\nprevious_names: a\n---\n", "old")).toBe("---\nprevious_names: [a, old]\n---\n");
-    expect(addPreviousName("---\nprevious_names: [old]\n---\n", "old")).toBe("---\nprevious_names: [old]\n---\n");
-    expect(addPreviousName("﻿---\r\ntitle: T\r\n---\r\nx\r\n", "o:ld")).toBe('﻿---\r\ntitle: T\r\nprevious_names: ["o:ld"]\r\n---\r\nx\r\n');
   });
 });
 
@@ -1443,14 +1437,17 @@ describe("nested vaults, known to each other without being opened (17.17)", () =
     expect(bl).toContainEqual(expect.objectContaining({ from: join(kid, "note.md"), vault: "dkid" }));
   });
 
-  test("from inside, the vault it sits in is named by vault:path, once known (20.20); never by [[name:…]] (20.22)", async () => {
+  test("from inside, the folder it sits in is named by its pointer, once known (21.7); never by name:path (21.12) or [[name:…]] (20.22)", async () => {
     const fresh = mkdtempSync(join(tmpdir(), "slipbox-nest-up-"));
     cpSync(parent, fresh, { recursive: true });
     writeFileSync(join(fresh, ".slipbox", "config.toml"), '[vault]\nid = "dparent00000002"\nname = "dparent2"\n');
     writeFileSync(join(fresh, "kid", ".slipbox", "config.toml"), '[vault]\nid = "dkid0000000002"\nname = "dkid2"\n');
     await cli(["ls"], fresh); // opened once: known on this machine
-    const r = await cli(["resolve", "dparent2:index.md", "--from", "note.md"], join(fresh, "kid"));
+    const r = await cli(["resolve", "slipbox://dparent2/index.md", "--from", "note.md"], join(fresh, "kid"));
     expect(r.json.data).toMatchObject({ status: "resolved", abs: join(fresh, "index.md"), vault: "dparent2", href: "../index.md" });
+    const old = await cli(["resolve", "dparent2:index.md", "--from", "note.md"], join(fresh, "kid"));
+    expect(old.code).toBe(3);
+    expect(old.json.data).toMatchObject({ status: "unresolved", suggest: "slipbox://dparent2/index.md" });
     expect((await cli(["resolve", "[[dparent2:index]]"], join(fresh, "kid"))).code).toBe(3);
   });
 
@@ -1465,18 +1462,18 @@ describe("nested vaults, known to each other without being opened (17.17)", () =
       const links = (await cli(["links", "index"], root)).json.data;
       // Two copies of dkid on this machine: each shown with its folder (20.6).
       for (const l of links) expect(l).toMatchObject({ status: "note", path: join(root, "kid", "note.md"), vault: `${basename(root)}.dkid` });
-      // Each copy of dparent by the name it's shown with (20.6): the one meant, never a guess between them.
-      const up = await cli(["resolve", `${basename(root)}.dparent:index.md`], join(root, "kid"));
-      expect(up.json.data).toMatchObject({ status: "resolved", abs: join(root, "index.md") });
-      const both = await cli(["resolve", "dparent:index.md"], join(root, "kid"));
-      expect(both.code).toBe(4);
-      expect(both.json.data.candidates).toEqual([`${basename(parent)}.dparent:index.md`, `${basename(second)}.dparent:index.md`].sort());
-      expect((await cli(["read", "dparent:index.md"], join(root, "kid"))).code).toBe(4);
+      // dparent by its old form: not a link, nor an argument (21.12); by its pointer, its default copy (21.6).
+      expect((await cli(["resolve", "dparent:index.md"], join(root, "kid"))).code).toBe(3);
+      expect((await cli(["read", "dparent:index.md"], join(root, "kid"))).code).toBe(3);
+      expect((await cli(["resolve", "slipbox://dparent/index.md"], join(root, "kid"))).json.data).toMatchObject({ status: "resolved", abs: join(parent, "index.md") });
       // The other copy's links to its own nested vault aren't backlinks here.
       const bl = (await cli(["backlinks", "note"], join(root, "kid"))).json.data.backlinks;
       expect(bl.map((b: { from: string }) => b.from)).toContain(join(root, "index.md"));
       expect(bl.map((b: { from: string }) => b.from)).not.toContain(join(other, "index.md"));
     }
+    // The second made the default: the pointer means it, from anywhere.
+    expect((await cli(["folders", "default", "dparent", second], parent)).code).toBe(0);
+    expect((await cli(["resolve", "slipbox://dparent/index.md"], join(parent, "kid"))).json.data).toMatchObject({ status: "resolved", abs: join(second, "index.md") });
   });
 });
 
@@ -2024,14 +2021,14 @@ describe("git worktrees: separate vaults of one repository (17.19)", () => {
     expect(readFileSync(cfg, "utf8")).toBe("# no identity on this branch yet\n");
   });
 
-  test("links: x:path from elsewhere means the main checkout; out of the repository, a worktree's paths as the main's; its links aren't backlinks twice", async () => {
+  test("links: slipbox://x/path from elsewhere means the main checkout; out of the repository, a worktree's paths as the main's; its links aren't backlinks twice", async () => {
     const l = await layout(++n);
     if (!l) return;
     await cli(["ls"], l.wt); // the worktree seen, its index written
     await cli(["ls"], l.x);
-    // Elsewhere: x:notes/a.md is the main checkout's note (20.20), not the worktree's — that's x@branch.
+    // Elsewhere: slipbox://x/notes/a.md is the main checkout's note (21.7), not the worktree's — that's x@branch.
     writeFileSync(join(l.y, "back.md"), "# Back\n");
-    const r = (await cli(["resolve", `x${n}:notes/a.md`, "--from", "back.md"], l.y)).json.data;
+    const r = (await cli(["resolve", `slipbox://x${n}/notes/a.md`, "--from", "back.md"], l.y)).json.data;
     expect(r).toMatchObject({ status: "resolved", abs: join(l.x, "notes", "a.md") });
     // In the worktree: ../../y/plan.md leaves the repository — as from the main checkout; ../src stays in the worktree.
     const links = (await cli(["links", "notes/a.md"], l.wt)).json.data;
@@ -3444,32 +3441,6 @@ describe("the parse cache by content (20.11)", () => {
   });
 });
 
-describe("the vault:path form (20.12)", () => {
-  test("a file as it's shown: its path in this vault; name:path in another, a nested one too; ~/ or its path in none", async () => {
-    const { vaultForm } = await import("../src/core/names.ts");
-    const base = mkdtempSync(join(tmpdir(), "slipbox-form-"));
-    const here = join(base, "here");
-    const other = join(base, "other");
-    for (const d of [here, other, join(here, "kid")]) mkdirSync(join(d, ".slipbox"), { recursive: true });
-    mkdirSync(join(here, "docs"), { recursive: true });
-    mkdirSync(join(base, "loose"), { recursive: true });
-    const names: Record<string, string> = { [here]: "here", [other]: "research", [join(here, "kid")]: "kid" };
-    const nameOf = (root: string) => names[root] ?? null;
-    expect(vaultForm(join(here, "docs", "plan.md"), here, nameOf)).toBe("docs/plan.md");
-    expect(vaultForm(join(other, "algorithms", "dijkstra.md"), here, nameOf)).toBe("research:algorithms/dijkstra.md");
-    expect(vaultForm(join(here, "kid", "k.md"), here, nameOf)).toBe("kid:k.md"); // a vault of its own, inside
-    expect(vaultForm(join(here, "docs", "plan.md"), null, nameOf)).toBe("here:docs/plan.md");
-    expect(vaultForm(join(base, "loose", "l.md"), here, nameOf)).toBe(join(base, "loose", "l.md"));
-    const before = process.env.HOME;
-    process.env.HOME = base;
-    try {
-      expect(vaultForm(join(base, "loose", "l.md"), here, nameOf)).toBe("~/loose/l.md");
-    } finally {
-      process.env.HOME = before;
-    }
-  });
-});
-
 describe("search by vault (20.16)", () => {
   const out: string[] = [];
   const cli = async (args: string[], cwd: string) => {
@@ -3604,7 +3575,7 @@ describe("generated edits as plans, in two steps (20.18)", () => {
     expect(id).toMatch(/^[0-9a-f]{8}$/);
     expect(existsSync(join(dir, "a.md"))).toBe(true);
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[a](a.md)\n");
-    expect((await cli(["apply"], dir)).json.data.find((p: { id: string }) => p.id === id)).toMatchObject({ command: "mv", kind: "note", from: "a.md", to: "b.md", root: dir, files: 2 }); // the note, and index.md
+    expect((await cli(["apply"], dir)).json.data.find((p: { id: string }) => p.id === id)).toMatchObject({ command: "mv", kind: "note", from: "a.md", to: "b.md", root: dir, files: 1 }); // index.md: nothing written into the note itself (21.12)
     const dry = await cli(["apply", id, "--dry-run"], dir);
     expect(dry.json.data.files[0].edits[0].after).toBe("[a](b.md)");
     expect(dry.json.warnings.join()).not.toContain("stale");
@@ -3743,26 +3714,7 @@ describe("links by name, read again within their root (21.3)", () => {
   });
 });
 
-describe("the CLI's vault:path (20.20)", () => {
-  const v = (key: string, name: string | null, path: string, extra: Partial<KnownVault> = {}): KnownVault => ({ key, id: null, kind: "vault", name, aliases: [], previous_names: [], path, seen: "", ...extra });
-
-  test("a vault by the name it's shown with, or its own when no other has it; the path from its root, never out of it", async () => {
-    const { fromVaultForm } = await import("../src/core/names.ts");
-    const known = [v("a", "docs", "/home/me/work/docs"), v("b", "docs", "/home/me/home/docs"), v("c", "research", "/r/research", { aliases: ["old-research"] }), v("w", "research", "/r/wt", { aliases: ["old-research"], worktree: { name: "wt", main: "/r/research" } }), v("f", "loose", "/f", { kind: "folder" })];
-    const branch = () => "refactor";
-    expect(fromVaultForm("work.docs:a/b.md", known, branch)).toEqual({ root: "/home/me/work/docs", rel: "a/b.md", abs: "/home/me/work/docs/a/b.md" });
-    expect(fromVaultForm("Research:algorithms/dijkstra.md", known, branch)?.abs).toBe("/r/research/algorithms/dijkstra.md");
-    expect(fromVaultForm("WORK.docs:a.md", known, branch)?.abs).toBe("/home/me/work/docs/a.md"); // case doesn't count
-    expect(fromVaultForm("research@refactor:x.md", known, branch)?.abs).toBe("/r/wt/x.md");
-    expect(fromVaultForm("old-research:x.md", known, branch)?.abs).toBe("/r/research/x.md"); // its old name, no other's
-    expect(fromVaultForm("research:", known, branch)).toEqual({ root: "/r/research", rel: "", abs: "/r/research" });
-    expect(fromVaultForm("docs:a.md", known, branch)).toBeNull(); // two vaults' own name: neither
-    expect(fromVaultForm("research:../other/x.md", known, branch)).toBeNull();
-    expect(fromVaultForm("loose:x.md", known, branch)).toBeNull(); // a folder isn't a vault
-    expect(fromVaultForm("Meeting: Q3", known, branch)).toBeNull();
-    expect(fromVaultForm(":x.md", known, branch)).toBeNull();
-  });
-
+describe("another folder's file as an argument: its pointer (21.10); vault:path gone (21.12)", () => {
   const out: string[] = [];
   const cli = async (args: string[], cwd: string) => {
     out.length = 0;
@@ -3792,43 +3744,54 @@ describe("the CLI's vault:path (20.20)", () => {
     return { at, a: `a${tag}`, b: `b${tag}` };
   };
 
-  test("in: a note argument names a file of that vault, and the command works there", async () => {
+  test("in: a pointer names a file of that folder, and the command works there; name:path is the old form, refused", async () => {
     const { at, a, b } = await two();
-    const read = await cli(["read", `${b}:algorithms/dijkstra.md`], at("a"));
+    const ptr = (x: string, path: string) => `slipbox://${x}/${path}`;
+    const read = await cli(["read", ptr(b, "algorithms/dijkstra.md")], at("a"));
     expect(read.code).toBe(0);
     expect(read.json.data).toMatchObject({ path: "algorithms/dijkstra.md" });
     expect(read.json.data.content).toContain("## Relaxation");
-    expect((await cli(["outline", `${b}:algorithms/dijkstra.md`], at("a"))).json.data.headings[1]).toMatchObject({ text: "Relaxation" });
-    // Backlinks of b's note, asked from a: a's link among them, a's own path shown as a's.
-    const bl = (await cli(["backlinks", `${b}:algorithms/dijkstra.md`], at("a"))).json.data.backlinks;
-    expect(bl).toContainEqual(expect.objectContaining({ from: join(at("a"), "notes", "plan.md"), shown: join(at("a"), "notes", "plan.md") })); // by its path (21.9)
+    expect((await cli(["outline", ptr(b, "algorithms/dijkstra.md")], at("a"))).json.data.headings[1]).toMatchObject({ text: "Relaxation" });
+    // Backlinks of b's note, asked from a: a's link among them, by its path (21.9).
+    const bl = (await cli(["backlinks", ptr(b, "algorithms/dijkstra")], at("a"))).json.data.backlinks;
+    expect(bl).toContainEqual(expect.objectContaining({ from: join(at("a"), "notes", "plan.md"), shown: join(at("a"), "notes", "plan.md") }));
     // find's note is its second argument; context takes several.
-    expect((await cli(["find", "Edges", `${b}:algorithms/dijkstra.md`], at("a"))).code).toBe(0);
-    expect((await cli(["context", `${a}:notes/other.md`, `${a}:notes/plan.md`], at("b"))).json.data.start).toEqual(["notes/other.md", "notes/plan.md"]);
-    // Each argument itself: the first saying which vault never stands for the rest.
+    expect((await cli(["find", "Edges", ptr(b, "algorithms/dijkstra.md")], at("a"))).code).toBe(0);
+    expect((await cli(["context", ptr(a, "notes/other.md"), ptr(a, "notes/plan.md")], at("b"))).json.data.start).toEqual(["notes/other.md", "notes/plan.md"]);
+    // Each argument itself: the first saying which folder never stands for the rest.
     expect((await cli(["context", "notes/other.md", "notes/plan.md"], at("a"))).json.data.start).toEqual(["notes/other.md", "notes/plan.md"]);
     // --from too.
-    expect((await cli(["resolve", "other.md", "--from", `${a}:notes/plan.md`], at("b"))).json.data).toMatchObject({ status: "resolved", path: "notes/other.md" });
-    // No vault by that name: a name, as before — not found.
-    expect((await cli(["read", "nope:x.md"], at("a"))).code).toBe(3);
+    expect((await cli(["resolve", "other.md", "--from", ptr(a, "notes/plan.md")], at("b"))).json.data).toMatchObject({ status: "resolved", path: "notes/other.md" });
+    // name:path (20.20) is gone: not found, the pointer said.
+    const old = await cli(["read", `${b}:algorithms/dijkstra.md`], at("a"));
+    expect(old.code).toBe(3);
+    expect(old.json.error.message).toContain(`${ptr(b, "algorithms/dijkstra.md")} names it`);
+    // No folder by that name: a name, as before — not found, nothing said of pointers.
+    const nope = await cli(["read", "nope:x.md"], at("a"));
+    expect(nope.code).toBe(3);
+    expect(nope.json.error.message).not.toContain("slipbox://");
     // A file by that very name is itself: a path wins.
     mkdirSync(join(at("a"), `${b}:algorithms`));
     writeFileSync(join(at("a"), `${b}:algorithms`, "dijkstra.md"), "# Local\n");
     expect((await cli(["read", `${b}:algorithms/dijkstra.md`], at("a"))).json.data.content).toBe("# Local\n");
   });
 
-  test("resolve: a vault:path, and with --from the relative path a link there would carry", async () => {
+  test("resolve: a pointer, and with --from the relative path a link there would carry; name:path its pointer said", async () => {
     const { at, a, b } = await two();
-    const r = await cli(["resolve", `${b}:algorithms/dijkstra.md#Relaxation`, "--from", "notes/plan.md"], at("a"));
+    const r = await cli(["resolve", `slipbox://${b}/algorithms/dijkstra.md#Relaxation`, "--from", "notes/plan.md"], at("a"));
     expect(r.json.data).toMatchObject({ status: "resolved", path: join(at("b"), "algorithms", "dijkstra.md"), abs: join(at("b"), "algorithms", "dijkstra.md"), shown: join(at("b"), "algorithms", "dijkstra.md"), href: "../../b/algorithms/dijkstra.md#relaxation", heading: "Relaxation", line: 3, vault: b });
-    // This vault's own: its path here.
-    const own = await cli(["resolve", `${a}:notes/other.md`, "--from", "notes/plan.md"], at("a"));
+    // This folder's own: its path here.
+    const own = await cli(["resolve", `slipbox://${a}/notes/other.md`, "--from", "notes/plan.md"], at("a"));
     expect(own.json.data).toMatchObject({ status: "resolved", path: "notes/other.md", shown: "notes/other.md", href: "other.md", vault: null });
     // A folder too; a file that isn't there, not.
-    expect((await cli(["resolve", `${b}:algorithms`, "--from", "notes/plan.md"], at("a"))).json.data).toMatchObject({ status: "resolved", abs: join(at("b"), "algorithms"), href: "../../b/algorithms" });
-    expect((await cli(["resolve", `${b}:algorithms/nope.md`, "--from", "notes/plan.md"], at("a"))).code).toBe(3);
+    expect((await cli(["resolve", `slipbox://${b}/algorithms`, "--from", "notes/plan.md"], at("a"))).json.data).toMatchObject({ status: "resolved", abs: join(at("b"), "algorithms"), href: "../../b/algorithms" });
+    expect((await cli(["resolve", `slipbox://${b}/algorithms/nope.md`, "--from", "notes/plan.md"], at("a"))).code).toBe(3);
     // Without --from: no link to write.
-    expect((await cli(["resolve", `${b}:algorithms/dijkstra.md`], at("a"))).json.data).toMatchObject({ status: "resolved", href: null });
+    expect((await cli(["resolve", `slipbox://${b}/algorithms/dijkstra.md`], at("a"))).json.data).toMatchObject({ status: "resolved", href: null });
+    // The old form: unresolved, and the pointer that is one.
+    const old = await cli(["resolve", `${b}:algorithms/dijkstra.md#Relaxation`, "--from", "notes/plan.md"], at("a"));
+    expect(old.code).toBe(3);
+    expect(old.json.data).toMatchObject({ status: "unresolved", href: null, suggest: `slipbox://${b}/algorithms/dijkstra.md` });
     // A path's href too, with the spaces a link encodes.
     writeFileSync(join(at("a"), "notes", "a note.md"), "# A note\n");
     expect((await cli(["resolve", "a note.md", "--from", "notes/plan.md"], at("a"))).json.data.href).toBe("a%20note.md");
@@ -3844,15 +3807,16 @@ describe("the CLI's vault:path (20.20)", () => {
     expect(await human(["backlinks", "algorithms/dijkstra.md"], at("b"))).toContain(`${join(at("a"), "notes", "plan.md")}:3  shortest`);
   });
 
-  test("mv and cp: a destination in this vault by vault:path; another vault's is refused", async () => {
-    const { at, a, b } = await two();
-    const moved = await cli(["mv", `${b}:algorithms/dijkstra.md`, `${b}:graphs/dijkstra.md`, "--dry-run"], at("a"));
+  test("mv and cp: a source by its pointer, the command in its folder; a destination a path there, never a pointer", async () => {
+    const { at, b } = await two();
+    const moved = await cli(["mv", `slipbox://${b}/algorithms/dijkstra.md`, "graphs/dijkstra.md", "--dry-run"], at("a"));
     expect(moved.code).toBe(0);
     expect(moved.json.data).toMatchObject({ from: "algorithms/dijkstra.md", to: "graphs/dijkstra.md", dryRun: true });
-    const across = await cli(["mv", `${b}:algorithms/dijkstra.md`, `${a}:dijkstra.md`, "--dry-run"], at("a"));
-    expect(across.code).toBe(5);
-    expect(across.json.error.message).toContain("in another vault");
-    expect((await cli(["cp", `${b}:algorithms/dijkstra.md`, `${b}:algorithms/copy.md`], at("a"))).code).toBe(0);
+    const pointed = await cli(["mv", `slipbox://${b}/algorithms/dijkstra.md`, `slipbox://${b}/graphs/dijkstra.md`, "--dry-run"], at("a"));
+    expect(pointed.code).toBe(5);
+    expect(pointed.json.error.message).toContain("not a pointer");
+    expect((await cli(["mv", `${b}:algorithms/dijkstra.md`, "graphs/dijkstra.md", "--dry-run"], at("a"))).code).toBe(3); // the old form
+    expect((await cli(["cp", `slipbox://${b}/algorithms/dijkstra.md`, "algorithms/copy.md"], at("a"))).code).toBe(0);
     expect(existsSync(join(at("b"), "algorithms", "copy.md"))).toBe(true);
   });
 });
