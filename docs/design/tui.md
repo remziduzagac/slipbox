@@ -56,6 +56,9 @@ where it ends on one, `┣` `┫` `╋` where it continues through, and the corn
 panes). Zen mode has no frame. The lines are light by default (`ui.lines = "light"`: `─ │ ┬ ┴ ├ ┤ ┼`);
 `ui.lines = "heavy"` draws them as shown here, `━ ┃ ┳ ┻ ┣ ┫ ╋`. Tables in the note are always light.
 
+**The terminal's title** is `slipbox — <the file on screen>` (its path in its vault), else the
+folder open in its place: told when it changes, its control characters stripped.
+
 **The top bar** has buttons and vault-wide state. It sits on the page's
 background like the rest, so the frame's rule under it gives it the same half row of air the tab
 strip and the titles get from theirs:

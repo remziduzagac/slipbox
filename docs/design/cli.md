@@ -32,7 +32,8 @@ never a lock, never a refusal.
 - **`schema`** is versioned separately from the app. It only changes when a stable command's
   shape changes.
 - **Exit codes:** `0` ok, `1` error, `2` usage, `3` not found (a note, a link's target, a task's
-  line, the `--root` folder), `4` ambiguous (a link, or several
+  line, the `--root` folder; the TUI's too, a path to open that isn't there said in a line before the
+  screen is taken), `4` ambiguous (a link, or several
   nvims for `send`), `5` refused (a stale `--if-unchanged`, a write outside the vault or to what
   isn't a note of it, `--create` over an existing file, a note or stdin that isn't valid UTF-8, a
   read of a symlink leading out of the vault).

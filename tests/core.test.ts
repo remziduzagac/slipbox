@@ -974,7 +974,7 @@ describe("file groups (16.1)", () => {
 });
 
 describe("data files read as documents (16.11–16.13)", () => {
-  const fields = (tree: { children: unknown[] }) => tree.children.filter((n) => (n as { type: string }).type === "dataField") as { key: string; value: string; kind: string; comment: string | null; position: { start: { line: number }; end: { line: number } } }[];
+  const fields = (tree: { children: unknown[] }) => tree.children.filter((n) => (n as { type: string }).type === "dataField") as { key: string; value: string; kind: string; comment: string | null; keyLine: number; position: { start: { line: number }; end: { line: number } } }[];
   const headings = (tree: { children: unknown[] }) => tree.children.filter((n) => (n as { type: string }).type === "heading").map((n) => (n as { children: { value: string }[] }).children[0]!.value);
   test("TOML: sections, keys with their lines and comments, multi-line values, record arrays", async () => {
     const { parseData } = await import("../src/core/data.ts");
@@ -1027,6 +1027,15 @@ describe("data files read as documents (16.11–16.13)", () => {
     expect(j.error).toBeNull(); // jsonc comments are allowed
     expect((j.tree.children[1] as unknown as { key: string; value: string }).value).toBe("{a: 1}"); // small and plain: inline
     expect(parseData("json", '{"a": }').error).toBeTruthy();
+    // A tsconfig.json as editors read it: trailing commas too, after a comment as well; a comma in a
+    // string stays, and every row keeps its line.
+    const tsconfig = parseData("json", '{\n  "a": [1, 2,],\n  "b": "x,}", // c\n  /* d */\n}\n');
+    expect(tsconfig.error).toBeNull();
+    expect(fields(tsconfig.tree).map((x) => [x.key, x.value, x.keyLine])).toEqual([
+      ["a", "[1, 2]", 2],
+      ["b", "x,}", 3],
+    ]);
+    expect(parseData("json", '{"a": 1,, }').error).toBeTruthy(); // one comma too many is still an error
     expect(parseData("yaml", "a: [1, 2\n").error).toBeTruthy();
   });
   test("INI and .env; CSV with quotes, doubled quotes and a newline in a field", async () => {
@@ -1036,6 +1045,17 @@ describe("data files read as documents (16.11–16.13)", () => {
     expect(fields(ini.tree).map((x) => [x.key, x.value, x.comment])).toEqual([
       ["k", "v", "tail"],
       ["X", "1", null],
+    ]);
+    // Java's .properties: `!` comments, and a value that goes on, indented, after a backslash; an
+    // INI's Windows path ending in one is a value of its own line.
+    const props = parseData("ini", "a = 0\n! where\nsources = /a, \\\n    /b, \\\n    /c\nnext = 1\ndir = C:\\\nlast = 2\n");
+    expect(props.error).toBeNull();
+    expect(fields(props.tree).map((x) => [x.key, x.value, x.comment, x.keyLine])).toEqual([
+      ["a", "0", null, 1],
+      ["sources", "/a, /b, /c", "where", 3],
+      ["next", "1", null, 6],
+      ["dir", "C:\\", null, 7],
+      ["last", "2", null, 8],
     ]);
     const csv = parseData("csv", 'a,b\n"1, one","say ""hi"""\n"multi\nline",2\n');
     expect(csv.error).toBeNull();

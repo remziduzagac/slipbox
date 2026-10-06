@@ -5,7 +5,8 @@ import { createCliRenderer, type KeyEvent } from "@opentui/core";
 import { flag, parseArgs } from "../cli/args.ts";
 import { loadConfig } from "../core/config.ts";
 import { openGraph } from "../core/graph.ts";
-import { locateVault, recordLocation, configFilesFor, setRootMarkers } from "../core/vault.ts";
+import { sanitize } from "../core/sanitize.ts";
+import { locateVault, recordLocation, configFilesFor, setRootMarkers, VaultError, type VaultLocation } from "../core/vault.ts";
 import { App } from "./app.ts";
 import { keyName } from "./keys.ts";
 import { AppRenderable, toRGBA } from "./opentui.ts";
@@ -15,7 +16,16 @@ export async function runTui(argv: string[]): Promise<number> {
   const path = args.positional[0];
   // Where roots are (21.1) is your config's to say, `--config` included: read before finding one.
   setRootMarkers(loadConfig({ configFile: flag(args, "config") }).config.walk.root_markers);
-  const loc = locateVault({ root: flag(args, "root"), path });
+  let loc: VaultLocation;
+  try {
+    loc = locateVault({ root: flag(args, "root"), path });
+  } catch (err) {
+    // A path that isn't there, a --root that isn't one: said in a line, as the CLI says it, before
+    // the screen is taken — and its exit code, the CLI's EXIT.notFound.
+    if (!(err instanceof VaultError)) throw err;
+    process.stderr.write(sanitize(`slipbox: ${err.message}\n`));
+    return 3;
+  }
   const loaded = loadConfig({ ...configFilesFor(loc), configFile: flag(args, "config") });
   recordLocation(loc);
   const warnings = [...loaded.warnings];
@@ -111,8 +121,6 @@ export async function runTui(argv: string[]): Promise<number> {
     app.resize(w, h);
     renderer.requestRender();
   });
-  const title = () => renderer.setTerminalTitle(`slipbox — ${app.view?.buf.key ?? app.loc.root}`);
-  title();
   renderer.requestRender();
 
   // Every signal that ends the process saves positions and the session first.

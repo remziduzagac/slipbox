@@ -305,28 +305,37 @@ function readIni(source: string): ParsedData {
     pending = null;
   };
   let error: string | null = null;
-  lines.forEach((raw, i) => {
-    const t = raw.replace(/\r$/, "").trim();
-    if (!t) return flushComment();
-    if (t.startsWith("#") || t.startsWith(";")) {
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i]!.replace(/\r$/, "").trim();
+    if (!t) {
+      flushComment();
+      continue;
+    }
+    // `!` too: Java's .properties comments.
+    if (/^[#;!]/.test(t)) {
       pending ??= { text: [], line: i + 1 };
-      pending.text.push(t.replace(/^[#;]\s?/, ""));
-      return;
+      pending.text.push(t.replace(/^[#;!]\s?/, ""));
+      continue;
     }
     const section = /^\[\s*([^\]]+?)\s*\]$/.exec(t);
     if (section) {
       flushComment();
       out.push(heading(section[1]!.split(".").length, section[1]!, i + 1));
-      return;
+      continue;
     }
     const kv = /^(?:export\s+)?([^=:]+?)\s*[=:]\s*(.*)$/.exec(t);
     if (!kv && !/^[\w.-]+$/.test(t)) {
       error ??= `line ${i + 1}: neither a section, a key nor a comment`;
       flushComment();
-      return;
+      continue;
     }
+    const keyLine = i + 1;
     const key = kv ? kv[1]! : t;
     let value = kv ? kv[2]! : "";
+    // A value ending in an odd run of backslashes goes on, on the next line when it's indented
+    // (.properties): joined, its indent dropped. Not indented, it's a line of its own — an INI's
+    // `dir = C:\` is a Windows path.
+    while (/(^|[^\\])(\\\\)*\\$/.test(value) && /^[ \t]+\S/.test(lines[i + 1] ?? "")) value = `${value.slice(0, -1)}${lines[++i]!.replace(/\r$/, "").trim()}`;
     let comment: string | null = null;
     const c = /\s[#;]\s?(.*)$/.exec(value);
     if (c && !/^["']/.test(value)) {
@@ -335,11 +344,11 @@ function readIni(source: string): ParsedData {
     }
     const quoted = /^"(.*)"$|^'(.*)'$/.exec(value);
     if (comment || standsAlone(pending, out)) flushComment();
-    const first = pending ? pending.line : i + 1;
+    const first = pending ? pending.line : keyLine;
     comment ??= pending ? pending.text.join(" ") : null;
     pending = null;
-    out.push({ type: "dataField", key, value: quoted ? (quoted[1] ?? quoted[2])! : value, kind: quoted ? "string" : kindOf(value), comment, keyWidth: 0, keyLine: i + 1, position: pos(first, i + 1) } as unknown as RootContent);
-  });
+    out.push({ type: "dataField", key, value: quoted ? (quoted[1] ?? quoted[2])! : value, kind: quoted ? "string" : kindOf(value), comment, keyWidth: 0, keyLine, position: pos(first, i + 1) } as unknown as RootContent);
+  }
   flushComment();
   const tree: Root = { type: "root", children: out };
   alignKeys(tree.children);
@@ -349,7 +358,23 @@ function readIni(source: string): ParsedData {
 // ---------------------------------------------------------------------------------------------
 // YAML and JSON
 
-/** JSON with // and /* comments (jsonc) as JSON: the comments blanked, strings kept. */
+/** Past whitespace and comments from `k`: the index of the next character that says something. */
+function nextSignificant(s: string, k: number): number {
+  while (k < s.length) {
+    if (/\s/.test(s[k]!)) k++;
+    else if (s.startsWith("//", k)) while (k < s.length && s[k] !== "\n") k++;
+    else if (s.startsWith("/*", k)) {
+      const end = s.indexOf("*/", k + 2);
+      k = end < 0 ? s.length : end + 2;
+    } else break;
+  }
+  return k;
+}
+
+/**
+ * JSON as editors read it (jsonc: tsconfig.json, VS Code's settings) as JSON: // and /* comments
+ * and trailing commas blanked, strings kept — every other character where it was.
+ */
 function stripJsonComments(s: string): string {
   let out = "";
   let str = false;
@@ -362,6 +387,9 @@ function stripJsonComments(s: string): string {
     } else if (ch === '"') {
       str = true;
       out += ch;
+    } else if (ch === ",") {
+      const next = s[nextSignificant(s, k + 1)];
+      out += next === "}" || next === "]" ? " " : ch;
     } else if (s.startsWith("//", k)) {
       while (k < s.length && s[k] !== "\n") k++;
       out += "\n";

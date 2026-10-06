@@ -80,6 +80,20 @@ describe("reading", () => {
     expect(slipbox(["render", "home", "--width", "5"]).code).toBe(2);
     expect(slipbox(["render", "no-such-note"]).code).toBe(3);
   });
+  // util-linux's script: a terminal for the TUI's start (a pipe never gets one).
+  test.skipIf(!Bun.spawnSync(["script", "--version"]).stdout.toString().includes("util-linux"))(
+    "the TUI on a path that isn't there, or a --root that isn't a root: a line and exit 3, never a stack trace",
+    () => {
+      for (const args of [["/nope/missing.md"], ["--root", sandbox, "x.md"]]) {
+        const cmd = ["bun", MAIN, ...args].map((a) => `'${a}'`).join(" ");
+        const r = Bun.spawnSync(["script", "-qec", cmd, "/dev/null"], { cwd: vault, env, stdin: "ignore", timeout: 20_000 });
+        const out = r.stdout.toString();
+        expect(out).toMatch(/^slipbox: (no such file or directory|.* isn't a root)/m);
+        expect(out).not.toContain("    at ");
+        expect(r.exitCode).toBe(3);
+      }
+    },
+  );
   test("outline lists headings with their lines", () => {
     const r = slipbox(["outline", "operations-handbook", "--json"]);
     expect(r.json.data.headings.some((h: { text: string }) => h.text === "O25: Documentation categories")).toBe(true);

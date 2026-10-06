@@ -128,8 +128,10 @@ the breadcrumb, `[x](file.toml#section)`, find and the lens work unchanged:
   them.
 
 TOML, INI and `.env` are read line by line (their structure is lines), TOML validated by
-`smol-toml`; YAML and JSON come from `yaml`'s document tree, which keeps positions and comments;
-JSON (and `.jsonc`, comments allowed) is validated by `JSON.parse`. **Nothing is ever
+`smol-toml`; INI's comments start with `#`, `;` or `!` (Java's `.properties`), whose values go on
+after a backslash when the next line is indented. YAML and JSON come from `yaml`'s document tree,
+which keeps positions and comments; JSON is validated by `JSON.parse`, read as editors read
+`tsconfig.json` (jsonc): `//` and `/* */` comments and trailing commas allowed. **Nothing is ever
 re-serialized**: edits are always on the text, so comments, order and formatting survive. A file
 that doesn't parse has no render (`16.14`): its error is shown and source mode opens.
 

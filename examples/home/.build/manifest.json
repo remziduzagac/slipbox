@@ -5064,10 +5064,9 @@
   },
   {
    "path": "work/infra/config/legacy-archive.properties",
-   "purpose": "The old bastion's copy of the archive settings: '!' comments and backslash continuations, which the INI reader rejects (line 4).",
+   "purpose": "The old bastion's copy of the archive settings: '!' comments and backslash continuations on indented lines, as Java's .properties has them.",
    "cases": [
-    "ini: Java .properties and .cfg through the INI… — '!' comments and backslash continuations: parse error",
-    "data: Data file that doesn't parse: no render,… — doesn't parse"
+    "ini: Java .properties and .cfg through the INI… — '!' comments and backslash continuations"
    ],
    "links": []
   },

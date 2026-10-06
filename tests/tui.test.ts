@@ -142,6 +142,22 @@ describe("drawing (3.1, 3.2)", () => {
     expect(c.styles[y]![pane.textX + v.cur.col]!.bg).toBe(h.app.theme.roles.cursor.bg!);
     expect(c.styles[y]![pane.textX + v.cur.col + 2]!.bg).toBe(h.app.theme.roles.cursor_line.bg!);
   });
+  test("the terminal's title follows the file on screen, told once a change; control characters never in it", async () => {
+    const h = await harness();
+    const titles: string[] = [];
+    h.app.host.setTitle = (t) => titles.push(t);
+    h.frame(); // index.md's, told at the first frame already: not again
+    h.app.openInNewTab("notes/alpha.md");
+    h.frame();
+    h.frame(); // nothing new: not told again
+    writeFileSync(join(h.root, "notes", "evil\x07\x1b]0;PWNED.md"), "# Evil\n");
+    h.app.openInNewTab("notes/evil\x07\x1b]0;PWNED.md");
+    h.frame();
+    expect(titles).toHaveLength(2);
+    expect(titles[0]).toBe("slipbox — notes/alpha.md");
+    expect(titles[1]).toStartWith("slipbox — notes/evil");
+    expect(titles[1]).not.toMatch(/[\x00-\x1f\x7f]/);
+  });
   test("tiny terminals do not crash", async () => {
     const h = await harness({ width: 9, height: 3 });
     expect(h.frame()).toContain("slipbox");

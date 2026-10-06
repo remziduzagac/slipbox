@@ -624,8 +624,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - A line that is not a section, key or comment is an error with its line number — `work/infra/config/broken.ini`,
   `work/infra/config/nginx.conf` (data.ts readIni error)
 - Java .properties and .cfg through the INI reader — `work/infra/config/archive.properties`,
-  `work/infra/config/haproxy.cfg` (filetypes.ts properties/cfg); `work/infra/config/legacy-archive.properties` is
-  deliberately unparsable ('!' comments and continuation lines: a parse-error case)
+  `work/infra/config/haproxy.cfg` (filetypes.ts properties/cfg); `work/infra/config/legacy-archive.properties` has
+  '!' comments and backslash continuations on indented lines (data.ts readIni)
 - .env with export prefix, quotes, comments, empty values, secrets-like placeholders, URLs — `.build/extras.toml`,
   `work/infra/config/prod.env`, `work/kestrel/.env.example` (data.ts readIni export prefix, tests 'INI and .env')
 - Section-less ini: all keys at the root, one aligned run — `work/infra/config/prod.env`,

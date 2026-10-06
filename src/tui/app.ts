@@ -620,6 +620,8 @@ export class App {
   watcher: VaultWatcher | null = null;
   ui: UiState;
   private drawFailed = false;
+  /** The terminal's title as last told (host.setTitle). */
+  private termTitle: string | null = null;
 
   /** Commands run from the palette or help, most recent first (kept in the session). */
   recentCommands: string[] = [];
@@ -6323,6 +6325,13 @@ export class App {
     this.width = canvas.width;
     this.height = canvas.height;
     this.fixRegion();
+    // The terminal's title follows what's on screen: the file, else the folder open. Sanitized: a
+    // name's control characters would end the title's escape sequence and write to the terminal.
+    const title = sanitize(`slipbox — ${this.view?.buf.key ?? this.loc.root}`);
+    if (title !== this.termTitle) {
+      this.termTitle = title;
+      this.host.setTitle?.(title);
+    }
     try {
       this.geometry = drawApp(this, canvas);
     } catch (err) {
