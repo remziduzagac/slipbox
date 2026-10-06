@@ -73,10 +73,10 @@ describe("wikilink syntax, as the converter reads it", () => {
     });
     return out;
   };
-  test("a note's parse has none: [[…]] is text (20.2)", () => {
+  test("a note's parse reads them again (21.3): wikilinks and embeds", () => {
     const types: string[] = [];
     visit(parseMarkdown("[[Foo Bar|x]] ![[img.png]]").tree, (n) => void types.push(n.type));
-    expect(types).not.toContain("wikiLink");
+    expect(types.filter((t) => t === "wikiLink")).toHaveLength(2);
   });
   test("targets, headings, blocks, aliases and embeds", () => {
     const [a, b, c, d] = links("[[Foo Bar|x]] ![[img.png]] [[n#Head]] [[n#^blk]]");
@@ -1108,8 +1108,8 @@ describe("a reader per note format (16.2)", () => {
     const md = readerFor("markdown");
     expect(md.scanHeadings("# One\n\n```\n# not\n```\n## Two\n").map((h) => h.text)).toEqual(["One", "Two"]);
     expect(md.linkAt("see [the intro](alpha.md#intro) and [x](b.md)", 6)).toEqual({ kind: "markdown", target: "alpha.md#intro", heading: null, text: "the intro" });
-    expect(md.linkAt("see [[alpha]] and [x](b.md)", 6)).toBeNull(); // [[…]] is text (20.2)
-    expect(md.linkAt("see [[alpha]] and [x](b.md)", 20)).toMatchObject({ kind: "markdown", target: "b.md" });
+    expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 6)).toMatchObject({ kind: "wiki", target: "alpha", heading: "Top", text: "the alpha" }); // read again (21.3)
+    expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 34)).toMatchObject({ kind: "markdown", target: "b.md" });
     expect(parseNoteFile("x.md", "# T\n").tree.children[0]!.type).toBe("heading");
     expect(readerFor("no-such-format")).toBe(md);
   });

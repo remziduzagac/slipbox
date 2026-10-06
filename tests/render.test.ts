@@ -148,10 +148,23 @@ describe("blocks and inlines (2.2)", () => {
       resolveLink: (_k, t) => (t === "a.md" ? "resolved" : "unresolved"),
     });
     const roles = layout.lines[0]!.spans.filter((s) => s.link !== undefined).map((s) => s.role);
-    expect(roles).toEqual(["link", "link_unresolved", "link"]); // [[c]] is text (20.2)
-    expect(layout.lines[0]!.spans.map((s) => s.text).join("")).toBe("a b [[c]] x");
+    expect(roles).toEqual(["link", "link_unresolved", "link_unresolved", "link"]); // [[c]] a link again (21.3)
+    expect(layout.lines[0]!.spans.map((s) => s.text).join("")).toBe("a b c x");
     expect(layout.lines[1]!.spans.map((s) => s.text).join("")).toBe("next");
-    expect(layout.links.map((l) => [l.line, l.col])).toEqual([[0, 0], [0, 2], [0, 10]]);
+    expect(layout.links.map((l) => [l.line, l.col])).toEqual([[0, 0], [0, 2], [0, 4], [0, 6]]);
+  });
+  test("a picture embedded by name: its name shown, an image's glyph; `|300`, `|240x180` its size, other words its alt", () => {
+    const shown = (md: string) => {
+      const l = renderMarkdown(md, { width: 60, glyphs: unicode, showUrls: false, resolveLink: () => "resolved" });
+      return l.lines[0]!.spans.filter((s) => s.link !== undefined).map((s) => [s.text, s.role]);
+    };
+    const img = unicode.image;
+    expect(shown("a ![[attachments/dal.png|300]] b")).toEqual([[`${img} dal.png`, "image"]]);
+    expect(shown("a ![[flip.JPG|240x180]] b")).toEqual([[`${img} flip.JPG`, "image"]]);
+    expect(shown("a ![[dal.png|the finished dal]] b")).toEqual([[`${img} the finished dal`, "image"]]);
+    expect(shown("a ![[dal.png|dal for 4]] b")).toEqual([[`${img} dal for 4`, "image"]]);
+    // Not a picture: a note's or a file's embed, its `|…` its words still.
+    expect(shown("a ![[Dal|300]] ![[pantry.csv]] b")).toEqual([[`${unicode.embed} 300`, "embed"], [`${unicode.embed} pantry.csv`, "embed"]]);
   });
   test("source lines survive wrapping (3.5 anchors on them)", () => {
     const layout = renderMarkdown("# H\n\npara one\nline two\n\nsecond para\n", { width: 6, glyphs: unicode, showUrls: false });

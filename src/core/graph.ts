@@ -10,6 +10,7 @@ import { basename, isAbsolute, join, posix, relative } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
+import type { WikiLink } from "./wikilink.ts";
 import { extensionless, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
@@ -141,7 +142,7 @@ export interface Backlink {
 }
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-export const INDEX_VERSION = 8; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22)
+export const INDEX_VERSION = 9; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3)
 
 interface IndexFile {
   version: number;
@@ -725,13 +726,55 @@ export class Graph {
   }
 
   /**
-   * Resolve a link found in `fromRel`: its path (20.2), into another root when it climbs out of this
-   * one (17.9). A wikilink isn't a link — text, never resolved by a name (20.22); the converter reads
-   * one with its legacy reader, `resolveLegacyWiki`.
+   * Resolve a link found in `fromRel`: its path (20.2, 21.2), into another root when it climbs out of
+   * this one (17.9); a wikilink within its root (21.3).
    */
   resolveLink(link: Pick<LinkRef, "kind" | "target">, fromRel: string): Target {
-    if (link.kind === "wiki" || link.kind === "embed") return { resolvedKind: "unresolved", path: null, candidates: [], reason: "a wikilink isn't a link: slipbox convert-links rewrites it as a path" };
+    if (link.kind === "wiki" || link.kind === "embed") return this.resolveWiki(link.target, fromRel);
     return this.resolvePath(link, fromRel);
+  }
+
+  /**
+   * A wikilink, read within its root (21.3): a note's name or path, an alias from front matter, an
+   * attachment by its name (as Obsidian finds one); a path into a root nested in this one is a path.
+   * Two notes (or attachments) of one name: the nearest, then the shortest; a real tie is ambiguous. No
+   * root, no names. Previous names, `[[vault:note]]` and remembered moves aren't read (20.22's kept).
+   */
+  private resolveWiki(target: string, fromRel: string): Target {
+    if (!target) return { resolvedKind: "anchor", path: fromRel, candidates: [] };
+    if (this.loc.mode === "folder") return { resolvedKind: "unresolved", path: null, candidates: [], reason: "names need a root, and this folder has none: .git, .slipbox/, .obsidian/ or .zk/ makes one" };
+    const r = this.index.resolveWiki(target, fromRel);
+    if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates };
+    if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
+    // A path: out of the root (`../`), or into a root nested in it.
+    const byPath = (/^\.\.?\//.test(target) ? this.byFilesystemPath(target, fromRel, true) : null) ?? this.intoNested(target.replace(/^\/+/, ""), true);
+    if (byPath) return byPath;
+    if (classify(target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(target)) {
+      const att = resolveAttachment(target, fromRel, this.root);
+      if (att) return { resolvedKind: "file", path: att, candidates: [] };
+      // Obsidian finds attachments anywhere in the vault by name.
+      const named = this.assets.get(target.split("/").pop()!.normalize("NFC").toLowerCase()) ?? [];
+      const suffix = target.normalize("NFC").toLowerCase();
+      const hits = named.filter((p) => p.toLowerCase() === suffix || p.toLowerCase().endsWith(`/${suffix}`));
+      // Two of a name, as two notes are: the nearest, then the shortest; a real tie ambiguous.
+      const r = pickCandidate(hits, target.normalize("NFC"), fromRel);
+      if (r.status === "resolved") return { resolvedKind: "file", path: r.path, candidates: r.candidates };
+      if (r.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: r.candidates };
+    }
+    const aliased = this.byAlias(target, fromRel);
+    if (aliased) return aliased;
+    return { resolvedKind: "unresolved", path: null, candidates: [] };
+  }
+
+  /** A note by an alias its front matter gives (21.3): never by a previous name. */
+  private byAlias(target: string, fromRel: string): Target | null {
+    if (target.includes("/")) return null;
+    const stem = target.replace(/\.(md|markdown)$/i, "");
+    const aliased = this.otherNames().aliases.get(normKey(stem));
+    if (!aliased?.length) return null;
+    const r = pickCandidate(aliased, stem, fromRel);
+    if (r.status === "resolved") return { resolvedKind: "note", path: r.path, candidates: r.candidates, via: "alias" };
+    return { resolvedKind: "ambiguous", path: null, candidates: r.candidates, via: "alias" };
   }
 
   /**
@@ -1285,6 +1328,11 @@ export function extractFromSource(file: NoteFile, text: string, flags: string[] 
       case "image":
         links.push(mdLink("image", n.url, n.alt ?? "", line, column, end));
         return;
+    }
+    // A wikilink or an embed (21.3): read within the note's root.
+    if ((n.type as string) === "wikiLink") {
+      const w = n as unknown as WikiLink;
+      links.push({ kind: w.embed ? "embed" : "wiki", target: w.target, heading: w.heading, block: w.block, alias: w.alias, text: w.alias ?? w.value, line, column, end: { line: end.line, column: end.column } });
     }
   });
   const fm = parsed.frontmatter?.data;

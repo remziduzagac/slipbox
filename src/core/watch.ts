@@ -106,9 +106,9 @@ export class VaultWatcher {
   }
 
   /** Watch a directory that appeared (created, or moved in with its contents) and everything
-   *  below it; return the notes already inside, which are new to us. */
+   *  below it; return the files already inside — notes and attachments — which are new to us. */
   private adoptTree(dirRel: string): string[] {
-    const notes: string[] = [];
+    const files: string[] = [];
     const visit = (d: string) => {
       this.watchDir(d);
       let entries: Dirent[] = [];
@@ -121,11 +121,11 @@ export class VaultWatcher {
         const rel = `${d}/${e.name}`;
         if (e.isDirectory()) {
           if (this.opts.filter.exclusion(rel, true) === null) visit(rel);
-        } else if (this.opts.filter.isNoteName(e.name) && this.opts.filter.exclusion(rel, false) === null) notes.push(rel);
+        } else if (this.opts.filter.exclusion(rel, false) === null) files.push(rel);
       }
     };
     visit(dirRel);
-    return notes;
+    return files;
   }
 
   get watchedCount(): number {

@@ -404,6 +404,10 @@ interface EmbedRef {
 /** A URL that names a note: an image-syntax link to it embeds it. */
 const NOTE_URL = /\.(md|markdown)$/i;
 
+/** A picture's file, embedded by name (`![[dal.png]]`), and the size Obsidian lets it carry. */
+const IMAGE_FILE = /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico|tiff?|heic)$/i;
+const SIZE = /^\d+(x\d+)?$/;
+
 /** An image URL's path and its fragment: `#^id` a block, any other a heading. */
 function urlParts(url: string): { target: string; heading: string | null; block: string | null } {
   const hash = url.indexOf("#");
@@ -1025,8 +1029,12 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
   const wiki = (w: WikiLink, st: Style) => {
     const kind = w.embed ? "embed" : "wiki";
     const s = status(ctx, kind, w.target);
+    // A picture embedded by name, as Obsidian writes one: `|300` and `|240x180` its size, not words.
+    const picture = w.embed && IMAGE_FILE.test(w.target);
+    const alias = picture && w.alias && SIZE.test(w.alias.trim()) ? null : w.alias;
     const shown =
-      w.alias ??
+      alias ??
+      (picture ? w.target.split("/").pop()! : null) ??
       (!w.target
         ? w.heading
           ? `#${w.heading}`
@@ -1038,9 +1046,10 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
           : w.block
             ? `${w.target} ^${w.block}`
             : w.target);
-    const id = addLink(ctx, { kind, target: w.target, heading: w.heading, text: shown, status: s, src: line });
-    const role: Role = w.embed ? "embed" : s === "unresolved" ? "link_unresolved" : s === "ambiguous" ? "link_ambiguous" : "wikilink";
-    const prefix = w.embed ? `${ctx.opts.glyphs.embed} ` : "";
+    // A block's `^id` rides as the heading does (`#^id`): followed, it lands on its block.
+    const id = addLink(ctx, { kind, target: w.target, heading: w.heading ?? (w.block ? `^${w.block}` : null), text: shown, status: s, src: line });
+    const role: Role = picture ? "image" : w.embed ? "embed" : s === "unresolved" ? "link_unresolved" : s === "ambiguous" ? "link_ambiguous" : "wikilink";
+    const prefix = picture ? `${ctx.opts.glyphs.image} ` : w.embed ? `${ctx.opts.glyphs.embed} ` : "";
     push(prefix + sanitize(shown), { role, attrs: st.attrs }, { link: id });
   };
   walk(nodes, style);

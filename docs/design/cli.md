@@ -278,11 +278,15 @@ attachments included: a path, from `--from`'s folder (`[a](../home.md)`, given w
 vault's root, or its name — else a file by its path from the vault's root. External URLs come back as
 `status: "external"`. `links --all` lists every note's, each with `from`.
 
-**Nothing resolves by a name** (`20.22`): a wikilink, `[[target]]` or `[[vault:note]]`, is text — `resolve` says so
-(exit 3, "a wikilink isn't a link: slipbox convert-links rewrites it as a path"), and so do links and the TUI. Aliases,
-previous names, an attachment found by its name, a move remembered: only the converter still reads them (`20.1`), as
-the legacy reader it keeps for what it rewrites. A vault name several vaults share as their own, `docs:a.md`, is
-ambiguous (exit 4) — `candidates` gives each by the name it's shown with, `work.docs:a.md`.
+**A wikilink resolves within its root** (`21.3`): `[[name]]`, `[[name#heading]]`, `![[dal.png]]` — by its path from
+the root (`[[Recipes/Weeknight/Dal]]`), its name (case folded, `.md` optional), an alias its front matter gives, or an
+attachment by its file name, as Obsidian finds one. Two of a name, notes or attachments: the one in the linking note's
+folder, then the deepest folder shared, then the shortest path; a real tie is ambiguous (exit 4), never guessed. A
+root nested inside ends its names (a path into it is a path). A file with no root has no names: exit 3, saying what
+makes one. Previous names, `[[vault:note]]` and a move remembered aren't read (`20.22`'s removals kept): only the
+converter reads them (`20.1`), as the legacy reader it keeps for what it rewrites. A vault name several vaults share
+as their own, `docs:a.md`, is ambiguous (exit 4) — `candidates` gives each by the name it's shown with,
+`work.docs:a.md`.
 
 **Across vaults** (plan `17.9`–`17.11`, `17.16`): a path out of the root (relative, `~/`, absolute — `/` is the
 filesystem's root — or a `file://` URL; a file, not an external link) resolves into the other vault: `path` and `abs`

@@ -1,5 +1,6 @@
 // Links as the 21.x design reads them, on the reference set: paths inside — `/` from the nearest root,
-// paths without an extension, folders — whatever form a folder's tool writes them in.
+// paths without an extension, folders — and wikilinks within their root, whatever form a folder's tool
+// writes them in.
 
 import { leader, type Scenario } from "./helpers.ts";
 import type { Session } from "./session.ts";
@@ -67,6 +68,59 @@ export const LINK_SCENARIOS: Scenario[] = [
         const at = rows.findIndex((r) => /\bprojects\b/.test(r) && !/the projects/.test(r));
         return at >= 0 && rows.slice(at + 1, at + 12).some((r) => r.includes("kestrel-v2-3.md"));
       }, 3000, "projects/ unfolded in the explorer, its notes under it");
+    },
+  },
+  {
+    name: "world/links: an Obsidian vault's wikilinks, read within it — names, aliases, headings, blocks, ties; no root, no names (21.3)",
+    options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
+    run: async (s) => {
+      // Pictures by name, as Obsidian sizes them (`|300`, `|240x180`): shown by their names.
+      await s.see("maqluba-flip.jpg");
+      s.expect(!s.screen().some((r) => /\b(300|240x180)$/.test(r.trimEnd())), "a picture's size isn't its text");
+      // `[[Meal plan|this week]]`: by its name, shown by its alias (the heading's words come first).
+      await follow(s, "this week. Monday");
+      await opened(s, "Meal plan.md");
+      await s.keys("ctrl+o");
+      await opened(s, "Home.md");
+      // `[[Maqluba]]`: no note by that name; مقلوبة.md's front matter has it as an alias, said so.
+      await follow(s, "Maqluba when");
+      await s.message(/\[\[Maqluba\]\] reached Recipes\/Family/); // "…by an alias", wrapped on
+      await s.see("Malik's family maqluba");
+      await s.keys("ctrl+o");
+      await opened(s, "Home.md");
+      // `[[Notes]]`: two notes of that name — the one in the same folder.
+      await follow(s, "Notes: the one");
+      await opened(s, "Notes.md");
+      s.expect(!/Recipes/.test(s.statusLine()), "the same folder's Notes.md, not Recipes/'s");
+      await s.keys("ctrl+o");
+      await opened(s, "Home.md");
+      // `![[dal.png|300]]`: two pictures of that name — the shorter path's, as Obsidian picks; its path copied.
+      await follow(s, "dal.png");
+      await s.message("attachment attachments/dal.png");
+      s.expect(s.clipboard().endsWith("/cooking/attachments/dal.png"), "attachments/dal.png's path copied, not Archive's");
+      // A third, in a new folder as near as attachments/, put there while slipbox runs: a real tie, asked which.
+      s.write("~/hobbies/cooking/photos/dal.png", "png");
+      for (let i = 0; i < 20 && !s.screen().some((r) => r.includes("[[dal.png]] matches 3 files")); i++) {
+        await s.keys("enter"); // the link under the cursor, followed again once the watcher has the new file
+        await s.settle(300);
+      }
+      await s.see("[[dal.png]] matches 3 files");
+      await s.see("photos/dal.png");
+      await s.keys("escape");
+      // `[[Home#Pantry]]` from deep in Recipes: the heading, by its name.
+      await s.restart({ startAt: "home/hobbies/cooking/Recipes/Baking/Sourdough/Starter/Feeding log.md" });
+      await follow(s, "Home › Pantry");
+      await opened(s, "Home.md");
+      await s.status(/L36:/);
+      // `[[Dal#^tadka]]`: the step its ^id closes.
+      await s.restart({ startAt: "home/hobbies/cooking/Recipes/Weeknight/Dal.md" });
+      await follow(s, "Dal ^tadka");
+      await s.status(/L3[23]:/);
+      // Downloads has no root: a name finds nothing, and the hint says what makes one.
+      await s.restart({ startAt: "home/Downloads/stray-note.md" });
+      await s.see("See plan for the order of work");
+      await follow(s, "plan for the order");
+      await s.message(/\[\[plan\]\]: names need a root/);
     },
   },
 ];

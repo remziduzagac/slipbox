@@ -203,8 +203,8 @@ describe("medium", () => {
     }
     // Without --from: a path from the vault's root, a file as well as a note.
     expect(JSON.parse((await cli(["resolve", "attachments/diagram.png", "--json"], fx)).out).data.path).toBe("attachments/diagram.png");
-    // By its name alone, as a wikilink found it: not a link (20.22).
-    expect((await cli(["resolve", "![[diagram.png]]", "--json"], fx)).code).toBe(3);
+    // By its name alone, a wikilink finds it, as Obsidian does (21.3); a path names it by its path.
+    expect(JSON.parse((await cli(["resolve", "![[diagram.png]]", "--json"], fx)).out).data.path).toBe("attachments/diagram.png");
     expect((await cli(["resolve", "diagram.png", "--from", "index", "--json"], fx)).code).toBe(3);
   });
   test(".gitignore: deeper negation re-includes; case follows git on this platform", () => {

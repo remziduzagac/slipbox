@@ -78,9 +78,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Tags: #tag, nested #a/b/c, with digits/dashes/underscores, at line start, after punctuation, in headings, in lists,
   in tables; not tags: #1, URL fragment, code, heading hash, 'C#' — `notes/daily/2026-08-21.md`,
   `notes/meetings/2026-09-05-feedback-synthesis.md` (rendering.md tag; decision 1.6; projects tags)
-- Wikilinks are plain text: \[\[note\]\], \[\[note\|alias\]\], !\[\[embed\]\], \\\[\[escaped\]\], inside code —
-  `hobbies/cooking/Mise en place.md`, `notes/research/link-styles.md` (rendering.md Links are plain paths (20.2);
-  wikilink tokenizer)
+- Wikilinks drawn as links: \[\[note\]\], \[\[note\|alias\]\], !\[\[embed\]\], a picture's size; text when
+  \\\[\[escaped\]\] or inside code — `hobbies/cooking/Mise en place.md`, `notes/research/link-styles.md` (rendering.md
+  Wikilinks are links (21.3); wikilink tokenizer)
 - Block id ^id at the end of paragraph, list item, and on a lone line after a table/quote/list —
   `hobbies/cooking/Recipes/Weeknight/Dal.md`, `notes/projects/kestrel-v2-3.md`,
   `work/kestrel/docs/adr/0003-sharing-links.md` (rendering.md Embeds block)
@@ -1907,8 +1907,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### wikilinks
 
-- Wikilinks are text everywhere but convert-links: links/resolve/backlinks don't see them; `[[vault:note]]` too —
-  `hobbies/cooking/Home.md`, `notes/research/link-styles.md` (cli.md resolve 'Nothing resolves by a name' (20.22))
+- Wikilinks read by links/resolve/backlinks within their root; `[[vault:note]]` isn't — `hobbies/cooking/Home.md`,
+  `notes/research/link-styles.md` (cli.md resolve 'A wikilink resolves within its root' (21.3))
 
 ### ls
 

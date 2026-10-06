@@ -49,10 +49,10 @@ status line (`20.14`). The explorer's roots (`20.15`). Search by vault (`20.16`)
 (`20.17`). Generated edits as plans (`20.18`: `--plan`, `slipbox apply`). Renames and moves on paths, code comments
 included (`20.19`). The CLI takes and gives `vault:path` (`20.20`: any note argument, `--from`; `shown`; `resolve`'s
 `href`, the relative path to write). The merge review (`20.21`: `slipbox merge-review`, `space g m`; after a merge or a
-pull, git's renames are evidence for the relink). The removals (`20.22`): nothing resolves by a name — wikilinks,
-`[[vault:note]]`, aliases, redirects are the converter's alone — and no home vault: a plain folder opened is an
-unnamed instance, walked and indexed as a vault is (`~` and `/` listed a level at a time). Next: phase 5's grammars
-(`16.18`–`16.22`; `16.23` asks about Ruby and C/C++).
+pull, git's renames are evidence for the relink). The removals (`20.22`): nothing resolves by a name — until `21.3`
+read wikilinks again within their root; `[[vault:note]]` and redirects stay the converter's — and no home vault: a
+plain folder opened is an unnamed instance, walked and indexed as a vault is (`~` and `/` listed a level at a time).
+Next: phase 5's grammars (`16.18`–`16.22`; `16.23` asks about Ruby and C/C++).
 
 ## The documents
 

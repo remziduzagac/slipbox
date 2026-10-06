@@ -61,8 +61,11 @@ as their text; the URL follows as `<url>` when colour is off or `render.show_url
 Images render as `▣ alt`: phase 6 adds pixels, and alt text plus path stay the floor. Inline
 tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 
-**Links are plain paths** (`20.2`): `[[…]]` is text, drawn as written — only the converter reads it (`20.1`,
-`docs/design/cli.md`, `convert-links`). A link's colour shows its status: resolved, or `link_unresolved` red.
+**Wikilinks are links** (`21.3`; `20.2` drew them as text): `[[name]]` shows its name, `[[name|text]]` its text,
+`[[name#Heading]]` `name › Heading`, `[[name#^id]]` `name ^id` — never inside code, nor after a `\`. A picture
+embedded by name, `![[dal.png]]`, is `▣ dal.png`, as a picture by its path is: Obsidian's size, `|300` or
+`|240x180`, is never its text. A link's colour shows its status: resolved, `link_unresolved` red, or
+`link_ambiguous` when two of a name tie.
 
 **The vault form** (`20.12`): a link without text of its own — `[](docs/plan.md)`, or text that is just its target —
 shows the file it reaches as a path in this vault (`docs/plan.md`, wherever the linking note is), or in another
@@ -71,10 +74,10 @@ vault — a nested one too — as that vault's name and its path there (`researc
 written, and so does the rendered view with link URLs shown (`space u r`, `render.show_urls`). The form is on screen
 and in the CLI only, never in a file; hovers, backlinks from other vaults and rename previews use it too.
 
-**Embeds** (`1.11`): a paragraph of nothing but embeds — each a note by its path, `![text](note.md)`, on its line, as
-the converter writes them (`20.1`) and Obsidian does without wikilinks — draws each embedded note in place (beside
-other text, or with no note there, it's a reference, `⧉ text`, as a picture's is `▣ alt`): a header
-with its name (`⧉ inner`, `⧉ note › Heading`, `⧉ note ^id`; a link to it), then its text behind a bar (role
+**Embeds** (`1.11`): a paragraph of nothing but embeds — each a note by name, `![[note]]` (`21.3`), or by its path,
+`![text](note.md)`, as the converter writes them (`20.1`) and Obsidian does without wikilinks — draws each embedded
+note in place (beside other text, or with no note there, it's a reference, `⧉ text`, as a picture's is `▣ alt`): a
+header with its name (`⧉ inner`, `⧉ note › Heading`, `⧉ note ^id`; a link to it), then its text behind a bar (role
 `embed`). `![x](note.md)` is the whole note but its frontmatter; `![x](note.md#heading)` the heading (by its text or
 slug) and what follows, to the next heading as high; `![x](note.md#^id)` the block whose id that is — a paragraph's or
 a list item's, at the end of its text, or the table, quote or list on the line before a lone `^id`. Read-only:
@@ -135,13 +138,13 @@ which keeps positions and comments; JSON is validated by `JSON.parse`, read as e
 re-serialized**: edits are always on the text, so comments, order and formatting survive. A file
 that doesn't parse has no render (`16.14`): its error is shown and source mode opens.
 
-## The wikilink tokenizer (the converter's)
+## The wikilink tokenizer
 
-`core/wikilink.ts` is a micromark extension, not a regex — since `20.2` used only by the converter (`20.1`), through
-`parseLegacy`, to read notes written before plain paths. That is why `[[links]]` inside code spans and fenced blocks
-are never converted, and why `\[[escaped]]` stays literal. Every node also carries its source position. It parses
-`![[embeds]]`, which `remark-wiki-link` does not, and treats `\|` as an alias divider, since that is how an alias is
-written inside a table cell.
+`core/wikilink.ts` is a micromark extension, not a regex — the reader's again since `21.3` (from `20.2` the
+converter's alone, `20.1`, which reads through `parseLegacy`). That is why `[[links]]` inside code spans and fenced
+blocks are never read or converted, and why `\[[escaped]]` stays literal. Every node also carries its source
+position. It parses `![[embeds]]`, which `remark-wiki-link` does not, and treats `\|` as an alias divider, since that
+is how an alias is written inside a table cell.
 
 ## The table allocator (plan `2.3`)
 

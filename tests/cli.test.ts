@@ -113,10 +113,8 @@ describe("links", () => {
     const h = slipbox(["resolve", "operations-handbook#O25: Documentation categories", "--json"]).json;
     expect(h.data).toMatchObject({ status: "resolved", path: "handbook/operations-handbook.md" });
     expect(h.data.line).toBeGreaterThan(1);
-    // A wikilink isn't a link (20.22): never resolved by its name.
-    const wiki = slipbox(["resolve", "[[operations-handbook]]", "--json"]);
-    expect(wiki.code).toBe(3);
-    expect(wiki.json.error?.message).toContain("slipbox convert-links rewrites it as a path");
+    // A wikilink, by its name within the root (21.3).
+    expect(slipbox(["resolve", "[[operations-handbook]]", "--json"]).json.data).toMatchObject({ status: "resolved", path: "handbook/operations-handbook.md" });
     expect(slipbox(["resolve", "visiting-rota", "--from", "partners-and-names"]).code).toBe(3);
     expect(slipbox(["resolve", "https://example.org/x", "--json"]).json.data.status).toBe("external");
   });

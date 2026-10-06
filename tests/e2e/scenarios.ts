@@ -120,17 +120,18 @@ const CORE: Scenario[] = [
 
   {
     name: "convert-links: every note's links made plain paths after a preview, an ambiguous one picked; embeds still drawn, a block followed, undone",
-    // A note written before plain paths: wikilinks, which slipbox reads as text now (20.2), and the
-    // converter reads as they were — `[[contacts]]` two notes answer to.
+    // A note written with wikilinks, read as links (21.3); the converter makes them paths —
+    // `[[contacts]]` two notes answer to, so it asks which.
     options: {
       files: {
         "old-note.md": "# Old note\n\nSee [[about-this-vault]] and [[contacts]]; the first thread is [[variable-star-survey^thread-one]].\n\n![[wrap-probe]]\n",
       },
     },
     run: async (s) => {
-      // Read now, its wikilinks are text.
+      // Read now, its wikilinks are links, shown by their names; the embed drawn already.
       await open(s, "old-note");
-      await s.see("See [[about-this-vault]] and [[contacts]]");
+      await s.see("See about-this-vault and contacts;");
+      await s.see("Table A — ordinary prose, no long tokens.");
       await s.ex("convert-links");
       await s.see(/links → plain paths: \d+ changes? in \d+ files?/, 10000);
       await s.see("pick old-note.md:3");

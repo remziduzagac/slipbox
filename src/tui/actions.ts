@@ -10,6 +10,7 @@ import { isAbsolute, join, posix, relative } from "node:path";
 import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
 import { locName } from "../core/names.ts";
+import { isNotePath } from "../core/links.ts";
 import { hasMarker, instanceOf, isInside, isNeverRoot } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
@@ -294,13 +295,21 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       if (!from) return a.message("warn", `[[${link.target}]]: links resolve only inside the vault`);
       const r = a.graph.resolveLink({ kind: link.kind, target: link.target }, from);
       if (r.via) a.message("info", `[[${link.target}]] reached ${r.path} by ${r.via === "alias" ? "an alias" : r.via === "previous-name" ? "a previous name" : "a redirect"}`);
-      if (r.resolvedKind === "note") return go(r.path!, link.heading);
+      // `#^id`: the block it marks, by its line (21.3), as a path link's lands.
+      const landing = (path: string) => {
+        if (!link.heading?.startsWith("^")) return link.heading;
+        const at = blockLine(a.graph, path, link.heading.slice(1));
+        return at === null ? null : `L${at}`;
+      };
+      if (r.resolvedKind === "note") return go(r.path!, landing(r.path!));
       if (r.resolvedKind === "file") return fileLink(a, r.path!, link.heading, inSplit);
       if (r.resolvedKind === "ambiguous") {
+        // Two notes of a name, or two attachments (`![[dal.png]]`, 21.3): one picked, opened as its link would.
+        const notes = r.candidates.every(isNotePath);
         return a.openList({
-          title: `[[${link.target}]] matches ${r.candidates.length} notes`,
+          title: `[[${link.target}]] matches ${r.candidates.length} ${notes ? "notes" : "files"}`,
           items: r.candidates.map((c) => ({ label: c, data: c })),
-          accept: (item) => go(item.data as string, link.heading),
+          accept: (item) => (isNotePath(item.data as string) ? go(item.data as string, link.heading) : fileLink(a, item.data as string, link.heading, inSplit)),
         });
       }
       // In another vault, or a vault this machine doesn't know: say which (17.8).

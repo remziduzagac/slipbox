@@ -38,7 +38,11 @@ const markdown: NoteReader = {
   parse: (source, cache) => parseMarkdown(source, cache),
   scanHeadings,
   linkAt(text, col) {
-    // A link is markdown's (20.2): `[[…]]` is text.
+    // A wikilink or an embed (21.3), `[[target#heading|alias]]`.
+    for (const m of text.matchAll(/(!?)\[\[([^\]|#\n]*)(?:#([^\]|\n]*))?(?:\|([^\]\n]*))?\]\]/g)) {
+      if (col < m.index || col >= m.index + m[0].length) continue;
+      return { kind: m[1] ? "embed" : "wiki", target: m[2]!.trim(), heading: m[3]?.trim() || null, text: m[4] ?? m[2]! };
+    }
     for (const m of text.matchAll(/!?\[([^\]\n]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
       if (col < m.index || col >= m.index + m[0].length) continue;
       return { kind: m[0].startsWith("!") ? "image" : "markdown", target: m[2]!, heading: null, text: m[1]! };

@@ -450,6 +450,37 @@ describe("review cycle 5 (the watcher's polling fallbacks)", () => {
       w.close();
     }
   });
+  test("a folder moved in brings its attachments with its notes: `![[dal.png]]` finds the picture in it (21.3)", async () => {
+    const { VaultWatcher } = await import("../src/core/watch.ts");
+    const { WalkFilter } = await import("../src/core/walk.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-adopt-"));
+    const outside = mkdtempSync(join(tmpdir(), "slipbox-adopt-out-"));
+    mkdirSync(join(outside, "photos", "old"), { recursive: true });
+    writeFileSync(join(outside, "photos", "dal.png"), "png");
+    writeFileSync(join(outside, "photos", "old", "flip.jpg"), "jpg");
+    writeFileSync(join(outside, "photos", "captions.md"), "# Captions\n");
+    const changed: { rel: string; isNote: boolean }[] = [];
+    const w = new VaultWatcher({
+      root: dir,
+      filter: new WalkFilter(dir, DEFAULT_CONFIG.walk),
+      dirs: [""],
+      debounceMs: 20,
+      known: new Map(),
+      onBatch: (b) => changed.push(...b.changes.map((c) => ({ rel: c.rel, isNote: c.isNote }))),
+      onDegraded: () => {},
+    });
+    try {
+      renameSync(join(outside, "photos"), join(dir, "photos"));
+      await until(() => changed.length >= 3);
+      expect(changed.sort((a, b) => a.rel.localeCompare(b.rel))).toEqual([
+        { rel: "photos/captions.md", isNote: true },
+        { rel: "photos/dal.png", isNote: false },
+        { rel: "photos/old/flip.jpg", isNote: false },
+      ]);
+    } finally {
+      w.close();
+    }
+  });
 });
 
 describe("links out of data files and to files (16.15)", () => {
@@ -847,11 +878,10 @@ describe("links across vaults: paths; names only for the converter (17.7–17.11
     return { after: r.json.data.files.flatMap((f: { edits: { after: string }[] }) => f.edits.map((e) => e.after)).join("\n"), skipped: r.json.data.skipped.map((x: { reason: string }) => x.reason) as string[] };
   };
 
-  test("[[vault:note]] isn't a link (20.22): resolve says so; the converter reads it, into the named vault (17.8)", async () => {
+  test("[[vault:note]] isn't read (20.22, kept by 21.3): nothing by that name; the converter reads it, into the named vault (17.8)", async () => {
     await ready;
     const r = await cli(["resolve", "[[xapp:design#Goals]]"], notes);
     expect(r.code).toBe(3);
-    expect(r.json.error.message).toContain("a wikilink isn't a link");
     // Bare, it's the vault:path form (20.20): a path in that vault, never a name.
     expect((await cli(["resolve", "xapp:design.md#Goals"], notes)).json.data).toMatchObject({ status: "resolved", abs: join(app, "design.md"), vault: "xapp", line: 5 });
     expect((await cli(["resolve", "xapp:design"], notes)).code).toBe(3);
@@ -869,9 +899,10 @@ describe("links across vaults: paths; names only for the converter (17.7–17.11
     expect(skipped.some((x) => x.includes("[[nope:x]]") && x.includes('unknown vault "nope"'))).toBe(true);
   });
 
-  test("aliases and previous names: names, gone from links (20.22) — the converter still reads them (17.7)", async () => {
+  test("an alias is a name again (21.3), a previous name isn't — the converter reads both (17.7)", async () => {
     await ready;
-    expect((await cli(["resolve", "[[nick]]"], notes)).code).toBe(3);
+    expect((await cli(["resolve", "[[nick]]"], notes)).json.data).toMatchObject({ status: "resolved", path: "person.md" });
+    expect((await cli(["resolve", "[[old-name]]"], notes)).code).toBe(3);
     expect((await converted()).after).toContain("[nick](person.md) [old-name](renamed.md)");
   });
 
@@ -3620,20 +3651,82 @@ describe("renames and moves on paths (20.19)", () => {
   });
 });
 
-describe("links by name, gone from reading (20.22)", () => {
-  test("a wikilink resolves to nothing, said why; the converter's legacy reader still finds its note", () => {
-    const dir = mkdtempSync(join(tmpdir(), "slipbox-noname-"));
+describe("links by name, read again within their root (21.3)", () => {
+  test("a wikilink is read within its root (21.3): a name, a path, an alias, an attachment; ties ambiguous", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-wiki-"));
+    mkdirSync(join(dir, ".slipbox"));
+    mkdirSync(join(dir, "notes", "deep"), { recursive: true });
+    mkdirSync(join(dir, "other"));
+    mkdirSync(join(dir, "img"));
+    writeFileSync(join(dir, "a.md"), "# A\n\n[[b]] [[notes/b#B]] [[bee|the bee]] ![[photo.png]] [[two]] [[research:b]] [[nowhere]]\n");
+    writeFileSync(join(dir, "notes", "b.md"), "---\naliases: [bee]\nprevious_names: [old-b]\n---\n# B\n");
+    writeFileSync(join(dir, "notes", "two.md"), "# Two\n");
+    writeFileSync(join(dir, "other", "two.md"), "# Two\n");
+    writeFileSync(join(dir, "notes", "deep", "near.md"), "[[two]]\n");
+    writeFileSync(join(dir, "img", "photo.png"), "png");
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const at = (target: string, from = "a.md", kind: "wiki" | "embed" = "wiki") => g.resolveLink({ kind, target }, from);
+    expect(at("b")).toMatchObject({ resolvedKind: "note", path: "notes/b.md" });
+    expect(at("notes/b")).toMatchObject({ resolvedKind: "note", path: "notes/b.md" });
+    expect(at("b.md")).toMatchObject({ resolvedKind: "note", path: "notes/b.md" });
+    expect(at("bee")).toMatchObject({ resolvedKind: "note", path: "notes/b.md", via: "alias" });
+    expect(at("photo.png", "a.md", "embed")).toMatchObject({ resolvedKind: "file", path: "img/photo.png" }); // by its name, anywhere
+    // Two notes of one name: from the root, a tie; from beside one, the nearest.
+    expect(at("two")).toMatchObject({ resolvedKind: "ambiguous", candidates: ["notes/two.md", "other/two.md"] });
+    expect(at("two", "notes/deep/near.md")).toMatchObject({ resolvedKind: "note", path: "notes/two.md" });
+    // Not read: a previous name, `[[vault:note]]`.
+    expect(at("old-b").resolvedKind).toBe("unresolved");
+    expect(at("research:b").resolvedKind).toBe("unresolved");
+    expect(at("nowhere")).toMatchObject({ resolvedKind: "unresolved", path: null });
+    // Backlinks by wikilink too: b's, from a, by name, path and alias.
+    expect(g.backlinks("notes/b.md").map((b) => b.target)).toEqual(["b", "notes/b", "bee"]);
+    // With no root, a name names nothing — said why.
+    const loose = mkdtempSync(join(tmpdir(), "slipbox-wiki-loose-"));
+    writeFileSync(join(loose, "x.md"), "[[y]]\n");
+    writeFileSync(join(loose, "y.md"), "# Y\n");
+    const lg = openGraph(folderAt(loose), DEFAULT_CONFIG, true);
+    expect(lg.resolveLink({ kind: "wiki", target: "y" }, "x.md")).toMatchObject({ resolvedKind: "unresolved", reason: "names need a root, and this folder has none: .git, .slipbox/, .obsidian/ or .zk/ makes one" });
+  });
+
+  test("two attachments of one name, as two notes: the nearest, then the shortest; a real tie ambiguous (21.3)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-wiki-att-"));
+    mkdirSync(join(dir, ".obsidian"));
+    for (const d of ["attachments", "Archive/attachments", "Recipes/img", "x", "y"]) mkdirSync(join(dir, d), { recursive: true });
+    for (const f of ["attachments/dal.png", "Archive/attachments/dal.png", "Recipes/img/dal.png", "x/pic.png", "y/pic.png"]) writeFileSync(join(dir, f), "png");
+    writeFileSync(join(dir, "Home.md"), "![[dal.png]] ![[pic.png]]\n");
+    mkdirSync(join(dir, "Archive", "old"), { recursive: true });
+    writeFileSync(join(dir, "Archive", "old", "menu.md"), "![[dal.png]]\n");
+    writeFileSync(join(dir, "Recipes", "dal.md"), "![[dal.png]]\n");
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const at = (target: string, from: string) => g.resolveLink({ kind: "embed", target }, from);
+    expect(at("dal.png", "Home.md")).toMatchObject({ resolvedKind: "file", path: "attachments/dal.png" }); // the shortest
+    expect(at("dal.png", "Archive/old/menu.md")).toMatchObject({ resolvedKind: "file", path: "Archive/attachments/dal.png" }); // the nearest
+    expect(at("dal.png", "Recipes/dal.md")).toMatchObject({ resolvedKind: "file", path: "Recipes/img/dal.png" });
+    expect(at("pic.png", "Home.md")).toMatchObject({ resolvedKind: "ambiguous", candidates: ["x/pic.png", "y/pic.png"] });
+  });
+
+  test("renamed, a note's wikilinks follow in their form — a name a name, a path a path, an alias kept; resolve reads them (21.3)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-wiki-mv-"));
     mkdirSync(join(dir, ".slipbox"));
     mkdirSync(join(dir, "notes"));
-    writeFileSync(join(dir, "a.md"), "# A\n\n[[b]]\n");
+    writeFileSync(join(dir, "a.md"), "[[b]] [[notes/b#B]] [[bee|the bee]] ![[b]]\n");
     writeFileSync(join(dir, "notes", "b.md"), "---\naliases: [bee]\n---\n# B\n");
+    const r = await cli(["--root", dir, "resolve", "[[b#B]]", "--from", "a.md", "--json"]);
+    expect(JSON.parse(r.out).data).toMatchObject({ status: "resolved", path: "notes/b.md" });
+    expect(JSON.parse((await cli(["--root", dir, "resolve", "[[nowhere]]", "--from", "a.md", "--json"])).out).data.status).toBe("unresolved");
+    expect((await cli(["--root", dir, "mv", "notes/b.md", "notes/c.md"])).code).toBe(0);
+    expect(readFileSync(join(dir, "a.md"), "utf8")).toBe("[[c]] [[notes/c#B]] [[bee|the bee]] ![[c]]\n");
+  });
+
+  test("a wikilink's names end at a root nested in its own; a path into it is a path (21.3)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-wiki-nested-"));
+    mkdirSync(join(dir, ".slipbox"));
+    mkdirSync(join(dir, "inner", ".slipbox"), { recursive: true });
+    writeFileSync(join(dir, "a.md"), "[[deepnote]] [[inner/deepnote]]\n");
+    writeFileSync(join(dir, "inner", "deepnote.md"), "# Deep\n");
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
-    for (const target of ["b", "bee", "notes/b"]) {
-      expect(g.resolveLink({ kind: "wiki", target }, "a.md")).toMatchObject({ resolvedKind: "unresolved", reason: "a wikilink isn't a link: slipbox convert-links rewrites it as a path" });
-      expect(g.resolveLegacyWiki({ kind: "wiki", target }, "a.md")).toMatchObject({ resolvedKind: "note", path: "notes/b.md" });
-    }
-    // Nothing links to b: [[b]] is text.
-    expect(g.backlinks("notes/b.md")).toEqual([]);
+    expect(g.resolveLink({ kind: "wiki", target: "deepnote" }, "a.md").resolvedKind).toBe("unresolved");
+    expect(g.resolveLink({ kind: "wiki", target: "inner/deepnote" }, "a.md")).toMatchObject({ resolvedKind: "note", path: join(dir, "inner", "deepnote.md") });
   });
 });
 

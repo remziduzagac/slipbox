@@ -541,7 +541,7 @@ const HANDLERS: Record<string, Handler> = {
     const inner = mdLink ? mdLink[1]! : raw;
     // A path, `#heading` after it, as in a link.
     const hash = inner.indexOf("#");
-    const parts = { target: decodeURIComponentSafe(hash < 0 ? inner : inner.slice(0, hash)), heading: hash < 0 ? null : decodeURIComponentSafe(inner.slice(hash + 1)) || null };
+    let parts = { target: decodeURIComponentSafe(hash < 0 ? inner : inner.slice(0, hash)), heading: hash < 0 ? null : decodeURIComponentSafe(inner.slice(hash + 1)) || null };
     const fromArg = flag(s.args, "from");
     const from = fromArg ? resolveNote(s, fromArg) : null;
     let status: string;
@@ -549,8 +549,10 @@ const HANDLERS: Record<string, Handler> = {
     let candidates: string[] = [];
     let found: Target | null = null;
     let formedVault: string | null = null;
-    // A wikilink isn't a link (20.2): text, resolved by no name (20.22).
+    // A wikilink (21.3): `[[target#heading|alias]]`, read within the root as `links` and the TUI read it.
+    const wiki = /^(!?)\[\[([^\]|#]*)(?:#([^\]|]*))?(?:\|[^\]]*)?\]\]$/.exec(raw);
     const bracketed = /^!?\[\[/.test(raw);
+    if (wiki) parts = { target: wiki[2]!.trim(), heading: wiki[3]?.trim() || null };
     // A file:// URL names a file (17.16): resolved, not external.
     const fileUrl = /^file:\/\//i.test(inner);
     // `vault:path` (20.20): a file or folder of that vault, by its path there.
@@ -565,8 +567,11 @@ const HANDLERS: Record<string, Handler> = {
       candidates = choices;
       found = { resolvedKind: "ambiguous", path: null, candidates: choices, reason: "several vaults have that name" };
     } else if (bracketed) {
-      status = "unresolved";
-      found = { resolvedKind: "unresolved", path: null, candidates: [], reason: "a wikilink isn't a link: slipbox convert-links rewrites it as a path" };
+      const w = s.graph.resolveLink({ kind: wiki?.[1] ? "embed" : "wiki", target: parts.target }, from ?? "");
+      status = w.resolvedKind === "note" || w.resolvedKind === "file" || w.resolvedKind === "anchor" ? "resolved" : w.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
+      path = status === "resolved" ? w.path : null;
+      candidates = w.candidates;
+      found = w;
     } else if (formed) {
       const there = formed.root === s.loc.root ? null : (s.graph.reach?.vaultOf(formed.root) ?? null);
       status = existsSync(formed.abs) ? "resolved" : "unresolved";

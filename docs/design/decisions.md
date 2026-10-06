@@ -143,10 +143,11 @@ interactions; the state they change, a note's text, is reached by `write`, `repl
 
 ## `1.4` — link resolution
 
-*Superseded by `20.2` and `20.22` (built 2026-10-02/03): links are plain paths. Wikilinks aren't read — only the
-converter (`20.1`) reads them, by the rules below, to rewrite them as paths — nothing resolves by name, alias,
-previous name or `[[vault:note]]`, a leading `/` is the filesystem's root, and a move is evidence for a fix, never a
-way to resolve. What follows is the record of how wikilinks resolved, which the converter still follows.*
+*Superseded by `20.2` and `20.22` (built 2026-10-02/03), then in part by `21.3` (built 2026-10-06): wikilinks are
+read again, within their root, by the rules below — a name, a path, an alias, an attachment by its name (two of a
+name, as two notes: the nearest, then the shortest). Previous names, `[[vault:note]]` and remembered moves stay
+unread but by the converter (`20.1`); a leading `/` is the nearest root's (`21.2`); a move is evidence for a fix,
+never a way to resolve.*
 
 One policy everywhere, never the filesystem's:
 
@@ -276,7 +277,7 @@ LSP face (`11.x`), and `17.20` below. In short:
 ## `21.x` — paths inside, conventions at the edges
 
 *Proposed 2026-10-05 with the user, after a survey of how other tools handle links, and reviewed with the user the same
-day; being built (plan `21.x`: `21.1` and `21.2` done). The model in full is `docs/idea.md`, "Paths inside,
+day; being built (plan `21.x`: `21.1`–`21.3` done). The model in full is `docs/idea.md`, "Paths inside,
 conventions at the edges". It revises `20.x` above.*
 
 - **Inside, a link is a path;** each written form — a relative path, `/…`, an extensionless path, a wikilink,
