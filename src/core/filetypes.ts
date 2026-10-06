@@ -122,10 +122,3 @@ export function classify(name: string, noteExtensions: readonly string[]): FileK
   if (BINARY.has(ext)) return { group: "binary", format: ext };
   return { group: "text", format: LANGUAGES[ext] ?? "text" };
 }
-
-/** Bytes that are not text: a NUL in the first 8 KB, as git decides it. */
-export function looksBinary(bytes: Uint8Array): boolean {
-  const n = Math.min(bytes.length, 8192);
-  for (let i = 0; i < n; i++) if (bytes[i] === 0) return true;
-  return false;
-}

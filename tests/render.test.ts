@@ -54,6 +54,27 @@ describe("no rendered row ever exceeds the layout width", () => {
   }
 });
 
+// The reference set's notes too (examples/home): realistic and hostile, every block at its edges.
+// Fewer widths than the demo's — the set is large; the narrow ones are where blocks break.
+describe("no rendered row ever exceeds the layout width: the reference set", () => {
+  const HOME = join(import.meta.dir, "..", "examples", "home");
+  const notes = (readdirSync(HOME, { recursive: true }) as string[]).filter((f) => f.endsWith(".md")).sort();
+  test("its notes are there", () => expect(notes.length).toBeGreaterThan(150));
+  for (const file of notes) {
+    test(file, () => {
+      const src = readFileSync(join(HOME, file), "utf8");
+      for (const [width, glyphs] of [[24, unicode], [37, glyphsFor("ascii")], [80, unicode], [140, unicode]] as const) {
+        const layout = renderMarkdown(src, { width, glyphs, showUrls: false });
+        if (layout.clipped) throw new Error(`${file} @${width}: ${layout.clipped} row(s) had to be clipped`);
+        for (const [i, line] of layout.lines.entries()) {
+          const w = line.spans.reduce((a, s) => a + stringWidth(s.text), 0);
+          if (w > width) throw new Error(`${file} @${width}: row ${i} is ${w} wide: ${line.spans.map((s) => s.text).join("")}`);
+        }
+      }
+    });
+  }
+});
+
 describe("snapshots of the layout IR as text", () => {
   for (const file of samples) {
     test(`${file} @ 80`, () => {
@@ -109,6 +130,10 @@ describe("blocks and inlines (2.2)", () => {
     const roles = new Set(layout.lines.flatMap((l) => l.spans.map((s) => s.role)));
     expect(roles.has("syn_keyword")).toBe(true);
     expect(roles.has("syn_comment")).toBe(true);
+    // A label wider than the row is cut with …: nothing left for the last defence to clip.
+    const long = renderMarkdown("```a-very-long-language-name-that-is-wider-than-the-row\nx\n```\n", { width: 24, glyphs: unicode, showUrls: false });
+    expect(long.clipped ?? 0).toBe(0);
+    expect(long.lines[0]!.spans.map((s) => s.text).join("")).toBe("a-very-long-language-n… ");
   });
   test("escapes never reach the IR (2.9)", () => {
     const out = r("red \x1b[31mtext\x1b[0m and `\x1b]52;c;aGk=\x07code`");
@@ -421,6 +446,13 @@ describe("review cycle 5 (render: what the snapshots can't see)", () => {
     expect(roleOf("warning")).toBe("callout_warning");
     expect(roleOf("caution")).toBe("callout_caution");
     expect(roleOf("bug")).toBe("callout_caution");
+    // Lookalikes stay quotes: unclosed, a space after the !, no !, and an escaped bracket — the
+    // author wanted the brackets — in a quote inside a list too (the escape is only in the source).
+    for (const src of ["> [!note text\n", "> [! note] t\n", "> [note]\n", "> \\[!note] t\n", "- > \\[!tip] t\n"]) {
+      const l = renderMarkdown(src, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false });
+      expect(l.lines.flatMap((x) => x.spans.map((sp) => sp.role)).some((r) => r.startsWith("callout_"))).toBe(false);
+      expect(l.lines.map((x) => x.spans.map((sp) => sp.text).join("")).join("\n")).toContain("[");
+    }
     const fm = renderMarkdown('+++\ntitle = "T"\ntags = ["a"]\n+++\n\nx\n', { width: 60, glyphs: glyphsFor("unicode"), showUrls: false });
     const rows = fm.lines.map((l) => l.spans.map((s) => s.text).join(""));
     expect(rows[0]).toContain("properties");

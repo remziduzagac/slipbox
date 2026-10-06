@@ -40,7 +40,7 @@ their children out at reduced width and prefix every row, so nesting composes.
 | list | bullets per depth, numbers right-aligned, hanging indent |
 | task item | checkbox glyph (after the number in an ordered list); a checked item's text is dimmed |
 | blockquote | `▎` bar per row, italic dim text |
-| callout | `> [!note] Title` (Obsidian and GitHub): icon, title, bar in the kind's colour |
+| callout | `> [!note] Title` (Obsidian and GitHub): icon, title, bar in the kind's colour; `> \[!note]` stays a quote |
 | code | full width, background fill, language label at top right, highlighted, hard-wrapped |
 | table | the allocator below |
 | thematic break | a rule across the width |

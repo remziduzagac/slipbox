@@ -45,11 +45,11 @@ interface Run {
   json: { schema: number; ok: boolean; command: string; data: any; error?: { code: number; message: string }; warnings: string[]; stale: string[] };
 }
 
-function slipbox(args: string[], opts: { stdin?: string; cwd?: string } = {}): Run {
+function slipbox(args: string[], opts: { stdin?: string; cwd?: string; env?: Record<string, string> } = {}): Run {
   const word = args.find((a) => !a.startsWith("-"));
   if (word && CLI_COMMANDS.has(word)) ran.add(word);
   // A timeout, so a hang (a read that never ends) fails the test instead of the run.
-  const r = Bun.spawnSync(["bun", MAIN, ...args], { cwd: opts.cwd ?? vault, env, stdin: opts.stdin === undefined ? "ignore" : Buffer.from(opts.stdin), timeout: 20_000 });
+  const r = Bun.spawnSync(["bun", MAIN, ...args], { cwd: opts.cwd ?? vault, env: { ...env, ...opts.env }, stdin: opts.stdin === undefined ? "ignore" : Buffer.from(opts.stdin), timeout: 20_000 });
   const out = r.stdout.toString();
   let json = null;
   if (args.includes("--json")) json = JSON.parse(out);
@@ -245,6 +245,37 @@ describe("editors and state", () => {
 });
 
 describe("the vault and the tool", () => {
+  test("slipbox lsp is gone: said why on stderr (an editor's log), exit 2", () => {
+    const r = slipbox(["lsp"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toContain("slipbox lsp was removed");
+  });
+  // The agents' skill (skills/slipbox/SKILL.md) is what they type: every example in it runs, its
+  // placeholders filled, with no usage error (exit 2) — a flag renamed or a command reshaped shows.
+  test("every command in the skill runs as written", () => {
+    const skill = readFileSync(join(import.meta.dir, "..", "skills", "slipbox", "SKILL.md"), "utf8");
+    const lines = skill
+      .split(/^```.*$/m)
+      .filter((_, i) => i % 2 === 1)
+      .flatMap((block) => block.split("\n"))
+      .filter((l) => l.startsWith("slipbox "))
+      .map((l) => l.replace(/\s{2,}#.*$/, ""));
+    expect(lines.length).toBeGreaterThan(30);
+    const fill: Record<string, string> = { "<note>": "operations-handbook", "[<note>]": "operations-handbook", "<text>": "Aster", "'<text>'": "Aster", "<old>": "Brill", "<new>": "BRILL", "<line>": "1", "<n>": "1", "<sha>": "0123456789abcdef", "<path>": "scratch/skill-example.md" };
+    // A copy of its own, known only to its own state: another halden in the sandbox's state would
+    // make the demo's name ambiguous for the tests after.
+    const dir = mkdtempSync(join(sandbox, "skill-"));
+    cpSync(DEMO, join(dir, "vault"), { recursive: true });
+    const own = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") };
+    for (const line of lines) {
+      // Its words as sh would split them: quotes kept together.
+      const words = [...line.matchAll(/'([^']*)'|"([^"]*)"|(\S+)/g)].map((m) => m[1] ?? m[2] ?? m[3]!).slice(1);
+      const args = words.map((w) => fill[w] ?? w);
+      expect(args.join(" ")).not.toMatch(/<\w+>/); // every placeholder known
+      const r = slipbox(args, { cwd: join(dir, "vault"), env: own, stdin: args.includes("--stdin") ? "x\n" : undefined });
+      if (r.code === 2) throw new Error(`${line}: a usage error\n${r.err || r.out}`);
+    }
+  });
   test("info, themes, commands, init, help, version", () => {
     const i = slipbox(["info", "--json"]).json.data;
     expect(i.root).toBe(vault);

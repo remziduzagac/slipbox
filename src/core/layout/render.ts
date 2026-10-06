@@ -294,7 +294,7 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
       if (ctx.nesting >= MAX_NESTING) return paragraph([{ type: "text", value: textOf(node) }], srcOf(node), ctx, width, base);
       ctx.nesting++;
       try {
-        return node.type === "list" ? list(node, ctx, width, base) : blockquote(node.children, srcOf(node), ctx, width);
+        return node.type === "list" ? list(node, ctx, width, base) : blockquote(node.children, srcOf(node), ctx, width, (node.data as { literal?: boolean } | undefined)?.literal);
       } finally {
         ctx.nesting--;
       }
@@ -462,8 +462,10 @@ function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, wi
   // Top padding row carries the language label, right-aligned.
   const top: Span[] = [];
   if (label) {
-    const lw = stringWidth(label) + 1;
-    top.push({ text: " ".repeat(Math.max(0, width - lw)), role: "code_block", attrs: 0 }, { text: `${label} `, role: "code_label", attrs: 0 });
+    // Cut with … when wider than the row, never left to the last defence's clip (lost text).
+    const shown = truncate(label, Math.max(1, width - 1));
+    const lw = stringWidth(shown) + 1;
+    top.push({ text: " ".repeat(Math.max(0, width - lw)), role: "code_block", attrs: 0 }, { text: `${shown} `, role: "code_label", attrs: 0 });
   }
   out.push({ spans: top, src, fill: "code_block" });
   const inner = Math.max(1, width - 2);
@@ -507,12 +509,12 @@ function breakHard(spans: Span[], width: number): Span[][] {
 
 const CALLOUT = /^\[!([A-Za-z]+)\]([+-])?[ \t]*/;
 
-function blockquote(children: RootContent[], src: number, ctx: Ctx, width: number): Line[] {
+function blockquote(children: RootContent[], src: number, ctx: Ctx, width: number, literal = false): Line[] {
   const g = ctx.opts.glyphs;
-  // Obsidian / GitHub callout: `> [!note] Optional title`.
+  // Obsidian / GitHub callout: `> [!note] Optional title` — unless its bracket is escaped (`literal`).
   const first = children[0];
   const lead = first?.type === "paragraph" ? first.children[0] : undefined;
-  const m = lead?.type === "text" ? CALLOUT.exec(lead.value) : null;
+  const m = lead?.type === "text" && !literal ? CALLOUT.exec(lead.value) : null;
   if (m && first?.type === "paragraph" && lead?.type === "text") {
     const kind = m[1]!.toLowerCase();
     const role = calloutRole(kind);

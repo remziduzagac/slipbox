@@ -9,6 +9,8 @@ import { dirname, join } from "node:path";
 import { parse } from "smol-toml";
 import { BuildError, buildHome, SOURCE } from "../scripts/build-home.ts";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
+import { parseData } from "../src/core/data.ts";
+import { classify } from "../src/core/filetypes.ts";
 
 const hasGit = spawnSync("git", ["--version"]).status === 0;
 
@@ -205,5 +207,37 @@ describe("the reference set is complete (examples/home)", () => {
     for (const marker of ["notes/.slipbox/", "hobbies/photography/.slipbox/", "hobbies/cooking/.obsidian/", "hobbies/cycling/.zk/"]) expect(files).toContain(marker);
     // The casual folder holds no marker of its own (one inside it, an exported vault, is a root nested in it).
     expect(files.filter((f) => /^Downloads\/\.(slipbox|obsidian|zk|git)\b/.test(f))).toEqual([]);
+  });
+});
+
+describe("the reference set's data files read as they mean to", () => {
+  // The ones that don't parse, on purpose, and what each is told (a reader that starts failing a
+  // realistic file, or stops failing a broken one, shows here).
+  const BROKEN: Record<string, string> = {
+    "work/infra/config/broken.ini": "line 7: neither a section, a key nor a comment",
+    "work/infra/config/broken/bad-date.toml": "invalid date",
+    "work/infra/config/broken/duplicate-key.toml": "redefine",
+    "work/infra/config/broken/unclosed-string.toml": "unfinished string",
+    "work/infra/config/local/empty.json": "Unexpected EOF",
+    "work/infra/config/nginx.conf": "line 2: neither a section, a key nor a comment",
+    "work/infra/dotfiles/slipbox/typo.toml": "invalid value",
+    "work/infra/k8s/broken-ingress.yaml": "line 27:",
+    "work/infra/k8s/tabs.yaml": "Tabs are not allowed",
+    "work/kestrel/api/settings.json5": "Expected '}'", // JSON5's unquoted keys: read as JSON
+    "work/kestrel/config/legacy-flags.json": "Single quotes",
+    "work/kestrel/data/import-2026-09.csv": "a quoted field never closes",
+  };
+  const data = (readdirSync(SOURCE, { recursive: true }) as string[])
+    .filter((f) => !f.startsWith(".build") && lstatSync(join(SOURCE, f)).isFile() && classify(f.split("/").pop()!, ["md"]).group === "data")
+    .sort();
+  test("there are plenty", () => expect(data.length).toBeGreaterThan(60));
+  test("each parses, or fails as it means to", () => {
+    const got: Record<string, string> = {};
+    for (const f of data) {
+      const r = parseData(classify(f.split("/").pop()!, ["md"]).format, readFileSync(join(SOURCE, f), "utf8"));
+      if (r.error) got[f] = r.error;
+    }
+    expect(Object.keys(got).sort()).toEqual(Object.keys(BROKEN).sort());
+    for (const [f, error] of Object.entries(BROKEN)) expect(got[f]).toContain(error);
   });
 });

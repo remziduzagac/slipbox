@@ -4790,6 +4790,13 @@ describe("files beyond notes (16.3–16.5)", () => {
     expect(readFileSync(join(root, "cfg", "app.toml"), "utf8")).toBe('[editor]\nfont = "x" # a comment\nwrap = true\n');
     expect(h.app.buffer("blob.dat")).toBeNull();
     expect(h.app.messages.at(-1)!.text).toContain("binary");
+    // Named like text, binary inside: a NUL in the first 8 KB (as git decides) isn't opened; one
+    // past them is the file's own business.
+    writeFileSync(join(root, "dump.txt"), `head\u0000${"x".repeat(100)}`);
+    writeFileSync(join(root, "late.txt"), `${"x\n".repeat(5000)}\u0000`);
+    expect(h.app.buffer("dump.txt")).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toBe("dump.txt holds binary bytes; slipbox opens text");
+    expect(h.app.buffer("late.txt")).not.toBeNull();
   });
   test("the switcher lists the files the explorer shows", async () => {
     const h = await harness({ root: await setup() });

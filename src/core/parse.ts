@@ -301,6 +301,24 @@ function shifted<T>(nodes: T[], delta: number): T[] {
 }
 
 /** Positions carry lines and columns only: an offset would go stale when chunks are reused. */
+/**
+ * A quote whose text starts with an escaped bracket (`> \[!note]`) is marked `literal`: its author
+ * wrote the brackets to be read, not a callout. Only the source tells (the escape is gone from the
+ * text), so it's marked here, while the offsets are there.
+ */
+function markLiteralQuotes(nodes: unknown[], text: string): void {
+  for (const n of nodes) {
+    const node = n as Nodes;
+    if (node.type === "blockquote") {
+      const first = node.children[0];
+      const lead = first?.type === "paragraph" ? first.children[0] : undefined;
+      const at = lead?.position?.start.offset;
+      if (lead?.type === "text" && at !== undefined && text[at] === "\\") ((node.data ??= {}) as { literal?: boolean }).literal = true;
+    }
+    if ("children" in node) markLiteralQuotes(node.children, text);
+  }
+}
+
 function dropOffsets(nodes: unknown[]): void {
   for (const n of nodes) {
     const node = n as { position?: { start: { offset?: number }; end: { offset?: number } }; children?: unknown[] };
@@ -384,6 +402,7 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
       };
       const kids = stubs.length ? root.children.filter((n) => !isStub(n)) : root.children;
       const stubbed = !stubs.length || root.children.length - kids.length === stubs.length;
+      markLiteralQuotes(kids, text);
       dropOffsets(kids);
       for (const k of kids) (k as unknown as Record<symbol, object>)[ORIGIN] = {};
       entry = { children: from - pre ? shifted(kids, from - pre) : kids, shift: from, stubbed };

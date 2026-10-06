@@ -473,6 +473,26 @@ describe("links out of data files and to files (16.15)", () => {
   });
 });
 
+describe("link destinations at their edges (CommonMark)", () => {
+  test("a bare space or an unbalanced paren ends it; <…>, %20 and titles are read; brackets in a name; empty is the note", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-dest-"));
+    mkdirSync(join(dir, ".slipbox"));
+    for (const f of ["my note.md", "plan (v2).md", "draft [wip].md", "x.md"]) writeFileSync(join(dir, f), `# ${f}\n`);
+    const body = ["[space](my note.md)", "[paren](plan (v2).md)", "[angle](<my note.md>)", "[enc](plan%20(v2).md)", "[brackets](<draft [wip].md>)", '[title](x.md "A title")', "[single](x.md 'single')", "[empty]()", "[hash](#)"];
+    writeFileSync(join(dir, "probe.md"), `${body.join("\n\n")}\n`);
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    expect(g.linksOf("probe.md").map((l) => [l.text, l.resolvedKind, l.path])).toEqual([
+      ["angle", "note", "my note.md"],
+      ["enc", "note", "plan (v2).md"],
+      ["brackets", "note", "draft [wip].md"],
+      ["title", "note", "x.md"],
+      ["single", "note", "x.md"],
+      ["empty", "anchor", "probe.md"],
+      ["hash", "anchor", "probe.md"],
+    ]);
+  });
+});
+
 describe("links in code comments (16.10)", () => {
   test("a comment's paths that name vault files, `path:line` and URLs are links and backlinks; a string's aren't", async () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-codelinks-"));
