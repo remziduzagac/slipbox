@@ -647,7 +647,7 @@ removals as their replacements land, the sweep last.*
 | 21.4 | **Done.** Conventions found: your setting, the root's tool's (Obsidian, zk), the notes' majority, ours |
 | 21.5 | **Done.** Links written in the convention: completion, the picker, `slipbox link`; renames keep each form |
 | 21.6 | **Done.** Named folders: by remote (short, qualified), by `.slipbox/` name and id; copies, defaults; lookup |
-| 21.7 | `slipbox://` pointers, `@branch` too: read, followed, backlinked, renamed; clashes asked; relinked to |
+| 21.7 | **Done.** `slipbox://` pointers, `@branch` too: read, followed, backlinked, renamed; clashes asked; relinked |
 | 21.8 | Personal state by root, positions by file; carried with a named folder's move; today's moved once |
 | 21.9 | What's shown: the file's own forms; files by path in lists; the status line and the explorer by roots |
 | 21.10 | Words and commands: `folders [default]`, `name`, `root`/`name` in JSON, `--scope here`; pointers as args |

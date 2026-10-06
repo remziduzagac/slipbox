@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, realpathSync, renameSync, rmdirSync, statSync, u
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
 import { atomicWrite, landsInside, readText } from "./fsutil.ts";
-import type { Backlink, Graph, LinkKind, NoteEntry } from "./graph.ts";
+import type { Backlink, Graph, LinkKind, NoteEntry, ResolvedLink } from "./graph.ts";
 import { VAULT_LINK } from "./graph.ts";
 import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
 import { slugify } from "./parse.ts";
@@ -20,6 +20,8 @@ import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } 
 import { forgetVault, readRegistry, VAULT_NAME, vaultConfigFile, vaultNamed } from "./registry.ts";
 import { openVault } from "./reach.ts";
 import { vaultForm } from "./names.ts";
+import { copyAvailable, folderIdentity, pointerName, readFolders, travelTogether } from "./folders.ts";
+import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { findVaultRoot, hasMarker, initVault, isInside, markersAt, type VaultLocation } from "./vault.ts";
 
 export class RenameError extends Error {}
@@ -154,6 +156,26 @@ function mdTarget(written: string, linkingAbs: string, toAbs: string, g: Graph |
   const hash = written.indexOf("#");
   const frag = hash >= 0 ? written.slice(hash) : "";
   const path = hash >= 0 ? written.slice(0, hash) : written;
+  // A pointer (21.7) stays one: its name and branch, the path from its folder's root to the file now —
+  // without an extension, a folder's `/`, encoded, each as written. Out of that folder, into another
+  // named one: a pointer to that one.
+  const p = isPointer(path) ? parsePointer(path) : null;
+  if (p) {
+    const t = resolvePointer({ ...p, path: "", fragment: null });
+    let into = t.status === "found" && isInside(t.root, toAbs) ? { name: p.name, branch: p.branch, root: t.root } : null;
+    if (!into) {
+      const there = findVaultRoot(toAbs);
+      const ident = there ? folderIdentity(there) : null;
+      if (there && ident) into = { name: pointerName({ key: ident.key, name: ident.name, remote: ident.remote }), branch: null, root: there };
+    }
+    if (into) {
+      let rel = relative(into.root, toAbs).split("\\").join("/");
+      if (extensionless(p.path) && NOTE_EXT.test(rel)) rel = rel.replace(NOTE_EXT, "");
+      if (p.path.endsWith("/") && rel && !rel.endsWith("/")) rel += "/";
+      const encode = /%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(rel);
+      return formatPointer({ name: into.name, branch: into.branch, path: rel, fragment: null }, encode ? encodeURI : undefined) + frag;
+    }
+  }
   let next: string;
   if (path.startsWith("/") && g && g.loc.mode !== "folder" && isInside(g.root, toAbs)) next = `/${relative(g.root, toAbs).split("\\").join("/")}`;
   else {
@@ -603,6 +625,8 @@ export function linksIntoFolder(g: Graph, folderAbs: string): { backlink: Backli
 /** A link from another vault to a file of a moving vault, rewritten to where the file will be; null
  *  when it needs nothing (by the vault's name). */
 function retargetInto(b: Backlink, oldAbs: string, newAbs: string): string | null {
+  // A pointer names the folder, wherever it is (21.7): nothing to rewrite.
+  if (isPointer(b.target)) return null;
   const wiki = b.kind === "wiki" || b.kind === "embed";
   if (wiki && VAULT_LINK.exec(b.target)) return null;
   if (pathForm(b.target)) {
@@ -701,10 +725,15 @@ export function planRelink(g: Graph, rels?: string[]): RenamePlan {
     for (const l of g.linksOf(rel)) {
       // A path that reaches nothing, whose file was seen to move (20.2: evidence, not resolution).
       const to = g.movedTarget(l, rel);
-      if (!to) continue;
       const abs = join(g.root, rel);
       const site: Site = { abs, kind: l.kind, target: l.target, line: l.line, column: l.column };
-      c.edit(site, mdTarget(l.target, abs, join(g.root, to), g), null);
+      if (to) {
+        c.edit(site, mdTarget(l.target, abs, join(g.root, to), g), null);
+        continue;
+      }
+      // A path into a named folder that doesn't travel with this one (21.7): its pointer.
+      const ptr = pointerOffer(g, l, rel);
+      if (ptr) c.edit(site, ptr, null);
     }
   }
   // The whole vault: the links its own move broke, too (20.17).
@@ -712,6 +741,43 @@ export function planRelink(g: Graph, rels?: string[]): RenamePlan {
   if (moved) vaultMoveFixes(g, moved, c);
   const files = c.result();
   return { kind: "relink", from: rels?.join(", ") ?? "every note", to: "", move: null, files, warnings: dirtyTrees(files.map((f) => f.abs)), skipped: c.skipped };
+}
+
+/**
+ * A markdown link's path out of this root into a named folder that doesn't travel with it (21.7):
+ * the pointer to write instead — for one that reaches the file, and for one broken where a copy of
+ * that folder was (moved by hand). Only one that reaches the file now; the fragment kept.
+ */
+function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string): string | null {
+  if (l.kind !== "markdown" && l.kind !== "image") return null;
+  const hash = l.target.indexOf("#");
+  const path = hash >= 0 ? l.target.slice(0, hash) : l.target;
+  const frag = hash >= 0 ? l.target.slice(hash) : "";
+  if (!pathForm(path) || pathForm(path) === "file-url") return null;
+  let abs: string | null = null;
+  if ((l.resolvedKind === "note" || l.resolvedKind === "file" || l.resolvedKind === "folder") && l.path && isAbsolute(l.path)) abs = l.path;
+  else if (l.resolvedKind === "unresolved" && pathForm(path) === "relative") {
+    let decoded = path;
+    try {
+      decoded = decodeURIComponent(path);
+    } catch {}
+    abs = join(dirname(join(g.root, fromRel)), decoded);
+  }
+  if (!abs || isInside(g.root, abs)) return null;
+  const folders = readFolders();
+  // Its folder: the root holding it now; else a copy of a named folder that isn't here any more.
+  const there = existsSync(abs) ? findVaultRoot(abs) : null;
+  const ident = there ? folderIdentity(there) : null;
+  let hit = ident && there ? { f: folders.find((x) => x.key === ident.key), root: there } : null;
+  if (!hit?.f) {
+    const was = folders.flatMap((f) => f.copies.filter((c) => !copyAvailable(c.path) && isInside(c.path, abs!)).map((c) => ({ f, root: c.path })))[0];
+    hit = was ?? null;
+  }
+  if (!hit?.f || travelTogether(g.root, hit.root)) return null;
+  const p = { name: pointerName(hit.f, folders), branch: null, path: relative(hit.root, abs).split(sep).join("/"), fragment: null };
+  const t = resolvePointer(p, folders);
+  if (t.status !== "found" || !pathLink(t.abs, join(g.root, fromRel), false, undefined, true)) return null;
+  return formatPointer(p, /%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(p.path) ? encodeURI : undefined) + frag;
 }
 
 /** This vault's last confirmed move to where it is now (20.5), if it has one. */

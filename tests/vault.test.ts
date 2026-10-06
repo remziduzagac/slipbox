@@ -3563,16 +3563,19 @@ describe("repairs from what the state knows (20.17)", () => {
     expect((await cli(["relink"], moved)).code).toBe(0);
     expect(readFileSync(join(moved, "out.md"), "utf8")).toBe("[n](../../../x/b/n.md#top) and [in](t.md)\n\n[near](../near.md)\n");
     expect(readFileSync(join(c, "in.md"), "utf8")).toBe(`[t](../../y/deeper/a/t.md) [abs](${moved}/t.md)\n`);
-    // Fixed: nothing more to do.
+    // Fixed. b is a named folder that doesn't travel with a: the relink offers its pointer now (21.7).
+    const offer = (await cli(["relink", "--dry-run"], moved)).json.data.files;
+    expect(offer.flatMap((f: { edits: { after: string }[] }) => f.edits.map((e) => e.after))).toEqual([`[n](slipbox://b${tag}/n.md#top) and [in](t.md)`]);
+    expect((await cli(["relink"], moved)).code).toBe(0);
     expect((await cli(["relink", "--dry-run"], moved)).json.data.files).toEqual([]);
-    // Moved again: the last move is the one to read from.
+    // Moved again: the last move is the one to read from — and the pointer needs nothing.
     const again = join(base, "z", "a");
     mkdirSync(dirname(again), { recursive: true });
     renameSync(moved, again);
     await cli(["ls"], again);
     await cli(["vault-moved", moved], again);
     expect((await cli(["relink"], again)).code).toBe(0);
-    expect(readFileSync(join(again, "out.md"), "utf8").split("\n")[0]).toBe("[n](../../x/b/n.md#top) and [in](t.md)");
+    expect(readFileSync(join(again, "out.md"), "utf8").split("\n")[0]).toBe(`[n](slipbox://b${tag}/n.md#top) and [in](t.md)`);
     expect(readFileSync(join(c, "in.md"), "utf8")).toBe(`[t](../../z/a/t.md) [abs](${again}/t.md)\n`);
   });
 });
@@ -4488,7 +4491,7 @@ describe("named folders (21.6)", () => {
     expect(pointerName(readFolders().find((f) => f.name === same)!)).toBe(same); // alone: its short name
     recordFolder(folder({ name: same, id: uniq() }));
     const amb = lookupFolder(same);
-    expect(amb).toMatchObject({ status: "ambiguous", reason: `2 different folders are called ${same}: rename one (slipbox name <new>)` });
+    expect(amb).toMatchObject({ status: "ambiguous", reason: `2 different folders are called ${same}: rename one (slipbox rename-vault <new>, in it)` });
     // Renamed in its config, its old name kept: the old name still finds it, said so.
     const was = `w${uniq()}`;
     const now = `v${uniq()}`;
@@ -4520,5 +4523,152 @@ describe("named folders (21.6)", () => {
     const unnamed = folder({ obsidian: true });
     writeFileSync(join(unnamed, "y.md"), "# Y\n");
     expect((await cli(["--root", unnamed, "info"])).out).toContain("name      none — no remote and no .slipbox/ name: linked to by relative path");
+  });
+});
+
+describe("slipbox:// pointers (21.7)", () => {
+  const uniq = () => basename(mkdtempSync(join(tmpdir(), "p"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
+  const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@t", "-c", "user.name=t", "-c", "init.defaultBranch=main", ...args], { cwd }).exitCode;
+  /** A named folder (`.slipbox/` with this name), its files, opened once so the lookup has it. */
+  const named = async (name: string, files: Record<string, string>, parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-"))) => {
+    const dir = join(parent, name);
+    mkdirSync(join(dir, ".slipbox"), { recursive: true });
+    writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${uniq()}"\nname = "${name}"\n`);
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, rel)), { recursive: true });
+      writeFileSync(join(dir, rel), text);
+    }
+    await cli(["--root", dir, "problems"]); // in the lookup, and indexed: its links read from elsewhere
+    return dir;
+  };
+
+  test("parsed: a name, @branch, the path and fragment; a qualified name as the longest known remote", async () => {
+    const { formatPointer, parsePointer } = await import("../src/core/pointer.ts");
+    const known = [{ key: "remote:github.com/me/research", name: "research", remote: "github.com/me/research", id: null, old: [], private: false, copies: [], default: null }];
+    expect(parsePointer("slipbox://notes/inbox.md", known)).toEqual({ name: "notes", branch: null, path: "inbox.md", fragment: null });
+    expect(parsePointer("slipbox://research@refactor/a%20b/x.md#Proof%20one", known)).toEqual({ name: "research", branch: "refactor", path: "a b/x.md", fragment: "Proof one" });
+    expect(parsePointer("slipbox://github.com/me/research@feat%2Fx/algo/d.md", known)).toEqual({ name: "github.com/me/research", branch: "feat/x", path: "algo/d.md", fragment: null });
+    expect(parsePointer("slipbox://gitlab.com/them/other/x.md", known)).toMatchObject({ name: "gitlab.com/them/other", path: "x.md" }); // unknown, by its look
+    // A remote of four parts: only the lookup knows where its name ends.
+    const deep = [...known, { ...known[0]!, key: "remote:gitlab.com/group/sub/proj", name: "proj", remote: "gitlab.com/group/sub/proj" }];
+    expect(parsePointer("slipbox://gitlab.com/group/sub/proj/notes/x.md", deep)).toMatchObject({ name: "gitlab.com/group/sub/proj", path: "notes/x.md" });
+    expect(parsePointer("slipbox://notes", known)).toMatchObject({ name: "notes", path: "" });
+    expect(parsePointer("https://notes/x.md", known)).toBeNull();
+    expect(formatPointer({ name: "research", branch: "feat/x", path: "a b.md", fragment: "Top" }, encodeURI)).toBe("slipbox://research@feat/x/a%20b.md#Top"); // as a branch is written
+  });
+
+  test("followed into another folder: its note, file or folder, extensionless; in its own root, a link like any; or why not", async () => {
+    const tag = uniq();
+    const b = await named(`beta${tag}`, { "sub/x.md": "# X\n\n## Top\n", "img/p.png": "png" });
+    const a = await named(`alpha${tag}`, { "a.md": "# A\n", "own.md": `[me](slipbox://alpha${tag}/a.md)\n` });
+    const g = openGraph(locateVault({ root: a }), DEFAULT_CONFIG, false);
+    const at = (target: string) => g.resolveLink({ kind: "markdown", target }, "own.md");
+    expect(at(`slipbox://beta${tag}/sub/x.md#Top`)).toMatchObject({ resolvedKind: "note", path: join(b, "sub", "x.md"), vault: `beta${tag}` });
+    expect(at(`slipbox://beta${tag}/sub/x`)).toMatchObject({ resolvedKind: "note", path: join(b, "sub", "x.md") });
+    expect(at(`slipbox://beta${tag}/img/p.png`)).toMatchObject({ resolvedKind: "file", path: join(b, "img", "p.png") });
+    expect(at(`slipbox://beta${tag}/sub/`)).toMatchObject({ resolvedKind: "folder", path: join(b, "sub") });
+    // Its own root: the note by its path here, a backlink like any.
+    expect(at(`slipbox://alpha${tag}/a.md`)).toMatchObject({ resolvedKind: "note", path: "a.md" });
+    expect(g.backlinks("a.md").map((x) => x.from)).toEqual(["own.md"]);
+    expect(at(`slipbox://beta${tag}/nope.md`)).toMatchObject({ resolvedKind: "unresolved", reason: `no nope.md in beta${tag}` });
+    expect(at(`slipbox://beta${tag}/../escape.md`)).toMatchObject({ resolvedKind: "unresolved", reason: "../escape.md: a pointer's path stays in its folder" });
+    expect(at(`slipbox://gone${tag}/x.md`)).toMatchObject({ resolvedKind: "unresolved", reason: `gone${tag} isn't on this machine yet: open it, or let the index find it` });
+    // Two folders of one name: ambiguous, each by where it is.
+    await named(`twin${tag}`, { "t.md": "# T\n" });
+    await named(`twin${tag}`, { "t.md": "# T\n" });
+    expect(at(`slipbox://twin${tag}/t.md`)).toMatchObject({ resolvedKind: "ambiguous", reason: expect.stringContaining(`2 different folders are called twin${tag}`) });
+  });
+
+  test("@branch: the checkout with it, a worktree's; else the file as git has it there, read-only; else why not", async () => {
+    const tag = uniq();
+    const repo = mkdtempSync(join(tmpdir(), "slipbox-ptr-git-"));
+    if (git(repo, "init", "-q") !== 0) return; // no git here
+    git(repo, "remote", "add", "origin", `git@github.com:me/repo${tag}.git`);
+    writeFileSync(join(repo, "x.md"), "# X on main\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-qm", "main");
+    git(repo, "branch", "draft");
+    git(repo, "branch", "agent/sync-retry");
+    git(repo, "checkout", "-qb", "feature");
+    writeFileSync(join(repo, "x.md"), "# X on feature\n");
+    git(repo, "commit", "-qam", "feature");
+    git(repo, "checkout", "-q", "main");
+    const wt = join(mkdtempSync(join(tmpdir(), "slipbox-ptr-wt-")), "wt");
+    git(repo, "worktree", "add", "-q", wt, "feature");
+    await cli(["--root", repo, "ls"]);
+    const { parsePointer, resolvePointer } = await import("../src/core/pointer.ts");
+    const r = (u: string) => resolvePointer(parsePointer(u)!);
+    expect(r(`slipbox://repo${tag}/x.md`)).toMatchObject({ status: "found", abs: join(repo, "x.md") });
+    expect(r(`slipbox://repo${tag}@main/x.md`)).toMatchObject({ status: "found", abs: join(repo, "x.md") });
+    expect(r(`slipbox://repo${tag}@feature/x.md`)).toMatchObject({ status: "found", root: wt, abs: join(wt, "x.md") });
+    expect(r(`slipbox://github.com/me/repo${tag}@draft/x.md`)).toMatchObject({ status: "branch", root: repo, rel: "x.md", branch: "draft" });
+    expect(r(`slipbox://repo${tag}@nowhere/x.md`)).toMatchObject({ status: "unresolved", reason: `repo${tag} has no branch nowhere` });
+    // A branch with a `/`: the longest the repository has, the rest the path.
+    expect(r(`slipbox://repo${tag}@agent/sync-retry/x.md`)).toMatchObject({ status: "branch", rel: "x.md", branch: "agent/sync-retry" });
+    expect(r(`slipbox://repo${tag}@agent%2Fsync-retry/x.md`)).toMatchObject({ status: "branch", rel: "x.md", branch: "agent/sync-retry" });
+    // The CLI: the branch read from git.
+    const j = JSON.parse((await cli(["--root", repo, "resolve", `slipbox://repo${tag}@draft/x.md`, "--json"])).out).data;
+    expect(j).toMatchObject({ status: "resolved", git: { root: repo, rel: "x.md", branch: "draft" } });
+  });
+
+  test("the CLI resolves one; another folder's pointer is a backlink; a rename keeps it a pointer, in its form", async () => {
+    const tag = uniq();
+    const parent = await named(`p${tag}`, { "p.md": "# P\n" });
+    const b = await named(`b${tag}`, { "sub/x.md": "# X\n\n## Top\n" }, parent);
+    const a = await named(`a${tag}`, { "a.md": `[x](slipbox://b${tag}/sub/x.md#Top) [bare](slipbox://b${tag}/sub/x)\n` });
+    const r = JSON.parse((await cli(["--root", a, "resolve", `slipbox://b${tag}/sub/x.md#Top`, "--from", "a.md", "--json"])).out).data;
+    expect(r).toMatchObject({ status: "resolved", path: join(b, "sub", "x.md"), line: 3 });
+    const unknown = await cli(["--root", a, "resolve", `slipbox://zz${tag}/x.md`]);
+    expect(unknown.code).toBe(3);
+    expect(unknown.err).toContain(`zz${tag} isn't on this machine yet`);
+    const back = JSON.parse((await cli(["--root", b, "backlinks", "sub/x.md", "--json"])).out).data.backlinks;
+    expect(back.map((x: { from: string; target: string }) => x.target)).toEqual([`slipbox://b${tag}/sub/x.md#Top`, `slipbox://b${tag}/sub/x`]);
+    expect((await cli(["--root", b, "mv", "sub/x.md", "moved/y.md"])).code).toBe(0);
+    expect(readFileSync(join(a, "a.md"), "utf8")).toBe(`[x](slipbox://b${tag}/moved/y.md#Top) [bare](slipbox://b${tag}/moved/y)\n`);
+    // The folder itself moved by slipbox: a pointer names it, wherever it is — nothing rewritten.
+    expect((await cli(["--root", parent, "mv", `b${tag}`, `deeper/b${tag}`])).code).toBe(0);
+    expect(existsSync(join(parent, "deeper", `b${tag}`, "moved", "y.md"))).toBe(true);
+    expect(readFileSync(join(a, "a.md"), "utf8")).toBe(`[x](slipbox://b${tag}/moved/y.md#Top) [bare](slipbox://b${tag}/moved/y)\n`);
+  });
+
+  test("written across folders that don't travel together: a pointer; together (one repository, nested outside git), a relative path", async () => {
+    const { linkEnds, writeLink } = await import("../src/core/write-link.ts");
+    const { travelTogether } = await import("../src/core/folders.ts");
+    const tag = uniq();
+    const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-w-"));
+    const b = await named(`wb${tag}`, { "far note.md": "---\ntitle: Far\n---\n# Far\n" }, parent);
+    const a = await named(`wa${tag}`, { "a.md": "# A\n" }, parent);
+    const inner = await named(`wi${tag}`, { "i.md": "# I\n" }, a);
+    expect([travelTogether(a, b), travelTogether(a, inner), travelTogether(inner, a)]).toEqual([false, true, true]);
+    const g = openGraph(locateVault({ root: a }), DEFAULT_CONFIG, false);
+    const conv = { path: { value: "name", source: "tool", why: "" }, extension: { value: "dropped", source: "tool", why: "" } } as never;
+    expect(writeLink(conv, "markdown", linkEnds(g, join(a, "a.md"), join(b, "far note.md")), "Far")).toBe(`[Far](slipbox://wb${tag}/far%20note.md)`);
+    // A wikilink root: a pointer is a URL, so a markdown link.
+    expect(writeLink(conv, "wiki", linkEnds(g, join(a, "a.md"), join(b, "far note.md")), "")).toBe(`[far note](slipbox://wb${tag}/far%20note.md)`);
+    expect(writeLink(conv, "markdown", linkEnds(g, join(a, "a.md"), join(inner, "i.md")), "I")).toBe(`[I](wi${tag}/i.md)`);
+    // One repository: its named folders travel together, wherever each is in it.
+    const repo = mkdtempSync(join(tmpdir(), "slipbox-ptr-repo-"));
+    mkdirSync(join(repo, ".git"));
+    const r1 = await named(`r1${tag}`, { "one.md": "# One\n" }, join(repo, "docs"));
+    const r2 = await named(`r2${tag}`, { "two.md": "# Two\n" }, join(repo, "notes"));
+    expect(travelTogether(r1, r2)).toBe(true);
+    const gr = openGraph(locateVault({ root: r1 }), DEFAULT_CONFIG, false);
+    expect(writeLink(conv, "markdown", linkEnds(gr, join(r1, "one.md"), join(r2, "two.md")), "Two")).toBe(`[Two](../../notes/r2${tag}/two.md)`);
+    const j = JSON.parse((await cli(["--root", a, "link", join(b, "far note.md"), "--from", "a.md", "--json"])).out).data;
+    expect(j.link).toBe(`[Far](slipbox://wb${tag}/far%20note.md)`);
+  });
+
+  test("the relink offers a pointer for a relative link into a named folder — reached, or broken where that folder was", async () => {
+    const tag = uniq();
+    const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-r-"));
+    const b = await named(`rb${tag}`, { "n.md": "# N\n" }, parent);
+    const a = await named(`ra${tag}`, { "a.md": `[n](../rb${tag}/n.md#top) [n2](../rb${tag}/n.md)\n` }, parent);
+    const files = (r: Captured) => JSON.parse(r.out).data.files.flatMap((f: { edits: { after: string }[] }) => f.edits.map((e) => e.after));
+    expect(files(await cli(["--root", a, "relink", "--dry-run", "--json"]))).toEqual([`[n](slipbox://rb${tag}/n.md#top) [n2](slipbox://rb${tag}/n.md)`]);
+    // Moved by hand, opened where it went: the links broke; the relink offers the pointer to where it is.
+    const moved = join(mkdtempSync(join(tmpdir(), "slipbox-ptr-r2-")), `rb${tag}`);
+    renameSync(b, moved);
+    await cli(["--root", moved, "ls"]);
+    expect(files(await cli(["--root", a, "relink", "--dry-run", "--json"]))).toEqual([`[n](slipbox://rb${tag}/n.md#top) [n2](slipbox://rb${tag}/n.md)`]);
   });
 });

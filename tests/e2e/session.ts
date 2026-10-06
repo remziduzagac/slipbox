@@ -182,6 +182,9 @@ export class Session {
     this.pane.run(`clear; cd ${shq(cwd)} && ${env} ${argv}; echo ${this.marker} $?`);
     if (this.opts.noWait) return;
     await this.until(() => this.statusLine().includes("READ") || this.statusLine().includes("SOURCE") || this.statusLine().includes("FILES"), 10000, "slipbox to start");
+    // Its first frame isn't its last at start (a loaded machine is slower to finish): keys sent before
+    // it settles can be read as the terminal's answers, and lost.
+    await this.settle();
   }
 
   /** Quit, then start again with these options changed (the same folders: its state carries over). */

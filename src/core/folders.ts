@@ -13,7 +13,7 @@
 // open. Filled from the folders opened and by the background index; a copy that's gone stays listed,
 // unavailable, so an unplugged drive comes back. A worktree's name means its main checkout.
 
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { normalizeRemote } from "./collection.ts";
 import { ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
@@ -89,6 +89,35 @@ function excluded(common: string, top: string, root: string): boolean {
     return readRegular(join(common, "info", "exclude"), SMALL_FILE).toString("utf8").split(/\r?\n/).includes(line);
   } catch {
     return false;
+  }
+}
+
+/**
+ * Whether two roots travel together (docs/idea.md, "Between folders"): one clone, or one folder moved
+ * as a whole, carries both — the same repository, or a repository and a submodule of it; outside
+ * git, one folder inside the other. Between them, a relative path; else a pointer (21.7).
+ */
+export function travelTogether(a: string, b: string): boolean {
+  const ca = checkoutOf(a);
+  const cb = checkoutOf(b);
+  if (ca && cb) {
+    const common = (c: { common: string }) => realPath(c.common);
+    const sub = (outer: string, inner: string) => inner.startsWith(`${outer}${sep}modules${sep}`);
+    return common(ca) === common(cb) || sub(common(ca), common(cb)) || sub(common(cb), common(ca));
+  }
+  if (ca || cb) return false;
+  const inside = (outer: string, inner: string) => {
+    const r = relative(outer, inner);
+    return !r.startsWith("..") && !r.startsWith(sep);
+  };
+  return inside(a, b) || inside(b, a);
+}
+
+function realPath(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
   }
 }
 
@@ -212,7 +241,7 @@ export function copyAvailable(path: string): boolean {
 
 export type FolderLookup =
   | { status: "found"; folder: NamedFolder; path: string; via?: "old-name" | "another-copy" }
-  | { status: "ambiguous"; candidates: string[]; reason: string }
+  | { status: "ambiguous"; candidates: string[]; reason: string; folders: NamedFolder[] }
   | { status: "unavailable"; folder: NamedFolder; path: string }
   | { status: "unknown"; reason: string };
 
@@ -237,7 +266,8 @@ export function lookupFolder(name: string, folders = readFolders()): FolderLooku
     return {
       status: "ambiguous",
       candidates: matches.map((f) => (repos ? f.remote! : `${f.name} (${f.default ?? f.copies[0]?.path})`)).sort(),
-      reason: repos ? `${matches.length} repositories are called ${name}: name one by its remote` : `${matches.length} different folders are called ${name}: rename one (slipbox name <new>)`,
+      reason: repos ? `${matches.length} repositories are called ${name}: name one by its remote` : `${matches.length} different folders are called ${name}: rename one (slipbox rename-vault <new>, in it)`,
+      folders: matches,
     };
   }
   const f = matches[0]!;

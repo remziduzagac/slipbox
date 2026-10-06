@@ -299,6 +299,18 @@ index. A name of two different folders is ambiguous: repositories each by their 
 is renamed; an old name (`aliases`, `previous_names`) still finds the folder; a copy that's gone stays listed,
 unavailable — another copy answers meanwhile.
 
+**Pointers** (`21.7`, `core/pointer.ts`): `slipbox://<name>[@branch]/<path>#fragment` — a link into a named folder
+(`21.6`), read by `resolve`, `links`, backlinks (another folder's pointers count, as of its index) and renames, which
+keep it a pointer, its name, branch and form; a named folder moved needs no link edited. The name is a folder's short
+one or a repository's qualified one (`github.com/me/research`: the longest leading part this machine knows as a
+remote). `@branch`: the checkout with that branch, a worktree's; else the file as it is there, read from git
+(`resolve --json` gives `git{root, rel, branch}`); a branch with `/` in it (`@agent/sync-retry/docs/x.md`) is the
+longest branch the repository has. Not here, an unknown name or a gone copy: exit 3 with why; a name of different
+folders: exit 4 with each. Links slipbox writes (`21.5`) between folders that don't travel together — not one
+repository or a submodule of it, nor, outside git, one folder inside the other — into a named folder are pointers (a
+markdown link, in a wikilink root too); `relink` offers each relative link's pointer, one broken where that folder was
+included.
+
 **The links' convention** (`21.4`): `info` says how the links slipbox makes in this root look — `links{style, path,
 extension}`, each `{value, source, why}`, `source` one of `setting`, `tool`, `notes` (with `share`, a percentage),
 `default` (`docs/design/configuration.md`, "The links' convention"). Its line: the parts, then what said each —

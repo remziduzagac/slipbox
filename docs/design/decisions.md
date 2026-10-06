@@ -277,7 +277,7 @@ LSP face (`11.x`), and `17.20` below. In short:
 ## `21.x` — paths inside, conventions at the edges
 
 *Proposed 2026-10-05 with the user, after a survey of how other tools handle links, and reviewed with the user the same
-day; being built (plan `21.x`: `21.1`–`21.6` done). The model in full is `docs/idea.md`, "Paths inside,
+day; being built (plan `21.x`: `21.1`–`21.7` done). The model in full is `docs/idea.md`, "Paths inside,
 conventions at the edges". It revises `20.x` above.*
 
 - **Inside, a link is a path;** each written form — a relative path, `/…`, an extensionless path, a wikilink,
@@ -308,6 +308,12 @@ conventions at the edges". It revises `20.x` above.*
   its main checkout; a `.slipbox/` git's exclude file keeps out is private. The question about a second copy comes only
   when two copies are here — a copy gone (moved, unplugged) stays listed, unavailable, and lookups take another copy
   meanwhile, said so. Built beside the 20.x model (display names, instances, `vault:path`), which `21.12` removes.
+- **Pointers, built** (`21.7`, 2026-10-06): a branch is written as it is (`@agent/sync-retry`, as the reference set
+  writes one) and told from the path by the branches the repository has — the longest; `%2F` reads too. A rename keeps
+  a pointer one, by its name as written (an old name stays until the relink); a whole named folder moved rewrites no
+  pointer. Followed: an unknown name or a gone copy says why, never offering a note by that name; a name of different
+  `.slipbox/` folders lists each, and renaming one (the parent folder's name prefixed, the config edit previewed); a
+  pointer from a file of no root follows like a URL. A wikilink root writes a pointer as a markdown link.
 - **Links slipbox writes** (`21.5`, 2026-10-06): completion (`](` and `[[`), the link picker (`space l i`) and `slipbox
   link`, which prints one for an agent, all through `core/write-link.ts`. A wikilink is a name only where the name
   reaches the note from the linking file — else its path from the root, never a name that would land elsewhere; a

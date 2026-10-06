@@ -427,6 +427,8 @@ Each kind of link does something different when followed:
 | `[t](not-yet.md)`, `[t](not-yet)`, a note not written yet | the new-note prompt, its name typed: `enter` makes it |
 | a broken link whose file moved | says where it went (`17.12`): `space l r` relinks it — a move never resolves it |
 | `[t](../other/x.md)` | opens the note in the other vault (`17.9`) |
+| `[t](slipbox://notes/x.md#h)` | its folder's copy here (`21.7`), at the heading; not here: said; two: picked |
+| `[t](slipbox://kestrel@agent/x.md)` | that branch's checkout or worktree; else the file from git, read-only |
 | `[[name]]`, `[[name#h]]`, `![[dal.png]]` | within its root (`21.3`): name, path or alias; a tie lists them |
 | `[t](other.md#frag)` | opens relative to the note; `#^id` at the block (`20.1`); a bad `%` read as written |
 | `[t](run.py#L42)` | opens the file at line 42 (as in a code comment's `run.py:42`) |

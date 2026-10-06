@@ -31,7 +31,7 @@ import type { ReplaceState } from "./replacing.ts";
 import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
-import { appendScratch, scratchLocation } from "../core/capture.ts";
+import { appendScratch, fence, fenceLanguage, scratchLocation } from "../core/capture.ts";
 import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
@@ -3850,6 +3850,18 @@ export class App {
     const fv = this.makeView(buf, { ...TOP }, { anchor: { ...TOP }, sub: 0, col: 0 });
     this.floating = { kind: "hover", view: fv, title };
     this.region = "content";
+  }
+
+  /**
+   * A pointer to a branch not checked out here (21.7): the file as it is there, from git, read-only,
+   * in the floating window — a note rendered, any other file as its text.
+   */
+  showFromGit(ref: { root: string; rel: string; branch: string }, link: string): void {
+    const c = checkoutOf(ref.root);
+    const text = c ? showAt(c, ref.branch, ref.rel) : null;
+    if (text === null) return this.message("warn", `${link}: no ${ref.rel} on ${ref.branch}`);
+    const note = /\.(md|markdown)$/i.test(ref.rel);
+    this.openHover(note ? text : fence(text, fenceLanguage(ref.rel)), `${ref.rel} on ${ref.branch}, read-only from git`);
   }
 
   /** A position in a source-mode view as the protocol counts it: line and UTF-16 character, from 0. */

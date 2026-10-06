@@ -12,6 +12,7 @@ import type { Config } from "./config.ts";
 import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
 import type { WikiLink } from "./wikilink.ts";
 import { countForms, type FormCounts } from "./convention.ts";
+import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { extensionless, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
@@ -75,7 +76,8 @@ export interface NoteEntry {
 export type VaultChange = { kind: "changed"; path: string } | { kind: "removed"; path: string } | { kind: "moved"; from: string; to: string };
 
 /** How a link was resolved when not by the note's own name or path. */
-export type Via = "alias" | "previous-name" | "redirect";
+/** How a link reached its target when not directly: an alias, a pointer's folder by an old name or another copy (21.7)… */
+export type Via = "alias" | "previous-name" | "redirect" | "old-name" | "another-copy";
 
 export interface ResolvedLink extends LinkRef {
   /** note: a vault note; file: an attachment; folder: a folder (21.2); external: a URL; anchor: within this note. */
@@ -88,6 +90,8 @@ export interface ResolvedLink extends LinkRef {
   via?: Via;
   /** Why it didn't resolve, when there's more to say than "no such note" ("unknown vault"). */
   reason?: string;
+  /** A pointer to a branch not checked out here (21.7): the file as it is there, read from git. */
+  gitRef?: { root: string; rel: string; branch: string };
 }
 
 /** What resolving a link found, without the link's own fields. */
@@ -822,6 +826,8 @@ export class Graph {
       const path = /^file:/i.test(link.target) ? link.target : link.target.split("#")[0]!;
       return this.byFilesystemPath(path, fromRel, false) ?? { resolvedKind: "unresolved", path: null, candidates: [] };
     }
+    // A pointer into a named folder (21.7): wherever this machine has it.
+    if (isPointer(link.target)) return this.byPointer(link.target, fromRel);
     // `/` from the nearest root, every file's (21.2): this graph's root — a plain folder opened has
     // none, and there it's the filesystem's path alone.
     const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index, this.loc.mode !== "folder");
@@ -874,6 +880,32 @@ export class Graph {
       if (this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel] };
     }
     return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], vault: this.reach?.vaultOf(hit.abs) ?? null };
+  }
+
+  /**
+   * A `slipbox://` pointer (21.7): its folder's copy here (21.6), the file in it as a path link finds
+   * one (no extension, a folder); in this root, its note or file like any link's (a backlink too).
+   * A branch not checked out here: the file as git has it there, read-only. Else why not.
+   */
+  private byPointer(target: string, fromRel: string): Target {
+    const p = parsePointer(target);
+    if (!p) return { resolvedKind: "unresolved", path: null, candidates: [] };
+    const t = resolvePointer(p);
+    if (t.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: t.candidates, reason: t.reason };
+    if (t.status === "unresolved") return { resolvedKind: "unresolved", path: null, candidates: [], reason: t.reason };
+    if (t.status === "branch") {
+      const kind = classify(t.rel, this.config.walk.extensions).group === "note" ? "note" : "file";
+      return { resolvedKind: kind, path: join(t.root, t.rel), candidates: [], vault: t.folder.name, gitRef: { root: t.root, rel: t.rel, branch: t.branch } };
+    }
+    const hit = pathLink(t.abs, join(this.root, fromRel || "_"), false, undefined, true);
+    const via = t.via ? { via: t.via } : {};
+    if (!hit) return { resolvedKind: "unresolved", path: null, candidates: [], reason: `no ${p.path || "folder"} in ${p.name}${p.branch ? `@${p.branch}` : ""}`, ...via };
+    const rel = relative(this.root, hit.abs);
+    const inside = !rel.startsWith("..") && !isAbsolute(rel);
+    if (hit.folder) return { resolvedKind: "folder", path: inside ? rel || "." : hit.abs, candidates: [], ...(inside ? {} : { vault: t.folder.name }), ...via };
+    if (inside && this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel], ...via };
+    if (inside && this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel], ...via };
+    return { resolvedKind: classify(hit.abs, this.config.walk.extensions).group === "note" ? "note" : "file", path: hit.abs, candidates: [], vault: t.folder.name, ...via };
   }
 
   /** The vaults nested in this one: folders the walk leaves to them. */

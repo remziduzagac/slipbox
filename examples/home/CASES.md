@@ -1958,11 +1958,13 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   vault's absolute links')
 - `file://` URL link — `notes/research/link-styles.md`, `work/kestrel/docs/qa/links.md` (21.x conventions table; 17.16)
 - slipbox://name/path pointer into a named repository (by remote) — `notes/index.md`, `notes/research/link-styles.md`
-  (21.x 'Named folders')
+  (21.7; tests 'followed into another folder', '@branch')
 - slipbox:// pointer into a .slipbox/-named folder — `hobbies/cycling/rides/202608301800-kyoto-river-loop.md`,
   `hobbies/photography/.slipbox/config.toml`, `hobbies/photography/gear/lenses.md`,
-  `hobbies/photography/trips/京都/index.md`, `notes/index.md`, `notes/projects/kyoto-trip.md` (21.x 'Named folders')
-- slipbox:// pointer with @branch — `notes/research/link-styles.md`, `notes/weekly/2026-W41.md` (21.x 'A branch')
+  `hobbies/photography/trips/京都/index.md`, `notes/index.md`, `notes/projects/kyoto-trip.md` (21.7; e2e 'slipbox://
+  pointers')
+- slipbox:// pointer with @branch — `notes/research/link-styles.md`, `notes/weekly/2026-W41.md`, `work/kestrel/docs/sync.md`
+  (21.7; test '@branch'; e2e 'slipbox:// pointers': the agent's worktree)
 - slipbox:// pointer: unnamed root cannot be pointed at — `notes/projects/brevet-300.md`,
   `notes/research/link-styles.md` (21.x 'never a folder's own name')
 - Pointer by old name after a folder was renamed — `notes/.slipbox/config.toml`, `notes/research/link-styles.md` (21.x
@@ -2162,12 +2164,12 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Renamed folder keeps its old name — `notes/.slipbox/config.toml`, `notes/research/link-styles.md` (21.6; test
   'different folders of one name… old names still find')
 - slipbox folders listing and default — `.build/product.toml`, `notes/.slipbox/config.toml` (21.x Words and commands)
-- Pointer to a name not on this machine — `notes/index.md`, `notes/research/link-styles.md` (21.x 'isn't on this
-  machine yet')
+- Pointer to a name not on this machine — `notes/index.md`, `notes/research/link-styles.md` (21.7 'isn't on this
+  machine yet'; test 'a pointer followed'; e2e 'slipbox:// pointers')
 - Named folder moved by hand takes its state along — `Downloads/notes-backup-2026-07/index.md` (21.x 'A named folder
   moved by hand')
-- slipbox resolve of a pointer — `notes/index.md`, `notes/research/link-styles.md` (21.x Agents; test 'resolve: a
-  vault:path, and with --from')
+- slipbox resolve of a pointer — `notes/index.md`, `notes/research/link-styles.md` (21.7 Agents; test 'the CLI
+  resolves one')
 - Old-form folder references flagged — `Downloads/stray-note.md`, `notes/research/link-styles.md` (21.x 'A link naming
   a folder the old way')
 
@@ -2261,7 +2263,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - A git rename as evidence versus a content hash — `.build/kestrel.toml`, `work/kestrel/docs/runbooks/sync-queue.md`
   (idea 'Changes and repairs')
 - A named folder renamed or moved on disk: pointers survive, relative ones break — `notes/index.md`,
-  `work/kestrel/docs/architecture.md` (21.x 'A named folder moved or renamed on disk')
+  `work/kestrel/docs/architecture.md` (21.7 'A named folder moved or renamed on disk'; tests 'a rename keeps it a
+  pointer', 'the relink offers a pointer')
 - Moves must not resolve quietly — `notes/daily/2026-09-22.md`, `work/kestrel/docs/architecture.md` (20.x 'stays one
   until it's repaired')
 - Plans: stale, refused, undo, apply — `notes/projects/kestrel-v2-3.md`, `work/kestrel/docs/architecture.md` (test

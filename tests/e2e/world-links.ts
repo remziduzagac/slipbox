@@ -196,4 +196,30 @@ export const LINK_SCENARIOS: Scenario[] = [
       s.expect(cooking.out.includes("name      none — no remote and no .slipbox/ name"), `cooking:\n${cooking.out}`);
     },
   },
+  {
+    name: "world/links: slipbox:// pointers — another named folder's note, once it's on this machine; an agent's branch, its worktree (21.7)",
+    options: { home: true, startAt: "home/hobbies/cycling/rides/202608301800-kyoto-river-loop.md" },
+    run: async (s) => {
+      // photography hasn't been opened here yet: said so, nothing made.
+      await follow(s, "Kyoto notes");
+      await s.message("photography isn't on this machine yet");
+      // Opened once (an agent's ls): in the lookup, and the pointer leads there.
+      s.cliIn("~/hobbies/photography", "ls");
+      await follow(s, "Kyoto notes");
+      await s.status(/photography/);
+      await s.see("Kyoto"); // the trip's index, in the photography folder
+      // kestrel's sync doc: Sam's notes (the notes folder), and the agent's copy on its branch — its worktree.
+      s.cliIn("~/notes", "ls");
+      await s.restart({ startAt: "home/work/kestrel/docs/sync.md" });
+      await follow(s, "his notes");
+      await s.status(/notes/);
+      await opened(s, "projects/sync-rewrite.md");
+      await s.restart({ startAt: "home/work/kestrel/docs/sync.md" });
+      await s.keys("/");
+      await s.type("is at");
+      await s.keys("enter", "escape", "tab", "enter");
+      await s.status(/sync-retry/);
+      await opened(s, "docs/sync.md");
+    },
+  },
 ];

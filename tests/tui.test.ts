@@ -5711,7 +5711,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.floating?.title).toBe(`tapp${n}:design.md › Goals`);
   });
 
-  test("a link's target completed (20.13): after ]( the files it could reach — this vault's by path, another's as name:path — narrowed as typed; the path from the note written", async () => {
+  test("a link's target completed (20.13): after ]( the files it could reach — this vault's by path, another's as name:path — narrowed as typed; the path from the note written, another named folder's pointer (21.7)", async () => {
     const { notes, app, n } = await twoVaults();
     mkdirSync(join(notes, "sub"), { recursive: true });
     writeFileSync(join(notes, "sub", "here.md"), "# Here\n");
@@ -5732,7 +5732,7 @@ describe("vaults in the TUI (17.x)", () => {
     for (const k of `tapp${n}:desi`) await h.keys(k);
     expect(shown(h)[0]).toBe(`tapp${n}:design.md`);
     await h.keys("tab");
-    expect(h.app.view!.buf.source).toBe(`# Here\n[x](../../${basename(app)}/design.md\n`);
+    expect(h.app.view!.buf.source).toBe(`# Here\n[x](slipbox://tapp${n}/design.md\n`); // a named folder of its own (21.7)
     expect(h.app.completion).toBeNull();
     // Closed by the link's end; a space is a path's too, written encoded.
     await h.keys(")", "space");
@@ -7596,6 +7596,76 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(recordFolder(g.b)?.ask).toBe(true);
     rmSync(g.a, { recursive: true });
     expect((await harness({ root: g.b, open: "n.md" })).app.overlay).toBeNull();
+  });
+
+  test("a pointer followed (21.7): into another named folder, at its heading; by an old name, said; two folders of the name, picked — or one renamed", async () => {
+    const { recordFolder } = await import("../src/core/folders.ts");
+    const tag = basename(mkdtempSync(join(sandbox, "pt-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const named = (name: string, files: Record<string, string>, extra = "") => {
+      const dir = join(mkdtempSync(join(sandbox, "ptr-")), name);
+      mkdirSync(join(dir, ".slipbox"), { recursive: true });
+      writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${basename(dirname(dir)).replace(/[^a-z0-9]/gi, "")}"\nname = "${name}"\n${extra}`);
+      for (const [rel, text] of Object.entries(files)) writeFileSync(join(dir, rel), text);
+      recordFolder(dir);
+      return dir;
+    };
+    const b = named(`b${tag}`, { "x.md": "# X\n\nfirst\n\n## Top\n\nunder top\n" }, `previous_names = ["old${tag}"]\n`);
+    const twin1 = named(`twin${tag}`, { "t.md": "# T1\n" });
+    named(`twin${tag}`, { "t.md": "# T2\n" });
+    const a = named(`a${tag}`, { "a.md": `# A\n\n[to](slipbox://b${tag}/x.md#Top) [old](slipbox://old${tag}/x.md) [twin](slipbox://twin${tag}/t.md) [gone](slipbox://none${tag}/x.md)\n` });
+    const h = await harness({ root: a, open: "a.md" });
+    await h.keys("tab", "enter");
+    expect(h.app.loc.root).toBe(b);
+    expect(h.app.view!.buf.rel).toBe("x.md");
+    expect(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!.src).toBe(5); // at ## Top
+    // An old name: there, and said so.
+    const h2 = await harness({ root: a, open: "a.md" });
+    await h2.keys("g", "g", "tab", "tab", "enter"); // from the top: its reading position is kept
+    expect(h2.app.view!.buf.abs).toBe(join(b, "x.md"));
+    expect(h2.app.messages.some((m) => m.text === `slipbox://old${tag}/x.md reached b${tag} by a name it had`)).toBe(true);
+    // Two different folders of one name: each, and renaming one — the parent folder's name its prefix.
+    const h3 = await harness({ root: a, open: "a.md" });
+    await h3.keys("g", "g", "tab", "tab", "tab", "enter");
+    const o = h3.app.overlay as ListOverlay;
+    expect(o.title).toBe(`twin${tag}: 2 different folders have this name — which is meant?`);
+    expect(o.items.map((i) => i.label).filter((l) => l.startsWith("Rename"))).toHaveLength(2);
+    await h3.keys("enter");
+    expect(h3.app.view!.buf.abs).toBe(join(twin1, "t.md"));
+    const h4 = await harness({ root: a, open: "a.md" });
+    await h4.keys("g", "g", "tab", "tab", "tab", "enter");
+    const at = (h4.app.overlay as ListOverlay).items.findIndex((i) => i.label === `Rename ${twin1}'s name…`);
+    h4.app.overlay && ((h4.app.overlay as ListOverlay).selected = at);
+    await h4.keys("enter");
+    expect(h4.app.overlay?.kind).toBe("prompt");
+    // Not on this machine: why — no new note by a pointer's name.
+    const h5 = await harness({ root: a, open: "a.md" });
+    await h5.keys("g", "g", "tab", "tab", "tab", "tab", "enter");
+    expect(h5.app.messages.at(-1)!.text).toBe(`slipbox://none${tag}/x.md: none${tag} isn't on this machine yet: open it, or let the index find it`);
+    expect(h5.app.overlay).toBeNull();
+    expect((h4.app.overlay as import("../src/tui/app.ts").PromptOverlay).text).toBe(`${basename(dirname(twin1)).replace(/[^\p{L}\p{N}._-]/gu, "")}-twin${tag}`);
+  });
+
+  test("a pointer to a branch not checked out here (21.7): the file as git has it there, read-only, in the floating window", async () => {
+    const repo = join(mkdtempSync(join(sandbox, "ptr-git-")), "repo");
+    mkdirSync(repo);
+    const git = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@t", "-c", "user.name=t", "-c", "init.defaultBranch=main", ...args], { cwd: repo }).exitCode;
+    if (git("init", "-q") !== 0) return;
+    const tag = basename(dirname(repo)).replace(/[^a-z0-9]/gi, "").toLowerCase();
+    git("remote", "add", "origin", `git@github.com:me/r${tag}.git`);
+    writeFileSync(join(repo, "x.md"), "# On main\n");
+    writeFileSync(join(repo, "a.md"), `[draft](slipbox://r${tag}@draft/x.md)\n`);
+    git("add", ".");
+    git("commit", "-qm", "main");
+    git("checkout", "-qb", "draft");
+    writeFileSync(join(repo, "x.md"), "# Drafted, on its branch\n");
+    git("commit", "-qam", "draft");
+    git("checkout", "-q", "main");
+    const h = await harness({ root: repo, open: "a.md" });
+    await h.keys("tab", "enter");
+    expect(h.app.floating?.kind).toBe("hover");
+    expect(h.app.floating?.title).toBe("x.md on draft, read-only from git");
+    expect(h.app.floating?.view.buf.source).toBe("# Drafted, on its branch\n");
+    expect(h.app.tabs.flatMap((t) => t.views.map((v) => v.buf.rel))).toEqual(["a.md"]); // nothing opened
   });
 
   test("a vault opened where a copy of it, gone from where it was, may have moved: asked — yes takes its state, no isn't asked again, esc asks next time (20.5)", async () => {

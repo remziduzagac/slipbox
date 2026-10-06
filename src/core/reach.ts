@@ -14,6 +14,7 @@ import { cacheDir } from "./paths.ts";
 import { displayNames } from "./names.ts";
 import { type KnownVault, namesOf, readIdentity, readRegistry, vaultConfigFile } from "./registry.ts";
 import { findVaultRoot, isInside, isVaultRoot, recordLocation, rootAt, type VaultLocation, configFilesFor } from "./vault.ts";
+import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 
 function real(p: string): string {
   try {
@@ -212,6 +213,13 @@ export class Reach implements VaultReach {
       return (r.resolvedKind === "note" || r.resolvedKind === "file") && r.path && !isAbsolute(r.path) ? r.path : null;
     };
     if (l.kind !== "markdown") return null;
+    // A pointer (21.7): where this machine has its folder — here, a backlink.
+    if (isPointer(l.target)) {
+      const p = parsePointer(l.target);
+      const t = p ? resolvePointer(p) : null;
+      const hit = t?.status === "found" ? pathLink(t.abs, linking, false) : null;
+      return hit ? inG(hit.abs) : null;
+    }
     const fileUrl = /^file:\/\//i.test(l.target);
     if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) && !fileUrl) return null;
     const path = fileUrl ? l.target : l.target.split("#")[0]!;

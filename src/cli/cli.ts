@@ -24,6 +24,7 @@ import { type Config, loadConfig } from "../core/config.ts";
 import { conventionOf, describeConvention, type LinkStyle } from "../core/convention.ts";
 import { linkEnds, writeLink } from "../core/write-link.ts";
 import { copyAvailable, folderIdentity, pointerName, readFolders } from "../core/folders.ts";
+import { isPointer } from "../core/pointer.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { Graph, type LinkProblem, openGraph, type Target } from "../core/graph.ts";
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
@@ -554,14 +555,17 @@ const HANDLERS: Record<string, Handler> = {
     // No --from: as from a note at the root.
     const fromAbs = fromRel ? g.abs(fromRel) : join(s.loc.root, ".link.md");
     const file = resolve(s.io.cwd, arg);
-    // A file other than a note, by its path; a note as any command takes one (its path, its name).
-    const toAbs = existsSync(file) && statSync(file).isFile() && classify(file, s.config.walk.extensions).group !== "note" ? file : g.abs(resolveNote(s, arg));
+    // A file by its path — not a note, or one out of this root (a pointer, 21.7); a note here as any
+    // command takes one (its path, its name).
+    const byPath = existsSync(file) && statSync(file).isFile() && (classify(file, s.config.walk.extensions).group !== "note" || !isInside(s.loc.root, file));
+    const toAbs = byPath ? file : g.abs(resolveNote(s, arg));
     const style = flag(s.args, "style");
     if (style !== undefined && style !== "markdown" && style !== "wiki") throw new UsageError(`--style is markdown or wiki (got ${style})`);
     const c = conventionOf(g, s.config, s.configOrigins, style as LinkStyle | undefined);
     const ends = linkEnds(g, fromAbs, toAbs);
-    const title = ends.to.rel && ends.to.note ? (g.entry(ends.to.rel)?.title ?? "") : "";
-    const text = flag(s.args, "text") ?? (c.style.value === "wiki" ? "" : title || basename(toAbs));
+    // Its title, from its own root's index when it's another's.
+    const title = ends.to.note ? (g.entryAnywhere(ends.to.rel ?? toAbs)?.title ?? "") : "";
+    const text = flag(s.args, "text") ?? (c.style.value === "wiki" && !ends.pointer ? "" : title || basename(toAbs).replace(/\.(md|markdown)$/i, ""));
     const link = writeLink(c, c.style.value, ends, text, has(s.args, "embed"));
     return {
       data: { link, path: ends.to.rel ?? toAbs, from: fromRel, style: c.style.value, pathForm: c.path.value, extension: c.extension.value },
@@ -588,13 +592,14 @@ const HANDLERS: Record<string, Handler> = {
     const wiki = /^(!?)\[\[([^\]|#]*)(?:#([^\]|]*))?(?:\|[^\]]*)?\]\]$/.exec(raw);
     const bracketed = /^!?\[\[/.test(raw);
     if (wiki) parts = { target: wiki[2]!.trim(), heading: wiki[3]?.trim() || null };
-    // A file:// URL names a file (17.16): resolved, not external.
+    // A file:// URL names a file (17.16), a slipbox:// pointer a named folder's (21.7): resolved, not external.
     const fileUrl = /^file:\/\//i.test(inner);
+    const pointer = isPointer(inner);
     // `vault:path` (20.20): a file or folder of that vault, by its path there.
     const formed = mdLink || bracketed ? null : fromVaultForm(hash < 0 ? inner : inner.slice(0, hash));
     // A scheme makes it external, with no spaces (a URL has none) and when no note is named so:
     // "Meeting: Q3" is a note.
-    const external = /^[a-z][a-z0-9+.-]*:/i.test(inner) && !fileUrl && !formed && (!!mdLink || (/^\S*$/.test(inner) && s.graph.findNote(parts.target, s.io.cwd).status === "unresolved"));
+    const external = /^[a-z][a-z0-9+.-]*:/i.test(inner) && !fileUrl && !pointer && !formed && (!!mdLink || (/^\S*$/.test(inner) && s.graph.findNote(parts.target, s.io.cwd).status === "unresolved"));
     // A vault name several vaults have (20.20): each by the name it's shown with, to pick from.
     const choices = formed || mdLink || bracketed ? [] : vaultFormChoices(hash < 0 ? inner : inner.slice(0, hash));
     if (choices.length) {
@@ -619,7 +624,7 @@ const HANDLERS: Record<string, Handler> = {
     } else if (!parts.target && from) {
       status = "resolved";
       path = from;
-    } else if (from || mdLink) {
+    } else if (from || mdLink || pointer) {
       // A link written in --from (or at the vault's root): its path — the resolver `links` and the
       // TUI use, so `resolve` is link.follow's CLI equivalent.
       const md = s.graph.resolveLink({ kind: "markdown", target: inner }, from ?? "");
@@ -650,7 +655,7 @@ const HANDLERS: Record<string, Handler> = {
     const abs = path && status !== "external" ? (isAbsolute(path) ? path : s.graph.abs(path)) : null;
     // With --from, the link to write there (20.20): the relative path, as a link carries it.
     const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${slugify(parts.heading)}` : ""}` : null;
-    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, vault: found?.vault ?? formedVault, reason: found?.reason ?? null };
+    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, vault: found?.vault ?? formedVault, reason: found?.reason ?? null, ...(found?.gitRef ? { git: found.gitRef } : {}) };
     if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`, EXIT.ambiguous, data);
     if (status === "unresolved") throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);
     return { data, human: `${abs ?? path}${line ? `:${line}` : ""}\n` };

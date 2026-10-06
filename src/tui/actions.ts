@@ -9,9 +9,11 @@ import { blockLine, landingText } from "../core/landing.ts";
 import { isAbsolute, join, posix, relative } from "node:path";
 import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { copiesShown, describeCollection } from "../core/collection.ts";
-import { locName } from "../core/names.ts";
+import { locName, tildePath } from "../core/names.ts";
+import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
+import { slugName } from "../core/registry.ts";
 import { isNotePath } from "../core/links.ts";
-import { hasMarker, instanceOf, isInside, isNeverRoot } from "../core/vault.ts";
+import { hasMarker, instanceOf, isInside, isNeverRoot, rootAt } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
@@ -319,6 +321,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
     }
     case "markdown":
     case "image": {
+      // A URL — a pointer too (21.7), which names its folder: followed from a file of no root as well.
       const external = /^[a-z][a-z0-9+.-]*:/i.test(link.target);
       if (!from && !external) return a.message("warn", `${link.target}: links resolve only inside the vault`);
       const r = a.graph.resolveLink({ kind: link.kind === "image" ? "image" : "markdown", target: link.target }, from ?? "");
@@ -342,6 +345,14 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
         const line = blockLine(a.graph, path, frag.slice(1));
         return line === null ? null : `L${line}`;
       };
+      // A pointer (21.7): its folder by a name it had, or another copy than the one links open — said so;
+      // a branch not checked out here, the file read from git; a name of different folders, picked.
+      if (r.via === "old-name") a.message("info", `${link.target} reached ${r.vault} by a name it had`);
+      if (r.via === "another-copy") a.message("info", `${link.target}: the copy of ${r.vault} links open isn't here — another copy`);
+      if (r.gitRef) return a.showFromGit(r.gitRef, link.target);
+      if (r.resolvedKind === "ambiguous" && isPointer(link.target)) return pickPointerFolder(a, link.target, frag, inSplit);
+      // Not on this machine, gone, no such file there: why — never a new note by a pointer's name.
+      if (r.resolvedKind === "unresolved" && isPointer(link.target)) return a.message("warn", `${link.target}: ${r.reason ?? "not found"}`);
       if (r.resolvedKind === "anchor") {
         const here = link.from ?? view.buf.rel;
         if (frag && here && (here !== view.buf.rel || frag.startsWith("^"))) return go(here, at(here));
@@ -365,6 +376,43 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       return a.message("warn", to ? `broken link: ${link.target} — moved to ${to}: space l r relinks it` : `broken link: ${link.target}`);
     }
   }
+}
+
+/**
+ * A pointer whose name different folders have (21.7): each, to open what it names there; and, for a
+ * `.slipbox/` folder, renaming its name — the parent folder's name prefixed as a suggestion, the
+ * edit to its config previewed first. Not now (esc) leaves it ambiguous, picked when followed again.
+ */
+function pickPointerFolder(a: App, target: string, frag: string | null, inSplit: boolean): void {
+  const p = parsePointer(target);
+  const t = p ? resolvePointer(p) : null;
+  if (!p || t?.status !== "ambiguous") return;
+  const items: ListItem[] = [];
+  for (const f of t.folders) {
+    const at = f.default ?? f.copies[0]?.path;
+    if (!at) continue;
+    items.push({ label: tildePath(at), detail: f.remote ?? `.slipbox/ ${f.id ?? ""}`.trim(), data: { open: join(at, p.path) } });
+  }
+  for (const f of t.folders.filter((x) => !x.remote)) {
+    const at = f.default ?? f.copies[0]?.path;
+    if (at) items.push({ label: `Rename ${tildePath(at)}'s name…`, detail: `${f.name} → ${slugName(posix.basename(posix.dirname(at)))}-${f.name}`, data: { rename: at, name: f.name } });
+  }
+  a.openList({
+    title: `${p.name}: ${t.folders.length} different folders have this name — which is meant?`,
+    items,
+    filterable: false,
+    accept: (item) => {
+      const d = item.data as { open?: string; rename?: string; name?: string };
+      if (d.open) {
+        if (inSplit) a.otherWindow();
+        return a.open(d.open, frag ? (lineAnchor(frag) ?? headingAnchor(a, d.open, frag)) : undefined);
+      }
+      const root = d.rename!;
+      const suggested = `${slugName(posix.basename(posix.dirname(root)))}-${d.name}`;
+      a.prompt(`rename ${d.name} at ${tildePath(root)} to: `, (name) => name.trim() && a.previewRename(() => planVaultRename(rootAt(root), name.trim())));
+      if (a.overlay?.kind === "prompt") a.overlay.text = suggested;
+    },
+  });
 }
 
 /** `g;` / `g,`: the change before or after in the note's change list. */

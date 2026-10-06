@@ -129,6 +129,7 @@ slipbox footnotes <note> edit 3 'New text'   # also: rm <label>, rename <label> 
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
 slipbox resolve research:algorithms/dijkstra.md --from notes/plan.md --json   # data.href: the path to write in a link
 slipbox link <note> --from <note>        # a link to <note> as this folder writes them (wikilink or markdown, its path form)
+slipbox resolve slipbox://notes/inbox.md --json   # a pointer into a named folder: where it is on this machine
 slipbox search dome shutter --json       # notes ranked by the words: hits[{path, line, column, heading, snippet}]
 slipbox changed --json                   # what this branch changed against main: files[{path, state, from?}]
 slipbox merge-review feat --json         # before merging feat here: breaks[{path, line, target, cause, by, fix}]
