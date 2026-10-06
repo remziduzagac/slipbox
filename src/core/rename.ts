@@ -749,6 +749,15 @@ export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean
         c.edit(site, mdTarget(l.target, abs, join(g.root, to), g), null);
         continue;
       }
+      // A pointer by a name its folder had (21.10, renamed with `slipbox name`): the name it has now.
+      if (isPointer(l.target) && l.via === "old-name") {
+        const p = parsePointer(l.target);
+        const t = p ? resolvePointer(p) : null;
+        if (p && t?.status === "found") {
+          c.edit(site, l.target.replace(`slipbox://${p.name}`, `slipbox://${pointerName(t.folder)}`), null);
+          continue;
+        }
+      }
       // A path into a named folder that doesn't travel with this one (21.7): its pointer.
       const ptr = opts.pointers === false ? null : pointerOffer(g, l, rel);
       if (ptr) c.edit(site, ptr, null);

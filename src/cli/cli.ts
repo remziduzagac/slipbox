@@ -23,8 +23,9 @@ import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { conventionOf, describeConvention, type LinkStyle } from "../core/convention.ts";
 import { linkEnds, writeLink } from "../core/write-link.ts";
-import { copyAvailable, folderIdentity, pointerName, readFolders } from "../core/folders.ts";
-import { isPointer } from "../core/pointer.ts";
+import { copyAvailable, folderIdentity, lookupFolder, pointerName, readFolders, setDefaultCopy } from "../core/folders.ts";
+import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
+import { pathLink } from "../core/links.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { certainty, describeLanding, Graph, type LinkProblem, openGraph, type Retarget, type Target } from "../core/graph.ts";
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
@@ -194,6 +195,8 @@ Usage:
   slipbox rm <note|folder>          delete to the vault's trash (slipbox trash restore puts it back)  [--dry-run]
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
   slipbox rename-vault <name>       rename this vault (one with .slipbox/); the old name kept  [--dry-run]
+  slipbox name <new>                this folder's name, as a pointer names it: changed, the old kept; a repository given one
+  slipbox folders [default <name> <path>]  the named folders: their copies, the one links open; or make one the one
   slipbox rename-heading <note> <heading> <new>  rename a heading; links to it fixed everywhere  [--dry-run]
   slipbox relink [note]             rewrite links broken by a move slipbox saw, to where the file is  [--dry-run]
   slipbox convert-links [note]      wikilinks and links from the vault's root rewritten as relative paths  [--dry-run]
@@ -232,7 +235,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 `;
 
 export const CLI_COMMANDS = new Set([
-  "render", "resolve", "link", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
+  "render", "resolve", "link", "links", "backlinks", "name", "folders", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-vault", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "vaults", "vault-moved", "apply", "doctor", "diagnostics", "themes", "commands", "help",
 ]);
@@ -352,7 +355,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
-  render: 1, resolve: 1, link: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
+  render: 1, resolve: 1, link: 1, links: 1, name: 1, folders: 3, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
   scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
 };
 
@@ -404,6 +407,7 @@ const FLAGS: Record<string, string[]> = {
   mv: ["dry-run", "plan"],
   rm: ["dry-run"],
   "rename-vault": ["dry-run", "plan"],
+  name: ["dry-run", "plan"],
   "rename-heading": ["dry-run", "plan"],
   relink: ["dry-run", "plan"],
   "convert-links": ["dry-run", "plan"],
@@ -421,6 +425,15 @@ const FLAGS: Record<string, string[]> = {
  * file by that name is itself: a path wins.
  */
 function vaultFormArg(arg: string, cwd: string): string {
+  // A pointer (21.10): the file it names, in its folder's copy here — or why not.
+  if (isPointer(arg)) {
+    const p = parsePointer(arg);
+    const t = p ? resolvePointer(p) : null;
+    if (t?.status === "found") return pathLink(t.abs, join(cwd, "_"), false, undefined, true)?.abs ?? t.abs;
+    if (t?.status === "ambiguous") throw new CliError(`${arg}: ${t.reason}`, EXIT.ambiguous, { candidates: t.candidates });
+    if (t?.status === "branch") throw new CliError(`${arg}: ${t.branch} isn't checked out here (slipbox resolve reads it from git)`, EXIT.notFound);
+    throw new CliError(`${arg}: ${t?.reason ?? "not a pointer"}`, EXIT.notFound);
+  }
   if (existsSync(isAbsolute(arg) ? arg : join(cwd, arg))) return arg;
   const choices = vaultFormChoices(arg);
   if (choices.length) throw new CliError(`several vaults are named ${arg.slice(0, arg.indexOf(":"))}: ${choices.join(", ")}`, EXIT.ambiguous, { candidates: choices });
@@ -1218,6 +1231,58 @@ const HANDLERS: Record<string, Handler> = {
       if (err instanceof FileOpError) throw new CliError(err.message, err.message.startsWith("nothing") ? EXIT.notFound : EXIT.refused);
       throw err;
     }
+  },
+
+  /**
+   * This root's name (21.10): a `.slipbox/` folder's changed — its old one kept, so pointers by it still
+   * find it (the relink rewrites them) — a repository's given a `.slipbox/` to hold one. A name a
+   * different folder has here is refused.
+   */
+  async name(s, rest) {
+    const name = requireArg(rest, "the folder's new name");
+    if (s.loc.mode === "folder") throw new CliError(`${s.loc.root} has no root to name: slipbox init makes one`, EXIT.refused);
+    const ident = folderIdentity(s.loc.root);
+    const taken = readFolders().find((f) => f.key !== ident?.key && f.name.toLowerCase() === name.toLowerCase());
+    if (taken) throw new CliError(`a different folder is called ${name}, at ${taken.default ?? taken.copies[0]?.path}: pick another`, EXIT.refused);
+    if (hasMarker(s.loc.root)) return HANDLERS["rename-vault"]!(s, rest);
+    if (has(s.args, "dry-run")) return { data: { root: s.loc.root, name, dryRun: true }, human: `would give ${s.loc.root} a .slipbox/ named ${name}\n` };
+    const r = initVault(s.loc.root, name);
+    recordLocation(rootAt(s.loc.root));
+    return { data: { root: r.root, name: r.name, id: r.id, created: r.created }, human: `${r.root} is named ${r.name} (.slipbox/ made to hold it)\n` };
+  },
+
+  /**
+   * The named folders this machine knows (21.6, 21.10): each name, its copies, the one links open;
+   * `default <name> <path>` makes that copy the one.
+   */
+  folders(s, rest) {
+    const list = readFolders();
+    if (rest[0] === "default") {
+      const [, name, at] = rest;
+      if (!name || !at) throw new UsageError("folders default takes a name and the copy's path");
+      const l = lookupFolder(name, list);
+      if (l.status === "ambiguous") throw new CliError(`${name}: ${l.reason}`, EXIT.ambiguous, { candidates: l.candidates });
+      if (l.status === "unknown") throw new CliError(l.reason, EXIT.notFound);
+      const path = resolve(s.io.cwd, at);
+      if (!l.folder.copies.some((c) => c.path === path)) throw new CliError(`${path} isn't a copy of ${l.folder.name}: ${l.folder.copies.map((c) => c.path).join(", ")}`, EXIT.refused);
+      setDefaultCopy(l.folder.key, path);
+      return { data: { name: l.folder.name, default: path }, human: `links to ${l.folder.name} open ${tildePath(path)}\n` };
+    }
+    if (rest.length) throw new UsageError("folders takes nothing, or default <name> <path>");
+    const data = list.map((f) => ({
+      name: f.name,
+      pointer: pointerName(f, list),
+      remote: f.remote,
+      id: f.id,
+      private: f.private,
+      old: f.old,
+      default: f.default,
+      copies: f.copies.map((c) => ({ path: c.path, seen: c.seen, found: !!c.found, available: copyAvailable(c.path) })),
+    }));
+    const human = data
+      .map((f) => [`${f.pointer}${f.pointer !== f.name ? ` (${f.name})` : ""}${f.remote && f.pointer !== f.remote ? `  ${f.remote}` : ""}${f.private ? "  private" : ""}`, ...f.copies.map((c) => `  ${c.path === f.default ? "*" : " "} ${tildePath(c.path)}${c.available ? "" : "  (not here)"}${c.found ? "  (found)" : ""}`)].join("\n"))
+      .join("\n");
+    return { data, human: human ? `${human}\n` : "no named folders yet: a .slipbox/ name, or a repository's remote, names one\n" };
   },
 
   async "rename-vault"(s, rest) {

@@ -654,6 +654,8 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   mv: "note.rename",
   relink: "link.relink",
   link: "link.insert",
+  folders: "folders.open",
+  name: "folder.name",
   "convert-links": "link.convert",
   context: "context.copy",
   search: "search.open",

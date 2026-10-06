@@ -13,9 +13,10 @@ import { copiesShown, describeCollection } from "../core/collection.ts";
 import { locName, tildePath } from "../core/names.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
 import { noteProblems, type Problem } from "../core/diagnostics.ts";
+import { copyAvailable, folderIdentity, type NamedFolder, pointerName, readFolders, recordFolder, setDefaultCopy } from "../core/folders.ts";
 import { slugName } from "../core/registry.ts";
 import { isNotePath } from "../core/links.ts";
-import { hasMarker, instanceOf, isInside, isNeverRoot, rootAt } from "../core/vault.ts";
+import { hasMarker, initVault, instanceOf, isInside, isNeverRoot, rootAt } from "../core/vault.ts";
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
@@ -564,7 +565,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
 }
 
 /** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
-const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "heading.rename", "vault.rename"]);
+const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "heading.rename", "vault.rename", "folder.name"]);
 
 /** Commands in the order of core/command-specs.ts, which follows docs/design/keymap.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
@@ -1562,6 +1563,12 @@ export function registerActions(app: App): void {
     "palette.open": (a) => openPalette(a),
     "note.open": (a, arg) => {
       if (!arg) return void a.run("switcher.open");
+      // A pointer (21.10): the file it names, in its folder's copy here.
+      if (isPointer(arg)) {
+        const r = a.graph.resolveLink({ kind: "markdown", target: arg }, a.view?.buf.rel ?? "");
+        if ((r.resolvedKind === "note" || r.resolvedKind === "file") && r.path) return a.open(r.path);
+        return a.message("warn", `${arg}: ${r.reason ?? (r.resolvedKind === "ambiguous" ? `matches ${r.candidates.join(", ")}` : "not found")}`);
+      }
       const r = a.graph.findNote(arg, a.loc.root);
       if (r.status === "resolved") return a.open(r.path);
       if (r.status === "ambiguous") return a.message("warn", `"${arg}" matches ${r.candidates.join(", ")}`);
@@ -1870,6 +1877,42 @@ export function registerActions(app: App): void {
         if (arg) return a.previewRename(() => planHeadingRename(a.graph, rel, h.text, arg));
         a.promptHeadingRename(rel, h.text);
       }),
+    "folders.open": (a) => {
+      const list = readFolders();
+      if (!list.length) return a.message("info", "no named folders yet: a .slipbox/ name, or a repository's remote, names one");
+      a.openList({
+        title: "Named folders — enter: its copies",
+        items: list.map((f) => ({ label: pointerName(f, list), detail: f.remote ?? (f.id ? `.slipbox/ ${f.id}` : ""), hint: `${f.copies.length} cop${f.copies.length === 1 ? "y" : "ies"}`, data: f })),
+        accept: (item) => {
+          const f = item.data as NamedFolder;
+          a.openList({
+            title: `${f.name}: which copy do links open?`,
+            filterable: false,
+            selected: Math.max(0, f.copies.findIndex((c) => c.path === f.default)),
+            items: f.copies.map((c) => ({ label: tildePath(c.path), hint: c.path === f.default ? "links open it" : copyAvailable(c.path) ? undefined : "not here", data: c.path })),
+            accept: (copy) => {
+              setDefaultCopy(f.key, copy.data as string);
+              a.message("info", `links to ${f.name} open ${tildePath(copy.data as string)}`);
+            },
+          });
+        },
+      });
+    },
+    "folder.name": (a, arg) => {
+      if (a.loc.mode === "folder") return a.message("warn", `${a.loc.root} has no root to name: :init makes one`);
+      const go = (name: string) => {
+        const ident = folderIdentity(a.loc.root);
+        const taken = readFolders().find((f) => f.key !== ident?.key && f.name.toLowerCase() === name.toLowerCase());
+        if (taken) return a.message("warn", `a different folder is called ${name}, at ${tildePath(taken.default ?? taken.copies[0]?.path ?? "")}: pick another`);
+        // A .slipbox/ folder's: renamed, its old name kept (previewed); a repository's: a .slipbox/ to hold one.
+        if (hasMarker(a.loc.root)) return a.previewRename(() => planVaultRename(a.loc, name));
+        initVault(a.loc.root, name);
+        recordFolder(a.loc.root);
+        a.message("info", `${tildePath(a.loc.root)} is named ${name} (.slipbox/ made to hold it)`);
+      };
+      if (arg) return go(arg.trim());
+      a.prompt(`name ${tildePath(a.loc.root)}, as pointers name it: `, (t) => t.trim() && go(t.trim()));
+    },
     "vault.rename": (a, arg) => {
       // The explorer's selected vault (one nested here), when it has focus.
       const item = a.explorerFocused() ? a.explorerItem() : null;

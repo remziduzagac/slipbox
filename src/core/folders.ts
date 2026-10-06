@@ -266,7 +266,7 @@ export function lookupFolder(name: string, folders = readFolders()): FolderLooku
     return {
       status: "ambiguous",
       candidates: matches.map((f) => (repos ? f.remote! : `${f.name} (${f.default ?? f.copies[0]?.path})`)).sort(),
-      reason: repos ? `${matches.length} repositories are called ${name}: name one by its remote` : `${matches.length} different folders are called ${name}: rename one (slipbox rename-vault <new>, in it)`,
+      reason: repos ? `${matches.length} repositories are called ${name}: name one by its remote` : `${matches.length} different folders are called ${name}: rename one (slipbox name <new>, in it)`,
       folders: matches,
     };
   }

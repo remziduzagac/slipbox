@@ -95,6 +95,8 @@ These churn freely before 1.0:
 | `footnotes <note>` | `{path, sha, footnotes[{label, id, text, line, def, references[{line, column, start, end}]}]}` |
 | `footnotes <note> add\|edit\|rm\|rename …` | `{path, sha, footnotes[…]}` after it; `--if-unchanged`; exit 5: refused |
 | `init [dir]` | `{root, created, identified, id, name, excluded}` — `--name N`, `--private`; exit 5: name in use |
+| `name <new>` | a `.slipbox/` folder's: as `rename-vault`; a repository's: `{root, name, id, created}`; exit 5: taken |
+| `folders` | `[{name, pointer, remote, id, private, old, default, copies[{path, seen, found, available}]}]` |
 | `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
 | `info` | root, mode, `vault{…, shown}`, `instance`, `collection`, `copies[]`, `index{…, written}`, `background` |
 | `vaults` | `[{key, instance, id, kind, name, shown, …, path, seen, indexed, exists, unavailable, worktree?}]` |
@@ -294,6 +296,14 @@ as their own, `docs:a.md`, is ambiguous (exit 4) — `candidates` gives each by 
 two ties make a link **fragile** (a note of the name nearer takes it): `problems` lists them as `fragile[]`, each with
 `fix`, the path that names its note for sure; `diagnostics` too, as `fragile` with `fix{title, text}`. A command that
 makes or removes a note sending links by name elsewhere warns, each: `Home.md:3: [[Pie]] reached X; it reaches Y now`.
+
+**Named folders' words** (`21.10`): a pointer (`slipbox://notes/inbox.md`) names a note wherever a command takes one —
+`read`, `outline`, `--from`, … — the file in its folder's copy here (exit 3 and why when it isn't here, 4 when the name
+is two folders'). `slipbox name <new>` names this root as pointers name it: a `.slipbox/` folder's name changed, the old
+one kept in its config (a pointer by it still finds it, `via: "old-name"`, and `relink` rewrites it to the new); a
+repository without `.slipbox/` given one to hold the name; a name a different folder has here refused (exit 5).
+`slipbox folders` lists the names this machine knows, each with its copies and the one links open (`*`);
+`folders default <name> <path>` makes a copy that one. The TUI's `:folders` and `:name` (`folders.open`, `folder.name`).
 
 **Repairs** (`21.11`): `relink` (the TUI's offer after a batch of moves made elsewhere) fixes links a move broke; a
 link naming a folder the old way (`research:x.md`, `[[research:x]]`) is unresolved with why and `suggest`, the pointer

@@ -126,6 +126,14 @@ describe("links", () => {
     expect(slipbox(["link", "operations-handbook", "--from", "kenji-mori"]).out).toBe(`${r.json.data.link}\n`);
     expect(slipbox(["link", "no-such-note-anywhere"]).code).toBe(3);
   });
+  test("folders and name (21.10): the named folders this machine knows; a name changed, dry-run first", () => {
+    const f = slipbox(["folders", "--json"]);
+    expect(f.code).toBe(0);
+    expect(Array.isArray(f.json.data)).toBe(true);
+    const n = slipbox(["name", "halden-renamed", "--dry-run", "--json"]);
+    expect(n.code).toBe(0);
+    expect(n.json.data).toMatchObject({ kind: "vault", to: "halden-renamed", dryRun: true });
+  });
   test("links and backlinks, with their status", () => {
     const l = slipbox(["links", "partners-and-names", "--json"]).json.data;
     expect(l.some((x: { target: string; status: string }) => x.target === "visiting-rota.md" && x.status === "unresolved")).toBe(true);

@@ -234,6 +234,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "trash.open", title: "The trash", cli: "slipbox trash", desc: "What was deleted in this vault, newest first; enter restores it" },
   { id: "note.rename", title: "Rename or move the note", cli: "slipbox mv <note> <new-path>", desc: "Its links rewritten in every vault reached, after a preview; the old name kept" },
   { id: "heading.rename", title: "Rename the heading", cli: "slipbox rename-heading <note> <heading> <new>", desc: "The section the cursor is in: every link to it rewritten in every vault reached, after a preview" },
+  { id: "folders.open", title: "Named folders: their copies, the one links open", cli: "slipbox folders [default <name> <path>]", desc: "Each name pointers use (21.6), its copies on this machine; enter on a copy makes it the one links open" },
+  { id: "folder.name", title: "Name this folder, as pointers name it", cli: "slipbox name <new>", desc: "A .slipbox/ folder's name changed (the old one kept, pointers by it still found); a repository given one" },
   { id: "vault.rename", title: "Rename the vault", cli: "slipbox rename-vault <name>", desc: "This one, or the explorer's selected vault: [[old:…]] links rewritten in every vault reached, after a preview; the old name kept" },
   { id: "link.relink", title: "Relink old names and moves", cli: "slipbox relink [note]", desc: "Rewrites this note's links that reach notes by an old name or a move" },
   { id: "link.convert", title: "Convert links to plain paths", cli: "slipbox convert-links [note]", desc: "Rewrites wikilinks, and links from the vault's root, as relative path links after a preview (a note's, or every note's); a link several notes answer to is picked" },

@@ -650,7 +650,7 @@ removals as their replacements land, the sweep last.*
 | 21.7 | **Done.** `slipbox://` pointers, `@branch` too: read, followed, backlinked, renamed; clashes asked; relinked |
 | 21.8 | Personal state by root, positions by file; carried with a named folder's move; today's moved once |
 | 21.9 | What's shown: the file's own forms, files by path in lists (**done**); the status line and explorer by roots |
-| 21.10 | Words and commands: `folders [default]`, `name`, `root`/`name` in JSON, `--scope here`; pointers as args |
+| 21.10 | Words: `folders [default]`, `name`, pointers as args (**done**); `root`/`name` in JSON, `--scope here` |
 | 21.11 | **Done.** Repairs: the relink offered after moves made elsewhere; typed `research:x.md` flagged and fixed |
 | 21.12 | Removed: collections, instances, display names, `vault:path`, `vault-moved`, `previous_names`; vault list |
 | 21.13 | The sweep: the docs, the skill, the README, the e2e scenarios |

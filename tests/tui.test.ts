@@ -7600,6 +7600,41 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect((await harness({ root: g.b, open: "n.md" })).app.overlay).toBeNull();
   });
 
+  test("named folders' words (21.10): :folders lists them and sets the copy links open; :name names a repository; :open takes a pointer", async () => {
+    const { readFolders, recordFolder } = await import("../src/core/folders.ts");
+    const tag = basename(mkdtempSync(join(sandbox, "wd-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const mk = () => {
+      const d = join(mkdtempSync(join(sandbox, "wd-f-")), `f${tag}`);
+      mkdirSync(join(d, ".slipbox"), { recursive: true });
+      writeFileSync(join(d, ".slipbox", "config.toml"), `[vault]\nid = "f${tag}"\nname = "f${tag}"\n`);
+      writeFileSync(join(d, "n.md"), "# N there\n");
+      recordFolder(d);
+      return d;
+    };
+    const one = mk();
+    const two = mk();
+    const repo = mkdtempSync(join(sandbox, "wd-r-"));
+    mkdirSync(join(repo, ".git"));
+    writeFileSync(join(repo, "r.md"), "# R\n");
+    const h = await harness({ root: repo, open: "r.md" });
+    expect(h.app.overlay).toBeNull();
+    await h.app.run("folders.open");
+    const list = h.app.overlay as ListOverlay;
+    list.selected = list.items.findIndex((i) => i.label === `f${tag}`);
+    await h.keys("enter");
+    expect((h.app.overlay as ListOverlay).title).toBe(`f${tag}: which copy do links open?`);
+    expect((h.app.overlay as ListOverlay).items.map((i) => [i.label, i.hint])).toEqual([[one, "links open it"], [two, undefined]]);
+    await h.keys("down", "enter");
+    expect(readFolders().find((f) => f.name === `f${tag}`)?.default).toBe(two);
+    // A repository named: a .slipbox/ to hold it.
+    await h.app.run(`folder.name r${tag}`);
+    expect(readFileSync(join(repo, ".slipbox", "config.toml"), "utf8")).toContain(`name = "r${tag}"`);
+    expect(h.app.messages.at(-1)!.text).toContain(`is named r${tag}`);
+    // :open with a pointer: the note in the copy links open.
+    await h.app.run(`note.open slipbox://f${tag}/n.md`);
+    expect(h.app.view!.buf.abs).toBe(join(two, "n.md"));
+  });
+
   test("repairs (21.11): a batch of moves made elsewhere offers the relink once; a folder named the old way says so, its pointer written by a code action", async () => {
     const { recordFolder } = await import("../src/core/folders.ts");
     const tag = basename(mkdtempSync(join(sandbox, "rp-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();

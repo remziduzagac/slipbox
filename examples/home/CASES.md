@@ -2447,6 +2447,10 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (command-specs.ts)
 - `link.insert` — Insert a link to a note… — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`
   (command-specs.ts; 21.5)
+- `folders.open` — Named folders: their copies, the one links open — `notes/.slipbox/config.toml`,
+  `Downloads/notes-backup-2026-07/.slipbox/config.toml` (command-specs.ts; 21.10)
+- `folder.name` — Name this folder, as pointers name it — `hobbies/photography/.slipbox/config.toml`,
+  `work/product/README.md` (command-specs.ts; 21.10)
 - `link.relink` — Relink old names and moves — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`
   (command-specs.ts)
 - `link.convert` — Convert links to plain paths — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`

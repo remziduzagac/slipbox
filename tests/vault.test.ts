@@ -4493,7 +4493,7 @@ describe("named folders (21.6)", () => {
     expect(pointerName(readFolders().find((f) => f.name === same)!)).toBe(same); // alone: its short name
     recordFolder(folder({ name: same, id: uniq() }));
     const amb = lookupFolder(same);
-    expect(amb).toMatchObject({ status: "ambiguous", reason: `2 different folders are called ${same}: rename one (slipbox rename-vault <new>, in it)` });
+    expect(amb).toMatchObject({ status: "ambiguous", reason: `2 different folders are called ${same}: rename one (slipbox name <new>, in it)` });
     // Renamed in its config, its old name kept: the old name still finds it, said so.
     const was = `w${uniq()}`;
     const now = `v${uniq()}`;
@@ -4951,5 +4951,67 @@ describe("links to the repository's own hosting (trailscout's review)", () => {
     writeFileSync(join(dir, "a.md"), `[n](https://github.com/me/b${tag}/blob/main/n.md)\n`);
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
     expect(g.linksOf("a.md")[0]).toMatchObject({ resolvedKind: "note", path: join(other, "n.md"), via: "hosting" });
+  });
+});
+
+describe("named folders' words (21.10)", () => {
+  const uniq = () => basename(mkdtempSync(join(tmpdir(), "w"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
+  test("a pointer as a command's note; slipbox name — a .slipbox/ folder's renamed, the old one kept and its pointers relinked; a repository's given one", async () => {
+    const tag = uniq();
+    const b = join(mkdtempSync(join(tmpdir(), "slipbox-words-")), "b");
+    mkdirSync(join(b, ".slipbox"), { recursive: true });
+    writeFileSync(join(b, ".slipbox", "config.toml"), `[vault]\nid = "b${tag}"\nname = "beta${tag}"\n`);
+    writeFileSync(join(b, "x.md"), "# X\n\nbody\n");
+    const a = mkdtempSync(join(tmpdir(), "slipbox-words-a-"));
+    mkdirSync(join(a, ".slipbox"));
+    writeFileSync(join(a, "a.md"), `[x](slipbox://beta${tag}/x.md)\n`);
+    await cli(["--root", b, "ls"]);
+    // A pointer names the note a command works on.
+    const read = JSON.parse((await cli(["read", `slipbox://beta${tag}/x`, "--json"])).out).data;
+    expect(read.content).toBe("# X\n\nbody\n");
+    expect((await cli(["read", `slipbox://nope${tag}/x.md`])).code).toBe(3);
+    // Renamed: the old name kept; a pointer by it still finds it, and the relink writes the new one.
+    expect((await cli(["--root", b, "name", `gamma${tag}`])).code).toBe(0);
+    expect(readFileSync(join(b, ".slipbox", "config.toml"), "utf8")).toContain(`previous_names = ["beta${tag}"]`);
+    const ga = openGraph(locateVault({ root: a }), DEFAULT_CONFIG, false);
+    expect(ga.linksOf("a.md")[0]).toMatchObject({ resolvedKind: "note", via: "old-name" });
+    expect((await cli(["--root", a, "relink"])).code).toBe(0);
+    expect(readFileSync(join(a, "a.md"), "utf8")).toBe(`[x](slipbox://gamma${tag}/x.md)\n`);
+    // A different folder's name: refused.
+    const c = join(mkdtempSync(join(tmpdir(), "slipbox-words-c-")), "c");
+    mkdirSync(join(c, ".slipbox"), { recursive: true });
+    writeFileSync(join(c, ".slipbox", "config.toml"), `[vault]\nid = "c${tag}"\nname = "c${tag}"\n`);
+    writeFileSync(join(c, "c.md"), "# C\n");
+    const clash = await cli(["--root", c, "name", `gamma${tag}`]);
+    expect(clash.code).toBe(5);
+    expect(clash.err).toContain(`a different folder is called gamma${tag}`);
+    // A repository without .slipbox/: one made to hold the name.
+    const repo = mkdtempSync(join(tmpdir(), "slipbox-words-r-"));
+    mkdirSync(join(repo, ".git"));
+    writeFileSync(join(repo, "r.md"), "# R\n");
+    expect((await cli(["--root", repo, "name", `repo${tag}`])).code).toBe(0);
+    expect(readFileSync(join(repo, ".slipbox", "config.toml"), "utf8")).toContain(`name = "repo${tag}"`);
+  });
+
+  test("slipbox folders: each name, its copies, the one links open; default <name> <path> makes another the one", async () => {
+    const tag = uniq();
+    const mk = () => {
+      const d = join(mkdtempSync(join(tmpdir(), "slipbox-words-f-")), `f${tag}`);
+      mkdirSync(join(d, ".slipbox"), { recursive: true });
+      writeFileSync(join(d, ".slipbox", "config.toml"), `[vault]\nid = "f${tag}"\nname = "f${tag}"\n`);
+      writeFileSync(join(d, "n.md"), "# N\n");
+      return d;
+    };
+    const one = mk();
+    const two = mk();
+    await cli(["--root", one, "ls"]);
+    await cli(["--root", two, "ls"]);
+    const f = JSON.parse((await cli(["folders", "--json"])).out).data.find((x: { name: string }) => x.name === `f${tag}`);
+    expect(f).toMatchObject({ pointer: `f${tag}`, default: one, copies: [{ path: one, available: true }, { path: two, available: true }] });
+    expect((await cli(["folders"])).out).toContain(`f${tag}\n  * ${one}\n    ${two}`);
+    expect((await cli(["folders", "default", `f${tag}`, two])).code).toBe(0);
+    expect(JSON.parse((await cli(["folders", "--json"])).out).data.find((x: { name: string }) => x.name === `f${tag}`).default).toBe(two);
+    expect((await cli(["folders", "default", `f${tag}`, "/not/a/copy"])).code).toBe(5);
+    expect((await cli(["folders", "default", `nope${tag}`, two])).code).toBe(3);
   });
 });
