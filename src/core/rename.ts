@@ -324,10 +324,9 @@ export function addPreviousName(text: string, name: string): string {
 // -------------------------------------------------------------------------------------------
 // Plans
 
-/** Where a link's file is, as shown (20.12): vault-relative, another vault's as `name:path`. */
-function shownFor(g: Graph, abs: string, vault: string | null | undefined): string {
-  if (isInside(g.root, abs) && findVaultRoot(abs) === g.root) return relative(g.root, abs);
-  return vault ? vaultForm(abs, null, () => vault) : g.shownPath(abs);
+/** Where a link's file is, as shown (21.9): its path from this root, else from home (`~/…`), else absolute. */
+function shownFor(g: Graph, abs: string, _vault?: string | null): string {
+  return g.shownPath(abs);
 }
 
 export class Collector {

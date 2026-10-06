@@ -3507,7 +3507,7 @@ describe("search by vault (20.16)", () => {
     expect(all).not.toContain(at("a"));
   });
 
-  test("slipbox search --scope: this vault by default; linked and all add others', each by name:path, after this one's", async () => {
+  test("slipbox search --scope: this vault by default; linked and all add others', each by its path (21.9), after this one's", async () => {
     const { at, tag } = await four();
     const files = (r: { json: { data: { hits: { shown: string }[] } } }) => r.json.data.hits.map((h) => h.shown);
     const here = await cli(["search", "narwhal"], at("a"));
@@ -3515,10 +3515,10 @@ describe("search by vault (20.16)", () => {
     expect(here.json.data.scope).toBe("vault");
     const linked = await cli(["search", "narwhal", "--scope", "linked"], at("a"));
     expect(files(linked)[0]).toBe("a-note.md");
-    expect(files(linked).slice(1).sort()).toEqual([`b${tag}:b-note.md`, `c${tag}:c-note.md`].sort());
+    expect(files(linked).slice(1).sort()).toEqual([join(at("b"), "b-note.md"), join(at("c"), "c-note.md")].sort());
     const hit = linked.json.data.hits.find((h: { vault: string | null }) => h.vault === `b${tag}`);
     expect(hit).toMatchObject({ abs: join(at("b"), "b-note.md"), path: "b-note.md", line: 3 });
-    expect(files(await cli(["search", "narwhal", "--scope", "all"], at("a")))).toContain(`d${tag}:d-note.md`);
+    expect(files(await cli(["search", "narwhal", "--scope", "all"], at("a")))).toContain(join(at("d"), "d-note.md"));
     expect((await cli(["search", "narwhal", "--scope", "near"], at("a"))).code).toBe(2);
   });
 });
@@ -3801,7 +3801,7 @@ describe("the CLI's vault:path (20.20)", () => {
     expect((await cli(["outline", `${b}:algorithms/dijkstra.md`], at("a"))).json.data.headings[1]).toMatchObject({ text: "Relaxation" });
     // Backlinks of b's note, asked from a: a's link among them, a's own path shown as a's.
     const bl = (await cli(["backlinks", `${b}:algorithms/dijkstra.md`], at("a"))).json.data.backlinks;
-    expect(bl).toContainEqual(expect.objectContaining({ from: join(at("a"), "notes", "plan.md"), shown: `${a}:notes/plan.md` }));
+    expect(bl).toContainEqual(expect.objectContaining({ from: join(at("a"), "notes", "plan.md"), shown: join(at("a"), "notes", "plan.md") })); // by its path (21.9)
     // find's note is its second argument; context takes several.
     expect((await cli(["find", "Edges", `${b}:algorithms/dijkstra.md`], at("a"))).code).toBe(0);
     expect((await cli(["context", `${a}:notes/other.md`, `${a}:notes/plan.md`], at("b"))).json.data.start).toEqual(["notes/other.md", "notes/plan.md"]);
@@ -3820,7 +3820,7 @@ describe("the CLI's vault:path (20.20)", () => {
   test("resolve: a vault:path, and with --from the relative path a link there would carry", async () => {
     const { at, a, b } = await two();
     const r = await cli(["resolve", `${b}:algorithms/dijkstra.md#Relaxation`, "--from", "notes/plan.md"], at("a"));
-    expect(r.json.data).toMatchObject({ status: "resolved", path: join(at("b"), "algorithms", "dijkstra.md"), abs: join(at("b"), "algorithms", "dijkstra.md"), shown: `${b}:algorithms/dijkstra.md`, href: "../../b/algorithms/dijkstra.md#relaxation", heading: "Relaxation", line: 3, vault: b });
+    expect(r.json.data).toMatchObject({ status: "resolved", path: join(at("b"), "algorithms", "dijkstra.md"), abs: join(at("b"), "algorithms", "dijkstra.md"), shown: join(at("b"), "algorithms", "dijkstra.md"), href: "../../b/algorithms/dijkstra.md#relaxation", heading: "Relaxation", line: 3, vault: b });
     // This vault's own: its path here.
     const own = await cli(["resolve", `${a}:notes/other.md`, "--from", "notes/plan.md"], at("a"));
     expect(own.json.data).toMatchObject({ status: "resolved", path: "notes/other.md", shown: "notes/other.md", href: "other.md", vault: null });
@@ -3834,14 +3834,14 @@ describe("the CLI's vault:path (20.20)", () => {
     expect((await cli(["resolve", "a note.md", "--from", "notes/plan.md"], at("a"))).json.data.href).toBe("a%20note.md");
   });
 
-  test("out: links and backlinks show another vault's file as vault:path", async () => {
+  test("out: links and backlinks show another vault's file by its path (21.9), its vault's name beside it", async () => {
     const { at, a, b } = await two();
     const links = (await cli(["links", "notes/plan.md"], at("a"))).json.data;
-    expect(links[0]).toMatchObject({ path: join(at("b"), "algorithms", "dijkstra.md"), shown: `${b}:algorithms/dijkstra.md`, vault: b });
-    expect(await human(["links", "notes/plan.md"], at("a"))).toContain(`-> ${b}:algorithms/dijkstra.md\n`);
+    expect(links[0]).toMatchObject({ path: join(at("b"), "algorithms", "dijkstra.md"), shown: join(at("b"), "algorithms", "dijkstra.md"), vault: b });
+    expect(await human(["links", "notes/plan.md"], at("a"))).toContain(`-> ${join(at("b"), "algorithms", "dijkstra.md")}\n`);
     const bl = (await cli(["backlinks", "algorithms/dijkstra.md"], at("b"))).json.data.backlinks;
-    expect(bl[0]).toMatchObject({ shown: `${a}:notes/plan.md` });
-    expect(await human(["backlinks", "algorithms/dijkstra.md"], at("b"))).toContain(`${a}:notes/plan.md:3  shortest`);
+    expect(bl[0]).toMatchObject({ shown: join(at("a"), "notes", "plan.md"), vault: a });
+    expect(await human(["backlinks", "algorithms/dijkstra.md"], at("b"))).toContain(`${join(at("a"), "notes", "plan.md")}:3  shortest`);
   });
 
   test("mv and cp: a destination in this vault by vault:path; another vault's is refused", async () => {

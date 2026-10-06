@@ -345,9 +345,9 @@ filesystem's root — or a `file://` URL; a file, not an external link) resolves
 are absolute, and `vault` names it. A path that reaches nothing is broken, whatever moved (`20.2`). A backlink from
 another vault has an absolute `from` and its `vault`.
 
-**`vault:path` in and out** (`20.20`): `shown` is the file as the TUI shows it (`20.12`) — its path in this vault,
-`research:algorithms/dijkstra.md` in another — in `resolve`, in each of `links`' and `backlinks`', and in their
-text output in place of the absolute path. `resolve` takes the form too, a folder included, `#heading` after it:
+**`vault:path` in** (`20.20`; `21.12` removes it): `shown` is the file by its path (`21.9`) — from this root, else
+`~/…`, else absolute — in `resolve`, in each of `links`' and `backlinks`', and in their text output; another vault's
+name is beside it, as `vault`. `resolve` still takes the `name:path` form, a folder included, `#heading` after it:
 `slipbox resolve research:algorithms/dijkstra.md#Relaxation --from notes/plan.md` gives `href`, the relative path
 a link from `--from` carries (`../../research/algorithms/dijkstra.md#relaxation`, encoded as a link is), to write.
 With `--from`, every resolve gives `href`; without, it's null. `--from` also says which vault the link is resolved

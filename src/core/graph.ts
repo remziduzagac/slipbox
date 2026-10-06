@@ -18,7 +18,7 @@ import { lookupFolder, pointerName } from "./folders.ts";
 import { extensionless, type Landed, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type AnchorInfo, anchorsOf, type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
-import { vaultForm } from "./names.ts";
+import { tildePath } from "./names.ts";
 import { ParseCache, sharedParseCache } from "./parsecache.ts";
 import { cacheDir, stateDir } from "./paths.ts";
 import { checkoutOf, headCommit, headOf } from "./git.ts";
@@ -357,7 +357,10 @@ export class Graph {
 
   /** A file as it's shown from this vault (20.12): its path here, else `vault:path`, else its own path. */
   shownPath(abs: string): string {
-    return vaultForm(abs, this.root, (root) => this.reach?.vaultOf(root) ?? null);
+    // By path (21.9): from this root (or the folder opened), else from home (`~/…`), else absolute.
+    const rel = relative(this.root, abs);
+    if (rel && !rel.startsWith("..") && !isAbsolute(rel)) return rel.split(sep).join("/");
+    return tildePath(abs);
   }
 
   /** When the index on disk was last written (20.10): how fresh it is; null when there's none. */

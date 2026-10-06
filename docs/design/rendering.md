@@ -70,12 +70,10 @@ embedded by name, `![[dal.png]]`, is `▣ dal.png`, as a picture by its path is:
 `|240x180`, is never its text. A link's colour shows its status: resolved, `link_unresolved` red, or
 `link_ambiguous` when two of a name tie.
 
-**The vault form** (`20.12`): a link without text of its own — `[](docs/plan.md)`, or text that is just its target —
-shows the file it reaches as a path in this vault (`docs/plan.md`, wherever the linking note is), or in another
-vault — a nested one too — as that vault's name and its path there (`research:algorithms/dijkstra.md`), its
-`#fragment` as written; a link that reaches nothing, or a web page, as written. Source mode shows the path as
-written, and so does the rendered view with link URLs shown (`space u r`, `render.show_urls`). The form is on screen
-and in the CLI only, never in a file; hovers, backlinks from other vaults and rename previews use it too.
+**What the file says** (`21.9`, replacing `20.12`'s vault form): a link without text of its own — `[](docs/plan.md)`,
+or text that is just its target — shows its target as written; no form is made up for the screen. Where a file is
+named in a list — backlinks, search results, pickers, hovers, rename previews — it's by its path: from this root (or
+the folder opened), else from home (`~/…`), else absolute (`graph.shownPath`).
 
 **Embeds** (`1.11`): a paragraph of nothing but embeds — each a note by name, `![[note]]` (`21.3`), or by its path,
 `![text](note.md)`, as the converter writes them (`20.1`) and Obsidian does without wikilinks — draws each embedded

@@ -5687,20 +5687,22 @@ describe("vaults in the TUI (17.x)", () => {
     return { base, notes, app, n };
   }
 
-  test("backlinks from another vault are listed in its vault form, name:path (20.12)", async () => {
-    const { notes, n } = await twoVaults();
+  test("backlinks from another vault are listed by their path (21.9), never a name:path label", async () => {
+    const { notes, app, n } = await twoVaults();
     const h = await harness({ root: notes, open: "todo.md" });
     await h.app.run("backlinks.open");
-    expect(h.frame()).toContain(`tapp${n}:links.md`);
+    expect(h.frame()).toContain(join(app, "links.md"));
+    expect(h.frame()).not.toContain(`tapp${n}:`);
   });
 
-  test("a link without text shows the file it reaches in its vault form; show link URLs, the path as written (20.12)", async () => {
+  test("a link without text shows its target as written (21.9): no form made up for the screen; its hover titled by the file's path", async () => {
     const { notes, app, n } = await twoVaults();
     mkdirSync(join(notes, "sub"), { recursive: true });
     writeFileSync(join(notes, "sub", "forms.md"), "[](../todo.md) [../todo.md](../todo.md) [](../../APP/design.md#goals) [](nowhere.md) [named](../todo.md)\n".replace("APP", basename(app)));
     const h = await harness({ root: notes, open: "sub/forms.md" });
     const row = () => h.frame().split("\n").find((r) => r.includes("nowhere.md"))!;
-    expect(row()).toContain(`todo.md todo.md tapp${n}:design.md#goals nowhere.md named`);
+    expect(row()).toContain(`../todo.md ../todo.md ../../${basename(app)}/design.md#goals nowhere.md named`);
+    expect(row()).not.toContain(`tapp${n}:`);
     await h.app.run("ui.urls");
     expect(row()).toContain(`../todo.md ../todo.md ../../${basename(app)}/design.md#goals nowhere.md`); // the toast covers the rest
     // Its hover is titled so too.
@@ -5708,11 +5710,11 @@ describe("vaults in the TUI (17.x)", () => {
     const link = h.app.currentLayout(h.app.view!).links.find((l) => l.target.endsWith("design.md#goals"))!;
     h.app.moveCursor(h.app.view!, { row: link.line, col: link.col });
     await h.keys("shift+k");
-    expect(h.app.floating?.title).toBe(`tapp${n}:design.md › Goals`);
+    expect(h.app.floating?.title).toBe(`${join(app, "design.md")} › Goals`);
   });
 
-  test("a link's target completed (20.13): after ]( the files it could reach — this vault's by path, another's as name:path — narrowed as typed; the path from the note written, another named folder's pointer (21.7)", async () => {
-    const { notes, app, n } = await twoVaults();
+  test("a link's target completed (20.13): after ]( the files it could reach — this vault's by path, another's by its full path (21.9) — narrowed as typed; the path from the note written, another named folder's pointer (21.7)", async () => {
+    const { base, notes, app, n } = await twoVaults();
     mkdirSync(join(notes, "sub"), { recursive: true });
     writeFileSync(join(notes, "sub", "here.md"), "# Here\n");
     writeFileSync(join(notes, "zq b.md"), "# Spaced\n");
@@ -5723,14 +5725,13 @@ describe("vaults in the TUI (17.x)", () => {
     const shown = (h: Harness) => h.app.completion?.shown.map((i) => i.label) ?? [];
     expect(h.app.completion?.links).toBe(true);
     expect(shown(h)).toContain("todo.md");
-    expect(shown(h)).toContain(`tapp${n}:design.md`);
+    expect(shown(h)).toContain(join(app, "design.md"));
     expect(shown(h)).not.toContain("sub/here.md"); // not the note itself
-    // This vault's first; each with its full path beside it.
-    expect(shown(h).indexOf("todo.md")).toBeLessThan(shown(h).indexOf(`tapp${n}:design.md`));
-    expect(h.app.completion!.shown.find((i) => i.label === `tapp${n}:design.md`)!.detail).toMatch(/design\.md$/);
-    // Typed as it's shown, the vault's name first (other test vaults have a design.md too).
-    for (const k of `tapp${n}:desi`) await h.keys(k);
-    expect(shown(h)[0]).toBe(`tapp${n}:design.md`);
+    // This vault's first.
+    expect(shown(h).indexOf("todo.md")).toBeLessThan(shown(h).indexOf(join(app, "design.md")));
+    // Typed as it's shown (other test vaults have a design.md too: this one's folder narrows).
+    for (const k of `${basename(base)}/app/desi`) await h.keys(k);
+    expect(shown(h)[0]).toBe(join(app, "design.md"));
     await h.keys("tab");
     expect(h.app.view!.buf.source).toBe(`# Here\n[x](slipbox://tapp${n}/design.md\n`); // a named folder of its own (21.7)
     expect(h.app.completion).toBeNull();
@@ -5828,7 +5829,7 @@ describe("vaults in the TUI (17.x)", () => {
     const labels = () => (h.app.overlay as ListOverlay).filtered.map((e) => e.item.label);
     expect(labels()).toEqual(["w.md:3"]);
     await h.keys("ctrl+a");
-    expect(labels()).toEqual(["w.md:3", "linked vaults", `tapp${n}:w2.md:3`]);
+    expect(labels()).toEqual(["w.md:3", "linked vaults", `${join(app, "w2.md")}:3`]); // by its path (21.9)
     expect((h.app.overlay as ListOverlay).title).toContain("and the vaults linked to it");
     await h.keys("ctrl+a");
     expect((h.app.overlay as ListOverlay).title).toContain("and every vault");
