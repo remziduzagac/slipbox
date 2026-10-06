@@ -642,7 +642,7 @@ removals as their replacements land, the sweep last.*
 | ID | Item |
 | --- | --- |
 | 21.1 | **Done.** Roots from markers: `.git`, `.slipbox/`, `.obsidian/`, `.zk/`; `root_markers`, yours; the nearest |
-| 21.2 | Links as paths inside: a reader per form; `/` from the nearest root, then the filesystem; extensionless paths |
+| 21.2 | **Done.** Links as paths inside: `/` from the nearest root, then the filesystem; extensionless; to a folder |
 | 21.3 | Wikilinks read within their root: names, paths, aliases, attachments; ties ambiguous; no root, no names |
 | 21.4 | Conventions found: the user's setting, the root's tool's (Obsidian, zk), its notes' majority, ours; in `info` |
 | 21.5 | Links written in the convention: completion, the link picker, capture; renames keep each link's form |

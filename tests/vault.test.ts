@@ -8,8 +8,8 @@ import { CLI_COMMANDS, runCli } from "../src/cli/cli.ts";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
-import { applyPlan, planHeadingRename, planUndo } from "../src/core/rename.ts";
-import { findVaultRoot, gitRootOf, initVault, isListed, isVaultRoot, locateVault, markersAt, recordLocation, setRootMarkers } from "../src/core/vault.ts";
+import { applyPlan, planHeadingRename, planRelink, planUndo } from "../src/core/rename.ts";
+import { findVaultRoot, folderAt, gitRootOf, initVault, isListed, isVaultRoot, locateVault, markersAt, recordLocation, setRootMarkers } from "../src/core/vault.ts";
 import { implicitName, type KnownVault } from "../src/core/registry.ts";
 import { cacheDir, vaultKey } from "../src/core/paths.ts";
 
@@ -956,13 +956,55 @@ describe("moves: detected by content, kept as redirects (17.12)", () => {
     expect((await cli(["relink", "--dry-run"], dir)).json.data.files[0].edits[0].after).toBe("[p](plan-final.md) [s](plan-final.md#the-plan)");
   });
 
-  test("a leading / is the filesystem's root in a note, the vault's in a code file (20.2, 16.10)", () => {
+  test("a leading / is the nearest root's, then the filesystem's, in every file; with no root, the filesystem's (21.2)", () => {
     const dir = vault({ "notes/a.md": "# A\n", "run.py": "# see /notes/a.md\n" });
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
     const at = (target: string, from: string) => g.resolveLink({ kind: "markdown", target }, from);
-    expect(at("/notes/a.md", "index.md").resolvedKind).toBe("unresolved");
-    expect(at(join(dir, "notes", "a.md"), "index.md")).toMatchObject({ resolvedKind: "note", path: "notes/a.md" });
+    expect(at("/notes/a.md", "index.md")).toMatchObject({ resolvedKind: "note", path: "notes/a.md" });
+    expect(at("/notes/a.md#Top", "notes/a.md")).toMatchObject({ resolvedKind: "note", path: "notes/a.md" });
     expect(at("/notes/a.md", "run.py")).toMatchObject({ resolvedKind: "note", path: "notes/a.md" });
+    // Nothing there in the root: the filesystem's path, inside the root or out of it.
+    expect(at(join(dir, "notes", "a.md"), "index.md")).toMatchObject({ resolvedKind: "note", path: "notes/a.md" });
+    const outside = join(mkdtempSync(join(tmpdir(), "slipbox-slash-")), "far.md");
+    writeFileSync(outside, "# Far\n");
+    expect(at(outside, "index.md")).toMatchObject({ resolvedKind: "note", path: outside });
+    expect(at(outside.replace(/\.md$/, ""), "index.md")).toMatchObject({ resolvedKind: "note", path: outside }); // without its extension too
+    expect(at("/nowhere/x.md", "index.md").resolvedKind).toBe("unresolved");
+    // A plain folder has no root: `/` is the filesystem's alone.
+    const loose = mkdtempSync(join(tmpdir(), "slipbox-loose-slash-"));
+    mkdirSync(join(loose, "notes"));
+    writeFileSync(join(loose, "notes", "a.md"), "# A\n");
+    const lg = openGraph(folderAt(loose), DEFAULT_CONFIG, true);
+    expect(lg.resolveLink({ kind: "markdown", target: "/notes/a.md" }, "x.md").resolvedKind).toBe("unresolved");
+    expect(lg.resolveLink({ kind: "markdown", target: join(loose, "notes", "a.md") }, "x.md")).toMatchObject({ resolvedKind: "note", path: "notes/a.md" });
+  });
+
+  test("a path without an extension is the file as written, else its note, else a folder; a trailing / a folder (21.2)", () => {
+    const dir = vault({ "notes/plan.md": "# Plan\n", "notes/Makefile": "all:\n", "notes/v1.2.md": "# v\n", "docs/guide.md": "# G\n", "docs.md": "# Docs\n", "zk/202608151900-index.md": "# I\n" });
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const at = (target: string, from = "index.md") => g.resolveLink({ kind: "markdown", target }, from);
+    expect(at("notes/plan")).toMatchObject({ resolvedKind: "note", path: "notes/plan.md" });
+    expect(at("plan#Plan", "notes/x.md")).toMatchObject({ resolvedKind: "note", path: "notes/plan.md" });
+    expect(at("/notes/plan")).toMatchObject({ resolvedKind: "note", path: "notes/plan.md" });
+    expect(at("202608151900-index", "zk/a.md")).toMatchObject({ resolvedKind: "note", path: "zk/202608151900-index.md" }); // zk's
+    expect(at("notes/Makefile")).toMatchObject({ resolvedKind: "file", path: "notes/Makefile" }); // the file as written first
+    expect(at("notes/v1.2")).toMatchObject({ resolvedKind: "note", path: "notes/v1.2.md" });
+    // A folder: `docs` is the note docs.md (a note before a folder), `docs/` the folder; the root itself.
+    expect(at("docs")).toMatchObject({ resolvedKind: "note", path: "docs.md" });
+    expect(at("docs/")).toMatchObject({ resolvedKind: "folder", path: "docs" });
+    expect(at("notes")).toMatchObject({ resolvedKind: "folder", path: "notes" });
+    expect(at("/")).toMatchObject({ resolvedKind: "folder", path: "." });
+    expect(at("missing/")).toMatchObject({ resolvedKind: "unresolved" });
+    // Broken, written without an extension: the note it reads as is what following offers to make;
+    // a `/…` from the root too — but not one naming no folder of the root (a filesystem path).
+    expect(g.missingNote({ kind: "markdown", target: "notes/idea" }, "index.md")).toBe("notes/idea.md");
+    expect(g.missingNote({ kind: "markdown", target: "/notes/idea.md" }, "docs/guide.md")).toBe("notes/idea.md");
+    expect(g.missingNote({ kind: "markdown", target: "/media/drive/idea.md" }, "index.md")).toBeNull();
+    // A folder is no broken link: no problem for it.
+    writeFileSync(join(dir, "index.md"), "[the docs](docs/) [notes](notes)\n");
+    const g2 = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    expect(g2.linksOf("index.md").map((l) => [l.target, l.resolvedKind])).toEqual([["docs/", "folder"], ["notes", "folder"]]);
+    expect(g2.backlinks("docs").map((b) => b.target)).toEqual(["docs/"]);
   });
 
   test("two notes with the same text gone at once: no move is guessed", async () => {
@@ -973,6 +1015,28 @@ describe("moves: detected by content, kept as redirects (17.12)", () => {
     renameSync(join(dir, "a.md"), join(dir, "c.md"));
     rmSync(join(dir, "b.md"));
     expect((await cli(["resolve", "[a](a.md)", "--from", "index.md"], dir)).code).toBe(3);
+  });
+
+  test("a rename keeps each link's form: from the root, without the extension; a folder's links follow it, its / kept (21.2)", async () => {
+    const dir = vault({ "notes/plan.md": "# Plan\n", "notes/deep/x.md": "# X\n", "index.md": "[root](/notes/plan.md#Plan) [bare](notes/plan) [rootbare](/notes/plan) [folder](notes/) [folder2](notes) [deep](notes/deep/)\n" });
+    expect((await cli(["mv", "notes/plan.md", "notes/roadmap.md"], dir)).code).toBe(0);
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[root](/notes/roadmap.md#Plan) [bare](notes/roadmap) [rootbare](/notes/roadmap) [folder](notes/) [folder2](notes) [deep](notes/deep/)\n");
+    // The folder moved: links to it and to the folder in it, each its own way; links into it too.
+    expect((await cli(["mv", "notes", "archive"], dir)).code).toBe(0);
+    expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("[root](/archive/roadmap.md#Plan) [bare](archive/roadmap) [rootbare](/archive/roadmap) [folder](archive/) [folder2](archive) [deep](archive/deep/)\n");
+  });
+
+  test("relinked, a link written without its extension stays so (21.2)", () => {
+    const dir = vault({ "docs/guide.md": "# The guide, long enough to be known again when it moves.\n", "index.md": "[g](docs/guide)\n" });
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const file = (rel: string) => ({ rel, abs: join(dir, rel), size: statSync(join(dir, rel)).size, mtimeMs: statSync(join(dir, rel)).mtimeMs });
+    writeFileSync(join(dir, "docs", "manual.md"), readFileSync(join(dir, "docs", "guide.md")));
+    rmSync(join(dir, "docs", "guide.md"));
+    g.removeFile("docs/guide.md");
+    g.updateFile("docs/manual.md", file("docs/manual.md"));
+    expect(g.movedTarget({ kind: "markdown", target: "docs/guide" }, "index.md")).toBe("docs/manual.md");
+    const plan = planRelink(g);
+    expect(plan.files.flatMap((f) => f.edits.map((e) => e.after.trim()))).toEqual(["[g](docs/manual)"]);
   });
 
   test("the watcher's removal and arrival pair into a move, in either order", () => {
@@ -3746,6 +3810,28 @@ describe("the merge review (20.21)", () => {
   const brief = (r: { json: { data: { breaks: { path: string; target: string; cause: string; by: string; to: string | null; fix: string | null }[] } } }) =>
     r.json.data.breaks.map((b) => [b.path, b.target, b.cause, b.by, b.to, b.fix]);
 
+  test("the merge review reads `/` from the root and paths without an extension; each fix in its link's form (21.2)", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-merge-forms-"));
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    put(root, "docs/plan.md", "# Plan\n\n## Aims\n\nThe plan, long enough to be known by its text when it moves.\n");
+    put(root, "index.md", "# Index\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "base");
+    git(root, "checkout", "-q", "-b", "refactor");
+    mkdirSync(join(root, "docs", "new"));
+    git(root, "mv", "docs/plan.md", "docs/new/plan.md");
+    git(root, "commit", "-q", "-m", "moved");
+    git(root, "checkout", "-q", "main");
+    put(root, "docs/c.md", "# C\n\n[root](/docs/plan.md#Aims) [bare](plan) [fine](/index)\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "c");
+    const r = await cli(["merge-review", "refactor"], root);
+    expect(brief(r)).toEqual([
+      ["docs/c.md", "/docs/plan.md#Aims", "moved", "refactor", "docs/new/plan.md", "/docs/new/plan.md#Aims"],
+      ["docs/c.md", "plan", "moved", "refactor", "docs/new/plan.md", "new/plan"],
+    ]);
+  });
+
   test("merging a branch here: each link its result breaks, with the cause and the fix; nothing written", async () => {
     const root = branches();
     if (!root) return;
@@ -3756,7 +3842,7 @@ describe("the merge review (20.21)", () => {
     expect(brief(r)).toEqual([
       ["docs/b.md", "plan.md#goals", "moved", "refactor", "docs/new/plan.md", "new/plan.md#goals"],
       ["docs/b.md", "old.md", "deleted", "refactor", null, null],
-      ["docs/b.md", `${root}/docs/plan.md`, "moved", "refactor", "docs/new/plan.md", "new/plan.md"],
+      ["docs/b.md", `${root}/docs/plan.md`, "moved", "refactor", "docs/new/plan.md", `${root}/docs/new/plan.md`], // its form kept (21.2)
       ["docs/b.md", "my%20plan.md", "moved", "refactor", "docs/new/my plan.md", "new/my%20plan.md"],
       ["docs/d.md", "nowhere.md", "missing", "refactor", null, null],
       ["docs/g.md", "old.md", "deleted", "refactor", null, null], // unchanged here: what it names went
@@ -3785,7 +3871,7 @@ describe("the merge review (20.21)", () => {
     expect(brief(back)).toEqual([
       ["docs/b.md", "plan.md#goals", "moved", "refactor", "docs/new/plan.md", "new/plan.md#goals"],
       ["docs/b.md", "old.md", "deleted", "refactor", null, null],
-      ["docs/b.md", `${root}/docs/plan.md`, "moved", "refactor", "docs/new/plan.md", "new/plan.md"],
+      ["docs/b.md", `${root}/docs/plan.md`, "moved", "refactor", "docs/new/plan.md", `${root}/docs/new/plan.md`], // its form kept (21.2)
       ["docs/b.md", "my%20plan.md", "moved", "refactor", "docs/new/my plan.md", "new/my%20plan.md"],
     ]);
     // A link refactor wrote to nothing, merged back into main: refactor's own (main's view: `missing`, by refactor).
@@ -3930,6 +4016,22 @@ describe("the merge review (20.21)", () => {
 });
 
 describe("roots from markers (21.1)", () => {
+  test("a file's root is its nearest, however it's opened: --root says where to start, a nested root stays its own", async () => {
+    const top = mkdtempSync(join(tmpdir(), "slipbox-nearest-"));
+    mkdirSync(join(top, ".slipbox"));
+    mkdirSync(join(top, "inner", ".slipbox"), { recursive: true });
+    writeFileSync(join(top, "a.md"), "# A\n");
+    writeFileSync(join(top, "inner", "b.md"), "# B\n");
+    expect(locateVault({ root: top, path: join(top, "inner", "b.md") }).root).toBe(join(top, "inner"));
+    expect(locateVault({ root: top, path: join(top, "a.md") }).root).toBe(top);
+    // The CLI alike: the note named from here, or from --root, in the root that holds it.
+    const elsewhere = mkdtempSync(join(tmpdir(), "slipbox-nearest-cwd-"));
+    for (const arg of [join(top, "inner", "b.md"), "inner/b.md"]) {
+      const r = await cli(["--root", top, "stat", arg], elsewhere);
+      expect(r.code).toBe(0);
+      expect(r.json.data.path).toBe("b.md");
+    }
+  });
   const out: string[] = [];
   const cli = async (args: string[], cwd: string) => {
     out.length = 0;

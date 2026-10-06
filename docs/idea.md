@@ -983,6 +983,7 @@ remembered move.
 | `[t](../docs/plan.md)` | relative to the file: what slipbox writes by default |
 | `[t](/docs/plan.md)` | from the nearest root; if nothing's there, the filesystem's path |
 | `[t](plan)` | an extensionless path: `plan.md` when no file is called `plan` (zk, mkdnflow, Typora) |
+| `[t](docs/)` | a folder: revealed in the explorer when followed (decided 2026-10-06) |
 | `[[plan]]`, `[[docs/plan#Aims\|a]]` | a wikilink, by name or path, within its root |
 | `[t](file:///home/me/x.md)` | the filesystem's path |
 | `[t](~/notes/x.md)` | the home folder's path: read, never written |

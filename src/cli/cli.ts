@@ -280,7 +280,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // The note argument, when it names a file, also says which vault this is (resolve's is --from:
     // where the link is written).
     const noteAt = NOTE_FIRST.includes(command) ? rest[0] : command === "find" ? rest[1] : command === "resolve" ? flag(args, "from") : undefined;
-    let pathArg = noteArgPath(noteAt, io.cwd);
+    let pathArg = noteArgPath(noteAt, io.cwd, flag(args, "root"));
     // A nested vault's folder, moved, copied or deleted, is a folder of the vault holding it (18.7).
     if (pathArg && ["mv", "cp", "rm"].includes(command)) {
       const abs = isAbsolute(pathArg) ? pathArg : join(io.cwd, pathArg);
@@ -415,10 +415,13 @@ function vaultFormArg(arg: string, cwd: string): string {
 }
 
 /** A note argument that names an existing file is a path; otherwise it is a link name. */
-function noteArgPath(arg: string | undefined, cwd: string): string | undefined {
+/** The note argument as a path that exists: from here, else from `--root` (where its names start). */
+function noteArgPath(arg: string | undefined, cwd: string, root?: string): string | undefined {
   if (!arg) return undefined;
   const p = arg.startsWith("/") ? arg : `${cwd}/${arg}`;
-  return existsSync(p) ? arg : undefined;
+  if (existsSync(p)) return arg;
+  const fromRoot = root && !arg.startsWith("/") ? join(resolve(cwd, root), arg) : null;
+  return fromRoot && existsSync(fromRoot) ? fromRoot : undefined;
 }
 
 interface Result {
@@ -449,7 +452,9 @@ function resolveNote(s: Session, arg: string, parse = true): string {
 
 function findNoteArg(s: Session, arg: string, parse: boolean): string {
   // The file that said which vault this is: only the argument naming it (context takes several).
-  if (s.loc.file && isInside(s.loc.root, s.loc.file) && resolve(s.io.cwd, arg) === s.loc.file) {
+  const root = flag(s.args, "root");
+  // Named from here, or from --root (`noteArgPath`): the file that said which root this is.
+  if (s.loc.file && isInside(s.loc.root, s.loc.file) && (resolve(s.io.cwd, arg) === s.loc.file || (root && resolve(s.io.cwd, root, arg) === s.loc.file))) {
     const rel = relative(s.loc.root, s.loc.file);
     if (s.graph.notes.has(rel)) return rel;
     // An existing file the walk leaves out: named, it's reached (20.8) — git-ignored or under a
@@ -578,7 +583,7 @@ const HANDLERS: Record<string, Handler> = {
       // A link written in --from (or at the vault's root): its path — the resolver `links` and the
       // TUI use, so `resolve` is link.follow's CLI equivalent.
       const md = s.graph.resolveLink({ kind: "markdown", target: inner }, from ?? "");
-      status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
+      status = md.resolvedKind === "note" || md.resolvedKind === "file" || md.resolvedKind === "folder" ? "resolved" : md.resolvedKind === "ambiguous" ? "ambiguous" : "unresolved";
       path = status === "resolved" ? md.path : null;
       candidates = md.candidates;
       found = md;
@@ -591,7 +596,7 @@ const HANDLERS: Record<string, Handler> = {
         candidates = r.candidates;
       } else {
         const md = s.graph.resolveLink({ kind: "markdown", target: inner }, "");
-        status = md.resolvedKind === "note" || md.resolvedKind === "file" ? "resolved" : "unresolved";
+        status = md.resolvedKind === "note" || md.resolvedKind === "file" || md.resolvedKind === "folder" ? "resolved" : "unresolved";
         path = status === "resolved" ? md.path : null;
         found = md;
       }

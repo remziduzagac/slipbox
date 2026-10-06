@@ -341,6 +341,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       }
       if (r.resolvedKind === "note") return go(r.path!, at(r.path!));
       if (r.resolvedKind === "file") return fileLink(a, r.path!, frag, inSplit);
+      if (r.resolvedKind === "folder") return a.revealFolder(r.path!);
       // Its file seen to move (17.12): where, and the fix (20.2: a move never resolves a link).
       const as = { kind: link.kind === "image" ? ("image" as const) : ("markdown" as const), target: link.target };
       const to = from ? a.graph.movedTarget(as, from) : null;

@@ -12,7 +12,7 @@ import { classify } from "./filetypes.ts";
 import { atomicWrite, landsInside, readText } from "./fsutil.ts";
 import type { Backlink, Graph, LinkKind, NoteEntry } from "./graph.ts";
 import { VAULT_LINK } from "./graph.ts";
-import { formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
+import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
 import { slugify } from "./parse.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
@@ -135,27 +135,33 @@ function pathRetarget(written: string, linkingAbs: string, linkingAfter: string,
   const hash = wiki ? -1 : written.indexOf("#");
   const frag = hash >= 0 ? written.slice(hash) : "";
   const path = hash >= 0 ? written.slice(0, hash) : written;
-  const hit = pathLink(path, linkingAbs, wiki);
+  const hit = pathLink(path, linkingAbs, wiki, undefined, true);
   if (!hit || real(hit.abs) !== real(fromAbs)) return null;
-  // A wikilink written without its extension stays without it; a markdown link names the file.
-  const ext = !wiki || /\.[A-Za-z0-9]+$/.test(path) || !NOTE_EXT.test(toAbs);
+  // Written without its extension, it stays without it (21.2): a wikilink's, a markdown link's.
+  const ext = !extensionless(path) || !NOTE_EXT.test(toAbs);
   let next = formatPathLink(hit.form, toAbs, linkingAfter, ext);
+  if (hit.folder && path.endsWith("/")) next += "/";
   if (!wiki && hit.form !== "file-url" && (/%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(next))) next = encodeURI(next);
   return next + frag;
 }
 
-/** A markdown link's new URL: the new path from the linking file (root-relative stays so). */
+/**
+ * A markdown link's new URL reaching `toAbs`, in the form it was written (21.2): from the root when it
+ * started with `/` and the root holds the target, else relative from the linking file (`./` kept);
+ * without its extension when written without one; a folder's trailing `/` kept.
+ */
 function mdTarget(written: string, linkingAbs: string, toAbs: string, g: Graph | null): string {
   const hash = written.indexOf("#");
   const frag = hash >= 0 ? written.slice(hash) : "";
   const path = hash >= 0 ? written.slice(0, hash) : written;
   let next: string;
-  // From the vault's root in a code or data file (16.10, 16.15); in a note `/` is the filesystem's (20.2).
-  if (path.startsWith("/") && g && isInside(g.root, toAbs) && classify(linkingAbs, g.config.walk.extensions).group !== "note") next = `/${relative(g.root, toAbs)}`;
+  if (path.startsWith("/") && g && g.loc.mode !== "folder" && isInside(g.root, toAbs)) next = `/${relative(g.root, toAbs).split("\\").join("/")}`;
   else {
     next = relative(dirname(linkingAbs), toAbs).split("\\").join("/");
     if (path.startsWith("./") && !next.startsWith("../")) next = `./${next}`;
   }
+  if (extensionless(path) && NOTE_EXT.test(next)) next = next.replace(NOTE_EXT, "");
+  if (path.endsWith("/") && !next.endsWith("/")) next += "/";
   // Written percent-encoded (`my%20note.md`): encoded again.
   const encoded = /%[0-9A-Fa-f]{2}/.test(path) || /\s/.test(next);
   return (encoded ? encodeURI(next) : next) + frag;
@@ -393,15 +399,19 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
  */
 export function planMoves(g: Graph, pairs: [string, string][]): RenamePlan {
   const moves = new Map<string, string>();
+  const folders = new Map<string, string>();
   const files = [...g.notes.keys(), ...g.filePaths()];
   for (const [from, to] of pairs) {
     if (g.notes.has(from) || g.filePaths().includes(from)) moves.set(from, to);
-    else if (g.dirs.includes(from)) for (const rel of files) if (rel.startsWith(`${from}/`)) moves.set(rel, `${to}${rel.slice(from.length)}`);
+    else if (g.dirs.includes(from)) {
+      for (const rel of files) if (rel.startsWith(`${from}/`)) moves.set(rel, `${to}${rel.slice(from.length)}`);
+      for (const [d, t] of foldersMoving(g, from, to)) folders.set(d, t);
+    }
   }
-  if (!moves.size) throw new RenameError("nothing of the vault moves");
+  if (!moves.size && !folders.size) throw new RenameError("nothing of the vault moves");
   const [from, to] = pairs[0]!;
   const one = pairs.length === 1 && g.notes.has(from);
-  return planMove(g, moves, { kind: one ? "note" : "folder", from, to, move: { from: join(g.root, from), to: join(g.root, to), dir: !one } });
+  return planMove(g, moves, { kind: one ? "note" : "folder", from, to, move: { from: join(g.root, from), to: join(g.root, to), dir: !one } }, folders);
 }
 
 /**
@@ -417,7 +427,14 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
   if (existsSync(join(g.root, to))) throw new RenameError(`${to} exists; not overwriting it`);
   const moves = new Map<string, string>();
   for (const rel of [...g.notes.keys(), ...g.filePaths()]) if (rel.startsWith(`${from}/`)) moves.set(rel, `${to}${rel.slice(from.length)}`);
-  return planMove(g, moves, { kind: "folder", from, to, move: { from: join(g.root, from), to: join(g.root, to), dir: true } });
+  return planMove(g, moves, { kind: "folder", from, to, move: { from: join(g.root, from), to: join(g.root, to), dir: true } }, foldersMoving(g, from, to));
+}
+
+/** The folder `from` and every folder in it, each to where it goes under `to` (links to a folder, 21.2). */
+function foldersMoving(g: Graph, from: string, to: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const d of [from, ...g.dirs]) if (d === from || d.startsWith(`${from}/`)) out.set(d, `${to}${d.slice(from.length)}`);
+  return out;
 }
 
 /**
@@ -425,7 +442,7 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
  * from where its file will be, each moved note's relative links to what stays put rewritten from
  * where it will be; a single note renamed keeps its old name (`previous_names`).
  */
-function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "kind" | "from" | "to" | "move">): RenamePlan {
+function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "kind" | "from" | "to" | "move">, folders = new Map<string, string>()): RenamePlan {
   const c = new Collector(g);
   const abs = (rel: string) => join(g.root, rel);
   /** Where a file will be: its new place if it moves, else where it is. */
@@ -451,8 +468,8 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
       if (l.kind !== "markdown" && l.kind !== "image" && !((l.kind === "wiki" || l.kind === "embed") && /^\.\.?\//.test(l.target))) continue;
       if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("#") || l.target.startsWith("/") || l.target.startsWith("~/")) continue;
       const r = g.resolveLink(l, fromRel);
-      if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path) continue;
-      if (!isAbsolute(r.path) && moves.has(r.path)) continue; // moving too: its backlink above
+      if ((r.resolvedKind !== "note" && r.resolvedKind !== "file" && r.resolvedKind !== "folder") || !r.path) continue;
+      if (!isAbsolute(r.path) && (moves.has(r.path) || folders.has(r.path))) continue; // moving too: rewritten as its backlink
       const targetAbs = isAbsolute(r.path) ? r.path : abs(r.path);
       const site: Site = { abs: abs(fromRel), kind: l.kind, target: l.target, line: l.line, column: l.column };
       const wiki = l.kind === "wiki" || l.kind === "embed";
@@ -463,6 +480,15 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
           : wikiTarget(l.target, posix.dirname(toRel), r.path, g, "")
         : mdTarget(l.target, abs(toRel), targetAbs, g);
       c.edit(site, next, null);
+    }
+  }
+  // Links to a folder that moves (21.2): to where it goes, each in its form.
+  for (const [fromDir, toDir] of folders) {
+    for (const b of g.backlinks(fromDir)) {
+      const linking = isAbsolute(b.from) ? b.from : abs(b.from);
+      const site: Site = { abs: linking, kind: b.kind, target: b.target, line: b.line, column: b.column };
+      const byPath = pathForm(b.target) ? pathRetarget(b.target, linking, after(linking), abs(fromDir), abs(toDir), false) : null;
+      c.edit(site, byPath ?? mdTarget(b.target, after(linking), abs(toDir), g), null);
     }
   }
   const files = c.result();

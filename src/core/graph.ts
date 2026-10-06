@@ -4,13 +4,13 @@
 // query time against the LinkIndex, so adding or removing a note never leaves stale answers.
 // The CLI reads a fresh cache instead of reparsing every note on every agent call (9.4).
 
-import { statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
 import { basename, isAbsolute, join, posix, relative } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
-import { LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
+import { extensionless, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
 import { vaultForm } from "./names.ts";
@@ -76,8 +76,8 @@ export type VaultChange = { kind: "changed"; path: string } | { kind: "removed";
 export type Via = "alias" | "previous-name" | "redirect";
 
 export interface ResolvedLink extends LinkRef {
-  /** note: a vault note; file: an attachment; external: a URL; anchor: within this note. */
-  resolvedKind: "note" | "file" | "external" | "anchor" | "unresolved" | "ambiguous";
+  /** note: a vault note; file: an attachment; folder: a folder (21.2); external: a URL; anchor: within this note. */
+  resolvedKind: "note" | "file" | "folder" | "external" | "anchor" | "unresolved" | "ambiguous";
   /** Vault-relative; absolute when the target is in another root (17.8, 17.9). */
   path: string | null;
   candidates: string[];
@@ -777,10 +777,10 @@ export class Graph {
       const path = /^file:/i.test(link.target) ? link.target : link.target.split("#")[0]!;
       return this.byFilesystemPath(path, fromRel, false) ?? { resolvedKind: "unresolved", path: null, candidates: [] };
     }
-    // A code or data file's paths (16.10, 16.15) are a project's: `/` its root; a note's are plain (20.2).
-    const rootSlash = !!fromRel && classify(fromRel, this.config.walk.extensions).group !== "note";
-    const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index, rootSlash);
-    if ((m.kind === "file" || m.kind === "missing") && !m.target.startsWith("../") && !m.target.startsWith("/")) {
+    // `/` from the nearest root, every file's (21.2): this graph's root — a plain folder opened has
+    // none, and there it's the filesystem's path alone.
+    const m: MdLinkTarget = resolveMarkdownUrl(link.target, fromRel, this.root, this.index, this.loc.mode !== "folder");
+    if ((m.kind === "file" || m.kind === "folder" || m.kind === "missing") && !m.target.startsWith("../") && !m.target.startsWith("/")) {
       // Into a vault nested in this one: its note, there (17.17).
       const nested = this.intoNested(m.target, false);
       if (nested) return nested;
@@ -802,6 +802,8 @@ export class Graph {
         return { resolvedKind: "note", path: m.target, candidates: [] };
       case "file":
         return { resolvedKind: "file", path: m.target, candidates: [] };
+      case "folder":
+        return { resolvedKind: "folder", path: m.target, candidates: [] };
       default:
         return { resolvedKind: "unresolved", path: null, candidates: [] };
     }
@@ -817,10 +819,12 @@ export class Graph {
     // relative path out of its checkout is taken from the main checkout (17.19): `../y/plan.md`
     // means the sibling repository beside the main one, wherever the worktree is kept.
     const wt = this.loc.worktree;
-    const hit = pathLink(target, join(this.root, fromRel || "_"), wiki, wt?.main ? { from: wt.checkout, to: wt.main } : undefined);
+    const hit = pathLink(target, join(this.root, fromRel || "_"), wiki, wt?.main ? { from: wt.checkout, to: wt.main } : undefined, true);
     if (!hit) return null;
     const rel = relative(this.root, hit.abs);
-    if (!rel.startsWith("..") && !isAbsolute(rel)) {
+    const inside = !rel.startsWith("..") && !isAbsolute(rel);
+    if (hit.folder) return { resolvedKind: "folder", path: inside ? rel || "." : hit.abs, candidates: [], ...(inside ? {} : { vault: this.reach?.vaultOf(hit.abs) ?? null }) };
+    if (inside) {
       if (this.notes.has(rel)) return { resolvedKind: "note", path: rel, candidates: [rel] };
       if (this.known(rel)) return { resolvedKind: "file", path: rel, candidates: [rel] };
     }
@@ -913,7 +917,9 @@ export class Graph {
    */
   movedTarget(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
     const rel = this.brokenPath(link, fromRel);
-    return rel === null ? null : this.movedTo(rel);
+    if (rel === null) return null;
+    // Written without its extension (21.2): the note's move counts.
+    return this.movedTo(rel) ?? (extensionless(rel) ? this.movedTo(`${rel}.md`) : null);
   }
 
   /**
@@ -923,7 +929,10 @@ export class Graph {
    */
   missingNote(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
     const rel = this.brokenPath(link, fromRel);
-    return rel !== null && /\.(md|markdown)$/i.test(rel) && !this.movedTo(rel) ? rel : null;
+    if (rel === null || rel.endsWith("/") || this.movedTo(rel)) return null;
+    // Written without an extension (21.2): the note it reads as, `plan.md`.
+    const note = extensionless(rel) ? `${rel}.md` : rel;
+    return /\.(md|markdown)$/i.test(note) && !this.movedTo(note) ? note : null;
   }
 
   /** A broken link's path in this vault (vault-relative, decoded): null for one that resolves, or isn't a vault path. */
@@ -931,13 +940,18 @@ export class Graph {
     if (link.kind !== "markdown" && link.kind !== "image") return null;
     if (this.resolveLink(link, fromRel).resolvedKind !== "unresolved") return null;
     const path = link.target.split("#")[0]!;
-    if (!path || /^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("/") || path.startsWith("~/")) return null;
+    if (!path || /^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("~/")) return null;
+    // `/…` from the root (21.2); with none (a plain folder), the filesystem's: not a path in it.
+    if (path.startsWith("/") && this.loc.mode === "folder") return null;
     let decoded = path;
     try {
       decoded = decodeURIComponent(path);
     } catch {}
-    const rel = posix.normalize(posix.join(posix.dirname(fromRel), decoded));
-    return rel.startsWith("../") ? null : rel;
+    // A `/…` naming no folder of the root is a filesystem path that isn't there (an unplugged
+    // drive's), not a place in the root.
+    if (decoded.startsWith("/") && decoded.slice(1).includes("/") && !existsSync(join(this.root, decoded.slice(1).split("/")[0]!))) return null;
+    const rel = decoded.startsWith("/") ? posix.normalize(decoded.slice(1)) : posix.normalize(posix.join(posix.dirname(fromRel), decoded));
+    return rel === ".." || rel.startsWith("../") ? null : rel;
   }
 
   /** `[[dir/old]]` or `[[old]]` whose note moved: by its old path, else its old name when unique. */
@@ -1040,8 +1054,9 @@ export class Graph {
         for (const l of links) {
           // An image's link counts too: the notes that show a picture are its backlinks (and a
           // rename or move of it fixes them, 18.3).
+          // A folder's links too, by its path (21.2): a move of the folder rewrites them.
           const r = this.resolveLink(l, from);
-          if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || r.path === from || isAbsolute(r.path)) continue;
+          if ((r.resolvedKind !== "note" && r.resolvedKind !== "file" && r.resolvedKind !== "folder") || !r.path || r.path === from || isAbsolute(r.path)) continue;
           const list = map.get(r.path) ?? [];
           list.push({ from, line: l.line, column: l.column, end: l.end, text: l.text, kind: l.kind, target: l.target, heading: l.heading, block: l.block, alias: l.alias });
           map.set(r.path, list);

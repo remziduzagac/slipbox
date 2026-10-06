@@ -12,6 +12,7 @@ import { GIT_SCENARIOS } from "./world-git.ts";
 import { CONTENT_SCENARIOS } from "./world-content.ts";
 import { TERMINAL_SCENARIOS } from "./world-terminal.ts";
 import { OUTSIDE_SCENARIOS } from "./world-outside.ts";
+import { LINK_SCENARIOS } from "./world-links.ts";
 
 export type { Scenario };
 
@@ -1823,4 +1824,4 @@ const CORE: Scenario[] = [
 ];
 
 /** Every scenario: the app's own (above), then slipbox in its world (world-*.ts). */
-export const SCENARIOS: Scenario[] = [...CORE, ...GIT_SCENARIOS, ...CONTENT_SCENARIOS, ...TERMINAL_SCENARIOS, ...OUTSIDE_SCENARIOS];
+export const SCENARIOS: Scenario[] = [...CORE, ...GIT_SCENARIOS, ...CONTENT_SCENARIOS, ...TERMINAL_SCENARIOS, ...OUTSIDE_SCENARIOS, ...LINK_SCENARIOS];

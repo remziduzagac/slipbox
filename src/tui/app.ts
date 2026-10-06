@@ -4980,15 +4980,34 @@ export class App {
     }
   }
 
-  revealInSidebar(): void {
+  /** The note on screen (or `rel`) shown in the explorer: its folders unfolded, its row selected; `open` a folder's own too. */
+  revealInSidebar(rel: string | null | undefined = this.view?.buf.rel, open = false): void {
     this.sidebar.pinned = false;
-    const rel = this.view?.buf.rel;
     if (!rel) return;
-    const parts = rel.split("/");
+    const parts = rel === "." ? [] : rel.split("/");
     for (let i = 1; i < parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
+    if (open && rel !== ".") this.expanded.add(rel);
     this.invalidateTree();
-    const idx = this.treeRows().findIndex((r) => r.path === rel);
+    const idx = rel === "." ? 0 : this.treeRows().findIndex((r) => r.path === rel);
     if (idx >= 0) this.sidebar.selected = idx;
+  }
+
+  /**
+   * A link to a folder followed (21.2): the folder revealed in the explorer, unfolded, the explorer
+   * focused — in its own root when it's outside this one (that root's, or the folder opened).
+   */
+  revealFolder(path: string): void {
+    if (isAbsolute(path)) {
+      const root = findVaultRoot(path);
+      if (!this.switchVault(root ? rootAt(root) : folderAt(path), null)) return;
+      path = relative(this.loc.root, path) || ".";
+    }
+    this.switchLeftView("explorer");
+    this.sidebar.filter = "";
+    this.sidebar.filtering = false;
+    this.showSidebar(true);
+    this.revealInSidebar(path, true);
+    this.region = "sidebar";
   }
 
   explorerAction(action: string): void {

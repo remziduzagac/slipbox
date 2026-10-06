@@ -4079,6 +4079,19 @@ describe("review cycle 2 (TUI navigation)", () => {
     h.app.handleMouse({ type: "down", x, y, button: 0 });
     h.app.handleMouse({ type: "up", x, y, button: 0 });
   };
+  test("a link to a folder is resolved, and followed reveals the folder in the explorer, unfolded and focused (21.2)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "folders.md"), "# Folders\n\n[the notes](notes/) and [the projects](/projects) and [nowhere](nowhere/)\n");
+    const h = await harness({ root, open: "folders.md" });
+    const links = h.app.currentLayout(h.app.view!).links;
+    expect(links.map((l) => [l.target, l.status])).toEqual([["notes/", "resolved"], ["/projects", "resolved"], ["nowhere/", "unresolved"]]);
+    await h.keys("tab", "enter");
+    expect(h.app.leftView).toBe("explorer");
+    expect(h.app.region).toBe("sidebar");
+    expect(h.app.expanded.has("notes")).toBe(true);
+    expect(h.app.explorerRows()[h.app.sidebar.selected]?.path).toBe("notes");
+    expect(h.app.view?.buf.rel).toBe("folders.md"); // nothing opened in its place
+  });
   test("enter follows a link in source mode and in the lens", async () => {
     for (const mode of ["v", "l"]) {
       const root = makeVault();

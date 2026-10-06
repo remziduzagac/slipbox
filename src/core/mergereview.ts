@@ -12,7 +12,7 @@ import { urlPath } from "./convert.ts";
 import { type Checkout, headOf } from "./git.ts";
 import { changedBetween, inVault } from "./gitops.ts";
 import { extractText } from "./graph.ts";
-import { homeDir } from "./links.ts";
+import { extensionless, homeDir } from "./links.ts";
 
 export interface MergeBreak {
   /** The note linking, in the merged result (vault path). */
@@ -110,9 +110,9 @@ function lookup(files: Map<string, string>): (rel: string) => boolean {
 }
 
 /**
- * The vault path a link names from the note `from`: a relative path, or one from the filesystem's root
- * or `~/` that's inside the vault (20.2). Null for a URL, an anchor, or a path out of the vault —
- * whether those reach isn't the merge's to say.
+ * The vault path a link names from the note `from`: a relative path, one from the root (`/…`, 21.2), or
+ * `~/` that's inside the vault. Null for a URL, an anchor, or a path out of the vault — whether those
+ * reach isn't the merge's to say. Written without an extension, it's that path: `reaches` reads it.
  */
 function named(target: string, from: string, root: string): string | null {
   if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//")) return null;
@@ -123,18 +123,32 @@ function named(target: string, from: string, root: string): string | null {
   } catch {}
   if (!path) return null;
   let rel: string;
-  if (path.startsWith("/") || path.startsWith("~/")) {
+  // `/…` from the root; one already under the root's own path is the filesystem's reading of it (the
+  // root holds nothing at `<root>/<root>/…`).
+  if (path.startsWith("~/") || path.startsWith(`${root}/`)) {
     const r = relative(root, path.startsWith("~/") ? join(homeDir(), path.slice(2)) : path);
     if (r.startsWith("..") || posix.isAbsolute(r)) return null;
     rel = r.split(sep).join("/") || ".";
-  } else rel = posix.normalize(posix.join(posix.dirname(from), path));
+  } else if (path.startsWith("/")) rel = posix.normalize(path.slice(1) || ".");
+  else rel = posix.normalize(posix.join(posix.dirname(from), path));
   return rel === ".." || rel.startsWith("../") ? null : rel.replace(/\/$/, "") || ".";
 }
 
-/** The target that reaches `to` from the note at `from`, the written one's fragment kept. */
-function fixFor(from: string, to: string, written: string): string {
+/** A path the tree has, written as it is or without its note's extension (21.2): the path it has, or null. */
+function reaches(n: string, has: (rel: string) => boolean): string | null {
+  if (has(n)) return n;
+  if (!extensionless(n)) return null;
+  return [`${n}.md`, `${n}.markdown`].find(has) ?? null;
+}
+
+/** The target that reaches `to` from the note at `from`, in the written one's form (21.2: from the
+ *  root, without the extension) and with its fragment. */
+function fixFor(from: string, to: string, written: string, root: string): string {
   const hash = written.indexOf("#");
-  return urlPath(posix.relative(posix.dirname(from), to) || posix.basename(to)) + (hash >= 0 ? written.slice(hash) : "");
+  const path = hash >= 0 ? written.slice(0, hash) : written;
+  let next = path.startsWith(`${root}/`) ? `${root}/${to}` : path.startsWith("/") ? `/${to}` : posix.relative(posix.dirname(from), to) || posix.basename(to);
+  if (extensionless(path)) next = next.replace(/\.(md|markdown)$/i, "");
+  return urlPath(next) + (hash >= 0 ? written.slice(hash) : "");
 }
 
 /**
@@ -193,17 +207,20 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
     const before = new Map<string, boolean>();
     for (const l of linksOf(was, O.get(was))) {
       const n = named(l.target, was, root);
-      if (n !== null) before.set(l.target, inO(n));
+      if (n !== null) before.set(l.target, reaches(n, inO) !== null);
     }
     for (const l of linksOf(p, oid)) {
-      const names = named(l.target, p, root);
-      if (names === null || inR(names) || before.get(l.target) === false) continue;
+      const written = named(l.target, p, root);
+      if (written === null || reaches(written, inR) !== null || before.get(l.target) === false) continue;
+      // Its path as the base had it (a note without its extension, the note): what moved or went.
+      const names = reaches(written, inO) ?? written;
       const site = { path: p, line: l.line, column: l.column, target: l.target, names };
       // The note moved, its link written from where it was: what it named there, still in the result.
-      const there = was !== p && before.get(l.target) ? named(l.target, was, root) : null;
+      const wasNamed = was !== p && before.get(l.target) ? named(l.target, was, root) : null;
+      const there = wasNamed === null ? null : (reaches(wasNamed, inO) ?? wasNamed);
       const m = moved.get(names.toLowerCase());
-      if (there && inR(there)) breaks.push({ ...site, cause: "note-moved", by: notesMoved.get(p)?.by ?? from, to: there, fix: fixFor(p, there, l.target) });
-      else if (m && inR(m.to)) breaks.push({ ...site, cause: "moved", by: m.by, to: m.to, fix: fixFor(p, m.to, l.target) });
+      if (there && inR(there)) breaks.push({ ...site, cause: "note-moved", by: notesMoved.get(p)?.by ?? from, to: there, fix: fixFor(p, there, l.target, root) });
+      else if (m && inR(m.to)) breaks.push({ ...site, cause: "moved", by: m.by, to: m.to, fix: fixFor(p, m.to, l.target, root) });
       else if (deleted.has(names.toLowerCase()) || m) breaks.push({ ...site, cause: "deleted", by: deleted.get(names.toLowerCase()) ?? m!.by, to: null, fix: null });
       // Neither moved nor deleted, yet it reached in `into` or wasn't there: the merged branch's doing.
       else breaks.push({ ...site, cause: "missing", by: from, to: null, fix: null });

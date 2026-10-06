@@ -186,7 +186,10 @@ export function locateVault(opts: LocateOptions): VaultLocation {
     if (!existsSync(root) || !statSync(root).isDirectory()) throw new VaultError(`--root is not a directory: ${opts.root}`);
     if (!isVaultRoot(root)) throw new VaultError(`--root ${opts.root} isn't a root (none of ${rootMarkers().join(", ")} in it): slipbox init ${opts.root} makes it one`);
     if (file && !isInside(root, file)) throw new VaultError(`${opts.path} is outside --root ${opts.root}`);
-    return rootAt(root, file);
+    // A file has one root, however it's opened (21.x): its nearest. `--root` says where to start; a
+    // root nested in it stays a boundary — its files are its own.
+    const own = file ? findVaultRoot(file) : null;
+    return rootAt(own && isInside(root, own) ? own : root, file);
   }
 
   const found = findVaultRoot(target ?? cwd);

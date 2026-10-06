@@ -251,8 +251,10 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   however many it holds (`20.3`) — else the plain folder the file is in (or the current one): an unnamed instance known
   by its path (`20.22`), walked and indexed as a vault is, its state its own. `$HOME` and `/` are never a root; opened
   as a plain folder, they're listed a level at a time, never walked or indexed (the background index walks `~`).
-  `--root` must name a root (one of the markers in it). Each command records the vault in `vaults.json` — an instance of
-  it (`20.4`), given a local id the first time, with its collection's evidence; a plain folder too, by its path. A
+  `--root` must name a root (one of the markers in it), and says where to start: a note named from it is found there,
+  but a file's root is its nearest — one in a root nested in `--root` is that root's (21.x). Each command records the
+  vault in `vaults.json` — an instance of it (`20.4`), given a local id the first time, with its collection's evidence;
+  a plain folder too, by its path. A
   vault's cache and state are its instance's (`20.5`). Opened where it wasn't seen before, while a copy of it is gone
   from where it was, every command warns until `slipbox vault-moved <old-path>` takes the gone copy's instance and state
   — or `--not` says it didn't move; with no path it lists the copies that may have. Moves are never taken on a guess. A

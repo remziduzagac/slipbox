@@ -35,6 +35,7 @@ export function linkResolver(graph: Graph | null, rel: string | null) {
     switch (r.resolvedKind) {
       case "note":
       case "file":
+      case "folder":
       case "anchor":
         return "resolved";
       case "external":

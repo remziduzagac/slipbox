@@ -417,14 +417,17 @@ Each kind of link does something different when followed:
 | --- | --- |
 | `[t](note.md)`, `[t](note.md#heading)` | opens the note, at the heading (by its slug or text) |
 | `[t](#frag)` | jumps within the note |
-| `[t](not-yet.md)`, a note not written yet | the new-note prompt, its name typed: `enter` makes it at that path |
+| `[t](/docs/plan.md)` | from the nearest root (`21.2`); the root holding nothing there, the filesystem's path |
+| `[t](plan)`, no extension | the file as written, else the note `plan.md`, else the folder (zk's links, `21.2`) |
+| `[t](docs/)`, a folder | revealed in the explorer, unfolded and focused (one elsewhere: in its own root) |
+| `[t](not-yet.md)`, `[t](not-yet)`, a note not written yet | the new-note prompt, its name typed: `enter` makes it |
 | a broken link whose file moved | says where it went (`17.12`): `space l r` relinks it — a move never resolves it |
 | `[t](../other/x.md)` | opens the note in the other vault (`17.9`) |
 | `[[…]]` | text, not a link (`20.2`): `:convert-links` makes it a path |
 | `[t](other.md#frag)` | opens relative to the note; `#^id` at the block (`20.1`); a bad `%` read as written |
 | `[t](run.py#L42)` | opens the file at line 42 (as in a code comment's `run.py:42`) |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
-| `file://…`, `~/x.md`, `/home/me/x.md` (`/` the filesystem's root) | opens the file, in whichever vault holds it |
+| `file://…`, `~/x.md`, `/home/me/x.md` (nothing there in the root) | opens the file, in whichever vault holds it |
 | attachment `![x](x.png)` | copies the path; images are phase 6 |
 | footnote `[1]` | jumps to the definition |
 | tag `#dome/shutter` | lists the notes with the tag (its nested ones too, `#dome/shutter/…`); enter opens one |

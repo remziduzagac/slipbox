@@ -1985,8 +1985,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - Images: !\[alt\](path) as a link/embed to files — `hobbies/photography/index.md`,
   `notes/attachments/Scan 2026-09-02.PDF`, `notes/attachments/whiteboard-2026-08-26.png`,
   `work/kestrel/docs/qa/links.md`, `work/product/assets/share-sheet.png` (1.11; graph attachments)
-- Link to a directory — `notes/research/link-styles.md`, `work/kestrel/docs/qa/links.md` (20.x resolver; broken-link
-  semantics)
+- Link to a directory (`../projects/`, `../`, `/`): resolved, never broken; followed, revealed in the explorer; moved,
+  rewritten — `notes/research/link-styles.md`, `work/kestrel/docs/qa/links.md` (21.2)
 - Link to a non-markdown file (code, csv, pdf, geojson, image) — `Downloads/receipt-desk-2026-08.pdf`,
   `hobbies/cycling/rides/202609131900-300k-brevet.md`, `hobbies/cycling/routes/300k-lakes-loop.geojson`,
   `hobbies/cycling/routes/300k-lakes-loop.gpx`, `notes/daily/2026-09-12.md` (test 'a data file's links resolve and

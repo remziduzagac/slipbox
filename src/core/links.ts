@@ -164,36 +164,54 @@ function sharedDepth(a: string, b: string): number {
   return n;
 }
 
-export type UrlKind = "external" | "note" | "file" | "anchor" | "missing";
+export type UrlKind = "external" | "note" | "file" | "folder" | "anchor" | "missing";
 
 export interface MdLinkTarget {
   kind: UrlKind;
-  /** Vault-relative path for note/file/missing, the URL for external. */
+  /** Vault-relative path for note/file/folder/missing (`.` the root itself), the URL for external. */
   target: string;
   fragment: string | null;
 }
 
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
-/** Classify and resolve a markdown link URL `[t](url)` found in `fromRel`. */
-export function resolveMarkdownUrl(url: string, fromRel: string, root: string, index: LinkIndex, rootSlash = false): MdLinkTarget {
+/**
+ * Classify and resolve a markdown link URL `[t](url)` found in `fromRel` (21.2): relative to the
+ * file; a leading `/` from the root (`hasRoot`: the nearest root, the graph's — with none, the
+ * filesystem's path alone, which the graph asks); then `landIn`'s order: a file as written, a note
+ * without its extension, a folder.
+ */
+export function resolveMarkdownUrl(url: string, fromRel: string, root: string, index: LinkIndex, hasRoot = true): MdLinkTarget {
   if (SCHEME.test(url) || url.startsWith("//")) return { kind: "external", target: url, fragment: null };
   const hash = url.indexOf("#");
   const fragment = hash >= 0 ? decodeSafe(url.slice(hash + 1)) : null;
   const pathPart = decodeSafe(hash >= 0 ? url.slice(0, hash) : url);
   if (!pathPart) return { kind: "anchor", target: fromRel, fragment };
-  // A leading `/` is the filesystem's root in a note (20.2): the file at that path, wherever it is. In a
-  // code or data file (`rootSlash`, 16.10, 16.15) it's the vault's, as a project's own paths are.
-  if (pathPart.startsWith("/") && !rootSlash) return { kind: "missing", target: pathPart, fragment };
-  const rel = pathPart.startsWith("/") ? posix.normalize(pathPart.slice(1)) : posix.normalize(posix.join(posix.dirname(fromRel), pathPart));
-  if (rel.startsWith("..")) return { kind: "missing", target: rel, fragment };
+  if (pathPart.startsWith("/") && !hasRoot) return { kind: "missing", target: pathPart, fragment };
+  const rel = pathPart.startsWith("/") ? posix.normalize(pathPart.slice(1) || ".") : posix.normalize(posix.join(posix.dirname(fromRel), pathPart));
+  if (rel === ".." || rel.startsWith("../")) return { kind: "missing", target: rel, fragment };
+  // Not in the root, a `/…` is the filesystem's path (21.2): the graph asks that of what's missing.
+  return { ...landIn(rel, root, index), fragment };
+}
+
+/**
+ * Where a path inside the root lands (21.2), in order: a folder when written with a trailing `/`;
+ * a note by its own spelling (case aside, 1.4); a file as written; a note without its extension —
+ * `plan` is `plan.md` when no file is called `plan` (zk's, mkdnflow's links); a folder.
+ */
+function landIn(rel: string, root: string, index: LinkIndex): Omit<MdLinkTarget, "fragment"> {
+  const bare = rel.replace(/\/+$/, "") || ".";
+  if (rel.endsWith("/") || bare === ".") return { kind: dirExists(root, bare) ? "folder" : "missing", target: bare };
   if (NOTE_EXT.test(rel)) {
     // The note's own spelling, not the link's: a path that exists, and the key backlinks use.
     const canon = index.canonical(rel);
-    if (canon) return { kind: "note", target: canon, fragment };
-    return { kind: fileExists(root, rel) ? "file" : "missing", target: rel, fragment };
+    if (canon) return { kind: "note", target: canon };
+    return { kind: fileExists(root, rel) ? "file" : "missing", target: rel };
   }
-  return { kind: fileExists(root, rel) ? "file" : "missing", target: rel, fragment };
+  if (fileExists(root, rel)) return { kind: "file", target: rel };
+  const note = index.canonical(rel);
+  if (note) return { kind: "note", target: note };
+  return { kind: dirExists(root, rel) ? "folder" : "missing", target: rel };
 }
 
 /**
@@ -202,6 +220,11 @@ export function resolveMarkdownUrl(url: string, fromRel: string, root: string, i
  * (`~/notes/x.md`), an absolute one (`/home/me/notes/x.md`), a `file://` URL.
  */
 export type PathForm = "relative" | "home" | "absolute" | "file-url";
+
+/** A path written without an extension (`plan`, `../notes/plan`): read as the note too (21.2). */
+export function extensionless(path: string): boolean {
+  return !/\.[A-Za-z0-9]+$/.test(posix.basename(path.replace(/\/+$/, "")));
+}
 
 export function homeDir(): string {
   return process.env.HOME || homedir();
@@ -239,7 +262,7 @@ export function pathNamed(target: string, linkingAbs: string): { form: PathForm;
   return { form, abs: form === "home" ? join(homeDir(), raw.slice(2)) : form === "absolute" ? raw : resolve(dirname(linkingAbs), raw) };
 }
 
-export function pathLink(target: string, linkingAbs: string, wiki: boolean, rebase?: { from: string; to: string }): { form: PathForm; abs: string } | null {
+export function pathLink(target: string, linkingAbs: string, wiki: boolean, rebase?: { from: string; to: string }, dirs = false): { form: PathForm; abs: string; folder?: boolean } | null {
   const form = pathForm(target);
   if (!form) return null;
   let p: string;
@@ -258,7 +281,10 @@ export function pathLink(target: string, linkingAbs: string, wiki: boolean, reba
       if (out.startsWith("..") || isAbsolute(out)) p = resolve(rebase.to, out);
     }
   }
-  const candidates = wiki && !/\.[A-Za-z0-9]+$/.test(p) ? [`${p}.md`, `${p}.markdown`] : [p];
+  // A wikilink without an extension names a note; a markdown link's path is the file as written,
+  // else the note without its extension (21.2) — and, asked (`dirs`), a folder.
+  const bare = !/\.[A-Za-z0-9]+$/.test(p);
+  const candidates = wiki && bare ? [`${p}.md`, `${p}.markdown`] : bare && !p.endsWith("/") ? [p, `${p}.md`, `${p}.markdown`] : [p];
   const hit = candidates.find((c) => {
     try {
       return statSync(c).isFile();
@@ -266,7 +292,9 @@ export function pathLink(target: string, linkingAbs: string, wiki: boolean, reba
       return false;
     }
   });
-  return hit ? { form, abs: hit } : null;
+  if (hit) return { form, abs: hit };
+  if (dirs && !wiki && dirExistsAt(p)) return { form, abs: p.replace(/\/+$/, "") || "/", folder: true };
+  return null;
 }
 
 /**
@@ -303,6 +331,18 @@ export function resolveAttachment(target: string, fromRel: string, root: string)
 
 export function isNotePath(p: string): boolean {
   return NOTE_EXT.test(p);
+}
+
+function dirExistsAt(abs: string): boolean {
+  try {
+    return statSync(abs).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function dirExists(root: string, rel: string): boolean {
+  return dirExistsAt(posix.join(root, rel));
 }
 
 function fileExists(root: string, rel: string): boolean {

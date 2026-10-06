@@ -276,14 +276,19 @@ LSP face (`11.x`), and `17.20` below. In short:
 ## `21.x` — paths inside, conventions at the edges
 
 *Proposed 2026-10-05 with the user, after a survey of how other tools handle links, and reviewed with the user the same
-day; not built yet (plan `21.x`). The model in full is `docs/idea.md`, "Paths inside, conventions at the edges". It
-revises `20.x` above.*
+day; being built (plan `21.x`: `21.1` and `21.2` done). The model in full is `docs/idea.md`, "Paths inside,
+conventions at the edges". It revises `20.x` above.*
 
 - **Inside, a link is a path;** each written form — a relative path, `/…`, an extensionless path, a wikilink,
   `file://`, `~/`, a `slipbox://` pointer — has a reader and, but for `~/`, a writer. The index, backlinks, renames,
   repairs, the merge review and plans see only paths.
 - **A leading `/` means the nearest root, then the filesystem's path.** Every tool surveyed gives `/` a root's meaning;
-  none the filesystem's (`20.2`'s choice, reversed).
+  none the filesystem's (`20.2`'s choice, reversed). A plain folder has no root: there `/` is the filesystem's alone.
+- **A path without an extension** is the file as written, else its note (`plan` → `plan.md`), else a folder; **a
+  link to a folder** resolves (decided 2026-10-06): followed, the folder is revealed in the explorer; a move of the
+  folder rewrites it. Renames keep each form: `/…` from the root, no extension, a folder's trailing `/`.
+- **A file's root is its nearest, however it's opened** (decided 2026-10-06): `--root` says where to start and where a
+  note's name is looked for; a root nested in it stays one. (`17.20`'s "`--root DIR`: `DIR`, exactly" is superseded.)
 - **Roots come from markers** — `.git`, `.slipbox/`, `.obsidian/`, `.zk/`, configurable in the user's config — and only
   answer what `/` starts from, a wikilink's scope, whose convention applies, what travels together, and what's named.
   The user never manages one.
