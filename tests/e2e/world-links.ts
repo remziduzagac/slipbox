@@ -123,4 +123,28 @@ export const LINK_SCENARIOS: Scenario[] = [
       await s.message(/\[\[plan\]\]: names need a root/);
     },
   },
+  {
+    name: "world/links: each root's convention and what said it — Obsidian's, zk's, a folder's own; yours, saved while running (21.4)",
+    options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
+    run: async (s) => {
+      // The cooking vault's, in the Info view: Obsidian's settings say all three.
+      await leader(s, "n", "i");
+      await s.see(/writes +wikilinks/);
+      await s.see(/path +by name/);
+      await s.see(/\.md +dropped/);
+      await s.see(/from +Obsidian/);
+      // zk's notebook, and the design folder whose own config says markdown over Obsidian's wikilinks, as an agent asks.
+      const zk = s.cliIn("~/hobbies/cycling", "info");
+      s.expect(zk.out.includes("links     markdown links, relative, without .md — zk's .zk/config.toml"), `zk's convention, from info:\n${zk.out}`);
+      const design = JSON.parse(s.cliIn("~/work/product/design", "info", "--json").out).data.links;
+      s.expect(design.style.value === "markdown" && design.style.why === "[links] in .slipbox/config.toml" && design.extension.why === "Obsidian's .obsidian/app.json", `the design folder's: ${JSON.stringify(design)}`);
+      // Your own setting, saved while slipbox runs: taken at once, over Obsidian's — a markdown link is a path.
+      const config = `${s.dir}/config/slipbox/config.toml`;
+      s.write(config, `${s.read(config)}\n[links]\nstyle = "markdown"\n`);
+      await s.see(/writes +markdown \(setting\)/, 6000);
+      await s.see(/path +relative \(ours\)/);
+      await s.see(/\.md +kept \(Obsidian\)/);
+      await s.notSee(/writes +wikilinks/);
+    },
+  },
 ];

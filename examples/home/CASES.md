@@ -2063,17 +2063,18 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### links/conventions
 
-- Obsidian root: wikilinks, shortest path, extension dropped — `hobbies/cooking/.obsidian/app.json`,
-  `work/product/design/.obsidian/app.json` (21.x; 'to check: exact keys of Obsidian's app.json')
-- zk root: markdown links without extension, / from the notebook root — `hobbies/cycling/.zk/config.toml`,
-  `hobbies/cycling/202608151900-index.md`, `hobbies/cycling/ideas/202410021000-winter-layers.md` (21.x; 'to check:
-  .zk/config.toml keys')
+- Obsidian root: wikilinks, by name, extension dropped (useMarkdownLinks, newLinkFormat) —
+  `hobbies/cooking/.obsidian/app.json`, `work/product/design/.obsidian/app.json` (configuration.md The links'
+  convention (21.4); test 'the reference set's conventions')
+- zk root: markdown links from the note, without extension (link-format, link-drop-extension) —
+  `hobbies/cycling/.zk/config.toml`, `hobbies/cycling/202608151900-index.md`,
+  `hobbies/cycling/ideas/202410021000-winter-layers.md` (21.4; test 'the reference set's conventions')
 - Markdown-convention root (plain git repo): relative paths with extension — `work/kestrel/CONTRIBUTING.md`,
   `work/kestrel/README.md`, `work/product/README.md` (21.x; test 'a git checkout's top is a vault…')
 - Convention from the user's setting beats the root's tool — `work/product/design/.slipbox/config.toml`,
-  `work/product/design/share-flow.md` (21.x 'which convention a file writes in')
-- Convention inferred by two-thirds dominance — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`,
-  `work/product/handbook/how-we-write.md` (21.x 'two-thirds or more')
+  `work/product/design/share-flow.md` (21.4 'which convention a file writes in'; e2e 'each root's convention')
+- Convention inferred by two-thirds dominance, in a root with no tool — `work/kestrel/README.md`,
+  `work/product/handbook/how-we-write.md` (21.4 'two-thirds or more'; test 'each part the first that says')
 - A root mixing forms with no dominant form — `work/product/design/share-flow.md` (21.x 'A root mixing forms')
 - A folder with no root: user's setting else ours — `Downloads/plan.md`, `Downloads/stray-note.md` (21.x 'A folder with
   no root')
@@ -2084,7 +2085,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - convert-links preview and apply — `notes/research/link-styles.md`, `work/product/design/share-flow.md` (test 'each
   form: relative to the note, text kept, headings as checked slugs…'; 'a link several notes answer to')
 - slipbox info reports the convention and its source — `hobbies/cooking/Home.md`,
-  `hobbies/cycling/202608151900-index.md` (21.x 'info and file info say which applies')
+  `hobbies/cycling/202608151900-index.md` (cli.md The links' convention (21.4); the Info view's Links section)
 - Completion/picker writes the convention's link — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`
   (21.x 'convention decides links slipbox makes')
 

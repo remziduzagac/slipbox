@@ -277,7 +277,7 @@ LSP face (`11.x`), and `17.20` below. In short:
 ## `21.x` — paths inside, conventions at the edges
 
 *Proposed 2026-10-05 with the user, after a survey of how other tools handle links, and reviewed with the user the same
-day; being built (plan `21.x`: `21.1`–`21.3` done). The model in full is `docs/idea.md`, "Paths inside,
+day; being built (plan `21.x`: `21.1`–`21.4` done). The model in full is `docs/idea.md`, "Paths inside,
 conventions at the edges". It revises `20.x` above.*
 
 - **Inside, a link is a path;** each written form — a relative path, `/…`, an extensionless path, a wikilink,
@@ -296,7 +296,13 @@ conventions at the edges". It revises `20.x` above.*
 - **Wikilinks are read again,** within their root: names, paths, aliases, attachments by name; ties ambiguous, never
   guessed; no root, no names. Previous names, `[[vault:note]]` and remembered moves aren't (`20.22`'s removals kept).
 - **Each folder's convention is followed:** the user's setting, else its tool's, else what its notes do, else relative
-  paths. Renames keep each link's form. The screen shows what the file says.
+  paths. Renames keep each link's form. The screen shows what the file says. Built (`21.4`, 2026-10-06), with what
+  the tools' own settings showed: Obsidian's extension follows the style (a wikilink drops `.md`, a markdown link
+  keeps it); zk writes a markdown link from the note and a wikilink from the notebook's top (its source, not its
+  docs' `{{path}}`), a custom template saying nothing; the style is found first, and the path and extension within
+  it — a tool's as it writes that style, the notes' among their links of that style. **A markdown link is never by
+  name** (slipbox reads it as a path, `21.2`): Obsidian's default "shortest" says nothing of one, and the next source
+  answers. Two-thirds exactly (6 of 9) is a majority.
 - **Between files that travel together** (one repository or submodule, one folder tree outside git), the convention;
   **into a named folder,** `slipbox://<name>/<path>` — a repository named by its remote (short, qualified on a clash), a
   folder by its `.slipbox/` name, never by a folder's own; **otherwise,** a relative path. Relinking a link between

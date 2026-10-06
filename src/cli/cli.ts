@@ -21,6 +21,7 @@ import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBase
 import { diffRows } from "../core/merge.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
+import { conventionOf, describeConvention } from "../core/convention.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { Graph, type LinkProblem, openGraph, type Target } from "../core/graph.ts";
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
@@ -101,6 +102,8 @@ class Session {
   readonly config: Config;
   /** The config files read, in the order applied (user, then the vault's). */
   readonly configSources: string[];
+  /** Which file set each setting taken (`links.style` → its file), for `info` (21.4). */
+  readonly configOrigins: Record<string, string>;
 
   constructor(
     readonly args: Args,
@@ -110,6 +113,7 @@ class Session {
     const loaded = loadConfig({ ...configFilesFor(loc), configFile: flag(args, "config") });
     this.config = loaded.config;
     this.configSources = loaded.sources;
+    this.configOrigins = loaded.origins;
     this.warnings.push(...loaded.warnings);
     if (loc.note) this.warnings.push(loc.note);
     // An agent is working (20.9): the TUI's background auto-index waits a while.
@@ -1430,6 +1434,8 @@ const HANDLERS: Record<string, Handler> = {
       background: backgroundStatus(s.config),
       search: searchInfo(s),
       skipped: g.skipped,
+      // How the links slipbox makes here look, each part with what said it (21.4).
+      links: conventionOf(g, s.config, s.configOrigins),
       stale: s.stale(),
     };
     const human = [
@@ -1440,6 +1446,7 @@ const HANDLERS: Record<string, Handler> = {
       `notes     ${data.notes} (parsed ${g.stats.parsed}, cached ${g.stats.cached}, ${g.stats.ms.toFixed(0)} ms)`,
       `index     ${data.index.written ? `written ${data.index.written.slice(0, 16).replace("T", " ")}` : "not written yet"}${g.reached.size ? `, ${g.reached.size} reached outside the walk` : ""}`,
       `home      ${describeBackground(data.background)}`,
+      `links     ${describeConvention(data.links)}`,
       `theme     ${data.config.theme}`,
       `config    ${data.config.sources.length ? data.config.sources.join(", then ") : `none (${data.config.user} doesn't exist)`}`,
       `cache     ${data.cache}`,

@@ -68,6 +68,11 @@ exclude = []                   # gitignore syntax, on top of .gitignore
 max_file_size = 4194304        # bytes; larger notes are listed as skipped
 root_markers = [".git", ".slipbox", ".obsidian", ".zk"]  # a folder holding one is a root (21.1); yours only
 
+[links]                        # the links slipbox makes (21.4): each "auto" is found, see below; slipbox info says
+style = "auto"                 # auto | markdown | wiki
+path = "auto"                  # auto | relative | root (/…) | name (a wikilink's only: a markdown link is a path)
+extension = "auto"             # auto | keep | drop   (.md)
+
 [files]                        # files beyond notes (16.x): what the explorer and ctrl+p list
 show = "renderable"            # notes | renderable (notes and data files) | all (every text file)
 include = []                   # gitignore syntax: always listed ("*.ts", "scripts/")
@@ -224,6 +229,20 @@ An unknown modifier (`hyper+x`) is reported, and the key never fires rather than
 A command spec is a command id, optionally followed by an argument (`"tab.goto 3"`,
 `"theme.set nord"`). `slipbox commands` lists every id, and `space ?` in the TUI lists every
 binding.
+
+## The links' convention
+
+`[links]` (`21.4`, `core/convention.ts`) says how the links slipbox makes look — completion, the link picker, capture
+(`21.5`); a rename keeps each link's own form. Each part is the first that says: your setting (the root's
+`.slipbox/config.toml` over your own config); the setting of the tool that owns the root (Obsidian's
+`.obsidian/app.json`: `useMarkdownLinks`, `newLinkFormat` — shortest is by name, relative, absolute from the root —
+with `.md` in a markdown link and none in a wikilink; zk's `.zk/config.toml`: `link-format`, a markdown link from the
+note and a wikilink from the notebook's top, a template saying nothing, and `link-drop-extension`); the root's notes,
+when one form has two-thirds or more of their links to its notes; else ours — markdown, relative, `.md` kept. The
+style is found first; the path and extension come within it, a tool's as it writes that style, the notes' counted
+among their links of that style. A markdown link is never by name: a "shortest" Obsidian setting says nothing of one.
+A folder with no root has your setting, else ours. `slipbox info` says each part and what said it; the Info view's
+Links section shows it short (`y` copies it whole).
 
 ## Colours
 

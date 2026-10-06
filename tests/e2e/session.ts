@@ -264,7 +264,23 @@ export class Session {
   // Driving.
 
   async keys(...keys: string[]): Promise<void> {
-    await this.pane.keys(...keys);
+    // An escape and the key after it, read together, are alt+key — and a loaded machine reads late,
+    // whatever the pause between them. So the escape is seen taking effect (the screen changing,
+    // within a second) before the next key goes.
+    let from = 0;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (keys[i] !== "escape" && keys[i] !== "esc") continue;
+      if (i > from) {
+        await this.pane.keys(...keys.slice(from, i));
+        await this.settle();
+      }
+      const before = this.pane.screen().join("\n");
+      await this.pane.keys(keys[i]!);
+      const end = Date.now() + 1000;
+      while (Date.now() < end && this.pane.screen().join("\n") === before) await sleep(20);
+      from = i + 1;
+    }
+    await this.pane.keys(...keys.slice(from));
     await this.settle();
   }
 

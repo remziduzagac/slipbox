@@ -380,7 +380,7 @@ function nextSignificant(s: string, k: number): number {
  * JSON as editors read it (jsonc: tsconfig.json, VS Code's settings) as JSON: // and /* comments
  * and trailing commas blanked, strings kept — every other character where it was.
  */
-function stripJsonComments(s: string): string {
+export function stripJsonComments(s: string): string {
   let out = "";
   let str = false;
   for (let k = 0; k < s.length; k++) {

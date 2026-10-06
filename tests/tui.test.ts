@@ -6916,6 +6916,42 @@ describe("the Info view (3.19)", () => {
     expect(rows(h)).toContain("backlinks: 2");
   });
 
+  test("a note's links' convention in its Links, and what said each part: the root's tool, its notes, one written since (21.4)", async () => {
+    // An Obsidian vault: its settings say all three.
+    const vault = mkdtempSync(join(tmpdir(), "slipbox-conv-tui-"));
+    mkdirSync(join(vault, ".obsidian"));
+    writeFileSync(join(vault, ".obsidian", "app.json"), '{"newLinkFormat": "relative"}\n');
+    writeFileSync(join(vault, "a.md"), "# A\n\n[[b]]\n");
+    writeFileSync(join(vault, "b.md"), "# B\n");
+    const h = await harness({ root: vault, open: "a.md" });
+    await h.keys("space", "n", "i");
+    const r = rows(h);
+    const at = r.indexOf("writes: wikilinks");
+    expect(r.slice(at, at + 4)).toEqual(["writes: wikilinks", "  path: relative", "  .md: dropped", "  from: Obsidian"]);
+    // y copies it whole.
+    h.app.outline.selected = h.app.infoRows().findIndex((x) => x.key === "writes");
+    h.app.region = "outline";
+    await h.keys("y");
+    expect(h.copied.at(-1)).toBe("wikilinks, relative, without .md — Obsidian's .obsidian/app.json");
+    // A folder of notes: theirs, every note counted; a note written since counts at once.
+    const notes = mkdtempSync(join(tmpdir(), "slipbox-conv-tui-notes-"));
+    mkdirSync(join(notes, ".slipbox"));
+    for (let i = 0; i < 6; i++) writeFileSync(join(notes, `n${i}.md`), `# N${i}\n\n[next](/n${(i + 1) % 6})\n`);
+    const n = await harness({ root: notes, open: "n0.md" });
+    await n.keys("space", "n", "i");
+    expect(rows(n).slice(rows(n).indexOf("writes: markdown"), rows(n).indexOf("writes: markdown") + 4)).toEqual(["writes: markdown", "  path: from the root", "  .md: dropped", "  from: notes 100%"]);
+    for (const [f, text] of [["m1.md", "[a](n1.md) [b](n2.md)\n"], ["m2.md", "[c](./n3.md)\n"]]) {
+      writeFileSync(join(notes, f!), text!);
+      const st = statSync(join(notes, f!));
+      n.app.graph.updateFile(f!, { rel: f!, abs: join(notes, f!), size: st.size, mtimeMs: st.mtimeMs });
+    }
+    // 6 of 9 from the root: two-thirds still; 6 of 9 without .md too — each part's own source now.
+    const mixed = rows(n);
+    const m = mixed.indexOf("writes: markdown (notes 100%)");
+    expect(mixed.slice(m, m + 3)).toEqual(["writes: markdown (notes 100%)", "  path: from the root (notes 67%)", "  .md: dropped (notes 67%)"]);
+    expect(mixed[m + 3] ?? "").not.toMatch(/^ {2}from:/); // each part says its own
+  });
+
   test("enter opens what a row names: a property's line, a tag's notes, the backlinks; y copies; h folds a section; / filters", async () => {
     const h = await setup();
     await h.keys("space", "n", "i");

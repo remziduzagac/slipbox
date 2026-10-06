@@ -41,6 +41,8 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
   echo "line $i" >> "$note"
   sleep 0.1
 done
+pause
 
+echo "deleting at the end"
 rm -f "$note"
 echo done

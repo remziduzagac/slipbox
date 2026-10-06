@@ -35,6 +35,7 @@ import { appendScratch, scratchLocation } from "../core/capture.ts";
 import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
+import { type ConventionPart, conventionOf, describeConvention } from "../core/convention.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { Graph, type LinkProblem } from "../core/graph.ts";
 import { type LintCmd, type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
@@ -632,6 +633,8 @@ export class App {
   private tree: TreeRow[] | null = null;
   private readonly configFile: string | undefined;
   private readonly configLastGood = new Map<string, Record<string, unknown>>();
+  /** Which file set each setting taken, for saying where one came from (the links' convention, 21.4). */
+  private configOrigins: Record<string, string> = {};
   private configStamps = new Map<string, number>();
   readonly now: () => number;
   quitting = false;
@@ -661,7 +664,7 @@ export class App {
     this.followGraph();
     this.explicitTheme = opts.themeName;
     // Each config file's last good contents, so a typo saved mid-edit keeps what it said (reload).
-    loadConfig({ ...configFilesFor(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood });
+    this.configOrigins = loadConfig({ ...configFilesFor(opts.loc), configFile: opts.configFile, lastGood: this.configLastGood }).origins;
     this.now = opts.now ?? Date.now;
     this.feed = new VaultFeed({
       checkout: () => this.checkout,
@@ -868,6 +871,8 @@ export class App {
   reloadConfig(reason: "manual" | "file changed" = "manual"): void {
     this.recordConfigStamps();
     const loaded = loadConfig({ ...configFilesFor(this.loc), configFile: this.configFile, lastGood: this.configLastGood });
+    this.configOrigins = loaded.origins;
+    this.infoCache = null; // the links' convention may say otherwise now
     this.clearPending(); // a sequence begun under the old keys means nothing under the new ones
     const before = this.config;
     const next = loaded.config;
@@ -4156,6 +4161,17 @@ export class App {
       row("Links", "footnotes", String(this.footnotes().length), { run: "footnotes.toggle" });
       const tasks = parsed ? listTasks(parsed.tree) : [];
       if (tasks.length) row("Links", "tasks", `${tasks.filter((t) => t.checked).length} of ${tasks.length} done`);
+      // How the links slipbox makes here look (21.4), and what said so (every note read, as for the
+      // backlinks) — short, for a narrow panel: `y` copies it whole, as `slipbox info` says it.
+      const c = conventionOf(this.graph, this.config, this.configOrigins);
+      const copy = { copy: describeConvention(c) };
+      const by = (p: ConventionPart<string>) => (p.source === "setting" ? "setting" : p.source === "tool" ? (c.tool === "obsidian" ? "Obsidian" : "zk") : p.source === "notes" ? `notes ${p.share}%` : "ours");
+      const one = new Set([c.style, c.path, c.extension].map(by)).size === 1;
+      const shown = (value: string, p: ConventionPart<string>) => (one ? value : `${value} (${by(p)})`);
+      row("Links", "writes", shown(c.style.value === "wiki" ? "wikilinks" : "markdown", c.style), copy);
+      row("Links", "path", shown({ relative: "relative", root: "from the root", name: "by name" }[c.path.value], c.path), copy, 1);
+      row("Links", ".md", shown(c.extension.value, c.extension), copy, 1);
+      if (one) row("Links", "from", by(c.style), copy, 1);
     }
     this.infoCache = { key, rows };
     return rows;
@@ -7010,6 +7026,7 @@ export class App {
     this.configLastGood.clear();
     const loaded = loadConfig({ ...configFilesFor(target), configFile: this.configFile, lastGood: this.configLastGood });
     this.config = loaded.config;
+    this.configOrigins = loaded.origins;
     this.lintCmd = lintCommand(this.config.lint, target.root, undefined, this.config.lsp.auto_install);
     this.vaultLint = { running: false, issues: null };
     this.relint();

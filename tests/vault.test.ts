@@ -4200,3 +4200,120 @@ describe("roots from markers (21.1)", () => {
     expect(plain.code).toBe(5);
   });
 });
+
+describe("the links' convention, found (21.4)", () => {
+  const notes = (links: [string, string][]) => links.map(([kind, target]) => ({ kind, target, resolvedKind: "note", path: "x.md" }));
+  test("the notes' links counted by style, path and extension: only those reaching a note in the root", async () => {
+    const { countForms } = await import("../src/core/convention.ts");
+    const c = countForms([
+      ...notes([["wiki", "Dal"], ["embed", "Recipes/Dal"], ["wiki", "../up/Dal.md"], ["wiki", "/Recipes/Dal"]]),
+      ...notes([["markdown", "a.md#top"], ["markdown", "../b"], ["markdown", "/docs/c.md"], ["image", "sub/d e.md?x"], ["markdown", "~/x.md"], ["markdown", "file:///x.md"]]),
+      { kind: "markdown", target: "gone.md", resolvedKind: "unresolved", path: null },
+      { kind: "markdown", target: "pic.png", resolvedKind: "file", path: "pic.png" },
+      { kind: "markdown", target: "../other/x.md", resolvedKind: "note", path: "/elsewhere/x.md" },
+    ]);
+    expect(c.style).toEqual({ markdown: 4, wiki: 4 });
+    expect(c.path.wiki).toEqual({ relative: 1, root: 2, name: 1 });
+    expect(c.path.markdown).toEqual({ relative: 3, root: 1, name: 0 });
+    expect(c.extension.wiki).toEqual({ kept: 1, dropped: 3 });
+    expect(c.extension.markdown).toEqual({ kept: 3, dropped: 1 });
+  });
+
+  test("Obsidian's and zk's settings read, their defaults where a key is unset; a template says nothing", async () => {
+    const { toolSays } = await import("../src/core/convention.ts");
+    const at = (files: Record<string, string | null>) => {
+      const dir = mkdtempSync(join(tmpdir(), "slipbox-tool-"));
+      for (const [f, text] of Object.entries(files)) {
+        mkdirSync(join(dir, dirname(f)), { recursive: true });
+        if (text !== null) writeFileSync(join(dir, f), text);
+      }
+      const t = toolSays(dir);
+      return t && { tool: t.tool, file: t.file, style: t.style, wiki: [t.path("wiki"), t.extension("wiki")], markdown: [t.path("markdown"), t.extension("markdown")] };
+    };
+    expect(at({ ".obsidian/x": null })).toEqual({ tool: "obsidian", file: ".obsidian/", style: "wiki", wiki: ["name", "dropped"], markdown: [undefined, "kept"] });
+    expect(at({ ".obsidian/app.json": '{"useMarkdownLinks": true, "newLinkFormat": "relative",}' })).toMatchObject({ file: ".obsidian/app.json", style: "markdown", markdown: ["relative", "kept"] });
+    expect(at({ ".obsidian/app.json": '{"newLinkFormat": "absolute"}' })).toMatchObject({ style: "wiki", wiki: ["root", "dropped"] });
+    expect(at({ ".obsidian/app.json": "not json" })).toMatchObject({ file: ".obsidian/", style: "wiki" }); // unreadable: Obsidian's defaults
+    expect(at({ ".zk/x": null })).toEqual({ tool: "zk", file: ".zk/", style: "markdown", wiki: ["root", "dropped"], markdown: ["relative", "dropped"] });
+    expect(at({ ".zk/config.toml": '[format.markdown]\nlink-format = "wiki"\nlink-drop-extension = false\n' })).toMatchObject({ file: ".zk/config.toml", style: "wiki", wiki: ["root", "kept"] });
+    expect(at({ ".zk/config.toml": '[format.markdown]\nlink-format = "[[{{filename}}]]"\n' })).toMatchObject({ style: undefined, wiki: [undefined, "dropped"] });
+    expect(at({ ".git/HEAD": "ref" })).toBeNull();
+  });
+
+  test("each part the first that says: your setting, the root's tool, its notes at two-thirds, ours", async () => {
+    const { emptyCounts, findConvention } = await import("../src/core/convention.ts");
+    const auto = { style: "auto", path: "auto", extension: "auto" } as const;
+    const counts = (style: [number, number], wikiPath: [number, number, number], wikiExt: [number, number], mdPath: [number, number, number] = [0, 0, 0], mdExt: [number, number] = [0, 0]) => {
+      const c = emptyCounts();
+      [c.style.markdown, c.style.wiki] = style;
+      [c.path.wiki.relative, c.path.wiki.root, c.path.wiki.name] = wikiPath;
+      [c.extension.wiki.kept, c.extension.wiki.dropped] = wikiExt;
+      [c.path.markdown.relative, c.path.markdown.root, c.path.markdown.name] = mdPath;
+      [c.extension.markdown.kept, c.extension.markdown.dropped] = mdExt;
+      return c;
+    };
+    const parts = (c: ReturnType<typeof findConvention>) => [c.style, c.path, c.extension].map((p) => `${p.value}:${p.source}`);
+    const obsidian = { tool: "obsidian" as const, file: ".obsidian/app.json", style: "wiki" as const, path: (s: string) => (s === "wiki" ? ("name" as const) : undefined), extension: (s: string) => (s === "wiki" ? ("dropped" as const) : ("kept" as const)) };
+    // Nothing says: ours.
+    expect(parts(findConvention({ links: auto, origins: {}, hasRoot: true, tool: null, counts: null }))).toEqual(["markdown:default", "relative:default", "kept:default"]);
+    // The notes, each part within the style they chose: two-thirds is enough.
+    expect(parts(findConvention({ links: auto, origins: {}, hasRoot: true, tool: null, counts: counts([1, 2], [0, 2, 1], [1, 2]) }))).toEqual(["wiki:notes", "root:notes", "dropped:notes"]);
+    // Under two-thirds: ours for that part (a root mixing forms).
+    expect(parts(findConvention({ links: auto, origins: {}, hasRoot: true, tool: null, counts: counts([4, 6], [3, 3, 4], [5, 5]) }))).toEqual(["markdown:default", "relative:default", "kept:default"]);
+    // The tool before the notes.
+    expect(parts(findConvention({ links: auto, origins: {}, hasRoot: true, tool: obsidian, counts: counts([10, 0], [0, 0, 0], [0, 0], [0, 10, 0], [0, 10]) }))).toEqual(["wiki:tool", "name:tool", "dropped:tool"]);
+    // Your setting before the tool; the tool's "shortest" isn't a path for a markdown link: the notes', else ours.
+    const md = findConvention({ links: { ...auto, style: "markdown" }, origins: { "links.style": ".slipbox/config.toml" }, hasRoot: true, tool: obsidian, counts: counts([3, 0], [0, 0, 0], [0, 0], [0, 3, 0], [3, 0]) });
+    expect(parts(md)).toEqual(["markdown:setting", "root:notes", "kept:tool"]);
+    expect(md.style.why).toBe("[links] in .slipbox/config.toml");
+    expect(parts(findConvention({ links: { ...auto, style: "markdown" }, origins: {}, hasRoot: true, tool: obsidian, counts: null }))).toEqual(["markdown:setting", "relative:default", "kept:tool"]);
+    // A path by name, set, fits only a wikilink.
+    expect(parts(findConvention({ links: { style: "markdown", path: "name", extension: "drop" }, origins: {}, hasRoot: true, tool: null, counts: null }))).toEqual(["markdown:setting", "relative:default", "dropped:setting"]);
+    expect(parts(findConvention({ links: { style: "wiki", path: "name", extension: "keep" }, origins: {}, hasRoot: true, tool: null, counts: null }))).toEqual(["wiki:setting", "name:setting", "kept:setting"]);
+    // No root: your setting, else ours — no tool, no notes.
+    expect(parts(findConvention({ links: { ...auto, extension: "drop" }, origins: {}, hasRoot: false, tool: obsidian, counts: counts([0, 9], [0, 0, 9], [0, 9]) }))).toEqual(["markdown:default", "relative:default", "dropped:setting"]);
+  });
+
+  test("[links] in a config: checked, and which file set each part kept; info says the convention and why", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-conv-"));
+    mkdirSync(join(dir, ".slipbox"));
+    mkdirSync(join(dir, "notes"));
+    writeFileSync(join(dir, ".slipbox", "config.toml"), '[links]\nstyle = "wiki"\npath = "sideways"\n');
+    const user = join(dir, "..", `${basename(dir)}-user.toml`);
+    writeFileSync(user, '[links]\nextension = "drop"\nstyle = "markdown"\n');
+    const loaded = loadConfig({ vaultRoot: dir, configFile: user });
+    expect(loaded.config.links).toEqual({ style: "wiki", path: "auto", extension: "drop" });
+    expect(loaded.origins["links.style"]).toBe(join(dir, ".slipbox", "config.toml")); // the root's, over yours
+    expect(loaded.origins["links.extension"]).toBe(user);
+    expect(loaded.origins["links.path"]).toBeUndefined(); // a bad value isn't taken
+    expect(loaded.warnings.join("\n")).toContain('"links.path" must be one of auto, relative, root, name (got "sideways")');
+    // The notes say the path: by name, all of them.
+    writeFileSync(join(dir, "a.md"), "[[b]] [[c]] and [b](notes/b.md)\n");
+    writeFileSync(join(dir, "notes", "b.md"), "# B\n");
+    writeFileSync(join(dir, "c.md"), "# C\n");
+    const r = await cli(["--root", dir, "--config", user, "info", "--json"]);
+    const links = JSON.parse(r.out).data.links;
+    expect([links.style, links.path, links.extension].map((p: { value: string; source: string }) => `${p.value}:${p.source}`)).toEqual(["wiki:setting", "name:notes", "dropped:setting"]);
+    expect(links.path.why).toBe("the notes, 100% of 2 links");
+    const human = (await cli(["--root", dir, "--config", user, "info"])).out;
+    expect(human).toContain(`links     wikilinks, by name, without .md — style: [links] in .slipbox/config.toml; path: the notes, 100% of 2 links; extension: [links] in ${user}`);
+  });
+});
+
+describe("the reference set's conventions (21.4)", () => {
+  // Copied first: opened in place, a root would be written to (its id, its state).
+  const at = async (rel: string) => {
+    const { conventionOf, describeConvention } = await import("../src/core/convention.ts");
+    const dir = join(mkdtempSync(join(tmpdir(), "slipbox-home-conv-")), basename(rel));
+    cpSync(join(import.meta.dir, "..", "examples", "home", rel), dir, { recursive: true });
+    const loaded = loadConfig({ vaultRoot: dir });
+    return describeConvention(conventionOf(openGraph(locateVault({ root: dir }), loaded.config, false), loaded.config, loaded.origins));
+  };
+  test("each root's, as CASES.md says (links/conventions)", async () => {
+    expect(await at("hobbies/cooking")).toBe("wikilinks, by name, without .md — Obsidian's .obsidian/app.json");
+    expect(await at("hobbies/cycling")).toBe("markdown links, relative, without .md — zk's .zk/config.toml");
+    // Its own setting says markdown, over Obsidian's wikilinks; a markdown link is a path, not a name.
+    expect(await at("work/product/design")).toMatch(/^markdown links, relative, with \.md — style: \[links\] in \.slipbox\/config\.toml; path: the notes, \d+% of \d+ links?; extension: Obsidian's \.obsidian\/app\.json$/);
+    expect(await at("work/kestrel")).toMatch(/^markdown links, relative, with \.md — style: the notes, 100% of \d+ links; path: the notes, \d+% of \d+ links; extension: the notes, \d+% of \d+ links$/);
+  });
+});

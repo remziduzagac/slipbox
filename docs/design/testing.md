@@ -142,7 +142,9 @@ bun run e2e find replace     # only the scenarios whose names contain these
   Scenarios that need room (docked panes, splits) say so and are skipped, named, in a smaller pane;
   one whose need shows only as it runs throws `Skipped` with the reason — never a silent pass.
 - **Keys.** Single characters are typed as themselves; keys herdr has no name for (the page keys,
-  `ctrl+end`) are sent as the escape sequences a terminal sends.
+  `ctrl+end`) are sent as the escape sequences a terminal sends. An escape with keys after it waits to be seen taking
+  effect (the screen changing, a second at most): read together with the next key — a loaded machine reads late, a
+  pause or not — it would be alt+key.
 - **Not the mouse.** herdr passes no mouse events through, so clicks, the wheel and drags stay
   covered by the headless tests only.
 

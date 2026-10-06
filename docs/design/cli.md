@@ -288,6 +288,11 @@ converter reads them (`20.1`), as the legacy reader it keeps for what it rewrite
 as their own, `docs:a.md`, is ambiguous (exit 4) — `candidates` gives each by the name it's shown with,
 `work.docs:a.md`.
 
+**The links' convention** (`21.4`): `info` says how the links slipbox makes in this root look — `links{style, path,
+extension}`, each `{value, source, why}`, `source` one of `setting`, `tool`, `notes` (with `share`, a percentage),
+`default` (`docs/design/configuration.md`, "The links' convention"). Its line: the parts, then what said each —
+`links     wikilinks, by name, without .md — Obsidian's .obsidian/app.json`.
+
 **Across vaults** (plan `17.9`–`17.11`, `17.16`): a path out of the root (relative, `~/`, absolute — `/` is the
 filesystem's root — or a `file://` URL; a file, not an external link) resolves into the other vault: `path` and `abs`
 are absolute, and `vault` names it. A path that reaches nothing is broken, whatever moved (`20.2`). A backlink from

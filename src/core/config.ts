@@ -33,6 +33,16 @@ export interface Config {
      */
     root_markers: string[];
   };
+  /**
+   * How the links slipbox writes look (21.4): each part "auto" — found from the root's tool and its
+   * notes (core/convention.ts) — or set here, for every root, or in a root's own `.slipbox/config.toml`.
+   */
+  links: {
+    style: "auto" | "markdown" | "wiki";
+    /** "name": a wikilink's, by the note's name alone; a markdown link is always a path. */
+    path: "auto" | "relative" | "root" | "name";
+    extension: "auto" | "keep" | "drop";
+  };
   /** Files beyond notes (16.x): which the explorer, the switcher and find show. */
   files: {
     /** "notes": notes only; "renderable": notes and data files (JSON, YAML, TOML, INI, CSV);
@@ -227,6 +237,7 @@ export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
   render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto" },
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
+  links: { style: "auto", path: "auto", extension: "auto" },
   files: { show: "renderable", include: [], exclude: [] },
   ui: {
     sidebar: true,
@@ -284,6 +295,9 @@ const ENUMS: Record<string, readonly string[]> = {
   "ui.lines": ["light", "heavy"],
   "files.show": ["notes", "renderable", "all"],
   "editor.edit_in": ["source", "live"],
+  "links.style": ["auto", "markdown", "wiki"],
+  "links.path": ["auto", "relative", "root", "name"],
+  "links.extension": ["auto", "keep", "drop"],
 };
 
 /** Numeric keys and their allowed range. */
@@ -314,6 +328,8 @@ export interface LoadedConfig {
   config: Config;
   sources: string[];
   warnings: string[];
+  /** Which file set each `section.key` taken (the last to set it), for saying where a setting came from. */
+  origins: Record<string, string>;
 }
 
 export interface LoadConfigOptions {
@@ -337,6 +353,7 @@ export interface LoadConfigOptions {
 export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
   const warnings: string[] = [];
   const sources: string[] = [];
+  const origins: Record<string, string> = {};
   let config = structuredClone(DEFAULT_CONFIG);
 
   const userFile = opts.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile();
@@ -366,6 +383,13 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     }
     if (file !== userFile) dropUserOnly(data, file, warnings);
     config = merge(config, data, file, "", warnings);
+    // A key this file set, and the merge took (a bad value is warned of and left as it was).
+    for (const [section, table] of Object.entries(data)) {
+      if (!isPlainObject(table)) continue;
+      const now = (config as unknown as Record<string, unknown>)[section];
+      if (!isPlainObject(now)) continue;
+      for (const [key, value] of Object.entries(table)) if (JSON.stringify(now[key]) === JSON.stringify(value)) origins[`${section}.${key}`] = file;
+    }
     sources.push(file);
   }
   // Root markers (21.1): plain names, each a file or folder looked for in a folder — never a path.
@@ -381,7 +405,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     warnings.push(`config: capture.file must be a relative .md path inside the project, not hidden (got ${JSON.stringify(config.capture.file)}); using "${DEFAULT_CONFIG.capture.file}"`);
     config.capture.file = DEFAULT_CONFIG.capture.file;
   }
-  return { config, sources, warnings };
+  return { config, sources, warnings, origins };
 }
 
 /**

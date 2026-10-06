@@ -11,6 +11,7 @@ import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
 import type { WikiLink } from "./wikilink.ts";
+import { countForms, type FormCounts } from "./convention.ts";
 import { extensionless, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
@@ -181,6 +182,7 @@ export class Graph {
    *  what's derived from them (the Info view's counts) know to look again. */
   generation = 0;
   private problemCache: { generation: number; broken: LinkProblem[]; ambiguous: LinkProblem[]; orphans: string[] } | null = null;
+  private formCache: { generation: number; counts: FormCounts } | null = null;
   private readonly dataLinkCache = new Map<string, { stamp: string; links: LinkRef[] }>();
   /** Aliases and previous names → notes, from the entries parsed so far (null: rebuild). */
   private nameCache: { aliases: Map<string, string[]>; previous: Map<string, string[]> } | null = null;
@@ -1069,6 +1071,15 @@ export class Graph {
     const orphans = [...this.notes.keys()].sort().filter((rel) => !this.backlinks(rel).some((b) => b.from !== rel));
     this.problemCache = { generation: this.generation, broken, ambiguous, orphans };
     return this.problemCache;
+  }
+
+  /** How this root's notes write their links to its notes (21.4), for its convention: every note read. */
+  linkForms(): FormCounts {
+    this.ensureAll();
+    if (this.formCache?.generation === this.generation) return this.formCache.counts;
+    const links = [...this.notes.keys()].flatMap((rel) => this.linksOf(rel));
+    this.formCache = { generation: this.generation, counts: countForms(links) };
+    return this.formCache.counts;
   }
 
   forgetProblems(): void {

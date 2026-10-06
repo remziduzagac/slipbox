@@ -522,15 +522,17 @@ keys.
 - **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
   Sections that fold (`h`/`l`): **File** (its path, the vault it belongs to, its kind, size, modified time, words and
   reading time, lines, encoding and line endings, saved or not), **Properties** (the frontmatter's keys and values,
-  nested maps indented under their key), **Tags** (its own, frontmatter's and text's), **Links** (links and how many
-  are unresolved, backlinks, headings, footnotes, tasks done). `enter` opens what a row names: a property's line in
-  the frontmatter (source mode: its own line; rendered, the row that shows it), a tag's notes, the links or backlinks
-  list, the outline or the footnotes view; any other row copies its value, as `y` does. The vault's own information
-  — its notes, index (when it was written, what was reached outside the walk, `20.10`) and watcher, the background
-  index of the home folder, this copy's instance id and what it holds, the other copies this machine knows (`20.4`,
-  the five seen last) — is `space v i`'s window: a vault isn't a file. Names are a column a third of the
-  pane at most, values cut to it (no sideways scrolling). `space n i`, the `ℹ` button, `slipbox stat` (its `vault`
-  and `properties` too). `e` edits the properties (below).
+  nested maps indented under their key), **Tags** (its own, frontmatter's and text's), **Links** (links and how many are
+  unresolved, backlinks, headings, footnotes, tasks done; how links are
+written here, `21.4` — `writes`, its `path` and `.md`, then `from` what said them, or each part's source after it, `y`
+copying it whole). `enter` opens what
+  a row names: a property's line in the frontmatter (source mode: its own line; rendered, the row that shows it), a
+  tag's notes, the links or backlinks list, the outline or the footnotes view; any other row copies its value, as `y`
+  does. The vault's own information — its notes, index (when it was written, what was reached outside the walk, `20.10`)
+  and watcher, the background index of the home folder, this copy's instance id and what it holds, the other copies this
+  machine knows (`20.4`, the five seen last) — is `space v i`'s window: a vault isn't a file. Names are a column a third
+  of the pane at most, values cut to it (no sideways scrolling). `space n i`, the `ℹ` button, `slipbox stat` (its
+  `vault` and `properties` too). `e` edits the properties (below).
 - **The properties editor** (`3.20`): `e` in the Info view, or `space n shift+p`, opens the note's frontmatter — YAML
   or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
   tall as its text. Inside is a window like any, in source mode, with every editing key there is; the keys and
