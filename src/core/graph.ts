@@ -11,7 +11,7 @@ import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, landsInside, readJson, readText, writeJson } from "./fsutil.ts";
 import { LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
-import { type HeadingInfo, headingsOf, noteTitle, visit } from "./parse.ts";
+import { type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
 import { vaultForm } from "./names.ts";
 import { ParseCache, sharedParseCache } from "./parsecache.ts";
@@ -383,13 +383,18 @@ export class Graph {
     return e;
   }
 
-  /** The parsed entry for a note, parsing it now if needed. */
-  entry(rel: string): NoteEntry | undefined {
+  /** The notes not parsed yet of at least `min` bytes: a background pass parses them on other threads first. */
+  unparsedOver(min: number): NoteFile[] {
+    return [...this.unparsed.values()].filter((f) => f.size >= min);
+  }
+
+  /** The parsed entry for a note, parsing it now if needed (its chunks from `chunks` when parsed elsewhere). */
+  entry(rel: string, chunks?: ChunkCache): NoteEntry | undefined {
     const adopted = this.adopted.get(rel);
     if (adopted) return adopted;
     const f = this.unparsed.get(rel);
     if (f) {
-      const e = extractNote(f);
+      const e = extractNote(f, sharedParseCache(), chunks);
       if (isUnreadable(e)) this.errors.push(`${rel}: ${e.flags.find((x) => x.startsWith("unreadable"))}`);
       this.notes.set(rel, e);
       this.unparsed.delete(rel);
@@ -404,9 +409,11 @@ export class Graph {
   }
 
   /** Parse for up to `budgetMs`; returns how many remain. The TUI calls this between frames. */
-  parseSome(budgetMs: number): number {
+  parseSome(budgetMs: number, skip?: ReadonlySet<string>): number {
     const end = performance.now() + budgetMs;
     for (const rel of this.unparsed.keys()) {
+      // Being parsed elsewhere (a big note, on other threads): not here, not now.
+      if (skip?.has(rel)) continue;
       this.entry(rel);
       if (performance.now() >= end) break;
     }
@@ -1187,7 +1194,7 @@ export const VAULT_LINK = /^([\p{L}\p{N}][\p{L}\p{N}._-]*):(.+)$/u;
 
 
 /** Parse one note and extract what the graph needs. */
-export function extractNote(file: NoteFile, cache: ParseCache | null = sharedParseCache()): NoteEntry {
+export function extractNote(file: NoteFile, cache: ParseCache | null = sharedParseCache(), chunks?: ChunkCache): NoteEntry {
   const flags: string[] = [];
   let text = "";
   try {
@@ -1200,11 +1207,11 @@ export function extractNote(file: NoteFile, cache: ParseCache | null = sharedPar
     flags.push(`unreadable: ${(err as NodeJS.ErrnoException).code ?? "error"}`);
     return extractFromSource(file, text, flags);
   }
-  return extractText(file, text, flags, cache);
+  return extractText(file, text, flags, cache, chunks);
 }
 
 /** A note's text parsed, from the parse cache when any copy parsed it before (20.11): a file's, or git's (20.21). */
-export function extractText(file: NoteFile, text: string, flags: string[] = [], cache: ParseCache | null = sharedParseCache()): NoteEntry {
+export function extractText(file: NoteFile, text: string, flags: string[] = [], cache: ParseCache | null = sharedParseCache(), chunks?: ChunkCache): NoteEntry {
   // Parsed before, by any copy of it on this machine (20.11): its content as it was, its place its own.
   const hash = contentHash(text);
   const key = ParseCache.key(hash, noteFormat(file.rel), INDEX_VERSION);
@@ -1224,7 +1231,7 @@ export function extractText(file: NoteFile, text: string, flags: string[] = [], 
       flags,
     };
   }
-  const e = extractFromSource(file, text, flags);
+  const e = extractFromSource(file, text, flags, chunks);
   cache?.put(key, { title: ownTitle.get(e) ? e.title : null, headings: e.headings, links: e.links, tags: e.tags, aliases: e.aliases, previous: e.previous });
   return e;
 }
@@ -1237,8 +1244,8 @@ function fileTitle(rel: string): string {
 /** Whether an entry's title is its own (frontmatter, a `#` heading), not its file's name. */
 const ownTitle = new WeakMap<NoteEntry, boolean>();
 
-export function extractFromSource(file: NoteFile, text: string, flags: string[] = []): NoteEntry {
-  const parsed = parseNoteFile(file.rel, text);
+export function extractFromSource(file: NoteFile, text: string, flags: string[] = [], chunks?: ChunkCache): NoteEntry {
+  const parsed = parseNoteFile(file.rel, text, chunks);
   const links: LinkRef[] = [];
   const inline: string[] = [];
   const definitions = new Map<string, string>();

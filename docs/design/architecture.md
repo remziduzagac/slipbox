@@ -212,7 +212,8 @@ The graph parses lazily. The walk alone supplies every note name, which is all l
 needs, so `render` and `resolve` never parse the whole vault. `backlinks`, `ls --json` and
 `outline` parse what they need and persist it. The TUI paints the first note straight away and
 parses the rest in slices of about 12 ms between frames, showing `indexing N…` in the top bar. A
-slice always parses at least one whole note, so a big note holds the screen while it is indexed.
+slice parses at least one whole note, so a big one (128 KB and up) is parsed on the workers first (below), the
+slices passing it by; the main thread only puts its chunks together. Where threads can't start, a slice parses it.
 
 **Big notes (plan `15.1`).** Three things keep a big note's cost in proportion to what changed, and two more keep
 the whole-note work — the first open, a change of width — short:

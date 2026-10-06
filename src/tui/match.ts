@@ -4,6 +4,8 @@
 // Scored by where each word lands: in the label over its description, the file name over its
 // folders, at a word start, earlier; shorter texts first.
 
+import { UNSAFE } from "../core/sanitize.ts";
+
 export interface Match {
   score: number;
   /** Indices into the candidate string that matched, for highlighting. */
@@ -28,6 +30,14 @@ const BOUNDARY = new Set(["/", " ", "-", "_", "."]);
  * label ranks above one found only after it.
  */
 export function match(query: string, text: string, labelEnd = text.length): Match | null {
+  // As it's drawn: a name's control and bidi characters never are (sanitize), so a query matches
+  // across them — `bellring` finds bell^Gring.md — its positions still the text's own.
+  if (UNSAFE.test(text)) {
+    const kept: number[] = [];
+    for (let i = 0; i < text.length; i++) if (!UNSAFE.test(text[i]!)) kept.push(i);
+    const m = match(query, kept.map((i) => text[i]).join(""), kept.filter((i) => i < labelEnd).length);
+    return m && { score: m.score, positions: m.positions.map((p) => kept[p]!) };
+  }
   const words = query.split(/\s+/).filter(Boolean);
   if (!words.length) return { score: 0, positions: [] };
   const folded = fold(text);

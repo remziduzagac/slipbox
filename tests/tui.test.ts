@@ -2995,6 +2995,10 @@ describe("review round 3", () => {
     // Highlights follow the text even where lowercasing changes its length.
     expect(match("read", "areas/readme.md")!.positions).toEqual([6, 7, 8, 9]);
     expect(match("stan", "İİstanbul.md")!.positions).toEqual([2, 3, 4, 5]);
+    // As drawn: a name's control characters never are, so the name shown is found, positions its own.
+    expect(match("bellring", "bell\x07ring.md")!.positions).toEqual([0, 1, 2, 3, 5, 6, 7, 8]);
+    expect(match("ring", "a\u202e/ring.md", 2)!.positions).toEqual([3, 4, 5, 6]);
+    expect(match("c", "ab\u202ec", 3)!.score).toBe(match("c", "abc", 2)!.score); // the label ends where it did: c is after it
     // Ranked: the file name over a folder, a word start, the shorter.
     expect(rank("readme", ["readme-old/notes.md", "areas/the-readme-of-it.md", "areas/readme.md"], (x) => x).map((r) => r.item)).toEqual([
       "areas/readme.md",
@@ -4798,6 +4802,37 @@ describe("files beyond notes (16.3–16.5)", () => {
     await h.app.run("history.back");
     expect(v.buf.rel).toBe("links-out.md");
     expect(v.source).toBe(false); // the note renders again
+  });
+  test("the background index parses a big note on other threads: no slice of it holds the keys for long (15.1)", async () => {
+    const root = makeVault();
+    const h = await harness({ root });
+    // Written after the harness's first build, with words of its own: no parse of it is cached anywhere.
+    const own = randomBytes(6).toString("hex");
+    writeFileSync(join(root, "notes", "big.md"), Array.from({ length: 40_000 }, (_, i) => `Line ${i} ${own} with [a link](alpha.md) and words enough.\n`).join("\n"));
+    h.app.graph.build(true, "lazy"); // every note unparsed, as at a cold start
+    expect(h.app.graph.pendingCount).toBeGreaterThan(1);
+    // Each piece of the pass the main thread does, timed: the slices, and a big note's chunks put together.
+    const g = h.app.graph;
+    const slices: number[] = [];
+    const parseSome = g.parseSome.bind(g);
+    g.parseSome = (ms, skip) => {
+      const t = performance.now();
+      const left = parseSome(ms, skip);
+      slices.push(performance.now() - t);
+      return left;
+    };
+    const entry = g.entry.bind(g);
+    g.entry = (rel, chunks) => {
+      const t = performance.now();
+      const e = entry(rel, chunks);
+      if (chunks) slices.push(performance.now() - t);
+      return e;
+    };
+    h.app.indexInBackground();
+    for (let i = 0; i < 400 && h.app.indexing; i++) await Bun.sleep(50);
+    expect(h.app.indexing).toBe(0);
+    expect(g.backlinks("notes/alpha.md").filter((b) => b.from === "notes/big.md")).toHaveLength(40_000);
+    expect(Math.max(...slices)).toBeLessThan(250); // parsed here whole, the big note alone takes seconds
   });
   test("a data file opens from a link, rendered; edits save; a binary file doesn't open", async () => {
     const root = await setup();

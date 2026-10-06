@@ -4,6 +4,7 @@
 [links]
 style = "markdown"
 
+# Its identity, committed with it.
 [vault]
-id = "32dd206fa2f10733"
-name = "slipbox-design"
+id = "9c41f07e2b5d8a63"
+name = "design"

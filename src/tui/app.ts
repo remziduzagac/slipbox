@@ -86,8 +86,9 @@ import { afterInsertKey, type CompletionState, completionKey, type SignatureStat
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
-import { parseMarkdown } from "../core/parse.ts";
-import { NoteBuffer } from "./buffer.ts";
+import { newParseCache, parseMarkdown } from "../core/parse.ts";
+import { parseInBackground } from "../core/parse-pool.ts";
+import { BACKGROUND_PARSE, NoteBuffer } from "./buffer.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, clampPos, ordered, type Pos, snap, wordAt } from "./cursor.ts";
 import { drawApp, type Geometry } from "./draw.ts";
@@ -6433,12 +6434,36 @@ export class App {
     if (!total) return;
     this.indexing = total;
     const t0 = this.now();
+    // A big note parses on other threads first (15.1), the main thread only putting its chunks
+    // together: parsed here whole, one would hold every key for seconds. Where threads can't
+    // start, it's parsed here after all.
+    const elsewhere = new Set<string>();
+    const failed = new Set<string>();
     const tick = () => {
       if (this.quitting) return;
-      const left = this.graph.parseSome(12);
+      for (const f of this.graph.unparsedOver(BACKGROUND_PARSE)) {
+        if (elsewhere.has(f.rel) || failed.has(f.rel)) continue;
+        let text: string;
+        try {
+          text = readText(f.abs).text;
+        } catch {
+          continue; // unreadable: the parse here says so
+        }
+        const chunks = newParseCache();
+        elsewhere.add(f.rel);
+        void parseInBackground(text, chunks)
+          .catch(() => false)
+          .then((ok) => {
+            elsewhere.delete(f.rel);
+            if (!ok) failed.add(f.rel);
+            else if (!this.quitting) this.graph.entry(f.rel, chunks);
+          });
+      }
+      const left = this.graph.parseSome(12, elsewhere);
       this.indexing = left;
       if (left) {
-        setTimeout(tick, 1);
+        // Only notes parsing elsewhere left: look again in a while, not every millisecond.
+        setTimeout(tick, left > elsewhere.size ? 1 : 50);
         if (total > 200) this.host.requestRender();
         return;
       }

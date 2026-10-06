@@ -57,6 +57,7 @@ command = ["npx", "markdownlint-cli2"]
 wq = "note.save_force"
 q = "app.quit"
 
+# The repository's identity, committed by Priya when she first opened it, so every clone is the same vault.
 [vault]
-id = "4b0fd3c5ad9ffafb"
-name = "slipbox-kestrel"
+id = "5e2d8a41c07b9f36"
+name = "kestrel"

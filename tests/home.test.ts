@@ -241,3 +241,13 @@ describe("the reference set's data files read as they mean to", () => {
     for (const [f, error] of Object.entries(BROKEN)) expect(got[f]).toContain(error);
   });
 });
+
+describe("the reference set is as written, never opened in place", () => {
+  // Opened inside this repository, slipbox gives an unnamed .slipbox/ an id and a name — the
+  // repository's own (slipbox-kestrel): the set's folders would carry this machine's identity.
+  test("no .slipbox/ config was given an identity by an open", () => {
+    const configs = (readdirSync(SOURCE, { recursive: true }) as string[]).filter((f) => f.endsWith(".slipbox/config.toml"));
+    expect(configs.length).toBeGreaterThan(4);
+    for (const f of configs) expect(`${f}: ${readFileSync(join(SOURCE, f), "utf8")}`).not.toMatch(/^name = "slipbox-/m);
+  });
+});
