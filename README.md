@@ -1,8 +1,9 @@
 # slipbox
 
-A terminal markdown notes app: a shared workspace for humans and agents over plain files. It reads a vault of
-markdown notes, renders them properly (tables that fit, highlighted code, themes), follows links as plain paths, and
-reloads the instant an agent rewrites a note. Every state change is also reachable from a CLI that agents drive.
+A terminal markdown notes app: a shared workspace for humans and agents over plain files. It reads a folder of
+markdown notes — a repository, an Obsidian vault, a zk notebook, or any folder — renders them properly (tables that
+fit, highlighted code, themes), follows links in the folder's own conventions, and reloads the instant an agent
+rewrites a note. Every state change is also reachable from a CLI that agents drive.
 
 Status: **phases 0–3** — rendering (leaf parity), a TUI that reads and edits (source mode, vim-shaped
 editing, the lens, autosave and a conflict prompt), and an agent-drivable CLI. See
@@ -14,13 +15,15 @@ Requires [Bun](https://bun.sh) 1.3+.
 
 ```bash
 bun install
-bun src/main.ts examples/vault                      # the TUI, on the demo vault
+bun src/main.ts examples/vault                      # the TUI, on the demo folder
 bun src/main.ts render examples/vault/equipment/telescope-comparison.md  # render to stdout
 scripts/install-local.sh                            # a `slipbox` launcher in ~/.local/bin
 ```
 
-A vault is any directory with a `.slipbox/` marker (`slipbox init`). Without one, slipbox runs in
-single-file mode.
+A file's **root** is the nearest folder above it holding `.git`, `.slipbox/`, `.obsidian/` or `.zk/`: what `/` in a
+link starts from, where a wikilink's names are looked for, whose link convention is followed. A folder without one
+works too, as the folder opened. `slipbox init --name notes` gives a folder `.slipbox/` and a name that other folders
+link to it by — `slipbox://notes/inbox.md` — wherever it is on each machine; a repository is named by its remote.
 
 ## In the TUI
 
@@ -46,19 +49,21 @@ The configuration reloads itself when you save it.
 
 ## For agents
 
-On the demo vault (`cd examples/vault`; `bun ../../src/main.ts` if `slipbox` isn't installed):
+On the demo folder (`cd examples/vault`; `bun ../../src/main.ts` if `slipbox` isn't installed):
 
 ```bash
 slipbox resolve 'equipment/telescope-comparison.md#Summary' --from home.md --json
 slipbox backlinks telescope-comparison --json
-slipbox find 'Aster' --json                  # a note's text, or the whole vault's
+slipbox find 'Aster' --json                  # a note's text, or every note's
 slipbox read home --json                     # the raw text and its sha
 slipbox write home --stdin --if-unchanged <sha> < new.md
 slipbox replace home Aster Astra --dry-run --json
 slipbox task 2026-09-14-weekly 17 --check
 slipbox write observing-log-2026 --append -- '- 22:10 seeing 2"'
 slipbox stat home --json                     # size, dates, title, link counts
-slipbox links --all --json                   # every link in the vault, and whether it resolves
+slipbox links --all --json                   # every link, and whether it resolves and how
+slipbox link telescope-comparison --from home --json   # a link to write, in this folder's convention
+slipbox resolve slipbox://halden/home.md --json        # a named folder's file, wherever it is here
 slipbox capture --ref ../../src/main.ts:1-3 --snippet
 slipbox render home --plain
 ```
@@ -82,5 +87,5 @@ bun run check        # typecheck + the core-never-imports-tui boundary + tests
 bun run e2e --tab    # the terminal tests: slipbox itself in a herdr pane (needs herdr)
 ```
 
-The test strategy, the demo vault (`examples/vault`) and the terminal tests are in
+The test strategy, the demo folder (`examples/vault`) and the terminal tests are in
 [docs/design/testing.md](docs/design/testing.md).

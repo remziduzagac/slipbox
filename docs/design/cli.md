@@ -73,7 +73,7 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `scratch path` | `{path, exists}` |
 | `scratch clear` | `{path, cleared, previousSha}` |
 | `scratch copy` | `{path, chars, methods[], file, confirmed}` |
-| `resolve <link>` | `{link, status, path, abs, shown, href, heading, line, candidates, vault, reason, how, …}` |
+| `resolve <link>` | `{link, status, path, abs, shown, href, heading, line, candidates, root, name, reason, how, …}` |
 | `links <note>` | `[{kind, target, heading, text, line, column, end, status, path, shown, …, how, certainty}]` |
 | `problems` | `{broken[], ambiguous[], fragile[], orphans[]}`: links `{from, line, column, end, kind, target, …}` |
 | `problems --lint` | adds `lint[{file, line, column, rule, name, description}]`; a warning when lint is off or fails |
@@ -81,9 +81,9 @@ Stable from phase 1–2, as the plan requires: changes here bump `schema`.
 | `changed` | `{base, mergeBase, files[{path, state, from?}]}`: `state` new, modified, renamed, deleted, conflict |
 | `diff <note>` | `{path, base, mergeBase, new, rows[{kind, text, line}]}`: `kind` `@@` ` ` `-` `+`; `line`: now |
 | `merge-review <branch>` | `{into, from, base, tree, conflicts[], breaks[{path, line, target, cause, to, fix, …}]}` |
-| `worktrees` | `[{path, branch, head, main, vault, current}]`: the main checkout first |
+| `worktrees` | `[{path, branch, head, main, root, current}]`: the main checkout first; `root`, this root there |
 | `tags [tag]` | `[{tag, count}]`, or a tag's `{tag, notes[]}` (its nested tags' too); exit 3: no note has it |
-| `backlinks <note>` | `{path, backlinks[{from, vault, shown, line, column, end, text, kind, target, heading, …}]}` |
+| `backlinks <note>` | `{path, backlinks[{from, root, name, shown, line, column, end, text, kind, target, …}]}` |
 
 These churn freely before 1.0:
 
@@ -116,7 +116,7 @@ These churn freely before 1.0:
 | `task <note>` | `{path, sha, tasks[{line, checked, text, raw}]}` |
 | `task <note> <line>` | `{path, line, text, checked, changed, sha}` |
 | `read <note>` | `{path, abs, sha, bom, crlf, invalidUtf8, content}` |
-| `stat <note>` | `{path, abs, vault, properties, size, mtime, title, tags, headings, links, unresolved, backlinks}` |
+| `stat <note>` | `{path, abs, root, name, properties, size, mtime, title, tags, headings, links, unresolved, …}` |
 | `write <note>` | `{path, created, shadows (with --create), appended, previousSha, sha}` |
 | `mkdir <path>` | `{path, created}`; an existing path or one outside the vault is exit 5 |
 | `send <note>` | `{path, line, server, commands[]}` |
@@ -344,14 +344,15 @@ that style's). A markdown link's text is the note's title (a file's name), a wik
 else the path from the root; a file outside the root, a relative path as it's named. `--json`: `{link, path, from,
 style, pathForm, extension}`. What the TUI's link picker and completion write; an agent writing a link writes this.
 
-**Across vaults** (plan `17.9`–`17.11`, `17.16`): a path out of the root (relative, `~/`, absolute — `/` is the
-filesystem's root — or a `file://` URL; a file, not an external link) resolves into the other vault: `path` and `abs`
-are absolute, and `vault` names it. A path that reaches nothing is broken, whatever moved (`20.2`). A backlink from
-another vault has an absolute `from` and its `vault`.
+**Across roots** (plan `17.9`–`17.11`, `17.16`, `21.10`): a path out of the root (relative, `~/`, absolute, or a
+`file://` URL; a file, not an external link) resolves into the other root: `path` and `abs` are absolute, `root` is
+that root's path and `name` its name when it has one (both null for this root's own files, and for a file of no
+root). A path that reaches nothing is broken, whatever moved (`20.2`). A backlink from another root has an absolute
+`from`, and its `root` and `name`.
 
 **Shown, and `href`:** `shown` is the file by its path (`21.9`) — from this root, else `~/…`, else absolute — in
-`resolve`, in each of `links`' and `backlinks`', and in their text output; another folder's name is beside it, as
-`vault`. With `--from`, every resolve gives `href`, the relative path a link from `--from` carries, encoded as a link
+`resolve`, in each of `links`' and `backlinks`', and in their text output; another root's is beside it, as `root`
+and `name`. With `--from`, every resolve gives `href`, the relative path a link from `--from` carries, encoded as a link
 is: `slipbox resolve slipbox://research/algorithms/dijkstra.md#Relaxation --from notes/plan.md` gives
 `../../research/algorithms/dijkstra.md#relaxation`. Without `--from`, it's null. `--from` also says which root the
 link is resolved in, as a note argument does. The `name:path` form (`20.20`) is gone (`21.12`): unresolved, exit 3,
@@ -405,11 +406,12 @@ headings and the path, then the text. A hit opens at the section with most of th
 first line with one — and `snippet` is that line, cut around the match, `marks` the words' places in it; `more`
 counts the file's other sections with some of the words. `--limit N` (default 20, up to 500).
 
-- **By vault** (`20.16`): `--scope vault` (the default, so an agent's results are predictable) searches this vault;
-  `--scope linked` adds the vaults linked to or from it — those its notes link into, those whose notes (as of their
-  index) link here; `--scope all` every other vault this machine knows. This vault's hits come first, then the
+- **By root** (`20.16`, `21.10`): `--scope here` (the default, so an agent's results are predictable) searches this
+  root; `--scope linked` adds the roots linked to or from it — those its notes link into, those whose notes (as of
+  their index) link here; `--scope all` every other root this machine knows. This root's hits come first, then the
   others' by score (`--limit` each), each searched with its own index (a scan where it has none). A hit of another
-  vault has `vault` (its name) and `abs`, and `shown` is its path (`21.9`); `vaults` lists those searched.
+  root has `root` and `name`, and `abs`; `shown` is its path (`21.9`); `roots` lists those searched. The old `--scope
+  vault` is read as `here`, with a warning.
 - **The query**: words (all of them); `"a phrase"`; `prefix*`; `-word` (none of it); `title:word` (in the title or
   an alias); `#tag` or `tag:x` (notes carrying the tag, or one nested under it); `path:folder/` (files whose path
   starts so). Nothing is passed on as FTS5 syntax: every word is quoted. Accents and case don't count. Words are
@@ -442,7 +444,7 @@ counts the file's other sections with some of the words. `--limit N` (default 20
 
 ## Renames (plans `17.15`, `7.1`–`7.4`)
 
-Each `files` entry is `{path, abs, vault, edits[{line, before, after}]}`.
+Each `files` entry is `{path, abs, root, name, edits[{line, before, after}]}` — `root` and `name` another root's.
 
 `slipbox mv <note> <new-path>` renames or moves a note (or any file of the vault; the extension is kept when the
 new path has none) and rewrites every link to it, in this vault and in every vault whose index links into it

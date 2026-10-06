@@ -1,7 +1,7 @@
-// Search by vault (plan 20.16; docs/idea.md, "Search"): ranked by how near a vault is, by links —
-// the vault open first, then the vaults linked to or from it under a divider, then every vault this
-// machine knows only when widened. Each vault is searched with its own index (a scan where it has
-// none); a hit of another vault carries its name and its full path.
+// Search by root (plan 20.16, 21.10; docs/idea.md, "What's shown"): ranked by how near a root is, by
+// links — the root open first (`here`), then the roots linked to or from it under a divider, then every
+// root this machine knows only when widened. Each is searched with its own index (a scan where it has
+// none); a hit of another root carries its name and its full path.
 
 import { isAbsolute } from "node:path";
 import type { Graph } from "./graph.ts";
@@ -10,30 +10,30 @@ import { search, type SearchHit, type SearchResult } from "./search.ts";
 import { SearchIndex } from "./search-index.ts";
 import { findVaultRoot, isListed, isVaultRoot } from "./vault.ts";
 
-export const SCOPES = ["vault", "linked", "all"] as const;
+export const SCOPES = ["here", "linked", "all"] as const;
 export type Scope = (typeof SCOPES)[number];
 
-/** A hit, and whose: this vault's (`vault` null) or another's, by its name; `abs` opens it. */
+/** A hit, and whose: this root's (`vault` null) or another's, by its name; `abs` opens it. */
 export interface ScopedHit extends SearchHit {
   abs: string;
   vault: string | null;
-  /** Its path as shown: here, `docs/plan.md`; elsewhere, `research:algorithms/dijkstra.md`. */
+  /** Its path as shown (21.9): here, `docs/plan.md`; elsewhere, from home or absolute. */
   shown: string;
 }
 
 export interface ScopedResult extends Omit<SearchResult, "hits"> {
   hits: ScopedHit[];
-  /** The other vaults searched, nearest first. */
+  /** The other roots searched, nearest first. */
   vaults: string[];
 }
 
 /**
- * The vaults a scope covers besides this one, nearest first (20.16). `linked`: those this vault's
+ * The roots a scope covers besides this one, nearest first (20.16). `linked`: those this root's
  * notes link into, and those whose notes link here (as of their index); `all`: those, then every
- * other vault this machine knows (not worktrees: their notes are their main checkout's).
+ * other root this machine knows (not worktrees: their notes are their main checkout's).
  */
 export function scopeRoots(g: Graph, scope: Scope): string[] {
-  if (scope === "vault" || isListed(g.loc)) return [];
+  if (scope === "here" || isListed(g.loc)) return [];
   const out = new Set<string>();
   const add = (abs: string) => {
     const root = findVaultRoot(abs);
@@ -54,9 +54,9 @@ export function scopeRoots(g: Graph, scope: Scope): string[] {
 }
 
 /**
- * Search this vault, and the others its scope covers (20.16): this vault's hits first, as `search`
- * ranks them; then the others', by score, each vault searched with its own index when it has one.
- * `limit` holds for each: this vault's, and the others' together.
+ * Search this root, and the others its scope covers (20.16): this root's hits first, as `search`
+ * ranks them; then the others', by score, each searched with its own index when it has one.
+ * `limit` holds for each: this root's, and the others' together.
  */
 export function searchScoped(g: Graph, idx: SearchIndex | null, input: string, scope: Scope, opts: { limit?: number; texts?: Map<string, string> } = {}): ScopedResult {
   const limit = opts.limit ?? 50;

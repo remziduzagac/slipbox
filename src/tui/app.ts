@@ -1813,14 +1813,14 @@ export class App {
   /** The search list (6.5): notes ranked by the words as they're typed; enter opens one at its match. */
   openSearch(seed = ""): void {
     let list: ListOverlay | null = null;
-    // By vault (20.16): this one; ctrl+a widens to the vaults linked to or from it, then to every one.
-    let scope: Scope = "vault";
+    // By root (20.16, 21.10): here; ctrl+a widens to the folders linked to or from it, then to every one.
+    let scope: Scope = "here";
     const titled = (t: string) => {
       if (list) list.title = t;
       return t;
     };
-    const where = () => (scope === "vault" ? "" : scope === "linked" ? " — and the vaults linked to it" : " — and every vault");
-    const HELP = 'search the vault — words, "a phrase", prefix*, -not, title:word, #tag, path:folder/ — ctrl+a: more vaults';
+    const where = () => (scope === "here" ? "" : scope === "linked" ? " — and the folders linked to it" : " — and every folder known");
+    const HELP = 'search here — words, "a phrase", prefix*, -not, title:word, #tag, path:folder/ — ctrl+a: more folders';
     const item = (h: SearchHit & { shown?: string }): ListItem => {
       const lead = h.heading ? `${h.heading} — ` : "";
       return {
@@ -1834,13 +1834,13 @@ export class App {
     const source = (input: string): ListItem[] => {
       if (!input.trim()) return (titled(`${HELP}${where()}`), []);
       const job = this.searchJob;
-      if (job && this.searchIndex) return (titled(`search — the vault is being indexed: ${job.indexed.toLocaleString("en")} of ${job.todo.length.toLocaleString("en")} files…`), []);
+      if (job && this.searchIndex) return (titled(`search — the folder is being indexed: ${job.indexed.toLocaleString("en")} of ${job.todo.length.toLocaleString("en")} files…`), []);
       const r = this.searchVault(input);
-      const others = scope === "vault" ? null : searchOthers(this.graph, input, scope);
+      const others = scope === "here" ? null : searchOthers(this.graph, input, scope);
       const n = r.hits.length + (others?.hits.length ?? 0);
       titled(`"${input.trim()}" — ${n} ${n === 1 ? "file" : "files"}${r.relaxed ? " with some of the words" : ""}${r.engine === "scan" ? " (scanned: no index here)" : ""}${where()}`);
       const items = r.hits.map(item);
-      if (others?.hits.length) items.push({ label: scope === "linked" ? "linked vaults" : "other vaults", header: true, data: null }, ...others.hits.map(item));
+      if (others?.hits.length) items.push({ label: scope === "linked" ? "linked folders" : "other folders", header: true, data: null }, ...others.hits.map(item));
       return items;
     };
     this.openList({
@@ -1850,7 +1850,7 @@ export class App {
       input: seed,
       accept: (item) => {
         const h = item.data as { path: string; line: number; column: number; abs?: string; vault?: string | null };
-        // Another vault's: into it, at the line (a switch, as a link into it is).
+        // Another root's: into it, at the line (a switch, as a link into it is).
         if (h.vault !== undefined && h.vault !== null && h.abs) return void this.intoOtherVault(h.abs, { heading: null, headingIndex: 0, offset: 0, line: h.line });
         this.openAt(h.path, h.line, h.column);
       },

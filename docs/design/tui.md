@@ -310,11 +310,11 @@ loose file opens as it is, beside the current vault's notes: it has no vault to 
 the note and place you left; each switch is remembered, so a chain of them unwinds one by one.
 
 **The named folders** (`space v v`, `:folders`, `folders.open`; `slipbox folders`): each by the name pointers give it
-(`21.6`) and the copy its links open here, those seen last first; `enter` goes into that copy. A repository's worktrees are its branches, not
-copies: listed once. **Which copy** a folder's links open (`space v shift+v`, `:folders-default`, `folders.default`;
-`slipbox folders default`): this folder's copies, else a pick of the folders with two. **Names** here, in the status
-line, `space v i`, the Info view and messages are each root's name as pointers give it — its `.slipbox/` name, else
-its repository's remote's — else its path (`~/…`); a named worktree as `name@branch` (`21.9`).
+(`21.6`) and the copy its links open here, those seen last first; `enter` goes into that copy. A repository's worktrees
+are its branches, not copies: listed once. **Which copy** a folder's links open (`space v shift+v`, `:folders-default`,
+`folders.default`; `slipbox folders default`): this folder's copies, else a pick of the folders with two. **Names**
+here, in the status line, `space v i`, the Info view and messages are each root's name as pointers give it — its
+`.slipbox/` name, else its repository's remote's — else its path (`~/…`); a named worktree as `name@branch` (`21.9`).
 
 **The background auto-index** (`20.9`): while nobody is working — no key or click for `index.idle_seconds`, no CLI
 command from an agent as long, this root's own index done — the TUI walks the home folder for roots a slice at a
@@ -660,14 +660,15 @@ past theirs), so the content behind never runs up to the edge.
   as `slipbox search` ranks them (`docs/design/cli.md`, "Search") — each a row: `path:line`, the section's heading
   and the line, its words marked, `+n` for the file's other sections with some of them. `enter` opens it on that
   line (rendered, at the line's start; in source mode, on the word). The index is the app's to keep: opened (or made)
-  as the vault opens and brought up to the files in idle slices — the list says `the vault is being indexed: n of m
+  as the vault opens and brought up to the files in idle slices — the list says `the folder is being indexed: n of m
   files…` the first time, and fills when it's done — then each file again as the graph hears it change (a save here,
   the watcher, a rename, a CLI write). An unsaved note is searched as it's shown, in place of what the index has of
   it. Without an index (`~` or `/` opened as a plain folder, `[search] engine = "scan"`) the files are scanned, and
   the title says so.
-  **By vault** (`20.16`): `ctrl+a` widens it to the vaults linked to or from this one, their hits under a `linked
-  vaults` divider as `path:line` (`21.9`: from home, else absolute); again, to every vault this machine knows; again,
-  back to this one. The title says which. `enter` on another vault's hit goes into it, at that line.
+  **By root** (`20.16`, `21.10`): `ctrl+a` widens it to the folders linked to or from this one, their hits under a
+  `linked folders` divider as `path:line` (`21.9`: from home, else absolute); again, to every root this machine knows
+  (`other folders`); again, back to this one. The title says which. `enter` on another root's hit goes into it, at
+  that line.
 - **Filtering** (`3.16`): each space-separated word as typed — its letters together, never one by
   one — and every word, in any order (`hand oper` finds `handbook/operations-handbook.md`); smart
   case, word by word. Ranked by where each word lands: in the label over its description, in the

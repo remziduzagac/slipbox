@@ -156,6 +156,23 @@ class Session {
   stale(): StaleEntry[] {
     return readStale(this.loc);
   }
+
+  private roots = new Map<string, { root: string | null; name: string | null }>();
+
+  /**
+   * The root a file is in, when it's another than this one, and that root's name (21.10): what JSON
+   * says of a link's file, a backlink's, a hit's — `{root: null, name: null}` for this root's own
+   * files, and for a file of no root.
+   */
+  rootOf(abs: string | null): { root: string | null; name: string | null } {
+    const none = { root: null, name: null };
+    if (!abs) return none;
+    const root = findVaultRoot(abs);
+    if (!root || root === this.loc.root) return none;
+    let hit = this.roots.get(root);
+    if (!hit) this.roots.set(root, (hit = { root, name: folderIdentity(root)?.name ?? null }));
+    return hit;
+  }
 }
 
 export const HELP = `slipbox ${VERSION} — terminal markdown notes, agent-drivable
@@ -168,7 +185,7 @@ Usage:
                                     [--text T] [--style markdown|wiki] [--embed]
   slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
-  slipbox search <words…>           the vault's notes ranked by the words: "phrases", prefix*, -not, title:, #tag, path:  [--scope vault|linked|all]
+  slipbox search <words…>           notes ranked by the words: "phrases", prefix*, -not, title:, #tag, path:  [--scope here|linked|all]
                                     [--limit N]
   slipbox index                     build or bring up to date the vault's search index  [--rebuild]
   slipbox index --home              the background auto-index of the home folder, run now  [--budget MS] [--rebuild]
@@ -668,7 +685,7 @@ const HANDLERS: Record<string, Handler> = {
     const abs = path && status !== "external" ? (isAbsolute(path) ? path : s.graph.abs(path)) : null;
     // With --from, the link to write there (20.20): the relative path, as a link carries it.
     const href = abs && from ? `${urlPath(relative(dirname(s.graph.abs(from)), abs).split(sep).join("/"))}${parts.heading ? `#${fragment ?? slugify(parts.heading)}` : ""}` : null;
-    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, vault: found?.vault ?? null, reason: found?.reason ?? null, how: found?.via ?? found?.how ?? null, certainty: found ? certainty(found) : status === "resolved" ? "exact" : status, ...(found?.gitRef ? { git: found.gitRef } : {}), ...(found?.suggest ? { suggest: found.suggest } : {}) };
+    const data = { link: raw, status, path, abs, shown: abs ? s.graph.shownPath(abs) : null, href, heading: parts.heading, line, candidates, ...s.rootOf(abs), reason: found?.reason ?? null, how: found?.via ?? found?.how ?? null, certainty: found ? certainty(found) : status === "resolved" ? "exact" : status, ...(found?.gitRef ? { git: found.gitRef } : {}), ...(found?.suggest ? { suggest: found.suggest } : {}) };
     if (status === "ambiguous") throw new CliError(`ambiguous link "${raw}"${data.reason ? ` (${data.reason})` : ""}: ${candidates.join(", ")}`, EXIT.ambiguous, data);
     if (status === "unresolved") throw new CliError(`unresolved link "${raw}"${data.reason ? `: ${data.reason}` : ""}`, EXIT.notFound, data);
     return { data, human: `${abs ?? path}${line ? `:${line}` : ""}\n` };
@@ -708,7 +725,8 @@ const HANDLERS: Record<string, Handler> = {
         path: l.path,
         shown: l.shown,
         candidates: l.candidates,
-        vault: l.vault ?? null,
+        // Another root's file: that root, and its name (21.10).
+        ...s.rootOf(l.path ? (isAbsolute(l.path) ? l.path : s.graph.abs(l.path)) : null),
         reason: l.reason ?? null,
         // How it landed, and how sure that is (exact, inferred, ambiguous, broken).
         how: l.via ?? l.how ?? null,
@@ -826,7 +844,7 @@ const HANDLERS: Record<string, Handler> = {
     const c = checkoutFor(s);
     const list = worktreeList(c);
     if (!list) throw new CliError("git couldn't list the worktrees", 1);
-    const data = list.map((w) => ({ ...w, vault: join(w.path, relative(c.root, s.loc.root)), current: w.path === c.root }));
+    const data = list.map((w) => ({ ...w, root: join(w.path, relative(c.root, s.loc.root)), current: w.path === c.root }));
     return { data, human: data.map((w) => `${w.current ? "*" : " "} ${w.branch ?? `(${w.head?.slice(0, 7) ?? "detached"})`}  ${w.path}${w.main ? "  (main)" : ""}\n`).join("") };
   },
 
@@ -835,8 +853,12 @@ const HANDLERS: Record<string, Handler> = {
     if (!rest.length) throw new UsageError("missing what to search for (search <words…>)");
     const query = rest.join(" ");
     const limit = wholeFlag(s, "limit", 20, 1, 500);
-    // By vault (20.16): this one by default, so an agent's results are predictable; linked, all.
-    const scope = (flag(s.args, "scope") ?? "vault") as Scope;
+    // By root (20.16, 21.10): here by default, so an agent's results are predictable; linked, all.
+    let scope = (flag(s.args, "scope") ?? "here") as Scope;
+    if ((scope as string) === "vault") {
+      s.warnings.push("--scope vault is --scope here now (21.10)");
+      scope = "here";
+    }
     if (!SCOPES.includes(scope)) throw new UsageError(`--scope takes ${SCOPES.join(", ")}`);
     const idx = searchIndex(s);
     try {
@@ -852,7 +874,9 @@ const HANDLERS: Record<string, Handler> = {
         return sanitize(out + h.snippet.slice(at));
       };
       const human = r.hits.map((h) => `${h.shown}:${h.line}:${h.column}  ${h.heading ? `${sanitize(h.heading)} — ` : ""}${mark(h)}${h.more ? `  (+${h.more} more)` : ""}\n`).join("");
-      return { data: { query, scope, engine: r.engine, relaxed: r.relaxed, vaults: r.vaults, hits: r.hits }, human };
+      // Each hit's root: another's by its path and name (21.10).
+      const hits = r.hits.map(({ vault: _, ...h }) => ({ ...h, ...s.rootOf(h.abs) }));
+      return { data: { query, scope, engine: r.engine, relaxed: r.relaxed, roots: r.vaults, hits }, human };
     } finally {
       idx?.close();
     }
@@ -935,7 +959,10 @@ const HANDLERS: Record<string, Handler> = {
     const rel = resolveNote(s, requireArg(rest, "note"));
     await s.graph.loadGrammars(); // code files link from their comments (16.10)
     // Each from as shown (21.9): its path from this root, else from home, else absolute.
-    const bl = s.graph.backlinks(rel).map((b) => ({ ...b, vault: b.vault ?? null, shown: s.graph.shownPath(isAbsolute(b.from) ? b.from : s.graph.abs(b.from)) }));
+    const bl = s.graph.backlinks(rel).map(({ vault: _, ...b }) => {
+      const from = isAbsolute(b.from) ? b.from : s.graph.abs(b.from);
+      return { ...b, ...s.rootOf(from), shown: s.graph.shownPath(from) };
+    });
     return { data: { path: rel, backlinks: bl }, human: bl.map((b) => `${b.shown}:${b.line}  ${b.text}\n`).join("") };
   },
 
@@ -2143,7 +2170,7 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
       to: p.to,
       dryRun: !applied,
       move: p.move,
-      files: p.files.map((f) => ({ path: f.shown, abs: f.abs, vault: f.vault, edits: f.edits })),
+      files: p.files.map((f) => ({ path: f.shown, abs: f.abs, ...s.rootOf(f.abs), edits: f.edits })),
       warnings: p.warnings,
       skipped: p.skipped,
       ...(p.ambiguous ? { ambiguous: p.ambiguous } : {}),

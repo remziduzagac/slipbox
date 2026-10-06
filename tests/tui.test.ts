@@ -5818,7 +5818,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.messages.at(-1)!.text).toBe("links are written in this folder's notes");
   });
 
-  test("search by vault (20.16): this vault's hits; ctrl+a adds the linked vaults' under a divider, then every vault's; one opens there", async () => {
+  test("search by root (20.16, 21.10): this root's hits; ctrl+a adds the linked folders' under a divider, then every one's; one opens there", async () => {
     const { notes, app, n } = await twoVaults();
     writeFileSync(join(notes, "w.md"), "# W\n\nA walrus here.\n");
     writeFileSync(join(app, "w2.md"), "# W2\n\nA walrus there.\n");
@@ -5829,10 +5829,10 @@ describe("vaults in the TUI (17.x)", () => {
     const labels = () => (h.app.overlay as ListOverlay).filtered.map((e) => e.item.label);
     expect(labels()).toEqual(["w.md:3"]);
     await h.keys("ctrl+a");
-    expect(labels()).toEqual(["w.md:3", "linked vaults", `${join(app, "w2.md")}:3`]); // by its path (21.9)
-    expect((h.app.overlay as ListOverlay).title).toContain("and the vaults linked to it");
+    expect(labels()).toEqual(["w.md:3", "linked folders", `${join(app, "w2.md")}:3`]); // by its path (21.9)
+    expect((h.app.overlay as ListOverlay).title).toContain("and the folders linked to it");
     await h.keys("ctrl+a");
-    expect((h.app.overlay as ListOverlay).title).toContain("and every vault");
+    expect((h.app.overlay as ListOverlay).title).toContain("and every folder known");
     await h.keys("ctrl+a"); // and back to this one
     expect(labels()).toEqual(["w.md:3"]);
     await h.keys("ctrl+a");
@@ -7376,7 +7376,7 @@ describe("search in the TUI (6.5, 6.9)", () => {
     await h.app.whenSearchIndexed();
     expect(h.app.searchIndex?.complete).toBe(true);
     await h.keys("space", "f", "s");
-    expect((h.app.overlay as ListOverlay).title).toStartWith("search the vault — words");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("search here — words");
     await typeIn(h, "quetzal plinth");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toBe('"quetzal plinth" — 1 file');
@@ -7437,7 +7437,7 @@ describe("search in the TUI (6.5, 6.9)", () => {
     expect(h.app.searchJob).not.toBeNull(); // keys don't wait for it: its slices run between frames
     // Asked directly meanwhile, the files are scanned: the index isn't whole yet.
     expect(h.app.searchVault("narwhal")).toMatchObject({ engine: "scan", hits: [{ path: "n7.md", line: 3 }] });
-    expect(list.title).toMatch(/^search — the vault is being indexed: [\d,]+ of [\d,]+ files…$/);
+    expect(list.title).toMatch(/^search — the folder is being indexed: [\d,]+ of [\d,]+ files…$/);
     expect(list.filtered).toEqual([]);
     await h.app.whenSearchIndexed();
     expect(list.title).toBe('"narwhal" — 1 file');

@@ -274,7 +274,8 @@ LSP face (`11.x`), and `17.20` below. In short:
 - **Generated edits are plans,** tied to file hashes, refused when stale; the CLI plans and applies in two steps.
   Changes made elsewhere repair the index; file fixes are asked for. Before a merge, `git merge-tree`'s result is
   checked for broken links; after one, git's renames are evidence for fixes. Hooks are opt-in.
-- **Search** ranks the current vault, then linked vaults, then everything on a key (`--scope vault|linked|all`).
+- **Search** ranks the current vault, then linked vaults, then everything on a key (`--scope vault|linked|all`;
+  `21.10` calls the first `here`).
 - **Settings,** deeper over broader: the nearest `.slipbox/config.toml`, outer ones, the user's; programs from the
   user's own config only.
 - **The LSP face goes** (gone: `20.23`, built first, 2026-10-02); the client for code stays.

@@ -358,7 +358,7 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | the vault's tags (`:tags`), then a tag's notes (`:tag name`) | — | `space f t` |
 | heading path: the breadcrumb's headings as a dropdown | — | `space f b` |
 | find in every note and file: each line with the text (open ones as they are) | `ctrl+shift+f` | `space f g` |
-| search the vault, ranked as you type (`:search`); `ctrl+a` more vaults (`20.16`); enter opens | — | `space f s` |
+| search here, ranked as you type (`:search`); `ctrl+a` more folders (`20.16`); enter opens | — | `space f s` |
 | go to a line by number (`:42` too) | `ctrl+g` | `space f l` |
 | command palette / command line | `:`, `ctrl+shift+p` | `space f p` |
 | *(reserved for phase 4)* tags | — | `space f t` |

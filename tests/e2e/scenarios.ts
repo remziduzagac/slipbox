@@ -892,7 +892,7 @@ const CORE: Scenario[] = [
     name: "search: space f s ranks the vault's notes as you type, the words marked; enter opens at the match",
     run: async (s) => {
       await leader(s, "f", "s");
-      await s.see("search the vault — words");
+      await s.see("search here — words");
       await s.type("dome shutter");
       await s.see(/"dome shutter" — \d+ files/, 5000);
       await s.see("projects/dome-refit.md:");
