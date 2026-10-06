@@ -550,6 +550,22 @@ describe("links in code comments (16.10)", () => {
   });
 });
 
+describe("links in a component's comments (16.10, 16.22)", () => {
+  test("a path in a Vue component's script comment, or its template's: a link and a backlink, at its place in the file", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-complinks-"));
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, "design.md"), "# Design\n");
+    writeFileSync(join(dir, "Card.vue"), '<template>\n  <!-- the layout: design.md -->\n  <p>x</p>\n</template>\n<script setup lang="ts">\n  // why: design.md\n  const s = "design.md";\n</script>\n');
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    await g.loadGrammars(); // Vue's, and TypeScript's for its script
+    expect(g.linksOf("Card.vue").map((l) => [l.target, l.resolvedKind, l.line, l.column])).toEqual([
+      ["/design.md", "note", 2, 20],
+      ["/design.md", "note", 6, 11], // in the script, where it is in the file
+    ]);
+    expect(g.backlinks("design.md").map((b) => [b.from, b.line])).toEqual([["Card.vue", 2], ["Card.vue", 6]]);
+  });
+});
+
 describe("the demo vault's code samples", () => {
   test("each language's sample parses cleanly, has an outline, and every path in its comments resolves", async () => {
     const { grammar, grammarFor, parseSyntax } = await import("../src/core/syntax.ts");

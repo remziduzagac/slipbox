@@ -18,6 +18,8 @@ conn.onInitialize((p) => ({
     textDocumentSync: { openClose: true, change: TextDocumentSyncKind.Incremental, save: { includeText: true } },
     hoverProvider: true,
     definitionProvider: true,
+    typeDefinitionProvider: true,
+    implementationProvider: true,
     referencesProvider: true,
     documentSymbolProvider: true,
     workspaceSymbolProvider: true,
@@ -75,6 +77,9 @@ conn.onHover((p) => ({ contents: { kind: "markdown", value: `line ${p.position.l
 const linesWith = (uri: string, word: string) =>
   (docs.get(uri)?.getText().split("\n") ?? []).flatMap((l, i) => (l.includes(word) ? [{ uri, range: { start: { line: i, character: l.indexOf(word) }, end: { line: i, character: l.indexOf(word) + word.length } } }] : []));
 conn.onDefinition((p) => linesWith(p.textDocument.uri, "DEF")[0] ?? null);
+// The type's definition: the first line holding TYPE; the implementations: each line holding IMPL.
+conn.onTypeDefinition((p) => linesWith(p.textDocument.uri, "TYPE")[0] ?? null);
+conn.onImplementation((p) => linesWith(p.textDocument.uri, "IMPL"));
 conn.onReferences((p) => linesWith(p.textDocument.uri, "REF"));
 // Symbols: each `function NAME` line, its `method NAME` lines nested under it.
 conn.onDocumentSymbol((p) => {

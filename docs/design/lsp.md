@@ -84,14 +84,15 @@ is said once: a native one to install yourself, an npm one when installing is of
 enabled = false` runs none.
 
 **Several servers on one file** (`19.17`): a file's main server and its add-ons all run, each doing its features —
-Helix's names: `diagnostics`, `hover`, `goto-definition`, `goto-reference`, `document-symbols`, `workspace-symbols`,
-`completion`, `signature-help`, `rename-symbol`, `code-action`, `format`. A main server does them all; an add-on, a
-linter's: `diagnostics`, `code-action`, `format`. A language's `language-servers` in the config can limit any of them as
-Helix does — an entry `{ name = "ruff", only-features = ["diagnostics", "format"] }`, or `except-features`. Every
-server's diagnostics are the file's (one limited away from them says nothing); a request that wants one answer (hover, a
-definition) goes to the first that does it and answers; references and code actions are every server's together, the
-same place once. Completion asks its servers in turn and shows the first one that answers (a main server before its
-add-ons, which by default don't complete); its trigger characters, and signature help's, are every server's together.
+Helix's names: `diagnostics`, `hover`, `goto-definition`, `goto-type-definition`, `goto-implementation`,
+`goto-reference`, `document-symbols`, `workspace-symbols`, `completion`, `signature-help`, `rename-symbol`,
+`code-action`, `format`. A main server does them all; an add-on, a linter's: `diagnostics`, `code-action`, `format`. A
+language's `language-servers` in the config can limit any of them as Helix does — an entry `{ name = "ruff",
+only-features = ["diagnostics", "format"] }`, or `except-features`. Every server's diagnostics are the file's (one
+limited away from them says nothing); a request that wants one answer (hover, a definition) goes to the first that does
+it and answers; references and code actions are every server's together, the same place once. Completion asks its
+servers in turn and shows the first one that answers (a main server before its add-ons, which by default don't
+complete); its trigger characters, and signature help's, are every server's together.
 
 **Linters without a server** (`19.19`, `core/servers/linters.ts`) are described in efm-langserver's keys, so a linter
 set up for efm pastes in — `[linter.<name>]` with `lint-command`, `lint-formats` (vim's errorformat), `lint-stdin`,

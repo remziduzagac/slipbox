@@ -1075,8 +1075,9 @@ export class App {
       // Links in its comments (16.10): URLs, and paths that name a file of the vault.
       const rel = buf.rel;
       const links = commentLinks(tree.comments()).filter((l) => l.url || (rel && this.graph.commentPath(l.target, rel)));
-      buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors(), links };
-      tree.tree.delete();
+      // A part in another language (16.22): its lines highlighted in it.
+      buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors(), links, languages: tree.languages() };
+      tree.delete();
       buf.invalidateLayouts();
       for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
       this.host.requestRender();

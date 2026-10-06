@@ -1,0 +1,35 @@
+---
+// The photo site's front page: the latest walk and the Kyoto selects.
+// The selects are the ones in exports/kyoto-selects.tsv.
+import Gallery from "../layouts/Gallery.astro";
+
+const title = "Harbour and Kyoto";
+const walks = await Astro.glob("../../../walks/*.md");
+
+function latest(list: { frontmatter: { date: string } }[]) {
+  return [...list].sort((a, b) => b.frontmatter.date.localeCompare(a.frontmatter.date))[0];
+}
+---
+<Gallery title={title}>
+  <!-- The first autumn walk is walks/2026-09-07-harbour.md -->
+  <h1 id="top">{title}</h1>
+  <section id="walks">
+    <h2>Walks</h2>
+    <p>{latest(walks)?.frontmatter.date}</p>
+  </section>
+  <section id="kyoto">
+    <h2>Kyoto</h2>
+    <img src="/images/inari-01.jpg" alt="Inari gates in the rain" />
+  </section>
+  <script>
+    // Scrolls the selects into view when the page is opened at #kyoto.
+    function reveal(id: string) {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    }
+    if (location.hash) reveal(location.hash.slice(1));
+  </script>
+  <style>
+    h1 { font-family: "Iowan Old Style", serif; }
+    #kyoto img { max-width: 100%; }
+  </style>
+</Gallery>

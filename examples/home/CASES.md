@@ -900,14 +900,32 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/tools/greeter/greeter.rs`, `work/kestrel/tools/greeter/greeter.sh`,
   `work/kestrel/tools/greeter/greeter.ts`, `work/kestrel/tools/greeter/greeter.tsx` (syntax.ts Grammar list; plan
   16\.7/16.8)
-- Languages without a grammar but with highlight.js: ruby, java, c, cpp, css, html, sql, vim, makefile, diff —
+- Languages without a grammar but with highlight.js: java, sql, vim, makefile, diff, XML and SVG —
   `work/kestrel/Makefile`, `work/kestrel/db/schema.sql`, `work/kestrel/legacy/GpxParser.java`,
-  `work/kestrel/legacy/haversine.c`, `work/kestrel/legacy/route_import.rb`, `work/kestrel/patches/tiles-fix.patch`,
-  `work/kestrel/public/index.html`, `work/kestrel/public/logo.svg`, `work/kestrel/src/styles/app.css` (syntax.ts
-  grammarFor returns null; plan 16.18-16.23 not built)
+  `work/kestrel/patches/tiles-fix.patch`, `work/kestrel/public/logo.svg` (syntax.ts grammarFor returns null)
+- Swift: classes, structs, enums, extensions, actors and protocols by their keyword, init; multi-line strings and
+  comments — `hobbies/photography/tools/RenameByExif.swift`, `hobbies/photography/tools/ContactSheet.swift` (16.18)
+- A page's headings and ids; its script and style parsed as theirs; a stylesheet's rules, @media, @keyframes, mixins —
+  `work/kestrel/public/index.html`, `Downloads/brevet-results-2026-09-13.htm`,
+  `hobbies/photography/site/src/styles/print.css`, `work/kestrel/src/styles/app.css`,
+  `work/kestrel/src/styles/share-sheet.scss` (16.19, 16.22)
+- PHP: classes, interfaces, traits, enums, heredocs; its HTML highlighted as HTML — `Downloads/old-blog-export/index.php`,
+  `Downloads/old-blog-export/feed.php` (16.20, 16.22)
+- Dockerfiles: their stages in the outline (`build (node:22-alpine)`); `Dockerfile.dev` too —
+  `work/kestrel/Dockerfile`, `hobbies/photography/site/Dockerfile` (16.21)
+- Components: Vue's template, script (lang="ts") and style (lang="scss"); Svelte's; Astro's frontmatter — each part an
+  outline entry, its definitions under it, its lines in its language, its comments' links —
+  `Downloads/recipe-card-demo/RecipeCard.vue`, `Downloads/recipe-card-demo/IngredientList.vue`,
+  `hobbies/cycling/viewer/src/RideMap.svelte`, `hobbies/cycling/viewer/src/Elevation.svelte`,
+  `hobbies/photography/site/src/pages/index.astro`, `hobbies/photography/site/src/layouts/Gallery.astro` (16.22)
+- Ruby (modules, classes, `self.` methods, heredocs; a Gemfile), C (functions, prototypes in a header, structs), C++
+  (namespaces, classes, methods declared and defined) — `work/kestrel/legacy/route_import.rb`,
+  `hobbies/cycling/tools/gpx_split.rb`, `hobbies/cycling/tools/Gemfile`, `work/kestrel/legacy/haversine.c`,
+  `work/kestrel/crates/route-engine/ffi/kestrel_route.h`, `work/kestrel/tools/geodesic/geodesic.cpp`,
+  `work/kestrel/tools/geodesic/geodesic.hpp` (16.23)
 - Language-server fallback outline: a file tree-sitter has no outline of takes the server's symbols —
-  `work/kestrel/src/styles/app.css`, `work/kestrel/tools/fake/hello.fake` (test 'a file tree-sitter has no outline of
-  takes its server', plan 19.14)
+  `work/kestrel/legacy/GpxParser.java`, `work/kestrel/tools/fake/hello.fake` (test 'a file tree-sitter has no outline
+  of takes its server', plan 19.14)
 - Dockerfile with hadolint findings when .hadolint.yaml exists — `work/kestrel/.hadolint.yaml`,
   `work/kestrel/Dockerfile` (lsp.md 19.19 hadolint; languages.ts dockerfile)
 - Linter without a server in efm keys configured in the vault config (\[linter.x\] lint-command, lint-formats) —
@@ -1405,7 +1423,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### code-files
 
-- tree-sitter languages open in source mode with outline and breadcrumb: TS, TSX, JS, Python, shell, Lua, Go, Rust —
+- tree-sitter languages open in source mode with outline and breadcrumb: TS, TSX, JS, Python, shell, Lua, Go, Rust
+  (and since 16.18-16.23 Swift, HTML, CSS, SCSS, PHP, Dockerfile, Vue, Svelte, Astro, Ruby, C, C++) —
   `work/kestrel/src/App.tsx`, `work/kestrel/src/generated/routes-big.ts`, `work/kestrel/tools/greeter/greeter.go`,
   `work/kestrel/tools/greeter/greeter.js`, `work/kestrel/tools/greeter/greeter.lua`,
   `work/kestrel/tools/greeter/greeter.py`, `work/kestrel/tools/greeter/greeter.rs`,
@@ -2474,6 +2493,10 @@ Code with definitions, references and the errors its servers report.
   (command-specs.ts)
 - `lsp.references` — References — `work/kestrel/src/sync/queue.ts`, `work/kestrel/api/kestrel_api/sync.py`
   (command-specs.ts)
+- `lsp.type_definition` — Go to the type's definition — `work/kestrel/src/sync/queue.ts`,
+  `work/kestrel/tools/geodesic/geodesic.cpp` (command-specs.ts; 19.13)
+- `lsp.implementation` — Go to the implementations — `work/kestrel/src/sync/queue.ts`,
+  `work/kestrel/tools/geodesic/geodesic.hpp` (command-specs.ts; 19.13)
 - `lsp.rename` — Rename the symbol — `work/kestrel/src/sync/queue.ts`, `work/kestrel/api/kestrel_api/sync.py`
   (command-specs.ts)
 - `lsp.code_action` — Code actions — `work/kestrel/src/sync/queue.ts`, `work/kestrel/api/kestrel_api/sync.py`

@@ -1062,7 +1062,7 @@ const HANDLERS: Record<string, Handler> = {
       const tree = loaded ? parseSyntax(loaded, readText(s.graph.abs(rel)).text) : null;
       if (!tree) throw new CliError(`couldn't load the ${g} grammar${loadError(`grammar:${g}`) ? ` — ${loadError(`grammar:${g}`)}` : ""}`, EXIT.error);
       const defs = tree.outline().map((d) => ({ depth: d.depth + 1, text: d.name, kind: d.kind, line: d.line }));
-      tree.tree.delete();
+      tree.delete();
       return {
         data: { path: rel, headings: defs },
         // The kind before the name, unless the name says it already (Rust's `impl Trait for T`).
@@ -1463,7 +1463,7 @@ const HANDLERS: Record<string, Handler> = {
       const tree = loaded ? parseSyntax(loaded, text) : null;
       if (tree) {
         problems.push(...syntaxProblems(tree.errors()));
-        tree.tree.delete();
+        tree.delete();
         sources.push({ name: "tree-sitter", kind: "syntax", status: "ran" });
       }
     }

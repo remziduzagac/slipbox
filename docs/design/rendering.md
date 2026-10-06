@@ -330,7 +330,8 @@ auto-detection is slow and often wrong. Scopes map to the `syn_*` roles. It live
 
 Source files in source mode use it too, a line at a time, with tree-sitter (`core/syntax.ts`,
 `16.7`) painting over it the parts of lines inside a string or comment that spans lines — which a
-line alone can't know. See [tui.md](tui.md), "Files beyond notes".
+line alone can't know — and, in a file of several languages (`16.22`: a component's script and style), saying which
+language each line is in (`languageAt`). See [tui.md](tui.md), "Files beyond notes".
 
 ## The ANSI writer
 

@@ -949,9 +949,10 @@ their files open as text.
   looked for in them. They have no rendered view: `space n v` and the lens say so and stay in
   source mode. A window that was in source mode only for such a file renders again when it opens a
   note (a link, `history.back`).
-- **Source code through tree-sitter** (`16.6`–`16.9`: TypeScript, TSX, JavaScript, Python, shell,
-  Lua, Go, Rust). Each language's grammar (the wasm from the language's own npm package, built for
-this runtime; `bunfig.toml` keeps their native install scripts off) loads the first time a file of it
+- **Source code through tree-sitter** (`16.6`–`16.9`, `16.18`–`16.23`: TypeScript, TSX, JavaScript, Python, shell,
+  Lua, Go, Rust, Swift, HTML, CSS, SCSS, PHP, Dockerfile, Vue, Svelte, Astro, Ruby, C, C++). Each language's grammar
+  (the wasm from the language's own npm package, built for this runtime — `bunfig.toml` keeps their native install
+  scripts off — or, where npm has none, built from its source into `grammars/`) loads the first time a file of it
   opens, never at start-up; until it lands, the file shows as any text file, and it draws again
   when it does. A parse runs at once on open and then 150 ms after typing pauses — never per key
   (tens of milliseconds for a 4,000-line file) — and the layout uses its last answer:
@@ -959,8 +960,17 @@ this runtime; `bunfig.toml` keeps their native install scripts off) loads the fi
     know alone, that it starts inside a string or comment opened above (a template string's middle
     lines, a docstring, a block comment).
   - **Outline and breadcrumb.** The file's definitions — functions, classes, methods, types,
-    interfaces, enums, Rust's structs, traits, impls and modules — as headings nested by where they
-    sit, from a query per language. `space o`, `]]` and the breadcrumb use them as a note's.
+    interfaces, enums, Rust's structs, traits, impls and modules; Swift's classes, structs, enums, extensions, actors
+    and protocols (by their keyword); C's functions, prototypes, structs and typedefs, C++'s classes, namespaces and
+    methods; Ruby's modules and `self.` methods; PHP's traits; a Dockerfile's stages (`build (node:22)`); a
+    stylesheet's rules, `@media` and mixins; a page's headings (by their text) and its ids (`#about`) — as headings
+    nested by where they sit, from a query per language. `space o`, `]]` and the breadcrumb use them as a note's.
+  - **A file in several languages** (`16.22`). A page's `<script>` and `<style>`, a Vue, Svelte or Astro component's
+    template, script and style, Astro's frontmatter: each part is parsed with its own grammar — `lang="ts"`, `lang="scss"`,
+    an HTML script's `type` (JSON is highlighted, not parsed); Astro's scripts are TypeScript. Each part is an outline
+    entry (`script setup lang="ts"`, `template`), its definitions under it; its lines are coloured in its language
+    (the lines its tags are on, the page's); its strings, comments, links and syntax errors are where they are in the
+    file. The grammars of a component's parts load with its own. A PHP file's HTML is coloured as HTML.
   - **Syntax errors** (syntax only: no types, no lint). Where the parser found an error or had to
     invent a missing token, the text is underlined (`syntax_error`), counted in the problems bar, and its line
     number is red when numbers show; the status line counts it (`✖ 1`), or says the error itself on the
@@ -1135,8 +1145,10 @@ name it, never a vault's.
 type, its docs), or, on a note's link, where it lands (the heading's section, the note's start); read-only, `esc` or `q`
 closes it. `g d` goes to the definition — the server's; a single one opens at once, in this vault or outside it (a
 dependency's types open as a loose file), several are a list — and in a note it follows the link. `g r` lists the
-references, each `file:line` with the line's text, to pick from; in a note, its backlinks. A file with no server says
-so, and `slipbox doctor` says which it would have.
+references, each `file:line` with the line's text, to pick from; in a note, its backlinks. `g y` goes to where its type
+is defined, `g shift+i` to what implements it (`19.13`; Helix's `goto-type-definition`, `goto-implementation` features):
+one at once, several to pick from. A file with no server says so, and `slipbox doctor` says which it would have; a
+server that doesn't find these, so too.
 
 **What a server changes** (`19.15`) is made through the buffers — never written behind them — each file's edits
 one undo step. A file no window shows is saved after (through the same atomic write as every save), so what an agent
@@ -1172,7 +1184,7 @@ from the note. Right after `[[` (or `![[`), this root's notes and files, each sh
 where it reaches the note from here, else its path — with its path beside it. Typing past the target (`)`, a space,
 `]`, `|`, `#`) closes it. Same keys as above.
 
-A file tree-sitter has no outline of (`16.8`: CSS, YAML, PHP, Swift…) takes its language server's symbols as its
+A file tree-sitter has no outline of (`16.8`: YAML, Java, Kotlin…) takes its language server's symbols as its
 outline and breadcrumb (`19.14`), nested as the server nests them, asked for when it opens and again after each change
 reaches the server. Where tree-sitter has one, it stays: it's there at once, and leaves out the variables and
 properties a server lists.

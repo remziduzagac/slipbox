@@ -34,6 +34,7 @@ import type { App, ListItem, Loc, PromptOverlay, UiState, View } from "./app.ts"
 import { editable, computeFind, KIND_NAMES, refilter } from "./app.ts";
 import * as C from "./cursor.ts";
 import { linkTokens } from "../core/syntax.ts";
+import type { Feature } from "../core/servers/languages.ts";
 import { readerFor } from "../core/readers.ts";
 import * as E from "./editing.ts";
 import * as R from "./replacing.ts";
@@ -1770,15 +1771,11 @@ export function registerActions(app: App): void {
     "lsp.definition": (a) =>
       withView(a, async (v) => {
         if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("link.follow");
-        a.syncServers(v.buf);
-        const s = a.servers;
-        if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
-        const answer = await s.request<Location | Location[] | LocationLink[]>(v.buf.abs, "textDocument/definition", { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, "definitionProvider", "goto-definition");
-        const locs = answer ? locations(answer.result) : [];
-        if (!locs.length) return a.message("info", "no definition found here");
-        if (locs.length === 1) return a.openLocation(locs[0]!.path, locs[0]!.line, locs[0]!.character);
-        pickLocation(a, `${locs.length} definitions`, locs);
+        await goTo(a, v, "textDocument/definition", "definitionProvider", "goto-definition", ["definition", "definitions"]);
       }),
+    // Where the type of what's under the cursor is defined, and what implements it (19.13).
+    "lsp.type_definition": (a) => withView(a, (v) => goTo(a, v, "textDocument/typeDefinition", "typeDefinitionProvider", "goto-type-definition", ["type definition", "type definitions"])),
+    "lsp.implementation": (a) => withView(a, (v) => goTo(a, v, "textDocument/implementation", "implementationProvider", "goto-implementation", ["implementation", "implementations"])),
     "lsp.references": (a) =>
       withView(a, async (v) => {
         if (v.buf.rel && a.graph.notes.has(v.buf.rel)) return void a.run("backlinks.open");
@@ -1980,6 +1977,22 @@ function hoverText(h: Hover): string {
 }
 
 /** Locations a server gives, as files and positions (a `LocationLink`'s target). */
+/**
+ * A jump the file's language server answers (19.13): one place, gone to; several, a list to pick
+ * from. `what`: the answer's name, one and many.
+ */
+async function goTo(a: App, v: View, method: string, capability: string, feature: Feature, what: [string, string]): Promise<void> {
+  a.syncServers(v.buf);
+  const s = a.servers;
+  if (!s?.isOpen(v.buf.abs)) return a.message("info", "no language server for this file (slipbox doctor says which it would have)");
+  if (!(await s.offers(v.buf.abs, feature, capability))) return a.message("info", `the language server doesn't find ${what[1]}`);
+  const answer = await s.request<Location | Location[] | LocationLink[]>(v.buf.abs, method, { textDocument: { uri: pathToFileURL(v.buf.abs).href }, position: a.lspPosition(v) }, capability, feature);
+  const locs = answer ? locations(answer.result) : [];
+  if (!locs.length) return a.message("info", `no ${what[0]} found here`);
+  if (locs.length === 1) return a.openLocation(locs[0]!.path, locs[0]!.line, locs[0]!.character);
+  pickLocation(a, `${locs.length} ${what[1]}`, locs);
+}
+
 function locations(r: Location | Location[] | LocationLink[] | null): { path: string; line: number; character: number }[] {
   const list = r === null ? [] : Array.isArray(r) ? r : [r];
   return list.flatMap((l) => {

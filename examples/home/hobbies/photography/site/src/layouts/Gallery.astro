@@ -1,0 +1,27 @@
+---
+/* Every page of the photo site: the masthead, the page, the print sheet.
+   Print styles are in site/src/styles/print.css. */
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{title} — photographs</title>
+    <link rel="stylesheet" href="/styles/print.css" media="print" />
+  </head>
+  <body>
+    <header id="masthead"><h1>{title}</h1></header>
+    <main id="content"><slot /></main>
+    <style lang="scss">
+      $ink: #222;
+      #masthead {
+        color: $ink;
+        h1 { margin: 0; }
+      }
+    </style>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+/* Print: the gallery on paper, one photograph a page.
+   The page sizes follow the sensor ratios in gear/bodies.md. */
+@page {
+  size: A4 landscape;
+  margin: 12mm;
+}
+
+@media print {
+  body { background: white; }
+  img {
+    page-break-inside: avoid;
+    max-height: 180mm;
+  }
+}
+
+.caption,
+figcaption {
+  font-size: 9pt;
+  font-family: "Iowan Old Style", serif;
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

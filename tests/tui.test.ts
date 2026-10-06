@@ -5138,6 +5138,25 @@ describe("YAML and JSON as a tree (16.12)", () => {
   });
 });
 
+describe("a component in the TUI (16.22)", () => {
+  test("a Vue file: its template, script and style in the outline, each part's definitions under it; each line coloured in its part's language", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "Card.vue"), '<template>\n  <h2 id="card">const</h2>\n</template>\n<script setup lang="ts">\nconst n = 1;\nfunction go(): void {}\n</script>\n<style>\n.a { color: red; }\n</style>\n');
+    const h = await harness({ root, open: "Card.vue", width: 100 });
+    const v = h.app.view!;
+    // Its grammar and its parts' (TypeScript, CSS) load first: until then, markup throughout.
+    for (let i = 0; i < 200 && v.buf.syntax?.version !== v.buf.version; i++) {
+      h.frame();
+      await Bun.sleep(10);
+    }
+    expect(h.app.outlineRows().map((r) => `${r.level}:${r.text}`)).toEqual(["1:template", "2:const", "1:script setup lang=\"ts\"", "2:go", "1:style", "2:.a"]);
+    expect([...v.buf.syntax!.languages]).toEqual([[5, "typescript"], [6, "typescript"], [9, "css"]]);
+    const role = (line: number, word: string) => h.app.currentLayout(v).lines.find((l) => l.src === line)!.spans.find((sp) => sp.text.includes(word))?.role;
+    expect(role(5, "const")).toBe("syn_keyword"); // the script's line, as TypeScript
+    expect(role(2, "const")).not.toBe("syn_keyword"); // the template's text, as markup
+  });
+});
+
 describe("links in code comments in the TUI (16.10)", () => {
   test("a comment's path is drawn as a link; enter opens it, `path:line` at that line", async () => {
     const root = makeVault();
@@ -8418,6 +8437,30 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     await h.app.servers!.stopAll();
   });
 
+  test("g y: the type's definition; g I: the implementations, to pick from; none: said (19.13)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "use it\n  TYPE Shape\nIMPL circle\nIMPL square\n");
+    writeFileSync(join(root, "b.fk"), "nothing here\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    h.app.startServers();
+    h.frame();
+    expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
+    await h.keys("g", "y");
+    expect(await until(() => h.app.cursorLine(h.app.view!) === 2)).toBe(true);
+    expect(h.app.view!.cur.col).toBe(2); // at TYPE, past the indent
+    await h.keys("g", "shift+i");
+    expect(await until(() => h.app.overlay?.kind === "list")).toBe(true);
+    expect((h.app.overlay as ListOverlay).title).toBe("2 implementations");
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["a.fk:3", "a.fk:4"]);
+    await h.keys("down", "enter");
+    expect(h.app.cursorLine(h.app.view!)).toBe(4);
+    await h.app.run("note.open b.fk");
+    expect(await until(() => (h.frame(), h.app.servers!.isOpen(join(root, "b.fk"))))).toBe(true);
+    await h.keys("g", "shift+i");
+    expect(await until(() => h.app.messages.at(-1)?.text === "no implementation found here")).toBe(true);
+    await h.app.servers!.stopAll();
+  });
+
   test("a file tree-sitter has no outline of takes its server's symbols as its outline, nested; again as it changes (19.14)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "a.fk"), "function first\n  method inner\nfunction second\n");
@@ -8717,8 +8760,9 @@ describe("linters without a server (19.19)", () => {
     expect(h.frame()).toMatch(/[┃│] 2 RUN BAD/); // the bar: its two, beside its line
     // Not installed: said once.
     expect(h.app.messages.filter((m) => m.text.includes("linter gone: slipbox-no-such-linter not found")).length).toBe(1);
-    // Typed: the input's linter again after the pause; the file's waits for the save.
-    await h.keys("shift+g", "o", "B", "A", "D", "escape");
+    // Typed: the input's linter again after the pause; the file's waits for the save. A line Dockerfile's grammar
+    // reads (16.21): no syntax error of its own among the findings.
+    await h.keys("shift+g", "o", "R", "U", "N", "space", "B", "A", "D", "escape");
     expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
     expect(shown().sort()).toEqual(["2 error fake: found BAD", "3 error fake: found BAD"]);
     await h.keys("ctrl+s");

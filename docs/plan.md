@@ -331,8 +331,6 @@ reading features, editing features, linters, and the languages.
 
 | ID | Decision | Gates |
 | --- | --- | --- |
-| `21.x` | Paths inside, conventions at the edges: approve the proposal | Phase 5c |
-| `16.23` | Ruby and C/C++ | Phase 5 |
 | `10.5` | PDF base — `pdfkit` or `@react-pdf/renderer` | Phase 6+ |
 
 ## Step 0 — codebase
@@ -478,7 +476,7 @@ common, and the only reason they are step 0.
 | 6.7 | **Done.** The change feed: every change to the vault's files through the graph (`onChange`) |
 | 6.8 | **Done.** `slipbox search` (ranked; the index, else a scan), `slipbox index`; `[search] engine` |
 | 6.9 | **Done.** The TUI keeps the index: built in idle slices, kept by the feed; unsaved notes searched as shown |
-| 6.10 | Scout, when it exists: a library behind `import()`; three tiers, appended; its `index()` from the feed |
+| 6.10 | **Postponed** (2026-10-07): Scout became trailscout, its own project; slipbox uses its SDK when that exists |
 | 6.11 | **Done.** better-sqlite3 for the index (scout's binding too): its own SQLite; Bun 1.4.2 and up |
 | 6.12 | **Done.** Sections are scout's: the containment tree cut to the 400–1500 band; a hit cites its section |
 | 6.13 | `@slipbox/links`: the link rules extracted into a package scout shares — a scout-blocking prerequisite |
@@ -581,7 +579,7 @@ source shown alike in every mode.*
 | 19.10 | **Done.** Ranges marked: underlined in source mode, the lens and the rendered view |
 | 19.11 | **Done.** Toggles (`space u d`, `shift+d`) and `[diagnostics]`; the status line takes every source |
 | 19.12 | **Done.** Hover in a float; signature help as `(` and `,` are typed (`19.16`) |
-| 19.13 | **Done** (definition, references). A jump, or a list when there are several; implementation and types later |
+| 19.13 | **Done.** Definition, type definition, implementations, references: a jump, or a list when there are several |
 | 19.14 | **Done.** The server's symbols where tree-sitter has none; the switcher's `#` the workspace's symbols |
 | 19.15 | **Done.** Rename, code actions, formatting: through `App.writeBuffer`, previewed like slipbox's renames |
 | 19.16 | **Done.** Completion in insert mode: on a trigger at once, on a word after a pause; narrowed as typed |
@@ -741,12 +739,12 @@ the link graph), data files (JSON, YAML, TOML, INI, CSV: rendered, not notes), a
 | 16.15 | **Done.** Links out of data files: paths that resolve, URLs, `$ref`, includes; into the graph |
 | 16.16 | **Dropped** (built, then removed 2026-09-30). Org as a note format — see `docs/idea.md` |
 | 16.17 | **Dropped** (built, then removed 2026-09-30). AsciiDoc as a note format — see `docs/idea.md` |
-| 16.18 | Swift: grammar, highlighting, outline (phase 5, as are the rest) |
-| 16.19 | HTML and CSS, SCSS with it: grammars, outlines (HTML's headings and ids, CSS's rules) |
-| 16.20 | PHP |
-| 16.21 | Dockerfile |
-| 16.22 | Vue, Svelte, Astro: a file's template, script and style, each in its own language |
-| 16.23 | **decide** Ruby and C/C++ |
+| 16.18 | **Done.** Swift: grammar, highlighting, outline (built from source into `grammars/`) |
+| 16.19 | **Done.** HTML and CSS, SCSS with it: grammars, outlines (HTML's headings and ids, CSS's rules) |
+| 16.20 | **Done.** PHP; its HTML highlighted as HTML |
+| 16.21 | **Done.** Dockerfile: its stages in the outline |
+| 16.22 | **Done.** Vue, Svelte, Astro (and a page's scripts and styles): each part in its own language |
+| 16.23 | **Decided and done** (2026-10-07): Ruby and C/C++ have grammars, as the rest |
 
 Later, on the same render: slipbox's own settings as a TOML screen with the config's schema
 (defaults, allowed values, unknown keys). Diffs are a separate discussion.

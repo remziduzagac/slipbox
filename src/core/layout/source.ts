@@ -30,6 +30,9 @@ export interface SourceLayoutOptions {
   /** Tree-sitter's word (16.7) on what highlight.js can't see from one line: the parts of line
    *  `line` (1-based) inside a string or comment that spans lines. */
   spans?: (line: number) => SyntaxSpan[] | undefined;
+  /** A line in another language than the file's (16.22: a component's script, a page's style), by
+   *  highlight.js's name; undefined: the file's own. */
+  languageAt?: (line: number) => string | undefined;
 }
 
 /** A displayed grapheme and the source offset (UTF-16, within its line) it came from. */
@@ -81,7 +84,8 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   // recolours the lines it now covers, above the edit).
   const sig = (line: number) => {
     const s = opts.spans?.(line);
-    return s?.length ? s.map((x) => `${x.kind}${x.from}-${x.to}`).join(",") : "";
+    const own = opts.languageAt?.(line);
+    return (s?.length ? s.map((x) => `${x.kind}${x.from}-${x.to}`).join(",") : "") + (own ? `@${own}` : "");
   };
   let pre = 0;
   while (pre < n && pre < O.length && texts[pre] === O[pre] && (!lang || old.states[pre] === sig(pre + 1))) pre++;
@@ -99,7 +103,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
     // comment opened above — so a line whose text is the same but whose context changed is laid
     // out again.
     if (lang) state = sig(i + 1);
-    const built = layoutLine(texts[i]!, state, i, width, tab, lang, lineSpans);
+    const built = layoutLine(texts[i]!, state, i, width, tab, lang ? (opts.languageAt?.(i + 1) ?? lang) : lang, lineSpans);
     states.push(state);
     rows.push(built.rows);
     naturals.push(built.natural);

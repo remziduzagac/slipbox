@@ -160,6 +160,8 @@ export const DEFAULT_KEYS: Record<string, string> = {
   // What's under the cursor (19.12, 19.13), as vim and LazyVim have it.
   "shift+k": "lsp.hover",
   "g d": "lsp.definition",
+  "g y": "lsp.type_definition",
+  "g shift+i": "lsp.implementation",
   "g r": "lsp.references",
   // What the code's language server changes (19.15), as LazyVim has them.
   "leader c r": "lsp.rename",

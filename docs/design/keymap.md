@@ -143,6 +143,8 @@ note, slipbox does:
 | hover: what it is, floating (types, docs); on a note's link, where it lands | `shift+k` |
 | go to its definition; in a note, follow the link | `g d` |
 | its references, to pick from; in a note, its backlinks | `g r` |
+| where its type is defined | `g y` |
+| what implements it, to pick from (an interface, an abstract method) | `g shift+i` |
 
 What a code file's language server changes (`19.15`) — `space c`, as LazyVim has it:
 

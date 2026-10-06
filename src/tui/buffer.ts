@@ -104,7 +104,7 @@ export class NoteBuffer {
    * inside multi-line strings and comments, the outline, syntax errors. The app refreshes it
    * shortly after edits stop; until then the layout uses it as it is.
    */
-  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[]; links: CommentLink[] } | null = null;
+  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[]; links: CommentLink[]; languages: Map<number, string> } | null = null;
 
   constructor(
     /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */
@@ -387,7 +387,12 @@ export class NoteBuffer {
       const fromParse = () => headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line }));
       const headings = !note ? code : parsed ? fromParse() : note.language === null ? "scan" : note.scanHeadings(this.source);
       const spans = this.syntax?.spans;
-      l = layoutSource(this.source, { width, wrap, headings, language: note ? note.language : this.kind.format, ...(spans ? { spans: (line: number) => spans.get(line) } : {}) }, this.sourceCache);
+      const langs = this.syntax?.languages;
+      l = layoutSource(
+        this.source,
+        { width, wrap, headings, language: note ? note.language : this.kind.format, ...(spans ? { spans: (line: number) => spans.get(line) } : {}), ...(langs?.size ? { languageAt: (line: number) => langs.get(line) } : {}) },
+        this.sourceCache,
+      );
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
     }

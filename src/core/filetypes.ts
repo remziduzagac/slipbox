@@ -54,6 +54,8 @@ export const LANGUAGES: Record<string, string> = {
   lua: "lua",
   go: "go",
   rs: "rust",
+  swift: "swift",
+  php: "php",
   rb: "ruby",
   java: "java",
   c: "c",
@@ -62,9 +64,13 @@ export const LANGUAGES: Record<string, string> = {
   cpp: "cpp",
   hpp: "cpp",
   css: "css",
-  scss: "css",
+  scss: "scss",
   html: "xml",
   htm: "xml",
+  // Components: template, script and style, each in its language (16.22).
+  vue: "vue",
+  svelte: "svelte",
+  astro: "astro",
   xml: "xml",
   svg: "xml",
   sql: "sql",
@@ -78,6 +84,7 @@ export const LANGUAGES: Record<string, string> = {
 export const NAMED: Record<string, string> = {
   makefile: "makefile",
   dockerfile: "dockerfile",
+  gemfile: "ruby",
   ".zshrc": "bash",
   ".bashrc": "bash",
   ".profile": "bash",
@@ -118,6 +125,8 @@ export function classify(name: string, noteExtensions: readonly string[]): FileK
   const ext = extensionOf(base);
   if (ext && noteExtensions.some((e) => e.replace(/^\./, "").toLowerCase() === ext)) return { group: "note", format: NOTE_FORMATS[ext] ?? "markdown" };
   if (NAMED[base]) return NAMED[base] === "ini" ? { group: "data", format: "ini" } : { group: "text", format: NAMED[base]! };
+  // A Dockerfile for one purpose: `Dockerfile.dev`, `Dockerfile.test`.
+  if (base.startsWith("dockerfile.")) return { group: "text", format: "dockerfile" };
   if (DATA_FORMATS[ext]) return { group: "data", format: DATA_FORMATS[ext]! };
   if (BINARY.has(ext)) return { group: "binary", format: ext };
   return { group: "text", format: LANGUAGES[ext] ?? "text" };

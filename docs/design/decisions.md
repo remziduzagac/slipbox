@@ -444,6 +444,24 @@ everything that knows a note by its lines — anchors, the cursor, the lens, the
 and nothing about them changes. Its links are its own, resolved and followed from where it is, as Obsidian does.
 Search, backlinks and the context bundle are untouched: an embed is a link already, and its text belongs to its note.
 
+## `16.23` — Ruby and C/C++
+
+Decided 2026-10-07, while building `16.18`–`16.22`: **both get grammars, as the rest do.** Their official npm packages
+(`tree-sitter-ruby`, `tree-sitter-c`, `tree-sitter-cpp`) ship WebAssembly for this runtime, so each costs a few hundred
+KB, loaded only when a file of it opens. Outlines: Ruby's modules, classes, methods and `self.` methods; C's functions,
+prototypes (a header's outline is mostly those), structs, unions, enums and typedefs; C++'s namespaces, classes and the
+methods declared in them, `A::go` where one is defined. A `.h` is C's.
+
+**Grammars npm has no WebAssembly for** (Swift, SCSS, Vue, Astro, Dockerfile) are built from source at pinned commits
+by `scripts/build-grammars.ts` into `grammars/`, committed with their licences, rather than taken from a bundle of
+prebuilt ones (`tree-sitter-wasms` has an older Swift). tree-sitter-cli 0.27 builds them with wasi-sdk, no emscripten
+or Docker needed, and what it builds loads in web-tree-sitter 0.25. Swift's scanner needed one line dropped (a print to
+`stderr`, which the runtime lacks); `grammars/README.md` says so.
+
+**A file in several languages** (`16.22`) is parsed part by part — a part's text with its own grammar, its results
+placed back in the file — rather than with tree-sitter's included ranges on one parser: a part's grammar is a different
+language, and its queries are its own.
+
 ## `5.9` — a branch switch as one event
 
 A checkout rewrites any number of files at once, and the watcher sees each on its own: reloads, moves detected by

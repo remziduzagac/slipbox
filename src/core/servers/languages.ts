@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
  * What a server is used for, by Helix's names (`only-features`, `except-features`): several servers on
  * one file each do what they're for — the main one everything, a linter's its diagnostics and fixes.
  */
-export type Feature = "diagnostics" | "hover" | "goto-definition" | "goto-reference" | "document-symbols" | "workspace-symbols" | "completion" | "signature-help" | "rename-symbol" | "code-action" | "format";
+export type Feature = "diagnostics" | "hover" | "goto-definition" | "goto-type-definition" | "goto-implementation" | "goto-reference" | "document-symbols" | "workspace-symbols" | "completion" | "signature-help" | "rename-symbol" | "code-action" | "format";
 
 /** An add-on's features unless the config says: a linter's. */
 export const ADD_ON_FEATURES: Feature[] = ["diagnostics", "code-action", "format"];

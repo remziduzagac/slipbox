@@ -1486,7 +1486,7 @@ export class Graph {
       const target = l.url ? l.target : `/${path}${l.at ? `#L${l.at}` : ""}`;
       out.push({ kind: "markdown", target, heading: null, block: null, alias: null, text: lines[l.line - 1]!.slice(l.from, l.to), line: l.line, column: l.from + 1, end: { line: l.line, column: l.to + 1 } });
     }
-    tree.tree.delete();
+    tree.delete();
     return out;
   }
 
