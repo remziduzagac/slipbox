@@ -97,7 +97,10 @@ tests, the design docs and the plan) and the files that cover it. Halden is its 
 `.build/<repo>.toml` — commits, branches, merges, a worktree, a remote. `bun scripts/build-home.ts <dir>` copies the
 set to `<dir>/home` and halden to `<dir>/vault`, replays each history with git (its `main` checked to end at the
 folder as committed), and makes from `.build/extras.toml` the files that can't be committed: hostile names, symlinks,
-a file over the size cap, an unreadable one. Tests and e2e scenarios build a fresh copy and use it as `$HOME`.
+a file over the size cap, an unreadable one. The e2e scenarios of `world-*.ts` build a fresh copy and use it as `$HOME`
+(`home`), and the tests check it: the build (`tests/home.test.ts`), that the set stays complete, that every data file
+parses or fails as it means to, that every note renders inside its width at four widths (`tests/render.test.ts`),
+and that no open in place gave its folders this machine's identity.
 
 ## The terminal tests (`bun run e2e`)
 
@@ -114,20 +117,30 @@ bun run e2e --pane w1:p2     # that pane (also SLIPBOX_E2E_PANE); it must be at 
 bun run e2e find replace     # only the scenarios whose names contain these
 ```
 
-- **Isolated.** Each scenario gets a fresh copy of the demo vault and its own config, state, cache
-  and data directories (its own list of vaults). Nothing in the repo or in your
-  own setup is touched, and a given pane that is running slipbox is refused rather than typed into.
-  A scenario can put files beside the vault (`beside`: another vault, a plain folder), run the CLI
-  before slipbox starts (`setup`: `init` that vault), and start somewhere else (`startAt`).
+- **Isolated.** Each scenario gets a fresh copy of the demo vault — or the reference set built, its
+  home folder as `$HOME` (`home`) — and its own config, state, cache and data directories (its own
+  list of vaults). Nothing in the repo or in your own setup is touched, and a given pane that is
+  running slipbox is refused rather than typed into. A scenario can put files beside the vault
+  (`beside`: another vault, a plain folder), run the CLI before slipbox starts (`setup`: `init` that
+  vault), and start slipbox another way: elsewhere (`startAt`), with no path (`startAt: null`), from
+  a folder (`cwd`), with flags (`args`) or environment (`env`), or expecting it to fail (`noWait`).
 - **Waits, never sleeps.** Every check waits (up to a timeout) for the screen to agree: a row that
-  contains something, the status line's mode, a message's floating box, a file on disk.
+  contains something, the status line's mode, a message's floating box, a file on disk. Only a check
+  that something *doesn't* happen — no autosave mid-insert, no popup before its delay — waits out a
+  stated while.
+- **The terminal itself.** A scenario reads what the terminal draws with its colours (`styleOf`,
+  `runs`), its title, the pid of slipbox in it (`signal` sends it SIGTERM or SIGHUP), pastes as a
+  terminal does (bracketed), quits and starts again on the same state (`restart`), and resizes the
+  pane for real (`zoom`, which needs the pane sized by its tab's layout: a client attached).
 - **Coverage is measured.** slipbox appends each command it runs to `SLIPBOX_TRACE`; the runner
-  lists the commands no scenario ran, and every command is run today. That says a command was
+  lists the commands no scenario ran (a run split over panes adds them to `SLIPBOX_E2E_RAN`, read
+  together after), and every command is run today. That says a command was
   reached, not that its effect was checked: each scenario checks its effects itself (the exact text
   a sequence of edits leaves, what a copy put on the clipboard file, a count on the find row), and a
   check that would pass with the feature broken is a bug in the scenario.
 - **Size.** herdr owns the pane's size, which the runner asks the shell for and never sets.
-  Scenarios that need room (docked panes, splits) say so and are skipped, named, in a smaller pane.
+  Scenarios that need room (docked panes, splits) say so and are skipped, named, in a smaller pane;
+  one whose need shows only as it runs throws `Skipped` with the reason — never a silent pass.
 - **Keys.** Single characters are typed as themselves; keys herdr has no name for (the page keys,
   `ctrl+end`) are sent as the escape sequences a terminal sends.
 - **Not the mouse.** herdr passes no mouse events through, so clicks, the wheel and drags stay
@@ -138,7 +151,12 @@ bun run e2e find replace     # only the scenarios whose names contain these
 | `tests/e2e/run.ts` | the runner: the pane, the loop, the report |
 | `tests/e2e/herdr.ts` | a herdr pane, driven: keys and text in, the screen out |
 | `tests/e2e/session.ts` | one scenario's slipbox, and the checks |
-| `tests/e2e/scenarios.ts` | the scenarios, by area |
+| `tests/e2e/helpers.ts` | what scenarios share: the cursor's place, opening a note, leader keys |
+| `tests/e2e/scenarios.ts` | the app's own scenarios, by area, on halden |
+| `tests/e2e/world-git.ts` | the reference set's roots and real git: `$HOME`, markers, a worktree, a conflict |
+| `tests/e2e/world-content.ts` | the set's content: every grammar, data, hostile text, wide characters, big files |
+| `tests/e2e/world-terminal.ts` | slipbox as a process: start-up forms, signals, restore, keys, pastes, colours |
+| `tests/e2e/world-outside.ts` | the world changing under it: the watcher, the CLI beside it, config, autosave |
 
 ## Timings (`bun scripts/bench.ts`)
 

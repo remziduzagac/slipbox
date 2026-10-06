@@ -11,7 +11,7 @@
 import { appendFileSync } from "node:fs";
 import { COMMAND_SPECS } from "../../src/core/command-specs.ts";
 import { HerdrError, Pane } from "./herdr.ts";
-import { REPO, Session } from "./session.ts";
+import { REPO, Session, Skipped } from "./session.ts";
 import { SCENARIOS } from "./scenarios.ts";
 
 const args = process.argv.slice(2);
@@ -76,11 +76,13 @@ async function runAll(): Promise<void> {
     current = session;
     const t0 = Date.now();
     let error: string | null = null;
+    let skip: string | null = null;
     try {
       await session.start();
       await s.run(session);
     } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
+      if (err instanceof Skipped) skip = err.message;
+      else error = err instanceof Error ? err.message : String(err);
     }
     // A slipbox that won't quit or die (Stuck) ends the run: the pane can't take another.
     const clean = await session.quit();
@@ -92,6 +94,9 @@ async function runAll(): Promise<void> {
     if (error) {
       failures.push({ name: s.name, error });
       console.log(`✗ ${s.name} (${ms} ms)`);
+    } else if (skip) {
+      skipped++;
+      console.log(`- ${s.name} (skipped: ${skip})`);
     } else console.log(`✓ ${s.name} (${ms} ms)`);
   }
 }
@@ -111,7 +116,7 @@ const missing = all.filter((id) => !ran.has(id));
 if (process.env.SLIPBOX_E2E_RAN) appendFileSync(process.env.SLIPBOX_E2E_RAN, [...ran].map((c) => `${c}\n`).join(""));
 const secs = ((Date.now() - started) / 1000).toFixed(1);
 const done = chosen.length - skipped;
-console.log(`\n${done - failures.length}/${done} scenarios passed in ${secs} s${skipped ? `, ${skipped} skipped (pane too small; try --tab)` : ""}`);
+console.log(`\n${done - failures.length}/${done} scenarios passed in ${secs} s${skipped ? `, ${skipped} skipped (said above why)` : ""}`);
 console.log(`commands run: ${all.length - missing.length}/${all.length}`);
 if (missing.length && !filters.length) console.log(`not run by any scenario:\n  ${missing.join("\n  ")}`);
 process.exit(failures.length ? 1 : 0);

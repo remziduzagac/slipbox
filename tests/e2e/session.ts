@@ -111,6 +111,9 @@ export class CheckFailed extends Error {}
 /** The pane isn't back at a shell: nothing after this can run in it. */
 export class Stuck extends Error {}
 
+/** What the scenario needs isn't there (said why): skipped, named — never a silent pass. */
+export class Skipped extends Error {}
+
 export class Session {
   readonly dir: string;
   readonly vault: string;
@@ -208,6 +211,9 @@ export class Session {
       else spawnSync("pkill", ["-f", this.dir]);
       await this.until(() => this.exited(), 5000, "slipbox to be killed").catch(() => undefined);
       if (!this.exited()) throw new Stuck(`slipbox in pane ${this.pane.id} would not quit or die; stopping`);
+      // Killed, it left the terminal as it had it — the alternate screen, raw keys: reset for the next.
+      this.pane.run("reset");
+      await this.until(() => this.pane.recent(5).trim() !== "", 5000, "the terminal reset").catch(() => undefined);
       return false;
     }
     return this.exitCode() === 0;
@@ -234,6 +240,13 @@ export class Session {
   /** The terminal's title, as slipbox last set it. */
   title(): string {
     return JSON.parse(herdr("pane", "get", this.pane.id)).result?.pane?.terminal_title ?? "";
+  }
+
+  /** The pane's size in its tab's layout, as herdr lays it out (with no client attached, not the pty's). */
+  layoutSize(): { cols: number; rows: number } {
+    const panes = JSON.parse(herdr("pane", "layout", "--pane", this.pane.id)).result?.layout?.panes ?? [];
+    const rect = panes.find((p: { pane_id: string }) => p.pane_id === this.pane.id)?.rect ?? { width: 0, height: 0 };
+    return { cols: rect.width, rows: rect.height };
   }
 
   /** Zoom the pane to the whole tab, or back: a real resize (SIGWINCH), as dragging a split is. */
@@ -387,7 +400,10 @@ export class Session {
   }
 
   exitCode(): number | null {
-    const m = new RegExp(`${this.marker} (\\d+)`).exec(this.pane.recent(15));
+    // In the scrollback; or on the visible screen when the terminal is still in the alternate
+    // screen (a killed slipbox never left it), where the scrollback reads empty.
+    const re = new RegExp(`${this.marker} (\\d+)`);
+    const m = re.exec(this.pane.recent(15)) ?? re.exec(this.pane.screen().join("\n"));
     return m ? Number(m[1]) : null;
   }
 
@@ -399,7 +415,9 @@ export class Session {
     for (;;) {
       if (ok()) return;
       if (Date.now() > end) throw new CheckFailed(`timed out waiting for ${what}\n${this.dump()}`);
-      if (this.exited()) throw new CheckFailed(`slipbox exited while waiting for ${what}\n${this.pane.recent(40)}`);
+      // Exited: what was awaited may have come with it (an exit itself, its last words) — looked at
+      // once more, since it may have happened between the two looks.
+      if (this.exited() && !ok()) throw new CheckFailed(`slipbox exited while waiting for ${what}\n${this.pane.recent(40)}`);
       await sleep(50);
     }
   }

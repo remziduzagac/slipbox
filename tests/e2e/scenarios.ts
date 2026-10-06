@@ -57,7 +57,7 @@ const CORE: Scenario[] = [
     name: "hostile names: a bidi override, C1 and an OSC in a file name never reach the terminal",
     needs: { cols: 100 },
     options: {
-      files: { "n-\u202etxt.cod\u202c-\u009b31m-\x1b]0;PWNED\x07.md": "# Hostile\u202e heading\n\n[[home]]\n" },
+      files: { "n-\u202etxt.cod\u202c-\u009b31m-\x1b]0;PWNED\x07.md": "# Hostile\u202e heading\n\n[home](home.md)\n" },
     },
     run: async (s) => {
       const clean = () => {
@@ -77,8 +77,11 @@ const CORE: Scenario[] = [
       await s.see("heading");
       clean();
       await open(s, "home");
-      await s.ex("backlinks.open"); // it links to home, so it is in home's list, by name
-      await s.see(/n-.*cod/);
+      // The explorer closed, so the name can only show in the list (its tab is above the list's title).
+      for (let i = 0; i < 3 && s.text().includes("Explorer"); i++) await leader(s, "e");
+      await leader(s, "l", "b"); // it links to home, so it is in home's list, by name
+      await s.see("Linking to");
+      await s.until(() => s.screen().some((r, i) => i > s.rowOf("Linking to") && /n-.*cod/.test(r)), 3000, "the hostile note in home's backlinks");
       clean();
     },
   },
@@ -220,9 +223,11 @@ const CORE: Scenario[] = [
     options: { open: HANDBOOK },
     run: async (s) => {
       await s.keys("]", "]", "j", "j");
+      const c0 = pos(s).col;
       await s.keys("v");
       await s.status("VISUAL");
-      await s.keys("l", "l", "l", "o");
+      await moveTo(s, ["l", "l", "l"], (_, c) => c === c0 + 3, "v l l l: three columns on");
+      await moveTo(s, ["o"], (_, c) => c === c0, "o to the selection's other end");
       await s.keys("y");
       await s.message(/copied 4 characters/);
       await s.until(() => [...s.clipboard()].length === 4, 3000, "v l l l y to copy four characters");
@@ -305,34 +310,47 @@ const CORE: Scenario[] = [
     name: "windows: split, turn, focus, move, swap, resize, resize mode, close, only",
     needs: { cols: 90, rows: 24 },
     run: async (s) => {
-      const crumbs = () => s.text().split("§ ").length - 1; // one breadcrumb a window
-      // A tab holds one window, or two in a split: side by side, or stacked (ctrl+w s turns it).
-      const sameRow = () => s.screen().some((r) => r.split("§ ").length - 1 === 2);
+      // The windows' notes in screen order, from their breadcrumbs (not the status line's path):
+      // below the tab bar and right of the explorer's border, both of which name files too. By code
+      // point, not string index: Nerd glyphs outside the BMP (the explorer's buttons, its icons)
+      // take two UTF-16 units for one column.
+      const border = () => Math.max(0, [...(s.screen()[2] ?? "")].findIndex((ch) => ch === "│" || ch === "┃"));
+      const NAME = /\b(home|writing-guide)\b(?=\.md\b)/g;
+      const rows = () => s.screen().slice(3, -1).map((r) => [...r].slice(border() + 1).join(""));
+      const notes = () => rows().join("\n").match(NAME) ?? [];
+      const order = () => notes().map((n) => `${n}.md`).join(" ");
+      // A tab holds one window, or two in a split: side by side (both names on one row), or
+      // stacked (ctrl+w s turns it).
+      const sameRow = () => rows().some((r) => (r.match(NAME) ?? []).length === 2);
+      // How many windows: the names their breadcrumbs show (a split's), or a lone one's § alone.
+      const windows = () => Math.max(notes().length, s.text().split("§ ").length - 1);
       await s.keys("ctrl+w", "v");
-      await s.until(() => crumbs() === 2 && sameRow(), 3000, "two windows side by side");
+      await s.until(() => notes().length === 2 && sameRow(), 3000, "two windows side by side");
       await s.keys("ctrl+w", "s");
-      await s.until(() => crumbs() === 2 && !sameRow(), 3000, "the split turned stacked");
-      for (const k of ["h", "l", "k", "j", "w"]) await s.keys("ctrl+w", k);
-      // Moving a window to an edge turns the split: H and L side by side, K and J stacked.
-      for (const [k, side] of [["H", true], ["K", false], ["L", true], ["J", false]] as const) {
+      await s.until(() => notes().length === 2 && !sameRow(), 3000, "the split turned stacked");
+      // One window shows another note, so where each window is can be told.
+      await open(s, "writing-guide");
+      await s.until(() => notes().sort().join(" ") === "home writing-guide", 3000, "two windows, two notes");
+      // The status line names the focused window's note.
+      const focused = () => /\b(home|writing-guide)\.md\b/.exec(s.statusLine())?.[1] ?? "";
+      // Moving a window to an edge turns the split and puts it there, focused: H left, K top, L
+      // right, J bottom. Side by side, ctrl+w l and h move the focus right and back.
+      for (const [k, side, first] of [["H", true, true], ["K", false, true], ["L", true, false], ["J", false, false]] as const) {
         await s.keys("ctrl+w");
         await s.type(k);
-        await s.until(() => sameRow() === side, 3000, `ctrl+w ${k}: ${side ? "side by side" : "stacked"}`);
+        await s.until(() => sameRow() === side && notes()[first ? 0 : 1] === focused(), 3000, `ctrl+w ${k}: ${side ? "side by side" : "stacked"}, ${first ? (side ? "left" : "top") : side ? "right" : "bottom"}`);
+        if (k === "H") {
+          await s.keys("ctrl+w", "l");
+          await s.until(() => focused() === notes()[1], 3000, "ctrl+w l to the right window");
+          await s.keys("ctrl+w", "h");
+          await s.until(() => focused() === notes()[0], 3000, "ctrl+w h back to the left one");
+        }
       }
-      // Swap: the two windows trade notes (one shows another note first).
-      await open(s, "writing-guide");
-      // The windows' notes in screen order, from their breadcrumbs (not the status line's path).
-      // (Below the tab bar and right of the explorer's border: both name files too.)
-      // By code point, not string index: Nerd glyphs outside the BMP (the explorer's buttons, its
-      // icons) take two UTF-16 units for one column.
-      const border = () => Math.max(0, [...(s.screen()[2] ?? "")].findIndex((ch) => ch === "│" || ch === "┃"));
-      const order = () => (s.screen().slice(3, -1).map((r) => [...r].slice(border() + 1).join("")).join("\n").match(/\b(home|writing-guide)\.md\b/g) ?? []).join(" ");
-      await s.until(() => order().split(" ").length === 2, 3000, "two windows, two notes");
+      // Swap: the two windows trade notes.
       const before = order();
       await s.keys("ctrl+w", "x");
       await s.until(() => order() === before.split(" ").reverse().join(" "), 3000, "ctrl+w x to swap the windows");
-      // Focus: the status line names the focused window's note. Stacked now: k is the top one.
-      const focused = () => /\b(home|writing-guide)\.md\b/.exec(s.statusLine())?.[1] ?? "";
+      // Focus. Stacked now: k is the top one.
       const [topNote, bottomNote] = order().split(" ").map((n) => n.replace(/\.md$/, ""));
       await s.keys("ctrl+w", "k");
       await s.until(() => focused() === topNote, 3000, "ctrl+w k to the top window");
@@ -377,9 +395,9 @@ const CORE: Scenario[] = [
       await s.keys("escape");
       await s.status("READ");
       await s.keys("ctrl+w", "q");
-      await s.until(() => crumbs() === 1, 3000, "a window closed");
+      await s.until(() => windows() === 1, 3000, "a window closed");
       await s.keys("ctrl+w", "v", "ctrl+w", "o");
-      await s.until(() => crumbs() === 1, 3000, "only one window");
+      await s.until(() => windows() === 1, 3000, "only one window");
     },
   },
 
@@ -458,8 +476,10 @@ const CORE: Scenario[] = [
       // Up and back down again (the file ends as it was); gi, left without typing.
       await moveTo(s, ["alt+shift+up"], (l) => l === 2, "alt+shift+up");
       await moveTo(s, ["alt+shift+down"], (l) => l === 3, "alt+shift+down");
+      // gi: insert again where it last ended — the end of line 3, wherever the cursor is now.
       await s.keys("g", "g", "g", "i");
       await s.status("INSERT");
+      await moveTo(s, [], (l, c) => l === 3 && c === 9, "gi at the end of charlie!");
       await s.keys("escape");
       await s.ex("wa");
       await s.file("m.md", (t) => t === "bravo\nalpha\ncharlie!\n", "the moved line and the change saved");
@@ -479,14 +499,19 @@ const CORE: Scenario[] = [
       await s.keys("shift+h");
       const top = pos(s).line;
       await s.keys("shift+l");
-      await s.until(() => pos(s).line > top, 3000, "L below H");
+      await s.until(() => pos(s).line > top + 20, 3000, "L a screen below H");
+      const bottom = pos(s).line;
       await s.keys("shift+m");
-      await s.until(() => pos(s).line > top, 3000, "M between");
+      await s.until(() => pos(s).line > top && pos(s).line < bottom, 3000, "M between H and L");
+      // zt, zb and zz put the cursor's line where H, L and M land: each pair agrees, so a scroll
+      // that went nowhere (or anywhere else) moves the cursor on the second key.
       const here = pos(s).line;
-      await s.keys("z", "t");
-      await s.until(() => s.screen().slice(2, 8).some((r) => r.includes("│") || r.trim().length > 0), 3000, "zt scrolled");
-      await s.keys("z", "b", "z", "z");
-      s.expect(pos(s).line === here, "zz, zt, zb move the view, never the cursor");
+      for (const [z, key, what] of [["t", "shift+h", "zt then H"], ["b", "shift+l", "zb then L"], ["z", "shift+m", "zz then M"]] as const) {
+        await s.keys("z", z);
+        s.expect(pos(s).line === here, `z${z} moves the view, never the cursor`);
+        await s.keys(key);
+        s.expect(pos(s).line === here, `${what}: the same line`);
+      }
       // Find, then N from the bottom: backward, always.
       await s.keys("/");
       await s.type("Weather");
@@ -794,9 +819,16 @@ const CORE: Scenario[] = [
       await leader(s, "f", "b");
       await s.see("Path");
       await s.keys("escape");
+      // The outline, open since space o: hidden from the palette, then shown again.
+      s.expect(s.text().includes("Outline"), "the outline open");
       await s.keys(":");
       await s.type("Show or hide the outline");
       await s.keys("enter");
+      await s.notSee("Outline");
+      await s.keys(":");
+      await s.type("Show or hide the outline");
+      await s.keys("enter");
+      await s.see("Outline");
     },
   },
 
@@ -1090,8 +1122,14 @@ const CORE: Scenario[] = [
       await s.status("SOURCE");
       await s.see("class Night:");
       // The outline is the file's definitions, nested (the grammar loads lazily, then redraws).
-      await s.ex("outline.pick");
-      await s.see("is_calibration");
+      // The picker, not the file on screen: its title, and a definition with its line beside it.
+      // The grammar loads lazily: until it has, there are no definitions to pick ("no headings").
+      for (let i = 0; i < 20 && s.rowOf("Headings —") < 0; i++) {
+        await leader(s, "f", "o");
+        await s.until(() => s.rowOf("Headings —") >= 0 || s.rowOf("no headings") >= 0, 3000, "the picker, or no headings yet");
+        if (s.rowOf("Headings —") < 0) await s.notSee("no headings", 6000); // the message gone, asked again
+      }
+      await s.see(/is_calibration\s+\d+/);
       await s.see("science");
       await s.keys("escape");
       await moveTo(s, ["4", "1", "G"], (l) => l === 41, "41G into Night.reduce");
@@ -1133,10 +1171,12 @@ const CORE: Scenario[] = [
       await s.type("mine");
       await s.keys("escape");
       s.write(MEETING, `${s.read(MEETING)}\ntheirs\n`);
-      await s.see("changed on disk", 5000);
+      await s.see("(l) Load theirs", 5000);
       await s.keys("escape");
+      await s.notSee("(l) Load theirs");
+      // space n c brings the prompt back: its choices again (the toast alone would say "changed on disk").
       await leader(s, "n", "c");
-      await s.see("changed on disk");
+      await s.see("(l) Load theirs");
       await s.keys("escape");
       await s.ex("w!");
       await s.file(MEETING, (t) => t.includes("mine") && !t.includes("theirs"), "yours written over theirs");
@@ -1212,10 +1252,23 @@ const CORE: Scenario[] = [
   },
   {
     name: "settings: space u u, every toggle, themes and glyph sets",
+    // A long paragraph and an external link: what the toggles change shows on them.
+    options: { open: "settings.md", files: { "settings.md": `# Settings\n\n${"word ".repeat(150)}end.\n\n[the site](https://example.org/x)\n` } },
     run: async (s) => {
       await leader(s, "u", "u");
       await s.see("UI settings");
       await s.keys("escape");
+      // What each toggle changes on screen, read in both states. The problems bar, the cursor row's
+      // band and the mouse change nothing a text screen shows (the colour scenarios read colours).
+      // (The paragraph's rows counted: its end may sit under the messages' boxes, top right.)
+      const wordRows = () => s.screen().filter((r) => r.includes("word word")).length;
+      const effect: Record<string, { read: () => number | boolean; ok: (on: number | boolean, off: number | boolean) => boolean }> = {
+        "Readable width": { read: wordRows, ok: (on, off) => (on as number) > (off as number) }, // narrower: more rows
+        "Wrap long lines": { read: wordRows, ok: (on, off) => (on as number) > 1 && off === 1 },
+        "Line numbers": { read: () => s.rowOf(/[│┃]\s+1\s.*Settings/) >= 0, ok: (on, off) => on === true && off === false },
+        "Zen mode": { read: () => s.text().includes("Explorer"), ok: (on, off) => on === false && off === true },
+        "Show link URLs": { read: () => s.text().includes("https://example.org/x"), ok: (on, off) => on === true && off === false },
+      };
       // Each toggle says its own name and the new state, then flips back (the message names it,
       // so a stale message from the one before can't pass).
       const names: Record<string, string> = { "shift+w": "Readable width", d: "Problems bar", z: "Zen mode", l: "Cursor-row highlight", n: "Line numbers", w: "Wrap long lines", r: "Show link URLs", m: "Mouse" };
@@ -1223,12 +1276,21 @@ const CORE: Scenario[] = [
         await leader(s, "u", k);
         await s.see(new RegExp(`${name}: (on|off)`)); // on the top bar, or the last row in zen
         const first = s.text().includes(`${name}: on`) ? "on" : "off";
+        const a = effect[name]?.read();
         await leader(s, "u", k); // back
         await s.see(`${name}: ${first === "on" ? "off" : "on"}`);
+        const e = effect[name];
+        if (e) {
+          const b = e.read();
+          s.expect(first === "on" ? e.ok(a!, b) : e.ok(b, a!), `${name}: what it changes on screen (${first}: ${a}, then ${b})`);
+        }
       }
+      // The breadcrumb, from the palette: gone.
+      s.expect(s.text().includes("§ "), "the breadcrumb showing to begin with");
       await s.keys(":");
       await s.type("Breadcrumb");
       await s.keys("enter");
+      await s.until(() => !s.text().includes("§ "), 3000, "the breadcrumb hidden");
       // The top bar hides and comes back (a setting, from the palette or the settings list).
       s.expect(s.topBar().includes("slipbox"), "the top bar showing to begin with");
       await s.keys(":");
@@ -1310,7 +1372,7 @@ const CORE: Scenario[] = [
       await s.see(/status +visiting/);
       // A tag's row: its notes.
       await s.keys("shift+g");
-      await s.until(() => /#visiting|#people/.test(s.text()), 3000, "its tags");
+      await s.until(() => s.text().includes("#people") && s.text().includes("#visiting"), 3000, "its tags, both");
       await s.keys("escape");
       await leader(s, "v", "i");
       await s.see(s.vault);
