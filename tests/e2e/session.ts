@@ -1,12 +1,14 @@
-// One scenario's slipbox: a fresh copy of the demo vault, its own config, state and cache, the app
-// started in the pane, and ways to drive and check it. Every check waits for the screen to agree
-// (up to a timeout) rather than sleeping a fixed time.
+// One scenario's slipbox: a fresh copy of the demo vault (or the reference set built, halden
+// beside it), its own config, state and cache, the app started in the pane, and ways to drive and
+// check it. Every check waits for the screen to agree (up to a timeout) rather than sleeping a
+// fixed time.
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { type Pane, sleep } from "./herdr.ts";
+import { isAbsolute, join } from "node:path";
+import { buildHome } from "../../scripts/build-home.ts";
+import { herdr, type Pane, sleep } from "./herdr.ts";
 
 export const REPO = join(import.meta.dir, "..", "..");
 export const DEMO = join(REPO, "examples", "vault");
@@ -22,8 +24,86 @@ export interface SessionOptions {
   beside?: Record<string, string>;
   /** Run before slipbox starts, with the CLI at hand (`s.cli`): `init` another vault, say. */
   setup?: (s: Session) => void;
-  /** Start here instead (a path relative to the scenario's folder: `loose` is `<dir>/loose`). */
-  startAt?: string;
+  /**
+   * Start here instead (a path relative to the scenario's folder: `loose` is `<dir>/loose`,
+   * `home/notes` the reference set's notes). `null`: no path at all, as `slipbox` alone.
+   */
+  startAt?: string | null;
+  /**
+   * The reference set (examples/home), built into the scenario's folder: `home/`, with its
+   * repositories' histories, is $HOME for slipbox, the CLI and git; halden is `vault/` beside it.
+   */
+  home?: boolean;
+  /** The folder slipbox starts in, relative to the scenario's folder (default: the repository). */
+  cwd?: string;
+  /** More arguments, before the path (`--theme`, `nord`). */
+  args?: string[];
+  /** More environment (`SLIPBOX_GLYPHS: "ascii"`). */
+  env?: Record<string, string>;
+  /** Don't wait for the first frame: a start meant to fail, or one the scenario waits for itself. */
+  noWait?: boolean;
+}
+
+/** A word for sh: single-quoted. */
+const shq = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
+
+/** One run of text in a style, from a row read with its colours (`Session.runs`). */
+export interface StyledRun {
+  text: string;
+  /** `31`, `5;208`, `#rrggbb`; null for the terminal's default. */
+  fg: string | null;
+  bg: string | null;
+  bold: boolean;
+}
+
+/** A row with its SGR sequences (`herdr pane read --format ansi`), as runs of one style each. */
+export function styledRuns(row: string): StyledRun[] {
+  const out: StyledRun[] = [];
+  let style = { fg: null as string | null, bg: null as string | null, bold: false };
+  let text = "";
+  const flush = () => {
+    if (text) out.push({ text, ...style });
+    text = "";
+  };
+  const color = (p: number[], i: number): [string, number] => {
+    if (p[i + 1] === 5) return [`5;${p[i + 2]}`, i + 2];
+    if (p[i + 1] === 2) return [`#${[p[i + 2], p[i + 3], p[i + 4]].map((n) => (n ?? 0).toString(16).padStart(2, "0")).join("")}`, i + 4];
+    return ["", i];
+  };
+  for (let k = 0; k < row.length; k++) {
+    if (row[k] === "\x1b" && row[k + 1] === "[") {
+      const end = row.slice(k + 2).search(/[@-~]/);
+      if (end < 0) break;
+      const body = row.slice(k + 2, k + 2 + end);
+      const final = row[k + 2 + end];
+      k += 2 + end;
+      if (final !== "m") continue;
+      flush();
+      const p = body === "" ? [0] : body.split(/[;:]/).map(Number);
+      for (let i = 0; i < p.length; i++) {
+        const c = p[i]!;
+        if (c === 0) style = { fg: null, bg: null, bold: false };
+        else if (c === 1) style.bold = true;
+        else if (c === 22) style.bold = false;
+        else if ((c >= 30 && c <= 37) || (c >= 90 && c <= 97)) style.fg = String(c);
+        else if (c === 39) style.fg = null;
+        else if ((c >= 40 && c <= 47) || (c >= 100 && c <= 107)) style.bg = String(c);
+        else if (c === 49) style.bg = null;
+        else if (c === 38 || c === 48) {
+          const [v, j] = color(p, i);
+          if (c === 38) style.fg = v || null;
+          else style.bg = v || null;
+          i = j;
+        }
+      }
+    } else if (row[k] === "\x1b") {
+      // Another escape (an OSC): skipped to its end.
+      const end = row.slice(k).search(/\x07|\x1b\\/);
+      k = end < 0 ? row.length : k + end;
+    } else text += row[k];
+  }
+  flush();
+  return out;
 }
 
 export class CheckFailed extends Error {}
@@ -34,6 +114,8 @@ export class Stuck extends Error {}
 export class Session {
   readonly dir: string;
   readonly vault: string;
+  /** The reference set's home folder, when the scenario has it (`home`). */
+  readonly home: string;
   readonly trace: string;
   private marker: string;
 
@@ -43,7 +125,10 @@ export class Session {
   ) {
     this.dir = mkdtempSync(join(tmpdir(), "slipbox-e2e-"));
     this.vault = join(this.dir, "vault");
-    cpSync(DEMO, this.vault, { recursive: true });
+    this.home = join(this.dir, "home");
+    // The reference set puts halden beside it as vault/ itself.
+    if (opts.home) buildHome(this.dir);
+    else cpSync(DEMO, this.vault, { recursive: true });
     for (const [rel, text] of Object.entries(opts.files ?? {})) this.write(rel, text);
     for (const [rel, text] of Object.entries(opts.beside ?? {})) {
       mkdirSync(join(this.dir, rel, ".."), { recursive: true });
@@ -52,7 +137,7 @@ export class Session {
     for (const d of ["config/slipbox", "state", "cache"]) mkdirSync(join(this.dir, d), { recursive: true });
     // {vault} in a scenario's config is this scenario's own copy of the vault.
     // The machine's own linter stays out of the scenarios unless one asks for it (3.21).
-    const config = (opts.config ?? "").replaceAll("{vault}", this.vault);
+    const config = (opts.config ?? "").replaceAll("{vault}", this.vault).replaceAll("{home}", this.home).replaceAll("{dir}", this.dir);
     // Lint and language servers off unless a scenario asks: they'd run npx, start servers, install them.
     // The background auto-index too (20.9): it would walk your own home folder.
     const off = `${/^\[lint\]/m.test(config) ? "" : '\n[lint]\nenabled = "off"\n'}${/^\[lsp\]/m.test(config) ? "" : "\n[lsp]\nenabled = false\n"}${/^\[index\]/m.test(config) ? "" : "\n[index]\nbackground = false\n"}`;
@@ -62,24 +147,45 @@ export class Session {
     this.marker = `__slipbox_e2e_exit_${Math.random().toString(36).slice(2, 8)}__`;
   }
 
-  /** Start slipbox and wait for its first frame. */
-  async start(): Promise<void> {
-    const env = [
-      `XDG_CONFIG_HOME=${this.dir}/config`,
-      `XDG_STATE_HOME=${this.dir}/state`,
-      `XDG_CACHE_HOME=${this.dir}/cache`,
-      `XDG_DATA_HOME=${this.dir}/data`,
-      `SLIPBOX_TRACE=${this.trace}`,
+  /** What slipbox and the CLI run with: this scenario's own folders, never yours. */
+  env(): Record<string, string> {
+    return {
+      XDG_CONFIG_HOME: `${this.dir}/config`,
+      XDG_STATE_HOME: `${this.dir}/state`,
+      XDG_CACHE_HOME: `${this.dir}/cache`,
+      XDG_DATA_HOME: `${this.dir}/data`,
+      SLIPBOX_TRACE: this.trace,
       // Its own config, whatever the shell exports (SLIPBOX_CONFIG would win over XDG_CONFIG_HOME).
-      `SLIPBOX_CONFIG=${this.dir}/config/slipbox/config.toml`,
-      "SLIPBOX_CLIPBOARD=file", // copies land in the state dir, not on your clipboard
-    ].join(" ");
+      SLIPBOX_CONFIG: `${this.dir}/config/slipbox/config.toml`,
+      SLIPBOX_CLIPBOARD: "file", // copies land in the state dir, not on your clipboard
+      ...(this.opts.home ? { HOME: this.home } : {}),
+      ...this.opts.env,
+    };
+  }
+
+  /** Start slipbox and wait for its first frame (unless the scenario waits itself: `noWait`). */
+  async start(): Promise<void> {
+    const env = Object.entries(this.env())
+      .map(([k, v]) => `${k}=${shq(v)}`)
+      .join(" ");
     this.opts.setup?.(this);
-    const file = this.opts.startAt !== undefined ? join(this.dir, this.opts.startAt) : join(this.vault, this.opts.open ?? "home.md");
+    const at = this.opts.startAt;
+    const file = at === null ? [] : [at !== undefined ? (isAbsolute(at) ? at : join(this.dir, at)) : join(this.vault, this.opts.open ?? "home.md")];
+    const cwd = this.opts.cwd !== undefined ? join(this.dir, this.opts.cwd) : REPO;
     // A marker of this start's own: started again in one scenario, the last exit's is still on screen.
     this.marker = `__slipbox_e2e_exit_${Math.random().toString(36).slice(2, 8)}__`;
-    this.pane.run(`clear; cd ${REPO} && ${env} bun src/main.ts '${file}'; echo ${this.marker} $?`);
-    await this.until(() => this.statusLine().includes("READ") || this.statusLine().includes("SOURCE"), 10000, "slipbox to start");
+    // Bun by its own path: with $HOME the reference set's, nothing may depend on finding it.
+    const argv = [process.execPath, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file].map(shq).join(" ");
+    this.pane.run(`clear; cd ${shq(cwd)} && ${env} ${argv}; echo ${this.marker} $?`);
+    if (this.opts.noWait) return;
+    await this.until(() => this.statusLine().includes("READ") || this.statusLine().includes("SOURCE") || this.statusLine().includes("FILES"), 10000, "slipbox to start");
+  }
+
+  /** Quit, then start again with these options changed (the same folders: its state carries over). */
+  async restart(changes: Partial<SessionOptions> = {}): Promise<void> {
+    await this.quit();
+    Object.assign(this.opts as SessionOptions, changes);
+    await this.start();
   }
 
   /**
@@ -95,8 +201,11 @@ export class Session {
       await this.until(() => this.exited(), 5000, "slipbox to quit").catch(() => undefined);
     }
     if (!this.exited()) {
-      // Its command line names this scenario's own folder, so this kills nothing else.
-      spawnSync("pkill", ["-f", this.dir]);
+      // The pane's own slipbox, by its pid; or by its command line, which names this scenario's own
+      // folder (started with a path) — either way nothing else.
+      const pid = this.pid();
+      if (pid) process.kill(pid, "SIGKILL");
+      else spawnSync("pkill", ["-f", this.dir]);
       await this.until(() => this.exited(), 5000, "slipbox to be killed").catch(() => undefined);
       if (!this.exited()) throw new Stuck(`slipbox in pane ${this.pane.id} would not quit or die; stopping`);
       return false;
@@ -106,6 +215,31 @@ export class Session {
 
   cleanup(): void {
     rmSync(this.dir, { recursive: true, force: true });
+  }
+
+  /** The pid of slipbox running in the pane, or null. */
+  pid(): number | null {
+    const info = JSON.parse(herdr("pane", "process-info", "--pane", this.pane.id)).result?.process_info;
+    const p = (info?.foreground_processes ?? []).find((x: { argv: string[] }) => x.argv.some((a) => a.endsWith(join("src", "main.ts"))));
+    return p ? (p.pid as number) : null;
+  }
+
+  /** Send slipbox a signal (SIGTERM, SIGHUP…), as a closing terminal or `kill` would. */
+  signal(sig: NodeJS.Signals): void {
+    const pid = this.pid();
+    if (!pid) throw new CheckFailed(`no slipbox running to send ${sig} to\n${this.dump()}`);
+    process.kill(pid, sig);
+  }
+
+  /** The terminal's title, as slipbox last set it. */
+  title(): string {
+    return JSON.parse(herdr("pane", "get", this.pane.id)).result?.pane?.terminal_title ?? "";
+  }
+
+  /** Zoom the pane to the whole tab, or back: a real resize (SIGWINCH), as dragging a split is. */
+  async zoom(on: boolean): Promise<void> {
+    herdr("pane", "zoom", this.pane.id, on ? "--on" : "--off");
+    await this.settle();
   }
 
   /** The commands run so far (SLIPBOX_TRACE). */
@@ -123,6 +257,12 @@ export class Session {
 
   async type(text: string): Promise<void> {
     this.pane.text(text);
+    await this.settle();
+  }
+
+  /** Text pasted, as a terminal sends a paste: bracketed (one event, not keys). */
+  async paste(text: string): Promise<void> {
+    this.pane.text(`\x1b[200~${text}\x1b[201~`);
     await this.settle();
   }
 
@@ -171,34 +311,57 @@ export class Session {
     return this.screen()[0] ?? "";
   }
 
+  /** The screen with its colours: each row as runs of one style. */
+  runs(): StyledRun[][] {
+    return this.pane.ansi().map(styledRuns);
+  }
+
+  /** The style of the first place `needle` shows on screen: the run its first character is in. */
+  styleOf(needle: string): StyledRun | null {
+    for (const row of this.runs()) {
+      const plain = row.map((r) => r.text).join("");
+      const at = plain.indexOf(needle);
+      if (at < 0) continue;
+      let n = 0;
+      for (const r of row) {
+        if (at < n + r.text.length) return r;
+        n += r.text.length;
+      }
+    }
+    return null;
+  }
+
   /** The first row containing `needle`, or -1. */
   rowOf(needle: string | RegExp): number {
     return this.screen().findIndex((r) => (typeof needle === "string" ? r.includes(needle) : needle.test(r)));
   }
 
+  /** A path a scenario names: `~/…` in the reference set's home, an absolute one as it is, else in halden's copy. */
+  path(rel: string): string {
+    if (rel.startsWith("~/")) return join(this.home, rel.slice(2));
+    return isAbsolute(rel) ? rel : join(this.vault, rel);
+  }
+
   read(rel: string): string {
-    return readFileSync(join(this.vault, rel), "utf8");
+    return readFileSync(this.path(rel), "utf8");
   }
 
   exists(rel: string): boolean {
-    return existsSync(join(this.vault, rel));
+    return existsSync(this.path(rel));
   }
 
   /** The slipbox CLI, as an agent runs it beside the TUI: the same vault, config and state. */
   cli(...args: string[]): { code: number; out: string } {
-    const r = spawnSync("bun", [join(REPO, "src", "main.ts"), ...args], {
-      cwd: this.vault,
+    return this.cliIn(this.vault, ...args);
+  }
+
+  /** The CLI run from a folder (`~/…` in the reference set). */
+  cliIn(cwd: string, ...args: string[]): { code: number; out: string } {
+    const { SLIPBOX_TRACE: _, ...env } = this.env();
+    const r = spawnSync(process.execPath, [join(REPO, "src", "main.ts"), ...args], {
+      cwd: this.path(cwd),
       encoding: "utf8",
-      env: {
-        ...process.env,
-        XDG_CONFIG_HOME: `${this.dir}/config`,
-        XDG_STATE_HOME: `${this.dir}/state`,
-        XDG_CACHE_HOME: `${this.dir}/cache`,
-        XDG_DATA_HOME: `${this.dir}/data`,
-        SLIPBOX_CONFIG: `${this.dir}/config/slipbox/config.toml`,
-        SLIPBOX_CLIPBOARD: "file",
-        NO_COLOR: "1",
-      },
+      env: { ...process.env, ...env, NO_COLOR: "1" },
     });
     return { code: r.status ?? -1, out: r.stdout };
   }
@@ -211,9 +374,9 @@ export class Session {
     return "";
   }
 
-  /** Write a file in the vault from outside the app (an agent's edit). */
+  /** Write a file from outside the app (an agent's edit): in the vault, or `~/…`. */
   write(rel: string, text: string): void {
-    const p = join(this.vault, rel);
+    const p = this.path(rel);
     mkdirSync(join(p, ".."), { recursive: true });
     writeFileSync(p, text);
   }
@@ -223,7 +386,7 @@ export class Session {
     return this.exitCode() !== null;
   }
 
-  private exitCode(): number | null {
+  exitCode(): number | null {
     const m = new RegExp(`${this.marker} (\\d+)`).exec(this.pane.recent(15));
     return m ? Number(m[1]) : null;
   }

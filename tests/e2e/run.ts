@@ -8,6 +8,7 @@
 // nothing in the repo or in your own setup is touched. At the end it lists the commands no
 // scenario ran (SLIPBOX_TRACE).
 
+import { appendFileSync } from "node:fs";
 import { COMMAND_SPECS } from "../../src/core/command-specs.ts";
 import { HerdrError, Pane } from "./herdr.ts";
 import { REPO, Session } from "./session.ts";
@@ -106,6 +107,8 @@ try {
 for (const f of failures) console.log(`\n── ${f.name}\n${f.error}`);
 const all = COMMAND_SPECS.map((c) => c.id);
 const missing = all.filter((id) => !ran.has(id));
+// A run split over several panes: each adds the commands it ran to one file, read together after.
+if (process.env.SLIPBOX_E2E_RAN) appendFileSync(process.env.SLIPBOX_E2E_RAN, [...ran].map((c) => `${c}\n`).join(""));
 const secs = ((Date.now() - started) / 1000).toFixed(1);
 const done = chosen.length - skipped;
 console.log(`\n${done - failures.length}/${done} scenarios passed in ${secs} s${skipped ? `, ${skipped} skipped (pane too small; try --tab)` : ""}`);

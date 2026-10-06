@@ -6,63 +6,16 @@
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import { UNSAFE } from "../../src/core/sanitize.ts";
-import type { Session, SessionOptions } from "./session.ts";
+import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, type Scenario, TOML, TSC } from "./helpers.ts";
+import type { SessionOptions } from "./session.ts";
+import { GIT_SCENARIOS } from "./world-git.ts";
+import { CONTENT_SCENARIOS } from "./world-content.ts";
+import { TERMINAL_SCENARIOS } from "./world-terminal.ts";
+import { OUTSIDE_SCENARIOS } from "./world-outside.ts";
 
-export interface Scenario {
-  name: string;
-  options?: SessionOptions;
-  /** The pane size it needs (docked panes need 90 columns); skipped in a smaller pane. */
-  needs?: { cols?: number; rows?: number };
-  run: (s: Session) => Promise<void>;
-}
+export type { Scenario };
 
-const HANDBOOK = "handbook/operations-handbook.md";
-const MEETING = "meetings/2026-09-14-weekly.md";
-const TOML = "software/halley/halley.toml";
-/** The repository's own TypeScript 7: a real language server the scenarios can run offline (19.x). */
-const TSC = join(import.meta.dir, "..", "..", "node_modules", ".bin", "tsc");
-
-/** The cursor's line and column, from the status line (`L12:3`). */
-function pos(s: Session): { line: number; col: number } {
-  const m = /L(\d+):(\d+)/.exec(s.statusLine());
-  return m ? { line: Number(m[1]), col: Number(m[2]) } : { line: -1, col: -1 };
-}
-
-/** Keys, then wait until the cursor's line satisfies `ok`. */
-async function moveTo(s: Session, keys: string[], ok: (line: number, col: number) => boolean, what: string): Promise<void> {
-  await s.keys(...keys);
-  await s.until(() => {
-    const p = pos(s);
-    return ok(p.line, p.col);
-  }, 3000, what);
-}
-
-/** Open a note with the quick switcher. */
-async function open(s: Session, name: string): Promise<void> {
-  await s.keys("ctrl+p");
-  await s.see(/Open (note|\()/); // "Open (n notes, m files)" when the vault has files
-  await s.type(name);
-  await s.keys("enter");
-  await s.status(name);
-}
-
-/** Leader sequences: space, then the keys. */
-const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys);
-
-/** Select the explorer's row named `name` (it has focus, the row on screen): from the top, down to it. */
-async function explorerRow(s: Session, name: string): Promise<void> {
-  await s.keys("g", "g");
-  // Its rows: left of its border (in code points: the Nerd glyphs are two units), past the left rail.
-  const title = s.rowOf(/Explorer/);
-  const border = [...s.screen()[title]!].findIndex((c) => c === "│" || c === "┃");
-  const left = (r: string) => [...r].slice(3, border).join("");
-  const first = s.screen().findIndex((r, i) => i > title && /\S/.test(left(r)));
-  const at = s.screen().findIndex((r, i) => i >= first && new RegExp(`\\b${name}\\b`).test(left(r)));
-  s.expect(at >= first, `the explorer shows ${name}`);
-  for (let i = first; i < at; i++) await s.keys("j");
-}
-
-export const SCENARIOS: Scenario[] = [
+const CORE: Scenario[] = [
   // --- start and quit -------------------------------------------------------------------------
   {
     name: "start: home renders; ctrl+q quits cleanly",
@@ -1806,3 +1759,6 @@ export const SCENARIOS: Scenario[] = [
     },
   },
 ];
+
+/** Every scenario: the app's own (above), then slipbox in its world (world-*.ts). */
+export const SCENARIOS: Scenario[] = [...CORE, ...GIT_SCENARIOS, ...CONTENT_SCENARIOS, ...TERMINAL_SCENARIOS, ...OUTSIDE_SCENARIOS];

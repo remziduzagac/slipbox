@@ -35,6 +35,18 @@ const RAW: Record<string, string> = {
   "ctrl+down": "\x1b[1;5B",
   "ctrl+left": "\x1b[1;5D",
   "ctrl+right": "\x1b[1;5C",
+  "shift+up": "\x1b[1;2A",
+  "shift+down": "\x1b[1;2B",
+  "shift+left": "\x1b[1;2D",
+  "shift+right": "\x1b[1;2C",
+  "shift+ctrl+left": "\x1b[1;6D",
+  "shift+ctrl+right": "\x1b[1;6C",
+  "shift+ctrl+up": "\x1b[1;6A",
+  "shift+ctrl+down": "\x1b[1;6B",
+  "shift+home": "\x1b[1;2H",
+  "shift+end": "\x1b[1;2F",
+  "alt+shift+up": "\x1b[1;4A",
+  "alt+shift+down": "\x1b[1;4B",
 };
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
