@@ -29,6 +29,7 @@ The ruler above is sixty cells; each line below should end where its width says,
 - Zero-width: a​b‌c⁠d‍e (five letters, four invisible joiners)
 - Thai: ปั่นจักรยานวันอาทิตย์
 - Devanagari: रविवार की सवारी
+- Devanagari conjuncts: दिल्ली से हरिद्वार (consonants joined by the virama, one cluster each)
 - Right to left, Arabic: جولة يوم الأحد
 - Right to left, Hebrew: סיבוב יום ראשון
 - Ambiguous width: ± × ÷ ° ¼ ½ ·
@@ -52,6 +53,7 @@ The ruler above is sixty cells; each line below should end where its width says,
 | Zero-width | a​b‌c⁠d | 0123456789 |
 | Thai | ปั่นจักรยาน | 0123456789 |
 | Devanagari | रविवार की सवारी | 0123456789 |
+| Conjuncts | दिल्ली से हरिद्वार | 0123456789 |
 | RTL | جولة يوم الأحد | 0123456789 |
 
 ## Emoji cells

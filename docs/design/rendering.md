@@ -217,6 +217,14 @@ some row wraps. The header separator is doubled (`╞═╪═╡`).
 - ASCII is 1 column, CJK and East Asian Wide are 2, RGI emoji are 2.
 - A ZWJ family is one grapheme of width 2.
 - Combining marks and zero-width characters are 0.
+- **How wide any other cluster is follows the terminal** (decided 2026-10-06), as OpenTUI found it asking
+  (`setWidthMethod`; the TUI lays everything out again if the answer comes after the first frame): `unicode`, the
+  default — terminals that cluster graphemes (libghostty, kitty, WezTerm) — counts a cluster its own width, Bun's
+  measure and OpenTUI's (`हिन्दी` is 3); `wcwidth` — terminals that don't — as wide as its first code point (`हिन्दी` 2,
+  a flag 1). OpenTUI's third method, `unicode-wide`, is counted as `unicode`. A test holds slipbox to OpenTUI's own
+  cells on every grapheme the reference set and halden hold; OpenTUI's table has ❤ wide, which slipbox follows, and
+  Bengali's reph 1, which it doesn't. A terminal may still count differently from OpenTUI: libghostty gives an Indic
+  spacing mark a column of its own.
 
 `layout/wrap.ts` breaks at spaces, and between CJK characters — except that closing punctuation
 (`、` `。` `）` `」`, and an ASCII `,` or `.` right after a CJK character) never starts a row, and

@@ -2,7 +2,7 @@
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
 
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
@@ -16,7 +16,7 @@ import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
-import { stringWidth } from "../src/core/width.ts";
+import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
 
@@ -120,6 +120,68 @@ const rowText = (h: Harness, row = h.app.view!.cur.row) => h.app.currentLayout(h
 const statusRow = (frame: string) => frame.split("\n").at(-1)!;
 const topRow = (frame: string) => frame.split("\n")[0]!;
 const rowStarting = (h: Harness, prefix: string) => h.app.currentLayout(h.app.view!).lines.findIndex((l) => l.spans.map((s) => s.text).join("").startsWith(prefix));
+
+describe("widths as OpenTUI draws them", () => {
+  // OpenTUI lays a frame's cells out by the method it found asking the terminal; slipbox lays its rows
+  // out by its own count. The two must agree, cluster by cluster, or a row drifts within the frame
+  // (Devanagari's conjuncts did: 2 columns here, 3 there). Every grapheme the reference set and halden
+  // hold, in each method, drawn into an OpenTUI buffer and measured where the next character lands.
+  test("every grapheme of the reference set and halden, in each of OpenTUI's methods slipbox follows", async () => {
+    const { OptimizedBuffer, RGBA } = await import("@opentui/core");
+    const seen = new Set<string>();
+    for (const dir of ["home", "vault"]) {
+      const base = join(import.meta.dir, "..", "examples", dir);
+      for (const f of readdirSync(base, { recursive: true }) as string[]) {
+        if (!f.endsWith(".md")) continue;
+        for (const g of graphemes(readFileSync(join(base, f), "utf8"))) if (g.length > 1 || g.charCodeAt(0) > 0x7e) seen.add(g);
+      }
+    }
+    expect(seen.size).toBeGreaterThan(500);
+    // Clusters where the two counts part (a conjunct's parts, a flag's letters), whatever the corpus
+    // holds. Not Bengali's reph (র্গা): OpenTUI's table has it 1, Bun's 2 — slipbox counts Bun's.
+    for (const t of ["हिन्दी", "नमस्ते", "क्ष", "ஸ்ரீ", "ཀྱི", "각", "1️⃣", "🇩🇪", "✔️"]) for (const g of graphemes(t)) seen.add(g);
+    const fg = RGBA.fromHex("#ffffff");
+    const bg = RGBA.fromHex("#000000");
+    try {
+      for (const method of ["unicode", "wcwidth"] as WidthMethod[]) {
+        setWidthMethod(method);
+        const buf = OptimizedBuffer.create(16, 1, method);
+        const off: string[] = [];
+        for (const g of seen) {
+          // Never drawn: sanitized first, or zero wide (the canvas skips those). A cluster of tens of
+          // code points (a Zalgo, fifty joined emoji) runs past the probe: no terminal agrees on those.
+          if (UNSAFE.test(g) || stringWidth(g) === 0 || [...g].length > 16) continue;
+          buf.clear(bg);
+          buf.drawText(`${g}|`, 0, 0, fg, bg, 0);
+          const chars = (buf as unknown as { buffers: { char: Uint32Array } }).buffers.char;
+          const drawn = chars.indexOf(124);
+          if (drawn !== stringWidth(g)) off.push(`${JSON.stringify(g)} U+${[...g].map((c) => c.codePointAt(0)!.toString(16)).join(" ")}: OpenTUI ${drawn}, slipbox ${stringWidth(g)}`);
+        }
+        buf.destroy();
+        expect(`${method}: ${off.length} off\n${off.slice(0, 20).join("\n")}`).toBe(`${method}: 0 off\n`);
+      }
+    } finally {
+      setWidthMethod("unicode");
+    }
+  });
+});
+
+describe("widths counted the terminal's way", () => {
+  test("the method changing (the terminal's answer after the first frame): every layout made again", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "flags.md"), `${"🇯🇵".repeat(30)}\n`);
+    const h = await harness({ root, open: "flags.md", width: 60 });
+    const rows = () => h.app.currentLayout(h.app.view!).lines.filter((l) => l.spans.some((sp) => sp.text.includes("🇯🇵"))).length;
+    try {
+      expect(rows()).toBe(2); // 60 columns of flags: two rows
+      setWidthMethod("wcwidth");
+      h.app.widthsChanged();
+      expect(rows()).toBe(1); // a flag as wide as its first letter: one
+    } finally {
+      setWidthMethod("unicode");
+    }
+  });
+});
 
 describe("drawing (3.1, 3.2)", () => {
   test("explorer, content and status line; cursor position in the status", async () => {

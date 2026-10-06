@@ -2,7 +2,9 @@
 //
 // Display width governs every wrap point, cursor position and column alignment, so it is
 // decided once here, per grapheme cluster: a ZWJ family is one grapheme across several code
-// points, a combining mark adds nothing, CJK takes two columns.
+// points, a combining mark adds nothing, CJK takes two columns. How wide a cluster is follows the
+// terminal (`WidthMethod`): the TUI draws through OpenTUI, which asks the terminal and lays its cells
+// out so; slipbox counts as it does, or rows and borders drift within one frame.
 
 import { eastAsianWidth } from "get-east-asian-width";
 
@@ -51,6 +53,28 @@ function isPrintableAscii(text: string): boolean {
   return true;
 }
 
+/**
+ * How a grapheme cluster's width is counted — OpenTUI's methods, chosen by asking the terminal:
+ * `unicode`, each cluster its own width (Bun's: terminals that cluster graphemes — libghostty, kitty,
+ * WezTerm — and the default); `wcwidth`, a cluster as wide as its first code point (terminals that
+ * don't). OpenTUI's third, `unicode-wide`, counts Indic spacing marks by rules of its own: slipbox
+ * counts as `unicode` there, and such text may drift.
+ */
+export type WidthMethod = "unicode" | "wcwidth";
+let method: WidthMethod = "unicode";
+
+/** Count widths the terminal's way (the TUI, from OpenTUI's answer); every cached width forgotten. */
+export function setWidthMethod(next: WidthMethod): void {
+  if (next === method) return;
+  method = next;
+  cache.clear();
+  shortCache.clear();
+}
+
+export function widthMethod(): WidthMethod {
+  return method;
+}
+
 const cache = new Map<string, number>();
 
 export function graphemeWidth(g: string): number {
@@ -68,11 +92,17 @@ export function graphemeWidth(g: string): number {
 
 function computeWidth(g: string): number {
   if (ZERO_WIDTH.test(g) || MARK_ONLY.test(g)) return 0;
-  if (RGI_EMOJI.test(g)) return 2;
-  // A pictograph forced to emoji presentation by VS16 is wide even when not RGI.
-  if (g.includes("️") && PICTOGRAPHIC.test(g)) return 2;
   const cp = g.codePointAt(0) ?? 0;
-  return eastAsianWidth(cp, { ambiguousAsWide: false });
+  // Where OpenTUI's table differs from the others (a test holds slipbox and OpenTUI together on
+  // every grapheme the reference set and halden have): ❤ is wide to it, whatever its selector.
+  if (cp === 0x2764) return 2;
+  // Not clustering, the terminal advances by the first code point (a flag's first letter, a
+  // keycap's digit, ✔ before its VS16), as OpenTUI then lays the cluster out.
+  if (method === "wcwidth") return eastAsianWidth(cp, { ambiguousAsWide: false });
+  // Clustering: the cluster's own width — an RGI emoji or a VS16 pictograph two, a conjunct with
+  // its spacing marks what its parts take (Bun's measure, OpenTUI's too).
+  if (RGI_EMOJI.test(g) || (g.includes("️") && PICTOGRAPHIC.test(g))) return 2;
+  return Bun.stringWidth(g, { ambiguousIsNarrow: true });
 }
 
 /** Short strings with something besides ASCII, measured: a list's bullet, a table's border, a

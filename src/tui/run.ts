@@ -6,6 +6,7 @@ import { flag, parseArgs } from "../cli/args.ts";
 import { loadConfig } from "../core/config.ts";
 import { openGraph } from "../core/graph.ts";
 import { sanitize } from "../core/sanitize.ts";
+import { setWidthMethod } from "../core/width.ts";
 import { locateVault, recordLocation, configFilesFor, setRootMarkers, VaultError, type VaultLocation } from "../core/vault.ts";
 import { App } from "./app.ts";
 import { keyName } from "./keys.ts";
@@ -96,7 +97,15 @@ export async function runTui(argv: string[]): Promise<number> {
   // Only when it changes: setBackgroundColor requests another render, so calling it on every
   // paint redraws the screen at the frame rate forever.
   let bg: string | null = null;
+  // How the terminal counts a cluster's columns, as OpenTUI found it asking — an answer that may come
+  // after the first frame: slipbox counts the same way, or rows drift inside the frame OpenTUI lays out.
+  let counted: string | null = null;
   const view = new AppRenderable(renderer, (canvas) => {
+    if (renderer.widthMethod !== counted) {
+      counted = renderer.widthMethod;
+      setWidthMethod(counted === "wcwidth" ? "wcwidth" : "unicode");
+      app.widthsChanged();
+    }
     if (app.theme.bg !== bg) {
       bg = app.theme.bg;
       renderer.setBackgroundColor(toRGBA(bg === "default" ? null : bg, false));

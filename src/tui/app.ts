@@ -836,6 +836,14 @@ export class App {
     for (const v of this.allViews()) v.layoutKey = "";
   }
 
+  /** Widths count another way now (the terminal's answer, `setWidthMethod`): every layout made again. */
+  widthsChanged(): void {
+    for (const b of this.buffers.values()) b.invalidateLayouts();
+    this.relayoutAll();
+    this.invalidateTree();
+    this.host.requestRender();
+  }
+
   private configFiles(): string[] {
     // Yours, the enclosing vaults' (20.7) and the vault's own: a change to any is a reload.
     const { vaultFile, outerFiles } = configFilesFor(this.loc);

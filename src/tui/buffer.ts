@@ -177,8 +177,10 @@ export class NoteBuffer {
 
   invalidateLayouts(): void {
     this.layouts.clear();
-    // What a render reads besides the text changed (the graph, the theme): no block is reusable.
+    // What a render reads besides the text changed (the graph, the theme, how widths count): no
+    // block or source row is reusable.
     this.renderCache = newRenderCache();
+    Object.assign(this.sourceCache, newSourceCache());
   }
 
   /**

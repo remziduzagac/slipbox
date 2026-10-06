@@ -51,9 +51,10 @@ function columns(row: string): { g: string; col: number }[] {
  * column the top row's `┐` is at, and no row is wider than the pane. A character slipbox measured
  * otherwise than the terminal shifts the rest of its row, and its border with it.
  *
- * Except a row with a spacing mark (\p{Mc}: Devanagari's ि ा ी): slipbox measures a grapheme
- * cluster by its base (rendering.md), herdr's terminal by its code points, one column each — a
- * known difference between terminals, not a slip of slipbox's.
+ * Except a row with a spacing mark (\p{Mc}: Devanagari's ि ा ी). slipbox counts as OpenTUI does
+ * (a unit test holds the two together); herdr's terminal, libghostty, gives such a mark a column of
+ * its own, and this check measures the screen with Bun's widths, as OpenTUI's: between the terminal
+ * and OpenTUI, past what slipbox can say.
  */
 function tablesAligned(s: Session, where: string): number {
   const rows = s.screen();
