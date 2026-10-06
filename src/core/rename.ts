@@ -737,7 +737,7 @@ function renameInConfig(text: string, oldName: string, newName: string): string 
  * Plan rewriting the links that reach their note only by a previous name or a redirect (17.12):
  * each to the note's name or path now. In `rels`, or every note.
  */
-export function planRelink(g: Graph, rels?: string[]): RenamePlan {
+export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean } = {}): RenamePlan {
   g.ensureAll();
   const c = new Collector(g);
   for (const rel of rels ?? [...g.notes.keys()]) {
@@ -751,7 +751,7 @@ export function planRelink(g: Graph, rels?: string[]): RenamePlan {
         continue;
       }
       // A path into a named folder that doesn't travel with this one (21.7): its pointer.
-      const ptr = pointerOffer(g, l, rel);
+      const ptr = opts.pointers === false ? null : pointerOffer(g, l, rel);
       if (ptr) c.edit(site, ptr, null);
     }
   }

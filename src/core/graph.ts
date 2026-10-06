@@ -6,15 +6,15 @@
 
 import { existsSync, statSync } from "node:fs";
 import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax, type Grammar } from "./syntax.ts";
-import { basename, isAbsolute, join, posix, relative } from "node:path";
+import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
 import { ensureDir, landsInside, readJson, readRegular, readText, SMALL_FILE, writeJson } from "./fsutil.ts";
 import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 import { countForms, type FormCounts } from "./convention.ts";
-import { isPointer, parsePointer, resolvePointer } from "./pointer.ts";
+import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { parseHosted, readmeAt } from "./hosting.ts";
-import { lookupFolder } from "./folders.ts";
+import { lookupFolder, pointerName } from "./folders.ts";
 import { extensionless, type Landed, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
 import { type AnchorInfo, anchorsOf, type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
@@ -101,6 +101,8 @@ export interface ResolvedLink extends LinkRef {
   how?: Landed;
   /** A hosting URL (via "hosting") naming another ref than the branch checked out: both. */
   hosted?: { ref: string; branch: string | null };
+  /** A file named the old way (`research:x.md`, `[[research:x]]`, 21.11): the pointer that names it. */
+  suggest?: string;
 }
 
 /** A link that reached one note and reaches another now, after a note came or went. */
@@ -886,7 +888,33 @@ export class Graph {
     }
     const aliased = this.byAlias(target, fromRel);
     if (aliased) return aliased;
-    return { resolvedKind: "unresolved", path: null, candidates: [] };
+    return this.oldForm(target) ?? { resolvedKind: "unresolved", path: null, candidates: [] };
+  }
+
+  /**
+   * A file named the old way (20.x's `vault:path`: `research:x.md`, `[[research:x]]`, 21.11) where a
+   * folder this machine knows has that name: not a link — said, with the pointer that is one.
+   * Null when the part before `:` names no folder (`Meeting: Q3` is a note's name).
+   */
+  private oldForm(target: string): Target | null {
+    const m = /^([^:/\s#]+):(?!\/\/)([^#]+)/.exec(target);
+    if (!m) return null;
+    const [, name, rest] = m as unknown as [string, string, string];
+    const l = lookupFolder(name);
+    if (l.status === "unknown") return null;
+    let suggest: string | undefined;
+    if (l.status === "found") {
+      // Its file: a path in the folder (`x.md`, extensionless too), else a note's name there.
+      const hit = pathLink(join(l.path, rest), join(l.path, "_"), false, undefined, false);
+      let rel = hit ? relative(l.path, hit.abs) : null;
+      if (!rel) {
+        const r = this.reach?.graphAt(l.path)?.resolveLink({ kind: "wiki", target: rest }, "");
+        rel = (r?.resolvedKind === "note" || r?.resolvedKind === "file") && r.path ? (isAbsolute(r.path) ? relative(l.path, r.path) : r.path) : null;
+      }
+      if (rel) suggest = formatPointer({ name: pointerName(l.folder), branch: null, path: rel.split(sep).join("/"), fragment: null });
+    }
+    const reason = `${name}:${rest} names a folder the old way — not a link${suggest ? `; ${suggest} is (space c a writes it)` : ""}`;
+    return { resolvedKind: "unresolved", path: null, candidates: [], reason, ...(suggest ? { suggest } : {}) };
   }
 
   /** A note by an alias its front matter gives (21.3): never by a previous name. */
@@ -945,6 +973,11 @@ export class Graph {
     }
     // A pointer into a named folder (21.7): wherever this machine has it.
     if (isPointer(link.target)) return this.byPointer(link.target, fromRel);
+    // A folder named the old way (`research:x.md`): no link, but its pointer said (21.11).
+    if (!/^(?:https?|mailto|file|ftp|data|tel):/i.test(link.target)) {
+      const old = this.oldForm(link.target);
+      if (old) return old;
+    }
     // This repository's hosting (a README's `https://github.com/me/repo/blob/main/x.md`): the file here.
     if (/^https?:\/\//i.test(link.target)) {
       const hosted = this.byHosting(link.target, fromRel);

@@ -279,7 +279,7 @@ LSP face (`11.x`), and `17.20` below. In short:
 ## `21.x` — paths inside, conventions at the edges
 
 *Proposed 2026-10-05 with the user, after a survey of how other tools handle links, and reviewed with the user the same
-day; being built (plan `21.x`: `21.1`–`21.7` done). The model in full is `docs/idea.md`, "Paths inside,
+day; being built (plan `21.x`: `21.1`–`21.7` and `21.11` done). The model in full is `docs/idea.md`, "Paths inside,
 conventions at the edges". It revises `20.x` above.*
 
 - **Inside, a link is a path;** each written form — a relative path, `/…`, an extensionless path, a wikilink,

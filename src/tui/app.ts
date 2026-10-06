@@ -6695,11 +6695,32 @@ export class App {
     // The panes' selections are row indexes: an agent's new or deleted note, or a heading added
     // above, would move them to another item. Kept by what they select, not where.
     const keep = this.rememberSelections();
+    // Files moved elsewhere (an editor, a file manager, git), seen by their content as they went and came.
+    const moves: [string, string][] = [];
+    const stop = this.graph.onChange((c) => {
+      if (c.kind === "moved") moves.push([c.from, c.to]);
+    });
     try {
       this.applyChangesNow(batch);
     } finally {
+      stop();
       keep();
     }
+    if (moves.length) this.offerRelink(moves);
+  }
+
+  /**
+   * A batch of moves made elsewhere broke links (21.11): the relink offered once for it — its preview,
+   * nothing written unasked. Typing, or something else open: said instead, with where to find it.
+   */
+  private offerRelink(moves: [string, string][]): void {
+    const plan = planRelink(this.graph, undefined, { pointers: false });
+    if (!plan.files.length) return;
+    const what = moves.length === 1 ? `${moves[0]![0]} moved to ${moves[0]![1]}` : `${moves.length} files moved`;
+    const links = plan.files.reduce((n, f) => n + f.edits.length, 0);
+    if (this.overlay || this.view?.insert) return this.message("warn", `${what}: ${links} line${links === 1 ? "" : "s"} of links broke — space v p shows them, space l r relinks a note's`);
+    this.message("info", `${what}: ${links} line${links === 1 ? "" : "s"} of links broke — the relink, to look over`);
+    this.previewRename(() => plan);
   }
 
   /** What the explorer and the outline have selected; the function puts them back on it. */

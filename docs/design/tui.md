@@ -322,6 +322,13 @@ time and indexes each, so backlinks from vaults never opened appear by themselve
 where it stopped, and a pass done, the next is a day later. `[index] background = false` turns it off;
 `slipbox index --home` runs it now.
 
+**Moves made elsewhere** (`21.11`): an editor, a file manager or an agent moving notes — seen by their text as they go
+and come in one batch of the watcher's — broke links that pointed where they were: the relink is offered once for the
+batch, its preview open (`old/plan.md moved to new/plan.md: 1 line of links broke — the relink, to look over`), nothing
+written unasked; typing, or with something else open, it's a message instead. **A folder named the old way**
+(`[[research:x]]`, `[t](research:x.md)`, when a folder this machine knows has that name) is no link: followed, it says
+so, with the pointer that is one; `space c a` writes it (a markdown link, its heading or block kept).
+
 **A vault moved** (`20.5`): opened where it wasn't seen before, while a copy of it is gone from where it was (seen
 last before this one appeared), the TUI asks "`<name>` was elsewhere before — did it move here?": `Moved here from
 <path>` takes that copy's instance — its reading positions, sessions and scratch, the vault opened again with them —

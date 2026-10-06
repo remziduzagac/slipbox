@@ -6,7 +6,7 @@ import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rea
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { COMMAND_SPECS } from "../src/core/command-specs.ts";
 import { canonKey, canonSeq } from "../src/core/commands.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
@@ -7597,6 +7597,53 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(recordFolder(g.b)?.ask).toBe(true);
     rmSync(g.a, { recursive: true });
     expect((await harness({ root: g.b, open: "n.md" })).app.overlay).toBeNull();
+  });
+
+  test("repairs (21.11): a batch of moves made elsewhere offers the relink once; a folder named the old way says so, its pointer written by a code action", async () => {
+    const { recordFolder } = await import("../src/core/folders.ts");
+    const tag = basename(mkdtempSync(join(sandbox, "rp-"))).replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const research = join(mkdtempSync(join(sandbox, "rp-r-")), `research${tag}`);
+    mkdirSync(join(research, ".slipbox"), { recursive: true });
+    writeFileSync(join(research, ".slipbox", "config.toml"), `[vault]\nid = "r${tag}"\nname = "research${tag}"\n`);
+    mkdirSync(join(research, "algorithms"));
+    writeFileSync(join(research, "algorithms", "dijkstra.md"), "# Dijkstra\n\n## Proof\n");
+    recordFolder(research);
+    const root = mkdtempSync(join(sandbox, "rp-a-"));
+    mkdirSync(join(root, ".slipbox"));
+    mkdirSync(join(root, "old"));
+    writeFileSync(join(root, "old", "plan.md"), "# Plan\n\nThe plan, long enough to be told by its text.\n");
+    writeFileSync(join(root, "Meeting: Q3.md"), "# Q3\n");
+    writeFileSync(join(root, "a.md"), `# A\n\n[plan](old/plan.md) [d](research${tag}:algorithms/dijkstra.md) [[research${tag}:dijkstra#Proof|D]] [[Meeting: Q3]] [[zz${tag}:thing]]\n\n[far](${relative(root, join(research, "algorithms", "dijkstra.md"))})\n`);
+    const h = await harness({ root, open: "a.md" });
+    // Moved elsewhere (a file manager): one batch, gone and come with the same text.
+    mkdirSync(join(root, "new"));
+    renameSync(join(root, "old", "plan.md"), join(root, "new", "plan.md"));
+    h.app.applyChanges({ changes: [{ rel: "old/plan.md", kind: "deleted", isNote: true }, { rel: "new/plan.md", kind: "created", isNote: true }], rescan: false });
+    expect(h.app.messages.some((m) => m.text === "old/plan.md moved to new/plan.md: 1 line of links broke — the relink, to look over")).toBe(true);
+    const preview = (h.app.overlay as ListOverlay).items.map((i) => `${i.label} ${i.detail ?? ""}`).join("\n");
+    expect(preview).toContain("a.md:3");
+    expect(preview).toContain("new/plan.md");
+    expect(preview).not.toContain("slipbox://"); // the moves' fixes only: no pointer offered unasked
+    await h.keys("escape");
+    // The old forms: not links, said — `Meeting: Q3` is a note's name, a link.
+    const links = h.app.graph.linksOf("a.md").map((l) => [l.target, l.resolvedKind, l.suggest ?? null]);
+    expect(links.slice(1)).toEqual([
+      [`research${tag}:algorithms/dijkstra.md`, "unresolved", `slipbox://research${tag}/algorithms/dijkstra.md`],
+      [`research${tag}:dijkstra`, "unresolved", `slipbox://research${tag}/algorithms/dijkstra.md`],
+      ["Meeting: Q3", "note", null],
+      [`zz${tag}:thing`, "unresolved", null], // no folder of that name: nothing to say of it
+      [relative(root, join(research, "algorithms", "dijkstra.md")), "note", null],
+    ]);
+    expect(h.app.graph.linksOf("a.md")[4]!.reason).toBeUndefined();
+    await h.keys("g", "g", "tab", "tab", "enter");
+    expect(h.app.messages.at(-1)!.text).toBe(`research${tag}:algorithms/dijkstra.md names a folder the old way — not a link; slipbox://research${tag}/algorithms/dijkstra.md is (space c a writes it)`);
+    // Written by the code actions: each a pointer, a markdown link.
+    await h.app.run("lsp.code_action");
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual([`Write its pointer: slipbox://research${tag}/algorithms/dijkstra.md`, `Write its pointer: slipbox://research${tag}/algorithms/dijkstra.md`]);
+    await h.keys("enter");
+    await h.app.run("lsp.code_action");
+    await h.keys("enter");
+    expect(readFileSync(join(root, "a.md"), "utf8")).toStartWith(`# A\n\n[plan](old/plan.md) [d](slipbox://research${tag}/algorithms/dijkstra.md) [D](slipbox://research${tag}/algorithms/dijkstra.md#proof) [[Meeting: Q3]]`);
   });
 
   test("a fragile link: the status line says how it landed; a code action names it for sure; a nearer namesake is said", async () => {

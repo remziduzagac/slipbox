@@ -353,8 +353,9 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       if (r.via === "another-copy") a.message("info", `${link.target}: the copy of ${r.vault} links open isn't here — another copy`);
       if (r.gitRef) return a.showFromGit(r.gitRef, link.target);
       if (r.resolvedKind === "ambiguous" && isPointer(link.target)) return pickPointerFolder(a, link.target, frag, inSplit);
-      // Not on this machine, gone, no such file there: why — never a new note by a pointer's name.
-      if (r.resolvedKind === "unresolved" && isPointer(link.target)) return a.message("warn", `${link.target}: ${r.reason ?? "not found"}`);
+      // Not on this machine, gone, no such file there: why — never a new note by a pointer's name. A
+      // folder named the old way (`research:x.md`, 21.11): why, and its pointer.
+      if (r.resolvedKind === "unresolved" && (isPointer(link.target) || r.suggest)) return a.message("warn", r.suggest ? r.reason! : `${link.target}: ${r.reason ?? "not found"}`);
       if (r.resolvedKind === "anchor") {
         const here = link.from ?? view.buf.rel;
         if (frag && here && (here !== view.buf.rel || frag.startsWith("^"))) return go(here, at(here));

@@ -295,6 +295,10 @@ two ties make a link **fragile** (a note of the name nearer takes it): `problems
 `fix`, the path that names its note for sure; `diagnostics` too, as `fragile` with `fix{title, text}`. A command that
 makes or removes a note sending links by name elsewhere warns, each: `Home.md:3: [[Pie]] reached X; it reaches Y now`.
 
+**Repairs** (`21.11`): `relink` (the TUI's offer after a batch of moves made elsewhere) fixes links a move broke; a
+link naming a folder the old way (`research:x.md`, `[[research:x]]`) is unresolved with why and `suggest`, the pointer
+that names its file, and `diagnostics` gives it as `old-form` with `fix` (that pointer, a markdown link).
+
 **Links to a repository's own hosting** (`core/hosting.ts`): GitHub's `/blob/<ref>/`, `/tree/<ref>/`, `/raw/<ref>/`,
 GitLab's `/-/blob/<ref>/` (groups nested), Bitbucket's `/src/<ref>/` (its `#markdown-header-` headings), a repository's
 own page or `#readme` (its README) — of this checkout's remote, or a named folder's (`21.6`) — are the file in this copy:

@@ -6,6 +6,7 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, join, posix } from "node:path";
 import { describeLanding, disambiguated, fragile, type Graph, type LinkRef, type Pos } from "./graph.ts";
 import { landing, lineFragment } from "./landing.ts";
+import { slugify } from "./parse.ts";
 import type { LintIssue } from "./lint.ts";
 import { unavailable } from "./registry.ts";
 import type { SyntaxError } from "./syntax.ts";
@@ -97,6 +98,16 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
     }
     // A link to the repository's hosting at another ref than the branch here: what it shows there may differ.
     if (l.via === "hosting" && l.hosted && l.resolvedKind !== "unresolved") add(l, "info", "other-ref", `${l.target} names ${l.hosted.ref}; this copy is on ${l.hosted.branch ?? "no branch"}`);
+    // A folder named the old way (21.11): the fix writes its pointer, a markdown link.
+    if (l.resolvedKind === "unresolved" && l.suggest) {
+      const at = lines[l.line - 1] ?? "";
+      const written = l.end.line === l.line ? at.slice(l.column - 1, l.end.column - 1) : "";
+      const text = l.alias ?? (wiki ? posix.basename(l.target.slice(l.target.indexOf(":") + 1)).replace(/\.(md|markdown)$/i, "") : null);
+      const frag = wiki && l.heading ? `#${slugify(l.heading)}` : wiki && l.block ? `#^${l.block}` : "";
+      const fixed = wiki ? `${written.startsWith("!") ? "!" : ""}[${text}](${l.suggest}${frag})` : written.replace(`(${l.target}`, `(${l.suggest}${l.target.includes("#") ? l.target.slice(l.target.indexOf("#")) : ""}`);
+      out.push({ start: { line: l.line, column: l.column }, end: l.end, severity: "warning", source: "slipbox", code: "old-form", message: l.reason!, target: l.target, ...(written ? { fix: { title: `Write its pointer: ${l.suggest}`, text: fixed } } : {}) });
+      continue;
+    }
     switch (l.resolvedKind) {
       case "unresolved":
         if (l.reason) add(l, "warning", "unresolved", l.reason);
