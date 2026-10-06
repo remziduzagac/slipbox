@@ -293,6 +293,13 @@ extension}`, each `{value, source, why}`, `source` one of `setting`, `tool`, `no
 `default` (`docs/design/configuration.md`, "The links' convention"). Its line: the parts, then what said each —
 `links     wikilinks, by name, without .md — Obsidian's .obsidian/app.json`.
 
+**`slipbox link <note>`** (`21.5`) prints a link to a note or file as slipbox writes one where `--from` is (else from
+the root's top): the root's convention, `--style markdown|wiki` the style already chosen (its path and extension then
+that style's). A markdown link's text is the note's title (a file's name), a wikilink has none; `--text` gives one,
+`--embed` makes it `![…]`. A wikilink is a name only where that name reaches the note from `--from` (21.3's rules),
+else the path from the root; a file outside the root, a relative path as it's named. `--json`: `{link, path, from,
+style, pathForm, extension}`. What the TUI's link picker and completion write; an agent writing a link writes this.
+
 **Across vaults** (plan `17.9`–`17.11`, `17.16`): a path out of the root (relative, `~/`, absolute — `/` is the
 filesystem's root — or a `file://` URL; a file, not an external link) resolves into the other vault: `path` and `abs`
 are absolute, and `vault` names it. A path that reaches nothing is broken, whatever moved (`20.2`). A backlink from

@@ -2087,7 +2087,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - slipbox info reports the convention and its source — `hobbies/cooking/Home.md`,
   `hobbies/cycling/202608151900-index.md` (cli.md The links' convention (21.4); the Info view's Links section)
 - Completion/picker writes the convention's link — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`
-  (21.x 'convention decides links slipbox makes')
+  (21.5; tests 'links completed in the root's convention', 'the link picker'; slipbox link)
 
 ### links/roots
 
@@ -2442,6 +2442,8 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
 - `link.follow` — Follow link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (command-specs.ts)
 - `link.follow_split` — Follow link into the split — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`
   (command-specs.ts)
+- `link.insert` — Insert a link to a note… — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`
+  (command-specs.ts; 21.5)
 - `link.relink` — Relink old names and moves — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`
   (command-specs.ts)
 - `link.convert` — Convert links to plain paths — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`

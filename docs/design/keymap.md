@@ -129,6 +129,7 @@ back to slipbox's own register when it can't be read (over SSH, say). The termin
 | follow the link under the cursor, else the first on the row | `enter`, `g f`, `g x`, click on it | `space l f` |
 | follow it into the split | `ctrl+enter`, `ctrl+w f` | `space l s`, `space w f` |
 | copy its target | `y l` | `space l y` |
+| write a link to a note picked, as the folder's convention writes one (`:link`, `21.5`) | — | `space l i` |
 | links from this note (list) | — | `space l l` |
 | backlinks: notes linking here (list) | — | `space l b` |
 | relink: this note's links that reach a note by an old name or a move, to its name now (`:relink`) | — | `space l r` |
@@ -152,7 +153,7 @@ What a code file's language server changes (`19.15`) — `space c`, as LazyVim h
 | format the file, as its server formats it: one undo step | `space c f` |
 
 Typing in a code file, its server's completion shows under the cursor (`19.16`) — in a note, a link's target after
-`](`, slipbox's own (`20.13`); while it shows, these keys are its,
+`](` or `[[`, slipbox's own (`20.13`, `21.5`); while it shows, these keys are its,
 as vim's and blink.cmp's:
 
 | Action | Keys |

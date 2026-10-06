@@ -4317,3 +4317,64 @@ describe("the reference set's conventions (21.4)", () => {
     expect(await at("work/kestrel")).toMatch(/^markdown links, relative, with \.md — style: the notes, 100% of \d+ links; path: the notes, \d+% of \d+ links; extension: the notes, \d+% of \d+ links$/);
   });
 });
+
+describe("links written in the convention (21.5)", () => {
+  const vault = () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-write-"));
+    mkdirSync(join(dir, ".slipbox"));
+    for (const d of ["sub", "other", "img", "my notes"]) mkdirSync(join(dir, d));
+    for (const f of ["a.md", "sub/b.md", "sub/x.md", "other/b.md", "my notes/c d.md"]) writeFileSync(join(dir, f), `# ${f}\n`);
+    writeFileSync(join(dir, "img", "p.png"), "png");
+    return dir;
+  };
+  test("each path and extension, in each style; a name only where it reaches the note, else the path from the root", async () => {
+    const { linkDestination, linkEnds, writeLink } = await import("../src/core/write-link.ts");
+    const dir = vault();
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    const conv = (path: string, extension: string) => ({ path: { value: path, source: "setting", why: "" }, extension: { value: extension, source: "setting", why: "" } }) as never;
+    const dest = (from: string, to: string, style: "markdown" | "wiki", path: string, ext: string) => linkDestination(conv(path, ext), style, linkEnds(g, join(dir, from), join(dir, to)));
+    // Markdown: relative or from the root; the extension kept or dropped — a note's only; encoded.
+    expect(dest("sub/x.md", "other/b.md", "markdown", "relative", "kept")).toBe("../other/b.md");
+    expect(dest("sub/x.md", "other/b.md", "markdown", "relative", "dropped")).toBe("../other/b");
+    expect(dest("sub/x.md", "other/b.md", "markdown", "root", "dropped")).toBe("/other/b");
+    expect(dest("a.md", "my notes/c d.md", "markdown", "relative", "kept")).toBe("my%20notes/c%20d.md");
+    expect(dest("a.md", "img/p.png", "markdown", "relative", "dropped")).toBe("img/p.png");
+    // Wiki: a name where it reaches the note — beside it, yes; from the top, two b's tie: the path.
+    expect(dest("sub/x.md", "sub/b.md", "wiki", "name", "dropped")).toBe("b");
+    expect(dest("a.md", "sub/b.md", "wiki", "name", "dropped")).toBe("sub/b");
+    expect(dest("a.md", "sub/b.md", "wiki", "name", "kept")).toBe("sub/b.md");
+    expect(dest("a.md", "img/p.png", "wiki", "name", "dropped")).toBe("p.png");
+    expect(dest("sub/x.md", "other/b.md", "wiki", "root", "dropped")).toBe("other/b");
+    expect(dest("sub/x.md", "other/b.md", "wiki", "relative", "dropped")).toBe("../other/b");
+    expect(dest("sub/x.md", "sub/b.md", "wiki", "relative", "dropped")).toBe("./b");
+    // Out of the root: a relative path, the file as named, whatever the convention.
+    const outside = mkdtempSync(join(tmpdir(), "slipbox-write-out-"));
+    writeFileSync(join(outside, "far.md"), "# Far\n");
+    expect(dest("a.md", relative(dir, join(outside, "far.md")), "wiki", "name", "dropped")).toBe(`../${basename(outside)}/far.md`);
+    // The whole link: text escaped, an alias only when it says more, an embed.
+    const ends = linkEnds(g, join(dir, "sub/x.md"), join(dir, "sub/b.md"));
+    expect(writeLink(conv("relative", "kept"), "markdown", ends, "the [b] note")).toBe("[the \\[b\\] note](b.md)");
+    expect(writeLink(conv("name", "dropped"), "wiki", ends, "")).toBe("[[b]]");
+    expect(writeLink(conv("name", "dropped"), "wiki", ends, "b")).toBe("[[b]]");
+    expect(writeLink(conv("name", "dropped"), "wiki", ends, "the b note")).toBe("[[b|the b note]]");
+    expect(writeLink(conv("name", "dropped"), "wiki", linkEnds(g, join(dir, "a.md"), join(dir, "img/p.png")), "", true)).toBe("![[p.png]]");
+  });
+
+  test("slipbox link: as the root's convention writes it from --from — the note's title its text; --style, --text, --embed", async () => {
+    const dir = vault();
+    rmSync(join(dir, ".slipbox"), { recursive: true });
+    mkdirSync(join(dir, ".obsidian"));
+    writeFileSync(join(dir, "sub", "b.md"), "---\ntitle: The B note\n---\n# B\n");
+    const link = async (...args: string[]) => JSON.parse((await cli(["--root", dir, "link", ...args, "--json"])).out).data;
+    expect(await link("sub/b.md", "--from", "sub/x.md")).toMatchObject({ link: "[[b]]", path: "sub/b.md", from: "sub/x.md", style: "wiki", pathForm: "name", extension: "dropped" });
+    expect((await link("sub/b.md", "--from", "a.md")).link).toBe("[[sub/b]]");
+    expect((await link("sub/b.md")).link).toBe("[[sub/b]]"); // no --from: as from the root
+    // Markdown asked for: Obsidian's "shortest" is no path for one — ours, relative; with .md, as Obsidian writes one.
+    expect((await link("sub/b.md", "--from", "a.md", "--style", "markdown")).link).toBe("[The B note](sub/b.md)");
+    expect((await link("sub/b.md", "--from", "sub/x.md", "--text", "bee")).link).toBe("[[b|bee]]");
+    expect((await link(join(dir, "img", "p.png"), "--from", "a.md", "--embed")).link).toBe("![[p.png]]");
+    const bad = await cli(["--root", dir, "link", "sub/b.md", "--style", "fancy"]);
+    expect(bad.code).toBe(2);
+    expect(bad.err).toContain("--style is markdown or wiki (got fancy)");
+  });
+});

@@ -3,13 +3,15 @@
 // pause — narrowed as typing goes on, asked again only when the server said its list was partial.
 // And signature help after `(` and `,`. A popup under the cursor; the keys are vim's and blink's.
 // In a note, a link's target is slipbox's own to complete (20.13): the files it could reach, in
-// their vault form and their full path; the one picked written as the path from the note.
+// their vault form and their full path; the one picked written as the root's convention writes it
+// (21.5) — a markdown link's path as its path and extension say, a wikilink's (`[[`) by name or path.
 
 import { existsSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CompletionItem, CompletionList, SignatureHelp, TextEdit } from "vscode-languageserver-protocol";
-import { urlPath } from "../core/convert.ts";
+import { conventionOf, type LinkStyle } from "../core/convention.ts";
+import { linkDestination, linkEnds } from "../core/write-link.ts";
 import { readJson } from "../core/fsutil.ts";
 import { cacheDir } from "../core/paths.ts";
 import { readRegistry } from "../core/registry.ts";
@@ -88,14 +90,16 @@ let asked = 0;
 
 /** After a key typed in insert mode: the popup narrowed, asked for or closed; signature help on `(` and `,`. */
 export function afterInsertKey(app: App, view: View, key: string): void {
-  // A link's target in a note (20.13): from just after `](`, narrowed as it's typed.
+  // A link's target in a note (20.13): from just after `](` or `[[` (21.5), narrowed as it's typed.
   if (view.insert && view.buf.kind.group === "note") {
     const at = offsetOf(app, view);
-    const from = linkTargetStart(view.buf.source, at);
+    const md = linkTargetStart(view.buf.source, at);
+    const wiki = md === null ? wikiTargetStart(view.buf.source, at) : null;
+    const from = md ?? wiki;
     const c = app.completion;
     if (from !== null) {
       if (c?.links && c.view === view && c.from === from) return narrow(app, c);
-      app.completion = { view, from, items: linkItems(app, view), shown: [], selected: 0, incomplete: false, links: true };
+      app.completion = { view, from, items: linkItems(app, view, md !== null ? "markdown" : "wiki"), shown: [], selected: 0, incomplete: false, links: true };
       return narrow(app, app.completion);
     }
     if (c?.links) app.completion = null;
@@ -140,28 +144,41 @@ export function linkTargetStart(source: string, at: number): number | null {
   return m ? at - m[1]!.length : null;
 }
 
+/** Inside a wikilink's target (`[[Da|`, `![[pic`): where the target starts, else null. */
+export function wikiTargetStart(source: string, at: number): number | null {
+  const line = source.slice(source.lastIndexOf("\n", at - 1) + 1, at);
+  const m = /\[\[([^\]|#[]*)$/.exec(line);
+  return m ? at - m[1]!.length : null;
+}
+
 /**
  * The files a link from this note could reach (20.13): this vault's notes and files, each by its path
- * here, and other vaults' notes, each as `name:path` — the full path beside each, and either typed
- * narrows. Picked, the path from the note is written, encoded as a link's path is (`%20`).
+ * here, and (a markdown link's) other vaults' notes, each as `name:path` — the full path beside each,
+ * and either typed narrows. Picked, it's written as the root's convention writes it in `style` (21.5);
+ * a wikilink reaches only its own root's (21.3).
  */
-function linkItems(app: App, view: View): CompletionItem[] {
+function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
   const g = app.graph;
-  const fromDir = dirname(view.buf.abs);
+  const c = conventionOf(g, app.config, app.configOrigins, style);
   const home = homeFolder();
   const tilde = (abs: string) => (abs.startsWith(`${home}/`) ? `~/${relative(home, abs)}` : abs);
-  const item = (abs: string, form: string, here: boolean): CompletionItem => ({
-    label: form,
-    detail: tilde(abs),
-    filterText: `${form} ${abs}`,
-    sortText: `${here ? 0 : 1}${form}`,
-    insertText: urlPath(relative(fromDir, abs).split(sep).join("/")),
-  });
+  const item = (abs: string, form: string, here: boolean): CompletionItem => {
+    const dest = linkDestination(c, style, linkEnds(g, view.buf.abs, abs));
+    return {
+      // A wikilink's shows what it writes (a name, a path); a markdown link's, the file as the vault shows it.
+      label: style === "wiki" ? dest : form,
+      detail: style === "wiki" ? form : tilde(abs),
+      filterText: `${form} ${dest} ${abs}`,
+      sortText: `${here ? 0 : 1}${form}`,
+      insertText: dest,
+    };
+  };
   const out: CompletionItem[] = [];
   for (const rel of [...g.notes.keys(), ...g.filePaths()]) {
     const abs = g.abs(rel);
     if (abs !== view.buf.abs) out.push(item(abs, rel, true));
   }
+  if (style === "wiki") return out;
   // Other vaults' notes, as of their last index: what the machine knows, read once per completion.
   for (const v of readRegistry()) {
     if (v.kind !== "vault" || v.worktree || v.path === g.root || !existsSync(v.path)) continue;

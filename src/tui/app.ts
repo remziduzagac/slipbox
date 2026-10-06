@@ -24,7 +24,7 @@ import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
-import { insertKey, insertText, offsetOf, placeAt, startInsert, stopInsert } from "./editing.ts";
+import { cannotEdit, insertKey, insertText, offsetOf, placeAt, startInsert, stopInsert } from "./editing.ts";
 import { insertRecord, newVimState, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
@@ -36,6 +36,7 @@ import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
 import { type ConventionPart, conventionOf, describeConvention } from "../core/convention.ts";
+import { linkEnds, writeLink } from "../core/write-link.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { Graph, type LinkProblem } from "../core/graph.ts";
 import { type LintCmd, type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
@@ -634,7 +635,7 @@ export class App {
   private readonly configFile: string | undefined;
   private readonly configLastGood = new Map<string, Record<string, unknown>>();
   /** Which file set each setting taken, for saying where one came from (the links' convention, 21.4). */
-  private configOrigins: Record<string, string> = {};
+  configOrigins: Record<string, string> = {};
   private configStamps = new Map<string, number>();
   readonly now: () => number;
   quitting = false;
@@ -4337,6 +4338,38 @@ export class App {
   }
 
   /** Add a footnote (3.18): its text asked; `[^N]` after the cursor's word, `[^N]: text` at the end. */
+  /**
+   * The link picker (21.5): a note or file of this root picked, and a link to it written at the
+   * cursor as the root's convention writes one — typing, where the cursor is; reading, after the word
+   * under it (out of a link or code span), as a footnote's reference goes — then saved.
+   */
+  insertLink(view: View): void {
+    const why = view.buf.kind.group !== "note" || view.buf.rel === null ? "links are written in this folder's notes" : cannotEdit(view);
+    if (why) return this.message("info", why);
+    const g = this.graph;
+    const version = view.buf.version;
+    const rels = [...g.notes.keys(), ...g.filePaths()].filter((r) => r !== view.buf.rel).sort();
+    this.openList({
+      title: "Link to…",
+      items: rels.map((r) => ({ label: r, data: r })),
+      accept: (item) => {
+        if (view.buf.version !== version) return this.message("warn", "the note changed while you picked: insert the link again");
+        const c = conventionOf(g, this.config, this.configOrigins);
+        const ends = linkEnds(g, view.buf.abs, g.abs(item.data as string));
+        const title = ends.to.note ? (g.entry(item.data as string)?.title ?? "") : "";
+        const link = writeLink(c, c.style.value, ends, c.style.value === "wiki" ? "" : title || posix.basename(item.data as string));
+        if (view.insert) {
+          insertText(this, view, link);
+          return this.message("info", `linked ${item.data as string}`);
+        }
+        const at = this.footnoteRefAt(view);
+        const before = view.buf.source[at - 1];
+        const text = `${before && !/\s/.test(before) ? " " : ""}${link}`;
+        this.applyFootnoteEdits([{ at, length: 0, text }], `linked ${item.data as string}: ${link}`, at + text.length);
+      },
+    });
+  }
+
   addFootnote(): void {
     if (!this.footnoteNote()) return;
     const view = this.view!;

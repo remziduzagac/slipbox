@@ -147,4 +147,30 @@ export const LINK_SCENARIOS: Scenario[] = [
       await s.notSee(/writes +wikilinks/);
     },
   },
+  {
+    name: "world/links: links written as each root writes them — the picker, [[ completed, slipbox link for an agent (21.5)",
+    options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
+    run: async (s) => {
+      // The picker, reading: after the word under the cursor, a wikilink by name — Obsidian's way.
+      await s.keys("/");
+      await s.type("shelves in");
+      await s.keys("enter", "escape");
+      await leader(s, "l", "i");
+      await s.see("Link to…");
+      await s.type("Shaksh");
+      await s.keys("enter");
+      await s.file("~/hobbies/cooking/Home.md", (t) => t.includes("More on the shelves [[Shakshuka]] in [[Pantry]]."), "the picked link after the word, by name");
+      await s.message("linked Recipes/Weeknight/Shakshuka.md");
+      // [[ completed in source mode: the other Notes, by its path — the name is this folder's own.
+      await leader(s, "n", "v");
+      await s.keys("shift+g", "o");
+      for (const k of ["[", "[", ..."Recipes/No"]) await s.keys(k);
+      await s.see(/Recipes\/Notes +Recipes\/Notes\.md/);
+      await s.keys("tab", "]", "]", "escape", "ctrl+s");
+      await s.file("~/hobbies/cooking/Home.md", (t) => t.trimEnd().endsWith("[[Recipes/Notes]]"), "the completed wikilink, by its path");
+      // An agent asks how to link from zk's notebook: no extension, from the note.
+      const zk = s.cliIn("~/hobbies/cycling", "link", "gear/202608201000-bike-fit.md", "--from", "rides/202609131900-300k-brevet.md");
+      s.expect(zk.out === "[Bike fit](../gear/202608201000-bike-fit)\n", `zk's link: ${zk.out}`);
+    },
+  },
 ];

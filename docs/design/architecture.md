@@ -85,6 +85,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
 | `core/convention.ts` | 21.4 | a root's links' convention: your setting, its tool's, its notes', ours |
+| `core/write-link.ts` | 21.5 | a link as slipbox writes one: completion, the link picker, `slipbox link` |
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
 | `core/lazy.ts` | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
 | `core/syntax.ts` | 16.7–16.9 | tree-sitter grammars: multi-line spans, outline, syntax errors, comments |

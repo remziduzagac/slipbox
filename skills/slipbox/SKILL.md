@@ -128,6 +128,7 @@ slipbox footnotes <note> add 12:30 'Source: the dome log'   # [^N] at line 12, c
 slipbox footnotes <note> edit 3 'New text'   # also: rm <label>, rename <label> <new>; --if-unchanged <sha>
 slipbox resolve '[text](../home.md)' --from people/x.md   # a markdown link, resolved as one
 slipbox resolve research:algorithms/dijkstra.md --from notes/plan.md --json   # data.href: the path to write in a link
+slipbox link <note> --from <note>        # a link to <note> as this folder writes them (wikilink or markdown, its path form)
 slipbox search dome shutter --json       # notes ranked by the words: hits[{path, line, column, heading, snippet}]
 slipbox changed --json                   # what this branch changed against main: files[{path, state, from?}]
 slipbox merge-review feat --json         # before merging feat here: breaks[{path, line, target, cause, by, fix}]

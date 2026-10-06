@@ -1163,7 +1163,7 @@ export class Graph {
   }
 
   /** Whether a vault-relative path is a note or a file of the vault (by the index: no disk). */
-  private known(rel: string): boolean {
+  known(rel: string): boolean {
     if (this.notes.has(rel)) return true;
     return this.assets.get(rel.slice(rel.lastIndexOf("/") + 1).normalize("NFC").toLowerCase())?.includes(rel) ?? false;
   }

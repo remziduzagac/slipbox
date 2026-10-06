@@ -5753,6 +5753,70 @@ describe("vaults in the TUI (17.x)", () => {
     await h.keys("escape");
   });
 
+  test("links completed in the root's convention (21.5): after [[ a name where it reaches the note, else its path; after ]( the convention's path and extension", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-complete-conv-"));
+    mkdirSync(join(root, ".obsidian"));
+    for (const d of ["sub", "other"]) mkdirSync(join(root, d));
+    for (const f of ["sub/b.md", "other/b.md", "sub/dal.md"]) writeFileSync(join(root, f), `# ${f}\n`);
+    writeFileSync(join(root, "sub", "here.md"), "# Here\n");
+    const h = await harness({ root, open: "sub/here.md" });
+    await h.app.run("view.source");
+    await h.keys("shift+g", "o");
+    const shown = () => h.app.completion?.shown.map((i) => [i.label, i.detail]) ?? [];
+    for (const k of "[[") await h.keys(k);
+    expect(h.app.completion?.links).toBe(true);
+    // Each as it would be written: beside this note a name; the other b by its path.
+    expect(shown()).toContainEqual(["b", "sub/b.md"]);
+    expect(shown()).toContainEqual(["other/b", "other/b.md"]);
+    for (const k of "da") await h.keys(k);
+    expect(shown()[0]).toEqual(["dal", "sub/dal.md"]);
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toEndWith("[[dal\n");
+    await h.keys("]", "]", "space");
+    expect(h.app.completion).toBeNull();
+    // A markdown link typed in a wikilink root: Obsidian keeps .md in one; relative (ours).
+    for (const k of "[x](oth") await h.keys(k);
+    await h.keys("tab");
+    expect(h.app.view!.buf.source).toEndWith("[[dal]] [x](../other/b.md\n");
+    await h.keys("escape");
+  });
+
+  test("the link picker (21.5): space l i, a note picked, its link written as the convention writes it — reading, after the word; typing, at the cursor; saved", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-picker-"));
+    mkdirSync(join(root, ".slipbox"));
+    mkdirSync(join(root, "sub"));
+    writeFileSync(join(root, "sub", "b.md"), "---\ntitle: The B note\n---\n# B\n");
+    writeFileSync(join(root, "a.md"), "# A\n\nSee here for more.\n");
+    const h = await harness({ root, open: "a.md" });
+    // Reading: on "here", the link goes after the word — markdown, relative, the note's title its text.
+    await h.keys("j", "j", "w");
+    await h.keys("space", "l", "i");
+    expect((h.app.overlay as ListOverlay).title).toBe("Link to…");
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["sub/b.md"]); // never the note itself
+    await h.keys("enter");
+    expect(readFileSync(join(root, "a.md"), "utf8")).toBe("# A\n\nSee here [The B note](sub/b.md) for more.\n");
+    expect(h.app.messages.at(-1)!.text).toBe("linked sub/b.md: [The B note](sub/b.md)");
+    // Typing, in a wikilink root: at the cursor, by name.
+    mkdirSync(join(root, "wiki", ".obsidian"), { recursive: true });
+    writeFileSync(join(root, "wiki", "c.md"), "# C\n");
+    writeFileSync(join(root, "wiki", "d.md"), "# D\n\n");
+    const w = await harness({ root: join(root, "wiki"), open: "d.md" });
+    await w.app.run("view.source");
+    await w.keys("shift+g", "i");
+    for (const k of ["A", "l", "s", "o", "space"]) await w.keys(k);
+    await w.app.run("link.insert");
+    await w.keys("enter");
+    expect(w.app.view!.buf.source).toContain("Also [[c]]");
+    expect(w.app.view!.insert).toBe(true); // still typing, after it
+    await w.keys("escape");
+    // Not a note of a root's: said so.
+    writeFileSync(join(root, "data.json"), "{}\n");
+    await h.app.run("tab.close");
+    h.app.open("data.json");
+    await h.app.run("link.insert");
+    expect(h.app.messages.at(-1)!.text).toBe("links are written in this folder's notes");
+  });
+
   test("search by vault (20.16): this vault's hits; ctrl+a adds the linked vaults' under a divider, then every vault's; one opens there", async () => {
     const { notes, app, n } = await twoVaults();
     writeFileSync(join(notes, "w.md"), "# W\n\nA walrus here.\n");

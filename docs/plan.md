@@ -645,7 +645,7 @@ removals as their replacements land, the sweep last.*
 | 21.2 | **Done.** Links as paths inside: `/` from the nearest root, then the filesystem; extensionless; to a folder |
 | 21.3 | **Done.** Wikilinks read within their root: names, paths, aliases, attachments; ties ambiguous; no root |
 | 21.4 | **Done.** Conventions found: your setting, the root's tool's (Obsidian, zk), the notes' majority, ours |
-| 21.5 | Links written in the convention: completion, the link picker, capture; renames keep each link's form |
+| 21.5 | **Done.** Links written in the convention: completion, the picker, `slipbox link`; renames keep each form |
 | 21.6 | Named folders: by remote (short, qualified), by `.slipbox/` name and id; copies, defaults; the durable lookup |
 | 21.7 | `slipbox://` pointers, `@branch` too: read, followed, backlinked, renamed; clashes asked; relinked to |
 | 21.8 | Personal state by root, positions by file; carried with a named folder's move; today's moved once |

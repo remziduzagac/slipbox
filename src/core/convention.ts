@@ -23,7 +23,8 @@ export type LinkExtension = "kept" | "dropped";
 /** One part, and what said it: your setting, the root's tool, its notes, or ours. */
 export interface ConventionPart<T> {
   value: T;
-  source: "setting" | "tool" | "notes" | "default";
+  /** "typed": a style the link being written already has (`](` typed), whatever the convention's. */
+  source: "setting" | "tool" | "notes" | "default" | "typed";
   /** Where, for people: the config file, the tool's file, "91% of 45 links", "ours". */
   why: string;
   /** The notes': the share of their links in this form, in percent. */
@@ -129,8 +130,11 @@ export function toolSays(root: string): ToolSays | null {
   return null;
 }
 
-/** A graph's root's convention: its tool's settings, its notes counted. */
-export function conventionOf(g: { root: string; loc: { mode: string }; linkForms(): FormCounts }, config: Config, origins: Record<string, string>): Convention {
+/**
+ * A graph's root's convention: its tool's settings, its notes counted. `style`: the one a link being
+ * written already has (`](` typed in a wikilink root) — the path and extension then as that style's.
+ */
+export function conventionOf(g: { root: string; loc: { mode: string }; linkForms(): FormCounts }, config: Config, origins: Record<string, string>, style?: LinkStyle): Convention {
   const hasRoot = g.loc.mode !== "folder";
   // A config file as people read it: from the root inside it (`.slipbox/config.toml`), else from home.
   const shown = Object.fromEntries(
@@ -139,7 +143,7 @@ export function conventionOf(g: { root: string; loc: { mode: string }; linkForms
       return [k, rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : f.startsWith(`${homedir()}/`) ? `~/${relative(homedir(), f)}` : f];
     }),
   );
-  return findConvention({ links: config.links, origins: shown, hasRoot, tool: hasRoot ? toolSays(g.root) : null, counts: hasRoot ? g.linkForms() : null });
+  return findConvention({ links: config.links, origins: shown, hasRoot, tool: hasRoot ? toolSays(g.root) : null, counts: hasRoot ? g.linkForms() : null, style });
 }
 
 export interface ConventionInput {
@@ -150,6 +154,8 @@ export interface ConventionInput {
   hasRoot: boolean;
   tool: ToolSays | null;
   counts: FormCounts | null;
+  /** The style already chosen (typed): only the path and extension are found. */
+  style?: LinkStyle;
 }
 
 export function findConvention(input: ConventionInput): Convention {
@@ -160,8 +166,9 @@ export function findConvention(input: ConventionInput): Convention {
   const toolWhy = tool ? `${tool.tool === "obsidian" ? "Obsidian's" : "zk's"} ${tool.file}` : "";
 
   // Style: the first that says.
-  const style: ConventionPart<LinkStyle> =
-    links.style !== "auto"
+  const style: ConventionPart<LinkStyle> = input.style
+    ? { value: input.style, source: "typed", why: "as typed" }
+    : links.style !== "auto"
       ? { value: links.style, source: "setting", why: setting("style") }
       : tool?.style
         ? { value: tool.style, source: "tool", why: toolWhy }

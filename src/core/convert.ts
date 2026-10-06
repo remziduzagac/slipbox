@@ -29,7 +29,7 @@ export function urlPath(p: string): string {
  * would act there is escaped (a backslash, brackets, `*`, a backtick, `<`, `&`, `~`; `_` unless it's
  * inside a word, where it can't emphasise).
  */
-function linkText(t: string): string {
+export function linkText(t: string): string {
   let out = "";
   for (let i = 0; i < t.length; i++) {
     const ch = t[i]!;

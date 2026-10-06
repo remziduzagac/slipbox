@@ -21,7 +21,8 @@ import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBase
 import { diffRows } from "../core/merge.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
-import { conventionOf, describeConvention } from "../core/convention.ts";
+import { conventionOf, describeConvention, type LinkStyle } from "../core/convention.ts";
+import { linkEnds, writeLink } from "../core/write-link.ts";
 import { glyphsFor, isGlyphMode } from "../core/glyphs.ts";
 import { Graph, type LinkProblem, openGraph, type Target } from "../core/graph.ts";
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
@@ -155,6 +156,8 @@ Usage:
   slipbox [path]                    open the TUI (needs a terminal); also: slipbox open [path]
   slipbox render <note>             render a note to stdout        [--width N] [--theme T] [--glyphs G] [--plain]
   slipbox resolve <link>            follow a link to a path        [--from <note>]
+  slipbox link <note>               a link to it, as slipbox writes one here: the folder's convention  [--from <note>]
+                                    [--text T] [--style markdown|wiki] [--embed]
   slipbox links <note>              outgoing links with status     [--all: every note's]
   slipbox backlinks <note>          notes that link to <note>
   slipbox search <words…>           the vault's notes ranked by the words: "phrases", prefix*, -not, title:, #tag, path:  [--scope vault|linked|all]
@@ -224,7 +227,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 `;
 
 export const CLI_COMMANDS = new Set([
-  "render", "resolve", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
+  "render", "resolve", "link", "links", "backlinks", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-vault", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
   "capture", "scratch", "init", "info", "vaults", "vault-moved", "apply", "doctor", "diagnostics", "themes", "commands", "help",
 ]);
@@ -277,13 +280,13 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // A file named `vault:path` (20.20) is that file: its path from here on, so the command works in
     // that vault as it would with the path.
     const NOTE_FIRST = ["render", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
-    const named = command === "context" ? rest.map((_, i) => i) : NOTE_FIRST.includes(command) || ["diagnostics", "doctor", "deinit", "index"].includes(command) ? [0] : command === "find" ? [1] : [];
+    const named = command === "context" ? rest.map((_, i) => i) : NOTE_FIRST.includes(command) || ["diagnostics", "doctor", "deinit", "index", "link"].includes(command) ? [0] : command === "find" ? [1] : [];
     for (const i of named) if (rest[i] !== undefined) rest[i] = vaultFormArg(rest[i]!, io.cwd);
     const from = flag(args, "from");
     if (from !== undefined) args.flags.set("from", vaultFormArg(from, io.cwd));
     // The note argument, when it names a file, also says which vault this is (resolve's is --from:
     // where the link is written).
-    const noteAt = NOTE_FIRST.includes(command) ? rest[0] : command === "find" ? rest[1] : command === "resolve" ? flag(args, "from") : undefined;
+    const noteAt = NOTE_FIRST.includes(command) ? rest[0] : command === "find" ? rest[1] : command === "resolve" ? flag(args, "from") : command === "link" ? (flag(args, "from") ?? rest[0]) : undefined;
     let pathArg = noteArgPath(noteAt, io.cwd, flag(args, "root"));
     // A nested vault's folder, moved, copied or deleted, is a folder of the vault holding it (18.7).
     if (pathArg && ["mv", "cp", "rm"].includes(command)) {
@@ -344,7 +347,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 
 /** Arguments each command takes at most (`write` and `capture` take free text: no limit). */
 const MAX_ARGS: Record<string, number> = {
-  render: 1, resolve: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
+  render: 1, resolve: 1, link: 1, links: 1, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
   scratch: 1, init: 1, info: 0, vaults: 0, "vault-moved": 1, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-vault": 1, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
 };
 
@@ -377,6 +380,7 @@ const GLOBAL_FLAGS = new Set(["root", "config", "json", "color", "plain", "help"
 const FLAGS: Record<string, string[]> = {
   render: ["width", "theme", "glyphs"],
   links: ["all"],
+  link: ["text", "style", "embed"],
   find: ["regex", "whole", "ignore-case", "files"],
   ls: ["files"],
   replace: ["regex", "whole", "ignore-case", "first", "first-per-line", "lines", "dry-run", "if-unchanged"],
@@ -535,6 +539,32 @@ const HANDLERS: Record<string, Handler> = {
         headings: layout.headings.map((h) => ({ level: h.level, text: h.text, slug: h.slug, line: h.src })),
       },
       human: layoutToAnsi(layout, theme, { depth }),
+    };
+  },
+
+  /**
+   * A link to a note or file, as slipbox writes one where `--from` is (21.5): the root's convention
+   * (21.4) — `--style` the one already chosen — a note's title its text, a file's name.
+   */
+  link(s, rest) {
+    const arg = requireArg(rest, "note");
+    const g = s.graph;
+    const fromRel = flag(s.args, "from") ? resolveNote(s, flag(s.args, "from")!) : null;
+    // No --from: as from a note at the root.
+    const fromAbs = fromRel ? g.abs(fromRel) : join(s.loc.root, ".link.md");
+    const file = resolve(s.io.cwd, arg);
+    // A file other than a note, by its path; a note as any command takes one (its path, its name).
+    const toAbs = existsSync(file) && statSync(file).isFile() && classify(file, s.config.walk.extensions).group !== "note" ? file : g.abs(resolveNote(s, arg));
+    const style = flag(s.args, "style");
+    if (style !== undefined && style !== "markdown" && style !== "wiki") throw new UsageError(`--style is markdown or wiki (got ${style})`);
+    const c = conventionOf(g, s.config, s.configOrigins, style as LinkStyle | undefined);
+    const ends = linkEnds(g, fromAbs, toAbs);
+    const title = ends.to.rel && ends.to.note ? (g.entry(ends.to.rel)?.title ?? "") : "";
+    const text = flag(s.args, "text") ?? (c.style.value === "wiki" ? "" : title || basename(toAbs));
+    const link = writeLink(c, c.style.value, ends, text, has(s.args, "embed"));
+    return {
+      data: { link, path: ends.to.rel ?? toAbs, from: fromRel, style: c.style.value, pathForm: c.path.value, extension: c.extension.value },
+      human: `${link}\n`,
     };
   },
 

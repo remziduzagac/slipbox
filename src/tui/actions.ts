@@ -966,6 +966,7 @@ export function registerActions(app: App): void {
         a.copy(linkTarget(a, v, lay(a, v).links[i]!));
       }),
     // links
+    "link.insert": (a) => withView(a, (v) => a.insertLink(v)),
     "link.next": (a) => cycleLink(a, 1),
     "link.prev": (a) => cycleLink(a, -1),
     "link.follow": (a) =>

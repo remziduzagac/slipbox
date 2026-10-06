@@ -277,7 +277,7 @@ LSP face (`11.x`), and `17.20` below. In short:
 ## `21.x` — paths inside, conventions at the edges
 
 *Proposed 2026-10-05 with the user, after a survey of how other tools handle links, and reviewed with the user the same
-day; being built (plan `21.x`: `21.1`–`21.4` done). The model in full is `docs/idea.md`, "Paths inside,
+day; being built (plan `21.x`: `21.1`–`21.5` done). The model in full is `docs/idea.md`, "Paths inside,
 conventions at the edges". It revises `20.x` above.*
 
 - **Inside, a link is a path;** each written form — a relative path, `/…`, an extensionless path, a wikilink,
@@ -303,6 +303,12 @@ conventions at the edges". It revises `20.x` above.*
   it — a tool's as it writes that style, the notes' among their links of that style. **A markdown link is never by
   name** (slipbox reads it as a path, `21.2`): Obsidian's default "shortest" says nothing of one, and the next source
   answers. Two-thirds exactly (6 of 9) is a majority.
+- **Links slipbox writes** (`21.5`, 2026-10-06): completion (`](` and `[[`), the link picker (`space l i`) and `slipbox
+  link`, which prints one for an agent, all through `core/write-link.ts`. A wikilink is a name only where the name
+  reaches the note from the linking file — else its path from the root, never a name that would land elsewhere; a
+  relative wikilink starts `./` or `../`, so it's never read as a name. The scratch's captures are `path:line`
+  references in code spans, as agents read them — not links, so the convention leaves them be. A rename keeps each
+  link's form, a name falling back to a path when the new name would be ambiguous.
 - **Between files that travel together** (one repository or submodule, one folder tree outside git), the convention;
   **into a named folder,** `slipbox://<name>/<path>` — a repository named by its remote (short, qualified on a clash), a
   folder by its `.slipbox/` name, never by a folder's own; **otherwise,** a relative path. Relinking a link between

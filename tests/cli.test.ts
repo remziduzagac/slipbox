@@ -118,6 +118,14 @@ describe("links", () => {
     expect(slipbox(["resolve", "visiting-rota", "--from", "partners-and-names"]).code).toBe(3);
     expect(slipbox(["resolve", "https://example.org/x", "--json"]).json.data.status).toBe("external");
   });
+  test("link: a link to a note as slipbox writes one where --from is — the demo's convention, the note's title (21.5)", () => {
+    const r = slipbox(["link", "operations-handbook", "--from", "kenji-mori", "--json"]);
+    expect(r.code).toBe(0);
+    expect(r.json.data).toMatchObject({ path: "handbook/operations-handbook.md", from: "people/kenji-mori.md", style: "markdown", pathForm: "relative" });
+    expect(r.json.data.link).toMatch(/^\[[^\]]+\]\(\.\.\/handbook\/operations-handbook\.md\)$/);
+    expect(slipbox(["link", "operations-handbook", "--from", "kenji-mori"]).out).toBe(`${r.json.data.link}\n`);
+    expect(slipbox(["link", "no-such-note-anywhere"]).code).toBe(3);
+  });
   test("links and backlinks, with their status", () => {
     const l = slipbox(["links", "partners-and-names", "--json"]).json.data;
     expect(l.some((x: { target: string; status: string }) => x.target === "visiting-rota.md" && x.status === "unresolved")).toBe(true);

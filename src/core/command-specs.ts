@@ -64,6 +64,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "link.prev", title: "Previous link", cli: I, desc: "Moves the cursor to the previous link" },
   { id: "link.follow", title: "Follow link", cli: "slipbox resolve <link> --from <note>", desc: "Opens the link under the cursor" },
   { id: "link.follow_split", title: "Follow link into the split", cli: "slipbox resolve <link> --from <note>", desc: "Opens the link under the cursor in the split" },
+  { id: "link.insert", title: "Insert a link to a note…", cli: "slipbox link <note> --from <note>", desc: "Picks a note or file of the folder and writes a link to it at the cursor, as the folder's convention writes one" },
   { id: "links.open", title: "Links from this note", cli: "slipbox links <note>", desc: "Lists every link in this note, with its status" },
   { id: "backlinks.open", title: "Backlinks: notes linking here", cli: "slipbox backlinks <note>", desc: "Lists the notes that link to this one" },
   { id: "lsp.hover", title: "What's under the cursor", cli: "slipbox resolve <link>", desc: "In a floating window: a code file's language server says (types, docs); on a note's link, where it lands" },

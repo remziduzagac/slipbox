@@ -436,13 +436,19 @@ Each kind of link does something different when followed:
 indented under its parent, whose count includes its children's — and picking one lists its notes; `:tag name` goes
 straight there. A note's tags are its frontmatter's `tags:` and the `#tags` in its text (`docs/design/rendering.md`).
 
+**Writing a link** (`21.5`): `space l i` (`:link`) lists this root's notes and files, the note itself not, and
+writes a link to the one picked as the root's convention writes one (`21.4`; `slipbox link`) — a markdown link with
+the note's title as its text, or a wikilink by name where the name reaches the note from here, else by its path.
+Typing, it goes at the cursor; reading, after the word under the cursor (out of a link or a code span), a space
+before it, saved at once. Not in a data or text file: links are written in a root's notes.
+
 A link landing on a line (`#L42`, a block's `^id`, a problem, a search hit) lands where that line is shown: in the
 rendered view, a line inside a paragraph that wraps lands on the paragraph, not the block after. The backlinks list
 shows another vault's link with that vault's name: `app: design/plan.md`.
 
 `enter` follows the link under the cursor, or else the row's first link. In source mode and inside
 the lens, where rows are the markdown itself, `enter` and `space l f` / `s` read the link around the
-cursor from the text (`[text](url)`, `![alt](path)`; `[[…]]` is text); in a text file, a URL or a path naming a
+cursor from the text (`[text](url)`, `![alt](path)`, `[[name]]`, `21.3`); in a text file, a URL or a path naming a
 file of the vault (`16.10`); a click there places the cursor for editing. A click follows a link
 only when it lands on the link: blank space past a row's end or below the note, which the cursor is
 clamped from, follows nothing.
@@ -1136,8 +1142,11 @@ or leaving insert closes it. Both are insert mode's, and leaving it closes both.
 **A link's target** (`20.13`) in a note is completed by slipbox itself, server or not: right after `](`, the files the
 link could reach — this vault's notes and files by their path here, other vaults' notes (as of their last index) as
 `name:path`, the note itself not — each with its full path beside it, this vault's first. What's typed narrows by
-either form. `tab` or `enter` writes the path from the note, encoded as a link's path is (`a%20b.md`); typing past
-the target (`)`, a space) closes it. Same keys as above.
+either form. `tab` or `enter` writes it as the root's convention writes a markdown link's path (`21.5`: relative or
+from the root, with or without `.md`), encoded as a link's path is (`a%20b.md`); another vault's, the path from the
+note. Right after `[[` (or `![[`), this root's notes and files, each shown as the wikilink would write it — a name
+where it reaches the note from here, else its path — with its path beside it. Typing past the target (`)`, a space,
+`]`, `|`, `#`) closes it. Same keys as above.
 
 A file tree-sitter has no outline of (`16.8`: CSS, YAML, PHP, Swift…) takes its language server's symbols as its
 outline and breadcrumb (`19.14`), nested as the server nests them, asked for when it opens and again after each change
