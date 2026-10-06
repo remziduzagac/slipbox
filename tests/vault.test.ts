@@ -3878,6 +3878,37 @@ describe("the merge review (20.21)", () => {
     expect(heard).toEqual([[["a.md", "docs/a.md"]]]);
   });
 
+  test("a rebase is one change: HEAD isn't seen moving mid-rebase; at its end the branch moved on, never switched", async () => {
+    const { VaultFeed } = await import("../src/core/vault-feed.ts");
+    const { checkoutOf } = await import("../src/core/git.ts");
+    const { openVault } = await import("../src/core/reach.ts");
+    const root = mkdtempSync(join(tmpdir(), "slipbox-rebase-"));
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    put(root, "a.md", "# A\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "start");
+    git(root, "checkout", "-q", "-b", "topic");
+    put(root, "b.md", "# B\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "b");
+    git(root, "checkout", "-q", "main");
+    put(root, "c.md", "# C\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "c");
+    git(root, "checkout", "-q", "topic");
+    const g = openVault(root);
+    const heard: [string | null, string | null][] = [];
+    const feed = new VaultFeed({ checkout: () => checkoutOf(root), graph: () => g, now: () => Date.now(), apply: () => {}, headMoved: (was, now) => heard.push([was.branch, now.branch]) });
+    feed.checkHead();
+    // Stopped after its first step (an --exec that fails): HEAD detached, the rebase not done.
+    git(root, "rebase", "-q", "--exec", "false", "main");
+    expect(existsSync(join(root, ".git", "rebase-merge"))).toBe(true);
+    expect(feed.checkHead()).toBe(false);
+    git(root, "rebase", "--continue");
+    expect(feed.checkHead()).toBe(true);
+    expect(heard).toEqual([["topic", "topic"]]);
+  });
+
   test("a branch switch isn't a merge: what only the other branch moved is no move here", async () => {
     const root = mkdtempSync(join(tmpdir(), "slipbox-switched-"));
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;

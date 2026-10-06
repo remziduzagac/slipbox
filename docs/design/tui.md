@@ -888,7 +888,8 @@ slipbox opens any text file in the vault, not only notes (`docs/idea.md`, "Files
 markdown"). `core/filetypes.ts` puts each file in a group by its name: **notes** (the vault's
 `walk.extensions`), **data** (JSON, YAML, TOML, INI, CSV/TSV), **text** (everything else: code,
 logs, `.txt`), or **binary** (images, archives…, by extension — and a text-named file holding a NUL
-in its first 8 KB), which never opens.
+in its first 8 KB), which never opens. Nor does a path in the vault that a symlink leads out of: it isn't a file of
+the vault (the walk leaves it out, the CLI refuses it), so nothing outside is read through it.
 
 A note is read by its format's reader (`core/readers.ts`, `16.2`): each parses into the same mdast
 tree — so the index, the render, the lens and the outline work alike for every format — and says
@@ -1040,9 +1041,11 @@ directory, sharing the walk's `WalkFilter` (decision `0.11`). Events are debounc
 - **What git does lands as one change** (`5.9`, `5.10`): while git holds its index lock (a checkout, a merge, a
   rebase, a commit) the watcher's news waits; when it lets go, everything it changed is applied together. HEAD is
   looked at each second and with each batch: when it moved, `switched to branch feat` — and that branch's tabs back
-  (above). The files a branch switch brings and takes for a few seconds after aren't taken for moves (`17.12`): a
-  note only one branch has comes and goes, nothing moved. A pull or merge on the same branch is no switch: a rename it
-  brings is a move.
+  (above). Mid-rebase (its `rebase-merge` or `rebase-apply` folder there) HEAD is detached between steps, or while
+  stopped on a conflict: not read as moved until the rebase ends, when its branch moved on — no switch away and back.
+  The files a branch switch brings and takes for a few seconds after aren't taken for moves (`17.12`): a note only one
+  branch has comes and goes, nothing moved. A pull or merge on the same branch is no switch: a rename it brings is a
+  move.
 
 ### Bun's watcher, and what covers its gaps
 

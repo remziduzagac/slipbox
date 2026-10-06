@@ -92,7 +92,15 @@ function pageBg(theme: Theme): Color | null {
   return theme.bg === "default" ? null : theme.bg;
 }
 
+/** A key as which-key and the status line show it (`␣ l y`; with ASCII glyphs `SPC l y`). */
+function keyText(app: App, key: string): string {
+  const k = prettyKey(key, app.leader);
+  return app.glyphs.mode === "ascii" ? k.replaceAll("␣", "SPC") : k;
+}
+
 export function drawApp(app: App, c: Canvas): Geometry {
+  // ASCII glyphs: what a console without Unicode can draw, every text drawn (drawText).
+  c.asciiGlyphs = app.glyphs.mode === "ascii";
   const theme = app.theme;
   const page = pageBg(theme);
   const W = c.width;
@@ -1640,7 +1648,7 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const view = app.view;
   const vim = app.vim;
   const chip = app.pending.length
-    ? ` ${app.pending.map((k) => prettyKey(k, app.leader)).join(" ")} `
+    ? ` ${app.pending.map((k) => keyText(app, k)).join(" ")} `
     : vim.op || vim.count || vim.awaitChar
       ? // An operator (or a count, or r) waiting: what's been typed so far, as in vim's showcmd.
         ` ${vim.op ? `${vim.op.count > 1 ? vim.op.count : ""}${vim.op.op}${vim.count}${vim.op.object ?? ""}${vim.op.keys.join("")}` : vim.awaitChar ? "r" : vim.count} `
@@ -1853,7 +1861,7 @@ function drawWhichKey(app: App, c: Canvas, top: number, bottom: number, geo: Geo
   const theme = app.theme;
   const entries = app.whichKeyEntries();
   if (!entries.length) return;
-  const shownKey = (key: string) => key.split(" ").map((k) => prettyKey(k, app.leader)).join(" ");
+  const shownKey = (key: string) => key.split(" ").map((k) => keyText(app, k)).join(" ");
   const GAP = 4;
   const maxW = Math.min(c.width - 8, 140);
   const layoutFor = (n: number) => {

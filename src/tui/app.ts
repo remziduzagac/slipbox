@@ -18,7 +18,7 @@ import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
-import { ensureDir, readJson, readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
+import { ensureDir, landsInside, readJson, readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
@@ -988,6 +988,12 @@ export class App {
       const kind = classify(abs, this.config.walk.extensions);
       if (kind.group === "binary") {
         this.message("warn", `${relRaw || abs} is a binary file; slipbox opens text`);
+        return null;
+      }
+      // A path in the vault that a symlink leads out of: not a file of the vault (the walk leaves
+      // it out, the CLI refuses it), so nothing from outside is read through it.
+      if (inside && !landsInside(this.loc.root, abs)) {
+        this.message("warn", `${relRaw} points outside the vault; not opening it`);
         return null;
       }
       buf = new NoteBuffer(rel, abs, key);
@@ -2524,7 +2530,9 @@ export class App {
   scrollCursorTo(view: View, where: "center" | "top" | "bottom"): void {
     const layout = this.currentLayout(view);
     const hidden = this.lensHidden(view, layout);
-    const up = where === "top" ? 0 : where === "center" ? Math.floor((view.height - 1) / 2) : view.height - 1;
+    // zt and zb keep ui.scrolloff rows to the edge, as the view always does (and H and L land there).
+    const so = Math.max(0, Math.min(this.config.ui.scrolloff, Math.floor((view.height - 1) / 2)));
+    const up = where === "top" ? so : where === "center" ? Math.floor((view.height - 1) / 2) : view.height - 1 - so;
     view.top = this.clampTop(view, layout, this.stepVisible(layout, hidden, view.cur.row, -up));
     this.anchorTop(view, layout);
   }
@@ -7089,7 +7097,7 @@ export class App {
       ...plan.skipped.map((s) => ({ label: `skipped ${s.shown}:${s.line}`, detail: s.reason, data: plan })),
       ...plan.files.flatMap((f) => f.edits.map((e) => ({ label: `${f.shown}:${e.line}`, detail: `${e.before.trim()}  →  ${e.after.trim()}`, data: plan }))),
     ];
-    if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "every link reaches its note by its name now" : plan.kind === "convert" ? "nothing left to convert" : "no links to change", data: plan });
+    if (!plan.files.length) items.push({ label: plan.kind === "relink" ? "no broken link points where a file moved from" : plan.kind === "convert" ? "nothing left to convert" : "no links to change", data: plan });
     const what =
       plan.kind === "note" || plan.kind === "heading"
         ? `${plan.from} → ${plan.to}`

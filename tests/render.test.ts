@@ -306,6 +306,19 @@ describe("the allocator predicts exactly what is drawn (review cycle 2)", () => 
 });
 
 describe("wrapping ASCII by ranges gives the grapheme wrap's rows, exactly (15.1)", () => {
+  test("a long paragraph wraps in linear time: twice the spans, about twice the time (never each row scanning them all)", () => {
+    const spans = (n: number): Span[] => Array.from({ length: n }, (_, i) => ({ text: `lat=54.7425${i % 10} lon=-3.2049 `, role: i % 2 ? "text" : "link", attrs: 0 }));
+    const time = (n: number) => {
+      const s = spans(n);
+      const t = performance.now();
+      wrapSpans(s, 60);
+      return performance.now() - t;
+    };
+    time(4000); // warmed up
+    const once = Math.min(time(20_000), time(20_000));
+    const twice = Math.min(time(40_000), time(40_000));
+    expect(twice / once).toBeLessThan(3); // quadratic would be about 4
+  });
   test("random spans of words, runs of spaces, separators, long words, empty spans, at every width", () => {
     let seed = 11;
     const rand = (n: number) => {

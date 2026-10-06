@@ -192,15 +192,20 @@ function wrapAscii(spans: Span[], w: number): Span[][] | null {
     i = j;
   }
   if (a >= 0 || rows.length === 0) rows.push([a, b]);
+  // Rows come in the text's order: each starts looking from the first span the last one still
+  // reached — not from the first span again (a long paragraph's thousands of rows and spans).
+  let first = 0;
   return rows.map(([x, y]) => {
     const out: Span[] = [];
     if (x < 0) return out;
-    spans.forEach((sp, k) => {
+    while (first < spans.length && starts[first]! + spans[first]!.text.length <= x) first++;
+    for (let k = first; k < spans.length && starts[k]! < y; k++) {
+      const sp = spans[k]!;
       const st = starts[k]!;
       const from = Math.max(x, st);
       const to = Math.min(y, st + sp.text.length);
       if (from < to) out.push({ ...sp, text: sp.text.slice(from - st, to - st) });
-    });
+    }
     return out;
   });
 }

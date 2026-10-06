@@ -2,7 +2,7 @@
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
 
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
@@ -3467,6 +3467,29 @@ describe("UI settings (space u)", () => {
     expect(h.app.ui.urls).toBe(true);
     expect(h.frame()).toContain("<https://example.invalid>");
   });
+  test("ASCII glyphs: the whole screen is ASCII, the chrome's own marks too (a console without Unicode)", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-ascii-"));
+    mkdirSync(join(root, ".slipbox"));
+    writeFileSync(join(root, "index.md"), "# Index\n\n- [the long one](a-rather-long-note-name-for-cutting-in-the-tab-strip.md)\n- [ ] a task\n\n> [!warning] Careful\n> text\n");
+    writeFileSync(join(root, "a-rather-long-note-name-for-cutting-in-the-tab-strip.md"), "# A\n\nplain\n");
+    const h = await harness({ root, width: 60, height: 20, config: (c) => (c.render.glyphs = "ascii") });
+    const ascii = (f: string, what: string) => {
+      const odd = [...f].filter((ch) => ch.codePointAt(0)! > 0x7e && ch !== "\n");
+      if (odd.length) throw new Error(`${what}: ${[...new Set(odd)].join(" ")}\n${f}`);
+    };
+    ascii(h.frame(), "at the start (watching or not, the frame)");
+    for (let i = 0; i < 4; i++) h.app.openInNewTab("a-rather-long-note-name-for-cutting-in-the-tab-strip.md");
+    h.app.openInNewTab("index.md");
+    ascii(h.frame(), "a tab's name cut");
+    await h.keys("tab"); // onto the link: the status line names it
+    ascii(h.frame(), "a link under the cursor");
+    await h.keys("space");
+    ascii(h.frame(), "the leader's popup");
+    await h.keys("escape", "space", "n", "v", "G", "A", "x", "escape");
+    ascii(h.frame(), "a change unsaved");
+    await h.keys("/", "t", "a", "s", "k");
+    ascii(h.frame(), "the find row");
+  });
   test("theme and glyph pickers preview live and esc restores", async () => {
     const h = await harness();
     await h.keys("space", "u", "t", "down");
@@ -4797,6 +4820,15 @@ describe("files beyond notes (16.3–16.5)", () => {
     expect(h.app.buffer("dump.txt")).toBeNull();
     expect(h.app.messages.at(-1)!.text).toBe("dump.txt holds binary bytes; slipbox opens text");
     expect(h.app.buffer("late.txt")).not.toBeNull();
+    // A symlink in the vault leading out of it isn't a file of the vault: nothing outside is read
+    // through it (the CLI refuses it too). One leading to a note inside opens.
+    const outside = join(mkdtempSync(join(tmpdir(), "slipbox-outside-")), "secret.md");
+    writeFileSync(outside, "# Secret\n");
+    symlinkSync(outside, join(root, "out.md"));
+    symlinkSync(join(root, "links-out.md"), join(root, "in.md"));
+    expect(h.app.buffer("out.md")).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toBe("out.md points outside the vault; not opening it");
+    expect(h.app.buffer("in.md")?.source).toBe(readFileSync(join(root, "links-out.md"), "utf8"));
   });
   test("the switcher lists the files the explorer shows", async () => {
     const h = await harness({ root: await setup() });
@@ -5247,10 +5279,16 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     await h.keys("shift+m");
     expect(Math.abs(v.cur.row - rows[Math.floor((rows.length - 1) / 2)]!)).toBeLessThanOrEqual(1);
     const row = v.cur.row;
+    // zt and zb keep the scrolloff rows (3) to the edge, so H and L stay on the cursor's row.
+    const at = () => h.app.screenRows(v, h.app.currentLayout(v)).indexOf(row);
     await h.keys("z", "t");
-    expect(v.top).toBe(row);
+    expect(at()).toBe(3);
+    await h.keys("shift+h");
+    expect(v.cur.row).toBe(row);
     await h.keys("z", "b");
-    expect(h.app.screenRows(v, h.app.currentLayout(v)).at(-1)).toBe(row);
+    expect(at()).toBe(h.app.screenRows(v, h.app.currentLayout(v)).length - 1 - 3);
+    await h.keys("shift+l");
+    expect(v.cur.row).toBe(row);
     await h.keys("z", "z");
     const shown = h.app.screenRows(v, h.app.currentLayout(v));
     expect(Math.abs(shown.indexOf(row) - Math.floor((shown.length - 1) / 2))).toBeLessThanOrEqual(1);
@@ -5926,6 +5964,9 @@ describe("vaults in the TUI (17.x)", () => {
     expect((h.app.overlay as ListOverlay).title).toStartWith("relink: 1 change in 1 file");
     await h.keys("enter");
     expect(readFileSync(join(notes, "todo-link.md"), "utf8")).toBe("[t](tasks.md)\n");
+    // Nothing left to relink: the preview says what it looked for (no names: links are paths, 20.22).
+    await h.app.run("link.relink");
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["no broken link points where a file moved from"]);
   });
 
   test("a new note named like another is offered a distinct name from its folder; typed again, it's kept (17.5)", async () => {

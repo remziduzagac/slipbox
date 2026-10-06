@@ -337,17 +337,22 @@ function readIni(source: string): ParsedData {
     // `dir = C:\` is a Windows path.
     while (/(^|[^\\])(\\\\)*\\$/.test(value) && /^[ \t]+\S/.test(lines[i + 1] ?? "")) value = `${value.slice(0, -1)}${lines[++i]!.replace(/\r$/, "").trim()}`;
     let comment: string | null = null;
-    const c = /\s[#;]\s?(.*)$/.exec(value);
-    if (c && !/^["']/.test(value)) {
-      comment = c[1]!.trim() || null;
-      value = value.slice(0, c.index).trim();
+    // Quoted, the value ends at its closing quote: a # or ; inside is its own, one after is a
+    // comment (`URL="https://x#top"   # where sync goes`).
+    const quoted = /^"(.*?)"\s*(?:[#;]\s?(.*))?$|^'(.*?)'\s*(?:[#;]\s?(.*))?$/.exec(value);
+    if (quoted) comment = (quoted[2] ?? quoted[4])?.trim() || null;
+    else {
+      const c = /\s[#;]\s?(.*)$/.exec(value);
+      if (c) {
+        comment = c[1]!.trim() || null;
+        value = value.slice(0, c.index).trim();
+      }
     }
-    const quoted = /^"(.*)"$|^'(.*)'$/.exec(value);
     if (comment || standsAlone(pending, out)) flushComment();
     const first = pending ? pending.line : keyLine;
     comment ??= pending ? pending.text.join(" ") : null;
     pending = null;
-    out.push({ type: "dataField", key, value: quoted ? (quoted[1] ?? quoted[2])! : value, kind: quoted ? "string" : kindOf(value), comment, keyWidth: 0, keyLine, position: pos(first, i + 1) } as unknown as RootContent);
+    out.push({ type: "dataField", key, value: quoted ? (quoted[1] ?? quoted[3])! : value, kind: quoted ? "string" : kindOf(value), comment, keyWidth: 0, keyLine, position: pos(first, i + 1) } as unknown as RootContent);
   }
   flushComment();
   const tree: Root = { type: "root", children: out };

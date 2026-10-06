@@ -16,7 +16,22 @@ export interface Canvas {
   cell(x: number, y: number, g: string, w: number, style: CellStyle): void;
   /** Draw ASCII text in one call (fast path). */
   ascii(x: number, y: number, text: string, style: CellStyle): void;
+  /** The frame is drawn with ASCII glyphs: typographic symbols go as their ASCII look-alikes. */
+  asciiGlyphs?: boolean;
 }
+
+/**
+ * What a console without Unicode (`TERM=linux`, a locale that isn't UTF-8: the ASCII glyph set)
+ * can't draw, as its ASCII look-alike, one column for one: the chrome's own marks (`•` unsaved,
+ * `⚠`, `↻`, `●` watching, `›`, `…`) and the punctuation of messages and of notes alike. The rest
+ * of the text (CJK, accents) goes as it is: nothing stands in for it.
+ */
+const ASCII_LOOKALIKE: Record<string, string> = {
+  "—": "-", "–": "-", "‘": "'", "’": "'", "“": '"', "”": '"', "…": "~", "·": "-", "•": "*", "›": ">", "‹": "<",
+  "→": ">", "←": "<", "↑": "^", "↓": "v", "⇄": "=", "⚠": "!", "✖": "x", "✗": "x", "×": "x", "ℹ": "i", "↻": "~",
+  "●": "*", "○": "o", "✓": "v", "\u00a0": " ",
+};
+const LOOKALIKES = new RegExp(`[${Object.keys(ASCII_LOOKALIKE).join("")}]`, "g");
 
 const PRINTABLE_ASCII = /^[\x20-\x7e]*$/;
 
@@ -35,6 +50,7 @@ export function drawText(c: Canvas, x: number, y: number, text: string, style: C
   if (y < 0 || y >= c.height || maxW <= 0) return 0;
   const limit = Math.min(maxW, c.width - x);
   if (limit <= 0) return 0;
+  if (c.asciiGlyphs && !PRINTABLE_ASCII.test(text)) text = text.replace(LOOKALIKES, (ch) => ASCII_LOOKALIKE[ch]!);
   if (PRINTABLE_ASCII.test(text)) {
     const t = text.length > limit ? text.slice(0, limit) : text;
     if (t) c.ascii(x, y, t, style);

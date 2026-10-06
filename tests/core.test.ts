@@ -1040,11 +1040,15 @@ describe("data files read as documents (16.11–16.13)", () => {
   });
   test("INI and .env; CSV with quotes, doubled quotes and a newline in a field", async () => {
     const { parseData } = await import("../src/core/data.ts");
-    const ini = parseData("ini", "; c\n[core]\nk = v ; tail\nexport X=1\n");
+    const ini = parseData("ini", '; c\n[core]\nk = v ; tail\nexport X=1\nURL="https://x.invalid/#top"   # where sync goes\nB=\'one ; two\' ; c\nQ="plain"\n');
     expect(headings(ini.tree)).toEqual(["core"]);
+    // Quoted, a value ends at its closing quote: a # or ; inside it is its own, one after a comment.
     expect(fields(ini.tree).map((x) => [x.key, x.value, x.comment])).toEqual([
       ["k", "v", "tail"],
       ["X", "1", null],
+      ["URL", "https://x.invalid/#top", "where sync goes"],
+      ["B", "one ; two", "c"],
+      ["Q", "plain", null],
     ]);
     // Java's .properties: `!` comments, and a value that goes on, indented, after a backslash; an
     // INI's Windows path ending in one is a value of its own line.

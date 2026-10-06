@@ -290,7 +290,9 @@ override:
 
 `SLIPBOX_GLYPHS` or the config value forces a set, and in the TUI `space u g` picks one with a live
 preview (`:glyphs <set>` sets it directly). The chrome has ASCII fallbacks too: `≡`→`=`, `▤`→`#`,
-`×`→`x`, `›`→`>`, `§`→`#`, tree lines `|` `` ` `` `-`, box joints `+`.
+`×`→`x`, `›`→`>`, `§`→`#`, tree lines `|` `` ` `` `-`, box joints `+`. And what such a console can't draw goes as
+an ASCII look-alike, one column for one, in the chrome and the note alike: the marks (`•` unsaved `*`, `⚠` `!`, `↻`
+`~`, `●` watching `*`), `…` `~`, dashes and curly quotes; the leader key shows as `SPC`.
 The Nerd set uses the same heading icons as the render-markdown configuration it replaces.
 
 ## Escapes (constraint `2.9`)

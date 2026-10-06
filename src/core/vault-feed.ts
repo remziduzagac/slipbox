@@ -107,6 +107,13 @@ export class VaultFeed {
     return !!c && existsSync(join(c.gitDir, "index.lock"));
   }
 
+  /** git is mid-rebase in the checkout: HEAD detached between its steps (or stopped on a conflict)
+   *  — not where the branch is going, so not a move of HEAD yet. */
+  rebasing(): boolean {
+    const c = this.o.checkout();
+    return !!c && (existsSync(join(c.gitDir, "rebase-merge")) || existsSync(join(c.gitDir, "rebase-apply")));
+  }
+
   /** A batch from the watcher: applied now — or, while git writes, held with the rest it writes. */
   receive(b: WatchBatch): void {
     this.held.push(b);
@@ -144,9 +151,10 @@ export class VaultFeed {
   }
 
   /** HEAD looked at (a poll, each batch): true when it moved, or a repository appeared or went.
-   *  Not while git still writes: then it hasn't finished moving. */
+   *  Not while git still writes, nor mid-rebase: then it hasn't finished moving (a rebase lands as
+   *  one change — its branch moved on, never a switch away and back). */
   checkHead(): boolean {
-    if (this.gitLocked()) return false;
+    if (this.gitLocked() || this.rebasing()) return false;
     const now = this.headNow();
     const was = this.head;
     this.head = now;
