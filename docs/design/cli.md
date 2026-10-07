@@ -659,3 +659,7 @@ exits 2, so an editor still starting it shows why in its log.
 `scripts/install-local.sh` writes a `slipbox` launcher into `~/.local/bin` that runs this
 checkout with bun. `--skill` also links the skill into `~/.claude/skills/slipbox`. Real packaging
 (`bun build --compile`, release assets) is plan `14.x`.
+
+The launcher gives Bun slipbox's own `bunfig.toml` and no `.env` (`--config`, `--no-env-file`). Bun reads both from
+the folder it starts in, which is whatever repository or notes folder you run `slipbox` in: that folder's preload
+would run, as its code, whenever slipbox did. A launcher written before 2026-10-07 lacks this: run the script again.

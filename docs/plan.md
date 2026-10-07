@@ -479,7 +479,7 @@ common, and the only reason they are step 0.
 | 6.8 | **Done.** `slipbox search` (ranked; the index, else a scan), `slipbox index`; `[search] engine` |
 | 6.9 | **Done.** The TUI keeps the index: built in idle slices, kept by the feed; unsaved notes searched as shown |
 | 6.10 | **Postponed** (2026-10-07): Scout became trailscout, its own project; slipbox uses its SDK when that exists |
-| 6.11 | **Done.** better-sqlite3 for the index (scout's binding too): its own SQLite; Bun 1.4.2 and up |
+| 6.11 | **Done.** better-sqlite3 for the index: its own SQLite (3.53.4); Bun 1.4.2 and up, glibc 2.34 |
 | 6.12 | **Done.** Sections are scout's: the containment tree cut to the 400–1500 band; a hit cites its section |
 | 6.13 | **Dropped** (2026-10-07). `@slipbox/links` for scout: scout became trailscout (`6.10`), its own project |
 
@@ -701,7 +701,7 @@ packaging lands whenever it first needs to run on a VM.*
 
 | ID | Item |
 | --- | --- |
-| 14.1 | `bun build --compile` per target |
+| 14.1 | `bun build --compile` per target, `--no-compile-autoload-bunfig --no-compile-autoload-dotenv` |
 | 14.2 | Release assets: darwin-arm64, linux-arm64, linux-x64 |
 | 14.3 | Homebrew formula |
 | 14.4 | Update path |

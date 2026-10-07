@@ -1942,9 +1942,9 @@ describe("the lint surface (3.21)", () => {
       mkdirSync(join(own, ".."), { recursive: true });
       writeFileSync(own, "#!/usr/bin/env node\n");
       chmodSync(own, 0o755);
-      expect(lintCommand(cfg("auto"), vault, home)).toEqual({ argv: [process.execPath, own, "--config", user], literal: true, env: { BUN_BE_BUN: "1" } });
+      expect(lintCommand(cfg("auto"), vault, home)).toEqual({ argv: [process.execPath, "--config=/dev/null", "--no-env-file", own, "--config", user], literal: true, env: { BUN_BE_BUN: "1" } });
       writeFileSync(join(vault, ".markdownlint.json"), "{}");
-      expect(lintCommand(cfg("auto"), vault, home)!.argv).toEqual([process.execPath, own]); // the vault's own config
+      expect(lintCommand(cfg("auto"), vault, home)!.argv).toEqual([process.execPath, "--config=/dev/null", "--no-env-file", own]); // the vault's own config
       expect(lintCommand(cfg("auto", ["mdl", "--config", "~/mdl.json"]), vault, home)).toEqual({ argv: ["mdl", "--config", join(home, "mdl.json")], literal: false });
     } finally {
       process.env.PATH = was;
@@ -1967,7 +1967,7 @@ describe("the lint surface (3.21)", () => {
       expect(said).toEqual([`installing file:${pkg} into slipbox's own folder…`]);
       expect(existsSync(join(process.env.XDG_DATA_HOME!, "slipbox", "tools", "node_modules", ".bin", "markdownlint-cli2"))).toBe(true);
       // Installed: found there from then on, never installed again.
-      expect(lintCommand({ enabled: "on", command: [] }, v)!.argv[1]).toBe(realpathSync(join(process.env.XDG_DATA_HOME!, "slipbox", "tools", "node_modules", ".bin", "markdownlint-cli2")));
+      expect(lintCommand({ enabled: "on", command: [] }, v)!.argv).toContain(realpathSync(join(process.env.XDG_DATA_HOME!, "slipbox", "tools", "node_modules", ".bin", "markdownlint-cli2")));
       // An install that fails: the linter doesn't run, and the next run tries again.
       const broken = { argv: [], literal: true, install: `file:${join(sandbox, "no-such-package")}` };
       expect(await runLint(broken, ["/v/a.md"], v, undefined, (t) => said.push(t))).toBeNull();

@@ -1,6 +1,6 @@
 // SQLite for slipbox (the search index, 6.6): better-sqlite3, which bundles its own SQLite (3.53.4)
-// and works the same under Node and Bun on macOS and Linux — chosen with scout, which uses it too,
-// so a process holding both loads one SQLite. Bun 1.3 panics on it; slipbox needs Bun 1.4.2 or later.
+// and works the same under Node and Bun on macOS and Linux, where bun:sqlite takes macOS's own. Bun 1.3
+// panics on it; slipbox needs Bun 1.4.2 or later, and on Linux glibc 2.34.
 //
 // Loaded through its per-platform entry, by a literal name each: those `require` their prebuilt
 // binary by a literal path, which `bun build --compile` embeds. The package's default entry finds it

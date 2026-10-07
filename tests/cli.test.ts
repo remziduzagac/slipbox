@@ -1426,3 +1426,24 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     expect(slipbox(["cp", "Home.md", "Other.md", "--json"], { cwd: root, env }).json.warnings).toEqual([]);
   });
 });
+
+describe("the launcher (scripts/install-local.sh)", () => {
+  test("run inside a repository, it never runs the repository's bunfig.toml preload, nor reads its .env", () => {
+    const bin = mkdtempSync(join(sandbox, "bin-"));
+    const made = Bun.spawnSync(["bash", join(import.meta.dir, "..", "scripts", "install-local.sh")], { env: { ...process.env, SLIPBOX_BIN_DIR: bin } });
+    expect(made.exitCode).toBe(0);
+    // A cloned repository: Bun, started in it, would run its preload first and load its .env.
+    const repo = mkdtempSync(join(sandbox, "hostile-"));
+    const ran = join(repo, "preload-ran");
+    writeFileSync(join(repo, "evil.ts"), `require("node:fs").writeFileSync(${JSON.stringify(ran)}, process.env.SLIPBOX_CONFIG ?? "");\n`);
+    writeFileSync(join(repo, "bunfig.toml"), 'preload = ["./evil.ts"]\n');
+    writeFileSync(join(repo, ".env"), `SLIPBOX_CONFIG=${join(repo, "planted.toml")}\n`);
+    writeFileSync(join(repo, "planted.toml"), "[ui]\ntheme = 7\n"); // a warning, if it were read
+    writeFileSync(join(repo, "a.md"), "# A\n");
+    const { SLIPBOX_CONFIG: _, ...clean } = { ...process.env, ...env };
+    const r = Bun.spawnSync([join(bin, "slipbox"), "ls", "--json"], { cwd: repo, env: clean });
+    expect(r.exitCode).toBe(0);
+    expect(existsSync(ran)).toBe(false);
+    expect(JSON.parse(r.stdout.toString()).warnings ?? []).toEqual([]);
+  });
+});

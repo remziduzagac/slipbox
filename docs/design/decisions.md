@@ -435,7 +435,10 @@ bash-language-server, lua-language-server and vscode-css-language-server. One li
 
 - **npm servers run on slipbox's own Bun.** vtsls, pyright and bash-language-server run under Bun, and the compiled
   binary is Bun when `BUN_BE_BUN=1` is set: it installs a server (`add --ignore-scripts --exact`, into a folder of
-  its own, in two seconds) and runs it. No Node, nothing global (`19.5`).
+  its own, in two seconds) and runs it. No Node, nothing global (`19.5`). Started in its root, it gets no
+  `bunfig.toml` and no `.env` (`--config=/dev/null --no-env-file`, 2026-10-07): Bun reads both from the folder it
+  starts in, so a repository's preload would run with any server started there, and the launcher (`install-local.sh`)
+  gives Bun slipbox's own config for the same reason.
 - **Diagnostics come both ways.** Older servers send them; newer ones — the CSS server, for one — wait to be asked
   (`textDocument/diagnostic`, LSP 3.17). The client does both.
 - **A server needs its settings.** Asked for them and given none, the CSS server checks nothing, so each server
@@ -537,9 +540,12 @@ score while there's none, so a search always answers. It's deliberately small �
 search, the graph) will sit behind the same API when it's there; slipbox's is the fallback.
 
 - **SQLite is better-sqlite3** (since 2026-10-01; Bun's own `bun:sqlite` before). It bundles its own SQLite (3.53.4)
-  rather than linking the host's, works the same under Node and Bun on macOS and Linux with no workaround (`bun:sqlite`
-  needs `setCustomSQLite()` on macOS), and is what scout uses — a process holding both loads one SQLite. Measured
-  with scout: Bun 1.3 panics on it (exit 133), so slipbox needs Bun 1.4.2 and says so at start. Every JS number binds
+  rather than linking the host's, and works the same under Node and Bun on macOS and Linux with no workaround
+  (`bun:sqlite` uses Apple's system SQLite on macOS and needs `setCustomSQLite()`). It was scout's too, so a process
+  holding both would load one SQLite; since 2026-10-07 trailscout runs as its own daemon, reached over a socket, and
+  its SQLite never loads in slipbox, so the binding is slipbox's own choice — still this one, for the reasons above.
+  Its Linux builds need glibc 2.34 or later. Measured with scout: Bun 1.3 panics on it (exit 133), so slipbox needs
+  Bun 1.4.2 and says so at start. Every JS number binds
   as a double (`bun:sqlite` narrowed integral ones), so an integer the schema needs is bound `CAST(? AS INTEGER)` —
   audited: FTS5's rowid and `LIMIT` accept a double in 3.53.4, cast anyway, since vec0's key does not. It loads
   through its per-platform entry by a literal name (`core/sqlite.ts`): that one's binary `bun build --compile`

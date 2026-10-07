@@ -13,7 +13,7 @@ behaviour, the matching document changes in the same commit.
 | [keymap.md](keymap.md) | every key: the conventions, the direct keys, the leader groups, the `:` aliases |
 | [keymap-comparison.md](keymap-comparison.md) | the keys beside vim's, VS Code's and Obsidian's, and where they differ |
 | [cli.md](cli.md) | the agent surface: commands, JSON contract, exit codes, capture |
-| [scout.md](scout.md) | scout, now trailscout (postponed, `6.10`): three tiers; a library; what disagrees |
+| [scout.md](scout.md) | scout, now trailscout (postponed, `6.10`): three tiers; its SDK and daemon; what disagrees |
 | [lsp.md](lsp.md) | phase 5: slipbox's client of the language servers of code (the LSP face is gone: `20.23`) |
 | [configuration.md](configuration.md) | every config key and environment variable |
 | [testing.md](testing.md) | test strategy and the fixture vault |

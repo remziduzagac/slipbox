@@ -171,7 +171,7 @@ package — no build toolchain):
 | `ignore` | gitignore semantics for the walk |
 | `smol-toml`, `yaml` | config; frontmatter and base16 schemes |
 | `vscode-languageserver-protocol`, `-textdocument` | the client's protocol (19.x), a file's text as a server has it |
-| `better-sqlite3` | the search index's SQLite, its own (3.53.4) bundled; needs Bun 1.4.2 |
+| `better-sqlite3` | the search index's SQLite, its own (3.53.4) bundled; needs Bun 1.4.2, on Linux glibc 2.34 |
 | `web-tree-sitter` 0.25 and a grammar package per language (`tree-sitter-*`) | source files' structure (16.7, 16.18) |
 
 The grammars npm ships no WebAssembly for — Swift, SCSS, Vue, Astro, Dockerfile — are built from their sources at

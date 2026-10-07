@@ -84,11 +84,15 @@ function nodeScript(path: string): boolean {
   }
 }
 
-/** How to run a program found at `path` with the server's arguments: a Node script on slipbox's own Bun. */
+/**
+ * How to run a program found at `path` with the server's arguments: a Node script on slipbox's own Bun.
+ * That Bun starts in the root, and would read the root's bunfig.toml (running its preload) and .env:
+ * a repository's own code, run by opening a file. No config and no .env, then.
+ */
 export function runnable(path: string, args: string[], where: Where): Found {
   if (!nodeScript(path)) return { argv: [path, ...args], env: {}, where, path };
   // Compiled, slipbox's binary is Bun when told to be (decisions, 11.1).
-  return { argv: [process.execPath, realpathSync(path), ...args], env: { BUN_BE_BUN: "1" }, where, path };
+  return { argv: [process.execPath, "--config=/dev/null", "--no-env-file", realpathSync(path), ...args], env: { BUN_BE_BUN: "1" }, where, path };
 }
 
 /** A server's program, wherever it is; null when it's nowhere (installable or not). */

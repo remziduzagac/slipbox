@@ -1,7 +1,10 @@
 # Scout: how slipbox will use it
 
-*Postponed (`6.10`, 2026-10-07): scout became trailscout, a project of its own with its own SDK; slipbox will use
-that SDK once it exists. This page stays as the record of what the two sides agreed.*
+*Postponed (`6.10`, 2026-10-07): scout became trailscout, a project of its own. It runs as its own daemon, and
+slipbox will reach it over a per-user Unix socket through `@trailscout/client`, an ESM-only SDK with no runtime
+dependencies (Node 22 or later, Bun 1.4 or later). trailscout's engine and its SQLite never load inside slipbox. This
+page stays as the record of what the two sides agreed; where it says scout is a library slipbox imports, the SDK
+and the daemon replace that.*
 
 Recorded 2026-10-01 from the design session on scout, a local retrieval engine slipbox will consume. **Scout does
 not exist yet**: nothing in slipbox is written against it — no dependency, no types, no adapter, no stub — and
@@ -40,12 +43,13 @@ Three tiers, not two engines to fuse.
 - **Tier 3 is the one most worth having**: a query-less diffusion from the note being read — not a search box at
   all, and the most slipbox-shaped thing scout does.
 
-## A library, never a CLI fallback
+## Through its SDK, never a CLI fallback
 
-Scout is an optional peer dependency behind a dynamic `import()`: absence is caught at import, and slipbox says
-"scout unavailable, using local search" — never silently slower. There is no fallback to scout's CLI: it reloads its
-model (some 300 MB) per invocation, a different performance class, and a second path through one feature is a path
-nobody tests. The CLI is the door for agents and shells.
+The SDK, `@trailscout/client`, is an optional dependency behind a dynamic `import()` (agreed when scout was to be a
+library slipbox loaded; the daemon now runs the engine). An SDK that isn't installed, or no daemon answering on the
+socket, is caught, and slipbox says "trailscout unavailable, using local search" — never silently slower. There is
+no fallback to scout's CLI: it reloads its model (some 300 MB) per invocation, a different performance class, and a
+second path through one feature is a path nobody tests. The CLI is the door for agents and shells.
 
 **slipbox drives scout's freshness.** It calls scout's `index()` from the same gate its own index is kept at — the
 graph's change feed (`Graph.onChange`, `6.7`), which every change reaches: a save here, the watcher, a rename, a
@@ -61,7 +65,9 @@ slipbox concept, persist it in a file — never expose a method.
 
 ## Already done on slipbox's side
 
-- **The SQLite binding**: better-sqlite3, scout's too, so a process holding both loads one SQLite (`6.1`).
+- **The SQLite binding**: better-sqlite3 was chosen as scout's too, so a process holding both would load one SQLite
+  (`6.11`). That no longer applies: trailscout's SQLite (Node's `node:sqlite`) runs in its daemon, so slipbox's
+  binding is its own choice ([decisions.md](decisions.md), `6.1`).
 - **The sections**: scout's containment tree and size band (`6.1`), so a scout result and a slipbox hit are the same
   section, cited in slipbox's own terms.
 

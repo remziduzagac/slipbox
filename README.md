@@ -12,7 +12,8 @@ its index, roots, named folders and pointers, git and merge review, language ser
 
 ## Try it
 
-Requires [Bun](https://bun.sh) 1.4.2 or later (older ones crash in SQLite, which search uses).
+Requires [Bun](https://bun.sh) 1.4.2 or later (older ones crash in SQLite, which search uses), and on Linux glibc 2.34
+or later.
 
 ```bash
 bun install

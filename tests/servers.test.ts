@@ -349,8 +349,22 @@ describe("which servers, where (19.2–19.5)", () => {
     exe(join(root, "node_modules/.bin/slipbox-test-ls"), "#!/usr/bin/env node\nconsole.log(1)\n");
     const f = findServer(def, join(root, "sub"))!;
     expect(f.where).toBe("project");
-    expect(f.argv).toEqual([process.execPath, join(root, "node_modules/.bin/slipbox-test-ls"), "--stdio"]);
+    expect(f.argv).toEqual([process.execPath, "--config=/dev/null", "--no-env-file", join(root, "node_modules/.bin/slipbox-test-ls"), "--stdio"]);
     expect(f.env).toEqual({ BUN_BE_BUN: "1" });
+  });
+
+  test("a Node server run on slipbox's Bun in a repository never runs the repository's bunfig.toml preload, nor reads its .env", () => {
+    // The root a server starts in is a cloned repository's: its bunfig.toml would have Bun run its own code first.
+    const root = dir("hostile-bun", { ".git/HEAD": "ref: refs/heads/main\n", ".env": "SLIPBOX_TEST_DOTENV=read\n" });
+    const ran = join(root, "preload-ran");
+    writeFileSync(join(root, "evil.ts"), `require("node:fs").writeFileSync(${JSON.stringify(ran)}, "yes");\n`);
+    writeFileSync(join(root, "bunfig.toml"), 'preload = ["./evil.ts"]\n');
+    exe(join(root, "node_modules/.bin/slipbox-test-env"), "#!/usr/bin/env node\nconsole.log(process.env.SLIPBOX_TEST_DOTENV ?? 'none')\n");
+    const f = findServer({ name: "e", command: "slipbox-test-env", args: [] }, root)!;
+    expect(f.where).toBe("project");
+    const r = Bun.spawnSync(f.argv, { cwd: root, env: { ...process.env, ...f.env } });
+    expect(r.stdout.toString().trim()).toBe("none");
+    expect(existsSync(ran)).toBe(false);
   });
 
   test("TypeScript's own server where the project's TypeScript is 7 or none, vtsls for an older one; add-ons where asked", () => {
