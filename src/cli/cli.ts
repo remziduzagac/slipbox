@@ -1417,7 +1417,7 @@ const HANDLERS: Record<string, Handler> = {
     };
     // A root you don't trust (23.x): what runs there is yours, never the folder's; said, with what it limits.
     const untrusted = (root: string, limits: string[]) => {
-      s.warnings.push(`${short(root)} isn't a root you trust: nothing of its own runs — not its programs, its settings that name one, or the code its servers and git would run${limits.length ? ` (here: ${limits.join("; ")})` : ""}; [trust] roots in your config trusts it`);
+      s.warnings.push(`${short(root)} isn't a root you trust: nothing of its own runs — not its programs, its settings that name one, or the code its servers and git would run${limits.length ? ` (here: ${limits.join("; ")})` : ""}; slipbox asks whether you trust it when that matters (or :trust there), and [trust] roots in your config can list it`);
       if (!gitGuardsAttributes()) s.warnings.push("git is older than 2.42: in a root you don't trust, the filters its attributes name can still run — git 2.42 or later stops them");
     };
     if (rest[0]) {

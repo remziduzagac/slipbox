@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { CodeAction, Command as LspCommand, Hover, Location, LocationLink, MarkedString, MarkupContent, Range, SymbolInformation, TextEdit, WorkspaceEdit, WorkspaceSymbol } from "vscode-languageserver-protocol";
 import { anchorsOf } from "../core/parse.ts";
 import { blockLine, findHeading, landingText, lineFragment } from "../core/landing.ts";
-import { isAbsolute, join, posix, relative } from "node:path";
+import { dirname, isAbsolute, join, posix, relative } from "node:path";
 import { backgroundStatus, describeBackground } from "../core/autoindex.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { isPointer, parsePointer, resolvePointer } from "../core/pointer.ts";
@@ -1913,6 +1913,9 @@ export function registerActions(app: App): void {
       }),
     "folders.open": (a) => a.openFolders(),
     "folders.default": (a) => a.chooseDefaultCopy(),
+    // A root's trust (23.x): the root you opened, or the shown file's project when it's elsewhere.
+    "root.trust": (a) => a.trustRoot(a.trustTarget(a.view ? dirname(a.view.buf.abs) : a.loc.root), true),
+    "root.untrust": (a) => a.trustRoot(a.trustTarget(a.view ? dirname(a.view.buf.abs) : a.loc.root), false),
     "folder.name": (a, arg) => {
       // The explorer's selected root (one nested here), when it has focus.
       const item = a.explorerFocused() ? a.explorerItem() : null;

@@ -3,11 +3,13 @@
 // headless tests can't: key encodings, timing, the idle loop, what the screen really shows. Mouse
 // clicks can't be sent through herdr; the headless tests cover them.
 
-import { existsSync, readFileSync, renameSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, renameSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { UNSAFE } from "../../src/core/sanitize.ts";
 import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, type Scenario, TOML, TSC } from "./helpers.ts";
-import type { SessionOptions } from "./session.ts";
+import { sleep } from "./herdr.ts";
+import { Skipped, type SessionOptions } from "./session.ts";
 import { GIT_SCENARIOS } from "./world-git.ts";
 import { CONTENT_SCENARIOS } from "./world-content.ts";
 import { TERMINAL_SCENARIOS } from "./world-terminal.ts";
@@ -766,6 +768,32 @@ const CORE: Scenario[] = [
       await s.see(/round\(x: number\): number/, 10000);
       await s.keys("escape");
       await s.see("Math.round(");
+    },
+  },
+  {
+    name: "trust: a Go file, language servers on — asked once whether you trust the root; y kept across a start; :untrust (23.x)",
+    options: {
+      config: "[lsp]\nenabled = true\nauto_install = false\n",
+      files: { "code/go.mod": "module probe\n\ngo 1.24\n", "code/main.go": 'package main\n\nfunc main() {\n\tvar x int = "a"\n\t_ = x\n}\n' },
+    },
+    run: async (s) => {
+      // gopls has a safe mode (no toolchain downloads, no cgo): where it runs, an unanswered root is asked about.
+      if (!Bun.which("gopls") && !existsSync(join(homedir(), "go", "bin", "gopls"))) throw new Skipped("gopls isn't installed here");
+      const answers = () => readFileSync(join(s.dir, "state", "slipbox", "trust.json"), "utf8");
+      await s.ex("e code/main.go");
+      await s.status("main.go");
+      await s.see(/Trust \S+\/vault\?/, 15000); // the root opened, not code/
+      await s.keys("y");
+      await s.message(/trusted \/\S+\/vault:/);
+      s.expect(JSON.parse(answers()).trusted.includes(realpathSync(s.vault)), `trusted, kept: ${answers()}`);
+      // Started again on it: not asked again.
+      await s.restart({ startAt: "vault/code/main.go" });
+      await s.status("main.go");
+      await sleep(3000); // its servers started, had it asked
+      s.expect(s.rowOf(/Trust \S+\/vault\?/) < 0, "not asked again");
+      await s.ex("untrust");
+      await s.message("vault kept safe: nothing of"); // the box wraps the rest
+      s.expect(JSON.parse(answers()).restricted.includes(realpathSync(s.vault)), `kept safe: ${answers()}`);
     },
   },
   {

@@ -237,6 +237,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "note.rename", title: "Rename or move the note", cli: "slipbox mv <note> <new-path>", desc: "Its links rewritten wherever they're reached, after a preview, each in its form" },
   { id: "heading.rename", title: "Rename the heading", cli: "slipbox rename-heading <note> <heading> <new>", desc: "The section the cursor is in: every link to it rewritten wherever it's reached, after a preview" },
   { id: "folders.open", title: "Folders: go into a named one", cli: "slipbox folders", desc: "The named folders this machine knows (21.6), each by the name pointers use; enter goes into the copy its links open (back returns)" },
+  { id: "root.trust", title: "Trust this root", cli: null, desc: "Its own tools run as they would anywhere — its programs, its settings, the code its servers and git run (23.x); asked the first time it matters. In slipbox only: an agent can't be talked into it" },
+  { id: "root.untrust", title: "Stop trusting this root", cli: null, desc: "Nothing of its own runs from now on: its servers in their safe modes, git with its guards (23.x)" },
   { id: "folders.default", title: "Which copy a folder's links open", cli: "slipbox folders default <name> <path>", desc: "A named folder with two copies here: pick the one its pointers open" },
   { id: "folder.name", title: "Name this folder, as pointers name it", cli: "slipbox name <new>", desc: "This root, or the explorer's selected one: a .slipbox/ folder's name changed (the old one kept, pointers by it still found), after a preview; a repository given one" },
   { id: "link.relink", title: "Relink after moves and renamed folders", cli: "slipbox relink [note]", desc: "Rewrites this note's links broken by a move it saw, and pointers by a folder's old name" },
@@ -273,7 +275,7 @@ export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "UI", ids: /^(ui\.|theme\.|glyphs\.)/ },
   { title: "Scratch", ids: /^(scratch\.|context\.copy$)/ },
   { title: "Git", ids: /^git\./ },
-  { title: "Note, folder, app", ids: /^(note\.|folder\.|folders\.|heading\.|rename\.|trash\.|problems\.|info\.|vault\.|config\.|messages\.|help\.|app\.)/ },
+  { title: "Note, folder, app", ids: /^(note\.|folder\.|folders\.|root\.|heading\.|rename\.|trash\.|problems\.|info\.|vault\.|config\.|messages\.|help\.|app\.)/ },
 ];
 
 export function commandGroup(id: string): string {

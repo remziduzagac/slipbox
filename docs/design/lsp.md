@@ -78,9 +78,16 @@ the root's preload and read its `.env`, whichever program it was, slipbox's own 
 program's name is common elsewhere is taken only from the project or slipbox's installs: a `tsc` on `PATH` may be an
 older TypeScript with no server.
 
-**Trust** (`23.x`, `core/trust.ts`; revises `19.6`). slipbox runs nothing a folder brings with it unless its root is
-in your config's `[trust] roots` (paths, `~`, globs such as `~/Projects/*`, each with what's inside it; a folder's
-own `[trust]` is ignored). In a root you don't trust:
+**Trust** (`23.x`, `core/trust.ts`; revises `19.6`). slipbox runs nothing a folder brings with it unless you trust its
+root. You never edit a file for that: the TUI asks, the first time it matters — when a file's servers there would
+otherwise run with something left out — `Trust ~/x? Its own tools would run code it holds — … Only a folder you
+know (y trusts it; n keeps it safe)`. It asks about the root you opened (one answer for every project in it), else the
+file's project; never while another window is open or you're typing (a typed `n` would answer it), but after your
+next key. `y` trusts it — its servers start again at once as they'd run anywhere — `n` or `esc` keeps it safe; either
+is kept in slipbox's state (`$XDG_STATE_HOME/slipbox/trust.json`), so it isn't asked again; `:trust` and `:untrust`
+change it. A notes-only folder is never asked. Your config's `[trust] roots` (paths, `~`, globs such as
+`~/Projects/*`) trusts ahead of time; a folder's own `[trust]` is ignored. The CLI never asks, and has no way to
+trust: an agent could be talked into it. In a root you don't trust:
 
 - **Programs:** the project's own copies (`node_modules/.bin`, the venvs, `vendor/bin`) aren't found, for servers,
   linters and markdownlint-cli2 alike — your config's path, `PATH`, your install folders and slipbox's installs are.
@@ -95,9 +102,9 @@ own `[trust]` is ignored). In a root you don't trust:
   manifest is built and run), lua-language-server where `.luarc` names a plugin. markdownlint-cli2 skips a note under
   a markdownlint config that is code (`.cjs`, `.mjs`) or names code to load (`customRules`, `markdownItPlugins`,
   `outputFormatters`), said once. A linter of your config (`lint-command`) runs as you set it.
-- **Said:** the first time a file's servers start in such a root, once, with what it leaves out
-  (`~/x isn't a root you trust: rust-analyzer without the project's code; .vscode/settings.json not read — …`);
-  `slipbox doctor` says it too, and which servers it skipped, and why.
+- **Said:** what it leaves out is the question's (the TUI), or a line on the CLI's standard error (`~/x isn't a root
+  you trust: rust-analyzer without the project's code; .vscode/settings.json not read — …`); a root you kept safe isn't
+  asked or told again. `slipbox doctor` says it too, and which servers it skipped, and why.
 
 In a root you trust, each runs as it would anywhere else: its own defaults, the folder's settings, its own copy.
 

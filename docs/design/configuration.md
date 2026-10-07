@@ -83,7 +83,7 @@ style = "auto"                 # auto | markdown | wiki
 path = "auto"                  # auto | relative | root (/…) | name (a wikilink's only: a markdown link is a path)
 extension = "auto"             # auto | keep | drop   (.md)
 
-[trust]                        # the roots whose own code may run (23.x): yours only, never a folder's
+[trust]                        # the roots whose own code may run (23.x): slipbox asks; this trusts ahead of time
 roots = []                     # paths, ~, globs: ["~/Projects/*", "~/notes"]; each with what's inside it
 
 [files]                        # files beyond notes (16.x): what the explorer and ctrl+p list

@@ -7,7 +7,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import type { Diagnostic, WorkspaceEdit } from "vscode-languageserver-protocol";
 import type { Problem, Severity } from "../diagnostics.ts";
 import { LanguageClient } from "./client.ts";
-import { isTrusted } from "../trust.ts";
+import { isTrusted, trustOf } from "../trust.ts";
 import { type Choice, chooseServers, type Found, findServer, rootFor } from "./find.ts";
 import { installPackages } from "./install.ts";
 import { does, type Feature, languageOf, type LanguageDef, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
@@ -29,6 +29,9 @@ export interface ManagerOptions {
   message: (level: "info" | "warn" | "error", text: string) => void;
   /** Servers' own log lines. */
   log?: (text: string) => void;
+  /** A root you haven't answered for, where its own code would otherwise run (what's left out): the TUI
+   *  asks whether you trust it (23.x). Without it, the CLI's way: said, never asked. */
+  ask?: (root: string, limits: string[]) => void;
 }
 
 interface Doc {
@@ -128,7 +131,9 @@ export class ServerManager {
     const limits = limitsOf(choice, root);
     if (limits.length && !this.untrustedSaid.has(root)) {
       this.untrustedSaid.add(root);
-      this.o.message("info", `${root} isn't a root you trust: ${limits.join("; ")} — [trust] roots in your config; slipbox doctor says more`);
+      // Asked once in the TUI; kept restricted, nothing more said (you chose it); the CLI says it.
+      if (!this.o.ask) this.o.message("info", `${root} isn't a root you trust: ${limits.join("; ")} — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`);
+      else if (trustOf(root) === null) this.o.ask(root, limits);
     }
     const doc: Doc = { path, languageId: lang.languageId, version, text, servers: [], lang };
     this.docs.set(path, doc);
@@ -161,6 +166,26 @@ export class ServerManager {
   /** Whether any of a file's servers says it's still at some work (loading, indexing): its word may not be all yet. */
   busy(path: string): boolean {
     return (this.docs.get(path)?.servers ?? []).some((key) => this.running.get(key)?.client?.busy ?? false);
+  }
+
+  /**
+   * The servers of projects under `root` stopped and started again, their files told again: a root just
+   * trusted runs them as it would anywhere — its own copies, its settings, the add-ons left out before.
+   */
+  restartUnder(root: string): void {
+    const inside = (p: string) => p === root || p.startsWith(`${root}/`);
+    const keys = new Set([...this.running.values()].filter((r) => inside(r.root)).map((r) => r.key));
+    const docs = [...this.docs.values()].filter((d) => inside(d.path) || d.servers.some((k) => keys.has(k)));
+    for (const k of keys) {
+      const r = this.running.get(k)!;
+      this.running.delete(k);
+      void r.ready.then((c) => c?.stop());
+    }
+    for (const r of [...this.untrustedSaid]) if (inside(r)) this.untrustedSaid.delete(r);
+    for (const d of docs) {
+      this.docs.delete(d.path);
+      this.open(d.path, d.version, d.text);
+    }
   }
 
   /** Its text now: every server of it told. */

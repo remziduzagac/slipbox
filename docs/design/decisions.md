@@ -282,10 +282,13 @@ nothing a folder brings with it:
 - **Bun's own reading:** no `bunfig.toml` and no `.env` from the folder Bun starts in (the launcher, Node servers;
   done 2026-10-07).
 
-**One opt-in, yours alone:** `[trust] roots` in your own config lists the roots whose tools run as they would anywhere
-else, their own defaults — paths, `~`, globs (`~/Projects/*`), each with what's inside it. A root's
-`.slipbox/config.toml` can't list itself, and the CLI never asks (an agent can't answer). `slipbox doctor` says whether
-a root is trusted, and what that limits; the TUI says it once, when a file's servers first start there. The cost, said
+**Trusting is yours, and takes no editing** (revised the same day with the user: "users should not be editing setting
+files to be able to access a folder; they should just type slipbox and start"). The TUI asks, once per root, the first
+time it matters — a file's servers there would run with something left out — and keeps the answer in slipbox's state
+(`trust.json`), never in a config or the folder; until it's answered, the root runs safe. `:trust` and `:untrust`
+change it. `[trust] roots` in your own config (paths, `~`, globs such as `~/Projects/*`) trusts ahead of time. A
+root's `.slipbox/config.toml` can't trust itself, and the CLI neither asks nor trusts: an agent can't answer, and could
+be talked into it. `slipbox doctor` says whether a root is trusted, and what that limits. The cost, said
 where it shows: in a root not trusted, a Rust project's macros give errors, ESLint finds nothing, a project's own
 TypeScript isn't used, a Ruby or Swift package gets no server.
 

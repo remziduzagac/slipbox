@@ -656,6 +656,8 @@ export const DEFAULT_ALIASES: Record<string, string> = {
   link: "link.insert",
   folders: "folders.open",
   "folders-default": "folders.default",
+  trust: "root.trust",
+  untrust: "root.untrust",
   name: "folder.name",
   "convert-links": "link.convert",
   context: "context.copy",

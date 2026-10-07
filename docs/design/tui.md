@@ -1241,7 +1241,7 @@ text they were found in), a note's own (`11.5`: a link that reaches nothing or s
 `#^block` its note hasn't, git's conflict markers; while the note is as saved, since the root's index has the
 file's), its language servers' (`19.1`; for the text they were found in — typing hides them until they answer
 again; once a server has answered, its syntax errors stand for tree-sitter's — in a root you don't trust, each in its
-safe mode, the first start there said once: `~/x isn't a root you trust: …`, lsp.md's "Trust"), and its linters
+safe mode until you answer whether you trust it — asked once, the first time it matters, lsp.md's "Trust"), and its linters
 without a server (`19.19`: one reading its input on the text as typed, 500 ms after typing pauses; one reading the
 file after each save, its findings hidden while the text differs). Each has a severity: error, warning, information,
 hint. `[diagnostics] severity` (`warning`) is the least that shows, so a root's notes not written yet —

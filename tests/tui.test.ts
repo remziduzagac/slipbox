@@ -8411,6 +8411,46 @@ describe("git worktrees in the TUI (17.19)", () => {
     });
   });
 
+  test("trust (23.x): asked once, when it first matters — never over another window, never mid-typing; y trusts, remembered; :untrust and :trust after", async () => {
+    const { setTrust, trustOf } = await import("../src/core/trust.ts");
+    const h = await harness({ open: "index.md" });
+    const root = h.app.loc.root;
+    try {
+      // Another window open: the question waits for it to close, then for a key.
+      await h.keys(":");
+      h.app.askTrust(join(root, "src"), ["fake without the project's code"]);
+      expect((h.app.overlay as { label?: string } | null)?.label ?? "").not.toContain("Trust");
+      await h.keys("escape");
+      // Typing: a typed n is text, never an answer.
+      await h.keys("i");
+      expect(h.app.view!.insert).toBe(true);
+      await h.keys("n");
+      expect(h.app.overlay).toBeNull();
+      await h.keys("escape", "escape", "j");
+      // About the root opened, not the project in it the server was for (src/): one answer for all of it.
+      expect((h.app.overlay as { label: string }).label).toBe(`Trust ${root}? Its own tools would run code it holds — fake without the project's code. Only a folder you know (y trusts it; n keeps it safe)`);
+      // Its servers started again, trusted: a stand-in manager says which root.
+      const restarted: string[] = [];
+      const app = h.app as unknown as { servers: unknown };
+      const said = { restartUnder: (r: string) => restarted.push(r) } as Record<string | symbol, unknown>;
+      app.servers = new Proxy(said, { get: (t, k) => (k in t ? t[k] : () => undefined) }); // the rest: nothing
+      await h.keys("y");
+      app.servers = null;
+      expect(restarted).toEqual([root]);
+      expect(trustOf(root)).toBe("trusted");
+      expect(h.app.messages.at(-1)!.text).toContain(`: its own tools run as they would anywhere — :untrust takes it back`);
+      // Answered: never asked again.
+      h.app.askTrust(root, ["x"]);
+      expect(h.app.overlay).toBeNull();
+      await h.app.run("root.untrust");
+      expect(trustOf(root)).toBe("restricted");
+      await h.app.run("root.trust");
+      expect(trustOf(root)).toBe("trusted");
+    } finally {
+      setTrust(root, null);
+    }
+  });
+
   test("started from the command line where a named folder was moved by hand: the start records it once, the App says so (21.8)", async () => {
     const { locateVault, recordLocation } = await import("../src/core/vault.ts");
     const { prepare } = await import("../src/tui/run.ts");

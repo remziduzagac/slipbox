@@ -400,6 +400,7 @@ config.
 | `:reindex` | reindex the root (or the folder opened) |
 | `:folders` | the named folders this machine knows: pick one to go into |
 | `:folders-default` | which copy a named folder's links open |
+| `:trust`, `:untrust` | trust this root, or stop: its own tools run, or run safe (23.x) |
 | `:name [new]` | name this folder as pointers name it |
 | `:init` | give this plain folder `.slipbox/` |
 | `:pin-root` | keep this root among the explorer's roots after leaving it, or no longer (`20.15`) |

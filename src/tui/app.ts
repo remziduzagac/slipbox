@@ -77,7 +77,7 @@ import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, readFolders, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
 import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
-import { setTrustedRoots } from "../core/trust.ts";
+import { isTrusted, setTrust, setTrustedRoots, trustOf } from "../core/trust.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
@@ -1119,6 +1119,48 @@ export class App {
   }
   private readonly serverTimers = new Map<NoteBuffer, ReturnType<typeof setTimeout>>();
 
+  /** A root's trust, to be asked (23.x): when nothing else is open and no one is typing. */
+  private pendingTrust: { root: string; limits: string[] } | null = null;
+
+  /**
+   * The folder a trust answer is for: the root you opened, when the project is in it — every project
+   * in it with one answer — else the project's own folder. Never a plain folder you opened (`~`).
+   */
+  trustTarget(path: string): string {
+    const r = this.loc.root;
+    if (this.loc.mode === "vault" && r !== homedir() && (path === r || path.startsWith(`${r}/`))) return r;
+    return checkoutOf(path)?.root ?? path;
+  }
+
+  /** A root whose own code would run, not answered for yet: asked whether you trust it, once (23.x). */
+  askTrust(root: string, limits: string[]): void {
+    this.pendingTrust ??= { root, limits };
+    this.askTrustNow();
+  }
+
+  /** The trust question, if one waits and nothing else is open, no one typing (a typed `n` would answer it). */
+  askTrustNow(): void {
+    const p = this.pendingTrust;
+    if (!p || this.overlay || this.allViews().some((v) => v.insert)) return;
+    this.pendingTrust = null;
+    const at = this.trustTarget(p.root);
+    if (trustOf(at) !== null) return;
+    this.confirm(`Trust ${tildePath(at)}? Its own tools would run code it holds — ${p.limits.join("; ")}. Only a folder you know (y trusts it; n keeps it safe)`, () => this.trustRoot(at, true), () => this.trustRoot(at, false));
+  }
+
+  /** A root trusted, or kept restricted, remembered (23.x): its servers started again, the way it now runs. */
+  trustRoot(at: string, yes: boolean): void {
+    const was = isTrusted(at);
+    setTrust(at, yes ? "trusted" : "restricted");
+    if (!yes && isTrusted(at)) return this.message("warn", `${tildePath(at)} is still trusted: your config's [trust] roots lists it`);
+    if (was !== yes) {
+      this.servers?.restartUnder(at);
+      this.refreshGit();
+    }
+    if (yes) this.message("info", `trusted ${tildePath(at)}: its own tools run as they would anywhere — :untrust takes it back`);
+    else this.message("info", `${tildePath(at)} kept safe: nothing of its own runs — :trust trusts it`);
+  }
+
   /** The manager started: it starts each server when a file first needs it. */
   startServers(): void {
     if (this.servers || !this.config.lsp.enabled) return;
@@ -1142,6 +1184,10 @@ export class App {
         const r = this.applyWorkspaceEdit(edit);
         this.host.requestRender();
         return r.files > 0;
+      },
+      ask: (root, limits) => {
+        this.askTrust(root, limits);
+        this.host.requestRender();
       },
     });
     // Exiting without quitting (a signal): the servers go too.
@@ -5791,6 +5837,8 @@ export class App {
         else waiting.conflictWaiting = false;
       }
     }
+    // A root's trust, asked while something else was open or someone typed: now, the same way.
+    if (key !== "escape") this.askTrustNow();
     this.host.requestRender();
   }
 

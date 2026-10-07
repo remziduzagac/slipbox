@@ -1,5 +1,5 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { formatEntry, formatRef, parseRef, scratchLocation } from "../src/core/capture.ts";
@@ -9,7 +9,7 @@ import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
 import { headingsOf, newParseCache, parseLegacy, parseMarkdown, visit } from "../src/core/parse.ts";
 import { lintCommand, lintLoadsCode, parseLint, runLint } from "../src/core/lint.ts";
-import { isTrusted, setTrustedRoots } from "../src/core/trust.ts";
+import { isTrusted, setTrust, setTrustedRoots, trustFile, trustOf } from "../src/core/trust.ts";
 import { addFootnote, applyEdits, deleteFootnote, editFootnote, footnotesOf, renameFootnote, type TextEdit } from "../src/core/footnotes.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
@@ -1940,6 +1940,25 @@ describe("trust (23.x)", () => {
     expect(r.config.trust.roots).toEqual(["~/Projects/*"]);
     expect(r.warnings.some((w) => w.includes("sets [trust], which only your own config may set (a folder can't trust itself)"))).toBe(true);
     expect(r.warnings.some((w) => w.includes("trust.roots takes paths and globs"))).toBe(true);
+  });
+
+  test("your answers, as the TUI keeps them: trusted or kept safe, the nearest counting, read again when another slipbox wrote them; your config's list wins", () => {
+    const dir = realpathSync(mkdtempSync(join(sandbox, "answers-")));
+    const app = join(dir, "app");
+    mkdirSync(join(app, "pkg"), { recursive: true });
+    expect(trustOf(app, [])).toBeNull(); // not answered: the TUI may ask
+    setTrust(app, "trusted");
+    expect(trustOf(join(app, "pkg"), [])).toBe("trusted"); // inside it
+    setTrust(join(app, "pkg"), "restricted");
+    expect(trustOf(join(app, "pkg", "x.ts"), [])).toBe("restricted"); // the nearest answer
+    expect(trustOf(app, [])).toBe("trusted");
+    // Another slipbox answered: read again.
+    writeFileSync(trustFile(), JSON.stringify({ trusted: [], restricted: [app] }));
+    utimesSync(trustFile(), new Date(), new Date(Date.now() + 5000));
+    expect(trustOf(app, [])).toBe("restricted");
+    expect(trustOf(app, [app])).toBe("trusted"); // your config's list
+    setTrust(app, null);
+    expect(trustOf(app, [])).toBeNull();
   });
 
   test("markdownlint-cli2 in a root you don't trust (23.5): a file under a config that is code, or names code, isn't linted — said once", async () => {

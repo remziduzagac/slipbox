@@ -91,7 +91,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/scope.ts` | 20.16, 21.10 | search by root: `here`, then linked roots, then every root known (`--scope`) |
 | `core/autoindex.ts` | 20.9 | the background auto-index: the home folder walked in slices, its roots indexed |
 | `core/sqlite.ts` | 6.6 | better-sqlite3, loaded so a compiled binary embeds its SQLite |
-| `core/trust.ts` | 23.x | the roots whose own code may run: your `[trust] roots`; elsewhere nothing a folder brings |
+| `core/trust.ts` | 23.x | the roots whose own code may run: your answers (`trust.json`), your `[trust] roots` |
 | `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |
@@ -205,6 +205,7 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | user config | `$XDG_CONFIG_HOME/slipbox/config.toml` (or `--config`, `$SLIPBOX_CONFIG`) |
 | a root's config and identity | `<root>/.slipbox/config.toml` (`[vault]`: `id`, `name`…), plus `.slipbox/version` |
 | the machine's roots (`21.8`) | `$XDG_STATE_HOME/slipbox/roots.json` (by path; moves kept) |
+| the roots you trust, or kept safe (`23.x`) | `$XDG_STATE_HOME/slipbox/trust.json` (your answers, by path) |
 | named folders (`21.6`) | `$XDG_STATE_HOME/slipbox/folders.json` (names, copies, defaults) |
 | user themes | `$XDG_CONFIG_HOME/slipbox/themes/*.yaml` (base16 / base24) |
 | link index | `$XDG_CACHE_HOME/slipbox/<key>/index.json` |

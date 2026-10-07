@@ -423,6 +423,8 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; Q a" = "tag.list"
 "leader ; S a" = "folders.open"
 "leader ; S b" = "folders.default"
+"leader ; S c" = "root.trust"
+"leader ; S d" = "root.untrust"
 "leader ; D a" = "config.reload"
 "leader ; K a" = "messages.open"
 "leader ; H a" = "help.open"

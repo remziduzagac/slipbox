@@ -18,7 +18,7 @@ import { doctor, doctorFile } from "../src/core/servers/doctor.ts";
 import { ServerManager, startOf } from "../src/core/servers/manager.ts";
 import { vscodeSettings } from "../src/core/servers/vscode.ts";
 import type { Problem } from "../src/core/diagnostics.ts";
-import { setTrustedRoots } from "../src/core/trust.ts";
+import { setTrust, setTrustedRoots } from "../src/core/trust.ts";
 
 setDefaultTimeout(30_000);
 const FAKE = join(import.meta.dir, "fixtures", "fake-lsp.ts");
@@ -539,7 +539,48 @@ describe("the servers of open files (19.1)", () => {
     m.open(join(top, "b.fk"), 1, "fine\n");
     await m.stopAll();
     const said = messages.filter((t) => t.includes("isn't a root you trust"));
-    expect(said).toEqual([`${top} isn't a root you trust: fake without the project's code; .vscode/settings.json not read — [trust] roots in your config; slipbox doctor says more`]);
+    expect(said).toEqual([`${top} isn't a root you trust: fake without the project's code; .vscode/settings.json not read — trust it in slipbox (it asks), or [trust] roots in your config; slipbox doctor says more`]);
+  });
+
+  test("the TUI's way (23.x): a root not answered for is asked about once, not told; kept restricted, neither; trusted, its servers started again as anywhere", async () => {
+    const folder = { name: "fake", command: launcher("fake-ask"), args: ["--stdio"], config: { fake: { level: 2 } }, untrusted: { settings: () => ({ fake: { safe: true } }) } };
+    const problems = new Map<string, { version: number | null; list: Problem[] }>();
+    const messages: string[] = [];
+    const asked: string[] = [];
+    const m = new ServerManager({ table: () => table({ fake: folder }), userTable: () => table({ fake: { ...folder, config: { fake: { level: 1 } } } }), autoInstall: () => false, problems: (path, _s, version, list) => problems.set(path, { version, list }), message: (_l, text) => messages.push(text), ask: (root, limits) => asked.push(`${root}: ${limits.join("; ")}`) });
+    const top = project("ask-trust");
+    const file = join(top, "a.fk");
+    m.open(file, 1, "BAD\n");
+    m.open(join(top, "b.fk"), 1, "fine\n");
+    expect(asked).toEqual([`${top}: fake without the project's code`]); // once
+    expect(messages.filter((t) => t.includes("trust"))).toEqual([]);
+    // The settings a server reports once it has asked for them: told again until it has.
+    let version = 1;
+    const settings = async (want: unknown) => {
+      for (const t = Date.now(); Date.now() - t < 8000; ) {
+        m.change(file, ++version, "BAD\n");
+        if (!(await until(() => problems.get(file)?.version === version, 2000))) continue;
+        const got = JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""));
+        if (JSON.stringify(got) === JSON.stringify(want)) return got;
+        await Bun.sleep(100);
+      }
+      return JSON.parse(problems.get(file)?.list[0]?.message.replace(/^bad, with /, "") ?? "null");
+    };
+    expect(await settings({ level: 1, safe: true })).toEqual({ level: 1, safe: true });
+    // Trusted: started again with the folder's own settings, nothing more asked.
+    setTrust(top, "trusted");
+    m.restartUnder(top);
+    expect(await settings({ level: 2 })).toEqual({ level: 2 });
+    expect(asked.length).toBe(1);
+    await m.stopAll();
+    // Another root, kept restricted: neither asked nor told.
+    const other = project("kept-safe");
+    setTrust(other, "restricted");
+    const m2 = new ServerManager({ table: () => table({ fake: folder }), autoInstall: () => false, problems: () => {}, message: (_l, text) => messages.push(text), ask: (root) => asked.push(root) });
+    m2.open(join(other, "a.fk"), 1, "fine\n");
+    expect(asked.length).toBe(1);
+    expect(messages.filter((t) => t.includes("trust"))).toEqual([]);
+    await m2.stopAll();
   });
 
   test("a server's start in a root you don't trust (23.4): its safe environment and initialize options; in one you trust, its own", () => {
