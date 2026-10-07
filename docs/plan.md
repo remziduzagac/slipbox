@@ -3,7 +3,7 @@
 Status: **phases 0–5c built** — 3b (`16.x`, files beyond markdown), 4 (vaults, renames, search, git, embeds), 5
 (`19.x` and `16.18`–`16.23`: language servers and more languages; its LSP face, `11.x`, removed in 5b), 5b (`20.x`,
 plain paths) and 5c (`21.x`, paths inside, conventions at the edges) included. Scout (`6.10`) is postponed: it became
-trailscout, its own project; how slipbox will use it is decided (`docs/design/scout.md`). Captured 2026-09-25, phased
+trailscout, its own project, which slipbox will reach through its SDK once that exists. Captured 2026-09-25, phased
 2026-09-25, phases 0–2 implemented 2026-09-25, phase 3 2026-09-28, phases 3b and 4 by 2026-10-01, 5b by 2026-10-03,
 5c and the rest of 5 by 2026-10-07 — how it was built is in `docs/design/`, the decisions it needed in
 `docs/design/decisions.md`.
