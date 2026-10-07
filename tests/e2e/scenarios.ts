@@ -1108,8 +1108,9 @@ const CORE: Scenario[] = [
       await leader(s, "n", "l");
       await s.status("LENS");
       await s.see("See [b](lens-b.md) here.");
+      // Onto the link (its text: the status line names a link only in the rendered view).
       await s.keys("f", "b");
-      await s.status("→ lens-b.md");
+      await s.until(() => pos(s).line === 3 && pos(s).col === 6, 3000, "the cursor on [b]");
       await s.keys("enter");
       // b's own text, in the lens still — none of a's left on screen.
       await s.see("More beta.");

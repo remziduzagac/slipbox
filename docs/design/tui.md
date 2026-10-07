@@ -144,7 +144,8 @@ session keeps them.
   any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
   dropped when the line is too short.
 
-On the right it shows the link under the cursor and its status (`→ beta.md (resolved)`), then
+On the right it shows the link under the cursor and its status (`→ beta.md (resolved)`) in the rendered view
+(in source mode and the lens the row is the link's own text, so none is named), then
 the note's words (`1,234 words`; the selection's in visual mode, `12 words selected`; frontmatter
 not counted, each Han or kana character a word; dropped first when short of room), then
 `tab N/M` when there are two or more tabs, then `L<source line>:<column>` and the percentage (`all`
