@@ -7,7 +7,7 @@
 
 import { existsSync, rmSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
-import { ensureDir, readJson, writeJson } from "./fsutil.ts";
+import { climbsOut, ensureDir, readJson, writeJson } from "./fsutil.ts";
 import type { Layout } from "./layout/ir.ts";
 import { type Keyed, stateDir, stateHome } from "./paths.ts";
 
@@ -166,7 +166,7 @@ export function carryPositions(from: string, to: string): void {
   let moved = false;
   for (const [k, v] of Object.entries(data)) {
     const rel = relative(from, k);
-    const inside = rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+    const inside = rel !== "" && !climbsOut(rel);
     const root = v.root === from ? to : v.root;
     if (inside || root !== v.root) moved = true;
     out[inside ? join(to, rel) : k] = { ...v, ...(root ? { root } : {}) };
@@ -203,7 +203,7 @@ export class PositionStore {
   /** A stored key as this root names it: a path in it, else absolute. */
   private shown(abs: string): string {
     const rel = relative(this.place.root, abs);
-    return rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel.split(sep).join("/") : abs;
+    return rel && !climbsOut(rel) ? rel.split(sep).join("/") : abs;
   }
 
   /**

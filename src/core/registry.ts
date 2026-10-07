@@ -9,7 +9,7 @@
 // `slipbox name`, never on their own. The names themselves are looked up in `folders.json`.
 
 import { randomBytes } from "node:crypto";
-import { existsSync, realpathSync, renameSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync, renameSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { atomicWrite, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
@@ -173,12 +173,36 @@ function migrate(): KnownRoot[] {
   return out;
 }
 
-/** A root's cache and state taken from one key to another, when the other has none yet. */
+/**
+ * A root's cache and state taken from one key to another (21.8). The other may hold some already —
+ * the background index built its graph at the new path first: then what it lacks is moved in, its
+ * derived files kept (the cache, `heads.json`), and the personal state (session, scratch, trash, undo
+ * log…) is the old key's. The old key's directories go.
+ */
 export function adoptStorage(from: string, to: string): void {
   if (from === to) return;
-  for (const home of [stateHome(), cacheHome()]) {
+  const homes: [string, (name: string) => boolean][] = [
+    [stateHome(), (name) => name === "heads.json"],
+    [cacheHome(), () => true],
+  ];
+  for (const [home, derived] of homes) {
+    const src = join(home, from);
+    const dst = join(home, to);
     try {
-      if (!existsSync(join(home, to)) && existsSync(join(home, from))) renameSync(join(home, from), join(home, to));
+      if (!existsSync(src)) continue;
+      if (!existsSync(dst)) {
+        renameSync(src, dst);
+        continue;
+      }
+      for (const name of readdirSync(src)) {
+        const there = join(dst, name);
+        if (existsSync(there)) {
+          if (derived(name)) continue;
+          rmSync(there, { recursive: true, force: true });
+        }
+        renameSync(join(src, name), there);
+      }
+      rmSync(src, { recursive: true, force: true });
     } catch {}
   }
 }
@@ -260,11 +284,13 @@ const WORKTREE_STATE_DAYS = 30;
  * Worktrees that are gone (17.19: merged, `git worktree remove`): their cache removed at once — it's
  * derived — and, a month after they were last seen, their state (the scratch, positions, session)
  * and their entry in the list. Until then they're listed as gone. Plain folders gone a month, too.
+ * A worktree's root is gone when its folder is no longer a root (`isRoot`: any of its markers, 21.1 —
+ * `vault.ts` passes `isVaultRoot`; without it, `.git` or `.slipbox/`).
  */
-export function pruneWorktrees(now = Date.now()): void {
+export function pruneWorktrees(now = Date.now(), isRoot: (path: string) => boolean = (p) => existsSync(join(p, ".git")) || existsSync(join(p, MARKER))): void {
   const list = readRoots();
   // On a drive that isn't there (20.10), nothing is gone: kept as it was until the drive is back.
-  const gone = list.filter((v) => v.worktree && !unavailable(v.path) && !existsSync(join(v.path, ".git")) && !existsSync(join(v.path, MARKER)));
+  const gone = list.filter((v) => v.worktree && !unavailable(v.path) && !isRoot(v.path));
   // A plain folder gone as long: forgotten too — it has nothing of its own to remove.
   const drop = list.filter((v) => v.kind === "folder" && !unavailable(v.path) && !existsSync(v.path) && now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000).map((v) => v.key);
   if (!gone.length && !drop.length) return;

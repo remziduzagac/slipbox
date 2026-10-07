@@ -173,9 +173,14 @@ export class SearchIndex {
     }
   }
 
-  /** The files within the folders and tags given, by path: a query of filters only. */
-  filesWhere(opts: { pathPrefix?: string[]; tags?: string[]; limit: number }): string[] {
+  /** The files within the folders and tags given, by path: a query of filters only — less those
+   *  `not` (an FTS5 query) matches, the words they mustn't have. */
+  filesWhere(opts: { pathPrefix?: string[]; tags?: string[]; not?: string; limit: number }): string[] {
     const f = SearchIndex.filters(opts, "path");
+    if (opts.not) {
+      f.where.push("path not in (select docs.path from fts join docs on docs.id = fts.rowid where fts match ?)");
+      f.args.push(opts.not);
+    }
     return (this.db.prepare(`select path from docs where ${["1", ...f.where].join(" and ")} order by path limit CAST(? AS INTEGER)`).all(...f.args, opts.limit) as { path: string }[]).map((r) => r.path);
   }
 

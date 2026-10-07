@@ -128,8 +128,9 @@ class Session {
     // A named folder moved here by hand (21.8): its state came along — sure, so nothing asked; said once.
     const { carriedFrom } = recordLocation(loc);
     if (carriedFrom) {
-      // The links its move broke, in and out of it (20.17): counted, for relink to fix.
-      const broken = planRelink(openVault(loc.root)).files.reduce((n, f) => n + f.edits.length, 0);
+      // The links its move broke, in and out of it (20.17): counted, for relink to fix — never the
+      // pointers relink offers for links that still reach their file (21.7), as the TUI's offer counts.
+      const broken = planRelink(openVault(loc.root), undefined, { pointers: false }).files.reduce((n, f) => n + f.edits.length, 0);
       const fix = broken ? ` — its move broke links on ${broken} line${broken === 1 ? "" : "s"}: slipbox relink fixes them (--dry-run shows how)` : "";
       this.warnings.push(`${rootLabel(loc)} moved here from ${carriedFrom}: its sessions, scratch, trash and reading positions came along${fix}`);
     }
@@ -247,7 +248,7 @@ href, the relative path a link there carries. After --, nothing is an option:
 slipbox read -- -dash.md names a note that starts with a dash.
 Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nvims for send),
 5 refused (--if-unchanged, a write outside the root or over an existing note, invalid UTF-8,
-  a read of a symlink leading out of the vault).
+  a read of a symlink leading out of the root).
 `;
 
 export const CLI_COMMANDS = new Set([
@@ -373,9 +374,9 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, link: 1, links: 1, name: 1, folders: 3, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
   scratch: 1, init: 1, info: 0, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
+  changed: 0, diff: 1, worktrees: 0, undo: 0,
 };
 
-/** The vault's data and text files (not notes, not binary), with their group and format. */
 /**
  * A note's or data file's tree: markdown parsed, a data file read by its format (16.11), its
  * parse error a CliError. A text file has no rendered form (exit 2: `read` gives its text).
@@ -391,6 +392,7 @@ function parseFile(s: Session, rel: string, text: string): ParsedNote {
   return parseNoteFile(rel, text);
 }
 
+/** The root's data and text files (not notes, not binary), with their group and format. */
 function textFiles(s: Session): { path: string; group: string; format: string }[] {
   return s.graph
     .filePaths()
@@ -478,15 +480,15 @@ function requireArg(rest: string[], what: string): string {
   return v;
 }
 
-/**
- * Resolve a note argument to a vault-relative path, or fail with exit 3/4. `parse` is false for
- * commands that need only the file's bytes: a big note the walk leaves out is then never parsed.
- */
 /** A link sent elsewhere by a note coming or going, for people. */
 export function retargetSaid(r: Retarget): string {
   return `${r.from}:${r.line}: [[${r.target}]] reached ${r.was}; it reaches ${r.now} now`;
 }
 
+/**
+ * Resolve a note argument to a root-relative path, or fail with exit 3/4. `parse` is false for
+ * commands that need only the file's bytes: a big note the walk leaves out is then never parsed.
+ */
 function resolveNote(s: Session, arg: string, parse = true): string {
   const rel = findNoteArg(s, arg, parse);
   // Reading follows the vault's rule too: a symlink pointing out of it is not a note of it (the
@@ -505,7 +507,8 @@ function findNoteArg(s: Session, arg: string, parse: boolean): string {
     // An existing file the walk leaves out: named, it's reached (20.8) — git-ignored or under a
     // hidden folder, it's indexed from now on, as the TUI does; under node_modules, excluded by
     // walk.exclude, it's read without joining the vault.
-    if (arg && existsSync(arg.startsWith("/") ? arg : `${s.io.cwd}/${arg}`)) {
+    // The argument names s.loc.file (from here or from --root): whether it exists is that file's.
+    if (arg && existsSync(s.loc.file)) {
       // A data or text file is itself (16.4): never parsed as a note.
       if (!s.graph.reachFile(rel, { keep: true }) && parse && classify(rel, s.config.walk.extensions).group === "note") s.graph.adopt(rel);
       return rel;
@@ -895,7 +898,7 @@ const HANDLERS: Record<string, Handler> = {
       const root = loc.root;
       recordLocation(loc); // known on this machine from now on, as reaching it would make it (17.6)
       const t = performance.now();
-      const g = new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "all");
+      const g = new Graph(loc, loadConfig({ ...configFilesFor(loc), configFile: flag(s.args, "config") }).config).build(true, "all");
       noteIndexed(loc.key);
       const ms = Math.round(performance.now() - t);
       const st = g.stats;
@@ -904,6 +907,8 @@ const HANDLERS: Record<string, Handler> = {
         human: `refreshed ${root}: ${st.notes} note${st.notes === 1 ? "" : "s"} — ${st.parsed} read again, ${st.gone} gone (${ms} ms)\n`,
       };
     }
+    // A path names what --refresh brings up to date; otherwise it would be dropped, the root indexed.
+    if (rest[0] !== undefined) throw new UsageError("index takes a path only with --refresh");
     // The background auto-index of the home folder (20.9), run here in the foreground: a pass, or as
     // much as --budget allows; where it is, either way.
     if (has(s.args, "home")) {
@@ -1164,6 +1169,8 @@ const HANDLERS: Record<string, Handler> = {
       const d = res.data as { dryRun: boolean };
       return { ...res, data: { ...d, root: abs, name: name ?? null, id: d.dryRun ? null : readIdentity(vaultConfigFile(abs)).id, created: !d.dryRun } };
     }
+    // A .slipbox/ made is no edit a saved plan holds (20.18): refused, nothing written.
+    if (has(s.args, "plan")) throw new UsageError("making a .slipbox/ has no edits to plan: --dry-run previews it (--plan is for a folder inside a root)");
     if (has(s.args, "dry-run")) return { data: { root: abs, dryRun: true }, human: `would give ${abs} a .slipbox/${name ? ` called ${name}` : ""}\n` };
     let r;
     try {
@@ -1261,6 +1268,8 @@ const HANDLERS: Record<string, Handler> = {
       if (!has(s.args, "dry-run") && !has(s.args, "plan")) recordLocation(rootAt(s.loc.root));
       return r;
     }
+    // A .slipbox/ made is no edit a saved plan holds (20.18): refused, nothing written.
+    if (has(s.args, "plan")) throw new UsageError(`${s.loc.root} has no .slipbox/: making one has no edits to plan (--dry-run previews it)`);
     if (has(s.args, "dry-run")) return { data: { root: s.loc.root, name, dryRun: true }, human: `would give ${s.loc.root} a .slipbox/ named ${name}\n` };
     const r = initVault(s.loc.root, name);
     recordLocation(rootAt(s.loc.root));
@@ -1329,11 +1338,8 @@ const HANDLERS: Record<string, Handler> = {
         throw new CliError((err as Error).message, EXIT.notFound);
       }
     }
-    const r = await renameResult(s, () => planUndo(s.graph));
-    // A vault's rename taken back: the machine's list learns its name again.
-    const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };
-    if (d.kind === "vault" && !d.dryRun) for (const f of d.files) if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
-    return r;
+    // A folder's rename taken back: the machine's list learns its name again.
+    return relearnRenamedRoots(s, await renameResult(s, () => planUndo(s.graph)));
   },
 
   // A plan saved by --plan (20.18), applied: refused, nothing written, when any of its files changed
@@ -1361,7 +1367,8 @@ const HANDLERS: Record<string, Handler> = {
       if (stale.length) s.warnings.push(`stale: ${stale.map((f) => f.shown).join(", ")} changed since it was planned — applying it would be refused`);
       return renameResult(s, () => saved.plan, g);
     }
-    const r = await renameResult(s, () => saved.plan, g);
+    // A saved `name` applied: the machine's list learns the new name, as `name` itself teaches it.
+    const r = relearnRenamedRoots(s, await renameResult(s, () => saved.plan, g));
     forgetPlan(saved.id);
     return r;
   },
@@ -1959,9 +1966,9 @@ function readNoteFile(s: Session, abs: string, forWriting = true): NoteFile {
 }
 
 /**
- * What a writer (`write`, `replace`, `task`) may change: a markdown note in a real vault, inside
- * it by its real path, and where the walk lists notes — never `.slipbox/`, `.git/`, a hidden
- * folder or `node_modules`, and never a file that isn't `.md`. Refused, exit 5.
+ * What a writer (`write`, `replace`, `task`) may change: a note, data or text file of the root
+ * (never a binary one, 16.4), inside it by its real path, and where the walk lists files — never
+ * `.slipbox/`, `.git/`, a hidden folder the root hasn't reached, or `node_modules`. Refused, exit 5.
  */
 function checkWritable(s: Session, abs: string): void {
   const refuse = (why: string) => {
@@ -2098,13 +2105,13 @@ function searchIndex(s: Session): SearchIndex | null {
   return idx;
 }
 
-/** A folder of the vault named on the command line (from cwd, or the vault's root), or null. */
 /** Where a move or copy goes: a path in this vault (a pointer to elsewhere is refused: a file moves within its own). */
 function destArg(s: Session, to: string | undefined): string | undefined {
   if (to === undefined || !isPointer(to)) return to;
   throw new CliError(`${to}: a destination is a path, in the file's own folder — not a pointer`, EXIT.refused);
 }
 
+/** A folder of the root named on the command line (from cwd, or the root), or null. */
 function folderArg(s: Session, arg: string): string | null {
   for (const abs of [arg.startsWith("/") ? arg : join(s.io.cwd, arg), join(s.loc.root, arg)]) {
     if (!isInside(s.loc.root, abs) || abs === s.loc.root) continue;
@@ -2180,6 +2187,16 @@ async function renameResult(s: Session, plan: () => RenamePlan, g = s.graph): Pr
     },
     human,
   };
+}
+
+/**
+ * A folder's rename written (`undo`, `apply`): the machine's list learns the name its `.slipbox/` holds
+ * now, as `name` teaches it — else pointers by that name fail elsewhere.
+ */
+function relearnRenamedRoots(s: Session, r: Result): Result {
+  const d = r.data as { kind: string; dryRun: boolean; files: { abs: string }[] };
+  if (d.kind === "vault" && !d.dryRun) for (const f of d.files) if (f.abs.endsWith(`${sep}.slipbox${sep}config.toml`)) recordLocation(rootAt(dirname(dirname(f.abs))));
+  return r;
 }
 
 export function defaultIo(): Io {

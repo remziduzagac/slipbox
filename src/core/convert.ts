@@ -1,6 +1,7 @@
 // The converter (plan 20.1; docs/idea.md, "Plain paths, virtual vaults"): a vault's links made plain
-// paths, once, by the resolution rules they were written for. Since 20.2 nothing else reads them: the
-// converter reads a note's wikilinks itself (`parseLegacy`) and resolves them by name as before. Each
+// paths, once, by the resolution rules they were written for. The graph reads wikilinks again (21.3),
+// within their root; the converter differs in resolving them as before (`Graph.resolveLegacyWiki`: by
+// name, alias, previous name, other vaults and moves), on its own parse of the note (`parseLegacy`). Each
 // `[[…]]` becomes a relative markdown link (`![[…]]` an image-syntax one, which embeds a note as
 // before), its text kept and its heading a fragment that's checked to exist; each `/…` markdown link,
 // which meant the vault's root and would mean the filesystem's, becomes relative. A plan like a

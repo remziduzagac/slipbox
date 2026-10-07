@@ -1,6 +1,6 @@
 // What's wrong in a file, from every source alike (plan 19.8): its syntax (16.9), the linter's
 // findings (3.21), its links (1.7, 11.5) and git's conflict markers — later, language servers'.
-// One shape, so the TUI's bar and marks, its status line and the LSP face show them the same way.
+// One shape, so the TUI's bar and marks, its status line and the CLI show them the same way.
 
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, posix } from "node:path";
@@ -52,11 +52,6 @@ export function fragmentOf(l: Pick<LinkRef, "kind" | "target" | "heading">): str
   }
 }
 
-/**
- * A note's own problems (11.5): a link that reaches nothing — a note not written yet is information, a
- * missing file or an unknown vault a warning — or several notes; a heading or block a link names that
- * its note hasn't; git's conflict markers, an error.
- */
 /** A link's file on a drive that isn't there (20.10): unavailable, not gone — said so. */
 function onUnplugged(g: Graph, rel: string, target: string): boolean {
   let path = target.split("#")[0]!;
@@ -69,6 +64,11 @@ function onUnplugged(g: Graph, rel: string, target: string): boolean {
   return unavailable(path);
 }
 
+/**
+ * A note's own problems (11.5): a link that reaches nothing — a note not written yet is information, a
+ * missing file or an unknown folder a warning — or several notes; a heading or block a link names that
+ * its note hasn't; git's conflict markers, an error.
+ */
 export function noteProblems(g: Graph, rel: string): Problem[] {
   const out: Problem[] = [];
   const add = (l: LinkRef, severity: Severity, code: string, message: string) => out.push({ start: { line: l.line, column: l.column }, end: l.end, severity, source: "slipbox", code, message, target: l.target });
@@ -127,6 +127,8 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
       case "note":
       case "anchor": {
         if ((!frag && !l.block) || (frag && lineFragment(frag))) break;
+        // A branch not checked out here (21.7): its file is git's, not the one on disk — not checked.
+        if (l.gitRef) break;
         const path = l.resolvedKind === "anchor" ? rel : l.path!;
         const where = l.resolvedKind === "anchor" ? "this note" : isAbsolute(path) ? posix.basename(path) : path;
         const hit = landing(g, path, frag, l.block, wiki);

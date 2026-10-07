@@ -16,7 +16,13 @@ const RULES: Record<string, string[]> = {
   "src/cli": ["src/tui", "@opentui"],
 };
 
-const IMPORT = /(?:import|export)\s[^'"]*?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|require\(\s*["']([^"']+)["']\s*\)/g;
+// `… from "x"`, `import("x")`, `require("x")`, and a side-effect `import "x"`.
+const IMPORT = /(?:import|export)\s[^'"]*?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|require\(\s*["']([^"']+)["']\s*\)|import\s*["']([^"']+)["']/g;
+
+/** What a file's text imports, by the specifiers as written. */
+export function importsOf(text: string): string[] {
+  return [...text.matchAll(IMPORT)].map((m) => (m[1] ?? m[2] ?? m[3] ?? m[4])!);
+}
 
 function files(dir: string): string[] {
   const out: string[] = [];
@@ -34,24 +40,25 @@ function files(dir: string): string[] {
   return out;
 }
 
-const violations: string[] = [];
-for (const [dir, banned] of Object.entries(RULES)) {
-  for (const file of files(join(ROOT, dir))) {
-    const text = readFileSync(file, "utf8");
-    for (const m of text.matchAll(IMPORT)) {
-      const spec = m[1] ?? m[2] ?? m[3]!;
-      const target = spec.startsWith(".") ? relative(ROOT, resolve(dirname(file), spec)) : spec;
-      for (const b of banned) {
-        if (target === b || target.startsWith(`${b}/`)) {
-          violations.push(`${relative(ROOT, file)}: imports ${spec} (${dir} must not import ${b})`);
+// Run as a script (`bun run check:boundary`); a test imports importsOf alone.
+if (import.meta.main) {
+  const violations: string[] = [];
+  for (const [dir, banned] of Object.entries(RULES)) {
+    for (const file of files(join(ROOT, dir))) {
+      for (const spec of importsOf(readFileSync(file, "utf8"))) {
+        const target = spec.startsWith(".") ? relative(ROOT, resolve(dirname(file), spec)) : spec;
+        for (const b of banned) {
+          if (target === b || target.startsWith(`${b}/`)) {
+            violations.push(`${relative(ROOT, file)}: imports ${spec} (${dir} must not import ${b})`);
+          }
         }
       }
     }
   }
-}
 
-if (violations.length) {
-  console.error(`boundary check failed:\n  ${violations.join("\n  ")}`);
-  process.exit(1);
+  if (violations.length) {
+    console.error(`boundary check failed:\n  ${violations.join("\n  ")}`);
+    process.exit(1);
+  }
+  console.log("boundary check ok: core and cli import nothing from the TUI");
 }
-console.log("boundary check ok: core and cli import nothing from the TUI");

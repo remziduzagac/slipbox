@@ -18,6 +18,7 @@ import { WalkFilter, walkVault } from "../src/core/walk.ts";
 import { stringWidth } from "../src/core/width.ts";
 import { App, computeFind, selectedText } from "../src/tui/app.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
+import { importsOf } from "../scripts/check-boundary.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-reg-"));
 process.env.XDG_STATE_HOME = join(sandbox, "state");
@@ -297,6 +298,10 @@ describe("low", () => {
     const target = mkdtempSync(join(sandbox, "init-"));
     const r = await cli(["init", "--root", target, "--json"], sandbox);
     expect(JSON.parse(r.out).data.root).toBe(target);
+  });
+  test("the boundary check sees a side-effect import, not only from / import() / require", () => {
+    const text = ['import "../tui/app.ts";', "import { App } from '../tui/app.ts';", 'export * from "@opentui/core";', 'await import("../tui/run.ts");', 'require("../tui/x.ts");'].join("\n");
+    expect(importsOf(text).sort()).toEqual(["../tui/app.ts", "../tui/app.ts", "../tui/run.ts", "../tui/x.ts", "@opentui/core"]);
   });
 });
 

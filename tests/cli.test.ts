@@ -613,6 +613,12 @@ describe("the vault and the tool", () => {
     expect(slipbox(["search", "木曽原"], { cwd: dir }).out).toBe("people/partners-and-names.md:84:35  Contacts — - Kiso-Hara Astronomical Society ([木曽原])\n");
     expect(slipbox(["info"], { cwd: dir }).out).toMatch(/\nsearch {4}auto — index: \d+ files\n/);
   });
+  test("search's human output: words that meet or overlap marked once", () => {
+    const dir = join(sandbox, "search-marks");
+    mkdirSync(join(dir, ".slipbox"), { recursive: true });
+    writeFileSync(join(dir, "ny.md"), "new york is new\n");
+    expect(slipbox(["search", "new", '"new york"'], { cwd: dir }).out).toBe("ny.md:1:1  [new york] is [new]\n");
+  });
   test("changed, diff, worktrees: this branch against main (5.13, 5.14)", () => {
     const dir = join(sandbox, "gitcli");
     mkdirSync(dir, { recursive: true });
@@ -631,6 +637,13 @@ describe("the vault and the tool", () => {
     // Before a merge (20.21): what merging feat into main would break — committed work only.
     git("commit", "-q", "-am", "second");
     expect(slipbox(["merge-review", "feat", "--into", "main"], { cwd: dir }).out).toBe("merging feat into main: no link would break\n");
+    // Histories with nothing in common: said so, not as an old git.
+    git("checkout", "-q", "--orphan", "lone");
+    git("commit", "-q", "-am", "lone");
+    const lone = slipbox(["merge-review", "lone", "--into", "main"], { cwd: dir });
+    expect(lone.code).not.toBe(0);
+    expect(lone.err).toContain("lone and main have no commit in common: git won't merge them");
+    expect(lone.err).not.toContain("2.38");
   });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
@@ -983,4 +996,81 @@ test("a move from a fresh process rewrites a code comment's path too: the gramma
   const r = slipbox(["mv", "a", "docs/a", "--json"], { cwd: dir });
   expect(r.code).toBe(0);
   expect(readFileSync(join(dir, "run.py"), "utf8")).toBe("# see docs/a.md\nprint(1)\n");
+});
+
+describe("review cycle 6 (cli)", () => {
+  /** A folder of its own and a state only it knows: what one test names, no other sees. */
+  function own(prefix: string): { dir: string; env: Record<string, string> } {
+    const dir = mkdtempSync(join(sandbox, prefix));
+    return { dir, env: { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") } };
+  }
+  test("--plan where no .slipbox/ is made a plan of: init on a plain folder, name on a repository — exit 2, nothing written", () => {
+    const { dir, env } = own("plan-");
+    const repo = join(dir, "repo");
+    mkdirSync(join(repo, ".git"), { recursive: true });
+    writeFileSync(join(repo, "a.md"), "# A\n");
+    const named = slipbox(["name", "planned", "--plan"], { cwd: repo, env });
+    expect(named.code).toBe(2);
+    expect(existsSync(join(repo, ".slipbox"))).toBe(false);
+    const plain = join(dir, "plain");
+    mkdirSync(plain);
+    expect(slipbox(["init", "--plan"], { cwd: plain, env }).code).toBe(2);
+    expect(existsSync(join(plain, ".slipbox"))).toBe(false);
+    expect(slipbox(["apply", "--json"], { cwd: plain, env }).json.data).toEqual([]);
+  });
+  test("apply of a saved name: the machine's list learns the new name; undo with an argument is refused, nothing undone", () => {
+    const { dir, env } = own("apply-name-");
+    const root = join(dir, "root");
+    mkdirSync(root);
+    writeFileSync(join(root, "a.md"), "# A\n");
+    const old = `fo${Date.now().toString(36)}`;
+    const now = `ba${Date.now().toString(36)}`;
+    expect(slipbox(["init", root, "--name", old], { env }).code).toBe(0);
+    const planned = slipbox(["name", now, "--plan", "--json"], { cwd: root, env }).json.data.plan.id as string;
+    expect(slipbox(["apply", planned], { cwd: root, env }).code).toBe(0);
+    const elsewhere = join(dir, "elsewhere");
+    mkdirSync(elsewhere);
+    const names = slipbox(["folders", "--json"], { cwd: elsewhere, env }).json.data.map((f: { name: string }) => f.name);
+    expect(names).toContain(now);
+    expect(names).not.toContain(old);
+    expect(slipbox(["resolve", `slipbox://${now}/a.md`], { cwd: elsewhere, env }).code).toBe(0);
+    // More than undo takes (none): a usage error before anything is taken back.
+    expect(slipbox(["undo", "x"], { cwd: root, env }).code).toBe(2);
+    expect(slipbox(["info", "--json"], { cwd: root, env }).json.data.name).toBe(now);
+  });
+  test("extra arguments are refused, not dropped: changed, worktrees, diff; index takes a path only with --refresh", () => {
+    expect(slipbox(["changed", "some-branch"]).code).toBe(2);
+    expect(slipbox(["worktrees", "x"]).code).toBe(2);
+    expect(slipbox(["diff", "home.md", "extra.md"]).code).toBe(2);
+    const r = slipbox(["index", "handbook"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toContain("only with --refresh");
+  });
+  test("a git-ignored file named from --root, from outside the root, is read and stat'd (20.8)", () => {
+    const { dir, env } = own("ignored-");
+    const repo = join(dir, "repo");
+    mkdirSync(join(repo, ".git"), { recursive: true });
+    mkdirSync(join(repo, "private"));
+    writeFileSync(join(repo, ".gitignore"), "private/\n");
+    writeFileSync(join(repo, "a.md"), "# A\n");
+    writeFileSync(join(repo, "private", "y.md"), "# Hidden away\n");
+    const plain = join(dir, "plain");
+    mkdirSync(plain);
+    const r = slipbox(["read", "--root", "../repo", "private/y.md"], { cwd: plain, env });
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("# Hidden away");
+    expect(slipbox(["stat", "--root", "../repo", "private/y.md"], { cwd: plain, env }).code).toBe(0);
+  });
+  test("index --refresh walks by --config's walk, as every other command does", () => {
+    const { dir, env } = own("refresh-cfg-");
+    const root = join(dir, "root");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(join(root, "skip"));
+    writeFileSync(join(root, "a.md"), "# A\n");
+    writeFileSync(join(root, "skip", "b.md"), "# B\n");
+    const alt = join(dir, "alt.toml");
+    writeFileSync(alt, '[walk]\nexclude = ["skip/"]\n');
+    expect(slipbox(["ls", "--config", alt, "--json"], { cwd: root, env }).json.data).toHaveLength(1);
+    expect(slipbox(["index", "--refresh", "--config", alt, "--json"], { cwd: root, env }).json.data.notes).toBe(1);
+  });
 });

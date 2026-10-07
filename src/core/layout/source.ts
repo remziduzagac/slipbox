@@ -7,7 +7,7 @@
 // spaces, all mapping to the tab; a wide character is one cell of width two). Control characters
 // show as `�` — the terminal never receives one.
 
-import { slugify } from "../parse.ts";
+import { HEADING_ID, slugify } from "../parse.ts";
 import type { Span as SyntaxSpan } from "../syntax.ts";
 import { highlight } from "./highlight.ts";
 import { graphemes, graphemeWidth } from "../width.ts";
@@ -340,11 +340,17 @@ function headingOfLine(raw: string): LineHeading | null {
   if (!raw.includes("#")) return null;
   const h = /^\s{0,3}(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$/.exec(raw.replace(/\r$/, ""));
   if (!h) return null;
-  const plain = (h[2] ?? "")
+  // A trailing `{#id}` is the id, not text; footnote marks and HTML tags are left out (as drawn).
+  let body = h[2] ?? "";
+  const id = HEADING_ID.exec(body);
+  if (id) body = body.slice(0, id.index);
+  const plain = body
+    .replace(/\[\^[^\]]+\]/g, "")
+    .replace(/<\/?[A-Za-z][^>]*>/g, "")
     .replace(/!?\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
     .replace(/!?\[\[([^\]]+)\]\]/g, "$1")
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/[*_`~]/g, "")
     .trim();
-  return { level: h[1]!.length, text: plain, slug: slugify(plain) };
+  return { level: h[1]!.length, text: plain, slug: slugify(plain), ...(id ? { id: id[1]! } : {}) };
 }

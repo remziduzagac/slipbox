@@ -264,8 +264,6 @@ export class NoteBuffer {
     this.markers = false;
   }
 
-  /** Replace `length` characters at `at` with `text`; part of the open undo step, else a step of
-   *  its own (the cursor offsets given). */
   /** Vim's change list (`g;` `g,`): where the text was changed, oldest first, as offsets kept in
    *  step with later edits; a change on the line of the one before replaces it. */
   changes: number[] = [];
@@ -274,6 +272,8 @@ export class NoteBuffer {
   /** Where the last insert session ended (`gi`). */
   lastInsert: number | null = null;
 
+  /** Replace `length` characters at `at` with `text`; part of the open undo step, else a step of
+   *  its own (the cursor offsets given). */
   edit(at: number, length: number, text: string, cursor = at): void {
     const removed = this.source.slice(at, at + length);
     if (!removed && !text) return;
@@ -341,7 +341,6 @@ export class NoteBuffer {
     this.layouts.clear();
   }
 
-  /** Where each line starts (UTF-16 offsets), for the current version. */
   private wordMemo = { version: -1, words: 0 };
 
   /** Words in the text (a note's frontmatter not counted), counted once per edit. */
@@ -350,6 +349,7 @@ export class NoteBuffer {
     return this.wordMemo.words;
   }
 
+  /** Where each line starts (UTF-16 offsets), for the current version. */
   lineStarts(): number[] {
     if (this.starts?.version === this.version) return this.starts.at;
     const at = [0];

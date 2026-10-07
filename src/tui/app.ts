@@ -117,6 +117,7 @@ import {
   EXPLORER_ACTIONS,
   OUTLINE_ACTIONS,
   RESIZE_ACTIONS,
+  keyChar,
   parseGroup,
   prettyKey,
 } from "./keys.ts";
@@ -252,10 +253,10 @@ export interface LiveBase {
   composed?: { key: string; layout: Layout };
 }
 
-/** A window whose text can be edited: source mode or live preview. */
 /** Where to log each command run, for the terminal tests' coverage: `SLIPBOX_TRACE`. */
 const TRACE = process.env.SLIPBOX_TRACE;
 
+/** A window whose text can be edited: source mode or live preview. */
 export function editable(view: View | null | undefined): boolean {
   return !!view && (!!view.source || !!view.live);
 }
@@ -544,7 +545,7 @@ export interface AppOptions {
   configFile?: string;
   watch?: boolean;
   now?: () => number;
-  /** Show the known vaults at once (17.14): slipbox was opened on a loose folder, not a file. */
+  /** Show the named folders at once (17.14, 21.10): slipbox was opened on a loose folder, not a file. */
   launcher?: boolean;
   /**
    * The root already recorded as seen, and what that found (21.8): the TUI's start records it before
@@ -623,7 +624,7 @@ export class App {
   /** Id of the clickable region under the mouse, for hover highlighting. */
   hover: string | null = null;
   positions: PositionStore;
-  /** Other vaults, reached by `[[vault:note]]`, paths out of this root, and their backlinks. */
+  /** Other roots, reached by paths out of this root and by pointers (`slipbox://name/…`), and their backlinks. */
   reach: Reach;
   watcher: VaultWatcher | null = null;
   ui: UiState;
@@ -1185,8 +1186,9 @@ export class App {
       const wasDirty = buf.dirty;
       const starts = buf.lineStarts();
       const at = (p: { line: number; character: number }) => Math.min(buf.source.length, (starts[p.line] ?? buf.source.length) + p.character);
-      // Last first, so each edit's offsets still hold.
-      const sorted = edits.map((e) => ({ from: at(e.range.start), to: at(e.range.end), text: e.newText })).sort((a, b) => b.from - a.from);
+      // Last first, so each edit's offsets still hold; of inserts at one place, the later one first,
+      // so their text reads in the array's order (as LSP has it, and as the preview showed it).
+      const sorted = edits.map((e, i) => ({ from: at(e.range.start), to: at(e.range.end), text: e.newText, i })).sort((a, b) => b.from - a.from || b.i - a.i);
       buf.beginStep(sorted.at(-1)!.from);
       for (const e of sorted) buf.edit(e.from, e.to - e.from, e.text);
       buf.endStep(sorted.at(-1)!.from);
@@ -1708,7 +1710,6 @@ export class App {
   private stopEmbedFeed: (() => void) | null = null;
   private stopRetargetFeed: (() => void) | null = null;
 
-  /** A new graph (the vault opened, switched, walked again): the search index and embeds follow it. */
   /** How a link under the cursor landed when a tie decided it ("the nearest of 2 named so"); else null. */
   linkLanded(view: View, link: LayoutLink): string | null {
     const from = link.from ?? view.buf.rel;
@@ -1716,6 +1717,7 @@ export class App {
     return describeLanding(this.graph.resolveLink({ kind: link.kind, target: link.target }, from));
   }
 
+  /** A new graph (the vault opened, switched, walked again): the search index and embeds follow it. */
   private followGraph(): void {
     this.startSearch();
     // A note coming or going sent links by name elsewhere: said, never silent.
@@ -1935,6 +1937,7 @@ export class App {
     }
     this.remember(view);
     const before = view.buf;
+    if (view.insert) stopInsert(this, view);
     Object.assign(view, this.makeView(buf, anchor), { back: view.back, fwd: [] });
     this.fitMode(view, before);
     this.region = "content";
@@ -1979,6 +1982,7 @@ export class App {
 
   showLoc(view: View, buf: NoteBuffer, loc: Loc): void {
     const before = view.buf;
+    if (view.insert && buf !== before) stopInsert(this, view);
     this.touchRecent(buf.key);
     Object.assign(view, {
       buf,
@@ -1994,17 +1998,38 @@ export class App {
     this.revealInSidebar();
   }
 
-  /**
-   * After a window changes file: one with no render goes to source mode; a window that was only in
-   * source mode for such a file (from `before`) renders again for one that can.
-   */
   /** A data file that opens in source mode because it doesn't parse (16.14): the error said. */
   private saySourceWhy(buf: NoteBuffer): void {
     const error = buf.kind.group === "data" ? buf.parsed.error : null;
     if (error) this.message("warn", `${buf.name} doesn't parse — ${error}: source mode`);
   }
 
+  /**
+   * A window now showing another buffer: the old one's lens and rows go (its render, size, place and
+   * inner scroll), so a lens left open opens again on the new note's cursor block.
+   */
+  resetForBuffer(view: View): void {
+    Object.assign(view, {
+      liveBase: undefined,
+      lensSize: undefined,
+      lensPin: undefined,
+      lensInner: 0,
+      lensStep: undefined,
+      lensClick: undefined,
+      topSub: 0,
+      anchorVersion: undefined,
+      visualLines: undefined,
+      layoutKey: "",
+    });
+  }
+
+  /**
+   * After a window changes file: one with no render goes to source mode; a window that was only in
+   * source mode for such a file (from `before`) renders again for one that can; the old file's lens
+   * state goes (resetForBuffer).
+   */
   fitMode(view: View, before: NoteBuffer): void {
+    if (view.buf !== before) this.resetForBuffer(view);
     const forced = !this.canRender(before);
     if (!this.canRender(view.buf)) {
       const was = view.source; // already so from makeView, which said why
@@ -2660,7 +2685,7 @@ export class App {
     return null;
   }
 
-  /** Toggle a task's checkbox (plan 4.11): `x`, or a click on it. */
+  /** Toggle a task's checkbox (plan 4.11): `ctrl+l` (`space n t`), or a click on it. */
   toggleTaskAt(view: View, task = this.taskAt(view)): void {
     if (!task) return this.message("info", "no task here — ctrl+l toggles a list item's [ ]");
     const buf = view.buf;
@@ -2720,8 +2745,7 @@ export class App {
     return true;
   }
 
-  /** The source line under the cursor: where a hand-off opens the note. */
-  /** The source line under the cursor: the span's it's on (a rendered paragraph's rows carry only its first). */
+  /** The source line under the cursor (the span's it's on): where a hand-off opens the note. */
   cursorLine(view: View): number {
     const line = this.currentLayout(view).lines[view.cur.row];
     return line ? srcAt(line, view.cur.col) : 1;
@@ -2740,8 +2764,6 @@ export class App {
     if (r !== 0) this.message("warn", `${argv[0]} exited with ${r}`);
   }
 
-  /** Send the note to an editor already running elsewhere (4.12); its saves arrive through the
-   *  watcher. */
   /** How the running nvims are found and asked; tests replace these. */
   nvimDiscovery: () => NvimServer[] = () => discoverNvims();
   nvimProbe: (socket: string) => NvimServer | null = (s) => probeNvim(s);
@@ -2870,15 +2892,22 @@ export class App {
   /**
    * Where a new note or folder goes: the explorer's selected folder (or the folder of its selected
    * file) when the explorer has focus, else the current note's folder; the vault's root without
-   * one. Vault-relative, "" for the root.
+   * one. Vault-relative, "" for the root; null for another root's row, which isn't this root's.
    */
-  newItemBase(): string {
+  newItemBase(): string | null {
     if (this.region === "sidebar" && this.leftView === "explorer") {
       const row = this.explorerRows()[this.sidebar.selected];
+      // Another root's row (20.15), or one under it: none of this root's folders (null, refused).
+      if (row?.under || row?.root?.other) return null;
       if (row) return row.kind === "dir" ? row.path : posix.dirname(row.path) === "." ? "" : posix.dirname(row.path);
     }
     const rel = this.view?.buf.rel;
     return rel && posix.dirname(rel) !== "." ? posix.dirname(rel) : "";
+  }
+
+  /** A new note, folder or paste with another root's row selected: refused, its files aren't this root's. */
+  private refuseOtherRoot(): void {
+    this.message("warn", "another root's folder: select a folder of this root");
   }
 
   /** A path typed for a new note or folder, from `base` (or the root, with a leading `/`); null
@@ -2925,7 +2954,8 @@ export class App {
    * (`# Name`). An existing file is just opened. Its vault path
    * and whether it was made, or null.
    */
-  createNote(input: string, base: string): { rel: string; created: boolean } | null {
+  createNote(input: string, base: string | null): { rel: string; created: boolean } | null {
+    if (base === null) return this.refuseOtherRoot(), null;
     let rel = this.newPath(input, base);
     if (!rel) return null;
     const ext = extensionOf(rel);
@@ -2966,6 +2996,7 @@ export class App {
    * name already typed (a link to a note that doesn't exist yet).
    */
   promptNewNote(base = this.newItemBase(), prefill = "", allowed = ""): void {
+    if (base === null) return this.refuseOtherRoot();
     const make = (text: string) => {
       // A name another note already has makes [[name]] ambiguous (17.5): a distinct one is
       // suggested, from the folder; typed again, the name is made anyway (a suggestion, not a rule).
@@ -3392,6 +3423,7 @@ export class App {
       return this.message("warn", `${clip.rel} isn't there any more`);
     }
     const into = this.newItemBase();
+    if (into === null) return this.refuseOtherRoot();
     const from = posix.dirname(clip.rel) === "." ? "" : posix.dirname(clip.rel);
     const name = posix.basename(clip.rel);
     const to = into ? `${into}/${name}` : name;
@@ -3421,7 +3453,7 @@ export class App {
     this.relayoutAll();
   }
 
-  /** A nested vault's name (`R`, the row's button): its `[[name:…]]` links fixed everywhere (17.15). */
+  /** A nested root's name (`R`, the row's button): its `.slipbox/` name, which pointers use (17.15, 21.10: `slipbox name`); links are paths and don't change. */
   renameVaultItem(item: ExplorerItem): void {
     if (!item.vault) return this.message("info", "R names a nested root: select one (its folder has its own icon)");
     const root = join(this.loc.root, item.rel);
@@ -3436,11 +3468,13 @@ export class App {
 
   /** Ask for a new folder's name and make it. */
   promptNewFolder(base = this.newItemBase()): void {
+    if (base === null) return this.refuseOtherRoot();
     this.prompt(`new folder in ${base ? `${base}/` : "the root"}`, (text) => void this.createFolder(text, base));
   }
 
   /** Create a folder (`shift+n` in the explorer, `space d n`, `:mkdir`): selected in the explorer. */
-  createFolder(input: string, base: string): string | null {
+  createFolder(input: string, base: string | null): string | null {
+    if (base === null) return this.refuseOtherRoot(), null;
     const rel = this.newPath(input, base);
     if (!rel) return null;
     const abs = join(this.loc.root, rel);
@@ -3780,12 +3814,15 @@ export class App {
   floating: ({ kind: "properties"; note: NoteBuffer; format: "yaml" | "toml"; original: string } | { kind: "hover" }) & { view: View; title: string } | null = null;
 
   /** The frontmatter's span in a note's text: the fences, and the text between them; null without one. */
-  private frontmatterSpan(source: string): { start: number; end: number; innerStart: number; innerEnd: number; format: "yaml" | "toml" } | null {
-    const m = /^(---|\+\+\+)[ \t]*\n([\s\S]*?)(?:^|\n)(---|\.\.\.|\+\+\+)[ \t]*(?:\n|$)/.exec(source);
+  private frontmatterSpan(source: string): { start: number; end: number; innerStart: number; innerEnd: number; bare: boolean; format: "yaml" | "toml" } | null {
+    // CRLF lines too; an empty one (the closing fence right after the opening) is tried first, so
+    // it never reaches on to a `---` rule further down.
+    const m = /^(---|\+\+\+)[ \t]*\r?\n(?:([\s\S]*?)\r?\n)??(---|\.\.\.|\+\+\+)[ \t]*(?:\r?\n|$)/.exec(source);
     if (!m || (m[1] === "+++") !== (m[3] === "+++")) return null;
-    const innerStart = m[1]!.length + (/^[ \t]*\n/.exec(source.slice(m[1]!.length))?.[0].length ?? 1);
-    const innerEnd = innerStart + m[2]!.length;
-    return { start: 0, end: m[0].length, innerStart, innerEnd, format: m[1] === "+++" ? "toml" : "yaml" };
+    const innerStart = /^(---|\+\+\+)[ \t]*\r?\n/.exec(source)![0].length;
+    const innerEnd = innerStart + (m[2]?.length ?? 0);
+    // bare: no line between the fences, so text put there brings its own line end.
+    return { start: 0, end: m[0].length, innerStart, innerEnd, bare: m[2] === undefined, format: m[1] === "+++" ? "toml" : "yaml" };
   }
 
   /** Edit the current note's properties — its frontmatter, YAML or TOML — in a floating editor (3.20). */
@@ -3795,7 +3832,7 @@ export class App {
     if (!view || view.buf.kind.group !== "note" || view.buf.rel === null) return this.message("info", "properties are a note's: its frontmatter");
     const note = view.buf;
     const span = this.frontmatterSpan(note.source);
-    const original = span ? note.source.slice(span.innerStart, span.innerEnd) : "";
+    const original = span ? note.source.slice(span.innerStart, span.innerEnd).replace(/\r\n/g, "\n") : "";
     const format = span?.format ?? "yaml";
     const buf = new NoteBuffer(null, `${note.abs}#properties`, `${note.key}#properties`);
     buf.kind = { group: "data", format };
@@ -3818,7 +3855,7 @@ export class App {
     const note = f.note;
     const body = text.replace(/\s+$/, "");
     const span = this.frontmatterSpan(note.source);
-    const now = span ? note.source.slice(span.innerStart, span.innerEnd) : "";
+    const now = span ? note.source.slice(span.innerStart, span.innerEnd).replace(/\r\n/g, "\n") : "";
     if (!sure && now !== f.original) {
       this.confirm(`${this.displayName(note)}'s properties changed while you edited them. Write yours over them?`, () => {
         if (this.writeProperties(text, true)) this.floating = null;
@@ -3835,8 +3872,17 @@ export class App {
       }
     }
     const fence = f.format === "toml" ? "+++" : "---";
+    // Written with the note's own line ends (a CRLF note stays CRLF).
+    const eol = note.eol;
+    const lines = body.replace(/\r?\n/g, eol);
     // Emptied: the frontmatter goes; new: it comes first.
-    const edit = span ? (body ? { at: span.innerStart, length: span.innerEnd - span.innerStart, text: body } : { at: 0, length: span.end, text: "" }) : body ? { at: 0, length: 0, text: `${fence}\n${body}\n${fence}\n` } : null;
+    const edit = span
+      ? body
+        ? { at: span.innerStart, length: span.innerEnd - span.innerStart, text: span.bare ? `${lines}${eol}` : lines }
+        : { at: 0, length: span.end, text: "" }
+      : body
+        ? { at: 0, length: 0, text: `${fence}${eol}${lines}${eol}${fence}${eol}` }
+        : null;
     if (edit && !(span && body === now)) {
       note.edit(edit.at, edit.length, edit.text); // one edit: one undo step
       for (const v of this.allViews()) if (v.buf === note) v.layoutKey = "";
@@ -4216,7 +4262,12 @@ export class App {
 
   /** `enter` on an Info row: a property's line, a tag's notes, a list or view, else its value copied. */
   openInfoRow(row: InfoRow): void {
-    if (row.heading) return this.infoAction(row.folded ? "unfold" : "fold");
+    if (row.heading) {
+      // This row's section, whatever is selected (from the filter, the rows it's among are gone).
+      if (!this.infoFolded.delete(row.section)) this.infoFolded.add(row.section);
+      this.outline.selected = Math.max(0, this.infoRows().findIndex((r) => r.heading && r.section === row.section));
+      return;
+    }
     const act = row.act;
     const view = this.view;
     if (!act || !view) return;
@@ -4373,7 +4424,6 @@ export class App {
     return true;
   }
 
-  /** Add a footnote (3.18): its text asked; `[^N]` after the cursor's word, `[^N]: text` at the end. */
   /**
    * A second copy of this folder seen (21.6): which one links to its name open — asked once, the
    * answer remembered; dismissed, the first found stays, and it isn't asked again.
@@ -4428,6 +4478,7 @@ export class App {
     });
   }
 
+  /** Add a footnote (3.18): its text asked; `[^N]` after the cursor's word, `[^N]: text` at the end. */
   addFootnote(): void {
     if (!this.footnoteNote()) return;
     const view = this.view!;
@@ -4698,15 +4749,17 @@ export class App {
 
   /**
    * The folders of the files open beside this root (21.9: a loose file a link was followed to, one
-   * opened by its path): each one's nearest root, else its folder — while a file of it is open.
+   * opened by its path): each one's nearest root, else its folder — while a file of it is open. Never
+   * the scratch's (slipbox's own state folder, by default) nor a virtual buffer's.
    */
   private besideRoots(): string[] {
     const here = this.loc.root;
+    const scratch = this.scratch().path;
     const out: string[] = [];
     for (const t of this.tabs) {
       for (const v of t.views) {
         const abs = v.buf.abs;
-        if (isInside(here, abs)) continue;
+        if (isInside(here, abs) || abs === scratch || v.buf.virtual) continue;
         let r = this.besideOf.get(abs);
         if (r === undefined) this.besideOf.set(abs, (r = findVaultRoot(abs) ?? dirname(abs)));
         if (!out.includes(r)) out.push(r);
@@ -4925,7 +4978,7 @@ export class App {
     const notes = this.rightView === "footnotes";
     const info = this.rightView === "info";
     const rows: { text: string; line?: number }[] = notes ? this.footnoteRows() : info ? this.infoRows() : this.outlineRows();
-    const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+    const typed = keyChar(key);
     const done = () => {
       o.filter = "";
       o.filtering = false;
@@ -4997,7 +5050,7 @@ export class App {
   private filterKey(key: string): void {
     const s = this.sidebar;
     const rows: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "problems" ? this.problemRows() : this.historyRows();
-    const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+    const typed = keyChar(key);
     const done = () => {
       s.filter = "";
       s.filtering = false;
@@ -5017,10 +5070,14 @@ export class App {
           return this.openProblemRow(row as ProblemRow, rows as ProblemRow[]);
         }
         if (this.leftView === "history") {
-          const i = (row as HistoryRow).index;
+          // A note read elsewhere ("recent here") opens here; a place in this window's history is gone back to.
+          const h = row as HistoryRow;
+          if (h.heading) return;
           done();
-          this.jumpHistory(i);
+          if (h.recent) this.open(h.recent);
+          else this.jumpHistory(h.index);
           this.region = "content";
+          if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
           return;
         }
         const tree = row as TreeRow;
@@ -5065,7 +5122,7 @@ export class App {
     s.scroll = 0;
     s.pinned = false;
     const next: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "problems" ? this.problemRows() : this.historyRows();
-    s.selected = Math.max(0, this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : this.leftView === "problems" ? next.findIndex((r) => !(r as ProblemRow).heading) : 0);
+    s.selected = Math.max(0, this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : next.findIndex((r) => !(r as ProblemRow | HistoryRow).heading));
   }
 
   /** The history view's keys (the explorer's keymap): move, jump, filter, close, leave. */
@@ -5254,6 +5311,11 @@ export class App {
       case "collapse": {
         // A filtered list shows every match whatever is folded: folding would act on rows not shown.
         if (!row || this.sidebar.filter) break;
+        // Another root's row (20.15): folded, the selection staying on it (its path is absolute).
+        if (row.root?.other) {
+          if (this.expanded.delete(row.path)) this.invalidateTree();
+          break;
+        }
         const dir = row.kind === "dir" && this.expanded.has(row.path) ? row.path : row.path.split("/").slice(0, -1).join("/");
         if (dir) {
           this.expanded.delete(dir);
@@ -5523,8 +5585,11 @@ export class App {
   }
 
   // -------------------------------------------------------------------------------------------
-  // Input. Dispatch order (decision 3.11): overlay → resize mode → pending sequence → focused
-  // pane keys → visual-mode keys → the normal keymap. The which-key popup shows while a sequence is pending.
+  // Input. Dispatch order (decision 3.11): a paste → overlay → a pane's filter → insert (the
+  // completion popup's keys first) → a character awaited (f, t, r) → (in source and the lens: counts
+  // and an operator's motion around the rest, vim.ts) → resize mode → pending sequence → the
+  // focused pane's keys → visual mode's → source mode's → the normal keymap. The which-key popup
+  // shows while a sequence is pending.
 
   /**
    * Pasted text (bracketed paste): into the text while typing, after the cursor in normal mode
@@ -5549,8 +5614,16 @@ export class App {
     const line = sanitize(text.replace(/\r\n?/g, "\n").split("\n")[0] ?? "");
     if (!line) return;
     if (o.kind === "prompt") {
+      // Into the field being typed in: the replace field when it has focus; none in a yes/no
+      // question or while each match is confirmed (keys there are answers, not text).
+      if (o.confirm || o.replace?.confirm) return;
+      if (o.replace?.focus) {
+        o.replace.text += line;
+        return;
+      }
       o.text += line;
       o.change?.(o.text);
+      if (o.replace && o.view) R.refresh(this, o, o.view);
     } else if (o.filterable) {
       o.input += line;
       refilter(o);
@@ -5752,7 +5825,7 @@ export class App {
     if (this.region === "content" && this.vim.awaitChar && !editable(iv)) {
       const f = this.vim.awaitChar;
       this.vim.awaitChar = null;
-      const ch = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+      const ch = keyChar(key);
       if (ch !== null) f(ch);
       return;
     }
@@ -5820,7 +5893,7 @@ export class App {
       return o.accept(o.text);
     }
     if (key === "escape" || key === "ctrl+c" || key === "ctrl+g") return this.closeOverlay(true);
-    const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+    const typed = keyChar(key);
     if (o.kind === "prompt" && o.confirm) {
       if (typed === "y" || typed === "Y") return this.answerDialog(true);
       if (typed === "n" || typed === "N") return this.answerDialog(false);
@@ -6172,7 +6245,8 @@ export class App {
       if (!g.sidebar || !inRect(g.sidebar, ev.x, ev.y)) return;
       const idx = ev.y - g.sidebar.y + this.sidebar.scroll;
       if (this.leftView === "problems") {
-        // A section's heading folds; a problem: one click selects it, a double-click goes there.
+        // A section's heading folds; a note's row opens on one click; a problem: one click selects
+        // it, a double-click goes there.
         const p = this.problemRows()[idx];
         if (!p) return;
         this.sidebar.selected = idx;
@@ -6547,7 +6621,12 @@ export class App {
   copyContext(): void {
     const buf = this.view?.buf;
     if (!buf || buf.rel === null || buf.virtual) return this.message("info", "context: open a note first");
-    for (const b of this.dirtyBuffers()) if (!b.virtual && !this.saveBuffer(b, true)) return;
+    for (const d of this.dirtyBuffers()) {
+      if (d.virtual || this.saveBuffer(d, true)) continue;
+      // Not saved (it changed on disk meanwhile): the bundle would miss what's on screen — said, never silent.
+      const key = this.keymap.keysFor("note.resolve")[0];
+      return this.message("warn", `context: ${this.displayName(d)} changed on disk while unsaved — ${key ? prettyKey(key, this.leader) : "note.resolve"} resolves it first`);
+    }
     const b = buildContext(this.graph, [buf.rel], this.config.context);
     const n = (k: number, one: string) => `${k} ${one}${k === 1 ? "" : "s"}`;
     const links = b.items.filter((i) => i.why === "link").length;
@@ -7142,6 +7221,9 @@ export class App {
    * saves this one's as quitting does. Refused while a note is unsaved: it would be left behind.
    */
   switchVault(target: VaultLocation, open: string | null, anchor?: Anchor, how: { back?: boolean } = {}): boolean {
+    // The floating window first: changed properties go into their note (or it asks, and nothing
+    // switches); the note they made unsaved then refuses the switch below.
+    if (this.floating && !this.closeFloating()) return false;
     const dirty = this.dirtyBuffers();
     if (dirty.length) {
       this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save (:wa) or revert before leaving ${this.vaultLabel(this.loc)}`);
@@ -7380,7 +7462,10 @@ export class App {
       if (nb) {
         for (const v of this.allViews()) {
           for (const l of [...v.back, ...v.fwd]) if (l.key === old.key) l.key = nb.key;
-          if (v.buf === old) Object.assign(v, this.makeView(nb, v.topAnchor, v.curAnchor), { back: v.back, fwd: v.fwd });
+          if (v.buf === old) {
+            Object.assign(v, this.makeView(nb, v.topAnchor, v.curAnchor), { back: v.back, fwd: v.fwd });
+            this.resetForBuffer(v);
+          }
         }
         this.recentNotes = this.recentNotes.map((k) => (k === old.key ? nb.key : k));
         moved.add(nb.abs);
@@ -7691,7 +7776,6 @@ export function selectable(o: ListOverlay, i: number, dir: number): number {
   return 0;
 }
 
-/** Link index at a layout cell, or -1. */
 /** The task whose checkbox glyph is at this cell, if any (its trailing space doesn't count). */
 export function taskMarkAt(layout: Layout, row: number, col: number): { line: number; end: number; checked: boolean } | null {
   let x = 0;
@@ -7709,6 +7793,7 @@ export function isHidden(hidden: [number, number][], r: number): boolean {
   return false;
 }
 
+/** Link index at a layout cell, or -1. */
 export function linkAt(layout: Layout, row: number, col: number): number {
   const line = layout.lines[row];
   if (!line) return -1;

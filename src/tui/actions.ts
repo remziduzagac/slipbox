@@ -21,12 +21,13 @@ import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
-import type { Command } from "../core/commands.ts";
+import { canonKey, type Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import { slugify } from "../core/parse.ts";
 import { compilePattern, findAll, parseSubstitute } from "../core/replace.ts";
 import { readText } from "../core/fsutil.ts";
 import { sanitize } from "../core/sanitize.ts";
+import { graphemes } from "../core/width.ts";
 import type { Anchor } from "../core/position.ts";
 import { cacheDir, stateDir } from "../core/paths.ts";
 import { listThemes, loadTheme } from "../core/theme/index.ts";
@@ -177,9 +178,14 @@ function lastLine(a: App, v: View): C.Pos {
 }
 
 /** D / C: to the end of the line (with a count, of the line count-1 below). */
-function toLineEnd(a: App, v: View, n: number): V.Range {
+function toLineEnd(a: App, v: View, n: number): V.Range | null {
   const at = E.offsetOf(a, v);
-  const last = Math.min(E.lineOf(v, at) + n - 1, v.buf.lineStarts().length);
+  // The note's lines, not the empty one after its final newline; from the last, a count has
+  // nowhere to go (vim's $ fails there, so 5D does nothing).
+  const real = Math.max(1, v.buf.lineStarts().length - (v.buf.source.endsWith("\n") ? 1 : 0));
+  const here = E.lineOf(v, at);
+  if (n > 1 && here >= real) return null;
+  const last = Math.min(here + n - 1, real);
   const end = (v.buf.lineStarts()[last - 1] ?? 0) + E.lineText(v, last).length;
   return { from: at, to: Math.max(at, end), linewise: false };
 }
@@ -222,7 +228,7 @@ function visualOp(a: App, op: "d" | "c" | ">" | "<"): void {
     const r = line ? V.linesRange(v, E.lineOf(v, from), E.lineOf(v, to)) : { from, to: Math.min(E.nextBoundary(v.buf.source, to), Math.max(to, E.lineEnd(v, to))), linewise: false };
     // For `.`: the same change on as much text, said in keys.
     const lines = E.lineOf(v, to) - E.lineOf(v, from) + 1;
-    const chars = [...v.buf.source.slice(r.from, r.to)].length;
+    const chars = graphemes(v.buf.source.slice(r.from, r.to)).length; // as l moves: by character
     const keys = line ? ["shift+v", ...Array(lines - 1).fill("j"), op] : lines === 1 ? ["v", ...Array(Math.max(0, chars - 1)).fill("l"), op] : null;
     const before = v.buf.version;
     const times = op === ">" || op === "<" ? V.takeCount(a) : 1;
@@ -565,7 +571,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
 }
 
 /** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
-const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "heading.rename", "vault.rename", "folder.name"]);
+const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "heading.rename", "folder.name"]);
 
 /** Commands in the order of core/command-specs.ts, which follows docs/design/keymap.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
@@ -584,13 +590,18 @@ function heading(title: string, first: boolean): ListItem[] {
   return [...(first ? [] : [{ label: "", header: true, data: null }]), { label: title, header: true, data: null }, { label: "", header: true, rule: true, data: null }];
 }
 
-/** Items under group headings, in the groups' order (docs/design/keymap.md). */
+/**
+ * Items under group headings, in the groups' order (docs/design/keymap.md). What no group in the
+ * order claims goes under "Other", last, so nothing is ever left out.
+ */
 function grouped(items: ListItem[], groupOf: (item: ListItem) => string, order: string[], first = true): ListItem[] {
   const out: ListItem[] = [];
   for (const title of order) {
     const members = items.filter((i) => groupOf(i) === title);
     if (members.length) out.push(...heading(title, first && !out.length), ...members);
   }
+  const rest = items.filter((i) => !order.includes(groupOf(i)));
+  if (rest.length) out.push(...heading("Other", first && !out.length), ...rest);
   return out;
 }
 
@@ -994,6 +1005,7 @@ export function registerActions(app: App): void {
       }),
     "visual.exit": (a) =>
       withView(a, (v) => {
+        a.vim.awaitChar = null; // an f / t left waiting never takes a later key
         Object.assign(v, { visual: null, sel: null });
       }),
     "app.escape": (a) => {
@@ -1037,7 +1049,13 @@ export function registerActions(app: App): void {
       withView(a, (v) => {
         const i = a.linkForFollow(v);
         const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
-        if (!link) return a.message("info", `no link here · ${prettyKey("ctrl+tab")} or ${prettyKey(`${a.leader} l n`, a.leader)} goes to the next one`);
+        if (!link) {
+          // The keys bound to the next link, as configured: one of its own, and the leader's.
+          const keys = a.keymap.keysFor("link.next");
+          const lead = canonKey(a.leader);
+          const said = [keys.find((k) => k.split(" ")[0] !== lead), keys.find((k) => k.split(" ")[0] === lead)].filter((k) => k !== undefined).map((k) => prettyKey(k, a.leader));
+          return a.message("info", said.length ? `no link here · ${said.join(" or ")} goes to the next one` : "no link here");
+        }
         followLink(a, link, false);
       }),
     "link.follow_split": (a) =>
@@ -1073,8 +1091,7 @@ export function registerActions(app: App): void {
         if (!bl.length) return a.message("info", `no notes link to ${v.buf.rel}`);
         a.openList({
           title: `Linking to ${v.buf.name} (${bl.length})`,
-          // Another vault's link (17.11): its vault's name before its path.
-          // Another vault's, in its vault form (20.12): `name:path`.
+          // Another root's link (17.11): by its path, as files are shown (21.9).
           items: bl.map((b) => ({ label: b.vault ? a.graph.shownPath(b.from) : b.from, detail: b.text, hint: `${b.line}`, data: b })),
           accept: (item) => {
             const b = item.data as { from: string; line: number };
@@ -1429,8 +1446,16 @@ export function registerActions(app: App): void {
     "edit.op_yank": (a) => sourceEdit(a, () => V.startOperator(a, "y"), false),
     "edit.op_indent": (a) => sourceEdit(a, () => V.startOperator(a, ">")),
     "edit.op_outdent": (a) => sourceEdit(a, () => V.startOperator(a, "<")),
-    "edit.delete_to_end": (a) => sourceEdit(a, (v) => V.apply(a, v, "d", toLineEnd(a, v, V.takeCount(a)))),
-    "edit.change_to_end": (a) => sourceEdit(a, (v) => V.apply(a, v, "c", toLineEnd(a, v, V.takeCount(a)))),
+    "edit.delete_to_end": (a) =>
+      sourceEdit(a, (v) => {
+        const r = toLineEnd(a, v, V.takeCount(a));
+        if (r) V.apply(a, v, "d", r);
+      }),
+    "edit.change_to_end": (a) =>
+      sourceEdit(a, (v) => {
+        const r = toLineEnd(a, v, V.takeCount(a));
+        if (r) V.apply(a, v, "c", r);
+      }),
     "edit.substitute": (a) => sourceEdit(a, (v) => V.apply(a, v, "c", charsRange(a, v, V.takeCount(a)) ?? { ...noRange, from: E.offsetOf(a, v), to: E.offsetOf(a, v) })),
     "edit.substitute_line": (a) =>
       sourceEdit(a, (v) => {
@@ -1455,8 +1480,14 @@ export function registerActions(app: App): void {
         const r = charsRange(a, v, V.takeCount(a));
         if (!r) return;
         const t = v.buf.source.slice(r.from, r.to);
-        const flipped = [...t].map((c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase())).join("");
-        if (flipped.length === t.length) v.buf.edit(r.from, t.length, flipped, r.from);
+        // Each letter on its own; one whose other case has another length (ß → SS, İ → i̇) stays.
+        const flipped = [...t]
+          .map((c) => {
+            const f = c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase();
+            return f.length === c.length ? f : c;
+          })
+          .join("");
+        if (flipped !== t) v.buf.edit(r.from, t.length, flipped, r.from);
         E.placeAt(a, v, Math.min(r.to, Math.max(r.from, E.lineEnd(v, r.from) - 1)));
       }),
     "edit.repeat": (a) => sourceEdit(a, () => V.repeat(a)),
@@ -1756,7 +1787,7 @@ export function registerActions(app: App): void {
           const entry = frag && !block ? a.graph.entryAnywhere(path) : undefined;
           const hit = entry && frag ? findHeading(entry.headings, entry.anchors ?? [], frag, wiki) : null;
           const heading = block ? null : (hit?.heading != null ? entry!.headings[hit.heading]!.text : null) || frag;
-          // Titled in its vault form (20.12): its path here, or `vault:path`.
+          // Titled by its path as shown (21.9): from this root, else `~/…`, else absolute.
           const shown = isAbsolute(path) ? a.graph.shownPath(path) : path;
           return a.openHover(text ?? "(nothing there)", `${shown}${block ? ` ^${block}` : heading ? ` › ${heading}` : ""}`);
         }

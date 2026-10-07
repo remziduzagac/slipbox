@@ -6,6 +6,7 @@
 import { graphemes } from "../core/width.ts";
 import { type App, editable, type View } from "./app.ts";
 import { cells } from "./cursor.ts";
+import { keyChar } from "./keys.ts";
 
 /** The cursor's place in the text (a UTF-16 offset into `source`). Source mode only. */
 export function offsetOf(app: App, view: View): number {
@@ -297,7 +298,7 @@ export function insertKey(app: App, view: View, key: string): void {
 }
 
 function insertKeyNow(app: App, view: View, key: string): void {
-  const typed = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+  const typed = keyChar(key);
   switch (key) {
     case "escape":
     case "ctrl+c":
@@ -379,12 +380,16 @@ export function moveLines(app: App, view: View, dir: -1 | 1): void {
   const b = Math.max(lineOf(view, cur), lineOf(view, anchor));
   if (dir < 0 ? a <= 1 : b >= real) return;
   const starts = buf.lineStarts();
-  const block = lines.slice(a - 1, b).join("\n");
-  const other = lines[dir < 0 ? a - 2 : b]!;
+  // Each line without its break (a CRLF one's \r too), joined again with the note's own; the
+  // range ends before the last line's break, which stays where it is.
+  const bare = (n: number) => lines[n]!.replace(/\r$/, "");
+  const eol = buf.eol;
+  const block = lines.slice(a - 1, b).map((_, k) => bare(a - 1 + k)).join(eol);
+  const other = bare(dir < 0 ? a - 2 : b);
   const from = starts[dir < 0 ? a - 2 : a - 1]!;
-  const to = (starts[dir < 0 ? b - 1 : b] ?? src.length) + lines[dir < 0 ? b - 1 : b]!.length;
-  const text = dir < 0 ? `${block}\n${other}` : `${other}\n${block}`;
-  const moveBy = dir < 0 ? -(other.length + 1) : other.length + 1;
+  const to = (starts[dir < 0 ? b - 1 : b] ?? src.length) + bare(dir < 0 ? b - 1 : b).length;
+  const text = dir < 0 ? `${block}${eol}${other}` : `${other}${eol}${block}`;
+  const moveBy = dir < 0 ? -(other.length + eol.length) : other.length + eol.length;
   buf.beginStep(cur);
   buf.edit(from, to - from, text, cur);
   buf.endStep(cur + moveBy);

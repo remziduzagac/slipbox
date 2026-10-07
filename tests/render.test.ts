@@ -1,7 +1,7 @@
 // Rendering: snapshot the pure layout stage (0.4) and property-test the table allocator (2.3).
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { glyphsFor } from "../src/core/glyphs.ts";
@@ -303,7 +303,7 @@ describe("the allocator predicts exactly what is drawn (review cycle 2)", () => 
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
       return (seed >>> 8) % n; // the high bits: an LCG's low ones repeat quickly
     };
-    const pieces = ["a", "word", "漢", "字", "、", "。", "（", "）", "「", "」", "ｱ", "ー", "🎉", "👨‍👩‍👧", "é", " ", "  ", "/", "-", ".", ",", "\n", "longidentifier_with.parts/and-more"];
+    const pieces = ["a", "word", "漢", "字", "、", "。", "（", "）", "「", "」", "ｱ", "ー", "…", "🎉", "👨‍👩‍👧", "é", " ", "  ", "/", "-", ".", ",", "\n", "longidentifier_with.parts/and-more"];
     for (let k = 0; k < 3000; k++) {
       const parts = Array.from({ length: 1 + rand(14) }, () => pieces[rand(pieces.length)]!);
       const cut = rand(parts.length);
@@ -315,6 +315,17 @@ describe("the allocator predicts exactly what is drawn (review cycle 2)", () => 
         if (predicted !== drawn) throw new Error(`${JSON.stringify(spans.map((x) => x.text))} @${w}: predicted ${predicted}, drawn ${drawn}`);
       }
     }
+  });
+  test("an ellipsis after a CJK character never starts a row: `…` and `‥` measure 1, yet close (kinsoku)", () => {
+    for (const mark of ["…", "‥", "……"]) {
+      const spans: Span[] = [{ text: `漢字漢字漢字漢字${mark}`, role: "text", attrs: 0 }];
+      for (let w = 4; w <= 18; w++) {
+        const rows = wrapSpans(spans, w).map((r) => r.map((x) => x.text).join(""));
+        for (const row of rows) expect(row.startsWith(mark[0]!)).toBe(false);
+        expect(countLines(measure(spans), w)).toBe(rows.length);
+      }
+    }
+    expect(wrapSpans([{ text: "漢字漢字漢字漢字…", role: "text", attrs: 0 }], 16).map((r) => r.map((x) => x.text).join(""))).toEqual(["漢字漢字漢字漢", "字…"]);
   });
 });
 
@@ -513,6 +524,52 @@ describe("the render cache (15.1)", () => {
       const cached = renderTree(p.tree, opts, p.frontmatter, rcache);
       const fresh = renderTree(parseMarkdown(text, undefined, { whole: true }).tree, opts, p.frontmatter);
       expect(JSON.stringify(cached)).toBe(JSON.stringify(fresh));
+    }
+  });
+});
+
+describe("narrow panes: embeds, callouts and data trees cut nothing (review cycle 1, 21.x)", () => {
+  const unicodeG = glyphsFor("unicode");
+  const fits = (l: Layout, what: string) => {
+    if (l.clipped) throw new Error(`${what} @${l.width}: ${l.clipped} row(s) had to be clipped`);
+    for (const [i, line] of l.lines.entries()) {
+      const w = line.spans.reduce((a, s) => a + stringWidth(s.text), 0);
+      if (w > l.width) throw new Error(`${what} @${l.width}: row ${i} is ${w} wide`);
+    }
+  };
+  test("an embed of a note with a table and a list, nested or not, at widths 6 to 24", () => {
+    const inner = parseNoteFile("inner.md", "| name | value |\n|---|---|\n| alpha | 1 |\n\n- one\n  - two words here\n").tree.children;
+    const embed = () => ({ path: "/v/inner.md", title: "inner", nodes: inner });
+    for (const md of ["![[inner]]\n", "- a\n  - ![[inner]]\n", "> > > ![[inner]]\n"]) {
+      for (let width = 6; width <= 24; width++) {
+        for (const glyphs of [unicodeG, glyphsFor("ascii")]) fits(renderMarkdown(md, { width, glyphs, showUrls: false, embed }), JSON.stringify(md));
+      }
+    }
+  });
+  test("a callout too narrow for its bar keeps its text's room, as a quote does", () => {
+    const l = renderMarkdown("> [!warning] Warning\n> > [!note] Inner\n> > > [!tip] Deep words here\n", { width: 8, glyphs: unicodeG, showUrls: false });
+    fits(l, "callouts");
+    const shown = l.lines.map((x) => x.spans.map((s) => s.text).join("").trim());
+    expect(shown.some((r) => r.includes("Warning"))).toBe(true); // not wrapped two columns wide
+    expect(shown.some((r) => r.includes("words"))).toBe(true);
+  });
+  test("a deep data tree with records, and the reference set's data files, at 8 to 37", () => {
+    const deep = parseData("yaml", "a:\n  b:\n    c:\n      d:\n        e:\n          f:\n            long_key_name: a value of several words\n            records:\n              - name: alpha\n                value: 1\n              - name: beta\n                value: 2\n            # a comment\n            k: v\n");
+    expect(deep.error).toBeNull();
+    const HOME = join(import.meta.dir, "..", "examples", "home");
+    // The trees and key-value files under 64 KB (a CSV is one table, the big ones slow to sweep).
+    const files = (readdirSync(HOME, { recursive: true }) as string[])
+      .filter((f) => !f.split("/").includes(".slipbox") && classify(f, ["md"]).group === "data" && !/\.(csv|tsv)$/.test(f) && statSync(join(HOME, f)).size < 65_536)
+      .sort();
+    expect(files.length).toBeGreaterThan(20);
+    const trees = [["deep.yaml", deep.tree] as const, ...files.flatMap((f) => {
+      const p = parseData(classify(f, ["md"]).format, readFileSync(join(HOME, f), "utf8"));
+      return p.error ? [] : [[f, p.tree] as const];
+    })];
+    for (const [name, tree] of trees) {
+      for (const width of [8, 12, 16, 20, 24, 37]) {
+        for (const glyphs of [unicodeG, glyphsFor("ascii")]) fits(renderTree(tree, { width, glyphs, showUrls: false }), name);
+      }
     }
   });
 });

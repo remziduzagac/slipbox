@@ -2,12 +2,14 @@
 // flaw, then goes further on how spare width is shared out.
 //
 //   desired[i] = max over rows of (content width + 2 * padding)
-//   minimum[i] = max over rows of (longest unbreakable token + 2 * padding)
+//   minimum[i] = max over rows of (longest soft segment + 2 * padding)
 //   budget     = width - (ncols + 1)
 //
 //   sum(desired) <= budget   -> desired: nothing wraps
-//   sum(minimum) <= budget   -> every column at its own minimum, then the surplus goes where it
-//                               removes the most wrapped rows (below)
+//   budget < ncols * 5       -> no grid: one record per row (a column under 3 content columns is
+//                               unreadable; 5 = MIN_CONTENT + 2 * padding)
+//   sum(minimum) <= budget   -> every column at its own minimum, then the surplus placed by cost
+//                               (below)
 //   fair share >= MIN_USEFUL -> words must break: columns floored at a fair share, same surplus rule
 //   otherwise                -> no grid: one record per row (narrow collapse, 3.14)
 //
@@ -16,9 +18,11 @@
 //
 // **Where the surplus goes.** Handing every column an equal share (water-filling) ignores how
 // much text each holds: a sentence column ends up as narrow as a one-word column and wraps into a
-// tall ribbon. Instead the allocator minimises the table's rendered height — the sum over rows of
-// the tallest cell — greedily: each step widens the column that removes the most rows per column
-// spent. What is left once no widening helps is water-filled toward `desired` for even margins.
+// tall ribbon. Instead the allocator minimises a cost: the table's rendered height (the sum over
+// rows of the tallest cell) plus SPLIT_COST per word split across lines. Greedy search can stall
+// on a plateau, so three candidates are scored and the cheapest wins: greedy (each step widens the
+// column that removes the most cost per column spent) then water-filled toward `desired`,
+// water-filling alone, and the surplus shared in proportion to each column's unmet width.
 
 export const PADDING = 1;
 /** Narrowest content width a column may have, in columns — once every column's longest word

@@ -13,7 +13,7 @@ import { addFootnote, applyEdits, deleteFootnote, editFootnote, footnotesOf, ren
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
 import { layoutSource } from "../src/core/layout/source.ts";
-import { expandTabs, sanitize } from "../src/core/sanitize.ts";
+import { expandTabs, sanitize, sanitizeMap } from "../src/core/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
@@ -62,9 +62,22 @@ describe("sanitize (2.9)", () => {
     expect(sanitize("bell\x07 del\x7f c1\x9b")).toBe("bell del c1");
     expect(sanitize("rtl\u202Eoverride")).toBe("rtloverride");
   });
+  test("sanitizeMap: the same text, and where each raw index went (-1 for one taken out)", () => {
+    for (const raw of ["plain", "bell\x07ring.md", "a\x1b[31mred\x1b[0m b", "x\x1b]0;t\x07y\u2028z", "c1\x9b31mq\u202Er", "e\x1b"]) {
+      const m = sanitizeMap(raw);
+      expect(m.text).toBe(sanitize(raw));
+      expect(m.at.length).toBe(raw.length);
+      // Every kept index lands on its own character, in order.
+      const kept = m.at.map((to, i) => [to, i] as const).filter(([to]) => to >= 0);
+      expect(kept.map(([to]) => to)).toEqual([...m.text].map((_, k) => k));
+      for (const [to, i] of kept) expect(m.text[to]).toBe(raw[i] === "\u2028" ? " " : raw[i]);
+    }
+    expect(sanitizeMap("bell\x07ring").at.slice(4)).toEqual([-1, 4, 5, 6, 7]);
+    expect(sanitizeMap("a\x1b[31mb").at).toEqual([0, -1, -1, -1, -1, -1, 1]);
+  });
 });
 
-// Only the converter (20.1) reads wikilinks, by parseLegacy; a note's parse leaves them text (20.2).
+// The converter (20.1) reads wikilinks by parseLegacy, the same parse as a note's since 21.3.
 describe("wikilink syntax, as the converter reads it", () => {
   const links = (src: string) => {
     const out: WikiLink[] = [];
@@ -84,6 +97,15 @@ describe("wikilink syntax, as the converter reads it", () => {
     expect(b).toMatchObject({ target: "img.png", embed: true });
     expect(c).toMatchObject({ target: "n", heading: "Head" });
     expect(d).toMatchObject({ target: "n", block: "blk" });
+  });
+  test("a block is `#^id`, or a bare `^id` with no heading before it; a caret in a heading is the heading's", async () => {
+    const { parseWikiTarget } = await import("../src/core/wikilink.ts");
+    expect(parseWikiTarget("Complexity#O(n^2)")).toMatchObject({ target: "Complexity", heading: "O(n^2)", block: null });
+    expect(parseWikiTarget("f^(n)|deriv")).toMatchObject({ target: "f^(n)", heading: null, block: null, alias: "deriv" });
+    expect(parseWikiTarget("note^abc")).toMatchObject({ target: "note", block: "abc" });
+    expect(parseWikiTarget("note#^abc")).toMatchObject({ target: "note", heading: null, block: "abc" });
+    // The documented bare form: `x^2` is note x's block 2 (an id may be digits).
+    expect(parseWikiTarget("x^2")).toMatchObject({ target: "x", block: "2" });
   });
   test("never inside code, never when escaped", () => {
     expect(links("`[[code]]` \\[[esc]]\n\n```\n[[fenced]]\n```\n")).toHaveLength(0);
@@ -176,6 +198,16 @@ describe("config (0.9)", () => {
     const mono = applyColorOverrides(loadTheme("mono").theme, { pane_title: { fg: "#ffffff", bold: false } }).theme;
     expect(mono.roles.pane_title.fg).toBeUndefined();
     expect(mono.roles.pane_title.bold).toBe(false);
+  });
+  test("[colors.<theme>]: a role's fields from two files merge, as a top-level role's do", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
+    const user = join(dir, "user.toml");
+    writeFileSync(user, '[colors]\nrail = { bg = "#000000" }\n[colors."tokyo-night"]\nrail = { bg = "#000000" }\n');
+    const folder = join(dir, "folder.toml");
+    writeFileSync(folder, '[colors]\nrail = { fg = "#ffffff" }\n[colors."tokyo-night"]\nrail = { fg = "#ffffff" }\n');
+    const { colors } = loadConfig({ configFile: user, vaultFile: folder }).config;
+    expect(colors.rail).toEqual({ bg: "#000000", fg: "#ffffff" });
+    expect(colors["tokyo-night"]).toEqual({ rail: { bg: "#000000", fg: "#ffffff" } });
   });
   test("no config at all is fine; bad keys are warnings, not crashes", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-cfg-"));
@@ -901,6 +933,23 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
     for (const [k, v] of before) expect(cache.chunks.get(k)).toBe(v);
   });
 
+  test("chunks parsed apart keep heading ids and literal quotes (15.1): a {#id} anchor, an escaped [!note]", async () => {
+    const { adoptChunks, headingsOf, noteChunks, parseChunk } = await import("../src/core/parse.ts");
+    const text = "## Setup {#setup}\n\n> \\[!note] literal\n";
+    const quote = (t: ReturnType<typeof parseMarkdown>) => t.tree.children.find((n) => n.type === "blockquote")?.data;
+    const cache = newParseCache();
+    adoptChunks(
+      cache,
+      noteChunks(text).map((c) => ({ text: c.text, children: JSON.parse(JSON.stringify(parseChunk(c.text, c.first))) })),
+    );
+    const adopted = parseMarkdown(text, cache);
+    const plain = parseMarkdown(text);
+    expect(headingsOf(plain.tree)).toMatchObject([{ text: "Setup", slug: "setup", id: "setup" }]);
+    expect(headingsOf(adopted.tree)).toEqual(headingsOf(plain.tree));
+    expect(quote(plain)).toEqual({ literal: true });
+    expect(quote(adopted)).toEqual(quote(plain));
+  });
+
   test("on the workers: every chunk in the cache, the same tree; nothing left the second time", async () => {
     const { noteChunks } = await import("../src/core/parse.ts");
     const { parseInBackground, stopParsePool } = await import("../src/core/parse-pool.ts");
@@ -1092,6 +1141,17 @@ describe("links out of data files (16.15)", () => {
     expect(fieldLink({ key: "version", value: "1.2.3" })).toBeNull();
     expect(fieldLink({ key: "title", value: "a sentence with spaces.md" })).toBeNull();
   });
+  test("a reference key's list, number, boolean or null is no link (never a broken `[base.json]`)", async () => {
+    const { dataLinks, parseData } = await import("../src/core/data.ts");
+    const { renderTree } = await import("../src/core/layout/render.ts");
+    const targets = (format: string, src: string) => dataLinks(parseData(format, src).tree).map((l) => l.target);
+    expect(targets("json", '{"includes": ["base.json"], "file": null, "path": 3, "schema": 2, "imports": true, "$ref": "user.json"}')).toEqual(["user.json"]);
+    expect(targets("toml", 'imports = ["base.toml"]\nschema = 2\ninclude = "base.toml"\n')).toEqual(["base.toml"]);
+    expect(targets("yaml", "include:\n  - base.yml\nschema: 2\nincludes: base.yml\n")).toEqual(["base.yml"]);
+    expect(targets("ini", "path = 3\nfile = base.ini\n")).toEqual(["base.ini"]);
+    const l = renderTree(parseData("json", '{"schema": 2, "includes": ["base.json"]}').tree, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false });
+    expect(l.lines.flatMap((x) => x.spans).filter((s) => s.role === "link_unresolved" || s.role === "link")).toEqual([]);
+  });
 });
 
 describe("link-like tokens in code (16.10)", () => {
@@ -1115,9 +1175,19 @@ describe("a reader per note format (16.2)", () => {
     expect([noteFormat("a.md"), noteFormat("b.markdown"), noteFormat("c.org"), noteFormat("d.txt")]).toEqual(["markdown", "markdown", "markdown", "markdown"]);
     const md = readerFor("markdown");
     expect(md.scanHeadings("# One\n\n```\n# not\n```\n## Two\n").map((h) => h.text)).toEqual(["One", "Two"]);
+    // The scan (an unsaved note's outline) reads a heading as the render does: `{#id}` the id, not
+    // text; footnote marks and HTML tags left out.
+    const hs = "# Setup {#install}\n\n## Notes[^1]\n\n## Use `x` <kbd>K</kbd>\n\n[^1]: n\n";
+    const drawn = renderMarkdown(hs, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }).headings.map(({ text, slug, id }) => ({ text, slug, id }));
+    expect(drawn).toEqual([{ text: "Setup", slug: "setup", id: "install" }, { text: "Notes", slug: "notes", id: undefined }, { text: "Use x K", slug: "use-x-k", id: undefined }]);
+    expect(md.scanHeadings(hs).map(({ text, slug, id }) => ({ text, slug, id }))).toEqual(drawn);
+    expect(layoutSource(hs, { width: 60, wrap: true, headings: "scan" }).headings[0]).toMatchObject({ text: "Setup", id: "install" });
     expect(md.linkAt("see [the intro](alpha.md#intro) and [x](b.md)", 6)).toEqual({ kind: "markdown", target: "alpha.md#intro", heading: null, text: "the intro" });
     expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 6)).toMatchObject({ kind: "wiki", target: "alpha", heading: "Top", text: "the alpha" }); // read again (21.3)
     expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 34)).toMatchObject({ kind: "markdown", target: "b.md" });
+    // Split as the tokenizer splits it: `\|` is a table cell's alias divider, `#^b1` a block.
+    expect(md.linkAt("| [[alpha\\|the alpha]] | x |", 5)).toEqual({ kind: "wiki", target: "alpha", heading: null, text: "the alpha" });
+    expect(md.linkAt("see ![[alpha#^b1]]", 6)).toEqual({ kind: "embed", target: "alpha", heading: "^b1", text: "alpha" });
     expect(parseNoteFile("x.md", "# T\n").tree.children[0]!.type).toBe("heading");
     expect(readerFor("no-such-format")).toBe(md);
   });

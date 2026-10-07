@@ -9,7 +9,7 @@ import { commentLinks, grammar, grammarFor, grammarNow, linkTokens, parseSyntax,
 import { basename, isAbsolute, join, posix, relative, sep } from "node:path";
 import type { Definition, Nodes } from "mdast";
 import type { Config } from "./config.ts";
-import { ensureDir, landsInside, readJson, readRegular, readText, SMALL_FILE, writeJson } from "./fsutil.ts";
+import { climbsOut, ensureDir, landsInside, readJson, readRegular, readText, SMALL_FILE, writeJson } from "./fsutil.ts";
 import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
 import { countForms, type FormCounts } from "./convention.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
@@ -80,7 +80,6 @@ export interface NoteEntry {
  */
 export type VaultChange = { kind: "changed"; path: string } | { kind: "removed"; path: string } | { kind: "moved"; from: string; to: string };
 
-/** How a link was resolved when not by the note's own name or path. */
 /** How a link reached its target when not directly: an alias, a pointer's folder by an old name or another copy (21.7)… */
 export type Via = "alias" | "previous-name" | "redirect" | "old-name" | "another-copy" | "hosting";
 
@@ -163,7 +162,7 @@ export type Target = Omit<ResolvedLink, keyof LinkRef>;
  * holding a path outside this one, and the links other vaults make into this one.
  */
 export interface VaultReach {
-  /** `[[vault:target]]` from `g`; null when `vault` names no vault and the link is something else. */
+  /** `[[vault:target]]` from `g`; null when `vault` names no folder (the link may be something else). */
   wiki(vault: string, target: string, g: Graph): Target | null;
   /** The name (or folder) of the root holding an absolute path outside this vault. */
   vaultOf(abs: string): string | null;
@@ -214,9 +213,9 @@ export interface Backlink {
   alias: string | null;
 }
 
-/** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
 const NOTE_EXT_RE = /\.(md|markdown)$/i;
 
+/** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
 export const INDEX_VERSION = 11; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links
 
 interface IndexFile {
@@ -438,8 +437,9 @@ export class Graph {
       try {
         decoded = decodeURIComponent(path);
       } catch {}
-      const rel = decoded.startsWith("/") ? relative(this.root, decoded) : posix.normalize(posix.join(posix.dirname(e.rel), decoded));
-      if (rel.startsWith("..") || isAbsolute(rel) || this.known(rel)) continue;
+      // `/…` is the root's (21.2); in a plain folder, which has none, the filesystem's.
+      const rel = !decoded.startsWith("/") ? posix.normalize(posix.join(posix.dirname(e.rel), decoded)) : this.loc.mode === "folder" ? relative(this.root, decoded) : posix.normalize(decoded.slice(1));
+      if (rel === "" || rel === "." || climbsOut(rel) || this.known(rel)) continue;
       this.reachFile(rel);
     }
   }
@@ -949,6 +949,7 @@ export class Graph {
       if (this.answersTo(inter[1]!)) return this.resolveLegacyWiki({ kind: link.kind, target: inter[2]! }, fromRel);
       const other = this.reach?.wiki(inter[1]!, inter[2]!, this);
       if (other) return other;
+      // No folder of that name: a name with a colon (an alias, a previous name) comes first.
     }
     if (classify(link.target, this.config.walk.extensions).group !== "note" && /\.[A-Za-z0-9]+$/.test(link.target)) {
       const att = resolveAttachment(link.target, fromRel, this.root);
@@ -964,6 +965,7 @@ export class Graph {
     if (named) return named;
     const moved = this.movedWiki(link.target);
     if (moved) return moved;
+    if (inter && this.reach) return { resolvedKind: "unresolved", path: null, candidates: [], vault: inter[1]!, reason: `unknown folder "${inter[1]}"` };
     return { resolvedKind: "unresolved", path: null, candidates: [] };
   }
 

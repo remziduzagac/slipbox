@@ -8,6 +8,7 @@
 // has: the longest one that's there (`%2F` reads as a `/` too).
 
 import { join, relative, sep } from "node:path";
+import { climbsOut } from "./fsutil.ts";
 import { lookupFolder, type NamedFolder, readFolders } from "./folders.ts";
 import { checkoutOf, headOf } from "./git.ts";
 import { branchesOf, worktreeList } from "./gitops.ts";
@@ -61,6 +62,10 @@ export function parsePointer(url: string, folders: NamedFolder[] = readFolders()
     if (folders.some((f) => f.remote?.toLowerCase() === name.toLowerCase())) return at(i);
   }
   if (!segs[0]) return null;
+  // A short name a known folder answers to, dots and all (`me.github.io`): the first part.
+  const [first] = nameAndBranch(segs[0]);
+  const want = first.toLowerCase();
+  if (folders.some((f) => f.name.toLowerCase() === want || f.old?.some((o) => o.toLowerCase() === want))) return at(1);
   // One this machine doesn't know: host, owner, repository (`github.com/me/x`), by its look.
   if (segs[0].includes(".") && segs.length > 3) return at(3);
   return at(1);
@@ -88,13 +93,10 @@ export function resolvePointer(p: Pointer, folders: NamedFolder[] = readFolders(
   if (l.status === "unavailable") return { status: "unresolved", reason: `${p.name} is at ${tildePath(l.path)}, which isn't here now (a drive unplugged?)` };
   let root = l.path;
   const via = l.via;
-  // The path stays in the folder.
-  const abs = (r: string) => join(r, p.path);
-  const inside = (r: string) => {
-    const rel = relative(r, abs(r));
-    return !rel.startsWith("..") && !rel.startsWith(sep);
-  };
-  if (!inside(root)) return { status: "unresolved", reason: `${p.path}: a pointer's path stays in its folder` };
+  // The path stays in the folder: as written, and again once a branch has taken its leading parts.
+  const outside = (path: string) => climbsOut(relative(root, join(root, path)));
+  const climbs = { status: "unresolved", reason: `${p.path}: a pointer's path stays in its folder` } as const;
+  if (outside(p.path)) return climbs;
   let path = p.path;
   if (p.branch) {
     const c = checkoutOf(root);
@@ -116,6 +118,7 @@ export function resolvePointer(p: Pointer, folders: NamedFolder[] = readFolders(
       }
     }
     if (!branches.has(branch)) return { status: "unresolved", reason: `${p.name} has no branch ${p.branch}` };
+    if (outside(path)) return climbs;
     if (head !== branch) {
       const wt = worktrees.find((w) => w.branch === branch);
       if (!wt) return { status: "branch", folder: l.folder, root: c.root, rel: join(within, path).split(sep).join("/"), branch };

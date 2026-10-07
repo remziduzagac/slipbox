@@ -5,6 +5,7 @@
 
 import { execFile, execFileSync } from "node:child_process";
 import { join, posix, relative, sep } from "node:path";
+import { climbsOut } from "./fsutil.ts";
 import type { Checkout } from "./git.ts";
 
 /** A file's state, as the explorer marks it: new (untracked or added), modified, renamed, deleted, or in conflict (a merge). */
@@ -167,7 +168,7 @@ export function worktreeList(c: Pick<Checkout, "root">): WorktreeEntry[] | null 
 /** A path of the checkout as one of the vault's, or null when it's outside the vault's folder. */
 export function inVault(c: Pick<Checkout, "root">, vaultRoot: string, path: string): string | null {
   const rel = relative(vaultRoot, join(c.root, path));
-  return rel && !rel.startsWith("..") && !rel.startsWith(sep) ? rel.split(sep).join("/") : null;
+  return rel && !climbsOut(rel) ? rel.split(sep).join("/") : null;
 }
 
 /** A vault path as the checkout's (from its top folder). */

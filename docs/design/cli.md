@@ -34,9 +34,9 @@ never a lock, never a refusal.
 - **Exit codes:** `0` ok, `1` error, `2` usage, `3` not found (a note, a link's target, a task's
   line, the `--root` folder; the TUI's too, a path to open that isn't there said in a line before the
   screen is taken), `4` ambiguous (a link, or several
-  nvims for `send`), `5` refused (a stale `--if-unchanged`, a write outside the vault or to what
-  isn't a note of it, `--create` over an existing file, a note or stdin that isn't valid UTF-8, a
-  read of a symlink leading out of the vault).
+  nvims for `send`), `5` refused (a stale `--if-unchanged`, a write outside the root or to a binary
+  file, `--create` over an existing file, a note or stdin that isn't valid UTF-8, a read of a
+  symlink leading out of the root).
 - **Arguments.** More than a command takes is a usage error (exit 2), not silently dropped; an
   empty value for a flag (`--root ''`, `--if-unchanged=`) too. After `--` nothing is an option:
   `slipbox read -- -dash.md` names a note that starts with a dash, and text starting with a dash (a
@@ -190,10 +190,11 @@ slipbox send handbook --line 42          # to the running nvim, as space n s doe
 slipbox history --json                   # data.read[{path,at,line}], data.open (tabs)
 ```
 
-- **Link status words.** `links` reports what a link reaches: `note`, `file`, `anchor` (a heading
-  in the same note), `external`, `ambiguous` or `unresolved`. `resolve` answers whether it
-  resolves: `resolved` (a note or a file), `external`, `ambiguous` or `unresolved`. A `links` entry
-  with `note`, `file` or `anchor` is one `resolve` calls `resolved`.
+- **Link status words.** `links` reports what a link reaches: `note`, `file`, `folder` (`21.2`),
+  `anchor` (a heading in the same note), `external`, `ambiguous` or `unresolved`. `resolve` answers
+  whether it resolves: `resolved` (a note, a file or a folder), `external`, `ambiguous` or
+  `unresolved`. A `links` entry with `note`, `file`, `folder` or `anchor` is one `resolve` calls
+  `resolved`.
 - **Paths for `--create`** are from the vault's root, wherever you are in it, unless they start
   with `./` or `../` (then from the current folder). A bare note name never depends on the current
   folder: a name several notes share is exit 4 with the candidates (`--from` picks the nearest).
@@ -377,8 +378,9 @@ Outside a git repository, or with no base branch, these exit 3.
 **`slipbox merge-review <branch> [--into <ref>]`**: the links merging `<branch>` into `--into` (default: the branch
 checked out) would break — git's own tentative result (`git merge-tree --write-tree`, git 2.38 or newer), read without
 touching the working tree or HEAD. Git can't see these itself: "`refactor` moves `docs/plan.md`; `main` added a link to
-it in `docs/b.md`" changes different files and merges cleanly. Each link of the result's notes that reaches nothing
-there, and wasn't broken in `--into`, comes with its `cause`:
+it in `docs/b.md`" changes different files and merges cleanly. Branches with no commit in common are refused, as git
+refuses to merge them. Each link of the result's notes that reaches nothing there, and wasn't broken in `--into`,
+comes with its `cause`:
 
 - `moved`: a branch (`by`) renamed the file it names (git pairs renames by similarity) to `to`; `fix` is the target to
   write instead, from the note, its `#fragment` kept and encoded as a link is;
@@ -412,10 +414,11 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   others' by score (`--limit` each), each searched with its own index (a scan where it has none). A hit of another
   root has `root` and `name`, and `abs`; `shown` is its path (`21.9`); `roots` lists those searched. The old `--scope
   vault` is read as `here`, with a warning.
-- **The query**: words (all of them); `"a phrase"`; `prefix*`; `-word` (none of it); `title:word` (in the title or
-  an alias); `#tag` or `tag:x` (notes carrying the tag, or one nested under it); `path:folder/` (files whose path
-  starts so). Nothing is passed on as FTS5 syntax: every word is quoted. Accents and case don't count. Words are
-  whole words: `cat` isn't `catalogue` (`cat*` is).
+- **The query**: words (all of them); `"a phrase"` (its words in order, a line break or a comma between them too);
+  `prefix*`; `-word` (none of it, with filters alone too: `#project -draft`); `title:word` (in the title or an
+  alias); `#tag` or `tag:x` (notes carrying the tag, or one nested under it); `path:folder/` (files whose path
+  starts so, ASCII letters in either case). Nothing is passed on as FTS5 syntax: every word is quoted. Accents and
+  case don't count. Words are whole words: `cat` isn't `catalogue` (`cat*` is).
 - **The index** is SQLite FTS5 in the vault's cache (`search.db`). `slipbox index` builds it, or brings it up to the
   files — `--rebuild` starts it again; the TUI keeps it as it runs. Before each search the index catches up with every
   file whose size or mtime changed since, whoever changed it. Until it's been built, a search scans the files with
@@ -461,8 +464,9 @@ grammars are loaded before it plans, so their comments count however fresh the p
 - **The note itself:** its own relative links follow it to its new folder; nothing else is written into it — no
   `previous_names` (`21.12`; `[rename]` is retired). A redirect is kept (`17.12`): evidence for `relink` to fix a link
   this rename couldn't reach, never a way to resolve it.
-- **Refused, nothing written** (exit 5): a target that exists, a path outside the vault or hidden, a file changed
-  between the plan and the writing.
+- **Refused, nothing written** (exit 5): a target that exists (a different file whose name differs only in case
+  too), a file where its folder would be, a path outside the vault or hidden, a file changed between the plan and
+  the writing.
 - **Git** (`7.3`): a root it writes to whose tree already has changes is named in `warnings`; the rename goes ahead.
 
 **A folder** (`18.3`): `slipbox mv <folder> <new-path>` moves it with everything in it — what the walk doesn't list
@@ -496,7 +500,9 @@ a moved folder says how many lines that is. Both take `--dry-run`.
 `slipbox apply <id>` writes it — refused, nothing written (exit 5), when any of its files changed since, so a stale
 plan is never applied — and it's gone; `--dry-run` shows it again and says whether it's still good (`stale: …`
 in the warnings). `slipbox apply` alone lists the plans waiting, newest first. So an agent plans, reviews, then
-applies; without `--plan` a command still applies at once.
+applies; without `--plan` a command still applies at once. `init <folder>` takes it for a folder inside a root, and
+`name` for a root that has a `.slipbox/`: making a `.slipbox/` (a plain folder's `init`, a repository's first `name`)
+is no edit a plan holds, so `--plan` there is refused (exit 2), nothing written — `--dry-run` previews it.
 
 `slipbox convert-links [note]` (plan `20.1`) makes a note's links — or every note's — plain paths, once, by today's
 resolution rules: each `[[…]]` a relative markdown link (`![[…]]` an image-syntax one, which still embeds a note),
@@ -521,9 +527,10 @@ the vaults linking into it; the heading's closing `#`s stay.
 Refused (exit 5) when the note has no such heading, has two of its name (a link can't tell them apart), or has a
 heading with the new name already. It takes `--dry-run`, and `undo` takes it back.
 
-**Undo** (`7.4`): `slipbox undo` takes back the vault's last rename, move, vault rename or relink — the TUI's or the
-CLI's alike: every file it rewrote gets back the text it had, byte for byte (a note's added previous name too), what
-moved moves back, and the folders the move made go if they're empty. It's a rename like the others — `--dry-run`
+**Undo** (`7.4`): `slipbox undo` takes back the root's last `mv`, `name`, `rename-heading`, `relink` or
+`convert-links` — the TUI's or the CLI's alike: every file it rewrote gets back the text it had, byte for byte (a
+folder's `previous_names`, for a `name` taken back), what moved moves back, and the folders the move made go if
+they're empty. It's a rename like the others — `--dry-run`
 previews it, each changed line the other way; open notes, the index and the redirects follow — and it's refused,
 nothing written (exit 5), when a file the rename wrote has changed since, or what moved isn't where it went; it
 stays next to undo, so putting the file back lets it through. Undone, it's forgotten: the next `undo` takes the one
@@ -532,12 +539,13 @@ made on (`5.9`): on another, `nothing to undo on branch main: the last rename wa
 A folder made a vault or a vault made a folder (`18.11`) isn't among them: `deinit` and `init` take each other back.
 
 **A folder made a vault, and back** (`18.11`): `slipbox init <folder>` on a folder inside a vault makes it a vault of
-its own — its `.slipbox/`, a distinct name suggested unless `--name`. Links are paths (`20.2`), which reach across the
-new boundary as before, so there's nothing of them to rewrite. `slipbox deinit <folder>` undoes it for a vault nested in
-another: its `.slipbox/` goes to the parent's trash (`trash restore` makes it a vault again), and the machine forgets
-it. A git checkout is refused, with `.slipbox/` or without: it's a vault by itself (`20.3`). Both take `--dry-run` and
-answer like `mv`, `init` adding the vault's `root`, `name` and `id`. Every plan's writes into another vault's files
-reach that vault's index at once, as if it had been opened.
+its own — its `.slipbox/`, a distinct name suggested unless `--name`. Links are paths (`20.2`): relative and
+filesystem ones reach across the new boundary as they are; one written from the root (`/…`), which would now mean the
+other root, is rewritten to reach what it did, shown in the preview. `slipbox deinit <folder>` undoes it for a vault
+nested in another, rewriting such links the other way: its `.slipbox/` goes to the parent's trash (`trash restore`
+makes it a vault again), and the machine forgets it. A git checkout is refused, with `.slipbox/` or without: it's a
+vault by itself (`20.3`). Both take `--dry-run` and answer like `mv`, `init` adding the vault's `root`, `name` and
+`id`. Every plan's writes into another vault's files reach that vault's index at once, as if it had been opened.
 
 ## Capture and the scratch (plans `8.1`–`8.4`)
 

@@ -42,7 +42,7 @@ export interface Glyphs {
   joints: Record<string, string>;
   dirOpen: string;
   dirClosed: string;
-  /** A folder that is its own root (17.13): a vault (a `.slipbox/`). */
+  /** A folder that is its own root (17.13): one with a `.slipbox/`. */
   vault: string;
   /** The explorer's buttons (18.1): a new note, a new folder on its title; on the selected row,
    *  one that opens its menu, whose entries carry the rest. */
@@ -52,8 +52,6 @@ export interface Glyphs {
   renameItem: string;
   moveItem: string;
   deleteItem: string;
-  /** On a vault's row: rename the vault (its name; rename is its folder's). */
-  renameVault: string;
   /** The outline's fold markers (the explorer uses dirOpen / dirClosed). */
   foldOpen: string;
   foldClosed: string;
@@ -82,7 +80,7 @@ export interface Glyphs {
   infoButton: string;
   /** The left rail's Problems button (1.7), under the history's. */
   problemsButton: string;
-  /** A git branch (17.19): beside the vault's state, a worktree's in the vault list. */
+  /** A git branch (17.19): in the worktree picker and the status line. */
   branch: string;
   /** The left rail's history button. */
   historyButton: string;
@@ -134,7 +132,6 @@ const unicode: Glyphs = {
   renameItem: "✎",
   moveItem: "↦",
   deleteItem: "✕",
-  renameVault: "✎◈",
   foldOpen: "▾",
   foldClosed: "▸",
   guide: "│",
@@ -194,7 +191,6 @@ const nerd: Glyphs = {
   renameItem: "\u{f03eb}", // nf-md-pencil
   moveItem: "\u{f0ab9}", // nf-md-file_move
   deleteItem: "\u{f0a7a}", // nf-md-trash_can_outline
-  renameVault: "\u{f0455}", // nf-md-rename_box
   file: "󰍔",
   dataFile: "\u{f0626}", // nf-md-code_json
   textFile: "\u{f022e}", // nf-md-file_code
@@ -236,7 +232,6 @@ const ascii: Glyphs = {
   renameItem: "r",
   moveItem: "m",
   deleteItem: "d",
-  renameVault: "R",
   foldOpen: "v",
   foldClosed: ">",
   guide: "|",

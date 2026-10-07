@@ -1,7 +1,7 @@
 # slipbox — handoff
 
-Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-09-29. Phases 0–3
-are built.
+Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-10-07. Phases 0–5c
+are built (`docs/plan.md`, "Phases").
 Read this, then `docs/idea.md`, then `docs/plan.md`, then `docs/design/` for how it was built.
 
 ## What you are building
@@ -52,7 +52,7 @@ included (`20.19`). The CLI takes and gives `vault:path` (`20.20`: any note argu
 pull, git's renames are evidence for the relink). The removals (`20.22`): nothing resolves by a name — until `21.3`
 read wikilinks again within their root; `[[vault:note]]` and redirects stay the converter's — and no home vault: a
 plain folder opened is an unnamed instance, walked and indexed as a vault is (`~` and `/` listed a level at a time).
-Next: phase 5's grammars (`16.18`–`16.22`; `16.23` asks about Ruby and C/C++).
+Next, then: phase 5's grammars (`16.18`–`16.22`; `16.23` asked about Ruby and C/C++) — built 2026-10-07, below.
 
 **Updated 2026-10-07.** Built since: paths inside, conventions at the edges (`21.x`; `docs/idea.md`, "Paths inside,
 conventions at the edges"; `docs/design/decisions.md`, `21.x`). A file's **root** is its nearest folder holding
@@ -65,7 +65,15 @@ named folder moved by hand takes its state along (`21.8`); the screen shows what
 (`21.9`); `slipbox folders`, `slipbox name`, pointers as arguments, `root`/`name` in the JSON, `--scope here`
 (`21.10`); repairs offered after moves made elsewhere (`21.11`). Gone (`21.12`): vaults as a concept — collections,
 instances, display names, `vault:path`, the move question, `previous_names` written on rename, `slipbox vaults`. The
-terminal scenarios for `21.x` are written (`tests/e2e/world-links.ts` and others), not yet run.
+terminal scenarios for `21.x` (`tests/e2e/world-links.ts` and others) were run in full the same day — 111 scenarios
+in six panes; the 17 that failed were fixed (`d0eff65`): one was slipbox's own (a named folder moved by hand had its
+state carried, but its move was lost at the start, never said nor its relink offered), the rest scenarios still in
+the old words.
+
+Also built 2026-10-07: the rest of phase 5 — grammars, outlines and highlighting for Swift (`16.18`), HTML, CSS and
+SCSS (`16.19`), PHP (`16.20`), Dockerfile (`16.21`), Vue, Svelte and Astro, each part in its own language (`16.22`),
+Ruby, C and C++ (`16.23`, decided in) — and jumps to type definitions and implementations (`19.13`). Left: Scout
+(`6.10`), postponed until trailscout, its successor, has an SDK, and phase 6+ (export, images, extensibility).
 
 ## The documents
 
@@ -171,8 +179,8 @@ spend a day on:
   root is (`20.22`); `$HOME` and `/` never (opened, they're listed a level at a time). Nothing is ever written into a
   root by opening it; its state is kept by its path (`21.8`). See `docs/idea.md`, "Paths inside, conventions at the
   edges".
-- **PKM layer in-process**, not by depending on a language server. slipbox *offering* an LSP is a
-  separate and approved thing (phase 5).
+- **PKM layer in-process**, not by depending on a language server. slipbox *offering* an LSP was built in
+  phase 5 and removed in `20.23`: with plain paths, editors' own servers follow the links, and agents use the CLI.
 - **Editing:** an in-app editor *and* `$EDITOR` hand-off (or a running nvim). Live preview is a
   lens: an explicit, framed editing session, not the rendered view quietly un-rendering the cursor
   line.

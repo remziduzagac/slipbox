@@ -263,16 +263,17 @@ export function commandSpec(id: string): CommandSpec | undefined {
 export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Cursor", ids: /^(cursor|scroll)\./ },
   { title: "Selection & copy", ids: /^(visual\.(char|line|swap|yank|exit)$|copy\.|app\.escape$)/ },
-  { title: "Links & history", ids: /^(link\.|links\.|backlinks\.|history\.|change\.)/ },
+  { title: "Links & history", ids: /^(link\.|links\.|backlinks\.|history\.|change\.|lsp\.)/ },
   { title: "Windows", ids: /^window\./ },
   { title: "Tabs", ids: /^tab\./ },
   { title: "Explorer", ids: /^explorer\./ },
-  { title: "Outline", ids: /^outline\.(cycle|toggle)$/ },
-  { title: "Find", ids: /^(find\.|switcher\.|outline\.pick$|breadcrumb\.path$|palette\.|note\.open$)/ },
+  { title: "Outline", ids: /^(outline\.(cycle|toggle)$|footnotes?\.)/ },
+  { title: "Find", ids: /^(find\.|switcher\.|search\.|tag\.list$|outline\.pick$|breadcrumb\.path$|palette\.|note\.open$)/ },
   { title: "Editing", ids: /^(task\.|edit\.|visual\.(delete|change|indent|outdent)$|view\.(source|live)$|lens\.|note\.(save|save_all|save_force|revert|resolve)$|app\.(save_quit|quit_force)$)/ },
   { title: "UI", ids: /^(ui\.|theme\.|glyphs\.)/ },
-  { title: "Scratch", ids: /^scratch\./ },
-  { title: "Note, folder, app", ids: /^(note\.|folder\.|vault\.|config\.|messages\.|help\.|app\.)/ },
+  { title: "Scratch", ids: /^(scratch\.|context\.copy$)/ },
+  { title: "Git", ids: /^git\./ },
+  { title: "Note, folder, app", ids: /^(note\.|folder\.|folders\.|heading\.|rename\.|trash\.|problems\.|info\.|vault\.|config\.|messages\.|help\.|app\.)/ },
 ];
 
 export function commandGroup(id: string): string {

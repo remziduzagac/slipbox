@@ -5,10 +5,10 @@ TOML, deeper over broader (plans `0.9`, `20.7`): each file over the ones before 
 1. built-in defaults
 2. the user file: `--config <file>`, else `$SLIPBOX_CONFIG`, else
    `$XDG_CONFIG_HOME/slipbox/config.toml`
-3. the files of the vaults enclosing this one, broadest first: each `.slipbox/config.toml` above it
-4. the vault file: `<vault>/.slipbox/config.toml` (a git vault without `.slipbox/` has none, `20.3`; nor has a plain
-   folder outside every vault, which takes only yours, `20.22` — the home vault's `$XDG_DATA_HOME/slipbox/home/` is
-   no longer read)
+3. the `.slipbox/config.toml` of each root enclosing this one, broadest first
+4. the root's own: `<root>/.slipbox/config.toml` (a root without `.slipbox/`, such as a git repository, has none,
+   `20.3`; nor has a plain folder outside every root, which takes only yours, `20.22` — the old home vault's
+   `$XDG_DATA_HOME/slipbox/home/` is no longer read)
 
 `slipbox info` lists the files that applied, in this order; a change to any of them reloads the TUI's settings.
 
@@ -24,11 +24,15 @@ aliases = ["n"]                # other names it answers to
 previous_names = ["old-notes"] # names it had: a pointer by one still finds it, said so (21.10)
 ```
 
-**What only you can set.** A vault file — the vault's own or an enclosing one's — comes with whatever you clone, so it
-never chooses a program slipbox runs: `editor.command`, `editor.remote` and `lint.command` there are ignored, with a
-warning, and only your user file sets them (`USER_ONLY` in `core/config.ts`). The rest of `[editor]`
+**What only you can set.** A folder's config file — the root's own or an enclosing one's — comes with whatever you
+clone, so it never names a program slipbox runs: `editor.command`, `editor.remote` and `lint.command` there are
+ignored, with a warning, and only your user file sets them (`USER_ONLY` in `core/config.ts`). The rest of `[editor]`
 and `[lint]` applies. Likewise a language server's `command`, `args` and `environment`, a linter's
-`lint-command`, and any server or linter slipbox doesn't build in: a vault tunes the known ones only.
+`lint-command`, and any server or linter slipbox doesn't build in: a folder's config tunes the known ones only.
+A known server's `config` from it does reach the server, though, as a project's `.vscode/settings.json` does, and
+some servers' settings name programs (rust-analyzer's `check.overrideCommand`, for one). Everything you open is
+trusted (`19.6`), so a folder you clone can still make a server run something; only slipbox's own command keys are
+yours alone.
 Nor may its `[keys]` or `[aliases]` name a command that throws work away — `app.quit_force`,
 `note.revert`, `note.save_force`, `scratch.clear` (`VAULT_FORBIDDEN_COMMANDS`) — so a clone can't put
 one on `ctrl+s` or `:wq`; those bindings are dropped with a warning.
@@ -41,7 +45,8 @@ slipbox runs correctly with no config at all. None of these crash it:
 
 - a broken file
 - an unknown key, or a retired one (`[rename]`, gone in `21.12`: a renamed note keeps no old name), which says why
-- a wrong type
+- a wrong type, a language server's, a `[[language]]`'s or a linter's fields included (`args`, `language-servers`,
+  `roots`, `lint-formats`…): that field is dropped, the rest of the entry kept
 - a value outside its set (`glyphs`, `show_urls`, `location`, `ui.lines`, `editor.edit_in`,
   `files.show`)
 - a list with something other than strings in it, a mode's key table (`[keys.source]`…) given as a
@@ -85,7 +90,7 @@ sidebar_width = 30             # 8–200; drawn 12 to half the terminal, the not
 outline = false                # outline pane on the right on wide terminals
 outline_width = 32
 split_ratio = 0.5              # first window's share of a split (0.2–0.8)
-top_bar = true                 # palette chip, vault state (≡ and ▤ when their rails are off); space u u
+top_bar = true                 # palette chip, roots' state (≡ and ▤ when their rails are off); space u b
 lines = "light"                # the frame's lines: "light" (─ │) or "heavy" (━ ┃)
 breadcrumb = true              # breadcrumb atop each window (with ▤ when there's no rail)
 left_rail = true               # a column of buttons down the left edge: the explorer's ≡
@@ -111,7 +116,7 @@ which_key_delay_ms = 500       # before it shows for prefixes other than the lea
 [capture]
 location = "state"             # state (never committed) | vault
 file = "scratch.md"            # a relative .md path; no "..", no hidden part (else the default);
-                               # in the vault, a symlinked scratch or folder puts it in the state dir
+                               # in the root, a symlinked scratch or folder puts it in the state dir
 
 [git]                          # git (5.11–5.14): space g, slipbox changed / diff
 base = ""                      # the branch changes are measured against; "" = main, else master
@@ -120,7 +125,7 @@ base = ""                      # the branch changes are measured against; "" = m
 engine = "auto"                # auto: the index once built, else a scan | index (built first) | scan (no index)
 
 [index]                        # the background auto-index of the home folder (20.9)
-background = true              # walk ~ slowly for vaults, index them: their links become backlinks; false: never
+background = true              # walk ~ slowly for roots, index them: their links become backlinks; false: never
 idle_seconds = 30              # nobody working this long first: no key in the TUI, no CLI command
 
 [diagnostics]                  # a file's problems where they are (19.8–19.11)
@@ -134,8 +139,8 @@ auto_install = true            # servers on npm installed into slipbox's own fol
                                # and markdownlint-cli2 for [lint] (19.21)
 
 [language-server.pyright]      # a language server (19.2), in Helix's languages.toml shape: changed by name
-config = { python = { analysis = { typeCheckingMode = "strict" } } }   # its settings, over the defaults
-# command = "/opt/bin/pyright-langserver"   # these three only in your own config, never a vault's:
+config = { python = { analysis = { typeCheckingMode = "strict" } } }   # its settings, merged all the way down
+# command = "/opt/bin/pyright-langserver"   # these three only in your own config, never a folder's:
 # args = ["--stdio"]                        #   what runs is yours to say
 # environment = { PYTHONPATH = "src" }
 
@@ -145,7 +150,7 @@ language-servers = ["pyright", "ruff"]   # or { name = "ruff", only-features = [
 linters = ["mypy"]             # its linters without a server (19.19), each a [linter.<name>]
 
 [linter.mypy]                  # a linter without a server (19.19), in efm-langserver's keys: changed by name
-lint-command = "mypy --show-column-numbers --no-error-summary"   # through the shell; yours only, never a vault's
+lint-command = "mypy --show-column-numbers --no-error-summary"   # through the shell; yours only, never a folder's
 lint-stdin = false             # true (efm's default): the text as typed on its input; false: the file as saved,
                                # its path appended unless the command has ${INPUT}
 lint-formats = ["%f:%l:%c: %trror: %m", "%f:%l:%c: %tarning: %m", "%f:%l:%c: %tote: %m"]   # vim's errorformat
@@ -171,10 +176,10 @@ remote = ["nvim"]              # space n s: "nvim" finds the running nvims (spac
                                # ['nvim --server {server} --remote {file}', …], {server} picked
 
 [lint]                         # the lint surface (3.21): your linter's findings in notes and the Problems view
-enabled = "auto"               # auto: only with a markdownlint config (the vault's, or ~/.markdownlint-cli2.jsonc)
+enabled = "auto"               # auto: only with a markdownlint config (the root's, or ~/.markdownlint-cli2.jsonc)
                                # | on | off (off: [linter.<name>] runs none either)
 command = []                   # [] = markdownlint-cli2, found or installed into slipbox's own folder (19.21)
-                               # (--config ~/.markdownlint-cli2.jsonc unless the vault has its own);
+                               # (--config ~/.markdownlint-cli2.jsonc unless the root has its own);
                                # else argv, files appended, "~/" expanded; yours only
 
 [watch]
@@ -191,16 +196,17 @@ poll_ms = 2000                 # backstop tick, unwatchable directories, degrade
 [keys.visual]                  # visual mode (movement keys extend by themselves)
 "Y" = "visual.yank"
 
-[keys.explorer]                # key = explorer action: down up open_tab expand open
-"p" = "open"                   #   collapse open_split top bottom filter close leave
+[keys.explorer]                # key = explorer action: down up open_tab expand open collapse open_split top
+"p" = "open"                   #   bottom filter all_files new_note new_folder rename rename_vault move delete
+                               #   restore undo_rename copy cut paste make_vault unmake_vault menu close leave
 
-[keys.outline]                 # key = outline action: down up jump fold unfold
-"z a" = "fold"                 #   top bottom filter close leave (sequences: space-separated keys)
+[keys.outline]                 # key = outline action: down up jump fold unfold top bottom filter close leave
+"z a" = "fold"                 #   rename (sequences: space-separated keys)
 
-[keys.footnotes]               # key = footnotes action: the outline's, and add edit
-"x" = "delete"                 #   delete rename
+[keys.footnotes]               # key = footnotes action: the pane's moves (down up jump fold unfold top bottom
+"x" = "delete"                 #   filter close leave), and add edit delete rename
 
-[keys.info]                    # key = Info action: the outline's, and copy
+[keys.info]                    # key = Info action: the pane's moves (as the footnotes'), and copy edit
 "c" = "copy"
 
 [keys.resize]                  # key = resize action: narrower wider shorter taller
@@ -275,7 +281,7 @@ The chrome roles most worth tuning:
 | `pane_title`, `pane_title_active` | the Explorer and Outline titles, unfocused and focused |
 | `breadcrumb*` | the breadcrumb row (`_band` its background, `_icon`, `_sep`, `_current`) |
 | `tree_guide` | the explorer's and the outline's tree lines |
-| `sidebar_vault` | in the explorer, a folder that is another vault (a folder's blue: its icon tells it apart) |
+| `sidebar_vault` | in the explorer, a folder that is another root (a folder's blue: its icon tells it apart) |
 | `scrollbar`, `scrollbar_track` | the scrollbar's thumb and track |
 | `cursor`, `cursor_line` | the cursor and its row |
 | `overlay*`, `keycap*` | popups: background, border, selection, headings, keycaps |
@@ -283,10 +289,10 @@ The chrome roles most worth tuning:
 
 ## Reloading
 
-The TUI reloads the configuration **by itself** when the user or vault config file is saved, and
-on demand with `space v c` or `:config`. [tui.md](tui.md) lists what a reload applies live. UI
-settings changed in the TUI are session overrides. Each is kept only while the config value it
-replaced is unchanged, so editing the config always wins.
+The TUI reloads the configuration **by itself** when your config file or any of the root's `.slipbox/config.toml`
+files (its own or an enclosing one's) is saved, and on demand with `space v c` or `:config`.
+[tui.md](tui.md) lists what a reload applies live. UI settings changed in the TUI are session overrides. Each is kept
+only while the config value it replaced is unchanged, so editing the config always wins.
 
 ## Environment
 

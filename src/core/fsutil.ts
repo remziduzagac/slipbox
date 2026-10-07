@@ -85,14 +85,21 @@ export function realTarget(path: string): string {
   }
 }
 
+/**
+ * Whether a relative path (as `relative` gives it) climbs out of where it's from: a ".." segment
+ * first, or another drive's. A name that merely starts with dots ("..notes") stays in.
+ */
+export function climbsOut(rel: string): boolean {
+  return rel === ".." || rel.startsWith(`..${sep}`) || rel.startsWith("../") || isAbsolute(rel) || (process.platform === "win32" && /^[A-Za-z]:/.test(rel));
+}
+
 /** Whether a write to `path` would land inside `root` (both by their real paths). */
 export function landsInside(root: string, path: string): boolean {
   let realRoot = root;
   try {
     realRoot = realpathSync(root);
   } catch {}
-  const rel = relative(realRoot, realTarget(path));
-  return !(rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel));
+  return !climbsOut(relative(realRoot, realTarget(path)));
 }
 
 export interface Stamp {
@@ -168,4 +175,27 @@ export function readJson<T>(path: string, fallback: T): T {
 
 export function writeJson(path: string, value: unknown): void {
   atomicWrite(path, JSON.stringify(value, null, 2) + "\n");
+}
+
+/**
+ * A state file whose absolute paths name places in a folder that moved (21.8: the trash's, the undo
+ * log's): each string that is `from` or a path in it rewritten to the same place in `to`. Nothing
+ * written when nothing changed, or the file isn't there.
+ */
+export function carryPaths(file: string, from: string, to: string): void {
+  const data = readJson<unknown>(file, undefined);
+  if (data === undefined) return;
+  let changed = false;
+  const carry = (v: unknown): unknown => {
+    if (typeof v === "string") {
+      if (v !== from && !v.startsWith(`${from}${sep}`)) return v;
+      changed = true;
+      return to + v.slice(from.length);
+    }
+    if (Array.isArray(v)) return v.map(carry);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, carry(x)]));
+    return v;
+  };
+  const next = carry(data);
+  if (changed) writeJson(file, next);
 }

@@ -155,6 +155,58 @@ describe("which servers, where (19.2–19.5)", () => {
     expect(warnings.some((w) => w.includes("adds the language server evil, which only your own config may"))).toBe(true);
   });
 
+  test("a folder's server config merges over yours all the way down: your nested settings stay", () => {
+    const root = dir("cfgdeep", {
+      "user.toml": '[language-server.pyright]\nconfig = { python = { analysis = { extraPaths = ["src"] } } }\n',
+      "vault.toml": '[language-server.pyright]\nconfig = { python = { analysis = { diagnosticMode = "workspace" } } }\n',
+    });
+    const { config, warnings } = loadConfig({ configFile: join(root, "user.toml"), vaultFile: join(root, "vault.toml") });
+    expect(config["language-server"].pyright!.config).toEqual({ python: { analysis: { extraPaths: ["src"], diagnosticMode: "workspace" } } });
+    expect(warnings).toEqual([]);
+  });
+
+  test("a server's, a language's or a linter's field of the wrong type is a warning, never a crash", () => {
+    const root = dir("cfgtypes", {
+      "user.toml": [
+        "[language-server.mylsp]",
+        'command = "mylsp"',
+        'args = "--stdio"',
+        'environment = { DEBUG = 1 }',
+        "",
+        "[[language]]",
+        'name = "python"',
+        'language-servers = "pyright"',
+        'roots = "x"',
+        'file-types = "py"',
+        'linters = "mypy"',
+        'language-id = 3',
+        "",
+        "[[language]]",
+        'name = "go"',
+        'language-servers = [{ name = "gopls", only-features = "diagnostics" }]',
+        "",
+        "[linter.mine]",
+        'lint-command = "mine -"',
+        'lint-formats = "%f:%l: %m"',
+        'root-markers = "mine.toml"',
+        'lint-stdin = "no"',
+        "lint-severity = 9",
+        "",
+      ].join("\n"),
+    });
+    const { config, warnings } = loadConfig({ configFile: join(root, "user.toml") });
+    const w = warnings.join("\n");
+    for (const field of ["language-server.mylsp.args", "language-server.mylsp.environment", "language.python.language-servers", "language.python.roots", "language.python.file-types", "language.python.linters", "language.python.language-id", "language.go.language-servers", "linter.mine.lint-formats", "linter.mine.root-markers", "linter.mine.lint-stdin", "linter.mine.lint-severity"])
+      expect(w).toContain(`${field} must be`);
+    // The rest of each entry stays.
+    expect(config["language-server"].mylsp).toEqual({ command: "mylsp" });
+    expect(config.language).toEqual([{ name: "python" }, { name: "go" }]);
+    expect(config.linter.mine).toEqual({ "lint-command": "mine -" });
+    const t = serverTable(config["language-server"], config.language);
+    expect(languageOf(t, "a.py")!.servers).toEqual(["pyright", "ruff"]);
+    expect(t.servers.mylsp!.args).toEqual([]);
+  });
+
   test("a project's root: the first marker's nearest folder, then the next's; never above the home folder", () => {
     const root = dir("mono", { ".git/HEAD": "ref: refs/heads/main\n", "package.json": "{}", "packages/a/tsconfig.json": "{}", "packages/a/src/x.ts": "", "packages/b/y.ts": "" });
     const ts = languageOf(serverTable(), "x.ts")!.roots;

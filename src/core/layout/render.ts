@@ -56,7 +56,6 @@ interface Ctx {
   links: LayoutLink[];
   headings: Omit<LayoutHeading, "line">[];
   definitions: Map<string, string>;
-  slugCounts: Map<string, number>;
   /** How many containers (quotes, lists, footnotes) deep the block being rendered is. */
   nesting: number;
   /** The notes being drawn, the outermost first: an embed of one of them is a loop (1.11). */
@@ -111,7 +110,7 @@ export function newRenderCache(): RenderCache {
 }
 
 export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontmatter | null, cache?: RenderCache): Layout {
-  const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), slugCounts: new Map(), nesting: 0, embedChain: opts.embedFrom ? [opts.embedFrom] : [], embedded: new Set() };
+  const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), nesting: 0, embedChain: opts.embedFrom ? [opts.embedFrom] : [], embedded: new Set() };
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
   if (!cache) return finish(blocks(tree.children, ctx, width, TEXT, frontmatter), ctx, width);
@@ -301,9 +300,9 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
       // A table of records in a data file's tree (16.12): under its key, inside the guides.
       const place = placeOf(node);
       if (!place?.lasts.length) return table(node, ctx, width);
-      const guide = guides(place.lasts, "down", ctx);
+      const guide = guides(place.lasts, "down", ctx, width - 8);
       const w = guide.reduce((a, s) => a + stringWidth(s.text), 0);
-      return prefixed(table(node, ctx, Math.max(8, width - w)), guide, srcOf(node), true);
+      return prefixed(table(node, ctx, width - w), guide, srcOf(node), true);
     }
     case "html":
       return htmlBlock(node.value, srcOf(node), width);
@@ -427,6 +426,7 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
   const id = addLink(ctx, { kind: w.kind, target: w.link, heading: w.heading, text: e.title, status: "resolved", src });
   const head = wrapSpans([{ text: `${g.embed} `, role: "embed", attrs: 0, link: id }, { text: sanitize(e.title), role: "embed", attrs: A_BOLD, link: id }], width).map((row) => ({ spans: row, src }));
   const note = (text: string): Line[] => [{ spans: [{ text, role: "dim", attrs: A_ITALIC }], src }];
+  const narrow = width - 2 < MIN_NESTED;
   let body: Line[];
   if (ctx.embedChain.includes(e.path)) body = note("embeds itself: not drawn again");
   else if (ctx.embedChain.length > MAX_EMBED_DEPTH) body = note("embedded deeper still: enter opens it");
@@ -438,7 +438,6 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
       links: ctx.links,
       headings: [],
       definitions: new Map(),
-      slugCounts: new Map(),
       nesting: ctx.nesting + 1,
       embedChain: [...ctx.embedChain, e.path],
       embedded: ctx.embedded,
@@ -446,12 +445,13 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
       linkFrom: e.from,
     };
     collectDefinitions({ type: "root", children: e.nodes }, inner);
-    body = blocks(e.nodes, inner, Math.max(MIN_NESTED, width - 2), TEXT);
+    body = blocks(e.nodes, inner, narrow ? width : width - 2, TEXT);
     if (!body.length) body = note("empty");
   }
   // At the embed's line, its own lines and headings forgotten: they're another note's.
   const placed = body.map((l) => ({ ...l, src, heading: undefined, spans: l.spans.map((s) => ({ ...s, src: undefined })) }));
-  return [...head, ...prefixed(placed, [{ text: `${g.quoteBar} `, role: "embed", attrs: 0 }], src, true)];
+  // Too narrow to indent: no bar, the body keeps the room (the title row still says whose it is).
+  return [...head, ...(narrow ? placed : prefixed(placed, [{ text: `${g.quoteBar} `, role: "embed", attrs: 0 }], src, true))];
 }
 
 function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, width: number, firstLine = 1): Line[] {
@@ -534,10 +534,12 @@ function blockquote(children: RootContent[], src: number, ctx: Ctx, width: numbe
     const body: RootContent[] = [];
     if (bodyFirst.length && textOf({ type: "paragraph", children: bodyFirst }).trim()) body.push({ ...first, children: bodyFirst });
     body.push(...children.slice(1));
-    const inner = width - 2;
+    // Too narrow to indent, as a quote: no bar, the title and the text keep the room.
+    const narrow = width - 2 < MIN_NESTED;
+    const inner = narrow ? width : width - 2;
     const lines: Line[] = wrapSpans(titleSpans, inner).map((row) => ({ spans: row, src }));
     lines.push(...blocks(body, ctx, inner, TEXT));
-    return prefixed(lines, [{ text: `${g.quoteBar} `, role, attrs: 0 }], src, true);
+    return narrow ? lines : prefixed(lines, [{ text: `${g.quoteBar} `, role, attrs: 0 }], src, true);
   }
   // Too narrow to indent (deep nesting in a narrow window): no bar, the text keeps the room.
   if (width - 2 < MIN_NESTED) return blocks(children, ctx, width, { role: "quote", attrs: 0 });
@@ -724,8 +726,12 @@ function placeOf(n: RootContent): TreePlace | undefined {
  * (├─ or └─ at its level); `down`, a row below it that is still its (a wrapped value, a table);
  * `above`, comment lines above it (its parent's line running down to it). The top level has none.
  */
-function guides(lasts: boolean[], at: "row" | "down" | "above", ctx: Ctx): Span[] {
+function guides(lasts: boolean[], at: "row" | "down" | "above", ctx: Ctx, room = Infinity): Span[] {
   const g = ctx.opts.glyphs;
+  // A narrow pane keeps the innermost levels that fit in `room` (3 columns each), so the row's
+  // text keeps its floor and nothing is cut; the outer ones go.
+  const keep = Math.min(lasts.length, Math.max(0, Math.floor(room / 3)));
+  if (keep < lasts.length) lasts = lasts.slice(lasts.length - keep);
   const n = lasts.length;
   if (!n) return [];
   let text = "";
@@ -742,7 +748,9 @@ function guides(lasts: boolean[], at: "row" | "down" | "above", ctx: Ctx): Span[
 function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
   const src = srcOf(f as unknown as Nodes);
   const place = f.tree;
-  const lead = place ? guides(place.lasts, "row", ctx) : [];
+  // The guides' room: a branch's key keeps 4 columns after its space; a key and value 8.
+  const room = width - (place?.branch ? 5 : 8);
+  const lead = place ? guides(place.lasts, "row", ctx, room) : [];
   const leadW = lead.reduce((a, s) => a + stringWidth(s.text), 0);
   if (place?.branch) {
     // The key alone, its comment after it; a heading of the outline (and the breadcrumb, and a
@@ -752,12 +760,13 @@ function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
     const idx = ctx.headings.push({ level, text, slug: slugify(text), src }) - 1;
     const spans: Span[] = [{ text: f.key ? text : "·", role: "fm_key", attrs: A_BOLD }];
     if (f.comment) spans.push({ text: `  # ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`, role: "syn_comment", attrs: 0 });
-    const down = guides(place.lasts, "down", ctx);
+    const down = guides(place.lasts, "down", ctx, room);
     const rows = wrapSpans(spans, Math.max(4, width - 1 - leadW));
     return rows.map((row, i) => ({ spans: [{ text: " ", role: "text", attrs: 0 }, ...(i === 0 ? lead : down), ...row], src, heading: i === 0 ? idx : undefined }));
   }
   width -= leadW;
-  const kw = Math.max(1, Math.min(f.keyWidth || stringWidth(sanitize(f.key)), Math.floor(width / 3)));
+  // The key column leaves the value 4 columns (with the space before the key and the two after it).
+  const kw = Math.max(1, Math.min(f.keyWidth || stringWidth(sanitize(f.key)), Math.floor(width / 3), width - 7));
   let role: Role = f.kind === "number" || f.kind === "date" ? "syn_number" : f.kind === "boolean" || f.kind === "null" ? "syn_constant" : "fm_value";
   const value = expandTabs(sanitize(f.value)) || (f.kind === "string" ? '""' : "");
   // A value that is a link (16.15): a URL, a reference key's value, or a path that resolves.
@@ -773,7 +782,7 @@ function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
   const spans: Span[] = [{ text: value, role, attrs: 0, ...(link !== undefined ? { link } : {}) }];
   if (f.comment) spans.push({ text: `${value ? "  " : ""}# ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`, role: "syn_comment", attrs: 0 });
   const rows = wrapSpans(spans, Math.max(4, width - kw - 3));
-  const down = place ? guides(place.lasts, "down", ctx) : [];
+  const down = place ? guides(place.lasts, "down", ctx, room) : [];
   return rows.map((row, i) => ({
     spans: [
       { text: " ", role: "text", attrs: 0 },
@@ -790,7 +799,7 @@ function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
 function dataComment(c: DataComment, width: number, ctx: Ctx): Line[] {
   const src = srcOf(c as unknown as Nodes);
   // In a tree, inside the guides of the key it's above.
-  const lead = c.tree ? guides(c.tree.lasts, c.tree.above ? "above" : "down", ctx) : [];
+  const lead = c.tree ? guides(c.tree.lasts, c.tree.above ? "above" : "down", ctx, width - 5) : [];
   const w = lead.reduce((a, s) => a + stringWidth(s.text), 0);
   return c.text.split("\n").flatMap((text, i) =>
     wrapSpans([{ text: expandTabs(sanitize(text)), role: "syn_comment", attrs: 0 }], Math.max(4, width - 1 - w)).map((row) => ({ spans: [{ text: " ", role: "text", attrs: 0 }, ...lead, ...row], src: src + i })),

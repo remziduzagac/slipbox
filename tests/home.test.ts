@@ -197,6 +197,12 @@ describe("the reference set is complete (examples/home)", () => {
     expect(loadConfig({ configFile: join(SOURCE, "work/infra/dotfiles/slipbox/config.toml") }).warnings).toEqual([]);
   });
 
+  test("the kitchen-sink config binds every command id under `leader ;`, none unknown", () => {
+    const keys = (parse(readFileSync(join(SOURCE, "work/infra/dotfiles/slipbox/config.toml"), "utf8")) as { keys: Record<string, unknown> }).keys;
+    const bound = Object.entries(keys).flatMap(([k, v]) => (k.startsWith("leader ; ") && typeof v === "string" ? [v] : []));
+    expect([...new Set(bound)].sort()).toEqual(COMMAND_SPECS.map((c) => c.id).sort());
+  });
+
   test("every grammar, data format and highlighted language has files: more than one where it can", async () => {
     const { GRAMMARS, grammarFor } = await import("../src/core/syntax.ts");
     const { DATA_FORMATS, LANGUAGES, NAMED, classify, extensionOf } = await import("../src/core/filetypes.ts");

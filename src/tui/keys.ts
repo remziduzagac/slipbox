@@ -311,8 +311,7 @@ for (let i = 1; i <= 9; i++) {
   DEFAULT_KEYS[`alt+${i}`] = `tab.goto ${i}`; // VS Code's (and browsers' on Linux)
 }
 
-/** Source mode: these win over the reading keys there (`x` deletes a character instead of
- *  ticking a task, as in vim). */
+/** Source mode: these win over the reading keys there, as in vim. */
 export const DEFAULT_SOURCE_KEYS: Record<string, string> = {
   x: "edit.delete_char",
   d: "edit.op_delete",
@@ -723,7 +722,19 @@ export function keyName(k: KeyLike): string {
   return canonKey([...mods, name.length === 1 ? name.toLowerCase() : name].join("+"));
 }
 
-/** Short human form for which-key and the status line: `ctrl+w shift+h` → `C-w S-h`. */
+/**
+ * The character a key types (`shift+w` is W, `shift+9` is `(`, `shift+space` — as the kitty
+ * protocol reports a shifted space — a space), or null for a named key.
+ */
+export function keyChar(key: string): string | null {
+  if (key === "space" || key === "shift+space") return " ";
+  if ([...key].length === 1) return key;
+  const m = /^shift\+(.)$/.exec(key);
+  if (!m) return null;
+  const SHIFTED: Record<string, string> = { "9": "(", "0": ")", "[": "{", "]": "}", ",": "<", ".": ">", "'": '"', "`": "~" };
+  return SHIFTED[m[1]!] ?? m[1]!.toUpperCase();
+}
+
 /** A key sequence spelled out for reading (help, the palette): `ctrl+d`, `space l y`, `esc`. */
 export function spellKey(seq: string): string {
   return seq
@@ -732,6 +743,7 @@ export function spellKey(seq: string): string {
     .join(" ");
 }
 
+/** Short human form for which-key and the status line: `ctrl+w shift+h` → `C-w S-h`. */
 export function prettyKey(seq: string, leader = "space"): string {
   const leaderKey = canonKey(leader);
   return seq

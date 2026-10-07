@@ -22,6 +22,31 @@ export function sanitize(text: string): string {
   return text.replace(ESCAPES, "").replace(CONTROLS, "").replace(SEPARATORS, " ");
 }
 
+/**
+ * `sanitize`, and where each of the text's own indices went in what it made (-1 for one taken
+ * out): a match found in the raw text (a filter's letters, a search hit's words) is marked where
+ * the sanitized text is drawn.
+ */
+export function sanitizeMap(text: string): { text: string; at: number[] } {
+  const at = Array.from({ length: text.length }, (_, i) => i);
+  if (!UNSAFE.test(text)) return { text, at };
+  const gone = new Uint8Array(text.length);
+  for (const m of text.matchAll(ESCAPES)) gone.fill(1, m.index, m.index + m[0].length);
+  // The controls are single code units: one left after the escapes is taken out where it is.
+  const control = new RegExp(CONTROLS.source);
+  const separator = new RegExp(SEPARATORS.source);
+  let out = "";
+  for (let i = 0; i < text.length; i++) {
+    if (gone[i] || control.test(text[i]!)) {
+      at[i] = -1;
+      continue;
+    }
+    at[i] = out.length;
+    out += separator.test(text[i]!) ? " " : text[i]!;
+  }
+  return { text: out, at };
+}
+
 /** Expand tabs to spaces against a tab stop, for code blocks. */
 export function expandTabs(line: string, tabWidth = 4): string {
   if (!line.includes("\t")) return line;

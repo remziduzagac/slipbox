@@ -9,7 +9,7 @@ import { type Problem, SEVERITIES, type Severity, worst } from "../core/diagnost
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
-import { sanitize } from "../core/sanitize.ts";
+import { sanitize, sanitizeMap } from "../core/sanitize.ts";
 import type { GitState } from "../core/gitops.ts";
 import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, type PromptOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
@@ -425,8 +425,8 @@ function button(app: App, c: Canvas, x: number, band: Band, text: string, role: 
 }
 
 /**
- * The top bar: the explorer button and the app chip on the left, vault state on the right; the
- * middle is left empty. (The outline's button is on the breadcrumb row.)
+ * The top bar: the explorer button and the app chip on the left, the root's state (indexing) on
+ * the right; the middle is left empty. (The outline's button is on the breadcrumb row.)
  */
 function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const theme = app.theme;
@@ -451,7 +451,7 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
   // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
-  // The branch is the status line's, with the vault's name (20.14).
+  // The branch is the status line's, with the root, by name or path (20.14, 21.9).
   for (const it of items) {
     const w = stringWidth(it.text) + 2;
     if (rx - w < x + 12) break;
@@ -1392,9 +1392,15 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
       const name = nameOf(row);
       const off = stringWidth(prefix(row));
       const base = row.path.length - name.length;
-      for (const p of m.positions.filter((x) => x >= base).map((x) => x - base)) {
-        const x = rect.x + off + stringWidth(name.slice(0, p)) - sv.left;
-        if (x >= rect.x && x < rect.x + sv.cols) c.cell(x, y, name[p]!, 1, { ...st, fg: matchSt.fg, bold: true });
+      // Grapheme by grapheme, as the name was drawn: an accent or an emoji whole, a wide one wide.
+      const shown = marked(name, m.positions.filter((x) => x >= base).map((x) => x - base));
+      let x = rect.x + off - sv.left;
+      let ci = 0;
+      for (const gr of graphemes(shown.text)) {
+        const gw = graphemeWidth(gr);
+        if (shown.pos.has(ci) && gw > 0 && x >= rect.x && x + gw <= rect.x + sv.cols) c.cell(x, y, gr, gw, { ...st, fg: matchSt.fg, bold: true });
+        x += gw;
+        ci += gr.length;
       }
     }
   }
@@ -1709,7 +1715,7 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const rightW = stringWidth(right) + 1;
   const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
   x += drawText(c, x, y, " ", st);
-  // The vault and its branch (20.14), while the path keeps a readable width (it goes before the path does).
+  // The root, by name or path, and its branch (20.14, 21.9), while the path keeps a readable width (it goes before the path does).
   // Where the file is (21.9), in the room the path leaves it — at most 40 columns.
   const rootRoom = Math.min(40, c.width - x - rightW - 4 - 24);
   const vault = rootRoom >= 8 ? app.vaultStatus(rootRoom) : "";
@@ -2057,8 +2063,10 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
     const hintW = hint ? stringWidth(hint) + 2 : 0;
     const avail = w - 4 - hintW - (keysW ? keysW + 2 : 0);
     let cx = x + 2 + indent;
-    const label = truncate(sanitize(item.label), Math.max(4, avail - indent));
-    const pos = new Set(positions);
+    // The filter matched the label as it is: its letters marked where the sanitized label has them.
+    const shown = marked(item.label, positions);
+    const label = truncate(shown.text, Math.max(4, avail - indent));
+    const pos = shown.pos;
     // Its own colour (a diff's line, a change's state), unless selected.
     const own = item.role && !selected ? { ...st, fg: roleStyle(theme, item.role, null).fg ?? st.fg, bold: roleStyle(theme, item.role, null).bold ?? st.bold } : st;
     let ci = 0;
@@ -2072,12 +2080,13 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
       const room = x + 2 + avail - cx - 2;
       if (room > 4 && item.detailMarks?.length) {
         // A search hit's words, marked in its line.
-        const detail = truncate(sanitize(item.detail), room);
+        const marks = marked(item.detail, item.detailMarks.flatMap(([a, b]) => Array.from({ length: Math.max(0, b - a) }, (_, k) => a + k)));
+        const detail = truncate(marks.text, room);
         let dx = cx + 2;
         let di = 0;
         for (const g of graphemes(detail)) {
           const gw = graphemeWidth(g);
-          const on = item.detailMarks.some(([a, b]) => di >= a && di < b);
+          const on = marks.pos.has(di);
           if (gw > 0) c.cell(dx, ry, g, gw, on ? { ...st, fg: matchSt.fg, bold: true } : { ...dim, bg: st.bg });
           dx += gw;
           di += g.length;
@@ -2092,6 +2101,20 @@ function drawList(app: App, c: Canvas, o: ListOverlay, mainY: number, mainH: num
 }
 
 const FOOTER_ROWS = 4;
+
+/**
+ * Text as it's drawn (sanitized) and a match's positions in it: the positions are the raw text's
+ * own (match.ts), and a control or an escape taken out would shift every one after it.
+ */
+function marked(raw: string, positions: Iterable<number>): { text: string; pos: Set<number> } {
+  const m = sanitizeMap(raw);
+  const pos = new Set<number>();
+  for (const p of positions) {
+    const at = m.at[p];
+    if (at !== undefined && at >= 0) pos.add(at);
+  }
+  return { text: m.text, pos };
+}
 
 /** A file's git state as the explorer marks it (5.11). */
 const GIT_MARK: Record<GitState, string> = { new: "+", modified: "M", renamed: "R", deleted: "D", conflict: "!" };
@@ -2155,8 +2178,9 @@ function drawDropdown(app: App, c: Canvas, o: ListOverlay, anchor: { x: number; 
     // One heading under the next: each row hangs off the one above with └─.
     if (depth) drawText(c, cx - 3, ry, `${g.guideLast}${g.guideDash}`, { ...roleStyle(theme, "tree_guide", st.bg), bg: st.bg }, 2);
     const hw = hintW(item);
-    const label = truncate(sanitize(item.label), Math.max(1, x + w - 2 - hw - cx));
-    const pos = new Set(positions);
+    const shown = marked(item.label, positions);
+    const label = truncate(shown.text, Math.max(1, x + w - 2 - hw - cx));
+    const pos = shown.pos;
     let ci = 0;
     for (const gr of graphemes(label)) {
       const gw = graphemeWidth(gr);

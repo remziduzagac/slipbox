@@ -45,9 +45,12 @@ TypeScript 7 is native with its server built in (`tsc --lsp --stdio`): it's used
 default are nvim-lspconfig's where it has some. The user's config changes them in Helix's `languages.toml` shape —
 `[language-server.<name>]` (`command`, `args`, `config`, `environment`, `required-root-patterns`) and
 `[[language]]` (`name`, `language-servers`, `roots`, `file-types`, `language-id`), a server's `config` merged over
-the defaults, the rest replaced, a new name added. A vault's config may tune a known server's `config` and a
-language's lists, never name what runs: its `command`, `args`, `environment`, and any server slipbox doesn't
-know, are ignored with a warning.
+the defaults (and each config file's over the ones before it) all the way down, the rest replaced, a new name added;
+a field of the wrong type is dropped with a warning. A folder's config may tune a known server's `config` and a
+language's lists, never name slipbox's command for it: its `command`, `args`, `environment`, and any server slipbox
+doesn't know, are ignored with a warning. That `config` does reach the server, though, and some servers' settings
+name programs (rust-analyzer's `check.overrideCommand`): as with `.vscode/settings.json` below, everything is
+trusted (`19.6`), so a cloned folder can still make a server run something.
 
 **A project's `.vscode/settings.json`** (`19.20`) answers its servers' settings too, as VS Code would: the nearest one
 at or above the server's project folder (short of `~`), read when the server starts, as VS Code reads it — comments

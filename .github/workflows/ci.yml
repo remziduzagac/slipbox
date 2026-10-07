@@ -15,7 +15,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: typecheck
         run: bun run typecheck
-      # Plan 0.3: the core never imports the TUI. This is what keeps the CLI and LSP faces alive.
+      # Plan 0.3: the core never imports the TUI. This is what keeps the CLI face free of the terminal renderer.
       - name: boundary
         run: bun run check:boundary
       - name: tests

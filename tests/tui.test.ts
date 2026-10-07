@@ -7,7 +7,7 @@ import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { basename, dirname, join, relative } from "node:path";
-import { COMMAND_SPECS } from "../src/core/command-specs.ts";
+import { COMMAND_SPECS, commandGroup } from "../src/core/command-specs.ts";
 import { canonKey, canonSeq } from "../src/core/commands.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
@@ -735,6 +735,19 @@ describe("overlays and the : prompt", () => {
     expect(o.items.some((i) => i.header && i.label === "Filtering a panel (/)")).toBe(true);
     await h.keys("escape");
   });
+  test("help and the palette list every command under a keymap.md group, none left out", async () => {
+    for (const s of COMMAND_SPECS) expect([s.id, commandGroup(s.id)]).not.toEqual([s.id, "Other"]);
+    const h = await harness({ width: 140, height: 40 });
+    await h.keys("space", "?");
+    const help = new Set((h.app.overlay as ListOverlay).items.map((i) => i.data));
+    for (const s of COMMAND_SPECS) expect([s.id, help.has(s.id)]).toEqual([s.id, true]);
+    await h.keys("escape");
+    await h.keys(":"); // an empty query: every shown command, by group
+    const palette = new Set((h.app.overlay as ListOverlay).filtered.map((e) => e.item.data));
+    for (const c of h.app.registry.list().filter((c) => !c.hidden)) expect([c.id, palette.has(c.id)]).toEqual([c.id, true]);
+    expect(palette.has("git.changes")).toBe(true);
+    await h.keys("escape");
+  });
   test("palette: Recent first, then groups; typing ranks without groups; the first key only", async () => {
     const h = await harness({ width: 140, height: 40 });
     await h.keys(":");
@@ -760,10 +773,12 @@ describe("overlays and the : prompt", () => {
       const l = lines.find((x) => x.includes(label))!;
       return l.indexOf(` ${key} `, l.indexOf(label) + label.length);
     };
-    // Every entry in view, whichever they are: its key in one column, its alias in another.
-    const inView = po.filtered.map((e) => e.item).filter((it) => !it.header && g.some((l) => l.includes(` ${it.label} `)));
-    const keyCols = inView.filter((it) => it.keys?.[0]).map((it) => colOf(g, ` ${it.label} `, it.keys![0]!));
-    const aliasCols = inView.filter((it) => it.keys?.[1]).map((it) => colOf(g, ` ${it.label} `, it.keys![1]!));
+    // Every entry in view, whichever they are: its key in one column, its alias in another. A row
+    // is its label whole, at the row's start ("Undo" isn't "Undo the last rename").
+    const row = (label: string) => `│ ${label}  `;
+    const inView = po.filtered.map((e) => e.item).filter((it) => !it.header && g.some((l) => l.includes(row(it.label))));
+    const keyCols = inView.filter((it) => it.keys?.[0]).map((it) => colOf(g, row(it.label), it.keys![0]!));
+    const aliasCols = inView.filter((it) => it.keys?.[1]).map((it) => colOf(g, row(it.label), it.keys![1]!));
     expect(keyCols.length).toBeGreaterThan(5);
     expect(aliasCols.length).toBeGreaterThan(2);
     expect(new Set(keyCols).size).toBe(1);
@@ -1140,6 +1155,19 @@ describe("the left panel's views and filter", () => {
     expect(v.back.map((l) => l.key)).toEqual(["notes/beta.md"]);
     await again.app.run("history.back");
     expect(again.app.view!.buf.rel).toBe("notes/beta.md");
+  });
+  test("history filter: the selection skips the 'recent here' heading, and enter on a recent note opens it here", async () => {
+    const h = await harness();
+    h.app.openInNewTab("notes/alpha.md");
+    h.app.openInNewTab("notes/beta.md"); // this window: beta.md alone; alpha.md and index.md are recent
+    await h.keys("space", "h", "h", "/", ...[..."alpha"]);
+    const rows = h.app.historyRows();
+    expect(rows.map((r) => (r.heading ? "--" : r.label))).toEqual(["--", "alpha.md"]);
+    expect(h.app.sidebar.selected).toBe(1); // on the note, not the heading
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    expect(h.app.view!.back.map((l) => l.key)).toEqual(["notes/beta.md"]);
+    expect(h.app.region).toBe("content");
   });
   test("history: every note with a reading position is there, newest first, with when (found in use: only 4)", async () => {
     const root = makeVault();
@@ -1899,6 +1927,30 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(rep()?.focus).toBe(true);
     await h.keys("escape");
   });
+  test("a paste goes into the field being typed in: the replace field when it has focus; none while confirming", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "b.md"), "cat dog cat\n");
+    const h = await harness({ root, open: "b.md", width: 100, height: 30 });
+    const o = () => h.app.overlay as import("../src/tui/app.ts").PromptOverlay;
+    await h.app.run("find.replace");
+    await h.keys(..."cat", "tab");
+    expect(o().replace?.focus).toBe(true);
+    await h.app.paste("NEW");
+    expect(o().replace!.text).toBe("NEW");
+    expect(o().text).toBe("cat");
+    await h.keys("shift+tab");
+    await h.app.paste("s");
+    expect(o().text).toBe("cats");
+    expect(o().replace!.text).toBe("NEW");
+    await h.keys("escape");
+    // Confirming each match (:s///c): a paste is no answer, and changes nothing.
+    await h.keys(":", ..."%s/cat/X/gc", "enter");
+    expect(o().replace?.confirm).toBeTruthy();
+    await h.app.paste("y");
+    expect(o().text).toBe("cat");
+    expect(o().replace!.text).toBe("X");
+    expect(h.app.view!.buf.source).toBe("cat dog cat\n");
+  });
   test("an operator with a jump in the lens acts from the cursor: dG, yG, >G", async () => {
     const { h, v, goto } = await setup((c) => (c.editor.edit_in = "live"));
     goto("Para 5 with");
@@ -2124,6 +2176,32 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(v.live).toBe(true);
     expect(lens().source.join("\n")).toContain(`Para ${which} with **bold**.`);
     expect(h.app.cursorLine(v)).toBe(1 + 2 * Number(which));
+  });
+  test("a link followed from the lens opens the lens on the new note, and typing lands where it's drawn", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.md"), "# Alpha\n\nSee [b](b.md) here.\n\nAAAA text of alpha.\n");
+    writeFileSync(join(root, "b.md"), "# Beta\n\nBBBB beta.\n\nMore beta.\n");
+    const h = await harness({ root, open: "a.md", width: 100, height: 30 });
+    const v = h.app.view!;
+    const rows = () => h.app.currentLayout(v).lines.map((l) => l.spans.map((x) => x.text).join("").trimEnd());
+    await h.keys("space", "n", "l");
+    h.app.moveCursor(v, { row: rows().findIndex((t) => t.includes("See [b]")), col: 6 });
+    h.frame();
+    await h.keys("enter");
+    expect(v.buf.rel).toBe("b.md");
+    expect(v.live).toBe(true);
+    expect(rows().join("\n")).not.toContain("AAAA");
+    expect(rows().join("\n")).toContain("More beta.");
+    // Typing on the row drawn as "More beta." changes that line of b.md.
+    h.app.moveCursor(v, { row: rows().findIndex((t) => t.includes("More beta.")), col: 0 });
+    h.frame();
+    await h.keys("i", "Z", "escape");
+    expect(v.buf.source).toBe("# Beta\n\nBBBB beta.\n\nZMore beta.\n");
+    // Back to a.md (ctrl+o): its own text, not b's.
+    await h.keys("ctrl+o");
+    expect(v.buf.rel).toBe("a.md");
+    expect(rows().join("\n")).not.toContain("beta");
+    expect(rows().join("\n")).toContain("AAAA text of alpha.");
   });
 });
 
@@ -3689,6 +3767,14 @@ describe("scratch (space s)", () => {
     await h.keys("space", "s", "y");
     expect(h.copied.at(-1)).toBe(text);
   });
+  test("the scratch open is never another root in the explorer (21.9): it lives in slipbox's own state folder", async () => {
+    const h = await harness();
+    h.app.capture("x");
+    await h.app.run("scratch.open");
+    expect(h.app.view!.buf.abs.startsWith(`${h.root}/`)).toBe(false); // the default place: outside the root
+    expect(h.app.otherRoots()).toEqual([]);
+    expect(h.app.explorerRows().some((r) => r.root?.other)).toBe(false);
+  });
 });
 
 describe("external changes (5.3, 5.4) and anchoring (3.5)", () => {
@@ -4576,6 +4662,14 @@ describe("review cycle 5 (editing against nvim)", () => {
     ["lensG", "# T\n\n- a\n- b\n- c\n\nx\nlast\n", ["G", "d", "d"], "# T\n\n- a\n- b\n- c\n\nx\n"],
     ["lensdG", "# T\n\n- a\n- b\n- c\n\nx\nlast\n", ["j", "j", "d", "G"], "# T\n\n"],
     ["lensGi", "# T\n\n- a\n- b\n- c\n\nx\nlast\n", ["G", "i", "Z", "<Esc>"], "# T\n\n- a\n- b\n- c\n\nx\nZlast\n"],
+    // An operator's f / t takes a digit as its character, not as a count.
+    ["df1", "abc 123 x\n", ["d", "f", "1"], "23 x\n"],
+    ["dt1", "abc 123 x\n", ["d", "t", "1"], "123 x\n"],
+    ["ct3", "abc 123 x\n", ["c", "t", "3", "Z", "<Esc>"], "Z3 x\n"],
+    // D with a count past the last line: to the last line's end, its line break kept; from the
+    // last line, nothing.
+    ["5D-mid", "a\nxb\nc\n", ["j", "l", "5", "D"], "a\nx\n"],
+    ["5D-last", "a\nb\n", ["j", "5", "D"], "a\nb\n"],
   ];
   const SPECIAL: Record<string, string> = { "<Esc>": "escape", "<C-u>": "ctrl+u", "<C-w>": "ctrl+w", "<CR>": "enter", "<BS>": "backspace" };
   const key = (t: string) => SPECIAL[t] ?? (t === " " ? "space" : /^[A-Z]$/.test(t) ? `shift+${t.toLowerCase()}` : t);
@@ -5910,6 +6004,58 @@ describe("vaults in the TUI (17.x)", () => {
     expect(h.app.otherRoots()).toEqual([]); // around it: the tree is in it
   });
 
+  test("h on another root's row folds it, the selection staying there (20.15)", async () => {
+    const { notes, app } = await twoVaults();
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.keys("tab", "enter"); // into app; notes is the other root
+    expect(h.app.loc.root).toBe(app);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    const at = h.app.explorerRows().findIndex((r) => !!r.root?.other);
+    h.app.sidebar.selected = at;
+    h.app.explorerAction("open"); // unfolded
+    expect(h.app.expanded.has(notes)).toBe(true);
+    expect(h.app.explorerRows().some((r) => r.under === notes)).toBe(true);
+    h.app.explorerAction("collapse");
+    expect(h.app.expanded.has(notes)).toBe(false);
+    expect(h.app.explorerRows().some((r) => r.under === notes)).toBe(false);
+    expect(h.app.sidebar.selected).toBe(at);
+    h.app.explorerAction("collapse"); // folded already: stays put
+    expect(h.app.sidebar.selected).toBe(at);
+  });
+
+  test("paste, new note and new folder on another root's row are refused (20.15), never a folder named by its path", async () => {
+    const { notes, app } = await twoVaults();
+    const h = await harness({ root: notes, open: "index.md" });
+    await h.keys("tab", "enter"); // into app; notes is the other root
+    expect(h.app.loc.root).toBe(app);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    const sel = (f: (r: ReturnType<App["explorerRows"]>[number]) => boolean) => (h.app.sidebar.selected = h.app.explorerRows().findIndex(f));
+    sel((r) => r.path === "design.md");
+    h.app.explorerAction("copy");
+    const before = readdirSync(app, { recursive: true }).sort();
+    const refused = () => expect(h.app.messages.at(-1)!.text).toBe("another root's folder: select a folder of this root");
+    sel((r) => !!r.root?.other);
+    h.app.explorerAction("paste");
+    refused();
+    h.app.explorerAction("new_note");
+    refused();
+    expect(h.app.overlay).toBeNull();
+    h.app.explorerAction("new_folder");
+    refused();
+    expect(h.app.overlay).toBeNull();
+    // A row under it, once unfolded: the same.
+    h.app.explorerAction("open");
+    sel((r) => r.under === notes && r.name === "todo.md");
+    expect(h.app.sidebar.selected).toBeGreaterThan(0);
+    h.app.explorerAction("paste");
+    refused();
+    expect(h.app.createNote("x", h.app.newItemBase())).toBeNull();
+    expect(readdirSync(app, { recursive: true }).sort()).toEqual(before);
+    expect(readdirSync(notes)).not.toContain("design.md");
+  });
+
   test("the explorer's roots (21.9): a loose file open beside the root brings its folder, gone when none of its files is shown", async () => {
     const root = makeVault();
     const loose = mkdtempSync(join(sandbox, "beside-"));
@@ -5975,6 +6121,34 @@ describe("vaults in the TUI (17.x)", () => {
     // Into app again: its session comes back, its two tabs.
     h.app.switchVault(locateVault({ root: app }), null);
     expect(h.app.tabs.map((t) => t.views[0]!.buf.rel).sort()).toEqual(["design.md", "links.md"]);
+  });
+
+  test("a switch closes the properties editor first: its edits written to the note, or the switch refused while it asks (17.10)", async () => {
+    const { notes, app } = await twoVaults();
+    const h = await harness({ root: notes, open: "index.md" });
+    const type = async (text: string) => {
+      for (const c of text) await h.keys(c === " " ? "space" : c);
+    };
+    await h.app.run("note.properties");
+    await h.keys("i");
+    await type("a: [");
+    await h.keys("escape");
+    expect(h.app.floating!.view.buf.dirty).toBe(true);
+    // Doesn't parse: it asks, and nothing switches.
+    expect(h.app.switchVault(locateVault({ root: app }), null)).toBe(false);
+    expect(h.app.loc.root).toBe(notes);
+    expect(h.app.floating).not.toBeNull();
+    expect((h.app.overlay as { confirm?: boolean } | null)?.confirm).toBe(true);
+    await h.keys("n");
+    await h.keys("d", "d", "i");
+    await type("a: 1");
+    await h.keys("escape");
+    // Parses: written into index.md, the editor closed, then the switch.
+    expect(h.app.switchVault(locateVault({ root: app }), null)).toBe(true);
+    expect(h.app.floating).toBeNull();
+    expect(h.app.loc.root).toBe(app);
+    expect(h.app.view?.buf.key).not.toContain("#properties");
+    expect(readFileSync(join(notes, "index.md"), "utf8")).toStartWith("---\na: 1\n---\n# Index");
   });
 
   test("the explorer shows a nested vault with its own icon; enter goes into it (17.13)", async () => {
@@ -6175,6 +6349,21 @@ describe("vaults in the TUI (17.x)", () => {
     h.app.config.context = { depth: 0, backlinks: false, limit: 25 };
     await h.keys("space", "s", "c");
     expect(files(h.copied.at(-1)!)).toEqual(["ctx.md"]);
+  });
+
+  test("space s c with an unsaved note changed on disk copies nothing and says which note, and how to resolve it", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "ctx.md"), "# Ctx\n");
+    const h = await harness({ root, open: "ctx.md" });
+    await h.keys("shift+g", "shift+a", "!", "escape");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    writeFileSync(join(root, "ctx.md"), "# Ctx, rewritten by an agent\n");
+    expect(h.app.view!.buf.changedOnDisk()).toBe(true);
+    const copies = h.copied.length;
+    await h.keys("space", "s", "c");
+    expect(h.copied.length).toBe(copies);
+    expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: "context: ctx.md changed on disk while unsaved — ␣ n c resolves it first" });
+    expect(readFileSync(join(root, "ctx.md"), "utf8")).toBe("# Ctx, rewritten by an agent\n");
   });
 
   test("a rename is refused while a file it rewrites is unsaved; :rename takes the path; the explorer's r asks", async () => {
@@ -7032,6 +7221,17 @@ describe("the Info view (3.19)", () => {
     expect(rows(h)).toContain("backlinks: 2");
   });
 
+  test("the filter's enter on a section heading folds that section, not the row at its index unfiltered", async () => {
+    const h = await setup();
+    await h.keys("space", "n", "i");
+    expect(h.app.region).toBe("outline");
+    await h.keys("/", ..."links");
+    expect(h.app.infoRows()[h.app.outline.selected]).toMatchObject({ heading: true, section: "Links" });
+    await h.keys("enter");
+    expect([...h.app.infoFolded]).toEqual(["Links"]);
+    expect(h.app.infoRows()[h.app.outline.selected]).toMatchObject({ heading: true, section: "Links" });
+  });
+
   test("a note's links' convention in its Links, and what said each part: the root's tool, its notes, one written since (21.4)", async () => {
     // An Obsidian vault: its settings say all three.
     const vault = mkdtempSync(join(tmpdir(), "slipbox-conv-tui-"));
@@ -7136,6 +7336,28 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
     expect(h.app.messages.at(-1)!.text).toBe("properties written to p.md");
     await h.keys("ctrl+z");
     expect(h.app.view!.buf.source).toBe("---\ntitle: T\ntags: [a]\n---\n# T\n\nBody.\n");
+  });
+
+  test("a CRLF note's frontmatter opens with its properties and is rewritten in place, CRLF kept", async () => {
+    const { h, read } = await setup("---\r\ntitle: T\r\n---\r\n# T\r\n\r\nBody.\r\n");
+    await h.app.run("note.properties");
+    expect(h.app.floating!.view.buf.source).toBe("title: T\n");
+    await h.keys("shift+g", "o");
+    await type(h, "status: new");
+    await h.keys("escape", "escape");
+    expect(h.app.floating).toBeNull();
+    expect(read()).toBe("---\r\ntitle: T\r\nstatus: new\r\n---\r\n# T\r\n\r\nBody.\r\n");
+  });
+
+  test("an empty frontmatter opens empty, never as the body up to a later rule; a property goes between its fences", async () => {
+    const { h, read } = await setup("---\n---\n# T\n\ntext\n\n---\n\nmore\n");
+    await h.app.run("note.properties");
+    expect(h.app.floating!.view.buf.source).toBe("");
+    await h.keys("i");
+    await type(h, "title: X");
+    await h.keys("escape", "escape");
+    expect(h.app.floating).toBeNull();
+    expect(read()).toBe("---\ntitle: X\n---\n# T\n\ntext\n\n---\n\nmore\n");
   });
 
   test("ctrl+s writes and stays; :q closes; a note without properties gets them first; emptied, they go", async () => {
@@ -8574,6 +8796,20 @@ describe("what a code file's server changes (19.15)", () => {
     expect(await until(() => (h.frame(), h.app.servers!.list()[0]?.state === "running"))).toBe(true);
   };
 
+  test("inserts at one place are made in the edit's order, as the preview shows them", async () => {
+    const { TextDocument } = await import("vscode-languageserver-textdocument");
+    const root = makeVault();
+    writeFileSync(join(root, "x.py"), "print(1)\n");
+    const h = await harness({ root, open: "index.md" });
+    const at = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
+    const edits = [{ range: at, newText: "import a\n" }, { range: at, newText: "import b\n" }];
+    const preview = TextDocument.applyEdits(TextDocument.create("", "", 0, "print(1)\n"), edits);
+    expect(h.app.applyWorkspaceEdit({ changes: { [`file://${join(root, "x.py")}`]: edits } })).toEqual({ files: 1, edits: 2 });
+    expect(preview).toBe("import a\nimport b\nprint(1)\n");
+    expect(h.app.buffer("x.py")!.source).toBe(preview);
+    expect(readFileSync(join(root, "x.py"), "utf8")).toBe(preview); // no window shows it: saved
+  });
+
   test("space c r: the symbol renamed everywhere the server says, after a preview; a file no window shows is saved", async () => {
     const root = makeVault();
     writeFileSync(join(root, "a.fk"), "REF one REF\n");
@@ -8962,4 +9198,164 @@ test("following a path link's fragment: a block's ^id lands on its block (an emb
   onRow("Odd x here");
   await h.app.run("link.follow");
   expect(v().buf.rel).toBe("sub/b.md");
+});
+
+describe("review (tui): vim and editing edges", () => {
+  const setup = async (text: string, name = "v.md", files: Record<string, string> = {}) => {
+    const root = makeVault();
+    writeFileSync(join(root, name), text);
+    for (const [f, t] of Object.entries(files)) writeFileSync(join(root, f), t);
+    const h = await harness({ root, open: name, width: 100, height: 30 });
+    await h.keys("space", "n", "v");
+    const v = h.app.view!;
+    const keys = async (...ks: string[]) => {
+      for (const k of ks) {
+        if (k.length > 1 && !k.includes("+") && !["escape", "enter", "backspace", "space", "tab"].includes(k)) {
+          for (const ch of k) await h.keys(ch === " " ? "space" : /[A-Z]/.test(ch) ? `shift+${ch.toLowerCase()}` : ch);
+        } else await h.keys(k);
+      }
+    };
+    return { h, v, keys, text: () => v.buf.source };
+  };
+  test("f and t in visual mode take their character; esc cancels it, and a later key isn't taken", async () => {
+    const a = await setup("abc.def x\n");
+    await a.keys("v", "f", ".", "d");
+    expect(a.text()).toBe("def x\n");
+    const b = await setup("abc.def x\n");
+    await b.keys("v", "f", "escape", "x");
+    expect(b.text()).toBe("bc.def x\n"); // one character, never a find of x
+  });
+  test(". after d/foo and c/foo repeats that change, not an older one", async () => {
+    const d = await setup("Zab foo cd foo ef\n");
+    await d.keys("x", "d", "/", "foo", "enter");
+    expect(d.text()).toBe("foo cd foo ef\n");
+    await d.keys("w", ".");
+    expect(d.text()).toBe("foo foo ef\n");
+    const c = await setup("a1 foo b2 foo end\n");
+    await c.keys("c", "/", "foo", "enter", "X", "escape");
+    expect(c.text()).toBe("Xfoo b2 foo end\n");
+    expect(c.h.app.vim.lastChange).toEqual(["c", "/", "f", "o", "o", "enter", "shift+x", "escape"]);
+    await c.keys("f", "b", ".");
+    expect(c.text()).toBe("Xfoo Xfoo end\n");
+  });
+  test(". repeats the text an accepted link completion put in", async () => {
+    const { keys, text, h } = await setup("# T\n", "v.md", { "zqother.md": "# Other\n" });
+    await keys("o", "[", "a", "]", "(", "z", "q", "o");
+    expect(h.app.completion?.shown[0]?.label).toBe("zqother.md");
+    await keys("tab", ")", "escape");
+    expect(text()).toBe("# T\n[a](zqother.md)\n");
+    await keys(".");
+    expect(text()).toBe("# T\n[a](zqother.md)\n[a](zqother.md)\n");
+  });
+  test("cgn after * keeps to whole words, as n does", async () => {
+    const { keys, text } = await setup("cat x\ncategory\ncat\n");
+    await keys("*", "g", "g", "$", "c", "g", "n", "dog", "escape");
+    expect(text()).toBe("cat x\ncategory\ndog\n");
+  });
+  test("shift+space (the kitty protocol's shifted space) types a space: in insert, a prompt, a list's filter, as f's character", async () => {
+    const { keys, text, h, v } = await setup("x y\n");
+    await keys("f", "shift+space");
+    expect(v.cur.col).toBe(1);
+    await keys("0", "i", "shift+h", "shift+space", "shift+w", "escape");
+    expect(text()).toBe("H Wx y\n");
+    await keys("/", "a", "shift+space", "b");
+    expect(h.app.overlay?.kind === "prompt" && h.app.overlay.text).toBe("a b");
+    await keys("escape", ":", "a", "shift+space", "b");
+    expect(h.app.overlay?.kind === "list" && h.app.overlay.input).toBe("a b");
+    await keys("escape");
+  });
+  test("enter where there's no link names the next-link keys as bound (tab), never ctrl+tab's tab switch", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), "# P\n\nplain text\n");
+    const h = await harness({ root, open: "p.md" });
+    await h.app.run("link.follow");
+    const said = h.app.messages.at(-1)!.text;
+    expect(said).toBe("no link here · tab or ␣ l n goes to the next one");
+  });
+  test("moving a CRLF note's lines keeps CRLF, with no stray \\r at the end", async () => {
+    for (const [input, keys, want] of [
+      ["a\r\nb", ["j", "alt+shift+up"], "b\r\na"],
+      ["a\r\nb", ["alt+shift+down"], "b\r\na"],
+      ["a\r\nb\r\n", ["j", "alt+shift+up"], "b\r\na\r\n"],
+      ["a\r\nb\r\nc\r\n", ["alt+shift+down"], "b\r\na\r\nc\r\n"],
+    ] as const) {
+      const s = await setup(input);
+      await s.keys(...keys);
+      expect(JSON.stringify(s.text())).toBe(JSON.stringify(want));
+    }
+  });
+  test(". after a visual change counts characters, not code points: a skin tone, a combining accent", async () => {
+    for (const first of ["👍🏽", "é"]) {
+      const { keys, text } = await setup(`${first}a bcd\n`);
+      await keys("v", "l", "d");
+      expect(text()).toBe(" bcd\n");
+      await keys(".");
+      expect(text()).toBe("cd\n");
+    }
+  });
+  test("~ over a letter whose other case is longer (ß, İ) toggles the rest and keeps it", async () => {
+    const a = await setup("aßb\n");
+    await a.keys("3", "~");
+    expect(a.text()).toBe("AßB\n");
+    const b = await setup("İstanbul\n");
+    await b.keys("8", "~");
+    expect(b.text()).toBe("İSTANBUL\n");
+  });
+});
+
+describe("review (tui): what a filter or a search marks, drawn where it is", () => {
+  /** The columns of row `y` drawn in the match colour. */
+  const lit = (h: Harness, y: number) => {
+    const c = h.canvas();
+    const fg = h.app.theme.roles.overlay_match.fg;
+    return c.rows[y]!.map((g, x) => (c.styles[y]![x]?.fg === fg && g !== "" ? g : "")).join("");
+  };
+  test("a name with a control character: the switcher marks the letters typed, not the ones after", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "bell\x07ring.md"), "# Bell\n");
+    const h = await harness({ root, open: "index.md", width: 120, height: 30 });
+    await h.keys("ctrl+p", "r", "i", "n", "g");
+    const rows = h.canvas().toString().split("\n");
+    const y = rows.findIndex((r) => r.includes("bellring.md"));
+    expect(y).toBeGreaterThan(-1);
+    expect(lit(h, y)).toBe("ring");
+  });
+  test("a search hit led by a heading with an escape marks the word itself", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "esc.md"), "# E\x07s\x1b[31mc\n\nsome \x1b[31mred\x1b[0m quetzal words\n");
+    const h = await harness({ root, open: "index.md", width: 140, height: 30, config: (c) => (c.search.engine = "auto") });
+    await h.app.whenSearchIndexed();
+    await h.keys("space", "f", "s");
+    for (const k of "quetzal") await h.keys(k);
+    const list = h.app.overlay as ListOverlay;
+    const hit = list.filtered.find((e) => e.item.label.startsWith("esc.md"));
+    expect(hit?.item.detail).toContain("\x1b[31m"); // its heading, as written, leads the line: drawn sanitized
+    const rows = h.canvas().toString().split("\n");
+    const y = rows.findIndex((r) => r.includes("esc.md:3"));
+    expect(lit(h, y)).toBe("quetzal");
+  });
+  test("the explorer's filter marks whole characters: a decomposed accent kept, a wide one whole", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "café.md"), "# Café\n");
+    writeFileSync(join(root, "日本.md"), "# Japan\n");
+    const h = await harness({ root, open: "index.md", width: 140, height: 30 });
+    await h.keys("space", "e", "/", "c", "a", "f", "e");
+    expect(h.frame()).toContain("café.md");
+    expect(h.frame()).not.toContain("cafe.md");
+    await h.keys("escape", "/", "日");
+    expect(h.frame()).toContain("日本.md");
+  });
+  test("ASCII glyphs reach every cell: a find match's row, the cursor on a dash", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "d.md"), "# D\n\nfoo — bar “q”\n");
+    const h = await harness({ root, open: "d.md", width: 80, height: 20, config: (c) => (c.render.glyphs = "ascii") });
+    const noUnicode = () => expect([...h.frame()].filter((ch) => ch.codePointAt(0)! > 0x7e && ch !== "\n")).toEqual([]);
+    await h.keys("/", "b", "a", "r", "enter"); // the row has a match: drawn a cell at a time
+    expect(h.frame()).toContain('foo - bar "q"');
+    noUnicode();
+    await h.keys("escape", "space", "n", "v");
+    const v = h.app.view!;
+    h.app.moveCursor(v, { row: 2, col: 4 }); // on the dash
+    noUnicode();
+  });
 });

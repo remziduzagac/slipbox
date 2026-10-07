@@ -1,8 +1,9 @@
-// Config loader (plan 0.9): TOML, defaults ← user ← vault marker, vault wins.
+// Config loader (plans 0.9, 20.7): TOML, defaults ← yours ← each enclosing root's .slipbox/config.toml ← the
+// root's own; deeper wins.
 // Must run correctly with no config at all, and never crash on a bad one — problems become
 // warnings in the message sink.
 
-import { type LanguageConfig, type ServerConfig, SERVERS } from "./servers/languages.ts";
+import { deepMerge, type LanguageConfig, type ServerConfig, SERVERS } from "./servers/languages.ts";
 import { type LinterConfig, LINTERS } from "./servers/linters.ts";
 import { existsSync } from "node:fs";
 import { readRegular, SMALL_FILE } from "./fsutil.ts";
@@ -99,7 +100,6 @@ export interface Config {
     /** Delay before the popup appears for prefixes other than the leader. */
     which_key_delay_ms: number;
   };
-  /** Renames (17.15). */
   /**
    * The lint surface (3.21): your markdownlint-cli2's findings in notes — slipbox ships no linter.
    * `enabled`: "auto" when a markdownlint config is there (~/.markdownlint-cli2.jsonc, or the
@@ -202,7 +202,8 @@ export interface Config {
   };
   /**
    * key sequence → command spec, e.g. `"leader l n" = "link.next"`; `""` unbinds a default.
-   * Sub-tables `visual`, `explorer`, `outline` and `resize` hold the keymaps of those contexts.
+   * Sub-tables `visual`, `source`, `explorer`, `outline`, `footnotes`, `info` and `resize` hold the
+   * keymaps of those contexts.
    */
   keys: Record<string, string> & {
     visual?: Record<string, string>;
@@ -212,7 +213,7 @@ export interface Config {
     outline?: Record<string, string>;
     /** The footnotes view's own keys (3.18): the outline's, and a / e / d / r. */
     footnotes?: Record<string, string>;
-    /** The Info view's own keys (3.19): the outline's, and y. */
+    /** The Info view's own keys (3.19): the pane's moves, and y (copy) and e (edit). */
     info?: Record<string, string>;
     resize?: Record<string, string>;
   };
@@ -408,8 +409,9 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
 }
 
 /**
- * Settings only your own config may set: each names a program slipbox runs. A vault's committed
- * config comes with whatever you clone, so it never chooses what runs on your machine.
+ * Settings only your own config may set: each names a program slipbox runs. A folder's committed
+ * config comes with whatever you clone, so it never sets slipbox's own commands (a known server's
+ * `config` still reaches the server, trusted as everything is: 19.6, configuration.md).
  */
 export const USER_ONLY = ["editor.command", "editor.remote", "lint.command"];
 
@@ -486,21 +488,25 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
   const out = { ...(base as Record<string, unknown>) };
   for (const [key, value] of Object.entries(over)) {
     const path = prefix ? `${prefix}.${key}` : key;
-    // Colour overrides: kept as given (tables merge by key) and validated against the theme.
+    // Colour overrides: kept as given (tables merge by key) and validated against the theme. A
+    // role's fields merge, at the top and in a theme's own table ([colors.<theme>]) alike.
     if (prefix === "colors") {
       const prev = out[key];
-      out[key] = isPlainObject(prev) && isPlainObject(value) ? { ...prev, ...value } : value;
+      const fields = (p: unknown, v: unknown) => (isPlainObject(p) && isPlainObject(v) ? { ...p, ...v } : v);
+      out[key] = isPlainObject(prev) && isPlainObject(value) ? { ...prev, ...Object.fromEntries(Object.entries(value).map(([r, v]) => [r, fields(prev[r], v)])) } : value;
       continue;
     }
-    // Language servers (19.2): each by name, its settings merged, the rest replaced; languages by name.
+    // Language servers (19.2): each by name, its settings merged (all the way down), the rest
+    // replaced; languages by name. A field of the wrong type is dropped with a warning.
     if (!prefix && key === "language-server") {
       if (!isPlainObject(value) || !Object.values(value).every(isPlainObject)) warnings.push(`config: ${file}: [language-server.<name>] must be tables`);
       else {
         const was = out[key] as Record<string, ServerConfig>;
         const next: Record<string, ServerConfig> = { ...was };
-        for (const [name, s] of Object.entries(value as Record<string, ServerConfig>)) {
+        for (const [name, given] of Object.entries(value)) {
+          const s = checkFields(given as Record<string, unknown>, SERVER_FIELDS, `language-server.${name}`, file, warnings) as ServerConfig;
           const before = next[name] ?? {};
-          next[name] = { ...before, ...s, ...(before.config && s.config ? { config: { ...before.config, ...s.config } } : {}) };
+          next[name] = { ...before, ...s, ...(before.config && s.config ? { config: deepMerge(before.config, s.config) } : {}) };
         }
         out[key] = next;
       }
@@ -511,7 +517,8 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       if (!isPlainObject(value) || !Object.values(value).every(isPlainObject)) warnings.push(`config: ${file}: [linter.<name>] must be tables`);
       else {
         const was = out[key] as Record<string, LinterConfig>;
-        out[key] = { ...was, ...Object.fromEntries(Object.entries(value as Record<string, LinterConfig>).map(([name, l]) => [name, { ...was[name], ...l }])) };
+        const checked = Object.entries(value).map(([name, l]) => [name, checkFields(l as Record<string, unknown>, LINTER_FIELDS, `linter.${name}`, file, warnings)] as const);
+        out[key] = { ...was, ...Object.fromEntries(checked.map(([name, l]) => [name, { ...was[name], ...l }])) };
       }
       continue;
     }
@@ -519,7 +526,8 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       if (!Array.isArray(value) || !value.every((l) => isPlainObject(l) && typeof l.name === "string")) warnings.push(`config: ${file}: [[language]] entries need a name`);
       else {
         const list = [...(out[key] as LanguageConfig[])];
-        for (const l of value as LanguageConfig[]) {
+        for (const given of value as Record<string, unknown>[]) {
+          const l = checkFields(given, LANGUAGE_FIELDS, `language.${given.name}`, file, warnings) as unknown as LanguageConfig;
           const i = list.findIndex((x) => x.name === l.name);
           if (i >= 0) list[i] = { ...list[i]!, ...l };
           else list.push(l);
@@ -574,6 +582,53 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
   return out as T;
 }
 
+const isString = (v: unknown): boolean => typeof v === "string";
+const isStrings = (v: unknown): boolean => Array.isArray(v) && v.every(isString);
+const isBoolean = (v: unknown): boolean => typeof v === "boolean";
+/** A language's server: its name, or `{ name, only-features, except-features }` (Helix's). */
+const isServerRef = (v: unknown): boolean =>
+  isString(v) ||
+  (isPlainObject(v) && isString(v.name) && (v["only-features"] === undefined || isStrings(v["only-features"])) && (v["except-features"] === undefined || isStrings(v["except-features"])));
+
+/** A field's type check, and how a warning says what it must be. Fields not named here are kept as given. */
+type FieldCheck = [check: (v: unknown) => boolean, must: string];
+const STRINGS: FieldCheck = [isStrings, "a list of strings"];
+const SERVER_FIELDS: Record<string, FieldCheck> = {
+  command: [isString, "a string"],
+  args: STRINGS,
+  config: [isPlainObject, "a table"],
+  environment: [(v) => isPlainObject(v) && Object.values(v).every(isString), "a table of strings"],
+  "required-root-patterns": STRINGS,
+};
+const LANGUAGE_FIELDS: Record<string, FieldCheck> = {
+  "language-servers": [(v) => Array.isArray(v) && v.every(isServerRef), "a list of server names, or of { name, only-features, except-features }"],
+  roots: STRINGS,
+  "file-types": STRINGS,
+  "language-id": [isString, "a string"],
+  linters: STRINGS,
+};
+const LINTER_FIELDS: Record<string, FieldCheck> = {
+  "lint-command": [isString, "a string"],
+  "lint-stdin": [isBoolean, "true or false"],
+  "lint-formats": STRINGS,
+  "lint-source": [isString, "a string"],
+  "lint-severity": [(v) => v === 1 || v === 2 || v === 3 || v === 4, "1, 2, 3 or 4"],
+  "lint-ignore-exit-code": [isBoolean, "true or false"],
+  "root-markers": STRINGS,
+  "require-marker": [isBoolean, "true or false"],
+};
+
+/** A copy of `table` without the fields of the wrong type, each warned of; the rest kept. */
+function checkFields(table: Record<string, unknown>, fields: Record<string, FieldCheck>, where: string, file: string, warnings: string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(table)) {
+    const field = fields[k];
+    if (field && !field[0](v)) warnings.push(`config: ${file}: ${where}.${k} must be ${field[1]}; ignored`);
+    else out[k] = v;
+  }
+  return out;
+}
+
 /** Ranged settings that may be fractional; every other ranged number must be whole. */
 const FRACTIONAL = new Set(["ui.split_ratio", "editor.lens_max"]);
 
@@ -588,12 +643,12 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v) && !(v instanceof Date);
 }
 
-export const VAULT_CONFIG_TEMPLATE = `# slipbox vault config. Settings here override ~/.config/slipbox/config.toml.
+export const VAULT_CONFIG_TEMPLATE = `# slipbox: this folder's settings. They override ~/.config/slipbox/config.toml.
 # See docs/design/configuration.md for every key.
 
 # theme = "tokyo-night"
 
 [walk]
-# Extra gitignore-syntax patterns to leave out of the vault, on top of .gitignore.
+# Extra gitignore-syntax patterns to leave out of this root, on top of .gitignore.
 # exclude = ["archive/"]
 `;

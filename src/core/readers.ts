@@ -12,6 +12,7 @@ import type { LayoutHeading, LinkKind } from "./layout/ir.ts";
 import { scanHeadings } from "./layout/source.ts";
 import { type ParseCache, type ParsedNote, parseMarkdown } from "./parse.ts";
 import { tagsInLine } from "./tags.ts";
+import { parseWikiTarget } from "./wikilink.ts";
 
 /** A link read from a line of source text. */
 export interface SourceLink {
@@ -38,10 +39,12 @@ const markdown: NoteReader = {
   parse: (source, cache) => parseMarkdown(source, cache),
   scanHeadings,
   linkAt(text, col) {
-    // A wikilink or an embed (21.3), `[[target#heading|alias]]`.
-    for (const m of text.matchAll(/(!?)\[\[([^\]|#\n]*)(?:#([^\]|\n]*))?(?:\|([^\]\n]*))?\]\]/g)) {
+    // A wikilink or an embed (21.3), `[[target#heading|alias]]`, split as the tokenizer splits it
+    // (`\|` in a table cell, `#^block`).
+    for (const m of text.matchAll(/(!?)\[\[([^[\]\n]+)\]\]/g)) {
       if (col < m.index || col >= m.index + m[0].length) continue;
-      return { kind: m[1] ? "embed" : "wiki", target: m[2]!.trim(), heading: m[3]?.trim() || null, text: m[4] ?? m[2]! };
+      const w = parseWikiTarget(m[2]!);
+      return { kind: m[1] ? "embed" : "wiki", target: w.target, heading: w.heading ?? (w.block ? `^${w.block}` : null), text: w.alias ?? w.target };
     }
     for (const m of text.matchAll(/!?\[([^\]\n]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
       if (col < m.index || col >= m.index + m[0].length) continue;

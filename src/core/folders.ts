@@ -48,7 +48,8 @@ export function folderIdentity(root: string): FolderIdentity | null {
   const ident = identityAt(root);
   const inRepo = c !== null && c.root === root;
   const remote = inRepo ? originRemote(c.common, c.main ?? c.root) : null;
-  const copy = inRepo && c.worktree && c.main ? c.main : root;
+  // A worktree's copy is its main checkout, a folder inside it the same folder there.
+  const copy = c?.worktree && c.main ? (inMain(c, root) ?? root) : root;
   const old = ident ? [...ident.aliases, ...ident.previous_names] : [];
   const priv = ident !== null && c !== null && excluded(c.common, c.root, root);
   if (ident?.name) {

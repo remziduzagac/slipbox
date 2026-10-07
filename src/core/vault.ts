@@ -15,8 +15,8 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadConfig, VAULT_CONFIG_TEMPLATE } from "./config.ts";
 import { checkoutOf, inMain } from "./git.ts";
 import { folderIdentity, folderNamed, identityAt, movedFrom, recordFolder, suggestFolderName } from "./folders.ts";
-import { readRegular } from "./fsutil.ts";
-import { vaultKey } from "./paths.ts";
+import { carryPaths, climbsOut, readRegular } from "./fsutil.ts";
+import { stateDir, vaultKey } from "./paths.ts";
 import { carryPositions } from "./position.ts";
 import {
   addIdentity,
@@ -171,6 +171,7 @@ export function locateVault(opts: LocateOptions): VaultLocation {
   if (opts.root) {
     const root = resolve(cwd, opts.root);
     if (!existsSync(root) || !statSync(root).isDirectory()) throw new VaultError(`--root is not a directory: ${opts.root}`);
+    if (isNeverRoot(root)) throw new VaultError(`--root ${opts.root}: ${root === homeFolder() ? "your home folder" : "/"} is never a root; open a folder in it`);
     if (!isVaultRoot(root)) throw new VaultError(`--root ${opts.root} isn't a root (none of ${rootMarkers().join(", ")} in it): slipbox init ${opts.root} makes it one`);
     if (file && !isInside(root, file)) throw new VaultError(`${opts.path} is outside --root ${opts.root}`);
     // A file has one root, however it's opened (21.x): its nearest. `--root` says where to start; a
@@ -233,7 +234,7 @@ export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): stri
 export function recordLocation(loc: VaultLocation): { carriedFrom: string | null } {
   if (loc.mode === "folder") {
     recordRoot({ kind: "folder", path: loc.root });
-    pruneWorktrees();
+    pruneWorktrees(Date.now(), isVaultRoot);
     return { carriedFrom: null };
   }
   // A plain folder that has become a root: the same place, one entry — the root's now.
@@ -249,20 +250,24 @@ export function recordLocation(loc: VaultLocation): { carriedFrom: string | null
     const was = known.find((v) => v.path === from);
     adoptStorage(was?.key ?? vaultKey(from), loc.key);
     carryPositions(from, loc.root);
+    // The trash and the undo log say where things were by absolute path: there, now (files.ts, rename-log.ts).
+    try {
+      carryPaths(join(stateDir(loc), "trash", "trash.json"), from, loc.root);
+      carryPaths(join(stateDir(loc), "renames.json"), from, loc.root);
+    } catch {}
     moved = [...(was?.moved ?? []), { from, to: loc.root, at: new Date().toISOString() }];
     if (was) writeRoots(known.filter((v) => v !== was));
   }
   recordFolder(loc.root, { replaces: wt ? null : from });
   recordRoot({ kind: "vault", path: loc.root, ...(loc.worktree ? { worktree: { name: loc.worktree.name, main: loc.worktree.mainVault } } : {}), ...(moved ? { moved } : {}) });
-  pruneWorktrees();
+  pruneWorktrees(Date.now(), isVaultRoot);
   return { carriedFrom: from };
 }
 
 
 export function isInside(root: string, path: string): boolean {
-  const rel = relative(root, path);
   // Climbing out is a ".." segment; a name that merely starts with dots ("..notes") is inside.
-  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel) && !/^[A-Za-z]:/.test(rel));
+  return !climbsOut(relative(root, path));
 }
 
 export function readVaultVersion(root: string): number | null {

@@ -9,7 +9,7 @@ reading `docs/`". Code: `src/core/layout/`, `src/core/theme/`, `src/core/glyphs.
 Pure data, framework-agnostic, defined in `layout/ir.ts`:
 
 ```ts
-Layout { lines: Line[]; links: LayoutLink[]; headings: LayoutHeading[]; width; clipped? }
+Layout { lines: Line[]; links: LayoutLink[]; headings: LayoutHeading[]; width; clipped?; embedded? }
 Line   { spans: Span[]; src; fill?; heading?; srcMap?; decor?; lens?; footnoteDef? }
 Span   { text; role; attrs; bg?; link?; src?; task? }
 ```
@@ -24,6 +24,8 @@ Span   { text; role; attrs; bg?; link?; src?; task? }
   line of the row above, so anchoring to a block lands on the block, not the gap before it.
 - **`links`** records every link with its kind, target, resolution status and first drawn
   position (row, column). The TUI cycles and follows links from this list.
+- **`embedded`** lists the notes drawn in place (`1.11`), nested ones too, so a change to one lays
+  this note out again.
 
 Both faces draw the same IR: `tui/draw.ts` paints it through a `Canvas`, and `layout/ansi.ts`
 turns it into a string for `slipbox render`.
@@ -124,9 +126,10 @@ the breadcrumb, `[x](file.toml#section)`, find and the lens work unchanged:
   key's value (`$ref`, `$schema`, `schema`, `include(s)`, `extends`, `import(s)`, `file`, `path`),
   shown broken when it doesn't resolve; and any path-like value (`schemas/user.json`,
   `../base.toml`) that resolves to a vault file — relative to the file's folder, as a markdown
-  link is. The graph reads the same links (files over 256 KB aside), so a data file shows among the
-  backlinks of what it points at, and `slipbox links` lists them. No wikilinks: data files have no
-  such convention.
+  link is. A link is a single value, not a list or a number: `includes: [base.json]`, `schema: 2`
+  and `path: null` are no links. The graph reads the same links (files over 256 KB aside), so a
+  data file shows among the backlinks of what it points at, and `slipbox links` lists them. No
+  wikilinks: data files have no such convention.
 - **CSV and TSV** are one table: quoted fields (with `""` and newlines inside), the first row the
   header, rows padded to the widest; past 2,000 rows the rest are counted, and source mode shows
   them.
@@ -135,9 +138,11 @@ TOML, INI and `.env` are read line by line (their structure is lines), TOML vali
 `smol-toml`; INI's comments start with `#`, `;` or `!` (Java's `.properties`), whose values go on
 after a backslash when the next line is indented. YAML and JSON come from `yaml`'s document tree,
 which keeps positions and comments; JSON is validated by `JSON.parse`, read as editors read
-`tsconfig.json` (jsonc): `//` and `/* */` comments and trailing commas allowed. **Nothing is ever
-re-serialized**: edits are always on the text, so comments, order and formatting survive. A file
-that doesn't parse has no render (`16.14`): its error is shown and source mode opens.
+`tsconfig.json` (jsonc): `//` and `/* */` comments and trailing commas allowed. `.json5` is read
+the same way, as JSONC: JSON5's own syntax (unquoted keys, single quotes, hex numbers) is reported
+as a parse error and the file opens in source mode. **Nothing is ever re-serialized**: edits are
+always on the text, so comments, order and formatting survive. A file that doesn't parse has no
+render (`16.14`): its error is shown and source mode opens.
 
 ## The wikilink tokenizer
 
@@ -159,6 +164,7 @@ minimum[i] = max over rows of (longest soft segment + 2 * padding)
 budget     = width - (ncols + 1)
 
 sum(desired) <= budget   -> desired: nothing wraps
+budget < ncols * 5       -> no grid: one record per row (a column under 3 content columns is unreadable)
 sum(minimum) <= budget   -> each column at its own minimum, surplus placed by cost (below)
 fair share >= 6 columns  -> words must break: columns floored at a fair share, same rule
 otherwise                -> no grid: one record per row
@@ -231,20 +237,21 @@ some row wraps. The header separator is doubled (`╞═╪═╡`).
   spacing mark a column of its own.
 
 `layout/wrap.ts` breaks at spaces, and between CJK characters — except that closing punctuation
-(`、` `。` `）` `」`, and an ASCII `,` or `.` right after a CJK character) never starts a row, and
+(`、` `。` `）` `」` `…`, and an ASCII `,` or `.` right after a CJK character) never starts a row, and
 opening punctuation (`（` `「`) never ends one (kinsoku). A token longer than the row starts
 a fresh row and packs its soft segments (split after `/ - _ . ? & = , : ; |`), so paths, URLs and
 identifiers break at a readable point. Only a segment wider than the whole row breaks at the
 grapheme that overflows.
 **Hostile notes.** Containers deeper than 60 (quotes, lists) render as their plain text, so a note
 5,000 levels deep neither overflows the stack nor hides everything. Below 8 columns for its child, a
-container stops indenting (a quote drops its bar, a list item's marker takes a row of its own), so
-nothing is cut in a narrow split. Inputs the markdown parser takes quadratic time over are tamed
-before parsing without moving an offset (`tame` in `core/parse.ts`), and only where an ordinary note
-never has them: frontmatter, fenced code and lines made only of rule characters (`***`, a setext
-`===`) are left alone. A run of 64 or more `*` `_` `[` `]` in a line with other text becomes
-look-alikes; 20 or more container markers, or 96 columns of indentation before a list marker, get
-one no-break space at the cap, which ends the nesting there.
+container stops indenting (a quote, a callout or an embed drops its bar, a list item's marker takes a
+row of its own), and a data file's tree drops its outer guides, so nothing is cut in a narrow split.
+Inputs the markdown parser takes quadratic time over are tamed before parsing without moving an
+offset (`tame` in `core/parse.ts`), and only where an ordinary note never has them: frontmatter,
+fenced code and lines made only of rule characters (`***`, a setext `===`) are left alone. A run of
+64 or more `*` `_` `[` `]` in a line with other text becomes look-alikes; 20 or more container
+markers, or 96 columns of indentation before a list marker, get one no-break space at the cap, which
+ends the nesting there.
 Frontmatter over 64 KB shows as text; YAML is parsed without the (quadratic) duplicate-key check.
 
 Nothing ever overflows the layout width. As a last defence the renderer cuts any row still too wide

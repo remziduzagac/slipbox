@@ -62,8 +62,9 @@ function chunkify(spans: Span[]): Chunk[] {
         flush();
         const prev = chunks.at(-1);
         // Text right after opening punctuation continues its chunk (no break after （ or 「), and so
-        // does ASCII closing punctuation right after a CJK character (no row starts with its comma).
-        if (kind === "word" && prev?.kind === "word" && (NO_BREAK_AFTER.test(prev.gs.at(-1)!.g) || (c >= 0 && CLOSING.includes(g))))
+        // does ASCII closing punctuation right after a CJK character (no row starts with its comma),
+        // and closing punctuation that measures 1 (`…` `‥`, East Asian Ambiguous) likewise.
+        if (kind === "word" && prev?.kind === "word" && (NO_BREAK_AFTER.test(prev.gs.at(-1)!.g) || (c >= 0 && CLOSING.includes(g)) || (prev.gs.at(-1)!.w === 2 && NO_BREAK_BEFORE.test(g))))
           cur = chunks.pop() as { kind: "word" | "space"; gs: G[]; width: number };
         else cur = { kind, gs: [], width: 0 };
       }

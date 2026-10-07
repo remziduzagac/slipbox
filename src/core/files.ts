@@ -140,6 +140,8 @@ export function restorePath(g: Graph | null, v: Keyed, which: string): TrashItem
   const item = items.find((i) => i.id === which) ?? items.find((i) => i.shown === which || i.abs === which);
   if (!item) throw new FileOpError(`nothing in the trash named ${which}`);
   if (existsSync(item.abs)) throw new FileOpError(`${item.shown} exists again; not restoring over it`);
+  // Its root moved and the trash wasn't told: never put back outside the root (recreating where it was).
+  if (g && !isInside(g.root, item.abs)) throw new FileOpError(`${item.shown} was at ${item.abs}, outside this root now; not restoring it there`);
   move(join(trashDir(v), item.id, basename(item.abs)), item.abs);
   rmSync(join(trashDir(v), item.id), { recursive: true, force: true });
   saveTrash(v, items.filter((i) => i.id !== item.id));

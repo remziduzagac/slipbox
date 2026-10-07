@@ -247,7 +247,8 @@ export function serverTable(servers: Record<string, ServerConfig> = {}, language
   return { servers: out, languages: langs };
 }
 
-function deepMerge(a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> {
+/** `b` over `a`, tables merged all the way down (lists and values replaced). */
+export function deepMerge(a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...a };
   for (const [k, v] of Object.entries(b)) {
     const was = out[k];

@@ -1,10 +1,12 @@
 # slipbox — implementation plan
 
-Status: **phases 0–4 built** — 3b (`16.x`, files beyond markdown) and 4 (vaults, renames, search, git, embeds)
-included; **phase 5 (`11.x`, `19.x`: language servers, both ways) has begun**. Scout (`6.10`) waits for Scout; how
-slipbox will use it is decided (`docs/design/scout.md`). Captured 2026-09-25, phased 2026-09-25, phases 0–2
-implemented 2026-09-25, phase 3 2026-09-28, phases 3b and 4 by 2026-10-01 — how it was built is in `docs/design/`, the
-decisions it needed in `docs/design/decisions.md`.
+Status: **phases 0–5c built** — 3b (`16.x`, files beyond markdown), 4 (vaults, renames, search, git, embeds), 5
+(`19.x` and `16.18`–`16.23`: language servers and more languages; its LSP face, `11.x`, removed in 5b), 5b (`20.x`,
+plain paths) and 5c (`21.x`, paths inside, conventions at the edges) included. Scout (`6.10`) is postponed: it became
+trailscout, its own project; how slipbox will use it is decided (`docs/design/scout.md`). Captured 2026-09-25, phased
+2026-09-25, phases 0–2 implemented 2026-09-25, phase 3 2026-09-28, phases 3b and 4 by 2026-10-01, 5b by 2026-10-03,
+5c and the rest of 5 by 2026-10-07 — how it was built is in `docs/design/`, the decisions it needed in
+`docs/design/decisions.md`.
 
 The design lives in `docs/idea.md` — what slipbox is, why each decision went the
 way it did, and what was ruled out. This file is the other half: the units of work, with
@@ -43,7 +45,7 @@ cited, not to imply an order.
 | **4** | Vault and structure | `17.x`, rest of `1.x`, `6.x`, `7.1`, embeds | Backlinks and search on a real vault |
 | **5** | LSP, code intelligence | `11.x`, `19.x`, `16.18`–`16.23` | nvim gets slipbox's graph; slipbox the servers' |
 | **5b** | Plain paths, virtual vaults | `20.x` | Open any file or folder and work: paths, derived vaults |
-| **5c** | Paths inside, conventions at the edges (proposed) | `21.x` | Other tools' links read and written; no vaults |
+| **5c** | Paths inside, conventions at the edges | `21.x` | Other tools' links read and written; no vaults |
 | **6+** | Export, images, extensibility | `10.x`, `12.x`, `13.x` | — |
 
 `14.x` distribution is not a phase. It lands whenever the thing first needs to run on a VM,
@@ -56,14 +58,14 @@ review work slipbox serves — reading what agents produced, configs and code as
 every text file to open well before the vault grows broader concepts.
 
 **Phase 5b is next (decided 2026-10-02).** Plain paths and virtual vaults (`docs/idea.md`, "Plain paths, virtual
-vaults") change what a link is and what a vault is; the rest of phase 5 (`16.18`–`16.23`) waits, since it doesn't
+vaults") change what a link is and what a vault is; the rest of phase 5 (`16.18`–`16.23`) waited, since it doesn't
 depend on either. The LSP face phase 5 built (`11.x`) is removed in it: with plain paths, editors' own servers follow
 the links, and agents have the CLI.
 
-**Phase 5c is proposed (2026-10-05, reviewed).** Paths inside, conventions at the edges (`docs/idea.md`, "Paths
-inside, conventions at the edges") revises phase 5b after a survey of other tools: `/` as a root, other tools' link
-conventions followed, `slipbox://` pointers between named folders, and no vaults to meet. Nothing of it is built until
-it's approved; the rest of phase 5 (`16.18`–`16.23`) waits on it, as it did on 5b.
+**Phase 5c was decided 2026-10-05, after a review, and built by 2026-10-07.** Paths inside, conventions at the edges
+(`docs/idea.md`, "Paths inside, conventions at the edges") revises phase 5b after a survey of other tools: `/` as a
+root, other tools' link conventions followed, `slipbox://` pointers between named folders, and no vaults to meet. The
+rest of phase 5 (`16.18`–`16.23`) waited on it, as it did on 5b, and followed (done 2026-10-07).
 
 **Phase 1 is rendering because it de-risks the premise.** If the rendering is not better than
 leaf's, nothing after it matters. It is also self-contained — parse, layout, theme — and needs
@@ -311,12 +313,12 @@ optional `--if-unchanged` for careful writers.
      hint); in the rendered view, on the row its source line starts on;
    - the text itself underlined or highlighted where the problem is, mapped through the layout when rendered;
    - the bar and the marks each toggled on its own (`space u`), and remembered like the other UI settings.
-5. **slipbox serves markdown to editors** (`11.x`): `slipbox lsp`, in vaults only (`.slipbox/`), marksman staying
-   for markdown elsewhere. A thin layer on the core, with `vscode-languageserver` for the protocol; the TUI keeps
-   calling the core directly. Renames are edits the editor applies (they skip slipbox's undo log), and lint
-   findings stay off over the LSP, since the editor runs its own linter.
+5. **slipbox serves markdown to editors** (`11.x`, removed in `20.23`): `slipbox lsp`, in vaults only
+   (`.slipbox/`), marksman staying for markdown elsewhere. A thin layer on the core, with `vscode-languageserver`
+   for the protocol; the TUI keeps calling the core directly. Renames are edits the editor applies (they skip
+   slipbox's undo log), and lint findings stay off over the LSP, since the editor runs its own linter.
 6. **New languages** (`16.18`–`16.23`): Swift, HTML and CSS, PHP, Dockerfile, the web frameworks (Vue, Svelte,
-   Astro); Ruby and C/C++ to decide.
+   Astro); Ruby and C/C++ decided and done (`16.23`).
 
 **Trust (`19.6`), decided with the user:** everything is trusted. Servers and linters run wherever slipbox opens a
 file, the project's own copies (`node_modules/.bin`, `.venv/bin`, `vendor/bin`) included, and they run the project's
@@ -596,6 +598,9 @@ source shown alike in every mode.*
 In order: link semantics, the migration and identity first; the index and what it shows second; repairs, the CLI and
 the merge review after; the removals as their replacements land, the sweep last.*
 
+*Revised by `21.x`: `21.12` removed `20.4`, `20.5`'s instances, `20.6`, `20.12`, `20.13` and `20.20`'s `vault:path`;
+`20.14` and `20.15` show roots (`21.9`). The rows record what was built.*
+
 | ID | Item |
 | --- | --- |
 | 20.1 | **Done.** The converter: `[[…]]` and `/…` links as relative paths, labels kept, fragments checked; previewed |
@@ -629,9 +634,9 @@ reuse today's rename and move engine (`7.1`–`7.3`, `17.12`, `17.15`) on paths;
 for a repair. Performance (`20.11`) is measured, not assumed. Each item ends with its tests listed for the user's
 approval before any is run.
 
-## Paths inside, conventions at the edges — `21.x` (phase 5c, proposed)
+## Paths inside, conventions at the edges — `21.x` (phase 5c)
 
-*Proposed 2026-10-05 and reviewed with the user; not built until approved to start. The design, and why, is
+*Proposed 2026-10-05 and reviewed with the user; approved, and built 2026-10-06 and 07. The design, and why, is
 `docs/idea.md`, "Paths inside, conventions at the edges";
 the decision record `docs/design/decisions.md`, `21.x`. In order: roots and the one model inside first; the
 conventions read, then found, then written; names and pointers next; state, words and what's shown after; the
@@ -651,7 +656,7 @@ removals as their replacements land, the sweep last.*
 | 21.10 | **Done.** Words: `folders [default]`, `name`, pointers as args; `root`/`name` in JSON; `--scope here` |
 | 21.11 | **Done.** Repairs: the relink offered after moves made elsewhere; typed `research:x.md` flagged and fixed |
 | 21.12 | **Done.** Gone: `vault:path`, `previous_names`, collections, instances, display names, `vault-moved`, vaults |
-| 21.13 | **Done.** The sweep: the docs, the skill, the README, the e2e scenarios (written; to run when approved) |
+| 21.13 | **Done.** The sweep: the docs, the skill, the README, the e2e scenarios (run 2026-10-07; findings fixed) |
 
 `21.1` comes first: `/`, wikilinks and conventions each read a root. `21.2`–`21.5` change no behaviour for relative
 links, which stay as they are. `21.6` and `21.7` replace what vaults gave links between folders before `21.12` removes
@@ -756,6 +761,9 @@ the file; derived data in the cache, personal data in the state, `.slipbox/` onl
 shared; names that mean the same on every machine. In order: roots and storage, then names, then
 links across vaults, then the TUI, then renames.*
 
+*Revised by `20.x` and `21.x`: `17.2` and `17.8` removed in `20.22`; `17.4`'s `previous_names`, `17.6` and `17.7`'s
+`previous_names` in `21.12`; `17.14` shows the named folders (`21.10`). The rows record what was built.*
+
 | ID | Item |
 | --- | --- |
 | 17.1 | **Done.** Roots: the nearest `.slipbox/`, else the home vault; never `~` or `/` (revised by `17.18`) |
@@ -796,8 +804,8 @@ not by vault names, and every form of it reaches the file, counts as a backlink,
 rename in its own form.
 
 `17.15` is where `7.1`–`7.3` land: a note's rename rewrites links as byte-range edits, previews every
-file it touches (7.2), and warns when a vault's git tree already has changes (7.3); the old name goes
-to `previous_names`. `7.4` (undo) stays open.
+file it touches (7.2), and warns when a vault's git tree already has changes (7.3); the old name went to
+`previous_names` until `21.12`. `7.4` (undo) is done since: `space v shift+u`, `slipbox undo`.
 
 ## Explorer: making and changing files — `18.x` (phase 4)
 

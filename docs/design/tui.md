@@ -56,22 +56,22 @@ where it ends on one, `┣` `┫` `╋` where it continues through, and the corn
 panes). Zen mode has no frame. The lines are light by default (`ui.lines = "light"`: `─ │ ┬ ┴ ├ ┤ ┼`);
 `ui.lines = "heavy"` draws them as shown here, `━ ┃ ┳ ┻ ┣ ┫ ╋`. Tables in the note are always light.
 
-**The terminal's title** is `slipbox — <the file on screen>` (its path in its vault), else the
+**The terminal's title** is `slipbox — <the file on screen>` (its path in its root), else the
 folder open in its place: told when it changes, its control characters stripped.
 
-**The top bar** has buttons and vault-wide state. It sits on the page's
+**The top bar** has buttons and the root's state. It sits on the page's
 background like the rest, so the frame's rule under it gives it the same half row of air the tab
 strip and the titles get from theirs:
 
 - on the left, the `slipbox` chip (plain accent text), which opens the command palette; before
   it, without the left rail, the explorer's `≡`;
-- at the right end, vault-wide state (`indexing N…`), dropped when fewer than 12 columns are left. The vault and its
-  branch are the status line's (`20.14`); a plain folder's, its path (`20.22`).
+- at the right end, the root's state (`indexing N…`), dropped when fewer than 12 columns are left. The root (by
+  name or path) and its branch are the status line's (`20.14`, `21.9`); a plain folder's, its path (`20.22`).
 
 Toggle buttons have no fill of their own: their glyph is dim (`topbar_button`) while the pane is
 closed and bright (`topbar_button_on`) while it is open. `ui.top_bar = false` removes the bar, as
 do `space u b` and "Top bar" in the UI settings (`space u u`, remembered like the other settings; the note gains
-its row, `:` still opens the palette, and the vault state isn't shown); zen mode hides it too.
+its row, `:` still opens the palette, and the indexing state isn't shown); zen mode hides it too.
 
 **The breadcrumb** tops each window, between two rules. It starts with an icon (`§`, ascii `#`) that
 opens the heading finder when clicked, then the chain of headings that window's cursor is under,
@@ -124,8 +124,9 @@ session keeps them.
 
 **The status line** is about the file. From left to right:
 
-- a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES` (the explorer or
-  the history), `OUTLINE`, `RESIZE`, or what's pending: keys of a sequence in short form (`␣ l`,
+- a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES` (the explorer, the
+  history or Problems), `OUTLINE`, `FOOTNOTES`, `INFO` (the right panel's views), `RESIZE`, or what's
+  pending: keys of a sequence in short form (`␣ l`,
   `C-w`), or an operator, count or `r` (`2d`, `di`);
 - where the file is, and its branch (`20.14`, `21.9`), dimmed: the root's name if it has one, else its path, else the
   folder opened — `research · main`, `~/src/experiment · main` (no remote), `notes`, `~/scratch` — and the branch
@@ -303,8 +304,9 @@ from another root, a named folder picked from `:folders` or a root from the expl
 as if started there — its config, its
 index (refreshed), its watcher, its reading positions and its session, whose tabs come back, with
 the note open (at its heading). Leaving saves the one before as quitting does. **Refused while a
-note is unsaved** (`unsaved: … — save (:wa) or revert before leaving`): it would be left behind. A
-loose file opens as it is, beside the current vault's notes: it has no vault to switch into.
+note is unsaved** (`unsaved: … — save (:wa) or revert before leaving`): it would be left behind. The properties
+editor closes first, writing its edits into the note — or, while it asks (they don't parse, or changed meanwhile),
+nothing switches. A loose file opens as it is, beside the current vault's notes: it has no vault to switch into.
 
 **Back returns.** `back` (`ctrl+o`) from the first place in a vault goes to the vault before, at
 the note and place you left; each switch is remembered, so a chain of them unwinds one by one.
@@ -364,8 +366,9 @@ skipped at the top; `enter` carries it out, `esc` leaves everything as it was. W
 while a file it rewrites is unsaved.** After it, the open notes it changed are reloaded, and a window on a renamed or
 moved note shows it under its new path, its history following — every note of a moved folder alike.
 
-**Undo** (`7.4`): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the vault's last rename,
-move or relink — made here or by `slipbox mv` — as `slipbox undo` does (`docs/design/cli.md`, "Renames"): its
+**Undo** (`7.4`): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the root's last rename,
+move, naming, heading rename, relink or conversion to path links — made here or by the CLI (`slipbox mv`, `name`,
+`rename-heading`, `relink`, `convert-links`) — as `slipbox undo` does (`docs/design/cli.md`, "Renames"): its
 preview first (`undo: notes/first.md → notes/alpha.md`, each line the other way), then every file as it was and what
 moved back where it was, open notes following it back. Refused when a file it wrote has changed since. `u` puts
 back a delete; `shift+u` a rename.
@@ -406,9 +409,11 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   links into it — by path or by its name — that break. Its menu has "Rename the folder" and, beside it, "Name it"
   (`shift+r`, `R` in the menu): `slipbox name` for it, its folder left where it is.
 - **A folder made a vault, and back** (`18.11`): `v` on a folder asks for the new vault's name (a distinct one typed:
-  `halden-logs` for `logs/`), then a preview — links are paths, which reach across the new boundary as before, so
-  there's nothing of them to rewrite (`20.2`) — as `slipbox init <folder>` does (`docs/design/cli.md`); enter makes it.
-  `shift+v` on a nested vault's row previews the way back, and enter puts its `.slipbox/` in the trash. The row turns
+  `halden-logs` for `logs/`), then a preview — links are paths (`20.2`): relative and filesystem ones reach across
+  the new boundary as they are, and one written from the root (`/…`) that would now mean the other root is rewritten
+  to reach what it did, shown there — as `slipbox init <folder>` does (`docs/design/cli.md`); enter makes it.
+  `shift+v` on a nested vault's row previews the way back (such links rewritten the other way), and enter puts its
+  `.slipbox/` in the trash. The row turns
   into a vault's or a folder's, selected. In a plain folder, `v` offers to make the folder a vault of its own and goes
   into it.
 
@@ -434,7 +439,7 @@ Each kind of link does something different when followed:
 | a broken link whose file moved | says where it went (`17.12`): `space l r` relinks it — a move never resolves it |
 | `[t](../other/x.md)` | opens the note in the other vault (`17.9`) |
 | `[t](slipbox://notes/x.md#h)` | its folder's copy here (`21.7`), at the heading; not here: said; two: picked |
-| `[t](slipbox://kestrel@agent/x.md)` | that branch's checkout or worktree; else the file from git, read-only |
+| `[t](slipbox://kestrel@agent/x.md)` | that branch's checkout or worktree; else git's file, read-only, `#h` unchecked |
 | `[[name]]`, `[[name#h]]`, `![[dal.png]]` | within its root (`21.3`): name, path or alias; a tie lists them |
 | `[t](other.md#frag)` | opens relative to the note; `#^id` at the block (`20.1`); a bad `%` read as written |
 | `[t](n.md#setup-1)` | the second "Setup" (GitHub's numbering); an id first (`{#id}`, `<a id>`), then text |
@@ -464,7 +469,7 @@ Pie.md now, not Recipes/Baking/Pie.md` — never only when a link breaks or heal
 
 A link landing on a line (`#L42`, a block's `^id`, a problem, a search hit) lands where that line is shown: in the
 rendered view, a line inside a paragraph that wraps lands on the paragraph, not the block after. The backlinks list
-shows another vault's link with that vault's name: `app: design/plan.md`.
+shows a link from another root by its path (`21.9`): from home (`~/app/design/plan.md`), else absolute.
 
 `enter` follows the link under the cursor, or else the row's first link. In source mode and inside
 the lens, where rows are the markdown itself, `enter` and `space l f` / `s` read the link around the
@@ -506,11 +511,14 @@ keys.
   plain folder. **The explorer's roots** (`20.15`, `21.9`): under the root open, the other roots, each by its name
   (`◈`), else its path: the root or folder slipbox was opened on, the roots pinned with `:pin-root` (`vault.pin_root`,
   kept with the opened root's state), and the folder of a file open beside this root — a loose file a link was
-  followed to, its nearest root else its folder — while one of its files is shown. A root followed into by a link is
-  the root open while it is, the opened one beside it; left, it goes unless pinned. `enter` on another root unfolds it
-  — its notes and files as its index has them — and a file of it opens there (a switch); none of this root's file
-  operations act on its rows. Roots never overlap: one inside the root open, or around it, isn't listed apart — its
-  folder is in the tree, or the tree is in it. **Git's marks** (`5.11`): in a git checkout each changed file has
+  followed to, its nearest root else its folder — while one of its files is shown (never the scratch's, which lives in
+  slipbox's state folder). A root followed into by a link is the root open while it is, the opened one beside it;
+  left, it goes unless pinned. `enter` on another root unfolds it — its notes and files as its index has them — `h`
+  folds it again, and a file of it opens there (a switch); a plain folder among them (a loose file's) has no index to
+  show, so `enter` goes into it instead (a switch). None of this root's file operations act on their rows (a
+  paste, new note or new folder there says `another root's folder: select a folder of this root`). Roots never
+  overlap: one inside the root open, or around it, isn't listed apart — its folder is in the tree, or the tree is in
+  it. **Git's marks** (`5.11`): in a git checkout each changed file has
   its state at its row's end — `M` modified, `+` new (untracked or added), `R` renamed, `!` in a merge's conflict
   (`git_modified`, `git_new`, `git_conflict`) — and a folder with one in it a `•`. git is asked in the background, a
   moment after anything changed (a save, the watcher, a file operation, a branch switch).
@@ -543,9 +551,10 @@ keys.
   links count, a note's own don't — each opened by `enter`). Under the first three, the notes with such links, and under
   a note its problems: the line and the link as written, in the link's colour (a finding: its line, rule and what's
   wrong). `enter` (or a double-click) opens the note there, the cursor on the link as drawn (in source mode, on its
-  text); on a note's row, at its first. It takes the explorer's keys (`l` / `h` unfold and fold a section, `/` filters);
-  a note's change shows at once. `space v p`, `:problems`, the `⚠` button — each opening lints the vault again (`Lint
-  (n) …` while it runs); `slipbox problems` gives the same (`--lint` for the findings).
+  text); a note's row (an orphan's too) opens at its first on one click. It takes the explorer's keys (`l` / `h`
+  unfold and fold a section, `/` filters); a note's change shows at once. `space v p`, `:problems`, the `⚠` button —
+  each opening lints the vault again (`Lint (n) …` while it runs); `slipbox problems` gives the same (`--lint` for the
+  findings).
 - **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
   Sections that fold (`h`/`l`): **File** (its path, the vault it belongs to, its kind, size, modified time, words and
   reading time, lines, encoding and line endings, saved or not), **Properties** (the frontmatter's keys and values,
@@ -698,7 +707,8 @@ past theirs), so the content behind never runs up to the edge.
   Without a keycap background (`NO_COLOR`), the columns are separated by `·`.
 
 Help and the palette list the same commands for different jobs, in the groups of
-[keymap.md](keymap.md) (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order:
+[keymap.md](keymap.md) (`COMMAND_GROUPS` in `core/command-specs.ts`), in that document's order. Every command has a
+group (a test checks it); one no group claims would still be listed, under "Other", last:
 
 - **Help (`?`, `space ?`, `:help`)** is for learning the keys: every command with all its bindings (source
   mode's own, `[keys.source]`, and visual mode's included), then what
@@ -915,6 +925,10 @@ taken away — so a keystroke never re-parses the note (plan `15.1`'s per-block 
 lens). Leaving insert mode, or an edit reaching outside it, lays the note out afresh — re-parsing
 only the chunks the edits touched and re-rendering only their blocks.
 
+**Another note in the window.** Following a link from the lens, or `ctrl+o` / `ctrl+i` to another note, keeps the
+lens open on the new note's cursor block: the old note's render, size, place and inner scroll go with it
+(`App.resetForBuffer`), so the window never shows one note while keys edit another.
+
 ## Files beyond notes (plan `16.x`)
 
 slipbox opens any text file in the vault, not only notes (`docs/idea.md`, "Files beyond
@@ -1061,7 +1075,8 @@ progress: it tries again later; in a worktree or submodule, the lock in the git 
 save first** (`4.10`): `space n e`, `space n s` and a capture into an open scratch write unsaved
 changes before the other side reads the file; `space s c` saves every unsaved note before it gathers the context
 bundle (`9.7`), which it copies: the note, what it links to and what links to it, as `slipbox context` writes it
-(`docs/design/cli.md`), as far as `[context]` says.
+(`docs/design/cli.md`), as far as `[context]` says. One that can't be saved (it changed on disk meanwhile) stops it,
+nothing copied: `context: x.md changed on disk while unsaved — ␣ n c resolves it first`.
 
 Quitting with unsaved changes is refused (`:q!` quits anyway); a signal still quits.
 
@@ -1244,10 +1259,12 @@ line's text, not the paragraph's first line or its row's end.
 
 ## Modes and dispatch (decision `3.11`)
 
-**Dispatch order:** an overlay first, then resize mode's keys (any other key leaves resize mode
-and runs as usual), then a pending sequence (where `esc` cancels and `backspace` goes up a
-level), then the focused pane's keymap (explorer or outline), then visual mode's, then the normal
-keymap. Only keymaps at or above the one holding a binding can
+**Dispatch order:** a paste first, then an overlay, then a pane's filter while typing in it, then insert mode's
+keys (the completion popup's first), then a key awaited as a character (after `f`, `t`, `r`), then — in source mode
+and the lens — counts and an operator's motion around the rest (`vim.ts`), then resize mode's keys (any other key
+leaves resize mode and runs as usual), then a pending sequence (where `esc` cancels and `backspace` goes up a level),
+then the focused pane's keymap (explorer or outline), then visual mode's, then source mode's own (`[keys.source]`,
+in an editable window outside visual mode), then the normal keymap. Only keymaps at or above the one holding a binding can
 make a key a prefix: visual mode's `y` doesn't wait for the normal keymap's `y y`. When a key is
 both a binding and a prefix, slipbox waits `input.which_key_delay_ms` for the next key, then
 runs the binding.

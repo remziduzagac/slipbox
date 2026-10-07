@@ -1,7 +1,7 @@
 // What keeps a graph current with its vault's files (5.1, 5.9, 5.10): the watcher's batches,
 // applied to the graph — or, while git writes (its index lock), held and applied together after,
-// and the files a branch switch brings and takes not taken for moves. The TUI and the LSP server
-// (11.2) each keep a graph by one; what they do with the news is their own.
+// and the files a branch switch brings and takes not taken for moves. The TUI keeps its graph by
+// one; what it does with the news is its own.
 
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";

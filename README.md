@@ -11,7 +11,7 @@ editing, the lens, autosave and a conflict prompt), and an agent-drivable CLI. S
 
 ## Try it
 
-Requires [Bun](https://bun.sh) 1.3+.
+Requires [Bun](https://bun.sh) 1.4.2 or later (older ones crash in SQLite, which search uses).
 
 ```bash
 bun install

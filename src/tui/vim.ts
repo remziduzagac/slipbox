@@ -6,7 +6,10 @@
 import type { App, View } from "./app.ts";
 import * as C from "./cursor.ts";
 import * as E from "./editing.ts";
+import { keyChar } from "./keys.ts";
 import { textMatches } from "./replacing.ts";
+
+export { keyChar };
 
 type Op = "d" | "c" | "y" | ">" | "<";
 export type FindKind = "f" | "F" | "t" | "T";
@@ -52,16 +55,6 @@ export function takeCount(app: App): number {
   return Math.min(n, 10000);
 }
 
-/** The character a key types (`shift+w` is W, `shift+9` is `(`), or null for a named key. */
-export function keyChar(key: string): string | null {
-  if (key === "space") return " ";
-  if ([...key].length === 1) return key;
-  const m = /^shift\+(.)$/.exec(key);
-  if (!m) return null;
-  const SHIFTED: Record<string, string> = { "9": "(", "0": ")", "[": "{", "]": "}", ",": "<", ".": ">", "'": '"', "`": "~" };
-  return SHIFTED[m[1]!] ?? m[1]!.toUpperCase();
-}
-
 function idle(app: App, view: View): boolean {
   const s = app.vim;
   return !s.count && !s.op && !s.awaitChar && !view.insert;
@@ -94,12 +87,12 @@ async function handle(app: App, view: View, key: string, dispatch: () => Promise
   if (s.awaitChar) {
     const f = s.awaitChar;
     s.awaitChar = null;
-    const ch = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+    const ch = keyChar(key);
     if (ch !== null) f(ch);
     return;
   }
-  // A count: 1-9, then 0 too.
-  if (!app.pending.length && (/^[1-9]$/.test(key) || (key === "0" && s.count))) {
+  // A count: 1-9, then 0 too — not while an operator's f / t waits for its character (dt1).
+  if (!app.pending.length && !s.op?.char && (/^[1-9]$/.test(key) || (key === "0" && s.count))) {
     s.count += key;
     return;
   }
@@ -126,6 +119,14 @@ async function handle(app: App, view: View, key: string, dispatch: () => Promise
  */
 export async function visualKey(app: App, view: View, key: string, dispatch: () => Promise<void>): Promise<void> {
   const s = app.vim;
+  // A character for f / t (vf.): taken here, as in normal mode; esc cancels it.
+  if (s.awaitChar) {
+    const f = s.awaitChar;
+    s.awaitChar = null;
+    const ch = key === "escape" ? null : keyChar(key);
+    if (ch !== null) f(ch);
+    return;
+  }
   if (s.visualObject) {
     const kind = s.visualObject;
     s.visualObject = null;
@@ -182,7 +183,7 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
   // f / t after the operator: this key is the character.
   if (o.char) {
     s.op = null;
-    const ch = key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
+    const ch = keyChar(key);
     if (ch === null) return;
     s.lastFind = { kind: o.char, ch };
     return findRange(app, view, o.op, o.char, ch, count, false);
@@ -215,8 +216,10 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
   // . . . changes the matches one after another.
   if (seq === "g n" || seq === "g shift+n") {
     s.op = null;
-    const q = view.find?.query;
-    const ms = q ? textMatches(view, q) : [];
+    const f = view.find;
+    const q = f?.query;
+    // The search's own flags: after `*`, whole words only, as n has them.
+    const ms = q ? textMatches(view, q, undefined, { regex: f?.regex ?? false, whole: f?.whole ?? false }) : [];
     if (typeof ms === "string" || !ms.length) return app.message("info", q ? `not found: ${q}` : "no search yet for gn");
     const at = E.offsetOf(app, view);
     const m = seq === "g n" ? (ms.find((x) => x.to > at) ?? ms[0]!) : (ms.findLast((x) => x.from <= at) ?? ms[ms.length - 1]!);
@@ -360,7 +363,19 @@ export function finishSearchOp(app: App, view: View, found: boolean): void {
   const to = E.offsetOf(app, view);
   const r = { from: Math.min(s.from, to), to: Math.max(s.from, to), linewise: false };
   E.placeAt(app, view, s.from);
-  if (r.from < r.to) apply(app, view, s.op, r);
+  if (r.from >= r.to) return;
+  const before = view.buf.version;
+  apply(app, view, s.op, r);
+  // The prompt's keys never went through vimKey: the change is recorded here, for `.` — the
+  // operator's keys, the search typed again, enter (and for c, the text typed next, insertRecord).
+  const v = app.vim;
+  if (v.replaying || view.buf.version === before) return;
+  const query = view.find?.query ?? "";
+  v.seq = [...v.seq, ...[...query].map((c) => (c === " " ? "space" : c)), "enter"];
+  v.seqVersion = before;
+  v.undoing = false;
+  if (view.insert) v.inInsert = true;
+  else v.lastChange = [...v.seq];
 }
 
 /** Whole source lines `first`..`last` (1-based), with their line break. */

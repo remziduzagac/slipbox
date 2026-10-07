@@ -113,10 +113,12 @@ export function parseWikiTarget(raw: string): Pick<WikiLink, "target" | "heading
     block = rest.slice(caret + 2).trim() || null;
     rest = rest.slice(0, caret);
   } else {
+    // `note^id` too, but only an id after the caret, and no heading before it: a caret in a heading
+    // (`#O(n^2)`) or before what isn't an id (`f^(n)`) is the text's.
     const hat = rest.lastIndexOf("^");
-    const hash = rest.indexOf("#");
-    if (hat >= 0 && (hash < 0 || hat > hash)) {
-      block = rest.slice(hat + 1).trim() || null;
+    const id = rest.slice(hat + 1).trim();
+    if (hat >= 0 && !rest.slice(0, hat).includes("#") && /^[A-Za-z0-9-]+$/.test(id)) {
+      block = id;
       rest = rest.slice(0, hat);
     }
   }

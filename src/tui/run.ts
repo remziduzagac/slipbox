@@ -1,4 +1,4 @@
-// TUI bootstrap (3.1): locate the vault, build the graph, start OpenTUI, route input to the app.
+// TUI bootstrap (3.1): locate the root, build the graph, start OpenTUI, route input to the app.
 // Imported lazily by main.ts only when stdout and stdin are terminals (9.3).
 
 import { createCliRenderer, type KeyEvent } from "@opentui/core";
@@ -47,7 +47,7 @@ export function prepare(argv: string[]): Start | number {
     open: loc.file ?? null,
     themeName: flag(args, "theme"),
     configFile: flag(args, "config"),
-    // A loose folder opened without a file (`slipbox ~`): the known vaults first (17.14).
+    // A loose folder opened without a file (`slipbox ~`): the named folders first (17.14, 21.10).
     launcher: loc.mode === "folder" && !loc.file,
     recorded,
   };

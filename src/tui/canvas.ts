@@ -45,6 +45,16 @@ export function safeCell(g: string): string {
   return UNSAFE.test(g) ? sanitize(g) || " " : g;
 }
 
+/**
+ * A grapheme as this canvas puts it on screen: safe (`safeCell`), and with ASCII glyphs its
+ * look-alike — so a cell drawn on its own (the cursor's, a find match's, a filter's letter, a
+ * row scrolled sideways) is what drawText would have made of it.
+ */
+export function glyphCell(c: Canvas, g: string): string {
+  const s = safeCell(g);
+  return c.asciiGlyphs ? (ASCII_LOOKALIKE[s] ?? s) : s;
+}
+
 /** Draw `text` at (x, y), clipped to `maxW` columns. Returns the columns used. */
 export function drawText(c: Canvas, x: number, y: number, text: string, style: CellStyle, maxW = Number.POSITIVE_INFINITY): number {
   if (y < 0 || y >= c.height || maxW <= 0) return 0;
@@ -69,6 +79,7 @@ export function drawText(c: Canvas, x: number, y: number, text: string, style: C
 
 /** In-memory canvas: characters only, plus the style of each cell for assertions. */
 export class TextCanvas implements Canvas {
+  asciiGlyphs?: boolean;
   readonly rows: string[][];
   readonly styles: (CellStyle | null)[][];
   constructor(
@@ -103,7 +114,7 @@ export class TextCanvas implements Canvas {
   cell(x: number, y: number, g: string, w: number, style: CellStyle): void {
     if (y < 0 || y >= this.height || x < 0 || x >= this.width) return;
     this.splitWide(y, x, Math.min(this.width, x + Math.max(1, w)));
-    this.rows[y]![x] = safeCell(g);
+    this.rows[y]![x] = glyphCell(this, g);
     this.styles[y]![x] = style;
     for (let k = 1; k < w && x + k < this.width; k++) this.rows[y]![x + k] = "";
   }

@@ -191,7 +191,7 @@ await bench("cli: task tasks20k (the list)", async () => [await cli(["task", "ta
 await bench("cli: read k20", async () => [await cli(["read", "k20"]), await cli(["read", "k20"])]);
 await bench("cli: render k20 --plain", async () => [await cli(["render", "k20", "--plain"]), await cli(["render", "k20", "--plain"])]);
 await bench("cli: find link-7 (the vault)", async () => [await cli(["find", "link-7"]), await cli(["find", "link-7"])]);
-await bench("cli: backlinks link-7", async () => [await cli(["backlinks", "k1"]), await cli(["backlinks", "k1"])]);
+await bench("cli: backlinks k1", async () => [await cli(["backlinks", "k1"]), await cli(["backlinks", "k1"])]);
 
 // The parse cache by content (20.11): a vault of many notes indexed once, then a second copy of it —
 // a worktree, a clone — indexed with the parse cache shared, and without it. Measured, not assumed.

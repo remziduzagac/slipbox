@@ -111,10 +111,11 @@ export class Reach implements VaultReach {
     this.knownCache = null;
   }
 
-  /** The converter's `[[name:note]]` (17.8): the note in the folder of that name (21.6), as a pointer finds it. */
+  /** The converter's `[[name:note]]` (17.8): the note in the folder of that name (21.6), as a pointer
+   *  finds it; null when no folder has that name (`[[Meeting: Q3]]` may be an alias, 21.3). */
   wiki(vault: string, target: string, _g: Graph): Target | null {
     const l = lookupFolder(vault);
-    if (l.status === "unknown") return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `unknown folder "${vault}"` };
+    if (l.status === "unknown") return null;
     if (l.status === "ambiguous") return { resolvedKind: "ambiguous", path: null, candidates: l.folders.map((f) => f.default ?? f.copies[0]!.path).sort(), vault, reason: l.reason };
     if (l.status === "unavailable") return { resolvedKind: "unresolved", path: null, candidates: [], vault, reason: `folder "${vault}" was last seen at ${l.path}` };
     const there = this.graphAt(l.path);
@@ -177,7 +178,15 @@ export class Reach implements VaultReach {
       const r = g.resolveLink({ kind: "markdown", target: posix.normalize(relative(g.root, abs)) }, "");
       return (r.resolvedKind === "note" || r.resolvedKind === "file") && r.path && !isAbsolute(r.path) ? r.path : null;
     };
-    if (l.kind !== "markdown") return null;
+    // A wikilink or embed reaches another root by a path out of its own (`[[../A/note]]`, as the
+    // graph reads it); names stay within their root (21.3).
+    if (l.kind === "wiki" || l.kind === "embed") {
+      if (!/^\.\.?\//.test(l.target)) return null;
+      const hit = pathLink(l.target, linking, true);
+      return hit ? inG(hit.abs) : null;
+    }
+    // A picture's link counts as a link's does (its notes are its backlinks).
+    if (l.kind !== "markdown" && l.kind !== "image") return null;
     // A pointer (21.7): where this machine has its folder — here, a backlink.
     if (isPointer(l.target)) {
       const p = parsePointer(l.target);

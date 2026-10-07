@@ -81,9 +81,9 @@ screen, unbreakable tokens, lines over the limit, every link form, CJK, emoji an
 `about-this-vault.md` says what each note exercises; `scripts/sample-metrics.ts` measures it, so a
 change to a note can be checked against what it has to keep covering. The TUI tests copy its notes
 into a temporary fixture vault as `samples/` (without its marker, which would make it a nested
-vault). The demo vault is named `halden` and holds two nested vaults, `outreach/` and
+root). The demo vault is named `halden` and holds two nested roots, `outreach/` and
 `outreach/school-visits/`, linked every way across (its `about-this-vault.md`, "Nested vaults"): the
-material for trying vaults by hand, and the e2e scenario "nested vaults".
+material for trying nested roots by hand, and the e2e scenario "nested roots".
 
 ## The reference set: `examples/home/`
 
@@ -159,6 +159,7 @@ bun run e2e find replace     # only the scenarios whose names contain these
 | `tests/e2e/world-content.ts` | the set's content: every grammar, data, hostile text, wide characters, big files |
 | `tests/e2e/world-terminal.ts` | slipbox as a process: start-up forms, signals, restore, keys, pastes, colours |
 | `tests/e2e/world-outside.ts` | the world changing under it: the watcher, the CLI beside it, config, autosave |
+| `tests/e2e/world-links.ts` | links as `21.x` reads them: `/` from a root, no extension, folders, wikilinks |
 
 ## Timings (`bun scripts/bench.ts`)
 

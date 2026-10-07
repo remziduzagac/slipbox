@@ -1,5 +1,6 @@
 // Parse pipeline (plan 1.3): remark + gfm + frontmatter + wikilinks + tags (1.6). Wikilinks are read
-// again (21.3): within their root, by the graph. The converter (20.1) reads them by `parseLegacy`.
+// again (21.3): within their root, by the graph. The converter (20.1) parses the same way
+// (`parseLegacy`); it differs only in resolving them by `Graph.resolveLegacyWiki`.
 // mdast carries source positions, which is why remark was chosen over marked.
 
 import type { Heading, Nodes, Root, Yaml } from "mdast";
@@ -25,17 +26,9 @@ const bodyProcessor = unified()
   .use(remarkGfm)
   .use(remarkWikiLink as never)
   .use(remarkHashtag as never);
-/** Wikilinks too, as notes were read before plain paths (20.2): the converter's only (20.1). */
-const legacyProcessor = unified()
-  .use(remarkParse)
-  .use(remarkGfm)
-  .use(remarkFrontmatter, ["yaml", "toml"])
-  .use(remarkWikiLink as never)
-  .use(remarkHashtag as never);
-
-/** A note's tree with its wikilinks read (`wikiLink` nodes), as before plain paths: for the converter. */
+/** A note's tree with its wikilinks read (`wikiLink` nodes), in one parse: for the converter (20.1). */
 export function parseLegacy(source: string): Root {
-  return legacyProcessor.parse(source) as Root;
+  return processor.parse(source) as Root;
 }
 
 export interface Frontmatter {
@@ -302,19 +295,25 @@ function shifted<T>(nodes: T[], delta: number): T[] {
   return nodes.map(copy) as T[];
 }
 
-/** Positions carry lines and columns only: an offset would go stale when chunks are reused. */
-/**
- * A quote whose text starts with an escaped bracket (`> \[!note]`) is marked `literal`: its author
- * wrote the brackets to be read, not a callout. Only the source tells (the escape is gone from the
- * text), so it's marked here, while the offsets are there.
- */
+/** What a parsed chunk's nodes get, however it was parsed (here or on another thread, 15.1): quotes
+ *  and heading ids marked from `text`, then the offsets dropped. */
+function finish(nodes: unknown[], text: string): void {
+  markLiteralQuotes(nodes, text);
+  markHeadingIds(nodes);
+  dropOffsets(nodes);
+}
+
+/** A heading's trailing `{#id …}` (Pandoc's attributes): the id in group 1. Source mode's heading
+ *  scan reads it with the same rule. */
+export const HEADING_ID = /\s*\{#([^\s{}#]+)(?:\s[^{}]*)?\}\s*$/;
+
 /** A heading's trailing `{#id …}` (Pandoc's attributes): its id, kept on the node, the text without it. */
 function markHeadingIds(nodes: unknown[]): void {
   for (const n of nodes) {
     const node = n as Nodes;
     if (node.type === "heading") {
       const last = node.children[node.children.length - 1];
-      const m = last?.type === "text" ? /\s*\{#([^\s{}#]+)(?:\s[^{}]*)?\}\s*$/.exec(last.value) : null;
+      const m = last?.type === "text" ? HEADING_ID.exec(last.value) : null;
       if (last?.type === "text" && m) {
         last.value = last.value.slice(0, m.index);
         ((node.data ??= {}) as { id?: string }).id = m[1]!;
@@ -325,6 +324,11 @@ function markHeadingIds(nodes: unknown[]): void {
   }
 }
 
+/**
+ * A quote whose text starts with an escaped bracket (`> \[!note]`) is marked `literal`: its author
+ * wrote the brackets to be read, not a callout. Only the source tells (the escape is gone from the
+ * text), so it's marked here, while the offsets are there.
+ */
 function markLiteralQuotes(nodes: unknown[], text: string): void {
   for (const n of nodes) {
     const node = n as Nodes;
@@ -338,6 +342,7 @@ function markLiteralQuotes(nodes: unknown[], text: string): void {
   }
 }
 
+/** Positions carry lines and columns only: an offset would go stale when chunks are reused. */
 function dropOffsets(nodes: unknown[]): void {
   for (const n of nodes) {
     const node = n as { position?: { start: { offset?: number }; end: { offset?: number } }; children?: unknown[] };
@@ -377,7 +382,7 @@ export function noteChunks(source: string): { text: string; first: boolean }[] {
 /** A chunk's top-level nodes, as `parseMarkdown` parses it: positions from line 1, no offsets. */
 export function parseChunk(text: string, first: boolean): Root["children"] {
   const root = (first ? processor : bodyProcessor).parse(text) as Root;
-  dropOffsets(root.children);
+  finish(root.children, text);
   return root.children;
 }
 
@@ -421,9 +426,7 @@ export function parseMarkdown(source: string, cache?: ParseCache, opts: { whole?
       };
       const kids = stubs.length ? root.children.filter((n) => !isStub(n)) : root.children;
       const stubbed = !stubs.length || root.children.length - kids.length === stubs.length;
-      markLiteralQuotes(kids, text);
-      markHeadingIds(kids);
-      dropOffsets(kids);
+      finish(kids, text);
       for (const k of kids) (k as unknown as Record<symbol, object>)[ORIGIN] = {};
       entry = { children: from - pre ? shifted(kids, from - pre) : kids, shift: from, stubbed };
     }

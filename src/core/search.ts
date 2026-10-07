@@ -444,12 +444,15 @@ export function parseQuery(input: string): SearchQuery {
   return q;
 }
 
+/** A term for FTS5: quoted (never its syntax), `*` for a prefix, in the title's columns for `title:`. */
+function ftsTerm(t: QueryTerm): string {
+  const s = `"${t.text.replace(/"/g, '""')}"${t.prefix ? "*" : ""}`;
+  return t.title ? `{title aliases} : ${s}` : s;
+}
+
 /** The query for FTS5: each term quoted; all the positive ones (or any, `relaxed`), none of the rest. */
 export function ftsMatch(q: SearchQuery, relaxed = false): string | null {
-  const one = (t: QueryTerm) => {
-    const s = `"${t.text.replace(/"/g, '""')}"${t.prefix ? "*" : ""}`;
-    return t.title ? `{title aliases} : ${s}` : s;
-  };
+  const one = ftsTerm;
   const pos = q.terms.filter((t) => !t.not).map(one);
   if (!pos.length) return null;
   const neg = q.terms.filter((t) => t.not).map(one);
@@ -505,14 +508,22 @@ function fold(text: string): { folded: string; at: number[] } {
 
 const isWordChar = (c: string | undefined) => !!c && /[\p{L}\p{N}]/u.test(c);
 
-/** Where a term occurs in folded text as the tokenizer would see it: at a word's start, and (unless a prefix) its end. */
-function occurrences(folded: string, term: QueryTerm): number[] {
-  const t = fold(term.text).folded;
-  const out: number[] = [];
-  for (let i = folded.indexOf(t); i >= 0; i = folded.indexOf(t, i + 1)) {
+/**
+ * Where a term occurs in folded text as the tokenizer would see it, start and end: its words in order,
+ * whatever is between them (a space, a line break, a comma), at a word's start and (unless a prefix)
+ * its end — as FTS5 matches a phrase, so the scan finds what the index does.
+ */
+function occurrences(folded: string, term: QueryTerm): [number, number][] {
+  const words = fold(term.text).folded.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  if (!words.length) return [];
+  const re = new RegExp(words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^\\p{L}\\p{N}]+"), "gu");
+  const out: [number, number][] = [];
+  for (const m of folded.matchAll(re)) {
+    const i = m.index;
+    const end = i + m[0].length;
     if (isWordChar(folded[i - 1])) continue;
-    if (!term.prefix && isWordChar(folded[i + t.length])) continue;
-    out.push(i);
+    if (!term.prefix && isWordChar(folded[end])) continue;
+    out.push([i, end]);
   }
   return out;
 }
@@ -539,7 +550,7 @@ function locate(path: string, group: "note" | "data", text: string, score: numbe
       const { folded, at } = fold(l.text);
       let col = -1;
       for (const t of pos) {
-        const o = occurrences(folded, t)[0];
+        const o = occurrences(folded, t)[0]?.[0];
         if (o === undefined) continue;
         seen.add(t);
         if (col < 0 || o < col) col = o;
@@ -566,11 +577,15 @@ function snippetOf(raw: string, pos: QueryTerm[]): { snippet: string; marks: [nu
   const find = () => {
     const { folded, at } = fold(line);
     const marks: [number, number][] = [];
-    for (const t of pos) {
-      const len = fold(t.text).folded.length;
-      for (const o of occurrences(folded, t)) marks.push([at[o]!, at[o + len] ?? line.length]);
+    for (const t of pos) for (const [s, e] of occurrences(folded, t)) marks.push([at[s]!, at[e] ?? line.length]);
+    // One mark where two meet or overlap (`new "new york"`): shown once.
+    const merged: [number, number][] = [];
+    for (const m of marks.sort((a, b) => a[0] - b[0] || a[1] - b[1])) {
+      const last = merged.at(-1);
+      if (last && m[0] <= last[1]) last[1] = Math.max(last[1], m[1]);
+      else merged.push([m[0], m[1]]);
     }
-    return marks.sort((a, b) => a[0] - b[0]);
+    return merged;
   };
   let marks = find();
   if (line.length > SNIPPET && marks.length) {
@@ -593,7 +608,9 @@ export function search(g: Graph, idx: SearchIndex | null, input: string, opts: {
   if (!q.terms.some((t) => !t.not)) {
     // Filters alone: the files they keep, by path.
     if (!q.tags.length && !q.paths.length) return { engine, relaxed: false, hits: [] };
-    const files = idx ? idx.filesWhere({ tags: q.tags, pathPrefix: q.paths, limit }) : scanFiles(g, q, opts.texts).slice(0, limit);
+    // Less the files with a word they mustn't have (`#project -draft`).
+    const not = q.terms.length ? q.terms.map(ftsTerm).join(" OR ") : undefined;
+    const files = idx ? idx.filesWhere({ tags: q.tags, pathPrefix: q.paths, not, limit }) : scanFiles(g, q, opts.texts).slice(0, limit);
     // Nothing read: the file's top stands for where it's hit.
     return { engine, relaxed: false, hits: files.map((path) => ({ path, line: 1, column: 1, heading: "", section: { name: "§:file", line: 1, end: 1 }, score: 0, snippet: "", marks: [], more: 0 })) };
   }
@@ -634,15 +651,31 @@ function scanned(g: Graph, texts?: Map<string, string>, only?: string[]): Scanne
   return out;
 }
 
+/** ASCII letters lowered, as SQLite's LIKE compares them: the index's `path:` and the scan's agree. */
+const asciiLower = (s: string) => s.replace(/[A-Z]/g, (c) => c.toLowerCase());
+
 function keeps(f: Scanned, q: SearchQuery): boolean {
-  if (q.paths.length && !q.paths.some((p) => f.path.startsWith(p))) return false;
+  if (q.paths.length && !q.paths.some((p) => asciiLower(f.path).startsWith(asciiLower(p)))) return false;
   const tags = f.doc.tags.map((t) => t.toLowerCase());
   return q.tags.every((t) => tags.some((x) => x === t || x.startsWith(`${t}/`)));
 }
 
+/** A scanned file's fields, folded: title, aliases, tags, path, headings, text (the index's columns). */
+function foldedFields(f: Scanned): string[] {
+  const d = f.doc;
+  return [d.title, d.aliases.join("\n"), d.tags.join("\n"), f.path, d.headings.map((h) => h.text).join("\n"), f.text].map((x) => fold(x).folded);
+}
+
+/** How often a term occurs in each field (`title:` in the title and aliases only). */
+function countsIn(fields: string[], t: QueryTerm): number[] {
+  return fields.map((x, k) => (t.title && k > 1 ? 0 : occurrences(x, t).length));
+}
+
 function scanFiles(g: Graph, q: SearchQuery, texts?: Map<string, string>): string[] {
+  const neg = q.terms.filter((t) => t.not);
   return scanned(g, texts)
     .filter((f) => keeps(f, q))
+    .filter((f) => !neg.length || !neg.some((t) => countsIn(foldedFields(f), t).some((n) => n > 0)))
     .map((f) => f.path)
     .sort();
 }
@@ -654,9 +687,8 @@ function scanSearch(g: Graph, q: SearchQuery, limit: number, texts?: Map<string,
   const files = scanned(g, texts, only).filter((f) => keeps(f, q));
   const cands: { f: Scanned; counts: number[][] }[] = [];
   for (const f of files) {
-    const d = f.doc;
-    const fields = [d.title, d.aliases.join("\n"), d.tags.join("\n"), f.path, d.headings.map((h) => h.text).join("\n"), f.text].map((x) => fold(x).folded);
-    const count = (t: QueryTerm) => fields.map((x, k) => (t.title && k > 1 ? 0 : occurrences(x, t).length));
+    const fields = foldedFields(f);
+    const count = (t: QueryTerm) => countsIn(fields, t);
     if (neg.some((t) => count(t).some((n) => n > 0))) continue;
     cands.push({ f, counts: pos.map(count) });
   }

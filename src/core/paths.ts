@@ -1,7 +1,7 @@
 // Storage layout (decision 0.10, docs/design/decisions.md; 17.3): config vs cache vs state vs data.
 //
-// A vault's cache and state are found by its storage key (`VaultLocation.key`): its id when it has
-// one (so they survive moving the folder), else `<basename>-<hash12>` of its path.
+// A root's cache and state are found by its key (`VaultLocation.key`): `<basename>-<hash12>` of its
+// real path (21.8); a named folder moved by hand has them carried (vault.ts `recordLocation`).
 
 import { createHash } from "node:crypto";
 import { realpathSync } from "node:fs";
@@ -55,7 +55,7 @@ export function cacheHome(): string {
   return join(xdg("XDG_CACHE_HOME", ".cache"), "slipbox");
 }
 
-/** Personal state for the machine: `vaults.json`, and a directory per vault. */
+/** Personal state for the machine (`roots.json`, `folders.json`, `positions.json`), and a directory per root. */
 export function stateHome(): string {
   return join(xdg("XDG_STATE_HOME", ".local/state"), "slipbox");
 }

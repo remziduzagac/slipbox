@@ -170,10 +170,10 @@ as vim's and blink.cmp's:
 | Action | Direct keys | Leader |
 | --- | --- | --- |
 | back / forward | `ctrl+o` / `alt+right`, `alt+left` (back) | `space h p` / `space h n` |
+| history, in the left panel (open → focus → close) | — | `space h h` |
 
 Vim's forward is `ctrl+i`, but terminals send `ctrl+i` as `tab`, which is next link here: forward is
 `alt+right` (VS Code's) and `space h n`.
-| history, in the left panel (open → focus → close) | — | `space h h` |
 
 ## Windows — `space w`
 
@@ -363,7 +363,6 @@ Below `ui.narrow_width` columns (default 90), the explorer and the outline open 
 | search here, ranked as you type (`:search`); `ctrl+a` more folders (`20.16`); enter opens | — | `space f s` |
 | go to a line by number (`:42` too) | `ctrl+g` | `space f l` |
 | command palette / command line | `:`, `ctrl+shift+p` | `space f p` |
-| *(reserved for phase 4)* tags | — | `space f t` |
 
 `n` always goes to the match after the cursor and `shift+n` to the one before, wherever it has
 moved since the last one — never vim's "the way the search went" — and they wrap around the note
@@ -571,7 +570,7 @@ edit the config and the config wins again.
 | `space v c` | reload the configuration (it also reloads by itself when a config file is saved) |
 | `space m` | messages |
 | `?`, `space ?` | help: every key, grouped, searchable (commands, panes, resize mode, mouse); `enter` runs a command |
-| `space q q` | quit (also `ctrl+q`, `:q`) |
+| `space q q` | quit (also `ctrl+q`, `:qa`) |
 
 ## In lists and prompts
 
@@ -640,8 +639,11 @@ mouse off, which gives it back to the terminal.
   terminal passes them through. Their alternatives always work.
 - **Keypad:** under the kitty protocol its keys arrive apart from the main ones; `enter`, the arrows
   and the paging keys on it act like the main ones. Legacy terminals send `ctrl+j` as a line feed,
-  which slipbox reads as `ctrl+j`.
-- **Older terminals:** `ctrl+shift+e`, `ctrl+tab`, `ctrl+enter` and `ctrl+backspace` can't be
-  told apart from their plain forms. Each one has a fallback that works everywhere.
+  which slipbox reads as `ctrl+j`. A shifted space, which the kitty protocol reports apart
+  (`shift+space`), types a space wherever text is typed: insert mode, a prompt, a filter, `f`'s
+  character.
+- **Older terminals:** `ctrl+shift+f`, `ctrl+shift+p`, `ctrl+shift+n`, `ctrl+shift+tab`, `ctrl+tab`,
+  `ctrl+enter` and `ctrl+backspace` can't be told apart from their plain forms. Each one has a
+  fallback that works everywhere.
 - **Multiplexers:** zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`, and tmux and herdr
   take `ctrl+b`, which slipbox doesn't use. The leader routes always work.

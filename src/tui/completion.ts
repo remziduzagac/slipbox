@@ -2,8 +2,8 @@
 // cursor — at once after one of its trigger characters (`.`), else once a word is begun, after a
 // pause — narrowed as typing goes on, asked again only when the server said its list was partial.
 // And signature help after `(` and `,`. A popup under the cursor; the keys are vim's and blink's.
-// In a note, a link's target is slipbox's own to complete (20.13): the files it could reach, in
-// their vault form and their full path; the one picked written as the root's convention writes it
+// In a note, a link's target is slipbox's own to complete (20.13): the files it could reach, by
+// their path as shown (21.9) and their full path; the one picked written as the root's convention writes it
 // (21.5) — a markdown link's path as its path and extension say, a wikilink's (`[[`) by name or path.
 
 import { existsSync } from "node:fs";
@@ -17,8 +17,10 @@ import { cacheDir } from "../core/paths.ts";
 import { readRoots } from "../core/registry.ts";
 import { homeFolder } from "../core/vault.ts";
 import type { App, View } from "./app.ts";
-import { offsetOf, placeAt } from "./editing.ts";
+import { offsetOf, placeAt, prevBoundary } from "./editing.ts";
+import { keyChar } from "./keys.ts";
 import { rank } from "./match.ts";
+import { PASTE } from "./vim.ts";
 
 export interface CompletionState {
   view: View;
@@ -48,11 +50,6 @@ export function wordStart(source: string, at: number): number {
   let i = at;
   while (i > 0 && WORD.test(source[i - 1]!)) i--;
   return i;
-}
-
-/** What a key types, if it's text. */
-function typedOf(key: string): string | null {
-  return key === "space" ? " " : [...key].length === 1 ? key : /^shift\+.$/.test(key) ? key.slice(6).toUpperCase() : null;
 }
 
 /** A key in insert mode while the popup shows: true when it's the popup's — moving, accepting, closing. */
@@ -110,7 +107,7 @@ export function afterInsertKey(app: App, view: View, key: string): void {
     app.signature = null;
     return;
   }
-  const typed = typedOf(key);
+  const typed = keyChar(key);
   const at = offsetOf(app, view);
   const from = wordStart(view.buf.source, at);
   const t = app.serverTriggers(view.buf.abs);
@@ -165,7 +162,7 @@ function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
   const item = (abs: string, form: string, here: boolean): CompletionItem => {
     const dest = linkDestination(c, style, linkEnds(g, view.buf.abs, abs));
     return {
-      // A wikilink's shows what it writes (a name, a path); a markdown link's, the file as the vault shows it.
+      // A wikilink's shows what it writes (a name, a path); a markdown link's, the file by its path as shown (21.9).
       label: style === "wiki" ? dest : form,
       detail: style === "wiki" ? form : tilde(abs),
       filterText: `${form} ${dest} ${abs}`,
@@ -243,6 +240,19 @@ function accept(app: App, c: CompletionState): void {
   const from = edit ? offset("range" in edit ? edit.range.start : edit.insert.start) : c.from;
   const raw = edit ? edit.newText : (item.insertText ?? item.label);
   const text = item.insertTextFormat === 2 ? plain(raw) : raw;
+  // For `.`: the accept as the keys that make the same text — a backspace per character it
+  // replaced, then the rest as a paste (a key of its own, insertRecord). Edits elsewhere (an
+  // import added) can't be said in keys: then the change isn't repeated at all, never wrongly.
+  const s = app.vim;
+  if (s.inInsert && !s.replaying) {
+    if (item.additionalTextEdits?.length || from > at) {
+      s.inInsert = false;
+      s.lastChange = null;
+    } else {
+      for (let k = at; k > from; k = prevBoundary(buf.source, k)) s.seq.push("backspace");
+      s.seq.push(`${PASTE}${text}`);
+    }
+  }
   buf.edit(from, at - from, text);
   placeAt(app, view, from + text.length, true);
   if (item.additionalTextEdits?.length) applyElsewhere(app, view, item.additionalTextEdits);

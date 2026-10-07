@@ -40,10 +40,10 @@ function eol(view: View, text: string): string {
   return view.buf.eol === "\n" ? text : text.replace(/\r?\n/g, view.buf.eol);
 }
 
-/** The query's matches in the note's text, within the replace's range. */
-export function textMatches(view: View, query: string, range?: [number, number]): TextMatch[] | string {
+/** The query's matches in the note's text, within the replace's range; with the find row's
+ *  toggles, or with `opts` (gn: the search's own, which `*` made whole words). */
+export function textMatches(view: View, query: string, range?: [number, number], opts = view.findOpts ?? { regex: false, whole: false }): TextMatch[] | string {
   if (!query) return [];
-  const opts = view.findOpts ?? { regex: false, whole: false };
   const re = compilePattern(query, opts);
   if (typeof re === "string") return re;
   return findAll(view.buf.source, re, range?.[0] ?? 0, range?.[1] ?? view.buf.source.length);

@@ -99,7 +99,10 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
   `--whole` for whole words. `replace` changes every match, or `--first`, or `--first-per-line`,
   within `--lines A-B` if given; read `data.changes[].text` / `textAfter` before you run it without
   `--dry-run` — a match inside a longer word shows there.
-- **Flags** a command doesn't take are refused (exit 2): only `replace` has `--dry-run`.
+- **Flags** a command doesn't take are refused (exit 2), so `write --dry-run` can't write. The commands that
+  change files beyond a note's text — `replace`, `mv`, `rm`, `rename-heading`, `relink`, `convert-links`, `undo`,
+  `name`, `init`/`deinit`, `apply` — take `--dry-run`. Those that plan edits take `--plan`: it saves the plan, writing
+  nothing, and `slipbox apply <id>` writes it. `write` has neither.
 - **Writing:** empty or blank text is refused (exit 2) so a failed pipe can't empty a note. `--append` adds a
   line; `--append --paragraph` adds a block of its own (after a table or paragraph, plain `--append`
   would join it). `--create` paths are from the root unless they start with `./` or `../`;
@@ -108,11 +111,12 @@ list is advisory), and the user then gets a conflict prompt, so ask before writi
 - **Names:** a bare name resolves the same from any folder; if several notes share it you get exit 4
   and `data.candidates` — pick one by path, or add `--from <note>` for the one nearest it. (For
   `send`, the candidates are nvims: objects with `socket`, `cwd`, `file`.)
-- **Link status:** `links` says `note`, `file`, `anchor`, `external`, `ambiguous` or `unresolved`;
+- **Link status:** `links` says `note`, `file`, `folder`, `anchor`, `external`, `ambiguous` or `unresolved`;
   `resolve` says `resolved`, `external`, `ambiguous` or `unresolved`.
 - **What the user sees:** `history --json` gives `current` (the note on screen, saved by the running
   TUI within a second of a change) and `read` (newest first, `exists: false` for deleted ones).
-- **The scratch's project** is the root, else the git top level, else the current folder.
+- **The scratch's project** is the root (the nearest folder holding a root marker: `.git`, `.slipbox`… by default),
+  else the folder you're in.
 
 ## Following links
 

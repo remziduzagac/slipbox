@@ -254,12 +254,7 @@ export function pathForm(target: string): PathForm | null {
 }
 
 /**
- * The file a path link names (17.16): `target` (without its `#fragment`) from the linking file.
- * A markdown link's path is percent-decoded; a wikilink's without an extension names a note
- * (`.md`, `.markdown`). Null when it isn't a path form, or names no file.
- */
-/**
- * The file a path link names, there or not (20.17: where a moved vault's files were): its form and
+ * The file a path link names, there or not (20.17: where a moved root's files were): its form and
  * absolute path, read as `pathLink` reads it but without asking the disk.
  */
 export function pathNamed(target: string, linkingAbs: string): { form: PathForm; abs: string } | null {
@@ -276,6 +271,11 @@ export function pathNamed(target: string, linkingAbs: string): { form: PathForm;
   return { form, abs: form === "home" ? join(homeDir(), raw.slice(2)) : form === "absolute" ? raw : resolve(dirname(linkingAbs), raw) };
 }
 
+/**
+ * The file a path link names (17.16): `target` (without its `#fragment`) from the linking file.
+ * A markdown link's path is percent-decoded; a wikilink's without an extension names a note
+ * (`.md`, `.markdown`). Null when it isn't a path form, or names no file.
+ */
 export function pathLink(target: string, linkingAbs: string, wiki: boolean, rebase?: { from: string; to: string }, dirs = false): { form: PathForm; abs: string; folder?: boolean } | null {
   const form = pathForm(target);
   if (!form) return null;

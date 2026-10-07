@@ -6,7 +6,7 @@ behaviour, the matching document changes in the same commit.
 
 | Document | Covers |
 | --- | --- |
-| [decisions.md](decisions.md) | answers to the plan's **decide** items: `0.10` `0.11` `9.1` `1.4` `3.5` `3.11`; phase 3 |
+| [decisions.md](decisions.md) | every decision the plan's items needed, by item ID (`0.10` … `21.x`); phase 3 |
 | [architecture.md](architecture.md) | one core and two faces, the boundary, modules, storage, performance |
 | [rendering.md](rendering.md) | phase 1: layout IR, blocks, tables, wrapping, themes, glyphs, escapes |
 | [tui.md](tui.md) | phases 2–3: the TUI — reading, navigation, watching, editing, the lens, saving |

@@ -74,6 +74,9 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/mergereview.ts` | 20.21 | before a merge: the links `git merge-tree`'s result would break, each cause and fix |
 | `core/reach.ts` | 17.9–17.11 | other roots: paths out of the root, their backlinks here; the converter's `[[x:…]]` |
 | `core/redirects.ts` | 17.12 | moves seen, by content hash; where an old path went |
+| `core/rename.ts` | 7.1–7.3, 17.15, 20.19 | renames and moves: each link rewritten as byte-range edits, previewed |
+| `core/plans.ts` | 20.18 | edits as plans: saved, tied to file contents, refused once stale, applied once |
+| `core/convert.ts` | 20.1 | the converter: `[[…]]` and `/…` links made relative paths, by their own old rules |
 | `core/rename-log.ts` | 7.4 | each rename's files and moves, as it found them: what an undo gives back |
 | `core/files.ts` | 18.4, 18.5, 18.11 | delete to the vault's trash and restore; copy; an unmade vault's `.slipbox/` |
 | `core/walk.ts` | 1.2, 0.11 | the walk and `WalkFilter`, shared with the watcher |
@@ -85,6 +88,8 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
 | `core/search.ts` | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
 | `core/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
+| `core/scope.ts` | 20.16, 21.10 | search by root: `here`, then linked roots, then every root known (`--scope`) |
+| `core/autoindex.ts` | 20.9 | the background auto-index: the home folder walked in slices, its roots indexed |
 | `core/sqlite.ts` | 6.6 | better-sqlite3, loaded so a compiled binary embeds its SQLite |
 | `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
@@ -103,6 +108,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/layout/source.ts` | 4.13 | the markdown as a layout, with each cell's source offset |
 | `core/layout/live.ts` | 4.14 | a note's blocks; the lens composed into the render |
 | `core/tasks.ts` | 4.11 | a task's checkbox toggled as a one-byte edit |
+| `core/words.ts` | — | word counts for the status line and note info: Han and kana by character |
 | `core/editor.ts` | 4.1, 4.2, 4.12 | hand-off templates to argv, never through a shell |
 | `core/nvim.ts` | 4.12 | finding and asking the running nvims |
 | `core/replace.ts` | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
@@ -113,7 +119,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/command-specs.ts` | 0.8, parity | every command id with its CLI equivalent |
 | `core/position.ts` | 3.4, 3.5, 3.15 | anchors, reading positions, session file |
 | `core/watch.ts` | 5.1, 5.2 | per-directory watcher, debounce, polling fallbacks |
-| `core/vault-feed.ts` | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI, LSP) |
+| `core/vault-feed.ts` | 5.1, 5.9, 5.10 | the watcher's news into a graph, held while git writes (TUI) |
 | `core/capture.ts` | 8.2–8.4 | scratch location, reference format, append |
 | `core/context.ts` | 9.7 | the context bundle: a note, its links and backlinks, as one document for an agent |
 | `core/lint.ts` | 3.21 | the lint surface: your markdownlint-cli2 run, its findings read |

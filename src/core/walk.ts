@@ -66,8 +66,12 @@ export class WalkFilter {
     const parts = rel.split("/");
     if (parts.some((p) => !p || p === "." || p === "..")) return false;
     for (let i = 0; i < parts.length; i++) {
-      const why = this.exclusion(parts.slice(0, i + 1).join("/"), i < parts.length - 1);
+      const prefix = parts.slice(0, i + 1).join("/");
+      const why = this.exclusion(prefix, i < parts.length - 1);
       if (why !== null && why !== "hidden" && why !== ".gitignore") return false;
+      // A root of its own, hidden or git-ignored too (a vendored clone): `exclusion` says why the
+      // walk skips it before it looks for markers.
+      if (why !== null && i < parts.length - 1 && isVaultRoot(join(this.root, prefix))) return false;
     }
     return true;
   }
@@ -95,7 +99,8 @@ export class WalkFilter {
       dir = dir ? `${dir}/${parts[i]}` : parts[i]!;
     }
     if (ignored) return ".gitignore";
-    // A `.slipbox/` folder or a git checkout (a repository, a submodule) inside: a vault of its own (20.3).
+    // A folder holding a root marker (`walk.root_markers`, 21.1: `.git`, `.slipbox/`, `.obsidian/`, `.zk/`…)
+    // inside: a root of its own (20.3).
     if (isDir && isVaultRoot(join(this.root, rel))) return "nested vault";
     return null;
   }

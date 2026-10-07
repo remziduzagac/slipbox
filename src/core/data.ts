@@ -660,8 +660,10 @@ export interface DataLink {
 }
 
 /** The link a key's value is, if any: a URL, a reference key's value, or a path-like string (which
- *  counts only if it resolves — the caller checks). */
-export function fieldLink(f: Pick<DataField, "key" | "value">): { target: string; explicit: boolean } | null {
+ *  counts only if it resolves — the caller checks). Only a single text value is one: a list, a
+ *  number, a boolean, a date or a null under `includes` or `path` is no link. */
+export function fieldLink(f: Pick<DataField, "key" | "value"> & { kind?: DataField["kind"] }): { target: string; explicit: boolean } | null {
+  if (f.kind && f.kind !== "string" && f.kind !== "other") return null;
   const v = f.value.trim();
   if (!v || v.length > 500) return null;
   if (URL.test(v)) return { target: v, explicit: true };

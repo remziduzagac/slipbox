@@ -155,8 +155,9 @@ One policy everywhere, never the filesystem's:
   Turkish i's fold too (2026-10-06): `İ` lowers to `i` with a combining dot, which goes, and `ı` is `i` — so `[[izmir]]`
   finds `İzmir.md` and `[[ILIK]]` `ılık.md`; the exact spelling still breaks a tie (`links.ts` `normKey`).
 - **Forms.** `[[name]]` matches file basenames without extension. `[[dir/name]]` matches a path suffix aligned on
-  segments. `[[name.md]]` is accepted. `#heading`, `^block` and `|alias` are split off first; `\|` is an alias
-  divider too, because that is how a wikilink is written inside a table cell.
+  segments. `[[name.md]]` is accepted. `#heading`, `#^block` and `|alias` are split off first; `\|` is an alias
+  divider too, because that is how a wikilink is written inside a table cell. A bare `^block` (`[[name^id]]`) only
+  when an id (letters, digits, `-`) follows the caret and no `#` comes before it: `[[n#O(n^2)]]` is a heading.
 - **Collisions** are a candidate list, never a silent pick. Disambiguation order: an exact-case match; then a candidate
   in the linking note's own directory; then the deepest shared directory with the linking note; then the shortest
   path (Obsidian's shortest-when-unambiguous). Still tied → **ambiguous**, all candidates returned, and the TUI shows
@@ -243,9 +244,11 @@ you say so, and so is text written over a frontmatter that changed under it.
 Language servers and linters run the project's code: rust-analyzer its build scripts, the ESLint server its
 `eslint.config.js`, the project's own `node_modules/.bin` and `.venv/bin`. Decided 2026-10-01 with the user:
 **everything is trusted**, as nvim and Helix trust it — no question per folder or repository, no list of trusted
-places. Unchanged by it: a vault's committed config never names a program to run (`command`, `args`, `environment`,
-`lint-command` are the user's config's only), so cloning a vault can't choose what runs; what the project's own
-tools do is the project's.
+places. Unchanged by it: a folder's committed config never sets slipbox's own command keys (`command`, `args`,
+`environment`, `lint-command` are the user's config's only). That's all it promises: a known server's `config` from
+a folder reaches the server, as `.vscode/settings.json` does, and some settings name programs (rust-analyzer's
+`check.overrideCommand`), so cloning a folder can still choose what a server runs; what the project's own tools do
+is the project's.
 
 ## `20.x` — plain paths, virtual vaults
 
@@ -283,8 +286,8 @@ LSP face (`11.x`), and `17.20` below. In short:
 ## `21.x` — paths inside, conventions at the edges
 
 *Proposed 2026-10-05 with the user, after a survey of how other tools handle links, and reviewed with the user the
-same day; built 2026-10-06 and 07 (plan `21.1`–`21.13`; the terminal scenarios written, not yet run). The model in
-full is `docs/idea.md`, "Paths inside, conventions at the edges". It revises `20.x` above.*
+same day; built 2026-10-06 and 07 (plan `21.1`–`21.13`; the terminal scenarios run on the 7th, their findings
+fixed). The model in full is `docs/idea.md`, "Paths inside, conventions at the edges". It revises `20.x` above.*
 
 - **Inside, a link is a path;** each written form — a relative path, `/…`, an extensionless path, a wikilink,
   `file://`, `~/`, a `slipbox://` pointer — has a reader and, but for `~/`, a writer. The index, backlinks, renames,
@@ -489,19 +492,24 @@ then. Staging and committing stay git's: slipbox shows, it doesn't commit.
 
 ## `17.19` — git worktrees
 
+*Revised by `21.8` and `21.12` (built 2026-10-07): keys are by path, a `git worktree move` found by git's name and
+its state carried; `[[x:note]]` is gone — a pointer names a folder, and a worktree's copy is its main checkout.*
+
 A linked worktree (`git worktree add`) is a separate vault of the same repository: the same id and name, its own
 state and cache — worktrees are an agent's task, each its own context (scratch, positions, session, indexes) — and
 which checkout it is comes from the files under `.git` (a worktree's `.git` is a file naming
 `.git/worktrees/<name>`, whose `commondir` is the repository's), never a git process and never where the folder is:
 `project/worktrees/x/feat` is a worktree of `project/x` as surely as `x/.worktrees/feat` would be.
 
-- **Keys:** the main checkout's state is the id's, a worktree's `<id>-wt-<name>` — git's name for it, so moving the
-  folder keeps it. Not "whichever was opened first": that would hand the main checkout's key to an agent's worktree.
+- **Keys:** each checkout's state is its path's (`21.8`), the main checkout's and every worktree's apart. A worktree
+  moved by `git worktree move` is found by git's name for it, and its state carried to the new path. Not "whichever
+  was opened first": that would hand the main checkout's state to an agent's worktree.
 - **Identity is never written from a worktree.** Each would write its own id (and a distinct name), and merging the
   branches would conflict over the vault's identity. A worktree whose config has none takes the main checkout's;
-  with none there either, its path keys it until the main checkout has one, committed.
-- **`[[x:note]]` from another vault means the main checkout**, the stable one — not the most recently opened, which
-  an agent's CLI calls in a worktree would keep changing. Inside a worktree, its own name means itself: its branch.
+  with none there either, it has none until the main checkout has one, committed.
+- **A pointer's name means the main checkout** (`slipbox://x/note.md`; `[[x:note]]` is gone, `21.12`), the stable one
+  — not the most recently opened, which an agent's CLI calls in a worktree would keep changing. A worktree's branch
+  is named as one: `slipbox://x@feat/note.md`.
 - **Backlinks don't count a worktree's links**: its notes are copies of the main checkout's.
 - **A relative path out of the repository is taken from the main checkout** in a worktree: `../y/plan.md` names the
   sibling repository beside the main one, wherever the worktree is kept; inside the repository, the worktree's own.
