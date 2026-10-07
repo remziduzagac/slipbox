@@ -705,6 +705,7 @@ packaging lands whenever it first needs to run on a VM.*
 | 14.2 | Release assets: darwin-arm64, linux-arm64, linux-x64 |
 | 14.3 | Homebrew formula |
 | 14.4 | Update path |
+| 14.5 | Alpine (musl): the SQLite loader picks the glibc build there; better-sqlite3 ships musl builds too |
 
 ## Performance — `15.x`
 
