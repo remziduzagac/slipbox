@@ -146,8 +146,8 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     const last = lines[lines.length - 1];
     if (last && last.spans.some((s) => s.text.trim())) push({ spans: [], src: last.src, decor: true });
   };
-  /** Where each cell's header is drawn (its row and column): the tree lines between a class and its members join them. */
-  const headRows: { row: number; column: number }[] = [];
+  /** Each cell's rows (its header's, its last) and column: the tree lines between a class and its members join them. */
+  const headRows: { row: number; column: number; end: number }[] = [];
   /** Where the page's cells are drawn: a class's members two columns in from it, however far the file indents them. */
   let indent = 0;
   const prose = (rows: Line[], comment: boolean, frame?: (l: Line) => Line) => {
@@ -225,16 +225,18 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     cellsOut.push({ from: c.from, to: c.to, title: c.title, ...(c.def ? { name: { line: c.def.name.line, column: c.def.name.from } } : {}) });
     push(cellHeader(c, left, inner, style, own, shut, g));
     const header = lines.length - 1;
-    headRows.push({ row: header, column: left });
-    // Its heading: its first row of code (a folded cell's, its header).
-    const heading = () => {
+    const rowsOf = { row: header, column: left, end: header };
+    headRows.push(rowsOf);
+    // Done: its last row; its heading, its first row of code (a folded cell's, its header).
+    const done = () => {
+      rowsOf.end = lines.length - 1;
       if (!c.def || c.def.kind === "value") return;
       const first = lines.findIndex((l, i) => i > header && l.srcMap);
       heads.push({ section: false, depth: c.def.depth, text: c.title, row: first > header ? first : header, src: c.from });
     };
     if (shut) {
       if (style === "box") push(boxEdge(left, inner, c.to, g, "bottom"));
-      heading();
+      done();
       return;
     }
     const lineEnd = (k: number) => texts[k - 1]?.length ?? 0;
@@ -302,7 +304,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     // A cell's last blank row is the gap's.
     if (blankRow) lines.pop();
     if (style === "box") push(boxEdge(left, inner, c.to, g, "bottom"));
-    heading();
+    done();
   };
 
   /** The cells of a definition — one, or a class's head then its members, each its own — its documentation in it. */
@@ -333,20 +335,19 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
 
   /**
    * The tree lines, as the explorer's, from a class's box to its members' (rows from `start`, the class at `column`): a
-   * line down from its box's corner, `├─` to each member's header, `└─` to the last.
+   * line down from its box's corner, `├─` to the middle of each member's box, `└─` to the last's.
    */
   const tree = (start: number, column: number) => {
     const members = headRows.filter((h) => h.row >= start);
     const at = Math.min(...members.map((h) => h.column));
     if (at <= column) return;
-    const own = members.filter((h) => h.column === at).map((h) => h.row);
-    const lastHead = Math.max(...own);
+    const mids = members.filter((h) => h.column === at).map((h) => h.row + Math.floor((h.end - h.row) / 2));
+    const lastMid = Math.max(...mids);
     const corner = lines[start - 1];
     if (corner?.decor) lines[start - 1] = putAt(corner, column, g.box.ml, "border"); // a box's bottom, not a band's code
-    for (let r = start; r <= lastHead; r++) {
-      const head = own.includes(r);
-      const mark = head ? `${r === lastHead ? g.guideLast : g.guideBranch}${g.guideDash.repeat(Math.max(0, at - column - 1))}` : g.guide;
-      lines[r] = putAt(lines[r]!, column, mark, "border");
+    for (let r = start; r <= lastMid; r++) {
+      if (!mids.includes(r)) lines[r] = putAt(lines[r]!, column, g.guide, "border");
+      else lines[r] = joint(putAt(lines[r]!, column, `${r === lastMid ? g.guideLast : g.guideBranch}${g.guideDash.repeat(at - column - 1)}`, "border"), at, g);
     }
   };
 
@@ -421,6 +422,20 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
 const lead = (t: string) => t.length - t.trimStart().length;
 const range = (a: number, b: number) => Array.from({ length: Math.max(0, b - a + 1) }, (_, k) => a + k);
 
+/**
+ * A box's left border, where a tree line meets it: `┤` (the border drawn into the row, no longer over it), `┼` on its
+ * divider, `┬` on its top. A band has no border: the line touches it.
+ */
+function joint(line: Line, at: number, g: Glyphs): Line {
+  let c = 0;
+  let here = "";
+  for (const s of line.spans) for (const gr of graphemes(s.text)) if (c++ === at) here = gr;
+  if (here === g.box.ml) return putAt(line, at, g.box.mm, "border");
+  if (here === g.box.tl) return putAt(line, at, g.box.tm, "border");
+  if (!line.frame?.includes(at)) return line;
+  return { ...putAt(line, at, g.box.mr, "border"), frame: line.frame.filter((x) => x !== at) };
+}
+
 /** A row with `text` drawn from column `at` (over its indentation's spaces), spaces added where the row is short. */
 function putAt(line: Line, at: number, text: string, role: Role): Line {
   const put = graphemes(text);
@@ -493,14 +508,15 @@ function cellHeader(c: CellSpec, column: number, inner: number, style: "box" | "
   const box = style === "box";
   const open = box ? `${g.box.tl}${g.box.h} ` : " ";
   const close = box ? ` ${g.box.h}${g.box.tr}` : " ";
-  const markW = c.mark ? stringWidth(c.mark) + 1 : 0;
+  // A comment's box: its mark alone (`¶`), no title — what it is, it says.
+  const markW = c.mark ? stringWidth(c.mark) + (c.prose ? 0 : 1) : 0;
   const room = total - stringWidth(open) - stringWidth(close) - markW - bw - stringWidth(lines) - 4;
-  const title = truncate(c.title, Math.max(1, room));
+  const title = c.prose ? "" : truncate(c.title, Math.max(1, room));
   const fill = Math.max(1, total - stringWidth(open) - stringWidth(close) - markW - stringWidth(title) - stringWidth(lines) - bw - 3);
   const edge: Role = box ? "border" : "text";
   const spans: Span[] = [{ text: " ".repeat(column), role: "text", attrs: 0 }, { text: open, role: edge, attrs: 0 }];
-  if (c.mark) spans.push({ text: `${c.mark} `, role: c.markRole, attrs: A_BOLD });
-  spans.push({ text: title, role: c.def ? c.markRole : "dim", attrs: c.def ? A_BOLD : 0 });
+  if (c.mark) spans.push({ text: c.prose ? c.mark : `${c.mark} `, role: c.markRole, attrs: A_BOLD });
+  if (title) spans.push({ text: title, role: c.def ? c.markRole : "dim", attrs: c.def ? A_BOLD : 0 });
   spans.push({ text: ` ${(box ? g.box.h : " ").repeat(fill)} `, role: edge, attrs: 0 });
   spans.push({ text: `${lines} `, role: "dim", attrs: 0 });
   spans.push(...buttons);

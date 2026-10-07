@@ -87,18 +87,18 @@ those names. A plain block comment over several lines is prose alone.
 ├─────────────────────────────────────────────────────────────────┤
 │ export class Graph {                                            │
 ├─────────────────────────────────────────────────────────────────┘
-├─┌─ ƒ textOf ────────────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ─┐
+│ ┌─ ƒ textOf ────────────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ─┐
 │ │ A note's text, as read.                                       │
 │ ├───────────────────────────────────────────────────────────────┤
-│ │ textOf(rel: string): string | undefined {                     │
+├─┤ textOf(rel: string): string | undefined {                     │
 │ │   return this.notes.get(rel);                                 │
 │ │ }                                                             │
 │ └───────────────────────────────────────────────────────────────┘
-├─┌─ ¶ comment ────────────────────────────────────── 30 ⧉ ✎ ◎ ▾ ─┐
-│ │ Then writing.                                                 │
+│ ┌─ ¶ ────────────────────────────────────────────── 30 ⧉ ✎ ◎ ▾ ─┐
+├─┤ Then writing.                                                 │
 │ └───────────────────────────────────────────────────────────────┘
-└─┌─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ─┐
-  │ add(rel: string): void { this.notes.set(rel, read(rel)); }    │
+│ ┌─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ─┐
+└─┤ add(rel: string): void { this.notes.set(rel, read(rel)); }    │
   └───────────────────────────────────────────────────────────────┘
 }
 ```
@@ -112,12 +112,13 @@ only the tokens differ.
   a cell of its head (up to its first member), then each member a cell under it; what's after the last member (a
   closing brace) is drawn as written. Each run of other statements — top-level values, a script's lines — between
   blank lines and comments is a cell too, titled by the values it defines, else `code`. A comment that documents
-  nothing (a file's opening note, a module's docstring) is a cell of its own: prose, no code, titled `comment` (or
-  `docstring`). The page's pieces touch, a box's borders setting each apart, whatever blank lines the file has; a
+  nothing (a file's opening note, a module's docstring) is a cell of its own: prose, no code, its header's mark alone
+  (`¶`), no title. The page's pieces touch, a box's borders setting each apart, whatever blank lines the file has; a
   blank row only before a section's rule.
 - **The tree**: a class's members are drawn two columns in from it, however far the file indents them (Python's four
   as TypeScript's two), joined to it by the explorer's tree lines: down from the corner of the class's box, `├─` to
-  each member's header, `└─` to the last. A class in a class has a tree of its own, from its own box.
+  the middle row of each member's box (`┤` where it meets the border, `┼` on a divider, `┬` on a folded box's top),
+  `└─` to the last's. A class in a class has a tree of its own, from its own box.
 - **A cell's header**: its kind (`ƒ` a function or method, `◆` a class, `◇` an interface, type or enum, `•` values,
   `¶` a comment; Nerd: the editors' symbol icons; ASCII `f C T v #`), its name bold, its lines, then its buttons —
   a comment's all but `⇢`, as it defines nothing:

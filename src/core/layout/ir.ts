@@ -50,8 +50,9 @@ export interface Line {
   footnoteDef?: string;
   /** A folded group's row (the code view's imports, 24.5): `enter` folds or unfolds the group starting on that line. */
   fold?: number;
-  /** A code cell's box (24.13): the columns of its left and right borders, drawn over this row's spaces there. */
-  frame?: [number, number];
+  /** A code cell's box (24.13): the columns of its borders drawn over this row's spaces there (a border a tree line
+   *  meets is drawn into the row instead, 24.14). */
+  frame?: number[];
   /** A code cell's row (24.13): the columns its own text takes — the rest is the cell's padding: no cursor stop there,
    *  so no mark either. */
   text?: [number, number];
