@@ -888,6 +888,7 @@ design: `docs/design/code-view.md`.*
 | 24.11 | **Prototype.** Comments as prose: markers gone; separators as sections; after code, notes in the margin |
 | 24.12 | **Prototype.** Python: docstrings above their definitions; JSDoc, Google, NumPy, reST read into one shape |
 | 24.13 | **Prototype.** A notebook: prose at full width, a cell per definition (boxes or bands), its header's buttons |
+| 24.14 | **Prototype.** Cells touch; tree lines join a class to its members, two columns in; a comment a cell |
 
 ## Deferred — in the design, not in this breakdown
 

@@ -108,6 +108,8 @@ export interface Glyphs {
   codeClass: string;
   codeType: string;
   codeValue: string;
+  /** A comment's cell (24.13): prose that documents nothing, in a box of its own. */
+  cellNote: string;
   /** A code cell's buttons (24.13): edit it, copy it, where it's used, add it to the scratch. */
   cellEdit: string;
   cellCopy: string;
@@ -192,6 +194,7 @@ const unicode: Glyphs = {
   codeClass: "◆",
   codeType: "◇",
   codeValue: "•",
+  cellNote: "¶",
   cellEdit: "✎",
   cellCopy: "⧉",
   cellRefs: "⇢",
@@ -208,6 +211,7 @@ const nerd: Glyphs = {
   codeClass: "\u{eb5b}", // nf-cod-symbol_class
   codeType: "\u{eb61}", // nf-cod-symbol_interface
   codeValue: "\u{eb5d}", // nf-cod-symbol_constant
+  cellNote: "\u{ea6b}", // nf-cod-comment
   cellEdit: "\u{ea73}", // nf-cod-edit
   cellCopy: "\u{ebcc}", // nf-cod-copy
   cellRefs: "\u{eb36}", // nf-cod-references
@@ -318,6 +322,7 @@ const ascii: Glyphs = {
   codeClass: "C",
   codeType: "T",
   codeValue: "v",
+  cellNote: "#",
   cellEdit: "e",
   cellCopy: "c",
   cellRefs: "r",

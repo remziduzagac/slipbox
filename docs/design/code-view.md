@@ -6,7 +6,7 @@ and the definition's documentation in it above its code; the file's other commen
 aim isn't to make code look like markdown, nor to run it (slipbox runs nothing, `23.x`); it's to make it read like a
 document — and alike whatever language wrote it.
 
-Status: a prototype for TypeScript, TSX, JavaScript and Python (`24.2`–`24.7`, `24.10`–`24.13`). What's built is
+Status: a prototype for TypeScript, TSX, JavaScript and Python (`24.2`–`24.7`, `24.10`–`24.14`). What's built is
 described here as it is; what's next is at the end.
 
 ## The rule: code's tokens verbatim, whitespace and decoration ours, comments as prose
@@ -38,7 +38,7 @@ a language hasn't mapped is drawn as it is.
 | definition: function, class, type | a cell, its header its kind and name; a class's head a cell, then each member's |
 | top-level values, other statements | a cell of each run of them (its title the values' names, else `code`) |
 | documentation | prose and a list of terms, in its cell above a divider and its code |
-| comment | right above a definition, its documentation; else prose in a box; in code, prose in the comments' colour |
+| comment | right above a definition, its documentation; else a cell of prose; in code, prose in the comments' colour |
 | separator comment | a section's rule with its title |
 | import group | folded into one row that names what it imports |
 | brackets, separators, operators | where a long line may break (any language: no mapping needed) |
@@ -67,9 +67,8 @@ those names. A plain block comment over several lines is prose alone.
 ## What it looks like
 
 ```text
-── Resolving links ──────────────────────────────────────────────────
-
-┌─ ƒ resolve ────────────────────────────────── 5–15 ⇢ ⧉ ✎ ◎ ▾ ─┐
+── Resolving links ────────────────────────────────────────────────
+┌─ ƒ resolve ──────────────────────────────────── 5–15 ⇢ ⧉ ✎ ◎ ▾ ─┐
 │ Resolves a link written in a note: the note it reaches, or null │
 │ when nothing matches.                                           │
 │                                                                 │
@@ -83,20 +82,24 @@ those names. A plain block comment over several lines is prose alone.
 │   return byName.get(key(target)) ?? byPath.get(target);         │
 │ }                                                               │
 └─────────────────────────────────────────────────────────────────┘
-
 ┌─ ◆ Graph ───────────────────────────────────── 19–20 ⇢ ⧉ ✎ ◎ ▾ ─┐
 │ The notes of a folder, read once.                               │
 ├─────────────────────────────────────────────────────────────────┤
 │ export class Graph {                                            │
-└─────────────────────────────────────────────────────────────────┘
-
-  ┌─ ƒ textOf ───────────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ─┐
-  │ A note's text, as read.                                      │
-  ├──────────────────────────────────────────────────────────────┤
-  │ textOf(rel: string): string | undefined {                    │
-  │   return this.notes.get(rel);                                │
-  │ }                                                            │
-  └──────────────────────────────────────────────────────────────┘
+├─────────────────────────────────────────────────────────────────┘
+├─┌─ ƒ textOf ────────────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ─┐
+│ │ A note's text, as read.                                       │
+│ ├───────────────────────────────────────────────────────────────┤
+│ │ textOf(rel: string): string | undefined {                     │
+│ │   return this.notes.get(rel);                                 │
+│ │ }                                                             │
+│ └───────────────────────────────────────────────────────────────┘
+├─┌─ ¶ comment ────────────────────────────────────── 30 ⧉ ✎ ◎ ▾ ─┐
+│ │ Then writing.                                                 │
+│ └───────────────────────────────────────────────────────────────┘
+└─┌─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ─┐
+  │ add(rel: string): void { this.notes.set(rel, read(rel)); }    │
+  └───────────────────────────────────────────────────────────────┘
 }
 ```
 
@@ -106,13 +109,18 @@ only the tokens differ.
 - **Cells**: a definition's documentation and its lines (its decorators first) in a box — or on a tinted band, the
   header a band of its own (`[render] code_cells`, `space u c`). Its documentation is prose at the top (a doc
   comment, a docstring, or comment lines right above it, as Go documents), then a divider, then its code. A class is
-  a cell of its head (up to its first member), then each member a cell under it at its indentation; what's after the
-  last member (a closing brace) is drawn as written. Each run of other statements — top-level values, a script's
-  lines — between blank lines and comments is a cell too, titled by the values it defines, else `code`. A comment that
-  documents nothing (a file's opening note, a module's docstring) is prose in a box of its own. One blank row between
-  the page's pieces (cells, sections, boxes), whatever the file has.
-- **A cell's header**: its kind (`ƒ` a function or method, `◆` a class, `◇` an interface, type or enum, `•` values;
-  Nerd: the editors' symbol icons; ASCII `f C T v`), its name bold, its lines, then its buttons:
+  a cell of its head (up to its first member), then each member a cell under it; what's after the last member (a
+  closing brace) is drawn as written. Each run of other statements — top-level values, a script's lines — between
+  blank lines and comments is a cell too, titled by the values it defines, else `code`. A comment that documents
+  nothing (a file's opening note, a module's docstring) is a cell of its own: prose, no code, titled `comment` (or
+  `docstring`). The page's pieces touch, a box's borders setting each apart, whatever blank lines the file has; a
+  blank row only before a section's rule.
+- **The tree**: a class's members are drawn two columns in from it, however far the file indents them (Python's four
+  as TypeScript's two), joined to it by the explorer's tree lines: down from the corner of the class's box, `├─` to
+  each member's header, `└─` to the last. A class in a class has a tree of its own, from its own box.
+- **A cell's header**: its kind (`ƒ` a function or method, `◆` a class, `◇` an interface, type or enum, `•` values,
+  `¶` a comment; Nerd: the editors' symbol icons; ASCII `f C T v #`), its name bold, its lines, then its buttons —
+  a comment's all but `⇢`, as it defines nothing:
 
 | Button | Key (the cell at the cursor) | Does |
 | --- | --- | --- |
