@@ -540,6 +540,7 @@ common, and the only reason they are step 0.
 | 10.6 | EPUB packaging over 10.2 |
 | 10.7 | Optional headless-browser tier |
 | 10.8 | Optional pandoc tier |
+| 10.9 | Compose: notes picked and put in order, then exported as one document — the assembler's (`10.1`) way in |
 
 ## LSP face — `11.x`
 
@@ -591,6 +592,7 @@ source shown alike in every mode.*
 | 19.20 | **Done.** Server settings from a project's `.vscode/settings.json`, over the config's, as VS Code does |
 | 19.21 | **Done.** markdownlint-cli2 found as a server is, else from the private install, rather than `npx` |
 | 19.22 | **Done.** CLI: `slipbox diagnostics <file>` — servers' and linters' findings, `--json`, for agents, scripts |
+| 19.23 | Live checks with the native servers and linters: rust-analyzer, gopls, clangd, sourcekit-lsp, ruby-lsp… |
 
 ## Plain paths, virtual vaults — `20.x` (phase 5b)
 
@@ -680,6 +682,8 @@ it. Each item ends with its tests listed for the user's approval before any is r
 | 12.7 | Transmit once, place by id |
 | 12.8 | Scroll behaviour — unicode placeholders |
 | 12.9 | Decode cache keyed by path, size and mtime |
+| 12.10 | Mermaid drawn as an image (`mermaid-cli`) where `12.1` finds a way; the code block otherwise |
+| 12.11 | LaTeX typeset as an image where images work; Unicode text (`unicodeit`) as the floor |
 
 ## Extensibility — `13.x`
 
@@ -835,12 +839,23 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | 18.12 | **Done.** A plan's writes into another vault's files reach its index at once (a second rename finds them) |
 | 18.13 | **Done.** Leader keys for every file action: `space n` notes, `space d` folders, `space v` vaults |
 
+## Notes over time and by their shape — `22.x`
+
+*Later; from the design's list of what was deferred (`docs/idea.md`), given IDs 2026-10-07.*
+
+| ID | Item |
+| --- | --- |
+| 22.1 | A note's history: its commits (`git log --follow`), an older version opened to read, the diff to it |
+| 22.2 | Frontmatter checked against a folder's rules (required keys, their types): findings in Problems |
+| 22.3 | Document types by their conventions (ADRs, plans, skills): listed and moved between by type |
+
 ## Deferred — in the design, not in this breakdown
 
-Mermaid and LaTeX, git awareness (beyond `5.9`, `5.10`, `17.19`), Tier 2 plugins, diffs,
-document-type awareness, frontmatter validation, composing notes
-into one document, and everything under the design's community-plugin tier. They get IDs
-when they get scheduled.
+Sorted 2026-10-07. Mermaid and LaTeX are `12.10`–`12.11`; composing notes, `10.9`; a note's history, frontmatter
+rules and document types, `22.x`; the live checks with native servers, `19.23`. Diffs and git awareness are built
+(`space g d`, `space g c`, the explorer's marks, worktrees, merge review). Tier 2 plugins are dropped: `13.x`'s
+commands cover what they would, and a shared plugin ecosystem is a supply-chain question. Anything else under the
+design's community-plugin tier gets an ID when it is scheduled.
 
 ## Constraints and gotchas
 
