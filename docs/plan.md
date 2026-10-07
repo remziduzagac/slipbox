@@ -481,7 +481,7 @@ common, and the only reason they are step 0.
 | 6.10 | **Postponed** (2026-10-07): Scout became trailscout, its own project; slipbox uses its SDK when that exists |
 | 6.11 | **Done.** better-sqlite3 for the index (scout's binding too): its own SQLite; Bun 1.4.2 and up |
 | 6.12 | **Done.** Sections are scout's: the containment tree cut to the 400–1500 band; a hit cites its section |
-| 6.13 | `@slipbox/links`: the link rules extracted into a package scout shares — a scout-blocking prerequisite |
+| 6.13 | **Dropped** (2026-10-07). `@slipbox/links` for scout: scout became trailscout (`6.10`), its own project |
 
 ## Write safety — `7.x`
 

@@ -1,5 +1,8 @@
 # Scout: how slipbox will use it
 
+*Postponed (`6.10`, 2026-10-07): scout became trailscout, a project of its own with its own SDK; slipbox will use
+that SDK once it exists. This page stays as the record of what the two sides agreed.*
+
 Recorded 2026-10-01 from the design session on scout, a local retrieval engine slipbox will consume. **Scout does
 not exist yet**: nothing in slipbox is written against it — no dependency, no types, no adapter, no stub — and
 slipbox works fully without it, as it always will. This page is so that when scout ships, both sides already agree.
@@ -62,9 +65,10 @@ slipbox concept, persist it in a file — never expose a method.
 - **The sections**: scout's containment tree and size band (`6.1`), so a scout result and a slipbox hit are the same
   section, cited in slipbox's own terms.
 
-**Not yet**: `@slipbox/links`, the wikilink rules extracted into a package both use (`normKey`, the collision
-ladder, `parseWikiTarget`, link forms, vault detection). Scout's design makes slipbox the owner and the extraction a
-scout-blocking prerequisite; it isn't in slipbox's plan yet.
+**Dropped** (`6.13`, 2026-10-07): `@slipbox/links`, the wikilink rules extracted into a package both would use
+(`normKey`, the collision ladder, `parseWikiTarget`, link forms, root detection). Scout's design made slipbox its
+owner and the extraction a prerequisite; trailscout explains the link rules itself. Should the two ever need to
+agree on a link, a table of cases (a link, the file it reaches) that both run is the cheaper way.
 
 ## Where scout's design and slipbox disagree
 
