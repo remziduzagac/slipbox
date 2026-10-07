@@ -19,9 +19,11 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | cache | `$XDG_CACHE_HOME/slipbox/<key>/` | the persisted link index | yes, rebuilt on demand |
 | cache, shared | `$XDG_CACHE_HOME/slipbox/parsed.db` | parsed content, by content (`20.11`) | yes, rebuilt as read |
 | state | `$XDG_STATE_HOME/slipbox/<key>/` | session, scratch, staleness, redirects, trash, undo | no: yours |
+| state | `$XDG_STATE_HOME/slipbox/<key>/` | pinned roots (`20.15`), branch heads seen (`20.21`) | no: the pins |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/positions.json` | reading positions, by file (`21.8`) | no |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/roots.json` | the roots seen, by path; their moves | no: the moves |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/folders.json` | named folders, their copies, defaults | no: names |
+| state, the machine's | `$XDG_STATE_HOME/slipbox/autoindex.json`, `activity` | the background index (`20.9`) | yes |
 | data | `$XDG_DATA_HOME/slipbox/tools/` | language servers installed for you (`19.x`) | yes, reinstalled |
 
 XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) on
@@ -340,10 +342,11 @@ fixed). The model in full is `docs/idea.md`, "Paths inside, conventions at the e
   another ref than the branch here is inferred and said (`core/hosting.ts`).
 - **Links slipbox writes** (`21.5`, 2026-10-06): completion (`](` and `[[`), the link picker (`space l i`) and `slipbox
   link`, which prints one for an agent, all through `core/write-link.ts`. A wikilink is a name only where the name
-  reaches the note from the linking file — else its path from the root, never a name that would land elsewhere; a
-  relative wikilink starts `./` or `../`, so it's never read as a name. The scratch's captures are `path:line`
-  references in code spans, as agents read them — not links, so the convention leaves them be. A rename keeps each
-  link's form, a name falling back to a path when the new name would be ambiguous.
+  reaches the note from the linking file — else its path from the root, a top-level note's path being its name, a
+  relative path (`../plan`): never a name that would land elsewhere; a relative wikilink starts `./` or `../`, so
+  it's never read as a name. The scratch's captures are `path:line` references in code spans, as agents read them —
+  not links, so the convention leaves them be. A rename keeps each link's form, a name falling back to a path when the
+  new name would be ambiguous.
 - **Between files that travel together** (one repository or submodule, one folder tree outside git), the convention;
   **into a named folder,** `slipbox://<name>/<path>` — a repository named by its remote (short, qualified on a clash), a
   folder by its `.slipbox/` name, never by a folder's own; **otherwise,** a relative path. Relinking a link between

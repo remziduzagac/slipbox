@@ -54,9 +54,20 @@ const NO_IDENTITY: VaultIdentity = { id: null, name: null, aliases: [], previous
 
 /** The `[vault]` table of a config file; missing or malformed fields are empty, never an error. */
 export function readIdentity(configFile: string): VaultIdentity {
+  let text: string;
+  try {
+    text = readRegular(configFile, SMALL_FILE).toString("utf8");
+  } catch {
+    return { ...NO_IDENTITY };
+  }
+  return identityOf(text);
+}
+
+/** The `[vault]` table of a config's text; an unparsable one has none. */
+export function identityOf(text: string): VaultIdentity {
   let data: Record<string, unknown>;
   try {
-    data = parseToml(readRegular(configFile, SMALL_FILE).toString("utf8")) as Record<string, unknown>;
+    data = parseToml(text) as Record<string, unknown>;
   } catch {
     return { ...NO_IDENTITY };
   }
@@ -282,7 +293,7 @@ const WORKTREE_STATE_DAYS = 30;
 
 /**
  * Worktrees that are gone (17.19: merged, `git worktree remove`): their cache removed at once — it's
- * derived — and, a month after they were last seen, their state (the scratch, positions, session)
+ * derived — and, a month after they were last seen, their state (the scratch, session, trash…)
  * and their entry in the list. Until then they're listed as gone. Plain folders gone a month, too.
  * A worktree's root is gone when its folder is no longer a root (`isRoot`: any of its markers, 21.1 —
  * `vault.ts` passes `isVaultRoot`; without it, `.git` or `.slipbox/`).

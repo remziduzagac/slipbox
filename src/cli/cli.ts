@@ -210,23 +210,24 @@ Usage:
   slipbox stat <note>               a note's size, dates, title, counts, encoding (the TUI's note info)
   slipbox write <note> [text]       write a note (atomic, in the root)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
   slipbox mkdir <path>              make a folder here (and its parents)
-  slipbox mv <note|folder> <new-path>  rename or move a note or folder; links fixed wherever they're reached  [--dry-run]
+  slipbox mv <note|folder> <new-path>  rename or move a note or folder; links fixed wherever they're reached  [--dry-run] [--plan]
   slipbox cp <note|folder> [path]   copy a note or folder (beside it, as name-copy, when no path)
   slipbox rm <note|folder>          delete to the trash (slipbox trash restore puts it back)  [--dry-run]
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
   slipbox name <new>                this folder's name, as a pointer names it: changed, the old kept; a repository given one
+                                    [--dry-run] [--plan]
   slipbox folders [default <name> <path>]  the named folders: their copies, the one links open; or make one the one
-  slipbox rename-heading <note> <heading> <new>  rename a heading; links to it fixed everywhere  [--dry-run]
-  slipbox relink [note]             rewrite links broken by a move slipbox saw, to where the file is  [--dry-run]
-  slipbox convert-links [note]      wikilinks and links from the root rewritten as relative paths  [--dry-run]
-  slipbox undo                      take back the last rename, move or relink here  [--dry-run]
+  slipbox rename-heading <note> <heading> <new>  rename a heading; links to it fixed everywhere  [--dry-run] [--plan]
+  slipbox relink [note]             rewrite links broken by a move slipbox saw, to where the file is  [--dry-run] [--plan]
+  slipbox convert-links [note]      wikilinks and links from the root rewritten as relative paths  [--dry-run] [--plan]
+  slipbox undo                      take back the last mv, name, rename-heading, relink or convert-links here  [--dry-run] [--plan]
   slipbox apply [plan]              write a plan --plan saved (refused if a file changed since); none: those waiting  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
-  slipbox init [dir]                give <dir> a .slipbox/: settings, and a name with --name  [--name N] [--private] [--dry-run]
-  slipbox deinit <dir>              take a nested root's .slipbox/ away: a plain folder of the root holding it  [--dry-run]
+  slipbox init [dir]                give <dir> a .slipbox/: settings, and a name with --name  [--name N] [--private] [--dry-run] [--plan]
+  slipbox deinit <dir>              take a nested root's .slipbox/ away: a plain folder of the root holding it  [--dry-run] [--plan]
   slipbox info                      the root, its name and copies, its link convention, paths, versions, staleness
   slipbox doctor [file]             language servers and linters: each language's, found where, installed when needed, or missing
   slipbox diagnostics <file>        a file's problems: its servers', its linters', its syntax; a note's links and lint  [--severity S] [--timeout SECS]
@@ -310,8 +311,8 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     const from = flag(args, "from");
     if (from !== undefined) args.flags.set("from", vaultFormArg(from, io.cwd));
     // The note argument, when it names a file, also says which vault this is (resolve's is --from:
-    // where the link is written).
-    const noteAt = NOTE_FIRST.includes(command) ? rest[0] : command === "find" ? rest[1] : command === "resolve" ? flag(args, "from") : command === "link" ? (flag(args, "from") ?? rest[0]) : undefined;
+    // where the link is written; diagnostics' its file, whose root's checks it runs).
+    const noteAt = NOTE_FIRST.includes(command) || command === "diagnostics" ? rest[0] : command === "find" ? rest[1] : command === "resolve" ? flag(args, "from") : command === "link" ? (flag(args, "from") ?? rest[0]) : undefined;
     let pathArg = noteArgPath(noteAt, io.cwd, flag(args, "root"));
     // A nested vault's folder, moved, copied or deleted, is a folder of the vault holding it (18.7).
     if (pathArg && ["mv", "cp", "rm"].includes(command)) {
@@ -403,7 +404,7 @@ function textFiles(s: Session): { path: string; group: string; format: string }[
 
 /** Flags every command takes, and each command's own. */
 const GLOBAL_FLAGS = new Set(["root", "config", "json", "color", "plain", "help", "version", "from"]);
-const FLAGS: Record<string, string[]> = {
+export const FLAGS: Record<string, string[]> = {
   render: ["width", "theme", "glyphs"],
   links: ["all"],
   link: ["text", "style", "embed"],
@@ -593,9 +594,16 @@ const HANDLERS: Record<string, Handler> = {
     // No --from: as from a note at the root.
     const fromAbs = fromRel ? g.abs(fromRel) : join(s.loc.root, ".link.md");
     const file = resolve(s.io.cwd, arg);
-    // A file by its path — not a note, or one out of this root (a pointer, 21.7); a note here as any
-    // command takes one (its path, its name).
-    const byPath = existsSync(file) && statSync(file).isFile() && (classify(file, s.config.walk.extensions).group !== "note" || !isInside(s.loc.root, file));
+    const isFile = existsSync(file) && statSync(file).isFile();
+    // A file by its path — not a note, or one out of this root, a root nested in it included (a
+    // pointer, 21.7); a note here as any command takes one (its path, its name).
+    const byPath = isFile && (classify(file, s.config.walk.extensions).group !== "note" || !isInside(s.loc.root, file) || (findVaultRoot(file) ?? s.loc.root) !== s.loc.root);
+    // A note here the walk leaves out (git-ignored, under a hidden folder): named, it's reached (20.8),
+    // as the note that says which root this is would be — with --from, that's the other note.
+    if (isFile && !byPath) {
+      const rel = relative(s.loc.root, file).split(sep).join("/");
+      if (!g.notes.has(rel)) g.reachFile(rel, { keep: true });
+    }
     const toAbs = byPath ? file : g.abs(resolveNote(s, arg));
     const style = flag(s.args, "style");
     if (style !== undefined && style !== "markdown" && style !== "wiki") throw new UsageError(`--style is markdown or wiki (got ${style})`);
@@ -724,6 +732,7 @@ const HANDLERS: Record<string, Handler> = {
         text: l.text,
         line: l.line,
         column: l.column,
+        end: l.end,
         status: l.resolvedKind,
         path: l.path,
         shown: l.shown,
@@ -1415,8 +1424,10 @@ const HANDLERS: Record<string, Handler> = {
   // errors when no server answered, and a vault note's own and the lint surface's. Exit 1 on an error.
   async diagnostics(s, rest) {
     const arg = requireArg(rest, "file");
-    const abs = isAbsolute(arg) ? arg : join(s.io.cwd, arg);
-    if (!existsSync(abs)) throw new CliError(`${arg}: no such file`, EXIT.notFound);
+    // From here, else from --root (`noteArgPath`).
+    const root = flag(s.args, "root");
+    const abs = [resolve(s.io.cwd, arg), root ? resolve(s.io.cwd, root, arg) : null].find((p) => p && existsSync(p));
+    if (!abs) throw new CliError(`${arg}: no such file`, EXIT.notFound);
     const min = (flag(s.args, "severity") ?? s.config.diagnostics.severity) as Severity;
     if (!SEVERITIES.includes(min)) throw new UsageError(`--severity takes ${SEVERITIES.join(", ")}`);
     const seconds = Number(flag(s.args, "timeout") ?? 60);
@@ -1474,9 +1485,10 @@ const HANDLERS: Record<string, Handler> = {
         sources.push({ name: "tree-sitter", kind: "syntax", status: "ran" });
       }
     }
-    // A vault note: its links and conflicts, and the lint surface's findings.
+    // A vault note: its links and conflicts, and the lint surface's findings. One the walk leaves out
+    // (git-ignored, under a hidden folder) is reached, named, as findNoteArg reaches it (20.8).
     const rel = relative(s.loc.root, abs).split(sep).join("/");
-    if (kind.group === "note" && !rel.startsWith("..") && s.graph.notes.has(rel)) {
+    if (kind.group === "note" && !rel.startsWith("..") && (s.graph.notes.has(rel) || s.graph.reachFile(rel, { keep: true })) && s.graph.notes.has(rel)) {
       problems.push(...noteProblems(s.graph, rel));
       sources.push({ name: "slipbox", kind: "slipbox", status: "ran" });
       const cmd = lintCommand(s.config.lint, s.loc.root, undefined, s.config.lsp.auto_install);

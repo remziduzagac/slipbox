@@ -21,7 +21,10 @@ export interface WatchChange {
 
 export interface WatchBatch {
   changes: WatchChange[];
-  /** A .gitignore or the vault config changed: the walk itself may differ, so rebuild. */
+  /**
+   * A .gitignore changed, a directory was added or a directory event came without a name: the walk
+   * may differ, so rebuild.
+   */
   rescan: boolean;
 }
 
@@ -136,8 +139,7 @@ export class VaultWatcher {
     return [...this.polled];
   }
 
-  /** Tell the watcher about a write slipbox made itself, so it does not react to it. */
-  /** Our own write of `rel`, stamped as written (`written`), else as it is on disk now. */
+  /** Our own write of `rel`, stamped as written (`written`), else as it is on disk now: not reacted to. */
   noteOwnWrite(rel: string, written?: { mtimeMs: number; size: number }): void {
     try {
       const st = written ?? statSync(join(this.opts.root, rel));
@@ -199,9 +201,9 @@ export class VaultWatcher {
     (this.pollTimer as { unref?: () => void }).unref?.();
   }
 
-  /** Stat-scan polled directories (and, when degraded, open files) for changes. Exposed for tests. */
   private ticks = 0;
 
+  /** Stat-scan polled directories (and, when degraded, open files) for changes. Exposed for tests. */
   pollTick(): void {
     const { filter, known, root } = this.opts;
     // Bun's fs.watch drops some events: a directory renamed out of the vault reports nothing,

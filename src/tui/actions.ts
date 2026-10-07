@@ -57,7 +57,7 @@ type Spot = { rel: string; line: number } | { rel: null; abs: string; line: numb
 /**
  * The switcher's `#` (VS Code's): the workspace's symbols — the current file's servers', asked as the
  * query's typed (each answer refilling the list it was asked from, the last asked's only), or, where
- * no server gives them (a note), the vault's headings: slipbox's own symbols, as its LSP face gives them.
+ * no server gives them (a note), the root's headings: slipbox's own symbols.
  */
 function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: string) => ListItem[] } {
   const from = a.view?.buf.abs ?? null;
@@ -558,6 +558,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
     case "window.split_side":
     case "window.split_stacked":
     case "tab.new":
+    case "link.convert":
       return cmd === "note.open" ? [...a.graph.notes.keys(), ...a.graph.filePaths().filter((p) => classify(p, a.config.walk.extensions).group !== "binary")] : [...a.graph.notes.keys()];
     case "theme.set":
       return listThemes().map((t) => t.name);
@@ -1467,7 +1468,7 @@ export function registerActions(app: App): void {
         const n = V.takeCount(a);
         a.vim.awaitChar = (ch) => {
           const r = charsRange(a, v, n);
-          if (!r || [...v.buf.source.slice(r.from, r.to)].length < n) return;
+          if (!r || graphemes(v.buf.source.slice(r.from, r.to)).length < n) return; // by character, as l steps
           v.buf.edit(r.from, r.to - r.from, ch.repeat(n), r.from);
           E.placeAt(a, v, r.from + ch.length * (n - 1));
         };
@@ -1526,7 +1527,9 @@ export function registerActions(app: App): void {
       }),
     "note.save_all": (a) => {
       for (const v of a.allViews()) if (v.insert) E.stopInsert(a, v);
-      const dirty = a.dirtyBuffers();
+      // The properties editor's changes too: written into their note (which it saves), the editor kept open.
+      const f = a.floating?.kind === "properties" && a.floating.view.buf.dirty ? a.floating : null;
+      const dirty = [...(f ? [f.view.buf] : []), ...a.dirtyBuffers().filter((b) => b !== f?.note)];
       if (!dirty.length) return a.message("info", "nothing to save");
       const saved = dirty.filter((b) => a.saveBuffer(b, true)).length;
       if (saved === dirty.length) a.message("info", `saved ${saved} note${saved === 1 ? "" : "s"}`);
@@ -1583,7 +1586,7 @@ export function registerActions(app: App): void {
         const current = [...layout.headings].reverse().findIndex((h) => h.line <= v.cur.row);
         a.openList({
           title: `Headings — ${v.buf.name}`,
-          items: layout.headings.map((h) => ({ label: h.text, indent: h.level - 1, hint: `${h.src}`, data: h.line })),
+          items: layout.headings.map((h) => ({ label: h.text.replace(/\s+/g, " "), indent: h.level - 1, hint: `${h.src}`, data: h.line })),
           accept: (item) => {
             a.pushHistory(v);
             a.moveCursor(v, { row: item.data as number, col: 0 });

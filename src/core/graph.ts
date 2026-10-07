@@ -27,7 +27,7 @@ import { remotesIn } from "./remotes.ts";
 import { contentHash, Redirects } from "./redirects.ts";
 import { dataLinks, parseData } from "./data.ts";
 import { classify, extensionOf, noteFormat } from "./filetypes.ts";
-import { isListed, type VaultLocation } from "./vault.ts";
+import { findVaultRoot, isListed, type VaultLocation } from "./vault.ts";
 import { listDirectory, type NoteFile, type Skipped, WalkFilter, walkVault } from "./walk.ts";
 import { type Hashtag, tagKey, tagName } from "./tags.ts";
 
@@ -216,7 +216,7 @@ export interface Backlink {
 const NOTE_EXT_RE = /\.(md|markdown)$/i;
 
 /** Bumped when what a note's entry holds changes: 5, content hashes (17.12). */
-export const INDEX_VERSION = 11; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links
+export const INDEX_VERSION = 12; // 6: inline #tags (1.6); 7: where links end (11.7); 8: no wikilinks (20.22); 9: wikilinks again (21.3); 10: heading ids, anchors; 11: front matter links; 12: worker-parsed heading ids (15.1)
 
 interface IndexFile {
   version: number;
@@ -437,9 +437,11 @@ export class Graph {
       try {
         decoded = decodeURIComponent(path);
       } catch {}
-      // `/…` is the root's (21.2); in a plain folder, which has none, the filesystem's.
-      const rel = !decoded.startsWith("/") ? posix.normalize(posix.join(posix.dirname(e.rel), decoded)) : this.loc.mode === "folder" ? relative(this.root, decoded) : posix.normalize(decoded.slice(1));
-      if (rel === "" || rel === "." || climbsOut(rel) || this.known(rel)) continue;
+      // `/…` is the root's, then the filesystem's (21.2); in a plain folder, which has none, the
+      // filesystem's alone.
+      let rel = !decoded.startsWith("/") ? posix.normalize(posix.join(posix.dirname(e.rel), decoded)) : this.loc.mode === "folder" ? relative(this.root, decoded) : posix.normalize(decoded.slice(1));
+      if (decoded.startsWith("/") && this.loc.mode !== "folder" && !(rel && !climbsOut(rel) && (this.known(rel) || this.reachable(rel)))) rel = relative(this.root, decoded);
+      if (rel === "" || rel === "." || climbsOut(rel) || isAbsolute(rel) || this.known(rel)) continue;
       this.reachFile(rel);
     }
   }
@@ -1383,7 +1385,12 @@ export class Graph {
   /** A note's entry by a path `resolveLink` gave: vault-relative, or absolute in another root. */
   entryAnywhere(path: string): NoteEntry | undefined {
     if (!isAbsolute(path)) return this.entry(path);
-    if (path.startsWith(`${this.root}/`)) return this.entry(path.slice(this.root.length + 1));
+    if (path.startsWith(`${this.root}/`)) {
+      const e = this.entry(path.slice(this.root.length + 1));
+      if (e) return e;
+      // A file of a root nested in this one is that root's (21.x): its own index has it.
+      return findVaultRoot(path)?.startsWith(`${this.root}/`) ? this.reach?.entryAt(path) : undefined;
+    }
     return this.reach?.entryAt(path);
   }
 

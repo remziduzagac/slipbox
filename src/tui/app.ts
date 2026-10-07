@@ -1184,8 +1184,9 @@ export class App {
       const buf = this.buffer(inVault ? path.slice(this.loc.root.length + 1) : path);
       if (!buf || !edits.length) continue;
       const wasDirty = buf.dirty;
-      const starts = buf.lineStarts();
-      const at = (p: { line: number; character: number }) => Math.min(buf.source.length, (starts[p.line] ?? buf.source.length) + p.character);
+      // Offsets as the preview's (and LSP's): a character past its line's end is the line's end.
+      const doc = TextDocument.create("", "", 0, buf.source);
+      const at = (p: { line: number; character: number }) => doc.offsetAt(p);
       // Last first, so each edit's offsets still hold; of inserts at one place, the later one first,
       // so their text reads in the array's order (as LSP has it, and as the preview showed it).
       const sorted = edits.map((e, i) => ({ from: at(e.range.start), to: at(e.range.end), text: e.newText, i })).sort((a, b) => b.from - a.from || b.i - a.i);
@@ -1699,7 +1700,7 @@ export class App {
     return named ? truncate(where + after, max) : truncateStart(where, Math.max(4, max - stringWidth(after))) + after;
   }
 
-  /** The vault's search index; null: none here (a loose folder, `[search] engine = "scan"`, SQLite couldn't). */
+  /** The root's search index; null: none here (`~` or `/` opened as a plain folder, `[search] engine = "scan"`, SQLite couldn't). */
   searchIndex: SearchIndex | null = null;
   /** Bringing the index up to the files, a slice at a time; null when it's done. */
   searchJob: IndexJob | null = null;
@@ -2637,7 +2638,8 @@ export class App {
     for (const h of hs) {
       if (h.line > view.cur.row) break;
       while (chain.length && chain[chain.length - 1]!.level >= h.level) chain.pop();
-      chain.push({ text: h.text, line: h.line, level: h.level });
+      // Drawn on one row: a setext heading's line break, or the two spaces a footnote mark leaves, fold.
+      chain.push({ text: h.text.replace(/\s+/g, " "), line: h.line, level: h.level });
     }
     return chain.map(({ text, line }) => ({ text, line }));
   }
@@ -5027,11 +5029,17 @@ export class App {
         if (typed === null) return;
         o.filter = (o.filter ?? "") + typed;
     }
-    // The selection goes to the heading that matches best (never a parent only kept for context).
+    this.outlineRefiltered();
+  }
+
+  /** The right pane's filter changed (typed, pasted): the selection goes to the row that matches best. */
+  private outlineRefiltered(): void {
+    const o = this.outline;
+    // The heading that matches best (never a parent only kept for context).
     o.scroll = 0;
     o.pinned = false;
     const q = o.filter ?? "";
-    const next: { text: string; heading?: boolean }[] = notes ? this.footnoteRows() : info ? this.infoRows() : this.outlineRows();
+    const next: { text: string; heading?: boolean }[] = this.rightView === "footnotes" ? this.footnoteRows() : this.rightView === "info" ? this.infoRows() : this.outlineRows();
     let best = 0;
     let bestScore = Number.NEGATIVE_INFINITY;
     if (q) {
@@ -5118,7 +5126,12 @@ export class App {
         if (typed === null) return;
         s.filter = (s.filter ?? "") + typed;
     }
-    // The selection goes to the first match: the first note, in the explorer.
+    this.sidebarRefiltered();
+  }
+
+  /** The left pane's filter changed (typed, pasted): the selection goes to the first match — the first note, in the explorer. */
+  private sidebarRefiltered(): void {
+    const s = this.sidebar;
     s.scroll = 0;
     s.pinned = false;
     const next: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "problems" ? this.problemRows() : this.historyRows();
@@ -5365,7 +5378,7 @@ export class App {
         }
       });
       hs.forEach((h, i) => {
-        if (keep.has(i)) out.push({ index: i, level: h.level, text: h.text, line: h.line, folded: false, hasChildren: (hs[i + 1]?.level ?? 0) > h.level });
+        if (keep.has(i)) out.push({ index: i, level: h.level, text: h.text.replace(/\s+/g, " "), line: h.line, folded: false, hasChildren: (hs[i + 1]?.level ?? 0) > h.level });
       });
       return out;
     }
@@ -5375,7 +5388,8 @@ export class App {
       else return;
       const hasChildren = (hs[i + 1]?.level ?? 0) > h.level;
       const folded = this.outline.folded.has(i);
-      out.push({ index: i, level: h.level, text: h.text, line: h.line, folded, hasChildren });
+      // Its text on one row (the layout keeps the heading's own, white space and all, for links).
+      out.push({ index: i, level: h.level, text: h.text.replace(/\s+/g, " "), line: h.line, folded, hasChildren });
       if (folded && hasChildren) hideDeeperThan = h.level;
     });
     return out;
@@ -5610,9 +5624,19 @@ export class App {
     }
     // In normal mode where the text is editable: put after the cursor, as p does.
     if (!o && this.region === "content" && iv && editable(iv)) return put(this, iv, true, text.replace(/\r\n?/g, "\n"));
-    if (!o) return;
     const line = sanitize(text.replace(/\r\n?/g, "\n").split("\n")[0] ?? "");
     if (!line) return;
+    if (!o) {
+      // A side pane's filter being typed in: its first line, as typed.
+      if (this.region === "sidebar" && this.sidebarShown && this.sidebar.filtering) {
+        this.sidebar.filter = (this.sidebar.filter ?? "") + line;
+        this.sidebarRefiltered();
+      } else if (this.region === "outline" && this.outlineShown && this.outline.filtering) {
+        this.outline.filter = (this.outline.filter ?? "") + line;
+        this.outlineRefiltered();
+      }
+      return;
+    }
     if (o.kind === "prompt") {
       // Into the field being typed in: the replace field when it has focus; none in a yes/no
       // question or while each match is confirmed (keys there are answers, not text).
@@ -6181,8 +6205,12 @@ export class App {
       this.drag = null;
       return;
     }
+    // The floating editor (3.20): a click outside its box (the which-key popup aside) closes it,
+    // writing back, and does nothing else — before the tabs and panes, which would act under it.
+    const inPopup = g.popup && inRect(g.popup, ev.x, ev.y);
+    if (this.floating && g.floating && !inRect(g.floating, ev.x, ev.y) && !inPopup) return void this.closeFloating();
     if (hot && !hot.startsWith("tab:")) return this.clickHot(hot);
-    if (g.popup && inRect(g.popup, ev.x, ev.y)) return; // the which-key popup's background
+    if (inPopup) return; // the which-key popup's background
     const tab = g.tabs.find((t) => inRect(t, ev.x, ev.y));
     if (tab) {
       this.activeTab = tab.index;
@@ -6247,24 +6275,31 @@ export class App {
       if (this.leftView === "problems") {
         // A section's heading folds; a note's row opens on one click; a problem: one click selects
         // it, a double-click goes there.
-        const p = this.problemRows()[idx];
+        const rows = this.problemRows();
+        const p = rows[idx];
         if (!p) return;
         this.sidebar.selected = idx;
         if (p.heading) return this.problemsAction(p.folded ? "expand" : "collapse");
         if (clicks < 2 && !p.note) return;
+        // The clicked row, of the filtered list (as enter in the filter): the filter clears.
         this.sidebar.filter = "";
         this.sidebar.filtering = false;
-        return this.problemsAction("open");
+        this.sidebar.pinned = false;
+        return this.openProblemRow(p, rows);
       }
       if (this.leftView === "history") {
         const h = this.historyRows()[idx];
         if (!h || h.heading) return;
         this.sidebar.selected = idx;
-        // As in the explorer: one click selects, a double-click (or enter) jumps there.
+        // As in the explorer: one click selects, a double-click (or enter) jumps there — the clicked
+        // row, of the filtered list; the filter clears.
         if (clicks < 2) return;
         this.sidebar.filter = "";
         this.sidebar.filtering = false;
-        this.historyAction("open");
+        if (h.recent) this.open(h.recent);
+        else this.jumpHistory(h.index);
+        this.region = "content";
+        if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
         return;
       }
       const row = this.explorerRows()[idx];
@@ -6301,8 +6336,7 @@ export class App {
       this.scrollbarTo(bar, ev.y, ev.x);
       return;
     }
-    // The floating editor (3.20): a click in it is its; outside its box, it closes.
-    if (this.floating && g.floating && !inRect(g.floating, ev.x, ev.y)) return void this.closeFloating();
+    // The floating editor (3.20): a click in it is its (one outside closed it, above).
     const pane = (this.floating ? g.panes.find((p) => p.view === this.floating!.view && inRect(p, ev.x, ev.y)) : undefined) ?? (this.floating ? undefined : g.panes.find((p) => inRect(p, ev.x, ev.y)));
     if (!pane) return;
     const t = this.tab!;
@@ -6623,7 +6657,9 @@ export class App {
     if (!buf || buf.rel === null || buf.virtual) return this.message("info", "context: open a note first");
     for (const d of this.dirtyBuffers()) {
       if (d.virtual || this.saveBuffer(d, true)) continue;
-      // Not saved (it changed on disk meanwhile): the bundle would miss what's on screen — said, never silent.
+      // Not saved: the bundle would miss what's on screen — said, never silent. Changed on disk
+      // meanwhile, the resolve's key; otherwise the write failed, and its error above says why.
+      if (!d.changedOnDisk() || d.deleted) return this.message("warn", `context: ${this.displayName(d)} couldn't be saved — not copying`);
       const key = this.keymap.keysFor("note.resolve")[0];
       return this.message("warn", `context: ${this.displayName(d)} changed on disk while unsaved — ${key ? prettyKey(key, this.leader) : "note.resolve"} resolves it first`);
     }
@@ -7020,6 +7056,8 @@ export class App {
   /** Quit, unless something is unsaved (`app.quit`; `:q!` quits anyway). */
   requestQuit(force = false): void {
     for (const v of this.allViews()) if (v.insert) stopInsert(this, v);
+    // The properties editor's text (not a buffer of the list): written back first, or asked about.
+    if (this.floating && !force && !this.closeFloating()) return;
     const dirty = this.dirtyBuffers();
     if (dirty.length && !force) {
       return this.message("warn", `unsaved changes in ${dirty.map((b) => this.displayName(b)).join(", ")} — :w saves, :q! quits without saving`);
@@ -7085,11 +7123,12 @@ export class App {
       buf.conflictWaiting = true;
       return;
     }
+    const waiting = buf.conflictWaiting;
     buf.conflictWaiting = false;
     if (this.overlay) {
       // Its own prompt already open: nothing to add. Another list open: said once, not per write.
       const own = this.overlay.kind === "list" && this.overlay.title.startsWith(`${this.displayName(buf)} changed on disk`);
-      if (!own && !buf.conflictWaiting) this.message("warn", `${this.displayName(buf)} changed on disk while you have unsaved changes — space n c resolves it`);
+      if (!own && !waiting) this.message("warn", `${this.displayName(buf)} changed on disk while you have unsaved changes — space n c resolves it`);
       buf.conflictWaiting = !own;
       return;
     }
@@ -7263,6 +7302,9 @@ export class App {
     this.activeTab = 0;
     this.overlay = null;
     this.expanded.clear();
+    // The clipboard and the last delete name the old root's things: forgotten.
+    this.fileClip = null;
+    this.lastTrashed = null;
     this.leftPositions.clear();
     this.sidebar = { visible: this.config.ui.sidebar, overlay: false, selected: 0, scroll: 0 };
     this.sideW = this.config.ui.sidebar_width;
@@ -7378,9 +7420,10 @@ export class App {
     } catch (err) {
       return this.message("warn", (err as Error).message);
     }
-    const touched = new Set([...plan.files.map((f) => f.abs), ...(plan.move ? [plan.move.from] : [])]);
+    // What it rewrites, and what it moves: a folder's every file (its open buffers are replaced by the moved files').
+    const touched = new Set([...plan.files.map((f) => f.abs), ...(plan.move ? [plan.move.from] : []), ...(plan.moves ?? []).map(([from]) => join(this.loc.root, from))]);
     const dirty = this.dirtyBuffers().filter((b) => touched.has(b.abs));
-    if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the rename rewrites ${dirty.length === 1 ? "it" : "them"}`);
+    if (dirty.length) return this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save first: the rename rewrites or moves ${dirty.length === 1 ? "it" : "them"}`);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     const more = extra?.(plan);
     const items: ListItem[] = [

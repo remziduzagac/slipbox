@@ -46,7 +46,7 @@ export function cacheDir(v: Keyed): string {
   return join(cacheHome(), v.key);
 }
 
-/** The vault's personal data: positions, the session, the scratch, redirects. */
+/** The vault's personal data: the session, the scratch, the trash, the undo log, redirects. */
 export function stateDir(v: Keyed): string {
   return join(stateHome(), v.key);
 }

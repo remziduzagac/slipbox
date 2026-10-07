@@ -174,14 +174,28 @@ export class Reach implements VaultReach {
     // A file of `g` by its absolute path: its vault path there.
     const inG = (abs: string) => {
       if (!isInside(g.root, abs)) return null;
-      // Its path from the vault's root, as a link from there reads it (its own spelling, 1.4).
-      const r = g.resolveLink({ kind: "markdown", target: posix.normalize(relative(g.root, abs)) }, "");
+      // Its path from the vault's root, as a link from there reads it (its own spelling, 1.4) — a URL's
+      // path, so a `#` or `%` in the file's name is encoded, not read as a fragment or an escape.
+      const target = posix.normalize(relative(g.root, abs)).replace(/[%#]/g, (c) => encodeURIComponent(c));
+      const r = g.resolveLink({ kind: "markdown", target }, "");
       return (r.resolvedKind === "note" || r.resolvedKind === "file") && r.path && !isAbsolute(r.path) ? r.path : null;
     };
+    // A path from the linking root's top (`[[outreach/index]]`, `/outreach/plan.md`) into a root
+    // nested in it (17.17), as its graph reads one: the file as written, else the note.
+    // Undefined where no file is there; null where it's the linking root's own (a link within it).
+    const fromTop = (path: string, wiki: boolean): string | null | undefined => {
+      const abs = join(v.path, path.replace(/^\/+/, ""));
+      const bare = !/\.[A-Za-z0-9]+$/.test(abs);
+      const candidates = wiki && bare ? [`${abs}.md`, `${abs}.markdown`] : bare ? [abs, `${abs}.md`, `${abs}.markdown`] : [abs];
+      const hit = candidates.find((c) => isFile(c));
+      if (!hit) return undefined;
+      const own = findVaultRoot(hit);
+      return own && real(own) !== real(v.path) ? inG(hit) : null;
+    };
     // A wikilink or embed reaches another root by a path out of its own (`[[../A/note]]`, as the
-    // graph reads it); names stay within their root (21.3).
+    // graph reads it), or into one nested in it; names stay within their root (21.3).
     if (l.kind === "wiki" || l.kind === "embed") {
-      if (!/^\.\.?\//.test(l.target)) return null;
+      if (!/^\.\.?\//.test(l.target)) return l.target.includes("/") ? (fromTop(l.target, true) ?? null) : null;
       const hit = pathLink(l.target, linking, true);
       return hit ? inG(hit.abs) : null;
     }
@@ -198,6 +212,15 @@ export class Reach implements VaultReach {
     if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) && !fileUrl) return null;
     const path = fileUrl ? l.target : l.target.split("#")[0]!;
     if (!path) return null;
+    // `/…` is the linking root's first, then the filesystem's (21.2).
+    if (path.startsWith("/") && !path.startsWith("//")) {
+      let decoded = path;
+      try {
+        decoded = decodeURIComponent(path);
+      } catch {}
+      const top = fromTop(decoded, false);
+      if (top !== undefined) return top;
+    }
     const hit = pathLink(path, linking, false);
     if (hit) return inG(hit.abs);
     // `/x.md` is the other vault's own root; any other relative path, from the linking note.
@@ -207,6 +230,14 @@ export class Reach implements VaultReach {
       decoded = decodeURIComponent(path);
     } catch {}
     return inG(resolve(dirname(linking), decoded));
+  }
+}
+
+function isFile(p: string): boolean {
+  try {
+    return statSync(p).isFile();
+  } catch {
+    return false;
   }
 }
 

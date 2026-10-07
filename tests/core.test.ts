@@ -158,6 +158,21 @@ describe("capture format (8.3, 8.4)", () => {
     const entry = formatEntry({ ref: parseRef("f.ts:2-3")!, snippet: true, cwd: dir }, dir);
     expect(entry).toBe("`f.ts:2-3`\n\n```typescript\ntwo\nthree\n```");
   });
+  test("a name that merely starts with dots (`..notes/`) is in the project: its path from there, not its absolute one", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cap-"));
+    mkdirSync(join(dir, "..notes"));
+    writeFileSync(join(dir, "..notes", "a.md"), "one\n");
+    expect(formatEntry({ ref: parseRef("..notes/a.md:1")!, cwd: dir }, dir)).toBe("`..notes/a.md:1`");
+  });
+});
+
+describe("folders that travel together (21.7)", () => {
+  test("two folders outside git, one in the other's `..archive/`: they travel together (21.7)", async () => {
+    const { travelTogether } = await import("../src/core/folders.ts");
+    const x = mkdtempSync(join(tmpdir(), "slipbox-travel-"));
+    mkdirSync(join(x, "..archive"));
+    expect([travelTogether(x, join(x, "..archive")), travelTogether(join(x, "..archive"), x)]).toEqual([true, true]);
+  });
 });
 
 describe("config (0.9)", () => {
@@ -1182,6 +1197,12 @@ describe("a reader per note format (16.2)", () => {
     expect(drawn).toEqual([{ text: "Setup", slug: "setup", id: "install" }, { text: "Notes", slug: "notes", id: undefined }, { text: "Use x K", slug: "use-x-k", id: undefined }]);
     expect(md.scanHeadings(hs).map(({ text, slug, id }) => ({ text, slug, id }))).toEqual(drawn);
     expect(layoutSource(hs, { width: 60, wrap: true, headings: "scan" }).headings[0]).toMatchObject({ text: "Setup", id: "install" });
+    // `_` inside a word, a code span's markup and an image (left out, its alt too) as the render reads them.
+    const marked = "# The config_file option\n\n## Use `a_b * c` here\n\n## Logo ![logo](logo.png) Title\n\n## *Bold* ~~gone~~ [[a|b]] &amp; \\*\n";
+    const rendered = renderMarkdown(marked, { width: 60, glyphs: glyphsFor("unicode"), showUrls: false }).headings.map(({ text, slug }) => ({ text, slug }));
+    expect(rendered.map((h) => h.text)).toEqual(["The config_file option", "Use a_b * c here", "Logo  Title", "Bold gone b & *"]);
+    expect(md.scanHeadings(marked).map(({ text, slug }) => ({ text, slug }))).toEqual(rendered);
+    expect(layoutSource(marked, { width: 60, wrap: true, headings: "scan" }).headings.map(({ text, slug }) => ({ text, slug }))).toEqual(rendered);
     expect(md.linkAt("see [the intro](alpha.md#intro) and [x](b.md)", 6)).toEqual({ kind: "markdown", target: "alpha.md#intro", heading: null, text: "the intro" });
     expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 6)).toMatchObject({ kind: "wiki", target: "alpha", heading: "Top", text: "the alpha" }); // read again (21.3)
     expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 34)).toMatchObject({ kind: "markdown", target: "b.md" });

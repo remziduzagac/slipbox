@@ -9,8 +9,6 @@ import * as E from "./editing.ts";
 import { keyChar } from "./keys.ts";
 import { textMatches } from "./replacing.ts";
 
-export { keyChar };
-
 type Op = "d" | "c" | "y" | ">" | "<";
 export type FindKind = "f" | "F" | "t" | "T";
 

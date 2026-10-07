@@ -83,7 +83,7 @@ LINTERS.yamllint!.hint = "uv tool install yamllint, pip install yamllint, or bre
 /** The linters in effect: the built-in ones, each the config names changed (its keys over the defaults) or added. */
 export function linterTable(config: Record<string, LinterConfig> = {}): Record<string, LinterDef> {
   const out: Record<string, LinterDef> = { ...LINTERS };
-  for (const [name, c] of Object.entries(config)) out[name] = linterDef(name, c, out[name]);
+  for (const [name, c] of Object.entries(config)) out[name] = linterDef(name, c, Object.hasOwn(out, name) ? out[name] : undefined);
   return out;
 }
 

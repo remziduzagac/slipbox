@@ -34,25 +34,26 @@ Next in phase 4: the rest of `1.x`, search (`6.x`), embeds. Still open: `7.4` (r
 (incremental reparse) moved to `15.1`, now mostly done (a note re-parses by chunk); `5.9` (a `HEAD`
 change as a branch switch) and the lint surface (markdownlint-cli2) are not built.
 
-**Updated 2026-10-03.** Built since: search (`6.x`), the lint surface (`3.21`), a branch switch as one event
-(`5.9`), and phase 5's LSP face (`11.x`) and code intelligence (`19.x`: language servers and linters for code). Left
-in phase 5: `16.18`–`16.23`. **Decided 2026-10-02, built by 2026-10-03:** plain paths and virtual vaults (`20.x`;
-`docs/idea.md`, "Plain paths, virtual vaults"). Done: the converter (`20.1`), links as plain paths (`20.2`: `[[…]]`
-is text, `/` the filesystem's root, a move never resolves a link), vault boundaries (`20.3`: the nearest `.slipbox/`
-or git checkout), collections apart from instances (`20.4`: local instance ids in `vaults.json`, copies told by
-their evidence), personal state by instance (`20.5`: moves confirmed, never guessed; today's state moved once), the
-LSP face removed (`20.23`), names for display (`20.6`: unique here, `work.docs`, `name@branch`), settings deeper
-over broader (`20.7`), git-ignored and hidden files indexed when reached (`20.8`), the background auto-index of `~`
-(`20.9`), freshness and coverage (`20.10`), the parse cache shared by content (`20.11`: a second copy read ~150×
-faster). The `vault:path` form on screen (`20.12`) and in link completion (`20.13`). The vault and its branch in the
-status line (`20.14`). The explorer's roots (`20.15`). Search by vault (`20.16`). Repairs from what the state knows
-(`20.17`). Generated edits as plans (`20.18`: `--plan`, `slipbox apply`). Renames and moves on paths, code comments
-included (`20.19`). The CLI takes and gives `vault:path` (`20.20`: any note argument, `--from`; `shown`; `resolve`'s
-`href`, the relative path to write). The merge review (`20.21`: `slipbox merge-review`, `space g m`; after a merge or a
-pull, git's renames are evidence for the relink). The removals (`20.22`): nothing resolves by a name — until `21.3`
-read wikilinks again within their root; `[[vault:note]]` and redirects stay the converter's — and no home vault: a
-plain folder opened is an unnamed instance, walked and indexed as a vault is (`~` and `/` listed a level at a time).
-Next, then: phase 5's grammars (`16.18`–`16.22`; `16.23` asked about Ruby and C/C++) — built 2026-10-07, below.
+**Updated 2026-10-03.** Built since: search (`6.x`), the lint surface (`3.21`), a branch switch as one event (`5.9`),
+rename undo (`7.4`: `space v shift+u`, `slipbox undo`), and phase 5's LSP face (`11.x`) and code intelligence (`19.x`:
+language servers and linters for code). Left in phase 5: `16.18`–`16.23`. **Decided 2026-10-02, built by 2026-10-03:**
+plain paths and virtual vaults (`20.x`; `docs/idea.md`, "Plain paths, virtual vaults"). Done: the converter (`20.1`),
+links as plain paths (`20.2`: `[[…]]` is text, `/` the filesystem's root, a move never resolves a link), vault
+boundaries (`20.3`: the nearest `.slipbox/` or git checkout), collections apart from instances (`20.4`: local instance
+ids in `vaults.json`, copies told by their evidence), personal state by instance (`20.5`: moves confirmed, never
+guessed; today's state moved once), the LSP face removed (`20.23`), names for display (`20.6`: unique here, `work.docs`,
+`name@branch`), settings deeper over broader (`20.7`), git-ignored and hidden files indexed when reached (`20.8`), the
+background auto-index of `~` (`20.9`), freshness and coverage (`20.10`), the parse cache shared by content (`20.11`: a
+second copy read ~150× faster). The `vault:path` form on screen (`20.12`) and in link completion (`20.13`). The vault
+and its branch in the status line (`20.14`). The explorer's roots (`20.15`). Search by vault (`20.16`). Repairs from
+what the state knows (`20.17`). Generated edits as plans (`20.18`: `--plan`, `slipbox apply`). Renames and moves on
+paths, code comments included (`20.19`). The CLI takes and gives `vault:path` (`20.20`: any note argument, `--from`;
+`shown`; `resolve`'s `href`, the relative path to write). The merge review (`20.21`: `slipbox merge-review`, `space g
+m`; after a merge or a pull, git's renames are evidence for the relink). The removals (`20.22`): nothing resolves by a
+name — until `21.3` read wikilinks again within their root; `[[vault:note]]` and redirects stay the converter's — and no
+home vault: a plain folder opened is an unnamed instance, walked and indexed as a vault is (`~` and `/` listed a level
+at a time). Next, then: phase 5's grammars (`16.18`–`16.22`; `16.23` asked about Ruby and C/C++) — built 2026-10-07,
+below.
 
 **Updated 2026-10-07.** Built since: paths inside, conventions at the edges (`21.x`; `docs/idea.md`, "Paths inside,
 conventions at the edges"; `docs/design/decisions.md`, `21.x`). A file's **root** is its nearest folder holding

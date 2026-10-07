@@ -441,7 +441,7 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
   const servers = data["language-server"];
   if (isPlainObject(servers)) {
     for (const [name, s] of Object.entries(servers)) {
-      if (!(name in SERVERS)) {
+      if (!Object.hasOwn(SERVERS, name)) {
         delete servers[name];
         warnings.push(`config: ${file} adds the language server ${name}, which only your own config may (it runs a program); ignored`);
         continue;
@@ -457,7 +457,7 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
   const linters = data.linter;
   if (isPlainObject(linters)) {
     for (const [name, l] of Object.entries(linters)) {
-      if (!(name in LINTERS)) {
+      if (!Object.hasOwn(LINTERS, name)) {
         delete linters[name];
         warnings.push(`config: ${file} adds the linter ${name}, which only your own config may (it runs a program); ignored`);
         continue;
@@ -505,7 +505,7 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
         const next: Record<string, ServerConfig> = { ...was };
         for (const [name, given] of Object.entries(value)) {
           const s = checkFields(given as Record<string, unknown>, SERVER_FIELDS, `language-server.${name}`, file, warnings) as ServerConfig;
-          const before = next[name] ?? {};
+          const before = (Object.hasOwn(next, name) ? next[name] : undefined) ?? {};
           next[name] = { ...before, ...s, ...(before.config && s.config ? { config: deepMerge(before.config, s.config) } : {}) };
         }
         out[key] = next;
@@ -518,7 +518,7 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       else {
         const was = out[key] as Record<string, LinterConfig>;
         const checked = Object.entries(value).map(([name, l]) => [name, checkFields(l as Record<string, unknown>, LINTER_FIELDS, `linter.${name}`, file, warnings)] as const);
-        out[key] = { ...was, ...Object.fromEntries(checked.map(([name, l]) => [name, { ...was[name], ...l }])) };
+        out[key] = { ...was, ...Object.fromEntries(checked.map(([name, l]) => [name, { ...(Object.hasOwn(was, name) ? was[name] : undefined), ...l }])) };
       }
       continue;
     }
@@ -590,7 +590,11 @@ const isServerRef = (v: unknown): boolean =>
   isString(v) ||
   (isPlainObject(v) && isString(v.name) && (v["only-features"] === undefined || isStrings(v["only-features"])) && (v["except-features"] === undefined || isStrings(v["except-features"])));
 
-/** A field's type check, and how a warning says what it must be. Fields not named here are kept as given. */
+/**
+ * A field's type check, and how a warning says what it must be. Fields not named here are kept as given,
+ * silently, so a Helix `languages.toml` section (or efm's keys) pastes in; only a known field spelled with
+ * underscores (`lint_command`, `file_types`) is warned of, a slip in these tables of hyphens.
+ */
 type FieldCheck = [check: (v: unknown) => boolean, must: string];
 const STRINGS: FieldCheck = [isStrings, "a list of strings"];
 const SERVER_FIELDS: Record<string, FieldCheck> = {
@@ -618,12 +622,14 @@ const LINTER_FIELDS: Record<string, FieldCheck> = {
   "require-marker": [isBoolean, "true or false"],
 };
 
-/** A copy of `table` without the fields of the wrong type, each warned of; the rest kept. */
+/** A copy of `table` without the fields of the wrong type, or a known one spelled with underscores, each warned of; the rest kept. */
 function checkFields(table: Record<string, unknown>, fields: Record<string, FieldCheck>, where: string, file: string, warnings: string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(table)) {
-    const field = fields[k];
-    if (field && !field[0](v)) warnings.push(`config: ${file}: ${where}.${k} must be ${field[1]}; ignored`);
+    const field = Object.hasOwn(fields, k) ? fields[k] : undefined;
+    const hyphened = k.replace(/_/g, "-");
+    if (!field && hyphened !== k && Object.hasOwn(fields, hyphened)) warnings.push(`config: ${file}: ${where}.${k} is spelled ${hyphened}; ignored`);
+    else if (field && !field[0](v)) warnings.push(`config: ${file}: ${where}.${k} must be ${field[1]}; ignored`);
     else out[k] = v;
   }
   return out;

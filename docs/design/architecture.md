@@ -1,6 +1,6 @@
 # Architecture
 
-How the code is laid out and why, as built in phases 0–3. The *why* of the product is in `docs/idea.md`; the
+How the code is laid out and why, as built in phases 0–5c. The *why* of the product is in `docs/idea.md`; the
 decisions that gated this code are in [decisions.md](decisions.md).
 
 ## One core, two faces
@@ -129,6 +129,8 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/servers/manager.ts` | 19.1 | the servers of open files: one per server and project, installed, restarted |
 | `core/servers/doctor.ts` | 19.7 | each language's servers and where each is; a file's, in its project |
 | `core/servers/client.ts` | 19.1 | a language server as slipbox's client: started, files synced, diagnostics, stopped |
+| `core/servers/linters.ts` | 19.19 | linters with no language server, in efm-langserver's keys, via the lint surface |
+| `core/servers/vscode.ts` | 19.20 | a project's `.vscode/settings.json` answering its servers' settings |
 | `core/diagnostics.ts` | 19.8, 11.5 | a file's problems from every source, one shape: links, conflicts, syntax, lint |
 | `core/clipboard.ts` | 8.5 | OSC 52 (up to 100 KB of base64), then pbcopy / wl-copy / xclip, then a file |
 | `core/stale.ts` | 9.9 | advisory list of unsaved paths, pid-stamped: the TUI writes it, the CLI reads it |
@@ -204,14 +206,18 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | user themes | `$XDG_CONFIG_HOME/slipbox/themes/*.yaml` (base16 / base24) |
 | link index | `$XDG_CACHE_HOME/slipbox/<key>/index.json` |
 | search index (`6.6`) | `$XDG_CACHE_HOME/slipbox/<key>/search.db` (SQLite FTS5, WAL) |
+| parse cache, shared (`20.11`) | `$XDG_CACHE_HOME/slipbox/parsed.db` (by content) |
 | reading positions (`21.8`) | `$XDG_STATE_HOME/slipbox/positions.json` (by file, the machine's) |
 | session | `$XDG_STATE_HOME/slipbox/<key>/session.json` |
+| pinned roots (`20.15`, `:pin-root`) | `$XDG_STATE_HOME/slipbox/<key>/roots.json` |
+| branch heads seen (`20.21`) | `$XDG_STATE_HOME/slipbox/<key>/heads.json` (each branch's last commit) |
 | clipboard fallback (no OSC 52 or clipboard tool) | `$XDG_STATE_HOME/slipbox/<key>/clipboard.txt` |
 | scratch | `$XDG_STATE_HOME/slipbox/<key>/scratch.md`, or in the vault by config |
 | staleness | `$XDG_STATE_HOME/slipbox/<key>/dirty/<pid>.json` |
 | redirects (moves seen: `17.12`) | `$XDG_STATE_HOME/slipbox/<key>/redirects.json` |
 | renames, to undo (`7.4`) | `$XDG_STATE_HOME/slipbox/<key>/renames.json` (the last 20) |
 | the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, and an item per folder) |
+| the background index (`20.9`) | `$XDG_STATE_HOME/slipbox/autoindex.json` (its place), `activity` (CLI last used) |
 
 `<key>` is the root's path — a plain folder's when there's none: `<basename>-<sha256(realpath)[:12]>` (`21.8`;
 `docs/design/decisions.md`, `0.10`). A named folder moved by hand takes it along.

@@ -16,6 +16,11 @@ exclude = ["drafts/", "*.bak", "node_modules/"]
 max_file_size = 8388608         # 8 MiB: the GPX exports are big
 root_markers = [".git", ".slipbox", ".obsidian", ".zk", "book.toml"]   # book.toml: our mdBook docs count as roots
 
+[links]                         # the links slipbox makes, said outright rather than found from each root
+style = "markdown"              # mdBook reads no wikilinks
+path = "relative"               # a link that still works on GitHub and in the book
+extension = "keep"              # mdBook turns foo.md into foo.html; a link without .md breaks there
+
 [files]
 show = "all"                    # every text file; ctrl+n with a name like deploy.toml or run.py makes that file
 include = ["*.ts", "scripts/"]

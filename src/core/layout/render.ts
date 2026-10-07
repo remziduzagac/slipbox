@@ -5,8 +5,8 @@
 
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
-import { type DataComment, type DataField, fieldLink, type TreePlace } from "../data.ts";
-import { headingText, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
+import { type CellLink, type DataComment, type DataField, fieldLink, type TreePlace } from "../data.ts";
+import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../width.ts";
@@ -339,8 +339,7 @@ function heading(depth: number, children: PhrasingContent[], src: number, ctx: C
   // The heading's text and slug as the outline (headingsOf) has them — not the drawn spans, which
   // carry footnote marks and image glyphs. Repeated headings share a slug; their occurrence tells
   // them apart (anchors count it), so [[#A-1]] is the heading "A-1", never the second "A".
-  const text = headingText({ type: "heading", depth: depth as Heading["depth"], children }).replace(/\s+/g, " ").trim();
-  const slug = slugify(text);
+  const { text, slug } = headingLabel({ type: "heading", depth: depth as Heading["depth"], children });
   const idx = ctx.headings.push({ level: depth, text, slug, src, ...(id ? { id } : {}) }) - 1;
   const iconW = stringWidth(icon);
   const rows = wrapSpans(spans, width - iconW);
@@ -645,8 +644,10 @@ function list(node: Extract<RootContent, { type: "list" }>, ctx: Ctx, width: num
 
 function htmlBlock(value: string, src: number, width: number): Line[] | null {
   // Comments are hidden, one by one (not everything from the first to the last: text between two
-  // is kept); a block that was only comments draws nothing.
-  value = value.replace(/<!--[\s\S]*?-->/g, "");
+  // is kept); a block that was only comments draws nothing. A comment leaves its line breaks, so
+  // each row keeps its source line, and a line it emptied draws no row.
+  const before = value.split("\n");
+  value = value.replace(/<!--[\s\S]*?-->/g, (m) => "\n".repeat(m.split("\n").length - 1));
   const v = value.trim();
   if (!v) return null;
   if (/^<br\s*\/?>$/i.test(v)) return [blank(src)];
@@ -654,6 +655,7 @@ function htmlBlock(value: string, src: number, width: number): Line[] | null {
   sanitize(value)
     .split("\n")
     .forEach((text, i) => {
+      if (!text.trim() && before[i]?.trim()) return;
       for (const row of breakHard([{ text: expandTabs(text), role: "html", attrs: 0 }], width)) out.push({ spans: row, src: src + i });
     });
   return out;
@@ -771,15 +773,9 @@ function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
   const value = expandTabs(sanitize(f.value)) || (f.kind === "string" ? '""' : "");
   // A value that is a link (16.15): a URL, a reference key's value, or a path that resolves.
   const l = fieldLink(f);
-  let link: number | undefined;
-  if (l) {
-    const s = status(ctx, "markdown", l.target);
-    if (l.explicit || s === "resolved") {
-      link = addLink(ctx, { kind: "markdown", target: l.target, heading: null, text: f.value, status: s, src: f.keyLine });
-      role = s === "unresolved" ? "link_unresolved" : "link";
-    }
-  }
-  const spans: Span[] = [{ text: value, role, attrs: 0, ...(link !== undefined ? { link } : {}) }];
+  const dl = l ? dataValueLink(ctx, l, f.value, f.keyLine) : null;
+  if (dl) role = dl.role;
+  const spans: Span[] = [{ text: value, role, attrs: 0, ...(dl ? { link: dl.link } : {}) }];
   if (f.comment) spans.push({ text: `${value ? "  " : ""}# ${expandTabs(sanitize(f.comment).replace(/\s*\n\s*/g, " "))}`, role: "syn_comment", attrs: 0 });
   const rows = wrapSpans(spans, Math.max(4, width - kw - 3));
   const down = place ? guides(place.lasts, "down", ctx, room) : [];
@@ -793,6 +789,14 @@ function dataField(f: DataField, ctx: Ctx, width: number): Line[] {
     ],
     src,
   }));
+}
+
+/** A data value's link (16.15), when it is one: explicit (a URL, a reference key's), or a path that
+ *  resolves. A field's value, or a records table's cell. */
+function dataValueLink(ctx: Ctx, l: CellLink, text: string, src: number): { link: number; role: Role } | null {
+  const s = status(ctx, "markdown", l.target);
+  if (!l.explicit && s !== "resolved") return null;
+  return { link: addLink(ctx, { kind: "markdown", target: l.target, heading: null, text, status: s, src }), role: s === "unresolved" ? "link_unresolved" : "link" };
 }
 
 /** Comment lines of a data file on their own: dimmed, wrapped. */
@@ -837,7 +841,11 @@ function table(node: Table, ctx: Ctx, width: number): Line[] {
     const out: Span[][] = [];
     for (let c = 0; c < ncols; c++) {
       const cell = row.children[c] as TableCell | undefined;
-      out.push(cell ? inline(cell.children, ctx, style, srcOf(row)) : []);
+      // A records table's cell whose value is a link (a data file's, 16.15), drawn as a field's is.
+      const l = ri > 0 ? (cell?.data as { link?: CellLink } | undefined)?.link : undefined;
+      const value = l ? textOf(cell as unknown as Nodes) : "";
+      const dl = l ? dataValueLink(ctx, l, value, srcOf(row)) : null;
+      out.push(dl ? [{ text: expandTabs(sanitize(value)), role: dl.role, attrs: 0, src: srcOf(row), link: dl.link }] : cell ? inline(cell.children, ctx, style, srcOf(row)) : []);
     }
     return out;
   });

@@ -368,7 +368,8 @@ export class NoteBuffer {
 
   private split: { version: number; lines: string[] } | null = null;
 
-  /** The raw markdown as a layout (source mode, 4.13), its headings borrowed from the render. */
+  /** The raw markdown as a layout (source mode, 4.13), its headings the render's: the parse's, or
+   *  while editing scanned from the text the way the render reads them. */
   sourceLayout(width: number, wrap: boolean, glyphs: Glyphs): Layout {
     const key = `src:${width}:${wrap ? 1 : 0}`;
     let l = this.layouts.get(key);

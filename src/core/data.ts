@@ -270,22 +270,29 @@ function tomlRecords(nodes: RootContent[]): RootContent[] {
     }
     const cols = [...new Set(entries.flatMap((e) => e.fields.map((f) => f.key)))];
     out.push(heading(n.type === "heading" ? n.depth : 1, name!, entries[0]!.line));
-    out.push(table(cols, entries.map((e) => ({ line: e.line, cells: cols.map((c) => e.fields.find((f) => f.key === c)?.value ?? "") })), entries[0]!.line));
+    const rows = entries.map((e) => {
+      const fields = cols.map((c) => e.fields.find((f) => f.key === c));
+      return { line: e.line, cells: fields.map((f) => f?.value ?? ""), links: fields.map((f) => (f ? fieldLink(f) : null)) };
+    });
+    out.push(table(cols, rows, entries[0]!.line));
     i = j - 1;
   }
   return out;
 }
 
-function table(header: string[], rows: { line: number; cells: string[] }[], line: number): Table {
-  const row = (cells: string[], at: number): TableRow => ({
+/** A records table's cell that is a link (16.15): as `fieldLink` reads its value under its column's key. */
+export type CellLink = NonNullable<ReturnType<typeof fieldLink>>;
+
+function table(header: string[], rows: { line: number; cells: string[]; links?: (CellLink | null)[] }[], line: number): Table {
+  const row = (cells: string[], at: number, links?: (CellLink | null)[]): TableRow => ({
     type: "tableRow",
-    children: cells.map((c) => ({ type: "tableCell", children: c ? [{ type: "text", value: c }] : [], position: pos(at) })),
+    children: cells.map((c, i) => ({ type: "tableCell", children: c ? [{ type: "text", value: c }] : [], position: pos(at), ...(links?.[i] ? { data: { link: links[i] } } : {}) })),
     position: pos(at),
   });
   const last = rows.length ? rows[rows.length - 1]!.line : line;
   // A data file's table is records: each row a block of its own for the lens (16.14), not the
   // whole table at once (a CSV's may be thousands of rows).
-  return { type: "table", align: header.map(() => null), children: [row(header, line), ...rows.map((r) => row(r.cells, r.line))], position: pos(line, last), data: { rowBlocks: true } };
+  return { type: "table", align: header.map(() => null), children: [row(header, line), ...rows.map((r) => row(r.cells, r.line, r.links))], position: pos(line, last), data: { rowBlocks: true } };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -581,7 +588,9 @@ function recordTable(seq: YamlNode, lineOf: (o: number) => number): Table {
   const cols = [...new Set(items.flatMap((m) => (m as unknown as { items: { key: YamlNode }[] }).items.map((p) => inline(p.key))))];
   const rows = items.map((m) => {
     const pairs = (m as unknown as { items: { key: YamlNode; value: YamlNode }[] }).items;
-    return { line: m.range ? lineOf(m.range[0]) : 1, cells: cols.map((c) => inline(pairs.find((p) => inline(p.key) === c)?.value)) };
+    const values = cols.map((c) => pairs.find((p) => inline(p.key) === c));
+    const links = values.map((p, k) => (p ? fieldLink({ key: cols[k]!, value: inline(p.value), kind: scalarKind(p.value) }) : null));
+    return { line: m.range ? lineOf(m.range[0]) : 1, cells: values.map((p) => inline(p?.value)), links };
   });
   return table(cols, rows, rows[0]?.line ?? 1);
 }
@@ -672,10 +681,21 @@ export function fieldLink(f: Pick<DataField, "key" | "value"> & { kind?: DataFie
   return null;
 }
 
-/** Every key's link candidate in a data file's tree (resolution is the graph's). */
+/** Every key's link candidate in a data file's tree (resolution is the graph's): a field's, and a
+ *  records table's cells', each under its column's key on its record's line. */
 export function dataLinks(tree: Root): DataLink[] {
   const out: DataLink[] = [];
   for (const n of tree.children) {
+    if (n.type === "table") {
+      const keys = (n.children[0]?.children ?? []).map((c) => (c.children[0] as { value?: string } | undefined)?.value ?? "");
+      for (const row of n.children.slice(1)) {
+        row.children.forEach((c, i) => {
+          const l = (c.data as { link?: CellLink } | undefined)?.link;
+          if (l) out.push({ ...l, key: keys[i] ?? "", line: row.position?.start.line ?? 1 });
+        });
+      }
+      continue;
+    }
     const f = n as unknown as DataField;
     if (f.type !== "dataField") continue;
     const l = fieldLink(f);

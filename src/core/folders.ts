@@ -16,7 +16,7 @@
 import { existsSync, realpathSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { normalizeRemote, remoteUrls } from "./remotes.ts";
-import { ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
+import { climbsOut, ensureDir, readJson, readRegular, SMALL_FILE, writeJson } from "./fsutil.ts";
 import { checkoutOf, inMain } from "./git.ts";
 import { stateHome } from "./paths.ts";
 import { implicitName, MARKER, readIdentity, slugName, unavailable, vaultConfigFile, type VaultIdentity } from "./registry.ts";
@@ -111,10 +111,8 @@ export function travelTogether(a: string, b: string): boolean {
     return common(ca) === common(cb) || sub(common(ca), common(cb)) || sub(common(cb), common(ca));
   }
   if (ca || cb) return false;
-  const inside = (outer: string, inner: string) => {
-    const r = relative(outer, inner);
-    return !r.startsWith("..") && !r.startsWith(sep);
-  };
+  // A name that merely starts with dots (`..archive`) is inside.
+  const inside = (outer: string, inner: string) => !climbsOut(relative(outer, inner));
   return inside(a, b) || inside(b, a);
 }
 

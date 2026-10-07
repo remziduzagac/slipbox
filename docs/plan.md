@@ -57,10 +57,10 @@ probably during phase 2.
 review work slipbox serves — reading what agents produced, configs and code as much as notes — needs
 every text file to open well before the vault grows broader concepts.
 
-**Phase 5b is next (decided 2026-10-02).** Plain paths and virtual vaults (`docs/idea.md`, "Plain paths, virtual
-vaults") change what a link is and what a vault is; the rest of phase 5 (`16.18`–`16.23`) waited, since it doesn't
-depend on either. The LSP face phase 5 built (`11.x`) is removed in it: with plain paths, editors' own servers follow
-the links, and agents have the CLI.
+**Phase 5b came next (decided 2026-10-02, built by 2026-10-03).** Plain paths and virtual vaults (`docs/idea.md`,
+"Plain paths, virtual vaults") change what a link is and what a vault is; the rest of phase 5 (`16.18`–`16.23`)
+waited, since it doesn't depend on either. The LSP face phase 5 built (`11.x`) was removed in it: with plain paths,
+editors' own servers follow the links, and agents have the CLI.
 
 **Phase 5c was decided 2026-10-05, after a review, and built by 2026-10-07.** Paths inside, conventions at the edges
 (`docs/idea.md`, "Paths inside, conventions at the edges") revises phase 5b after a survey of other tools: `/` as a
@@ -599,7 +599,8 @@ In order: link semantics, the migration and identity first; the index and what i
 the merge review after; the removals as their replacements land, the sweep last.*
 
 *Revised by `21.x`: `21.12` removed `20.4`, `20.5`'s instances, `20.6`, `20.12`, `20.13` and `20.20`'s `vault:path`;
-`20.14` and `20.15` show roots (`21.9`). The rows record what was built.*
+`20.14` and `20.15` show roots (`21.9`); `20.2`'s `/` starts from the nearest root first (`21.2`); `20.3`'s markers
+widened by `21.1`. The rows record what was built.*
 
 | ID | Item |
 | --- | --- |
@@ -762,7 +763,9 @@ shared; names that mean the same on every machine. In order: roots and storage, 
 links across vaults, then the TUI, then renames.*
 
 *Revised by `20.x` and `21.x`: `17.2` and `17.8` removed in `20.22`; `17.4`'s `previous_names`, `17.6` and `17.7`'s
-`previous_names` in `21.12`; `17.14` shows the named folders (`21.10`). The rows record what was built.*
+`previous_names` in `21.12`; `17.14` shows the named folders (`21.10`); `17.3`'s id keying replaced by state by root's
+path (`21.8`); `17.12`'s redirect following removed in `20.22`; `17.18` revised by `20.3` and `21.1` (a git checkout,
+`.obsidian/` or `.zk/` is a root by itself). The rows record what was built.*
 
 | ID | Item |
 | --- | --- |
@@ -795,9 +798,10 @@ links across vaults, then the TUI, then renames.*
 identity optional. Superseded the same day by `20.x`, which goes further — links are paths and vaults derived.
 
 `17.18` revised `17.1` (2026-09-30): a git repository without `.slipbox/` was a root of its own;
-now every vault has a `.slipbox/` — one model, no fallbacks — and a repository is offered: made a
+then every vault had a `.slipbox/` — one model, no fallbacks — and a repository was offered: made a
 vault (committed, or private through `.git/info/exclude`) or not now, remembered. A `.slipbox/`
-without an identity gets one when first opened.
+without an identity got one when first opened. Revised again by `20.3` and `21.1`: a git checkout,
+`.obsidian/` or `.zk/` is a root by itself, and nothing is written into a root by opening it.
 
 `17.16` is for compatibility: links written by other editors and agents name files by their paths,
 not by vault names, and every form of it reaches the file, counts as a backlink, and survives a

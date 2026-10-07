@@ -8,13 +8,13 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import { type Config, isSafeRelative } from "./config.ts";
-import { atomicWrite, ensureDir, landsInside, readRegular } from "./fsutil.ts";
+import { atomicWrite, climbsOut, ensureDir, landsInside, readRegular } from "./fsutil.ts";
 import { type Keyed, stateDir } from "./paths.ts";
 import { sanitize } from "./sanitize.ts";
 
 export interface ScratchLocation {
   path: string;
-  /** The project the scratch belongs to: the vault root, else the git root, else cwd. */
+  /** The project the scratch belongs to: its root (the plain folder, when one is opened). */
   project: string;
 }
 
@@ -117,7 +117,7 @@ export function formatEntry(input: CaptureInput, project: string): string {
     const cwd = input.cwd ?? process.cwd();
     const abs = isAbsolute(input.ref.path) ? input.ref.path : resolve(cwd, input.ref.path);
     const rel = relative(project, abs);
-    const shown = rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : abs;
+    const shown = rel && !climbsOut(rel) ? rel : abs;
     parts.push(formatRef({ ...input.ref, path: shown }));
     if (input.snippet || input.snippetText !== undefined) {
       let body = input.snippetText;

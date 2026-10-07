@@ -163,13 +163,12 @@ bun run e2e find replace     # only the scenarios whose names contain these
 
 ## Timings (`bun scripts/bench.ts`)
 
-`scripts/bench.ts` generates notes of 1,000 and 20,000 lines (and one of 20,000 tasks) in a temporary
-vault and times what grows with a note: opening it, moving, typing in source mode and the lens,
-leaving the lens, a reload, a width change, and the CLI's `task`, `read`, `render`, `find` and
-`backlinks`. `bun scripts/bench.ts lens k20` runs only the cases whose names contain those words.
-It isn't part of `bun run check`: timings depend on the machine. The incremental paths it measures
-are held to their from-scratch results by the tests ("the incremental source layout", "the chunked
-parse", "the render cache", "parseAround").
+`scripts/bench.ts` generates notes of 1,000 and 20,000 lines (and one of 20,000 tasks) in a temporary vault and times
+what grows with a note: opening it, moving, typing in source mode and the lens, leaving the lens, a reload, a width
+change, and the CLI's `task`, `read`, `render`, `find` and `backlinks`. `bun scripts/bench.ts lens k20` runs only the
+cases whose names contain any of those words, and skips the work of the cases it leaves out. It isn't part of
+`bun run check`: timings depend on the machine. The incremental paths it measures are held to their from-scratch
+results by the tests ("the incremental source layout", "the chunked parse", "the render cache", "parseAround").
 
 **The parse cache by content** (`20.11`, `bun scripts/bench.ts "2,000 notes"`): 2,000 notes of 120 lines each, the
 first copy parsed and the cache filled, then a second copy (a worktree, a clone) read with it and without it.

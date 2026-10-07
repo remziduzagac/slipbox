@@ -448,7 +448,7 @@ function drawTopBar(app: App, c: Canvas, band: Band, geo: Geometry): void {
     button(app, c, rx, band, label, app.outlineShown ? "topbar_button_on" : "topbar_button", "btn:outline", geo, bar.bg);
     rx -= 1;
   }
-  // Vault-wide state; the watcher and reload markers are about the file, so they sit by its path.
+  // The root's state; the watcher and reload markers are about the file, so they sit by its path.
   const items: { text: string; role: Role }[] = [];
   if (app.indexing > 0) items.push({ text: `indexing ${app.indexing}…`, role: "status_dim" });
   // The branch is the status line's, with the root, by name or path (20.14, 21.9).
@@ -1115,8 +1115,10 @@ function drawScrollbar(app: App, c: Canvas, r: Rect, total: number, top: number,
   for (let k = 0; k < thumb; k++) drawText(c, r.x, r.y + pos + k, app.glyphs.scrollThumb, st, 1);
 }
 
-/** The block cursor: the character under it drawn with the cursor role (inverse without colour). */
-/** The cursor on its character; a wide one at the last column (`end`) shows as one cell. */
+/**
+ * The block cursor on its character, drawn with the cursor role (inverse without colour); a wide one
+ * at the last column (`end`) shows as one cell.
+ */
 function drawCursor(c: Canvas, x: number, y: number, line: Line, col: number, theme: Theme, end = Number.POSITIVE_INFINITY): void {
   const st = roleStyle(theme, "cursor", null);
   const cell = cells(line).find((k) => k.x === col);
@@ -1336,6 +1338,8 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   // The selected note, file, folder or nested vault: a button at the row's end opening its menu
   // (18.1) — rename, move, delete… — its right edge under the title's buttons'.
   const buttonsOf = (row: TreeRow) => {
+    // Another root's rows (20.15) are its own, not this one's to act on: no menu, as explorerItem has it.
+    if (row.under || row.root?.other) return null;
     if (row.kind === "root" && !(row.root?.kind === "vault" && app.loc.mode === "vault")) return null;
     const bs: (readonly [string, string])[] = [[g.itemMenu, "xrow:menu"]];
     return { bs, w: bs.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0) };
@@ -1367,7 +1371,11 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     // Its git state at the row's end (5.11): a file's letter, a folder's dot — not under its buttons.
     const gst = withButtons ? undefined : row.kind === "note" ? app.gitStates?.get(row.path) : app.gitFolders.get(row.path);
     const markW = gst ? 3 : 0; // a space, the mark, the last column
-    const w = drawText(c, rect.x, y, !withButtons ? shown : sv.hbar ? splitAtWidth(shown, room)[0] : truncate(shown, room), st, rect.w - markW);
+    const drawn = !withButtons ? shown : sv.hbar ? splitAtWidth(shown, room)[0] : truncate(shown, room);
+    const w = drawText(c, rect.x, y, drawn, st, rect.w - markW);
+    // Where the filter's matches may be marked: on the name as drawn, short of the `…` that cut it.
+    const cut = !sv.hbar && w === stringWidth(drawn) && stringWidth(drawn) < stringWidth(text(row));
+    const markEnd = rect.x + w - (cut ? 1 : 0);
     if (gst) {
       const mark = row.kind === "note" ? GIT_MARK[gst] : "•";
       const role: Role = gst === "conflict" ? "git_conflict" : gst === "new" ? "git_new" : "git_modified";
@@ -1381,8 +1389,8 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
       }
     }
     // A vault named otherwise than its folder: the name, dimmed, after it (17.13) — up to its
-    // buttons, when it has them.
-    const vaultName = row.root?.name;
+    // buttons, when it has them. Another root's row is its name already.
+    const vaultName = row.root?.other ? undefined : row.root?.name;
     const nameEnd = withButtons ? room : rect.w;
     if (vaultName && !sv.left && w + 1 < nameEnd) drawText(c, rect.x + w + 1, y, vaultName, { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, nameEnd - w - 1);
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
@@ -1398,7 +1406,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
       let ci = 0;
       for (const gr of graphemes(shown.text)) {
         const gw = graphemeWidth(gr);
-        if (shown.pos.has(ci) && gw > 0 && x >= rect.x && x + gw <= rect.x + sv.cols) c.cell(x, y, gr, gw, { ...st, fg: matchSt.fg, bold: true });
+        if (shown.pos.has(ci) && gw > 0 && x >= rect.x && x + gw <= markEnd) c.cell(x, y, gr, gw, { ...st, fg: matchSt.fg, bold: true });
         x += gw;
         ci += gr.length;
       }

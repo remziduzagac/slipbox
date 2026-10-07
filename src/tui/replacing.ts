@@ -157,13 +157,16 @@ export function substitute(app: App, view: View, input: string): void {
   const sub = parseSubstitute(input);
   if (!sub) return app.message("warn", "a substitute is s/old/new/ with g, i, c flags after it");
   if (sub.range === "selection" && !view.visualLines) return app.message("warn", "no selection yet for '<,'>");
+  // The last selection's lines can outlive the lines (deleted since): refused, as vim's E16 is.
+  const lineCount = Math.max(1, view.buf.lineStarts().length - (view.buf.source.endsWith("\n") ? 1 : 0));
+  if (sub.range === "selection" && view.visualLines![0] > lineCount) return app.message("warn", "the last selection's lines aren't in the note any more");
   // The cursor's line before the window changes mode (a rendered row knows its source line).
   const line = app.currentLayout(view).lines[view.cur.row]?.src ?? 1;
   if (!editable(view)) app.setViewMode(view, app.editMode());
   const text = view.buf.source;
   const starts = view.buf.lineStarts();
-  const [a, b] = sub.range === "all" ? [1, starts.length] : sub.range === "selection" ? view.visualLines! : [line, line];
-  const range: [number, number] = [starts[a - 1] ?? 0, starts[b] ?? text.length];
+  const [a, b] = sub.range === "all" ? [1, starts.length] : sub.range === "selection" ? [view.visualLines![0], Math.min(view.visualLines![1], lineCount)] : [line, line];
+  const range: [number, number] = [starts[a - 1]!, starts[b] ?? text.length];
   const re = compilePattern(sub.pattern, { regex: true, whole: false, ignoreCase: sub.ignoreCase });
   if (typeof re === "string") return app.message("warn", `not a regex: ${re}`);
   const all = findAll(text, re, range[0], range[1], true); // :s/^/> / inserts at an empty match

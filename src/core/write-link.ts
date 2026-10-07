@@ -3,8 +3,9 @@
 // link picker and `slipbox link` write through here; a rename keeps each link's own form instead.
 //
 // A name is written only when it reaches the note from where the link is (no other note of that name
-// nearer, 21.3); else the path from the root, as Obsidian's "shortest" does. A file outside the root
-// is reached by a relative path, its extension kept: the convention is the root's.
+// nearer, 21.3); else the path from the root, as Obsidian's "shortest" does — a top-level note's
+// being its name, a relative path (`../plan`) then. A file outside the root is reached by a relative
+// path, its extension kept: the convention is the root's.
 
 import { dirname, isAbsolute, posix, relative, sep } from "node:path";
 import type { Convention, LinkStyle } from "./convention.ts";
@@ -41,12 +42,18 @@ export function linkDestination(c: Pick<Convention, "path" | "extension">, style
   if (to.rel === null || isAbsolute(to.rel)) return ends.pointer ? (style === "markdown" ? formatPointerEncoded(ends.pointer) : ends.pointer) : enc(rel(to.abs));
   // Only a note's extension: a picture keeps its own.
   const bare = (p: string) => (c.extension.value === "dropped" ? p.replace(NOTE_EXT, "") : p);
+  // A wikilink's path from the root: a top-level note's is its name, read as one (21.3) — where that
+  // lands elsewhere, the path from the linking note (`../plan`).
+  const fromRoot = () => {
+    const dest = bare(to.rel!);
+    return dest.includes("/") || ends.reachesByName(dest) ? dest : bare(rel(to.abs));
+  };
   if (style === "wiki" && c.path.value === "name") {
     const name = bare(posix.basename(to.rel));
     if (ends.reachesByName(name)) return name;
-    return bare(to.rel);
+    return fromRoot();
   }
-  if (c.path.value === "root") return enc(style === "markdown" ? `/${bare(to.rel)}` : bare(to.rel));
+  if (c.path.value === "root") return style === "markdown" ? enc(`/${bare(to.rel)}`) : fromRoot();
   return enc(bare(rel(to.abs)));
 }
 

@@ -47,6 +47,9 @@ slipbox runs correctly with no config at all. None of these crash it:
 - an unknown key, or a retired one (`[rename]`, gone in `21.12`: a renamed note keeps no old name), which says why
 - a wrong type, a language server's, a `[[language]]`'s or a linter's fields included (`args`, `language-servers`,
   `roots`, `lint-formats`…): that field is dropped, the rest of the entry kept
+- a known field of a `[language-server.<name>]`, `[[language]]` or `[linter.<name>]` spelled with underscores
+  (`lint_command`, `file_types`): dropped. Any other field of theirs that slipbox doesn't read (`scope`,
+  `comment-token`) is kept without a warning, so a Helix `languages.toml` section, or efm's keys, pastes in
 - a value outside its set (`glyphs`, `show_urls`, `location`, `ui.lines`, `editor.edit_in`,
   `files.show`)
 - a list with something other than strings in it, a mode's key table (`[keys.source]`…) given as a

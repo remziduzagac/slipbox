@@ -18,7 +18,9 @@ older text than the last sent is dropped. Its log and messages go to slipbox's; 
 action's command does) is made, through slipbox's own writes (`19.15`, `applyWorkspaceEdit`). Asked to ask again
 (`workspace/diagnostic/refresh`, which pyright sends), it asks about every open file; anything else it's asked and
 doesn't know gets an empty answer, never an error — pyright crashed on that error, unhandled. Stopping it is
-`shutdown` then `exit`, then a kill; an exit that wasn't asked for is a crash, said with its last error line.
+`shutdown` then `exit`, then a kill; an exit that wasn't asked for, once it is running, is a crash, said with its last
+error line. One that exits before it answers `initialize`, or doesn't answer in 20 s, failed to start: said once, with
+its last error line, and not started again.
 
 **Which servers** (`19.2`, `core/servers/languages.ts`): a file's language is its whole name (`Dockerfile`), else
 its extension, and each language has root markers and servers — the first that applies and is found is its main
@@ -40,24 +42,26 @@ as that ESLint decides), stylelint's reads the project's config and its plugins,
 | Dockerfile, PHP | docker-langserver (npm); intelephense (npm) |
 | Swift, C, C++, Ruby | sourcekit-lsp; clangd; ruby-lsp |
 
-TypeScript 7 is native with its server built in (`tsc --lsp --stdio`): it's used where the project's TypeScript is
-7 or there is none, and vtsls, its own TypeScript bundled, where the project's is older. Each server's settings by
-default are nvim-lspconfig's where it has some. The user's config changes them in Helix's `languages.toml` shape —
-`[language-server.<name>]` (`command`, `args`, `config`, `environment`, `required-root-patterns`) and
-`[[language]]` (`name`, `language-servers`, `roots`, `file-types`, `language-id`), a server's `config` merged over
-the defaults (and each config file's over the ones before it) all the way down, the rest replaced, a new name added;
-a field of the wrong type is dropped with a warning. A folder's config may tune a known server's `config` and a
+TypeScript 7 is native with its server built in (`tsc --lsp --stdio`): it's used where the project's TypeScript is 7 or
+there is none, and vtsls, its own TypeScript bundled, where the project's is older. Each server's settings by default
+are nvim-lspconfig's where it has some. The user's config changes them in Helix's `languages.toml` shape —
+`[language-server.<name>]` (`command`, `args`, `config`, `environment`, `required-root-patterns`) and `[[language]]`
+(`name`, `language-servers`, `roots`, `file-types`, `language-id`), a server's `config` merged over the defaults (and
+each config file's over the ones before it) all the way down, the rest replaced, a new name added; a field of the wrong
+type is dropped with a warning, and so is a known field spelled with underscores (`file_types`). A field slipbox doesn't
+read is kept without a warning, so a Helix section pastes in. A folder's config may tune a known server's `config` and a
 language's lists, never name slipbox's command for it: its `command`, `args`, `environment`, and any server slipbox
-doesn't know, are ignored with a warning. That `config` does reach the server, though, and some servers' settings
-name programs (rust-analyzer's `check.overrideCommand`): as with `.vscode/settings.json` below, everything is
-trusted (`19.6`), so a cloned folder can still make a server run something.
+doesn't know, are ignored with a warning. That `config` does reach the server, though, and some servers' settings name
+programs (rust-analyzer's `check.overrideCommand`): as with `.vscode/settings.json` below, everything is trusted
+(`19.6`), so a cloned folder can still make a server run something.
 
 **A project's `.vscode/settings.json`** (`19.20`) answers its servers' settings too, as VS Code would: the nearest one
 at or above the server's project folder (short of `~`), read when the server starts, as VS Code reads it — comments
 and trailing commas allowed — its dotted keys nested (`"python.analysis.typeCheckingMode"` is
 `python.analysis.typeCheckingMode`, merged with a nested form beside it). It goes over the config's, as VS Code puts a
-workspace's settings over the user's: the defaults, then your config, then the vault's, then the project's. VS
-Code's per-language overrides (`"[python]": {…}`) are left out. Changed, it counts from the server's next start.
+workspace's settings over the user's: the defaults, then your config, then each enclosing root's
+`.slipbox/config.toml` and the root's own (configuration.md's order), then the project's. VS Code's per-language
+overrides (`"[python]": {…}`) are left out. Changed, it counts from the server's next start.
 
 **Where its project is** (`19.3`): the nearest folder above the file holding the language's first root marker, then
 its next — `tsconfig.json` before `package.json` before `.git` — as nvim's `root_markers` have it; never `~` or `/`;
@@ -82,7 +86,8 @@ file of its language in that project is first shown — installed first when it 
 file as it opens, again 150 ms after typing pauses (never per key), and when it's saved; a file gone with a vault
 switch or a rename is closed in it. Its diagnostics become the file's problems, in the bar, the marks and the status
 line ("Problems where they are" in [tui.md](tui.md)). A server that crashes is started again and told its files
-again; one that crashes more than three times in five minutes is left stopped, and said so. A server that's missing
+again; one that crashes more than three times in five minutes is left stopped, and said so. One that can't start, or
+doesn't answer `initialize`, never ran: it is said once and not started again. A server that's missing
 is said once: a native one to install yourself, an npm one when installing is off. Quitting kills them; `[lsp]
 enabled = false` runs none.
 

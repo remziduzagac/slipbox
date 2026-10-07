@@ -217,7 +217,7 @@ export interface LanguageConfig {
 export function serverTable(servers: Record<string, ServerConfig> = {}, languages: LanguageConfig[] = []): ServerTable {
   const out: Record<string, ServerDef> = { ...SERVERS };
   for (const [name, c] of Object.entries(servers)) {
-    const base = out[name] ?? { name, command: name, args: [] };
+    const base = (Object.hasOwn(out, name) ? out[name] : undefined) ?? { name, command: name, args: [] };
     out[name] = {
       ...base,
       // A command of its own: what's run is the user's choice, never slipbox's install.

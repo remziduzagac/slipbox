@@ -126,7 +126,8 @@ export interface Choice {
  * when none is, the first that slipbox can install — then each add-on whose config the project has.
  */
 export function chooseServers(lang: LanguageDef, servers: Record<string, ServerDef>, root: string, asks: (requires: string[]) => boolean): Choice {
-  const defs = lang.servers.map((n) => servers[n]).filter((d): d is ServerDef => !!d);
+  // Its own names only: `toString` is a name slipbox doesn't know, not Object's method.
+  const defs = lang.servers.map((n) => (Object.hasOwn(servers, n) ? servers[n] : undefined)).filter((d): d is ServerDef => !!d);
   const mains = defs.filter((d) => !d.requires && (!d.when || d.when(root)));
   const run: Choice["run"] = [];
   const missing: ServerDef[] = [];

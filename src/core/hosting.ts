@@ -45,7 +45,10 @@ export function parseHosted(url: string): HostedPath | null {
   const strip = (s: string) => s.replace(/\.git$/i, "");
   const at = (repo: string[], kind: string, rest: string[]): HostedPath | null => {
     if (repo.length < 2 || !rest.length) return null;
-    return { remote: `${host}/${[...repo.slice(0, -1), strip(repo[repo.length - 1]!)].join("/")}`, ref: decode(rest[0]!), path: decode(rest.slice(1).join("/")), fragment, folder: kind === "tree" };
+    // `%2F` outlives the URL's own dot segments: decoded, `..%2F..%2Fx.md` would climb out of the copy.
+    const path = decode(rest.slice(1).join("/"));
+    if (path.split("/").some((s) => s === ".." || s === ".")) return null;
+    return { remote: `${host}/${[...repo.slice(0, -1), strip(repo[repo.length - 1]!)].join("/")}`, ref: decode(rest[0]!), path, fragment, folder: kind === "tree" };
   };
   // GitLab: `<group…>/<repo>/-/blob|tree|raw/<ref>/<path>`.
   const dash = segs.indexOf("-");

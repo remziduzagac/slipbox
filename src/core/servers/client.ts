@@ -53,7 +53,7 @@ export interface ClientHooks {
   diagnostics?: (uri: string, diagnostics: Diagnostic[], version: number | null) => void;
   /** What the server says for the user's log. */
   log?: (message: string) => void;
-  /** It ended: asked to (`expected`), or it crashed or couldn't start. */
+  /** It ended after it was running: asked to (`expected`), or it crashed; a start that fails rejects start() instead. */
   exited?: (expected: boolean, why: string) => void;
   /** An edit it asks slipbox to make (after a command it was told to run): true when it was. */
   applyEdit?: (edit: WorkspaceEdit) => boolean;
@@ -159,7 +159,9 @@ export class LanguageClient {
     failed.catch(() => {}); // from here on, an exit is `ended`'s to report
     await conn.sendNotification(InitializedNotification.type, {});
     if (this.spec.settings) await conn.sendNotification(DidChangeConfigurationNotification.type, { settings: this.spec.settings });
-    this.state = "running";
+    // It may have gone in the moment after it answered: still a start that failed, not a crash.
+    if (this.state === "failed") throw new Error(`${this.spec.name} exited before it was ready${this.stderrTail()}`);
+    if (this.state === "starting") this.state = "running";
   }
 
   private listen(conn: ProtocolConnection): void {
@@ -291,9 +293,17 @@ export class LanguageClient {
   }
 
   private ended(code: number | null, signal: string | null): void {
-    const expected = this.state === "stopping";
-    if (this.state !== "failed") this.state = "stopped";
     this.open.clear();
+    // It never got running: start() rejects and says why, once. Not a crash, so not started again.
+    if (this.state === "starting" || this.state === "failed") {
+      this.state = "failed";
+      try {
+        this.conn?.dispose();
+      } catch {}
+      return;
+    }
+    const expected = this.state === "stopping";
+    this.state = "stopped";
     try {
       this.conn?.dispose();
     } catch {}

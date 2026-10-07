@@ -7,7 +7,7 @@
 // spaces, all mapping to the tab; a wide character is one cell of width two). Control characters
 // show as `�` — the terminal never receives one.
 
-import { HEADING_ID, slugify } from "../parse.ts";
+import { headingLabel, parseMarkdown, slugify } from "../parse.ts";
 import type { Span as SyntaxSpan } from "../syntax.ts";
 import { highlight } from "./highlight.ts";
 import { graphemes, graphemeWidth } from "../width.ts";
@@ -316,8 +316,8 @@ function highlightLine(raw: string, state: string, i: number): { roles: Role[]; 
 
 /**
  * The ATX headings of a text without parsing it (source mode while editing, so a keystroke never
- * re-parses the note): outside frontmatter and fenced code, their text with the common inline
- * markup taken off, slugged the way the render slugs them.
+ * re-parses the note): outside frontmatter and fenced code, their text and slugs as the render
+ * has them.
  */
 export function scanHeadings(source: string): Omit<LayoutHeading, "line">[] {
   const out: Omit<LayoutHeading, "line">[] = [];
@@ -334,23 +334,23 @@ export function scanHeadings(source: string): Omit<LayoutHeading, "line">[] {
   return out;
 }
 
-/** An ATX heading line's level, its text with the common inline markup taken off, and its slug —
- *  as the render slugs it (a repeated heading keeps its plain slug, no -1 suffix). */
+/** An ATX heading line's level, text and slug, as the render and the graph have them (headingLabel;
+ *  a repeated heading keeps its plain slug, no -1 suffix). A line with no markup is its own text;
+ *  one with markup is parsed — that line alone, so a keystroke never re-parses the note — with a
+ *  stand-in definition for each footnote mark, which the whole note would have. */
 function headingOfLine(raw: string): LineHeading | null {
   if (!raw.includes("#")) return null;
-  const h = /^\s{0,3}(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$/.exec(raw.replace(/\r$/, ""));
+  const line = raw.replace(/\r$/, "");
+  const h = /^\s{0,3}(#{1,6})(?:\s+(.*?))?(?:\s+#+)?\s*$/.exec(line);
   if (!h) return null;
-  // A trailing `{#id}` is the id, not text; footnote marks and HTML tags are left out (as drawn).
-  let body = h[2] ?? "";
-  const id = HEADING_ID.exec(body);
-  if (id) body = body.slice(0, id.index);
-  const plain = body
-    .replace(/\[\^[^\]]+\]/g, "")
-    .replace(/<\/?[A-Za-z][^>]*>/g, "")
-    .replace(/!?\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
-    .replace(/!?\[\[([^\]]+)\]\]/g, "$1")
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/[*_`~]/g, "")
-    .trim();
-  return { level: h[1]!.length, text: plain, slug: slugify(plain), ...(id ? { id: id[1]! } : {}) };
+  const body = h[2] ?? "";
+  if (!/[\\[\]*_`~<&{]/.test(body)) {
+    const text = body.trim();
+    return { level: h[1]!.length, text, slug: slugify(text) };
+  }
+  const marks = [...new Set([...body.matchAll(/\[\^([^\]\s]+)\]/g)].map((m) => m[1]!))];
+  const node = parseMarkdown(marks.length ? `${line}\n\n${marks.map((m) => `[^${m}]: #`).join("\n\n")}\n` : line).tree.children[0];
+  if (node?.type !== "heading") return null;
+  const id = (node.data as { id?: string } | undefined)?.id;
+  return { level: node.depth, ...headingLabel(node), ...(id ? { id } : {}) };
 }

@@ -5,8 +5,9 @@ markdown notes — a repository, an Obsidian vault, a zk notebook, or any folder
 fit, highlighted code, themes), follows links in the folder's own conventions, and reloads the instant an agent
 rewrites a note. Every state change is also reachable from a CLI that agents drive.
 
-Status: **phases 0–3** — rendering (leaf parity), a TUI that reads and edits (source mode, vim-shaped
-editing, the lens, autosave and a conflict prompt), and an agent-drivable CLI. See
+Status: **phases 0–5c** — rendering (leaf parity), a TUI that reads and edits (source mode, vim-shaped
+editing, the lens, autosave and a conflict prompt), and an agent-drivable CLI; then files beyond markdown, search and
+its index, roots, named folders and pointers, git and merge review, language servers, linters and diagnostics. See
 [docs/plan.md](docs/plan.md).
 
 ## Try it
@@ -30,18 +31,19 @@ link to it by — `slipbox://notes/inbox.md` — wherever it is on each machine;
 A reading cursor moves with vim keys or the usual editor keys. `space` opens a which-key popup
 listing everything else, and `?` lists every key, so nothing needs memorising:
 
-- **Moving:** `h` `j` `k` `l` or the arrows; `w`/`b` or `alt+left`/`alt+right` by word; `[ [` /
+- **Moving:** `h` `j` `k` `l` or the arrows; `w`/`b` or `ctrl+right`/`ctrl+left` by word; `[ [` /
   `] ]` or `alt+up`/`alt+down` by heading.
-- **Links:** `enter` follows the link under the cursor; `shift+h` / `shift+l` go back and
+- **Links:** `enter` follows the link under the cursor; `ctrl+o` or `alt+left` goes back, `alt+right`
   forward.
 - **Finding and copying:** `ctrl+p` switches notes, `ctrl+f` finds, `ctrl+h` finds and replaces
   (or vim's `:%s/old/new/g`), `:` opens the command palette, and `v` selects then `y` copies.
-- **Panes:** `ctrl+e` explorer and `ctrl+o` outline (each opens, then focuses, then closes;
-  `esc` returns to the note), `ctrl+w v` split, `ctrl+t o` new tab. Everything is clickable too.
+- **Panes:** `space e` explorer and `space o` outline (each opens, then focuses, then closes;
+  `esc` returns to the note), `ctrl+w v` split, `ctrl+t c` new tab. Everything is clickable too.
 - **Editing:** `i`, `a` or `o` start typing — in the lens (rendered, with the markdown around the
-  cursor between two rules) or in source mode (`space n v`); `esc` twice closes the lens. The vim
-  commands work (`dw`, `ciw`, `p`, `u`, `.`); `ctrl+s` saves, and autosave does after a pause. `x`
-  ticks a task; `space n e` hands the note to your editor, `space n s` to a running nvim.
+  cursor between two rules) or in source mode (`space n v` or `ctrl+e`); `esc` twice closes the lens. The
+  vim commands work (`dw`, `ciw`, `p`, `u`, `.`); `ctrl+s` saves, and autosave does after a pause.
+  `ctrl+l` (or `space n t`, or a click) ticks a task; `space n e` hands the note to your editor, `space n s` to a
+  running nvim.
 - **Quitting:** `ctrl+q`, and slipbox remembers where you were.
 
 Every key is in [docs/design/keymap.md](docs/design/keymap.md), and all of them are configurable.

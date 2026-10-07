@@ -363,8 +363,9 @@ as part of the preview. Each shows its **preview** first: a list of every line i
 (`notes/index.md:3 [plan](plan.md) → [plan](roadmap.md)`), with the git trees that already have changes and the links
 skipped at the top; `enter` carries it out, `esc` leaves everything as it was. What it does is `slipbox mv`'s,
 `name`'s, `rename-heading`'s, `relink`'s and `convert-links`'s (`docs/design/cli.md`, "Renames"). **Refused
-while a file it rewrites is unsaved.** After it, the open notes it changed are reloaded, and a window on a renamed or
-moved note shows it under its new path, its history following — every note of a moved folder alike.
+while a file it rewrites or moves is unsaved** (a moved folder's notes included). After it, the open notes it changed
+are reloaded, and a window on a renamed or moved note shows it under its new path, its history following — every note
+of a moved folder alike.
 
 **Undo** (`7.4`): `space v shift+u` (the explorer's `shift+u`, `:undo-rename`) takes back the root's last rename,
 move, naming, heading rename, relink or conversion to path links — made here or by the CLI (`slipbox mv`, `name`,
@@ -395,17 +396,18 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   unsaved.
 - **Copy, cut, paste (`y`, `x`, `p`):** `p` pastes into the selected folder (or beside the selected file): a copy —
   `name-copy`, `-2`… when pasted beside the original, the copy's links as written — or what was cut, moved (the
-  preview, links fixed).
+  preview, links fixed). Going into another root forgets what was copied or cut, and `u`'s last delete.
 - **The selected row's menu:** while the explorer has focus, the selected row has one button at its end, under the
   title's buttons: `…` (Nerd: three dots; ascii `...`). It opens a menu hanging from it (`.` opens it by key, from the
   row), titled with the row's name, each entry with its key in the explorer, which picks it there too: for a folder
   "New note here" and "New folder here", then "Rename", "Move to…", "Copy", "Cut", for a folder "Give it .slipbox/" (a
-  nested root's: "Make it a plain folder"), "Paste … here" (when something is copied or cut), "Delete". `enter` or a click
-  does the selected one; `esc` or a click outside closes it. A name that doesn't fit beside the button widens the
-  tree: the explorer's horizontal scrollbar appears, and scrolled to its end the name ends just before it.
+  nested root's: "Make it a plain folder"), "Paste … here" (when something is copied or cut), "Delete" (a nested
+  root's: "Delete the root"). `enter` or a click does the selected one; `esc` or a click outside closes it. A name that
+  doesn't fit beside the button widens the tree: the explorer's horizontal scrollbar appears, and scrolled to its end
+  the name ends just before it.
 - **A nested vault's row** (`18.7`) is a folder of this vault: `r` renames its folder and `m` moves it — links into it
   by path fixed here and in the vaults that reach it, its own relative links out fixed, its id and name kept (it's
-  recorded at its new place); `d` deletes it whole, saying so ("the vault outreach (outreach/, 12 notes)") with the
+  recorded at its new place); `d` deletes it whole, saying so ("the root outreach (outreach/, 12 notes)") with the
   links into it — by path or by its name — that break. Its menu has "Rename the folder" and, beside it, "Name it"
   (`shift+r`, `R` in the menu): `slipbox name` for it, its folder left where it is.
 - **A folder made a vault, and back** (`18.11`): `v` on a folder asks for the new vault's name (a distinct one typed:
@@ -437,7 +439,7 @@ Each kind of link does something different when followed:
 | `[t](docs/)`, a folder | revealed in the explorer, unfolded and focused (one elsewhere: in its own root) |
 | `[t](not-yet.md)`, `[t](not-yet)`, a note not written yet | the new-note prompt, its name typed: `enter` makes it |
 | a broken link whose file moved | says where it went (`17.12`): `space l r` relinks it — a move never resolves it |
-| `[t](../other/x.md)` | opens the note in the other vault (`17.9`) |
+| `[t](../other/x.md)` | opens the note in the other root (`17.9`) |
 | `[t](slipbox://notes/x.md#h)` | its folder's copy here (`21.7`), at the heading; not here: said; two: picked |
 | `[t](slipbox://kestrel@agent/x.md)` | that branch's checkout or worktree; else git's file, read-only, `#h` unchecked |
 | `[[name]]`, `[[name#h]]`, `![[dal.png]]` | within its root (`21.3`): name, path or alias; a tie lists them |
@@ -447,20 +449,21 @@ Each kind of link does something different when followed:
 | `[t](run.py#L42)`, `#L42-L50`, `#L42C5-L45C10` | opens the file at line 42 (as in a code comment's `run.py:42`) |
 | `https://github.com/me/repo/blob/main/x.md` | this repository's own: the file in this copy (a backlink); else a URL |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
-| `file://…`, `~/x.md`, `/home/me/x.md` (nothing there in the root) | opens the file, in whichever vault holds it |
+| `file://…`, `~/x.md`, `/home/me/x.md` (nothing there in the root) | opens the file, in whichever root holds it |
 | attachment `![x](x.png)` | copies the path; images are phase 6 |
 | footnote `[1]` | jumps to the definition |
 | tag `#dome/shutter` | lists the notes with the tag (its nested ones too, `#dome/shutter/…`); enter opens one |
 
-**Tags** (`1.6`): `space f t` (`:tags`) lists the vault's tags, each with how many notes carry it — a nested tag
+**Tags** (`1.6`): `space f t` (`:tags`) lists the root's tags, each with how many notes carry it — a nested tag
 indented under its parent, whose count includes its children's — and picking one lists its notes; `:tag name` goes
 straight there. A note's tags are its frontmatter's `tags:` and the `#tags` in its text (`docs/design/rendering.md`).
 
 **Writing a link** (`21.5`): `space l i` (`:link`) lists this root's notes and files, the note itself not, and
 writes a link to the one picked as the root's convention writes one (`21.4`; `slipbox link`) — a markdown link with
-the note's title as its text, or a wikilink by name where the name reaches the note from here, else by its path.
-Typing, it goes at the cursor; reading, after the word under the cursor (out of a link or a code span), a space
-before it, saved at once. Not in a data or text file: links are written in a root's notes.
+the note's title as its text, or a wikilink by name where the name reaches the note from here, else by its path
+from the root — a top-level note's path being its name, a relative path (`../plan`). Typing, it goes at the cursor;
+reading, after the word under the cursor (out of a link or a code span), a space before it, saved at once. Not in a
+data or text file: links are written in a root's notes.
 
 **How a link landed** (trailscout's review, 2026-10-06): the status line's link under the cursor says it when a tie
 decided it — `→ [[Pie]] (resolved, the shortest path of 2 named so)`; and a note coming or going that sends a link by
@@ -540,14 +543,14 @@ keys.
   match under their parents (folds ignored), the selection on the best match. The arrows and
   `ctrl+n` / `ctrl+p` move, `enter` or a click opens (in the explorer and the history, a
   double-click; the filter clears), `esc` clears it. `ctrl+p`
-  stays the flat quick-open across the vault.
-- **Problems (left, `1.7`):** what's wrong in the vault — the left panel's views are the vault's, the right's the
+  stays the flat quick-open across the root.
+- **Problems (left, `1.7`):** what's wrong in the root — the left panel's views are the root's, the right's the
   file's. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link set: each link that
-  reaches nothing, and why when there's a reason, such as an unknown vault), **Ambiguous links** (each that reaches
+  reaches nothing, and why when there's a reason, such as an unknown folder), **Ambiguous links** (each that reaches
   several notes, and how many), **Fragile links** (each won by where it's written — the nearest or the shortest of
   several of its name — and the path that names its note for sure, `space c a` writing it), **Lint** (`3.21`: the
   linter's findings, when one runs — see "The lint surface"), **Conflicts** (`5.12`: during a merge, each file git says
-  is unmerged, at its first `<<<<<<<` marker), **Orphans** (`9.5`: the notes no other note links to — another vault's
+  is unmerged, at its first `<<<<<<<` marker), **Orphans** (`9.5`: the notes no other note links to — another root's
   links count, a note's own don't — each opened by `enter`). Under the first three, the notes with such links, and under
   a note its problems: the line and the link as written, in the link's colour (a finding: its line, rule and what's
   wrong). `enter` (or a double-click) opens the note there, the cursor on the link as drawn (in source mode, on its
@@ -573,10 +576,12 @@ copying it whole). `enter` opens what
   or TOML, as the note has it — in a floating window over the others: framed, titled "Properties — note (YAML)", as
   tall as its text. Inside is a window like any, in source mode, with every editing key there is; the keys and
   commands act on it while it's open. `esc` (in normal mode), `q` or `:q` close it, writing its text back when it
-  changed, and a click outside its box does too; `ctrl+s` (`:w`) writes it back and keeps it open. The write is one
-  edit to the note — one undo step there — and the note is saved. A note without a frontmatter gets one first; an
-  emptied one is removed. Text that doesn't parse asks before it's written (no keeps you editing), as does a
-  frontmatter changed in the note meanwhile. Following a link from inside it closes it first.
+  changed, and a click outside its box does too (that click does nothing else: a tab or a pane under it isn't
+  reached); `ctrl+s` (`:w`) writes it back and keeps it open, as does `:wa`. Quitting (`ctrl+q`, `:qa`, `:x`) closes
+  it first, writing back — `:q!` doesn't. The write is one edit to the note — one undo step there — and the note is
+  saved. A note without a frontmatter gets one first; an emptied one is removed. Text that doesn't parse asks before
+  it's written (no keeps you editing, and the app open), as does a frontmatter changed in the note meanwhile.
+  Following a link from inside it closes it first.
 - **Outline (right):** the current note's headings, indented, foldable (`h`/`l`). While not
   focused it follows the cursor's section, and `enter` jumps to the heading.
 - **Footnotes (right, `3.17`):** the current note's footnotes, in the order the note first refers to them (as GFM
@@ -817,7 +822,8 @@ buffer reloads, its windows keeping their anchors, so the cursor stays put.
 checkbox, flips the task item holding the cursor — the innermost, from any of its rows — as a
 one-byte edit to the file's bytes, so a BOM, CRLF endings and even invalid UTF-8 survive untouched.
 If the file changed on disk since it was shown, it is reloaded instead and nothing is written (its
-lines may have moved).
+lines may have moved). With unsaved changes it flips the mark in the text on screen instead — an undo
+step, left unsaved ("done ✓ (unsaved)") — never on disk under them.
 
 **Handing off to another editor** (`4.1`, `4.2`, `4.12`) comes in two kinds, both opening the note at
 the cursor's source line. `space n e` steps aside: the renderer suspends, the editor
@@ -847,7 +853,10 @@ inside them, never through a shell, so a file name can't become a command; a tem
 chip reads `SOURCE`. It is another layout of the same note (`core/layout/source.ts`), so everything
 built on the layout works the same in both: the cursor keys, find and `*`, visual selection and
 copy, the mouse, wrapping, line numbers, the scrollbars. The cursor stays on its source line across
-the switch, and the outline and breadcrumb keep working, their headings borrowed from the render.
+the switch, and the outline and breadcrumb keep working. Their headings are the parse's while the
+text is saved; while it's being edited they're scanned from the text, each ATX heading line read
+the way the render reads it (a line with markup parsed alone), so their text and slugs — and a
+`#fragment` followed from source mode — are the render's.
 
 A source line is a row, wrapped at the last space that fits (wrapping on) or kept whole (off); the
 text column is the window's full width, readable width aside. Highlighting is light and per line:
@@ -1028,9 +1037,10 @@ wait for a motion or a text object, a register, and `.`. Each operator and edit 
 in `[keys.source]`; what follows an operator is read the way which-key reads a prefix: a motion is
 any cursor command the keymap resolves (run with the cursor put back after, its range taken as
 text offsets), a text object is found in the text itself; `gn` is the search's next match in the
-text (`replacing.ts` finds it with the window's find toggles). `.` replays the keys of the last
-change, the keys typed in the insert session it started included (`insertRecord`), a paste as a key
-of its own, so anything that changed the text repeats exactly — `cgn` then `.` walks the matches. A
+text (`replacing.ts` finds it with the search's own flags, regex and whole words, as `n` has them:
+after `*`, whole words only). `.` replays the keys of the last change, the keys typed in the insert
+session it started included (`insertRecord`), a paste as a key of its own, so anything that changed
+the text repeats exactly — `cgn` then `.` walks the matches. A
 visual-mode change repeats on as much text from the cursor, as in vim (`V`, `j`s and the operator;
 `v`, `l`s and the operator on one line); one across lines of characters can't be said in keys, and
 `.` then has nothing to repeat rather than an older change. Keys are handled one at a time, in
@@ -1190,14 +1200,15 @@ text. Only the last ask's answer is shown: one arriving after a later ask is dro
 or leaving insert closes it. Both are insert mode's, and leaving it closes both.
 
 **A link's target** (`20.13`) in a note is completed by slipbox itself, server or not: right after `](`, the files the
-link could reach — this vault's notes and files by their path here, other vaults' notes (as of their last index) by
-theirs (`21.9`: from home, else absolute), the note itself not — each with its full path beside it, this vault's
+link could reach — this root's notes and files by their path here, other roots' notes (as of their last index) by
+theirs (`21.9`: from home, else absolute), the note itself not — each with its full path beside it, this root's
 first. What's typed narrows by either form. `tab` or `enter` writes it as the root's convention writes a markdown
 link's path (`21.5`: relative or from the root, with or without `.md`), encoded as a link's path is (`a%20b.md`);
-another vault's, its pointer when a named folder holds it that doesn't travel with this one (`21.7`), else the path
-from the note. Right after `[[` (or `![[`), this root's notes and files, each shown as the wikilink would write it — a name
-where it reaches the note from here, else its path — with its path beside it. Typing past the target (`)`, a space,
-`]`, `|`, `#`) closes it. Same keys as above.
+another root's, its pointer when a named folder holds it that doesn't travel with this one (`21.7`), else the path
+from the note. Right after `[[` (or `![[`), this root's notes and files, each shown as the wikilink would write it —
+a name where it reaches the note from here, else its path from the root (a top-level note's being its name, a
+relative path: `../plan`) — with its path beside it. Typing past the target (`)`, a space, `]`, `|`, `#`) closes it.
+Same keys as above.
 
 A file tree-sitter has no outline of (`16.8`: YAML, Java, Kotlin…) takes its language server's symbols as its
 outline and breadcrumb (`19.14`), nested as the server nests them, asked for when it opens and again after each change

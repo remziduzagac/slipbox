@@ -1,6 +1,7 @@
 // A project's `.vscode/settings.json` (plan 19.20): its servers' settings, as VS Code answers them —
 // what a project has set for VS Code already counts in slipbox, nothing restated. VS Code's own
-// order: the defaults, then the user's (slipbox's config, a vault's over it), then the workspace's.
+// order: the defaults, then the user's (slipbox's config, each folder's `.slipbox/config.toml` over
+// it), then the workspace's.
 
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";

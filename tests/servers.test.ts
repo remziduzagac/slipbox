@@ -14,6 +14,7 @@ import { chooseServers, findServer, rootFor, toolsDir } from "../src/core/server
 import { installPackages } from "../src/core/servers/install.ts";
 import { languageOf, projectAsks, type ServerDef, serverTable, type ServerTable } from "../src/core/servers/languages.ts";
 import { commandFor, compileFormat, type Format, type LinterConfig, linterRoot, LINTERS, linterTable, parseFindings, runLinter } from "../src/core/servers/linters.ts";
+import { doctor, doctorFile } from "../src/core/servers/doctor.ts";
 import { ServerManager } from "../src/core/servers/manager.ts";
 import { vscodeSettings } from "../src/core/servers/vscode.ts";
 import type { Problem } from "../src/core/diagnostics.ts";
@@ -99,6 +100,15 @@ describe("the client (19.1)", () => {
     expect(missing.start()).rejects.toThrow("nowhere can't start");
     const quick = new LanguageClient({ name: "quick", argv: ["sh", "-c", "echo 'no such option' >&2; exit 2"], root: sandbox });
     expect(quick.start()).rejects.toThrow("quick exited before it was ready (code 2): no such option");
+  });
+
+  test("a server that exits before it is ready: start() rejects, and the exit isn't reported as a crash", async () => {
+    const exits: boolean[] = [];
+    const quick = new LanguageClient({ name: "quick", argv: ["sh", "-c", "exit 2"], root: sandbox }, { exited: (expected) => exits.push(expected) });
+    await expect(quick.start()).rejects.toThrow("quick exited before it was ready (code 2)");
+    await Bun.sleep(100);
+    expect(exits).toEqual([]);
+    expect(quick.state).toBe("failed");
   });
 
   test("settings looked up by section", () => {
@@ -205,6 +215,64 @@ describe("which servers, where (19.2–19.5)", () => {
     const t = serverTable(config["language-server"], config.language);
     expect(languageOf(t, "a.py")!.servers).toEqual(["pyright", "ruff"]);
     expect(t.servers.mylsp!.args).toEqual([]);
+  });
+
+  test("a known field spelled with underscores is a warning; a Helix field slipbox doesn't read is kept, unsaid", () => {
+    const root = dir("cfgspell", {
+      "user.toml": [
+        "[language-server.pyright]",
+        'comand = "/opt/pyright"',
+        'required_root_patterns = ["x"]',
+        "",
+        "[[language]]",
+        'name = "python"',
+        'file_types = ["py"]',
+        'language_servers = ["pyright"]',
+        'scope = "source.python"',
+        'comment-token = "#"',
+        "",
+        "[linter.mypy]",
+        'lint_command = "mypy"',
+        "",
+      ].join("\n"),
+    });
+    const { config, warnings } = loadConfig({ configFile: join(root, "user.toml") });
+    expect(warnings.filter((w) => w.includes("is spelled")).map((w) => w.split(": ").at(-1))).toEqual([
+      "language-server.pyright.required_root_patterns is spelled required-root-patterns; ignored",
+      "language.python.file_types is spelled file-types; ignored",
+      "language.python.language_servers is spelled language-servers; ignored",
+      "linter.mypy.lint_command is spelled lint-command; ignored",
+    ]);
+    expect(warnings.join("\n")).not.toContain("scope");
+    expect(warnings.join("\n")).not.toContain("comment-token");
+    expect(warnings.join("\n")).not.toContain("comand"); // not a known field's underscored spelling: kept
+    expect(config.language).toEqual([{ name: "python", scope: "source.python", "comment-token": "#" }] as never);
+    expect(config.linter.mypy).toEqual({});
+  });
+
+  test("a server or linter named as Object's own keys (toString, constructor) is an unknown name, never a crash", () => {
+    const root = dir("cfgproto", {
+      "user.toml": '[language-server.mylsp]\nconstructor = 1\ncommand = "mylsp"\n',
+      "vault.toml": "[language-server.constructor]\nconfig = {}\n\n[linter.toString]\nlint-source = \"x\"\n",
+    });
+    const { config, warnings } = loadConfig({ configFile: join(root, "user.toml"), vaultFile: join(root, "vault.toml") });
+    expect(Object.hasOwn(config["language-server"], "constructor")).toBe(false);
+    expect(Object.hasOwn(config.linter, "toString")).toBe(false);
+    expect(warnings.some((w) => w.includes("adds the language server constructor, which only your own config may"))).toBe(true);
+    expect(warnings.some((w) => w.includes("adds the linter toString, which only your own config may"))).toBe(true);
+    // In a language's lists, and named in your own config: unknown, or a new one of that name.
+    const t = serverTable({ toString: { args: [] } }, [{ name: "python", "language-servers": ["constructor", "toString"], linters: ["constructor"] }]);
+    expect(t.servers.toString).toMatchObject({ name: "toString", command: "toString" });
+    expect(linterTable({ toString: {} }).toString).toMatchObject({ name: "toString", command: "" });
+    const file = join(dir("proto", { "a.py": "" }), "a.py");
+    const f = doctorFile(t, linterTable(), file, false)!;
+    expect(f.run).toEqual([]);
+    expect(f.missing.map((d) => d.name)).toEqual(["toString"]);
+    expect(f.linters).toEqual([]);
+    expect(doctor(t, linterTable(), join(file, ".."), false).find((g) => g.languages.includes("python"))!.servers.map((s) => s.name)).toEqual(["toString"]);
+    const m = new ServerManager({ table: () => t, autoInstall: () => false, problems: () => {}, message: () => {} });
+    expect(() => m.open(file, 1, "")).not.toThrow();
+    void m.stopAll();
   });
 
   test("a project's root: the first marker's nearest folder, then the next's; never above the home folder", () => {
@@ -373,6 +441,14 @@ describe("the servers of open files (19.1)", () => {
     m.change(file, 2, "CRASH\n"); // it dies on this text, every time it's told it
     expect(await until(() => messages.some((x) => x.includes("keeps crashing")), 15_000)).toBe(true);
     expect(messages.filter((x) => x.startsWith("fake crashed")).length).toBe(3);
+    await m.stopAll();
+  });
+
+  test("a server that can't start is said once, not counted as a crash and started again", async () => {
+    const { m, messages } = managed(table({ fake: { name: "fake", command: "sh", args: ["-c", "echo 'fatal: bad flag' >&2; exit 2"] } }));
+    m.open(join(project("pq"), "a.fk"), 1, "");
+    await Bun.sleep(1000);
+    expect(messages).toEqual(["fake: fake exited before it was ready (code 2): fatal: bad flag"]);
     await m.stopAll();
   });
 

@@ -16,7 +16,7 @@ import { slugify } from "./parse.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
-import { forgetRoot, newVaultId, readIdentity, readRoots, VAULT_NAME, vaultConfigFile, withIdentity } from "./registry.ts";
+import { forgetRoot, identityOf, newVaultId, readIdentity, readRoots, VAULT_NAME, vaultConfigFile, withIdentity } from "./registry.ts";
 import { openVault } from "./reach.ts";
 import { copyAvailable, folderIdentity, folderNamed, pointerName, readFolders, recordFolder, travelTogether } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
@@ -418,27 +418,6 @@ export function planNoteRename(g: Graph, fromRel: string, toInput: string): Rena
 }
 
 /**
- * Plan the moves an editor makes itself (11.10): files and folders, vault paths old → new, every link
- * to each fixed. Where they land isn't checked: the editor moves them, and its own checks hold.
- */
-export function planMoves(g: Graph, pairs: [string, string][]): RenamePlan {
-  const moves = new Map<string, string>();
-  const folders = new Map<string, string>();
-  const files = [...g.notes.keys(), ...g.filePaths()];
-  for (const [from, to] of pairs) {
-    if (g.notes.has(from) || g.filePaths().includes(from)) moves.set(from, to);
-    else if (g.dirs.includes(from)) {
-      for (const rel of files) if (rel.startsWith(`${from}/`)) moves.set(rel, `${to}${rel.slice(from.length)}`);
-      for (const [d, t] of foldersMoving(g, from, to)) folders.set(d, t);
-    }
-  }
-  if (!moves.size && !folders.size) throw new RenameError("nothing of the vault moves");
-  const [from, to] = pairs[0]!;
-  const one = pairs.length === 1 && g.notes.has(from);
-  return planMove(g, moves, { kind: one ? "note" : "folder", from, to, move: { from: join(g.root, from), to: join(g.root, to), dir: !one } }, folders);
-}
-
-/**
  * Plan renaming or moving a folder (18.3): every note and file in it moves with it, and every link to
  * any of them is rewritten — links between two of them that move together stay as they are.
  */
@@ -666,6 +645,12 @@ export function planVaultRename(loc: VaultLocation, newName: string): RenamePlan
   const text = readText(cfg).text;
   // Named before: the new name, the old one kept. Never: a name, and an id to tell its copies apart.
   const next = oldName ? renameInConfig(text, oldName, newName) : withIdentity(text, have, { id: newVaultId(), name: newName });
+  // The edit is textual: read back, it must be the same folder by its new name, the old one kept —
+  // else (a `[ vault ]` header, dotted `vault.name` keys) nothing is written.
+  const got = identityOf(next);
+  if (oldName && (got.id !== have.id || got.name !== newName || !got.previous_names.includes(oldName))) {
+    throw new RenameError("can't edit .slipbox/config.toml's [vault] table safely: edit it by hand");
+  }
   const after = oldName ? `name = "${newName}" (previous_names + ${oldName})` : `name = "${newName}"`;
   const files: FileChange[] = [{ abs: cfg, shown: ".slipbox/config.toml", vault: null, edits: [{ line: 0, before: oldName ? `name = "${oldName}"` : "(no name)", after }], text, next }];
   return { kind: "vault", from: oldName ?? loc.root, to: newName, move: null, files, warnings: dirtyTrees([cfg]), skipped: [] };
@@ -685,11 +670,12 @@ function renameInConfig(text: string, oldName: string, newName: string): string 
   let table = t.slice(start, end);
   const nameLine = /^name[ \t]*=.*$/m;
   table = nameLine.test(table) ? table.replace(nameLine, `name = ${JSON.stringify(newName)}`) : `\nname = ${JSON.stringify(newName)}${table}`;
-  const prev = /^previous_names[ \t]*=[ \t]*\[(.*)\][ \t]*$/m.exec(table);
+  // On one line or several (as a formatter writes a long array), a comment after it or in it.
+  const prev = /^previous_names[ \t]*=[ \t]*\[([\s\S]*?)\][ \t]*(#.*)?$/m.exec(table);
   if (prev) {
-    const items = prev[1]!.split(",").map((x) => x.trim()).filter(Boolean);
+    const items = prev[1]!.split("\n").map((l) => l.replace(/#.*$/, "")).join(",").split(",").map((x) => x.trim()).filter(Boolean);
     if (!items.map((x) => x.replace(/^["']|["']$/g, "")).includes(oldName)) items.push(JSON.stringify(oldName));
-    table = table.replace(prev[0], `previous_names = [${items.join(", ")}]`);
+    table = table.replace(prev[0], `previous_names = [${items.join(", ")}]${prev[2] ? ` ${prev[2]}` : ""}`);
   } else {
     const nl = table.endsWith("\n") ? "" : "\n";
     const at = table.search(/\n\s*$/);
@@ -699,8 +685,10 @@ function renameInConfig(text: string, oldName: string, newName: string): string 
 }
 
 /**
- * Plan rewriting the links that reach their note only by a previous name or a redirect (17.12):
- * each to the note's name or path now. In `rels`, or every note.
+ * Plan rewriting links that reach nothing but whose file was seen to move (17.12, 20.2), to its path
+ * now; pointers by a folder's old name (21.10), to its name now; and paths into a named folder that
+ * doesn't travel with this one, as pointers (21.7). In `rels`, or every note, which also fixes the
+ * root's own last move (20.17).
  */
 export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean } = {}): RenamePlan {
   g.ensureAll();
@@ -1132,8 +1120,11 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
   const touched = new Set([...written, ...(plan.moves ?? []).map(([, to]) => join(g.root, to))]);
   for (const abs of touched) {
     if (!isInside(g.root, abs)) continue;
-    // A moved vault's files are its own, not this vault's (18.7).
+    // A moved vault's files are its own, not this vault's (18.7); so are a nested root's (17.17),
+    // reindexed with the others.
     if (plan.vaults?.length && mv && (abs === mv.to || abs.startsWith(`${mv.to}/`))) continue;
+    const own = findVaultRoot(abs);
+    if (own && real(own) !== real(g.root)) continue;
     const rel = relative(g.root, abs);
     // What the walk leaves out (`.slipbox/config.toml`, a naming's) isn't one of the root's files —
     // unless a link reached it (20.8).

@@ -8,9 +8,11 @@ import { glyphsFor } from "../src/core/glyphs.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import type { Layout } from "../src/core/layout/ir.ts";
 import { renderMarkdown, renderTree } from "../src/core/layout/render.ts";
-import { parseData } from "../src/core/data.ts";
+import { dataLinks, parseData } from "../src/core/data.ts";
 import { classify } from "../src/core/filetypes.ts";
 import { parseNoteFile } from "../src/core/readers.ts";
+import { findHeading, headingFragment } from "../src/core/landing.ts";
+import { headingsOf, parseMarkdown } from "../src/core/parse.ts";
 import { allocate } from "../src/core/layout/table.ts";
 import { countLines, measure, wrapGraphemes, wrapSpans } from "../src/core/layout/wrap.ts";
 import type { Span } from "../src/core/layout/ir.ts";
@@ -571,5 +573,56 @@ describe("narrow panes: embeds, callouts and data trees cut nothing (review cycl
         for (const glyphs of [unicodeG, glyphsFor("ascii")]) fits(renderTree(tree, { width, glyphs, showUrls: false }), name);
       }
     }
+  });
+});
+
+describe("headings: the render, the graph and source mode read one text (review cycle 2, render)", () => {
+  const md = "## Setup [^1] notes\n\n## Logo ![l](l.png) Title\n\n## a  b\n\n## Trailing [^1]\n\n[^1]: a note\n";
+  test("the layout's headings are headingsOf's, inner white space kept, and a fragment lands", () => {
+    const graph = headingsOf(parseMarkdown(md).tree);
+    const layout = renderMarkdown(md, { width: 60, glyphs: unicode, showUrls: false }).headings;
+    expect(layout.map((h) => [h.text, h.slug])).toEqual(graph.map((h) => [h.text, h.slug]));
+    expect(graph.map((h) => h.slug)).toEqual(["setup--notes", "logo--title", "a--b", "trailing"]);
+    // What jumpToHeading does with a fragment slipbox writes from the graph's headings.
+    const heads = layout.map((h) => ({ depth: h.level, text: h.text, slug: h.slug, line: h.src, id: h.id }));
+    graph.forEach((g, i) => expect(findHeading(heads, [], headingFragment(graph, i))?.line).toBe(g.line));
+  });
+});
+
+describe("an HTML block's comments (review cycle 2, render)", () => {
+  test("a comment over several lines keeps the rows after it on their source lines, and leaves no row", () => {
+    const l = renderMarkdown("# T\n\n<div>\n<!-- a note\nspanning lines -->\n<p>x</p>\n<!-- one line -->\n</div>\n", { width: 60, glyphs: unicode, showUrls: false });
+    const rows = l.lines.filter((x) => x.src >= 3).map((x) => [x.src, x.spans.map((s) => s.text).join("").trimEnd()]);
+    expect(rows).toEqual([[3, "<div>"], [6, "<p>x</p>"], [8, "</div>"]]);
+  });
+});
+
+describe("links inside a data file's records (review cycle 2, render)", () => {
+  const cases: [format: string, text: string, targets: string[], lines: number[]][] = [
+    ["yaml", "schemas:\n  - name: user\n    $ref: schemas/user.json\n  - name: post\n    $ref: schemas/post.json\n", ["schemas/user.json", "schemas/post.json"], [2, 4]],
+    ["toml", '[[include]]\npath = "a.toml"\n[[include]]\npath = "b.toml"\n', ["a.toml", "b.toml"], [1, 3]],
+    ["json", '{"servers": [\n  {"name": "a", "url": "https://a.example"},\n  {"name": "b", "url": "https://b.example"}\n]}\n', ["https://a.example", "https://b.example"], [2, 3]],
+  ];
+  for (const [format, text, targets, lines] of cases) {
+    test(`${format}: the graph reads them and the render draws them as links`, () => {
+      const { tree, error } = parseData(format, text);
+      expect(error).toBeNull();
+      expect(tree.children.some((n) => n.type === "table")).toBe(true); // still a table
+      expect(dataLinks(tree).map((l) => [l.target, l.line, l.explicit])).toEqual(targets.map((t, i) => [t, lines[i]!, true]));
+      const l = renderTree(tree, { width: 80, glyphs: unicode, showUrls: false, resolveLink: () => "unresolved" });
+      expect(l.links.map((x) => [x.target, x.status])).toEqual(targets.map((t) => [t, t.startsWith("https:") ? "external" : "unresolved"]));
+      // Each drawn on its record's row, a span carrying the link.
+      for (const [i, link] of l.links.entries()) {
+        const row = l.lines[link.line]!;
+        expect(row.src).toBe(lines[i]!);
+        expect(row.spans.some((sp) => sp.link === i && sp.text === targets[i])).toBe(true);
+      }
+    });
+  }
+  test("a path-like value in a record is a link only when it resolves, as a field's is", () => {
+    const { tree } = parseData("yaml", "files:\n  - name: a\n    doc: docs/a.md\n  - name: b\n    doc: docs/b.md\n");
+    expect(dataLinks(tree).map((l) => [l.target, l.key, l.explicit])).toEqual([["docs/a.md", "doc", false], ["docs/b.md", "doc", false]]);
+    const l = renderTree(tree, { width: 80, glyphs: unicode, showUrls: false, resolveLink: (_k, t) => (t === "docs/a.md" ? "resolved" : "unresolved") });
+    expect(l.links.map((x) => x.target)).toEqual(["docs/a.md"]);
   });
 });

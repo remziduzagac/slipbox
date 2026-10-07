@@ -139,6 +139,22 @@ describe("the walk (0.11)", () => {
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
     expect([...g.notes.keys()]).toEqual(["public.md"]);
   });
+  test("a symlinked picture or data file: inside the root, listed and found by name; outside it, skipped and said (0.11)", async () => {
+    const { WalkFilter, walkVault } = await import("../src/core/walk.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-link-asset-"));
+    const outside = mkdtempSync(join(tmpdir(), "slipbox-link-asset-out-"));
+    for (const d of [".slipbox", "shared", "img"]) mkdirSync(join(dir, d));
+    writeFileSync(join(dir, "shared", "logo.png"), "png");
+    writeFileSync(join(outside, "far.png"), "png");
+    symlinkSync("../shared/logo.png", join(dir, "img", "brand.png"));
+    symlinkSync(join(outside, "far.png"), join(dir, "out.png"));
+    writeFileSync(join(dir, "a.md"), "![[brand.png]]\n");
+    const walk = walkVault(dir, new WalkFilter(dir, DEFAULT_CONFIG.walk));
+    expect(walk.assets.sort()).toEqual(["img/brand.png", "shared/logo.png"]);
+    expect(walk.skipped).toContainEqual({ rel: "out.png", reason: "symlink points outside the root" });
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    expect(g.resolveLink({ kind: "embed", target: "brand.png" }, "a.md")).toMatchObject({ resolvedKind: "file", path: "img/brand.png" });
+  });
   test("encodings: CRLF, BOM, invalid UTF-8 and no trailing newline all parse", () => {
     expect(withVaultCfg.notes.get("crlf.md")!.flags).toContain("crlf");
     expect(withVaultCfg.notes.get("bom.md")!.title).toBe("BOM note");
@@ -811,6 +827,33 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     expect(existsSync(join(b, "y.md"))).toBe(true);
   });
 
+  test("a named folder moved by hand: the session's scratch, in the state folder by its absolute path, follows it (0.10, 21.8)", async () => {
+    const { loadSession, saveSession } = await import("../src/core/position.ts");
+    const { appendScratch, scratchLocation } = await import("../src/core/capture.ts");
+    const base = fresh("scratch-moved");
+    const tag = `sm${basename(base).slice(-6).toLowerCase()}`;
+    const a = join(base, "a", "notes");
+    mkdirSync(a, { recursive: true });
+    writeFileSync(join(a, "x.md"), "# X\n");
+    await cli(["init", a, "--name", tag], a);
+    const before = locateVault({ path: a });
+    const scratch = scratchLocation(before, DEFAULT_CONFIG).path;
+    appendScratch(scratchLocation(before, DEFAULT_CONFIG), "a thought\n");
+    const place = { key: scratch, anchor: { heading: null, headingIndex: 0, offset: 0, line: 0 } };
+    saveSession(before, { version: 1, tabs: [{ panes: [{ path: scratch, anchor: place.anchor, back: [place] }], active: 0 }], activeTab: 0, sidebar: true, recent_notes: [scratch, "x.md"] });
+    renameSync(join(base, "a"), join(base, "b"));
+    const b = join(base, "b", "notes");
+    const after = locateVault({ path: b });
+    expect(recordLocation(after).carriedFrom).toBe(a);
+    const moved = scratchLocation(after, DEFAULT_CONFIG).path;
+    expect(moved).not.toBe(scratch);
+    const s = loadSession(after)!;
+    expect(s.tabs[0]!.panes[0]!.path).toBe(moved);
+    expect(s.tabs[0]!.panes[0]!.back![0]!.key).toBe(moved);
+    expect(s.recent_notes).toEqual([moved, "x.md"]);
+    expect(readFileSync(moved, "utf8")).toContain("a thought");
+  });
+
   test("a name that starts with dots (`..draft.md`) is inside its root: its position carried and listed, git's paths kept", async () => {
     const { PositionStore, carryPositions } = await import("../src/core/position.ts");
     const { inVault } = await import("../src/core/gitops.ts");
@@ -1089,6 +1132,21 @@ describe("links across vaults: paths; names only for the converter (17.7–17.11
     expect(readFileSync(join(rb, "b.md"), "utf8")).toBe("![x](../ra/img/pic.png) [[../ra/note]] ![[../ra/img/pic.png]]\n");
   });
 
+  test("a file named with # or % in another root: its backlinks found all the same (17.11)", async () => {
+    const { openVault } = await import("../src/core/reach.ts");
+    const top = mkdtempSync(join(tmpdir(), "slipbox-reach-hash-"));
+    const rg = join(top, "G");
+    const ro = join(top, "O");
+    for (const [rel, text] of Object.entries({ "G/.slipbox/config.toml": "", "G/C#.md": "# C#\n", "G/x.md": "# x\n", "O/.slipbox/config.toml": "", "O/o.md": "[c](../G/C%23.md) [x](../G/x.md)\n" })) {
+      mkdirSync(join(top, rel, ".."), { recursive: true });
+      writeFileSync(join(top, rel), text);
+    }
+    openVault(ro).ensureAll(); // O's index: its links into G
+    const g = openVault(rg);
+    expect(g.backlinks("x.md").map((b) => b.from)).toEqual([join(ro, "o.md")]);
+    expect(g.backlinks("C#.md").map((b) => b.from)).toEqual([join(ro, "o.md")]);
+  });
+
   test("a renamed vault's old name: the converter reaches it, checked by its id; a moved-away vault says where it was", async () => {
     await ready;
     const cfg = join(app, ".slipbox", "config.toml");
@@ -1280,6 +1338,19 @@ describe("renames across vaults (17.15, 7.1–7.3)", () => {
     return dir;
   };
   const read = (dir: string, rel: string) => readFileSync(join(dir, rel), "utf8");
+
+  test("a nested root's file rewritten by a rename stays that root's: never one of this root's notes (17.17)", async () => {
+    const { openVault } = await import("../src/core/reach.ts");
+    const { planNoteRename } = await import("../src/core/rename.ts");
+    const dir = vault({ "a.md": "# A\n", "sub/.slipbox/config.toml": "", "sub/b.md": "[a](../a.md)\n" });
+    openVault(join(dir, "sub")).ensureAll();
+    const g = openVault(dir);
+    expect([...g.notes.keys()]).toEqual(["a.md"]);
+    applyPlan(g, planNoteRename(g, "a.md", "c"));
+    expect(read(dir, "sub/b.md")).toBe("[a](../c.md)\n");
+    expect([...g.notes.keys()]).toEqual(["c.md"]);
+    expect(g.backlinks("c.md").map((b) => b.from)).toEqual([join(dir, "sub", "b.md")]);
+  });
 
   test("a note's rename rewrites every link form, keeps how each was written, and writes nothing into it but its links (21.12)", async () => {
     const dir = vault({
@@ -1677,6 +1748,32 @@ describe("moving a folder (18.3)", () => {
     expect(g.notes.has("x/y/sub/three.md")).toBe(true);
     expect(g.redirects!.follow("a/one.md")).toBe("x/y/one.md");
     expect(() => planFolderMove(g, "x", "x/y/z")).toThrow(/can't move into itself/);
+  });
+
+  test("another root's path from its top into a root nested in it — [[outreach/index]], /outreach/plan.md — a backlink there", async () => {
+    const { openVault } = await import("../src/core/reach.ts");
+    const a = mkdtempSync(join(tmpdir(), "slipbox-nest-top-"));
+    const files: Record<string, string> = {
+      ".obsidian/app.json": "{}",
+      "a.md": "# A\n\n[[outreach/index]] [t](/outreach/plan.md) [r](outreach/plan.md) [[outreach/plan]] [[index]]\n",
+      "outreach/.obsidian/app.json": "{}",
+      "outreach/index.md": "# Index\n",
+      "outreach/plan.md": "# Plan\n",
+    };
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(a, rel, ".."), { recursive: true });
+      writeFileSync(join(a, rel), text);
+    }
+    openVault(a).ensureAll(); // A's index, as of its last indexing
+    const g = openVault(join(a, "outreach"));
+    const back = (rel: string) => g.backlinks(rel).map((b) => [b.from, b.target]);
+    // A plain name stays in its root: A's `[[index]]` isn't one.
+    expect(back("index.md")).toEqual([[join(a, "a.md"), "outreach/index"]]);
+    expect(back("plan.md")).toEqual([
+      [join(a, "a.md"), "/outreach/plan.md"],
+      [join(a, "a.md"), "outreach/plan.md"],
+      [join(a, "a.md"), "outreach/plan"],
+    ]);
   });
 });
 
@@ -2099,6 +2196,34 @@ describe("search: the index and the scan (6.x)", () => {
     // better-sqlite3's own SQLite, bundled, whatever the host has (FTS5 in it).
     expect(fresh.db.prepare("select sqlite_version() as v").get()).toEqual({ v: "3.53.4" });
     fresh.close();
+  });
+
+  test("filters alone with `only` (the TUI's unsaved notes): just those files read", async () => {
+    const { search } = await import("../src/core/search.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-search-only-"));
+    mkdirSync(join(dir, ".slipbox"));
+    for (const f of ["a.md", "b.md"]) writeFileSync(join(dir, f), `# ${f}\n`);
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    expect(search(g, null, "path:a", { only: ["b.md"] }).hits).toEqual([]);
+    expect(search(g, null, "path:a", { only: ["a.md"] }).hits.map((h) => h.path)).toEqual(["a.md"]);
+  });
+
+  test("a phrase wrapped across a line break, or starting inside a word turned down: found and placed, by the scan and the index", async () => {
+    const { catchUp, search, SearchIndex } = await import("../src/core/search.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-search-phrase-"));
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, "a.md"), "uno no no\n");
+    writeFileSync(join(dir, "b.md"), "# b\n\n## Trip\n\nWe went to New\nYork last week.\n");
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, true);
+    const idx = SearchIndex.open(g.loc)!;
+    catchUp(g, idx);
+    for (const i of [null, idx]) {
+      expect(search(g, i, '"new york"').hits).toMatchObject([{ path: "b.md", line: 5, column: 12, heading: "Trip", snippet: "We went to New" }]);
+      const [no] = search(g, i, '"no no"').hits;
+      expect(no).toMatchObject({ path: "a.md", line: 1, column: 5, snippet: "uno no no" });
+      expect(no!.snippet.slice(no!.marks[0]![0], no!.marks[0]![1])).toBe("no no");
+    }
+    idx.close();
   });
 
   test("the CLI: a scan until `slipbox index`, then the index, kept current; [search] engine = \"scan\" never uses one", async () => {
@@ -3226,6 +3351,16 @@ describe("the index on demand: what the walk leaves out, indexed when reached (2
     expect(g.resolveLink({ kind: "markdown", target: "/.notes/hidden.md" }, "sub/s.md")).toMatchObject({ resolvedKind: "note", path: ".notes/hidden.md" });
   });
 
+  test("a `/…` link by the file's absolute path reaches it too: the root's reading first, then the filesystem's (21.2)", () => {
+    const dir = make();
+    writeFileSync(join(dir, "index.md"), `[abs](${join(dir, ".notes", "hidden.md")}) [pic](${join(dir, "tmp", "pic.png")})\n`);
+    const g = openGraph(locateVault({ root: dir }), cfg(), false);
+    g.ensureAll();
+    expect([...g.reached].sort()).toEqual([".notes/hidden.md", "tmp/pic.png"]);
+    expect(g.notes.has(".notes/hidden.md")).toBe(true);
+    expect(g.backlinks(".notes/hidden.md").map((b) => b.from)).toEqual(["index.md"]);
+  });
+
   test("a root of its own is never reached, though git-ignored or hidden (0.11)", () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-reach-nested-"));
     mkdirSync(join(dir, ".git"));
@@ -3608,6 +3743,33 @@ describe("search by vault (20.16)", () => {
     expect(all).not.toContain(at("a"));
   });
 
+  test("another root's index still being built is not used: its files scanned; a built one is caught up first", async () => {
+    const { searchOthers } = await import("../src/core/scope.ts");
+    const { SearchIndex } = await import("../src/core/search-index.ts");
+    const { catchUp } = await import("../src/core/search.ts");
+    const { openVault } = await import("../src/core/reach.ts");
+    const { at } = await four();
+    const bLoc = locateVault({ root: at("b") });
+    rmSync(join(cacheDir(bLoc), "search.db"), { force: true });
+    SearchIndex.open(bLoc)!.close(); // made, as the TUI makes it on opening, and left before it was built
+    const found = () => {
+      const g = openVault(at("a"));
+      g.ensureAll();
+      return searchOthers(g, "narwhal", "linked").hits.map((h) => h.abs);
+    };
+    expect(found()).toContain(join(at("b"), "b-note.md"));
+    // Scanned, not built here: building it is its own root's (as this root's search leaves its own).
+    const half = SearchIndex.open(bLoc)!;
+    expect(half.complete).toBe(false);
+    half.close();
+    // Built, then a note added: found all the same.
+    const idx = SearchIndex.open(bLoc)!;
+    catchUp(openVault(at("b")), idx);
+    idx.close();
+    writeFileSync(join(at("b"), "b-late.md"), "# late\n\nAnother narwhal.\n");
+    expect(found()).toContain(join(at("b"), "b-late.md"));
+  });
+
   test("slipbox search --scope: here by default; linked and all add others', each by its path (21.9) with its root (21.10), after this one's", async () => {
     const { at, tag } = await four();
     const files = (r: { json: { data: { hits: { shown: string }[] } } }) => r.json.data.hits.map((h) => h.shown);
@@ -3848,6 +4010,29 @@ describe("renames refused before anything is written (cli.md, Renames)", () => {
     const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
     applyPlan(g, planNoteRename(g, "notes/Meeting: Q3.md", "notes/Meeting: Q4"));
     expect(readFileSync(join(dir, "index.md"), "utf8")).toBe("See [[Meeting: Q4]].\n");
+  });
+
+  test("a renamed folder's previous_names on several lines, or with a comment: kept one key, its id and the old name", async () => {
+    const { planVaultRename } = await import("../src/core/rename.ts");
+    const { readIdentity } = await import("../src/core/registry.ts");
+    const tag = (dir: string) => basename(dir).slice(-6).toLowerCase();
+    for (const prev of ['previous_names = [\n  "older",\n]\n', 'previous_names = ["older"] # kept\n']) {
+      const dir = root({ "a.md": "# A\n" });
+      const cfg = join(dir, ".slipbox", "config.toml");
+      writeFileSync(cfg, `[vault]\nid = "dd835b829b2153ca"\nname = "al${tag(dir)}"\n${prev}`);
+      const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+      applyPlan(g, planVaultRename(g.loc, `be${tag(dir)}`));
+      expect(readIdentity(cfg)).toMatchObject({ id: "dd835b829b2153ca", name: `be${tag(dir)}`, previous_names: ["older", `al${tag(dir)}`] });
+      expect(readFileSync(cfg, "utf8").match(/^previous_names/gm)).toHaveLength(1);
+    }
+    // A table the edit can't follow (`[ vault ]`): refused, nothing written.
+    const dir = root({ "a.md": "# A\n" });
+    const cfg = join(dir, ".slipbox", "config.toml");
+    const text = `[ vault ]\nid = "dd835b829b2153cb"\nname = "al${tag(dir)}"\n`;
+    writeFileSync(cfg, text);
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    expect(() => planVaultRename(g.loc, `be${tag(dir)}`)).toThrow("edit it by hand");
+    expect(readFileSync(cfg, "utf8")).toBe(text);
   });
 
   test("a folder's naming, and its undo, leave .slipbox/config.toml out of the root's files", async () => {
@@ -4565,6 +4750,25 @@ describe("links written in the convention (21.5)", () => {
     expect(writeLink(conv("name", "dropped"), "wiki", linkEnds(g, join(dir, "a.md"), join(dir, "img/p.png")), "", true)).toBe("![[p.png]]");
   });
 
+  test("a top-level note with a nearer namesake: a relative path, never its name, which lands on the namesake", async () => {
+    const { linkEnds, writeLink } = await import("../src/core/write-link.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-write-top-"));
+    mkdirSync(join(dir, ".obsidian"));
+    mkdirSync(join(dir, "sub"));
+    for (const f of ["plan.md", "sub/plan.md", "sub/a.md"]) writeFileSync(join(dir, f), `# ${f}\n`);
+    const g = openGraph(locateVault({ root: dir }), DEFAULT_CONFIG, false);
+    const conv = (path: string, extension: string) => ({ path: { value: path, source: "setting", why: "" }, extension: { value: extension, source: "setting", why: "" } }) as never;
+    const ends = linkEnds(g, join(dir, "sub/a.md"), join(dir, "plan.md"));
+    const lands = (link: string) => g.resolveLink({ kind: "wiki", target: link.slice(2, -2) }, "sub/a.md").path;
+    for (const [path, ext, want] of [["name", "dropped", "[[../plan]]"], ["name", "kept", "[[../plan.md]]"], ["root", "dropped", "[[../plan]]"]] as const) {
+      const link = writeLink(conv(path, ext), "wiki", ends, "");
+      expect(link).toBe(want);
+      expect(lands(link)).toBe("plan.md");
+    }
+    // Where its name does reach it, the name.
+    expect(writeLink(conv("root", "dropped"), "wiki", linkEnds(g, join(dir, "sub/a.md"), join(dir, "sub/plan.md")), "")).toBe("[[sub/plan]]");
+  });
+
   test("slipbox link: as the root's convention writes it from --from — the note's title its text; --style, --text, --embed", async () => {
     const dir = vault();
     rmSync(join(dir, ".slipbox"), { recursive: true });
@@ -5122,6 +5326,9 @@ describe("links to the repository's own hosting (trailscout's review)", () => {
     expect(parseHosted("https://bitbucket.org/team/repo/src/main/docs/x.md#markdown-header-goals")).toMatchObject({ remote: "bitbucket.org/team/repo", path: "docs/x.md", fragment: "goals" });
     expect(parseHosted("https://github.com/me/repo.git#readme")).toEqual({ remote: "github.com/me/repo", ref: null, path: "", fragment: null, folder: false });
     expect(parseHosted("https://github.com/me/repo/issues/12")).toBeNull();
+    // Encoded slashes never climb out of the copy: not a hosting link, an external one.
+    expect(parseHosted("https://github.com/me/repo/blob/main/..%2F..%2Fsecret.md")).toBeNull();
+    expect(parseHosted("https://github.com/me/repo/blob/main/docs%2F.%2Fplan.md")).toBeNull();
     expect(parseHosted("mailto:me@example.com")).toBeNull();
   });
 

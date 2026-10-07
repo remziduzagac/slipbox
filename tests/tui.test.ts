@@ -1109,6 +1109,21 @@ describe("the left panel's views and filter", () => {
     expect(h.app.region).toBe("content");
     expect(h.app.sidebar.filter).toBe("");
   });
+  test("a paste while a pane's filter is typed in goes into it (its first line), the selection on the first match", async () => {
+    const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 40, config: (c) => (c.ui.outline = true) });
+    h.app.showSidebar(true);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    await h.keys("/");
+    await h.app.paste("beta\nmore");
+    expect(h.app.sidebar.filter).toBe("beta");
+    expect(h.app.explorerRows()[h.app.sidebar.selected]!.path).toBe("notes/beta.md");
+    await h.keys("escape", "space", "o", "/");
+    expect(h.app.region as string).toBe("outline");
+    await h.app.paste("Swapping\r\nnot this");
+    expect(h.app.outline.filter).toBe("Swapping");
+    expect(h.app.outlineRows()[h.app.outline.selected]!.text).toStartWith("Swapping a filter");
+  });
   test("/ filters the outline: matching headings under their parents; enter jumps, esc clears", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 160, height: 40, config: (c) => (c.ui.outline = true) });
     await h.keys("space", "o"); // focus it
@@ -1155,6 +1170,21 @@ describe("the left panel's views and filter", () => {
     expect(v.back.map((l) => l.key)).toEqual(["notes/beta.md"]);
     await again.app.run("history.back");
     expect(again.app.view!.buf.rel).toBe("notes/beta.md");
+  });
+  test("history: a double-click in a filtered list jumps to the clicked entry, the filter cleared", async () => {
+    const h = await harness();
+    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("note.open notes/beta.md");
+    await h.keys("space", "h", "h", "/", ...[..."index"]);
+    const rows = h.app.historyRows();
+    const i = rows.findIndex((r) => r.path === "index.md");
+    expect(i).toBe(0); // unfiltered, row 0 is beta.md, here
+    h.frame();
+    const sb = h.app.geometry!.sidebar!;
+    const y = sb.y + i - h.app.sidebar.scroll;
+    for (const type of ["down", "up", "down", "up"]) h.app.handleMouse({ type, x: sb.x + 4, y, button: 0 });
+    expect(h.app.view!.buf.rel).toBe("index.md");
+    expect(h.app.sidebar.filter).toBe("");
   });
   test("history filter: the selection skips the 'recent here' heading, and enter on a recent note opens it here", async () => {
     const h = await harness();
@@ -4053,6 +4083,23 @@ describe("review cycle 1 (TUI)", () => {
     await ex("'<,'>s/$/!/");
     expect(v.buf.source).toBe("a\nb!\nc!\nd\n");
   });
+  test("'<,'> whose lines were deleted since is refused, never the note's first line", async () => {
+    const { h, v, ex } = await source("x1\nx2\nx3\nx4\nx5\n");
+    await h.keys("3", "j", "shift+v", "j", ":", "escape", "escape");
+    expect(v.visualLines).toEqual([4, 5]);
+    await h.keys("g", "g", "d", "3", "j");
+    expect(v.buf.source).toBe("x5\n");
+    await ex("'<,'>s/x/y/");
+    expect(v.buf.source).toBe("x5\n");
+    expect(h.app.messages.at(-1)?.text).toBe("the last selection's lines aren't in the note any more");
+  });
+  test("a counted r counts characters, not code points: an emoji with a modifier is one", async () => {
+    const { h, v } = await source("a👍🏽\n");
+    await h.keys("0", "l", "2", "r", "x");
+    expect(v.buf.source).toBe("a👍🏽\n"); // not enough characters, as in vim
+    await h.keys("0", "l", "r", "x");
+    expect(v.buf.source).toBe("ax\n");
+  });
   test("session restore keeps the scroll position, with the breadcrumb on", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "samples/handbook/operations-handbook.md", width: 160, height: 40 });
@@ -4422,6 +4469,16 @@ describe("review cycle 3 (TUI)", () => {
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
     await h.keys(":", "w", "space", ...[..."zzqqxx"], "enter");
     expect(h.app.messages.at(-1)!.text).toContain("takes no argument");
+  });
+  test(":convert-links <note> from the palette previews that note's links only (20.1)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "c1.md"), "[[beta]]\n");
+    writeFileSync(join(root, "c2.md"), "[[beta]] too\n");
+    const h = await harness({ root, open: "c1.md", width: 160, height: 40 });
+    h.app.graph.build(true);
+    await h.keys(":", ...[..."convert-links"], "space", ...[..."c1"], "enter");
+    expect(h.app.messages.some((m) => m.text.includes("takes no argument"))).toBe(false);
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["c1.md:1"]);
   });
   test("joints: a tab separator over a border is a cross", async () => {
     // Somewhere across these widths a tab's separator lands on the outline's border column.
@@ -5994,6 +6051,24 @@ describe("vaults in the TUI (17.x)", () => {
     expect((await harness({ root: notes, open: "index.md" })).app.otherRoots()).toEqual([]);
   });
 
+  test("another root's row (20.15): its name once, no menu button for the menu that refuses it", async () => {
+    const { notes, n } = await twoVaults();
+    const h = await harness({ root: notes, open: "index.md", width: 120, height: 30 });
+    await h.keys("tab", "enter"); // into the app vault, by the link
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.root?.other);
+    const row = h.frame().split("\n").find((r) => r.includes(`tnotes${n}`))!;
+    expect(row.split(`tnotes${n}`).length - 1).toBe(1);
+    expect(row).not.toContain(h.app.glyphs.itemMenu);
+    expect(h.app.geometry!.hot.some((x) => x.id === "xrow:menu")).toBe(false);
+    // Unfolded, its files' rows neither.
+    h.app.explorerAction("open");
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.under === notes && r.name === "todo.md");
+    h.frame();
+    expect(h.app.geometry!.hot.some((x) => x.id === "xrow:menu")).toBe(false);
+  });
+
   test("the explorer's roots never overlap (20.15): a vault inside the one open, or around it, isn't one apart", async () => {
     const { locateVault } = await import("../src/core/vault.ts");
     const outer = makeVault(); // its nested-vault/ is a vault of its own
@@ -6366,6 +6441,39 @@ describe("vaults in the TUI (17.x)", () => {
     expect(readFileSync(join(root, "ctx.md"), "utf8")).toBe("# Ctx, rewritten by an agent\n");
   });
 
+  test("space s c with an unsaved note that can't be written copies nothing and blames the write, not a conflict", async () => {
+    const root = makeVault();
+    mkdirSync(join(root, "ro"));
+    writeFileSync(join(root, "ro", "a.md"), "# A\n");
+    const h = await harness({ root, open: "ro/a.md" });
+    await h.keys("shift+g", "shift+a", "!", "escape");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    chmodSync(join(root, "ro", "a.md"), 0o444);
+    chmodSync(join(root, "ro"), 0o555);
+    try {
+      const copies = h.copied.length;
+      await h.keys("space", "s", "c");
+      expect(h.copied.length).toBe(copies);
+      expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: "context: ro/a.md couldn't be saved — not copying" });
+      expect(h.app.messages.some((m) => m.level === "error" && m.text.startsWith("can't write ro/a.md"))).toBe(true);
+    } finally {
+      chmodSync(join(root, "ro"), 0o755);
+      chmodSync(join(root, "ro", "a.md"), 0o644);
+    }
+  });
+
+  test("a dirty note changed on disk while another list is open is said once, not per write", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "index.md" });
+    await h.keys("shift+a", "!", "escape");
+    const buf = h.app.view!.buf;
+    expect(buf.dirty).toBe(true);
+    h.app.openList({ title: "Something else", items: [{ label: "x", data: null }], accept: () => {} });
+    const before = h.app.messages.length;
+    for (let k = 0; k < 3; k++) h.app.conflictPrompt(buf);
+    expect(h.app.messages.slice(before).filter((m) => m.text.includes("changed on disk while you have unsaved changes"))).toHaveLength(1);
+  });
+
   test("a rename is refused while a file it rewrites is unsaved; :rename takes the path; the explorer's r asks", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });
@@ -6388,6 +6496,20 @@ describe("vaults in the TUI (17.x)", () => {
     h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.path === "notes/beta.md");
     await h.keys("r");
     expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "rename notes/beta.md to: ", text: "beta" });
+  });
+
+  test("a folder's move is refused while a note in it is unsaved, its links rewritten or not", async () => {
+    const { planFolderMove } = await import("../src/core/rename.ts");
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    h.app.view!.buf.edit(0, 0, "UNSAVED ");
+    h.app.previewRename(() => planFolderMove(h.app.graph, "notes", "notes2"));
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toStartWith("unsaved: notes/alpha.md");
+    expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true);
+    expect(existsSync(join(root, "notes2"))).toBe(false);
+    expect(h.app.view!.buf.dirty).toBe(true);
+    expect(h.app.view!.buf.source).toStartWith("UNSAVED ");
   });
 
   test("naming the folder anew, and relinking a moved note's links, from the TUI", async () => {
@@ -6636,6 +6758,27 @@ describe("the explorer's file operations and buttons (18.x)", () => {
     expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
     expect(h.app.fileClip).toBeNull(); // pasted: done
+  });
+
+  test("a root switch forgets what was copied or cut and the last delete: p and u never reach the other root's files", async () => {
+    const a = makeVault();
+    const b = makeVault();
+    writeFileSync(join(a, "notes", "x.md"), "# from A\n");
+    writeFileSync(join(b, "notes", "x.md"), "# from B\n");
+    const h = await at(a, "notes/x.md");
+    await h.keys("y");
+    h.app.selectInExplorer("notes/alpha.md");
+    await h.keys("d", "y");
+    expect(existsSync(join(a, "notes", "alpha.md"))).toBe(false);
+    h.app.switchVault((await import("../src/core/vault.ts")).rootAt(b), null);
+    expect(h.app.loc.root).toBe(b);
+    h.app.pasteItem();
+    expect(h.app.messages.at(-1)!.text).toBe("nothing copied or cut: y copies, x cuts");
+    expect(readdirSync(join(b, "notes")).filter((n) => n.startsWith("x"))).toEqual(["x.md"]);
+    expect(readdirSync(b).filter((n) => n.startsWith("x"))).toEqual([]);
+    // u: B's trash (empty), not A's last delete looked for in it.
+    h.app.restoreLast();
+    expect(h.app.messages.at(-1)!.text).toBe("the trash is empty");
   });
 
   test("a folder renamed or moved takes its notes, their open windows and every link along", async () => {
@@ -7408,6 +7551,67 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
     h.app.handleMouse({ type: "up", x: 1, y: 30, button: 0 });
     expect(h.app.floating).toBeNull();
   });
+
+  test("quitting writes the properties back first (ctrl+q, :x); text that doesn't parse asks, the app kept; :wa writes them", async () => {
+    const { h, read } = await setup("---\ntitle: A\n---\n# A\n");
+    await h.app.run("note.properties");
+    await h.keys("o");
+    await type(h, "x: 1");
+    await h.keys("escape", "ctrl+q");
+    expect(read()).toBe("---\ntitle: A\nx: 1\n---\n# A\n");
+    expect(h.quit.called).toBe(true);
+    // Not parsing: asked, still open, not quit.
+    const b = await setup("---\ntitle: A\n---\n# A\n");
+    await b.h.app.run("note.properties");
+    await b.h.keys("o");
+    await type(b.h, "broken: [");
+    await b.h.keys("escape", ":", "x", "enter");
+    expect(ask(b.h)).toMatchObject({ confirm: true, label: expect.stringMatching(/^The properties don't parse/) });
+    expect(b.h.quit.called).toBe(false);
+    expect(b.read()).toBe("---\ntitle: A\n---\n# A\n");
+    // :wa: written, and said so; the editor stays.
+    const c = await setup("---\ntitle: A\n---\n# A\n");
+    await c.h.app.run("note.properties");
+    await c.h.keys("o");
+    await type(c.h, "y: 2");
+    await c.h.keys("escape", ":", "w", "a", "enter");
+    expect(c.read()).toBe("---\ntitle: A\ny: 2\n---\n# A\n");
+    expect(c.h.app.messages.at(-1)!.text).toBe("saved 1 note");
+    expect(c.h.app.floating).not.toBeNull();
+  });
+
+  test("a click on another tab (or a side pane) closes it, writing back, and does nothing else", async () => {
+    const { h, read } = await setup("---\ntitle: A\n---\n# A\n");
+    await h.app.run("tab.new");
+    await h.app.run("note.open index.md");
+    await h.app.run("tab.prev");
+    expect(h.app.activeTab).toBe(0);
+    await h.app.run("note.properties");
+    await h.keys("o");
+    await type(h, "x: 1");
+    await h.keys("escape");
+    h.frame();
+    const tab = h.app.geometry!.tabs.find((t) => t.index === 1)!;
+    h.app.handleMouse({ type: "down", x: tab.x + 1, y: tab.y, button: 0 });
+    h.app.handleMouse({ type: "up", x: tab.x + 1, y: tab.y, button: 0 });
+    expect(h.app.floating).toBeNull();
+    expect(h.app.activeTab).toBe(0); // the click was the editor's closing
+    expect(read()).toBe("---\ntitle: A\nx: 1\n---\n# A\n");
+    // The explorer: likewise.
+    h.app.showSidebar(true);
+    await h.app.run("note.properties");
+    await h.keys("shift+g", "o");
+    await type(h, "z: 3");
+    await h.keys("escape");
+    h.frame();
+    const sb = h.app.geometry!.sidebarPane!;
+    h.app.region = "content";
+    h.app.handleMouse({ type: "down", x: sb.x + 1, y: sb.y + 1, button: 0 });
+    h.app.handleMouse({ type: "up", x: sb.x + 1, y: sb.y + 1, button: 0 });
+    expect(h.app.floating).toBeNull();
+    expect(h.app.region).toBe("content");
+    expect(read()).toBe("---\ntitle: A\nx: 1\nz: 3\n---\n# A\n");
+  });
 });
 
 describe("the Problems view (1.7)", () => {
@@ -7479,6 +7683,19 @@ describe("the Problems view (1.7)", () => {
     h.app.region = "sidebar";
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("b/twin.md");
+  });
+
+  test("a double-click in a filtered list goes to the clicked problem, the filter cleared", async () => {
+    const h = await setup();
+    await h.app.run("note.open a/twin.md");
+    await h.keys("space", "v", "p", "/", "n", "o", "p", "e");
+    expect(rows(h)).toEqual(["# Broken links (2)", "  other.md", "    L3  nope.png"]);
+    h.frame();
+    const sb = h.app.geometry!.sidebar!;
+    const y = sb.y + 2 - h.app.sidebar.scroll;
+    for (const type of ["down", "up", "down", "up"]) h.app.handleMouse({ type, x: sb.x + 4, y, button: 0 });
+    expect(h.app.view!.buf.rel).toBe("other.md");
+    expect(h.app.sidebar.filter).toBe("");
   });
 });
 
@@ -8810,6 +9027,15 @@ describe("what a code file's server changes (19.15)", () => {
     expect(readFileSync(join(root, "x.py"), "utf8")).toBe(preview); // no window shows it: saved
   });
 
+  test("a character past its line's end is the line's end, as the preview has it — the lines after kept", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "code.txt"), "short\nkeep this line\nand this\n");
+    const h = await harness({ root, open: "index.md" });
+    const edits = [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 100 } }, newText: "SHORT" }];
+    expect(h.app.applyWorkspaceEdit({ changes: { [`file://${join(root, "code.txt")}`]: edits } })).toEqual({ files: 1, edits: 1 });
+    expect(readFileSync(join(root, "code.txt"), "utf8")).toBe("SHORT\nkeep this line\nand this\n");
+  });
+
   test("space c r: the symbol renamed everywhere the server says, after a preview; a file no window shows is saved", async () => {
     const root = makeVault();
     writeFileSync(join(root, "a.fk"), "REF one REF\n");
@@ -9344,6 +9570,15 @@ describe("review (tui): what a filter or a search marks, drawn where it is", () 
     expect(h.frame()).not.toContain("cafe.md");
     await h.keys("escape", "/", "日");
     expect(h.frame()).toContain("日本.md");
+  });
+  test("the explorer's filter marks only what the row shows: never over its menu button", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "abcdefghijklmnopqrstuv-qq.md"), "# Q\n");
+    const h = await harness({ root, open: "index.md", width: 120, height: 30 });
+    await h.keys("space", "e", "/", "q", "q");
+    const row = h.frame().split("\n").find((r) => r.includes("abcdefghij"))!;
+    expect(row).toContain(h.app.glyphs.itemMenu);
+    expect(h.app.geometry!.hot.some((x) => x.id === "xrow:menu")).toBe(true);
   });
   test("ASCII glyphs reach every cell: a find match's row, the cursor on a dash", async () => {
     const root = makeVault();

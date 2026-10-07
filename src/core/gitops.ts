@@ -146,7 +146,7 @@ export interface WorktreeEntry {
   /** The branch checked out; null when detached (then `head`). */
   branch: string | null;
   head: string | null;
-  /** The main checkout (the first git lists). */
+  /** The main checkout: the first git lists, unless the repository is bare (it has none then). */
   main: boolean;
 }
 
@@ -155,12 +155,17 @@ export function worktreeList(c: Pick<Checkout, "root">): WorktreeEntry[] | null 
   const out = run(c, ["worktree", "list", "--porcelain"]);
   if (out === null) return null;
   const list: WorktreeEntry[] = [];
+  // Git lists the main checkout first; a bare repository is listed there instead, and has none.
+  let first = true;
   for (const block of out.split(/\n\n+/)) {
     const path = /^worktree (.+)$/m.exec(block)?.[1];
-    if (!path || /^bare$/m.test(block)) continue;
+    if (!path) continue;
+    const main = first;
+    first = false;
+    if (/^bare$/m.test(block)) continue;
     const branch = /^branch refs\/heads\/(.+)$/m.exec(block)?.[1] ?? null;
     const head = /^HEAD ([0-9a-f]+)$/m.exec(block)?.[1] ?? null;
-    list.push({ path, branch, head, main: list.length === 0 });
+    list.push({ path, branch, head, main });
   }
   return list;
 }

@@ -195,12 +195,16 @@ function handleSymlink(abs: string, rel: string, realRoot: string, filter: WalkF
     if (filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) out.skipped.push({ rel, reason: "symlink to something that isn't a file" });
     return;
   }
-  if (!filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) return;
+  // Any file, a note or not (0.11): inside the root, listed as the walk lists it; outside, said.
   if (!isInside(realRoot, target)) {
     out.skipped.push({ rel, reason: "symlink points outside the root" });
     return;
   }
   if (filter.exclusion(rel, false) !== null) return;
+  if (!filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) {
+    out.assets.push(rel);
+    return;
+  }
   addFile(abs, rel, filter, out);
   const added = out.files[out.files.length - 1];
   if (added?.rel === rel) symlinkTargets.set(added, relative(realRoot, target).split(sep).join("/"));

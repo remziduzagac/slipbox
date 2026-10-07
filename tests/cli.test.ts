@@ -6,8 +6,8 @@
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { CLI_COMMANDS } from "../src/cli/cli.ts";
+import { basename, join } from "node:path";
+import { CLI_COMMANDS, FLAGS } from "../src/cli/cli.ts";
 
 // Harnesses copy and index a vault, CLI tests start processes: slow on a loaded machine, not stuck.
 setDefaultTimeout(30_000);
@@ -140,6 +140,14 @@ describe("links", () => {
     expect(slipbox(["links", "partners-and-names"]).out).toContain("UNRESOLVED");
     const b = slipbox(["backlinks", "kenji-mori", "--json"]).json.data;
     expect(b.backlinks.map((x: { from: string }) => x.from)).toContain("home.md");
+  });
+  test("links --json gives each link's end, as backlinks gives the same link's", () => {
+    type Pos = { line: number; column: number };
+    const l = slipbox(["links", "home", "--json"]).json.data as (Pos & { path: string | null; end: Pos })[];
+    for (const x of l) expect(x.end).toEqual({ line: expect.any(Number), column: expect.any(Number) });
+    const to = l.find((x) => x.path === "people/kenji-mori.md")!;
+    const back = slipbox(["backlinks", "kenji-mori", "--json"]).json.data.backlinks.find((x: Pos & { from: string }) => x.from === "home.md" && x.line === to.line && x.column === to.column);
+    expect(to.end).toEqual(back.end);
   });
 });
 
@@ -645,6 +653,23 @@ describe("the vault and the tool", () => {
     expect(lone.err).toContain("lone and main have no commit in common: git won't merge them");
     expect(lone.err).not.toContain("2.38");
   });
+  test("worktrees of a bare repository: none of them the main checkout (5.14)", () => {
+    const top = join(sandbox, "gitbare");
+    const src = join(top, "src");
+    mkdirSync(src, { recursive: true });
+    const git = (cwd: string, ...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", cwd, ...args]);
+    writeFileSync(join(src, "plan.md"), "# Plan\n");
+    if (git(src, "init", "-q", "-b", "main").exitCode !== 0) return;
+    git(src, "add", "-A");
+    git(src, "commit", "-q", "-m", "start");
+    git(top, "clone", "-q", "--bare", src, "repo.git");
+    const bare = join(top, "repo.git");
+    git(bare, "worktree", "add", "-q", join(top, "w-main"), "main");
+    git(bare, "worktree", "add", "-q", "-b", "feat", join(top, "w-feat"));
+    const list = slipbox(["worktrees", "--json"], { cwd: join(top, "w-feat") }).json.data as { path: string; main: boolean }[];
+    expect(list.map((w) => basename(w.path)).sort()).toEqual(["w-feat", "w-main"]);
+    expect(list.map((w) => w.main)).toEqual([false, false]);
+  });
   test("errors: usage 2, not found 3, --json always one object", () => {
     const bad = slipbox(["frobnicate", "--json"]);
     expect(bad.code).toBe(2);
@@ -1060,6 +1085,56 @@ describe("review cycle 6 (cli)", () => {
     expect(r.code).toBe(0);
     expect(r.out).toContain("# Hidden away");
     expect(slipbox(["stat", "--root", "../repo", "private/y.md"], { cwd: plain, env }).code).toBe(0);
+  });
+  test("review cycle 2: diagnostics takes the root from its file — from above it, by --root, nested, hidden", () => {
+    const { dir, env } = own("diag-root-");
+    // Neither servers nor the lint surface: slipbox's own checks only.
+    const cfg = join(dir, "quiet.toml");
+    writeFileSync(cfg, '[lsp]\nenabled = false\n\n[lint]\nenabled = "off"\n');
+    const root = join(dir, "root");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(join(root, "nest", ".slipbox"), { recursive: true });
+    mkdirSync(join(root, ".hidden"));
+    writeFileSync(join(root, "d.md"), "[b](sub/nothere.md)\n");
+    writeFileSync(join(root, "nest", "n.md"), "[c](gone.md)\n");
+    writeFileSync(join(root, ".hidden", "h.md"), "[e](elsewhere.md)\n");
+    const run = (args: string[], cwd: string) => slipbox(["diagnostics", ...args, "--severity", "hint", "--config", cfg, "--json"], { cwd, env });
+    const said = (r: Run, target: string) => {
+      expect(r.code).toBe(0);
+      expect(r.json.data.sources).toContainEqual({ name: "slipbox", kind: "slipbox", status: "ran" });
+      expect(r.json.data.problems.some((p: { source: string; message: string }) => p.source === "slipbox" && p.message.includes(target))).toBe(true);
+    };
+    said(run(["root/d.md"], dir), "sub/nothere.md");
+    said(run(["d.md", "--root", "root"], dir), "sub/nothere.md");
+    said(run(["nest/n.md"], root), "gone.md");
+    said(run([".hidden/h.md"], root), "elsewhere.md");
+  });
+  test("review cycle 2: link --from takes a target in a nested root by its path, and reaches a hidden one", () => {
+    const { dir, env } = own("link-from-");
+    const root = join(dir, "root");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(join(root, "nest", ".slipbox"), { recursive: true });
+    mkdirSync(join(root, ".hidden"));
+    writeFileSync(join(root, "c.md"), "# C\n");
+    writeFileSync(join(root, "nest", "x.md"), "# X\n");
+    writeFileSync(join(root, ".hidden", "h.md"), "# H\n");
+    expect(slipbox(["link", "nest/x.md", "--from", "c.md"], { cwd: root, env })).toMatchObject({ code: 0, out: "[X](nest/x.md)\n" });
+    expect(slipbox(["link", join(root, "nest", "x.md"), "--from", "c.md"], { cwd: root, env })).toMatchObject({ code: 0, out: "[X](nest/x.md)\n" });
+    // Never reached before: --from's note is the one that says which root this is, not the target.
+    expect(slipbox(["link", ".hidden/h.md", "--from", "c.md"], { cwd: root, env })).toMatchObject({ code: 0, out: "[H](.hidden/h.md)\n" });
+  });
+  test("help lists every flag each command takes, on the command's own lines", () => {
+    const text = new Map<string, string>();
+    let at: string | null = null;
+    for (const line of slipbox(["help"]).out.split("\n")) {
+      const m = /^ {2}slipbox (\S+)/.exec(line);
+      if (m) at = m[1]!;
+      else if (!/^ {20,}\S/.test(line)) at = null;
+      if (at) text.set(at, `${text.get(at) ?? ""}${line}\n`);
+    }
+    for (const [command, flags] of Object.entries(FLAGS)) {
+      for (const f of flags) expect(`${command}: ${text.get(command) ?? ""}`).toContain(`--${f}`);
+    }
   });
   test("index --refresh walks by --config's walk, as every other command does", () => {
     const { dir, env } = own("refresh-cfg-");

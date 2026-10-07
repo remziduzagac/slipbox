@@ -197,6 +197,20 @@ describe("the reference set is complete (examples/home)", () => {
     expect(loadConfig({ configFile: join(SOURCE, "work/infra/dotfiles/slipbox/config.toml") }).warnings).toEqual([]);
   });
 
+  test("the kitchen-sink config has every key of slipbox's defaults, the free-form tables aside", async () => {
+    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+    const file = parse(readFileSync(join(SOURCE, "work/infra/dotfiles/slipbox/config.toml"), "utf8")) as Record<string, unknown>;
+    const freeForm = new Set(["colors", "keys", "aliases", "groups", "language-server", "language", "linter"]);
+    const missing = Object.entries(DEFAULT_CONFIG as unknown as Record<string, unknown>).flatMap(([section, value]) => {
+      if (freeForm.has(section)) return [];
+      if (!(section in file)) return [section];
+      if (value === null || typeof value !== "object" || Array.isArray(value)) return [];
+      const had = file[section] as Record<string, unknown>;
+      return Object.keys(value).flatMap((k) => (k in had ? [] : [`${section}.${k}`]));
+    });
+    expect(missing).toEqual([]);
+  });
+
   test("the kitchen-sink config binds every command id under `leader ;`, none unknown", () => {
     const keys = (parse(readFileSync(join(SOURCE, "work/infra/dotfiles/slipbox/config.toml"), "utf8")) as { keys: Record<string, unknown> }).keys;
     const bound = Object.entries(keys).flatMap(([k, v]) => (k.startsWith("leader ; ") && typeof v === "string" ? [v] : []));

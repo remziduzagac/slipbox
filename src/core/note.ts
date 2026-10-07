@@ -9,7 +9,7 @@ import type { Glyphs } from "./glyphs.ts";
 import type { Graph } from "./graph.ts";
 import type { Layout, LinkStatus } from "./layout/ir.ts";
 import { type RenderCache, type RenderOptions, renderTree } from "./layout/render.ts";
-import { headingText, type ParsedNote, parseMarkdown, slugify } from "./parse.ts";
+import { headingLabel, headingText, type ParsedNote, parseMarkdown } from "./parse.ts";
 import { findHeading } from "./landing.ts";
 import { findVaultRoot } from "./vault.ts";
 
@@ -85,7 +85,7 @@ function parsedAt(abs: string): ParsedNote | null {
 function sectionOf(tree: Root, heading: string): RootContent[] | null {
   const kids = tree.children;
   // The headings, as a link finds one (landing.ts): by text, slug, id, or a path of them.
-  const heads = kids.flatMap((n, i) => (n.type === "heading" ? [{ i, depth: n.depth, text: headingText(n).trim(), slug: slugify(headingText(n).trim()), line: i, id: (n.data as { id?: string } | undefined)?.id }] : []));
+  const heads = kids.flatMap((n, i) => (n.type === "heading" ? [{ i, depth: n.depth, ...headingLabel(n), line: i, id: (n.data as { id?: string } | undefined)?.id }] : []));
   const hit = findHeading(heads, [], heading, true);
   if (!hit || hit.heading === null) return null;
   const at = heads[hit.heading]!.i;

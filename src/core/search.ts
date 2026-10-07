@@ -506,8 +506,6 @@ function fold(text: string): { folded: string; at: number[] } {
   return { folded, at };
 }
 
-const isWordChar = (c: string | undefined) => !!c && /[\p{L}\p{N}]/u.test(c);
-
 /**
  * Where a term occurs in folded text as the tokenizer would see it, start and end: its words in order,
  * whatever is between them (a space, a line break, a comma), at a word's start and (unless a prefix)
@@ -516,16 +514,11 @@ const isWordChar = (c: string | undefined) => !!c && /[\p{L}\p{N}]/u.test(c);
 function occurrences(folded: string, term: QueryTerm): [number, number][] {
   const words = fold(term.text).folded.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
   if (!words.length) return [];
-  const re = new RegExp(words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^\\p{L}\\p{N}]+"), "gu");
-  const out: [number, number][] = [];
-  for (const m of folded.matchAll(re)) {
-    const i = m.index;
-    const end = i + m[0].length;
-    if (isWordChar(folded[i - 1])) continue;
-    if (!term.prefix && isWordChar(folded[end])) continue;
-    out.push([i, end]);
-  }
-  return out;
+  // The bounds in the pattern, not checked after: a match turned down inside a word (`uno` for "no
+  // no") would otherwise hide one starting within it.
+  const body = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^\\p{L}\\p{N}]+");
+  const re = new RegExp(`(?<![\\p{L}\\p{N}])${body}${term.prefix ? "" : "(?![\\p{L}\\p{N}])"}`, "gu");
+  return [...folded.matchAll(re)].map((m): [number, number] => [m.index, m.index + m[0].length]);
 }
 
 /** How much of a line the snippet shows around the first match. */
@@ -543,21 +536,27 @@ function locate(path: string, group: "note" | "data", text: string, score: numbe
   let withWords = 0;
   // The unit with most of the words (a heading's own text), at its first line with one.
   for (const u of doc.units) {
+    // Its lines joined, folded, as the index reads them: a phrase wrapped across a line break placed
+    // too. Each folded offset kept with its line and its offset in that line.
+    let folded = "";
+    const where: [number, number][] = [];
+    u.forEach((l, i) => {
+      const f = fold(l.text);
+      folded += `${f.folded}\n`;
+      for (let k = 0; k <= f.folded.length; k++) where.push([i, f.at[k]!]);
+    });
     const seen = new Set<QueryTerm>();
-    let first: { line: number; column: number; raw: string } | null = null;
-    for (const l of u) {
-      if (seen.size >= pos.length) break;
-      const { folded, at } = fold(l.text);
-      let col = -1;
-      for (const t of pos) {
-        const o = occurrences(folded, t)[0]?.[0];
-        if (o === undefined) continue;
-        seen.add(t);
-        if (col < 0 || o < col) col = o;
-      }
-      if (col >= 0 && !first) first = { line: l.line, column: [...l.text.slice(0, at[col])].length + 1, raw: l.text };
+    let col = -1;
+    for (const t of pos) {
+      const o = occurrences(folded, t)[0]?.[0];
+      if (o === undefined) continue;
+      seen.add(t);
+      if (col < 0 || o < col) col = o;
     }
-    if (!first) continue;
+    if (col < 0) continue;
+    const [i, off] = where[col]!;
+    const l = u[i]!;
+    const first = { line: l.line, column: [...l.text.slice(0, off)].length + 1, raw: l.text };
     withWords++;
     if (!best || seen.size > best.found) best = { found: seen.size, ...first };
   }
@@ -610,7 +609,7 @@ export function search(g: Graph, idx: SearchIndex | null, input: string, opts: {
     if (!q.tags.length && !q.paths.length) return { engine, relaxed: false, hits: [] };
     // Less the files with a word they mustn't have (`#project -draft`).
     const not = q.terms.length ? q.terms.map(ftsTerm).join(" OR ") : undefined;
-    const files = idx ? idx.filesWhere({ tags: q.tags, pathPrefix: q.paths, not, limit }) : scanFiles(g, q, opts.texts).slice(0, limit);
+    const files = idx ? idx.filesWhere({ tags: q.tags, pathPrefix: q.paths, not, limit }) : scanFiles(g, q, opts.texts, opts.only).slice(0, limit);
     // Nothing read: the file's top stands for where it's hit.
     return { engine, relaxed: false, hits: files.map((path) => ({ path, line: 1, column: 1, heading: "", section: { name: "§:file", line: 1, end: 1 }, score: 0, snippet: "", marks: [], more: 0 })) };
   }
@@ -671,9 +670,9 @@ function countsIn(fields: string[], t: QueryTerm): number[] {
   return fields.map((x, k) => (t.title && k > 1 ? 0 : occurrences(x, t).length));
 }
 
-function scanFiles(g: Graph, q: SearchQuery, texts?: Map<string, string>): string[] {
+function scanFiles(g: Graph, q: SearchQuery, texts?: Map<string, string>, only?: string[]): string[] {
   const neg = q.terms.filter((t) => t.not);
-  return scanned(g, texts)
+  return scanned(g, texts, only)
     .filter((f) => keeps(f, q))
     .filter((f) => !neg.length || !neg.some((t) => countsIn(foldedFields(f), t).some((n) => n > 0)))
     .map((f) => f.path)

@@ -303,8 +303,7 @@ function finish(nodes: unknown[], text: string): void {
   dropOffsets(nodes);
 }
 
-/** A heading's trailing `{#id …}` (Pandoc's attributes): the id in group 1. Source mode's heading
- *  scan reads it with the same rule. */
+/** A heading's trailing `{#id …}` (Pandoc's attributes): the id in group 1. */
 export const HEADING_ID = /\s*\{#([^\s{}#]+)(?:\s[^{}]*)?\}\s*$/;
 
 /** A heading's trailing `{#id …}` (Pandoc's attributes): its id, kept on the node, the text without it. */
@@ -558,14 +557,24 @@ export function headingsOf(tree: Root): HeadingInfo[] {
   const out: HeadingInfo[] = [];
   visit(tree, (node) => {
     if (node.type === "heading") {
-      const text = headingText(node);
       const id = (node.data as { id?: string } | undefined)?.id;
-      out.push({ depth: node.depth, text, slug: slugify(text), line: node.position?.start.line ?? 1, ...(id ? { id } : {}) });
+      out.push({ depth: node.depth, ...headingLabel(node), line: node.position?.start.line ?? 1, ...(id ? { id } : {}) });
       return false;
     }
     if (node.type === "code" || node.type === "html") return false;
   });
   return out;
+}
+
+/**
+ * A heading's text and slug, the one derivation the outline, the graph, the render and a link's
+ * landing all use: its visible text, trimmed at the ends only (a trailing footnote mark or image
+ * leaves a space). White space inside is kept — a footnote mark between two words leaves two
+ * spaces, and GitHub's slug keeps their `--` — so whatever draws it folds it, never the stored text.
+ */
+export function headingLabel(node: Heading): { text: string; slug: string } {
+  const text = headingText(node).trim();
+  return { text, slug: slugify(text) };
 }
 
 export function headingText(node: Heading): string {

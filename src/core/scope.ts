@@ -1,12 +1,13 @@
 // Search by root (plan 20.16, 21.10; docs/idea.md, "What's shown"): ranked by how near a root is, by
 // links — the root open first (`here`), then the roots linked to or from it under a divider, then every
-// root this machine knows only when widened. Each is searched with its own index (a scan where it has
-// none); a hit of another root carries its name and its full path.
+// root this machine knows only when widened. Each is searched with its own index, caught up first (a
+// scan where it has none, or one still being built); a hit of another root carries its name and its
+// full path.
 
 import { isAbsolute } from "node:path";
 import type { Graph } from "./graph.ts";
 import { readRoots } from "./registry.ts";
-import { search, type SearchHit, type SearchResult } from "./search.ts";
+import { catchUp, search, type SearchHit, type SearchResult } from "./search.ts";
 import { SearchIndex } from "./search-index.ts";
 import { findVaultRoot, isListed, isVaultRoot } from "./vault.ts";
 
@@ -73,8 +74,14 @@ export function searchOthers(g: Graph, input: string, scope: Scope, limit = 50):
   for (const root of roots) {
     const og = g.reach?.graphAt(root) ?? null;
     if (!og) continue;
-    const oi = og.config.search.engine === "scan" || !SearchIndex.exists(og.loc) ? null : SearchIndex.open(og.loc);
+    let oi = og.config.search.engine === "scan" || !SearchIndex.exists(og.loc) ? null : SearchIndex.open(og.loc);
     try {
+      // As this root's own (cli.ts): still being built, the files scanned; else caught up first.
+      if (oi && og.config.search.engine === "auto" && !oi.complete) {
+        oi.close();
+        oi = null;
+      }
+      if (oi) catchUp(og, oi);
       const name = g.reach?.vaultOf(root) ?? null;
       for (const h of search(og, oi, input, { limit }).hits) {
         const abs = og.abs(h.path);

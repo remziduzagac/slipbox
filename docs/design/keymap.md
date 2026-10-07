@@ -416,7 +416,8 @@ JavaScript regex; any punctuation can delimit (`:s#a/b#c#`) and `\` escapes it. 
 `\1`–`\9` are groups, `&` the match, `\&` a literal `&`. `^` and `$` are a line's start and end, and
 a match of nothing inserts there: `:%s/^/> /` quotes every line, `:%s/$/!/` ends each with `!`. A
 substitute is one undo step, confirmed or not, and works on the markdown: a rendered window switches
-to editing first. `'<,'>` is the last selection's lines, also after it ended.
+to editing first. `'<,'>` is the last selection's lines, also after it ended; when they're gone (deleted
+since), it is refused, as vim's is, and lines past the end are left out.
 
 ## Editing
 
@@ -585,7 +586,7 @@ Pickers, the palette and help share these keys (a prompt, such as `/`, takes `ba
 | `enter` | accept |
 | `esc`, `ctrl+c`, `ctrl+g` | cancel |
 | `backspace`, `ctrl+w` or `ctrl+backspace` | delete a character / a word of the filter |
-| paste | the first line of the pasted text goes into the filter or prompt |
+| paste | the first line of the pasted text goes into the filter (a side pane's too, while typed in) or prompt |
 | `ctrl+u` | clear a prompt |
 | an entry's key | in a menu (the explorer row's `…`): pick that entry (`R` isn't `r`) |
 | `y` / `n` | answer a yes-or-no question (`esc` is no; `enter` isn't an answer) |

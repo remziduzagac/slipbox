@@ -49,7 +49,7 @@ function linterReport(def: LinterDef, root: string): LinterReport {
   return { name: def.name, program, where: path ? (path.startsWith(`${root}/`) ? "project" : "path") : null, path, hint: def.hint ?? null, markers: def.rootMarkers, required: def.requireMarker };
 }
 
-const lintersOf = (lang: LanguageDef, linters: Record<string, LinterDef>) => (lang.linters ?? []).map((n) => linters[n]).filter((d): d is LinterDef => !!d?.command);
+const lintersOf = (lang: LanguageDef, linters: Record<string, LinterDef>) => (lang.linters ?? []).map((n) => (Object.hasOwn(linters, n) ? linters[n] : undefined)).filter((d): d is LinterDef => !!d?.command);
 
 function report(def: ServerDef, root: string, autoInstall: boolean): ServerReport {
   const f = findServer(def, root);
@@ -75,7 +75,7 @@ export function doctor(table: ServerTable, linters: Record<string, LinterDef>, r
       g.languages.push(lang.name);
       continue;
     }
-    const servers = lang.servers.map((n) => table.servers[n]).filter((d): d is ServerDef => !!d);
+    const servers = lang.servers.map((n) => (Object.hasOwn(table.servers, n) ? table.servers[n] : undefined)).filter((d): d is ServerDef => !!d);
     groups.set(key, { languages: [lang.name], servers: servers.map((d) => report(d, root, autoInstall)), linters: lintersOf(lang, linters).map((d) => linterReport(d, root)) });
   }
   return [...groups.values()];

@@ -342,8 +342,9 @@ extension}`, each `{value, source, why}`, `source` one of `setting`, `tool`, `no
 the root's top): the root's convention, `--style markdown|wiki` the style already chosen (its path and extension then
 that style's). A markdown link's text is the note's title (a file's name), a wikilink has none; `--text` gives one,
 `--embed` makes it `![…]`. A wikilink is a name only where that name reaches the note from `--from` (21.3's rules),
-else the path from the root; a file outside the root, a relative path as it's named. `--json`: `{link, path, from,
-style, pathForm, extension}`. What the TUI's link picker and completion write; an agent writing a link writes this.
+else the path from the root — a top-level note's path being its name, a relative path (`../plan`); a file outside the
+root, a relative path as it's named. `--json`: `{link, path, from, style, pathForm, extension}`. What the TUI's link
+picker and completion write; an agent writing a link writes this.
 
 **Across roots** (plan `17.9`–`17.11`, `17.16`, `21.10`): a path out of the root (relative, `~/`, absolute, or a
 `file://` URL; a file, not an external link) resolves into the other root: `path` and `abs` are absolute, `root` is
@@ -368,7 +369,8 @@ What changed on this branch, measured against the base branch (`--base <ref>`, e
   `M a.md`, `+ b.md`, `D gone.md`, `R notes/new.md  (from notes/old.md)`; files outside the vault's folder left out.
 - **`slipbox diff <note>`**: the note's diff, each group after `@@ line N`, `-` and `+` lines with three lines of
   context; `rows[].line` is the line in the note as it is now. A note the base hasn't is all `+` (`new: true`).
-- **`slipbox worktrees`**: the repository's checkouts, the main one first — branch, path, and the vault's folder there.
+- **`slipbox worktrees`**: the repository's checkouts, the main one first (a bare repository has none) — branch, path,
+  and the vault's folder there.
 - **`slipbox problems`** lists a merge's unmerged files as `conflicts`, each at its first `<<<<<<<` line.
 
 Outside a git repository, or with no base branch, these exit 3.
@@ -486,8 +488,9 @@ refused when something is there now. `slipbox cp` copies a note, file or folder,
 `slipbox name <name>` names this root (`21.10`): a `.slipbox/` folder's `[vault] name` changed, the old name added to
 its `previous_names` (a pointer by it still finds the folder, and the relink brings it to the new one), or — never
 named — a name and an id written; a repository without `.slipbox/` given one to hold the name. Previewed with
-`--dry-run`; a name a different folder has here is refused (exit 5). `slipbox relink [note]` rewrites the links of
-a note (or every note) that reach nothing but whose file was seen to move (`17.12`) — broken, since a move never
+`--dry-run`; a name a different folder has here is refused (exit 5), and so is a `[vault]` table the edit can't follow
+(a `[ vault ]` header, dotted `vault.name` keys): edit it by hand. `slipbox relink [note]` rewrites the links of a
+note (or every note) that reach nothing but whose file was seen to move (`17.12`) — broken, since a move never
 resolves a link (`20.2`) — to its path now. For every note, it also fixes what the root's own last move by hand broke
 (`20.17`, `21.8`), from what the state knows of where it was: its links out by a path, now reaching nothing, to where
 they reached from there; and the other roots' links into where it was (as of their index) to where it is — each in

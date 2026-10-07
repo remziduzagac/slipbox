@@ -17,7 +17,7 @@ import { checkoutOf, inMain } from "./git.ts";
 import { folderIdentity, folderNamed, identityAt, movedFrom, recordFolder, suggestFolderName } from "./folders.ts";
 import { carryPaths, climbsOut, readRegular } from "./fsutil.ts";
 import { stateDir, vaultKey } from "./paths.ts";
-import { carryPositions } from "./position.ts";
+import { carryPositions, sessionFile } from "./position.ts";
 import {
   addIdentity,
   adoptStorage,
@@ -228,8 +228,9 @@ export function vaultConfigPath(loc: Pick<VaultLocation, "mode" | "root">): stri
 /**
  * Record the root as seen (17.6, 21.8): in the machine's list by its path, and — a named one — in the
  * lookup pointers are found by (21.6). A named folder moved here by hand (`movedFrom`: sure, never a
- * guess) takes its state along — cache, session, scratch, trash, undo, positions — and its move is
- * kept, for the relink (20.17). Where it came from, when it did.
+ * guess) takes its state along — cache, session, scratch, trash, undo, positions; the session's paths
+ * into the state folder (the scratch's) to the new one — and its move is kept, for the relink (20.17).
+ * Where it came from, when it did.
  */
 export function recordLocation(loc: VaultLocation): { carriedFrom: string | null } {
   if (loc.mode === "folder") {
@@ -248,12 +249,15 @@ export function recordLocation(loc: VaultLocation): { carriedFrom: string | null
   let moved = known.find((v) => v.key === loc.key)?.moved;
   if (from) {
     const was = known.find((v) => v.path === from);
-    adoptStorage(was?.key ?? vaultKey(from), loc.key);
+    const oldKey = was?.key ?? vaultKey(from);
+    adoptStorage(oldKey, loc.key);
     carryPositions(from, loc.root);
     // The trash and the undo log say where things were by absolute path: there, now (files.ts, rename-log.ts).
+    // The session names a file in the state folder (the scratch) by its absolute path: in the new one.
     try {
       carryPaths(join(stateDir(loc), "trash", "trash.json"), from, loc.root);
       carryPaths(join(stateDir(loc), "renames.json"), from, loc.root);
+      carryPaths(sessionFile(loc), stateDir({ key: oldKey }), stateDir(loc));
     } catch {}
     moved = [...(was?.moved ?? []), { from, to: loc.root, at: new Date().toISOString() }];
     if (was) writeRoots(known.filter((v) => v !== was));
