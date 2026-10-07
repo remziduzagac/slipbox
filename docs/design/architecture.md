@@ -45,6 +45,11 @@ OpenTUI:
 | `src/tui/opentui.ts` | `Canvas` over `OptimizedBuffer`; the full-screen `Renderable` |
 | `src/tui/run.ts` | `createCliRenderer`, key, paste and mouse events, resize, OSC 52, shutdown |
 
+What comes before the screen is taken is `run.ts`'s `prepare`, which needs no terminal (a test calls it):
+the root found, its config, the root recorded as seen, and the graph. Recording comes before the graph
+opens, so a named folder moved here by hand has its cache adopted first (21.8). The App is told what that
+found, and doesn't record the root a second time, which would find nothing moved.
+
 Shutdown saves positions and the session whatever ends the process: `ctrl+q`, or `SIGTERM`, `SIGHUP`,
 `SIGINT`, `SIGQUIT` or `SIGPIPE`.
 

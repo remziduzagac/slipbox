@@ -1349,7 +1349,7 @@ const CORE: Scenario[] = [
       await open(s, "kenji-mori");
       await leader(s, "n", "i");
       await s.status("INFO");
-      await s.see(/vault +halden/);
+      await s.see(/root +halden/);
       await s.see("Properties");
       await s.see(/building +Workshop/);
       await s.see(/backlinks +\d+/);
@@ -1570,12 +1570,12 @@ const CORE: Scenario[] = [
     run: async (s) => {
       // home's last link: outreach/index.md, in a root nested in this one (enter: the row's link).
       await s.keys("shift+g", "enter");
-      await s.message(/^outreach — /);
+      await s.message(" outreach — "); // as the switch says it: name — path
       await s.status("index.md");
       await s.see("The observatory's public programme");
       // Two deep: the school visits.
       await s.keys("g", "g", "tab", "tab", "enter");
-      await s.message(/^outreach-school-visits — /);
+      await s.message(" outreach-school-visits — ");
       await s.see("A vault nested two deep");
       // Back, and back again: to the observatory's home.
       await s.keys("ctrl+o");
@@ -1620,17 +1620,17 @@ const CORE: Scenario[] = [
       await s.keys(".");
       await s.see(/Give it \.slipbox\/ +v/);
       await s.keys("v");
-      await s.see("make logs/ a vault named:");
+      await s.see("give logs/ its .slipbox/, called (empty: no name):");
       await s.see("› halden-logs");
       await s.keys("enter");
-      await s.see(/logs\/ → the vault halden-logs: \d+ changes? in \d+ files?/);
+      await s.see(/logs\/ → a root of its own, called halden-logs: \d+ changes? in \d+ files?/);
       await s.keys("enter");
-      await s.message("made logs/ the vault halden-logs");
+      await s.message("made logs/ a root of its own, called"); // the box wraps the rest
       s.expect(s.exists("logs/.slipbox/config.toml"), "logs/ has its .slipbox/");
       s.expect(s.read("home.md") === home, "home's path into it, across now, as it was");
       // V: back, the links as they were.
       await s.keys("shift+v");
-      await s.see(/the vault logs\/ → a folder of halden/);
+      await s.see(/logs\/ → a plain folder of halden: \d+ changes? in \d+ files?/);
       await s.keys("enter");
       await s.message("made logs/ a plain folder of halden");
       s.expect(!s.exists("logs/.slipbox"), "its .slipbox/ gone (to the trash)");
@@ -1641,8 +1641,8 @@ const CORE: Scenario[] = [
       await s.see("Rename the folder");
       await s.keys("escape");
       await leader(s, "v");
-      await s.see("Make a vault");
-      await s.see("Make the vault a plain folder");
+      await s.see("Give a folder .slipbox/");
+      await s.see("Take .slipbox/ away");
       await s.keys("escape");
     },
   },
@@ -1685,14 +1685,14 @@ const CORE: Scenario[] = [
       await s.message("cut people/");
       // The vault.
       await leader(s, "v", "m");
-      await s.see("make people/ a vault named:");
+      await s.see("give people/ its .slipbox/, called (empty: no name):");
       await s.keys("escape");
       await leader(s, "v", "shift+m");
       await s.message("isn't inside another root");
     },
   },
   {
-    name: "rename: space n m previews every change, enter renames; each link follows, the old name kept",
+    name: "rename: space n m previews every change, enter renames; each link follows, nothing else written into the note",
     run: async (s) => {
       await open(s, "kenji-mori");
       await leader(s, "n", "m");
@@ -1706,7 +1706,7 @@ const CORE: Scenario[] = [
       await s.message("renamed people/kenji-mori.md → people/kenji.md");
       await s.status("kenji.md");
       s.expect(!s.exists("people/kenji-mori.md"), "the old file is gone");
-      await s.file("people/kenji.md", (t) => t.includes("previous_names: [kenji-mori]"), "the old name kept");
+      await s.file("people/kenji.md", (t) => t.includes("# Kenji Mori") && !t.includes("previous_names"), "no old name written into it (21.12)");
       s.expect(s.read("home.md").includes("- [kenji-mori](people/kenji.md) — our visiting astronomer"), "home's link follows");
       s.expect(s.read("people/partners-and-names.md").includes("[kenji-mori.md](kenji.md); the names"), "the note beside it too");
       s.expect(s.read("people/partners-and-names.md").includes("![kenji-mori › Kenji Mori](kenji.md#kenji-mori)"), "the embed follows");
@@ -1816,7 +1816,7 @@ const CORE: Scenario[] = [
       await leader(s, "v", "v");
       await s.see("halden");
       await s.keys("enter");
-      await s.message(/^halden — /);
+      await s.message(" halden — ");
       await s.status("home.md");
     },
   },

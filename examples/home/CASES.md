@@ -2710,7 +2710,7 @@ The same notes, one per tab.
 
 ### search
 
-- `search.open` — Search the vault — `notes/index.md`, `notes/meetings/all-hands-archive.md` (command-specs.ts)
+- `search.open` — Search here — `notes/index.md`, `notes/meetings/all-hands-archive.md` (command-specs.ts)
 
 ### task
 

@@ -8,11 +8,19 @@ import { openGraph } from "../core/graph.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { setWidthMethod } from "../core/width.ts";
 import { locateVault, recordLocation, configFilesFor, setRootMarkers, VaultError, type VaultLocation } from "../core/vault.ts";
-import { App } from "./app.ts";
+import { App, type AppOptions } from "./app.ts";
 import { keyName } from "./keys.ts";
 import { AppRenderable, toRGBA } from "./opentui.ts";
 
-export async function runTui(argv: string[]): Promise<number> {
+/** What the App starts with, all found before the screen is taken. */
+export type Start = Omit<AppOptions, "host">;
+
+/**
+ * Everything before the screen is taken: the root found (one that can't be is said in a line, and the
+ * exit code returned), its config, the machine told it has seen the root — a named folder moved here by
+ * hand adopting its state before the graph opens on it, and the App told it moved (21.8) — the graph.
+ */
+export function prepare(argv: string[]): Start | number {
   const args = parseArgs(argv);
   const path = args.positional[0];
   // Where roots are (21.1) is your config's to say, `--config` included: read before finding one.
@@ -28,15 +36,30 @@ export async function runTui(argv: string[]): Promise<number> {
     return 3;
   }
   const loaded = loadConfig({ ...configFilesFor(loc), configFile: flag(args, "config") });
-  recordLocation(loc);
+  const recorded = recordLocation(loc);
   const warnings = [...loaded.warnings];
   if (loc.note) warnings.push(loc.note);
-  const graph = openGraph(loc, loaded.config, true, "lazy");
-  const open = loc.file ?? null;
+  return {
+    loc,
+    config: loaded.config,
+    graph: openGraph(loc, loaded.config, true, "lazy"),
+    warnings,
+    open: loc.file ?? null,
+    themeName: flag(args, "theme"),
+    configFile: flag(args, "config"),
+    // A loose folder opened without a file (`slipbox ~`): the known vaults first (17.14).
+    launcher: loc.mode === "folder" && !loc.file,
+    recorded,
+  };
+}
+
+export async function runTui(argv: string[]): Promise<number> {
+  const start = prepare(argv);
+  if (typeof start === "number") return start;
 
   const renderer = await createCliRenderer({
     exitOnCtrlC: false,
-    useMouse: loaded.config.ui.mouse,
+    useMouse: start.config.ui.mouse,
     // Mouse movement drives hover highlighting on buttons, tabs and entries.
     enableMouseMovement: true,
     targetFps: 60,
@@ -47,15 +70,7 @@ export async function runTui(argv: string[]): Promise<number> {
   const done = new Promise<number>((r) => (resolveDone = r));
 
   const app = new App({
-    loc,
-    config: loaded.config,
-    graph,
-    warnings,
-    open,
-    themeName: flag(args, "theme"),
-    configFile: flag(args, "config"),
-    // A loose folder opened without a file (`slipbox ~`): the known vaults first (17.14).
-    launcher: loc.mode === "folder" && !loc.file,
+    ...start,
     host: {
       requestRender: () => renderer.requestRender(),
       // SLIPBOX_CLIPBOARD=file keeps copies off the real clipboard (core/clipboard.ts).

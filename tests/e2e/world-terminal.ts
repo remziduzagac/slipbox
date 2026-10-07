@@ -63,10 +63,10 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       await s.restart({ args: ["open"], startAt: "vault/meetings/2026-09-14-weekly.md" });
       await s.status("meetings/2026-09-14-weekly.md");
       // --root: started with no path in a folder that is no root (the scenario's own), halden all the same —
-      // its session back (the weekly note), where that folder alone would open as a plain folder, its vaults listed.
+      // its session back (the weekly note), where that folder alone would open as a plain folder, the named ones listed.
       await s.restart({ args: ["--root", join(s.dir, "vault")], startAt: null, cwd: "" });
       await s.status(/\bhalden\b.*2026-09-14-weekly\.md/);
-      s.expect(s.rowOf(/Vaults \(\d+\)/) < 0, "halden opened, not the folder's vault list");
+      s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "halden opened, not the named folders' list");
       // --theme: what's drawn is that theme's — the heading in nord's h2 colour, not tokyo-night's.
       await s.restart({ args: ["--theme", "nord"], startAt: "vault/home.md", cwd: undefined });
       await drawnIn(s, "Start here", NORD.roles.h2.fg!, "a heading in nord's h2 colour");
@@ -410,7 +410,7 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       // Into find's group: its entries; backspace back up to the groups; esc closes.
       await s.keys("f");
       await s.see("Find in every note");
-      await s.see("Search the vault");
+      await s.see("Search here");
       await s.keys("backspace");
       await s.until(() => s.rowOf("+history") >= 0 && s.rowOf("Find in every note") < 0, 3000, "backspace up to the groups");
       await s.keys("escape");

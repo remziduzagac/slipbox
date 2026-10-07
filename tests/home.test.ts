@@ -184,6 +184,19 @@ describe("the reference set is complete (examples/home)", () => {
     expect(named).toEqual([]);
   });
 
+  test("a command's case calls it by its title as the palette shows it", () => {
+    const stale = COMMAND_SPECS.flatMap((c) => {
+      const m = new RegExp(`^- \`${c.id.replace(/\./g, "\\.")}\` — (.+?) — \``, "m").exec(cases);
+      return m && m[1] !== c.title ? [`${c.id}: "${m[1]}", now "${c.title}"`] : [];
+    });
+    expect(stale).toEqual([]);
+  });
+
+  test("the team's kitchen-sink config says every key once, none unknown or retired", async () => {
+    const { loadConfig } = await import("../src/core/config.ts");
+    expect(loadConfig({ configFile: join(SOURCE, "work/infra/dotfiles/slipbox/config.toml") }).warnings).toEqual([]);
+  });
+
   test("every grammar, data format and highlighted language has files: more than one where it can", async () => {
     const { GRAMMARS, grammarFor } = await import("../src/core/syntax.ts");
     const { DATA_FORMATS, LANGUAGES, NAMED, classify, extensionOf } = await import("../src/core/filetypes.ts");

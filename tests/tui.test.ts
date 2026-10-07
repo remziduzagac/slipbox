@@ -7860,6 +7860,25 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(again.app.messages.some((m) => m.text.includes("moved here"))).toBe(false);
   });
 
+  test("started from the command line where a named folder was moved by hand: the start records it once, the App says so (21.8)", async () => {
+    const { locateVault, recordLocation } = await import("../src/core/vault.ts");
+    const { prepare } = await import("../src/tui/run.ts");
+    const dir = join(mkdtempSync(join(sandbox, "mvs-")), "mvs");
+    const tag = `mvs${basename(dirname(dir)).slice(-6).replace(/[^a-z0-9]/gi, "").toLowerCase()}`;
+    mkdirSync(join(dir, ".slipbox"), { recursive: true });
+    writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${tag}"\nname = "${tag}"\n`);
+    writeFileSync(join(dir, "n.md"), "# N\n");
+    recordLocation(locateVault({ path: dir }));
+    const moved = join(dirname(dir), "elsewhere");
+    renameSync(dir, moved);
+    // What `slipbox <path>` does before the screen is taken: the move found there, and passed on.
+    const start = prepare([join(moved, "n.md")]);
+    if (typeof start === "number") throw new Error(`exit ${start}`);
+    expect(start.recorded?.carriedFrom).toBe(dir);
+    const app = new App({ ...start, watch: false, host: { requestRender() {}, osc52: () => true, quit: () => {} } });
+    expect(app.messages.some((m) => m.text.startsWith(`${tag} moved here from `))).toBe(true);
+  });
+
   test("a named folder moved by hand: the links its move broke, their fix previewed at once (20.17, 21.8)", async () => {
     const { locateVault, recordLocation } = await import("../src/core/vault.ts");
     const base = mkdtempSync(join(sandbox, "mvfix-"));

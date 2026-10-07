@@ -546,6 +546,11 @@ export interface AppOptions {
   now?: () => number;
   /** Show the known vaults at once (17.14): slipbox was opened on a loose folder, not a file. */
   launcher?: boolean;
+  /**
+   * The root already recorded as seen, and what that found (21.8): the TUI's start records it before
+   * the graph opens, so a moved folder's cache is adopted first. Left out, the App records it itself.
+   */
+  recorded?: { carriedFrom: string | null };
 }
 
 export class App {
@@ -655,7 +660,7 @@ export class App {
     this.config = opts.config;
     this.graph = opts.graph;
     // This machine sees the root (17.6); a named folder moved here by hand brought its state (21.8).
-    const { carriedFrom } = recordLocation(opts.loc);
+    const { carriedFrom } = opts.recorded ?? recordLocation(opts.loc);
     this.reach = new Reach(opts.loc);
     this.graph.reach ??= this.reach;
     this.lintCmd = lintCommand(opts.config.lint, opts.loc.root, undefined, opts.config.lsp.auto_install);

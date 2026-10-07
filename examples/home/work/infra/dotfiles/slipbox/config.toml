@@ -49,9 +49,6 @@ leader = "\\"                   # the key `leader` means below; backslash, becau
 which_key = true
 which_key_delay_ms = 300
 
-[rename]
-previous_names = false
-
 [capture]
 location = "vault"
 file = "inbox/scratch.md"

@@ -71,9 +71,9 @@ export const GIT_SCENARIOS: Scenario[] = [
       },
     },
     run: async (s) => {
-      await s.see(/Vaults \(\d+\)/);
-      await s.see(/\bnotes +\//);
-      await s.see(/kestrel +\//);
+      await s.see(/Folders \(\d+\)/);
+      await s.see(/\bnotes +~\/notes\b/);
+      await s.see(/\bkestrel +~\/work\/kestrel\b/);
       await s.keys("escape");
       await s.status(/ ~ /); // a plain folder: its path where a vault's name would be
       // A level at a time: its folders, not what's in them (cooking is two down, kestrel one).
@@ -113,14 +113,14 @@ export const GIT_SCENARIOS: Scenario[] = [
       },
     },
     run: async (s) => {
-      // .obsidian/ makes cooking a root: named by its folder, its own tree at the explorer's top (no `..`).
-      await s.status(/ cooking +Home\.md/);
+      // .obsidian/ makes cooking a root: unnamed, shown by its path (21.9); its own tree at the explorer's top (no `..`).
+      await s.status(/ ~\/hobbies\/cooking +Home\.md/);
       for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
       await s.until(() => explorer(s).some((r) => /\sRecipes\s*$/.test(r.trimEnd())), 3000, "cooking's own tree");
       s.expect(!explorer(s).some((r) => /\s\.\.\s*$/.test(r.trimEnd())), "a root has no .. above it");
       // .zk/ makes cycling one.
       await s.restart({ startAt: "home/hobbies/cycling/202608151900-index.md" });
-      await s.status(/ cycling +202608151900-index\.md/);
+      await s.status(/ ~\/hobbies\/cycling +202608151900-index\.md/);
       await s.quit();
       // Opened, read, quit: neither has a file more or less, a byte changed in size — no .slipbox/ made.
       const was = before.get(s)!;
@@ -284,7 +284,7 @@ export const GIT_SCENARIOS: Scenario[] = [
       await s.quit();
       renameSync(s.path("~/hobbies/photography"), s.path("~/hobbies/photography-moved"));
       await s.restart({ startAt: "home/hobbies/photography-moved/index.md" });
-      await s.message(/photography moved here from .*hobbies\/photography/, 5000);
+      await s.message("photography moved here from", 5000); // the box wraps where from
       await s.notSee("did it move here?");
       await s.until(() => pos(s).line === left, 5000, `index.md at line ${left} again`);
     },

@@ -330,8 +330,8 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       await leader(s, "n", "v");
       // A symlink out of the root: never read, as the walk and the CLI (exit 5) refuse it.
       await ex(s, "e research/outside.md");
-      await s.until(() => s.statusLine().includes("outside.md") || /outside the vault|no note or file/.test(s.text()), 3000, "outside.md opened or refused");
-      s.expect(!s.statusLine().includes("outside.md"), "a symlink leading out of the vault isn't opened");
+      await s.until(() => s.statusLine().includes("outside.md") || /outside the root|no note or file/.test(s.text()), 3000, "outside.md opened or refused");
+      s.expect(!s.statusLine().includes("outside.md"), "a symlink leading out of the root isn't opened");
     },
   },
   {

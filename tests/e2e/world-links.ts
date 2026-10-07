@@ -233,7 +233,7 @@ export const LINK_SCENARIOS: Scenario[] = [
       await s.see(/Folders \(\d+\)/);
       await s.type("photography");
       await s.keys("enter");
-      await s.message(/^photography — /);
+      await s.message(" photography — "); // as the switch says it: name — path
       await s.status(/ photography[ ·]/);
       // An Obsidian vault with no .slipbox/ name and no remote: its path, from home.
       writeFileSync(s.path("~/hobbies/cooking/stray-link.md"), `# Stray link\n\n[the stray note](${s.path("~/Downloads/stray-note.md")})\n`);
@@ -254,7 +254,7 @@ export const LINK_SCENARIOS: Scenario[] = [
     options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
     run: async (s) => {
       await s.ex("name cooking");
-      await s.message(/is named cooking \(\.slipbox\/ made to hold it\)/);
+      await s.message("is named cooking (.slipbox/"); // the box wraps the rest
       await s.status(/ cooking /);
       s.expect(readFileSync(s.path("~/hobbies/cooking/.slipbox/config.toml"), "utf8").includes('name = "cooking"'), "the name written into .slipbox/");
       const r = JSON.parse(s.cliIn("~/notes", "resolve", "slipbox://cooking/Home.md", "--json").out).data;

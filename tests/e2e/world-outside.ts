@@ -148,7 +148,7 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
   },
 
   {
-    name: "world/outside: a note moved by hand — mv, then cp and rm the other way round — its links say where, space l r relinks",
+    name: "world/outside: a note moved by hand — mv, then cp and rm the other way round — the relink offered at once; declined, its links say where, space l r relinks",
     options: {
       open: "late-note.md",
       files: { "late-note.md": "# Late\n\nAsk [Kenji](people/kenji-mori.md) about Aster.\n" },
@@ -158,25 +158,27 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       // Every note's text known first: the index is cached once all are parsed. (A note moved in the
       // moment after a first, cold open, before its parse, has no text to be known by.)
       await s.until(() => indexCached(s), 5000, "the vault's notes all parsed (its index cached)");
-      // mv: gone from one path, the same text at another — a move (17.12), never a quiet resolve.
+      // mv: gone from one path, the same text at another — a move (17.12), never a quiet resolve: the
+      // links it broke, their fix offered at once (21.11); enter takes it.
       renameSync(s.path(KENJI), s.path("people/kenji.md"));
-      await onto(s, "Kenji");
-      await s.status("→ people/kenji-mori.md (unresolved)", 5000); // broken once the move is seen
-      await s.keys("enter");
-      await s.message("moved to people/kenji.md", 5000);
-      await leader(s, "l", "r");
-      await s.see("relink: 1 change in 1 file", 5000);
+      await s.see(/relink: \d+ changes? in \d+ files?/, 5000); // every note's links to it, home's too
+      await s.message("moved to people/kenji.md");
       await s.keys("enter");
       await s.file("late-note.md", (t) => t.includes("[Kenji](people/kenji.md)"), "relinked to where it went");
-      // The other way round: the copy arrives first, then the original goes.
+      // The other way round: the copy arrives first, then the original goes. The offer declined, the
+      // link says where it went, and space l r relinks it.
       cpSync(s.path("people/kenji.md"), s.path("people/k-mori.md"));
       await sleep(300); // two events, not one batch: the arrival seen before the removal
       rmSync(s.path("people/kenji.md"));
-      await s.status("(unresolved)", 5000);
+      await s.see(/relink: \d+ changes? in \d+ files?/, 5000);
+      await s.keys("escape");
+      await s.notSee(/relink: \d+ changes? in \d+ files?/);
+      await onto(s, "Kenji");
+      await s.status("→ people/kenji.md (unresolved)", 5000);
       await s.keys("enter");
-      await s.message("moved to people/k-mori.md", 5000);
+      await s.message("people/k-mori.md: space l r relinks it", 5000); // "… moved to" ends the row above
       await leader(s, "l", "r");
-      await s.see("relink: 1 change in 1 file", 5000);
+      await s.see("relink: 1 change in 1 file", 5000); // this note's
       await s.keys("enter");
       await s.file("late-note.md", (t) => t.includes("[Kenji](people/k-mori.md)"), "relinked again");
     },
