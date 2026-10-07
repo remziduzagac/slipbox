@@ -4,7 +4,9 @@
 // root's tool (`.obsidian/app.json`, `.zk/config.toml`); what the root's notes already do, when one
 // form has two-thirds or more of their links within the root; else ours — markdown, relative, the
 // extension kept. The style is found first: the path and extension a tool writes depend on it, and
-// the notes are counted within it. A folder with no root has your setting, else ours.
+// the notes are counted within it. A folder with no root has your setting where it can read it, else
+// ours: it reads no wikilink and no path from a root (21.3), so your `wiki` style is a markdown link
+// there and your `root` or `name` path a relative one (a wikilink typed stays one, relative).
 //
 // It decides only the links slipbox makes (21.5); a rename keeps each link's own form.
 
@@ -150,7 +152,7 @@ export interface ConventionInput {
   links: Config["links"];
   /** Which file set each `links.*` key (LoadedConfig.origins). */
   origins: Record<string, string>;
-  /** No root: your setting, else ours. */
+  /** No root: your setting where a folder can read it, else ours. */
   hasRoot: boolean;
   tool: ToolSays | null;
   counts: FormCounts | null;
@@ -165,25 +167,31 @@ export function findConvention(input: ConventionInput): Convention {
   const setting = (key: string) => `[links] in ${origins[`links.${key}`] ?? "your config"}`;
   const toolWhy = tool ? `${tool.tool === "obsidian" ? "Obsidian's" : "zk's"} ${tool.file}` : "";
 
-  // Style: the first that says.
+  // Style: the first that says. No root reads a wikilink: your `wiki` is a markdown link there.
   const style: ConventionPart<LinkStyle> = input.style
     ? { value: input.style, source: "typed", why: "as typed" }
-    : links.style !== "auto"
-      ? { value: links.style, source: "setting", why: setting("style") }
-      : tool?.style
-        ? { value: tool.style, source: "tool", why: toolWhy }
-        : (dominant(counts?.style) ?? { value: OURS.style, source: "default", why: "ours" });
+    : links.style === "wiki" && !hasRoot
+      ? { value: "markdown", source: "default", why: "no root: a wikilink needs one" }
+      : links.style !== "auto"
+        ? { value: links.style, source: "setting", why: setting("style") }
+        : tool?.style
+          ? { value: tool.style, source: "tool", why: toolWhy }
+          : (dominant(counts?.style) ?? { value: OURS.style, source: "default", why: "ours" });
   const s = style.value;
 
   // Path, within the style: a markdown link is a path, never a name.
   const fits = (p: LinkPath | undefined) => p !== undefined && (s === "wiki" || p !== "name");
   const toolPath = tool?.path(s);
   const setPath = links.path === "auto" ? undefined : links.path;
-  const path: ConventionPart<LinkPath> = fits(setPath)
-    ? { value: setPath!, source: "setting", why: setting("path") }
-    : fits(toolPath)
-      ? { value: toolPath!, source: "tool", why: toolWhy }
-      : (dominant(counts?.path[s]) ?? { value: OURS.path, source: "default", why: "ours" });
+  // No root reads a path from one, nor a name: your `root` or `name` is a relative path there.
+  const path: ConventionPart<LinkPath> =
+    !hasRoot && (setPath === "root" || setPath === "name")
+      ? { value: "relative", source: "default", why: "no root: `/` and names need one" }
+      : fits(setPath)
+        ? { value: setPath!, source: "setting", why: setting("path") }
+        : fits(toolPath)
+          ? { value: toolPath!, source: "tool", why: toolWhy }
+          : (dominant(counts?.path[s]) ?? { value: OURS.path, source: "default", why: "ours" });
 
   const toolExt = tool?.extension(s);
   const extension: ConventionPart<LinkExtension> =

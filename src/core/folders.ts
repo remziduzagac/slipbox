@@ -31,11 +31,14 @@ export interface FolderIdentity {
   remote: string | null;
   /** A `.slipbox/` folder's id. */
   id: string | null;
-  /** Names it had (its config's `aliases` and `previous_names`): a pointer by one still finds it. */
+  /** Other names it answers to (its config's `aliases`): a pointer by one finds it as by its name. */
+  aliases: string[];
+  /** Names it had (its config's `previous_names`): a pointer by one still finds it, said so. */
   old: string[];
   /** A `.slipbox/` kept out of git (`init --private`): its name holds on this machine only. */
   private: boolean;
-  /** The folder the copy is: a worktree's main checkout, else the folder itself. */
+  /** The folder the copy is, by its real path (a symlink to it is the same copy): a worktree's main
+   *  checkout, else the folder itself. */
   copy: string;
 }
 
@@ -49,17 +52,18 @@ export function folderIdentity(root: string): FolderIdentity | null {
   const inRepo = c !== null && c.root === root;
   const remote = inRepo ? originRemote(c.common, c.main ?? c.root) : null;
   // A worktree's copy is its main checkout, a folder inside it the same folder there.
-  const copy = c?.worktree && c.main ? (inMain(c, root) ?? root) : root;
-  const old = ident ? [...ident.aliases, ...ident.previous_names] : [];
+  const copy = realPath(c?.worktree && c.main ? (inMain(c, root) ?? root) : root);
+  const aliases = ident?.aliases ?? [];
+  const old = ident?.previous_names ?? [];
   const priv = ident !== null && c !== null && excluded(c.common, c.root, root);
   if (ident?.name) {
     const key = ident.id ? `slipbox:${ident.id}` : remote ? `remote:${remote}` : `path:${copy}`;
-    return { key, name: ident.name, remote, id: ident.id, old, private: priv, copy };
+    return { key, name: ident.name, remote, id: ident.id, aliases, old, private: priv, copy };
   }
   if (!remote) return null;
   const name = slugName(remote.split("/").pop()!);
   if (!name) return null;
-  return { key: `remote:${remote}`, name, remote, id: ident?.id ?? null, old, private: false, copy };
+  return { key: `remote:${remote}`, name, remote, id: ident?.id ?? null, aliases, old, private: false, copy };
 }
 
 /**
@@ -158,7 +162,8 @@ export function foldersFile(): string {
 export function readFolders(): NamedFolder[] {
   const f = readJson<FoldersFile | null>(foldersFile(), null);
   if (!f || f.version !== 1 || !Array.isArray(f.folders)) return [];
-  return f.folders.filter((x) => x && typeof x.key === "string" && typeof x.name === "string" && Array.isArray(x.copies));
+  // An entry from before aliases were kept apart has none: its next sighting brings them.
+  return f.folders.filter((x) => x && typeof x.key === "string" && typeof x.name === "string" && Array.isArray(x.copies)).map((x) => ({ ...x, aliases: Array.isArray(x.aliases) ? x.aliases : [], old: Array.isArray(x.old) ? x.old : [] }));
 }
 
 function writeFolders(folders: NamedFolder[]): void {
@@ -176,7 +181,9 @@ function writeFolders(folders: NamedFolder[]): void {
 export function recordFolder(root: string, opts: { found?: boolean; now?: Date; replaces?: string | null } = {}): NamedFolder | null {
   const ident = folderIdentity(root);
   const list = readFolders();
-  const at = ident?.copy ?? root;
+  // By its real path: reached through a symlink, it's the same copy, not a second one.
+  const at = ident?.copy ?? realPath(root);
+  const here = (c: FolderCopy) => c.path === at || realPath(c.path) === at;
   // A copy moved here by hand (21.8, `movedFrom`): the one it was, gone.
   if (opts.replaces) {
     const f = list.find((x) => x.key === ident?.key);
@@ -190,10 +197,11 @@ export function recordFolder(root: string, opts: { found?: boolean; now?: Date; 
   for (const f of list) {
     if (f.key === ident?.key) continue;
     const before = f.copies.length;
-    f.copies = f.copies.filter((c) => c.path !== at);
+    const gone = f.copies.filter(here).map((c) => c.path);
+    f.copies = f.copies.filter((c) => !here(c));
     if (f.copies.length !== before) {
       changed = true;
-      if (f.default === at) f.default = f.copies[0]?.path ?? null;
+      if (f.default && gone.includes(f.default)) f.default = f.copies[0]?.path ?? null;
     }
   }
   if (!ident) {
@@ -207,8 +215,13 @@ export function recordFolder(root: string, opts: { found?: boolean; now?: Date; 
     entry = { ...named, copies: [], default: null };
     list.push(entry);
   } else Object.assign(entry, named);
-  const mine = entry.copies.find((c) => c.path === at);
+  // Recorded before by another path to it (a symlink's): one copy, by its real path now.
+  const mine = entry.copies.find(here);
   if (mine) {
+    if (entry.default === mine.path) entry.default = at;
+    mine.path = at;
+    entry.copies = entry.copies.filter((c) => c === mine || !here(c));
+    if (entry.ask && entry.copies.filter((c) => copyAvailable(c.path)).length < 2) delete entry.ask;
     mine.seen = now;
     if (!opts.found) delete mine.found;
   } else {
@@ -229,22 +242,22 @@ export function recordFolder(root: string, opts: { found?: boolean; now?: Date; 
  */
 export function movedFrom(root: string): string | null {
   const ident = folderIdentity(root);
-  if (!ident || ident.copy !== root) return null;
+  if (!ident || ident.copy !== realPath(root)) return null;
   const f = readFolders().find((x) => x.key === ident.key);
   // Known here already — opened, not only found by the background index: no move.
-  if (!f || f.copies.some((c) => c.path === root && !c.found)) return null;
+  if (!f || f.copies.some((c) => (c.path === ident.copy || realPath(c.path) === ident.copy) && !c.found)) return null;
   const gone = f.copies.filter((c) => !existsSync(c.path) && !unavailable(c.path));
   return gone.length === 1 ? gone[0]!.path : null;
 }
 
 /**
- * The named folders this machine knows by `name` (their name, or one they had), other than the one at
- * `except`: a name `slipbox init` and `slipbox name` refuse.
+ * The named folders this machine knows by `name` (their name, an alias, or one they had), other than
+ * the one at `except`: a name `slipbox init` and `slipbox name` refuse.
  */
 export function folderNamed(name: string, except?: string, folders = readFolders()): NamedFolder[] {
   const n = name.toLowerCase();
   const own = except ? folderIdentity(except)?.key : undefined;
-  return folders.filter((f) => f.key !== own && [f.name, ...f.old].some((x) => x.toLowerCase() === n));
+  return folders.filter((f) => f.key !== own && [f.name, ...f.aliases, ...f.old].some((x) => x.toLowerCase() === n));
 }
 
 /**
@@ -264,7 +277,8 @@ export function setDefaultCopy(key: string, path: string | null): void {
   const list = readFolders();
   const f = list.find((x) => x.key === key);
   if (!f) return;
-  if (path && f.copies.some((c) => c.path === path)) f.default = path;
+  const copy = path ? f.copies.find((c) => c.path === path || realPath(c.path) === realPath(path)) : undefined;
+  if (copy) f.default = copy.path;
   delete f.ask;
   f.asked = true;
   writeFolders(list);
@@ -285,12 +299,12 @@ export type FolderLookup =
  * Where a folder's name is on this machine: its default copy (another, when that one isn't here);
  * a qualified name (`github.com/me/research`) by its remote. Different folders of one name are
  * ambiguous, never guessed: repositories each by their qualified name, `.slipbox/` folders until one
- * is renamed. A name it had still finds it, said so.
+ * is renamed. An alias finds it as its name does; a name it had still finds it, said so.
  */
 export function lookupFolder(name: string, folders = readFolders()): FolderLookup {
   const want = name.toLowerCase();
   const qualified = name.includes("/");
-  let matches = folders.filter((f) => (qualified ? f.remote?.toLowerCase() === want : f.name.toLowerCase() === want));
+  let matches = folders.filter((f) => (qualified ? f.remote?.toLowerCase() === want : [f.name, ...f.aliases].some((n) => n.toLowerCase() === want)));
   let via: "old-name" | undefined;
   if (!matches.length && !qualified) {
     matches = folders.filter((f) => f.old.some((o) => o.toLowerCase() === want));

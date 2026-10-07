@@ -25,7 +25,7 @@ import { canonKey, type Command } from "../core/commands.ts";
 import type { LayoutLink } from "../core/layout/ir.ts";
 import { slugify } from "../core/parse.ts";
 import { compilePattern, findAll, parseSubstitute } from "../core/replace.ts";
-import { readText } from "../core/fsutil.ts";
+import { climbsOut, readText } from "../core/fsutil.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes } from "../core/width.ts";
 import type { Anchor } from "../core/position.ts";
@@ -41,7 +41,7 @@ import * as E from "./editing.ts";
 import * as R from "./replacing.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
-import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, HISTORY_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, RESIZE_ACTIONS, spellKey } from "./keys.ts";
+import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, FOOTNOTE_ACTION_INFO, HISTORY_ACTION_INFO, INFO_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, PROBLEMS_ACTION_INFO, RESIZE_ACTIONS, spellKey } from "./keys.ts";
 
 type Run = Command<App>["run"];
 
@@ -91,7 +91,7 @@ function workspaceSymbols(a: App, overlay: App["overlay"]): { list: (query: stri
         const range = "range" in sym.location ? sym.location.range : null;
         const line = (range?.start.line ?? 0) + 1;
         const rel = relative(a.loc.root, abs);
-        const where = rel.startsWith("..") ? abs : rel;
+        const where = climbsOut(rel) ? abs : rel;
         const data: Spot = { rel: null, abs, line, character: range?.start.character ?? 0 };
         return { label: sym.name, hint: KIND_NAMES[sym.kind] ?? "", detail: `${sym.containerName ? `${sym.containerName} · ` : ""}${where}:${line}`, data };
       });
@@ -157,22 +157,20 @@ function charsRange(a: App, v: View, n: number): V.Range | null {
   return { from: at, to: Math.min(to, end), linewise: false };
 }
 
-/** A count typed before gg or G, in an editable window: the start of that source line. */
+/** A count typed before gg or G, in an editable window: that source line's first non-blank, as G. */
 function countedLine(a: App, v: View): C.Pos | null {
   if (!editable(v) || !a.vim.count) return null;
-  const n = V.takeCount(a);
-  const starts = v.buf.lineStarts();
-  E.placeAt(a, v, starts[Math.min(n, starts.length) - 1] ?? 0);
-  return { ...v.cur };
+  return lastLine(a, v, V.takeCount(a));
 }
 
 /**
- * G where the text is editable: the last source line's first non-blank, as vim has it. (The last
- * rendered row belongs to its block's first line: in the lens, `Gdd` would take the wrong line.)
+ * G where the text is editable: the last source line's first non-blank, as vim has it (or line
+ * `upTo`'s, for 5G). (The last rendered row belongs to its block's first line: in the lens, `Gdd`
+ * would take the wrong line.)
  */
-function lastLine(a: App, v: View): C.Pos {
+function lastLine(a: App, v: View, upTo = Infinity): C.Pos {
   const starts = v.buf.lineStarts();
-  const n = Math.max(1, starts.length - (v.buf.source.endsWith("\n") ? 1 : 0));
+  const n = Math.min(upTo, Math.max(1, starts.length - (v.buf.source.endsWith("\n") ? 1 : 0)));
   E.placeAt(a, v, (starts[n - 1] ?? 0) + /^\s*/.exec(E.lineText(v, n))![0].length);
   return { ...v.cur };
 }
@@ -625,10 +623,7 @@ function openPalette(a: App): void {
   const v = a.view;
   let input = "";
   if (v?.sel) {
-    const lines = a.currentLayout(v).lines;
-    const x = lines[v.sel.anchor.row]?.src ?? 1;
-    const y = lines[v.cur.row]?.src ?? 1;
-    v.visualLines = [Math.min(x, y), Math.max(x, y)];
+    a.markSelection(v);
     input = "'<,'>";
   }
   const commands = inSpecOrder(a.registry.list().filter((c) => !c.hidden));
@@ -731,9 +726,9 @@ function openPalette(a: App): void {
 
 /**
  * Help (`?`, `space ?`): for learning the keys. Every command with all its keys, by group, plus what
- * works inside the explorer, the outline, visual and resize mode, and the mouse. Filtering keeps
- * the groups; enter runs a command (the in-pane and mouse entries are reference only). Opened
- * from the explorer, the outline or visual mode, it starts at that section.
+ * works inside each panel view, visual and resize mode, and the mouse. Filtering keeps the
+ * groups; enter runs a command (the in-pane and mouse entries are reference only). Opened from a
+ * panel view or visual mode, it starts at that section.
  */
 function openHelp(a: App): void {
   const commands: ListItem[] = inSpecOrder(a.registry.list()).map((c) => {
@@ -754,17 +749,25 @@ function openHelp(a: App): void {
     ...pane(a.explorerKeys, EXPLORER_ACTION_INFO),
     ...heading("Inside the history", false),
     ...pane(a.explorerKeys, HISTORY_ACTION_INFO),
+    ...heading("Inside Problems", false),
+    ...pane(a.explorerKeys, PROBLEMS_ACTION_INFO),
     ...heading("Filtering a panel (/)", false),
     ...FILTER_KEYS_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys.map((k) => (k === "type" ? k : spellKey(k))), new Set(), detail), data: null })),
     ...heading("Inside the outline", false),
     ...pane(a.outlineKeys, OUTLINE_ACTION_INFO),
+    ...heading("Inside Info", false),
+    ...pane(a.infoKeys, INFO_ACTION_INFO),
+    ...heading("Inside the footnotes", false),
+    ...pane(a.footnoteKeys, FOOTNOTE_ACTION_INFO),
     ...heading("Resize mode", false),
     ...pane(a.resizeKeys, RESIZE_ACTIONS),
     ...heading("Mouse", false),
     ...MOUSE_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys, new Set(), detail), data: null })),
   ];
-  // Start where the keys are about what you're doing: the focused pane's, or visual mode's.
-  const section = a.region === "sidebar" ? (a.leftView === "history" ? "Inside the history" : "Inside the explorer") : a.region === "outline" ? "Inside the outline" : a.view?.visual ? "Selection & copy" : null;
+  // Start where the keys are about what you're doing: the focused pane's view's, or visual mode's.
+  const left = { explorer: "Inside the explorer", history: "Inside the history", problems: "Inside Problems" } as const;
+  const right = { outline: "Inside the outline", info: "Inside Info", footnotes: "Inside the footnotes" } as const;
+  const section = a.region === "sidebar" ? left[a.leftView] : a.region === "outline" ? right[a.rightView] : a.view?.visual ? "Selection & copy" : null;
   const at = section ? items.findIndex((i) => i.header && i.label === section) : -1; // the title row
   a.openList({
     title: "Keys — type to filter, enter runs a command",
@@ -1355,6 +1358,7 @@ export function registerActions(app: App): void {
       withView(a, (v) => {
         const kind = (arg === "F" || arg === "t" || arg === "T" ? arg : "f") as V.FindKind;
         const n = V.takeCount(a);
+        a.vim.awaitKey = `${n > 1 ? n : ""}${kind}`;
         a.vim.awaitChar = (ch) => {
           a.vim.lastFind = { kind, ch };
           const to = C.findChar(lay(a, v), v.cur, kind, ch, n);
@@ -1399,7 +1403,7 @@ export function registerActions(app: App): void {
     "note.create": (a, arg) => {
       if (!arg) return a.promptNewNote();
       const r = a.createNote(arg, a.newItemBase());
-      if (r) a.open(r.rel);
+      if (r) a.open(r.open);
     },
     "folder.create": (a, arg) => (arg ? void a.createFolder(arg, a.newItemBase()) : a.promptNewFolder()),
     "tab.close_others": (a) => a.closeOtherTabs(),
@@ -1466,6 +1470,7 @@ export function registerActions(app: App): void {
     "edit.replace_char": (a) =>
       sourceEdit(a, (v) => {
         const n = V.takeCount(a);
+        a.vim.awaitKey = `${n > 1 ? n : ""}r`;
         a.vim.awaitChar = (ch) => {
           const r = charsRange(a, v, n);
           if (!r || graphemes(v.buf.source.slice(r.from, r.to)).length < n) return; // by character, as l steps

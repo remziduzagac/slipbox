@@ -41,8 +41,9 @@ export interface KnownRoot {
   found?: boolean;
   /** When its index was last built (20.9, 20.10): how fresh it is. */
   indexed?: string;
-  /** A root in a linked git worktree (17.19): git's name for it, and the main checkout's root. */
-  worktree?: { name: string; main: string | null };
+  /** A root in a linked git worktree (17.19): git's name for it, the main checkout's root, and its admin
+   *  folder's fingerprint — a move is carried only to the worktree with the same one. */
+  worktree?: { name: string; main: string | null; admin?: string };
   /** Where it was before, its state carried along (21.8): what the relink reads a move from (20.17). */
   moved?: { from: string; to: string; at: string }[];
 }
@@ -103,17 +104,39 @@ export function implicitName(root: string): string {
   return slugName(basename(root)) || "notes";
 }
 
+/** A `[vault]` table a textual edit can't follow (a `[ vault ]` header, dotted `vault.name` keys). */
+export class IdentityEditError extends Error {
+  constructor() {
+    super("can't edit .slipbox/config.toml's [vault] table safely: edit it by hand");
+  }
+}
+
+/**
+ * Whether a config's text after a textual `[vault]` edit reads back as meant (`want`'s id and name;
+ * the aliases and previous names it had, `previous` among them too) — not when the text's form
+ * defeated the edit: a second `[vault]` table, invalid TOML, the name somewhere else.
+ */
+export function identityReadsBack(have: VaultIdentity, next: string, want: { id: string | null; name: string | null; previous?: string }): boolean {
+  const got = identityOf(next);
+  const kept = (had: string[], now: string[]) => had.every((n) => now.includes(n));
+  return got.id === want.id && got.name === want.name && kept(have.aliases, got.aliases) && kept(have.previous_names, got.previous_names) && (!want.previous || got.previous_names.includes(want.previous));
+}
+
 /**
  * Add `id` and `name` to a config file's `[vault]` table, as text: the file's comments and layout
- * stay. Fields already there are kept.
+ * stay. Fields already there are kept. Read back first: a table the edit can't follow
+ * (IdentityEditError) writes nothing.
  */
 export function addIdentity(configFile: string, fields: { id?: string; name?: string }): void {
   let text = "";
   try {
     text = readRegular(configFile, SMALL_FILE).toString("utf8");
   } catch {}
-  const next = withIdentity(text, readIdentity(configFile), fields);
-  if (next !== text) atomicWrite(configFile, next);
+  const have = readIdentity(configFile);
+  const next = withIdentity(text, have, fields);
+  if (next === text) return;
+  if (!identityReadsBack(have, next, { id: have.id ?? fields.id ?? null, name: have.name ?? fields.name ?? null })) throw new IdentityEditError();
+  atomicWrite(configFile, next);
 }
 
 /** A config's text with `id` and `name` added to its `[vault]` table, those it has (`have`) kept. */
@@ -294,7 +317,8 @@ const WORKTREE_STATE_DAYS = 30;
 /**
  * Worktrees that are gone (17.19: merged, `git worktree remove`): their cache removed at once — it's
  * derived — and, a month after they were last seen, their state (the scratch, session, trash…)
- * and their entry in the list. Until then they're listed as gone. Plain folders gone a month, too.
+ * and their entry in the list. Until then they're listed as gone. Plain folders gone a month, too: their
+ * entry, cache and state.
  * A worktree's root is gone when its folder is no longer a root (`isRoot`: any of its markers, 21.1 —
  * `vault.ts` passes `isVaultRoot`; without it, `.git` or `.slipbox/`).
  */
@@ -302,9 +326,16 @@ export function pruneWorktrees(now = Date.now(), isRoot: (path: string) => boole
   const list = readRoots();
   // On a drive that isn't there (20.10), nothing is gone: kept as it was until the drive is back.
   const gone = list.filter((v) => v.worktree && !unavailable(v.path) && !isRoot(v.path));
-  // A plain folder gone as long: forgotten too — it has nothing of its own to remove.
+  // A plain folder gone as long: forgotten too, its cache (index, search) and state (session) with it —
+  // a folder moved since starts afresh where it is, as a worktree past the month does.
   const drop = list.filter((v) => v.kind === "folder" && !unavailable(v.path) && !existsSync(v.path) && now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000).map((v) => v.key);
   if (!gone.length && !drop.length) return;
+  for (const key of drop) {
+    // Its key another entry's too (a root there once): that one keeps them.
+    if (list.some((v) => v.key === key && v.kind !== "folder")) continue;
+    rmSync(join(cacheHome(), key), { recursive: true, force: true });
+    rmSync(join(stateHome(), key), { recursive: true, force: true });
+  }
   for (const v of gone) {
     rmSync(join(cacheHome(), v.key), { recursive: true, force: true });
     if (now - Date.parse(v.seen) > WORKTREE_STATE_DAYS * 86_400_000) {

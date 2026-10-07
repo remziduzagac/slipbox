@@ -3,8 +3,8 @@
 // this itself: "refactor moves docs/plan.md; main added a link to it in docs/b.md" changes different
 // files, so it merges cleanly. Each link broken in the result that wasn't broken in the branch merged
 // into is said with its cause — the file moved (where to, and the fix), was deleted, isn't on either
-// branch, or the note itself moved — and whose change it was. Committed work only: what isn't
-// committed is in neither branch.
+// branch, or the note itself moved — and whose change it was. Every written form: a markdown link's
+// path, a wikilink's path or name (21.3). Committed work only: what isn't committed is in neither branch.
 
 import { spawnSync } from "node:child_process";
 import { join, posix, relative, sep } from "node:path";
@@ -12,7 +12,7 @@ import { urlPath } from "./convert.ts";
 import { type Checkout, headOf } from "./git.ts";
 import { changedBetween, inVault } from "./gitops.ts";
 import { extractText } from "./graph.ts";
-import { extensionless, homeDir } from "./links.ts";
+import { extensionless, homeDir, wikiPathCandidates } from "./links.ts";
 
 export interface MergeBreak {
   /** The note linking, in the merged result (vault path). */
@@ -141,6 +141,42 @@ function reaches(n: string, has: (rel: string) => boolean): string | null {
   return [`${n}.md`, `${n}.markdown`].find(has) ?? null;
 }
 
+/**
+ * The vault path a wikilink written as a path names (21.3): from the root (`[[docs/plan]]`, a leading
+ * `/` dropped), or from the note (`[[../plan]]`). Null for a name alone, a pointer, or a path out of
+ * the vault. Without an extension it's the note: `wikiReaches` reads it.
+ */
+function wikiNamed(target: string, from: string): string | null {
+  const t = target.trim();
+  if (!t.includes("/") || /^[a-z][a-z0-9+.-]*:/i.test(t) || t.startsWith("~/")) return null;
+  const rel = /^\.\.?\//.test(t) ? posix.normalize(posix.join(posix.dirname(from), t)) : posix.normalize(t.replace(/^\/+/, ""));
+  return rel === ".." || rel.startsWith("../") ? null : rel;
+}
+
+/** The path a wikilink's path reaches in a tree: the file as written, else its note. */
+function wikiReaches(n: string, has: (rel: string) => boolean): string | null {
+  return wikiPathCandidates(n).find(has) ?? null;
+}
+
+/** A tree's files by the names a wikilink reaches them by (21.3), any case: a note's with and without its extension, a file's. */
+function byName(files: Map<string, string>): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const p of files.keys()) {
+    const b = posix.basename(p).toLowerCase();
+    for (const k of NOTE.test(b) ? [b, b.replace(NOTE, "")] : [b]) out.set(k, [...(out.get(k) ?? []), p]);
+  }
+  return out;
+}
+
+/** A wikilink's target that reaches `to` from the note at `from`, in its form: a name a name, a path
+ *  from the root or relative as written; `.md` only where it was written; never encoded. */
+function wikiFix(from: string, to: string, written: string): string {
+  const t = written.trim();
+  let next = !t.includes("/") ? posix.basename(to) : /^\.\.?\//.test(t) ? posix.relative(posix.dirname(from), to) : `${t.startsWith("/") ? "/" : ""}${to}`;
+  if (/^\.\.?\//.test(t) && !next.startsWith("../")) next = `./${next}`;
+  return NOTE.test(t) ? next : next.replace(NOTE, "");
+}
+
 /** The target that reaches `to` from the note at `from`, in the written one's form (21.2: from the
  *  root, without the extension) and with its fragment. */
 function fixFor(from: string, to: string, written: string, root: string): string {
@@ -204,26 +240,70 @@ export function reviewMerge(c: Checkout, root: string, from: string, into = "HEA
   const linksOf = (rel: string, oid: string | undefined) => {
     const text = oid ? texts.get(oid) : undefined;
     if (text === undefined) return [];
-    return extractText({ rel, abs: "", size: text.length, mtimeMs: 0 }, text).links.filter((l) => l.kind === "markdown" || l.kind === "image");
+    return extractText({ rel, abs: "", size: text.length, mtimeMs: 0 }, text).links.filter((l) => l.kind === "markdown" || l.kind === "image" || l.kind === "wiki" || l.kind === "embed");
   };
+  const namesR = byName(R);
+  const namesO = byName(O);
+  const isWiki = (l: { kind: string }) => l.kind === "wiki" || l.kind === "embed";
+  /** A link's key, so a wikilink and a markdown link written alike are told apart. */
+  const keyOf = (l: { kind: string; target: string }) => `${isWiki(l) ? "w" : "m"}:${l.target}`;
 
+  // A wikilink (21.3): by its path, as a markdown link's is checked; by a name alone, broken when no
+  // file of the result answers to it, where one in `into` did — renamed or deleted by a branch.
+  const wikiBreak = (p: string, was: string, l: { kind: string; target: string; line: number; column: number }, before: Map<string, boolean>): MergeBreak | null => {
+    const k = keyOf(l);
+    const t = l.target.trim();
+    const written = wikiNamed(t, p);
+    if (written === null) {
+      if (!t || t.includes(":") || t.includes("/") || namesR.has(t.toLowerCase()) || before.get(k) === false) return null;
+      const had = namesO.get(t.toLowerCase());
+      const names = had?.[0] ?? t;
+      const site = { path: p, line: l.line, column: l.column, target: l.target, names };
+      const m = had?.map((h) => moved.get(h.toLowerCase())).find((x) => x && inR(x.to));
+      if (m) return { ...site, cause: "moved", by: m.by, to: m.to, fix: wikiFix(p, m.to, l.target) };
+      const del = had?.map((h) => deleted.get(h.toLowerCase())).find((x) => x);
+      if (del) return { ...site, cause: "deleted", by: del, to: null, fix: null };
+      return { ...site, cause: "missing", by: from, to: null, fix: null };
+    }
+    if (wikiReaches(written, inR) !== null || before.get(k) === false) return null;
+    const names = wikiReaches(written, inO) ?? (NOTE.test(written) ? written : `${written}.md`);
+    const site = { path: p, line: l.line, column: l.column, target: l.target, names };
+    const wasNamed = was !== p && before.get(k) ? wikiNamed(t, was) : null;
+    const there = wasNamed === null ? null : (wikiReaches(wasNamed, inO) ?? wasNamed);
+    const m = moved.get(names.toLowerCase());
+    if (there && inR(there)) return { ...site, cause: "note-moved", by: notesMoved.get(p)?.by ?? from, to: there, fix: wikiFix(p, there, l.target) };
+    if (m && inR(m.to)) return { ...site, cause: "moved", by: m.by, to: m.to, fix: wikiFix(p, m.to, l.target) };
+    if (deleted.has(names.toLowerCase()) || m) return { ...site, cause: "deleted", by: deleted.get(names.toLowerCase()) ?? m!.by, to: null, fix: null };
+    return { ...site, cause: "missing", by: from, to: null, fix: null };
+  };
   const breaks: MergeBreak[] = [];
   for (const [p, oid] of notes.sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
     const was = placeInO(p);
     // The note's links in `into`, by target: each reaching, or not.
     const before = new Map<string, boolean>();
     for (const l of linksOf(was, O.get(was))) {
+      if (isWiki(l)) {
+        const n = wikiNamed(l.target, was);
+        if (n !== null) before.set(keyOf(l), wikiReaches(n, inO) !== null);
+        else if (l.target.trim() && !l.target.includes(":")) before.set(keyOf(l), namesO.has(l.target.trim().toLowerCase()));
+        continue;
+      }
       const n = named(l.target, was, root);
-      if (n !== null) before.set(l.target, reaches(n, inO) !== null);
+      if (n !== null) before.set(keyOf(l), reaches(n, inO) !== null);
     }
     for (const l of linksOf(p, oid)) {
+      if (isWiki(l)) {
+        const b = wikiBreak(p, was, l, before);
+        if (b) breaks.push(b);
+        continue;
+      }
       const written = named(l.target, p, root);
-      if (written === null || reaches(written, inR) !== null || before.get(l.target) === false) continue;
+      if (written === null || reaches(written, inR) !== null || before.get(keyOf(l)) === false) continue;
       // Its path as the base had it (a note without its extension, the note): what moved or went.
       const names = reaches(written, inO) ?? written;
       const site = { path: p, line: l.line, column: l.column, target: l.target, names };
       // The note moved, its link written from where it was: what it named there, still in the result.
-      const wasNamed = was !== p && before.get(l.target) ? named(l.target, was, root) : null;
+      const wasNamed = was !== p && before.get(keyOf(l)) ? named(l.target, was, root) : null;
       const there = wasNamed === null ? null : (reaches(wasNamed, inO) ?? wasNamed);
       const m = moved.get(names.toLowerCase());
       if (there && inR(there)) breaks.push({ ...site, cause: "note-moved", by: notesMoved.get(p)?.by ?? from, to: there, fix: fixFor(p, there, l.target, root) });

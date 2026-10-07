@@ -188,8 +188,10 @@ OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `packa
 1. Read the changelog from the pinned version to the target.
 2. Bump the pin, run `bun run check`. The `OpenTUI end to end` test in `tests/tui.test.ts`
    exercises the adapter through OpenTUI's own test renderer.
-3. Launch the TUI and check the four things the adapter uses: `drawText` and `fillRect` output,
-   key names (`keyName` in `tui/keys.ts`), mouse events, and `copyToClipboardOSC52`.
+3. Launch the TUI and check what the adapter uses: `drawText` and `fillRect` output, key names
+   (`keyName` in `tui/keys.ts`), paste, mouse and resize events, `widthMethod` (a wcwidth
+   terminal's rows must not drift), `suspend`/`resume` (the `$EDITOR` hand-off),
+   `setTerminalTitle`, `setBackgroundColor`, `useMouse`, `copyToClipboardOSC52`, and `destroy`.
 4. Only `tui/opentui.ts` and `tui/run.ts` should need changes. If anything else does, the
    boundary has leaked; fix that first.
 
@@ -218,6 +220,8 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | renames, to undo (`7.4`) | `$XDG_STATE_HOME/slipbox/<key>/renames.json` (the last 20) |
 | the trash (`18.4`) | `$XDG_STATE_HOME/slipbox/<key>/trash/` (`trash.json`, and an item per folder) |
 | the background index (`20.9`) | `$XDG_STATE_HOME/slipbox/autoindex.json` (its place), `activity` (CLI last used) |
+| saved plans (`20.18`, `--plan`) | `$XDG_STATE_HOME/slipbox/plans/<id>.json` (for `slipbox apply`; gone once applied) |
+| language servers installed (`19.5`) | `$XDG_DATA_HOME/slipbox/tools/` |
 
 `<key>` is the root's path — a plain folder's when there's none: `<basename>-<sha256(realpath)[:12]>` (`21.8`;
 `docs/design/decisions.md`, `0.10`). A named folder moved by hand takes it along.

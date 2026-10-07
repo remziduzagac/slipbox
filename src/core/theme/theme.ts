@@ -202,7 +202,7 @@ export function themeFromPalette(
     sidebar_dir: { fg: p.blue },
     sidebar_selected: { fg: p.fg_strong, bg: p.surface, bold: true },
     sidebar_active: { fg: p.cyan },
-    // A folder that is a vault of its own (17.13): a folder's colour — its icon tells it apart —
+    // A folder that is a root of its own, nested (17.13): a folder's colour — its icon tells it apart —
     // and a role of its own, for [colors] to set.
     sidebar_vault: { fg: p.blue },
     git_new: { fg: p.green },

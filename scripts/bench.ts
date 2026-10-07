@@ -2,7 +2,8 @@
 //
 // Generates big notes in a temporary vault, drives the TUI model headlessly (as tests/tui.test.ts
 // does) and the CLI as a process, and prints the median of a few runs of each. Nothing outside the
-// temporary directory is touched; the config, state and cache go there too.
+// temporary directory is touched; the config, state, cache and data go there too, and no linter or
+// server runs (or is installed) while it's timed.
 
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,6 +13,7 @@ const dir = mkdtempSync(join(tmpdir(), "slipbox-bench-"));
 process.env.XDG_STATE_HOME = join(dir, "state");
 process.env.XDG_CACHE_HOME = join(dir, "cache");
 process.env.XDG_CONFIG_HOME = join(dir, "config");
+process.env.XDG_DATA_HOME = join(dir, "data");
 process.env.SLIPBOX_CLIPBOARD = "file";
 delete process.env.SLIPBOX_CONFIG;
 
@@ -60,6 +62,8 @@ async function makeApp(open: string, width = 120, height = 40) {
   const config = structuredClone(DEFAULT_CONFIG);
   config.ui.restore_session = false;
   config.editor.autosave_ms = 0;
+  config.lint.enabled = "off";
+  config.lsp.enabled = false;
   const loc = locateVault({ root: vault });
   const graph = openGraph(loc, config, false, "lazy");
   const app = new App({ loc, config, graph, host: { requestRender() {}, osc52: () => true, quit() {} }, open, watch: false });
@@ -98,6 +102,8 @@ for (const note of ["k1.md", "k20.md"]) {
     for (let k = 0; k < 3; k++) {
       const config = structuredClone(DEFAULT_CONFIG);
       config.ui.restore_session = false;
+      config.lint.enabled = "off";
+      config.lsp.enabled = false;
       const loc = locateVault({ root: vault });
       const graph = openGraph(loc, config, false, "lazy");
       let app: InstanceType<typeof App> | null = null;

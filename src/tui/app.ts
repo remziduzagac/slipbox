@@ -18,7 +18,7 @@ import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
-import { ensureDir, landsInside, readJson, readRegular, readText, realTarget, SMALL_FILE, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
+import { climbsOut, ensureDir, landsInside, readJson, readRegular, readText, realTarget, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
@@ -76,7 +76,7 @@ import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, readFolders, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
-import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isNeverRoot, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
+import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
@@ -195,8 +195,6 @@ export interface View {
   visual: "char" | "line" | null;
   /** The text version the cursor's anchor was last re-derived at (layoutFor). */
   anchorVersion?: number;
-  /** The last selection's source lines, 1-based: `:'<,'>s` works on them. */
-  visualLines?: [number, number];
   /** Source-based positions, which survive re-layout (decision 3.5). */
   topAnchor: Anchor;
   /** Which of the top anchor's line's rows is the top (a wrapped line has several): 0, the first. */
@@ -859,7 +857,7 @@ export class App {
   }
 
   private configFiles(): string[] {
-    // Yours, the enclosing vaults' (20.7) and the vault's own: a change to any is a reload.
+    // Yours, the enclosing roots' (20.7) and the root's own: a change to any is a reload.
     const { vaultFile, outerFiles } = configFilesFor(this.loc);
     return [this.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile(), ...outerFiles, ...(vaultFile ? [vaultFile] : [])];
   }
@@ -989,6 +987,11 @@ export class App {
   get view(): View | null {
     // The floating editor (3.20), while it's open, is the window the keys and commands act on.
     if (this.floating) return this.floating.view;
+    return this.tabView;
+  }
+
+  /** The tab's active window: the one under the floating window while that is open. */
+  get tabView(): View | null {
     const t = this.tab;
     return t ? (t.views[t.active] ?? null) : null;
   }
@@ -1003,7 +1006,7 @@ export class App {
   buffer(pathOrRel: string): NoteBuffer | null {
     const abs = pathOrRel.startsWith("/") ? pathOrRel : join(this.loc.root, pathOrRel);
     const relRaw = relative(this.loc.root, abs);
-    const inside = !relRaw.startsWith("..") && !relRaw.startsWith("/");
+    const inside = !climbsOut(relRaw);
     const key = inside ? relRaw : abs;
     let buf = this.buffers.get(key);
     if (!buf) {
@@ -1952,6 +1955,8 @@ export class App {
   }
 
   remember(view: View): void {
+    // A floating window (the properties, a hover, a file from git) isn't a place read.
+    if (view.buf.virtual) return;
     this.positions.set(view.buf.key, view.topAnchor, view.curAnchor);
   }
 
@@ -2019,7 +2024,6 @@ export class App {
       lensClick: undefined,
       topSub: 0,
       anchorVersion: undefined,
-      visualLines: undefined,
       layoutKey: "",
     });
   }
@@ -2544,6 +2548,15 @@ export class App {
     view.sel = { anchor, line, src: this.cursorAnchorFor(this.currentLayout(view), anchor) };
   }
 
+  /** The selection's first and last lines as the buffer's `'<` `'>` marks, which move with the text. */
+  markSelection(view: View, layout: Layout = this.currentLayout(view)): void {
+    if (!view.sel) return;
+    const x = layout.lines[view.sel.anchor.row]?.src ?? 1;
+    const y = layout.lines[view.cur.row]?.src ?? 1;
+    const starts = view.buf.lineStarts();
+    view.buf.visualMarks = [starts[Math.min(x, y) - 1] ?? 0, starts[Math.max(x, y) - 1] ?? 0];
+  }
+
   /** Move the cursor (extending the selection when asked, or in visual mode). */
   moveCursor(view: View, to: Pos, opts: { extend?: boolean; keepGoal?: boolean } = {}): void {
     this.outline.pinned = false; // the outline follows the cursor's section again
@@ -2555,11 +2568,7 @@ export class App {
     if (!opts.keepGoal) view.goal = view.cur.col;
     view.curAnchor = this.cursorAnchorFor(layout, view.cur);
     // The selection's lines, kept after it ends: `:'<,'>s` works on the last one, as vim's marks.
-    if (view.sel) {
-      const x = layout.lines[view.sel.anchor.row]?.src ?? 1;
-      const y = layout.lines[view.cur.row]?.src ?? 1;
-      view.visualLines = [Math.min(x, y), Math.max(x, y)];
-    }
+    if (view.sel) this.markSelection(view, layout);
     this.ensureCursorVisible(view, layout);
   }
 
@@ -2753,13 +2762,28 @@ export class App {
     return line ? srcAt(line, view.cur.col) : 1;
   }
 
+  /**
+   * The file a hand-off gives the editor, and the line: the view's, at the cursor; from the floating
+   * properties editor, its note at the top (the editor closed first, its text written back); none
+   * (said) from another floating window, which isn't a file.
+   */
+  private handOffTarget(view: View): { buf: NoteBuffer; line: number } | null {
+    if (!view.buf.virtual) return { buf: view.buf, line: this.cursorLine(view) };
+    const f = this.floating;
+    if (f?.kind === "properties" && view === f.view) return this.closeFloating() ? { buf: f.note, line: 1 } : null;
+    this.message("info", "nothing to hand off: this window isn't a file");
+    return null;
+  }
+
   /** Step aside for the editor (4.1): it runs in this terminal; the note reloads after it. */
   editInEditor(view: View): void {
     if (!this.host.runForeground) return this.message("error", "can't hand off to an editor here");
-    const buf = view.buf;
+    const target = this.handOffTarget(view);
+    if (!target) return;
+    const buf = target.buf;
     // The editor reads the file: unsaved changes go there first (4.10).
     if (buf.dirty && !this.saveBuffer(buf)) return this.message("warn", `${this.displayName(buf)} isn't saved — not handing it off`);
-    const argv = editorArgv(this.config.editor.command, buf.abs, this.cursorLine(view));
+    const argv = editorArgv(this.config.editor.command, buf.abs, target.line);
     const r = this.host.runForeground(argv);
     if (typeof r === "string") return this.message("error", `couldn't start ${argv[0]}: ${r}`);
     if (buf.changedOnDisk()) this.reloadBuffer(buf);
@@ -2777,7 +2801,10 @@ export class App {
    * preset (the default) or a `{server}` template, the nvim is the one picked before while it
    * answers; else the only one running; else a picker — which `choose` (`space n p`) always opens.
    */
-  sendToEditor(view: View, choose = false): void {
+  sendToEditor(from: View, choose = false): void {
+    const target = this.handOffTarget(from);
+    if (!target) return;
+    const view = target;
     if (view.buf.dirty && !this.saveBuffer(view.buf)) return this.message("warn", `${this.displayName(view.buf)} isn't saved — not sending it`);
     const raw = this.config.editor.remote.filter((t) => t.trim());
     if (!raw.length) return this.message("info", "set [editor] remote in the config to send notes to a running editor");
@@ -2808,10 +2835,10 @@ export class App {
     });
   }
 
-  private sendWith(view: View, templates: string[], server: NvimServer | ""): void {
+  private sendWith(view: { buf: NoteBuffer; line: number }, templates: string[], server: NvimServer | ""): void {
     const run = this.host.runDetached;
     if (!run) return this.message("error", "can't start an editor from here");
-    const line = this.cursorLine(view);
+    const line = view.line;
     // Each command a template of its own; no {file} means none is appended (nvim's --remote-send).
     const socket = server ? server.socket : "";
     const cmds = templates.map((t) => editorArgv(t, view.buf.abs, line, process.env, false, socket));
@@ -2852,9 +2879,12 @@ export class App {
   // Tabs and the split (3.3)
 
   splitWith(orientation: Tab["orientation"]): void {
+    // The floating window closes first: the split is of the window under it, never of the floating
+    // one (its buffer isn't a file, and a tab keeping it would lose what's typed there).
+    if (this.floating && !this.closeFloating()) return;
     const t = this.tab;
-    const view = this.view;
-    if (!t || !view) return;
+    const view = this.tabView;
+    if (!t || !view || view.buf.virtual) return;
     t.orientation = orientation;
     if (t.views.length === 1) {
       t.views.push(this.makeView(view.buf, { ...view.topAnchor }, { ...view.curAnchor }));
@@ -2864,6 +2894,7 @@ export class App {
 
   /** Focus the split's other window, splitting first when there's one: where "in the split" opens. */
   otherWindow(): void {
+    if (this.floating && !this.closeFloating()) return;
     const t = this.tab;
     if (!t) return;
     if (t.views.length === 1) this.splitWith(t.orientation ?? "side");
@@ -2928,20 +2959,21 @@ export class App {
     try {
       root = realpathSync(root);
     } catch {}
-    const r = relative(root, target);
-    if (r.startsWith("..") || isAbsolute(r)) {
+    if (climbsOut(relative(root, target))) {
       this.message("warn", `${typed} resolves outside the root — not creating it`);
       return null;
     }
     return rel;
   }
 
-  /** The folders a new path makes, known to the walk and the watcher (and the explorer shows). */
+  /** The folders a new path makes, known to the walk and the watcher (and the explorer shows); not
+   *  one the walk leaves out (`walk.exclude`) or a root nested in this one, nor anything under it. */
   private addFolders(rel: string): void {
     const parts = rel.split("/");
     let added = false;
     for (let i = 1; i <= parts.length; i++) {
       const dir = parts.slice(0, i).join("/");
+      if (!this.graph.admits(dir, true)) break;
       if (!this.graph.dirs.includes(dir)) {
         this.graph.dirs.push(dir);
         added = true;
@@ -2953,23 +2985,27 @@ export class App {
   /**
    * Create a note (ctrl+n, `:new`): `input` from `base`, `.md` added unless it names a known
    * extension (`.toml`, `.py`…); missing folders made. A note starts with its title as a heading
-   * (`# Name`). An existing file is just opened. Its vault path
-   * and whether it was made, or null.
+   * (`# Name`). An existing file is just opened. Its vault path, whether it was made, and the path
+   * to open it by, or null. One the walk leaves out (`walk.exclude`) or in a root nested in this one
+   * isn't this root's note: it's made, but not indexed here, and opened by its absolute path (into
+   * the nested root).
    */
-  createNote(input: string, base: string | null): { rel: string; created: boolean } | null {
+  createNote(input: string, base: string | null): { rel: string; created: boolean; open: string } | null {
     if (base === null) return this.refuseOtherRoot(), null;
     let rel = this.newPath(input, base);
     if (!rel) return null;
     const ext = extensionOf(rel);
     if (!ext || !isKnownExtension(ext)) rel = `${rel}.md`;
     const abs = join(this.loc.root, rel);
+    const ours = this.graph.admits(rel);
+    const open = ours ? rel : abs;
     if (existsSync(abs)) {
       if (statSync(abs).isDirectory()) {
         this.message("warn", `${rel} is a folder`);
         return null;
       }
       this.message("info", `${rel} exists — opened`);
-      return { rel, created: false };
+      return { rel, created: false, open };
     }
     const kind = classify(rel, this.config.walk.extensions);
     const name = posix.basename(rel).replace(/\.[^.]+$/, "");
@@ -2982,15 +3018,17 @@ export class App {
       this.message("error", `can't create ${rel}: ${(err as Error).message}`);
       return null;
     }
-    const dir = posix.dirname(rel);
-    if (dir !== ".") this.addFolders(dir);
     this.watcher?.noteOwnWrite(rel, stamp);
-    if (kind.group === "note") this.graph.updateFile(rel, { rel, abs, size: stamp.size, mtimeMs: stamp.mtimeMs });
-    else this.graph.addAsset(rel);
-    this.invalidateTree();
-    this.relayoutAll(); // links to it resolve now
+    if (ours) {
+      const dir = posix.dirname(rel);
+      if (dir !== ".") this.addFolders(dir);
+      if (kind.group === "note") this.graph.updateFile(rel, { rel, abs, size: stamp.size, mtimeMs: stamp.mtimeMs });
+      else this.graph.addAsset(rel);
+      this.invalidateTree();
+      this.relayoutAll(); // links to it resolve now
+    }
     this.message("info", `created ${rel}`);
-    return { rel, created: true };
+    return { rel, created: true, open };
   }
 
   /**
@@ -3010,11 +3048,12 @@ export class App {
       const r = this.createNote(text, base);
       if (!r) return;
       this.region = "content";
-      this.open(r.rel);
+      const abs = join(this.loc.root, r.rel); // before the open, which may switch roots
+      this.open(r.open);
       const v = this.view;
       // Typing on the line after the title's blank one (as `o` there would): a source view has no
       // row past the file's last line break, so the insert begins with one.
-      if (r.created && v?.buf.rel === r.rel) {
+      if (r.created && v?.buf.abs === abs) {
         startInsert(this, v, (w) => w.buf.source.length);
         insertText(this, v, v.buf.eol);
       }
@@ -3223,12 +3262,16 @@ export class App {
   unmakeThisVault(): void {
     const holder = this.loc.mode === "vault" ? findVaultRoot(dirname(this.loc.root)) : null;
     if (!holder) return this.message("info", `${this.loc.name ?? this.loc.root} isn't inside another root: only a root nested in another becomes a plain folder (of the root holding it)`);
+    // Refused before anything changes when the switch into the holder would be: never a root
+    // whose .slipbox/ is gone, still open.
+    if (!this.canLeave()) return;
     const parent = openVault(holder);
     const rel = relative(holder, this.loc.root);
     const open = this.view?.buf.abs ?? null;
     this.previewRename(
       () => planUnmakeVault(parent, rel),
       (plan) => {
+        if (!this.canLeave()) return; // changed while the preview showed
         let applied: Applied;
         try {
           applied = applyPlan(parent, plan);
@@ -3832,6 +3875,8 @@ export class App {
     const view = this.view;
     if (this.floating) return;
     if (!view || view.buf.kind.group !== "note" || view.buf.rel === null) return this.message("info", "properties are a note's: its frontmatter");
+    const why = cannotEdit(view);
+    if (why) return this.message("warn", `${why} — not editing`);
     const note = view.buf;
     const span = this.frontmatterSpan(note.source);
     const original = span ? note.source.slice(span.innerStart, span.innerEnd).replace(/\r\n/g, "\n") : "";
@@ -3849,9 +3894,10 @@ export class App {
   /**
    * Write the floating editor's text into its note's frontmatter: one undo step there, the note
    * saved. Text that doesn't parse, or a frontmatter changed under it meanwhile, asks first; false
-   * while it asks (the editor stays).
+   * while it asks (the editor stays). `close`: asked by closing the editor, which a yes then closes;
+   * from `ctrl+s` or `:wa`, a yes keeps it open, its text saved.
    */
-  private writeProperties(text: string, sure = false): boolean {
+  private writeProperties(text: string, sure = false, close = false): boolean {
     const f = this.floating;
     if (f?.kind !== "properties") return false;
     const note = f.note;
@@ -3859,17 +3905,13 @@ export class App {
     const span = this.frontmatterSpan(note.source);
     const now = span ? note.source.slice(span.innerStart, span.innerEnd).replace(/\r\n/g, "\n") : "";
     if (!sure && now !== f.original) {
-      this.confirm(`${this.displayName(note)}'s properties changed while you edited them. Write yours over them?`, () => {
-        if (this.writeProperties(text, true)) this.floating = null;
-      });
+      this.confirm(`${this.displayName(note)}'s properties changed while you edited them. Write yours over them?`, () => this.writtenAfterAsking(f, text, close));
       return false;
     }
     if (!sure && body) {
       const probe = parseMarkdown(f.format === "toml" ? `+++\n${body}\n+++\n` : `---\n${body}\n---\n`).frontmatter;
       if (probe?.error) {
-        this.confirm(`The properties don't parse (${probe.error.split("\n")[0]}). Write them anyway?`, () => {
-          if (this.writeProperties(text, true)) this.floating = null;
-        });
+        this.confirm(`The properties don't parse (${probe.error.split("\n")[0]}). Write them anyway?`, () => this.writtenAfterAsking(f, text, close));
         return false;
       }
     }
@@ -3885,21 +3927,32 @@ export class App {
       : body
         ? { at: 0, length: 0, text: `${fence}${eol}${lines}${eol}${fence}${eol}` }
         : null;
-    if (edit && !(span && body === now)) {
+    // The note gone on disk (or never valid UTF-8) meanwhile: not written, nor brought back.
+    const why = cannotEdit({ buf: note });
+    if (why) this.message("warn", `${why} — not writing the properties`);
+    else if (edit && !(span && body === now)) {
       note.edit(edit.at, edit.length, edit.text); // one edit: one undo step
       for (const v of this.allViews()) if (v.buf === note) v.layoutKey = "";
-      if (!this.saveBuffer(note, true)) this.message("warn", `${this.displayName(note)}'s properties changed — not saved yet (the file changed on disk: space n w decides)`);
-      else this.message("info", `properties written to ${this.displayName(note)}`);
+      if (this.saveBuffer(note, true)) this.message("info", `properties written to ${this.displayName(note)}`);
+      // Any other failure has said why already.
+      else if (note.changedOnDisk() && !note.deleted) this.message("warn", `${this.displayName(note)}'s properties changed — not saved yet (the file changed on disk: space n w decides)`);
     }
     f.original = body;
     return true;
+  }
+
+  /** A yes to writing the properties: written; then the editor closed, or (from a save) its text saved. */
+  private writtenAfterAsking(f: NonNullable<App["floating"]>, text: string, close: boolean): void {
+    if (!this.writeProperties(text, true, close)) return;
+    if (close) this.floating = null;
+    else if (f.view.buf.source === text) f.view.buf.markSaved();
   }
 
   /** Close the floating editor, writing its text back first when it changed; false while that asks. */
   closeFloating(): boolean {
     const f = this.floating;
     if (!f) return true;
-    if (f.kind === "properties" && f.view.buf.dirty && !this.writeProperties(f.view.buf.source)) return false;
+    if (f.kind === "properties" && f.view.buf.dirty && !this.writeProperties(f.view.buf.source, false, true)) return false;
     this.floating = null;
     return true;
   }
@@ -4366,17 +4419,19 @@ export class App {
       const at = offsetOf(this, view);
       if (view.insert) return at;
       let end = at;
+      // Never past a line's end: a CRLF note's blank line has the cursor on its CR.
       if (word(src[end])) while (word(src[end])) end++;
-      else if (end < src.length && src[end] !== "\n") end++;
+      else if (end < src.length && src[end] !== "\n" && src[end] !== "\r") end++;
       const ls = starts[line.src - 1] ?? 0;
-      return outOfSyntax(end, ls, src.indexOf("\n", ls) < 0 ? src.length : src.indexOf("\n", ls));
+      const nl = src.indexOf("\n", ls);
+      return outOfSyntax(end, ls, nl < 0 ? src.length : src[nl - 1] === "\r" ? nl - 1 : nl);
     }
     // A rendered row: the paragraph's rows up to the cursor's, and its source lines.
     const rowText = (r: number) => layout.lines[r]?.spans.map((s) => s.text).join("") ?? "";
     let first = view.cur.row;
     while (first > 0 && rowText(first - 1).trim() && !layout.lines[first - 1]!.srcMap && !layout.lines[first - 1]!.decor) first--;
     const blockStart = starts[(layout.lines[first]?.src ?? line?.src ?? 1) - 1] ?? 0;
-    const blank = /\n[ \t]*\n/g;
+    const blank = /\r?\n[ \t]*\r?\n/g;
     blank.lastIndex = blockStart;
     const blockEnd = blank.exec(src)?.index ?? src.replace(/\s+$/, "").length;
     const text = rowText(view.cur.row);
@@ -4404,16 +4459,21 @@ export class App {
     const view = this.view;
     if (!view) return;
     const buf = view.buf;
+    // Asked again when it's made: the file can go while a question is open.
+    const why = cannotEdit(view);
+    if (why) return this.message("warn", `${why} — not editing`);
     const before = view.cur;
     buf.beginStep(offsetOf(this, view));
     const order = edits.map((e, i) => ({ e, i })).sort((a, b) => b.e.at - a.e.at || b.i - a.i);
-    for (const { e } of order) buf.edit(e.at, e.length, e.text);
+    // The edits' new lines (`\n`) as the note's own: a CRLF note stays CRLF.
+    for (const { e } of order) buf.edit(e.at, e.length, buf.eol === "\n" ? e.text : e.text.replace(/\r?\n/g, buf.eol));
     buf.endStep(cursorAfter ?? offsetOf(this, view));
     for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
     // Where the cursor was: in source mode, past what was typed before it; rendered, its row.
     if (cursorAfter !== undefined && this.currentLayout(view).lines[before.row]?.srcMap) placeAt(this, view, cursorAfter);
     if (this.saveBuffer(buf, true)) this.message("info", done);
-    else this.message("warn", `${done} — not saved yet (the file changed on disk: space n w decides)`);
+    // Any other failure has said why already.
+    else if (buf.changedOnDisk() && !buf.deleted) this.message("warn", `${done} — not saved yet (the file changed on disk: space n w decides)`);
   }
 
   /** Whether the current window's note can have footnotes changed: a markdown note of this vault. */
@@ -4423,7 +4483,10 @@ export class App {
       this.message("info", "footnotes are in this root's notes");
       return false;
     }
-    return true;
+    // Deleted on disk, or not valid UTF-8: not edited (its save would bring it back, or change bytes).
+    const why = cannotEdit(view);
+    if (why) this.message("warn", `${why} — not editing`);
+    return !why;
   }
 
   /**
@@ -4857,7 +4920,7 @@ export class App {
 
   /** The history view's rows: the active window's timeline, newest first, filtered. */
   historyRows(): HistoryRow[] {
-    const v = this.view;
+    const v = this.tabView; // the window's, never a floating one's
     if (!v) return [];
     const here: Loc = { key: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor };
     const timeline = [...v.back, here, ...[...v.fwd].reverse()];
@@ -4917,7 +4980,9 @@ export class App {
 
   /** Jump the window to entry `i` of its timeline: what's before it becomes back, after it forward. */
   jumpHistory(i: number): void {
-    const v = this.view;
+    // As following a link: the floating window closes, and the window under it goes.
+    if (this.floating && !this.closeFloating()) return;
+    const v = this.tabView;
     if (!v) return;
     const here: Loc = { key: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor };
     const timeline = [...v.back, here, ...[...v.fwd].reverse()];
@@ -5622,8 +5687,21 @@ export class App {
       insertText(this, iv, text.replace(/\r\n?/g, "\n").replaceAll("\n", iv.buf.eol));
       return insertRecord(this, iv, `${PASTE}${text}`);
     }
-    // In normal mode where the text is editable: put after the cursor, as p does.
-    if (!o && this.region === "content" && iv && editable(iv)) return put(this, iv, true, text.replace(/\r\n?/g, "\n"));
+    // In normal mode where the text is editable: put after the cursor, as p does — and, as p is,
+    // a change `.` repeats (the paste a key of its own).
+    if (!o && this.region === "content" && iv && editable(iv)) {
+      const before = iv.buf.version;
+      put(this, iv, true, text.replace(/\r\n?/g, "\n"));
+      const s = this.vim;
+      if (!s.replaying && iv.buf.version !== before) {
+        s.seq = [`${PASTE}${text}`];
+        s.seqVersion = before;
+        s.undoing = false;
+        s.inInsert = false;
+        s.lastChange = [...s.seq];
+      }
+      return;
+    }
     const line = sanitize(text.replace(/\r\n?/g, "\n").split("\n")[0] ?? "");
     if (!line) return;
     if (!o) {
@@ -5840,7 +5918,11 @@ export class App {
     if (this.region === "content" && iv?.insert && !this.pending.length) {
       if (key === "ctrl+s") return void this.run("note.save");
       // The completion popup's keys first (19.16): moving in it, accepting, closing.
-      if (completionKey(this, iv, key)) return;
+      if (completionKey(this, iv, key)) {
+        // ctrl+e closing it is part of the change: `.` closes the popup its replay opens again.
+        if (key === "ctrl+e") insertRecord(this, iv, key);
+        return;
+      }
       insertKey(this, iv, key);
       afterInsertKey(this, iv, key);
       return insertRecord(this, iv, key);
@@ -5856,7 +5938,18 @@ export class App {
     // Source mode's normal mode: counts, operators and `.` around the keymaps (vim.ts).
     if (this.region === "content" && iv && editable(iv) && !iv.visual && !this.resizeMode) return vimKey(this, iv, key, () => this.dispatchMapped(key));
     if (this.region === "content" && iv?.visual && !this.resizeMode) return visualKey(this, iv, key, () => this.dispatchMapped(key));
-    return this.dispatchMapped(key);
+    // From the render, a key that starts typing (o, i, a, A, I, O) switches the window to source:
+    // the change it starts is recorded for `.` as if made there (insertRecord ends it at esc).
+    const s = this.vim;
+    const start = this.region === "content" && iv && !this.resizeMode && !s.replaying ? { keys: [...this.pending, key], version: iv.buf.version } : null;
+    await this.dispatchMapped(key);
+    const v = this.view;
+    if (start && v && v === iv && v.insert && editable(v)) {
+      s.seq = start.keys;
+      s.seqVersion = start.version;
+      s.undoing = false;
+      s.inInsert = true;
+    }
   }
 
   /** A key through the keymaps: resize mode's, then pending sequences, then the bindings. */
@@ -6682,7 +6775,7 @@ export class App {
     if (scratchBuf?.dirty && !this.saveBuffer(scratchBuf)) return;
     appendScratch(loc, entry);
     const rel = relative(this.loc.root, loc.path);
-    if (!rel.startsWith("..")) this.watcher?.noteOwnWrite(rel);
+    if (!climbsOut(rel)) this.watcher?.noteOwnWrite(rel);
     const open = this.buffers.get(loc.path) ?? this.buffers.get(rel);
     if (open) {
       open.load();
@@ -7259,7 +7352,8 @@ export class App {
    * positions and session — with `open` open (an absolute path), or the session's tabs. Leaving
    * saves this one's as quitting does. Refused while a note is unsaved: it would be left behind.
    */
-  switchVault(target: VaultLocation, open: string | null, anchor?: Anchor, how: { back?: boolean } = {}): boolean {
+  /** Whether this root can be left now: nothing unsaved; said when not. */
+  private canLeave(): boolean {
     // The floating window first: changed properties go into their note (or it asks, and nothing
     // switches); the note they made unsaved then refuses the switch below.
     if (this.floating && !this.closeFloating()) return false;
@@ -7268,6 +7362,11 @@ export class App {
       this.message("warn", `unsaved: ${dirty.map((b) => this.displayName(b)).join(", ")} — save (:wa) or revert before leaving ${this.vaultLabel(this.loc)}`);
       return false;
     }
+    return true;
+  }
+
+  switchVault(target: VaultLocation, open: string | null, anchor?: Anchor, how: { back?: boolean } = {}): boolean {
+    if (!this.canLeave()) return false;
     const v = this.view;
     const from = v ? { root: this.loc.root, path: v.buf.abs, anchor: { ...v.topAnchor }, cursor: { ...v.curAnchor } } : null;
     // Leave, as quitting would.
@@ -7305,6 +7404,9 @@ export class App {
     // The clipboard and the last delete name the old root's things: forgotten.
     this.fileClip = null;
     this.lastTrashed = null;
+    // So are git's states (the explorer's marks, the Problems' conflicts): asked again, below.
+    this.gitStates = null;
+    this.gitFolders.clear();
     this.leftPositions.clear();
     this.sidebar = { visible: this.config.ui.sidebar, overlay: false, selected: 0, scroll: 0 };
     this.sideW = this.config.ui.sidebar_width;
@@ -7350,6 +7452,7 @@ export class App {
     if (this.live) {
       if (this.config.watch.enabled) this.startWatcher();
       this.indexInBackground();
+      this.refreshGit();
     }
     this.message("info", target.mode === "vault" && target.name ? `${rootLabel(target)} — ${target.root}` : target.root);
     this.host.requestRender();

@@ -139,7 +139,8 @@ export function deleteFootnote(source: string, fn: Footnote): TextEdit[] {
   const edits: TextEdit[] = fn.references.map((r) => ({ at: r.start, length: r.end - r.start, text: "" }));
   if (fn.def) {
     const from = source.lastIndexOf("\n", fn.def.start - 1) + 1;
-    const to = source[fn.def.end] === "\n" ? fn.def.end + 1 : fn.def.end;
+    // Its line's end too (a CRLF note's two characters), so no blank line is left in its place.
+    const to = source.startsWith("\r\n", fn.def.end) ? fn.def.end + 2 : source[fn.def.end] === "\n" ? fn.def.end + 1 : fn.def.end;
     edits.push({ at: from, length: to - from, text: "" });
   }
   return edits;

@@ -47,7 +47,7 @@ export interface Embedded {
   /** Its links' status, its embeds — from where it is, not from the note embedding it. */
   resolveLink?: RenderOptions["resolveLink"];
   embed?: RenderOptions["embed"];
-  /** Its path in this vault, for following its links from there; absent in another vault. */
+  /** Its path in this root, for following its links from there; absent in another root. */
   from?: string;
 }
 

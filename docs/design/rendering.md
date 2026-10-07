@@ -128,7 +128,7 @@ the breadcrumb, `[x](file.toml#section)`, find and the lens work unchanged:
 - **Values that are links** (`16.15`) draw as links, followed with `enter`: a URL; a reference
   key's value (`$ref`, `$schema`, `schema`, `include(s)`, `extends`, `import(s)`, `file`, `path`),
   shown broken when it doesn't resolve; and any path-like value (`schemas/user.json`,
-  `../base.toml`) that resolves to a vault file — relative to the file's folder, as a markdown
+  `../base.toml`) that resolves to a file of the root — relative to the file's folder, as a markdown
   link is. A link is a single value, not a list or a number: `includes: [base.json]`, `schema: 2`
   and `path: null` are no links. The graph reads the same links (files over 256 KB aside), so a
   data file shows among the backlinks of what it points at, and `slipbox links` lists them. No
@@ -322,8 +322,10 @@ The Nerd set uses the same heading icons as the render-markdown configuration it
 `core/sanitize.ts` removes CSI, OSC, DCS/APC and two-byte escape sequences, bare C0 and C1
 controls, bidi override and isolate characters and the bidi marks (U+200E, U+200F, U+061C), which
 are used for display spoofing, and turns the line and paragraph separators (U+2028, U+2029) into
-spaces. The TUI's chrome draws names (files, folders, headings, config labels) through the same
-function, and each canvas passes every cell through it again (`safeCell`). Every
+spaces. An OSC or DCS string left unterminated (a truncated capture) is removed to the end of its
+line, never past it, so a code block keeps its lines and their source lines. The TUI's chrome
+draws names (files, folders, headings, config labels) through the same function, and each canvas
+passes every cell through it again (`safeCell`). Every
 string entering the IR passes through it: text, code, HTML, frontmatter, link targets and
 language labels. As a backstop, the layout's final pass sanitizes every span again, whichever
 path built it (footnote labels and nested frontmatter keys were found that way). The fixture

@@ -156,16 +156,19 @@ export function replaceEvery(app: App, view: View, query: string, replacement: s
 export function substitute(app: App, view: View, input: string): void {
   const sub = parseSubstitute(input);
   if (!sub) return app.message("warn", "a substitute is s/old/new/ with g, i, c flags after it");
-  if (sub.range === "selection" && !view.visualLines) return app.message("warn", "no selection yet for '<,'>");
-  // The last selection's lines can outlive the lines (deleted since): refused, as vim's E16 is.
+  const marks = view.buf.visualMarks;
+  if (sub.range === "selection" && !marks) return app.message("warn", "no selection yet for '<,'>");
+  // The marks move with the text (lines deleted under them collapse to the line after, as vim's do).
   const lineCount = Math.max(1, view.buf.lineStarts().length - (view.buf.source.endsWith("\n") ? 1 : 0));
-  if (sub.range === "selection" && view.visualLines![0] > lineCount) return app.message("warn", "the last selection's lines aren't in the note any more");
-  // The cursor's line before the window changes mode (a rendered row knows its source line).
-  const line = app.currentLayout(view).lines[view.cur.row]?.src ?? 1;
+  // The cursor's line before the window changes mode; a rendered row's are the source lines its text
+  // came from (a paragraph's row joins several), so `:s` works on what the row shows.
+  const row = app.currentLayout(view).lines[view.cur.row];
+  const srcs = [row?.src ?? 1, ...(editable(view) ? [] : (row?.spans ?? []).flatMap((s) => (s.src === undefined ? [] : [s.src])))];
+  const line: [number, number] = [Math.min(...srcs), Math.max(...srcs)];
   if (!editable(view)) app.setViewMode(view, app.editMode());
   const text = view.buf.source;
   const starts = view.buf.lineStarts();
-  const [a, b] = sub.range === "all" ? [1, starts.length] : sub.range === "selection" ? [view.visualLines![0], Math.min(view.visualLines![1], lineCount)] : [line, line];
+  const [a, b] = sub.range === "all" ? [1, starts.length] : sub.range === "selection" ? [Math.min(E.lineOf(view, marks![0]), lineCount), Math.min(E.lineOf(view, marks![1]), lineCount)] : line;
   const range: [number, number] = [starts[a - 1]!, starts[b] ?? text.length];
   const re = compilePattern(sub.pattern, { regex: true, whole: false, ignoreCase: sub.ignoreCase });
   if (typeof re === "string") return app.message("warn", `not a regex: ${re}`);

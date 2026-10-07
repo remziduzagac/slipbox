@@ -600,7 +600,9 @@ the merge review after; the removals as their replacements land, the sweep last.
 
 *Revised by `21.x`: `21.12` removed `20.4`, `20.5`'s instances, `20.6`, `20.12`, `20.13` and `20.20`'s `vault:path`;
 `20.14` and `20.15` show roots (`21.9`); `20.2`'s `/` starts from the nearest root first (`21.2`); `20.3`'s markers
-widened by `21.1`. The rows record what was built.*
+widened by `21.1`; `20.2`'s `[[…]]` as text and `20.22`'s removal of resolving by name revised by `21.3` (wikilinks
+read within their root); `20.11`'s links resolved per root, not per instance (`21.8`, `21.12`). The rows record what
+was built.*
 
 | ID | Item |
 | --- | --- |

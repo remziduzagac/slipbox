@@ -444,6 +444,38 @@ describe("the servers of open files (19.1)", () => {
     await m.stopAll();
   });
 
+  test("a crash whose program has gone: left stopped and said so — never installed, native or npm with auto_install off", async () => {
+    // Native (its command the user's, an absolute path): no npm to install it from.
+    const program = launcher("fake-gone");
+    const native = managed(table({ fake: { name: "fake", command: program, args: ["--stdio"] } }));
+    const file = join(project("pgone"), "a.fk");
+    native.m.open(file, 1, "BAD\n");
+    expect(await until(() => native.problems.get(file)?.list.length === 1)).toBe(true);
+    rmSync(program);
+    native.m.change(file, 2, "CRASH\n");
+    expect(await until(() => native.messages.some((x) => x.includes("program is gone")))).toBe(true);
+    expect(native.messages.filter((x) => x.startsWith("fake crashed"))).toEqual([expect.stringMatching(/^fake crashed \(.*\) and its program is gone; not started again$/)]);
+    expect(await native.m.request(file, "textDocument/hover", { textDocument: { uri: pathToFileURL(file).href }, position: { line: 0, character: 0 } }, "hoverProvider", "hover")).toBeNull();
+    await native.m.stopAll(); // resolves: no restart that rejected
+    // npm, found in the project, then gone: with auto_install off, not installed.
+    const root = project("pgone-npm");
+    const bins = join(root, "node_modules", ".bin");
+    mkdirSync(bins, { recursive: true });
+    const local = join(bins, "slipbox-gone-ls");
+    writeFileSync(local, `#!/usr/bin/env node\nawait import(${JSON.stringify(FAKE)});\n`);
+    chmodSync(local, 0o755);
+    const npmDef = { name: "fake-npm", command: "slipbox-gone-ls", args: ["--stdio"], npm: { package: "slipbox-gone-ls", version: "1.0.0", bin: "slipbox-gone-ls" } };
+    const npm = managed(table({ "fake-npm": npmDef }));
+    const f2 = join(root, "a.fk");
+    npm.m.open(f2, 1, "BAD\n");
+    expect(await until(() => npm.problems.get(f2)?.list.length === 1)).toBe(true);
+    rmSync(local);
+    npm.m.change(f2, 2, "CRASH\n");
+    expect(await until(() => npm.messages.some((x) => x.includes("program is gone")))).toBe(true);
+    expect(npm.messages.some((x) => x.startsWith("installing"))).toBe(false);
+    await npm.m.stopAll();
+  });
+
   test("a server that can't start is said once, not counted as a crash and started again", async () => {
     const { m, messages } = managed(table({ fake: { name: "fake", command: "sh", args: ["-c", "echo 'fatal: bad flag' >&2; exit 2"] } }));
     m.open(join(project("pq"), "a.fk"), 1, "");

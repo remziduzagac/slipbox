@@ -298,7 +298,7 @@ export function pathLink(target: string, linkingAbs: string, wiki: boolean, reba
   // A wikilink without an extension names a note; a markdown link's path is the file as written,
   // else the note without its extension (21.2) — and, asked (`dirs`), a folder.
   const bare = !/\.[A-Za-z0-9]+$/.test(p);
-  const candidates = wiki && bare ? [`${p}.md`, `${p}.markdown`] : bare && !p.endsWith("/") ? [p, `${p}.md`, `${p}.markdown`] : [p];
+  const candidates = wiki ? wikiPathCandidates(p) : bare && !p.endsWith("/") ? [p, `${p}.md`, `${p}.markdown`] : [p];
   const hit = candidates.find((c) => {
     try {
       return statSync(c).isFile();
@@ -309,6 +309,17 @@ export function pathLink(target: string, linkingAbs: string, wiki: boolean, reba
   if (hit) return { form, abs: hit };
   if (dirs && !wiki && dirExistsAt(p)) return { form, abs: p.replace(/\/+$/, "") || "/", folder: true };
   return null;
+}
+
+/**
+ * The files a wikilink's path may name, in order (17.16): written with `.md`, that file; without an
+ * extension, the note (`.md`, `.markdown`); with another one, the file as written, else the note —
+ * a dotted name (`2024.01.05`, `v1.2`) is a note's as much as `plan` is.
+ */
+export function wikiPathCandidates(p: string): string[] {
+  if (NOTE_EXT.test(p)) return [p];
+  const notes = [`${p}.md`, `${p}.markdown`];
+  return /\.[A-Za-z0-9]+$/.test(p) ? [p, ...notes] : notes;
 }
 
 /**

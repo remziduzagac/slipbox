@@ -9,7 +9,7 @@ import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
 import { loadConfig } from "./config.ts";
 import { readJson } from "./fsutil.ts";
 import { type Backlink, type Graph, type LinkRef, type NoteEntry, openGraph, type Target, type VaultReach } from "./graph.ts";
-import { pathLink } from "./links.ts";
+import { pathLink, wikiPathCandidates } from "./links.ts";
 import { folderIdentity, lookupFolder } from "./folders.ts";
 import { cacheDir } from "./paths.ts";
 import { tildePath } from "./names.ts";
@@ -186,7 +186,7 @@ export class Reach implements VaultReach {
     const fromTop = (path: string, wiki: boolean): string | null | undefined => {
       const abs = join(v.path, path.replace(/^\/+/, ""));
       const bare = !/\.[A-Za-z0-9]+$/.test(abs);
-      const candidates = wiki && bare ? [`${abs}.md`, `${abs}.markdown`] : bare ? [abs, `${abs}.md`, `${abs}.markdown`] : [abs];
+      const candidates = wiki ? wikiPathCandidates(abs) : bare ? [abs, `${abs}.md`, `${abs}.markdown`] : [abs];
       const hit = candidates.find((c) => isFile(c));
       if (!hit) return undefined;
       const own = findVaultRoot(hit);

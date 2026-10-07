@@ -337,7 +337,8 @@ export function scanHeadings(source: string): Omit<LayoutHeading, "line">[] {
 /** An ATX heading line's level, text and slug, as the render and the graph have them (headingLabel;
  *  a repeated heading keeps its plain slug, no -1 suffix). A line with no markup is its own text;
  *  one with markup is parsed — that line alone, so a keystroke never re-parses the note — with a
- *  stand-in definition for each footnote mark, which the whole note would have. */
+ *  stand-in definition for each footnote mark and each reference label, which the whole note would
+ *  have. (A shortcut `[x]` defined nowhere then reads `x`, not `[x]`; its slug is the same.) */
 function headingOfLine(raw: string): LineHeading | null {
   if (!raw.includes("#")) return null;
   const line = raw.replace(/\r$/, "");
@@ -348,8 +349,12 @@ function headingOfLine(raw: string): LineHeading | null {
     const text = body.trim();
     return { level: h[1]!.length, text, slug: slugify(text) };
   }
-  const marks = [...new Set([...body.matchAll(/\[\^([^\]\s]+)\]/g)].map((m) => m[1]!))];
-  const node = parseMarkdown(marks.length ? `${line}\n\n${marks.map((m) => `[^${m}]: #`).join("\n\n")}\n` : line).tree.children[0];
+  // A footnote mark `[^m]`, and a reference link's or image's label: the `[label]` of a full
+  // `[text][label]`, or the text of a collapsed `[text][]` or a shortcut `[text]`.
+  const marks = [...new Set([...body.matchAll(/\[\^([^\]\s]+)\]/g)].map((m) => `[^${m[1]}]`))];
+  const labels = [...new Set([...body.matchAll(/\[([^[\]^][^[\]]*)\]/g)].map((m) => `[${m[1]}]`))];
+  const defs = [...marks, ...labels];
+  const node = parseMarkdown(defs.length ? `${line}\n\n${defs.map((d) => `${d}: #`).join("\n\n")}\n` : line).tree.children[0];
   if (node?.type !== "heading") return null;
   const id = (node.data as { id?: string } | undefined)?.id;
   return { level: node.depth, ...headingLabel(node), ...(id ? { id } : {}) };

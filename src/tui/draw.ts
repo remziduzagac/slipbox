@@ -17,7 +17,7 @@ import { countWords } from "../core/words.ts";
 import type { CommentLink } from "../core/syntax.ts";
 import { cells, ordered } from "./cursor.ts";
 import { match } from "./match.ts";
-import { prettyKey, spellKey } from "./keys.ts";
+import { keyChar, prettyKey, spellKey } from "./keys.ts";
 
 export interface Rect {
   x: number;
@@ -1253,10 +1253,11 @@ function sideView<T extends object>(rect: Rect, rows: T[], text: (row: T) => str
 }
 
 /** One side-pane row's text from the view's offset: clipped when the pane scrolls sideways,
- *  cut with an ellipsis otherwise (a pane too short for the bar). */
-function sideRow(text: string, sv: SideView): string {
-  if (!sv.hbar) return truncate(text, sv.cols);
-  return splitAtWidth(splitAtWidth(text, sv.left)[1], sv.cols)[0];
+ *  cut with an ellipsis otherwise (a pane too short for the bar); `reserve` columns kept at its end. */
+function sideRow(text: string, sv: SideView, reserve = 0): string {
+  const cols = Math.max(1, sv.cols - reserve);
+  if (!sv.hbar) return truncate(text, cols);
+  return splitAtWidth(splitAtWidth(text, sv.left)[1], cols)[0];
 }
 
 function sideHScrollbar(app: App, c: Canvas, sv: SideView, pane: "sidebar" | "outline", active: boolean, bg: Color | null, geo: Geometry): void {
@@ -1335,6 +1336,10 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     row.root ? (row.root.kind === "vault" ? g.vault : g.dirClosed) : row.group === "data" ? g.dataFile : row.group === "text" ? g.textFile : g.file;
   const prefix = (row: TreeRow) => `${" ".repeat(1 + row.depth * 2)}${row.kind === "dir" ? (q || app.expanded.has(row.path) ? g.dirOpen : g.dirClosed) : icon(row)} `;
   const text = (row: TreeRow) => prefix(row) + nameOf(row);
+  // Its git state at the row's end (5.11): a file's letter, a folder's dot. Its 2 columns count in
+  // the row's width, so a name scrolled to its end ends before the mark, never under it.
+  const gitOf = (row: TreeRow) => (row.kind === "note" ? app.gitStates?.get(row.path) : app.gitFolders.get(row.path));
+  const measured = (row: TreeRow) => (gitOf(row) ? `${text(row)}  ` : text(row));
   // The selected note, file, folder or nested vault: a button at the row's end opening its menu
   // (18.1) — rename, move, delete… — its right edge under the title's buttons'.
   const buttonsOf = (row: TreeRow) => {
@@ -1348,7 +1353,7 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   const selButtons = sel ? buttonsOf(sel) : null;
   const buttonsFit = !!selButtons && list.w - 1 - selButtons.w >= 4;
   // A name that doesn't fit beside them: the pane scrolls sideways, its end reachable before them.
-  const sv = sideView(list, rows, text, s, sel && buttonsFit ? stringWidth(text(sel)) + selButtons!.w + 1 : 0);
+  const sv = sideView(list, rows, measured, s, sel && buttonsFit ? stringWidth(text(sel)) + selButtons!.w + 1 : 0);
   const rect = sv.list;
   followSelection(s, rows.length, rect.h);
   if (!rows.length && q) drawText(c, rect.x + 1, rect.y, "no matches", roleStyle(theme, "dim", bg), rect.w - 1);
@@ -1366,11 +1371,11 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
     const withButtons = selected && row === sel && buttonsFit;
     const buttonsW = withButtons ? selButtons!.w : 0;
-    const shown = sideRow(text(row), sv);
-    const room = sv.cols - buttonsW;
-    // Its git state at the row's end (5.11): a file's letter, a folder's dot — not under its buttons.
-    const gst = withButtons ? undefined : row.kind === "note" ? app.gitStates?.get(row.path) : app.gitFolders.get(row.path);
+    // Its git state, not under its buttons; the text cut short of it (with a `…` when it can't scroll).
+    const gst = withButtons ? undefined : gitOf(row);
     const markW = gst ? 3 : 0; // a space, the mark, the last column
+    const shown = sideRow(text(row), sv, gst ? 2 : 0);
+    const room = sv.cols - buttonsW;
     const drawn = !withButtons ? shown : sv.hbar ? splitAtWidth(shown, room)[0] : truncate(shown, room);
     const w = drawText(c, rect.x, y, drawn, st, rect.w - markW);
     // Where the filter's matches may be marked: on the name as drawn, short of the `…` that cut it.
@@ -1391,8 +1396,9 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     // A vault named otherwise than its folder: the name, dimmed, after it (17.13) — up to its
     // buttons, when it has them. Another root's row is its name already.
     const vaultName = row.root?.other ? undefined : row.root?.name;
-    const nameEnd = withButtons ? room : rect.w;
-    if (vaultName && !sv.left && w + 1 < nameEnd) drawText(c, rect.x + w + 1, y, vaultName, { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, nameEnd - w - 1);
+    // Short of its git mark and the scrollbar's column.
+    const nameEnd = withButtons ? room : sv.cols - (gst ? 2 : 0);
+    if (vaultName && !sv.left && w + 1 < nameEnd) drawText(c, rect.x + w + 1, y, truncate(vaultName, nameEnd - w - 1), { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, nameEnd - w - 1);
     drawGuides(app, c, rect, y, row.depth, lines[s.scroll + i]!, st.bg, sv.left);
     // What the filter matched in a note's name (it matches the path: a word may be a folder's).
     const m = q && row.kind === "note" && row.path.endsWith(nameOf(row)) ? match(q, row.path) : null;
@@ -1664,8 +1670,9 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   const chip = app.pending.length
     ? ` ${app.pending.map((k) => keyText(app, k)).join(" ")} `
     : vim.op || vim.count || vim.awaitChar
-      ? // An operator (or a count, or r) waiting: what's been typed so far, as in vim's showcmd.
-        ` ${vim.op ? `${vim.op.count > 1 ? vim.op.count : ""}${vim.op.op}${vim.count}${vim.op.object ?? ""}${vim.op.keys.join("")}` : vim.awaitChar ? "r" : vim.count} `
+      ? // An operator (or a count, or r, f, t waiting for a character): what's been typed so far, as
+        // in vim's showcmd — `dT`, not `dshift+t`.
+        ` ${vim.op ? `${vim.op.count > 1 ? vim.op.count : ""}${vim.op.op}${vim.count}${vim.op.object ?? ""}${vim.op.keys.map((k) => keyChar(k) ?? k).join("")}` : vim.awaitChar ? (vim.awaitKey ?? "r") : vim.count} `
     : app.resizeMode
       ? " RESIZE "
     : view?.visual === "char"
@@ -1721,7 +1728,6 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   if (stringWidth(right) + 1 > room) right = pos;
 
   const rightW = stringWidth(right) + 1;
-  const changed = buf.changedAt && app.now() - buf.changedAt < CHANGE_MARKER_MS;
   x += drawText(c, x, y, " ", st);
   // The root, by name or path, and its branch (20.14, 21.9), while the path keeps a readable width (it goes before the path does).
   // Where the file is (21.9), in the room the path leaves it — at most 40 columns.

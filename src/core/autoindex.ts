@@ -10,9 +10,9 @@ import { type Config, loadConfig } from "./config.ts";
 import { readJson, writeJson, ensureDir } from "./fsutil.ts";
 import { Graph } from "./graph.ts";
 import { recordFolder } from "./folders.ts";
-import { stateHome } from "./paths.ts";
+import { stateHome, vaultKey } from "./paths.ts";
 import { noteIndexed, readRoots, recordRoot } from "./registry.ts";
-import { configFilesFor, isNeverRoot, isVaultRoot, rootAt } from "./vault.ts";
+import { configFilesFor, isNeverRoot, isVaultRoot, knownWorktree, rootAt } from "./vault.ts";
 
 /** Folders the walk of the home folder never goes into: tools' and caches', and every hidden one. */
 const SKIPPED = new Set(["node_modules", "venv", "__pycache__"]);
@@ -123,7 +123,8 @@ export class AutoIndex {
     try {
       const loc = rootAt(root);
       // Listed after those opened, until it's opened itself; its name in the lookup (21.6), as found.
-      if (!readRoots().some((v) => v.kind === "vault" && v.path === root)) recordRoot({ kind: "vault", path: root, found: true, ...(loc.worktree ? { worktree: { name: loc.worktree.name, main: loc.worktree.mainVault } } : {}) });
+      // By its key (its real path's): reached by another path, it's the root already listed.
+      if (!readRoots().some((v) => v.kind === "vault" && v.key === loc.key)) recordRoot({ kind: "vault", path: root, found: true, ...(loc.worktree ? { worktree: knownWorktree(loc.worktree) } : {}) });
       recordFolder(root, { found: true });
       return new Graph(loc, loadConfig({ ...configFilesFor(loc) }).config).build(true, "lazy");
     } catch {
@@ -132,7 +133,7 @@ export class AutoIndex {
   }
 
   private markIndexed(root: string): void {
-    const v = readRoots().find((x) => x.kind === "vault" && x.path === root);
+    const v = readRoots().find((x) => x.kind === "vault" && x.key === vaultKey(root));
     if (v) noteIndexed(v.key, new Date(this.now()));
   }
 

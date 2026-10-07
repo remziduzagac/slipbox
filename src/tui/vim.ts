@@ -21,8 +21,10 @@ export interface VimState {
   count: string;
   /** An operator waiting for its motion: which, its count, the motion keys so far. */
   op: { op: Op; count: number; given: boolean; keys: string[]; object: "i" | "a" | null; char: FindKind | null } | null;
-  /** A command waiting for one character (`r`). */
+  /** A command waiting for one character (`r`, `f`). */
   awaitChar: ((ch: string) => void) | null;
+  /** Which, as the status chip shows it while it waits (`r`, `2f`, `T`). */
+  awaitKey?: string;
   /** The last f / F / t / T and its character, for ; and ,. */
   lastFind: { kind: FindKind; ch: string } | null;
   /** An operator waiting for a search to finish (d/foo): where it started. */

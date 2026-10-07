@@ -172,34 +172,38 @@ function walkDir(root: string, realRoot: string, dirRel: string, filter: WalkFil
   }
 }
 
-function handleSymlink(abs: string, rel: string, realRoot: string, filter: WalkFilter, out: WalkResult): void {
+/**
+ * What the walk makes of the symlink at `abs` (0.11) — the watcher too, so both take the same: a
+ * directory is never followed; a file is kept only inside the root (`realRoot`, its real path), any
+ * file, a note or not; anything else is skipped, with why (`special`: a FIFO, socket or device).
+ */
+export function symlinkVerdict(abs: string, realRoot: string): { kept: true; target: string } | { kept: false; reason: string | null; special?: boolean } {
   let target: string;
   try {
     target = realpathSync(abs);
   } catch {
-    out.skipped.push({ rel, reason: "broken symlink" });
-    return;
+    return { kept: false, reason: "broken symlink" };
   }
   let st;
   try {
     st = statSync(target);
   } catch {
+    return { kept: false, reason: null };
+  }
+  if (st.isDirectory()) return { kept: false, reason: "symlinked directory (not followed)" };
+  // A FIFO, socket or device: reading one would hang.
+  if (!st.isFile()) return { kept: false, reason: "symlink to something that isn't a file", special: true };
+  if (!isInside(realRoot, target)) return { kept: false, reason: "symlink points outside the root" };
+  return { kept: true, target };
+}
+
+function handleSymlink(abs: string, rel: string, realRoot: string, filter: WalkFilter, out: WalkResult): void {
+  const v = symlinkVerdict(abs, realRoot);
+  if (!v.kept) {
+    if (v.reason && (!v.special || filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1)))) out.skipped.push({ rel, reason: v.reason });
     return;
   }
-  if (st.isDirectory()) {
-    out.skipped.push({ rel, reason: "symlinked directory (not followed)" });
-    return;
-  }
-  if (!st.isFile()) {
-    // A FIFO, socket or device: reading one would hang.
-    if (filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) out.skipped.push({ rel, reason: "symlink to something that isn't a file" });
-    return;
-  }
-  // Any file, a note or not (0.11): inside the root, listed as the walk lists it; outside, said.
-  if (!isInside(realRoot, target)) {
-    out.skipped.push({ rel, reason: "symlink points outside the root" });
-    return;
-  }
+  const target = v.target;
   if (filter.exclusion(rel, false) !== null) return;
   if (!filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) {
     out.assets.push(rel);

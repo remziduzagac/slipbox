@@ -271,6 +271,18 @@ export class NoteBuffer {
   changeAt = 0;
   /** Where the last insert session ended (`gi`). */
   lastInsert: number | null = null;
+  /** The last selection's first and last lines (`'<` `'>`), as the offsets of their starts kept in
+   *  step with later edits — vim's marks, which move with the text: `:'<,'>s` works on them. */
+  visualMarks: [number, number] | null = null;
+
+  /** Keep `'<` `'>` on their lines through an edit (an undo or redo too): lines inserted at a marked
+   *  line's start go above it, and a mark in deleted text collapses to the line after, as vim's do. */
+  private moveMarks(at: number, length: number, text: string): void {
+    if (!this.visualMarks) return;
+    const d = text.length - length;
+    const move = (o: number) => (o > at ? Math.max(at, o + d) : o === at && !length && text.includes("\n") ? o + text.lastIndexOf("\n") + 1 : o);
+    this.visualMarks = [move(this.visualMarks[0]), move(this.visualMarks[1])];
+  }
 
   /** Replace `length` characters at `at` with `text`; part of the open undo step, else a step of
    *  its own (the cursor offsets given). */
@@ -281,6 +293,7 @@ export class NoteBuffer {
     const shift = (o: number) => (o > at ? Math.max(at, o + d) : o);
     this.changes = this.changes.map(shift);
     if (this.lastInsert !== null) this.lastInsert = shift(this.lastInsert);
+    this.moveMarks(at, length, text);
     this.source = this.source.slice(0, at) + text + this.source.slice(at + length);
     const last = this.changes[this.changes.length - 1];
     if (last !== undefined && !this.source.slice(Math.min(last, at), Math.max(last, at)).includes("\n")) this.changes[this.changes.length - 1] = at;
@@ -336,6 +349,7 @@ export class NoteBuffer {
   }
 
   private replace(at: number, length: number, text: string): void {
+    this.moveMarks(at, length, text);
     this.source = this.source.slice(0, at) + text + this.source.slice(at + length);
     this.version++;
     this.layouts.clear();
@@ -385,7 +399,7 @@ export class NoteBuffer {
       // Tree-sitter's outline where it has one; else the language server's symbols (19.14).
       const outline = this.syntax?.outline.length ? this.syntax.outline : (this.serverOutline ?? []);
       const code = outline.map((o) => ({ level: Math.min(6, o.depth + 1), text: o.name, slug: slugify(o.name), src: o.line }));
-      const fromParse = () => headingsOf(this.parsed.tree).map(({ depth, text, slug, line }) => ({ level: depth, text, slug, src: line }));
+      const fromParse = () => headingsOf(this.parsed.tree).map(({ depth, text, slug, line, id }) => ({ level: depth, text, slug, src: line, ...(id ? { id } : {}) }));
       const headings = !note ? code : parsed ? fromParse() : note.language === null ? "scan" : note.scanHeadings(this.source);
       const spans = this.syntax?.spans;
       const langs = this.syntax?.languages;

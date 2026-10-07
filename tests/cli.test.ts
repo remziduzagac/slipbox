@@ -1123,6 +1123,62 @@ describe("review cycle 6 (cli)", () => {
     // Never reached before: --from's note is the one that says which root this is, not the target.
     expect(slipbox(["link", ".hidden/h.md", "--from", "c.md"], { cwd: root, env })).toMatchObject({ code: 0, out: "[H](.hidden/h.md)\n" });
   });
+  test("review cycle 3: link --from takes a target the walk never takes (node_modules, walk.exclude) by its path", () => {
+    const { dir, env } = own("link-excluded-");
+    const root = join(dir, "root");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    writeFileSync(join(root, ".slipbox", "config.toml"), '[walk]\nexclude = ["skip/"]\n');
+    mkdirSync(join(root, "node_modules", "pkg"), { recursive: true });
+    mkdirSync(join(root, "skip"));
+    writeFileSync(join(root, "ok.md"), "# OK\n");
+    writeFileSync(join(root, "node_modules", "pkg", "README.md"), "# P\n");
+    writeFileSync(join(root, "skip", "s.md"), "# S\n");
+    for (const target of ["node_modules/pkg/README.md", "skip/s.md"]) {
+      const plain = slipbox(["link", target], { cwd: root, env });
+      expect(plain.code).toBe(0);
+      expect(slipbox(["link", target, "--from", "ok.md"], { cwd: root, env })).toMatchObject({ code: 0, out: plain.out });
+    }
+  });
+  test("review cycle 3: diagnostics runs slipbox's checks on a root note whose name starts with ..", () => {
+    const { dir, env } = own("diag-dots-");
+    const cfg = join(dir, "quiet.toml");
+    writeFileSync(cfg, '[lsp]\nenabled = false\n\n[lint]\nenabled = "off"\n');
+    const root = join(dir, "root");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    writeFileSync(join(root, "..draft.md"), "[x](missing.md)\n");
+    const r = slipbox(["diagnostics", "..draft.md", "--severity", "hint", "--config", cfg, "--json"], { cwd: root, env });
+    expect(r.code).toBe(0);
+    expect(r.json.data.sources).toContainEqual({ name: "slipbox", kind: "slipbox", status: "ran" });
+    expect(r.json.data.problems.some((p: { source: string; message: string }) => p.source === "slipbox" && p.message.includes("missing.md"))).toBe(true);
+  });
+  test("review cycle 3: --not, vault-moved's, is no option any more", () => {
+    const r = slipbox(["ls", "--not"], { cwd: DEMO });
+    expect(r.code).toBe(2);
+    expect(r.err).toContain("unknown option: --not");
+  });
+  test("review cycle 3: mv and cp take the new path from the root, the current folder (./, ../), or absolute", () => {
+    const { dir, env } = own("dest-");
+    const root = join(dir, "root");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    mkdirSync(join(root, "sub"));
+    writeFileSync(join(root, "ok.md"), "# OK\n");
+    writeFileSync(join(root, "sub", "x.md"), "# X\n");
+    writeFileSync(join(root, "sub", "z.md"), "# Z\n");
+    // Absolute, inside the root: where it says, not a tree of its folders under the root.
+    expect(slipbox(["cp", "ok.md", join(root, "copy.md"), "--json"], { cwd: root, env }).json.data.to).toBe("copy.md");
+    expect(existsSync(join(root, "copy.md"))).toBe(true);
+    // Absolute, outside: refused, nothing written.
+    expect(slipbox(["mv", "ok.md", "/etc/x.md"], { cwd: root, env }).code).toBe(5);
+    expect(slipbox(["cp", "ok.md", "/etc/x.md"], { cwd: root, env }).code).toBe(5);
+    expect(existsSync(join(root, "etc"))).toBe(false);
+    expect(existsSync(join(root, "ok.md"))).toBe(true);
+    // From the current folder when it says so.
+    const sub = join(root, "sub");
+    expect(slipbox(["mv", "x.md", "./y.md"], { cwd: sub, env }).code).toBe(0);
+    expect(existsSync(join(sub, "y.md"))).toBe(true);
+    expect(slipbox(["mv", "z.md", "../z.md"], { cwd: sub, env }).code).toBe(0);
+    expect(existsSync(join(root, "z.md"))).toBe(true);
+  });
   test("help lists every flag each command takes, on the command's own lines", () => {
     const text = new Map<string, string>();
     let at: string | null = null;
@@ -1147,5 +1203,22 @@ describe("review cycle 6 (cli)", () => {
     writeFileSync(alt, '[walk]\nexclude = ["skip/"]\n');
     expect(slipbox(["ls", "--config", alt, "--json"], { cwd: root, env }).json.data).toHaveLength(1);
     expect(slipbox(["index", "--refresh", "--config", alt, "--json"], { cwd: root, env }).json.data.notes).toBe(1);
+  });
+});
+
+describe("review cycle 3 (core, cli)", () => {
+  test("name on a folder never named, its [vault] table one the edit can't follow: refused, the file as it was", () => {
+    const dir = mkdtempSync(join(sandbox, "name-dotted-"));
+    const xdg = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data") };
+    const root = join(dir, "root");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    writeFileSync(join(root, "a.md"), "# A\n");
+    for (const text of ['vault.aliases = ["n"]\n\n[render]\ninset = 2\n', '[ vault ]\naliases = ["n"]\n']) {
+      writeFileSync(join(root, ".slipbox", "config.toml"), text);
+      const r = slipbox(["name", "dotted"], { cwd: root, env: xdg });
+      expect(r.code).not.toBe(0);
+      expect(r.err).toContain("edit it by hand");
+      expect(readFileSync(join(root, ".slipbox", "config.toml"), "utf8")).toBe(text);
+    }
   });
 });

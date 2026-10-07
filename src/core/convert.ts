@@ -3,9 +3,10 @@
 // within their root; the converter differs in resolving them as before (`Graph.resolveLegacyWiki`: by
 // name, alias, previous name, other vaults and moves), on its own parse of the note (`parseLegacy`). Each
 // `[[…]]` becomes a relative markdown link (`![[…]]` an image-syntax one, which embeds a note as
-// before), its text kept and its heading a fragment that's checked to exist; each `/…` markdown link,
-// which meant the vault's root and would mean the filesystem's, becomes relative. A plan like a
-// rename's: previewed, then written with every file as it was planned from, and undone the same way.
+// before), its text kept and its heading a fragment that's checked to exist; each `/…` markdown link
+// becomes relative, so it reads the same in tools that don't take `/` as the root (here it's the
+// nearest root's, then the filesystem's path, 21.2). A plan like a rename's: previewed, then written
+// with every file as it was planned from, and undone the same way.
 // A link it can't decide is left as written and said why; one several notes answer to, for a pick.
 
 import { existsSync } from "node:fs";
@@ -16,6 +17,7 @@ import { parseLegacy, slugify, visit } from "./parse.ts";
 import { readText } from "./fsutil.ts";
 import { type Ambiguous, Collector, dirtyTrees, type RenamePlan } from "./rename.ts";
 import { parseWikiTarget, type WikiLink } from "./wikilink.ts";
+import { isInside } from "./vault.ts";
 
 /** A wikilink as written: `!`, then `[[target#heading|alias]]`. */
 const WIKI = /(!?)\[\[([^\]\n]*?)\]\]/g;
@@ -236,8 +238,10 @@ const DEFINITION = /^( {0,3}\[[^\]]+\]:[ \t]*)(<[^>\n]*>|\S+)/;
 /**
  * A markdown link written from the vault's root (`/docs/x.md`): its URL from the note's folder
  * instead — an inline link's where it is, a reference link's in its definition (once, however many
- * use it). Only when that's what it reached: the file there under the vault's root. One that names
- * the filesystem's own path already means what it will mean; one that reaches nothing is said.
+ * use it) — so tools that read `/` as the filesystem's root reach it too (here `/` is the nearest
+ * root's, then the filesystem's path: 21.2). Only when that's what it reached: the file there under
+ * the vault's root. One that names the filesystem's own path means the same anywhere; one that
+ * reaches nothing is said.
  */
 function rootJob(g: Graph, rel: string, l: ResolvedLink, lines: string[], definitions: Set<number>, add: (j: Job) => void, skip: (l: ResolvedLink, reason: string) => void): void {
   const hash = l.target.indexOf("#");
@@ -249,13 +253,15 @@ function rootJob(g: Graph, rel: string, l: ResolvedLink, lines: string[], defini
   } catch {}
   // What it meant before: the vault's root first — the file there, by the vault's own spelling.
   const was = g.resolveLink({ kind: "markdown", target: l.target.slice(1) }, "");
-  if ((was.resolvedKind !== "note" && was.resolvedKind !== "file") || !was.path || isAbsolute(was.path)) {
+  // A root nested in this one has its files by their absolute paths (17.17): under the root too.
+  const reached = (was.resolvedKind === "note" || was.resolvedKind === "file") && was.path ? (isAbsolute(was.path) ? was.path : join(g.root, was.path)) : null;
+  if (!reached || !isInside(g.root, reached)) {
     // Else the filesystem's own path, which means the same after; else nothing at all.
     if (existsSync(decoded)) return;
     return skip(l, `${l.target}: nothing there — left as it is`);
   }
   const abs = join(g.root, rel);
-  const relPath = relative(dirname(abs), join(g.root, was.path)).split(sep).join("/");
+  const relPath = relative(dirname(abs), reached).split(sep).join("/");
   const next = (/%[0-9A-Fa-f]{2}/.test(path) || /[\s()<>#?[\]\\]/.test(relPath) ? urlPath(relPath) : relPath) + frag;
   // An inline link: its `](URL` within the link's own span — the last there, so a link around an
   // image (`[![i](/x.md)](/x.md)`) is the outer one — else, the file changed since, the nearest.

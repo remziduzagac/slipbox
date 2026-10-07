@@ -57,6 +57,20 @@ export function checkoutOf(dir: string): Checkout | null {
   }
 }
 
+/**
+ * A linked worktree's admin folder (`.git/worktrees/<name>`, `gitDir`) told apart from a later one
+ * git gives the same name (17.19): `git worktree add` writes its `commondir`, which `git worktree
+ * move` leaves alone — its inode and time. Null when it can't be read.
+ */
+export function worktreeFingerprint(gitDir: string): string | null {
+  try {
+    const st = statSync(join(gitDir, "commondir"));
+    return `${st.ino}:${st.mtimeMs}`;
+  } catch {
+    return null;
+  }
+}
+
 /** Where a folder of one checkout is in the main checkout: `repo/docs` in a worktree is `main/docs`. */
 export function inMain(c: Checkout, path: string): string | null {
   return c.main ? join(c.main, relative(c.root, path)) : null;

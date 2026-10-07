@@ -175,6 +175,12 @@ describe("blocks and inlines (2.2)", () => {
     expect(srcs).toContain(4);
     expect(srcs[srcs.length - 1]).toBe(6);
   });
+  test("an unterminated escape in a code block keeps the block's lines and their source lines", () => {
+    const layout = renderMarkdown("para\n\n```\nline one \x1b]0;title\nline two\nline three\n```\n\nafter\n", { width: 40, glyphs: unicode, showUrls: false });
+    const rows = layout.lines.map((l) => [l.src, l.spans.map((s) => s.text).join("").trim()] as const);
+    expect(rows.filter(([, t]) => t.startsWith("line"))).toEqual([[4, "line one"], [5, "line two"], [6, "line three"]]);
+    expect(rows.at(-1)).toEqual([9, "after"]);
+  });
   test("frontmatter renders as properties, with the parse error when broken", () => {
     expect(r("---\ntitle: T\ntags: [a, b]\n---\n\nbody\n")).toMatchSnapshot();
     expect(r("---\ntitle: [unclosed\n---\n\nbody\n")).toContain("title: [unclosed");

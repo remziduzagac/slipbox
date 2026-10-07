@@ -416,8 +416,10 @@ JavaScript regex; any punctuation can delimit (`:s#a/b#c#`) and `\` escapes it. 
 `\1`–`\9` are groups, `&` the match, `\&` a literal `&`. `^` and `$` are a line's start and end, and
 a match of nothing inserts there: `:%s/^/> /` quotes every line, `:%s/$/!/` ends each with `!`. A
 substitute is one undo step, confirmed or not, and works on the markdown: a rendered window switches
-to editing first. `'<,'>` is the last selection's lines, also after it ended; when they're gone (deleted
-since), it is refused, as vim's is, and lines past the end are left out.
+to editing first, and from the render the cursor's line is the source lines its row shows (a
+paragraph's row joins several). `'<,'>` is the last selection's lines, also after it ended: as vim's
+marks they move with the text (lines added or deleted above, an undo), and lines deleted under them
+leave the line after.
 
 ## Editing
 
@@ -506,9 +508,10 @@ wrapped across rows, `0`, `$`, `j` and `k` (and `d$`, `dj`) work on the row, whi
 `I`, `dd` and `cc` work on the whole source line. A word motion never stops inside a word where it
 wraps. Each CJK character is a word for `w`, `b` and `e`, while `iw`, `*` and `#` take the whole run
 of them. `/` typed with the cursor on a match stays on it (vim moves to the next). `r` and `f` take
-a character typed, not `enter` or `tab`. A count before `gg` or `G` is a line number (`3gg`, `5G`).
-The cursor stops on trailing spaces and on a tab (one stop, as wide as it's drawn), as in vim. Also
-not vim: `$` in visual mode stops on the last character, so `v$d` keeps the line break; `<` on a
+a character typed, not `enter` or `tab`. A count before `gg` or `G` is a line number (`3gg`, `5G`),
+the cursor on its first non-blank as without one. The cursor stops on trailing spaces and on a tab
+(one stop, as wide as it's drawn), as in vim. Also not vim: `$` in visual mode stops on the last
+character, so `v$d` keeps the line break; `<` on a
 tab-indented line takes the tab (never turns it into spaces); a count before `i`, `a`, `o` is
 ignored (`3ix` types one x); `n` and `shift+n` go forward and back through the note whichever of
 `/`, `*` or `#` started the search; `.` doesn't repeat a characterwise visual change that spans
@@ -570,7 +573,7 @@ edit the config and the config wins again.
 | `space v i` | folder info: root, name and copies, notes, skipped paths, cache and state, watcher |
 | `space v c` | reload the configuration (it also reloads by itself when a config file is saved) |
 | `space m` | messages |
-| `?`, `space ?` | help: every key, grouped, searchable (commands, panes, resize mode, mouse); `enter` runs a command |
+| `?`, `space ?` | help: every key, grouped, searchable (commands, panel views, resize, mouse); `enter` runs a command |
 | `space q q` | quit (also `ctrl+q`, `:qa`) |
 
 ## In lists and prompts

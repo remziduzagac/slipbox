@@ -1,7 +1,8 @@
 // Linters without a language server (plan 19.19): the lint surface (3.21) widened to code. Each is
 // described in efm-langserver's keys — `lint-command`, `lint-formats` in vim's errorformat,
 // `lint-stdin` — so a linter set up for efm pastes in, and runs as efm runs it: through the shell,
-// from the project's top folder, the project's own copy first; findings read from what it prints.
+// from the nearest folder holding one of its root-markers (else, unless it requires one, the file's
+// project), the project's own copy first; findings read from what it prints.
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";

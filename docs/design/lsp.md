@@ -83,10 +83,11 @@ installed: found, or named in the config — the system is the user's.
 
 **The servers of open files** (`19.1`, `core/servers/manager.ts`): one client per server and project, started when a
 file of its language in that project is first shown — installed first when it must be — and told about each such
-file as it opens, again 150 ms after typing pauses (never per key), and when it's saved; a file gone with a vault
+file as it opens, again 150 ms after typing pauses (never per key), and when it's saved; a file gone with a root
 switch or a rename is closed in it. Its diagnostics become the file's problems, in the bar, the marks and the status
 line ("Problems where they are" in [tui.md](tui.md)). A server that crashes is started again and told its files
-again; one that crashes more than three times in five minutes is left stopped, and said so. One that can't start, or
+again; one that crashes more than three times in five minutes is left stopped, and said so, as is one whose program
+is gone (never installed then, but for an npm one with installing on). One that can't start, or
 doesn't answer `initialize`, never ran: it is said once and not started again. A server that's missing
 is said once: a native one to install yourself, an npm one when installing is off. Quitting kills them; `[lsp]
 enabled = false` runs none.

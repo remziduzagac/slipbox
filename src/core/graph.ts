@@ -15,7 +15,7 @@ import { countForms, type FormCounts } from "./convention.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { parseHosted, readmeAt } from "./hosting.ts";
 import { lookupFolder, pointerName } from "./folders.ts";
-import { extensionless, type Landed, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl } from "./links.ts";
+import { extensionless, type Landed, LinkIndex, type MdLinkTarget, normKey, pathLink, pickCandidate, type Resolution, resolveAttachment, resolveMarkdownUrl, wikiPathCandidates } from "./links.ts";
 import { type AnchorInfo, anchorsOf, type HeadingInfo, headingsOf, noteTitle, type ParseCache as ChunkCache, visit } from "./parse.ts";
 import { parseNoteFile } from "./readers.ts";
 import { tildePath } from "./names.ts";
@@ -187,13 +187,22 @@ export interface LinkProblem {
   candidates: string[];
   /** A broken link's file, seen to move: where it is now (vault path), the relink's fix. */
   moved?: string | null;
-  /** A fragile link's: the target that names its note for sure, its path from the root. */
+  /** A fragile link's: the target that names its note for sure — its path from the root, or a relative one for a top-level note. */
   fix?: string;
 }
 
-/** The target that names a link's note for sure: its path from the root, without `.md` when the link had none. */
-export function disambiguated(l: Pick<ResolvedLink, "target" | "path">): string {
-  return NOTE_EXT_RE.test(l.target) || !NOTE_EXT_RE.test(l.path!) ? l.path! : l.path!.replace(NOTE_EXT_RE, "");
+/**
+ * The target that names a link's note (or file) for sure, written in the note at `fromRel`: its path
+ * from the root — but a top-level note's path is its bare name, read as a name again (21.3), so
+ * that one is a relative path (`../plan`, `./plan`). Without `.md` when the link had none.
+ */
+export function disambiguated(l: Pick<ResolvedLink, "target" | "path">, fromRel: string): string {
+  let p = l.path!;
+  if (!p.includes("/")) {
+    p = posix.relative(posix.dirname(fromRel), p);
+    if (!p.startsWith("../")) p = `./${p}`;
+  }
+  return NOTE_EXT_RE.test(l.target) || !NOTE_EXT_RE.test(p) ? p : p.replace(NOTE_EXT_RE, "");
 }
 
 export interface Backlink {
@@ -381,6 +390,17 @@ export class Graph {
    * points at one, or it was opened or named. Indexed as the walked ones are, and kept with the index.
    */
   readonly reached = new Set<string>();
+
+  /**
+   * Whether a path of the vault can be one of its files or folders: not excluded by `walk.exclude`
+   * nor inside a root of its own (a hidden or git-ignored one can, when reached: 20.8). `isDir`: a
+   * folder, which is also refused when it is a root of its own.
+   */
+  admits(rel: string, isDir = false): boolean {
+    if (!this.filter.reachable(rel)) return false;
+    const why = isDir ? this.filter.exclusion(rel, true) : null;
+    return why === null || why === "hidden" || why === ".gitignore";
+  }
 
   /** `rel` as a file to index when reached: there, a file inside the vault, and only left out softly. */
   private reachable(rel: string): NoteFile | null {
@@ -1142,7 +1162,7 @@ export class Graph {
     const p = posix.normalize(rel);
     if (!this.nestedRoots().some((r) => p.startsWith(`${r}/`))) return null;
     const abs = join(this.root, p);
-    const candidates = wiki && !/\.[A-Za-z0-9]+$/.test(p) ? [`${abs}.md`, `${abs}.markdown`] : [abs];
+    const candidates = wiki ? wikiPathCandidates(abs) : [abs];
     const hit = candidates.find((c) => {
       try {
         return statSync(c).isFile();
@@ -1214,10 +1234,24 @@ export class Graph {
    * isn't a vault path, or no move of it is known.
    */
   movedTarget(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
-    const rel = this.brokenPath(link, fromRel);
+    const wiki = link.kind === "wiki" || link.kind === "embed";
+    const rel = wiki ? this.brokenWikiPath(link, fromRel) : this.brokenPath(link, fromRel);
     if (rel === null) return null;
-    // Written without its extension (21.2): the note's move counts.
-    return this.movedTo(rel) ?? (extensionless(rel) ? this.movedTo(`${rel}.md`) : null);
+    // Written without its extension (21.2): the note's move counts — a wikilink's whatever its name's dots.
+    return this.movedTo(rel) ?? (extensionless(rel) || (wiki && !/\.(md|markdown)$/i.test(rel)) ? this.movedTo(`${rel}.md`) : null);
+  }
+
+  /**
+   * A broken wikilink's path in this root, as `brokenPath` for a markdown link's: one written as a
+   * path (`[[docs/plan]]` from the root, `[[../plan]]` from the note) — a name alone stays a name,
+   * which no move resolves (20.2). Null in a plain folder, which reads no wikilink.
+   */
+  private brokenWikiPath(link: Pick<LinkRef, "kind" | "target">, fromRel: string): string | null {
+    const t = link.target.trim();
+    if (this.loc.mode === "folder" || !t.includes("/") || /^[a-z][a-z0-9+.-]*:/i.test(t) || t.startsWith("~/")) return null;
+    if (this.resolveLink(link, fromRel).resolvedKind !== "unresolved") return null;
+    const rel = /^\.\.?\//.test(t) ? posix.normalize(posix.join(posix.dirname(fromRel), t)) : posix.normalize(t.replace(/^\/+/, ""));
+    return rel === ".." || rel.startsWith("../") ? null : rel;
   }
 
   /**
@@ -1317,7 +1351,7 @@ export class Graph {
       for (const l of this.linksOf(rel)) {
         // Won by where it's written (the nearest, the shortest): a note of the name nearer would take it.
         if ((l.resolvedKind === "note" || l.resolvedKind === "file") && fragile(l) && l.path && !isAbsolute(l.path)) {
-          fragileLinks.push({ from: rel, line: l.line, column: l.column, end: l.end, kind: l.kind, target: l.target, text: l.text, reason: describeLanding(l), candidates: l.candidates, fix: disambiguated(l) });
+          fragileLinks.push({ from: rel, line: l.line, column: l.column, end: l.end, kind: l.kind, target: l.target, text: l.text, reason: describeLanding(l), candidates: l.candidates, fix: disambiguated(l, rel) });
           continue;
         }
         if (l.resolvedKind !== "unresolved" && l.resolvedKind !== "ambiguous") continue;
@@ -1570,11 +1604,11 @@ export function extractText(file: NoteFile, text: string, flags: string[] = [], 
   return e;
 }
 
-/** The wikilinks in a front matter's text (its lines from the note's second), each at its line and column. */
+/** The wikilinks in a front matter's text (its lines from the note's second), each at its line and column; a YAML comment's aren't. */
 export function frontmatterLinks(raw: string): LinkRef[] {
   const out: LinkRef[] = [];
-  raw.split("\n").forEach((text, i) => {
-    if (/^\s*#/.test(text)) return;
+  raw.split("\n").forEach((line, i) => {
+    const text = line.slice(0, yamlCommentAt(line));
     for (const m of text.matchAll(/(!?)\[\[([^[\]\n]+)\]\]/g)) {
       const w = parseWikiTarget(m[2]!);
       if (!w.target && !w.heading && !w.block) continue;
@@ -1583,6 +1617,26 @@ export function frontmatterLinks(raw: string): LinkRef[] {
     }
   });
   return out;
+}
+
+/**
+ * Where a YAML line's comment starts (its length when it has none): the first `#` outside a quoted
+ * scalar, at the line's start or after whitespace — so `[[Plan#Goals]]`'s `#` is no comment.
+ */
+function yamlCommentAt(line: string): number {
+  let quote: string | null = null;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i]!;
+    if (quote === '"') {
+      if (c === "\\") i++;
+      else if (c === '"') quote = null;
+    } else if (quote === "'") {
+      if (c === "'" && line[i + 1] === "'") i++;
+      else if (c === "'") quote = null;
+    } else if ((c === '"' || c === "'") && (i === 0 || /[\s[{,]/.test(line[i - 1]!))) quote = c; // a quoted scalar's start, not `Bob's`
+    else if (c === "#" && (i === 0 || /\s/.test(line[i - 1]!))) return i;
+  }
+  return line.length;
 }
 
 /** A note's title from its file's name: what stands in when it has none of its own. */

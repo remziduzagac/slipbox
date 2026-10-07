@@ -622,7 +622,7 @@ const PATH_RE = /(?<![\w./@~-])(?:\.{1,2}\/|\/)?[\w@~-][\w.@~-]*(?:\/[\w.@~-]+)*
 
 /**
  * Link-like tokens in a text (16.10): URLs, and paths with an extension, `path:42` included. Which
- * paths are links is the caller's to say — the ones that name a file of the vault.
+ * paths are links is the caller's to say — the ones that name a file of the root.
  */
 export function linkTokens(text: string): { index: number; length: number; target: string; url: boolean; at: number | null }[] {
   const out: { index: number; length: number; target: string; url: boolean; at: number | null }[] = [];

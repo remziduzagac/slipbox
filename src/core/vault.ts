@@ -13,13 +13,14 @@ import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadConfig, VAULT_CONFIG_TEMPLATE } from "./config.ts";
-import { checkoutOf, inMain } from "./git.ts";
+import { checkoutOf, inMain, worktreeFingerprint } from "./git.ts";
 import { folderIdentity, folderNamed, identityAt, movedFrom, recordFolder, suggestFolderName } from "./folders.ts";
 import { carryPaths, climbsOut, readRegular } from "./fsutil.ts";
 import { stateDir, vaultKey } from "./paths.ts";
 import { carryPositions, sessionFile } from "./position.ts";
 import {
   addIdentity,
+  IdentityEditError,
   adoptStorage,
   forgetRoot,
   MARKER,
@@ -31,6 +32,7 @@ import {
   VAULT_NAME,
   vaultConfigFile,
   writeRoots,
+  type KnownRoot,
   type RootKind,
 } from "./registry.ts";
 
@@ -45,6 +47,8 @@ export interface Worktree {
   main: string | null;
   /** This vault's folder in the main checkout. */
   mainVault: string | null;
+  /** Its admin folder's fingerprint (`worktreeFingerprint`): a later worktree of its name isn't it. */
+  admin: string | null;
 }
 
 /** Format version of the marker directory. Bump with a migration, never silently. */
@@ -188,7 +192,7 @@ export function locateVault(opts: LocateOptions): VaultLocation {
 /** The location of a root (21.1): read, never written — its name, id and settings as they are. */
 export function rootAt(root: string, file: string | null = null): VaultLocation {
   const c = checkoutOf(root);
-  const worktree: Worktree | null = c?.worktree ? { name: c.worktree, checkout: c.root, main: c.main, mainVault: inMain(c, root) } : null;
+  const worktree: Worktree | null = c?.worktree ? { name: c.worktree, checkout: c.root, main: c.main, mainVault: inMain(c, root), admin: worktreeFingerprint(c.gitDir) } : null;
   // A worktree without an identity of its own reads its main checkout's (17.19), never writing.
   const ident = identityAt(root);
   return { root, mode: "vault", file, key: vaultKey(root), id: ident?.id ?? null, name: folderIdentity(root)?.name ?? null, aliases: ident?.aliases ?? [], previous_names: ident?.previous_names ?? [], worktree };
@@ -242,9 +246,10 @@ export function recordLocation(loc: VaultLocation): { carriedFrom: string | null
   forgetRoot(loc.root, ["folder"]);
   const known = readRoots();
   // Opened before (not only found by the background index): no move to carry. A worktree moved by git
-  // (`git worktree move`) is found by git's name for it (17.19); a named folder, by its name (21.8).
+  // (`git worktree move`) is found by git's name for it and its admin folder's fingerprint (17.19) — a
+  // worktree removed and another added under its name is a new one; a named folder, by its name (21.8).
   const wt = loc.worktree;
-  const movedWorktree = () => known.find((v) => v.worktree && wt && v.worktree.name === wt.name && v.worktree.main === wt.mainVault && v.path !== loc.root && !isVaultRoot(v.path))?.path ?? null;
+  const movedWorktree = () => known.find((v) => v.worktree && wt && v.worktree.name === wt.name && v.worktree.main === wt.mainVault && !!wt.admin && v.worktree.admin === wt.admin && v.path !== loc.root && !isVaultRoot(v.path))?.path ?? null;
   const from = known.some((v) => v.key === loc.key && !v.found) ? null : wt ? movedWorktree() : movedFrom(loc.root);
   let moved = known.find((v) => v.key === loc.key)?.moved;
   if (from) {
@@ -263,11 +268,16 @@ export function recordLocation(loc: VaultLocation): { carriedFrom: string | null
     if (was) writeRoots(known.filter((v) => v !== was));
   }
   recordFolder(loc.root, { replaces: wt ? null : from });
-  recordRoot({ kind: "vault", path: loc.root, ...(loc.worktree ? { worktree: { name: loc.worktree.name, main: loc.worktree.mainVault } } : {}), ...(moved ? { moved } : {}) });
+  recordRoot({ kind: "vault", path: loc.root, ...(loc.worktree ? { worktree: knownWorktree(loc.worktree) } : {}), ...(moved ? { moved } : {}) });
   pruneWorktrees(Date.now(), isVaultRoot);
   return { carriedFrom: from };
 }
 
+
+/** A worktree as the machine's list keeps it: git's name, the main checkout's root, its fingerprint. */
+export function knownWorktree(w: Worktree): NonNullable<KnownRoot["worktree"]> {
+  return { name: w.name, main: w.mainVault, ...(w.admin ? { admin: w.admin } : {}) };
+}
 
 export function isInside(root: string, path: string): boolean {
   // Climbing out is a ".." segment; a name that merely starts with dots ("..notes") is inside.
@@ -314,10 +324,9 @@ export function initVault(dir: string, name?: string, opts: { private?: boolean 
     const other = folderNamed(name, root);
     if (other.length) throw new VaultError(`a different folder is called "${name}", at ${other[0]!.default ?? other[0]!.copies[0]?.path}; try "${suggestFolderName(root, parentName(root))}"`);
   }
-  const excluded = opts.private ? excludeFromGit(root) : null;
   if (have?.name) {
     if (name !== undefined && name !== have.name) throw new VaultError(`${root} is already called "${have.name}": slipbox name ${name} renames it`);
-    return { root, created: false, identified: false, id: have.id, name: have.name, excluded };
+    return { root, created: false, identified: false, id: have.id, name: have.name, excluded: opts.private ? excludeFromGit(root) : null };
   }
   if (!exists) {
     mkdirSync(marker, { recursive: true });
@@ -327,8 +336,16 @@ export function initVault(dir: string, name?: string, opts: { private?: boolean 
   let id = have?.id ?? null;
   if (name !== undefined) {
     id ??= newVaultId();
-    addIdentity(vaultConfigFile(root), { id, name });
+    try {
+      addIdentity(vaultConfigFile(root), { id, name });
+    } catch (err) {
+      // Its [vault] table one the edit can't follow: nothing written, the user edits it.
+      if (err instanceof IdentityEditError) throw new VaultError(err.message);
+      throw err;
+    }
   }
+  // Excluded from git only once nothing else can fail.
+  const excluded = opts.private ? excludeFromGit(root) : null;
   recordLocation(rootAt(root));
   return { root, created: !exists, identified: exists && name !== undefined, id, name: name ?? null, excluded };
 }

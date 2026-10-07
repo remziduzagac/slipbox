@@ -1,6 +1,6 @@
 // What a file is to slipbox (plan 16.1, docs/idea.md "Files beyond markdown"): three groups.
 //
-// - notes: markdown, the files with an extension in the vault's `walk.extensions`. They are the
+// - notes: markdown, the files with an extension in the root's `walk.extensions`. They are the
 //   link graph.
 // - data: JSON, YAML, TOML, INI, CSV/TSV — rendered as documents, not notes.
 // - text: every other text file — source mode only, highlighted by language.
@@ -16,7 +16,7 @@ export interface FileKind {
   format: string;
 }
 
-/** Note formats by extension: which ones are notes is the vault's `walk.extensions`. */
+/** Note formats by extension: which ones are notes is the root's `walk.extensions`. */
 const NOTE_FORMATS: Record<string, string> = { md: "markdown", markdown: "markdown" };
 
 export const DATA_FORMATS: Record<string, string> = {
@@ -116,7 +116,7 @@ export function extensionOf(name: string): string {
 }
 
 /**
- * The group and format of a file, by its name: a note when its extension is one of the vault's
+ * The group and format of a file, by its name: a note when its extension is one of the root's
  * note extensions (`walk.extensions`), data by a data extension, binary by a binary one, and
  * text otherwise — a file that turns out to hold binary bytes is refused when it's opened.
  */

@@ -24,6 +24,7 @@ Four kinds of data, four places. Nothing derived ever lives in the vault. Revise
 | state, the machine's | `$XDG_STATE_HOME/slipbox/roots.json` | the roots seen, by path; their moves | no: the moves |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/folders.json` | named folders, their copies, defaults | no: names |
 | state, the machine's | `$XDG_STATE_HOME/slipbox/autoindex.json`, `activity` | the background index (`20.9`) | yes |
+| state, the machine's | `$XDG_STATE_HOME/slipbox/plans/` | plans saved for `apply` (`20.18`) | yes: planned again |
 | data | `$XDG_DATA_HOME/slipbox/tools/` | language servers installed for you (`19.x`) | yes, reinstalled |
 
 XDG defaults apply when the variables are unset (`~/.config`, `~/.cache`, `~/.local/state`, `~/.local/share`) on
@@ -42,7 +43,8 @@ root's history lists its own files and those read from it. The newest 5,000 are 
 path, nothing left at the old one, and exactly one such copy gone — also when the background index found it at the new
 path first. Its cache, session, scratch, trash, undo log and positions move to the new key; the move is kept with its
 entry in `roots.json`, for the relink (`20.17`), which is offered at once. Nothing is asked. A worktree `git worktree
-move` took elsewhere is found by git's name for it. Any other move — an unnamed root, two copies gone — starts fresh.
+move` took elsewhere is found by git's name for it and its admin folder's fingerprint (`17.19`): a new worktree git gave
+a removed one's name is not it. Any other move — an unnamed root, two copies gone — starts fresh.
 
 **Today's state moved once** (`21.8`): the instances' list (`vaults.json`, `20.5`) is read into `roots.json` the first
 time slipbox runs, each instance's state and cache moved from its key to its path's, and the old list removed; a root's
@@ -54,7 +56,8 @@ Consequences, accepted deliberately:
 - **An unnamed root moved by hand starts fresh:** nothing names it to be found again by. Naming it (`slipbox name`) is
   the remedy.
 - A plain folder's state is its own, by its path (`20.22`): moved, it starts afresh. The home vault that held every
-  loose folder's (`17.2`) is gone; its `$XDG_DATA_HOME/slipbox/home/config.toml` is no longer read.
+  loose folder's (`17.2`) is gone; its `$XDG_DATA_HOME/slipbox/home/config.toml` is no longer read. A plain folder
+  gone a month is forgotten: its entry in `roots.json`, its cache and its state removed, as a worktree's are (`17.19`).
 
 **The parse cache is shared by content** (`20.11`): what a note says once parsed — links as written, headings, tags,
 aliases, a title of its own — is kept in one SQLite file by its text's hash, its format and the parser's version
@@ -505,8 +508,11 @@ which checkout it is comes from the files under `.git` (a worktree's `.git` is a
 `project/worktrees/x/feat` is a worktree of `project/x` as surely as `x/.worktrees/feat` would be.
 
 - **Keys:** each checkout's state is its path's (`21.8`), the main checkout's and every worktree's apart. A worktree
-  moved by `git worktree move` is found by git's name for it, and its state carried to the new path. Not "whichever
-  was opened first": that would hand the main checkout's state to an agent's worktree.
+  moved by `git worktree move` is found by git's name for it, and its state carried to the new path — only when its
+  admin folder (`.git/worktrees/<name>`) is the one recorded: its `commondir`'s inode and time, which `git worktree
+  add` writes and a move leaves. A worktree removed and another added under its name (git reuses it) is a new one,
+  its state its own. Not "whichever was opened first": that would hand the main checkout's state to an agent's
+  worktree.
 - **Identity is never written from a worktree.** Each would write its own id (and a distinct name), and merging the
   branches would conflict over the vault's identity. A worktree whose config has none takes the main checkout's;
   with none there either, it has none until the main checkout has one, committed.
@@ -517,7 +523,7 @@ which checkout it is comes from the files under `.git` (a worktree's `.git` is a
 - **A relative path out of the repository is taken from the main checkout** in a worktree: `../y/plan.md` names the
   sibling repository beside the main one, wherever the worktree is kept; inside the repository, the worktree's own.
 - **A worktree that's gone** (merged, removed) has its cache removed at once; its state — an agent's scratch — a month
-  after it was last seen.
+  after it was last seen. A plain folder gone a month is forgotten too: its entry, its cache and its state removed.
 
 `.slipbox/` is committed, so a merge merges it; there's little in it — the identity, written once, and settings — and
 nothing slipbox writes while it's used: state and caches are outside the repository, per checkout.
@@ -651,9 +657,10 @@ and config remaps all of them.
 - **Plain `q` never quits** (`ctrl+q` does), and **`ctrl+c` only copies** (in a list or prompt it
   cancels).
 - **Editing keys are vim's, and only where the text is editable**: `d c y p x .` and the rest live
-  in the source layer (source mode and the lens), so reading keeps its own `x` (tick a task). The
-  keys that start an edit (`i a I A o O`) and undo (`u ctrl+r U`) are in the reading layer too:
-  they switch the window to source first.
+  in the source layer (source mode and the lens) and do nothing in the render, where a task is
+  ticked with `ctrl+l` or `space n t` (or a click on its box). The keys that start an edit
+  (`i a I A o O`) and undo (`u ctrl+r U`) are in the reading layer too: they switch the window to
+  source first.
 
 ## Phase 3 — editing
 

@@ -7,7 +7,7 @@ import { copyText } from "../src/core/clipboard.ts";
 import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
-import { newParseCache, parseLegacy, parseMarkdown, visit } from "../src/core/parse.ts";
+import { headingsOf, newParseCache, parseLegacy, parseMarkdown, visit } from "../src/core/parse.ts";
 import { lintCommand, parseLint, runLint } from "../src/core/lint.ts";
 import { addFootnote, applyEdits, deleteFootnote, editFootnote, footnotesOf, renameFootnote, type TextEdit } from "../src/core/footnotes.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
@@ -61,6 +61,11 @@ describe("sanitize (2.9)", () => {
     expect(sanitize("tab\tnewline\nok")).toBe("tab\tnewline\nok");
     expect(sanitize("bell\x07 del\x7f c1\x9b")).toBe("bell del c1");
     expect(sanitize("rtl\u202Eoverride")).toBe("rtloverride");
+  });
+  test("an unterminated OSC or DCS string takes the rest of its line, never the lines after it", () => {
+    expect(sanitize("line one \x1b]0;title\nline two\nline three")).toBe("line one \nline two\nline three");
+    expect(sanitize("a\x1bPq#0\nb\nc")).toBe("a\nb\nc");
+    expect(sanitizeMap("x\x1b]0;t\ny").text).toBe("x\ny");
   });
   test("sanitizeMap: the same text, and where each raw index went (-1 for one taken out)", () => {
     for (const raw of ["plain", "bell\x07ring.md", "a\x1b[31mred\x1b[0m b", "x\x1b]0;t\x07y\u2028z", "c1\x9b31mq\u202Er", "e\x1b"]) {
@@ -780,6 +785,16 @@ describe("review cycle 5 (core, from mutation testing)", () => {
     expect(re.flags).not.toContain("i");
     expect(findAll("ärzte Ärzte", re).map((m) => m.from)).toEqual([6]);
   });
+  test("smart case skips a regex's escapes: `\\S` is no capital, `\\WFoo` still has one", () => {
+    const re = compilePattern("todo\\s*\\S", { regex: true, whole: false, ignoreCase: false }) as RegExp;
+    expect(re.flags).toContain("i");
+    expect(findAll("TODO: x", re).map((m) => m.from)).toEqual([0]);
+    const cased = compilePattern("\\WFoo", { regex: true, whole: false, ignoreCase: false }) as RegExp;
+    expect(cased.flags).not.toContain("i");
+    expect(findAll(" foo Foo", cased).map((m) => m.from)).toEqual([4]);
+    // Plain text has no escapes: its backslash is a character, its capital a capital.
+    expect((compilePattern("a\\S", { regex: false, whole: false }) as RegExp).flags).not.toContain("i");
+  });
   test("the switcher's match is smart-case too", async () => {
     const { match } = await import("../src/tui/match.ts");
     expect(match("Tel", "telescope.md")).toBeNull();
@@ -1203,6 +1218,12 @@ describe("a reader per note format (16.2)", () => {
     expect(rendered.map((h) => h.text)).toEqual(["The config_file option", "Use a_b * c here", "Logo  Title", "Bold gone b & *"]);
     expect(md.scanHeadings(marked).map(({ text, slug }) => ({ text, slug }))).toEqual(rendered);
     expect(layoutSource(marked, { width: 60, wrap: true, headings: "scan" }).headings.map(({ text, slug }) => ({ text, slug }))).toEqual(rendered);
+    // Reference links and images, their definitions elsewhere in the note: a README's badge heading.
+    const refs = "# Foo [![Build][ci-badge]][ci-url]\n\n## See [the docs][d]\n\n## Logo ![alt][img] here\n\n## Also [d][] and [d]\n\n" +
+      "[ci-badge]: https://ci/b.svg\n[ci-url]: https://ci\n[d]: docs.md\n[img]: logo.png\n";
+    const refsDrawn = headingsOf(parseMarkdown(refs).tree).map(({ text, slug }) => ({ text, slug }));
+    expect(refsDrawn.map((h) => h.slug)).toEqual(["foo", "see-the-docs", "logo--here", "also-d-and-d"]);
+    expect(md.scanHeadings(refs).map(({ text, slug }) => ({ text, slug }))).toEqual(refsDrawn);
     expect(md.linkAt("see [the intro](alpha.md#intro) and [x](b.md)", 6)).toEqual({ kind: "markdown", target: "alpha.md#intro", heading: null, text: "the intro" });
     expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 6)).toMatchObject({ kind: "wiki", target: "alpha", heading: "Top", text: "the alpha" }); // read again (21.3)
     expect(md.linkAt("see [[alpha#Top|the alpha]] and [x](b.md)", 34)).toMatchObject({ kind: "markdown", target: "b.md" });
@@ -1406,6 +1427,8 @@ describe("footnotes (3.17)", () => {
     expect(run(two, (s, l) => editFootnote(s, l[0]!, "New text"))).toBe("A[^n] b.\n\n[^n]: New text\n[^z]: Zed.\n");
     // Deleted: its references and its definition's lines.
     expect(run("A[^n] b[^n].\n\n[^n]: Old,\n    more.\n[^z]: Zed.\n", (s, l) => deleteFootnote(s, l[0]!))).toBe("A b.\n\n[^z]: Zed.\n");
+    // A CRLF note's: its line's CRLF goes too, never leaving a blank line where it was.
+    expect(run("A[^n] b.\r\n\r\n[^n]: Old.\r\n[^z]: Zed.\r\n", (s, l) => deleteFootnote(s, l[0]!))).toBe("A b.\r\n\r\n[^z]: Zed.\r\n");
     // Renamed: everywhere; a taken label, or one with a space, refused.
     expect(run("A[^n] b[^n].\n\n[^n]: Old.\n[^z]: Zed.\n", (s, l) => renameFootnote(s, l[0]!, l, "source"))).toBe("A[^source] b[^source].\n\n[^source]: Old.\n[^z]: Zed.\n");
     const l = footnotesOf(parseMarkdown(two));

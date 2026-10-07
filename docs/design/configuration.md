@@ -248,7 +248,9 @@ note and a wikilink from the notebook's top, a template saying nothing, and `lin
 when one form has two-thirds or more of their links to its notes; else ours — markdown, relative, `.md` kept. The
 style is found first; the path and extension come within it, a tool's as it writes that style, the notes' counted
 among their links of that style. A markdown link is never by name: a "shortest" Obsidian setting says nothing of one.
-A folder with no root has your setting, else ours. `slipbox info` says each part and what said it; the Info view's
+A folder with no root has your setting where it can read it, else ours: it reads no wikilink and no path from a root,
+so there `style = "wiki"` writes a markdown link and `path = "root"` or `"name"` a relative one (a wikilink you typed
+stays one, its path relative); the extension is yours. `slipbox info` says each part and what said it; the Info view's
 Links section shows it short (`y` copies it whole).
 
 ## Colours

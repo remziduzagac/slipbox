@@ -79,7 +79,7 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
     // Won by where it's written (the nearest, the shortest of several of its name): a note of that
     // name nearer would take it, silently. Said, with the path that names it for sure.
     if (wiki && (l.resolvedKind === "note" || l.resolvedKind === "file") && fragile(l) && l.path && !isAbsolute(l.path)) {
-      const sure = disambiguated(l);
+      const sure = disambiguated(l, rel);
       const at = lines[l.line - 1] ?? "";
       const written = l.end.line === l.line ? at.slice(l.column - 1, l.end.column - 1) : "";
       const open = written.indexOf("[[");
@@ -111,7 +111,12 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
     switch (l.resolvedKind) {
       case "unresolved":
         if (l.reason) add(l, "warning", "unresolved", l.reason);
-        else if (wiki) add(l, "info", "unresolved", `no note named "${l.target}" yet`);
+        else if (wiki) {
+          // Its path's file seen to move (17.12): said, with the fix, as a markdown link's.
+          const to = g.movedTarget(l, rel);
+          if (to) add(l, "warning", "unresolved", `broken link: ${l.target} — moved to ${to} (relink fixes it)`);
+          else add(l, "info", "unresolved", `no note named "${l.target}" yet`);
+        }
         else {
           // A note not written yet: information, as a wikilink's was. Its file seen to move (17.12):
           // said, with the fix — a move never resolves it (20.2). Else broken.

@@ -9,9 +9,9 @@
 // If registration fails (inotify limits on the Linux VMs: ENOSPC / EMFILE), the watcher degrades
 // *loudly*: it reports once and falls back to polling the files it was asked to poll.
 
-import { type Dirent, existsSync, type FSWatcher, readdirSync, statSync, watch } from "node:fs";
-import { join } from "node:path";
-import type { WalkFilter } from "./walk.ts";
+import { type Dirent, existsSync, type FSWatcher, lstatSync, readdirSync, realpathSync, statSync, watch } from "node:fs";
+import { join, relative, sep } from "node:path";
+import { symlinkVerdict, type WalkFilter } from "./walk.ts";
 
 export interface WatchChange {
   rel: string;
@@ -65,7 +65,15 @@ export class VaultWatcher {
    *  events for dot-files, so these are polled on the housekeeping tick. */
   private readonly gitignores = new Map<string, number>();
 
+  /** The root's real path: a symlink is kept only when it points inside it (0.11). */
+  private readonly realRoot: string;
+
   constructor(private readonly opts: WatcherOptions) {
+    let realRoot = opts.root;
+    try {
+      realRoot = realpathSync(opts.root);
+    } catch {}
+    this.realRoot = realRoot;
     for (const [k, v] of opts.sizes ?? []) this.sizes.set(k, v);
     for (const d of opts.dirs) this.watchDir(d);
     this.ensurePollTimer();
@@ -124,11 +132,23 @@ export class VaultWatcher {
         const rel = `${d}/${e.name}`;
         if (e.isDirectory()) {
           if (this.opts.filter.exclusion(rel, true) === null) visit(rel);
-        } else if (this.opts.filter.exclusion(rel, false) === null) files.push(rel);
+        } else if (e.isSymbolicLink() && !this.symlinkKept(rel)) continue;
+        else if (this.opts.filter.exclusion(rel, false) === null) files.push(rel);
       }
     };
     visit(dirRel);
     return files;
+  }
+
+  /**
+   * Whether the symlink at `rel` is one the walk keeps (0.11): a file inside the root — never a
+   * directory, never outside — that isn't a note already known by its own path.
+   */
+  private symlinkKept(rel: string): boolean {
+    const v = symlinkVerdict(join(this.opts.root, rel), this.realRoot);
+    if (!v.kept) return false;
+    const target = relative(this.realRoot, v.target).split(sep).join("/");
+    return target === rel || !this.opts.known.has(target);
   }
 
   get watchedCount(): number {
@@ -300,6 +320,11 @@ export class VaultWatcher {
       try {
         st = statSync(join(root, rel));
       } catch {}
+      // A symlink as the walk takes it (0.11): a directory never followed, a file outside never adopted.
+      if (st && isSymlink(join(root, rel)) && !this.symlinkKept(rel)) {
+        if (!known.has(rel)) continue;
+        st = null; // a note that became such a link: gone
+      }
       if (st?.isDirectory()) {
         if (filter.exclusion(rel, true) === null && !this.watchers.has(rel)) paths.push(...this.adoptTree(rel));
         continue;
@@ -367,6 +392,14 @@ export class VaultWatcher {
       }
     }
     if (changes.length || rescan) this.opts.onBatch({ changes, rescan });
+  }
+}
+
+function isSymlink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
   }
 }
 

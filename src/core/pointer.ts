@@ -65,7 +65,7 @@ export function parsePointer(url: string, folders: NamedFolder[] = readFolders()
   // A short name a known folder answers to, dots and all (`me.github.io`): the first part.
   const [first] = nameAndBranch(segs[0]);
   const want = first.toLowerCase();
-  if (folders.some((f) => f.name.toLowerCase() === want || f.old?.some((o) => o.toLowerCase() === want))) return at(1);
+  if (folders.some((f) => [f.name, ...(f.aliases ?? []), ...(f.old ?? [])].some((o) => o.toLowerCase() === want))) return at(1);
   // One this machine doesn't know: host, owner, repository (`github.com/me/x`), by its look.
   if (segs[0].includes(".") && segs.length > 3) return at(3);
   return at(1);

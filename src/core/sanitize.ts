@@ -5,10 +5,11 @@
 import { graphemes, graphemeWidth } from "./width.ts";
 
 // ESC-introduced sequences: CSI, OSC (BEL or ST terminated), DCS/SOS/PM/APC strings, and
-// two-byte escapes. Then the bare C0/C1 controls that are left.
+// two-byte escapes. Then the bare C0/C1 controls that are left. A string never crosses a line: an
+// unterminated one (a truncated capture) takes the rest of its line, not the lines after it.
 const ESCAPES =
   // biome-ignore lint: control characters are the point of this pattern
-  /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x1b[PX^_][^\x1b]*(?:\x1b\\)?|\x1b[@-Z\\-_]|\x9b[0-?]*[ -/]*[@-~]/g;
+  /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b\n]*(?:\x07|\x1b\\)?|\x1b[PX^_][^\x1b\n]*(?:\x1b\\)?|\x1b[@-Z\\-_]|\x9b[0-?]*[ -/]*[@-~]/g;
 // C0 except TAB and LF, DEL, C1, bidi embedding/override/isolate controls and marks (display
 // spoofing; terminals draw the marks as nothing while they measure 1).
 const CONTROLS = /[\x00-\x08\x0b-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;

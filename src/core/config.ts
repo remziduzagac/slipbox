@@ -178,7 +178,7 @@ export interface Config {
      * `code -g {file}:{line}`; nvim takes two, since its `--remote` has no `+{line}`:
      * `nvim --server S --remote {file}`, then `nvim --server S --remote-send <C-\><C-N>:{line}<CR>`.
      * `{server}` is a socket picked from the running nvims. `["nvim"]` (the default) is the preset:
-     * find the running nvims, pick one (remembered per vault), then those two commands. The watcher
+     * find the running nvims, pick one (remembered per root), then those two commands. The watcher
      * picks up its saves. Empty: off.
      */
     remote: string[];
@@ -378,7 +378,7 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     }
     // The vault's identity (17.4) isn't a setting: read by core/registry.ts, never merged.
     if ("vault" in data) {
-      if (file === userFile) warnings.push(`config: ${file}: [vault] belongs in a vault's .slipbox/config.toml; ignored`);
+      if (file === userFile) warnings.push(`config: ${file}: [vault] belongs in a folder's .slipbox/config.toml (its identity); ignored`);
       delete data.vault;
     }
     if (file !== userFile) dropUserOnly(data, file, warnings);

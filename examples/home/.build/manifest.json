@@ -2830,7 +2830,7 @@
    "purpose": "The team's recommended user config — every key once with a non-default value (the kitchen sink).",
    "cases": [
     "config: Every key present once with valid… — every key once",
-    "code-misc: Linter without a server in efm keys… — [linter.todo] lint-command grep for TODO, lint-formats '%f:%l:%c: %m'",
+    "code-misc: Linter without a server in efm keys… — [linter.todo] lint-command rg --vimgrep for TODO, lint-formats '%f:%l:%c:%m'",
     "colors: [colors] role overrides: string fg, table… — [colors] overrides in each form",
     "keys: commands lists every command id with CLI… — [keys], [aliases], [groups]",
     "code-misc: Per-language server config in vault… — [language-server.pyright] config",

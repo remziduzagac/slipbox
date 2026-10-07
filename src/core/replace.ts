@@ -16,10 +16,19 @@ export function compilePattern(query: string, opts: PatternOptions): RegExp | st
   if (opts.whole) source = `(?<![\\p{L}\\p{N}_])(?:${source})(?![\\p{L}\\p{N}_])`;
   try {
     // m: ^ and $ are a line's start and end, as in vim and grep, not the whole note's.
-    return new RegExp(source, !opts.ignoreCase && /\p{Lu}/u.test(query) ? "gmu" : "gimu");
+    const capital = /\p{Lu}/u.test(opts.regex ? unescaped(query) : query);
+    return new RegExp(source, !opts.ignoreCase && capital ? "gmu" : "gimu");
   } catch (err) {
     return (err as Error).message.replace(/^Invalid regular expression: /, "");
   }
+}
+
+/**
+ * A regex query without its escapes, for smart case: `\S`, `\W`, `\p{Lu}` or `\x4A` is no
+ * capital the user typed (vim's smartcase skips the character after a backslash too).
+ */
+function unescaped(query: string): string {
+  return query.replace(/\\(?:[pP]\{[^}]*\}|k<[^>]*>|c[A-Za-z]|u\{[^}]*\}|u[0-9A-Fa-f]{4}|x[0-9A-Fa-f]{2}|.)/gsu, "");
 }
 
 /**

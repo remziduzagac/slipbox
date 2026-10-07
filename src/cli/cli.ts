@@ -41,7 +41,7 @@ import { cacheDir, stateDir, stateHome, userConfigFile } from "../core/paths.ts"
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
 import { sanitize, UNSAFE } from "../core/sanitize.ts";
-import { type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { climbsOut, type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
 import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
@@ -211,6 +211,7 @@ Usage:
   slipbox write <note> [text]       write a note (atomic, in the root)  [--stdin] [--append [--paragraph]] [--create] [--if-unchanged <sha>] [--allow-empty]
   slipbox mkdir <path>              make a folder here (and its parents)
   slipbox mv <note|folder> <new-path>  rename or move a note or folder; links fixed wherever they're reached  [--dry-run] [--plan]
+                                    <new-path> (and cp's path): from the root, or from here when ./ or ../, or absolute
   slipbox cp <note|folder> [path]   copy a note or folder (beside it, as name-copy, when no path)
   slipbox rm <note|folder>          delete to the trash (slipbox trash restore puts it back)  [--dry-run]
   slipbox trash [restore <item>]    what's in the trash, newest first; restore an item (its id or path)
@@ -403,7 +404,7 @@ function textFiles(s: Session): { path: string; group: string; format: string }[
 }
 
 /** Flags every command takes, and each command's own. */
-const GLOBAL_FLAGS = new Set(["root", "config", "json", "color", "plain", "help", "version", "from"]);
+export const GLOBAL_FLAGS = new Set(["root", "config", "json", "color", "plain", "help", "version", "from"]);
 export const FLAGS: Record<string, string[]> = {
   render: ["width", "theme", "glyphs"],
   links: ["all"],
@@ -600,11 +601,13 @@ const HANDLERS: Record<string, Handler> = {
     const byPath = isFile && (classify(file, s.config.walk.extensions).group !== "note" || !isInside(s.loc.root, file) || (findVaultRoot(file) ?? s.loc.root) !== s.loc.root);
     // A note here the walk leaves out (git-ignored, under a hidden folder): named, it's reached (20.8),
     // as the note that says which root this is would be — with --from, that's the other note.
+    // One the walk never takes (under node_modules, walk.exclude) isn't reached: it goes by its path.
+    let reached = true;
     if (isFile && !byPath) {
       const rel = relative(s.loc.root, file).split(sep).join("/");
-      if (!g.notes.has(rel)) g.reachFile(rel, { keep: true });
+      if (!g.notes.has(rel)) reached = g.reachFile(rel, { keep: true });
     }
-    const toAbs = byPath ? file : g.abs(resolveNote(s, arg));
+    const toAbs = byPath || (isFile && !reached) ? file : g.abs(resolveNote(s, arg));
     const style = flag(s.args, "style");
     if (style !== undefined && style !== "markdown" && style !== "wiki") throw new UsageError(`--style is markdown or wiki (got ${style})`);
     const c = conventionOf(g, s.config, s.configOrigins, style as LinkStyle | undefined);
@@ -1309,6 +1312,7 @@ const HANDLERS: Record<string, Handler> = {
       remote: f.remote,
       id: f.id,
       private: f.private,
+      aliases: f.aliases,
       old: f.old,
       default: f.default,
       copies: f.copies.map((c) => ({ path: c.path, seen: c.seen, found: !!c.found, available: copyAvailable(c.path) })),
@@ -1488,7 +1492,7 @@ const HANDLERS: Record<string, Handler> = {
     // A vault note: its links and conflicts, and the lint surface's findings. One the walk leaves out
     // (git-ignored, under a hidden folder) is reached, named, as findNoteArg reaches it (20.8).
     const rel = relative(s.loc.root, abs).split(sep).join("/");
-    if (kind.group === "note" && !rel.startsWith("..") && (s.graph.notes.has(rel) || s.graph.reachFile(rel, { keep: true })) && s.graph.notes.has(rel)) {
+    if (kind.group === "note" && !climbsOut(rel) && (s.graph.notes.has(rel) || s.graph.reachFile(rel, { keep: true })) && s.graph.notes.has(rel)) {
       problems.push(...noteProblems(s.graph, rel));
       sources.push({ name: "slipbox", kind: "slipbox", status: "ran" });
       const cmd = lintCommand(s.config.lint, s.loc.root, undefined, s.config.lsp.auto_install);
@@ -2117,10 +2121,18 @@ function searchIndex(s: Session): SearchIndex | null {
   return idx;
 }
 
-/** Where a move or copy goes: a path in this vault (a pointer to elsewhere is refused: a file moves within its own). */
+/**
+ * Where a move or copy goes: a path in this root, from it — or from the current folder when it says so
+ * (./, ../), or the filesystem's when absolute, as mkdir and write --create take one. A pointer to
+ * elsewhere is refused: a file moves within its own root.
+ */
 function destArg(s: Session, to: string | undefined): string | undefined {
-  if (to === undefined || !isPointer(to)) return to;
-  throw new CliError(`${to}: a destination is a path, in the file's own folder — not a pointer`, EXIT.refused);
+  if (!to) return to;
+  if (isPointer(to)) throw new CliError(`${to}: a destination is a path, in the file's own folder — not a pointer`, EXIT.refused);
+  const abs = to.startsWith("/") ? to : /^\.\.?\//.test(to) ? join(s.io.cwd, to) : join(s.loc.root, to);
+  const rel = relative(s.loc.root, abs).split(sep).join("/");
+  if (!rel || !isInside(s.loc.root, abs) || !landsInside(s.loc.root, abs)) throw new CliError(`${to} is outside the root (${s.loc.root})`, EXIT.refused);
+  return to.endsWith("/") ? `${rel}/` : rel;
 }
 
 /** A folder of the root named on the command line (from cwd, or the root), or null. */

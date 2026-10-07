@@ -9,14 +9,14 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, realpathSync, renameSync, rmdirSync, statSync, unlinkSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, sep } from "node:path";
 import { classify } from "./filetypes.ts";
-import { atomicWrite, landsInside, readText } from "./fsutil.ts";
+import { atomicWrite, climbsOut, landsInside, readText } from "./fsutil.ts";
 import type { Backlink, Graph, LinkKind, NoteEntry, ResolvedLink } from "./graph.ts";
-import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed } from "./links.ts";
+import { extensionless, formatPathLink, normKey, pathForm, pathLink, type PathForm, pathNamed, wikiPathCandidates } from "./links.ts";
 import { slugify } from "./parse.ts";
 import { trashVaultMarker } from "./files.ts";
 import { contentHash } from "./redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
-import { forgetRoot, identityOf, newVaultId, readIdentity, readRoots, VAULT_NAME, vaultConfigFile, withIdentity } from "./registry.ts";
+import { forgetRoot, IdentityEditError, identityReadsBack, newVaultId, readIdentity, readRoots, VAULT_NAME, vaultConfigFile, withIdentity } from "./registry.ts";
 import { openVault } from "./reach.ts";
 import { copyAvailable, folderIdentity, folderNamed, pointerName, readFolders, recordFolder, travelTogether } from "./folders.ts";
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
@@ -99,13 +99,16 @@ const NOTE_EXT = /\.(md|markdown)$/i;
 
 /**
  * The new target text of a wikilink whose note is now at `toRel` in the vault `g` — keeping the
- * way it was written: a name stays a name (a path when the name is taken), a path a path, a
- * relative path relative, an extension written stays written.
+ * way it was written: a name stays a name (a path when the name is taken, or `apart`: the note now in
+ * another root than the link, where a name doesn't reach — 17.17, 21.3), a path a path, a relative
+ * path relative, an extension written stays written.
  */
-function wikiTarget(written: string, fromRelDir: string | null, toRel: string, g: Graph, movedFrom: string): string {
+function wikiTarget(written: string, fromRelDir: string | null, toRel: string, g: Graph, movedFrom: string, apart = false): string {
   const t = written;
-  const ext = NOTE_EXT.test(t) || !NOTE_EXT.test(toRel) ? posix.extname(toRel) : "";
-  const stem = (p: string) => (NOTE_EXT.test(toRel) ? p.replace(NOTE_EXT, "") : p);
+  // A note's `.md` only where it was written; any other file's extension is in its path, once.
+  const isNote = NOTE_EXT.test(toRel);
+  const ext = isNote && NOTE_EXT.test(t) ? posix.extname(toRel) : "";
+  const stem = (p: string) => (isNote ? p.replace(NOTE_EXT, "") : p);
   if ((t.startsWith("./") || t.startsWith("../")) && fromRelDir !== null) {
     let r = posix.relative(fromRelDir, stem(toRel)) + ext;
     if (!r.startsWith("../")) r = `./${r}`;
@@ -115,7 +118,12 @@ function wikiTarget(written: string, fromRelDir: string | null, toRel: string, g
   const name = stem(posix.basename(toRel));
   // Another note with that name: the path, so it can't reach the wrong one.
   const taken = [...g.notes.keys()].some((p) => p !== movedFrom && p !== toRel && normKey(posix.basename(p).replace(NOTE_EXT, "")) === normKey(name));
-  return (taken ? stem(toRel) : name) + ext;
+  return (taken || apart ? stem(toRel) : name) + ext;
+}
+
+/** The root a file is in (or will be, not there yet), by its real path: the nearest marker's. */
+function rootOfPath(abs: string): string {
+  return real(findVaultRoot(abs) ?? "");
 }
 
 function real(p: string): string {
@@ -430,7 +438,14 @@ export function planFolderMove(g: Graph, fromDir: string, toInput: string): Rena
   if (existsSync(join(g.root, to)) && !sameFile(join(g.root, from), join(g.root, to))) throw new RenameError(`${to} exists; not overwriting it`);
   const moves = new Map<string, string>();
   for (const rel of [...g.notes.keys(), ...g.filePaths()]) if (rel.startsWith(`${from}/`)) moves.set(rel, `${to}${rel.slice(from.length)}`);
-  return planMove(g, moves, { kind: "folder", from, to, move: { from: join(g.root, from), to: join(g.root, to), dir: true } }, foldersMoving(g, from, to));
+  // A root nested in it moves with it (18.7): the links into it and out of it as its own move's.
+  const fromAbs = join(g.root, from);
+  const toAbs = join(g.root, to);
+  const moving = (abs: string) => abs === fromAbs || abs.startsWith(`${fromAbs}/`);
+  const shift = (abs: string) => (moving(abs) ? toAbs + abs.slice(fromAbs.length) : abs);
+  const nested = g.nestedRoots().filter((r) => r.startsWith(`${from}/`));
+  const roots = nested.length ? (c: Collector) => nested.flatMap((r) => nestedRootEdits(g, c, join(g.root, r), moving, shift)) : undefined;
+  return planMove(g, moves, { kind: "folder", from, to, move: { from: fromAbs, to: toAbs, dir: true } }, foldersMoving(g, from, to), roots);
 }
 
 /** The folder `from` and every folder in it, each to where it goes under `to` (links to a folder, 21.2). */
@@ -445,14 +460,16 @@ function foldersMoving(g: Graph, from: string, to: string): Map<string, string> 
  * from where its file will be, each moved note's relative links to what stays put rewritten from
  * where it will be.
  */
-function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "kind" | "from" | "to" | "move">, folders = new Map<string, string>()): RenamePlan {
+function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "kind" | "from" | "to" | "move">, folders = new Map<string, string>(), roots?: (c: Collector) => [string, string][]): RenamePlan {
   const c = new Collector(g);
   const abs = (rel: string) => join(g.root, rel);
-  /** Where a file will be: its new place if it moves, else where it is. */
+  const mv = head.move;
+  /** Where a file will be: its new place if it moves (a folder's, a root nested in it too), else where it is. */
   const after = (fileAbs: string) => {
     if (!isInside(g.root, fileAbs)) return fileAbs;
     const moved = moves.get(relative(g.root, fileAbs));
-    return moved ? abs(moved) : fileAbs;
+    if (moved) return abs(moved);
+    return mv?.dir && fileAbs.startsWith(`${mv.from}/`) ? mv.to + fileAbs.slice(mv.from.length) : fileAbs;
   };
   for (const [fromRel, toRel] of moves) {
     const isNote = g.notes.has(fromRel);
@@ -465,23 +482,27 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
       const site: Site = { abs: linking, kind: b.kind, target: b.target, line: b.line, column: b.column };
       c.edit(site, retargetBacklink(g, b, linking, after(linking), fromRel, toRel, aliases, oldName), b.vault ?? null);
     }
-    // Its own relative links to what stays put, from where it will be.
-    if (!entry || posix.dirname(fromRel) === posix.dirname(toRel)) continue;
+    // Its own relative links to what stays put, from where it will be. Into a root nested here, every
+    // link by a name or from the top too: they'd be read from that root (17.17, 21.3) — relative paths.
+    const crosses = rootOfPath(abs(toRel)) !== real(g.root);
+    if (!entry || (posix.dirname(fromRel) === posix.dirname(toRel) && !crosses)) continue;
     for (const l of entry.links) {
-      if (l.kind !== "markdown" && l.kind !== "image" && !((l.kind === "wiki" || l.kind === "embed") && /^\.\.?\//.test(l.target))) continue;
-      if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("#") || l.target.startsWith("/") || l.target.startsWith("~/")) continue;
+      const wikiLink = l.kind === "wiki" || l.kind === "embed";
+      if (l.kind !== "markdown" && l.kind !== "image" && !(wikiLink && (crosses || /^\.\.?\//.test(l.target)))) continue;
+      if (/^[a-z][a-z0-9+.-]*:/i.test(l.target) || l.target.startsWith("#") || (l.target.startsWith("/") && !crosses) || l.target.startsWith("~/")) continue;
       const r = g.resolveLink(l, fromRel);
       if ((r.resolvedKind !== "note" && r.resolvedKind !== "file" && r.resolvedKind !== "folder") || !r.path) continue;
       if (!isAbsolute(r.path) && (moves.has(r.path) || folders.has(r.path))) continue; // moving too: rewritten as its backlink
+      if (isAbsolute(r.path) && after(r.path) !== r.path) continue; // a root nested in the folder: moving with it
       const targetAbs = isAbsolute(r.path) ? r.path : abs(r.path);
       const site: Site = { abs: abs(fromRel), kind: l.kind, target: l.target, line: l.line, column: l.column };
       const wiki = l.kind === "wiki" || l.kind === "embed";
       // Out of the vault (17.16): a relative path from where the note will be.
       const next = wiki
-        ? isAbsolute(r.path)
+        ? isAbsolute(r.path) || crosses
           ? formatPathLink("relative", targetAbs, abs(toRel), /\.[A-Za-z0-9]+$/.test(l.target))
           : wikiTarget(l.target, posix.dirname(toRel), r.path, g, "")
-        : mdTarget(l.target, abs(toRel), targetAbs, g);
+        : mdTarget(l.target, abs(toRel), targetAbs, crosses ? null : g);
       c.edit(site, next, null);
     }
   }
@@ -494,9 +515,10 @@ function planMove(g: Graph, moves: Map<string, string>, head: Pick<RenamePlan, "
       c.edit(site, byPath ?? mdTarget(b.target, after(linking), abs(toDir), g), null);
     }
   }
+  const vaults = roots?.(c) ?? [];
   const files = c.result();
   const warnings = dirtyTrees([head.move!.from, ...files.map((f) => f.abs)]);
-  return { ...head, moves: [...moves], files, warnings, skipped: c.skipped };
+  return { ...head, moves: [...moves], ...(vaults.length ? { vaults } : {}), files, warnings, skipped: c.skipped };
 }
 
 /**
@@ -516,20 +538,42 @@ export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: str
   const toAbs = join(parent.root, to);
   const moving = (abs: string) => abs === fromAbs || abs.startsWith(`${fromAbs}/`);
   const shift = (abs: string) => (moving(abs) ? toAbs + abs.slice(fromAbs.length) : abs);
+  const c = new Collector(parent);
+  const vaults = nestedRootEdits(parent, c, fromAbs, moving, shift);
+  const files = c.result();
+  const warnings = dirtyTrees([fromAbs, ...files.map((f) => f.abs)]);
+  return {
+    kind: "folder",
+    from,
+    to,
+    move: { from: fromAbs, to: toAbs, dir: true },
+    moves: [],
+    vaults,
+    files,
+    warnings,
+    skipped: c.skipped,
+  };
+}
+
+/**
+ * The edits a root nested in `parent` at `rootAbs` needs when it moves (18.7), into `c`: the links into
+ * it — the parent's and the other roots' this machine reaches — and its notes' relative links out of
+ * it, each from where its file will be (`shift`); links within what moves (`moving`) stay as they are.
+ * The roots that move, it and those nested in it, old → new.
+ */
+function nestedRootEdits(parent: Graph, c: Collector, rootAbs: string, moving: (abs: string) => boolean, shift: (abs: string) => string): [string, string][] {
   // Other vaults' links are read from their indexes: the parent's, fresh.
   parent.ensureAll();
   const graphs: Graph[] = [];
-  for (const root of [fromAbs]) {
-    const queue = [root];
-    while (queue.length) {
-      const g = openVault(queue.shift()!);
-      graphs.push(g);
-      for (const n of g.nestedRoots()) queue.push(join(g.root, n));
-    }
+  const queue = [rootAbs];
+  while (queue.length) {
+    const g = openVault(queue.shift()!);
+    graphs.push(g);
+    for (const n of g.nestedRoots()) queue.push(join(g.root, n));
   }
-  const c = new Collector(parent);
-  // The parent's own links into it, from its index in memory…
-  for (const l of linksIntoFolder(parent, fromAbs)) {
+  // The parent's own links into it, from its index in memory (a note moving with it keeps its link)…
+  for (const l of linksIntoFolder(parent, rootAbs)) {
+    if (moving(l.backlink.from)) continue;
     const next = retargetInto(l.backlink, l.targetAbs, shift(l.targetAbs));
     if (next !== null) c.edit({ abs: l.backlink.from, kind: l.backlink.kind, target: l.backlink.target, line: l.backlink.line, column: l.backlink.column }, next, null);
   }
@@ -539,7 +583,8 @@ export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: str
     for (const rel of [...g.notes.keys(), ...g.filePaths()]) {
       const targetAbs = join(g.root, rel);
       for (const b of g.backlinks(rel)) {
-        if (!isAbsolute(b.from) || moving(b.from) || isInside(parent.root, b.from)) continue;
+        // The parent's own links are rewritten above; a root nested beside this one has its own.
+        if (!isAbsolute(b.from) || moving(b.from) || (isInside(parent.root, b.from) && real(findVaultRoot(b.from) ?? "") === real(parent.root))) continue;
         const next = retargetInto(b, targetAbs, shift(targetAbs));
         if (next !== null) c.edit({ abs: b.from, kind: b.kind, target: b.target, line: b.line, column: b.column }, next, b.vault ?? null);
       }
@@ -557,19 +602,7 @@ export function planVaultFolderMove(parent: Graph, fromRel: string, toInput: str
       }
     }
   }
-  const files = c.result();
-  const warnings = dirtyTrees([fromAbs, ...files.map((f) => f.abs)]);
-  return {
-    kind: "folder",
-    from,
-    to,
-    move: { from: fromAbs, to: toAbs, dir: true },
-    moves: [],
-    vaults: graphs.map((g) => [g.root, shift(g.root)]),
-    files,
-    warnings,
-    skipped: c.skipped,
-  };
+  return graphs.map((g) => [g.root, shift(g.root)]);
 }
 
 /** The links of `g`'s notes that reach into the folder at `folderAbs` (a vault nested in it), each as
@@ -624,7 +657,8 @@ function retargetBacklink(g: Graph, b: Backlink, linking: string, linkingAfter: 
     // Written as an alias: still right after the rename.
     if (!b.target.includes("/") && aliases.has(normKey(name)) && normKey(name) !== normKey(oldName)) return b.target;
     const fromDir = isInside(g.root, linkingAfter) ? posix.dirname(relative(g.root, linkingAfter)) : null;
-    return wikiTarget(b.target, fromDir, toRel, g, fromRel);
+    // Moved into a root nested here: a name ends at its boundary, a path from the top reaches in (17.17).
+    return wikiTarget(b.target, fromDir, toRel, g, fromRel, rootOfPath(linkingAfter) !== rootOfPath(toAbs));
   }
   return mdTarget(b.target, linkingAfter, toAbs, isInside(g.root, linkingAfter) ? g : null);
 }
@@ -644,13 +678,11 @@ export function planVaultRename(loc: VaultLocation, newName: string): RenamePlan
   checkVaultName(newName, loc.root);
   const text = readText(cfg).text;
   // Named before: the new name, the old one kept. Never: a name, and an id to tell its copies apart.
-  const next = oldName ? renameInConfig(text, oldName, newName) : withIdentity(text, have, { id: newVaultId(), name: newName });
+  const id = oldName ? have.id : (have.id ?? newVaultId());
+  const next = oldName ? renameInConfig(text, oldName, newName) : withIdentity(text, have, { id: id!, name: newName });
   // The edit is textual: read back, it must be the same folder by its new name, the old one kept —
-  // else (a `[ vault ]` header, dotted `vault.name` keys) nothing is written.
-  const got = identityOf(next);
-  if (oldName && (got.id !== have.id || got.name !== newName || !got.previous_names.includes(oldName))) {
-    throw new RenameError("can't edit .slipbox/config.toml's [vault] table safely: edit it by hand");
-  }
+  // else (a `[ vault ]` header, dotted `vault.name` keys) nothing is written. Never named too.
+  if (!identityReadsBack(have, next, { id, name: newName, ...(oldName ? { previous: oldName } : {}) })) throw new RenameError(new IdentityEditError().message);
   const after = oldName ? `name = "${newName}" (previous_names + ${oldName})` : `name = "${newName}"`;
   const files: FileChange[] = [{ abs: cfg, shown: ".slipbox/config.toml", vault: null, edits: [{ line: 0, before: oldName ? `name = "${oldName}"` : "(no name)", after }], text, next }];
   return { kind: "vault", from: oldName ?? loc.root, to: newName, move: null, files, warnings: dirtyTrees([cfg]), skipped: [] };
@@ -700,7 +732,9 @@ export function planRelink(g: Graph, rels?: string[], opts: { pointers?: boolean
       const abs = join(g.root, rel);
       const site: Site = { abs, kind: l.kind, target: l.target, line: l.line, column: l.column };
       if (to) {
-        c.edit(site, mdTarget(l.target, abs, join(g.root, to), g), null);
+        // Each in its own form: a wikilink's path a wikilink's (relative kept, `.md` only if written).
+        const wiki = l.kind === "wiki" || l.kind === "embed";
+        c.edit(site, wiki ? wikiTarget(l.target, posix.dirname(rel), to, g, "") : mdTarget(l.target, abs, join(g.root, to), g), null);
         continue;
       }
       // A pointer by a name its folder had (21.10, renamed with `slipbox name`): the name it has now.
@@ -852,6 +886,33 @@ function notARootPath(url: string): boolean {
   return (/^[a-z][a-z0-9+.-]*:/i.test(url) && !/^file:/i.test(url)) || /^file:/i.test(url) || url.startsWith("~/") || url.startsWith("#");
 }
 
+/**
+ * Whether a wikilink written as a path (`[[docs/plan]]`, not `./`/`../` nor a name) reaches `targetAbs`
+ * read from the root at `rootAbs` (21.3, 17.16): the file as written, else its note.
+ */
+function wikiPathReaches(written: string, rootAbs: string, targetAbs: string): boolean {
+  const t = written.trim();
+  if (!t.includes("/") || /^\.\.?\//.test(t)) return false;
+  return wikiPathCandidates(join(rootAbs, t.replace(/^\/+/, ""))).some((c) => c === targetAbs || (existsSync(c) && real(c) === real(targetAbs)));
+}
+
+/**
+ * A wikilink's target rewritten to reach `targetAbs` from `linkingAbs`, read in the root `rootAbs`: its
+ * path from that root when it's in it and that path is one (it has a `/` — a top-level note's is a name),
+ * else a relative path. `.md` only where it was written; another file's extension always.
+ */
+function wikiTo(written: string, linkingAbs: string, rootAbs: string, targetAbs: string): string {
+  const fromRoot = relative(rootAbs, targetAbs).split(sep).join("/");
+  const next = !climbsOut(fromRoot) && !isAbsolute(fromRoot) && fromRoot.includes("/") ? fromRoot : formatPathLink("relative", targetAbs, linkingAbs, true);
+  return NOTE_EXT.test(written) || !NOTE_EXT.test(targetAbs) ? next : next.replace(NOTE_EXT, "");
+}
+
+/** The names a wikilink reaches files by (21.3): a note's without its extension, any other file's whole, case-folded. */
+function wikiNameKey(path: string): string {
+  const b = posix.basename(path);
+  return normKey(NOTE_EXT.test(b) ? b.replace(NOTE_EXT, "") : b);
+}
+
 /** Normalized folder path as typed, inside the vault. */
 function folderPath(g: Graph, folderRel: string): string {
   const f = posix.normalize(folderRel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
@@ -879,15 +940,27 @@ export function planMakeVault(parent: Graph, folderRel: string, name: string | n
     const linkingAbs = join(parent.root, rel);
     const fromIn = inF(rel);
     for (const l of entry.links) {
-      if (l.kind !== "markdown" && l.kind !== "image") continue;
+      const wiki = l.kind === "wiki" || l.kind === "embed";
+      if (l.kind !== "markdown" && l.kind !== "image" && !wiki) continue;
       const r = parent.resolveLink(l, rel);
       if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path) continue;
       const targetAbs = isAbsolute(r.path) ? r.path : join(parent.root, r.path);
       if (!isInside(parent.root, targetAbs)) continue; // elsewhere: this changes nothing about it
       const toIn = inF(relative(parent.root, targetAbs).split(sep).join("/"));
-      if ((!fromIn && !toIn) || notARootPath(l.target)) continue;
+      if (!fromIn && !toIn) continue;
       const rootAfter = fromIn ? Fabs : parent.root;
-      if (!urlReaches(l.target, linkingAbs, rootAfter, targetAbs)) c.edit({ abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column }, urlTo(l.target, linkingAbs, rootAfter, targetAbs), null);
+      const site = { abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column };
+      if (wiki) {
+        // A wikilink (21.3): a relative path reaches as it did; a name ends at F's boundary — kept
+        // only within it — and a path is read from the root it's in now.
+        const t = l.target.trim();
+        if (/^\.\.?\//.test(t)) continue;
+        const reaches = t.includes("/") ? wikiPathReaches(t, rootAfter, targetAbs) : fromIn && toIn;
+        if (!reaches) c.edit(site, wikiTo(l.target, linkingAbs, rootAfter, targetAbs), null);
+        continue;
+      }
+      if (notARootPath(l.target)) continue;
+      if (!urlReaches(l.target, linkingAbs, rootAfter, targetAbs)) c.edit(site, urlTo(l.target, linkingAbs, rootAfter, targetAbs), null);
     }
   }
   const files = c.result();
@@ -918,16 +991,45 @@ export function planUnmakeVault(parent: Graph, folderRel: string): RenamePlan {
   parent.ensureAll();
   const P = parent.loc.name ?? parent.root;
   const c = new Collector(parent);
+  // The names a wikilink reaches once its notes are the parent's: how many files answer to each.
+  const named = new Map<string, number>();
+  for (const p of [...parent.notes.keys(), ...parent.filePaths(), ...[...v.notes.keys(), ...v.filePaths()].map((x) => `${F}/${x}`)]) {
+    const k = wikiNameKey(p);
+    named.set(k, (named.get(k) ?? 0) + 1);
+  }
   // Its own links within it.
   for (const [vr, e] of v.notes) {
     const linkingAbs = join(Vabs, vr);
     for (const l of e.links) {
-      if ((l.kind !== "markdown" && l.kind !== "image") || notARootPath(l.target)) continue;
+      const wiki = l.kind === "wiki" || l.kind === "embed";
+      if ((l.kind !== "markdown" && l.kind !== "image" && !wiki) || (!wiki && notARootPath(l.target))) continue;
       const r = v.resolveLink(l, vr);
       if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path) continue;
       const targetAbs = isAbsolute(r.path) ? r.path : join(Vabs, r.path);
       if (!isInside(Vabs, targetAbs)) continue; // out of it: a path reaches the same
-      if (!urlReaches(l.target, linkingAbs, parent.root, targetAbs)) c.edit({ abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column }, urlTo(l.target, linkingAbs, parent.root, targetAbs), null);
+      const site = { abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column };
+      if (wiki) {
+        // A wikilink (21.3): a relative path reaches as it did; a path is read from the parent's root
+        // now; a name stays one only while no other file of the parent answers to it.
+        const t = l.target.trim();
+        if (/^\.\.?\//.test(t)) continue;
+        const reaches = t.includes("/") ? wikiPathReaches(t, parent.root, targetAbs) : r.via === "alias" || (named.get(wikiNameKey(targetAbs)) ?? 0) <= 1;
+        if (!reaches) c.edit(site, wikiTo(l.target, linkingAbs, parent.root, targetAbs), null);
+        continue;
+      }
+      if (!urlReaches(l.target, linkingAbs, parent.root, targetAbs)) c.edit(site, urlTo(l.target, linkingAbs, parent.root, targetAbs), null);
+    }
+  }
+  // The parent's names: one its notes share with a note of the vault would land on either — a path.
+  const vNamed = new Set([...v.notes.keys(), ...v.filePaths()].map(wikiNameKey));
+  for (const [rel, e] of parent.notes) {
+    for (const l of e.links) {
+      if ((l.kind !== "wiki" && l.kind !== "embed") || l.target.includes("/") || !l.target.trim()) continue;
+      const r = parent.resolveLink(l, rel);
+      if ((r.resolvedKind !== "note" && r.resolvedKind !== "file") || !r.path || isAbsolute(r.path) || r.via === "alias") continue;
+      if (!vNamed.has(wikiNameKey(r.path))) continue;
+      const linkingAbs = join(parent.root, rel);
+      c.edit({ abs: linkingAbs, kind: l.kind, target: l.target, line: l.line, column: l.column }, wikiTo(l.target, linkingAbs, parent.root, join(parent.root, r.path)), null);
     }
   }
   const out = c.result();
@@ -1122,7 +1224,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     if (!isInside(g.root, abs)) continue;
     // A moved vault's files are its own, not this vault's (18.7); so are a nested root's (17.17),
     // reindexed with the others.
-    if (plan.vaults?.length && mv && (abs === mv.to || abs.startsWith(`${mv.to}/`))) continue;
+    if (plan.vaults?.some(([, to]) => abs === to || abs.startsWith(`${to}/`))) continue;
     const own = findVaultRoot(abs);
     if (own && real(own) !== real(g.root)) continue;
     const rel = relative(g.root, abs);
@@ -1136,7 +1238,8 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       else g.addAsset(rel);
     } catch {}
   }
-  if (mv?.dir && !plan.vaults?.length) {
+  // A plain folder's (one holding a root nested in it, too), not a root's own folder.
+  if (mv?.dir && !plan.vaults?.some(([from]) => from === mv.from)) {
     const from = relative(g.root, mv.from);
     const to = relative(g.root, mv.to);
     g.dirs = [...new Set(g.dirs.map((d) => (d === from || d.startsWith(`${from}/`) ? to + d.slice(from.length) : d)).concat(to.split("/").map((_, i, a) => a.slice(0, i + 1).join("/"))))];
@@ -1150,6 +1253,23 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
 /** Whether a link's `#fragment` names a heading: by its text (any case) or its slug. */
 function namesHeading(fragment: string, text: string): boolean {
   return normKey(fragment.trim()) === normKey(text) || normKey(slugify(fragment)) === normKey(slugify(text));
+}
+
+/**
+ * The heading on line `n` (1-based) of `lines`, its text now `next`: an ATX heading (`## Goals ##`)
+ * or a setext one (`Goals` over a `---` or `===` underline), its indent, its explicit id (`{#g}`) and
+ * its closing hashes or underline kept. Null when line `n` isn't a heading's.
+ */
+function headingLine(lines: string[], n: number, next: string): string | null {
+  const line = lines[n - 1]?.replace(/\r$/, "");
+  if (line === undefined) return null;
+  const id = "([ \\t]*\\{#[^\\s{}#]+(?:\\s[^{}]*)?\\})?";
+  const atx = new RegExp(`^(\\s{0,3}#{1,6}[ \\t]+)(.*?)${id}([ \\t]+#+[ \\t]*)?$`).exec(line);
+  if (atx) return `${atx[1]}${next}${atx[3] ?? ""}${atx[4] ?? ""}`;
+  const under = lines[n]?.replace(/\r$/, "");
+  if (under === undefined || !/^ {0,3}(=+|-+)[ \t]*$/.test(under) || !line.trim()) return null;
+  const setext = new RegExp(`^( {0,3})(.*?)${id}([ \\t]*)$`).exec(line);
+  return setext ? `${setext[1]}${next}${setext[3] ?? ""}${setext[4] ?? ""}` : null;
 }
 
 /**
@@ -1214,10 +1334,12 @@ export function planHeadingRename(g: Graph, rel: string, heading: string, toText
   if (entry.headings.some((x) => x !== h && slugify(x.text) === slugify(next))) throw new RenameError(`${rel} has a heading "${next}" already`);
   const c = new Collector(g);
   const own = join(g.root, rel);
-  c.line(own, null, h.line, (line) => {
-    const m = /^(\s{0,3}#{1,6}[ \t]+)(.*?)([ \t]+#+[ \t]*)?$/.exec(line);
-    return m ? `${m[1]}${next}${m[3] ?? ""}` : null;
-  }, "the heading isn't on its line any more");
+  // The heading itself first: when it can't be rewritten, nothing is — its links renamed alone would break.
+  const text = c.file(own, null)?.text;
+  if (text === undefined) throw new RenameError(`${rel} can't be read`);
+  const retitled = headingLine(text.split("\n"), h.line, next);
+  if (retitled === null) throw new RenameError(`the heading "${h.text}" isn't on line ${h.line} of ${rel} any more (its index is older than the file): nothing renamed`);
+  c.line(own, null, h.line, () => retitled, "the heading isn't on its line any more");
   const fragment = (l: { kind: LinkKind; target: string; heading: string | null }) => {
     if (l.kind === "wiki" || l.kind === "embed") return l.heading;
     const i = l.target.indexOf("#");
@@ -1230,9 +1352,11 @@ export function planHeadingRename(g: Graph, rel: string, heading: string, toText
     const abs = isAbsolute(b.from) ? b.from : join(g.root, b.from);
     c.line(abs, b.vault ?? null, b.line, (line) => retitle(line, site(abs, b), h.text, next), "no link to the heading there any more");
   }
+  // Its own links to it: by an anchor alone, or by its own path or name (backlinks leave a note's links to itself out).
+  const self = (r: Pick<ResolvedLink, "resolvedKind" | "path">) => r.resolvedKind === "anchor" || (r.resolvedKind === "note" && !!r.path && (r.path === rel || r.path === own));
   for (const l of entry.links) {
     const f = fragment(l);
-    if (f === null || !namesHeading(f, h.text) || g.resolveLink(l, rel).resolvedKind !== "anchor") continue;
+    if (f === null || !namesHeading(f, h.text) || !self(g.resolveLink(l, rel))) continue;
     c.line(own, null, l.line, (line) => retitle(line, site(own, l), h.text, next), "no link to the heading there any more");
   }
   const files = c.result();

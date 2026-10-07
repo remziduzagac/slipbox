@@ -78,7 +78,7 @@ enabled = true
 auto_install = false            # the laptops have the servers from Homebrew
 
 [language-server.pyright]
-command = "/opt/homebrew/bin/pyright-langserver"   # the program is mine to name, never a vault's
+command = "/opt/homebrew/bin/pyright-langserver"   # the program is mine to name, never a folder's
 args = ["--stdio"]
 environment = { PYTHONPATH = "api" }
 config = { python = { analysis = { typeCheckingMode = "strict", autoSearchPaths = true } } }
@@ -103,7 +103,7 @@ language-id = "fake"
 [linter.todo]                   # a linter without a server: what the notes and code still owe
 lint-command = "rg --vimgrep -e TODO -e FIXME"
 lint-stdin = false
-lint-formats = ['%f:%l:%c: %m']
+lint-formats = ['%f:%l:%c:%m']        # rg --vimgrep: no space after the column
 lint-source = "todo"
 lint-severity = 3
 lint-ignore-exit-code = true
@@ -121,7 +121,10 @@ autosave_ms = 10000
 edit_in = "live"
 lens_min_rows = 8
 lens_max = 0.4
-remote = ["nvim --server {server} --remote {file}", "code -g {file}:{line}"]   # tried in order
+remote = [                      # run in order, each after the last; the first failure stops
+  "nvim --server {server} --remote {file}",
+  "nvim --server {server} --remote-send '<C-\\><C-N>:{line}<CR>'",
+]
 
 [lint]
 enabled = "on"

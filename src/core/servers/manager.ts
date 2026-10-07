@@ -274,7 +274,8 @@ export class ServerManager {
 
   /** An npm server installed into slipbox's folder, once a session; true when it's there. */
   private install(def: ServerDef): Promise<boolean> {
-    const npm = def.npm!;
+    const npm = def.npm;
+    if (!npm) return Promise.resolve(false); // a native server is never installed
     const spec = `${npm.package}@${npm.version}`;
     let done = this.installs.get(spec);
     if (!done) {
@@ -297,9 +298,15 @@ export class ServerManager {
       this.o.message("error", `${r.def.name} keeps crashing (${why}); not started again`);
       return;
     }
+    // Its program gone (a venv recreated, an upgrade moving it): left stopped, unless it's npm's to install.
+    const found = findServer(r.def, r.root);
+    if (!found && !(r.def.npm && this.o.autoInstall())) {
+      this.o.message("error", `${r.def.name} crashed (${why}) and its program is gone; not started again`);
+      return;
+    }
     this.o.message("warn", `${r.def.name} crashed (${why}); starting it again`);
     // The same server again, its files told again once it's ready.
-    r.ready = this.start(r, findServer(r.def, r.root));
+    r.ready = this.start(r, found);
     void r.ready.then((client) => {
       if (!client) return;
       for (const d of this.docs.values()) if (d.servers.includes(r.key)) void client.didOpen(uriOf(d.path), d.languageId, d.version, d.text);

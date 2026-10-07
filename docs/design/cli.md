@@ -96,7 +96,7 @@ These churn freely before 1.0:
 | `footnotes <note> add\|edit\|rm\|rename …` | `{path, sha, footnotes[…]}` after it; `--if-unchanged`; exit 5: refused |
 | `init [dir]` | `{root, created, identified, id, name, excluded}` — id, name with `--name N`; exit 5: name in use |
 | `name <new>` | a `.slipbox/` folder's: as `mv`, kind `vault`; a repository's: `{root, name, id, created}`; 5: taken |
-| `folders` | `[{name, pointer, remote, id, private, old, default, copies[{path, seen, found, available}]}]` |
+| `folders` | `[{name, pointer, remote, id, private, aliases, old, default, copies[{path, seen, found, …}]}]` |
 | `init <folder>`, `deinit` | as `mv`: kind `make-vault`, `unmake-vault`; `init` adds `root`, `name` and `id` |
 | `info` | `root`, `mode`, `name`, `key`, `folder{name, pointer, …, copies[]}`, `links`, `index{…, written}`, … |
 | `--plan` (`mv`, `relink`…) | as `--dry-run`, plus `plan{id, made}`: saved for `apply` (`20.18`) |
@@ -318,8 +318,9 @@ remote (`github.com/me/research`) when a different repository this machine knows
 relative path`. The lookup (`folders.json` in the state folder) holds each name, its copies and the default one: the
 first found, or the one picked (the TUI asks once a second is here); filled from the folders opened and the background
 index. A name of two different folders is ambiguous: repositories each by their remote, `.slipbox/` folders until one
-is renamed; an old name (`aliases`, `previous_names`) still finds the folder; a copy that's gone stays listed,
-unavailable — another copy answers meanwhile.
+is renamed; an alias (`aliases`) finds the folder as its name does, and a name it had (`previous_names`, kept as
+`old`) still finds it, said so (`via: "old-name"`); a copy that's gone stays listed, unavailable — another copy answers
+meanwhile.
 
 **Pointers** (`21.7`, `core/pointer.ts`): `slipbox://<name>[@branch]/<path>#fragment` — a link into a named folder
 (`21.6`), read by `resolve`, `links`, backlinks (another folder's pointers count, as of its index) and renames, which
@@ -381,11 +382,12 @@ Outside a git repository, or with no base branch, these exit 3.
 checked out) would break — git's own tentative result (`git merge-tree --write-tree`, git 2.38 or newer), read without
 touching the working tree or HEAD. Git can't see these itself: "`refactor` moves `docs/plan.md`; `main` added a link to
 it in `docs/b.md`" changes different files and merges cleanly. Branches with no commit in common are refused, as git
-refuses to merge them. Each link of the result's notes that reaches nothing there, and wasn't broken in `--into`,
-comes with its `cause`:
+refuses to merge them. Each link of the result's notes — a markdown link's path, a wikilink's path or name (`21.3`) —
+that reaches nothing there, and wasn't broken in `--into`, comes with its `cause`:
 
 - `moved`: a branch (`by`) renamed the file it names (git pairs renames by similarity) to `to`; `fix` is the target to
-  write instead, from the note, its `#fragment` kept and encoded as a link is;
+  write instead, from the note, its `#fragment` kept and encoded as a link is (a wikilink's in its own form: a name
+  stays a name, no `.md` unless written, nothing encoded);
 - `deleted`: a branch deleted it, or moved it out of the vault;
 - `note-moved`: the note itself moved without its relative link; `to` is what it named from where it was, and `fix`;
 - `missing`: neither branch had it — the merged branch's link to nothing.
@@ -457,6 +459,8 @@ new path has none) and rewrites every link to it, in this vault and in every vau
 grammars are loaded before it plans, so their comments count however fresh the process). `--dry-run` is the preview
 (`7.2`): each changed line, before and after, and nothing written.
 
+- **The new path** is from the root, unless it's absolute or starts with `./` or `../` (from the current folder), as
+  `write --create` and `mkdir` take one; outside the root, or a pointer, it's refused.
 - **Each link keeps how it was written:** a relative path stays relative, `#heading` and `#^block` stay, a
   percent-encoded URL is encoded again, a reference link's definition is rewritten where it is; a filesystem path
   (`17.16`) stays in its form — `~/`, absolute, or a `file://` URL.
@@ -473,7 +477,7 @@ grammars are loaded before it plans, so their comments count however fresh the p
 
 **A folder** (`18.3`): `slipbox mv <folder> <new-path>` moves it with everything in it — what the walk doesn't list
 too — and rewrites every link to anything in it, from where each linking file will be; links between two files that
-move together stay as they are.
+move together stay as they are. Its new path is taken as a note's.
 
 **A nested vault's folder** (`18.7`) is a folder of the vault holding it, whichever one the path names: `mv` moves it,
 rewriting the links into it by path — this vault's, and those of the vaults that reach it — and its own relative links
@@ -483,19 +487,20 @@ break.
 **Deleting and copying** (`18.4`, `18.5`): `slipbox rm` moves a note, file or folder to the vault's trash — in its
 state, never in the folder — and says how many links from other notes break (`breaking`, and a warning); `--dry-run`
 only says. `slipbox trash` lists what's there; `slipbox trash restore <id|path>` puts an item back where it was,
-refused when something is there now. `slipbox cp` copies a note, file or folder, as written.
+refused when something is there now. `slipbox cp` copies a note, file or folder, as written, to a path taken as
+`mv` takes one.
 
 `slipbox name <name>` names this root (`21.10`): a `.slipbox/` folder's `[vault] name` changed, the old name added to
-its `previous_names` (a pointer by it still finds the folder, and the relink brings it to the new one), or — never
-named — a name and an id written; a repository without `.slipbox/` given one to hold the name. Previewed with
-`--dry-run`; a name a different folder has here is refused (exit 5), and so is a `[vault]` table the edit can't follow
-(a `[ vault ]` header, dotted `vault.name` keys): edit it by hand. `slipbox relink [note]` rewrites the links of a
-note (or every note) that reach nothing but whose file was seen to move (`17.12`) — broken, since a move never
-resolves a link (`20.2`) — to its path now. For every note, it also fixes what the root's own last move by hand broke
-(`20.17`, `21.8`), from what the state knows of where it was: its links out by a path, now reaching nothing, to where
-they reached from there; and the other roots' links into where it was (as of their index) to where it is — each in
-its own form (relative, `~/`, absolute), a link that still reaches something left alone. The command that first opens
-a moved folder says how many lines that is. Both take `--dry-run`.
+its `previous_names` (a pointer by it still finds the folder, and the relink brings it to the new one), or — never named
+— a name and an id written; a repository without `.slipbox/` given one to hold the name. Previewed with `--dry-run`; a
+name a different folder has here is refused (exit 5), and so is a `[vault]` table the edit can't follow (a `[ vault ]`
+header, dotted `vault.name` keys) — by `init --name` too: edit it by hand. `slipbox relink [note]` rewrites the links of
+a note (or every note) by a path — a markdown link's, a wikilink's in its own form — that reach nothing but whose file
+was seen to move (`17.12`) — broken, since a move never resolves a link (`20.2`) — to its path now. For every note, it
+also fixes what the root's own last move by hand broke (`20.17`, `21.8`), from what the state knows of where it was: its
+links out by a path, now reaching nothing, to where they reached from there; and the other roots' links into where it
+was (as of their index) to where it is — each in its own form (relative, `~/`, absolute), a link that still reaches
+something left alone. The command that first opens a moved folder says how many lines that is. Both take `--dry-run`.
 
 **Plans, in two steps** (`20.18`): every command that generates edits — `mv`, `name`, `rename-heading`,
 `relink`, `convert-links`, `init <folder>`, `deinit`, `undo` — takes `--plan`: it says what it would do, as
@@ -513,8 +518,9 @@ its alias kept as the text, else the link as it was drawn (`[[plan#Aims]]` → `
 literal still: what a markdown label would act on (a backslash, brackets, `*`, a backtick, `<`, `&`, `~`, a `_` at a
 word's edge) is escaped, and in a table the `|` too. A heading becomes its slug, checked to be in the note, a block
 `#^id`, a picture's size Obsidian's markdown form (`![[pic.png|300]]` → `![pic.png|300](pic.png)`). And each markdown
-link written from the vault's root (`[x](/docs/x.md)`, which will mean the filesystem's root) is made relative — a
-reference link's in its definition, once however many use it; one naming the filesystem's own path is left, as it
+link written from the root (`[x](/docs/x.md)`: here from the nearest root, `21.2`, but the filesystem's root to other
+tools) is made relative, so it reads the same anywhere — a reference link's in its definition, once however many use
+it; one naming the filesystem's own path is left, as it
 means the same after. Spaces, parentheses, `#` and `%` in a path are percent-encoded. Left as written, each said in
 the warnings: a link that reaches nothing, a heading or block that isn't there (or a heading no slug can reach,
 `## 🎉`), one not where the index has it; and a link several notes answer to, listed in `ambiguous` (`{key, shown,
@@ -542,13 +548,17 @@ made on (`5.9`): on another, `nothing to undo on branch main: the last rename wa
 A folder made a vault or a vault made a folder (`18.11`) isn't among them: `deinit` and `init` take each other back.
 
 **A folder made a vault, and back** (`18.11`): `slipbox init <folder>` on a folder inside a vault makes it a vault of
-its own — its `.slipbox/`, a distinct name suggested unless `--name`. Links are paths (`20.2`): relative and
-filesystem ones reach across the new boundary as they are; one written from the root (`/…`), which would now mean the
-other root, is rewritten to reach what it did, shown in the preview. `slipbox deinit <folder>` undoes it for a vault
-nested in another, rewriting such links the other way: its `.slipbox/` goes to the parent's trash (`trash restore`
+its own — its `.slipbox/`, named only with `--name` (the TUI's prompt suggests a distinct name). Links are paths
+(`20.2`): relative and filesystem ones reach across the new boundary as they are; one written from the root (`/…`),
+which would now mean the other root, is rewritten to reach what it did, shown in the preview. So is a wikilink that
+wouldn't reach (`21.3`): a name across the boundary, which a root ends, becomes a path (`[[F/plan]]` into it,
+`[[../home]]` out of it); a path from the root is read from the new one (`[[F/x/y]]` inside it is `[[x/y]]`); a name
+within it stays a name. `slipbox deinit <folder>` undoes it for a vault nested in another, rewriting such links the
+other way — its paths from its root gain its folder, and a name another note of the parent shares (its own, or a
+parent's) becomes a path, never landing on the other one: its `.slipbox/` goes to the parent's trash (`trash restore`
 makes it a vault again), and the machine forgets it. A git checkout is refused, with `.slipbox/` or without: it's a
-vault by itself (`20.3`). Both take `--dry-run` and answer like `mv`, `init` adding the vault's `root`, `name` and
-`id`. Every plan's writes into another vault's files reach that vault's index at once, as if it had been opened.
+vault by itself (`20.3`). Both take `--dry-run` and answer like `mv`, `init` adding the vault's `root`, `name` and `id`.
+Every plan's writes into another vault's files reach that vault's index at once, as if it had been opened.
 
 ## Capture and the scratch (plans `8.1`–`8.4`)
 
