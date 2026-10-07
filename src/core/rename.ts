@@ -22,6 +22,7 @@ import { copyAvailable, folderIdentity, folderNamed, pointerName, readFolders, r
 import { formatPointer, isPointer, parsePointer, resolvePointer } from "./pointer.ts";
 import { parseHosted } from "./hosting.ts";
 import { checkoutOf } from "./git.ts";
+import { gitArgs } from "./gitops.ts";
 import { findVaultRoot, hasMarker, initVault, isInside, markersAt, type VaultLocation } from "./vault.ts";
 
 export class RenameError extends Error {}
@@ -360,7 +361,7 @@ export function dirtyTrees(paths: string[]): string[] {
   const out: string[] = [];
   for (const root of roots) {
     try {
-      const status = execFileSync("git", ["-C", root, "status", "--porcelain"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 });
+      const status = execFileSync("git", gitArgs(root, ["status", "--porcelain"]), { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 });
       if (status.trim()) out.push(`${root} already has uncommitted changes (git): these edits will mix with them`);
     } catch {
       // not a git repository, or no git: nothing to warn about

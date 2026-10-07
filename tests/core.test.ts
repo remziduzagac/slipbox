@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,7 +8,8 @@ import { canonKey, Keymap, unknownModifiers } from "../src/core/commands.ts";
 import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
 import { headingsOf, newParseCache, parseLegacy, parseMarkdown, visit } from "../src/core/parse.ts";
-import { lintCommand, parseLint, runLint } from "../src/core/lint.ts";
+import { lintCommand, lintLoadsCode, parseLint, runLint } from "../src/core/lint.ts";
+import { isTrusted, setTrustedRoots } from "../src/core/trust.ts";
 import { addFootnote, applyEdits, deleteFootnote, editFootnote, footnotesOf, renameFootnote, type TextEdit } from "../src/core/footnotes.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import { renderMarkdown } from "../src/core/layout/render.ts";
@@ -35,6 +36,8 @@ process.env.XDG_DATA_HOME = join(sandbox, "data"); // the home vault (17.2)
 delete process.env.SLIPBOX_CONFIG; // it would win over XDG_CONFIG_HOME: never the developer's own config
 process.env.SLIPBOX_CLIPBOARD = "file"; // copies never reach the developer's clipboard
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+// A root is trusted only where a test says so (23.x): none by default, as in use.
+afterEach(() => setTrustedRoots([]));
 
 
 describe("width (0.7)", () => {
@@ -1906,6 +1909,64 @@ describe("footnotes (3.17)", () => {
   });
 });
 
+describe("trust (23.x)", () => {
+  test("a root is trusted when your list names it, a folder above it, or a glob matching either; nothing is by default", () => {
+    const home = mkdtempSync(join(sandbox, "trust-"));
+    const proj = join(home, "Projects", "app");
+    mkdirSync(join(proj, "src"), { recursive: true });
+    mkdirSync(join(home, "Other", "x"), { recursive: true });
+    expect(isTrusted(proj, [])).toBe(false);
+    expect(isTrusted(proj, [proj])).toBe(true);
+    expect(isTrusted(join(proj, "src"), [proj])).toBe(true); // inside it
+    expect(isTrusted(join(home, "Projects"), [proj])).toBe(false); // above it isn't
+    expect(isTrusted(join(proj, "src"), [join(home, "Projects", "*")])).toBe(true);
+    expect(isTrusted(join(home, "Other", "x"), [join(home, "Projects", "*")])).toBe(false);
+    expect(isTrusted(`${proj}-evil`, [proj])).toBe(false); // a name that starts the same
+    // Through a symlink: the folder it is.
+    symlinkSync(proj, join(home, "link"));
+    expect(isTrusted(join(home, "link", "src"), [proj])).toBe(true);
+    // The list set once is the one asked.
+    setTrustedRoots([proj]);
+    expect(isTrusted(proj)).toBe(true);
+  });
+
+  test("only your config trusts: a folder's [trust] is ignored, said why; a list of other than paths is warned of", () => {
+    const dir = mkdtempSync(join(sandbox, "trustcfg-"));
+    const user = join(dir, "config.toml");
+    writeFileSync(user, '[trust]\nroots = ["~/Projects/*", ""]\n');
+    mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
+    writeFileSync(join(dir, "v", ".slipbox", "config.toml"), '[trust]\nroots = ["/"]\n');
+    const r = loadConfig({ configFile: user, vaultRoot: join(dir, "v") });
+    expect(r.config.trust.roots).toEqual(["~/Projects/*"]);
+    expect(r.warnings.some((w) => w.includes("sets [trust], which only your own config may set (a folder can't trust itself)"))).toBe(true);
+    expect(r.warnings.some((w) => w.includes("trust.roots takes paths and globs"))).toBe(true);
+  });
+
+  test("markdownlint-cli2 in a root you don't trust (23.5): a file under a config that is code, or names code, isn't linted — said once", async () => {
+    const root = mkdtempSync(join(sandbox, "mdl-trust-"));
+    for (const [rel, text] of Object.entries({ "plain/a.md": "# A\n", "js/.markdownlint.cjs": "module.exports = {};\n", "js/deep/b.md": "# B\n", "rules/.markdownlint-cli2.jsonc": '{ "customRules": ["./rule.js"] }\n', "rules/c.md": "# C\n" })) {
+      mkdirSync(join(root, rel, ".."), { recursive: true });
+      writeFileSync(join(root, rel), text);
+    }
+    expect(lintLoadsCode(join(root, "plain/a.md"), root)).toBe(false);
+    expect(lintLoadsCode(join(root, "js/deep/b.md"), root)).toBe(true);
+    expect(lintLoadsCode(join(root, "rules/c.md"), root)).toBe(true);
+    // A linter that names every file it's given: only the plain one reaches it.
+    const fake = join(root, "fake-mdl");
+    writeFileSync(fake, '#!/bin/sh\nfor f in "$@"; do echo "${f#:}:1 error MD041/first-line-heading First line"; done\nexit 1\n');
+    chmodSync(fake, 0o755);
+    const said: string[] = [];
+    const files = ["plain/a.md", "js/deep/b.md", "rules/c.md"].map((f) => join(root, f));
+    const got = await runLint({ argv: [fake], literal: true }, files, root, undefined, (t) => said.push(t));
+    expect(got!.map((i) => i.file)).toEqual([join(root, "plain/a.md")]);
+    expect(said).toEqual([`markdownlint-cli2 not run on 2 file(s): a markdownlint config there is code, or names code to load, and ${root} isn't a root you trust — [trust] roots in your config`]);
+    await runLint({ argv: [fake], literal: true }, files, root, undefined, (t) => said.push(t));
+    expect(said.length).toBe(1); // said once
+    setTrustedRoots([root]);
+    expect((await runLint({ argv: [fake], literal: true }, files, root))!.length).toBe(3);
+  });
+});
+
 describe("the lint surface (3.21)", () => {
   test("markdownlint-cli2's lines read: path, line, column, rule and its name, what's wrong; the rest ignored", () => {
     const out = [
@@ -1923,6 +1984,7 @@ describe("the lint surface (3.21)", () => {
   });
 
   test("which linter: off; auto only with a markdownlint config (yours, or the vault's); markdownlint-cli2 with yours unless the vault has its own — found as a server is, the vault's own first, else installed first (19.21); [lint] command as given", () => {
+    setTrustedRoots([sandbox]); // a root you trust (23.x): the vault's own markdownlint-cli2 counts
     const home = mkdtempSync(join(sandbox, "home-"));
     const vault = mkdtempSync(join(sandbox, "vault-"));
     const cfg = (enabled: "auto" | "on" | "off", command: string[] = []) => ({ enabled, command });

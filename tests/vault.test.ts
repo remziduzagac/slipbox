@@ -1,7 +1,7 @@
 // The fixture vault (0.5) against the walk (0.11), discovery (1.1), the graph and the CLI (9.x).
 
 import { describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 import { CLI_COMMANDS, FLAGS, GLOBAL_FLAGS, runCli } from "../src/cli/cli.ts";
@@ -2792,6 +2792,55 @@ describe("a branch switch (5.9)", () => {
     git(root, "checkout", "-q", "feat");
     expect((await cli(["undo"], root)).json.data).toMatchObject({ kind: "note", from: "b.md", to: "a.md" });
     expect(readFileSync(join(root, "index.md"), "utf8")).toBe("[[a]]\n");
+  });
+});
+
+describe("git in a root you don't trust (23.6)", () => {
+  // A repository whose .git/config and .gitattributes name programs — as one copied or unpacked brings
+  // them (git clone doesn't) — each leaving a mark when git runs it.
+  const hostile = () => {
+    const top = mkdtempSync(join(tmpdir(), "slipbox-hostile-git-"));
+    const g = (...args: string[]) => Bun.spawnSync(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-C", top, ...args]);
+    if (g("init", "-q", "-b", "main").exitCode !== 0) return null;
+    writeFileSync(join(top, "a.md"), "# A\n");
+    writeFileSync(join(top, ".gitattributes"), "*.md filter=evil diff=evil merge=evil\n");
+    g("add", "-A");
+    g("commit", "-q", "-m", "files");
+    const mark = (what: string) => `sh -c 'touch ${join(top, `${what}-ran`)}; cat'`;
+    g("config", "filter.evil.clean", mark("clean"));
+    g("config", "diff.evil.textconv", `sh -c 'touch ${join(top, "textconv-ran")}; cat "$1"' --`);
+    g("config", "core.fsmonitor", `sh -c 'touch ${join(top, "fsmonitor-ran")}'`);
+    writeFileSync(join(top, ".git", "hooks", "post-index-change"), `#!/bin/sh\ntouch ${join(top, "hook-ran")}\n`);
+    chmodSync(join(top, ".git", "hooks", "post-index-change"), 0o755);
+    writeFileSync(join(top, "a.md"), "# A\n\nchanged\n");
+    return top;
+  };
+  const marks = (top: string) => ["clean", "textconv", "fsmonitor", "hook"].filter((m) => existsSync(join(top, `${m}-ran`)));
+
+  test("status, what changed, a file as a branch has it: nothing the repository names runs", async () => {
+    const top = hostile();
+    if (!top) return; // no git here
+    const { statusOf, changedSince, showAt } = await import("../src/core/gitops.ts");
+    const c = { root: top };
+    expect(statusOf(c)!.get("a.md")).toBe("modified");
+    expect(changedSince(c, "main")).not.toBeNull();
+    expect(showAt(c, "main", "a.md")).toBe("# A\n");
+    expect(marks(top)).toEqual([]);
+  });
+
+  test("in a root you trust, git as the repository has it: its filters and hooks run", async () => {
+    const top = hostile();
+    if (!top) return;
+    const { statusOf, changedSince } = await import("../src/core/gitops.ts");
+    const { setTrustedRoots } = await import("../src/core/trust.ts");
+    setTrustedRoots([top]);
+    try {
+      statusOf({ root: top });
+      changedSince({ root: top }, "main");
+      expect(marks(top).length).toBeGreaterThan(0);
+    } finally {
+      setTrustedRoots([]);
+    }
   });
 });
 

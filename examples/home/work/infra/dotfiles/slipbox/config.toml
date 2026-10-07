@@ -54,6 +54,9 @@ leader = "\\"                   # the key `leader` means below; backslash, becau
 which_key = true
 which_key_delay_ms = 300
 
+[trust]
+roots = ["~/work/kestrel", "~/work/infra"]   # the team's own repositories: their tools run as they would anywhere
+
 [capture]
 location = "vault"
 file = "inbox/scratch.md"

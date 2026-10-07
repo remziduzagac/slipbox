@@ -77,6 +77,7 @@ import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, readFolders, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
 import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
+import { setTrustedRoots } from "../core/trust.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
 import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
@@ -887,6 +888,7 @@ export class App {
     const next = loaded.config;
     this.config = next;
     setRootMarkers(next.walk.root_markers); // where roots are, from now on (21.1): your config only
+    setTrustedRoots(next.trust.roots); // and which may run their own code (23.x): yours only too
     this.lintCmd = lintCommand(next.lint, this.loc.root, undefined, next.lsp.auto_install);
     const differs = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
     const changed = (Object.keys(next) as (keyof Config)[]).filter((s) => differs(before[s], next[s]));
@@ -1122,6 +1124,7 @@ export class App {
     if (this.servers || !this.config.lsp.enabled) return;
     this.servers = new ServerManager({
       table: () => serverTable(this.config["language-server"], this.config.language),
+      userTable: () => this.userServerTable(),
       autoInstall: () => this.config.lsp.auto_install,
       problems: (path, server, version, list, raw) => {
         const buf = [...this.buffers.values()].find((b) => b.abs === path);
@@ -1281,6 +1284,15 @@ export class App {
   // one reading its input on the text as typed, once typing pauses; the others on the file as saved.
 
   private tablesMemo: { config: Config; servers: ServerTable; linters: Record<string, LinterDef> } | null = null;
+  private userTableMemo: { config: Config; table: ServerTable } | null = null;
+  /** The servers as your own config has them, no folder's: their settings in a root you don't trust (23.3). */
+  userServerTable(): ServerTable {
+    if (this.userTableMemo?.config !== this.config) {
+      const yours = loadConfig({ configFile: this.configFile }).config;
+      this.userTableMemo = { config: this.config, table: serverTable(yours["language-server"], yours.language) };
+    }
+    return this.userTableMemo.table;
+  }
   /** The languages and linters in effect, as the config has them. */
   private tables(): { servers: ServerTable; linters: Record<string, LinterDef> } {
     if (this.tablesMemo?.config !== this.config) this.tablesMemo = { config: this.config, servers: serverTable(this.config["language-server"], this.config.language), linters: linterTable(this.config.linter) };

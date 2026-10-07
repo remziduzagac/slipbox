@@ -3,19 +3,53 @@
 // These run git — unlike `git.ts`, which only reads `.git` — since status and history aren't in
 // files slipbox could read cheaply. A git that isn't there, or fails, is "nothing known".
 
-import { execFile, execFileSync } from "node:child_process";
+import { execFile, execFileSync, spawnSync } from "node:child_process";
 import { join, posix, relative, sep } from "node:path";
 import { climbsOut } from "./fsutil.ts";
 import type { Checkout } from "./git.ts";
+import { isTrusted } from "./trust.ts";
 
 /** A file's state, as the explorer marks it: new (untracked or added), modified, renamed, deleted, or in conflict (a merge). */
 export type GitState = "new" | "modified" | "renamed" | "deleted" | "conflict";
+
+/** The empty tree: attributes read from it name nothing — no filter, diff or merge driver of a repository's. */
+const EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+let attrSource: boolean | null = null;
+
+/** Whether this git takes `--attr-source` (2.42 and later): without it, a repository's filters can still run. */
+export function gitGuardsAttributes(): boolean {
+  return takesAttrSource();
+}
+
+/** Whether this git takes `--attr-source` (2.42 and later). */
+function takesAttrSource(): boolean {
+  if (attrSource === null) {
+    const v = /git version (\d+)\.(\d+)/.exec(spawnSync("git", ["--version"], { encoding: "utf8" }).stdout ?? "");
+    attrSource = !!v && (Number(v[1]) > 2 || (Number(v[1]) === 2 && Number(v[2]) >= 42));
+  }
+  return attrSource;
+}
+
+/**
+ * git's arguments for a command in `root` (23.6). In a root you don't trust, git runs nothing of the
+ * repository's own config or files: no fsmonitor command, no hook (`status` writes the index, and that
+ * runs `post-index-change`), no filter, diff or merge driver its attributes name (read from the empty
+ * tree instead; git 2.42 and later), no textconv or external diff, no index written by a read. In one
+ * you trust, git as the repository has it — its LFS filters too.
+ */
+export function gitArgs(root: string, args: string[]): string[] {
+  if (isTrusted(root)) return ["-C", root, ...args];
+  const [cmd, ...rest] = args;
+  const diffs = cmd === "diff" || cmd === "show" ? ["--no-textconv", "--no-ext-diff"] : [];
+  const attrs = takesAttrSource() ? [`--attr-source=${EMPTY_TREE}`] : [];
+  return ["-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "log.showSignature=false", ...attrs, "--no-optional-locks", "-C", root, cmd!, ...diffs, ...rest];
+}
 
 const OPTS = { encoding: "utf8" as const, stdio: ["ignore", "pipe", "ignore"] as ["ignore", "pipe", "ignore"], timeout: 15_000, maxBuffer: 64 * 1024 * 1024 };
 
 function run(c: Pick<Checkout, "root">, args: string[]): string | null {
   try {
-    return execFileSync("git", ["-C", c.root, ...args], OPTS);
+    return execFileSync("git", gitArgs(c.root, args), OPTS);
   } catch {
     return null;
   }
@@ -56,7 +90,7 @@ export function statusOf(c: Pick<Checkout, "root">): Map<string, GitState> | nul
 /** The same, not waiting on git (the TUI's explorer marks). */
 export function statusLater(c: Pick<Checkout, "root">): Promise<Map<string, GitState> | null> {
   return new Promise((done) => {
-    execFile("git", ["-C", c.root, ...STATUS_ARGS], OPTS, (err, out) => done(err ? null : parseStatus(out)));
+    execFile("git", gitArgs(c.root, STATUS_ARGS), OPTS, (err, out) => done(err ? null : parseStatus(out)));
   });
 }
 

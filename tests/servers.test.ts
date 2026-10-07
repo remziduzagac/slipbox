@@ -2,7 +2,7 @@
 // diagnostics heard — sent or asked for — its settings answered, stopped, and a crash noticed. A fake
 // server (tests/fixtures/fake-lsp.ts) stands in for a real one.
 
-import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,12 +12,13 @@ import { loadConfig } from "../src/core/config.ts";
 import { LanguageClient, type ServerSpec, settingAt } from "../src/core/servers/client.ts";
 import { chooseServers, findServer, rootFor, toolsDir } from "../src/core/servers/find.ts";
 import { installPackages } from "../src/core/servers/install.ts";
-import { languageOf, projectAsks, type ServerDef, serverTable, type ServerTable } from "../src/core/servers/languages.ts";
-import { commandFor, compileFormat, type Format, type LinterConfig, linterRoot, LINTERS, linterTable, parseFindings, runLinter } from "../src/core/servers/linters.ts";
+import { languageOf, projectAsks, SERVERS, type ServerDef, serverTable, type ServerTable } from "../src/core/servers/languages.ts";
+import { commandFor, compileFormat, type Format, type LinterConfig, linterRoot, LINTERS, linterTable, parseFindings, projectPath, runLinter } from "../src/core/servers/linters.ts";
 import { doctor, doctorFile } from "../src/core/servers/doctor.ts";
-import { ServerManager } from "../src/core/servers/manager.ts";
+import { ServerManager, startOf } from "../src/core/servers/manager.ts";
 import { vscodeSettings } from "../src/core/servers/vscode.ts";
 import type { Problem } from "../src/core/diagnostics.ts";
+import { setTrustedRoots } from "../src/core/trust.ts";
 
 setDefaultTimeout(30_000);
 const FAKE = join(import.meta.dir, "fixtures", "fake-lsp.ts");
@@ -25,6 +26,8 @@ const sandbox = mkdtempSync(join(tmpdir(), "slipbox-servers-"));
 process.env.XDG_DATA_HOME = join(sandbox, "data"); // slipbox's installs, and Mason's, are the sandbox's
 delete process.env.SLIPBOX_CONFIG;
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }));
+// A root is trusted only where a test says so (23.x): none by default, as in use.
+afterEach(() => setTrustedRoots([]));
 
 const until = async (ok: () => boolean, ms = 5000) => {
   for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
@@ -341,6 +344,7 @@ describe("which servers, where (19.2–19.5)", () => {
   });
 
   test("a program found in the project first, then PATH, then slipbox's installs; a Node launcher runs on Bun", () => {
+    setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     const root = dir("found", { ".git/HEAD": "ref: refs/heads/main\n" });
     const def = { name: "x", command: "slipbox-test-ls", args: ["--stdio"], npm: { package: "slipbox-test-ls", version: "1.0.0", bin: "slipbox-test-ls" } };
     expect(findServer(def, root)).toBeNull();
@@ -354,6 +358,7 @@ describe("which servers, where (19.2–19.5)", () => {
   });
 
   test("a Node server run on slipbox's Bun in a repository never runs the repository's bunfig.toml preload, nor reads its .env", () => {
+    setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     // The root a server starts in is a cloned repository's: its bunfig.toml would have Bun run its own code first.
     const root = dir("hostile-bun", { ".git/HEAD": "ref: refs/heads/main\n", ".env": "SLIPBOX_TEST_DOTENV=read\n" });
     const ran = join(root, "preload-ran");
@@ -367,7 +372,45 @@ describe("which servers, where (19.2–19.5)", () => {
     expect(existsSync(ran)).toBe(false);
   });
 
+  test("a root you don't trust (23.2, 23.4): its own copy of a program never run; servers that would run its code left out, said why", () => {
+    const root = dir("untrusted-choice", {
+      ".git/HEAD": "ref: refs/heads/main\n",
+      "eslint.config.js": "export default [];\n",
+      Gemfile: "source 'https://rubygems.org'\n",
+      "Package.swift": "// swift-tools-version:5.9\n",
+      ".luarc.json": '{ "runtime.plugin": "plugin.lua" }\n',
+    });
+    exe(join(root, "node_modules/.bin/slipbox-test-own"), "#!/bin/sh\n");
+    const own: ServerDef = { name: "own", command: "slipbox-test-own", args: [] };
+    expect(findServer(own, root)).toBeNull(); // the project's: its code
+    const t = serverTable();
+    const skipped = (file: string) => {
+      const lang = languageOf(t, join(root, file))!;
+      return chooseServers(lang, t.servers, root, (r) => projectAsks(root, r)).skipped.map((k) => `${k.def.name}: ${k.why}`);
+    };
+    expect(skipped("a.ts")).toEqual(["eslint: its config is code"]);
+    expect(skipped("a.rb")).toEqual(["ruby-lsp: it runs the project's Gemfile (Bundler)"]);
+    expect(skipped("a.swift")).toEqual(["sourcekit-lsp: it builds the package's manifest, Package.swift"]);
+    expect(skipped("a.lua")).toEqual(["lua-language-server: its .luarc names a plugin, which runs as code"]);
+    expect(skipped("a.rs")).toEqual([]); // run, without the project's code
+    // Trusted: each as it would run anywhere, the project's own copy first.
+    setTrustedRoots([root]);
+    expect(findServer(own, root)?.where).toBe("project");
+    for (const f of ["a.ts", "a.rb", "a.swift", "a.lua"]) expect(skipped(f)).toEqual([]);
+  });
+
+  test("the built-in servers' safe modes (23.4): rust-analyzer without build scripts or macros, gopls with no toolchain or cgo, pyright the venv's packages from disk", () => {
+    const root = dir("untrusted-modes", { ".venv/lib/python3.12/site-packages/x.py": "" });
+    const ra = SERVERS["rust-analyzer"]!.untrusted!;
+    expect(ra.settings!(root)).toEqual({ "rust-analyzer": { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false } });
+    expect(ra.initOptions).toEqual({ cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false });
+    expect(SERVERS.gopls!.untrusted!.environment).toEqual({ GOTOOLCHAIN: "local", CGO_ENABLED: "0" });
+    expect(SERVERS.pyright!.untrusted!.settings!(root)).toEqual({ python: { analysis: { extraPaths: [join(root, ".venv/lib/python3.12/site-packages")] } } });
+    expect(SERVERS.vtsls!.untrusted!.settings!(root)).toEqual({ vtsls: { autoUseWorkspaceTsdk: false } });
+  });
+
   test("TypeScript's own server where the project's TypeScript is 7 or none, vtsls for an older one; add-ons where asked", () => {
+    setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     const t = serverTable();
     const lang = languageOf(t, "a.ts")!;
     const names = (root: string) => chooseServers(lang, t.servers, root, (r) => projectAsks(root, r)).run.map((r) => r.def.name);
@@ -381,7 +424,7 @@ describe("which servers, where (19.2–19.5)", () => {
     // A native server nowhere to be found: missing, never installed.
     const native = { name: "slipbox-no-native", command: "slipbox-no-native", args: [] };
     const c = chooseServers({ ...lang, servers: ["slipbox-no-native"] }, { "slipbox-no-native": native }, old, () => false);
-    expect(c).toEqual({ run: [], missing: [native] });
+    expect(c).toEqual({ run: [], missing: [native], skipped: [] });
   });
 
   test("installing: into slipbox's tools folder, pinned, its install script not run", async () => {
@@ -446,6 +489,7 @@ describe("the servers of open files (19.1)", () => {
   });
 
   test("a project's .vscode/settings.json answers its servers' settings, over the config's, as VS Code's workspace does (19.20)", async () => {
+    setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     const fakeDef = { name: "fake", command: launcher("fake-vsc"), args: ["--stdio"], config: { fake: { level: 1, keep: "x", deep: { a: 1, b: 1 } } } };
     const { m, problems } = managed(table({ fake: fakeDef }));
     const top = project("vsc");
@@ -465,6 +509,36 @@ describe("the servers of open files (19.1)", () => {
     expect(vscodeSettings(join(sandbox, "pa"))).toBeNull(); // none
     // Found from a package below; VS Code's per-language overrides left out.
     expect(vscodeSettings(pkg)).toEqual({ fake: { level: 3, deep: { b: 2, c: 3 } }, editor: { tabSize: 2 } });
+  });
+
+  test("a root you don't trust (23.3): a server's settings yours and its safe ones — none of the folder's config or .vscode; said once", async () => {
+    // As the table in effect has it, the folder's config is in its settings; yours alone has it without.
+    const folder = { name: "fake", command: launcher("fake-untrusted"), args: ["--stdio"], config: { fake: { level: 2, fromFolder: true } }, untrusted: { settings: () => ({ fake: { safe: true } }) } };
+    const yours = { ...folder, config: { fake: { level: 1 } } };
+    const problems = new Map<string, { version: number | null; list: Problem[] }>();
+    const messages: string[] = [];
+    const m = new ServerManager({ table: () => table({ fake: folder }), userTable: () => table({ fake: yours }), autoInstall: () => false, problems: (path, _s, version, list) => problems.set(path, { version, list }), message: (_l, text) => messages.push(text) });
+    const top = project("untrusted-settings");
+    mkdirSync(join(top, ".vscode"), { recursive: true });
+    writeFileSync(join(top, ".vscode", "settings.json"), '{ "fake.level": 3, "fake.fromVscode": true }');
+    const file = join(top, "a.fk");
+    m.open(file, 1, "BAD\n");
+    expect(await until(() => (problems.get(file)?.list.length ?? 0) > 0)).toBe(true);
+    m.change(file, 2, "BAD\n"); // told again once it has asked for its settings
+    expect(await until(() => problems.get(file)?.version === 2)).toBe(true);
+    expect(JSON.parse(problems.get(file)!.list[0]!.message.replace(/^bad, with /, ""))).toEqual({ level: 1, safe: true });
+    m.open(join(top, "b.fk"), 1, "fine\n");
+    await m.stopAll();
+    const said = messages.filter((t) => t.includes("isn't a root you trust"));
+    expect(said).toEqual([`${top} isn't a root you trust: fake without the project's code; .vscode/settings.json not read — [trust] roots in your config; slipbox doctor says more`]);
+  });
+
+  test("a server's start in a root you don't trust (23.4): its safe environment and initialize options; in one you trust, its own", () => {
+    const top = project("untrusted-start");
+    const def: ServerDef = { name: "g", command: "g", args: [], environment: { KEEP: "1" }, initOptions: { own: true }, untrusted: { environment: { GOTOOLCHAIN: "local" }, initOptions: { safe: true } } };
+    expect(startOf(def, top)).toEqual({ environment: { KEEP: "1", GOTOOLCHAIN: "local" }, initOptions: { safe: true } });
+    setTrustedRoots([top]);
+    expect(startOf(def, top)).toEqual({ environment: { KEEP: "1" }, initOptions: { own: true } });
   });
 
   test(".vscode/settings.json: the nearest at or above the project's folder, never merged with one further up; one that doesn't parse is none", () => {
@@ -528,6 +602,7 @@ describe("the servers of open files (19.1)", () => {
   });
 
   test("a crash whose program has gone: left stopped and said so — never installed, native or npm with auto_install off", async () => {
+    setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     // Native (its command the user's, an absolute path): no npm to install it from.
     const program = launcher("fake-gone");
     const native = managed(table({ fake: { name: "fake", command: program, args: ["--stdio"] } }));
@@ -686,6 +761,7 @@ describe("linters without a server (19.19)", () => {
   });
 
   test("run as efm runs it: its input the text, from its project, the project's own copy first; exit 0 is nothing found", async () => {
+    setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     const root = dir("efm", { ".fakelintrc": "", "src/a b's.txt": "on disk\n", "node_modules/.bin/fakelint": "#!/bin/sh\necho \"-:1:2: [error] own copy, in $(basename \"$PWD\")\"\nexit 1\n" });
     chmodSync(join(root, "node_modules/.bin/fakelint"), 0o755);
     const file = join(root, "src/a b's.txt");
@@ -758,7 +834,15 @@ describe("linters without a server (19.19)", () => {
     expect(await runLinter(linter({ "lint-command": "true" }), join(gone, "a.txt"), "", gone)).toMatchObject({ failed: "error", detail: expect.stringMatching(/^t: .*ENOENT/) });
   });
 
+  test("a linter in a root you don't trust (23.2): the project's own copy isn't on its PATH; in one you trust, first", () => {
+    const root = dir("untrusted-lint", { "node_modules/.bin/x": "" });
+    expect(projectPath(root, "/usr/bin")).toBe("/usr/bin");
+    setTrustedRoots([root]);
+    expect(projectPath(root, "/usr/bin")).toBe(`${join(root, "node_modules/.bin")}:/usr/bin`);
+  });
+
   test("doctor for a file: each linter's own folder, its program found from there; null where the project doesn't ask", () => {
+    setTrustedRoots([sandbox]); // a root you trust (23.x): the project's own programs and settings count
     const root = dir("doclint", { ".git/HEAD": "", "svc/.hadolint.yaml": "", "svc/api/Dockerfile": "", "svc/node_modules/.bin/hadolint": "#!/bin/sh\n", "web/Dockerfile": "" });
     chmodSync(join(root, "svc/node_modules/.bin/hadolint"), 0o755);
     const svc = doctorFile(serverTable(), linterTable(), join(root, "svc/api/Dockerfile"), false)!;

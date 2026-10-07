@@ -268,16 +268,26 @@ nothing a folder brings with it:
   `.vscode/settings.json` or a server's settings name (`typescript.tsdk`, rust-analyzer's `check.overrideCommand`).
 - **Its code, run by a server by default:** rust-analyzer without build scripts, proc macros or check-on-save; gopls
   with `GOTOOLCHAIN=local` and cgo off; the TypeScript servers with their own TypeScript and no project plugins;
-  pyright given the venv's packages read from disk, its Python never run. Linters whose config is code (ESLint,
-  stylelint) don't run.
-- **Its git config:** git runs with `-c core.fsmonitor=false`, `--no-textconv` and `--no-ext-diff`.
+  pyright given the venv's packages read from disk, its Python never run. A server that can't work without the
+  project's code doesn't run: the ESLint and stylelint servers (their config is code), ruby-lsp beside a `Gemfile`
+  (Bundler runs it), sourcekit-lsp beside a `Package.swift` (its manifest is built and run), lua-language-server where
+  `.luarc` names a plugin; and markdownlint-cli2 skips a note under a config of its that is code or names code to load.
+  A folder's own server settings (its `.slipbox/config.toml`, its `.vscode/settings.json`) don't reach a server.
+- **Its git config and files:** no fsmonitor command; no hook (`core.hooksPath=/dev/null` — `git status` writes the
+  index, and that runs `post-index-change`); attributes read from the empty tree (`--attr-source`, git 2.42 and later),
+  so no filter, diff or merge driver of the repository's runs — the flags first planned weren't enough: `git diff
+  --name-status` still ran a clean filter; `--no-textconv`, `--no-ext-diff`; `--no-optional-locks`, so a read writes no
+  index. In a root you trust, git as the repository has it — without its attributes, Git LFS's files would all look
+  modified.
 - **Bun's own reading:** no `bunfig.toml` and no `.env` from the folder Bun starts in (the launcher, Node servers;
   done 2026-10-07).
 
 **One opt-in, yours alone:** `[trust] roots` in your own config lists the roots whose tools run as they would anywhere
-else, their own defaults. A root's `.slipbox/config.toml` can't list itself, and the CLI never asks (an agent can't
-answer). `slipbox doctor` says whether a root is trusted, and what that limits. The cost, said where it shows: in a
-root not trusted, a Rust project's macros give errors, ESLint finds nothing, a project's own TypeScript isn't used.
+else, their own defaults — paths, `~`, globs (`~/Projects/*`), each with what's inside it. A root's
+`.slipbox/config.toml` can't list itself, and the CLI never asks (an agent can't answer). `slipbox doctor` says whether
+a root is trusted, and what that limits; the TUI says it once, when a file's servers first start there. The cost, said
+where it shows: in a root not trusted, a Rust project's macros give errors, ESLint finds nothing, a project's own
+TypeScript isn't used, a Ruby or Swift package gets no server.
 
 ## `20.x` — plain paths, virtual vaults
 

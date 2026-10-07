@@ -91,6 +91,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/scope.ts` | 20.16, 21.10 | search by root: `here`, then linked roots, then every root known (`--scope`) |
 | `core/autoindex.ts` | 20.9 | the background auto-index: the home folder walked in slices, its roots indexed |
 | `core/sqlite.ts` | 6.6 | better-sqlite3, loaded so a compiled binary embeds its SQLite |
+| `core/trust.ts` | 23.x | the roots whose own code may run: your `[trust] roots`; elsewhere nothing a folder brings |
 | `core/graph.ts` | 1.5–1.9, 6.7, 11.8 | notes, links, backlinks, lazy parsing, the index; change feed; unsaved text |
 | `core/readers.ts` | 16.2 | a reader per note format: its parse into mdast, headings and links off raw lines |
 | `core/filetypes.ts` | 16.1 | a file's group (note, data, text, binary) and format, by extension |

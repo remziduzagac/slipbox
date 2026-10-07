@@ -858,13 +858,13 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | ID | Item |
 | --- | --- |
 | 23.1 | **Decided.** A folder's own code never runs, unless its root is in your config's `[trust] roots` |
-| 23.2 | Programs only from your config, `PATH`, your install folders, slipbox's installs: never a folder's own |
-| 23.3 | A root's `.vscode/settings.json` not read, or only its keys that name no program, path or command |
-| 23.4 | Servers in their no-execution modes: rust-analyzer, gopls, the TypeScript servers, pyright |
-| 23.5 | Linters whose config is code (ESLint, stylelint) not run |
-| 23.6 | git with `-c core.fsmonitor=false`, `--no-textconv`, `--no-ext-diff` |
-| 23.7 | `[trust] roots` (paths, `~`, globs) in your config only, never a root's; the CLI never asks |
-| 23.8 | `slipbox doctor` and the TUI say a root isn't trusted, once, and what that limits |
+| 23.2 | **Done.** Programs only from your config, `PATH`, your installs, slipbox's: never a folder's own |
+| 23.3 | **Done.** A server's settings yours alone: no folder's `.slipbox/config.toml` or `.vscode/settings.json` |
+| 23.4 | **Done.** Servers in safe modes (rust-analyzer, gopls, TS, pyright); ruby-lsp, sourcekit-lsp, lua… held back |
+| 23.5 | **Done.** Linters whose config is code not run: ESLint, stylelint, markdownlint-cli2's `.cjs`/`customRules` |
+| 23.6 | **Done.** git: no fsmonitor, hooks, filters or drivers (`--attr-source` from the empty tree), no textconv |
+| 23.7 | **Done.** `[trust] roots` (paths, `~`, globs) in your config only, never a root's; the CLI never asks |
+| 23.8 | **Done.** `slipbox doctor` and the TUI say a root isn't trusted, once, and what that limits |
 | 23.9 | **Done** (2026-10-07). Bun reads no `bunfig.toml` or `.env` of the folder it starts in |
 
 ## Deferred — in the design, not in this breakdown

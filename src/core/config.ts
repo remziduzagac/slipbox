@@ -44,6 +44,11 @@ export interface Config {
     path: "auto" | "relative" | "root" | "name";
     extension: "auto" | "keep" | "drop";
   };
+  /**
+   * The roots whose own code may run (23.x): paths, `~`, globs (`~/Projects/*`), each with what's
+   * inside it. Elsewhere nothing a folder brings runs. Your own config only — a folder can't trust itself.
+   */
+  trust: { roots: string[] };
   /** Files beyond notes (16.x): which the explorer, the switcher and find show. */
   files: {
     /** "notes": notes only; "renderable": notes and data files (JSON, YAML, TOML, INI, CSV);
@@ -234,6 +239,7 @@ export const DEFAULT_CONFIG: Config = {
   render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto" },
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
   links: { style: "auto", path: "auto", extension: "auto" },
+  trust: { roots: [] },
   files: { show: "renderable", include: [], exclude: [] },
   ui: {
     sidebar: true,
@@ -392,6 +398,12 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
     }
     sources.push(file);
   }
+  // Trusted roots (23.x): strings only — a path, `~`, a glob.
+  const roots = config.trust.roots.filter((r) => typeof r === "string" && r.trim() !== "");
+  if (roots.length !== config.trust.roots.length) {
+    warnings.push(`config: trust.roots takes paths and globs ("~/Projects/*"); ignored ${JSON.stringify(config.trust.roots.filter((r) => !roots.includes(r)))}`);
+    config.trust.roots = roots;
+  }
   // Root markers (21.1): plain names, each a file or folder looked for in a folder — never a path.
   const markers = config.walk.root_markers.filter((m) => typeof m === "string" && m !== "" && m !== "." && m !== ".." && !/[/\\]/.test(m));
   if (markers.length !== config.walk.root_markers.length) {
@@ -467,6 +479,11 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
         warnings.push(`config: ${file} sets linter.${name}.lint-command, which only your own config may set (it runs a program); ignored`);
       }
     }
+  }
+  // Which roots may run their own code (23.x): a folder can't vouch for itself.
+  if ("trust" in data) {
+    delete data.trust;
+    warnings.push(`config: ${file} sets [trust], which only your own config may set (a folder can't trust itself); ignored`);
   }
   // Where roots are (21.1) is found before any folder's config is: only yours can say.
   const walk = data.walk;

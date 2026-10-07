@@ -9,6 +9,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import type { Problem, Severity } from "../diagnostics.ts";
+import { isTrusted } from "../trust.ts";
 
 /** A linter as the config writes it (`[linter.<name>]`): efm-langserver's keys. */
 export interface LinterConfig {
@@ -228,8 +229,10 @@ export function linterRoot(def: LinterDef, file: string, projectRoot: string): s
   return def.requireMarker ? null : projectRoot;
 }
 
-/** A project's own programs, before `PATH`: its npm, Python and Composer tools. */
+/** A project's own programs, before `PATH`: its npm, Python and Composer tools — in a root you trust
+ *  (23.2); elsewhere they're the project's code, and `PATH` alone is searched. */
 export function projectPath(root: string, path = process.env.PATH ?? ""): string {
+  if (!isTrusted(root)) return path;
   const own = ["node_modules/.bin", ".venv/bin", "venv/bin", "vendor/bin"].map((d) => join(root, d)).filter((d) => existsSync(d));
   return [...own, path].filter(Boolean).join(delimiter);
 }

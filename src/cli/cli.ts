@@ -17,7 +17,7 @@ import { copyText } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
 import { catchUp, search, SearchIndex } from "../core/search.ts";
 import { type Checkout, checkoutOf } from "../core/git.ts";
-import { baseBranch, changedSince, type GitState, inCheckout, inVault, mergeBaseOf, showAt, statusOf, worktreeList } from "../core/gitops.ts";
+import { baseBranch, changedSince, type GitState, gitGuardsAttributes, inCheckout, inVault, mergeBaseOf, showAt, statusOf, worktreeList } from "../core/gitops.ts";
 import { diffRows } from "../core/merge.ts";
 import { COMMAND_SPECS } from "../core/command-specs.ts";
 import { type Config, loadConfig } from "../core/config.ts";
@@ -64,6 +64,7 @@ import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../co
 import { type Scope, SCOPES, searchScoped } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isListed, isInside, isVaultRoot, locateVault, markersAt, setRootMarkers, readVaultVersion, recordLocation, rootAt, VaultError, type VaultLocation, configFilesFor } from "../core/vault.ts";
+import { isTrusted, setTrustedRoots } from "../core/trust.ts";
 import { type Args, flag, has, parseArgs, UsageError, VALUED } from "./args.ts";
 import { VERSION } from "../version.ts";
 
@@ -302,8 +303,11 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     // Flags every command shares are checked for every command, used or not.
     const color = flag(args, "color");
     if (color !== undefined && !["auto", "always", "never"].includes(color)) throw new UsageError("--color must be auto, always or never");
-    // Where roots are (21.1) is your config's to say, `--config` included: read before finding one.
-    setRootMarkers(loadConfig({ configFile: flag(args, "config") }).config.walk.root_markers);
+    // Where roots are (21.1), and which may run their own code (23.x), are your config's to say,
+    // `--config` included: read before finding one.
+    const yours = loadConfig({ configFile: flag(args, "config") }).config;
+    setRootMarkers(yours.walk.root_markers);
+    setTrustedRoots(yours.trust.roots);
     // A file named by its pointer (21.10) is that file: its path from here on, so the command works in
     // its folder as it would with the path.
     const NOTE_FIRST = ["render", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
@@ -1411,14 +1415,22 @@ const HANDLERS: Record<string, Handler> = {
       const at = r.root === undefined ? (r.required ? `  (where the project has ${r.markers.slice(0, 2).join(" or ")}…)` : "") : r.root === null ? "  (not run: the project has no config for it)" : `  (runs in ${short(r.root)})`;
       return `  ${`${r.name} (linter)`.padEnd(28)} ${what}${at}\n`;
     };
+    // A root you don't trust (23.x): what runs there is yours, never the folder's; said, with what it limits.
+    const untrusted = (root: string, limits: string[]) => {
+      s.warnings.push(`${short(root)} isn't a root you trust: nothing of its own runs — not its programs, its settings that name one, or the code its servers and git would run${limits.length ? ` (here: ${limits.join("; ")})` : ""}; [trust] roots in your config trusts it`);
+      if (!gitGuardsAttributes()) s.warnings.push("git is older than 2.42: in a root you don't trust, the filters its attributes name can still run — git 2.42 or later stops them");
+    };
     if (rest[0]) {
       const abs = isAbsolute(rest[0]) ? rest[0] : join(s.io.cwd, rest[0]);
       const f = doctorFile(table, linters, abs, auto);
       if (!f) throw new CliError(`${rest[0]}: slipbox serves no language of it`, EXIT.notFound);
-      const human = [`${rest[0]}: ${f.language}, its project ${short(f.root)}\n`, ...f.run.map(line), ...f.linters.map(lintLine), ...(f.missing.length ? ["missing:\n", ...f.missing.map(line)] : [])].join("");
+      if (!f.trusted) untrusted(f.root, f.limits);
+      const skipped = f.skipped.map((k) => `  ${k.name.padEnd(28)} not run here: ${k.why}\n`);
+      const human = [`${rest[0]}: ${f.language}, its project ${short(f.root)}${f.trusted ? " (a root you trust)" : ""}\n`, ...f.run.map(line), ...skipped, ...f.linters.map(lintLine), ...(f.missing.length ? ["missing:\n", ...f.missing.map(line)] : [])].join("");
       return { data: f, human };
     }
     const groups = doctor(table, linters, s.io.cwd, auto);
+    if (!isTrusted(s.io.cwd)) untrusted(s.io.cwd, []);
     if (!s.config.lsp.enabled) s.warnings.push("language servers are off: [lsp] enabled = false");
     return { data: groups, human: groups.map((g) => `${g.languages.join(", ")}\n${g.servers.map(line).join("")}${g.linters.map(lintLine).join("")}`).join("") };
   },
@@ -1446,8 +1458,11 @@ const HANDLERS: Record<string, Handler> = {
     if (lang && s.config.lsp.enabled) {
       const heard = new Map<string, Problem[]>();
       let news = Date.now();
+      // Yours alone, for a root you don't trust (23.3): no folder's settings reach its servers.
+      const yours = loadConfig({ configFile: flag(s.args, "config") }).config;
       const m = new ServerManager({
         table: () => table,
+        userTable: () => serverTable(yours["language-server"], yours.language),
         autoInstall: () => s.config.lsp.auto_install,
         problems: (path, server, _v, list) => {
           if (path !== abs) return;

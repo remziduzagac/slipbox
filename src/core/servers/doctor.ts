@@ -5,6 +5,8 @@
 import { type Choice, chooseServers, findServer, rootFor, type Where } from "./find.ts";
 import { type LanguageDef, languageOf, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
 import { type LinterDef, linterRoot, projectPath } from "./linters.ts";
+import { limitsOf } from "./manager.ts";
+import { isTrusted } from "../trust.ts";
 
 export interface ServerReport {
   name: string;
@@ -86,6 +88,11 @@ export interface FileReport {
   languageId: string;
   /** Its project's top folder. */
   root: string;
+  /** Whether that's a root you trust (23.x); when not, what that leaves out — empty when nothing. */
+  trusted: boolean;
+  limits: string[];
+  /** Servers that would run the project's code, not run there, and why. */
+  skipped: { name: string; why: string }[];
   /** The servers that would serve it there, the main one first; and those it would have had, missing. */
   run: ServerReport[];
   missing: ServerReport[];
@@ -103,6 +110,9 @@ export function doctorFile(table: ServerTable, linters: Record<string, LinterDef
     language: lang.name,
     languageId: lang.languageId,
     root,
+    trusted: isTrusted(root),
+    limits: limitsOf(choice, root),
+    skipped: choice.skipped.map((s) => ({ name: s.def.name, why: s.why })),
     run: choice.run.map((r) => report(r.def, root, autoInstall)),
     missing: choice.missing.map((d) => report(d, root, autoInstall)),
     linters: lintersOf(lang, linters).map((d) => {

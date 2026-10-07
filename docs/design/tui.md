@@ -1161,10 +1161,12 @@ produces one error message, `⚠ not watching` in the status line, and polling o
 
 slipbox runs the linter you already use and shows what it finds where it is; it ships no rules of its own
 (`docs/idea.md`, "Run this repo's linter, don't ship one"). By default that's `markdownlint-cli2`, found as a
-language server is (`19.21`: the root's own `node_modules/.bin`, `PATH`, your installs), else installed into
-slipbox's own folder the first time it's needed, pinned (`[lsp] auto_install`; "installing markdownlint-cli2@0.23.3
-into slipbox's own folder…"), and run on slipbox's Bun: with the root's own markdownlint config when it has one (the
-linter finds it), else with `~/.markdownlint-cli2.jsonc`.
+language server is (`19.21`: the root's own `node_modules/.bin` in a root you trust, `PATH`, your installs), else
+installed into slipbox's own folder the first time it's needed, pinned (`[lsp] auto_install`; "installing
+markdownlint-cli2@0.23.3 into slipbox's own folder…"), and run on slipbox's Bun: with the root's own markdownlint
+config when it has one (the linter finds it), else with `~/.markdownlint-cli2.jsonc`. In a root you don't trust
+(`23.5`), a note under a markdownlint config that is code (`.cjs`, `.mjs`) or names code to load (`customRules`…)
+isn't linted, said once.
 `[lint] enabled = "auto"` lints only where one of those configs is — markdownlint's defaults are no one's rules for
 notes; `"on"` lints anyway, `"off"` never. `[lint] command` runs another linter, the files appended, as long as it
 prints markdownlint-cli2's lines (`path:line[:column] MD013/line-length what's wrong`) — only your own config can
@@ -1238,10 +1240,11 @@ syntax errors (`16.9`; in source mode, out of insert, for the text as it is), th
 text they were found in), a note's own (`11.5`: a link that reaches nothing or several notes, a `#heading` or
 `#^block` its note hasn't, git's conflict markers; while the note is as saved, since the root's index has the
 file's), its language servers' (`19.1`; for the text they were found in — typing hides them until they answer
-again; once a server has answered, its syntax errors stand for tree-sitter's), and its linters without a server
-(`19.19`: one reading its input on the text as typed, 500 ms after typing pauses; one reading the file after each save,
-its findings hidden while the text differs). Each has a severity: error, warning,
-information, hint. `[diagnostics] severity` (`warning`) is the least that shows, so a root's notes not written yet —
+again; once a server has answered, its syntax errors stand for tree-sitter's — in a root you don't trust, each in its
+safe mode, the first start there said once: `~/x isn't a root you trust: …`, lsp.md's "Trust"), and its linters
+without a server (`19.19`: one reading its input on the text as typed, 500 ms after typing pauses; one reading the
+file after each save, its findings hidden while the text differs). Each has a severity: error, warning, information,
+hint. `[diagnostics] severity` (`warning`) is the least that shows, so a root's notes not written yet —
 information — don't mark every page; `"info"` shows them too.
 
 - **The bar** (`space u d`, `[diagnostics] bar`): a column beside the text, left of the line numbers. On the row a

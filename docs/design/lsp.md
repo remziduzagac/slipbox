@@ -51,11 +51,11 @@ each config file's over the ones before it) all the way down, the rest replaced,
 type is dropped with a warning, and so is a known field spelled with underscores (`file_types`). A field slipbox doesn't
 read is kept without a warning, so a Helix section pastes in. A folder's config may tune a known server's `config` and a
 language's lists, never name slipbox's command for it: its `command`, `args`, `environment`, and any server slipbox
-doesn't know, are ignored with a warning. That `config` does reach the server, though, and some servers' settings name
-programs (rust-analyzer's `check.overrideCommand`): as with `.vscode/settings.json` below, everything is trusted
-(`19.6`), so a cloned folder can still make a server run something.
+doesn't know, are ignored with a warning. That `config` reaches the server in a root you trust — and some servers'
+settings name programs (rust-analyzer's `check.overrideCommand`) — but not in one you don't ("Trust", below).
 
-**A project's `.vscode/settings.json`** (`19.20`) answers its servers' settings too, as VS Code would: the nearest one
+**A project's `.vscode/settings.json`** (`19.20`) answers its servers' settings too, in a root you trust, as VS Code
+would: the nearest one
 at or above the server's project folder (short of `~`), read when the server starts, as VS Code reads it — comments
 and trailing commas allowed — its dotted keys nested (`"python.analysis.typeCheckingMode"` is
 `python.analysis.typeCheckingMode`, merged with a nested form beside it). It goes over the config's, as VS Code puts a
@@ -67,16 +67,37 @@ overrides (`"[python]": {…}`) are left out. Changed, it counts from the server
 its next — `tsconfig.json` before `package.json` before `.git` — as nvim's `root_markers` have it; never `~` or `/`;
 else the file's own folder.
 
-**Where its program is** (`19.4`), in order: the path the user's config gives; the project's own
+**Where its program is** (`19.4`), in order: the path the user's config gives; the project's own, in a root you trust
 (`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin`, from its folder up to its checkout's top); `PATH`; the
 places the user installs tools (Mason's `bin`, `~/.cargo/bin`, `~/go/bin`, `~/.local/bin`); slipbox's own installs.
 A program written for Node (`#!/usr/bin/env node`) runs on slipbox's own Bun — no Node needed — with no
 `bunfig.toml` and no `.env` (`--config=/dev/null --no-env-file`): it starts in its root, and Bun would otherwise run
 the root's preload and read its `.env`, whichever program it was, slipbox's own install too. A server whose
 program's name is common elsewhere is taken only from the project or slipbox's installs: a `tsc` on `PATH` may be an
-older TypeScript with no server. Everything is trusted
-(`19.6`): the project's own programs run, and its servers run its code, as under nvim or Helix — until `23.x`,
-decided 2026-10-07: nothing of a folder's own, unless you trust its root.
+older TypeScript with no server.
+
+**Trust** (`23.x`, `core/trust.ts`; revises `19.6`). slipbox runs nothing a folder brings with it unless its root is
+in your config's `[trust] roots` (paths, `~`, globs such as `~/Projects/*`, each with what's inside it; a folder's
+own `[trust]` is ignored). In a root you don't trust:
+
+- **Programs:** the project's own copies (`node_modules/.bin`, the venvs, `vendor/bin`) aren't found, for servers,
+  linters and markdownlint-cli2 alike — your config's path, `PATH`, your install folders and slipbox's installs are.
+- **Settings:** a server's are its defaults and your own config's (the table your config alone makes), never a
+  folder's `.slipbox/config.toml` or its `.vscode/settings.json`, with each server's safe ones over them.
+- **Safe modes:** rust-analyzer without build scripts, proc macros or `cargo check` on save (in its settings and its
+  `initialize` options); gopls with `GOTOOLCHAIN=local` and `CGO_ENABLED=0`; vtsls never switching to the project's
+  TypeScript; pyright given the venv's `site-packages`, found on disk, so its Python never runs; TypeScript's own
+  server (`tsc --lsp`) only from slipbox's install.
+- **Not run:** a server that can't work without the project's code — the ESLint and stylelint servers (their config
+  is code), ruby-lsp where there's a `Gemfile` (Bundler runs it), sourcekit-lsp where there's a `Package.swift` (its
+  manifest is built and run), lua-language-server where `.luarc` names a plugin. markdownlint-cli2 skips a note under
+  a markdownlint config that is code (`.cjs`, `.mjs`) or names code to load (`customRules`, `markdownItPlugins`,
+  `outputFormatters`), said once. A linter of your config (`lint-command`) runs as you set it.
+- **Said:** the first time a file's servers start in such a root, once, with what it leaves out
+  (`~/x isn't a root you trust: rust-analyzer without the project's code; .vscode/settings.json not read — …`);
+  `slipbox doctor` says it too, and which servers it skipped, and why.
+
+In a root you trust, each runs as it would anywhere else: its own defaults, the folder's settings, its own copy.
 
 **Installing** (`19.5`, `core/servers/install.ts`): a server published on npm and found nowhere is installed when a
 file first needs it — `[lsp] auto_install = false` stops that — into slipbox's own package folder
@@ -111,8 +132,8 @@ set up for efm pastes in — `[linter.<name>]` with `lint-command`, `lint-format
 `lint-source`, `lint-severity`, `lint-ignore-exit-code`, `root-markers`, `require-marker` — and a language's
 `linters` names its own. Each runs as efm runs it: through the shell, from the nearest folder holding one of its
 `root-markers` (with `require-marker`, only where there is one; else from the file's project), the project's own
-copy first (`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin` before `PATH`); its output and errors read
-together, each line by the first format matching it whole; and an exit of 0 is nothing found, unless
+copy first in a root you trust (`node_modules/.bin`, `.venv/bin`, `venv/bin`, `vendor/bin` before `PATH`); its output
+and errors read together, each line by the first format matching it whole; and an exit of 0 is nothing found, unless
 `lint-ignore-exit-code`. A finding about another file is passed over; one about `-`, `stdin` or `<stdin>` is this
 file's. Built in, each only where the project has its config: **hadolint** for Dockerfiles (`.hadolint.yaml`) and
 **yamllint** for YAML (`.yamllint`). One not installed is said once (`linter hadolint: hadolint not found — …`), and

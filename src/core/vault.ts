@@ -14,6 +14,7 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadConfig, VAULT_CONFIG_TEMPLATE } from "./config.ts";
 import { checkoutOf, inMain, worktreeFingerprint } from "./git.ts";
+import { gitArgs } from "./gitops.ts";
 import { folderIdentity, folderNamed, identityAt, movedFrom, recordFolder, suggestFolderName } from "./folders.ts";
 import { carryPaths, climbsOut, readRegular } from "./fsutil.ts";
 import { stateDir, vaultKey } from "./paths.ts";
@@ -360,7 +361,7 @@ function excludeFromGit(root: string): string | null {
   if (!repo) return null;
   let file: string;
   try {
-    file = resolve(repo, execFileSync("git", ["-C", repo, "rev-parse", "--git-path", "info/exclude"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim());
+    file = resolve(repo, execFileSync("git", gitArgs(repo, ["rev-parse", "--git-path", "info/exclude"]), { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim());
   } catch {
     file = join(repo, ".git", "info", "exclude");
   }

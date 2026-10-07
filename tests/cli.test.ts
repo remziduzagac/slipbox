@@ -1379,6 +1379,23 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     expect(list.filter((t) => t.current).map((t) => t.name)).toEqual(["nord"]);
     expect(list.find((t) => t.name === "mine")).toEqual({ name: "mine", source: "user", path: join(themes, "mine.yaml"), current: false });
   });
+  test("doctor in a root you don't trust (23.8): what it leaves out, said; in one your config trusts, nothing to say", () => {
+    const { root, dir, env } = fresh("doctor-trust-");
+    writeFileSync(join(root, "Gemfile"), "source 'https://rubygems.org'\n");
+    writeFileSync(join(root, "app.rb"), "puts 1\n");
+    const j = slipbox(["doctor", "app.rb", "--json"], { cwd: root, env }).json;
+    expect(j.data).toMatchObject({ trusted: false, skipped: [{ name: "ruby-lsp", why: "it runs the project's Gemfile (Bundler)" }] });
+    expect(j.warnings.some((w: string) => w.includes("isn't a root you trust") && w.includes("ruby-lsp not run (it runs the project's Gemfile (Bundler))"))).toBe(true);
+    const human = slipbox(["doctor", "app.rb"], { cwd: root, env });
+    expect(human.out).toContain(`  ${"ruby-lsp".padEnd(28)} not run here: it runs the project's Gemfile (Bundler)\n`);
+    // Trusted in your config: run as anywhere, nothing said.
+    const cfg = join(dir, "trusting.toml");
+    writeFileSync(cfg, `[trust]\nroots = [${JSON.stringify(root)}]\n`);
+    const t = slipbox(["doctor", "app.rb", "--config", cfg, "--json"], { cwd: root, env }).json;
+    expect(t.data).toMatchObject({ trusted: true, skipped: [], limits: [] });
+    expect(t.warnings.filter((w: string) => w.includes("isn't a root you trust"))).toEqual([]);
+  });
+
   test("doctor: language servers off is a warning; with installing off, a server not found says so, never 'installs when needed'", () => {
     const { root, dir, env } = fresh("doctor-off-");
     const cfg = join(dir, "off.toml");
@@ -1394,7 +1411,8 @@ describe("the CLI's edges: help flags, error paths, empty states", () => {
     expect(r.err).toContain("slipbox: warning: language servers are off: [lsp] enabled = false\n");
     expect(r.out).not.toContain("slipbox installs");
     for (const s of off) expect(r.out).toContain(`  ${s.name.padEnd(28)} not found, and installing is off ([lsp] auto_install): ${s.package}`);
-    expect(slipbox(["doctor", "--json"], { cwd: root, env }).json.warnings).toEqual([]);
+    // On, nothing to warn of here but the root's trust (said for every root you don't trust, 23.8).
+    expect(slipbox(["doctor", "--json"], { cwd: root, env }).json.warnings.filter((w: string) => !w.includes("isn't a root you trust"))).toEqual([]);
   });
   test("mkdir: no path is a usage error; an absolute path in the root is made, one outside refused", () => {
     const { root, dir, env } = fresh("mkdir-");

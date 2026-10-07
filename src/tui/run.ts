@@ -8,6 +8,7 @@ import { openGraph } from "../core/graph.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { setWidthMethod } from "../core/width.ts";
 import { locateVault, recordLocation, configFilesFor, setRootMarkers, VaultError, type VaultLocation } from "../core/vault.ts";
+import { setTrustedRoots } from "../core/trust.ts";
 import { App, type AppOptions } from "./app.ts";
 import { keyName } from "./keys.ts";
 import { AppRenderable, toRGBA } from "./opentui.ts";
@@ -23,8 +24,11 @@ export type Start = Omit<AppOptions, "host">;
 export function prepare(argv: string[]): Start | number {
   const args = parseArgs(argv);
   const path = args.positional[0];
-  // Where roots are (21.1) is your config's to say, `--config` included: read before finding one.
-  setRootMarkers(loadConfig({ configFile: flag(args, "config") }).config.walk.root_markers);
+  // Where roots are (21.1), and which may run their own code (23.x), are your config's to say,
+  // `--config` included: read before finding one.
+  const yours = loadConfig({ configFile: flag(args, "config") }).config;
+  setRootMarkers(yours.walk.root_markers);
+  setTrustedRoots(yours.trust.roots);
   let loc: VaultLocation;
   try {
     loc = locateVault({ root: flag(args, "root"), path });

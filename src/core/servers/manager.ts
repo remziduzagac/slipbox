@@ -7,14 +7,18 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import type { Diagnostic, WorkspaceEdit } from "vscode-languageserver-protocol";
 import type { Problem, Severity } from "../diagnostics.ts";
 import { LanguageClient } from "./client.ts";
-import { chooseServers, type Found, findServer, rootFor } from "./find.ts";
+import { isTrusted } from "../trust.ts";
+import { type Choice, chooseServers, type Found, findServer, rootFor } from "./find.ts";
 import { installPackages } from "./install.ts";
 import { does, type Feature, languageOf, type LanguageDef, projectAsks, type ServerDef, type ServerTable } from "./languages.ts";
-import { mergeSettings, vscodeSettings } from "./vscode.ts";
+import { mergeSettings, vscodeSettings, vscodeSettingsFile } from "./vscode.ts";
 
 export interface ManagerOptions {
   /** The servers and languages in effect (the config's over the built-in). */
   table: () => ServerTable;
+  /** Yours alone — the built-in under your own config, no folder's: a server's settings in a root you
+   *  don't trust (23.3). The table in effect when not given. */
+  userTable?: () => ServerTable;
   /** Whether npm servers are installed when missing (`[lsp] auto_install`). */
   autoInstall: () => boolean;
   /** A file's problems from one server, for the text of `version` (null: the latest sent); `raw`, as the server gave them (a code action asks with them). */
@@ -68,11 +72,35 @@ export function problemOf(d: Diagnostic, server: string): Problem {
   };
 }
 
-/** A server's settings in a project: its own (the defaults, the config's over them), then the project's
- *  `.vscode/settings.json` over those, as VS Code puts a workspace's over the user's (19.20). */
-export function settingsFor(def: ServerDef, root: string): Record<string, unknown> | undefined {
+/**
+ * A server's settings in a project: its own (the defaults, the config's over them), then the project's
+ * `.vscode/settings.json` over those, as VS Code puts a workspace's over the user's (19.20). In a root
+ * you don't trust (23.3), yours alone (`yours`: the server as your own config has it) and its settings
+ * for running nothing of the project's over them — none of the folder's: they may name a program.
+ */
+export function settingsFor(def: ServerDef, root: string, yours: ServerDef = def): Record<string, unknown> | undefined {
+  if (!isTrusted(root)) {
+    const safe = def.untrusted?.settings?.(root);
+    return safe ? mergeSettings(yours.config ?? {}, safe) : yours.config;
+  }
   const project = vscodeSettings(root);
   return project ? mergeSettings(def.config ?? {}, project) : def.config;
+}
+
+/** How a server starts in a project: its environment and `initialize` options, its no-execution ones
+ *  in a root you don't trust (23.4). */
+export function startOf(def: ServerDef, root: string): { environment: Record<string, string>; initOptions: unknown } {
+  if (isTrusted(root) || !def.untrusted) return { environment: def.environment ?? {}, initOptions: def.initOptions };
+  return { environment: { ...def.environment, ...def.untrusted.environment }, initOptions: def.untrusted.initOptions ?? def.initOptions };
+}
+
+/** What a root you don't trust leaves out of a file's servers (23.x), said once: none when nothing is. */
+export function limitsOf(choice: Choice, root: string): string[] {
+  if (isTrusted(root)) return [];
+  const out = choice.skipped.map((s) => `${s.def.name} not run (${s.why})`);
+  for (const { def } of choice.run) if (def.untrusted && !def.untrusted.skip) out.push(`${def.name} without the project's code`);
+  if (vscodeSettingsFile(root)) out.push(".vscode/settings.json not read");
+  return out;
 }
 
 export class ServerManager {
@@ -82,6 +110,8 @@ export class ServerManager {
   private readonly installs = new Map<string, Promise<boolean>>();
   /** Servers said to be missing: each said once. */
   private readonly said = new Set<string>();
+  /** Roots said not to be trusted (23.8): each said once. */
+  private readonly untrustedSaid = new Set<string>();
   private closed = false;
 
   constructor(private readonly o: ManagerOptions) {}
@@ -95,6 +125,11 @@ export class ServerManager {
     const root = rootFor(path, lang.roots);
     const choice = chooseServers(lang, table.servers, root, (r) => projectAsks(root, r));
     for (const d of choice.missing) this.missing(d, lang.name);
+    const limits = limitsOf(choice, root);
+    if (limits.length && !this.untrustedSaid.has(root)) {
+      this.untrustedSaid.add(root);
+      this.o.message("info", `${root} isn't a root you trust: ${limits.join("; ")} — [trust] roots in your config; slipbox doctor says more`);
+    }
     const doc: Doc = { path, languageId: lang.languageId, version, text, servers: [], lang };
     this.docs.set(path, doc);
     for (const { def, found } of choice.run) {
@@ -244,8 +279,10 @@ export class ServerManager {
       f = findServer(r.def, r.root);
       if (!f) return null;
     }
+    const yours = this.o.userTable?.().servers[r.def.name] ?? r.def;
+    const { environment, initOptions } = startOf(r.def, r.root);
     const client = new LanguageClient(
-      { name: r.def.name, argv: f.argv, env: { ...f.env, ...r.def.environment }, settings: settingsFor(r.def, r.root), initOptions: r.def.initOptions, root: r.root },
+      { name: r.def.name, argv: f.argv, env: { ...f.env, ...environment }, settings: settingsFor(r.def, r.root, yours), initOptions, root: r.root },
       {
         diagnostics: (uri, diagnostics, version) => {
           if (!uri.startsWith("file:")) return;

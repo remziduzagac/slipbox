@@ -627,9 +627,13 @@ Each language's linters without a server (`19.19`) follow, `(linter)` after the 
 `PATH`, or how to get it, and the config files it runs beside. `slipbox doctor <file>` takes one file: its language,
 its project's top folder, and the servers that would serve it there, the main one first, then its linters — where each
 would run, or that the project has no config for it — then what it would have had and hasn't. A note is exit 3:
-slipbox serves notes itself. `--json`: an array of `{languages, servers[{name, role, status, where, path, package,
-hint, requires}], linters[{name, program, where, path, hint, markers, required}]}`, or for a file `{language,
-languageId, root, run[], missing[], linters[]}`, each linter with its `root` (null: not run).
+slipbox serves notes itself. In a root you don't trust (`23.x`), a warning says so, and what that leaves out there —
+`ruby-lsp not run (it runs the project's Gemfile (Bundler))`, `rust-analyzer without the project's code`,
+`.vscode/settings.json not read` — and a file's servers left out are listed, `not run here: …`; `(a root you trust)`
+follows a trusted project's folder. Git older than 2.42 is warned of in such a root: its filters can still run.
+`--json`: an array of `{languages, servers[{name, role, status, where, path, package, hint, requires}],
+linters[{name, program, where, path, hint, markers, required}]}`, or for a file `{language, languageId, root, trusted,
+limits[], skipped[{name, why}], run[], missing[], linters[]}`, each linter with its `root` (null: not run).
 
 ## `slipbox diagnostics` (plan `19.22`)
 

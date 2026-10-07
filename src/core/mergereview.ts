@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 import { join, posix, relative, sep } from "node:path";
 import { urlPath } from "./convert.ts";
 import { type Checkout, headOf } from "./git.ts";
-import { changedBetween, inVault } from "./gitops.ts";
+import { changedBetween, gitArgs, inVault } from "./gitops.ts";
 import { extractText } from "./graph.ts";
 import { extensionless, homeDir, wikiPathCandidates } from "./links.ts";
 
@@ -54,7 +54,7 @@ export class MergeReviewError extends Error {}
 const NOTE = /\.(md|markdown)$/i;
 
 function git(c: Pick<Checkout, "root">, args: string[], input?: string): { status: number | null; out: Buffer; err: string } {
-  const r = spawnSync("git", ["-C", c.root, ...args], { input, maxBuffer: 512 * 1024 * 1024, timeout: 120_000 });
+  const r = spawnSync("git", gitArgs(c.root, args), { input, maxBuffer: 512 * 1024 * 1024, timeout: 120_000 });
   return { status: r.error ? null : r.status, out: r.stdout ?? Buffer.alloc(0), err: r.stderr?.toString("utf8") ?? String(r.error ?? "") };
 }
 

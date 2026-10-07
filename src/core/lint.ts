@@ -5,10 +5,11 @@
 // installed into slipbox's own folder when first needed (19.21), and run on slipbox's Bun.
 
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import type { Config } from "./config.ts";
+import { isTrusted } from "./trust.ts";
 import { findServer } from "./servers/find.ts";
 import { installPackages } from "./servers/install.ts";
 import type { ServerDef } from "./servers/languages.ts";
@@ -37,6 +38,38 @@ const VAULT_CONFIGS = [
   ".markdownlint.cjs",
   ".markdownlint.mjs",
 ];
+
+/** markdownlint-cli2's configs that are code, and the keys by which one names code it loads. */
+const CODE_CONFIGS = [".markdownlint-cli2.cjs", ".markdownlint-cli2.mjs", ".markdownlint.cjs", ".markdownlint.mjs"];
+const LOADS_CODE = /["']?(customRules|markdownItPlugins|outputFormatters)["']?\s*:/;
+
+/**
+ * Whether markdownlint-cli2 would load code to lint `file`: a config in its folder, or one above it in
+ * `root`, that is code (`.cjs`, `.mjs`) or names code to load (`customRules`…). In a root you don't
+ * trust, such a file isn't linted (23.5). `seen` keeps each folder's answer for a run.
+ */
+export function lintLoadsCode(file: string, root: string, seen = new Map<string, boolean>()): boolean {
+  for (let dir = dirname(file); ; dir = dirname(dir)) {
+    let hit = seen.get(dir);
+    if (hit === undefined) {
+      hit =
+        CODE_CONFIGS.some((f) => existsSync(join(dir, f))) ||
+        VAULT_CONFIGS.filter((f) => !CODE_CONFIGS.includes(f)).some((f) => {
+          try {
+            return LOADS_CODE.test(readFileSync(join(dir, f), "utf8"));
+          } catch {
+            return false;
+          }
+        });
+      seen.set(dir, hit);
+    }
+    if (hit) return true;
+    if (dir === root || dirname(dir) === dir || !dir.startsWith(`${root}/`)) return false;
+  }
+}
+
+/** Roots already told their markdownlint config loads code (said once). */
+const codeSaid = new Set<string>();
 
 /** markdownlint-cli2 as slipbox finds and installs it: pinned, its bin a Node script run on slipbox's Bun. */
 export const MARKDOWNLINT: ServerDef = { name: "markdownlint-cli2", command: "markdownlint-cli2", args: [], npm: { package: "markdownlint-cli2", version: "0.23.3", bin: "markdownlint-cli2" } };
@@ -118,6 +151,17 @@ export function parseLint(output: string, cwd: string): LintIssue[] {
  * command gets each path as a literal (`:path`). `say`: told when it's installed first.
  */
 export async function runLint(given: LintCmd, files: string[], cwd: string, timeoutMs = 60_000, say?: (text: string) => void): Promise<LintIssue[] | null> {
+  // markdownlint-cli2's own configs, in a root you don't trust: none of them run as code (23.5).
+  if (given.literal && !isTrusted(cwd)) {
+    const seen = new Map<string, boolean>();
+    const kept = files.filter((f) => !lintLoadsCode(f, cwd, seen));
+    if (kept.length < files.length && !codeSaid.has(cwd)) {
+      codeSaid.add(cwd);
+      say?.(`markdownlint-cli2 not run on ${files.length - kept.length} file(s): a markdownlint config there is code, or names code to load, and ${cwd} isn't a root you trust — [trust] roots in your config`);
+    }
+    if (!kept.length) return [];
+    files = kept;
+  }
   const cmd = await ready(given, cwd, say);
   if (!cmd) return null;
   return new Promise((done) => {

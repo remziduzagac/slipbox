@@ -3,7 +3,7 @@
 // after; a server's command, settings and, for those published on npm, the package slipbox installs
 // privately (19.5). The user's config takes the same shape (`[language-server.x]`, `[[language]]`).
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 /**
@@ -38,7 +38,41 @@ export interface ServerDef {
   hint?: string;
   /** Found only in the project or slipbox's installs: its name elsewhere may be another program (an older `tsc`). */
   ownOnly?: boolean;
+  /**
+   * How it runs in a root you don't trust (23.4): settings over its own and an environment, so it runs
+   * nothing of the project's — or, `skip`, why it can't run there at all (it would run the project's code).
+   */
+  untrusted?: { settings?: (root: string) => Record<string, unknown>; initOptions?: unknown; environment?: Record<string, string>; skip?: (root: string) => string | null };
 }
+
+/** rust-analyzer without the project's code: no build scripts, no proc macros, no `cargo check` on save. */
+const RUST_SAFE = { cargo: { buildScripts: { enable: false } }, procMacro: { enable: false }, checkOnSave: false };
+
+/** A project's virtual environment's packages, found on disk — its Python is never run to ask. */
+export function venvPackages(root: string): string[] {
+  const out: string[] = [];
+  for (const v of [".venv", "venv"]) {
+    const lib = join(root, v, "lib");
+    try {
+      for (const d of readdirSync(lib)) if (d.startsWith("python") && existsSync(join(lib, d, "site-packages"))) out.push(join(lib, d, "site-packages"));
+    } catch {}
+  }
+  return out;
+}
+
+/** Whether a project's `.luarc` names a plugin (lua-language-server runs it, as code). */
+function luaPlugin(root: string): boolean {
+  return [".luarc.json", ".luarc.jsonc"].some((f) => {
+    try {
+      return /"(runtime\.)?plugin"/.test(readFileSync(join(root, f), "utf8"));
+    } catch {
+      return false;
+    }
+  });
+}
+
+/** Linters whose config is code, which they run. */
+const CONFIG_IS_CODE = { skip: () => "its config is code" };
 
 export interface LanguageDef {
   name: string;
@@ -75,11 +109,12 @@ export const SERVERS: Record<string, ServerDef> = {
   // TypeScript 7 is native, its server built in: the project's own when it has one (19.4), else installed.
   typescript: { name: "typescript", command: "tsc", args: ["--lsp", "--stdio"], npm: { package: "typescript", version: "7.0.2", bin: "tsc" }, when: (root) => !olderTypeScript(root), ownOnly: true },
   // A project on TypeScript 6 or older: vtsls, its own TypeScript bundled.
-  vtsls: { name: "vtsls", command: "vtsls", args: ["--stdio"], npm: { package: "@vtsls/language-server", version: "0.3.0", bin: "vtsls" } },
-  pyright: { name: "pyright", command: "pyright-langserver", args: ["--stdio"], npm: { package: "pyright", version: "1.1.414", bin: "pyright-langserver" }, config: { python: { analysis: { autoSearchPaths: true, useLibraryCodeForTypes: true, diagnosticMode: "openFilesOnly" } } } },
-  "rust-analyzer": { name: "rust-analyzer", command: "rust-analyzer", args: [], hint: "rustup component add rust-analyzer" },
-  gopls: { name: "gopls", command: "gopls", args: [], hint: "go install golang.org/x/tools/gopls@latest" },
-  "lua-language-server": { name: "lua-language-server", command: "lua-language-server", args: [], hint: "your package manager (brew install lua-language-server)" },
+  vtsls: { name: "vtsls", command: "vtsls", args: ["--stdio"], npm: { package: "@vtsls/language-server", version: "0.3.0", bin: "vtsls" }, untrusted: { settings: () => ({ vtsls: { autoUseWorkspaceTsdk: false } }) } },
+  pyright: { name: "pyright", command: "pyright-langserver", args: ["--stdio"], npm: { package: "pyright", version: "1.1.414", bin: "pyright-langserver" }, config: { python: { analysis: { autoSearchPaths: true, useLibraryCodeForTypes: true, diagnosticMode: "openFilesOnly" } } }, untrusted: { settings: (root) => ({ python: { analysis: { extraPaths: venvPackages(root) } } }) } },
+  "rust-analyzer": { name: "rust-analyzer", command: "rust-analyzer", args: [], hint: "rustup component add rust-analyzer", untrusted: { settings: () => ({ "rust-analyzer": RUST_SAFE }), initOptions: RUST_SAFE } },
+  // No toolchain a go.mod names downloaded and run, no cgo directives (pkg-config).
+  gopls: { name: "gopls", command: "gopls", args: [], hint: "go install golang.org/x/tools/gopls@latest", untrusted: { environment: { GOTOOLCHAIN: "local", CGO_ENABLED: "0" } } },
+  "lua-language-server": { name: "lua-language-server", command: "lua-language-server", args: [], hint: "your package manager (brew install lua-language-server)", untrusted: { skip: (root) => (luaPlugin(root) ? "its .luarc names a plugin, which runs as code" : null) } },
   "bash-language-server": { name: "bash-language-server", command: "bash-language-server", args: ["start"], npm: { package: "bash-language-server", version: "5.8.1", bin: "bash-language-server" } },
   "vscode-json-language-server": { name: "vscode-json-language-server", command: "vscode-json-language-server", args: ["--stdio"], npm: { ...EXTRACTED, bin: "vscode-json-language-server" }, config: { json: { validate: { enable: true } } }, initOptions: { provideFormatter: true } },
   "yaml-language-server": { name: "yaml-language-server", command: "yaml-language-server", args: ["--stdio"], npm: { package: "yaml-language-server", version: "1.24.0", bin: "yaml-language-server" }, config: { redhat: { telemetry: { enabled: false } }, yaml: { validate: true } } },
@@ -88,9 +123,9 @@ export const SERVERS: Record<string, ServerDef> = {
   "vscode-html-language-server": { name: "vscode-html-language-server", command: "vscode-html-language-server", args: ["--stdio"], npm: { ...EXTRACTED, bin: "vscode-html-language-server" }, config: { html: { validate: { scripts: true, styles: true } } }, initOptions: { provideFormatter: true, embeddedLanguages: { css: true, javascript: true } } },
   "docker-langserver": { name: "docker-langserver", command: "docker-langserver", args: ["--stdio"], npm: { package: "dockerfile-language-server-nodejs", version: "0.15.0", bin: "docker-langserver" } },
   intelephense: { name: "intelephense", command: "intelephense", args: ["--stdio"], npm: { package: "intelephense", version: "1.18.5", bin: "intelephense" } },
-  "sourcekit-lsp": { name: "sourcekit-lsp", command: "sourcekit-lsp", args: [], hint: "it comes with Xcode, or the Swift toolchain" },
+  "sourcekit-lsp": { name: "sourcekit-lsp", command: "sourcekit-lsp", args: [], hint: "it comes with Xcode, or the Swift toolchain", untrusted: { skip: (root) => (existsSync(join(root, "Package.swift")) ? "it builds the package's manifest, Package.swift" : null) } },
   clangd: { name: "clangd", command: "clangd", args: [], hint: "your package manager (clangd, or LLVM)" },
-  "ruby-lsp": { name: "ruby-lsp", command: "ruby-lsp", args: [], hint: "gem install ruby-lsp" },
+  "ruby-lsp": { name: "ruby-lsp", command: "ruby-lsp", args: [], hint: "gem install ruby-lsp", untrusted: { skip: (root) => (existsSync(join(root, "Gemfile")) ? "it runs the project's Gemfile (Bundler)" : null) } },
   // Linters' servers: add-ons, where the project has their config (19.18). Settings as nvim-lspconfig's.
   eslint: {
     name: "eslint",
@@ -98,6 +133,7 @@ export const SERVERS: Record<string, ServerDef> = {
     args: ["--stdio"],
     npm: { ...EXTRACTED, bin: "vscode-eslint-language-server" },
     requires: ESLINT_CONFIGS,
+    untrusted: CONFIG_IS_CODE,
     config: {
       validate: "on",
       useESLintClass: false,
@@ -115,7 +151,7 @@ export const SERVERS: Record<string, ServerDef> = {
     },
   },
   biome: { name: "biome", command: "biome", args: ["lsp-proxy"], npm: { package: "@biomejs/biome", version: "2.5.15", bin: "biome" }, requires: ["biome.json", "biome.jsonc"] },
-  stylelint: { name: "stylelint", command: "stylelint-lsp", args: ["--stdio"], npm: { package: "stylelint-lsp", version: "2.0.1", bin: "stylelint-lsp" }, requires: STYLELINT_CONFIGS, config: { stylelintplus: {} } },
+  stylelint: { name: "stylelint", command: "stylelint-lsp", args: ["--stdio"], npm: { package: "stylelint-lsp", version: "2.0.1", bin: "stylelint-lsp" }, requires: STYLELINT_CONFIGS, config: { stylelintplus: {} }, untrusted: CONFIG_IS_CODE },
   ruff: { name: "ruff", command: "ruff", args: ["server"], requires: ["ruff.toml", ".ruff.toml", "pyproject.toml:[tool.ruff"], hint: "uv tool install ruff, pip install ruff, or brew install ruff" },
 };
 

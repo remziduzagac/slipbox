@@ -29,11 +29,11 @@ clone, so it never names a program slipbox runs: `editor.command`, `editor.remot
 ignored, with a warning, and only your user file sets them (`USER_ONLY` in `core/config.ts`). The rest of `[editor]`
 and `[lint]` applies. Likewise a language server's `command`, `args` and `environment`, a linter's
 `lint-command`, and any server or linter slipbox doesn't build in: a folder's config tunes the known ones only.
-A known server's `config` from it does reach the server, though, as a project's `.vscode/settings.json` does, and
-some servers' settings name programs (rust-analyzer's `check.overrideCommand`, for one). Everything you open is
-trusted (`19.6`), so a folder you clone can still make a server run something; only slipbox's own command keys are
-yours alone. `23.x` (decided 2026-10-07, not built yet) changes that: nothing of a folder's own runs unless its
-root is in your `[trust] roots`.
+Nor may it set `[trust]`: a folder can't trust itself. In a root you trust (`[trust] roots`, below), a known
+server's `config` from a folder reaches the server, as a project's `.vscode/settings.json` does — and some servers'
+settings name programs (rust-analyzer's `check.overrideCommand`, for one). In a root you don't (`23.x`), neither
+does: a server's settings are its defaults and yours, with the ones that keep it from running the project's code
+over them, and nothing of the folder's own runs ([lsp.md](lsp.md), "Trust").
 Nor may its `[keys]` or `[aliases]` name a command that throws work away — `app.quit_force`,
 `note.revert`, `note.save_force`, `scratch.clear` (`VAULT_FORBIDDEN_COMMANDS`) — so a clone can't put
 one on `ctrl+s` or `:wq`; those bindings are dropped with a warning.
@@ -82,6 +82,9 @@ root_markers = [".git", ".slipbox", ".obsidian", ".zk"]  # a folder holding one 
 style = "auto"                 # auto | markdown | wiki
 path = "auto"                  # auto | relative | root (/…) | name (a wikilink's only: a markdown link is a path)
 extension = "auto"             # auto | keep | drop   (.md)
+
+[trust]                        # the roots whose own code may run (23.x): yours only, never a folder's
+roots = []                     # paths, ~, globs: ["~/Projects/*", "~/notes"]; each with what's inside it
 
 [files]                        # files beyond notes (16.x): what the explorer and ctrl+p list
 show = "renderable"            # notes | renderable (notes and data files) | all (every text file)
