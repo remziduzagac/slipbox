@@ -5235,7 +5235,8 @@ describe("files beyond notes (16.3–16.5)", () => {
     expect(paths()).not.toContain("run.py");
   });
   test("a code file opens in source mode, highlighted, and has no render; a note after it renders", async () => {
-    const h = await harness({ root: await setup() });
+    // Code as [render] code = "source" opens it (Python has the code view by default, 24.x).
+    const h = await harness({ root: await setup(), config: (c) => (c.render.code = "source") });
     await h.app.run("note.open links-out.md");
     const v = h.app.view!;
     const links = h.app.currentLayout(v).links;
@@ -5459,14 +5460,14 @@ describe("code as a document (24.x)", () => {
     const gap = r.indexOf("", 2);
     expect(r.slice(2, gap).map((x) => x.trim()).join(" ")).toBe("Resolves a link written in a note: the note it reaches, or null when nothing matches.");
     expect(r[2]).toStartWith("  Resolves"); // at the comment's indentation
-    expect(r.slice(gap + 1, gap + 5).join("\n")).toMatch(/^ {4}from +the note it's written in\n {4}target +the link as written {2}\{string\}\n {4}returns +the link, or null\n {4}deprecated +use reach instead$/);
+    expect(r.slice(gap + 1, gap + 5).join("\n")).toMatch(/^ {4}from +the note it's written in\n {4}target +the link as written {2}string\n {4}returns +the link, or null\n {4}deprecated +use reach instead$/);
     const sig = rowIndex(h, "export function resolve");
     expect(r[sig]).toBe("ƒ export function resolve(from: string, target: string): Link | null {");
     expect(r[sig + 1]).toBe("  │ if (!target) return null;");
     // The class: a section of its own, its methods marked, its member's doc comment as prose.
     expect(r[rowIndex(h, "export class Graph") - 1]).toBe("");
     expect(r[rowIndex(h, "export class Graph")]).toBe("◆ export class Graph {");
-    expect(r[rowIndex(h, "A note's text")]).toBe("    A note's text, as read.");
+    expect(r[rowIndex(h, "A note's text")]).toBe("  │ A note's text, as read."); // its indentation's guide
     expect(r[rowIndex(h, "textOf(")]).toMatch(/^ƒ │ textOf\(/);
     // Three blank lines between members: one blank row. A template string's own blank line: kept.
     const add = rowIndex(h, "add(rel");
@@ -5582,14 +5583,14 @@ describe("code as a document (24.x)", () => {
       await Bun.sleep(10);
     }
     expect(rows(h)[rowIndex(h, "xtextOf(")]).toMatch(/^ƒ │ xtextOf\(/);
-    expect(rows(h)[rowIndex(h, "A note's text")]).toBe("    A note's text, as read.");
+    expect(rows(h)[rowIndex(h, "A note's text")]).toBe("  │ A note's text, as read.");
     // On the imports' row: the lens holds them all, as written.
     h.app.moveCursor(v, { row: 0, col: 0 });
     await h.keys("space", "n", "l");
     expect(h.app.currentLayout(v).lines.filter((l) => l.lens === "source").slice(0, 3).map((l) => l.src)).toEqual([1, 2, 3]);
   });
 
-  test("space n v: source and back; edit_in = source: editing goes to source; [render] code = source; Python in source", async () => {
+  test("space n v: source and back; edit_in = source: editing goes to source; [render] code = source; Go in source", async () => {
     const h = await open();
     const v = h.app.view!;
     await h.keys("space", "n", "v");
@@ -5608,8 +5609,8 @@ describe("code as a document (24.x)", () => {
     expect(v.source).toBe(true); // as a note: source mode stays until space n v
     const plain = await open({ config: (c) => (c.render.code = "source") });
     expect(plain.app.view!.source).toBe(true);
-    const py = await open({}, "tool.py", "def f():\n    return 1\n");
-    expect(py.app.view!.source).toBe(true);
+    const go = await open({}, "tool.go", "package main\n\nfunc f() int { return 1 }\n"); // not mapped yet
+    expect(go.app.view!.source).toBe(true);
   });
 
   test("the margin's marks in each glyph set", async () => {
@@ -5618,6 +5619,161 @@ describe("code as a document (24.x)", () => {
       expect(rows(h)[rowIndex(h, "export function resolve")]).toStartWith(`${fn} `);
       expect(rows(h)[rowIndex(h, "export class Graph")]).toStartWith(`${cls} `);
     }
+  });
+});
+
+describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", () => {
+  const TS = [
+    'import { join } from "node:path";',
+    "",
+    "// ---- Resolving links ----",
+    "",
+    "/**",
+    " * Resolves a link written in a note: the note it reaches, or `null` when nothing matches.",
+    " * @param from - the note it's written in",
+    " * @param target the link as written",
+    " * @returns the link, or null",
+    " */",
+    "export function resolve(from: string, target: string): Link | null {",
+    "  if (!target) return null; // nothing written: nothing to find",
+    "  // By name first, then by path: a path is never ambiguous.",
+    "  return byName.get(normKey(target)) ?? byPath.get(join(from, target)) ?? byAlias.get(target.toLowerCase()) ?? null;",
+    "}",
+    "",
+    "// ---- The graph ----",
+    "",
+    "/** The notes of a folder, read once. */",
+    "export class Graph {",
+    "  /**",
+    "   * A note's text, as read.",
+    "   *",
+    "   * From the cache when it has it.",
+    "   */",
+    "  textOf(rel: string): string | undefined {",
+    "    return this.notes.get(rel);",
+    "  }",
+    "}",
+    "",
+  ].join("\n");
+  const PY = [
+    "from os.path import join",
+    "",
+    "# ---- Resolving links ----",
+    "",
+    "",
+    "def resolve(from_: str, target: str) -> Link | None:",
+    '    """Resolves a link written in a note: the note it reaches,',
+    "    or ``None`` when nothing matches.",
+    "",
+    "    Args:",
+    "        from_: the note it's written in",
+    "        target: the link as written",
+    "",
+    "    Returns:",
+    "        the link, or None",
+    '    """',
+    "    if not target:",
+    "        return None  # nothing written: nothing to find",
+    "    # By name first, then by path: a path is never ambiguous.",
+    "    return by_name.get(norm_key(target)) or by_path.get(join(from_, target)) or by_alias.get(target.lower())",
+    "",
+    "",
+    "# ---- The graph ----",
+    "",
+    "",
+    "class Graph:",
+    '    """The notes of a folder, read once."""',
+    "",
+    "    def text_of(self, rel: str) -> str | None:",
+    '        """A note\'s text, as read.',
+    "",
+    "        From the cache when it has it.",
+    '        """',
+    "        return self.notes.get(rel)",
+    "",
+  ].join("\n");
+  const open = async (file: string, text: string, config?: (c: Config) => void) => {
+    const root = makeVault();
+    writeFileSync(join(root, file), text);
+    const h = await harness({ root, open: file, width: 100, height: 60, config: (c) => ((c.ui.sidebar = false), config?.(c)) });
+    for (let i = 0; i < 200 && h.app.view!.buf.syntax?.version !== h.app.view!.buf.version; i++) {
+      h.frame();
+      await Bun.sleep(10);
+    }
+    return h;
+  };
+  const rows = (h: Harness) => {
+    const frame = h.frame();
+    const pane = h.app.geometry!.panes[0]!;
+    return frame.split("\n").slice(pane.y, pane.y + pane.h).map((r) => [...r].slice(pane.textX - 2, pane.x + pane.w - 1).join("").trimEnd());
+  };
+
+  test("the same function and class in TypeScript and Python read alike: sections, docs above, notes, prose comments", async () => {
+    const ts = rows(await open("links.ts", TS));
+    const py = rows(await open("links.py", PY));
+    const at = (r: string[], text: string) => r.findIndex((x) => x.includes(text));
+    // A separator comment: a section's rule with its title, in both.
+    for (const r of [ts, py]) expect(r[at(r, "Resolving links")]).toMatch(/^ {2}── Resolving links ─+$/);
+    // The docs above the definition — Python's docstring too — as prose, then the same terms.
+    const doc = (r: string[]) => {
+      const i = at(r, "Resolves a link");
+      const sig = at(r, "resolve(");
+      return { prose: r.slice(i, sig).filter((x) => x.trim()).map((x) => x.trim().replace(/\s+/g, " ")), sig };
+    };
+    expect(doc(ts).prose).toEqual(["Resolves a link written in a note: the note it reaches, or null when nothing matches.", "from the note it's written in", "target the link as written", "returns the link, or null"]);
+    expect(doc(py).prose).toEqual(["Resolves a link written in a note: the note it reaches, or None when nothing matches.", "from_ the note it's written in", "target the link as written", "returns the link, or None"]);
+    expect(ts[doc(ts).sig]).toBe("ƒ export function resolve(from: string, target: string): Link | null {");
+    expect(py[doc(py).sig]).toBe("ƒ def resolve(from_: str, target: str) -> Link | None:");
+    // A comment after code: a note, its marker gone; a comment line: prose, its marker gone.
+    expect(ts[at(ts, "nothing written")]).toMatch(/^ {2}│ if \(!target\) return null; +nothing written: nothing to find$/);
+    expect(py[at(py, "nothing written")]).toMatch(/^ {2}│ {3}│ {3}return None +nothing written: nothing to find$/);
+    expect(ts[at(ts, "By name first")]).toBe("  │ By name first, then by path: a path is never ambiguous.");
+    expect(py[at(py, "By name first")]).toBe("  │   By name first, then by path: a path is never ambiguous.");
+    for (const r of [ts, py]) expect(r.some((x) => /\/\/|#|"""|\/\*\*/.test(x))).toBe(false); // no marker anywhere
+    // A long line breaks before its operator, in both: `??`, `or`.
+    expect(ts[at(ts, "byAlias") ]).toMatch(/^ {2}│ {5}\?\? byAlias\.get/);
+    expect(py[at(py, "by_alias")]).toMatch(/^ {2}│ {7}or by_alias\.get/);
+    // The class: its doc above it; its method's above the method.
+    for (const r of [ts, py]) {
+      expect(r[at(r, "◆ ") - 1]!.trim()).toBe("The notes of a folder, read once.");
+      // Right under the class, its method's doc: no blank row (Python's after its docstring is the docstring's); its
+      // second paragraph prose too, at the method's indentation (a docstring's indentation isn't markdown's code).
+      expect(r[at(r, "◆ ") + 1]).toMatch(/^ {2}│ +A note's text, as read\.$/);
+      expect(r[at(r, "◆ ") + 3]).toMatch(/^ {2}│ +From the cache when it has it\.$/);
+      expect(r[at(r, "text_of(") >= 0 ? at(r, "text_of(") - 1 : at(r, "textOf(") - 1]).toMatch(/^ {2}│ +From the cache when it has it\.$/);
+    }
+  });
+
+  test("the sections head the outline's definitions; a docstring's rows keep their lines", async () => {
+    const h = await open("links.py", PY);
+    const layout = h.app.currentLayout(h.app.view!);
+    expect(layout.headings.map((x) => `${x.level} ${x.text}`)).toEqual(["1 Resolving links", "2 resolve", "1 The graph", "2 Graph", "3 text_of"]);
+    // The docstring drawn above `def`, each row on its own line: its first, its terms'.
+    const doc = layout.lines.filter((l) => l.src >= 7 && l.src <= 16);
+    expect(doc[0]!.src).toBe(7);
+    expect(layout.lines.findIndex((l) => l.src === 7)).toBeLessThan(layout.lines.findIndex((l) => l.src === 6));
+    expect(layout.lines.find((l) => l.spans.some((s) => s.text.startsWith("from_")))!.src).toBe(11);
+  });
+
+  test("a comment for tools, and code put aside, stay as written; a note's run lines up; a block of comment lines is one paragraph", async () => {
+    const ts = rows(
+      await open(
+        "c.ts",
+        ["// eslint-disable-next-line no-console", 'console.log("x");', "// const old = compute(1);", "// A plain note", "// over two lines.", "const a = 1; // first", "const bb = 22; // second", "// ==== Tail ====", "const y = 1;", ""].join("\n"),
+      ),
+    );
+    expect(ts).toContain("  // eslint-disable-next-line no-console");
+    expect(ts).toContain("  // const old = compute(1);");
+    expect(ts).toContain("  A plain note over two lines.");
+    const a = ts.find((x) => x.includes("first"))!;
+    const b = ts.find((x) => x.includes("second"))!;
+    expect(a.indexOf("first")).toBe(b.indexOf("second")); // one column for the run's notes
+    expect(a).toMatch(/^• const a = 1; +first$/);
+    // A section right after code: a blank row before its rule all the same.
+    expect(ts[ts.findIndex((x) => x.includes("── Tail"))! - 1]).toBe("");
+    const py = rows(await open("t.py", ["#!/usr/bin/env python3", "# -*- coding: utf-8 -*-", "x = os.environ  # type: ignore", ""].join("\n")));
+    expect(py.slice(0, 2)).toEqual(["  #!/usr/bin/env python3", "  # -*- coding: utf-8 -*-"]);
+    expect(py).toContain("• x = os.environ  # type: ignore"); // a directive after code: as written, no note
   });
 });
 
@@ -5650,7 +5806,7 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
   test("a syntax error is marked out of insert, the status line counting it", async () => {
     const root = makeVault();
     writeFileSync(join(root, "bad.py"), "def f(:\n    pass\n\nx = 1\n");
-    const h = await harness({ root, open: "bad.py", width: 100 });
+    const h = await harness({ root, open: "bad.py", width: 100, config: (c) => (c.render.code = "source") });
     await settle(h);
     const errs = h.app.view!.buf.syntax!.errors;
     expect(errs.length).toBeGreaterThan(0);
@@ -5832,7 +5988,7 @@ describe("links in code comments in the TUI (16.10)", () => {
     const root = makeVault();
     writeFileSync(join(root, "lib.py"), "a = 1\nb = 2\nc = 3\n");
     writeFileSync(join(root, "run.py"), "# see lib.py:3 and notes/alpha.md\nx = 1\n");
-    const h = await harness({ root, open: "run.py", width: 100 });
+    const h = await harness({ root, open: "run.py", width: 100, config: (c) => (c.render.code = "source") });
     const v = h.app.view!;
     for (let i = 0; i < 100 && v.buf.syntax?.version !== v.buf.version; i++) {
       h.frame();

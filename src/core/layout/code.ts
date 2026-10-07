@@ -1,7 +1,9 @@
-// The code view (plan 24.x, docs/design/code-view.md): a source file read as a document. Every token is drawn as
-// written; the whitespace and the decoration are the view's own — where a long line breaks and how its rest is
+// The code view (plan 24.x, docs/design/code-view.md): a source file read as a document. Every token of code is drawn
+// as written; the whitespace and the decoration are the view's own — where a long line breaks and how its rest is
 // indented, the blank rows between definitions, dimming, bold, a definition's kind in the margin, indent guides, a
-// folded run of imports, and the doc comments rendered as prose.
+// folded run of imports. Comments are documentation: their markers gone, their text rendered as prose — a
+// definition's docs (JSDoc, a docstring: Google, NumPy, reST) as prose and a list of terms, drawn above it in every
+// language; a separator comment as a section's rule; a comment after code as a note in the margin beside it.
 //
 // It starts from source mode's rows (one per line, unwrapped: highlighted, and kept between edits by the buffer's
 // source cache), so a row of code here carries the same `srcMap`: each cell maps to its place in the line, and the
@@ -10,10 +12,11 @@
 
 import type { Glyphs } from "../glyphs.ts";
 import { slugify } from "../parse.ts";
-import type { CodeDef, CodeDoc, CodeImports, CodeModel } from "../syntax.ts";
+import { readDoc } from "../docformats.ts";
+import type { CodeComment, CodeDef, CodeDoc, CodeImports, CodeModel } from "../syntax.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../width.ts";
-import { A_BOLD, A_DIM, type Layout, type LayoutHeading, type LayoutLink, type Line, type Span } from "./ir.ts";
+import { A_BOLD, A_DIM, A_ITALIC, type Layout, type LayoutHeading, type LayoutLink, type Line, type Span } from "./ir.ts";
 import { renderMarkdown } from "./render.ts";
 
 export interface CodeLayoutOptions {
@@ -45,6 +48,19 @@ interface Break {
 const QUIET = /^[{};]$/;
 const CONTINUE = 4;
 
+/** A comment that's for tools, not readers, kept as written: a shebang, an encoding, a linter's or checker's directive. */
+const DIRECTIVE = /^(!|-\*-|eslint|prettier-|biome-|@ts-|ts-|tslint:|istanbul |c8 |jshint|global |noqa|type:\s*ignore|pyright:|mypy:|pylint:|fmt:|isort:|pragma|nolint|go:|\+build|endregion\b|#endregion\b)/;
+/** A comment that's code put aside: kept as written (dimmed), not read as prose. */
+const CODELIKE = /([;{}]\s*$)|(^(const|let|var|return|import|export|function|def|class|from|if|elif|for|while|print|self\.|this\.)\b.*[(=:{])|(^[\w.]+\(.*\)\s*;?$)/;
+/** A separator comment's title (empty: a rule alone), or null when it isn't one. */
+function sectionOf(t: string): string | null {
+  if (/^[-=*#~_+]{3,}$/.test(t)) return "";
+  const m = /^[-=*#~_+]{2,}\s+(.+?)(?:\s+[-=*#~_+]{2,})?$/.exec(t) ?? /^(?:MARK:\s*-?\s*|#?region\s+|pragma mark\s*-?\s*)(.+)$/i.exec(t);
+  return m ? m[1]!.trim() : null;
+}
+/** A comment's text without its markers: `//`, `#`, `--`, a one-line block comment's. */
+const unmark = (t: string) => t.replace(/^(\/\/+|#+|--+|\/\*+)\s?/, "").replace(/\s*\*+\/\s*$/, "");
+
 /**
  * The code view's layout of `source`, from `base` (source mode's layout, unwrapped: a row per line) and what the
  * file's parse says (`model`; null while it's parsed: the code alone, its guides and its wrapping).
@@ -57,22 +73,41 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
   const g = opts.glyphs;
   const width = Math.max(10, opts.width);
   const defs = model?.defs ?? [];
-  const docs = new Map<number, CodeDoc>((model?.docs ?? []).map((d) => [d.start, d]));
   const imports = new Map<number, CodeImports>((model?.imports ?? []).map((m) => [m.start, m]));
+  // Documentation where it is, and a definition's docstring drawn above the definition (24.4): its own lines skipped
+  // where they are, with the blank lines right after them.
+  const docs = new Map<number, CodeDoc>();
+  const docsBefore = new Map<number, CodeDoc[]>();
+  const moved = new Set<number>();
+  for (const d of model?.docs ?? []) {
+    if (d.before === undefined) {
+      docs.set(d.start, d);
+      continue;
+    }
+    docsBefore.set(d.before, [...(docsBefore.get(d.before) ?? []), d]);
+    for (let k = d.start; k <= d.end; k++) moved.add(k);
+    for (let k = d.end + 1; k <= texts.length && !texts[k - 1]!.trim(); k++) moved.add(k);
+  }
+  // Comments: a line that's only a comment, and one after code (a note for the margin).
+  const lineComment = new Map<number, CodeComment>();
+  const trailing = new Map<number, CodeComment>();
+  for (const c of model?.comments ?? []) (c.trailing ? trailing : lineComment).set(c.line, c);
   const defAt = new Map<number, CodeDef>();
   const nameAt = new Map<number, CodeDef>();
   for (const d of defs) {
     if (!defAt.has(d.line)) defAt.set(d.line, d);
     if (!nameAt.has(d.name.line)) nameAt.set(d.name.line, d);
   }
-  // Where a top-level function's, class's or type's block starts (its doc comment's first line, when it has one right
-  // above it): one blank row before each. Values aren't sections: a run of consts stays together.
+  // Where a top-level function's, class's or type's block starts (the doc comment right above it, else its decorators):
+  // one blank row before each, and before a section. Values aren't sections: a run of consts stays together.
   const blockStart = new Set<number>();
-  const docEnding = new Map<number, CodeDoc>((model?.docs ?? []).map((d) => [d.end, d]));
-  for (const d of defs) if (d.depth === 0 && d.kind !== "value") blockStart.add(docEnding.get(d.line - 1)?.start ?? d.line);
+  const docEnding = new Map<number, CodeDoc>((model?.docs ?? []).filter((d) => d.before === undefined).map((d) => [d.end, d]));
+  for (const d of defs) if (d.depth === 0 && d.kind !== "value") blockStart.add(docEnding.get(d.top - 1)?.start ?? d.top);
   const unit = indentUnit(texts);
+  const notes = noteColumns(texts, trailing, rowOf, width);
   const lines: Line[] = [];
   const links: LayoutLink[] = [];
+  const sections: { text: string; row: number; src: number }[] = [];
   const firstRow = new Map<number, number>();
   let natural = 0;
   const push = (l: Line) => {
@@ -82,11 +117,16 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     if (w > natural) natural = w;
   };
   const blank = (src: number, decor: boolean): Line => (decor ? { spans: [], src, decor: true } : { spans: [], src, srcMap: { cells: [], end: 0 } });
+  const prose = (text: string[], first: number, column: number) => {
+    for (const l of proseRows(text, first, column, width, unit, g, links, lines.length)) push(l);
+  };
 
-  const code = (ln: number) => {
-    const cells = cellsOf(rowOf.get(ln));
+  const code = (ln: number, verbatim = false) => {
+    let cells = cellsOf(rowOf.get(ln));
     const def = defAt.get(ln);
     decorate(cells, nameAt.get(ln), unit, g);
+    const note = trailing.get(ln);
+    if (note && !verbatim) cells = noted(cells, note, notes.get(ln) ?? 0);
     const rows = opts.wrap ? breakLine(cells, width, unit, g) : [{ cells }];
     const end = texts[ln - 1]?.length ?? 0;
     rows.forEach((r, k) => {
@@ -96,20 +136,60 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     });
   };
 
+  /** A run of comment lines from `ln`, at one column: prose by paragraph, a separator a section, the rest as written. */
+  const comments = (ln: number): number => {
+    const column = lineComment.get(ln)!.column;
+    let end = ln;
+    while (lineComment.get(end + 1)?.column === column && !docs.has(end + 1) && !imports.has(end + 1)) end++;
+    let para: string[] = [];
+    let paraStart = ln;
+    const flush = () => {
+      if (para.some((t) => t.trim())) prose(para, paraStart, column);
+      para = [];
+    };
+    for (let k = ln; k <= end; k++) {
+      const t = unmark(texts[k - 1]!.slice(column)).trimEnd();
+      const raw = texts[k - 1]!.slice(column).replace(/^(\/\/+|#|--+|\/\*+)/, "");
+      const section = sectionOf(t.trim());
+      if (DIRECTIVE.test(raw.trim()) || (t.trim() && CODELIKE.test(t.trim()))) {
+        flush();
+        code(k, true);
+      } else if (section !== null && column === 0) {
+        flush();
+        push(sectionRow(section, width, k, g));
+        sections.push({ text: section, row: lines.length - 1, src: k });
+      } else {
+        if (!para.length) paraStart = k;
+        para.push(t);
+      }
+    }
+    flush();
+    return end + 1;
+  };
+
   let shown = false;
   let blanks: number[] = [];
   for (let ln = 1; ln <= texts.length; ) {
+    if (moved.has(ln)) {
+      ln++;
+      continue;
+    }
     const run = imports.get(ln);
     const doc = docs.get(ln);
     if (!run && !doc && !texts[ln - 1]!.trim() && !opts.inside?.(ln)) {
       blanks.push(ln++);
       continue;
     }
-    // A run of blank lines is one blank row; a top-level definition has one before it, whatever the file has.
+    // A run of blank lines is one blank row; a top-level definition or a section has one before it, whatever the file
+    // has.
+    const c = lineComment.get(ln);
+    const section = c && c.column === 0 && sectionOf(unmark(texts[ln - 1]!.slice(c.column)).trim()) !== null;
     if (shown && blanks.length) push(blank(blanks[0]!, false));
-    else if (shown && blockStart.has(ln)) push(blank(ln, true));
+    else if (shown && (blockStart.has(ln) || section)) push(blank(ln, true));
     blanks = [];
     shown = true;
+    // A definition's docstring, above it.
+    for (const d of docsBefore.get(ln) ?? []) for (const l of docRows(texts, d, width, unit, g, links, lines.length)) push(l);
     if (run) {
       const open = opts.open.has(run.start);
       push(foldRow(run, open, width, g));
@@ -118,24 +198,119 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       continue;
     }
     if (doc) {
-      for (const l of docRows(texts, doc, width, g, links, lines.length)) push(l);
+      for (const l of docRows(texts, doc, width, unit, g, links, lines.length)) push(l);
       ln = doc.end + 1;
+      continue;
+    }
+    if (c && !texts[ln - 1]!.slice(0, c.column).trim()) {
+      ln = comments(ln);
       continue;
     }
     code(ln++);
   }
   if (!lines.length) lines.push({ spans: [], src: 1, srcMap: { cells: [], end: 0 } });
-  // The sections, as the outline has them (`]]`, the breadcrumb): values are marked, not sections.
-  const headings: LayoutHeading[] = [];
+  // The headings (`]]`, the breadcrumb): the sections, then the definitions under them — values are marked, not
+  // headings.
+  const all: { level: number; text: string; row: number; src: number }[] = sections.map((x) => ({ level: 1, ...x }));
+  const under = sections.length ? 2 : 1;
   for (const d of defs) {
     if (d.kind === "value") continue;
     const row = firstRow.get(d.line);
     if (row === undefined) continue;
-    const text = texts[d.name.line - 1]?.slice(d.name.from, d.name.to) ?? "";
-    if (lines[row]!.heading === undefined) lines[row] = { ...lines[row]!, heading: headings.length };
-    headings.push({ level: Math.min(6, d.depth + 1), text, slug: slugify(text), line: row, src: d.line });
+    all.push({ level: Math.min(6, d.depth + under), text: texts[d.name.line - 1]?.slice(d.name.from, d.name.to) ?? "", row, src: d.line });
+  }
+  all.sort((a, b) => a.row - b.row);
+  const headings: LayoutHeading[] = [];
+  for (const h of all) {
+    if (lines[h.row]!.heading === undefined) lines[h.row] = { ...lines[h.row]!, heading: headings.length };
+    headings.push({ level: h.level, text: h.text, slug: slugify(h.text), line: h.row, src: h.src });
   }
   return { lines, links, headings, width: opts.wrap ? width : Math.max(width, natural + 1) };
+}
+
+/**
+ * Where each line's note goes (its comment after code, in the margin): a run of lines with notes lines them up a
+ * column past the longest code among them — unless that's past two thirds of the width; then two columns past each.
+ */
+function noteColumns(texts: string[], trailing: Map<number, CodeComment>, rowOf: Map<number, Line>, width: number): Map<number, number> {
+  const out = new Map<number, number>();
+  const codeWidth = (ln: number) => {
+    const c = trailing.get(ln)!;
+    let w = 0;
+    let end = 0;
+    for (const cell of cellsOf(rowOf.get(ln))) {
+      if (cell.at >= c.column) break;
+      w += cell.w;
+      if (cell.g !== " ") end = w;
+    }
+    return end;
+  };
+  const lines = [...trailing.keys()].filter((ln) => !DIRECTIVE.test(unmark((texts[ln - 1] ?? "").slice(trailing.get(ln)!.column)).trim())).sort((a, b) => a - b);
+  for (let i = 0; i < lines.length; ) {
+    let j = i;
+    while (j + 1 < lines.length && lines[j + 1] === lines[j]! + 1) j++;
+    const run = lines.slice(i, j + 1);
+    const col = Math.max(...run.map(codeWidth)) + 2;
+    for (const ln of run) out.set(ln, col <= width * (2 / 3) ? col : codeWidth(ln) + 2);
+    i = j + 1;
+  }
+  return out;
+}
+
+/** A row's comment after its code as a note: its markers gone, its text in the comments' colour, slanted, at `column`. */
+function noted(cells: Cell[], note: CodeComment, column: number): Cell[] {
+  const k = cells.findIndex((c) => c.at >= note.column);
+  if (k < 0 || !column) return cells;
+  let text = k;
+  while (text < cells.length && /[/#*-]/.test(cells[text]!.g)) text++;
+  while (text < cells.length && cells[text]!.g === " ") text++;
+  let end = cells.length;
+  while (end > text && /[*/ ]/.test(cells[end - 1]!.g) && cells.slice(text, end).map((c) => c.g).join("").endsWith("*/")) end--;
+  const code = cells.slice(0, k);
+  while (code.length && code[code.length - 1]!.g === " ") code.pop();
+  const w = code.reduce((n, c) => n + c.w, 0);
+  const at = cells[text]?.at ?? note.column;
+  const pad = Array.from({ length: Math.max(2, column - w) }, (): Cell => ({ g: " ", w: 1, at, role: "text", attrs: 0 }));
+  return [...code, ...pad, ...cells.slice(text, end).map((c) => ({ ...c, role: "syn_comment" as Role, attrs: A_ITALIC }))];
+}
+
+/** A separator comment as a section's rule: `── Title ───…` across the width (a rule alone without a title). */
+function sectionRow(title: string, width: number, src: number, g: Glyphs): Line {
+  const head = title ? `${g.rule.repeat(2)} ` : "";
+  const name = title ? truncate(title, Math.max(1, width - 6)) : "";
+  const rest = Math.max(0, width - stringWidth(head) - stringWidth(name) - (title ? 1 : 0));
+  const spans: Span[] = [];
+  if (head) spans.push({ text: head, role: "rule", attrs: 0, src });
+  if (name) spans.push({ text: `${name} `, role: "h3", attrs: A_BOLD, src });
+  spans.push({ text: g.rule.repeat(rest), role: "rule", attrs: 0, src });
+  return { spans, src };
+}
+
+/** A line's indentation in front of prose: the guides of its levels, then spaces. */
+function indentSpans(column: number, unit: number, g: Glyphs): Span[] {
+  const out: Span[] = [];
+  for (let c = 0; c < column; c++) {
+    const guide = c % unit === 0;
+    const text = guide ? g.guide : " ";
+    const role: Role = guide ? "tree_guide" : "text";
+    const last = out[out.length - 1];
+    if (last && last.role === role) last.text += text;
+    else out.push({ text, role, attrs: 0 });
+  }
+  return out;
+}
+
+/** Prose (a comment's, a doc's body) rendered as markdown at `column`: line k of `text` is source line `first + k`. */
+function proseRows(text: string[], first: number, column: number, width: number, unit: number, g: Glyphs, links: LayoutLink[], rowBase: number, map?: number[]): Line[] {
+  const at = (k: number) => (map ? (map[k] ?? map[map.length - 1] ?? 0) + first : first + k);
+  const indent = Math.min(column, Math.max(0, width - 20));
+  const md = renderMarkdown(text.join("\n"), { width: Math.max(10, width - indent), glyphs: g, showUrls: false });
+  const shift = links.length;
+  for (const l of md.links) links.push({ ...l, line: l.line < 0 ? -1 : rowBase + l.line, col: l.col + indent, src: at(l.src - 1) });
+  return md.lines.map((l) => {
+    const spans: Span[] = l.spans.map((s) => ({ ...s, ...(s.src !== undefined ? { src: at(s.src - 1) } : {}), ...(s.link !== undefined ? { link: s.link + shift } : {}) }));
+    return { spans: [...indentSpans(indent, unit, g), ...spans], src: at(Math.max(1, l.src) - 1) };
+  });
 }
 
 /**
@@ -205,7 +380,8 @@ function decorate(cells: Cell[], def: CodeDef | undefined, unit: number, g: Glyp
   }
 }
 
-/** Where a row of code may break: after an opening bracket, after a comma, before `&&` `||` `??` ` ? ` or a chained `.`. */
+/** Where a row of code may break: after an opening bracket, after a comma, before `&&` `||` `??` ` ? ` `and` `or` or a
+ *  chained `.`. */
 function breaksOf(cells: Cell[], from: number): Break[] {
   const out: Break[] = [];
   let depth = 0;
@@ -221,7 +397,7 @@ function breaksOf(cells: Cell[], from: number): Break[] {
       let j = i + 1;
       while (j < cells.length && cells[j]!.g === " ") j++;
       if (j < cells.length) out.push({ i: j, depth });
-    } else if (cells[i - 1]?.g === " " && (at(i, "&& ") || at(i, "|| ") || at(i, "?? ") || at(i, "? "))) out.push({ i, depth });
+    } else if (cells[i - 1]?.g === " " && (at(i, "&& ") || at(i, "|| ") || at(i, "?? ") || at(i, "? ") || at(i, "and ") || at(i, "or "))) out.push({ i, depth });
     else if (c.g === "." && cells[i - 1]?.g === ")") out.push({ i, depth });
   }
   return out;
@@ -307,58 +483,52 @@ function foldRow(run: CodeImports, open: boolean, width: number, g: Glyphs): Lin
 }
 
 /**
- * A doc comment as prose: its markers gone, its text rendered as markdown at its indentation and wrapped to the
- * width; JSDoc's tags as a definition list under it — each `@param`'s name, `@returns` as `returns`, another tag by
- * its name — then what it says. Its rows are placed by line: a comment's line k is the text's line k.
+ * Documentation as prose (24.4): its markers gone (a docstring's quotes, dedented), read into prose and a list of
+ * terms whatever its format (`docformats.ts`), the prose rendered as markdown at its column and the terms under it —
+ * each name, then what it is, its type dimmed after. Placed by line: what it says is where its source line is.
  */
-function docRows(texts: string[], doc: CodeDoc, width: number, g: Glyphs, links: LayoutLink[], rowBase: number): Line[] {
+function docRows(texts: string[], doc: CodeDoc, width: number, unit: number, g: Glyphs, links: LayoutLink[], rowBase: number): Line[] {
   const raw = texts.slice(doc.start - 1, doc.end);
-  const text = raw.map((l, k) => {
-    let t = k === 0 ? l.slice(doc.column).replace(/^\/\*\*\s?/, "") : l.replace(/^\s*\*(?!\/)\s?/, "");
-    if (k === raw.length - 1) t = t.replace(/\s*\*\/\s*$/, "");
-    return t;
-  });
-  const tagAt = text.findIndex((t) => /^\s*@\w/.test(t));
-  const body = (tagAt < 0 ? text : text.slice(0, tagAt)).join("\n").replace(/\s+$/, "");
-  const indent = " ".repeat(Math.min(doc.column, Math.max(0, width - 20)));
-  const room = Math.max(10, width - indent.length);
+  let text: string[];
+  if (doc.style === "docstring") {
+    text = raw.map((l, k) => {
+      let t = k === 0 ? l.trimStart().replace(/^[rRuUbBfF]{0,2}("""|\'\'\'|"|')/, "") : l;
+      if (k === raw.length - 1) t = t.replace(/("""|\'\'\'|"|')\s*$/, "");
+      return t;
+    });
+    // PEP 257: the lines after the first lose their common indentation.
+    const rest = text.slice(1).filter((t) => t.trim());
+    const common = rest.length ? Math.min(...rest.map((t) => t.length - t.trimStart().length)) : 0;
+    text = text.map((t, k) => (k === 0 ? t.trim() : t.slice(common)));
+  } else {
+    text = raw.map((l, k) => {
+      let t = k === 0 ? l.slice(doc.column).replace(/^\/\*+\s?/, "") : l.replace(/^\s*\*(?!\/)\s?/, "");
+      if (k === raw.length - 1) t = t.replace(/\s*\*+\/\s*$/, "");
+      return t;
+    });
+  }
+  const read = readDoc(text, doc.style);
   const out: Line[] = [];
-  if (body.trim()) {
-    const md = renderMarkdown(body, { width: room, glyphs: g, showUrls: false });
-    const shift = links.length;
-    for (const l of md.links) links.push({ ...l, line: l.line < 0 ? -1 : rowBase + l.line, col: l.col + indent.length, src: doc.start + l.src - 1 });
-    for (const l of md.lines) {
-      const spans: Span[] = l.spans.map((s) => ({ ...s, ...(s.src !== undefined ? { src: doc.start + s.src - 1 } : {}), ...(s.link !== undefined ? { link: s.link + shift } : {}) }));
-      out.push({ spans: indent ? [{ text: indent, role: "text", attrs: 0 }, ...spans] : spans, src: doc.start + Math.max(1, l.src) - 1 });
-    }
+  if (read.body.some((b) => b.text.trim())) {
+    out.push(...proseRows(read.body.map((b) => b.text), doc.start, doc.column, width, unit, g, links, rowBase, read.body.map((b) => b.line)));
   }
-  if (tagAt < 0) return out.length ? out : [{ spans: [], src: doc.start }];
-  // The tags: each its line and what follows it up to the next.
-  const tags: { term: string; type: string; desc: string; src: number }[] = [];
-  for (let k = tagAt; k < text.length; k++) {
-    const t = text[k]!.trim();
-    const m = /^@(\w+)\s*(\{[^}]*\})?\s*(.*)$/.exec(t);
-    if (m) {
-      const [, tag, type = "", rest = ""] = m;
-      const param = tag === "param" || tag === "arg" || tag === "argument" || tag === "property" || tag === "prop";
-      const p = param ? /^(\[?[\w$.]+(?:=[^\]]*)?\]?)\s*(?:-\s*)?(.*)$/.exec(rest) : null;
-      const term = p ? p[1]! : tag === "return" || tag === "returns" ? "returns" : tag!;
-      tags.push({ term, type, desc: p ? p[2]! : rest, src: doc.start + k });
-    } else if (t && tags.length) tags[tags.length - 1]!.desc += ` ${t}`;
-  }
-  if (out.length && tags.length) out.push({ spans: [], src: doc.start + tagAt, decor: true });
-  const termW = Math.min(16, Math.max(...tags.map((t) => stringWidth(t.term)))) + 3;
-  for (const t of tags) {
+  if (!read.tags.length) return out.length ? out : [{ spans: [], src: doc.start }];
+  if (out.length) out.push({ spans: [], src: doc.start + read.tags[0]!.line, decor: true });
+  const indent = Math.min(doc.column, Math.max(0, width - 20));
+  const room = Math.max(10, width - indent);
+  const termW = Math.min(16, Math.max(...read.tags.map((t) => stringWidth(t.term)))) + 3;
+  for (const t of read.tags) {
+    const src = doc.start + t.line;
     const descRoom = Math.max(10, room - 2 - termW);
     const words = t.desc.trim() ? wrapWords(t.desc.trim(), descRoom) : [""];
     words.forEach((w, k) => {
-      const spans: Span[] = [{ text: `${indent}  `, role: "text", attrs: 0 }];
-      if (k === 0) spans.push({ text: truncate(t.term, termW - 1).padEnd(termW), role: "fm_key", attrs: 0, src: t.src });
+      const spans: Span[] = [...indentSpans(indent, unit, g), { text: "  ", role: "text", attrs: 0 }];
+      if (k === 0) spans.push({ text: truncate(t.term, termW - 1).padEnd(termW), role: "fm_key", attrs: 0, src });
       else spans.push({ text: " ".repeat(termW), role: "text", attrs: 0 });
       // Its code spans as the prose's: the backticks gone, the code coloured.
-      if (w) w.split(/(`[^`]+`)/).forEach((part, j) => part && spans.push(j % 2 ? { text: part.slice(1, -1), role: "code_inline", attrs: 0, src: t.src } : { text: part, role: "text", attrs: 0, src: t.src }));
-      if (k === 0 && t.type) spans.push({ text: `  ${t.type}`, role: "dim", attrs: 0, src: t.src });
-      out.push({ spans, src: t.src });
+      if (w) w.split(/(`[^`]+`)/).forEach((part, j) => part && spans.push(j % 2 ? { text: part.slice(1, -1), role: "code_inline", attrs: 0, src } : { text: part, role: "text", attrs: 0, src }));
+      if (k === 0 && t.type) spans.push({ text: `${w ? "  " : ""}${t.type}`, role: "dim", attrs: 0, src });
+      out.push({ spans, src });
     });
   }
   return out;

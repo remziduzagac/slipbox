@@ -883,8 +883,10 @@ design: `docs/design/code-view.md`.*
 | 24.6 | **Prototype.** Long lines broken at their structure; the author's breaks kept, line numbers the file's |
 | 24.7 | **Prototype.** Indent guides; braces and semicolons dimmed |
 | 24.8 | Folding any definition; editing a row in place, without the lens |
-| 24.9 | Python, Rust, Go mapped; tabular code aligned; license headers folded |
+| 24.9 | Rust, Go mapped; tabular code aligned; signatures one parameter a line; license headers folded |
 | 24.10 | **Prototype.** The lens on code: a line, a doc comment, the imports as written, highlighted; `esc esc` back |
+| 24.11 | **Prototype.** Comments as prose: markers gone; separators as sections; after code, notes in the margin |
+| 24.12 | **Prototype.** Python: docstrings above their definitions; JSDoc, Google, NumPy, reST read into one shape |
 
 ## Deferred — in the design, not in this breakdown
 

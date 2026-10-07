@@ -591,53 +591,90 @@ export class SyntaxTree {
    */
   codeModel(): CodeModel | null {
     if (!DOCUMENT_GRAMMARS.has(this.g.grammar)) return null;
+    const python = this.g.grammar === "python";
     const root = this.tree.rootNode;
-    const found: { kind: CodeDef["kind"]; start: Pos; end: Pos; name: Node }[] = [];
+    const lines = this.source.split("\n");
+    const found: { kind: CodeDef["kind"]; start: Pos; end: Pos; name: Node; node: Node }[] = [];
     for (const m of this.g.defs?.matches(root) ?? []) {
       const def = m.captures.find((c) => c.name === "def")?.node;
       const name = m.captures.find((c) => c.name === "name")?.node;
       const kind = def ? CODE_KIND[def.type] : undefined;
-      if (def && name && kind) found.push({ kind, start: def.startPosition, end: def.endPosition, name });
+      if (def && name && kind) found.push({ kind, start: def.startPosition, end: def.endPosition, name, node: def });
     }
-    // A file's top-level values (`const`, `let`, `var`, exported or not) that aren't functions.
+    // A file's top-level values that aren't functions: `const`, `let`, `var` (exported or not); Python's assignments.
     for (const top of root.namedChildren) {
-      const decl = top?.type === "export_statement" ? top.childForFieldName("declaration") : top;
+      if (!top) continue;
+      if (python) {
+        const a = top.type === "expression_statement" ? top.namedChildren[0] : null;
+        const name = a?.type === "assignment" ? a.childForFieldName("left") : null;
+        if (name?.type === "identifier") found.push({ kind: "value", start: top.startPosition, end: top.endPosition, name, node: top });
+        continue;
+      }
+      const decl = top.type === "export_statement" ? top.childForFieldName("declaration") : top;
       if (!decl || (decl.type !== "lexical_declaration" && decl.type !== "variable_declaration")) continue;
       const first = decl.namedChildren.find((n) => n?.type === "variable_declarator");
       const name = first?.childForFieldName("name");
       const value = first?.childForFieldName("value");
       if (!first || !name || (value && (value.type === "arrow_function" || value.type === "function_expression"))) continue;
-      found.push({ kind: "value", start: top!.startPosition, end: top!.endPosition, name });
+      found.push({ kind: "value", start: top.startPosition, end: top.endPosition, name, node: top });
     }
     found.sort((a, b) => (before(a.start, b.start) ? -1 : before(b.start, a.start) ? 1 : 0));
     const defs: CodeDef[] = [];
+    const docs: CodeDoc[] = [];
     const open: Pos[] = [];
+    // A docstring: a body's first statement, when it's a string alone.
+    const docstring = (body: Node | null | undefined): Node | null => {
+      const first = body?.namedChildren[0];
+      const str = first?.type === "expression_statement" && first.namedChildren.length === 1 ? first.namedChildren[0] : null;
+      return str?.type === "string" ? str : null;
+    };
     for (const f of found) {
       while (open.length && !before(f.start, open[open.length - 1]!)) open.pop();
       const n = f.name;
       const to = n.endPosition.row === n.startPosition.row ? n.endPosition.column : n.startPosition.column + 1;
-      defs.push({ kind: f.kind, line: f.start.row + 1, name: { line: n.startPosition.row + 1, from: n.startPosition.column, to }, depth: open.length });
+      const decorated = f.node.parent?.type === "decorated_definition" ? f.node.parent : null;
+      const top = (decorated ?? f.node).startPosition.row + 1;
+      defs.push({ kind: f.kind, line: f.start.row + 1, name: { line: n.startPosition.row + 1, from: n.startPosition.column, to }, depth: open.length, top });
       open.push(f.end);
+      if (python && f.kind !== "value") {
+        const d = docstring(f.node.childForFieldName("body"));
+        if (d) docs.push({ start: d.startPosition.row + 1, end: d.endPosition.row + 1, column: (decorated ?? f.node).startPosition.column, style: "docstring", before: top });
+      }
     }
-    const docs: CodeDoc[] = [];
+    // A module's docstring: where it is, at the top.
+    const moduleDoc = python ? docstring(root) : null;
+    if (moduleDoc) docs.push({ start: moduleDoc.startPosition.row + 1, end: moduleDoc.endPosition.row + 1, column: moduleDoc.startPosition.column, style: "docstring" });
+    // The comments: a `/** */` is documentation, and so is a block comment over several lines; the rest are comments.
+    const comments: CodeComment[] = [];
     for (const c of this.g.comments.captures(root)) {
-      if (c.node.text.startsWith("/**") && !c.node.text.startsWith("/**/")) docs.push({ start: c.node.startPosition.row + 1, end: c.node.endPosition.row + 1, column: c.node.startPosition.column });
+      const s = c.node.startPosition;
+      const e = c.node.endPosition;
+      const text = c.node.text;
+      const trailing = !!(lines[s.row] ?? "").slice(0, s.column).trim();
+      if (text.startsWith("/**") && !text.startsWith("/**/") && !trailing) docs.push({ start: s.row + 1, end: e.row + 1, column: s.column, style: "jsdoc" });
+      else if (text.startsWith("/*") && e.row > s.row && !trailing) docs.push({ start: s.row + 1, end: e.row + 1, column: s.column, style: "block" });
+      else comments.push({ line: s.row + 1, column: s.column, end: e.column, trailing });
     }
+    docs.sort((a, b) => a.start - b.start);
     // Runs of imports: those with only blank lines between them.
-    const lines = this.source.split("\n");
     const imports: CodeImports[] = [];
+    const IMPORTS = new Set(["import_statement", "import_from_statement", "future_import_statement"]);
     for (const n of root.namedChildren) {
-      if (n?.type !== "import_statement") continue;
+      if (!n || !IMPORTS.has(n.type)) continue;
       const start = n.startPosition.row + 1;
       const end = n.endPosition.row + 1;
-      const module = (n.childForFieldName("source")?.text ?? "").replace(/^["'`]|["'`]$/g, "");
+      const modules = python
+        ? n.type === "import_statement"
+          ? n.namedChildren.map((x) => (x?.type === "aliased_import" ? x.childForFieldName("name") : x)?.text ?? "")
+          : [n.childForFieldName("module_name")?.text ?? "__future__"]
+        : [(n.childForFieldName("source")?.text ?? "").replace(/^["'`]|["'`]$/g, "")];
       const last = imports[imports.length - 1];
       if (last && lines.slice(last.end, start - 1).every((l) => !l.trim())) {
         last.end = end;
-        last.modules.push(module);
-      } else imports.push({ start, end, modules: [module] });
+        last.modules.push(...modules);
+      } else imports.push({ start, end, modules });
     }
-    return { defs, docs, imports };
+    return { defs, docs, comments, imports };
   }
 
   /**
@@ -660,8 +697,8 @@ export class SyntaxTree {
   }
 }
 
-/** The grammars the code view (24.x) maps: their definitions, doc comments and imports. */
-export const DOCUMENT_GRAMMARS: ReadonlySet<Grammar> = new Set<Grammar>(["typescript", "tsx", "javascript"]);
+/** The grammars the code view (24.x) maps: their definitions, doc comments, comments and imports. */
+export const DOCUMENT_GRAMMARS: ReadonlySet<Grammar> = new Set<Grammar>(["typescript", "tsx", "javascript", "python"]);
 
 /** A definition as the code view draws it (24.3): its kind, the line it starts on, its name's place, its depth. */
 export interface CodeDef {
@@ -672,13 +709,29 @@ export interface CodeDef {
   name: { line: number; from: number; to: number };
   /** How many definitions it's inside. */
   depth: number;
+  /** The line its block starts on: its decorators' first, else its own. */
+  top: number;
 }
 
-/** A doc comment (`/** … *\/`): its 1-based first and last lines, and the column it starts at. */
+/**
+ * Documentation (24.4): a doc comment (`/** … *\/`), a docstring (Python's first string in a body), or a plain block
+ * comment — its 1-based first and last lines, and the column it's drawn at.
+ */
 export interface CodeDoc {
   start: number;
   end: number;
   column: number;
+  style: "jsdoc" | "docstring" | "block";
+  /** A docstring of a definition: drawn before this line (the definition's block), as documentation is elsewhere. */
+  before?: number;
+}
+
+/** A comment that isn't documentation (24.4): a line comment, or a block comment on one line; `trailing`: after code. */
+export interface CodeComment {
+  line: number;
+  column: number;
+  end: number;
+  trailing: boolean;
 }
 
 /** A run of imports (24.5): its 1-based first and last lines, and the modules it imports. */
@@ -692,6 +745,7 @@ export interface CodeImports {
 export interface CodeModel {
   defs: CodeDef[];
   docs: CodeDoc[];
+  comments: CodeComment[];
   imports: CodeImports[];
 }
 
@@ -703,6 +757,8 @@ const CODE_KIND: Record<string, CodeDef["kind"]> = {
   variable_declarator: "function",
   class_declaration: "class",
   abstract_class_declaration: "class",
+  function_definition: "function",
+  class_definition: "class",
   interface_declaration: "type",
   type_alias_declaration: "type",
   enum_declaration: "type",
