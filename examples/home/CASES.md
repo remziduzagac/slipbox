@@ -1403,12 +1403,14 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### problems
 
-- problems view: Broken links, Ambiguous links, Lint, Conflicts, Orphans; folding; enter lands on link; / filters —
-  `notes/meetings/2026-09-05-feedback-synthesis.md`, `work/kestrel/docs/release-notes/2.3.md` (problems.open 1.7;
+- problems panel, All: Broken links, Ambiguous links, Lint, Conflicts, Orphans; folding; enter lands on link; / filters
+  — `notes/meetings/2026-09-05-feedback-synthesis.md`, `work/kestrel/docs/release-notes/2.3.md` (problems.open 1.7;
   tests)
-- problems where they are: bar column counts (+ past 9), colours by severity, marks underlined, status line, severity
-  threshold — `work/kestrel/src/routes/RouteMap.tsx`, `work/product/drafts/notes-from-offsite.md` (Problems where they
-  are 19.8-11)
+- problems panel, This file: every source's problems with their lines, the chosen one marked, enter jumps; tab switches
+  — `work/kestrel/src/routes/RouteMap.tsx`, `work/product/drafts/notes-from-offsite.md` (problems.file 1.7; tests)
+- problems where they are: bar column signs by severity, the count past one (+ past 9), marks at a level (errors by
+  default; space u shift+d cycles), status line, severity threshold — `work/kestrel/src/routes/RouteMap.tsx`,
+  `work/product/drafts/notes-from-offsite.md` (Problems where they are 19.8-11)
 - problems lists broken, ambiguous links and orphans; a path is never ambiguous —
   `notes/meetings/2026-09-05-feedback-synthesis.md`, `notes/projects/kestrel-v2-3.md`, `notes/reading/the-long-ride.md`
   (cli.md problems; cli.test 'problems')
@@ -2458,6 +2460,7 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
 - `link.next` — Next link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (command-specs.ts)
 - `link.prev` — Previous link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (command-specs.ts)
 - `link.follow` — Follow link — `notes/research/link-styles.md`, `notes/projects/route-sharing.md` (command-specs.ts)
+- `link.follow_tab` — Follow link into a new tab — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`
 - `link.follow_split` — Follow link into the split — `notes/research/link-styles.md`, `notes/projects/route-sharing.md`
   (command-specs.ts)
 - `link.insert` — Insert a link to a note… — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`
@@ -2883,6 +2886,7 @@ Wide tables and code blocks to edit in place.
 ### problems
 
 - `problems.open` — Problems: open, focus, close — `notes/research/link-styles.md`, `notes/index.md` (command-specs.ts)
+- `problems.file` — This file's problems — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
 
 ### tag
 

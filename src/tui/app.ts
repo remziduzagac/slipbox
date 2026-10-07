@@ -76,11 +76,11 @@ import { activityFile, AutoIndex } from "../core/autoindex.ts";
 import { type Scope, SCOPES, searchOthers } from "../core/scope.ts";
 import { rootLabel, tildePath } from "../core/names.ts";
 import { copyAvailable, folderIdentity, lookupFolder, type NamedFolder, pointerName, readFolders, setDefaultCopy, suggestFolderName } from "../core/folders.ts";
-import { configFilesFor, findVaultRoot, folderAt, homeFolder, initVault, isInside, isListed, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
+import { configFilesFor, findVaultRoot, folderAt, hasMarker, homeFolder, initVault, isInside, isListed, isVaultRoot, locateVault, recordLocation, rootAt, rootMarkers, setRootMarkers, type VaultLocation } from "../core/vault.ts";
 import { isTrusted, setTrust, setTrustedRoots, trustOf } from "../core/trust.ts";
 import { type Head, VaultFeed, applyToGraph } from "../core/vault-feed.ts";
 import { VaultWatcher, type WatchBatch } from "../core/watch.ts";
-import { atLeast, lintProblems, noteProblems, type Problem, syntaxProblems } from "../core/diagnostics.ts";
+import { atLeast, lintProblems, noteProblems, type Problem, SEVERITIES, syntaxProblems } from "../core/diagnostics.ts";
 import { languageOf, serverTable, type ServerTable } from "../core/servers/languages.ts";
 import { type LinterDef, linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
 import { rootFor } from "../core/servers/find.ts";
@@ -366,7 +366,7 @@ export interface SidePaneState {
 }
 
 /** What the left panel shows: the file tree or the window's history (more views to come). */
-export type LeftView = "explorer" | "history" | "problems";
+export type LeftView = "explorer" | "history";
 /** What the right panel shows, always of the file on screen: its Info, its outline, its footnotes
  *  (more to come: comments). */
 export type RightView = "info" | "outline" | "footnotes";
@@ -386,10 +386,9 @@ export interface PanelView<Id extends string> {
 export const LEFT_VIEWS: PanelView<LeftView>[] = [
   { id: "explorer", title: "Explorer", glyph: (g) => g.explorerButton },
   { id: "history", title: "History", glyph: (g) => g.historyButton },
-  { id: "problems", title: "Problems", glyph: (g) => g.problemsButton },
 ];
 
-/** One row of the Problems view (1.7): a section's heading, a note with problems under it, or a problem. */
+/** One row of the Problems panel's All tab (1.7): a section's heading, a note with problems under it, or a problem. */
 export interface ProblemRow {
   section: string;
   heading: boolean;
@@ -481,13 +480,29 @@ export interface TreeRow {
   /** A file beyond notes: its group (16.x). */
   group?: FileGroup;
   /** A root row: what it is, where it is, and the vault's name when it isn't the folder's; `other`:
-   *  another of the explorer's roots (20.15), beside the vault open — unfolded, not entered. */
-  root?: { kind: "vault" | "folder"; abs: string; name?: string; other?: boolean };
+   *  another of the explorer's roots (20.15), beside the vault open — unfolded, not entered; `here`:
+   *  the root open, in a folder above it the explorer climbed to (`..`) — its tree under it. */
+  root?: { kind: "vault" | "folder"; abs: string; name?: string; other?: boolean; here?: boolean };
   /** A row of another root (20.15): that root's folder. Opening its file switches into it. */
   under?: string;
+  /** A row above the root open (`..` climbed): its path absolute, listed a level at a time. Opening
+   *  its file switches into the file's root, as a link does. */
+  outside?: boolean;
 }
 
-export type Region = "content" | "sidebar" | "outline";
+export type Region = "content" | "sidebar" | "outline" | "problems";
+
+/**
+ * The Problems panel (1.7, 19.8), full width at the bottom: in tabs, the file on screen's problems — from every
+ * source, each with its line — and the root's (its links' and lint's, its conflicts, its orphans). Each tab keeps its
+ * selection and its first row shown; the root's has a filter.
+ */
+export interface ProblemsPanel {
+  shown: boolean;
+  tab: "file" | "all";
+  file: { selected: number; scroll: number };
+  all: { selected: number; scroll: number; filter: string; filtering: boolean };
+}
 
 /** Live UI settings (docs/design/keymap.md, `space u`). */
 export interface UiState {
@@ -502,7 +517,8 @@ export interface UiState {
   top_bar: boolean;
   /** The problems bar beside the text (19.9), and the problems' text marked (19.10). */
   problems_bar: boolean;
-  problem_marks: boolean;
+  /** The least severity underlined in the text (`off`: none); the Problems panel's choice is marked whatever it is. */
+  problem_marks: "off" | "error" | "warning" | "info";
   theme: string;
   glyphs: string;
 }
@@ -546,6 +562,8 @@ export interface AppOptions {
   now?: () => number;
   /** Show the named folders at once (17.14, 21.10): slipbox was opened on a loose folder, not a file. */
   launcher?: boolean;
+  /** The folder slipbox was opened on, inside its root: the explorer starts there (`..` climbs). */
+  folder?: string;
   /**
    * The root already recorded as seen, and what that found (21.8): the TUI's start records it before
    * the graph opens, so a moved folder's cache is adopted first. Left out, the App records it itself.
@@ -592,7 +610,11 @@ export class App {
   /** What the right panel shows (3.17); `outline` is its state, whichever view that is. */
   rightView: RightView = "outline";
   private rightPositions = new Map<RightView, Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">>();
-  /** The Problems view's folded sections, by name (1.7). */
+  /** The Problems panel (1.7, at the bottom): shown or not, its tab, each tab's place. */
+  problemsPanel: ProblemsPanel = { shown: false, tab: "file", file: { selected: 0, scroll: 0 }, all: { selected: 0, scroll: 0, filter: "", filtering: false } };
+  /** The panel's keys: the explorer's (as configured), and tab / shift+tab between its tabs. */
+  problemsKeys!: Keymap;
+  /** The Problems panel's folded sections (All), by name (1.7). */
   problemsFolded = new Set<string>();
   /** The Info view's folded sections, by name (3.19). */
   infoFolded = new Set<string>();
@@ -602,6 +624,11 @@ export class App {
   private footnoteCache: { key: string; list: Footnote[] } | null = null;
   outline: SidePaneState & { folded: Set<number>; forKey: string };
   expanded = new Set<string>();
+  /**
+   * The explorer's top folder (absolute): the root's, or the folder slipbox was opened on; `..` climbs
+   * from it — above the root too, to `/`, a folder listed a level at a time (never walked).
+   */
+  explorerTop = "";
   overlay: Overlay | null = null;
   pending: string[] = [];
   private pendingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -654,6 +681,8 @@ export class App {
 
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
+    this.explorerTop = opts.loc.root;
+    if (opts.folder && opts.folder !== opts.loc.root && isInside(opts.loc.root, opts.folder)) this.setExplorerTop(opts.folder);
     this.mainRoot = opts.loc.root;
     this.mainKey = opts.loc.key;
     this.pinnedRoots = new Set(readJson<string[]>(this.pinnedRootsFile(), []).filter((r) => typeof r === "string"));
@@ -770,6 +799,7 @@ export class App {
     this.visualKeys = new Keymap(DEFAULT_VISUAL_KEYS, visual ?? {}, this.leader);
     this.sourceKeys = new Keymap(DEFAULT_SOURCE_KEYS, source ?? {}, this.leader);
     this.explorerKeys = new Keymap(DEFAULT_EXPLORER_KEYS, explorer ?? {}, this.leader);
+    this.problemsKeys = new Keymap({ ...DEFAULT_EXPLORER_KEYS, tab: "switch", "shift+tab": "switch" }, explorer ?? {}, this.leader);
     this.outlineKeys = new Keymap(DEFAULT_OUTLINE_KEYS, outline ?? {}, this.leader);
     this.footnoteKeys = new Keymap(DEFAULT_FOOTNOTE_KEYS, footnotes ?? {}, this.leader);
     this.infoKeys = new Keymap(DEFAULT_INFO_KEYS, info ?? {}, this.leader);
@@ -1406,12 +1436,12 @@ export class App {
   }
 
   // The lint surface (3.21): your markdownlint-cli2 run on a note once it's saved — its findings
-  // beside their lines, on the status line, in the Problems view — and on the vault for that view.
+  // beside their lines, on the status line, in the Problems panel — and on the vault for that view.
 
   /** The linter (`[lint]`), or null: lint off, or it couldn't run. */
   lintCmd: LintCmd | null = null;
   private readonly lintRuns = new Map<NoteBuffer, ReturnType<typeof setTimeout> | "running">();
-  /** The whole vault's findings, as last linted (the Problems view's): null until it's run. */
+  /** The whole vault's findings, as last linted (the Problems panel's All tab): null until it's run. */
   vaultLint: { running: boolean; issues: LintIssue[] | null } = { running: false, issues: null };
 
   /** Lint a note when its text is the file's (saved) and hasn't been linted as it is: at once the
@@ -1437,7 +1467,7 @@ export class App {
     this.lintRuns.set(buf, t);
   }
 
-  /** Lint every note (the Problems view's Lint section), in runs of a few hundred files. */
+  /** Lint every note (the Problems panel's Lint section), in runs of a few hundred files. */
   lintVault(): void {
     const cmd = this.lintCmd;
     if (!cmd || this.vaultLint.running) return;
@@ -2372,13 +2402,13 @@ export class App {
     return this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0);
   }
 
-  /** The problems bar's width (19.9): a count and a space, while it's on — with `auto`, once the file
-   *  has had problems, and from then on, so the text doesn't move as they come and go. */
+  /** The problems bar's width (19.9): a sign, a count when more than one, a space — while it's on; with `auto`,
+   *  once the file has had problems, and from then on, so the text doesn't move as they come and go. */
   barWidth(view: View): number {
     if (!this.ui.problems_bar) return 0;
-    if (this.config.diagnostics.bar === "on" || view.buf.problemBar) return 2;
+    if (this.config.diagnostics.bar === "on" || view.buf.problemBar) return 3;
     if (this.problemsShown(view, true).length) view.buf.problemBar = true;
-    return view.buf.problemBar ? 2 : 0;
+    return view.buf.problemBar ? 3 : 0;
   }
 
   /** A note's own problems — its links, its conflicts — kept until the vault or the note changes. */
@@ -2988,8 +3018,9 @@ export class App {
   newItemBase(): string | null {
     if (this.region === "sidebar" && this.leftView === "explorer") {
       const row = this.explorerRows()[this.sidebar.selected];
-      // Another root's row (20.15), or one under it: none of this root's folders (null, refused).
-      if (row?.under || row?.root?.other) return null;
+      // Another root's row (20.15), or one under it, or above the root: none of this root's folders (null, refused).
+      if (row?.under || row?.root?.other || row?.outside) return null;
+      if (row?.root?.here) return "";
       if (row) return row.kind === "dir" ? row.path : posix.dirname(row.path) === "." ? "" : posix.dirname(row.path);
     }
     const rel = this.view?.buf.rel;
@@ -3157,8 +3188,8 @@ export class App {
     if (this.leftView !== "explorer") return null;
     const row = this.explorerRows()[this.sidebar.selected];
     if (!row) return null;
-    // Another root's (20.15): its files are its vault's, not this one's to rename, move or delete here.
-    if (row.under || row.root?.other) return null;
+    // Another root's (20.15), or above the root: its files aren't this one's to rename, move or delete here.
+    if (row.under || row.root?.other || row.outside || row.root?.here) return null;
     if (row.kind === "root") return row.root?.kind === "vault" && this.loc.mode === "vault" ? { rel: row.path, dir: true, vault: true } : null;
     return { rel: row.path, dir: row.kind === "dir" };
   }
@@ -4064,12 +4095,132 @@ export class App {
     this.region = "content";
   }
 
-  // The Problems view (1.7), the left panel's third: what's wrong in the vault — links that reach
-  // nothing, links that reach several notes — each opened where it is.
+  // The Problems panel (1.7, 19.8), at the bottom: the file on screen's problems, and the root's — links that
+  // reach nothing or several notes, lint, conflicts, orphans — each opened where it is.
+
+  /** The file on screen's problems, every source's, by where they start: the panel's This file tab. */
+  fileProblems(): Problem[] {
+    const v = this.view;
+    if (!v) return [];
+    return [...this.problemsShown(v)].sort((a, b) => a.start.line - b.start.line || a.start.column - b.start.column || SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
+  }
+
+  /** The panel's problem chosen in This file, while it has the focus: marked in the text whatever the marks say. */
+  chosenProblem(): Problem | undefined {
+    const p = this.problemsPanel;
+    if (!p.shown || p.tab !== "file" || this.region !== "problems") return undefined;
+    return this.fileProblems()[p.file.selected];
+  }
+
+  /**
+   * The Problems panel opened on a tab and focused (`space n q` This file, `space v p` All; the status line's
+   * problems, clicked, This file); already open there and focused, closed.
+   */
+  openProblems(tab: "file" | "all"): void {
+    const p = this.problemsPanel;
+    if (p.shown && p.tab === tab && this.region === "problems") return this.closeProblems();
+    if (tab === "all") {
+      this.graph.forgetProblems();
+      this.lintVault();
+    }
+    // This file: the problem at the cursor's line, or the next one after it.
+    if (tab === "file" && this.view) {
+      const at = this.view.cur.row;
+      const line = srcAt(this.currentLayout(this.view).lines[at] ?? { src: 1 } as never, this.view.cur.col);
+      const list = this.fileProblems();
+      const i = list.findIndex((x) => x.end.line >= line);
+      p.file.selected = Math.max(0, i < 0 ? list.length - 1 : i);
+    }
+    p.shown = true;
+    p.tab = tab;
+    this.region = "problems";
+  }
+
+  closeProblems(): void {
+    const p = this.problemsPanel;
+    p.shown = false;
+    p.all.filtering = false;
+    if (this.region === "problems") this.region = "content";
+  }
+
+  /** The panel's keys: the explorer's moves, `tab` between its tabs; This file's moves take the cursor to the problem. */
+  problemsPanelAction(action: string): void {
+    const p = this.problemsPanel;
+    if (action === "switch") {
+      if (p.tab === "file") this.openProblems("all");
+      else p.tab = "file";
+      return;
+    }
+    if (p.tab === "all") return this.problemsAction(action);
+    const list = this.fileProblems();
+    const s = p.file;
+    const go = (i: number) => {
+      s.selected = Math.max(0, Math.min(list.length - 1, i));
+      this.showFileProblem(list[s.selected]);
+    };
+    switch (action) {
+      case "down":
+        return go(s.selected + 1);
+      case "up":
+        return go(s.selected - 1);
+      case "top":
+        return go(0);
+      case "bottom":
+        return go(list.length - 1);
+      case "open":
+      case "open_tab":
+      case "expand":
+      case "open_split":
+        return this.showFileProblem(list[s.selected], true);
+      case "close":
+        return this.closeProblems();
+      case "leave":
+        this.region = "content";
+        return;
+    }
+  }
+
+  /** A problem of the file on screen: the cursor onto it — the panel keeping the focus, unless `go` (enter) moves it there. */
+  showFileProblem(pr: Problem | undefined, go = false): void {
+    const v = this.view;
+    if (!v || !pr) return;
+    if (go) this.pushHistory(v);
+    this.placeAtLine(v, pr.start.line, pr.start.column);
+    if (go) this.region = "content";
+  }
+
+  /** How many problems the All tab has: links, lint, conflicts — orphans, notes nothing links to, aside. */
+  problemCount(): number {
+    const p = this.graph.problems();
+    const conflicts = [...(this.gitStates ?? [])].filter(([, st]) => st === "conflict").length;
+    return p.broken.length + p.ambiguous.length + p.fragile.length + (this.vaultLint.issues?.length ?? 0) + conflicts;
+  }
+
+  /** A click on a row of the panel: This file's selects its problem (the note shows it), a second click goes there;
+   *  All's as the left panel's did — a heading folds, a note's row opens, a problem selects, then goes there. */
+  clickProblemRow(i: number, clicks: number): void {
+    const p = this.problemsPanel;
+    this.region = "problems";
+    if (p.tab === "file") {
+      const list = this.fileProblems();
+      p.file.selected = i;
+      return this.showFileProblem(list[i], clicks >= 2);
+    }
+    const rows = this.problemRows();
+    const row = rows[i];
+    if (!row) return;
+    p.all.selected = i;
+    if (row.heading) return this.problemsAction(row.folded ? "expand" : "collapse");
+    if (clicks < 2 && !row.note) return;
+    // The clicked row, of the filtered list (as enter in the filter): the filter clears.
+    p.all.filter = "";
+    p.all.filtering = false;
+    return this.openProblemRow(row, rows);
+  }
 
   /** Its rows: each section's heading (with its count), its problems under it unless folded; `/` filters. */
   problemRows(): ProblemRow[] {
-    const q = this.leftView === "problems" ? (this.sidebar.filter ?? "") : "";
+    const q = this.problemsPanel.all.filter;
     const p = this.graph.problems();
     const out: ProblemRow[] = [];
     const written = (l: LinkProblem) => (l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}]]` : l.target);
@@ -4214,10 +4365,9 @@ export class App {
     return [...p.broken, ...p.ambiguous].filter((x) => x.from === rel);
   }
 
-  /** The Problems view's keys (the explorer's keymap): move, go there, fold its sections, filter, close, leave. */
+  /** The panel's All tab's keys (the explorer's keymap): move, go there, fold its sections, filter, close, leave. */
   problemsAction(action: string): void {
-    const s = this.sidebar;
-    s.pinned = false;
+    const s = this.problemsPanel.all;
     const rows = this.problemRows();
     const row = rows[s.selected];
     switch (action) {
@@ -4252,14 +4402,70 @@ export class App {
         s.filtering = true;
         break;
       case "close":
-        this.showSidebar(false);
+        this.closeProblems();
         break;
       case "leave":
         this.region = "content";
-        if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
         break;
       // The explorer's other actions (new, rename…) mean nothing here.
     }
+  }
+
+  /** Keys while the All tab's filter has them: type, move, go there, clear. */
+  private problemsFilterKey(key: string): void {
+    const s = this.problemsPanel.all;
+    const rows = this.problemRows();
+    const typed = keyChar(key);
+    switch (key) {
+      case "escape":
+      case "ctrl+c":
+      case "ctrl+g":
+        s.filter = "";
+        s.filtering = false;
+        return;
+      case "enter": {
+        // On a heading (rows that came after the typing, a section's git or lint arriving): its first problem.
+        let row = rows[s.selected];
+        if (row?.heading) row = rows.slice(s.selected).find((r) => !r.heading) ?? row;
+        if (!row) return;
+        s.filter = "";
+        s.filtering = false;
+        return this.openProblemRow(row, rows);
+      }
+      case "down":
+      case "ctrl+n":
+      case "ctrl+j":
+      case "tab":
+        s.selected = Math.min(rows.length - 1, s.selected + 1);
+        return;
+      case "up":
+      case "ctrl+p":
+      case "ctrl+k":
+      case "shift+tab":
+        s.selected = Math.max(0, s.selected - 1);
+        return;
+      case "backspace":
+        s.filter = [...s.filter].slice(0, -1).join("");
+        break;
+      case "ctrl+w":
+      case "ctrl+backspace":
+        s.filter = s.filter.replace(/\S*\s*$/, "");
+        break;
+      case "ctrl+u":
+        s.filter = "";
+        break;
+      default:
+        if (typed === null) return;
+        s.filter += typed;
+    }
+    this.problemsRefiltered();
+  }
+
+  /** The All tab's filter changed (typed, pasted): the selection to the first problem shown. */
+  private problemsRefiltered(): void {
+    const s = this.problemsPanel.all;
+    s.scroll = 0;
+    s.selected = Math.max(0, this.problemRows().findIndex((r) => !r.heading));
   }
 
   // The Info view (3.19): what the file on screen is — where, which vault, its size and dates, its
@@ -4725,7 +4931,7 @@ export class App {
    */
   shownFiles(): { path: string; group: FileGroup }[] {
     const f = this.config.files;
-    const mode = this.sidebar.allFiles ? "all" : f.show;
+    const mode = this.sidebar.allFiles ? "all" : this.filesShown();
     const incl = f.include.length ? ignore().add(f.include) : null;
     const excl = f.exclude.length ? ignore().add(f.exclude) : null;
     const out: { path: string; group: FileGroup }[] = [];
@@ -4737,22 +4943,35 @@ export class App {
     return out;
   }
 
+  /** A root's name beside its folder's, when it has another one; a worktree's, its branch (17.19). */
+  private rootName(abs: string): string | undefined {
+    const n = readIdentity(vaultConfigFile(abs)).name;
+    const name = n && n !== basename(abs) ? n : undefined;
+    // A worktree of a repository (17.19): its branch beside it — every worktree has the
+    // repository's name, so the branch is what tells them apart.
+    const c = checkoutOf(abs);
+    if (!c?.worktree) return name;
+    const h = headOf(c);
+    return `${this.glyphs.branch} ${h.branch ?? h.commit?.slice(0, 7) ?? c.worktree}`;
+  }
+
+  /**
+   * What `files.show` lists here: `auto` — notes and data files in a notes root (one with `.slipbox/`),
+   * every text file anywhere else (a repository, where code lives; a plain folder).
+   */
+  filesShown(): "notes" | "renderable" | "all" {
+    const show = this.config.files.show;
+    if (show !== "auto") return show;
+    return this.loc.mode === "vault" && hasMarker(this.loc.root) ? "renderable" : "all";
+  }
+
   /**
    * The tree's folders that are roots of their own (17.13): vaults and repositories nested in this
    * one; in a loose folder, every folder in it — each a root, or a loose folder to go into.
    */
   private rootRows(): Map<string, NonNullable<TreeRow["root"]>> {
     const out = new Map<string, NonNullable<TreeRow["root"]>>();
-    const named = (abs: string) => {
-      const n = readIdentity(vaultConfigFile(abs)).name;
-      const name = n && n !== basename(abs) ? n : undefined;
-      // A worktree of a repository (17.19): its branch beside it — every worktree has the
-      // repository's name, so the branch is what tells them apart.
-      const c = checkoutOf(abs);
-      if (!c?.worktree) return name;
-      const h = headOf(c);
-      return `${this.glyphs.branch} ${h.branch ?? h.commit?.slice(0, 7) ?? c.worktree}`;
-    };
+    const named = (abs: string) => this.rootName(abs);
     if (!isListed(this.loc)) {
       for (const s of this.graph.skipped) {
         if (s.reason !== "nested vault") continue;
@@ -4775,14 +4994,113 @@ export class App {
 
   treeRows(): TreeRow[] {
     // The folders of files open beside this root come and go with their tabs (21.9).
-    const beside = this.besideRoots().join("\n");
+    const beside = `${this.besideRoots().join("\n")}\n${this.explorerTop}`;
     if (this.tree && this.treeBeside === beside) return this.tree;
     this.treeBeside = beside;
+    const R = this.loc.root;
+    const T = this.explorerTop;
     const rows: TreeRow[] = [];
-    // A plain folder's parent, to go up: the file tree of the launcher (17.14).
-    if (this.loc.mode === "folder" && dirname(this.loc.root) !== this.loc.root) {
-      rows.push({ kind: "root", path: "..", name: "..", depth: 0, root: { kind: "folder", abs: dirname(this.loc.root) } });
+    // `..` (17.14): the explorer up a folder — no fence at the root, up to `/`.
+    if (dirname(T) !== T) rows.push({ kind: "root", path: "..", name: "..", depth: 0, root: { kind: "folder", abs: dirname(T) } });
+    if (T === R) rows.push(...this.rootTree());
+    else if (isInside(R, T)) {
+      // A folder of the root: its rows, from it.
+      const sub = relative(R, T).split(sep).join("/");
+      const d = sub.split("/").length;
+      for (const r of this.rootTree()) if (r.path.startsWith(`${sub}/`)) rows.push({ ...r, depth: r.depth - d });
+    } else this.outsideRows(T, 0, rows);
+    // The explorer's other roots (20.15), each by its name, unfolded on a key; their rows are theirs —
+    // those in the folder climbed to are there already.
+    for (const abs of this.otherRoots()) {
+      if (!isInside(R, T) && isInside(T, abs)) continue;
+      const vault = isVaultRoot(abs);
+      const name = vault ? (this.reach?.vaultOf(abs) ?? basename(abs)) : tildePath(abs);
+      rows.push({ kind: "root", path: abs, name, depth: 0, root: { kind: vault ? "vault" : "folder", abs, name, other: true } });
+      if (vault && this.expanded.has(abs)) this.otherRootRows(abs, rows);
     }
+    this.tree = rows;
+    return rows;
+  }
+
+  /**
+   * A folder above the root open, listed a level at a time (never walked): its folders — the root
+   * open marked, its tree under it while unfolded; other roots by their icon and name — then its files,
+   * as `files.show` would list them in their root.
+   */
+  private outsideRows(dir: string, depth: number, out: TreeRow[]): void {
+    let entries: Dirent[] = [];
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    const R = this.loc.root;
+    const byName = (a: Dirent, b: Dirent) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    const isDir = (e: Dirent) => {
+      if (e.isDirectory()) return true;
+      if (!e.isSymbolicLink()) return false;
+      try {
+        return statSync(join(dir, e.name)).isDirectory();
+      } catch {
+        return false;
+      }
+    };
+    const shown = entries.filter((e) => !e.name.startsWith(".") && e.name !== "node_modules");
+    for (const e of shown.filter(isDir).sort(byName)) {
+      const abs = join(dir, e.name);
+      if (abs === R) {
+        out.push({ kind: "root", path: R, name: e.name, depth, root: { kind: this.loc.mode, abs: R, name: this.rootName(R), here: true } });
+        if (this.expanded.has(R)) for (const r of this.rootTree()) out.push({ ...r, depth: r.depth + depth + 1 });
+        continue;
+      }
+      if (isVaultRoot(abs)) out.push({ kind: "root", path: abs, name: e.name, depth, root: { kind: "vault", abs, name: this.rootName(abs) }, outside: true });
+      else out.push({ kind: "dir", path: abs, name: e.name, depth, outside: true });
+      if (this.expanded.has(abs)) this.outsideRows(abs, depth + 1, out);
+    }
+    // Its files as their root lists them: auto, every text file but in a notes root.
+    const show = this.sidebar.allFiles ? "all" : this.config.files.show;
+    const own = findVaultRoot(dir);
+    const mode = show === "auto" ? (own && hasMarker(own) ? "renderable" : "all") : show;
+    for (const e of shown.filter((e) => !isDir(e) && (e.isFile() || e.isSymbolicLink())).sort(byName)) {
+      const abs = join(dir, e.name);
+      const { group } = classify(abs, this.config.walk.extensions);
+      if (group === "binary" || (group !== "note" && (mode === "notes" || (mode === "renderable" && group !== "data")))) continue;
+      out.push({ kind: "note", path: abs, name: e.name, depth, outside: true, ...(group !== "note" ? { group } : {}) });
+    }
+  }
+
+  /** The explorer's top to `dir`, the folders down to it unfolded (inside the root, by their paths there). */
+  setExplorerTop(dir: string): void {
+    const R = this.loc.root;
+    this.explorerTop = dir;
+    if (dir !== R && isInside(R, dir)) {
+      const parts = relative(R, dir).split(sep);
+      for (let i = 1; i <= parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
+    }
+    this.invalidateTree();
+  }
+
+  /**
+   * `..` (17.14): the explorer up a folder — past the root too, to `/`. The folder it showed stays in
+   * the tree, unfolded and selected (the root open marked).
+   */
+  explorerUp(): void {
+    const R = this.loc.root;
+    const from = this.explorerTop;
+    const up = dirname(from);
+    if (up === from) return;
+    this.explorerTop = up;
+    const inside = from !== R && isInside(R, from);
+    this.expanded.add(inside ? relative(R, from).split(sep).join("/") : from);
+    this.invalidateTree();
+    const key = inside ? relative(R, from).split(sep).join("/") : from;
+    this.sidebar.selected = Math.max(0, this.explorerRows().findIndex((r) => r.path === key));
+    this.sidebar.scroll = 0;
+  }
+
+  /** The root's own tree: its folders, notes and files, and the roots in it (17.13). */
+  private rootTree(): TreeRow[] {
+    const rows: TreeRow[] = [];
     const groups = new Map(this.shownFiles().map((f) => [f.path, f.group]));
     // The walk's folders too, so one with nothing listed in it (just made, or holding only files
     // the explorer leaves out) is still there to open and to create in.
@@ -4821,14 +5139,6 @@ export class App {
       if (visible && roots.has(p)) rows.push({ kind: "root", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, root: roots.get(p)! });
       else if (visible && !folders.has(p)) rows.push({ kind: "note", path: p, name: parts[parts.length - 1]!, depth: parts.length - 1, ...(groups.has(p) ? { group: groups.get(p) } : {}) });
     }
-    // The explorer's other roots (20.15), each by its name, unfolded on a key; their rows are theirs.
-    for (const abs of this.otherRoots()) {
-      const vault = isVaultRoot(abs);
-      const name = vault ? (this.reach?.vaultOf(abs) ?? basename(abs)) : tildePath(abs);
-      rows.push({ kind: "root", path: abs, name, depth: 0, root: { kind: vault ? "vault" : "folder", abs, name, other: true } });
-      if (vault && this.expanded.has(abs)) this.otherRootRows(abs, rows);
-    }
-    this.tree = rows;
     return rows;
   }
 
@@ -5036,6 +5346,56 @@ export class App {
     return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   }
 
+  /** A place in a window's history, said: its path, and the heading it's under. */
+  private placeName(loc: Loc): string {
+    const buf = this.buffers.get(loc.key);
+    const path = buf ? this.displayName(buf) : loc.key;
+    const heading = (loc.cursor?.anchor ?? loc.anchor).heading;
+    return heading ? `${path} › ${heading}` : path;
+  }
+
+  /**
+   * Where back or forward takes the window (the status line's ‹ ›, said on hover): the place, the
+   * root it was in when back leaves this one (17.10); null when there's nowhere to go.
+   */
+  historyStep(dir: "back" | "forward"): string | null {
+    const v = this.tabView;
+    if (!v) return null;
+    const loc = dir === "back" ? v.back.at(-1) : v.fwd.at(-1);
+    if (loc) return this.placeName(loc);
+    const t = dir === "back" ? this.vaultTrail.at(-1) : undefined;
+    return t ? tildePath(t.path) : null;
+  }
+
+  /**
+   * The status line's path, clicked (3.x): the window's history as a browser shows it — forward places
+   * above, the place it's at marked, back places below — under "Copy path"; a place chosen, the window
+   * goes there (several steps at once).
+   */
+  openPathMenu(): void {
+    const v = this.tabView;
+    if (!v) return;
+    const here: Loc = { key: v.buf.key, anchor: v.topAnchor, cursor: v.curAnchor };
+    const timeline = [...v.back, here, ...[...v.fwd].reverse()];
+    const cur = v.back.length;
+    const g = this.glyphs;
+    const places: ListItem[] = timeline
+      .map((l, i) => ({ label: `${i === cur ? g.historyHere : " "} ${sanitize(this.placeName(l))}`, hint: i === cur ? "here" : i > cur ? "forward" : "back", data: i }))
+      .reverse();
+    const key = this.keymap.keysFor("copy.path")[0];
+    const items: ListItem[] = [{ label: "  Copy path", hint: key ? prettyKey(key, this.leader) : undefined, data: "copy" }, ...places];
+    const hot = this.geometry?.hot.find((h) => h.id === "status:path");
+    this.openList({
+      title: "History",
+      items,
+      filterable: false,
+      anchor: hot ? { x: Math.max(0, hot.x - 4), y: hot.y } : undefined,
+      menu: true,
+      selected: 1 + (timeline.length - 1 - cur),
+      accept: (it) => (it.data === "copy" ? void this.copy(v.buf.abs) : this.jumpHistory(it.data as number)),
+    });
+  }
+
   /** Jump the window to entry `i` of its timeline: what's before it becomes back, after it forward. */
   jumpHistory(i: number): void {
     // As following a link: the floating window closes, and the window under it goes.
@@ -5076,7 +5436,6 @@ export class App {
     this.sidebar.filter = "";
     this.sidebar.pinned = false;
     if (view === "explorer") this.revealInSidebar();
-    else if (view === "problems") this.sidebar.selected = 0;
     else this.sidebar.selected = Math.max(0, this.historyRows().findIndex((r) => r.here));
   }
 
@@ -5180,7 +5539,7 @@ export class App {
   /** Keys while the left panel's filter has them: type, move, open, clear. */
   private filterKey(key: string): void {
     const s = this.sidebar;
-    const rows: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "problems" ? this.problemRows() : this.historyRows();
+    const rows: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.historyRows();
     const typed = keyChar(key);
     const done = () => {
       s.filter = "";
@@ -5196,10 +5555,6 @@ export class App {
       case "enter": {
         const row = rows[s.selected];
         if (!row) return;
-        if (this.leftView === "problems") {
-          done();
-          return this.openProblemRow(row as ProblemRow, rows as ProblemRow[]);
-        }
         if (this.leftView === "history") {
           // A note read elsewhere ("recent here") opens here; a place in this window's history is gone back to.
           const h = row as HistoryRow;
@@ -5257,8 +5612,8 @@ export class App {
     const s = this.sidebar;
     s.scroll = 0;
     s.pinned = false;
-    const next: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.leftView === "problems" ? this.problemRows() : this.historyRows();
-    s.selected = Math.max(0, this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : next.findIndex((r) => !(r as ProblemRow | HistoryRow).heading));
+    const next: unknown[] = this.leftView === "explorer" ? this.explorerRows() : this.historyRows();
+    s.selected = Math.max(0, this.leftView === "explorer" ? next.findIndex((r) => (r as TreeRow).kind === "note") : next.findIndex((r) => !(r as HistoryRow).heading));
   }
 
   /** The history view's keys (the explorer's keymap): move, jump, filter, close, leave. */
@@ -5317,11 +5672,13 @@ export class App {
   revealInSidebar(rel: string | null | undefined = this.view?.buf.rel, open = false): void {
     this.sidebar.pinned = false;
     if (!rel) return;
+    // Climbed above the root: the root unfolded in it. (Down in a folder of it, a path elsewhere isn't shown.)
+    if (!isInside(this.loc.root, this.explorerTop)) this.expanded.add(this.loc.root);
     const parts = rel === "." ? [] : rel.split("/");
     for (let i = 1; i < parts.length; i++) this.expanded.add(parts.slice(0, i).join("/"));
     if (open && rel !== ".") this.expanded.add(rel);
     this.invalidateTree();
-    const idx = rel === "." ? 0 : this.treeRows().findIndex((r) => r.path === rel);
+    const idx = rel === "." ? Math.max(0, this.treeRows().findIndex((r) => r.path !== "..")) : this.treeRows().findIndex((r) => r.path === rel);
     if (idx >= 0) this.sidebar.selected = idx;
   }
 
@@ -5346,7 +5703,6 @@ export class App {
   explorerAction(action: string): void {
     this.sidebar.pinned = false;
     if (this.leftView === "history") return this.historyAction(action);
-    if (this.leftView === "problems") return this.problemsAction(action);
     if (action === "filter") {
       this.sidebar.filtering = true; // resumes a filter already there (a view's restored one)
       return;
@@ -5363,6 +5719,20 @@ export class App {
         return;
       }
       if (row.under && row.kind === "note") return void this.switchVault(rootAt(row.under), row.path);
+      if (row.path === ".." && row.kind === "root") return this.explorerUp();
+      // The root open, in a folder above it: the explorer back down to it.
+      if (row.root?.here) {
+        this.explorerTop = this.loc.root;
+        this.invalidateTree();
+        this.sidebar.selected = 0;
+        return;
+      }
+      // Above the root, another root is a folder to unfold, like any (its file, opened, switches into it).
+      if (row.kind === "root" && row.outside) {
+        this.expanded.add(row.path);
+        this.invalidateTree();
+        return;
+      }
       if (row.kind === "root") return this.enterRoot(row);
       if (row.kind === "dir") {
         this.expanded.add(row.path);
@@ -5419,7 +5789,8 @@ export class App {
         this.invalidateTree();
         const again = this.explorerRows().findIndex((r) => r.path === at);
         if (again >= 0) this.sidebar.selected = again;
-        this.message("info", this.sidebar.allFiles ? "explorer: every text file" : `explorer: ${this.config.files.show === "notes" ? "notes" : this.config.files.show === "all" ? "every text file" : "notes and data files"} (files.show)`);
+        const shown = this.filesShown();
+        this.message("info", this.sidebar.allFiles ? "explorer: every text file" : `explorer: ${shown === "notes" ? "notes" : shown === "all" ? "every text file" : "notes and data files"} (files.show)`);
         break;
       }
       case "bottom":
@@ -5430,12 +5801,15 @@ export class App {
         openNote("here");
         break;
       case "expand":
-        // A folder unfolds; a note opens as a tab.
+        // A folder unfolds (above the root, a root too, and the root open); a note opens as a tab.
         if (row?.kind === "dir") openNote("here");
-        else openNote("tab");
+        else if (row?.kind === "root" && (row.outside || row.root?.here)) {
+          this.expanded.add(row.path);
+          this.invalidateTree();
+        } else openNote("tab");
         break;
       case "open_tab":
-        if (row?.kind === "dir") {
+        if (row?.kind === "dir" || (row?.kind === "root" && row.outside)) {
           if (this.expanded.has(row.path)) this.expanded.delete(row.path);
           else this.expanded.add(row.path);
           this.invalidateTree();
@@ -5447,8 +5821,9 @@ export class App {
       case "collapse": {
         // A filtered list shows every match whatever is folded: folding would act on rows not shown.
         if (!row || this.sidebar.filter) break;
-        // Another root's row (20.15): folded, the selection staying on it (its path is absolute).
-        if (row.root?.other) {
+        // Another root's row (20.15), the root open or one beside it above it: folded, the selection
+        // staying on it (its path is absolute).
+        if (row.root?.other || row.root?.here || (row.kind === "root" && row.outside)) {
           if (this.expanded.delete(row.path)) this.invalidateTree();
           break;
         }
@@ -5770,6 +6145,9 @@ export class App {
       } else if (this.region === "outline" && this.outlineShown && this.outline.filtering) {
         this.outline.filter = (this.outline.filter ?? "") + line;
         this.outlineRefiltered();
+      } else if (this.region === "problems" && this.problemsPanel.all.filtering) {
+        this.problemsPanel.all.filter += line;
+        this.problemsRefiltered();
       }
       return;
     }
@@ -5794,7 +6172,7 @@ export class App {
 
   /** Focus never stays on a hidden pane (after zen, a config reload, a resize): back to the note. */
   fixRegion(): void {
-    if ((this.region === "sidebar" && !this.sidebarShown) || (this.region === "outline" && !this.outlineShown)) this.region = "content";
+    if ((this.region === "sidebar" && !this.sidebarShown) || (this.region === "outline" && !this.outlineShown) || (this.region === "problems" && !this.problemsPanel.shown)) this.region = "content";
   }
 
   /**
@@ -5886,7 +6264,8 @@ export class App {
   private maps(): { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] {
     const out: { map: Keymap; run: (spec: string) => Promise<void> | void; info?: Record<string, { title: string; desc: string }> }[] = [];
     // A pane's own actions carry their titles (which-key says "New note here", as help does).
-    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : this.leftView === "problems" ? PROBLEMS_ACTION_INFO : EXPLORER_ACTION_INFO });
+    if (this.region === "sidebar" && this.sidebarShown) out.push({ map: this.explorerKeys, run: (a) => this.explorerAction(a), info: this.leftView === "history" ? HISTORY_ACTION_INFO : EXPLORER_ACTION_INFO });
+    if (this.region === "problems" && this.problemsPanel.shown) out.push({ map: this.problemsKeys, run: (a) => this.problemsPanelAction(a), info: PROBLEMS_ACTION_INFO });
     if (this.region === "outline" && this.outlineShown) {
       out.push(
         this.rightView === "footnotes"
@@ -5973,6 +6352,7 @@ export class App {
     if (this.overlay) return this.overlayKey(this.overlay, key);
     if (this.region === "sidebar" && this.sidebarShown && this.sidebar.filtering && !this.pending.length) return this.filterKey(key);
     if (this.region === "outline" && this.outlineShown && this.outline.filtering && !this.pending.length) return this.outlineFilterKey(key);
+    if (this.region === "problems" && this.problemsPanel.shown && this.problemsPanel.tab === "all" && this.problemsPanel.all.filtering && !this.pending.length) return this.problemsFilterKey(key);
     // Insert mode: keys are text, except the few that edit or move (editing.ts); save still works.
     const iv = this.view;
     if (this.region === "content" && iv?.insert && !this.pending.length) {
@@ -6298,6 +6678,16 @@ export class App {
       }
       return;
     }
+    // The Problems panel: its list scrolls, the selection moving only to stay in view (drawing keeps it there).
+    if (g.problems && inRect(g.problems, ev.x, ev.y)) {
+      const p = this.problemsPanel;
+      const s = p.tab === "file" ? p.file : p.all;
+      const shown = p.tab === "file" ? Math.max(1, Math.floor((g.problems.h - 1) / 2)) : g.problems.h - 1;
+      const count = p.tab === "file" ? this.fileProblems().length : this.problemRows().length;
+      s.scroll = Math.max(0, Math.min(Math.max(0, count - shown), s.scroll + dir * (p.tab === "file" ? 1 : n)));
+      s.selected = Math.max(s.scroll, Math.min(s.selected, s.scroll + shown - 1));
+      return;
+    }
     // Side panes first: on narrow screens they lie over the note.
     if (g.outlinePane && inRect(g.outlinePane, ev.x, ev.y)) {
       this.outline.scroll = Math.max(0, this.outline.scroll + dir * n);
@@ -6362,8 +6752,14 @@ export class App {
     // writing back, and does nothing else — before the tabs and panes, which would act under it.
     const inPopup = g.popup && inRect(g.popup, ev.x, ev.y);
     if (this.floating && g.floating && !inRect(g.floating, ev.x, ev.y) && !inPopup) return void this.closeFloating();
+    if (hot?.startsWith("prow:")) return this.clickProblemRow(Number(hot.slice(5)), clicks);
     if (hot && !hot.startsWith("tab:")) return this.clickHot(hot);
     if (inPopup) return; // the which-key popup's background
+    // The Problems panel: a click anywhere else in it focuses it.
+    if (g.problems && inRect({ ...g.problems, y: g.problems.y - 1, h: g.problems.h + 1 }, ev.x, ev.y)) {
+      this.region = "problems";
+      return;
+    }
     const tab = g.tabs.find((t) => inRect(t, ev.x, ev.y));
     if (tab) {
       this.activeTab = tab.index;
@@ -6425,21 +6821,6 @@ export class App {
       this.region = "sidebar";
       if (!g.sidebar || !inRect(g.sidebar, ev.x, ev.y)) return;
       const idx = ev.y - g.sidebar.y + this.sidebar.scroll;
-      if (this.leftView === "problems") {
-        // A section's heading folds; a note's row opens on one click; a problem: one click selects
-        // it, a double-click goes there.
-        const rows = this.problemRows();
-        const p = rows[idx];
-        if (!p) return;
-        this.sidebar.selected = idx;
-        if (p.heading) return this.problemsAction(p.folded ? "expand" : "collapse");
-        if (clicks < 2 && !p.note) return;
-        // The clicked row, of the filtered list (as enter in the filter): the filter clears.
-        this.sidebar.filter = "";
-        this.sidebar.filtering = false;
-        this.sidebar.pinned = false;
-        return this.openProblemRow(p, rows);
-      }
       if (this.leftView === "history") {
         const h = this.historyRows()[idx];
         if (!h || h.heading) return;
@@ -6642,14 +7023,17 @@ export class App {
         break;
       case "fn":
         return this.addFootnote();
+      // The Problems panel's tabs and close button; the status line's problems open it on this file's.
+      case "ptab":
+        if (arg === "close") return this.closeProblems();
+        if (arg === "all" && this.problemsPanel.tab !== "all") return this.openProblems("all");
+        this.problemsPanel.tab = arg === "all" ? "all" : "file";
+        this.region = "problems";
+        break;
       case "btn":
         if (arg === "explorer") this.openLeftView("explorer");
         else if (arg === "history") this.openLeftView("history");
-        else if (arg === "problems") {
-          this.graph.forgetProblems();
-          this.lintVault();
-          this.openLeftView("problems");
-        }
+        else if (arg === "problems") this.problemsPanel.shown ? this.closeProblems() : this.openProblems("all");
         else if (arg === "outline") void this.run("outline.toggle");
         else if (arg === "footnotes") void this.run("footnotes.toggle");
         else if (arg === "info") void this.run("info.toggle");
@@ -6717,8 +7101,12 @@ export class App {
         break;
       }
       case "status":
-        if (arg === "path" && this.view) this.copy(this.view.buf.abs);
+        // The path: its window's history, and Copy path; the arrows around it, back and forward.
+        if (arg === "path" && this.view) this.openPathMenu();
+        else if (arg === "back" || arg === "forward") this.history(arg);
         else if (arg === "message") void this.run("messages.open");
+        // The file's problems: the Problems panel on This file (1.7); open on it already, closed.
+        else if (arg === "problems") return this.problemsPanel.shown && this.problemsPanel.tab === "file" ? this.closeProblems() : this.openProblems("file");
         break;
       case "wk":
         void this.handleKey(arg);
@@ -7461,6 +7849,13 @@ export class App {
     this.activeTab = 0;
     this.overlay = null;
     this.expanded.clear();
+    // The explorer climbed above the root left (`..`), to a folder the new one is in too: it stays there,
+    // the new root unfolded in it (17.14). Else it starts at the new root.
+    const top = this.explorerTop;
+    const climbed = !!from && top !== from.root && !isInside(from.root, top);
+    if (climbed && isInside(top, target.root) && top !== target.root) {
+      for (let d = target.root; d !== top && isInside(top, d); d = dirname(d)) this.expanded.add(d);
+    } else this.explorerTop = target.root;
     // The clipboard and the last delete name the old root's things: forgotten.
     this.fileClip = null;
     this.lastTrashed = null;

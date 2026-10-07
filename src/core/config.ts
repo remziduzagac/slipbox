@@ -53,7 +53,7 @@ export interface Config {
   files: {
     /** "notes": notes only; "renderable": notes and data files (JSON, YAML, TOML, INI, CSV);
      *  "all": every text file the walk sees. The explorer's key toggles to "all" and back. */
-    show: "notes" | "renderable" | "all";
+    show: "auto" | "notes" | "renderable" | "all";
     /** gitignore-syntax patterns shown whatever `show` says (`*.ts`, `scripts/`). */
     include: string[];
     /** gitignore-syntax patterns never shown (the walk's own excludes apply too). */
@@ -137,11 +137,12 @@ export interface Config {
     idle_seconds: number;
   };
   /** A file's problems shown where they are (19.8–19.11): `bar`, a column beside the text with each
-   *  line's count — `auto` while the file has had any, `on` always, `off` never; `marks`, the text
-   *  underlined; `severity`, the least that shows (a note not written yet is `info`). */
+   *  line's count — `auto` while the file has had any, `on` always, `off` never; `marks`, the least
+   *  severity underlined in the text (`off`: none); `severity`, the least that shows (a note not written
+   *  yet is `info`). */
   diagnostics: {
     bar: "auto" | "on" | "off";
-    marks: boolean;
+    marks: "off" | "error" | "warning" | "info";
     severity: "error" | "warning" | "info" | "hint";
   };
   /** Language servers in Helix's shape (19.2): each changed or added by name — its command, args,
@@ -240,7 +241,7 @@ export const DEFAULT_CONFIG: Config = {
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
   links: { style: "auto", path: "auto", extension: "auto" },
   trust: { roots: [] },
-  files: { show: "renderable", include: [], exclude: [] },
+  files: { show: "auto", include: [], exclude: [] },
   ui: {
     sidebar: true,
     sidebar_width: 30,
@@ -270,7 +271,7 @@ export const DEFAULT_CONFIG: Config = {
   git: { base: "" },
   search: { engine: "auto" },
   index: { background: true, idle_seconds: 30 },
-  diagnostics: { bar: "auto", marks: true, severity: "warning" },
+  diagnostics: { bar: "auto", marks: "error", severity: "warning" },
   "language-server": {},
   language: [],
   linter: {},
@@ -297,9 +298,10 @@ const ENUMS: Record<string, readonly string[]> = {
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],
   "diagnostics.bar": ["auto", "on", "off"],
+  "diagnostics.marks": ["off", "error", "warning", "info"],
   "diagnostics.severity": ["error", "warning", "info", "hint"],
   "ui.lines": ["light", "heavy"],
-  "files.show": ["notes", "renderable", "all"],
+  "files.show": ["auto", "notes", "renderable", "all"],
   "editor.edit_in": ["source", "live"],
   "links.style": ["auto", "markdown", "wiki"],
   "links.path": ["auto", "relative", "root", "name"],
@@ -388,6 +390,9 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
       delete data.vault;
     }
     if (file !== userFile) dropUserOnly(data, file, warnings);
+    // `marks` was on or off before it was a severity: on marked every problem shown, off none.
+    const diag = data.diagnostics;
+    if (isPlainObject(diag) && typeof diag.marks === "boolean") diag.marks = diag.marks ? "info" : "off";
     config = merge(config, data, file, "", warnings);
     // A key this file set, and the merge took (a bad value is warned of and left as it was).
     for (const [section, table] of Object.entries(data)) {

@@ -270,15 +270,24 @@ function sourceLinkAt(a: App, v: View): LayoutLink | null {
   return l ? { ...base, ...l } : null;
 }
 
-function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
+/** Where a followed link opens: this window, the split's other one, or a new tab. */
+type Into = "here" | "split" | "tab";
+
+/** A note or file opened where a link goes: here, in the split's other window, or a tab of its own. */
+function openInto(a: App, into: Into, path: string, anchor?: Anchor): void {
+  if (into === "tab") return a.openInNewTab(path, anchor);
+  if (into === "split") a.otherWindow();
+  a.open(path, anchor);
+}
+
+function followLink(a: App, link: LayoutLink, into: Into): void {
   const view = a.view;
   if (!view) return;
   // A link drawn inside an embed (1.11) is the embedded note's: followed from there.
   const from = link.from ?? view.buf.rel;
   const go = (path: string, heading: string | null) => {
     const anchor = heading ? (lineAnchor(heading) ?? headingAnchor(a, path, heading, link.kind === "wiki" || link.kind === "embed")) : undefined;
-    if (inSplit) a.otherWindow();
-    a.open(path, anchor);
+    openInto(a, into, path, anchor);
   };
   switch (link.kind) {
     case "tag":
@@ -311,14 +320,14 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
         return at === null ? null : `L${at}`;
       };
       if (r.resolvedKind === "note") return go(r.path!, landing(r.path!));
-      if (r.resolvedKind === "file") return fileLink(a, r.path!, link.heading, inSplit);
+      if (r.resolvedKind === "file") return fileLink(a, r.path!, link.heading, into);
       if (r.resolvedKind === "ambiguous") {
         // Two notes of a name, or two attachments (`![[dal.png]]`, 21.3): one picked, opened as its link would.
         const notes = r.candidates.every(isNotePath);
         return a.openList({
           title: `[[${link.target}]] matches ${r.candidates.length} ${notes ? "notes" : "files"}`,
           items: r.candidates.map((c) => ({ label: c, data: c })),
-          accept: (item) => (isNotePath(item.data as string) ? go(item.data as string, link.heading) : fileLink(a, item.data as string, link.heading, inSplit)),
+          accept: (item) => (isNotePath(item.data as string) ? go(item.data as string, link.heading) : fileLink(a, item.data as string, link.heading, into)),
         });
       }
       // In another vault, or a vault this machine doesn't know: say which (17.8).
@@ -357,7 +366,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
       if (r.via === "old-name") a.message("info", `${link.target} reached ${r.vault} by a name it had`);
       if (r.via === "another-copy") a.message("info", `${link.target}: the copy of ${r.vault} links open isn't here — another copy`);
       if (r.gitRef) return a.showFromGit(r.gitRef, link.target);
-      if (r.resolvedKind === "ambiguous" && isPointer(link.target)) return pickPointerFolder(a, link.target, frag, inSplit);
+      if (r.resolvedKind === "ambiguous" && isPointer(link.target)) return pickPointerFolder(a, link.target, frag, into);
       // Not on this machine, gone, no such file there: why — never a new note by a pointer's name. A
       // folder named the old way (`research:x.md`, 21.11): why, and its pointer.
       if (r.resolvedKind === "unresolved" && (isPointer(link.target) || r.suggest)) return a.message("warn", r.suggest ? r.reason! : `${link.target}: ${r.reason ?? "not found"}`);
@@ -368,7 +377,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
         return;
       }
       if (r.resolvedKind === "note") return go(r.path!, at(r.path!));
-      if (r.resolvedKind === "file") return fileLink(a, r.path!, frag, inSplit);
+      if (r.resolvedKind === "file") return fileLink(a, r.path!, frag, into);
       if (r.resolvedKind === "folder") return a.revealFolder(r.path!);
       // Its file seen to move (17.12): where, and the fix (20.2: a move never resolves a link).
       const as = { kind: link.kind === "image" ? ("image" as const) : ("markdown" as const), target: link.target };
@@ -391,7 +400,7 @@ function followLink(a: App, link: LayoutLink, inSplit: boolean): void {
  * `.slipbox/` folder, renaming its name — the parent folder's name prefixed as a suggestion, the
  * edit to its config previewed first. Not now (esc) leaves it ambiguous, picked when followed again.
  */
-function pickPointerFolder(a: App, target: string, frag: string | null, inSplit: boolean): void {
+function pickPointerFolder(a: App, target: string, frag: string | null, into: Into): void {
   const p = parsePointer(target);
   const t = p ? resolvePointer(p) : null;
   if (!p || t?.status !== "ambiguous") return;
@@ -411,10 +420,7 @@ function pickPointerFolder(a: App, target: string, frag: string | null, inSplit:
     filterable: false,
     accept: (item) => {
       const d = item.data as { open?: string; rename?: string; name?: string };
-      if (d.open) {
-        if (inSplit) a.otherWindow();
-        return a.open(d.open, frag ? (lineAnchor(frag) ?? headingAnchor(a, d.open, frag)) : undefined);
-      }
+      if (d.open) return openInto(a, into, d.open, frag ? (lineAnchor(frag) ?? headingAnchor(a, d.open, frag)) : undefined);
       const root = d.rename!;
       const suggested = `${slugName(posix.basename(posix.dirname(root)))}-${d.name}`;
       a.prompt(`rename ${d.name} at ${tildePath(root)} to: `, (name) => name.trim() && a.previewRename(() => planVaultRename(rootAt(root), name.trim())));
@@ -444,13 +450,12 @@ function lensStep(a: App, step: 1 | -1): void {
   });
 }
 
-function fileLink(a: App, rel: string, heading: string | null = null, inSplit = false): void {
+function fileLink(a: App, rel: string, heading: string | null = null, into: Into = "here"): void {
   // A data or text file opens (16.4) — at a data file's section when the link names one
   // (`[[config.toml#editor]]`); a binary one's path is copied (images render later).
   if (classify(rel, a.config.walk.extensions).group !== "binary") {
-    if (inSplit) a.otherWindow();
     const line = heading ? lineAnchor(heading) : undefined;
-    a.open(rel, line);
+    openInto(a, into, rel, line);
     if (heading && !line && a.view) jumpToHeading(a, a.view, heading);
     return;
   }
@@ -750,7 +755,7 @@ function openHelp(a: App): void {
     ...heading("Inside the history", false),
     ...pane(a.explorerKeys, HISTORY_ACTION_INFO),
     ...heading("Inside Problems", false),
-    ...pane(a.explorerKeys, PROBLEMS_ACTION_INFO),
+    ...pane(a.problemsKeys, PROBLEMS_ACTION_INFO),
     ...heading("Filtering a panel (/)", false),
     ...FILTER_KEYS_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys.map((k) => (k === "type" ? k : spellKey(k))), new Set(), detail), data: null })),
     ...heading("Inside the outline", false),
@@ -765,9 +770,9 @@ function openHelp(a: App): void {
     ...MOUSE_HELP.map(([label, keys, detail]) => ({ label, ...topKeys(keys, new Set(), detail), data: null })),
   ];
   // Start where the keys are about what you're doing: the focused pane's view's, or visual mode's.
-  const left = { explorer: "Inside the explorer", history: "Inside the history", problems: "Inside Problems" } as const;
+  const left = { explorer: "Inside the explorer", history: "Inside the history" } as const;
   const right = { outline: "Inside the outline", info: "Inside Info", footnotes: "Inside the footnotes" } as const;
-  const section = a.region === "sidebar" ? left[a.leftView] : a.region === "outline" ? right[a.rightView] : a.view?.visual ? "Selection & copy" : null;
+  const section = a.region === "sidebar" ? left[a.leftView] : a.region === "outline" ? right[a.rightView] : a.region === "problems" ? "Inside Problems" : a.view?.visual ? "Selection & copy" : null;
   const at = section ? items.findIndex((i) => i.header && i.label === section) : -1; // the title row
   a.openList({
     title: "Keys — type to filter, enter runs a command",
@@ -814,8 +819,11 @@ const UI_TOGGLES: { key: keyof UiState; id: string; title: string }[] = [
   { key: "breadcrumb", id: "ui.breadcrumb", title: "Breadcrumb" },
   { key: "top_bar", id: "ui.top_bar", title: "Top bar" },
   { key: "problems_bar", id: "ui.problems_bar", title: "Problems bar" },
-  { key: "problem_marks", id: "ui.problem_marks", title: "Problems marked in the text" },
 ];
+
+/** The marks' levels in turn (`space u shift+d`), and how each is said. */
+const MARKS_NEXT = { off: "error", error: "warning", warning: "info", info: "off" } as const;
+const MARKS_SAID = { off: "off", error: "errors", warning: "warnings and up", info: "all" } as const;
 
 function toggle(a: App, key: keyof UiState, title: string): void {
   const next = !a.ui[key];
@@ -1060,14 +1068,21 @@ export function registerActions(app: App): void {
           const said = [keys.find((k) => k.split(" ")[0] !== lead), keys.find((k) => k.split(" ")[0] === lead)].filter((k) => k !== undefined).map((k) => prettyKey(k, a.leader));
           return a.message("info", said.length ? `no link here · ${said.join(" or ")} goes to the next one` : "no link here");
         }
-        followLink(a, link, false);
+        followLink(a, link, "here");
       }),
     "link.follow_split": (a) =>
       withView(a, (v) => {
         const i = a.linkForFollow(v);
         const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
         if (!link) return a.message("info", "no link here");
-        followLink(a, link, true);
+        followLink(a, link, "split");
+      }),
+    "link.follow_tab": (a) =>
+      withView(a, (v) => {
+        const i = a.linkForFollow(v);
+        const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
+        if (!link) return a.message("info", "no link here");
+        followLink(a, link, "tab");
       }),
     "links.open": (a) =>
       withView(a, (v) => {
@@ -1084,7 +1099,7 @@ export function registerActions(app: App): void {
           accept: (item) => {
             const l = layout.links[item.data as number]!;
             if (l.line >= 0) a.moveCursor(v, { row: l.line, col: l.col });
-            followLink(a, l, false);
+            followLink(a, l, "here");
           },
         });
       }),
@@ -1183,6 +1198,17 @@ export function registerActions(app: App): void {
     // :tabnew <note>: a new tab on that note; without one, on this note.
     "tab.new": (a, arg) =>
       withView(a, async (v) => {
+        // A window of a split: moved out into a tab of its own — its history and place with it — the split gone,
+        // the other window keeping the tab (vim's ctrl+w T).
+        const t = a.tab!;
+        if (!arg && t.views.length > 1) {
+          t.views.splice(t.views.indexOf(v), 1);
+          t.active = 0;
+          v.layoutKey = "";
+          a.tabs.splice(a.activeTab + 1, 0, { views: [v], active: 0, orientation: "side", ratio: a.config.ui.split_ratio });
+          a.activeTab += 1;
+          return;
+        }
         a.tabs.splice(a.activeTab + 1, 0, { views: [a.makeView(v.buf, { ...v.topAnchor }, { ...v.curAnchor })], active: 0, orientation: "side", ratio: a.config.ui.split_ratio });
         a.activeTab += 1;
         if (arg) await a.run(`note.open ${arg}`);
@@ -1633,6 +1659,7 @@ export function registerActions(app: App): void {
         { label: "Theme", hint: a.ui.theme, data: "theme.pick" },
         { label: "Glyphs", hint: a.ui.glyphs, data: "glyphs.pick" },
         ...UI_TOGGLES.map((t) => ({ label: t.title, hint: onOff(a.ui[t.key] as boolean), data: t.id })),
+        { label: "Problems marked in the text", hint: MARKS_SAID[a.ui.problem_marks], data: "ui.problem_marks" },
       ];
       a.openList({ title: "UI settings — enter changes one", items, accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()) });
     },
@@ -1753,12 +1780,10 @@ export function registerActions(app: App): void {
       }),
     "trash.open": (a) => a.openTrash(),
     "tag.list": (a, arg) => (arg ? a.openTagNotes(arg) : a.openTagList()),
-    // The left panel's Problems view (1.7): open, focus, close — made afresh when it opens.
-    "problems.open": (a) => {
-      a.graph.forgetProblems();
-      a.lintVault();
-      a.openLeftView("problems", "cycle");
-    },
+    // The Problems panel at the bottom (1.7): the root's problems (All), or the file on screen's — made afresh when
+    // it opens; open and focused already, closed.
+    "problems.open": (a) => a.openProblems("all"),
+    "problems.file": (a) => a.openProblems("file"),
     "vault.init": (a) => {
       // In a root: the explorer's selected folder (or this note's) a root of its own (18.11).
       if (a.loc.mode === "vault") return a.makeVaultHere();
@@ -1989,6 +2014,12 @@ export function registerActions(app: App): void {
     "app.quit": (a) => a.requestQuit(),
   };
   for (const t of UI_TOGGLES) impl[t.id] = (a) => toggle(a, t.key, t.title);
+  // The marks, a level now (off → errors → warnings and up → all), not a switch.
+  impl["ui.problem_marks"] = (a) => {
+    const next = MARKS_NEXT[a.ui.problem_marks];
+    a.setUi("problem_marks", next);
+    a.message("info", `Problems marked in the text: ${MARKS_SAID[next]}`);
+  };
 
   for (const spec of COMMAND_SPECS) {
     const run = impl[spec.id];

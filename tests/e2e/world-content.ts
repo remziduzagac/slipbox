@@ -3,7 +3,7 @@
 
 import { lstatSync, readlinkSync } from "node:fs";
 import { UNSAFE } from "../../src/core/sanitize.ts";
-import { leader, moveTo, pos, type Scenario } from "./helpers.ts";
+import { leader, moveTo, pos, type Scenario, signed } from "./helpers.ts";
 import type { Session } from "./session.ts";
 
 const KESTREL = "home/work/kestrel/README.md";
@@ -111,10 +111,10 @@ export const CONTENT_SCENARIOS: Scenario[] = [
       }
       // A TypeScript file left by a bad rebase: its errors counted on the status line.
       await edit(s, "src/sync/stray-token.ts");
-      await s.status(/✖ ?\d/, 5000);
+      await s.status(signed("{error} ?\\d"), 5000);
       // And a Go file's: another grammar's errors, the same way.
       await edit(s, "tools/uploader/broken.go");
-      await s.status(/✖ ?\d/, 5000);
+      await s.status(signed("{error} ?\\d"), 5000);
     },
   },
   {

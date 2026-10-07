@@ -125,16 +125,21 @@ session keeps them.
 
 **The status line** is about the file. From left to right:
 
-- a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES` (the explorer, the
-  history or Problems), `OUTLINE`, `FOOTNOTES`, `INFO` (the right panel's views), `RESIZE`, or what's
+- a mode chip: `READ`, `SOURCE`, `LENS`, `INSERT`, `VISUAL`, `V-LINE`, `FILES` (the explorer or the
+  history), `PROBLEMS` (the bottom panel), `OUTLINE`, `FOOTNOTES`, `INFO` (the right panel's views), `RESIZE`, or what's
   pending: keys of a sequence in short form (`␣ l`,
   `C-w`), or an operator, a count, or a key waiting for its character (`2d`, `di`, `dT`, `r`, `2f`);
 - where the file is, and its branch (`20.14`, `21.9`), dimmed: the root's name if it has one, else its path, else the
   folder opened — `research · main`, `~/src/experiment · main` (no remote), `notes`, `~/scratch` — and the branch
   checked out now (a detached head: its commit); a named worktree as `research@refactor`. At most 40 columns, a path
   cut from the front to fit; it's the first to go when the path would be left fewer than 24 columns;
-- the note's path (click to copy its absolute path), cut from the front when short of room, so the
-  note's own name stays;
+- the note's path between back and forward, as an address bar's: `‹ notes/people/kenji-mori.md ›`. `‹` and `›` go
+  back and forward in the focused window's history, each bright when there's somewhere to go, dim when not; hovered,
+  one says where, above it (`back: home.md › Start here`; back past the root's first place, the root before). A click
+  on the path opens the window's history above it, as a browser shows it: **Copy path** first (its absolute path;
+  `y p` too), then the places — forward ones on top, the current one marked `●`, back ones under it, each its path
+  and heading; a click or `enter` goes there (several steps at once). Cut from the front when short of room, so the
+  note's own name stays; the arrows go only with it;
 - a marker: `• unsaved`, `• unsaved ⚠ differs from disk` (after keeping yours in a conflict),
   `↻ reloaded` after an external change, or `✖ deleted on disk` — in symbols only (`• ⚠`) on a
   narrow screen, so the path and the position keep their room; then the worst problem on the cursor's line
@@ -250,14 +255,14 @@ follows it once: the second click, landing in the note it opened, is swallowed.
   its buffer.
 - **View** (a window): a buffer plus its own cursor, top row, selection, find and history.
   Two windows may show one buffer.
-- **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a
-  ratio (the first window's share). Resize mode (`space w r`, or a `ctrl+w` step) changes the ratio,
-  or the explorer or outline width when one is focused, and all of it is kept in the session.
-  Side by side falls back to stacked below 80 content columns (a fixed width, not
-  `ui.narrow_width`), and a stacked split too short for two windows (under 6 rows) shows only the
-  active one. With a split, each window names its note on its breadcrumb row, bright in
-  the active window. Pane widths stay between 12 columns and half the terminal, and together
-  leave the note at least 24; a split's ratio stays between 15% and 85%.
+- **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a ratio (the first window's
+  share). `ctrl+t c` (`tab.new`) in a split moves this window out into a tab of its own, the split gone; with one
+  window, it opens its note in a new tab. Resize mode (`space w r`, or a `ctrl+w` step) changes the ratio, or the
+  explorer or outline width when one is focused, and all of it is kept in the session. Side by side falls back to
+  stacked below 80 content columns (a fixed width, not `ui.narrow_width`), and a stacked split too short for two windows
+  (under 6 rows) shows only the active one. With a split, each window names its note on its breadcrumb row, bright in
+  the active window. Pane widths stay between 12 columns and half the terminal, and together leave the note at least 24;
+  a split's ratio stays between 15% and 85%.
 
 ## Positions (plans `3.4`, `3.5`, `3.15`)
 
@@ -295,7 +300,8 @@ Each window has back and forward stacks of `{note, top, cursor}`, 200 deep, kept
 each way) so they go on after a restart. Following a link, jumping to a heading and opening a note
 all push onto them. The history list (`space h h`) shows the whole timeline and jumps anywhere in
 it, and under it the notes read lately in other tabs and sessions: a note opened in a tab of its own
-starts a timeline of its own, and is still found there.
+starts a timeline of its own, and is still found there. The status line's `‹` `›`, around the path, are back and
+forward with the mouse; the path, clicked, lists the window's timeline (see the status line, above).
 
 ## Switching roots (plans `17.10`, `17.14`, `21.10`)
 
@@ -477,7 +483,8 @@ A link landing on a line (`#L42`, a block's `^id`, a problem, a search hit) land
 rendered view, a line inside a paragraph that wraps lands on the paragraph, not the block after. The backlinks list
 shows a link from another root by its path (`21.9`): from home (`~/app/design/plan.md`), else absolute.
 
-`enter` follows the link under the cursor, or else the row's first link. In source mode and inside
+`enter` follows the link under the cursor, or else the row's first link; `ctrl+enter` (`space l t`) follows it into
+a new tab, as a browser's ctrl+click does, and `ctrl+w f` (`space l s`) into the split. In source mode and inside
 the lens, where rows are the markdown itself, `enter` and `space l f` / `s` read the link around the
 cursor from the text (`[text](url)`, `![alt](path)`, `[[name]]`, `21.3`); in a text file, a URL or a path naming a
 file of the root (`16.10`); a click there places the cursor for editing. A click follows a link
@@ -490,7 +497,7 @@ position under a repeated heading (a log's `## Weather` entries) keeps its entry
 prepended: the anchor also records the heading's occurrence counted from the bottom and the row's
 text, and keeps whichever count still finds that text.
 
-## Side panes: explorer (plan `3.7`), history, problems, Info, outline and footnotes
+## Side panes: explorer (plan `3.7`), history, Info, outline and footnotes
 
 Each side has one panel, which shows one of its views at a time; its rail has a button per view,
 bright while that view shows. Clicking a view's button shows the panel on it (and focuses it), or
@@ -501,34 +508,38 @@ registry (`LEFT_VIEWS`,
 `RIGHT_VIEWS` in `app.ts`) and more will come on both sides, each with its own rows, drawing and
 keys.
 
-- **Explorer (left, `≡`):** the walked notes as a tree, directories first, with the files
-  `files.show` lists beside them — by default the data files (JSON, YAML, TOML, INI, CSV), shown with
-  their extension and their own icon; `a` toggles to every text file and back (`16.5`, "Files beyond
-  notes" below). Moving the selection, or a click on a note, only selects. `enter`, `l` and a
-  double-click open the note as a tab, or switch to the tab already showing it; `o` replaces the
-  current window's note, and `s` opens it in the split's other window. A click on a folder folds or
-  unfolds it. New notes and folders, renames, moves, deletes, copies: "Files in the explorer",
-  below. **A folder that is another root** (`17.13`), nested in this one (`◈`, Nerd: a
-  bookshelf), in a folder's blue (role `sidebar_vault`, for `[colors]` to set), is a row of its
-  own, its icon telling it from a folder, the root's name dimmed after the folder's when they
-  differ (cut short of its git mark) — a worktree's branch instead (`⎇ feat`, `17.19`); `enter` or a double-click goes into
-  it (a switch, below). **In a plain folder** (`20.22`) the explorer is its tree, as a root's is, with `..` above it
-  to go up (`17.14`); in `~` or `/`, listed a level at a time, each folder in it is a row to go into — a root or a
-  plain folder. **The explorer's roots** (`20.15`, `21.9`): under the root open, the other roots, each by its name
-  (`◈`), else its path: the root or folder slipbox was opened on, the roots pinned with `:pin-root` (`vault.pin_root`,
-  kept with the opened root's state), and the folder of a file open beside this root — a loose file a link was
-  followed to, its nearest root else its folder — while one of its files is shown (never the scratch's, which lives in
-  slipbox's state folder). A root followed into by a link is the root open while it is, the opened one beside it;
-  left, it goes unless pinned. `enter` on another root unfolds it — its notes and files as its index has them — `h`
-  folds it again, and a file of it opens there (a switch); a plain folder among them (a loose file's) has no index to
-  show, so `enter` goes into it instead (a switch). None of this root's file operations act on their rows (a
-  paste, new note or new folder there says `another root's folder: select a folder of this root`). Roots never
-  overlap: one inside the root open, or around it, isn't listed apart — its folder is in the tree, or the tree is in
-  it. **Git's marks** (`5.11`): in a git checkout each changed file has
-  its state at its row's end — `M` modified, `+` new (untracked or added), `R` renamed, `!` in a merge's conflict
-  (`git_modified`, `git_new`, `git_conflict`) — and a folder with one in it a `•`. git is asked in the background, a
-  moment after anything changed (a save, the watcher, a file operation, a branch switch, a switch of roots — which
-  drops the old root's marks at once).
+- **Explorer (left, `≡`):** the walked notes as a tree, directories first, from the folder slipbox was opened on (the
+  root's, or a folder of it), with the files `files.show` lists beside them — by default (`auto`) every text file in a
+  repository, where code lives, and the data files (JSON, YAML, TOML, INI, CSV) in a notes root (one with `.slipbox/`),
+  shown with their extension and their own icon; `a` toggles to every text file and back (`16.5`, "Files beyond notes"
+  below). **`..`** on top, roots included (`17.14`): `enter` moves the explorer up a folder — no fence at the root.
+  Above the root, a folder is listed a level at a time, never walked (`~` and `/` too; nothing is above `/`): its
+  folders, then its files; the root open among them, marked (`sidebar_active`) and unfolded, its tree under it (`h` /
+  `l` fold and unfold it; `enter` takes the explorer back down to it); another root by its icon and name, unfolding like
+  a folder. A file there opens as a link to it does: in its own root, switching into it — the explorer staying where it
+  was, the new root unfolded in it — or, outside every root, beside this one. None of this root's file operations act on
+  the rows above it. Moving the selection, or a click on a note, only selects. `enter`, `l` and a double-click open the
+  note as a tab, or switch to the tab already showing it; `o` replaces the current window's note, and `s` opens it in
+  the split's other window. A click on a folder folds or unfolds it. New notes and folders, renames, moves, deletes,
+  copies: "Files in the explorer", below. **A folder that is another root** (`17.13`), nested in this one (`◈`, Nerd: a
+  bookshelf), in a folder's blue (role `sidebar_vault`, for `[colors]` to set), is a row of its own, its icon telling it
+  from a folder, the root's name dimmed after the folder's when they differ (cut short of its git mark) — a worktree's
+  branch instead (`⎇ feat`, `17.19`); `enter` or a double-click goes into it (a switch, below). **In a plain folder**
+  (`20.22`) the explorer is its tree, as a root's is; in `~` or `/`, listed a level at a time, each folder in it is a
+  row to go into — a root or a plain folder. **The explorer's roots** (`20.15`, `21.9`): under the root open, the other
+  roots, each by its name (`◈`), else its path: the root or folder slipbox was opened on, the roots pinned with
+  `:pin-root` (`vault.pin_root`, kept with the opened root's state), and the folder of a file open beside this root — a
+  loose file a link was followed to, its nearest root else its folder — while one of its files is shown (never the
+  scratch's, which lives in slipbox's state folder). A root followed into by a link is the root open while it is, the
+  opened one beside it; left, it goes unless pinned. `enter` on another root unfolds it — its notes and files as its
+  index has them — `h` folds it again, and a file of it opens there (a switch); a plain folder among them (a loose
+  file's) has no index to show, so `enter` goes into it instead (a switch). None of this root's file operations act on
+  their rows (a paste, new note or new folder there says `another root's folder: select a folder of this root`). Roots
+  never overlap: one inside the root open, or around it, isn't listed apart — its folder is in the tree, or the tree is
+  in it. **Git's marks** (`5.11`): in a git checkout each changed file has its state at its row's end — `M` modified,
+  `+` new (untracked or added), `R` renamed, `!` in a merge's conflict (`git_modified`, `git_new`, `git_conflict`) — and
+  a folder with one in it a `•`. git is asked in the background, a moment after anything changed (a save, the watcher, a
+  file operation, a branch switch, a switch of roots — which drops the old root's marks at once).
 - **History (left, `◷`, `space h h`):** the active window's timeline, newest first: each place's
   note name and line, the current one marked `here` and selected when the view opens. A click
   selects an entry; `enter` or a double-click jumps there, the places before it becoming back and
@@ -538,33 +549,19 @@ keys.
   0 lists none): each with when (the time today, else the day), or `tab N` when it's open in
   another tab; `enter` opens one in this window. The heading is stepped over. The history never
   scrolls sideways: a name too long for the pane beside its hint is cut (`…`), the hint kept.
-- **Filter (`/`, in the explorer, the history, Problems, the outline, Info and the footnotes):** a `› text` row at
+- **Filter (`/`, in the explorer, the history, the outline, Info and the footnotes; Problems' All tab, below):** a
+  `› text` row at
   the top of the list, a rule under it (joined to the pane's border), then the list —
   while the pane has focus (otherwise `/` is find in the note); typing narrows the rows (`/`
   on a view that kept its filter resumes it). The explorer keeps the tree: the notes whose path
   matches, under their folders (all unfolded), the matched letters highlighted, the selection on the
-  first note. The history keeps the entries whose path matches. Problems keeps the problems whose note, line or
-  link matches (a conflict or an orphan by its path), under their section headings, unfolded. The outline keeps the
+  first note. The history keeps the entries whose path matches. The outline keeps the
   headings that match under their parents (folds ignored), the selection on the best match. Info keeps the rows
   whose name or value matches, under their sections, unfolded. The footnotes view keeps the footnotes whose label
   or text matches. The arrows and
   `ctrl+n` / `ctrl+p` move, `enter` or a click opens (in the explorer and the history, a
   double-click; the filter clears), `esc` clears it. `ctrl+p`
   stays the flat quick-open across the root.
-- **Problems (left, `1.7`):** what's wrong in the root — the left panel's views are the root's, the right's the
-  file's. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link set: each link that
-  reaches nothing, and why when there's a reason, such as an unknown folder), **Ambiguous links** (each that reaches
-  several notes, and how many), **Fragile links** (each won by where it's written — the nearest or the shortest of
-  several of its name — and the path that names its note for sure, `space c a` writing it), **Lint** (`3.21`: the
-  linter's findings, when one runs — see "The lint surface"), **Conflicts** (`5.12`: during a merge, each file git says
-  is unmerged, at its first `<<<<<<<` marker), **Orphans** (`9.5`: the notes no other note links to — another root's
-  links count, a note's own don't — each opened by `enter`). Under the first three, the notes with such links, and under
-  a note its problems: the line and the link as written, in the link's colour (a finding: its line, rule and what's
-  wrong). `enter` (or a double-click) opens the note there, the cursor on the link as drawn (in source mode, on its
-  text); a note's row (an orphan's too) opens at its first on one click. It takes the explorer's keys (`l` / `h`
-  unfold and fold a section, `/` filters); a note's change shows at once. `space v p`, `:problems`, the `⚠` button —
-  each opening lints the root again (`Lint (n) …` while it runs); `slipbox problems` gives the same (`--lint` for the
-  findings).
 - **Info (right, `3.19`):** what the file on screen is — the right panel's views all show that file, and follow it.
   Sections that fold (`h`/`l`): **File** (its path, the root it belongs to — none, in a plain folder — its kind, size,
   modified time, words and reading time, lines, encoding and line endings, saved or not), **Properties** (the
@@ -626,10 +623,10 @@ the page), 3 columns wide, with no border: the frame's rules run over it unbroke
 rules it meets. Each is generic: a place for buttons, whatever they open.
 
 - **The left rail** runs from under the top bar's rule to the frame's bottom rule, its first button
-  level with the tab strip. It holds the left panel's views, the explorer's `≡`, the history's
-  `◷` (ascii `~`) and the problems' `⚠` (Nerd: an alert in a circle; ascii `!`), and the panel opens
-  beside it. Without it, `≡` is the top bar's, the history opens with `space h h` and the problems
-  with `space v p`.
+  level with the tab strip. It holds the left panel's views, the explorer's `≡` and the history's
+  `◷` (ascii `~`), the panel opening beside it; under them the Problems panel's `⚠` (Nerd: an alert in a circle;
+  ascii `!`), bright while it's open, which opens it on All and closes it. Without it, `≡` is the top bar's, the
+  history opens with `space h h` and the problems with `space v p`.
 - **The right rail** runs from under the tab strip's rule, its first button level with the breadcrumb. It holds the
   right panel's views: the Info's `ℹ` (Nerd: an i in a circle; ascii `i`), under it the outline's `▤`, then the
   footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`); the panel opens beside it. Without it, `▤` sits at the
@@ -1021,8 +1018,9 @@ their files open as text.
     before any code file is opened, and a rename or move rewrites them.
 - **Editing and saving** work as for notes: the same undo, saves, autosave and conflict prompt; an
   agent's change to an open file reloads it.
-- **What lists them.** The explorer and the switcher show what `files.show` says (`notes`,
-  `renderable` — notes and data files, the default — or `all` text files), plus `files.include`
+- **What lists them.** The explorer and the switcher show what `files.show` says (`auto`, the default: `renderable` in
+  a notes root — one with `.slipbox/` — and `all` elsewhere, a repository where code lives; `notes`; `renderable` —
+  notes and data files; or `all` text files), plus `files.include`
   patterns, minus `files.exclude`; the explorer's `a` toggles to all and back. The explorer, the
   tabs and the history show every name with its extension (the switcher lists paths), notes' too
   (`home.md`, `halley.toml`): the formats sit side by side, and the extension says which is which.
@@ -1176,8 +1174,8 @@ name it, never a root's.
   unsaved, since the linter reads the file. Its findings show only for the text they were found in: typing hides
   them until the next save's run. A finding is a warning among the file's problems ("Problems where they are"):
   counted in the bar, its line's number in `warn`, the status line saying `⚠ MD013 line-length: …` on its line.
-- **The root** is linted when the Problems view opens: its **Lint** section lists the findings by note, and a note's
-  own run keeps its rows current. `enter` on one opens the note at that line (in source mode, its column); on a
+- **The root** is linted when the Problems panel's All tab opens: its **Lint** section lists the findings by note, and a
+  note's own run keeps its rows current. `enter` on one opens the note at that line (in source mode, its column); on a
   note's row, at its first.
 - **A linter that can't run** (not installed, or failing without a finding) is said once, and not tried again until
   the config changes.
@@ -1248,18 +1246,59 @@ hint. `[diagnostics] severity` (`warning`) is the least that shows, so a root's 
 information — don't mark every page; `"info"` shows them too.
 
 - **The bar** (`space u d`, `[diagnostics] bar`): a column beside the text, left of the line numbers. On the row a
-  line starts on — in the rendered view, the row its text starts on, or the next one drawn — how many problems start
-  there (`+` past 9), in the worst one's colour (`error`, `warn`, `info`). With `"auto"`, the default, it takes its two
+  line starts on — in the rendered view, the row its text starts on, or the next one drawn — the worst problem
+  starting there by its sign, in its colour (`✖` `error`, `⚠` `warn`, `ℹ` `info`, `·` a hint; the Nerd set's icons;
+  ASCII `E W I .`), then how many when more than one (`+` past 9). With `"auto"`, the default, it takes its three
   columns once a file has had a problem, and keeps them while the file is open, so the text doesn't move as problems
-  come and go; `"on"` keeps them always, `"off"` never. A line's number takes the worst one's colour too.
-- **The marks** (`space u shift+d`, `[diagnostics] marks`): where each problem is, underlined in its severity's
-  colour (`problem_error`, `problem_warn`, `problem_info`; a syntax error keeps `syntax_error`). Source mode and the
-  lens know each character's place: the problem's own characters. The rendered view knows each piece of text's line:
-  a link's problem marks the link as drawn, any other the text its lines became.
+  come and go; `"on"` keeps them always, `"off"` never. A line's number takes the worst one's colour too. No ruler
+  on the right: the Problems panel's This file tab says where in the file they are.
+- **The marks** (`[diagnostics] marks`): where each problem is, underlined in its severity's colour
+  (`problem_error`, `problem_warn`, `problem_info`; a syntax error keeps `syntax_error`), for the problems at least as
+  bad as its level: `"error"` (the default), `"warning"`, `"info"` (all), or `"off"`; `space u shift+d` cycles off →
+  errors → warnings → all (an older `true` reads as all, `false` as off). Source mode and the lens know each
+  character's place: the problem's own characters. The rendered view knows each piece of text's line: a link's
+  problem marks the link as drawn, any other the text its lines became. A link that reaches nothing or several notes
+  keeps its own colour and underline whatever the level (`link_unresolved`, `link_ambiguous`), and the Problems
+  panel's chosen problem is marked whatever it is (below).
 - **The status line**: the worst problem on the cursor's line, its code first (`⚠ MD013 line-length: …`), else how
   many of each severity (`✖ 1  ⚠ 3  ℹ 2`).
 
 Both switches are UI settings (`space u u`), remembered as the others are.
+
+## The Problems panel (plan `1.7`)
+
+A panel across the whole width at the bottom, under the windows and the side panes, over the frame's bottom rule —
+a third of the rows, at least twelve where that's under 40% of them; a screen too short for three keeps the note (its
+keys still work). Its first row
+has its two tabs, the chosen one bright, a click on a title switching (`tab` / `shift+tab` too), and a close button
+at its right end; the panel has the keys while focused (`PROBLEMS` on the status line), `esc` handing them back to
+the note and `q` closing it.
+
+- **This file (n)** (`space n q`; a click on the status line's problems): every problem of the file
+  on screen, from every source ("Problems where they are", at `[diagnostics] severity` and up), in the order they
+  come: on its first row the severity's sign, `line:col`, the message, and who found it dimmed at the right
+  (`slipbox unresolved`, `markdownlint MD013`); under it the line's text, its leading blanks dropped, the problem's
+  part marked as it is in the note. It follows the file on screen and opens on the problem at or after the cursor's
+  line. Moving through it (`j` / `k`, a click) takes the note there, the panel keeping the keys, and marks that
+  problem in the note with a background (`link_focus`), whatever `marks` says, while the panel has the focus;
+  `enter` (or a second click) goes there, the note taking the keys, a place pushed onto its history.
+- **All (n)** (`space v p`, `:problems`, the left rail's `⚠`): what's wrong in the root, the count leaving its
+  orphans out. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link set: each link
+  that reaches nothing, and why when there's a reason, such as an unknown folder), **Ambiguous links** (each that
+  reaches several notes, and how many), **Fragile links** (each won by where it's written — the nearest or the
+  shortest of several of its name — and the path that names its note for sure, `space c a` writing it), **Lint**
+  (`3.21`: the linter's findings, when one runs — see "The lint surface"), **Conflicts** (`5.12`: during a merge, each
+  file git says is unmerged, at its first `<<<<<<<` marker), **Orphans** (`9.5`: the notes no other note links to —
+  another root's links count, a note's own don't — each opened by `enter`). Under the first three, the notes with
+  such links, and under a note its problems: the line and the link as written, in the link's colour (a finding: its
+  line, rule and what's wrong). `enter` (or a double-click) opens the note there, the cursor on the link as drawn
+  (in source mode, on its text); a note's row (an orphan's too) opens at its first on one click. It takes the
+  explorer's keys (`l` / `h` unfold and fold a section); `/` filters — its `› text` after the tabs' titles — keeping
+  the problems whose note, line or link matches (a conflict or an orphan by its path) under their headings,
+  unfolded; a note's change shows at once. Each opening lints the root again (`Lint (n) …` while it runs);
+  `slipbox problems` gives the same (`--lint` for the findings).
+
+The same key, the panel open there and focused, closes it; open and not focused, it focuses it.
 
 ## Git (plans `5.11`–`5.14`)
 

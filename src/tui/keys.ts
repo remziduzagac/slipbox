@@ -62,11 +62,12 @@ export const DEFAULT_KEYS: Record<string, string> = {
   enter: "link.follow",
   "g f": "link.follow",
   "g x": "link.follow",
-  "ctrl+enter": "link.follow_split",
+  "ctrl+enter": "link.follow_tab",
   "leader l n": "link.next",
   "leader l p": "link.prev",
   "leader l f": "link.follow",
   "leader l s": "link.follow_split",
+  "leader l t": "link.follow_tab",
   "leader l y": "copy.link",
   "leader l i": "link.insert",
   "leader l l": "links.open",
@@ -76,6 +77,9 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "ctrl+o": "history.back",
   "alt+left": "history.back",
   "alt+right": "history.forward",
+  // What macOS terminals send for option+← / option+→ (word left / right, as meta-b / meta-f).
+  "alt+b": "history.back",
+  "alt+f": "history.forward",
   "leader h p": "history.back",
   "leader h n": "history.forward",
   "leader h h": "history.list",
@@ -266,6 +270,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader v m": "vault.init",
   "leader v t": "trash.open",
   "leader v p": "problems.open",
+  "leader n q": "problems.file",
   // Folders (18.13): the explorer's selected one when it has focus, else this note's.
   "leader d n": "folder.create",
   "leader d r": "folder.rename",
@@ -480,7 +485,7 @@ export const EXPLORER_ACTION_INFO: Record<string, { title: string; desc: string 
   top: { title: "Top", desc: "Selects the first row" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   filter: { title: "Filter", desc: "Type to narrow the rows (the tree keeps its folders); enter opens, esc clears" },
-  all_files: { title: "All files", desc: "Shows every text file, or back to files.show (notes and data files)" },
+  all_files: { title: "All files", desc: "Shows every text file, or back to what files.show lists (auto: notes and data files in a notes root)" },
   new_note: { title: "New note here", desc: "Asks for a name and makes the note in the selected folder (or beside the selected file)" },
   new_folder: { title: "New folder here", desc: "Asks for a name and makes the folder in the selected folder (or beside the selected file)" },
   rename: { title: "Rename", desc: "A new name for the selected note, file or folder, in its folder; every link to it fixed after a preview" },
@@ -512,16 +517,17 @@ export const HISTORY_ACTION_INFO: Record<string, { title: string; desc: string; 
   leave: { title: "Back to the note", desc: "Focuses the note; the history stays open" },
 };
 
-/** The Problems view takes the explorer's keymap too (1.7): what its actions do there, for help. */
+/** The Problems panel takes the explorer's keymap too (1.7), `tab` switching its tabs: what its actions do there, for help. */
 export const PROBLEMS_ACTION_INFO: Record<string, { title: string; desc: string; actions?: string[] }> = {
-  down: { title: "Move down", desc: "Selects the next problem" },
+  down: { title: "Move down", desc: "Selects the next problem (This file: the note shows it, marked)" },
   up: { title: "Move up", desc: "Selects the previous problem" },
   jump: { title: "Go there", desc: "Opens the note at the problem (a section's heading: folds or unfolds it)", actions: ["open_tab", "expand", "open", "open_split"] },
-  collapse: { title: "Fold", desc: "Folds the section, or goes from a problem to its section" },
+  collapse: { title: "Fold", desc: "All: folds the section, or goes from a problem to its section" },
   top: { title: "Top", desc: "Selects the first row" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
-  filter: { title: "Filter", desc: "Type to narrow the problems by note and link; enter goes there, esc clears" },
-  close: { title: "Close the problems", desc: "Closes the left panel; focus returns to the note" },
+  switch: { title: "Other tab", desc: "Between This file and All" },
+  filter: { title: "Filter", desc: "All: type to narrow the problems by note and link; enter goes there, esc clears" },
+  close: { title: "Close the problems", desc: "Closes the bottom panel; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the problems stay open" },
 };
 

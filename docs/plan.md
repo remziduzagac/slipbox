@@ -371,7 +371,7 @@ common, and the only reason they are step 0.
 | 1.4 | **decide** link resolution, then build it: `nameToPath` as lists, collisions, case policy |
 | 1.5 | Backlinks map |
 | 1.6 | **Done.** Tags map: frontmatter `tags` and `#tags` in the text, nested, one tag whatever its case |
-| 1.7 | **Done.** Unresolved-link set (and ambiguous links): the Problems view (`space v p`), `slipbox problems` |
+| 1.7 | **Done.** Unresolved-link set (and ambiguous links): the Problems panel, This file and All, `slipbox problems` |
 | 1.8 | Incremental single-file graph update |
 | 1.9 | Index persistence: when, and to the cache location from 0.10 |
 | 1.10 | `slipbox init` and the no-marker path — announce the degradation, offer to create |
@@ -523,7 +523,7 @@ common, and the only reason they are step 0.
 | 9.4 | Cross-process semantics — **decided**: disk is the contract. See Agent integration |
 | 9.9 | Advisory staleness file — TUI writes dirty paths plus its pid; CLI surfaces them |
 | 9.10 | `--if-unchanged` for writers that must not clobber |
-| 9.5 | **Done.** Graph queries: links, backlinks, `tags`; orphans in `slipbox problems` (and the Problems view) |
+| 9.5 | **Done.** Graph queries: links, backlinks, `tags`; orphans in `slipbox problems` (and the Problems panel) |
 | 9.6 | `capture` subcommand |
 | 9.7 | **Done.** Context bundle: `slipbox context <note>`, `space s c` — the note, its links and backlinks |
 | 9.8 | The agent-facing skill that teaches the CLI |
@@ -580,8 +580,8 @@ source shown alike in every mode.*
 | 19.6 | **Decided:** trusted everywhere — servers and linters run the project's code (revised by `23.1`) |
 | 19.7 | **Done.** `slipbox doctor`: per language, each server and linter — found where, installable, or how to get it |
 | 19.8 | **Done.** Diagnostics: one list per file from every source — syntax, lint, links; servers to come |
-| 19.9 | **Done.** The bar: a column beside the text, each line's count coloured by its worst severity, every mode |
-| 19.10 | **Done.** Ranges marked: underlined in source mode, the lens and the rendered view |
+| 19.9 | **Done.** The bar: a column beside the text, each line's worst sign in its colour, the count past one |
+| 19.10 | **Done.** Ranges marked at a level (errors by default): in source mode, the lens and the rendered view |
 | 19.11 | **Done.** Toggles (`space u d`, `shift+d`) and `[diagnostics]`; the status line takes every source |
 | 19.12 | **Done.** Hover in a float; signature help as `(` and `,` are typed (`19.16`) |
 | 19.13 | **Done.** Definition, type definition, implementations, references: a jump, or a list when there are several |

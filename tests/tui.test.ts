@@ -18,6 +18,7 @@ import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
+import { srcAt } from "../src/core/layout/ir.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
@@ -70,6 +71,8 @@ interface Opts {
   /** Start here instead of at `root` as a vault (a loose folder: the home vault). */
   loc?: import("../src/core/vault.ts").VaultLocation;
   launcher?: boolean;
+  /** The folder slipbox was opened on, inside the root. */
+  folder?: string;
 }
 
 async function harness(opts: Opts = {}): Promise<Harness> {
@@ -90,7 +93,7 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   const copied: string[] = [];
   const quit = { called: false };
   const host: Host = { requestRender() {}, osc52: (t) => (copied.push(t), true), quit: () => (quit.called = true) };
-  const app = new App({ loc, config, graph, host, open: opts.open === undefined ? "index.md" : opts.open, watch: opts.watch ?? false, configFile: opts.configFile, themeName: opts.themeName, launcher: opts.launcher });
+  const app = new App({ loc, config, graph, host, open: opts.open === undefined ? "index.md" : opts.open, watch: opts.watch ?? false, configFile: opts.configFile, themeName: opts.themeName, launcher: opts.launcher, folder: opts.folder });
   // Never the machine's own nvims.
   app.nvimDiscovery = () => [];
   app.nvimProbe = () => null;
@@ -429,7 +432,7 @@ describe("selection", () => {
 });
 
 describe("links and history", () => {
-  test("tab puts the cursor on a link (] l too); enter, gf follow; ctrl+o / alt+left back, alt+right forward", async () => {
+  test("tab puts the cursor on a link (] l too); enter, gf follow; ctrl+o / alt+left / alt+b back, alt+right / alt+f forward", async () => {
     const h = await harness();
     await h.keys("tab");
     expect(statusRow(h.frame())).toContain("→ notes/alpha.md (resolved)");
@@ -443,10 +446,15 @@ describe("links and history", () => {
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     await h.keys("alt+left");
     expect(h.app.view!.buf.rel).toBe("index.md");
+    // What a macOS terminal sends for option+→ / option+←: meta-f / meta-b.
+    await h.keys("alt+f");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    await h.keys("alt+b");
+    expect(h.app.view!.buf.rel).toBe("index.md");
     await h.keys("g", "g", "]", "l", "g", "f");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
   });
-  test("enter off a link follows the row's first link; ctrl+enter into the split", async () => {
+  test("enter off a link follows the row's first link; ctrl+enter (space l t) into a new tab, as a browser's ctrl+click", async () => {
     const h = await harness();
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Links:"), col: 0 });
     await h.keys("enter");
@@ -454,9 +462,32 @@ describe("links and history", () => {
     await h.keys("ctrl+o");
     h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Links:"), col: 0 });
     await h.keys("ctrl+enter");
-    expect(h.app.tab!.views).toHaveLength(2);
+    expect(h.app.tabs.map((t) => t.views.map((v) => v.buf.rel))).toEqual([["index.md"], ["notes/alpha.md"]]);
+    expect(h.app.activeTab).toBe(1);
+    h.app.activeTab = 0;
+    h.app.moveCursor(h.app.view!, { row: rowStarting(h, "Links:"), col: 0 });
+    await h.keys("space", "l", "t");
+    expect(h.app.tabs).toHaveLength(3);
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
   });
+  test("a new tab from a split (ctrl+t c): the window moves out into a tab of its own, its place and history with it; the split gone", async () => {
+    const h = await harness();
+    await h.keys("tab", "space", "l", "s"); // index.md's first link into the split
+    expect(h.app.tab!.views).toHaveLength(2);
+    await h.keys("tab", "enter"); // on from there, for a back to come with the window
+    const first = h.app.view!.buf.rel;
+    const moved = h.app.view!;
+    const back = moved.back.length;
+    await h.keys("ctrl+t", "c");
+    expect(h.app.tabs.map((t) => t.views.map((v) => v.buf.rel))).toEqual([["index.md"], [first]]);
+    expect(h.app.view).toBe(moved); // the window itself, not a copy
+    expect(h.app.view!.back.length).toBe(back);
+    // No split: a new tab with this note, as before.
+    await h.keys("ctrl+t", "c");
+    expect(h.app.tabs).toHaveLength(3);
+    expect(h.app.tabs[2]!.views[0]!.buf.rel).toBe(first);
+  });
+
   test("space l: n y s b l", async () => {
     const h = await harness();
     await h.keys("space", "l", "n");
@@ -770,7 +801,7 @@ describe("overlays and the : prompt", () => {
     expect(o.items.some((i) => i.header && i.label === "Filtering a panel (/)")).toBe(true);
     await h.keys("escape");
     // Every panel view has its own section, opened from it: Problems, Info, the footnotes.
-    for (const [cmd, region, heading] of [["problems.open", "sidebar", "Inside Problems"], ["info.toggle", "outline", "Inside Info"], ["footnotes.toggle", "outline", "Inside the footnotes"]] as const) {
+    for (const [cmd, region, heading] of [["problems.open", "problems", "Inside Problems"], ["info.toggle", "outline", "Inside Info"], ["footnotes.toggle", "outline", "Inside the footnotes"]] as const) {
       await h.app.run(cmd);
       h.app.region = region;
       expect(await start()).toEqual({ heading, selectedIsEntry: true });
@@ -2503,7 +2534,7 @@ describe("top bar, tab strip, status line", () => {
     expect(top).toContain("slipbox");
     expect(top).not.toContain("▤"); // the outline's button is on the breadcrumb
     expect(top).not.toContain("watching"); // the watcher is shown by the file's path
-    expect(statusRow(h.frame())).toMatch(/index\.md +○ not watching/); // watch: false in the harness
+    expect(statusRow(h.frame())).toMatch(/‹ index\.md › +○ not watching/); // watch: false in the harness
     // The bar and its chip sit on the page, so the frame's rule right under it gives it the same
     // air as the rows below.
     const chipR = h.app.geometry!.hot.find((r) => r.id === "btn:palette")!;
@@ -2780,14 +2811,66 @@ describe("top bar, tab strip, status line", () => {
     click(h, icon.x, icon.y);
     expect(h.app.overlay?.kind).toBe("list");
     await h.keys("escape");
+    // The path: its window's history, Copy path first.
     const path = hot(h, "status:path");
     click(h, path.x, path.y);
+    const menu = h.app.overlay as ListOverlay;
+    expect(menu.items[0]!.label.trim()).toBe("Copy path");
+    menu.selected = 0;
+    await h.keys("enter");
     expect(h.copied.at(-1)).toEndWith("/notes/alpha.md");
     h.app.message("info", "a message to click");
     const msg = hot(h, "toast:0");
     click(h, msg.x + 3, msg.y);
     expect(h.frame()).toContain("Messages");
     expect(h.app.toasts).toEqual([]); // the boxes go: every message is in the list
+  });
+  test("the status line's ‹ path ›: back and forward, bright when there's somewhere to go, hovered saying where; the path, the history", async () => {
+    const h = await harness({ open: "notes/alpha.md", width: 140 });
+    const st = () => statusRow(h.frame());
+    const styleOf = (id: string) => {
+      const at = hot(h, id);
+      return h.canvas().styles[at.y]![at.x]!;
+    };
+    expect(st()).toMatch(/‹ notes\/alpha\.md ›/);
+    const dim = h.app.theme.roles.status_dim.fg!;
+    expect(styleOf("status:back").fg).toBe(dim); // nowhere to go yet
+    expect(styleOf("status:forward").fg).toBe(dim);
+    // Following a link: back lights up.
+    await h.app.run("note.open notes/beta.md");
+    expect(h.app.view!.buf.rel).toBe("notes/beta.md");
+    expect(styleOf("status:back").fg).not.toBe(dim);
+    expect(styleOf("status:back").bold).toBe(true);
+    expect(styleOf("status:forward").fg).toBe(dim);
+    // Hovered: where it goes, over the frame's rule.
+    const back = hot(h, "status:back");
+    h.app.handleMouse({ type: "move", x: back.x, y: back.y, button: 0 });
+    const rows = h.frame().split("\n");
+    expect(rows.at(-2)).toContain(" back: notes/alpha.md ");
+    // Clicked: back; forward lights up.
+    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: back.x, y: back.y, button: 0 });
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    expect(styleOf("status:forward").fg).not.toBe(dim);
+    const fwd = hot(h, "status:forward");
+    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: fwd.x, y: fwd.y, button: 0 });
+    expect(h.app.view!.buf.rel).toBe("notes/beta.md");
+    // The path: the history above it — forward places on top, here marked, back below; enter jumps.
+    await h.app.run("note.open index.md");
+    await h.app.run("history.back");
+    h.frame();
+    const path = hot(h, "status:path");
+    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: path.x, y: path.y, button: 0 });
+    const menu = h.app.overlay as ListOverlay;
+    expect(menu.title).toBe("History");
+    expect(menu.items.map((i) => `${i.label}|${i.hint ?? ""}`)).toEqual(["  Copy path|y p", "  index.md|forward", "● notes/beta.md|here", "  notes/alpha.md|back"]);
+    expect(menu.items[menu.selected]!.hint).toBe("here");
+    h.frame();
+    expect(h.app.geometry!.overlay!.y + h.app.geometry!.overlay!.h).toBeLessThanOrEqual(path.y); // above the path
+    menu.selected = 3;
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    // Two steps forward at once, from there.
+    expect(h.app.view!.fwd.length).toBe(2);
   });
   test("the breadcrumb can be hidden (a UI setting); find's row then sits at the window's top", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", width: 120, height: 30 });
@@ -3924,13 +4007,13 @@ describe("state (3.4, 3.15)", () => {
   test("session restore: tabs, splits with orientation, cursors", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
-    await h.keys("ctrl+w", "s", "j", "j", "ctrl+t", "c");
+    await h.keys("ctrl+t", "c", "ctrl+w", "s", "j", "j");
     const cur = { ...h.app.view!.cur };
     h.app.quit();
     const again = await harness({ root, open: null, config: (c) => (c.ui.restore_session = true) });
     expect(again.app.tabs).toHaveLength(2);
-    expect(again.app.tabs[0]!.views).toHaveLength(2);
-    expect(again.app.tabs[0]!.orientation).toBe("stacked");
+    expect(again.app.tabs[1]!.views).toHaveLength(2);
+    expect(again.app.tabs[1]!.orientation).toBe("stacked");
     expect(again.app.view!.cur).toEqual(cur);
   });
   test("ctrl+q quits and saves; q alone never quits", async () => {
@@ -5350,6 +5433,103 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
     expect(h.app.view!.buf.source.startsWith("def f(x):")).toBe(true);
     expect(h.app.view!.buf.syntax!.errors).toEqual([]);
     expect(statusRow(h.frame())).not.toContain("✖");
+  });
+});
+
+describe("the explorer: no fence at the root (17.14)", () => {
+  /** A folder of roots: a notes root, a repository, a plain folder, a loose note and a picture. */
+  const place = () => {
+    const P = mkdtempSync(join(sandbox, "place-"));
+    mkdirSync(join(P, "notes", ".slipbox"), { recursive: true });
+    mkdirSync(join(P, "notes", "sub"));
+    writeFileSync(join(P, "notes", "a.md"), "# A\n");
+    writeFileSync(join(P, "notes", "data.json"), "{}\n");
+    writeFileSync(join(P, "notes", "script.py"), "print(1)\n");
+    writeFileSync(join(P, "notes", "sub", "b.md"), "# B\n");
+    mkdirSync(join(P, "code", ".git"), { recursive: true });
+    writeFileSync(join(P, "code", "main.ts"), "export {};\n");
+    mkdirSync(join(P, "loose"));
+    writeFileSync(join(P, "loose", "x.md"), "# X\n");
+    writeFileSync(join(P, "readme.md"), "# Readme\n");
+    writeFileSync(join(P, "pic.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0]));
+    return P;
+  };
+  const shown = (h: Harness) => h.app.explorerRows().map((r) => `${"  ".repeat(r.depth)}${r.name}${r.root?.here ? " (here)" : r.kind === "root" && r.path !== ".." ? " (root)" : ""}`);
+  const select = async (h: Harness, name: string) => {
+    h.app.sidebar.selected = h.app.explorerRows().findIndex((r) => r.name === name);
+    h.app.region = "sidebar";
+  };
+
+  test("files.show auto: notes and data files in a notes root, every text file in a repository", async () => {
+    const P = place();
+    const h = await harness({ root: join(P, "notes"), open: "a.md", config: (c) => (c.files.show = DEFAULT_CONFIG.files.show) });
+    expect(DEFAULT_CONFIG.files.show).toBe("auto");
+    expect(h.app.filesShown()).toBe("renderable");
+    expect(shown(h)).toEqual(["..", "sub", "a.md", "data.json"]);
+    const code = await harness({ root: join(P, "code"), open: null, config: (c) => (c.files.show = DEFAULT_CONFIG.files.show) });
+    expect(code.app.filesShown()).toBe("all");
+    expect(shown(code)).toEqual(["..", "main.ts"]);
+  });
+
+  test("..: up a folder, past the root — its tree kept under it, marked; another root's file opened switches into it", async () => {
+    const P = place();
+    const h = await harness({ root: join(P, "notes"), open: "a.md", config: (c) => (c.files.show = "auto") });
+    await select(h, "..");
+    await h.keys("enter");
+    expect(h.app.explorerTop).toBe(P);
+    expect(h.app.loc.root).toBe(join(P, "notes")); // the root open is still this one
+    // A level at a time: the folders (roots by their icon), then the files; the root open unfolded, marked.
+    expect(shown(h)).toEqual(["..", "code (root)", "loose", "notes (here)", "  sub", "  a.md", "  data.json", "readme.md"]);
+    expect(h.app.explorerRows()[h.app.sidebar.selected]!.name).toBe("notes");
+    h.app.region = "content"; // not drawn selected
+    const c = h.canvas();
+    const list = h.app.geometry!.sidebar!;
+    const y = list.y + h.app.explorerRows().findIndex((r) => r.root?.here) - h.app.sidebar.scroll;
+    const x = [...c.toString().split("\n")[y]!].join("").indexOf("notes");
+    expect(c.styles[y]![x]!.fg).toBe(h.app.theme.roles.sidebar_active.fg!);
+    // A plain folder unfolds a level; its note opens beside this root's (it has none of its own).
+    await select(h, "loose");
+    await h.keys("l");
+    expect(shown(h)).toContain("  x.md");
+    expect(h.app.explorerItem()).toBeNull(); // nothing of this root's to rename or delete
+    // Another root unfolds like a folder; its file, opened, switches into it — the explorer staying put.
+    await select(h, "code");
+    await h.keys("enter");
+    expect(shown(h)).toContain("  main.ts");
+    await select(h, "main.ts");
+    await h.keys("enter");
+    expect(h.app.loc.root).toBe(join(P, "code"));
+    expect(h.app.view!.buf.abs).toBe(join(P, "code", "main.ts"));
+    expect(h.app.explorerTop).toBe(P);
+    expect(shown(h)).toEqual(["..", "code (here)", "  main.ts", "loose", "notes (root)", "readme.md"]);
+    // h and l fold and unfold the root open; enter takes the explorer back down to it.
+    await select(h, "code");
+    await h.keys("h");
+    expect(shown(h)).toEqual(["..", "code (here)", "loose", "notes (root)", "readme.md"]);
+    await h.keys("l");
+    expect(shown(h)).toContain("  main.ts");
+    await h.keys("enter");
+    expect(h.app.explorerTop).toBe(join(P, "code"));
+    // The root opened on stays one of the explorer's roots, under the tree (20.15).
+    expect(shown(h).slice(0, 2)).toEqual(["..", "main.ts"]);
+    expect(h.app.explorerRows().slice(2).map((r) => [r.root?.abs, r.root?.other])).toEqual([[join(P, "notes"), true]]);
+  });
+
+  test("it starts at the folder slipbox was opened on; .. climbs to the root, the folder unfolded; / has no ..", async () => {
+    const P = place();
+    const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub") });
+    expect(h.app.explorerTop).toBe(join(P, "notes", "sub"));
+    expect(shown(h)).toEqual(["..", "b.md"]);
+    await select(h, "..");
+    await h.keys("enter");
+    expect(h.app.explorerTop).toBe(join(P, "notes"));
+    expect(shown(h)).toEqual(["..", "sub", "  b.md", "a.md", "data.json"]);
+    expect(h.app.explorerRows()[h.app.sidebar.selected]!.name).toBe("sub");
+    // `/` (and `~`): listed a level at a time, never walked; nothing above it.
+    h.app.setExplorerTop("/");
+    const rows = h.app.explorerRows();
+    expect(rows[0]!.name).not.toBe("..");
+    expect(rows.every((r) => r.depth === 0 || r.root?.other)).toBe(true);
   });
 });
 
@@ -7724,8 +7904,8 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
   });
 });
 
-describe("the Problems view (1.7)", () => {
-  const setup = async () => {
+describe("the Problems panel (1.7)", () => {
+  const setup = async (height = 40) => {
     const root = mkdtempSync(join(tmpdir(), "slipbox-problems-tui-"));
     mkdirSync(join(root, ".slipbox"));
     mkdirSync(join(root, "a"));
@@ -7734,15 +7914,20 @@ describe("the Problems view (1.7)", () => {
     writeFileSync(join(root, "b", "twin.md"), "# Twin B\n");
     writeFileSync(join(root, "index.md"), "# Index\n\nSee [missing](missing.md) here.\n");
     writeFileSync(join(root, "other.md"), "# Other\n\n![pic](nope.png)\n");
-    return await harness({ root, open: "other.md", width: 140 });
+    return await harness({ root, open: "other.md", width: 140, height });
   };
   const rows = (h: Harness) => h.app.problemRows().map((r) => (r.heading ? `# ${r.label}` : r.note ? `  ${r.label}` : `    ${r.label}  ${r.detail}`));
+  const hot = (h: Harness, id: string) => h.app.geometry!.hot.find((x) => x.id === id);
+  const click = (h: Harness, at: { x: number; y: number }, times = 1) => {
+    for (let i = 0; i < times; i++) for (const type of ["down", "up"]) h.app.handleMouse({ type, x: at.x, y: at.y, button: 0 });
+  };
 
-  test("space v p: the vault's broken links, by note; enter goes there, onto the link; its button under the history's", async () => {
+  test("space v p: All — the root's broken links, by note, across the bottom; enter goes there, onto the link", async () => {
     const h = await setup();
     await h.keys("space", "v", "p");
-    expect(h.app.leftView).toBe("problems");
-    expect(h.app.region).toBe("sidebar");
+    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "all" });
+    expect(h.app.region).toBe("problems");
+    expect(h.app.leftView).toBe("explorer"); // not the left panel's view any more
     expect(rows(h)).toEqual([
       "# Broken links (2)",
       "  index.md",
@@ -7758,39 +7943,56 @@ describe("the Problems view (1.7)", () => {
       "  index.md",
       "  other.md",
     ]);
-    const hot = (id: string) => h.app.geometry!.hot.find((x) => x.id === id)!;
-    expect(hot("btn:problems").y).toBe(hot("btn:history").y + 1);
-    // Enter on a problem: its note, the cursor on the link.
-    h.app.sidebar.selected = 2;
+    // Across the bottom, under a rule, over the frame's: its tabs, then the rows; the windows end above it.
+    const lines = h.frame().split("\n");
+    const tabsY = lines.findIndex((l) => l.includes(" This file (1) ") && l.includes(" All (2) "));
+    expect(tabsY).toBeGreaterThan(0);
+    expect(lines[tabsY - 1]).toMatch(/^━+┻━+$/); // the explorer's border ends on it
+    expect(lines.at(-2)).toMatch(/^━+$/);
+    expect(lines[tabsY + 1]).toContain("Broken links (2)");
+    expect(h.app.geometry!.problems).toMatchObject({ x: 0, y: tabsY, w: 140 });
+    const pane = h.app.geometry!.panes[0]!;
+    expect(pane.y + pane.h).toBeLessThan(tabsY);
+    // Enter on a problem: its note, the cursor on the link; the panel stays, the note has the keys.
+    h.app.problemsPanel.all.selected = 2;
     await h.keys("enter");
     const v = h.app.view!;
     expect(v.buf.rel).toBe("index.md");
     expect(h.app.region).toBe("content");
+    expect(h.app.problemsPanel.shown).toBe(true);
     expect(h.app.currentLayout(v).links[h.app.linkUnderCursor(v)]).toMatchObject({ target: "missing.md" });
     // Fixed: gone at once.
     writeFileSync(join(h.root, "missing.md"), "# Missing\n");
     const st = statSync(join(h.root, "missing.md"));
     h.app.graph.updateFile("missing.md", { rel: "missing.md", abs: join(h.root, "missing.md"), size: st.size, mtimeMs: st.mtimeMs });
     expect(rows(h)[0]).toBe("# Broken links (1)");
+    // Focused and on All already, the same keys close it.
+    await h.keys("space", "v", "p");
+    expect(h.app.region).toBe("problems");
+    await h.keys("space", "v", "p");
+    expect(h.app.problemsPanel.shown).toBe(false);
+    expect(h.app.region).toBe("content");
+    expect(h.frame()).not.toContain(" This file (");
   });
 
   test("a section's heading folds; a note's row goes to its first problem; / filters", async () => {
     const h = await setup();
     await h.keys("space", "v", "p");
-    h.app.sidebar.selected = 0;
+    h.app.problemsPanel.all.selected = 0;
     await h.keys("h");
     expect(rows(h)[0]).toBe("# Broken links (2)");
     expect(rows(h)[1]).toBe("# Ambiguous links (0)");
     await h.keys("l");
-    h.app.sidebar.selected = 3; // other.md's row
+    h.app.problemsPanel.all.selected = 3; // other.md's row
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("other.md");
     await h.keys("space", "v", "p", "/", "t", "w", "i", "n");
     expect(rows(h)).toEqual(["# Orphans (4)", "  a/twin.md", "  b/twin.md"]);
+    // The filter after the tabs' titles.
+    expect(h.frame().split("\n").find((l) => l.includes(" All (2) "))).toContain("› twin");
     // An orphan's row: the note.
     await h.keys("escape");
-    h.app.sidebar.selected = h.app.problemRows().findIndex((r) => r.section === "Orphans" && r.note === "b/twin.md");
-    h.app.region = "sidebar";
+    h.app.problemsPanel.all.selected = h.app.problemRows().findIndex((r) => r.section === "Orphans" && r.note === "b/twin.md");
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("b/twin.md");
   });
@@ -7801,11 +8003,97 @@ describe("the Problems view (1.7)", () => {
     await h.keys("space", "v", "p", "/", "n", "o", "p", "e");
     expect(rows(h)).toEqual(["# Broken links (2)", "  other.md", "    L3  nope.png"]);
     h.frame();
-    const sb = h.app.geometry!.sidebar!;
-    const y = sb.y + 2 - h.app.sidebar.scroll;
-    for (const type of ["down", "up", "down", "up"]) h.app.handleMouse({ type, x: sb.x + 4, y, button: 0 });
+    const row = hot(h, "prow:2")!;
+    click(h, { x: row.x + 8, y: row.y });
+    expect(h.app.view!.buf.rel).toBe("a/twin.md"); // one click selects it
+    expect(h.app.problemsPanel.all.selected).toBe(2);
+    click(h, { x: row.x + 8, y: row.y }); // the second: a double-click
     expect(h.app.view!.buf.rel).toBe("other.md");
-    expect(h.app.sidebar.filter).toBe("");
+    expect(h.app.problemsPanel.all.filter).toBe("");
+  });
+
+  test("This file: every problem of the note with its line, the chosen one marked in the text; moving shows it, enter goes there", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "two.md"), "# Two\n\nSee [a](gone-a.png) first.\n\nThen\t[b](gone-b.png) too.\n");
+    const h = await harness({ root, open: "two.md", width: 120, height: 40, config: (c) => (c.diagnostics.marks = "off") });
+    await h.keys("space", "n", "q");
+    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
+    expect(h.app.region).toBe("problems");
+    expect(h.app.fileProblems().map((p) => `${p.start.line}:${p.start.column} ${p.target}`)).toEqual(["3:5 gone-a.png", "5:6 gone-b.png"]);
+    const lines = h.frame().split("\n");
+    const tabsY = lines.findIndex((l) => l.includes(" This file (2) "));
+    // Two rows each: the sign, line:col, the message, who found it; under it the line, its part marked.
+    expect(lines[tabsY + 1]).toMatch(/^ ⚠ 3:5 {2}broken link: gone-a\.png +slipbox unresolved$/);
+    expect(lines[tabsY + 2]).toMatch(/^ {4}See \[a\]\(gone-a\.png\) first\./);
+    expect(lines[tabsY + 3]).toMatch(/^ ⚠ 5:6 {2}broken link: gone-b\.png/);
+    expect(lines[tabsY + 4]).toMatch(/^ {4}Then \[b\]\(gone-b\.png\) too\./); // the tab drawn as a space
+    const c = h.canvas();
+    const col = (y: number, text: string) => [...lines[y]!.slice(0, lines[y]!.indexOf(text))].length;
+    const markAt = (y: number, text: string) => c.styles[y]![col(y, text)]!;
+    const warn = h.app.theme.roles.problem_warn;
+    expect(markAt(tabsY + 2, "[a]")).toMatchObject(warn.bg ? { bg: warn.bg } : { underline: true });
+    expect(markAt(tabsY + 2, "See").underline ?? false).toBe(false);
+    // The chosen problem marked in the note while the panel has the keys, the marks off or not.
+    const focusBg = h.app.theme.roles.link_focus.bg!;
+    const noteRow = (text: string) => lines.findIndex((l, y) => y < tabsY && l.includes(text));
+    expect(c.styles[noteRow("See a")]![col(noteRow("See a"), "See a") + 4]!.bg).toBe(focusBg);
+    expect(c.styles[noteRow("Then")]![col(noteRow("Then"), "b too")]?.bg ?? null).not.toBe(focusBg);
+    // j: the next one — the cursor (and the view) on its line, the panel keeping the keys.
+    await h.keys("j");
+    expect(h.app.problemsPanel.file.selected).toBe(1);
+    expect(h.app.region).toBe("problems");
+    const v = h.app.view!;
+    expect(srcAt(h.app.currentLayout(v).lines[v.cur.row]!, v.cur.col)).toBe(5);
+    // Focus elsewhere: no mark.
+    await h.keys("escape");
+    expect(h.app.region).toBe("content");
+    expect(h.app.chosenProblem()).toBeUndefined();
+    // Back, then enter: there, the note has the keys; back (alt+b) returns where it was.
+    await h.keys("space", "n", "q");
+    expect(h.app.region).toBe("problems");
+    h.app.problemsPanel.file.selected = 0;
+    await h.keys("enter");
+    expect(h.app.region).toBe("content");
+    expect(srcAt(h.app.currentLayout(v).lines[v.cur.row]!, v.cur.col)).toBe(3);
+    // tab: All, and back.
+    await h.keys("space", "n", "q", "tab");
+    expect(h.app.problemsPanel.tab).toBe("all");
+    await h.keys("shift+tab");
+    expect(h.app.problemsPanel.tab).toBe("file");
+  });
+
+  test("the status line's problems, clicked, open This file; a tab's title switches; its button closes", async () => {
+    const h = await setup();
+    h.frame();
+    const at = hot(h, "status:problems")!;
+    expect(at.y).toBe(39);
+    click(h, at);
+    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
+    expect(h.app.region).toBe("problems");
+    h.frame();
+    click(h, hot(h, "ptab:all")!);
+    expect(h.app.problemsPanel.tab).toBe("all");
+    h.frame();
+    click(h, hot(h, "ptab:file")!);
+    expect(h.app.problemsPanel.tab).toBe("file");
+    h.frame();
+    click(h, hot(h, "ptab:close")!);
+    expect(h.app.problemsPanel.shown).toBe(false);
+    expect(h.app.region).toBe("content");
+    // The left rail's button, under the history's: opens it on All, closes it.
+    h.frame();
+    expect(hot(h, "btn:problems")!.y).toBe(hot(h, "btn:history")!.y + 1);
+    click(h, hot(h, "btn:problems")!);
+    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "all" });
+    h.app.region = "content"; // open, not focused: closed all the same
+    h.frame();
+    click(h, hot(h, "btn:problems")!);
+    expect(h.app.problemsPanel.shown).toBe(false);
+    // A short screen keeps the note: no panel drawn, its keys still work.
+    const s = await setup(12);
+    await s.keys("space", "n", "q");
+    expect(s.frame()).not.toContain(" This file (");
+    expect(s.app.region).toBe("problems");
   });
 });
 
@@ -7841,7 +8129,7 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     // The problems bar (19.9): beside the number, how many start on the line, in the worst one's colour.
     const y3 = rows.findIndex((r) => /A long/.test(r));
     const bar = [...rows[y3]!].indexOf("┃") + 2; // the border, a margin, then the bar
-    expect([...rows[y3]!].slice(bar, bar + 4).join("")).toBe("1 3 "); // the bar's count, then the line's number
+    expect([...rows[y3]!].slice(bar, bar + 4).join("")).toBe("⚠  3"); // the bar: the worst one's sign, no count for one; then the line's number
     expect(c.styles[y3]![bar]!.fg).toBe(h.app.theme.roles.warn.fg!);
     // Typing: its text isn't the file's any more — nothing shown until it's saved (and linted again).
     h.app.view!.buf.edit(0, 0, "x");
@@ -7855,7 +8143,7 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     await until(() => h.app.problemsShown(h.app.view!).length > 0);
   });
 
-  test("the Problems view lints the vault: a Lint section by note; enter opens a finding; a linter that can't run says so once", async () => {
+  test("the Problems panel lints the root: a Lint section by note; enter opens a finding; a linter that can't run says so once", async () => {
     const { h } = await setup();
     await h.keys("space", "v", "p");
     await until(() => h.app.vaultLint.issues !== null && !h.app.vaultLint.running);
@@ -7864,7 +8152,7 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     expect(lint[0]!.label).toMatch(/^Lint \(\d+\)$/);
     const row = lint.findIndex((r) => r.lint && r.lint.file.endsWith("/l.md"));
     expect(lint[row - 1]!.note).toBe("l.md");
-    h.app.sidebar.selected = rows.indexOf(lint[row]!);
+    h.app.problemsPanel.all.selected = rows.indexOf(lint[row]!);
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("l.md");
     expect(statusRow(h.frame())).toContain("L3:1"); // rendered: its line's start, not the row's end (a regression)
@@ -7874,13 +8162,13 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     await until(() => !h.app.vaultLint.running);
     await h.keys("/");
     await h.keys(...[..."MD013 l.md"].map((c) => (c === " " ? "space" : c)));
-    expect(h.app.problemRows()[h.app.sidebar.selected]!.note).toBe("l.md");
+    expect(h.app.problemRows()[h.app.problemsPanel.all.selected]!.note).toBe("l.md");
     await h.keys("enter");
     expect(h.app.cursorLine(h.app.view!)).toBe(3);
     // In source mode, on its column.
     await h.app.run("view.source");
     await h.keys("g", "g", "space", "v", "p");
-    h.app.sidebar.selected = h.app.problemRows().findIndex((r) => r.lint?.file.endsWith("/l.md"));
+    h.app.problemsPanel.all.selected = h.app.problemRows().findIndex((r) => r.lint?.file.endsWith("/l.md"));
     await h.keys("enter");
     expect(statusRow(h.frame())).toContain("L3:5");
     // Not there: said once, lint off.
@@ -8892,7 +9180,15 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
       ["a.md", "L4"],
     ]);
     await h.keys("space", "v", "p");
-    h.app.sidebar.selected = h.app.problemRows().findIndex((r) => r.label === "a.md" && r.section === "Conflicts");
+    h.app.problemsPanel.all.selected = h.app.problemRows().findIndex((r) => r.label === "a.md" && r.section === "Conflicts");
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("a.md");
+    expect(h.app.cursorLine(h.app.view!)).toBe(4);
+    // Filtered to it, the selection on its heading (git's answer came after the typing): enter goes to its first.
+    await h.app.run("note.open notes/b.md");
+    await h.keys("space", "v", "p", "/", "a", ".", "m", "d");
+    expect(h.app.problemRows()[0]!.label).toBe("Conflicts (1)");
+    h.app.problemsPanel.all.selected = 0;
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("a.md");
     expect(h.app.cursorLine(h.app.view!)).toBe(4);
@@ -8987,47 +9283,84 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     const y = rows.findIndex((r) => r.includes(text));
     const cellsOf = [...rows[y]!];
     const left = cellsOf.indexOf("┃");
-    return { cells: cellsOf, styles: c.styles[y]!, bar: cellsOf[left + 2]!, barFg: c.styles[y]![left + 2]!.fg, at: (s: string) => cellsOf.join("").indexOf(s) };
+    return { cells: cellsOf, styles: c.styles[y]!, bar: cellsOf[left + 2]!, count: cellsOf[left + 3]!, barFg: c.styles[y]![left + 2]!.fg, at: (s: string) => cellsOf.join("").indexOf(s) };
   };
 
-  test("the bar counts a line's problems in the worst one's colour; the link marked; the status line says what", async () => {
-    const h = await harness({ root: vault(), open: "p.md" });
+  test("the bar: a line's worst problem's sign in its colour, the count past one; the status line says what", async () => {
+    const h = await harness({ root: vault("# P\n\nSee [twin](twin.png) here.\n\nAnd [nope](nope.md) there.\n\nTwo [a](a.png) [b](b.png).\n"), open: "p.md" });
     h.frame();
     const see = rowOf(h, "See");
-    expect(see.bar).toBe("1");
+    expect([see.bar, see.count]).toEqual(["⚠", " "]); // one: no count
     expect(see.barFg).toBe(h.app.theme.roles.warn.fg!);
-    // The broken link, marked as a warning; the text around it not.
-    expect(see.styles[see.at("twin")]!.fg).toBe(h.app.theme.roles.problem_warn.fg!);
-    expect(see.styles[see.at("here")]!.fg).not.toBe(h.app.theme.roles.problem_warn.fg!);
+    expect([rowOf(h, "Two").bar, rowOf(h, "Two").count]).toEqual(["⚠", "2"]);
+    // A warning, below the marks' default level (errors): not marked in the text.
+    expect(see.styles[see.at("twin")]!.fg).not.toBe(h.app.theme.roles.problem_warn.fg!);
     // nope.md is a note not written yet: information, under the default threshold.
     expect(rowOf(h, "And").bar).toBe(" ");
-    expect(statusRow(h.frame())).toContain("⚠ 1");
+    expect(statusRow(h.frame())).toContain("⚠ 3");
     await h.app.run("cursor.goto_line 3");
     expect(statusRow(h.frame())).toContain("⚠ unresolved broken link: twin.png");
+    // Each glyph set its own signs: ASCII's letters, the Nerd Font's icons.
+    for (const [glyphs, sign] of [["ascii", "W"], ["nerd", "\u{ea6c}"]] as const) {
+      const g = await harness({ root: vault(), open: "p.md", config: (c) => (c.render.glyphs = glyphs) });
+      const rows = g.frame().split("\n");
+      expect(rows.find((r) => r.includes("See"))).toContain(`${sign}  See`);
+    }
   });
 
   test("[diagnostics] severity = \"info\": the notes not written yet too, in their colour", async () => {
     const h = await harness({ root: vault(), open: "p.md", config: (c) => (c.diagnostics.severity = "info") });
     h.frame();
     const and = rowOf(h, "And");
-    expect(and.bar).toBe("1");
+    expect(and.bar).toBe("ℹ");
     expect(and.barFg).toBe(h.app.theme.roles.info.fg!);
     expect(statusRow(h.frame())).toMatch(/⚠ 1 {2}ℹ 1/);
   });
 
-  test("space u d hides the bar (the text takes its room), space u shift+d the marks; bar = \"off\" never shows it", async () => {
+  test("space u d hides the bar (the text takes its room); bar = \"off\" never shows it", async () => {
     const h = await harness({ root: vault(), open: "p.md" });
     h.frame();
     const before = rowOf(h, "See").at("See");
     await h.keys("space", "u", "d");
-    expect(rowOf(h, "See").at("See")).toBe(before - 2);
+    expect(rowOf(h, "See").at("See")).toBe(before - 3);
     expect(h.app.messages.at(-1)!.text).toBe("Problems bar: off");
-    await h.keys("space", "u", "shift+d");
-    const see = rowOf(h, "See");
-    expect(see.styles[see.at("twin")]!.fg).not.toBe(h.app.theme.roles.problem_warn.fg!);
     const off = await harness({ root: vault(), open: "p.md", config: (c) => (c.diagnostics.bar = "off") });
     off.frame();
-    expect(rowOf(off, "See").at("See")).toBe(before - 2);
+    expect(rowOf(off, "See").at("See")).toBe(before - 3);
+  });
+
+  test("the marks: a level — errors by default; space u shift+d cycles errors → warnings → all → off", async () => {
+    // A merge's conflict left in it: an error; a broken link, a warning; a note not written yet, information.
+    const text = "# P\n\nSee [twin](twin.png) here.\n\nAnd [nope](nope.md) there.\n\n<<<<<<< ours\nmine\n=======\ntheirs\n>>>>>>> other\n";
+    const h = await harness({ root: vault(text), open: "p.md", config: (c) => (c.diagnostics.severity = "info") });
+    await h.app.run("view.source");
+    const roles = h.app.theme.roles;
+    const marked = () => ({
+      error: rowOf(h, "mine").styles[rowOf(h, "mine").at("mine")]!.fg === roles.problem_error.fg,
+      warning: rowOf(h, "See").styles[rowOf(h, "See").at("[twin")]!.fg === roles.problem_warn.fg,
+      info: rowOf(h, "And").styles[rowOf(h, "And").at("[nope")]!.fg === roles.problem_info.fg,
+    });
+    expect(h.app.problemsShown(h.app.view!).map((p) => p.severity).sort()).toEqual(["error", "info", "warning"]);
+    expect(h.app.ui.problem_marks).toBe("error");
+    expect(marked()).toEqual({ error: true, warning: false, info: false });
+    await h.keys("space", "u", "shift+d");
+    expect(h.app.messages.at(-1)!.text).toBe("Problems marked in the text: warnings and up");
+    expect(marked()).toEqual({ error: true, warning: true, info: false });
+    await h.keys("space", "u", "shift+d");
+    expect(h.app.messages.at(-1)!.text).toBe("Problems marked in the text: all");
+    expect(marked()).toEqual({ error: true, warning: true, info: true });
+    await h.keys("space", "u", "shift+d");
+    expect(h.app.messages.at(-1)!.text).toBe("Problems marked in the text: off");
+    expect(marked()).toEqual({ error: false, warning: false, info: false });
+    await h.keys("space", "u", "shift+d");
+    expect(h.app.ui.problem_marks).toBe("error");
+    // An older config's true and false: every severity shown, and none.
+    for (const [old, level] of [[true, "info"], [false, "off"]] as const) {
+      const dir = mkdtempSync(join(sandbox, "marks-"));
+      writeFileSync(join(dir, "config.toml"), `[diagnostics]\nmarks = ${old}\n`);
+      const { loadConfig } = await import("../src/core/config.ts");
+      expect(loadConfig({ configFile: join(dir, "config.toml"), vaultFile: null }).config.diagnostics.marks).toBe(level);
+    }
   });
 
   test("auto: no bar while a note has had no problems; once it has, it stays as they go", async () => {
@@ -9038,16 +9371,16 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     writeFileSync(join(root, "p.md"), "# P\n\nSee [twin](twin.png) here.\n");
     h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
     h.frame();
-    expect(rowOf(h, "See").at("See")).toBe(clean + 2);
+    expect(rowOf(h, "See").at("See")).toBe(clean + 3);
     writeFileSync(join(root, "p.md"), "# P\n\nSee [twin](x/twin.md) here.\n");
     h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
     h.frame();
     expect(rowOf(h, "See").bar).toBe(" ");
-    expect(rowOf(h, "See").at("See")).toBe(clean + 2); // kept: the text doesn't move back
+    expect(rowOf(h, "See").at("See")).toBe(clean + 3); // kept: the text doesn't move back
   });
 
   test("in source mode the mark is the link's own characters", async () => {
-    const h = await harness({ root: vault(), open: "p.md" });
+    const h = await harness({ root: vault(), open: "p.md", config: (c) => (c.diagnostics.marks = "warning") });
     await h.app.run("view.source");
     h.frame();
     const see = rowOf(h, "See [twin](twin.png)");
@@ -9520,7 +9853,7 @@ describe("linters without a server (19.19)", () => {
     const shown = () => h.app.problemsShown(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
     expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
     expect(shown().sort()).toEqual(["2 error fake: found BAD", "2 warning saved: saved BAD"]);
-    expect(h.frame()).toMatch(/[┃│] 2 RUN BAD/); // the bar: its two, beside its line
+    expect(h.frame()).toMatch(/[┃│] ✖2 RUN BAD/); // the bar: the worse one's sign and its two, beside its line
     // Not installed: said once.
     expect(h.app.messages.filter((m) => m.text.includes("linter gone: slipbox-no-such-linter not found")).length).toBe(1);
     // Typed: the input's linter again after the pause; the file's waits for the save. A line Dockerfile's grammar

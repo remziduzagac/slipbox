@@ -7,7 +7,7 @@ import { existsSync, readFileSync, realpathSync, renameSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { UNSAFE } from "../../src/core/sanitize.ts";
-import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, type Scenario, TOML, TSC } from "./helpers.ts";
+import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, type Scenario, signed, TOML, TSC } from "./helpers.ts";
 import { sleep } from "./herdr.ts";
 import { Skipped, type SessionOptions } from "./session.ts";
 import { GIT_SCENARIOS } from "./world-git.ts";
@@ -286,6 +286,11 @@ const CORE: Scenario[] = [
       await s.keys("escape");
       await s.keys("alt+left"); // back, VS Code's way
       await s.status("home.md");
+      // What a Mac's option+arrows send (option as meta: a word's step): forward and back too.
+      await s.keys("alt+f");
+      await s.status("about-this-vault.md");
+      await s.keys("alt+b");
+      await s.status("home.md");
       await leader(s, "l", "l");
       await s.see("Links from");
       await s.keys("escape");
@@ -441,6 +446,15 @@ const CORE: Scenario[] = [
       await s.see(/3 \S/);
       await s.keys("ctrl+t", "o");
       await s.message(/closed 2 other tabs/);
+      await s.notSee(/2 \S+\.md/);
+      // In a split, a new tab takes this window out of it: two tabs of one window each.
+      await s.keys("ctrl+w", "v");
+      await s.keys("ctrl+t", "c");
+      await s.see(/2 \S+\.md/);
+      await s.keys("ctrl+t", "t");
+      await s.see("Tabs (2)");
+      await s.keys("escape");
+      await s.keys("ctrl+t", "q");
       await s.notSee(/2 \S+\.md/);
       await s.keys("ctrl+t");
       await s.type("Q");
@@ -672,18 +686,23 @@ const CORE: Scenario[] = [
     },
   },
   {
-    name: "problems: space v p lists the vault's broken links by note; enter goes onto one",
+    name: "problems: space v p — the bottom panel's All tab lists the vault's broken links by note; enter goes onto one",
     run: async (s) => {
       await leader(s, "v", "p");
-      await s.status("FILES");
+      await s.status("PROBLEMS");
+      await s.see(/This file \(\d+\) +All \(\d+\)/); // its tabs, across the bottom
       await s.see(/Broken links \(\d+\)/);
-      await s.see(/L16 +visiting-rota\.md/);
+      // A note nothing links to, under Orphans (filtered: the panel is a third of the screen).
+      await s.keys("/");
+      await s.type("broken-front");
       await s.see(/Orphans \(\d+\)/);
       await s.see(/scratch\/broken-front/);
+      await s.keys("escape");
       // Filtered to the rota: partners-and-names's row, over its link to a note not written yet; enter opens it
       // there, on the link.
       await s.keys("/");
       await s.type("visiting-rota");
+      await s.see(/L16 +visiting-rota\.md/);
       await s.keys("enter");
       await s.status("partners-and-names.md");
       await s.status("→ visiting-rota.md (unresolved)");
@@ -696,14 +715,17 @@ const CORE: Scenario[] = [
       config: `[lint]\nenabled = "on"\ncommand = ["sh", "-c", ${JSON.stringify(`for f; do case "$f" in */home.md) printf '%s:3:6 error MD013/line-length Line length [Expected: 80]\\n' "$f";; esac; done; exit 1`)}, "lint"]\n`,
     },
     run: async (s) => {
-      await s.status("⚠ 1", 6000); // how many of each severity (19.8); the linter runs once the note opens
-      // The problems bar (19.9) and the marks (19.10), each toggled off and back.
+      await s.status(signed("{warning} 1"), 6000); // how many of each severity (19.8); the linter runs once the note opens
+      // The problems bar (19.9): the warning's sign beside its line; off and back.
+      await s.see(signed("[│┃] {warning} {2}\\S"));
       await leader(s, "u", "d");
       await s.message("Problems bar: off");
       await leader(s, "u", "d");
-      await leader(s, "u", "shift+d");
-      await s.message("Problems marked in the text: off");
-      await leader(s, "u", "shift+d");
+      // The marks (19.10): a level, cycled from errors through warnings and all to off, and back.
+      for (const level of ["warnings and up", "all", "off", "errors"]) {
+        await leader(s, "u", "shift+d");
+        await s.message(`Problems marked in the text: ${level}`);
+      }
       await leader(s, "v", "p");
       await s.see(/Lint \(1\)/);
       await s.see(/L3 +MD013 line-len/); // cut to the panel
@@ -711,7 +733,38 @@ const CORE: Scenario[] = [
       await s.type("MD013");
       await s.keys("enter");
       await s.status("L3:1"); // rendered: the line's start
-      await s.status("⚠ MD013 line-length: Line length [Expected: 80]");
+      await s.status(signed("{warning} MD013 line-length: Line length \\[Expected: 80\\]"));
+    },
+  },
+  {
+    name: "problems panel: space n q — this file's problems with their lines; j shows the next in the note, enter goes there; tab to All, q closes",
+    options: { files: { "scratch/two.md": "# Two\n\nSee [a](gone-a.png) first.\n\nThen [b](gone-b.png) too.\n" }, open: "scratch/two.md" },
+    run: async (s) => {
+      await s.status(signed("{warning} 2"), 5000);
+      await leader(s, "n", "q");
+      await s.status("PROBLEMS");
+      await s.see(/This file \(2\) +All \(\d+\)/);
+      // Each problem: its sign, line:col, the message, who found it; under it, its line.
+      await s.see(signed("{warning} 3:5 {2}broken link: gone-a\\.png +slipbox unresolved"));
+      await s.see(/^\s+See \[a\]\(gone-a\.png\) first\./m);
+      await s.see(signed("{warning} 5:6 {2}broken link: gone-b\\.png"));
+      // j: the note on the next one, the panel keeping the keys.
+      await s.keys("j");
+      await s.status(/L5:/);
+      await s.status("PROBLEMS");
+      // enter: there, the note has the keys; the panel stays.
+      await s.keys("enter");
+      await s.until(() => !s.statusLine().includes("PROBLEMS"), 3000, "the note's keys again");
+      await s.status(/L5:/);
+      await s.see("This file (2)");
+      // tab: All; q closes it.
+      await leader(s, "n", "q");
+      await s.keys("tab");
+      await s.see(/Broken links \(\d+\)/);
+      await s.keys("q");
+      await s.until(() => !s.text().includes("This file ("), 3000, "the panel closed");
+      // The status line's path between back and forward.
+      await s.status(/‹ scratch\/two\.md ›/);
     },
   },
   {
@@ -722,8 +775,8 @@ const CORE: Scenario[] = [
       await s.ex("e scratch/tool.ts");
       await s.status("tool.ts");
       // The error under the cursor, from the server; the bar beside its line.
-      await s.status(/✖ 2322 Type 'string' is not assignable to type 'number'/, 15000);
-      await s.see(/│ ?1 +const n: number/);
+      await s.status(signed("{error} 2322 Type 'string' is not assignable to type 'number'"), 15000);
+      await s.see(signed("│ ?{error} +const n: number")); // the bar: the error's sign beside its line
       // What's under the cursor (19.12, 19.13): n's type, floating; from its use, its declaration; its uses.
       await s.keys("w");
       await s.keys("shift+k");
@@ -756,7 +809,7 @@ const CORE: Scenario[] = [
       await s.keys("f", "\"", "d", "a", "\"", "i");
       await s.type("1");
       await s.keys("escape");
-      await s.until(() => !s.statusLine().includes("✖"), 10000, "the error gone with the fix");
+      await s.until(() => !signed("{error}").test(s.statusLine()), 10000, "the error gone with the fix");
       // Completion as it's typed (19.16): Math's members after `.`, narrowed by what follows, one put in; then
       // the signature being typed, after `(`.
       await s.keys("shift+g", "o");
@@ -1269,12 +1322,12 @@ const CORE: Scenario[] = [
       // A file with a syntax error: counted in the status line, gone while typing, back after.
       await s.ex("e scratch/half-written.py"); // code isn't in ctrl+p by default (files.show)
       await s.status("half-written.py");
-      await s.status(/✖/, 5000);
+      await s.status(signed("{error}"), 5000);
       await s.keys("G", "o");
       await s.status("INSERT");
-      await s.until(() => !s.statusLine().includes("✖"), 3000, "no error marks while typing");
+      await s.until(() => !signed("{error}").test(s.statusLine()), 3000, "no error marks while typing");
       await s.keys("escape");
-      await s.status(/✖/, 5000);
+      await s.status(signed("{error}"), 5000);
     },
   },
   // --- saving and conflicts -------------------------------------------------------------------

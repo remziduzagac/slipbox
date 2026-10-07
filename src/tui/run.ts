@@ -7,6 +7,7 @@ import { loadConfig } from "../core/config.ts";
 import { openGraph } from "../core/graph.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { setWidthMethod } from "../core/width.ts";
+import { resolve } from "node:path";
 import { locateVault, recordLocation, configFilesFor, setRootMarkers, VaultError, type VaultLocation } from "../core/vault.ts";
 import { setTrustedRoots } from "../core/trust.ts";
 import { App, type AppOptions } from "./app.ts";
@@ -53,6 +54,8 @@ export function prepare(argv: string[]): Start | number {
     configFile: flag(args, "config"),
     // A loose folder opened without a file (`slipbox ~`): the named folders first (17.14, 21.10).
     launcher: loc.mode === "folder" && !loc.file,
+    // A folder of a root opened: the explorer starts there.
+    folder: path && !loc.file ? resolve(path) : undefined,
     recorded,
   };
 }

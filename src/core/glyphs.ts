@@ -78,7 +78,7 @@ export interface Glyphs {
   footnotesButton: string;
   /** The right rail's Info button (3.19), above the outline's. */
   infoButton: string;
-  /** The left rail's Problems button (1.7), under the history's. */
+  /** The left rail's Problems button (1.7), under the history's: the bottom panel, opened and closed. */
   problemsButton: string;
   /** A git branch (17.19): in the worktree picker and the status line. */
   branch: string;
@@ -94,6 +94,15 @@ export interface Glyphs {
   msgError: string;
   msgWarn: string;
   msgInfo: string;
+  /** A problem's severity: beside its line (the problems bar) and on the status line. */
+  problemError: string;
+  problemWarn: string;
+  problemInfo: string;
+  problemHint: string;
+  /** The status line's back and forward, around the path; the place you're at, in its history. */
+  navBack: string;
+  navForward: string;
+  historyHere: string;
 }
 
 const unicode: Glyphs = {
@@ -162,10 +171,21 @@ const unicode: Glyphs = {
   msgError: "✗",
   msgWarn: "!",
   msgInfo: "·",
+  problemError: "✖",
+  problemWarn: "⚠",
+  problemInfo: "ℹ",
+  problemHint: "·",
+  navBack: "‹",
+  navForward: "›",
+  historyHere: "●",
 };
 
 const nerd: Glyphs = {
   ...unicode,
+  problemError: "\u{ea87}", // nf-cod-error
+  problemWarn: "\u{ea6c}", // nf-cod-warning
+  problemInfo: "\u{ea74}", // nf-cod-info
+  problemHint: "\u{ea61}", // nf-cod-lightbulb
   pin: "\u{f0403}", // nf-md-pin
   mode: "nerd",
   // Same icons as render-markdown in the nvim config this replaces.
@@ -261,6 +281,13 @@ const ascii: Glyphs = {
   msgError: "x",
   msgWarn: "!",
   msgInfo: "-",
+  problemError: "E",
+  problemWarn: "W",
+  problemInfo: "I",
+  problemHint: ".",
+  navBack: "<",
+  navForward: ">",
+  historyHere: "*",
 };
 
 const SETS = { unicode, nerd, ascii };

@@ -42,6 +42,14 @@ export async function open(s: Session, name: string): Promise<void> {
   await s.status(name);
 }
 
+/**
+ * A problem's severity sign, as the glyph set in use draws it (19.9) — on the status line, in the bar and the
+ * Problems panel: unicode's, or the Nerd Font's (a kitty, Ghostty or WezTerm terminal gets those).
+ */
+export const SIGN = { error: "[✖\uea87]", warning: "[⚠\uea6c]", info: "[ℹ\uea74]" } as const;
+/** A pattern of `source`, `{error}`, `{warning}` and `{info}` standing for their signs. */
+export const signed = (source: string): RegExp => new RegExp(source.replace(/\{(error|warning|info)\}/g, (_, k: keyof typeof SIGN) => SIGN[k]));
+
 /** Leader sequences: space, then the keys. */
 export const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys);
 

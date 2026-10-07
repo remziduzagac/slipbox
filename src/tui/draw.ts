@@ -5,7 +5,7 @@
 
 import type { Glyphs } from "../core/glyphs.ts";
 import { type Layout, type Line, srcAt } from "../core/layout/ir.ts";
-import { type Problem, SEVERITIES, type Severity, worst } from "../core/diagnostics.ts";
+import { atLeast, type Problem, SEVERITIES, type Severity, worst } from "../core/diagnostics.ts";
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
@@ -79,6 +79,8 @@ export interface Geometry {
   floating?: Rect | null;
   /** Where the active window's cursor is on screen: completion's popup hangs from it (19.16). */
   cursor?: { x: number; y: number } | null;
+  /** The Problems panel (1.7), at the bottom, under its rule: clicks and the wheel there are its. */
+  problems?: Rect | null;
 }
 
 const CHANGE_MARKER_MS = 3000;
@@ -122,7 +124,14 @@ export function drawApp(app: App, c: Canvas): Geometry {
   const frame = !zen;
   const mainY = frame ? head + 1 + (tabBar ? 2 : 0) : 0;
   const mainH = H - mainY - (frame ? 1 : 0) - status;
-  const bottom = mainY + mainH - 1;
+  // The Problems panel (1.7), across the whole width under the windows and the side panes, over the
+  // frame's bottom rule: its tabs' row and its list, under a rule of its own. A screen too short for it
+  // keeps the note: a third of the rows, at least PANEL_ROWS where 40% leaves that many, and at least 3 (its
+  // tabs and a problem).
+  const panelH = app.problemsPanel.shown ? Math.min(Math.max(PANEL_ROWS, Math.floor(mainH / 3)), Math.floor(mainH * 0.4)) : 0;
+  const panel = panelH >= 3 ? panelH : 0;
+  const bodyH = mainH - (panel ? panel + 1 : 0);
+  const bottom = mainY + bodyH - 1;
   // Borders run down to the bottom rule, where they join it.
   const borderEnd = frame ? bottom + 1 : bottom;
 
@@ -143,7 +152,11 @@ export function drawApp(app: App, c: Canvas): Geometry {
 
   if (frame) {
     rule(head, 0, W);
+    rule(mainY + mainH, 0, W);
+  }
+  if (panel) {
     rule(bottom + 1, 0, W);
+    geo.problems = drawProblemsPanel(app, c, { x: 0, y: bottom + 2, w: W, h: panel }, geo);
   }
   if (tabBar) {
     // Tabs hold the note and its outline, not the explorer: the strip starts after the explorer.
@@ -151,7 +164,7 @@ export function drawApp(app: App, c: Canvas): Geometry {
     drawTabs(app, c, x0, { y: head + 1, h: 1 }, geo);
     rule(head + 2, x0, W);
   }
-  drawContent(app, c, { x: left, y: mainY, w: Math.max(0, RW - left - right), h: mainH }, frame, geo);
+  drawContent(app, c, { x: left, y: mainY, w: Math.max(0, RW - left - right), h: bodyH }, frame, geo);
   if (LW) drawRail(app, c, "left", LW - 1, frame ? head : 0, frame ? head + 1 : 0, bottom, borderEnd, geo);
   if (RW < W) drawRail(app, c, "right", RW, frame ? head + (tabBar ? 2 : 0) : mainY, mainY, bottom, borderEnd, geo);
 
@@ -392,7 +405,11 @@ function drawRail(app: App, c: Canvas, side: "left" | "right", bx: number, y0: n
   // A button per view of that side's panel, bright while its view shows.
   const buttons =
     side === "left"
-      ? LEFT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.sidebarShown && app.leftView === v.id, id: `btn:${v.id}` }))
+      ? [
+          ...LEFT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.sidebarShown && app.leftView === v.id, id: `btn:${v.id}` })),
+          // Under them, the bottom panel's: Problems (1.7).
+          { glyph: app.glyphs.problemsButton, on: app.problemsPanel.shown, id: "btn:problems" },
+        ]
       : RIGHT_VIEWS.map((v) => ({ glyph: v.glyph(app.glyphs), on: app.outlineShown && app.rightView === v.id, id: `btn:${v.id}` }));
   buttons.forEach((b, k) => {
     const y = top + k;
@@ -869,7 +886,13 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const onLine = problemLines(problems);
   const barW = app.barWidth(view);
   const barAt = barW ? barRows(layout, problems) : null;
-  const marksOn = app.ui.problem_marks && problems.length > 0;
+  // The marks: the problems as bad as the level set, or worse (19.10).
+  const level = app.ui.problem_marks;
+  const markedOn = level === "off" ? new Map<number, Problem[]>() : problemLines(problems.filter((p) => atLeast(p.severity, level)));
+  const marksOn = markedOn.size > 0;
+  // The Problems panel's chosen problem, while it has the keys: marked whatever the level (1.7).
+  const chosen = view === app.view ? app.chosenProblem() : undefined;
+  const chosenOn = chosen ? problemLines([chosen]) : null;
   const links = commentLinksShown(view);
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
   // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
@@ -883,9 +906,13 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const isCursorRow = showCursor && row === view.cur.row;
     const band = isCursorRow ? cursorBg : null;
     if (band) c.fill(body.x, y, body.w - 1, 1, band);
-    // The problems bar (19.9): on the row a line starts on, how many problems start there, in the worst one's colour.
+    // The problems bar (19.9): on the row a line starts on, the worst problem's sign in its colour, and how many
+    // start there when more than one.
     const here = barAt?.get(row);
-    if (here) drawText(c, gutterX, y, here.length > 9 ? "+" : String(here.length), { ...roleStyle(theme, SEVERITY_ROLE[worst(here)], page), bold: true, bg: band ?? page });
+    if (here) {
+      const n = here.length > 9 ? "+" : here.length > 1 ? String(here.length) : "";
+      drawText(c, gutterX, y, `${severityGlyph(app.glyphs, worst(here))}${n}`, { ...roleStyle(theme, SEVERITY_ROLE[worst(here)], page), bold: true, bg: band ?? page });
+    }
     if (gutter > barW) {
       const num = line.src !== prevSrc ? String(line.src).padStart(gutter - barW - 1) : "";
       const on = onLine.get(line.src);
@@ -907,7 +934,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const to = sel.line || row !== sel.range[1].row ? 1e9 : sel.range[1].col + 1;
       marks.push({ from, to, role: "selection" });
     }
-    if (marksOn) marks.push(...problemMarks(line, layout, onLine, layout.lines[row + 1]?.src !== line.src));
+    if (marksOn) marks.push(...problemMarks(line, layout, markedOn, layout.lines[row + 1]?.src !== line.src));
+    if (chosenOn) marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
     // An oversized lens's rules say how much of it is out of sight: ↑ above, ↓ below.
@@ -1002,8 +1030,10 @@ function drawSignature(app: App, c: Canvas, at: { x: number; y: number }, top: n
   drawText(c, px, y, sanitize(sig.label.slice(b)), st, Math.max(0, x + w - 1 - px));
 }
 
-/** Each severity's sign in the status line. */
-const SEVERITY_GLYPH: Record<Severity, string> = { error: "✖", warning: "⚠", info: "ℹ", hint: "·" };
+/** Each severity's sign, in the glyph set in use: beside its line (the problems bar) and on the status line. */
+function severityGlyph(g: Glyphs, s: Severity): string {
+  return s === "error" ? g.problemError : s === "warning" ? g.problemWarn : s === "info" ? g.problemInfo : g.problemHint;
+}
 
 /** Each severity's colour, in the bar, the line numbers and the status line. */
 const SEVERITY_ROLE: Record<Severity, Role> = { error: "error", warning: "warn", info: "info", hint: "status_dim" };
@@ -1052,9 +1082,9 @@ function barRows(layout: Layout, problems: Problem[]): Map<number, Problem[]> {
  * itself. A rendered one knows each span's line: a link's problem marks the link as drawn, any other
  * the text that came from its lines.
  */
-function problemMarks(line: Line, layout: Layout, onLine: Map<number, Problem[]>, lastRow: boolean): { from: number; to: number; role: Role }[] {
+function problemMarks(line: Line, layout: Layout, onLine: Map<number, Problem[]>, lastRow: boolean, as?: Role): { from: number; to: number; role: Role }[] {
   const out: { from: number; to: number; role: Role }[] = [];
-  const role = (p: Problem): Role => (p.source === "syntax" ? "syntax_error" : MARK_ROLE[p.severity]);
+  const role = (p: Problem): Role => as ?? (p.source === "syntax" ? "syntax_error" : MARK_ROLE[p.severity]);
   if (line.srcMap) {
     for (const p of onLine.get(line.src) ?? []) {
       const from = line.src === p.start.line ? p.start.column - 1 : 0;
@@ -1273,11 +1303,10 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   const base = roleStyle(theme, "sidebar", page);
   c.fill(pane.x, pane.y, pane.w, pane.h, base.bg);
   const history = app.leftView === "history";
-  const problems = app.leftView === "problems";
   const title = LEFT_VIEWS.find((v) => v.id === app.leftView)!.title;
   let rect = paneTitle(app, c, pane, title, app.region === "sidebar", base.bg);
   // The explorer's title: a new note and a new folder, at its right end (18.1).
-  if (!history && !problems && rect !== pane) {
+  if (!history && rect !== pane) {
     const g = app.glyphs;
     const buttons: [string, string][] = [
       [g.newNote, "xnew:note"],
@@ -1293,7 +1322,7 @@ function drawSidebar(app: App, c: Canvas, pane: Rect, geo: Geometry): Rect {
   }
   const s = app.sidebar;
   rect = filterRow(app, c, rect, s, app.region === "sidebar", base.bg, geo);
-  return history ? drawHistoryList(app, c, rect, base.bg, geo) : problems ? drawProblems(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
+  return history ? drawHistoryList(app, c, rect, base.bg, geo) : drawTree(app, c, rect, base.bg, geo);
 }
 
 /**
@@ -1343,8 +1372,9 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
   // The selected note, file, folder or nested vault: a button at the row's end opening its menu
   // (18.1) — rename, move, delete… — its right edge under the title's buttons'.
   const buttonsOf = (row: TreeRow) => {
-    // Another root's rows (20.15) are its own, not this one's to act on: no menu, as explorerItem has it.
-    if (row.under || row.root?.other) return null;
+    // Another root's rows (20.15) are its own, not this one's to act on, nor those above the root: no
+    // menu, as explorerItem has it.
+    if (row.under || row.root?.other || row.outside || row.root?.here) return null;
     if (row.kind === "root" && !(row.root?.kind === "vault" && app.loc.mode === "vault")) return null;
     const bs: (readonly [string, string])[] = [[g.itemMenu, "xrow:menu"]];
     return { bs, w: bs.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0) };
@@ -1364,8 +1394,9 @@ function drawTree(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geomet
     if (!row) break;
     const y = rect.y + i;
     const selected = s.scroll + i === s.selected && app.region === "sidebar";
+    // The root open, in a folder the explorer climbed to: marked, as the note open is.
     let role: Role =
-      row.root?.kind === "vault" ? "sidebar_vault" : row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
+      row.root?.here ? "sidebar_active" : row.root?.kind === "vault" ? "sidebar_vault" : row.kind !== "note" ? "sidebar_dir" : row.path === current ? "sidebar_active" : "sidebar";
     if (selected) role = "sidebar_selected";
     const st = roleStyle(theme, role, bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
@@ -1467,42 +1498,152 @@ function drawHistoryList(app: App, c: Canvas, list: Rect, bg: Color | null, geo:
   return rect;
 }
 
+/** The Problems panel's least height (1.7), its tabs' row included, on a screen tall enough for it. */
+const PANEL_ROWS = 12;
+
 /**
- * The Problems view (1.7): a heading per kind of problem, with its count, that folds; under it each
- * note with problems, then its problems — the line, dim, and how the link is written and why, in
- * the link's colour — cut to the pane (never scrolled sideways).
+ * The Problems panel (1.7), across the bottom: a row of its two tabs — This file (n), All (n) — with
+ * All's filter after them and a close button at the end, then the tab's list. Returns its rect.
  */
-function drawProblems(app: App, c: Canvas, list: Rect, bg: Color | null, geo: Geometry): Rect {
+function drawProblemsPanel(app: App, c: Canvas, rect: Rect, geo: Geometry): Rect {
+  const theme = app.theme;
+  const page = pageBg(theme);
+  const bg = roleStyle(theme, "sidebar", page).bg;
+  c.fill(rect.x, rect.y, rect.w, rect.h, bg);
+  const p = app.problemsPanel;
+  const focused = app.region === "problems";
+  const file = app.fileProblems();
+  let x = rect.x + 1;
+  for (const [tab, title] of [["file", `This file (${file.length})`], ["all", `All (${app.problemCount()})`]] as const) {
+    const id = `ptab:${tab}`;
+    const on = p.tab === tab;
+    const role: Role = app.hover === id ? "hover" : on ? (focused ? "sidebar_selected" : "sidebar_active") : "dim";
+    const w = drawText(c, x, rect.y, ` ${title} `, { ...roleStyle(theme, role, bg), bold: on }, rect.x + rect.w - x);
+    geo.hot.push({ id, x, y: rect.y, w, h: 1 });
+    x += w + 1;
+  }
+  const closeId = "ptab:close";
+  const closeX = rect.x + rect.w - 4;
+  if (closeX > x) smallButton(app, c, closeX, rect.y, ` ${app.glyphs.close} `, closeId, geo, bg);
+  const list = { x: rect.x, y: rect.y + 1, w: rect.w, h: rect.h - 1 };
+  if (p.tab === "all") {
+    const s = p.all;
+    if (s.filtering || s.filter) {
+      const px = drawText(c, x + 1, rect.y, "› ", { ...roleStyle(theme, "sidebar_dir", bg), bg });
+      const fw = drawText(c, x + 1 + px, rect.y, truncate(sanitize(s.filter), Math.max(0, closeX - x - 3 - px)), { ...roleStyle(theme, "text", bg), bg });
+      if (s.filtering && focused) drawText(c, x + 1 + px + fw, rect.y, " ", roleStyle(theme, "cursor", bg));
+    }
+    drawAllProblems(app, c, list, bg, geo);
+  } else drawFileProblems(app, c, list, file, bg, geo);
+  return rect;
+}
+
+/** A panel list's scroll, keeping its selection in view (`per`: rows an entry takes). */
+function panelScroll(s: { selected: number; scroll: number }, count: number, shown: number): void {
+  s.selected = Math.max(0, Math.min(s.selected, count - 1));
+  if (s.selected < s.scroll) s.scroll = s.selected;
+  if (s.selected >= s.scroll + shown) s.scroll = s.selected - shown + 1;
+  s.scroll = Math.max(0, Math.min(s.scroll, Math.max(0, count - shown)));
+}
+
+/**
+ * This file's problems: two rows each — the severity's sign, `line:col`, the message and (dim, at the
+ * right) who found it; under it the line's text, the problem's part marked as in the note.
+ */
+function drawFileProblems(app: App, c: Canvas, list: Rect, problems: Problem[], bg: Color | null, geo: Geometry): void {
+  const theme = app.theme;
+  const s = app.problemsPanel.file;
+  const shown = Math.max(1, Math.floor(list.h / 2));
+  panelScroll(s, problems.length, shown);
+  if (!problems.length) {
+    drawText(c, list.x + 2, list.y, "no problems in this file", roleStyle(theme, "dim", bg), list.w - 2);
+    return;
+  }
+  const lines = app.view?.buf.lines() ?? [];
+  const cols = list.w - 2;
+  for (let i = 0; i < shown; i++) {
+    const at = s.scroll + i;
+    const pr = problems[at];
+    if (!pr) break;
+    const y = list.y + i * 2;
+    const selected = at === s.selected;
+    const st = roleStyle(theme, selected && app.region === "problems" ? "sidebar_selected" : selected ? "sidebar_active" : "sidebar", bg);
+    if (selected) c.fill(list.x, y, list.w, 2, st.bg);
+    const rowBg = st.bg;
+    const sign = severityGlyph(app.glyphs, pr.severity);
+    let x = list.x + 1;
+    x += drawText(c, x, y, `${sign} `, { ...roleStyle(theme, SEVERITY_ROLE[pr.severity], rowBg), bg: rowBg });
+    x += drawText(c, x, y, `${pr.start.line}:${pr.start.column}  `, { ...roleStyle(theme, "dim", rowBg), bg: rowBg });
+    const who = sanitize(`${pr.source}${pr.code ? ` ${pr.code}` : ""}`);
+    const whoW = Math.min(stringWidth(who), Math.floor(cols / 3));
+    const msgRoom = list.x + 1 + cols - x - (whoW ? whoW + 2 : 0);
+    drawText(c, x, y, truncate(sanitize(pr.message.replace(/\s*\n\s*/g, " ")), Math.max(0, msgRoom)), st, Math.max(0, msgRoom));
+    if (whoW) drawText(c, list.x + 1 + cols - whoW, y, truncate(who, whoW), { ...roleStyle(theme, "dim", rowBg), bg: rowBg });
+    drawExcerpt(app, c, list.x + 4, y + 1, cols - 3, lines[pr.start.line - 1] ?? "", pr, rowBg);
+    geo.hot.push({ id: `prow:${at}`, x: list.x, y, w: list.w, h: 2 });
+  }
+}
+
+/**
+ * A problem's line, cut to `w`, its leading blanks dropped: the part the problem covers (to the line's
+ * end when it runs on) marked as in the note, the text before it cut from the front to keep it in sight.
+ */
+function drawExcerpt(app: App, c: Canvas, x: number, y: number, w: number, raw: string, pr: Problem, bg: Color | null): void {
+  if (w <= 0) return;
+  const theme = app.theme;
+  // Tabs as one space each: the columns (UTF-16 units) still count from the line's start.
+  const text = raw.replace(/\r$/, "").replace(/\t/g, " ");
+  const from = Math.max(0, Math.min(text.length, pr.start.column - 1));
+  const to = pr.end.line === pr.start.line ? Math.max(from, Math.min(text.length, pr.end.column - 1)) : text.length;
+  const lead = text.length - text.trimStart().length;
+  const head = sanitize(text.slice(Math.min(lead, from), from));
+  const part = sanitize(text.slice(from, to));
+  const tail = sanitize(text.slice(to));
+  const dim = { ...roleStyle(theme, "dim", bg), bg };
+  const before = stringWidth(head) > w / 2 ? truncateStart(head, Math.floor(w / 2)) : head;
+  let at = x + drawText(c, x, y, before, dim, w);
+  const left = () => Math.max(0, x + w - at);
+  const mark = { ...roleStyle(theme, "text", bg), bg, ...markStyle(theme, pr.source === "syntax" ? "syntax_error" : MARK_ROLE[pr.severity]) };
+  // An empty part (a problem at the line's end): one cell marked where it is.
+  at += drawText(c, at, y, part ? truncate(part, left()) : left() ? " " : "", mark, left());
+  if (left()) drawText(c, at, y, truncate(tail, left()), dim, left());
+}
+
+/**
+ * The All tab: the root's problems as the left panel's view had them — a heading per kind, with its
+ * count, that folds; under it each note with problems, then its problems — the line, dim, and how the
+ * link is written and why, in the link's colour — cut to the panel.
+ */
+function drawAllProblems(app: App, c: Canvas, rect: Rect, bg: Color | null, geo: Geometry): void {
   const theme = app.theme;
   const rows = app.problemRows();
-  const s = app.sidebar;
+  const s = app.problemsPanel.all;
   const g = app.glyphs;
-  const sv = sideView(list, rows, () => "", s);
-  const rect = sv.list;
-  followSelection(s, rows.length, rect.h);
-  if (!rows.length) drawText(c, rect.x + 1, rect.y, s.filter ? "no matches" : "no problems", roleStyle(theme, "dim", bg), rect.w - 1);
+  panelScroll(s, rows.length, rect.h);
+  if (!rows.length) drawText(c, rect.x + 2, rect.y, s.filter ? "no matches" : "no problems", roleStyle(theme, "dim", bg), rect.w - 2);
+  const cols = rect.w - 1;
   for (let i = 0; i < rect.h; i++) {
-    const row = rows[s.scroll + i];
+    const at = s.scroll + i;
+    const row = rows[at];
     if (!row) break;
     const y = rect.y + i;
-    const selected = s.scroll + i === s.selected && app.region === "sidebar";
-    const st = roleStyle(theme, selected ? "sidebar_selected" : "sidebar", bg);
+    const selected = at === s.selected;
+    const st = roleStyle(theme, selected && app.region === "problems" ? "sidebar_selected" : selected ? "sidebar_active" : "sidebar", bg);
     if (selected) c.fill(rect.x, y, rect.w, 1, st.bg);
+    geo.hot.push({ id: `prow:${at}`, x: rect.x, y, w: rect.w, h: 1 });
     if (row.heading) {
-      drawText(c, rect.x, y, truncate(` ${row.folded ? g.foldClosed : g.foldOpen} ${row.label}`, sv.cols), { ...st, bold: true }, rect.w);
+      drawText(c, rect.x + 1, y, truncate(`${row.folded ? g.foldClosed : g.foldOpen} ${row.label}`, cols - 1), { ...st, bold: true }, cols - 1);
       continue;
     }
     if (row.note) {
-      drawText(c, rect.x + 3, y, truncate(row.label, sv.cols - 3), st, sv.cols - 3);
+      drawText(c, rect.x + 4, y, truncate(row.label, cols - 4), st, cols - 4);
       continue;
     }
-    const w = drawText(c, rect.x + 5, y, truncate(row.label, sv.cols - 5), { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, sv.cols - 5);
-    const x = rect.x + 5 + w + 2;
+    const w = drawText(c, rect.x + 6, y, truncate(row.label, cols - 6), { ...roleStyle(theme, "dim", st.bg), bg: st.bg }, cols - 6);
+    const x = rect.x + 6 + w + 2;
     const role: Role = row.section === "Broken links" ? "link_unresolved" : row.section === "Lint" ? "warn" : "link_ambiguous";
-    if (x < rect.x + sv.cols) drawText(c, x, y, truncate(sanitize(row.detail), rect.x + sv.cols - x), { ...roleStyle(theme, role, st.bg), bg: st.bg }, rect.x + sv.cols - x);
+    if (x < rect.x + cols) drawText(c, x, y, truncate(sanitize(row.detail), rect.x + cols - x), { ...roleStyle(theme, role, st.bg), bg: st.bg }, rect.x + cols - x);
   }
-  paneScrollbar(app, c, rect, rows.length, s.scroll, "sidebar", app.region === "sidebar", bg, geo);
-  return rect;
 }
 
 /**
@@ -1681,6 +1822,8 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
         ? " V-LINE "
         : app.region === "sidebar"
           ? " FILES "
+          : app.region === "problems"
+          ? " PROBLEMS "
           : app.region === "outline"
             ? app.rightView === "footnotes"
               ? " FOOTNOTES "
@@ -1742,11 +1885,31 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
   // position on the right is never pushed out.
   const long = pathMarker(app, view);
   const marker = c.width - x - rightW - 2 - stringWidth(long) >= 16 ? long : pathMarker(app, view, true);
-  const pathW = Math.max(4, c.width - x - rightW - 2 - stringWidth(marker));
-  // Cut from the front: the note's own name is the part worth keeping.
+  // Around the path, as an address bar's: back and forward for this window, bright when there's
+  // somewhere to go; hovered, where (over the frame's rule). They go only with the path.
+  const g = app.glyphs;
+  const navW = stringWidth(g.navBack) + stringWidth(g.navForward) + 2;
+  const pathW = Math.max(4, c.width - x - rightW - 2 - stringWidth(marker) - navW);
+  const arrow = (dir: "back" | "forward", glyph: string) => {
+    const id = `status:${dir}`;
+    const to = app.historyStep(dir);
+    const style = app.hover === id && to ? roleStyle(theme, "hover", st.bg) : to ? { ...st, bold: true } : { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg };
+    const w = drawText(c, x, y, glyph, style);
+    geo.hot.push({ id, x, y: band.y, w, h: band.h });
+    if (app.hover === id && band.y > 0) {
+      const tip = truncate(` ${sanitize(to ? `${dir}: ${to}` : `nowhere ${dir === "back" ? "back" : "forward"}`)} `, c.width - x);
+      drawText(c, x, band.y - 1, tip, roleStyle(theme, "overlay", null));
+    }
+    x += w;
+  };
+  arrow("back", g.navBack);
+  x += drawText(c, x, y, " ", st);
+  // Cut from the front: the note's own name is the part worth keeping. Clicked: the window's history.
   const pw = drawText(c, x, y, truncateStart(full, pathW), app.hover === pathId ? roleStyle(theme, "hover", st.bg) : { ...st, bold: true });
   geo.hot.push({ id: pathId, x, y: band.y, w: pw, h: band.h });
   x += pw;
+  x += drawText(c, x, y, " ", st);
+  arrow("forward", g.navForward);
   const markerRole: Role = buf.deleted ? "error" : buf.conflictKept || buf.dirty ? "warn" : "info";
   if (marker) x += drawText(c, x, y, marker, roleStyle(theme, markerRole, st.bg), Math.max(0, c.width - rightW - x));
   // Whether external changes to this file will show up.
@@ -1763,13 +1926,20 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
     const mine = problems.filter((p) => p.start.line <= src && src <= p.end.line).sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
     const top = mine[0];
     const text = top
-      ? `  ${SEVERITY_GLYPH[top.severity]} ${top.code ? `${top.code} ` : ""}${top.message}`
+      ? `  ${severityGlyph(app.glyphs, top.severity)} ${top.code ? `${top.code} ` : ""}${top.message}`
       : `  ${SEVERITIES.map((sev) => [sev, problems.filter((p) => p.severity === sev).length] as const)
           .filter(([, n]) => n)
-          .map(([sev, n]) => `${SEVERITY_GLYPH[sev]} ${n}`)
+          .map(([sev, n]) => `${severityGlyph(app.glyphs, sev)} ${n}`)
           .join("  ")}`;
     const room = rx - x - 3 - stringWidth(watch.text);
-    if (room > 8) x += drawText(c, x, y, truncate(sanitize(text), room), { ...roleStyle(theme, SEVERITY_ROLE[top?.severity ?? worst(problems)], st.bg), bg: st.bg });
+    // Clicked, the Problems panel on this file's (1.7).
+    const id = "status:problems";
+    if (room > 8) {
+      const role: Role = app.hover === id ? "hover" : SEVERITY_ROLE[top?.severity ?? worst(problems)];
+      const w = drawText(c, x, y, truncate(sanitize(text), room), { ...roleStyle(theme, role, st.bg), bg: app.hover === id ? roleStyle(theme, "hover", st.bg).bg : st.bg });
+      geo.hot.push({ id, x: x + 2, y: band.y, w: Math.max(0, w - 2), h: band.h });
+      x += w;
+    }
   }
   if (x + stringWidth(watch.text) + 3 < rx) x += drawText(c, x, y, `  ${watch.text}`, { ...roleStyle(theme, watch.role, st.bg), bg: st.bg });
   if (rx > x) drawText(c, rx, y, right, { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg });

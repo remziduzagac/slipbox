@@ -59,6 +59,8 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       // the repository's own path (not ../README.md, not docs/'s).
       await s.status(/ README\.md/);
       await s.see("Its top, where a folder inside it opens.");
+      // The explorer starts at the folder opened on (`..` climbs to the top): its guide, not the README.
+      await s.see(/\bguide\.md\b/);
       // `slipbox open <path>` is the plain form spelled out.
       await s.restart({ args: ["open"], startAt: "vault/meetings/2026-09-14-weekly.md" });
       await s.status("meetings/2026-09-14-weekly.md");
@@ -257,7 +259,7 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
     },
   },
   {
-    name: "world/terminal: keys as terminals send them — ctrl+j in a list, shift and shift+ctrl arrows select, home and end, ctrl+enter into a split, ctrl+shift+f",
+    name: "world/terminal: keys as terminals send them — ctrl+j in a list, shift and shift+ctrl arrows select, home and end, ctrl+enter into a new tab, ctrl+shift+f",
     options: { files: { "sel.md": "# Sel\n\nBack to index and on to beta.\n" }, open: "sel.md" },
     run: async (s) => {
       // ctrl+j moves a list's selection down (a legacy terminal sends it as a line feed): the
@@ -288,14 +290,16 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       await s.keys("escape", "0");
       await moveTo(s, ["end"], (_, c) => c === 29, "end to the row's last character");
       await moveTo(s, ["home"], (_, c) => c === 1, "home to the row's start");
-      // ctrl+enter follows the link under the cursor into a split (kitty's keyboard protocol tells it from enter).
+      // ctrl+enter follows the link under the cursor into a new tab, as a browser's ctrl+click does (kitty's keyboard
+      // protocol tells it from enter).
       await open(s, "home");
       await s.keys("tab");
       await s.until(() => /→ about-this-vault\.md/.test(s.statusLine()), 3000, "the cursor on the first link");
       await s.keys("ctrl+enter");
-      await s.until(() => windows(s) === 2, 3000, "ctrl+enter to open the link in a split");
+      await s.see(/2 about-this-vault\.md/, 3000); // a second tab, its title the note
       await s.status("about-this-vault.md");
-      await s.keys("ctrl+w", "o");
+      s.expect(windows(s) === 1, "a tab, not a split");
+      await s.keys("ctrl+w", "q"); // its only window: the tab closes
       // ctrl+shift+f finds in every note — an unsaved one as it is — where ctrl+f finds in this one.
       await open(s, "sel.md");
       await leader(s, "n", "v");

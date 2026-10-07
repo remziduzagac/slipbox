@@ -127,7 +127,8 @@ back to slipbox's own register when it can't be read (over SSH, say). The termin
 | --- | --- | --- |
 | next / previous link (the cursor jumps to it) | `tab` / `shift+tab`, `] l` / `[ l` | `space l n` / `space l p` |
 | follow the link under the cursor, else the first on the row | `enter`, `g f`, `g x`, click on it | `space l f` |
-| follow it into the split | `ctrl+enter`, `ctrl+w f` | `space l s`, `space w f` |
+| follow it into a new tab | `ctrl+enter` | `space l t` |
+| follow it into the split | `ctrl+w f` | `space l s`, `space w f` |
 | copy its target | `y l` | `space l y` |
 | write a link to a note picked, as the folder's convention writes one (`:link`, `21.5`) | — | `space l i` |
 | links from this note (list) | — | `space l l` |
@@ -169,11 +170,12 @@ as vim's and blink.cmp's:
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| back / forward | `ctrl+o` / `alt+right`, `alt+left` (back) | `space h p` / `space h n` |
+| back / forward | `ctrl+o` / `alt+right`, `alt+left` (back); `alt+b` / `alt+f` | `space h p` / `space h n` |
 | history, in the left panel (open → focus → close) | — | `space h h` |
 
 Vim's forward is `ctrl+i`, but terminals send `ctrl+i` as `tab`, which is next link here: forward is
-`alt+right` (VS Code's) and `space h n`.
+`alt+right` (VS Code's) and `space h n`. `alt+b` / `alt+f` are what a macOS terminal sends for option+← / option+→
+(meta-b and meta-f, word left and right), so those reach back and forward too.
 
 ## Windows — `space w`
 
@@ -225,7 +227,7 @@ in config.
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| new tab with the current note (`:tabnew`) | `ctrl+t c` | `space t c` |
+| new tab with the current note (`:tabnew`); in a split, this window moved out into its own | `ctrl+t c` | `space t c` |
 | list tabs (pick one) | `ctrl+t t` | `space t t` |
 | next tab | `g t`, `ctrl+tab`, `ctrl+pagedown`, `ctrl+t n`, `ctrl+t right` | `space t n`, `space t right` |
 | previous tab | `g shift+t`, `ctrl+shift+tab`, `ctrl+pageup`, `ctrl+t p`, `ctrl+t left` | `space t p`, `space t left` |
@@ -248,14 +250,14 @@ Inside the explorer (`[keys.explorer]` in config):
 | Key | Action |
 | --- | --- |
 | `j` / `k`, `down` / `up` | move (selects only; nothing opens) |
-| `enter` | open the note as a tab (or switch to its tab) / fold or unfold a folder |
+| `enter` | open the note as a tab (or switch to its tab) / fold or unfold a folder / `..`: the explorer up a folder |
 | `l`, `right` | open the note as a tab (or switch to its tab) / unfold a folder |
 | `o` | open the note in the current window, replacing what it shows |
 | `h`, `left` | collapse |
 | `s` | open in the split's other window (splitting first) |
 | `g g` / `shift+g` | top / bottom |
 | `/` | filter: type to narrow the tree (folders kept); arrows move, `enter` opens, `esc` clears |
-| `a` | show every text file, or back to what `files.show` lists (notes and data files) |
+| `a` | show every text file, or back to what `files.show` lists (auto: notes and data files in a notes root) |
 | `n` / `shift+n` | a new note / folder in the selected folder (beside a selected file); `space n n` too |
 | `r` | rename the selected note, file or folder (a nested root's folder too), in its folder: links fixed |
 | `shift+r` | on a nested root's row: name it, as pointers name it (`slipbox name`; the folder stays) |
@@ -294,7 +296,7 @@ file's folder); elsewhere on the current note, its folder, or this root.
 | `space n shift+y` | a copy of the note beside it (`name-copy`), opened |
 | `space v t` / `space v u` | the trash (`:trash`) / restore what was deleted last |
 | `space v shift+u` | undo the last rename, move or relink (`:undo-rename`, `7.4`): its preview, then as it was |
-| `space v p` | the problems (`:problems`, `1.7`): broken and ambiguous links, in the left panel |
+| `space v p` | the problems (`:problems`, `1.7`): the Problems panel's All tab — the root's links, lint, conflicts |
 | `space v m` | give a folder `.slipbox/` (`:init`): this plain one; in a root, the selected folder (or this note's) |
 | `space v shift+m` | make a nested root a plain folder of the one holding it (this one: then into its parent) |
 | `space v n` | name the folder as pointers name it (`:name`): the selected root, or this one |
@@ -336,6 +338,12 @@ title), `e` edits the selected one's text, `r` renames its label, `d` deletes it
 the outline's keys (`[keys.info]`): `j` / `k` move, `enter` (or a click) opens what a row names — a property's line,
 a tag's notes, the links, backlinks, outline or footnotes — or copies its value, `y` copies, `h` / `l` fold and unfold
 a section, `/` filters, `e` edits the properties, `q` closes, `esc` goes back to the note.
+
+**The Problems panel** (`1.7`) is across the bottom, in two tabs: This file (`space n q`, a click on the status
+line's problems) and All (`space v p`, the left rail's `⚠`). It takes the explorer's keys: `j` / `k` move — in This
+file the note follows, the problem marked — `enter` (or a click again) goes there, `h` / `l` fold and unfold All's
+sections, `/` filters All, `tab` / `shift+tab` (or a click on a title) switch tabs, `q` closes, `esc` goes back to
+the note.
 
 **The properties editor** (`3.20`: `e` there, or `space n shift+p`) floats over the windows with the note's
 frontmatter: every editing key works in it. `esc` in normal mode, `q` or `:q` close it, writing back what changed;
@@ -534,8 +542,8 @@ gets one when a line is added after its last.
 | `space u r` | link URLs shown after the link text |
 | `space u m` | mouse on / off; off gives the mouse back to the terminal for native selection |
 | `space u b` | top bar on / off (the palette chip and the folder's state); the note takes its row |
-| `space u d` | the problems bar on / off: each line's problems, counted, coloured by the worst (`19.9`) |
-| `space u shift+d` | problems marked in the text on / off: underlined where they are (`19.10`) |
+| `space u d` | the problems bar on / off: each line's worst problem's sign, its colour, the count past one (`19.9`) |
+| `space u shift+d` | problems marked in the text, cycling off → errors → warnings → all (`19.10`) |
 
 **Persistence.** UI settings apply at once and are remembered in the session. Config sets the
 defaults, and a session setting is kept only while the config value it overrode is unchanged:
@@ -569,6 +577,7 @@ edit the config and the config wins again.
 | `space n p` | choose which running nvim `space n s` sends to (it asks by itself when unsure) |
 | `space n r` | reload this note from disk |
 | `space n i` | the Info view (`3.19`): open, focus, close — the file's path, root, counts, properties, tags, links |
+| `space n q` | this file's problems (`1.7`): the Problems panel's This file tab, each with its line; open, close |
 | `space v v` | go into a named folder (`:folders`); `back` returns |
 | `space v r` | reindex the root |
 | `space v i` | folder info: root, name and copies, notes, skipped paths, cache and state, watcher |
@@ -607,6 +616,7 @@ mouse off, which gives it back to the terminal.
 | --- | --- |
 | `≡` (on the left rail; without it the top bar's) | show the explorer (and focus it) / hide it |
 | `◷` (on the left rail) | show the history (and focus it) / hide it |
+| `⚠` (on the left rail, under `◷`) | open the Problems panel on All / close it |
 | `▤` (on the right rail; without it the breadcrumb's or the top bar's) | show the outline (and focus it) / hide it |
 | superscript, `¹` (on the right rail, under `▤`) | show the footnotes (and focus them) / hide them |
 | info, `ℹ` (on the right rail, above `▤`) | show the Info (and focus it) / hide it |
@@ -620,7 +630,10 @@ mouse off, which gives it back to the terminal.
 | scrollbar (window, explorer, outline) | click to jump; drag to scroll |
 | horizontal scrollbar | click to jump sideways; drag to scroll sideways (a side pane's also focuses it) |
 | a task's checkbox (`☐` / `☑`) | tick or untick it |
-| status line path | copy the note's path |
+| status line `‹` / `›` | back / forward in the window's history (dim: nowhere to go); hovered, where to |
+| status line path | the window's history above it, Copy path first; click or `enter` goes there |
+| status line problems | the Problems panel on This file / close it |
+| Problems panel | a tab's title switches; a row selects (This file: the note shows it), again goes there; `×` |
 | a message's floating box | click to open the messages list (the boxes go) |
 | which-key popup | click an entry: a group opens it, a command runs it |
 

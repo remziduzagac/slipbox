@@ -87,7 +87,8 @@ extension = "auto"             # auto | keep | drop   (.md)
 roots = []                     # paths, ~, globs: ["~/Projects/*", "~/notes"]; each with what's inside it
 
 [files]                        # files beyond notes (16.x): what the explorer and ctrl+p list
-show = "renderable"            # notes | renderable (notes and data files) | all (every text file)
+show = "auto"                  # auto: renderable in a notes root (.slipbox/), all elsewhere (a repository) |
+                               # notes | renderable (notes and data files) | all (every text file)
 include = []                   # gitignore syntax: always listed ("*.ts", "scripts/")
 exclude = []                   # gitignore syntax: never listed
 
@@ -137,7 +138,7 @@ idle_seconds = 30              # nobody working this long first: no key in the T
 
 [diagnostics]                  # a file's problems where they are (19.8–19.11)
 bar = "auto"                   # the bar beside the text: auto (once a file has had problems) | on | off
-marks = true                   # problems underlined in the text
+marks = "error"                # problems marked in the text, at least: error | warning | info (all) | off
 severity = "warning"           # the least shown: error | warning | info (a note not written yet) | hint
 
 [lsp]                          # language servers for the code slipbox opens (19.x)
@@ -182,7 +183,7 @@ remote = ["nvim"]              # space n s: "nvim" finds the running nvims (spac
                                # else commands run in order, e.g. "code -g {file}:{line}", or
                                # ['nvim --server {server} --remote {file}', …], {server} picked
 
-[lint]                         # the lint surface (3.21): your linter's findings in notes and the Problems view
+[lint]                         # the lint surface (3.21): your linter's findings in notes and the Problems panel
 enabled = "auto"               # auto: only with a markdownlint config (the root's, or ~/.markdownlint-cli2.jsonc)
                                # | on | off (off: [linter.<name>] runs none either)
 command = []                   # [] = markdownlint-cli2, found or installed into slipbox's own folder (19.21)

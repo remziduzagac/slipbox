@@ -97,7 +97,7 @@ export const GIT_SCENARIOS: Scenario[] = [
       // Across roots by a relative path: into the kestrel repository, its top the root; back.
       await s.keys("escape");
       await follow(s, ARCHITECTURE);
-      await s.status(/kestrel · main +docs\/architecture\.md/, 5000);
+      await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
       await s.keys("ctrl+o");
       await s.status(/ notes .*index\.md/, 5000);
     },
@@ -113,14 +113,29 @@ export const GIT_SCENARIOS: Scenario[] = [
       },
     },
     run: async (s) => {
-      // .obsidian/ makes cooking a root: unnamed, shown by its path (21.9); its own tree at the explorer's top (no `..`).
-      await s.status(/ ~\/hobbies\/cooking +Home\.md/);
+      // .obsidian/ makes cooking a root: unnamed, shown by its path (21.9); its own tree at the explorer's top, `..`
+      // above it all the same (17.14: no fence at the root).
+      await s.status(/ ~\/hobbies\/cooking +‹ Home\.md/);
       for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
       await s.until(() => explorer(s).some((r) => /\sRecipes\s*$/.test(r.trimEnd())), 3000, "cooking's own tree");
-      s.expect(!explorer(s).some((r) => /\s\.\.\s*$/.test(r.trimEnd())), "a root has no .. above it");
+      s.expect(explorer(s).some((r) => /\s\.\.\s*$/.test(r.trimEnd())), "`..` above the root");
+      // `..`: hobbies a level at a time — cooking marked and unfolded (its Recipes under it), cycling a root beside
+      // it; a file of cycling's opened switches into it, the explorer staying in hobbies.
+      await s.keys("g", "g"); // `..`, the first row
+      await s.keys("enter");
+      await s.until(() => explorer(s).some((r) => /\scycling\s*$/.test(r.trimEnd())), 3000, "hobbies listed");
+      s.expect(explorer(s).some((r) => /\sRecipes\s*$/.test(r.trimEnd())), "cooking still unfolded under it");
+      await explorerRow(s, "cycling");
+      await s.keys("enter");
+      await s.until(() => explorer(s).some((r) => /202608151900-index\.md\s*$/.test(r.trimEnd())), 3000, "cycling unfolded");
+      await explorerRow(s, "202608151900-index\\.md");
+      await s.keys("enter");
+      await s.status(/ ~\/hobbies\/cycling +‹ 202608151900-index\.md/, 5000);
+      for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
+      await s.until(() => explorer(s).some((r) => /\scooking\s*$/.test(r.trimEnd())), 3000, "the explorer still in hobbies");
       // .zk/ makes cycling one.
       await s.restart({ startAt: "home/hobbies/cycling/202608151900-index.md" });
-      await s.status(/ ~\/hobbies\/cycling +202608151900-index\.md/);
+      await s.status(/ ~\/hobbies\/cycling +‹ 202608151900-index\.md/);
       await s.quit();
       // Opened, read, quit: neither has a file more or less, a byte changed in size — no .slipbox/ made.
       const was = before.get(s)!;
@@ -130,7 +145,7 @@ export const GIT_SCENARIOS: Scenario[] = [
       const config = join(s.dir, "config", "slipbox", "config.toml");
       writeFileSync(config, `${readFileSync(config, "utf8")}\n[walk]\nroot_markers = [".git", ".slipbox"]\n`);
       await s.restart({ startAt: "home/hobbies/cooking/Home.md" });
-      await s.status(/ ~\/hobbies\/cooking +Home\.md/);
+      await s.status(/ ~\/hobbies\/cooking +‹ Home\.md/);
       for (let i = 0; i < 3 && !s.statusLine().includes("FILES"); i++) await leader(s, "e");
       await s.until(() => explorer(s).some((r) => /\s\.\.\s*$/.test(r.trimEnd())), 3000, "a plain folder's .. above it");
     },
@@ -141,17 +156,17 @@ export const GIT_SCENARIOS: Scenario[] = [
     options: { home: true, startAt: "home/work/kestrel-agent-sync-retry/README.md" },
     run: async (s) => {
       // The build's worktree of kestrel (git worktree add): named for its main checkout and its branch.
-      await s.status(/kestrel@agent\/sync-retry +README\.md/);
+      await s.status(/kestrel@agent\/sync-retry +‹ README\.md/);
       await leader(s, "g", "w");
       await s.see("Worktrees (2) — enter: this note there");
       await s.see(/\smain\s+\/\S+\/work\/kestrel\s/); // the main checkout (after its branch icon)
       await s.see(/●\s+(\S+\s+)?agent\/sync-retry\s+\/\S+\/work\/kestrel-agent-sync-retry/); // this one, marked
       await s.type("main");
       await s.keys("enter");
-      await s.status(/kestrel · main +README\.md/, 5000);
+      await s.status(/kestrel · main +‹ README\.md/, 5000);
       // Back: the worktree again, as a vault of its own.
       await s.keys("ctrl+o");
-      await s.status(/kestrel@agent\/sync-retry +README\.md/, 5000);
+      await s.status(/kestrel@agent\/sync-retry +‹ README\.md/, 5000);
     },
   },
 
@@ -166,11 +181,12 @@ export const GIT_SCENARIOS: Scenario[] = [
       const marker = s.read(notes).split("\n").findIndex((l) => l.startsWith("<<<<<<<")) + 1;
       s.expect(marker > 0, "the release notes hold git's markers");
       await leader(s, "v", "p");
+      // Filtered to the file (the panel is a third of the screen): under Conflicts, at its first marker.
+      await s.keys("/");
+      await s.type("release-notes/2.3");
       await s.see(/Conflicts \(1\)/, 5000);
       await s.see("docs/release-notes/2.3.");
       // enter: the note at its first marker, the conflict said.
-      await s.keys("/");
-      await s.type("release-notes/2.3");
       await s.keys("enter");
       await s.status("docs/release-notes/2.3.md", 5000);
       await s.status(`L${marker}:1`);
@@ -198,7 +214,7 @@ export const GIT_SCENARIOS: Scenario[] = [
     options: { home: true, startAt: "home/work/kestrel/docs/architecture.md" },
     run: async (s) => {
       const repo = "~/work/kestrel";
-      await s.status(/kestrel · main +docs\/architecture\.md/);
+      await s.status(/kestrel · main +‹ docs\/architecture\.md/);
       // Detached: its commit where the branch would be.
       git(s, repo, "checkout", "-q", "--detach", "HEAD~1");
       const sha = git(s, repo, "rev-parse", "HEAD").out.trim();
@@ -212,7 +228,7 @@ export const GIT_SCENARIOS: Scenario[] = [
       // switch's files coming and going aren't moves — nothing to relink.
       s.expect(git(s, repo, "checkout", "-q", "refactor/docs-layout").code === 0, "checkout refactor/docs-layout");
       await s.message("switched to branch refactor/docs-layout", 5000);
-      await s.status(/ · refactor\/docs-layout +docs\/architecture\.md/);
+      await s.status(/ · refactor\/docs-layout +‹ docs\/architecture\.md/);
       s.expect(s.read("~/work/kestrel/docs/architecture.md").includes("[sync.md](sync.md)") && !s.exists("~/work/kestrel/docs/sync.md"), "a link the switch broke");
       await leader(s, "l", "r");
       await s.see("relink: 0 changes in 0 files", 5000);
@@ -231,7 +247,7 @@ export const GIT_SCENARIOS: Scenario[] = [
       const renames = git(s, repo, "diff", "-M", "--name-status", old, "HEAD").out.split("\n").filter((l) => l.startsWith("R")).length;
       s.expect(renames > 0, "the rebase brings renames");
       await s.message("cleanup/remove-legacy moved on", 8000); // the box wraps the rest
-      await s.status(/ · cleanup\/remove-legacy +docs\/architecture\.md/); // the tabs stay
+      await s.status(/ · cleanup\/remove-legacy +‹ docs\/architecture\.md/); // the tabs stay
       s.expect((await messagesSaying(s, "moved on", new RegExp(`moved on: git moved ${renames} files`))) === 1, "git's renames said once");
       s.expect((await messagesSaying(s, "switched cleanup", /switched to branch cleanup\/remove-legacy/)) === 1, "no switch said back to the branch");
       s.expect((await messagesSaying(s, "switched detached", /switched to a detached HEAD/)) === detachedBefore, "no detach said for the rebase");
@@ -250,7 +266,7 @@ export const GIT_SCENARIOS: Scenario[] = [
         await s.keys("escape");
       };
       await follow(s, ARCHITECTURE);
-      await s.status(/kestrel · main +docs\/architecture\.md/, 5000);
+      await s.status(/kestrel · main +‹ docs\/architecture\.md/, 5000);
       await s.keys("ctrl+o");
       await s.status(/ notes .*index\.md/, 5000);
       await openExplorer();
