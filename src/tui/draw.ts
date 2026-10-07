@@ -937,8 +937,10 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const to = sel.line || row !== sel.range[1].row ? 1e9 : sel.range[1].col + 1;
       marks.push({ from, to, role: "selection" });
     }
-    if (marksOn) marks.push(...problemMarks(line, layout, markedOn, layout.lines[row + 1]?.src !== line.src));
-    if (chosenOn) marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
+    // Never on decoration (a code cell's header and borders, the lens's rules): they carry a line, not its text. (A
+    // cell's padding never: marks go by a row's cells, and its cells are its text's.)
+    if (marksOn && !line.decor) marks.push(...problemMarks(line, layout, markedOn, layout.lines[row + 1]?.src !== line.src));
+    if (chosenOn && !line.decor) marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
     // A code cell's box (24.13): its borders over the row's spaces there; its header's buttons, each clickable.

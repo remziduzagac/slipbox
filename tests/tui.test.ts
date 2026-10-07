@@ -5467,32 +5467,37 @@ describe("code as a notebook (24.x, 24.13)", () => {
   const line = (h: Harness) => srcAt(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!, h.app.view!.cur.col);
 
   test("a TypeScript file as a notebook: prose at full width; a cell per definition in a box, its header its kind, name, lines and buttons; a class's head, then its methods", async () => {
-    const h = await open();
+    const h = await open({ height: 80 });
     const v = h.app.view!;
     expect(v.source).toBeFalsy();
     const r = rows(h);
     expect(r[0]).toBe("▸ imports  node:fs · node:path · ./links.ts (3)");
     expect(r[1]).toBe("");
-    // The documentation: prose, then its terms — above the cell, outside it.
-    expect(r[2]).toBe("Resolves a link written in a note: the note it reaches, or null when nothing matches.");
-    expect(r.slice(4, 8).join("\n")).toMatch(/^ {2}from +the note it's written in\n {2}target +the link as written {2}string\n {2}returns +the link, or null\n {2}deprecated +use reach instead$/);
-    // The cell: its header, its code (every token as written), its bottom.
+    // The cell: its header (its lines its documentation's with its code's); its documentation — prose, then its terms;
+    // a divider; its code, every token as written; its bottom.
     const head = rowIndex(h, "ƒ resolve");
-    expect(r[head]).toMatch(/^┌─ ƒ resolve ─+ 11–15 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
-    expect(r[head + 1]).toMatch(/^│ export function resolve\(from: string, target: string\): Link \| null \{ +│$/);
-    expect(r[head + 2]).toMatch(/^│ {3}if \(!target\) return null; +│$/);
-    expect(r[head + 6]).toMatch(/^│ \} +│$/);
-    expect(r[head + 7]).toMatch(/^└─+┘$/);
-    expect(r[head]!.length).toBe(r[head + 7]!.length); // one box
+    expect(head).toBe(2);
+    expect(r[head]).toMatch(/^┌─ ƒ resolve ─+ 4–15 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
+    expect(r[head + 1]).toMatch(/^│ Resolves a link written in a note: the note it reaches, or null when nothing matches\. +│$/);
+    expect(r[head + 2]).toMatch(/^│ +│$/);
+    expect(r.slice(head + 3, head + 7).join("\n")).toMatch(/^│ {3}from +the note it's written in +│\n│ {3}target +the link as written {2}string +│\n│ {3}returns +the link, or null +│\n│ {3}deprecated +use reach instead +│$/);
+    expect(r[head + 7]).toMatch(/^├─+┤$/);
+    expect(r[head + 8]).toMatch(/^│ export function resolve\(from: string, target: string\): Link \| null \{ +│$/);
+    expect(r[head + 9]).toMatch(/^│ {3}if \(!target\) return null; +│$/);
+    expect(r[head + 13]).toMatch(/^│ \} +│$/);
+    expect(r[head + 14]).toMatch(/^└─+┘$/);
+    expect(r[head]!.length).toBe(r[head + 14]!.length); // one box
     // The class: a cell of its head; its methods each a cell, at their indentation, a method's doc above it; its brace.
     expect(r[rowIndex(h, "◆ Graph")]).toMatch(/^┌─ ◆ Graph ─+ 16–17 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
     expect(r[rowIndex(h, "◆ Graph") + 2]).toMatch(/^│ {3}private notes = new Map<string, string>\(\); +│$/);
     const textOf = rowIndex(h, "ƒ textOf");
-    expect(r[textOf - 1]).toBe("  A note's text, as read.");
-    expect(r[textOf]).toMatch(/^ {2}┌─ ƒ textOf ─+ 19–21 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
-    expect(r[textOf + 1]).toMatch(/^ {2}│ textOf\(rel: string\): string \| undefined \{ +│$/); // its rows from its own edge
-    // A comment between members: prose on the page, at their indentation, no guide.
-    expect(r[rowIndex(h, "Then writing")]).toBe("  Then writing.");
+    expect(r[textOf]).toMatch(/^ {2}┌─ ƒ textOf ─+ 18–21 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
+    expect(r[textOf + 1]).toMatch(/^ {2}│ A note's text, as read\. +│$/);
+    expect(r[textOf + 2]).toMatch(/^ {2}├─+┤$/);
+    expect(r[textOf + 3]).toMatch(/^ {2}│ textOf\(rel: string\): string \| undefined \{ +│$/); // its rows from its own edge
+    // A comment that documents nothing: prose in a box of its own, at its indentation.
+    const loose = rowIndex(h, "Then writing");
+    expect(r.slice(loose - 1, loose + 2)).toEqual([expect.stringMatching(/^ {2}┌─+┐$/), expect.stringMatching(/^ {2}│ Then writing\. +│$/), expect.stringMatching(/^ {2}└─+┘$/)]);
     expect(r[rowIndex(h, "ƒ add")]).toMatch(/^ {2}┌─ ƒ add ─+ 25 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
     expect(r[rowIndex(h, "ƒ add") - 1]).toBe("");
     expect(r[rowIndex(h, "ƒ add") + 3]).toBe("}");
@@ -5515,7 +5520,11 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(h.app.currentLayout(v).headings.map((x) => `${x.level} ${x.text}`)).toEqual(["1 resolve", "1 Graph", "2 textOf", "2 add"]);
     for (const x of h.app.currentLayout(v).headings) expect(h.app.currentLayout(v).lines[x.line]!.srcMap).toBeDefined();
     // Its cells, for their buttons and keys.
-    expect(h.app.currentLayout(v).cells!.map((c) => `${c.title} ${c.from}-${c.to}`)).toEqual(["resolve 11-15", "Graph 16-17", "textOf 19-21", "add 25-25", "html · min 27-33"]);
+    expect(h.app.currentLayout(v).cells!.map((c) => `${c.title} ${c.from}-${c.to}`)).toEqual(["resolve 4-15", "Graph 16-17", "textOf 18-21", "add 25-25", "html · min 27-33"]);
+    // The cursor on a cell's prose is on its text too, never its border.
+    const prose = h.app.currentLayout(v).lines.findIndex((l) => l.text && !l.srcMap && l.spans.some((sp) => sp.text.includes("Resolves")));
+    h.app.moveCursor(v, { row: prose, col: 0 });
+    expect(v.cur.col).toBe(2);
   });
 
   test("a cell folds to its header — z a, space k f, its ▾ — and opens again; the imports fold on enter", async () => {
@@ -5524,11 +5533,11 @@ describe("code as a notebook (24.x, 24.13)", () => {
     h.app.placeAtLine(v, 13);
     await h.keys("z", "a");
     let r = rows(h);
-    expect(r[rowIndex(h, "ƒ resolve")]).toMatch(/ 11–15 ⇢ ⧉ ✎ ◎ ▸ ─┐$/);
+    expect(r[rowIndex(h, "ƒ resolve")]).toMatch(/ 4–15 ⇢ ⧉ ✎ ◎ ▸ ─┐$/);
     expect(r[rowIndex(h, "ƒ resolve") + 1]).toMatch(/^└─+┘$/);
     expect(rowIndex(h, "if (!target)")).toBe(-1);
     // Its button: open again.
-    const fold = hot(h, "cell:fold:11")!;
+    const fold = hot(h, "cell:fold:4")!;
     click(h, fold);
     expect(rowIndex(h, "if (!target)")).toBeGreaterThan(0);
     // A class folded: its methods with it.
@@ -5548,33 +5557,60 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const v = h.app.view!;
     const lines = v.buf.lines();
     // ⧉: its lines, as the file has them.
-    click(h, hot(h, "cell:copy:11")!);
-    expect(h.copied.at(-1)).toBe(lines.slice(10, 15).join("\n"));
-    expect(h.app.messages.at(-1)!.text).toBe("copied resolve — lines 11–15");
+    click(h, hot(h, "cell:copy:4")!);
+    expect(h.copied.at(-1)).toBe(lines.slice(3, 15).join("\n")); // its documentation with its code
+    expect(h.app.messages.at(-1)!.text).toBe("copied resolve — lines 4–15");
     // ✎: the lens on it, its lines whole.
-    click(h, hot(h, "cell:edit:19")!);
+    click(h, hot(h, "cell:edit:18")!);
     expect(v.live).toBe(true);
     const lens = h.app.currentLayout(v).lines.filter((l) => l.lens === "source").map((l) => l.src);
-    expect([lens[0], lens.at(-1)]).toEqual([19, 22]); // its lines, and the blank line its last block takes
+    expect([lens[0], lens.at(-1)]).toEqual([18, 22]); // its lines, and the blank line its last block takes
     await h.keys("escape", "escape");
     // ◎: the scratch, with its path and lines.
-    click(h, hot(h, "cell:scratch:11")!);
-    expect(h.app.messages.at(-1)!.text).toBe("resolve — lines 11–15 added to the scratch");
-    expect(readFileSync(h.app.scratch().path, "utf8")).toContain("sample.ts:11-15");
+    click(h, hot(h, "cell:scratch:4")!);
+    expect(h.app.messages.at(-1)!.text).toBe("resolve — lines 4–15 added to the scratch");
+    expect(readFileSync(h.app.scratch().path, "utf8")).toContain("sample.ts:4-15");
     // ⚠: a problem in it — counted on its header, the panel on it.
     const warning = (line: number, message: string) => ({ start: { line, column: 3 }, end: { line, column: 6 }, severity: "warning" as const, source: "fake", code: null, message });
     v.buf.serverProblems.set("fake", { version: v.buf.version, raw: [], list: [warning(2, "before it"), warning(13, "a warning"), warning(25, "after it")] });
     v.layoutKey = "";
     h.app.dismissToasts(); // the messages' boxes off the header
-    expect(rows(h)[rowIndex(h, "ƒ resolve")]).toMatch(/ 11–15 ⚠ ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
-    click(h, hot(h, "cell:problems:11")!);
+    expect(rows(h)[rowIndex(h, "ƒ resolve")]).toMatch(/ 4–15 ⚠ ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
+    click(h, hot(h, "cell:problems:4")!);
     expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
     expect(h.app.fileRows()[h.app.problemsPanel.file.selected]!.message).toBe("a warning");
     // ⇢: from its name.
     h.app.closeProblems();
-    click(h, hot(h, "cell:references:11")!);
+    click(h, hot(h, "cell:references:4")!);
     expect(line(h)).toBe(11);
     expect(v.buf.lines()[10]!.slice(placedColumn(h))).toStartWith("resolve(");
+  });
+
+  test("a problem across a cell's lines marks its text only — never its header, its borders or its padding", async () => {
+    const h = await open();
+    const v = h.app.view!;
+    // An error over the whole function, its first line to its last.
+    v.buf.serverProblems.set("fake", { version: v.buf.version, raw: [], list: [{ start: { line: 11, column: 1 }, end: { line: 15, column: 2 }, severity: "error", source: "fake", code: null, message: "wrong" }] });
+    v.layoutKey = "";
+    const c = h.canvas();
+    const lines = c.toString().split("\n");
+    const red = h.app.theme.roles.problem_error;
+    const marked = (y: number, x: number) => {
+      const st = c.styles[y]![x]!;
+      return (red.fg !== undefined && st.fg === red.fg) || (red.underline === true && st.underline === true);
+    };
+    const pane = h.app.geometry!.panes[0]!;
+    const y = (text: string) => lines.findIndex((l, i) => i >= pane.y && l.includes(text));
+    const header = y("ƒ resolve");
+    const sig = y("export function resolve");
+    const bottom = lines.findIndex((l, i) => i > sig && l.includes("└"));
+    const x = (row: number, text: string) => [...lines[row]!.slice(0, lines[row]!.indexOf(text))].length;
+    expect(marked(sig, x(sig, "export"))).toBe(true); // the text
+    // The header's border and title, and the bottom (its ⚠ button is red on purpose).
+    for (let k = pane.textX; k < pane.textX + 20; k++) expect(marked(header, k)).toBe(false);
+    for (let k = pane.textX; k < pane.x + pane.w - 1; k++) expect(marked(bottom, k)).toBe(false);
+    expect(marked(sig, x(sig, "{") + 2)).toBe(false); // the padding after the row's text
+    expect(marked(sig, pane.textX)).toBe(false); // the border
   });
 
   test("boxes or bands: space u c; a band's header and code on a tint, no borders", async () => {
@@ -5583,8 +5619,9 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(h.app.messages.at(-1)!.text).toBe("Code cells: bands");
     const r = rows(h);
     const head = rowIndex(h, "ƒ resolve");
-    expect(r[head]).toMatch(/^ ƒ resolve +11–15 ⇢ ⧉ ✎ ◎ ▾$/);
-    expect(r[head + 1]).toStartWith(" export function resolve(");
+    expect(r[head]).toMatch(/^ ƒ resolve +4–15 ⇢ ⧉ ✎ ◎ ▾$/);
+    expect(r[head + 1]).toStartWith(" Resolves a link");
+    expect(r[r.findIndex((x) => x.includes("export function resolve"))]).toStartWith(" export function resolve(");
     const layout = h.app.currentLayout(h.app.view!);
     expect(layout.lines.find((l) => l.src === 12 && l.srcMap)!.fill).toBe("code_block");
     expect(layout.lines.find((l) => l.src === 12 && l.srcMap)!.frame).toBeUndefined();
@@ -5764,18 +5801,20 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
     const at = (r: string[], text: string) => r.findIndex((x) => x.includes(text));
     // A separator comment: a section's rule with its title, in both.
     for (const r of [ts, py]) expect(r[at(r, "Resolving links")]).toMatch(/^── Resolving links ─+$/);
-    // The docs above the cell — Python's docstring too — as prose, then the same terms; then the cell.
+    // In the cell, its documentation — Python's docstring too, above the code — as prose, then the same terms; a
+    // divider; its code.
+    const inBox = (x: string) => x.replace(/^ *│ ?/, "").replace(/ *│$/, "").trim().replace(/\s+/g, " ");
     const doc = (r: string[]) => {
-      const i = at(r, "Resolves a link");
       const head = at(r, "ƒ resolve");
-      return { prose: r.slice(i, head).filter((x) => x.trim()).map((x) => x.trim().replace(/\s+/g, " ")), head };
+      const divider = r.findIndex((x, i) => i > head && /^├/.test(x));
+      return { prose: r.slice(head + 1, divider).map(inBox).filter((x) => x), head, divider };
     };
     expect(doc(ts).prose).toEqual(["Resolves a link written in a note: the note it reaches, or null when nothing matches.", "from the note it's written in", "target the link as written", "returns the link, or null"]);
     expect(doc(py).prose).toEqual(["Resolves a link written in a note: the note it reaches, or None when nothing matches.", "from_ the note it's written in", "target the link as written", "returns the link, or None"]);
-    expect(ts[doc(ts).head]).toMatch(/^┌─ ƒ resolve ─+ 11–15 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
+    expect(ts[doc(ts).head]).toMatch(/^┌─ ƒ resolve ─+ 5–15 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
     expect(py[doc(py).head]).toMatch(/^┌─ ƒ resolve ─+ 6–20 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
-    expect(ts[doc(ts).head + 1]).toMatch(/^│ export function resolve\(from: string, target: string\): Link \| null \{ +│$/);
-    expect(py[doc(py).head + 1]).toMatch(/^│ def resolve\(from_: str, target: str\) -> Link \| None: +│$/);
+    expect(ts[doc(ts).divider + 1]).toMatch(/^│ export function resolve\(from: string, target: string\): Link \| null \{ +│$/);
+    expect(py[doc(py).divider + 1]).toMatch(/^│ def resolve\(from_: str, target: str\) -> Link \| None: +│$/);
     // In the cell: a comment after code a note, its marker gone; a comment line prose, its marker gone.
     expect(ts[at(ts, "nothing written")]).toMatch(/^│ {3}if \(!target\) return null; +nothing written: nothing to find +│$/);
     expect(py[at(py, "nothing written")]).toMatch(/^│ {5}│ {3}return None +nothing written: nothing to find +│$/);
@@ -5785,13 +5824,14 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
     // A long line breaks before its operator, in both: `??`, `or`.
     expect(ts[at(ts, "byAlias")]).toMatch(/^│ {7}\?\? byAlias\.get/);
     expect(py[at(py, "by_alias")]).toMatch(/^│ {9}or by_alias\.get/);
-    // The class: its doc above its cell; its method's above the method's, both paragraphs prose (a docstring's
-    // indentation isn't markdown's code).
+    // The class: its doc in its cell; its method's in the method's, both paragraphs prose (a docstring's indentation
+    // isn't markdown's code).
     for (const r of [ts, py]) {
-      expect(r[at(r, "◆ Graph") - 1]!.trim()).toBe("The notes of a folder, read once.");
+      expect(inBox(r[at(r, "◆ Graph") + 1]!)).toBe("The notes of a folder, read once.");
       const m = at(r, "ƒ text");
-      expect(r.slice(m - 3, m).map((x) => x.trim())).toEqual(["A note's text, as read.", "", "From the cache when it has it."]);
       expect(r[m]).toMatch(/^ +┌─ ƒ text_?[oO]f ─/);
+      expect(r.slice(m + 1, m + 4).map(inBox)).toEqual(["A note's text, as read.", "", "From the cache when it has it."]);
+      expect(r[m + 4]).toMatch(/^ +├─+┤$/);
     }
   });
 
@@ -5802,7 +5842,7 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
     // The docstring drawn above `def`, each row on its own line: its first, its terms'.
     const doc = layout.lines.filter((l) => l.src >= 7 && l.src <= 16);
     expect(doc[0]!.src).toBe(7);
-    expect(layout.lines.findIndex((l) => l.src === 7)).toBeLessThan(layout.lines.findIndex((l) => l.src === 6));
+    expect(layout.lines.findIndex((l) => l.src === 7)).toBeLessThan(layout.lines.findIndex((l) => l.src === 6 && l.srcMap));
     expect(layout.lines.find((l) => l.spans.some((s) => s.text.startsWith("from_")))!.src).toBe(11);
   });
 
@@ -5810,17 +5850,20 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
     const ts = rows(
       await open(
         "c.ts",
-        ["// eslint-disable-next-line no-console", 'console.log("x");', "// const old = compute(1);", "// A plain note", "// over two lines.", "const a = 1; // first", "const bb = 22; // second", "// ==== Tail ====", "const y = 1;", ""].join("\n"),
+        ["// eslint-disable-next-line no-console", 'console.log("x");', "// const old = compute(1);", "// A plain note", "// over two lines.", "const a = 1; // first", "const bb = 22; // second", "// ==== Tail ====", "const y = 1;", "", "// Adds one, as Go documents a function.", "function inc(x: number) { return x + 1; }", ""].join("\n"),
       ),
     );
     expect(ts).toContain("// eslint-disable-next-line no-console");
     expect(ts).toContain("// const old = compute(1);");
-    expect(ts).toContain("A plain note over two lines.");
+    expect(ts.some((x) => /^│ A plain note over two lines\. +│$/.test(x))).toBe(true); // its own box
     const a = ts.find((x) => x.includes("first"))!;
     const b = ts.find((x) => x.includes("second"))!;
     expect(a.indexOf("first")).toBe(b.indexOf("second")); // one column for the run's notes
     expect(a).toMatch(/^│ const a = 1; +first +│$/);
     expect(ts[ts.indexOf(a) - 1]).toMatch(/^┌─ • a · bb ─/); // the values together, one cell
+    // Comment lines right above a definition document it: in its cell, above a divider.
+    const inc = ts.findIndex((x) => x.includes("ƒ inc"));
+    expect(ts.slice(inc, inc + 3)).toEqual([expect.stringMatching(/^┌─ ƒ inc ─+ 11–12 /), expect.stringMatching(/^│ Adds one, as Go documents a function\. +│$/), expect.stringMatching(/^├─+┤$/)]);
     // A section right after code: a blank row before its rule all the same.
     expect(ts[ts.findIndex((x) => x.includes("── Tail"))! - 1]).toBe("");
     const py = rows(await open("t.py", ["#!/usr/bin/env python3", "# -*- coding: utf-8 -*-", "x = os.environ  # type: ignore", ""].join("\n")));

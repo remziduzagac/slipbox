@@ -48,9 +48,13 @@ export function cells(line: Line | undefined): Cell[] {
   // A rendered row's trailing spaces are padding, not text: the cursor stops at the last visible
   // character. A source row's are text (a hard break's two spaces): the cursor reaches them.
   if (!map) while (c.length && /^\s$/.test(c[c.length - 1]!.g)) c.pop();
-  // A code cell's padding before its text (24.13) maps where the text starts: no stop of its own, so the cursor is on
-  // the text, never on the cell's border.
-  if (map && c.length > 1 && /^\s/.test(c[0]!.g) && c[0]!.at === c[1]!.at) c.shift();
+  // A code cell's row (24.13): its stops its own text's, never the cell's padding and border (an empty row's, where its
+  // text would start).
+  if (line.text) {
+    const [from, to] = line.text;
+    c = c.filter((x) => x.x >= from && (x.x < to || x.x === from));
+    if (!c.length && !map) c = [{ g: " ", x: from, w: 1 }]; // an empty prose row: one stop, where its text would be
+  }
   cellCache.set(line, c);
   return c;
 }

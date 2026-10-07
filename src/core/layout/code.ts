@@ -69,10 +69,17 @@ function sectionOf(t: string): string | null {
 /** A comment's text without its markers: `//`, `#`, `--`, a one-line block comment's. */
 const unmark = (t: string) => t.replace(/^(\/\/+|#+|--+|\/\*+)\s?/, "").replace(/\s*\*+\/\s*$/, "");
 
-/** A cell: its first and last lines, where it's drawn, what it's called, and the key it folds by. */
+/** Documentation a cell holds above its code: a doc comment or docstring, or a run of comment lines. */
+type DocPart = { doc: CodeDoc } | { comments: { from: number; to: number; column: number } };
+
+/** A cell: its first and last lines (its documentation's with its code's), where it's drawn, what it's called. */
 interface CellSpec {
   from: number;
   to: number;
+  /** Its code's first and last lines (after its documentation); the whole cell's when it has none. */
+  code?: [number, number];
+  /** Its documentation, drawn in it above its code. */
+  docs?: DocPart[];
   column: number;
   mark: string;
   markRole: Role;
@@ -158,17 +165,28 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     return opts.wrap ? breakLine(cells, room, unit, g, strip >= 0 ? unit : 0) : [{ cells }];
   };
 
-  /** A run of comment lines from `ln` (at most to `to`), at one column, on the page: prose by paragraph, a separator a
-   *  section, the rest as written. Returns the line after it, and whether its prose documents the line right below. */
-  const comments = (ln: number, to: number, column: number): number => {
+  /**
+   * A run of comment lines from `ln` (at most to `to`), at one column, on the page. Prose alone, right above a
+   * definition (`documents`): its documentation, returned for its cell. Else drawn: its prose in a box of its own, a
+   * separator a section, the rest as written.
+   */
+  const comments = (ln: number, to: number, column: number, documents: (line: number) => boolean): { next: number; attached?: DocPart } => {
     let end = ln;
     while (end < to && lineComment.get(end + 1)?.column === column && !docs.has(end + 1) && !imports.has(end + 1)) end++;
+    const plain = (k: number) => {
+      const t = unmark(texts[k - 1]!.slice(column)).trim();
+      const raw = texts[k - 1]!.slice(column).replace(/^(\/\/+|#|--+|\/\*+)/, "").trim();
+      return !DIRECTIVE.test(raw) && !(t && CODELIKE.test(t)) && !(sectionOf(t) !== null && column === 0);
+    };
+    if (documents(end + 1) && range(ln, end).every(plain)) return { next: end + 1, attached: { comments: { from: ln, to: end, column } } };
     let para: string[] = [];
     let paraStart = ln;
     const flush = () => {
       if (para.some((t) => t.trim())) {
         gap();
-        prose(proseRows(para, paraStart, column, width, unit, g, links, lines.length, undefined, Number.POSITIVE_INFINITY), false);
+        const text = para;
+        const at = paraStart;
+        proseBox(column, at, at + text.length - 1, (inner, shift) => proseRows(text, at, 0, inner, unit, g, links, lines.length + 1, undefined, Number.POSITIVE_INFINITY, shift));
       }
       para = [];
     };
@@ -190,7 +208,17 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       }
     }
     flush();
-    return end + 1;
+    return { next: end + 1 };
+  };
+
+  /** Prose in a box (or on a band) of its own: a comment that documents nothing, a module's docstring. */
+  const proseBox = (column: number, from: number, to: number, render: (inner: number, shift: number) => Line[]) => {
+    const col = Math.min(column, Math.max(0, width - 30));
+    const inner = width - col - (style === "box" ? 4 : 2);
+    const side = style === "box" ? 2 : 1;
+    if (style === "box") push(boxEdge(col, inner, from, g, "top"));
+    for (const l of render(inner, col + side)) push(framedRow(l, col, inner, style));
+    if (style === "box") push(boxEdge(col, inner, to, g, "bottom"));
   };
 
   /** A cell: its header, then (unless folded) its lines — code, its comments as notes — in a box or on a band. */
@@ -209,14 +237,25 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       heads.push({ section: false, depth: c.def.depth, text: c.title, row: first > header ? first : header, src: c.from });
     };
     if (shut) {
-      if (style === "box") push(cellBottom(col, inner, c.to, g));
+      if (style === "box") push(boxEdge(col, inner, c.to, g, "bottom"));
       heading();
       return;
     }
     const lineEnd = (k: number) => texts[k - 1]?.length ?? 0;
     const framed = (l: Line): Line => framedRow(l, col, inner, style);
+    // Its documentation first, as prose, then a divider; then its code.
+    const side = style === "box" ? 2 : 1;
+    for (const part of c.docs ?? []) {
+      const rows =
+        "doc" in part
+          ? docRows(texts, part.doc, inner, unit, g, links, lines.length, Number.POSITIVE_INFINITY, col + side, 0)
+          : proseRows(range(part.comments.from, part.comments.to).map((k) => unmark(texts[k - 1]!.slice(part.comments.column)).trimEnd()), part.comments.from, 0, inner, unit, g, links, lines.length, undefined, Number.POSITIVE_INFINITY, col + side);
+      for (const l of rows) push(framed(l));
+    }
+    if (c.docs?.length) push(style === "box" ? boxEdge(col, inner, c.code?.[0] ?? c.from, g, "divider") : { spans: [], src: c.code?.[0] ?? c.from, decor: true, fill: "code_block" });
     let blankRow = false;
-    for (let k = c.from; k <= c.to; ) {
+    const [first, last] = c.code ?? [c.from, c.to];
+    for (let k = first; k <= last; ) {
       if (moved.has(k)) {
         k++;
         continue;
@@ -231,7 +270,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       const lc = lineComment.get(k);
       const doc = docs.get(k);
       if (doc) {
-        prose(docRows(texts, { ...doc, column: Math.max(0, doc.column - col) }, inner, unit, g, links, lines.length, unit), true, framed);
+        prose(docRows(texts, doc, inner, unit, g, links, lines.length, unit, 0, Math.max(0, doc.column - col)), true, framed);
         k = doc.end + 1;
         continue;
       }
@@ -265,23 +304,24 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     }
     // A cell's last blank row is the gap's.
     if (blankRow) lines.pop();
-    if (style === "box") push(cellBottom(col, inner, c.to, g));
+    if (style === "box") push(boxEdge(col, inner, c.to, g, "bottom"));
     heading();
   };
 
-  /** The cells of a definition: one, or a class's head then its members, each its own. */
-  const definition = (d: CodeDef) => {
+  /** The cells of a definition — one, or a class's head then its members, each its own — its documentation in it. */
+  const definition = (d: CodeDef, docsOf: DocPart[]) => {
+    const from = Math.min(d.top, ...docsOf.map((p) => ("doc" in p ? (p.doc.before === undefined ? p.doc.start : d.top) : p.comments.from)));
     const mark = markOf(d, g);
     const markRole: Role = d.kind === "function" ? "syn_function" : d.kind === "value" ? "syn_variable" : "syn_type";
     const title = texts[d.name.line - 1]?.slice(d.name.from, d.name.to) ?? "";
     const kids = d.kind === "class" ? defs.filter((k) => k.depth === d.depth + 1 && k.top > d.line && k.end <= d.end && k.kind !== "value") : [];
-    if (!kids.length) return cell({ from: d.top, to: d.end, column: d.column, mark, markRole, title, def: d });
+    if (!kids.length) return cell({ from, to: d.end, code: [d.top, d.end], docs: docsOf, column: d.column, mark, markRole, title, def: d });
     // A class: its head (up to its first member's documentation), then its members on a page of their own.
     const blockOf = (k: CodeDef) => docEnding.get(k.top - 1)?.start ?? k.top;
     let head = Math.min(...kids.map(blockOf)) - 1;
     while (head > d.top && blank(texts[head - 1], head)) head--;
     while (head > d.top && lineComment.has(head)) head--;
-    cell({ from: d.top, to: head, column: d.column, mark, markRole, title, def: d });
+    cell({ from, to: head, code: [d.top, head], docs: docsOf, column: d.column, mark, markRole, title, def: d });
     if (folded.has(d.top)) return;
     const last = Math.max(...kids.map((k) => k.end));
     page(head + 1, last, d.depth + 1);
@@ -295,10 +335,12 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     const here = new Map<number, CodeDef>();
     for (const d of defs) if (d.depth === depth && d.top >= from && d.top <= to && d.kind !== "value" && !here.has(d.top)) here.set(d.top, d);
     const stops = (k: number) => here.has(k) || docs.has(k) || imports.has(k) || moved.has(k) || (lineComment.has(k) && !texts[k - 1]!.slice(0, lineComment.get(k)!.column).trim());
-    let attached = false;
+    // Documentation right above a definition here: its cell's.
+    let pending: DocPart[] = [];
+    const documents = (k: number) => here.has(k) || (docs.has(k) && here.has(docs.get(k)!.end + 1));
     for (let ln = from; ln <= to; ) {
       if (moved.has(ln) || blank(texts[ln - 1], ln)) {
-        attached = false;
+        pending = [];
         ln++;
         continue;
       }
@@ -313,26 +355,27 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       }
       const doc = docs.get(ln);
       if (doc) {
-        gap();
-        for (const l of docRows(texts, doc, width, unit, g, links, lines.length)) push(l);
-        attached = here.has(doc.end + 1);
+        if (here.has(doc.end + 1)) pending.push({ doc });
+        else {
+          gap();
+          proseBox(doc.column, doc.start, doc.end, (inner, shift) => docRows(texts, doc, inner, unit, g, links, lines.length + 1, Number.POSITIVE_INFINITY, shift, 0));
+        }
         ln = doc.end + 1;
         continue;
       }
       const lc = lineComment.get(ln);
       if (lc && !texts[ln - 1]!.slice(0, lc.column).trim()) {
-        const next = comments(ln, to, lc.column);
-        attached = here.has(next) && lines[lines.length - 1]?.srcMap === undefined && !lines[lines.length - 1]?.decor;
-        ln = next;
+        const r = comments(ln, to, lc.column, documents);
+        if (r.attached) pending.push(r.attached);
+        else pending = [];
+        ln = r.next;
         continue;
       }
       const d = here.get(ln);
       if (d) {
-        const above = docsBefore.get(d.top) ?? [];
-        if (!attached || above.length) gap();
-        for (const x of above) for (const l of docRows(texts, x, width, unit, g, links, lines.length)) push(l);
-        attached = false;
-        definition(d);
+        gap();
+        definition(d, [...pending, ...(docsBefore.get(d.top) ?? []).map((doc) => ({ doc }))]);
+        pending = [];
         ln = d.end + 1;
         continue;
       }
@@ -340,8 +383,8 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       let end = ln;
       while (end < to && !stops(end + 1) && !blank(texts[end], end + 1)) end++;
       const values = defs.filter((v) => v.kind === "value" && v.top >= ln && v.top <= end).map((v) => texts[v.name.line - 1]?.slice(v.name.from, v.name.to) ?? "");
-      if (!attached) gap();
-      attached = false;
+      gap();
+      pending = [];
       cell({ from: ln, to: end, column: Math.min(...range(ln, end).filter((k) => !blank(texts[k - 1], k)).map((k) => lead(texts[k - 1]!))), mark: values.length ? g.codeValue : "", markRole: "syn_variable", title: values.length ? values.join(" · ") : "code" });
       ln = end + 1;
     }
@@ -377,7 +420,7 @@ function framedRow(l: Line, column: number, inner: number, style: "box" | "band"
   const w = l.spans.reduce((n, s) => n + stringWidth(s.text), 0);
   const left: Span = { text: " ".repeat(column + side), role: "text", attrs: 0 };
   const right: Span = { text: " ".repeat(Math.max(0, inner - w) + side), role: "text", attrs: 0 };
-  const out: Line = { ...l, spans: [left, ...l.spans, right] };
+  const out: Line = { ...l, spans: [left, ...l.spans, right], text: [column + side, column + side + w] };
   if (l.srcMap) {
     const first = l.srcMap.cells[0] ?? l.srcMap.end;
     out.srcMap = { cells: [...Array(column + side).fill(first), ...l.srcMap.cells, ...Array(Math.max(0, inner - w) + side).fill(l.srcMap.end)], end: l.srcMap.end };
@@ -429,9 +472,10 @@ function cellHeader(c: CellSpec, column: number, inner: number, style: "box" | "
   return { spans, src: c.from, decor: true, ...(box ? {} : { fill: "breadcrumb_band" as Role }) };
 }
 
-/** A box's bottom border. */
-function cellBottom(column: number, inner: number, src: number, g: Glyphs): Line {
-  return { spans: [{ text: " ".repeat(column), role: "text", attrs: 0 }, { text: `${g.box.bl}${g.box.h.repeat(inner + 2)}${g.box.br}`, role: "border", attrs: 0 }], src, decor: true };
+/** A box's edge: its top (a prose box's, untitled), the divider between a cell's documentation and its code, its bottom. */
+function boxEdge(column: number, inner: number, src: number, g: Glyphs, edge: "top" | "divider" | "bottom"): Line {
+  const [l, r] = edge === "top" ? [g.box.tl, g.box.tr] : edge === "divider" ? [g.box.ml, g.box.mr] : [g.box.bl, g.box.br];
+  return { spans: [{ text: " ".repeat(column), role: "text", attrs: 0 }, { text: `${l}${g.box.h.repeat(inner + 2)}${r}`, role: "border", attrs: 0 }], src, decor: true };
 }
 
 /**
@@ -507,14 +551,14 @@ function indentSpans(column: number, unit: number, g: Glyphs, from = unit): Span
 }
 
 /** Prose (a comment's, a doc's body) rendered as markdown at `column`: line k of `text` is source line `first + k`. */
-function proseRows(text: string[], first: number, column: number, width: number, unit: number, g: Glyphs, links: LayoutLink[], rowBase: number, map?: number[], guidesFrom = unit): Line[] {
+function proseRows(text: string[], first: number, column: number, width: number, unit: number, g: Glyphs, links: LayoutLink[], rowBase: number, map?: number[], guidesFrom = unit, shift = 0): Line[] {
   const at = (k: number) => (map ? (map[k] ?? map[map.length - 1] ?? 0) + first : first + k);
   const indent = Math.min(column, Math.max(0, width - 20));
   const md = renderMarkdown(text.join("\n"), { width: Math.max(10, width - indent), glyphs: g, showUrls: false });
-  const shift = links.length;
-  for (const l of md.links) links.push({ ...l, line: l.line < 0 ? -1 : rowBase + l.line, col: l.col + indent, src: at(l.src - 1) });
+  const before = links.length;
+  for (const l of md.links) links.push({ ...l, line: l.line < 0 ? -1 : rowBase + l.line, col: l.col + indent + shift, src: at(l.src - 1) });
   return md.lines.map((l) => {
-    const spans: Span[] = l.spans.map((s) => ({ ...s, ...(s.src !== undefined ? { src: at(s.src - 1) } : {}), ...(s.link !== undefined ? { link: s.link + shift } : {}) }));
+    const spans: Span[] = l.spans.map((s) => ({ ...s, ...(s.src !== undefined ? { src: at(s.src - 1) } : {}), ...(s.link !== undefined ? { link: s.link + before } : {}) }));
     return { spans: [...indentSpans(indent, unit, g, guidesFrom), ...spans], src: at(Math.max(1, l.src) - 1) };
   });
 }
@@ -693,7 +737,7 @@ function foldRow(run: CodeImports, open: boolean, width: number, g: Glyphs): Lin
  * terms whatever its format (`docformats.ts`), the prose rendered as markdown at its column and the terms under it —
  * each name, then what it is, its type dimmed after. Placed by line: what it says is where its source line is.
  */
-function docRows(texts: string[], doc: CodeDoc, width: number, unit: number, g: Glyphs, links: LayoutLink[], rowBase: number, guidesFrom = Number.POSITIVE_INFINITY): Line[] {
+function docRows(texts: string[], doc: CodeDoc, width: number, unit: number, g: Glyphs, links: LayoutLink[], rowBase: number, guidesFrom = Number.POSITIVE_INFINITY, shift = 0, drawAt = doc.column): Line[] {
   const raw = texts.slice(doc.start - 1, doc.end);
   let text: string[];
   if (doc.style === "docstring") {
@@ -716,11 +760,11 @@ function docRows(texts: string[], doc: CodeDoc, width: number, unit: number, g: 
   const read = readDoc(text, doc.style);
   const out: Line[] = [];
   if (read.body.some((b) => b.text.trim())) {
-    out.push(...proseRows(read.body.map((b) => b.text), doc.start, doc.column, width, unit, g, links, rowBase, read.body.map((b) => b.line), guidesFrom));
+    out.push(...proseRows(read.body.map((b) => b.text), doc.start, drawAt, width, unit, g, links, rowBase, read.body.map((b) => b.line), guidesFrom, shift));
   }
   if (!read.tags.length) return out.length ? out : [{ spans: [], src: doc.start }];
   if (out.length) out.push({ spans: [], src: doc.start + read.tags[0]!.line, decor: true });
-  const indent = Math.min(doc.column, Math.max(0, width - 20));
+  const indent = Math.min(drawAt, Math.max(0, width - 20));
   const room = Math.max(10, width - indent);
   const termW = Math.min(16, Math.max(...read.tags.map((t) => stringWidth(t.term)))) + 3;
   for (const t of read.tags) {
