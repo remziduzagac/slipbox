@@ -1923,7 +1923,7 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
       ? { text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`, role: "check_done" as Role }
       : { text: "○ not watching", role: "status_dim" as Role };
   const rx = c.width - rightW;
-  // The file's problems (19.8), from every source: the worst on the cursor's line, else how many of each.
+  // The file's problems (19.8), from every source: how many of each (what they say is the Problems panel's).
   const problems = app.problemsShown(view);
   // None here: the Problems panel's button, dim — clicked, the root's (1.7).
   if (!problems.length && rx - x - 3 - stringWidth(watch.text) > 8) {
@@ -1934,19 +1934,15 @@ function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void {
     x += w;
   }
   if (problems.length) {
-    const mine = problems.filter((p) => p.start.line <= src && src <= p.end.line).sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
-    const top = mine[0];
-    const text = top
-      ? `  ${severityGlyph(app.glyphs, top.severity)} ${top.code ? `${top.code} ` : ""}${top.message}`
-      : `  ${SEVERITIES.map((sev) => [sev, problems.filter((p) => p.severity === sev).length] as const)
-          .filter(([, n]) => n)
-          .map(([sev, n]) => `${severityGlyph(app.glyphs, sev)} ${n}`)
-          .join("  ")}`;
+    const text = `  ${SEVERITIES.map((sev) => [sev, problems.filter((p) => p.severity === sev).length] as const)
+      .filter(([, n]) => n)
+      .map(([sev, n]) => `${severityGlyph(app.glyphs, sev)} ${n}`)
+      .join("  ")}`;
     const room = rx - x - 3 - stringWidth(watch.text);
     // Clicked, the Problems panel on this file's (1.7).
     const id = "status:problems";
     if (room > 8) {
-      const role: Role = app.hover === id ? "hover" : SEVERITY_ROLE[top?.severity ?? worst(problems)];
+      const role: Role = app.hover === id ? "hover" : SEVERITY_ROLE[worst(problems)];
       const w = drawText(c, x, y, truncate(sanitize(text), room), { ...roleStyle(theme, role, st.bg), bg: app.hover === id ? roleStyle(theme, "hover", st.bg).bg : st.bg });
       geo.hot.push({ id, x: x + 2, y: band.y, w: Math.max(0, w - 2), h: band.h });
       x += w;

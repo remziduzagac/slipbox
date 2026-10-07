@@ -3,7 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { explorerRow, leader, moveTo, pos, type Scenario } from "./helpers.ts";
+import { explorerRow, leader, moveTo, pos, problemListed, type Scenario } from "./helpers.ts";
 import type { Session } from "./session.ts";
 
 /** git in one of the set's repositories, as its owner runs it (HOME the set's); its stdout, or a failure. */
@@ -190,7 +190,7 @@ export const GIT_SCENARIOS: Scenario[] = [
       await s.keys("enter");
       await s.status("docs/release-notes/2.3.md", 5000);
       await s.status(`L${marker}:1`);
-      await s.status("conflict");
+      await problemListed(s, "a merge conflict: both sides are still here");
       // The explorer marks it `!` (its row unselected: a selected row shows its buttons there).
       await leader(s, "E");
       await s.status("FILES");

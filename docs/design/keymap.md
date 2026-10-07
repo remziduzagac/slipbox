@@ -342,7 +342,8 @@ a section, `/` filters, `e` edits the properties, `q` closes, `esc` goes back to
 **The Problems panel** (`1.7`) is across the bottom, in two tabs: This file (`space n q`, a click on the status
 line's problems, or on a sign of the bar) and All (`space v p`; the status line's `⚠ 0` when the file has none). It
 takes the explorer's keys: `j` / `k` move — in This file the note follows, the problem marked — `enter` (or a click
-again) goes there, `h` / `l` fold and unfold All's sections, `/` filters the tab, `tab` / `shift+tab` (or a click on
+again) goes there; in All, `enter` or a click opens it in a tab of its own (or the tab showing it), `o` in this window,
+`s` in the split; `h` / `l` fold and unfold All's sections, `/` filters the tab, `tab` / `shift+tab` (or a click on
 a title) switch tabs, `q` closes, `esc` goes back to the note. Resize mode sizes it while it's focused: `j` / `k`
 (`ctrl+w +` / `-`) a row taller or shorter.
 
@@ -634,7 +635,8 @@ mouse off, which gives it back to the terminal.
 | status line path | the window's history above it, Copy path first; click or `enter` goes there |
 | status line problems | the Problems panel on This file (`⚠ 0`, none here: on All) / close it |
 | a sign of the problems bar | the Problems panel on This file, at that problem |
-| Problems panel | a tab's title switches; a row selects (This file: the note shows it), again goes there; `×` |
+| Problems panel | a tab's title switches; This file: a row selects (the note shows it), again goes there |
+| Problems panel, All | a problem's row opens it in a tab at its line; a heading folds; `×` closes the panel |
 | Problems panel's rule | drag to resize it |
 | a message's floating box | click to open the messages list (the boxes go) |
 | which-key popup | click an entry: a group opens it, a command runs it |

@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { appendFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadTheme } from "../../src/core/theme/index.ts";
-import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, type Scenario, signed, TSC } from "./helpers.ts";
+import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, problemListed, type Scenario, signed, TSC } from "./helpers.ts";
 import { sleep } from "./herdr.ts";
 import type { Session } from "./session.ts";
 
@@ -523,16 +523,18 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await s.keys("escape");
       // Unsaved: the linter reads the file, so nothing yet.
       await sleep(1000);
-      s.expect(!s.statusLine().includes("MD099"), "no finding for unsaved text");
+      const counted = () => signed("{warning} [1-9]").test(s.statusLine());
+      s.expect(!counted(), "no finding for unsaved text");
       await s.keys("ctrl+s");
-      await s.status(signed("{warning} MD099 todo-left: A TODO is left"), 5000);
+      await s.until(counted, 5000, "the finding counted once saved");
+      await problemListed(s, signed("{warning} \\d+:1 +todo-left: A TODO is left"));
       // Typed again: hidden until the next save's run.
       await s.keys("A");
       await s.type(" soon");
       await s.keys("escape");
-      await s.until(() => !s.statusLine().includes("MD099"), 3000, "the finding hidden while unsaved");
+      await s.until(() => !counted(), 3000, "the finding hidden while unsaved");
       await s.keys("ctrl+s");
-      await s.status("MD099", 5000);
+      await s.until(counted, 5000, "the finding back once saved");
       // Fixed and saved: gone.
       await s.keys("d", "d", "ctrl+s");
       await s.until(() => !signed("{warning} (MD|[1-9])").test(s.statusLine()), 5000, "no finding once fixed and saved");
@@ -545,7 +547,8 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
     run: async (s) => {
       s.write("scratch/tool.ts", 'const n: number = "x";\nexport const m = n;\n');
       await s.ex("e scratch/tool.ts");
-      await s.status(signed("{error} 2322 Type 'string' is not assignable to type 'number'"), 15000);
+      await s.status(signed("{error} 1"), 15000);
+      await problemListed(s, "Type 'string' is not assignable to type 'number'");
       const server = childOf(s.pid()!, /tsc|typescript/);
       s.expect(server !== null, "TypeScript's server among slipbox's children");
       process.kill(server!, "SIGKILL");
@@ -554,7 +557,7 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await s.keys("G", "o");
       await s.type("const t: string = 1;");
       await s.keys("escape");
-      await s.status(/Type 'number' is not assignable to type 'string'/, 15000);
+      await problemListed(s, "Type 'number' is not assignable to type 'string'", 15000);
     },
   },
 ];

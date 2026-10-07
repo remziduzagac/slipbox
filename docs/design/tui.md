@@ -142,10 +142,10 @@ session keeps them.
   note's own name stays; the arrows go only with it;
 - a marker: `• unsaved`, `• unsaved ⚠ differs from disk` (after keeping yours in a conflict),
   `↻ reloaded` after an external change, or `✖ deleted on disk` — in symbols only (`• ⚠`) on a
-  narrow screen, so the path and the position keep their room; then the worst problem on the cursor's line
-  (`⚠ MD013 line-length: …`, `✖ missing ")"`), or how many the file has of each severity (`✖ 1  ⚠ 3`; see
-  "Problems where they are") — clicked, the Problems panel on This file; with none, the panel's button, dim
-  (`⚠ 0`; Nerd: an alert in a circle; ascii `!`), which opens it on All;
+  narrow screen, so the path and the position keep their room; then how many problems the file has of each severity
+  (`✖ 1  ⚠ 3`; see "Problems where they are") — never what one says, which is the Problems panel's — clicked, the
+  Problems panel on This file; with none, the panel's button, dim (`⚠ 0`; Nerd: an alert in a circle; ascii `!`),
+  which opens it on All;
 - whether external changes will show up: `● watching` (with a count of polled directories, if
   any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
   dropped when the line is too short.
@@ -1007,8 +1007,8 @@ their files open as text.
     file. The grammars of a component's parts load with its own. A PHP file's HTML is coloured as HTML.
   - **Syntax errors** (syntax only: no types, no lint). Where the parser found an error or had to
     invent a missing token, the text is underlined (`syntax_error`), counted in the problems bar, and its line
-    number is red when numbers show; the status line counts it (`✖ 1`), or says the error itself on the
-    cursor's line. Never during insert mode — a half-typed line is always broken — and only for
+    number is red when numbers show; the status line counts it (`✖ 1`), and the Problems panel's This file says
+    what it is. Never during insert mode — a half-typed line is always broken — and only for
     the text as it is now: after an edit the marks come back when the new parse lands.
   - **Links in comments** (`16.10`): URLs, and paths with an extension that name a file of the
     root — relative to the file, then to its root, where a repo's paths start (a leading `/` too) —
@@ -1173,7 +1173,8 @@ name it, never a root's.
 - **A note** is linted once its text is the file's: when it opens, and 300 ms after each save — never while it's
   unsaved, since the linter reads the file. Its findings show only for the text they were found in: typing hides
   them until the next save's run. A finding is a warning among the file's problems ("Problems where they are"):
-  counted in the bar, its line's number in `warn`, the status line saying `⚠ MD013 line-length: …` on its line.
+  counted in the bar and on the status line, its line's number in `warn`, the Problems panel saying what
+  (`⚠ 3:5  line-length: Line length [Expected: 80]  markdownlint MD013`).
 - **The root** is linted when the Problems panel's All tab opens: its **Lint** section lists the findings by note, and a
   note's own run keeps its rows current. `enter` on one opens the note at that line (in source mode, its column); on a
   note's row, at its first.
@@ -1261,8 +1262,8 @@ information — don't mark every page; `"info"` shows them too.
   problem marks the link as drawn, any other the text its lines became. A link that reaches nothing or several notes
   keeps its own colour and underline whatever the level (`link_unresolved`, `link_ambiguous`), and the Problems
   panel's chosen problem is marked whatever it is (below).
-- **The status line**: the worst problem on the cursor's line, its code first (`⚠ MD013 line-length: …`), else how
-  many of each severity (`✖ 1  ⚠ 3  ℹ 2`).
+- **The status line**: how many of each severity (`✖ 1  ⚠ 3  ℹ 2`), on any line; what each says is the Problems
+  panel's (below).
 
 Both switches are UI settings (`space u u`), remembered as the others are.
 
@@ -1295,8 +1296,10 @@ the status line), `esc` handing them back to the note and `q` closing it.
   file git says is unmerged, at its first `<<<<<<<` marker), **Orphans** (`9.5`: the notes no other note links to —
   another root's links count, a note's own don't — each opened by `enter`). Under the first three, the notes with such
   links, and under a note its problems: the line and the link as written, in the link's colour (a finding: its line,
-  rule and what's wrong). `enter` (or a double-click) opens the note there, the cursor on the link as drawn (in source
-  mode, on its text); a note's row (an orphan's too) opens at its first on one click. It takes the explorer's keys (`l`
+  rule and what's wrong). `enter` or a click opens the note there in a tab of its own — or switches to the tab showing
+  it, a place pushed onto its history — the cursor on the problem's line, on the link as drawn (in source mode, on its
+  text); a note's row (an orphan's too) opens at its first. As in the explorer, `o` opens it in this window instead,
+  `s` in the split's other. It takes the explorer's keys (`l`
   / `h` unfold and fold a section); `/` filters — its `› text` after the tabs' titles — keeping the problems whose note,
   line or link matches (a conflict or an orphan by its path) under their headings, unfolded; a note's change shows at
   once. Each opening lints the root again (`Lint (n) …` while it runs); `slipbox problems` gives the same (`--lint` for

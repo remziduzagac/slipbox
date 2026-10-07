@@ -1403,9 +1403,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### problems
 
-- problems panel, All: Broken links, Ambiguous links, Lint, Conflicts, Orphans; folding; enter lands on link; / filters
-  — `notes/meetings/2026-09-05-feedback-synthesis.md`, `work/kestrel/docs/release-notes/2.3.md` (problems.open 1.7;
-  tests)
+- problems panel, All: Broken links, Ambiguous links, Lint, Conflicts, Orphans; folding; enter or a click opens the
+  file in a tab at its line (o here, s the split); / filters — `notes/meetings/2026-09-05-feedback-synthesis.md`,
+  `work/kestrel/docs/release-notes/2.3.md` (problems.open 1.7; tests)
 - problems panel, This file: every source's problems with their lines, the chosen one marked, enter jumps; tab switches;
   / filters; resized (ctrl+w + / -, its rule dragged); a bar sign clicked opens it there; none here: the status
   line's ⚠ 0 — `work/kestrel/src/routes/RouteMap.tsx`, `work/product/drafts/notes-from-offsite.md` (problems.file 1.7;

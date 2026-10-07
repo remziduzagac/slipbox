@@ -4269,7 +4269,7 @@ export class App {
   }
 
   /** A click on a row of the panel: This file's selects its problem (the note shows it), a second click goes there;
-   *  All's as the left panel's did — a heading folds, a note's row opens, a problem selects, then goes there. */
+   *  All's opens it in a tab (a heading folds), as `enter` does. */
   clickProblemRow(i: number, clicks: number): void {
     const p = this.problemsPanel;
     this.region = "problems";
@@ -4283,7 +4283,8 @@ export class App {
     if (!row) return;
     p.all.selected = i;
     if (row.heading) return this.problemsAction(row.folded ? "expand" : "collapse");
-    if (clicks < 2 && !row.note) return;
+    // One click opens it (a tab); the second of a double-click has nothing left to do.
+    if (clicks >= 2) return;
     // The clicked row, of the filtered list (as enter in the filter): the filter clears.
     p.all.filter = "";
     p.all.filtering = false;
@@ -4362,9 +4363,24 @@ export class App {
     return out;
   }
 
+  /**
+   * A file opened at a line (the Problems panel's All, 1.7): in this window, in a tab — its own, or the one
+   * showing it, a place pushed onto that window's history — or in the split's other window.
+   */
+  private openWhere(rel: string, line: number, where: "here" | "tab" | "split"): void {
+    if (where === "tab") {
+      const shown = this.tabs.some((t) => t.views.some((v) => v.buf.rel === rel));
+      this.openOrSwitchTab(rel);
+      if (shown && this.view?.buf.rel === rel) this.pushHistory(this.view);
+      return;
+    }
+    if (where === "split") this.otherWindow();
+    this.open(rel, { heading: null, headingIndex: 0, offset: 0, line });
+  }
+
   /** Open a problem's note at it: the line, the cursor on the link. */
-  jumpToProblem(l: LinkProblem): void {
-    this.open(l.from, { heading: null, headingIndex: 0, offset: 0, line: l.line });
+  jumpToProblem(l: LinkProblem, where: "here" | "tab" | "split" = "here"): void {
+    this.openWhere(l.from, l.line, where);
     const v = this.view;
     if (v && v.buf.rel === l.from) {
       // Rendered, onto the link as drawn (the ones with its target on its line, in order); in source mode, its text.
@@ -4378,16 +4394,16 @@ export class App {
   }
 
   /** Open a linter's finding: its note at its line (and column, when it says one). */
-  jumpToLint(i: LintIssue): void {
-    this.openAt(relative(this.loc.root, i.file), i.line, i.column ?? 1);
+  jumpToLint(i: LintIssue, where: "here" | "tab" | "split" = "here"): void {
+    this.openAt(relative(this.loc.root, i.file), i.line, i.column ?? 1, where);
   }
 
   /**
    * Open a file at a line and column (1-based; the column in code points): rendered, at the start of
    * the line's row — a rendered row has no source columns; in source mode, on the column.
    */
-  openAt(rel: string, line: number, column = 1): void {
-    this.open(rel, { heading: null, headingIndex: 0, offset: 0, line });
+  openAt(rel: string, line: number, column = 1, where: "here" | "tab" | "split" = "here"): void {
+    this.openWhere(rel, line, where);
     const v = this.view;
     if (v && v.buf.rel === rel) this.placeAtLine(v, line, column);
     this.region = "content";
@@ -4416,17 +4432,18 @@ export class App {
     }
   }
 
-  /** A Problems row opened: its problem; a note's row, the note at its first in that section, of `rows` (the ones
-   *  shown, so a filter's pick) — an orphan's, the note. A heading's does nothing. */
-  private openProblemRow(row: ProblemRow, rows: ProblemRow[]): void {
-    if (row.conflict) return this.openAt(row.conflict.path, row.conflict.line);
-    if (row.link) return this.jumpToProblem(row.link);
-    if (row.lint) return this.jumpToLint(row.lint);
+  /** A Problems row opened — in a tab by default (`enter`, a click), as the explorer opens a note: its problem; a note's
+   *  row, the note at its first in that section, of `rows` (the ones shown, so a filter's pick) — an orphan's, the
+   *  note. A heading's does nothing. */
+  private openProblemRow(row: ProblemRow, rows: ProblemRow[], where: "here" | "tab" | "split" = "tab"): void {
+    if (row.conflict) return this.openAt(row.conflict.path, row.conflict.line, 1, where);
+    if (row.link) return this.jumpToProblem(row.link, where);
+    if (row.lint) return this.jumpToLint(row.lint, where);
     if (!row.note || row.heading) return;
     const first = rows.find((r) => r.section === row.section && (r.link?.from === row.note || (r.lint && relative(this.loc.root, r.lint.file) === row.note)));
-    if (first?.link) return this.jumpToProblem(first.link);
-    if (first?.lint) return this.jumpToLint(first.lint);
-    this.open(row.note);
+    if (first?.link) return this.jumpToProblem(first.link, where);
+    if (first?.lint) return this.jumpToLint(first.lint, where);
+    this.openWhere(row.note, 1, where);
     this.region = "content";
     if (this.narrow || this.ui.zen) this.sidebar.overlay = false;
   }
@@ -4459,11 +4476,12 @@ export class App {
       case "open_tab":
       case "expand":
       case "open_split":
+        // As the explorer's keys: enter and l a tab of its own (or the tab showing it), o this window, s the split.
         if (!row) break;
         if (row.heading) {
           if (row.folded) this.problemsFolded.delete(row.section);
           else if (action !== "expand") this.problemsFolded.add(row.section);
-        } else this.openProblemRow(row, rows);
+        } else this.openProblemRow(row, rows, action === "open" ? "here" : action === "open_split" ? "split" : "tab");
         break;
       case "collapse":
         if (!row) break;

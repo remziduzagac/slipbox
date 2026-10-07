@@ -5415,7 +5415,7 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
     h.app.moveCursor(v, { row: 1, col: 2 });
     expect(h.frame()).toMatch(/Box\s*›\s*open/);
   });
-  test("a syntax error is marked out of insert, with the status line saying what", async () => {
+  test("a syntax error is marked out of insert, the status line counting it", async () => {
     const root = makeVault();
     writeFileSync(join(root, "bad.py"), "def f(:\n    pass\n\nx = 1\n");
     const h = await harness({ root, open: "bad.py", width: 100 });
@@ -5424,7 +5424,7 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
     expect(errs.length).toBeGreaterThan(0);
     const marked = (c: TextCanvas) => c.styles.some((r) => r.some((st) => st?.underline && st.fg !== "default"));
     expect(marked(h.canvas())).toBe(true);
-    expect(statusRow(h.frame())).toMatch(/✖ (1 syntax error|syntax error|missing)/);
+    expect(statusRow(h.frame())).toMatch(/✖ \d+ /); // how many: what it says is the Problems panel's
     // Typing: no marks (a half-typed line is broken anyway); the fix clears them once it settles.
     await h.keys("A");
     expect(marked(h.canvas())).toBe(false);
@@ -7998,19 +7998,50 @@ describe("the Problems panel (1.7)", () => {
     expect(h.app.view!.buf.rel).toBe("b/twin.md");
   });
 
-  test("a double-click in a filtered list goes to the clicked problem, the filter cleared", async () => {
+  test("All: a click opens the problem in a tab of its own at its line (the tab showing it, if one does); o here, s the split", async () => {
     const h = await setup();
     await h.app.run("note.open a/twin.md");
     await h.keys("space", "v", "p", "/", "n", "o", "p", "e");
     expect(rows(h)).toEqual(["# Broken links (2)", "  other.md", "    L3  nope.png"]);
     h.frame();
-    const row = hot(h, "prow:2")!;
-    click(h, { x: row.x + 8, y: row.y });
-    expect(h.app.view!.buf.rel).toBe("a/twin.md"); // one click selects it
-    expect(h.app.problemsPanel.all.selected).toBe(2);
-    click(h, { x: row.x + 8, y: row.y }); // the second: a double-click
-    expect(h.app.view!.buf.rel).toBe("other.md");
-    expect(h.app.problemsPanel.all.filter).toBe("");
+    // Each click a column further: two at one spot within 400 ms are a double-click.
+    let dx = 8;
+    const at = (i: number) => {
+      h.frame();
+      const r = hot(h, `prow:${i}`)!;
+      return { x: r.x + dx++, y: r.y };
+    };
+    const tabs = () => h.app.tabs.map((t) => t.views.map((v) => v.buf.rel).join("|"));
+    const line = () => srcAt(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!, h.app.view!.cur.col);
+    click(h, at(2));
+    expect(tabs()).toEqual(["a/twin.md", "other.md"]);
+    expect(h.app.activeTab).toBe(1);
+    expect(line()).toBe(3);
+    expect(h.app.region).toBe("content");
+    expect(h.app.problemsPanel.all.filter).toBe(""); // the filter cleared, the panel open
+    expect(h.app.problemsPanel.shown).toBe(true);
+    // index.md's: a third tab; other.md's again, from elsewhere — its tab, no new one, back to its line.
+    click(h, at(h.app.problemRows().findIndex((r) => r.link?.from === "index.md")));
+    expect(tabs()).toEqual(["a/twin.md", "other.md", "index.md"]);
+    h.app.activeTab = 1;
+    h.app.placeAtLine(h.app.view!, 1);
+    h.app.activeTab = 0;
+    click(h, at(h.app.problemRows().findIndex((r) => r.link?.from === "other.md")));
+    expect(tabs()).toEqual(["a/twin.md", "other.md", "index.md"]);
+    expect(h.app.activeTab).toBe(1);
+    expect(line()).toBe(3);
+    await h.keys("ctrl+o"); // back: where it was in that tab
+    expect(line()).toBe(1);
+    // The keys as the explorer's: o in this window, s in the split's other.
+    await h.app.run("tab.close_others");
+    await h.keys("space", "v", "p");
+    h.app.problemsPanel.all.selected = h.app.problemRows().findIndex((r) => r.link?.from === "index.md");
+    await h.keys("o");
+    expect(tabs()).toEqual(["index.md"]);
+    await h.keys("space", "v", "p");
+    h.app.problemsPanel.all.selected = h.app.problemRows().findIndex((r) => r.link?.from === "other.md");
+    await h.keys("s");
+    expect(tabs()).toEqual(["index.md|other.md"]);
   });
 
   test("This file: every problem of the note with its line, the chosen one marked in the text; moving shows it, enter goes there", async () => {
@@ -8205,13 +8236,14 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     expect(ok()).toBe(true);
   };
 
-  test("once a note is saved it's linted: the finding on the cursor's line on the status line, its line number marked; editing hides them until saved", async () => {
+  test("once a note is saved it's linted: counted on the status line, its line number marked; editing hides them until saved", async () => {
     const { h } = await setup();
     h.frame();
     await until(() => h.app.view!.buf.lint !== null);
     expect(statusRow(h.frame())).toContain("⚠ 1"); // how many of each severity (19.8)
-    await h.keys("j", "j"); // line 3
-    expect(statusRow(h.frame())).toContain("⚠ MD013 line-length: Line length [Expected: 80]");
+    await h.keys("j", "j"); // line 3: the status line still counts, never says what (the Problems panel does)
+    expect(statusRow(h.frame())).toContain("⚠ 1");
+    expect(statusRow(h.frame())).not.toContain("MD013");
     const c = h.canvas();
     const rows = c.toString().split("\n");
     const at = (n: string, text: string) => {
@@ -9394,7 +9426,8 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     expect(rowOf(h, "And").bar).toBe(" ");
     expect(statusRow(h.frame())).toContain("⚠ 3");
     await h.app.run("cursor.goto_line 3");
-    expect(statusRow(h.frame())).toContain("⚠ unresolved broken link: twin.png");
+    expect(statusRow(h.frame())).toContain("⚠ 3"); // on a problem's line too: the counts only
+    expect(statusRow(h.frame())).not.toContain("twin.png");
     // Each glyph set its own signs: ASCII's letters, the Nerd Font's icons.
     for (const [glyphs, sign] of [["ascii", "W"], ["nerd", "\u{ea6c}"]] as const) {
       const g = await harness({ root: vault(), open: "p.md", config: (c) => (c.render.glyphs = glyphs) });

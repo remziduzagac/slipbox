@@ -7,7 +7,7 @@ import { existsSync, readFileSync, realpathSync, renameSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { UNSAFE } from "../../src/core/sanitize.ts";
-import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, type Scenario, signed, TOML, TSC } from "./helpers.ts";
+import { explorerRow, HANDBOOK, leader, MEETING, moveTo, open, pos, problemListed, type Scenario, signed, TOML, TSC } from "./helpers.ts";
 import { sleep } from "./herdr.ts";
 import { Skipped, type SessionOptions } from "./session.ts";
 import { GIT_SCENARIOS } from "./world-git.ts";
@@ -733,7 +733,8 @@ const CORE: Scenario[] = [
       await s.type("MD013");
       await s.keys("enter");
       await s.status("L3:1"); // rendered: the line's start
-      await s.status(signed("{warning} MD013 line-length: Line length \\[Expected: 80\\]"));
+      // What it says, in the panel's This file (the status line counts it).
+      await problemListed(s, signed("{warning} 3:6 +line-length: Line length \\[Expected: 80\\] +markdownlint MD013"));
     },
   },
   {
@@ -798,8 +799,9 @@ const CORE: Scenario[] = [
       s.write("scratch/tool.ts", 'const n: number = "x";\nexport const m = n;\n');
       await s.ex("e scratch/tool.ts");
       await s.status("tool.ts");
-      // The error under the cursor, from the server; the bar beside its line.
-      await s.status(signed("{error} 2322 Type 'string' is not assignable to type 'number'"), 15000);
+      // The error, from the server: counted on the status line, said in the Problems panel; the bar beside its line.
+      await s.status(signed("{error} 1"), 15000);
+      await problemListed(s, signed("{error} 1:\\d+ +Type 'string' is not assignable to type 'number'"));
       await s.see(signed("│ ?{error} +const n: number")); // the bar: the error's sign beside its line
       // What's under the cursor (19.12, 19.13): n's type, floating; from its use, its declaration; its uses.
       await s.keys("w");

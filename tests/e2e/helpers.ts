@@ -50,6 +50,18 @@ export const SIGN = { error: "[✖\uea87]", warning: "[⚠\uea6c]", info: "[ℹ\
 /** A pattern of `source`, `{error}`, `{warning}` and `{info}` standing for their signs. */
 export const signed = (source: string): RegExp => new RegExp(source.replace(/\{(error|warning|info)\}/g, (_, k: keyof typeof SIGN) => SIGN[k]));
 
+/**
+ * A problem of the file on screen, as the Problems panel's This file lists it (the status line only counts them,
+ * 1.7): the panel opened, `needle` waited for there, the panel closed again.
+ */
+export async function problemListed(s: Session, needle: string | RegExp, timeout = 3000): Promise<void> {
+  await s.keys("space", "n", "q");
+  await s.status("PROBLEMS");
+  await s.see(needle, timeout);
+  await s.keys("q");
+  await s.until(() => !s.statusLine().includes("PROBLEMS"), 3000, "the Problems panel closed");
+}
+
 /** Leader sequences: space, then the keys. */
 export const leader = (s: Session, ...keys: string[]) => s.keys("space", ...keys);
 
