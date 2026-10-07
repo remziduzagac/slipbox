@@ -868,7 +868,7 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | 23.8 | **Done.** `slipbox doctor` and the TUI say a root isn't trusted, once, and what that limits |
 | 23.9 | **Done** (2026-10-07). Bun reads no `bunfig.toml` or `.env` of the folder it starts in |
 
-## Code as a document — `24.x`
+## Code as a notebook — `24.x`
 
 *Decided 2026-10-07 with the user: code renders too — not to look like markdown, but to read like a document. The
 design: `docs/design/code-view.md`.*
@@ -887,6 +887,7 @@ design: `docs/design/code-view.md`.*
 | 24.10 | **Prototype.** The lens on code: a line, a doc comment, the imports as written, highlighted; `esc esc` back |
 | 24.11 | **Prototype.** Comments as prose: markers gone; separators as sections; after code, notes in the margin |
 | 24.12 | **Prototype.** Python: docstrings above their definitions; JSDoc, Google, NumPy, reST read into one shape |
+| 24.13 | **Prototype.** A notebook: prose at full width, a cell per definition (boxes or bands), its header's buttons |
 
 ## Deferred — in the design, not in this breakdown
 

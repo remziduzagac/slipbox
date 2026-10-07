@@ -10,6 +10,7 @@ max_width = 110                 # the text column in the TUI; 0 would be the ful
 glyphs = "unicode"              # our terminal font has no Nerd glyphs
 show_urls = "always"
 code = "document"               # code opens as a document (24.x) where its language is mapped
+code_cells = "box"              # the code view's cells in boxes, or on bands
 
 [walk]
 extensions = ["md", "markdown", "mdx"]
@@ -378,6 +379,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; e j" = "ui.problem_marks"
 "leader ; e k" = "ui.urls"
 "leader ; e l" = "ui.mouse"
+"leader ; e m" = "ui.code_cells"
 "leader ; p a" = "scratch.open"
 "leader ; p b" = "scratch.add"
 "leader ; p c" = "scratch.copy"
@@ -428,6 +430,12 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; S b" = "folders.default"
 "leader ; S c" = "root.trust"
 "leader ; S d" = "root.untrust"
+"leader ; T a" = "cell.fold"
+"leader ; T b" = "cell.edit"
+"leader ; T c" = "cell.copy"
+"leader ; T d" = "cell.references"
+"leader ; T e" = "cell.problems"
+"leader ; T f" = "cell.scratch"
 "leader ; D a" = "config.reload"
 "leader ; K a" = "messages.open"
 "leader ; H a" = "help.open"

@@ -84,6 +84,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | half page down / up (cursor moves with it) | `ctrl+d` / `ctrl+u` |
 | page down / up (cursor moves with it) | `pagedown` / `pageup` |
 | the cursor's line to the middle / top / bottom of the window | `z z` / `z t` / `z b` |
+| fold or open the code cell at the cursor (`24.13`) | `z a` |
 | mouse wheel | scrolls the view |
 | horizontal wheel or trackpad | scrolls sideways: the note with wrapping off, a side pane with rows wider than it |
 
@@ -546,6 +547,7 @@ gets one when a line is added after its last.
 | `space u b` | top bar on / off (the palette chip and the folder's state); the note takes its row |
 | `space u d` | the problems bar on / off: each line's worst problem's sign, its colour, the count past one (`19.9`) |
 | `space u shift+d` | problems marked in the text, cycling off → errors → warnings → all (`19.10`) |
+| `space u c` | the code view's cells (`24.13`): in boxes, or on tinted bands |
 
 **Persistence.** UI settings apply at once and are remembered in the session. Config sets the
 defaults, and a session setting is kept only while the config value it overrode is unchanged:
@@ -587,6 +589,20 @@ edit the config and the config wins again.
 | `space m` | messages |
 | `?`, `space ?` | help: every key, grouped, searchable (commands, panel views, resize, mouse); `enter` runs a command |
 | `space q q` | quit (also `ctrl+q`, `:qa`) |
+
+### Code cells — `space k`
+
+The code view (`24.13`) draws code as a notebook: each definition a cell, its header carrying buttons. Each button is
+a key too, on the cell at the cursor:
+
+| Keys | Action | Button |
+| --- | --- | --- |
+| `space k f`, `z a` | fold the cell to its header, or open it | `▾` / `▸` |
+| `space k e` | edit the cell: the lens on its lines | `✎` |
+| `space k y` | copy the cell's lines, as the file has them | `⧉` |
+| `space k r` | where the cell's definition is used (its language server) | `⇢` |
+| `space k p` | the cell's problems: the Problems panel on its first | `⚠ n` |
+| `space k s` | add the cell to the scratch, with its path and lines | `◎` |
 
 ## In lists and prompts
 

@@ -25,6 +25,8 @@ export interface Config {
     show_urls: "auto" | "always" | "never";
     /** How code opens (24.x): as a document, where its language is mapped; or in source mode. */
     code: "document" | "source";
+    /** How the code view draws a cell (24.13): in a box, or on a band. */
+    code_cells: "box" | "band";
   };
   walk: {
     extensions: string[];
@@ -239,7 +241,7 @@ export interface Config {
 
 export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
-  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document" },
+  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document", code_cells: "box" },
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
   links: { style: "auto", path: "auto", extension: "auto" },
   trust: { roots: [] },
@@ -297,6 +299,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.glyphs": ["auto", "nerd", "unicode", "ascii"],
   "render.show_urls": ["auto", "always", "never"],
   "render.code": ["document", "source"],
+  "render.code_cells": ["box", "band"],
   "capture.location": ["state", "vault"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],

@@ -31,7 +31,7 @@ import type { ReplaceState } from "./replacing.ts";
 import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
-import { appendScratch, fence, fenceLanguage, scratchLocation } from "../core/capture.ts";
+import { appendScratch, fence, fenceLanguage, formatEntry, scratchLocation } from "../core/capture.ts";
 import { copyText, readClipboard } from "../core/clipboard.ts";
 import { canonKey, canonSeq, CommandRegistry, Keymap, unknownModifiers } from "../core/commands.ts";
 import { type Config, loadConfig } from "../core/config.ts";
@@ -219,6 +219,8 @@ export interface View {
   lensSize?: number;
   /** A `+` or `-` waiting for the next layout (which has the lens's blocks). */
   lensStep?: 1 | -1;
+  /** The lines the next lens opens on (a code cell's, 24.13), not the cursor's block. */
+  lensRange?: [number, number];
   /** Where the lens sits on screen (rows from the window's top to its top rule), kept as it moves. */
   lensPin?: { range: string; screen: number };
   /** A click moved the cursor: the screen row it was on, which the clicked line keeps. */
@@ -532,6 +534,8 @@ export interface UiState {
   problems_bar: boolean;
   /** The least severity underlined in the text (`off`: none); the Problems panel's choice is marked whatever it is. */
   problem_marks: "off" | "error" | "warning" | "info";
+  /** How the code view draws a cell (24.13): in a box, or on a band. */
+  code_cells: "box" | "band";
   theme: string;
   glyphs: string;
 }
@@ -549,6 +553,7 @@ export function uiDefaults(c: Config): UiState {
     top_bar: c.ui.top_bar,
     problems_bar: c.diagnostics.bar !== "off",
     problem_marks: c.diagnostics.marks,
+    code_cells: c.render.code_cells,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
     urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,
@@ -2214,7 +2219,7 @@ export class App {
       : view.live
         ? this.liveLayout(view, width)
         : code
-          ? view.buf.codeLayout(width, this.ui.wrap, this.glyphs)
+          ? view.buf.codeLayout(width, this.ui.wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view))
           : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
@@ -2359,7 +2364,7 @@ export class App {
     // Code (24.8): the document view around a lens of its own blocks — a line, a doc comment, the imports.
     const code = this.isCodeDocument(buf);
     const fresh = (prev?: Block): LiveBase => {
-      const rendered = code ? buf.codeLayout(width, wrap, this.glyphs) : buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null);
+      const rendered = code ? buf.codeLayout(width, wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view)) : buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null);
       const blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
       // After an edit, the lens keeps covering the lines it did (snapped to whole blocks).
       let range: Block;
@@ -2371,7 +2376,10 @@ export class App {
       return { rendered, width, wrap, renderedVersion: buf.version, version: buf.version, blocks, old: range, active: range, ...around(range), lineCount };
     };
     let base = view.liveBase;
-    if (!base || base.width !== width || base.wrap !== wrap) base = fresh();
+    // A cell's ✎ (24.13): the lens on its lines.
+    const asked = view.lensRange;
+    view.lensRange = undefined;
+    if (!base || base.width !== width || base.wrap !== wrap || asked) base = fresh(asked);
     else if (buf.version !== base.version) {
       // Typed into the lens, the rest untouched: the same render, the lens longer or shorter.
       // …and the line break that ends the lens survived (a delete at its last line's end joins the
@@ -2436,14 +2444,68 @@ export class App {
     return this.layoutFor(view, view.width, this.gutterWidth(view));
   }
 
-  /** The gutter's width for a view: the problems bar's, then the line numbers', then the code view's margin (24.3). */
+  /** The gutter's width for a view: the problems bar's, then the line numbers' (0 when both are off). */
   gutterWidth(view: View): number {
-    return this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0) + this.marginWidth(view);
+    return this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0);
   }
 
-  /** The code view's margin (24.3): a definition's kind, and a space — two columns, in the code view only. */
-  marginWidth(view: View): number {
-    return !view.source && this.isCodeDocument(view.buf) ? 2 : 0;
+  /** The problems the code view's cells count in their headers (24.13): each by its line and severity. */
+  cellProblems(view: View): { line: number; severity: Problem["severity"] }[] {
+    return this.problemsShown(view).map((p) => ({ line: p.start.line, severity: p.severity }));
+  }
+
+  /** The code view's cell (24.13) holding line `line` — the innermost (a method's, not its class's) — or starting there. */
+  cellAt(view: View, line: number): NonNullable<Layout["cells"]>[number] | null {
+    const cells = this.currentLayout(view).cells ?? [];
+    return cells.filter((c) => line >= c.from && line <= c.to).sort((a, b) => a.to - a.from - (b.to - b.from))[0] ?? null;
+  }
+
+  /**
+   * A cell's action (24.13), from its header's button or the key on the cursor's cell: fold it to its header, edit it (the
+   * lens on its lines), copy its code, where its definition is used, its problems, or add it to the scratch.
+   */
+  cellAction(action: string, from?: number): void {
+    const v = this.view;
+    if (!v || !this.isCodeDocument(v.buf) || v.source) return this.message("info", "a cell is the code view's: a file of a language it maps, as a document");
+    const line = from ?? srcAt(this.currentLayout(v).lines[v.cur.row] ?? { src: 1, spans: [] }, v.cur.col);
+    const cell = from !== undefined ? ((this.currentLayout(v).cells ?? []).find((c) => c.from === from) ?? null) : this.cellAt(v, line);
+    if (!cell) return this.message("info", "no cell here: the cursor's on prose, or between cells");
+    const text = v.buf.lines().slice(cell.from - 1, cell.to).join("\n");
+    const lines = cell.from === cell.to ? `line ${cell.from}` : `lines ${cell.from}–${cell.to}`;
+    switch (action) {
+      case "fold":
+        if (!v.buf.codeFolded.delete(cell.from)) v.buf.codeFolded.add(cell.from);
+        for (const x of this.allViews()) if (x.buf === v.buf) x.layoutKey = "";
+        return;
+      case "edit":
+        this.placeAtLine(v, cell.from);
+        v.lensRange = [cell.from, cell.to];
+        if (!v.live) this.setViewMode(v, "live");
+        else v.liveBase = undefined;
+        this.region = "content";
+        return;
+      case "copy":
+        this.copy(text, false);
+        return this.message("info", `copied ${cell.title} — ${lines}`);
+      case "references":
+        if (!cell.name) return this.message("info", `${cell.title}: no definition to look for`);
+        placeAt(this, v, (v.buf.lineStarts()[cell.name.line - 1] ?? 0) + cell.name.column);
+        void this.run("lsp.references");
+        return;
+      case "problems": {
+        this.openProblems("file");
+        const list = this.fileRows();
+        const i = list.findIndex((p) => p.start.line >= cell.from && p.start.line <= cell.to);
+        if (i >= 0) {
+          this.problemsPanel.file.selected = i;
+          this.showFileProblem(list[i]);
+        }
+        return;
+      }
+      case "scratch":
+        this.capture(formatEntry({ ref: { path: v.buf.abs, startLine: cell.from, endLine: cell.to }, snippetText: text, lang: "" }, this.loc.root));
+        return this.message("info", `${cell.title} — ${lines} added to the scratch`);
+    }
   }
 
   /** The problems bar's width (19.9): a sign, a count when more than one, a space — while it's on; with `auto`,
@@ -2541,6 +2603,8 @@ export class App {
     }
     if (view.insert) stopInsert(this, view);
     this.remember(view);
+    // On a row of the file's text, the cursor keeps its character, not its column (a code cell's rows are framed).
+    const keep = this.currentLayout(view).lines[view.cur.row]?.srcMap ? offsetOf(this, view) : null;
     view.source = mode === "source";
     view.live = mode === "live";
     view.liveBase = undefined;
@@ -2550,6 +2614,7 @@ export class App {
     view.layoutKey = ""; // re-derive the rows from the anchors: the same source line
     view.sel = null;
     view.visual = null;
+    if (keep !== null) placeAt(this, view, keep);
   }
 
   /** The mode the editing keys switch a rendered window to (`[editor] edit_in`), code's document view too (24.8). */
@@ -7212,6 +7277,11 @@ export class App {
         break;
       case "fn":
         return this.addFootnote();
+      // A code cell's button (24.13): `action:line`.
+      case "cell": {
+        const [action, line] = arg.split(":");
+        return this.cellAction(action!, Number(line));
+      }
       // The Problems panel's tabs and close button; the status line's problems open it on this file's.
       case "ptab":
         if (arg === "close") return this.closeProblems();

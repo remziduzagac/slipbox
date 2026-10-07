@@ -915,12 +915,9 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const top = [...here].sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity))[0]!;
       geo.hot.push({ id: `pbar:${top.start.line}:${top.start.column}`, x: gutterX, y, w, h: 1 });
     }
-    // The code view's margin (24.3): a definition's kind, beside the text.
-    const marginW = app.marginWidth(view);
-    if (line.mark && marginW) drawText(c, textX - marginW, y, line.mark.text, { ...roleStyle(theme, line.mark.role, page), bold: true, bg: band ?? page }, marginW);
-    if (gutter - marginW > barW) {
-      // A row the layout adds (the code view's blank before a definition, the lens's rules) has no number.
-      const num = line.src !== prevSrc && !line.decor ? String(line.src).padStart(gutter - marginW - barW - 1) : "";
+    if (gutter > barW) {
+      // A row the layout adds (the code view's blank between cells, a box's bottom, the lens's rules) has no number.
+      const num = line.src !== prevSrc && !line.decor ? String(line.src).padStart(gutter - barW - 1) : "";
       const on = onLine.get(line.src);
       const role: Role = on ? SEVERITY_ROLE[worst(on)] : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
       if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), bg: band ?? page });
@@ -944,6 +941,25 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     if (chosenOn) marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
+    // A code cell's box (24.13): its borders over the row's spaces there; its header's buttons, each clickable.
+    if (line.frame) {
+      for (const fx of line.frame) {
+        const x = textX + fx - view.left;
+        if (x >= textX && x < textX + textW) drawText(c, x, y, app.glyphs.box.v, { ...roleStyle(theme, "border", page), bg: band ?? page }, 1);
+      }
+    }
+    if (line.spans.some((sp) => sp.button)) {
+      let x = textX - view.left;
+      for (const sp of line.spans) {
+        const w = stringWidth(sp.text);
+        if (sp.button && x >= textX && x + w <= textX + textW) {
+          const id = `cell:${sp.button}`;
+          if (app.hover === id) drawText(c, x, y, sp.text, roleStyle(theme, "hover", page));
+          geo.hot.push({ id, x, y, w, h: 1 });
+        }
+        x += w;
+      }
+    }
     // An oversized lens's rules say how much of it is out of sight: ↑ above, ↓ below.
     if ((line.lens === "top" || line.lens === "bottom") && hidden.length) {
       const first = layout.lines.findIndex((l) => l.lens === "source");

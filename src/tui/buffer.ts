@@ -108,6 +108,8 @@ export class NoteBuffer {
   syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[]; links: CommentLink[]; languages: Map<number, string>; code: CodeModel | null } | null = null;
   /** The code view's runs of imports unfolded (24.5), by their first line. */
   readonly codeOpen = new Set<number>();
+  /** The code view's cells folded to their header (24.13), by their first line. */
+  readonly codeFolded = new Set<number>();
 
   constructor(
     /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */
@@ -425,14 +427,15 @@ export class NoteBuffer {
    * the parse of this text, or the last one while it's parsed again (its lines may have moved: the view is redrawn
    * when it lands).
    */
-  codeLayout(width: number, wrap: boolean, glyphs: Glyphs): Layout {
-    const key = `code:${width}:${wrap ? 1 : 0}:${glyphs.mode}:${[...this.codeOpen].join(",")}:${this.syntax?.version ?? -1}`;
+  codeLayout(width: number, wrap: boolean, glyphs: Glyphs, cells: "box" | "band" = "box", problems: readonly { line: number; severity: Problem["severity"] }[] = []): Layout {
+    const marks = problems.map((p) => `${p.line}${p.severity[0]}`).join(",");
+    const key = `code:${width}:${wrap ? 1 : 0}:${glyphs.mode}:${cells}:${[...this.codeOpen].join(",")}:${[...this.codeFolded].join(",")}:${marks}:${this.syntax?.version ?? -1}`;
     let l = this.layouts.get(key);
     if (!l) {
       const base = this.sourceLayout(1, false, glyphs);
       const spans = this.syntax?.spans;
       const fresh = this.syntax?.version === this.version;
-      l = layoutCode(this.source, base, fresh ? (this.syntax?.code ?? null) : null, { width, wrap, glyphs, open: this.codeOpen, inside: (line) => !!spans?.get(line)?.length });
+      l = layoutCode(this.source, base, fresh ? (this.syntax?.code ?? null) : null, { width, wrap, glyphs, open: this.codeOpen, folded: this.codeFolded, cells, problems, inside: (line) => !!spans?.get(line)?.length });
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
       this.layouts.set(key, l);
     }

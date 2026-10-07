@@ -196,6 +196,14 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "ui.top_bar", title: "Top bar", cli: I, desc: "Shows or hides the top bar (the palette chip, the folder's state)" },
   { id: "ui.problems_bar", title: "Problems bar", cli: I, desc: "Shows or hides the column beside the text with each line's problems, counted and coloured by the worst" },
   { id: "ui.problem_marks", title: "Problems marked in the text", cli: I, desc: "Underlines where each problem is, in source mode and the rendered view" },
+  { id: "ui.code_cells", title: "Code cells: boxes or bands", cli: I, desc: "How the code view draws its cells: each in a box, or on a tinted band" },
+  // the code view's cells (24.13): the one at the cursor, as its header's buttons do
+  { id: "cell.fold", title: "Fold or unfold the cell", cli: I, desc: "Folds the code cell at the cursor to its header, or opens it again" },
+  { id: "cell.edit", title: "Edit the cell", cli: I, desc: "Opens the lens on the code cell at the cursor: its lines as written, to type into" },
+  { id: "cell.copy", title: "Copy the cell", cli: "slipbox read <note>", desc: "Copies the code cell at the cursor: its lines as the file has them" },
+  { id: "cell.references", title: "Where the cell's definition is used", cli: "slipbox backlinks <note>", desc: "The places that use the cell's definition, from its language server" },
+  { id: "cell.problems", title: "The cell's problems", cli: "slipbox diagnostics <file>", desc: "The Problems panel on this file, on the cell's first problem" },
+  { id: "cell.scratch", title: "Add the cell to the scratch", cli: "slipbox capture --ref <path:line> [--snippet]", desc: "Adds the code cell at the cursor to the scratch, with its path and lines, for an agent" },
   { id: "ui.urls", title: "Show link URLs", cli: I, desc: "Prints link addresses after their text" },
   { id: "ui.mouse", title: "Mouse", cli: I, desc: "Turns the mouse off so the terminal selects" },
   // scratch
@@ -276,6 +284,7 @@ export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Editing", ids: /^(task\.|edit\.|visual\.(delete|change|indent|outdent)$|view\.(source|live)$|lens\.|note\.(save|save_all|save_force|revert|resolve)$|app\.(save_quit|quit_force)$)/ },
   { title: "UI", ids: /^(ui\.|theme\.|glyphs\.)/ },
   { title: "Scratch", ids: /^(scratch\.|context\.copy$)/ },
+  { title: "Code cells", ids: /^cell\./ },
   { title: "Git", ids: /^git\./ },
   { title: "Note, folder, app", ids: /^(note\.|folder\.|folders\.|root\.|heading\.|rename\.|trash\.|problems\.|info\.|vault\.|config\.|messages\.|help\.|app\.)/ },
 ];

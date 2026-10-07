@@ -24,6 +24,8 @@ export interface Span {
   src?: number;
   /** A task item's checkbox: the item's first and last source lines (plan 4.11). */
   task?: { line: number; end: number; checked: boolean };
+  /** A button (a code cell's, 24.13): what it does, `action:line` — drawn as a button, clicked to do it. */
+  button?: string;
 }
 
 export interface Line {
@@ -46,10 +48,10 @@ export interface Line {
   lens?: "top" | "bottom" | "pad" | "source";
   /** The first row of a footnote's definition: its identifier (what a `[^ref]` link targets). */
   footnoteDef?: string;
-  /** The code view's margin (24.3): the kind of definition starting on this row, drawn left of the text. */
-  mark?: { text: string; role: Role };
   /** A folded group's row (the code view's imports, 24.5): `enter` folds or unfolds the group starting on that line. */
   fold?: number;
+  /** A code cell's box (24.13): the columns of its left and right borders, drawn over this row's spaces there. */
+  frame?: [number, number];
 }
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote" | "tag";
@@ -92,6 +94,8 @@ export interface Layout {
   clipped?: number;
   /** The notes drawn inside this one (1.11), nested ones too, by absolute path: a change to one re-lays it out. */
   embedded?: string[];
+  /** The code view's cells (24.13): each one's lines, its title, and its definition's name (where references start). */
+  cells?: { from: number; to: number; title: string; name?: { line: number; column: number } }[];
 }
 
 export function spanWidthText(spans: Span[]): string {

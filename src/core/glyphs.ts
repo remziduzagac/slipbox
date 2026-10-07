@@ -103,11 +103,16 @@ export interface Glyphs {
   navBack: string;
   navForward: string;
   historyHere: string;
-  /** The code view's margin (24.3): a definition's kind — a function or method, a class, a type, a top-level value. */
+  /** A code cell's header (24.13): its definition's kind — a function or method, a class, a type, a top-level value. */
   codeFunction: string;
   codeClass: string;
   codeType: string;
   codeValue: string;
+  /** A code cell's buttons (24.13): edit it, copy it, where it's used, add it to the scratch. */
+  cellEdit: string;
+  cellCopy: string;
+  cellRefs: string;
+  cellScratch: string;
 }
 
 const unicode: Glyphs = {
@@ -187,6 +192,10 @@ const unicode: Glyphs = {
   codeClass: "◆",
   codeType: "◇",
   codeValue: "•",
+  cellEdit: "✎",
+  cellCopy: "⧉",
+  cellRefs: "⇢",
+  cellScratch: "◎",
 };
 
 const nerd: Glyphs = {
@@ -199,6 +208,10 @@ const nerd: Glyphs = {
   codeClass: "\u{eb5b}", // nf-cod-symbol_class
   codeType: "\u{eb61}", // nf-cod-symbol_interface
   codeValue: "\u{eb5d}", // nf-cod-symbol_constant
+  cellEdit: "\u{ea73}", // nf-cod-edit
+  cellCopy: "\u{ebcc}", // nf-cod-copy
+  cellRefs: "\u{eb36}", // nf-cod-references
+  cellScratch: "\u{eb05}", // nf-cod-pin
   pin: "\u{f0403}", // nf-md-pin
   mode: "nerd",
   // Same icons as render-markdown in the nvim config this replaces.
@@ -305,6 +318,10 @@ const ascii: Glyphs = {
   codeClass: "C",
   codeType: "T",
   codeValue: "v",
+  cellEdit: "e",
+  cellCopy: "c",
+  cellRefs: "r",
+  cellScratch: "s",
 };
 
 const SETS = { unicode, nerd, ascii };

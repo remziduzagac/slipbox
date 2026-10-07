@@ -634,7 +634,8 @@ export class SyntaxTree {
       const to = n.endPosition.row === n.startPosition.row ? n.endPosition.column : n.startPosition.column + 1;
       const decorated = f.node.parent?.type === "decorated_definition" ? f.node.parent : null;
       const top = (decorated ?? f.node).startPosition.row + 1;
-      defs.push({ kind: f.kind, line: f.start.row + 1, name: { line: n.startPosition.row + 1, from: n.startPosition.column, to }, depth: open.length, top });
+      const at = (decorated ?? f.node).startPosition;
+      defs.push({ kind: f.kind, line: f.start.row + 1, name: { line: n.startPosition.row + 1, from: n.startPosition.column, to }, depth: open.length, top, end: f.end.row + 1, column: (lines[at.row] ?? "").length - (lines[at.row] ?? "").trimStart().length });
       open.push(f.end);
       if (python && f.kind !== "value") {
         const d = docstring(f.node.childForFieldName("body"));
@@ -711,6 +712,10 @@ export interface CodeDef {
   depth: number;
   /** The line its block starts on: its decorators' first, else its own. */
   top: number;
+  /** Its last line. */
+  end: number;
+  /** The column it starts at: its indentation. */
+  column: number;
 }
 
 /**

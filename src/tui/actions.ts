@@ -1663,6 +1663,7 @@ export function registerActions(app: App): void {
         { label: "Glyphs", hint: a.ui.glyphs, data: "glyphs.pick" },
         ...UI_TOGGLES.map((t) => ({ label: t.title, hint: onOff(a.ui[t.key] as boolean), data: t.id })),
         { label: "Problems marked in the text", hint: MARKS_SAID[a.ui.problem_marks], data: "ui.problem_marks" },
+        { label: "Code cells", hint: a.ui.code_cells === "box" ? "boxes" : "bands", data: "ui.code_cells" },
       ];
       a.openList({ title: "UI settings — enter changes one", items, accept: (item) => void a.run(item.data as string).then(() => a.host.requestRender()) });
     },
@@ -2023,6 +2024,13 @@ export function registerActions(app: App): void {
     a.setUi("problem_marks", next);
     a.message("info", `Problems marked in the text: ${MARKS_SAID[next]}`);
   };
+  // The code view's cells (24.13): boxes or bands; the cell at the cursor, as its header's buttons.
+  impl["ui.code_cells"] = (a) => {
+    const next = a.ui.code_cells === "box" ? "band" : "box";
+    a.setUi("code_cells", next);
+    a.message("info", `Code cells: ${next === "box" ? "boxes" : "bands"}`);
+  };
+  for (const action of ["fold", "edit", "copy", "references", "problems", "scratch"]) impl[`cell.${action}`] = (a) => a.cellAction(action);
 
   for (const spec of COMMAND_SPECS) {
     const run = impl[spec.id];

@@ -226,6 +226,15 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader u b": "ui.top_bar",
   "leader u d": "ui.problems_bar",
   "leader u shift+d": "ui.problem_marks",
+  "leader u c": "ui.code_cells",
+  // The code view's cell at the cursor (24.13), as its header's buttons; `z a` folds it, as vim folds.
+  "leader k f": "cell.fold",
+  "z a": "cell.fold",
+  "leader k e": "cell.edit",
+  "leader k y": "cell.copy",
+  "leader k r": "cell.references",
+  "leader k p": "cell.problems",
+  "leader k s": "cell.scratch",
   // scratch
   "leader s s": "scratch.open",
   "leader s a": "scratch.add",
@@ -590,6 +599,7 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader f": "find: notes, headings, tags, text, commands",
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
+  "leader k": "cell: fold, edit, copy, references, problems, scratch — the code view's cell at the cursor",
   "leader g": "git: what changed, a note's diff, the worktrees, a merge's links",
   "leader c": "code: rename, actions, format — the language server's",
   "leader n": "note: new, rename, move, delete, copy, cut, source, the lens, save, edit elsewhere, reload, info",

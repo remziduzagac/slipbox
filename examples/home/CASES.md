@@ -2893,6 +2893,17 @@ Wide tables and code blocks to edit in place.
 ### problems
 
 - `problems.open` — Problems: open, focus, close — `notes/research/link-styles.md`, `notes/index.md` (command-specs.ts)
+- `cell.fold` — Fold or unfold the cell — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
+- `cell.edit` — Edit the cell — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
+- `cell.copy` — Copy the cell — `work/kestrel/api/kestrel_api/app.py`, `notes/index.md` (command-specs.ts)
+- `cell.references` — Where the cell's definition is used — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md`
+  (command-specs.ts)
+- `cell.problems` — The cell's problems — `work/kestrel/api/kestrel_api/half_written.py`, `notes/index.md`
+  (command-specs.ts)
+- `cell.scratch` — Add the cell to the scratch — `work/kestrel/api/kestrel_api/app.py`, `notes/index.md`
+  (command-specs.ts)
+- `ui.code_cells` — Code cells: boxes or bands — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md`
+  (command-specs.ts)
 - `problems.file` — This file's problems — `work/kestrel/src/routes/RouteMap.tsx`, `notes/index.md` (command-specs.ts)
 
 ### tag

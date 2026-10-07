@@ -72,6 +72,7 @@ max_width = 0                  # cap on the text column in the TUI; 0 = full pan
 glyphs = "auto"                # auto | nerd | unicode | ascii   (env SLIPBOX_GLYPHS overrides auto)
 show_urls = "auto"             # auto (only without colour) | always | never
 code = "document"              # code opens as a document (24.x: TS, TSX, JS, Python so far) | source: in source mode
+code_cells = "box"             # the code view's cells: box (framed) | band (on a tint); space u c switches
 
 [walk]
 extensions = ["md", "markdown"] # a note's extensions (a note is markdown, whatever its name)
