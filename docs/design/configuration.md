@@ -71,6 +71,7 @@ inset = 4                      # columns held back from the pane width (min 1, m
 max_width = 0                  # cap on the text column in the TUI; 0 = full pane
 glyphs = "auto"                # auto | nerd | unicode | ascii   (env SLIPBOX_GLYPHS overrides auto)
 show_urls = "auto"             # auto (only without colour) | always | never
+code = "document"              # code opens as a document (24.x: TS, TSX, JS so far) | source: in source mode
 
 [walk]
 extensions = ["md", "markdown"] # a note's extensions (a note is markdown, whatever its name)

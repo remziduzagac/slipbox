@@ -46,6 +46,10 @@ export interface Line {
   lens?: "top" | "bottom" | "pad" | "source";
   /** The first row of a footnote's definition: its identifier (what a `[^ref]` link targets). */
   footnoteDef?: string;
+  /** The code view's margin (24.3): the kind of definition starting on this row, drawn left of the text. */
+  mark?: { text: string; role: Role };
+  /** A folded group's row (the code view's imports, 24.5): `enter` folds or unfolds the group starting on that line. */
+  fold?: number;
 }
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote" | "tag";

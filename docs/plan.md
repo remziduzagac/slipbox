@@ -868,6 +868,23 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | 23.8 | **Done.** `slipbox doctor` and the TUI say a root isn't trusted, once, and what that limits |
 | 23.9 | **Done** (2026-10-07). Bun reads no `bunfig.toml` or `.env` of the folder it starts in |
 
+## Code as a document — `24.x`
+
+*Decided 2026-10-07 with the user: code renders too — not to look like markdown, but to read like a document. The
+design: `docs/design/code-view.md`.*
+
+| ID | Item |
+| --- | --- |
+| 24.1 | **Decided.** Tokens verbatim, whitespace and decoration ours; shared categories mapped per language |
+| 24.2 | **Prototype.** TS, TSX, JS: the document view by default (`[render] code`), `space n v` to source |
+| 24.3 | **Prototype.** Definitions as titles: kind in the margin, name bold, keywords dim; a blank row before each |
+| 24.4 | **Prototype.** Doc comments rendered as markdown; JSDoc's tags a definition list |
+| 24.5 | **Prototype.** Imports folded into one row naming them; `enter` unfolds |
+| 24.6 | **Prototype.** Long lines broken at their structure; the author's breaks kept, line numbers the file's |
+| 24.7 | **Prototype.** Indent guides; braces and semicolons dimmed |
+| 24.8 | Folding any definition; editing in place; the lens for a doc comment |
+| 24.9 | Python, Rust, Go mapped; tabular code aligned; license headers folded |
+
 ## Deferred — in the design, not in this breakdown
 
 Sorted 2026-10-07. Mermaid and LaTeX are `12.10`–`12.11`; composing notes, `10.9`; a note's history, frontmatter

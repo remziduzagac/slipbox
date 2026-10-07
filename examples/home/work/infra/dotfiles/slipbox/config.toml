@@ -9,6 +9,7 @@ inset = 3
 max_width = 110                 # the text column in the TUI; 0 would be the full pane
 glyphs = "unicode"              # our terminal font has no Nerd glyphs
 show_urls = "always"
+code = "document"               # code opens as a document (24.x) where its language is mapped
 
 [walk]
 extensions = ["md", "markdown", "mdx"]

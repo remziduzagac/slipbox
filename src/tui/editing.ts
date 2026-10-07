@@ -122,9 +122,9 @@ export function startInsert(app: App, view: View, at: (v: View) => number, past 
   const why = cannotEdit(view);
   if (why) return app.message("warn", `${why} — not editing`);
   if (!editable(view)) {
-    const mode = app.editMode();
+    const mode = app.editMode(view);
     app.setViewMode(view, mode);
-    app.message("info", mode === "live" ? "the lens: editing the markdown around the cursor — esc esc closes it" : "source — editing the markdown");
+    app.message("info", mode === "live" ? "the lens: editing the markdown around the cursor — esc esc closes it" : `source — editing the ${view.buf.kind.group === "note" ? "markdown" : "file"}`);
   }
   view.sel = null;
   view.visual = null;
@@ -369,7 +369,7 @@ function insertKeyNow(app: App, view: View, key: string): void {
 export function moveLines(app: App, view: View, dir: -1 | 1): void {
   const why = cannotEdit(view);
   if (why) return app.message("warn", `${why} — not editing`);
-  if (!editable(view)) app.setViewMode(view, app.editMode());
+  if (!editable(view)) app.setViewMode(view, app.editMode(view));
   const buf = view.buf;
   const src = buf.source;
   const lines = src.split("\n");

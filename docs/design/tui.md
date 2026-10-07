@@ -982,7 +982,11 @@ their files open as text.
 - **Text files open in source mode**, highlighted by their language; no markdown headings are
   looked for in them. They have no rendered view: `space n v` and the lens say so and stay in
   source mode. A window that was in source mode only for such a file renders again when it opens a
-  note (a link, `history.back`).
+  note (a link, `history.back`). **Code in a language the code view maps** (`24.x`: TypeScript, TSX, JavaScript so
+  far) opens as a document instead — its definitions as sections, its doc comments as prose, its imports folded,
+  every token as written — and `space n v` switches it to source mode and back; editing switches it to source mode,
+  never the lens. `[render] code = "source"` opens it in source mode as before. `docs/design/code-view.md` has the
+  view.
 - **Source code through tree-sitter** (`16.6`–`16.9`, `16.18`–`16.23`: TypeScript, TSX, JavaScript, Python, shell,
   Lua, Go, Rust, Swift, HTML, CSS, SCSS, PHP, Dockerfile, Vue, Svelte, Astro, Ruby, C, C++). Each language's grammar
   (the wasm from the language's own npm package, built for this runtime — `bunfig.toml` keeps their native install

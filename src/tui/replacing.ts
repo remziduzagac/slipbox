@@ -52,7 +52,7 @@ export function textMatches(view: View, query: string, range?: [number, number],
 /** Open the replace field on a window's find prompt (the window switched to editing first). */
 export function openReplace(app: App, o: PromptOverlay, view: View, range?: [number, number]): void {
   if (!editable(view)) {
-    app.setViewMode(view, app.editMode());
+    app.setViewMode(view, app.editMode(view));
     app.message("info", "replacing in the markdown");
   }
   o.replace ??= { text: "", focus: true, range, current: 0, total: 0 };
@@ -165,7 +165,7 @@ export function substitute(app: App, view: View, input: string): void {
   const row = app.currentLayout(view).lines[view.cur.row];
   const srcs = [row?.src ?? 1, ...(editable(view) ? [] : (row?.spans ?? []).flatMap((s) => (s.src === undefined ? [] : [s.src])))];
   const line: [number, number] = [Math.min(...srcs), Math.max(...srcs)];
-  if (!editable(view)) app.setViewMode(view, app.editMode());
+  if (!editable(view)) app.setViewMode(view, app.editMode(view));
   const text = view.buf.source;
   const starts = view.buf.lineStarts();
   const [a, b] = sub.range === "all" ? [1, starts.length] : sub.range === "selection" ? [Math.min(E.lineOf(view, marks![0]), lineCount), Math.min(E.lineOf(view, marks![1]), lineCount)] : line;

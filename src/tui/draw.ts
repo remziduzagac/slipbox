@@ -915,13 +915,17 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const top = [...here].sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity))[0]!;
       geo.hot.push({ id: `pbar:${top.start.line}:${top.start.column}`, x: gutterX, y, w, h: 1 });
     }
-    if (gutter > barW) {
-      const num = line.src !== prevSrc ? String(line.src).padStart(gutter - barW - 1) : "";
+    // The code view's margin (24.3): a definition's kind, beside the text.
+    const marginW = app.marginWidth(view);
+    if (line.mark && marginW) drawText(c, textX - marginW, y, line.mark.text, { ...roleStyle(theme, line.mark.role, page), bold: true, bg: band ?? page }, marginW);
+    if (gutter - marginW > barW) {
+      // A row the layout adds (the code view's blank before a definition, the lens's rules) has no number.
+      const num = line.src !== prevSrc && !line.decor ? String(line.src).padStart(gutter - marginW - barW - 1) : "";
       const on = onLine.get(line.src);
       const role: Role = on ? SEVERITY_ROLE[worst(on)] : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
       if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), bg: band ?? page });
     }
-    prevSrc = line.src;
+    if (!line.decor) prevSrc = line.src;
     const fill = line.fill ? theme.roles[line.fill].bg : undefined;
     if (fill && !band) c.fill(textX, y, Math.min(layout.width, textW), 1, fill);
 

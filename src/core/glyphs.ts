@@ -103,6 +103,11 @@ export interface Glyphs {
   navBack: string;
   navForward: string;
   historyHere: string;
+  /** The code view's margin (24.3): a definition's kind — a function or method, a class, a type, a top-level value. */
+  codeFunction: string;
+  codeClass: string;
+  codeType: string;
+  codeValue: string;
 }
 
 const unicode: Glyphs = {
@@ -178,6 +183,10 @@ const unicode: Glyphs = {
   navBack: "‹",
   navForward: "›",
   historyHere: "●",
+  codeFunction: "ƒ",
+  codeClass: "◆",
+  codeType: "◇",
+  codeValue: "•",
 };
 
 const nerd: Glyphs = {
@@ -186,6 +195,10 @@ const nerd: Glyphs = {
   problemWarn: "\u{ea6c}", // nf-cod-warning
   problemInfo: "\u{ea74}", // nf-cod-info
   problemHint: "\u{ea61}", // nf-cod-lightbulb
+  codeFunction: "\u{ea8c}", // nf-cod-symbol_method
+  codeClass: "\u{eb5b}", // nf-cod-symbol_class
+  codeType: "\u{eb61}", // nf-cod-symbol_interface
+  codeValue: "\u{eb5d}", // nf-cod-symbol_constant
   pin: "\u{f0403}", // nf-md-pin
   mode: "nerd",
   // Same icons as render-markdown in the nvim config this replaces.
@@ -288,6 +301,10 @@ const ascii: Glyphs = {
   navBack: "<",
   navForward: ">",
   historyHere: "*",
+  codeFunction: "f",
+  codeClass: "C",
+  codeType: "T",
+  codeValue: "v",
 };
 
 const SETS = { unicode, nerd, ascii };

@@ -23,6 +23,8 @@ export interface Config {
     glyphs: GlyphMode;
     /** Show link URLs after link text. `auto`: only when colour is off. */
     show_urls: "auto" | "always" | "never";
+    /** How code opens (24.x): as a document, where its language is mapped; or in source mode. */
+    code: "document" | "source";
   };
   walk: {
     extensions: string[];
@@ -237,7 +239,7 @@ export interface Config {
 
 export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
-  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto" },
+  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document" },
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
   links: { style: "auto", path: "auto", extension: "auto" },
   trust: { roots: [] },
@@ -294,6 +296,7 @@ const RETIRED: Record<string, string> = {
 const ENUMS: Record<string, readonly string[]> = {
   "render.glyphs": ["auto", "nerd", "unicode", "ascii"],
   "render.show_urls": ["auto", "always", "never"],
+  "render.code": ["document", "source"],
   "capture.location": ["state", "vault"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],

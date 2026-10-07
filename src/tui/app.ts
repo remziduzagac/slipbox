@@ -10,7 +10,7 @@
 // through `Host`; tui/run.ts binds both to OpenTUI. That keeps the whole model testable.
 
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { commentLinks, grammarFor, grammarNow, type OutlineEntry, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
+import { commentLinks, DOCUMENT_GRAMMARS, grammarFor, grammarNow, type OutlineEntry, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
 import { type DocumentSymbol, type SymbolInformation, SymbolKind, type TextEdit as LspTextEdit, type WorkspaceEdit } from "vscode-languageserver-protocol";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { onLoaded } from "../core/lazy.ts";
@@ -1130,7 +1130,7 @@ export class App {
       const rel = buf.rel;
       const links = commentLinks(tree.comments()).filter((l) => l.url || (rel && this.graph.commentPath(l.target, rel)));
       // A part in another language (16.22): its lines highlighted in it.
-      buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors(), links, languages: tree.languages() };
+      buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors(), links, languages: tree.languages(), code: tree.codeModel() };
       tree.delete();
       buf.invalidateLayouts();
       for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
@@ -1982,7 +1982,14 @@ export class App {
    *  (16.11–16.14), text files never. */
   canRender(buf: NoteBuffer): boolean {
     if (buf.kind.group === "data") return !buf.parsed.error;
-    return buf.kind.group === "note"; // every note format has a reader (16.2)
+    return buf.kind.group === "note" || this.isCodeDocument(buf); // every note format has a reader (16.2)
+  }
+
+  /** Code that renders as a document (24.x): a language the view maps, unless `[render] code` says source. */
+  isCodeDocument(buf: NoteBuffer): boolean {
+    if (buf.kind.group !== "text" || this.config.render.code !== "document") return false;
+    const g = grammarFor(buf.kind.format, extensionOf(buf.name));
+    return !!g && DOCUMENT_GRAMMARS.has(g);
   }
 
   /** Notes and files most recently shown, newest first (the switcher lists them first). */
@@ -2185,12 +2192,15 @@ export class App {
     }
     // Source mode: the whole text column (no readable width), less one for a cursor after a full
     // row's end; unwrapped, as long as the longest line.
+    const code = !view.source && !view.live && this.isCodeDocument(view.buf);
     const width = view.source
       ? Math.max(10, paneWidth - gutter - 2)
       : this.ui.wrap
         ? this.textWidth(paneWidth, gutter)
-        : this.nowrapWidth(view, paneWidth, gutter);
-    if (view.source) this.ensureSyntax(view.buf);
+        : code
+          ? layoutWidth(paneWidth - gutter, this.config.render.inset, NOWRAP_PROBE)
+          : this.nowrapWidth(view, paneWidth, gutter);
+    if (view.source || code) this.ensureSyntax(view.buf);
     this.ensureLint(view.buf);
     this.ensureLinters(view.buf);
     this.ensureServers(view.buf);
@@ -2198,7 +2208,9 @@ export class App {
       ? view.buf.sourceLayout(width, this.ui.wrap, this.glyphs)
       : view.live
         ? this.liveLayout(view, width)
-        : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
+        : code
+          ? view.buf.codeLayout(width, this.ui.wrap, this.glyphs)
+          : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
     if (view.layoutKey !== key) {
@@ -2410,9 +2422,14 @@ export class App {
     return this.layoutFor(view, view.width, this.gutterWidth(view));
   }
 
-  /** The gutter's width for a view: the problems bar's, then the line numbers' (0 when both are off). */
+  /** The gutter's width for a view: the problems bar's, then the line numbers', then the code view's margin (24.3). */
   gutterWidth(view: View): number {
-    return this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0);
+    return this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0) + this.marginWidth(view);
+  }
+
+  /** The code view's margin (24.3): a definition's kind, and a space — two columns, in the code view only. */
+  marginWidth(view: View): number {
+    return !view.source && !view.live && this.isCodeDocument(view.buf) ? 2 : 0;
   }
 
   /** The problems bar's width (19.9): a sign, a count when more than one, a space — while it's on; with `auto`,
@@ -2502,6 +2519,8 @@ export class App {
 
   /** A window's mode: rendered, source (the markdown), or live preview. The cursor keeps its line. */
   setViewMode(view: View, mode: "rendered" | "source" | "live"): void {
+    // The lens is a note's and a data file's: code is edited in source mode (24.x).
+    if (mode === "live" && this.isCodeDocument(view.buf)) mode = "source";
     const now = view.source ? "source" : view.live ? "live" : "rendered";
     if (now === mode) return;
     if (mode !== "source" && !this.canRender(view.buf)) {
@@ -2521,9 +2540,19 @@ export class App {
     view.visual = null;
   }
 
-  /** The mode the editing keys switch a rendered window to (`[editor] edit_in`). */
-  editMode(): "source" | "live" {
+  /** The mode the editing keys switch a rendered window to (`[editor] edit_in`); code's always source (24.x). */
+  editMode(view?: View | null): "source" | "live" {
+    if (view && this.isCodeDocument(view.buf)) return "source";
     return this.config.editor.edit_in === "live" ? "live" : "source";
+  }
+
+  /** The code view's run of imports on the cursor's row (24.5), folded or unfolded; false when the row isn't one. */
+  toggleCodeFold(view: View): boolean {
+    const at = this.currentLayout(view).lines[view.cur.row]?.fold;
+    if (at === undefined) return false;
+    if (!view.buf.codeOpen.delete(at)) view.buf.codeOpen.add(at);
+    for (const v of this.allViews()) if (v.buf === view.buf) v.layoutKey = "";
+    return true;
   }
 
   private cursorAnchorFor(layout: Layout, p: Pos): CursorAnchor {
@@ -2973,7 +3002,40 @@ export class App {
 
   selectionText(view: View): string {
     if (!view.sel) return "";
+    if (this.isCodeDocument(view.buf) && !view.source && !view.live) return this.codeSelectionText(view);
     return selectedText(this.currentLayout(view), view.sel, view.cur);
+  }
+
+  /**
+   * A selection in the code view (24.x): the file's text between its ends — never the rows as drawn, whose guides,
+   * breaks and folds are the view's. A line selection, its lines whole; a doc comment's row, its line whole.
+   */
+  private codeSelectionText(view: View): string {
+    const layout = this.currentLayout(view);
+    const [a, b] = ordered(view.sel!.anchor, view.cur);
+    const src = view.buf.source;
+    const starts = view.buf.lineStarts();
+    const lineEnd = (ln: number) => {
+      const e = src.indexOf("\n", starts[ln - 1] ?? src.length);
+      return e < 0 ? src.length : e;
+    };
+    const rowLine = (row: number) => layout.lines[row]?.src ?? 1;
+    const offset = (p: Pos, after: boolean): number => {
+      const line = layout.lines[p.row];
+      if (!line) return src.length;
+      const base = starts[line.src - 1] ?? 0;
+      if (!line.srcMap || view.sel!.line) return after ? lineEnd(line.src) : base;
+      const c = cells(line).find((x) => p.col >= x.x && p.col < x.x + x.w);
+      if (c?.at === undefined) return after ? base + line.srcMap.end : base + (line.srcMap.cells[0] ?? 0);
+      return base + c.at + (after ? (graphemes(src.slice(base + c.at, base + c.at + 16))[0]?.length ?? 1) : 0);
+    };
+    let from = offset(a, false);
+    let to = offset(b, true);
+    if (view.sel!.line) {
+      from = starts[rowLine(a.row) - 1] ?? 0;
+      to = lineEnd(rowLine(b.row));
+    }
+    return src.slice(from, Math.max(from, to));
   }
 
   // -------------------------------------------------------------------------------------------

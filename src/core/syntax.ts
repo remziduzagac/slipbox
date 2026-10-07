@@ -585,6 +585,62 @@ export class SyntaxTree {
   }
 
   /**
+   * What the code view draws beyond the tokens (24.x), for a grammar it maps (DOCUMENT_GRAMMARS; else null): the
+   * definitions — functions, classes, types, and a file's top-level values — each nested under those it's inside;
+   * the doc comments; the runs of imports.
+   */
+  codeModel(): CodeModel | null {
+    if (!DOCUMENT_GRAMMARS.has(this.g.grammar)) return null;
+    const root = this.tree.rootNode;
+    const found: { kind: CodeDef["kind"]; start: Pos; end: Pos; name: Node }[] = [];
+    for (const m of this.g.defs?.matches(root) ?? []) {
+      const def = m.captures.find((c) => c.name === "def")?.node;
+      const name = m.captures.find((c) => c.name === "name")?.node;
+      const kind = def ? CODE_KIND[def.type] : undefined;
+      if (def && name && kind) found.push({ kind, start: def.startPosition, end: def.endPosition, name });
+    }
+    // A file's top-level values (`const`, `let`, `var`, exported or not) that aren't functions.
+    for (const top of root.namedChildren) {
+      const decl = top?.type === "export_statement" ? top.childForFieldName("declaration") : top;
+      if (!decl || (decl.type !== "lexical_declaration" && decl.type !== "variable_declaration")) continue;
+      const first = decl.namedChildren.find((n) => n?.type === "variable_declarator");
+      const name = first?.childForFieldName("name");
+      const value = first?.childForFieldName("value");
+      if (!first || !name || (value && (value.type === "arrow_function" || value.type === "function_expression"))) continue;
+      found.push({ kind: "value", start: top!.startPosition, end: top!.endPosition, name });
+    }
+    found.sort((a, b) => (before(a.start, b.start) ? -1 : before(b.start, a.start) ? 1 : 0));
+    const defs: CodeDef[] = [];
+    const open: Pos[] = [];
+    for (const f of found) {
+      while (open.length && !before(f.start, open[open.length - 1]!)) open.pop();
+      const n = f.name;
+      const to = n.endPosition.row === n.startPosition.row ? n.endPosition.column : n.startPosition.column + 1;
+      defs.push({ kind: f.kind, line: f.start.row + 1, name: { line: n.startPosition.row + 1, from: n.startPosition.column, to }, depth: open.length });
+      open.push(f.end);
+    }
+    const docs: CodeDoc[] = [];
+    for (const c of this.g.comments.captures(root)) {
+      if (c.node.text.startsWith("/**") && !c.node.text.startsWith("/**/")) docs.push({ start: c.node.startPosition.row + 1, end: c.node.endPosition.row + 1, column: c.node.startPosition.column });
+    }
+    // Runs of imports: those with only blank lines between them.
+    const lines = this.source.split("\n");
+    const imports: CodeImports[] = [];
+    for (const n of root.namedChildren) {
+      if (n?.type !== "import_statement") continue;
+      const start = n.startPosition.row + 1;
+      const end = n.endPosition.row + 1;
+      const module = (n.childForFieldName("source")?.text ?? "").replace(/^["'`]|["'`]$/g, "");
+      const last = imports[imports.length - 1];
+      if (last && lines.slice(last.end, start - 1).every((l) => !l.trim())) {
+        last.end = end;
+        last.modules.push(module);
+      } else imports.push({ start, end, modules: [module] });
+    }
+    return { defs, docs, imports };
+  }
+
+  /**
    * The lines in another language than the file's (16.22), by highlight.js's name: a part's lines
    * between the one its tag opens on and the one its closing tag is on — those hold the tags too.
    */
@@ -603,6 +659,54 @@ export class SyntaxTree {
     return out;
   }
 }
+
+/** The grammars the code view (24.x) maps: their definitions, doc comments and imports. */
+export const DOCUMENT_GRAMMARS: ReadonlySet<Grammar> = new Set<Grammar>(["typescript", "tsx", "javascript"]);
+
+/** A definition as the code view draws it (24.3): its kind, the line it starts on, its name's place, its depth. */
+export interface CodeDef {
+  kind: "function" | "class" | "type" | "value";
+  /** 1-based. */
+  line: number;
+  /** Its name: a 1-based line, 0-based UTF-16 columns. */
+  name: { line: number; from: number; to: number };
+  /** How many definitions it's inside. */
+  depth: number;
+}
+
+/** A doc comment (`/** … *\/`): its 1-based first and last lines, and the column it starts at. */
+export interface CodeDoc {
+  start: number;
+  end: number;
+  column: number;
+}
+
+/** A run of imports (24.5): its 1-based first and last lines, and the modules it imports. */
+export interface CodeImports {
+  start: number;
+  end: number;
+  modules: string[];
+}
+
+/** What the code view knows of a file beyond its tokens (24.x): its definitions, doc comments and imports. */
+export interface CodeModel {
+  defs: CodeDef[];
+  docs: CodeDoc[];
+  imports: CodeImports[];
+}
+
+/** A definition's node type, as the code view's kind. */
+const CODE_KIND: Record<string, CodeDef["kind"]> = {
+  function_declaration: "function",
+  generator_function_declaration: "function",
+  method_definition: "function",
+  variable_declarator: "function",
+  class_declaration: "class",
+  abstract_class_declaration: "class",
+  interface_declaration: "type",
+  type_alias_declaration: "type",
+  enum_declaration: "type",
+};
 
 export interface CommentLink {
   /** 1-based line; 0-based UTF-16 columns of the token in it. */

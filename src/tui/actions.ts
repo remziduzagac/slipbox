@@ -139,9 +139,9 @@ function sourceEdit(a: App, run: (v: View) => void | Promise<void>, edits = true
     const why = E.cannotEdit(v);
     if (edits && why) return a.message("warn", `${why} — not editing`);
     if (!editable(v)) {
-      const mode = a.editMode();
+      const mode = a.editMode(v);
       a.setViewMode(v, mode);
-      a.message("info", mode === "live" ? "the lens: editing the markdown around the cursor — esc esc closes it" : "source — editing the markdown");
+      a.message("info", mode === "live" ? "the lens: editing the markdown around the cursor — esc esc closes it" : `source — editing the ${v.buf.kind.group === "note" ? "markdown" : "file"}`);
     }
     return run(v);
   });
@@ -1059,6 +1059,8 @@ export function registerActions(app: App): void {
     "link.prev": (a) => cycleLink(a, -1),
     "link.follow": (a) =>
       withView(a, (v) => {
+        // The code view's run of imports (24.5): folded or unfolded.
+        if (a.toggleCodeFold(v)) return;
         const i = a.linkForFollow(v);
         const link = i >= 0 ? lay(a, v).links[i]! : sourceLinkAt(a, v);
         if (!link) {
@@ -1408,7 +1410,8 @@ export function registerActions(app: App): void {
         const was = v.source;
         a.setViewMode(v, v.source ? "rendered" : "source");
         if (v.source === was) return; // refused (a file with no render): its own message says why
-        a.message("info", v.source ? "source — the note's markdown" : "rendered");
+        const what = v.buf.kind.group === "note" ? "the note's markdown" : "the file as written";
+        a.message("info", v.source ? `source — ${what}` : a.isCodeDocument(v.buf) ? "the code as a document" : "rendered");
       }),
     "view.live": (a) =>
       withView(a, (v) => {

@@ -1403,6 +1403,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### problems
 
+- code as a document: definitions in the margin, doc comments as prose with their tags, imports folded (enter), long
+  lines broken at their structure, guides; space n v to source — `work/kestrel/src/routes/RouteMap.tsx` (code-view.md
+  24.x; tests)
 - problems panel, All: Broken links, Ambiguous links, Lint, Conflicts, Orphans; folding; enter or a click opens the
   file in a tab at its line (o here, s the split); / filters — `notes/meetings/2026-09-05-feedback-synthesis.md`,
   `work/kestrel/docs/release-notes/2.3.md` (problems.open 1.7; tests)

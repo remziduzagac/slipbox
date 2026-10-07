@@ -35,8 +35,9 @@ export function cells(line: Line | undefined): Cell[] {
       const at = map?.[i++]; // srcMap has every grapheme, zero-width ones too
       if (w > 0) {
         const prev = c[c.length - 1];
-        // A tab is drawn as several cells with one offset: one stop, as wide as all of them.
-        if (map && prev && at === prev.at) {
+        // A tab is drawn as several cells with one offset: one stop, as wide as all of them. So is a continuation
+        // row's indentation in the code view (24.6), up to its first character, which is a stop of its own.
+        if (map && prev && at === prev.at && /^\s$/.test(g)) {
           prev.g = "\t";
           prev.w += w;
         } else c.push(map ? { g, x, w, at } : { g, x, w });

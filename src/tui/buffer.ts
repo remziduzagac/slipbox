@@ -22,7 +22,8 @@ import { headingsOf, newParseCache, noteChunks, type ParsedNote, parseMarkdown, 
 import { parseInBackground } from "../core/parse-pool.ts";
 import { countWords } from "../core/words.ts";
 import { readerFor } from "../core/readers.ts";
-import type { CommentLink, OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
+import type { CodeModel, CommentLink, OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
+import { layoutCode } from "../core/layout/code.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
 export interface TextEdit {
@@ -104,7 +105,9 @@ export class NoteBuffer {
    * inside multi-line strings and comments, the outline, syntax errors. The app refreshes it
    * shortly after edits stop; until then the layout uses it as it is.
    */
-  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[]; links: CommentLink[]; languages: Map<number, string> } | null = null;
+  syntax: { version: number; spans: Map<number, SyntaxSpan[]>; outline: OutlineEntry[]; errors: SyntaxError[]; links: CommentLink[]; languages: Map<number, string>; code: CodeModel | null } | null = null;
+  /** The code view's runs of imports unfolded (24.5), by their first line. */
+  readonly codeOpen = new Set<number>();
 
   constructor(
     /** Vault-relative path, or null for a file outside the vault (e.g. the scratch). */
@@ -416,6 +419,25 @@ export class NoteBuffer {
 
   /** The notes its layouts draw inside it (1.11), by absolute path: a change to one re-lays it out. */
   readonly embedded = new Set<string>();
+
+  /**
+   * The code view (24.x): the file as a document, from source mode's rows (a row per line) and what its parse says —
+   * the parse of this text, or the last one while it's parsed again (its lines may have moved: the view is redrawn
+   * when it lands).
+   */
+  codeLayout(width: number, wrap: boolean, glyphs: Glyphs): Layout {
+    const key = `code:${width}:${wrap ? 1 : 0}:${glyphs.mode}:${[...this.codeOpen].join(",")}:${this.syntax?.version ?? -1}`;
+    let l = this.layouts.get(key);
+    if (!l) {
+      const base = this.sourceLayout(1, false, glyphs);
+      const spans = this.syntax?.spans;
+      const fresh = this.syntax?.version === this.version;
+      l = layoutCode(this.source, base, fresh ? (this.syntax?.code ?? null) : null, { width, wrap, glyphs, open: this.codeOpen, inside: (line) => !!spans?.get(line)?.length });
+      if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
+      this.layouts.set(key, l);
+    }
+    return l;
+  }
 
   layout(width: number, glyphs: Glyphs, showUrls: boolean, graph: Graph | null): Layout {
     const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}`;

@@ -5390,6 +5390,190 @@ describe("data files render as documents (16.11–16.14)", () => {
   });
 });
 
+describe("code as a document (24.x)", () => {
+  const SAMPLE = [
+    'import { readFileSync } from "node:fs";',
+    'import { join } from "node:path";',
+    'import type { Link } from "./links.ts";',
+    "/**",
+    " * Resolves a link written in a note: the note it reaches, or `null` when **nothing** matches.",
+    " * @param from - the note it's written in",
+    " * @param {string} target the link as written",
+    " * @returns the link, or null",
+    " * @deprecated use `reach` instead",
+    " */",
+    "export function resolve(from: string, target: string): Link | null {",
+    "  if (!target) return null;",
+    "  const hit = byName.get(normKey(target)) ?? byPath.get(join(from, target)) ?? byAlias.get(target.toLowerCase()) ?? null;",
+    "  return hit;",
+    "}",
+    "export class Graph {",
+    "  private notes = new Map<string, string>();",
+    "  /** A note's text, as read. */",
+    "  textOf(rel: string): string | undefined {",
+    "    return this.notes.get(rel);",
+    "  }",
+    "",
+    "",
+    "",
+    '  add(rel: string): void { this.notes.set(rel, readFileSync(rel, "utf8")); }',
+    "}",
+    "const html = `",
+    "<p>one</p>",
+    "",
+    "",
+    "<p>two</p>",
+    "`;",
+    "const min = 1;",
+    "",
+  ].join("\n");
+  const open = async (opts: Partial<Opts> = {}, file = "sample.ts", text = SAMPLE) => {
+    const root = makeVault();
+    writeFileSync(join(root, file), text);
+    // The whole width the note's: no explorer beside it.
+    const config = (c: Config) => ((c.ui.sidebar = false), opts.config?.(c));
+    const h = await harness({ root, open: file, width: 100, height: 50, ...opts, config });
+    for (let i = 0; i < 200 && h.app.view!.buf.syntax?.version !== h.app.view!.buf.version; i++) {
+      h.frame();
+      await Bun.sleep(10);
+    }
+    h.frame();
+    return h;
+  };
+  /** The window's rows as drawn, from the text column less the margin's two. */
+  const rows = (h: Harness) => {
+    const pane = h.app.geometry!.panes[0]!;
+    return h.frame().split("\n").slice(pane.y, pane.y + pane.h).map((r) => [...r].slice(pane.textX - 2, pane.x + pane.w - 1).join("").trimEnd());
+  };
+  const rowIndex = (h: Harness, text: string) => rows(h).findIndex((r) => r.includes(text));
+
+  test("a TypeScript file opens as a document: kinds in the margin, imports one row, doc comments as prose, a blank row before each section", async () => {
+    const h = await open();
+    const v = h.app.view!;
+    expect(v.source).toBeFalsy();
+    const r = rows(h);
+    expect(r[0]).toBe("  ▸ imports  node:fs · node:path · ./links.ts (3)");
+    expect(r[1]).toBe(""); // a blank row before the first section, its doc comment
+    // The doc comment: the markers gone, markdown rendered; its tags a definition list, code spans coloured.
+    const gap = r.indexOf("", 2);
+    expect(r.slice(2, gap).map((x) => x.trim()).join(" ")).toBe("Resolves a link written in a note: the note it reaches, or null when nothing matches.");
+    expect(r[2]).toStartWith("  Resolves"); // at the comment's indentation
+    expect(r.slice(gap + 1, gap + 5).join("\n")).toMatch(/^ {4}from +the note it's written in\n {4}target +the link as written {2}\{string\}\n {4}returns +the link, or null\n {4}deprecated +use reach instead$/);
+    const sig = rowIndex(h, "export function resolve");
+    expect(r[sig]).toBe("ƒ export function resolve(from: string, target: string): Link | null {");
+    expect(r[sig + 1]).toBe("  │ if (!target) return null;");
+    // The class: a section of its own, its methods marked, its member's doc comment as prose.
+    expect(r[rowIndex(h, "export class Graph") - 1]).toBe("");
+    expect(r[rowIndex(h, "export class Graph")]).toBe("◆ export class Graph {");
+    expect(r[rowIndex(h, "A note's text")]).toBe("    A note's text, as read.");
+    expect(r[rowIndex(h, "textOf(")]).toMatch(/^ƒ │ textOf\(/);
+    // Three blank lines between members: one blank row. A template string's own blank line: kept.
+    const add = rowIndex(h, "add(rel");
+    expect(r[add - 1]).toBe("");
+    expect(r[add - 2]).toBe("  │ }");
+    const one = rowIndex(h, "<p>one</p>");
+    expect(r.slice(one, one + 4)).toEqual(["  <p>one</p>", "", "", "  <p>two</p>"]); // the string's own text
+    // Values aren't sections: no blank row forced between them, nor after the class.
+    expect(r[one - 2]).toBe("  }");
+    expect(r[rowIndex(h, "const min")! - 1]).toBe("  `;");
+    // The name bold, as the layout has it (its role may be bold already).
+    const sigLine = h.app.currentLayout(v).lines.find((l) => l.src === 11)!;
+    expect(sigLine.spans.find((sp) => sp.text.includes("resolve"))!.attrs & 1).toBe(1);
+    expect(sigLine.spans.find((sp) => sp.text.includes("from"))!.attrs & 1).toBe(0);
+    // The name bold, what's before it on its line dim, a brace dim.
+    const c = h.canvas();
+    const pane = h.app.geometry!.panes[0]!;
+    const y = pane.y + sig;
+    const line = [...c.toString().split("\n")[y]!];
+    const at = (s: string) => line.join("").indexOf(s);
+    expect(c.styles[y]![at("resolve(")]!.bold).toBe(true);
+    expect(c.styles[y]![at("export")]!.dim).toBe(true);
+    expect(c.styles[y]![at("from:")]!.bold).toBe(false);
+    expect(c.styles[y]![line.lastIndexOf("{")]!.dim).toBe(true);
+    // The outline: the definitions; a heading per section for ]] and the breadcrumb.
+    expect(h.app.currentLayout(v).headings.map((x) => `${x.level} ${x.text}`)).toEqual(["1 resolve", "1 Graph", "2 textOf", "2 add"]);
+  });
+
+  test("enter on the imports' row unfolds them, and again folds them", async () => {
+    const h = await open();
+    const v = h.app.view!;
+    h.app.moveCursor(v, { row: 0, col: 0 });
+    await h.keys("enter");
+    expect(rows(h).slice(0, 4)).toEqual(["  ▾ imports (3)", '  import { readFileSync } from "node:fs";', '  import { join } from "node:path";', '  import type { Link } from "./links.ts";']);
+    h.app.moveCursor(v, { row: 0, col: 0 });
+    await h.keys("enter");
+    expect(rows(h)[0]).toStartWith("  ▸ imports");
+  });
+
+  test("a long line breaks at its structure, its rest under its own indent; each row's cells are still the file's", async () => {
+    const h = await open({ width: 90 });
+    const r = rows(h);
+    const i = rowIndex(h, "const hit");
+    expect(r[i]).toMatch(/^ {2}│ const hit = byName\.get\(normKey\(target\)\) \?\? byPath\.get\(join\(from, target\)\)$/);
+    expect(r[i + 1]).toBe("  │     ?? byAlias.get(target.toLowerCase()) ?? null;");
+    // The continuation row's text maps to its place in the line: the cursor there is on `??`.
+    const v = h.app.view!;
+    const layout = h.app.currentLayout(v);
+    const row = layout.lines.findIndex((l) => l.src === 13) + 1;
+    expect(layout.lines[row]!.src).toBe(13);
+    const col = [...r[i + 1]!].indexOf("?") - 2;
+    const line13 = v.buf.lines()[12]!;
+    expect(layout.lines[row]!.srcMap!.cells[col]).toBe(line13.indexOf("?? byAlias"));
+    // Its first character a stop of its own, past the indentation: the cursor stays on it.
+    h.app.moveCursor(v, { row, col });
+    expect(v.cur).toEqual({ row, col });
+    // Copied, it's the file's text: the line whole, never its two rows nor its guides.
+    h.app.select(v, { row: row - 1, col: 0 }, true);
+    h.app.moveCursor(v, { row, col: 0 }, { extend: true });
+    expect(h.app.selectionText(v)).toBe(line13);
+    // From a word on the first row to one on the second: the text between them, as in the file.
+    const first = layout.lines[row - 1]!;
+    const startCol = [...first.spans.map((sp) => sp.text).join("")].join("").indexOf("byPath");
+    h.app.select(v, { row: row - 1, col: startCol }, false);
+    h.app.moveCursor(v, { row, col: col + 9 }, { extend: true });
+    expect(h.app.selectionText(v)).toBe(line13.slice(line13.indexOf("byPath"), line13.indexOf("?? byAlias") + 10));
+    // ]] and [[: from one section to the next.
+    v.sel = null;
+    h.app.moveCursor(v, { row: 0, col: 0 });
+    await h.keys("]", "]");
+    expect(layout.lines[v.cur.row]!.src).toBe(11);
+    await h.keys("]", "]");
+    expect(h.app.currentLayout(v).lines[v.cur.row]!.src).toBe(16);
+    // Wrapping off: the line runs on, one row.
+    await h.keys("space", "u", "w");
+    expect(h.app.currentLayout(v).lines.filter((l) => l.src === 13)).toHaveLength(1);
+  });
+
+  test("space n v: source and back; editing goes to source, never the lens; [render] code = source; Python in source", async () => {
+    const h = await open({ config: (c) => (c.editor.edit_in = "live") });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v");
+    expect(v.source).toBe(true);
+    expect(h.app.messages.at(-1)!.text).toBe("source — the file as written");
+    expect(h.app.currentLayout(v).lines[0]!.fold).toBeUndefined(); // the imports as written, no margin
+    expect(h.app.marginWidth(v)).toBe(0);
+    await h.keys("space", "n", "v");
+    expect(v.source).toBeFalsy();
+    expect(h.app.messages.at(-1)!.text).toBe("the code as a document");
+    await h.keys("i");
+    expect(v.source).toBe(true);
+    expect(v.live).toBeFalsy();
+    expect(h.app.messages.at(-1)!.text).toBe("source — editing the file");
+    const plain = await open({ config: (c) => (c.render.code = "source") });
+    expect(plain.app.view!.source).toBe(true);
+    const py = await open({}, "tool.py", "def f():\n    return 1\n");
+    expect(py.app.view!.source).toBe(true);
+  });
+
+  test("the margin's marks in each glyph set", async () => {
+    for (const [glyphs, fn, cls] of [["ascii", "f", "C"], ["nerd", "\u{ea8c}", "\u{eb5b}"]] as const) {
+      const h = await open({ config: (c) => (c.render.glyphs = glyphs) });
+      expect(rows(h)[rowIndex(h, "export function resolve")]).toStartWith(`${fn} `);
+      expect(rows(h)[rowIndex(h, "export class Graph")]).toStartWith(`${cls} `);
+    }
+  });
+});
+
 describe("source files through tree-sitter (16.6–16.9)", () => {
   const TS = 'export class Box {\n  open(): void {}\n}\n\nfunction wrap(x: number) {\n  const s = `one\ntwo ${x}\nthree`;\n  return s;\n}\n';
   // The grammar loads lazily, then the pass runs from a timer: wait for both.
@@ -5403,7 +5587,8 @@ describe("source files through tree-sitter (16.6–16.9)", () => {
   test("the outline and breadcrumb come from the grammar; a template string's middle lines are string", async () => {
     const root = makeVault();
     writeFileSync(join(root, "box.ts"), TS);
-    const h = await harness({ root, open: "box.ts", width: 100 });
+    // Source mode, as [render] code = "source" opens code (the code view, 24.x, has tests of its own).
+    const h = await harness({ root, open: "box.ts", width: 100, config: (c) => (c.render.code = "source") });
     const v = h.app.view!;
     expect(v.source).toBe(true);
     await settle(h);
