@@ -984,8 +984,9 @@ their files open as text.
   source mode. A window that was in source mode only for such a file renders again when it opens a
   note (a link, `history.back`). **Code in a language the code view maps** (`24.x`: TypeScript, TSX, JavaScript so
   far) opens as a document instead — its definitions as sections, its doc comments as prose, its imports folded,
-  every token as written — and `space n v` switches it to source mode and back; editing switches it to source mode,
-  never the lens. `[render] code = "source"` opens it in source mode as before. `docs/design/code-view.md` has the
+  every token as written — and `space n v` switches it to source mode and back; editing opens the lens on the
+  cursor's line, doc comment or imports, or source mode (`[editor] edit_in`), as for a note. `[render] code = "source"`
+  opens it in source mode as before. `docs/design/code-view.md` has the
   view.
 - **Source code through tree-sitter** (`16.6`–`16.9`, `16.18`–`16.23`: TypeScript, TSX, JavaScript, Python, shell,
   Lua, Go, Rust, Swift, HTML, CSS, SCSS, PHP, Dockerfile, Vue, Svelte, Astro, Ruby, C, C++). Each language's grammar

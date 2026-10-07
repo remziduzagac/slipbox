@@ -5442,8 +5442,9 @@ describe("code as a document (24.x)", () => {
   };
   /** The window's rows as drawn, from the text column less the margin's two. */
   const rows = (h: Harness) => {
+    const frame = h.frame();
     const pane = h.app.geometry!.panes[0]!;
-    return h.frame().split("\n").slice(pane.y, pane.y + pane.h).map((r) => [...r].slice(pane.textX - 2, pane.x + pane.w - 1).join("").trimEnd());
+    return frame.split("\n").slice(pane.y, pane.y + pane.h).map((r) => [...r].slice(pane.textX - 2, pane.x + pane.w - 1).join("").trimEnd());
   };
   const rowIndex = (h: Harness, text: string) => rows(h).findIndex((r) => r.includes(text));
 
@@ -5544,8 +5545,52 @@ describe("code as a document (24.x)", () => {
     expect(h.app.currentLayout(v).lines.filter((l) => l.src === 13)).toHaveLength(1);
   });
 
-  test("space n v: source and back; editing goes to source, never the lens; [render] code = source; Python in source", async () => {
+  test("the lens: the cursor's line, doc comment or imports as written, highlighted as code; esc esc back to the document", async () => {
     const h = await open({ config: (c) => (c.editor.edit_in = "live") });
+    const v = h.app.view!;
+    // On the method's line: the lens opens there, its rows the file's, in the code's colours.
+    h.app.placeAtLine(v, 19, 3); // on textOf's t
+    await h.keys("i");
+    expect(v.live).toBe(true);
+    expect(h.app.marginWidth(v)).toBe(2); // the text doesn't move as the lens opens
+    expect(h.app.messages.at(-1)!.text).toBe("the lens: editing the code around the cursor — esc esc closes it");
+    const layout = h.app.currentLayout(v);
+    const lens = layout.lines.filter((l) => l.lens === "source");
+    expect(lens[0]!.src).toBe(18); // the method's doc comment, its own block, came in to the lens's least size
+    expect(lens.map((l) => l.spans.map((s) => s.text).join(""))).toContain("    return this.notes.get(rel);");
+    const ret = lens.find((l) => l.src === 20)!.spans.find((s) => s.text.includes("return"))!;
+    expect(ret.role).toBe("syn_keyword");
+    expect(layout.lines.find((l) => l.src === 18 && l.lens === "source")!.spans.map((s) => s.text).join("")).toBe("  /** A note's text, as read. */");
+    // Around it, the document view.
+    expect(rows(h)).toContain("◆ export class Graph {");
+    // In the middle of a doc comment, the lens holds it whole: its first line to its last.
+    await h.keys("escape", "escape");
+    h.app.placeAtLine(v, 7);
+    await h.keys("space", "n", "l");
+    const docLens = h.app.currentLayout(v).lines.filter((l) => l.lens === "source").map((l) => l.src);
+    expect(docLens[0]).toBe(4);
+    expect(docLens).toContain(10);
+    await h.keys("escape");
+    h.app.placeAtLine(v, 19, 3);
+    await h.keys("i");
+    // Typed into, then esc esc: the document again, the edit in it, on the new parse.
+    await h.keys("x", "escape", "escape");
+    expect(v.live).toBeFalsy();
+    expect(v.source).toBeFalsy();
+    for (let i = 0; i < 200 && v.buf.syntax?.version !== v.buf.version; i++) {
+      h.frame();
+      await Bun.sleep(10);
+    }
+    expect(rows(h)[rowIndex(h, "xtextOf(")]).toMatch(/^ƒ │ xtextOf\(/);
+    expect(rows(h)[rowIndex(h, "A note's text")]).toBe("    A note's text, as read.");
+    // On the imports' row: the lens holds them all, as written.
+    h.app.moveCursor(v, { row: 0, col: 0 });
+    await h.keys("space", "n", "l");
+    expect(h.app.currentLayout(v).lines.filter((l) => l.lens === "source").slice(0, 3).map((l) => l.src)).toEqual([1, 2, 3]);
+  });
+
+  test("space n v: source and back; edit_in = source: editing goes to source; [render] code = source; Python in source", async () => {
+    const h = await open();
     const v = h.app.view!;
     await h.keys("space", "n", "v");
     expect(v.source).toBe(true);
@@ -5559,6 +5604,8 @@ describe("code as a document (24.x)", () => {
     expect(v.source).toBe(true);
     expect(v.live).toBeFalsy();
     expect(h.app.messages.at(-1)!.text).toBe("source — editing the file");
+    await h.keys("escape");
+    expect(v.source).toBe(true); // as a note: source mode stays until space n v
     const plain = await open({ config: (c) => (c.render.code = "source") });
     expect(plain.app.view!.source).toBe(true);
     const py = await open({}, "tool.py", "def f():\n    return 1\n");

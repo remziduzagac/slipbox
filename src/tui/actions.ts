@@ -141,7 +141,7 @@ function sourceEdit(a: App, run: (v: View) => void | Promise<void>, edits = true
     if (!editable(v)) {
       const mode = a.editMode(v);
       a.setViewMode(v, mode);
-      a.message("info", mode === "live" ? "the lens: editing the markdown around the cursor — esc esc closes it" : `source — editing the ${v.buf.kind.group === "note" ? "markdown" : "file"}`);
+      a.message("info", mode === "live" ? `the lens: editing the ${v.buf.kind.group === "text" ? "code" : "markdown"} around the cursor — esc esc closes it` : `source — editing the ${v.buf.kind.group === "note" ? "markdown" : "file"}`);
     }
     return run(v);
   });
@@ -1418,7 +1418,7 @@ export function registerActions(app: App): void {
         const was = v.live;
         a.setViewMode(v, v.live ? "rendered" : "live");
         if (v.live === was) return;
-        a.message("info", v.live ? "the lens: the markdown around the cursor — esc closes it" : "rendered");
+        a.message("info", v.live ? `the lens: the ${v.buf.kind.group === "text" ? "code" : "markdown"} around the cursor — esc closes it` : a.isCodeDocument(v.buf) ? "the code as a document" : "rendered");
       }),
     // The lens's size by hand: a block more or less, kept as it moves; `=` lets it size itself.
     "lens.grow": (a) => lensStep(a, 1),

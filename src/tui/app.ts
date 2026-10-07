@@ -1133,7 +1133,12 @@ export class App {
       buf.syntax = { version: buf.version, spans, outline: tree.outline(), errors: tree.errors(), links, languages: tree.languages(), code: tree.codeModel() };
       tree.delete();
       buf.invalidateLayouts();
-      for (const v of this.allViews()) if (v.buf === buf) v.layoutKey = "";
+      for (const v of this.allViews()) {
+        if (v.buf !== buf) continue;
+        v.layoutKey = "";
+        // The code view's lens, not being typed into: its document made again on this parse (24.8).
+        if (v.live && !v.insert && this.isCodeDocument(buf)) v.liveBase = undefined;
+      }
       this.host.requestRender();
     };
     const t = setTimeout(run, buf.syntax ? 150 : 0);
@@ -2200,7 +2205,7 @@ export class App {
         : code
           ? layoutWidth(paneWidth - gutter, this.config.render.inset, NOWRAP_PROBE)
           : this.nowrapWidth(view, paneWidth, gutter);
-    if (view.source || code) this.ensureSyntax(view.buf);
+    if (view.source || this.isCodeDocument(view.buf)) this.ensureSyntax(view.buf);
     this.ensureLint(view.buf);
     this.ensureLinters(view.buf);
     this.ensureServers(view.buf);
@@ -2351,9 +2356,11 @@ export class App {
       before: buf.source.slice(0, starts[range[0] - 1] ?? 0),
       after: buf.source.slice(starts[range[1]] ?? buf.source.length),
     });
+    // Code (24.8): the document view around a lens of its own blocks — a line, a doc comment, the imports.
+    const code = this.isCodeDocument(buf);
     const fresh = (prev?: Block): LiveBase => {
-      const rendered = buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null);
-      const blocks = blockRanges(buf.parsed.tree, lineCount);
+      const rendered = code ? buf.codeLayout(width, wrap, this.glyphs) : buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null);
+      const blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
       // After an edit, the lens keeps covering the lines it did (snapped to whole blocks).
       let range: Block;
       if (prev) {
@@ -2399,7 +2406,7 @@ export class App {
         if (step > 0) {
           if (hi + 1 < bl.length) hi++;
           else if (lo > 0) lo--;
-          else this.message("info", "the lens holds the whole note");
+          else this.message("info", `the lens holds the whole ${buf.kind.group === "note" ? "note" : "file"}`);
         } else if (lo < hi) {
           if (at - lo >= hi - at) lo++;
           else hi--;
@@ -2413,7 +2420,14 @@ export class App {
     const editing = !!view.insert;
     const key = `${base.active[0]}-${base.active[1]}:${buf.version}:${base.renderedVersion}:${editing ? "e" : "v"}`;
     if (base.composed?.key === key) return base.composed.layout;
-    const layout = composeLive(base.rendered, base.old, base.active, texts, { width, wrap, rule: this.glyphs.lensRule, editing });
+    const spans = code ? buf.syntax?.spans : undefined;
+    const layout = composeLive(base.rendered, base.old, base.active, texts, {
+      width,
+      wrap,
+      rule: this.glyphs.lensRule,
+      editing,
+      ...(code ? { language: buf.kind.format, ...(spans ? { spans: (l: number) => spans.get(l) } : {}) } : {}),
+    });
     base.composed = { key, layout };
     return layout;
   }
@@ -2429,7 +2443,7 @@ export class App {
 
   /** The code view's margin (24.3): a definition's kind, and a space — two columns, in the code view only. */
   marginWidth(view: View): number {
-    return !view.source && !view.live && this.isCodeDocument(view.buf) ? 2 : 0;
+    return !view.source && this.isCodeDocument(view.buf) ? 2 : 0;
   }
 
   /** The problems bar's width (19.9): a sign, a count when more than one, a space — while it's on; with `auto`,
@@ -2519,8 +2533,6 @@ export class App {
 
   /** A window's mode: rendered, source (the markdown), or live preview. The cursor keeps its line. */
   setViewMode(view: View, mode: "rendered" | "source" | "live"): void {
-    // The lens is a note's and a data file's: code is edited in source mode (24.x).
-    if (mode === "live" && this.isCodeDocument(view.buf)) mode = "source";
     const now = view.source ? "source" : view.live ? "live" : "rendered";
     if (now === mode) return;
     if (mode !== "source" && !this.canRender(view.buf)) {
@@ -2540,9 +2552,8 @@ export class App {
     view.visual = null;
   }
 
-  /** The mode the editing keys switch a rendered window to (`[editor] edit_in`); code's always source (24.x). */
-  editMode(view?: View | null): "source" | "live" {
-    if (view && this.isCodeDocument(view.buf)) return "source";
+  /** The mode the editing keys switch a rendered window to (`[editor] edit_in`), code's document view too (24.8). */
+  editMode(_view?: View | null): "source" | "live" {
     return this.config.editor.edit_in === "live" ? "live" : "source";
   }
 

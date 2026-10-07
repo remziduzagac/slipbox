@@ -23,7 +23,7 @@ import { parseInBackground } from "../core/parse-pool.ts";
 import { countWords } from "../core/words.ts";
 import { readerFor } from "../core/readers.ts";
 import type { CodeModel, CommentLink, OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
-import { layoutCode } from "../core/layout/code.ts";
+import { codeBlocks, layoutCode } from "../core/layout/code.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
 export interface TextEdit {
@@ -437,6 +437,13 @@ export class NoteBuffer {
       this.layouts.set(key, l);
     }
     return l;
+  }
+
+  /** The code's blocks for the lens (24.8): its doc comments, its imports, its lines. */
+  codeBlocks(lineCount: number): [number, number][] {
+    const fresh = this.syntax?.version === this.version;
+    const spans = fresh ? this.syntax?.spans : undefined;
+    return codeBlocks(this.lines(), fresh ? (this.syntax?.code ?? null) : null, lineCount, (line) => !!spans?.get(line)?.some((s) => s.from === 0));
   }
 
   layout(width: number, glyphs: Glyphs, showUrls: boolean, graph: Graph | null): Layout {

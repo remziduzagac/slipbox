@@ -78,9 +78,13 @@ The prototype maps TypeScript, TSX and JavaScript (`SyntaxTree.codeModel`, `src/
 
 - **The default view** of a file in a language it maps (`[render] code = "document"`; `"source"` opens code in
   source mode as before). `space n v` switches it to source mode and back, as for a note.
-- **Editing**: as a rendered note, the editing keys switch the window to source mode first. The rows of code keep
-  their exact columns, so the cursor, find, a selection, problem marks, a language server's hover and jumps all land
-  where they are in the file; a doc comment's rows are rendered prose, placed by line.
+- **Editing**: as in a rendered note, the editing keys open the lens or switch the window to source mode, as
+  `[editor] edit_in` says. The lens (`space n l`) is the cursor's block as written, highlighted as code, the document
+  around it: a block is a line, a doc comment whole, or the run of imports whole, with the blank lines after it, and
+  the lens takes in its neighbours up to `lens_min_rows`. `esc esc` closes it, the document drawn again on the new
+  parse. The rows of code keep their exact columns, so the cursor, find, a selection, problem marks, a language
+  server's hover and jumps all land where they are in the file; a doc comment's rows are rendered prose, placed by
+  line.
 - **The outline and the breadcrumb** are the definitions, as in source mode; `]]` and `[[` go between them.
 - **Copying** a selection copies the file's text, never the rows as drawn.
 - **Problems** show as in source mode: the bar's signs, the marks, the Problems panel.
@@ -88,7 +92,7 @@ The prototype maps TypeScript, TSX and JavaScript (`SyntaxTree.codeModel`, `src/
 ## Next
 
 - Folding any definition (`▸` in the margin, a key and a click), not only the imports.
-- Editing in place: a row of code typed into without leaving the view; the lens for a doc comment.
+- Editing in place: a row of code typed into without the lens.
 - Python (docstrings, decorators), Rust (`///`, `//!`, attributes), Go (a definition's leading comments): each a
   mapping.
 - Columns where the code is tabular: consecutive assignments, enum members, an object's keys, aligned.

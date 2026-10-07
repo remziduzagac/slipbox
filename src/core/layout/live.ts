@@ -8,6 +8,7 @@
 // the rows after it renumbered by the lines added or taken away: no re-parse on a keystroke.
 
 import type { Root, RootContent } from "mdast";
+import type { Span as SyntaxSpan } from "../syntax.ts";
 import type { Role } from "../theme/theme.ts";
 import type { Layout, LayoutHeading, LayoutLink, Line } from "./ir.ts";
 import { layoutSource } from "./source.ts";
@@ -82,6 +83,9 @@ export interface LiveOptions {
   rule?: string;
   /** Typed into (insert mode): the rules, label and band say "editing" in their own colour. */
   editing?: boolean;
+  /** Code (24.x): its language, and tree-sitter's spans by the file's line numbers — the lens highlighted as code. */
+  language?: string | null;
+  spans?: (line: number) => SyntaxSpan[] | undefined;
 }
 
 /**
@@ -93,7 +97,15 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
   const delta = active[1] - active[0] - (old[1] - old[0]);
   const out: Line[] = [];
   const newRow = new Map<number, number>();
-  const source = layoutSource(lines.slice(active[0] - 1, active[1]).join("\n"), { width: opts.width, wrap: opts.wrap, headings: [], slice: true });
+  const spans = opts.spans;
+  const source = layoutSource(lines.slice(active[0] - 1, active[1]).join("\n"), {
+    width: opts.width,
+    wrap: opts.wrap,
+    headings: [],
+    slice: true,
+    ...(opts.language ? { language: opts.language } : {}),
+    ...(spans ? { spans: (l: number) => spans(l + active[0] - 1) } : {}),
+  });
   let placed = false;
   const rule: Role = opts.editing ? "lens_edit" : "lens";
   const blank = (l: Line | undefined) => !!l && !l.fill && l.spans.every((s) => !s.text.trim());

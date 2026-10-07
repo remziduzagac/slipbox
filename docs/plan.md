@@ -882,8 +882,9 @@ design: `docs/design/code-view.md`.*
 | 24.5 | **Prototype.** Imports folded into one row naming them; `enter` unfolds |
 | 24.6 | **Prototype.** Long lines broken at their structure; the author's breaks kept, line numbers the file's |
 | 24.7 | **Prototype.** Indent guides; braces and semicolons dimmed |
-| 24.8 | Folding any definition; editing in place; the lens for a doc comment |
+| 24.8 | Folding any definition; editing a row in place, without the lens |
 | 24.9 | Python, Rust, Go mapped; tabular code aligned; license headers folded |
+| 24.10 | **Prototype.** The lens on code: a line, a doc comment, the imports as written, highlighted; `esc esc` back |
 
 ## Deferred — in the design, not in this breakdown
 

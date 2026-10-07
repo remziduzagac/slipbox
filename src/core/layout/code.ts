@@ -138,6 +138,27 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
   return { lines, links, headings, width: opts.wrap ? width : Math.max(width, natural + 1) };
 }
 
+/**
+ * The code's blocks for the lens (24.8), covering lines 1..`lineCount`: a doc comment, a run of imports, or a line —
+ * each with the blank lines after it; a string or comment that spans lines stays with the line it starts on.
+ */
+export function codeBlocks(texts: string[], model: CodeModel | null, lineCount: number, continues: (line: number) => boolean): [number, number][] {
+  const starts: number[] = [];
+  const whole = [...(model?.docs ?? []), ...(model?.imports ?? [])].sort((a, b) => a.start - b.start);
+  let w = 0;
+  for (let ln = 1; ln <= lineCount; ln++) {
+    while (w < whole.length && whole[w]!.end < ln) w++;
+    const run = whole[w];
+    if (run && ln >= run.start && ln <= run.end) {
+      if (ln === run.start) starts.push(ln);
+      continue;
+    }
+    if (texts[ln - 1]?.trim() && !continues(ln)) starts.push(ln);
+  }
+  if (!starts.length || starts[0]! > 1) starts.unshift(1);
+  return starts.map((s, i) => [s, (starts[i + 1] ?? lineCount + 1) - 1]);
+}
+
 /** The margin's mark for a definition's kind. */
 function markOf(def: CodeDef, g: Glyphs): string {
   return def.kind === "function" ? g.codeFunction : def.kind === "class" ? g.codeClass : def.kind === "type" ? g.codeType : g.codeValue;

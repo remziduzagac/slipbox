@@ -124,7 +124,7 @@ export function startInsert(app: App, view: View, at: (v: View) => number, past 
   if (!editable(view)) {
     const mode = app.editMode(view);
     app.setViewMode(view, mode);
-    app.message("info", mode === "live" ? "the lens: editing the markdown around the cursor — esc esc closes it" : `source — editing the ${view.buf.kind.group === "note" ? "markdown" : "file"}`);
+    app.message("info", mode === "live" ? `the lens: editing the ${view.buf.kind.group === "text" ? "code" : "markdown"} around the cursor — esc esc closes it` : `source — editing the ${view.buf.kind.group === "note" ? "markdown" : "file"}`);
   }
   view.sel = null;
   view.visual = null;
