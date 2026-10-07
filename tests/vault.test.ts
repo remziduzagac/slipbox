@@ -4127,6 +4127,36 @@ describe("search by vault (20.16)", () => {
     expect(found()).toContain(join(at("b"), "b-late.md"));
   });
 
+  test("a search of every root leaves each as it was: not seen now, one only found still only found (the :folders order kept)", async () => {
+    const { searchOthers } = await import("../src/core/scope.ts");
+    const { openVault } = await import("../src/core/reach.ts");
+    const { readRoots, writeRoots } = await import("../src/core/registry.ts");
+    const { at } = await four();
+    // d: last seen long ago, and only found by the background index, never opened.
+    const old = "2020-01-01T00:00:00.000Z";
+    writeRoots(readRoots().map((v) => (v.path === at("d") ? { ...v, seen: old, found: true } : v)));
+    const g = openVault(at("a"));
+    g.ensureAll();
+    expect(searchOthers(g, "narwhal", "all").hits.map((h) => h.abs)).toContain(join(at("d"), "d-note.md"));
+    expect(readRoots().find((v) => v.path === at("d"))).toMatchObject({ seen: old, found: true });
+  });
+
+  test("a moved folder's relink reads every other root's links, and leaves each as it was: not seen now", async () => {
+    const { openVault } = await import("../src/core/reach.ts");
+    const { readRoots, writeRoots } = await import("../src/core/registry.ts");
+    const { planRelink } = await import("../src/core/rename.ts");
+    const { at } = await four();
+    const old = "2020-01-01T00:00:00.000Z";
+    writeRoots(readRoots().map((v) => (v.path === at("d") ? { ...v, seen: old } : v)));
+    // b moved by hand, opened where it went: c's link into it (through a) and a's out to it are fixed.
+    const moved = join(at("b"), "..", "b-moved");
+    renameSync(at("b"), moved);
+    recordLocation(locateVault({ root: moved }));
+    const plan = planRelink(openVault(moved));
+    expect(plan.files.map((f) => f.abs)).toContain(join(at("a"), "out.md"));
+    expect(readRoots().find((v) => v.path === at("d"))!.seen).toBe(old);
+  });
+
   test("slipbox search --scope: here by default; linked and all add others', each by its path (21.9) with its root (21.10), after this one's", async () => {
     const { at, tag } = await four();
     const files = (r: { json: { data: { hits: { shown: string }[] } } }) => r.json.data.hits.map((h) => h.shown);

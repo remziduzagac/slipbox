@@ -70,9 +70,10 @@ export function searchScoped(g: Graph, idx: SearchIndex | null, input: string, s
 /** The other vaults' hits a scope covers (20.16), by score, `limit` at most; and which vaults those were. */
 export function searchOthers(g: Graph, input: string, scope: Scope, limit = 50): { hits: ScopedHit[]; vaults: string[] } {
   const roots = scopeRoots(g, scope);
+  const known = new Set(readRoots().map((v) => v.path));
   const others: ScopedHit[] = [];
   for (const root of roots) {
-    const og = g.reach?.graphAt(root) ?? null;
+    const og = g.reach?.graphAt(root, { known: known.has(root) }) ?? null;
     if (!og) continue;
     let oi = og.config.search.engine === "scan" || !SearchIndex.exists(og.loc) ? null : SearchIndex.open(og.loc);
     try {

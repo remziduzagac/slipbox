@@ -67,14 +67,18 @@ export class Reach implements VaultReach {
     return name;
   }
 
-  /** The graph of another root, opened on first use with its own config; its index refreshed. */
-  graphAt(root: string): Graph | null {
+  /**
+   * The graph of another root, opened on first use with its own config; its index refreshed. A root
+   * reached is recorded as seen; one taken from the machine's list (`known`: a search of every root, a
+   * moved folder's relink) isn't — it's known already, and each would read as just opened.
+   */
+  graphAt(root: string, opts: { known?: boolean } = {}): Graph | null {
     const key = real(root);
     if (this.graphs.has(key)) return this.graphs.get(key)!;
     let g: Graph | null = null;
     try {
       const loc = rootAt(root);
-      recordLocation(loc); // reached: known on this machine, its links counted as backlinks (17.11)
+      if (!opts.known) recordLocation(loc); // reached: known on this machine, its links counted as backlinks (17.11)
       const config = loadConfig({ ...configFilesFor(loc) }).config;
       g = openGraph(loc, config, true, "lazy");
       g.thorough = true;

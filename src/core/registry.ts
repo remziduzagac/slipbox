@@ -299,7 +299,9 @@ export function unavailable(path: string): boolean {
  */
 export function forgetRoot(root: string, kinds?: RootKind[]): void {
   const list = readRoots();
-  const rest = list.filter((v) => real(v.path) !== real(root) || (kinds && !kinds.includes(v.kind)));
+  const at = real(root);
+  // Kinds first, then the cheap test: each entry's real path asked only when it could be that root.
+  const rest = list.filter((v) => (kinds && !kinds.includes(v.kind)) || (v.path !== root && real(v.path) !== at));
   if (rest.length !== list.length) writeRoots(rest);
 }
 

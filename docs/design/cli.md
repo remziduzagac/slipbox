@@ -416,7 +416,8 @@ counts the file's other sections with some of the words. `--limit N` (default 20
   root; `--scope linked` adds the roots linked to or from it — those its notes link into, those whose notes (as of
   their index) link here; `--scope all` every other root this machine knows. This root's hits come first, then the
   others' by score (`--limit` each), each searched with its own index (a scan where it has none). A hit of another
-  root has `root` and `name`, and `abs`; `shown` is its path (`21.9`); `roots` lists those searched. The old `--scope
+  root has `root` and `name`, and `abs`; `shown` is its path (`21.9`); `roots` lists those searched. Searching a root
+  the machine knows doesn't count as opening it: its `seen` (the `folders` order) stays as it was. The old `--scope
   vault` is read as `here`, with a warning.
 - **The query**: words (all of them); `"a phrase"` (its words in order, a line break or a comma between them too);
   `prefix*`; `-word` (none of it, with filters alone too: `#project -draft`); `title:word` (in the title or an

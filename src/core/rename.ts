@@ -844,7 +844,7 @@ function vaultMoveFixes(g: Graph, from: string, c: Collector): void {
   }
   for (const v of readRoots()) {
     if (v.kind !== "vault" || v.path === to || isInside(to, v.path) || !existsSync(v.path)) continue;
-    const og = g.reach?.graphAt(v.path) ?? null;
+    const og = g.reach?.graphAt(v.path, { known: true }) ?? null;
     if (!og) continue;
     for (const rel of og.notes.keys()) {
       const linking = join(og.root, rel);

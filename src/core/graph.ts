@@ -171,7 +171,7 @@ export interface VaultReach {
   /** The entry of a note in another root, by its absolute path. */
   entryAt(abs: string): NoteEntry | undefined;
   /** Another root's graph (an embed of its note resolves its links there, 1.11); null if unreadable. */
-  graphAt(root: string): Graph | null;
+  graphAt(root: string, opts?: { known?: boolean }): Graph | null;
 }
 
 /** A link that reaches nothing, or more than one note (1.7): where it is, how it's written, why. */

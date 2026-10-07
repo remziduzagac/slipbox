@@ -116,6 +116,24 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   return { app, copied, quit, keys, frame, canvas, root };
 }
 
+/**
+ * The machine's list of roots narrowed to those under `base` while `run` runs, then the others put back:
+ * a search of every root and a moved folder's relink read them all, and this file's tests leave hundreds,
+ * so such a test would be as slow as the tests before it are many.
+ */
+async function onlyRootsUnder<T>(base: string, run: () => Promise<T>): Promise<T> {
+  const { readRoots, writeRoots } = await import("../src/core/registry.ts");
+  const was = readRoots();
+  const ours = (v: { path: string }) => v.path.startsWith(`${base}/`);
+  writeRoots(was.filter(ours));
+  try {
+    return await run();
+  } finally {
+    const now = readRoots();
+    writeRoots([...was.filter((v) => !ours(v) && !now.some((x) => x.key === v.key)), ...now]);
+  }
+}
+
 const rowText = (h: Harness, row = h.app.view!.cur.row) => h.app.currentLayout(h.app.view!).lines[row]!.spans.map((s) => s.text).join("");
 const statusRow = (frame: string) => frame.split("\n").at(-1)!;
 const topRow = (frame: string) => frame.split("\n")[0]!;
@@ -6079,28 +6097,30 @@ describe("vaults in the TUI (17.x)", () => {
   });
 
   test("search by root (20.16, 21.10): this root's hits; ctrl+a adds the linked folders' under a divider, then every one's; one opens there", async () => {
-    const { notes, app, n } = await twoVaults();
-    writeFileSync(join(notes, "w.md"), "# W\n\nA walrus here.\n");
-    writeFileSync(join(app, "w2.md"), "# W2\n\nA walrus there.\n");
-    const h = await harness({ root: notes, open: "index.md" });
-    h.app.graph.reach!.graphAt(app)?.ensureAll(); // the app vault's index, as when opened
-    await h.keys("space", "f", "s");
-    for (const k of "walrus") await h.keys(k);
-    const labels = () => (h.app.overlay as ListOverlay).filtered.map((e) => e.item.label);
-    expect(labels()).toEqual(["w.md:3"]);
-    await h.keys("ctrl+a");
-    expect(labels()).toEqual(["w.md:3", "linked folders", `${join(app, "w2.md")}:3`]); // by its path (21.9)
-    expect((h.app.overlay as ListOverlay).title).toContain("and the folders linked to it");
-    await h.keys("ctrl+a");
-    expect((h.app.overlay as ListOverlay).title).toContain("and every folder known");
-    await h.keys("ctrl+a"); // and back to this one
-    expect(labels()).toEqual(["w.md:3"]);
-    await h.keys("ctrl+a");
-    (h.app.overlay as ListOverlay).selected = 2;
-    await h.keys("enter");
-    expect(h.app.loc.root).toBe(app);
-    expect(h.app.view!.buf.rel).toBe("w2.md");
-    expect(h.app.view!.curAnchor.anchor.line).toBe(3);
+    const { base, notes, app } = await twoVaults();
+    await onlyRootsUnder(base, async () => {
+      writeFileSync(join(notes, "w.md"), "# W\n\nA walrus here.\n");
+      writeFileSync(join(app, "w2.md"), "# W2\n\nA walrus there.\n");
+      const h = await harness({ root: notes, open: "index.md" });
+      h.app.graph.reach!.graphAt(app)?.ensureAll(); // the app vault's index, as when opened
+      await h.keys("space", "f", "s");
+      for (const k of "walrus") await h.keys(k);
+      const labels = () => (h.app.overlay as ListOverlay).filtered.map((e) => e.item.label);
+      expect(labels()).toEqual(["w.md:3"]);
+      await h.keys("ctrl+a");
+      expect(labels()).toEqual(["w.md:3", "linked folders", `${join(app, "w2.md")}:3`]); // by its path (21.9)
+      expect((h.app.overlay as ListOverlay).title).toContain("and the folders linked to it");
+      await h.keys("ctrl+a");
+      expect((h.app.overlay as ListOverlay).title).toContain("and every folder known");
+      await h.keys("ctrl+a"); // and back to this one
+      expect(labels()).toEqual(["w.md:3"]);
+      await h.keys("ctrl+a");
+      (h.app.overlay as ListOverlay).selected = 2;
+      await h.keys("enter");
+      expect(h.app.loc.root).toBe(app);
+      expect(h.app.view!.buf.rel).toBe("w2.md");
+      expect(h.app.view!.curAnchor.anchor.line).toBe(3);
+    });
   });
 
   test("the explorer's roots (20.15): the vault opened stays beside one followed into; its files open there; pinned, a root stays", async () => {
@@ -8374,19 +8394,21 @@ describe("git worktrees in the TUI (17.19)", () => {
     mkdirSync(join(dir, ".slipbox"), { recursive: true });
     writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${tag}"\nname = "${tag}"\n`);
     writeFileSync(join(dir, "n.md"), "# N\n\none\n\ntwo\n");
-    const first = locateVault({ path: dir });
-    recordLocation(first); // opened there once
-    const ps = new PositionStore(first);
-    ps.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 5 });
-    ps.save();
-    const moved = join(dirname(dir), "elsewhere");
-    renameSync(dir, moved);
-    const h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
-    expect(h.app.overlay).toBeNull(); // sure, so nothing asked
-    expect(h.app.messages.some((m) => m.text.startsWith(`${tag} moved here from ${tildePath(dir)}: its sessions, scratch, trash and reading positions came along`))).toBe(true);
-    expect(new PositionStore(h.app.loc).get("n.md")?.line).toBe(5);
-    const again = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
-    expect(again.app.messages.some((m) => m.text.includes("moved here"))).toBe(false);
+    await onlyRootsUnder(dirname(dir), async () => {
+      const first = locateVault({ path: dir });
+      recordLocation(first); // opened there once
+      const ps = new PositionStore(first);
+      ps.set("n.md", { heading: null, headingIndex: 0, offset: 0, line: 5 });
+      ps.save();
+      const moved = join(dirname(dir), "elsewhere");
+      renameSync(dir, moved);
+      const h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
+      expect(h.app.overlay).toBeNull(); // sure, so nothing asked
+      expect(h.app.messages.some((m) => m.text.startsWith(`${tag} moved here from ${tildePath(dir)}: its sessions, scratch, trash and reading positions came along`))).toBe(true);
+      expect(new PositionStore(h.app.loc).get("n.md")?.line).toBe(5);
+      const again = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
+      expect(again.app.messages.some((m) => m.text.includes("moved here"))).toBe(false);
+    });
   });
 
   test("started from the command line where a named folder was moved by hand: the start records it once, the App says so (21.8)", async () => {
@@ -8397,15 +8419,17 @@ describe("git worktrees in the TUI (17.19)", () => {
     mkdirSync(join(dir, ".slipbox"), { recursive: true });
     writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${tag}"\nname = "${tag}"\n`);
     writeFileSync(join(dir, "n.md"), "# N\n");
-    recordLocation(locateVault({ path: dir }));
-    const moved = join(dirname(dir), "elsewhere");
-    renameSync(dir, moved);
-    // What `slipbox <path>` does before the screen is taken: the move found there, and passed on.
-    const start = prepare([join(moved, "n.md")]);
-    if (typeof start === "number") throw new Error(`exit ${start}`);
-    expect(start.recorded?.carriedFrom).toBe(dir);
-    const app = new App({ ...start, watch: false, host: { requestRender() {}, osc52: () => true, quit: () => {} } });
-    expect(app.messages.some((m) => m.text.startsWith(`${tag} moved here from `))).toBe(true);
+    await onlyRootsUnder(dirname(dir), async () => {
+      recordLocation(locateVault({ path: dir }));
+      const moved = join(dirname(dir), "elsewhere");
+      renameSync(dir, moved);
+      // What `slipbox <path>` does before the screen is taken: the move found there, and passed on.
+      const start = prepare([join(moved, "n.md")]);
+      if (typeof start === "number") throw new Error(`exit ${start}`);
+      expect(start.recorded?.carriedFrom).toBe(dir);
+      const app = new App({ ...start, watch: false, host: { requestRender() {}, osc52: () => true, quit: () => {} } });
+      expect(app.messages.some((m) => m.text.startsWith(`${tag} moved here from `))).toBe(true);
+    });
   });
 
   test("the start (prepare): a path that isn't there said in a line, exit 3; a note opens in its vault, the flags passed on; a loose folder starts on the launcher", async () => {
@@ -8446,15 +8470,17 @@ describe("git worktrees in the TUI (17.19)", () => {
     writeFileSync(join(a, ".slipbox", "config.toml"), `[vault]\nid = "${basename(base).replace(/[^a-z0-9]/gi, "")}"\nname = "mvfix${basename(base).slice(-6).replace(/[^a-z0-9]/gi, "")}"\n`);
     writeFileSync(join(a, "n.md"), "# N\n\n[s](../shared.md)\n");
     writeFileSync(join(base, "shared.md"), "# Shared\n");
-    recordLocation(locateVault({ path: a }));
-    const moved = join(base, "deep", "v");
-    mkdirSync(dirname(moved), { recursive: true });
-    renameSync(a, moved);
-    const h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
-    expect(h.app.overlay?.kind).toBe("list");
-    expect(JSON.stringify((h.app.overlay as ListOverlay).items)).toContain("../../shared.md");
-    await h.keys("enter"); // applied
-    expect(readFileSync(join(moved, "n.md"), "utf8")).toBe("# N\n\n[s](../../shared.md)\n");
+    await onlyRootsUnder(base, async () => {
+      recordLocation(locateVault({ path: a }));
+      const moved = join(base, "deep", "v");
+      mkdirSync(dirname(moved), { recursive: true });
+      renameSync(a, moved);
+      const h = await harness({ loc: locateVault({ path: moved }), open: "n.md" });
+      expect(h.app.overlay?.kind).toBe("list");
+      expect(JSON.stringify((h.app.overlay as ListOverlay).items)).toContain("../../shared.md");
+      await h.keys("enter"); // applied
+      expect(readFileSync(join(moved, "n.md"), "utf8")).toBe("# N\n\n[s](../../shared.md)\n");
+    });
   });
 
   test("the folder holding the worktrees: each its own vault, its branch beside it", async () => {
