@@ -2534,7 +2534,7 @@ describe("top bar, tab strip, status line", () => {
     expect(top).toContain("slipbox");
     expect(top).not.toContain("▤"); // the outline's button is on the breadcrumb
     expect(top).not.toContain("watching"); // the watcher is shown by the file's path
-    expect(statusRow(h.frame())).toMatch(/‹ index\.md › +○ not watching/); // watch: false in the harness
+    expect(statusRow(h.frame())).toMatch(/‹ index\.md › +⚠ 0 +○ not watching/); // no problems: the panel's button; watch: false in the harness
     // The bar and its chip sit on the page, so the frame's rule right under it gives it the same
     // air as the rows below.
     const chipR = h.app.geometry!.hot.find((r) => r.id === "btn:palette")!;
@@ -7949,7 +7949,8 @@ describe("the Problems panel (1.7)", () => {
     expect(tabsY).toBeGreaterThan(0);
     expect(lines[tabsY - 1]).toMatch(/^━+┻━+$/); // the explorer's border ends on it
     expect(lines.at(-2)).toMatch(/^━+$/);
-    expect(lines[tabsY + 1]).toContain("Broken links (2)");
+    expect(lines[tabsY + 1]!.trim()).toBe(""); // a blank row under the tabs
+    expect(lines[tabsY + 2]).toContain("Broken links (2)");
     expect(h.app.geometry!.problems).toMatchObject({ x: 0, y: tabsY, w: 140 });
     const pane = h.app.geometry!.panes[0]!;
     expect(pane.y + pane.h).toBeLessThan(tabsY);
@@ -8022,17 +8023,20 @@ describe("the Problems panel (1.7)", () => {
     expect(h.app.fileProblems().map((p) => `${p.start.line}:${p.start.column} ${p.target}`)).toEqual(["3:5 gone-a.png", "5:6 gone-b.png"]);
     const lines = h.frame().split("\n");
     const tabsY = lines.findIndex((l) => l.includes(" This file (2) "));
-    // Two rows each: the sign, line:col, the message, who found it; under it the line, its part marked.
-    expect(lines[tabsY + 1]).toMatch(/^ ⚠ 3:5 {2}broken link: gone-a\.png +slipbox unresolved$/);
-    expect(lines[tabsY + 2]).toMatch(/^ {4}See \[a\]\(gone-a\.png\) first\./);
-    expect(lines[tabsY + 3]).toMatch(/^ ⚠ 5:6 {2}broken link: gone-b\.png/);
-    expect(lines[tabsY + 4]).toMatch(/^ {4}Then \[b\]\(gone-b\.png\) too\./); // the tab drawn as a space
+    // A blank row under the tabs; then two rows each, a blank one between: the sign, line:col, the message, who found
+    // it; under it the line, its part marked.
+    expect(lines[tabsY + 1]!.trim()).toBe("");
+    expect(lines[tabsY + 2]).toMatch(/^ ⚠ 3:5 {2}broken link: gone-a\.png +slipbox unresolved$/);
+    expect(lines[tabsY + 3]).toMatch(/^ {4}See \[a\]\(gone-a\.png\) first\./);
+    expect(lines[tabsY + 4]!.trim()).toBe("");
+    expect(lines[tabsY + 5]).toMatch(/^ ⚠ 5:6 {2}broken link: gone-b\.png/);
+    expect(lines[tabsY + 6]).toMatch(/^ {4}Then \[b\]\(gone-b\.png\) too\./); // the tab drawn as a space
     const c = h.canvas();
     const col = (y: number, text: string) => [...lines[y]!.slice(0, lines[y]!.indexOf(text))].length;
     const markAt = (y: number, text: string) => c.styles[y]![col(y, text)]!;
     const warn = h.app.theme.roles.problem_warn;
-    expect(markAt(tabsY + 2, "[a]")).toMatchObject(warn.bg ? { bg: warn.bg } : { underline: true });
-    expect(markAt(tabsY + 2, "See").underline ?? false).toBe(false);
+    expect(markAt(tabsY + 3, "[a]")).toMatchObject(warn.bg ? { bg: warn.bg } : { underline: true });
+    expect(markAt(tabsY + 3, "See").underline ?? false).toBe(false);
     // The chosen problem marked in the note while the panel has the keys, the marks off or not.
     const focusBg = h.app.theme.roles.link_focus.bg!;
     const noteRow = (text: string) => lines.findIndex((l, y) => y < tabsY && l.includes(text));
@@ -8080,20 +8084,110 @@ describe("the Problems panel (1.7)", () => {
     click(h, hot(h, "ptab:close")!);
     expect(h.app.problemsPanel.shown).toBe(false);
     expect(h.app.region).toBe("content");
-    // The left rail's button, under the history's: opens it on All, closes it.
+    // No button on the left rail: a file with none has the panel's on the status line, dim — it opens All.
+    await h.app.run("note.open a/twin.md");
     h.frame();
-    expect(hot(h, "btn:problems")!.y).toBe(hot(h, "btn:history")!.y + 1);
-    click(h, hot(h, "btn:problems")!);
+    expect(hot(h, "btn:problems")).toBeUndefined();
+    expect(statusRow(h.frame())).toMatch(/‹ a\/twin\.md › +⚠ 0 /);
+    const none = hot(h, "status:problems")!;
+    expect(h.canvas().styles[none.y]![none.x]!.fg).toBe(h.app.theme.roles.status_dim.fg!);
+    click(h, none);
     expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "all" });
-    h.app.region = "content"; // open, not focused: closed all the same
     h.frame();
-    click(h, hot(h, "btn:problems")!);
+    click(h, hot(h, "status:problems")!);
     expect(h.app.problemsPanel.shown).toBe(false);
     // A short screen keeps the note: no panel drawn, its keys still work.
     const s = await setup(12);
     await s.keys("space", "n", "q");
     expect(s.frame()).not.toContain(" This file (");
     expect(s.app.region).toBe("problems");
+  });
+});
+
+describe("the Problems panel: filtered, resized, opened from the bar (1.7)", () => {
+  const two = async (height = 40) => {
+    const root = makeVault();
+    writeFileSync(join(root, "two.md"), "# Two\n\nSee [a](gone-a.png) first.\n\nThen [b](gone-b.png) too.\n");
+    return await harness({ root, open: "two.md", width: 120, height });
+  };
+  const line = (h: Harness) => srcAt(h.app.currentLayout(h.app.view!).lines[h.app.view!.cur.row]!, h.app.view!.cur.col);
+
+  test("This file's filter: / narrows by message, place or line; enter goes there, the filter cleared", async () => {
+    const h = await two();
+    await h.keys("space", "n", "q", "/", "T", "h", "e", "n");
+    expect(h.app.fileRows().map((p) => p.start.line)).toEqual([5]); // the line's text matched
+    expect(h.frame()).toMatch(/This file \(2\) .*› Then/); // its count all of them; the filter after the titles
+    expect(h.frame()).not.toContain("3:5");
+    await h.keys("enter");
+    expect(h.app.region).toBe("content");
+    expect(line(h)).toBe(5);
+    expect(h.app.problemsPanel.file.filter).toBe("");
+    // Nothing matches: said.
+    await h.keys("space", "n", "q", "/", "z", "z", "z");
+    expect(h.frame()).toContain("no matches");
+    await h.keys("escape");
+    expect(h.app.fileRows()).toHaveLength(2);
+  });
+
+  test("resized as a window is: ctrl+w + and -, resize mode's j / k, a drag of its rule; = a third again; kept", async () => {
+    const h = await two();
+    await h.keys("space", "n", "q");
+    const drawn = () => (h.frame(), h.app.geometry!.problems!.h);
+    const first = drawn();
+    await h.keys("ctrl+w", "+");
+    expect(drawn()).toBe(first + 1);
+    expect(h.app.resizeMode).toBe(true);
+    await h.keys("j", "j", "k");
+    expect(drawn()).toBe(first + 2);
+    await h.keys("h");
+    expect(h.app.messages.at(-1)!.text).toContain("j / k resize it");
+    await h.keys("escape");
+    expect(h.app.resizeMode).toBe(false);
+    await h.keys("ctrl+w", "-", "escape");
+    expect(drawn()).toBe(first + 1);
+    // Its rule dragged up three rows: three taller; the windows above shorter.
+    const rule = h.app.geometry!.separators.find((s) => s.kind === "problems")!;
+    expect(rule.y).toBe(h.app.geometry!.problems!.y - 1);
+    const paneH = h.app.geometry!.panes[0]!.h;
+    h.app.handleMouse({ type: "down", x: 60, y: rule.y, button: 0 });
+    h.app.handleMouse({ type: "drag", x: 60, y: rule.y - 3, button: 0 });
+    h.app.handleMouse({ type: "up", x: 60, y: rule.y - 3, button: 0 });
+    expect(drawn()).toBe(first + 4);
+    expect(h.app.geometry!.panes[0]!.h).toBe(paneH - 3);
+    // Never leaving the note under four rows.
+    h.app.resizeProblems(200);
+    h.frame();
+    expect(h.app.geometry!.problems!.y - 1 - h.app.geometry!.panes[0]!.y).toBeGreaterThanOrEqual(4);
+    // = : back to a third of the screen.
+    await h.keys("ctrl+w", "=");
+    expect(drawn()).toBe(first);
+    // Kept in the session.
+    h.app.resizeProblems(15);
+    h.app.quit();
+    const again = await harness({ root: h.root, open: null, config: (c) => (c.ui.restore_session = true) });
+    expect(again.app.problemsPanel.height).toBe(15);
+    await again.keys("space", "n", "q");
+    expect(again.app.geometry!.problems!.h).toBe(15);
+  });
+
+  test("a sign of the problems bar, clicked: This file on that problem, the note on it, the panel with the keys", async () => {
+    const h = await two();
+    h.frame();
+    const sign = h.app.geometry!.hot.find((x) => x.id === "pbar:5:6")!;
+    expect(h.frame().split("\n")[sign.y]).toContain("Then b too");
+    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: sign.x, y: sign.y, button: 0 });
+    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
+    expect(h.app.problemsPanel.file.selected).toBe(1);
+    expect(h.app.region).toBe("problems");
+    expect(line(h)).toBe(5);
+    // Again, on the other: its own, the filter there cleared, the panel still open.
+    h.app.problemsPanel.file.filter = "Then";
+    h.frame();
+    const other = h.app.geometry!.hot.find((x) => x.id === "pbar:3:5")!;
+    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: other.x, y: other.y, button: 0 });
+    expect(h.app.problemsPanel.file).toMatchObject({ selected: 0, filter: "" });
+    expect(h.app.problemsPanel.shown).toBe(true);
+    expect(line(h)).toBe(3);
   });
 });
 
@@ -8137,7 +8231,8 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     await new Promise((r) => setTimeout(r, 450)); // past a re-lint's 300 ms: none while it's unsaved
     h.frame();
     expect(h.app.problemsShown(h.app.view!)).toEqual([]);
-    expect(statusRow(h.frame())).not.toContain("⚠");
+    expect(statusRow(h.frame())).not.toMatch(/⚠ [1-9]|MD013/);
+    expect(statusRow(h.frame())).toContain("⚠ 0"); // none: the Problems panel's button
     h.app.saveBuffer(h.app.view!.buf);
     h.frame();
     await until(() => h.app.problemsShown(h.app.view!).length > 0);

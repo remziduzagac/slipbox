@@ -206,15 +206,15 @@ widening without the chord.
 | --- | --- |
 | enter resize mode | `space w r`; or resize one step with `ctrl+w >` `<` `+` `-` |
 | narrower / wider (2 columns a step) | `h` / `l`, `left` / `right`, `<` / `>` |
-| shorter / taller (a stacked split) | `k` / `j`, `up` / `down`, `-` / `+` |
+| shorter / taller (a stacked split, the Problems panel) | `k` / `j`, `up` / `down`, `-` / `+` |
 | equal sizes | `=` (also `ctrl+w =`, `space w =` outside the mode) |
 | leave | `esc`, `enter`, `q`; any other key leaves and does its normal job |
 
-**What resizes follows focus:** the explorer's or the outline's width when it is focused, otherwise
-the active window's share of the split. Sizes are remembered in the session, and the defaults come
-from `ui.split_ratio`, `ui.sidebar_width` and `ui.outline_width`; `=` evens a split to half and puts
-the pane widths back to those defaults. Pane widths stay between 12 columns and half the terminal,
-leaving the note at least 24; a split stays between 15% and 85%. The mode's keys are `[keys.resize]`
+**What resizes follows focus:** the explorer's or the outline's width when it is focused, the Problems panel's height
+when it is, otherwise the active window's share of the split. Sizes are remembered in the session, and the defaults come
+from `ui.split_ratio`, `ui.sidebar_width` and `ui.outline_width`; `=` evens a split to half and puts the pane widths
+back to those defaults, and the Problems panel back to a third of the screen. Pane widths stay between 12 columns and
+half the terminal, leaving the note at least 24; a split stays between 15% and 85%. The mode's keys are `[keys.resize]`
 in config.
 
 - **Focus moves beyond the panes:** out to the explorer on the left and the outline on the
@@ -340,10 +340,11 @@ a tag's notes, the links, backlinks, outline or footnotes — or copies its valu
 a section, `/` filters, `e` edits the properties, `q` closes, `esc` goes back to the note.
 
 **The Problems panel** (`1.7`) is across the bottom, in two tabs: This file (`space n q`, a click on the status
-line's problems) and All (`space v p`, the left rail's `⚠`). It takes the explorer's keys: `j` / `k` move — in This
-file the note follows, the problem marked — `enter` (or a click again) goes there, `h` / `l` fold and unfold All's
-sections, `/` filters All, `tab` / `shift+tab` (or a click on a title) switch tabs, `q` closes, `esc` goes back to
-the note.
+line's problems, or on a sign of the bar) and All (`space v p`; the status line's `⚠ 0` when the file has none). It
+takes the explorer's keys: `j` / `k` move — in This file the note follows, the problem marked — `enter` (or a click
+again) goes there, `h` / `l` fold and unfold All's sections, `/` filters the tab, `tab` / `shift+tab` (or a click on
+a title) switch tabs, `q` closes, `esc` goes back to the note. Resize mode sizes it while it's focused: `j` / `k`
+(`ctrl+w +` / `-`) a row taller or shorter.
 
 **The properties editor** (`3.20`: `e` there, or `space n shift+p`) floats over the windows with the note's
 frontmatter: every editing key works in it. `esc` in normal mode, `q` or `:q` close it, writing back what changed;
@@ -616,7 +617,6 @@ mouse off, which gives it back to the terminal.
 | --- | --- |
 | `≡` (on the left rail; without it the top bar's) | show the explorer (and focus it) / hide it |
 | `◷` (on the left rail) | show the history (and focus it) / hide it |
-| `⚠` (on the left rail, under `◷`) | open the Problems panel on All / close it |
 | `▤` (on the right rail; without it the breadcrumb's or the top bar's) | show the outline (and focus it) / hide it |
 | superscript, `¹` (on the right rail, under `▤`) | show the footnotes (and focus them) / hide them |
 | info, `ℹ` (on the right rail, above `▤`) | show the Info (and focus it) / hide it |
@@ -632,8 +632,10 @@ mouse off, which gives it back to the terminal.
 | a task's checkbox (`☐` / `☑`) | tick or untick it |
 | status line `‹` / `›` | back / forward in the window's history (dim: nowhere to go); hovered, where to |
 | status line path | the window's history above it, Copy path first; click or `enter` goes there |
-| status line problems | the Problems panel on This file / close it |
+| status line problems | the Problems panel on This file (`⚠ 0`, none here: on All) / close it |
+| a sign of the problems bar | the Problems panel on This file, at that problem |
 | Problems panel | a tab's title switches; a row selects (This file: the note shows it), again goes there; `×` |
+| Problems panel's rule | drag to resize it |
 | a message's floating box | click to open the messages list (the boxes go) |
 | which-key popup | click an entry: a group opens it, a command runs it |
 

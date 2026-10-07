@@ -78,7 +78,7 @@ export interface Glyphs {
   footnotesButton: string;
   /** The right rail's Info button (3.19), above the outline's. */
   infoButton: string;
-  /** The left rail's Problems button (1.7), under the history's: the bottom panel, opened and closed. */
+  /** The Problems panel's button (1.7), on the status line while the file has no problems (`⚠ 0`). */
   problemsButton: string;
   /** A git branch (17.19): in the worktree picker and the status line. */
   branch: string;

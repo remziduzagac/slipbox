@@ -737,8 +737,8 @@ const CORE: Scenario[] = [
     },
   },
   {
-    name: "problems panel: space n q — this file's problems with their lines; j shows the next in the note, enter goes there; tab to All, q closes",
-    options: { files: { "scratch/two.md": "# Two\n\nSee [a](gone-a.png) first.\n\nThen [b](gone-b.png) too.\n" }, open: "scratch/two.md" },
+    name: "problems panel: space n q — this file's problems with their lines, spaced; j shows the next, enter goes there; / filters; ctrl+w + resizes; tab to All, q closes; ⚠ 0 with none",
+    options: { files: { "scratch/two.md": "# Two\n\nSee [a](gone-a.png) first.\n\nThen [b](gone-b.png) too.\n", "scratch/clean.md": "# Clean\n" }, open: "scratch/two.md" },
     run: async (s) => {
       await s.status(signed("{warning} 2"), 5000);
       await leader(s, "n", "q");
@@ -757,14 +757,38 @@ const CORE: Scenario[] = [
       await s.until(() => !s.statusLine().includes("PROBLEMS"), 3000, "the note's keys again");
       await s.status(/L5:/);
       await s.see("This file (2)");
-      // tab: All; q closes it.
+      // A blank row under the tabs, and between the problems.
       await leader(s, "n", "q");
+      const rows = () => s.screen();
+      const tabs = () => rows().findIndex((r) => r.includes("This file (2)"));
+      s.expect(rows()[tabs() + 1]!.trim() === "", "a blank row under the tabs");
+      const second = rows().findIndex((r) => signed("{warning} 5:6").test(r));
+      s.expect(second > 0 && rows()[second - 1]!.trim() === "", "a blank row between the problems");
+      // / filters it: by the line's text.
+      await s.keys("/");
+      await s.type("Then");
+      await s.see("› Then");
+      await s.until(() => !signed("{warning} 3:5").test(s.text()), 3000, "the other problem filtered out");
+      await s.keys("escape");
+      // Resized as a window: ctrl+w + a row taller, then resize mode's j another; esc leaves it.
+      const top = () => tabs();
+      const was = top();
+      await s.keys("ctrl+w", "+");
+      await s.status("RESIZE");
+      await s.keys("j");
+      await s.until(() => top() === was - 2, 3000, "the panel two rows taller");
+      await s.keys("escape");
+      await s.status("PROBLEMS");
+      // tab: All; q closes it.
       await s.keys("tab");
       await s.see(/Broken links \(\d+\)/);
       await s.keys("q");
       await s.until(() => !s.text().includes("This file ("), 3000, "the panel closed");
       // The status line's path between back and forward.
       await s.status(/‹ scratch\/two\.md ›/);
+      // A note with no problems: the panel's button on the status line instead, `⚠ 0` (a Nerd icon or `!`).
+      await s.ex("e scratch/clean.md");
+      await s.status(/‹ scratch\/clean\.md › +\S+ 0 /);
     },
   },
   {

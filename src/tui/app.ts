@@ -492,16 +492,29 @@ export interface TreeRow {
 
 export type Region = "content" | "sidebar" | "outline" | "problems";
 
+/** The Problems panel's least height (1.7), its tabs' row included, on a screen tall enough for it. */
+export const PANEL_ROWS = 12;
+
 /**
  * The Problems panel (1.7, 19.8), full width at the bottom: in tabs, the file on screen's problems — from every
  * source, each with its line — and the root's (its links' and lint's, its conflicts, its orphans). Each tab keeps its
- * selection and its first row shown; the root's has a filter.
+ * selection, its first row shown and its filter (`/`).
  */
 export interface ProblemsPanel {
   shown: boolean;
   tab: "file" | "all";
-  file: { selected: number; scroll: number };
-  all: { selected: number; scroll: number; filter: string; filtering: boolean };
+  /** Its height, its tabs' row included, as resized (resize mode, a drag of its rule); null: a third of the screen. */
+  height: number | null;
+  file: PanelList;
+  all: PanelList;
+}
+
+/** One of the Problems panel's lists: its selection, its first row shown, its filter and whether keys go to it. */
+export interface PanelList {
+  selected: number;
+  scroll: number;
+  filter: string;
+  filtering: boolean;
 }
 
 /** Live UI settings (docs/design/keymap.md, `space u`). */
@@ -611,7 +624,7 @@ export class App {
   rightView: RightView = "outline";
   private rightPositions = new Map<RightView, Pick<SidePaneState, "selected" | "scroll" | "left" | "pinned" | "filter">>();
   /** The Problems panel (1.7, at the bottom): shown or not, its tab, each tab's place. */
-  problemsPanel: ProblemsPanel = { shown: false, tab: "file", file: { selected: 0, scroll: 0 }, all: { selected: 0, scroll: 0, filter: "", filtering: false } };
+  problemsPanel: ProblemsPanel = { shown: false, tab: "file", height: null, file: { selected: 0, scroll: 0, filter: "", filtering: false }, all: { selected: 0, scroll: 0, filter: "", filtering: false } };
   /** The panel's keys: the explorer's (as configured), and tab / shift+tab between its tabs. */
   problemsKeys!: Keymap;
   /** The Problems panel's folded sections (All), by name (1.7). */
@@ -3808,10 +3821,17 @@ export class App {
       if (t) t.ratio = 0.5;
       this.sideW = this.config.ui.sidebar_width;
       this.outW = this.config.ui.outline_width;
+      this.problemsPanel.height = null;
       return;
     }
     const grow = action === "wider" || action === "taller" ? 1 : -1;
     const horizontal = action === "wider" || action === "narrower";
+    // The Problems panel, focused: taller and shorter, from its height as drawn.
+    if (this.region === "problems" && this.problemsPanel.shown) {
+      if (horizontal) return this.message("info", "the Problems panel spans the screen: j / k resize it");
+      const drawn = this.geometry?.problems?.h;
+      return this.resizeProblems((drawn ?? this.problemsPanel.height ?? PANEL_ROWS) + grow);
+    }
     if (this.region === "sidebar" && horizontal) {
       // From the drawn width, which the room left can hold below the stored one: every step shows.
       this.sideW = Math.max(12, Math.min(this.sidebarWidth() + grow * step, Math.floor(this.width * 0.5)));
@@ -4105,11 +4125,53 @@ export class App {
     return [...this.problemsShown(v)].sort((a, b) => a.start.line - b.start.line || a.start.column - b.start.column || SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
   }
 
+  /** This file's problems as its tab lists them: those its filter matches — the place, the message, who found it, the line. */
+  fileRows(): Problem[] {
+    const list = this.fileProblems();
+    const q = this.problemsPanel.file.filter;
+    if (!q) return list;
+    const lines = this.view?.buf.lines() ?? [];
+    return list.filter((p) => match(q, `${p.start.line}:${p.start.column} ${p.message} ${p.source} ${p.code ?? ""} ${lines[p.start.line - 1] ?? ""}`));
+  }
+
   /** The panel's problem chosen in This file, while it has the focus: marked in the text whatever the marks say. */
   chosenProblem(): Problem | undefined {
     const p = this.problemsPanel;
     if (!p.shown || p.tab !== "file" || this.region !== "problems") return undefined;
-    return this.fileProblems()[p.file.selected];
+    return this.fileRows()[p.file.selected];
+  }
+
+  /**
+   * The panel's height (its tabs' row included) in the `rows` the windows and it share: as resized, else a third
+   * of them — at least PANEL_ROWS where that's under 40% of them — always leaving the note 4; 0 when it can't have 3.
+   */
+  problemsPanelRows(rows: number): number {
+    if (!this.problemsPanel.shown) return 0;
+    const h = this.problemsPanel.height ?? Math.min(Math.max(PANEL_ROWS, Math.floor(rows / 3)), Math.floor(rows * 0.4));
+    const fit = Math.min(h, rows - 5);
+    return fit >= 3 ? fit : 0;
+  }
+
+  /** The panel resized to `h` rows (resize mode, a drag of its rule): kept, within what the screen allows. */
+  resizeProblems(h: number): void {
+    this.problemsPanel.height = Math.max(3, Math.min(200, Math.round(h)));
+  }
+
+  /**
+   * A sign of the problems bar, clicked (19.9): the panel on This file, that problem chosen — the worst starting
+   * there — the note on it, the panel keeping the keys.
+   */
+  openProblemAt(line: number, column: number): void {
+    const p = this.problemsPanel;
+    p.file.filter = "";
+    p.file.filtering = false;
+    const list = this.fileRows();
+    const i = list.findIndex((x) => x.start.line === line && x.start.column === column);
+    p.shown = true;
+    p.tab = "file";
+    p.file.selected = Math.max(0, i);
+    this.region = "problems";
+    this.showFileProblem(list[p.file.selected]);
   }
 
   /**
@@ -4127,7 +4189,7 @@ export class App {
     if (tab === "file" && this.view) {
       const at = this.view.cur.row;
       const line = srcAt(this.currentLayout(this.view).lines[at] ?? { src: 1 } as never, this.view.cur.col);
-      const list = this.fileProblems();
+      const list = this.fileRows();
       const i = list.findIndex((x) => x.end.line >= line);
       p.file.selected = Math.max(0, i < 0 ? list.length - 1 : i);
     }
@@ -4140,6 +4202,7 @@ export class App {
     const p = this.problemsPanel;
     p.shown = false;
     p.all.filtering = false;
+    p.file.filtering = false;
     if (this.region === "problems") this.region = "content";
   }
 
@@ -4152,7 +4215,7 @@ export class App {
       return;
     }
     if (p.tab === "all") return this.problemsAction(action);
-    const list = this.fileProblems();
+    const list = this.fileRows();
     const s = p.file;
     const go = (i: number) => {
       s.selected = Math.max(0, Math.min(list.length - 1, i));
@@ -4172,6 +4235,9 @@ export class App {
       case "expand":
       case "open_split":
         return this.showFileProblem(list[s.selected], true);
+      case "filter":
+        s.filtering = true;
+        return;
       case "close":
         return this.closeProblems();
       case "leave":
@@ -4189,6 +4255,12 @@ export class App {
     if (go) this.region = "content";
   }
 
+  /** The panel's tab's list state: This file's or All's. */
+  problemsList(): PanelList {
+    const p = this.problemsPanel;
+    return p.tab === "file" ? p.file : p.all;
+  }
+
   /** How many problems the All tab has: links, lint, conflicts — orphans, notes nothing links to, aside. */
   problemCount(): number {
     const p = this.graph.problems();
@@ -4202,7 +4274,7 @@ export class App {
     const p = this.problemsPanel;
     this.region = "problems";
     if (p.tab === "file") {
-      const list = this.fileProblems();
+      const list = this.fileRows();
       p.file.selected = i;
       return this.showFileProblem(list[i], clicks >= 2);
     }
@@ -4411,10 +4483,11 @@ export class App {
     }
   }
 
-  /** Keys while the All tab's filter has them: type, move, go there, clear. */
+  /** Keys while a tab's filter has them: type, move, go there, clear. */
   private problemsFilterKey(key: string): void {
-    const s = this.problemsPanel.all;
-    const rows = this.problemRows();
+    const p = this.problemsPanel;
+    const s = p.tab === "file" ? p.file : p.all;
+    const rows: unknown[] = p.tab === "file" ? this.fileRows() : this.problemRows();
     const typed = keyChar(key);
     switch (key) {
       case "escape":
@@ -4424,13 +4497,22 @@ export class App {
         s.filtering = false;
         return;
       case "enter": {
+        if (p.tab === "file") {
+          const pr = rows[s.selected] as Problem | undefined;
+          s.filter = "";
+          s.filtering = false;
+          if (!pr) return;
+          s.selected = Math.max(0, this.fileRows().indexOf(pr));
+          return this.showFileProblem(pr, true);
+        }
+        const all = rows as ProblemRow[];
         // On a heading (rows that came after the typing, a section's git or lint arriving): its first problem.
-        let row = rows[s.selected];
-        if (row?.heading) row = rows.slice(s.selected).find((r) => !r.heading) ?? row;
+        let row = all[s.selected];
+        if (row?.heading) row = all.slice(s.selected).find((r) => !r.heading) ?? row;
         if (!row) return;
         s.filter = "";
         s.filtering = false;
-        return this.openProblemRow(row, rows);
+        return this.openProblemRow(row, all);
       }
       case "down":
       case "ctrl+n":
@@ -4461,11 +4543,12 @@ export class App {
     this.problemsRefiltered();
   }
 
-  /** The All tab's filter changed (typed, pasted): the selection to the first problem shown. */
+  /** A tab's filter changed (typed, pasted): the selection to the first problem shown. */
   private problemsRefiltered(): void {
-    const s = this.problemsPanel.all;
+    const p = this.problemsPanel;
+    const s = p.tab === "file" ? p.file : p.all;
     s.scroll = 0;
-    s.selected = Math.max(0, this.problemRows().findIndex((r) => !r.heading));
+    s.selected = p.tab === "file" ? 0 : Math.max(0, this.problemRows().findIndex((r) => !r.heading));
   }
 
   // The Info view (3.19): what the file on screen is — where, which vault, its size and dates, its
@@ -6145,8 +6228,8 @@ export class App {
       } else if (this.region === "outline" && this.outlineShown && this.outline.filtering) {
         this.outline.filter = (this.outline.filter ?? "") + line;
         this.outlineRefiltered();
-      } else if (this.region === "problems" && this.problemsPanel.all.filtering) {
-        this.problemsPanel.all.filter += line;
+      } else if (this.region === "problems" && this.problemsList().filtering) {
+        this.problemsList().filter += line;
         this.problemsRefiltered();
       }
       return;
@@ -6352,7 +6435,7 @@ export class App {
     if (this.overlay) return this.overlayKey(this.overlay, key);
     if (this.region === "sidebar" && this.sidebarShown && this.sidebar.filtering && !this.pending.length) return this.filterKey(key);
     if (this.region === "outline" && this.outlineShown && this.outline.filtering && !this.pending.length) return this.outlineFilterKey(key);
-    if (this.region === "problems" && this.problemsPanel.shown && this.problemsPanel.tab === "all" && this.problemsPanel.all.filtering && !this.pending.length) return this.problemsFilterKey(key);
+    if (this.region === "problems" && this.problemsPanel.shown && this.problemsList().filtering && !this.pending.length) return this.problemsFilterKey(key);
     // Insert mode: keys are text, except the few that edit or move (editing.ts); save still works.
     const iv = this.view;
     if (this.region === "content" && iv?.insert && !this.pending.length) {
@@ -6682,8 +6765,8 @@ export class App {
     if (g.problems && inRect(g.problems, ev.x, ev.y)) {
       const p = this.problemsPanel;
       const s = p.tab === "file" ? p.file : p.all;
-      const shown = p.tab === "file" ? Math.max(1, Math.floor((g.problems.h - 1) / 2)) : g.problems.h - 1;
-      const count = p.tab === "file" ? this.fileProblems().length : this.problemRows().length;
+      const shown = Math.max(1, g.problemsPage ?? 1);
+      const count = p.tab === "file" ? this.fileRows().length : this.problemRows().length;
       s.scroll = Math.max(0, Math.min(Math.max(0, count - shown), s.scroll + dir * (p.tab === "file" ? 1 : n)));
       s.selected = Math.max(s.scroll, Math.min(s.selected, s.scroll + shown - 1));
       return;
@@ -6753,6 +6836,20 @@ export class App {
     const inPopup = g.popup && inRect(g.popup, ev.x, ev.y);
     if (this.floating && g.floating && !inRect(g.floating, ev.x, ev.y) && !inPopup) return void this.closeFloating();
     if (hot?.startsWith("prow:")) return this.clickProblemRow(Number(hot.slice(5)), clicks);
+    // A sign of the problems bar (19.9): its window active, the panel on that problem.
+    if (hot?.startsWith("pbar:")) {
+      const pane = g.panes.find((p) => inRect(p, ev.x, ev.y));
+      const t = this.tab;
+      if (pane && t && !this.floating && t.views.includes(pane.view)) t.active = t.views.indexOf(pane.view);
+      const [line, column] = hot.slice(5).split(":").map(Number);
+      return this.openProblemAt(line!, column!);
+    }
+    // The Problems panel's rule: dragged, its height.
+    const panelRule = g.separators.find((s) => s.kind === "problems" && inRect(s, ev.x, ev.y));
+    if (panelRule) {
+      this.drag = { kind: "separator", sep: panelRule };
+      return;
+    }
     if (hot && !hot.startsWith("tab:")) return this.clickHot(hot);
     if (inPopup) return; // the which-key popup's background
     // The Problems panel: a click anywhere else in it focuses it.
@@ -6934,6 +7031,7 @@ export class App {
     }
     if (d.kind === "separator") {
       const s = d.sep;
+      if (s.kind === "problems" && s.area) return this.resizeProblems(s.area.y + s.area.h - 1 - ev.y);
       if (s.kind === "sidebar") this.sideW = Math.max(12, Math.min(ev.x - this.leftRailWidth, Math.floor(this.usableWidth * 0.5)));
       else if (s.kind === "outline") this.outW = Math.max(12, Math.min(this.width - this.rightRailWidth - ev.x - 1, Math.floor(this.usableWidth * 0.5)));
       else if (s.area && this.tab) {
@@ -7033,7 +7131,6 @@ export class App {
       case "btn":
         if (arg === "explorer") this.openLeftView("explorer");
         else if (arg === "history") this.openLeftView("history");
-        else if (arg === "problems") this.problemsPanel.shown ? this.closeProblems() : this.openProblems("all");
         else if (arg === "outline") void this.run("outline.toggle");
         else if (arg === "footnotes") void this.run("footnotes.toggle");
         else if (arg === "info") void this.run("info.toggle");
@@ -7105,8 +7202,11 @@ export class App {
         if (arg === "path" && this.view) this.openPathMenu();
         else if (arg === "back" || arg === "forward") this.history(arg);
         else if (arg === "message") void this.run("messages.open");
-        // The file's problems: the Problems panel on This file (1.7); open on it already, closed.
-        else if (arg === "problems") return this.problemsPanel.shown && this.problemsPanel.tab === "file" ? this.closeProblems() : this.openProblems("file");
+        // The file's problems: the Problems panel on This file (1.7) — on All when it has none; open there, closed.
+        else if (arg === "problems") {
+          const tab = this.fileProblems().length ? "file" : "all";
+          return this.problemsPanel.shown && this.problemsPanel.tab === tab ? this.closeProblems() : this.openProblems(tab);
+        }
         break;
       case "wk":
         void this.handleKey(arg);
@@ -7531,6 +7631,7 @@ export class App {
     this.sidebar.visible = s.sidebar;
     if (s.outline !== undefined) this.outline.visible = s.outline;
     if (s.sidebar_width) this.sideW = s.sidebar_width;
+    if (s.problems_height) this.problemsPanel.height = s.problems_height;
     if (s.outline_width) this.outW = s.outline_width;
     this.revealInSidebar();
     return true;
@@ -7572,6 +7673,7 @@ export class App {
       sidebar: this.sidebar.visible,
       outline: this.outline.visible,
       sidebar_width: this.sideW,
+      problems_height: this.problemsPanel.height ?? undefined,
       outline_width: this.outW,
       ui: this.uiOverrides,
       recent_commands: this.recentCommands,

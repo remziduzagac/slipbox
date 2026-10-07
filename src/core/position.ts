@@ -295,6 +295,8 @@ export interface SessionState {
   outline?: boolean;
   sidebar_width?: number;
   outline_width?: number;
+  /** The Problems panel's height, as resized (1.7). */
+  problems_height?: number;
   theme?: string;
   ui?: Record<string, UiOverride>;
   /** Commands run from the palette or help, most recent first. */
@@ -339,6 +341,7 @@ export function loadSession(place: StatePlace): SessionState | null {
     outline: typeof s.outline === "boolean" ? s.outline : undefined,
     sidebar_width: validWidth(s.sidebar_width),
     outline_width: validWidth(s.outline_width),
+    problems_height: typeof s.problems_height === "number" && Number.isInteger(s.problems_height) && s.problems_height >= 3 && s.problems_height <= 200 ? s.problems_height : undefined,
     theme: typeof s.theme === "string" ? s.theme : undefined,
     ui: s.ui && typeof s.ui === "object" && !Array.isArray(s.ui) ? s.ui : {},
     recent_commands: Array.isArray(s.recent_commands) ? s.recent_commands.filter((x) => typeof x === "string") : [],

@@ -526,7 +526,7 @@ export const PROBLEMS_ACTION_INFO: Record<string, { title: string; desc: string;
   top: { title: "Top", desc: "Selects the first row" },
   bottom: { title: "Bottom", desc: "Selects the last row" },
   switch: { title: "Other tab", desc: "Between This file and All" },
-  filter: { title: "Filter", desc: "All: type to narrow the problems by note and link; enter goes there, esc clears" },
+  filter: { title: "Filter", desc: "Type to narrow the problems (This file: by place, message or line; All: by note and link); enter goes there, esc clears" },
   close: { title: "Close the problems", desc: "Closes the bottom panel; focus returns to the note" },
   leave: { title: "Back to the note", desc: "Focuses the note; the problems stay open" },
 };
@@ -575,8 +575,8 @@ export const FOOTNOTE_ACTION_INFO: Record<string, { title: string; desc: string 
 export const RESIZE_ACTIONS: Record<string, { title: string; desc: string }> = {
   narrower: { title: "Narrower", desc: "Shrinks the focused pane or window" },
   wider: { title: "Wider", desc: "Grows the focused pane or window" },
-  shorter: { title: "Shorter", desc: "Shrinks the window in a stacked split" },
-  taller: { title: "Taller", desc: "Grows the window in a stacked split" },
+  shorter: { title: "Shorter", desc: "Shrinks the window in a stacked split, or the Problems panel when focused" },
+  taller: { title: "Taller", desc: "Grows the window in a stacked split, or the Problems panel when focused" },
   equalize: { title: "Equal sizes", desc: "Evens the split and resets pane widths" },
   leave: { title: "Leave resize mode", desc: "Back to reading" },
 };

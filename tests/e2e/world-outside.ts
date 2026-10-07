@@ -535,7 +535,7 @@ export const OUTSIDE_SCENARIOS: Scenario[] = [
       await s.status("MD099", 5000);
       // Fixed and saved: gone.
       await s.keys("d", "d", "ctrl+s");
-      await s.until(() => !signed("{warning}").test(s.statusLine()), 5000, "no finding once fixed and saved");
+      await s.until(() => !signed("{warning} (MD|[1-9])").test(s.statusLine()), 5000, "no finding once fixed and saved");
     },
   },
 

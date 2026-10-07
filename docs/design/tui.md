@@ -144,7 +144,8 @@ session keeps them.
   `↻ reloaded` after an external change, or `✖ deleted on disk` — in symbols only (`• ⚠`) on a
   narrow screen, so the path and the position keep their room; then the worst problem on the cursor's line
   (`⚠ MD013 line-length: …`, `✖ missing ")"`), or how many the file has of each severity (`✖ 1  ⚠ 3`; see
-  "Problems where they are");
+  "Problems where they are") — clicked, the Problems panel on This file; with none, the panel's button, dim
+  (`⚠ 0`; Nerd: an alert in a circle; ascii `!`), which opens it on All;
 - whether external changes will show up: `● watching` (with a count of polled directories, if
   any), `⚠ not watching` when the watcher failed, `○ not watching` when it is off. It is
   dropped when the line is too short.
@@ -258,11 +259,11 @@ follows it once: the second click, landing in the note it opened, is swallowed.
 - **Tab:** one window, or two in a split, with an orientation (side by side, or stacked) and a ratio (the first window's
   share). `ctrl+t c` (`tab.new`) in a split moves this window out into a tab of its own, the split gone; with one
   window, it opens its note in a new tab. Resize mode (`space w r`, or a `ctrl+w` step) changes the ratio, or the
-  explorer or outline width when one is focused, and all of it is kept in the session. Side by side falls back to
-  stacked below 80 content columns (a fixed width, not `ui.narrow_width`), and a stacked split too short for two windows
-  (under 6 rows) shows only the active one. With a split, each window names its note on its breadcrumb row, bright in
-  the active window. Pane widths stay between 12 columns and half the terminal, and together leave the note at least 24;
-  a split's ratio stays between 15% and 85%.
+  explorer or outline width, or the Problems panel's height, when one is focused, and all of it is kept in the session.
+  Side by side falls back to stacked below 80 content columns (a fixed width, not `ui.narrow_width`), and a stacked
+  split too short for two windows (under 6 rows) shows only the active one. With a split, each window names its note on
+  its breadcrumb row, bright in the active window. Pane widths stay between 12 columns and half the terminal, and
+  together leave the note at least 24; a split's ratio stays between 15% and 85%.
 
 ## Positions (plans `3.4`, `3.5`, `3.15`)
 
@@ -624,9 +625,8 @@ rules it meets. Each is generic: a place for buttons, whatever they open.
 
 - **The left rail** runs from under the top bar's rule to the frame's bottom rule, its first button
   level with the tab strip. It holds the left panel's views, the explorer's `≡` and the history's
-  `◷` (ascii `~`), the panel opening beside it; under them the Problems panel's `⚠` (Nerd: an alert in a circle;
-  ascii `!`), bright while it's open, which opens it on All and closes it. Without it, `≡` is the top bar's, the
-  history opens with `space h h` and the problems with `space v p`.
+  `◷` (ascii `~`), the panel opening beside it. Without it, `≡` is the top bar's and the history opens with
+  `space h h`. (The Problems panel, at the bottom, opens from the status line.)
 - **The right rail** runs from under the tab strip's rule, its first button level with the breadcrumb. It holds the
   right panel's views: the Info's `ℹ` (Nerd: an i in a circle; ascii `i`), under it the outline's `▤`, then the
   footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`); the panel opens beside it. Without it, `▤` sits at the
@@ -1250,8 +1250,9 @@ information — don't mark every page; `"info"` shows them too.
   starting there by its sign, in its colour (`✖` `error`, `⚠` `warn`, `ℹ` `info`, `·` a hint; the Nerd set's icons;
   ASCII `E W I .`), then how many when more than one (`+` past 9). With `"auto"`, the default, it takes its three
   columns once a file has had a problem, and keeps them while the file is open, so the text doesn't move as problems
-  come and go; `"on"` keeps them always, `"off"` never. A line's number takes the worst one's colour too. No ruler
-  on the right: the Problems panel's This file tab says where in the file they are.
+  come and go; `"on"` keeps them always, `"off"` never. A line's number takes the worst one's colour too. A click on a
+  sign opens the Problems panel on This file at that problem (the worst there), the note on it, the panel with the
+  keys. No ruler on the right: the Problems panel's This file tab says where in the file they are.
 - **The marks** (`[diagnostics] marks`): where each problem is, underlined in its severity's colour
   (`problem_error`, `problem_warn`, `problem_info`; a syntax error keeps `syntax_error`), for the problems at least as
   bad as its level: `"error"` (the default), `"warning"`, `"info"` (all), or `"off"`; `space u shift+d` cycles off →
@@ -1268,35 +1269,38 @@ Both switches are UI settings (`space u u`), remembered as the others are.
 ## The Problems panel (plan `1.7`)
 
 A panel across the whole width at the bottom, under the windows and the side panes, over the frame's bottom rule —
-a third of the rows, at least twelve where that's under 40% of them; a screen too short for three keeps the note (its
-keys still work). Its first row
-has its two tabs, the chosen one bright, a click on a title switching (`tab` / `shift+tab` too), and a close button
-at its right end; the panel has the keys while focused (`PROBLEMS` on the status line), `esc` handing them back to
-the note and `q` closing it.
+a third of the rows, at least twelve where that's under 40% of them. It resizes as a window does: with it focused,
+resize mode's `j` / `k` (`ctrl+w +` / `-`, `space w r`) make it a row taller or shorter, and its rule drags; `=` puts
+it back to a third; its height is kept in the session, and never leaves the note under four rows (a screen too short
+for three keeps the note; its keys still work). Its first row has its two tabs, the chosen one bright, a click on a
+title switching (`tab` / `shift+tab` too), the tab's filter after them (`/`: `› text`), and a close button at its
+right end; then, a blank row above and below it, the tab's list. The panel has the keys while focused (`PROBLEMS` on
+the status line), `esc` handing them back to the note and `q` closing it.
 
-- **This file (n)** (`space n q`; a click on the status line's problems): every problem of the file
-  on screen, from every source ("Problems where they are", at `[diagnostics] severity` and up), in the order they
-  come: on its first row the severity's sign, `line:col`, the message, and who found it dimmed at the right
-  (`slipbox unresolved`, `markdownlint MD013`); under it the line's text, its leading blanks dropped, the problem's
-  part marked as it is in the note. It follows the file on screen and opens on the problem at or after the cursor's
-  line. Moving through it (`j` / `k`, a click) takes the note there, the panel keeping the keys, and marks that
-  problem in the note with a background (`link_focus`), whatever `marks` says, while the panel has the focus;
+- **This file (n)** (`space n q`; a click on the status line's problems, or on a sign of the bar): every problem of the
+  file on screen, from every source ("Problems where they are", at `[diagnostics] severity` and up), in the order they
+  come, a blank row between them: on its first row the severity's sign, `line:col`, the message, and who found it dimmed
+  at the right (`slipbox unresolved`, `markdownlint MD013`); under it the line's text, its leading blanks dropped, the
+  problem's part marked as it is in the note. `/` filters them — by place, message, who found it or the line's text —
+  `enter` going to the first match, the filter cleared. It follows the file on screen and opens on the problem at or
+  after the cursor's line. Moving through it (`j` / `k`, a click) takes the note there, the panel keeping the keys, and
+  marks that problem in the note with a background (`link_focus`), whatever `marks` says, while the panel has the focus;
   `enter` (or a second click) goes there, the note taking the keys, a place pushed onto its history.
-- **All (n)** (`space v p`, `:problems`, the left rail's `⚠`): what's wrong in the root, the count leaving its
-  orphans out. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link set: each link
-  that reaches nothing, and why when there's a reason, such as an unknown folder), **Ambiguous links** (each that
-  reaches several notes, and how many), **Fragile links** (each won by where it's written — the nearest or the
-  shortest of several of its name — and the path that names its note for sure, `space c a` writing it), **Lint**
+- **All (n)** (`space v p`, `:problems`; the status line's `⚠ 0` when the file has none): what's wrong in the root, the
+  count leaving its orphans out. A heading per kind, with its count, that folds: **Broken links** (the unresolved-link
+  set: each link that reaches nothing, and why when there's a reason, such as an unknown folder), **Ambiguous links**
+  (each that reaches several notes, and how many), **Fragile links** (each won by where it's written — the nearest or
+  the shortest of several of its name — and the path that names its note for sure, `space c a` writing it), **Lint**
   (`3.21`: the linter's findings, when one runs — see "The lint surface"), **Conflicts** (`5.12`: during a merge, each
   file git says is unmerged, at its first `<<<<<<<` marker), **Orphans** (`9.5`: the notes no other note links to —
-  another root's links count, a note's own don't — each opened by `enter`). Under the first three, the notes with
-  such links, and under a note its problems: the line and the link as written, in the link's colour (a finding: its
-  line, rule and what's wrong). `enter` (or a double-click) opens the note there, the cursor on the link as drawn
-  (in source mode, on its text); a note's row (an orphan's too) opens at its first on one click. It takes the
-  explorer's keys (`l` / `h` unfold and fold a section); `/` filters — its `› text` after the tabs' titles — keeping
-  the problems whose note, line or link matches (a conflict or an orphan by its path) under their headings,
-  unfolded; a note's change shows at once. Each opening lints the root again (`Lint (n) …` while it runs);
-  `slipbox problems` gives the same (`--lint` for the findings).
+  another root's links count, a note's own don't — each opened by `enter`). Under the first three, the notes with such
+  links, and under a note its problems: the line and the link as written, in the link's colour (a finding: its line,
+  rule and what's wrong). `enter` (or a double-click) opens the note there, the cursor on the link as drawn (in source
+  mode, on its text); a note's row (an orphan's too) opens at its first on one click. It takes the explorer's keys (`l`
+  / `h` unfold and fold a section); `/` filters — its `› text` after the tabs' titles — keeping the problems whose note,
+  line or link matches (a conflict or an orphan by its path) under their headings, unfolded; a note's change shows at
+  once. Each opening lints the root again (`Lint (n) …` while it runs); `slipbox problems` gives the same (`--lint` for
+  the findings).
 
 The same key, the panel open there and focused, closes it; open and not focused, it focuses it.
 

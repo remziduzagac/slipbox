@@ -1406,8 +1406,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - problems panel, All: Broken links, Ambiguous links, Lint, Conflicts, Orphans; folding; enter lands on link; / filters
   — `notes/meetings/2026-09-05-feedback-synthesis.md`, `work/kestrel/docs/release-notes/2.3.md` (problems.open 1.7;
   tests)
-- problems panel, This file: every source's problems with their lines, the chosen one marked, enter jumps; tab switches
-  — `work/kestrel/src/routes/RouteMap.tsx`, `work/product/drafts/notes-from-offsite.md` (problems.file 1.7; tests)
+- problems panel, This file: every source's problems with their lines, the chosen one marked, enter jumps; tab switches;
+  / filters; resized (ctrl+w + / -, its rule dragged); a bar sign clicked opens it there; none here: the status
+  line's ⚠ 0 — `work/kestrel/src/routes/RouteMap.tsx`, `work/product/drafts/notes-from-offsite.md` (problems.file 1.7;
+  tests)
 - problems where they are: bar column signs by severity, the count past one (+ past 9), marks at a level (errors by
   default; space u shift+d cycles), status line, severity threshold — `work/kestrel/src/routes/RouteMap.tsx`,
   `work/product/drafts/notes-from-offsite.md` (Problems where they are 19.8-11)
