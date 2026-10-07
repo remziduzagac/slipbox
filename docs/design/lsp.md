@@ -75,7 +75,8 @@ A program written for Node (`#!/usr/bin/env node`) runs on slipbox's own Bun —
 the root's preload and read its `.env`, whichever program it was, slipbox's own install too. A server whose
 program's name is common elsewhere is taken only from the project or slipbox's installs: a `tsc` on `PATH` may be an
 older TypeScript with no server. Everything is trusted
-(`19.6`): the project's own programs run, and its servers run its code, as under nvim or Helix.
+(`19.6`): the project's own programs run, and its servers run its code, as under nvim or Helix — until `23.x`,
+decided 2026-10-07: nothing of a folder's own, unless you trust its root.
 
 **Installing** (`19.5`, `core/servers/install.ts`): a server published on npm and found nowhere is installed when a
 file first needs it — `[lsp] auto_install = false` stops that — into slipbox's own package folder

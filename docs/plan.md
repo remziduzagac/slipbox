@@ -212,7 +212,8 @@ changed.
 | Files beyond markdown: three groups, phase 3b before the vault | 2026-09-29 | `docs/idea.md`, `16.x` below |
 | `6.1` search: our own index, Scout later | 2026-10-01 | `docs/design/decisions.md` |
 | Phase 5: language servers both ways, linters, diagnostics everywhere | 2026-10-01 | below |
-| `19.6` trust: everything trusted, as in nvim and Helix | 2026-10-01 | `docs/design/decisions.md` |
+| `19.6` trust: everything trusted, as in nvim and Helix (revised by `23.1`) | 2026-10-01 | `docs/design/decisions.md` |
+| `23.1` run nothing of a folder's own, unless you trust its root | 2026-10-07 | `docs/design/decisions.md` |
 
 ### Phase 3 decided 2026-09-28 — editing, in five steps
 
@@ -320,10 +321,11 @@ optional `--if-unchanged` for careful writers.
 6. **New languages** (`16.18`–`16.23`): Swift, HTML and CSS, PHP, Dockerfile, the web frameworks (Vue, Svelte,
    Astro); Ruby and C/C++ decided and done (`16.23`).
 
-**Trust (`19.6`), decided with the user:** everything is trusted. Servers and linters run wherever slipbox opens a
-file, the project's own copies (`node_modules/.bin`, `.venv/bin`, `vendor/bin`) included, and they run the project's
-code — build scripts, `eslint.config.js` — as they do under nvim or Helix; nothing asks first. What stays is the rule
-above: a vault's committed config never names a program to run.
+**Trust (`19.6`), decided with the user:** everything is trusted — revised 2026-10-07 by `23.x`, so that nothing of a
+folder's own runs unless you trust its root. Servers and linters run wherever slipbox opens a file, the project's
+own copies (`node_modules/.bin`, `.venv/bin`, `vendor/bin`) included, and they run the project's code — build
+scripts, `eslint.config.js` — as they do under nvim or Helix; nothing asks first. What stays is the rule above: a
+vault's committed config never names a program to run.
 
 **Order:** `11.1` (the protocol library, for both directions), then the markdown server (`11.x`), then the
 diagnostics display on today's findings (`19.8`–`19.11`), then the client and finding servers (`19.1`–`19.7`),
@@ -575,7 +577,7 @@ source shown alike in every mode.*
 | 19.3 | **Done.** Roots per language, from markers (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`…) |
 | 19.4 | **Done.** Finding: the user's config, the project (`node_modules/.bin`, `.venv/bin`…), `PATH`, Mason |
 | 19.5 | **Done.** Private installs: npm packages with Bun into slipbox's folder, pinned, scripts off; `auto_install` |
-| 19.6 | **Decided:** trusted everywhere — servers and linters run the project's code, as in nvim and Helix |
+| 19.6 | **Decided:** trusted everywhere — servers and linters run the project's code (revised by `23.1`) |
 | 19.7 | **Done.** `slipbox doctor`: per language, each server and linter — found where, installable, or how to get it |
 | 19.8 | **Done.** Diagnostics: one list per file from every source — syntax, lint, links; servers to come |
 | 19.9 | **Done.** The bar: a column beside the text, each line's count coloured by its worst severity, every mode |
@@ -848,6 +850,22 @@ rather than an unlink, nvim-tree's keys where they fit. The design is `docs/desi
 | 22.1 | A note's history: its commits (`git log --follow`), an older version opened to read, the diff to it |
 | 22.2 | Frontmatter checked against a folder's rules (required keys, their types): findings in Problems |
 | 22.3 | Document types by their conventions (ADRs, plans, skills): listed and moved between by type |
+
+## Running nothing of a folder's own — `23.x`
+
+*Decided 2026-10-07 with the user; revises `19.6`. The design, and why: `docs/design/decisions.md`, `23.x`.*
+
+| ID | Item |
+| --- | --- |
+| 23.1 | **Decided.** A folder's own code never runs, unless its root is in your config's `[trust] roots` |
+| 23.2 | Programs only from your config, `PATH`, your install folders, slipbox's installs: never a folder's own |
+| 23.3 | A root's `.vscode/settings.json` not read, or only its keys that name no program, path or command |
+| 23.4 | Servers in their no-execution modes: rust-analyzer, gopls, the TypeScript servers, pyright |
+| 23.5 | Linters whose config is code (ESLint, stylelint) not run |
+| 23.6 | git with `-c core.fsmonitor=false`, `--no-textconv`, `--no-ext-diff` |
+| 23.7 | `[trust] roots` (paths, `~`, globs) in your config only, never a root's; the CLI never asks |
+| 23.8 | `slipbox doctor` and the TUI say a root isn't trusted, once, and what that limits |
+| 23.9 | **Done** (2026-10-07). Bun reads no `bunfig.toml` or `.env` of the folder it starts in |
 
 ## Deferred — in the design, not in this breakdown
 

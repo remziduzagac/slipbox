@@ -32,7 +32,8 @@ and `[lint]` applies. Likewise a language server's `command`, `args` and `enviro
 A known server's `config` from it does reach the server, though, as a project's `.vscode/settings.json` does, and
 some servers' settings name programs (rust-analyzer's `check.overrideCommand`, for one). Everything you open is
 trusted (`19.6`), so a folder you clone can still make a server run something; only slipbox's own command keys are
-yours alone.
+yours alone. `23.x` (decided 2026-10-07, not built yet) changes that: nothing of a folder's own runs unless its
+root is in your `[trust] roots`.
 Nor may its `[keys]` or `[aliases]` name a command that throws work away — `app.quit_force`,
 `note.revert`, `note.save_force`, `scratch.clear` (`VAULT_FORBIDDEN_COMMANDS`) — so a clone can't put
 one on `ctrl+s` or `:wq`; those bindings are dropped with a warning.

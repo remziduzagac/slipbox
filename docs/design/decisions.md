@@ -246,6 +246,8 @@ you say so, and so is text written over a frontmatter that changed under it.
 
 ## `19.6` — trust
 
+*Revised 2026-10-07 by `23.x` (below): nothing of a folder's own runs, unless you trust its root.*
+
 Language servers and linters run the project's code: rust-analyzer its build scripts, the ESLint server its
 `eslint.config.js`, the project's own `node_modules/.bin` and `.venv/bin`. Decided 2026-10-01 with the user:
 **everything is trusted**, as nvim and Helix trust it — no question per folder or repository, no list of trusted
@@ -254,6 +256,28 @@ places. Unchanged by it: a folder's committed config never sets slipbox's own co
 a folder reaches the server, as `.vscode/settings.json` does, and some settings name programs (rust-analyzer's
 `check.overrideCommand`), so cloning a folder can still choose what a server runs; what the project's own tools do
 is the project's.
+
+## `23.x` — run nothing of a folder's own
+
+Decided 2026-10-07 with the user, after trailscout's review of what makes a repository's code run; revises `19.6`.
+slipbox runs programs you chose: your editor, git, and the servers and linters found in your config, on `PATH`, in
+your install folders (Mason's, `~/.cargo/bin`, `~/go/bin`, `~/.local/bin`) or installed by slipbox itself. It runs
+nothing a folder brings with it:
+
+- **Its programs:** not its `node_modules/.bin`, `.venv/bin`, `venv/bin` or `vendor/bin`, nor a program its
+  `.vscode/settings.json` or a server's settings name (`typescript.tsdk`, rust-analyzer's `check.overrideCommand`).
+- **Its code, run by a server by default:** rust-analyzer without build scripts, proc macros or check-on-save; gopls
+  with `GOTOOLCHAIN=local` and cgo off; the TypeScript servers with their own TypeScript and no project plugins;
+  pyright given the venv's packages read from disk, its Python never run. Linters whose config is code (ESLint,
+  stylelint) don't run.
+- **Its git config:** git runs with `-c core.fsmonitor=false`, `--no-textconv` and `--no-ext-diff`.
+- **Bun's own reading:** no `bunfig.toml` and no `.env` from the folder Bun starts in (the launcher, Node servers;
+  done 2026-10-07).
+
+**One opt-in, yours alone:** `[trust] roots` in your own config lists the roots whose tools run as they would anywhere
+else, their own defaults. A root's `.slipbox/config.toml` can't list itself, and the CLI never asks (an agent can't
+answer). `slipbox doctor` says whether a root is trusted, and what that limits. The cost, said where it shows: in a
+root not trusted, a Rust project's macros give errors, ESLint finds nothing, a project's own TypeScript isn't used.
 
 ## `20.x` — plain paths, virtual vaults
 
