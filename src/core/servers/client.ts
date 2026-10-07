@@ -196,7 +196,15 @@ export class LanguageClient {
       for (const uri of this.open.keys()) void this.pull(uri);
       return null;
     });
-    conn.onNotification("$/progress", () => {});
+    // Some work of the server's done (its workspace loaded, its index built): a server that waits to be
+    // asked is asked again — rust-analyzer's first answer, before its workspace loads, is empty, and
+    // without `cargo check` (a root you don't trust, 23.4) nothing else would ask it after.
+    conn.onNotification("$/progress", (p: { token?: string | number; value?: { kind?: string } }) => {
+      if (p?.value?.kind === "begin") this.working.add(String(p.token));
+      if (p?.value?.kind !== "end") return;
+      this.working.delete(String(p.token));
+      if (this.pullsDiagnostics) this.pullSoon();
+    });
     conn.onNotification("telemetry/event", () => {});
     // Anything else asked of slipbox — another refresh, a feature it doesn't have — gets an empty
     // answer, never an error: some servers crash on an error they don't expect (pyright did).
@@ -205,6 +213,24 @@ export class LanguageClient {
       this.hooks.log?.(`${this.spec.name}: asked ${method}, which slipbox doesn't answer`);
       return null;
     });
+  }
+
+  /** Its work in progress, by token (`$/progress` begun, not ended): loading a workspace, indexing. */
+  private readonly working = new Set<string>();
+  /** Whether it says it's still at some work: what it has said of a file may not be all yet. */
+  get busy(): boolean {
+    return this.working.size > 0;
+  }
+
+  private pullTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Every open file's diagnostics asked for again in a moment: work ending in a burst asks once. */
+  private pullSoon(): void {
+    if (this.pullTimer) clearTimeout(this.pullTimer);
+    this.pullTimer = setTimeout(() => {
+      this.pullTimer = null;
+      for (const uri of this.open.keys()) void this.pull(uri);
+    }, 100);
+    (this.pullTimer as { unref?: () => void }).unref?.();
   }
 
   /** Whether the server wants to be asked for a document's diagnostics (pull, 3.17). */

@@ -158,6 +158,11 @@ export class ServerManager {
     return out;
   }
 
+  /** Whether any of a file's servers says it's still at some work (loading, indexing): its word may not be all yet. */
+  busy(path: string): boolean {
+    return (this.docs.get(path)?.servers ?? []).some((key) => this.running.get(key)?.client?.busy ?? false);
+  }
+
   /** Its text now: every server of it told. */
   change(path: string, version: number, text: string): void {
     const doc = this.docs.get(path);

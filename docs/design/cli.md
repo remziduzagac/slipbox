@@ -641,7 +641,8 @@ limits[], skipped[{name, why}], run[], missing[], linters[]}`, each linter with 
 severity source code: message`, sorted by place:
 
 - its language servers' (`19.x`): started as the TUI starts them (installed first when on npm), told the file, then
-  waited for until each has said what it finds and gone quiet for 750 ms, since a server says it in stages; at most
+  waited for until each has said what it finds and gone quiet for 750 ms, since a server says it in stages — a server
+  still at work it said it began (`$/progress`: rust-analyzer loading its workspace) isn't quiet yet; at most
   `--timeout` seconds (60), a server that said nothing by then named in a warning;
 - its linters without a server (`19.19`), where its project has their config;
 - its syntax errors from tree-sitter, when no server answered (a server has them then);

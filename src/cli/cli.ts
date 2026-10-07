@@ -1474,7 +1474,12 @@ const HANDLERS: Record<string, Handler> = {
       const deadline = Date.now() + seconds * 1000;
       m.open(abs, 1, text);
       const running = await within(m.started(abs, "diagnostics"), seconds * 1000, [] as string[]);
-      while (Date.now() < deadline && !(running.every((n) => heard.has(n)) && Date.now() - news >= 750)) await Bun.sleep(50);
+      // A server still at some work it said it began (rust-analyzer loading its workspace: its first word is
+      // empty) is news too: its quiet counts from when the work ends, and what it says after.
+      while (Date.now() < deadline && !(running.every((n) => heard.has(n)) && Date.now() - news >= 750)) {
+        if (m.busy(abs)) news = Date.now();
+        await Bun.sleep(50);
+      }
       for (const name of running) sources.push({ name, kind: "server", status: heard.has(name) ? "answered" : "silent" });
       for (const [name, list] of heard) problems.push(...list), answered++;
       await within(m.stopAll(), 3000, undefined);

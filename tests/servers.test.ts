@@ -70,6 +70,15 @@ describe("the client (19.1)", () => {
     expect(f.exits).toEqual([{ expected: true, why: "stopped" }]);
   });
 
+  test("a server that waits to be asked, its first answer empty while it loads: asked again once it says its work is done", async () => {
+    const f = fake({ pull: true });
+    await f.client.start();
+    // As rust-analyzer without cargo check: nothing until its workspace loads, then no refresh asked — a `$/progress` end.
+    await f.client.didOpen(uri, "typescript", 1, "LOADING\nBAD here\n");
+    expect(await until(() => f.heard.get(uri)?.diagnostics.length === 1, 3000)).toBe(true);
+    await f.client.stop();
+  });
+
   test("a server that waits to be asked (3.17): its diagnostics asked for on open, change and save", async () => {
     const f = fake({ pull: true });
     await f.client.start();

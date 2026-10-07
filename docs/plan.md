@@ -594,7 +594,7 @@ source shown alike in every mode.*
 | 19.20 | **Done.** Server settings from a project's `.vscode/settings.json`, over the config's, as VS Code does |
 | 19.21 | **Done.** markdownlint-cli2 found as a server is, else from the private install, rather than `npx` |
 | 19.22 | **Done.** CLI: `slipbox diagnostics <file>` — servers' and linters' findings, `--json`, for agents, scripts |
-| 19.23 | Live checks with the native servers and linters: rust-analyzer, gopls, clangd, sourcekit-lsp, ruby-lsp… |
+| 19.23 | **Done** (2026-10-07). Live: rust-analyzer, gopls, clangd, sourcekit-lsp, ruby-lsp, taplo, hadolint… |
 
 ## Plain paths, virtual vaults — `20.x` (phase 5b)
 

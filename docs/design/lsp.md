@@ -16,7 +16,9 @@ each change, which every server takes. Its diagnostics come both ways: sent (`pu
 each open, change and save from a server that wants that (`textDocument/diagnostic`, LSP 3.17) — an answer about an
 older text than the last sent is dropped. Its log and messages go to slipbox's; an edit it asks to make (a code
 action's command does) is made, through slipbox's own writes (`19.15`, `applyWorkspaceEdit`). Asked to ask again
-(`workspace/diagnostic/refresh`, which pyright sends), it asks about every open file; anything else it's asked and
+(`workspace/diagnostic/refresh`, which pyright sends), it asks about every open file; so it does, a moment later,
+when such a server says some work of its has ended (`$/progress`): rust-analyzer's first answer, before its workspace
+loads, is empty, and without `cargo check` (a root you don't trust) it asks nothing after. Anything else it's asked and
 doesn't know gets an empty answer, never an error — pyright crashed on that error, unhandled. Stopping it is
 `shutdown` then `exit`, then a kill; an exit that wasn't asked for, once it is running, is a crash, said with its last
 error line. One that exits before it answers `initialize`, or doesn't answer in 20 s, failed to start: said once, with
@@ -144,3 +146,15 @@ The errorformat read is the part linters use: `%f %l %c %v %e %k %t %n %m %r %p 
 `%*[^:]`, `%\s`, `%[…]`. Multi-line formats (`%A`, `%C`, `%Z`) and the file stack (`%D`, `%P`) aren't read: a
 linter whose formats need them says so when it would run.
 
+
+**Live checks** (`19.23`, 2026-10-07, Linux arm64), through `slipbox diagnostics` on a file with an error, in a root
+you trust and one you don't: rust-analyzer, gopls, clangd, sourcekit-lsp, ruby-lsp, taplo, the Dockerfile and YAML
+servers, hadolint and yamllint each found what they should. rust-analyzer in a root you don't trust gave its own
+findings (a type mismatch, a syntax error) without running `build.rs`; trusted, `cargo check` ran it. Each server's
+own quirks, not slipbox's:
+
+- **sourcekit-lsp**, on a Swift file outside a package, says what it finds only after the file's first change — the
+  TUI's first keystroke; `slipbox diagnostics` on an untouched file hears nothing from it.
+- **ruby-lsp** installs its own gems with Bundler at each start: with a system Ruby (`/usr/bin/ruby`) they must already
+  be installed, since your user can't write its gem folder; and in a project with a `Gemfile` it wants its
+  `Gemfile.lock`.

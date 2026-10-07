@@ -413,6 +413,20 @@ describe("the vault and the tool", () => {
     expect(slipbox(["doctor", "ops/Dockerfile", "--json"]).json.data.linters).toMatchObject([{ name: "hadolint", root: join(vault, "ops") }]);
     expect(slipbox(["doctor", "ops/Dockerfile"]).out).toMatch(/hadolint \(linter\) .*\(runs in .*ops\)/);
   });
+  test("diagnostics: a server still at its work when it first answers (rust-analyzer loading) is waited for until it says it's done", () => {
+    const dir = join(sandbox, "diag-loading");
+    mkdirSync(join(dir, ".git"), { recursive: true });
+    const launcher = join(dir, "fake-ls");
+    writeFileSync(launcher, `#!/usr/bin/env node\nawait import(${JSON.stringify(join(import.meta.dir, "fixtures", "fake-lsp.ts"))});\n`);
+    chmodSync(launcher, 0o755);
+    const cfg = join(dir, "config.toml");
+    writeFileSync(cfg, `[language-server.fake]\ncommand = ${JSON.stringify(launcher)}\nargs = ["--stdio"]\nenvironment = { FAKE_PULL = "1" }\n\n[[language]]\nname = "fake"\nfile-types = ["fk"]\nlanguage-servers = ["fake"]\n`);
+    // Asked at once, it has nothing; its loading, begun at once, ends after more than a pause in what it says.
+    writeFileSync(join(dir, "a.fk"), "LOADING\nBAD here\n");
+    const r = slipbox(["diagnostics", "a.fk", "--config", cfg, "--json"], { cwd: dir });
+    expect(r.json.data.problems.map((p: { line: number }) => p.line)).toEqual([2]);
+  });
+
   test("diagnostics: a file's problems from its servers (waited for) and linters; a note's links and lint; exit 1 on an error (19.22)", () => {
     const dir = join(sandbox, "diag");
     mkdirSync(join(dir, ".git"), { recursive: true });

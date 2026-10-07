@@ -1,7 +1,8 @@
 // A language server for the client's tests (plan 19.1): a warning on each line holding BAD — sent, or
 // asked for with FAKE_PULL=1 (late for a text with SLOW) — that says the settings it was given; it exits
-// on CRASH; on REFRESH it asks the client to ask again, as pyright does; hover says the line; SHOW, REGISTER and
-// SAVED below.
+// on CRASH; on REFRESH it asks the client to ask again, as pyright does; on LOADING it has nothing to say until its
+// work is done a moment later, said by `$/progress` and no refresh, as rust-analyzer does; hover says the line; SHOW,
+// REGISTER and SAVED below.
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createConnection, DiagnosticSeverity, DocumentDiagnosticRequest, MessageType, ProposedFeatures, ShowMessageNotification, TextDocuments, TextDocumentSyncKind, type TextEdit } from "vscode-languageserver/node";
@@ -13,6 +14,9 @@ const pull = process.env.FAKE_PULL === "1";
 let settings: unknown = null;
 /** Files it has asked the client to ask about again: they get one more problem after that. */
 const refreshed = new Set<string>();
+/** Files it is still loading (LOADING): asked, it has nothing yet; and those it has started loading. */
+const loading = new Set<string>();
+const loadStarted = new Set<string>();
 
 conn.onInitialize((p) => ({
   capabilities: {
@@ -47,6 +51,20 @@ const problems = (doc: TextDocument | undefined) => [
 
 docs.onDidChangeContent((e) => {
   refreshed.delete(e.document.uri); // the refresh's problem is the text's it came with
+  // LOADING: work begun at once and done 1.2 s later — longer than a pause in what it says — said by
+  // `$/progress` alone, no refresh asked.
+  if (e.document.getText().includes("LOADING") && !loadStarted.has(e.document.uri)) {
+    loadStarted.add(e.document.uri);
+    loading.add(e.document.uri);
+    const token = "loading";
+    void conn.sendRequest("window/workDoneProgress/create", { token }).then(() => {
+      void conn.sendNotification("$/progress", { token, value: { kind: "begin", title: "Loading" } });
+      setTimeout(() => {
+        loading.delete(e.document.uri);
+        void conn.sendNotification("$/progress", { token, value: { kind: "end" } });
+      }, 1200);
+    });
+  }
   if (e.document.getText().includes("CRASH")) process.exit(3);
   // As pyright does: asks the client to ask again, and dies if that fails (an unhandled rejection);
   // ASK, the same with a method no client knows.
@@ -68,7 +86,7 @@ docs.onDidChangeContent((e) => {
 });
 conn.languages.diagnostics.on(async (p) => {
   const doc = docs.get(p.textDocument.uri);
-  const items = problems(doc);
+  const items = doc && loading.has(doc.uri) ? [] : problems(doc);
   // SLOW: answered late, after an answer about a newer text.
   if (doc?.getText().includes("SLOW")) await new Promise((r) => setTimeout(r, 400));
   return { kind: "full", items };
