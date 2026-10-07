@@ -272,6 +272,20 @@ describe("the vault and the tool", () => {
     expect(r.code).toBe(2);
     expect(r.err).toContain("slipbox lsp was removed");
   });
+  test("no terminal (9.3): slipbox [path] and slipbox open [path] refuse the TUI, a hint and exit 2; --help, --version, --json run the CLI", () => {
+    for (const args of [[], ["home.md"], ["open"], ["open", "home.md"], ["home.md", "--theme", "nord"]]) {
+      const r = slipbox(args);
+      expect([args.join(" "), r.code, r.out]).toEqual([args.join(" "), 2, ""]); // nothing painted into the pipe
+      expect(r.err).toStartWith("slipbox: not starting the TUI — stdin/stdout is not a terminal.\n");
+      expect(r.err).toContain("`slipbox render <note>`");
+    }
+    // An unknown flag is a usage error, said as one.
+    expect(slipbox(["home.md", "--bogus"])).toMatchObject({ code: 2, err: expect.stringContaining("unknown option: --bogus") });
+    // These run the CLI instead, whatever the path.
+    expect(slipbox(["home.md", "--help"])).toMatchObject({ code: 0, out: expect.stringContaining("slipbox find <query>") });
+    expect(slipbox(["home.md", "--version"]).out).toMatch(/^slipbox \d+\.\d+\.\d+\n$/);
+    expect(slipbox(["--json"]).json).toMatchObject({ ok: true, command: "help" });
+  });
   // The agents' skill (skills/slipbox/SKILL.md) is what they type: every example in it runs, its
   // placeholders filled, with no usage error (exit 2) — a flag renamed or a command reshaped shows.
   test("every command in the skill runs as written", () => {
@@ -1220,5 +1234,195 @@ describe("review cycle 3 (core, cli)", () => {
       expect(r.err).toContain("edit it by hand");
       expect(readFileSync(join(root, ".slipbox", "config.toml"), "utf8")).toBe(text);
     }
+  });
+});
+
+describe("the CLI's edges: help flags, error paths, empty states", () => {
+  /** A root of its own, with a state, cache and config only it knows. */
+  function fresh(prefix: string): { root: string; dir: string; env: Record<string, string> } {
+    const dir = mkdtempSync(join(sandbox, prefix));
+    const root = join(dir, "root");
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    const env = { XDG_STATE_HOME: join(dir, "state"), XDG_CACHE_HOME: join(dir, "cache"), XDG_DATA_HOME: join(dir, "data"), XDG_CONFIG_HOME: join(dir, "config"), SLIPBOX_CONFIG: join(dir, "config", "slipbox", "config.toml") };
+    return { root, dir, env };
+  }
+  test("-h after any command is the help, -V the version; --json wraps each", () => {
+    const h = slipbox(["read", "home", "-h"]);
+    expect(h.code).toBe(0);
+    expect(h.out).toStartWith("slipbox ");
+    expect(h.out).toContain("Exit codes: 0 ok, 1 error, 2 usage, 3 not found");
+    expect(slipbox(["read", "-h", "--json"]).json).toMatchObject({ ok: true, command: "help", data: { text: h.out } });
+    const v = slipbox(["ls", "-V"]);
+    expect(v.code).toBe(0);
+    expect(v.out).toMatch(/^slipbox \d+\.\d+\.\d+\n$/);
+    expect(slipbox(["-V", "--json"]).json).toMatchObject({ ok: true, command: "version", data: { version: v.out.trim().slice("slipbox ".length) } });
+  });
+  test("footnotes: an unknown subcommand, a missing label, text or position, a line not there — usage errors, nothing written", () => {
+    const { root, env } = fresh("fn-usage-");
+    const text = "# F\n\nA claim[^1] here.\n\n[^1]: The source\n";
+    writeFileSync(join(root, "fn.md"), text);
+    const cases: [string[], string][] = [
+      [["frob"], "footnotes: unknown subcommand frob (add, edit, rm, rename)"],
+      [["add"], "footnotes <note> add <line[:col]> <text>"],
+      [["add", "3"], "footnotes <note> add <line[:col]> <text>"],
+      [["add", "x3", "a note"], "footnotes <note> add <line[:col]> <text>"],
+      [["add", "9", "a note"], "fn.md has no line 9"],
+      [["add", "0", "a note"], "fn.md has no line 0"],
+      [["edit"], "footnotes edit needs the footnote's label"],
+      [["edit", "1"], "footnotes <note> edit <label> <text>"],
+      [["rename", "1"], "footnotes <note> rename <label> <new-label>"],
+      [["rm"], "footnotes rm needs the footnote's label"],
+    ];
+    for (const [args, message] of cases) {
+      const r = slipbox(["footnotes", "fn.md", ...args], { cwd: root, env });
+      expect(`${args.join(" ")}: ${r.code} ${r.err}`).toBe(`${args.join(" ")}: 2 slipbox: ${message}\n`);
+    }
+    expect(slipbox(["footnotes", "fn.md", "frob", "--json"], { cwd: root, env }).json).toMatchObject({ ok: false, error: { code: 2 } });
+    expect(readFileSync(join(root, "fn.md"), "utf8")).toBe(text);
+  });
+  test("replace: --lines out of order, --first with --first-per-line — usage errors; a dry run shows each line before and after", () => {
+    const { root, env } = fresh("replace-usage-");
+    writeFileSync(join(root, "p.md"), "Asterion and Aster\nnone here\n");
+    for (const [args, message] of [
+      [["--lines", "2-1"], "--lines must look like 12 or 12-40, from 1 and in order"],
+      [["--lines", "0"], "--lines must look like 12 or 12-40, from 1 and in order"],
+      [["--lines", "1-x"], "--lines must look like 12 or 12-40, from 1 and in order"],
+      [["--first", "--first-per-line"], "--first or --first-per-line, not both"],
+    ] as [string[], string][]) {
+      const r = slipbox(["replace", "p.md", "Aster", "Vega", ...args], { cwd: root, env });
+      expect(r.code).toBe(2);
+      expect(r.err).toBe(`slipbox: ${message}\n`);
+    }
+    expect(readFileSync(join(root, "p.md"), "utf8")).toBe("Asterion and Aster\nnone here\n");
+    const dry = slipbox(["replace", "p.md", "Aster", "Vega", "--dry-run"], { cwd: root, env });
+    expect(dry.code).toBe(0);
+    expect(dry.out).toBe("would replace 2 in p.md\n1:1: Asterion and Aster\n    → Vegaion and Aster\n1:14: Asterion and Aster\n     → Asterion and Vega\n");
+    expect(readFileSync(join(root, "p.md"), "utf8")).toBe("Asterion and Aster\nnone here\n");
+    expect(slipbox(["replace", "p.md", "Aster", "Vega"], { cwd: root, env }).out).toBe("replaced 2 in p.md\n");
+  });
+  test("task: a line that isn't a whole number from 1 is a usage error, nothing ticked", () => {
+    const { root, env } = fresh("task-usage-");
+    writeFileSync(join(root, "t.md"), "- [ ] one\n");
+    for (const line of ["0", "abc", "1.5", "-1"]) {
+      const r = slipbox(["task", "t.md", "--", line], { cwd: root, env });
+      expect(r.code).toBe(2);
+      expect(r.err).toBe("slipbox: the task's line must be a whole number from 1\n");
+    }
+    expect(readFileSync(join(root, "t.md"), "utf8")).toBe("- [ ] one\n");
+  });
+  test("send: no remote editor set, one that won't start, one that fails — exit 1, said; --server where no nvim answers — exit 3", () => {
+    const { root, dir, env } = fresh("send-errors-");
+    writeFileSync(join(root, "n.md"), "# N\n");
+    const cfg = (name: string, remote: string) => {
+      const p = join(dir, `${name}.toml`);
+      writeFileSync(p, `[editor]\nremote = ${remote}\n`);
+      return p;
+    };
+    const none = slipbox(["send", "n.md", "--config", cfg("none", "[]")], { cwd: root, env });
+    expect(none).toMatchObject({ code: 1, err: "slipbox: set [editor] remote in the config to send notes to a running editor\n" });
+    const gone = slipbox(["send", "n.md", "--config", cfg("gone", '["slipbox-no-such-editor {file}"]')], { cwd: root, env });
+    expect(gone.code).toBe(1);
+    expect(gone.err).toStartWith("slipbox: couldn't start slipbox-no-such-editor");
+    const fails = slipbox(["send", "n.md", "--line", "3", "--config", cfg("fail", '["false {file} {line}"]')], { cwd: root, env });
+    expect(fails).toMatchObject({ code: 1, err: `slipbox: false ${join(root, "n.md")} exited with 1\n` });
+    // The nvim preset names a {server}: --server must name one that answers.
+    const sock = join(dir, "no-nvim.sock");
+    const r = slipbox(["send", "n.md", "--server", sock, "--config", cfg("nvim", '["nvim"]'), "--json"], { cwd: root, env });
+    expect(r.code).toBe(3);
+    expect(r.json).toMatchObject({ ok: false, error: { code: 3, message: `no nvim answers at ${sock}` } });
+  });
+  test("history: nothing read yet, said; a read note since deleted marked; the active tab's active window is current", () => {
+    const { root, env } = fresh("history-");
+    writeFileSync(join(root, "a.md"), "# A\n");
+    writeFileSync(join(root, "b.md"), "# B\n");
+    expect(slipbox(["history"], { cwd: root, env })).toMatchObject({ code: 0, out: "nothing read in the TUI yet\n" });
+    expect(slipbox(["history", "--json"], { cwd: root, env }).json.data).toEqual({ read: [], open: [], activeTab: null, current: null });
+    const state = slipbox(["info", "--json"], { cwd: root, env }).json.data.state as string;
+    mkdirSync(state, { recursive: true });
+    writeFileSync(
+      join(state, "positions.json"),
+      JSON.stringify({
+        "a.md": { heading: null, headingIndex: 0, offset: 0, line: 2, at: "2026-09-01T10:00:00.000Z" },
+        "gone.md": { heading: null, headingIndex: 0, offset: 0, line: 7, at: "2026-09-02T10:00:00.000Z" },
+      }),
+    );
+    const anchor = { heading: null, headingIndex: 0, offset: 0, line: 1 };
+    writeFileSync(
+      join(state, "session.json"),
+      JSON.stringify({ version: 1, tabs: [{ panes: [{ path: "a.md", anchor }], active: 0 }, { panes: [{ path: "a.md", anchor }, { path: "b.md", anchor }], active: 1 }], activeTab: 1, sidebar: true }),
+    );
+    expect(slipbox(["history"], { cwd: root, env }).out).toBe("2026-09-02 10:00  gone.md:7  (deleted)\n2026-09-01 10:00  a.md:2\n");
+    const h = slipbox(["history", "--json"], { cwd: root, env }).json.data;
+    expect(h.read.map((r: { path: string; exists: boolean }) => [r.path, r.exists])).toEqual([
+      ["gone.md", false],
+      ["a.md", true],
+    ]);
+    expect(h).toMatchObject({ open: [["a.md"], ["a.md", "b.md"]], activeTab: 1, current: "b.md" });
+  });
+  test("commands: the human list gives each command's CLI equivalent, or (interaction)", () => {
+    const out = slipbox(["commands"]).out;
+    expect(out).toMatch(/^task\.toggle +Toggle task +slipbox task <note> <line>$/m);
+    expect(out).toMatch(/^cursor\.left +Cursor left +\(interaction\)$/m);
+    expect(out.split("\n").filter(Boolean)).toHaveLength(slipbox(["commands", "--json"]).json.data.length);
+  });
+  test("themes: the configured one marked current; a user theme listed with its file", () => {
+    const { root, dir, env } = fresh("themes-");
+    const themes = join(dir, "config", "slipbox", "themes");
+    mkdirSync(themes, { recursive: true });
+    writeFileSync(join(themes, "mine.yaml"), 'scheme: "mine"\n');
+    writeFileSync(join(dir, "config", "slipbox", "config.toml"), 'theme = "nord"\n');
+    const out = slipbox(["themes"], { cwd: root, env }).out;
+    expect(out).toContain("* nord\n");
+    expect(out).toContain("  tokyo-night\n");
+    expect(out).toContain(`  mine  (${join(themes, "mine.yaml")})\n`);
+    const list = slipbox(["themes", "--json"], { cwd: root, env }).json.data as { name: string; source: string; current: boolean; path?: string }[];
+    expect(list.filter((t) => t.current).map((t) => t.name)).toEqual(["nord"]);
+    expect(list.find((t) => t.name === "mine")).toEqual({ name: "mine", source: "user", path: join(themes, "mine.yaml"), current: false });
+  });
+  test("doctor: language servers off is a warning; with installing off, a server not found says so, never 'installs when needed'", () => {
+    const { root, dir, env } = fresh("doctor-off-");
+    const cfg = join(dir, "off.toml");
+    writeFileSync(cfg, "[lsp]\nenabled = false\nauto_install = false\n");
+    const j = slipbox(["doctor", "--config", cfg, "--json"], { cwd: root, env }).json;
+    expect(j.warnings).toContain("language servers are off: [lsp] enabled = false");
+    type Server = { name: string; status: string; package: string | null };
+    const servers = (j.data as { servers: Server[] }[]).flatMap((g) => g.servers);
+    expect(servers.some((s) => s.status === "installable")).toBe(false);
+    const off = servers.filter((s) => s.status !== "found" && s.package);
+    expect(off.length).toBeGreaterThan(0);
+    const r = slipbox(["doctor", "--config", cfg], { cwd: root, env });
+    expect(r.err).toContain("slipbox: warning: language servers are off: [lsp] enabled = false\n");
+    expect(r.out).not.toContain("slipbox installs");
+    for (const s of off) expect(r.out).toContain(`  ${s.name.padEnd(28)} not found, and installing is off ([lsp] auto_install): ${s.package}`);
+    expect(slipbox(["doctor", "--json"], { cwd: root, env }).json.warnings).toEqual([]);
+  });
+  test("mkdir: no path is a usage error; an absolute path in the root is made, one outside refused", () => {
+    const { root, dir, env } = fresh("mkdir-");
+    expect(slipbox(["mkdir"], { cwd: root, env })).toMatchObject({ code: 2, err: "slipbox: missing path\n" });
+    expect(slipbox(["mkdir", join(root, "abs", "deep"), "--json"], { cwd: root, env }).json.data).toEqual({ path: "abs/deep", created: true });
+    expect(existsSync(join(root, "abs", "deep"))).toBe(true);
+    const out = slipbox(["mkdir", join(dir, "beside"), "--json"], { cwd: root, env });
+    expect(out.code).toBe(5);
+    expect(out.json.error!.message).toBe(`${join(dir, "beside")} is outside the root (${root})`);
+    expect(existsSync(join(dir, "beside"))).toBe(false);
+  });
+  test("cp, rm and trash restore of a namesake: each link by name it sends elsewhere is warned (21.3)", () => {
+    const { root, env } = fresh("namesake-");
+    mkdirSync(join(root, "Recipes", "Baking"), { recursive: true });
+    mkdirSync(join(root, "Archive", "Old", "Older"), { recursive: true });
+    writeFileSync(join(root, "Home.md"), "# Home\n\nSee [[Pie]] now.\n");
+    writeFileSync(join(root, "Recipes", "Baking", "Pie.md"), "# P\n");
+    writeFileSync(join(root, "Archive", "Old", "Older", "Pie.md"), "# P2\n");
+    // A nearer Pie made: [[Pie]] reaches it now, the shortest path.
+    const cp = slipbox(["cp", "Recipes/Baking/Pie.md", "Pie.md", "--json"], { cwd: root, env }).json;
+    expect(cp.ok).toBe(true);
+    expect(cp.warnings).toContain("Home.md:3: [[Pie]] reached Recipes/Baking/Pie.md; it reaches Pie.md now");
+    const rm = slipbox(["rm", "Pie.md"], { cwd: root, env });
+    expect(rm.code).toBe(0);
+    expect(rm.err).toContain("slipbox: warning: Home.md:3: [[Pie]] reached Pie.md; it reaches Recipes/Baking/Pie.md now\n");
+    const back = slipbox(["trash", "restore", "Pie.md", "--json"], { cwd: root, env }).json;
+    expect(back.warnings).toContain("Home.md:3: [[Pie]] reached Recipes/Baking/Pie.md; it reaches Pie.md now");
+    // A name no other note has sends nothing elsewhere: nothing said.
+    expect(slipbox(["cp", "Home.md", "Other.md", "--json"], { cwd: root, env }).json.warnings).toEqual([]);
   });
 });

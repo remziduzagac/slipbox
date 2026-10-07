@@ -314,6 +314,23 @@ describe("cursor movement", () => {
     await h.keys("pagedown", "pagedown", "pageup", "ctrl+u");
     expect(v.cur.row - v.top).toBeGreaterThanOrEqual(3);
   });
+  test("w b e at the note's ends: w on the last word to its end, e there stays, b in the first word to its start", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "w.md"), "one two\nthree four\n");
+    const h = await harness({ root, open: "w.md" });
+    await h.keys("space", "n", "v");
+    const v = h.app.view!;
+    const from = async (row: number, col: number, key: string) => {
+      h.app.moveCursor(v, { row, col });
+      await h.keys(key);
+      return [v.cur.row, v.cur.col];
+    };
+    expect(await from(1, 6, "w")).toEqual([1, 9]); // no next word: the last one's end
+    expect(await from(1, 6, "e")).toEqual([1, 9]);
+    expect(await from(1, 9, "e")).toEqual([1, 9]); // nothing after: stays
+    expect(await from(0, 2, "b")).toEqual([0, 0]);
+    expect(await from(0, 0, "b")).toEqual([0, 0]);
+  });
   test("wide characters are one stop", async () => {
     const h = await harness({ open: "cjk/日本語.md" });
     const row = rowStarting(h, "alpha");
@@ -8391,6 +8408,36 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(app.messages.some((m) => m.text.startsWith(`${tag} moved here from `))).toBe(true);
   });
 
+  test("the start (prepare): a path that isn't there said in a line, exit 3; a note opens in its vault, the flags passed on; a loose folder starts on the launcher", async () => {
+    const { prepare } = await import("../src/tui/run.ts");
+    const said: string[] = [];
+    const write = process.stderr.write;
+    process.stderr.write = ((s: string) => (said.push(s), true)) as typeof process.stderr.write;
+    let missing: ReturnType<typeof prepare>;
+    try {
+      missing = prepare([join(sandbox, "no-such-place", "x.md")]);
+    } finally {
+      process.stderr.write = write;
+    }
+    expect(missing).toBe(3);
+    expect(said).toEqual([`slipbox: no such file or directory: ${join(sandbox, "no-such-place", "x.md")}\n`]);
+    const root = makeVault();
+    const start = prepare([join(root, "notes", "alpha.md"), "--theme", "nord"]);
+    if (typeof start === "number") throw new Error(`exit ${start}`);
+    expect(start.loc.root).toBe(root);
+    expect(start.open).toBe(join(root, "notes", "alpha.md"));
+    expect(start.themeName).toBe("nord");
+    expect(start.launcher).toBe(false);
+    expect(start.graph.notes.has("notes/alpha.md")).toBe(true);
+    const loose = mkdtempSync(join(sandbox, "loose-"));
+    writeFileSync(join(loose, "a.md"), "# A\n");
+    const folder = prepare([loose]);
+    if (typeof folder === "number") throw new Error(`exit ${folder}`);
+    expect(folder.loc.mode).toBe("folder");
+    expect(folder.open).toBeNull();
+    expect(folder.launcher).toBe(true);
+  });
+
   test("a named folder moved by hand: the links its move broke, their fix previewed at once (20.17, 21.8)", async () => {
     const { locateVault, recordLocation } = await import("../src/core/vault.ts");
     const base = mkdtempSync(join(sandbox, "mvfix-"));
@@ -8829,6 +8876,18 @@ describe("embeds in the TUI (1.11)", () => {
     expect(h.app.view!.buf.rel).toBe("sub/inner.md");
   });
 
+  test("a [[#Heading]] wikilink inside an embed opens the embedded note at its heading, not the host's", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "host.md"), "# Host\n\n![[inner]]\n\n## Deep\n\nthe host's own\n");
+    writeFileSync(join(root, "inner.md"), "# Inner\n\nOn to [[#Deep]].\n\n## Deep\n\nbottom\n");
+    const h = await harness({ root, open: "host.md" });
+    const l = h.app.currentLayout(h.app.view!).links.find((x) => x.kind === "wiki" && x.heading === "Deep")!;
+    h.app.moveCursor(h.app.view!, { row: l.line, col: l.col });
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("inner.md");
+    expect(statusRow(h.frame())).toMatch(/ L5:/);
+  });
+
   test("the embedded note changed — on disk, or saved here — and the note showing it shows it now", async () => {
     const { root, h } = await setup();
     // On disk, as the watcher tells the graph.
@@ -8962,6 +9021,31 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     expect(h.app.problemsShown(h.app.view!)).toEqual([]);
     expect(await until(() => (h.frame(), h.app.problemsShown(h.app.view!).length === 2))).toBe(true);
     expect(h.app.servers!.list()).toMatchObject([{ name: "fake", state: "running", files: 1 }]);
+    await h.app.servers!.stopAll();
+  });
+
+  test("a file whose server isn't installed: said once, on the screen", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "text\n");
+    writeFileSync(join(root, "b.fk"), "more\n");
+    const h = await harness({
+      root,
+      open: "a.fk",
+      config: (c) => {
+        c["language-server"] = { nope: { command: "slipbox-test-no-such-server" } };
+        c.language = [{ name: "fake", "file-types": ["fk"], "language-servers": ["nope"] }];
+      },
+    });
+    h.app.startServers();
+    h.frame();
+    const said = (h2: Harness) => h2.app.messages.filter((m) => m.text.startsWith("fake: nope isn't installed"));
+    expect(await until(() => said(h).length === 1)).toBe(true);
+    expect(said(h)[0]!.level).toBe("warn");
+    expect(h.frame()).toContain("nope isn't installed");
+    await h.app.run("note.open b.fk");
+    h.frame();
+    await Bun.sleep(100);
+    expect(said(h)).toHaveLength(1);
     await h.app.servers!.stopAll();
   });
 
@@ -9298,6 +9382,42 @@ describe("completion while typing (19.16)", () => {
     expect(await until(() => marked() === "b: string")).toBe(true);
     await h.keys(")");
     expect(h.app.signature).toBeNull();
+    await h.app.servers!.stopAll();
+  });
+
+  test("up (ctrl+p) from the first item wraps to the last; backspace to the word's start closes the popup", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "alpha beta alpine\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "x", ".");
+    expect(await until(() => shown(h).length === 2)).toBe(true);
+    await h.keys("up");
+    expect(h.app.completion!.selected).toBe(1);
+    await h.keys("ctrl+p");
+    expect(h.app.completion!.selected).toBe(0);
+    await h.keys("up", "enter");
+    expect(h.app.view!.buf.source).toBe("import x\nalpha beta alpine\nx.method\n");
+    await h.keys("escape", "o", "a", "l");
+    expect(await until(() => shown(h).length > 0)).toBe(true);
+    await h.keys("backspace");
+    expect(shown(h).slice(0, 2)).toEqual(["alpha", "alpine"]); // "a": open still
+    await h.keys("backspace");
+    expect(h.app.completion).toBeNull(); // nothing typed of a word
+    await Bun.sleep(300);
+    expect(h.app.completion).toBeNull(); // and not asked again
+    await h.app.servers!.stopAll();
+  });
+
+  test("signature help closes when the server has none for where the cursor is", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "start\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    await h.keys("o", "f", "n", "(");
+    expect(await until(() => h.app.signature !== null)).toBe(true);
+    await h.keys("enter", ","); // a new line: no call being typed there
+    expect(await until(() => h.app.signature === null)).toBe(true);
     await h.app.servers!.stopAll();
   });
 });
@@ -9937,5 +10057,433 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     expect(v.buf.source).toBe("bZZcdef\n");
     await h.keys(".");
     expect(v.buf.source).toBe("bZZZZcdef\n");
+  });
+});
+
+describe("lists and commands no test had run (the TUI model)", () => {
+  const last = (h: Harness) => h.app.messages.at(-1)!.text;
+
+  test("help: enter on a command runs it", async () => {
+    const h = await harness();
+    expect(h.app.ui.zen).toBe(false);
+    await h.keys("?");
+    for (const ch of "zen mode") await h.keys(ch === " " ? "space" : ch);
+    const o = h.app.overlay as ListOverlay;
+    expect(o.filtered[o.selected]!.item.label).toBe("Zen mode");
+    await h.keys("enter");
+    await Bun.sleep(10);
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.ui.zen).toBe(true);
+  });
+
+  test("the glyphs picker: a move previews the set, enter keeps it and says so", async () => {
+    const h = await harness();
+    await h.keys("space", "u", "g");
+    expect((h.app.overlay as ListOverlay).title).toBe("Glyphs (live preview)");
+    await h.keys("down"); // unicode → ascii
+    expect(h.app.glyphs.mode).toBe("ascii");
+    await h.keys("enter");
+    expect(h.app.ui.glyphs).toBe("ascii");
+    expect(h.app.glyphs.mode).toBe("ascii");
+    expect(last(h)).toBe("glyphs: ascii");
+  });
+
+  test("the tab list: enter goes to the tab picked", async () => {
+    const h = await harness();
+    await h.keys("ctrl+t", "c");
+    await h.app.run("note.open notes/beta.md");
+    expect(h.app.activeTab).toBe(1);
+    await h.keys("ctrl+t", "t", "up", "enter");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.activeTab).toBe(0);
+    expect(h.app.view!.buf.rel).toBe("index.md");
+  });
+
+  test("ctrl+w w: to the other window, round; from a panel, back to the note's window first", async () => {
+    const h = await harness({ width: 160 });
+    await h.keys("ctrl+w", "v");
+    const t = h.app.tab!;
+    const at = t.active;
+    await h.keys("ctrl+w", "w");
+    expect(t.active).toBe(1 - at);
+    await h.keys("ctrl+w", "w");
+    expect(t.active).toBe(at);
+    await h.keys("space", "e");
+    h.app.region = "sidebar";
+    await h.keys("ctrl+w", "w");
+    expect(h.app.region as string).toBe("content");
+    expect(t.active).toBe(at); // only back, not on
+  });
+
+  test("backlinks: enter opens the linking note at the link's line", async () => {
+    const h = await harness({ open: "notes/beta.md" });
+    await h.keys("space", "l", "b");
+    const o = h.app.overlay as ListOverlay;
+    const pick = o.filtered[o.selected]!.item.data as { from: string; line: number };
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe(pick.from);
+    expect(h.app.cursorLine(h.app.view!)).toBe(pick.line);
+  });
+
+  test("the links list: enter puts the cursor on the link and follows it", async () => {
+    const h = await harness({ open: "notes/alpha.md" });
+    await h.keys("space", "l", "l");
+    const o = h.app.overlay as ListOverlay;
+    expect(o.items.map((i) => i.label)).toContain("beta");
+    o.selected = o.filtered.findIndex((e) => e.item.label === "beta");
+    await h.keys("enter");
+    expect(h.app.view!.buf.rel).toBe("notes/beta.md");
+    await h.keys("ctrl+o"); // back: the cursor was put on the link before it was followed
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+    expect(rowText(h)).toContain("on to beta");
+  });
+
+  test("y y with a mouse selection copies the selection, not the row, and ends it", async () => {
+    const h = await harness({ open: "notes/alpha.md" });
+    const pane = h.app.geometry!.panes[0]!;
+    const row = rowStarting(h, "Back to");
+    h.app.handleMouse({ type: "down", x: pane.textX, y: pane.y + row, button: 0 });
+    h.app.handleMouse({ type: "drag", x: pane.textX + 6, y: pane.y + row, button: 0 });
+    h.app.handleMouse({ type: "up", x: pane.textX + 6, y: pane.y + row, button: 0 });
+    h.copied.length = 0;
+    await h.keys("y", "y");
+    expect(h.copied).toEqual(["Back to"]);
+    expect(h.app.view!.sel).toBeNull();
+    await h.keys("y", "y"); // no selection now: the row
+    expect(h.copied.at(-1)).toBe("Back to index and on to beta.");
+  });
+
+  test("a conflict prompt dismissed keeps yours and says how to come back; space n c brings it back, and says when there is none", async () => {
+    const root = makeVault();
+    const file = join(root, "c.md");
+    writeFileSync(file, "line\n");
+    const h = await harness({ root, open: "c.md" });
+    const v = h.app.view!;
+    await h.keys("space", "n", "c");
+    expect(last(h)).toBe("c.md has no conflict with the file on disk");
+    expect(h.app.overlay).toBeNull();
+    await h.keys("shift+a", "!", "escape");
+    writeFileSync(file, "theirs\n");
+    const future = Date.now() / 1000 + 5;
+    utimesSync(file, future, future);
+    h.app.reloadBuffer(v.buf);
+    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+    await h.keys("escape");
+    expect(v.buf.conflictKept).toBe(true);
+    expect(v.buf.source).toBe("line!\n");
+    expect(last(h)).toBe("c.md: keeping yours for now — space n c to resolve");
+    await h.keys("space", "n", "c");
+    expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+    await h.keys("l");
+    expect(v.buf.source).toBe("theirs\n");
+  });
+
+  test(":open of a pointer to a folder this machine doesn't know: said, nothing opened", async () => {
+    const h = await harness();
+    await h.app.run("note.open slipbox://no-such-folder-here/x.md");
+    expect(h.app.messages.at(-1)!.level).toBe("warn");
+    expect(last(h)).toStartWith("slipbox://no-such-folder-here/x.md: ");
+    expect(h.app.view!.buf.rel).toBe("index.md");
+  });
+
+  test("space n x cuts this note, space d x and space d y its folder; space d p in another note's folder moves or copies them there", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    await h.keys("space", "n", "x");
+    expect(last(h)).toContain("cut notes/alpha.md");
+    await h.app.run("note.open projects/index.md");
+    await h.keys("space", "d", "p");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → projects/alpha.md");
+    await h.keys("enter");
+    expect(existsSync(join(root, "projects", "alpha.md"))).toBe(true);
+    expect(existsSync(join(root, "notes", "alpha.md"))).toBe(false);
+    expect(readFileSync(join(root, "index.md"), "utf8")).toContain("[alpha](projects/alpha.md)");
+    // This note's folder copied, pasted beside notes/beta.md.
+    await h.keys("space", "d", "y");
+    expect(last(h)).toContain("copied projects/");
+    await h.app.run("note.open notes/beta.md");
+    await h.keys("space", "d", "p");
+    expect(existsSync(join(root, "notes", "projects", "index.md"))).toBe(true);
+    expect(existsSync(join(root, "projects", "index.md"))).toBe(true);
+    // And cut: notes/ moved into projects/.
+    await h.keys("space", "d", "x");
+    expect(last(h)).toContain("cut notes/");
+    await h.app.run("note.open projects/index.md");
+    await h.keys("space", "d", "p");
+    expect((h.app.overlay as ListOverlay).title).toStartWith("notes/ → projects/notes/");
+    await h.keys("enter");
+    expect(existsSync(join(root, "projects", "notes", "beta.md"))).toBe(true);
+    expect(existsSync(join(root, "notes"))).toBe(false);
+  });
+
+  test("a key that is both a command and a prefix: run on its own once the pause passes, not when its sequence follows", async () => {
+    const h = await harness({ config: (c) => ((c.input.which_key_delay_ms = 40), (c.keys = { q: "ui.zen", "q q": "cursor.bottom" } as unknown as Config["keys"])) });
+    await h.keys("q");
+    expect(h.app.ui.zen).toBe(false); // waiting for a second key
+    await Bun.sleep(120);
+    expect(h.app.pending).toEqual([]);
+    expect(h.app.ui.zen).toBe(true);
+    await h.keys("q", "q");
+    await Bun.sleep(120);
+    expect(h.app.ui.zen).toBe(true); // q q ran, q didn't
+    expect(h.app.view!.cur.row).toBeGreaterThan(0);
+  });
+
+  test("a split with the breadcrumb off: each window titled by its note on its top row", async () => {
+    const h = await harness({ width: 160, config: (c) => (c.ui.breadcrumb = false) });
+    await h.keys("ctrl+w", "v");
+    await h.app.run("note.open notes/beta.md");
+    const [a, b] = h.app.geometry!.panes;
+    const c = h.canvas();
+    const top = (p: typeof a) => c.rows[p!.y - 1]!.slice(p!.x, p!.x + p!.w).join("");
+    expect([top(a), top(b)].map((t) => t.trim()).sort()).toEqual(["index.md", "notes/beta.md"]);
+  });
+
+  test("the outline of a note without headings says so; Info's filter matching nothing says so", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "plain.md"), "just text\n");
+    const h = await harness({ root, open: "plain.md" });
+    await h.keys("space", "o");
+    expect(h.app.rightView).toBe("outline");
+    expect(h.frame()).toContain("no headings");
+    await h.app.run("info.toggle");
+    expect(h.app.rightView).toBe("info");
+    expect(h.frame()).not.toContain("no matches");
+    h.app.region = "outline";
+    await h.keys("/", "z", "q", "x", "j");
+    expect(h.frame()).toContain("no matches");
+  });
+
+  test("vim: an operator with ; before any f or t says so; di\" and di( with nothing to take leave the line alone", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "v.md"), 'no quotes "here\ncall(a, b\n');
+    const h = await harness({ root, open: "v.md" });
+    await h.keys("space", "n", "v");
+    const v = h.app.view!;
+    const before = v.buf.source;
+    await h.keys("d", ";");
+    expect(last(h)).toBe("no f or t to repeat yet");
+    expect(v.buf.source).toBe(before);
+    await h.keys("d", "i", "shift+'"); // a lone quote: no pair
+    expect(v.buf.source).toBe(before);
+    await h.keys("j", "$", "d", "i", "shift+9"); // an open bracket never closed
+    expect(v.buf.source).toBe(before);
+    expect(v.buf.dirty).toBe(false);
+  });
+
+  test("vim: a line put after the last line of a note without a final line break, one undo step", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "v.md"), "first\nlast");
+    const h = await harness({ root, open: "v.md" });
+    await h.keys("space", "n", "v");
+    const v = h.app.view!;
+    await h.keys("y", "y", "j", "p");
+    expect(v.buf.source).toBe("first\nlast\nfirst");
+    expect(h.app.cursorLine(v)).toBe(3);
+    await h.keys("u");
+    expect(v.buf.source).toBe("first\nlast");
+  });
+
+  test("space n shift+y on a note gone from disk: said, no copy, still on it", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: "notes/alpha.md" });
+    rmSync(join(root, "notes", "alpha.md"));
+    await h.keys("space", "n", "shift+y");
+    expect(h.app.messages.at(-1)!.level).toBe("warn");
+    expect(last(h)).toContain("no note, file or folder notes/alpha.md");
+    expect(existsSync(join(root, "notes", "alpha-copy.md"))).toBe(false);
+    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
+  });
+
+  test(":s///c: l replaces the match asked about and stops", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "s.md"), "cat cat\ncat\n");
+    const h = await harness({ root, open: "s.md" });
+    await h.keys(":", ..."%s/cat/X/gc", "enter");
+    expect(h.frame()).toContain("replace? y n a q");
+    await h.keys("n", "l");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.view!.buf.source).toBe("cat X\ncat\n");
+    expect(last(h)).toBe("1 substitution");
+  });
+});
+
+describe("what keymap.md and tui.md promise (review: docs against the tests)", () => {
+  test("lists: down wraps to the top, ctrl+j / ctrl+k move, the page keys and ctrl+d / ctrl+u go by 10; n/m counts; ctrl+g cancels", async () => {
+    const h = await harness({ width: 120, height: 40 });
+    await h.keys("ctrl+p");
+    const o = h.app.overlay as ListOverlay;
+    const n = o.filtered.length;
+    expect(n).toBeGreaterThan(25);
+    const counter = () => h.frame().match(/ (\d+)\/(\d+) /)?.slice(1).map(Number);
+    expect(counter()).toEqual([1, n]); // in the bottom border
+    await h.keys("pagedown");
+    expect(o.selected).toBe(10);
+    await h.keys("ctrl+d");
+    expect(o.selected).toBe(20);
+    expect(counter()).toEqual([21, n]);
+    await h.keys("pageup");
+    expect(o.selected).toBe(10);
+    await h.keys("ctrl+u");
+    expect(o.selected).toBe(0);
+    await h.keys("ctrl+j", "ctrl+j", "ctrl+k");
+    expect(o.selected).toBe(1);
+    await h.keys("ctrl+k", "ctrl+k"); // up from the first: the last
+    expect(o.selected).toBe(n - 1);
+    await h.keys("down"); // down from the last: the first
+    expect(o.selected).toBe(0);
+    for (const c of "zqxjzqxj") await h.keys(c);
+    expect(h.frame()).toContain("no matches");
+    expect(counter()).toEqual([0, 0]);
+    await h.keys("ctrl+g");
+    expect(h.app.overlay).toBeNull();
+    // A list without a filter (the folder's info): j and k move, a letter types nothing.
+    await h.keys("space", "v", "i");
+    const info = h.app.overlay as ListOverlay;
+    expect(info.filterable).toBe(false);
+    await h.keys("j", "j", "k");
+    expect(info.selected).toBe(1);
+    expect(info.input).toBe("");
+    await h.keys("ctrl+c");
+    expect(h.app.overlay).toBeNull();
+  });
+
+  test("the status line counts the tabs (tab N/M) once there are two", async () => {
+    const h = await harness();
+    expect(statusRow(h.frame())).not.toMatch(/tab \d+\/\d+/);
+    await h.keys("ctrl+t", "c", "ctrl+t", "c");
+    expect(statusRow(h.frame())).toContain("tab 3/3");
+    await h.keys("ctrl+t", "1");
+    expect(statusRow(h.frame())).toContain("tab 1/3");
+    await h.keys("ctrl+t", "o");
+    expect(statusRow(h.frame())).not.toMatch(/tab \d+\/\d+/);
+  });
+
+  test("a tab reads ` N name `, the name cut to 24 columns, and ↻ for 3 s after a reload", async () => {
+    const root = makeVault();
+    const name = "a-note-whose-name-runs-past-the-tab.md";
+    writeFileSync(join(root, name), "# Long\n\ntext\n");
+    let now = 1_000_000;
+    const h = await harness({ root, open: name });
+    (h.app as unknown as { now: () => number }).now = () => now;
+    const strip = () => {
+      const g = h.app.geometry!.tabStrip!;
+      return h.frame().split("\n")[g.y]!.slice(g.x);
+    };
+    expect(strip()).toContain(" 1 a-note-whose-name-runs-… ");
+    expect(strip()).not.toContain("past");
+    writeFileSync(join(root, name), "# Long\n\ntext, changed\n");
+    h.app.applyChanges({ changes: [{ rel: name, kind: "changed", isNote: true }], rescan: false });
+    expect(strip()).toContain("runs-… ↻");
+    now += 3_001;
+    expect(strip()).not.toContain("↻");
+  });
+
+  test("messages: four boxes at most; info marked ·, unless it brings its own symbol; 4 s, an error 8 s", async () => {
+    const h = await harness({ width: 120, height: 40 });
+    let now = 1_000_000;
+    (h.app as unknown as { now: () => number }).now = () => now;
+    const boxes = () => (h.frame(), h.app.geometry!.hot.filter((r) => r.id.startsWith("toast:")));
+    const boxText = (i: number) => {
+      const b = boxes()[i]!;
+      return h.frame().split("\n")[b.y + 1]!.slice(b.x, b.x + b.w);
+    };
+    h.app.message("error", "first, an error");
+    h.app.message("info", "plain info");
+    expect(boxText(0)).toContain("· plain info");
+    h.app.message("info", "↻ notes/alpha.md reloaded");
+    expect(boxText(0)).toContain("│ ↻ notes/alpha.md reloaded");
+    expect(boxText(0)).not.toContain("·");
+    h.app.message("warn", "a fourth");
+    h.app.message("warn", "a fifth");
+    expect(boxes()).toHaveLength(4);
+    expect(h.app.toasts.map((t) => t.text)).toEqual(["a fifth", "a fourth", "↻ notes/alpha.md reloaded", "plain info"]);
+    expect(h.app.messages.some((m) => m.text === "first, an error")).toBe(true); // in the list still
+    // Times: an info message goes after 4 s, an error stays 8 s.
+    h.app.dismissToasts();
+    h.app.message("error", "broke");
+    h.app.message("info", "fyi");
+    now += 4_001;
+    h.app.message("info", "later");
+    expect(h.app.toasts.map((t) => t.text)).toEqual(["later", "broke"]); // the info gone after 4 s
+    now += 3_000;
+    h.app.message("info", "at 7 s");
+    expect(h.app.toasts.map((t) => t.text)).toEqual(["at 7 s", "later", "broke"]); // the error still
+    now += 999;
+    h.app.message("info", "at 8 s");
+    expect(h.app.toasts.map((t) => t.text)).toEqual(["at 8 s", "at 7 s", "later"]); // gone after 8 s
+  });
+
+  test("selection keys: shift+ctrl+end / home to the note's ends, shift+ctrl+down by paragraph, shift+pagedown by page", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "long.md"), Array.from({ length: 60 }, (_, i) => `Line ${i + 1}.`).join("\n\n") + "\n");
+    const h = await harness({ root, open: "long.md", height: 30 });
+    const v = h.app.view!;
+    const last = h.app.currentLayout(v).lines.length - 1;
+    await h.keys("j", "j", "shift+ctrl+end");
+    expect(v.sel?.anchor.row).toBe(2);
+    expect(v.cur.row).toBe(last);
+    await h.keys("escape", "shift+ctrl+home");
+    expect(v.sel?.anchor.row).toBe(last);
+    expect(v.cur.row).toBe(0);
+    await h.keys("escape", "shift+ctrl+down");
+    expect(v.sel?.anchor.row).toBe(0);
+    expect(v.cur.row).toBe(1); // the blank row after the first paragraph
+    await h.keys("escape", "g", "g", "shift+pagedown");
+    expect(v.sel?.anchor.row).toBe(0);
+    expect(v.cur.row).toBeGreaterThan(15);
+    await h.keys("ctrl+c");
+    expect(h.copied.at(-1)).toMatch(/^Line 1\.\n\nLine 2\.\n\nLine 3\./); // the rows between, copied
+  });
+
+  test("tab keys: ctrl+pageup the previous, alt+1 and space t 1 the first, ctrl+shift+pageup moves the tab left", async () => {
+    const h = await harness();
+    await h.app.run("note.open notes/alpha.md");
+    await h.keys("ctrl+t", "c");
+    await h.app.run("note.open notes/beta.md");
+    expect(h.app.tabs.map((t) => t.views[0]!.buf.rel)).toEqual(["notes/alpha.md", "notes/beta.md"]);
+    await h.keys("ctrl+pageup");
+    expect(h.app.activeTab).toBe(0);
+    await h.keys("ctrl+pagedown", "alt+1");
+    expect(h.app.activeTab).toBe(0);
+    await h.keys("ctrl+pagedown", "space", "t", "1");
+    expect(h.app.activeTab).toBe(0);
+    await h.keys("ctrl+pagedown", "ctrl+shift+pageup");
+    expect(h.app.tabs.map((t) => t.views[0]!.buf.rel)).toEqual(["notes/beta.md", "notes/alpha.md"]);
+    expect(h.app.activeTab).toBe(0); // the tab moved goes on being the one shown
+    await h.keys("ctrl+shift+pagedown");
+    expect(h.app.tabs.map((t) => t.views[0]!.buf.rel)).toEqual(["notes/alpha.md", "notes/beta.md"]);
+  });
+
+  test("window and link keys: ctrl+\\ splits side by side; g x follows; space h p / space h n go back and forward", async () => {
+    const h = await harness({ open: "index.md", width: 160 });
+    await h.keys("ctrl+\\");
+    const t = h.app.tab!;
+    expect([t.views.length, t.orientation]).toEqual([2, "side"]);
+    await h.keys("ctrl+w", "o");
+    const from = h.app.view!.buf.rel;
+    await h.keys("tab", "g", "x"); // the first link, followed
+    const to = h.app.view!.buf.rel;
+    expect(to).not.toBe(from);
+    await h.keys("space", "h", "p");
+    expect(h.app.view!.buf.rel).toBe(from);
+    await h.keys("space", "h", "n");
+    expect(h.app.view!.buf.rel).toBe(to);
+  });
+
+  test("UI keys: alt+z wraps, space u m gives the mouse back, space n r reloads from disk", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "r.md"), "# R\n\nbefore\n");
+    const h = await harness({ root, open: "r.md" });
+    await h.keys("alt+z");
+    expect(h.app.ui.wrap).toBe(false);
+    await h.keys("alt+z");
+    expect(h.app.ui.wrap).toBe(true);
+    const mouse = h.app.ui.mouse;
+    await h.keys("space", "u", "m");
+    expect(h.app.ui.mouse).toBe(!mouse);
+    writeFileSync(join(root, "r.md"), "# R\n\nafter\n");
+    await h.keys("space", "n", "r");
+    expect(h.app.view!.buf.source).toBe("# R\n\nafter\n");
   });
 });

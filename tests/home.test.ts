@@ -140,6 +140,38 @@ kind = "unreadable"
     buildHome(s.out, s.home, s.halden);
     expect(() => buildHome(s.out, s.home, s.halden)).toThrow("already holds home/ or vault/");
   });
+
+  test("a big file of real text: its head once, then its content repeated past the size; a symlink without a target refused", () => {
+    const extras = `[[file]]
+path = "notes/log.md"
+kind = "big"
+size = 4000
+head = "# Log\\n\\n"
+content = "a line of the log"
+`;
+    const s = source("", { "notes/a.md": "# A\n" }, extras);
+    const text = readFileSync(join(buildHome(s.out, s.home, s.halden).home, "notes", "log.md"), "utf8");
+    expect(text.startsWith("# Log\n\na line of the log\na line of the log\n")).toBe(true);
+    expect(text.split("# Log").length).toBe(2); // the head once
+    expect(text.length).toBeGreaterThanOrEqual(4000);
+    expect(text.slice("# Log\n\n".length).split("\n").filter(Boolean).every((l) => l === "a line of the log")).toBe(true);
+    const bad = source("", { "notes/a.md": "# A\n" }, '[[file]]\npath = "notes/current.md"\nkind = "symlink"\n');
+    expect(() => buildHome(bad.out, bad.home, bad.halden)).toThrow("notes/current.md: a symlink needs a target");
+  });
+
+  test("run as a script: no folder is its usage (exit 2); a build that fails says why (exit 1), nothing printed as built", () => {
+    const script = join(import.meta.dir, "..", "scripts", "build-home.ts");
+    const usage = spawnSync(process.execPath, [script], { encoding: "utf8" });
+    expect(usage.status).toBe(2);
+    expect(usage.stderr).toContain("usage: bun scripts/build-home.ts <dir>");
+    const out = mkdtempSync(join(tmpdir(), "slipbox-homecli-"));
+    mkdirSync(join(out, "home"));
+    const failed = spawnSync(process.execPath, [script, out], { encoding: "utf8" });
+    expect(failed.status).toBe(1);
+    expect(failed.stderr).toContain(`build-home: ${out} already holds home/ or vault/`);
+    expect(failed.stdout).not.toContain("built");
+    expect(readdirSync(out)).toEqual(["home"]);
+  });
 });
 
 describe("the reference set is complete (examples/home)", () => {

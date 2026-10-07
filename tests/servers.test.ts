@@ -120,6 +120,60 @@ describe("the client (19.1)", () => {
   });
 });
 
+describe("the client (19.1): what a server says and asks besides diagnostics", () => {
+  test("its log and shown messages reach the log; a save sends the text when it asked for it; a closed file's save isn't sent", async () => {
+    const f = fake();
+    await f.client.start();
+    await f.client.didOpen(uri, "typescript", 1, "SAVED\n");
+    await f.client.didSave(uri, "SAVED on disk\n");
+    await f.client.didSave(uri);
+    await f.client.didChange(uri, 2, "SAVED SHOW\n");
+    expect(await until(() => f.logs.some((l) => l.startsWith("fake: shown")))).toBe(true);
+    await f.client.didClose(uri);
+    await f.client.didSave(uri, "after close");
+    await f.client.didOpen(uri, "typescript", 3, "SAVED\n");
+    await f.client.didSave(uri, "last");
+    expect(await until(() => f.logs.some((l) => l.includes('"last"')))).toBe(true);
+    expect(f.logs.filter((l) => l.startsWith("fake: saved") || l.startsWith("fake: shown"))).toEqual([
+      `fake: saved ${uri} with "SAVED on disk\\n"`,
+      `fake: saved ${uri}, no text`,
+      `fake: shown for ${uri}`,
+      `fake: saved ${uri} with "last"`,
+    ]);
+    await f.client.stop();
+  });
+
+  test("a server that registers diagnostics later is asked for them from then on, and no longer once it unregisters", async () => {
+    const f = fake();
+    await f.client.start();
+    expect(f.client.pullsDiagnostics).toBe(false);
+    await f.client.didOpen(uri, "typescript", 1, "REGISTER\n");
+    expect(await until(() => f.client.pullsDiagnostics)).toBe(true);
+    await f.client.didChange(uri, 2, "UNREGISTER\n");
+    expect(await until(() => !f.client.pullsDiagnostics)).toBe(true);
+    await f.client.stop();
+  });
+
+  test("killed (slipbox exiting): it goes at once, an expected end, not a crash; killing or stopping it again does nothing", async () => {
+    const f = fake();
+    f.client.kill(); // never started: nothing to kill
+    expect(f.client.state).not.toBe("stopping");
+    await f.client.start();
+    await f.client.didOpen(uri, "typescript", 1, "fine\n");
+    f.client.kill();
+    expect(f.client.state).toBe("stopping");
+    expect(await until(() => f.exits.length === 1)).toBe(true);
+    expect(f.exits).toEqual([{ expected: true, why: "stopped" }]);
+    expect(f.client.state).toBe("stopped");
+    expect(f.client.isOpen(uri)).toBe(false);
+    f.client.kill();
+    await f.client.stop();
+    expect(f.client.state).toBe("stopped");
+    expect(f.exits.length).toBe(1);
+    expect(await f.client.request("textDocument/hover", { textDocument: { uri }, position: { line: 0, character: 0 } })).toBeNull();
+  });
+});
+
 describe("which servers, where (19.2–19.5)", () => {
   const dir = (name: string, files: Record<string, string>) => {
     const root = join(sandbox, name);
@@ -399,6 +453,21 @@ describe("the servers of open files (19.1)", () => {
     expect(vscodeSettings(pkg)).toEqual({ fake: { level: 3, deep: { b: 2, c: 3 } }, editor: { tabSize: 2 } });
   });
 
+  test(".vscode/settings.json: the nearest at or above the project's folder, never merged with one further up; one that doesn't parse is none", () => {
+    const top = project("vsc-nearest");
+    const pkg = join(top, "packages", "app");
+    mkdirSync(join(top, ".vscode"), { recursive: true });
+    mkdirSync(join(pkg, ".vscode"), { recursive: true });
+    mkdirSync(join(pkg, "src"), { recursive: true });
+    writeFileSync(join(top, ".vscode", "settings.json"), '{ "fake.level": 1, "fake.top": true }');
+    writeFileSync(join(pkg, ".vscode", "settings.json"), '{ "fake.level": 2 }');
+    expect(vscodeSettings(pkg)).toEqual({ fake: { level: 2 } }); // its own: the top's is further
+    expect(vscodeSettings(join(pkg, "src"))).toEqual({ fake: { level: 2 } }); // from below, the nearest above
+    expect(vscodeSettings(join(top, "packages"))).toEqual({ fake: { level: 1, top: true } });
+    writeFileSync(join(pkg, ".vscode", "settings.json"), '{ "fake.level": ');
+    expect(vscodeSettings(pkg)).toBeNull();
+  });
+
   test("several servers on a file: each does its features — an add-on a linter's; the config limits them, Helix's way", async () => {
     const main = { name: "fake", command: launcher("fake-main"), args: ["--stdio"] };
     const addon = { name: "fake-lint", command: launcher("fake-addon"), args: ["--stdio"], requires: ["lint.cfg"] };
@@ -506,6 +575,35 @@ describe("the servers of open files (19.1)", () => {
     expect(install.messages).toEqual([`installing fake-npm (slipbox-fake-ls@file:${pkg}) into slipbox's own folder…`, "installed fake-npm"]);
     expect(existsSync(join(toolsDir(), "node_modules/.bin/slipbox-fake-ls"))).toBe(true);
     await install.m.stopAll();
+  });
+  test("a file's servers, once each has started: the running ones; a save reaches them; closed, they're told, and it opens afresh", async () => {
+    const fakeDef = { name: "fake", command: launcher("fake-started"), args: ["--stdio"] };
+    const logs: string[] = [];
+    const problems = new Map<string, { version: number | null; list: Problem[] }>();
+    const t = table({ fake: fakeDef });
+    const m = new ServerManager({ table: () => t, autoInstall: () => false, problems: (path, _s, version, list) => problems.set(path, { version, list }), message: () => {}, log: (l) => logs.push(l) });
+    const file = join(project("pstarted"), "a.fk");
+    const fileUri = pathToFileURL(file).href;
+    expect(await m.started(file, "diagnostics")).toEqual([]); // not open
+    m.open(file, 1, "SAVED\n");
+    expect(await m.started(file, "diagnostics")).toEqual(["fake"]);
+    m.save(file, "SAVED as written\n");
+    expect(await until(() => logs.includes(`fake: saved ${fileUri} with "SAVED as written\\n"`))).toBe(true);
+    m.close(file);
+    expect(m.isOpen(file)).toBe(false);
+    expect(await m.started(file, "diagnostics")).toEqual([]);
+    m.save(file, "SAVED after close\n"); // not theirs any more
+    // Opened again with another text: told afresh, so its problems are the new text's.
+    m.open(file, 1, "BAD\nBAD\n");
+    expect(await until(() => problems.get(file)?.list.length === 2)).toBe(true);
+    expect(logs.some((l) => l.includes("after close"))).toBe(false);
+    await m.stopAll();
+    // A server that couldn't start isn't among them.
+    const broken = managed(table({ fake: { name: "fake", command: "sh", args: ["-c", "exit 2"] } }));
+    const other = join(project("pstarted-broken"), "a.fk");
+    broken.m.open(other, 1, "");
+    expect(await broken.m.started(other, "diagnostics")).toEqual([]);
+    await broken.m.stopAll();
   });
 });
 
@@ -617,5 +715,43 @@ describe("linters without a server (19.19)", () => {
     expect(config.language).toEqual([{ name: "yaml", linters: ["yamllint", "mine"] }]);
     expect(warnings.some((w) => w.includes("sets linter.yamllint.lint-command, which only your own config may set"))).toBe(true);
     expect(warnings.some((w) => w.includes("adds the linter evil, which only your own config may"))).toBe(true);
+  });
+  test("errorformat's regex items and ranges: %\\+ %\\? %\\= and a plain backslash; %[…]; what's malformed is said", () => {
+    const f = (s: string) => compileFormat(s) as Format;
+    expect(f("%f:%l:%\\s%\\+%m").re.exec("x:2:   hi")?.slice(1)).toEqual(["x", "2", "hi"]);
+    expect(f("%f:%l:%\\s%\\+%m").re.exec("x:2:hi")).toBeNull(); // one at least
+    expect(f("%f:%l:%\\s%\\?%m").re.exec("x:2:hi")?.slice(1)).toEqual(["x", "2", "hi"]);
+    expect(f("%f:%l:%\\s%\\=%m").re.exec("x:2: hi")?.slice(1)).toEqual(["x", "2", "hi"]);
+    expect(f("%f:%l:%\\s%\\?%m").re.exec("x:2:  hi")?.slice(1)).toEqual(["x", "2", " hi"]); // one at most
+    expect(f("%f %\\| %m").re.exec("a \\| m")?.slice(1)).toEqual(["a", "m"]); // a backslash as itself
+    const range = f("%f:%l:%[A-Z] %m");
+    expect(range.fields).toEqual(["f", "l", "m"]); // a range isn't captured
+    expect(range.re.exec("a.sh:3:W text")?.slice(1)).toEqual(["a.sh", "3", "text"]);
+    expect(range.re.exec("a.sh:3:w text")).toBeNull();
+    expect(f("%f:%[^0-9]%m").re.exec("x:yes")?.slice(1)).toEqual(["x", "es"]);
+    expect(f("%f:%[^0-9]%m").re.exec("x:9no")).toBeNull();
+    expect(compileFormat("%f:%[A-Z")).toContain("an unclosed %[");
+    expect(compileFormat("%f:%l %")).toContain("ends in a lone %");
+  });
+
+  test("a linter that takes too long is stopped, and said so; one that can't start at all says why", async () => {
+    const root = dir("slowlint", { "a.txt": "" });
+    const t = Date.now();
+    expect(await runLinter(linter({ "lint-command": "sleep 5" }), join(root, "a.txt"), "", root, 200)).toEqual({ failed: "timeout", detail: "t took longer than 0.2 s" });
+    expect(Date.now() - t).toBeLessThan(3000);
+    // Its project's folder gone (deleted while open): the shell itself can't start there.
+    const gone = join(sandbox, "slowlint-gone");
+    expect(await runLinter(linter({ "lint-command": "true" }), join(gone, "a.txt"), "", gone)).toMatchObject({ failed: "error", detail: expect.stringMatching(/^t: .*ENOENT/) });
+  });
+
+  test("doctor for a file: each linter's own folder, its program found from there; null where the project doesn't ask", () => {
+    const root = dir("doclint", { ".git/HEAD": "", "svc/.hadolint.yaml": "", "svc/api/Dockerfile": "", "svc/node_modules/.bin/hadolint": "#!/bin/sh\n", "web/Dockerfile": "" });
+    chmodSync(join(root, "svc/node_modules/.bin/hadolint"), 0o755);
+    const svc = doctorFile(serverTable(), linterTable(), join(root, "svc/api/Dockerfile"), false)!;
+    expect(svc.root).toBe(root);
+    expect(svc.linters).toEqual([expect.objectContaining({ name: "hadolint", root: join(root, "svc"), where: "project", path: join(root, "svc/node_modules/.bin/hadolint") })]);
+    const web = doctorFile(serverTable(), linterTable(), join(root, "web/Dockerfile"), false)!;
+    expect(web.linters).toEqual([expect.objectContaining({ name: "hadolint", root: null })]);
+    expect(web.linters[0]!.where).not.toBe("project");
   });
 });

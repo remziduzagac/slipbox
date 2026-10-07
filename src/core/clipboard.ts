@@ -50,7 +50,8 @@ function localTools(): string[][] {
 
 function runTool(argv: string[], text: string): boolean {
   try {
-    const bin = Bun.which(argv[0]!);
+    // PATH as it is now (Bun.which alone reads the start-up one): a test's fake tools, never the real.
+    const bin = Bun.which(argv[0]!, { PATH: process.env.PATH ?? "" });
     if (!bin) return false;
     const r = Bun.spawnSync([bin, ...argv.slice(1)], { stdin: Buffer.from(text), stdout: "ignore", stderr: "ignore" });
     return r.exitCode === 0;
@@ -117,7 +118,7 @@ export function readClipboard(fallbackDir: string): string | null {
   }
   for (const tool of readTools()) {
     try {
-      const bin = Bun.which(tool[0]!);
+      const bin = Bun.which(tool[0]!, { PATH: process.env.PATH ?? "" });
       if (!bin) continue;
       const r = Bun.spawnSync([bin, ...tool.slice(1)], { stdout: "pipe", stderr: "ignore", timeout: 1000 });
       if (r.exitCode === 0) return new TextDecoder().decode(r.stdout);

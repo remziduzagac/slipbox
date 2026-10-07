@@ -16,7 +16,8 @@ import { headingsOf, parseMarkdown } from "../src/core/parse.ts";
 import { allocate } from "../src/core/layout/table.ts";
 import { countLines, measure, wrapGraphemes, wrapSpans } from "../src/core/layout/wrap.ts";
 import type { Span } from "../src/core/layout/ir.ts";
-import { loadTheme } from "../src/core/theme/index.ts";
+import { blend, listThemes, loadTheme } from "../src/core/theme/index.ts";
+import { layoutWidth } from "../src/core/note.ts";
 import { stringWidth } from "../src/core/width.ts";
 
 // Isolation (testing.md): never read or write the real config, cache or state directories.
@@ -300,6 +301,75 @@ describe("ANSI writer", () => {
     expect(colour).toContain("\x1b[0;38;2;");
     for (const line of colour.trimEnd().split("\n")) expect(line.endsWith("\x1b[0m")).toBe(true);
     expect(layoutToAnsi(layout, theme, { depth: "256" })).toContain("38;5;");
+  });
+});
+
+describe("ANSI writer: colours the terminal can't show as given", () => {
+  /** The SGR codes the writer gives a span of the text role, coloured `color`, at `depth`. */
+  const codes = async (color: unknown, depth: "16" | "256" | "truecolor") => {
+    const { lineToAnsi } = await import("../src/core/layout/ansi.ts");
+    const { applyColorOverrides } = await import("../src/core/theme/index.ts");
+    const { theme, warnings } = applyColorOverrides(loadTheme("tokyo-night").theme, { text: color });
+    expect(warnings).toEqual([]);
+    const out = lineToAnsi({ spans: [{ text: "x", role: "text", attrs: 0 }], src: 1 }, 1, theme, { depth });
+    return /^\x1b\[0;([\d;]+)mx\x1b\[0m$/.exec(out)?.[1];
+  };
+
+  test("a palette number past 15 on a 16-colour terminal: the nearest of the 16, cube and greys alike", async () => {
+    expect(await codes(196, "16")).toBe("91"); // #ff0000: bright red
+    expect(await codes(21, "16")).toBe("94"); // #0000ff: bright blue
+    expect(await codes(28, "16")).toBe("32"); // #008700: green
+    expect(await codes(244, "16")).toBe("37"); // #808080: white, not bright
+    expect(await codes(250, "16")).toBe("97"); // #bcbcbc: bright white
+    expect(await codes(249, "16")).toBe("97"); // #b2b2b2: just bright
+    expect(await codes(124, "16")).toBe("91"); // #af0000: just bright red
+    expect(await codes(232, "16")).toBe("30"); // #080808: black
+    expect(await codes({ fg: 4, bg: 196 }, "16")).toBe("34;101"); // the background's too
+    expect(await codes(12, "16")).toBe("94"); // the 16 themselves as they are
+    expect(await codes(196, "256")).toBe("38;5;196"); // as it is where the palette is there
+  });
+
+  test("a hex colour on a 256-colour terminal: the nearest of the cube or the greys; on 16, the nearest of those", async () => {
+    expect(await codes("#ff0000", "256")).toBe("38;5;196");
+    expect(await codes("#808080", "256")).toBe("38;5;244"); // a grey: the grey ramp, not the cube
+    expect(await codes("#5f87af", "256")).toBe("38;5;67"); // on the cube exactly
+    expect(await codes("#ff0000", "16")).toBe("91");
+    expect(await codes("#303030", "16")).toBe("30"); // near black
+    expect(await codes("#404040", "16")).toBe("90"); // a dark grey: bright black
+    expect(await codes("#ff0000", "truecolor")).toBe("38;2;255;0;0");
+  });
+});
+
+describe("rows back to their source (the layout IR)", () => {
+  test("what's at a column comes from its span's own line, else the row's; where a line's text starts", async () => {
+    const { posOfSrc, srcAt } = await import("../src/core/layout/ir.ts");
+    const l = renderMarkdown("# T\n\none\ntwo\nthree\n\n- a\n", { width: 40, glyphs: unicode, showUrls: false });
+    const para = l.lines.find((x) => x.spans.some((s) => s.text === "two"))!;
+    expect([0, 3, 4, 7, 8, 12].map((c) => srcAt(para, c))).toEqual([3, 4, 4, 5, 5, 5]); // one two three, one row of three lines
+    expect(srcAt(para, 100)).toBe(3); // past the text: the row's
+    const item = l.lines.find((x) => x.spans.some((s) => s.text === "a"))!;
+    expect(srcAt(item, 0)).toBe(7); // the bullet has no line of its own: the row's
+    expect(posOfSrc(l.lines, 4)).toEqual({ row: l.lines.indexOf(para), col: 4 });
+    expect(posOfSrc(l.lines, 7)).toEqual({ row: l.lines.indexOf(item), col: 2 }); // its text, after the bullet
+    expect(posOfSrc(l.lines, 2)).toBeNull(); // a blank line has no text
+    expect(posOfSrc(l.lines, 99)).toBeNull();
+  });
+});
+
+describe("highlighting: languages and the cache's bounds (15.1)", () => {
+  test("a language known or not; a block highlighted again once thousands of others have pushed it out", async () => {
+    const { hasLanguage, highlight } = await import("../src/core/layout/highlight.ts");
+    expect(hasLanguage("ts")).toBe(true);
+    expect(hasLanguage("python")).toBe(true);
+    expect(hasLanguage("no-such-language")).toBe(false);
+    const first = highlight("let first = 0;", "ts")!;
+    expect(highlight("let first = 0;", "ts")).toBe(first); // cached
+    let last: ReturnType<typeof highlight> = null;
+    for (let i = 0; i < 8000; i++) last = highlight(`let v${i} = ${i};`, "ts");
+    const again = highlight("let first = 0;", "ts")!;
+    expect(again).not.toBe(first); // the oldest went first
+    expect(again).toEqual(first); // the same colours, worked out again
+    expect(highlight("let v7999 = 7999;", "ts")).toBe(last); // the newest stayed
   });
 });
 
@@ -630,5 +700,47 @@ describe("links inside a data file's records (review cycle 2, render)", () => {
     expect(dataLinks(tree).map((l) => [l.target, l.key, l.explicit])).toEqual([["docs/a.md", "doc", false], ["docs/b.md", "doc", false]]);
     const l = renderTree(tree, { width: 80, glyphs: unicode, showUrls: false, resolveLink: (_k, t) => (t === "docs/a.md" ? "resolved" : "unresolved") });
     expect(l.links.map((x) => x.target)).toEqual(["docs/a.md"]);
+  });
+});
+
+describe("what rendering.md promises (review: docs against the tests)", () => {
+  const rows = (md: string, width = 60) => renderMarkdown(md, { width, glyphs: unicode, showUrls: false }).lines.map((l) => l.spans.map((s) => s.text).join(""));
+  test("records: the labels' column is a third of the width at most, a long label wrapping inside it", () => {
+    const md = "| a rather long column label | two | three | four | five |\n|---|---|---|---|---|\n| a | b | c | d | e |\n";
+    const out = rows(md, 24);
+    expect(out.every((r) => stringWidth(r) <= 24)).toBe(true);
+    // floor(24 / 3) = 8 columns of label, two of gap: every value starts at column 10.
+    expect(out.slice(1, 5).map((r) => r.trimEnd())).toEqual(["a rather  a", "long", "column", "label"]);
+    expect(out.find((r) => r.startsWith("two"))).toBe("two       b");
+  });
+  test("tabs expand to stops of 4 in code blocks, HTML and raw frontmatter, and of 2 in inline code", () => {
+    const out = rows("```\na\tb\n```\n\n`a\tb` x\n\n<div>\nc\td\n</div>\n");
+    expect(out).toContain(" a   b"); // the code block's own one-column margin, then a stop of 4
+    expect(out).toContain("a b x"); // inline code: a stop of 2
+    expect(out).toContain("c   d"); // an HTML block
+    // Frontmatter that doesn't parse is shown as written, its tabs expanded too.
+    expect(rows("---\ntitle: [x\n\tq\n---\n\nbody\n")).toContain("     q");
+  });
+  test("readability defaults (2.7): the inset, capped at 5% of a narrow pane and never below 1", () => {
+    expect(layoutWidth(120, 4)).toBe(116); // the default inset, whole
+    expect(layoutWidth(60, 4)).toBe(57); // 5% of 60
+    expect(layoutWidth(30, 4)).toBe(29); // 5% of 30, rounded down
+    expect(layoutWidth(15, 4)).toBe(14); // 5% of 15 rounds to 0: never below 1
+    expect(layoutWidth(120, 4, 80)).toBe(80); // render.max_width caps what's left
+  });
+  test("readability defaults (2.7): Tokyo Night's bold and inline code; every theme's heading bands blended 14% (dark) or 16% (light)", () => {
+    const tn = loadTheme("tokyo-night").theme;
+    expect(tn.roles.strong).toMatchObject({ fg: "#bcc5e6", bold: true });
+    expect(tn.roles.code_inline).toMatchObject({ fg: "#c0caf5", bg: "#292e42", italic: true });
+    const kinds = new Set<string>();
+    for (const { name } of listThemes()) {
+      const t = loadTheme(name).theme;
+      if (!t.bg.startsWith("#")) continue; // the terminal's and mono have no colours to blend
+      kinds.add(t.kind);
+      for (const h of ["h1", "h2", "h3", "h4", "h5", "h6"] as const) {
+        expect([name, h, t.roles[h].bg]).toEqual([name, h, blend(t.roles[h].fg!, t.bg, t.kind === "dark" ? 0.14 : 0.16)]);
+      }
+    }
+    expect([...kinds].sort()).toEqual(["dark", "light"]);
   });
 });

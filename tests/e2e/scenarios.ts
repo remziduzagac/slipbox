@@ -769,6 +769,31 @@ const CORE: Scenario[] = [
     },
   },
   {
+    name: "language servers: g y goes to the type's definition, g shift+i lists the implementations to pick from — TypeScript's own server (19.13)",
+    options: { config: `[lsp]\nenabled = true\n\n[language-server.typescript]\ncommand = ${JSON.stringify(TSC)}\n` },
+    run: async (s) => {
+      s.write(
+        "scratch/shapes.ts",
+        "interface Shape { area(): number }\nclass Square implements Shape { area() { return 1; } }\nclass Circle implements Shape { area() { return 2; } }\nexport const s: Shape = new Square();\nexport const a = s.area();\n",
+      );
+      await s.ex("e scratch/shapes.ts");
+      await s.status("shapes.ts");
+      // On the s of `s.area()`: its type is Shape, line 1 — where g d would go is line 4, its declaration.
+      await s.keys("j", "j", "j", "j", "f", "=", "w");
+      await s.status(/L5:18\b/);
+      await s.keys("g", "y");
+      await s.status(/L1:11\b/, 15000);
+      // On Shape: the two classes that implement it, a list; the second picked.
+      await s.keys("g", "shift+i");
+      await s.see("2 implementations", 10000);
+      await s.see(/shapes\.ts:2 +class Square implements Shape/);
+      await s.see(/shapes\.ts:3 +class Circle implements Shape/);
+      await s.keys("down", "enter");
+      await s.status(/L3:7\b/);
+      await s.notSee("2 implementations");
+    },
+  },
+  {
     name: "tags: space f t lists them with counts, a tag its notes; a #tag in the text followed",
     run: async (s) => {
       await leader(s, "f", "t");
@@ -1005,6 +1030,31 @@ const CORE: Scenario[] = [
     },
   },
   {
+    name: "repeat: . after an o begun in the render opens the same line again; . after a terminal's paste in normal mode puts it again, not the x before",
+    options: { open: "o-render.md", files: { "o-render.md": "# J\n\nalpha one\n\nbeta two\n", "paste-dot.md": "abcdef\n" } },
+    run: async (s) => {
+      await s.status("READ");
+      await s.keys("/");
+      await s.type("alpha one");
+      await s.keys("enter", "escape");
+      await s.keys("o");
+      await s.status("INSERT");
+      await s.type("xy");
+      await s.keys("escape");
+      await s.keys("j", "j", ".", "ctrl+s");
+      await s.file("o-render.md", (t) => t === "# J\n\nalpha one\nxy\n\nbeta two\nxy\n", "the o repeated below beta two");
+      // A paste as the terminal sends it (bracketed), in normal mode: put after the cursor, like p; . puts it again.
+      await open(s, "paste-dot");
+      if (!s.statusLine().includes("SOURCE")) await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.keys("x"); // bcdef
+      await s.paste("ZZ"); // bZZcdef
+      s.expect(!s.statusLine().includes("INSERT"), "still in normal mode after the paste");
+      await s.keys(".", "ctrl+s");
+      await s.file("paste-dot.md", (t) => t === "bZZZZcdef\n", "the paste put again, the x not repeated");
+    },
+  },
+  {
     name: "task: ctrl+l ticks a checkbox in the render and writes it",
     options: { open: MEETING },
     run: async (s) => {
@@ -1043,6 +1093,41 @@ const CORE: Scenario[] = [
       await s.keys("escape");
       await s.keys("ctrl+s");
       await s.file(HANDBOOK, (t) => t.includes(" (lens)"), "the lens edit saved");
+    },
+  },
+  {
+    name: "lens: a link followed from it opens the lens on the new note — its text drawn, typing lands there; ctrl+o back to the first",
+    options: {
+      open: "lens-a.md",
+      files: { "lens-a.md": "# Alpha\n\nSee [b](lens-b.md) here.\n\nAAAA text of alpha.\n", "lens-b.md": "# Beta\n\nBBBB beta.\n\nMore beta.\n" },
+    },
+    run: async (s) => {
+      await s.keys("/");
+      await s.type("See");
+      await s.keys("enter", "escape");
+      await leader(s, "n", "l");
+      await s.status("LENS");
+      await s.see("See [b](lens-b.md) here.");
+      await s.keys("f", "b");
+      await s.status("→ lens-b.md");
+      await s.keys("enter");
+      // b's own text, in the lens still — none of a's left on screen.
+      await s.see("More beta.");
+      await s.see("BBBB beta.");
+      await s.notSee("AAAA");
+      await s.status("LENS");
+      // Typing on the line drawn as "More beta." changes that line of b.
+      for (let i = 0; i < 10 && pos(s).line < 5; i++) await s.keys("j");
+      s.expect(pos(s).line === 5, `the cursor on b's line 5, not ${pos(s).line}`);
+      await s.keys("0", "i", "Z");
+      await s.keys("escape");
+      await s.keys("ctrl+s");
+      await s.file("lens-b.md", (t) => t === "# Beta\n\nBBBB beta.\n\nZMore beta.\n", "Z typed at the start of b's last line");
+      s.expect(s.read("lens-a.md") === "# Alpha\n\nSee [b](lens-b.md) here.\n\nAAAA text of alpha.\n", "a untouched");
+      // Back: a's own text again.
+      await s.keys("ctrl+o");
+      await s.see("AAAA text of alpha.");
+      await s.notSee("More beta.");
     },
   },
 
@@ -1583,10 +1668,10 @@ const CORE: Scenario[] = [
       await s.keys("ctrl+o");
       await s.status("home.md");
       await s.see("Halden Ridge Observatory");
-      // home's backlinks: from both nested vaults.
+      // home's backlinks: from both nested roots, each by its path (21.9).
       await leader(s, "l", "b");
-      await s.see("outreach:index.md");
-      await s.see("outreach-school-visits:index.md");
+      await s.see("outreach/index.md");
+      await s.see("outreach/school-visits/index.md");
       await s.keys("escape");
       await leader(s, "e");
       await s.see("outreach");
@@ -1689,6 +1774,41 @@ const CORE: Scenario[] = [
       await s.keys("escape");
       await leader(s, "v", "shift+m");
       await s.message("isn't inside another root");
+    },
+  },
+  {
+    name: "files: a folder with an unsaved note open in it isn't renamed — said, the edit kept; saved, it is, the note open from its new place",
+    options: { open: "people/contacts.md" },
+    run: async (s) => {
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.keys("G", "o");
+      await s.type("Typed before the move");
+      await s.keys("escape");
+      await s.status("unsaved");
+      await leader(s, "d", "r");
+      await s.see("rename people/ to:");
+      await s.keys("ctrl+u");
+      await s.type("folk");
+      await s.keys("enter");
+      await s.message("unsaved: people/contacts.md");
+      s.expect(s.exists("people/contacts.md") && !s.exists("folk"), "nothing moved while the note is unsaved");
+      await s.see("Typed before the move");
+      await s.status("unsaved");
+      // Saved, the same rename goes ahead: previewed, carried out, the note open from folk/ with its text.
+      await s.keys("ctrl+s");
+      await s.file("people/contacts.md", (t) => t.includes("Typed before the move"), "the edit saved where it was");
+      await leader(s, "d", "r");
+      await s.see("rename people/ to:");
+      await s.keys("ctrl+u");
+      await s.type("folk");
+      await s.keys("enter");
+      await s.see("people/ → folk/");
+      await s.keys("enter");
+      await s.file("folk/contacts.md", (t) => t.includes("Typed before the move"), "the folder renamed, the note in it");
+      s.expect(!s.exists("people"), "people/ gone");
+      await s.status("folk/contacts.md");
+      await s.see("Typed before the move");
     },
   },
   {

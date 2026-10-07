@@ -283,6 +283,23 @@ describe("themes (2.6)", () => {
   });
 });
 
+describe("themes (2.6): a user's own files", () => {
+  test("a user theme loads, shadowing a built-in of its name; a broken one falls back, saying which file and why", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-themes-"));
+    const slots = Array.from({ length: 16 }, (_, i) => `base0${i.toString(16).toUpperCase()}: "${(i * 1111).toString(16).padStart(6, "0")}"`);
+    writeFileSync(join(dir, "terminal.yaml"), `scheme: "Mine"\n${slots.join("\n")}\n`);
+    writeFileSync(join(dir, "broken.yml"), "scheme: x\nbase00: '000000'\n");
+    const mine = loadTheme("terminal", dir);
+    expect(mine.warning).toBeNull();
+    expect(mine.theme).toMatchObject({ name: "terminal", source: "user", bg: "#000000" });
+    const broken = loadTheme("broken", dir);
+    expect(broken.theme.name).toBe("tokyo-night");
+    expect(broken.warning).toStartWith(`theme broken: ${join(dir, "broken.yml")}: `);
+    expect(listThemes(dir).filter((t) => t.name === "terminal")).toEqual([{ name: "terminal", source: "user", path: join(dir, "terminal.yaml") }]);
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
 describe("keymap (0.8)", () => {
   test("sequences, prefixes and overrides", () => {
     const k = new Keymap({ "g g": "scroll.top", j: "scroll.down" }, { j: "", "g  t": "tab.next" });
@@ -313,6 +330,17 @@ describe("glyph sets", () => {
       }
     });
   }
+  test("auto (rendering.md, Glyphs): ASCII for a locale that isn't UTF-8 or the Linux console, Nerd for the terminals that bundle it, else Unicode", () => {
+    const auto = (env: NodeJS.ProcessEnv) => glyphsFor("auto", env).mode;
+    expect(auto({ LANG: "C", TERM: "xterm-ghostty" })).toBe("ascii"); // a locale set, not UTF-8: whatever the terminal
+    expect(auto({ LC_ALL: "en_US.ISO-8859-1", LANG: "en_US.UTF-8" })).toBe("ascii"); // LC_ALL wins over LANG
+    expect(auto({ LC_CTYPE: "en_US.UTF-8", LANG: "C" })).toBe("unicode"); // LC_CTYPE before LANG
+    expect(auto({ TERM: "linux", LANG: "en_US.UTF-8" })).toBe("ascii");
+    for (const term of [{ TERM: "xterm-ghostty" }, { TERM: "xterm-kitty" }, { TERM_PROGRAM: "WezTerm" }]) expect(auto({ LANG: "en_US.utf8", ...term })).toBe("nerd");
+    expect(auto({ TERM: "xterm-256color", LANG: "en_US.UTF-8" })).toBe("unicode");
+    expect(auto({ TERM: "xterm-256color" })).toBe("unicode"); // no locale at all isn't a non-UTF-8 one
+    expect(glyphsFor("unicode", { TERM: "linux" }).mode).toBe("unicode"); // a set named in config is never guessed
+  });
 });
 
 describe("review round 2 (core)", () => {
@@ -404,6 +432,20 @@ describe("task toggle (4.11) and note writes (4.6, 7.5)", () => {
     expect([...r.bytes]).toEqual([0xef, 0xbb, 0xbf, ...enc("- [ ] a\r\n- [x] b\r\n"), 0xff]);
     expect(toggleTask(bom, 1)?.checked).toBe(true); // the BOM isn't part of line 1
   });
+  test("a write whose rename fails leaves no temp file behind, and what was there as it was (4.6)", async () => {
+    const { atomicWrite } = await import("../src/core/fsutil.ts");
+    const { readdirSync } = await import("node:fs");
+    const dir = mkdtempSync(join(sandbox, "atomic-"));
+    mkdirSync(join(dir, "taken"));
+    writeFileSync(join(dir, "taken", "inside.md"), "# Inside\n");
+    expect(() => atomicWrite(join(dir, "taken"), "# Note\n")).toThrow();
+    expect(readdirSync(dir)).toEqual(["taken"]);
+    expect(readFileSync(join(dir, "taken", "inside.md"), "utf8")).toBe("# Inside\n");
+    // The same write where it can land: done, no temp file either.
+    atomicWrite(join(dir, "note.md"), "# Note\n");
+    expect(readdirSync(dir).sort()).toEqual(["note.md", "taken"]);
+  });
+
   test("writeNote keeps the mode, writes through a symlink, and refuses one out of the vault", () => {
     const root = mkdtempSync(join(tmpdir(), "slipbox-write-"));
     const outside = mkdtempSync(join(tmpdir(), "slipbox-out-"));
@@ -482,6 +524,141 @@ describe("finding running nvims (4.12)", () => {
     } finally {
       for (const srv of [a, b, c]) srv.close();
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("clipboard (8.5): OSC 52, the system's tools, then the file", () => {
+  /**
+   * Fake clipboard tools on a PATH of their own — never the real ones — with the display variables
+   * that pick them and SLIPBOX_CLIPBOARD as given (unset when not). A tool copying writes `board`
+   * beside it, a tool pasting prints it; each says in `ran` that it ran, with its arguments.
+   */
+  const withTools = async (tools: Record<string, "copy" | "paste" | "fail" | "both">, env: { WAYLAND_DISPLAY?: string; DISPLAY?: string; SLIPBOX_CLIPBOARD?: string }, fn: (dir: string) => void | Promise<void>) => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-cliptools-"));
+    const body = { copy: '/bin/cat > "${0%/*}/board"', paste: '/bin/cat "${0%/*}/board"', fail: "exit 1", both: 'case "$*" in *-o*) /bin/cat "${0%/*}/board" ;; *) /bin/cat > "${0%/*}/board" ;; esac' };
+    for (const [name, kind] of Object.entries(tools)) {
+      writeFileSync(join(dir, name), `#!/bin/sh\necho "\${0##*/} $*" >> "\${0%/*}/ran"\n${body[kind]}\n`);
+      chmodSync(join(dir, name), 0o755);
+    }
+    const keys = ["PATH", "WAYLAND_DISPLAY", "DISPLAY", "SLIPBOX_CLIPBOARD"] as const;
+    const was = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    const set = (k: string, v: string | undefined) => (v === undefined ? delete process.env[k] : (process.env[k] = v));
+    process.env.PATH = dir;
+    for (const k of keys.slice(1)) set(k, env[k as keyof typeof env]);
+    try {
+      await fn(dir);
+    } finally {
+      for (const k of keys) set(k, was[k]);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const ran = (dir: string) => (existsSync(join(dir, "ran")) ? readFileSync(join(dir, "ran"), "utf8").trim().split("\n") : []);
+
+  test("a copy goes by OSC 52 and the first tool that takes it, confirmed; a paste reads it back the same way", async () => {
+    const { copyText, readClipboard } = await import("../src/core/clipboard.ts");
+    const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
+    // X11: xclip fails, xsel takes it.
+    await withTools({ xclip: "fail", xsel: "both" }, { DISPLAY: ":0" }, (dir) => {
+      const r = copyText("héllo\n", { osc52: () => true, fallbackDir: out });
+      expect(r).toEqual({ methods: ["osc52", "xsel"], file: null, confirmed: true });
+      expect(readFileSync(join(dir, "board"), "utf8")).toBe("héllo\n");
+      expect(existsSync(join(out, "clipboard.txt"))).toBe(false); // no file when something took it
+      expect(readClipboard(out)).toBe("héllo\n");
+      expect(ran(dir)).toEqual(["xclip -selection clipboard", "xsel --clipboard --input", "xclip -selection clipboard -o", "xsel --clipboard --output"]);
+    });
+    // Wayland first, when both are there: wl-copy takes it and xsel never runs.
+    await withTools({ "wl-copy": "copy", "wl-paste": "paste", xsel: "both" }, { WAYLAND_DISPLAY: "wayland-0", DISPLAY: ":0" }, (dir) => {
+      expect(copyText("w", { osc52: () => false, fallbackDir: out })).toEqual({ methods: ["wl-copy"], file: null, confirmed: true });
+      expect(readClipboard(out)).toBe("w");
+      expect(ran(dir)).toEqual(["wl-copy ", "wl-paste --no-newline"]);
+    });
+    rmSync(out, { recursive: true, force: true });
+  });
+
+  test("no tool answers (over SSH): OSC 52 alone, unconfirmed; without it the file; a paste finds nothing", async () => {
+    const { copyText, readClipboard } = await import("../src/core/clipboard.ts");
+    const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
+    // A display, but none of its tools installed; then no display at all, a tool there unasked.
+    for (const [tools, env] of [[{}, { DISPLAY: ":0", WAYLAND_DISPLAY: "w" }], [{ xclip: "both" as const }, {}]] as const) {
+      await withTools(tools, env, (dir) => {
+        expect(copyText("over ssh", { osc52: () => true, fallbackDir: out })).toEqual({ methods: ["osc52"], file: null, confirmed: false });
+        expect(existsSync(join(out, "clipboard.txt"))).toBe(false);
+        expect(copyText("no terminal", { osc52: () => false, fallbackDir: out })).toEqual({ methods: ["file"], file: join(out, "clipboard.txt"), confirmed: false });
+        expect(readFileSync(join(out, "clipboard.txt"), "utf8")).toBe("no terminal");
+        expect(readClipboard(out)).toBeNull(); // the fallback file isn't the clipboard
+        expect(ran(dir)).toEqual([]);
+      });
+      rmSync(join(out, "clipboard.txt"), { force: true });
+    }
+    rmSync(out, { recursive: true, force: true });
+  });
+
+  test("SLIPBOX_CLIPBOARD=file: never the terminal's or the system's clipboard, only the file, read back", async () => {
+    const { copyText, readClipboard } = await import("../src/core/clipboard.ts");
+    const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
+    await withTools({ xclip: "both", "wl-copy": "copy", "wl-paste": "paste" }, { DISPLAY: ":0", WAYLAND_DISPLAY: "w", SLIPBOX_CLIPBOARD: "file" }, (dir) => {
+      expect(readClipboard(out)).toBeNull(); // nothing copied yet
+      expect(copyText("only here", { fallbackDir: out })).toEqual({ methods: ["file"], file: join(out, "clipboard.txt"), confirmed: false });
+      expect(readClipboard(out)).toBe("only here");
+      expect(ran(dir)).toEqual([]);
+    });
+    rmSync(out, { recursive: true, force: true });
+  });
+
+  test("the OSC 52 sequence: the text in base64, capped where terminals choke — the cap's own size still sent", async () => {
+    const { copyText, osc52Sequence, osc52ToTty, OSC52_MAX_BASE64 } = await import("../src/core/clipboard.ts");
+    expect(osc52Sequence("hé")).toBe(`\x1b]52;c;${Buffer.from("hé").toString("base64")}\x07`);
+    const atCap = "x".repeat((OSC52_MAX_BASE64 / 4) * 3); // exactly the cap in base64
+    expect(osc52Sequence(atCap)).not.toBeNull();
+    expect(osc52Sequence(`${atCap}x`)).toBeNull();
+    expect(osc52ToTty(`${atCap}x`)).toBe(false); // too big: the terminal is never written
+    const out = mkdtempSync(join(tmpdir(), "slipbox-clip-"));
+    const sent: number[] = [];
+    copyText(atCap, { osc52: (t) => (sent.push(t.length), true), fallbackDir: out });
+    expect(sent).toEqual([atCap.length]);
+    rmSync(out, { recursive: true, force: true });
+  });
+});
+
+describe("finding running nvims (4.12): where, and what each says", () => {
+  test("the sockets' folders: $XDG_RUNTIME_DIR, then each of nvim's own under $TMPDIR/nvim.$USER", async () => {
+    const { nvimSocketDirs } = await import("../src/core/nvim.ts");
+    const { userInfo } = await import("node:os");
+    const tmp = mkdtempSync(join(tmpdir(), "slipbox-nvdirs-"));
+    const base = join(tmp, `nvim.${userInfo().username}`);
+    mkdirSync(join(base, "a1"), { recursive: true });
+    mkdirSync(join(base, "b2"));
+    const dirs = nvimSocketDirs({ XDG_RUNTIME_DIR: "/run/user/7", TMPDIR: tmp });
+    expect(dirs[0]).toBe("/run/user/7");
+    expect(dirs.slice(1).sort()).toEqual([join(base, "a1"), join(base, "b2")]);
+    expect(nvimSocketDirs({ TMPDIR: join(tmp, "none") })).toEqual([]); // no runtime dir, no nvim folder
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  test("each socket asked its cwd and file; one that fails, says nothing, or hangs is left out", async () => {
+    const { probeNvim } = await import("../src/core/nvim.ts");
+    // A fake nvim on a PATH of its own: the user's nvims are never asked.
+    const bin = mkdtempSync(join(tmpdir(), "slipbox-fakenvim-"));
+    writeFileSync(
+      join(bin, "nvim"),
+      `#!/bin/sh\nprintf '%s\\n' "$@" > "\${0%/*}/args"\ncase "$2" in\n  *live*) printf '/work dir\\n/work dir/a.md\\n' ;;\n  *empty*) printf '\\n' ;;\n  *nofile*) printf '/w\\n\\n' ;;\n  *slow*) exec /bin/sleep 5 ;;\n  *) echo 'E247: Failed to connect'; exit 1 ;;\nesac\n`,
+    );
+    chmodSync(join(bin, "nvim"), 0o755);
+    const was = process.env.PATH;
+    process.env.PATH = bin;
+    try {
+      expect(probeNvim("/s/live")).toEqual({ socket: "/s/live", cwd: "/work dir", file: "/work dir/a.md" });
+      expect(readFileSync(join(bin, "args"), "utf8").split("\n").slice(0, 3)).toEqual(["--server", "/s/live", "--remote-expr"]);
+      expect(probeNvim("/s/nofile")).toEqual({ socket: "/s/nofile", cwd: "/w", file: "" });
+      expect(probeNvim("/s/stale")).toBeNull(); // nothing listening: nvim fails, whatever it printed
+      expect(probeNvim("/s/empty")).toBeNull();
+      const t = Date.now();
+      expect(probeNvim("/s/slow", 300)).toBeNull();
+      expect(Date.now() - t).toBeLessThan(3000);
+    } finally {
+      process.env.PATH = was;
+      rmSync(bin, { recursive: true, force: true });
     }
   });
 });
@@ -598,6 +775,113 @@ describe("find and replace (core/replace.ts)", () => {
     expect(parseSubstitute("s/a/b/x")).toBeNull(); // not a flag
     expect(parseSubstitute("sort")).toBeNull();
     expect(parseSubstitute("s//b/")).toBeNull();
+  });
+});
+
+describe("find and replace: character classes in a regex", () => {
+  const re = (q: string) => {
+    const r = compilePattern(q, { regex: true, whole: false });
+    if (typeof r === "string") throw new Error(r);
+    return r;
+  };
+  test("^ and $ inside a class are characters, not line anchors; outside one, a line's start and end", () => {
+    const text = "a$b^c\r\nx$y\n";
+    expect(findAll(text, re("[$^]")).map((m) => m.groups[0])).toEqual(["$", "^", "$"]);
+    expect(findAll(text, re("[^$^\\r\\n]+")).map((m) => m.groups[0])).toEqual(["a", "b", "c", "x", "y"]);
+    expect(findAll(text, re("[\\]$]")).map((m) => m.from)).toEqual([1, 8]); // an escaped ] doesn't end the class
+    expect(findAll(text, re("c$")).map((m) => m.from)).toEqual([4]); // before the CRLF
+    expect(findAll(text, re("[cy]$")).map((m) => m.from)).toEqual([4, 9]);
+    // After a class, $ is the note's line end again: never before a lone \r, as a bare multiline $ would be.
+    expect(findAll("p\rq\n", re("[p]$"))).toEqual([]);
+    expect(findAll("p\rq\n", re("[q]$")).map((m) => m.from)).toEqual([2]);
+    expect(findAll(text, re("^x")).map((m) => m.from)).toEqual([7]);
+    expect(findAll(text, re("\\$")).map((m) => m.from)).toEqual([1, 8]);
+  });
+});
+
+describe("lazy loading (16.6)", () => {
+  test("asked before it's ready: null, loaded once; then the value, and whoever listens hears it", async () => {
+    const { lazy, load, loadError, onLoaded } = await import("../src/core/lazy.ts");
+    const name = "test:lazy-ready";
+    const heard: string[] = [];
+    const off = onLoaded((n) => n.startsWith("test:") && heard.push(n));
+    let calls = 0;
+    const loader = async () => {
+      calls++;
+      await Bun.sleep(10);
+      return { answer: 42 };
+    };
+    expect(lazy(name, loader)).toBeNull();
+    expect(lazy(name, loader)).toBeNull(); // still loading: not started again
+    const waited = await load(name, loader); // the CLI waits for the same load
+    expect(waited).toEqual({ answer: 42 });
+    expect(lazy(name, loader)).toBe(waited!);
+    expect(await load(name, loader)).toBe(waited!);
+    expect(calls).toBe(1);
+    expect(heard).toEqual([name]);
+    expect(loadError(name)).toBeNull();
+    off();
+  });
+
+  test("a load that fails: null, and why; never tried again; a listener removed hears no more", async () => {
+    const { lazy, load, loadError, onLoaded } = await import("../src/core/lazy.ts");
+    const heard: string[] = [];
+    const off = onLoaded((n) => n.startsWith("test:") && heard.push(n));
+    let calls = 0;
+    const loader = async (): Promise<number> => {
+      calls++;
+      throw new Error("no such grammar");
+    };
+    expect(await load("test:lazy-fails", loader)).toBeNull();
+    expect(loadError("test:lazy-fails")).toBe("no such grammar");
+    expect(lazy("test:lazy-fails", loader)).toBeNull();
+    expect(await load("test:lazy-fails", loader)).toBeNull();
+    expect(calls).toBe(1);
+    expect(heard).toEqual(["test:lazy-fails"]);
+    off();
+    await load("test:lazy-after", async () => 1);
+    expect(heard).toEqual(["test:lazy-fails"]);
+    expect(loadError("test:never-asked")).toBeNull();
+  });
+});
+
+describe("advisory staleness (9.9)", () => {
+  test("an empty list removes this process's file; another user's process (EPERM) counts as alive", async () => {
+    const { readStale, writeDirty } = await import("../src/core/stale.ts");
+    const v = { key: `stale-${process.pid}` };
+    writeDirty(v, ["a.md", "b.md"]);
+    expect(readStale(v)).toEqual([
+      { path: "a.md", pid: process.pid },
+      { path: "b.md", pid: process.pid },
+    ]);
+    writeDirty(v, []);
+    expect(readStale(v)).toEqual([]);
+    const { stateDir } = await import("../src/core/paths.ts");
+    expect(existsSync(join(stateDir(v), "dirty", `${process.pid}.json`))).toBe(false);
+    writeDirty(v, []); // nothing to remove: no error
+    if (process.getuid?.() !== 0) {
+      writeDirty(v, ["root.md"], 1); // pid 1 isn't this user's to signal: alive, as far as anyone can tell
+      expect(readStale(v)).toEqual([{ path: "root.md", pid: 1 }]);
+      writeDirty(v, [], 1);
+    }
+  });
+});
+
+describe("links to a repository's own hosting: the edges", () => {
+  test("a path that isn't valid percent-encoding is kept as written; a README any case, a file only", async () => {
+    const { inRepo, parseHosted, readmeAt } = await import("../src/core/hosting.ts");
+    expect(parseHosted("https://github.com/me/repo/blob/main/100%-done.md")).toMatchObject({ path: "100%-done.md", ref: "main" });
+    expect(parseHosted("https://github.com/me/repo/blob/main/a.md#50%")).toMatchObject({ path: "a.md", fragment: "50%" });
+    const top = mkdtempSync(join(tmpdir(), "slipbox-hosting-"));
+    expect(readmeAt(top)).toBeNull();
+    mkdirSync(join(top, "README.md")); // a folder of that name isn't it
+    expect(readmeAt(top)).toBeNull();
+    writeFileSync(join(top, "ReadMe.markdown"), "# hi\n");
+    expect(readmeAt(top)).toBe("ReadMe.markdown");
+    expect(readmeAt(join(top, "missing"))).toBeNull();
+    expect(inRepo(top, "ReadMe.markdown")).toBe(true);
+    expect(inRepo(top, "docs/x.md")).toBe(false);
+    rmSync(top, { recursive: true, force: true });
   });
 });
 
@@ -741,6 +1025,138 @@ describe("review cycle 3 (config)", () => {
     expect((b.config.keys as Record<string, unknown>).source).toBeUndefined();
     const c = loadConfig({ configFile: write("[walk]\nextensions = []\n").f });
     expect(c.config.walk.extensions.length).toBeGreaterThan(0);
+  });
+});
+
+describe("what configuration.md promises", () => {
+  const file = (text: string) => {
+    const f = join(mkdtempSync(join(tmpdir(), "slipbox-cfgdoc-")), "c.toml");
+    writeFileSync(f, text);
+    return f;
+  };
+  type Sections = Record<string, Record<string, unknown>>;
+
+  test("every key's default is the one its listing gives", async () => {
+    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+    const doc = readFileSync(join(import.meta.dir, "..", "docs", "design", "configuration.md"), "utf8");
+    const listed = Bun.TOML.parse(doc.split("## Every key")[1]!.split("```toml")[1]!.split("```")[0]!) as Sections;
+    // The tables there are examples, not defaults: servers, languages, linters, keys, aliases, groups, colours.
+    const examples = new Set(["language-server", "language", "linter", "keys", "aliases", "groups", "colors"]);
+    const defaults = DEFAULT_CONFIG as unknown as Sections;
+    const differ: string[] = [];
+    for (const [section, table] of Object.entries(listed)) {
+      if (examples.has(section)) continue;
+      if (typeof table !== "object") {
+        if (JSON.stringify(table) !== JSON.stringify(defaults[section])) differ.push(section);
+        continue;
+      }
+      for (const [key, value] of Object.entries(table)) if (JSON.stringify(defaults[section]?.[key]) !== JSON.stringify(value)) differ.push(`${section}.${key}`);
+      // …and no setting left out of the listing.
+      for (const key of Object.keys(defaults[section] ?? {})) if (!(key in table)) differ.push(`${section}.${key} (not listed)`);
+    }
+    for (const section of Object.keys(defaults)) if (!(section in listed)) differ.push(`[${section}] (not listed)`);
+    expect(differ).toEqual([]);
+    expect(Object.keys(listed).length).toBeGreaterThan(15);
+  });
+
+  test("the user file: --config, else $SLIPBOX_CONFIG, else $XDG_CONFIG_HOME/slipbox/config.toml; a --config that isn't there is said", () => {
+    const xdg = mkdtempSync(join(tmpdir(), "slipbox-xdg-"));
+    mkdirSync(join(xdg, "slipbox"));
+    const fromXdg = join(xdg, "slipbox", "config.toml");
+    writeFileSync(fromXdg, 'theme = "nord"\n');
+    const fromEnv = file('theme = "dracula"\n');
+    const fromFlag = file('theme = "monokai"\n');
+    const saved = { xdg: process.env.XDG_CONFIG_HOME };
+    try {
+      process.env.XDG_CONFIG_HOME = xdg;
+      expect(loadConfig()).toMatchObject({ config: { theme: "nord" }, sources: [fromXdg] });
+      process.env.SLIPBOX_CONFIG = fromEnv;
+      expect(loadConfig()).toMatchObject({ config: { theme: "dracula" }, sources: [fromEnv] });
+      expect(loadConfig({ configFile: fromFlag })).toMatchObject({ config: { theme: "monokai" }, sources: [fromFlag] });
+      // A --config that isn't there: said, and neither of the others stands in for it.
+      const gone = join(xdg, "nope.toml");
+      const r = loadConfig({ configFile: gone });
+      expect(r).toMatchObject({ config: { theme: "tokyo-night" }, sources: [] });
+      expect(r.warnings).toContain(`config: ${gone} does not exist`);
+    } finally {
+      process.env.XDG_CONFIG_HOME = saved.xdg;
+      delete process.env.SLIPBOX_CONFIG;
+    }
+  });
+
+  test("a value outside its set keeps the default, with a warning — each key the list names; one inside it is taken", async () => {
+    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+    const keys: [string, string, string][] = [
+      ["render", "glyphs", "ascii"],
+      ["render", "show_urls", "never"],
+      ["capture", "location", "vault"],
+      ["ui", "lines", "heavy"],
+      ["editor", "edit_in", "live"],
+      ["files", "show", "all"],
+    ];
+    for (const [section, key, good] of keys) {
+      const bad = loadConfig({ configFile: file(`[${section}]\n${key} = "bogus"\n`) });
+      expect([key, (bad.config as unknown as Sections)[section]![key]]).toEqual([key, (DEFAULT_CONFIG as unknown as Sections)[section]![key]]);
+      expect(bad.warnings.join("\n")).toContain(`"${section}.${key}" must be one of`);
+      const ok = loadConfig({ configFile: file(`[${section}]\n${key} = "${good}"\n`) });
+      expect([key, (ok.config as unknown as Sections)[section]![key], ok.warnings]).toEqual([key, good, []]);
+    }
+  });
+
+  test("numbers: a range's ends are taken, past them the default; a fraction only for split_ratio and lens_max", async () => {
+    const { DEFAULT_CONFIG } = await import("../src/core/config.ts");
+    const value = (section: string, key: string, v: number) => {
+      const r = loadConfig({ configFile: file(`[${section}]\n${key} = ${v}\n`) });
+      return { v: (r.config as unknown as Sections)[section]![key], warned: r.warnings.length > 0 };
+    };
+    const ends: [string, string, number][] = [
+      ["render", "inset", 0], ["render", "inset", 40],
+      ["ui", "sidebar_width", 8], ["ui", "sidebar_width", 200],
+      ["watch", "poll_ms", 50],
+      ["ui", "split_ratio", 0.2], ["ui", "split_ratio", 0.8], ["ui", "split_ratio", 0.35],
+      ["editor", "lens_max", 0.3],
+      ["ui", "history_limit", 0], ["ui", "history_limit", 2000],
+      ["context", "depth", 5], ["context", "limit", 500],
+    ];
+    for (const [s, k, v] of ends) expect([`${s}.${k}`, value(s, k, v)]).toEqual([`${s}.${k}`, { v, warned: false }]);
+    const past: [string, string, number][] = [
+      ["render", "inset", 41],
+      ["ui", "sidebar_width", 7], ["ui", "sidebar_width", 201],
+      ["watch", "poll_ms", 49],
+      ["ui", "split_ratio", 0.9],
+      ["ui", "history_limit", 2001],
+      ["context", "depth", 6], ["context", "limit", 0],
+      // A fraction where a whole number is meant.
+      ["ui", "sidebar_width", 30.5], ["watch", "poll_ms", 100.5], ["context", "limit", 2.5],
+    ];
+    for (const [s, k, v] of past) expect([`${s}.${k}`, v, value(s, k, v)]).toEqual([`${s}.${k}`, v, { v: (DEFAULT_CONFIG as unknown as Sections)[s]![k], warned: true }]);
+  });
+
+  test("capture.file: a relative .md path in the project; a hidden part, another extension, absolute or climbing out keeps the default", () => {
+    for (const good of ["notes/inbox.md", "inbox.markdown"]) {
+      const r = loadConfig({ configFile: file(`[capture]\nfile = "${good}"\n`) });
+      expect([good, r.config.capture.file, r.warnings]).toEqual([good, good, []]);
+    }
+    for (const bad of [".notes/inbox.md", "notes/.inbox.md", "scratch.txt", "/tmp/inbox.md", "notes/../../inbox.md"]) {
+      const r = loadConfig({ configFile: file(`[capture]\nfile = "${bad}"\n`) });
+      expect([bad, r.config.capture.file]).toEqual([bad, "scratch.md"]);
+      expect(r.warnings.join("\n")).toContain("capture.file must be a relative .md path inside the project, not hidden");
+    }
+  });
+
+  test("[colors]: a terminal palette number as a string or ansi:N, and default; anything else a warning", () => {
+    const tokyo = loadTheme("tokyo-night").theme;
+    const { theme, warnings } = applyColorOverrides(tokyo, { text: "12", h1: "ansi:12", h2: "default", h3: { bg: "255" }, h4: "256", h5: "#abc", h6: "ansi:300" });
+    expect([theme.roles.text.fg, theme.roles.h1.fg, theme.roles.h2.fg, theme.roles.h3.bg]).toEqual(["ansi:12", "ansi:12", "default", "ansi:255"]);
+    expect([theme.roles.h4.fg, theme.roles.h5.fg, theme.roles.h6.fg]).toEqual([tokyo.roles.h4.fg, tokyo.roles.h5.fg, tokyo.roles.h6.fg]);
+    expect(warnings.filter((w) => w.includes("not a colour")).map((w) => w.split(":")[1]!.trim())).toEqual(["colors.h4", "colors.h5", "colors.h6"]);
+  });
+
+  test("SLIPBOX_GLYPHS acts only where render.glyphs is auto: never over a set the config names; a value that isn't a set is ignored", () => {
+    const env = { TERM: "xterm-kitty", LANG: "en_US.UTF-8" };
+    for (const named of ["unicode", "nerd"] as const) expect(glyphsFor(named, { ...env, SLIPBOX_GLYPHS: "ascii" }).mode).toBe(named);
+    expect(glyphsFor("auto", { ...env, SLIPBOX_GLYPHS: "ascii" }).mode).toBe("ascii");
+    expect(glyphsFor("auto", { ...env, SLIPBOX_GLYPHS: "fancy" }).mode).toBe("nerd"); // not a set: detected
   });
 });
 
@@ -991,6 +1407,54 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
     const had = new Map(cache.chunks);
     expect(await parseInBackground(text, cache)).toBe(true);
     for (const [k, v] of had) expect(cache.chunks.get(k)).toBe(v); // none parsed again
+    stopParsePool();
+  });
+
+  test("threads that can't start, or a worker that fails: false (the main thread parses), and the pool starts afresh", async () => {
+    const { parseInBackground, stopParsePool } = await import("../src/core/parse-pool.ts");
+    const text = await demo();
+    const real = globalThis.Worker;
+    let made = 0;
+    class NoThreads {
+      constructor() {
+        throw new Error("no threads here");
+      }
+    }
+    // A worker that fails on its first message, as one that crashed would.
+    class Failing {
+      onmessage: unknown = null;
+      onerror: ((e: unknown) => void) | null = null;
+      constructor() {
+        made++;
+      }
+      ended = false;
+      postMessage() {
+        setTimeout(() => this.ended || this.onerror?.(new Error("worker crashed")), 1);
+      }
+      terminate() {
+        this.ended = true; // as a real one: terminated, it says nothing more
+      }
+    }
+    stopParsePool();
+    try {
+      (globalThis as { Worker: unknown }).Worker = NoThreads;
+      const cache = newParseCache();
+      expect(await parseInBackground(text, cache)).toBe(false);
+      expect(cache.chunks.size).toBe(0);
+      (globalThis as { Worker: unknown }).Worker = Failing;
+      expect(await parseInBackground(text, cache)).toBe(false); // what was waiting ended, with nothing
+      expect(cache.chunks.size).toBe(0);
+      const first = made;
+      expect(first).toBeGreaterThan(0);
+      expect(await parseInBackground(text, cache)).toBe(false);
+      expect(made).toBe(first * 2); // the failed pool was dropped: started again
+    } finally {
+      (globalThis as { Worker: unknown }).Worker = real;
+      stopParsePool();
+    }
+    const cache = newParseCache();
+    expect(await parseInBackground(text, cache)).toBe(true); // real threads again
+    expect(cache.chunks.size).toBeGreaterThan(0);
     stopParsePool();
   });
 
@@ -1410,6 +1874,11 @@ describe("footnotes (3.17)", () => {
     expect(list[0]!.references).toMatchObject([{ line: 4, column: 2 }, { line: 4, column: 23 }]);
   });
 
+  test("a definition's text as one line: a wikilink by its alias, else its name; an embed by its name; a tag with its #", () => {
+    const list = footnotesOf(parseMarkdown("A[^1]\n\n[^1]: See [[plan|the plan]], [[other]] and ![[pic.png]] #todo.\n"));
+    expect(list.map((f) => f.text)).toEqual(["See the plan, other and pic.png #todo."]);
+  });
+
   test("add, edit, delete, rename: each the edits it makes to the note's text (3.18)", () => {
     const run = (src: string, change: (s: string, list: ReturnType<typeof footnotesOf>) => TextEdit[]) => applyEdits(src, change(src, footnotesOf(parseMarkdown(src))));
     // Added: [^N] where asked, its definition after the note's last one (the note ends with them)…
@@ -1520,5 +1989,49 @@ describe("the lint surface (3.21)", () => {
     expect((await runLint(said, ["/v/a[1].md"], v))![0]!.description).toBe(":/v/a[1].md"); // a literal path, never a glob
     expect(await runLint({ argv: ["no-such-linter-slipbox-test"], literal: false }, ["/v/a.md"], v)).toBeNull();
     expect(await runLint({ argv: ["sh", "-c", "exit 2"], literal: false }, ["/v/a.md"], v)).toBeNull();
+  });
+});
+
+describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
+  /** A tree of its own: the script copied into it (it checks the tree it sits in), and these files. */
+  const check = (files: Record<string, string>) => {
+    const top = mkdtempSync(join(sandbox, "boundary-"));
+    mkdirSync(join(top, "scripts"));
+    writeFileSync(join(top, "scripts", "check-boundary.ts"), readFileSync(join(import.meta.dir, "..", "scripts", "check-boundary.ts"), "utf8"));
+    for (const [rel, text] of Object.entries(files)) {
+      mkdirSync(join(top, rel, ".."), { recursive: true });
+      writeFileSync(join(top, rel), text);
+    }
+    const r = Bun.spawnSync([process.execPath, join(top, "scripts", "check-boundary.ts")]);
+    return { code: r.exitCode, out: r.stdout.toString(), err: r.stderr.toString() };
+  };
+
+  test("a core file importing the TUI, a CLI file importing OpenTUI: each reported, the check fails", () => {
+    const r = check({
+      "src/core/deep/a.ts": 'import { App } from "../../tui/app.ts";\nexport const a = App;\n',
+      "src/core/b.ts": 'export const b = () => import("../cli/cli.ts");\n',
+      "src/cli/c.ts": 'import "@opentui/core";\nimport { a } from "../core/deep/a.ts";\n',
+      "src/tui/app.ts": 'import "@opentui/core";\nexport const App = 1;\n',
+    });
+    expect(r.code).toBe(1);
+    expect(r.err.split("\n").filter((l) => l.startsWith("  ")).map((l) => l.trim()).sort()).toEqual([
+      "src/cli/c.ts: imports @opentui/core (src/cli must not import @opentui)",
+      "src/core/b.ts: imports ../cli/cli.ts (src/core must not import src/cli)",
+      "src/core/deep/a.ts: imports ../../tui/app.ts (src/core must not import src/tui)",
+    ]);
+    expect(r.out).not.toContain("boundary check ok");
+  });
+
+  test("a tree that keeps the rules passes: the core imported by the CLI, the TUI importing OpenTUI", () => {
+    const r = check({
+      "src/core/a.ts": 'import { join } from "node:path";\nexport const a = join;\n',
+      "src/cli/c.ts": 'import { a } from "../core/a.ts";\nexport const c = a;\n',
+      "src/tui/app.ts": 'import "@opentui/core";\nimport { a } from "../core/a.ts";\n',
+      "src/tuition/t.ts": "export const t = 1;\n", // a folder whose name starts as the TUI's does: not the TUI
+      "src/core/d.ts": 'import { t } from "../tuition/t.ts";\n',
+    });
+    expect(r.err).toBe("");
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("boundary check ok");
   });
 });

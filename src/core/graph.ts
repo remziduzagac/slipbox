@@ -721,6 +721,8 @@ export class Graph {
     const key = normKey(name);
     const named = this.index.resolveWiki(name, null).candidates.filter((c) => c !== rel).length;
     if (!named && !this.otherNames().aliases.has(key)) return null;
+    // One process, one answer (the CLI's): a link in a note not parsed yet is watched too.
+    if (this.thorough && this.unparsed.size) this.ensureAll();
     const out: { from: string; link: LinkRef; was: string }[] = [];
     for (const [from, e] of this.notes) {
       for (const l of e.links) {

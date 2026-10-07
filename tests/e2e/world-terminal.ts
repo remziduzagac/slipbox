@@ -457,4 +457,37 @@ export const TERMINAL_SCENARIOS: Scenario[] = [
       s.expect(existsSync(s.path(MEETING)), "the note still there");
     },
   },
+  {
+    name: "world/terminal: quitting with the properties editor open — ctrl+q writes its edits first; :x with text that doesn't parse asks, still running",
+    options: { open: "props.md", files: { "props.md": "---\ntitle: A\n---\n# A\n" } },
+    run: async (s) => {
+      const written = "---\ntitle: A\nx: 1\n---\n# A\n";
+      await leader(s, "n", "shift+p");
+      await s.see("Properties — props.md (YAML)");
+      await s.keys("o");
+      await s.type("x: 1");
+      await s.keys("escape");
+      await s.keys("ctrl+q");
+      await s.until(() => s.exited(), 5000, "ctrl+q to quit");
+      s.expect(s.exitCode() === 0, `a clean exit, not ${s.exitCode()}`);
+      s.expect(s.read("props.md") === written, `the edit written back before quitting:\n${s.read("props.md")}`);
+      // Text that doesn't parse: :x asks first, nothing quit, nothing written; declined, the editor kept.
+      await s.restart();
+      await leader(s, "n", "shift+p");
+      await s.see("Properties — props.md (YAML)");
+      await s.keys("o");
+      await s.type("broken: [");
+      await s.keys("escape");
+      await s.ex("x");
+      await s.see("The properties don't parse");
+      s.expect(!s.exited(), "still running while it asks");
+      await s.keys("escape");
+      await s.notSee("The properties don't parse");
+      await s.see("Properties — props.md (YAML)");
+      s.expect(s.read("props.md") === written, "nothing written while asking, nor when declined");
+      await s.ex("q!");
+      await s.until(() => s.exited(), 5000, ":q! to quit");
+      s.expect(s.read("props.md") === written, ":q! wrote nothing");
+    },
+  },
 ];

@@ -198,6 +198,39 @@ export const LINK_SCENARIOS: Scenario[] = [
     },
   },
   {
+    name: "world/links: named folders — space v shift+v picks which copy a folder's links open, :folders-default again; info says which (21.6)",
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      // Both copies of notes known here (an agent's ls in each), links opening ~/notes: nothing asked at the start.
+      setup: (s) => {
+        s.cliIn("~/notes", "ls");
+        s.cliIn("~/Downloads/notes-backup-2026-07", "ls");
+        const r = s.cliIn("~/notes", "folders", "default", "notes", s.path("~/notes"));
+        if (r.out !== "links to notes open ~/notes\n") throw new Error(`folders default: ${r.code} ${r.out}`);
+      },
+    },
+    run: async (s) => {
+      const marked = () => s.screen().find((r) => r.includes("links open it")) ?? "";
+      const info = () => s.cliIn("~/notes", "info").out;
+      await leader(s, "v", "shift+v");
+      await s.see("notes: which copy do links open?");
+      await s.until(() => marked().includes("~/notes") && !marked().includes("backup"), 3000, "~/notes marked as the copy links open");
+      await s.see("~/Downloads/notes-backup-2026-07");
+      await s.keys("down", "enter");
+      await s.message("links to notes open"); // the path wraps on
+      await s.notSee("which copy do links open?");
+      s.expect(info().includes("name      notes — 2 copies, links open ~/Downloads/notes-backup-2026-07"), `info:\n${info()}`);
+      // Again by its command: the backup marked now; ~/notes picked back.
+      await s.ex("folders-default");
+      await s.see("notes: which copy do links open?");
+      await s.until(() => marked().includes("notes-backup-2026-07"), 3000, "the backup marked as the copy links open");
+      await s.keys("up", "enter");
+      await s.notSee("which copy do links open?");
+      s.expect(info().includes("name      notes — 2 copies, links open ~/notes\n"), `info:\n${info()}`);
+    },
+  },
+  {
     name: "world/links: slipbox:// pointers — another named folder's note, once it's on this machine; an agent's branch, its worktree (21.7)",
     options: { home: true, startAt: "home/hobbies/cycling/rides/202608301800-kyoto-river-loop.md" },
     run: async (s) => {

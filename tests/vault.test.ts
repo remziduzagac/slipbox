@@ -266,6 +266,228 @@ describe("CLI parity (Principles)", () => {
   });
 });
 
+describe("what cli.md and the skill promise a caller (9.2)", () => {
+  /** A copy of the demo vault, unnamed (its name would be one more copy of halden on this machine). */
+  const demo = () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-promise-"));
+    cpSync(join(import.meta.dir, "..", "examples", "vault"), dir, { recursive: true });
+    writeFileSync(join(dir, ".slipbox", "config.toml"), '[walk]\nexclude = ["scratch/trash/"]\n');
+    return dir;
+  };
+  const run = async (args: string[], cwd: string, o: { isTTY?: boolean; env?: Record<string, string | undefined> } = {}) => {
+    let out = "";
+    let err = "";
+    const code = await runCli(args, { out: (s) => (out += s), err: (s) => (err += s), stdin: async () => "", isTTY: o.isTTY ?? false, columns: 80, cwd, env: { ...process.env, NO_COLOR: "1", ...o.env } });
+    return { code, out, err, json: args.includes("--json") ? JSON.parse(out) : null };
+  };
+
+  test("each command's --json data has the fields cli.md's tables name", async () => {
+    const dir = demo();
+    const data = async (...args: string[]) => {
+      const r = await run([...args, "--json"], dir);
+      expect([args.join(" "), r.code]).toEqual([args.join(" "), 0]);
+      return r.json.data;
+    };
+    // [what, the object, the fields cli.md names for it]
+    const shapes: [string, Record<string, unknown>, string[]][] = [];
+    const want = (what: string, o: Record<string, unknown>, fields: string[]) => shapes.push([what, o, fields]);
+    const render = await data("render", "home");
+    want("render", render, ["path", "width", "lines", "headings"]);
+    want("render headings[]", render.headings[0], ["level", "text", "slug", "line"]);
+    want("capture", await data("capture", "a thought"), ["scratch", "project", "entry"]);
+    want("scratch show", await data("scratch", "show"), ["path", "content", "sha"]);
+    want("scratch", await data("scratch"), ["path", "content", "sha"]);
+    want("scratch path", await data("scratch", "path"), ["path", "exists"]);
+    want("scratch copy", await data("scratch", "copy"), ["path", "chars", "methods", "file", "confirmed"]);
+    want("scratch clear", await data("scratch", "clear"), ["path", "cleared", "previousSha"]);
+    want("resolve", await data("resolve", "home"), ["link", "status", "path", "abs", "shown", "href", "heading", "line", "candidates", "root", "name", "reason", "how"]);
+    want("links[]", (await data("links", "home"))[0], ["kind", "target", "heading", "text", "line", "column", "end", "status", "path", "shown", "how", "certainty"]);
+    const problems = await data("problems");
+    want("problems", problems, ["broken", "ambiguous", "fragile", "orphans"]);
+    want("problems broken[]", problems.broken[0], ["from", "line", "column", "end", "kind", "target"]);
+    want("tags[]", (await data("tags"))[0], ["tag", "count"]);
+    want("tags <tag>", await data("tags", (await data("tags"))[0].tag), ["tag", "notes"]);
+    const backlinks = await data("backlinks", "home");
+    want("backlinks", backlinks, ["path", "backlinks"]);
+    want("backlinks[]", backlinks.backlinks[0], ["from", "root", "name", "shown", "line", "column", "end", "text", "kind", "target"]);
+    want("ls[]", (await data("ls"))[0], ["path", "title", "size", "mtime", "tags", "links"]);
+    want("ls --files, a file", (await data("ls", "--files")).find((f: { group?: string }) => f.group), ["path", "group", "format", "size", "mtime"]);
+    const outline = await data("outline", "home");
+    want("outline", outline, ["path", "headings"]);
+    want("outline headings[]", outline.headings[0], ["depth", "text", "slug", "line"]);
+    const context = await data("context", "home");
+    want("context", context, ["start", "depth", "backlinks", "limit", "files", "left", "text"]);
+    want("context files[]", context.files[0], ["path", "why", "depth", "from", "lines"]);
+    const footnotes = await data("footnotes", "partners-and-names");
+    want("footnotes", footnotes, ["path", "sha", "footnotes"]);
+    want("footnotes[]", footnotes.footnotes[0], ["label", "id", "text", "line", "def", "references"]);
+    want("footnotes references[]", footnotes.footnotes[0].references[0], ["line", "column", "start", "end"]);
+    want("themes[]", (await data("themes"))[0], ["name", "source", "current"]);
+    want("commands[]", (await data("commands"))[0], ["id", "title", "cli", "desc"]);
+    const find = await data("find", "dome");
+    want("find", find, ["query", "regex", "whole", "count", "matches"]);
+    want("find matches[]", find.matches[0], ["path", "line", "column", "match", "text"]);
+    want("index", await data("index"), ["path", "rebuilt", "indexed", "removed", "files", "ms"]);
+    want("index --refresh", await data("index", "--refresh"), ["root", "notes", "changed", "unchanged", "gone", "reached", "indexed", "ms"]);
+    const search = await data("search", "dome");
+    want("search", search, ["query", "engine", "relaxed", "hits"]);
+    want("search hits[]", search.hits[0], ["path", "line", "column", "heading", "section", "score", "snippet"]);
+    const replace = await data("replace", "home", "Halden", "HALDEN", "--dry-run");
+    want("replace", replace, ["path", "count", "dryRun", "sha", "newSha", "changes"]);
+    want("replace changes[]", replace.changes[0], ["line", "column", "before", "after", "text", "textAfter"]);
+    const tasks = await data("task", "2026-09-14-weekly");
+    want("task <note>", tasks, ["path", "sha", "tasks"]);
+    want("task <note> tasks[]", tasks.tasks[0], ["line", "checked", "text", "raw"]);
+    want("task <note> <line>", await data("task", "2026-09-14-weekly", String(tasks.tasks[0].line)), ["path", "line", "text", "checked", "changed", "sha"]);
+    want("read", await data("read", "home"), ["path", "abs", "sha", "bom", "crlf", "invalidUtf8", "content"]);
+    want("stat", await data("stat", "home"), ["path", "abs", "root", "name", "properties", "size", "mtime", "title", "tags", "headings", "links", "unresolved"]);
+    want("write --create", await data("write", "logs/promised", "# Promised", "--create"), ["path", "created", "shadows", "appended", "previousSha", "sha"]);
+    want("write", await data("write", "logs/promised", "more", "--append"), ["path", "created", "appended", "previousSha", "sha"]);
+    want("mkdir", await data("mkdir", "promised-folder"), ["path", "created"]);
+    want("history", await data("history"), ["read", "open", "activeTab", "current"]);
+    want("link", await data("link", "home"), ["link", "path", "from", "style", "pathForm", "extension"]);
+    want("mv --dry-run", await data("mv", "logs/promised.md", "logs/kept.md", "--dry-run"), ["kind", "from", "to", "dryRun", "move", "files", "warnings", "skipped"]);
+    want("cp", await data("cp", "logs/promised.md", "logs/copied.md"), ["from", "to", "dir"]);
+    const rm = await data("rm", "logs/copied.md");
+    want("rm", rm, ["path", "dryRun", "breaking", "trashed"]);
+    want("rm trashed", rm.trashed, ["id", "abs", "shown", "dir", "at"]);
+    want("info", await data("info"), ["root", "mode", "name", "key", "folder", "links", "index"]);
+    const missing = shapes.map(([what, o, fields]) => [what, fields.filter((f) => !Object.hasOwn(o ?? {}, f))]).filter(([, gone]) => gone!.length);
+    expect(missing).toEqual([]);
+  });
+
+  test("--width takes a whole number from 20 to 1000, written in digits", async () => {
+    const dir = demo();
+    expect((await run(["render", "home", "--width", "20"], dir)).code).toBe(0);
+    expect((await run(["render", "home", "--width", "1000"], dir)).code).toBe(0);
+    for (const bad of ["19", "1001", "1e2", "+30", "40.5"]) {
+      const r = await run(["render", "home", "--width", bad], dir);
+      expect([bad, r.code, r.err]).toEqual([bad, 2, "slipbox: --width must be a whole number from 20 to 1000\n"]);
+    }
+  });
+
+  test("render colours only a terminal without NO_COLOR; --plain, --color never and a pipe print no escapes", async () => {
+    const dir = demo();
+    const term = { NO_COLOR: undefined, TERM: "xterm-256color", COLORTERM: "truecolor" };
+    expect((await run(["render", "home"], dir, { isTTY: true, env: term })).out).toContain("\x1b[");
+    for (const [args, o] of [
+      [["render", "home"], { isTTY: true, env: { ...term, NO_COLOR: "1" } }],
+      [["render", "home", "--plain"], { isTTY: true, env: term }],
+      [["render", "home", "--color", "never"], { isTTY: true, env: term }],
+      [["render", "home"], { isTTY: false, env: term }],
+    ] as const) {
+      const r = await run([...args], dir, o);
+      expect([args.join(" "), o.env.NO_COLOR ?? "", o.isTTY, r.code, r.out.includes("\x1b")]).toEqual([args.join(" "), o.env.NO_COLOR ?? "", o.isTTY, 0, false]);
+    }
+  });
+
+  test("a name several notes share: exit 4 and data.candidates, whichever command names the note", async () => {
+    const dir = demo();
+    for (const args of [["read", "contacts"], ["stat", "contacts"], ["write", "contacts", "x"], ["links", "contacts"], ["outline", "contacts"]]) {
+      const r = await run([...args, "--json"], dir);
+      expect([args[0], r.code, r.json.data?.candidates]).toEqual([args[0], 4, ["equipment/contacts.md", "people/contacts.md"]]);
+    }
+    expect(readFileSync(join(dir, "people", "contacts.md"), "utf8")).not.toBe("x\n");
+  });
+
+  test("search gives 20 hits unless --limit says (up to 500); context's --limit is 1–500", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-limit-"));
+    mkdirSync(join(dir, ".slipbox"));
+    for (let i = 0; i < 30; i++) writeFileSync(join(dir, `n${i}.md`), `# N${i}\n\ncomet ${i}\n`);
+    expect((await run(["search", "comet", "--json"], dir)).json.data.hits).toHaveLength(20);
+    expect((await run(["search", "comet", "--limit", "25", "--json"], dir)).json.data.hits).toHaveLength(25);
+    expect((await run(["search", "comet", "--limit", "500", "--json"], dir)).json.data.hits).toHaveLength(30);
+    expect((await run(["search", "comet", "--limit", "501"], dir)).code).toBe(2);
+    expect((await run(["context", "n1", "--limit", "500"], dir)).code).toBe(0);
+    for (const bad of ["0", "501"]) expect([bad, (await run(["context", "n1", "--limit", bad], dir)).code]).toEqual([bad, 2]);
+  });
+
+  test("[search] engine = \"index\" builds the index before the first search; never a scan", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-engine-"));
+    mkdirSync(join(dir, ".slipbox"));
+    writeFileSync(join(dir, ".slipbox", "config.toml"), '[search]\nengine = "index"\n');
+    writeFileSync(join(dir, "a.md"), "# A\n\nthe comet's tail\n");
+    const r = await run(["search", "comet", "--json"], dir);
+    expect(r.json.data).toMatchObject({ engine: "index", hits: [{ path: "a.md", line: 3 }] });
+    expect(r.json.warnings).toEqual([]);
+    expect((await run(["info", "--json"], dir)).json.data.search).toEqual({ engine: "index", index: { files: 1, complete: true } });
+  });
+
+  test("[context] sets the bundle's defaults; the flags win over it", async () => {
+    const dir = demo();
+    writeFileSync(join(dir, ".slipbox", "config.toml"), "[context]\ndepth = 0\nbacklinks = false\nlimit = 2\n");
+    const paths = async (...flags: string[]) => (await run(["context", "people/kenji-mori.md", ...flags, "--json"], dir)).json.data;
+    const byConfig = await paths();
+    expect(byConfig).toMatchObject({ depth: 0, backlinks: false, limit: 2 });
+    expect(byConfig.files.map((f: { why: string }) => f.why)).toEqual(["start"]);
+    const byFlags = await paths("--depth", "1", "--limit", "3");
+    expect(byFlags).toMatchObject({ depth: 1, backlinks: false, limit: 3 });
+    expect(byFlags.files.map((f: { why: string }) => f.why)).toEqual(["start", "link", "link"]);
+    expect(byFlags.left.length).toBeGreaterThan(0); // past the limit: named, not included
+  });
+
+  test("scratch path says whether it exists yet; scratch copy says how it copied, and how much", async () => {
+    const dir = demo();
+    const before = (await run(["scratch", "path", "--json"], dir)).json.data;
+    expect(before.exists).toBe(false);
+    expect(existsSync(before.path)).toBe(false);
+    expect((await run(["scratch", "copy"], dir)).code).toBe(3); // nothing to copy
+    await run(["capture", "the dew heater"], dir);
+    expect((await run(["scratch", "path", "--json"], dir)).json.data).toEqual({ path: before.path, exists: true });
+    const content = readFileSync(before.path, "utf8");
+    const copy = (await run(["scratch", "copy", "--json"], dir)).json.data;
+    expect(copy).toMatchObject({ path: before.path, chars: content.length, methods: ["file"], confirmed: false });
+    expect(readFileSync(copy.file, "utf8")).toBe(content);
+    expect((await run(["scratch", "copy"], dir)).out).toBe(`wrote ${copy.file} (${content.length} chars)\n`);
+  });
+
+  test("--root names a root: a folder that isn't there, or holds no root marker, is exit 3 with how to make one", async () => {
+    const dir = demo();
+    const missing = await run(["ls", "--root", join(dir, "no-such-folder"), "--json"], dir);
+    expect(missing.json).toMatchObject({ ok: false, error: { code: 3 } });
+    expect(missing.code).toBe(3);
+    const plain = mkdtempSync(join(tmpdir(), "slipbox-plain-root-"));
+    const notRoot = await run(["ls", "--root", plain], dir);
+    expect(notRoot.code).toBe(3);
+    expect(notRoot.err).toContain(`isn't a root (none of .git, .slipbox, .obsidian, .zk in it): slipbox init ${plain} makes it one`);
+    expect((await run(["ls", "--root", join(dir, "people")], dir)).code).toBe(3); // a folder of a root isn't one
+    expect((await run(["ls", "--root", dir], join(dir, "people"))).code).toBe(0);
+  });
+
+  test("the scratch's project is the root, from any folder in it; else the folder you're in — whose scratch stays in its state", async () => {
+    const dir = demo();
+    const fromSub = (await run(["capture", "--ref", "kenji-mori.md:3", "--json"], join(dir, "people"))).json.data;
+    expect(fromSub).toMatchObject({ project: dir, entry: "`people/kenji-mori.md:3`" });
+    expect((await run(["capture", "a thought", "--json"], dir)).json.data.scratch).toBe(fromSub.scratch); // one scratch per project
+    const plain = mkdtempSync(join(tmpdir(), "slipbox-plain-scratch-"));
+    writeFileSync(join(plain, "loose.md"), "# Loose\n");
+    const cfg = join(plain, "..", `${basename(plain)}.toml`);
+    writeFileSync(cfg, '[capture]\nlocation = "vault"\n');
+    const loose = (await run(["capture", "--ref", "loose.md:1", "--json", "--config", cfg], plain)).json.data;
+    expect(loose).toMatchObject({ project: plain, entry: "`loose.md:1`" });
+    expect(loose.scratch.startsWith(plain)).toBe(false); // nothing written into a plain folder
+    expect(existsSync(join(plain, "scratch.md"))).toBe(false);
+    // A vault takes location = "vault": its scratch is in it.
+    expect((await run(["capture", "x", "--json", "--config", cfg], dir)).json.data.scratch).toBe(join(dir, "scratch.md"));
+  });
+
+  test("an unexpected error is exit 1 and one line; SLIPBOX_DEBUG adds its stack trace (configuration.md, Environment)", async () => {
+    const dir = demo();
+    const failing = async (env: Record<string, string>) => {
+      let err = "";
+      const code = await runCli(["write", "home", "--stdin"], { out: () => {}, err: (s) => (err += s), stdin: async () => Promise.reject(new Error("the pipe broke")), isTTY: false, columns: 80, cwd: dir, env: { ...process.env, ...env } });
+      return { code, err };
+    };
+    const { SLIPBOX_DEBUG: _, ...quiet } = process.env as Record<string, string>;
+    expect(await failing(quiet)).toEqual({ code: 1, err: "slipbox: the pipe broke\n" });
+    const debug = await failing({ SLIPBOX_DEBUG: "1" });
+    expect(debug.code).toBe(1);
+    expect(debug.err).toStartWith("slipbox: the pipe broke\nError: the pipe broke\n    at ");
+    // A refusal is no surprise: never a stack trace.
+    expect((await run(["read", "no-such-note"], dir, { env: { SLIPBOX_DEBUG: "1" } })).err).toBe(`slipbox: no note or file "no-such-note" in ${dir}\n`);
+  });
+});
+
 describe("review round 2 (CLI)", () => {
   const vault = (files: Record<string, string>) => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-r2-"));
@@ -686,6 +908,33 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     expect(status).not.toContain(".slipbox");
   });
 
+  test("init --private where git can't say (a .git it can't read): the exclude file still found, its lines kept, ours once (17.18)", async () => {
+    const top = fresh("private-nogit");
+    mkdirSync(join(top, ".git", "info"), { recursive: true }); // no HEAD, no objects: git says it's no repository
+    writeFileSync(join(top, ".git", "info", "exclude"), "*.log");
+    const r = await cli(["init", top, "--private", "--json"], top);
+    expect(r.code).toBe(0);
+    expect(r.json.data.excluded).toBe(join(top, ".git", "info", "exclude"));
+    await cli(["init", top, "--private", "--json"], top);
+    expect(readFileSync(join(top, ".git", "info", "exclude"), "utf8")).toBe("*.log\n/.slipbox/\n");
+  });
+
+  test("init on a named folder: its name again is no change; --private later still keeps .slipbox/ out of git (17.18)", async () => {
+    const dir = fresh("private-later");
+    if (Bun.spawnSync(["git", "init", "-q", dir]).exitCode !== 0) return; // no git here
+    const tag = `pl${basename(dir).slice(-6).toLowerCase()}`;
+    const named = await cli(["init", dir, "--name", tag, "--json"], dir);
+    const cfg = readFileSync(join(dir, ".slipbox", "config.toml"), "utf8");
+    const again = await cli(["init", dir, "--name", tag, "--json"], dir);
+    expect(again.code).toBe(0);
+    expect(again.json.data).toMatchObject({ created: false, identified: false, id: named.json.data.id, name: tag, excluded: null });
+    const priv = await cli(["init", dir, "--private", "--json"], dir);
+    expect(priv.json.data).toMatchObject({ created: false, identified: false, id: named.json.data.id, name: tag, excluded: join(dir, ".git", "info", "exclude") });
+    expect(readFileSync(join(dir, ".git", "info", "exclude"), "utf8").split("\n")).toContain("/.slipbox/");
+    expect(Bun.spawnSync(["git", "-C", dir, "status", "--porcelain"]).stdout.toString()).not.toContain(".slipbox");
+    expect(readFileSync(join(dir, ".slipbox", "config.toml"), "utf8")).toBe(cfg); // its identity untouched
+  });
+
   test("names: one a different folder has is refused, with one that isn't — x-<folder> inside x, -2 when taken (17.5, 21.6)", async () => {
     const { suggestFolderName } = await import("../src/core/folders.ts");
     const base = fresh("names");
@@ -805,6 +1054,35 @@ describe("a root's identity, its state by path, the machine's roots (17.3–17.6
     expect((await cli(["ls", "--json"], b)).json.warnings.join()).toContain(`moved here from ${a}`);
     expect(loadSession(locateVault({ path: b }))?.tabs).toHaveLength(1);
     expect(existsSync(stateDir(locA))).toBe(false);
+  });
+
+  test("a root's storage taken to its new key: the personal state the old key's, the new key's derived files kept (21.8)", async () => {
+    const { adoptStorage } = await import("../src/core/registry.ts");
+    const { cacheHome, stateHome } = await import("../src/core/paths.ts");
+    const tag = basename(fresh("adopt-storage"));
+    const [from, to, alone] = [`${tag}-from`, `${tag}-to`, `${tag}-alone`];
+    const put = (home: string, key: string, rel: string, text: string) => {
+      mkdirSync(dirname(join(home, key, rel)), { recursive: true });
+      writeFileSync(join(home, key, rel), text);
+    };
+    const at = (home: string, key: string, rel: string) => (existsSync(join(home, key, rel)) ? readFileSync(join(home, key, rel), "utf8") : null);
+    put(stateHome(), from, "session.json", "old session");
+    put(stateHome(), from, "heads.json", "old heads");
+    put(stateHome(), from, "trash/1/x.md", "# X\n");
+    put(cacheHome(), from, "graph.json", "old graph");
+    put(cacheHome(), from, "parse.json", "old parse");
+    // The background index opened it at the new path first: a session, heads and a cache already there.
+    put(stateHome(), to, "session.json", "new session");
+    put(stateHome(), to, "heads.json", "new heads");
+    put(cacheHome(), to, "graph.json", "new graph");
+    adoptStorage(from, to);
+    expect([at(stateHome(), to, "session.json"), at(stateHome(), to, "heads.json"), at(stateHome(), to, "trash/1/x.md")]).toEqual(["old session", "new heads", "# X\n"]);
+    expect([at(cacheHome(), to, "graph.json"), at(cacheHome(), to, "parse.json")]).toEqual(["new graph", "old parse"]);
+    expect([existsSync(join(stateHome(), from)), existsSync(join(cacheHome(), from))]).toEqual([false, false]);
+    // Nothing at the new key: all of it moves.
+    put(stateHome(), alone, "session.json", "its session");
+    adoptStorage(alone, `${alone}-2`);
+    expect([at(stateHome(), `${alone}-2`, "session.json"), existsSync(join(stateHome(), alone))]).toEqual(["its session", false]);
   });
 
   test("a named folder moved by hand: its trash restores into where it is now, its undo log follows (0.10, 21.8)", async () => {
@@ -1972,6 +2250,25 @@ describe("the context bundle (9.7)", () => {
     expect(b.text).not.toContain("unrelated");
   });
 
+  test("a linked file gone since the index, or one that can't be read: named as such, never included", async () => {
+    const { buildContext } = await import("../src/core/context.ts");
+    const { chmodSync } = await import("node:fs");
+    const g = setup();
+    rmSync(join(g.root, "c.md"));
+    chmodSync(join(g.root, "s.ts"), 0o000);
+    try {
+      const b = buildContext(g, ["a.md"], { depth: 1, backlinks: false, limit: 25 });
+      expect(paths(b)).toEqual(["start:a.md", "link:b.md"]);
+      expect(b.left.filter((l) => l.reason === "unreadable")).toEqual([
+        { path: "c.md", why: "link", from: "a.md", reason: "unreadable" },
+        { path: "s.ts", why: "link", from: "a.md", reason: "unreadable" },
+      ]);
+      expect(b.text).toContain("- `c.md` — linked from a.md: can't be read\n- `s.ts` — linked from a.md: can't be read\n");
+    } finally {
+      chmodSync(join(g.root, "s.ts"), 0o644);
+    }
+  });
+
   test("deeper, none, no backlinks, a limit: what's past it named, not included", async () => {
     const { buildContext } = await import("../src/core/context.ts");
     const g = setup();
@@ -2655,6 +2952,25 @@ describe("embeds drawn in place (1.11)", () => {
     expect(l.links.find((x) => x.line === 4)).toMatchObject({ kind: "image", target: "sub/inner.md", text: "inner", line: 4 });
   });
 
+  test("an embedded note deleted, or one that can't be read: a reference, never its old text; changed, drawn as it is now", async () => {
+    const { chmodSync } = await import("node:fs");
+    const { dir, g } = vaultOf({ "host.md": "![[gone]]\n\n![[locked]]\n", "gone.md": "# Gone\n\nIts text.\n", "locked.md": "# Locked\n\nSecret text.\n" });
+    expect(text(await draw(g, "host.md"))).toContain("▎ Its text.");
+    rmSync(join(dir, "gone.md"));
+    writeFileSync(join(dir, "locked.md"), "# Locked\n\nNew text, longer.\n");
+    chmodSync(join(dir, "locked.md"), 0o000);
+    try {
+      const l = await draw(g, "host.md");
+      expect(l.embedded ?? []).toEqual([]);
+      expect(text(l)).toEqual(["⧉ gone", "", "⧉ locked"]);
+    } finally {
+      chmodSync(join(dir, "locked.md"), 0o644);
+    }
+    const again = await draw(g, "host.md");
+    expect(again.embedded).toEqual([join(dir, "locked.md")]);
+    expect(text(again)).toContain("▎ New text, longer.");
+  });
+
   test("a heading's section, a block by its ^id (a paragraph's, a list item's, a table's on the line after); missing ones said", async () => {
     const { g } = vaultOf({
       "host.md": "![src › Two](src.md#two)\n\n![src › ^para](src.md#^para)\n\n![src › ^item](src.md#^item)\n\n![src › ^tab](src.md#^tab)\n\n![src › Nope](src.md#nope)\n\n![src › ^nope](src.md#^nope)\n",
@@ -3221,6 +3537,13 @@ describe("a root's name and entry: by its remote, its .slipbox/, its path (20.22
     expect(remotesIn(config, "/r")).toEqual(["github.com/o/r", "gitlab.com/o/r"]);
   });
 
+  test("a remote URL that doesn't parse names nothing: skipped, the repository's other remotes still read", async () => {
+    const { normalizeRemote, remotesIn } = await import("../src/core/remotes.ts");
+    expect(normalizeRemote("https://", "/r")).toBeNull();
+    expect(normalizeRemote("http://[::1/x", "/r")).toBeNull();
+    expect(remotesIn('[remote "broken"]\n\turl = https://\n[remote "origin"]\n\turl = git@github.com:o/r.git\n', "/r")).toEqual(["github.com/o/r"]);
+  });
+
   test("a repository is named after its remote (origin's, else the first one's), else unnamed; .slipbox/'s name wins", async () => {
     const dir = join(fresh("repname"), "pf");
     mkdirSync(dir);
@@ -3404,6 +3727,31 @@ describe("the index on demand: what the walk leaves out, indexed when reached (2
     // No longer left out (the .gitignore line gone): walked like any other, not "reached".
     writeFileSync(join(dir, ".gitignore"), "");
     expect(openGraph(locateVault({ root: dir }), cfg(), true).reached.has("tmp/deeper.md")).toBe(false);
+  });
+
+  test("a note the walk excludes, named by the CLI: read as a note, its links followed — and still not the vault's", async () => {
+    const dir = make();
+    writeFileSync(join(dir, ".slipbox", "config.toml"), 'walk.exclude = ["drafts/"]\n');
+    writeFileSync(join(dir, "node_modules", "dep.md"), "# Dep\n\n[[index]] [up](../index.md)\n");
+    const out: string[] = [];
+    const cli = async (args: string[]) => {
+      out.length = 0;
+      const code = await runCli([...args, "--json"], { out: (x: string) => out.push(x), err: () => {}, stdin: async () => "", isTTY: false, columns: 80, cwd: dir, env: process.env });
+      return { code, json: JSON.parse(out.join("")) };
+    };
+    const links = await cli(["links", "node_modules/dep.md"]);
+    expect(links.code).toBe(0);
+    expect(links.json.data.map((l: { target: string; status: string; path: string | null }) => [l.target, l.status, l.path])).toEqual([
+      ["index", "note", "index.md"],
+      ["../index.md", "note", "index.md"],
+    ]);
+    expect((await cli(["ls"])).json.data.map((n: { path: string }) => n.path)).not.toContain("node_modules/dep.md");
+    // The graph's own: read once, kept aside; a file that isn't there, nothing.
+    const g = openGraph(locateVault({ root: dir }), cfg(), false);
+    expect(g.adopt("node_modules/dep.md")?.title).toBe("Dep");
+    expect(g.notes.has("node_modules/dep.md")).toBe(false);
+    expect(g.entry("node_modules/dep.md")?.links.map((l) => l.target)).toEqual(["index", "../index.md"]);
+    expect(g.adopt("node_modules/nope.md")).toBeUndefined();
   });
 
   test("the CLI reaches what it's told to read; a plain folder too, but $HOME, only listed (20.22)", async () => {
@@ -4395,6 +4743,31 @@ describe("the merge review (20.21)", () => {
     expect(brief(r)).toEqual([["b.md", "a.md", "deleted", "out", null, null]]);
   });
 
+  test("wikilinks to nothing: one the branch writes, by name or by path, is `missing`; one to a note it deleted, `deleted`", async () => {
+    const root = mkdtempSync(join(tmpdir(), "slipbox-merge-missing-"));
+    if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
+    put(root, "docs/old.md", "# Old\n");
+    put(root, "docs/keep.md", "# Keep\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "base");
+    git(root, "checkout", "-q", "-b", "refactor");
+    git(root, "rm", "-q", "docs/old.md");
+    put(root, "docs/c.md", "# C\n\n[[nowhere]] [[docs/gone]] [[keep]] [[docs/keep]]\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "refactor");
+    git(root, "checkout", "-q", "main");
+    put(root, "docs/b.md", "# B\n\n[[docs/old]] [[old]]\n");
+    git(root, "add", "-A");
+    git(root, "commit", "-q", "-m", "main");
+    const r = await cli(["merge-review", "refactor"], root);
+    expect(r.json.data.breaks.map((b: { path: string; target: string; cause: string; by: string; names: string; to: string | null; fix: string | null }) => [b.path, b.target, b.cause, b.by, b.names, b.to, b.fix])).toEqual([
+      ["docs/b.md", "docs/old", "deleted", "refactor", "docs/old.md", null, null],
+      ["docs/b.md", "old", "deleted", "refactor", "docs/old.md", null, null],
+      ["docs/c.md", "nowhere", "missing", "refactor", "nowhere", null, null],
+      ["docs/c.md", "docs/gone", "missing", "refactor", "docs/gone.md", null, null],
+    ]);
+  });
+
   test("outside git: exit 3", async () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-nogit-"));
     mkdirSync(join(dir, ".slipbox"));
@@ -4485,6 +4858,30 @@ describe("the merge review (20.21)", () => {
     git(root, "rebase", "--continue");
     expect(feed.checkHead()).toBe(true);
     expect(heard).toEqual([["topic", "topic"]]);
+  });
+
+  test("the feed closed (another vault opened) while git still writes: what it held is never applied after", async () => {
+    const { VaultFeed } = await import("../src/core/vault-feed.ts");
+    let locked = true;
+    const applied: string[][] = [];
+    const make = () =>
+      new VaultFeed({ checkout: () => null, graph: () => { throw new Error("no graph wanted"); }, now: () => Date.now(), apply: (b) => applied.push(b.changes.map((c) => c.rel)), locked: () => locked });
+    const batch = (rel: string) => ({ changes: [{ rel, kind: "changed" as const, isNote: true }], rescan: false });
+    // Open: held while git writes, applied once it's done.
+    const open = make();
+    open.receive(batch("a.md"));
+    expect(applied).toEqual([]);
+    locked = false;
+    await Bun.sleep(250);
+    expect(applied).toEqual([["a.md"]]);
+    // Closed while it waits: nothing lands.
+    locked = true;
+    const closed = make();
+    closed.receive(batch("b.md"));
+    closed.close();
+    locked = false;
+    await Bun.sleep(250);
+    expect(applied).toEqual([["a.md"]]);
   });
 
   test("a branch switch isn't a merge: what only the other branch moved is no move here", async () => {
@@ -4637,6 +5034,21 @@ describe("the links' convention, found (21.4)", () => {
     expect(at({ ".zk/config.toml": '[format.markdown]\nlink-format = "wiki"\nlink-drop-extension = false\n' })).toMatchObject({ file: ".zk/config.toml", style: "wiki", wiki: ["root", "kept"] });
     expect(at({ ".zk/config.toml": '[format.markdown]\nlink-format = "[[{{filename}}]]"\n' })).toMatchObject({ style: undefined, wiki: [undefined, "dropped"] });
     expect(at({ ".git/HEAD": "ref" })).toBeNull();
+  });
+
+  test("a zk config that doesn't parse (a typo mid-edit): zk's defaults, as an Obsidian app.json that doesn't", async () => {
+    const { toolSays } = await import("../src/core/convention.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-tool-zkbad-"));
+    mkdirSync(join(dir, ".zk"));
+    writeFileSync(join(dir, ".zk", "config.toml"), '[format.markdown\nlink-format = "wiki"\nlink-drop-extension = false\n');
+    const t = toolSays(dir)!;
+    expect({ tool: t.tool, file: t.file, style: t.style, wiki: [t.path("wiki"), t.extension("wiki")], markdown: [t.path("markdown"), t.extension("markdown")] }).toEqual({
+      tool: "zk",
+      file: ".zk/",
+      style: "markdown",
+      wiki: ["root", "dropped"],
+      markdown: ["relative", "dropped"],
+    });
   });
 
   test("each part the first that says: your setting, the root's tool, its notes at two-thirds, ours", async () => {
@@ -5200,6 +5612,19 @@ describe("where a link lands (trailscout's suggestions, 2026-10-06)", () => {
     expect(landingLine(g, "n.md", null, "real")).toBe(7);
     expect(landingLine(g, "n.md", "L3C2-L5C1", null)).toBe(3);
     expect(landingText(g, "n.md", "L3-L5", null)).toBe("```js\nconst a = 1; ^fake\n```");
+  });
+
+  test("a link to a note itself lands on its start, its front matter left out; one never closed is text; a note that isn't, nothing", async () => {
+    const { landingText } = await import("../src/core/landing.ts");
+    const { g } = vault({
+      "plan.md": "---\ntitle: Plan\ntags: [a]\n---\n\n# Plan\n\nThe body.\n",
+      "yaml.md": "---\ntitle: Dots\n...\nAfter the dots.\n",
+      "open.md": "---\ntitle: Open\nno close\n",
+    });
+    expect(landingText(g, "plan.md", null, null)).toBe("# Plan\n\nThe body.");
+    expect(landingText(g, "yaml.md", null, null)).toBe("After the dots.");
+    expect(landingText(g, "open.md", null, null)).toBe("---\ntitle: Open\nno close");
+    expect(landingText(g, "nope.md", null, null)).toBeNull();
   });
 });
 
@@ -5909,5 +6334,40 @@ describe("review cycle 3 (core)", () => {
       ["note", "sub/y.md"],
       ["note", "solo.md"],
     ]);
+  });
+});
+
+describe("deleting and copying: the path checked by the core, whoever asks (18.4, 18.5)", () => {
+  test("a file gone since it was listed, a path out of the root, slipbox's and git's own: refused, nothing trashed or copied", async () => {
+    const { copyPath, FileOpError, listTrash, trashPath } = await import("../src/core/files.ts");
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-fileops-"));
+    mkdirSync(join(dir, ".slipbox"));
+    mkdirSync(join(dir, ".git"));
+    writeFileSync(join(dir, ".git", "HEAD"), "ref: refs/heads/main\n");
+    writeFileSync(join(dir, "a.md"), "# A\n");
+    writeFileSync(join(dir, "gone.md"), "# Gone\n");
+    const loc = locateVault({ root: dir });
+    const g = openGraph(loc, DEFAULT_CONFIG, false);
+    rmSync(join(dir, "gone.md")); // deleted by another program, the sidebar still listing it
+    const refused = (f: () => unknown) => {
+      try {
+        f();
+      } catch (err) {
+        expect(err).toBeInstanceOf(FileOpError);
+        return (err as Error).message;
+      }
+      return null;
+    };
+    expect(refused(() => trashPath(g, loc, "gone.md"))).toBe(`no note, file or folder gone.md in ${dir}`);
+    expect(refused(() => copyPath(g, "/gone.md/"))).toBe(`no note, file or folder gone.md in ${dir}`);
+    expect(refused(() => trashPath(g, loc, "../a.md"))).toBe("../a.md isn't inside the root");
+    expect(refused(() => copyPath(g, "docs/../.."))).toBe("docs/../.. isn't inside the root");
+    expect(refused(() => trashPath(g, loc, ".slipbox/config.toml"))).toBe(".slipbox/config.toml: slipbox's and git's own folders aren't notes");
+    expect(refused(() => copyPath(g, ".git/HEAD"))).toBe(".git/HEAD: slipbox's and git's own folders aren't notes");
+    expect(listTrash(loc)).toEqual([]);
+    expect(readdirSync(dir).sort()).toEqual([".git", ".slipbox", "a.md"]);
+    // The check passes what's there: a.md trashed.
+    expect(trashPath(g, loc, "a.md")).toMatchObject({ abs: join(dir, "a.md"), dir: false });
+    expect(existsSync(join(dir, "a.md"))).toBe(false);
   });
 });

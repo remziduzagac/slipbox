@@ -117,7 +117,7 @@ with the explorer open beside the content the strip starts after the explorer's 
 note and the outline. The explorer runs from under the frame's top rule to its bottom rule, and
 stays put when the strip appears or goes.
 
-**Pinned tabs** (`ctrl+t shift+p`, `:tabpin`) keep together at the left of the strip, in the order
+**Pinned tabs** (`ctrl+t m`, `space t m`, `:tabpin`) keep together at the left of the strip, in the order
 they were pinned; moving a tab (keys or a drag) stays inside its group. A pinned tab keeps its note:
 whatever would open over it — a link, `ctrl+p`, `:e`, the explorer — opens in a new tab instead.
 Close others and close all skip pinned tabs (`ctrl+t q` closes one, being about that tab), and the

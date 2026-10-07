@@ -1,9 +1,10 @@
 // A language server for the client's tests (plan 19.1): a warning on each line holding BAD — sent, or
 // asked for with FAKE_PULL=1 (late for a text with SLOW) — that says the settings it was given; it exits
-// on CRASH; on REFRESH it asks the client to ask again, as pyright does; hover says the line.
+// on CRASH; on REFRESH it asks the client to ask again, as pyright does; hover says the line; SHOW, REGISTER and
+// SAVED below.
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { createConnection, DiagnosticSeverity, ProposedFeatures, TextDocuments, TextDocumentSyncKind, type TextEdit } from "vscode-languageserver/node";
+import { createConnection, DiagnosticSeverity, DocumentDiagnosticRequest, MessageType, ProposedFeatures, ShowMessageNotification, TextDocuments, TextDocumentSyncKind, type TextEdit } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 const conn = createConnection(ProposedFeatures.all);
@@ -167,5 +168,25 @@ conn.onSignatureHelp((p) => {
   if (open < 0) return null;
   return { signatures: [{ label: "fn(a: number, b: string)", parameters: [{ label: "a: number" }, { label: "b: string" }] }], activeSignature: 0, activeParameter: line.slice(open).split(",").length - 1 };
 });
+// SHOW: it shows the user a message. REGISTER: it asks, from now on, to be asked for its diagnostics
+// (registered as 3.17 lets a server do later); UNREGISTER takes that back.
+let registered: Promise<{ dispose(): void }> | null = null;
+docs.onDidChangeContent((e) => {
+  const text = e.document.getText();
+  if (text.includes("SHOW")) void conn.sendNotification(ShowMessageNotification.type, { type: MessageType.Warning, message: `shown for ${e.document.uri}` });
+  if (text.includes("UNREGISTER")) {
+    void registered?.then((d) => d.dispose());
+    registered = null;
+  } else if (text.includes("REGISTER") && !registered) {
+    registered = conn.client.register(DocumentDiagnosticRequest.type, { documentSelector: null, interFileDependencies: false, workspaceDiagnostics: false });
+  }
+});
 docs.listen(conn);
+// A file holding SAVED, saved: it logs it, with the text the client sent along (it asked for it); a
+// file it doesn't have open, too (no client should save one).
+conn.onDidSaveTextDocument((p) => {
+  const doc = docs.get(p.textDocument.uri);
+  if (doc && !doc.getText().includes("SAVED")) return;
+  conn.console.log(`saved ${p.textDocument.uri}${p.text === undefined ? ", no text" : ` with ${JSON.stringify(p.text)}`}`);
+});
 conn.listen();
