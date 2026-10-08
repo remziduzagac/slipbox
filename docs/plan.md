@@ -890,6 +890,7 @@ design: `docs/design/code-view.md`.*
 | 24.13 | **Prototype.** A notebook: prose at full width, a cell per definition (boxes or bands), its header's buttons |
 | 24.14 | **Prototype.** Cells touch; tree lines join a class to its members, two columns in; a comment a cell |
 | 24.15 | **Prototype.** Boxes of a top and a left line, blank rows around them; the tree's lines; comments keep lines |
+| 24.16 | **Prototype.** The lens on code opens on the cursor's cell whole when it fits, and moves cell to cell |
 
 ## Deferred — in the design, not in this breakdown
 

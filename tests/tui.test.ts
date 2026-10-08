@@ -5812,6 +5812,35 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(h.app.currentLayout(v).lines.filter((l) => l.src === 13 && l.srcMap)).toHaveLength(1);
   });
 
+  test("the lens opens on the cursor's cell whole when it fits: a function with its documentation, a class's head; it moves to the next whole; a cell too tall, its lines", async () => {
+    const h = await open();
+    const v = h.app.view!;
+    const lens = () => {
+      const src = h.app.currentLayout(v).lines.filter((l) => l.lens === "source").map((l) => l.src);
+      return [src[0], src.at(-1)];
+    };
+    // In a function: its JSDoc, its lines (no neighbours to make up the lens's least rows).
+    h.app.placeAtLine(v, 12);
+    await h.keys("space", "n", "l");
+    expect(lens()).toEqual([4, 15]);
+    await h.keys("escape");
+    // On a class's line: its head — its line and its fields, up to its first member.
+    h.app.placeAtLine(v, 16);
+    await h.keys("space", "n", "l");
+    expect(lens()).toEqual([16, 17]);
+    // Past its edge: the next cell, whole — the lens moves to it rather than gathering it.
+    await h.keys("j", "j");
+    expect(lens()).toEqual([18, 22]); // a method with its doc comment, and the blank line after it
+    await h.keys("escape");
+    // Too tall for the lens's most (lens_max of the window): its lines, as before — the cursor's and its neighbours.
+    const small = await open({ config: (c) => (c.editor.lens_max = 0.1) });
+    small.app.placeAtLine(small.app.view!, 12);
+    await small.keys("space", "n", "l");
+    const rows = small.app.currentLayout(small.app.view!).lines.filter((l) => l.lens === "source").map((l) => l.src);
+    expect(rows).toContain(12);
+    expect(rows[0]).toBeGreaterThan(4);
+  });
+
   test("the lens: the cursor's line as written, highlighted as code; esc esc back to the notebook", async () => {
     const h = await open({ config: (c) => (c.editor.edit_in = "live") });
     const v = h.app.view!;

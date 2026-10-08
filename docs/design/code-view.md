@@ -6,7 +6,7 @@ and the definition's documentation in it above its code; the file's other commen
 aim isn't to make code look like markdown, nor to run it (slipbox runs nothing, `23.x`); it's to make it read like a
 document — and alike whatever language wrote it.
 
-Status: a prototype for TypeScript, TSX, JavaScript and Python (`24.2`–`24.7`, `24.10`–`24.14`). What's built is
+Status: a prototype for TypeScript, TSX, JavaScript and Python (`24.2`–`24.7`, `24.10`–`24.16`). What's built is
 described here as it is; what's next is at the end.
 
 ## The rule: code's tokens verbatim, whitespace and decoration ours, comments as prose
@@ -167,9 +167,12 @@ the tokens differ.
   source mode as before). `space n v` switches it to source mode and back, as for a note.
 - **Editing**: as in a rendered note, the editing keys open the lens (their second press edits) or switch the window to
   source mode, as `[editor] edit_in` says — the cursor keeping its character, though a cell's columns aren't the file's.
-  The lens (`space n l`) is the cursor's block as written, highlighted as code, the notebook around it: a block is a
-  line, a doc comment whole, or the run of imports whole, and the lens takes in its neighbours up to `lens_min_rows`; a
-  cell's `✎` opens it on the whole cell. `esc esc` closes it, the notebook drawn again on the new parse.
+  The lens (`space n l`) is the cursor's cell as written, highlighted as code, the notebook around it: the cell whole
+  when it fits within `lens_max` of the window — a function with its documentation, a class's head (its doc, its line,
+  its fields), a comment's box, a run of statements — alone, not padded with its neighbours; past its edge the lens
+  moves to the next cell whole. A cell too tall is its lines: a line, a doc comment whole, the run of imports whole,
+  the lens taking in its neighbours up to `lens_min_rows`, as a note's blocks. A cell's `✎` opens it on the whole
+  cell, however tall. `esc esc` closes it, the notebook drawn again on the new parse.
 - **The cursor** is on the text of a cell's rows, never on its border or padding; a header is decoration, a frame
   row the cursor passes over. The rows of code keep a map of each cell to its place in the file, so find, a
   selection, problem marks, a language server's hover and jumps all land where they are in the file; documentation's

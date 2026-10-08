@@ -28,6 +28,7 @@ import { cannotEdit, insertKey, insertText, offsetOf, placeAt, startInsert, stop
 import { insertRecord, newVimState, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
+import { cellBlocks } from "../core/layout/code.ts";
 import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
@@ -252,6 +253,9 @@ export interface LiveBase {
   after: string;
   lineCount: number;
   composed?: { key: string; layout: Layout };
+  /** The code view's blocks that are a cell whole (24.16), by their first line: the lens opens on one alone, and moves
+   *  to the next rather than gathering it. */
+  whole?: ReadonlySet<number>;
 }
 
 /** Where to log each command run, for the terminal tests' coverage: `SLIPBOX_TRACE`. */
@@ -2322,9 +2326,11 @@ export class App {
     // A size set by hand (`+` `-`) is the lens's size wherever it goes, until `=`.
     const minRows = view.lensSize ?? (cards ? 1 : this.config.editor.lens_min_rows);
     const maxRows = view.lensSize !== undefined || rows ? minRows : Math.max(minRows, Math.floor(Math.max(1, view.height) * this.config.editor.lens_max));
-    // The lens on the cursor's block, grown by its neighbours (below, then above) to the minimum.
-    const openOn = (blocks: Block[], at: number): Block => {
+    // The lens on the cursor's block, grown by its neighbours (below, then above) to the minimum — a code cell whole,
+    // alone.
+    const openOn = (blocks: Block[], at: number, whole?: ReadonlySet<number>): Block => {
       const i = blocks.findIndex((b) => at >= b[0] && at <= b[1]);
+      if (i >= 0 && whole?.has(blocks[i]![0])) return blocks[i]!;
       let lo = i < 0 ? blocks.length - 1 : i;
       let hi = lo;
       // A neighbour comes in only if the lens still fits its maximum with it: a small block next to
@@ -2341,14 +2347,16 @@ export class App {
       }
       return [blocks[lo]![0], blocks[hi]![1]];
     };
-    // The cursor past an edge: the blocks up to its one come in; far ones go past the maximum.
-    const follow = (blocks: Block[], range: Block, at: number): Block => {
+    // The cursor past an edge: the blocks up to its one come in; far ones go past the maximum. Into a code cell whole:
+    // the lens moves to it.
+    const follow = (blocks: Block[], range: Block, at: number, whole?: ReadonlySet<number>): Block => {
       if (at >= range[0] && at <= range[1]) return range;
       if (cards) return openOn(blocks, at);
       let lo = blocks.findIndex((b) => b[0] === range[0]);
       let hi = blocks.findIndex((b) => b[1] === range[1]);
       const i = blocks.findIndex((b) => at >= b[0] && at <= b[1]);
-      if (lo < 0 || hi < 0 || i < 0 || i > hi + 1 || i < lo - 1) return openOn(blocks, at); // a jump
+      if (i >= 0 && whole?.has(blocks[i]![0])) return blocks[i]!;
+      if (lo < 0 || hi < 0 || i < 0 || i > hi + 1 || i < lo - 1) return openOn(blocks, at, whole); // a jump
       if (i > hi) hi = i;
       else lo = i;
       while (rowsOf(blocks[lo]![0], blocks[hi]![1]) > maxRows && lo < hi) {
@@ -2361,19 +2369,20 @@ export class App {
       before: buf.source.slice(0, starts[range[0] - 1] ?? 0),
       after: buf.source.slice(starts[range[1]] ?? buf.source.length),
     });
-    // Code (24.8): the document view around a lens of its own blocks — a line, a doc comment, the imports.
+    // Code (24.8): the document view around a lens of its own blocks — a cell whole when it fits (24.16), else a line,
+    // a doc comment, the imports.
     const code = this.isCodeDocument(buf);
     const fresh = (prev?: Block): LiveBase => {
       const rendered = code ? buf.codeLayout(width, wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view)) : buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null);
-      const blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
+      const { blocks, whole } = code ? cellBlocks(buf.codeBlocks(lineCount), rendered.cells ?? [], (s, e) => rowsOf(s, e) <= maxRows) : { blocks: blockRanges(buf.parsed.tree, lineCount), whole: undefined };
       // After an edit, the lens keeps covering the lines it did (snapped to whole blocks).
       let range: Block;
       if (prev) {
         const s = blockAt(blocks, Math.min(prev[0], lineCount));
         const e = blockAt(blocks, Math.min(Math.max(prev[0], prev[1]), lineCount));
-        range = follow(blocks, [s[0], e[1]], Math.min(line, lineCount));
-      } else range = openOn(blocks, Math.min(line, lineCount));
-      return { rendered, width, wrap, renderedVersion: buf.version, version: buf.version, blocks, old: range, active: range, ...around(range), lineCount };
+        range = follow(blocks, [s[0], e[1]], Math.min(line, lineCount), whole);
+      } else range = openOn(blocks, Math.min(line, lineCount), whole);
+      return { rendered, width, wrap, renderedVersion: buf.version, version: buf.version, blocks, whole, old: range, active: range, ...around(range), lineCount };
     };
     let base = view.liveBase;
     // A cell's ✎ (24.13): the lens on its lines.
@@ -2396,7 +2405,7 @@ export class App {
       else base = view.insert || untouched ? fresh(active) : fresh();
     } else if (line < base.active[0] || line > base.active[1]) {
       if (base.renderedVersion === buf.version) {
-        const range = follow(base.blocks, base.active, line);
+        const range = follow(base.blocks, base.active, line, base.whole);
         base = { ...base, old: range, active: range, ...around(range), composed: undefined };
       } else base = fresh(view.insert ? [Math.min(base.active[0], line), Math.max(base.active[1], line)] : base.active); // typing never sits outside it
     }

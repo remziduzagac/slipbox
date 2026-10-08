@@ -655,6 +655,29 @@ export function codeBlocks(texts: string[], model: CodeModel | null, lineCount: 
   return starts.map((s, i) => [s, (starts[i + 1] ?? lineCount + 1) - 1]);
 }
 
+/**
+ * The lens's blocks with each cell whole (24.16) — its documentation with its code; a class's head, its doc, its
+ * fields — when it fits (`fits`: its rows within the lens's maximum), and which blocks those are, by their first line.
+ * A cell too tall stays its lines' blocks.
+ */
+export function cellBlocks(blocks: [number, number][], cells: readonly { from: number; to: number }[], fits: (from: number, to: number) => boolean): { blocks: [number, number][]; whole: Set<number> } {
+  const ends = new Map(cells.map((c) => [c.from, c.to]));
+  const out: [number, number][] = [];
+  const whole = new Set<number>();
+  for (let i = 0; i < blocks.length; ) {
+    const to = ends.get(blocks[i]![0]);
+    let j = i;
+    while (to !== undefined && j + 1 < blocks.length && blocks[j + 1]![0] <= to) j++;
+    const cell: [number, number] = [blocks[i]![0], blocks[j]![1]];
+    if (to !== undefined && fits(cell[0], cell[1])) {
+      out.push(cell);
+      whole.add(cell[0]);
+      i = j + 1;
+    } else out.push(blocks[i++]!);
+  }
+  return { blocks: out, whole };
+}
+
 /** The margin's mark for a definition's kind. */
 function markOf(def: CodeDef, g: Glyphs): string {
   return def.kind === "function" ? g.codeFunction : def.kind === "class" ? g.codeClass : def.kind === "type" ? g.codeType : g.codeValue;
