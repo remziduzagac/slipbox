@@ -1,6 +1,6 @@
 // Rendering: snapshot the pure layout stage (0.4) and property-test the table allocator (2.3).
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +10,7 @@ import type { Layout } from "../src/core/layout/ir.ts";
 import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
 import { dataLinks, parseData } from "../src/core/data.ts";
 import { classify } from "../src/core/filetypes.ts";
+import { loadMermaid } from "../src/core/diagrams.ts";
 import { parseNoteFile } from "../src/core/readers.ts";
 import { findHeading, headingFragment } from "../src/core/landing.ts";
 import { headingsOf, parseMarkdown } from "../src/core/parse.ts";
@@ -757,5 +758,84 @@ describe("what rendering.md promises (review: docs against the tests)", () => {
       }
     }
     expect([...kinds].sort()).toEqual(["dark", "light"]);
+  });
+});
+
+describe("Mermaid (12.10)", () => {
+  beforeAll(async () => {
+    await loadMermaid();
+  });
+  const rows = (l: Layout) => l.lines.map((x) => x.spans.map((s) => s.text).join(""));
+  const md = "# D\n\n```mermaid\ngraph TD\n  A[Write] --> B[Disk-cache]\n```\n\nafter\n";
+  test("a diagram drawn in box drawing, every row at its block's line: its lines in the border colour, its words text", () => {
+    const l = renderMarkdown(md, { width: 60, glyphs: unicode, showUrls: false });
+    const drawn = l.lines.filter((x) => x.spans.some((s) => s.text.includes("┌")) || x.spans.some((s) => s.text.includes("Write")));
+    expect(rows(l).some((r) => /│\s+Write\s+│/.test(r))).toBe(true);
+    expect(rows(l).join("\n")).not.toContain("A[Write]");
+    expect(drawn.length).toBeGreaterThan(1);
+    // All at the fence's line; no code block's background.
+    const block = l.lines.filter((x) => x.src === 3);
+    expect(block.length).toBeGreaterThan(5);
+    expect(block.every((x) => !x.fill)).toBe(true);
+    const spans = block.flatMap((x) => x.spans);
+    expect(spans.find((s) => s.text.includes("Write"))!.role).toBe("text");
+    expect(spans.find((s) => s.text.includes("Disk-cache"))!.role).toBe("text"); // a hyphen in a word stays a word
+    expect(spans.filter((s) => /[┌─│▼]/.test(s.text)).every((s) => s.role === "table_border")).toBe(true);
+    expect(rows(l).at(-1)).toBe("after");
+  });
+  test("with ASCII glyphs: drawn in ASCII, its `+ - |` the lines", () => {
+    const ascii = glyphsFor("ascii", {});
+    const l = renderMarkdown(md, { width: 60, glyphs: ascii, showUrls: false });
+    expect(rows(l).join("\n")).toMatch(/\|\s+Write\s+\|/);
+    expect(rows(l).join("\n")).not.toMatch(/[┌│]/);
+    expect(l.lines.flatMap((x) => x.spans).find((s) => s.text.startsWith("+"))!.role).toBe("table_border");
+  });
+  test("drawn while its library loads: its code, the layout saying it waited, the block not kept — drawn once it's in", () => {
+    // A process of its own: here the library is in already.
+    const script = `
+      import { parseMarkdown } from "./src/core/parse.ts";
+      import { newRenderCache, renderTree } from "./src/core/layout/render.ts";
+      import { glyphsFor } from "./src/core/glyphs.ts";
+      import { loadMermaid } from "./src/core/diagrams.ts";
+      const parsed = parseMarkdown("# D\\n\\n\`\`\`mermaid\\ngraph TD\\n  A[Write] --> B[Disk]\\n\`\`\`\\n");
+      const cache = newRenderCache();
+      const opts = { width: 60, glyphs: glyphsFor("unicode"), showUrls: false };
+      const text = (l) => l.lines.map((x) => x.spans.map((s) => s.text).join("")).join("\\n");
+      const first = renderTree(parsed.tree, opts, null, cache);
+      // In a note embedded in this one: this one waited too.
+      const inner = parseMarkdown("\`\`\`mermaid\\ngraph TD\\n  A --> B\\n\`\`\`\\n").tree.children;
+      const embed = () => ({ path: "/inner.md", title: "inner", nodes: inner });
+      const host = renderTree(parseMarkdown("![[inner]]\\n").tree, { ...opts, embed }, null);
+      await loadMermaid();
+      const second = renderTree(parsed.tree, opts, null, cache);
+      console.log(JSON.stringify({ pending: [first.pending, second.pending ?? null, host.pending], code: text(first).includes("A[Write]"), drawn: /│\\s+Write\\s+│/.test(text(second)) }));
+    `;
+    const r = Bun.spawnSync(["bun", "-e", script], { cwd: join(import.meta.dir, "..") });
+    expect(r.stderr.toString()).toBe("");
+    expect(JSON.parse(r.stdout.toString())).toEqual({ pending: [["mermaid"], null, ["mermaid"]], code: true, drawn: true });
+  });
+  test("its rows as the text has them: no blank row after, no spaces at their ends", () => {
+    const l = renderMarkdown("```mermaid\nclassDiagram\n  class Graph\n```\n\nafter\n", { width: 60, glyphs: unicode, showUrls: false });
+    const drawn = rows(l).slice(0, rows(l).indexOf("after") - 1);
+    expect(drawn.at(-1)).toMatch(/└─+┘/);
+    expect(drawn.every((r) => r === r.trimEnd())).toBe(true);
+  });
+  test("one too wide at the library's spacing is drawn closer together, before it's given up on", () => {
+    // 51 columns at its own spacing, 45 a little closer, 42 closest.
+    const md = "```mermaid\ngraph LR\n  A[Read] --> B[Parse] --> C[Lay out] --> D[Draw]\n```\n";
+    for (const width of [46, 43]) {
+      const r = rows(renderMarkdown(md, { width, glyphs: unicode, showUrls: false }));
+      expect(r.some((x) => /│\s+Draw\s+│/.test(x))).toBe(true);
+      expect(Math.max(...r.map(stringWidth))).toBeLessThanOrEqual(width);
+    }
+  });
+  test("a kind it doesn't draw, or a diagram wider than the text: its code, the label saying why", () => {
+    const pie = renderMarkdown("```mermaid\npie title X\n  \"a\": 1\n```\n", { width: 60, glyphs: unicode, showUrls: false });
+    expect(rows(pie)[0]).toMatch(/mermaid — not drawn: pie $/);
+    expect(rows(pie)[1]).toContain("pie title X");
+    const chain = Array.from({ length: 8 }, (_, i) => `N${i}[Node number ${i}]`).join(" --> ");
+    const wide = renderMarkdown(`\`\`\`mermaid\ngraph LR\n  ${chain}\n\`\`\`\n`, { width: 60, glyphs: unicode, showUrls: false });
+    expect(rows(wide)[0]).toMatch(/mermaid — too wide to draw $/);
+    for (const r of rows(wide)) expect(stringWidth(r)).toBeLessThanOrEqual(60);
   });
 });

@@ -6,6 +6,7 @@
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
 import { type CellLink, type DataComment, type DataField, fieldLink, type TreePlace } from "../data.ts";
+import { drawMermaid, MERMAID } from "../diagrams.ts";
 import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
@@ -79,6 +80,8 @@ interface Ctx {
   embedChain: string[];
   /** Every note embedded so far, nested ones too. */
   embedded: Set<string>;
+  /** What its blocks waited for, a module still loading (16.6): a block that did is never kept. */
+  pending: Set<string>;
   /** Inside an embed: its links are at the embed's line, and resolved from the embedded note. */
   linkSrc?: number;
   linkFrom?: string;
@@ -127,7 +130,7 @@ export function newRenderCache(): RenderCache {
 }
 
 export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontmatter | null, cache?: RenderCache): Layout {
-  const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), nesting: 0, embedChain: opts.embedFrom ? [opts.embedFrom] : [], embedded: new Set() };
+  const ctx: Ctx = { opts, links: [], headings: [], definitions: new Map(), nesting: 0, embedChain: opts.embedFrom ? [opts.embedFrom] : [], embedded: new Set(), pending: new Set() };
   collectDefinitions(tree, ctx);
   const width = Math.max(8, opts.width);
   if (!cache) return finish(blocks(tree.children, ctx, width, TEXT, frontmatter), ctx, width);
@@ -143,13 +146,15 @@ export function renderTree(tree: Root, opts: RenderOptions, frontmatter?: Frontm
     let hit = origin ? cache.blocks.get(origin) : undefined;
     if (!hit) {
       // Rendered on its own: its links and headings numbered from 0, renumbered when placed.
-      const own: Ctx = { ...ctx, links: [], headings: [], embedded: new Set() };
+      const own: Ctx = { ...ctx, links: [], headings: [], embedded: new Set(), pending: new Set() };
       const rows = block(node, own, width, TEXT, frontmatter);
       if (rows === null) continue;
       hit = { lines: rows, links: own.links, headings: own.headings, src: srcOf(node) };
       // A block with an embed draws another note, which changes on its own: never kept (1.11).
       for (const p of own.embedded) ctx.embedded.add(p);
-      if (origin && !own.embedded.size) cache.blocks.set(origin, hit);
+      // One drawn while what it needs loads (a diagram as its code): never kept either.
+      for (const p of own.pending) ctx.pending.add(p);
+      if (origin && !own.embedded.size && !own.pending.size) cache.blocks.set(origin, hit);
     }
     const delta = srcOf(node) - hit.src;
     const linkBase = ctx.links.length;
@@ -180,7 +185,7 @@ function placed(line: Line, delta: number, linkBase: number, headBase: number): 
 
 function finish(lines: Line[], ctx: Ctx, width: number): Layout {
   const out = finishRows(lines, ctx, width);
-  return ctx.embedded.size ? { ...out, embedded: [...ctx.embedded] } : out;
+  return { ...out, ...(ctx.embedded.size ? { embedded: [...ctx.embedded] } : {}), ...(ctx.pending.size ? { pending: [...ctx.pending] } : {}) };
 }
 
 function finishRows(lines: Line[], ctx: Ctx, width: number): Layout {
@@ -301,6 +306,13 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
       // A fenced block's code starts a line after its fence; an indented one's on its own line.
       const span = node.position ? node.position.end.line - node.position.start.line + 1 : 0;
       const fenced = !node.position || span > node.value.split("\n").length;
+      if (node.lang && /^mermaid$/i.test(node.lang)) {
+        // Drawn in the terminal's own characters (12.10); its code where it can't be, saying why.
+        const d = drawMermaid(sanitize(node.value), width, ctx.opts.glyphs.mode === "ascii");
+        if (!d) ctx.pending.add(MERMAID);
+        if (d && "rows" in d) return diagram(d.rows, srcOf(node), ctx.opts.glyphs.mode === "ascii");
+        return codeBlock(node.value, node.lang, srcOf(node), ctx, width, fenced ? 1 : 0, d?.why);
+      }
       return codeBlock(node.value, node.lang ?? null, srcOf(node), ctx, width, fenced ? 1 : 0);
     }
     case "blockquote":
@@ -499,6 +511,7 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
       nesting: ctx.nesting + 1,
       embedChain: [...ctx.embedChain, e.path],
       embedded: ctx.embedded,
+      pending: ctx.pending,
       linkSrc: ctx.linkSrc ?? src,
       linkFrom: e.from,
     };
@@ -521,13 +534,35 @@ function embeddedPictures(picture: RenderOptions["picture"], locate: Embedded["l
   };
 }
 
-function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, width: number, firstLine = 1): Line[] {
+/** A diagram drawn in text (12.10), every row at its block's line: its lines in the table's border colour, its words
+ *  as text. */
+function diagram(rows: string[], src: number, ascii: boolean): Line[] {
+  const drawing = ascii ? ASCII_DRAWING : DRAWING;
+  return rows.map((row) => {
+    const spans: Span[] = [];
+    for (const g of graphemes(sanitize(row))) {
+      const role: Role = drawing.test(g) ? "table_border" : "text";
+      const last = spans[spans.length - 1];
+      if (last?.role === role) last.text += g;
+      else spans.push({ text: g, role, attrs: 0 });
+    }
+    return { spans, src };
+  });
+}
+
+/** A diagram's lines, arrows and node shapes: box drawing, arrows, geometric shapes — in ASCII, `+ - | < > ^`. */
+const DRAWING = /^[\u2190-\u21ff\u2500-\u257f\u25a0-\u25ff]$/;
+const ASCII_DRAWING = /^[+\-|<>^]$/;
+
+/** `note`: why a block that's drawn elsewhere is its code here (a diagram too wide, a kind not drawn), after its
+ *  language in the label. */
+function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, width: number, firstLine = 1, note?: string): Line[] {
   const g = ctx.opts.glyphs;
   const code = sanitize(value);
   const sourceLines = code.split("\n").map((l) => expandTabs(l));
   const tokens = highlight(sourceLines.join("\n"), lang);
   const out: Line[] = [];
-  const label = lang ? sanitize(lang) : "";
+  const label = lang ? sanitize(note ? `${lang} — ${note}` : lang) : "";
   // Top padding row carries the language label, right-aligned.
   const top: Span[] = [];
   if (label) {

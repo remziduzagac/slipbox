@@ -83,6 +83,14 @@ drawn, `enter` copying its address. Fetched (into the cache, a file per address:
 until `enter`. Inline
 tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 
+**Mermaid** (12.10): a ` ```mermaid ` block is drawn in the terminal's own characters — box drawing, arrows, its
+words in the text's colour and its lines in the table's border colour; in ASCII where the glyphs are — by
+`beautiful-mermaid`, no browser (flowcharts, state, sequence, class and ER diagrams, XY charts). Too wide at its own
+spacing, it's drawn closer together; still too wide, a kind it doesn't draw (`pie`, `gantt`), or one it can't read:
+its code, the label saying why (`mermaid — too wide to draw`, `mermaid — not drawn: pie`). Every row is at the
+block's line, so the lens opens on its source. The library loads the first time a note holds a diagram; until it's in
+(a moment), the block is its code, then drawn — and `slipbox render` waits for it.
+
 **Wikilinks are links** (`21.3`; `20.2` drew them as text): `[[name]]` shows its name, `[[name|text]]` its text,
 `[[name#Heading]]` `name › Heading`, `[[name#^id]]` `name ^id` — never inside code, nor after a `\`. A picture
 embedded by name, `![[dal.png]]`, is `▣ dal.png`, as a picture by its path is: Obsidian's size, `|300` or

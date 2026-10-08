@@ -19,6 +19,7 @@ import { match, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
 import { type Layout, type Line, srcAt } from "../src/core/layout/ir.ts";
+import { load } from "../src/core/lazy.ts";
 import { cells } from "../src/tui/cursor.ts";
 import { offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
@@ -6845,6 +6846,24 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     }
     await h.keys("escape", "ctrl+k");
     expect(v.source).toBe(true);
+  });
+});
+
+describe("lazy loading (16.6)", () => {
+  test("a module arriving lays out again the notes laid out while it loaded (a Mermaid diagram as its code, 12.10) — no other", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "lazy.md"), "# L\n\nText.\n");
+    const h = await harness({ root, open: "lazy.md" });
+    const before = h.app.currentLayout(h.app.view!);
+    expect(h.app.currentLayout(h.app.view!)).toBe(before); // kept while nothing changes
+    // Something else arriving (a grammar): the note didn't wait for it, its layout kept — a big one isn't laid out whole.
+    await load(`a-module-${Math.random()}`, async () => 1);
+    expect(h.app.currentLayout(h.app.view!)).toBe(before);
+    // What it waited for: laid out again.
+    const name = `a-module-${Math.random()}`;
+    before.pending = [name];
+    await load(name, async () => 1);
+    expect(h.app.currentLayout(h.app.view!)).not.toBe(before);
   });
 });
 

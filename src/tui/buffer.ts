@@ -422,6 +422,12 @@ export class NoteBuffer {
   /** The notes its layouts draw inside it (1.11), by absolute path: a change to one re-lays it out. */
   readonly embedded = new Set<string>();
 
+  /** Its layouts made while `name` loaded (16.6) dropped, to be made again with it — its other caches kept: a block
+   *  that waited was never kept. */
+  arrived(name: string): void {
+    for (const [key, l] of this.layouts) if (l.pending?.includes(name)) this.layouts.delete(key);
+  }
+
   /**
    * The code view (24.x): the file as a document, from source mode's rows (a row per line) and what its parse says —
    * the parse of this text, or the last one while it's parsed again (its lines may have moved: the view is redrawn

@@ -7,6 +7,7 @@
 
 import { grammar, grammarFor, parseSyntax } from "../core/syntax.ts";
 import { loadError } from "../core/lazy.ts";
+import { loadMermaid } from "../core/diagrams.ts";
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -556,10 +557,12 @@ function colorDepth(s: Session): ColorDepth {
 }
 
 const HANDLERS: Record<string, Handler> = {
-  render(s, rest) {
+  async render(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
     const abs = s.graph.abs(rel);
     const decoded = readText(abs);
+    // A Mermaid diagram is drawn (12.10): its library loaded first, as the TUI's arrives on its own.
+    if (/^ {0,3}(`{3,}|~{3,})\s*mermaid\s*$/im.test(decoded.text)) await loadMermaid();
     const depth = colorDepth(s);
     const widthArg = flag(s.args, "width");
     if (widthArg !== undefined && !/^\d+$/.test(widthArg)) throw new UsageError("--width must be a whole number from 20 to 1000");

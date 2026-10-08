@@ -108,6 +108,8 @@ export interface Layout {
   clipped?: number;
   /** The notes drawn inside this one (1.11), nested ones too, by absolute path: a change to one re-lays it out. */
   embedded?: string[];
+  /** What it waited for, a module still loading (16.6; Mermaid's, 12.10): laid out again when that's in. */
+  pending?: string[];
   /** The code view's cells (24.13): each one's lines, its title, and its definition's name (where references start). */
   cells?: { from: number; to: number; title: string; name?: { line: number; column: number } }[];
 }

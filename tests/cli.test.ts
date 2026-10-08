@@ -80,6 +80,15 @@ describe("reading", () => {
     expect(slipbox(["render", "home", "--width", "5"]).code).toBe(2);
     expect(slipbox(["render", "no-such-note"]).code).toBe(3);
   });
+  test("render draws a Mermaid diagram in box drawing (12.10): its library waited for, as a process starting cold", () => {
+    const dir = join(sandbox, "diagrams");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "d.md"), "# D\n\n```mermaid\ngraph TD\n  A[Write] --> B[Disk]\n```\n");
+    const r = slipbox(["render", join(dir, "d.md"), "--width", "80", "--plain"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/│\s+Write\s+│/);
+    expect(r.out).not.toContain("A[Write]");
+  });
   // util-linux's script: a terminal for the TUI's start (a pipe never gets one).
   test.skipIf(!Bun.spawnSync(["script", "--version"]).stdout.toString().includes("util-linux"))(
     "the TUI on a path that isn't there, or a --root that isn't a root: a line and exit 3, never a stack trace",

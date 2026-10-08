@@ -785,8 +785,10 @@ export class App {
     // A second copy of this folder (21.6): which one links open, asked once.
     if (!this.overlay) this.askDefaultCopy();
     // A grammar (or anything lazy) that finished loading: lay out again and draw.
-    this.stopLazy = onLoaded(() => {
+    this.stopLazy = onLoaded((name) => {
       this.graph.grammarsChanged(); // code files' comment links can be read now (16.10)
+      // Notes drawn while it loaded (a Mermaid diagram as its code, 12.10): drawn again — those only.
+      for (const b of this.buffers.values()) b.arrived(name);
       this.relayoutAll();
       this.host.requestRender();
     });
