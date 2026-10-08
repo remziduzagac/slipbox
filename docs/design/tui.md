@@ -778,7 +778,7 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - source line numbers in a gutter
 - the problems bar, and the problems marked in the text (below, "Problems where they are") — the bar and the numbers
   on a shade of their own down the window (`gutter`, halfway from the page to the breadcrumb row's shade, the two
-  framing the text), set apart from it
+  framing the text), then a column of the page's before the text
 - the breadcrumb (no key of its own: the `space u u` list, or the palette)
 - wrapping (below)
 - link URLs
@@ -1255,14 +1255,15 @@ file after each save, its findings hidden while the text differs). Each has a se
 hint. `[diagnostics] severity` (`warning`) is the least that shows, so a root's notes not written yet —
 information — don't mark every page; `"info"` shows them too.
 
-- **The bar** (`space u d`, `[diagnostics] bar`): a column beside the text, left of the line numbers. On the row a
+- **The bar** (`space u d`, `[diagnostics] bar`): a column beside the text while line numbers are off. On the row a
   line starts on — in the rendered view, the row its text starts on, or the next one drawn — the worst problem
   starting there by its sign, in its colour (`✖` `error`, `⚠` `warn`, `ℹ` `info`, `·` a hint; the Nerd set's icons;
   ASCII `E W I .`), then how many when more than one (`+` past 9). With `"auto"`, the default, it takes its three
   columns once a file has had a problem, and keeps them while the file is open, so the text doesn't move as problems
-  come and go; `"on"` keeps them always, `"off"` never. A line's number takes the worst one's colour too. A click on a
-  sign opens the Problems panel on This file at that problem (the worst there), the note on it, the panel with the
-  keys. No ruler on the right: the Problems panel's This file tab says where in the file they are.
+  come and go; `"on"` keeps them always, `"off"` never. With line numbers on there's no bar: a line's number takes
+  the worst one's colour, bold, and stands for the sign. A click on a sign — or on such a number, where a problem
+  starts — opens the Problems panel on This file at that problem (the worst there), the note on it, the panel with
+  the keys. No ruler on the right: the Problems panel's This file tab says where in the file they are.
 - **The marks** (`[diagnostics] marks`): where each problem is, underlined in its severity's colour
   (`problem_error`, `problem_warn`, `problem_info`; a syntax error keeps `syntax_error`), for the problems at least as
   bad as its level: `"error"` (the default), `"warning"`, `"info"` (all), or `"off"`; `space u shift+d` cycles off →

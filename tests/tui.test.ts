@@ -3781,7 +3781,9 @@ describe("UI settings (space u)", () => {
     const c = h.canvas();
     const gutter = h.app.theme.roles.gutter.bg!;
     for (const y of [pane.y + 1, pane.y + pane.h - 1]) {
-      for (let x = pane.x; x < pane.textX; x++) expect(c.styles[y]![x]!.bg).toBe(gutter);
+      for (let x = pane.x; x < pane.textX - 1; x++) expect(c.styles[y]![x]!.bg).toBe(gutter);
+      // A column of the page's between it and the text.
+      expect([c.line(y)[pane.textX - 1], c.styles[y]![pane.textX - 1]!.bg]).toEqual([" ", h.app.theme.bg]);
       expect(c.styles[y]![pane.textX]!.bg).not.toBe(gutter);
     }
     const full = h.app.currentLayout(h.app.view!).width;
@@ -8863,11 +8865,17 @@ describe("the lint surface: your linter's findings in notes (3.21)", () => {
     };
     expect(at("3", "A long")).toBe(h.app.theme.roles.warn.fg!);
     expect(at("1", "L")).not.toBe(h.app.theme.roles.warn.fg!);
-    // The problems bar (19.9): beside the number, how many start on the line, in the worst one's colour.
+    // Beside line numbers, no problems bar (19.9): the number in the worst one's colour, bold — clicked, as a sign is.
     const y3 = rows.findIndex((r) => /A long/.test(r));
-    const bar = [...rows[y3]!].indexOf("┃") + 2; // the border, a margin, then the bar
-    expect([...rows[y3]!].slice(bar, bar + 4).join("")).toBe("⚠  3"); // the bar: the worst one's sign, no count for one; then the line's number
-    expect(c.styles[y3]![bar]!.fg).toBe(h.app.theme.roles.warn.fg!);
+    const num = [...rows[y3]!].indexOf("┃") + 2; // the border, a margin, then the number
+    expect([...rows[y3]!].slice(num, num + 4).join("")).toBe("3  A"); // the number, the gutter's space, the page's
+    expect(c.styles[y3]![num]!).toMatchObject({ fg: h.app.theme.roles.warn.fg!, bold: true });
+    const signs = h.app.geometry!.hot.filter((x) => x.id.startsWith("pbar:3:"));
+    expect(signs).toHaveLength(1); // the number's, no sign under it
+    expect([signs[0]!.y, signs[0]!.x <= num && num < signs[0]!.x + signs[0]!.w]).toEqual([y3, true]);
+    for (const type of ["down", "up"]) h.app.handleMouse({ type, x: num, y: y3, button: 0 });
+    expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
+    h.app.closeProblems();
     // Typing: its text isn't the file's any more — nothing shown until it's saved (and linted again).
     h.app.view!.buf.edit(0, 0, "x");
     h.frame();
@@ -10043,7 +10051,7 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     for (const [glyphs, sign] of [["ascii", "W"], ["nerd", "\u{ea6c}"]] as const) {
       const g = await harness({ root: vault(), open: "p.md", config: (c) => (c.render.glyphs = glyphs) });
       const rows = g.frame().split("\n");
-      expect(rows.find((r) => r.includes("See"))).toContain(`${sign}  See`);
+      expect(rows.find((r) => r.includes("See"))).toContain(`${sign}   See`); // the sign, no count, the bar's space, the page's
     }
   });
 
@@ -10061,11 +10069,11 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     h.frame();
     const before = rowOf(h, "See").at("See");
     await h.keys("space", "u", "d");
-    expect(rowOf(h, "See").at("See")).toBe(before - 3);
+    expect(rowOf(h, "See").at("See")).toBe(before - 4); // the bar's three, the page's column after it
     expect(h.app.messages.at(-1)!.text).toBe("Problems bar: off");
     const off = await harness({ root: vault(), open: "p.md", config: (c) => (c.diagnostics.bar = "off") });
     off.frame();
-    expect(rowOf(off, "See").at("See")).toBe(before - 3);
+    expect(rowOf(off, "See").at("See")).toBe(before - 4);
   });
 
   test("the marks: a level — errors by default; space u shift+d cycles errors → warnings → all → off", async () => {
@@ -10110,12 +10118,12 @@ describe("problems where they are: the bar, the marks, the status line (19.8–1
     writeFileSync(join(root, "p.md"), "# P\n\nSee [twin](twin.png) here.\n");
     h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
     h.frame();
-    expect(rowOf(h, "See").at("See")).toBe(clean + 3);
+    expect(rowOf(h, "See").at("See")).toBe(clean + 4);
     writeFileSync(join(root, "p.md"), "# P\n\nSee [twin](x/twin.md) here.\n");
     h.app.applyChanges({ changes: [{ rel: "p.md", kind: "changed", isNote: true }], rescan: false });
     h.frame();
     expect(rowOf(h, "See").bar).toBe(" ");
-    expect(rowOf(h, "See").at("See")).toBe(clean + 3); // kept: the text doesn't move back
+    expect(rowOf(h, "See").at("See")).toBe(clean + 4); // kept: the text doesn't move back
   });
 
   test("in source mode the mark is the link's own characters", async () => {
@@ -10592,7 +10600,7 @@ describe("linters without a server (19.19)", () => {
     const shown = () => h.app.problemsShown(h.app.view!).map((p) => `${p.start.line} ${p.severity} ${p.source}: ${p.message}`);
     expect(await until(() => (h.frame(), shown().length === 2))).toBe(true);
     expect(shown().sort()).toEqual(["2 error fake: found BAD", "2 warning saved: saved BAD"]);
-    expect(h.frame()).toMatch(/[┃│] ✖2 RUN BAD/); // the bar: the worse one's sign and its two, beside its line
+    expect(h.frame()).toMatch(/[┃│] ✖2 {2}RUN BAD/); // the bar: the worse one's sign and its two, beside its line
     // Not installed: said once.
     expect(h.app.messages.filter((m) => m.text.includes("linter gone: slipbox-no-such-linter not found")).length).toBe(1);
     // Typed: the input's linter again after the pause; the file's waits for the save. A line Dockerfile's grammar

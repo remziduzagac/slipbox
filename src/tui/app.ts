@@ -2444,9 +2444,11 @@ export class App {
     return this.layoutFor(view, view.width, this.gutterWidth(view));
   }
 
-  /** The gutter's width for a view: the problems bar's, then the line numbers' (0 when both are off). */
+  /** The gutter's width for a view: the problems bar's or the line numbers', then a column of the page's between it
+   *  and the text (0 when both are off). */
   gutterWidth(view: View): number {
-    return this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0);
+    const w = this.barWidth(view) + (this.ui.line_numbers ? String(view.buf.lineStarts().length).length + 1 : 0);
+    return w ? w + 1 : 0;
   }
 
   /** The problems the code view's cells count in their headers (24.13): each by its line and severity. */
@@ -2509,9 +2511,10 @@ export class App {
   }
 
   /** The problems bar's width (19.9): a sign, a count when more than one, a space — while it's on; with `auto`,
-   *  once the file has had problems, and from then on, so the text doesn't move as they come and go. */
+   *  once the file has had problems, and from then on, so the text doesn't move as they come and go. None beside line
+   *  numbers: a line's number takes its worst problem's colour, and is clicked as a sign is. */
   barWidth(view: View): number {
-    if (!this.ui.problems_bar) return 0;
+    if (!this.ui.problems_bar || this.ui.line_numbers) return 0;
     if (this.config.diagnostics.bar === "on" || view.buf.problemBar) return 3;
     if (this.problemsShown(view, true).length) view.buf.problemBar = true;
     return view.buf.problemBar ? 3 : 0;

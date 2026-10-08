@@ -194,7 +194,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "ui.wrap", title: "Wrap long lines", cli: I, desc: "Wraps to the pane, or scrolls sideways when off" },
   { id: "ui.breadcrumb", title: "Breadcrumb", cli: I, desc: "Shows or hides the heading path at the top of each window" },
   { id: "ui.top_bar", title: "Top bar", cli: I, desc: "Shows or hides the top bar (the palette chip, the folder's state)" },
-  { id: "ui.problems_bar", title: "Problems bar", cli: I, desc: "Shows or hides the column beside the text with each line's problems, counted and coloured by the worst" },
+  { id: "ui.problems_bar", title: "Problems bar", cli: I, desc: "Shows or hides the column beside the text with each line's problems, counted and coloured by the worst (with line numbers on, the numbers take the colour instead)" },
   { id: "ui.problem_marks", title: "Problems marked in the text", cli: I, desc: "Underlines where each problem is, in source mode and the rendered view" },
   { id: "ui.code_cells", title: "Code cells: boxes or bands", cli: I, desc: "How the code view draws its cells: each in a box, or on a tinted band" },
   // the code view's cells (24.13): the one at the cursor, as its header's buttons do

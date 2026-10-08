@@ -545,7 +545,7 @@ gets one when a line is added after its last.
 | `space u r` | link URLs shown after the link text |
 | `space u m` | mouse on / off; off gives the mouse back to the terminal for native selection |
 | `space u b` | top bar on / off (the palette chip and the folder's state); the note takes its row |
-| `space u d` | the problems bar on / off: each line's worst problem's sign, its colour, the count past one (`19.9`) |
+| `space u d` | the problems bar on / off (with line numbers off; on, a number takes its line's colour) (`19.9`) |
 | `space u shift+d` | problems marked in the text, cycling off → errors → warnings → all (`19.10`) |
 | `space u c` | the code view's cells (`24.13`): in boxes, or on tinted bands |
 
@@ -650,7 +650,7 @@ mouse off, which gives it back to the terminal.
 | status line `‹` / `›` | back / forward in the window's history (dim: nowhere to go); hovered, where to |
 | status line path | the window's history above it, Copy path first; click or `enter` goes there |
 | status line problems | the Problems panel on This file (`⚠ 0`, none here: on All) / close it |
-| a sign of the problems bar | the Problems panel on This file, at that problem |
+| a sign of the problems bar, a coloured line number | the Problems panel on This file, at that problem |
 | Problems panel | a tab's title switches; This file: a row selects (the note shows it), again goes there |
 | Problems panel, All | a problem's row opens it in a tab at its line; a heading folds; `×` closes the panel |
 | Problems panel's rule | drag to resize it |
