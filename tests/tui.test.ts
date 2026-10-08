@@ -2222,7 +2222,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(v.live).toBe(false);
     expect(lens().top).toBe(-1);
   });
-  test("its rows numbered by their distance from the cursor's (0), the lens's accent; outside it, the lines' numbers; relative_numbers = off: the lines'", async () => {
+  test("its rows numbered by their distance from the cursor's, the lens's accent — the cursor's by its line; outside it, the lines' numbers; relative_numbers = off: the lines'", async () => {
     for (const relative of ["lens", "off"] as const) {
       const { h, v, goto, lens } = await setup((c) => ((c.ui.line_numbers = true), (c.ui.relative_numbers = relative)));
       goto("Para 7 with");
@@ -2234,7 +2234,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
       const inside = [...Array(l.bottom - l.top - 1).keys()].map((k) => l.top + 1 + k);
       const layout = h.app.currentLayout(v);
       if (relative === "lens") {
-        expect(inside.map(gutter)).toEqual(inside.map((r) => String(Math.abs(r - v.cur.row))));
+        expect(inside.map(gutter)).toEqual(inside.map((r) => String(r === v.cur.row ? layout.lines[r]!.src : Math.abs(r - v.cur.row))));
         expect([gutter(l.top), gutter(l.bottom)]).toEqual(["", ""]); // its rules: none
         const near = inside.find((r) => r !== v.cur.row)!;
         expect(c.styles[pane.y + near - v.top]![pane.textX - 3]!).toMatchObject({ fg: h.app.theme.roles.lens.fg, bold: false });

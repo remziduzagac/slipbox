@@ -902,10 +902,11 @@ first.)
 shade lighter than the page — a code block is darker), so the whole area reads as the lens, not
 just its edges.
 
-**Its numbers.** With line numbers on, the lens's rows are numbered by their distance from the cursor's — the cursor's
-`0`, in the current line's colour, the others in the lens's accent — every row a step of `j` and `k` (a wrapped line's
-rows too), so vim's counts (`5j`, `d3k`) read off them; the cursor's line is on the status line. Outside the lens, the
-lines' own numbers. `[ui] relative_numbers = "off"` numbers the lens's rows by their lines too.
+**Its numbers.** With line numbers on, the lens's rows are numbered by their distance from the cursor's, in the lens's
+accent — every row a step of `j` and `k` (a wrapped line's rows too), so vim's counts (`5j`, `d3k`) read off them —
+and the cursor's row by its line, in the current line's colour: the reference the distances count from, in the same
+gutter as the lines' numbers outside the lens (vim's `number` with `relativenumber`). `[ui] relative_numbers = "off"`
+numbers the lens's rows by their lines too.
 
 **Its mode.** The top rule's label says which: `source · lines 8–13` while viewing (normal mode),
 `editing · lines 8–13` while typing. Editing draws the rules and label in `lens_edit` (green where

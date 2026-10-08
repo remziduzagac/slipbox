@@ -926,11 +926,12 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       geo.hot.push({ id: clicked(here), x: gutterX, y, w, h: 1 });
     }
     if (numbers) {
-      // In the lens (`[ui] relative_numbers`): each row's distance from the cursor's, the cursor's 0 — every row a step
-      // of j and k, a wrapped line's too — so vim's counts read off it. Its line is on the status line.
+      // In the lens (`[ui] relative_numbers`): each row's distance from the cursor's — every row a step of j and k, a
+      // wrapped line's too — so vim's counts read off it; the cursor's row its line's number, the reference, as vim's
+      // number with relativenumber.
       const relative = relativeNumbers && line.lens === "source";
       // A row the layout adds (the code view's blank between cells, a box's bottom, the lens's rules) has no number.
-      const n = relative ? Math.abs(row - view.cur.row) : line.src !== prevSrc && !line.decor ? line.src : null;
+      const n = !relative ? (line.src !== prevSrc && !line.decor ? line.src : null) : row === view.cur.row ? line.src : Math.abs(row - view.cur.row);
       const num = n === null ? "" : String(n).padStart(gutter - barW - 2);
       // A line with problems: its number in the worst one's colour, bold; where one starts, clicked as a sign is.
       const on = onLine.get(line.src);
