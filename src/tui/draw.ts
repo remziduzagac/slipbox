@@ -1199,7 +1199,9 @@ function drawPictures(c: Canvas, layout: Layout, shown: number[], top: number, x
     const skip = row - start;
     let rows = 0;
     while (i + rows < shown.length && rows < pic.rows - skip && shown[i + rows] === row + rows) rows++;
-    c.image!(x, top + i, Math.min(pic.cols, textW), rows, pic.src, { skip, total: pic.rows });
+    // Where its row's text starts: past a list's indent, a quote's bar, an embedded note's (12.14).
+    const at = layout.lines[start]!.spans.reduce((w, s) => w + stringWidth(s.text), 0);
+    c.image!(x + at, top + i, Math.min(pic.cols, textW - at), rows, pic.src, { skip, total: pic.rows });
     i += rows - 1;
   }
 }

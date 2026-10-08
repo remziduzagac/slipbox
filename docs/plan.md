@@ -689,7 +689,7 @@ it. Each item ends with its tests listed for the user's approval before any is r
 | 12.11 | LaTeX typeset as an image where images work; Unicode text (`unicodeit`) as the floor |
 | 12.12 | **Prototype.** Images online: `ask` (the link; `enter` asks — once, or its site), `show`, `never` |
 | 12.13 | **Prototype.** Obsidian's `![[picture.png]]`: found as its link is; `\|300`, `\|240x180` its size |
-| 12.14 | A picture in an embedded note (its path the embedded note's) |
+| 12.14 | **Prototype.** A picture in an embedded note: found from where that note is, drawn inside its frame |
 
 ## Extensibility — `13.x`
 

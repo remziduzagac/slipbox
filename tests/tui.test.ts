@@ -18,7 +18,7 @@ import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
-import { type Line, srcAt } from "../src/core/layout/ir.ts";
+import { type Layout, type Line, srcAt } from "../src/core/layout/ir.ts";
 import { cells } from "../src/tui/cursor.ts";
 import { offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
@@ -6924,15 +6924,45 @@ describe("pictures (12.x)", () => {
     expect(layout.lines.some((l) => lineText(l).includes("Beside ▣ chart.png text."))).toBe(true);
     expect(layout.lines.some((l) => lineText(l).includes("Hello."))).toBe(true);
   });
-  test("a picture in an embedded note stays ▣ alt: its path is that note's, not this one's", async () => {
+  // Where a picture's `▣ alt` text starts on its row, and where each picture is drawn: the column past the text's.
+  const altAt = (layout: Layout, alt: string) =>
+    layout.lines.flatMap((l) => {
+      const k = l.spans.findIndex((sp) => sp.text === alt);
+      return k < 0 ? [] : [l.spans.slice(0, k).reduce((w, sp) => w + [...sp.text].length, 0)];
+    });
+  const drawnAt = (h: Harness) => h.canvas().images.map((im) => im.x - h.app.geometry!.panes[0]!.textX);
+  test("a picture in an embedded note (12.14): found from where that note is — its path from its folder, its name from its place — and drawn inside its frame, an embed's in an embed's too", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "host.md"), "# Host\n\n![[inner]]\n");
-    writeFileSync(join(root, "inner.md"), "# Inner\n\n![chart](chart.png)\n");
-    writeFileSync(join(root, "chart.png"), "x");
-    const h = await harness({ root, open: "host.md", width: 100, height: 40, images: terminal(true, { "chart.png": { width: 400, height: 200 } }) });
+    for (const d of ["frames", "frames/sub", "frames/sub/deep"]) mkdirSync(join(root, d));
+    writeFileSync(join(root, "frames", "host.md"), "# Host\n\n![[frame-inner]]\n");
+    writeFileSync(join(root, "frames", "sub", "frame-inner.md"), "# Inner\n\n![chart](chart.png)\n\n![[spot.png|80]]\n\n![[frame-deeper]]\n");
+    writeFileSync(join(root, "frames", "sub", "deep", "frame-deeper.md"), "# Deeper\n\n![deep chart](chart.png)\n");
+    // Two of each: the host's folder has its own, which the embedded notes' must not be taken for.
+    for (const f of ["frames/chart.png", "frames/spot.png", "frames/sub/chart.png", "frames/sub/spot.png", "frames/sub/deep/chart.png"]) writeFileSync(join(root, f), "x");
+    const sizes = { "chart.png": { width: 400, height: 200 }, "spot.png": { width: 400, height: 200 } };
+    const h = await harness({ root, open: "frames/host.md", width: 100, height: 80, images: terminal(true, sizes) });
     const layout = h.app.currentLayout(h.app.view!);
-    expect(layout.lines.some((l) => l.spans.some((s) => s.text.includes("▣ chart")))).toBe(true); // drawn in place
-    expect(layout.lines.some((l) => l.image)).toBe(false);
+    const sub = join(root, "frames", "sub");
+    // Inside its frame: two columns narrower than the note, each embed's.
+    expect(layout.lines.filter((l) => l.image).map((l) => l.image)).toEqual([
+      { src: join(sub, "chart.png"), cols: 48, rows: 12 },
+      { src: join(sub, "spot.png"), cols: 10, rows: 3 },
+      { src: join(sub, "deep", "chart.png"), cols: 48, rows: 12 },
+    ]);
+    // Drawn past its frame's bar, where its ▣ alt line's text starts.
+    const bars = [...altAt(layout, "▣ chart"), ...altAt(layout, "▣ spot.png"), ...altAt(layout, "▣ deep chart")];
+    expect(bars).toEqual([2, 2, 4]);
+    expect(drawnAt(h)).toEqual(bars);
+  });
+  test("a picture in a list item or a quote: drawn where its ▣ alt text starts, past the bullet or the bar, never over them", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "indented.md"), "# I\n\n- ![listed](chart.png)\n\n> ![quoted](chart.png)\n");
+    writeFileSync(join(root, "chart.png"), "x");
+    const h = await harness({ root, open: "indented.md", width: 100, height: 60, images: terminal(true, { "chart.png": { width: 400, height: 200 } }) });
+    const layout = h.app.currentLayout(h.app.view!);
+    const starts = [...altAt(layout, "▣ listed"), ...altAt(layout, "▣ quoted")];
+    expect(starts.every((x) => x > 0)).toBe(true);
+    expect(drawnAt(h)).toEqual(starts);
   });
   describe("on the internet (12.12)", () => {
     const sizes: Host["images"] = { supported: () => true, size: () => ({ width: 400, height: 200 }), cell: () => ({ width: 8, height: 16 }) };

@@ -41,9 +41,13 @@ export interface RenderOptions {
 /**
  * Where a picture is, as the note writes it: a markdown image's URL — a path from the note's folder, or on the
  * internet — or a name, `![[dal.png]]` (12.13), found as a link to it is, with the size in pixels Obsidian's `|300`
- * (its width) or `|240x180` (the box it fits in) gives it.
+ * (its width) or `|240x180` (the box it fits in) gives it. Or a file already found: an embedded note's picture, found
+ * from where that note is (12.14).
  */
-export type PictureSource = { url: string } | { name: string; size: { width: number; height: number | null } | null };
+export type PictureSource = { url: string } | { name: string; size: PictureSize | null } | { file: string; size: PictureSize | null };
+export type PictureSize = { width: number; height: number | null };
+/** A picture found: its file, or its address on the internet. */
+export type FoundPicture = Exclude<PictureSource, { name: string }>;
 
 /** A note embedded, as the caller found it: what to draw, and how its own links resolve. */
 export interface Embedded {
@@ -59,6 +63,9 @@ export interface Embedded {
   embed?: RenderOptions["embed"];
   /** Its path in this root, for following its links from there; absent in another root. */
   from?: string;
+  /** Where its pictures are (12.14): a path from its folder, a name from where it is — files; one on the internet as
+   *  it's written. Without it, its pictures stay `▣ alt`. */
+  locate?: (from: PictureSource) => FoundPicture | null;
 }
 
 interface Ctx {
@@ -485,8 +492,7 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
   else {
     ctx.embedded.add(e.path);
     const inner: Ctx = {
-      // Its pictures stay `▣ alt`: their paths are the embedded note's, not this one's.
-      opts: { ...ctx.opts, resolveLink: e.resolveLink ?? ctx.opts.resolveLink, embed: e.embed, picture: undefined },
+      opts: { ...ctx.opts, resolveLink: e.resolveLink ?? ctx.opts.resolveLink, embed: e.embed, picture: embeddedPictures(ctx.opts.picture, e.locate) },
       links: ctx.links,
       headings: [],
       definitions: new Map(),
@@ -504,6 +510,15 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
   const placed = body.map((l) => ({ ...l, src, heading: undefined, spans: l.spans.map((s) => ({ ...s, src: undefined })) }));
   // Too narrow to indent: no bar, the body keeps the room (the title row still says whose it is).
   return [...head, ...(narrow ? placed : prefixed(placed, [{ text: `${g.quoteBar} `, role: "embed", attrs: 0 }], src, true))];
+}
+
+/** An embedded note's pictures (12.14): found from where it is, then drawn as the note showing it draws its own. */
+function embeddedPictures(picture: RenderOptions["picture"], locate: Embedded["locate"]): RenderOptions["picture"] {
+  if (!picture || !locate) return undefined;
+  return (from, width) => {
+    const found = locate(from);
+    return found ? picture(found, width) : null;
+  };
 }
 
 function codeBlock(value: string, lang: string | null, src: number, ctx: Ctx, width: number, firstLine = 1): Line[] {

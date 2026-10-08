@@ -68,10 +68,12 @@ as their text; the URL follows as `<url>` when colour is off or `render.show_url
 Images render as `▣ alt`, and alt text plus path stay the floor (12.x): a picture alone in its paragraph, a local
 image file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty graphics or
 sixel, as OpenTUI finds it asking, never blocks of colour — sized to the text width, its proportions kept, at most 12
-rows; scrolled half out of sight, the part that shows. One embedded by name, `![[dal.png]]` (12.13), is drawn the same,
-found as its link is (anywhere in the root, the nearest of two; two tied, neither): Obsidian's `|300` its width in
-pixels, `|240x180` the box it fits in, its proportions kept. Beside text, in an embedded note, or where the terminal
-draws none (`[render] images = "never"` too): `▣ alt` alone. A picture on the internet (12.12) is fetched only as
+rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of sight, the part
+that shows. One embedded by name, `![[dal.png]]` (12.13), is drawn the same, found as its link is (anywhere in the
+root, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box it fits in, its
+proportions kept. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name
+from its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none
+(`[render] images = "never"` too): `▣ alt` alone. A picture on the internet (12.12) is fetched only as
 `[render] images_remote` says: `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from
 its site without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor
 drawn, `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most
@@ -100,7 +102,7 @@ a list item's, at the end of its text, or the table, quote or list on the line b
 
 - **Where it is.** Its rows are all at the embed's line: the note shown has the cursor, anchors and the lens; the
   embedded note's headings stay out of its outline. Its links are its own: their status, and where they lead, are
-  as from the embedded note (`[sibling](sibling.md)` beside it, `[x](#heading)` its own heading).
+  as from the embedded note (`[sibling](sibling.md)` beside it, `[x](#heading)` its own heading); its pictures too.
 - **Loops and depth.** An embed of a note already being drawn says `embeds itself: not drawn again`; embeds inside
   embeds go three deep, then `embedded deeper still: enter opens it`. A heading or block that isn't there says so.
 - **Current.** It's read from its file (re-read when that changes); a block holding one is never kept in the render

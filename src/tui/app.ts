@@ -43,7 +43,7 @@ import { describeLanding, Graph, type LinkProblem } from "../core/graph.ts";
 import { type LintCmd, type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
 import { type Layout, type LayoutLink, type Picture, posOfSrc, srcAt } from "../core/layout/ir.ts";
 import type { PictureSource } from "../core/layout/render.ts";
-import { layoutWidth } from "../core/note.ts";
+import { layoutWidth, pictureLocator } from "../core/note.ts";
 import { stateDir, userConfigFile } from "../core/paths.ts";
 import {
   SESSION_BRANCHES,
@@ -972,49 +972,40 @@ export class App {
   }
 
   /**
-   * A note's pictures (12.x): where the terminal draws images and `[render] images` lets it, a local image file —
-   * by the note's own folder — sized to the width, its proportions kept, at most PICTURE_ROWS rows; else none, `▣ alt`
-   * the floor. An image on the internet stays its link.
+   * A note's pictures (12.x): where the terminal draws images and `[render] images` lets it, an image file — found as
+   * the note's links are, or fetched from the internet (12.12) — sized to the width, its proportions kept, at most
+   * PICTURE_ROWS rows; else none, `▣ alt` the floor.
    */
   picturesFor(buf: NoteBuffer): { picture: (from: PictureSource, width: number) => Picture | null; key: string } | undefined {
     const images = this.host.images;
     if (this.config.render.images === "never" || !images?.supported()) return undefined;
     const cell = images.cell() ?? { width: 8, height: 16 };
-    const dir = dirname(buf.abs);
+    // Found as the note's links are (12.13): a path from its folder, a name from where it is.
+    const locate = pictureLocator(this.graph, buf.rel, buf.abs);
     return {
       key: `${cell.width}x${cell.height}`,
-      picture: (from, width) => {
+      picture: (asked, width) => {
+        const from = locate(asked);
+        if (!from) return null;
         let path: string;
-        if ("name" in from) {
-          // By name (12.13), `![[dal.png]]`: the file a link to it finds — two of the name tied, neither.
-          const r = buf.rel !== null ? this.graph.resolveLink({ kind: "embed", target: from.name }, buf.rel) : null;
-          if (r?.resolvedKind !== "file") return null;
-          path = isAbsolute(r.path!) ? r.path! : this.graph.abs(r.path!);
-        } else {
+        if ("file" in from) path = from.file;
+        else {
+          // On the internet (12.12): drawn once it's fetched — `show` fetches it now, `ask` (its site said yes to) too.
           const url = from.url;
-          if (!url) return null;
-          if (/^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//")) {
-            // On the internet (12.12): drawn once it's fetched — `show` fetches it now, `ask` (its site said yes to) too.
-            const remote = this.config.render.images_remote;
-            const site = RemoteImages.site(url);
-            if (remote === "never" || !site) return null;
-            const cached = this.remoteImages.cached(url);
-            if (!cached) {
-              if (remote === "show" || this.remoteImages.sites.has(site)) this.remoteImages.fetch(url);
-              return null;
-            }
-            path = cached;
-          } else
-            try {
-              path = resolve(dir, decodeURI(url.split(/[?#]/)[0]!));
-            } catch {
-              return null;
-            }
+          const remote = this.config.render.images_remote;
+          const site = RemoteImages.site(url);
+          if (remote === "never" || !site) return null;
+          const cached = this.remoteImages.cached(url);
+          if (!cached) {
+            if (remote === "show" || this.remoteImages.sites.has(site)) this.remoteImages.fetch(url);
+            return null;
+          }
+          path = cached;
         }
         const size = images.size(path);
         if (!size || size.width <= 0 || size.height <= 0) return null;
         // Obsidian's size, `|300` its width and `|240x180` the box it fits in, in place of its own; proportions kept.
-        const px = "name" in from && from.size ? Math.min(from.size.width, from.size.height ? (from.size.height * size.width) / size.height : Infinity) : size.width;
+        const px = "file" in from && from.size ? Math.min(from.size.width, from.size.height ? (from.size.height * size.width) / size.height : Infinity) : size.width;
         let cols = Math.max(1, Math.min(width, Math.ceil(px / cell.width)));
         let rows = Math.max(1, Math.ceil((cols * cell.width * size.height) / size.width / cell.height));
         if (rows > PICTURE_ROWS) {

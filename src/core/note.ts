@@ -2,13 +2,13 @@
 // Shared by `slipbox render` and the TUI so both show exactly the same thing.
 
 import { statSync } from "node:fs";
-import { basename, dirname, isAbsolute, relative } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import type { Heading, ListItem, Paragraph, Root, RootContent } from "mdast";
 import { readText } from "./fsutil.ts";
 import type { Glyphs } from "./glyphs.ts";
 import type { Graph } from "./graph.ts";
 import type { Layout, LinkStatus } from "./layout/ir.ts";
-import { type RenderCache, type RenderOptions, renderTree } from "./layout/render.ts";
+import { type FoundPicture, type PictureSource, type RenderCache, type RenderOptions, renderTree } from "./layout/render.ts";
 import { headingLabel, headingText, type ParsedNote, parseMarkdown } from "./parse.ts";
 import { findHeading } from "./landing.ts";
 import { findVaultRoot } from "./vault.ts";
@@ -47,6 +47,31 @@ export function linkResolver(graph: Graph | null, rel: string | null) {
         return "ambiguous";
       default:
         return "unresolved";
+    }
+  };
+}
+
+/**
+ * Where a note's pictures are (12.x), found as its links are: a path from its folder (`abs`'s), a name (`![[dal.png]]`,
+ * 12.13) from where it is in its root (`rel` in `g`; neither, no names) — files; one on the internet as it's written; a
+ * file found already as it is. Null where there's none.
+ */
+export function pictureLocator(g: Graph | null, rel: string | null, abs: string): (from: PictureSource) => FoundPicture | null {
+  return (from) => {
+    if ("file" in from) return from;
+    if ("name" in from) {
+      // Two of the name tied: neither.
+      const r = g && rel !== null ? g.resolveLink({ kind: "embed", target: from.name }, rel) : null;
+      if (r?.resolvedKind !== "file") return null;
+      return { file: isAbsolute(r.path!) ? r.path! : g!.abs(r.path!), size: from.size };
+    }
+    const url = from.url;
+    if (!url) return null;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//")) return from;
+    try {
+      return { file: resolve(dirname(abs), decodeURI(url.split(/[?#]/)[0]!)), size: null };
+    } catch {
+      return null;
     }
   };
 }
@@ -160,6 +185,7 @@ export function embedder(g: Graph, fromRel: string): RenderOptions["embed"] {
       ...(nodes ? {} : { missing: heading ? `no heading "${heading}" in ${name}` : `no block ^${block} in ${name}` }),
       resolveLink: there && rel ? linkResolver(there, rel) : undefined,
       embed: there && rel ? embedder(there, rel) : undefined,
+      locate: pictureLocator(there, rel, abs),
       ...(isAbsolute(r.path) ? {} : { from: r.path }),
     };
   };
