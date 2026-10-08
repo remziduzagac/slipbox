@@ -16,7 +16,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { onLoaded } from "../core/lazy.ts";
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
-import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { climbsOut, ensureDir, landsInside, readJson, readRegular, readText, realTarget, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
@@ -42,9 +43,10 @@ import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { describeLanding, Graph, type LinkProblem } from "../core/graph.ts";
 import { type LintCmd, type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
 import { type Layout, type LayoutLink, type Picture, posOfSrc, srcAt } from "../core/layout/ir.ts";
-import type { PictureSource } from "../core/layout/render.ts";
+import type { PictureSource, RenderOptions } from "../core/layout/render.ts";
+import { type Rasterizer, rasterizer } from "../core/svg.ts";
 import { layoutWidth, pictureLocator } from "../core/note.ts";
-import { stateDir, userConfigFile } from "../core/paths.ts";
+import { cacheHome, stateDir, userConfigFile } from "../core/paths.ts";
 import {
   SESSION_BRANCHES,
   type SessionTab,
@@ -60,7 +62,7 @@ import {
   TOP,
   type UiOverride,
 } from "../core/position.ts";
-import { applyColorOverrides, listThemes, loadTheme, type Role, type Theme } from "../core/theme/index.ts";
+import { applyColorOverrides, colorHex, listThemes, loadTheme, type Role, type Theme } from "../core/theme/index.ts";
 import { normKey } from "../core/links.ts";
 import { openVault, Reach } from "../core/reach.ts";
 import { buildContext } from "../core/context.ts";
@@ -94,7 +96,7 @@ import { registerActions } from "./actions.ts";
 import { newParseCache, parseMarkdown } from "../core/parse.ts";
 import { parseInBackground } from "../core/parse-pool.ts";
 import { BACKGROUND_PARSE, NoteBuffer } from "./buffer.ts";
-import { RemoteImages } from "./images.ts";
+import { fitPicture, RemoteImages, svgText } from "./images.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, clampPos, ordered, type Pos, snap, wordAt } from "./cursor.ts";
 import { drawApp, type Geometry } from "./draw.ts";
@@ -166,6 +168,10 @@ export interface Host {
 
 /** A picture's most rows (12.x): a big screenshot never takes the page over. */
 export const PICTURE_ROWS = 12;
+/** At most this many rows for what slipbox draws as a picture (12.16, 12.17): a diagram may be tall. */
+export const DRAWING_ROWS = 60;
+/** A terminal's words are about this much of its cell's height: what a drawing's are sized to. */
+const TEXT_EM = 0.8;
 /** How long a view rests from quick scrolling before its pictures are drawn again (12.7). */
 export const PICTURES_REST_MS = 120;
 
@@ -1003,20 +1009,24 @@ export class App {
 
   /**
    * A note's pictures (12.x): where the terminal draws images and `[render] images` lets it, an image file — found as
-   * the note's links are, or fetched from the internet (12.12) — sized to the width, its proportions kept, at most
-   * PICTURE_ROWS rows; else none, `▣ alt` the floor.
+   * the note's links are, or fetched from the internet (12.12); an SVG rasterised (12.15) — sized to the width, its
+   * proportions kept, at most PICTURE_ROWS rows; else none, `▣ alt` the floor. And what slipbox draws as pictures, as
+   * chosen (12.16, 12.17): `drawings`, in the theme's colours.
    */
-  picturesFor(buf: NoteBuffer): { picture: (from: PictureSource, width: number) => Picture | null; key: string } | undefined {
+  picturesFor(buf: NoteBuffer): { picture: (from: PictureSource, width: number) => Picture | null; key: string; drawings?: RenderOptions["drawings"] } | undefined {
     const images = this.host.images;
     if (this.config.render.images === "never" || !images?.supported()) return undefined;
     const cell = images.cell() ?? { width: 8, height: 16 };
+    const drawings = this.drawings();
     // Found as the note's links are (12.13): a path from its folder, a name from where it is.
     const locate = pictureLocator(this.graph, buf.rel, buf.abs);
     return {
-      key: `${cell.width}x${cell.height}`,
+      key: `${cell.width}x${cell.height}|${JSON.stringify(drawings)}`,
+      drawings,
       picture: (asked, width) => {
         const from = locate(asked);
         if (!from) return null;
+        if ("svg" in from) return this.drawnPicture(from.svg, from.kind, width, cell);
         let path: string;
         if ("file" in from) path = from.file;
         else {
@@ -1032,19 +1042,76 @@ export class App {
           }
           path = cached;
         }
-        const size = images.size(path);
+        // An SVG (12.15): rasterised at the size it's drawn, its own size its natural one.
+        const svg = svgText(path);
+        const r = svg ? rasterizer() : null;
+        const size = svg ? (r?.size(svg) ?? null) : images.size(path);
         if (!size || size.width <= 0 || size.height <= 0) return null;
         // Obsidian's size, `|300` its width and `|240x180` the box it fits in, in place of its own; proportions kept.
         const px = "file" in from && from.size ? Math.min(from.size.width, from.size.height ? (from.size.height * size.width) / size.height : Infinity) : size.width;
-        let cols = Math.max(1, Math.min(width, Math.ceil(px / cell.width)));
-        let rows = Math.max(1, Math.ceil((cols * cell.width * size.height) / size.width / cell.height));
-        if (rows > PICTURE_ROWS) {
-          rows = PICTURE_ROWS;
-          cols = Math.max(1, Math.min(width, Math.round((rows * cell.height * size.width) / size.height / cell.width)));
-        }
-        return { src: path, cols, rows };
+        const { cols, rows } = fitPicture(px, (px * size.height) / size.width, width, cell, PICTURE_ROWS);
+        if (!svg) return { src: path, cols, rows };
+        const png = r && this.rasterized(svg, cols * cell.width, r);
+        return png ? { src: png, cols, rows } : null;
       },
     };
+  }
+
+  /**
+   * What slipbox draws as pictures (12.16, 12.17), as `[render] mermaid` and `math` choose, in the theme's colours —
+   * `ansi:N` as xterm has it, `default` the theme's kind's.
+   */
+  private drawings(): NonNullable<RenderOptions["drawings"]> {
+    const r = this.config.render;
+    const t = this.theme;
+    const dark = t.kind === "dark";
+    const fg = colorHex(t.roles.text.fg ?? t.fg, dark ? "#d4d4d4" : "#1f1f1f");
+    const of = (role: Role) => colorHex(t.roles[role].fg ?? fg, fg);
+    const colors = { bg: colorHex(t.bg, dark ? "#1e1e1e" : "#ffffff"), fg, line: of("table_border"), accent: of("link"), muted: of("dim"), math: of("math") };
+    return { mermaid: r.mermaid === "picture", math: r.math === "picture", colors };
+  }
+
+  /**
+   * A drawing slipbox made (12.16, 12.17) as a picture: a diagram as big as the terminal's words would be beside it
+   * (its words are 13 pixels; a terminal's, about 0.8 of its cell's height), a display's maths too (MathJax's sizes are
+   * in `ex`). A diagram wider than the text is drawn smaller; maths isn't — it's text then. Null while resvg loads.
+   */
+  private drawnPicture(svg: string, kind: "diagram" | "math", width: number, cell: { width: number; height: number }): Picture | null {
+    const r = rasterizer();
+    if (!r) return null;
+    const em = cell.height * TEXT_EM;
+    let w: number;
+    let h: number;
+    if (kind === "math") {
+      const ex = (attr: string) => Number(new RegExp(`<svg[^>]*\\b${attr}="([\\d.]+)ex"`).exec(svg)?.[1] ?? Number.NaN) * em * 0.431;
+      [w, h] = [ex("width"), ex("height")];
+      if (!(w > 0 && h > 0) || w > width * cell.width) return null;
+    } else {
+      // (resvg refuses an SVG without a size.)
+      const size = r.size(svg);
+      if (!size) return null;
+      [w, h] = [(size.width * em) / 13, (size.height * em) / 13];
+    }
+    const { cols, rows } = fitPicture(w, h, width, cell, DRAWING_ROWS);
+    const png = this.rasterized(svg, cols * cell.width, r);
+    return png ? { src: png, cols, rows } : null;
+  }
+
+  /** An SVG rasterised `px` wide (12.15), kept in the cache by its text and width: the PNG's path, or null. */
+  private rasterized(svg: string, px: number, r: Rasterizer): string | null {
+    const dir = join(cacheHome(), "images");
+    const file = join(dir, `svg-${createHash("sha256").update(svg).digest("hex").slice(0, 32)}-${px}.png`);
+    if (existsSync(file)) return file;
+    const png = r.png(svg, px);
+    if (!png) return null;
+    try {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(`${file}.part`, png);
+      renameSync(`${file}.part`, file);
+      return file;
+    } catch {
+      return null;
+    }
   }
 
   private configFiles(): string[] {

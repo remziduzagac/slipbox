@@ -29,6 +29,8 @@ export interface NoteRenderOptions {
   showUrls: boolean;
   /** Its pictures (12.x): see RenderOptions.picture. */
   picture?: RenderOptions["picture"];
+  /** What's drawn as a picture by choice (12.16, 12.17): see RenderOptions.drawings. */
+  drawings?: RenderOptions["drawings"];
 }
 
 export function linkResolver(graph: Graph | null, rel: string | null) {
@@ -58,7 +60,8 @@ export function linkResolver(graph: Graph | null, rel: string | null) {
  */
 export function pictureLocator(g: Graph | null, rel: string | null, abs: string): (from: PictureSource) => FoundPicture | null {
   return (from) => {
-    if ("file" in from) return from;
+    // Found already, or drawn by slipbox (12.16, 12.17).
+    if ("file" in from || "svg" in from) return from;
     if ("name" in from) {
       // Two of the name tied: neither.
       const r = g && rel !== null ? g.resolveLink({ kind: "embed", target: from.name }, rel) : null;

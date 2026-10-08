@@ -104,6 +104,8 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/lazy.ts` | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
 | `core/diagrams.ts` | 12.10 | Mermaid drawn in box drawing (loaded on first use), or why it's its code |
 | `core/math.ts` | 12.11 | maths as Unicode text: a formula, a display's rows (aligned, cases, matrices) |
+| `core/svg.ts` | 12.15 | SVG rasterised (resvg, on first use), a machine's font for words; CSS variables resolved |
+| `core/typeset.ts` | 12.17 | a display's maths typeset as an SVG (MathJax, loaded on first use) |
 | `core/syntax.ts` | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
 | `core/landing.ts` | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
 | `core/note.ts` | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
@@ -179,6 +181,8 @@ package — no build toolchain):
 | `beautiful-mermaid` **1.1.3, pinned exactly** (with `elkjs`) | Mermaid drawn in the terminal's characters (12.10) |
 | `remark-math` 6.0.0 | `$…$` and `$$` blocks read (12.11); KaTeX comes with it, never imported |
 | `unicodeit` 0.7.5 | LaTeX's symbols as Unicode (12.11); its table is the LaTeX Project Public License's too |
+| `@resvg/resvg-wasm` 2.6.2 | SVG rasterised (12.15), as WebAssembly: no native build; MPL-2.0 |
+| `mathjax-full` 3.2.2 | a display's maths typeset as a picture (12.17); Apache-2.0 |
 
 The grammars npm ships no WebAssembly for — Swift, SCSS, Vue, Astro, Dockerfile — are built from their sources at
 pinned commits into `grammars/` by `scripts/build-grammars.ts`, committed with their licences (`grammars/README.md`).

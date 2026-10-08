@@ -691,9 +691,9 @@ it. Each item ends with its tests listed for the user's approval before any is r
 | 12.12 | **Prototype.** Images online: `ask` (the link; `enter` asks — once, or its site), `show`, `never` |
 | 12.13 | **Prototype.** Obsidian's `![[picture.png]]`: found as its link is; `\|300`, `\|240x180` its size |
 | 12.14 | **Prototype.** A picture in an embedded note: found from where that note is, drawn inside its frame |
-| 12.15 | SVG drawn: rasterised by resvg (WebAssembly) into the image cache — `![x](d.svg)`, `12.16`, `12.17` |
-| 12.16 | Mermaid as a picture, by choice where images work (`12.10` the default), its SVG through `12.15` |
-| 12.17 | Display maths (`$$…$$`) typeset by MathJax as a picture, by choice, through `12.15`; inline stays text |
+| 12.15 | **Prototype.** SVG drawn: rasterised by resvg (WebAssembly) into the cache — `![x](d.svg)`, `12.16`, `12.17` |
+| 12.16 | **Prototype.** Mermaid as a picture, by choice where images work (`12.10` the default), via `12.15` |
+| 12.17 | **Prototype.** Display maths typeset by MathJax as a picture, by choice, via `12.15`; inline stays text |
 
 Decided 2026-10-08 with the user: the terminal's own first — Unicode drawing and text, the default where images work
 too — then pictures, by choice; every picture slipbox makes in the theme's colours. Maths is in. The order: `12.7`

@@ -3,6 +3,7 @@
 // doesn't draw, a diagram that doesn't parse, or one wider than the text, the block is its code, saying why.
 
 import { lazy, load } from "./lazy.ts";
+import { flattenVars } from "./svg.ts";
 import { stringWidth } from "./width.ts";
 
 type Mermaid = typeof import("beautiful-mermaid");
@@ -19,6 +20,30 @@ export function mermaid(): Mermaid | null {
 /** Wait for it (the CLI, which has no frame to draw again). */
 export function loadMermaid(): Promise<Mermaid | null> {
   return load(MERMAID, importMermaid);
+}
+
+/** The theme's colours a diagram is drawn in as a picture (12.16), as `#rrggbb`. */
+export interface DrawingColors {
+  bg: string;
+  fg: string;
+  line: string;
+  accent: string;
+  muted: string;
+}
+
+/**
+ * A Mermaid diagram as an SVG for a picture (12.16): in the theme's colours, its background the terminal's, its words in
+ * `family`; its CSS variables put in place (resvg reads none). Null while the library loads, where it doesn't draw it,
+ * or where there's no font for its words.
+ */
+export function mermaidSvg(source: string, colors: DrawingColors, family: string | null): string | null {
+  const m = mermaid();
+  if (!m || !family) return null;
+  try {
+    return flattenVars(m.renderMermaidSVG(source, { ...colors, font: family, transparent: true }));
+  } catch {
+    return null;
+  }
 }
 
 /** A diagram's rows, or why it's its code instead. */

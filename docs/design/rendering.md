@@ -71,7 +71,9 @@ sixel, as OpenTUI finds it asking, never blocks of colour — sized to the text 
 rows, from where its `▣ alt` text starts (past a list's bullet, a quote's bar); scrolled half out of sight, the part
 that shows. One embedded by name, `![[dal.png]]` (12.13), is drawn the same, found as its link is (anywhere in the
 root, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box it fits in, its
-proportions kept. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name
+proportions kept. An SVG (12.15) — by its name, or a picture fetched told by how it starts — is rasterised by resvg
+(WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it fetches nothing it
+links to. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name
 from its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none
 (`[render] images = "never"` too): `▣ alt` alone. Over Kitty graphics a picture is sent compressed and placed by
 its id (12.7); OpenTUI numbers ids by the order pictures are drawn in, so scrolling one into view above others sends
@@ -91,7 +93,12 @@ words in the text's colour and its lines in the table's border colour; in ASCII 
 spacing, it's drawn closer together; still too wide, a kind it doesn't draw (`pie`, `gantt`), or one it can't read:
 its code, the label saying why (`mermaid — too wide to draw`, `mermaid — not drawn: pie`). Every row is at the
 block's line, so the lens opens on its source. The library loads the first time a note holds a diagram; until it's in
-(a moment), the block is its code, then drawn — and `slipbox render` waits for it.
+(a moment), the block is its code, then drawn — and `slipbox render` waits for it. Where pictures are drawn,
+`[render] mermaid = "picture"` (12.16) draws it as one instead: `beautiful-mermaid`'s SVG in the theme's colours (its
+text, the table's border, a link's accent, `dim`; `ansi:N` as xterm has it), the terminal's background showing
+through, its words in a sans font found on the machine (DejaVu, Liberation, Noto, Arial, Helvetica) — as big as the
+terminal's own, at most the text's width and 60 rows, centred: its first row the indent before it, where the cursor
+stops. No font found, a kind it doesn't draw, or pictures not drawn: in characters, as above.
 
 **Maths** (12.11): `$…$` in text and `$$` blocks, read as Obsidian reads them — not maths where the `$`s hold a space
 just inside them, or a digit follows the closing one (`costs $5 and $10` is money; `$$…$$` in text is maths). Drawn as
@@ -99,11 +106,13 @@ Unicode text in the `math` role: commands as the characters Unicode has (`unicod
 `\mathbb{R}` ℝ), sub- and superscripts whole where Unicode has each character (`x^2` x², `\sum_{i=1}^n` ∑ᵢ₌₁ⁿ), else
 bracketed (`e^{i\pi}` e^(iπ)); fractions `a/b` (`(a+b)/c`, `½`), roots `√x` `∛x`, accents over each letter, `\text`'s
 words, functions as their names (`\log`), spacing and sizing done first — a command is given to the table only by its
-exact name. A display's rows are centred together: `aligned` rows lined up at their `&`,
-`cases` braced (`⎧ ⎩`), matrices bracketed (`⎛ ⎝`), what's written around one on its middle row. A formula with a
-command none of this knows is as written — in text `$…$`, a display its LaTeX, highlighted (`math — as written`; one
-wider than the text, `math — too wide to draw`). What's read from a note as text — a heading's (so its slug), a task's,
-a link's, a footnote's — keeps its maths as written.
+exact name. A display's rows are centred together: `aligned` rows lined up at their `&`, `cases` braced (`⎧ ⎩`),
+matrices bracketed (`⎛ ⎝`), what's written around one on its middle row. A formula with a command none of this knows is
+as written — in text `$…$`, a display its LaTeX, highlighted (`math — as written`; one wider than the text, `math — too
+wide to draw`). Where pictures are drawn, `[render] math = "picture"` (12.17) typesets a display as one, by MathJax, in
+the `math` role's colour, as big as the words beside it, centred; one it can't read, or wider than the text, is text as
+above. Inline maths is always text. What's read from a note as text — a heading's (so its slug), a task's, a link's, a
+footnote's — keeps its maths as written.
 
 **Wikilinks are links** (`21.3`; `20.2` drew them as text): `[[name]]` shows its name, `[[name|text]]` its text,
 `[[name#Heading]]` `name › Heading`, `[[name#^id]]` `name ^id` — never inside code, nor after a `\`. A picture

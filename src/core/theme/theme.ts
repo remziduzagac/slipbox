@@ -106,6 +106,24 @@ export function blend(a: Color, b: Color, t: number): Color {
   return toHex([x[0] * t + y[0] * (1 - t), x[1] * t + y[1] * (1 - t), x[2] * t + y[2] * (1 - t)]);
 }
 
+/** The 16 colours xterm gives `ansi:0`–`ansi:15` by default. */
+const XTERM16 = ["#000000", "#cd0000", "#00cd00", "#cdcd00", "#0000ee", "#cd00cd", "#00cdcd", "#e5e5e5", "#7f7f7f", "#ff0000", "#00ff00", "#ffff00", "#5c5cff", "#ff00ff", "#00ffff", "#ffffff"];
+
+/**
+ * A colour as `#rrggbb`, for what slipbox draws as a picture (12.16, 12.17): `ansi:N` as xterm has it by default (a
+ * terminal's own palette may differ), `default` as `fallback`.
+ */
+export function colorHex(c: Color, fallback: string): string {
+  if (c.startsWith("#")) return c;
+  const n = c.startsWith("ansi:") ? Number(c.slice(5)) : -1;
+  if (!(n >= 0 && n <= 255)) return fallback;
+  if (n < 16) return XTERM16[n]!;
+  if (n >= 232) return toHex([8 + (n - 232) * 10, 8 + (n - 232) * 10, 8 + (n - 232) * 10]);
+  const level = (v: number) => (v ? 55 + v * 40 : 0);
+  const k = n - 16;
+  return toHex([level(Math.floor(k / 36)), level(Math.floor(k / 6) % 6), level(k % 6)]);
+}
+
 export function luminance(hex: Color): number {
   if (!hex.startsWith("#")) return 0;
   const [r, g, b] = hexToRgb(hex).map((v) => {

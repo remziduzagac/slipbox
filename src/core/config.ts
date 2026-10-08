@@ -33,6 +33,11 @@ export interface Config {
     /** A picture on the internet (12.12): `ask` — its link, `enter` asks (this once, or its site) and fetches it —
      *  `show`, fetched as the note opens, or `never` fetched nor drawn. Fetched, it's cached: drawn without asking. */
     images_remote: "ask" | "show" | "never";
+    /** A Mermaid diagram (12.10, 12.16): drawn in the terminal's characters — `text` — or, where pictures are drawn, as
+     *  one in the theme's colours. */
+    mermaid: "text" | "picture";
+    /** A display's maths (12.11, 12.17): Unicode text, or, where pictures are drawn, typeset as one. Text's in text. */
+    math: "text" | "picture";
   };
   walk: {
     extensions: string[];
@@ -250,7 +255,7 @@ export interface Config {
 
 export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
-  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document", code_cells: "box", images: "auto", images_remote: "ask" },
+  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document", code_cells: "box", images: "auto", images_remote: "ask", mermaid: "text", math: "text" },
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
   links: { style: "auto", path: "auto", extension: "auto" },
   trust: { roots: [] },
@@ -312,6 +317,8 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.code_cells": ["box", "band"],
   "render.images": ["auto", "never"],
   "render.images_remote": ["ask", "show", "never"],
+  "render.mermaid": ["text", "picture"],
+  "render.math": ["text", "picture"],
   "capture.location": ["state", "vault"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],

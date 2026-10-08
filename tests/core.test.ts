@@ -10,6 +10,9 @@ import { loadConfig } from "../src/core/config.ts";
 import { LinkIndex } from "../src/core/links.ts";
 import { headingsOf, newParseCache, noteChunks, parseLegacy, parseMarkdown, slugify, visit } from "../src/core/parse.ts";
 import { mathRows, mathText } from "../src/core/math.ts";
+import { flattenVars, loadRasterizer, looksLikeSvg } from "../src/core/svg.ts";
+import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
+import { loadTypesetter } from "../src/core/typeset.ts";
 import { extractFromSource } from "../src/core/graph.ts";
 import { lintCommand, lintLoadsCode, parseLint, runLint } from "../src/core/lint.ts";
 import { isTrusted, setTrust, setTrustedRoots, trustFile, trustOf } from "../src/core/trust.ts";
@@ -20,7 +23,7 @@ import { layoutSource } from "../src/core/layout/source.ts";
 import { expandTabs, sanitize, sanitizeMap } from "../src/core/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
-import { blend, luminance } from "../src/core/theme/theme.ts";
+import { blend, colorHex, luminance } from "../src/core/theme/theme.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/tasks.ts";
@@ -1367,6 +1370,54 @@ describe("maths as Unicode text (12.11)", () => {
     // Money's text is as written.
     const p = parseMarkdown("costs $5 and $10").tree.children[0]!;
     expect("children" in p && p.children.map((c) => ("value" in c ? c.value : "")).join("")).toBe("costs $5 and $10");
+  });
+});
+
+describe("SVG drawn (12.15), and what slipbox draws as pictures (12.16, 12.17)", () => {
+  const pngWidth = (png: Uint8Array) => new DataView(png.buffer, png.byteOffset).getUint32(16);
+  test("CSS custom properties put in place: the root's and the style's, fallbacks, color-mix — an @import gone", () => {
+    const svg = `<svg style="--bg:#000000;--fg:#ffffff;background:var(--bg)"><style>@import url('https://x.invalid/f.css');
+      svg { /* derived */ --_mid: color-mix(in srgb, var(--fg) 25%, var(--bg)); --_line: var(--line, var(--_mid)); }</style>
+      <rect fill="var(--_line)" stroke="var(--accent, #123456)"/><text fill="var(--nope)">t</text></svg>`;
+    const flat = flattenVars(svg);
+    expect(flat).not.toMatch(/var\(|color-mix|@import/);
+    expect(flat).toContain('<rect fill="#404040" stroke="#123456"/>');
+    expect(flat).toContain('<text fill="none">'); // nothing to give it: not drawn, never black
+    expect(flattenVars('<svg><rect fill="color-mix(in srgb, #ff0000, #0000ff)"/></svg>')).toContain('fill="#800080"');
+  });
+  test("a colour as #rrggbb for a picture: ansi:N as xterm has it, default the fallback", () => {
+    expect(colorHex("#abcdef", "#000000")).toBe("#abcdef");
+    expect([colorHex("ansi:1", "x"), colorHex("ansi:21", "x"), colorHex("ansi:16", "x"), colorHex("ansi:244", "x")]).toEqual(["#cd0000", "#0000ff", "#000000", "#808080"]);
+    expect([colorHex("default", "#111111"), colorHex("ansi:300", "#222222")]).toEqual(["#111111", "#222222"]);
+  });
+  test("an SVG told by how its text starts: a declaration, comments, a doctype before it", () => {
+    for (const head of ['<svg xmlns="x">', '<?xml version="1.0"?>\n<!-- made -->\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "x">\n<svg>', "  <SVG>"]) expect(looksLikeSvg(head)).toBe(true);
+    for (const head of ["<html><svg>", "\x89PNG\r\n", "<svgx>"]) expect(looksLikeSvg(head)).toBe(false);
+  });
+  test("rasterised: its own size, drawn as a PNG the width asked; what isn't an SVG, null", async () => {
+    const r = (await loadRasterizer())!;
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="#ff0000"/></svg>';
+    expect(r.size(svg)).toEqual({ width: 40, height: 20 });
+    expect(pngWidth(r.png(svg, 80)!)).toBe(80);
+    expect(r.size("not an svg")).toBeNull();
+    expect(r.png("<svg", 10)).toBeNull();
+  });
+  test("a Mermaid diagram as an SVG in the theme's colours, nothing left for resvg to resolve; maths typeset in its colour", async () => {
+    await loadMermaid();
+    const colors = { bg: "#101010", fg: "#e0e0e0", line: "#707070", accent: "#3080f0", muted: "#909090" };
+    const svg = mermaidSvg("graph TD\n  A --> B", colors, "DejaVu Sans")!;
+    expect(svg).not.toMatch(/var\(|color-mix/);
+    expect(svg).toContain("#e0e0e0");
+    expect(svg).toContain("DejaVu Sans");
+    expect(svg).not.toMatch(/<svg[^>]*background/); // the terminal's own background shows through
+    expect(mermaidSvg("pie title X", colors, "DejaVu Sans")).toBeNull();
+    expect(mermaidSvg("graph TD\n  A --> B", colors, null)).toBeNull(); // no font for its words: not a picture
+    const t = (await loadTypesetter())!;
+    const m = t("\\frac{a}{b}", "#ff0000")!;
+    expect(m).toMatch(/<svg[^>]*width="[\d.]+ex"/);
+    expect(m).toContain('fill="#ff0000"');
+    expect(m).not.toContain("currentColor");
+    expect(t("\\nope x", "#ff0000")).toBeNull(); // not red ink: text, or as written
   });
 });
 

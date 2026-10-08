@@ -1,7 +1,7 @@
 // The TUI model, driven headlessly: keys in (canonical names, as the keymap writes them),
 // TextCanvas out. Plus one run through OpenTUI's test renderer for real key parsing.
 
-import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { UNSAFE } from "../src/core/sanitize.ts";
 import { tmpdir } from "node:os";
@@ -12,7 +12,7 @@ import { canonKey, canonSeq } from "../src/core/commands.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
-import { type ListOverlay, App, type Host, PICTURES_REST_MS } from "../src/tui/app.ts";
+import { type ListOverlay, App, type Host, PICTURE_ROWS, PICTURES_REST_MS } from "../src/tui/app.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
@@ -20,6 +20,11 @@ import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src
 import { crumbLayout } from "../src/tui/draw.ts";
 import { type Layout, type Line, srcAt } from "../src/core/layout/ir.ts";
 import { load } from "../src/core/lazy.ts";
+import { loadRasterizer } from "../src/core/svg.ts";
+import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
+import { loadTypesetter } from "../src/core/typeset.ts";
+import { colorHex } from "../src/core/theme/theme.ts";
+import { svgText } from "../src/tui/images.ts";
 import { cells } from "../src/tui/cursor.ts";
 import { offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
@@ -7016,6 +7021,92 @@ describe("pictures (12.x)", () => {
     const starts = [...altAt(layout, "▣ listed"), ...altAt(layout, "▣ quoted")];
     expect(starts.every((x) => x > 0)).toBe(true);
     expect(drawnAt(h)).toEqual(starts);
+  });
+  describe("SVG drawn, and what slipbox draws as pictures (12.15–12.17)", () => {
+    beforeAll(async () => {
+      await Promise.all([loadRasterizer(), loadMermaid(), loadTypesetter()]);
+    });
+    const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#3080f0"/></svg>';
+    const pngWidth = (path: string) => new DataView(readFileSync(path).buffer).getUint32(16);
+    const at = async (note: string, config?: (c: Config) => void, files: Record<string, string> = {}, cell = { width: 8, height: 16 }) => {
+      const root = makeVault();
+      writeFileSync(join(root, "draw.md"), note);
+      for (const [f, text] of Object.entries(files)) writeFileSync(join(root, f), text);
+      const h = await harness({ root, open: "draw.md", width: 100, height: 60, config, images: { ...terminal(true, {})!, cell: () => cell } });
+      return { h, layout: h.app.currentLayout(h.app.view!) };
+    };
+    test("an SVG picture: rasterised into the cache at the size it's drawn, from its own size — as a PNG would be", async () => {
+      const { layout } = await at("# D\n\n![chart](chart.svg)\n", undefined, { "chart.svg": SVG });
+      // 400 × 200 in 8 × 16 cells: 50 by 13, past 12 rows — 12 rows, 48 columns, rasterised 384 pixels wide.
+      const p = layout.lines.find((l) => l.image)!.image!;
+      // (Bun's toMatchObject writes an asymmetric matcher into what it matched: `src` read first.)
+      const src = p.src;
+      expect(p).toMatchObject({ cols: 48, rows: 12, src: expect.stringMatching(/svg-[0-9a-f]{32}-384\.png$/) });
+      expect(pngWidth(src)).toBe(384);
+    });
+    test("a picture fetched and kept by its address is told an SVG by how it starts; a name says it", () => {
+      const dir = mkdtempSync(join(sandbox, "svgs-"));
+      const write = (name: string, text: string) => (writeFileSync(join(dir, name), text), join(dir, name));
+      expect(svgText(write("0123abcd", `<?xml version="1.0"?>\n${SVG}`))).toContain("<svg");
+      expect(svgText(write("4567abcd", "\x89PNG\r\n\x1a\n"))).toBeNull();
+      expect(svgText(write("d.svg", SVG))).toBe(SVG);
+      expect(svgText(write("d.png", SVG))).toBeNull(); // a PNG by its name: not read as text
+      expect(svgText(write("big.svg", `${SVG}${" ".repeat(9 * 1024 * 1024)}`))).toBeNull(); // past 8 MB: not drawn
+    });
+    const mermaid = "# D\n\n```mermaid\ngraph TD\n  A --> B\n```\n";
+    test("Mermaid as a picture, as chosen: in the theme's colours, centred — drawn past its indent; as text by default", async () => {
+      // A table's border unlike the frame's, to tell them apart.
+      const { h, layout } = await at(mermaid, (c) => ((c.render.mermaid = "picture"), (c.colors = { table_border: "#a1b2c3" })));
+      const first = layout.lines.findIndex((l) => l.image);
+      const p = layout.lines[first]!.image!;
+      expect(p.src).toMatch(/svg-[0-9a-f]{32}-\d+\.png$/);
+      const indent = layout.lines[first]!.spans[0]!.text.length;
+      expect(indent).toBeGreaterThan(1); // narrower than the text: room either side
+      const pane = h.app.geometry!.panes[0]!;
+      expect(h.canvas().images.map((im) => im.x - pane.textX)).toEqual([indent]);
+      // The theme's colours, each its role's.
+      const t = h.app.theme;
+      const fg = colorHex(t.roles.text.fg ?? t.fg, "?");
+      const of = (r: keyof typeof t.roles) => colorHex(t.roles[r].fg ?? fg, fg);
+      const pictures = h.app.picturesFor(h.app.view!.buf)!;
+      expect(pictures.drawings!.colors).toEqual({ bg: colorHex(t.bg, "?"), fg, line: of("table_border"), accent: of("link"), muted: of("dim"), math: of("math") });
+      expect(pictures.drawings!.colors.line).toBe("#a1b2c3");
+      // As big as the terminal's words would be: its 13-pixel words at 0.8 of the cell's height — a Retina one's here.
+      const retina = await at(mermaid, (c) => (c.render.mermaid = "picture"), {}, { width: 16, height: 34 });
+      const drawn = retina.layout.lines.find((l) => l.image)!.image!;
+      const r = (await loadRasterizer())!;
+      const colors = retina.h.app.picturesFor(retina.h.app.view!.buf)!.drawings!.colors;
+      const own = r.size(mermaidSvg("graph TD\n  A --> B", colors, r.family)!)!;
+      expect(drawn.cols).toBe(Math.ceil((own.width * 34 * 0.8) / 13 / 16));
+      const text = await at(mermaid);
+      expect(text.layout.lines.some((l) => l.image)).toBe(false);
+      expect(text.h.app.picturesFor(text.h.app.view!.buf)!.key).not.toBe(pictures.key); // a choice changed: laid out again
+    });
+    test("a drawing taller than a picture may be: scrolled past its top, the rest still drawn", async () => {
+      const chain = Array.from({ length: 8 }, (_, i) => `N${i}[Step ${i}]`).join(" --> ");
+      const { h, layout } = await at(`# D\n\n\`\`\`mermaid\ngraph TD\n  ${chain}\n\`\`\`\n`, (c) => (c.render.mermaid = "picture"));
+      const first = layout.lines.findIndex((l) => l.image);
+      const rows = layout.lines[first]!.image!.rows;
+      expect(rows).toBeGreaterThan(PICTURE_ROWS + 2);
+      h.app.view!.top = first + PICTURE_ROWS + 1;
+      expect(h.canvas().images).toEqual([expect.objectContaining({ skip: PICTURE_ROWS + 1, total: rows })]);
+    });
+    test("rasterised once: drawn from the cache after, not rasterised again", async () => {
+      const { h, layout } = await at("# D\n\n![chart](chart.svg)\n", undefined, { "chart.svg": SVG });
+      const src = layout.lines.find((l) => l.image)!.image!.src;
+      writeFileSync(src, "kept");
+      h.app.view!.buf.invalidateLayouts();
+      h.app.relayoutAll();
+      expect(h.app.currentLayout(h.app.view!).lines.find((l) => l.image)!.image!.src).toBe(src);
+      expect(readFileSync(src, "utf8")).toBe("kept");
+    });
+    test("a display's maths as a picture, as chosen: typeset at the size of the words beside it; wider than the text, text", async () => {
+      const { layout } = await at("# M\n\n$$\n\\frac{a}{b}\n$$\n", (c) => (c.render.math = "picture"));
+      expect(layout.lines.find((l) => l.image)!.image).toMatchObject({ cols: 2, rows: 2, src: expect.stringMatching(/svg-.*\.png$/) });
+      const long = Array.from({ length: 60 }, (_, i) => `x_{${i}}`).join(" + ");
+      const wide = await at(`# M\n\n$$\n${long}\n$$\n`, (c) => (c.render.math = "picture"));
+      expect(wide.layout.lines.some((l) => l.image)).toBe(false);
+    });
   });
   describe("on the internet (12.12)", () => {
     const sizes: Host["images"] = { supported: () => true, size: () => ({ width: 400, height: 200 }), cell: () => ({ width: 8, height: 16 }) };

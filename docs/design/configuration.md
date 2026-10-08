@@ -75,6 +75,8 @@ code = "document"              # code opens as a document (24.x: TS, TSX, JS, Py
 code_cells = "box"             # the code view's cells: box (framed) | band (on a tint); space u c switches
 images = "auto"                # a note's pictures, where the terminal draws images (Kitty, sixel) | never
 images_remote = "ask"          # pictures online: ask (enter asks, then fetches) | show | never (not fetched)
+mermaid = "text"               # a Mermaid diagram in the terminal's characters | picture (where pictures are drawn)
+math = "text"                  # a display's maths as Unicode text | picture: typeset (where pictures are drawn)
 
 [walk]
 extensions = ["md", "markdown"] # a note's extensions (a note is markdown, whatever its name)

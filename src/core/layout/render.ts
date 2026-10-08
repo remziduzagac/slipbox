@@ -6,7 +6,9 @@
 import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table, TableCell } from "mdast";
 import type { Glyphs } from "../glyphs.ts";
 import { type CellLink, type DataComment, type DataField, fieldLink, type TreePlace } from "../data.ts";
-import { drawMermaid, MERMAID } from "../diagrams.ts";
+import { type DrawingColors, drawMermaid, MERMAID, mermaidSvg } from "../diagrams.ts";
+import { RESVG, rasterizer } from "../svg.ts";
+import { MATHJAX, typesetter } from "../typeset.ts";
 import { mathRows, mathText } from "../math.ts";
 import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
@@ -38,6 +40,8 @@ export interface RenderOptions {
   /** A picture alone in its paragraph (12.x), drawn under its `▣ alt` line: its file and the cells it takes at most
    *  `width` columns wide — or null (not a local image, no images here): its `▣ alt` alone, the floor. */
   picture?: (from: PictureSource, width: number) => Picture | null;
+  /** Mermaid and a display's maths drawn as pictures (12.16, 12.17), as chosen where pictures are: in these colours. */
+  drawings?: { mermaid: boolean; math: boolean; colors: DrawingColors & { math: string } };
 }
 
 /**
@@ -46,7 +50,12 @@ export interface RenderOptions {
  * (its width) or `|240x180` (the box it fits in) gives it. Or a file already found: an embedded note's picture, found
  * from where that note is (12.14).
  */
-export type PictureSource = { url: string } | { name: string; size: PictureSize | null } | { file: string; size: PictureSize | null };
+export type PictureSource =
+  | { url: string }
+  | { name: string; size: PictureSize | null }
+  | { file: string; size: PictureSize | null }
+  /** An SVG slipbox drew (12.16, 12.17): a diagram's, sized as the terminal's words are, or a display's maths. */
+  | { svg: string; kind: "diagram" | "math" };
 export type PictureSize = { width: number; height: number | null };
 /** A picture found: its file, or its address on the internet. */
 export type FoundPicture = Exclude<PictureSource, { name: string }>;
@@ -302,6 +311,16 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
     case "paragraph":
       return paragraph(node.children, srcOf(node), ctx, width, base);
     case "math": {
+      // Typeset as a picture, where that's chosen (12.17).
+      if (ctx.opts.drawings?.math && ctx.opts.picture) {
+        const r = rasterizer();
+        const t = typesetter();
+        if (!r) ctx.pending.add(RESVG);
+        if (!t) ctx.pending.add(MATHJAX);
+        const svg = r && t ? t(node.value, ctx.opts.drawings.colors.math) : null;
+        const drawn = svg ? drawing(svg, "math", srcOf(node), ctx, width) : null;
+        if (drawn) return drawn;
+      }
       // A display (12.11): its rows in Unicode, centred together; one that can't be, or wider than the text, as written.
       const rows = mathRows(sanitize(node.value));
       const widest = rows ? Math.max(...rows.map(stringWidth)) : 0;
@@ -316,6 +335,14 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
       const span = node.position ? node.position.end.line - node.position.start.line + 1 : 0;
       const fenced = !node.position || span > node.value.split("\n").length;
       if (node.lang && /^mermaid$/i.test(node.lang)) {
+        // As a picture, where that's chosen (12.16).
+        if (ctx.opts.drawings?.mermaid && ctx.opts.picture) {
+          const r = rasterizer();
+          const svg = r ? mermaidSvg(sanitize(node.value), ctx.opts.drawings.colors, r.family) : null;
+          if (!r) ctx.pending.add(RESVG);
+          const rows = svg ? drawing(svg, "diagram", srcOf(node), ctx, width) : null;
+          if (rows) return rows;
+        }
         // Drawn in the terminal's own characters (12.10); its code where it can't be, saying why.
         const d = drawMermaid(sanitize(node.value), width, ctx.opts.glyphs.mode === "ascii");
         if (!d) ctx.pending.add(MERMAID);
@@ -423,7 +450,7 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
     if (e) out.push(...embedFrame(r, e, at, ctx, width));
     else {
       const from = pictureSource(r.node);
-      out.push(...pictureRows(r.node, from && ctx.opts.picture ? ctx.opts.picture(from, width) : null, at, ctx, width, base));
+      out.push(...pictureRows(r.node, from ? askPicture(from, width, ctx) : null, at, ctx, width, base));
     }
   }
   return out;
@@ -435,16 +462,23 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
  * picture drawn (no images here, none local): then it's a paragraph like any, `▣ alt` the floor.
  */
 function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: number, base: Style): Line[] | null {
-  const pictureOf = ctx.opts.picture;
-  if (!pictureOf) return null;
+  if (!ctx.opts.picture) return null;
   const images = children.flatMap((c) => {
     const from = pictureSource(c);
     return from ? [{ c, from }] : [];
   });
   if (!images.length || images.length !== children.filter((c) => !(c.type === "break" || (c.type === "text" && !c.value.trim()))).length) return null;
-  const drawn = images.map(({ c, from }) => ({ c, p: pictureOf(from, width) }));
+  const drawn = images.map(({ c, from }) => ({ c, p: askPicture(from, width, ctx) }));
   if (!drawn.some((d) => d.p)) return null;
   return drawn.flatMap(({ c, p }) => pictureRows(c, p, c.position?.start.line ?? src, ctx, width, base));
+}
+
+/** A picture asked for: an SVG's (12.15) waits for its rasteriser — the layout says so, and is made again when it's in. */
+function askPicture(from: PictureSource, width: number, ctx: Ctx): Picture | null {
+  if (!ctx.opts.picture) return null;
+  const named = "url" in from ? from.url.split(/[?#]/)[0]! : "name" in from ? from.name : "";
+  if (/\.svg$/i.test(named) && !rasterizer()) ctx.pending.add(RESVG);
+  return ctx.opts.picture(from, width);
 }
 
 /** A picture's `▣ alt` line (anything else's reference), then — where it's drawn — the rows its image is drawn over:
@@ -541,6 +575,18 @@ function embeddedPictures(picture: RenderOptions["picture"], locate: Embedded["l
     const found = locate(from);
     return found ? picture(found, width) : null;
   };
+}
+
+/**
+ * A drawing slipbox makes as a picture (12.16, 12.17), centred: its first row holds the indent before it — where the
+ * cursor stops, the lens opening on the block's source — the rest are the rows it's drawn over. Null where there's no
+ * picture of it (pictures aren't drawn, it's wider than the text): then it's drawn in text.
+ */
+function drawing(svg: string, kind: "diagram" | "math", src: number, ctx: Ctx, width: number): Line[] | null {
+  const p = ctx.opts.picture?.({ svg, kind }, width - 1);
+  if (!p) return null;
+  const indent = Math.max(1, Math.floor((width - p.cols) / 2));
+  return Array.from({ length: p.rows }, (_, k): Line => (k === 0 ? { spans: [{ text: " ".repeat(indent), role: "text", attrs: 0 }], src, image: p } : { spans: [], src, decor: true }));
 }
 
 /** A diagram drawn in text (12.10), every row at its block's line: its lines in the table's border colour, its words

@@ -12,7 +12,7 @@ import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { sanitize, sanitizeMap } from "../core/sanitize.ts";
 import type { GitState } from "../core/gitops.ts";
-import { type App, type HistoryRow, LEFT_VIEWS, PICTURE_ROWS, type ListItem, type ListOverlay, type PromptOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
+import { type App, DRAWING_ROWS, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, type PromptOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { countWords } from "../core/words.ts";
 import type { CommentLink } from "../core/syntax.ts";
@@ -1181,7 +1181,7 @@ function offsetMarks(line: Line, ranges: { from: number; to: number }[] | undefi
 
 /**
  * A note's pictures (12.x), over the blank rows the layout keeps for them: each from its first row on screen — one whose
- * top is scrolled away (up to PICTURE_ROWS rows back), cut there — to its last on screen.
+ * top is scrolled away (up to DRAWING_ROWS rows back, the tallest a picture is), cut there — to its last on screen.
  */
 function drawPictures(c: Canvas, layout: Layout, shown: number[], top: number, x: number, textW: number): void {
   for (let i = 0; i < shown.length; i++) {
@@ -1189,7 +1189,7 @@ function drawPictures(c: Canvas, layout: Layout, shown: number[], top: number, x
     let start = row;
     let pic = layout.lines[row]?.image;
     if (!pic && i === 0)
-      for (let k = 1; k < PICTURE_ROWS && row - k >= 0; k++) {
+      for (let k = 1; k < DRAWING_ROWS && row - k >= 0; k++) {
         const p = layout.lines[row - k]?.image;
         if (!p) continue;
         if (row - k + p.rows > row) [start, pic] = [row - k, p];

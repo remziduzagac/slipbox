@@ -3,9 +3,49 @@
 // is an image's or nothing: a timeout, a size cap, an image's content type.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { extname, join } from "node:path";
 import { cacheHome } from "../core/paths.ts";
+import { looksLikeSvg } from "../core/svg.ts";
+
+/** An SVG read for drawing is at most this big (12.15). */
+const MAX_SVG_BYTES = 8 * 1024 * 1024;
+
+/**
+ * A picture's cells at most `width` columns wide: `w` × `h` pixels in cells of the terminal's, proportions kept, at most
+ * `maxRows` rows (narrower then).
+ */
+export function fitPicture(w: number, h: number, width: number, cell: { width: number; height: number }, maxRows: number): { cols: number; rows: number } {
+  let cols = Math.max(1, Math.min(width, Math.ceil(w / cell.width)));
+  let rows = Math.max(1, Math.ceil((cols * cell.width * h) / w / cell.height));
+  if (rows > maxRows) {
+    rows = maxRows;
+    cols = Math.max(1, Math.min(width, Math.round((rows * cell.height * w) / h / cell.width)));
+  }
+  return { cols, rows };
+}
+
+/**
+ * A file's text where it's an SVG (12.15) — by its name (`.svg`), or, a picture fetched and kept by its address (no
+ * name of its own, 12.12), by how it starts — else null; null too where it's larger than 8 MB.
+ */
+export function svgText(path: string): string | null {
+  const ext = extname(path).toLowerCase();
+  if (ext && ext !== ".svg") return null;
+  try {
+    if (statSync(path).size > MAX_SVG_BYTES) return null;
+    if (!ext) {
+      const head = Buffer.alloc(512);
+      const fd = openSync(path, "r");
+      const n = readSync(fd, head, 0, 512, 0);
+      closeSync(fd);
+      if (!looksLikeSvg(head.subarray(0, n).toString("utf8"))) return null;
+    }
+    return readFileSync(path, "utf8");
+  } catch {
+    return null;
+  }
+}
 
 /** The most an image may weigh, and how long its fetch may take. */
 const MAX_BYTES = 20 * 1024 * 1024;

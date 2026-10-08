@@ -11,6 +11,8 @@ import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layo
 import { dataLinks, parseData } from "../src/core/data.ts";
 import { classify } from "../src/core/filetypes.ts";
 import { loadMermaid } from "../src/core/diagrams.ts";
+import { loadRasterizer } from "../src/core/svg.ts";
+import { loadTypesetter } from "../src/core/typeset.ts";
 import { parseNoteFile } from "../src/core/readers.ts";
 import { findHeading, headingFragment } from "../src/core/landing.ts";
 import { headingsOf, parseMarkdown } from "../src/core/parse.ts";
@@ -868,5 +870,74 @@ describe("maths (12.11)", () => {
     expect(src.spans.some((s) => s.role.startsWith("syn_"))).toBe(true);
     const wide = text(render(`$$\n${Array.from({ length: 30 }, (_, i) => `x_${i}`).join(" + ")}\n$$\n`));
     expect(wide[0]).toMatch(/math — too wide to draw $/);
+  });
+});
+
+describe("drawn as pictures, by choice (12.16, 12.17)", () => {
+  beforeAll(async () => {
+    await Promise.all([loadMermaid(), loadRasterizer(), loadTypesetter()]);
+  });
+  const colors = { bg: "#101010", fg: "#e0e0e0", line: "#707070", accent: "#3080f0", muted: "#909090", math: "#ff00ff" };
+  const text = (l: Layout) => l.lines.map((x) => x.spans.map((s) => s.text).join(""));
+  const draw = (md: string, drawings: { mermaid: boolean; math: boolean }, drawn = true) => {
+    const asked: { from: PictureSource; width: number }[] = [];
+    const picture = (from: PictureSource, width: number) => (asked.push({ from, width }), drawn && "svg" in from ? { src: "/drawn.png", cols: 10, rows: 3 } : null);
+    return { l: renderMarkdown(md, { width: 40, glyphs: unicode, showUrls: false, picture, drawings: { ...drawings, colors } }), asked };
+  };
+  const mermaid = "```mermaid\ngraph TD\n  A --> B\n```\n\nafter\n";
+  test("a Mermaid diagram as a picture: asked for at a column less, centred — its first row the indent, the cursor's stop", () => {
+    const { l, asked } = draw(mermaid, { mermaid: true, math: false });
+    expect(asked).toEqual([{ from: { svg: expect.stringContaining("<svg"), kind: "diagram" }, width: 39 }]);
+    expect((asked[0]!.from as { svg: string }).svg).toContain("#e0e0e0"); // the theme's colours
+    const rows = l.lines.slice(0, 3);
+    expect(rows[0]).toMatchObject({ src: 1, image: { src: "/drawn.png", cols: 10, rows: 3 }, spans: [{ text: " ".repeat(15), role: "text" }] });
+    expect(rows.slice(1).every((x) => x.decor && !x.spans.length && x.src === 1)).toBe(true);
+    expect(text(l).at(-1)).toBe("after");
+  });
+  test("one as wide as it can be still leaves a column before it: the cursor's stop", () => {
+    const picture = () => ({ src: "/wide.png", cols: 39, rows: 2 });
+    const l = renderMarkdown(mermaid, { width: 40, glyphs: unicode, showUrls: false, picture, drawings: { mermaid: true, math: false, colors } });
+    expect(l.lines[0]).toMatchObject({ spans: [{ text: " " }], image: { cols: 39 } });
+  });
+  test("not chosen, or no picture of it (pictures not drawn, too big): drawn in the terminal's characters", () => {
+    for (const { l } of [draw(mermaid, { mermaid: false, math: true }), draw(mermaid, { mermaid: true, math: false }, false)]) {
+      expect(l.lines.some((x) => x.image)).toBe(false);
+      expect(text(l).some((r) => /│\s+A\s+│/.test(r))).toBe(true);
+    }
+  });
+  test("a display's maths as a picture: typeset in the maths colour, centred; inline maths stays text; not chosen, text", () => {
+    const md = "Inline $x^2$.\n\n$$\n\\frac{a}{b}\n$$\n";
+    const { l, asked } = draw(md, { mermaid: false, math: true });
+    expect(asked).toEqual([{ from: { svg: expect.stringContaining('fill="#ff00ff"'), kind: "math" }, width: 39 }]);
+    expect(text(l)[0]).toBe("Inline x².");
+    expect(l.lines.find((x) => x.image)).toMatchObject({ src: 3, spans: [{ text: " ".repeat(15) }] });
+    expect(draw(md, { mermaid: true, math: false }).l.lines.some((x) => x.image)).toBe(false);
+    // One MathJax can't read: the text of it, as without pictures.
+    const bad = draw("$$\n\\nope\n$$\n", { mermaid: false, math: true });
+    expect(bad.asked).toEqual([]);
+    expect(text(bad.l)[0]).toMatch(/math — as written $/);
+  });
+  test("drawn while what draws it loads: in text, the layout saying what it waited for", () => {
+    // A process of its own: here they're in already. A diagram, a display, an SVG picture, each on its own.
+    const script = `
+      import { renderMarkdown } from "./src/core/layout/render.ts";
+      import { glyphsFor } from "./src/core/glyphs.ts";
+      const colors = { bg: "#000000", fg: "#ffffff", line: "#777777", accent: "#0000ff", muted: "#999999", math: "#ffffff" };
+      const picture = (from) => ("svg" in from ? { src: "/p.png", cols: 4, rows: 2 } : null);
+      const opts = { width: 40, glyphs: glyphsFor("unicode"), showUrls: false, picture, drawings: { mermaid: true, math: true, colors } };
+      const seen = JSON.parse(process.env.MD).map((md) => {
+        const l = renderMarkdown(md, opts);
+        return { pending: [...(l.pending ?? [])].sort(), images: l.lines.filter((x) => x.image).length };
+      });
+      console.log(JSON.stringify(seen));
+    `;
+    const MD = JSON.stringify(["```mermaid\ngraph TD\n  A --> B\n```\n", "$$\nx\n$$\n", "![d](d.svg)\n"]);
+    const r = Bun.spawnSync(["bun", "-e", script], { cwd: join(import.meta.dir, ".."), env: { ...process.env, MD } });
+    expect(r.stderr.toString()).toBe("");
+    expect(JSON.parse(r.stdout.toString())).toEqual([
+      { pending: ["mermaid", "resvg"], images: 0 },
+      { pending: ["mathjax", "resvg"], images: 0 },
+      { pending: ["resvg"], images: 0 },
+    ]);
   });
 });

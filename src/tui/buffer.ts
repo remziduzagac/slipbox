@@ -456,11 +456,11 @@ export class NoteBuffer {
   }
 
   /** The note laid out; `pictures` (12.x): how its pictures are drawn, and a key that changes when they would. */
-  layout(width: number, glyphs: Glyphs, showUrls: boolean, graph: Graph | null, pictures?: { picture: NonNullable<NoteRenderOptions["picture"]>; key: string }): Layout {
+  layout(width: number, glyphs: Glyphs, showUrls: boolean, graph: Graph | null, pictures?: { picture: NonNullable<NoteRenderOptions["picture"]>; key: string; drawings?: NoteRenderOptions["drawings"] }): Layout {
     const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${pictures?.key ?? "-"}`;
     let l = this.layouts.get(key);
     if (!l) {
-      l = layoutNote(this.parsed, graph, this.rel, { width, glyphs, showUrls, ...(pictures ? { picture: pictures.picture } : {}) }, this.renderCache);
+      l = layoutNote(this.parsed, graph, this.rel, { width, glyphs, showUrls, ...(pictures ? { picture: pictures.picture, drawings: pictures.drawings } : {}) }, this.renderCache);
       for (const p of l.embedded ?? []) this.embedded.add(p);
       // Keep the last few widths (a drag back and forth, a toggle and back): evict the oldest.
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);
