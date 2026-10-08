@@ -72,6 +72,9 @@ export async function runTui(argv: string[]): Promise<number> {
     enableMouseMovement: true,
     targetFps: 60,
     autoFocus: false,
+    // Pictures sent compressed (12.7): OpenTUI numbers them by the order they're drawn in, so one is sent again when
+    // those above it in view change — a third of the bytes, measured scrolling the pictures demo.
+    kittyImageTransport: "zlib",
   });
 
   let resolveDone: (code: number) => void = () => {};

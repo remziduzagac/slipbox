@@ -683,7 +683,7 @@ it. Each item ends with its tests listed for the user's approval before any is r
 | 12.4 | **Dropped.** No half-block fallback: where a terminal draws no images, `▣ alt` and its link (decided) |
 | 12.5 | **constraint** alt text plus path is the floor — a note never becomes unreadable |
 | 12.6 | **Prototype.** Sizing from cell pixel geometry: the text width, proportions kept, at most 12 rows |
-| 12.7 | Transmit once, place by id — OpenTUI's Kitty output sends with an id, places by it: to confirm, scrolling |
+| 12.7 | **Done** (on the wire). Sent compressed (zlib), placed by id; ids by draw order, OpenTUI's: re-sent on scroll |
 | 12.8 | **Prototype.** Scroll behaviour — a picture cut where it scrolls out of sight |
 | 12.9 | **Prototype.** Decode cache keyed by path and mtime |
 | 12.10 | Mermaid as Unicode drawing (`beautiful-mermaid`, no browser): flowchart, state, sequence, class, ER, XY |
@@ -697,7 +697,7 @@ it. Each item ends with its tests listed for the user's approval before any is r
 
 Decided 2026-10-08 with the user: the terminal's own first — Unicode drawing and text, the default where images work
 too — then pictures, by choice; every picture slipbox makes in the theme's colours. Maths is in. The order: `12.7`
-confirmed, then `12.10`, `12.11`, `12.15`, `12.16`, `12.17`. A Mermaid kind `beautiful-mermaid` doesn't draw, or a
+checked, then `12.10`, `12.11`, `12.15`, `12.16`, `12.17`. A Mermaid kind `beautiful-mermaid` doesn't draw, or a
 diagram that doesn't parse, stays its code block; a formula, its source. Passed over: `mermaid-cli` (a headless
 Chromium per diagram), `mermaid-ascii` (labelled nodes broken, `docs/idea.md`).
 

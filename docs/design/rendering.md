@@ -73,7 +73,9 @@ that shows. One embedded by name, `![[dal.png]]` (12.13), is drawn the same, fou
 root, the nearest of two; two tied, neither): Obsidian's `|300` its width in pixels, `|240x180` the box it fits in, its
 proportions kept. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name
 from its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none
-(`[render] images = "never"` too): `▣ alt` alone. A picture on the internet (12.12) is fetched only as
+(`[render] images = "never"` too): `▣ alt` alone. Over Kitty graphics a picture is sent compressed and placed by
+its id (12.7); OpenTUI numbers ids by the order pictures are drawn in, so scrolling one into view above others sends
+those again — slipbox can't give a picture an id of its own. A picture on the internet (12.12) is fetched only as
 `[render] images_remote` says: `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from
 its site without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor
 drawn, `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most
