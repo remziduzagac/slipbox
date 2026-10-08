@@ -25,6 +25,10 @@ import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
 import { loadTypesetter } from "../src/core/typeset.ts";
 import { colorHex } from "../src/core/theme/theme.ts";
 import { svgText } from "../src/tui/images.ts";
+import { idColor, pictureId, placeholderRow, release, transmit } from "../src/tui/placeholders.ts";
+import { Pictures } from "../src/tui/opentui.ts";
+import { OptimizedBuffer } from "@opentui/core";
+import { inflateSync } from "node:zlib";
 import { cells } from "../src/tui/cursor.ts";
 import { offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
@@ -7021,6 +7025,130 @@ describe("pictures (12.x)", () => {
     const starts = [...altAt(layout, "▣ listed"), ...altAt(layout, "▣ quoted")];
     expect(starts.every((x) => x > 0)).toBe(true);
     expect(drawnAt(h)).toEqual(starts);
+  });
+  describe("as Kitty's Unicode placeholders (12.7)", () => {
+    const PH = "\u{10EEEE}";
+    test("a row of cells: the placeholder, its row's mark, its column's — Kitty's marks for 0, 1, 2", () => {
+      expect(placeholderRow(1, 3)).toBe(`${PH}\u030D\u0305${PH}\u030D\u030D${PH}\u030D\u030E`);
+      expect(placeholderRow(0, 1)).toBe(`${PH}\u0305\u0305`);
+      expect(idColor(42)).toBe("#00002a");
+      const id = pictureId("/p.png", 10, 3);
+      expect(id).toBe(pictureId("/p.png", 10, 3));
+      expect(id).toBeGreaterThan(0);
+      expect(id).toBeLessThanOrEqual(0xffffff);
+      expect(new Set([id, pictureId("/p.png", 11, 3), pictureId("/p.png", 10, 4), pictureId("/q.png", 10, 3)]).size).toBe(4);
+      // One whose hash would make it 0 — no id, to Kitty — is 1 (found by searching).
+      expect(pictureId("/p14964393.png", 1, 1)).toBe(1);
+    });
+    test("sent once, quietly: its pixels compressed in chunks with a virtual placement of its cells; let go by id", () => {
+      const parts = (s: string) => [...s.matchAll(/\x1b_G([^;]*);([^\x1b]*)\x1b\\/g)].map((m) => ({ keys: m[1]!, data: m[2]! }));
+      const small = parts(transmit(42, new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]), 2, 1, 3, 1));
+      expect(small.map((p) => p.keys)).toEqual(["a=T,U=1,f=32,o=z,s=2,v=1,i=42,c=3,r=1,q=2,m=0"]);
+      expect([...inflateSync(Buffer.from(small[0]!.data, "base64"))]).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+      // Noise: nothing for deflate to shorten, so several chunks.
+      let seed = 1;
+      const noise = Uint8Array.from({ length: 20_000 }, () => {
+        seed ^= seed << 13;
+        seed ^= seed >>> 17;
+        seed ^= seed << 5;
+        return seed & 255;
+      });
+      const big = parts(transmit(7, noise, 100, 50, 10, 4));
+      expect(big.length).toBeGreaterThan(2);
+      expect(big[0]!.keys.endsWith("m=1")).toBe(true);
+      expect(big.slice(1, -1).every((p) => p.keys === "m=1,q=2")).toBe(true);
+      expect(big.at(-1)!.keys).toBe("m=0,q=2");
+      expect(big.every((p) => p.data.length <= 4096)).toBe(true);
+      expect([...inflateSync(Buffer.from(big.map((p) => p.data).join(""), "base64"))]).toEqual([...noise]);
+      expect(release(42)).toBe("\x1b_Ga=d,d=I,i=42,q=2\x1b\\");
+    });
+    test("drawn through OpenTUI: sent once — scrolled, drawn again without sending — its cells text in its id's colour", async () => {
+      const r = (await loadRasterizer())!;
+      const file = join(mkdtempSync(join(sandbox, "ph-")), "p.png");
+      writeFileSync(file, r.png('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="32"><rect width="64" height="32" fill="#f00"/></svg>', 64)!);
+      const written: string[] = [];
+      const pictures = new Pictures(() => "kitty", { write: (s) => written.push(s), cell: () => ({ width: 8, height: 16 }) });
+      expect(pictures.usesPlaceholders()).toBe(true);
+      const buf = OptimizedBuffer.create(20, 6, "unicode");
+      // The frame's text, a line per row: a cell a cluster (its spans read placeholders as spaces; their colours are right).
+      const lines = () => {
+        const cells = [...new Intl.Segmenter().segment(new TextDecoder().decode(buf.getRealCharBytes()))].map((g) => g.segment);
+        return Array.from({ length: buf.height }, (_, y) => cells.slice(y * buf.width, (y + 1) * buf.width).join(""));
+      };
+      pictures.draw(buf, 2, 1, 4, 2, file, { skip: 0, total: 2 });
+      expect(written).toHaveLength(1);
+      // 64 × 32 pixels into 4 × 2 cells of 8 × 16: sent at the 32 × 16 it's drawn.
+      expect(written[0]).toContain(",s=32,v=16,");
+      expect(written[0]).toContain(",c=4,r=2,");
+      const id = pictureId(`${file}\u0000${statSync(file).mtimeMs}`, 4, 2);
+      expect(written[0]).toContain(`,i=${id},`);
+      expect(lines()[1]).toStartWith(`  ${placeholderRow(0, 4)} `);
+      expect(lines()[2]).toStartWith(`  ${placeholderRow(1, 4)} `);
+      const cells = buf.getSpanLines()[1]!.spans[1]!;
+      expect([cells.width, ...cells.fg.toInts().slice(0, 3)]).toEqual([4, (id >> 16) & 255, (id >> 8) & 255, id & 255]);
+      // Scrolled: its second row at the top — the same picture, nothing sent.
+      buf.clear();
+      pictures.draw(buf, 2, 0, 4, 1, file, { skip: 1, total: 2 });
+      expect(written).toHaveLength(1);
+      expect(lines()[0]).toStartWith(`  ${placeholderRow(1, 4)} `);
+      // Quitting lets it go.
+      pictures.releaseAll();
+      expect(written.at(-1)).toBe(release(id));
+      buf.destroy();
+    });
+    test("the oldest of more than 48 let go; with sixel, OpenTUI's own path — no placeholders", async () => {
+      const r = (await loadRasterizer())!;
+      const dir = mkdtempSync(join(sandbox, "ph-"));
+      const written: string[] = [];
+      const pictures = new Pictures(() => "kitty", { write: (s) => written.push(s), cell: () => ({ width: 8, height: 16 }) });
+      const buf = OptimizedBuffer.create(20, 4, "unicode");
+      const png = r.png('<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>', 8)!;
+      const files = Array.from({ length: 49 }, (_, i) => join(dir, `p${i}.png`));
+      for (const f of files) writeFileSync(f, png);
+      const idOf = (f: string) => pictureId(`${f}\u0000${statSync(f).mtimeMs}`, 1, 1);
+      for (const f of files.slice(0, 48)) pictures.draw(buf, 0, 0, 1, 1, f, { skip: 0, total: 1 });
+      // The first drawn again is the newest: the second is the oldest when the 49th comes.
+      pictures.draw(buf, 0, 0, 1, 1, files[0]!, { skip: 0, total: 1 });
+      pictures.draw(buf, 0, 0, 1, 1, files[48]!, { skip: 0, total: 1 });
+      expect(written.filter((w) => w.startsWith("\x1b_Ga=d"))).toEqual([release(idOf(files[1]!))]);
+      // Wider than its columns can be numbered: OpenTUI's own path.
+      const wide = OptimizedBuffer.create(400, 2, "unicode");
+      const sent = written.length;
+      pictures.draw(wide, 0, 0, 298, 1, files[2]!, { skip: 0, total: 1 });
+      expect(written.length).toBe(sent);
+      expect(new TextDecoder().decode(wide.getRealCharBytes())).not.toContain(PH);
+      wide.destroy();
+      const sixel = new Pictures(() => "sixel", { write: (s) => written.push(s), cell: () => ({ width: 8, height: 16 }) });
+      expect(sixel.usesPlaceholders()).toBe(false);
+      buf.clear();
+      const before = written.length;
+      sixel.draw(buf, 0, 0, 1, 1, files[1]!, { skip: 0, total: 1 });
+      expect(written.length).toBe(before);
+      expect(new TextDecoder().decode(buf.getRealCharBytes(true))).not.toContain(PH);
+      buf.destroy();
+    });
+  });
+  test("as placeholders, pictures are drawn at every step; else a wheel holds them back from its first tick until it rests", async () => {
+    const { h, v } = await open(true, undefined, 30);
+    let t = 10_000;
+    (h.app as unknown as { now: () => number }).now = () => t;
+    v.pictures = undefined;
+    const drawn = () => h.canvas().images.length > 0;
+    expect(drawn()).toBe(true);
+    // A wheel: held back from its first tick.
+    t += 1000;
+    h.app.handleMouse({ type: "scroll", x: 50, y: 10, button: 0, scroll: { direction: "down", delta: 1 } });
+    expect(v.top).toBeGreaterThan(0);
+    expect(drawn()).toBe(false);
+    t += PICTURES_REST_MS;
+    expect(drawn()).toBe(true);
+    // As placeholders: quick steps drawn too.
+    h.app.host.images!.placeholders = () => true;
+    for (let k = 0; k < 3; k++) {
+      t += 10;
+      v.top += 1;
+      expect(drawn()).toBe(true);
+    }
   });
   describe("SVG drawn, and what slipbox draws as pictures (12.15–12.17)", () => {
     beforeAll(async () => {

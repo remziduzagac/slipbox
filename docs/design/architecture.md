@@ -106,6 +106,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/math.ts` | 12.11 | maths as Unicode text: a formula, a display's rows (aligned, cases, matrices) |
 | `core/svg.ts` | 12.15 | SVG rasterised (resvg, on first use), a machine's font for words; CSS variables resolved |
 | `core/typeset.ts` | 12.17 | a display's maths typeset as an SVG (MathJax, loaded on first use) |
+| `tui/placeholders.ts` | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
 | `core/syntax.ts` | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
 | `core/landing.ts` | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
 | `core/note.ts` | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
@@ -201,7 +202,9 @@ OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `packa
 3. Launch the TUI and check what the adapter uses: `drawText` and `fillRect` output, key names
    (`keyName` in `tui/keys.ts`), paste, mouse and resize events, `widthMethod` (a wcwidth
    terminal's rows must not drift), `suspend`/`resume` (the `$EDITOR` hand-off),
-   `setTerminalTitle`, `setBackgroundColor`, `useMouse`, `copyToClipboardOSC52`, and `destroy`.
+   `setTerminalTitle`, `setBackgroundColor`, `useMouse`, `copyToClipboardOSC52`, and `destroy`. And pictures:
+   `NativeImage` (decode, `resize`, `raw`), `drawImage` for sixel, and the **private** `writeOut` that sends Kitty
+   placeholders' pictures in step with the frames (12.7) — still there, still ordered with the frame's output.
 4. Only `tui/opentui.ts` and `tui/run.ts` should need changes. If anything else does, the
    boundary has leaked; fix that first.
 

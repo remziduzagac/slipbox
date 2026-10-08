@@ -7,6 +7,7 @@ import { imageInfo, NativeImage, type OptimizedBuffer, Renderable, type RenderCo
 import type { CellStyle } from "../core/layout/style.ts";
 import type { Color } from "../core/theme/theme.ts";
 import { type Canvas, glyphCell } from "./canvas.ts";
+import { idColor, MAX_PLACEHOLDER_CELLS, pictureId, placeholderRow, release, transmit } from "./placeholders.ts";
 
 const colors = new Map<string, RGBA>();
 
@@ -41,7 +42,19 @@ function attrs(s: CellStyle): number {
 export class Pictures {
   private readonly sizes = new Map<string, { at: number; size: { width: number; height: number } | null }>();
   private readonly images = new Map<string, { at: number; image: NativeImage | null }>();
-  constructor(readonly protocol: () => "kitty" | "sixel" | null) {}
+  /** The pictures sent as Unicode placeholders (12.7), by id, the oldest first. */
+  private readonly sent = new Set<number>();
+  constructor(
+    readonly protocol: () => "kitty" | "sixel" | null,
+    /** Kitty graphics as Unicode placeholders (12.7): what writes to the terminal in step with the frames, and the
+     *  cell's size in pixels (a picture is sent that size). Without them, OpenTUI's own picture path. */
+    private readonly placeholders?: { write: (s: string) => void; cell: () => { width: number; height: number } | null },
+  ) {}
+
+  /** Whether pictures are drawn as Unicode placeholders: text that scrolls, nothing sent again (12.7). */
+  usesPlaceholders(): boolean {
+    return !!this.placeholders && this.protocol() === "kitty";
+  }
 
   size(path: string): { width: number; height: number } | null {
     const at = modified(path);
@@ -62,9 +75,57 @@ export class Pictures {
     const protocol = this.protocol();
     const image = protocol ? this.image(src) : null;
     if (!protocol || !image || rows <= 0) return;
+    if (this.usesPlaceholders() && cols <= MAX_PLACEHOLDER_CELLS && crop.total <= MAX_PLACEHOLDER_CELLS) {
+      const id = this.send(src, image, cols, crop.total);
+      if (id === null) return;
+      const fg = RGBA.fromHex(idColor(id));
+      for (let k = 0; k < rows; k++) buf.drawText(placeholderRow(crop.skip + k, cols), x, y + k, fg);
+      return;
+    }
     const top = Math.round((image.height * crop.skip) / crop.total);
     const tall = Math.max(1, Math.min(image.height - top, Math.round((image.height * rows) / crop.total)));
     buf.drawImage(image, x, y, cols, rows, undefined, undefined, 0, top, image.width, tall, protocol);
+  }
+
+  /**
+   * A picture sent to the terminal for placeholders, once — by its file, when it was changed, and its cells: scaled to
+   * the pixels it's drawn in (never up), with a virtual placement of those cells. The oldest let go past 48. Its id.
+   */
+  private send(src: string, image: NativeImage, cols: number, rows: number): number | null {
+    const id = pictureId(`${src}\u0000${this.images.get(src)?.at ?? 0}`, cols, rows);
+    if (this.sent.has(id)) {
+      // Used again: the newest.
+      this.sent.delete(id);
+      this.sent.add(id);
+      return id;
+    }
+    const cell = this.placeholders!.cell() ?? { width: 8, height: 16 };
+    const scale = Math.min(1, (cols * cell.width) / image.width, (rows * cell.height) / image.height);
+    const w = Math.max(1, Math.round(image.width * scale));
+    const h = Math.max(1, Math.round(image.height * scale));
+    let rgba: Uint8Array;
+    try {
+      const sized = w === image.width && h === image.height ? image : image.resize({ width: w, height: h });
+      const raw = sized.raw("rgba8");
+      rgba = raw.stride === w * 4 ? raw.data.slice(0, w * h * 4) : packRows(raw.data, raw.stride, w, h);
+      if (sized !== image) sized.dispose();
+    } catch {
+      return null;
+    }
+    this.placeholders!.write(transmit(id, rgba, w, h, cols, rows));
+    this.sent.add(id);
+    if (this.sent.size > 48) {
+      const old = this.sent.values().next().value!;
+      this.sent.delete(old);
+      this.placeholders!.write(release(old));
+    }
+    return id;
+  }
+
+  /** Every picture sent let go: slipbox is quitting, and the terminal keeps what it's sent until told. */
+  releaseAll(): void {
+    for (const id of this.sent) this.placeholders?.write(release(id));
+    this.sent.clear();
   }
 
   private image(src: string): NativeImage | null {
@@ -86,6 +147,13 @@ export class Pictures {
     this.images.set(src, { at, image });
     return image;
   }
+}
+
+/** Pixel rows, `stride` bytes apart, packed tight (`w` × 4 bytes each). */
+function packRows(data: Uint8Array, stride: number, w: number, h: number): Uint8Array {
+  const out = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) out.set(data.subarray(y * stride, y * stride + w * 4), y * w * 4);
+  return out;
 }
 
 function modified(path: string): number | null {

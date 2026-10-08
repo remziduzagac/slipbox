@@ -160,6 +160,8 @@ export interface Host {
     supported(): boolean;
     size(path: string): { width: number; height: number } | null;
     cell(): { width: number; height: number } | null;
+    /** Whether pictures are drawn as Unicode placeholders (12.7): text that scrolls — then never held back. */
+    placeholders?(): boolean;
   };
   /** The network, for pictures on the internet (12.12): fetch's own, unless the host stands in (the tests' never
    *  reaches it). */
@@ -688,6 +690,8 @@ export class App {
   toasts: Message[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private picturesTimer: ReturnType<typeof setTimeout> | null = null;
+  /** When the wheel last scrolled (12.7). */
+  private wheelAt = -Infinity;
 
   /** The newest message still showing. */
   get transient(): Message | null {
@@ -944,17 +948,19 @@ export class App {
   }
 
   /**
-   * Whether a view's pictures are drawn this frame (12.7). A step of scrolling draws them; quick steps after it — a key
-   * held, a wheel spun — don't, as each would send them to the terminal again (OpenTUI numbers pictures by the order
-   * they're drawn in, so what scrolls out of view renumbers the rest). Their rows stay; they're drawn once it rests.
+   * Whether a view's pictures are drawn this frame (12.7). As Unicode placeholders, always: they're text. Otherwise —
+   * OpenTUI's own picture path, which numbers pictures by the order they're drawn in and sends them again as that
+   * changes — a step of scrolling draws them, but quick steps after it (a key held) don't, nor a wheel's from its
+   * first tick: their rows stay, and they're drawn once it rests.
    */
   picturesNow(view: View): boolean {
+    if (this.host.images?.placeholders?.()) return true;
     const now = this.now();
     const p = view.pictures;
     // Not scrolled yet: its first step is a step, however soon it comes.
     if (!p) view.pictures = { top: view.top, at: -Infinity, wait: false };
     else if (p.top !== view.top) {
-      p.wait = now - p.at < PICTURES_REST_MS;
+      p.wait = now - p.at < PICTURES_REST_MS || now - this.wheelAt < PICTURES_REST_MS;
       p.top = view.top;
       p.at = now;
       if (p.wait) {
@@ -7051,6 +7057,8 @@ export class App {
   /** Everything visible is clickable (docs/design/keymap.md, "Mouse"). */
   handleMouse(ev: { type: string; x: number; y: number; button: number; scroll?: { direction: string; delta: number } }): void {
     if (ev.type !== "move") this.lastInputAt = this.now();
+    // A wheel spun (12.7): pictures held back from its first tick until it rests.
+    if (ev.type === "scroll") this.wheelAt = this.now();
     // A big note still parsing (15.1): a click or a scroll would land on its placeholder.
     if (this.parses.size) return;
     this.handleMouseNow(ev);

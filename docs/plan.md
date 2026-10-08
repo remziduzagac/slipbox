@@ -683,7 +683,7 @@ it. Each item ends with its tests listed for the user's approval before any is r
 | 12.4 | **Dropped.** No half-block fallback: where a terminal draws no images, `▣ alt` and its link (decided) |
 | 12.5 | **constraint** alt text plus path is the floor — a note never becomes unreadable |
 | 12.6 | **Prototype.** Sizing from cell pixel geometry: the text width, proportions kept, at most 12 rows |
-| 12.7 | **Done** (on the wire). Sent compressed (zlib), placed by id; ids by draw order, OpenTUI's: re-sent on scroll |
+| 12.7 | **Prototype.** Sent once, drawn as Kitty's Unicode placeholders: text that scrolls; sixel waits on scroll |
 | 12.8 | **Prototype.** Scroll behaviour — a picture cut where it scrolls out of sight |
 | 12.9 | **Prototype.** Decode cache keyed by path and mtime |
 | 12.10 | **Prototype.** Mermaid as Unicode drawing (`beautiful-mermaid`, no browser): flowchart, state, sequence, ER… |

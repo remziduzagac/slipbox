@@ -79,15 +79,21 @@ export async function runTui(argv: string[]): Promise<number> {
 
   let resolveDone: (code: number) => void = () => {};
   const done = new Promise<number>((r) => (resolveDone = r));
-  // Pictures (12.x): drawn where the terminal speaks Kitty graphics or sixel, as OpenTUI found it asking.
-  const pictures = new Pictures(() => {
-    const c = renderer.capabilities;
-    return c?.kitty_graphics ? "kitty" : c?.sixel ? "sixel" : null;
-  });
   const cell = () => {
     const r = renderer.resolution;
     return r && renderer.terminalWidth > 0 && renderer.terminalHeight > 0 ? { width: r.width / renderer.terminalWidth, height: r.height / renderer.terminalHeight } : null;
   };
+  // Pictures (12.x): drawn where the terminal speaks Kitty graphics or sixel, as OpenTUI found it asking. Kitty's as
+  // Unicode placeholders (12.7): sent once through OpenTUI's own output — so in step with its frames (a private
+  // method: checked at each OpenTUI upgrade) — then drawn as text.
+  const write = (s: string) => void (renderer as unknown as { writeOut(chunk: string): boolean }).writeOut(s);
+  const pictures = new Pictures(
+    () => {
+      const c = renderer.capabilities;
+      return c?.kitty_graphics ? "kitty" : c?.sixel ? "sixel" : null;
+    },
+    { write, cell },
+  );
 
   const app = new App({
     ...start,
@@ -96,11 +102,12 @@ export async function runTui(argv: string[]): Promise<number> {
       // SLIPBOX_CLIPBOARD=file keeps copies off the real clipboard (core/clipboard.ts).
       osc52: (text) => process.env.SLIPBOX_CLIPBOARD !== "file" && renderer.copyToClipboardOSC52(text),
       quit: () => {
+        pictures.releaseAll();
         renderer.destroy();
         resolveDone(0);
       },
       setTitle: (t) => renderer.setTerminalTitle(t),
-      images: { supported: () => pictures.protocol() !== null, size: (path) => pictures.size(path), cell },
+      images: { supported: () => pictures.protocol() !== null, size: (path) => pictures.size(path), cell, placeholders: () => pictures.usesPlaceholders() },
       setMouse: (on) => {
         renderer.useMouse = on;
       },

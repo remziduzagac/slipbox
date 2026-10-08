@@ -75,11 +75,14 @@ proportions kept. An SVG (12.15) — by its name, or a picture fetched told by h
 (WebAssembly) at the size it's drawn, from its own size, into the cache, and drawn as a PNG is; it fetches nothing it
 links to. One in an embedded note (12.14) is found from where that note is — its path from its folder, its name
 from its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none
-(`[render] images = "never"` too): `▣ alt` alone. Over Kitty graphics a picture is sent compressed and placed by
-its id (12.7); OpenTUI numbers ids by the order pictures are drawn in, so scrolling one into view above others sends
-those again — slipbox can't give a picture an id of its own. So a step of scrolling draws a view's pictures, but quick
-steps after it (a key held, a wheel spun: within 120 ms of the last) don't — their rows stay — and they're drawn once
-it rests. A picture on the internet (12.12) is fetched only as
+(`[render] images = "never"` too): `▣ alt` alone. Where the terminal speaks Kitty graphics, a picture is sent to
+it once (12.7) — compressed, at the pixels it's drawn in, with a virtual placement of its cells — and drawn as Kitty's
+Unicode placeholders: each cell U+10EEEE in the picture's id's colour, its row and column as combining marks. They're
+text, so scrolling moves them and the terminal the picture with them: nothing is sent again, nothing waits. The last
+48 are kept in the terminal; quitting lets them go. With sixel (OpenTUI's own picture path, which numbers pictures by
+the order they're drawn in and sends them again as that changes), a step of scrolling draws a view's pictures, but
+quick steps after it (a key held: within 120 ms of the last) don't, nor a wheel's from its first tick — their rows
+stay — and they're drawn once it rests. A picture on the internet (12.12) is fetched only as
 `[render] images_remote` says: `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from
 its site without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor
 drawn, `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most
