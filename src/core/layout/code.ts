@@ -348,18 +348,19 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
 
   /**
    * The tree lines, as the explorer's, from a class's box to its members' (rows from `start`, the class at `column`): its
-   * box's left line on down, `├─` to each member's top, by its name, `└─` to the last's. A class's closing box (`close`,
-   * its top row): the line on down to it, the members between the class's two boxes.
+   * box's left line on down, `├─` to each member's box a row under its top, by its name — the same row for every one,
+   * the box's corner kept — `└─` to the last's (a folded box, or a band, at its top: it has no row under it). A class's
+   * closing box (`close`, its top row): the line on down to it, the members between the class's two boxes.
    */
   const tree = (start: number, column: number, close?: number) => {
     const members = headRows.filter((h) => h.row >= start);
     const at = Math.min(...members.map((h) => h.column));
     if (at <= column) return;
-    const heads = members.filter((h) => h.column === at).map((h) => h.row);
-    const last = Math.max(...heads);
+    const meets = members.filter((h) => h.column === at).map((h) => (lines[h.row + 1]?.frame?.includes(at) ? h.row + 1 : h.row));
+    const last = Math.max(...meets);
     for (let r = start; r <= (close ?? last); r++) {
       if (r === close) lines[r] = putAt(lines[r]!, column, g.box.ml, "border");
-      else if (!heads.includes(r)) lines[r] = putAt(lines[r]!, column, g.guide, "border");
+      else if (!meets.includes(r)) lines[r] = putAt(lines[r]!, column, g.guide, "border");
       else lines[r] = joint(putAt(lines[r]!, column, `${r === last && close === undefined ? g.guideLast : g.guideBranch}${g.guideDash.repeat(at - column - 1)}`, "border"), at, g);
     }
   };
@@ -437,12 +438,17 @@ const lead = (t: string) => t.length - t.trimStart().length;
 const CLOSING = /^\s*\}\s*$/;
 const range = (a: number, b: number) => Array.from({ length: Math.max(0, b - a + 1) }, (_, k) => a + k);
 
-/** A box's top-left corner, where a tree line meets it: `┬`. A band has none: the line touches its header. */
+/**
+ * A box's left line where a tree line meets it: `┤` (the line drawn into the row, no longer over it) — `┬` on a folded
+ * box's top. A band has none: the line touches its header.
+ */
 function joint(line: Line, at: number, g: Glyphs): Line {
   let c = 0;
   let here = "";
   for (const s of line.spans) for (const gr of graphemes(s.text)) if (c++ === at) here = gr;
-  return here === g.box.tl ? putAt(line, at, g.box.tm, "border") : line;
+  if (here === g.box.tl) return putAt(line, at, g.box.tm, "border");
+  if (!line.frame?.includes(at)) return line;
+  return { ...putAt(line, at, g.box.mr, "border"), frame: line.frame.filter((x) => x !== at) };
 }
 
 /** A row with `text` drawn from column `at` (over its indentation's spaces), spaces added where the row is short. */
