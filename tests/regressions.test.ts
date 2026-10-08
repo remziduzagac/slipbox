@@ -96,7 +96,7 @@ describe("medium", () => {
     await app.handleKey("ctrl+o");
     expect(app.view!.buf.key).toBe("b.md");
     expect(app.view!.buf.source).toBe("# B\n");
-    await app.handleKey("alt+right");
+    await app.run("history.forward");
     expect(app.view!.buf.key).toBe("a.md");
     expect(app.view!.fwd).toHaveLength(0);
   });

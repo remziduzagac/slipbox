@@ -308,7 +308,17 @@ export function indentLine(app: App, view: View, dir: 1 | -1): void {
 export function insertKey(app: App, view: View, key: string): void {
   insertKeyNow(app, view, key);
   // Moving the cursor starts the insert again there, as vim's does: ctrl+u and ctrl+w stop at it.
-  if (view.insert && ["left", "right", "up", "down", "home", "end"].includes(key)) view.insertFrom = offsetOf(app, view);
+  if (view.insert && (["left", "right", "up", "down", "home", "end"].includes(key) || WORD_KEYS[key])) view.insertFrom = offsetOf(app, view);
+}
+
+/** Typing, by words: ctrl+← / ctrl+→, alt+← / alt+→ (macOS's option+arrows), alt+b / alt+f (what its terminals send). */
+const WORD_KEYS: Record<string, -1 | 1> = { "ctrl+left": -1, "alt+left": -1, "alt+b": -1, "ctrl+right": 1, "alt+right": 1, "alt+f": 1 };
+
+/** A word back (to its start) or forward (to its end) from `at`, across lines: a run of letters and digits, or of
+ *  other marks, past the spaces before it. */
+function wordFrom(text: string, at: number, dir: -1 | 1): number {
+  if (dir < 0) return at - /(?:[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]+)?\s*$/u.exec(text.slice(0, at))![0].length;
+  return at + /^\s*(?:[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]+)?/u.exec(text.slice(at))![0].length;
 }
 
 function insertKeyNow(app: App, view: View, key: string): void {
@@ -350,6 +360,13 @@ function insertKeyNow(app: App, view: View, key: string): void {
       const at = offsetOf(app, view);
       return placeAt(app, view, view.buf.lineStarts()[lineOf(view, at) - 1] ?? 0, true);
     }
+    case "ctrl+left":
+    case "alt+left":
+    case "alt+b":
+    case "ctrl+right":
+    case "alt+right":
+    case "alt+f":
+      return placeAt(app, view, wordFrom(view.buf.source, offsetOf(app, view), WORD_KEYS[key]!), true);
     case "end": {
       const src = lineOf(view, offsetOf(app, view));
       return placeAt(app, view, (view.buf.lineStarts()[src - 1] ?? 0) + lineText(view, src).length, true);
