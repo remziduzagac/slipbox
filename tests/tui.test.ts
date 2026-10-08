@@ -2222,6 +2222,29 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(v.live).toBe(false);
     expect(lens().top).toBe(-1);
   });
+  test("its rows numbered by their distance from the cursor's (0), the lens's accent; outside it, the lines' numbers; relative_numbers = off: the lines'", async () => {
+    for (const relative of ["lens", "off"] as const) {
+      const { h, v, goto, lens } = await setup((c) => ((c.ui.line_numbers = true), (c.ui.relative_numbers = relative)));
+      goto("Para 7 with");
+      await h.keys("space", "n", "l", "j");
+      const c = h.canvas();
+      const pane = h.app.geometry!.panes[0]!;
+      const gutter = (row: number) => c.line(pane.y + row - v.top).slice(pane.x, pane.textX).trim();
+      const l = lens();
+      const inside = [...Array(l.bottom - l.top - 1).keys()].map((k) => l.top + 1 + k);
+      const layout = h.app.currentLayout(v);
+      if (relative === "lens") {
+        expect(inside.map(gutter)).toEqual(inside.map((r) => String(Math.abs(r - v.cur.row))));
+        expect([gutter(l.top), gutter(l.bottom)]).toEqual(["", ""]); // its rules: none
+        const near = inside.find((r) => r !== v.cur.row)!;
+        expect(c.styles[pane.y + near - v.top]![pane.textX - 3]!).toMatchObject({ fg: h.app.theme.roles.lens.fg, bold: false });
+        expect(c.styles[pane.y + v.cur.row - v.top]![pane.textX - 3]!.fg).toBe(h.app.theme.roles.line_number_current.fg!);
+      } else expect(gutter(v.cur.row)).toBe(String(layout.lines[v.cur.row]!.src));
+      // Outside the lens, the lines' own numbers.
+      const above = l.top - 2; // past the rule and its air
+      expect(gutter(above)).toBe(String(layout.lines[above]!.src));
+    }
+  });
   test("an edit that doesn't type (a line moved, x from the palette) opens it first too; its second press edits", async () => {
     const { h, v, goto } = await setup((c) => (c.editor.edit_in = "live"));
     for (const edit of [() => h.keys("alt+shift+down"), () => h.app.run("edit.delete_char")]) {

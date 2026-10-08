@@ -80,6 +80,9 @@ export interface Config {
     cursorline: boolean;
     /** Source line numbers in a left gutter. */
     line_numbers: boolean;
+    /** In the lens, each row's distance from the cursor's (its own 0) in place of its line number, vim's counts read off
+     *  it (`5j`, `d3k`): "lens", or "off". */
+    relative_numbers: "lens" | "off";
     /** Wrap long lines to the pane; off, notes keep their natural width and scroll sideways. */
     wrap: boolean;
     /** Cap the text column at `readable_max` columns, centred. */
@@ -257,6 +260,7 @@ export const DEFAULT_CONFIG: Config = {
     restore_session: true,
     cursorline: true,
     line_numbers: false,
+    relative_numbers: "lens",
     wrap: true,
     readable_width: false,
     readable_max: 100,
@@ -307,6 +311,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "diagnostics.marks": ["off", "error", "warning", "info"],
   "diagnostics.severity": ["error", "warning", "info", "hint"],
   "ui.lines": ["light", "heavy"],
+  "ui.relative_numbers": ["lens", "off"],
   "files.show": ["auto", "notes", "renderable", "all"],
   "editor.edit_in": ["source", "live"],
   "links.style": ["auto", "markdown", "wiki"],

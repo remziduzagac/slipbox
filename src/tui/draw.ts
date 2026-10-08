@@ -885,6 +885,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const onLine = problemLines(problems);
   const barW = app.barWidth(view);
   const numbers = app.ui.line_numbers;
+  const relativeNumbers = app.config.ui.relative_numbers === "lens";
   // Where each problem starts: the bar's sign there, or — beside line numbers, no bar — the number clicked.
   const barAt = barW || numbers ? barRows(layout, problems) : null;
   // A click on a sign (or a number) opens the Problems panel on the worst problem starting there.
@@ -925,12 +926,18 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       geo.hot.push({ id: clicked(here), x: gutterX, y, w, h: 1 });
     }
     if (numbers) {
+      // In the lens (`[ui] relative_numbers`): each row's distance from the cursor's, the cursor's 0 — every row a step
+      // of j and k, a wrapped line's too — so vim's counts read off it. Its line is on the status line.
+      const relative = relativeNumbers && line.lens === "source";
       // A row the layout adds (the code view's blank between cells, a box's bottom, the lens's rules) has no number.
-      const num = line.src !== prevSrc && !line.decor ? String(line.src).padStart(gutter - barW - 2) : "";
+      const n = relative ? Math.abs(row - view.cur.row) : line.src !== prevSrc && !line.decor ? line.src : null;
+      const num = n === null ? "" : String(n).padStart(gutter - barW - 2);
       // A line with problems: its number in the worst one's colour, bold; where one starts, clicked as a sign is.
       const on = onLine.get(line.src);
-      const role: Role = on ? SEVERITY_ROLE[worst(on)] : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
-      if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), ...(on ? { bold: true } : {}), bg: band ?? gutterBg });
+      const current = relative ? row === view.cur.row : line.src === cursorSrc && showCursor;
+      const role: Role = on ? SEVERITY_ROLE[worst(on)] : current ? "line_number_current" : relative ? "lens" : "line_number";
+      // The distances in the lens's accent, not its bold.
+      if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), ...(on ? { bold: true } : role === "lens" ? { bold: false } : {}), bg: band ?? gutterBg });
       if (here && !barW) geo.hot.push({ id: clicked(here), x: gutterX, y, w: gutter - 1, h: 1 });
     }
     if (!line.decor) prevSrc = line.src;
