@@ -41,7 +41,7 @@ export const ROLES = [
   "git_new", "git_modified", "git_conflict", "diff_add", "diff_del", "diff_head",
   "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
   "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
-  "cursor", "cursor_line", "line_number", "line_number_current", "gutter",
+  "cursor", "cursor_line", "line_number", "line_number_current", "gutter", "cell_line",
   "which_key_key", "which_key_group",
   "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover",
   "breadcrumb", "breadcrumb_current", "breadcrumb_sep", "breadcrumb_icon", "breadcrumb_band", "tree_guide", "rail", "lens", "lens_band", "lens_edit", "lens_band_edit",
@@ -238,6 +238,9 @@ export function themeFromPalette(
     cursor_line: { bg: blend(p.surface, p.bg, 0.55) },
     line_number: { fg: p.surface2 },
     line_number_current: { fg: p.orange, bold: true },
+    // A code cell's lines — its box's, the tree's between a class and its members (24.13): a step brighter than the
+    // frame's and the rules', so a cell stands out from the chrome around it; the indent guides in its code stay quiet.
+    cell_line: { fg: blend(p.surface2, p.fg_dim, 0.35) },
     // The gutter (the problems bar, the line numbers): halfway from the page to the breadcrumb row's shade, the two
     // framing the text, the gutter the quieter — not the rails' and code blocks' dark, which a code block beside it
     // would run into.
@@ -323,6 +326,7 @@ export function terminalTheme(): Theme {
     breadcrumb_band: { bg: a(0) },
     rail: { bg: a(0) },
     gutter: { bg: a(0) },
+    cell_line: { fg: a(7) },
     lens: { fg: a(4), bold: true },
     lens_band: { bg: a(0) },
     lens_edit: { fg: a(2), bold: true },
