@@ -676,17 +676,19 @@ it. Each item ends with its tests listed for the user's approval before any is r
 
 | ID | Item |
 | --- | --- |
-| 12.1 | Capability probe — query the channel, never sniff `$TERM` |
-| 12.2 | `images = auto \| always \| never` override |
-| 12.3 | Protocol emit: kitty, iTerm2, sixel |
-| 12.4 | Unicode half-block fallback |
+| 12.1 | **Prototype.** Capability probe — OpenTUI's, which asks the terminal; never `$TERM` |
+| 12.2 | **Prototype.** `[render] images = auto \| never` |
+| 12.3 | **Prototype.** Protocol emit through OpenTUI: Kitty graphics (herdr draws them too), sixel |
+| 12.4 | **Dropped.** No half-block fallback: where a terminal draws no images, `▣ alt` and its link (decided) |
 | 12.5 | **constraint** alt text plus path is the floor — a note never becomes unreadable |
-| 12.6 | Sizing from cell pixel geometry |
-| 12.7 | Transmit once, place by id |
-| 12.8 | Scroll behaviour — unicode placeholders |
-| 12.9 | Decode cache keyed by path, size and mtime |
+| 12.6 | **Prototype.** Sizing from cell pixel geometry: the text width, proportions kept, at most 12 rows |
+| 12.7 | Transmit once, place by id (OpenTUI's, to be checked) |
+| 12.8 | **Prototype.** Scroll behaviour — a picture cut where it scrolls out of sight |
+| 12.9 | **Prototype.** Decode cache keyed by path and mtime |
 | 12.10 | Mermaid drawn as an image (`mermaid-cli`) where `12.1` finds a way; the code block otherwise |
 | 12.11 | LaTeX typeset as an image where images work; Unicode text (`unicodeit`) as the floor |
+| 12.12 | Images online: `ask` (the link; `enter` asks — this once, or this site — then fetches), `show`, `never` |
+| 12.13 | Obsidian's `![[picture.png]]`, and a picture in an embedded note (its path the embedded note's) |
 
 ## Extensibility — `13.x`
 

@@ -18,6 +18,9 @@ export interface Canvas {
   ascii(x: number, y: number, text: string, style: CellStyle): void;
   /** The frame is drawn with ASCII glyphs: typographic symbols go as their ASCII look-alikes. */
   asciiGlyphs?: boolean;
+  /** A picture (12.x), over `cols` × `rows` cells from (x, y): of an image `crop.total` rows tall, the part from row
+   *  `crop.skip` on. Absent: the canvas draws none. */
+  image?(x: number, y: number, cols: number, rows: number, src: string, crop: { skip: number; total: number }): void;
 }
 
 /**
@@ -80,6 +83,8 @@ export function drawText(c: Canvas, x: number, y: number, text: string, style: C
 /** In-memory canvas: characters only, plus the style of each cell for assertions. */
 export class TextCanvas implements Canvas {
   asciiGlyphs?: boolean;
+  /** The pictures drawn, as asked (12.x): the tests read them. */
+  readonly images: { x: number; y: number; cols: number; rows: number; src: string; skip: number; total: number }[] = [];
   readonly rows: string[][];
   readonly styles: (CellStyle | null)[][];
   constructor(
@@ -120,6 +125,9 @@ export class TextCanvas implements Canvas {
   }
   ascii(x: number, y: number, text: string, style: CellStyle): void {
     for (let i = 0; i < text.length; i++) this.cell(x + i, y, text[i]!, 1, style);
+  }
+  image(x: number, y: number, cols: number, rows: number, src: string, crop: { skip: number; total: number }): void {
+    this.images.push({ x, y, cols, rows, src, ...crop });
   }
   toString(): string {
     return this.rows.map((r) => r.join("").replace(/\s+$/, "")).join("\n");

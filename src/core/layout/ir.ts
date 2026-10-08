@@ -56,6 +56,16 @@ export interface Line {
   /** A code cell's row (24.13): the columns its own text takes — the rest is the cell's padding: no cursor stop there,
    *  so no mark either. */
   text?: [number, number];
+  /** A picture's first row (12.x): the file, and the columns and rows it takes — this row and the `rows - 1` after
+   *  it, blank frame rows the drawing puts the image over. */
+  image?: Picture;
+}
+
+/** A picture drawn in a note (12.x): its file (absolute), and the cells it takes. */
+export interface Picture {
+  src: string;
+  cols: number;
+  rows: number;
 }
 
 export type LinkKind = "wiki" | "embed" | "markdown" | "image" | "footnote" | "tag";

@@ -65,7 +65,11 @@ never a place to wrap.
 because bold alone does not read as bold in a terminal (plan `2.7`). Also: `*emphasis*`,
 `~~strike~~`, and `` `code` `` in the `code_inline` role with its own background. Links render
 as their text; the URL follows as `<url>` when colour is off or `render.show_urls` asks.
-Images render as `▣ alt`: phase 6 adds pixels, and alt text plus path stay the floor. Inline
+Images render as `▣ alt`, and alt text plus path stay the floor (12.x): a picture alone in its paragraph, a local
+image file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty graphics or
+sixel, as OpenTUI finds it asking, never blocks of colour — sized to the text width, its proportions kept, at most 12
+rows; scrolled half out of sight, the part that shows. Beside text, on the internet, in an embedded note, or where the
+terminal draws none (`[render] images = "never"` too): `▣ alt` alone. Inline
 tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 
 **Wikilinks are links** (`21.3`; `20.2` drew them as text): `[[name]]` shows its name, `[[name|text]]` its text,

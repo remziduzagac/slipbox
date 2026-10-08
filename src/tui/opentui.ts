@@ -2,7 +2,8 @@
 // Renderable that hosts the app. Pinned at @opentui/core 0.5.12 (see docs/design/architecture.md
 // for the upgrade policy) — if the API churns, this file and run.ts are what change.
 
-import { type OptimizedBuffer, Renderable, type RenderContext, RGBA, TextAttributes } from "@opentui/core";
+import { readFileSync, statSync } from "node:fs";
+import { imageInfo, NativeImage, type OptimizedBuffer, Renderable, type RenderContext, RGBA, TextAttributes } from "@opentui/core";
 import type { CellStyle } from "../core/layout/style.ts";
 import type { Color } from "../core/theme/theme.ts";
 import { type Canvas, glyphCell } from "./canvas.ts";
@@ -32,9 +33,76 @@ function attrs(s: CellStyle): number {
   return a;
 }
 
+/**
+ * A note's pictures (12.x) through OpenTUI: an image file's size, and the image decoded, each read once by path and
+ * modified time (the decoded ones the last few); drawn with the protocol the terminal speaks, Kitty graphics or sixel —
+ * never in blocks of colour: where it speaks neither, there are no pictures, `▣ alt` the floor.
+ */
+export class Pictures {
+  private readonly sizes = new Map<string, { at: number; size: { width: number; height: number } | null }>();
+  private readonly images = new Map<string, { at: number; image: NativeImage | null }>();
+  constructor(readonly protocol: () => "kitty" | "sixel" | null) {}
+
+  size(path: string): { width: number; height: number } | null {
+    const at = modified(path);
+    if (at === null) return null;
+    const hit = this.sizes.get(path);
+    if (hit?.at === at) return hit.size;
+    let size: { width: number; height: number } | null = null;
+    try {
+      const info = imageInfo(readFileSync(path));
+      size = { width: info.width, height: info.height };
+    } catch {}
+    if (this.sizes.size >= 500) this.sizes.delete(this.sizes.keys().next().value!);
+    this.sizes.set(path, { at, size });
+    return size;
+  }
+
+  draw(buf: OptimizedBuffer, x: number, y: number, cols: number, rows: number, src: string, crop: { skip: number; total: number }): void {
+    const protocol = this.protocol();
+    const image = protocol ? this.image(src) : null;
+    if (!protocol || !image || rows <= 0) return;
+    const top = Math.round((image.height * crop.skip) / crop.total);
+    const tall = Math.max(1, Math.min(image.height - top, Math.round((image.height * rows) / crop.total)));
+    buf.drawImage(image, x, y, cols, rows, undefined, undefined, 0, top, image.width, tall, protocol);
+  }
+
+  private image(src: string): NativeImage | null {
+    const at = modified(src);
+    if (at === null) return null;
+    const hit = this.images.get(src);
+    if (hit?.at === at) return hit.image;
+    hit?.image?.dispose();
+    let image: NativeImage | null = null;
+    try {
+      image = NativeImage.decode(readFileSync(src));
+    } catch {}
+    // The last few decoded: a note's pictures, and the ones before it.
+    if (this.images.size >= 24) {
+      const [old, kept] = this.images.entries().next().value!;
+      kept.image?.dispose();
+      this.images.delete(old);
+    }
+    this.images.set(src, { at, image });
+    return image;
+  }
+}
+
+function modified(path: string): number | null {
+  try {
+    const st = statSync(path);
+    return st.isFile() ? st.mtimeMs : null;
+  } catch {
+    return null;
+  }
+}
+
 export class BufferCanvas implements Canvas {
   asciiGlyphs?: boolean;
-  constructor(private readonly buf: OptimizedBuffer) {}
+  constructor(
+    private readonly buf: OptimizedBuffer,
+    private readonly pictures?: Pictures,
+  ) {}
   get width(): number {
     return this.buf.width;
   }
@@ -51,6 +119,9 @@ export class BufferCanvas implements Canvas {
   ascii(x: number, y: number, text: string, s: CellStyle): void {
     this.buf.drawText(text, x, y, toRGBA(s.fg, true), toRGBA(s.bg, false), attrs(s));
   }
+  image(x: number, y: number, cols: number, rows: number, src: string, crop: { skip: number; total: number }): void {
+    this.pictures?.draw(this.buf, x, y, cols, rows, src, crop);
+  }
 }
 
 /** A full-screen renderable whose paint step is the app's draw. */
@@ -58,11 +129,12 @@ export class AppRenderable extends Renderable {
   constructor(
     ctx: RenderContext,
     private readonly paint: (canvas: Canvas) => void,
+    private readonly pictures?: Pictures,
   ) {
     super(ctx, { width: "100%", height: "100%", position: "absolute", left: 0, top: 0 });
   }
 
   protected override renderSelf(buffer: OptimizedBuffer): void {
-    this.paint(new BufferCanvas(buffer));
+    this.paint(new BufferCanvas(buffer, this.pictures));
   }
 }

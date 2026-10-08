@@ -16,7 +16,7 @@ import { newRenderCache } from "../core/layout/render.ts";
 import type { Graph } from "../core/graph.ts";
 import { readText, type Stamp, stamp } from "../core/fsutil.ts";
 import type { Layout } from "../core/layout/ir.ts";
-import { layoutNote } from "../core/note.ts";
+import { layoutNote, type NoteRenderOptions } from "../core/note.ts";
 import { layoutSource, newSourceCache } from "../core/layout/source.ts";
 import { headingsOf, newParseCache, noteChunks, type ParsedNote, parseMarkdown, slugify } from "../core/parse.ts";
 import { parseInBackground } from "../core/parse-pool.ts";
@@ -449,11 +449,12 @@ export class NoteBuffer {
     return codeBlocks(this.lines(), fresh ? (this.syntax?.code ?? null) : null, lineCount, (line) => !!spans?.get(line)?.some((s) => s.from === 0));
   }
 
-  layout(width: number, glyphs: Glyphs, showUrls: boolean, graph: Graph | null): Layout {
-    const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}`;
+  /** The note laid out; `pictures` (12.x): how its pictures are drawn, and a key that changes when they would. */
+  layout(width: number, glyphs: Glyphs, showUrls: boolean, graph: Graph | null, pictures?: { picture: NonNullable<NoteRenderOptions["picture"]>; key: string }): Layout {
+    const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${pictures?.key ?? "-"}`;
     let l = this.layouts.get(key);
     if (!l) {
-      l = layoutNote(this.parsed, graph, this.rel, { width, glyphs, showUrls }, this.renderCache);
+      l = layoutNote(this.parsed, graph, this.rel, { width, glyphs, showUrls, ...(pictures ? { picture: pictures.picture } : {}) }, this.renderCache);
       for (const p of l.embedded ?? []) this.embedded.add(p);
       // Keep the last few widths (a drag back and forth, a toggle and back): evict the oldest.
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);

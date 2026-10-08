@@ -12,7 +12,7 @@ import type { Color, Role, Theme } from "../core/theme/theme.ts";
 import { graphemeWidth, graphemes, splitAtWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { sanitize, sanitizeMap } from "../core/sanitize.ts";
 import type { GitState } from "../core/gitops.ts";
-import { type App, type HistoryRow, LEFT_VIEWS, type ListItem, type ListOverlay, type PromptOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
+import { type App, type HistoryRow, LEFT_VIEWS, PICTURE_ROWS, type ListItem, type ListOverlay, type PromptOverlay, RIGHT_VIEWS, type SidePaneState, type Tab, type TreeRow, type View } from "./app.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { countWords } from "../core/words.ts";
 import type { CommentLink } from "../core/syntax.ts";
@@ -999,6 +999,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       if (view === app.view) geo.cursor = { x: textX - view.left + view.cur.col, y };
     }
   }
+  if (c.image && view.left === 0) drawPictures(c, layout, shown, body.y, textX, textW);
 
   if (hbar) {
     const r = { x: textX, y: body.y + body.h, w: textW, h: 1 };
@@ -1176,6 +1177,31 @@ function offsetMarks(line: Line, ranges: { from: number; to: number }[] | undefi
     else if (lastRow && e.from >= line.srcMap.end && cs.length) out.push({ from: cs[cs.length - 1]!.x, to: cs[cs.length - 1]!.x + cs[cs.length - 1]!.w, role });
   }
   return out;
+}
+
+/**
+ * A note's pictures (12.x), over the blank rows the layout keeps for them: each from its first row on screen — one whose
+ * top is scrolled away (up to PICTURE_ROWS rows back), cut there — to its last on screen.
+ */
+function drawPictures(c: Canvas, layout: Layout, shown: number[], top: number, x: number, textW: number): void {
+  for (let i = 0; i < shown.length; i++) {
+    const row = shown[i]!;
+    let start = row;
+    let pic = layout.lines[row]?.image;
+    if (!pic && i === 0)
+      for (let k = 1; k < PICTURE_ROWS && row - k >= 0; k++) {
+        const p = layout.lines[row - k]?.image;
+        if (!p) continue;
+        if (row - k + p.rows > row) [start, pic] = [row - k, p];
+        break;
+      }
+    if (!pic) continue;
+    const skip = row - start;
+    let rows = 0;
+    while (i + rows < shown.length && rows < pic.rows - skip && shown[i + rows] === row + rows) rows++;
+    c.image!(x, top + i, Math.min(pic.cols, textW), rows, pic.src, { skip, total: pic.rows });
+    i += rows - 1;
+  }
 }
 
 /** A scrollbar: a `▐` track with a `▐` thumb sized and placed for `total` rows from `top`. */

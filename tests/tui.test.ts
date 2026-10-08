@@ -75,6 +75,8 @@ interface Opts {
   launcher?: boolean;
   /** The folder slipbox was opened on, inside the root. */
   folder?: string;
+  /** The terminal's pictures (12.x), as a stand-in: none unless given. */
+  images?: Host["images"];
 }
 
 async function harness(opts: Opts = {}): Promise<Harness> {
@@ -96,7 +98,7 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   const graph = openGraph(loc, config, false);
   const copied: string[] = [];
   const quit = { called: false };
-  const host: Host = { requestRender() {}, osc52: (t) => (copied.push(t), true), quit: () => (quit.called = true) };
+  const host: Host = { requestRender() {}, osc52: (t) => (copied.push(t), true), quit: () => (quit.called = true), ...(opts.images ? { images: opts.images } : {}) };
   const app = new App({ loc, config, graph, host, open: opts.open === undefined ? "index.md" : opts.open, watch: opts.watch ?? false, configFile: opts.configFile, themeName: opts.themeName, launcher: opts.launcher, folder: opts.folder });
   // Never the machine's own nvims.
   app.nvimDiscovery = () => [];
@@ -6835,6 +6837,81 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     }
     await h.keys("escape", "ctrl+k");
     expect(v.source).toBe(true);
+  });
+});
+
+describe("pictures (12.x)", () => {
+  // A terminal that draws images, its cells 8 × 16 pixels; the image files' sizes as it would read them.
+  const terminal = (supported: boolean, sizes: Record<string, { width: number; height: number }>): Host["images"] => ({
+    supported: () => supported,
+    size: (path) => sizes[basename(path)] ?? null,
+    cell: () => ({ width: 8, height: 16 }),
+  });
+  const note = `# P\n\nText before.\n\n![chart](chart.png)\n\nAfter, ![icon](chart.png) inline.\n\n![web](https://example.invalid/chart.png)\n\n${Array.from({ length: 30 }, (_, i) => `Line ${i + 1}.`).join("\n\n")}\n`;
+  const open = async (supported = true, config?: (c: Config) => void, height = 40) => {
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), note);
+    writeFileSync(join(root, "chart.png"), "a stand-in: its size is the terminal's to say");
+    const h = await harness({ root, open: "p.md", width: 100, height, config, images: terminal(supported, { "chart.png": { width: 400, height: 200 } }) });
+    return { h, v: h.app.view!, root };
+  };
+  test("a local picture alone in its paragraph: its ▣ alt line, then the rows it's drawn over — sized to its proportions, at most 12 rows; beside text, on the internet, or missing: ▣ alt alone", async () => {
+    const { h, v, root } = await open();
+    const layout = h.app.currentLayout(v);
+    const alt = layout.lines.findIndex((l) => l.spans.some((s) => s.text === "▣ chart"));
+    // 400 × 200 pixels in 8 × 16 cells: 50 columns by 13 rows, past 12 — so 12 rows, 48 columns.
+    expect(layout.lines[alt + 1]).toMatchObject({ decor: true, spans: [], image: { src: join(root, "chart.png"), cols: 48, rows: 12 } });
+    expect(layout.lines.slice(alt + 2, alt + 13).every((l) => l.decor && !l.spans.length && !l.image)).toBe(true);
+    expect(layout.lines[alt + 13]!.spans.length).toBe(0); // the gap after the paragraph
+    // Drawn over its rows, from the text column.
+    const c = h.canvas();
+    const pane = h.app.geometry!.panes[0]!;
+    expect(c.images).toEqual([{ x: pane.textX, y: pane.y + alt + 1 - v.top, cols: 48, rows: 12, src: join(root, "chart.png"), skip: 0, total: 12 }]);
+    // An image beside text, or on the internet: its ▣ alt line alone.
+    expect(layout.lines.some((l) => l.spans.some((s) => s.text === "▣ icon"))).toBe(true);
+    expect(layout.lines.filter((l) => l.image)).toHaveLength(1);
+  });
+  test("scrolled so its top is out of sight: the rest drawn, cut where it shows", async () => {
+    const { h, v } = await open();
+    const layout = h.app.currentLayout(v);
+    const first = layout.lines.findIndex((l) => l.image);
+    v.top = first + 5;
+    const c = h.canvas();
+    const pane = h.app.geometry!.panes[0]!;
+    expect(c.images).toEqual([expect.objectContaining({ y: pane.y, rows: 7, skip: 5, total: 12 })]);
+  });
+  test("where the terminal draws no images, or [render] images = never: the note as it was — ▣ alt and its path, nothing more", async () => {
+    for (const [supported, setting] of [[false, "auto"], [true, "never"]] as const) {
+      const { h, v } = await open(supported, (c) => (c.render.images = setting));
+      const layout = h.app.currentLayout(v);
+      expect(layout.lines.some((l) => l.image)).toBe(false);
+      const alt = layout.lines.findIndex((l) => l.spans.some((s) => s.text === "▣ chart"));
+      expect(layout.lines[alt + 1]!.spans.length).toBe(0); // the paragraph's gap, then the next
+      expect(layout.lines[alt + 2]!.spans.map((s) => s.text).join("")).toContain("After,");
+      expect(h.canvas().images).toEqual([]);
+    }
+  });
+  test("a picture in an embedded note stays ▣ alt: its path is that note's, not this one's", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "host.md"), "# Host\n\n![[inner]]\n");
+    writeFileSync(join(root, "inner.md"), "# Inner\n\n![chart](chart.png)\n");
+    writeFileSync(join(root, "chart.png"), "x");
+    const h = await harness({ root, open: "host.md", width: 100, height: 40, images: terminal(true, { "chart.png": { width: 400, height: 200 } }) });
+    const layout = h.app.currentLayout(h.app.view!);
+    expect(layout.lines.some((l) => l.spans.some((s) => s.text.includes("▣ chart")))).toBe(true); // drawn in place
+    expect(layout.lines.some((l) => l.image)).toBe(false);
+  });
+  test("support said after the first frame: the note laid out again, its pictures in", async () => {
+    let supported = false;
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), note);
+    writeFileSync(join(root, "chart.png"), "x");
+    const images: Host["images"] = { supported: () => supported, size: () => ({ width: 400, height: 200 }), cell: () => ({ width: 8, height: 16 }) };
+    const h = await harness({ root, open: "p.md", width: 100, height: 40, images });
+    expect(h.app.currentLayout(h.app.view!).lines.some((l) => l.image)).toBe(false);
+    supported = true;
+    h.app.picturesChanged();
+    expect(h.app.currentLayout(h.app.view!).lines.some((l) => l.image)).toBe(true);
   });
 });
 

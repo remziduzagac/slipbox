@@ -27,6 +27,9 @@ export interface Config {
     code: "document" | "source";
     /** How the code view draws a cell (24.13): in a box, or on a band. */
     code_cells: "box" | "band";
+    /** A note's pictures (12.x): drawn under their `▣ alt` line where the terminal draws images (Kitty graphics, sixel)
+     *  — `auto` — or never; `▣ alt` and its path are the floor either way. */
+    images: "auto" | "never";
   };
   walk: {
     extensions: string[];
@@ -244,7 +247,7 @@ export interface Config {
 
 export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
-  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document", code_cells: "box" },
+  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document", code_cells: "box", images: "auto" },
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
   links: { style: "auto", path: "auto", extension: "auto" },
   trust: { roots: [] },
@@ -304,6 +307,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.show_urls": ["auto", "always", "never"],
   "render.code": ["document", "source"],
   "render.code_cells": ["box", "band"],
+  "render.images": ["auto", "never"],
   "capture.location": ["state", "vault"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],

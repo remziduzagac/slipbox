@@ -13,7 +13,7 @@ import { graphemes, graphemeWidth, padEnd, stringWidth, truncate } from "../widt
 import type { Hashtag } from "../tags.ts";
 import { parseWikiTarget, type WikiLink } from "../wikilink.ts";
 import { highlight } from "./highlight.ts";
-import { A_BOLD, A_ITALIC, A_STRIKE, type Layout, type LayoutHeading, type LayoutLink, type Line, type LinkStatus, type Span } from "./ir.ts";
+import { A_BOLD, A_ITALIC, A_STRIKE, type Layout, type LayoutHeading, type LayoutLink, type Line, type LinkStatus, type Picture, type Span } from "./ir.ts";
 import { allocate, PADDING } from "./table.ts";
 import { fit, longestWord, measure, naturalWidth, wrapSpans } from "./wrap.ts";
 
@@ -33,6 +33,9 @@ export interface RenderOptions {
   embed?: (target: string, heading: string | null, block: string | null, kind?: "embed" | "image") => Embedded | null;
   /** The note being drawn (absolute): an embed of it, however deep, is a loop. */
   embedFrom?: string;
+  /** A picture alone in its paragraph (12.x), drawn under its `▣ alt` line: its file and the cells it takes at most
+   *  `width` columns wide — or null (not a local image, no images here): its `▣ alt` alone, the floor. */
+  picture?: (url: string, width: number) => Picture | null;
 }
 
 /** A note embedded, as the caller found it: what to draw, and how its own links resolve. */
@@ -355,6 +358,8 @@ function paragraph(children: PhrasingContent[], src: number, ctx: Ctx, width: nu
   // Embeds alone in their paragraph (1.11), each on its line: a note's drawn in place.
   const framed = embedsAlone(children, src, ctx, width, base);
   if (framed) return framed;
+  const pictured = picturesAlone(children, src, ctx, width, base);
+  if (pictured) return pictured;
   const spans = inline(children, ctx, base, src);
   return wrapSpans(spans, width).map((row) => ({ spans: row, src: row[0]?.src ?? src }));
 }
@@ -382,6 +387,27 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
     const at = (r.node as unknown as { position?: { start: { line: number } } }).position?.start.line ?? src;
     if (e) out.push(...embedFrame(r, e, at, ctx, width));
     else out.push(...wrapSpans(inline([r.node], ctx, base, at), width).map((row) => ({ spans: row, src: at })));
+  }
+  return out;
+}
+
+/**
+ * A paragraph of nothing but pictures (and the line breaks between them), 12.x: each its `▣ alt` line, then the rows
+ * the image is drawn over — blank frame rows, the first carrying the picture. Null when there's other text, or no
+ * picture drawn (no images here, none local): then it's a paragraph like any, `▣ alt` the floor.
+ */
+function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: number, base: Style): Line[] | null {
+  const pictureOf = ctx.opts.picture;
+  if (!pictureOf) return null;
+  const images = children.filter((c) => c.type === "image");
+  if (!images.length || children.some((c) => c.type !== "image" && !(c.type === "break" || (c.type === "text" && !c.value.trim())))) return null;
+  const drawn = images.map((c) => ({ c, p: c.type === "image" ? pictureOf(c.url, width) : null }));
+  if (!drawn.some((d) => d.p)) return null;
+  const out: Line[] = [];
+  for (const { c, p } of drawn) {
+    const at = c.position?.start.line ?? src;
+    out.push(...wrapSpans(inline([c], ctx, base, at), width).map((row) => ({ spans: row, src: at })));
+    if (p) for (let k = 0; k < p.rows; k++) out.push({ spans: [], src: at, decor: true, ...(k === 0 ? { image: p } : {}) });
   }
   return out;
 }
@@ -433,7 +459,8 @@ function embedFrame(w: EmbedRef, e: Embedded, src: number, ctx: Ctx, width: numb
   else {
     ctx.embedded.add(e.path);
     const inner: Ctx = {
-      opts: { ...ctx.opts, resolveLink: e.resolveLink ?? ctx.opts.resolveLink, embed: e.embed },
+      // Its pictures stay `▣ alt`: their paths are the embedded note's, not this one's.
+      opts: { ...ctx.opts, resolveLink: e.resolveLink ?? ctx.opts.resolveLink, embed: e.embed, picture: undefined },
       links: ctx.links,
       headings: [],
       definitions: new Map(),

@@ -27,6 +27,8 @@ export interface NoteRenderOptions {
   width: number;
   glyphs: Glyphs;
   showUrls: boolean;
+  /** Its pictures (12.x): see RenderOptions.picture. */
+  picture?: RenderOptions["picture"];
 }
 
 export function linkResolver(graph: Graph | null, rel: string | null) {

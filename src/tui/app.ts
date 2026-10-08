@@ -41,7 +41,7 @@ import { linkEnds, writeLink } from "../core/write-link.ts";
 import { glyphsFor, type Glyphs } from "../core/glyphs.ts";
 import { describeLanding, Graph, type LinkProblem } from "../core/graph.ts";
 import { type LintCmd, type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
-import { type Layout, type LayoutLink, posOfSrc, srcAt } from "../core/layout/ir.ts";
+import { type Layout, type LayoutLink, type Picture, posOfSrc, srcAt } from "../core/layout/ir.ts";
 import { layoutWidth } from "../core/note.ts";
 import { stateDir, userConfigFile } from "../core/paths.ts";
 import {
@@ -149,7 +149,18 @@ export interface Host {
   runForeground?(argv: string[]): number | string;
   /** Start `argv` detached and don't wait; the promise settles with its exit code or an error. */
   runDetached?(argv: string[]): Promise<number | string>;
+  /** Pictures (12.x), as the renderer finds them: whether the terminal draws images (Kitty graphics, sixel), an image
+   *  file's size in pixels (null when it isn't one), and a cell's size in pixels (null until the terminal says).
+   *  Absent: no pictures, `▣ alt` the floor. */
+  images?: {
+    supported(): boolean;
+    size(path: string): { width: number; height: number } | null;
+    cell(): { width: number; height: number } | null;
+  };
 }
+
+/** A picture's most rows (12.x): a big screenshot never takes the page over. */
+export const PICTURE_ROWS = 12;
 
 export type Level = "info" | "warn" | "error";
 
@@ -907,6 +918,44 @@ export class App {
     this.relayoutAll();
     this.invalidateTree();
     this.host.requestRender();
+  }
+
+  /** Whether the terminal draws images, or its cell's size, changed (12.x): every note laid out again. */
+  picturesChanged(): void {
+    this.widthsChanged();
+  }
+
+  /**
+   * A note's pictures (12.x): where the terminal draws images and `[render] images` lets it, a local image file —
+   * by the note's own folder — sized to the width, its proportions kept, at most PICTURE_ROWS rows; else none, `▣ alt`
+   * the floor. An image on the internet stays its link.
+   */
+  picturesFor(buf: NoteBuffer): { picture: (url: string, width: number) => Picture | null; key: string } | undefined {
+    const images = this.host.images;
+    if (this.config.render.images === "never" || !images?.supported()) return undefined;
+    const cell = images.cell() ?? { width: 8, height: 16 };
+    const dir = dirname(buf.abs);
+    return {
+      key: `${cell.width}x${cell.height}`,
+      picture: (url, width) => {
+        if (!url || /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//")) return null;
+        let path: string;
+        try {
+          path = resolve(dir, decodeURI(url.split(/[?#]/)[0]!));
+        } catch {
+          return null;
+        }
+        const size = images.size(path);
+        if (!size || size.width <= 0 || size.height <= 0) return null;
+        let cols = Math.max(1, Math.min(width, Math.ceil(size.width / cell.width)));
+        let rows = Math.max(1, Math.ceil((cols * cell.width * size.height) / size.width / cell.height));
+        if (rows > PICTURE_ROWS) {
+          rows = PICTURE_ROWS;
+          cols = Math.max(1, Math.min(width, Math.round((rows * cell.height * size.width) / size.height / cell.width)));
+        }
+        return { src: path, cols, rows };
+      },
+    };
   }
 
   private configFiles(): string[] {
@@ -2224,7 +2273,7 @@ export class App {
         ? this.liveLayout(view, width)
         : code
           ? view.buf.codeLayout(width, this.ui.wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view))
-          : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null);
+          : view.buf.layout(width, this.glyphs, this.ui.urls, view.buf.rel ? this.graph : null, this.picturesFor(view.buf));
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.glyphs.mode}:${this.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}`;
     if (view.layoutKey !== key) {
@@ -2378,7 +2427,7 @@ export class App {
     const code = this.isCodeDocument(buf);
     const fits = (s: number, e: number) => rowsOf(s, e) <= maxRows;
     const fresh = (prev?: Block): LiveBase => {
-      const rendered = code ? buf.codeLayout(width, wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view)) : buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null);
+      const rendered = code ? buf.codeLayout(width, wrap, this.glyphs, this.ui.code_cells, this.cellProblems(view)) : buf.layout(width, this.glyphs, this.ui.urls, buf.rel ? this.graph : null, this.picturesFor(buf));
       let blocks = code ? buf.codeBlocks(lineCount) : blockRanges(buf.parsed.tree, lineCount);
       let unit: ((at: number) => Block | null) | undefined;
       if (code) {

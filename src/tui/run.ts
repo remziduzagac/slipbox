@@ -12,7 +12,8 @@ import { locateVault, recordLocation, configFilesFor, setRootMarkers, VaultError
 import { setTrustedRoots } from "../core/trust.ts";
 import { App, type AppOptions } from "./app.ts";
 import { keyName } from "./keys.ts";
-import { AppRenderable, toRGBA } from "./opentui.ts";
+import type { Canvas } from "./canvas.ts";
+import { AppRenderable, Pictures, toRGBA } from "./opentui.ts";
 
 /** What the App starts with, all found before the screen is taken. */
 export type Start = Omit<AppOptions, "host">;
@@ -75,6 +76,15 @@ export async function runTui(argv: string[]): Promise<number> {
 
   let resolveDone: (code: number) => void = () => {};
   const done = new Promise<number>((r) => (resolveDone = r));
+  // Pictures (12.x): drawn where the terminal speaks Kitty graphics or sixel, as OpenTUI found it asking.
+  const pictures = new Pictures(() => {
+    const c = renderer.capabilities;
+    return c?.kitty_graphics ? "kitty" : c?.sixel ? "sixel" : null;
+  });
+  const cell = () => {
+    const r = renderer.resolution;
+    return r && renderer.terminalWidth > 0 && renderer.terminalHeight > 0 ? { width: r.width / renderer.terminalWidth, height: r.height / renderer.terminalHeight } : null;
+  };
 
   const app = new App({
     ...start,
@@ -87,6 +97,7 @@ export async function runTui(argv: string[]): Promise<number> {
         resolveDone(0);
       },
       setTitle: (t) => renderer.setTerminalTitle(t),
+      images: { supported: () => pictures.protocol() !== null, size: (path) => pictures.size(path), cell },
       setMouse: (on) => {
         renderer.useMouse = on;
       },
@@ -122,18 +133,27 @@ export async function runTui(argv: string[]): Promise<number> {
   // How the terminal counts a cluster's columns, as OpenTUI found it asking — an answer that may come
   // after the first frame: slipbox counts the same way, or rows drift inside the frame OpenTUI lays out.
   let counted: string | null = null;
-  const view = new AppRenderable(renderer, (canvas) => {
+  // Whether pictures are drawn, and at what cell size — answers that may come after the first frame: notes laid out
+  // again when they do.
+  const picturesNow = () => `${pictures.protocol() ?? "-"}:${JSON.stringify(cell())}`;
+  let picturesSeen = picturesNow();
+  const paint = (canvas: Canvas) => {
     if (renderer.widthMethod !== counted) {
       counted = renderer.widthMethod;
       setWidthMethod(counted === "wcwidth" ? "wcwidth" : "unicode");
       app.widthsChanged();
+    }
+    if (picturesNow() !== picturesSeen) {
+      picturesSeen = picturesNow();
+      app.picturesChanged();
     }
     if (app.theme.bg !== bg) {
       bg = app.theme.bg;
       renderer.setBackgroundColor(toRGBA(bg === "default" ? null : bg, false));
     }
     app.draw(canvas);
-  });
+  };
+  const view = new AppRenderable(renderer, paint, pictures);
   renderer.root.add(view);
   view.onMouse = (e) => {
     app.handleMouse({ type: e.type, x: e.x, y: e.y, button: e.button, scroll: e.scroll });
