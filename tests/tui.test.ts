@@ -5547,6 +5547,12 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(r[head + 14]).toBe("│ }");
     expect(r[head + 15]).toBe(""); // the next box's blank row
     expect(r.filter((x) => /[┐┘└]/.test(x))).toEqual([]); // no right corner, no bottom, anywhere
+    // Its lines in a colour of their own, brighter than the frame's: its top, its left line (drawn over its rows).
+    const canvas = h.canvas();
+    const pane = h.app.geometry!.panes[0]!;
+    const cellLine = h.app.theme.roles.cell_line.fg!;
+    expect(cellLine).not.toBe(h.app.theme.roles.border.fg);
+    for (const y of [head, head + 2]) expect(canvas.styles[pane.y + y]![pane.textX]!.fg).toBe(cellLine);
     const layout = h.app.currentLayout(v);
     const top = layout.lines.findIndex((l) => l.decor && l.spans.some((sp) => sp.text === "resolve"));
     expect(layout.lines[top + 1]!.decor).toBe(true); // the blank row: decoration, no cursor stop
@@ -5562,6 +5568,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(textOf).toBe(graph + 5);
     expect(r[textOf]).toMatch(/^│ ┌─ ƒ textOf ─+ 18–21 ⇢ ⧉ ✎ ◎ ▾ ──$/);
     expect(r[textOf + 1]).toBe("├─┤"); // a row under its top, its left line drawn into the row
+    for (const [y, x] of [[graph + 4, 0], [textOf + 1, 0], [textOf + 1, 2]] as const) expect(canvas.styles[pane.y + y]![pane.textX + x]!.fg).toBe(cellLine); // the tree's lines, its joints
     expect(r[textOf + 2]).toBe("│ │ A note's text, as read.");
     expect(r[textOf + 3]).toBe("│ │"); // the blank row between its documentation and its code
     expect(r[textOf + 4]).toBe("│ │ textOf(rel: string): string | undefined {"); // its rows from its own edge
@@ -5571,11 +5578,10 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(r.slice(loose - 2, loose + 2)).toEqual(["│", expect.stringMatching(/^│ ┌─ ¶ ─+ 23 ⧉ ✎ ◎ ▾ ──$/), "├─┤ Then writing.", "│"]);
     expect(r[loose - 1]!.length).toBe(r[head]!.length); // its top to the edge
     expect(r[rowIndex(h, "ƒ add")]).toMatch(/^│ ┌─ ƒ add ─+ 25 ⇢ ⧉ ✎ ◎ ▾ ──$/);
-    expect(r[rowIndex(h, "ƒ add") + 1]).toBe("├─┤"); // the last: the line on to the brace's box
+    expect(r[rowIndex(h, "ƒ add") + 1]).toBe("├─┤"); // the last: the line on to the class's brace
     expect(r[rowIndex(h, "ƒ add") + 2]).toMatch(/^│ │ add\(rel: string\)/);
-    // The class's closing brace: a box of its own at the class's, the line down to it — the members between the two.
-    expect(r.slice(rowIndex(h, "ƒ add") + 3, rowIndex(h, "ƒ add") + 5)).toEqual([expect.stringMatching(/^├─+$/), "│ }"]);
-    expect(r[rowIndex(h, "ƒ add") + 3]!.length).toBe(r[graph]!.length);
+    // The class's closing brace: a row of the class's, on its left line — no box of its own.
+    expect(r.slice(rowIndex(h, "ƒ add") + 3, rowIndex(h, "ƒ add") + 5)).toEqual(["│ }", ""]);
     const brace = h.app.currentLayout(v).lines.find((l) => l.src === 26 && l.srcMap)!;
     expect(brace.spans.filter((sp) => sp.text.trim()).every((sp) => sp.attrs & 16)).toBe(true); // the class's closing brace, dimmed
     // Statements together: the values' names, no references (they're no definition); a string's blank lines its own.
@@ -5633,12 +5639,12 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(narrow.find((x) => x.includes("ƒ one"))).toStartWith("┌─ ƒ one");
   });
 
-  test("a class's closing brace a box of its own, from its own edge; what's after its last method else its members' cells", async () => {
-    // A class indented in the file (in a namespace): its closing box from its own edge, as its cells are.
+  test("a class's closing brace a row on its line, from its own edge; what's after its last method else its members' cells", async () => {
+    // A class indented in the file (in a namespace): its closing brace from its own edge, as its cells are.
     const NS = ["export namespace N {", "  export class A {", "    m(): void {}", "  }", "}", ""].join("\n");
     let r = rows(await open({}, "ns.ts", NS));
     const m = r.findIndex((x) => x.includes("ƒ m"));
-    expect(r.slice(m + 3, m + 5)).toEqual([expect.stringMatching(/^├─+$/), "│ }"]);
+    expect(r.slice(m + 3, m + 5)).toEqual(["│ }", ""]);
     // A field after the last method, braces in it: a member's cell; only the brace on its own line is the closing.
     r = rows(await open({}, "b.ts", ["export class B {", "  m(): void {}", "  static empty = {};", "}", ""].join("\n")));
     expect(r.find((y) => y.includes("static empty"))).toMatch(/^│ │ static empty = \{\};$/);

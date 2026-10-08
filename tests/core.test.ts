@@ -280,6 +280,15 @@ describe("themes (2.6)", () => {
       expect([t.name, Math.min(page!, band!) < gutter! && gutter! < Math.max(page!, band!)]).toEqual([t.name, true]);
     }
   });
+  test("a code cell's lines a step brighter than the frame's and the rules', dimmer than the text, in every colour theme", () => {
+    for (const t of listThemes()) {
+      const { theme } = loadTheme(t.name);
+      if (theme.name === "terminal" || theme.name === "mono") continue;
+      const [frame, cell, text] = [theme.roles.rule.fg!, theme.roles.cell_line.fg!, theme.fg].map(luminance);
+      const [lo, hi] = theme.kind === "dark" ? [frame!, text!] : [text!, frame!];
+      expect([t.name, lo < cell! && cell! < hi]).toEqual([t.name, true]);
+    }
+  });
   test("the lens while it's typed into is green: its rules and label, a green tint on its rows", () => {
     const { theme } = loadTheme("tokyo-night");
     expect(theme.roles.lens_edit.fg).toBe("#9ece6a"); // the palette's green

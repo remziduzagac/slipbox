@@ -332,15 +332,13 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     indent += 2;
     page(head + 1, body, d.depth + 1);
     indent = column;
-    // Its closing (dimmed as braces are): a box of its own at the class's, the class closed there, the tree's line
-    // down to it.
+    // Its closing brace (dimmed as braces are): a row of the class's at its left line, the tree's line on down to it.
     const left = Math.min(column, Math.max(0, width - 30));
     const tail = range(body + 1, d.end).filter((k) => !blank(texts[k - 1], k));
     const close = style === "box" && tail.length ? lines.length : undefined;
     if (tail.length) {
       const inner = width - left - (style === "box" ? 4 : 2);
       const col = Math.min(d.column, Math.max(0, width - 30));
-      if (style === "box") push(boxTop(left, inner, tail[0]!, g));
       for (const k of tail) for (const r of codeRows(k, col, inner)) push(framedRow(plainRow(r.cells, k, texts[k - 1]!.length), left, inner, style));
     }
     tree(start, left, close);
@@ -350,7 +348,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
    * The tree lines, as the explorer's, from a class's box to its members' (rows from `start`, the class at `column`): its
    * box's left line on down, `├─` to each member's box a row under its top, by its name — the same row for every one,
    * the box's corner kept — `└─` to the last's (a folded box, or a band, at its top: it has no row under it). A class's
-   * closing box (`close`, its top row): the line on down to it, the members between the class's two boxes.
+   * closing brace (`close`, its row): the line on down to it, its own left line there.
    */
   const tree = (start: number, column: number, close?: number) => {
     const members = headRows.filter((h) => h.row >= start);
@@ -358,10 +356,9 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     if (at <= column) return;
     const meets = members.filter((h) => h.column === at).map((h) => (lines[h.row + 1]?.frame?.includes(at) ? h.row + 1 : h.row));
     const last = Math.max(...meets);
-    for (let r = start; r <= (close ?? last); r++) {
-      if (r === close) lines[r] = putAt(lines[r]!, column, g.box.ml, "border");
-      else if (!meets.includes(r)) lines[r] = putAt(lines[r]!, column, g.guide, "border");
-      else lines[r] = joint(putAt(lines[r]!, column, `${r === last && close === undefined ? g.guideLast : g.guideBranch}${g.guideDash.repeat(at - column - 1)}`, "border"), at, g);
+    for (let r = start; r < (close ?? last + 1); r++) {
+      if (!meets.includes(r)) lines[r] = putAt(lines[r]!, column, g.guide, "cell_line");
+      else lines[r] = joint(putAt(lines[r]!, column, `${r === last && close === undefined ? g.guideLast : g.guideBranch}${g.guideDash.repeat(at - column - 1)}`, "cell_line"), at, g);
     }
   };
 
@@ -446,9 +443,9 @@ function joint(line: Line, at: number, g: Glyphs): Line {
   let c = 0;
   let here = "";
   for (const s of line.spans) for (const gr of graphemes(s.text)) if (c++ === at) here = gr;
-  if (here === g.box.tl) return putAt(line, at, g.box.tm, "border");
+  if (here === g.box.tl) return putAt(line, at, g.box.tm, "cell_line");
   if (!line.frame?.includes(at)) return line;
-  return { ...putAt(line, at, g.box.mr, "border"), frame: line.frame.filter((x) => x !== at) };
+  return { ...putAt(line, at, g.box.mr, "cell_line"), frame: line.frame.filter((x) => x !== at) };
 }
 
 /** A row with `text` drawn from column `at` (over its indentation's spaces), spaces added where the row is short. */
@@ -528,7 +525,7 @@ function cellHeader(c: CellSpec, column: number, inner: number, style: "box" | "
   const room = total - stringWidth(open) - stringWidth(close) - markW - bw - stringWidth(lines) - 4;
   const title = c.prose ? "" : truncate(c.title, Math.max(1, room));
   const fill = Math.max(1, total - stringWidth(open) - stringWidth(close) - markW - stringWidth(title) - stringWidth(lines) - bw - 3);
-  const edge: Role = box ? "border" : "text";
+  const edge: Role = box ? "cell_line" : "text";
   const spans: Span[] = [{ text: " ".repeat(column), role: "text", attrs: 0 }, { text: open, role: edge, attrs: 0 }];
   if (c.mark) spans.push({ text: c.prose ? c.mark : `${c.mark} `, role: c.markRole, attrs: A_BOLD });
   if (title) spans.push({ text: title, role: c.def ? c.markRole : "dim", attrs: c.def ? A_BOLD : 0 });
@@ -540,10 +537,6 @@ function cellHeader(c: CellSpec, column: number, inner: number, style: "box" | "
   return { spans, src: c.from, decor: true, ...(box ? {} : { fill: "breadcrumb_band" as Role }) };
 }
 
-/** A closing brace's box's top, untitled, from its left line to the edge: a box has no right line. */
-function boxTop(column: number, inner: number, src: number, g: Glyphs): Line {
-  return { spans: [{ text: " ".repeat(column), role: "text", attrs: 0 }, { text: `${g.box.tl}${g.box.h.repeat(inner + 3)}`, role: "border", attrs: 0 }], src, decor: true };
-}
 
 /**
  * Where each line's note goes (its comment after code, in the margin): a run of lines with notes lines them up a

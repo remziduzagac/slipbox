@@ -958,7 +958,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     if (line.frame) {
       for (const fx of line.frame) {
         const x = textX + fx - view.left;
-        if (x >= textX && x < textX + textW) drawText(c, x, y, app.glyphs.box.v, { ...roleStyle(theme, "border", page), bg: band ?? page }, 1);
+        if (x >= textX && x < textX + textW) drawText(c, x, y, app.glyphs.box.v, { ...roleStyle(theme, "cell_line", page), bg: band ?? page }, 1);
       }
     }
     if (line.spans.some((sp) => sp.button)) {
