@@ -101,30 +101,34 @@ those names. A plain block comment over several lines is prose alone.
 ├─┤ Then writing.                                                 │
 │ └───────────────────────────────────────────────────────────────┘
 │ ┌─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ─┐
-└─┤                                                               │
-  │ add(rel: string): void { this.notes.set(rel, read(rel)); }    │
-  └───────────────────────────────────────────────────────────────┘
-}
+├─┤                                                               │
+│ │ add(rel: string): void { this.notes.set(rel, read(rel)); }    │
+│ └───────────────────────────────────────────────────────────────┘
+├─────────────────────────────────────────────────────────────────┐
+│ }                                                               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 A Python file of the same function and class reads the same: the docstring at the top of the cell, then the code —
 only the tokens differ.
 
 - **Cells**: a definition's documentation and its lines (its decorators first) in a box — or on a tinted band, the
-  header a band of its own (`[render] code_cells`, `space u c`). Its documentation is prose at the top (a doc
-  comment, a docstring, or comment lines right above it, as Go documents), then a divider, then its code. A class is
-  a cell of its head (up to its first member), then each member a cell under it; what's after the last member (a
-  closing brace) is drawn as written. Each run of other statements — top-level values, a script's lines — between
-  blank lines and comments is a cell too, titled by the values it defines, else `code`. A comment that documents
-  nothing (a file's opening note, a module's docstring) is a cell of its own: prose, no code, its header's mark alone
-  (`¶`), no title. A box has a blank row under its header, so its name stands clear of what's under it (not a
-  comment's box, which has no name, nor a band, its header a band of its own). The page's pieces touch, a box's
-  borders setting each apart, whatever blank lines the file has; a blank row only before a section's rule.
+  header a band of its own (`[render] code_cells`, `space u c`). Its documentation is prose at the top (a doc comment, a
+  docstring, or comment lines right above it, as Go documents), then a divider, then its code. A class is a cell of its
+  head (up to its first member), then each member a cell under it (what's after its last method too), then its closing
+  brace in a box of its own at the class's, untitled — the class closed where it's written. Each run of other statements
+  — top-level values, a script's lines — between blank lines and comments is a cell too, titled by the values it
+  defines, else `code`. A comment that documents nothing (a file's opening note, a module's docstring) is a cell of its
+  own: prose, no code, its header's mark alone (`¶`), no title. A box has a blank row under its header, so its name
+  stands clear of what's under it (not a comment's box, which has no name, nor a band, its header a band of its own).
+  The page's pieces touch, a box's borders setting each apart, whatever blank lines the file has; a blank row only
+  before a section's rule.
 - **The tree**: a class's members are drawn two columns in from it, however far the file indents them (Python's four
   as TypeScript's two), joined to it by the explorer's tree lines: down from the corner of the class's box, `├─` to
   the middle row of each member's box (`┤` where it meets the border, `┼` on a divider, `┬` on a folded box's top),
   `└─` to the last's — a tall box's no further than three rows under its header, so the line stays by the name. A
-  class in a class has a tree of its own, from its own box.
+  class with a closing brace has the line on down to its closing box's corner, the members between the class's two
+  boxes. A class in a class has a tree of its own, from its own box.
 - **A cell's header**: its kind (`ƒ` a function or method, `◆` a class, `◇` an interface, type or enum, `•` values,
   `¶` a comment; Nerd: the editors' symbol icons; ASCII `f C T v #`), its name bold, its lines, then its buttons —
   a comment's all but `⇢`, as it defines nothing:

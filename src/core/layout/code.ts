@@ -324,23 +324,36 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     while (head > d.top && lineComment.has(head)) head--;
     cell({ from, to: head, code: [d.top, head], docs: docsOf, column: d.column, mark, markRole, title, def: d });
     if (folded.has(d.top)) return;
-    const last = Math.max(...kids.map((k) => k.end));
+    // Its members, to its closing brace (a line of its own after its last member's).
+    let body = d.end;
+    while (body > Math.max(...kids.map((k) => k.end)) && CLOSING.test(texts[body - 1]!)) body--;
     const start = lines.length;
     const column = indent;
     indent += 2;
-    page(head + 1, last, d.depth + 1);
+    page(head + 1, body, d.depth + 1);
     indent = column;
-    tree(start, Math.min(column, Math.max(0, width - 30)));
-    // What's after the last member (a closing brace, dimmed as braces are): as written, under the members.
-    for (let k = last + 1; k <= d.end; k++) if (!blank(texts[k - 1], k)) for (const r of codeRows(k, -1, width)) push(plainRow(r.cells, k, texts[k - 1]!.length));
+    // Its closing (dimmed as braces are): a box of its own at the class's, the class closed there, the tree's line
+    // down to it.
+    const left = Math.min(column, Math.max(0, width - 30));
+    const tail = range(body + 1, d.end).filter((k) => !blank(texts[k - 1], k));
+    const close = style === "box" && tail.length ? lines.length : undefined;
+    if (tail.length) {
+      const inner = width - left - (style === "box" ? 4 : 2);
+      const col = Math.min(d.column, Math.max(0, width - 30));
+      if (style === "box") push(boxEdge(left, inner, tail[0]!, g, "top"));
+      for (const k of tail) for (const r of codeRows(k, col, inner)) push(framedRow(plainRow(r.cells, k, texts[k - 1]!.length), left, inner, style));
+      if (style === "box") push(boxEdge(left, inner, d.end, g, "bottom"));
+    }
+    tree(start, left, close);
   };
 
   /**
    * The tree lines, as the explorer's, from a class's box to its members' (rows from `start`, the class at `column`): a
    * line down from its box's corner, `├─` to the middle of each member's box, `└─` to the last's — a tall box's no
-   * further than three rows under its header, by its name.
+   * further than three rows under its header, by its name. A class's closing box (`close`, its top row): the line on
+   * down to its corner, the members between the class's two boxes.
    */
-  const tree = (start: number, column: number) => {
+  const tree = (start: number, column: number, close?: number) => {
     const members = headRows.filter((h) => h.row >= start);
     const at = Math.min(...members.map((h) => h.column));
     if (at <= column) return;
@@ -348,9 +361,10 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     const lastMid = Math.max(...mids);
     const corner = lines[start - 1];
     if (corner?.decor) lines[start - 1] = putAt(corner, column, g.box.ml, "border"); // a box's bottom, not a band's code
-    for (let r = start; r <= lastMid; r++) {
-      if (!mids.includes(r)) lines[r] = putAt(lines[r]!, column, g.guide, "border");
-      else lines[r] = joint(putAt(lines[r]!, column, `${r === lastMid ? g.guideLast : g.guideBranch}${g.guideDash.repeat(at - column - 1)}`, "border"), at, g);
+    for (let r = start; r <= (close ?? lastMid); r++) {
+      if (r === close) lines[r] = putAt(lines[r]!, column, g.box.ml, "border");
+      else if (!mids.includes(r)) lines[r] = putAt(lines[r]!, column, g.guide, "border");
+      else lines[r] = joint(putAt(lines[r]!, column, `${r === lastMid && close === undefined ? g.guideLast : g.guideBranch}${g.guideDash.repeat(at - column - 1)}`, "border"), at, g);
     }
   };
 
@@ -423,6 +437,8 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
 }
 
 const lead = (t: string) => t.length - t.trimStart().length;
+/** A class's closing brace, on a line of its own. */
+const CLOSING = /^\s*\}\s*$/;
 const range = (a: number, b: number) => Array.from({ length: Math.max(0, b - a + 1) }, (_, k) => a + k);
 
 /**

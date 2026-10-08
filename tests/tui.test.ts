@@ -5515,13 +5515,15 @@ describe("code as a notebook (24.x, 24.13)", () => {
     ]);
     expect(r[loose - 1]!.length).toBe(r[loose + 1]!.length); // its header as wide as its box
     expect(r[rowIndex(h, "ƒ add")]).toMatch(/^│ ┌─ ƒ add ─+ 25 ⇢ ⧉ ✎ ◎ ▾ ─┐$/);
-    expect(r[rowIndex(h, "ƒ add") + 1]).toMatch(/^└─┤ +│$/);
-    expect(r[rowIndex(h, "ƒ add") + 2]).toMatch(/^ {2}│ add\(rel: string\)/);
+    expect(r[rowIndex(h, "ƒ add") + 1]).toMatch(/^├─┤ +│$/);
+    expect(r[rowIndex(h, "ƒ add") + 2]).toMatch(/^│ │ add\(rel: string\)/);
     expect(r[rowIndex(h, "ƒ add") - 1]).toMatch(/^│ └─+┘$/);
-    expect(r[rowIndex(h, "ƒ add") + 3]).toMatch(/^ {2}└─+┘$/); // the last member's: no line on past it
-    expect(r[rowIndex(h, "ƒ add") + 4]).toBe("}");
+    expect(r[rowIndex(h, "ƒ add") + 3]).toMatch(/^│ └─+┘$/);
+    // The class's closing brace: a box of its own at the class's, the line down to it — the members between the two.
+    expect(r.slice(rowIndex(h, "ƒ add") + 4, rowIndex(h, "ƒ add") + 7)).toEqual([expect.stringMatching(/^├─+┐$/), expect.stringMatching(/^│ \} +│$/), expect.stringMatching(/^└─+┘$/)]);
+    expect(r[rowIndex(h, "ƒ add") + 4]!.length).toBe(r[graph]!.length);
     const brace = h.app.currentLayout(v).lines.find((l) => l.src === 26 && l.srcMap)!;
-    expect(brace.spans.every((sp) => sp.attrs & 16)).toBe(true); // the class's closing brace, dimmed
+    expect(brace.spans.filter((sp) => sp.text.trim()).every((sp) => sp.attrs & 16)).toBe(true); // the class's closing brace, dimmed
     // Statements together: the values' names, no references (they're no definition); a string's blank lines its own.
     const vals = rowIndex(h, "html · min");
     expect(r[vals]).toMatch(/^┌─ • html · min ─+ 27–33 ⧉ ✎ ◎ ▾ ─┐$/);
@@ -5578,6 +5580,25 @@ describe("code as a notebook (24.x, 24.13)", () => {
     // Too narrow for a member to sit further in: no tree, the boxes as they are.
     const narrow = h.app.view!.buf.codeLayout(28, true, h.app.glyphs).lines.map((l) => l.spans.map((sp) => sp.text).join(""));
     expect(narrow.find((x) => x.includes("ƒ one"))).toStartWith("┌─ ƒ one");
+  });
+
+  test("a class's closing brace a box of its own, from its own edge; what's after its last method else its members' cells", async () => {
+    // A class indented in the file (in a namespace): its closing box from its own edge, as its cells are.
+    const NS = ["export namespace N {", "  export class A {", "    m(): void {}", "  }", "}", ""].join("\n");
+    let r = rows(await open({}, "ns.ts", NS));
+    const m = r.findIndex((x) => x.includes("ƒ m"));
+    expect(r.slice(m + 3, m + 7)).toEqual([expect.stringMatching(/^│ └─+┘$/), expect.stringMatching(/^├─+┐$/), expect.stringMatching(/^│ \} +│$/), expect.stringMatching(/^└─+┘$/)]);
+    // A field after the last method, braces in it: a member's cell; only the brace on its own line is the closing.
+    r = rows(await open({}, "b.ts", ["export class B {", "  m(): void {}", "  static empty = {};", "}", ""].join("\n")));
+    expect(r.find((y) => y.includes("static empty"))).toMatch(/^│ │ static empty = \{\}; +│$/);
+    expect(r.filter((y) => /^│ \} +│$/.test(y))).toHaveLength(1);
+    // Python's class has no closing: a value after its last method is a member's cell, on the tree.
+    const PY = ["class A:", "    def m(self):", "        pass", "", "    x = 1", ""].join("\n");
+    r = rows(await open({}, "a.py", PY));
+    const x = r.findIndex((y) => y.includes("─ code ─"));
+    expect(r[x]).toMatch(/^│ ┌─ code ─+ 5 ⧉ ✎ ◎ ▾ ─┐$/);
+    expect(r[x + 1]).toMatch(/^└─┤ +│$/);
+    expect(r[x + 2]).toMatch(/^ {2}│ x = 1 +│$/);
   });
 
   test("a cell folds to its header — z a, space k f, its ▾ — and opens again; the imports fold on enter", async () => {
@@ -5694,6 +5715,9 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const layout = h.app.currentLayout(h.app.view!);
     expect(layout.lines.find((l) => l.src === 12 && l.srcMap)!.fill).toBe("code_block");
     expect(layout.lines.find((l) => l.src === 12 && l.srcMap)!.frame).toBeUndefined();
+    // The class's closing brace on a band of its own, no line to it (no corner to turn).
+    const brace = layout.lines.find((l) => l.src === 26 && l.srcMap)!;
+    expect([brace.fill, brace.spans.map((sp) => sp.text).join("").trimEnd()]).toEqual(["code_block", " }"]);
     expect(r.some((x) => x.includes("┌"))).toBe(false);
     await h.keys("space", "u", "c");
     expect(h.app.messages.at(-1)!.text).toBe("Code cells: boxes");
@@ -5900,9 +5924,10 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
       const m = at(r, "ƒ text");
       expect(r[m]).toMatch(/^│ ┌─ ƒ text_?[oO]f ─/); // the class's one member
       expect(r.slice(m + 2, m + 5).map(inBox)).toEqual(["A note's text, as read.", "", "From the cache when it has it."]);
-      // The line to its box's middle, but no further than three rows under its name: TypeScript's box a row taller.
-      expect(r[m + 3]).toMatch(/^└─┤ +│$/);
-      expect(r[m + 5]).toMatch(/^ {2}├─+┤$/);
+      // The line to its box's middle, but no further than three rows under its name: TypeScript's box a row taller. On
+      // past it to the class's closing brace in TypeScript; Python's class has none.
+      expect(r[m + 3]).toMatch(r === ts ? /^├─┤ +│$/ : /^└─┤ +│$/);
+      expect(r[m + 5]).toMatch(r === ts ? /^│ ├─+┤$/ : /^ {2}├─+┤$/);
     }
   });
 
