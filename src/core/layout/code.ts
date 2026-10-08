@@ -236,7 +236,6 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       heads.push({ section: false, depth: c.def.depth, text: c.title, row: first > header ? first : header, src: c.from });
     };
     if (shut) {
-      if (style === "box") push(boxEdge(left, inner, c.to, g, "bottom"));
       done();
       return;
     }
@@ -304,9 +303,8 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       for (const r of codeRows(k, col, inner)) push(framed(plainRow(r.cells, k, lineEnd(k))));
       k++;
     }
-    // A cell's last blank row is the gap's.
+    // A cell's last blank row is the gap's. A box is open at the bottom: the next one's top closes it.
     if (blankRow) lines.pop();
-    if (style === "box") push(boxEdge(left, inner, c.to, g, "bottom"));
     done();
   };
 
@@ -343,25 +341,22 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       const col = Math.min(d.column, Math.max(0, width - 30));
       if (style === "box") push(boxEdge(left, inner, tail[0]!, g, "top"));
       for (const k of tail) for (const r of codeRows(k, col, inner)) push(framedRow(plainRow(r.cells, k, texts[k - 1]!.length), left, inner, style));
-      if (style === "box") push(boxEdge(left, inner, d.end, g, "bottom"));
     }
     tree(start, left, close);
   };
 
   /**
-   * The tree lines, as the explorer's, from a class's box to its members' (rows from `start`, the class at `column`): a
-   * line down from its box's corner, `├─` to the middle of each member's box, `└─` to the last's — a tall box's no
-   * further than three rows under its header, by its name. A class's closing box (`close`, its top row): the line on
-   * down to its corner, the members between the class's two boxes.
+   * The tree lines, as the explorer's, from a class's box to its members' (rows from `start`, the class at `column`): its
+   * box's left line on down, `├─` to the middle of each member's box, `└─` to the last's — a tall box's no further than
+   * three rows under its header, by its name. A class's closing box (`close`, its top row): the line on down to its
+   * corner, the members between the class's two boxes.
    */
   const tree = (start: number, column: number, close?: number) => {
     const members = headRows.filter((h) => h.row >= start);
     const at = Math.min(...members.map((h) => h.column));
     if (at <= column) return;
-    const mids = members.filter((h) => h.column === at).map((h) => h.row + Math.min(3, Math.floor((h.end - h.row) / 2)));
+    const mids = members.filter((h) => h.column === at).map((h) => h.row + Math.min(3, Math.ceil((h.end - h.row) / 2)));
     const lastMid = Math.max(...mids);
-    const corner = lines[start - 1];
-    if (corner?.decor) lines[start - 1] = putAt(corner, column, g.box.ml, "border"); // a box's bottom, not a band's code
     for (let r = start; r <= (close ?? lastMid); r++) {
       if (r === close) lines[r] = putAt(lines[r]!, column, g.box.ml, "border");
       else if (!mids.includes(r)) lines[r] = putAt(lines[r]!, column, g.guide, "border");
@@ -497,7 +492,7 @@ function framedRow(l: Line, column: number, inner: number, style: "box" | "band"
     const first = l.srcMap.cells[0] ?? l.srcMap.end;
     out.srcMap = { cells: [...Array(column + side).fill(first), ...l.srcMap.cells, ...Array(Math.max(0, inner - w) + side).fill(l.srcMap.end)], end: l.srcMap.end };
   }
-  if (style === "box") out.frame = [column, column + inner + 3];
+  if (style === "box") out.frame = [column]; // its left line: no right one
   else out.fill = "code_block";
   return out;
 }
@@ -527,7 +522,7 @@ function cellHeader(c: CellSpec, column: number, inner: number, style: "box" | "
   const bw = buttons.reduce((n, s) => n + stringWidth(s.text), 0);
   const box = style === "box";
   const open = box ? `${g.box.tl}${g.box.h} ` : " ";
-  const close = box ? ` ${g.box.h}${g.box.tr}` : " ";
+  const close = box ? ` ${g.box.h.repeat(2)}` : " "; // its top line runs to the edge: no corner
   // A comment's box: its mark alone (`¶`), no title — what it is, it says.
   const markW = c.mark ? stringWidth(c.mark) + (c.prose ? 0 : 1) : 0;
   const room = total - stringWidth(open) - stringWidth(close) - markW - bw - stringWidth(lines) - 4;
@@ -545,9 +540,10 @@ function cellHeader(c: CellSpec, column: number, inner: number, style: "box" | "
   return { spans, src: c.from, decor: true, ...(box ? {} : { fill: "breadcrumb_band" as Role }) };
 }
 
-/** A box's edge: its top (a prose box's, untitled), the divider between a cell's documentation and its code, its bottom. */
-function boxEdge(column: number, inner: number, src: number, g: Glyphs, edge: "top" | "divider" | "bottom"): Line {
-  const [l, r] = edge === "top" ? [g.box.tl, g.box.tr] : edge === "divider" ? [g.box.ml, g.box.mr] : [g.box.bl, g.box.br];
+/** A box's edge — its top (a closing brace's box's, untitled), the divider between a cell's documentation and its
+ *  code — from its left line to the edge: a box has no right line. */
+function boxEdge(column: number, inner: number, src: number, g: Glyphs, edge: "top" | "divider"): Line {
+  const [l, r] = edge === "top" ? [g.box.tl, g.box.h] : [g.box.ml, g.box.h];
   return { spans: [{ text: " ".repeat(column), role: "text", attrs: 0 }, { text: `${l}${g.box.h.repeat(inner + 2)}${r}`, role: "border", attrs: 0 }], src, decor: true };
 }
 
