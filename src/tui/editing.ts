@@ -344,6 +344,12 @@ function insertKeyNow(app: App, view: View, key: string): void {
       return deleteWordBack(app, view);
     case "ctrl+u":
       return deleteToLineStart(app, view);
+    case "ctrl+v": {
+      // The clipboard, as the terminal's own paste (cmd+v) puts it: into the text, its line breaks the note's own.
+      const reg = app.pasteText();
+      if (reg) insertText(app, view, reg.text.replace(/\r\n?/g, "\n").replaceAll("\n", view.buf.eol));
+      return;
+    }
     case "tab":
       return indentLine(app, view, 1);
     case "shift+tab":

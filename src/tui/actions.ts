@@ -211,18 +211,25 @@ function joinLines(a: App, v: View, n: number): void {
   E.placeAt(a, v, at);
 }
 
+/** The selection's text in the file — its lines whole in visual line mode, else from its first character to its last —
+ *  and the offsets of its two ends. */
+function selectionRange(a: App, v: View): { range: V.Range; from: number; to: number } {
+  const [s, e] = C.ordered(v.sel?.anchor ?? v.cur, v.cur);
+  const from = E.offsetAtPos(a, v, s);
+  const to = E.offsetAtPos(a, v, e);
+  const range = v.visual === "line" ? V.linesRange(v, E.lineOf(v, from), E.lineOf(v, to)) : { from, to: Math.min(E.nextBoundary(v.buf.source, to), Math.max(to, E.lineEnd(v, to))), linewise: false };
+  return { range, from, to };
+}
+
 /** d / c / > / < on a visual selection (char or line), in source mode. */
 function visualOp(a: App, op: "d" | "c" | ">" | "<"): void {
   withView(a, (v) => {
     if (!editable(v)) return a.message("info", "editing is in source mode (space n v) or live preview (space n l)");
     const why = E.cannotEdit(v);
     if (why) return a.message("warn", `${why} — not editing`);
-    const [s, e] = C.ordered(v.sel?.anchor ?? v.cur, v.cur);
     const line = v.visual === "line";
+    const { range: r, from, to } = selectionRange(a, v);
     Object.assign(v, { visual: null, sel: null });
-    const from = E.offsetAtPos(a, v, s);
-    const to = E.offsetAtPos(a, v, e);
-    const r = line ? V.linesRange(v, E.lineOf(v, from), E.lineOf(v, to)) : { from, to: Math.min(E.nextBoundary(v.buf.source, to), Math.max(to, E.lineEnd(v, to))), linewise: false };
     // For `.`: the same change on as much text, said in keys.
     const lines = E.lineOf(v, to) - E.lineOf(v, from) + 1;
     const chars = graphemes(v.buf.source.slice(r.from, r.to)).length; // as l moves: by character
@@ -1508,6 +1515,32 @@ export function registerActions(app: App): void {
       }),
     "edit.join": (a) => sourceEdit(a, (v) => joinLines(a, v, Math.max(2, V.takeCount(a)))),
     "edit.paste_after": (a) => sourceEdit(a, (v) => V.put(a, v, true)),
+    // ctrl+x / ctrl+v (as every editor's): the selection cut, or the cursor's line; the clipboard pasted — over the
+    // selection, or as p.
+    "edit.cut": (a) =>
+      withView(a, (v) => {
+        if (v.sel) return visualOp(a, "d");
+        return sourceEdit(a, (w) => {
+          const line = E.lineOf(w, E.offsetOf(a, w));
+          V.apply(a, w, "d", V.linesRange(w, line, line));
+        });
+      }),
+    "edit.paste": (a) =>
+      withView(a, (v) => {
+        if (!v.sel) return sourceEdit(a, (w) => V.put(a, w, true));
+        if (!editable(v)) return a.message("info", "editing is in source mode (space n v) or live preview (space n l)");
+        const why = E.cannotEdit(v);
+        if (why) return a.message("warn", `${why} — not editing`);
+        const reg = a.pasteText();
+        if (!reg) return a.message("info", "nothing to paste — copy something first");
+        const r = selectionRange(a, v).range;
+        Object.assign(v, { visual: null, sel: null });
+        let text = reg.text.replace(/\r\n?/g, "\n");
+        if (r.linewise && !text.endsWith("\n")) text += "\n";
+        text = text.replaceAll("\n", v.buf.eol);
+        v.buf.edit(r.from, r.to - r.from, text, E.offsetOf(a, v));
+        E.placeAt(a, v, Math.max(r.from, r.from + text.length - 1));
+      }),
     "edit.paste_before": (a) => sourceEdit(a, (v) => V.put(a, v, false)),
     "edit.toggle_case": (a) =>
       sourceEdit(a, (v) => {

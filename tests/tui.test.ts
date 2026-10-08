@@ -4122,8 +4122,8 @@ describe("keymap and registry (0.8, 3.12)", () => {
     for (const s of COMMAND_SPECS) expect(h.app.registry.get(s.id)).toBeDefined();
   });
   test("every ctrl chord outside cursor movement has a non-ctrl route (keymap.md convention)", () => {
-    // Movement has its own alternatives (pagedown, home, arrows); ctrl+c's is y y.
-    const exempt = (v: string) => v.startsWith("cursor.") || v === "copy.selection";
+    // Movement has its own alternatives (pagedown, home, arrows); ctrl+c's is y y, ctrl+x's d and x, ctrl+v's p.
+    const exempt = (v: string) => v.startsWith("cursor.") || ["copy.selection", "edit.cut", "edit.paste"].includes(v);
     for (const [k, v] of Object.entries(DEFAULT_KEYS)) {
       if (!canonSeq(k).startsWith("ctrl+") || exempt(v)) continue;
       const others = Object.entries(DEFAULT_KEYS).filter(([k2, v2]) => v2.split(" ")[0] === v.split(" ")[0] && !canonSeq(k2).startsWith("ctrl+"));
@@ -6698,6 +6698,49 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     h.app.paste("++");
     await h.keys("escape");
     expect(v.buf.source).toContain("++");
+  });
+  test("ctrl+x / ctrl+v, as every editor's beside ctrl+c: a selection cut, else the line; the clipboard pasted — as p, over a selection, while typing", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "c.md"), "alpha beta\ngamma\ndelta\n");
+    const h = await harness({ root, open: "c.md" });
+    const v = h.app.view!;
+    await h.keys("space", "n", "v"); // source mode
+    // A selection cut: what ctrl+c would have copied, taken out.
+    await h.keys("shift+right", "shift+right", "ctrl+c");
+    const copied = h.copied.at(-1);
+    await h.keys("ctrl+x");
+    expect([copied, h.copied.at(-1), v.buf.source]).toEqual(["alp", "alp", "ha beta\ngamma\ndelta\n"]);
+    // Nothing selected: the cursor's line, whole.
+    await h.keys("j", "ctrl+x");
+    expect([h.copied.at(-1), v.buf.source]).toEqual(["gamma\n", "ha beta\ndelta\n"]);
+    // ctrl+v: a line on the clipboard goes under the cursor's line, as p puts it.
+    await h.keys("ctrl+v");
+    expect(v.buf.source).toBe("ha beta\ndelta\ngamma\n");
+    // Over a selection: the clipboard in its place — the clipboard unchanged (a paste isn't a cut).
+    const { copyText } = await import("../src/core/clipboard.ts");
+    const { stateDir } = await import("../src/core/paths.ts");
+    copyText("ZED", { osc52: () => false, fallbackDir: stateDir(h.app.loc) });
+    await h.keys("g", "g", "v", "l", "ctrl+v");
+    expect(v.buf.source).toBe("ZED beta\ndelta\ngamma\n");
+    await h.keys("shift+right", "ctrl+v"); // a shift-selection too: "D " (from the cursor's character, as ctrl+c copies)
+    expect(v.buf.source).toBe("ZEZEDbeta\ndelta\ngamma\n");
+    // While typing: at the cursor, as the terminal's own paste.
+    await h.keys("shift+a", "space", "ctrl+v", "escape");
+    expect(v.buf.source).toBe("ZEZEDbeta ZED\ndelta\ngamma\n");
+    // Lines selected (V): the clipboard's text a line of its own in their place.
+    await h.keys("j", "shift+v", "ctrl+v");
+    expect(v.buf.source).toBe("ZEZEDbeta ZED\nZED\ngamma\n");
+    // ctrl+k switches the view, as space n v.
+    await h.keys("ctrl+k");
+    expect(v.source).toBeFalsy();
+    // Reading, a selection isn't cut: that's an edit, in source mode or the lens.
+    for (const key of ["ctrl+x", "ctrl+v"]) {
+      await h.keys("escape", "shift+right", key);
+      expect(v.buf.source).toBe("ZEZEDbeta ZED\nZED\ngamma\n");
+      expect(h.app.messages.at(-1)!.text).toBe("editing is in source mode (space n v) or live preview (space n l)");
+    }
+    await h.keys("escape", "ctrl+k");
+    expect(v.source).toBe(true);
   });
 });
 

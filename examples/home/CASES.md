@@ -2573,6 +2573,10 @@ Notes being written today: lists, tasks, tables, quotes, code to change.
   `notes/daily/2026-10-05.md` (command-specs.ts)
 - `edit.paste_before` — Put before — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
   `notes/daily/2026-10-05.md` (command-specs.ts)
+- `edit.cut` — Cut — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-05.md`
+  (command-specs.ts)
+- `edit.paste` — Paste — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`, `notes/daily/2026-10-05.md`
+  (command-specs.ts)
 - `edit.toggle_case` — Toggle case — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
   `notes/daily/2026-10-05.md` (command-specs.ts)
 - `edit.repeat` — Repeat the last change — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,

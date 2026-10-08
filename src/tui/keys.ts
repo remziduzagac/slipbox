@@ -55,6 +55,10 @@ export const DEFAULT_KEYS: Record<string, string> = {
   escape: "app.escape",
   "y y": "copy.smart",
   "ctrl+c": "copy.selection",
+  // Cut and paste, as every editor has them beside ctrl+c (vim's ctrl+v and ctrl+x, block selection and a number less,
+  // slipbox hasn't).
+  "ctrl+x": "edit.cut",
+  "ctrl+v": "edit.paste",
   "y p": "copy.path",
   "y r": "copy.ref",
   "y l": "copy.link",
@@ -248,6 +252,7 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader n r": "note.reload",
   "leader n e": "note.edit",
   "leader n v": "view.source",
+  "ctrl+k": "view.source",
   "leader n l": "view.live",
   "leader n w": "note.save",
   "leader n shift+w": "note.save_all",

@@ -162,6 +162,8 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "edit.join", title: "Join lines", cli: I, desc: "Joins the line below onto this one with a space (J)" },
   { id: "edit.paste_after", title: "Put after", cli: I, desc: "Puts what was last deleted or yanked after the cursor, or under the line (p)" },
   { id: "edit.paste_before", title: "Put before", cli: I, desc: "Puts it before the cursor, or over the line (P)" },
+  { id: "edit.cut", title: "Cut", cli: I, desc: "Cuts the selection — or, nothing selected, the cursor's line — to the clipboard (ctrl+x)" },
+  { id: "edit.paste", title: "Paste", cli: I, desc: "Pastes the clipboard: after the cursor as p, a copied line under its line, over the selection (ctrl+v)" },
   { id: "edit.toggle_case", title: "Toggle case", cli: I, desc: "Flips the case of the character under the cursor and moves on (~)" },
   { id: "edit.repeat", title: "Repeat the last change", cli: I, desc: "Does the last change again, here (.)" },
   { id: "visual.delete", title: "Delete the selection", cli: I, desc: "Deletes the selected text (source mode)" },

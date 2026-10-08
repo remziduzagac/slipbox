@@ -27,7 +27,8 @@ Config uses the same notation and accepts common spellings: `G` means `shift+g`,
   emacs keys** — but for what macOS terminals send for its own keys: `alt+b` / `alt+f` for option+← / option+→,
   `ctrl+a` / `ctrl+e` for cmd+← / cmd+→, which do what those keys do in any Mac app.
 - **Direct keys beside navigation** are few: `?` help, `:` the palette, `/` and `ctrl+f` find (`n` / `shift+n`),
-  `ctrl+p` the switcher, the `y …` copies, `v` visual mode, `ctrl+q` quit. The which-key popup lists the next keys:
+  `ctrl+p` the switcher, the `y …` copies, `ctrl+c` / `ctrl+x` / `ctrl+v` copy, cut and paste, `v` visual mode,
+  `ctrl+k` source mode, `ctrl+q` quit. The which-key popup lists the next keys:
   immediately after the leader, and after 500 ms for the other prefixes (`y`, `ctrl+w`, `ctrl+t`, `[`, `]`, `g`, `z`).
   Each entry shows a name and a short explanation, in at most three columns, and keys with the same action share an
   entry (`h left`). `backspace` goes up a level, and `esc` cancels. A key that is both a binding and a prefix waits the
@@ -104,12 +105,14 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | cancel (also clears find highlights; with neither, focuses the note) | `esc` |
 | mouse | click moves the cursor (on a link, follows it); drag selects and copies on release |
 
-## Copy
+## Copy, cut, paste
 
 | Action | Keys |
 | --- | --- |
 | copy the selection, or the cursor row when nothing is selected | `y y` |
 | copy the selection (only when something is selected) | `ctrl+c` |
+| cut the selection, or the cursor's line when nothing is selected (an edit) | `ctrl+x` |
+| paste the clipboard: as `p`, over the selection, or while typing at the cursor | `ctrl+v` |
 | copy the note's path | `y p` |
 | copy `path:line` of the cursor row | `y r` |
 | copy the target of the link under the cursor | `y l` |
@@ -118,8 +121,9 @@ Every copy goes to the system clipboard (through the terminal, then `wl-copy`, `
 `pbcopy`), and so does every cut (`x`, `d…`, `c…`, as vim with `clipboard=unnamedplus`). `p` puts
 what the system clipboard holds — read with `wl-paste`, `xclip`, `xsel` or `pbpaste` — and falls
 back to slipbox's own register when it can't be read (over SSH, say). The terminal's paste
-(`ctrl+shift+v`, `cmd+v`) types the text while typing, and puts it like `p` in normal mode.
-`ctrl+v` is not bound.
+(`ctrl+shift+v`, `cmd+v`) types the text while typing, and puts it like `p` in normal mode — as `ctrl+v` does,
+reading the clipboard itself: vim's `ctrl+v` and `ctrl+x` (block selection, a number less) are the editors' paste
+and cut here, beside `ctrl+c`. A paste over a selection leaves the clipboard as it was.
 
 ## Links — `space l`
 
@@ -441,7 +445,7 @@ source first.
 | Action | Keys |
 | --- | --- |
 | tick or untick the task item at the cursor (the innermost, on any of its rows) | `ctrl+l`, `space n t`, a click |
-| show this window's note as its raw markdown, or rendered again (`:source`) | `space n v` |
+| show this window's note as its raw markdown, or rendered again (`:source`) | `ctrl+k`, `space n v` |
 | open the lens: the markdown around the cursor, the rest rendered (`:lens`); `esc` closes it | `space n l` |
 | the lens a block bigger / smaller (the size kept as it moves) / its own size again | `+` / `-` / `=` |
 | type before the cursor / after it | `i` / `a` |
@@ -508,10 +512,11 @@ an item with nothing after its marker, ending the list; `backspace` / `delete` a
 `ctrl+w` the word before; `ctrl+u` what was typed on the line, then the rest before the cursor, and at the line's start
 joins it to the one above (`ctrl+w` too stops once where the insert began); `tab` / `shift+tab` indent or outdent the
 line by two spaces; the arrows, `home` and `end` move — `cmd+←/→` (`ctrl+a` / `ctrl+e`) to the line's start and end,
-`cmd+↑/↓` to the note's; `ctrl+←/→`, `alt+←/→` and `alt+b` / `alt+f` move by words — back to a word's start, forward to
-its end, across lines; `ctrl+s` saves. A paste goes into the text. While a code file's completion shows, `tab`, `enter`,
-`ctrl+n`, `ctrl+p`, `up`, `down` and `ctrl+e` are its (`space c`, above). Source mode's own keys are `[keys.source]` in
-config: the operators and edits above (`d c y > < D C s S r J p P ~ . x`), which win over the reading keys there.
+`cmd+↑/↓` to the note's; `ctrl+v` pastes the clipboard; `ctrl+←/→`, `alt+←/→` and `alt+b` / `alt+f` move by words — back
+to a word's start, forward to its end, across lines; `ctrl+s` saves. A paste goes into the text. While a code file's
+completion shows, `tab`, `enter`, `ctrl+n`, `ctrl+p`, `up`, `down` and `ctrl+e` are its (`space c`, above). Source
+mode's own keys are `[keys.source]` in config: the operators and edits above (`d c y > < D C s S r J p P ~ . x`), which
+win over the reading keys there.
 
 **Where source mode isn't vim.** Motions move by the rows you see, as in reading: on a long line
 wrapped across rows, `0`, `$`, `j` and `k` (and `d$`, `dj`) work on the row, while `D`, `C`, `A`,

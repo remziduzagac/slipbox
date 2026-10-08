@@ -690,16 +690,16 @@ and config remaps all of them.
 
 **The conventions that settle collisions:**
 
-- **Direct keys are for navigation,** plus a few universal ones (`?`, `:`, `/`, `ctrl+f`,
-  `ctrl+p`, the `y …` copies, `v`, `ctrl+o`, `ctrl+q`; see keymap.md); everything
-  else is under the leader, `space`.
+- **Direct keys are for navigation,** plus a few universal ones (`?`, `:`, `/`, `ctrl+f`, `ctrl+p`, the `y …` copies,
+  `ctrl+c` / `ctrl+x` / `ctrl+v`, `v`, `ctrl+k`, `ctrl+o`, `ctrl+q`; see keymap.md); everything else is under the
+  leader, `space`.
 - **No emacs keys**, and no `g` keys except `g g` — but for what macOS terminals send for a Mac's own keys
   (2026-10-08): `alt+b` / `alt+f` for option+← / option+→, by words; `ctrl+a` / `ctrl+e` for cmd+← / cmd+→, a line's
   start and end. A Mac user's keys do what they do in any Mac app; the source switch they displaced (`ctrl+e`) keeps
   `space n v`.
 - **Every `ctrl+` chord has a non-`ctrl+` route,** because terminals, multiplexers and browsers
   can swallow them. Cursor movement is exempt (it has its own alternatives: page keys, arrows,
-  `home`/`end`), and so is `ctrl+c`, whose route is `y y`.
+  `home`/`end`), and so are `ctrl+c`, whose route is `y y`, `ctrl+x` (`d`, `x`) and `ctrl+v` (`p`).
 - **Plain `q` never quits** (`ctrl+q` does), and **`ctrl+c` only copies** (in a list or prompt it
   cancels).
 - **Editing keys are vim's, and only where the text is editable**: `d c y p x .` and the rest live
