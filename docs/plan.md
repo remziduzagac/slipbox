@@ -703,16 +703,16 @@ Chromium per diagram), `mermaid-ascii` (labelled nodes broken, `docs/idea.md`).
 
 ## Extensibility — `13.x`
 
-*Phase 6+.*
+*Deferred, the whole of it (2026-10-09, with the user): for the future, not planned now.*
 
 | ID | Item |
 | --- | --- |
-| 13.1 | Tier 0: commands shelling out with context substitution |
+| 13.1 | **Deferred.** Tier 0: commands shelling out with context substitution |
 | 13.2 | **constraint** arguments passed as argv, never interpolated into a shell string |
-| 13.3 | Sink: suspend and run in the foreground |
-| 13.4 | Sink: scratch or output buffer |
-| 13.5 | Sink: embedded terminal — optional, and never the path everything routes through |
-| 13.6 | Optional external-pane providers with a null backend, built and tested first |
+| 13.3 | **Deferred.** Sink: suspend and run in the foreground |
+| 13.4 | **Deferred.** Sink: scratch or output buffer |
+| 13.5 | **Deferred.** Sink: embedded terminal — optional, and never the path everything routes through |
+| 13.6 | **Deferred.** Optional external-pane providers with a null backend, built and tested first |
 
 ## Distribution — `14.x`
 

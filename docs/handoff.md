@@ -87,6 +87,11 @@ as text (`12.11`), then SVG (`12.15`) and pictures of both by choice, in the the
 beyond that: `24.9`, `24.17`, export (`10.x`), extensibility (`13.x`), distribution (`14.x`), `22.x`, and Scout
 (`6.10`).
 
+**Updated 2026-10-09.** All of `12.x` is built, as prototypes: SVG (`12.15`), Mermaid and a display's maths as pictures
+by choice (`12.16`, `12.17`), and Kitty pictures drawn as Unicode placeholders, sent once (`12.7`). Extensibility
+(`13.x`) is deferred, the whole of it. Left: `24.9`, `24.17`, export (`10.x`), distribution (`14.x`), `22.x`, and
+Scout (`6.10`).
+
 ## The documents
 
 | File | What it is | When to read it |
