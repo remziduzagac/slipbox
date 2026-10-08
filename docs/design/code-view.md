@@ -59,10 +59,11 @@ A doc comment or a docstring is read into one shape — prose, then a list of te
 | NumPy | Python docstrings | `Parameters` over dashes (`name : type`, what under it), `Returns`, `Raises` |
 | reST (Sphinx) | Python docstrings | `:param name:`, `:type name:`, `:returns:`, `:rtype:`, `:raises E:` |
 
-The prose is rendered as markdown at the documentation's indentation (reST's double-backtick code and its roles, such
-as `` :func:`name` ``, as code); a docstring loses its quotes and its common indentation first (PEP 257). The terms
-are a definition list under it: each name, then what it is, its type dimmed after; `returns`, `yields` and `raises` by
-those names. A plain block comment over several lines is prose alone.
+The prose is rendered as markdown, its lines as its author broke them (each a row, wrapped when too long), at the
+documentation's indentation (reST's double-backtick code and its roles, such as `` :func:`name` ``, as code); a
+docstring loses its quotes and its common indentation first (PEP 257). The terms are a definition list under it: each
+name, then what it is, its type dimmed after; `returns`, `yields` and `raises` by those names. A plain block comment
+over several lines is prose alone.
 
 ## What it looks like
 
@@ -77,26 +78,30 @@ those names. A plain block comment over several lines is prose alone.
 │   from      the note it's written in
 │   target    the link as written
 │   returns   the link, or null
-├──────────────────────────────────────────────────────────────────
+│
 │ export function resolve(from: string, target: string) {
 │   if (!target) return null;  nothing written
 │   By name first, then by path.
 │   return byName.get(key(target)) ?? byPath.get(target);
 │ }
+
 ┌─ ◆ Graph ───────────────────────────────────── 19–20 ⇢ ⧉ ✎ ◎ ▾ ──
 │
 │ The notes of a folder, read once.
-├──────────────────────────────────────────────────────────────────
+│
 │ export class Graph {
+│
 │ ┌─ ƒ textOf ────────────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ──
 │ │
 │ │ A note's text, as read.
-├─┼────────────────────────────────────────────────────────────────
+├─┤
 │ │ textOf(rel: string): string | undefined {
 │ │   return this.notes.get(rel);
 │ │ }
+│
 │ ┌─ ¶ ────────────────────────────────────────────── 30 ⧉ ✎ ◎ ▾ ──
 ├─┤ Then writing.
+│
 │ ┌─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ──
 ├─┤
 │ │ add(rel: string): void { this.notes.set(rel, read(rel)); }
@@ -104,24 +109,25 @@ those names. A plain block comment over several lines is prose alone.
 │ }
 ```
 
-A Python file of the same function and class reads the same: the docstring at the top of the cell, then the code —
-only the tokens differ.
+A Python file of the same function and class reads the same: the docstring at the top of the cell, then the code — only
+the tokens differ.
 
 - **Cells**: a definition's documentation and its lines (its decorators first) in a box — or on a tinted band, the
   header a band of its own (`[render] code_cells`, `space u c`). A box is its top line, its header, and its left line:
   no right line, no bottom — the next box's top closes it. Its documentation is prose at the top (a doc comment, a
-  docstring, or comment lines right above it, as Go documents), then a divider, then its code. A class is a cell of its
-  head (up to its first member), then each member a cell under it (what's after its last method too), then its closing
-  brace in a box of its own at the class's, untitled — the class closed where it's written. Each run of other statements
-  — top-level values, a script's lines — between blank lines and comments is a cell too, titled by the values it
-  defines, else `code`. A comment that documents nothing (a file's opening note, a module's docstring) is a cell of its
-  own: prose, no code, its header's mark alone (`¶`), no title. A box has a blank row under its header, so its name
-  stands clear of what's under it (not a comment's box, which has no name, nor a band, its header a band of its own).
-  The page's pieces touch, a box's top setting each apart, whatever blank lines the file has; blank rows only around a
-  section's rule.
+  docstring, or comment lines right above it, as Go documents), then a blank row (the two belong together), then its
+  code. A class is a cell of its head (up to its first member), then each member a cell under it (what's after its last
+  method too), then its closing brace in a box of its own at the class's, untitled — the class closed where it's
+  written. Each run of other statements — top-level values, a script's lines — between blank lines and comments is a
+  cell too, titled by the values it defines, else `code`. A comment that documents nothing (a file's opening note, a
+  module's docstring) is a cell of its own: prose, no code, its header's mark alone (`¶`), no title. A box has a blank
+  row under its header, so its name stands clear of what's under it (not a comment's box, which has no name, nor a band,
+  its header a band of its own). Whatever blank lines the file has: a blank row before each box (in a class, on the
+  class's line), so its name stands clear of what's above it, and around a section's rule; bands touch, a band's header
+  a tint of its own.
 - **The tree**: a class's members are drawn two columns in from it, however far the file indents them (Python's four
   as TypeScript's two), joined to it by the explorer's tree lines: the class's left line on down, `├─` to the middle
-  row of each member's box, the lower of two (`┤` where it meets its left line, `┼` on a divider, `┬` on a folded box's
+  row of each member's box, the lower of two (`┤` where it meets its left line, `┬` on a folded box's
   top), `└─` to the last's — a tall box's no further than three rows under its header, so the line stays by the name.
   A class with a closing brace has the line on down to its closing box's top, the members between the class's two
   boxes. A class in a class has a tree of its own, from its own box.
