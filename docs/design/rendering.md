@@ -91,6 +91,18 @@ its code, the label saying why (`mermaid — too wide to draw`, `mermaid — not
 block's line, so the lens opens on its source. The library loads the first time a note holds a diagram; until it's in
 (a moment), the block is its code, then drawn — and `slipbox render` waits for it.
 
+**Maths** (12.11): `$…$` in text and `$$` blocks, read as Obsidian reads them — not maths where the `$`s hold a space
+just inside them, or a digit follows the closing one (`costs $5 and $10` is money; `$$…$$` in text is maths). Drawn as
+Unicode text in the `math` role: commands as the characters Unicode has (`unicodeit`'s table: `\alpha` α, `\in` ∈,
+`\mathbb{R}` ℝ), sub- and superscripts whole where Unicode has each character (`x^2` x², `\sum_{i=1}^n` ∑ᵢ₌₁ⁿ), else
+bracketed (`e^{i\pi}` e^(iπ)); fractions `a/b` (`(a+b)/c`, `½`), roots `√x` `∛x`, accents over each letter, `\text`'s
+words, functions as their names (`\log`), spacing and sizing done first — a command is given to the table only by its
+exact name. A display's rows are centred together: `aligned` rows lined up at their `&`,
+`cases` braced (`⎧ ⎩`), matrices bracketed (`⎛ ⎝`), what's written around one on its middle row. A formula with a
+command none of this knows is as written — in text `$…$`, a display its LaTeX, highlighted (`math — as written`; one
+wider than the text, `math — too wide to draw`). What's read from a note as text — a heading's (so its slug), a task's,
+a link's, a footnote's — keeps its maths as written.
+
 **Wikilinks are links** (`21.3`; `20.2` drew them as text): `[[name]]` shows its name, `[[name|text]]` its text,
 `[[name#Heading]]` `name › Heading`, `[[name#^id]]` `name ^id` — never inside code, nor after a `\`. A picture
 embedded by name, `![[dal.png]]`, is `▣ dal.png`, as a picture by its path is: Obsidian's size, `|300` or

@@ -4,9 +4,11 @@
 // mdast carries source positions, which is why remark was chosen over marked.
 
 import type { Heading, Nodes, Root, Yaml } from "mdast";
+import type { Position } from "unist";
 import { toString } from "mdast-util-to-string";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { parse as parseToml } from "smol-toml";
@@ -14,9 +16,11 @@ import { parse as parseYaml } from "yaml";
 import { remarkHashtag } from "./tags.ts";
 import { remarkWikiLink, type WikiLink } from "./wikilink.ts";
 
+// Maths (12.11): `$…$` in text, `$$` blocks — `$` read as Obsidian reads it after the parse (`dollarsAsText`).
 const processor = unified()
   .use(remarkParse)
   .use(remarkGfm)
+  .use(remarkMath)
   .use(remarkFrontmatter, ["yaml", "toml"])
   .use(remarkWikiLink as never)
   .use(remarkHashtag as never);
@@ -24,6 +28,7 @@ const processor = unified()
 const bodyProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm)
+  .use(remarkMath)
   .use(remarkWikiLink as never)
   .use(remarkHashtag as never);
 /** A note's tree with its wikilinks read (`wikiLink` nodes), in one parse: for the converter (20.1). */
@@ -172,7 +177,9 @@ function chunkStarts(lines: string[], min = CHUNK_LINES): number[] {
       }
       continue;
     }
-    const f = /^\s{0,3}(`{3,}|~{3,})/.exec(line);
+    // A maths block's `$$` is a fence too (12.11) — unless more `$` follow on its line: `$$x$$` is text.
+    let f = /^\s{0,3}(`{3,}|~{3,}|\${2,})/.exec(line);
+    if (f && f[1]![0] === "$" && !fence && line.slice(f[0].length).includes("$")) f = null;
     if (fence) {
       if (f && f[1]![0] === fence[0] && f[1]!.length >= fence.length && !line.slice(f[0].length).trim()) {
         fence = null;
@@ -298,9 +305,30 @@ function shifted<T>(nodes: T[], delta: number): T[] {
 /** What a parsed chunk's nodes get, however it was parsed (here or on another thread, 15.1): quotes
  *  and heading ids marked from `text`, then the offsets dropped. */
 function finish(nodes: unknown[], text: string): void {
+  dollarsAsText(nodes, text);
   markLiteralQuotes(nodes, text);
   markHeadingIds(nodes);
   dropOffsets(nodes);
+}
+
+/**
+ * `$…$` read as Obsidian and Pandoc read it (12.11): not maths where the `$`s hold a space just inside them, or a digit
+ * follows the closing one — `$5 and $10` is money — so that span is its text again. `$$…$$` in text is maths as written.
+ */
+function dollarsAsText(nodes: unknown[], text: string): void {
+  for (const n of nodes) {
+    const node = n as { children?: { type: string; position?: Position }[] };
+    if (!node.children) continue;
+    node.children = node.children.map((c) => {
+      const start = c.position?.start.offset;
+      const end = c.position?.end.offset;
+      if (c.type !== "inlineMath" || start === undefined || end === undefined) return c;
+      const raw = text.slice(start, end);
+      if (raw.startsWith("$$") || (!/^\$\s|\s\$$/.test(raw) && !/^\d/.test(text.slice(end)))) return c;
+      return { type: "text", value: raw, position: c.position };
+    });
+    dollarsAsText(node.children, text);
+  }
 }
 
 /** A heading's trailing `{#id …}` (Pandoc's attributes): the id in group 1. */
@@ -592,8 +620,17 @@ export function headingText(node: Heading): string {
       return false;
     }
     if (n.type === "text" || n.type === "inlineCode") parts.push(n.value);
+    // Maths as written (12.11): a heading's text — its slug, links to it — is what it was before maths was read.
+    else if (n.type === "inlineMath") parts.push(`$${n.value}$`);
   });
   return parts.join("") || toString(node);
+}
+
+/** A node's text, as `mdast-util-to-string` gives it — but maths as written, `$…$` (12.11). */
+export function plainText(node: Nodes): string {
+  if (node.type === "inlineMath") return `$${node.value}$`;
+  if ("children" in node) return node.children.map((c) => plainText(c as Nodes)).join("");
+  return toString(node);
 }
 
 /** Title of a note: frontmatter `title`, else the first H1, else the file name. */

@@ -839,3 +839,34 @@ describe("Mermaid (12.10)", () => {
     for (const r of rows(wide)) expect(stringWidth(r)).toBeLessThanOrEqual(60);
   });
 });
+
+describe("maths (12.11)", () => {
+  const text = (l: Layout) => l.lines.map((x) => x.spans.map((s) => s.text).join(""));
+  const render = (md: string, width = 60) => renderMarkdown(md, { width, glyphs: unicode, showUrls: false });
+  test("in text: Unicode, in the maths colour; one that can't be, as written; money as text", () => {
+    const l = render("Euler: $e^{i\\pi} + 1 = 0$; odd $\\nope x$; costs $5 and $10.\n");
+    expect(text(l)[0]).toBe("Euler: e^(iπ) + 1 = 0; odd $\\nope x$; costs $5 and $10.");
+    const spans = l.lines[0]!.spans;
+    expect(spans.find((s) => s.text.includes("iπ"))!.role).toBe("math");
+    expect(spans.find((s) => s.text.includes("\\nope"))!.role).toBe("math");
+    expect(spans.find((s) => s.text.includes("$5"))!.role).toBe("text");
+  });
+  test("a display: its rows centred together, every row at its block's line, in the maths colour", () => {
+    const l = render("# M\n\n$$\nf(x) = \\begin{cases} x & x \\ge 0 \\\\ -x & x < 0 \\end{cases}\n$$\n\nafter\n", 40);
+    const rows = l.lines.filter((x) => x.src === 3 && x.spans.length);
+    // 18 columns wide in 40: 11 before.
+    expect(rows.map((x) => x.spans.map((s) => s.text).join(""))).toEqual(["           f(x) = ⎧ x   x ≥ 0", "                  ⎩ −x  x < 0"]);
+    expect(rows.every((x) => x.spans.at(-1)!.role === "math" && !x.fill)).toBe(true);
+    expect(text(l).at(-1)).toBe("after");
+  });
+  test("a display it can't draw, or wider than the text: its source as LaTeX, the label saying why", () => {
+    const tikz = text(render("$$\n\\begin{tikzpicture} x \\end{tikzpicture}\n$$\n"));
+    expect(tikz[0]).toMatch(/math — as written $/);
+    expect(tikz[1]).toContain("\\begin{tikzpicture}");
+    // Highlighted as LaTeX.
+    const src = render("$$\n\\begin{tikzpicture} x \\end{tikzpicture}\n$$\n").lines[1]!;
+    expect(src.spans.some((s) => s.role.startsWith("syn_"))).toBe(true);
+    const wide = text(render(`$$\n${Array.from({ length: 30 }, (_, i) => `x_${i}`).join(" + ")}\n$$\n`));
+    expect(wide[0]).toMatch(/math — too wide to draw $/);
+  });
+});

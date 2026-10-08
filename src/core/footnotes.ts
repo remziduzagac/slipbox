@@ -40,6 +40,7 @@ function plain(node: Nodes): string {
       return false;
     }
     if (n.type === "text" || n.type === "inlineCode") parts.push(n.value);
+    else if (n.type === "inlineMath") parts.push(`$${n.value}$`); // as written (12.11)
     else if (n.type === "break" || n.type === "paragraph") parts.push(" ");
   });
   return parts.join("").replace(/\s+/g, " ").trim();

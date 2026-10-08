@@ -4122,12 +4122,12 @@ One clear night, from the plan to the public site:
 
 
 halley reports every star as an instrumental magnitude, so the numbers in
-vss_photometry are $m_V$ relative to the comparison stars, not fluxes. The
+vss_photometry are m_V relative to the comparison stars, not fluxes. The
 conversion is the usual one:
 
-$$ m = -2.5 \\log_{10}\\left(\\frac{F}{F_0}\\right) $$
+                              m = −2.5 log₁₀(F/F₀)
 
-where $F_0$ is the zero-point flux for the filter, fitted each night from the
+where F₀ is the zero-point flux for the filter, fitted each night from the
 comparisons.
 
 To see the night's zero points without opening Python, ask stacks directly; the

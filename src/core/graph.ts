@@ -1724,6 +1724,7 @@ function plain(n: Nodes): string {
   const parts: string[] = [];
   visit(n, (c) => {
     if (c.type === "text" || c.type === "inlineCode") parts.push(c.value);
+    else if (c.type === "inlineMath") parts.push(`$${c.value}$`); // as written (12.11)
   });
   return parts.join("");
 }

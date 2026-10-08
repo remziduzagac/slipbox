@@ -7,6 +7,7 @@ import type { Heading, Nodes, Parents, PhrasingContent, Root, RootContent, Table
 import type { Glyphs } from "../glyphs.ts";
 import { type CellLink, type DataComment, type DataField, fieldLink, type TreePlace } from "../data.ts";
 import { drawMermaid, MERMAID } from "../diagrams.ts";
+import { mathRows, mathText } from "../math.ts";
 import { headingLabel, ORIGIN, parseMarkdown, type Frontmatter, slugify } from "../parse.ts";
 import { expandTabs, sanitize } from "../sanitize.ts";
 import type { Role } from "../theme/theme.ts";
@@ -300,6 +301,14 @@ function block(node: RootContent, ctx: Ctx, width: number, base: Style, fm?: Fro
       return heading(node.depth, node.children, srcOf(node), ctx, width, (node.data as { id?: string } | undefined)?.id);
     case "paragraph":
       return paragraph(node.children, srcOf(node), ctx, width, base);
+    case "math": {
+      // A display (12.11): its rows in Unicode, centred together; one that can't be, or wider than the text, as written.
+      const rows = mathRows(sanitize(node.value));
+      const widest = rows ? Math.max(...rows.map(stringWidth)) : 0;
+      if (!rows || widest > width) return codeBlock(node.value, "math", srcOf(node), ctx, width, 1, rows ? "too wide to draw" : "as written");
+      const indent = " ".repeat(Math.floor((width - widest) / 2));
+      return rows.map((r) => ({ spans: [...(indent ? [{ text: indent, role: "text" as Role, attrs: 0 }] : []), { text: r, role: "math" as Role, attrs: 0 }], src: srcOf(node) }));
+    }
     case "thematicBreak":
       return [{ spans: [{ text: ctx.opts.glyphs.rule.repeat(width), role: "rule", attrs: 0 }], src: srcOf(node) }];
     case "code": {
@@ -1095,6 +1104,10 @@ function inline(nodes: PhrasingContent[], ctx: Ctx, style: Style, src: number): 
           break;
         case "inlineCode":
           push(expandTabs(sanitize(n.value).replace(/\n/g, " "), 2), { role: "code_inline", attrs: 0 }, extra);
+          break;
+        case "inlineMath":
+          // Maths as Unicode text (12.11); one that can't be, as written.
+          push(sanitize(mathText(n.value) ?? `$${n.value}$`).replace(/\n/g, " "), { role: "math", attrs: st.attrs }, extra);
           break;
         case "break":
           push("\n", st);

@@ -2,8 +2,7 @@
 // nothing else changes — not a BOM, not CRLF line endings, not bytes that aren't valid UTF-8.
 
 import type { Root } from "mdast";
-import { toString } from "mdast-util-to-string";
-import { visit } from "./parse.ts";
+import { plainText, visit } from "./parse.ts";
 
 /** A list item's task marker at the start of a line: optional `>` quote prefixes, the bullet or
  *  number, then `[ ]`, `[x]` or `[X]`. Matched on the line's bytes read one per character. */
@@ -58,7 +57,7 @@ export function listTasks(tree: Root): TaskItem[] {
   visit(tree, (node) => {
     if (node.type !== "listItem" || typeof node.checked !== "boolean" || !node.position) return;
     const first = node.children[0];
-    const text = first ? toString(first).split("\n")[0]!.trim() : "";
+    const text = first ? plainText(first).split("\n")[0]!.trim() : "";
     out.push({ line: node.position.start.line, checked: node.checked, text });
   });
   return out;

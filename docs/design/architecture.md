@@ -103,6 +103,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/data.ts` | 16.11–16.15 | data files (TOML, INI, YAML, JSON, CSV) read into a document tree; their links |
 | `core/lazy.ts` | 16.6 | modules and assets loaded on first use: asked synchronously, heard when ready |
 | `core/diagrams.ts` | 12.10 | Mermaid drawn in box drawing (loaded on first use), or why it's its code |
+| `core/math.ts` | 12.11 | maths as Unicode text: a formula, a display's rows (aligned, cases, matrices) |
 | `core/syntax.ts` | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
 | `core/landing.ts` | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
 | `core/note.ts` | 2.x, 1.11 | a note rendered for a pane: parse, resolve links, embeds' notes, lay out (CLI and TUI) |
@@ -176,6 +177,8 @@ package — no build toolchain):
 | `better-sqlite3` | the search index's SQLite, its own (3.53.4) bundled; needs Bun 1.4.2, on Linux glibc 2.34 |
 | `web-tree-sitter` 0.25 and a grammar package per language (`tree-sitter-*`) | source files' structure (16.7, 16.18) |
 | `beautiful-mermaid` **1.1.3, pinned exactly** (with `elkjs`) | Mermaid drawn in the terminal's characters (12.10) |
+| `remark-math` 6.0.0 | `$…$` and `$$` blocks read (12.11); KaTeX comes with it, never imported |
+| `unicodeit` 0.7.5 | LaTeX's symbols as Unicode (12.11); its table is the LaTeX Project Public License's too |
 
 The grammars npm ships no WebAssembly for — Swift, SCSS, Vue, Astro, Dockerfile — are built from their sources at
 pinned commits into `grammars/` by `scripts/build-grammars.ts`, committed with their licences (`grammars/README.md`).

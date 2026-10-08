@@ -14,6 +14,7 @@ import ini from "highlight.js/lib/languages/ini";
 import java from "highlight.js/lib/languages/java";
 import javascript from "highlight.js/lib/languages/javascript";
 import json from "highlight.js/lib/languages/json";
+import latex from "highlight.js/lib/languages/latex";
 import lua from "highlight.js/lib/languages/lua";
 import makefile from "highlight.js/lib/languages/makefile";
 import markdown from "highlight.js/lib/languages/markdown";
@@ -32,13 +33,15 @@ import yaml from "highlight.js/lib/languages/yaml";
 import type { Role } from "../theme/theme.ts";
 
 const LANGS: Record<string, unknown> = {
-  bash, c, cpp, css, diff, dockerfile, go, ini, java, javascript, json, lua, makefile, markdown,
+  bash, c, cpp, css, diff, dockerfile, go, ini, java, javascript, json, latex, lua, makefile, markdown,
   php, python, ruby, rust, scss, shell, sql, swift, typescript, vim, xml, yaml,
 };
 for (const [name, lang] of Object.entries(LANGS)) hljs.registerLanguage(name, lang as never);
 hljs.registerAliases(["sh", "zsh", "console"], { languageName: "bash" });
 hljs.registerAliases(["toml"], { languageName: "ini" });
 hljs.registerAliases(["jsonc", "json5"], { languageName: "json" });
+// A maths block shown as written (12.11) is labelled `math`.
+hljs.registerAliases(["tex", "math"], { languageName: "latex" });
 // A component's template lines (16.22): its script and style lines go by their own languages.
 hljs.registerAliases(["html", "svg", "vue", "svelte", "astro"], { languageName: "xml" });
 hljs.registerAliases(["tsx", "ts"], { languageName: "typescript" });

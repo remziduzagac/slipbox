@@ -687,7 +687,7 @@ it. Each item ends with its tests listed for the user's approval before any is r
 | 12.8 | **Prototype.** Scroll behaviour — a picture cut where it scrolls out of sight |
 | 12.9 | **Prototype.** Decode cache keyed by path and mtime |
 | 12.10 | **Prototype.** Mermaid as Unicode drawing (`beautiful-mermaid`, no browser): flowchart, state, sequence, ER… |
-| 12.11 | Maths read, `$…$` (Obsidian's rule: no space inside, no digit after) and `$$…$$`, as Unicode text |
+| 12.11 | **Prototype.** Maths read, `$…$` (Obsidian's rule: no space inside, no digit after) and `$$`, as Unicode |
 | 12.12 | **Prototype.** Images online: `ask` (the link; `enter` asks — once, or its site), `show`, `never` |
 | 12.13 | **Prototype.** Obsidian's `![[picture.png]]`: found as its link is; `\|300`, `\|240x180` its size |
 | 12.14 | **Prototype.** A picture in an embedded note: found from where that note is, drawn inside its frame |
