@@ -687,7 +687,7 @@ it. Each item ends with its tests listed for the user's approval before any is r
 | 12.9 | **Prototype.** Decode cache keyed by path and mtime |
 | 12.10 | Mermaid drawn as an image (`mermaid-cli`) where `12.1` finds a way; the code block otherwise |
 | 12.11 | LaTeX typeset as an image where images work; Unicode text (`unicodeit`) as the floor |
-| 12.12 | Images online: `ask` (the link; `enter` asks — this once, or this site — then fetches), `show`, `never` |
+| 12.12 | **Prototype.** Images online: `ask` (the link; `enter` asks — once, or its site), `show`, `never` |
 | 12.13 | Obsidian's `![[picture.png]]`, and a picture in an embedded note (its path the embedded note's) |
 
 ## Extensibility — `13.x`

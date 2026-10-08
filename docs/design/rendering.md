@@ -68,8 +68,13 @@ as their text; the URL follows as `<url>` when colour is off or `render.show_url
 Images render as `▣ alt`, and alt text plus path stay the floor (12.x): a picture alone in its paragraph, a local
 image file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty graphics or
 sixel, as OpenTUI finds it asking, never blocks of colour — sized to the text width, its proportions kept, at most 12
-rows; scrolled half out of sight, the part that shows. Beside text, on the internet, in an embedded note, or where the
-terminal draws none (`[render] images = "never"` too): `▣ alt` alone. Inline
+rows; scrolled half out of sight, the part that shows. Beside text, in an embedded note, or where the terminal draws
+none (`[render] images = "never"` too): `▣ alt` alone. A picture on the internet (12.12) is fetched only as
+`[render] images_remote` says: `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from
+its site without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor
+drawn, `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most
+20 MB, within 15 s), it's drawn as a local one, without asking again; a fetch that fails says why and isn't tried again
+until `enter`. Inline
 tags such as `<kbd>` and `<sup>` are dropped and their text kept.
 
 **Wikilinks are links** (`21.3`; `20.2` drew them as text): `[[name]]` shows its name, `[[name|text]]` its text,

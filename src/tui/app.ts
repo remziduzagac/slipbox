@@ -93,6 +93,7 @@ import { registerActions } from "./actions.ts";
 import { newParseCache, parseMarkdown } from "../core/parse.ts";
 import { parseInBackground } from "../core/parse-pool.ts";
 import { BACKGROUND_PARSE, NoteBuffer } from "./buffer.ts";
+import { RemoteImages } from "./images.ts";
 import { type Canvas, drawText } from "./canvas.ts";
 import { cells, clampPos, ordered, type Pos, snap, wordAt } from "./cursor.ts";
 import { drawApp, type Geometry } from "./draw.ts";
@@ -157,6 +158,9 @@ export interface Host {
     size(path: string): { width: number; height: number } | null;
     cell(): { width: number; height: number } | null;
   };
+  /** The network, for pictures on the internet (12.12): fetch's own, unless the host stands in (the tests' never
+   *  reaches it). */
+  fetch?(url: string, init: RequestInit): Promise<Response>;
 }
 
 /** A picture's most rows (12.x): a big screenshot never takes the page over. */
@@ -925,6 +929,47 @@ export class App {
     this.widthsChanged();
   }
 
+  /** Pictures on the internet (12.12), fetched into the cache: there, the notes laid out again; failed, why. */
+  readonly remoteImages = new RemoteImages(
+    (url, init) => (this.host.fetch ? this.host.fetch(url, init) : fetch(url, init)),
+    (url, error) => {
+      if (error) this.message("warn", `couldn't fetch ${url}: ${error}`);
+      else this.picturesChanged();
+    },
+  );
+
+  /**
+   * `enter` on a picture on the internet (12.12): fetched — `ask`'s question answered yes (this once, or for its site
+   * from now on, this run), or at once where its site is said yes to or `show` fetches; with `never`, or fetched
+   * already, its address copied as a link's is. True when it was the picture's to handle.
+   */
+  followRemoteImage(url: string): boolean {
+    const mode = this.config.render.images_remote;
+    const site = RemoteImages.site(url);
+    if (!site || mode === "never" || this.remoteImages.cached(url)) return false;
+    if (mode === "show" || this.remoteImages.sites.has(site)) {
+      this.remoteImages.fetch(url, true);
+      this.message("info", `fetching ${url}`);
+      return true;
+    }
+    this.openList({
+      title: `Fetch this picture from ${site}?`,
+      filterable: false,
+      items: [
+        { label: "(o) Yes, this once", hotkey: "o", data: "once" },
+        { label: `(s) Yes, and from ${site} without asking`, detail: "until slipbox quits", hotkey: "s", data: "site" },
+        { label: "(n) No", hotkey: "n", data: "no" },
+      ],
+      accept: (item) => {
+        if (item.data === "no") return;
+        if (item.data === "site") this.remoteImages.sites.add(site);
+        this.remoteImages.fetch(url, true);
+        this.message("info", `fetching ${url}`);
+      },
+    });
+    return true;
+  }
+
   /**
    * A note's pictures (12.x): where the terminal draws images and `[render] images` lets it, a local image file —
    * by the note's own folder — sized to the width, its proportions kept, at most PICTURE_ROWS rows; else none, `▣ alt`
@@ -938,13 +983,25 @@ export class App {
     return {
       key: `${cell.width}x${cell.height}`,
       picture: (url, width) => {
-        if (!url || /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//")) return null;
+        if (!url) return null;
         let path: string;
-        try {
-          path = resolve(dir, decodeURI(url.split(/[?#]/)[0]!));
-        } catch {
-          return null;
-        }
+        if (/^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//")) {
+          // On the internet (12.12): drawn once it's fetched — `show` fetches it now, `ask` (its site said yes to) too.
+          const remote = this.config.render.images_remote;
+          const site = RemoteImages.site(url);
+          if (remote === "never" || !site) return null;
+          const cached = this.remoteImages.cached(url);
+          if (!cached) {
+            if (remote === "show" || this.remoteImages.sites.has(site)) this.remoteImages.fetch(url);
+            return null;
+          }
+          path = cached;
+        } else
+          try {
+            path = resolve(dir, decodeURI(url.split(/[?#]/)[0]!));
+          } catch {
+            return null;
+          }
         const size = images.size(path);
         if (!size || size.width <= 0 || size.height <= 0) return null;
         let cols = Math.max(1, Math.min(width, Math.ceil(size.width / cell.width)));

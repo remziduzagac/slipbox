@@ -12,6 +12,7 @@ show_urls = "always"
 code = "document"               # code opens as a document (24.x) where its language is mapped
 code_cells = "box"              # the code view's cells in boxes, or on bands
 images = "auto"                 # pictures in notes, where the terminal draws them
+images_remote = "ask"           # pictures online: asked for on enter
 
 [walk]
 extensions = ["md", "markdown", "mdx"]

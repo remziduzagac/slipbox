@@ -346,6 +346,8 @@ function followLink(a: App, link: LayoutLink, into: Into): void {
       // A URL — a pointer too (21.7), which names its folder: followed from a file of no root as well.
       const external = /^[a-z][a-z0-9+.-]*:/i.test(link.target);
       if (!from && !external) return a.message("warn", `${link.target}: this file is outside the root — open its folder to follow its links`);
+      // A picture on the internet: fetched, as `[render] images_remote` says (12.12).
+      if (link.kind === "image" && external && a.followRemoteImage(link.target)) return;
       const r = a.graph.resolveLink({ kind: link.kind === "image" ? "image" : "markdown", target: link.target }, from ?? "");
       if (r.resolvedKind === "external") {
         a.copy(link.target, false);

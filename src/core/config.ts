@@ -30,6 +30,9 @@ export interface Config {
     /** A note's pictures (12.x): drawn under their `▣ alt` line where the terminal draws images (Kitty graphics, sixel)
      *  — `auto` — or never; `▣ alt` and its path are the floor either way. */
     images: "auto" | "never";
+    /** A picture on the internet (12.12): `ask` — its link, `enter` asks (this once, or its site) and fetches it —
+     *  `show`, fetched as the note opens, or `never` fetched nor drawn. Fetched, it's cached: drawn without asking. */
+    images_remote: "ask" | "show" | "never";
   };
   walk: {
     extensions: string[];
@@ -247,7 +250,7 @@ export interface Config {
 
 export const DEFAULT_CONFIG: Config = {
   theme: "tokyo-night",
-  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document", code_cells: "box", images: "auto" },
+  render: { inset: 4, max_width: 0, glyphs: "auto", show_urls: "auto", code: "document", code_cells: "box", images: "auto", images_remote: "ask" },
   walk: { extensions: ["md", "markdown"], exclude: [], max_file_size: 4 * 1024 * 1024, root_markers: [".git", ".slipbox", ".obsidian", ".zk"] },
   links: { style: "auto", path: "auto", extension: "auto" },
   trust: { roots: [] },
@@ -308,6 +311,7 @@ const ENUMS: Record<string, readonly string[]> = {
   "render.code": ["document", "source"],
   "render.code_cells": ["box", "band"],
   "render.images": ["auto", "never"],
+  "render.images_remote": ["ask", "show", "never"],
   "capture.location": ["state", "vault"],
   "lint.enabled": ["auto", "on", "off"],
   "search.engine": ["auto", "index", "scan"],

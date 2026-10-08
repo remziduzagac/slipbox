@@ -77,6 +77,8 @@ interface Opts {
   folder?: string;
   /** The terminal's pictures (12.x), as a stand-in: none unless given. */
   images?: Host["images"];
+  /** The network (12.12), as a stand-in: none unless given — a test never reaches the real one. */
+  fetch?: Host["fetch"];
 }
 
 async function harness(opts: Opts = {}): Promise<Harness> {
@@ -98,7 +100,13 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   const graph = openGraph(loc, config, false);
   const copied: string[] = [];
   const quit = { called: false };
-  const host: Host = { requestRender() {}, osc52: (t) => (copied.push(t), true), quit: () => (quit.called = true), ...(opts.images ? { images: opts.images } : {}) };
+  const host: Host = {
+    requestRender() {},
+    osc52: (t) => (copied.push(t), true),
+    quit: () => (quit.called = true),
+    ...(opts.images ? { images: opts.images } : {}),
+    fetch: opts.fetch ?? (async (url) => Promise.reject(new Error(`no network in a test (${url})`))),
+  };
   const app = new App({ loc, config, graph, host, open: opts.open === undefined ? "index.md" : opts.open, watch: opts.watch ?? false, configFile: opts.configFile, themeName: opts.themeName, launcher: opts.launcher, folder: opts.folder });
   // Never the machine's own nvims.
   app.nvimDiscovery = () => [];
@@ -6900,6 +6908,88 @@ describe("pictures (12.x)", () => {
     const layout = h.app.currentLayout(h.app.view!);
     expect(layout.lines.some((l) => l.spans.some((s) => s.text.includes("▣ chart")))).toBe(true); // drawn in place
     expect(layout.lines.some((l) => l.image)).toBe(false);
+  });
+  describe("on the internet (12.12)", () => {
+    const sizes: Host["images"] = { supported: () => true, size: () => ({ width: 400, height: 200 }), cell: () => ({ width: 8, height: 16 }) };
+    const web = async (mode: "ask" | "show" | "never", answer: (url: string) => Response = () => new Response("png bytes", { headers: { "content-type": "image/png" } })) => {
+      const root = makeVault();
+      const url = `https://pictures.example/${mode}-${Math.random().toString(36).slice(2)}.png`;
+      writeFileSync(join(root, "w.md"), `# W\n\n![web](${url})\n\n![other](https://pictures.example/other-${url.slice(-12)})\n`);
+      const asked: string[] = [];
+      const fetch = async (u: string) => (asked.push(u), answer(u));
+      const h = await harness({ root, open: "w.md", width: 100, height: 40, images: sizes, fetch, config: (c) => (c.render.images_remote = mode) });
+      const pictures = () => h.app.currentLayout(h.app.view!).lines.filter((l) => l.image).length;
+      const onLink = async (alt: string) => {
+        const row = h.app.currentLayout(h.app.view!).lines.findIndex((l) => l.spans.some((sp) => sp.text === `▣ ${alt}`));
+        h.app.moveCursor(h.app.view!, { row, col: 0 });
+        await h.keys("enter");
+      };
+      const settle = async (want: () => boolean) => {
+        for (let k = 0; k < 100 && !want(); k++) await Bun.sleep(5);
+      };
+      return { h, url, asked, pictures, onLink, settle };
+    };
+    test("ask (the default): the link alone until enter asks — yes this once fetches it; yes for its site, its others too", async () => {
+      const { h, url, asked, pictures, onLink, settle } = await web("ask");
+      expect([pictures(), asked]).toEqual([0, []]); // nothing fetched by itself
+      await onLink("web");
+      expect((h.app.overlay as ListOverlay).title).toBe("Fetch this picture from https://pictures.example?");
+      await h.keys("o");
+      await settle(() => pictures() === 1);
+      expect([asked, pictures()]).toEqual([[url], 1]);
+      expect(h.app.currentLayout(h.app.view!).lines.find((l) => l.image)!.image!.src).toBe(h.app.remoteImages.file(url));
+      // The other: yes for the site — and then any picture of it fetched as the note's laid out.
+      await onLink("other");
+      await h.keys("s");
+      await settle(() => pictures() === 2);
+      expect(h.app.remoteImages.sites.has("https://pictures.example")).toBe(true);
+    });
+    test("ask, answered no: nothing fetched", async () => {
+      const { h, asked, pictures, onLink } = await web("ask");
+      await onLink("web");
+      await h.keys("n");
+      await Bun.sleep(20);
+      expect([asked, pictures()]).toEqual([[], 0]);
+    });
+    test("show: fetched as the note's laid out; never: not fetched, not drawn even when fetched before — enter copies its address", async () => {
+      const shown = await web("show");
+      await shown.settle(() => shown.pictures() === 2);
+      expect(shown.asked).toHaveLength(2);
+      const never = await web("never");
+      writeFileSync(never.h.app.remoteImages.file(never.url), "fetched before");
+      never.h.app.picturesChanged();
+      expect([never.pictures(), never.asked]).toEqual([0, []]);
+      await never.onLink("web");
+      expect(never.h.copied.at(-1)).toBe(never.url);
+      await never.onLink("other"); // not fetched before: never fetched on enter either
+      await Bun.sleep(20);
+      expect([never.asked, never.h.app.overlay]).toEqual([[], null]);
+      expect(never.h.copied.at(-1)).toMatch(/^https:\/\/pictures\.example\/other-/);
+    });
+    test("an image larger than 20 MB isn't kept: said so before it's read, or once it's read", async () => {
+      const big = new Uint8Array(21 * 1024 * 1024);
+      const large = await web("show", (u) =>
+        u.includes("other-")
+          ? new Response(big, { headers: { "content-type": "image/png" } })
+          : new Response("small, but says it's big", { headers: { "content-type": "image/png", "content-length": String(big.length) } }),
+      );
+      await large.settle(() => large.h.app.messages.filter((m) => m.text.startsWith("couldn't fetch")).length === 2);
+      expect(large.h.app.messages.filter((m) => m.text.endsWith(": larger than 20 MB"))).toHaveLength(2);
+      expect(large.pictures()).toBe(0);
+    });
+    test("a fetch that fails — the site's error, not an image — says why, and isn't tried again by itself; enter tries again", async () => {
+      const failing = await web("show", (u) => (u.includes("other-") ? new Response("<html>", { headers: { "content-type": "text/html" } }) : new Response("gone", { status: 404 })));
+      await failing.settle(() => failing.h.app.messages.filter((m) => m.text.startsWith("couldn't fetch")).length === 2);
+      const said = failing.h.app.messages.map((m) => m.text).filter((t) => t.startsWith("couldn't fetch"));
+      expect(said.sort()).toEqual([`couldn't fetch ${failing.url}: the site answered 404`, expect.stringMatching(/: not an image \(text\/html\)$/)].sort());
+      failing.h.app.picturesChanged();
+      failing.h.frame();
+      await Bun.sleep(20);
+      expect(failing.asked).toHaveLength(2); // not again by itself
+      await failing.onLink("web");
+      await failing.settle(() => failing.asked.length === 3);
+      expect(failing.asked).toHaveLength(3);
+    });
   });
   test("support said after the first frame: the note laid out again, its pictures in", async () => {
     let supported = false;

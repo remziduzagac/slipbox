@@ -460,7 +460,8 @@ Each kind of link does something different when followed:
 | `https://github.com/me/repo/blob/main/x.md` | this repository's own: the file in this copy (a backlink); else a URL |
 | `https://…` | copies the URL; opening a browser over SSH would be wrong |
 | `file://…`, `~/x.md`, `/home/me/x.md` (nothing there in the root) | opens the file, in whichever root holds it |
-| attachment `![x](x.png)` | copies the path; images are phase 6 |
+| attachment `![x](x.png)` | copies the path (drawn under its link where the terminal draws images, 12.x) |
+| a picture online `![x](https://…)` | `images_remote = "ask"`: fetch it — this once, or its site — then drawn (12.12) |
 | footnote `[1]` | jumps to the definition |
 | tag `#dome/shutter` | lists the notes with the tag (its nested ones too, `#dome/shutter/…`); enter opens one |
 

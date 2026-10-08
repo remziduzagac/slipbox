@@ -74,6 +74,7 @@ show_urls = "auto"             # auto (only without colour) | always | never
 code = "document"              # code opens as a document (24.x: TS, TSX, JS, Python so far) | source: in source mode
 code_cells = "box"             # the code view's cells: box (framed) | band (on a tint); space u c switches
 images = "auto"                # a note's pictures, where the terminal draws images (Kitty, sixel) | never
+images_remote = "ask"          # pictures online: ask (enter asks, then fetches) | show | never (not fetched)
 
 [walk]
 extensions = ["md", "markdown"] # a note's extensions (a note is markdown, whatever its name)
