@@ -10,11 +10,15 @@
 import type { Root, RootContent } from "mdast";
 import type { Span as SyntaxSpan } from "../syntax.ts";
 import type { Role } from "../theme/theme.ts";
+import { stringWidth } from "../width.ts";
 import type { Layout, LayoutHeading, LayoutLink, Line } from "./ir.ts";
 import { layoutSource } from "./source.ts";
 
 /** A block: its first and last source lines (1-based, inclusive). */
 export type Block = [number, number];
+
+/** The lens's counters' column (`[ui] relative_numbers`): three digits and a space. */
+export const LENS_COUNTERS = 4;
 
 /** The note's blocks, in order, covering lines 1..`lineCount`. */
 export function blockRanges(tree: Root, lineCount: number): Block[] {
@@ -86,6 +90,20 @@ export interface LiveOptions {
   /** Code (24.x): its language, and tree-sitter's spans by the file's line numbers — the lens highlighted as code. */
   language?: string | null;
   spans?: (line: number) => SyntaxSpan[] | undefined;
+  /** Its counters' column (`[ui] relative_numbers`): this many columns before each source row, kept free — the drawing
+   *  writes each row's distance from the cursor's there — never the cursor's (its cells map to no offset, -1). */
+  counters?: number;
+}
+
+/** A lens row with its counters' column before it: spaces mapped to no offset, its text after them. */
+function countered(l: Line, n: number): Line {
+  const w = l.spans.reduce((k, s) => k + stringWidth(s.text), 0);
+  return {
+    ...l,
+    spans: [{ text: " ".repeat(n), role: "text", attrs: 0 }, ...l.spans],
+    text: [n, n + w],
+    ...(l.srcMap ? { srcMap: { cells: [...Array(n).fill(-1), ...l.srcMap.cells], end: l.srcMap.end } } : {}),
+  };
 }
 
 /**
@@ -98,8 +116,9 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
   const out: Line[] = [];
   const newRow = new Map<number, number>();
   const spans = opts.spans;
+  const counters = opts.rule ? (opts.counters ?? 0) : 0;
   const source = layoutSource(lines.slice(active[0] - 1, active[1]).join("\n"), {
-    width: opts.width,
+    width: Math.max(10, opts.width - counters),
     wrap: opts.wrap,
     headings: [],
     slice: true,
@@ -124,7 +143,10 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
       out.push({ ...lensRule(opts.rule, opts.width, active[0] - 1, ` ${opts.editing ? "editing" : "source"} · ${lines} `, rule), lens: "top" });
     }
     const band = opts.editing ? ("lens_band_edit" as const) : ("lens_band" as const);
-    for (const l of source.lines) out.push({ ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })), ...(opts.rule ? { lens: "source" as const, fill: band } : {}) });
+    for (const l of source.lines) {
+      const row: Line = { ...l, src: l.src + active[0] - 1, spans: l.spans.map((s) => ({ ...s, src: (s.src ?? 1) + active[0] - 1 })), ...(opts.rule ? { lens: "source" as const, fill: band } : {}) };
+      out.push(counters ? countered(row, counters) : row);
+    }
     if (opts.rule) {
       out.push({ ...lensRule(opts.rule, opts.width, active[1], "", rule), lens: "bottom" });
       if (next && !blank(next)) out.push({ spans: [], src: active[1], decor: true, lens: "pad" });

@@ -29,7 +29,7 @@ import { insertRecord, newVimState, PASTE, put, vimKey, visualKey } from "./vim.
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
 import { cellBlocks } from "../core/layout/code.ts";
-import { type Block, blockAt, blockRanges, composeLive } from "../core/layout/live.ts";
+import { type Block, blockAt, blockRanges, composeLive, LENS_COUNTERS } from "../core/layout/live.ts";
 import { discoverNvims, NVIM_REMOTE, type NvimServer, probeNvim } from "../core/nvim.ts";
 import { homedir } from "node:os";
 import { appendScratch, fence, fenceLanguage, formatEntry, scratchLocation } from "../core/capture.ts";
@@ -2311,10 +2311,11 @@ export class App {
     const starts = buf.lineStarts();
     const lineCount = Math.max(1, starts.length - (buf.source.endsWith("\n") && starts.length > 1 ? 1 : 0));
     const texts = buf.lines();
-    // Rows a run of lines takes in the lens (wrapped at the width).
+    // Rows a run of lines takes in the lens (wrapped at the width its counters leave).
+    const textWidth = width - (this.config.ui.relative_numbers === "lens" ? LENS_COUNTERS : 0);
     const rowsOf = (s: number, e: number) => {
       let n = 0;
-      for (let k = s; k <= e; k++) n += wrap ? Math.max(1, Math.ceil(stringWidth(texts[k - 1] ?? "") / Math.max(1, width))) : 1;
+      for (let k = s; k <= e; k++) n += wrap ? Math.max(1, Math.ceil(stringWidth(texts[k - 1] ?? "") / Math.max(1, textWidth))) : 1;
       return n;
     };
     // A data file's blocks are cards (a key and its values, 16.12): the lens is the cursor's card,
@@ -2443,6 +2444,7 @@ export class App {
       wrap,
       rule: this.glyphs.lensRule,
       editing,
+      ...(this.config.ui.relative_numbers === "lens" ? { counters: LENS_COUNTERS } : {}),
       ...(code ? { language: buf.kind.format, ...(spans ? { spans: (l: number) => spans.get(l) } : {}) } : {}),
     });
     base.composed = { key, layout };

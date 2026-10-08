@@ -5,6 +5,7 @@
 
 import type { Glyphs } from "../core/glyphs.ts";
 import { type Layout, type Line, srcAt } from "../core/layout/ir.ts";
+import { LENS_COUNTERS } from "../core/layout/live.ts";
 import { atLeast, type Problem, SEVERITIES, type Severity, worst } from "../core/diagnostics.ts";
 import { type CellStyle, spanStyle } from "../core/layout/style.ts";
 import type { Color, Role, Theme } from "../core/theme/theme.ts";
@@ -926,19 +927,12 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       geo.hot.push({ id: clicked(here), x: gutterX, y, w, h: 1 });
     }
     if (numbers) {
-      // In the lens (`[ui] relative_numbers`): each row's distance from the cursor's — every row a step of j and k, a
-      // wrapped line's too — so vim's counts read off it; the cursor's row its line's number, the reference, as vim's
-      // number with relativenumber.
-      const relative = relativeNumbers && line.lens === "source";
       // A row the layout adds (the code view's blank between cells, a box's bottom, the lens's rules) has no number.
-      const n = !relative ? (line.src !== prevSrc && !line.decor ? line.src : null) : row === view.cur.row ? line.src : Math.abs(row - view.cur.row);
-      const num = n === null ? "" : String(n).padStart(gutter - barW - 2);
+      const num = line.src !== prevSrc && !line.decor ? String(line.src).padStart(gutter - barW - 2) : "";
       // A line with problems: its number in the worst one's colour, bold; where one starts, clicked as a sign is.
       const on = onLine.get(line.src);
-      const current = relative ? row === view.cur.row : line.src === cursorSrc && showCursor;
-      const role: Role = on ? SEVERITY_ROLE[worst(on)] : current ? "line_number_current" : relative ? "lens" : "line_number";
-      // The distances in the lens's accent, not its bold.
-      if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), ...(on ? { bold: true } : role === "lens" ? { bold: false } : {}), bg: band ?? gutterBg });
+      const role: Role = on ? SEVERITY_ROLE[worst(on)] : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
+      if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), ...(on ? { bold: true } : {}), bg: band ?? gutterBg });
       if (here && !barW) geo.hot.push({ id: clicked(here), x: gutterX, y, w: gutter - 1, h: 1 });
     }
     if (!line.decor) prevSrc = line.src;
@@ -962,6 +956,15 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     if (chosenOn && !line.decor) marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
+    // The lens's counters (`[ui] relative_numbers`), in the column its rows keep free: each row's distance from the
+    // cursor's, the cursor's 0 — every row a step of j and k, a wrapped line's too — so vim's counts read off them. In
+    // the lens's accent; the cursor's in the current line's colour.
+    if (relativeNumbers && line.lens === "source" && view.left === 0) {
+      const current = row === view.cur.row;
+      const n = String(Math.min(999, Math.abs(row - view.cur.row))).padStart(LENS_COUNTERS - 1);
+      const tint = band ?? (line.fill ? theme.roles[line.fill].bg : undefined) ?? page;
+      drawText(c, textX, y, n, { ...roleStyle(theme, current ? "line_number_current" : "lens", page), ...(current ? {} : { bold: false }), bg: tint });
+    }
     // A code cell's box (24.13): its borders over the row's spaces there; its header's buttons, each clickable.
     if (line.frame) {
       for (const fx of line.frame) {

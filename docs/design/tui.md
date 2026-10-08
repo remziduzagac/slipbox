@@ -775,7 +775,7 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - readable width (the text column capped and centred)
 - zen (no chrome; panes only on demand)
 - the cursor-row band
-- source line numbers in a gutter
+- source line numbers in a gutter (on by default)
 - the problems bar, and the problems marked in the text (below, "Problems where they are") — the bar and the numbers
   on a shade of their own down the window (`gutter`, halfway from the page to the breadcrumb row's shade, the two
   framing the text), then a column of the page's before the text
@@ -902,11 +902,10 @@ first.)
 shade lighter than the page — a code block is darker), so the whole area reads as the lens, not
 just its edges.
 
-**Its numbers.** With line numbers on, the lens's rows are numbered by their distance from the cursor's, in the lens's
-accent — every row a step of `j` and `k` (a wrapped line's rows too), so vim's counts (`5j`, `d3k`) read off them —
-and the cursor's row by its line, in the current line's colour: the reference the distances count from, in the same
-gutter as the lines' numbers outside the lens (vim's `number` with `relativenumber`). `[ui] relative_numbers = "off"`
-numbers the lens's rows by their lines too.
+**Its counters.** The lens keeps a column of its own before its rows (four columns, on its tint): each row's distance
+from the cursor's, the cursor's `0` in the current line's colour, the others in the lens's accent — every row a step of
+`j` and `k` (a wrapped line's rows too), so vim's counts (`5j`, `d3k`) read off them. The cursor never stops there; the
+gutter keeps the lines' own numbers, the lens's too. `[ui] relative_numbers = "off"`: no counters, no column.
 
 **Its mode.** The top rule's label says which: `source · lines 8–13` while viewing (normal mode),
 `editing · lines 8–13` while typing. Editing draws the rules and label in `lens_edit` (green where

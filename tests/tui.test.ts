@@ -18,7 +18,7 @@ import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
-import { srcAt } from "../src/core/layout/ir.ts";
+import { type Line, srcAt } from "../src/core/layout/ir.ts";
 import { cells } from "../src/tui/cursor.ts";
 import { offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
@@ -88,6 +88,8 @@ async function harness(opts: Opts = {}): Promise<Harness> {
   config.render.glyphs = "unicode";
   // The frame tests read heavy lines; the light set has its own test.
   config.ui.lines = "heavy";
+  // Laid out without the gutter (on by default): the tests of line numbers, and what's drawn in it, turn it on.
+  config.ui.line_numbers = false;
   config.walk.exclude = ["drafts/"];
   opts.config?.(config);
   const loc = opts.loc ?? locateVault({ root });
@@ -140,6 +142,11 @@ async function onlyRootsUnder<T>(base: string, run: () => Promise<T>): Promise<T
 }
 
 const rowText = (h: Harness, row = h.app.view!.cur.row) => h.app.currentLayout(h.app.view!).lines[row]!.spans.map((s) => s.text).join("");
+/** A layout row's own text: from where it starts (a lens row's counters, a code cell's border and padding before it). */
+const lineText = (l: Line) => {
+  const all = l.spans.map((s) => s.text).join("");
+  return l.text ? [...all].slice(l.text[0]).join("") : all;
+};
 const statusRow = (frame: string) => frame.split("\n").at(-1)!;
 const topRow = (frame: string) => frame.split("\n")[0]!;
 const rowStarting = (h: Harness, prefix: string) => h.app.currentLayout(h.app.view!).lines.findIndex((l) => l.spans.map((s) => s.text).join("").startsWith(prefix));
@@ -2041,7 +2048,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     const h = await harness({ root, open: "l.md", width: 100, height: 30, config });
     const v = h.app.view!;
     const L = () => h.app.currentLayout(v);
-    const rows = () => L().lines.map((l) => l.spans.map((x) => x.text).join("").trimEnd());
+    const rows = () => L().lines.map((l) => lineText(l).trimEnd());
     const goto = (text: string) => {
       h.app.moveCursor(v, { row: rows().findIndex((t) => t.includes(text)), col: 0 });
       h.frame();
@@ -2050,7 +2057,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
       const lines = L().lines;
       const top = lines.findIndex((l) => l.lens === "top");
       const bottom = lines.findIndex((l) => l.lens === "bottom");
-      return { top, bottom, source: lines.slice(top + 1, bottom).map((l) => l.spans.map((x) => x.text).join("")) };
+      return { top, bottom, source: lines.slice(top + 1, bottom).map(lineText) };
     };
     return { h, v, rows, goto, lens, L };
   };
@@ -2222,28 +2229,55 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     expect(v.live).toBe(false);
     expect(lens().top).toBe(-1);
   });
-  test("its rows numbered by their distance from the cursor's, the lens's accent — the cursor's by its line; outside it, the lines' numbers; relative_numbers = off: the lines'", async () => {
+  test("its counters: each row's distance from the cursor's (0) in a column of its own, the lens's accent; the gutter its lines' numbers; relative_numbers = off: none", async () => {
     for (const relative of ["lens", "off"] as const) {
       const { h, v, goto, lens } = await setup((c) => ((c.ui.line_numbers = true), (c.ui.relative_numbers = relative)));
       goto("Para 7 with");
       await h.keys("space", "n", "l", "j");
       const c = h.canvas();
       const pane = h.app.geometry!.panes[0]!;
-      const gutter = (row: number) => c.line(pane.y + row - v.top).slice(pane.x, pane.textX).trim();
+      const screen = (row: number) => c.line(pane.y + row - v.top);
+      const gutter = (row: number) => screen(row).slice(pane.x, pane.textX).trim();
+      const counter = (row: number) => screen(row).slice(pane.textX, pane.textX + 4);
       const l = lens();
       const inside = [...Array(l.bottom - l.top - 1).keys()].map((k) => l.top + 1 + k);
       const layout = h.app.currentLayout(v);
+      const para = inside.find((r) => lineText(layout.lines[r]!).startsWith("Para 7"))!;
+      // The gutter: the lines' own numbers, in the lens too.
+      expect(gutter(para)).toBe(String(layout.lines[para]!.src));
       if (relative === "lens") {
-        expect(inside.map(gutter)).toEqual(inside.map((r) => String(r === v.cur.row ? layout.lines[r]!.src : Math.abs(r - v.cur.row))));
-        expect([gutter(l.top), gutter(l.bottom)]).toEqual(["", ""]); // its rules: none
+        expect(inside.map(counter)).toEqual(inside.map((r) => `${String(Math.abs(r - v.cur.row)).padStart(3)} `));
+        expect(screen(para).slice(pane.textX + 4)).toMatch(/^Para 7 with \*\*bold\*\*\./); // its text after them
         const near = inside.find((r) => r !== v.cur.row)!;
-        expect(c.styles[pane.y + near - v.top]![pane.textX - 3]!).toMatchObject({ fg: h.app.theme.roles.lens.fg, bold: false });
-        expect(c.styles[pane.y + v.cur.row - v.top]![pane.textX - 3]!.fg).toBe(h.app.theme.roles.line_number_current.fg!);
-      } else expect(gutter(v.cur.row)).toBe(String(layout.lines[v.cur.row]!.src));
-      // Outside the lens, the lines' own numbers.
-      const above = l.top - 2; // past the rule and its air
-      expect(gutter(above)).toBe(String(layout.lines[above]!.src));
+        expect(c.styles[pane.y + near - v.top]![pane.textX + 2]!).toMatchObject({ fg: h.app.theme.roles.lens.fg, bold: false });
+        expect(c.styles[pane.y + v.cur.row - v.top]![pane.textX + 2]!.fg).toBe(h.app.theme.roles.line_number_current.fg!);
+        // The cursor never on them: to the row's start, and it lands on its text.
+        h.app.moveCursor(v, { row: para, col: 0 });
+        expect([v.cur.row, v.cur.col]).toEqual([para, 4]);
+        // An empty line's row: one stop, where its text would be.
+        const empty = inside.find((r) => !lineText(layout.lines[r]!).trim())!;
+        h.app.moveCursor(v, { row: empty, col: 0 });
+        expect([v.cur.row, v.cur.col]).toEqual([empty, 4]);
+      } else expect(screen(para).slice(pane.textX)).toMatch(/^Para 7 with \*\*bold\*\*\./); // no column for them
     }
+    // An indented line keeps its first space a stop of its own (the counters map to no offset); a drag from the counters'
+    // column selects from the line's start.
+    const root = makeVault();
+    writeFileSync(join(root, "i.md"), "# I\n\n- one\n  - nested item\n");
+    const h = await harness({ root, open: "i.md", width: 100, height: 30 });
+    const v = h.app.view!;
+    await h.keys("space", "n", "l");
+    const layout = h.app.currentLayout(v);
+    const nested = layout.lines.findIndex((l) => lineText(l).startsWith("  - nested"));
+    h.app.moveCursor(v, { row: nested, col: 0 });
+    expect([v.cur.col, h.app.view!.buf.source.slice(offsetOf(h.app, v), offsetOf(h.app, v) + 4)]).toEqual([4, "  - "]);
+    h.frame();
+    const pane = h.app.geometry!.panes[0]!;
+    const y = pane.y + nested - v.top;
+    h.app.handleMouse({ type: "down", x: pane.textX, y, button: 0 });
+    h.app.handleMouse({ type: "drag", x: pane.textX + 8, y, button: 0 });
+    h.app.handleMouse({ type: "up", x: pane.textX + 8, y, button: 0 });
+    expect(h.copied.at(-1)).toBe("  - n");
   });
   test("an edit that doesn't type (a line moved, x from the palette) opens it first too; its second press edits", async () => {
     const { h, v, goto } = await setup((c) => (c.editor.edit_in = "live"));
@@ -2339,7 +2373,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     const h = await harness({ root, open: "l.md", width: 100, height: 40 });
     const v = h.app.view!;
     await h.keys("space", "n", "l");
-    const rows = () => h.app.currentLayout(v).lines.map((l) => l.spans.map((x) => x.text).join("").trimEnd());
+    const rows = () => h.app.currentLayout(v).lines.map((l) => lineText(l).trimEnd());
     for (const want of [8, 3, 12, 11, 5, 9]) {
       h.frame();
       const pane = h.app.geometry!.panes[0]!;
@@ -2386,9 +2420,10 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     writeFileSync(join(root, "b.md"), "# Beta\n\nBBBB beta.\n\nMore beta.\n");
     const h = await harness({ root, open: "a.md", width: 100, height: 30 });
     const v = h.app.view!;
-    const rows = () => h.app.currentLayout(v).lines.map((l) => l.spans.map((x) => x.text).join("").trimEnd());
+    const rows = () => h.app.currentLayout(v).lines.map((l) => lineText(l).trimEnd());
     await h.keys("space", "n", "l");
-    h.app.moveCursor(v, { row: rows().findIndex((t) => t.includes("See [b]")), col: 6 });
+    const see = rows().findIndex((t) => t.includes("See [b]"));
+    h.app.moveCursor(v, { row: see, col: (h.app.currentLayout(v).lines[see]!.text?.[0] ?? 0) + 6 }); // on the link, past the counters
     h.frame();
     await h.keys("enter");
     expect(v.buf.rel).toBe("b.md");
@@ -5900,7 +5935,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(v.live).toBe(true);
     expect(h.app.messages.at(-1)!.text).toBe("the lens: the code around the cursor — the key again edits it, esc closes it");
     const lens = h.app.currentLayout(v).lines.filter((l) => l.lens === "source");
-    expect(lens.map((l) => l.spans.map((sp) => sp.text).join(""))).toContain("    return this.notes.get(rel);");
+    expect(lens.map(lineText)).toContain("    return this.notes.get(rel);");
     expect(lens.find((l) => l.src === 20)!.spans.find((sp) => sp.text.includes("return"))!.role).toBe("syn_keyword");
     expect(rows(h).some((x) => /^┌─ ◆ Graph ─/.test(x))).toBe(true); // around it, the notebook
     await h.keys("i", "x", "escape", "escape");
@@ -6392,7 +6427,8 @@ describe("links out of data files in the TUI (16.15)", () => {
 describe("the lens on a CSV (16.14)", () => {
   test("a few rows around the cursor, never the whole table; sliding a row at a time", async () => {
     const root = makeVault();
-    const h = await harness({ root, open: "samples/logs/photometry-2026.csv", width: 140, height: 40 });
+    // Records counted, a row each: no counters to make a long one wrap.
+    const h = await harness({ root, open: "samples/logs/photometry-2026.csv", width: 140, height: 40, config: (c) => (c.ui.relative_numbers = "off") });
     const v = h.app.view!;
     const lens = () => /source · lines? (\d+(?:–\d+)?)/.exec(h.frame())?.[1] ?? "none";
     h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.src === 10), col: 2 });
@@ -6473,7 +6509,8 @@ describe("the lens's modes and size", () => {
   });
   test("on a CSV, + takes a record more and the lens slides at that size", async () => {
     const root = makeVault();
-    const h = await harness({ root, open: "samples/logs/photometry-2026.csv", width: 140, height: 40 });
+    // Records counted, a row each: no counters to make a long one wrap.
+    const h = await harness({ root, open: "samples/logs/photometry-2026.csv", width: 140, height: 40, config: (c) => (c.ui.relative_numbers = "off") });
     const v = h.app.view!;
     h.app.moveCursor(v, { row: h.app.currentLayout(v).lines.findIndex((l) => l.src === 10), col: 2 });
     await h.keys("space", "n", "l", "+");

@@ -53,7 +53,8 @@ export function cells(line: Line | undefined): Cell[] {
   if (line.text) {
     const [from, to] = line.text;
     c = c.filter((x) => x.x >= from && (x.x < to || x.x === from));
-    if (!c.length && !map) c = [{ g: " ", x: from, w: 1 }]; // an empty prose row: one stop, where its text would be
+    // An empty row: one stop, where its text would be (an empty line's, at its start).
+    if (!c.length) c = [map ? { g: " ", x: from, w: 1, at: line.srcMap!.end } : { g: " ", x: from, w: 1 }];
   }
   cellCache.set(line, c);
   return c;

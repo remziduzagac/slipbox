@@ -80,8 +80,8 @@ export interface Config {
     cursorline: boolean;
     /** Source line numbers in a left gutter. */
     line_numbers: boolean;
-    /** In the lens, each row's distance from the cursor's in place of its line number (the cursor's row its line's,
-     *  the reference), vim's counts read off it (`5j`, `d3k`): "lens", or "off". */
+    /** The lens's counters: in a column of its own, each row's distance from the cursor's (the cursor's 0), vim's counts
+     *  read off it (`5j`, `d3k`): "lens", or "off". */
     relative_numbers: "lens" | "off";
     /** Wrap long lines to the pane; off, notes keep their natural width and scroll sideways. */
     wrap: boolean;
@@ -259,7 +259,7 @@ export const DEFAULT_CONFIG: Config = {
     narrow_width: 90,
     restore_session: true,
     cursorline: true,
-    line_numbers: false,
+    line_numbers: true,
     relative_numbers: "lens",
     wrap: true,
     readable_width: false,
