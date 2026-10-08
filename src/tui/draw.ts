@@ -894,6 +894,9 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const chosenOn = chosen ? problemLines([chosen]) : null;
   const links = commentLinksShown(view);
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
+  // The gutter (the problems bar, the line numbers) in a shade of its own down the window, a column of it before them.
+  const gutterBg = (gutter && theme.roles.gutter.bg) || page;
+  if (gutter && gutterBg !== page) c.fill(gutterX - 1, body.y, gutter + 1, body.h, gutterBg);
   // The rows shown: an oversized lens hides the ones outside its inner window (4.15).
   const shown = app.screenRows(view, layout);
   const hidden = app.lensHidden(view, layout);
@@ -910,7 +913,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     const here = barAt?.get(row);
     if (here) {
       const n = here.length > 9 ? "+" : here.length > 1 ? String(here.length) : "";
-      const w = drawText(c, gutterX, y, `${severityGlyph(app.glyphs, worst(here))}${n}`, { ...roleStyle(theme, SEVERITY_ROLE[worst(here)], page), bold: true, bg: band ?? page });
+      const w = drawText(c, gutterX, y, `${severityGlyph(app.glyphs, worst(here))}${n}`, { ...roleStyle(theme, SEVERITY_ROLE[worst(here)], page), bold: true, bg: band ?? gutterBg });
       // Clicked: the Problems panel on the worst of them.
       const top = [...here].sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity))[0]!;
       geo.hot.push({ id: `pbar:${top.start.line}:${top.start.column}`, x: gutterX, y, w, h: 1 });
@@ -920,7 +923,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       const num = line.src !== prevSrc && !line.decor ? String(line.src).padStart(gutter - barW - 1) : "";
       const on = onLine.get(line.src);
       const role: Role = on ? SEVERITY_ROLE[worst(on)] : line.src === cursorSrc && showCursor ? "line_number_current" : "line_number";
-      if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), bg: band ?? page });
+      if (num) drawText(c, gutterX + barW, y, num, { ...roleStyle(theme, role, page), bg: band ?? gutterBg });
     }
     if (!line.decor) prevSrc = line.src;
     const fill = line.fill ? theme.roles[line.fill].bg : undefined;

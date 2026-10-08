@@ -3777,6 +3777,13 @@ describe("UI settings (space u)", () => {
     expect(h.app.ui.line_numbers).toBe(true);
     const pane = h.app.geometry!.panes[0]!;
     expect(h.canvas().line(pane.y).slice(pane.x, pane.textX).trim()).toBe("1");
+    // The gutter in a shade of its own down the window, past the text's end too; the text's columns the page's.
+    const c = h.canvas();
+    const gutter = h.app.theme.roles.gutter.bg!;
+    for (const y of [pane.y + 1, pane.y + pane.h - 1]) {
+      for (let x = pane.x; x < pane.textX; x++) expect(c.styles[y]![x]!.bg).toBe(gutter);
+      expect(c.styles[y]![pane.textX]!.bg).not.toBe(gutter);
+    }
     const full = h.app.currentLayout(h.app.view!).width;
     expect(full).toBeGreaterThan(100); // 200 columns: the toggle below has something to cap
     await h.keys("space", "u", "shift+w");
@@ -8809,6 +8816,7 @@ describe("the Problems panel: filtered, resized, opened from the bar (1.7)", () 
     h.frame();
     const sign = h.app.geometry!.hot.find((x) => x.id === "pbar:5:6")!;
     expect(h.frame().split("\n")[sign.y]).toContain("Then b too");
+    expect(h.canvas().styles[sign.y]![sign.x]!.bg).toBe(h.app.theme.roles.gutter.bg!); // on the gutter's shade
     for (const type of ["down", "up"]) h.app.handleMouse({ type, x: sign.x, y: sign.y, button: 0 });
     expect(h.app.problemsPanel).toMatchObject({ shown: true, tab: "file" });
     expect(h.app.problemsPanel.file.selected).toBe(1);

@@ -286,6 +286,7 @@ The chrome roles most worth tuning:
 | `topbar_chip` | the `slipbox` chip |
 | `topbar_button`, `topbar_button_on` | the rails' and top bar's buttons (`≡` `◷` `▤`), closed and open |
 | `rail` | the rails' tint (its `bg`); none, as under NO_COLOR, draws a bordered rail instead |
+| `gutter` | the problems bar's and line numbers' shade (its `bg`), down the window beside the text |
 | `lens` | the lens's rules and label (the accent, bold) |
 | `lens_band` | the lens's rows of markdown (a light tint; its `bg`) |
 | `lens_edit`, `lens_band_edit` | the same while typing in it (green, and a green tint) |

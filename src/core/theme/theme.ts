@@ -41,7 +41,7 @@ export const ROLES = [
   "git_new", "git_modified", "git_conflict", "diff_add", "diff_del", "diff_head",
   "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
   "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
-  "cursor", "cursor_line", "line_number", "line_number_current",
+  "cursor", "cursor_line", "line_number", "line_number_current", "gutter",
   "which_key_key", "which_key_group",
   "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover",
   "breadcrumb", "breadcrumb_current", "breadcrumb_sep", "breadcrumb_icon", "breadcrumb_band", "tree_guide", "rail", "lens", "lens_band", "lens_edit", "lens_band_edit",
@@ -238,6 +238,8 @@ export function themeFromPalette(
     cursor_line: { bg: blend(p.surface, p.bg, 0.55) },
     line_number: { fg: p.surface2 },
     line_number_current: { fg: p.orange, bold: true },
+    // The gutter (the problems bar, the line numbers): the rails' shade, set apart from the text.
+    gutter: { bg: p.bg_dark },
     which_key_key: { fg: p.orange, bg: p.bg_dark, bold: true },
     which_key_group: { fg: p.blue, bg: p.bg_dark },
     // On the page: the frame rule under it gives the bar the same air as the rows below.
