@@ -69,6 +69,7 @@ those names. A plain block comment over several lines is prose alone.
 ```text
 ── Resolving links ────────────────────────────────────────────────
 ┌─ ƒ resolve ──────────────────────────────────── 5–15 ⇢ ⧉ ✎ ◎ ▾ ─┐
+│                                                                 │
 │ Resolves a link written in a note: the note it reaches, or null │
 │ when nothing matches.                                           │
 │                                                                 │
@@ -83,14 +84,16 @@ those names. A plain block comment over several lines is prose alone.
 │ }                                                               │
 └─────────────────────────────────────────────────────────────────┘
 ┌─ ◆ Graph ───────────────────────────────────── 19–20 ⇢ ⧉ ✎ ◎ ▾ ─┐
+│                                                                 │
 │ The notes of a folder, read once.                               │
 ├─────────────────────────────────────────────────────────────────┤
 │ export class Graph {                                            │
 ├─────────────────────────────────────────────────────────────────┘
 │ ┌─ ƒ textOf ────────────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ─┐
+│ │                                                               │
 │ │ A note's text, as read.                                       │
-│ ├───────────────────────────────────────────────────────────────┤
-├─┤ textOf(rel: string): string | undefined {                     │
+├─┼───────────────────────────────────────────────────────────────┤
+│ │ textOf(rel: string): string | undefined {                     │
 │ │   return this.notes.get(rel);                                 │
 │ │ }                                                             │
 │ └───────────────────────────────────────────────────────────────┘
@@ -98,7 +101,8 @@ those names. A plain block comment over several lines is prose alone.
 ├─┤ Then writing.                                                 │
 │ └───────────────────────────────────────────────────────────────┘
 │ ┌─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ─┐
-└─┤ add(rel: string): void { this.notes.set(rel, read(rel)); }    │
+└─┤                                                               │
+  │ add(rel: string): void { this.notes.set(rel, read(rel)); }    │
   └───────────────────────────────────────────────────────────────┘
 }
 ```
@@ -113,8 +117,9 @@ only the tokens differ.
   closing brace) is drawn as written. Each run of other statements — top-level values, a script's lines — between
   blank lines and comments is a cell too, titled by the values it defines, else `code`. A comment that documents
   nothing (a file's opening note, a module's docstring) is a cell of its own: prose, no code, its header's mark alone
-  (`¶`), no title. The page's pieces touch, a box's borders setting each apart, whatever blank lines the file has; a
-  blank row only before a section's rule.
+  (`¶`), no title. A box has a blank row under its header, so its name stands clear of what's under it (not a
+  comment's box, which has no name, nor a band, its header a band of its own). The page's pieces touch, a box's
+  borders setting each apart, whatever blank lines the file has; a blank row only before a section's rule.
 - **The tree**: a class's members are drawn two columns in from it, however far the file indents them (Python's four
   as TypeScript's two), joined to it by the explorer's tree lines: down from the corner of the class's box, `├─` to
   the middle row of each member's box (`┤` where it meets the border, `┼` on a divider, `┬` on a folded box's top),

@@ -898,8 +898,8 @@ shade lighter than the page — a code block is darker), so the whole area reads
 just its edges.
 
 **Its mode.** The top rule's label says which: `source · lines 8–13` while viewing (normal mode),
-`editing · lines 8–13` while typing. Editing draws the rules and label in `lens_edit` (warm: orange
-where viewing is the accent) and tints the rows `lens_band_edit`, so the two never look alike.
+`editing · lines 8–13` while typing. Editing draws the rules and label in `lens_edit` (green where
+viewing is the accent) and tints the rows `lens_band_edit`, so the two never look alike.
 
 **Its air.** One blank row sits outside each rule: where the rendered row next to it is already
 blank (the gap after a block), that's it; otherwise a blank frame row is added, so the lens never

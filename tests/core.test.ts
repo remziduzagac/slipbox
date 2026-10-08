@@ -18,6 +18,7 @@ import { layoutSource } from "../src/core/layout/source.ts";
 import { expandTabs, sanitize, sanitizeMap } from "../src/core/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
+import { blend } from "../src/core/theme/theme.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/tasks.ts";
@@ -270,6 +271,11 @@ describe("themes (2.6)", () => {
       expect(warning).toBeNull();
       for (const r of ROLES) expect(theme.roles[r]).toBeDefined();
     }
+  });
+  test("the lens while it's typed into is green: its rules and label, a green tint on its rows", () => {
+    const { theme } = loadTheme("tokyo-night");
+    expect(theme.roles.lens_edit.fg).toBe("#9ece6a"); // the palette's green
+    expect(theme.roles.lens_band_edit.bg).toBe(blend("#9ece6a", "#16161e", 0.07)); // over the page's background
   });
   test("unknown theme falls back to tokyo-night with a warning", () => {
     const r = loadTheme("no-such-theme");

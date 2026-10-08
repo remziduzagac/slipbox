@@ -241,6 +241,8 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     }
     const lineEnd = (k: number) => texts[k - 1]?.length ?? 0;
     const framed = (l: Line): Line => framedRow(l, left, inner, style);
+    // A blank row under a box's header, so its name stands clear of what's under it (a comment's box has no name).
+    if (style === "box" && !c.prose) push(framed({ spans: [], src: c.from, decor: true }));
     // Its documentation first, as prose, then a divider; then its code.
     const side = style === "box" ? 2 : 1;
     for (const part of c.docs ?? []) {

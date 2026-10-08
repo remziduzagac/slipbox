@@ -254,9 +254,9 @@ export function themeFromPalette(
     lens: { fg: p.blue, bold: true },
     // The lens's rows of markdown: a shade lighter than the page (a code block is darker).
     lens_band: { bg: blend(p.surface, p.bg, 0.3) },
-    // While it's typed into: warm, so editing never looks like reading.
-    lens_edit: { fg: p.orange, bold: true },
-    lens_band_edit: { bg: blend(p.orange, p.bg, 0.07) },
+    // While it's typed into: green, so editing never looks like reading.
+    lens_edit: { fg: p.green, bold: true },
+    lens_band_edit: { bg: blend(p.green, p.bg, 0.07) },
     breadcrumb: { fg: p.fg_dim },
     breadcrumb_current: { fg: p.fg_strong, bold: true },
     breadcrumb_sep: { fg: p.comment },
@@ -320,7 +320,7 @@ export function terminalTheme(): Theme {
     rail: { bg: a(0) },
     lens: { fg: a(4), bold: true },
     lens_band: { bg: a(0) },
-    lens_edit: { fg: a(3), bold: true },
+    lens_edit: { fg: a(2), bold: true },
     lens_band_edit: { bg: a(0) },
     breadcrumb: { fg: a(7) },
     breadcrumb_current: { fg: a(15), bold: true },
