@@ -214,6 +214,7 @@ changed.
 | Phase 5: language servers both ways, linters, diagnostics everywhere | 2026-10-01 | below |
 | `19.6` trust: everything trusted, as in nvim and Helix (revised by `23.1`) | 2026-10-01 | `docs/design/decisions.md` |
 | `23.1` run nothing of a folder's own, unless you trust its root | 2026-10-07 | `docs/design/decisions.md` |
+| `12.x` the terminal's own first: Unicode, then pictures in the theme's colours | 2026-10-08 | `12.x` |
 
 ### Phase 3 decided 2026-09-28 — editing, in five steps
 
@@ -346,18 +347,18 @@ common, and the only reason they are step 0.
 
 | ID | Item | Why it cannot wait |
 | --- | --- | --- |
-| 0.1 | Repo, licence, README, `bun init`, strict TS | — |
-| 0.2 | Module layout `core/` `tui/` `cli/` `lsp/` | The three-faces split |
-| 0.3 | **CI check: `core/` must not import `tui/`** | OpenTUI is Bun-only FFI; a breach kills CLI and LSP silently |
-| 0.4 | Test runner + snapshot harness | Snapshotting the pure layout stage *is* the strategy |
-| 0.5 | **Fixture vault** — wikilinks, collisions, wide tables, CJK, frontmatter, CRLF | Everything tests against it |
-| 0.6 | Pin OpenTUI exactly, write the upgrade policy | Pre-1.0, 169 commits per 90 days |
-| 0.7 | **One width function**; nothing else measures text | Display width governs every wrap and cursor position |
-| 0.8 | **Command registry** — every action named | Palette, keymaps, modal layer and plugins all consume it |
-| 0.9 | Config loader — TOML, user plus vault marker, vault wins | Almost everything reads config |
-| 0.10 | **decide** storage: config vs cache vs **state** | Paths bake in; moving them needs a migration |
-| 0.11 | **decide** the walk: extensions, ignores, symlinks, caps | Changes the graph, perf, indexing and watching |
-| 0.12 | Version stamp in the vault marker dir | Nothing to migrate *from* without it |
+| 0.1 | **Done.** Repo, licence, README, `bun init`, strict TS | — |
+| 0.2 | **Done.** Module layout `core/` `tui/` `cli/` `lsp/` | The three-faces split |
+| 0.3 | **Done.** CI check: `core/` must not import `tui/` | OpenTUI is Bun-only FFI; a breach kills the CLI silently |
+| 0.4 | **Done.** Test runner + snapshot harness | Snapshotting the pure layout stage *is* the strategy |
+| 0.5 | **Done.** **Fixture vault** — wikilinks, collisions, wide tables, CJK, frontmatter, CRLF | All tests use it |
+| 0.6 | **Done.** Pin OpenTUI exactly, write the upgrade policy | Pre-1.0, 169 commits per 90 days |
+| 0.7 | **Done.** One width function; nothing else measures text | Display width governs each wrap and cursor position |
+| 0.8 | **Done.** **Command registry** — every action named | Palette, keymaps, modal layer and plugins all consume it |
+| 0.9 | **Done.** Config loader — TOML, user plus vault marker, vault wins | Almost everything reads config |
+| 0.10 | **Decided, done.** storage: config vs cache vs **state** | Paths bake in; moving them needs a migration |
+| 0.11 | **Decided, done.** the walk: extensions, ignores, symlinks, caps | Changes graph, perf, indexing, watching |
+| 0.12 | **Done.** Version stamp in the vault marker dir | Nothing to migrate *from* without it |
 
 ## Core: vault and graph — `1.x`
 
@@ -365,16 +366,16 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 1.1 | Vault root discovery: marker dir, precedence, `--root`, single-file mode |
-| 1.2 | File walk implementing 0.11 |
-| 1.3 | Parse pipeline: remark + gfm + frontmatter + wiki-link |
-| 1.4 | **decide** link resolution, then build it: `nameToPath` as lists, collisions, case policy |
-| 1.5 | Backlinks map |
+| 1.1 | **Done.** Vault root discovery: marker dir, precedence, `--root`, single-file mode |
+| 1.2 | **Done.** File walk implementing 0.11 |
+| 1.3 | **Done.** Parse pipeline: remark + gfm + frontmatter + wiki-link |
+| 1.4 | **Decided, done.** link resolution, then build it: `nameToPath` as lists, collisions, case policy |
+| 1.5 | **Done.** Backlinks map |
 | 1.6 | **Done.** Tags map: frontmatter `tags` and `#tags` in the text, nested, one tag whatever its case |
 | 1.7 | **Done.** Unresolved-link set (and ambiguous links): the Problems panel, This file and All, `slipbox problems` |
-| 1.8 | Incremental single-file graph update |
-| 1.9 | Index persistence: when, and to the cache location from 0.10 |
-| 1.10 | `slipbox init` and the no-marker path — announce the degradation, offer to create |
+| 1.8 | **Done.** Incremental single-file graph update |
+| 1.9 | **Done.** Index persistence: when, and to the cache location from 0.10 |
+| 1.10 | **Done.** `slipbox init` and the no-marker path — announce the degradation, offer to create |
 | 1.11 | **Done.** Embeds drawn in place: `![[note]]`, `#Heading`, `#^block`; read-only, loops and depth capped |
 
 ## Rendering — `2.x`
@@ -383,14 +384,14 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 2.1 | **mdast to layout IR — pure, framework-agnostic** |
-| 2.2 | Blocks and inlines: headings, lists, code, quotes, emphasis |
-| 2.3 | **Table allocator**, including the aggregate-minimum overflow bug |
-| 2.4 | Wrapping over 0.7 |
-| 2.5 | Code-fence syntax highlighting |
-| 2.6 | Theme tokens, built-ins, base16 loader |
-| 2.7 | Readability defaults: render-width inset, inline-code background, bold fg, border contrast |
-| 2.8 | Glyph capability: Nerd Font detection and an ASCII fallback set |
+| 2.1 | **Done.** **mdast to layout IR — pure, framework-agnostic** |
+| 2.2 | **Done.** Blocks and inlines: headings, lists, code, quotes, emphasis |
+| 2.3 | **Done.** **Table allocator**, including the aggregate-minimum overflow bug |
+| 2.4 | **Done.** Wrapping over 0.7 |
+| 2.5 | **Done.** Code-fence syntax highlighting |
+| 2.6 | **Done.** Theme tokens, built-ins, base16 loader |
+| 2.7 | **Done.** Readability defaults: render-width inset, inline-code background, bold fg, border contrast |
+| 2.8 | **Done.** Glyph capability: Nerd Font detection and an ASCII fallback set |
 | 2.9 | **constraint** strip terminal escapes from text on the way into layout |
 
 ## TUI — `3.x`
@@ -399,21 +400,21 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 3.1 | Renderer bootstrap, sidebar / content / status layout |
-| 3.2 | Scroll with viewport-only rendering |
-| 3.3 | Buffers, tabs, one split |
-| 3.4 | Reading position per note |
-| 3.5 | **decide** reload anchoring — line number, heading, node id or content hash |
-| 3.6 | Back/forward history stack |
-| 3.7 | File explorer |
-| 3.8 | Quick switcher |
-| 3.9 | Outline |
-| 3.10 | Command palette over 0.8 |
-| 3.11 | **decide** mode taxonomy and dispatch order, plus the key collisions |
-| 3.12 | Default keymap |
-| 3.13 | **Message sink** — one place for errors, warnings and script stderr |
-| 3.14 | Narrow-terminal collapse |
-| 3.15 | Session restore |
+| 3.1 | **Done.** Renderer bootstrap, sidebar / content / status layout |
+| 3.2 | **Done.** Scroll with viewport-only rendering |
+| 3.3 | **Done.** Buffers, tabs, one split |
+| 3.4 | **Done.** Reading position per note |
+| 3.5 | **Decided, done.** reload anchoring — line number, heading, node id or content hash |
+| 3.6 | **Done.** Back/forward history stack |
+| 3.7 | **Done.** File explorer |
+| 3.8 | **Done.** Quick switcher |
+| 3.9 | **Done.** Outline |
+| 3.10 | **Done.** Command palette over 0.8 |
+| 3.11 | **Decided, done.** mode taxonomy and dispatch order, plus the key collisions |
+| 3.12 | **Done.** Default keymap |
+| 3.13 | **Done.** **Message sink** — one place for errors, warnings and script stderr |
+| 3.14 | **Done.** Narrow-terminal collapse |
+| 3.15 | **Done.** Session restore |
 | 3.16 | **Done.** Filters match each typed word with its letters together, words in any order — not letter by letter |
 | 3.17 | **Done.** Footnotes: the right panel's second view (`space n f`): each footnote, its references, jumps |
 | 3.18 | **Done.** Footnotes added (`space n shift+f`, `a`, `+`), edited, renamed, deleted; `slipbox footnotes … add` |
@@ -427,23 +428,23 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 4.1 | `$EDITOR` hand-off using OpenTUI `suspend()` / `resume()` |
-| 4.2 | `editor.command` template with `{file}` and `{line}` — there is no portable line-number flag |
-| 4.3 | In-app editor — built as `NoteBuffer` with `editing.ts` and `vim.ts`, not on `Textarea` |
-| 4.4 | Modal layer — state machine over the named actions from 0.8 |
-| 4.5 | Undo/redo wiring, surviving external reload |
-| 4.6 | Atomic save, temp plus rename |
-| 4.7 | Autosave, long idle delay |
-| 4.8 | Dirty-state indicators |
-| 4.9 | Incremental reparse |
-| 4.10 | Flush dirty buffers at handoff points — capture, context bundle, invoking an agent |
-| 4.11 | Checkbox toggle — a key and a click on `[ ]`; the first write |
-| 4.12 | Remote hand-off — open the note in an editor already running (nvim `--server`), no wait |
-| 4.13 | Source mode — the raw markdown as a layout, so the reading keys work unchanged |
-| 4.14 | Live preview — the block under the cursor as its source, edited in place (the lens) |
-| 4.15 | The lens scrolls inside a block taller than its maximum, with "↑ N lines" on its rules |
-| 4.16 | Find and replace — a replace row under find (`ctrl+h`); vim's `:s` with `g` `i` `c`; `cgn` and `.` |
-| 4.17 | The lens opens on the cursor's innermost section whole when it fits, and moves section to section |
+| 4.1 | **Done.** `$EDITOR` hand-off using OpenTUI `suspend()` / `resume()` |
+| 4.2 | **Done.** `editor.command` template with `{file}` and `{line}` — there is no portable line-number flag |
+| 4.3 | **Done.** In-app editor — built as `NoteBuffer` with `editing.ts` and `vim.ts`, not on `Textarea` |
+| 4.4 | **Done.** Modal layer — state machine over the named actions from 0.8 |
+| 4.5 | **Done.** Undo/redo wiring, surviving external reload |
+| 4.6 | **Done.** Atomic save, temp plus rename |
+| 4.7 | **Done.** Autosave, long idle delay |
+| 4.8 | **Done.** Dirty-state indicators |
+| 4.9 | **Done** (`15.1`). Incremental reparse |
+| 4.10 | **Done.** Flush dirty buffers at handoff points — capture, context bundle, invoking an agent |
+| 4.11 | **Done.** Checkbox toggle — a key and a click on `[ ]`; the first write |
+| 4.12 | **Done.** Remote hand-off — open the note in an editor already running (nvim `--server`), no wait |
+| 4.13 | **Done.** Source mode — the raw markdown as a layout, so the reading keys work unchanged |
+| 4.14 | **Done.** Live preview — the block under the cursor as its source, edited in place (the lens) |
+| 4.15 | **Done.** The lens scrolls inside a block taller than its maximum, with "↑ N lines" on its rules |
+| 4.16 | **Done.** Find and replace — a replace row under find (`ctrl+h`); vim's `:s` with `g` `i` `c`; `cgn` and `.` |
+| 4.17 | **Done.** The lens opens on the cursor's innermost section whole when it fits, and moves section to section |
 
 ## Concurrency — `5.x`
 
@@ -451,14 +452,14 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 5.1 | Watcher, debounce, ignore own writes |
-| 5.2 | Watch-registration failure path — inotify limits on the Linux VMs; degrade loudly |
-| 5.3 | Silent reload when clean |
-| 5.4 | Surface an external change the moment it lands |
-| 5.5 | Vim-shaped conflict prompt — `(L)oad` `(K)eep` `(D)iff` `(M)erge` |
-| 5.6 | Autosave aborts on mtime change |
-| 5.7 | Post-`(K)eep` state: autosave off until an explicit, confirmed save |
-| 5.8 | Incremental graph update from watch events |
+| 5.1 | **Done.** Watcher, debounce, ignore own writes |
+| 5.2 | **Done.** Watch-registration failure path — inotify limits on the Linux VMs; degrade loudly |
+| 5.3 | **Done.** Silent reload when clean |
+| 5.4 | **Done.** Surface an external change the moment it lands |
+| 5.5 | **Done.** Vim-shaped conflict prompt — `(L)oad` `(K)eep` `(D)iff` `(M)erge` |
+| 5.6 | **Done.** Autosave aborts on mtime change |
+| 5.7 | **Done.** Post-`(K)eep` state: autosave off until an explicit, confirmed save |
+| 5.8 | **Done.** Incremental graph update from watch events |
 | 5.9 | **Done.** `HEAD` moves as one event: git's changes held while it writes; no moves; each branch its tabs |
 | 5.10 | **Done.** Autosave waits out git's index lock, and so does the watcher's news (`5.9`) |
 | 5.11 | **Done.** Git's marks in the explorer: each changed file's state, a folder with one; asked in the background |
@@ -505,11 +506,11 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 8.1 | The capture path is `slipbox capture`, called from nvim — see Decisions |
-| 8.2 | Storage location per 0.10 |
-| 8.3 | Accumulator: `path:line` refs and excerpts |
-| 8.4 | Markdown format carrying source refs |
-| 8.5 | Clipboard: **OSC 52**, then `pbcopy` / `wl-copy`, then write a file and print the path |
+| 8.1 | **Done.** The capture path is `slipbox capture`, called from nvim — see Decisions |
+| 8.2 | **Done.** Storage location per 0.10 |
+| 8.3 | **Done.** Accumulator: `path:line` refs and excerpts |
+| 8.4 | **Done.** Markdown format carrying source refs |
+| 8.5 | **Done.** Clipboard: **OSC 52**, then `pbcopy` / `wl-copy`, then write a file and print the path |
 
 ## CLI face — `9.x`
 
@@ -518,16 +519,16 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 9.1 | **decide** the command list — read `zk` and `nb` first |
-| 9.2 | `--json` output separate from human output; stable exit codes; versioning |
-| 9.3 | **No-TTY behaviour** — never start a TUI when stdout is a pipe |
-| 9.4 | Cross-process semantics — **decided**: disk is the contract. See Agent integration |
-| 9.9 | Advisory staleness file — TUI writes dirty paths plus its pid; CLI surfaces them |
-| 9.10 | `--if-unchanged` for writers that must not clobber |
+| 9.1 | **Decided, done.** the command list — read `zk` and `nb` first |
+| 9.2 | **Done.** `--json` output separate from human output; stable exit codes; versioning |
+| 9.3 | **Done.** **No-TTY behaviour** — never start a TUI when stdout is a pipe |
+| 9.4 | **Done.** Cross-process semantics — **decided**: disk is the contract. See Agent integration |
+| 9.9 | **Done.** Advisory staleness file — TUI writes dirty paths plus its pid; CLI surfaces them |
+| 9.10 | **Done.** `--if-unchanged` for writers that must not clobber |
 | 9.5 | **Done.** Graph queries: links, backlinks, `tags`; orphans in `slipbox problems` (and the Problems panel) |
-| 9.6 | `capture` subcommand |
+| 9.6 | **Done.** `capture` subcommand |
 | 9.7 | **Done.** Context bundle: `slipbox context <note>`, `space s c` — the note, its links and backlinks |
-| 9.8 | The agent-facing skill that teaches the CLI |
+| 9.8 | **Done.** The agent-facing skill that teaches the CLI |
 
 ## Export — `10.x`
 
@@ -682,14 +683,23 @@ it. Each item ends with its tests listed for the user's approval before any is r
 | 12.4 | **Dropped.** No half-block fallback: where a terminal draws no images, `▣ alt` and its link (decided) |
 | 12.5 | **constraint** alt text plus path is the floor — a note never becomes unreadable |
 | 12.6 | **Prototype.** Sizing from cell pixel geometry: the text width, proportions kept, at most 12 rows |
-| 12.7 | Transmit once, place by id (OpenTUI's, to be checked) |
+| 12.7 | Transmit once, place by id — OpenTUI's Kitty output sends with an id, places by it: to confirm, scrolling |
 | 12.8 | **Prototype.** Scroll behaviour — a picture cut where it scrolls out of sight |
 | 12.9 | **Prototype.** Decode cache keyed by path and mtime |
-| 12.10 | Mermaid drawn as an image (`mermaid-cli`) where `12.1` finds a way; the code block otherwise |
-| 12.11 | LaTeX typeset as an image where images work; Unicode text (`unicodeit`) as the floor |
+| 12.10 | Mermaid as Unicode drawing (`beautiful-mermaid`, no browser): flowchart, state, sequence, class, ER, XY |
+| 12.11 | Maths read, `$…$` (Obsidian's rule: no space inside, no digit after) and `$$…$$`, as Unicode text |
 | 12.12 | **Prototype.** Images online: `ask` (the link; `enter` asks — once, or its site), `show`, `never` |
 | 12.13 | **Prototype.** Obsidian's `![[picture.png]]`: found as its link is; `\|300`, `\|240x180` its size |
 | 12.14 | **Prototype.** A picture in an embedded note: found from where that note is, drawn inside its frame |
+| 12.15 | SVG drawn: rasterised by resvg (WebAssembly) into the image cache — `![x](d.svg)`, `12.16`, `12.17` |
+| 12.16 | Mermaid as a picture, by choice where images work (`12.10` the default), its SVG through `12.15` |
+| 12.17 | Display maths (`$$…$$`) typeset by MathJax as a picture, by choice, through `12.15`; inline stays text |
+
+Decided 2026-10-08 with the user: the terminal's own first — Unicode drawing and text, the default where images work
+too — then pictures, by choice; every picture slipbox makes in the theme's colours. Maths is in. The order: `12.7`
+confirmed, then `12.10`, `12.11`, `12.15`, `12.16`, `12.17`. A Mermaid kind `beautiful-mermaid` doesn't draw, or a
+diagram that doesn't parse, stays its code block; a formula, its source. Passed over: `mermaid-cli` (a headless
+Chromium per diagram), `mermaid-ascii` (labelled nodes broken, `docs/idea.md`).
 
 ## Extensibility — `13.x`
 
@@ -725,7 +735,7 @@ packaging lands whenever it first needs to run on a VM.*
 | ID | Item |
 | --- | --- |
 | 15.1 | **Done.** Incremental layout: parse by chunk, render by block, source mode by line; big notes on threads |
-| 15.2 | Pathological nesting — **done** as a cap: nesting past 60 renders as text, quadratic parser inputs tamed |
+| 15.2 | **Done.** Pathological nesting, as a cap: nesting past 60 renders as text, quadratic parser inputs tamed |
 
 `15.1`: edits, reloads and leaving the lens cost what they change (`docs/design/architecture.md`, "Big notes", with
 timings from `scripts/bench.ts`); a big note's first open parses on other threads behind a one-line `reading…`
@@ -886,7 +896,7 @@ design: `docs/design/code-view.md`.*
 | 24.5 | **Prototype.** Imports folded into one row naming them; `enter` unfolds |
 | 24.6 | **Prototype.** Long lines broken at their structure; the author's breaks kept, line numbers the file's |
 | 24.7 | **Prototype.** Indent guides; braces and semicolons dimmed |
-| 24.8 | Folding any definition; editing a row in place, without the lens |
+| 24.8 | **Done.** Folding any definition: `▾` / `▸`, `space k f`, `z a` (editing a row in place is `24.17`) |
 | 24.9 | Rust, Go mapped; tabular code aligned; signatures one parameter a line; license headers folded |
 | 24.10 | **Prototype.** The lens on code: a line, a doc comment, the imports as written, highlighted; `esc esc` back |
 | 24.11 | **Prototype.** Comments as prose: markers gone; separators as sections; after code, notes in the margin |
@@ -895,12 +905,14 @@ design: `docs/design/code-view.md`.*
 | 24.14 | **Prototype.** Cells touch; tree lines join a class to its members, two columns in; a comment a cell |
 | 24.15 | **Prototype.** Boxes of a top and a left line, blank rows around them; the tree's lines; comments keep lines |
 | 24.16 | **Prototype.** The lens on code opens on the cursor's cell whole when it fits, and moves cell to cell |
+| 24.17 | Editing a row in place, without the lens |
+| 24.18 | **Dropped** (2026-10-08). Folding inside a cell — an `if`'s body, a loop's: a cell folds whole |
 
 ## Deferred — in the design, not in this breakdown
 
-Sorted 2026-10-07. Mermaid and LaTeX are `12.10`–`12.11`; composing notes, `10.9`; a note's history, frontmatter
-rules and document types, `22.x`; the live checks with native servers, `19.23`. Diffs and git awareness are built
-(`space g d`, `space g c`, the explorer's marks, worktrees, merge review). Tier 2 plugins are dropped: `13.x`'s
+Sorted 2026-10-07. Mermaid and LaTeX are `12.10`–`12.11` and `12.15`–`12.17`; composing notes, `10.9`; a note's history,
+frontmatter rules and document types, `22.x`; the live checks with native servers, `19.23`. Diffs and git awareness are
+built (`space g d`, `space g c`, the explorer's marks, worktrees, merge review). Tier 2 plugins are dropped: `13.x`'s
 commands cover what they would, and a shared plugin ecosystem is a supply-chain question. Anything else under the
 design's community-plugin tier gets an ID when it is scheduled.
 

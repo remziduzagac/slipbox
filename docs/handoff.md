@@ -1,6 +1,6 @@
 # slipbox — handoff
 
-Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-10-07. Phases 0–5c
+Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-10-08. Phases 0–5c
 are built (`docs/plan.md`, "Phases").
 Read this, then `docs/idea.md`, then `docs/plan.md`, then `docs/design/` for how it was built.
 
@@ -75,6 +75,17 @@ Also built 2026-10-07: the rest of phase 5 — grammars, outlines and highlighti
 SCSS (`16.19`), PHP (`16.20`), Dockerfile (`16.21`), Vue, Svelte and Astro, each part in its own language (`16.22`),
 Ruby, C and C++ (`16.23`, decided in) — and jumps to type definitions and implementations (`19.13`). Left: Scout
 (`6.10`), postponed until trailscout, its successor, has an SDK, and phase 6+ (export, images, extensibility).
+
+**Updated 2026-10-08.** Built since, as prototypes tried with the user before they're marked done: code as a notebook
+(`24.x`, `docs/design/code-view.md`) — TypeScript, TSX, JavaScript and Python read as a document, definitions in open
+boxes, comments as prose, the lens on a whole cell — and pictures (`12.x`, `docs/design/rendering.md`): a local image
+drawn under its `▣ alt` line where the terminal speaks Kitty graphics or sixel, one online fetched as `[render]
+images_remote` says, `![[picture.png]]` by name, and pictures in an embedded note. Also: line numbers on by default, the
+lens counting rows from the cursor, and opening on a whole section (`4.17`); macOS's cmd-arrow keys. The plan now marks
+every built item done. Next in `12.x`, the terminal's own first: `12.7` confirmed, Mermaid as Unicode (`12.10`), maths
+as text (`12.11`), then SVG (`12.15`) and pictures of both by choice, in the theme's colours (`12.16`, `12.17`). Left
+beyond that: `24.9`, `24.17`, export (`10.x`), extensibility (`13.x`), distribution (`14.x`), `22.x`, and Scout
+(`6.10`).
 
 ## The documents
 
