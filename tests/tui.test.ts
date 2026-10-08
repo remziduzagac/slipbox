@@ -5525,7 +5525,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const top = layout.lines.findIndex((l) => l.decor && l.spans.some((sp) => sp.text === "resolve"));
     expect(layout.lines[top + 1]!.decor).toBe(true); // the blank row: decoration, no cursor stop
     // The class: a cell of its head; its methods each a cell, at their indentation, a method's doc above it; its brace.
-    // The tree's lines, as the explorer's, join them: the class's left line on down, to the middle of each member's box.
+    // The tree's lines, as the explorer's, join them: the class's left line on down, to each member's top, by its name.
     const graph = rowIndex(h, "◆ Graph");
     expect(graph).toBe(head + 16);
     expect(r[graph]).toMatch(/^┌─ ◆ Graph ─+ 16–17 ⇢ ⧉ ✎ ◎ ▾ ──$/);
@@ -5533,18 +5533,18 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(r[graph + 4]).toBe("│"); // a member's blank row, on the class's line
     const textOf = rowIndex(h, "ƒ textOf");
     expect(textOf).toBe(graph + 5);
-    expect(r[textOf]).toMatch(/^│ ┌─ ƒ textOf ─+ 18–21 ⇢ ⧉ ✎ ◎ ▾ ──$/);
+    expect(r[textOf]).toMatch(/^├─┬─ ƒ textOf ─+ 18–21 ⇢ ⧉ ✎ ◎ ▾ ──$/); // its top's corner where the line meets it
     expect(r[textOf + 1]).toBe("│ │");
     expect(r[textOf + 2]).toBe("│ │ A note's text, as read.");
-    expect(r[textOf + 3]).toBe("├─┤"); // its box's middle: the blank row between its documentation and its code
+    expect(r[textOf + 3]).toBe("│ │"); // the blank row between its documentation and its code
     expect(r[textOf + 4]).toBe("│ │ textOf(rel: string): string | undefined {"); // its rows from its own edge
     // A comment that documents nothing: prose in a box of its own, at its indentation, its header its mark alone and
     // its buttons (no references: it defines nothing).
     const loose = rowIndex(h, "Then writing");
-    expect(r.slice(loose - 2, loose + 2)).toEqual(["│", expect.stringMatching(/^│ ┌─ ¶ ─+ 23 ⧉ ✎ ◎ ▾ ──$/), "├─┤ Then writing.", "│"]);
+    expect(r.slice(loose - 2, loose + 2)).toEqual(["│", expect.stringMatching(/^├─┬─ ¶ ─+ 23 ⧉ ✎ ◎ ▾ ──$/), "│ │ Then writing.", "│"]);
     expect(r[loose - 1]!.length).toBe(r[head]!.length); // its top to the edge
-    expect(r[rowIndex(h, "ƒ add")]).toMatch(/^│ ┌─ ƒ add ─+ 25 ⇢ ⧉ ✎ ◎ ▾ ──$/);
-    expect(r[rowIndex(h, "ƒ add") + 1]).toBe("├─┤");
+    expect(r[rowIndex(h, "ƒ add")]).toMatch(/^├─┬─ ƒ add ─+ 25 ⇢ ⧉ ✎ ◎ ▾ ──$/); // the last: the line on to the brace's
+    expect(r[rowIndex(h, "ƒ add") + 1]).toBe("│ │");
     expect(r[rowIndex(h, "ƒ add") + 2]).toMatch(/^│ │ add\(rel: string\)/);
     // The class's closing brace: a box of its own at the class's, the line down to it — the members between the two.
     expect(r.slice(rowIndex(h, "ƒ add") + 3, rowIndex(h, "ƒ add") + 5)).toEqual([expect.stringMatching(/^├─+$/), "│ }"]);
@@ -5586,19 +5586,19 @@ describe("code as a notebook (24.x, 24.13)", () => {
       "│ class Outer:",
       "│     x = 1",
       "│", // a member's blank row, on the class's left line going on down
-      "│ ┌─ ƒ one ─",
+      "├─┬─ ƒ one ─", // to its top, by its name
       "│ │",
-      "├─┤ def one(self):", // the middle of its box
+      "│ │ def one(self):",
       "│ │     pass",
       "│",
-      "│ ┌─ ◆ Inner ─",
-      "│ │",
-      "└─┤ class Inner:", // the last of its members: its line ends here; Inner's own tree from Inner's left line
+      "└─┬─ ◆ Inner ─", // the last of its members: its line ends here; Inner's own tree from Inner's left line
+      "  │",
+      "  │ class Inner:",
       "  │     y = 2",
       "  │",
-      "  │ ┌─ ƒ two ─",
-      "  │ │",
-      "  └─┤ def two(self):",
+      "  └─┬─ ƒ two ─",
+      "    │",
+      "    │ def two(self):",
       "    │     pass",
     ]);
     // Too narrow for a member to sit further in: no tree, the boxes as they are.
@@ -5620,9 +5620,9 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const PY = ["class A:", "    def m(self):", "        pass", "", "    x = 1", ""].join("\n");
     r = rows(await open({}, "a.py", PY));
     const x = r.findIndex((y) => y.includes("─ code ─"));
-    expect(r[x]).toMatch(/^│ ┌─ code ─+ 5 ⧉ ✎ ◎ ▾ ──$/);
-    expect(r[x + 1]).toMatch(/^└─┤$/);
-    expect(r[x + 2]).toMatch(/^ {2}│ x = 1$/);
+    expect(r[x]).toMatch(/^└─┬─ code ─+ 5 ⧉ ✎ ◎ ▾ ──$/);
+    expect(r[x + 1]).toBe("  │");
+    expect(r[x + 2]).toBe("  │ x = 1");
   });
 
   test("a cell folds to its header — z a, space k f, its ▾ — and opens again; the imports fold on enter", async () => {
@@ -5732,9 +5732,9 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const r = rows(h);
     const head = rowIndex(h, "ƒ resolve");
     expect(r[head]).toMatch(/^ ƒ resolve +4–15 ⇢ ⧉ ✎ ◎ ▾$/);
-    expect(r[rowIndex(h, "ƒ textOf")]).toMatch(/^│ {2}ƒ textOf +18–21 /); // the tree's lines, bands or boxes
+    expect(r[rowIndex(h, "ƒ textOf")]).toMatch(/^├─ ƒ textOf +18–21 /); // the tree's lines, bands or boxes: to its header
     expect(r[rowIndex(h, "◆ Graph") - 1]).toBe(" }"); // bands touch: a band's header is a tint of its own
-    expect(r[rowIndex(h, "ƒ textOf") + 3]).toMatch(/^├─ textOf\(rel/); // to the band's middle row (rounded down the band)
+    expect(r[rowIndex(h, "ƒ textOf") + 3]).toMatch(/^│ {2}textOf\(rel/); // the line on past its rows
     expect(r[rowIndex(h, "private notes")]).toMatch(/^ {3}private notes/); // from the class's band, no corner to turn
     expect(r[head + 1]).toStartWith(" Resolves a link");
     expect(r[r.findIndex((x) => x.includes("export function resolve"))]).toStartWith(" export function resolve(");
@@ -5794,7 +5794,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
       h.frame();
       await Bun.sleep(10);
     }
-    expect(rows(h)[rowIndex(h, "ƒ xtextOf")]).toMatch(/^│ ┌─ ƒ xtextOf ─/);
+    expect(rows(h)[rowIndex(h, "ƒ xtextOf")]).toMatch(/^├─┬─ ƒ xtextOf ─/);
   });
 
   test("space n v: source and back; edit_in = source: editing goes to source; [render] code = source; Go in source", async () => {
@@ -5951,11 +5951,10 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
     for (const r of [ts, py]) {
       expect(inBox(r[at(r, "◆ Graph") + 2]!)).toBe("The notes of a folder, read once."); // under the blank row
       const m = at(r, "ƒ text");
-      expect(r[m]).toMatch(/^│ ┌─ ƒ text_?[oO]f ─/); // the class's one member
+      // The class's one member, the line to its top — on past it to the class's closing brace in TypeScript; Python's
+      // class has none.
+      expect(r[m]).toMatch(r === ts ? /^├─┬─ ƒ textOf ─/ : /^└─┬─ ƒ text_of ─/);
       expect(r.slice(m + 2, m + 5).map(inBox)).toEqual(["A note's text, as read.", "", "From the cache when it has it."]);
-      // The line to its box's middle, but no further than three rows under its name: TypeScript's box a row taller. On
-      // past it to the class's closing brace in TypeScript; Python's class has none.
-      expect(r[m + 3]).toMatch(r === ts ? /^├─┤$/ : /^└─┤$/);
       expect(r[m + 5]).toBe(r === ts ? "│ │" : "  │"); // a blank row before its code, no divider
     }
   });

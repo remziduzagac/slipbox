@@ -91,19 +91,19 @@ over several lines is prose alone.
 │
 │ export class Graph {
 │
-│ ┌─ ƒ textOf ────────────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ──
+├─┬─ ƒ textOf ────────────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ──
 │ │
 │ │ A note's text, as read.
-├─┤
+│ │
 │ │ textOf(rel: string): string | undefined {
 │ │   return this.notes.get(rel);
 │ │ }
 │
-│ ┌─ ¶ ────────────────────────────────────────────── 30 ⧉ ✎ ◎ ▾ ──
-├─┤ Then writing.
+├─┬─ ¶ ────────────────────────────────────────────── 30 ⧉ ✎ ◎ ▾ ──
+│ │ Then writing.
 │
-│ ┌─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ──
-├─┤
+├─┬─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ──
+│ │
 │ │ add(rel: string): void { this.notes.set(rel, read(rel)); }
 ├──────────────────────────────────────────────────────────────────
 │ }
@@ -126,11 +126,10 @@ the tokens differ.
   class's line), so its name stands clear of what's above it, and around a section's rule; bands touch, a band's header
   a tint of its own.
 - **The tree**: a class's members are drawn two columns in from it, however far the file indents them (Python's four
-  as TypeScript's two), joined to it by the explorer's tree lines: the class's left line on down, `├─` to the middle
-  row of each member's box, the lower of two (`┤` where it meets its left line, `┬` on a folded box's
-  top), `└─` to the last's — a tall box's no further than three rows under its header, so the line stays by the name.
-  A class with a closing brace has the line on down to its closing box's top, the members between the class's two
-  boxes. A class in a class has a tree of its own, from its own box.
+  as TypeScript's two), joined to it by the explorer's tree lines: the class's left line on down, `├─` to each
+  member's top, by its name (`┬` where it meets the box's corner; a band's header, touched), `└─` to the last's — the
+  same row for every member, however tall its box. A class with a closing brace has the line on down to its closing
+  box's top, the members between the class's two boxes. A class in a class has a tree of its own, from its own box.
 - **A cell's header**: its kind (`ƒ` a function or method, `◆` a class, `◇` an interface, type or enum, `•` values,
   `¶` a comment; Nerd: the editors' symbol icons; ASCII `f C T v #`), its name bold, its lines, then its buttons —
   a comment's all but `⇢`, as it defines nothing:
