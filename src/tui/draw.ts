@@ -999,7 +999,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
       if (view === app.view) geo.cursor = { x: textX - view.left + view.cur.col, y };
     }
   }
-  if (c.image && view.left === 0) drawPictures(c, layout, shown, body.y, textX, textW);
+  if (c.image && view.left === 0 && app.picturesNow(view)) drawPictures(c, layout, shown, body.y, textX, textW);
 
   if (hbar) {
     const r = { x: textX, y: body.y + body.h, w: textW, h: 1 };

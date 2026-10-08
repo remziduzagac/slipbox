@@ -12,7 +12,7 @@ import { canonKey, canonSeq } from "../src/core/commands.ts";
 import { type Config, DEFAULT_CONFIG } from "../src/core/config.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { locateVault } from "../src/core/vault.ts";
-import { type ListOverlay, App, type Host } from "../src/tui/app.ts";
+import { type ListOverlay, App, type Host, PICTURES_REST_MS } from "../src/tui/app.ts";
 import type { NvimServer } from "../src/core/nvim.ts";
 import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
@@ -6897,6 +6897,40 @@ describe("pictures (12.x)", () => {
     // An image beside text, or on the internet: its ▣ alt line alone.
     expect(layout.lines.some((l) => l.spans.some((s) => s.text === "▣ icon"))).toBe(true);
     expect(layout.lines.filter((l) => l.image)).toHaveLength(1);
+  });
+  test("a step of scrolling draws its pictures; quick steps after it don't, until it rests — then a frame draws them (12.7)", async () => {
+    const { h, v } = await open(true, undefined, 30);
+    let t = 10_000;
+    (h.app as unknown as { now: () => number }).now = () => t;
+    v.pictures = undefined; // what the harness drew before this clock
+    let asked = 0;
+    h.app.host.requestRender = () => void asked++;
+    const drawn = () => h.canvas().images.length > 0;
+    expect(drawn()).toBe(true); // opened
+    const step = (ms: number) => {
+      t += ms;
+      v.top += 1;
+    };
+    step(10);
+    expect(drawn()).toBe(true); // the first step, however soon: a step
+    step(1000);
+    expect(drawn()).toBe(true); // one step, a while after: drawn at once
+    step(40);
+    expect(drawn()).toBe(false); // quick: not sent again
+    step(40);
+    expect(drawn()).toBe(false);
+    t += 50;
+    expect(drawn()).toBe(false); // not rested yet
+    t += 80;
+    expect(drawn()).toBe(true); // rested: drawn where it is now
+    // The frame that draws them asks for itself.
+    step(1000);
+    expect(drawn()).toBe(true);
+    step(40);
+    asked = 0;
+    expect(drawn()).toBe(false);
+    await Bun.sleep(PICTURES_REST_MS + 40);
+    expect(asked).toBeGreaterThan(0);
   });
   test("scrolled so its top is out of sight: the rest drawn, cut where it shows", async () => {
     const { h, v } = await open();

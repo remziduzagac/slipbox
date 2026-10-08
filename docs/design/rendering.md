@@ -75,7 +75,9 @@ proportions kept. One in an embedded note (12.14) is found from where that note 
 from its place in its root — and drawn inside its frame. Beside text, or where the terminal draws none
 (`[render] images = "never"` too): `▣ alt` alone. Over Kitty graphics a picture is sent compressed and placed by
 its id (12.7); OpenTUI numbers ids by the order pictures are drawn in, so scrolling one into view above others sends
-those again — slipbox can't give a picture an id of its own. A picture on the internet (12.12) is fetched only as
+those again — slipbox can't give a picture an id of its own. So a step of scrolling draws a view's pictures, but quick
+steps after it (a key held, a wheel spun: within 120 ms of the last) don't — their rows stay — and they're drawn once
+it rests. A picture on the internet (12.12) is fetched only as
 `[render] images_remote` says: `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from
 its site without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor
 drawn, `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most

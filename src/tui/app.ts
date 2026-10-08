@@ -166,6 +166,8 @@ export interface Host {
 
 /** A picture's most rows (12.x): a big screenshot never takes the page over. */
 export const PICTURE_ROWS = 12;
+/** How long a view rests from quick scrolling before its pictures are drawn again (12.7). */
+export const PICTURES_REST_MS = 120;
 
 export type Level = "info" | "warn" | "error";
 
@@ -206,6 +208,8 @@ export interface View {
   buf: NoteBuffer;
   /** First row on screen. */
   top: number;
+  /** Its pictures (12.7): the top they were last drawn at, when it last scrolled, and whether they wait for it to rest. */
+  pictures?: { top: number; at: number; wait: boolean };
   cur: Pos;
   /** Column to return to when moving through shorter rows. */
   goal: number;
@@ -677,6 +681,7 @@ export class App {
   /** The messages showing as floating boxes, newest first (each for 4 s, 8 s an error). */
   toasts: Message[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private picturesTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** The newest message still showing. */
   get transient(): Message | null {
@@ -930,6 +935,29 @@ export class App {
   /** Whether the terminal draws images, or its cell's size, changed (12.x): every note laid out again. */
   picturesChanged(): void {
     this.widthsChanged();
+  }
+
+  /**
+   * Whether a view's pictures are drawn this frame (12.7). A step of scrolling draws them; quick steps after it — a key
+   * held, a wheel spun — don't, as each would send them to the terminal again (OpenTUI numbers pictures by the order
+   * they're drawn in, so what scrolls out of view renumbers the rest). Their rows stay; they're drawn once it rests.
+   */
+  picturesNow(view: View): boolean {
+    const now = this.now();
+    const p = view.pictures;
+    // Not scrolled yet: its first step is a step, however soon it comes.
+    if (!p) view.pictures = { top: view.top, at: -Infinity, wait: false };
+    else if (p.top !== view.top) {
+      p.wait = now - p.at < PICTURES_REST_MS;
+      p.top = view.top;
+      p.at = now;
+      if (p.wait) {
+        // A frame when it has rested, to draw them.
+        if (this.picturesTimer) clearTimeout(this.picturesTimer);
+        this.picturesTimer = setTimeout(() => this.host.requestRender(), PICTURES_REST_MS + 10);
+      }
+    } else if (p.wait && now - p.at >= PICTURES_REST_MS) p.wait = false;
+    return !view.pictures!.wait;
   }
 
   /** Pictures on the internet (12.12), fetched into the cache: there, the notes laid out again; failed, why. */
