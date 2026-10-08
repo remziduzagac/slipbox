@@ -238,9 +238,10 @@ export function themeFromPalette(
     cursor_line: { bg: blend(p.surface, p.bg, 0.55) },
     line_number: { fg: p.surface2 },
     line_number_current: { fg: p.orange, bold: true },
-    // The gutter (the problems bar, the line numbers): the breadcrumb row's shade, the two framing the text — not the
-    // rails' and code blocks' dark, which a code block beside it would run into.
-    gutter: { bg: blend(p.surface, p.bg, 0.35) },
+    // The gutter (the problems bar, the line numbers): halfway from the page to the breadcrumb row's shade, the two
+    // framing the text, the gutter the quieter — not the rails' and code blocks' dark, which a code block beside it
+    // would run into.
+    gutter: { bg: blend(p.surface, p.bg, 0.175) },
     which_key_key: { fg: p.orange, bg: p.bg_dark, bold: true },
     which_key_group: { fg: p.blue, bg: p.bg_dark },
     // On the page: the frame rule under it gives the bar the same air as the rows below.

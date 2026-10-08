@@ -18,7 +18,7 @@ import { layoutSource } from "../src/core/layout/source.ts";
 import { expandTabs, sanitize, sanitizeMap } from "../src/core/sanitize.ts";
 import { base16ToPalette, parseBase16 } from "../src/core/theme/base16.ts";
 import { applyColorOverrides, listThemes, loadTheme, ROLES } from "../src/core/theme/index.ts";
-import { blend } from "../src/core/theme/theme.ts";
+import { blend, luminance } from "../src/core/theme/theme.ts";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { WriteRefused, writeNote } from "../src/core/fsutil.ts";
 import { listTasks, toggleTask } from "../src/core/tasks.ts";
@@ -272,13 +272,12 @@ describe("themes (2.6)", () => {
       for (const r of ROLES) expect(theme.roles[r]).toBeDefined();
     }
   });
-  test("the gutter's shade is the breadcrumb row's in every colour theme, never the code blocks' and rails' dark", () => {
+  test("the gutter's shade is between the page's and the breadcrumb row's in every colour theme, a quieter frame", () => {
     for (const t of listThemes()) {
       const { theme } = loadTheme(t.name);
       if (theme.name === "terminal" || theme.name === "mono") continue; // sixteen colours, or none
-      const { gutter, breadcrumb_band, code_block, rail } = theme.roles;
-      expect([t.name, gutter.bg]).toEqual([t.name, breadcrumb_band.bg!]);
-      expect([code_block.bg, rail.bg]).not.toContain(gutter.bg);
+      const [page, gutter, band] = [theme.bg, theme.roles.gutter.bg!, theme.roles.breadcrumb_band.bg!].map(luminance);
+      expect([t.name, Math.min(page!, band!) < gutter! && gutter! < Math.max(page!, band!)]).toEqual([t.name, true]);
     }
   });
   test("the lens while it's typed into is green: its rules and label, a green tint on its rows", () => {
