@@ -68,8 +68,10 @@ as their text; the URL follows as `<url>` when colour is off or `render.show_url
 Images render as `▣ alt`, and alt text plus path stay the floor (12.x): a picture alone in its paragraph, a local
 image file (PNG, JPEG, WebP, GIF), is drawn under its `▣ alt` line where the terminal draws images — Kitty graphics or
 sixel, as OpenTUI finds it asking, never blocks of colour — sized to the text width, its proportions kept, at most 12
-rows; scrolled half out of sight, the part that shows. Beside text, in an embedded note, or where the terminal draws
-none (`[render] images = "never"` too): `▣ alt` alone. A picture on the internet (12.12) is fetched only as
+rows; scrolled half out of sight, the part that shows. One embedded by name, `![[dal.png]]` (12.13), is drawn the same,
+found as its link is (anywhere in the root, the nearest of two; two tied, neither): Obsidian's `|300` its width in
+pixels, `|240x180` the box it fits in, its proportions kept. Beside text, in an embedded note, or where the terminal
+draws none (`[render] images = "never"` too): `▣ alt` alone. A picture on the internet (12.12) is fetched only as
 `[render] images_remote` says: `ask` (the default) — its link, until `enter` on it asks to fetch it, this once or from
 its site without asking (until slipbox quits); `show` — fetched as the note's laid out; `never` — neither fetched nor
 drawn, `enter` copying its address. Fetched (into the cache, a file per address: an image's content type, at most
@@ -103,8 +105,9 @@ a list item's, at the end of its text, or the table, quote or list on the line b
   embeds go three deep, then `embedded deeper still: enter opens it`. A heading or block that isn't there says so.
 - **Current.** It's read from its file (re-read when that changes); a block holding one is never kept in the render
   cache, and the note showing it lays out again when the graph hears the embedded note change.
-- **References still.** A picture (`![x](pic.png)`), any other file, an embed that reaches nothing, and an embed with
-  text around it render as a reference — pixels are phase 6.
+- **References still.** A picture (`![x](pic.png)`, `![[pic.png]]`) is a picture's `▣ alt` — drawn under it where
+  pictures are (12.x), never framed; any other file, an embed that reaches nothing, and an embed with text around it
+  render as a reference.
 
 ## Data files (plans `16.11`–`16.14`)
 

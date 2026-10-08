@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { glyphsFor } from "../src/core/glyphs.ts";
 import { layoutToAnsi } from "../src/core/layout/ansi.ts";
 import type { Layout } from "../src/core/layout/ir.ts";
-import { renderMarkdown, renderTree } from "../src/core/layout/render.ts";
+import { type PictureSource, renderMarkdown, renderTree } from "../src/core/layout/render.ts";
 import { dataLinks, parseData } from "../src/core/data.ts";
 import { classify } from "../src/core/filetypes.ts";
 import { parseNoteFile } from "../src/core/readers.ts";
@@ -168,6 +168,21 @@ describe("blocks and inlines (2.2)", () => {
     expect(shown("a ![[dal.png|dal for 4]] b")).toEqual([[`${img} dal for 4`, "image"]]);
     // Not a picture: a note's or a file's embed, its `|…` its words still.
     expect(shown("a ![[Dal|300]] ![[pantry.csv]] b")).toEqual([[`${unicode.embed} 300`, "embed"], [`${unicode.embed} pantry.csv`, "embed"]]);
+  });
+  test("a picture embedded by name, alone in its paragraph, is asked for by its name and Obsidian's size (12.13); a note's embed, one beside text, a link to one, isn't", () => {
+    const asked: PictureSource[] = [];
+    const picture = (from: PictureSource) => (asked.push(from), { src: "/pictures/p.png", cols: 4, rows: 2 });
+    const md = "![[dal.png]]\n\n![[a/dal.png|300]]\n\n![[flip.JPG|240x180]]\n\n![[dal.png|the finished dal]]\n\n![[Dal|300]]\n\nbeside ![[dal.png]] text\n\n[[dal.png]]\n";
+    const l = renderMarkdown(md, { width: 60, glyphs: unicode, showUrls: false, picture });
+    expect(asked).toEqual([
+      { name: "dal.png", size: null },
+      { name: "a/dal.png", size: { width: 300, height: null } },
+      { name: "flip.JPG", size: { width: 240, height: 180 } },
+      { name: "dal.png", size: null },
+    ]);
+    // Each under its `▣ name` line, as a picture by its path is.
+    const rows = l.lines.map((x) => (x.image ? "picture" : x.spans.map((s) => s.text).join("")));
+    expect(rows.slice(0, 4)).toEqual([`${unicode.image} dal.png`, "picture", "", ""]);
   });
   test("source lines survive wrapping (3.5 anchors on them)", () => {
     const layout = renderMarkdown("# H\n\npara one\nline two\n\nsecond para\n", { width: 6, glyphs: unicode, showUrls: false });

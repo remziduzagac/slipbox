@@ -35,8 +35,15 @@ export interface RenderOptions {
   embedFrom?: string;
   /** A picture alone in its paragraph (12.x), drawn under its `▣ alt` line: its file and the cells it takes at most
    *  `width` columns wide — or null (not a local image, no images here): its `▣ alt` alone, the floor. */
-  picture?: (url: string, width: number) => Picture | null;
+  picture?: (from: PictureSource, width: number) => Picture | null;
 }
+
+/**
+ * Where a picture is, as the note writes it: a markdown image's URL — a path from the note's folder, or on the
+ * internet — or a name, `![[dal.png]]` (12.13), found as a link to it is, with the size in pixels Obsidian's `|300`
+ * (its width) or `|240x180` (the box it fits in) gives it.
+ */
+export type PictureSource = { url: string } | { name: string; size: { width: number; height: number | null } | null };
 
 /** A note embedded, as the caller found it: what to draw, and how its own links resolve. */
 export interface Embedded {
@@ -386,7 +393,10 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
   for (const { r, e } of found) {
     const at = (r.node as unknown as { position?: { start: { line: number } } }).position?.start.line ?? src;
     if (e) out.push(...embedFrame(r, e, at, ctx, width));
-    else out.push(...wrapSpans(inline([r.node], ctx, base, at), width).map((row) => ({ spans: row, src: at })));
+    else {
+      const from = pictureSource(r.node);
+      out.push(...pictureRows(r.node, from && ctx.opts.picture ? ctx.opts.picture(from, width) : null, at, ctx, width, base));
+    }
   }
   return out;
 }
@@ -399,17 +409,33 @@ function embedsAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: 
 function picturesAlone(children: PhrasingContent[], src: number, ctx: Ctx, width: number, base: Style): Line[] | null {
   const pictureOf = ctx.opts.picture;
   if (!pictureOf) return null;
-  const images = children.filter((c) => c.type === "image");
-  if (!images.length || children.some((c) => c.type !== "image" && !(c.type === "break" || (c.type === "text" && !c.value.trim())))) return null;
-  const drawn = images.map((c) => ({ c, p: c.type === "image" ? pictureOf(c.url, width) : null }));
+  const images = children.flatMap((c) => {
+    const from = pictureSource(c);
+    return from ? [{ c, from }] : [];
+  });
+  if (!images.length || images.length !== children.filter((c) => !(c.type === "break" || (c.type === "text" && !c.value.trim()))).length) return null;
+  const drawn = images.map(({ c, from }) => ({ c, p: pictureOf(from, width) }));
   if (!drawn.some((d) => d.p)) return null;
-  const out: Line[] = [];
-  for (const { c, p } of drawn) {
-    const at = c.position?.start.line ?? src;
-    out.push(...wrapSpans(inline([c], ctx, base, at), width).map((row) => ({ spans: row, src: at })));
-    if (p) for (let k = 0; k < p.rows; k++) out.push({ spans: [], src: at, decor: true, ...(k === 0 ? { image: p } : {}) });
-  }
+  return drawn.flatMap(({ c, p }) => pictureRows(c, p, c.position?.start.line ?? src, ctx, width, base));
+}
+
+/** A picture's `▣ alt` line (anything else's reference), then — where it's drawn — the rows its image is drawn over:
+ *  blank frame rows, the first carrying the picture. */
+function pictureRows(c: PhrasingContent, p: Picture | null, at: number, ctx: Ctx, width: number, base: Style): Line[] {
+  const out: Line[] = wrapSpans(inline([c], ctx, base, at), width).map((row) => ({ spans: row, src: at }));
+  if (p) for (let k = 0; k < p.rows; k++) out.push({ spans: [], src: at, decor: true, ...(k === 0 ? { image: p } : {}) });
   return out;
+}
+
+/** Where a picture is drawn from: a markdown image's URL, or a picture embedded by name (`![[dal.png|300]]`) and the
+ *  size its `|…` gives it. Null for anything else. */
+function pictureSource(c: PhrasingContent): PictureSource | null {
+  if (c.type === "image") return { url: c.url };
+  if ((c.type as string) !== "wikiLink") return null;
+  const w = c as unknown as WikiLink;
+  if (!w.embed || !IMAGE_FILE.test(w.target)) return null;
+  const m = SIZE.exec(w.alias?.trim() ?? "");
+  return { name: w.target, size: m ? { width: Number(m[1]), height: m[2] ? Number(m[2]) : null } : null };
 }
 
 /** An embed as written: a wikilink's (`![[…]]`), or a path's (`![…](note.md)`, 20.1). */
@@ -428,7 +454,7 @@ const NOTE_URL = /\.(md|markdown)$/i;
 
 /** A picture's file, embedded by name (`![[dal.png]]`), and the size Obsidian lets it carry. */
 const IMAGE_FILE = /\.(png|jpe?g|gif|webp|avif|svg|bmp|ico|tiff?|heic)$/i;
-const SIZE = /^\d+(x\d+)?$/;
+const SIZE = /^(\d+)(?:x(\d+))?$/;
 
 /** An image URL's path and its fragment: `#^id` a block, any other a heading. */
 function urlParts(url: string): { target: string; heading: string | null; block: string | null } {

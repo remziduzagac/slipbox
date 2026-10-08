@@ -6899,6 +6899,31 @@ describe("pictures (12.x)", () => {
       expect(h.canvas().images).toEqual([]);
     }
   });
+  test("a picture embedded by name, `![[chart.png]]` (12.13): found as its link is, in another folder or root too, and drawn as a path's is — `|80` its width, `|400x32` the box it fits in; two of the name tied, or beside text: ▣ alone", async () => {
+    const root = makeVault();
+    for (const d of ["gallery", "shots", "twin-a", "twin-b"]) mkdirSync(join(root, d));
+    const md = "# N\n\n![[chart.png]]\n\n![[chart.png|80]]\n\n![[chart.png|400x32]]\n\n![[twin.png]]\n\nBeside ![[chart.png]] text.\n\n![[gallery-other]]\n![[chart.png|80]]\n\n![[nested-vault/inner.png|80]]\n";
+    writeFileSync(join(root, "gallery", "n.md"), md);
+    writeFileSync(join(root, "gallery", "gallery-other.md"), "# Other\n\nHello.\n");
+    for (const f of ["shots/chart.png", "twin-a/twin.png", "twin-b/twin.png", "nested-vault/inner.png"]) writeFileSync(join(root, f), "x");
+    const sizes = { "chart.png": { width: 400, height: 200 }, "twin.png": { width: 400, height: 200 }, "inner.png": { width: 400, height: 200 } };
+    const h = await harness({ root, open: "gallery/n.md", width: 100, height: 40, images: terminal(true, sizes) });
+    const layout = h.app.currentLayout(h.app.view!);
+    const chart = join(root, "shots", "chart.png");
+    // 400 × 200 in 8 × 16 cells: its own size 48 × 12 (12 rows at most); 80 pixels wide, 10 × 3; 64 by 32, 8 × 2.
+    const drawn = layout.lines.filter((l) => l.image).map((l) => [l.src, l.image]);
+    expect(drawn).toEqual([
+      [3, { src: chart, cols: 48, rows: 12 }],
+      [5, { src: chart, cols: 10, rows: 3 }],
+      [7, { src: chart, cols: 8, rows: 2 }],
+      [14, { src: chart, cols: 10, rows: 3 }],
+      [16, { src: join(root, "nested-vault", "inner.png"), cols: 10, rows: 3 }], // a root inside this one: its path
+    ]);
+    // The tied name and the one beside text: their ▣ name alone; the note beside a picture framed in place.
+    expect(layout.lines.some((l) => lineText(l) === "▣ twin.png")).toBe(true);
+    expect(layout.lines.some((l) => lineText(l).includes("Beside ▣ chart.png text."))).toBe(true);
+    expect(layout.lines.some((l) => lineText(l).includes("Hello."))).toBe(true);
+  });
   test("a picture in an embedded note stays ▣ alt: its path is that note's, not this one's", async () => {
     const root = makeVault();
     writeFileSync(join(root, "host.md"), "# Host\n\n![[inner]]\n");
