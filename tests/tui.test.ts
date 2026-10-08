@@ -748,7 +748,7 @@ describe("overlays and the : prompt", () => {
     // At most three bindings; the rest in the footer description.
     const endRow = o.items.find((i) => i.data === "cursor.line_end")!;
     expect(endRow.keys).toEqual(["$", "end", "cmd+right"]);
-    expect(endRow.more).toEqual(["shift+end", "shift+cmd+right"]);
+    expect(endRow.more).toEqual(["ctrl+e", "shift+end", "shift+cmd+right", "ctrl+shift+e"]);
     // Keys in a section line up in columns.
     const lines = f.split("\n");
     const colOf = (label: string, key: string) => {
@@ -759,7 +759,7 @@ describe("overlays and the : prompt", () => {
     expect(colOf("Cursor left", "h")).toBe(colOf("Top of note", "g g"));
     // Spelled-out keys, each binding a separate keycap (a sequence stays in one).
     const row = f.split("\n").find((l) => l.includes("Top of note"))!;
-    expect(row).toMatch(/g g +ctrl\+home +ctrl\+shift\+home/);
+    expect(row).toMatch(/g g +ctrl\+home +cmd\+up/);
     const c = h.canvas();
     const y = c.rows.findIndex((r) => r.join("").includes("Top of note"));
     const line = c.rows[y]!.join("");
@@ -1466,6 +1466,34 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     expect(v.buf.source).toBe("one two.three\nfourx five\n");
     await h.keys("ctrl+w"); // the insert started again where the cursor landed: only what was typed since goes
     expect(v.buf.source).toBe("one two.three\nfour five\n");
+  });
+  test("macOS's cmd keys, as other Mac apps: cmd+← / cmd+→ (ctrl+a / ctrl+e, what its terminals send) to a line's start and end, cmd+↑ / cmd+↓ to the top and bottom — reading and typing", async () => {
+    const { h, v } = await setup("one two\nthree four\n");
+    await h.keys("space", "n", "v", "j", "w"); // source mode, on "four"
+    const at = () => offsetOf(h.app, v);
+    const seen: number[] = [];
+    for (const key of ["ctrl+a", "ctrl+e", "cmd+left", "cmd+right", "cmd+up", "cmd+down"]) {
+      await h.keys(key);
+      seen.push(at());
+    }
+    expect(seen).toEqual([8, 17, 8, 17, 0, 8]); // reading: the end is on the last character; the bottom, the last line
+    expect(v.source).toBe(true); // ctrl+e moves: it never switches the view any more
+    // Extending: shift with them.
+    await h.keys("ctrl+a", "shift+ctrl+e");
+    expect(h.app.selectionText(v)).toBe("three four");
+    await h.keys("escape", "shift+a"); // typing at the line's end
+    seen.length = 0;
+    for (const key of ["ctrl+a", "ctrl+e", "cmd+left", "cmd+right", "cmd+up", "cmd+down"]) {
+      await h.keys(key);
+      seen.push(at());
+    }
+    expect(seen).toEqual([8, 18, 8, 18, 0, 18]); // typing: past the last character; the bottom, the last line's end
+    await h.keys("cmd+up", "x");
+    expect(v.buf.source).toBe("xone two\nthree four\n");
+    await h.keys("ctrl+w"); // the insert started again where the cursor landed
+    expect(v.buf.source).toBe("one two\nthree four\n");
+    await h.keys("escape", "j", "shift+i", "a", "b", "ctrl+e", "x", "ctrl+w"); // on its line too: only the x goes
+    expect(v.buf.source).toBe("one two\nabthree four\n");
   });
   test("i from the render switches to source and types; esc ends; u undoes the session; U redoes", async () => {
     const { h, type, v, file } = await setup("# T\n\nhello world\n");
@@ -6575,7 +6603,7 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     const shown = h.app.screenRows(v, h.app.currentLayout(v));
     expect(Math.abs(shown.indexOf(row) - Math.floor((shown.length - 1) / 2))).toBeLessThanOrEqual(1);
   });
-  test("go to line: ctrl+g asks, :42 goes; ctrl+z undoes, ctrl+y redoes; ctrl+e toggles source", async () => {
+  test("go to line: ctrl+g asks, :42 goes; ctrl+z undoes, ctrl+y redoes; space n v toggles source", async () => {
     const h = await harness({ root: long(), open: "long.md" });
     const v = h.app.view!;
     const line = () => h.app.currentLayout(v).lines[v.cur.row]!.src;
@@ -6583,13 +6611,13 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     expect(line()).toBe(21);
     await h.keys(":", "4", "1", "enter");
     expect(line()).toBe(41);
-    await h.keys("ctrl+e");
+    await h.keys("space", "n", "v");
     expect(v.source).toBe(true);
     await h.keys("A", "!", "escape", "ctrl+z");
     expect(v.buf.source).not.toContain("!");
     await h.keys("ctrl+y");
     expect(v.buf.source).toContain("Line 21.!");
-    await h.keys("ctrl+e");
+    await h.keys("space", "n", "v");
     expect(v.source).toBe(false);
   });
   test("q and :q close the window, then the tab; on the last, q only says so and :q quits", async () => {

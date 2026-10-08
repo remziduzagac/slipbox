@@ -24,15 +24,14 @@ Config uses the same notation and accepts common spellings: `G` means `shift+g`,
   VS Code and Obsidian share come next (`ctrl+f`, `ctrl+p`, `ctrl+s`, `ctrl+z` / `ctrl+y`,
   `ctrl+←/→` and `alt+←/→` by word, `ctrl+shift+f`, `ctrl+tab`); `ctrl+w` and `ctrl+t`
   stay vim's and slipbox's prefixes for windows and tabs; everything else is under `space`. **No
-  emacs keys.**
-- **Direct keys beside navigation** are few: `?` help, `:` the palette, `/` and `ctrl+f` find
-  (`n` / `shift+n`), `ctrl+p` the switcher, the `y …` copies, `v` visual mode, `ctrl+e` source
-  mode, `ctrl+q` quit. The which-key popup lists the next keys: immediately after the
-  leader, and after 500 ms for the other prefixes (`y`, `ctrl+w`, `ctrl+t`, `[`, `]`, `g`, `z`).
-  Each entry shows a name and a short explanation, in at most three columns, and keys with the same
-  action share an entry (`h left`). `backspace` goes up a level, and `esc` cancels. A key that is
-  both a binding and a prefix waits the same delay (`input.which_key_delay_ms`) for the next key
-  before it runs.
+  emacs keys** — but for what macOS terminals send for its own keys: `alt+b` / `alt+f` for option+← / option+→,
+  `ctrl+a` / `ctrl+e` for cmd+← / cmd+→, which do what those keys do in any Mac app.
+- **Direct keys beside navigation** are few: `?` help, `:` the palette, `/` and `ctrl+f` find (`n` / `shift+n`),
+  `ctrl+p` the switcher, the `y …` copies, `v` visual mode, `ctrl+q` quit. The which-key popup lists the next keys:
+  immediately after the leader, and after 500 ms for the other prefixes (`y`, `ctrl+w`, `ctrl+t`, `[`, `]`, `g`, `z`).
+  Each entry shows a name and a short explanation, in at most three columns, and keys with the same action share an
+  entry (`h left`). `backspace` goes up a level, and `esc` cancels. A key that is both a binding and a prefix waits the
+  same delay (`input.which_key_delay_ms`) for the next key before it runs.
 - **Every `ctrl+` chord has another route**, usually under the leader: terminals, multiplexers
   and browsers swallow `ctrl+` keys (zellij takes `ctrl+t`, `ctrl+p`, `ctrl+o` and `ctrl+q`);
   nothing takes `space`. Cursor movement is the exception (its chords have direct alternatives:
@@ -69,9 +68,9 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | up / down one row | `k` / `j` | `up` / `down` |
 | previous / next word start | `b` / `w` | `ctrl+left` / `ctrl+right`, `alt+left` / `alt+right`, `alt+b` / `alt+f` |
 | end of word | `e` | — |
-| start / end of row | `0` / `$` | `home` / `end`, `cmd+left` / `cmd+right` |
+| start / end of row | `0` / `$` | `home` / `end`, `cmd+left` / `cmd+right`, `ctrl+a` / `ctrl+e` |
 | first non-blank of row | `^` | — |
-| top / bottom of note | `g g` / `shift+g` | `ctrl+home` / `ctrl+end` |
+| top / bottom of note | `g g` / `shift+g` | `ctrl+home` / `ctrl+end`, `cmd+up` / `cmd+down` |
 | previous / next heading | `[ [` / `] ]` | `alt+up` / `alt+down` |
 | previous / next paragraph | `{` / `}` | `ctrl+up` / `ctrl+down` |
 | top / middle / bottom row on screen | `shift+h` / `shift+m` / `shift+l` | — |
@@ -94,10 +93,10 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | --- | --- |
 | extend by character / row | `shift+left` / `shift+right` / `shift+up` / `shift+down` |
 | extend by word | `shift+ctrl+left` / `shift+ctrl+right`, `shift+alt+left` / `shift+alt+right`, `v` + `w` `b` `e` |
-| extend to row start / end | `shift+home` / `shift+end`, `v` + `0` `$` |
+| extend to row start / end | `shift+home` / `shift+end`, `shift+ctrl+a` / `shift+ctrl+e`, `v` + `0` `$` |
 | … also | `shift+cmd+left` / `shift+cmd+right` (where the terminal passes `cmd` through) |
 | extend by paragraph | `shift+ctrl+up` / `shift+ctrl+down` |
-| extend to note top / bottom | `shift+ctrl+home` / `shift+ctrl+end` |
+| extend to note top / bottom | `shift+ctrl+home` / `shift+ctrl+end`, `shift+cmd+up` / `shift+cmd+down` |
 | extend by page | `shift+pageup` / `shift+pagedown` |
 | visual mode, by character / whole rows | `v` / `shift+v`, then any movement (the same key again leaves) |
 | swap selection ends (visual mode) | `o` |
@@ -442,7 +441,7 @@ source first.
 | Action | Keys |
 | --- | --- |
 | tick or untick the task item at the cursor (the innermost, on any of its rows) | `ctrl+l`, `space n t`, a click |
-| show this window's note as its raw markdown, or rendered again (`:source`) | `ctrl+e`, `space n v` |
+| show this window's note as its raw markdown, or rendered again (`:source`) | `space n v` |
 | open the lens: the markdown around the cursor, the rest rendered (`:lens`); `esc` closes it | `space n l` |
 | the lens a block bigger / smaller (the size kept as it moves) / its own size again | `+` / `-` / `=` |
 | type before the cursor / after it | `i` / `a` |
@@ -508,11 +507,11 @@ a new line with the same indentation, continuing a list (the same bullet, the ne
 an item with nothing after its marker, ending the list; `backspace` / `delete` a character (joining lines at an edge);
 `ctrl+w` the word before; `ctrl+u` what was typed on the line, then the rest before the cursor, and at the line's start
 joins it to the one above (`ctrl+w` too stops once where the insert began); `tab` / `shift+tab` indent or outdent the
-line by two spaces; the arrows, `home` and `end` move; `ctrl+←/→`, `alt+←/→` and `alt+b` / `alt+f` move by words — back
-to a word's start, forward to its end, across lines; `ctrl+s` saves. A paste goes into the text. While a code file's
-completion shows, `tab`, `enter`, `ctrl+n`, `ctrl+p`, `up`, `down` and `ctrl+e` are its (`space c`, above). Source
-mode's own keys are `[keys.source]` in config: the operators and edits above (`d c y > < D C s S r J p P ~ . x`), which
-win over the reading keys there.
+line by two spaces; the arrows, `home` and `end` move — `cmd+←/→` (`ctrl+a` / `ctrl+e`) to the line's start and end,
+`cmd+↑/↓` to the note's; `ctrl+←/→`, `alt+←/→` and `alt+b` / `alt+f` move by words — back to a word's start, forward to
+its end, across lines; `ctrl+s` saves. A paste goes into the text. While a code file's completion shows, `tab`, `enter`,
+`ctrl+n`, `ctrl+p`, `up`, `down` and `ctrl+e` are its (`space c`, above). Source mode's own keys are `[keys.source]` in
+config: the operators and edits above (`d c y > < D C s S r J p P ~ . x`), which win over the reading keys there.
 
 **Where source mode isn't vim.** Motions move by the rows you see, as in reading: on a long line
 wrapped across rows, `0`, `$`, `j` and `k` (and `d$`, `dj`) work on the row, while `D`, `C`, `A`,

@@ -308,8 +308,11 @@ export function indentLine(app: App, view: View, dir: 1 | -1): void {
 export function insertKey(app: App, view: View, key: string): void {
   insertKeyNow(app, view, key);
   // Moving the cursor starts the insert again there, as vim's does: ctrl+u and ctrl+w stop at it.
-  if (view.insert && (["left", "right", "up", "down", "home", "end"].includes(key) || WORD_KEYS[key])) view.insertFrom = offsetOf(app, view);
+  if (view.insert && (MOVING.has(key) || WORD_KEYS[key])) view.insertFrom = offsetOf(app, view);
 }
+
+/** Typing's moves: the arrows, home and end — and macOS's cmd+arrows, cmd+← / cmd+→ arriving as ctrl+a / ctrl+e. */
+const MOVING = new Set(["left", "right", "up", "down", "home", "end", "cmd+left", "cmd+right", "ctrl+a", "ctrl+e", "cmd+up", "cmd+down"]);
 
 /** Typing, by words: ctrl+← / ctrl+→, alt+← / alt+→ (macOS's option+arrows), alt+b / alt+f (what its terminals send). */
 const WORD_KEYS: Record<string, -1 | 1> = { "ctrl+left": -1, "alt+left": -1, "alt+b": -1, "ctrl+right": 1, "alt+right": 1, "alt+f": 1 };
@@ -356,9 +359,18 @@ function insertKeyNow(app: App, view: View, key: string): void {
       const end = (view.buf.lineStarts()[src - 1] ?? 0) + lineText(view, src).length;
       return placeAt(app, view, at < end ? nextBoundary(view.buf.source, at) : at, true);
     }
-    case "home": {
+    case "home":
+    case "cmd+left":
+    case "ctrl+a": {
       const at = offsetOf(app, view);
       return placeAt(app, view, view.buf.lineStarts()[lineOf(view, at) - 1] ?? 0, true);
+    }
+    case "cmd+up":
+      return placeAt(app, view, 0, true);
+    case "cmd+down": {
+      // The last line's end (a final newline ends it; it starts none).
+      const src = view.buf.source;
+      return placeAt(app, view, src.endsWith("\n") ? src.length - 1 : src.length, true);
     }
     case "ctrl+left":
     case "alt+left":
@@ -367,7 +379,9 @@ function insertKeyNow(app: App, view: View, key: string): void {
     case "alt+right":
     case "alt+f":
       return placeAt(app, view, wordFrom(view.buf.source, offsetOf(app, view), WORD_KEYS[key]!), true);
-    case "end": {
+    case "end":
+    case "cmd+right":
+    case "ctrl+e": {
       const src = lineOf(view, offsetOf(app, view));
       return placeAt(app, view, (view.buf.lineStarts()[src - 1] ?? 0) + lineText(view, src).length, true);
     }
