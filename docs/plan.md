@@ -498,7 +498,7 @@ common, and the only reason they are step 0.
 | 7.3 | **Done** (`17.15`). Confirm, and warn when the tree is already dirty |
 | 7.4 | **Done.** Undo a rename: `space v shift+u`, `slipbox undo` — the files as they were, what moved back |
 | 7.5 | **constraint** never write outside the vault root — decide what a symlink out means |
-| 7.6 | **decide** frontmatter is spliced by byte range, never parsed and re-serialised |
+| 7.6 | **Decided, done.** frontmatter is spliced by byte range, never parsed and re-serialised |
 
 ## Scratch capture — `8.x`
 
