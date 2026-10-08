@@ -2150,18 +2150,41 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     h.frame();
     expect(lens().source.join("\n")).toContain("Para 20 with **bold**.");
   });
-  test("esc esc from typing closes it; i from the render (edit_in = live) opens it typing", async () => {
-    const { h, v, goto, lens } = await setup((c) => (c.editor.edit_in = "live"));
+  test("i from the render (edit_in = live) opens it, as written; i again types — esc esc leaves as it came: typing, then it", async () => {
+    const { h, v, goto, lens, rows } = await setup((c) => (c.editor.edit_in = "live"));
     goto("Para 7 with");
     await h.keys("i");
     expect(v.live).toBe(true);
+    expect(v.insert).toBeFalsy();
+    expect(h.app.messages.at(-1)!.text).toBe("the lens: the markdown around the cursor — the key again edits it, esc closes it");
+    expect(rows()[lens().top]).toContain("source · lines");
+    await h.keys("i");
     expect(v.insert).toBe(true);
+    expect(rows()[lens().top]).toContain("editing · lines");
     await h.keys("escape");
     expect(v.live).toBe(true); // normal mode, still open
     expect(statusRow(h.frame())).toContain("LENS");
     await h.keys("escape");
     expect(v.live).toBe(false);
     expect(lens().top).toBe(-1);
+  });
+  test("an edit that doesn't type (a line moved, x from the palette) opens it first too; its second press edits", async () => {
+    const { h, v, goto } = await setup((c) => (c.editor.edit_in = "live"));
+    for (const edit of [() => h.keys("alt+shift+down"), () => h.app.run("edit.delete_char")]) {
+      goto("Para 7 with");
+      const before = v.buf.source;
+      await edit();
+      expect(v.live).toBe(true);
+      expect(v.buf.source).toBe(before); // opened, nothing edited
+      await edit();
+      expect(v.buf.source).not.toBe(before);
+      await h.keys("u", "escape");
+      expect(v.live).toBe(false);
+    }
+    // A yank isn't an edit: it goes on at once, waiting for its motion.
+    goto("Para 7 with");
+    await h.app.run("edit.op_yank");
+    expect([v.live, h.app.vim.op?.op]).toEqual([true, "y"]);
   });
   test("typing in it doesn't re-parse; what's after shifts; closing renders the edit", async () => {
     const { h, v, goto, rows } = await setup();
@@ -5375,7 +5398,7 @@ describe("data files render as documents (16.11–16.14)", () => {
     const v = h.app.view!;
     const row = h.app.currentLayout(v).lines.findIndex((x) => x.spans.some((s) => s.text.includes("autosave_ms")));
     h.app.moveCursor(v, { row, col: 2 });
-    await h.keys("shift+a", "0", "escape");
+    await h.keys("shift+a", "shift+a", "0", "escape"); // the lens, then typing in it
     expect(v.live).toBe(true);
     expect(v.buf.source).toContain("autosave_ms = 300000\n");
     // Break it: an unclosed string. Mid-typing the lens stays; leaving insert, source mode.
@@ -5757,12 +5780,12 @@ describe("code as a notebook (24.x, 24.13)", () => {
     h.app.placeAtLine(v, 19, 3);
     await h.keys("i");
     expect(v.live).toBe(true);
-    expect(h.app.messages.at(-1)!.text).toBe("the lens: editing the code around the cursor — esc esc closes it");
+    expect(h.app.messages.at(-1)!.text).toBe("the lens: the code around the cursor — the key again edits it, esc closes it");
     const lens = h.app.currentLayout(v).lines.filter((l) => l.lens === "source");
     expect(lens.map((l) => l.spans.map((sp) => sp.text).join(""))).toContain("    return this.notes.get(rel);");
     expect(lens.find((l) => l.src === 20)!.spans.find((sp) => sp.text.includes("return"))!.role).toBe("syn_keyword");
     expect(rows(h).some((x) => /^┌─ ◆ Graph ─/.test(x))).toBe(true); // around it, the notebook
-    await h.keys("x", "escape", "escape");
+    await h.keys("i", "x", "escape", "escape");
     expect(v.live).toBeFalsy();
     for (let k = 0; k < 200 && v.buf.syntax?.version !== v.buf.version; k++) {
       h.frame();
@@ -5783,6 +5806,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(h.app.messages.at(-1)!.text).toBe("the code as a document");
     await h.keys("i");
     expect(v.source).toBe(true);
+    expect(v.insert).toBe(true); // to source mode, typing at once: no lens to show first
     expect(h.app.messages.at(-1)!.text).toBe("source — editing the file");
     const plain = await open({ config: (c) => (c.render.code = "source") });
     expect(plain.app.view!.source).toBe(true);
@@ -5893,7 +5917,7 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
     const py = rows(await open("links.py", PY));
     const at = (r: string[], text: string) => r.findIndex((x) => x.includes(text));
     // A separator comment: a section's rule with its title, in both.
-    for (const r of [ts, py]) expect(r[at(r, "Resolving links")]).toMatch(/^── Resolving links ─+$/);
+    for (const r of [ts, py]) expect(r.slice(at(r, "Resolving links") - 1, at(r, "Resolving links") + 3)).toEqual(["", expect.stringMatching(/^── Resolving links ─+$/), "", expect.stringMatching(/^┌─ ƒ resolve /)]); // a blank row each side
     // In the cell, its documentation — Python's docstring too, above the code — as prose, then the same terms; a
     // divider; its code.
     const inBox = (x: string) => x.replace(/^[ │├└┤─]*/, "").replace(/ *│$/, "").trim().replace(/\s+/g, " ");

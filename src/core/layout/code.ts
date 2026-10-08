@@ -141,7 +141,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     const w = l.spans.reduce((n, s) => n + stringWidth(s.text), 0);
     if (w > natural) natural = w;
   };
-  // The page's pieces touch — a box's borders set it apart — but for one blank row before a section's rule.
+  // The page's pieces touch — a box's borders set it apart — but for a blank row before a section's rule (and after).
   const gap = () => {
     const last = lines[lines.length - 1];
     if (last && last.spans.some((s) => s.text.trim())) push({ spans: [], src: last.src, decor: true });
@@ -205,6 +205,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
         gap();
         push(sectionRow(section, width, k, g));
         heads.push({ section: true, depth: 0, text: section, row: lines.length - 1, src: k });
+        push({ spans: [], src: k, decor: true }); // and one after it: a rule's title stands clear of its cells
       } else {
         if (!para.length) paraStart = k;
         para.push(t);

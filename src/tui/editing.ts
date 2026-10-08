@@ -117,15 +117,29 @@ export function cannotEdit(view: Pick<View, "buf">): string | null {
 // ---------------------------------------------------------------------------------------------
 // Insert mode
 
-/** Enter insert mode at offset `at` (switching the window to source first). */
+/**
+ * An editing key on a rendered window switches it to editing (`[editor] edit_in`). To source mode: the key goes on and
+ * edits. To the lens: the lens opens on the cursor's block as written, and the key's second press edits — as `esc esc`
+ * leaves, the editing first, then the lens. True when the key goes on to edit.
+ */
+export function toEditing(app: App, view: View): boolean {
+  if (editable(view)) return true;
+  const mode = app.editMode(view);
+  app.setViewMode(view, mode);
+  const what = view.buf.kind.group === "text" ? "code" : "markdown";
+  if (mode === "live") {
+    app.message("info", `the lens: the ${what} around the cursor — the key again edits it, esc closes it`);
+    return false;
+  }
+  app.message("info", `source — editing the ${view.buf.kind.group === "note" ? "markdown" : "file"}`);
+  return true;
+}
+
+/** Enter insert mode at offset `at` (switching the window to editing first: the lens's first press only opens it). */
 export function startInsert(app: App, view: View, at: (v: View) => number, past = true): void {
   const why = cannotEdit(view);
   if (why) return app.message("warn", `${why} — not editing`);
-  if (!editable(view)) {
-    const mode = app.editMode(view);
-    app.setViewMode(view, mode);
-    app.message("info", mode === "live" ? `the lens: editing the ${view.buf.kind.group === "text" ? "code" : "markdown"} around the cursor — esc esc closes it` : `source — editing the ${view.buf.kind.group === "note" ? "markdown" : "file"}`);
-  }
+  if (!toEditing(app, view)) return;
   view.sel = null;
   view.visual = null;
   const off = at(view);
@@ -364,12 +378,12 @@ function insertKeyNow(app: App, view: View, key: string): void {
 /**
  * Move the cursor's line — or, in V, the selected lines — up or down past its neighbour, one undo
  * step; the cursor (and the selection) go with them. From the render, the window switches to
- * editing first, as the other editing keys do.
+ * editing first, as the other editing keys do (the lens's first press only opens it).
  */
 export function moveLines(app: App, view: View, dir: -1 | 1): void {
   const why = cannotEdit(view);
   if (why) return app.message("warn", `${why} — not editing`);
-  if (!editable(view)) app.setViewMode(view, app.editMode(view));
+  if (!toEditing(app, view)) return;
   const buf = view.buf;
   const src = buf.source;
   const lines = src.split("\n");

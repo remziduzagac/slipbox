@@ -888,10 +888,13 @@ the top one is labelled with its lines (`━━ source · lines 12–18 ━━`)
 blank lines after it, so the blocks cover the note.
 
 **The session.** With `[editor] edit_in = "live"`, `i` `a` `o` and the other editing keys open the
-lens typing; `space n l` (`:live`) opens it in normal mode. The chip reads `LENS` (`INSERT` while
-typing). `esc` from typing goes to normal mode with the lens still open — the vim commands work on
-what's in it — and `esc` in normal mode closes it: everything renders again. Reading, there is no
-lens and the keys are the reading keys.
+lens in normal mode, the block as written, and edit on their second press — as `esc esc` leaves, typing
+first, then the lens; `space n l` (`:live`) opens it too. A yank isn't an edit: it goes on at once.
+The chip reads `LENS` (`INSERT` while typing). `esc` from typing goes to normal mode with the lens
+still open — the vim commands work on what's in it — and `esc` in normal mode closes it: everything
+renders again. Reading, there is no lens and the keys are the reading keys. (With `edit_in =
+"source"`, an editing key switches the window and edits at once: source mode has nothing to show
+first.)
 
 **Its tint.** The rows of markdown between the rules have a background of their own (`lens_band`, a
 shade lighter than the page — a code block is darker), so the whole area reads as the lens, not

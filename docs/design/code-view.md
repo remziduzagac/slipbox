@@ -68,6 +68,7 @@ those names. A plain block comment over several lines is prose alone.
 
 ```text
 ── Resolving links ────────────────────────────────────────────────
+
 ┌─ ƒ resolve ──────────────────────────────────── 5–15 ⇢ ⧉ ✎ ◎ ▾ ─┐
 │                                                                 │
 │ Resolves a link written in a note: the note it reaches, or null │
@@ -121,8 +122,8 @@ only the tokens differ.
   defines, else `code`. A comment that documents nothing (a file's opening note, a module's docstring) is a cell of its
   own: prose, no code, its header's mark alone (`¶`), no title. A box has a blank row under its header, so its name
   stands clear of what's under it (not a comment's box, which has no name, nor a band, its header a band of its own).
-  The page's pieces touch, a box's borders setting each apart, whatever blank lines the file has; a blank row only
-  before a section's rule.
+  The page's pieces touch, a box's borders setting each apart, whatever blank lines the file has; blank rows only
+  around a section's rule.
 - **The tree**: a class's members are drawn two columns in from it, however far the file indents them (Python's four
   as TypeScript's two), joined to it by the explorer's tree lines: down from the corner of the class's box, `├─` to
   the middle row of each member's box (`┤` where it meets the border, `┼` on a divider, `┬` on a folded box's top),
@@ -147,7 +148,8 @@ only the tokens differ.
   semicolons dimmed. A comment line is prose in the comments' colour, slanted; a comment after code is a note beside
   it, the notes of consecutive lines lined up in one column. A blank line inside a string is the string's.
 - **Sections**: a separator comment — `// ---- Resolving links ----`, `# === X ===`, `// MARK: X`, `#region X` — is a
-  rule across the page with its title, the outline's top level (`]]`, the breadcrumb), the cells under it.
+  rule across the page with its title, a blank row each side of it, the outline's top level (`]]`, the breadcrumb),
+  the cells under it.
 - **Imports**: the file's run of imports is one row, `▸ imports`, naming the modules (as many as fit) and how many.
   `enter` on it unfolds it (`▾ imports`), and again folds it.
 - **Width**: a line too long for its cell breaks at its structure — after an opening bracket, after a comma, before
@@ -160,11 +162,11 @@ only the tokens differ.
 
 - **The default view** of a file in a language it maps (`[render] code = "document"`; `"source"` opens code in
   source mode as before). `space n v` switches it to source mode and back, as for a note.
-- **Editing**: as in a rendered note, the editing keys open the lens or switch the window to source mode, as
-  `[editor] edit_in` says — the cursor keeping its character, though a cell's columns aren't the file's. The lens
-  (`space n l`) is the cursor's block as written, highlighted as code, the notebook around it: a block is a line, a doc
-  comment whole, or the run of imports whole, and the lens takes in its neighbours up to `lens_min_rows`; a cell's
-  `✎` opens it on the whole cell. `esc esc` closes it, the notebook drawn again on the new parse.
+- **Editing**: as in a rendered note, the editing keys open the lens (their second press edits) or switch the window to
+  source mode, as `[editor] edit_in` says — the cursor keeping its character, though a cell's columns aren't the file's.
+  The lens (`space n l`) is the cursor's block as written, highlighted as code, the notebook around it: a block is a
+  line, a doc comment whole, or the run of imports whole, and the lens takes in its neighbours up to `lens_min_rows`; a
+  cell's `✎` opens it on the whole cell. `esc esc` closes it, the notebook drawn again on the new parse.
 - **The cursor** is on the text of a cell's rows, never on its border or padding; a header is decoration, a frame
   row the cursor passes over. The rows of code keep a map of each cell to its place in the file, so find, a
   selection, problem marks, a language server's hover and jumps all land where they are in the file; documentation's

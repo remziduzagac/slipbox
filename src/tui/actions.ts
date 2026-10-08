@@ -133,16 +133,15 @@ function undoRedo(a: App, v: View, which: "undo" | "redo"): void {
 
 const noRange: V.Range = { from: 0, to: 0, linewise: false };
 
-/** An editing command: in a source window (switching a rendered one first), on an editable note. */
+/**
+ * An editing command: in a source window (switching a rendered one first — the lens's first press only opens it), on
+ * an editable note. One that doesn't edit (a yank) goes on at once.
+ */
 function sourceEdit(a: App, run: (v: View) => void | Promise<void>, edits = true): Promise<void> | void {
   return withView(a, (v) => {
     const why = E.cannotEdit(v);
     if (edits && why) return a.message("warn", `${why} — not editing`);
-    if (!editable(v)) {
-      const mode = a.editMode(v);
-      a.setViewMode(v, mode);
-      a.message("info", mode === "live" ? `the lens: editing the ${v.buf.kind.group === "text" ? "code" : "markdown"} around the cursor — esc esc closes it` : `source — editing the ${v.buf.kind.group === "note" ? "markdown" : "file"}`);
-    }
+    if (!E.toEditing(a, v) && edits) return;
     return run(v);
   });
 }
