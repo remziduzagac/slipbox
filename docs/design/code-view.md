@@ -190,5 +190,5 @@ the tokens differ.
 - Signatures that don't fit, one parameter per line; columns where the code is tabular (consecutive assignments, enum
   members, an object's keys); `self.` and `this.` dimmed; a license header folded, like the imports.
 - The references button with its count, once a server has said it.
-- Folding inner blocks (parked): a line whose next lines are indented deeper folds to `if (x) { ⋯ 2 lines }`, `z a`
-  on it; its toggle in the gutter after the line number, or at the box's right edge under the header's `▾` — open.
+
+Not done (decided 2026-10-08): folding inside a cell — an `if`'s body, a loop's. A cell folds whole.
