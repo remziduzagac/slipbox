@@ -897,7 +897,7 @@ design: `docs/design/code-view.md`.*
 | 24.6 | **Prototype.** Long lines broken at their structure; the author's breaks kept, line numbers the file's |
 | 24.7 | **Prototype.** Indent guides; braces and semicolons dimmed |
 | 24.8 | **Done.** Folding any definition: `▾` / `▸`, `space k f`, `z a` (editing a row in place is `24.17`) |
-| 24.9 | Rust, Go mapped; tabular code aligned; signatures one parameter a line; license headers folded |
+| 24.9 | **Decided.** The code view generic: each grammar's own queries, conventions as exceptions (below) |
 | 24.10 | **Prototype.** The lens on code: a line, a doc comment, the imports as written, highlighted; `esc esc` back |
 | 24.11 | **Prototype.** Comments as prose: markers gone; separators as sections; after code, notes in the margin |
 | 24.12 | **Prototype.** Python: docstrings above their definitions; JSDoc, Google, NumPy, reST read into one shape |
@@ -907,6 +907,19 @@ design: `docs/design/code-view.md`.*
 | 24.16 | **Prototype.** The lens on code opens on the cursor's cell whole when it fits, and moves cell to cell |
 | 24.17 | Editing a row in place, without the lens |
 | 24.18 | **Dropped** (2026-10-08). Folding inside a cell — an `if`'s body, a loop's: a cell folds whole |
+| 24.19 | A signature too long for its cell: one parameter a row |
+| 24.20 | Columns where code is tabular: consecutive assignments, enum members, an object's keys |
+| 24.21 | `self.` and `this.` dimmed |
+| 24.22 | A license header folded, as the imports are |
+
+`24.9`, decided 2026-10-09 with the user: tree-sitter already gives every grammar slipbox parses the queries its outline
+and its comments' links use — definitions with their names and ranges, and comments. The code view is built on those
+for the 13 grammars with definitions (TypeScript, TSX, JavaScript, Python, Go, Rust, Swift, PHP, Ruby, C, C++, Lua,
+Bash); markup and config (HTML, Vue, Svelte, Astro, CSS, SCSS, Dockerfile) keep source mode. A definition's kind is
+read from its node's type name; its documentation is the comment lines right above it, markers stripped; `@param`-style
+tags are terms, any other doc is markdown prose; imports are a run of top-level nodes named so. What a language does
+its own way is an exception (Python's docstrings), not a mapping. `24.11`–`24.16`'s TypeScript and Python become the
+generic view and their exceptions, their tests the proof nothing was lost. It replaces "Rust, Go mapped".
 
 ## Deferred — in the design, not in this breakdown
 
