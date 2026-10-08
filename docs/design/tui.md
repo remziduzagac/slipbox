@@ -777,7 +777,8 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - the cursor-row band
 - source line numbers in a gutter
 - the problems bar, and the problems marked in the text (below, "Problems where they are") — the bar and the numbers
-  on a shade of their own down the window (`gutter`, the rails' shade), set apart from the text
+  on a shade of their own down the window (`gutter`, the breadcrumb row's shade, the two framing the text), set apart
+  from it
 - the breadcrumb (no key of its own: the `space u u` list, or the palette)
 - wrapping (below)
 - link URLs

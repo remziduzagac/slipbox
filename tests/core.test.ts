@@ -272,6 +272,15 @@ describe("themes (2.6)", () => {
       for (const r of ROLES) expect(theme.roles[r]).toBeDefined();
     }
   });
+  test("the gutter's shade is the breadcrumb row's in every colour theme, never the code blocks' and rails' dark", () => {
+    for (const t of listThemes()) {
+      const { theme } = loadTheme(t.name);
+      if (theme.name === "terminal" || theme.name === "mono") continue; // sixteen colours, or none
+      const { gutter, breadcrumb_band, code_block, rail } = theme.roles;
+      expect([t.name, gutter.bg]).toEqual([t.name, breadcrumb_band.bg!]);
+      expect([code_block.bg, rail.bg]).not.toContain(gutter.bg);
+    }
+  });
   test("the lens while it's typed into is green: its rules and label, a green tint on its rows", () => {
     const { theme } = loadTheme("tokyo-night");
     expect(theme.roles.lens_edit.fg).toBe("#9ece6a"); // the palette's green

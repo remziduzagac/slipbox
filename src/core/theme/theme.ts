@@ -238,8 +238,9 @@ export function themeFromPalette(
     cursor_line: { bg: blend(p.surface, p.bg, 0.55) },
     line_number: { fg: p.surface2 },
     line_number_current: { fg: p.orange, bold: true },
-    // The gutter (the problems bar, the line numbers): the rails' shade, set apart from the text.
-    gutter: { bg: p.bg_dark },
+    // The gutter (the problems bar, the line numbers): the breadcrumb row's shade, the two framing the text — not the
+    // rails' and code blocks' dark, which a code block beside it would run into.
+    gutter: { bg: blend(p.surface, p.bg, 0.35) },
     which_key_key: { fg: p.orange, bg: p.bg_dark, bold: true },
     which_key_group: { fg: p.blue, bg: p.bg_dark },
     // On the page: the frame rule under it gives the bar the same air as the rows below.
@@ -320,6 +321,7 @@ export function terminalTheme(): Theme {
     hover: { fg: a(0), bg: a(7), bold: true },
     breadcrumb_band: { bg: a(0) },
     rail: { bg: a(0) },
+    gutter: { bg: a(0) },
     lens: { fg: a(4), bold: true },
     lens_band: { bg: a(0) },
     lens_edit: { fg: a(2), bold: true },
