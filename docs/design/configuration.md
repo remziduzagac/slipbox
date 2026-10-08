@@ -139,7 +139,7 @@ background = true              # walk ~ slowly for roots, index them: their link
 idle_seconds = 30              # nobody working this long first: no key in the TUI, no CLI command
 
 [diagnostics]                  # a file's problems where they are (19.8–19.11)
-bar = "auto"                   # the bar beside the text, line numbers off: auto (once a file has had problems) | on | off
+bar = "auto"                   # the bar beside the text (no line numbers): auto (once it's had problems) | on | off
 marks = "error"                # problems marked in the text, at least: error | warning | info (all) | off
 severity = "warning"           # the least shown: error | warning | info (a note not written yet) | hint
 
