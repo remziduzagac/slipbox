@@ -5580,8 +5580,9 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(r[rowIndex(h, "ƒ add")]).toMatch(/^│ ┌─ ƒ add ─+ 25 ⇢ ⧉ ✎ ◎ ▾ ──$/);
     expect(r[rowIndex(h, "ƒ add") + 1]).toBe("├─┤"); // the last: the line on to the class's brace
     expect(r[rowIndex(h, "ƒ add") + 2]).toMatch(/^│ │ add\(rel: string\)/);
-    // The class's closing brace: a row of the class's, on its left line — no box of its own.
-    expect(r.slice(rowIndex(h, "ƒ add") + 3, rowIndex(h, "ƒ add") + 5)).toEqual(["│ }", ""]);
+    // The class's closing brace: a row of the class's, on its left line — no box of its own — a blank row before it,
+    // as after any box that no box follows.
+    expect(r.slice(rowIndex(h, "ƒ add") + 3, rowIndex(h, "ƒ add") + 6)).toEqual(["│", "│ }", ""]);
     const brace = h.app.currentLayout(v).lines.find((l) => l.src === 26 && l.srcMap)!;
     expect(brace.spans.filter((sp) => sp.text.trim()).every((sp) => sp.attrs & 16)).toBe(true); // the class's closing brace, dimmed
     // Statements together: the values' names, no references (they're no definition); a string's blank lines its own.
@@ -5644,7 +5645,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     const NS = ["export namespace N {", "  export class A {", "    m(): void {}", "  }", "}", ""].join("\n");
     let r = rows(await open({}, "ns.ts", NS));
     const m = r.findIndex((x) => x.includes("ƒ m"));
-    expect(r.slice(m + 3, m + 5)).toEqual(["│ }", ""]);
+    expect(r.slice(m + 3, m + 6)).toEqual(["│", "│ }", ""]);
     // A field after the last method, braces in it: a member's cell; only the brace on its own line is the closing.
     r = rows(await open({}, "b.ts", ["export class B {", "  m(): void {}", "  static empty = {};", "}", ""].join("\n")));
     expect(r.find((y) => y.includes("static empty"))).toMatch(/^│ │ static empty = \{\};$/);
@@ -5777,6 +5778,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     // The class's closing brace on a band of its own, no line to it (no corner to turn).
     const brace = layout.lines.find((l) => l.src === 26 && l.srcMap)!;
     expect([brace.fill, brace.spans.map((sp) => sp.text).join("").trimEnd()]).toEqual(["code_block", " }"]);
+    expect(layout.lines[layout.lines.indexOf(brace) - 1]!.srcMap).toBeDefined(); // right under the last member's band
     expect(r.some((x) => x.includes("┌"))).toBe(false);
     await h.keys("space", "u", "c");
     expect(h.app.messages.at(-1)!.text).toBe("Code cells: boxes");
@@ -6013,6 +6015,13 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
     );
     expect(ts).toContain("// eslint-disable-next-line no-console");
     expect(ts).toContain("// const old = compute(1);");
+    expect(ts[ts.indexOf("// const old = compute(1);") - 1]).toBe(""); // after a box, a blank row: no box follows it
+    // Once, however many rows follow that aren't boxes; imports too.
+    const kept = rows(await open("k.ts", ["const a = 1;", "// eslint-disable-next-line no-console", "// @ts-expect-error", "import { x } from \"y\";", ""].join("\n")));
+    const at = kept.indexOf("// eslint-disable-next-line no-console");
+    expect(kept.slice(at - 2, at + 4)).toEqual(["│ const a = 1;", "", "// eslint-disable-next-line no-console", "// @ts-expect-error", "▸ imports  y (1)", ""]);
+    const imp = rows(await open("i.ts", ["const a = 1;", 'import { x } from "y";', ""].join("\n")));
+    expect(imp.slice(imp.indexOf("│ const a = 1;"), imp.indexOf("│ const a = 1;") + 3)).toEqual(["│ const a = 1;", "", "▸ imports  y (1)"]);
     const plain = ts.indexOf("│ A plain note");
     expect(ts.slice(plain, plain + 2)).toEqual(["│ A plain note", "│ over two lines."]); // its own box, its lines as written
     const a = ts.find((x) => x.includes("first"))!;

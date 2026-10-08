@@ -105,6 +105,7 @@ over several lines is prose alone.
 │ ┌─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ──
 ├─┤
 │ │ add(rel: string): void { this.notes.set(rel, read(rel)); }
+│
 │ }
 ```
 
@@ -123,8 +124,9 @@ the tokens differ.
   docstring) is a cell of its own: prose, no code, its header's mark alone (`¶`), no title. A box has a blank row under
   its header, so its name stands clear of what's under it (not a comment's box, which has no name, nor a band, its
   header a band of its own). Whatever blank lines the file has: a blank row before each box (in a class, on the class's
-  line), so its name stands clear of what's above it, and around a section's rule; bands touch, a band's header a tint
-  of its own.
+  line), so its name stands clear of what's above it — and after one when what follows isn't a box (a class's closing
+  brace, a comment kept as written, imports) — and around a section's rule; bands touch, a band's header a tint of
+  its own.
 - **The tree**: a class's members are drawn two columns in from it, however far the file indents them (Python's four
   as TypeScript's two), joined to it by the explorer's tree lines: the class's left line on down, `├─` to each
   member's box a row under its top, by its name — the same row for every member, its corner kept (`┤` where it meets

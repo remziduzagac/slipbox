@@ -141,10 +141,16 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     const w = l.spans.reduce((n, s) => n + stringWidth(s.text), 0);
     if (w > natural) natural = w;
   };
-  // A blank row before a box and around a section's rule (none twice).
+  // A blank row before a box and around a section's rule (none twice) — and after a box when what follows isn't one
+  // (the next box's own blank row sets the two apart): a class's closing brace, a comment kept as written.
+  let boxEnded = false;
   const gap = () => {
+    boxEnded = false;
     const last = lines[lines.length - 1];
     if (last && last.spans.some((s) => s.text.trim())) push({ spans: [], src: last.src, decor: true });
+  };
+  const afterBox = () => {
+    if (boxEnded) gap();
   };
   /** Each cell's header's row and column: the tree lines between a class and its members join them there. */
   const headRows: { row: number; column: number }[] = [];
@@ -199,6 +205,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       const section = sectionOf(t.trim());
       if (DIRECTIVE.test(raw.trim()) || (t.trim() && CODELIKE.test(t.trim()))) {
         flush();
+        afterBox();
         for (const r of codeRows(k, -1, width)) push(plainRow(r.cells, k, texts[k - 1]!.length));
       } else if (section !== null && column === 0) {
         flush();
@@ -231,6 +238,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     headRows.push({ row: header, column: left });
     // Done: its heading, its first row of code (a folded cell's, its header).
     const done = () => {
+      boxEnded = style === "box";
       if (!c.def || c.def.kind === "value") return;
       const first = lines.findIndex((l, i) => i > header && l.srcMap);
       heads.push({ section: false, depth: c.def.depth, text: c.title, row: first > header ? first : header, src: c.from });
@@ -335,6 +343,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     // Its closing brace (dimmed as braces are): a row of the class's at its left line, the tree's line on down to it.
     const left = Math.min(column, Math.max(0, width - 30));
     const tail = range(body + 1, d.end).filter((k) => !blank(texts[k - 1], k));
+    if (tail.length) afterBox();
     const close = style === "box" && tail.length ? lines.length : undefined;
     if (tail.length) {
       const inner = width - left - (style === "box" ? 4 : 2);
@@ -380,6 +389,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       const run = depth === 0 ? imports.get(ln) : undefined;
       if (run) {
         const open = opts.open.has(run.start);
+        afterBox();
         push(foldRow(run, open, width, g));
         if (open) for (let k = run.start; k <= run.end; k++) for (const r of codeRows(k, -1, width)) push(plainRow(r.cells, k, texts[k - 1]!.length));
         ln = run.end + 1;
