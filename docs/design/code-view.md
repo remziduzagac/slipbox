@@ -118,7 +118,8 @@ only the tokens differ.
 - **The tree**: a class's members are drawn two columns in from it, however far the file indents them (Python's four
   as TypeScript's two), joined to it by the explorer's tree lines: down from the corner of the class's box, `├─` to
   the middle row of each member's box (`┤` where it meets the border, `┼` on a divider, `┬` on a folded box's top),
-  `└─` to the last's. A class in a class has a tree of its own, from its own box.
+  `└─` to the last's — a tall box's no further than three rows under its header, so the line stays by the name. A
+  class in a class has a tree of its own, from its own box.
 - **A cell's header**: its kind (`ƒ` a function or method, `◆` a class, `◇` an interface, type or enum, `•` values,
   `¶` a comment; Nerd: the editors' symbol icons; ASCII `f C T v #`), its name bold, its lines, then its buttons —
   a comment's all but `⇢`, as it defines nothing:

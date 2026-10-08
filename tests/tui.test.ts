@@ -5889,7 +5889,9 @@ describe("code as a document: comments, Python beside TypeScript (24.4, 24.9)", 
       const m = at(r, "ƒ text");
       expect(r[m]).toMatch(/^│ ┌─ ƒ text_?[oO]f ─/); // the class's one member
       expect(r.slice(m + 1, m + 4).map(inBox)).toEqual(["A note's text, as read.", "", "From the cache when it has it."]);
-      expect(r[m + 4]).toMatch(/^( {2}├|└─┼)─+┤$/); // the line to its box's middle: TypeScript's divider
+      // The line to its box's middle, but no further than three rows under its name: TypeScript's box a row taller.
+      expect(r[m + 3]).toMatch(/^└─┤ From the cache/);
+      expect(r[m + 4]).toMatch(/^ {2}├─+┤$/);
     }
   });
 

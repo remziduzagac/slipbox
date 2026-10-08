@@ -335,13 +335,14 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
 
   /**
    * The tree lines, as the explorer's, from a class's box to its members' (rows from `start`, the class at `column`): a
-   * line down from its box's corner, `├─` to the middle of each member's box, `└─` to the last's.
+   * line down from its box's corner, `├─` to the middle of each member's box, `└─` to the last's — a tall box's no
+   * further than three rows under its header, by its name.
    */
   const tree = (start: number, column: number) => {
     const members = headRows.filter((h) => h.row >= start);
     const at = Math.min(...members.map((h) => h.column));
     if (at <= column) return;
-    const mids = members.filter((h) => h.column === at).map((h) => h.row + Math.floor((h.end - h.row) / 2));
+    const mids = members.filter((h) => h.column === at).map((h) => h.row + Math.min(3, Math.floor((h.end - h.row) / 2)));
     const lastMid = Math.max(...mids);
     const corner = lines[start - 1];
     if (corner?.decor) lines[start - 1] = putAt(corner, column, g.box.ml, "border"); // a box's bottom, not a band's code
