@@ -44,6 +44,18 @@ export function blockRanges(tree: Root, lineCount: number): Block[] {
   return sorted.map((s, i) => [s, (sorted[i + 1] ?? lineCount + 1) - 1] as Block);
 }
 
+/**
+ * A note's sections, by its top-level headings: each heading's lines and everything under it up to the next heading of
+ * its level or higher (or the note's end) — a section nested in its parent's.
+ */
+export function sectionRanges(tree: Root, lineCount: number): Block[] {
+  const heads = tree.children.flatMap((n) => (n.type === "heading" && n.position ? [{ line: n.position.start.line, depth: n.depth }] : []));
+  return heads.map((h, i) => {
+    const next = heads.slice(i + 1).find((k) => k.depth <= h.depth);
+    return [h.line, Math.min(lineCount, (next?.line ?? lineCount + 1) - 1)] as Block;
+  });
+}
+
 type TreeRow = { depth: number; branch: boolean };
 
 function rowOf(n: RootContent): TreeRow | null {

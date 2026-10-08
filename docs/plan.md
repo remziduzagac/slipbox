@@ -443,6 +443,7 @@ common, and the only reason they are step 0.
 | 4.14 | Live preview — the block under the cursor as its source, edited in place (the lens) |
 | 4.15 | The lens scrolls inside a block taller than its maximum, with "↑ N lines" on its rules |
 | 4.16 | Find and replace — a replace row under find (`ctrl+h`); vim's `:s` with `g` `i` `c`; `cgn` and `.` |
+| 4.17 | The lens opens on the cursor's innermost section whole when it fits, and moves section to section |
 
 ## Concurrency — `5.x`
 

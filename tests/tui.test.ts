@@ -2279,6 +2279,40 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
     h.app.handleMouse({ type: "up", x: pane.textX + 8, y, button: 0 });
     expect(h.copied.at(-1)).toBe("  - n");
   });
+  test("it opens on the cursor's innermost section whole when it fits, and moves to the next whole; one too tall, its blocks", async () => {
+    const beta = Array.from({ length: 20 }, (_, i) => `Beta ${i + 1}.`).join("\n\n");
+    const text = `# Doc\n\nIntro paragraph.\n\n## Alpha\n\nAlpha one.\n\n### Alpha.1\n\nSub one.\n\nSub two.\n\n### Alpha.2\n\nSub three.\n\n## Beta\n\n${beta}\n`;
+    const root = makeVault();
+    writeFileSync(join(root, "s.md"), text);
+    const h = await harness({ root, open: "s.md", width: 100, height: 40 });
+    const v = h.app.view!;
+    const lens = () => /source · lines? (\d+(?:–\d+)?)/.exec(h.frame())?.[1] ?? "none";
+    const open = async (line: number) => {
+      await h.keys("escape", "escape");
+      h.app.placeAtLine(v, line);
+      await h.keys("space", "n", "l");
+      return lens();
+    };
+    expect(await open(11)).toBe("9–14"); // in a subsection: it, heading to its end
+    expect(await open(7)).toBe("5–18"); // in a section's own text: the section, its subsections with it
+    // Past its edge: the next section, whole.
+    await open(13);
+    await h.keys("j", "j");
+    expect(lens()).toBe("15–18");
+    // A section too tall for the lens's most (lens_max): its blocks, as before — the cursor's and its neighbours.
+    const tall = await open(25);
+    const [from, to] = tall.split("–").map(Number);
+    expect(from! > 19 && from! <= 25 && to! >= 25 && to! < 60).toBe(true);
+    // A size set by hand is the lens's: + takes a block more, whatever the section; past its edge it slides at that size.
+    await open(11);
+    await h.keys("+");
+    expect(lens()).toBe("9–16");
+    for (let k = 0; k < 6; k++) await h.keys("j");
+    expect(lens()).toBe("11–18");
+    // …and opened again by a change from elsewhere: at that size, around the cursor, not its section.
+    v.buf.edit(v.buf.source.length - 1, 0, " end");
+    expect(lens()).toBe("15–22"); // its eight rows round the cursor's block, not the section's 15–18
+  });
   test("an edit that doesn't type (a line moved, x from the palette) opens it first too; its second press edits", async () => {
     const { h, v, goto } = await setup((c) => (c.editor.edit_in = "live"));
     for (const edit of [() => h.keys("alt+shift+down"), () => h.app.run("edit.delete_char")]) {

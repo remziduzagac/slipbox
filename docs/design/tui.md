@@ -917,25 +917,26 @@ touches a heading band, a table or a code block. Like the rules, these rows are 
 
 **Its size by hand.** `+` takes the next block in (the one above, at the note's end), `-` drops the
 block farthest from the cursor; the size it comes to is kept as the lens moves — it slides at that
-size rather than growing — until `=` lets it size itself again, or it closes.
+size rather than growing, sections or not — until `=` lets it size itself again, or it closes.
 
-**Its size.** It opens on the cursor's block and takes in the neighbours (below, then above) until
-it has `[editor] lens_min_rows` rows of markdown (6), so a one-line paragraph isn't a sliver and
-small moves don't reshape it. It never splits a block. An edit inside it (typing, `dd`, a replace)
-keeps its lines, grown or shrunk by the edit; typing that reaches past an edge (a join at its last
-line, a backspace at its first) extends it to the cursor, so the cursor always sits on a source row
-and an edit goes where you see it. A change from elsewhere while you aren't typing (an agent's
-write, a `:%s`) reopens it on the cursor's block at its opening size, never stretched by the lines
-the change added. The cursor placed on a line outside it (`cgn`, `n`, undo) moves it there first.
+**Its size.** It opens on the cursor's section whole when it fits within `[editor] lens_max` of the window (half): the
+innermost one around the cursor — its heading and everything under it to the next heading of its level or higher, a
+subsection with it — not padded. A section too tall for it, or text before the first heading, is its blocks: it opens on
+the cursor's block and takes in the neighbours (below, then above) until it has `[editor] lens_min_rows` rows of
+markdown (6), so a one-line paragraph isn't a sliver and small moves don't reshape it. It never splits a block. An edit
+inside it (typing, `dd`, a replace) keeps its lines, grown or shrunk by the edit; typing that reaches past an edge (a
+join at its last line, a backspace at its first) extends it to the cursor, so the cursor always sits on a source row and
+an edit goes where you see it. A change from elsewhere while you aren't typing (an agent's write, a `:%s`) reopens it on
+the cursor's block at its opening size, never stretched by the lines the change added. The cursor placed on a line
+outside it (`cgn`, `n`, undo) moves it there first.
 
-**Moving while it's open.** The cursor stays in it. Moving inside changes nothing; moving past an
-edge brings the next block in, dropping the far ones once it's taller than `[editor] lens_max` of
-the window (half); a jump (`g g`, `shift+g`, a search, `n`, the outline) moves it to the block
-landed on. It keeps its height on screen: when it moves or grows, the page scrolls under it, so your
-eyes stay in one place. A click in the rendered text outside it moves it there, the clicked line
-staying under the pointer (the lens's height on screen is the keyboard's rule; a click keeps what
-you clicked); the wheel scrolls the page freely, the lens riding with its text. In insert mode the
-arrows stop at its rules.
+**Moving while it's open.** The cursor stays in it. Moving inside changes nothing; moving past an edge into a section
+that fits moves it to that section whole, and elsewhere brings the next block in, dropping the far ones once it's taller
+than `[editor] lens_max` of the window (half); a jump (`g g`, `shift+g`, a search, `n`, the outline) moves it to the
+block landed on. It keeps its height on screen: when it moves or grows, the page scrolls under it, so your eyes stay in
+one place. A click in the rendered text outside it moves it there, the clicked line staying under the pointer (the
+lens's height on screen is the keyboard's rule; a click keeps what you clicked); the wheel scrolls the page freely, the
+lens riding with its text. In insert mode the arrows stop at its rules.
 
 **A block taller than the lens** (plan `4.15`) scrolls inside it: the lens shows `lens_max` of the
 window, the rest of the block out of sight above and below, counted on its rules (`↑ 21 lines`,
