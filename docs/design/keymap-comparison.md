@@ -14,8 +14,8 @@ keys are its Linux and Windows defaults. `?` marks an Obsidian default not confi
 | Action | vim | VS Code | Obsidian | slipbox |
 | --- | --- | --- | --- | --- |
 | character / line | `h j k l` | arrows | arrows | `h j k l`, arrows |
-| word | `w b e` | `C-←/→` | `C-←/→` | `w b e`, `C-←/→` |
-| select by word | `v` + `w b e` | `C-S-←/→` | `C-S-←/→` | `v` + `w b e`, `C-S-←/→` |
+| word | `w b e` | `C-←/→` | `C-←/→` | `w b e`, `C-←/→`, `A-←/→` |
+| select by word | `v` + `w b e` | `C-S-←/→` | `C-S-←/→` | `v` + `w b e`, `C-S-←/→`, `A-S-←/→` |
 | row start / end | `0 ^ $` | `Home` / `End` | `Home` / `End` | `0 ^ $`, `Home` / `End` |
 | select to row start / end | `v0` `v$` | `S-Home` / `S-End` | `S-Home` / `S-End` | `v0` `v$`, `S-Home` / `S-End` |
 | top / bottom of the note | `gg` / `G` | `C-Home` / `C-End` | `C-Home` / `C-End` | `gg` `G`, `C-Home` / `C-End` |
@@ -63,7 +63,7 @@ keys are its Linux and Windows defaults. `?` marks an Obsidian default not confi
 | follow the link | `gf`, `gx` | `C-click` | `A-Enter` | `Enter`, `gf`, `gx`, `␣lf`, a click |
 | follow it into the split | `C-w f` | `C-Enter` | `?` | `C-Enter`, `C-w f`, `␣ls`, `␣wf` |
 | next / previous link | — | — | — | `Tab` / `S-Tab`, `]l` / `[l`, `␣ln` / `␣lp` |
-| back / forward | `C-o` / `C-i` | `A-←` / `A-→` | `C-A-←` / `C-A-→` | `C-o`, `A-←` / `A-→`, `␣hp` / `␣hn` |
+| back / forward | `C-o` / `C-i` | `A-←` / `A-→` | `C-A-←` / `C-A-→` | `C-o`, `␣hp` / `␣hn` |
 | the history | `:jumps` | — | — | `␣hh` |
 
 ## Windows

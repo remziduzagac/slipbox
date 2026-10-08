@@ -22,7 +22,7 @@ Config uses the same notation and accepts common spellings: `G` means `shift+g`,
   2026-09-29). A key keeps its vim meaning where slipbox has the action (`H` `M` `L`, `zz`,
   `ctrl+o`, `gt`, `gf`, `:q`) — `?` aside, which is help, the key most apps give it; the `ctrl` keys
   VS Code and Obsidian share come next (`ctrl+f`, `ctrl+p`, `ctrl+s`, `ctrl+z` / `ctrl+y`,
-  `ctrl+←/→` by word, `ctrl+shift+f`, `ctrl+tab`, `alt+←/→` back and forward); `ctrl+w` and `ctrl+t`
+  `ctrl+←/→` and `alt+←/→` by word, `ctrl+shift+f`, `ctrl+tab`); `ctrl+w` and `ctrl+t`
   stay vim's and slipbox's prefixes for windows and tabs; everything else is under `space`. **No
   emacs keys.**
 - **Direct keys beside navigation** are few: `?` help, `:` the palette, `/` and `ctrl+f` find
@@ -67,7 +67,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | --- | --- | --- |
 | left / right one character | `h` / `l` | `left` / `right` |
 | up / down one row | `k` / `j` | `up` / `down` |
-| previous / next word start | `b` / `w` | `ctrl+left` / `ctrl+right` |
+| previous / next word start | `b` / `w` | `ctrl+left` / `ctrl+right`, `alt+left` / `alt+right`, `alt+b` / `alt+f` |
 | end of word | `e` | — |
 | start / end of row | `0` / `$` | `home` / `end`, `cmd+left` / `cmd+right` |
 | first non-blank of row | `^` | — |
@@ -93,7 +93,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | Action | Keys |
 | --- | --- |
 | extend by character / row | `shift+left` / `shift+right` / `shift+up` / `shift+down` |
-| extend by word | `shift+ctrl+left` / `shift+ctrl+right`, `v` + `w` `b` `e` |
+| extend by word | `shift+ctrl+left` / `shift+ctrl+right`, `shift+alt+left` / `shift+alt+right`, `v` + `w` `b` `e` |
 | extend to row start / end | `shift+home` / `shift+end`, `v` + `0` `$` |
 | … also | `shift+cmd+left` / `shift+cmd+right` (where the terminal passes `cmd` through) |
 | extend by paragraph | `shift+ctrl+up` / `shift+ctrl+down` |
@@ -171,12 +171,12 @@ as vim's and blink.cmp's:
 
 | Action | Direct keys | Leader |
 | --- | --- | --- |
-| back / forward | `ctrl+o` / `alt+right`, `alt+left` (back); `alt+b` / `alt+f` | `space h p` / `space h n` |
+| back / forward | `ctrl+o` / — | `space h p` / `space h n` |
 | history, in the left panel (open → focus → close) | — | `space h h` |
 
-Vim's forward is `ctrl+i`, but terminals send `ctrl+i` as `tab`, which is next link here: forward is
-`alt+right` (VS Code's) and `space h n`. `alt+b` / `alt+f` are what a macOS terminal sends for option+← / option+→
-(meta-b and meta-f, word left and right), so those reach back and forward too.
+Vim's forward is `ctrl+i`, but terminals send `ctrl+i` as `tab`, which is next link here: forward is `space h n`.
+`alt+←` / `alt+→` move by words, as macOS's option+arrows do, not through history — and `alt+b` / `alt+f` too, what a
+macOS terminal sends for option+← / option+→ (meta-b and meta-f, readline's word back and forward).
 
 ## Windows — `space w`
 
@@ -502,18 +502,17 @@ A count goes before the command, the motion or the text object (`3dd`, `d2w`, `5
 status chip shows what's pending (`2d`, `di`). The register holds the last text deleted, changed or
 yanked; a yank also goes to the clipboard.
 
-Quitting (`ctrl+q`, `:q`) with unsaved changes is refused, naming the notes. In **insert mode**
-(the chip reads `INSERT`) keys are text, except: `esc` (or `ctrl+c`) back to normal, the cursor
-stepping back onto a character; `enter` a new line with the same indentation, continuing a list
-(the same bullet, the next number, an empty task box) — or, on an item with nothing after its
-marker, ending the list; `backspace` / `delete` a character (joining lines at an edge); `ctrl+w`
-the word before; `ctrl+u` what was typed on the line, then the rest before the cursor, and at the
-line's start joins it to the one above (`ctrl+w` too stops once where the insert began); `tab` /
-`shift+tab` indent or outdent the line by two spaces; the arrows, `home` and `end` move; `ctrl+s`
-saves. A paste goes into the text. While a code file's completion shows, `tab`, `enter`, `ctrl+n`, `ctrl+p`, `up`,
-`down` and `ctrl+e` are its (`space c`, above).
-Source mode's own keys are `[keys.source]` in config: the operators and edits above (`d c y > < D C s
-S r J p P ~ . x`), which win over the reading keys there.
+Quitting (`ctrl+q`, `:q`) with unsaved changes is refused, naming the notes. In **insert mode** (the chip reads
+`INSERT`) keys are text, except: `esc` (or `ctrl+c`) back to normal, the cursor stepping back onto a character; `enter`
+a new line with the same indentation, continuing a list (the same bullet, the next number, an empty task box) — or, on
+an item with nothing after its marker, ending the list; `backspace` / `delete` a character (joining lines at an edge);
+`ctrl+w` the word before; `ctrl+u` what was typed on the line, then the rest before the cursor, and at the line's start
+joins it to the one above (`ctrl+w` too stops once where the insert began); `tab` / `shift+tab` indent or outdent the
+line by two spaces; the arrows, `home` and `end` move; `ctrl+←/→`, `alt+←/→` and `alt+b` / `alt+f` move by words — back
+to a word's start, forward to its end, across lines; `ctrl+s` saves. A paste goes into the text. While a code file's
+completion shows, `tab`, `enter`, `ctrl+n`, `ctrl+p`, `up`, `down` and `ctrl+e` are its (`space c`, above). Source
+mode's own keys are `[keys.source]` in config: the operators and edits above (`d c y > < D C s S r J p P ~ . x`), which
+win over the reading keys there.
 
 **Where source mode isn't vim.** Motions move by the rows you see, as in reading: on a long line
 wrapped across rows, `0`, `$`, `j` and `k` (and `d$`, `dj`) work on the row, while `D`, `C`, `A`,

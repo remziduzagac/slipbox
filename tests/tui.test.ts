@@ -20,6 +20,7 @@ import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src
 import { crumbLayout } from "../src/tui/draw.ts";
 import { srcAt } from "../src/core/layout/ir.ts";
 import { cells } from "../src/tui/cursor.ts";
+import { offsetOf } from "../src/tui/editing.ts";
 import { DEFAULT_KEYS, keyName } from "../src/tui/keys.ts";
 
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-tui-"));
@@ -433,7 +434,7 @@ describe("selection", () => {
 });
 
 describe("links and history", () => {
-  test("tab puts the cursor on a link (] l too); enter, gf follow; ctrl+o / alt+left / alt+b back, alt+right / alt+f forward", async () => {
+  test("tab puts the cursor on a link (] l too); enter, gf follow; ctrl+o back, space h n forward; alt+arrows by words", async () => {
     const h = await harness();
     await h.keys("tab");
     expect(statusRow(h.frame())).toContain("→ notes/alpha.md (resolved)");
@@ -443,15 +444,23 @@ describe("links and history", () => {
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     await h.keys("ctrl+o");
     expect(h.app.view!.buf.rel).toBe("index.md");
-    await h.keys("alt+right");
+    await h.keys("space", "h", "n");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
-    await h.keys("alt+left");
+    await h.keys("ctrl+o");
     expect(h.app.view!.buf.rel).toBe("index.md");
-    // What a macOS terminal sends for option+→ / option+←: meta-f / meta-b.
-    await h.keys("alt+f");
-    expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
-    await h.keys("alt+b");
+    // alt+← / alt+→ move by words, as macOS's option+arrows — and alt+b / alt+f, what its terminals send for them
+    // (meta-b, meta-f) — never through history.
+    const v = h.app.view!;
+    h.app.moveCursor(v, { row: rowStarting(h, "Links:"), col: 0 });
+    const moves: number[] = [];
+    for (const key of ["alt+right", "alt+f", "alt+b", "alt+left"]) {
+      await h.keys(key);
+      moves.push(v.cur.col);
+    }
     expect(h.app.view!.buf.rel).toBe("index.md");
+    expect(moves[0]).toBeGreaterThan(0);
+    expect(moves[1]).toBeGreaterThan(moves[0]!);
+    expect(moves.slice(2)).toEqual([moves[0]!, 0]);
     await h.keys("g", "g", "]", "l", "g", "f");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
   });
@@ -518,7 +527,7 @@ describe("links and history", () => {
     expect(h.frame()).toContain("here");
     await h.keys("down", "down", "enter");
     expect(h.app.view!.buf.rel).toBe("index.md");
-    await h.keys("alt+right");
+    await h.keys("space", "h", "n");
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
   });
   test("history: a click selects an entry, a double-click jumps there", async () => {
@@ -1441,6 +1450,23 @@ describe("editing: insert mode, undo, save (step 3b)", () => {
     };
     return { h, file, type, v: h.app.view! };
   };
+  test("typing, by words: ctrl+arrows, alt+arrows, alt+b / alt+f — to a word's start back, its end forward, across lines", async () => {
+    const { h, v } = await setup("one two.three\nfour five\n");
+    await h.keys("space", "n", "v", "g", "g", "shift+a"); // source mode, typing at the line's end
+    const at = () => offsetOf(h.app, v);
+    const seen: number[] = [];
+    for (const key of ["alt+left", "ctrl+left", "alt+b", "alt+right", "ctrl+right", "alt+f", "alt+f"]) {
+      await h.keys(key);
+      seen.push(at());
+    }
+    // back: "three", ".", "two"; forward: "two" — the end — then "." and "three"; then over the line's end to "four"'s.
+    expect(seen).toEqual([8, 7, 4, 7, 8, 13, 18]);
+    expect(v.insert).toBe(true);
+    await h.keys("x");
+    expect(v.buf.source).toBe("one two.three\nfourx five\n");
+    await h.keys("ctrl+w"); // the insert started again where the cursor landed: only what was typed since goes
+    expect(v.buf.source).toBe("one two.three\nfour five\n");
+  });
   test("i from the render switches to source and types; esc ends; u undoes the session; U redoes", async () => {
     const { h, type, v, file } = await setup("# T\n\nhello world\n");
     h.app.moveCursor(v, { row: rowStarting(h, "hello"), col: 6 }); // on "w"

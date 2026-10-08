@@ -11,8 +11,10 @@ const MOVES: [id: string, keys: string[], extendKeys: string[]][] = [
   ["cursor.right", ["l", "right"], ["shift+right"]],
   ["cursor.up", ["k", "up"], ["shift+up"]],
   ["cursor.down", ["j", "down"], ["shift+down"]],
-  ["cursor.word_prev", ["b", "ctrl+left"], ["shift+ctrl+left"]],
-  ["cursor.word_next", ["w", "ctrl+right"], ["shift+ctrl+right"]],
+  // alt+← / alt+→ by words too, as macOS's option+arrows — and alt+b / alt+f, what its terminals send for them (meta-b
+  // and meta-f, readline's word back and forward).
+  ["cursor.word_prev", ["b", "ctrl+left", "alt+left", "alt+b"], ["shift+ctrl+left", "shift+alt+left"]],
+  ["cursor.word_next", ["w", "ctrl+right", "alt+right", "alt+f"], ["shift+ctrl+right", "shift+alt+right"]],
   ["cursor.word_end", ["e"], []],
   ["cursor.line_start", ["0", "home", "cmd+left"], ["shift+home", "shift+cmd+left"]],
   ["cursor.line_end", ["$", "end", "cmd+right"], ["shift+end", "shift+cmd+right"]],
@@ -75,11 +77,6 @@ export const DEFAULT_KEYS: Record<string, string> = {
   "leader l r": "link.relink",
   // history
   "ctrl+o": "history.back",
-  "alt+left": "history.back",
-  "alt+right": "history.forward",
-  // What macOS terminals send for option+← / option+→ (word left / right, as meta-b / meta-f).
-  "alt+b": "history.back",
-  "alt+f": "history.forward",
   "leader h p": "history.back",
   "leader h n": "history.forward",
   "leader h h": "history.list",
