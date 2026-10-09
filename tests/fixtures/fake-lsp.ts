@@ -184,6 +184,7 @@ conn.onCompletion(async (p) => {
     return [
       snippet("fori", "for (${1:ix} = 0; $1 < ${2:n}; $1++) {\n\t$0\n}", "for (ix = 0; ix < n; ix++) {\n}"),
       snippet("pick", "pick(${1|one,two|}, ${2:${TM_FILENAME_BASE}})", "pick(one, x)"),
+      snippet("nest", "f(${1:a, ${2:b}})$0", "f(a, b)"),
       snippet("imp", "use(${1:it})$0", "use(it)", { additionalTextEdits: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, newText: "import x\n" }] }),
     ];
   }

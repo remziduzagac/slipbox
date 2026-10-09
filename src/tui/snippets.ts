@@ -58,8 +58,7 @@ export function endSnippet(app: App): void {
 export function startSnippet(app: App, view: View, at: number, snippet: Snippet): void {
   endSnippet(app);
   const stops = snippet.stops.map((x) => ({ n: x.n, ranges: x.ranges.map(([a, b]): [number, number] => [a + at, b + at]) }));
-  const only = stops.length === 1 ? stops[0]!.ranges[0]! : null;
-  if (only) return placeAt(app, view, only[0], true);
+  // Only `$0`: the cursor there, the session over as it starts.
   const s: SnippetSession = { view, stops, at: 0, fresh: false, owner: stops[0]!.ranges[0]!, listener: () => {} };
   s.listener = (a, l, t) => follow(app, s, a, l, t);
   view.buf.editListeners.add(s.listener);
@@ -87,10 +86,9 @@ function go(app: App, s: SnippetSession, k: number): void {
 export function snippetKey(app: App, view: View, key: string): boolean {
   const s = app.snippet;
   if (!s || s.view !== view) return false;
-  if (!view.insert) return end_(app, s), false;
+  // `esc` leaves insert, which ends it (stopInsert).
   if (key === "tab") return go(app, s, s.at + 1), true;
   if (key === "shift+tab") return go(app, s, Math.max(0, s.at - 1)), true;
-  if (key === "escape" || key === "ctrl+c") return end_(app, s), false;
   if (!s.fresh) return false;
   const [a, b] = s.stops[s.at]!.ranges[0]!;
   const typed = keyChar(key);

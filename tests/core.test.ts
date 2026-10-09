@@ -2726,6 +2726,8 @@ describe("a server's snippets (25.8)", () => {
       { n: 2, ranges: [[16, 17]] },
       { n: 0, ranges: [[25, 25]] },
     ]);
+    // A mirror inside another stop's placeholder: filled, that placeholder grows around it.
+    expect(expandSnippet("${1:f($2)} ${2:bb}", ctx)).toEqual({ text: "f(bb) bb", stops: [{ n: 1, ranges: [[0, 5]] }, { n: 2, ranges: [[6, 8], [2, 4]] }, { n: 0, ranges: [[8, 8]] }] });
     // A mirror before its placeholder: the placeholder still first, typed there.
     expect(expandSnippet("$1-${1:ab}", ctx)).toEqual({ text: "ab-ab", stops: [{ n: 1, ranges: [[3, 5], [0, 2]] }, { n: 0, ranges: [[5, 5]] }] });
     const nested = expandSnippet("f(${1:a, ${2:b}})", ctx);

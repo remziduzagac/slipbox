@@ -43,6 +43,7 @@ import * as E from "./editing.ts";
 import * as R from "./replacing.ts";
 import { spellAdd, spellStep, spellSuggest } from "./spelling.ts";
 import { shellFilter, shellRun, shellStop } from "./shellrun.ts";
+import { endSnippet } from "./snippets.ts";
 import { parseBang } from "../core/shell.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
@@ -1631,6 +1632,8 @@ export function registerActions(app: App): void {
     "note.revert": (a) =>
       withView(a, (v) => {
         for (const w of a.allViews()) if (w.buf === v.buf) w.insert = false;
+        // Out of insert so, a snippet being typed in it is over too (25.8).
+        if (a.snippet?.view.buf === v.buf) endSnippet(a);
         if (!v.buf.load()) return a.message("warn", `${v.buf.key} is gone from disk`);
         for (const w of a.allViews()) if (w.buf === v.buf) w.layoutKey = "";
         a.message("info", `${a.displayName(v.buf)} reloaded from disk — u brings your changes back`);

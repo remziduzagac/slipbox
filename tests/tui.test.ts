@@ -11767,6 +11767,40 @@ describe("completion while typing (19.16)", () => {
     await h.app.servers!.stopAll();
   });
 
+  test("a snippet's placeholder kept by a move, typed into there; a nested stop gone with its parent's placeholder; :e! ends it", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "SNIPPETS\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    const text = () => h.app.view!.buf.source;
+    await h.keys("o", "f", "o");
+    expect(await until(() => shown(h)[0] === "fori")).toBe(true);
+    await h.keys("tab", "right", "q");
+    // The move kept "ix": q went in after its i, the mirrors following.
+    expect(text()).toBe("SNIPPETS\nfor (iqx = 0; iqx < n; iqx++) {\n  \n}\n");
+    await h.keys("escape", "u");
+    expect(text()).toBe("SNIPPETS\n");
+    await h.keys("o", "n", "e");
+    expect(await until(() => shown(h)[0] === "nest")).toBe(true);
+    await h.keys("tab");
+    expect(text()).toBe("SNIPPETS\nf(a, b)\n");
+    // Typed over the outer placeholder: the inner stop goes with it; tab is $0, after the ).
+    await h.keys("z", "tab");
+    expect(h.app.snippet).toBeNull();
+    await h.keys("q");
+    expect(text()).toBe("SNIPPETS\nf(z)q\n");
+    // A snippet when the note is reverted (:e!): over with insert.
+    await h.keys("escape", "o", "f", "o");
+    expect(await until(() => shown(h)[0] === "fori")).toBe(true);
+    await h.keys("tab");
+    expect(h.app.snippet).not.toBeNull();
+    // Saved with it: reverting changes no text, and still ends it.
+    await h.keys("ctrl+s");
+    await h.app.run("note.revert");
+    expect(h.app.snippet).toBeNull();
+    await h.app.servers!.stopAll();
+  });
+
   test("a snippet's choice (the first), its variable's value; an import added above moves its stops; esc ends it", async () => {
     const root = makeVault();
     writeFileSync(join(root, "a.fk"), "SNIPPETS\n");
