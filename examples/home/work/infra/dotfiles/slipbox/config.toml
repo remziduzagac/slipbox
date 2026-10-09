@@ -131,6 +131,7 @@ autosave_ms = 10000
 edit_in = "live"
 lens_min_rows = 8
 lens_max = 0.4
+auto_pairs = true                # typing ( [ { " ' ` puts its closing half after the cursor
 remote = [                      # run in order, each after the last; the first failure stops
   "nvim --server {server} --remote {file}",
   "nvim --server {server} --remote-send '<C-\\><C-N>:{line}<CR>'",
@@ -236,6 +237,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; b x" = "cursor.screen_middle"
 "leader ; b y" = "cursor.screen_bottom"
 "leader ; b z" = "cursor.goto_line"
+"leader ; U a" = "cursor.match_bracket"
 "leader ; t a" = "scroll.center"
 "leader ; t b" = "scroll.top"
 "leader ; t c" = "scroll.bottom"

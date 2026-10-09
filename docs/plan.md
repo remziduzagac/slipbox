@@ -960,14 +960,17 @@ Not wanted: vim's marks, macros, named registers and block selection.*
 | --- | --- |
 | 25.1 | **Prototype.** Indentation per file — `.editorconfig`, else the file's own, else its language's |
 | 25.2 | **Prototype.** Comments toggled: `gc` and a motion, `gcc`, a selection's lines, `ctrl+/`; each language's |
-| 25.3 | Brackets: `%` to the matching one (a motion too), the matching one marked; pairs closed as typed, opt-in |
+| 25.3 | **Prototype.** Brackets: `%` to the matching one (a motion too), both marked; pairs closed as typed, opt-in |
 | 25.4 | Replace across files in the TUI: previewed as a rename is, undoable |
 | 25.5 | Word completion without a language server: the open files' words, `ctrl+n` / `ctrl+p` |
 | 25.6 | Spelling in notes: misspelt words marked, their suggestions, a word added to your own list |
 | 25.7 | A command run: `:!cmd`, its output in a window; lines filtered through one (`:'<,'>!sort`) |
+| 25.8 | A server's snippets: their tab stops and placeholders filled in turn, `tab` to the next (`19.16`) |
 
 `25.1` covers saving as `.editorconfig` says too: trailing whitespace trimmed, the final newline added, only where it
-asks. `25.7` is the part of `13.1` that runs what you type yourself; the rest of `13.x` stays deferred.
+asks. `25.7` is the part of `13.1` that runs what you type yourself; the rest of `13.x` stays deferred. `25.8`:
+completion with a language server is `19.16`'s, done; it asks for no snippets (`snippetSupport: false`), so a function
+comes without its arguments' places to fill — added 2026-10-09 at the user's asking.
 
 ## Git in the editor — `26.x`
 

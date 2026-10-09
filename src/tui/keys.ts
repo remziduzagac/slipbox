@@ -34,6 +34,7 @@ const MOVES: [id: string, keys: string[], extendKeys: string[]][] = [
   ["cursor.screen_top", ["shift+h"], []],
   ["cursor.screen_middle", ["shift+m"], []],
   ["cursor.screen_bottom", ["shift+l"], []],
+  ["cursor.match_bracket", ["%"], []],
 ];
 
 export const MOVE_COMMANDS = new Set(MOVES.map((m) => m[0]));

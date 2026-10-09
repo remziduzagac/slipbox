@@ -43,6 +43,7 @@ export const COMMAND_SPECS: CommandSpec[] = [
   { id: "cursor.screen_top", title: "Top of the screen", cli: I, desc: "Moves the cursor to the first row on screen (vim's H)" },
   { id: "cursor.screen_middle", title: "Middle of the screen", cli: I, desc: "Moves the cursor to the middle row on screen (vim's M)" },
   { id: "cursor.screen_bottom", title: "Bottom of the screen", cli: I, desc: "Moves the cursor to the last row on screen (vim's L)" },
+  { id: "cursor.match_bracket", title: "To the matching bracket", cli: I, desc: "From the bracket at the cursor (or the line's next one) to the one matching it, past those nested between (vim's %); d% takes both" },
   { id: "cursor.goto_line", title: "Go to line", cli: "slipbox send <note> --line <n>", desc: "Asks for a line number and goes there (:42 does too)" },
   { id: "scroll.center", title: "Cursor's line to the middle", cli: I, desc: "Scrolls so the cursor's line is in the middle of the window (vim's zz)" },
   { id: "scroll.top", title: "Cursor's line to the top", cli: I, desc: "Scrolls so the cursor's line is the first on screen (vim's zt)" },

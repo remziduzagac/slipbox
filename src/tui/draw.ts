@@ -1008,6 +1008,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const chosen = view === app.view ? app.chosenProblem() : undefined;
   const chosenOn = chosen ? problemLines([chosen]) : null;
   const links = commentLinksShown(view);
+  const brackets = app.bracketMarks(view);
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
   // The gutter (the problems bar, the line numbers) in a shade of its own down the window, a column of it before them;
   // its last column the page's, between it and the text.
@@ -1061,6 +1062,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     if (marksOn && !line.decor) marks.push(...problemMarks(line, layout, markedOn, layout.lines[row + 1]?.src !== line.src));
     if (chosenOn && !line.decor) marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
+    if (brackets && !line.decor) marks.push(...offsetMarks(line, brackets.get(line.src), false, "bracket_match"));
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
     // The lens's counters (`[ui] relative_numbers`), in the column its rows keep free: each row's distance from the
     // cursor's, the cursor's 0 — every row a step of j and k, a wrapped line's too — so vim's counts read off them. In

@@ -186,6 +186,7 @@ autosave_ms = 30000            # save a changed note after this long without a k
 edit_in = "source"             # where i, a, o… take a rendered window: "source" or "live" (the lens)
 lens_min_rows = 6              # the lens takes in neighbouring blocks up to at least this many rows
 lens_max = 0.5                 # …and stops at this share of the window
+auto_pairs = false             # typing ( [ { " ' ` closes the pair after the cursor (25.3)
 remote = ["nvim"]              # space n s: "nvim" finds the running nvims (space n p picks);
                                # else commands run in order, e.g. "code -g {file}:{line}", or
                                # ['nvim --server {server} --remote {file}', …], {server} picked

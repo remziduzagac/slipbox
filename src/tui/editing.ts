@@ -9,6 +9,7 @@ import { cells } from "./cursor.ts";
 import { keyChar } from "./keys.ts";
 import { indentUnit } from "../core/indent.ts";
 import { type CommentStyle, commentStyle, toggleComments } from "../core/comments.ts";
+import { autoPair, emptyPair } from "../core/brackets.ts";
 
 /** The cursor's place in the text (a UTF-16 offset into `source`). Source mode only. */
 export function offsetOf(app: App, view: View): number {
@@ -259,10 +260,14 @@ function inFence(view: View, src: number): boolean {
   return fence !== null;
 }
 
-/** Backspace: the grapheme before the cursor (a line break joins the lines). */
+/** Backspace: the grapheme before the cursor (a line break joins the lines); an empty pair both its halves (25.3). */
 export function backspace(app: App, view: View): void {
   const at = offsetOf(app, view);
   if (at <= 0) return;
+  if (app.config.editor.auto_pairs && emptyPair(view.buf.source, at)) {
+    view.buf.edit(at - 1, 2, "");
+    return placeAt(app, view, at - 1, true);
+  }
   const from = prevBoundary(view.buf.source, at);
   view.buf.edit(from, at - from, "");
   placeAt(app, view, from, true);
@@ -462,6 +467,15 @@ function insertKeyNow(app: App, view: View, key: string): void {
       app.setCursorAnchor(view, layout);
       view.goal = goal;
       return;
+    }
+  }
+  if (typed !== null && app.config.editor.auto_pairs && typed.length === 1) {
+    // A pair closed as it's typed (25.3): its other half after the cursor, or one already there stepped over.
+    const at = offsetOf(app, view);
+    const pair = autoPair(view.buf.source, at, typed);
+    if (pair !== null) {
+      insertText(app, view, pair);
+      return placeAt(app, view, at + 1, true);
     }
   }
   if (typed !== null) insertText(app, view, typed);

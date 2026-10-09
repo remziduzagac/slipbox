@@ -26,7 +26,8 @@ import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
 import { writeDirty } from "../core/stale.ts";
 import { editorArgv } from "../core/editor.ts";
-import { cannotEdit, insertKey, insertText, offsetOf, placeAt, startInsert, stopInsert } from "./editing.ts";
+import { cannotEdit, insertKey, insertText, lineOf, offsetOf, placeAt, startInsert, stopInsert } from "./editing.ts";
+import { matchBracket } from "../core/brackets.ts";
 import { insertRecord, newVimState, PASTE, put, vimKey, visualKey } from "./vim.ts";
 import * as R from "./replacing.ts";
 import type { ReplaceState } from "./replacing.ts";
@@ -7843,6 +7844,34 @@ export class App {
       });
     }
     go();
+  }
+
+  private bracketMemo: { buf: NoteBuffer; version: number; at: number; insert: boolean; marks: Map<number, { from: number; to: number }[]> | null } | null = null;
+
+  /**
+   * The bracket at the cursor and the one matching it (25.3), each by its source line and its place in it, for the view
+   * to mark — in source mode; while typing, the bracket just before the cursor too. Null where it's on none.
+   */
+  bracketMarks(view: View): Map<number, { from: number; to: number }[]> | null {
+    if (!view.source) return null;
+    const at = offsetOf(this, view);
+    const m = this.bracketMemo;
+    if (m && m.buf === view.buf && m.version === view.buf.version && m.at === at && m.insert === !!view.insert) return m.marks;
+    const text = view.buf.source;
+    let here = matchBracket(text, at) >= 0 ? at : -1;
+    if (here < 0 && view.insert && at > 0 && matchBracket(text, at - 1) >= 0) here = at - 1;
+    let marks: Map<number, { from: number; to: number }[]> | null = null;
+    if (here >= 0) {
+      marks = new Map();
+      const starts = view.buf.lineStarts();
+      for (const o of [here, matchBracket(text, here)]) {
+        const line = lineOf(view, o);
+        const col = o - (starts[line - 1] ?? 0);
+        marks.set(line, [...(marks.get(line) ?? []), { from: col, to: col + 1 }]);
+      }
+    }
+    this.bracketMemo = { buf: view.buf, version: view.buf.version, at, insert: !!view.insert, marks };
+    return marks;
   }
 
   /** A folder as an export's places show it: from the root inside it, `~/` under home, else whole. */

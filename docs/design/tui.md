@@ -1058,7 +1058,10 @@ their files open as text.
 
 Editing is in source mode: `i`, `a`, `o` and their capitals (in [keymap.md](keymap.md)) start typing, switching a
 rendered window to source first. A level of indentation is the file's (`25.1`): its `.editorconfig`, else its own lines,
-else its language ([configuration.md](configuration.md), "Indentation"). The buffer's `source` is the truth; every
+else its language ([configuration.md](configuration.md), "Indentation"). `%` goes to the matching bracket
+(`core/brackets.ts`, `25.3`): of its kind, the pairs nested between counted, across lines, by the text alone — a
+bracket in a string or a comment counts too, as in vim. In source mode the bracket at the cursor and its match are
+marked (`bracket_match`); while typing, the one just before the cursor. The buffer's `source` is the truth; every
 change is `NoteBuffer.edit`, one undo step each, except that an insert session (from `i` to `esc`) is one step. The
 cursor is a place in the text found through the source layout's `srcMap` (`editing.ts`), so tabs, wide characters and
 wrapped rows edit exactly where they show.

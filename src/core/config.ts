@@ -217,6 +217,8 @@ export interface Config {
     lens_min_rows: number;
     /** …and it stops taking in neighbours at this share of the window (a bigger block shows whole). */
     lens_max: number;
+    /** Typing an opening bracket or a quote puts its closing one after the cursor (25.3); off by default. */
+    auto_pairs: boolean;
   };
   watch: {
     enabled: boolean;
@@ -296,7 +298,7 @@ export const DEFAULT_CONFIG: Config = {
   linter: {},
   lsp: { enabled: true, auto_install: true },
   context: { depth: 1, backlinks: true, limit: 25 },
-  editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5 },
+  editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5, auto_pairs: false },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
   aliases: {},

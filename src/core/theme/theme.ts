@@ -40,7 +40,7 @@ export const ROLES = [
   // a file's git state in the explorer (5.11); a diff's added and removed lines (5.13)
   "git_new", "git_modified", "git_conflict", "diff_add", "diff_del", "diff_head",
   "tab", "tab_active", "tab_active_idle", "pane_title", "pane_title_active", "overlay", "overlay_border", "overlay_selected", "overlay_match", "overlay_dim", "overlay_group", "keycap", "keycap_selected",
-  "selection", "error", "warn", "info", "scrollbar", "scrollbar_track",
+  "selection", "bracket_match", "error", "warn", "info", "scrollbar", "scrollbar_track",
   "cursor", "cursor_line", "line_number", "line_number_current", "gutter", "cell_line",
   "which_key_key", "which_key_group",
   "topbar", "topbar_button", "topbar_button_on", "topbar_chip", "hover",
@@ -247,6 +247,8 @@ export function themeFromPalette(
     keycap: { fg: p.fg, bg: p.surface },
     keycap_selected: { fg: p.fg_strong, bg: p.surface2 },
     selection: { bg: p.surface2 },
+    // The bracket matching the one at the cursor, and that one (25.3).
+    bracket_match: { fg: p.fg_strong, bg: p.surface2, bold: true },
     error: { fg: p.red, bold: true },
     warn: { fg: p.yellow },
     info: { fg: p.cyan },
@@ -373,6 +375,7 @@ export function monoTheme(): Theme {
   roles.overlay_selected = { bold: true, underline: true };
   roles.status_accent = { bold: true };
   roles.selection = { underline: true };
+  roles.bracket_match = { bold: true, underline: true };
   roles.cursor = { inverse: true };
   roles.cursor_line = {};
   roles.hover = { inverse: true };

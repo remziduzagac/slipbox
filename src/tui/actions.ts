@@ -20,6 +20,7 @@ import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
 import { FORMATS } from "../core/export/index.ts";
+import { bracketFrom, matchBracket } from "../core/brackets.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
 import { canonKey, type Command } from "../core/commands.ts";
@@ -965,6 +966,17 @@ export function registerActions(app: App): void {
     "cursor.screen_top": motion((a, v) => C.firstNonBlank(lay(a, v), a.screenRow(v, "top"))),
     "cursor.screen_middle": motion((a, v) => C.firstNonBlank(lay(a, v), a.screenRow(v, "middle"))),
     "cursor.screen_bottom": motion((a, v) => C.firstNonBlank(lay(a, v), a.screenRow(v, "bottom"))),
+    // % (25.3): from the bracket at the cursor, or the line's next one, to its match — the text's, so source mode's.
+    "cursor.match_bracket": (a) =>
+      withView(a, (v) => {
+        if (!editable(v)) return a.message("info", "% goes by the text: in source mode (space n v) or live preview");
+        const text = v.buf.source;
+        const from = bracketFrom(text, E.offsetOf(a, v));
+        if (from < 0) return a.message("info", "no bracket here or after it on the line");
+        const to = matchBracket(text, from);
+        if (to < 0) return a.message("info", `no ${text[from]} to match this one`);
+        E.placeAt(a, v, to);
+      }),
     "scroll.center": (a) => withView(a, (v) => a.scrollCursorTo(v, "center")),
     "scroll.top": (a) => withView(a, (v) => a.scrollCursorTo(v, "top")),
     "scroll.bottom": (a) => withView(a, (v) => a.scrollCursorTo(v, "bottom")),

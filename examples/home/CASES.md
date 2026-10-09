@@ -2423,6 +2423,8 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (command-specs.ts)
 - `cursor.screen_bottom` — Bottom of the screen — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
   (command-specs.ts)
+- `cursor.match_bracket` — To the matching bracket — `work/kestrel/src/sync/queue.ts`,
+  `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
 - `cursor.goto_line` — Go to line — `notes/meetings/all-hands-archive.md`, `notes/daily/2026-10-05.md`
   (command-specs.ts)
 

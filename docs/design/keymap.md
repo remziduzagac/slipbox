@@ -74,6 +74,7 @@ A reading cursor sits on the rendered text, like vim's normal mode.
 | top / bottom of note | `g g` / `shift+g` | `ctrl+home` / `ctrl+end`, `cmd+up` / `cmd+down` |
 | previous / next heading | `[ [` / `] ]` | `alt+up` / `alt+down` |
 | previous / next paragraph | `{` / `}` | `ctrl+up` / `ctrl+down` |
+| the matching bracket, from the one at the cursor or the line's next (source, the lens: `25.3`) | `%` | — |
 | top / middle / bottom row on screen | `shift+h` / `shift+m` / `shift+l` | — |
 | a line by number (a prompt; `:42` too) | `42 g g`, `42 shift+g` (source) | `ctrl+g`, `space f l` |
 
@@ -490,11 +491,11 @@ source first.
 | in visual mode: delete, change, indent, outdent the selection | `d` `x`, `c`, `>`, `<` |
 | in visual mode: select a text object (`viw`, `vi(`); counts work (`v2j`, `V3>`) | `i` / `a` + object |
 
-Motions are the reading keys (`w` `b` `e` `0` `^` `$` `j` `k` `g g` `shift+g` `{` `}`, `f` `t`…), and
+Motions are the reading keys (`w` `b` `e` `0` `^` `$` `j` `k` `g g` `shift+g` `{` `}` `%`, `f` `t`…), and
 a search: after an operator, `/` covers the text up to the match you accept, and `n` / `shift+n` up
 to the next or previous one (`d/foo`, `dn`). `j`, `k`,
-`g g` and `shift+g` take whole lines (with a count, to that line: `d3G`), `e` and `$` include the
-character they land on, `cw` changes to the word's end, and `dw` stops at the line's end. An
+`g g` and `shift+g` take whole lines (with a count, to that line: `d3G`), `e`, `$` and `%` include the
+character they land on (`d%` takes both brackets), `cw` changes to the word's end, and `dw` stops at the line's end. An
 exclusive motion that ends at a line's start ends at the end of the line before instead, and from
 the first non-blank takes whole lines (vim's rule): `d}` keeps the blank line, `c}` changes the
 paragraph's lines, `db` at a line's start stays on the line above. `}` in the last paragraph goes
@@ -517,7 +518,9 @@ right after the cursor to a line of its own) or Python's and YAML's `:`; `backsp
 lines at an edge); `ctrl+w` the word before; `ctrl+u` what was typed on the line, then the rest before the cursor, and
 at the line's start joins it to the one above (`ctrl+w` too stops once where the insert began); `tab` / `shift+tab`
 indent or outdent the line a level, as the file indents (a tab, or its spaces: `25.1`); `ctrl+/` comments or uncomments
-it, the cursor kept on its character (`25.2`); the arrows, `home` and `end` move — `cmd+←/→` (`ctrl+a` / `ctrl+e`) to
+it, the cursor kept on its character (`25.2`); with `[editor] auto_pairs` on, `(` `[` `{` and a quote type their closing
+half too, a closing one typed where it already is steps over it, and `backspace` between an empty pair takes both
+(`25.3`); the arrows, `home` and `end` move — `cmd+←/→` (`ctrl+a` / `ctrl+e`) to
 the line's start and end, `cmd+↑/↓` to the note's; `ctrl+v` pastes the clipboard; `ctrl+←/→`, `alt+←/→` and `alt+b` /
 `alt+f` move by words — back to a word's start, forward to its end, across lines; `ctrl+s` saves. A paste goes into the
 text. While a code file's completion shows, `tab`, `enter`, `ctrl+n`, `ctrl+p`, `up`, `down` and `ctrl+e` are its

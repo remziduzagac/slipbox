@@ -271,7 +271,7 @@ export interface Range {
 /** Motions that take whole lines under an operator, and those that include the character they
  *  land on. */
 const LINEWISE = new Set(["cursor.up", "cursor.down", "cursor.top", "cursor.bottom", "cursor.half_down", "cursor.half_up", "cursor.page_down", "cursor.page_up"]);
-const INCLUSIVE = new Set(["cursor.word_end", "cursor.line_end"]);
+const INCLUSIVE = new Set(["cursor.word_end", "cursor.line_end", "cursor.match_bracket"]);
 
 /** Where a motion goes (run `count` times, then the cursor put back), as a text range. */
 async function motionRange(app: App, view: View, spec: string, count: number, op: Op): Promise<Range | null> {
