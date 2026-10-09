@@ -5003,6 +5003,11 @@ export class App {
     row("File", "words", note ? `${words.toLocaleString("en")} (~${Math.max(1, Math.round(words / 230))} min)` : words.toLocaleString("en"));
     row("File", "lines", b.lineStarts().length.toLocaleString("en"));
     row("File", "encoding", [b.invalidUtf8 ? "invalid UTF-8" : "UTF-8", b.eol === "\r\n" ? "CRLF" : "LF", ...(b.bom ? ["BOM"] : [])].join(", "));
+    // How it's indented (25.1), and where that was found.
+    const ind = b.indent();
+    const said = ind.from === "editorconfig" ? ".editorconfig" : ind.from === "file" ? "as the file is" : "its language's";
+    const onSave = [ind.trimTrailing ? "trailing whitespace trimmed" : "", ind.finalNewline ? "a final newline" : ""].filter(Boolean).join(", ");
+    row("File", "indent", `${ind.tabs ? `tabs, ${ind.tabWidth} wide` : `${ind.size} spaces`} (${said})${onSave ? `; on save: ${onSave}` : ""}`);
     row("File", "state", b.deleted ? "deleted on disk" : b.conflictKept ? "unsaved — differs from disk" : b.dirty ? "unsaved changes" : "saved");
     // Its properties: the frontmatter, nested maps under their keys.
     // Parsing on other threads (15.1): the properties and tasks when it's done.
@@ -8297,6 +8302,8 @@ export class App {
       else this.conflictPrompt(buf);
       return false;
     }
+    // What `.editorconfig` asks of a save (25.1): trailing whitespace, the final newline — in the text first.
+    buf.applySaveRules();
     return this.writeBuffer(buf, buf.contentToSave(), true);
   }
 

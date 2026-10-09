@@ -306,6 +306,22 @@ The chrome roles most worth tuning:
 | `overlay*`, `keycap*` | popups: background, border, selection, headings, keycaps |
 | `which_key_key`, `which_key_group` | the which-key popup's keys and `+group` names |
 
+## Indentation: `.editorconfig`
+
+How a file is indented (`25.1`) — a tab a level or spaces, how many, how wide a tab shows — is found, in order:
+
+1. its `.editorconfig` files' `indent_style`, `indent_size` and `tab_width`, read from its folder up until one says
+   `root = true`, nearer over farther and later sections over earlier, their globs as the EditorConfig spec has them;
+2. else the file itself: tabs where more of its lines start with one, else the step its lines go in by most;
+3. else its language's: Go, Makefiles and TSV tabs; Python, Rust, Java, Kotlin, Swift, PHP, C, C++, C#, Scala and Dart
+   four spaces; the rest two.
+
+`tab` and `shift+tab` in insert mode, `>` and `<`, and a new line after an opening bracket use it; the source view
+draws a tab that wide (else four columns). A save does what `.editorconfig` asks, and only then: `trim_trailing_whitespace
+= true` trims every line's trailing spaces and tabs, `insert_final_newline = true` adds the last newline — in the text
+first, as an undo step of its own. The Info view (`space n i`) says how a file is indented and where that came from.
+slipbox has no indentation setting of its own: `.editorconfig` is where a project, or your home folder, says it.
+
 ## Reloading
 
 The TUI reloads the configuration **by itself** when your config file or any of the root's `.slipbox/config.toml`

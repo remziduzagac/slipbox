@@ -24,6 +24,7 @@ import { countWords } from "../core/words.ts";
 import { readerFor } from "../core/readers.ts";
 import type { CodeModel, CommentLink, OutlineEntry, Span as SyntaxSpan, SyntaxError } from "../core/syntax.ts";
 import { codeBlocks, layoutCode } from "../core/layout/code.ts";
+import { type Indent, indentFor, saveRules } from "../core/indent.ts";
 
 /** One change to the text: at `at`, `removed` was replaced by `inserted`. */
 export interface TextEdit {
@@ -234,6 +235,32 @@ export class NoteBuffer {
     return this.dirtyMemo.dirty;
   }
 
+  private indentMemo: Indent | null = null;
+
+  /** How the file is indented (25.1), found the first time it's asked: its `.editorconfig`, its lines, its language. */
+  indent(): Indent {
+    this.indentMemo ??= indentFor(this.abs, this.source);
+    return this.indentMemo;
+  }
+
+  /**
+   * What `.editorconfig` asks of a save (25.1) done to the text before it's written: trailing whitespace trimmed, the
+   * final newline added — one undo step, only where it changes anything.
+   */
+  applySaveRules(): void {
+    if (this.virtual) return;
+    const next = saveRules(this.source, this.indent());
+    if (next === this.source) return;
+    const a = this.source;
+    let head = 0;
+    while (head < a.length && head < next.length && a[head] === next[head]) head++;
+    let tail = 0;
+    while (tail < a.length - head && tail < next.length - head && a[a.length - 1 - tail] === next[next.length - 1 - tail]) tail++;
+    this.endStep(head);
+    this.edit(head, a.length - head - tail, next.slice(head, next.length - tail), head);
+    this.endStep(head);
+  }
+
   /** The file's content for `source`: with its BOM again. */
   contentToSave(): string {
     return (this.bom ? "\uFEFF" : "") + this.source;
@@ -410,7 +437,7 @@ export class NoteBuffer {
       const langs = this.syntax?.languages;
       l = layoutSource(
         this.source,
-        { width, wrap, headings, language: note ? note.language : this.kind.format, ...(spans ? { spans: (line: number) => spans.get(line) } : {}), ...(langs?.size ? { languageAt: (line: number) => langs.get(line) } : {}) },
+        { width, wrap, headings, language: note ? note.language : this.kind.format, tabWidth: this.indent().tabWidth, ...(spans ? { spans: (line: number) => spans.get(line) } : {}), ...(langs?.size ? { languageAt: (line: number) => langs.get(line) } : {}) },
         this.sourceCache,
       );
       if (this.layouts.size >= 6) this.layouts.delete(this.layouts.keys().next().value!);

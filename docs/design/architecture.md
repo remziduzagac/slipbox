@@ -129,6 +129,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/tasks.ts` | 4.11 | a task's checkbox toggled as a one-byte edit |
 | `core/words.ts` | — | word counts for the status line and note info: Han and kana by character |
 | `core/editor.ts` | 4.1, 4.2, 4.12 | hand-off templates to argv, never through a shell |
+| `core/indent.ts` | 25.1 | a file's indentation: `.editorconfig` (its globs), the file's lines, its language; save rules |
 | `core/nvim.ts` | 4.12 | finding and asking the running nvims |
 | `core/replace.ts` | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
 | `core/merge.ts` | 5.5 | line diff (Myers), three-way merge, the diff the conflict prompt shows |

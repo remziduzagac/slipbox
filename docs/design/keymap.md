@@ -475,7 +475,7 @@ source first.
 | Action | Keys |
 | --- | --- |
 | delete / change / yank what a motion or text object covers | `d` / `c` / `y` + motion |
-| indent / outdent the lines it covers (two spaces) | `>` / `<` + motion |
+| indent / outdent the lines it covers, a level as the file indents (`25.1`) | `>` / `<` + motion |
 | … whole lines | `dd` `cc` `yy` `>>` `<<` |
 | to the line's end: delete / change | `shift+d` / `shift+c` |
 | substitute the character / the line | `s` / `shift+s` |
@@ -510,15 +510,16 @@ yanked; a yank also goes to the clipboard.
 Quitting (`ctrl+q`, `:q`) with unsaved changes is refused, naming the notes. In **insert mode** (the chip reads
 `INSERT`) keys are text, except: `esc` (or `ctrl+c`) back to normal, the cursor stepping back onto a character; `enter`
 a new line with the same indentation, continuing a list (the same bullet, the next number, an empty task box) — or, on
-an item with nothing after its marker, ending the list; `backspace` / `delete` a character (joining lines at an edge);
-`ctrl+w` the word before; `ctrl+u` what was typed on the line, then the rest before the cursor, and at the line's start
-joins it to the one above (`ctrl+w` too stops once where the insert began); `tab` / `shift+tab` indent or outdent the
-line by two spaces; the arrows, `home` and `end` move — `cmd+←/→` (`ctrl+a` / `ctrl+e`) to the line's start and end,
-`cmd+↑/↓` to the note's; `ctrl+v` pastes the clipboard; `ctrl+←/→`, `alt+←/→` and `alt+b` / `alt+f` move by words — back
-to a word's start, forward to its end, across lines; `ctrl+s` saves. A paste goes into the text. While a code file's
-completion shows, `tab`, `enter`, `ctrl+n`, `ctrl+p`, `up`, `down` and `ctrl+e` are its (`space c`, above). Source
-mode's own keys are `[keys.source]` in config: the operators and edits above (`d c y > < D C s S r J p P ~ . x`), which
-win over the reading keys there.
+an item with nothing after its marker, ending the list; in code, a level more after an opening bracket (the closing one
+right after the cursor to a line of its own) or Python's and YAML's `:`; `backspace` / `delete` a character (joining
+lines at an edge); `ctrl+w` the word before; `ctrl+u` what was typed on the line, then the rest before the cursor, and
+at the line's start joins it to the one above (`ctrl+w` too stops once where the insert began); `tab` / `shift+tab`
+indent or outdent the line a level, as the file indents (a tab, or its spaces: `25.1`); the arrows, `home` and `end`
+move — `cmd+←/→` (`ctrl+a` / `ctrl+e`) to the line's start and end, `cmd+↑/↓` to the note's; `ctrl+v` pastes the
+clipboard; `ctrl+←/→`, `alt+←/→` and `alt+b` / `alt+f` move by words — back to a word's start, forward to its end,
+across lines; `ctrl+s` saves. A paste goes into the text. While a code file's completion shows, `tab`, `enter`,
+`ctrl+n`, `ctrl+p`, `up`, `down` and `ctrl+e` are its (`space c`, above). Source mode's own keys are `[keys.source]` in
+config: the operators and edits above (`d c y > < D C s S r J p P ~ . x`), which win over the reading keys there.
 
 **Where source mode isn't vim.** Motions move by the rows you see, as in reading: on a long line
 wrapped across rows, `0`, `$`, `j` and `k` (and `d$`, `dj`) work on the row, while `D`, `C`, `A`,

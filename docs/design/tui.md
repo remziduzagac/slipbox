@@ -1056,11 +1056,12 @@ their files open as text.
 
 ## Editing (plans `4.3`, `4.4`, `4.5`; phase 3 step 3)
 
-Editing is in source mode: `i`, `a`, `o` and their capitals (in [keymap.md](keymap.md)) start
-typing, switching a rendered window to source first. The buffer's `source` is the truth; every
-change is `NoteBuffer.edit`, one undo step each, except that an insert session (from `i` to `esc`)
-is one step. The cursor is a place in the text found through the source layout's `srcMap`
-(`editing.ts`), so tabs, wide characters and wrapped rows edit exactly where they show.
+Editing is in source mode: `i`, `a`, `o` and their capitals (in [keymap.md](keymap.md)) start typing, switching a
+rendered window to source first. A level of indentation is the file's (`25.1`): its `.editorconfig`, else its own lines,
+else its language ([configuration.md](configuration.md), "Indentation"). The buffer's `source` is the truth; every
+change is `NoteBuffer.edit`, one undo step each, except that an insert session (from `i` to `esc`) is one step. The
+cursor is a place in the text found through the source layout's `srcMap` (`editing.ts`), so tabs, wide characters and
+wrapped rows edit exactly where they show.
 
 **Normal mode** in source is vim-shaped (`vim.ts`): counts, operators (`d` `c` `y` `>` `<`) that
 wait for a motion or a text object, a register, and `.`. Each operator and edit is a named command

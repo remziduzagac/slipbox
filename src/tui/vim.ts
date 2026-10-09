@@ -8,6 +8,7 @@ import * as C from "./cursor.ts";
 import * as E from "./editing.ts";
 import { keyChar } from "./keys.ts";
 import { textMatches } from "./replacing.ts";
+import { indentUnit } from "../core/indent.ts";
 
 type Op = "d" | "c" | "y" | ">" | "<";
 export type FindKind = "f" | "F" | "t" | "T";
@@ -433,18 +434,18 @@ export function firstNonBlank(view: View, src: number): number {
   return (view.buf.lineStarts()[src - 1] ?? 0) + /^\s*/.exec(E.lineText(view, src))![0].length;
 }
 
-/** > and <: two spaces in or out on each line (not on blank ones, going in). */
+/** > and <: a level in or out on each line, as the file indents (25.1) — not on blank ones, going in. */
 export function indentLines(app: App, view: View, first: number, last: number, dir: 1 | -1, times = 1): void {
   const buf = view.buf;
+  const indent = buf.indent();
   buf.beginStep(E.offsetOf(app, view));
   for (let n = last; n >= first; n--) {
     const start = buf.lineStarts()[n - 1] ?? 0;
     const text = E.lineText(view, n);
-    if (dir === 1 && text.trim()) buf.edit(start, 0, "  ".repeat(times));
+    if (dir === 1 && text.trim()) buf.edit(start, 0, indentUnit(indent).repeat(times));
     else if (dir === -1) {
-      // A tab is one level (as > never adds one, it only takes it away); else two spaces.
       let k = 0;
-      for (let t = 0; t < times; t++) k += text.startsWith("\t", k) ? 1 : /^ {0,2}/.exec(text.slice(k))![0].length;
+      for (let t = 0; t < times; t++) k += E.outdentLength(text.slice(k), indent.size);
       if (k) buf.edit(start, k, "");
     }
   }

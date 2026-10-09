@@ -7,6 +7,7 @@ import { graphemes } from "../core/width.ts";
 import { type App, editable, type View } from "./app.ts";
 import { cells } from "./cursor.ts";
 import { keyChar } from "./keys.ts";
+import { indentUnit } from "../core/indent.ts";
 
 /** The cursor's place in the text (a UTF-16 offset into `source`). Source mode only. */
 export function offsetOf(app: App, view: View): number {
@@ -224,6 +225,18 @@ export function newline(app: App, view: View): void {
     const marker = m[2] ?? `${Number(m[3]) + 1}${m[4]}`;
     lead = `${m[1]}${marker}${m[5]}${m[6] ? "[ ] " : ""}`;
   }
+  // Code (25.1): after an opening bracket, a level in — the closing one right after the cursor to a line of its own;
+  // after a `:` in Python or YAML, a level in too.
+  const after = line.slice(at - start);
+  const opener = view.buf.kind.group !== "note" && !m ? before.trimEnd().at(-1) : undefined;
+  if (opener && (OPENS[opener] || (opener === ":" && /^(python|yaml)$/.test(view.buf.kind.format)))) {
+    const inner = lead + indentUnit(view.buf.indent());
+    if (OPENS[opener] && after.trimStart().startsWith(OPENS[opener]!)) {
+      insertText(app, view, view.buf.eol + inner + view.buf.eol + lead);
+      return placeAt(app, view, at + view.buf.eol.length + inner.length, true);
+    }
+    return insertText(app, view, view.buf.eol + inner);
+  }
   // The last line of a note with no final newline (or an empty note): the new line gets a line
   // ending too, or it would be no line at all and typing would land on the line before.
   if (at === view.buf.source.length && !view.buf.source.endsWith("\n")) {
@@ -289,20 +302,31 @@ export function deleteToLineStart(app: App, view: View): void {
   placeAt(app, view, from, true);
 }
 
-/** Tab / shift+tab: indent or outdent the cursor's line by two spaces (markdown list nesting). */
+/** Tab / shift+tab: indent or outdent the cursor's line a level, as the file indents (25.1): a tab, or its spaces. */
 export function indentLine(app: App, view: View, dir: 1 | -1): void {
   const at = offsetOf(app, view);
   const src = lineOf(view, at);
   const start = view.buf.lineStarts()[src - 1] ?? 0;
+  const indent = view.buf.indent();
   if (dir === 1) {
-    view.buf.edit(start, 0, "  ");
-    return placeAt(app, view, at + 2, true);
+    const unit = indentUnit(indent);
+    view.buf.edit(start, 0, unit);
+    return placeAt(app, view, at + unit.length, true);
   }
-  const n = /^ {0,2}/.exec(lineText(view, src))![0].length;
+  const n = outdentLength(lineText(view, src), indent.size);
   if (!n) return;
   view.buf.edit(start, n, "");
   placeAt(app, view, Math.max(start, at - n), true);
 }
+
+/** How much of a line's start a level out takes: its first tab, or up to `size` spaces. */
+export function outdentLength(line: string, size: number): number {
+  if (line.startsWith("\t")) return 1;
+  return new RegExp(`^ {0,${size}}`).exec(line)![0].length;
+}
+
+/** The brackets a line ending in one opens: a new line inside goes a level in (25.1). */
+const OPENS: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
 
 /** Keys in insert mode: text goes in; the arrows and friends move; esc leaves. */
 export function insertKey(app: App, view: View, key: string): void {

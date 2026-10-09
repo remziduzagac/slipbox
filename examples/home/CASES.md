@@ -979,6 +979,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### editing
 
+- Indentation per file (25.1): `.editorconfig` says spaces, four in Python, tabs in Go, Markdown not trimmed; `tab`,
+  `>>`, a new line after `{`, a save trimming trailing whitespace and adding the final newline; the Info view's indent —
+  `work/kestrel/.editorconfig`, `work/kestrel/tools/greeter/greeter.go`, `work/kestrel/api/kestrel_api/sync.py`,
+  `work/kestrel/src/sync/queue.ts` (configuration.md Indentation)
 - Editing a data file saves atomically via App.writeBuffer and preserves comments, order, formatting —
   `work/kestrel/config/app.toml`, `work/kestrel/kestrel.toml` (rendering.md 'Nothing is ever re-serialized'; CLAUDE.md
   writeBuffer)
