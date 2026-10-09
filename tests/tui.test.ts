@@ -6064,7 +6064,8 @@ describe("code as a notebook (24.x, 24.13)", () => {
       const head = h.app.currentLayout(h.app.view!).lines.find((l) => l.spans.some((sp) => sp.text === "function: "))!;
       const word = head.spans.find((sp) => sp.text === "function: ")!;
       expect([word.role, word.attrs & A_BOLD]).toEqual(["dim", 0]);
-      expect(head.spans.find((sp) => sp.text === "f")!.attrs & A_BOLD).toBe(A_BOLD);
+      const name = head.spans.find((sp) => sp.text === "f")!;
+      expect([name.role, name.attrs & A_BOLD]).toEqual(["strong", A_BOLD]); // the text's colour, bold: not the code's
     });
     test("a definition's kind by its node's type, in any grammar", () => {
       const kinds = ["function_item", "method_declaration", "init_declaration", "impl_item", "trait_item", "mod_item", "module", "namespace_definition", "struct_item", "type_spec", "enum_item", "interface_declaration", "method", "declaration", "comment"].map(codeKind);

@@ -145,11 +145,12 @@ the tokens differ.
   the box's left line; a folded box, which has no row under its top, `┬` at it; a band's header, touched) — `└─` to
   the last's — or, a class with a closing brace, `├─` to the last too, the line on down to the brace. A class in a class
   has a tree of its own, from its own box.
-- **A cell's header**: what it is in its language's word, dimmed, then its name bold (`function: resolve`,
-  `class: Graph`, `method: textOf`, `struct: Frame`, `impl: Stacker`, `trait`, `interface`, `enum`, `type`, `module`,
-  `namespace`, `protocol` — a function in a class, an impl or a trait a method, in a module a function; `24.9`), the
-  word the first to go where the name wouldn't fit; a comment's box its `¶` alone; a run of statements its values'
-  names (`•`) or `code`. Then its lines, then its buttons — a comment's all but `⇢`, as it defines nothing:
+- **A cell's header**: what it is in its language's word, dimmed, then its name bold in the text's own colour (apart
+  from the code's colour for it below: `function: resolve`, `class: Graph`, `method: textOf`, `struct: Frame`, `impl:
+  Stacker`, `trait`, `interface`, `enum`, `type`, `module`, `namespace`, `protocol` — a function in a class, an impl or
+  a trait a method, in a module a function; `24.9`), the word the first to go where the name wouldn't fit; a comment's
+  box its `¶` alone; a run of statements its values' names (`•`) or `code`. Then its lines, then its buttons — a
+  comment's all but `⇢`, as it defines nothing:
 
 | Button | Key (the cell at the cursor) | Does |
 | --- | --- | --- |

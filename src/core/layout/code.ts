@@ -557,7 +557,8 @@ function cellHeader(c: CellSpec, column: number, inner: number, style: "box" | "
   const spans: Span[] = [{ text: " ".repeat(column), role: "text", attrs: 0 }, { text: open, role: edge, attrs: 0 }];
   if (word) spans.push({ text: word, role: "dim", attrs: 0 });
   else if (c.mark) spans.push({ text: c.prose ? c.mark : `${c.mark} `, role: c.markRole, attrs: A_BOLD });
-  if (title) spans.push({ text: title, role: c.def ? c.markRole : "dim", attrs: c.def ? A_BOLD : 0 });
+  // A definition's name in the text's own colour, bold — apart from the code's colour for it, below.
+  if (title) spans.push({ text: title, role: c.def ? "strong" : "dim", attrs: c.def ? A_BOLD : 0 });
   spans.push({ text: ` ${(box ? g.box.h : " ").repeat(fill)} `, role: edge, attrs: 0 });
   spans.push({ text: `${lines} `, role: "dim", attrs: 0 });
   spans.push(...buttons);
