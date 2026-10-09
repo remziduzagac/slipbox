@@ -905,12 +905,12 @@ design: `docs/design/code-view.md`.*
 | 24.14 | **Prototype.** Cells touch; tree lines join a class to its members, two columns in; a comment a cell |
 | 24.15 | **Prototype.** Boxes of a top and a left line, blank rows around them; the tree's lines; comments keep lines |
 | 24.16 | **Prototype.** The lens on code opens on the cursor's cell whole when it fits, and moves cell to cell |
-| 24.17 | Editing a row in place, without the lens |
+| 24.17 | **Dropped** (2026-10-09). Typing in a row in place: the lens is where notes and code are edited |
 | 24.18 | **Dropped** (2026-10-08). Folding inside a cell — an `if`'s body, a loop's: a cell folds whole |
-| 24.19 | A signature too long for its cell: one parameter a row |
-| 24.20 | Columns where code is tabular: consecutive assignments, enum members, an object's keys |
-| 24.21 | `self.` and `this.` dimmed |
-| 24.22 | A license header folded, as the imports are |
+| 24.19 | **Decided.** A definition's signature too long for its cell: a parameter a row, `)` at its indent; not calls |
+| 24.20 | **Deferred** (2026-10-09). Tabular code in columns: assignments, enum members, keys — columns inside rows |
+| 24.21 | **Decided.** A receiver dimmed with its `.` or `->` (`this.`, `self.`, `$this->`), not bare; with `24.9` |
+| 24.22 | **Decided.** A licence header, or a "generated" banner, folded into a row naming it, as the imports are |
 
 `24.9`, decided 2026-10-09 with the user: tree-sitter already gives every grammar slipbox parses the queries its outline
 and its comments' links use — definitions with their names and ranges, and comments. The code view is built on those
@@ -919,7 +919,8 @@ Bash); markup and config (HTML, Vue, Svelte, Astro, CSS, SCSS, Dockerfile) keep 
 read from its node's type name; its documentation is the comment lines right above it, markers stripped; `@param`-style
 tags are terms, any other doc is markdown prose; imports are a run of top-level nodes named so. What a language does
 its own way is an exception (Python's docstrings), not a mapping. `24.11`–`24.16`'s TypeScript and Python become the
-generic view and their exceptions, their tests the proof nothing was lost. It replaces "Rust, Go mapped".
+generic view and their exceptions, their tests the proof nothing was lost. It replaces "Rust, Go mapped". Every file
+keeps its source mode, the document view or not: `space n v` switches, `[render] code = "source"` opens code in it.
 
 ## Deferred — in the design, not in this breakdown
 

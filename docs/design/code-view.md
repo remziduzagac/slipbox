@@ -185,7 +185,6 @@ the tokens differ.
 
 ## Next
 
-- Editing in place: a row of code typed into without the lens.
 - The view generic (`24.9`): built on each grammar's own queries — its definitions and comments, which its outline and
   its comments' links use — for every grammar with definitions; what a language does its own way an exception.
 - Signatures that don't fit, one parameter per line (`24.19`); columns where the code is tabular (consecutive
@@ -193,4 +192,5 @@ the tokens differ.
   like the imports (`24.22`).
 - The references button with its count, once a server has said it.
 
-Not done (decided 2026-10-08): folding inside a cell — an `if`'s body, a loop's. A cell folds whole.
+Not done (decided 2026-10-08): folding inside a cell — an `if`'s body, a loop's. A cell folds whole. Nor (2026-10-09)
+typing in a row in place, without the lens: the lens is where notes and code are edited (`24.17`).
