@@ -1,6 +1,6 @@
 # slipbox — handoff
 
-Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-10-08. Phases 0–5c
+Written 2026-09-25 for whoever picks this up next, human or agent; updated 2026-10-09. Phases 0–5c
 are built (`docs/plan.md`, "Phases").
 Read this, then `docs/idea.md`, then `docs/plan.md`, then `docs/design/` for how it was built.
 
@@ -94,6 +94,13 @@ placeholders, sent once (`12.7`). Extensibility (`13.x`) is deferred, the whole 
 grammar with definitions drawn as a document from its own tree-sitter queries — a long signature a parameter a row
 (`24.19`), receivers dimmed (`24.21`), a licence or generated header folded (`24.22`); `24.20` deferred, `24.17`
 dropped.
+
+Export (`10.x`, `docs/design/export.md`) began the same day, decided with the user: no external tool — every format
+TypeScript or JavaScript under a permissive licence (the headless browser, `10.7`, and pandoc, `10.8`, dropped) — Word
+first, an export beside its note by default. Built, as prototypes to try: the assembler (`10.1`: embeds drawn in,
+links inside the document, pictures, diagrams and maths drawn) and Word (`10.4`, by `docx`): `slipbox export <note…>`
+and `space n o`. Next: HTML (`10.2`), Markdown (`10.3`), PDF by `pdfkit` (`10.5`), EPUB (`10.6`), and picking notes
+in the TUI (`10.9`).
 
 ## The documents
 

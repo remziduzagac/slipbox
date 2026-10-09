@@ -15,7 +15,7 @@ Read `docs/handoff.md` first, then `docs/design/README.md`. The plan's item IDs 
   passes through `sanitize`.
 - Phase 3 (editing) has begun: the TUI writes notes only through `App.writeBuffer` (atomic, inside
   the vault, the watcher told) — never with its own `writeFile`. Besides notes, it writes its own
-  state and cache, and the scratch.
+  state and cache, the scratch, and an export where you said (`atomicWrite`, never over a note).
 - Markdown is wrapped at 120 columns, tables and code included.
 
 ## Commands

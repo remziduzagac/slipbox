@@ -7,7 +7,7 @@ export interface Args {
 }
 
 /** Flags that take a value, and boolean flags. Anything else is a usage error. */
-export const VALUED = new Set(["root", "config", "color", "width", "theme", "from", "ref", "lang", "if-unchanged", "glyphs", "lines", "line", "server", "name", "depth", "limit", "base", "severity", "timeout", "budget", "scope", "into", "text", "style"]);
+export const VALUED = new Set(["root", "config", "color", "width", "theme", "from", "ref", "lang", "if-unchanged", "glyphs", "lines", "line", "server", "name", "depth", "limit", "base", "severity", "timeout", "budget", "scope", "into", "text", "style", "to", "out"]);
 const BOOLEAN = new Set(["all", "files", "json", "plain", "snippet", "stdin", "help", "version", "regex", "whole", "ignore-case", "first", "first-per-line", "dry-run", "create", "append", "paragraph", "allow-empty", "check", "uncheck", "private", "lint", "no-backlinks", "copy", "rebuild", "home", "refresh", "plan", "embed"]);
 
 export class UsageError extends Error {}
@@ -47,6 +47,13 @@ export function parseArgs(argv: string[]): Args {
     }
     if (a === "-V") {
       flags.set("version", true);
+      continue;
+    }
+    // `-o`, where a file is written: `--out`'s.
+    if (a === "-o") {
+      const v = argv[++i];
+      if (!v) throw new UsageError("-o needs a value");
+      flags.set("out", v);
       continue;
     }
     if (a.startsWith("-") && a.length > 1) throw new UsageError(`unknown option: ${a}${DASH_HINT}`);

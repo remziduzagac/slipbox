@@ -520,6 +520,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   them; ls --files; binary refused')
 - slipbox render of data files at widths 40, 80, 120 and --json (a code file is refused, exit 2) — `work/kestrel/config/regions.yaml`,
   `work/kestrel/kestrel.toml` (test 'render draws a note at a width, plain or as JSON lines')
+- slipbox export to Word: a diagram and display maths drawn, embeds drawn in, links into the document; two notes, two
+  chapters — `notes/research/route-cost-models.md`, `notes/projects/sync-rewrite.md` (export.md; test 'export')
 
 ### classify
 
@@ -2753,6 +2755,8 @@ The same notes, one per tab.
 - `note.send` — Send to your running editor — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (command-specs.ts)
 - `note.send_pick` — Choose the editor to send to — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+  (command-specs.ts)
+- `note.export` — Export the note: Word… — `notes/research/route-cost-models.md`, `notes/projects/sync-rewrite.md`
   (command-specs.ts)
 - `note.info` — Info: open, focus, close — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (command-specs.ts)

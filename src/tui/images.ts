@@ -2,9 +2,9 @@
 // yes (this once, or for its site) — into the cache, a file per address, and drawn from there as a local one is. A fetch
 // is an image's or nothing: a timeout, a size cap, an image's content type.
 
-import { createHash } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
+import { remoteImageName } from "../core/imagecache.ts";
 import { cacheHome } from "../core/paths.ts";
 import { looksLikeSvg } from "../core/svg.ts";
 
@@ -69,7 +69,7 @@ export class RemoteImages {
 
   /** Where an address's image is kept: one file per address. */
   file(url: string): string {
-    return join(this.dir, createHash("sha256").update(url).digest("hex").slice(0, 32));
+    return join(this.dir, remoteImageName(url));
   }
 
   /** The image fetched for an address, or null when it hasn't been. */

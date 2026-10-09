@@ -12,7 +12,7 @@ import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { appendScratch, CaptureError, clearScratch, formatEntry, parseRef, readScratch, scratchLocation } from "../core/capture.ts";
 import { copyText } from "../core/clipboard.ts";
 import { buildContext } from "../core/context.ts";
@@ -42,7 +42,8 @@ import { cacheDir, stateDir, stateHome, userConfigFile } from "../core/paths.ts"
 import { readStale, type StaleEntry } from "../core/stale.ts";
 import { applyColorOverrides, listThemes, loadTheme } from "../core/theme/index.ts";
 import { sanitize, UNSAFE } from "../core/sanitize.ts";
-import { climbsOut, type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { atomicWrite, climbsOut, type DecodedFile, decodeText, ensureDir, landsInside, readJson, readRegular, readText, WriteRefused, writeNote } from "../core/fsutil.ts";
+import { exportNotes, exportTarget, FORMATS, formatFor } from "../core/export/index.ts";
 import { compilePattern, expandReplacement, findAll, firstPerLine, replaceMatches } from "../core/replace.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { editorArgv } from "../core/editor.ts";
@@ -227,6 +228,7 @@ Usage:
   slipbox apply [plan]              write a plan --plan saved (refused if a file changed since); none: those waiting  [--dry-run]
   slipbox send <note>               open it in a running editor   [--line N] [--server <socket>]
   slipbox history                   notes read lately, newest first, and what's open
+  slipbox export <note…>            notes as one document: Word, beside the first by its name  [--to docx] [--out|-o <path>]
   slipbox capture [text]            append to the scratch          [--ref path:L[-M] | path:L:C-D | path:L:C-M:D] [--snippet] [--stdin] [--lang L]
   slipbox scratch show|path|clear|copy                            [--if-unchanged <sha>]
   slipbox init [dir]                give <dir> a .slipbox/: settings, and a name with --name  [--name N] [--private] [--dry-run] [--plan]
@@ -258,7 +260,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "link", "links", "backlinks", "name", "folders", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
-  "capture", "scratch", "init", "info", "apply", "doctor", "diagnostics", "themes", "commands", "help",
+  "capture", "scratch", "init", "info", "apply", "doctor", "diagnostics", "themes", "commands", "help", "export",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -311,7 +313,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     setTrustedRoots(yours.trust.roots);
     // A file named by its pointer (21.10) is that file: its path from here on, so the command works in
     // its folder as it would with the path.
-    const NOTE_FIRST = ["render", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
+    const NOTE_FIRST = ["render", "export", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
     const named = command === "context" ? rest.map((_, i) => i) : NOTE_FIRST.includes(command) || ["diagnostics", "doctor", "deinit", "index", "link"].includes(command) ? [0] : command === "find" ? [1] : [];
     for (const i of named) if (rest[i] !== undefined) rest[i] = vaultFormArg(rest[i]!, io.cwd);
     const from = flag(args, "from");
@@ -412,6 +414,7 @@ function textFiles(s: Session): { path: string; group: string; format: string }[
 export const GLOBAL_FLAGS = new Set(["root", "config", "json", "color", "plain", "help", "version", "from"]);
 export const FLAGS: Record<string, string[]> = {
   render: ["width", "theme", "glyphs"],
+  export: ["to", "out"],
   links: ["all"],
   link: ["text", "style", "embed"],
   find: ["regex", "whole", "ignore-case", "files"],
@@ -557,6 +560,28 @@ function colorDepth(s: Session): ColorDepth {
 }
 
 const HANDLERS: Record<string, Handler> = {
+  /**
+   * Notes exported as one document (10.x): a chapter each, in the order given; to `--out` (`-o`), else beside the first
+   * with its name; in `--to`'s format, else `--out`'s extension's, else Word's.
+   */
+  async export(s, rest) {
+    if (!rest.length) throw new UsageError("export needs a note: slipbox export <note…> [--to docx] [--out|-o <path>]");
+    const rels = rest.map((r) => resolveNote(s, r));
+    const out = flag(s.args, "out");
+    const name = flag(s.args, "to") ?? (out && extname(out) ? extname(out) : "docx");
+    const format = formatFor(name);
+    if (!format) throw new UsageError(`--to must be one of: ${FORMATS.map((f) => f.name).join(", ")}`);
+    let target: string;
+    try {
+      target = exportTarget(s.graph, rels[0]!, format, out ?? null, s.io.cwd);
+    } catch (err) {
+      throw new CliError((err as Error).message, EXIT.refused);
+    }
+    const bytes = await exportNotes(s.graph, rels, format);
+    atomicWrite(target, bytes);
+    const shown = s.graph.shownPath(target);
+    return { data: { path: shown, format: format.name, notes: rels, bytes: bytes.length }, human: `exported ${rels.length === 1 ? rels[0] : `${rels.length} notes`} to ${shown} (${format.title})\n` };
+  },
   async render(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
     const abs = s.graph.abs(rel);

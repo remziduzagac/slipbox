@@ -536,15 +536,19 @@ common, and the only reason they are step 0.
 
 | ID | Item |
 | --- | --- |
-| 10.1 | **Assembler**: resolve embeds, rewrite wikilinks by export-set membership, absolutise assets, map frontmatter |
-| 10.2 | HTML writer |
-| 10.3 | Markdown writer |
-| 10.4 | DOCX writer |
-| 10.5 | **decide** `pdfkit` or `@react-pdf/renderer`, then build the PDF writer |
-| 10.6 | EPUB packaging over 10.2 |
-| 10.7 | Optional headless-browser tier |
-| 10.8 | Optional pandoc tier |
-| 10.9 | Compose: notes picked and put in order, then exported as one document — the assembler's (`10.1`) way in |
+| 10.1 | **Prototype.** Assembler: embeds drawn in, links inside the document or their text, pictures as on screen |
+| 10.2 | HTML writer: one file, its pictures inside it |
+| 10.3 | Markdown writer: portable — embeds drawn in, links relative, pictures copied beside it |
+| 10.4 | **Prototype.** DOCX writer, by `docx` (MIT): `slipbox export`, `space n o` |
+| 10.5 | **Decided** (2026-10-09): `pdfkit` (MIT); then build the PDF writer |
+| 10.6 | EPUB packaging over 10.2, zipped by `fflate` (MIT) |
+| 10.7 | **Dropped** (2026-10-09). A headless-browser tier: an external tool |
+| 10.8 | **Dropped** (2026-10-09). A pandoc tier: an external tool |
+| 10.9 | Compose: notes picked and put in order, then exported as one document. The CLI takes several notes already |
+
+Decided 2026-10-09 with the user: no external tool — every format is TypeScript or JavaScript under a permissive
+licence, and a format that would need a tool isn't offered. Word first, then the rest; an export goes beside its note
+by default. Design: `docs/design/export.md`.
 
 ## LSP face — `11.x`
 

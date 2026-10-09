@@ -14,6 +14,7 @@ behaviour, the matching document changes in the same commit.
 | [keymap.md](keymap.md) | every key: the conventions, the direct keys, the leader groups, the `:` aliases |
 | [keymap-comparison.md](keymap-comparison.md) | the keys beside vim's, VS Code's and Obsidian's, and where they differ |
 | [cli.md](cli.md) | the agent surface: commands, JSON contract, exit codes, capture |
+| [export.md](export.md) | `10.x`: notes as a document — the assembler, Word; no tool run, permissive licences only |
 | [lsp.md](lsp.md) | phase 5: slipbox's client of the language servers of code (the LSP face is gone: `20.23`) |
 | [configuration.md](configuration.md) | every config key and environment variable |
 | [testing.md](testing.md) | test strategy and the fixture vault |

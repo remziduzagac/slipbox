@@ -19,7 +19,8 @@ import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
-import { climbsOut, ensureDir, landsInside, readJson, readRegular, readText, realTarget, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
+import { atomicWrite, climbsOut, ensureDir, landsInside, readJson, readRegular, readText, realTarget, WriteRefused, writeJson, writeNote } from "../core/fsutil.ts";
+import { defaultTarget, type ExportFormat, exportNotes, exportTarget, FORMATS, formatFor } from "../core/export/index.ts";
 import { listTasks, toggleTask } from "../core/tasks.ts";
 import { merge3, unifiedDiff } from "../core/merge.ts";
 import { compilePattern, findAll } from "../core/replace.ts";
@@ -7702,20 +7703,81 @@ export class App {
   copyContext(): void {
     const buf = this.view?.buf;
     if (!buf || buf.rel === null || buf.virtual) return this.message("info", "context: open a note first");
-    for (const d of this.dirtyBuffers()) {
-      if (d.virtual || this.saveBuffer(d, true)) continue;
-      // Not saved: the bundle would miss what's on screen — said, never silent. Changed on disk
-      // meanwhile, the resolve's key; otherwise the write failed, and its error above says why.
-      if (!d.changedOnDisk() || d.deleted) return this.message("warn", `context: ${this.displayName(d)} couldn't be saved — not copying`);
-      const key = this.keymap.keysFor("note.resolve")[0];
-      return this.message("warn", `context: ${this.displayName(d)} changed on disk while unsaved — ${key ? prettyKey(key, this.leader) : "note.resolve"} resolves it first`);
-    }
+    if (!this.savedForHandoff("context", "not copying")) return;
     const b = buildContext(this.graph, [buf.rel], this.config.context);
     const n = (k: number, one: string) => `${k} ${one}${k === 1 ? "" : "s"}`;
     const links = b.items.filter((i) => i.why === "link").length;
     const backs = b.items.filter((i) => i.why === "backlink").length;
     const out = b.left.filter((l) => l.reason === "limit").length;
     this.copy(b.text, true, `the context of ${buf.rel}: ${n(b.items.length, "file")} (${links} linked, ${backs} linking to it${out ? `; ${out} past the limit` : ""}), ${b.text.length} characters`);
+  }
+
+  /**
+   * Every unsaved note saved, for a hand-off that reads them from disk (4.10): true when they are. When one couldn't be,
+   * false, and said — never silent: `what` the hand-off, `not` what it didn't do.
+   */
+  savedForHandoff(what: string, not: string): boolean {
+    for (const d of this.dirtyBuffers()) {
+      if (d.virtual || this.saveBuffer(d, true)) continue;
+      // Changed on disk meanwhile, the resolve's key; otherwise the write failed, and its error above says why.
+      if (!d.changedOnDisk() || d.deleted) this.message("warn", `${what}: ${this.displayName(d)} couldn't be saved — ${not}`);
+      else {
+        const key = this.keymap.keysFor("note.resolve")[0];
+        this.message("warn", `${what}: ${this.displayName(d)} changed on disk while unsaved — ${key ? prettyKey(key, this.leader) : "note.resolve"} resolves it first`);
+      }
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Export a note (10.x): the explorer's selected one, or this one. Its format picked — or named, `:export docx` — then
+   * where asked: beside it, its name, unless you say otherwise.
+   */
+  exportNote(name?: string): void {
+    const t = this.noteTarget();
+    if (!t) return;
+    if (!this.graph.notes.has(t.rel)) return this.message("info", `export: ${t.rel} isn't a note — a note is exported`);
+    if (name) {
+      const format = formatFor(name);
+      if (!format) return this.message("warn", `export: no format ${name} — ${FORMATS.map((f) => f.name).join(", ")}`);
+      return this.promptExport(t.rel, format);
+    }
+    this.openList({ title: `Export ${t.rel} as`, items: FORMATS.map((f) => ({ label: f.title, hint: f.name, data: f })), accept: (item) => this.promptExport(t.rel, item.data as ExportFormat) });
+  }
+
+  /** Ask where the export goes, its default filled in (from the root; `~/` home); a file there replaced once you say so. */
+  promptExport(rel: string, format: ExportFormat): void {
+    const suggested = defaultTarget(this.graph.abs(rel), format);
+    this.prompt(`export ${rel} as ${format.title} to: `, (text) => {
+      const typed = text.trim();
+      if (!typed) return;
+      let target: string;
+      try {
+        target = exportTarget(this.graph, rel, format, typed.startsWith("~/") ? join(homedir(), typed.slice(2)) : typed, this.loc.root);
+      } catch (err) {
+        return this.message("warn", `export: ${(err as Error).message}`);
+      }
+      const go = () => void this.writeExport([rel], format, target);
+      if (existsSync(target)) return this.confirm(`${this.graph.shownPath(target)} is there — replace it?`, go);
+      go();
+    });
+    (this.overlay as PromptOverlay).text = relative(this.loc.root, suggested);
+  }
+
+  /** The notes at `rels` exported as one document to `target`, unsaved ones saved first (4.10): what's on screen. */
+  async writeExport(rels: string[], format: ExportFormat, target: string): Promise<void> {
+    if (!this.savedForHandoff("export", "not exporting")) return;
+    const shown = this.graph.shownPath(target);
+    this.message("info", `exporting to ${shown}…`);
+    this.host.requestRender();
+    try {
+      atomicWrite(target, await exportNotes(this.graph, rels, format));
+    } catch (err) {
+      return this.message("error", `export: ${shown} not written — ${(err as Error).message}`);
+    }
+    this.message("info", `exported ${rels.join(", ")} to ${shown} (${format.title})`);
+    this.host.requestRender();
   }
 
   scratch() {

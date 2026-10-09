@@ -8260,6 +8260,100 @@ describe("vaults in the TUI (17.x)", () => {
     }
   });
 
+  /** Until `ok`, or `ms` have passed: an export is written after its key returns. */
+  const until = async (ok: () => boolean, ms = 8000) => {
+    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+    return ok();
+  };
+  const isDocx = (file: string) => readFileSync(file).subarray(0, 4).toString("latin1") === "PK\x03\x04";
+
+  test("space n o exports the note: its format picked, then where, beside it by its name; unsaved notes saved first (10.x)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "rep.md"), "# Rep\n\nText.\n");
+    const h = await harness({ root, open: "rep.md" });
+    await h.keys("shift+g", "shift+a", "!", "escape");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    await h.keys("space", "n", "o");
+    expect(h.app.overlay).toMatchObject({ kind: "list", title: "Export rep.md as" });
+    expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["Word (.docx)"]);
+    await h.keys("enter");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "export rep.md as Word (.docx) to: ", text: "rep.docx" });
+    await h.keys("enter");
+    expect(await until(() => h.app.messages.at(-1)!.text.startsWith("exported"))).toBe(true);
+    expect(h.app.messages.at(-1)).toMatchObject({ level: "info", text: "exported rep.md to rep.docx (Word (.docx))" });
+    // Saved first: the document holds what was on screen.
+    expect(h.app.view!.buf.dirty).toBe(false);
+    expect(readFileSync(join(root, "rep.md"), "utf8")).toBe("# Rep\n\nText.!\n");
+    expect(isDocx(join(root, "rep.docx"))).toBe(true);
+  });
+
+  test("an export replaces a file only once you say so, never a note; a folder gets the note's name in it", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "rep.md"), "# Rep\n");
+    writeFileSync(join(root, "rep.docx"), "an older one");
+    mkdirSync(join(root, "out"));
+    const h = await harness({ root, open: "rep.md" });
+    await h.keys("space", "n", "o", "enter", "enter");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", confirm: true, label: "rep.docx is there — replace it?" });
+    await h.keys("n");
+    await Bun.sleep(50);
+    expect(readFileSync(join(root, "rep.docx"), "utf8")).toBe("an older one");
+    await h.keys("space", "n", "o", "enter", "enter", "y");
+    expect(await until(() => isDocx(join(root, "rep.docx")))).toBe(true);
+    // A note: refused, whatever its name says.
+    await h.app.run("note.export docx");
+    (h.app.overlay as { text: string }).text = "index.md";
+    await h.keys("enter");
+    expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: "export: index.md is a note — an export doesn't write over it" });
+    expect(readFileSync(join(root, "index.md"), "utf8")).not.toStartWith("PK");
+    // A folder: the note's name in it.
+    await h.app.run("note.export docx");
+    (h.app.overlay as { text: string }).text = "out";
+    await h.keys("enter");
+    expect(await until(() => existsSync(join(root, "out", "rep.docx")))).toBe(true);
+  });
+
+  test(":export docx skips the picker; a format it doesn't know, or a file that isn't a note, said", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "rep.md"), "# Rep\n");
+    writeFileSync(join(root, "data.json"), "{}\n");
+    const h = await harness({ root, open: "rep.md" });
+    await h.app.run("note.export word");
+    expect(h.app.overlay).toMatchObject({ kind: "prompt", text: "rep.docx" });
+    await h.keys("escape");
+    await h.app.run("note.export odt");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: "export: no format odt — docx" });
+    h.app.open("data.json");
+    await h.app.run("note.export");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)!.text).toBe("export: data.json isn't a note — a note is exported");
+  });
+
+  test("an export that can't be written says why; an unsaved note that can't be saved stops it", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "rep.md"), "# Rep\n");
+    mkdirSync(join(root, "ro"));
+    const h = await harness({ root, open: "rep.md" });
+    chmodSync(join(root, "ro"), 0o555);
+    try {
+      await h.app.run("note.export docx");
+      (h.app.overlay as { text: string }).text = "ro/rep.docx";
+      await h.keys("enter");
+      expect(await until(() => h.app.messages.at(-1)!.level === "error")).toBe(true);
+      expect(h.app.messages.at(-1)!.text).toStartWith("export: ro/rep.docx not written — ");
+      expect(readdirSync(join(root, "ro"))).toEqual([]);
+    } finally {
+      chmodSync(join(root, "ro"), 0o755);
+    }
+    await h.keys("shift+g", "shift+a", "!", "escape");
+    writeFileSync(join(root, "rep.md"), "# Rep, rewritten by an agent\n");
+    await h.app.run("note.export docx");
+    await h.keys("enter");
+    expect(h.app.messages.at(-1)).toMatchObject({ level: "warn", text: "export: rep.md changed on disk while unsaved — ␣ n c resolves it first" });
+    expect(existsSync(join(root, "rep.docx"))).toBe(false);
+  });
+
   test("a dirty note changed on disk while another list is open is said once, not per write", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });

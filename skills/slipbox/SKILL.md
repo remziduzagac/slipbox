@@ -162,6 +162,16 @@ into a named folder that doesn't travel with this one. The old `research:x.md` f
 pointer that is one in `suggest`. A note name on the command line, shared by several notes, is exit 4 with the
 candidates: pick one, or add `--from` for the nearest.
 
+## Exporting for the user
+
+```bash
+slipbox export <note> --json             # a Word document beside the note, its name: data.path, where it went
+slipbox export <note> <note> -o out/both.docx   # several notes as one document, a chapter each
+```
+
+Embeds are drawn in, diagrams and display maths drawn as pictures, and links to the notes exported stay links inside
+the document; nothing is fetched (a picture on the web is its cached copy, or its link). It never writes over a note.
+
 ## Capturing for the user — the scratch
 
 The scratch is a markdown file per project. The user reads it in the TUI (`space s s`) and copies
@@ -187,4 +197,5 @@ Paths inside the project are stored relative to it.
 - Don't write into `.slipbox/` or the cache and state directories; `info` shows where they
   are.
 - Don't start the TUI from a script. It refuses without a terminal and exits 2.
-- Don't `send` a note to the user's editor unless they asked to see it.
+- Don't `send` a note to the user's editor unless they asked to see it, or `export` one unless they asked for a
+  document.

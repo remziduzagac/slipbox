@@ -19,6 +19,7 @@ import { hasMarker, initVault, isInside, isNeverRoot, rootAt } from "../core/vau
 import { planHeadingRename, planNoteRename, planRelink, planVaultRename } from "../core/rename.ts";
 import { copyPath } from "../core/files.ts";
 import { classify } from "../core/filetypes.ts";
+import { FORMATS } from "../core/export/index.ts";
 import { clearScratch, formatEntry, readScratch } from "../core/capture.ts";
 import { COMMAND_GROUPS, COMMAND_SPECS, commandGroup } from "../core/command-specs.ts";
 import { canonKey, type Command } from "../core/commands.ts";
@@ -575,6 +576,8 @@ function argCandidates(a: App, cmd: string): string[] | null {
       return listThemes().map((t) => t.name);
     case "glyphs.set":
       return ["nerd", "unicode", "ascii", "auto"];
+    case "note.export":
+      return FORMATS.map((f) => f.name);
     case "tag.list":
       return a.graph.tags().map((t) => t.tag);
     default:
@@ -1611,6 +1614,7 @@ export function registerActions(app: App): void {
     "app.quit_force": (a) => a.requestQuit(true),
     "note.send": (a) => withView(a, (v) => a.sendToEditor(v)),
     "note.send_pick": (a) => withView(a, (v) => a.sendToEditor(v, true)),
+    "note.export": (a, arg) => a.exportNote(arg || undefined),
     "find.word_next": (a) => findWord(a, 1),
     "find.word_prev": (a) => findWord(a, -1),
     "find.clear": (a) =>

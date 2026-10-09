@@ -403,6 +403,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; r c" = "lens.reset"
 "leader ; d j" = "note.send"
 "leader ; d k" = "note.send_pick"
+"leader ; d t" = "note.export"
 "leader ; d l" = "note.info"
 "leader ; d m" = "note.properties"
 "leader ; I a" = "info.toggle"

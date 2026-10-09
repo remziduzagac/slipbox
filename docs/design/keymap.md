@@ -420,6 +420,7 @@ config.
 | `:pin-root` | keep this root among the explorer's roots after leaving it, or no longer (`20.15`) |
 | `:delete` | delete the note to the trash (asks first) |
 | `:trash` | the trash: `enter` restores an item |
+| `:export [format]` | export the note (`space n o`); a format named skips its list (`10.x`) |
 | `:config` | reload the configuration |
 
 **Substitute** is vim's, typed at the `:` prompt (`find.substitute`): `:s/old/new/` on the cursor's
@@ -582,6 +583,7 @@ edit the config and the config wins again.
 | `space n e` | edit in your editor at the cursor's line, in this terminal; back here when it closes |
 | `space n s` | send the note to your editor already running elsewhere: a running nvim by default |
 | `space n p` | choose which running nvim `space n s` sends to (it asks by itself when unsure) |
+| `space n o` | export the note (`:export [format]`, `10.x`): its format picked, then where — beside it, its name |
 | `space n r` | reload this note from disk |
 | `space n i` | the Info view (`3.19`): open, focus, close — the file's path, root, counts, properties, tags, links |
 | `space n q` | this file's problems (`1.7`): the Problems panel's This file tab, each with its line; open, close |

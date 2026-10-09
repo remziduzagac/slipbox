@@ -106,6 +106,11 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/math.ts` | 12.11 | maths as Unicode text: a formula, a display's rows (aligned, cases, matrices) |
 | `core/svg.ts` | 12.15 | SVG rasterised (resvg, on first use), a machine's font for words; CSS variables resolved |
 | `core/typeset.ts` | 12.17 | a display's maths typeset as an SVG (MathJax, loaded on first use) |
+| `core/imagecache.ts` | 12.12 | where a picture on the web is kept once fetched: a file per address |
+| `core/export/assemble.ts` | 10.1 | notes as one document: chapters, embeds drawn in, links inside it, pictures found |
+| `core/export/docx.ts` | 10.4 | the document as Word's `.docx` (`docx`, loaded when exporting) |
+| `core/export/images.ts` | 10.x | a picture's kind and size from its header; an SVG rasterised; its size as shown |
+| `core/export/index.ts` | 10.x | the formats by name, where an export goes (`docs/design/export.md`) |
 | `tui/placeholders.ts` | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
 | `core/syntax.ts` | 16.7–16.9, 16.18–16.22 | tree-sitter: spans, outline, errors, comments; parts in other languages |
 | `core/landing.ts` | 11.3 | where a link lands in its note — a heading, a block's `^id`, `L42` — and its text there |
@@ -184,6 +189,7 @@ package — no build toolchain):
 | `unicodeit` 0.7.5 | LaTeX's symbols as Unicode (12.11); its table is the LaTeX Project Public License's too |
 | `@resvg/resvg-wasm` 2.6.2 | SVG rasterised (12.15), as WebAssembly: no native build; MPL-2.0 |
 | `mathjax-full` 3.2.2 | a display's maths typeset as a picture (12.17); Apache-2.0 |
+| `docx` 9.9.0 | Word export (10.4); MIT, its zip (JSZip) MIT or GPLv3, taken under MIT |
 
 The grammars npm ships no WebAssembly for — Swift, SCSS, Vue, Astro, Dockerfile — are built from their sources at
 pinned commits into `grammars/` by `scripts/build-grammars.ts`, committed with their licences (`grammars/README.md`).
@@ -210,7 +216,8 @@ OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `packa
 
 ## Storage
 
-Decision `0.10`. Nothing derived is ever written into the vault.
+Decision `0.10`. Nothing derived is ever written into the vault. An export (`10.x`) is asked for, not derived: it goes
+where it's told, beside its note by default.
 
 | What | Where |
 | --- | --- |
@@ -223,6 +230,7 @@ Decision `0.10`. Nothing derived is ever written into the vault.
 | link index | `$XDG_CACHE_HOME/slipbox/<key>/index.json` |
 | search index (`6.6`) | `$XDG_CACHE_HOME/slipbox/<key>/search.db` (SQLite FTS5, WAL) |
 | parse cache, shared (`20.11`) | `$XDG_CACHE_HOME/slipbox/parsed.db` (by content) |
+| pictures (`12.12`, `12.15`) | `$XDG_CACHE_HOME/slipbox/images/` (a file per web address; SVGs as drawn, by width) |
 | reading positions (`21.8`) | `$XDG_STATE_HOME/slipbox/positions.json` (by file, the machine's) |
 | session | `$XDG_STATE_HOME/slipbox/<key>/session.json` |
 | pinned roots (`20.15`, `:pin-root`) | `$XDG_STATE_HOME/slipbox/<key>/roots.json` |

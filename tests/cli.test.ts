@@ -251,6 +251,26 @@ describe("writing", () => {
     expect(slipbox(["scratch", "show"]).out).toBe("");
     expect(slipbox(["capture"]).code).toBe(2);
   });
+  test("export: a Word document beside the note, its name; several notes one; --to, -o (a folder: its name in it), never over a note", () => {
+    const r = slipbox(["export", "dome-refit"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toBe("exported projects/dome-refit.md to projects/dome-refit.docx (Word (.docx))\n");
+    expect(readFileSync(join(vault, "projects", "dome-refit.docx")).subarray(0, 4).toString("latin1")).toBe("PK\x03\x04");
+    const j = slipbox(["export", "dome-refit", "pipeline-cookbook", "--to", "word", "-o", "exports/both.docx", "--json"]).json;
+    expect(j.data).toMatchObject({ path: "exports/both.docx", format: "docx", notes: ["projects/dome-refit.md", "software/pipeline-cookbook.md"] });
+    expect(j.data.bytes).toBe(readFileSync(join(vault, "exports", "both.docx")).length);
+    // -o's extension says the format; a folder gets the note's name in it.
+    expect(slipbox(["export", "dome-refit", "-o", "exports/upper.DOCX"]).code).toBe(0);
+    expect(slipbox(["export", "dome-refit", "-o", "exports", "--json"]).json.data.path).toBe("exports/dome-refit.docx");
+    const over = slipbox(["export", "dome-refit", "-o", "home.md", "--to", "docx"]);
+    expect([over.code, over.err]).toEqual([5, "slipbox: home.md is a note — an export doesn't write over it\n"]);
+    expect(note("home.md")).toStartWith("# Halden Ridge Observatory\n");
+    const bad = slipbox(["export", "dome-refit", "--to", "odt"]);
+    expect([bad.code, bad.err]).toEqual([2, "slipbox: --to must be one of: docx\n"]);
+    expect(slipbox(["export", "dome-refit", "-o", "exports/x.odt"]).code).toBe(2);
+    expect(existsSync(join(vault, "exports", "x.odt"))).toBe(false);
+    expect(slipbox(["export"]).code).toBe(2);
+  });
 });
 
 describe("editors and state", () => {
