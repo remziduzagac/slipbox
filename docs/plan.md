@@ -677,23 +677,23 @@ it. Each item ends with its tests listed for the user's approval before any is r
 
 | ID | Item |
 | --- | --- |
-| 12.1 | **Prototype.** Capability probe — OpenTUI's, which asks the terminal; never `$TERM` |
-| 12.2 | **Prototype.** `[render] images = auto \| never` |
-| 12.3 | **Prototype.** Protocol emit through OpenTUI: Kitty graphics (herdr draws them too), sixel |
+| 12.1 | **Done.** Capability probe — OpenTUI's, which asks the terminal; never `$TERM` |
+| 12.2 | **Done.** `[render] images = auto \| never` |
+| 12.3 | **Done.** Protocol emit through OpenTUI: Kitty graphics (herdr draws them too), sixel |
 | 12.4 | **Dropped.** No half-block fallback: where a terminal draws no images, `▣ alt` and its link (decided) |
 | 12.5 | **constraint** alt text plus path is the floor — a note never becomes unreadable |
-| 12.6 | **Prototype.** Sizing from cell pixel geometry: the text width, proportions kept, at most 12 rows |
-| 12.7 | **Prototype.** Sent once, drawn as Kitty's Unicode placeholders: text that scrolls; sixel waits on scroll |
-| 12.8 | **Prototype.** Scroll behaviour — a picture cut where it scrolls out of sight |
-| 12.9 | **Prototype.** Decode cache keyed by path and mtime |
-| 12.10 | **Prototype.** Mermaid as Unicode drawing (`beautiful-mermaid`, no browser): flowchart, state, sequence, ER… |
-| 12.11 | **Prototype.** Maths read, `$…$` (Obsidian's rule: no space inside, no digit after) and `$$`, as Unicode |
-| 12.12 | **Prototype.** Images online: `ask` (the link; `enter` asks — once, or its site), `show`, `never` |
-| 12.13 | **Prototype.** Obsidian's `![[picture.png]]`: found as its link is; `\|300`, `\|240x180` its size |
-| 12.14 | **Prototype.** A picture in an embedded note: found from where that note is, drawn inside its frame |
-| 12.15 | **Prototype.** SVG drawn: rasterised by resvg (WebAssembly) into the cache — `![x](d.svg)`, `12.16`, `12.17` |
-| 12.16 | **Prototype.** Mermaid as a picture, by choice where images work (`12.10` the default), via `12.15` |
-| 12.17 | **Prototype.** Display maths typeset by MathJax as a picture, by choice, via `12.15`; inline stays text |
+| 12.6 | **Done.** Sizing from cell pixel geometry: the text width, proportions kept, at most 12 rows |
+| 12.7 | **Done.** Sent once, drawn as Kitty's Unicode placeholders: text that scrolls; sixel waits on scroll |
+| 12.8 | **Done.** Scroll behaviour — a picture cut where it scrolls out of sight |
+| 12.9 | **Done.** Decode cache keyed by path and mtime |
+| 12.10 | **Done.** Mermaid as Unicode drawing (`beautiful-mermaid`, no browser): flowchart, state, sequence, ER… |
+| 12.11 | **Done.** Maths read, `$…$` (Obsidian's rule: no space inside, no digit after) and `$$`, as Unicode |
+| 12.12 | **Done.** Images online: `ask` (the link; `enter` asks — once, or its site), `show`, `never` |
+| 12.13 | **Done.** Obsidian's `![[picture.png]]`: found as its link is; `\|300`, `\|240x180` its size |
+| 12.14 | **Done.** A picture in an embedded note: found from where that note is, drawn inside its frame |
+| 12.15 | **Done.** SVG drawn: rasterised by resvg (WebAssembly) into the cache — `![x](d.svg)`, `12.16`, `12.17` |
+| 12.16 | **Done.** Mermaid as a picture, by choice where images work (`12.10` the default), via `12.15` |
+| 12.17 | **Done.** Display maths typeset by MathJax as a picture, by choice, via `12.15`; inline stays text |
 
 Decided 2026-10-08 with the user: the terminal's own first — Unicode drawing and text, the default where images work
 too — then pictures, by choice; every picture slipbox makes in the theme's colours. Maths is in. The order: `12.7`
@@ -890,27 +890,27 @@ design: `docs/design/code-view.md`.*
 | ID | Item |
 | --- | --- |
 | 24.1 | **Decided.** Tokens verbatim, whitespace and decoration ours; shared categories mapped per language |
-| 24.2 | **Prototype.** TS, TSX, JS: the document view by default (`[render] code`), `space n v` to source |
-| 24.3 | **Prototype.** Definitions as titles: kind in the margin, name bold, keywords dim; a blank row before each |
-| 24.4 | **Prototype.** Doc comments rendered as markdown; JSDoc's tags a definition list |
-| 24.5 | **Prototype.** Imports folded into one row naming them; `enter` unfolds |
-| 24.6 | **Prototype.** Long lines broken at their structure; the author's breaks kept, line numbers the file's |
-| 24.7 | **Prototype.** Indent guides; braces and semicolons dimmed |
+| 24.2 | **Done.** TS, TSX, JS: the document view by default (`[render] code`), `space n v` to source |
+| 24.3 | **Done.** Definitions as titles: kind in the margin, name bold, keywords dim; a blank row before each |
+| 24.4 | **Done.** Doc comments rendered as markdown; JSDoc's tags a definition list |
+| 24.5 | **Done.** Imports folded into one row naming them; `enter` unfolds |
+| 24.6 | **Done.** Long lines broken at their structure; the author's breaks kept, line numbers the file's |
+| 24.7 | **Done.** Indent guides; braces and semicolons dimmed |
 | 24.8 | **Done.** Folding any definition: `▾` / `▸`, `space k f`, `z a` (editing a row in place is `24.17`) |
-| 24.9 | **Prototype.** The code view generic: each grammar's own queries, conventions as exceptions (below) |
-| 24.10 | **Prototype.** The lens on code: a line, a doc comment, the imports as written, highlighted; `esc esc` back |
-| 24.11 | **Prototype.** Comments as prose: markers gone; separators as sections; after code, notes in the margin |
-| 24.12 | **Prototype.** Python: docstrings above their definitions; JSDoc, Google, NumPy, reST read into one shape |
-| 24.13 | **Prototype.** A notebook: prose at full width, a cell per definition (boxes or bands), its header's buttons |
-| 24.14 | **Prototype.** Cells touch; tree lines join a class to its members, two columns in; a comment a cell |
-| 24.15 | **Prototype.** Boxes of a top and a left line, blank rows around them; the tree's lines; comments keep lines |
-| 24.16 | **Prototype.** The lens on code opens on the cursor's cell whole when it fits, and moves cell to cell |
+| 24.9 | **Done.** The code view generic: each grammar's own queries, conventions as exceptions (below) |
+| 24.10 | **Done.** The lens on code: a line, a doc comment, the imports as written, highlighted; `esc esc` back |
+| 24.11 | **Done.** Comments as prose: markers gone; separators as sections; after code, notes in the margin |
+| 24.12 | **Done.** Python: docstrings above their definitions; JSDoc, Google, NumPy, reST read into one shape |
+| 24.13 | **Done.** A notebook: prose at full width, a cell per definition (boxes or bands), its header's buttons |
+| 24.14 | **Done.** Cells touch; tree lines join a class to its members, two columns in; a comment a cell |
+| 24.15 | **Done.** Boxes of a top and a left line, blank rows around them; the tree's lines; comments keep lines |
+| 24.16 | **Done.** The lens on code opens on the cursor's cell whole when it fits, and moves cell to cell |
 | 24.17 | **Dropped** (2026-10-09). Typing in a row in place: the lens is where notes and code are edited |
 | 24.18 | **Dropped** (2026-10-08). Folding inside a cell — an `if`'s body, a loop's: a cell folds whole |
-| 24.19 | **Prototype.** A definition's long signature: a parameter a row, `)` at its indent; not calls |
+| 24.19 | **Done.** A definition's long signature: a parameter a row, `)` at its indent; not calls |
 | 24.20 | **Deferred** (2026-10-09). Tabular code in columns: assignments, enum members, keys — columns inside rows |
-| 24.21 | **Prototype.** A receiver dimmed with its `.` or `->` (`this.`, `self.`, `$this->`), not bare; with `24.9` |
-| 24.22 | **Prototype.** A licence header, or a "generated" banner, folded into a row naming it, as the imports are |
+| 24.21 | **Done.** A receiver dimmed with its `.` or `->` (`this.`, `self.`, `$this->`), not bare; with `24.9` |
+| 24.22 | **Done.** A licence header, or a "generated" banner, folded into a row naming it, as the imports are |
 
 `24.9`, decided 2026-10-09 with the user: tree-sitter already gives every grammar slipbox parses the queries its outline
 and its comments' links use — definitions with their names and ranges, and comments. The code view is built on those

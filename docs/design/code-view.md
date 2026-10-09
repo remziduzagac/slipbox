@@ -6,10 +6,10 @@ and the definition's documentation in it above its code; the file's other commen
 aim isn't to make code look like markdown, nor to run it (slipbox runs nothing, `23.x`); it's to make it read like a
 document — and alike whatever language wrote it.
 
-Status: a prototype (`24.2`–`24.7`, `24.9`–`24.16`, `24.19`, `24.21`, `24.22`) for every grammar slipbox parses that has
-definitions: TypeScript, TSX, JavaScript, Python, Go, Rust, Swift, PHP, Ruby, C, C++, Lua and Bash. Markup and config
-(HTML, Vue, Svelte, Astro, CSS, SCSS, Dockerfile) open in source mode, and every file keeps it (`space n v`). What's
-built is described here as it is; what's next is at the end.
+Status: done (`24.2`–`24.7`, `24.9`–`24.16`, `24.19`, `24.21`, `24.22`, 2026-10-09) for every grammar slipbox parses
+that has definitions: TypeScript, TSX, JavaScript, Python, Go, Rust, Swift, PHP, Ruby, C, C++, Lua and Bash. Markup and
+config (HTML, Vue, Svelte, Astro, CSS, SCSS, Dockerfile) open in source mode, and every file keeps it (`space n v`).
+What's built is described here as it is; what's next is at the end.
 
 ## The rule: code's tokens verbatim, whitespace and decoration ours, comments as prose
 

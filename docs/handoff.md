@@ -87,12 +87,13 @@ as text (`12.11`), then SVG (`12.15`) and pictures of both by choice, in the the
 beyond that: `24.9`, `24.17`, export (`10.x`), extensibility (`13.x`), distribution (`14.x`), `22.x`, and Scout
 (`6.10`).
 
-**Updated 2026-10-09.** All of `12.x` is built, as prototypes: SVG (`12.15`), Mermaid and a display's maths as pictures
-by choice (`12.16`, `12.17`), and Kitty pictures drawn as Unicode placeholders, sent once (`12.7`). Extensibility
-(`13.x`) is deferred, the whole of it. Left: `24.9`, `24.17`, export (`10.x`), distribution (`14.x`), `22.x`, and
-Scout (`6.10`). Built the same day: the code view generic (`24.9`) — every grammar with definitions drawn as a
-document from its own tree-sitter queries — a long signature a parameter a row (`24.19`), receivers dimmed (`24.21`), a
-licence or generated header folded (`24.22`); `24.20` deferred, `24.17` dropped.
+**Updated 2026-10-09.** All of `12.x` is built — and, with `24.x`, marked done once the user had tried them: SVG
+(`12.15`), Mermaid and a display's maths as pictures by choice (`12.16`, `12.17`), and Kitty pictures drawn as Unicode
+placeholders, sent once (`12.7`). Extensibility (`13.x`) is deferred, the whole of it. Left: `24.9`, `24.17`, export
+(`10.x`), distribution (`14.x`), `22.x`, and Scout (`6.10`). Built the same day: the code view generic (`24.9`) — every
+grammar with definitions drawn as a document from its own tree-sitter queries — a long signature a parameter a row
+(`24.19`), receivers dimmed (`24.21`), a licence or generated header folded (`24.22`); `24.20` deferred, `24.17`
+dropped.
 
 ## The documents
 
