@@ -348,6 +348,9 @@ export const DEFAULT_SOURCE_KEYS: Record<string, string> = {
   "shift+p": "edit.paste_before",
   "~": "edit.toggle_case",
   ".": "edit.repeat",
+  "g c": "edit.op_comment",
+  "ctrl+/": "edit.comment_line",
+  "ctrl+_": "edit.comment_line",
 };
 
 /** Visual mode: these win over the normal keymap; movements extend the selection by themselves. */
@@ -360,6 +363,9 @@ export const DEFAULT_VISUAL_KEYS: Record<string, string> = {
   c: "visual.change",
   ">": "visual.indent",
   "<": "visual.outdent",
+  "g c": "visual.comment",
+  "ctrl+/": "visual.comment",
+  "ctrl+_": "visual.comment",
   escape: "visual.exit",
   v: "visual.char",
   "shift+v": "visual.line",

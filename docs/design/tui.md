@@ -1063,20 +1063,18 @@ change is `NoteBuffer.edit`, one undo step each, except that an insert session (
 cursor is a place in the text found through the source layout's `srcMap` (`editing.ts`), so tabs, wide characters and
 wrapped rows edit exactly where they show.
 
-**Normal mode** in source is vim-shaped (`vim.ts`): counts, operators (`d` `c` `y` `>` `<`) that
-wait for a motion or a text object, a register, and `.`. Each operator and edit is a named command
-in `[keys.source]`; what follows an operator is read the way which-key reads a prefix: a motion is
-any cursor command the keymap resolves (run with the cursor put back after, its range taken as
-text offsets), a text object is found in the text itself; `gn` is the search's next match in the
-text (`replacing.ts` finds it with the search's own flags, regex and whole words, as `n` has them:
-after `*`, whole words only). `.` replays the keys of the last change, the keys typed in the insert
-session it started included (`insertRecord`), a paste as a key of its own, so anything that changed
-the text repeats exactly — `cgn` then `.` walks the matches. A
-visual-mode change repeats on as much text from the cursor, as in vim (`V`, `j`s and the operator;
-`v`, `l`s and the operator on one line); one across lines of characters can't be said in keys, and
-`.` then has nothing to repeat rather than an older change. Keys are handled one at a time, in
-order (`App.handleKey` queues them, a paste too), so a burst of typed keys or a paste never
-interleaves with a command still running; `.`'s own replay runs inside its turn.
+**Normal mode** in source is vim-shaped (`vim.ts`): counts, operators (`d` `c` `y` `>` `<` `gc`) that wait for a motion
+or a text object, a register, and `.`. Each operator and edit is a named command in `[keys.source]`; what follows an
+operator is read the way which-key reads a prefix: a motion is any cursor command the keymap resolves (run with the
+cursor put back after, its range taken as text offsets), a text object is found in the text itself; `gn` is the search's
+next match in the text (`replacing.ts` finds it with the search's own flags, regex and whole words, as `n` has them:
+after `*`, whole words only). `.` replays the keys of the last change, the keys typed in the insert session it started
+included (`insertRecord`), a paste as a key of its own, so anything that changed the text repeats exactly — `cgn` then
+`.` walks the matches. A visual-mode change repeats on as much text from the cursor, as in vim (`V`, `j`s and the
+operator; `v`, `l`s and the operator on one line); one across lines of characters can't be said in keys, and `.` then
+has nothing to repeat rather than an older change. Keys are handled one at a time, in order (`App.handleKey` queues
+them, a paste too), so a burst of typed keys or a paste never interleaves with a command still running; `.`'s own replay
+runs inside its turn.
 
 A changed note is **unsaved** until `:w` / `ctrl+s`: `• unsaved` by its path in the status line,
 `•` on its tab; undoing back to the saved text makes it clean again. Saving goes through

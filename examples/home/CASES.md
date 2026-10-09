@@ -2449,6 +2449,8 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (command-specs.ts)
 - `visual.outdent` — Outdent the selection — `notes/daily/2026-09-22.md`, `notes/projects/kestrel-v2-3.md`
   (command-specs.ts)
+- `visual.comment` — Comment or uncomment the selection — `work/kestrel/src/sync/queue.ts`, `notes/inbox.md`
+  (command-specs.ts)
 
 ### app
 
@@ -2564,6 +2566,10 @@ Notes being written today: lists, tasks, tables, quotes, code to change.
   `notes/daily/2026-10-05.md` (command-specs.ts)
 - `edit.op_outdent` — Outdent (operator) — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
   `notes/daily/2026-10-05.md` (command-specs.ts)
+- `edit.op_comment` — Comment or uncomment (operator) — `work/kestrel/src/sync/queue.ts`,
+  `work/kestrel/api/kestrel_api/sync.py`, `notes/inbox.md` (command-specs.ts)
+- `edit.comment_line` — Comment or uncomment the line — `work/kestrel/tools/greeter/greeter.go`,
+  `work/kestrel/kestrel.toml` (command-specs.ts)
 - `edit.delete_to_end` — Delete to the line's end — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
   `notes/daily/2026-10-05.md` (command-specs.ts)
 - `edit.change_to_end` — Change to the line's end — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,

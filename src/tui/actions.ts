@@ -223,7 +223,7 @@ function selectionRange(a: App, v: View): { range: V.Range; from: number; to: nu
 }
 
 /** d / c / > / < on a visual selection (char or line), in source mode. */
-function visualOp(a: App, op: "d" | "c" | ">" | "<"): void {
+function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc"): void {
   withView(a, (v) => {
     if (!editable(v)) return a.message("info", "editing is in source mode (space n v) or live preview (space n l)");
     const why = E.cannotEdit(v);
@@ -234,7 +234,8 @@ function visualOp(a: App, op: "d" | "c" | ">" | "<"): void {
     // For `.`: the same change on as much text, said in keys.
     const lines = E.lineOf(v, to) - E.lineOf(v, from) + 1;
     const chars = graphemes(v.buf.source.slice(r.from, r.to)).length; // as l moves: by character
-    const keys = line ? ["shift+v", ...Array(lines - 1).fill("j"), op] : lines === 1 ? ["v", ...Array(Math.max(0, chars - 1)).fill("l"), op] : null;
+    const opKeys = op === "gc" ? ["g", "c"] : [op];
+    const keys = line ? ["shift+v", ...Array(lines - 1).fill("j"), ...opKeys] : lines === 1 ? ["v", ...Array(Math.max(0, chars - 1)).fill("l"), ...opKeys] : null;
     const before = v.buf.version;
     const times = op === ">" || op === "<" ? V.takeCount(a) : 1;
     V.apply(a, v, op, { ...r, times });
@@ -1490,6 +1491,13 @@ export function registerActions(app: App): void {
     "edit.op_change": (a) => sourceEdit(a, () => V.startOperator(a, "c")),
     "edit.op_yank": (a) => sourceEdit(a, () => V.startOperator(a, "y"), false),
     "edit.op_indent": (a) => sourceEdit(a, () => V.startOperator(a, ">")),
+    "edit.op_comment": (a) => sourceEdit(a, () => V.startOperator(a, "gc")),
+    "edit.comment_line": (a) =>
+      sourceEdit(a, (v) => {
+        const n = V.takeCount(a);
+        const first = E.lineOf(v, E.offsetOf(a, v));
+        V.commentLines(a, v, first, first + n - 1);
+      }),
     "edit.op_outdent": (a) => sourceEdit(a, () => V.startOperator(a, "<")),
     "edit.delete_to_end": (a) =>
       sourceEdit(a, (v) => {
@@ -1568,6 +1576,7 @@ export function registerActions(app: App): void {
     "visual.change": (a) => visualOp(a, "c"),
     "visual.indent": (a) => visualOp(a, ">"),
     "visual.outdent": (a) => visualOp(a, "<"),
+    "visual.comment": (a) => visualOp(a, "gc"),
     "find.substitute": (a, arg) =>
       withView(a, (v) => {
         if (!arg) return a.message("info", "type it on the command line: :s/old/new/ or :%s/old/new/g");

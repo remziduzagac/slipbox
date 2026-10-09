@@ -8,6 +8,7 @@ import { type App, editable, type View } from "./app.ts";
 import { cells } from "./cursor.ts";
 import { keyChar } from "./keys.ts";
 import { indentUnit } from "../core/indent.ts";
+import { type CommentStyle, commentStyle, toggleComments } from "../core/comments.ts";
 
 /** The cursor's place in the text (a UTF-16 offset into `source`). Source mode only. */
 export function offsetOf(app: App, view: View): number {
@@ -319,6 +320,33 @@ export function indentLine(app: App, view: View, dir: 1 | -1): void {
   placeAt(app, view, Math.max(start, at - n), true);
 }
 
+/** How a line of the file is commented (25.2): its own part's language (a component's script, its style), else the
+ *  file's; null for one with no comments. */
+export function commentStyleAt(view: View, line: number): CommentStyle | null {
+  const buf = view.buf;
+  return commentStyle(buf.syntax?.languages.get(line) ?? buf.kind.format);
+}
+
+/** ctrl+/ while typing (25.2): the line's comment toggled, the cursor kept on the character it was on. */
+export function commentLine(app: App, view: View): void {
+  const at = offsetOf(app, view);
+  const src = lineOf(view, at);
+  const style = commentStyleAt(view, src);
+  if (!style) return app.message("info", `${view.buf.kind.format} has no comments`);
+  const start = view.buf.lineStarts()[src - 1] ?? 0;
+  const line = lineText(view, src);
+  const next = toggleComments([line], style)?.[0];
+  if (next === undefined || next === line) return;
+  // Where the line's own text starts, before and after: past the marker (and its space) where it's commented.
+  const head = /^[ \t]*/.exec(line)![0].length;
+  const marker = "line" in style ? style.line : style.open;
+  const after = (text: string) => head + (text.slice(head).startsWith(marker) ? marker.length + (text[head + marker.length] === " " ? 1 : 0) : 0);
+  const [was, now] = [after(line), after(next)];
+  const col = at - start;
+  view.buf.edit(start, line.length, next);
+  placeAt(app, view, start + Math.min(next.length, col <= head ? col : col < was ? now : col - was + now), true);
+}
+
 /** How much of a line's start a level out takes: its first tab, or up to `size` spaces. */
 export function outdentLength(line: string, size: number): number {
   if (line.startsWith("\t")) return 1;
@@ -374,6 +402,9 @@ function insertKeyNow(app: App, view: View, key: string): void {
       if (reg) insertText(app, view, reg.text.replace(/\r\n?/g, "\n").replaceAll("\n", view.buf.eol));
       return;
     }
+    case "ctrl+/":
+    case "ctrl+_":
+      return commentLine(app, view);
     case "tab":
       return indentLine(app, view, 1);
     case "shift+tab":

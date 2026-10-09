@@ -959,7 +959,7 @@ Not wanted: vim's marks, macros, named registers and block selection.*
 | ID | Item |
 | --- | --- |
 | 25.1 | **Prototype.** Indentation per file — `.editorconfig`, else the file's own, else its language's |
-| 25.2 | Comments toggled: `gc` and a motion, `gcc`, a selection's lines; each language's markers |
+| 25.2 | **Prototype.** Comments toggled: `gc` and a motion, `gcc`, a selection's lines, `ctrl+/`; each language's |
 | 25.3 | Brackets: `%` to the matching one (a motion too), the matching one marked; pairs closed as typed, opt-in |
 | 25.4 | Replace across files in the TUI: previewed as a rename is, undoable |
 | 25.5 | Word completion without a language server: the open files' words, `ctrl+n` / `ctrl+p` |

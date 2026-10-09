@@ -9,8 +9,9 @@ import * as E from "./editing.ts";
 import { keyChar } from "./keys.ts";
 import { textMatches } from "./replacing.ts";
 import { indentUnit } from "../core/indent.ts";
+import { toggleComments } from "../core/comments.ts";
 
-type Op = "d" | "c" | "y" | ">" | "<";
+type Op = "d" | "c" | "y" | ">" | "<" | "gc";
 export type FindKind = "f" | "F" | "t" | "T";
 
 export function reverseFind(k: FindKind): FindKind {
@@ -203,7 +204,7 @@ async function operatorKey(app: App, view: View, key: string): Promise<void> {
     return;
   }
   // The operator doubled (dd, cc, yy, >>, <<): whole lines, count of them.
-  const opKey = { d: "d", c: "c", y: "y", ">": ">", "<": "<" }[o.op];
+  const opKey = { d: "d", c: "c", y: "y", ">": ">", "<": "<", gc: "c" }[o.op];
   if (!o.keys.length && key === opKey) {
     s.op = null;
     const at = E.offsetOf(app, view);
@@ -404,6 +405,7 @@ export function apply(app: App, view: View, op: Op, r: Range): void {
     return E.placeAt(app, view, r.from);
   }
   if (op === ">" || op === "<") return indentLines(app, view, E.lineOf(view, r.from), E.lineOf(view, Math.max(r.from, r.to - 1)), op === ">" ? 1 : -1, r.times ?? 1);
+  if (op === "gc") return commentLines(app, view, E.lineOf(view, r.from), E.lineOf(view, Math.max(r.from, r.to - 1)));
   app.vim.register = { text, linewise: r.linewise };
   // A cut is a copy too: the system clipboard gets it (vim with clipboard=unnamedplus).
   if (text) app.copy(text, false);
@@ -448,6 +450,24 @@ export function indentLines(app: App, view: View, first: number, last: number, d
       for (let t = 0; t < times; t++) k += E.outdentLength(text.slice(k), indent.size);
       if (k) buf.edit(start, k, "");
     }
+  }
+  const at = firstNonBlank(view, first);
+  buf.endStep(at);
+  E.placeAt(app, view, at);
+}
+
+/** gc and its motion, gcc, a selection's: the lines' comments toggled (25.2) — one undo step, the cursor on the first. */
+export function commentLines(app: App, view: View, first: number, last: number): void {
+  const style = E.commentStyleAt(view, first);
+  if (!style) return app.message("info", `${view.buf.kind.format} has no comments`);
+  const buf = view.buf;
+  const lines = Array.from({ length: last - first + 1 }, (_, k) => E.lineText(view, first + k));
+  const next = toggleComments(lines, style);
+  if (!next) return;
+  buf.beginStep(E.offsetOf(app, view));
+  for (let k = lines.length - 1; k >= 0; k--) {
+    if (next[k] === lines[k]) continue;
+    buf.edit(buf.lineStarts()[first + k - 1] ?? 0, lines[k]!.length, next[k]!);
   }
   const at = firstNonBlank(view, first);
   buf.endStep(at);
