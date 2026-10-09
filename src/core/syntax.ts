@@ -558,10 +558,11 @@ export class SyntaxTree {
    *  highlight.js's to colour, a line at a time); its parts' too. */
   spans(): Span[] {
     const out: Span[] = [];
+    const lines = this.source.split("\n");
     const add = (query: Query, kind: Span["kind"]) => {
       for (const c of query.captures(this.tree.rootNode)) {
         const s = c.node.startPosition;
-        const e = c.node.endPosition;
+        const e = endOf(c.node, lines);
         if (e.row === s.row) continue;
         for (let r = s.row; r <= e.row; r++) out.push({ line: r + 1, from: r === s.row ? s.column : 0, to: r === e.row ? e.column : Number.POSITIVE_INFINITY, kind });
       }
@@ -598,10 +599,11 @@ export class SyntaxTree {
     for (const m of this.g.defs?.matches(root) ?? []) {
       const def = m.captures.find((c) => c.name === "def")?.node;
       const name = m.captures.find((c) => c.name === "name")?.node;
-      const kind = def ? CODE_KIND[def.type] : undefined;
+      const kind = def ? codeKind(def.type) : undefined;
       if (def && name && kind) found.push({ kind, start: def.startPosition, end: def.endPosition, name, node: def });
     }
     // A file's top-level values that aren't functions: `const`, `let`, `var` (exported or not); Python's assignments.
+    // (Another language's are in the runs of statements between its definitions, each run a cell.)
     for (const top of root.namedChildren) {
       if (!top) continue;
       if (python) {
@@ -633,23 +635,28 @@ export class SyntaxTree {
       const n = f.name;
       const to = n.endPosition.row === n.startPosition.row ? n.endPosition.column : n.startPosition.column + 1;
       const decorated = f.node.parent?.type === "decorated_definition" ? f.node.parent : null;
-      const top = (decorated ?? f.node).startPosition.row + 1;
-      const at = (decorated ?? f.node).startPosition;
+      // What's written above it for it — Rust's `#[derive(…)]`, an annotation — is its cell's too.
+      let first: Node = decorated ?? f.node;
+      for (let p = first.previousNamedSibling; p && ATTRIBUTE.test(p.type) && p.endPosition.row >= first.startPosition.row - 1; p = p.previousNamedSibling) first = p;
+      const top = first.startPosition.row + 1;
+      const at = first.startPosition;
       defs.push({ kind: f.kind, line: f.start.row + 1, name: { line: n.startPosition.row + 1, from: n.startPosition.column, to }, depth: open.length, top, end: f.end.row + 1, column: (lines[at.row] ?? "").length - (lines[at.row] ?? "").trimStart().length });
       open.push(f.end);
       if (python && f.kind !== "value") {
         const d = docstring(f.node.childForFieldName("body"));
-        if (d) docs.push({ start: d.startPosition.row + 1, end: d.endPosition.row + 1, column: (decorated ?? f.node).startPosition.column, style: "docstring", before: top });
+        if (d) docs.push({ start: d.startPosition.row + 1, end: d.endPosition.row + 1, column: first.startPosition.column, style: "docstring", before: top });
       }
     }
     // A module's docstring: where it is, at the top.
     const moduleDoc = python ? docstring(root) : null;
     if (moduleDoc) docs.push({ start: moduleDoc.startPosition.row + 1, end: moduleDoc.endPosition.row + 1, column: moduleDoc.startPosition.column, style: "docstring" });
+    // A licence or a "generated" banner heading the file (24.22): folded, not prose.
+    const header = headerOf(this.g.comments.captures(root).map((c) => c.node), root, lines);
     // The comments: a `/** */` is documentation, and so is a block comment over several lines; the rest are comments.
     const comments: CodeComment[] = [];
     for (const c of this.g.comments.captures(root)) {
       const s = c.node.startPosition;
-      const e = c.node.endPosition;
+      const e = endOf(c.node, lines);
       const text = c.node.text;
       const trailing = !!(lines[s.row] ?? "").slice(0, s.column).trim();
       if (text.startsWith("/**") && !text.startsWith("/**/") && !trailing) docs.push({ start: s.row + 1, end: e.row + 1, column: s.column, style: "jsdoc" });
@@ -657,20 +664,21 @@ export class SyntaxTree {
       else comments.push({ line: s.row + 1, column: s.column, end: e.column, trailing });
     }
     docs.sort((a, b) => a.start - b.start);
-    // Runs of imports: those with only blank lines between them.
+    // Runs of imports: those with only blank lines between them — a node named so, in any grammar (`import`, `use`,
+    // `#include`, `using`); what each imports read from its strings, else its words after the keyword.
     const imports: CodeImports[] = [];
-    const IMPORTS = new Set(["import_statement", "import_from_statement", "future_import_statement"]);
+    if (header) imports.push({ start: header.start, end: header.end, modules: header.name ? [header.name] : [], kind: header.kind });
     for (const n of root.namedChildren) {
-      if (!n || !IMPORTS.has(n.type)) continue;
+      if (!n || !IMPORT.test(n.type)) continue;
       const start = n.startPosition.row + 1;
       const end = n.endPosition.row + 1;
       const modules = python
         ? n.type === "import_statement"
           ? n.namedChildren.map((x) => (x?.type === "aliased_import" ? x.childForFieldName("name") : x)?.text ?? "")
           : [n.childForFieldName("module_name")?.text ?? "__future__"]
-        : [(n.childForFieldName("source")?.text ?? "").replace(/^["'`]|["'`]$/g, "")];
+        : importedBy(n);
       const last = imports[imports.length - 1];
-      if (last && lines.slice(last.end, start - 1).every((l) => !l.trim())) {
+      if (last && !last.kind && lines.slice(last.end, start - 1).every((l) => !l.trim())) {
         last.end = end;
         last.modules.push(...modules);
       } else imports.push({ start, end, modules });
@@ -699,7 +707,95 @@ export class SyntaxTree {
 }
 
 /** The grammars the code view (24.x) maps: their definitions, doc comments, comments and imports. */
-export const DOCUMENT_GRAMMARS: ReadonlySet<Grammar> = new Set<Grammar>(["typescript", "tsx", "javascript", "python"]);
+export const DOCUMENT_GRAMMARS: ReadonlySet<Grammar> = new Set<Grammar>(["typescript", "tsx", "javascript", "python", "go", "rust", "swift", "php", "ruby", "c", "cpp", "lua", "bash"]);
+/**
+ * Where a node ends — but one that takes its line's end with it (Rust's line comments do), ending at column 0 of the
+ * next line, ends at the end of its own: that next line isn't inside it.
+ */
+function endOf(n: Node, lines: string[]): Pos {
+  const e = n.endPosition;
+  if (e.column > 0 || e.row <= n.startPosition.row) return e;
+  return { row: e.row - 1, column: lines[e.row - 1]?.length ?? 0 };
+}
+
+/** A node written above a definition, for it: an attribute, a decorator, an annotation. */
+const ATTRIBUTE = /attribute|decorator|annotation/;
+/** A top-level node that imports: `import`, `use`, `#include`, `using`, `extern crate` — as each grammar names it. */
+const IMPORT = /import|^use_|_use_|^using_|include|extern_crate/;
+
+/** What a node imports, for its folded row: its strings (`"fmt"`, `<stdio.h>`), else its words after the keyword. */
+function importedBy(n: Node): string[] {
+  const named = (n.childForFieldName("source")?.text ?? "").replace(/^["'`]|["'`]$/g, "");
+  if (named) return [named];
+  const out: string[] = [];
+  const visit = (x: Node | null) => {
+    if (!x) return;
+    if (/string|system_lib/.test(x.type)) {
+      out.push(x.text.replace(/^["'`<]|["'`>]$/g, ""));
+      return;
+    }
+    for (const c of x.namedChildren) visit(c);
+  };
+  visit(n);
+  if (out.length) return out;
+  const words = n.text.replace(/^\s*(?:#\s*include|import|use|using|extern\s+crate|from)\b\s*/, "").replace(/;\s*$/, "").trim();
+  return words ? [words] : [];
+}
+
+/**
+ * A licence or a "generated" banner heading a file (24.22): the comment lines it starts with — past a shebang or an
+ * encoding line — when they're two lines or more, before any code, and read so. Its name where it says one.
+ */
+function headerOf(comments: Node[], root: Node, lines: string[]): { start: number; end: number; kind: "license" | "generated"; name: string | null } | null {
+  const sorted = [...comments].sort((a, b) => a.startPosition.row - b.startPosition.row);
+  let k = 0;
+  // Past a shebang, an encoding line, PHP's opening tag.
+  const preamble = /^(#!|.*-\*-|<\?php\b)/;
+  while (k < sorted.length && preamble.test(sorted[k]!.text)) k++;
+  const first = sorted[k];
+  if (!first || lines.slice(0, first.startPosition.row).some((l) => l.trim() && !preamble.test(l.trim()))) return null;
+  let end = k;
+  while (end + 1 < sorted.length && sorted[end + 1]!.startPosition.row === endOf(sorted[end]!, lines).row + 1) end++;
+  const start = first.startPosition.row + 1;
+  const last = endOf(sorted[end]!, lines).row + 1;
+  const code = root.namedChildren.find((n) => n && !/comment|php_tag/.test(n.type));
+  if (last - start < 1 || (code && code.startPosition.row + 1 <= last)) return null;
+  const text = sorted.slice(k, end + 1).map((n) => n.text).join("\n");
+  const spdx = /SPDX-License-Identifier:\s*([^\s*]+)/.exec(text);
+  if (spdx) return { start, end: last, kind: "license", name: spdx[1]! };
+  if (/\b(Code generated\b.*\bDO NOT EDIT|auto-?generated|automatically generated|@generated|this file (?:is|was) generated|DO NOT EDIT)\b/i.test(text)) {
+    const by = /generated (?:by|with|from) ([\w.@/-]+)/i.exec(text);
+    return { start, end: last, kind: "generated", name: by ? by[1]!.replace(/[.,:]+$/, "") : null };
+  }
+  if (!/copyright|\(c\)|©/i.test(text) || !/licen[cs]e|permission is hereby granted|all rights reserved|warrant|redistribution/i.test(text)) return null;
+  const name = /Permission is hereby granted, free of charge/i.test(text) || /\bMIT License\b/i.test(text)
+    ? "MIT"
+    : /Apache License,?\s+Version 2\.0/i.test(text)
+      ? "Apache-2.0"
+      : /GNU (?:Affero|Lesser)? ?General Public License/i.test(text)
+        ? `${/Affero/i.test(text) ? "AGPL" : /Lesser/i.test(text) ? "LGPL" : "GPL"}${/version 3/i.test(text) ? "-3.0" : /version 2/i.test(text) ? "-2.0" : ""}`
+        : /Mozilla Public License/i.test(text)
+          ? "MPL-2.0"
+          : /Redistribution and use in source and binary forms/i.test(text)
+            ? "BSD"
+            : /BSD-style license/i.test(text)
+              ? "BSD"
+              : null;
+  return { start, end: last, kind: "license", name };
+}
+
+/**
+ * A definition's kind in the code view, by its node's type in any grammar: a function, a class (what holds other
+ * definitions: a class, an impl, a trait, a module, a namespace, a protocol), a type (an interface, a struct, an enum,
+ * a type alias); else not a definition the view draws.
+ */
+export function codeKind(type: string): CodeDef["kind"] | undefined {
+  if (CODE_KIND[type]) return CODE_KIND[type];
+  if (/function|method|^init_declaration$/.test(type)) return "function";
+  if (/class|impl|trait|module|namespace|protocol|^mod_item$/.test(type)) return "class";
+  if (/interface|struct|union|enum|type/.test(type)) return "type";
+  return undefined;
+}
 
 /** A definition as the code view draws it (24.3): its kind, the line it starts on, its name's place, its depth. */
 export interface CodeDef {
@@ -726,7 +822,8 @@ export interface CodeDoc {
   start: number;
   end: number;
   column: number;
-  style: "jsdoc" | "docstring" | "block";
+  /** `lines`: a run of line comments holding tags (`@param`), read as JSDoc is (24.9). */
+  style: "jsdoc" | "docstring" | "block" | "lines";
   /** A docstring of a definition: drawn before this line (the definition's block), as documentation is elsewhere. */
   before?: number;
 }
@@ -739,11 +836,13 @@ export interface CodeComment {
   trailing: boolean;
 }
 
-/** A run of imports (24.5): its 1-based first and last lines, and the modules it imports. */
+/** A run of imports (24.5): its 1-based first and last lines, and the modules it imports. Or a header folded as one
+ *  (24.22): a licence, its name; a "generated" banner, what generated it. */
 export interface CodeImports {
   start: number;
   end: number;
   modules: string[];
+  kind?: "license" | "generated";
 }
 
 /** What the code view knows of a file beyond its tokens (24.x): its definitions, doc comments and imports. */
@@ -767,6 +866,13 @@ const CODE_KIND: Record<string, CodeDef["kind"]> = {
   interface_declaration: "type",
   type_alias_declaration: "type",
   enum_declaration: "type",
+  // C's: a declaration with a function's declarator, a prototype; C++'s field declaration likewise, a method's.
+  declaration: "function",
+  field_declaration: "function",
+  type_definition: "type",
+  // Ruby's: what `def` and `def self.` make.
+  method: "function",
+  singleton_method: "function",
 };
 
 export interface CommentLink {

@@ -36,8 +36,8 @@ function kindOf(section: string): "params" | "returns" | "yields" | "raises" {
  * one on; a docstring: Google's sections (`Args:`), NumPy's (`Parameters` over dashes) or reST's fields (`:param x:`),
  * wherever they are, the rest prose; `block`: prose.
  */
-export function readDoc(lines: string[], style: "jsdoc" | "docstring" | "block"): DocText {
-  if (style === "jsdoc") return readJsdoc(lines);
+export function readDoc(lines: string[], style: "jsdoc" | "docstring" | "block" | "lines"): DocText {
+  if (style === "jsdoc" || style === "lines") return readJsdoc(lines);
   if (style === "block") return { body: lines.map((text, line) => ({ text, line })), tags: [] };
   const tags: DocTag[] = [];
   const taken = new Set<number>();
@@ -124,22 +124,25 @@ function readSection(lines: string[], first: number, kind: "params" | "returns" 
   });
 }
 
-/** JSDoc: prose, then `@param {T} name - what`, `@returns what`, and other tags by their name. */
+/** JSDoc: prose, then `@param {T} name - what`, `@returns what`, and other tags by their name — Javadoc's, PHPDoc's
+ *  (`@param T $name`) and Doxygen's (`\param`) too, and LuaDoc's in line comments. */
 function readJsdoc(lines: string[]): DocText {
-  const at = lines.findIndex((t) => /^\s*@\w/.test(t));
+  const at = lines.findIndex((t) => /^\s*[@\\]\w/.test(t));
   const body = (at < 0 ? lines : lines.slice(0, at)).map((text, line) => ({ text, line }));
   while (body.length && !body[body.length - 1]!.text.trim()) body.pop();
   const tags: DocTag[] = [];
   if (at < 0) return { body, tags };
   for (let k = at; k < lines.length; k++) {
     const t = lines[k]!.trim();
-    const m = /^@(\w+)\s*(\{[^}]*\})?\s*(.*)$/.exec(t);
+    const m = /^[@\\](\w+)\s*(\{[^}]*\})?\s*(.*)$/.exec(t);
     if (m) {
       const [, tag, type = "", rest = ""] = m;
       const param = /^(param|arg|argument|property|prop)$/.test(tag!);
-      const p = param ? /^(\[?[\w$.]+(?:=[^\]]*)?\]?)\s*(?:-\s*)?(.*)$/.exec(rest) : null;
-      const term = p ? p[1]! : tag === "return" || tag === "returns" ? "returns" : tag!;
-      tags.push({ term, type: type.replace(/^\{|\}$/g, ""), desc: p ? p[2]! : rest, line: k });
+      // PHPDoc's type comes before the name, `$` and all: `@param string $name who`.
+      const php = param && !type ? /^([^\s$]+)\s+(\$\w+)\s*(?:-\s*)?(.*)$/.exec(rest) : null;
+      const p = param && !php ? /^(\[?[\w$.]+(?:=[^\]]*)?\]?)\s*(?:-\s*)?(.*)$/.exec(rest) : null;
+      const term = php ? php[2]! : p ? p[1]! : tag === "return" || tag === "returns" ? "returns" : tag!;
+      tags.push({ term, type: php ? php[1]! : type.replace(/^\{|\}$/g, ""), desc: php ? php[3]! : p ? p[2]! : rest, line: k });
     } else if (t && tags.length) tags[tags.length - 1]!.desc += ` ${t}`;
   }
   return { body, tags };

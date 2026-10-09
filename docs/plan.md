@@ -897,7 +897,7 @@ design: `docs/design/code-view.md`.*
 | 24.6 | **Prototype.** Long lines broken at their structure; the author's breaks kept, line numbers the file's |
 | 24.7 | **Prototype.** Indent guides; braces and semicolons dimmed |
 | 24.8 | **Done.** Folding any definition: `▾` / `▸`, `space k f`, `z a` (editing a row in place is `24.17`) |
-| 24.9 | **Decided.** The code view generic: each grammar's own queries, conventions as exceptions (below) |
+| 24.9 | **Prototype.** The code view generic: each grammar's own queries, conventions as exceptions (below) |
 | 24.10 | **Prototype.** The lens on code: a line, a doc comment, the imports as written, highlighted; `esc esc` back |
 | 24.11 | **Prototype.** Comments as prose: markers gone; separators as sections; after code, notes in the margin |
 | 24.12 | **Prototype.** Python: docstrings above their definitions; JSDoc, Google, NumPy, reST read into one shape |
@@ -907,10 +907,10 @@ design: `docs/design/code-view.md`.*
 | 24.16 | **Prototype.** The lens on code opens on the cursor's cell whole when it fits, and moves cell to cell |
 | 24.17 | **Dropped** (2026-10-09). Typing in a row in place: the lens is where notes and code are edited |
 | 24.18 | **Dropped** (2026-10-08). Folding inside a cell — an `if`'s body, a loop's: a cell folds whole |
-| 24.19 | **Decided.** A definition's signature too long for its cell: a parameter a row, `)` at its indent; not calls |
+| 24.19 | **Prototype.** A definition's long signature: a parameter a row, `)` at its indent; not calls |
 | 24.20 | **Deferred** (2026-10-09). Tabular code in columns: assignments, enum members, keys — columns inside rows |
-| 24.21 | **Decided.** A receiver dimmed with its `.` or `->` (`this.`, `self.`, `$this->`), not bare; with `24.9` |
-| 24.22 | **Decided.** A licence header, or a "generated" banner, folded into a row naming it, as the imports are |
+| 24.21 | **Prototype.** A receiver dimmed with its `.` or `->` (`this.`, `self.`, `$this->`), not bare; with `24.9` |
+| 24.22 | **Prototype.** A licence header, or a "generated" banner, folded into a row naming it, as the imports are |
 
 `24.9`, decided 2026-10-09 with the user: tree-sitter already gives every grammar slipbox parses the queries its outline
 and its comments' links use — definitions with their names and ranges, and comments. The code view is built on those

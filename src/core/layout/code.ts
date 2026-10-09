@@ -14,6 +14,7 @@ import { readDoc } from "../docformats.ts";
 import type { Severity } from "../diagnostics.ts";
 import type { Glyphs } from "../glyphs.ts";
 import { slugify } from "../parse.ts";
+import { expandTabs } from "../sanitize.ts";
 import type { CodeComment, CodeDef, CodeDoc, CodeImports, CodeModel } from "../syntax.ts";
 import type { Role } from "../theme/theme.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate } from "../width.ts";
@@ -66,8 +67,11 @@ function sectionOf(t: string): string | null {
   const m = /^[-=*#~_+]{2,}\s+(.+?)(?:\s+[-=*#~_+]{2,})?$/.exec(t) ?? /^(?:MARK:\s*-?\s*|#?region\s+|pragma mark\s*-?\s*)(.+)$/i.exec(t);
   return m ? m[1]!.trim() : null;
 }
-/** A comment's text without its markers: `//`, `#`, `--`, a one-line block comment's. */
-const unmark = (t: string) => t.replace(/^(\/\/+|#+|--+|\/\*+)\s?/, "").replace(/\s*\*+\/\s*$/, "");
+/** A comment's text without its markers: `//`, `#`, `--`, a one-line block comment's — Rust's and Doxygen's inner doc
+ *  markers (`//!`, `/*!`) too. */
+const unmark = (t: string) => t.replace(/^(\/\/+!?|#+|--+|\/\*+!?)\s?/, "").replace(/\s*\*+\/\s*$/, "");
+/** A comment's marker, for telling a tool's directive by what follows it (`#!` a shebang, kept; `//!` a doc). */
+const MARKER = /^(\/\/+!?|#|--+|\/\*+!?)/;
 
 /** Documentation a cell holds above its code: a doc comment or docstring, or a run of comment lines. */
 type DocPart = { doc: CodeDoc } | { comments: { from: number; to: number; column: number } };
@@ -173,7 +177,10 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     decorate(cells, nameAt.get(ln), unit, g, strip >= 0 ? unit : 0);
     const note = trailing.get(ln);
     if (note) cells = noted(cells, note, (notes.get(ln) ?? 0) - k);
-    return opts.wrap ? breakLine(cells, room, unit, g, strip >= 0 ? unit : 0) : [{ cells }];
+    if (!opts.wrap) return [{ cells }];
+    // A function's signature that doesn't fit: a parameter a row (24.19).
+    const def = nameAt.get(ln);
+    return (def?.kind === "function" && signatureRows(cells, def.name.to, room, unit, g, strip >= 0 ? unit : 0)) || breakLine(cells, room, unit, g, strip >= 0 ? unit : 0);
   };
 
   /**
@@ -186,7 +193,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     while (end < to && lineComment.get(end + 1)?.column === column && !docs.has(end + 1) && !imports.has(end + 1)) end++;
     const plain = (k: number) => {
       const t = unmark(texts[k - 1]!.slice(column)).trim();
-      const raw = texts[k - 1]!.slice(column).replace(/^(\/\/+|#|--+|\/\*+)/, "").trim();
+      const raw = texts[k - 1]!.slice(column).replace(MARKER, "").trim();
       return !DIRECTIVE.test(raw) && !(t && CODELIKE.test(t)) && !(sectionOf(t) !== null && column === 0);
     };
     if (documents(end + 1) && range(ln, end).every(plain)) return { next: end + 1, attached: { comments: { from: ln, to: end, column } } };
@@ -201,7 +208,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
     };
     for (let k = ln; k <= end; k++) {
       const t = unmark(texts[k - 1]!.slice(column)).trimEnd();
-      const raw = texts[k - 1]!.slice(column).replace(/^(\/\/+|#|--+|\/\*+)/, "");
+      const raw = texts[k - 1]!.slice(column).replace(MARKER, "");
       const section = sectionOf(t.trim());
       if (DIRECTIVE.test(raw.trim()) || (t.trim() && CODELIKE.test(t.trim()))) {
         flush();
@@ -257,7 +264,10 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
       const rows =
         "doc" in part
           ? docRows(texts, part.doc, inner, unit, g, links, lines.length, Number.POSITIVE_INFINITY, left + side, 0)
-          : proseRows(range(part.comments.from, part.comments.to).map((k) => unmark(texts[k - 1]!.slice(part.comments.column)).trimEnd()), part.comments.from, 0, inner, unit, g, links, lines.length, undefined, Number.POSITIVE_INFINITY, left + side);
+          : // Line comments holding tags (LuaDoc's, Doxygen's `///`): read as a doc comment is, its terms a list (24.9).
+            range(part.comments.from, part.comments.to).some((k) => /^\s*[@\\]\w/.test(unmark(texts[k - 1]!.slice(part.comments.column))))
+            ? docRows(texts, { start: part.comments.from, end: part.comments.to, column: part.comments.column, style: "lines" }, inner, unit, g, links, lines.length, Number.POSITIVE_INFINITY, left + side, 0)
+            : proseRows(range(part.comments.from, part.comments.to).map((k) => unmark(texts[k - 1]!.slice(part.comments.column)).trimEnd()), part.comments.from, 0, inner, unit, g, links, lines.length, undefined, Number.POSITIVE_INFINITY, left + side);
       for (const l of rows) push(framed(l));
     }
     // Between its documentation and its code, a blank row: the two belong together.
@@ -296,7 +306,7 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
         };
         for (let j = k; j <= end; j++) {
           const t = unmark(texts[j - 1]!.slice(lc.column)).trimEnd();
-          const raw = texts[j - 1]!.slice(lc.column).replace(/^(\/\/+|#|--+|\/\*+)/, "");
+          const raw = texts[j - 1]!.slice(lc.column).replace(MARKER, "");
           if (DIRECTIVE.test(raw.trim()) || (t.trim() && CODELIKE.test(t.trim()))) {
             flush();
             for (const r of codeRows(j, col, inner)) push(framed(plainRow(r.cells, j, lineEnd(j))));
@@ -442,7 +452,8 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
 
 const lead = (t: string) => t.length - t.trimStart().length;
 /** A class's closing brace, on a line of its own. */
-const CLOSING = /^\s*\}\s*$/;
+/** A class's closing line: its brace (`};` in C++), or Ruby's and Lua's `end`. */
+const CLOSING = /^\s*(\}\s*;?|end)\s*$/;
 const range = (a: number, b: number) => Array.from({ length: Math.max(0, b - a + 1) }, (_, k) => a + k);
 
 /**
@@ -683,11 +694,12 @@ function markOf(def: CodeDef, g: Glyphs): string {
   return def.kind === "function" ? g.codeFunction : def.kind === "class" ? g.codeClass : def.kind === "type" ? g.codeType : g.codeValue;
 }
 
-/** The file's indentation step: the least indentation a line of code has (2 by default, at most 8) — a doc
- *  comment's ` * ` lines and other odd ones aside. */
+/** The file's indentation step: the least indentation a line of code has (2 by default, at most 8), a tab as wide as
+ *  its rows draw it (Go's, C's) — a doc comment's ` * ` lines and other odd ones aside. */
 function indentUnit(texts: string[]): number {
   let unit = 0;
-  for (const t of texts) {
+  for (const raw of texts) {
+    const t = expandTabs(raw);
     const lead = /^ */.exec(t)![0].length;
     if (lead > 1 && lead < 9 && t.trim() && !t.trimStart().startsWith("*") && (!unit || lead < unit)) unit = lead;
   }
@@ -717,10 +729,27 @@ function decorate(cells: Cell[], def: CodeDef | undefined, unit: number, g: Glyp
   while (lead < cells.length && cells[lead]!.g === " ") lead++;
   if (lead < cells.length) for (let c = from; c < lead; c += unit) cells[c] = { ...cells[c]!, g: g.guide, role: "tree_guide" };
   for (const c of cells) if (QUIET.test(c.g) && !inText(c)) c.attrs |= A_DIM;
+  dimReceivers(cells);
   if (!def) return;
   for (const c of cells) {
     if (c.at >= def.name.from && c.at < def.name.to) c.attrs |= A_BOLD;
     else if (c.at < def.name.from && c.g !== " " && c.role !== "tree_guide") c.attrs |= A_DIM;
+  }
+}
+
+/** A receiver and its access (24.21), dimmed: `this.`, `self.`, `$this->`, `this->` — so the member it reaches stands out.
+ *  A bare one (`return this`) is the value, and stays; so does one in a string or a comment. */
+function dimReceivers(cells: Cell[]): void {
+  const word = (c: Cell | undefined) => !!c && /^[\w$]$/.test(c.g);
+  for (let i = 0; i < cells.length; i++) {
+    const start = cells[i]!.g === "$" ? i + 1 : i;
+    const name = cells.slice(start, start + 4).map((c) => c.g).join("");
+    if ((name !== "this" && name !== "self") || word(cells[i - 1]) || cells.slice(i, start + 4).some(inText)) continue;
+    const after = start + 4;
+    const access = cells[after]?.g === "." ? 1 : cells[after]?.g === "-" && cells[after + 1]?.g === ">" ? 2 : 0;
+    if (!access || word(cells[after + access]) === false) continue;
+    for (let k = i; k < after + access; k++) cells[k]!.attrs |= A_DIM;
+    i = after + access - 1;
   }
 }
 
@@ -745,6 +774,48 @@ function breaksOf(cells: Cell[], from: number): Break[] {
     else if (c.g === "." && cells[i - 1]?.g === ")") out.push({ i, depth });
   }
   return out;
+}
+
+/**
+ * A function's signature that doesn't fit `width`, a parameter a row (24.19): its line up to the `(` after its name,
+ * each parameter four columns further in (one too long broken as any row is), then its `)` and the rest back at the
+ * line's indentation. Null where it fits, or its `)` isn't on this line, or it has no parameters: then it's any row.
+ */
+function signatureRows(cells: Cell[], nameEnd: number, width: number, unit: number, g: Glyphs, guidesFrom: number): { cells: Cell[] }[] | null {
+  if (cells.reduce((n, c) => n + c.w, 0) <= width) return null;
+  const open = cells.findIndex((c) => c.at >= nameEnd && c.g === "(" && !inText(c));
+  if (open < 0) return null;
+  let depth = 0;
+  let close = -1;
+  const commas: number[] = [];
+  for (let i = open; i < cells.length && close < 0; i++) {
+    const c = cells[i]!;
+    if (inText(c)) continue;
+    if ("([{".includes(c.g)) depth++;
+    else if (")]}".includes(c.g) && --depth === 0) close = i;
+    else if (c.g === "," && depth === 1) commas.push(i);
+  }
+  if (close < 0 || !cells.slice(open + 1, close).some((c) => c.g !== " ")) return null;
+  let lead = 0;
+  while (lead < cells.length && (cells[lead]!.g === " " || cells[lead]!.role === "tree_guide")) lead++;
+  const head = cells.slice(0, open + 1);
+  if (head.reduce((n, c) => n + c.w, 0) > width) return null;
+  const pad = (n: number, at: number) => Array.from({ length: n }, (_, c): Cell => (c < lead && c >= guidesFrom && c % unit === 0 ? { g: g.guide, w: 1, at, role: "tree_guide", attrs: 0 } : { g: " ", w: 1, at, role: "text", attrs: 0 }));
+  const trim = (part: Cell[]) => {
+    let a = 0;
+    let b = part.length;
+    while (a < b && part[a]!.g === " ") a++;
+    while (b > a && part[b - 1]!.g === " ") b--;
+    return part.slice(a, b);
+  };
+  const rows: { cells: Cell[] }[] = [{ cells: head }];
+  const bounds = [open, ...commas, close];
+  for (let k = 0; k + 1 < bounds.length; k++) {
+    const part = trim(cells.slice(bounds[k]! + 1, k + 2 < bounds.length ? bounds[k + 1]! + 1 : bounds[k + 1]!));
+    if (part.length) rows.push(...breakLine([...pad(lead + CONTINUE, part[0]!.at), ...part], width, unit, g, guidesFrom));
+  }
+  rows.push(...breakLine([...pad(lead, cells[close]!.at), ...cells.slice(close)], width, unit, g, guidesFrom));
+  return rows;
 }
 
 /**
@@ -815,10 +886,19 @@ function toSpans(cells: Cell[], src: number): Span[] {
   return out;
 }
 
-/** A run of imports' row: folded, `▸ imports` and the modules (as many as fit) and how many; open, `▾ imports`. */
+/**
+ * A run of imports' row: folded, `▸ imports` and the modules (as many as fit) and how many; open, `▾ imports`. A header
+ * folded so (24.22): `▸ license · MIT`, `▸ generated · protoc`, else its lines' count.
+ */
 function foldRow(run: CodeImports, open: boolean, width: number, g: Glyphs): Line {
+  const head = `${open ? g.foldOpen : g.foldClosed} ${run.kind ?? "imports"}`;
+  if (run.kind) {
+    const what = run.modules[0] ?? `${run.end - run.start + 1} lines`;
+    const spans: Span[] = [{ text: head, role: "dim", attrs: A_BOLD, src: run.start }];
+    if (!open) spans.push({ text: ` · ${truncate(what, Math.max(1, width - stringWidth(head) - 3))}`, role: "dim", attrs: 0, src: run.start });
+    return { spans, src: run.start, fold: run.start };
+  }
   const count = `(${run.modules.length})`;
-  const head = `${open ? g.foldOpen : g.foldClosed} imports`;
   const names = open ? "" : truncate(run.modules.join(" · "), Math.max(0, width - stringWidth(head) - stringWidth(count) - 5));
   const spans: Span[] = [{ text: head, role: "dim", attrs: A_BOLD, src: run.start }];
   if (names) spans.push({ text: `  ${names}`, role: "dim", attrs: 0, src: run.start });
@@ -844,7 +924,8 @@ function docRows(texts: string[], doc: CodeDoc, width: number, unit: number, g: 
     const rest = text.slice(1).filter((t) => t.trim());
     const common = rest.length ? Math.min(...rest.map((t) => t.length - t.trimStart().length)) : 0;
     text = text.map((t, k) => (k === 0 ? t.trim() : t.slice(common)));
-  } else {
+  } else if (doc.style === "lines") text = raw.map((l) => unmark(l.slice(doc.column)).trimEnd());
+  else {
     text = raw.map((l, k) => {
       let t = k === 0 ? l.slice(doc.column).replace(/^\/\*+\s?/, "") : l.replace(/^\s*\*(?!\/)\s?/, "");
       if (k === raw.length - 1) t = t.replace(/\s*\*+\/\s*$/, "");

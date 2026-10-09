@@ -6,8 +6,10 @@ and the definition's documentation in it above its code; the file's other commen
 aim isn't to make code look like markdown, nor to run it (slipbox runs nothing, `23.x`); it's to make it read like a
 document — and alike whatever language wrote it.
 
-Status: a prototype for TypeScript, TSX, JavaScript and Python (`24.2`–`24.7`, `24.10`–`24.16`). What's built is
-described here as it is; what's next is at the end.
+Status: a prototype (`24.2`–`24.7`, `24.9`–`24.16`, `24.19`, `24.21`, `24.22`) for every grammar slipbox parses that has
+definitions: TypeScript, TSX, JavaScript, Python, Go, Rust, Swift, PHP, Ruby, C, C++, Lua and Bash. Markup and config
+(HTML, Vue, Svelte, Astro, CSS, SCSS, Dockerfile) open in source mode, and every file keeps it (`space n v`). What's
+built is described here as it is; what's next is at the end.
 
 ## The rule: code's tokens verbatim, whitespace and decoration ours, comments as prose
 
@@ -44,7 +46,15 @@ a language hasn't mapped is drawn as it is.
 | brackets, separators, operators | where a long line may break (any language: no mapping needed) |
 | indentation | guides, one per level |
 
-The mapping is `SyntaxTree.codeModel` (`src/core/syntax.ts`): TypeScript, TSX, JavaScript and Python so far. The
+The mapping is generic (`24.9`): `SyntaxTree.codeModel` (`src/core/syntax.ts`) reads each grammar's own queries — the
+definitions its outline uses and the comments its links are found in — so no language is mapped by hand. A
+definition's kind is its node's type: a function or method; a class (what holds definitions: a class, an impl, a
+trait, a module, a namespace, a protocol); a type (an interface, a struct, an enum, an alias). What's written above it
+for it (Rust's `#[derive(…)]`, a decorator) is its cell's. Its documentation is the comment lines right above it, the
+markers gone (`///`, `//!`, `//`, `#`, `--`, `/** */`). Imports are a run of top-level nodes named so (`import`, `use`,
+`#include`, `using`), what each imports read from its strings, else its words. What a language does its own way is an
+exception, not a mapping: Python's docstrings, below their `def`; TypeScript's, JavaScript's and Python's top-level
+values, cells by their names. A comment that takes its line's end with it (Rust's) ends where its line does. The
 documentation formats are `readDoc` (`src/core/docformats.ts`), and the layout (`layoutCode`,
 `src/core/layout/code.ts`) knows only the categories.
 
@@ -55,6 +65,8 @@ A doc comment or a docstring is read into one shape — prose, then a list of te
 | Format | Where | Its terms |
 | --- | --- | --- |
 | JSDoc | `/** … */` | `@param {T} name - what`, `@returns`, other tags by name |
+| Javadoc, PHPDoc, Doxygen | `/** … */`, `///` | `@param name what`, PHPDoc's `@param T $name`, Doxygen's `\param` |
+| LuaDoc | `---`, `--` | `@param name what`, as JSDoc's |
 | Google | Python docstrings | `Args:` (`name (type): what`), `Returns:`, `Yields:`, `Raises:` |
 | NumPy | Python docstrings | `Parameters` over dashes (`name : type`, what under it), `Returns`, `Raises` |
 | reST (Sphinx) | Python docstrings | `:param name:`, `:type name:`, `:returns:`, `:rtype:`, `:raises E:` |
@@ -147,17 +159,25 @@ the tokens differ.
 | `▾` / `▸` | `space k f`, `z a` | folds it to its header (a class, its members with it), and opens it |
 
 - **Inside a cell**: its rows start at its left edge (its indentation is the cell's); indent guides from its second
-  level (the first is the border); the definition's name bold, what's before it on its line dimmed; braces and
-  semicolons dimmed. A comment line is prose in the comments' colour, slanted; a comment after code is a note beside
-  it, the notes of consecutive lines lined up in one column. A blank line inside a string is the string's.
+  level (the first is the border, a tab as wide as it's drawn); the definition's name bold, what's before it on its line
+  dimmed; braces and semicolons dimmed; a receiver with its access — `this.`, `self.`, `$this->`, `this->` — dimmed, so
+  the member it reaches stands out (`24.21`; a bare `this` is the value, and stays). A comment line is prose in the
+  comments' colour, slanted; a comment after code is a note beside it, the notes of consecutive lines lined up in one
+  column. A blank line inside a string is the string's.
 - **Sections**: a separator comment — `// ---- Resolving links ----`, `# === X ===`, `// MARK: X`, `#region X` — is a
   rule across the page with its title, a blank row each side of it, the outline's top level (`]]`, the breadcrumb),
   the cells under it.
 - **Imports**: the file's run of imports is one row, `▸ imports`, naming the modules (as many as fit) and how many.
   `enter` on it unfolds it (`▾ imports`), and again folds it.
+- **A licence or a generated banner** (`24.22`): the comment lines a file starts with — past a shebang, an encoding
+  line, PHP's `<?php` — two lines or more, before any code, are one row when they're a licence (`▸ license · MIT`: its
+  SPDX id, else MIT, Apache-2.0, GPL, LGPL, AGPL, MPL-2.0 or BSD by its words, else its lines' count) or a generated
+  file's banner (`▸ generated · protoc-gen-go`, what generated it). `enter` opens and folds it, as the imports.
 - **Width**: a line too long for its cell breaks at its structure — after an opening bracket, after a comma, before
   `&&` `||` `??` `?` `and` `or`, or a `.` that chains — at the shallowest bracket depth that fits, the rest continuing
-  four columns further in than the line. A line that fits is never broken, and lines are never joined: the author's
+  four columns further in than the line. A definition's signature that doesn't fit (`24.19`) is a parameter a row:
+  its line to its `(`, each parameter four columns further in, then its `)` and the rest at the line's indentation —
+  a call's arguments are broken as any line is. A line that fits is never broken, and lines are never joined: the author's
   breaks stay, so line numbers stay the file's. With wrapping off (`space u w`), lines run on and the view scrolls
   sideways.
 
@@ -185,11 +205,7 @@ the tokens differ.
 
 ## Next
 
-- The view generic (`24.9`): built on each grammar's own queries — its definitions and comments, which its outline and
-  its comments' links use — for every grammar with definitions; what a language does its own way an exception.
-- Signatures that don't fit, one parameter per line (`24.19`); columns where the code is tabular (consecutive
-  assignments, enum members, an object's keys, `24.20`); `self.` and `this.` dimmed (`24.21`); a license header folded,
-  like the imports (`24.22`).
+- Columns where the code is tabular (consecutive assignments, enum members, an object's keys, `24.20`): deferred.
 - The references button with its count, once a server has said it.
 
 Not done (decided 2026-10-08): folding inside a cell — an `if`'s body, a loop's. A cell folds whole. Nor (2026-10-09)

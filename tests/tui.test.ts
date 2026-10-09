@@ -18,7 +18,8 @@ import { TextCanvas } from "../src/tui/canvas.ts";
 import { match, rank } from "../src/tui/match.ts";
 import { graphemes, setWidthMethod, stringWidth, type WidthMethod } from "../src/core/width.ts";
 import { crumbLayout } from "../src/tui/draw.ts";
-import { type Layout, type Line, srcAt } from "../src/core/layout/ir.ts";
+import { A_DIM, type Layout, type Line, srcAt } from "../src/core/layout/ir.ts";
+import { codeKind } from "../src/core/syntax.ts";
 import { load } from "../src/core/lazy.ts";
 import { loadRasterizer } from "../src/core/svg.ts";
 import { loadMermaid, mermaidSvg } from "../src/core/diagrams.ts";
@@ -6017,11 +6018,14 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(h.app.messages.at(-1)!.text).toBe("source — editing the file");
     const plain = await open({ config: (c) => (c.render.code = "source") });
     expect(plain.app.view!.source).toBe(true);
-    const go = await open({}, "tool.go", "package main\n\nfunc f() int { return 1 }\n"); // not mapped yet
-    expect(go.app.view!.source).toBe(true);
+    // Go is drawn as a document (24.9); CSS, which has no definitions to be cells, in source mode.
+    const go = await open({}, "tool.go", "package main\n\nfunc f() int { return 1 }\n");
+    expect(go.app.view!.source).toBeFalsy();
+    const css = await open({}, "site.css", "a {\n  color: red;\n}\n");
+    expect(css.app.view!.source).toBe(true);
     // A cell's key outside a cell, or in source mode: said.
-    await go.keys("z", "a");
-    expect(go.app.messages.at(-1)!.text).toStartWith("a cell is the code view's");
+    await css.keys("z", "a");
+    expect(css.app.messages.at(-1)!.text).toStartWith("a cell is the code view's");
   });
 
   test("a header's kind in each glyph set", async () => {
@@ -6030,6 +6034,145 @@ describe("code as a notebook (24.x, 24.13)", () => {
       expect(rows(h)[rowIndex(h, "resolve ")]).toContain(` ${fn} resolve `);
       expect(rows(h)[rowIndex(h, "Graph ")]).toContain(` ${cls} Graph `);
     }
+  });
+  describe("every grammar with definitions, by its own queries (24.9)", () => {
+    const view = async (file: string, text: string, width = 100) => {
+      const h = await open({ width }, file, text);
+      return { h, layout: h.app.currentLayout(h.app.view!), text: rows(h).join("\n") };
+    };
+    const cellsOf = (l: Layout) => (l.cells ?? []).map((c) => `${c.title} ${c.from}–${c.to}`);
+    test("a definition's kind by its node's type, in any grammar", () => {
+      const kinds = ["function_item", "method_declaration", "init_declaration", "impl_item", "trait_item", "mod_item", "module", "namespace_definition", "struct_item", "type_spec", "enum_item", "interface_declaration", "method", "declaration", "comment"].map(codeKind);
+      expect(kinds).toEqual(["function", "function", "function", "class", "class", "class", "class", "class", "type", "type", "type", "type", "function", "function", undefined]);
+    });
+    test("Go: a declaration's comment lines its documentation, its imports folded, a method a cell; tabs as wide as drawn", async () => {
+      const go = 'package main\n\nimport (\n\t"fmt"\n\t"os"\n)\n\n// Run copies the files.\nfunc (u *Upload) Run(dry bool) {\n\tif dry {\n\t\tfmt.Println(os.Args)\n\t}\n}\n';
+      const { layout, text } = await view("up.go", go);
+      expect(text).toContain("▸ imports  fmt · os (2)");
+      expect(cellsOf(layout)).toContain("Run 8–13");
+      expect(text).toContain("Run copies the files.");
+      expect(text).not.toContain("// Run");
+      // Two tabs in: one guide (the first level is the box's border), not three.
+      expect(text.split("\n").find((r) => r.includes("fmt.Println"))!.match(/│/g)?.length).toBe(1 + 1);
+    });
+    test("Rust: `//!` a module's prose, `///` an item's, its attributes in its cell; `use` folded; an impl's methods its members", async () => {
+      const rs = "//! The stacker.\n\nuse std::collections::HashMap;\n\n/// One frame.\n#[derive(Debug)]\npub struct Frame {\n    pub n: u32,\n}\n\nimpl Frame {\n    /// Its size.\n    pub fn size(&self) -> u32 {\n        self.n\n    }\n}\n";
+      const { layout, text } = await view("lib.rs", rs);
+      expect(text).toContain("The stacker.");
+      expect(text).not.toMatch(/\/\/[!/]|! The/);
+      expect(text).toContain("▸ imports  std::collections::HashMap (1)");
+      expect(cellsOf(layout)).toEqual(expect.arrayContaining(["Frame 5–9", "size 12–15"]));
+      expect(text).toContain("#[derive(Debug)]");
+      // The blank line after `//!` — its comment takes its line's end with it — isn't a cell of its own.
+      expect(cellsOf(layout).some((c) => c.startsWith("code 2"))).toBe(false);
+    });
+    test("Ruby: a class's `end` closes it, as a brace does; C: `#include`s folded", async () => {
+      const rb = "# A route.\nclass Route\n  # Reads it.\n  def initialize(path)\n    @path = path\n  end\nend\n";
+      const ruby = await view("route.rb", rb);
+      expect(cellsOf(ruby.layout).some((c) => c.startsWith("code"))).toBe(false);
+      const c = await view("h.c", "#include <stdio.h>\n#include \"util.h\"\n\nint main(void) { return 0; }\n");
+      expect(c.text).toContain("▸ imports  stdio.h · util.h (2)");
+      // C++'s class closes with `};`.
+      const cpp = await view("w.cpp", "class W {\n public:\n  int n() { return 1; }\n};\n");
+      expect(cellsOf(cpp.layout).some((x) => x.startsWith("code"))).toBe(false);
+    });
+    test("tags in line comments are terms (LuaDoc, Doxygen's `\\param`); PHPDoc's type before its name", async () => {
+      const lua = await view("g.lua", "--- Greets someone.\n-- @param name who\nlocal function greet(name)\n  return name\nend\n");
+      expect(lua.text).toMatch(/name\s+who/);
+      expect(lua.text).not.toContain("@param");
+      const c = await view("d.c", "/// Adds.\n/// \\param a the first\nint add(int a) { return a; }\n");
+      expect(c.text).toMatch(/a\s+the first/);
+      const php = await view("g.php", "<?php\n/**\n * Greets.\n * @param string $name who\n */\nfunction greet(string $name) { return $name; }\n");
+      expect(php.text).toMatch(/\$name\s+who\s+string/);
+    });
+  });
+  describe("a definition's long signature, a parameter a row (24.19)", () => {
+    const sig = "export function resolveLink(link: LinkRef, fromRel: string, options: ResolveOptions = {}, pick: (a: number, b: number) => number): Target {\n  return go(link, fromRel, options, strict, { depth: 1, seen: new Set<string>(), mode: \"strict\" }, more, andMore);\n}\n";
+    test("each parameter on its own row, four columns in; `)` and the rest at the line's indentation", async () => {
+      const h = await open({ width: 80 }, "s.ts", sig);
+      const r = rows(h);
+      const at = r.findIndex((x) => x.includes("export function resolveLink("));
+      // (Past the box's left line.)
+      const bare = (x: string) => x.replace(/^[│\s]+/, "").trimEnd();
+      expect(r.slice(at, at + 6).map(bare)).toEqual(["export function resolveLink(", "link: LinkRef,", "fromRel: string,", "options: ResolveOptions = {},", "pick: (a: number, b: number) => number", "): Target {"]);
+      expect(r[at + 1]!.indexOf("link") - r[at]!.indexOf("export")).toBe(4);
+      expect(r[at + 5]!.indexOf(")")).toBe(r[at]!.indexOf("export"));
+    });
+    test("a Go method: its parameters, not its receiver's; one without parameters, any row", async () => {
+      const go = "package m\n\nfunc (u *Upload) Run(target string, dryRun bool, verbose bool, retries int, timeout int) error {\n\treturn nil\n}\n\nfunc Long() map[string]map[string]map[string]map[string]map[string]map[string]int {\n\treturn nil\n}\n";
+      const h = await open({ width: 80 }, "m.go", go);
+      const r = rows(h).map((x) => x.replace(/^[│\s]+/, ""));
+      expect(r).toContain("func (u *Upload) Run(");
+      expect(r).toContain("target string,");
+      expect(r.some((x) => x.endsWith("Long("))).toBe(false);
+    });
+    test("not a call's arguments; not a signature that fits", async () => {
+      const h = await open({ width: 80 }, "s.ts", sig);
+      const r = rows(h);
+      const call = r.findIndex((x) => x.includes("return go("));
+      expect(r[call]!.replace(/^[│\s]+/, "")).not.toBe("return go("); // broken as any row is, filled
+      const fits = await open({ width: 100 }, "f.ts", "function f(a: number, b: number): number {\n  return a + b;\n}\n");
+      expect(rows(fits).some((x) => x.replace(/^[│\s]+/, "") === "function f(a: number, b: number): number {")).toBe(true);
+    });
+  });
+  test("a receiver dimmed with its access — `this.`, `self.`, `$this->` — not a bare one, nor one in a string (24.21)", async () => {
+    const h = await open({}, "r.ts", 'class A {\n  n = 1;\n  get(): A {\n    const s = "this.x";\n    return this.n > 0 ? this : myself.n;\n  }\n}\n');
+    const line = h.app.currentLayout(h.app.view!).lines.find((l) => l.spans.some((s) => s.text.includes("return")))!;
+    const cells = line.spans.flatMap((s) => [...s.text].map((ch) => ({ ch, dim: !!(s.attrs & A_DIM) })));
+    const text = cells.map((c) => c.ch).join("");
+    const dimAt = (k: number, n: number) => cells.slice(k, k + n).every((c) => c.dim);
+    const first = text.indexOf("this.n");
+    expect(dimAt(first, 5)).toBe(true); // `this.`
+    expect(cells[first + 5]!.dim).toBe(false); // `n`
+    const bare = text.indexOf("? this");
+    expect(dimAt(bare + 2, 4)).toBe(false);
+    expect(cells[text.indexOf("myself.") + 2]!.dim).toBe(false); // a word ending in `self` isn't one
+    const str = h.app.currentLayout(h.app.view!).lines.find((l) => l.spans.some((s) => s.text.includes('"this.x"')))!;
+    expect(str.spans.find((s) => s.text.includes("this.x"))!.attrs & A_DIM).toBe(0);
+    const php = await open({}, "p.php", "<?php\nclass G {\n  function g() { return $this->prefix; }\n}\n");
+    const pl = php.app.currentLayout(php.app.view!).lines.find((l) => l.spans.some((s) => s.text.includes("prefix")))!;
+    const pc = pl.spans.flatMap((s) => [...s.text].map((ch) => ({ ch, dim: !!(s.attrs & A_DIM) })));
+    const pt = pc.map((c) => c.ch).join("");
+    expect(pc.slice(pt.indexOf("$this->"), pt.indexOf("$this->") + 7).every((c) => c.dim)).toBe(true);
+    expect(pc[pt.indexOf("prefix")]!.dim).toBe(false);
+  });
+  describe("a licence header or a generated banner folded, as the imports are (24.22)", () => {
+    const mit = "// Copyright 2026 Example Co.\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software.\n\nexport const x = 1;\n";
+    test("named where it says one — SPDX's, the MIT text's, what generated it; `enter` opens it, and again folds it", async () => {
+      const h = await open({}, "m.ts", mit);
+      expect(rows(h)).toContain("▸ license · MIT");
+      expect(rows(h).join("\n")).not.toContain("Permission is hereby granted");
+      h.app.moveCursor(h.app.view!, { row: h.app.currentLayout(h.app.view!).lines.findIndex((l) => l.fold !== undefined), col: 0 });
+      await h.keys("enter");
+      expect(rows(h).join("\n")).toContain("Permission is hereby granted");
+      expect(rows(h)).toContain("▾ license");
+      const spdx = await open({}, "s.ts", "/*\n * SPDX-License-Identifier: Apache-2.0\n * Copyright 2026 X\n */\nexport const y = 2;\n");
+      expect(rows(spdx)).toContain("▸ license · Apache-2.0");
+      const gen = await open({}, "g.py", "#!/usr/bin/env python3\n# Code generated by protoc-gen-py. DO NOT EDIT.\n# source: a.proto\n\nX = 1\n");
+      expect(rows(gen)).toContain("▸ generated · protoc-gen-py");
+      const unnamed = await open({}, "u.ts", "// Copyright 2026 X. All rights reserved.\n// Do with it as the licence says.\n\nexport const z = 3;\n");
+      expect(rows(unnamed)).toContain("▸ license · 2 lines");
+      // Each licence by its words; Rust's line comments, each taking its line's end; PHP's past its opening tag; one
+      // right above the imports, folded apart from them.
+      const named: [string, string, string][] = [
+        ["a.ts", "// Copyright 2026 X\n// Licensed under the Apache License, Version 2.0 (the \"License\");", "Apache-2.0"],
+        ["g.ts", "// Copyright (C) 2026 X\n// under the terms of the GNU General Public License, version 3", "GPL-3.0"],
+        ["b.ts", "// Copyright 2026 X\n// Redistribution and use in source and binary forms, with or without", "BSD"],
+        ["mp.ts", "// Copyright 2026 X. This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.\n// If a copy of the MPL was not distributed with this file, you can obtain one.", "MPL-2.0"],
+        ["r.rs", "// Copyright 2026 X\n// Permission is hereby granted, free of charge, to any person", "MIT"],
+      ];
+      for (const [file, header, name] of named) expect(rows(await open({}, file, `${header}\n\nconst q = 1;\n`))).toContain(`▸ license · ${name}`);
+      const php = await open({}, "g.php", "<?php\n// Code generated by protoc-gen-php. DO NOT EDIT.\n// source: g.proto\n\n$x = 1;\n");
+      expect(rows(php)).toContain("▸ generated · protoc-gen-php");
+      const above = await open({}, "i.ts", `${mit.split("\n\n")[0]}\nimport { a } from "./a.ts";\n\nexport const b = a;\n`);
+      expect(rows(above)).toEqual(expect.arrayContaining(["▸ license · MIT", "▸ imports  ./a.ts (1)"]));
+    });
+    test("not one line, not a comment after code, not one that isn't a licence, not one sharing a line with code", async () => {
+      for (const [file, text] of [["one.ts", "// Copyright 2026 X. MIT licensed.\nexport const a = 1;\n"], ["late.ts", "export const a = 1;\n// Copyright 2026 X\n// Licensed under MIT.\n"], ["prose.ts", "// A note about this file:\n// it is small.\n\nexport const a = 1;\n"], ["words.ts", "// Checks each package's license:\n// reads its LICENSE file.\n\nexport const a = 1;\n"], ["same.ts", "// Copyright 2026 X\n/* Licensed under the MIT License. */ export const a = 1;\n"]] as const) {
+        const h = await open({}, file, text);
+        expect(rows(h).some((r) => /license|generated/.test(r) && r.includes("▸"))).toBe(false);
+      }
+    });
   });
 });
 
