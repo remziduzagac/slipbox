@@ -161,6 +161,13 @@ describe("links", () => {
 });
 
 describe("find and replace", () => {
+  test("spell (25.6): a note's misspelt words, from a process of its own — Hunspell's WebAssembly loaded there too", () => {
+    const r = slipbox(["spell", "kenji-mori", "--json"]);
+    expect(r.code).toBe(0);
+    expect(r.json.data).toMatchObject({ path: "people/kenji-mori.md", languages: ["en"], missing: [] });
+    for (const w of r.json.data.words) expect(w).toEqual({ line: expect.any(Number), column: expect.any(Number), word: expect.any(String) });
+    expect(slipbox(["spell", "kenji-mori"]).out).toMatch(/^(people\/kenji-mori\.md:\d+:\d+: \S+\n)*$/);
+  });
   test("find: the vault or one note; plain by default; regex, whole words, smart case", () => {
     const all = slipbox(["find", "Aster", "--json"]).json.data;
     expect(all.count).toBeGreaterThan(10);

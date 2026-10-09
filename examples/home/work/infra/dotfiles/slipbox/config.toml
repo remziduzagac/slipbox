@@ -137,6 +137,11 @@ remote = [                      # run in order, each after the last; the first f
   "nvim --server {server} --remote-send '<C-\\><C-N>:{line}<CR>'",
 ]
 
+[spell]                         # misspelt words marked in notes (25.6)
+enabled = true
+languages = ["en", "tr"]        # a note's own lang: in its front matter wins
+dictionaries = { de = "~/.local/share/hunspell/de_DE.dic" }   # yours, by language: its .aff beside it
+
 [lint]
 enabled = "on"
 command = ["markdownlint-cli2", "--config", "~/.markdownlint-cli2.jsonc"]
@@ -393,6 +398,11 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; e k" = "ui.urls"
 "leader ; e l" = "ui.mouse"
 "leader ; e m" = "ui.code_cells"
+"leader ; e n" = "ui.spell"
+"leader ; V a" = "spell.next"
+"leader ; V b" = "spell.prev"
+"leader ; V c" = "spell.suggest"
+"leader ; V d" = "spell.add"
 "leader ; p a" = "scratch.open"
 "leader ; p b" = "scratch.add"
 "leader ; p c" = "scratch.copy"
@@ -567,3 +577,4 @@ sc = "scratch.open"
 "leader ; P" = "switcher"
 "leader ; Q" = "tag"
 "leader ; R" = "task"
+"leader ; V" = "spelling"

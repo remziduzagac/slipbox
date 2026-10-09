@@ -1552,6 +1552,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### ui
 
+- spelling (space u s, on in the kitchen sink): a Turkish and English note's deliberate typo (kitpa) marked, not
+  in its code span; ] s, z = (kitap), z g; an English note's names — `notes/reading/okuma-notlari.md`,
+  `notes/reading/maps-and-territories.md` (tui.md Spelling (25.6); tests 'spelling (25.6)')
 - themes and glyph sets (nerd, unicode, ascii, auto) picker preview and esc restores; NO\_COLOR —
   `work/infra/dotfiles/slipbox/themes/kestrel-dark.yaml`, `work/kestrel/docs/qa/theme-showcase.md` (theme.pick,
   glyphs.pick; tests)
@@ -2489,6 +2492,17 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (command-specs.ts)
 - `link.insert` — Insert a link to a note… — `hobbies/cooking/Home.md`, `hobbies/cycling/202608151900-index.md`
   (command-specs.ts; 21.5)
+
+### spell
+
+- `spell.next` — Next misspelt word — `notes/reading/okuma-notlari.md`, `notes/reading/maps-and-territories.md`
+  (command-specs.ts)
+- `spell.prev` — Previous misspelt word — `notes/reading/okuma-notlari.md`, `notes/reading/maps-and-territories.md`
+  (command-specs.ts)
+- `spell.suggest` — Spelling suggestions — `notes/reading/okuma-notlari.md`, `notes/reading/maps-and-territories.md`
+  (command-specs.ts)
+- `spell.add` — Add the word to your words — `notes/reading/okuma-notlari.md`,
+  `notes/reading/maps-and-territories.md` (command-specs.ts)
 - `folders.open` — Folders: go into a named one — `notes/.slipbox/config.toml`, `work/product/README.md`
   (command-specs.ts; 21.10)
 - `folders.default` — Which copy a folder's links open — `notes/.slipbox/config.toml`,
@@ -2826,6 +2840,7 @@ The same notes, one per tab.
   (command-specs.ts)
 - `ui.problems_bar` — Problems bar — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`
   (command-specs.ts)
+- `ui.spell` — Spelling — `notes/reading/okuma-notlari.md`, `notes/reading/maps-and-territories.md` (command-specs.ts)
 - `ui.problem_marks` — Problems marked in the text — `work/kestrel/docs/qa/render-torture.md`,
   `notes/meetings/all-hands-archive.md` (command-specs.ts)
 - `ui.urls` — Show link URLs — `work/kestrel/docs/qa/render-torture.md`, `notes/meetings/all-hands-archive.md`

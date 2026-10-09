@@ -13,7 +13,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { commentLinks, DOCUMENT_GRAMMARS, grammarFor, grammarNow, type OutlineEntry, parseSyntax, type Span as SyntaxSpan } from "../core/syntax.ts";
 import { type DocumentSymbol, type SymbolInformation, SymbolKind, type TextEdit as LspTextEdit, type WorkspaceEdit } from "vscode-languageserver-protocol";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { onLoaded } from "../core/lazy.ts";
+import { lazy, loadError, onLoaded } from "../core/lazy.ts";
+import { addOwnWord, Checker, dictionaryFiles, noteLanguages, openSpeller, ownWordsFile, proseWords, type Speller, type SpellWord } from "../core/spell.ts";
 import ignore from "ignore";
 import { classify, extensionOf, type FileGroup, isKnownExtension } from "../core/filetypes.ts";
 import { appendFileSync, type Dirent, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
@@ -574,6 +575,8 @@ export interface UiState {
   problem_marks: "off" | "error" | "warning" | "info";
   /** How the code view draws a cell (24.13): in a box, or on a band. */
   code_cells: "box" | "band";
+  /** Misspelt words marked in notes (25.6). */
+  spell: boolean;
   theme: string;
   glyphs: string;
 }
@@ -592,6 +595,7 @@ export function uiDefaults(c: Config): UiState {
     problems_bar: c.diagnostics.bar !== "off",
     problem_marks: c.diagnostics.marks,
     code_cells: c.render.code_cells,
+    spell: c.spell.enabled,
     // "auto": URLs where colour can't mark links (NO_COLOR), as in `slipbox render`.
     urls: c.render.show_urls === "always" || (c.render.show_urls === "auto" && !!process.env.NO_COLOR),
     theme: c.theme,
@@ -7883,6 +7887,83 @@ export class App {
     }
     this.bracketMemo = { buf: view.buf, version: view.buf.version, at, insert: !!view.insert, marks };
     return marks;
+  }
+
+  /** The dictionaries' checkers by their languages (25.6): each once its dictionaries are loaded. */
+  private readonly checkers = new Map<string, Checker>();
+  /** Languages already said to have no dictionary, or one that wouldn't load: said once. */
+  private readonly spellSaid = new Set<string>();
+  /** Bumped when your words change: the words found misspelt before are found again. */
+  private spellGeneration = 0;
+  private spellMemo: { buf: NoteBuffer; version: number; key: string; generation: number; words: SpellWord[] } | null = null;
+
+  /** A note's languages for spelling: its front matter's `lang`, else `[spell] languages`. */
+  private spellLanguages(view: View): string[] {
+    return noteLanguages(view.buf.parsed.frontmatter?.data, this.config.spell.languages);
+  }
+
+  /**
+   * A checker for some languages (25.6): their dictionaries, once all have loaded — each in the background the first
+   * time, the window drawn again when it's there; null until then. A language with no dictionary is said once.
+   */
+  private spellChecker(langs: string[]): Checker | null {
+    const key = langs.join(" ");
+    const hit = this.checkers.get(key);
+    if (hit) return hit;
+    const spellers: Speller[] = [];
+    let waiting = false;
+    for (const lang of langs) {
+      const files = dictionaryFiles(lang, this.config.spell.dictionaries);
+      const name = files ? `spell:${files.aff}` : "";
+      const s = files ? lazy(name, () => openSpeller(files)) : null;
+      if (s) spellers.push(s);
+      else if (files && !loadError(name)) waiting = true;
+      else if (!this.spellSaid.has(lang)) {
+        this.spellSaid.add(lang);
+        this.message("warn", files ? `spelling: ${lang}'s dictionary didn't load (${loadError(name)})` : `spelling: no dictionary for ${lang} — [spell] dictionaries can name yours`);
+      }
+    }
+    if (waiting) return null;
+    const c = new Checker(spellers);
+    this.checkers.set(key, c);
+    return c;
+  }
+
+  /**
+   * A note's misspelt words (25.6), in order, while spelling is on: its prose's words none of its languages' dictionaries
+   * knows — null while they load, or for a file that isn't a note.
+   */
+  misspelt(view: View): SpellWord[] | null {
+    if (!this.ui.spell || view.buf.kind.group !== "note") return null;
+    const buf = view.buf;
+    const langs = this.spellLanguages(view);
+    const checker = this.spellChecker(langs);
+    if (!checker) return null;
+    const key = langs.join(" ");
+    const m = this.spellMemo;
+    if (m && m.buf === buf && m.version === buf.version && m.key === key && m.generation === this.spellGeneration) return m.words;
+    const words = checker.misspelt(proseWords(buf.parsed.tree, buf.source));
+    this.spellMemo = { buf, version: buf.version, key, generation: this.spellGeneration, words };
+    return words;
+  }
+
+  /** What a word of the note might be instead: its languages' dictionaries' suggestions. */
+  spellSuggestions(view: View, word: string): string[] {
+    return this.spellChecker(this.spellLanguages(view))?.suggest(word) ?? [];
+  }
+
+  /** One of your words added (25.6): to your list, and to every dictionary loaded — marked no more anywhere. */
+  addSpellWord(word: string): void {
+    try {
+      addOwnWord(word);
+    } catch (err) {
+      return this.message("error", `couldn't add "${word}" to your words: ${(err as Error).message}`);
+    }
+    for (const c of this.checkers.values()) for (const s of c.spellers) s.add(word);
+    // Their answers so far are thrown away; the dictionaries, with the word in them now, stay.
+    this.checkers.clear();
+    this.spellGeneration++;
+    this.message("info", `"${word}" added to your words (${this.graph.shownPath(ownWordsFile())})`);
   }
 
   /** A folder as an export's places show it: from the root inside it, `~/` under home, else whole. */

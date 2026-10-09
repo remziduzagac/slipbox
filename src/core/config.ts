@@ -220,6 +220,15 @@ export interface Config {
     /** Typing an opening bracket or a quote puts its closing one after the cursor (25.3); off by default. */
     auto_pairs: boolean;
   };
+  /** Spelling in notes (25.6). */
+  spell: {
+    /** Misspelt words marked in notes; `space u s` turns it on or off for the session. Off by default. */
+    enabled: boolean;
+    /** The languages a note is checked in when its front matter names none (`lang: tr`). */
+    languages: string[];
+    /** Your own Hunspell dictionaries by language: the path to its `.dic`, its `.aff` beside it. */
+    dictionaries: Record<string, string>;
+  };
   watch: {
     enabled: boolean;
     debounce_ms: number;
@@ -299,6 +308,7 @@ export const DEFAULT_CONFIG: Config = {
   lsp: { enabled: true, auto_install: true },
   context: { depth: 1, backlinks: true, limit: 25 },
   editor: { command: "", remote: ["nvim"], autosave_ms: 30000, edit_in: "source", lens_min_rows: 6, lens_max: 0.5, auto_pairs: false },
+  spell: { enabled: false, languages: ["en"], dictionaries: {} },
   watch: { enabled: true, debounce_ms: 120, poll_ms: 2000 },
   keys: {},
   aliases: {},
@@ -586,8 +596,8 @@ function merge<T>(base: T, over: Record<string, unknown>, file: string, prefix: 
       }
       continue;
     }
-    // String maps: key bindings (with context sub-tables), aliases, group names.
-    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || /^keys\.(visual|source|explorer|outline|footnotes|info|resize)$/.test(prefix)) {
+    // String maps: key bindings (with context sub-tables), aliases, group names, dictionaries by language.
+    if (prefix === "keys" || prefix === "aliases" || prefix === "groups" || prefix === "spell.dictionaries" || /^keys\.(visual|source|explorer|outline|footnotes|info|resize)$/.test(prefix)) {
       const table = prefix === "keys" && ["visual", "source", "explorer", "outline", "footnotes", "info", "resize"].includes(key);
       if (table && !isPlainObject(value)) warnings.push(`config: ${file}: ${path} must be a table of key = "command" (a mode's own keys)`);
       else if (typeof value === "string") out[key] = value;

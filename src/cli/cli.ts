@@ -32,7 +32,8 @@ import { certainty, describeLanding, Graph, type LinkProblem, openGraph, type Re
 import { type LintIssue, lintCommand, lintFailure, runLint } from "../core/lint.ts";
 import { detectColorDepth, layoutToAnsi, type ColorDepth } from "../core/layout/ansi.ts";
 import { layoutNote, layoutWidth } from "../core/note.ts";
-import { headingsOf, parseAround, type ParsedNote, slugify } from "../core/parse.ts";
+import { headingsOf, parseAround, parseMarkdown, type ParsedNote, slugify } from "../core/parse.ts";
+import { addOwnWord, Checker, dictionaryFiles, noteLanguages, openSpeller, ownWordsFile, proseWords, type Speller } from "../core/spell.ts";
 import { findHeading, headingFragment } from "../core/landing.ts";
 import { addFootnote, applyEdits, deleteFootnote, editFootnote, type Footnote, footnotesOf, renameFootnote, type TextEdit } from "../core/footnotes.ts";
 import { parseNoteFile } from "../core/readers.ts";
@@ -210,6 +211,8 @@ Usage:
   slipbox find <query> [note]       find text in a note, or every note  [--regex] [--whole] [--ignore-case] [--files]
   slipbox replace <note> <old> <new>  replace in a note  [--regex] [--whole] [--ignore-case] [--first | --first-per-line] [--lines A-B] [--dry-run] [--if-unchanged <sha>]
   slipbox replace --all <old> <new>  replace in every note, undone as a rename is  [--files] [--regex] [--whole] [--ignore-case] [--dry-run] [--plan]
+  slipbox spell <note>              the words its dictionaries don't know (its lang:, else [spell] languages)
+                                    [--lang L[,M]] [--suggest] · --add <word>: one of your words, added
   slipbox task <note> [line]        list tasks, or toggle one      [--check] [--uncheck] [--if-unchanged <sha>]
   slipbox read <note>               a note's text, and its sha
   slipbox stat <note>               a note's size, dates, title, counts, encoding (the TUI's note info)
@@ -263,7 +266,7 @@ Exit codes: 0 ok, 1 error, 2 usage, 3 not found, 4 ambiguous (a link; several nv
 export const CLI_COMMANDS = new Set([
   "render", "resolve", "link", "links", "backlinks", "name", "folders", "ls", "outline", "find", "replace", "task", "read", "stat", "write", "mkdir", "send", "history",
   "mv", "rename-heading", "relink", "convert-links", "undo", "context", "search", "index", "changed", "diff", "merge-review", "worktrees", "cp", "rm", "trash", "deinit", "tags", "footnotes", "problems",
-  "capture", "scratch", "init", "info", "apply", "doctor", "diagnostics", "themes", "commands", "help", "export",
+  "capture", "scratch", "init", "info", "apply", "doctor", "diagnostics", "themes", "commands", "help", "export", "spell",
 ]);
 
 /** The command word in raw arguments that failed to parse: skips flags and their values. */
@@ -316,7 +319,7 @@ export async function runCli(argv: string[], io: Io): Promise<number> {
     setTrustedRoots(yours.trust.roots);
     // A file named by its pointer (21.10) is that file: its path from here on, so the command works in
     // its folder as it would with the path.
-    const NOTE_FIRST = ["render", "export", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
+    const NOTE_FIRST = ["render", "export", "spell", "links", "backlinks", "outline", "footnotes", "replace", "task", "read", "stat", "write", "send", "mv", "rename-heading", "relink", "convert-links", "cp", "rm", "diff", "context"];
     // `replace --all` names no note: its first argument is what it finds.
     const noNote = command === "replace" && has(args, "all");
     const named = command === "context" ? rest.map((_, i) => i) : noNote ? [] : NOTE_FIRST.includes(command) || ["diagnostics", "doctor", "deinit", "index", "link"].includes(command) ? [0] : command === "find" ? [1] : [];
@@ -388,7 +391,7 @@ function within<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
 const MAX_ARGS: Record<string, number> = {
   render: 1, resolve: 1, link: 1, links: 1, name: 1, folders: 3, backlinks: 1, ls: 0, outline: 1, find: 2, replace: 3, task: 2, read: 1, stat: 1, send: 1, history: 0,
   scratch: 1, init: 1, info: 0, apply: 1, index: 1, themes: 0, commands: 0, mkdir: 1, mv: 2, "rename-heading": 3, doctor: 1, diagnostics: 1, relink: 1, "convert-links": 1, cp: 2, rm: 1, trash: 2, deinit: 1, tags: 1, footnotes: 4, problems: 0, "merge-review": 1,
-  changed: 0, diff: 1, worktrees: 0, undo: 0,
+  changed: 0, diff: 1, worktrees: 0, undo: 0, spell: 1,
 };
 
 /**
@@ -425,6 +428,7 @@ export const FLAGS: Record<string, string[]> = {
   find: ["regex", "whole", "ignore-case", "files"],
   ls: ["files"],
   replace: ["regex", "whole", "ignore-case", "first", "first-per-line", "lines", "dry-run", "if-unchanged", "all", "files", "plan"],
+  spell: ["lang", "suggest", "add"],
   task: ["check", "uncheck", "if-unchanged"],
   footnotes: ["if-unchanged"],
   problems: ["lint"],
@@ -1678,6 +1682,45 @@ const HANDLERS: Record<string, Handler> = {
     return {
       data: { query, regex: has(s.args, "regex"), whole: has(s.args, "whole"), count: matches.length, matches },
       human: matches.map((m) => `${m.path}:${m.line}:${m.column}: ${m.text}\n`).join(""),
+    };
+  },
+
+  // Spelling (25.6): a note's misspelt words, by line and column (code points, as find's), with --suggest what each
+  // might be; --add puts a word in your own list, which the TUI's z g writes too.
+  async spell(s, rest) {
+    const add = flag(s.args, "add");
+    if (add !== undefined) {
+      if (rest.length || has(s.args, "suggest") || flag(s.args, "lang") !== undefined) throw new UsageError("spell --add takes the word alone");
+      const word = add.trim();
+      if (!word || /\s/.test(word)) throw new UsageError("--add takes one word");
+      addOwnWord(word);
+      return { data: { added: word, file: ownWordsFile() }, human: `"${word}" added to your words (${ownWordsFile()})\n` };
+    }
+    const rel = resolveNote(s, requireArg(rest, "note"), false);
+    if (classify(rel, s.config.walk.extensions).group !== "note") throw new UsageError(`${rel} isn't a note: spelling checks a note's prose`);
+    const text = readText(s.graph.abs(rel)).text;
+    const parsed = parseMarkdown(text);
+    const given = flag(s.args, "lang");
+    const languages = given !== undefined ? given.split(",").map((l) => l.trim()).filter(Boolean) : noteLanguages(parsed.frontmatter?.data, s.config.spell.languages);
+    const spellers: Speller[] = [];
+    const missing: string[] = [];
+    for (const lang of languages) {
+      const files = dictionaryFiles(lang, s.config.spell.dictionaries);
+      if (files) spellers.push(await openSpeller(files));
+      else missing.push(lang);
+    }
+    if (missing.length) s.warnings.push(`no dictionary for ${missing.join(", ")} — [spell] dictionaries can name yours`);
+    const checker = new Checker(spellers);
+    const starts = lineStarts(text);
+    const words = checker.misspelt(proseWords(parsed.tree, text)).map((w) => ({
+      line: w.line,
+      column: [...text.slice(starts[w.line - 1]!, w.from)].length + 1,
+      word: w.word,
+      ...(has(s.args, "suggest") ? { suggestions: checker.suggest(w.word) } : {}),
+    }));
+    return {
+      data: { path: rel, languages, missing, words },
+      human: words.map((w) => `${rel}:${w.line}:${w.column}: ${w.word}${w.suggestions ? ` → ${w.suggestions.join(", ") || "(none)"}` : ""}\n`).join(""),
     };
   },
 

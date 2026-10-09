@@ -751,6 +751,9 @@ Whatever is picked, the compiled binary bundles libraries whose licences ask for
   `@jsquash/webp` and its `wasm-feature-detect`; the libwebp `@jsquash/webp` compiles (and the binary embeds) is
   BSD-3-Clause, its notice too.
 - `jszip` is "MIT OR GPL-3.0-or-later": taken under MIT.
+- **Hunspell** (`25.6`), which `hunspell-asm` (MIT) compiles and the binary embeds, is "MPL-1.1 OR GPL-2.0 OR
+  LGPL-2.1": taken under MPL-1.1, weak copyleft as above (decided 2026-10-10). The dictionaries shipped are
+  `dictionary-en` (MIT and BSD, from SCOWL) and `dictionary-tr` (MIT), each with its licence text.
 
 The rest are permissive (MIT, ISC, BSD, BlueOak, Zlib); the grammars built into `grammars/` are MIT, their licences
 in `grammars/licenses/`. A new dependency's licence, and its own dependencies', is checked before it's added.
@@ -963,7 +966,7 @@ Not wanted: vim's marks, macros, named registers and block selection.*
 | 25.3 | **Prototype.** Brackets: `%` to the matching one (a motion too), both marked; pairs closed as typed, opt-in |
 | 25.4 | **Prototype.** Replace across files in the TUI: previewed as a rename is, undoable; `replace --all` |
 | 25.5 | **Prototype.** Word completion without a language server: the open files' words, `ctrl+n` / `ctrl+p` |
-| 25.6 | Spelling in notes: misspelt words marked, their suggestions, a word added to your own list |
+| 25.6 | **Prototype.** Spelling in notes: misspelt words marked, their suggestions, a word added to your own list |
 | 25.7 | A command run: `:!cmd`, its output in a window; lines filtered through one (`:'<,'>!sort`) |
 | 25.8 | A server's snippets: their tab stops and placeholders filled in turn, `tab` to the next (`19.16`) |
 
@@ -971,6 +974,11 @@ Not wanted: vim's marks, macros, named registers and block selection.*
 asks. `25.7` is the part of `13.1` that runs what you type yourself; the rest of `13.x` stays deferred. `25.8`:
 completion with a language server is `19.16`'s, done; it asks for no snippets (`snippetSupport: false`), so a function
 comes without its arguments' places to fill — added 2026-10-09 at the user's asking.
+
+`25.6`, decided 2026-10-10 with the user: English and Turkish come with slipbox, and any other language is the user's own
+Hunspell dictionary (`[spell] dictionaries`, else the system's). Hunspell runs as WebAssembly (`hunspell-asm`): it
+opens Turkish in 270 ms and about 20 MB, where nspell (pure JavaScript) took 950 ms and 250 MB for the same answers.
+Spelling is off by default (`space u s`); a note's front matter `lang:` names its languages.
 
 ## Git in the editor — `26.x`
 

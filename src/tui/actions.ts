@@ -41,6 +41,7 @@ import type { Feature } from "../core/servers/languages.ts";
 import { readerFor } from "../core/readers.ts";
 import * as E from "./editing.ts";
 import * as R from "./replacing.ts";
+import { spellAdd, spellStep, spellSuggest } from "./spelling.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
 import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, FOOTNOTE_ACTION_INFO, HISTORY_ACTION_INFO, INFO_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, PROBLEMS_ACTION_INFO, RESIZE_ACTIONS, spellKey } from "./keys.ts";
@@ -832,6 +833,7 @@ const UI_TOGGLES: { key: keyof UiState; id: string; title: string }[] = [
   { key: "breadcrumb", id: "ui.breadcrumb", title: "Breadcrumb" },
   { key: "top_bar", id: "ui.top_bar", title: "Top bar" },
   { key: "problems_bar", id: "ui.problems_bar", title: "Problems bar" },
+  { key: "spell", id: "ui.spell", title: "Spelling" },
 ];
 
 /** The marks' levels in turn (`space u shift+d`), and how each is said. */
@@ -1079,6 +1081,11 @@ export function registerActions(app: App): void {
       }),
     // links
     "link.insert": (a) => withView(a, (v) => a.insertLink(v)),
+    // Spelling (25.6): vim's keys, on the words its marks show.
+    "spell.next": (a) => withView(a, (v) => spellStep(a, v, 1)),
+    "spell.prev": (a) => withView(a, (v) => spellStep(a, v, -1)),
+    "spell.suggest": (a) => withView(a, (v) => spellSuggest(a, v)),
+    "spell.add": (a) => withView(a, (v) => spellAdd(a, v)),
     "link.next": (a) => cycleLink(a, 1),
     "link.prev": (a) => cycleLink(a, -1),
     "link.follow": (a) =>

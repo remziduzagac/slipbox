@@ -790,6 +790,21 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - wrapping (below)
 - link URLs
 - mouse capture
+- spelling (below)
+
+**Spelling (`25.6`; `space u s`, `[spell] enabled`).** A note's misspelt words are marked (`spell`: underlined) in every
+view — source, rendered and the lens — as `core/spell.ts` finds them: its prose, word by word — not its front matter,
+code, HTML or maths, a link's address, a wikilink, a tag, a URL or an email, nor an abbreviation (`API`), an identifier
+(`camelCase`, `snake_case`, `x86`), a path or a dotted name (`file.ts`) — checked against its languages' dictionaries,
+a word any of them knows being right. Its languages are its front matter's `lang` (`lang: tr`, `lang: [tr, en]`), else
+`[spell] languages`; English and Turkish come with slipbox, any other is yours or the system's
+([configuration.md](configuration.md), "Spelling"); a language with none is said once. Hunspell, as WebAssembly, and
+each dictionary load in the background the first time; the window is drawn again when they're there. Source rows mark
+a word by its offsets; a rendered row finds it among the prose of its spans (not code, a URL, a tag). A find's match
+or the selection shows over a mark. `] s` / `[ s` go to the next / previous one where the window shows it, `z =` lists
+the one under the cursor's suggestions — each language's best in turn — and puts the one picked in its place (an edit,
+one undo step, left unsaved), `z g` adds it to your words (`~/.local/share/slipbox/spell/words.txt`, one a line,
+what `slipbox spell --add` writes): every dictionary loaded takes it at once. `slipbox spell` is the CLI's.
 
 **Wrapping off (`space u w`, `alt+z`, `ui.wrap = false`).** Each note is laid out at its natural width:
 first very wide, then at its widest real row (trailing spaces, rules and right-aligned

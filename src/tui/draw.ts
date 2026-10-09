@@ -17,6 +17,7 @@ import { type Canvas, drawText } from "./canvas.ts";
 import { countWords } from "../core/words.ts";
 import type { CommentLink } from "../core/syntax.ts";
 import { cells, ordered } from "./cursor.ts";
+import { type Spot, spellSpots } from "./spelling.ts";
 import { match } from "./match.ts";
 import { keyChar, prettyKey, spellKey } from "./keys.ts";
 import { dateText, placeOf, type SaveAsGeometry, type SaveAsOverlay, sizeText } from "./saveas.ts";
@@ -1009,6 +1010,10 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const chosenOn = chosen ? problemLines([chosen]) : null;
   const links = commentLinksShown(view);
   const brackets = app.bracketMarks(view);
+  // Misspelt words (25.6), by the row they show on.
+  const misspelt = app.misspelt(view);
+  const spelling = new Map<number, Spot[]>();
+  for (const s of misspelt ? spellSpots(layout, misspelt) : []) spelling.set(s.row, [...(spelling.get(s.row) ?? []), s]);
   let prevSrc = view.top > 0 ? (layout.lines[view.top - 1]?.src ?? -1) : -1;
   // The gutter (the problems bar, the line numbers) in a shade of its own down the window, a column of it before them;
   // its last column the page's, between it and the text.
@@ -1063,6 +1068,8 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     if (chosenOn && !line.decor) marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     if (brackets && !line.decor) marks.push(...offsetMarks(line, brackets.get(line.src), false, "bracket_match"));
+    // Last: the first mark a cell has is the one drawn, so a find's match or the selection shows over a misspelt word.
+    for (const s of spelling.get(row) ?? []) marks.push({ from: s.col, to: s.col + s.width, role: "spell" });
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);
     // The lens's counters (`[ui] relative_numbers`), in the column its rows keep free: each row's distance from the
     // cursor's, the cursor's 0 — every row a step of j and k, a wrapped line's too — so vim's counts read off them. In

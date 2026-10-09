@@ -115,6 +115,7 @@ These churn freely before 1.0:
 | `index` | `{path, rebuilt, indexed, removed, files, ms}` |
 | `replace <note> <old> <new>` | `{path, count, dryRun, sha, newSha, changes[{line, before, after}]}` |
 | `replace --all <old> <new>` | as `mv`, kind `replace`: `from` what it finds, `to` what with |
+| `spell <note>` | `{path, languages, missing, words[{line, column, word, suggestions?}]}`; `--add`: `{added, file}` |
 | `task <note>` | `{path, sha, tasks[{line, checked, text, raw}]}` |
 | `task <note> <line>` | `{path, line, text, checked, changed, sha}` |
 | `read <note>` | `{path, abs, sha, bom, crlf, invalidUtf8, content}` |
@@ -181,6 +182,7 @@ slipbox find 'O2[0-9]:' handbook --regex --json   # one note; data.matches[{path
 slipbox replace kenji-mori Aster ASTER --dry-run  # what would change, line by line
 slipbox replace note '(\w+): book' '$1 will book' --regex --lines 10-20
 slipbox replace --all Aster Astra --dry-run    # every note: each line it would change; undo takes it back
+slipbox spell kenji-mori --suggest             # path:line:column: word → what it might be instead
 slipbox task 2026-09-14-weekly           # line, [x] or [ ], text
 slipbox task 2026-09-14-weekly 17 --check
 slipbox read note --json                 # data.content, data.sha
@@ -228,6 +230,10 @@ slipbox history --json                   # data.read[{path,at,line}], data.open 
   --regex`), and the replacement takes `$&`, `$1`–`$9` and `$$`. `replace` changes every match
   unless `--first` (the first in the range) or `--first-per-line` (vim's `:s` without `g`);
   `--lines A-B` keeps it to those lines, as `:'<,'>s` does.
+- **`spell <note>`** (`25.6`) lists the words of a note's prose its dictionaries don't know, by line and column (code
+  points, as `find`'s): its front matter's `lang`, else `[spell] languages`, or `--lang tr,en` (the dictionaries:
+  [configuration.md](configuration.md), "Spelling"). A language with no dictionary is a warning, its words unchecked.
+  `--suggest` gives each one's suggestions; `--add <word>` puts a word in your own list, as the TUI's `z g` does.
 - **`replace --all <old> <new>`** (`25.4`) replaces in every note — with `--files`, every text file too, as `find
   --files` searches — as a rename is (below): `--dry-run` previews each line it changes, `--plan` saves it for `apply`,
   and `undo` takes it back. A match may cross lines (`--regex`): its lines are one change. A file with a match that

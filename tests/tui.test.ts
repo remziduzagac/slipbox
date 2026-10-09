@@ -13321,3 +13321,143 @@ describe("word completion without a server (25.5)", () => {
     expect(h.app.completion).toBeNull();
   });
 });
+
+describe("spelling (25.6)", () => {
+  const vault = (files: Record<string, string>) => {
+    const root = makeVault();
+    for (const [rel, text] of Object.entries(files)) writeFileSync(join(root, rel), text);
+    return root;
+  };
+  const until = async (ok: () => boolean, ms = 8000) => {
+    for (const t = Date.now(); !ok() && Date.now() - t < ms; ) await Bun.sleep(20);
+    return ok();
+  };
+  /** Spelling turned on, its dictionaries loaded: the window's misspelt words. */
+  const on = async (h: Harness) => {
+    await h.keys("space", "u", "s");
+    expect(await until(() => (h.frame(), h.app.misspelt(h.app.view!) !== null))).toBe(true);
+    return h.app.misspelt(h.app.view!)!.map((w) => w.word);
+  };
+  /** The style of the first cell of `word` on the row showing `row`'s text. */
+  const styleAt = (h: Harness, row: string, word: string) => {
+    const c = h.canvas();
+    const y = c.rows.findIndex((r) => r.join("").includes(row));
+    return c.styles[y]![c.rows[y]!.join("").indexOf(word, c.rows[y]!.join("").indexOf(row))]!;
+  };
+
+  test("off by default; space u s turns it on: misspelt words marked in the render and in source, not in code; ] s and [ s go to them", async () => {
+    const root = vault({ "s1.md": "# Spelling\n\nThis has a recieve and a\nseccond word here.\n\n`recieve` is code; this recieve isn't.\n" });
+    const h = await harness({ root, open: "s1.md", width: 120, height: 30 });
+    expect(h.app.misspelt(h.app.view!)).toBeNull();
+    expect(await on(h)).toEqual(["recieve", "seccond", "recieve"]);
+    expect(h.app.messages.some((m) => m.text === "Spelling: on")).toBe(true);
+    const spell = h.app.theme.roles.spell;
+    // Rendered: the paragraph's row, both its words; the code span's, not.
+    expect(styleAt(h, "This has a recieve", "recieve")).toMatchObject({ fg: spell.fg, underline: true });
+    expect(styleAt(h, "This has a recieve", "seccond")).toMatchObject({ fg: spell.fg, underline: true });
+    // On the line with the code, the code's not, the prose's is.
+    expect(styleAt(h, "recieve is code; this recieve", "recieve").fg).not.toBe(spell.fg);
+    expect(styleAt(h, "this recieve isn't", "recieve")).toMatchObject({ fg: spell.fg, underline: true });
+    // ] s from the top: each in turn, around the end; [ s back.
+    const v = h.app.view!;
+    const at = () => h.app.currentLayout(v).lines[v.cur.row]!.spans.map((s) => s.text).join("").slice(v.cur.col, v.cur.col + 7);
+    const spot = () => `${at()}@${v.cur.row}`;
+    await h.keys("]", "s");
+    const first = spot();
+    await h.keys("]", "s");
+    const second = spot();
+    await h.keys("]", "s");
+    const third = spot();
+    expect([first, second, third].map((x) => x.split("@")[0])).toEqual(["recieve", "seccond", "recieve"]);
+    // The paragraph's two on one row; the code's line's on another.
+    expect(first.split("@")[1]).toBe(second.split("@")[1]);
+    expect(third.split("@")[1]).not.toBe(first.split("@")[1]);
+    await h.keys("]", "s");
+    expect(spot()).toBe(first); // around the end
+    await h.keys("[", "s");
+    expect(spot()).toBe(third); // around the start
+    await h.keys("[", "s", "[", "s");
+    expect(spot()).toBe(first); // the one before seccond, on its row
+    // Source mode: by their offsets.
+    await h.keys("ctrl+k");
+    expect(styleAt(h, "seccond word here", "seccond")).toMatchObject({ fg: spell.fg, underline: true });
+    expect(styleAt(h, "`recieve` is code", "recieve").fg).not.toBe(spell.fg);
+    expect(styleAt(h, "this recieve isn't", "recieve")).toMatchObject({ fg: spell.fg, underline: true });
+    await h.keys("g", "g", "]", "s");
+    expect(h.app.view!.buf.source.slice(offsetOf(h.app, h.app.view!), offsetOf(h.app, h.app.view!) + 7)).toBe("recieve");
+    // A link's address with the misspelt word in it isn't marked, its text is; nor a word that only holds it.
+    await h.keys("shift+g", "o", "enter", ...[..."[recieve](recieve.md) and likely lik"].map((k) => (k === " " ? "space" : k)), "escape");
+    expect(await until(() => (h.frame(), (h.app.misspelt(h.app.view!) ?? []).length === 5))).toBe(true);
+    expect(h.app.misspelt(h.app.view!)!.slice(3).map((w) => w.word)).toEqual(["recieve", "lik"]);
+    expect(styleAt(h, "[recieve](recieve.md)", "recieve")).toMatchObject({ fg: spell.fg, underline: true });
+    expect(styleAt(h, "(recieve.md)", "recieve").fg).not.toBe(spell.fg);
+    expect(styleAt(h, "likely lik", "likely").fg).not.toBe(spell.fg);
+    expect(styleAt(h, "y lik", "lik")).toMatchObject({ fg: spell.fg, underline: true });
+    await h.keys("ctrl+k");
+    expect(styleAt(h, "recieve and likely", "recieve")).toMatchObject({ fg: spell.fg, underline: true });
+    expect(styleAt(h, "and likely lik", "likely").fg).not.toBe(spell.fg);
+    expect(styleAt(h, "y lik", "lik")).toMatchObject({ fg: spell.fg, underline: true });
+    await h.keys("ctrl+k");
+    // A find's match over one shows as the match.
+    await h.keys("/", ...[..."seccond"], "enter");
+    expect(styleAt(h, "seccond word here", "seccond").fg).not.toBe(spell.fg);
+    // Off again: no marks, ] s says why.
+    await h.keys("escape", "space", "u", "s");
+    expect(h.app.misspelt(h.app.view!)).toBeNull();
+    await h.keys("]", "s");
+    expect(h.app.messages.at(-1)?.text).toBe("spelling is off — space u s turns it on");
+  });
+
+  test("z = suggests: enter puts one in its place, one undo step; its last row adds the word; z g too — another note's mark goes", async () => {
+    const root = vault({ "s1.md": "A recieve and Zorvexium.\n", "s2.md": "Zorvexium again, and Quorblet.\n" });
+    const h = await harness({ root, open: "s2.md", width: 120, height: 30 });
+    h.app.openInNewTab("s1.md");
+    expect(await on(h)).toEqual(["recieve", "Zorvexium"]);
+    await h.keys("]", "s", "z", "=");
+    const list = h.app.overlay as ListOverlay;
+    expect(list.items[0]!.label).toBe("receive");
+    expect(list.items.at(-1)!.label).toBe('add "recieve" to your words');
+    await h.keys("enter");
+    expect(h.app.view!.buf.source).toBe("A receive and Zorvexium.\n");
+    expect(h.app.view!.buf.dirty).toBe(true);
+    await h.keys("ctrl+z");
+    expect(h.app.view!.buf.source).toBe("A recieve and Zorvexium.\n");
+    // The text changed under the list (a reload): the word isn't replaced where it no longer is.
+    await h.keys("g", "g", "]", "s", "z", "=");
+    h.app.view!.buf.edit(0, 0, "So ");
+    await h.keys("enter");
+    expect(h.app.messages.at(-1)?.text).toBe('"recieve" changed meanwhile — not replaced');
+    expect(h.app.view!.buf.source).toBe("So A recieve and Zorvexium.\n");
+    // z g on the other: added, marked nowhere — here, nor in the other note.
+    await h.keys("g", "g", "]", "s", "]", "s");
+    await h.keys("z", "g");
+    expect(h.app.messages.at(-1)?.text).toStartWith('"Zorvexium" added to your words');
+    expect(h.app.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["recieve"]);
+    h.app.openInNewTab("s2.md");
+    expect(await until(() => (h.frame(), h.app.misspelt(h.app.view!) !== null))).toBe(true);
+    expect(h.app.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["Quorblet"]);
+    // The add row does as z g.
+    await h.keys("]", "s", "z", "=");
+    await h.keys(...Array((h.app.overlay as ListOverlay).items.length - 1).fill("down"), "enter");
+    expect(h.app.messages.at(-1)?.text).toStartWith('"Quorblet" added to your words');
+    // Off a misspelt word: said.
+    await h.keys("g", "g", "z", "=");
+    expect(h.app.messages.at(-1)?.text).toBe("no misspelt word under the cursor");
+  });
+
+  test("a note's lang: picks its dictionaries; a language with none is said once; not a note, no spelling", async () => {
+    const root = vault({ "s3.md": "---\nlang: tr\n---\nBugün evlerinzde kitap okuyorum.\n", "s4.md": "---\nlang: [xx, tr]\n---\nzzq kitap\n", "s5.ts": "const recieve = 1;\n" });
+    // First the one with no dictionary for xx: said once, though tr's is loading meanwhile, frame after frame.
+    const h = await harness({ root, open: "s4.md", width: 120, height: 30 });
+    expect(await on(h)).toEqual(["zzq"]);
+    h.frame();
+    expect(h.app.messages.filter((m) => m.text === "spelling: no dictionary for xx — [spell] dictionaries can name yours").length).toBe(1);
+    h.app.openInNewTab("s3.md");
+    expect(await until(() => (h.frame(), h.app.misspelt(h.app.view!) !== null))).toBe(true);
+    expect(h.app.misspelt(h.app.view!)!.map((w) => w.word)).toEqual(["evlerinzde"]);
+    h.app.openInNewTab("s5.ts");
+    expect(h.app.misspelt(h.app.view!)).toBeNull();
+    await h.keys("]", "s");
+    expect(h.app.messages.at(-1)?.text).toBe("spelling is a note's");
+  });
+});

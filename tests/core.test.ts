@@ -2483,3 +2483,160 @@ describe("replace across files: the lines it changes (25.4)", () => {
     expect(edits("same\n", "same", "same")).toEqual([]);
   });
 });
+
+describe("spelling (25.6)", () => {
+  const dir = () => mkdtempSync(join(tmpdir(), "slipbox-spell-"));
+
+  test("a note's prose, word by word: not its front matter, code, addresses, wikilinks, tags, abbreviations or identifiers", async () => {
+    const { proseWords } = await import("../src/core/spell.ts");
+    const src = [
+      "---",
+      "title: Frontmatter wrods",
+      "---",
+      "# A headng",
+      "",
+      "Tehre is `inlnie` code, [a lnik](https://exmaple.com/pth) and <https://autolnik.com>, mail <a@bcdx.co>.",
+      "A [[Wikilnik]] and #tagg; API, x86, snake_cse, camelCse, file.tss, src/coer and don't, Ankara'da.",
+      "Mail kenjii@exmaple.org, see slipbox://reserch/notte.md and file:///hme/x, ![a pictre](p.png) $mathh$ <b>htmll</b>",
+      "",
+      "```js",
+      "const misspeld = 1;",
+      "```",
+      "",
+      "| Tabel | cell |",
+      "| --- | --- |",
+      "| celll | $mathh$ |",
+      "",
+    ].join("\n");
+    const words = proseWords(parseMarkdown(src).tree, src);
+    expect(words.map((w) => `${w.word}@${w.line}:${w.column}`)).toEqual([
+      "headng@4:5",
+      "Tehre@6:1",
+      "is@6:7",
+      "code@6:19",
+      "lnik@6:28",
+      "and@6:59",
+      "mail@6:87",
+      "and@7:16",
+      "and@7:77",
+      "don't@7:81",
+      "Ankara'da@7:88",
+      "Mail@8:1",
+      "see@8:26",
+      "and@8:57",
+      "htmll@8:106",
+      "Tabel@14:3",
+      "cell@14:11",
+      "celll@16:3",
+    ]);
+    // Each by its offset too.
+    expect(words.every((w) => src.slice(w.from, w.to) === w.word)).toBe(true);
+  });
+
+  test("a language's dictionary: yours, else the system's for that very language, else slipbox's, else the system's for its base", async () => {
+    const { dictionaryFiles } = await import("../src/core/spell.ts");
+    const home = dir();
+    const sys = dir();
+    for (const n of ["tr_TR", "en_GB", "de_DE", "de_AT"]) {
+      writeFileSync(join(sys, `${n}.aff`), "");
+      writeFileSync(join(sys, `${n}.dic`), "");
+    }
+    // An .aff without its .dic is no dictionary.
+    writeFileSync(join(sys, "pt_BR.aff"), "");
+    mkdirSync(join(home, "d"));
+    writeFileSync(join(home, "d", "mine.aff"), "");
+    writeFileSync(join(home, "d", "mine.dic"), "");
+    const yours = { fr: "~/d/mine.dic", it: join(home, "d", "mine"), es: "~/d/none.dic" };
+    const at = (lang: string) => {
+      const f = dictionaryFiles(lang, yours, [sys], home);
+      return f && `${f.from}:${f.aff.startsWith(sys) ? f.aff.slice(sys.length + 1) : f.from === "slipbox" ? "bundled" : f.aff.slice(home.length + 1)}`;
+    };
+    expect([at("fr"), at("it"), at("fr-FR")]).toEqual(["yours:d/mine.aff", "yours:d/mine.aff", "yours:d/mine.aff"]);
+    // tr-TR: the system's own; tr and en: slipbox's; en-GB: the system's; de: the system's first de_*.
+    expect([at("tr-TR"), at("tr"), at("en"), at("en-GB"), at("en_US"), at("de")]).toEqual(["system:tr_TR.aff", "slipbox:bundled", "slipbox:bundled", "system:en_GB.aff", "slipbox:bundled", "system:de_AT.aff"]);
+    // Yours not there: the rest as before; a language nobody has, none.
+    expect([at("es"), at("xx"), at("pt-BR"), at("pt")]).toEqual([null, null, null, null]);
+  });
+
+  test("a dictionary in another encoding is read as UTF-8; one in UTF-8 as it is", async () => {
+    const { asUtf8, openSpeller } = await import("../src/core/spell.ts");
+    const latin = (s: string) => Uint8Array.from([...s].map((c) => (c === "ı" ? 0xfd : c === "ş" ? 0xfe : c.charCodeAt(0))));
+    const aff = latin("SET ISO8859-9\nTRY abcı\n");
+    const dic = latin("2\nkış\nkız\n");
+    const out = asUtf8(aff, dic);
+    expect(new TextDecoder().decode(out.aff)).toBe("SET UTF-8\nTRY abcı\n");
+    expect(new TextDecoder().decode(out.dic)).toBe("2\nkış\nkız\n");
+    const utf = new TextEncoder().encode("SET UTF-8\n");
+    expect(asUtf8(utf, dic).aff).toBe(utf);
+    // Opened, it knows its words as written.
+    const d = dir();
+    writeFileSync(join(d, "x.aff"), aff);
+    writeFileSync(join(d, "x.dic"), dic);
+    const s = await openSpeller({ aff: join(d, "x.aff"), dic: join(d, "x.dic"), from: "yours" });
+    expect([s.correct("kış"), s.correct("kız"), s.correct("kiz")]).toEqual([true, true, false]);
+  });
+
+  test("slipbox's English and Turkish; your words put in as each opens; the languages a note names", async () => {
+    const { addOwnWord, dictionaryFiles, noteLanguages, openSpeller, ownWords, ownWordsFile } = await import("../src/core/spell.ts");
+    addOwnWord("Zorvexian");
+    expect(ownWords()).toContain("Zorvexian");
+    expect(ownWordsFile()).toBe(join(process.env.XDG_DATA_HOME!, "slipbox", "spell", "words.txt"));
+    const en = await openSpeller(dictionaryFiles("en", {})!);
+    expect([en.correct("receive"), en.correct("recieve"), en.correct("Zorvexian"), en.correct("don't")]).toEqual([true, false, true, true]);
+    expect(en.suggest("recieve")[0]).toBe("receive");
+    const tr = await openSpeller(dictionaryFiles("tr", {})!);
+    expect([tr.correct("kitaplarımızdan"), tr.correct("evlerinzde"), tr.correct("Ankara'da")]).toEqual([true, false, true]);
+    expect([noteLanguages({ lang: "tr" }, ["en"]), noteLanguages({ lang: "tr, en" }, ["en"]), noteLanguages({ lang: ["tr-TR", 3] }, ["en"]), noteLanguages({}, ["en"]), noteLanguages(null, ["de"])]).toEqual([
+      ["tr"],
+      ["tr", "en"],
+      ["tr-TR"],
+      ["en"],
+      ["de"],
+    ]);
+  });
+
+  test("your words: one a line, comments and blank lines left out; added at the end, a line of its own", async () => {
+    const { addOwnWord, ownWords } = await import("../src/core/spell.ts");
+    const f = join(dir(), "sub", "words.txt");
+    expect(ownWords(f)).toEqual([]);
+    addOwnWord("one", f);
+    writeFileSync(f, `${readFileSync(f, "utf8")}# a comment\n\n  two  `);
+    addOwnWord("three", f);
+    expect(readFileSync(f, "utf8")).toBe("one\n# a comment\n\n  two  \nthree\n");
+    expect(ownWords(f)).toEqual(["one", "two", "three"]);
+  });
+
+  test("a checker: any of its dictionaries knowing a word will do; each word asked once; suggestions in turn, ten at most", async () => {
+    const { Checker } = await import("../src/core/spell.ts");
+    const asked: string[] = [];
+    const speller = (known: string[], sugg: string[]) => ({ correct: (w: string) => (asked.push(w), known.includes(w)), suggest: () => sugg, add: () => {} });
+    const c = new Checker([speller(["bir", "don't"], ["a1", "a2", "x"]), speller(["one"], ["b1", "x", "b2", ...Array.from({ length: 9 }, (_, i) => `c${i}`)])]);
+    expect([c.correct("bir"), c.correct("one"), c.correct("zzz"), c.correct("don’t")]).toEqual([true, true, false, true]);
+    const before = asked.length;
+    expect([c.correct("zzz"), c.correct("one")]).toEqual([false, true]);
+    expect(asked.length).toBe(before); // known already
+    expect(c.suggest("zzz")).toEqual(["a1", "b1", "a2", "x", "b2", "c0", "c1", "c2", "c3", "c4"]);
+    const w = (word: string) => ({ word, line: 1, column: 1, from: 0, to: word.length });
+    expect(c.misspelt([w("bir"), w("zzz"), w("one")]).map((x) => x.word)).toEqual(["zzz"]);
+    // No dictionary: nothing is misspelt.
+    expect(new Checker([]).correct("zzz")).toBe(true);
+  });
+});
+
+describe("spelling, bundled (25.6)", () => {
+  test("Hunspell from a bundle, as the compiled binary has it: its runtime called, a dictionary opened", () => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-bundle-"));
+    const entry = join(dir, "entry.ts");
+    writeFileSync(
+      entry,
+      `import { dictionaryFiles, openSpeller } from ${JSON.stringify(join(import.meta.dir, "..", "src", "core", "spell.ts"))};\n` +
+        `const s = await openSpeller(dictionaryFiles("en", {})!);\nconsole.log(s.correct("receive"), s.correct("recieve"));\n`,
+    );
+    const built = Bun.spawnSync([process.execPath, "build", entry, "--target", "bun", "--outdir", join(dir, "out")], { stderr: "pipe" });
+    expect(built.exitCode).toBe(0);
+    // Run where its files are: a bundle names them from there (a compiled binary has them inside it).
+    const ran = Bun.spawnSync([process.execPath, join(dir, "out", "entry.js")], { cwd: join(dir, "out"), stderr: "pipe", env: { ...process.env } });
+    expect(new TextDecoder().decode(ran.stderr)).toBe("");
+    expect(new TextDecoder().decode(ran.stdout)).toBe("true false\n");
+  }, 60000);
+});

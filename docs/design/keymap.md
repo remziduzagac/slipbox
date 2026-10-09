@@ -563,6 +563,11 @@ gets one when a line is added after its last.
 | `space u d` | the problems bar on / off (with line numbers off; on, a number takes its line's colour) (`19.9`) |
 | `space u shift+d` | problems marked in the text, cycling off → errors → warnings → all (`19.10`) |
 | `space u c` | the code view's cells (`24.13`): in boxes, or on tinted bands |
+| `space u s` | spelling on / off: a note's misspelt words marked (`25.6`) |
+
+**Spelling** (`25.6`), while it's on: `] s` / `[ s` go to the next / previous misspelt word (around the note's ends),
+`z =` lists the one under the cursor's suggestions — `enter` puts one in its place, its last row adds the word to your
+words — and `z g` adds it to your words, marked no more in any note. As vim's.
 
 **Persistence.** UI settings apply at once and are remembered in the session. Config sets the
 defaults, and a session setting is kept only while the config value it overrode is unchanged:

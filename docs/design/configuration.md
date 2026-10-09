@@ -191,6 +191,11 @@ remote = ["nvim"]              # space n s: "nvim" finds the running nvims (spac
                                # else commands run in order, e.g. "code -g {file}:{line}", or
                                # ['nvim --server {server} --remote {file}', …], {server} picked
 
+[spell]                        # spelling in notes (25.6); space u s turns it on or off for the session
+enabled = false                # misspelt words marked in notes
+languages = ["en"]             # a note's languages when its front matter names none (lang: tr)
+dictionaries = {}              # yours by language: { de = "~/dicts/de_DE.dic" }, its .aff beside it
+
 [lint]                         # the lint surface (3.21): your linter's findings in notes and the Problems panel
 enabled = "auto"               # auto: only with a markdownlint config (the root's, or ~/.markdownlint-cli2.jsonc)
                                # | on | off (off: [linter.<name>] runs none either)
@@ -322,6 +327,22 @@ draws a tab that wide (else four columns). A save does what `.editorconfig` asks
 = true` trims every line's trailing spaces and tabs, `insert_final_newline = true` adds the last newline — in the text
 first, as an undo step of its own. The Info view (`space n i`) says how a file is indented and where that came from.
 slipbox has no indentation setting of its own: `.editorconfig` is where a project, or your home folder, says it.
+
+## Spelling: the dictionaries
+
+A note is checked (`25.6`) in the languages its front matter names (`lang: tr`, `lang: [tr, en]`, `lang: en-GB`), else
+`[spell] languages`. Each language's dictionary is found, in order:
+
+1. yours, in `[spell] dictionaries`, by the language or its base (`de` for `de-AT`): the path to its `.dic`, its `.aff`
+   beside it;
+2. else the system's for that very language (`en_GB.aff` for `en-GB`), in `~/.local/share/hunspell`,
+   `/usr/share/hunspell`, `/usr/share/myspell`, `/usr/local/share/hunspell`, Homebrew's and macOS's `Library/Spelling`;
+3. else slipbox's own, for English (American) and Turkish;
+4. else the system's first for its base (`de_DE` for `de`).
+
+Dictionaries are Hunspell's (LibreOffice's and most systems' are): one in another encoding than UTF-8 (`SET
+ISO8859-9`) is read in its own. Your words — `z g`, `slipbox spell --add` — are one a line in
+`~/.local/share/slipbox/spell/words.txt` (`$XDG_DATA_HOME`), right in every language; a line starting `#` is a comment.
 
 ## Reloading
 

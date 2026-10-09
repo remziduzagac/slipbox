@@ -135,6 +135,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/nvim.ts` | 4.12 | finding and asking the running nvims |
 | `core/replace.ts` | 4.16 | find's patterns (plain, regex, whole words), replacements, vim's `:s` parsed |
 | `core/replace-files.ts` | 25.4 | a find replaced across files, as a rename's plan: previewed, undone |
+| `core/spell.ts` | 25.6 | a note's prose word by word; Hunspell dictionaries: slipbox's, yours, the system's |
 | `core/merge.ts` | 5.5 | line diff (Myers), three-way merge, the diff the conflict prompt shows |
 | `core/theme/*` | 2.6 | semantic roles, built-in themes, base16 loader |
 | `core/glyphs.ts` | 2.8 | Nerd, Unicode and ASCII glyph sets |
@@ -165,6 +166,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `tui/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
 | `tui/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
 | `tui/replacing.ts` | 4.16 | the replace row, `:s` and its confirm, `gn`'s matches |
+| `tui/spelling.ts` | 25.6 | misspelt words where a window shows them: the marks, `] s`, `z =`, `z g` |
 | `tui/completion.ts` | 19.16, 20.13, 25.5 | completion as typed: a server's items, links' targets, open files' words |
 | `tui/saveas.ts` | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
 
