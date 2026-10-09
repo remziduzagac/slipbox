@@ -92,6 +92,8 @@ interface CellSpec {
   title: string;
   /** The definition it is, for its name's and its kind's decoration; none for a run of statements. */
   def?: CodeDef;
+  /** Its language's word for it (`struct`), before its name in its header, in place of `mark`. */
+  term?: string;
 }
 
 /**
@@ -330,17 +332,19 @@ export function layoutCode(source: string, base: Layout, model: CodeModel | null
   /** The cells of a definition — one, or a class's head then its members, each its own — its documentation in it. */
   const definition = (d: CodeDef, docsOf: DocPart[]) => {
     const from = Math.min(d.top, ...docsOf.map((p) => ("doc" in p ? (p.doc.before === undefined ? p.doc.start : d.top) : p.comments.from)));
-    const mark = markOf(d, g);
+    // Its header says what it is in its language's word (`struct: Frame`), else its kind's mark.
+    const mark = d.term ? "" : markOf(d, g);
+    const term = d.term;
     const markRole: Role = d.kind === "function" ? "syn_function" : d.kind === "value" ? "syn_variable" : "syn_type";
     const title = texts[d.name.line - 1]?.slice(d.name.from, d.name.to) ?? "";
     const kids = d.kind === "class" ? defs.filter((k) => k.depth === d.depth + 1 && k.top > d.line && k.end <= d.end && k.kind !== "value") : [];
-    if (!kids.length) return cell({ from, to: d.end, code: [d.top, d.end], docs: docsOf, column: d.column, mark, markRole, title, def: d });
+    if (!kids.length) return cell({ from, to: d.end, code: [d.top, d.end], docs: docsOf, column: d.column, mark, markRole, title, def: d, term });
     // A class: its head (up to its first member's documentation), then its members on a page of their own.
     const blockOf = (k: CodeDef) => docEnding.get(k.top - 1)?.start ?? k.top;
     let head = Math.min(...kids.map(blockOf)) - 1;
     while (head > d.top && blank(texts[head - 1], head)) head--;
     while (head > d.top && lineComment.has(head)) head--;
-    cell({ from, to: head, code: [d.top, head], docs: docsOf, column: d.column, mark, markRole, title, def: d });
+    cell({ from, to: head, code: [d.top, head], docs: docsOf, column: d.column, mark, markRole, title, def: d, term });
     if (folded.has(d.top)) return;
     // Its members, to its closing brace (a line of its own after its last member's).
     let body = d.end;
@@ -541,14 +545,18 @@ function cellHeader(c: CellSpec, column: number, inner: number, style: "box" | "
   const box = style === "box";
   const open = box ? `${g.box.tl}${g.box.h} ` : " ";
   const close = box ? ` ${g.box.h.repeat(2)}` : " "; // its top line runs to the edge: no corner
-  // A comment's box: its mark alone (`¶`), no title — what it is, it says.
-  const markW = c.mark ? stringWidth(c.mark) + (c.prose ? 0 : 1) : 0;
+  // A comment's box: its mark alone (`¶`), no title — what it is, it says. A definition's: its word, `struct: ` — the
+  // first to go where the name wouldn't fit beside it.
+  const fixed = stringWidth(open) + stringWidth(close) + bw + stringWidth(lines) + 4;
+  const word = c.term && stringWidth(c.term) + 2 + stringWidth(c.title) <= total - fixed ? `${c.term}: ` : "";
+  const markW = word ? stringWidth(word) : c.mark ? stringWidth(c.mark) + (c.prose ? 0 : 1) : 0;
   const room = total - stringWidth(open) - stringWidth(close) - markW - bw - stringWidth(lines) - 4;
   const title = c.prose ? "" : truncate(c.title, Math.max(1, room));
   const fill = Math.max(1, total - stringWidth(open) - stringWidth(close) - markW - stringWidth(title) - stringWidth(lines) - bw - 3);
   const edge: Role = box ? "cell_line" : "text";
   const spans: Span[] = [{ text: " ".repeat(column), role: "text", attrs: 0 }, { text: open, role: edge, attrs: 0 }];
-  if (c.mark) spans.push({ text: c.prose ? c.mark : `${c.mark} `, role: c.markRole, attrs: A_BOLD });
+  if (word) spans.push({ text: word, role: "dim", attrs: 0 });
+  else if (c.mark) spans.push({ text: c.prose ? c.mark : `${c.mark} `, role: c.markRole, attrs: A_BOLD });
   if (title) spans.push({ text: title, role: c.def ? c.markRole : "dim", attrs: c.def ? A_BOLD : 0 });
   spans.push({ text: ` ${(box ? g.box.h : " ").repeat(fill)} `, role: edge, attrs: 0 });
   spans.push({ text: `${lines} `, role: "dim", attrs: 0 });

@@ -624,6 +624,8 @@ export class SyntaxTree {
     const defs: CodeDef[] = [];
     const docs: CodeDoc[] = [];
     const open: Pos[] = [];
+    /** The words of the definitions `open`'s ends are of: a function in a class (not a module) is a method. */
+    const holders: string[] = [];
     // A docstring: a body's first statement, when it's a string alone.
     const docstring = (body: Node | null | undefined): Node | null => {
       const first = body?.namedChildren[0];
@@ -631,7 +633,10 @@ export class SyntaxTree {
       return str?.type === "string" ? str : null;
     };
     for (const f of found) {
-      while (open.length && !before(f.start, open[open.length - 1]!)) open.pop();
+      while (open.length && !before(f.start, open[open.length - 1]!)) {
+        open.pop();
+        holders.pop();
+      }
       const n = f.name;
       const to = n.endPosition.row === n.startPosition.row ? n.endPosition.column : n.startPosition.column + 1;
       const decorated = f.node.parent?.type === "decorated_definition" ? f.node.parent : null;
@@ -640,8 +645,11 @@ export class SyntaxTree {
       for (let p = first.previousNamedSibling; p && ATTRIBUTE.test(p.type) && p.endPosition.row >= first.startPosition.row - 1; p = p.previousNamedSibling) first = p;
       const top = first.startPosition.row + 1;
       const at = first.startPosition;
-      defs.push({ kind: f.kind, line: f.start.row + 1, name: { line: n.startPosition.row + 1, from: n.startPosition.column, to }, depth: open.length, top, end: f.end.row + 1, column: (lines[at.row] ?? "").length - (lines[at.row] ?? "").trimStart().length });
+      const holder = holders[holders.length - 1];
+      const term = termOf(f.node, !!holder && !/module|namespace/.test(holder));
+      defs.push({ kind: f.kind, line: f.start.row + 1, name: { line: n.startPosition.row + 1, from: n.startPosition.column, to }, depth: open.length, top, end: f.end.row + 1, column: (lines[at.row] ?? "").length - (lines[at.row] ?? "").trimStart().length, term });
       open.push(f.end);
+      holders.push(term);
       if (python && f.kind !== "value") {
         const d = docstring(f.node.childForFieldName("body"));
         if (d) docs.push({ start: d.startPosition.row + 1, end: d.endPosition.row + 1, column: first.startPosition.column, style: "docstring", before: top });
@@ -784,6 +792,37 @@ function headerOf(comments: Node[], root: Node, lines: string[]): { start: numbe
   return { start, end: last, kind: "license", name };
 }
 
+/** What a language calls a definition, by its node's type, where the type's own name, less its suffix, isn't it. */
+const TERMS: Record<string, string> = {
+  generator_function_declaration: "function",
+  variable_declarator: "function",
+  declaration: "function",
+  protocol_function_declaration: "method",
+  singleton_method: "method",
+  field_declaration: "method",
+  abstract_class_declaration: "class",
+  mod_item: "module",
+  type_alias_declaration: "type",
+  typealias_declaration: "type",
+};
+
+/**
+ * A definition's word (24.9): what its language calls it — its node's type, less what every grammar adds
+ * (`struct_item` a struct, `interface_declaration` an interface), Swift's from what it declares, Go's `type T struct` a
+ * struct; a function in a class (an impl, a trait, a struct — not a module or a namespace) a method.
+ */
+function termOf(n: Node, inClass: boolean): string {
+  let t = TERMS[n.type] ?? n.type.replace(/_(item|declaration|definition|specifier|statement|spec)$/, "").replace(/_/g, " ");
+  const declares = n.childForFieldName("declaration_kind")?.text;
+  if (declares) t = declares;
+  if (n.type === "type_spec") {
+    const of = n.childForFieldName("type")?.type;
+    if (of === "struct_type") t = "struct";
+    else if (of === "interface_type") t = "interface";
+  }
+  return inClass && t === "function" ? "method" : t;
+}
+
 /**
  * A definition's kind in the code view, by its node's type in any grammar: a function, a class (what holds other
  * definitions: a class, an impl, a trait, a module, a namespace, a protocol), a type (an interface, a struct, an enum,
@@ -812,6 +851,9 @@ export interface CodeDef {
   end: number;
   /** The column it starts at: its indentation. */
   column: number;
+  /** What its language calls it (24.9): `function`, `method`, `class`, `struct`, `impl`, `trait`… — its cell's header's
+   *  word. */
+  term?: string;
 }
 
 /**

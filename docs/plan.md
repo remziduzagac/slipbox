@@ -920,7 +920,8 @@ read from its node's type name; its documentation is the comment lines right abo
 tags are terms, any other doc is markdown prose; imports are a run of top-level nodes named so. What a language does
 its own way is an exception (Python's docstrings), not a mapping. `24.11`–`24.16`'s TypeScript and Python become the
 generic view and their exceptions, their tests the proof nothing was lost. It replaces "Rust, Go mapped". Every file
-keeps its source mode, the document view or not: `space n v` switches, `[render] code = "source"` opens code in it.
+keeps its source mode, the document view or not: `space n v` switches, `[render] code = "source"` opens code in it. A
+cell's header says what it is in its language's word, `struct: Frame`, `method: add` (the user's, 2026-10-09).
 
 ## Deferred — in the design, not in this breakdown
 

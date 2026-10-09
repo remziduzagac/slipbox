@@ -37,7 +37,7 @@ a language hasn't mapped is drawn as it is.
 
 | Category | What the view does with it |
 | --- | --- |
-| definition: function, class, type | a cell, its header its kind and name; a class's head a cell, then each member's |
+| definition: function, class, type | a cell, its header its word and name; a class's head a cell, then each member's |
 | top-level values, other statements | a cell of each run of them (its title the values' names, else `code`) |
 | documentation | prose and a list of terms, in its cell above a divider and its code |
 | comment | right above a definition, its documentation; else a cell of prose; in code, prose in the comments' colour |
@@ -82,7 +82,7 @@ over several lines is prose alone.
 ```text
 ── Resolving links ────────────────────────────────────────────────
 
-┌─ ƒ resolve ──────────────────────────────────── 5–15 ⇢ ⧉ ✎ ◎ ▾ ──
+┌─ function: resolve ──────────────────────────── 5–15 ⇢ ⧉ ✎ ◎ ▾ ──
 │
 │ Resolves a link written in a note: the note it reaches, or null
 │ when nothing matches.
@@ -97,13 +97,13 @@ over several lines is prose alone.
 │   return byName.get(key(target)) ?? byPath.get(target);
 │ }
 
-┌─ ◆ Graph ───────────────────────────────────── 19–20 ⇢ ⧉ ✎ ◎ ▾ ──
+┌─ class: Graph ──────────────────────────────── 19–20 ⇢ ⧉ ✎ ◎ ▾ ──
 │
 │ The notes of a folder, read once.
 │
 │ export class Graph {
 │
-│ ┌─ ƒ textOf ────────────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ──
+│ ┌─ method: textOf ──────────────────────────── 21–28 ⇢ ⧉ ✎ ◎ ▾ ──
 ├─┤
 │ │ A note's text, as read.
 │ │
@@ -114,7 +114,7 @@ over several lines is prose alone.
 │ ┌─ ¶ ────────────────────────────────────────────── 30 ⧉ ✎ ◎ ▾ ──
 ├─┤ Then writing.
 │
-│ ┌─ ƒ add ──────────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ──
+│ ┌─ method: add ────────────────────────────────── 32 ⇢ ⧉ ✎ ◎ ▾ ──
 ├─┤
 │ │ add(rel: string): void { this.notes.set(rel, read(rel)); }
 │
@@ -145,9 +145,11 @@ the tokens differ.
   the box's left line; a folded box, which has no row under its top, `┬` at it; a band's header, touched) — `└─` to
   the last's — or, a class with a closing brace, `├─` to the last too, the line on down to the brace. A class in a class
   has a tree of its own, from its own box.
-- **A cell's header**: its kind (`ƒ` a function or method, `◆` a class, `◇` an interface, type or enum, `•` values,
-  `¶` a comment; Nerd: the editors' symbol icons; ASCII `f C T v #`), its name bold, its lines, then its buttons —
-  a comment's all but `⇢`, as it defines nothing:
+- **A cell's header**: what it is in its language's word, dimmed, then its name bold (`function: resolve`,
+  `class: Graph`, `method: textOf`, `struct: Frame`, `impl: Stacker`, `trait`, `interface`, `enum`, `type`, `module`,
+  `namespace`, `protocol` — a function in a class, an impl or a trait a method, in a module a function; `24.9`), the
+  word the first to go where the name wouldn't fit; a comment's box its `¶` alone; a run of statements its values'
+  names (`•`) or `code`. Then its lines, then its buttons — a comment's all but `⇢`, as it defines nothing:
 
 | Button | Key (the cell at the cursor) | Does |
 | --- | --- | --- |
