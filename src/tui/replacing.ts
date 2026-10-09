@@ -149,6 +149,29 @@ export function replaceEvery(app: App, view: View, query: string, replacement: s
 }
 
 /**
+ * The source lines a command line's range names in a window — `:s`'s, a filter's (25.7), first and last, from 1: the
+ * cursor's (a rendered row's are the source lines its text came from: a paragraph's row joins several, so the command
+ * works on what the row shows), the note's (`%`), the last selection's (`'<,'>`), or by number. Why not, as a string.
+ */
+export function exLines(app: App, view: View, range: "line" | "all" | "selection" | { from: number; to: number }): [number, number] | string {
+  // The marks move with the text (lines deleted under them collapse to the line after, as vim's do).
+  const lineCount = Math.max(1, view.buf.lineStarts().length - (view.buf.source.endsWith("\n") ? 1 : 0));
+  if (range === "all") return [1, lineCount];
+  if (range === "selection") {
+    const marks = view.buf.visualMarks;
+    if (!marks) return "no selection yet for '<,'>";
+    return [Math.min(E.lineOf(view, marks[0]), lineCount), Math.min(E.lineOf(view, marks[1]), lineCount)];
+  }
+  if (range !== "line") {
+    if (range.from < 1 || range.from > lineCount) return `line ${range.from} isn't in the note (it has ${lineCount})`;
+    return [range.from, Math.min(range.to, lineCount)];
+  }
+  const row = app.currentLayout(view).lines[view.cur.row];
+  const srcs = [row?.src ?? 1, ...(editable(view) ? [] : (row?.spans ?? []).flatMap((s) => (s.src === undefined ? [] : [s.src])))];
+  return [Math.min(...srcs), Math.max(...srcs)];
+}
+
+/**
  * Vim's substitute from the command line: `s/old/new/` on the cursor's line, `%s` on the note,
  * `'<,'>s` on the last selection's lines; `g` every match on a line, `i` ignoring case, `c` asking
  * at each. The pattern is a regex; the edits are one undo step.
@@ -156,19 +179,13 @@ export function replaceEvery(app: App, view: View, query: string, replacement: s
 export function substitute(app: App, view: View, input: string): void {
   const sub = parseSubstitute(input);
   if (!sub) return app.message("warn", "a substitute is s/old/new/ with g, i, c flags after it");
-  const marks = view.buf.visualMarks;
-  if (sub.range === "selection" && !marks) return app.message("warn", "no selection yet for '<,'>");
-  // The marks move with the text (lines deleted under them collapse to the line after, as vim's do).
-  const lineCount = Math.max(1, view.buf.lineStarts().length - (view.buf.source.endsWith("\n") ? 1 : 0));
-  // The cursor's line before the window changes mode; a rendered row's are the source lines its text
-  // came from (a paragraph's row joins several), so `:s` works on what the row shows.
-  const row = app.currentLayout(view).lines[view.cur.row];
-  const srcs = [row?.src ?? 1, ...(editable(view) ? [] : (row?.spans ?? []).flatMap((s) => (s.src === undefined ? [] : [s.src])))];
-  const line: [number, number] = [Math.min(...srcs), Math.max(...srcs)];
+  // The cursor's line before the window changes mode.
+  const span = exLines(app, view, sub.range);
+  if (typeof span === "string") return app.message("warn", span);
   if (!editable(view)) app.setViewMode(view, app.editMode(view));
   const text = view.buf.source;
   const starts = view.buf.lineStarts();
-  const [a, b] = sub.range === "all" ? [1, starts.length] : sub.range === "selection" ? [Math.min(E.lineOf(view, marks![0]), lineCount), Math.min(E.lineOf(view, marks![1]), lineCount)] : line;
+  const [a, b] = span;
   const range: [number, number] = [starts[a - 1]!, starts[b] ?? text.length];
   const re = compilePattern(sub.pattern, { regex: true, whole: false, ignoreCase: sub.ignoreCase });
   if (typeof re === "string") return app.message("warn", `not a regex: ${re}`);

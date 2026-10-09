@@ -364,6 +364,7 @@ export const DEFAULT_SOURCE_KEYS: Record<string, string> = {
 /** Visual mode: these win over the normal keymap; movements extend the selection by themselves. */
 export const DEFAULT_VISUAL_KEYS: Record<string, string> = {
   o: "visual.swap",
+  "!": "shell.filter",
   y: "visual.yank",
   // Source mode: edit the selection.
   d: "visual.delete",

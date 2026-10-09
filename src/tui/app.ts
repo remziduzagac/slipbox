@@ -7889,6 +7889,9 @@ export class App {
     return marks;
   }
 
+  /** The command your shell is running (25.7): one at a time. */
+  shellJob: { command: string; stop: () => void } | null = null;
+
   /** The dictionaries' checkers by their languages (25.6): each once its dictionaries are loaded. */
   private readonly checkers = new Map<string, Checker>();
   /** Languages already said to have no dictionary, or one that wouldn't load: said once. */
@@ -8576,6 +8579,7 @@ export class App {
     if (this.quitting) return;
     this.quitting = true;
     this.servers?.killAll();
+    this.shellJob?.stop();
     try {
       writeDirty(this.loc, []);
     } catch {}

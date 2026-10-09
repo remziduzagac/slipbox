@@ -441,6 +441,13 @@ paragraph's row joins several). `'<,'>` is the last selection's lines, also afte
 marks they move with the text (lines added or deleted above, an undo), and lines deleted under them
 leave the line after.
 
+**Your shell** (`25.7`), as vim's: `:!cmd` runs `cmd` by your shell (`$SHELL`) in the root's folder — `%` is the file's
+path from there (`\%` a percent sign) — and shows what it prints, both streams, in a window titled with how it ended;
+`enter` on a `path:line` there (`grep -n`'s, a compiler's) opens that file at that line. `:{range}!cmd` gives the lines
+to it and puts what it prints in their place, one undo step: `:%!sort`, `:'<,'>!column -t` (`!` on a selection types
+`:'<,'>!`), `:.!cmd`, `:3,7!cmd`. A failing one leaves the lines as they were and shows its output; a text changed
+while it ran is left too. One runs at a time; `shell.stop` (and quitting) ends it, and what it started.
+
 ## Editing
 
 Phase 3 (plan). The hand-offs (`space n e`, `space n s`) are under "Note, folder, app". Editing

@@ -42,6 +42,8 @@ import { readerFor } from "../core/readers.ts";
 import * as E from "./editing.ts";
 import * as R from "./replacing.ts";
 import { spellAdd, spellStep, spellSuggest } from "./spelling.ts";
+import { shellFilter, shellRun, shellStop } from "./shellrun.ts";
+import { parseBang } from "../core/shell.ts";
 import * as V from "./vim.ts";
 import { rank } from "./match.ts";
 import { EXPLORER_ACTION_INFO, FILTER_KEYS_HELP, FOOTNOTE_ACTION_INFO, HISTORY_ACTION_INFO, INFO_ACTION_INFO, OUTLINE_ACTION_INFO, prettyKey, PROBLEMS_ACTION_INFO, RESIZE_ACTIONS, spellKey } from "./keys.ts";
@@ -589,7 +591,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
 }
 
 /** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
-const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "heading.rename", "folder.name"]);
+const FREE_ARG = new Set(["note.create", "folder.create", "cursor.goto_line", "find.vault", "search.open", "note.rename", "heading.rename", "folder.name", "shell.run", "shell.filter"]);
 
 /** Commands in the order of core/command-specs.ts, which follows docs/design/keymap.md. */
 const SPEC_ORDER = new Map(COMMAND_SPECS.map((c, i) => [c.id, i]));
@@ -637,13 +639,13 @@ function topKeys(keys: string[], variants: Set<string>, desc: string): { keys: s
  * typing ranks the best match first. Each command shows its first key and alias; the selected
  * one's description is in the footer.
  */
-function openPalette(a: App): void {
-  // From a selection: its lines are '<,'> (vim's marks), already typed, for :'<,'>s.
+function openPalette(a: App, typed = ""): void {
+  // From a selection: its lines are '<,'> (vim's marks), already typed, for :'<,'>s — then `typed`.
   const v = a.view;
-  let input = "";
+  let input = typed;
   if (v?.sel) {
     a.markSelection(v);
-    input = "'<,'>";
+    input = `'<,'>${typed}`;
   }
   const commands = inSpecOrder(a.registry.list().filter((c) => !c.hidden));
   const aliasOf = new Map<string, string[]>();
@@ -677,6 +679,9 @@ function openPalette(a: App): void {
       if (/^\s*\d+\s*$/.test(input)) return [{ label: `Go to line ${input.trim()}`, detail: "cursor.goto_line", keys: ["", `:${input.trim()}`], data: `cursor.goto_line ${input.trim()}` }];
       // A substitute (vim's :s): one entry, run by enter.
       if (parseSubstitute(input)) return [{ label: "Substitute", detail: input.trim(), keys: ["", ":s"], data: `find.substitute ${input.trim()}` }];
+      // A command for the shell (25.7): run, or lines filtered through it.
+      const bang = parseBang(input);
+      if (bang) return [bang.range ? { label: "Filter the lines through", detail: input.trim(), keys: ["", ":!"], data: `shell.filter ${input.trim()}` } : { label: "Run in the shell", detail: bang.command, keys: ["", ":!"], data: `shell.run ${bang.command}` }];
       const m = /^(\S+)\s(.*)$/.exec(input);
       const aliasSpec = m ? a.aliases[m[1]!] : undefined;
       if (aliasSpec) {
@@ -703,6 +708,13 @@ function openPalette(a: App): void {
       if (parseSubstitute(input)) {
         a.overlay = null;
         void a.run(`find.substitute ${input.trim()}`).then(() => a.host.requestRender());
+        return true;
+      }
+      const bang = parseBang(input);
+      if (bang) {
+        a.overlay = null;
+        if (bang.range) shellFilter(a, input);
+        else shellRun(a, bang.command);
         return true;
       }
       if (/^\s*\d+\s*$/.test(input)) {
@@ -1700,6 +1712,10 @@ export function registerActions(app: App): void {
         });
       }),
     "palette.open": (a) => openPalette(a),
+    // Your shell (25.7): what you type, run; lines filtered through it. Without the command, the `:` line asks it.
+    "shell.run": (a, arg) => (arg?.trim() ? shellRun(a, arg) : openPalette(a, "!")),
+    "shell.filter": (a, arg) => (arg?.trim() && parseBang(arg)?.range ? shellFilter(a, arg) : openPalette(a, a.view?.sel ? "!" : ".!")),
+    "shell.stop": (a) => shellStop(a),
     "note.open": (a, arg) => {
       if (!arg) return void a.run("switcher.open");
       // A pointer (21.10): the file it names, in its folder's copy here.

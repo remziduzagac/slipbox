@@ -2739,6 +2739,16 @@ The same notes, one per tab.
   (command-specs.ts)
 - `find.replace_vault` — Replace in every note — `notes/meetings/all-hands-archive.md`,
   `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
+
+### shell
+
+- `shell.run` — Run a command — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- `shell.filter` — Filter lines through a command — `notes/reading/list.md`, `work/kestrel/config/app.toml`
+  (command-specs.ts)
+- `shell.stop` — Stop the running command — `notes/index.md`, `work/kestrel/README.md` (command-specs.ts)
+- :!grep -n then enter on a path:line; :'<,'>!sort on a list; :%!column -t on a table; a folder's key bound to
+  shell.run dropped — `notes/reading/list.md`, `work/kestrel/README.md` (keymap.md Your shell (25.7); tests 'commands
+  run by your shell')
 - `find.substitute` — Substitute: s/old/new/ — `notes/meetings/all-hands-archive.md`,
   `work/kestrel/api/kestrel_api/sync.py` (command-specs.ts)
 - `find.next` — Next match — `notes/meetings/all-hands-archive.md`, `work/kestrel/api/kestrel_api/sync.py`

@@ -474,7 +474,10 @@ export const USER_ONLY = ["editor.command", "editor.remote", "lint.command"];
  * Commands a vault's keys and aliases may not name: each throws work away (quit without saving,
  * revert, overwrite, clear), and a cloned vault could otherwise put one on ctrl+s or :wq.
  */
-export const VAULT_FORBIDDEN_COMMANDS = ["app.quit_force", "note.revert", "note.save_force", "scratch.clear"];
+export const VAULT_FORBIDDEN_COMMANDS = ["app.quit_force", "note.revert", "note.save_force", "scratch.clear", "shell.run", "shell.filter"];
+
+/** Of those, the ones that run a program (25.7): a folder's key would run what the folder chose. */
+const RUNS_A_PROGRAM = new Set(["shell.run", "shell.filter"]);
 
 function dropUserOnly(data: Record<string, unknown>, file: string, warnings: string[]): void {
   // Keys and aliases (every mode's table) that name a command throwing work away.
@@ -484,7 +487,7 @@ function dropUserOnly(data: Record<string, unknown>, file: string, warnings: str
       if (isPlainObject(v)) strip(v, `${where}.${k}`);
       else if (typeof v === "string" && VAULT_FORBIDDEN_COMMANDS.includes(v.split(" ")[0]!)) {
         delete table[k];
-        warnings.push(`config: ${file} binds ${where}.${k} to ${v}, which only your own config may (it throws work away); ignored`);
+        warnings.push(`config: ${file} binds ${where}.${k} to ${v}, which only your own config may (${RUNS_A_PROGRAM.has(v.split(" ")[0]!) ? "it runs a program" : "it throws work away"}); ignored`);
       }
     }
   };

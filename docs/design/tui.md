@@ -792,6 +792,13 @@ These are the `space u` toggles and pickers (list in [keymap.md](keymap.md)):
 - mouse capture
 - spelling (below)
 
+**Commands run by your shell (`25.7`).** `:!cmd` and `:{range}!cmd` ([keymap.md](keymap.md), "Your shell") run what
+you type, never what a root brings: a folder's config can't bind `shell.run` or `shell.filter`
+([configuration.md](configuration.md)). It runs by `$SHELL -c` in the root's folder, `SLIPBOX_ROOT` and `SLIPBOX_FILE`
+in its environment, in a process group of its own so stopping it stops what it started; the TUI goes on meanwhile,
+`running: cmd` said. What it prints is kept to 2 MB (the window says so when cut short), a filter's output to 32 MB;
+the window is a list — each line sanitized, filtered as typed — whose `enter` on a `path:line` of the root opens it.
+
 **Spelling (`25.6`; `space u s`, `[spell] enabled`).** A note's misspelt words are marked (`spell`: underlined) in every
 view — source, rendered and the lens — as `core/spell.ts` finds them: its prose, word by word — not its front matter,
 code, HTML or maths, a link's address, a wikilink, a tag, a URL or an email, nor an abbreviation (`API`), an identifier

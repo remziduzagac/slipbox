@@ -35,8 +35,9 @@ settings name programs (rust-analyzer's `check.overrideCommand`, for one). In a 
 does: a server's settings are its defaults and yours, with the ones that keep it from running the project's code
 over them, and nothing of the folder's own runs ([lsp.md](lsp.md), "Trust").
 Nor may its `[keys]` or `[aliases]` name a command that throws work away — `app.quit_force`,
-`note.revert`, `note.save_force`, `scratch.clear` (`VAULT_FORBIDDEN_COMMANDS`) — so a clone can't put
-one on `ctrl+s` or `:wq`; those bindings are dropped with a warning.
+`note.revert`, `note.save_force`, `scratch.clear` — or runs a program, `shell.run` and `shell.filter` (`25.7`; with
+an argument, the folder would choose what runs) (`VAULT_FORBIDDEN_COMMANDS`): so a clone can't put one on `ctrl+s` or
+`:wq`; those bindings are dropped with a warning. Yours may: `"g m" = "shell.run make"`.
 
 **A typo saved mid-edit.** When a file fails to parse on a live reload, it keeps what it said
 before (its last good contents), with a warning — your theme, keys and picked settings stay — until
