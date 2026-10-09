@@ -43,6 +43,8 @@ export interface ExportDoc {
  */
 export interface ExportPicture {
   file?: string;
+  /** Its bytes in hand, read before its file: a picture made PNG for a format that doesn't hold its kind. */
+  data?: Uint8Array;
   /** Where it is on the web, for one drawn from its cached copy. */
   url?: string;
   svg?: string;

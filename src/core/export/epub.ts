@@ -9,6 +9,7 @@ import { toHtml as serialise } from "hast-util-to-html";
 import { strToU8, type Zippable, zipSync } from "fflate";
 import { loadRasterizer } from "../svg.ts";
 import type { ExportDoc } from "./assemble.ts";
+import { convertPictures } from "./convert.ts";
 import { chapterHast } from "./hast.ts";
 import { mediaType } from "./images.ts";
 import { CSS } from "./style.ts";
@@ -21,6 +22,8 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 /** The document as an EPUB's bytes. */
 export async function toEpub(doc: ExportDoc): Promise<Uint8Array> {
   const r = await loadRasterizer();
+  // An e-book's pictures are PNG, JPEG, GIF, WebP and SVG: a BMP made a PNG first.
+  await convertPictures(doc, ["png", "jpg", "gif", "webp"], r);
   const lang = doc.lang ?? "en";
   // Every id the book holds, by the chapter file it's in: where a link to it goes.
   const fileOf = new Map<string, string>();

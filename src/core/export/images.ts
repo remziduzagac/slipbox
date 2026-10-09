@@ -73,10 +73,10 @@ export interface PictureData {
 export function pictureData(pic: ExportPicture, r: Rasterizer | null, maxWidth: number): PictureData | null {
   let svg = pic.svg ?? null;
   let raster: Raster | null = null;
-  if (!svg && pic.file) {
+  if (!svg && (pic.data || pic.file)) {
     let bytes: Uint8Array;
     try {
-      bytes = readFileSync(pic.file);
+      bytes = pic.data ?? readFileSync(pic.file!);
     } catch {
       return null;
     }
@@ -108,14 +108,9 @@ export function pictureData(pic: ExportPicture, r: Rasterizer | null, maxWidth: 
 export function rasterOf(pic: ExportPicture, r: Rasterizer | null, maxWidth: number, kinds: Raster["type"][], scale = 2): (Raster & { shown: { width: number; height: number } }) | null {
   const p = pictureData(pic, r, maxWidth);
   if (!p) return null;
-  if (p.type !== "svg" && kinds.includes(p.type)) return { data: p.data, type: p.type, width: p.width, height: p.height, shown: p.shown };
-  // A GIF where it isn't held: drawn by resvg as a PNG, inside an SVG (it reads no WebP or BMP).
-  if (p.type !== "svg" && p.type !== "gif") return null;
-  const svg =
-    p.type === "svg"
-      ? new TextDecoder().decode(p.data)
-      : `<svg xmlns="http://www.w3.org/2000/svg" width="${p.width}" height="${p.height}"><image href="data:image/gif;base64,${Buffer.from(p.data).toString("base64")}" width="${p.width}" height="${p.height}"/></svg>`;
-  const png = r?.png(svg, p.type === "svg" ? p.shown.width * scale : p.width);
+  // A kind not held: made a PNG before the export (`convert.ts`), or it's its words.
+  if (p.type !== "svg") return kinds.includes(p.type) ? { data: p.data, type: p.type, width: p.width, height: p.height, shown: p.shown } : null;
+  const png = r?.png(new TextDecoder().decode(p.data), p.shown.width * scale);
   if (!png) return null;
   const info = rasterInfo(png)!;
   return { data: png, type: "png", width: info.width, height: info.height, shown: p.shown };

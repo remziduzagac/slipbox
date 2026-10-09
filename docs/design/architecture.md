@@ -109,13 +109,14 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `core/imagecache.ts` | 12.12 | where a picture on the web is kept once fetched: a file per address |
 | `core/export/assemble.ts` | 10.1 | notes as one document: chapters, embeds drawn in, links inside it, pictures found |
 | `core/export/docx.ts` | 10.4 | the document as Word's `.docx` (`docx`, loaded when exporting) |
-| `core/export/pdf.ts` | 10.5 | the document as a PDF, laid out by pdfkit; a character's font where the font has none |
+| `core/export/pdf.ts` | 10.5, 10.11 | the document as a PDF: lines laid out here, set by pdfkit; a font a character |
 | `core/export/fonts.ts` | 10.5 | a PDF's fonts, found in the machine's font folders: sans, mono, fallbacks |
 | `core/export/hast.ts` | 10.2, 10.6 | a chapter as HTML's tree: ids, pictures where kept, maths, code, footnotes |
 | `core/export/html.ts` | 10.2 | the document as one HTML file, its pictures inside it |
 | `core/export/epub.ts` | 10.6 | the document as an EPUB 3 (fflate): XHTML chapters, contents, pictures |
 | `core/export/markdown.ts` | 10.3 | the document as portable Markdown, its pictures copied beside it |
 | `core/export/images.ts` | 10.x | a picture's kind and size from its header; an SVG rasterised; its size as shown |
+| `core/export/convert.ts` | 10.10 | a picture a format doesn't hold made PNG first: BMP, GIF, WebP decoded |
 | `core/export/style.ts` | 10.x | the look on paper: print's colours, callouts', code's; the stylesheet |
 | `core/export/index.ts` | 10.x | the formats by name, where an export goes, writing it (`docs/design/export.md`) |
 | `tui/placeholders.ts` | 12.7 | Kitty's Unicode placeholders: a picture's id, its cells as text, sent once, let go |
@@ -199,6 +200,8 @@ package — no build toolchain):
 | `docx` 9.9.0 | Word export (10.4); MIT, its zip (JSZip) MIT or GPLv3, taken under MIT |
 | `pdfkit` 0.20.2, `fontkit` 2.0.4 | PDF export (10.5): the layout, the fonts read and embedded; MIT |
 | `fflate` 0.8.3 | the EPUB's zip (10.6); MIT |
+| `linebreak` 1.1.0 | where a PDF's line may break (10.11): Unicode's UAX #14; MIT |
+| `@jsquash/webp` 1.5.0 | a WebP decoded for an export (10.10): libwebp as WebAssembly; Apache-2.0, libwebp BSD-3 |
 | `mdast-util-to-hast` 13.2.1, `hast-util-to-html` 9.0.5 | HTML and EPUB export (10.2, 10.6): markdown's tree as HTML |
 | `mdast-util-to-markdown` 2.1.2, `-gfm` 3.1.0, `-math` 3.0.0 | Markdown export (10.3): the tree written again |
 

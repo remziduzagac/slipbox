@@ -34,7 +34,11 @@ import { mathRows, mathText } from "../math.ts";
 import { loadRasterizer, type Rasterizer } from "../svg.ts";
 import type { ExportDoc, ExportPicture } from "./assemble.ts";
 import { calloutColour } from "./style.ts";
-import { rasterOf } from "./images.ts";
+import { convertPictures } from "./convert.ts";
+import { type Raster, rasterOf } from "./images.ts";
+
+/** The pictures Word holds as they are. */
+const KINDS: Raster["type"][] = ["png", "jpg", "gif", "bmp"];
 
 /** The page's text width, in pixels at 96 to the inch: A4 less an inch each side. */
 const PAGE_PX = 600;
@@ -84,7 +88,10 @@ export function bookmarkName(anchor: string): string {
 
 /** The document as a .docx file's bytes. */
 export async function toDocx(doc: ExportDoc): Promise<Uint8Array> {
-  const w: Writer = { r: await loadRasterizer(), notes: new Map(), numbering: [] };
+  const r = await loadRasterizer();
+  // What Word holds: PNG, JPEG, GIF, BMP; a WebP made a PNG first.
+  await convertPictures(doc, KINDS, r);
+  const w: Writer = { r, notes: new Map(), numbering: [] };
   // Footnotes first: their numbers, in the order they're defined.
   for (const ch of doc.chapters) for (const n of ch.nodes) if (n.type === "footnoteDefinition") w.notes.set(n.identifier, { n: w.notes.size + 1, children: [] });
   for (const ch of doc.chapters) for (const n of ch.nodes) if (n.type === "footnoteDefinition") w.notes.get(n.identifier)!.children = blocks(n.children, w, 0).filter((c): c is Paragraph => c instanceof Paragraph);
@@ -237,7 +244,7 @@ function runs(nodes: PhrasingContent[], s: Style, w: Writer): ParagraphChild[] {
 
 /** A picture as Word's image, shown at its size up to the page's width; null where Word can't hold it. */
 function image(pic: ExportPicture, w: Writer, alt: string): ImageRun | null {
-  const r = rasterOf(pic, w.r, PAGE_PX, ["png", "jpg", "gif", "bmp"]);
+  const r = rasterOf(pic, w.r, PAGE_PX, KINDS);
   if (!r) return null;
   return new ImageRun({ type: r.type as "png", data: r.data, transformation: { width: r.shown.width, height: r.shown.height }, altText: { name: alt || "picture", description: alt, title: alt } });
 }

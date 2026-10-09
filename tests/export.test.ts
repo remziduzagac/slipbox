@@ -6,15 +6,17 @@ import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { inflateRawSync, inflateSync } from "node:zlib";
+import { crc32, inflateRawSync, inflateSync } from "node:zlib";
 import type { Image, Link, PhrasingContent, RootContent } from "mdast";
 import { DEFAULT_CONFIG } from "../src/core/config.ts";
 import { assemble, chapterAnchor, type ExportDoc, type ExportPicture, headingAnchor } from "../src/core/export/assemble.ts";
+import { convertPictures, decodeBmp, decodeWebp, encodePng, toPng } from "../src/core/export/convert.ts";
 import { bookmarkName, toDocx } from "../src/core/export/docx.ts";
 import { findFonts } from "../src/core/export/fonts.ts";
 import { rasterInfo, rasterOf } from "../src/core/export/images.ts";
 import { defaultTarget, EXPORT_MARK, exportNotes, exportTarget, FORMATS, formatFor, isExport, writeExport } from "../src/core/export/index.ts";
-import { pdfDocument, splitByFont, toPdf } from "../src/core/export/pdf.ts";
+import { pdfDocument, splitByFont, toPdf, words } from "../src/core/export/pdf.ts";
+import { TINT } from "../src/core/export/style.ts";
 import { slugify } from "../src/core/parse.ts";
 import { openGraph } from "../src/core/graph.ts";
 import { remoteImageName } from "../src/core/imagecache.ts";
@@ -37,6 +39,66 @@ let png: Uint8Array;
 beforeAll(async () => {
   png = (await loadRasterizer())!.png(rect(40, 20), 40)!;
 });
+
+/** A real WebP from the reference set: a harbour photo, 240 by 160. */
+const WEBP = readFileSync(join(import.meta.dir, "..", "examples", "home", "hobbies", "photography", "images", "harbour-01.webp"));
+/** A GIF of one red pixel. */
+const GIF = Buffer.from("R0lGODdhAQABAIABAP8AAP///ywAAAAAAQABAAACAkQBADs=", "base64");
+
+/** A BMP made byte by byte: `rows` as the file holds them (bottom-up unless `height` is negative), each padded to 4. */
+function bmpFile(width: number, height: number, bpp: number, rows: number[][], o: { palette?: number[]; masks?: number[]; compression?: number; core?: boolean } = {}): Uint8Array {
+  const header = o.core ? 12 : 40;
+  const masks = o.masks ?? [];
+  const palette = o.palette ?? [];
+  const stride = Math.ceil((bpp * width) / 32) * 4;
+  const offset = 14 + header + masks.length * 4 + palette.length;
+  const b = new Uint8Array(offset + stride * Math.abs(height));
+  const v = new DataView(b.buffer);
+  b.set([0x42, 0x4d]);
+  v.setUint32(2, b.length, true);
+  v.setUint32(10, offset, true);
+  v.setUint32(14, header, true);
+  if (o.core) {
+    v.setUint16(18, width, true);
+    v.setInt16(20, height, true);
+    v.setUint16(22, 1, true);
+    v.setUint16(24, bpp, true);
+  } else {
+    v.setInt32(18, width, true);
+    v.setInt32(22, height, true);
+    v.setUint16(26, 1, true);
+    v.setUint16(28, bpp, true);
+    v.setUint32(30, o.compression ?? 0, true);
+    if (palette.length) v.setUint32(46, palette.length / 4, true);
+  }
+  masks.forEach((m, i) => v.setUint32(14 + header + i * 4, m, true));
+  b.set(palette, 14 + header + masks.length * 4);
+  rows.forEach((row, i) => b.set(row, offset + i * stride));
+  return b;
+}
+
+/** A PNG's pixels, as `encodePng` writes them (each row unfiltered). */
+function pngPixels(png: Uint8Array): { width: number; height: number; data: number[] } {
+  const v = new DataView(png.buffer, png.byteOffset, png.byteLength);
+  const [width, height] = [v.getUint32(16), v.getUint32(20)];
+  // Eight bits a channel, red, green, blue and alpha.
+  expect([png[24], png[25]]).toEqual([8, 6]);
+  const idat: Uint8Array[] = [];
+  for (let at = 8; at < png.length; ) {
+    const len = v.getUint32(at);
+    // Each chunk's check: over its type and its data.
+    expect(v.getUint32(at + 8 + len)).toBe(crc32(png.subarray(at + 4, at + 8 + len)));
+    if (new TextDecoder().decode(png.subarray(at + 4, at + 8)) === "IDAT") idat.push(png.subarray(at + 8, at + 8 + len));
+    at += 12 + len;
+  }
+  const rows = inflateSync(Buffer.concat(idat));
+  const data: number[] = [];
+  for (let y = 0; y < height; y++) {
+    expect(rows[y * (width * 4 + 1)]).toBe(0);
+    data.push(...rows.subarray(y * (width * 4 + 1) + 1, (y + 1) * (width * 4 + 1)));
+  }
+  return { width, height, data };
+}
 
 /** A root of its own, holding `files`. */
 function root(files: Record<string, string | Uint8Array>) {
@@ -106,9 +168,14 @@ function notWellFormed(doc: string): string | null {
   return stack.length ? `<${stack.at(-1)}> never closed` : null;
 }
 
+/** A colour as a PDF writes it: `#rrggbb`'s three parts, 0 to 1. */
+const tint = (hex: string) => [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16) / 255).join(" ");
+
 interface PdfRead {
   /** Each page's text, a line a text position. */
   pages: string[];
+  /** Each page's content as written: what it draws. */
+  content: string[];
   /** The named destinations a link can go to. */
   dests: string[];
   links: { dest?: string; uri?: string }[];
@@ -142,7 +209,8 @@ function readPdf(bytes: Uint8Array): PdfRead {
         const s = stream(to);
         for (const m of s.matchAll(/<([\da-f]+)>\s*<([\da-f]+)>\s*\[([^\]]*)\]/gi)) {
           let code = Number.parseInt(m[1]!, 16);
-          for (const u of m[3]!.matchAll(/<([\da-f]+)>/gi)) map.set(code++, utf16(u[1]!));
+          // A ligature's characters may be written apart: `<0066 0074>`, "ft".
+          for (const u of m[3]!.matchAll(/<([\da-f\s]+)>/gi)) map.set(code++, utf16(u[1]!.replace(/\s/g, "")));
         }
         for (const block of s.matchAll(/beginbfchar([\s\S]*?)endbfchar/g)) for (const m of block[1]!.matchAll(/<([\da-f]+)>\s*<([\da-f]+)>/gi)) map.set(Number.parseInt(m[1]!, 16), utf16(m[2]!));
       }
@@ -153,6 +221,7 @@ function readPdf(bytes: Uint8Array): PdfRead {
   const pagesObj = [...objs.values()].find((b) => /\/Type \/Pages\b/.test(b))!;
   const order = [.../\/Kids \[([^\]]*)\]/.exec(pagesObj)![1]!.matchAll(/(\d+) 0 R/g)].map((m) => Number(m[1]));
   const pages: string[] = [];
+  const contents: string[] = [];
   const images: number[] = [];
   for (const p of order) {
     const page = objs.get(p)!;
@@ -178,6 +247,7 @@ function readPdf(bytes: Uint8Array): PdfRead {
       }
     }
     pages.push(text.trim());
+    contents.push(content);
     images.push((content.match(/\/I\d+ Do/g) ?? []).length);
   }
   const str = (s: string) => s.replace(/\\([()\\])/g, "$1");
@@ -192,7 +262,7 @@ function readPdf(bytes: Uint8Array): PdfRead {
   });
   const outline = [...raw.matchAll(/\/Title \(((?:[^()\\]|\\.)*)\)/g)].map((m) => str(m[1]!));
   const fontNames = [...new Set([...raw.matchAll(/\/BaseFont \/([\w+-]+)/g)].map((m) => m[1]!.replace(/^[A-Z]{6}\+/, "")))];
-  return { pages, dests, links, outline, images, fonts: fontNames };
+  return { pages, content: contents, dests, links, outline, images, fonts: fontNames };
 }
 
 describe("export: the assembler (10.1)", () => {
@@ -375,17 +445,18 @@ describe("export: Word (10.4)", () => {
     expect(bookmarkName("a-b")).not.toBe(bookmarkName("a_b"));
   });
 
-  test("pictures embedded at their size up to the page's width, diagrams and maths rasterised; a WebP its words", async () => {
-    const webp = new Uint8Array([...new TextEncoder().encode("RIFF"), 0, 0, 0, 0, ...new TextEncoder().encode("WEBPVP8L"), 0, 0, 0, 0, 0x2f, 9, 0x40, 2, 0, 0, 0, 0, 0, 0, 0]);
+  test("pictures embedded at their size up to the page's width, diagrams and maths rasterised; a WebP made PNG first", async () => {
     const { graph } = root({
       "a.md": "# A\n\n![[square.png|20]] ![big](big.svg) ![photo](photo.webp)\n\n```mermaid\ngraph LR\n  A --> B\n```\n\n$$\n\\frac{a}{b}\n$$\n",
       "square.png": png,
       "big.svg": rect(1200, 300),
-      "photo.webp": webp,
+      "photo.webp": WEBP,
     });
     const z = unzip(await toDocx(await assemble(graph, ["a.md"])));
     const media = [...z.keys()].filter((k) => k.startsWith("word/media/") && !k.endsWith("/"));
-    expect(media.length).toBe(4);
+    expect(media.length).toBe(5);
+    // The WebP, 240 by 160, as a PNG: Word holds no WebP.
+    expect(media.map((m) => rasterInfo(z.get(m)!)).filter((i) => i?.width === 240)).toEqual([{ type: "png", width: 240, height: 160 }]);
     const body = xml(z, "word/document.xml");
     // Sizes in EMU (9525 a pixel): the PNG at its |20, the SVG at the page's 600.
     const extents = [...body.matchAll(/<wp:extent cx="(\d+)" cy="(\d+)"\/>/g)].map((m) => [Number(m[1]) / 9525, Number(m[2]) / 9525]);
@@ -641,14 +712,12 @@ describe("export: PDF (10.5)", () => {
     expect((pdfDocument(await assemble(r.graph, ["a.md"])) as unknown as { _font: unknown })._font).toBeNull();
   });
 
-  test("pictures drawn (an SVG and a GIF rasterised, a WebP its words); code, a table, a quote, lists and notes read back", async () => {
-    const gif = Buffer.from("R0lGODdhAQABAIABAP8AAP///ywAAAAAAQABAAACAkQBADs=", "base64");
-    const webp = new Uint8Array([...new TextEncoder().encode("RIFF"), 0, 0, 0, 0, ...new TextEncoder().encode("WEBPVP8L"), 0, 0, 0, 0, 0x2f, 9, 0x40, 2, 0, 0, 0, 0, 0, 0, 0]);
+  test("pictures drawn (an SVG rasterised; a GIF, a WebP, a BMP made PNG first); code, a table, a quote, lists and notes read back", async () => {
     const r = root({
       "a.md": [
         "# A",
         "",
-        "![[square.png]] ![v](v.svg) ![g](g.gif) ![photo](p.webp)",
+        "![[square.png]] ![v](v.svg) ![g](g.gif) ![photo](p.webp) ![dot](d.bmp) ![broken](x.webp)",
         "",
         "```ts",
         "const answer = 42;",
@@ -670,13 +739,17 @@ describe("export: PDF (10.5)", () => {
       ].join("\n"),
       "square.png": png,
       "v.svg": rect(100, 50),
-      "g.gif": gif,
-      "p.webp": webp,
+      "g.gif": GIF,
+      "p.webp": WEBP,
+      "d.bmp": bmpFile(1, 1, 24, [[0, 0, 255]]),
+      // A WebP's header and nothing more: it can't be read, so it's its words.
+      "x.webp": new Uint8Array([...new TextEncoder().encode("RIFF"), 0, 0, 0, 0, ...new TextEncoder().encode("WEBPVP8L"), 0, 0, 0, 0, 0x2f, 9, 0x40, 2, 0, 0, 0, 0, 0, 0, 0]),
     });
     const pdf = readPdf((await exportOf(r, ["a.md"], "pdf")).data);
-    expect(pdf.images[0]).toBe(3);
+    expect(pdf.images[0]).toBe(5);
     const text = pdf.pages.join("\n");
-    for (const words of ["photo", "const answer = 42;", "NameCount\napples3", "Quoted words.", "3.third\n4.fourth", "Claim¹.", "Notes\n1.The note."]) expect(text).toContain(words);
+    expect(text).not.toContain("photo");
+    for (const words of ["broken", "const answer = 42;", "NameCount\napples3", "Quoted words.", "3.third\n4.fourth", "Claim¹.", "Notes\n1.The note."]) expect(text).toContain(words);
     expect(pdf.links).toEqual(expect.arrayContaining([{ dest: "a--note-1" }]));
     expect(pdf.dests).toContain("a--note-1");
   });
@@ -704,6 +777,9 @@ describe("export: a PDF's fonts", () => {
     // A face in a collection by its PostScript name.
     expect(findFonts(files("Helvetica.ttc")).bold).toEqual({ path: "/f/Helvetica.ttc", ps: "Helvetica-Bold" });
     expect(findFonts(new Map()).builtin).toBe(true);
+    // Emoji in black and white, before CJK (10.12); a colour emoji font isn't one: it has no outlines.
+    const emoji = findFonts(files(...lato, "DejaVuSans.ttf", "NotoColorEmoji.ttf", "NotoSansCJK-Regular.ttc", "NotoEmoji-Regular.ttf"));
+    expect(emoji.fallbacks.map((x) => x.path)).toEqual(["/f/DejaVuSans.ttf", "/f/NotoEmoji-Regular.ttf", "/f/NotoSansCJK-Regular.ttc"]);
   });
 
   test("a character the font hasn't got taken from the first fallback that has it; a mark stays with its letter", () => {
@@ -718,6 +794,112 @@ describe("export: a PDF's fonts", () => {
     // None has it: the font's own box.
     expect(splitByFont("x\u{1f600}", "body", has, ["symbols"])).toEqual([{ text: "x\u{1f600}", key: "body" }]);
     expect(splitByFont("→\u0301", "body", has, ["symbols"])).toEqual([{ text: "→\u0301", key: "symbols" }]);
+  });
+});
+
+describe("export: pictures made PNG before an export (10.10)", () => {
+  test("a PNG written: its size, its pixels as given, row by row", () => {
+    const pixels = [255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 255, 1, 2, 3, 4, 9, 9, 9, 9, 200, 100, 50, 25];
+    const out = encodePng({ width: 3, height: 2, data: new Uint8Array(pixels) });
+    expect(rasterInfo(out)).toEqual({ type: "png", width: 3, height: 2 });
+    expect(pngPixels(out)).toEqual({ width: 3, height: 2, data: pixels });
+  });
+
+  test("a BMP read: 24 bits bottom-up, a palette top-down, 1 bit across a byte, 5-5-5, masks with alpha, the old header", () => {
+    const px = (img: ReturnType<typeof decodeBmp>) => (img ? [img.width, img.height, ...img.data] : null);
+    // Stored bottom row first: blue, white; then red, green.
+    expect(px(decodeBmp(bmpFile(2, 2, 24, [[255, 0, 0, 255, 255, 255], [0, 0, 255, 0, 255, 0]])))).toEqual([2, 2, 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255]);
+    const palette = [0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 0];
+    expect(px(decodeBmp(bmpFile(3, -1, 8, [[0, 1, 2]], { palette })))).toEqual([3, 1, 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255]);
+    const bw = [0, 0, 0, 0, 255, 255, 255, 0];
+    const nine = decodeBmp(bmpFile(9, 1, 1, [[0b10101010, 0b10000000]], { palette: bw }))!;
+    expect([...nine.data].filter((_, i) => i % 4 === 0)).toEqual([255, 0, 255, 0, 255, 0, 255, 0, 255]);
+    const rgb555 = decodeBmp(bmpFile(3, 1, 16, [[0x00, 0x7c, 0xe0, 0x03, 0x1f, 0x00]]))!;
+    expect([...rgb555.data]).toEqual([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255]);
+    const alpha = decodeBmp(bmpFile(1, 1, 32, [[0, 0, 255, 0x80]], { compression: 6, masks: [0xff0000, 0xff00, 0xff, 0xff000000] }))!;
+    expect([...alpha.data]).toEqual([255, 0, 0, 128]);
+    // 32 bits with no masks: the fourth byte is no alpha.
+    expect([...decodeBmp(bmpFile(1, 1, 32, [[0, 255, 0, 0]]))!.data]).toEqual([0, 255, 0, 255]);
+    expect(px(decodeBmp(bmpFile(1, 1, 24, [[10, 20, 30]], { core: true })))).toEqual([1, 1, 30, 20, 10, 255]);
+  });
+
+  test("what isn't a BMP it reads, null: run-length encoded, cut short, another kind", () => {
+    expect(decodeBmp(bmpFile(2, 1, 8, [[0, 0]], { compression: 1 }))).toBeNull();
+    expect(decodeBmp(bmpFile(2, 2, 24, [[1, 2, 3, 4, 5, 6]]).subarray(0, 60))).toBeNull();
+    expect(decodeBmp(png)).toBeNull();
+  });
+
+  test("a WebP read by libwebp; one it can't, null", async () => {
+    const img = (await decodeWebp(WEBP))!;
+    expect([img.width, img.height, img.data.length]).toEqual([240, 160, 240 * 160 * 4]);
+    expect([...img.data.subarray(0, 4)]).toEqual([45, 79, 118, 255]);
+    expect(await decodeWebp(new Uint8Array([...new TextEncoder().encode("RIFF"), 0, 0, 0, 0, ...new TextEncoder().encode("WEBPVP8 ")]))).toBeNull();
+  });
+
+  test("a raster as a PNG: a PNG as it is, a BMP, a GIF, a WebP made one; a JPEG not", async () => {
+    const r = await loadRasterizer();
+    expect(await toPng(png, r)).toBe(png);
+    for (const [bytes, size] of [[bmpFile(1, 1, 24, [[0, 0, 255]]), [1, 1]], [GIF, [1, 1]], [WEBP, [240, 160]]] as const) expect(rasterInfo((await toPng(bytes, r))!)).toEqual({ type: "png", width: size[0], height: size[1] });
+    expect(await toPng(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 4, 0, 0, 0xff, 0xc0, 0, 11, 8, 1, 0xe0, 2, 0x80, 3, 0, 0, 0, 0, 0, 0]), r)).toBeNull();
+  });
+
+  test("a document's pictures of a kind the format doesn't hold made PNG, each file once; the rest as they are", async () => {
+    const r = root({ "a.md": "# A\n\n![w](w.webp) ![b](b.bmp) ![p](p.png) ![again](w.webp)\n", "w.webp": WEBP, "b.bmp": bmpFile(1, 1, 24, [[0, 0, 255]]), "p.png": png });
+    const doc = await assemble(r.graph, ["a.md"]);
+    await convertPictures(doc, ["png", "jpg"], await loadRasterizer());
+    const pics = pictures(doc).map((p) => p.picture!);
+    expect(pics.map((p) => (p.data ? rasterInfo(p.data)?.type : null))).toEqual(["png", "png", null, "png"]);
+    expect(pics[0]!.data).toBe(pics[3]!.data!);
+    // A format that holds WebP: left as it is.
+    const kept = await assemble(r.graph, ["a.md"]);
+    await convertPictures(kept, ["png", "jpg", "webp"], await loadRasterizer());
+    expect(pictures(kept)[0]!.picture!.data).toBeUndefined();
+  });
+
+  test("an e-book's BMP made PNG: an EPUB holds none", async () => {
+    const r = root({ "a.md": "# A\n\n![dot](d.bmp) ![w](w.webp)\n", "d.bmp": bmpFile(1, 1, 24, [[0, 0, 255]]), "w.webp": WEBP });
+    const z = unzip((await exportOf(r, ["a.md"], "epub")).data);
+    expect([...z.keys()].filter((k) => k.startsWith("OEBPS/images/")).map((k) => k.split(".").pop()).sort()).toEqual(["png", "webp"]);
+  });
+});
+
+describe("export: a PDF's lines laid out (10.11)", () => {
+  test("where a line may break: between words, after a newline (it must), either side of a picture, between CJK", () => {
+    expect(words("a b")).toEqual([{ end: 2, required: false }, { end: 3, required: false }]);
+    expect(words("a\nb")).toEqual([{ end: 2, required: true }, { end: 3, required: false }]);
+    expect(words("x\ufffcy")).toEqual([{ end: 1, required: false }, { end: 2, required: false }, { end: 3, required: false }]);
+    expect(words("日本語").map((w) => w.end)).toEqual([1, 2, 3]);
+    expect(words("e.g. this")).toEqual([{ end: 5, required: false }, { end: 9, required: false }]);
+  });
+
+  test("a picture in a sentence drawn in its line, maths on the baseline typeset, inline code on a tint", async () => {
+    const r = root({ "a.md": "# A\n\nBefore ![[square.png|20]] after, and $x^2$ too, with `code` here.\n", "square.png": png });
+    const bytes = (await exportOf(r, ["a.md"], "pdf")).data;
+    const pdf = readPdf(bytes);
+    // One line: the words either side of the picture and the maths, and both drawn on it.
+    expect(pdf.pages[0]!.split("\n")[1]).toBe("Before  after, and  too, with code here.");
+    expect(pdf.images[0]).toBe(2);
+    expect(pdf.content[0]).toContain(`${tint(TINT.inline)} scn`);
+  });
+
+  test("a word longer than a line cut where it fits; a long line wrapped; a newline kept", async () => {
+    const long = "x".repeat(400);
+    const r = root({ "a.md": `# A\n\n${long}\n\n${"word ".repeat(120).trim()}\n\nOne\\\ntwo\n` });
+    const pdf = readPdf((await exportOf(r, ["a.md"], "pdf")).data);
+    const lines = pdf.pages[0]!.split("\n");
+    const cut = lines.filter((l) => /^x+$/.test(l));
+    expect(cut.length).toBeGreaterThan(1);
+    expect(cut.join("")).toBe(long);
+    const wrapped = lines.filter((l) => l.startsWith("word"));
+    expect(wrapped.length).toBeGreaterThan(2);
+    expect(wrapped.join(" ").split(/\s+/).length).toBe(120);
+    expect(lines).toEqual(expect.arrayContaining(["One", "two"]));
+  });
+
+  test("a table's column never narrower than its longest word; its cells' words whole", async () => {
+    const r = root({ "a.md": `| Term | Meaning |\n| --- | --- |\n| photosynthesis | ${"the way a plant makes its food from light ".repeat(8).trim()} |\n` });
+    const pdf = readPdf((await exportOf(r, ["a.md"], "pdf")).data);
+    expect(pdf.pages[0]).toContain("photosynthesis");
   });
 });
 

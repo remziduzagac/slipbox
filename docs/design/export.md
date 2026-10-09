@@ -18,7 +18,8 @@ The code is in `src/core/export/`:
 | `html.ts` | the document as one HTML file (`10.2`) |
 | `epub.ts` | the document as an EPUB (`10.6`) |
 | `markdown.ts` | the document as Markdown, its pictures beside it (`10.3`) |
-| `images.ts` | a picture's kind and size from its file's header; an SVG (or a GIF) rasterised; its size shown |
+| `images.ts` | a picture's kind and size from its file's header; an SVG rasterised; its size shown |
+| `convert.ts` | a picture of a kind a format doesn't hold made a PNG first: BMP, GIF and WebP decoded (`10.10`) |
 | `style.ts` | the look on paper: print's colours, a callout's, code's; the stylesheet |
 | `index.ts` | the formats, by name; where an export goes; writing it |
 
@@ -105,10 +106,10 @@ Written by `docx` (MIT), whose zip, JSZip, is dual-licensed MIT or GPLv3 and tak
 - **Quotes** are indented behind a bar. **Code** is a paragraph a line on a tint, comments italic.
 - **Tables** have borders and a header row (bold, tinted, repeated on each page), their columns aligned as written.
 - **Footnotes** are Word's own.
-- **Pictures:** PNG, JPEG, GIF and BMP go in as they are. An SVG — a file, a diagram, a display's maths — is
-  rasterised by resvg at twice the size it's shown. A WebP is its words: Word holds none, and nothing here decodes
-  one. A picture is shown at its size (or Obsidian's) up to the text's width, 600 pixels at 96 to the inch. MathJax's
-  sizes are in `ex`, taken as 6.3 pixels (11-point text).
+- **Pictures:** PNG, JPEG, GIF and BMP go in as they are; a WebP is made a PNG first (Word holds none). An SVG — a
+  file, a diagram, a display's maths — is rasterised by resvg at twice the size it's shown. A picture is shown at its
+  size (or Obsidian's) up to the text's width, 600 pixels at 96 to the inch. MathJax's sizes are in `ex`, taken as
+  6.3 pixels (11-point text).
 - **Maths:** a display without a picture is its Unicode rows (`12.11`), centred, else as written. Inline maths is
   Unicode text in italics, else as written.
 
@@ -122,15 +123,25 @@ Laid out by pdfkit (MIT) on A4, 64-point margins, the text 10.5 points.
   with a regular face, a missing face taken from its nearest. Code is in the first monospaced one there (DejaVu Sans
   Mono, Liberation Mono, Noto Sans Mono, Menlo, Consolas…). They're embedded, only the glyphs used.
 - **A character a font hasn't got** is taken from the first fallback that has it — DejaVu Sans and Noto for symbols,
-  arrows and maths, then the CJK fonts there are — a combining mark staying with its letter. One no font has is the
-  font's own box. With no font found at all, PDF's own Helvetica and Courier, which hold Latin-1: the rest is `?`.
+  arrows and maths, then emoji, then the CJK fonts there are — a combining mark or a joiner staying with what it joins.
+  One no font has is the font's own box. With no font found at all, PDF's own Helvetica and Courier, which hold
+  Latin-1: the rest is `?`.
+- **Emoji** are black and white (`10.12`), from a font that draws them so: Noto Emoji, OpenMoji's black, Symbola,
+  Segoe UI Symbol. A colour emoji font (Apple's, Noto Color Emoji) has pictures, not outlines, and a PDF's text can't
+  use it; colour is `10.13`, deferred.
+- **Lines are laid out here** (`10.11`), not by pdfkit, whose lines hold only text: words and pictures together,
+  broken where Unicode lets a line break (UAX #14, by `linebreak`, MIT), a word longer than a line cut where it fits,
+  each run on one baseline. So a picture in a sentence stays in its line (as high as it needs); maths in a line is
+  MathJax's, typeset and drawn at four times its size, set on the baseline as MathJax places it; inline code is on a
+  tint. Spaces are written too, so what's copied from the page, or searched, has its words apart; a link is one area a
+  line.
 - **Chapters** start on a new page, each a destination; the PDF's outline lists them and their second-level headings.
   Every heading is a destination the document's links go to; a heading never ends a page.
 - **Text** wraps at the width; links are blue, to the web or inside the document; a footnote's mark is a superscript
   number (`[1]` where no font has the digits), linked to its note at the chapter's end, under "Notes".
-- **Pictures** are centred at their size up to the text's width and the page's height: PNG and JPEG as they are; an
-  SVG, a diagram and a GIF rasterised by resvg; a display's maths at three times its size, as it's small. A WebP or a
-  BMP is its words (resvg decodes neither).
+- **Pictures** alone in a paragraph are centred at their size up to the text's width and the page's height: PNG and
+  JPEG as they are; a GIF, a BMP and a WebP made PNG first; an SVG and a diagram rasterised by resvg; a display's
+  maths at three times its size, as it's small.
 - **Code** is on a tint, a line at a time (so a page can break inside it), coloured. **Tables** are drawn: columns as
   wide as their words need, shared out by how much each wants where they don't fit; a row is never split, and the
   header row comes again on a new page. **Quotes** have a bar down their left, page by page, a callout's in its colour.
@@ -152,9 +163,10 @@ text and attribute.
 ## An e-book (`10.6`)
 
 EPUB 3, zipped by fflate (MIT): `mimetype` first and stored, as readers require; a chapter a file of XHTML; each
-picture a file of the book, the same picture once; a contents page (the chapters and their sections); the stylesheet.
-XHTML is XML, so no attribute is left without a value and `<` in one is escaped. Its id comes from what's in it — the
-notes, in order — so the same notes exported again are the same book, updated.
+picture a file of the book, the same picture once (a BMP made PNG first: an e-book holds none); a contents page (the
+chapters and their sections); the stylesheet. XHTML is XML, so no attribute is left without a value and `<` in one is
+escaped. Its id comes from what's in it — the notes, in order — so the same notes exported again are the same book,
+updated.
 
 ## Markdown (`10.3`)
 
@@ -172,21 +184,33 @@ One portable file, for GitHub or any editor:
 - **Its frontmatter** has the title, author, date and language, and the mark `generator: slipbox`, which lets a later
   export replace it, though it's a note. Pictures left from an earlier export of other pictures stay in the folder.
 
+## Pictures made PNG (`10.10`)
+
+Each format holds some kinds of picture and not others — Word no WebP, PDF only PNG and JPEG, an e-book no BMP — so
+before a writer runs, every picture of a kind it doesn't hold is decoded and written again as a PNG (`convert.ts`),
+and the writers see only what they take. A file is converted once, however often the document shows it. BMP is
+decoded here (1, 4, 8, 16, 24 and 32 bits, its palette and its masks, either way up; not run-length encoded); a GIF's
+first frame is drawn by resvg; a WebP is decoded by libwebp, compiled to WebAssembly (`@jsquash/webp`), loaded the
+first time a WebP is met and embedded in a compiled slipbox. The PNG is written here: eight bits a channel with alpha,
+deflated by Node's zlib. One that can't be decoded is its words, as before.
+
 ## Licences
 
-The export's own libraries are MIT: `docx` and JSZip (MIT or GPLv3, taken under MIT), pdfkit and fontkit, fflate,
-`mdast-util-to-hast`, `hast-util-to-html`, `mdast-util-to-markdown`, `mdast-util-gfm` and `mdast-util-math`. fontkit's
-helpers (`@swc/helpers`) are Apache-2.0. It also draws with what the TUI draws with (`12.x`): beautiful-mermaid (MIT)
-and its layout engine elkjs (EPL-2.0), MathJax (Apache-2.0), and resvg (MPL-2.0). EPL-2.0 and MPL-2.0 are weak
-copyleft, accepted for use (2026-10-09): a change to those libraries' own files would have to be shared, and nothing
-of slipbox's is. What a distributed binary owes them is `14.6` in the plan.
+The export's own libraries are MIT: `docx` and JSZip (MIT or GPLv3, taken under MIT), pdfkit, fontkit and `linebreak`,
+fflate, `mdast-util-to-hast`, `hast-util-to-html`, `mdast-util-to-markdown`, `mdast-util-gfm` and `mdast-util-math`.
+fontkit's helpers (`@swc/helpers`) are Apache-2.0, as are `@jsquash/webp` and its `wasm-feature-detect`; the libwebp it
+compiles is BSD-3-Clause. It also draws with what the TUI draws with (`12.x`): beautiful-mermaid (MIT) and its layout
+engine elkjs (EPL-2.0), MathJax (Apache-2.0), and resvg (MPL-2.0). EPL-2.0 and MPL-2.0 are weak copyleft, accepted for
+use (2026-10-09): a change to those libraries' own files would have to be shared, and nothing of slipbox's is. What a
+distributed binary owes them is `14.6` in the plan.
 
 ## Known limits
 
 - A picture is read wherever its link points, as on screen. A note from elsewhere can name a picture outside the root,
   and its export would hold that picture.
 - A footnote a section embed refers to, but defined outside the section, isn't drawn in.
-- A WebP is its words in Word and PDF, a BMP in PDF.
-- PDF: a picture inside a line of text is drawn on its own, between the words before and after it; colour emoji are
-  boxes (no font here draws them). On a machine with no fonts at all, a compiled slipbox can't make one: PDF's own
-  fonts, which it would fall back on, aren't in the build (it says so).
+- A run-length-encoded BMP, or a picture otherwise unreadable, is its words. The libwebp in `@jsquash/webp` is 1.0.2,
+  old; it decodes inside WebAssembly, where a malformed file can fail but not reach beyond it.
+- PDF: emoji are black and white, and only where a font that draws them is on the machine (none, a box); colour is
+  `10.13`. On a machine with no fonts at all, a compiled slipbox can't make one: PDF's own fonts, which it would fall
+  back on, aren't in the build (it says so).

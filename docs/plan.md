@@ -545,10 +545,16 @@ common, and the only reason they are step 0.
 | 10.7 | **Dropped** (2026-10-09). A headless-browser tier: an external tool |
 | 10.8 | **Dropped** (2026-10-09). A pandoc tier: an external tool |
 | 10.9 | **Prototype.** Compose: notes picked in order, one document — `space n shift+o`; the CLI takes several |
+| 10.10 | **Prototype.** A picture a format doesn't hold made PNG first: BMP, GIF, WebP (libwebp as wasm) |
+| 10.11 | **Prototype.** PDF lines laid out by slipbox: a picture in a sentence, maths on the baseline, code tinted |
+| 10.12 | **Prototype.** Emoji in a PDF in black and white, from a font that draws them so (Noto Emoji, Symbola…) |
+| 10.13 | **Deferred** (2026-10-09). Colour emoji in a PDF: the colour emoji font's own pictures, in a line (`10.11`) |
 
 Decided 2026-10-09 with the user: no external tool — every format is TypeScript or JavaScript under a permissive
 licence, and a format that would need a tool isn't offered. Word first, then the rest; an export goes beside its note
-by default. Design: `docs/design/export.md`.
+by default. Later the same day: what a format can't take made PNG first (`10.10`), the PDF's lines laid out by
+slipbox (`10.11`), emoji in black and white for now (`10.12`), colour later (`10.13`). Design:
+`docs/design/export.md`.
 
 ## LSP face — `11.x`
 
@@ -740,7 +746,9 @@ Whatever is picked, the compiled binary bundles libraries whose licences ask for
   `@resvg/resvg-wasm` (MPL-2.0). Shipped, each needs its licence text and where its source is; a change to their own
   files would have to be shared. Neither reaches slipbox's own code.
 - **unicodeit**'s symbol table is the LaTeX Project Public License's (LPPL), beside its MIT code.
-- **Apache-2.0**, whose licence and NOTICE go along: `mathjax-full`, `typeahead`, `@swc/helpers` (under fontkit).
+- **Apache-2.0**, whose licence and NOTICE go along: `mathjax-full`, `typeahead`, `@swc/helpers` (under fontkit),
+  `@jsquash/webp` and its `wasm-feature-detect`; the libwebp `@jsquash/webp` compiles (and the binary embeds) is
+  BSD-3-Clause, its notice too.
 - `jszip` is "MIT OR GPL-3.0-or-later": taken under MIT.
 
 The rest are permissive (MIT, ISC, BSD, BlueOak, Zlib); the grammars built into `grammars/` are MIT, their licences

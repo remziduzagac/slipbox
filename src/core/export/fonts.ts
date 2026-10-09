@@ -1,7 +1,7 @@
 // The fonts a PDF export (plan 10.5) is set in, found on the machine — its font folders read, no tool asked: a sans
 // family, all four faces where one has them (DejaVu Sans, Liberation, Noto, Arial, Helvetica…), a monospaced one for
-// code, and fonts for what those have no glyph for (symbols, CJK), a character at a time. None found, PDF's own
-// Helvetica and Courier, which hold Latin-1 only.
+// code, and fonts for what those have no glyph for (symbols, emoji in black and white, CJK), a character at a time.
+// None found, PDF's own Helvetica and Courier, which hold Latin-1 only.
 
 import { readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
@@ -57,7 +57,10 @@ const MONO: [string, string][] = [
   ["cour.ttf", "courbd.ttf"],
 ];
 
-/** Fonts for what the chosen ones lack: symbols and arrows, maths, then CJK — the first holding a glyph is used. */
+/**
+ * Fonts for what the chosen ones lack: symbols and arrows, maths, emoji, then CJK — the first holding a glyph is used.
+ * Emoji in black and white (10.12): a colour emoji font (Apple's, Noto Color Emoji) has no outlines a PDF can take.
+ */
 const FALLBACKS = [
   "DejaVuSans.ttf",
   "NotoSans-Regular.ttf",
@@ -66,6 +69,11 @@ const FALLBACKS = [
   "Arial Unicode.ttf",
   "Apple Symbols.ttf",
   "seguisym.ttf",
+  "NotoEmoji-Regular.ttf",
+  "NotoEmoji-VariableFont_wght.ttf",
+  "OpenMoji-black-glyf.ttf",
+  "Symbola.ttf",
+  "Symbola_hint.ttf",
   "NotoSansCJK-Regular.ttc",
   "NotoSansCJKsc-Regular.otf",
   "NotoSansCJKjp-Regular.otf",
