@@ -951,13 +951,48 @@ generic view and their exceptions, their tests the proof nothing was lost. It re
 keeps its source mode, the document view or not: `space n v` switches, `[render] code = "source"` opens code in it. A
 cell's header says what it is in its language's word, `struct: Frame`, `method: add` (the user's, 2026-10-09).
 
+## Editing fundamentals — `25.x`
+
+*Decided 2026-10-09 with the user: what a good editor does, short of an IDE, built in this order before git (`26.x`).
+Not wanted: vim's marks, macros, named registers and block selection.*
+
+| ID | Item |
+| --- | --- |
+| 25.1 | Indentation per file: tabs or spaces, how wide — `.editorconfig`, else the file's own, else its language's |
+| 25.2 | Comments toggled: `gc` and a motion, `gcc`, a selection's lines; each language's markers |
+| 25.3 | Brackets: `%` to the matching one (a motion too), the matching one marked; pairs closed as typed, opt-in |
+| 25.4 | Replace across files in the TUI: previewed as a rename is, undoable |
+| 25.5 | Word completion without a language server: the open files' words, `ctrl+n` / `ctrl+p` |
+| 25.6 | Spelling in notes: misspelt words marked, their suggestions, a word added to your own list |
+| 25.7 | A command run: `:!cmd`, its output in a window; lines filtered through one (`:'<,'>!sort`) |
+
+`25.1` covers saving as `.editorconfig` says too: trailing whitespace trimmed, the final newline added, only where it
+asks. `25.7` is the part of `13.1` that runs what you type yourself; the rest of `13.x` stays deferred.
+
+## Git in the editor — `26.x`
+
+*Decided 2026-10-09 with the user, built after `25.x`. Today's git support reads, at the branch's level (`5.11`–`5.14`,
+`20.21`); this is the working tree's. It runs the system's `git`, as now, with `23.6`'s guards where a root isn't
+trusted. It's the TUI's alone, no CLI equivalents: an agent has `git` itself.*
+
+| ID | Item |
+| --- | --- |
+| 26.1 | Changed lines in the gutter, against what's staged, unsaved text included; `]c` / `[c`; preview, undo one |
+| 26.2 | A source control view by the explorer: staged, unstaged, untracked, conflicted; stage, unstage, discard |
+| 26.3 | Commit: its message in a floating editor; amend. In a root not trusted its hooks don't run, and it says so |
+| 26.4 | Blame: who changed the cursor's line, when, the commit's message; a file's history with `22.1` |
+| 26.5 | Branches: switched to or made from a picker, unsaved notes saved or kept first |
+| 26.6 | Later, opt-in: stash; fetch, pull, push — asked for, never automatic; a conflict view: ours, theirs, both |
+
+`26.2` stages, unstages or discards a file or one change, and opens its diff; discarding asks first.
+
 ## Deferred — in the design, not in this breakdown
 
 Sorted 2026-10-07. Mermaid and LaTeX are `12.10`–`12.11` and `12.15`–`12.17`; composing notes, `10.9`; a note's history,
 frontmatter rules and document types, `22.x`; the live checks with native servers, `19.23`. Diffs and git awareness are
-built (`space g d`, `space g c`, the explorer's marks, worktrees, merge review). Tier 2 plugins are dropped: `13.x`'s
-commands cover what they would, and a shared plugin ecosystem is a supply-chain question. Anything else under the
-design's community-plugin tier gets an ID when it is scheduled.
+built (`space g d`, `space g c`, the explorer's marks, worktrees, merge review); the working tree's git is `26.x`. Tier
+2 plugins are dropped: `13.x`'s commands cover what they would, and a shared plugin ecosystem is a supply-chain
+question. Anything else under the design's community-plugin tier gets an ID when it is scheduled.
 
 ## Constraints and gotchas
 
