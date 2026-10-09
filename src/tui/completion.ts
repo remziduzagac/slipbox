@@ -8,7 +8,7 @@
 // Anywhere, ctrl+n / ctrl+p with no popup completes a word from the open files' words, no server asked (25.5).
 
 import { existsSync } from "node:fs";
-import { join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CompletionItem, CompletionList, SignatureHelp, TextEdit } from "vscode-languageserver-protocol";
 import { conventionOf, type LinkStyle } from "../core/convention.ts";
@@ -22,6 +22,9 @@ import { offsetOf, placeAt, prevBoundary } from "./editing.ts";
 import { keyChar } from "./keys.ts";
 import { rank } from "./match.ts";
 import { PASTE } from "./vim.ts";
+import { startSnippet } from "./snippets.ts";
+import { expandSnippet, type SnippetContext } from "../core/snippet.ts";
+import { indentUnit } from "../core/indent.ts";
 
 export interface CompletionState {
   view: View;
@@ -285,9 +288,28 @@ function narrow(app: App, c: CompletionState): void {
   if (!c.shown.length) app.completion = null;
 }
 
-/** A snippet's text as plain text: its placeholders' text kept, its tab stops gone. */
-function plain(text: string): string {
-  return text.replace(/\$\{\d+:([^}]*)\}/g, "$1").replace(/\$\{\d+\}|\$\d+/g, "");
+/** What a snippet (25.8) is expanded with here: the line's indentation, the file's unit, the file's variables. */
+function snippetContext(app: App, view: View, at: number): SnippetContext {
+  const buf = view.buf;
+  const lineStart = buf.source.lastIndexOf("\n", at - 1) + 1;
+  const lineEnd = buf.source.indexOf("\n", at);
+  const line = buf.source.slice(lineStart, lineEnd < 0 ? undefined : lineEnd);
+  const n = buf.source.slice(0, at).split("\n").length;
+  return {
+    indent: /^[ \t]*/.exec(line)![0],
+    unit: indentUnit(buf.indent()),
+    vars: {
+      TM_FILENAME: basename(buf.abs),
+      TM_FILENAME_BASE: basename(buf.abs).replace(/\.[^.]*$/, ""),
+      TM_DIRECTORY: dirname(buf.abs),
+      TM_FILEPATH: buf.abs,
+      TM_LINE_INDEX: String(n - 1),
+      TM_LINE_NUMBER: String(n),
+      TM_CURRENT_LINE: line,
+      TM_CURRENT_WORD: buf.source.slice(wordStart(buf.source, at), at),
+      TM_SELECTED_TEXT: "",
+    },
+  };
 }
 
 /** The chosen item put in: its edit (from where it starts to the cursor), else its text over the word; then its other edits (an import). */
@@ -301,13 +323,17 @@ function accept(app: App, c: CompletionState): void {
   const edit = item.textEdit;
   const from = edit ? offset("range" in edit ? edit.range.start : edit.insert.start) : c.from;
   const raw = edit ? edit.newText : (item.insertText ?? item.label);
-  const text = item.insertTextFormat === 2 ? plain(raw) : raw;
+  // A snippet (25.8): expanded, its stops to tab through.
+  const snippet = item.insertTextFormat === 2 ? expandSnippet(raw, snippetContext(app, view, from)) : null;
+  const text = snippet ? snippet.text : raw;
+  const stops = snippet && snippet.stops.length > 1;
   // For `.`: the accept as the keys that make the same text — a backspace per character it
   // replaced, then the rest as a paste (a key of its own, insertRecord). Edits elsewhere (an
   // import added) can't be said in keys: then the change isn't repeated at all, never wrongly.
   const s = app.vim;
   if (s.inInsert && !s.replaying) {
-    if (item.additionalTextEdits?.length || from > at) {
+    // Its stops typed into can't be said in keys either.
+    if (item.additionalTextEdits?.length || from > at || stops) {
       s.inInsert = false;
       s.lastChange = null;
     } else {
@@ -317,6 +343,8 @@ function accept(app: App, c: CompletionState): void {
   }
   buf.edit(from, at - from, text);
   placeAt(app, view, from + text.length, true);
+  // Followed before the other edits, which move its stops along.
+  if (snippet) startSnippet(app, view, from, snippet);
   if (item.additionalTextEdits?.length) applyElsewhere(app, view, item.additionalTextEdits);
   app.completion = null;
 }

@@ -533,7 +533,8 @@ half too, a closing one typed where it already is steps over it, and `backspace`
 the line's start and end, `cmd+↑/↓` to the note's; `ctrl+v` pastes the clipboard; `ctrl+←/→`, `alt+←/→` and `alt+b` /
 `alt+f` move by words — back to a word's start, forward to its end, across lines; `ctrl+s` saves. A paste goes into the
 text. While a code file's completion shows, `tab`, `enter`, `ctrl+n`, `ctrl+p`, `up`, `down` and `ctrl+e` are its
-(`space c`, above); with none showing, `ctrl+n` / `ctrl+p` complete the word from the open files' words (`25.5`).
+(`space c`, above); in a snippet it put in, `tab` and `shift+tab` go to its next and previous stop (`25.8`); with
+none showing, `ctrl+n` / `ctrl+p` complete the word from the open files' words (`25.5`).
 Source mode's own keys are `[keys.source]` in config: the operators and edits above (`d c y > < D C s S r J p P ~ . x`),
 which win over the reading keys there.
 

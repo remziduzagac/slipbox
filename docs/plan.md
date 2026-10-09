@@ -968,7 +968,7 @@ Not wanted: vim's marks, macros, named registers and block selection.*
 | 25.5 | **Prototype.** Word completion without a language server: the open files' words, `ctrl+n` / `ctrl+p` |
 | 25.6 | **Prototype.** Spelling in notes: misspelt words marked, their suggestions, a word added to your own list |
 | 25.7 | **Prototype.** A command run: `:!cmd`, its output in a window; lines filtered through one (`:'<,'>!sort`) |
-| 25.8 | A server's snippets: their tab stops and placeholders filled in turn, `tab` to the next (`19.16`) |
+| 25.8 | **Prototype.** A server's snippets: their tab stops and placeholders filled in turn, `tab` to the next |
 
 `25.1` covers saving as `.editorconfig` says too: trailing whitespace trimmed, the final newline added, only where it
 asks. `25.7` is the part of `13.1` that runs what you type yourself; the rest of `13.x` stays deferred. `25.8`:

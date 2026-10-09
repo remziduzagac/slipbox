@@ -10,6 +10,7 @@ import { keyChar } from "./keys.ts";
 import { indentUnit } from "../core/indent.ts";
 import { type CommentStyle, commentStyle, toggleComments } from "../core/comments.ts";
 import { autoPair, emptyPair } from "../core/brackets.ts";
+import { endSnippet } from "./snippets.ts";
 
 /** The cursor's place in the text (a UTF-16 offset into `source`). Source mode only. */
 export function offsetOf(app: App, view: View): number {
@@ -167,9 +168,10 @@ function insertStop(view: View, lineStart: number, at: number): number {
 export function stopInsert(app: App, view: View): void {
   if (!view.insert) return;
   view.insert = false;
-  // Completion's popup and the signature are typing's (19.16).
+  // Completion's popup and the signature are typing's (19.16); so is a snippet's stops (25.8).
   app.completion = null;
   app.signature = null;
+  endSnippet(app);
   const at = offsetOf(app, view);
   view.buf.lastInsert = at; // gi comes back here
   view.buf.endStep(at);

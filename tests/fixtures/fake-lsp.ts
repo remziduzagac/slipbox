@@ -18,7 +18,9 @@ const refreshed = new Set<string>();
 const loading = new Set<string>();
 const loadStarted = new Set<string>();
 
+let snippets = false;
 conn.onInitialize((p) => ({
+  ...((snippets = !!p.capabilities.textDocument?.completion?.completionItem?.snippetSupport), {}),
   capabilities: {
     textDocumentSync: { openClose: true, change: TextDocumentSyncKind.Incremental, save: { includeText: true } },
     hoverProvider: true,
@@ -175,6 +177,16 @@ conn.onCompletion(async (p) => {
     return [{ label: "member", detail: "a field" }, { label: "method", detail: "fn()", additionalTextEdits: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, newText: "import x\n" }] }];
   }
   const text = docs.get(p.textDocument.uri)!.getText();
+  // SNIPPETS: snippets — as plain text to a client that said it takes none.
+  if (text.includes("SNIPPETS")) {
+    const snippet = (label: string, body: string, plain: string, more = {}) =>
+      snippets ? { label, insertTextFormat: 2, insertText: body, ...more } : { label, insertText: plain, ...more };
+    return [
+      snippet("fori", "for (${1:ix} = 0; $1 < ${2:n}; $1++) {\n\t$0\n}", "for (ix = 0; ix < n; ix++) {\n}"),
+      snippet("pick", "pick(${1|one,two|}, ${2:${TM_FILENAME_BASE}})", "pick(one, x)"),
+      snippet("imp", "use(${1:it})$0", "use(it)", { additionalTextEdits: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }, newText: "import x\n" }] }),
+    ];
+  }
   // SLOW: a word's items answered late, after a trigger's asked later.
   if (text.includes("SLOW")) await new Promise((r) => setTimeout(r, 300));
   return [...new Set(text.match(/\w{3,}/g) ?? [])].map((w) => ({ label: w }));

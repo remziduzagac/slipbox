@@ -78,7 +78,7 @@ export const CLIENT_CAPABILITIES: ClientCapabilities = {
       resolveSupport: { properties: ["edit"] },
     },
     formatting: {},
-    completion: { completionItem: { snippetSupport: false, documentationFormat: ["markdown", "plaintext"], labelDetailsSupport: true }, contextSupport: true },
+    completion: { completionItem: { snippetSupport: true, documentationFormat: ["markdown", "plaintext"], labelDetailsSupport: true }, contextSupport: true },
     signatureHelp: { signatureInformation: { documentationFormat: ["markdown", "plaintext"], parameterInformation: { labelOffsetSupport: true }, activeParameterSupport: true } },
   },
   workspace: { configuration: true, workspaceFolders: true, didChangeConfiguration: { dynamicRegistration: false }, applyEdit: true, workspaceEdit: { documentChanges: true }, symbol: { resolveSupport: { properties: ["location.range"] } } },

@@ -307,6 +307,10 @@ export class NoteBuffer {
    *  step with later edits — vim's marks, which move with the text: `:'<,'>s` works on them. */
   visualMarks: [number, number] | null = null;
 
+  /** Told of each change to the text, once it's made — where, how much went, what came — an undo's too: a snippet's
+   *  stops follow the text so (25.8). */
+  readonly editListeners = new Set<(at: number, length: number, text: string) => void>();
+
   /** Keep `'<` `'>` on their lines through an edit (an undo or redo too): lines inserted at a marked
    *  line's start go above it, and a mark in deleted text collapses to the line after, as vim's do. */
   private moveMarks(at: number, length: number, text: string): void {
@@ -342,6 +346,7 @@ export class NoteBuffer {
       this.undoStack.push({ edits: [e], before: cursor, after: at + text.length });
       this.redoStack = [];
     }
+    for (const f of this.editListeners) f(at, length, text);
   }
 
   /** Group the edits until `endStep` into one undo step (an insert session, a compound command). */
@@ -385,6 +390,7 @@ export class NoteBuffer {
     this.source = this.source.slice(0, at) + text + this.source.slice(at + length);
     this.version++;
     this.layouts.clear();
+    for (const f of this.editListeners) f(at, length, text);
   }
 
   private wordMemo = { version: -1, words: 0 };

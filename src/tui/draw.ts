@@ -18,6 +18,7 @@ import { countWords } from "../core/words.ts";
 import type { CommentLink } from "../core/syntax.ts";
 import { cells, ordered } from "./cursor.ts";
 import { type Spot, spellSpots } from "./spelling.ts";
+import { snippetMark } from "./snippets.ts";
 import { match } from "./match.ts";
 import { keyChar, prettyKey, spellKey } from "./keys.ts";
 import { dateText, placeOf, type SaveAsGeometry, type SaveAsOverlay, sizeText } from "./saveas.ts";
@@ -1010,6 +1011,15 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
   const chosenOn = chosen ? problemLines([chosen]) : null;
   const links = commentLinksShown(view);
   const brackets = app.bracketMarks(view);
+  // A snippet's placeholder, untouched, at the stop the cursor is at (25.8): marked as selected, by its source line.
+  const stop = snippetMark(app, view);
+  const stopLines = new Map<number, { from: number; to: number }[]>();
+  if (stop) {
+    const starts = view.buf.lineStarts();
+    for (let ln = starts.findLastIndex((s) => s <= stop[0]); ln >= 0 && starts[ln]! < Math.max(stop[1], stop[0] + 1); ln++) {
+      stopLines.set(ln + 1, [{ from: Math.max(0, stop[0] - starts[ln]!), to: stop[1] - starts[ln]! }]);
+    }
+  }
   // Misspelt words (25.6), by the row they show on.
   const misspelt = app.misspelt(view);
   const spelling = new Map<number, Spot[]>();
@@ -1068,6 +1078,7 @@ function drawPane(app: App, c: Canvas, view: View, rect: Rect, contentFocused: b
     if (chosenOn && !line.decor) marks.push(...problemMarks(line, layout, chosenOn, layout.lines[row + 1]?.src !== line.src, "link_focus"));
     if (links) marks.push(...offsetMarks(line, links.get(line.src), false, "link"));
     if (brackets && !line.decor) marks.push(...offsetMarks(line, brackets.get(line.src), false, "bracket_match"));
+    if (stop && !line.decor) marks.push(...offsetMarks(line, stopLines.get(line.src), false, "selection"));
     // Last: the first mark a cell has is the one drawn, so a find's match or the selection shows over a misspelt word.
     for (const s of spelling.get(row) ?? []) marks.push({ from: s.col, to: s.col + s.width, role: "spell" });
     drawLine(c, textX, y, line, textW, theme, band, page, underCursor, marks, view.left);

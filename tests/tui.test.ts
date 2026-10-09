@@ -11733,6 +11733,70 @@ describe("completion while typing (19.16)", () => {
     await h.app.servers!.stopAll();
   });
 
+  test("a snippet (25.8): its stops in turn — the placeholder replaced by what's typed, its mirrors following — then $0", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "SNIPPETS\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    const text = () => h.app.view!.buf.source;
+    await h.keys("o", "f", "o");
+    expect(await until(() => shown(h)[0] === "fori")).toBe(true);
+    await h.keys("tab");
+    // Expanded: the mirrors given the placeholder, the tab the file's two spaces, the new lines the line's indent.
+    expect(text()).toBe("SNIPPETS\nfor (ix = 0; ix < n; ix++) {\n  \n}\n");
+    expect(h.app.snippet).not.toBeNull();
+    // The first stop's placeholder marked as selected, the cursor on it; typed over, the mirrors follow.
+    const c = h.canvas();
+    const y = c.rows.findIndex((r) => r.join("").includes("for (ix = 0"));
+    // Its second cell: the cursor's on the first.
+    expect(c.styles[y]![c.rows[y]!.join("").indexOf("x = 0")]!.bg).toBe(h.app.theme.roles.selection.bg!);
+    expect(c.styles[y]![c.rows[y]!.join("").indexOf(" = 0")]!.bg).not.toBe(h.app.theme.roles.selection.bg!);
+    await h.keys("j", "j");
+    expect(text()).toBe("SNIPPETS\nfor (jj = 0; jj < n; jj++) {\n  \n}\n");
+    await h.keys("tab", "l", "e", "n");
+    expect(text()).toBe("SNIPPETS\nfor (jj = 0; jj < len; jj++) {\n  \n}\n");
+    // shift+tab back to the first, then on to $0: inside the block, the session over.
+    await h.keys("shift+tab", "backspace", "k", "tab", "tab");
+    expect(text()).toBe("SNIPPETS\nfor (k = 0; k < len; k++) {\n  \n}\n");
+    expect(h.app.snippet).toBeNull();
+    await h.keys("x", "escape");
+    expect(text()).toBe("SNIPPETS\nfor (k = 0; k < len; k++) {\n  x\n}\n");
+    // A snippet's typing can't be repeated as keys: . has nothing.
+    await h.keys(".");
+    expect(text()).toBe("SNIPPETS\nfor (k = 0; k < len; k++) {\n  x\n}\n");
+    await h.app.servers!.stopAll();
+  });
+
+  test("a snippet's choice (the first), its variable's value; an import added above moves its stops; esc ends it", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.fk"), "SNIPPETS\n");
+    const h = await harness({ root, open: "a.fk", config: served });
+    await ready(h);
+    const text = () => h.app.view!.buf.source;
+    await h.keys("o", "p", "i");
+    expect(await until(() => shown(h)[0] === "pick")).toBe(true);
+    await h.keys("tab");
+    expect(text()).toBe("SNIPPETS\npick(one, a)\n");
+    // On to the variable's stop; a backspace takes its placeholder.
+    await h.keys("tab", "backspace", "b");
+    expect(text()).toBe("SNIPPETS\npick(one, b)\n");
+    await h.keys("escape");
+    expect(h.app.snippet).toBeNull();
+    // Insert again: tab indents, no stop to go to.
+    await h.keys("o", "i", "m");
+    expect(await until(() => shown(h)[0] === "imp")).toBe(true);
+    await h.keys("tab");
+    expect(text()).toBe("import x\nSNIPPETS\npick(one, b)\nuse(it)\n");
+    await h.keys("z");
+    expect(text()).toBe("import x\nSNIPPETS\npick(one, b)\nuse(z)\n");
+    // Moving off the stop ends it: tab indents again.
+    await h.keys("end", "tab");
+    expect(h.app.snippet).toBeNull();
+    expect(text()).toBe("import x\nSNIPPETS\npick(one, b)\n  use(z)\n");
+    await h.keys("escape");
+    await h.app.servers!.stopAll();
+  });
+
   test("after a trigger character at once: ctrl+n moves, enter puts it in with its import; escape closes and leaves insert", async () => {
     const root = makeVault();
     writeFileSync(join(root, "a.fk"), "start\n");

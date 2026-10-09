@@ -93,6 +93,7 @@ import { languageOf, serverTable, type ServerTable } from "../core/servers/langu
 import { type LinterDef, linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
 import { rootFor } from "../core/servers/find.ts";
 import { ServerManager } from "../core/servers/manager.ts";
+import { afterSnippetKey, type SnippetSession, snippetKey } from "./snippets.ts";
 import { afterInsertKey, completeWords, type CompletionState, completionKey, type SignatureState } from "./completion.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
@@ -6871,8 +6872,11 @@ export class App {
       }
       // None showing: a word from the open files' words (25.5). Not a key of the change: the word accepted is.
       if (key === "ctrl+n" || key === "ctrl+p") return completeWords(this, iv, key === "ctrl+p");
+      // A snippet's stops (25.8): tab and shift+tab between them; the first key at one replacing its placeholder.
+      if (snippetKey(this, iv, key)) return;
       insertKey(this, iv, key);
       afterInsertKey(this, iv, key);
+      afterSnippetKey(this, iv);
       return insertRecord(this, iv, key);
     }
     // A command waiting for one character (f, t) in the render; in source vim.ts has it.
@@ -7888,6 +7892,9 @@ export class App {
     this.bracketMemo = { buf: view.buf, version: view.buf.version, at, insert: !!view.insert, marks };
     return marks;
   }
+
+  /** A server's snippet being typed through (25.8): its stops. */
+  snippet: SnippetSession | null = null;
 
   /** The command your shell is running (25.7): one at a time. */
   shellJob: { command: string; stop: () => void } | null = null;

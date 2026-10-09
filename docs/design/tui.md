@@ -1259,8 +1259,14 @@ after one of its servers' trigger characters (`.`), else once a word is begun an
 items, each with its detail dimmed, the best first — by how well the word typed so far matches, then the server's
 order. Typing on narrows the list without asking again, unless the server said its list was partial; a word ended
 (a space, an operator) closes it. `tab` or `enter` puts the chosen item in — its edit if it has one, else its text over
-the word, a snippet's tab stops dropped — then its other edits (an import at the top), the cursor staying on its
-text. Only the last ask's answer is shown: one arriving after a later ask is dropped. **Signature help** shows after
+the word — then its other edits (an import at the top), the cursor staying on its text. **A snippet** (`25.8`;
+slipbox says it takes them) is expanded first (`core/snippet.ts`, LSP's grammar): a choice its first, a variable its
+value (`TM_FILENAME`…), each new line indented as the line, a tab as the file indents, a stop written again given its
+placeholder's text. The cursor goes to its first stop, the placeholder marked as selected: the first key typed
+replaces it (a backspace takes it), and its mirrors follow what's typed. `tab` goes to the next stop, `shift+tab`
+back; `$0` (else the snippet's end) is the last, and ends it — as do `esc`, the cursor leaving the stop, and an edit
+cutting across one. The stops follow the text, an import added above included. Typing through a snippet isn't one
+`.` repeats. Only the last ask's answer is shown: one arriving after a later ask is dropped. **Signature help** shows after
 `(` and `,` (as the server names them): the signature on a line above the cursor, the active parameter marked; `)`
 or leaving insert closes it. Both are insert mode's, and leaving it closes both.
 
