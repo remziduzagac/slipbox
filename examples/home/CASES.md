@@ -475,6 +475,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/src/routes/share.ts` (lsp.hover/definition/references; test 'in a note slipbox answers itself')
 - link target completion after \]( with this root's paths, another root's by its path (a pointer written into a named
   folder), encoding — `notes/index.md`, `work/kestrel/docs/architecture.md` (tui.md A link's target (20.13, 21.5))
+- ctrl+n / ctrl+p in insert mode: a word from the open files' words, this file's nearest first, narrowed as typed —
+  `notes/index.md`, `work/kestrel/src/sync/queue.ts` (tui.md A word from the open files (25.5); tests 'word
+  completion without a server')
 - relink and convert-links (preview, ambiguous pick, unsaved refused, undone) — `notes/daily/2026-09-22.md`,
   `notes/projects/kestrel-v2-3.md` (link.relink, link.convert; tests 'the converter from the TUI')
 - links lists outgoing links with kind, target, heading, text, line, column, end, status —

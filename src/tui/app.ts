@@ -92,7 +92,7 @@ import { languageOf, serverTable, type ServerTable } from "../core/servers/langu
 import { type LinterDef, linterRoot, linterTable, runLinter } from "../core/servers/linters.ts";
 import { rootFor } from "../core/servers/find.ts";
 import { ServerManager } from "../core/servers/manager.ts";
-import { afterInsertKey, type CompletionState, completionKey, type SignatureState } from "./completion.ts";
+import { afterInsertKey, completeWords, type CompletionState, completionKey, type SignatureState } from "./completion.ts";
 import { sanitize } from "../core/sanitize.ts";
 import { graphemes, graphemeWidth, stringWidth, truncate, truncateStart } from "../core/width.ts";
 import { registerActions } from "./actions.ts";
@@ -6865,6 +6865,8 @@ export class App {
         if (key === "ctrl+e") insertRecord(this, iv, key);
         return;
       }
+      // None showing: a word from the open files' words (25.5). Not a key of the change: the word accepted is.
+      if (key === "ctrl+n" || key === "ctrl+p") return completeWords(this, iv, key === "ctrl+p");
       insertKey(this, iv, key);
       afterInsertKey(this, iv, key);
       return insertRecord(this, iv, key);

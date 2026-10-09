@@ -165,6 +165,7 @@ Everything else is testable headlessly with `TextCanvas` (see [testing.md](testi
 | `tui/editing.ts` | 4.3 | the cursor as a text offset; insert mode |
 | `tui/vim.ts` | 4.4 | counts, operators and text objects, the register, `.` |
 | `tui/replacing.ts` | 4.16 | the replace row, `:s` and its confirm, `gn`'s matches |
+| `tui/completion.ts` | 19.16, 20.13, 25.5 | completion as typed: a server's items, links' targets, open files' words |
 | `tui/saveas.ts` | 10.14 | the Save As window an export opens: places, the folder's entries, the name; its keys |
 
 ## Data flow for one note

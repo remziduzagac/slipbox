@@ -1253,6 +1253,15 @@ a name where it reaches the note from here, else its path from the root (a top-l
 relative path: `../plan`) — with its path beside it. Typing past the target (`)`, a space, `]`, `|`, `#`) closes it.
 Same keys as above.
 
+**A word from the open files** (`25.5`): `ctrl+n` in insert mode with no popup showing completes the word before the
+cursor, as vim's does, server or not, in a note or a code file — the open files' words that start as it does, two
+letters or more, each once: this file's first, from the cursor on and then around from the top (`ctrl+p`: back from
+the cursor, then around from the end), then each other open file's, named beside it. Typed in lower case, any case
+matches (find's smart case). The word the cursor is in isn't offered, nor the word as typed. Typing on narrows the list;
+a character no word has, a move, or a backspace past where the word began, closes it. A server's ask waiting on a pause,
+or its answer still on the way, is dropped for it; a trigger character closes it and asks the server. Same keys as
+above; `.` repeats the word put in.
+
 A file tree-sitter has no outline of (`16.8`: YAML, Java, Kotlin…) takes its language server's symbols as its
 outline and breadcrumb (`19.14`), nested as the server nests them, asked for when it opens and again after each change
 reaches the server. Where tree-sitter has one, it stays: it's there at once, and leaves out the variables and
